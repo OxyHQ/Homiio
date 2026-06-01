@@ -108,4 +108,8 @@ temp/
 .vercel
 
 # Local development
-.local/ 
+.local/
+
+# Self-hosted local image store (backend fallback when object storage is unconfigured)
+.local-image-store/
+packages/backend/.local-image-store/ 

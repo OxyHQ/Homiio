@@ -30,7 +30,8 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
 }) => {
     const router = useRouter();
     const isPublicHousing = property?.housingType === 'public';
-    const publicHousingState = property?.address?.state;
+    // Public-housing authority label uses the resolved region NAME (geo is relational).
+    const publicHousingState = property?.address?.regionName;
 
     const getLandlordDisplayName = (profile: Profile | null): string => {
         if (!profile) return 'Unknown Owner';

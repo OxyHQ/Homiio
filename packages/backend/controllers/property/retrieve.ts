@@ -1,11 +1,15 @@
 const { Property, RecentlyViewed } = require('../../models');
 const { AppError, successResponse, paginationResponse } = require('../../middlewares/errorHandler');
+const { serializePropertyAddresses, ADDRESS_GEO_POPULATE } = require('../../services/propertyAddressSerializer');
 
 export async function getPropertyById(req, res, next) {
   try {
     const { propertyId } = req.params;
-    const property = await Property.findById(propertyId).populate('addressId').lean();
+    const property = await Property.findById(propertyId).populate(ADDRESS_GEO_POPULATE).lean();
     if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
+    // Resolve the address's city/region/country NAMES from the deep-populated
+    // geo refs (geo is relational), then flatten the refs back to ids.
+    serializePropertyAddresses(property);
     await Property.findByIdAndUpdate(propertyId, { $inc: { views: 1 } });
     if (req.userId && (req.user?.id || req.user?._id)) {
       const oxyUserId = req.user.id || req.user._id;
@@ -41,13 +45,14 @@ export async function getMyProperties(req, res, next) {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [properties, total] = await Promise.all([
       Property.find({ profileId: activeProfile._id, status: { $ne: 'archived' } })
-        .populate('addressId')
+        .populate(ADDRESS_GEO_POPULATE)
         .skip(skip)
         .limit(parseInt(limit))
         .sort({ createdAt: -1 })
         .lean(),
       Property.countDocuments({ profileId: activeProfile._id, status: { $ne: 'archived' } })
     ]);
+    serializePropertyAddresses(properties);
     res.json(paginationResponse(properties, parseInt(page), parseInt(limit), total, 'Your properties retrieved successfully'));
   } catch (error) { next(error); }
 }

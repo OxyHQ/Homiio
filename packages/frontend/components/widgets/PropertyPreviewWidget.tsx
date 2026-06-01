@@ -246,15 +246,28 @@ export function PropertyPreviewWidget() {
 
     const now = new Date().toISOString();
 
+    // Geo is relational on a real Property, but a live form preview has no
+    // resolved geo ids yet — so feed the form's entered place NAMES into the
+    // serialized address's resolved-name fields (which the card renders) and
+    // leave the `*Id` references empty for the preview.
+    const previewLocation = [location.city, location.state, location.country]
+      .filter(Boolean)
+      .join(', ');
+
     return {
       _id: 'preview',
       address: {
         street: location.address ?? '',
-        city: location.city ?? '',
-        state: location.state,
         postal_code: location.postal_code ?? '',
-        country: location.country ?? '',
         countryCode: location.countryCode ?? '',
+        countryId: '',
+        regionId: '',
+        cityId: '',
+        cityName: location.city || undefined,
+        regionName: location.state || undefined,
+        countryName: location.country || undefined,
+        neighborhoodName: location.neighborhood || undefined,
+        location: previewLocation || undefined,
         number: location.number,
         building_name: location.building_name,
         block: location.block,
@@ -263,7 +276,6 @@ export function PropertyPreviewWidget() {
         unit: location.unit,
         subunit: location.subunit,
         district: location.district,
-        neighborhood: location.neighborhood,
         address_lines: location.address_lines,
         po_box: location.po_box,
         reference: location.reference,

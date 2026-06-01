@@ -35,6 +35,7 @@ import type {
 import { useSearchMode } from '@/context/SearchModeContext';
 import { geocodeAddress } from '@/hooks/useAddressSearch';
 import { cityService } from '@/services/cityService';
+import { cityCountryName, cityRegionName } from '@/utils/cityDisplay';
 import { DEFAULT_SEARCH_QUERY, useSearchQueryStore } from '@/store/searchQueryStore';
 import { onApplySavedSearch, type SavedSearchPayload } from '@/utils/searchEvents';
 
@@ -180,8 +181,13 @@ export default function SearchScreen() {
           const response = await cityService.getCityBySlug(cityParam);
           const city = response?.data;
           if (city?.coordinates) {
+            // Compose the full label from the populated region/country names
+            // (geo is relational; the City carries no free-text display string).
+            const label = [city.name, cityRegionName(city), cityCountryName(city)]
+              .filter(Boolean)
+              .join(', ');
             applyLocation({
-              label: city.displayName || city.name,
+              label: label || city.name,
               shortLabel: city.name,
               center: [city.coordinates.lng, city.coordinates.lat],
             });

@@ -38,13 +38,17 @@ function generateShortPropertyTitle(propertyData) {
     type = 'apartment',
     address = {},
     bedrooms = 0,
-    bathrooms = 0
+    bathrooms = 0,
+    geo = null
   } = propertyData;
 
-  // Extract address components
+  // Extract address components. City/region/neighborhood NAMES are relational
+  // and come from the resolved `geo` labels (see geoDisplayService); only the
+  // building-level `street` is read off the address itself.
   const street = address.street || '';
-  const city = address.city || '';
-  const state = address.state || '';
+  const city = (geo && geo.city) || '';
+  const state = (geo && geo.region) || '';
+  const neighborhood = (geo && geo.neighborhood) || '';
 
   // Clean and format street address
   let streetAddress = street.trim();
@@ -86,9 +90,9 @@ function generateShortPropertyTitle(propertyData) {
   // Build location string - prefer neighborhood-like information
   let location = '';
   
-  // First check if neighborhood is explicitly provided
-  if (address.neighborhood) {
-    location = address.neighborhood;
+  // First check if a resolved neighborhood name is available
+  if (neighborhood) {
+    location = neighborhood;
   } else if (streetAddress) {
     // Try to extract neighborhood from street name
     const streetParts = streetAddress.split(',').map(part => part.trim());
@@ -164,13 +168,16 @@ function generateLargePropertyTitle(propertyData) {
     type = 'apartment',
     address = {},
     bedrooms = 0,
-    bathrooms = 0
+    bathrooms = 0,
+    geo = null
   } = propertyData;
 
-  // Extract address components
+  // Extract address components. Geo (city/region) is relational, so the city and
+  // region NAMES come from the resolved `geo` labels (see geoDisplayService),
+  // not from free-text fields on the address.
   const street = address.street || '';
-  const city = address.city || '';
-  const state = address.state || '';
+  const city = (geo && geo.city) || '';
+  const state = (geo && geo.region) || '';
 
   // Clean and format street address
   let streetAddress = street.trim();

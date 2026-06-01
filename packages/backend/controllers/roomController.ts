@@ -48,16 +48,15 @@ class RoomController {
 
       if (profileId) filters.profileId = profileId;
 
-      // Resolve city/state to address ids, matching the property list handler.
+      // Resolve city/state to address ids via RELATIONAL geo, matching the
+      // property list handler (no free-text city/state matching on the Address).
       if (city || state) {
-        const addressQuery: Record<string, unknown> = {};
-        if (city) addressQuery.city = new RegExp(String(city), 'i');
-        if (state) addressQuery.state = new RegExp(String(state), 'i');
-
-        const matchingAddresses = await Address.find(addressQuery).select('_id').lean();
-        const addressIds = matchingAddresses.map((addr: { _id: unknown }) => addr._id);
-
-        if (addressIds.length === 0) {
+        const { resolveGeoFilterAddressIds } = require('../services/geoQueryService');
+        const addressIds = await resolveGeoFilterAddressIds({
+          city: city ? String(city) : undefined,
+          state: state ? String(state) : undefined,
+        });
+        if (addressIds === null || addressIds.length === 0) {
           return res.json(paginationResponse([], pageNumber, limitNumber, 0, 'No rooms found'));
         }
         filters.addressId = { $in: addressIds };

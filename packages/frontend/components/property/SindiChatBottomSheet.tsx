@@ -97,7 +97,7 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
                 isInitialized.current = true;
 
                 // Create conversation title with fallback values
-                const city = property.address?.city || 'Unknown Location';
+                const city = property.address?.cityName || 'Unknown Location';
                 const type = property.type || 'Property';
                 const conversationTitle = `Property: ${city} - ${type}`;
 
@@ -126,7 +126,7 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
                         // short-term (nightly) price for vacation-only listings.
                         const bedrooms = property.bedrooms || 'unspecified';
                         const bathrooms = property.bathrooms || 'unspecified';
-                        const location = property.address?.city || 'the area';
+                        const location = property.address?.cityName || 'the area';
                         const longTerm = property.longTermRent;
                         const shortTerm = property.shortTermRent;
                         const rent = longTerm?.monthlyAmount ?? shortTerm?.nightlyRate ?? 'unspecified';

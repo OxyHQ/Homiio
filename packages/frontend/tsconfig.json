@@ -17,6 +17,12 @@
       ],
       "@homiio/shared-types/*": [
         "../shared-types/src/*"
+      ],
+      "@oxyhq/core": [
+        "../../node_modules/@oxyhq/core"
+      ],
+      "@oxyhq/core/*": [
+        "../../node_modules/@oxyhq/core/*"
       ]
     }
   },

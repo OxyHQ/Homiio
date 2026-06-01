@@ -63,7 +63,7 @@ export function resolveHeadlinePrice(
     priceLabel = '';
   }
 
-  const priceSubtitle = `${property.address?.city || ''}, ${property.address?.country || ''}`;
+  const priceSubtitle = `${property.address?.cityName || ''}, ${property.address?.countryName || ''}`;
 
   return { priceLabel, priceSubtitle };
 }

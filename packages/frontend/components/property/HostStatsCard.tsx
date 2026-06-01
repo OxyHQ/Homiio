@@ -105,7 +105,7 @@ export const HostStatsCard: React.FC<HostStatsCardProps> = ({
   // government authority, so we surface the state name and skip the
   // personal-profile bits that don't apply.
   if (property?.housingType === 'public') {
-    const state = property.address?.state;
+    const state = property.address?.regionName;
     return (
       <View style={styles.card}>
         <View style={styles.governmentAvatar}>

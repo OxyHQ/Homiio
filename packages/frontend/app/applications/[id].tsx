@@ -280,7 +280,7 @@ export default function ApplicationDetailScreen() {
             </View>
             {property?.address ? (
               <BloomText style={styles.subtitle}>
-                {[property.address.city, property.address.country]
+                {[property.address.cityName, property.address.countryName]
                   .filter(Boolean)
                   .join(', ')}
               </BloomText>

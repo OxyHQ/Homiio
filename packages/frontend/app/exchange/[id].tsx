@@ -221,7 +221,7 @@ export default function ExchangeRequestDetailScreen() {
             </View>
             {property?.address ? (
               <BloomText style={styles.subtitle}>
-                {[property.address.city, property.address.country].filter(Boolean).join(', ')}
+                {[property.address.cityName, property.address.countryName].filter(Boolean).join(', ')}
               </BloomText>
             ) : null}
           </CardSurface>

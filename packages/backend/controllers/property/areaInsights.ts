@@ -131,6 +131,26 @@ interface AvgRow {
 /** Lean Address projection used for geo id-resolution. */
 type AddressGeoLean = { _id: Types.ObjectId };
 
+/** A geo ref field as read off a lean Address: a bare id or a populated doc. */
+type GeoRefField = Types.ObjectId | { _id: Types.ObjectId; name?: string } | null | undefined;
+
+/** The geo-bearing subset of a populated Address used by area insights. */
+interface PopulatedGeoAddress {
+  coordinates?: { coordinates?: [number, number] };
+  cityId?: GeoRefField;
+  neighborhoodId?: GeoRefField;
+}
+
+/** Extract `{ id, name? }` from a geo ref that may be an id or a populated doc. */
+function extractGeoRef(ref: GeoRefField): { id: Types.ObjectId; name?: string } | null {
+  if (!ref) return null;
+  if (ref instanceof Types.ObjectId) return { id: ref };
+  if (typeof ref === 'object' && '_id' in ref && ref._id) {
+    return { id: ref._id, name: typeof ref.name === 'string' ? ref.name : undefined };
+  }
+  return null;
+}
+
 /** Target fields needed to build the comparable query and the response. */
 interface TargetContext {
   id: Types.ObjectId;
@@ -149,7 +169,13 @@ interface TargetContext {
   squareFootage: number;
   longitude: number;
   latitude: number;
+  /** Canonical city id (Address.cityId) used to scope city-wide comparables. */
+  cityId: Types.ObjectId;
+  /** Canonical neighborhood id (Address.neighborhoodId), null when unknown. */
+  neighborhoodId: Types.ObjectId | null;
+  /** Display name of the city, resolved from the populated City doc. */
   city: string;
+  /** Display name of the neighborhood, resolved from the populated Neighborhood doc. */
   neighborhood: string | null;
 }
 
@@ -206,7 +232,7 @@ async function resolveRadiusAddressIds(
  */
 async function resolveCityAddressIds(target: TargetContext): Promise<Types.ObjectId[]> {
   const matches = await Address.find({
-    city: target.city,
+    cityId: target.cityId,
     coordinates: {
       $near: {
         $geometry: { type: 'Point', coordinates: [target.longitude, target.latitude] },
@@ -218,12 +244,12 @@ async function resolveCityAddressIds(target: TargetContext): Promise<Types.Objec
   return matches.map((a) => a._id);
 }
 
-/** Resolve Address ids in the target's neighborhood (within its city). */
+/** Resolve Address ids in the target's neighborhood (relational, by id). */
 async function resolveNeighborhoodAddressIds(
   target: TargetContext
 ): Promise<Types.ObjectId[]> {
-  if (!target.neighborhood) return [];
-  const matches = await Address.find({ city: target.city, neighborhood: target.neighborhood })
+  if (!target.neighborhoodId) return [];
+  const matches = await Address.find({ neighborhoodId: target.neighborhoodId })
     .select('_id')
     .lean<AddressGeoLean[]>();
   return matches.map((a) => a._id);
@@ -481,12 +507,19 @@ function buildTargetContext(
   // `transformAddressFields`, which renames the populated `addressId` to
   // `address` (and deletes `addressId`). Read `address` first, then fall back
   // to the raw `addressId` in case the transform did not run.
-  const populated = property as unknown as { address?: IAddress; addressId?: IAddress };
+  const populated = property as unknown as { address?: PopulatedGeoAddress; addressId?: PopulatedGeoAddress };
   const address = populated.address ?? populated.addressId ?? null;
   const coords = address?.coordinates?.coordinates;
   if (!address || !Array.isArray(coords) || coords.length !== 2) return { reason: 'no_coordinates' };
   const [longitude, latitude] = coords;
   if (typeof longitude !== 'number' || typeof latitude !== 'number') return { reason: 'no_coordinates' };
+
+  // Geo is relational: scope by the resolved cityId/neighborhoodId, and read the
+  // display names from the (deep-)populated City/Neighborhood docs. Without a
+  // cityId there is no comparable scope to build.
+  const cityRef = extractGeoRef(address.cityId);
+  if (!cityRef) return { reason: 'no_coordinates' };
+  const neighborhoodRef = extractGeoRef(address.neighborhoodId);
 
   const basis = resolvePriceBasis(property);
   if (!basis) return { reason: 'no_price' };
@@ -502,8 +535,10 @@ function buildTargetContext(
       squareFootage: typeof property.squareFootage === 'number' ? property.squareFootage : 0,
       longitude,
       latitude,
-      city: address.city,
-      neighborhood: address.neighborhood ?? null,
+      cityId: cityRef.id,
+      neighborhoodId: neighborhoodRef?.id ?? null,
+      city: cityRef.name ?? '',
+      neighborhood: neighborhoodRef?.name ?? null,
     },
   };
 }
@@ -588,7 +623,15 @@ export async function getAreaInsights(req: Request, res: Response, next: NextFun
       return next(new AppError('Invalid property ID', 400, 'INVALID_ID'));
     }
 
-    const property = await Property.findById(propertyId).populate('addressId').lean<IProperty | null>();
+    const property = await Property.findById(propertyId)
+      .populate({
+        path: 'addressId',
+        populate: [
+          { path: 'cityId', select: 'name' },
+          { path: 'neighborhoodId', select: 'name' },
+        ],
+      })
+      .lean<IProperty | null>();
     if (!property) {
       return next(new AppError('Property not found', 404, 'NOT_FOUND'));
     }

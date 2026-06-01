@@ -9,6 +9,7 @@ import path from 'path';
 import config from '../config';
 import { logger } from '../middlewares/logging';
 const { generateLargePropertyTitle } = require('../utils/propertyTitleGenerator');
+const { resolveAddressDisplay } = require('./geoDisplayService');
 
 // Configure i18n
 i18n.configure({
@@ -175,7 +176,7 @@ class TelegramService {
    * @param {string} language - Language code for translations
    * @returns {string} - Formatted message
    */
-  formatPropertyMessage(property, language = 'es') {
+  formatPropertyMessage(property, language = 'es', geo = null) {
     const {
       type,
       bedrooms,
@@ -193,12 +194,14 @@ class TelegramService {
     // Get translations for the language
     const t = this.getI18nForLanguage(language);
 
-    // Generate large format title using the title generator
+    // Generate large format title using the title generator. Geo labels are
+    // relational and threaded through explicitly (resolved by the caller).
     const largeTitle = generateLargePropertyTitle({
       type,
       address,
       bedrooms,
-      bathrooms
+      bathrooms,
+      geo
     });
 
     const dynamicTitle = `🏠 **${this.escapeMarkdown(largeTitle)}**`;
@@ -244,6 +247,17 @@ class TelegramService {
       return street.replace(/,?\s*\d+.*$/, '').trim();
     };
 
+    // City/region labels are relational (resolved from the canonical geo docs);
+    // only the building-level street + postal code come off the address.
+    const cityLabel = (geo && geo.city) || '';
+    const regionLabel = (geo && geo.region) || '';
+    const postalCode = address?.postal_code || '';
+    const locationLine = [removePropertyNumber(address?.street), cityLabel, `${regionLabel} ${postalCode}`.trim()]
+      .filter(Boolean)
+      .map((part) => this.escapeMarkdown(part))
+      .join(', ');
+    const cityHashtag = cityLabel ? ` #${this.escapeMarkdown(cityLabel.replace(/\s+/g, ''))}` : '';
+
     const message = `${dynamicTitle}
 
 💰 **${t.__('telegram.rent')}:** ${this.escapeMarkdown(rentDisplay)}
@@ -251,12 +265,12 @@ class TelegramService {
 
 🏡 **${t.__('telegram.details')}:**
 • ${bedrooms} ${t.__('telegram.bedrooms')}, ${bathrooms} ${t.__('telegram.bathrooms')}
-• ${this.escapeMarkdown(removePropertyNumber(address.street))}, ${this.escapeMarkdown(address.city)}, ${this.escapeMarkdown(address.state)} ${this.escapeMarkdown(address.zipCode)}
+• ${locationLine}
 • ${t.__('telegram.type')}: ${this.escapeMarkdown(propertyType)}
 ${property.squareFootage ? `• ${t.__('telegram.size')}: ${this.escapeMarkdown(property.squareFootage.toString())} m²` : ''}
 
 ✨ **${t.__('telegram.amenities')}:** ${this.escapeMarkdown(amenitiesText)}${descriptionSection}
-${t.__('telegram.hashtags.newProperty')} #${this.escapeMarkdown(address.city.replace(/\s+/g, ''))} #${this.escapeMarkdown(propertyType.replace(/\s+/g, ''))}`;
+${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(propertyType.replace(/\s+/g, ''))}`;
 
     return message;
   }
@@ -273,10 +287,12 @@ ${t.__('telegram.hashtags.newProperty')} #${this.escapeMarkdown(address.city.rep
         return false;
       }
 
-      // Check if location is supported for notifications
-      const city = property.address?.city;
-      const country = property.address?.country;
-      
+      // Geo is relational: resolve the city/region/country display names from the
+      // canonical geo docs (populated or by id) before deciding routing/format.
+      const geo = await resolveAddressDisplay(property.address);
+      const city = geo.city;
+      const country = geo.country;
+
       if (!this.isLocationSupported(city, country)) {
         logger.info('Location not supported for Telegram notifications. Skipping notification.', {
           city,
@@ -288,10 +304,10 @@ ${t.__('telegram.hashtags.newProperty')} #${this.escapeMarkdown(address.city.rep
 
       // Get topic ID for this location
       const topicId = this.getTopicIdForLocation(city, country);
-      
+
       // Get the group configuration
       const groupConfig = this.getGroupForCity(city);
-      
+
       if (!groupConfig || !groupConfig.id) {
         logger.warn('No Telegram group configured. Skipping notification.', {
           city,
@@ -302,7 +318,7 @@ ${t.__('telegram.hashtags.newProperty')} #${this.escapeMarkdown(address.city.rep
       }
 
       // Format message with appropriate language
-      const message = this.formatPropertyMessage(property, groupConfig.language);
+      const message = this.formatPropertyMessage(property, groupConfig.language, geo);
       
       // Get translations for button text
       const t = this.getI18nForLanguage(groupConfig.language);
@@ -482,10 +498,11 @@ ${t.__('telegram.hashtags.newProperty')} #${this.escapeMarkdown(address.city.rep
 
     for (const property of properties) {
       try {
-        // Check if location is supported before attempting to send
-        const city = property.address?.city;
-        const country = property.address?.country;
-        
+        // Resolve the relational geo labels to decide routing/support.
+        const geo = await resolveAddressDisplay(property.address);
+        const city = geo.city;
+        const country = geo.country;
+
         if (!this.isLocationSupported(city, country)) {
           results.skipped++;
           logger.info('Skipping property - location not supported for Telegram notifications', {

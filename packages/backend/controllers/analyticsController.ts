@@ -94,28 +94,28 @@ class AnalyticsController {
 
       const pricing = pricingAgg[0] || { averageRent: 0, minRent: 0, maxRent: 0 };
 
-      // Top cities by property count with avg rent
+      // Top cities by property count with avg rent. Geo is relational, so this
+      // joins Property → Address → City (and Region for the label) and groups by
+      // the canonical cityId rather than a free-text city string.
       const topCities = await Property.aggregate([
         { $match: { addressId: { $exists: true, $ne: null } } },
-        {
-          $lookup: {
-            from: 'addresses',
-            localField: 'addressId',
-            foreignField: '_id',
-            as: 'address'
-          }
-        },
+        { $lookup: { from: 'addresses', localField: 'addressId', foreignField: '_id', as: 'address' } },
         { $unwind: '$address' },
-        { $match: { 'address.city': { $exists: true, $ne: null } } },
+        { $match: { 'address.cityId': { $exists: true, $ne: null } } },
         {
           $group: {
-            _id: { city: '$address.city', state: '$address.state' },
+            _id: '$address.cityId',
+            regionId: { $first: '$address.regionId' },
             properties: { $sum: 1 },
             averageRent: { $avg: '$longTermRent.monthlyAmount' },
           },
         },
         { $sort: { properties: -1 } },
         { $limit: 6 },
+        { $lookup: { from: 'cities', localField: '_id', foreignField: '_id', as: 'city' } },
+        { $unwind: { path: '$city', preserveNullAndEmptyArrays: true } },
+        { $lookup: { from: 'regions', localField: 'regionId', foreignField: '_id', as: 'region' } },
+        { $unwind: { path: '$region', preserveNullAndEmptyArrays: true } },
       ]).catch(() => []);
 
       // Price buckets (preset boundaries)
@@ -146,8 +146,9 @@ class AnalyticsController {
               maxRent: pricing.maxRent || 0,
             },
             topCities: topCities.map((c) => ({
-              city: c._id.city,
-              state: c._id.state,
+              cityId: c._id,
+              city: c.city?.name ?? null,
+              state: c.region?.name ?? null,
               properties: c.properties,
               averageRent: Math.round(c.averageRent || 0),
             })),

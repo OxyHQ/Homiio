@@ -12,6 +12,7 @@ const {
   AvailabilityWindowStatus,
   ReservationStatus
 } = require('@homiio/shared-types');
+const { serializePropertyAddresses, ADDRESS_GEO_POPULATE } = require('../../services/propertyAddressSerializer');
 
 const OFFERING_VALUES: ReadonlySet<string> = new Set(Object.values(OfferingType));
 
@@ -37,6 +38,22 @@ function priceBucket(price: number): 'low' | 'medium' | 'high' {
   if (price < PRICE_BUCKET_LOW_MAX) return 'low';
   if (price < PRICE_BUCKET_MEDIUM_MAX) return 'medium';
   return 'high';
+}
+
+/**
+ * Stable city key for location-based personalization. Geo is relational, so we
+ * key on the Address `cityId` (the post-find transform renames the populated
+ * `addressId` to `address`; the ref is a bare id under a shallow populate, or a
+ * `{ _id }` doc under a deep one). Returns null when no city ref is present.
+ */
+function cityIdKey(property: { address?: { cityId?: unknown }; addressId?: { cityId?: unknown } }): string | null {
+  const ref = property.address?.cityId ?? property.addressId?.cityId;
+  if (!ref) return null;
+  if (typeof ref === 'object' && '_id' in (ref as Record<string, unknown>)) {
+    const id = (ref as { _id?: unknown })._id;
+    return id ? String(id) : null;
+  }
+  return String(ref);
 }
 
 export const getProperties = async (req: Request, res: Response, next: NextFunction) => {
@@ -112,22 +129,19 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       }
     }
     
-    // Handle city and state filters with Address lookup
-    let addressIds: string[] = [];
+    // Handle city and state filters via RELATIONAL geo resolution. The location
+    // name (or id) is translated to a canonical City/Region id and the matching
+    // Address ids — there is no free-text city/state matching on the Address.
     if (city || state) {
-      const { Address } = require('../../models');
-      const addressQuery: any = {};
-      if (city) addressQuery.city = new RegExp(city, 'i');
-      if (state) addressQuery.state = new RegExp(String(state), 'i');
-      
-      const matchingAddresses = await Address.find(addressQuery).select('_id');
-      addressIds = matchingAddresses.map((addr: any) => addr._id);
-      
-      if (addressIds.length === 0) {
-        // No matching addresses found, return empty result
+      const { resolveGeoFilterAddressIds } = require('../../services/geoQueryService');
+      const addressIds = await resolveGeoFilterAddressIds({
+        city: city ? String(city) : undefined,
+        state: state ? String(state) : undefined,
+      });
+      if (addressIds === null || addressIds.length === 0) {
+        // Unknown city/region, or no addresses there — return empty result.
         return res.json(paginationResponse([], pageNumber, limitNumber, 0));
       }
-      
       filters.addressId = { $in: addressIds };
     }
 
@@ -341,13 +355,19 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
 
     const [properties, total] = await Promise.all([
       Property.find(filters)
-        .populate('addressId')
+        .populate(ADDRESS_GEO_POPULATE)
         .sort(sortOptions)
         .skip(skip)
         .limit(limitNumber)
         .lean(),
       Property.countDocuments(filters)
     ]);
+
+    // Resolve each address's city/region/country NAMES from the deep-populated
+    // geo refs (relational geo), then flatten the refs back to ids. Done once,
+    // in-place, before the personalization/ordering spreads (which preserve the
+    // `address` reference), so cards render a location label with no N+1.
+    serializePropertyAddresses(properties);
 
     const mongoose = require('mongoose');
     const { Saved } = require('../../models');
@@ -448,8 +468,9 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
                 const priceRange = priceBucket(price);
                 preferenceWeights.priceRanges[priceRange] = (preferenceWeights.priceRanges[priceRange] || 0) + 1;
               }
-              if (property.address?.city) {
-                preferenceWeights.locations[property.address.city] = (preferenceWeights.locations[property.address.city] || 0) + 1;
+              const viewCityId = cityIdKey(property);
+              if (viewCityId) {
+                preferenceWeights.locations[viewCityId] = (preferenceWeights.locations[viewCityId] || 0) + 1;
               }
               if (property.amenities) {
                 for (const amenity of property.amenities) {
@@ -469,7 +490,8 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
               const priceRange = priceBucket(price);
               personalizedScore += (preferenceWeights.priceRanges[priceRange] || 0) * 12;
             }
-            if (property.addressId?.city) personalizedScore += (preferenceWeights.locations[property.addressId.city] || 0) * 20;
+            const scoreCityId = cityIdKey(property);
+            if (scoreCityId) personalizedScore += (preferenceWeights.locations[scoreCityId] || 0) * 20;
             if (property.amenities) {
               for (const amenity of property.amenities) {
                 personalizedScore += (preferenceWeights.amenities[amenity] || 0) * 5;

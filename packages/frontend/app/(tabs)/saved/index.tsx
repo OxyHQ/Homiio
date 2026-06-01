@@ -129,7 +129,7 @@ export default function SavedPropertiesScreen() {
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         const title = getPropertyTitle(property).toLowerCase();
-        const city = property.address?.city?.toLowerCase() ?? '';
+        const city = property.address?.cityName?.toLowerCase() ?? '';
         if (!title.includes(q) && !city.includes(q)) return false;
       }
       switch (recency) {

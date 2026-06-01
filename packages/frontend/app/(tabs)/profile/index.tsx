@@ -414,6 +414,18 @@ export default function ProfileScreen() {
           />
         </SettingsListGroup>
 
+        <SettingsListGroup title={t('agent.menu.section', 'Earn')}>
+          <SettingsListItem
+            icon={<RowIcon name="cash-outline" />}
+            title={t('agent.menu.title', 'Earn with Homiio')}
+            description={t(
+              'agent.menu.description',
+              'Bring homes to Homiio and earn when they rent or sell.',
+            )}
+            onPress={() => router.push('/agent')}
+          />
+        </SettingsListGroup>
+
         <SettingsListGroup title={t('profile.sections.account', 'Account')}>
           <SettingsListItem
             icon={<RowIcon name="star-outline" />}

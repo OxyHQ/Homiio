@@ -1,6 +1,7 @@
 export * from './create';
 export * from './retrieve';
 export * from './updateDelete';
+export * from './transact';
 export * from './search';
 export * from './geospatial';
 export * from './stats';

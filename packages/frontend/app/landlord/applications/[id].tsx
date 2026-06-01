@@ -446,7 +446,7 @@ export default function LandlordApplicationDetailScreen() {
             <H3 style={styles.cardHeading}>{propertyTitle}</H3>
             {property?.address ? (
               <BloomText style={styles.subtitle}>
-                {[property.address.city, property.address.country]
+                {[property.address.cityName, property.address.countryName]
                   .filter(Boolean)
                   .join(', ')}
               </BloomText>

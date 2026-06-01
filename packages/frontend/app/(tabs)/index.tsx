@@ -47,11 +47,13 @@ import * as Location from 'expo-location';
 
 import { H1, P } from '@oxyhq/bloom/typography';
 
-import { OfferingType, type Property, type PropertyFilters } from '@homiio/shared-types';
+import { OfferingType, type City, type Property, type PropertyFilters } from '@homiio/shared-types';
 
 // Real data hooks
 import { useProperties } from '@/hooks';
 import { cityService } from '@/services/cityService';
+import { usePopularCities } from '@/hooks/useCityQueries';
+import { cityCountryName, cityRegionName } from '@/utils/cityDisplay';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { useRentalMode } from '@/context/RentalModeContext';
@@ -64,12 +66,10 @@ import { SearchSummaryBar } from '@/components/search/SearchSummaryBar';
 import { SearchPanel } from '@/components/search/SearchPanel';
 import type { SearchQuery, SearchStep } from '@/components/search/types';
 import { useSearchQueryStore } from '@/store/searchQueryStore';
-import {
-  CityShowcaseSection,
-  type CityShowcaseItem,
-} from '@/components/CityShowcaseSection';
+import { CityShowcaseSection } from '@/components/CityShowcaseSection';
 import { FeaturedGridSection } from '@/components/FeaturedGridSection';
 import { HostCtaBanner } from '@/components/HostCtaBanner';
+import { AgentCtaBanner } from '@/components/agent/AgentCtaBanner';
 import { HomeFooterStrip } from '@/components/HomeFooterStrip';
 import { useMediaQuery } from 'react-responsive';
 import { useLayoutScroll } from '@/context/LayoutScrollContext';
@@ -82,72 +82,6 @@ import {
   tracker,
 } from '@/constants/styles';
 
-interface NearbyCity {
-  _id?: string;
-  id?: string;
-  name: string;
-  latitude?: number;
-  longitude?: number;
-  distance?: number;
-}
-
-interface CityListResponseItem extends NearbyCity {
-  propertiesCount?: number;
-  state?: string;
-  country?: string;
-}
-
-/**
- * Hand-curated visual showcase of Spain's flagship rental markets. The
- * images come from Unsplash's open library (no API key needed) and are
- * cached aggressively by `expo-image`. When backend cities API surfaces
- * a matching record, we merge in the live property count.
- */
-const CITY_SHOWCASE: readonly CityShowcaseItem[] = [
-  {
-    id: 'barcelona',
-    name: 'Barcelona',
-    subtitle: 'Mediterranean charm, all-year sun',
-    imageUrl:
-      'https://images.unsplash.com/photo-1583422409516-2895a77efded?auto=format&fit=crop&w=1280&q=80',
-  },
-  {
-    id: 'madrid',
-    name: 'Madrid',
-    subtitle: 'Capital culture, fast pace',
-    imageUrl:
-      'https://images.unsplash.com/photo-1543783207-ec64e4d95325?auto=format&fit=crop&w=1280&q=80',
-  },
-  {
-    id: 'valencia',
-    name: 'València',
-    subtitle: 'Beachside light, paella streets',
-    imageUrl:
-      'https://images.unsplash.com/photo-1599282103940-9ba0e7b9f43e?auto=format&fit=crop&w=1280&q=80',
-  },
-  {
-    id: 'sevilla',
-    name: 'Sevilla',
-    subtitle: 'Andalusian rhythm, orange trees',
-    imageUrl:
-      'https://images.unsplash.com/photo-1559842139-2e1f7d62e98f?auto=format&fit=crop&w=1280&q=80',
-  },
-  {
-    id: 'malaga',
-    name: 'Málaga',
-    subtitle: 'Costa del Sol, art and beaches',
-    imageUrl:
-      'https://images.unsplash.com/photo-1601158935942-52255782d322?auto=format&fit=crop&w=1280&q=80',
-  },
-  {
-    id: 'bilbao',
-    name: 'Bilbao',
-    subtitle: 'Basque grit, design and pintxos',
-    imageUrl:
-      'https://images.unsplash.com/photo-1572889464195-26cf26be8ae5?auto=format&fit=crop&w=1280&q=80',
-  },
-] as const;
-
 /**
  * Hero photo used at the bottom of the home page Host CTA. Reuses a
  * tasteful Unsplash apartment interior so the banner reads as
@@ -156,6 +90,17 @@ const CITY_SHOWCASE: readonly CityShowcaseItem[] = [
 const HOST_CTA_IMAGE =
   'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=1600&q=80';
 
+/** How many DB cities to surface in the home Explore showcase. */
+const EXPLORE_CITY_LIMIT = 8;
+
+/**
+ * Distance (km) within which the user is treated as "clearly inside" the nearest
+ * city's region, so the Explore title scopes to the REGION/province (e.g.
+ * "Explore Catalonia"). Beyond it, the title falls back to the COUNTRY.
+ */
+const WITHIN_REGION_KM = 120;
+
+/** Haversine distance (km) between two lat/lng points; used for nearest-city. */
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const toRad = (v: number) => (v * Math.PI) / 180;
   const R = 6371; // km
@@ -174,7 +119,9 @@ export default function HomePage() {
   const insets = useSafeAreaInsets();
   const { offering: browseOffering } = useRentalMode();
   const [refreshing, setRefreshing] = useState(false);
-  const [cities, setCities] = useState<CityListResponseItem[]>([]);
+  // DB cities (with populated region/country + self-hosted cover image) power
+  // both the Explore showcase and the nearby-city carousels.
+  const { data: cities = [] } = usePopularCities(EXPLORE_CITY_LIMIT);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -250,24 +197,56 @@ export default function HomePage() {
     };
   }, []);
 
-  // Derive nearby cities from user location + cities list (no extra effect).
-  const nearbyCities = useMemo<NearbyCity[]>(() => {
-    if (!userLocation || cities.length === 0) return [];
-    const withDistance = cities
-      .filter((city) => typeof city.latitude === 'number' && typeof city.longitude === 'number')
+  // Cities that carry usable coordinates, each with its distance from the user
+  // (Infinity when the user's location is unknown). Drives both the adaptive
+  // Explore title (nearest city) and the nearby-city carousels.
+  const citiesByDistance = useMemo(() => {
+    const located = cities.filter(
+      (city): city is City & { coordinates: { lat: number; lng: number } } =>
+        typeof city.coordinates?.lat === 'number' && typeof city.coordinates?.lng === 'number',
+    );
+    if (!userLocation) {
+      return located.map((city) => ({ city, distance: Number.POSITIVE_INFINITY }));
+    }
+    return located
       .map((city) => ({
-        ...city,
+        city,
         distance: getDistance(
           userLocation.latitude,
           userLocation.longitude,
-          city.latitude ?? 0,
-          city.longitude ?? 0,
+          city.coordinates.lat,
+          city.coordinates.lng,
         ),
-      }));
-    return withDistance
-      .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0))
-      .slice(0, 2);
+      }))
+      .sort((a, b) => a.distance - b.distance);
   }, [userLocation, cities]);
+
+  // The two closest cities (only when the user shared their location), used for
+  // the nearby-city carousels lower on the page.
+  const nearbyCities = useMemo<City[]>(() => {
+    if (!userLocation) return [];
+    return citiesByDistance.slice(0, 2).map((entry) => entry.city);
+  }, [userLocation, citiesByDistance]);
+
+  // The place the Explore showcase is scoped to, for its adaptive title.
+  // Priority: the region/province the user is clearly within (nearest located
+  // city inside WITHIN_REGION_KM) → that city's country → the search query's
+  // chosen place → the country of the first DB city → a neutral default.
+  const explorePlace = useMemo<string>(() => {
+    const nearest = citiesByDistance[0];
+    if (userLocation && nearest && nearest.distance <= WITHIN_REGION_KM) {
+      const region = cityRegionName(nearest.city);
+      if (region) return region;
+    }
+    if (userLocation && nearest) {
+      const country = cityCountryName(nearest.city);
+      if (country) return country;
+    }
+    const queryPlace = activeQuery.location?.shortLabel || activeQuery.location?.label;
+    if (queryPlace) return queryPlace;
+    const fallbackCountry = cities.map((c) => cityCountryName(c)).find(Boolean);
+    return fallbackCountry ?? t('home.cityShowcase.defaultPlace', 'Spain');
+  }, [userLocation, citiesByDistance, activeQuery.location, cities, t]);
 
   // Fetch properties for the two closest cities. The nearbyCities array
   // changes only when location or cities change, so this is the
@@ -277,7 +256,7 @@ export default function HomePage() {
     let cancelled = false;
     Promise.all(
       nearbyCities.map(async (city) => {
-        const cityId = city._id || city.id || '';
+        const cityId = city._id;
         try {
           const res = await cityService.getPropertiesByCity(cityId, { limit: 8 });
           return { cityId, properties: (res.properties as Property[]) || [] };
@@ -316,15 +295,7 @@ export default function HomePage() {
   );
 
   useEffect(() => {
-    Promise.all([
-      loadProperties(feedFilters),
-      cityService
-        .getPopularCities(8)
-        .then((r) => (r.data || []) as CityListResponseItem[])
-        .catch(() => [] as CityListResponseItem[]),
-    ]).then(([, citiesData]) => {
-      setCities(citiesData);
-    });
+    loadProperties(feedFilters);
   }, [loadProperties, feedFilters]);
 
   const featuredProperties = useMemo<Property[]>(() => {
@@ -396,14 +367,18 @@ export default function HomePage() {
   }, [browseOffering, t]);
 
   const handleNavigateToCity = useCallback(
-    (item: CityShowcaseItem) => {
-      router.push(`/search?city=${encodeURIComponent(item.id)}`);
+    (city: City) => {
+      router.push(`/properties/city/${city._id}`);
     },
     [router],
   );
 
   const handleBecomeHost = useCallback(() => {
     router.push('/properties/create');
+  }, [router]);
+
+  const handleBecomeAgent = useCallback(() => {
+    router.push('/agent');
   }, [router]);
 
   const footerChunks = useMemo(
@@ -518,14 +493,19 @@ export default function HomePage() {
           </View>
         ) : null}
 
-        {/* === City Showcase === */}
-        <View style={{ marginTop: sectionGap }}>
-          <CityShowcaseSection
-            title={t('home.cityShowcase.title', 'Explore Spain')}
-            items={CITY_SHOWCASE}
-            onPressCity={handleNavigateToCity}
-          />
-        </View>
+        {/* === City Showcase (DB cities, adaptive region/country title) === */}
+        {cities.length > 0 ? (
+          <View style={{ marginTop: sectionGap }}>
+            <CityShowcaseSection
+              title={t('home.cityShowcase.title', {
+                defaultValue: 'Explore {{place}}',
+                place: explorePlace,
+              })}
+              items={cities}
+              onPressCity={handleNavigateToCity}
+            />
+          </View>
+        ) : null}
 
         {/* === Featured Grid (mode-aware) === */}
         {gridProperties.length > 0 ? (
@@ -588,7 +568,7 @@ export default function HomePage() {
 
         {/* === Nearby city carousels (only when location + properties available) === */}
         {nearbyCities.map((city) => {
-          const cityId = city._id || city.id || '';
+          const cityId = city._id;
           const cityProperties = nearbyProperties[cityId];
           if (!cityProperties || cityProperties.length === 0) return null;
           return (
@@ -623,6 +603,20 @@ export default function HomePage() {
             ctaLabel={t('home.hostCta.cta', 'Become a host')}
             imageUrl={HOST_CTA_IMAGE}
             onPress={handleBecomeHost}
+          />
+        </View>
+
+        {/* === Earn with Homiio (agent) banner === */}
+        <View style={{ marginTop: sectionGap }}>
+          <AgentCtaBanner
+            title={t('agent.banner.title', 'Start today. No license needed.')}
+            subtitle={t(
+              'agent.banner.subtitle',
+              'Turn the homes around you into income.',
+            )}
+            ctaLabel={t('agent.banner.cta', 'Become an agent')}
+            trustLine={t('agent.banner.trust', 'No license needed. Work from your phone.')}
+            onPress={handleBecomeAgent}
           />
         </View>
 

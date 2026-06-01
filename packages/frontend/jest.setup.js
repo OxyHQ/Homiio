@@ -15,6 +15,16 @@ jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock
 require('react-native-reanimated').setUpTests();
 
 /**
+ * @react-native-async-storage/async-storage requires a native module that does
+ * not exist in the Node/Jest environment. Use the official in-memory mock so
+ * any module that transitively imports AsyncStorage (e.g. @oxyhq/core's
+ * platformCrypto on the react-native code path) does not throw at load time.
+ */
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+);
+
+/**
  * Report fonts as already loaded so components that mount Bloom typography
  * (everything under BloomThemeProvider) don't trigger expo-font's async
  * `loadAsync().then(setLoaded)` after the synchronous test render — which would

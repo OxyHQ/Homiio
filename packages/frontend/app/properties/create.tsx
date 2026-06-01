@@ -1,8 +1,9 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, ScrollView, TouchableOpacity, Platform, KeyboardAvoidingView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Header } from '@/components/Header';
+import { useReferralStore } from '@/store/referralStore';
 import { ThemedText } from '@/components/ThemedText';
 import { Button } from '@oxyhq/bloom/button';
 import { StepsContainer } from '@/components/StepsContainer';
@@ -27,8 +28,24 @@ import {
 export default function CreatePropertyScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const { id, ref } = useLocalSearchParams();
   const propertyId = typeof id === 'string' ? id : undefined;
+
+  // Capture a partner referral code carried on the create-property link
+  // (`…/properties/create?ref=<code>`) into the persisted referral store. This
+  // is an external-store write (not React state of this component), so doing it
+  // in a `useMemo` keyed on the param is effect-free and runs only when the
+  // inbound `ref` actually changes — no `useEffect` needed. The store setter
+  // no-ops on a blank value, so navigating here without a `ref` never clears a
+  // previously captured code. Only meaningful on a new listing (the param is
+  // never present in edit mode), so attribution applies to the property the
+  // referral was for.
+  const referralParam = Array.isArray(ref) ? ref[0] : ref;
+  useMemo(() => {
+    if (!propertyId) {
+      useReferralStore.getState().setReferralCode(referralParam);
+    }
+  }, [referralParam, propertyId]);
 
   const {
     formData,

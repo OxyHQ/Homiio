@@ -92,6 +92,26 @@ export async function createProperty(req, res, next) {
 
     const propertyData = { ...req.body, profileId: req.body.profileId };
 
+    // Resolve an optional partner referral code into an attribution: a valid,
+    // active partner stamps `sourcedByPartner` + `sourcedByReferralCode` on the
+    // listing. An unknown/inactive code is ignored (the listing is still
+    // created — referral attribution is best-effort, never a hard failure), and
+    // the raw `referralCode` is never persisted directly.
+    const referralCode = typeof req.body.referralCode === 'string' ? req.body.referralCode.trim() : '';
+    delete propertyData.referralCode;
+    delete propertyData.sourcedByPartner;
+    delete propertyData.sourcedByReferralCode;
+    if (referralCode) {
+      const { Partner } = require('../../models');
+      const partner = await Partner.findOne({ referralCode: referralCode.toLowerCase(), status: 'active' });
+      if (partner) {
+        propertyData.sourcedByPartner = partner._id;
+        propertyData.sourcedByReferralCode = partner.referralCode;
+      } else {
+        logger.info('Property create: referral code did not match an active partner', { referralCode });
+      }
+    }
+
     // Validate & normalize per-offering fields: `offerings` must be present and
     // equal the set of present priced blocks, each with a positive price /
     // valid exchange mode. Also derives `sale.pricePerSqm`.

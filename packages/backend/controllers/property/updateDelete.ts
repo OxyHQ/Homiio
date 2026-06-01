@@ -1,6 +1,12 @@
+import { PropertyStatus } from '@homiio/shared-types';
 import { applyOfferingRulesForUpdate, OfferingValidationError } from './offeringRules';
+import { onPropertyTransacted } from '../../services/commissionService';
 const { Property } = require('../../models');
 const { AppError, successResponse } = require('../../middlewares/errorHandler');
+const { logger } = require('../../middlewares/logging');
+
+/** Statuses that close a deal and (for sourced listings) earn a commission. */
+const TERMINAL_STATUSES: ReadonlyArray<string> = [PropertyStatus.RENTED, PropertyStatus.SOLD];
 
 export async function updateProperty(req, res, next) {
   try {
@@ -55,12 +61,30 @@ export async function updateProperty(req, res, next) {
     }
     
     const updatedProperty = await Property.findByIdAndUpdate(
-      propertyId, 
-      { ...updateData, updatedAt: new Date() }, 
+      propertyId,
+      { ...updateData, updatedAt: new Date() },
       { new: true, runValidators: true }
     ).populate('addressId');
-    
+
     if (!updatedProperty) return next(new AppError('Failed to update property', 500, 'UPDATE_FAILED'));
+
+    // When this edit closes the deal (status → rented/sold) on a listing sourced
+    // by a partner, fire the commission trigger. It is idempotent, so editing a
+    // property that is already terminal never creates a second commission.
+    const transitionedToTerminal =
+      property.status !== updatedProperty.status && TERMINAL_STATUSES.includes(updatedProperty.status);
+    if (transitionedToTerminal && updatedProperty.sourcedByPartner) {
+      try {
+        await onPropertyTransacted(updatedProperty);
+      } catch (commissionError) {
+        // A commission failure must not fail the property update itself.
+        logger.error('Failed to process commission on property close', {
+          propertyId: String(propertyId),
+          error: commissionError instanceof Error ? commissionError.message : String(commissionError),
+        });
+      }
+    }
+
     res.json(successResponse(updatedProperty.toJSON(), 'Property updated successfully'));
   } catch (error) {
     if (error instanceof OfferingValidationError) {

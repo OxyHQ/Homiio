@@ -7,6 +7,7 @@ import { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import { ProfileType } from '@homiio/shared-types';
 import { Review } from '../models/Review';
+import { forwardGeocode } from '../services/geocodingService';
 const { Address, Profile } = require('../models');
 
 /**
@@ -213,114 +214,42 @@ export const createReview = async (req: Request, res: Response) => {
       return badRequest(res, { message: 'Opinion must be at least 10 characters long' });
     }
 
-    // Try to find existing address or create new one
-    let address;
-    
-    // Create normalized address for lookup
-    const normalizedAddress = {
-      street: addressData.street.trim(),
-      city: addressData.city.trim(),
-      state: addressData.state?.trim() || '',
-      postal_code: addressData.postal_code.trim(),
-      country: addressData.country.trim(),
-      number: addressData.number?.trim() || '',
-      building_name: addressData.building_name?.trim() || '',
-      floor: addressData.floor?.trim() || '',
-      unit: addressData.unit?.trim() || ''
-    };
+    // Resolve (find-or-create) the canonical building Address. Geo is
+    // relational: `findOrCreateCanonical` resolves the country/region/city/
+    // neighborhood id chain from coordinates (falling back to the place names)
+    // and dedupes the building by its normalized key. Coordinates are required,
+    // so when the client omits them we forward-geocode the address string once.
+    let coordinates = addressData.latitude && addressData.longitude
+      ? { type: 'Point' as const, coordinates: [parseFloat(addressData.longitude), parseFloat(addressData.latitude)] as [number, number] }
+      : undefined;
 
-    // Check if address already exists
-    // We'll look for an exact match on key fields, checking both new and legacy field names
-    address = await Address.findOne({
-      $or: [
-        // Modern field names
-        {
-          street: normalizedAddress.street,
-          city: normalizedAddress.city,
-          postal_code: normalizedAddress.postal_code,
-          country: normalizedAddress.country,
-          ...(normalizedAddress.state && { state: normalizedAddress.state }),
-          ...(normalizedAddress.number && { number: normalizedAddress.number }),
-          ...(normalizedAddress.building_name && { building_name: normalizedAddress.building_name }),
-          ...(normalizedAddress.floor && { floor: normalizedAddress.floor }),
-          ...(normalizedAddress.unit && { unit: normalizedAddress.unit })
-        },
-        // Legacy field names (zipCode instead of postal_code)
-        {
-          street: normalizedAddress.street,
-          city: normalizedAddress.city,
-          zipCode: normalizedAddress.postal_code,  // Check legacy zipCode field
-          country: normalizedAddress.country,
-          ...(normalizedAddress.state && { state: normalizedAddress.state }),
-          ...(normalizedAddress.number && { number: normalizedAddress.number }),
-          ...(normalizedAddress.building_name && { building_name: normalizedAddress.building_name }),
-          ...(normalizedAddress.floor && { floor: normalizedAddress.floor }),
-          ...(normalizedAddress.unit && { unit: normalizedAddress.unit })
-        }
-      ]
-    });
-
-    if (!address) {
-      // Create new address
-      const addressToCreate = {
-        street: normalizedAddress.street,
-        city: normalizedAddress.city,
-        state: normalizedAddress.state || undefined,
-        postal_code: normalizedAddress.postal_code,
-        country: normalizedAddress.country,
-        countryCode: 'ES', // Default for now, could be determined from country name
-        ...(normalizedAddress.number && { number: normalizedAddress.number }),
-        ...(normalizedAddress.building_name && { building_name: normalizedAddress.building_name }),
-        ...(normalizedAddress.floor && { floor: normalizedAddress.floor }),
-        ...(normalizedAddress.unit && { unit: normalizedAddress.unit }),
-        address_lines: [
-          normalizedAddress.street,
-          ...(normalizedAddress.number ? [normalizedAddress.number] : []),
-          ...(normalizedAddress.building_name ? [normalizedAddress.building_name] : [])
-        ].filter(Boolean),
-        // Use coordinates from request if available, otherwise default coordinates
-        coordinates: {
-          type: 'Point',
-          coordinates: addressData.latitude && addressData.longitude 
-            ? [parseFloat(addressData.longitude), parseFloat(addressData.latitude)] 
-            : [0, 0] // [longitude, latitude]
-        }
-      };
-
-      try {
-        // Create address directly
-        address = new Address(addressToCreate);
-        await address.save();
-        logger.info('Created new address', { addressId: address._id });
-      } catch (error: any) {
-        // Handle duplicate key error (E11000) by trying to find the existing address
-        if (error.code === 11000) {
-          logger.info('Address already exists (caught duplicate key error), attempting to find it');
-          
-          // Try to find the address again with broader search criteria
-          address = await Address.findOne({
-            street: normalizedAddress.street,
-            city: normalizedAddress.city,
-            state: normalizedAddress.state,
-            $or: [
-              { postal_code: normalizedAddress.postal_code },
-              { zipCode: normalizedAddress.postal_code }  // Legacy field
-            ]
-          });
-          
-          if (!address) {
-            // If we still can't find it, throw the original error
-            throw error;
-          }
-          
-          logger.info('Found existing address after duplicate key error', { addressId: address._id });
-        } else {
-          throw error;
-        }
+    if (!coordinates) {
+      const query = [addressData.street, addressData.number, addressData.city, addressData.state, addressData.postal_code, addressData.country]
+        .filter(Boolean)
+        .join(', ');
+      const geocoded = await forwardGeocode(query);
+      if (!geocoded.success || !geocoded.data?.coordinates) {
+        return badRequest(res, { message: 'Could not resolve coordinates for the address; please include latitude and longitude' });
       }
-    } else {
-      logger.info('Using existing address', { addressId: address._id });
+      coordinates = { type: 'Point', coordinates: geocoded.data.coordinates };
     }
+
+    const address = await Address.findOrCreateCanonical({
+      street: addressData.street.trim(),
+      number: addressData.number?.trim() || undefined,
+      building_name: addressData.building_name?.trim() || undefined,
+      floor: addressData.floor?.trim() || undefined,
+      unit: addressData.unit?.trim() || undefined,
+      postal_code: addressData.postal_code.trim(),
+      // Place NAMES are used to resolve the geo id chain (never persisted as text).
+      city: addressData.city.trim(),
+      state: addressData.state?.trim() || undefined,
+      country: addressData.country.trim(),
+      countryCode: addressData.countryCode,
+      neighborhood: addressData.neighborhood?.trim() || undefined,
+      coordinates,
+    });
+    logger.info('Resolved review address', { addressId: address._id });
 
     const addressLevel = address.getAddressLevel();
     
@@ -388,7 +317,16 @@ export const createReview = async (req: Request, res: Response) => {
     // Populate the saved review for response
     const populatedReview = await Review.findById(review._id)
       .populate('profileId', 'profileType personalProfile isAnonymous')
-      .populate('addressId', 'street city state postal_code country fullAddress')
+      .populate({
+        path: 'addressId',
+        select: 'street postal_code countryCode cityId regionId countryId neighborhoodId coordinates',
+        populate: [
+          { path: 'cityId', select: 'name' },
+          { path: 'regionId', select: 'name' },
+          { path: 'countryId', select: 'name code' },
+          { path: 'neighborhoodId', select: 'name' },
+        ],
+      })
       .lean();
 
     logger.info('Review created successfully', { reviewId: review._id, addressId: address._id });

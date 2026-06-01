@@ -174,8 +174,8 @@ export default function ReportListingScreen() {
             <View style={styles.propertyCard}>
               <ThemedText style={styles.propertyTitle}>{propertyTitle}</ThemedText>
               <ThemedText style={styles.propertyLocation}>
-                {property.address?.city}
-                {property.address?.country ? `, ${property.address.country}` : ''}
+                {property.address?.cityName}
+                {property.address?.countryName ? `, ${property.address.countryName}` : ''}
               </ThemedText>
             </View>
           ) : null}
