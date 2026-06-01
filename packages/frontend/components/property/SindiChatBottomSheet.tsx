@@ -121,13 +121,17 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
 
 <PROPERTIES_JSON>["${propertyId}"]</PROPERTIES_JSON>`;
                     } else {
-                        // Build default property message with safe property access
+                        // Build default property message with safe property access.
+                        // Prefer the long-term (monthly) price; fall back to the
+                        // short-term (nightly) price for vacation-only listings.
                         const bedrooms = property.bedrooms || 'unspecified';
                         const bathrooms = property.bathrooms || 'unspecified';
                         const location = property.address?.city || 'the area';
-                        const rent = property.rent?.amount || 'unspecified';
-                        const currency = property.rent?.currency || '';
-                        const priceUnit = property.priceUnit || 'month';
+                        const longTerm = property.longTermRent;
+                        const shortTerm = property.shortTermRent;
+                        const rent = longTerm?.monthlyAmount ?? shortTerm?.nightlyRate ?? 'unspecified';
+                        const currency = longTerm?.currency || shortTerm?.currency || '';
+                        const priceUnit = longTerm ? 'month' : shortTerm ? 'night' : 'month';
                         const propertyId = property._id || property.id;
 
                         messageToSend = `I'm interested in this property: ${type} with ${bedrooms} bedrooms and ${bathrooms} bathrooms in ${location}. The rent is ${rent} ${currency}/${priceUnit}. Can you help me understand more about this property and my rental rights?

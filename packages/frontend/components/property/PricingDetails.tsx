@@ -1,15 +1,17 @@
 /**
  * PricingDetails — "Pricing & Costs" block on the property detail.
  *
- * Migrated to Bloom Typography + Divider so the values inherit the canonical
- * type scale and the row separators are the canonical hairline. Prices render
- * through `CurrencyFormatter` (converts to the user's display currency) instead
- * of a hardcoded symbol.
+ * Reads the ACTIVE browse mode's priced block (the unit is fixed per block):
+ *  - Long-term (`longTermRent`): Rent + Deposit + Utilities, and a "Cost to move
+ *    in" breakdown of Rent + Deposit (+ one-time fees) = upfront total.
+ *  - Vacation (`shortTermRent`): Nightly rate + Deposit, and an upfront total of
+ *    nightly + Cleaning + Service + Taxes on the subtotal.
+ * The breakdown is omitted when there is nothing beyond the rent to total. Sale
+ * / exchange listings have their own dedicated sections, so this block self-hides
+ * when the active mode's rent block is absent.
  *
- * Folds in the "Cost to move in" breakdown (companion to the price block):
- *  - Long-term: Rent + Deposit (+ one-time Fees) = upfront total.
- *  - Vacation: Cleaning + Service + Taxes folded into an "Upfront total".
- * The breakdown is omitted when there is nothing beyond the rent to total.
+ * Prices render through `CurrencyFormatter` (converts to the user's display
+ * currency); row separators use the canonical Bloom `Divider`.
  */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -22,24 +24,13 @@ import { Section } from '@/components/property/Section';
 import { CurrencyFormatter } from '@/components/CurrencyFormatter';
 import { colors } from '@/styles/colors';
 import { hairline, radius, spacing } from '@/constants/styles';
-import { RentMode, type PriceBreakdown } from '@homiio/shared-types';
-
-interface PricingProperty {
-  rent?: {
-    amount?: number;
-    currency?: string;
-    deposit?: number;
-    paymentFrequency?: string;
-    utilities?: string;
-  };
-  priceUnit?: string;
-  rentMode?: RentMode;
-  priceBreakdown?: PriceBreakdown;
-  petFee?: number;
-}
+import { type Property } from '@homiio/shared-types';
+import type { RentalMode } from '@/utils/propertyUtils';
 
 interface Props {
-  property: PricingProperty | null | undefined;
+  property: Property | null | undefined;
+  /** The active rent experience — selects which priced block is shown. */
+  mode: RentalMode;
 }
 
 const PERCENT_DIVISOR = 100;
@@ -51,17 +42,24 @@ interface MoneyRow {
   amount: number;
 }
 
-export const PricingDetails: React.FC<Props> = ({ property }) => {
+export const PricingDetails: React.FC<Props> = ({ property, mode }) => {
   const { t } = useTranslation();
-  const rentAmount = property?.rent?.amount;
-  const rentFrequency = property?.priceUnit ?? property?.rent?.paymentFrequency;
-  const deposit = property?.rent?.deposit;
-  const currency = property?.rent?.currency ?? 'EUR';
-  const utilitiesValue = property?.rent?.utilities;
+
+  const isVacation = mode === 'vacation';
+  const longTerm = property?.longTermRent;
+  const shortTerm = property?.shortTermRent;
+
+  // The headline rent amount + its currency + per-unit suffix come from the
+  // active mode's block. The unit is fixed per block (month vs night).
+  const rentAmount = isVacation ? shortTerm?.nightlyRate : longTerm?.monthlyAmount;
+  const currency = (isVacation ? shortTerm?.currency : longTerm?.currency) ?? 'EUR';
+  const rentUnit = isVacation
+    ? t('listing.offering.perNightUnit', 'night')
+    : t('listing.offering.perMonthUnit', 'month');
+  const deposit = isVacation ? shortTerm?.deposit : longTerm?.deposit;
+  const utilitiesValue = isVacation ? undefined : longTerm?.utilities;
   const utilitiesIncluded =
     utilitiesValue === undefined ? undefined : utilitiesValue === 'included';
-  const isVacation = property?.rentMode === RentMode.VACATION;
-  const breakdown = property?.priceBreakdown;
 
   if (
     rentAmount === undefined &&
@@ -85,7 +83,7 @@ export const PricingDetails: React.FC<Props> = ({ property }) => {
   }
 
   // ----- Move-in cost breakdown -----
-  // Long-term move-in = rent + deposit + one-time fees (e.g. pet fee).
+  // Long-term move-in = rent + deposit (+ one-time application/late fees).
   // Vacation upfront = nightly + cleaning + service + taxes on the subtotal.
   const moveInRows: MoneyRow[] = [];
   let total = 0;
@@ -100,24 +98,24 @@ export const PricingDetails: React.FC<Props> = ({ property }) => {
   }
 
   if (isVacation) {
-    if (breakdown?.cleaningFee) {
+    if (shortTerm?.cleaningFee) {
       moveInRows.push({
         key: 'cleaning',
         label: t('property.moveInCost.cleaningFee'),
-        amount: breakdown.cleaningFee,
+        amount: shortTerm.cleaningFee,
       });
-      total += breakdown.cleaningFee;
+      total += shortTerm.cleaningFee;
     }
-    if (breakdown?.serviceFee) {
+    if (shortTerm?.serviceFee) {
       moveInRows.push({
         key: 'service',
         label: t('property.moveInCost.serviceFee'),
-        amount: breakdown.serviceFee,
+        amount: shortTerm.serviceFee,
       });
-      total += breakdown.serviceFee;
+      total += shortTerm.serviceFee;
     }
-    if (breakdown?.taxesPercent) {
-      const taxes = Math.round((total * breakdown.taxesPercent) / PERCENT_DIVISOR);
+    if (shortTerm?.taxesPercent) {
+      const taxes = Math.round((total * shortTerm.taxesPercent) / PERCENT_DIVISOR);
       moveInRows.push({
         key: 'taxes',
         label: t('property.moveInCost.taxes'),
@@ -134,13 +132,13 @@ export const PricingDetails: React.FC<Props> = ({ property }) => {
       });
       total += deposit;
     }
-    if (property?.petFee) {
+    if (longTerm?.applicationFee) {
       moveInRows.push({
-        key: 'petFee',
+        key: 'applicationFee',
         label: t('property.moveInCost.fees'),
-        amount: property.petFee,
+        amount: longTerm.applicationFee,
       });
-      total += property.petFee;
+      total += longTerm.applicationFee;
     }
   }
 
@@ -163,8 +161,8 @@ export const PricingDetails: React.FC<Props> = ({ property }) => {
                 showConversion={false}
                 style={styles.value}
               />
-              {row.key === 'rent' && rentFrequency ? (
-                <BloomText style={styles.unit}>{` /${rentFrequency}`}</BloomText>
+              {row.key === 'rent' ? (
+                <BloomText style={styles.unit}>{` /${rentUnit}`}</BloomText>
               ) : null}
             </BloomText>
           </View>

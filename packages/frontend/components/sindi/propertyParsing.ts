@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import {
-  PaymentFrequency,
+  OfferingType,
   PropertyStatus,
   PropertyType,
   UtilitiesIncluded,
@@ -51,7 +51,6 @@ const FILE_DATA_URL_REGEX = /<FILE_DATA_URL>[\s\S]*?<\/FILE_DATA_URL>/i;
 /** Defaults for the synthetic {@link Property} objects built from legacy search lines. */
 const DEFAULT_CURRENCY = 'USD';
 const DEFAULT_PROPERTY_TYPE = PropertyType.APARTMENT;
-const DEFAULT_PAYMENT_FREQUENCY = PaymentFrequency.MONTHLY;
 const DEFAULT_UTILITIES = UtilitiesIncluded.EXCLUDED;
 const DEFAULT_PROPERTY_STATUS = PropertyStatus.PUBLISHED;
 const DEFAULT_ROOM_COUNT = 1;
@@ -221,10 +220,12 @@ function buildSyntheticProperty({ id, type, price, city }: SyntheticPropertyInpu
     _id: id,
     id,
     type: toPropertyType(type),
-    rent: {
-      amount: price,
+    // Synthetic search-line listings are long-term rentals — the only price the
+    // legacy line carries is a monthly figure.
+    offerings: [OfferingType.LONG_TERM_RENT],
+    longTermRent: {
+      monthlyAmount: price,
       currency: DEFAULT_CURRENCY,
-      paymentFrequency: DEFAULT_PAYMENT_FREQUENCY,
       deposit: 0,
       utilities: DEFAULT_UTILITIES,
     },

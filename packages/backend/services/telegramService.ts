@@ -180,7 +180,9 @@ class TelegramService {
       type,
       bedrooms,
       bathrooms,
-      rent,
+      longTermRent,
+      shortTermRent,
+      sale,
       address,
       description,
       amenities,
@@ -198,12 +200,21 @@ class TelegramService {
       bedrooms,
       bathrooms
     });
-    
+
     const dynamicTitle = `🏠 **${this.escapeMarkdown(largeTitle)}**`;
-    
-    // Format rent
-    const paymentFreq = t.__(`telegram.paymentFrequency.${rent.paymentFrequency}`) || rent.paymentFrequency;
-    const rentDisplay = `${rent.currency} ${rent.amount.toLocaleString()}/${paymentFreq}`;
+
+    // Format price from the listing's primary offering block (monthly rent →
+    // nightly rate → sale price). Falls back to a neutral label when none set.
+    let rentDisplay = t.__('telegram.priceOnRequest') || 'Price on request';
+    if (longTermRent?.monthlyAmount) {
+      const perMonth = t.__('telegram.perMonth') || 'month';
+      rentDisplay = `${longTermRent.currency} ${Number(longTermRent.monthlyAmount).toLocaleString()}/${perMonth}`;
+    } else if (shortTermRent?.nightlyRate) {
+      const perNight = t.__('telegram.perNight') || 'night';
+      rentDisplay = `${shortTermRent.currency} ${Number(shortTermRent.nightlyRate).toLocaleString()}/${perNight}`;
+    } else if (sale?.price) {
+      rentDisplay = `${sale.currency} ${Number(sale.price).toLocaleString()}`;
+    }
     
     // Format amenities (limit to first 5)
     const amenitiesText = amenities && amenities.length > 0 

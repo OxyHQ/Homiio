@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiltersBottomSheet, FilterSection, FilterValue } from '@/components/FiltersBar/FiltersBottomSheet';
 import { useRentalMode } from '@/context/RentalModeContext';
-import { CancellationPolicy, ListingIntent } from '@homiio/shared-types';
+import { CancellationPolicy } from '@homiio/shared-types';
 
 /**
  * Shared filter shape used by SearchScreen + SearchBar quick filters.
@@ -10,7 +10,8 @@ import { CancellationPolicy, ListingIntent } from '@homiio/shared-types';
  * The schema is intentionally permissive about long-term vs vacation fields
  * because the same listing can appear in either mode. Sections are gated by
  * the active mode at render time (see `filterSections` below) rather than at
- * the type level.
+ * the type level. The active OFFERING (rent / sale / exchange) is owned by the
+ * top-level browse toggle, not this sheet, so there is no listing-type section.
  */
 export interface SearchFilters {
     minPrice: number;
@@ -18,8 +19,6 @@ export interface SearchFilters {
     bedrooms: number | string;
     bathrooms: number | string;
     type?: string;
-    /** Listing type to scope to (rent / sale / exchange). Undefined = any. */
-    intent?: ListingIntent;
     amenities?: string[];
 
     // Vacation-specific
@@ -42,12 +41,6 @@ interface SearchFiltersBottomSheetProps {
     onApply: () => void;
     onClear: () => void;
 }
-
-const LISTING_TYPES = [
-    { id: ListingIntent.RENT, label: 'listing.intent.rent', fallback: 'Rent' },
-    { id: ListingIntent.SALE, label: 'listing.intent.sale', fallback: 'For sale' },
-    { id: ListingIntent.EXCHANGE, label: 'listing.intent.exchange', fallback: 'Exchange' },
-];
 
 const PROPERTY_TYPES_LONG_TERM = [
     { id: 'apartment', label: 'Apartments' },
@@ -103,17 +96,6 @@ export function SearchFiltersBottomSheet({
     const filterSections: FilterSection[] = useMemo(() => {
         const propertyTypes = mode === 'vacation' ? PROPERTY_TYPES_VACATION : PROPERTY_TYPES_LONG_TERM;
         const sections: FilterSection[] = [
-            {
-                id: 'intent',
-                title: t('search.filters.listingType', 'Listing type'),
-                type: 'chips',
-                options: LISTING_TYPES.map((listingType) => ({
-                    id: listingType.id,
-                    label: t(listingType.label, listingType.fallback),
-                    value: listingType.id,
-                })),
-                value: filters.intent,
-            },
             {
                 id: 'type',
                 title: t('Property Type'),

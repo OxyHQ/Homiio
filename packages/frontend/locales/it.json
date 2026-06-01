@@ -982,11 +982,6 @@
     }
   },
   "listing": {
-    "intent": {
-      "rent": "Affitto",
-      "sale": "In vendita",
-      "exchange": "Scambio"
-    },
     "exchange": {
       "free": "Gratis",
       "sectionTitle": "Scambio casa",
@@ -1107,12 +1102,50 @@
       }
     },
     "badge": {
+      "byNight": "A notte",
       "forSale": "In vendita",
       "exchange": "Scambio"
     },
     "offering": {
       "stepTitle": "Come lo offri?",
-      "stepHelp": "Scegli una o più opzioni. Puoi affittare e vendere lo stesso immobile."
+      "stepHelp": "Scegli una o più opzioni. Puoi affittare e vendere lo stesso immobile.",
+      "currency": "Valuta",
+      "alsoAvailable": "Disponibile anche",
+      "perMonthUnit": "mese",
+      "perNightUnit": "notte",
+      "longTerm": "Affitto mensile",
+      "longTermHelp": "Contratto a lungo termine, prezzo al mese.",
+      "longTermStepTitle": "Affitto mensile",
+      "nightly": "Affitto a notte",
+      "nightlyHelp": "Vacanze / soggiorni brevi, prezzo a notte.",
+      "nightlyStepTitle": "Tariffa a notte",
+      "sell": "Vendi",
+      "sellHelp": "Metti l'immobile in vendita.",
+      "exchange": "Scambio",
+      "exchangeHelp": "Scambio casa o ospitalità gratuita.",
+      "summary": {
+        "longTerm": "Mensile",
+        "nightly": "A notte",
+        "sale": "In vendita",
+        "exchange": "Scambio"
+      }
+    },
+    "pricing": {
+      "monthlyRent": "Affitto mensile",
+      "securityDeposit": "Cauzione",
+      "applicationFee": "Costi di candidatura",
+      "lateFee": "Mora per ritardo"
+    },
+    "nightly": {
+      "nightlyRate": "Tariffa a notte",
+      "cleaningFee": "Costi di pulizia",
+      "serviceFee": "Costi di servizio",
+      "taxesPercent": "Tasse (%)",
+      "minNights": "Notti min.",
+      "maxNights": "Notti max.",
+      "noMax": "Nessun max.",
+      "instantBook": "Prenotazione immediata",
+      "previewTitle": "Totale di esempio per {{count}} notti"
     },
     "sale": {
       "stepTitle": "Dettagli della vendita",

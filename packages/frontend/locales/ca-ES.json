@@ -1097,11 +1097,6 @@
     }
   },
   "listing": {
-    "intent": {
-      "rent": "Lloguer",
-      "sale": "En venda",
-      "exchange": "Intercanvi"
-    },
     "exchange": {
       "free": "Gratis",
       "sectionTitle": "Intercanvi de casa",
@@ -1222,12 +1217,50 @@
       }
     },
     "badge": {
+      "byNight": "Per nit",
       "forSale": "En venda",
       "exchange": "Intercanvi"
     },
     "offering": {
       "stepTitle": "Com ho ofereixes?",
-      "stepHelp": "Tria una o més opcions. Pots llogar i vendre el mateix immoble."
+      "stepHelp": "Tria una o més opcions. Pots llogar i vendre el mateix immoble.",
+      "currency": "Moneda",
+      "alsoAvailable": "També disponible",
+      "perMonthUnit": "mes",
+      "perNightUnit": "nit",
+      "longTerm": "Lloguer mensual",
+      "longTermHelp": "Contracte de llarga durada, preu per mes.",
+      "longTermStepTitle": "Lloguer mensual",
+      "nightly": "Lloguer per nit",
+      "nightlyHelp": "Vacances / estades curtes, preu per nit.",
+      "nightlyStepTitle": "Tarifa per nit",
+      "sell": "Vendre",
+      "sellHelp": "Posa l'immoble en venda.",
+      "exchange": "Intercanvi",
+      "exchangeHelp": "Intercanvi de casa o allotjament gratuït.",
+      "summary": {
+        "longTerm": "Mensual",
+        "nightly": "Per nit",
+        "sale": "En venda",
+        "exchange": "Intercanvi"
+      }
+    },
+    "pricing": {
+      "monthlyRent": "Lloguer mensual",
+      "securityDeposit": "Fiança",
+      "applicationFee": "Tarifa de sol·licitud",
+      "lateFee": "Recàrrec per retard"
+    },
+    "nightly": {
+      "nightlyRate": "Tarifa per nit",
+      "cleaningFee": "Tarifa de neteja",
+      "serviceFee": "Tarifa de servei",
+      "taxesPercent": "Impostos (%)",
+      "minNights": "Nits mín.",
+      "maxNights": "Nits màx.",
+      "noMax": "Sense màx.",
+      "instantBook": "Reserva instantània",
+      "previewTitle": "Total d'exemple per a {{count}} nits"
     },
     "sale": {
       "stepTitle": "Detalls de la venda",

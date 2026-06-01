@@ -7,30 +7,51 @@ import {
   PropertyStatus,
   HousingType,
   LayoutType,
-  PaymentFrequency,
   UtilitiesIncluded,
   PriceUnit,
   GeoJSONPoint,
-  RentMode,
+  OfferingType,
   AvailabilityWindow,
   CancellationPolicy,
-  PriceBreakdown,
-  ListingIntent,
   ExchangeMode,
   DeepPartial
 } from './common';
 import { Address } from './address';
 
-export interface PropertyRent {
-  amount: number;
+/**
+ * Long-term (monthly) rent pricing for a listing carrying the
+ * {@link OfferingType.LONG_TERM_RENT} offering. The amount is always a monthly
+ * figure — the unit is fixed and never reinterpreted by browse mode.
+ */
+export interface LongTermRent {
+  monthlyAmount: number;
   currency: string;
-  paymentFrequency: PaymentFrequency;
-  deposit: number;
-  utilities: UtilitiesIncluded;
-  hasIncomeBasedPricing?: boolean;
-  hasSlidingScale?: boolean;
-  hasUtilitiesIncluded?: boolean;
-  hasReducedDeposit?: boolean;
+  deposit?: number;
+  applicationFee?: number;
+  lateFee?: number;
+  utilities?: UtilitiesIncluded;
+}
+
+/**
+ * Short-term (per-night) rent pricing for a listing carrying the
+ * {@link OfferingType.SHORT_TERM_RENT} offering. `nightlyRate` is always a
+ * per-night figure. Fees and taxes feed the booking quote total
+ * (`nightlyRate * nights + cleaningFee + serviceFee`, then `taxesPercent`).
+ */
+export interface ShortTermRent {
+  nightlyRate: number;
+  currency: string;
+  cleaningFee?: number;
+  serviceFee?: number;
+  /** Percentage 0-100, applied to (nightlyRate * nights + cleaningFee + serviceFee). */
+  taxesPercent?: number;
+  /** Minimum number of nights guests can book. */
+  minNights?: number;
+  /** Maximum number of nights guests can book. */
+  maxNights?: number;
+  /** When true, bookings confirm without host approval. */
+  instantBook?: boolean;
+  deposit?: number;
 }
 
 /**
@@ -48,9 +69,9 @@ export interface PropertySale {
 }
 
 /**
- * Home-exchange offer for a listing with the EXCHANGE intent (swap / hosting).
- * Reuses the same {@link AvailabilityWindow} type as vacation rentals so the
- * calendar primitives stay consistent across intents.
+ * Home-exchange offer for a listing carrying the `EXCHANGE` offering (swap /
+ * hosting). Reuses the same {@link AvailabilityWindow} type as short-term
+ * rentals so the calendar primitives stay consistent across offerings.
  */
 export interface PropertyExchange {
   mode: ExchangeMode;
@@ -161,8 +182,16 @@ export interface Property {
   squareFootage?: number;
   bedrooms?: number;
   bathrooms?: number;
-  rent: PropertyRent;
-  priceUnit?: PriceUnit;
+  /**
+   * The single source of truth for how this listing is offered. Each offering
+   * is backed by its own priced block below; the server validates that
+   * `offerings` exactly equals the set of present blocks.
+   */
+  offerings: OfferingType[];
+  /** Monthly-rent pricing, present iff `offerings` includes `LONG_TERM_RENT`. */
+  longTermRent?: LongTermRent;
+  /** Per-night pricing, present iff `offerings` includes `SHORT_TERM_RENT`. */
+  shortTermRent?: ShortTermRent;
   amenities?: string[];
   images?: string[] | PropertyImage[];
   status: PropertyStatus;
@@ -195,32 +224,18 @@ export interface Property {
   smokingAllowed?: boolean;
   partiesAllowed?: boolean;
   guestsAllowed?: boolean;
-  // Hybrid rental mode (long-term / vacation / both)
-  rentMode?: RentMode;
   /**
-   * Calendar windows for vacation/short-term mode.
+   * Calendar windows for short-term (vacation) bookings.
    * Empty array (or undefined) = always available.
    * NOTE: persisted server-side as `availabilityWindows` to avoid colliding
    * with the legacy `availability` object subschema on the Property document.
    */
   availabilityWindows?: AvailabilityWindow[];
-  /** Minimum number of nights guests can book. */
-  minStay?: number;
-  /** Maximum number of nights guests can book. */
-  maxStay?: number;
-  /** Vacation-mode cancellation policy. */
+  /** Short-term-mode cancellation policy. */
   cancellationPolicy?: CancellationPolicy;
-  /** When true, vacation bookings confirm without host approval. */
-  instantBook?: boolean;
-  /** Optional vacation-mode fee breakdown. */
-  priceBreakdown?: PriceBreakdown;
-  // Multi-intent platform (rent / sale / exchange). All additive & optional;
-  // a listing with no `intents` is treated as rent-only for back-compat.
-  /** Ways this listing is offered. Defaults to `['rent']` when absent. */
-  intents?: ListingIntent[];
-  /** Sale pricing, present when `intents` includes `'sale'`. */
+  /** Sale pricing, present iff `offerings` includes `SALE`. */
   sale?: PropertySale;
-  /** Home-exchange offer, present when `intents` includes `'exchange'`. */
+  /** Home-exchange offer, present iff `offerings` includes `EXCHANGE`. */
   exchange?: PropertyExchange;
   // Flags
   isVerified?: boolean;
@@ -252,8 +267,12 @@ export interface CreatePropertyData {
   squareFootage?: number;
   bedrooms?: number;
   bathrooms?: number;
-  rent: PropertyRent;
-  priceUnit?: PriceUnit;
+  /** The single source of truth for how this listing is offered. */
+  offerings: OfferingType[];
+  /** Monthly-rent pricing, required when `offerings` includes `LONG_TERM_RENT`. */
+  longTermRent?: LongTermRent;
+  /** Per-night pricing, required when `offerings` includes `SHORT_TERM_RENT`. */
+  shortTermRent?: ShortTermRent;
   amenities?: string[];
   images?: string[];
   location?: GeoJSONPoint;
@@ -280,16 +299,8 @@ export interface CreatePropertyData {
   smokingAllowed?: boolean;
   partiesAllowed?: boolean;
   guestsAllowed?: boolean;
-  // Hybrid rental mode
-  rentMode?: RentMode;
   availabilityWindows?: AvailabilityWindow[];
-  minStay?: number;
-  maxStay?: number;
   cancellationPolicy?: CancellationPolicy;
-  instantBook?: boolean;
-  priceBreakdown?: PriceBreakdown;
-  // Multi-intent platform (rent / sale / exchange)
-  intents?: ListingIntent[];
   sale?: PropertySale;
   exchange?: PropertyExchange;
   // Accommodation-specific details
@@ -335,22 +346,24 @@ export interface PropertyFilters {
   parking?: boolean;
   verified?: boolean;
   eco?: boolean;
-  // Hybrid filters
-  /** Filter by rent mode. `'both'` listings match either `long_term` or `vacation` requests. */
-  rentMode?: RentMode;
+  // Offering filters
+  /**
+   * Restrict to listings carrying this offering (matches arrays containing it).
+   * Also selects which priced block `minRent`/`maxRent` (or the offering's own
+   * range) apply to: `long_term_rent`→`longTermRent.monthlyAmount`,
+   * `short_term_rent`→`shortTermRent.nightlyRate`, `sale`→`sale.price`.
+   */
+  offering?: OfferingType;
   instantBook?: boolean;
-  /** Check-in date for vacation availability filtering (ISO-8601). */
+  /** Check-in date for short-term availability filtering (ISO-8601). */
   checkIn?: string;
-  /** Check-out date for vacation availability filtering (ISO-8601). */
+  /** Check-out date for short-term availability filtering (ISO-8601). */
   checkOut?: string;
   /** Required number of guests the listing must accommodate. */
   guests?: number;
-  // Multi-intent filters
-  /** Restrict to listings carrying this intent (matches arrays containing it). */
-  intent?: ListingIntent;
-  /** Minimum sale price (only meaningful with `intent === 'sale'`). */
+  /** Minimum sale price (only meaningful with `offering === 'sale'`). */
   minSalePrice?: number;
-  /** Maximum sale price (only meaningful with `intent === 'sale'`). */
+  /** Maximum sale price (only meaningful with `offering === 'sale'`). */
   maxSalePrice?: number;
   /** Exchange mode filter. A `'both'` listing matches a `swap` or `host` request. */
   exchangeMode?: ExchangeMode;
@@ -482,10 +495,10 @@ export interface AreaNeighborhoodVsCity {
 /**
  * Payload returned by `GET /api/properties/:propertyId/area-insights`.
  *
- * Compares the target listing's price to similar homes nearby (same
- * `priceUnit`, compatible `rentMode`, ±1 bedroom). `sampleSize === 0` signals
- * that no comparables were found — consumers must render a graceful
- * "not enough data" state rather than a fabricated range.
+ * Compares the target listing's price to similar homes nearby (same active
+ * offering, ±1 bedroom). `sampleSize === 0` signals that no comparables were
+ * found — consumers must render a graceful "not enough data" state rather than
+ * a fabricated range.
  */
 export interface PropertyAreaInsights {
   basis: AreaInsightsBasis;

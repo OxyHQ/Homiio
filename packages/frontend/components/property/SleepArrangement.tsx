@@ -9,7 +9,7 @@
  * call sites.
  *
  * Only renders when:
- *   - the property is vacation-capable (`rentMode` is VACATION or BOTH), AND
+ *   - the property is vacation-capable (carries the SHORT_TERM_RENT offering), AND
  *   - the user is currently browsing in vacation mode, AND
  *   - the listing reports at least one bedroom.
  *

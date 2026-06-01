@@ -1324,11 +1324,6 @@
     }
   },
   "listing": {
-    "intent": {
-      "rent": "Rent",
-      "sale": "For sale",
-      "exchange": "Exchange"
-    },
     "exchange": {
       "free": "Free",
       "sectionTitle": "Home exchange",
@@ -1449,12 +1444,50 @@
       }
     },
     "badge": {
+      "byNight": "By night",
       "forSale": "For sale",
       "exchange": "Exchange"
     },
     "offering": {
       "stepTitle": "How are you offering this?",
-      "stepHelp": "Choose one or more. You can rent and sell the same place."
+      "stepHelp": "Choose one or more. You can rent and sell the same place.",
+      "currency": "Currency",
+      "alsoAvailable": "Also available",
+      "perMonthUnit": "month",
+      "perNightUnit": "night",
+      "longTerm": "Rent monthly",
+      "longTermHelp": "Traditional long-term lease, priced per month.",
+      "longTermStepTitle": "Monthly rent",
+      "nightly": "Rent by night",
+      "nightlyHelp": "Vacation / short stays, priced per night.",
+      "nightlyStepTitle": "Nightly rate",
+      "sell": "Sell",
+      "sellHelp": "List the property for sale.",
+      "exchange": "Exchange",
+      "exchangeHelp": "Home swap or free hosting.",
+      "summary": {
+        "longTerm": "Monthly",
+        "nightly": "By night",
+        "sale": "For sale",
+        "exchange": "Exchange"
+      }
+    },
+    "pricing": {
+      "monthlyRent": "Monthly Rent",
+      "securityDeposit": "Security Deposit",
+      "applicationFee": "Application Fee",
+      "lateFee": "Late Fee"
+    },
+    "nightly": {
+      "nightlyRate": "Nightly rate",
+      "cleaningFee": "Cleaning fee",
+      "serviceFee": "Service fee",
+      "taxesPercent": "Taxes (%)",
+      "minNights": "Min nights",
+      "maxNights": "Max nights",
+      "noMax": "No max",
+      "instantBook": "Instant book",
+      "previewTitle": "Example {{count}}-night total"
     },
     "sale": {
       "stepTitle": "Sale details",

@@ -198,7 +198,7 @@ export default function StaysScreen() {
                 }
                 actionText={filter === 'all' ? 'Explore stays' : 'Explore stays'}
                 actionIcon="search-outline"
-                onAction={() => router.push('/search?rentMode=vacation')}
+                onAction={() => router.push('/search?offering=short_term_rent')}
               />
             </View>
           ) : (

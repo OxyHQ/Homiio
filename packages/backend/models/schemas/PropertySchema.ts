@@ -7,75 +7,98 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
 const { transformAddressFields } = require('../../utils/helpers');
+const { validateOfferings } = require('./offeringValidation');
 const {
   PropertyType,
   PropertyStatus,
   HousingType,
   LayoutType,
-  PaymentFrequency,
   UtilitiesIncluded,
   LeaseDuration,
-  RentMode,
   AvailabilityWindowStatus,
   CancellationPolicy,
-  ListingIntent,
+  OfferingType,
   ExchangeMode
 } = require('@homiio/shared-types');
 
-/**
- * Back-compat: every listing predating the multi-intent model has no stored
- * `intents`. Surface those (and any empty array) as rent-only so the field is
- * always present and meaningful on every read path (lean queries, toJSON,
- * toObject). Mutates the passed plain object in place.
- */
-function normalizeIntents(ret: any): void {
-  if (ret && (!Array.isArray(ret.intents) || ret.intents.length === 0)) {
-    ret.intents = [ListingIntent.RENT];
-  }
-}
+/** Currency codes accepted on every priced block (rent / sale / exchange). */
+const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'FAIR'];
 
-const rentSchema = new mongoose.Schema({
-  amount: {
+// Monthly-rent pricing block (offering: long_term_rent). 'FAIR' is 4 chars so
+// no length cap is applied — only the shared currency enum.
+const longTermRentSchema = new mongoose.Schema({
+  monthlyAmount: {
     type: Number,
-    required: [true, 'Rent amount is required'],
-    min: [0, 'Rent amount must be positive']
+    required: [true, 'Monthly amount is required'],
+    min: [0, 'Monthly amount must be positive']
   },
   currency: {
     type: String,
     required: true,
-    enum: ['USD', 'EUR', 'GBP', 'CAD', 'FAIR'],
+    uppercase: true,
+    enum: SUPPORTED_CURRENCIES,
     default: 'EUR'
-  },
-  paymentFrequency: {
-    type: String,
-    enum: Object.values(PaymentFrequency),
-    default: PaymentFrequency.MONTHLY
   },
   deposit: {
     type: Number,
-    min: [0, 'Deposit must be positive'],
-    default: 0
+    min: [0, 'Deposit must be positive']
+  },
+  applicationFee: {
+    type: Number,
+    min: [0, 'Application fee must be positive']
+  },
+  lateFee: {
+    type: Number,
+    min: [0, 'Late fee must be positive']
   },
   utilities: {
     type: String,
-    enum: Object.values(UtilitiesIncluded),
-    default: UtilitiesIncluded.EXCLUDED
+    enum: Object.values(UtilitiesIncluded)
+  }
+}, { _id: false });
+
+// Per-night pricing block (offering: short_term_rent).
+const shortTermRentSchema = new mongoose.Schema({
+  nightlyRate: {
+    type: Number,
+    required: [true, 'Nightly rate is required'],
+    min: [0, 'Nightly rate must be positive']
   },
-  hasIncomeBasedPricing: {
+  currency: {
+    type: String,
+    required: true,
+    uppercase: true,
+    enum: SUPPORTED_CURRENCIES,
+    default: 'EUR'
+  },
+  cleaningFee: {
+    type: Number,
+    min: [0, 'Cleaning fee cannot be negative']
+  },
+  serviceFee: {
+    type: Number,
+    min: [0, 'Service fee cannot be negative']
+  },
+  taxesPercent: {
+    type: Number,
+    min: [0, 'Taxes percent cannot be negative'],
+    max: [100, 'Taxes percent cannot exceed 100']
+  },
+  minNights: {
+    type: Number,
+    min: [1, 'Minimum nights must be at least 1']
+  },
+  maxNights: {
+    type: Number,
+    min: [1, 'Maximum nights must be at least 1']
+  },
+  instantBook: {
     type: Boolean,
     default: false
   },
-  hasSlidingScale: {
-    type: Boolean,
-    default: false
-  },
-  hasUtilitiesIncluded: {
-    type: Boolean,
-    default: false
-  },
-  hasReducedDeposit: {
-    type: Boolean,
-    default: false
+  deposit: {
+    type: Number,
+    min: [0, 'Deposit must be positive']
   }
 }, { _id: false });
 
@@ -149,24 +172,7 @@ const availabilityWindowSchema = new mongoose.Schema({
   }
 }, { _id: false });
 
-// Vacation-mode fee breakdown.
-const priceBreakdownSchema = new mongoose.Schema({
-  cleaningFee: {
-    type: Number,
-    min: [0, 'Cleaning fee cannot be negative']
-  },
-  serviceFee: {
-    type: Number,
-    min: [0, 'Service fee cannot be negative']
-  },
-  taxesPercent: {
-    type: Number,
-    min: [0, 'Taxes percent cannot be negative'],
-    max: [100, 'Taxes percent cannot exceed 100']
-  }
-}, { _id: false });
-
-// Sale pricing for listings carrying the SALE intent (buy flow).
+// Sale pricing for listings carrying the SALE offering (buy flow).
 const saleSchema = new mongoose.Schema({
   price: {
     type: Number,
@@ -175,10 +181,10 @@ const saleSchema = new mongoose.Schema({
   currency: {
     type: String,
     uppercase: true,
-    // Same currency set as `rentSchema.currency` so rent/sale codes stay
-    // consistent. Note 'FAIR' is 4 chars, so no minlength/maxlength constraint
-    // (a length cap would wrongly reject 'FAIR' which rent accepts).
-    enum: ['USD', 'EUR', 'GBP', 'CAD', 'FAIR']
+    // Shared 5-code currency set so rent/sale codes stay consistent. Note
+    // 'FAIR' is 4 chars, so no minlength/maxlength constraint (a length cap
+    // would wrongly reject 'FAIR').
+    enum: SUPPORTED_CURRENCIES
   },
   pricePerSqm: {
     type: Number,
@@ -346,29 +352,28 @@ const propertySchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  rent: {
-    type: rentSchema,
-    // Not unconditionally required: a listing that does NOT carry the RENT
-    // intent (sale-only or exchange-only) may legitimately omit the rent block.
-    // The `hasTransactablePrice` path validator below still guarantees the
-    // listing is transactable via its sale price / exchange offer.
-    required: function(this: any) {
-      const intents = Array.isArray(this.intents) ? this.intents : [];
-      // Empty/missing intents read as rent-only (back-compat) → rent required.
-      if (intents.length === 0) return true;
-      return intents.includes(ListingIntent.RENT);
-    }
+  // ---- Per-offering priced blocks ----
+  // `offerings` is the single source of truth; the `offeringValidation` path
+  // validator guarantees it equals exactly the set of present blocks, each with
+  // a positive price / valid exchange mode.
+  offerings: {
+    type: [{ type: String, enum: Object.values(OfferingType) }],
+    required: true,
+    default: []
+  },
+  longTermRent: {
+    type: longTermRentSchema,
+    default: undefined
+  },
+  shortTermRent: {
+    type: shortTermRentSchema,
+    default: undefined
   },
   amenities: [{
     type: String,
     trim: true,
     lowercase: true
   }],
-  priceUnit: {
-    type: String,
-    enum: ['day', 'night', 'week', 'month', 'year'],
-    default: 'month'
-  },
   furnishedStatus: {
     type: String,
     enum: ['furnished', 'unfurnished', 'partially_furnished', 'not_specified'],
@@ -420,43 +425,16 @@ const propertySchema = new mongoose.Schema({
     min: [1, 'Maximum guests must be at least 1'],
     default: 1
   },
-  // ---- Hybrid rental (long-term + vacation) fields ----
-  rentMode: {
-    type: String,
-    enum: Object.values(RentMode),
-    default: RentMode.LONG_TERM,
-    index: true
-  },
+  // ---- Short-term (vacation) calendar + booking policy ----
   availabilityWindows: {
     type: [availabilityWindowSchema],
     default: []
-  },
-  minStay: {
-    type: Number,
-    min: [1, 'Minimum stay must be at least 1 night']
-  },
-  maxStay: {
-    type: Number,
-    min: [1, 'Maximum stay must be at least 1 night']
   },
   cancellationPolicy: {
     type: String,
     enum: Object.values(CancellationPolicy)
   },
-  instantBook: {
-    type: Boolean,
-    default: false
-  },
-  priceBreakdown: {
-    type: priceBreakdownSchema,
-    default: undefined
-  },
-  // ---- Multi-intent platform (rent / sale / exchange) ----
-  // A listing may carry several intents at once; empty/missing reads as rent-only.
-  intents: {
-    type: [{ type: String, enum: Object.values(ListingIntent) }],
-    default: [ListingIntent.RENT]
-  },
+  // ---- Sale / exchange offering blocks ----
   sale: {
     type: saleSchema,
     default: undefined
@@ -628,9 +606,6 @@ const propertySchema = new mongoose.Schema({
     transform: function(doc, ret) {
       ret.id = ret._id;
 
-      // Back-compat: legacy listings predate `intents`; surface them as rent-only.
-      normalizeIntents(ret);
-
       // Apply address field transformation
       transformAddressFields(ret);
 
@@ -640,9 +615,6 @@ const propertySchema = new mongoose.Schema({
   toObject: {
     virtuals: true,
     transform: function(doc, ret) {
-      // Back-compat: legacy listings predate `intents`; surface them as rent-only.
-      normalizeIntents(ret);
-
       // Apply address field transformation (used by lean queries)
       transformAddressFields(ret);
 
@@ -657,7 +629,6 @@ propertySchema.index({ profileId: 1, createdAt: -1 }); // User's property list q
 propertySchema.index({ addressId: 1 });
 propertySchema.index({ type: 1, 'availability.isAvailable': 1 });
 propertySchema.index({ status: 1, 'availability.isAvailable': 1 }); // Search queries
-propertySchema.index({ 'rent.amount': 1 });
 propertySchema.index({ bedrooms: 1, bathrooms: 1 });
 propertySchema.index({ amenities: 1 });
 propertySchema.index({ createdAt: -1 });
@@ -668,58 +639,41 @@ propertySchema.index({
   title: 'text',
   description: 'text'
 });
-// ---- Hybrid rental indexes ----
-// Mode-aware feed queries: list properties for a given rent mode, city and status.
-// addressId is denormalized into a separate join, so the cheapest compound that
-// still scopes the listing feed is (rentMode, status, type).
-propertySchema.index({ rentMode: 1, status: 1, type: 1 });
+// ---- Per-offering indexes ----
+// Offering-scoped feed queries (offerings is an array; the index matches membership).
+propertySchema.index({ offerings: 1, status: 1 });
+// Price-range filtering + price sort, resolved per offering.
+propertySchema.index({ 'longTermRent.monthlyAmount': 1 });
+propertySchema.index({ 'shortTermRent.nightlyRate': 1 });
+propertySchema.index({ 'sale.price': 1 });
 // Calendar range queries: find listings with windows overlapping a request range.
 propertySchema.index({ 'availabilityWindows.start': 1 });
 propertySchema.index({ 'availabilityWindows.end': 1 });
-// Vacation feed sort: highlight instant-book listings.
-propertySchema.index({ rentMode: 1, instantBook: 1, status: 1 });
-// ---- Multi-intent indexes (rent / sale / exchange) ----
-// Intent-scoped feed queries (intents is an array; the index matches membership).
-propertySchema.index({ intents: 1, status: 1 });
-// Sale price range filtering and salePrice sort.
-propertySchema.index({ 'sale.price': 1 });
-// Exchange feed queries scoped by intent + exchange mode + status.
-propertySchema.index({ intents: 1, 'exchange.mode': 1, status: 1 });
+// Exchange feed queries scoped by offering + exchange mode + status.
+propertySchema.index({ offerings: 1, 'exchange.mode': 1, status: 1 });
 
 /**
- * A listing is valid when at least one of its declared intents can actually be
- * fulfilled:
- *  - RENT: a positive `rent.amount`,
- *  - SALE: the SALE intent + a positive `sale.price`,
- *  - EXCHANGE: the EXCHANGE intent + a valid `exchange.mode` (a swap/hosting
- *    offer carries no price — its "value" is the exchange itself).
- *
- * This keeps the `rent` field present (so downstream `property.rent` access
- * never throws) while letting sale-only and exchange-only listings skip a
- * meaningful rent. Legacy rent docs (rent > 0) always pass.
+ * Offerings must be non-empty and equal exactly the set of present priced
+ * blocks (long_term_rent↔longTermRent, short_term_rent↔shortTermRent,
+ * sale↔sale, exchange↔exchange), each with a positive price / valid exchange
+ * mode. The rule lives once in `offeringValidation` so it can't drift between
+ * the schema and the controllers. Attached to `offerings` so it runs on save
+ * and on `findOneAndUpdate` with `runValidators`.
  */
-function hasTransactablePrice(this: any): boolean {
-  const rentAmount = this.rent?.amount;
-  if (typeof rentAmount === 'number' && rentAmount > 0) {
-    return true;
-  }
-  const intents = Array.isArray(this.intents) ? this.intents : [];
-  const salePrice = this.sale?.price;
-  if (intents.includes(ListingIntent.SALE) && typeof salePrice === 'number' && salePrice > 0) {
-    return true;
-  }
-  const exchangeMode = this.exchange?.mode;
-  return (
-    intents.includes(ListingIntent.EXCHANGE) &&
-    typeof exchangeMode === 'string' &&
-    Object.values(ExchangeMode).includes(exchangeMode)
-  );
-}
-
-propertySchema.path('rent').validate(
-  hasTransactablePrice,
-  'A listing must be transactable: a rent amount, a sale price (sale listings), or an exchange mode (exchange listings)'
-);
+propertySchema.path('offerings').validate({
+  validator: function(this: any): boolean {
+    // Only the document context exposes every block as `this.*`. Update
+    // validators (findOneAndUpdate + runValidators) run with a Query `this`
+    // where sibling blocks are not visible, which would wrongly reject a
+    // partial edit — the update controller's `applyOfferingRulesForUpdate`
+    // already enforces full coherence there, so skip when not a document.
+    if (typeof this.isModified !== 'function') {
+      return true;
+    }
+    return validateOfferings(this) === null;
+  },
+  message: 'offerings must be non-empty and match exactly the present priced blocks, each with a positive price'
+});
 
 // Virtual for full address (requires population)
 propertySchema.virtual('fullAddress').get(function() {
@@ -750,13 +704,12 @@ propertySchema.virtual('primaryImage').get(function() {
 });
 
 // Post-query hook for lean queries: lean() bypasses the toJSON/toObject
-// transforms, so normalize intents (back-compat) and the address shape here so
-// every read path is consistent. Address transform only runs when populated.
+// transforms, so normalize the address shape here so every read path is
+// consistent. Address transform only runs when the address is populated.
 propertySchema.post(['find', 'findOne'], function(docs) {
   if (!docs) return;
   const apply = (doc: any) => {
     if (!doc) return;
-    normalizeIntents(doc);
     if (doc.addressId && typeof doc.addressId === 'object') {
       transformAddressFields(doc);
     }
@@ -842,9 +795,9 @@ propertySchema.statics.search = async function(searchParams) {
   }
 
   if (minRent !== undefined || maxRent !== undefined) {
-    query['rent.amount'] = {};
-    if (minRent !== undefined) query['rent.amount'].$gte = minRent;
-    if (maxRent !== undefined) query['rent.amount'].$lte = maxRent;
+    query['longTermRent.monthlyAmount'] = {};
+    if (minRent !== undefined) query['longTermRent.monthlyAmount'].$gte = minRent;
+    if (maxRent !== undefined) query['longTermRent.monthlyAmount'].$lte = maxRent;
   }
 
   if (bedrooms !== undefined) {

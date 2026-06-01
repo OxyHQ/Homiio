@@ -3,10 +3,11 @@ import { View, Image, StyleSheet, Pressable, TouchableOpacity, ViewStyle, Platfo
 import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
-import { Property, ListingIntent, RentMode } from '@homiio/shared-types';
+import { PriceUnit, Property } from '@homiio/shared-types';
 import {
   getPropertyTitle,
   getPropertyImageSource,
+  resolveOfferingSummaries,
   resolvePrimaryOffering,
 } from '@/utils/propertyUtils';
 
@@ -15,7 +16,7 @@ import { useRentalMode } from '@/context/RentalModeContext';
 
 import { SaveButton } from './SaveButton';
 import { CurrencyFormatter } from './CurrencyFormatter';
-import { IntentBadge } from './property/IntentBadge';
+import { OfferingBadge } from './property/OfferingBadge';
 import { PropertyImageCarousel } from './property/PropertyImageCarousel';
 import { ThemedText } from '@/components/ThemedText';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
@@ -31,8 +32,8 @@ function shouldShowInstantBook(
   mode: 'long_term' | 'vacation',
 ): boolean {
   if (mode !== 'vacation') return false;
-  if (!property.instantBook) return false;
-  return property.rentMode === RentMode.VACATION || property.rentMode === RentMode.BOTH;
+  // Instant book is a short-term-offering property — read it off that block.
+  return Boolean(property.shortTermRent?.instantBook);
 }
 
 export type PropertyCardVariant = 'default' | 'compact' | 'featured' | 'saved' | 'grid';
@@ -196,7 +197,7 @@ export function PropertyCard({
 }: PropertyCardProps) {
   // Use saved properties context to check if property is saved
   const { isPropertySaved, isInitialized } = useSavedPropertiesContext();
-  const { mode } = useRentalMode();
+  const { mode, browseMode } = useRentalMode();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
 
@@ -236,22 +237,22 @@ export function PropertyCard({
     return null;
   }
 
-  // The single primary price/offering this card displays. Centralised in
-  // `resolvePrimaryOffering` (priority rent → sale → exchange) so a rent listing
-  // — including a "rent + sell" one — keeps its exact previous price display,
-  // a sale-only listing shows the sale price (no per-unit suffix), and an
-  // exchange-only listing shows "Free".
+  // The single primary price/offering this card displays — the ACTIVE browse
+  // mode's priced block (the unit is fixed per block, never reinterpreted): a
+  // multi-offering listing shows €1,700/month in Long-term and €110/night in
+  // Vacation. A sale shows the asking price (no per-unit suffix); an exchange
+  // shows "Free". When the listing doesn't carry the active offering,
+  // `resolvePrimaryOffering` falls back to the first present block.
   const primaryOffering = resolvePrimaryOffering(
     property,
-    mode,
+    browseMode,
     t('listing.exchange.free', 'Free'),
   );
 
-  // Non-rent intents drive the floating "For sale" / "Exchange" badges. A
-  // listing with no stored intents is rent-only, so this is empty for it.
-  const nonRentIntents = (property.intents ?? []).filter(
-    (intent) => intent !== ListingIntent.RENT,
-  );
+  // The OTHER offerings this multi-offering listing carries (excluding the one
+  // shown above) drive both the floating badges and the subtle "Also available"
+  // line. Empty for single-offering listings.
+  const otherOfferings = resolveOfferingSummaries(property, browseMode);
 
   // Extract data from property object
   const propertyData = {
@@ -273,6 +274,22 @@ export function PropertyCard({
     rating: undefined as number | undefined,
     reviewCount: undefined as number | undefined,
   };
+
+  // Localized per-unit suffix for the headline (fixed per priced block):
+  // long-term → "month", short-term → "night"; sale/exchange have none.
+  const priceUnitSuffix = propertyData.priceUnit
+    ? propertyData.priceUnit === PriceUnit.NIGHT
+      ? t('listing.offering.perNightUnit', 'night')
+      : t('listing.offering.perMonthUnit', 'month')
+    : '';
+
+  // "Also available: By night · For sale" — joins the other offerings' labels.
+  const alsoAvailableLabel =
+    otherOfferings.length > 0
+      ? `${t('listing.offering.alsoAvailable', 'Also available')}: ${otherOfferings
+          .map((summary) => t(summary.i18nKey, summary.fallback))
+          .join(' · ')}`
+      : '';
 
   const isEco = Boolean(property.isEcoFriendly);
   const isFeatured = variant === 'featured';
@@ -336,13 +353,14 @@ export function PropertyCard({
       {/* Status badges — suppressed in grid variant to keep cards photo-first */}
       {!isGrid && (
         <>
-          {/* Intent badges — "For sale" / "Exchange" for each non-rent intent.
-              Pinned top-left below the small eco/verified chips so labeled
-              chips never collide with the top-right save heart. */}
-          {nonRentIntents.length > 0 && (
+          {/* Offering badges — "By night" / "For sale" / "Exchange" for each
+              OTHER offering this listing carries (the active one is the price
+              above). Pinned top-left below the small eco/verified chips so
+              labeled chips never collide with the top-right save heart. */}
+          {otherOfferings.length > 0 && (
             <View style={styles.intentBadgeRow}>
-              {nonRentIntents.map((intent) => (
-                <IntentBadge key={intent} intent={intent} size="md" />
+              {otherOfferings.map((summary) => (
+                <OfferingBadge key={summary.offering} offering={summary.offering} size="md" />
               ))}
             </View>
           )}
@@ -467,10 +485,10 @@ export function PropertyCard({
         </View>
       )}
 
-      {/* Price — driven by the resolved primary offering. Exchange-only listings
-          have no money price, so they render the "Free" label (RISK 3) instead
-          of CurrencyFormatter; sale shows the sale price with NO per-unit
-          suffix; rent keeps its exact previous amount + per-unit display. */}
+      {/* Price — the ACTIVE browse mode's priced block. Exchange listings have
+          no money price, so they render the "Free" label instead of
+          CurrencyFormatter; sale shows the sale price with NO per-unit suffix;
+          long-term shows `/month` and short-term `/night` (fixed per block). */}
       {finalShowPrice &&
         (propertyData.offeringKind === 'exchange'
           ? propertyData.offeringLabel.length > 0
@@ -492,9 +510,9 @@ export function PropertyCard({
                   originalCurrency={propertyData.currency}
                   showConversion={false}
                 />
-                {propertyData.priceUnit ? (
+                {priceUnitSuffix ? (
                   <BloomText style={[styles.priceUnit, isGrid ? styles.gridPriceUnit : null]}>
-                    {' / '}{propertyData.priceUnit}
+                    {' / '}{priceUnitSuffix}
                   </BloomText>
                 ) : null}
               </>
@@ -502,6 +520,15 @@ export function PropertyCard({
           </BloomText>
         </View>
       )}
+
+      {/* "Also available: By night · For sale" — the OTHER offerings this
+          multi-offering listing carries. Hidden in the dense grid + compact
+          tiles to keep them photo-first. */}
+      {finalShowPrice && !isGrid && variant !== 'compact' && alsoAvailableLabel ? (
+        <BloomText style={styles.alsoAvailable} numberOfLines={1}>
+          {alsoAvailableLabel}
+        </BloomText>
+      ) : null}
     </View>
   );
 
@@ -741,6 +768,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '400',
     color: colors.COLOR_BLACK_LIGHT_4,
+  },
+  // Subtle secondary line under the price listing the listing's OTHER offerings.
+  alsoAvailable: {
+    fontSize: 12,
+    color: colors.COLOR_BLACK_LIGHT_4,
+    marginTop: 2,
   },
 
   // Badge and overlay styles (shared)

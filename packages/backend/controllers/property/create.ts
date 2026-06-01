@@ -1,5 +1,5 @@
 import { ProfileType } from '@homiio/shared-types';
-import { applyIntentRules, IntentValidationError } from './intentValidation';
+import { applyOfferingRulesForCreate, OfferingValidationError } from './offeringRules';
 const { Property } = require('../../models');
 const { telegramService } = require('../../services');
 const { logger, businessLogger } = require('../../middlewares/logging');
@@ -92,9 +92,10 @@ export async function createProperty(req, res, next) {
 
     const propertyData = { ...req.body, profileId: req.body.profileId };
 
-    // Validate & normalize multi-intent fields (defaults intents to ['rent'],
-    // enforces sale/exchange required sub-payloads, derives sale.pricePerSqm).
-    applyIntentRules(propertyData, true);
+    // Validate & normalize per-offering fields: `offerings` must be present and
+    // equal the set of present priced blocks, each with a positive price /
+    // valid exchange mode. Also derives `sale.pricePerSqm`.
+    applyOfferingRulesForCreate(propertyData);
 
     // Handle address creation or reference
     let addressId;
@@ -156,7 +157,7 @@ export async function createProperty(req, res, next) {
     });
     res.status(201).json(successResponse(savedProperty.toJSON(), 'Property created successfully'));
   } catch (error) {
-    if (error instanceof IntentValidationError) {
+    if (error instanceof OfferingValidationError) {
       return next(new AppError(error.message, 400, error.code));
     }
     if (error.name === 'ValidationError') {

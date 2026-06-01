@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const propertyController = require('../controllers/propertyController');
 const profileController = require('../controllers/profileController');
+const reportController = require('../controllers/reportController');
 const validation = require('../middlewares/validation');
 const { asyncHandler } = require('../middlewares/errorHandler');
 
@@ -15,6 +16,9 @@ router.delete("/:propertyId", asyncHandler(propertyController.deleteProperty));
 
 // Property tracking (requires authentication)
 router.post("/:propertyId/track-view", asyncHandler(profileController.trackPropertyView));
+
+// Trust & safety: file a report against a listing (requires authentication)
+router.post("/:propertyId/report", asyncHandler(reportController.createListingReport));
 
 // User properties (requires authentication)
 router.get("/me/list", asyncHandler(propertyController.getMyProperties));

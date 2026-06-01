@@ -28,6 +28,27 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Resolve the auth headers for a request.
+ *
+ * The access token comes from the shared Oxy client. When there is no token
+ * (e.g. the user is logged out), we deliberately attach NO `Authorization`
+ * header rather than sending `Bearer null`/`Bearer undefined`: the backend's
+ * Oxy auth middleware runs `jwtDecode` on whatever follows `Bearer `, so a
+ * non-JWT string is rejected with a 401 "Invalid token format". Public-ish
+ * reads must degrade to an unauthenticated request instead of hard-failing.
+ *
+ * `getAccessToken()` is synchronous today but is awaited so a future async
+ * token source can be swapped in without touching every call site.
+ */
+const buildAuthHeaders = async (): Promise<Record<string, string>> => {
+  const token = await oxyClient.getAccessToken();
+  if (typeof token === 'string' && token.length > 0) {
+    return { Authorization: `Bearer ${token}` };
+  }
+  return {};
+};
+
 const extractErrorMessage = (data: any, status: number): string => {
   if (!data) return `HTTP ${status}`;
   if (typeof data.message === 'string' && data.message.trim()) return data.message;
@@ -85,15 +106,7 @@ export const api = {
 
     // Handle authentication if required
     if (options?.requireAuth !== false) {
-      try {
-        const token = await oxyClient.getAccessToken();
-
-
-        headers['Authorization'] = `Bearer ${token}`;
-      } catch (error) {
-        console.error('Failed to get token:', error);
-        throw new ApiError('Authentication failed', 401);
-      }
+      Object.assign(headers, await buildAuthHeaders());
     }
 
     const response = await fetch(url.toString(), {
@@ -126,15 +139,7 @@ export const api = {
 
     // Handle authentication if required
     if (options?.requireAuth !== false) {
-      try {
-        const token = await oxyClient.getAccessToken();
-
-
-        headers['Authorization'] = `Bearer ${token}`;
-      } catch (error) {
-        console.error('Failed to get token:', error);
-        throw new ApiError('Authentication failed', 401);
-      }
+      Object.assign(headers, await buildAuthHeaders());
     }
 
     const response = await fetch(`${API_CONFIG.baseURL}${endpoint}`, {
@@ -168,15 +173,7 @@ export const api = {
 
     // Handle authentication if required
     if (options?.requireAuth !== false) {
-      try {
-        const token = await oxyClient.getAccessToken();
-
-
-        headers['Authorization'] = `Bearer ${token}`;
-      } catch (error) {
-        console.error('Failed to get token:', error);
-        throw new ApiError('Authentication failed', 401);
-      }
+      Object.assign(headers, await buildAuthHeaders());
     }
 
     const response = await fetch(`${API_CONFIG.baseURL}${endpoint}`, {
@@ -209,15 +206,7 @@ export const api = {
 
     // Handle authentication if required
     if (options?.requireAuth !== false) {
-      try {
-        const token = await oxyClient.getAccessToken();
-
-
-        headers['Authorization'] = `Bearer ${token}`;
-      } catch (error) {
-        console.error('Failed to get token:', error);
-        throw new ApiError('Authentication failed', 401);
-      }
+      Object.assign(headers, await buildAuthHeaders());
     }
 
     const response = await fetch(`${API_CONFIG.baseURL}${endpoint}`, {
@@ -250,15 +239,7 @@ export const api = {
 
     // Handle authentication if required
     if (options?.requireAuth !== false) {
-      try {
-        const token = await oxyClient.getAccessToken();
-
-
-        headers['Authorization'] = `Bearer ${token}`;
-      } catch (error) {
-        console.error('Failed to get token:', error);
-        throw new ApiError('Authentication failed', 401);
-      }
+      Object.assign(headers, await buildAuthHeaders());
     }
 
     const response = await fetch(`${API_CONFIG.baseURL}${endpoint}`, {

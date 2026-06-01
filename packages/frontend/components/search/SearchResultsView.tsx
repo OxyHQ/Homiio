@@ -47,8 +47,10 @@ import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { colors } from '@/styles/colors';
 import { cardShadow, hairline, radius, spacing } from '@/constants/styles';
-import { ListingIntent, PropertyType } from '@homiio/shared-types';
+import { OfferingType, PropertyType } from '@homiio/shared-types';
 import type { Property } from '@homiio/shared-types';
+import { resolvePrimaryOffering } from '@/utils/propertyUtils';
+import { browseModeFromOffering } from './types';
 
 import { SearchActionPill } from './SearchActionPill';
 import { SearchSummaryBar } from './SearchSummaryBar';
@@ -68,7 +70,9 @@ const SKELETON_COUNT = 6;
 /** Build map markers ([lng, lat] pins) from a property list. */
 function toMarkers(
   properties: readonly Property[],
+  offering: OfferingType,
 ): { id: string; coordinates: [number, number]; priceLabel: string }[] {
+  const browseMode = browseModeFromOffering(offering);
   return properties
     .map((p) => {
       const coords = p.address?.coordinates?.coordinates ?? p.location?.coordinates;
@@ -80,10 +84,16 @@ function toMarkers(
       ) {
         return null;
       }
+      // Price the pin off the ACTIVE offering's block (monthly / nightly / sale).
+      const primary = resolvePrimaryOffering(p, browseMode);
+      const priceLabel =
+        primary.amount > 0
+          ? `€${Math.round(primary.amount).toLocaleString()}`
+          : primary.label;
       return {
         id: p._id,
         coordinates: [coords[0], coords[1]] as [number, number],
-        priceLabel: `€${p.rent?.amount?.toLocaleString() ?? 0}`,
+        priceLabel,
       };
     })
     .filter(
@@ -104,7 +114,6 @@ function toSheetFilters(query: SearchQuery): SearchFilters {
     bedrooms: query.bedrooms ?? 1,
     bathrooms: query.bathrooms ?? 1,
     type: query.propertyTypes[0],
-    intent: query.intent,
     amenities: query.amenities,
     guests: query.guests,
     checkIn: query.dates?.start,
@@ -114,13 +123,12 @@ function toSheetFilters(query: SearchQuery): SearchFilters {
 
 /**
  * Count the *applied* refinements in a query for the Filters pill badge. The
- * location, sort, and map bounds are surfaced elsewhere (the summary pill and
- * the Sort pill), so they don't count here — only the controls the filters
+ * location, sort, map bounds, and the active offering (the browse toggle) are
+ * surfaced elsewhere, so they don't count here — only the controls the filters
  * sheet edits: property type(s), price, bedrooms, bathrooms, and each amenity.
  */
 function countActiveFilters(query: SearchQuery): number {
   let count = 0;
-  if (query.intent !== undefined) count += 1;
   count += query.propertyTypes.length;
   if (query.priceMin !== undefined || query.priceMax !== undefined) count += 1;
   if (query.bedrooms !== undefined) count += 1;
@@ -168,7 +176,10 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
 
   const { searchExists } = useSavedSearches();
 
-  const markers = useMemo(() => toMarkers(properties), [properties]);
+  const markers = useMemo(
+    () => toMarkers(properties, query.offering),
+    [properties, query.offering],
+  );
 
   // --- Top-bar control state (drives the action pills' active/badge UI) ---
   const activeFilterCount = useMemo(() => countActiveFilters(query), [query]);
@@ -177,24 +188,6 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     () => resolveSortLabel(query.sortBy, query.sortOrder, t),
     [query.sortBy, query.sortOrder, t],
   );
-
-  // Active "Listing type" chip, surfaced as a dismissible pill in the top bar.
-  const intentPillLabel = useMemo(() => {
-    switch (query.intent) {
-      case ListingIntent.RENT:
-        return t('listing.intent.rent', 'Rent');
-      case ListingIntent.SALE:
-        return t('listing.intent.sale', 'For sale');
-      case ListingIntent.EXCHANGE:
-        return t('listing.intent.exchange', 'Exchange');
-      default:
-        return null;
-    }
-  }, [query.intent, t]);
-
-  const handleClearIntent = useCallback(() => {
-    onQueryChange({ intent: undefined });
-  }, [onQueryChange]);
 
   // A search is "saved" when one already exists matching this location label.
   const isSearchSaved = useMemo(() => {
@@ -266,18 +259,6 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   const handleSheetFilterChange = useCallback(
     (sectionId: string, value: FilterValue) => {
       switch (sectionId) {
-        case 'intent': {
-          // Single-select; re-tapping the active chip clears the filter.
-          const intentValues = Object.values(ListingIntent) as string[];
-          const nextIntent =
-            typeof value === 'string' && intentValues.includes(value)
-              ? (value as ListingIntent)
-              : undefined;
-          onQueryChange({
-            intent: query.intent === nextIntent ? undefined : nextIntent,
-          });
-          return;
-        }
         case 'type':
           onQueryChange({
             propertyTypes:
@@ -325,7 +306,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
           return;
       }
     },
-    [onQueryChange, query.amenities, query.intent],
+    [onQueryChange, query.amenities],
   );
 
   const handleFiltersPress = useCallback(() => {
@@ -336,7 +317,6 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         onApply={() => bottomSheet.closeBottomSheet()}
         onClear={() => {
           onQueryChange({
-            intent: undefined,
             propertyTypes: [],
             priceMin: undefined,
             priceMax: undefined,
@@ -361,8 +341,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         defaultName={query.location?.shortLabel || 'My Search'}
         query={label}
         filters={{
-          rentMode: query.rentMode,
-          intent: query.intent,
+          offering: query.offering,
           propertyTypes: query.propertyTypes,
           priceMin: query.priceMin,
           priceMax: query.priceMax,
@@ -430,18 +409,6 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
           style={styles.topBarActionsScroll}
           contentContainerStyle={styles.topBarActions}
         >
-          {/* Dismissible "Listing type" pill — only when an intent is set. Its
-              active treatment shows a close affordance; tapping clears it. */}
-          {intentPillLabel ? (
-            <SearchActionPill
-              label={intentPillLabel}
-              icon="pricetag-outline"
-              activeIcon="close"
-              active
-              onPress={handleClearIntent}
-              accessibilityLabel={`${t('search.filters.listingType', 'Listing type')}: ${intentPillLabel}. ${t('common.clear', 'Clear')}`}
-            />
-          ) : null}
           <SearchActionPill
             label={t('search.actions.filters', 'Filters') || 'Filters'}
             icon="options-outline"

@@ -15,7 +15,19 @@
 const { Property, Reservation, Profile } = require('../models');
 const { logger } = require('../middlewares/logging');
 const { AppError, successResponse, paginationResponse } = require('../middlewares/errorHandler');
-const { ReservationStatus, CancellationPolicy, RentMode, AvailabilityWindowStatus } = require('@homiio/shared-types');
+const { ReservationStatus, CancellationPolicy, OfferingType, AvailabilityWindowStatus } = require('@homiio/shared-types');
+
+/** Default currency used when a short-term block somehow lacks one. */
+const DEFAULT_CURRENCY = 'EUR';
+/** Percentage divisor for the taxes computation. */
+const PERCENT = 100;
+/** Rounding factor for currency amounts (2 decimal places). */
+const CURRENCY_ROUNDING = 100;
+
+/** A property carries the short-term-rent offering (vacation-bookable). */
+function isVacationBookable(property: { offerings?: unknown }): boolean {
+  return Array.isArray(property.offerings) && property.offerings.includes(OfferingType.SHORT_TERM_RENT);
+}
 const { hasConflict } = require('../utils/availabilityUtils');
 import type { DateWindow } from '../utils/availabilityUtils';
 
@@ -115,8 +127,12 @@ class ReservationController {
       if (property.isExternal) {
         return next(new AppError('Cannot book external listings', 400, 'EXTERNAL_PROPERTY'));
       }
-      if (property.rentMode === RentMode.LONG_TERM) {
-        return next(new AppError('This property is long-term only and not bookable', 400, 'NOT_BOOKABLE'));
+      if (!isVacationBookable(property)) {
+        return next(new AppError('This property is not offered for short-term booking', 400, 'NOT_VACATION_BOOKABLE'));
+      }
+      const shortTerm = property.shortTermRent;
+      if (!shortTerm) {
+        return next(new AppError('This property has no short-term pricing', 400, 'NOT_VACATION_BOOKABLE'));
       }
 
       const guestProfile = await Profile.findActiveByOxyUserId(oxyUserId);
@@ -142,12 +158,12 @@ class ReservationController {
       const nights = computeNights(checkInDate, checkOutDate);
       if (nights < 1) return next(new AppError('Reservation must be at least 1 night', 400, 'INVALID_RANGE'));
 
-      // Enforce min/max stay
-      if (property.minStay && nights < property.minStay) {
-        return next(new AppError(`Minimum stay is ${property.minStay} night(s)`, 400, 'BELOW_MIN_STAY'));
+      // Enforce min/max stay (from the short-term block)
+      if (shortTerm.minNights && nights < shortTerm.minNights) {
+        return next(new AppError(`Minimum stay is ${shortTerm.minNights} night(s)`, 400, 'BELOW_MIN_STAY'));
       }
-      if (property.maxStay && nights > property.maxStay) {
-        return next(new AppError(`Maximum stay is ${property.maxStay} night(s)`, 400, 'ABOVE_MAX_STAY'));
+      if (shortTerm.maxNights && nights > shortTerm.maxNights) {
+        return next(new AppError(`Maximum stay is ${shortTerm.maxNights} night(s)`, 400, 'ABOVE_MAX_STAY'));
       }
 
       // Guest capacity
@@ -172,19 +188,19 @@ class ReservationController {
         return next(new AppError('Selected dates are blocked by the host calendar', 409, 'BLOCKED_BY_HOST'));
       }
 
-      // Pricing
-      const nightlyRate = Number(property?.rent?.amount) || 0;
+      // Pricing — all from the short-term block (NOT a monthly figure).
+      const nightlyRate = Number(shortTerm.nightlyRate) || 0;
       if (nightlyRate <= 0) return next(new AppError('Property has no valid nightly rate', 400, 'NO_RATE'));
       const subtotal = nightlyRate * nights;
-      const cleaningFee = Number(property?.priceBreakdown?.cleaningFee) || 0;
-      const serviceFee = Number(property?.priceBreakdown?.serviceFee) || 0;
-      const taxesPercent = Number(property?.priceBreakdown?.taxesPercent) || 0;
-      const taxes = Math.round((subtotal + cleaningFee + serviceFee) * (taxesPercent / 100) * 100) / 100;
-      const total = Math.round((subtotal + cleaningFee + serviceFee + taxes) * 100) / 100;
-      const currency = (property?.rent?.currency || 'EUR').toUpperCase();
+      const cleaningFee = Number(shortTerm.cleaningFee) || 0;
+      const serviceFee = Number(shortTerm.serviceFee) || 0;
+      const taxesPercent = Number(shortTerm.taxesPercent) || 0;
+      const taxes = Math.round((subtotal + cleaningFee + serviceFee) * (taxesPercent / PERCENT) * CURRENCY_ROUNDING) / CURRENCY_ROUNDING;
+      const total = Math.round((subtotal + cleaningFee + serviceFee + taxes) * CURRENCY_ROUNDING) / CURRENCY_ROUNDING;
+      const currency = (shortTerm.currency || DEFAULT_CURRENCY).toUpperCase();
 
       const cancellationPolicy = property.cancellationPolicy || CancellationPolicy.MODERATE;
-      const instantBooked = property.instantBook === true;
+      const instantBooked = shortTerm.instantBook === true;
       const status = instantBooked ? ReservationStatus.CONFIRMED : ReservationStatus.PENDING;
 
       const reservation = await Reservation.create({
@@ -370,7 +386,7 @@ class ReservationController {
     try {
       const { id } = req.params;
       const property = await Property.findById(id)
-        .select('availabilityWindows minStay maxStay maxGuests rentMode instantBook cancellationPolicy')
+        .select('availabilityWindows maxGuests offerings shortTermRent cancellationPolicy')
         .lean();
       if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
 
@@ -390,11 +406,11 @@ class ReservationController {
 
       const data = {
         propertyId: id,
-        rentMode: property.rentMode,
-        instantBook: property.instantBook,
+        offerings: property.offerings,
+        instantBook: property.shortTermRent?.instantBook ?? false,
         cancellationPolicy: property.cancellationPolicy,
-        minStay: property.minStay,
-        maxStay: property.maxStay,
+        minNights: property.shortTermRent?.minNights,
+        maxNights: property.shortTermRent?.maxNights,
         maxGuests: property.maxGuests,
         windows: property.availabilityWindows || [],
         booked: bookedRanges

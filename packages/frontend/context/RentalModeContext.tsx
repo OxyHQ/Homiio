@@ -1,26 +1,29 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { ListingIntent, RentMode } from '@homiio/shared-types';
+import { OfferingType } from '@homiio/shared-types';
 
-import { BROWSE_MODE_MAP, type BrowseMode } from '@/components/search/types';
+import {
+  BROWSE_MODE_OFFERING,
+  type BrowseMode,
+} from '@/components/search/types';
 import { useSearchQueryStore } from '@/store/searchQueryStore';
 
 /**
  * The rental experience the user browses in.
  *
- * `'both'` is a backend-only listing flag — it never appears in the UI as a
- * separate mode because the user always browses in either the long-term or
- * vacation experience. A `RentMode.BOTH` listing surfaces in whichever mode
- * the user is currently in. This type is the *rent-only* axis and is what every
- * price/availability surface (PropertyCard, detail headline, booking widget)
- * already consumes — it is intentionally left unchanged.
+ * Only the two rent offerings have a per-unit price surface, so `RentalMode`
+ * collapses the four browse modes to the rent axis the price/availability
+ * surfaces care about: `vacation` for the short-term offering, `long_term` for
+ * everything else (sale shows no per-unit suffix, exchange shows "Free", so the
+ * rent unit never surfaces for them). Every price/availability surface
+ * (PropertyCard, detail headline, booking widget) consumes this.
  */
 export type RentalMode = 'long_term' | 'vacation';
 
 /**
- * The unified top-level browse selection ({@link BrowseMode}) and its
- * decomposition into the two filter axes ({@link BROWSE_MODE_MAP}) are defined
+ * The unified top-level browse selection ({@link BrowseMode}) and its 1:1
+ * mapping to an {@link OfferingType} ({@link BROWSE_MODE_OFFERING}) are defined
  * once in the pure `components/search/types` module (imported above) so the
  * search store, this context, the sidebar toggle, and the `SearchPanel` all
  * share one mapping without a React dependency.
@@ -28,11 +31,10 @@ export type RentalMode = 'long_term' | 'vacation';
 
 interface RentalModeContextValue {
   /**
-   * Rent-only experience axis (`long_term` | `vacation`). Derived from
-   * {@link browseMode}: the buy/exchange browse modes keep `long_term`
-   * semantics (sale shows no per-unit suffix; exchange shows "Free", so the
-   * rent unit never surfaces for them). Every existing price/availability
-   * surface keeps reading this exactly as before.
+   * Rent-only experience axis (`long_term` | `vacation`). Derived from the
+   * active {@link offering}: the short-term offering maps to `vacation`, every
+   * other offering to `long_term`. Every existing price/availability surface
+   * keeps reading this exactly as before.
    */
   mode: RentalMode;
   /**
@@ -46,12 +48,12 @@ interface RentalModeContextValue {
   /** Switch the top-level browse selection (also patches the active search query). */
   setBrowseMode: (browseMode: BrowseMode) => void;
   /**
-   * The listing intent implied by {@link browseMode} (`sale` for buy,
-   * `exchange` for exchange, `undefined` for the rent modes). Surfaced so
-   * non-search consumers can scope feeds to the active intent without
+   * The {@link OfferingType} implied by {@link browseMode}. This is the single
+   * axis the feed + price surfaces filter and reprice on, surfaced so non-search
+   * consumers (home feed, PropertyCard) can scope to the active offering without
    * re-deriving the mapping.
    */
-  intent: ListingIntent | undefined;
+  offering: OfferingType;
   /** True until the persisted mode has been loaded from AsyncStorage. */
   hydrated: boolean;
 }
@@ -83,14 +85,10 @@ export const RentalModeProvider: React.FC<RentalModeProviderProps> = ({ children
         if (cancelled) return;
         if (isBrowseMode(stored)) {
           setBrowseModeState(stored);
-          const axes = BROWSE_MODE_MAP[stored];
           // Re-hydrate the active search query so a returning user lands on the
-          // same intent/mode they last browsed. `patchQuery` is a plain Zustand
+          // same offering they last browsed. `setOffering` is a plain Zustand
           // action (no React subscription), safe to call from this effect.
-          useSearchQueryStore.getState().patchQuery({
-            rentMode: axes.rentMode,
-            intent: axes.intent,
-          });
+          useSearchQueryStore.getState().setOffering(BROWSE_MODE_OFFERING[stored]);
         }
       })
       .catch(() => {
@@ -106,18 +104,11 @@ export const RentalModeProvider: React.FC<RentalModeProviderProps> = ({ children
 
   const setBrowseMode = useCallback((next: BrowseMode) => {
     setBrowseModeState(next);
-    const axes = BROWSE_MODE_MAP[next];
     // Route the selection into the SAME query the search already filters on.
-    // Switching out of vacation clears the vacation-only fields (mirrors the
-    // store's own `setRentMode`) so a stale date range can't follow the user
-    // into a long-term/buy/exchange browse.
-    useSearchQueryStore.getState().patchQuery({
-      rentMode: axes.rentMode,
-      intent: axes.intent,
-      ...(axes.rentMode === RentMode.LONG_TERM
-        ? { dates: undefined, guests: undefined }
-        : {}),
-    });
+    // `setOffering` clears the price range (it is denominated per-offering) and
+    // the short-term-only fields when leaving the short-term offering, so a
+    // stale date range / nightly band can't follow the user into another mode.
+    useSearchQueryStore.getState().setOffering(BROWSE_MODE_OFFERING[next]);
     AsyncStorage.setItem(STORAGE_KEY, next).catch(() => {
       // Best-effort persistence — UI is already updated.
     });
@@ -130,18 +121,18 @@ export const RentalModeProvider: React.FC<RentalModeProviderProps> = ({ children
     [setBrowseMode],
   );
 
-  const axes = BROWSE_MODE_MAP[browseMode];
+  const offering = BROWSE_MODE_OFFERING[browseMode];
 
   const value = useMemo<RentalModeContextValue>(
     () => ({
-      mode: axes.rentMode === RentMode.VACATION ? 'vacation' : 'long_term',
+      mode: offering === OfferingType.SHORT_TERM_RENT ? 'vacation' : 'long_term',
       setMode,
       browseMode,
       setBrowseMode,
-      intent: axes.intent,
+      offering,
       hydrated,
     }),
-    [axes.rentMode, axes.intent, setMode, browseMode, setBrowseMode, hydrated],
+    [offering, setMode, browseMode, setBrowseMode, hydrated],
   );
 
   return <RentalModeContext.Provider value={value}>{children}</RentalModeContext.Provider>;

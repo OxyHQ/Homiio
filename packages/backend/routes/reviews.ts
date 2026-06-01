@@ -5,8 +5,6 @@
 
 import { Router } from 'express';
 import {
-  getReviewsByAddress,
-  getAddressReviewStats,
   createReview,
   getReviewById,
   updateReview,
@@ -16,9 +14,10 @@ import {
 
 const router = Router();
 
-// Address-specific review routes
-router.get('/address/:addressId', getReviewsByAddress);
-router.get('/address/:addressId/stats', getAddressReviewStats);
+// NOTE: the address review READ routes (`GET /address/:addressId` and
+// `/address/:addressId/stats`) are served publicly from `routes/public.ts`
+// (community-visible reads, no auth). They are intentionally NOT declared here
+// so this authenticated router only owns mutations + owner-scoped reads.
 
 // Review CRUD operations
 router.post('/', createReview);

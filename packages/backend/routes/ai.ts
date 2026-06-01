@@ -49,7 +49,7 @@ type PropertyFilters = Partial<{
   parkingType: string;
   petPolicy: string;
   leaseTerm: string;
-  priceUnit: string;
+  offering: string;
   proximityToTransport: boolean;
   proximityToSchools: boolean;
   proximityToShopping: boolean;
@@ -217,7 +217,7 @@ const buildSearchParams = (
   addIf(params, 'parkingType', filters.parkingType);
   addIf(params, 'petPolicy', filters.petPolicy);
   addIf(params, 'leaseTerm', filters.leaseTerm);
-  addIf(params, 'priceUnit', filters.priceUnit);
+  addIf(params, 'offering', filters.offering);
   addBool(params, 'proximityToTransport', filters.proximityToTransport);
   addBool(params, 'proximityToSchools', filters.proximityToSchools);
   addBool(params, 'proximityToShopping', filters.proximityToShopping);
@@ -344,7 +344,7 @@ Focus on extracting clear location information from the user's query.`;
     put('parkingType', typeof raw.parkingType === 'string' ? raw.parkingType : undefined);
     put('petPolicy', typeof raw.petPolicy === 'string' ? raw.petPolicy : undefined);
     put('leaseTerm', typeof raw.leaseTerm === 'string' ? raw.leaseTerm : undefined);
-    put('priceUnit', typeof raw.priceUnit === 'string' ? raw.priceUnit : undefined);
+    put('offering', typeof raw.offering === 'string' ? raw.offering : undefined);
     put('proximityToTransport', typeof raw.proximityToTransport === 'boolean' ? raw.proximityToTransport : undefined);
     put('proximityToSchools', typeof raw.proximityToSchools === 'boolean' ? raw.proximityToSchools : undefined);
     put('proximityToShopping', typeof raw.proximityToShopping === 'boolean' ? raw.proximityToShopping : undefined);
@@ -454,11 +454,15 @@ export default function aiRouter() {
       let contextPrompt = 'Generate 5-6 relevant, actionable chat suggestions for a rental property chat assistant. ';
       
       if (propertyContext) {
-        const { type, city, bedrooms, bathrooms, rent, amenities } = propertyContext;
+        const { type, city, bedrooms, bathrooms, longTermRent, shortTermRent, amenities } = propertyContext;
         contextPrompt += `Property context: ${type || 'Property'} in ${city || 'the area'}`;
         if (bedrooms) contextPrompt += `, ${bedrooms} bedrooms`;
         if (bathrooms) contextPrompt += `, ${bathrooms} bathrooms`;
-        if (rent?.amount) contextPrompt += `, rent ${rent.amount} ${rent.currency || ''}`;
+        if (longTermRent?.monthlyAmount) {
+          contextPrompt += `, ${longTermRent.monthlyAmount} ${longTermRent.currency || ''}/month`;
+        } else if (shortTermRent?.nightlyRate) {
+          contextPrompt += `, ${shortTermRent.nightlyRate} ${shortTermRent.currency || ''}/night`;
+        }
         if (amenities?.length) contextPrompt += `, amenities: ${amenities.slice(0, 3).join(', ')}`;
         contextPrompt += '. ';
       }
@@ -610,7 +614,13 @@ Return only the JSON array, no other text.`;
               id: p._id?.toString?.() || p.id,
               title: p.title,
               type: p.type,
-              rent: p.rent?.amount ? compact({ amount: p.rent.amount, currency: p.rent.currency }) : undefined,
+              offerings: Array.isArray(p.offerings) ? p.offerings : undefined,
+              longTermRent: p.longTermRent?.monthlyAmount
+                ? compact({ monthlyAmount: p.longTermRent.monthlyAmount, currency: p.longTermRent.currency })
+                : undefined,
+              shortTermRent: p.shortTermRent?.nightlyRate
+                ? compact({ nightlyRate: p.shortTermRent.nightlyRate, currency: p.shortTermRent.currency })
+                : undefined,
               city: p.address?.city,
               neighborhood: p.address?.neighborhood || p.address?.district,
               bedrooms: p.bedrooms ?? p.features?.bedrooms,

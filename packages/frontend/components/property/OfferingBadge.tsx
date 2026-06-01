@@ -1,18 +1,20 @@
 /**
- * IntentBadge — a small floating chip that marks a listing's non-rent offering
- * ("For sale" / "Exchange"). Shared across the card grid and any future surface
- * so the intent vocabulary (label, colour, icon) lives in exactly one place.
+ * OfferingBadge — a small floating chip that marks one of a listing's offerings
+ * ("For sale" / "Exchange" / "By night"). Shared across the card grid and any
+ * future surface so the offering vocabulary (label, colour, icon) lives in
+ * exactly one place.
  *
- * Rent needs no badge (it's the default), so `RENT` renders nothing. The chip
- * reuses PropertyCard's `statusChip` language — a soft tinted pill — with an
- * amber tint for sale and a teal tint for exchange.
+ * Long-term rent is the default and needs no badge, so
+ * {@link OfferingType.LONG_TERM_RENT} renders nothing. The chip reuses
+ * PropertyCard's `statusChip` language — a soft tinted pill — with an amber tint
+ * for sale, a teal tint for exchange, and the brand tint for by-night.
  */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
-import { ListingIntent } from '@homiio/shared-types';
+import { OfferingType } from '@homiio/shared-types';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { colors } from '@/styles/colors';
@@ -20,12 +22,12 @@ import { radius, spacing } from '@/constants/styles';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
-export type IntentBadgeSize = 'sm' | 'md';
+export type OfferingBadgeSize = 'sm' | 'md';
 
-interface IntentBadgeProps {
-  intent: ListingIntent;
+interface OfferingBadgeProps {
+  offering: OfferingType;
   /** `sm` for dense grids, `md` (default) for roomy cards. */
-  size?: IntentBadgeSize;
+  size?: OfferingBadgeSize;
 }
 
 interface BadgeStyle {
@@ -36,15 +38,22 @@ interface BadgeStyle {
   fallback: string;
 }
 
-const BADGE_STYLES: Partial<Record<ListingIntent, BadgeStyle>> = {
-  [ListingIntent.SALE]: {
+const BADGE_STYLES: Partial<Record<OfferingType, BadgeStyle>> = {
+  [OfferingType.SHORT_TERM_RENT]: {
+    background: colors.primaryLight_2,
+    foreground: colors.primaryColor,
+    icon: 'moon',
+    i18nKey: 'listing.badge.byNight',
+    fallback: 'By night',
+  },
+  [OfferingType.SALE]: {
     background: colors.saleSubtle,
     foreground: colors.saleAccent,
     icon: 'pricetag',
     i18nKey: 'listing.badge.forSale',
     fallback: 'For sale',
   },
-  [ListingIntent.EXCHANGE]: {
+  [OfferingType.EXCHANGE]: {
     background: colors.exchangeSubtle,
     foreground: colors.exchangeAccent,
     icon: 'swap-horizontal',
@@ -53,10 +62,10 @@ const BADGE_STYLES: Partial<Record<ListingIntent, BadgeStyle>> = {
   },
 };
 
-export const IntentBadge: React.FC<IntentBadgeProps> = ({ intent, size = 'md' }) => {
+export const OfferingBadge: React.FC<OfferingBadgeProps> = ({ offering, size = 'md' }) => {
   const { t } = useTranslation();
-  const config = BADGE_STYLES[intent];
-  // Rent (or any unmapped intent) carries no badge.
+  const config = BADGE_STYLES[offering];
+  // Long-term rent (or any unmapped offering) carries no badge.
   if (!config) return null;
 
   const isSmall = size === 'sm';
@@ -108,4 +117,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default IntentBadge;
+export default OfferingBadge;

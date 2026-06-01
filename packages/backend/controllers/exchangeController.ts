@@ -5,7 +5,7 @@
  *  - SWAP: reciprocal home swap (each party stays in the other's home)
  *  - HOST: one-way free hosting (guest stays, no reciprocity)
  *
- * Operates only on listings carrying the EXCHANGE intent. Distinct from:
+ * Operates only on listings carrying the EXCHANGE offering. Distinct from:
  *  - `Reservation`     (paid vacation booking — Airbnb-style)
  *  - `ViewingRequest`  (in-person tour for the long-term rent flow)
  *  - `Lease`           (signed long-term contract)
@@ -25,7 +25,7 @@ import type {
 const { Property, ExchangeRequest, Profile } = require('../models');
 const { logger } = require('../middlewares/logging');
 const { AppError, successResponse, paginationResponse } = require('../middlewares/errorHandler');
-const { ExchangeMode, ExchangeRequestStatus, ListingIntent } = require('@homiio/shared-types');
+const { ExchangeMode, ExchangeRequestStatus, OfferingType } = require('@homiio/shared-types');
 const { Types } = require('mongoose');
 const { windowsOverlap } = require('../utils/availabilityUtils');
 
@@ -53,9 +53,9 @@ function modeAccepts(listingMode: string, requestedMode: string): boolean {
   return listingMode === requestedMode;
 }
 
-/** A property carries the EXCHANGE intent (empty/missing intents read as rent-only). */
-function hasExchangeIntent(property: { intents?: unknown }): boolean {
-  return Array.isArray(property.intents) && property.intents.includes(ListingIntent.EXCHANGE);
+/** A property carries the EXCHANGE offering. */
+function hasExchangeOffering(property: { offerings?: unknown }): boolean {
+  return Array.isArray(property.offerings) && property.offerings.includes(OfferingType.EXCHANGE);
 }
 
 /** Parse + validate a requested/offered window into concrete Dates. Returns null if malformed. */
@@ -159,7 +159,7 @@ class ExchangeController {
       if (property.isExternal) {
         return next(new AppError('Cannot request an exchange on external listings', 400, 'EXTERNAL_PROPERTY'));
       }
-      if (!hasExchangeIntent(property)) {
+      if (!hasExchangeOffering(property)) {
         return next(new AppError('This property is not open to home exchange', 400, 'NOT_EXCHANGEABLE'));
       }
       const listingMode = property.exchange?.mode;
@@ -202,7 +202,7 @@ class ExchangeController {
         if (String(offeredProperty.profileId) !== String(requesterProfile._id)) {
           return next(new AppError('Offered property does not belong to you', 403, 'FORBIDDEN'));
         }
-        if (!hasExchangeIntent(offeredProperty)) {
+        if (!hasExchangeOffering(offeredProperty)) {
           return next(new AppError('Offered property is not open to home exchange', 400, 'OFFERED_NOT_EXCHANGEABLE'));
         }
         const offered = parseWindow(offeredWindow);
@@ -383,7 +383,7 @@ class ExchangeController {
           if (!targetProperty) {
             return next(new AppError('Property no longer exists', 404, 'NOT_FOUND'));
           }
-          if (!hasExchangeIntent(targetProperty)) {
+          if (!hasExchangeOffering(targetProperty)) {
             return next(new AppError('This property is no longer open to home exchange', 409, 'NOT_EXCHANGEABLE'));
           }
           const listingMode = targetProperty.exchange?.mode;

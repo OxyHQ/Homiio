@@ -15,17 +15,15 @@
  * `PropertySchema.statics.findWithinRadius` / `findNearby`) and then constrains
  * properties by `addressId`. This keeps every query index-backed.
  *
- * Like-for-like guarantee: prices are only ever compared within a single
- * `priceUnit` (e.g. monthly vs monthly), so a long-term €/month listing is
- * never mixed with a vacation €/night listing. `rentMode` is matched as
- * "target mode OR both", because a `RentMode.BOTH` listing participates in both
- * the long-term and vacation feeds; the `priceUnit` guard is what keeps its
- * price comparable.
+ * Like-for-like guarantee: a target is compared only against listings carrying
+ * the SAME offering (long-term monthly vs long-term monthly, short-term nightly
+ * vs short-term nightly, sale price vs sale price), so a €/month listing is
+ * never mixed with a €/night one.
  */
 
 import type { Request, Response, NextFunction } from 'express';
 import { Types, type Model } from 'mongoose';
-import { ListingIntent } from '@homiio/shared-types';
+import { OfferingType } from '@homiio/shared-types';
 import type {
   PropertyAreaInsights,
   AreaPriceVerdict,
@@ -71,19 +69,30 @@ const VERDICT_BELOW_AVG_MAX = -2;
 const VERDICT_AVERAGE_MAX = 2;
 
 /**
- * Mongo field paths the comparison can be denominated in. A rent comparison
- * uses `rent.amount`; a sale comparison uses `sale.price`. Threaded through the
- * filter + aggregations so a sale-only listing (rent 0) is never compared
- * against rentals (which produced a bogus "-100% / good deal").
+ * Mongo field paths the comparison can be denominated in, one per offering. A
+ * target is compared only against listings carrying the same offering, in the
+ * matching price field, so a monthly figure is never mixed with a nightly one
+ * or a sale total.
  */
-const PRICE_FIELD_RENT = 'rent.amount';
+const PRICE_FIELD_LONG_TERM = 'longTermRent.monthlyAmount';
+const PRICE_FIELD_SHORT_TERM = 'shortTermRent.nightlyRate';
 const PRICE_FIELD_SALE = 'sale.price';
-type PriceField = typeof PRICE_FIELD_RENT | typeof PRICE_FIELD_SALE;
+type PriceField =
+  | typeof PRICE_FIELD_LONG_TERM
+  | typeof PRICE_FIELD_SHORT_TERM
+  | typeof PRICE_FIELD_SALE;
 
-/** Rent-mode literals as stored on the Property (`RentMode` enum values). */
-const RENT_MODE_LONG_TERM = 'long_term';
-const RENT_MODE_VACATION = 'vacation';
-const RENT_MODE_BOTH = 'both';
+/** The offering each price field belongs to, for the comparable membership filter. */
+const OFFERING_FOR_PRICE_FIELD: Record<PriceField, OfferingType> = {
+  [PRICE_FIELD_LONG_TERM]: OfferingType.LONG_TERM_RENT,
+  [PRICE_FIELD_SHORT_TERM]: OfferingType.SHORT_TERM_RENT,
+  [PRICE_FIELD_SALE]: OfferingType.SALE,
+};
+
+/** A short-term-mode price unit label, for the response `priceUnit` field. */
+const PRICE_UNIT_MONTH = 'month';
+const PRICE_UNIT_NIGHT = 'night';
+const PRICE_UNIT_SALE = 'sale';
 
 /**
  * Outgoing response shape. Field-for-field the shared `PropertyAreaInsights`
@@ -105,7 +114,7 @@ interface PriceStatsRow {
   median: number | null;
   prices: number[];
   /**
-   * Average of `rent.amount / squareFootage` over the SAME scope, restricted to
+   * Average of `<priceField> / squareFootage` over the SAME scope, restricted to
    * comparables with `squareFootage > 0` (others are mapped to `$$REMOVE` so the
    * `$avg` ignores them). `null` when no comparable in scope exposes a usable
    * square footage — folded into this pipeline to save a Mongo round-trip.
@@ -126,16 +135,15 @@ type AddressGeoLean = { _id: Types.ObjectId };
 interface TargetContext {
   id: Types.ObjectId;
   bedrooms: number;
-  rentMode: string;
+  /** Human price-unit label for the response (`month` / `night` / `sale`). */
   priceUnit: string;
   currency: string;
-  /** The target's own price in the comparison basis (rent.amount or sale.price). */
+  /** The target's own price in the comparison basis (the offering's price field). */
   price: number;
   /**
-   * Which price the comparison is denominated in. A SALE-basis target (sale
-   * intent + positive sale price and no positive rent) compares `sale.price`
-   * against sale comparables; everything else compares `rent.amount` against
-   * rentals.
+   * Which price the comparison is denominated in — the price field of the
+   * target's primary offering. Comparables are matched on the SAME offering and
+   * the SAME field, so a monthly figure is never mixed with a nightly one.
    */
   priceField: PriceField;
   squareFootage: number;
@@ -146,38 +154,15 @@ interface TargetContext {
 }
 
 /**
- * The set of `rentMode` values whose listings are valid comparables for the
- * target's mode. A `RentMode.BOTH` listing participates in both feeds, so:
- *  - a long-term target matches long_term + both,
- *  - a vacation target matches vacation + both,
- *  - a "both" target itself participates in both feeds, so it matches any mode.
- *
- * The `priceUnit` equality guard (applied separately) is what ultimately keeps
- * prices like-for-like, so a "both" monthly listing never compares against a
- * vacation per-night listing even though their modes are technically allowed.
- */
-function compatibleRentModes(targetRentMode: string): string[] {
-  if (targetRentMode === RENT_MODE_BOTH) {
-    return [RENT_MODE_LONG_TERM, RENT_MODE_VACATION, RENT_MODE_BOTH];
-  }
-  return [targetRentMode, RENT_MODE_BOTH];
-}
-
-/**
  * Base comparable filter (everything except the geo / city scope).
  *
  * Comparable = a published, available listing that is NOT the target, within
- * ±BEDROOM_TOLERANCE bedrooms, with a positive price in the comparison basis.
- *
- *  - RENT basis: also shares the target's `priceUnit` (like-for-like pricing)
- *    and a compatible `rentMode` (see `compatibleRentModes`), and requires
- *    `rent.amount > 0`.
- *  - SALE basis: requires the `sale` intent and `sale.price > 0`; `priceUnit`
- *    and `rentMode` are rent concepts and so are NOT applied (a sale price is a
- *    single total, not a per-period rate).
+ * ±BEDROOM_TOLERANCE bedrooms, carrying the SAME offering as the target's
+ * primary basis, with a positive price in the matching field. Matching on the
+ * offering (rather than a price-unit string) is what keeps prices like-for-like.
  */
 function buildBaseComparableFilter(target: TargetContext): Record<string, unknown> {
-  const base: Record<string, unknown> = {
+  return {
     _id: { $ne: target.id },
     status: 'published',
     'availability.isAvailable': true,
@@ -185,18 +170,9 @@ function buildBaseComparableFilter(target: TargetContext): Record<string, unknow
       $gte: target.bedrooms - BEDROOM_TOLERANCE,
       $lte: target.bedrooms + BEDROOM_TOLERANCE,
     },
+    offerings: OFFERING_FOR_PRICE_FIELD[target.priceField],
+    [target.priceField]: { $gt: 0 },
   };
-
-  if (target.priceField === PRICE_FIELD_SALE) {
-    base.intents = ListingIntent.SALE;
-    base[PRICE_FIELD_SALE] = { $gt: 0 };
-    return base;
-  }
-
-  base.priceUnit = target.priceUnit;
-  base.rentMode = { $in: compatibleRentModes(target.rentMode) };
-  base[PRICE_FIELD_RENT] = { $gt: 0 };
-  return base;
 }
 
 /**
@@ -260,8 +236,8 @@ function roundInt(value: number): number {
 
 /**
  * Run the comparable price-stats aggregation over the given address-id scope,
- * denominated in `priceField` (`rent.amount` or `sale.price`). Returns null when
- * the scope yields no comparables. Uses the `$median` accumulator (MongoDB 7.0+)
+ * denominated in `priceField` (the target offering's price field). Returns null
+ * when the scope yields no comparables. Uses the `$median` accumulator (MongoDB 7.0+)
  * and also keeps the sorted price array so the histogram can be built without a
  * second pass.
  *
@@ -449,32 +425,42 @@ function buildNeighborhoodVsCity(
 }
 
 /**
- * Resolve the comparison BASIS for a target listing.
+ * Resolve the comparison BASIS for a target listing — the single offering its
+ * price comparison is denominated in.
  *
- * Precedence: a positive `rent.amount` makes it a RENT comparison (it is
- * "primarily rent", even if it is ALSO for sale). Otherwise, a SALE listing
- * with a positive `sale.price` is a SALE comparison. A listing with neither a
- * positive rent nor a positive sale price has no basis at all (the caller then
+ * Precedence (a multi-offering listing has ONE comparison basis): long-term
+ * monthly rent → short-term nightly rate → sale price. EXCHANGE carries no
+ * monetary price, so an exchange-only listing has no basis (the caller then
  * returns `sampleSize: 0` rather than comparing against a 0 basis).
  */
 function resolvePriceBasis(
   property: IProperty
-): { priceField: PriceField; price: number; currency: string } | null {
-  const rentAmount = property.rent?.amount;
-  if (typeof rentAmount === 'number' && rentAmount > 0) {
+): { priceField: PriceField; price: number; currency: string; priceUnit: string } | null {
+  const monthly = property.longTermRent?.monthlyAmount;
+  if (typeof monthly === 'number' && monthly > 0) {
     return {
-      priceField: PRICE_FIELD_RENT,
-      price: rentAmount,
-      currency: property.rent?.currency ?? 'EUR',
+      priceField: PRICE_FIELD_LONG_TERM,
+      price: monthly,
+      currency: property.longTermRent?.currency ?? 'EUR',
+      priceUnit: PRICE_UNIT_MONTH,
     };
   }
-  const intents = Array.isArray(property.intents) ? property.intents : [];
+  const nightly = property.shortTermRent?.nightlyRate;
+  if (typeof nightly === 'number' && nightly > 0) {
+    return {
+      priceField: PRICE_FIELD_SHORT_TERM,
+      price: nightly,
+      currency: property.shortTermRent?.currency ?? 'EUR',
+      priceUnit: PRICE_UNIT_NIGHT,
+    };
+  }
   const salePrice = property.sale?.price;
-  if (intents.includes(ListingIntent.SALE) && typeof salePrice === 'number' && salePrice > 0) {
+  if (typeof salePrice === 'number' && salePrice > 0) {
     return {
       priceField: PRICE_FIELD_SALE,
       price: salePrice,
-      currency: property.sale?.currency ?? property.rent?.currency ?? 'EUR',
+      currency: property.sale?.currency ?? 'EUR',
+      priceUnit: PRICE_UNIT_SALE,
     };
   }
   return null;
@@ -509,8 +495,7 @@ function buildTargetContext(
     context: {
       id: property._id,
       bedrooms: typeof property.bedrooms === 'number' ? property.bedrooms : 0,
-      rentMode: property.rentMode ?? 'long_term',
-      priceUnit: property.priceUnit ?? 'month',
+      priceUnit: basis.priceUnit,
       currency: basis.currency,
       price: basis.price,
       priceField: basis.priceField,
@@ -573,8 +558,12 @@ function buildEmptyInsights(property: IProperty): AreaInsightsResponse {
     basis: 'city',
     radiusKm: RADIUS_KM,
     areaLabel: '',
-    currency: property.rent?.currency ?? property.sale?.currency ?? 'EUR',
-    priceUnit: property.priceUnit ?? 'month',
+    currency:
+      property.longTermRent?.currency ??
+      property.shortTermRent?.currency ??
+      property.sale?.currency ??
+      'EUR',
+    priceUnit: PRICE_UNIT_MONTH,
     sampleSize: 0,
     comparison: buildComparison(null, 0),
     pricePerSqm: null,

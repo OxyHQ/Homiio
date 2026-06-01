@@ -94,7 +94,7 @@ const ModeRowButton = React.memo(function ModeRowButton({
  * animates between the four browse rows (Long-term, Vacation, Buy, Exchange)
  * via `translateY` so no row re-mounts. The selection drives the global
  * {@link useRentalMode} browse mode, which routes straight into the same
- * `intent` + `rentMode` the search already filters on.
+ * `offering` axis the search already filters and reprices on.
  *
  * Mirrors Clarity's segmented-toggle dimensions and animation parameters: 4px
  * outer padding, 32px row height, rounded-12px track, rounded-8px indicator,

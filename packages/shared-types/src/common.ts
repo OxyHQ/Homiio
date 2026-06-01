@@ -63,18 +63,6 @@ export enum PriceUnit {
   YEAR = 'year'
 }
 
-/**
- * Rental mode for hybrid listings.
- * - LONG_TERM: traditional rent (Idealista-style) — default
- * - VACATION: short-term / vacation rental (Airbnb-style)
- * - BOTH: same listing appears in both feeds; host accepts both flows
- */
-export enum RentMode {
-  LONG_TERM = 'long_term',
-  VACATION = 'vacation',
-  BOTH = 'both'
-}
-
 /** Status of an availability window on the property calendar. */
 export enum AvailabilityWindowStatus {
   AVAILABLE = 'available',
@@ -83,15 +71,19 @@ export enum AvailabilityWindowStatus {
 }
 
 /**
- * Ways a single listing can be offered. A listing may carry MULTIPLE intents
- * at once (e.g. `[RENT, SALE]` for "rent + sell"). Legacy listings with no
- * stored intents are treated as rent-only.
- * - RENT: traditional/short-term rental (the existing flow)
+ * The single axis describing how a listing is offered. A listing may carry
+ * MULTIPLE offerings at once (e.g. `[LONG_TERM_RENT, SHORT_TERM_RENT]` for a
+ * flat available both monthly and by the night). Each offering owns its own
+ * priced block on the Property, so the unit (monthly vs nightly) is fixed per
+ * block and never reinterpreted by browse mode.
+ * - LONG_TERM_RENT: traditional monthly rent (Idealista-style)
+ * - SHORT_TERM_RENT: vacation / by-the-night rental (Airbnb-style)
  * - SALE: property is for sale (buy)
  * - EXCHANGE: home swap and/or free hosting
  */
-export enum ListingIntent {
-  RENT = 'rent',
+export enum OfferingType {
+  LONG_TERM_RENT = 'long_term_rent',
+  SHORT_TERM_RENT = 'short_term_rent',
   SALE = 'sale',
   EXCHANGE = 'exchange'
 }
@@ -137,14 +129,6 @@ export interface AvailabilityWindow {
   start: ISODate;
   end: ISODate;
   status: AvailabilityWindowStatus;
-}
-
-/** Vacation-mode breakdown fields used when computing a quote total. */
-export interface PriceBreakdown {
-  cleaningFee?: number;
-  serviceFee?: number;
-  /** Percentage 0-100, applied to (nightly * nights + cleaningFee + serviceFee) */
-  taxesPercent?: number;
 }
 
 export enum ProfileType {

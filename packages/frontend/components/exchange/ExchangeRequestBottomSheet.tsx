@@ -18,11 +18,10 @@ import { H3, Text as BloomText } from '@oxyhq/bloom/typography';
 import { useOxy, showSignInModal } from '@oxyhq/services';
 import {
   ExchangeMode,
-  ListingIntent,
+  OfferingType,
   type CreateExchangeRequestData,
   type Property,
 } from '@homiio/shared-types';
-
 import { toast } from '@/lib/sonner';
 import {
   AvailabilityCalendar,
@@ -31,7 +30,7 @@ import {
 import { useProfile } from '@/context/ProfileContext';
 import { useCreateExchangeRequest } from '@/hooks/useExchangeQueries';
 import { useUserProperties } from '@/hooks/usePropertyQueries';
-import { getPropertyTitle } from '@/utils/propertyUtils';
+import { getPropertyTitle, hasOffering } from '@/utils/propertyUtils';
 import { formatLocalized } from '@/utils/dateLocale';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
@@ -56,8 +55,7 @@ const formatRange = (range: AvailabilityCalendarRange | null): string =>
 const propertyId = (property: Property): string => property._id || property.id || '';
 
 const isExchangeEnabled = (property: Property): boolean =>
-  Array.isArray(property.intents) &&
-  property.intents.includes(ListingIntent.EXCHANGE);
+  hasOffering(property, OfferingType.EXCHANGE);
 
 /**
  * ExchangeRequestBottomSheet — propose a home swap or free-hosting stay.

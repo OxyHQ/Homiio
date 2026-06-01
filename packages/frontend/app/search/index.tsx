@@ -13,7 +13,7 @@
  *    routed to `/profile` to sign in.
  *
  * Inbound deep links are mapped onto the store (re-applied when they change):
- *  - `?rentMode=vacation|long_term` switches the experience.
+ *  - `?offering=long_term_rent|short_term_rent|sale|exchange` switches the offering.
  *  - `?city=<slug>` resolves to a located "Where" via the cities API.
  *  - `?query=<text>` geocodes to a located "Where" via the keyless Nominatim
  *    geocoder (see `useAddressSearch`).
@@ -23,7 +23,7 @@ import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useOxy } from '@oxyhq/services';
 
-import { ListingIntent, PropertyType, RentMode, type Property } from '@homiio/shared-types';
+import { OfferingType, PropertyType, type Property } from '@homiio/shared-types';
 
 import { SearchResultsView } from '@/components/search/SearchResultsView';
 import { SearchPanel } from '@/components/search/SearchPanel';
@@ -44,23 +44,18 @@ function readParam(value: string | string[] | undefined): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
 
-/** Coerce the `rentMode` param onto the {@link RentMode} enum (vacation | long-term). */
-function parseRentMode(value: string | undefined): RentMode | undefined {
-  if (value === RentMode.VACATION) return RentMode.VACATION;
-  if (value === RentMode.LONG_TERM) return RentMode.LONG_TERM;
-  return undefined;
+/** All valid {@link OfferingType} values, for narrowing offering params/payloads. */
+const OFFERING_TYPES = new Set<string>(Object.values(OfferingType));
+
+/** Coerce a string onto the {@link OfferingType} enum, or undefined. */
+function parseOffering(value: string | undefined): OfferingType | undefined {
+  return value !== undefined && OFFERING_TYPES.has(value)
+    ? (value as OfferingType)
+    : undefined;
 }
 
 /** All valid {@link PropertyType} values, for narrowing saved-search payloads. */
 const PROPERTY_TYPES = new Set<string>(Object.values(PropertyType));
-
-/** All valid {@link ListingIntent} values, for narrowing saved-search payloads. */
-const LISTING_INTENTS = new Set<string>(Object.values(ListingIntent));
-
-const readIntent = (value: unknown): ListingIntent | undefined =>
-  typeof value === 'string' && LISTING_INTENTS.has(value)
-    ? (value as ListingIntent)
-    : undefined;
 
 const readNumber = (value: unknown): number | undefined =>
   typeof value === 'number' && Number.isFinite(value) ? value : undefined;
@@ -98,7 +93,8 @@ const readDates = (filters: Record<string, unknown>): SearchDateRange | undefine
  */
 function payloadToQuery(payload: SavedSearchPayload): SearchQuery {
   const filters = payload.filters ?? {};
-  const rentMode = parseRentMode(readString(filters.rentMode)) ?? RentMode.LONG_TERM;
+  const offering =
+    parseOffering(readString(filters.offering)) ?? OfferingType.LONG_TERM_RENT;
   const propertyTypes = filters.propertyTypes
     ? readPropertyTypes(filters.propertyTypes)
     : readPropertyTypes(filters.type);
@@ -107,8 +103,7 @@ function payloadToQuery(payload: SavedSearchPayload): SearchQuery {
 
   return {
     ...DEFAULT_SEARCH_QUERY,
-    rentMode,
-    intent: readIntent(filters.intent),
+    offering,
     propertyTypes,
     priceMin,
     priceMax,
@@ -116,7 +111,7 @@ function payloadToQuery(payload: SavedSearchPayload): SearchQuery {
     bathrooms: readNumber(filters.bathrooms),
     amenities: readStringArray(filters.amenities),
     guests: readNumber(filters.guests),
-    dates: rentMode === RentMode.VACATION ? readDates(filters) : undefined,
+    dates: offering === OfferingType.SHORT_TERM_RENT ? readDates(filters) : undefined,
   };
 }
 
@@ -139,7 +134,7 @@ export default function SearchScreen() {
   const params = useLocalSearchParams<{
     query?: string | string[];
     city?: string | string[];
-    rentMode?: string | string[];
+    offering?: string | string[];
   }>();
   const { isAuthenticated } = useOxy();
   const { setIsMapMode } = useSearchMode();
@@ -164,12 +159,12 @@ export default function SearchScreen() {
   // edits (those don't touch the URL), so it can't clobber them.
   const queryParam = readParam(params.query);
   const cityParam = readParam(params.city);
-  const rentModeParam = readParam(params.rentMode);
+  const offeringParam = readParam(params.offering);
 
   useEffect(() => {
-    const rentMode = parseRentMode(rentModeParam);
-    if (rentMode) {
-      useSearchQueryStore.getState().setRentMode(rentMode);
+    const offering = parseOffering(offeringParam);
+    if (offering) {
+      useSearchQueryStore.getState().setOffering(offering);
     }
     if (!cityParam && !queryParam) return;
 
@@ -206,7 +201,7 @@ export default function SearchScreen() {
     return () => {
       cancelled = true;
     };
-  }, [cityParam, queryParam, rentModeParam]);
+  }, [cityParam, queryParam, offeringParam]);
 
   // Apply saved searches pushed over the lightweight event bus by the
   // RightBar's SavedSearchesWidget while the user is already on this screen

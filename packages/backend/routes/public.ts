@@ -10,6 +10,7 @@ const cityController = require('../controllers/cityController').default;
 const tipsController = require('../controllers/tipsController');
 const analyticsController = require('../controllers/analyticsController');
 const geocodingController = require('../controllers/geocodingController').default;
+const reviewController = require('../controllers/reviewController');
 const { asyncHandler } = require('../middlewares');
 const performanceMonitor = require('../middlewares/performance').default;
 const Conversation = require('../models/schemas/ConversationSchema');
@@ -34,6 +35,14 @@ export default function () {
   // Public geocoding routes
   router.get('/geocoding/reverse', asyncHandler(geocodingController.reverseGeocode));
   router.get('/geocoding/forward', asyncHandler(geocodingController.forwardGeocode));
+
+  // Public review READ routes (community notes). These are community-visible
+  // building/unit reviews surfaced on the property-detail screen — the
+  // controllers read only `req.params`/`req.query` and never touch `req.user`,
+  // so they belong here next to `area-insights` rather than behind `oxy.auth()`.
+  // Review WRITES (POST/PUT/DELETE) stay on the authenticated `/reviews` router.
+  router.get('/reviews/address/:addressId', asyncHandler(reviewController.getReviewsByAddress));
+  router.get('/reviews/address/:addressId/stats', asyncHandler(reviewController.getAddressReviewStats));
 
   // Public city routes
   router.get('/cities', asyncHandler(cityController.getCities));

@@ -10,12 +10,16 @@ import {
   HousingType,
   LayoutType,
   LeaseDuration,
-  RentMode,
+  UtilitiesIncluded,
   AvailabilityWindowStatus,
   CancellationPolicy,
-  ListingIntent,
+  OfferingType,
   ExchangeMode
 } from '@homiio/shared-types';
+import { validateOfferings } from './schemas/offeringValidation';
+
+/** Currency codes accepted on every priced block (rent / sale / exchange). */
+const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'FAIR'] as const;
 
 // Define the Property interface
 export interface IProperty extends Document {
@@ -34,12 +38,29 @@ export interface IProperty extends Document {
   squareFootage?: number;
   bedrooms?: number;
   bathrooms?: number;
-  rent: {
-    amount: number;
+  /** The single source of truth for how this listing is offered. */
+  offerings: OfferingType[];
+  /** Monthly-rent pricing, present iff `offerings` includes `LONG_TERM_RENT`. */
+  longTermRent?: {
+    monthlyAmount: number;
     currency: string;
-    paymentFrequency: 'monthly' | 'weekly' | 'daily';
+    deposit?: number;
+    applicationFee?: number;
+    lateFee?: number;
+    utilities?: UtilitiesIncluded;
   };
-  priceUnit?: 'day' | 'night' | 'week' | 'month' | 'year';
+  /** Per-night pricing, present iff `offerings` includes `SHORT_TERM_RENT`. */
+  shortTermRent?: {
+    nightlyRate: number;
+    currency: string;
+    cleaningFee?: number;
+    serviceFee?: number;
+    taxesPercent?: number;
+    minNights?: number;
+    maxNights?: number;
+    instantBook?: boolean;
+    deposit?: number;
+  };
   amenities?: string[];
   images?: Array<{
     url: string;
@@ -68,24 +89,13 @@ export interface IProperty extends Document {
   smokingAllowed?: boolean;
   partiesAllowed?: boolean;
   guestsAllowed?: boolean;
-  // Hybrid rental fields
-  rentMode?: RentMode;
+  // Short-term (vacation) calendar
   availabilityWindows?: Array<{
     start: Date;
     end: Date;
     status: AvailabilityWindowStatus;
   }>;
-  minStay?: number;
-  maxStay?: number;
   cancellationPolicy?: CancellationPolicy;
-  instantBook?: boolean;
-  priceBreakdown?: {
-    cleaningFee?: number;
-    serviceFee?: number;
-    taxesPercent?: number;
-  };
-  // Multi-intent platform (rent / sale / exchange)
-  intents?: ListingIntent[];
   sale?: {
     price: number;
     currency: string;
@@ -118,6 +128,49 @@ export interface IProperty extends Document {
     count: number;
   };
 }
+
+// Per-offering priced blocks. Each currency uses the shared 5-code set; 'FAIR'
+// is 4 chars so no length cap is applied (a 3-char cap would reject it).
+const longTermRentSchema = new Schema({
+  monthlyAmount: {
+    type: Number,
+    required: [true, 'Monthly amount is required'],
+    min: [0, 'Monthly amount cannot be negative']
+  },
+  currency: {
+    type: String,
+    required: true,
+    uppercase: true,
+    enum: SUPPORTED_CURRENCIES,
+    default: 'EUR'
+  },
+  deposit: { type: Number, min: [0, 'Deposit cannot be negative'] },
+  applicationFee: { type: Number, min: [0, 'Application fee cannot be negative'] },
+  lateFee: { type: Number, min: [0, 'Late fee cannot be negative'] },
+  utilities: { type: String, enum: Object.values(UtilitiesIncluded) }
+}, { _id: false });
+
+const shortTermRentSchema = new Schema({
+  nightlyRate: {
+    type: Number,
+    required: [true, 'Nightly rate is required'],
+    min: [0, 'Nightly rate cannot be negative']
+  },
+  currency: {
+    type: String,
+    required: true,
+    uppercase: true,
+    enum: SUPPORTED_CURRENCIES,
+    default: 'EUR'
+  },
+  cleaningFee: { type: Number, min: [0, 'Cleaning fee cannot be negative'] },
+  serviceFee: { type: Number, min: [0, 'Service fee cannot be negative'] },
+  taxesPercent: { type: Number, min: [0, 'Taxes percent cannot be negative'], max: [100, 'Taxes percent cannot exceed 100'] },
+  minNights: { type: Number, min: [1, 'Minimum nights must be at least 1'] },
+  maxNights: { type: Number, min: [1, 'Maximum nights must be at least 1'] },
+  instantBook: { type: Boolean, default: false },
+  deposit: { type: Number, min: [0, 'Deposit cannot be negative'] }
+}, { _id: false });
 
 const PropertySchema = new Schema({
   profileId: {
@@ -183,30 +236,18 @@ const PropertySchema = new Schema({
     min: [0, 'Bathrooms cannot be negative'],
     default: 1
   },
-  rent: {
-    amount: {
-      type: Number,
-      required: true,
-      min: [0, 'Rent amount cannot be negative']
-    },
-    currency: {
-      type: String,
-      required: true,
-      default: 'USD',
-      uppercase: true,
-      minlength: 3,
-      maxlength: 3
-    },
-    paymentFrequency: {
-      type: String,
-      enum: ['daily', 'weekly', 'monthly'],
-      default: 'monthly'
-    }
+  offerings: {
+    type: [{ type: String, enum: Object.values(OfferingType) }],
+    required: true,
+    default: []
   },
-  priceUnit: {
-    type: String,
-    enum: ['day', 'night', 'week', 'month', 'year'],
-    default: 'month'
+  longTermRent: {
+    type: longTermRentSchema,
+    default: undefined
+  },
+  shortTermRent: {
+    type: shortTermRentSchema,
+    default: undefined
   },
   amenities: [{
     type: String,
@@ -324,12 +365,6 @@ const PropertySchema = new Schema({
     min: [1, 'Maximum guests must be at least 1'],
     default: 1
   },
-  rentMode: {
-    type: String,
-    enum: Object.values(RentMode),
-    default: RentMode.LONG_TERM,
-    index: true
-  },
   availabilityWindows: {
     type: [{
       start: { type: Date, required: true },
@@ -344,32 +379,9 @@ const PropertySchema = new Schema({
     }],
     default: []
   },
-  minStay: {
-    type: Number,
-    min: [1, 'Minimum stay must be at least 1 night']
-  },
-  maxStay: {
-    type: Number,
-    min: [1, 'Maximum stay must be at least 1 night']
-  },
   cancellationPolicy: {
     type: String,
     enum: Object.values(CancellationPolicy)
-  },
-  instantBook: {
-    type: Boolean,
-    default: false
-  },
-  priceBreakdown: {
-    cleaningFee: { type: Number, min: 0 },
-    serviceFee: { type: Number, min: 0 },
-    taxesPercent: { type: Number, min: 0, max: 100 }
-  },
-  // ---- Multi-intent platform (rent / sale / exchange) ----
-  // A listing may carry several intents at once; empty/missing reads as rent-only.
-  intents: {
-    type: [{ type: String, enum: Object.values(ListingIntent) }],
-    default: [ListingIntent.RENT]
   },
   sale: {
     price: { type: Number, min: [0, 'Sale price cannot be negative'] },
@@ -441,10 +453,6 @@ const PropertySchema = new Schema({
     virtuals: true,
     transform: function(doc: any, ret: any) {
       ret.id = ret._id;
-      // Back-compat: legacy listings predate `intents`; surface them as rent-only.
-      if (!Array.isArray(ret.intents) || ret.intents.length === 0) {
-        ret.intents = [ListingIntent.RENT];
-      }
       // Transform addressId to address if populated
       if (ret.addressId && typeof ret.addressId === 'object' && ret.addressId._id) {
         ret.address = { ...ret.addressId };
@@ -470,41 +478,39 @@ const PropertySchema = new Schema({
 PropertySchema.index({ profileId: 1, status: 1 });
 PropertySchema.index({ addressId: 1 });
 PropertySchema.index({ type: 1, status: 1 });
-PropertySchema.index({ 'rent.amount': 1 });
 PropertySchema.index({ bedrooms: 1, bathrooms: 1 });
 PropertySchema.index({ amenities: 1 });
 PropertySchema.index({ createdAt: -1 });
 PropertySchema.index({ source: 1, sourceId: 1 }, { unique: true, partialFilterExpression: { sourceId: { $type: 'string' } } });
-// Hybrid rental indexes
-PropertySchema.index({ rentMode: 1, status: 1, type: 1 });
+// ---- Per-offering indexes ----
+PropertySchema.index({ offerings: 1, status: 1 });
+PropertySchema.index({ 'longTermRent.monthlyAmount': 1 });
+PropertySchema.index({ 'shortTermRent.nightlyRate': 1 });
+PropertySchema.index({ 'sale.price': 1 });
 PropertySchema.index({ 'availabilityWindows.start': 1 });
 PropertySchema.index({ 'availabilityWindows.end': 1 });
-PropertySchema.index({ rentMode: 1, instantBook: 1, status: 1 });
-// Multi-intent indexes
-PropertySchema.index({ intents: 1, status: 1 });
-PropertySchema.index({ 'sale.price': 1 });
-PropertySchema.index({ intents: 1, 'exchange.mode': 1, status: 1 });
+PropertySchema.index({ offerings: 1, 'exchange.mode': 1, status: 1 });
 
-/**
- * A listing is valid when it can actually be transacted: either it has a
- * rent amount, or it is offered for sale with a sale price. This keeps the
- * `rent` field present (so `property.rent` access never throws) while letting
- * sale-only listings skip a meaningful rent. Legacy rent docs always pass.
- */
-function hasTransactablePrice(this: IProperty): boolean {
-  const rentAmount = this.rent?.amount;
-  if (typeof rentAmount === 'number' && rentAmount > 0) {
-    return true;
-  }
-  const intents = Array.isArray(this.intents) ? this.intents : [];
-  const salePrice = this.sale?.price;
-  return intents.includes(ListingIntent.SALE) && typeof salePrice === 'number' && salePrice > 0;
-}
-
-PropertySchema.path('rent').validate(
-  hasTransactablePrice,
-  'A listing must have a rent amount or, for sale listings, a sale price'
-);
+// Offerings must be non-empty and equal exactly the set of present priced
+// blocks, each with a positive price / valid exchange mode (single source of
+// truth in `offeringValidation`). Attached to `offerings` so it runs on save
+// and on `findOneAndUpdate` with `runValidators`. The controller-level
+// `applyOfferingRules*` surfaces the SPECIFIC reason to the client; this is the
+// DB last-line guard.
+PropertySchema.path('offerings').validate({
+  validator: function(this: IProperty): boolean {
+    // Only the document context exposes every block as `this.*`. Update
+    // validators (findOneAndUpdate + runValidators) run with a Query `this`
+    // where sibling blocks are not visible, which would wrongly reject a
+    // partial edit — the update controller's `applyOfferingRulesForUpdate`
+    // already enforces full coherence there, so skip when not a document.
+    if (typeof (this as { isModified?: unknown }).isModified !== 'function') {
+      return true;
+    }
+    return validateOfferings(this) === null;
+  },
+  message: 'offerings must be non-empty and match exactly the present priced blocks, each with a positive price'
+});
 
 // Pre-save hook to update lastSaved
 PropertySchema.pre('save', function(this: IProperty) {

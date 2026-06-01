@@ -42,6 +42,7 @@ import * as Linking from 'expo-linking';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useOxy, showSignInModal } from '@oxyhq/services';
+import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { Header } from '@/components/Header';
 import { SaveButton } from '@/components/SaveButton';
@@ -53,10 +54,11 @@ import { useRentalMode } from '@/context/RentalModeContext';
 import { useIsRightBarVisible } from '@/hooks/useOptimizedMediaQuery';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { resolveHeadlinePrice } from '@/utils/propertyPricing';
+import { hasOffering, resolveOfferingSummaries } from '@/utils/propertyUtils';
 import { propertyService } from '@/services/propertyService';
 import profileService, { type Profile } from '@/services/profileService';
 import ViewingService from '@/services/viewingService';
-import { ListingIntent, PropertyType, RentMode, type Property, type PropertyImage } from '@homiio/shared-types';
+import { OfferingType, PropertyType, type Property, type PropertyImage } from '@homiio/shared-types';
 
 import { PropertyDetailSkeleton } from '@/components/ui/skeletons/PropertyDetailSkeleton';
 
@@ -101,6 +103,8 @@ interface PropertyDetailViewModel {
   title: string;
   location: string;
   price: string;
+  /** "Also available: …" line listing the OTHER offerings (empty when none). */
+  alsoAvailable: string;
   bedrooms: number;
   bathrooms: number;
   size: number;
@@ -115,7 +119,7 @@ export default function PropertyDetailPage() {
   const { id } = useLocalSearchParams();
   const { oxyServices, activeSessionId } = useOxy();
   const layoutScrollContext = useLayoutScroll();
-  const { mode: rentalMode } = useRentalMode();
+  const { mode: rentalMode, browseMode } = useRentalMode();
   const { addProperty } = useRecentlyViewed();
   // On wide screens the booking/apply card lives in the app shell's right
   // column (RightBar → PropertyBookingWidget). When the RightBar is hidden
@@ -219,17 +223,26 @@ export default function PropertyDetailPage() {
     if (!apiProperty) return null;
     const propertyId = apiProperty._id || apiProperty.id || '';
 
-    // Intent-aware headline price + location subtitle for the sticky header and
-    // the right-column booking card. Centralised in `resolveHeadlinePrice`
-    // (rent → sale → exchange) so the screen, sticky header, and
-    // PropertyBookingWidget all share one rule: a sale listing shows its asking
-    // price (no per-unit suffix), an exchange listing shows the "Free" label,
-    // and rent keeps its exact `${currency}${amount}/${priceUnit}` display.
+    // Offering-aware headline price + location subtitle for the sticky header
+    // and the right-column booking card. Centralised in `resolveHeadlinePrice`
+    // so the screen, sticky header, and PropertyBookingWidget all share one
+    // rule: the ACTIVE browse mode's priced block (long-term `/month`,
+    // short-term `/night`, sale asking price, exchange "Free"). The unit is
+    // fixed per block — never reinterpreted by mode.
     const { priceLabel, priceSubtitle } = resolveHeadlinePrice(
       apiProperty,
-      rentalMode,
+      browseMode,
       t,
     );
+
+    // "Also available: By night · For sale" — the listing's OTHER offerings.
+    const summaries = resolveOfferingSummaries(apiProperty, browseMode);
+    const alsoAvailable =
+      summaries.length > 0
+        ? `${t('listing.offering.alsoAvailable', 'Also available')}: ${summaries
+            .map((summary) => t(summary.i18nKey, summary.fallback))
+            .join(' · ')}`
+        : '';
 
     const generatedTitle = generatePropertyTitle({
       type: Object.values(PropertyType).includes(apiProperty.type as PropertyType)
@@ -244,12 +257,13 @@ export default function PropertyDetailPage() {
       title: generatedTitle,
       location: priceSubtitle,
       price: priceLabel,
+      alsoAvailable,
       bedrooms: apiProperty.bedrooms || 0,
       bathrooms: apiProperty.bathrooms || 0,
       size: apiProperty.squareFootage || 0,
       images: apiProperty.images || [],
     };
-  }, [apiProperty, rentalMode, t]);
+  }, [apiProperty, browseMode, t]);
 
   // Track property view once per page load.
   useEffect(() => {
@@ -489,21 +503,20 @@ export default function PropertyDetailPage() {
     );
   }
 
-  // Whether this listing can be booked as a short-stay (Airbnb-style).
-  // VACATION or BOTH qualify; pure LONG_TERM does not. This capability is a
-  // property of the listing itself, independent of the currently-selected
-  // rentalMode toggle, so it also decides Reviews (vacation) vs Community
-  // Notes (long-term) further down.
+  // Whether this listing can be booked as a short-stay (Airbnb-style) — it
+  // carries the SHORT_TERM_RENT offering. This capability is a property of the
+  // listing itself, independent of the currently-selected rentalMode toggle, so
+  // it also decides Reviews (vacation) vs Community Notes (long-term) below.
   const isVacationRentable = Boolean(
-    apiProperty &&
-      (apiProperty.rentMode === RentMode.VACATION ||
-        apiProperty.rentMode === RentMode.BOTH),
+    apiProperty && hasOffering(apiProperty, OfferingType.SHORT_TERM_RENT),
   );
 
   // Whether this listing is (also) for sale. Drives the Sale Details + Mortgage
   // sections below. Both additionally require the `sale` sub-payload to render,
   // so a sale listing with no stored sale block never leaves a bare divider.
-  const isSaleListing = Boolean(apiProperty?.intents?.includes(ListingIntent.SALE));
+  const isSaleListing = Boolean(
+    apiProperty && hasOffering(apiProperty, OfferingType.SALE),
+  );
   const saleData = isSaleListing ? apiProperty?.sale : undefined;
 
   // Whether this listing is open to home exchange (swap / free hosting). Drives
@@ -511,7 +524,7 @@ export default function PropertyDetailPage() {
   // requires the `exchange` sub-payload to render, so an exchange listing with
   // no stored exchange block never leaves a bare divider.
   const isExchangeListing = Boolean(
-    apiProperty?.intents?.includes(ListingIntent.EXCHANGE),
+    apiProperty && hasOffering(apiProperty, OfferingType.EXCHANGE),
   );
   const exchangeData = isExchangeListing ? apiProperty?.exchange : undefined;
 
@@ -657,9 +670,22 @@ export default function PropertyDetailPage() {
           <View style={[styles.section, styles.divider]}>
             <BasicInfoSection
               property={apiProperty}
+              mode={rentalMode}
               hasActiveViewing={hasActiveViewing}
               onViewingsPress={() => router.push('/viewings')}
             />
+            {property.alsoAvailable ? (
+              <View style={styles.alsoAvailableRow}>
+                <Ionicons
+                  name="layers-outline"
+                  size={14}
+                  color={colors.COLOR_BLACK_LIGHT_3}
+                />
+                <BloomText style={styles.alsoAvailableText}>
+                  {property.alsoAvailable}
+                </BloomText>
+              </View>
+            ) : null}
           </View>
 
           {showInlineBookingCard && apiProperty ? (
@@ -690,7 +716,7 @@ export default function PropertyDetailPage() {
           ) : null}
 
           <View style={[styles.section, styles.divider]}>
-            <PricingDetails property={apiProperty} />
+            <PricingDetails property={apiProperty} mode={rentalMode} />
           </View>
 
           {/* Sale details + mortgage calculator — only for sale listings that
@@ -885,6 +911,18 @@ const styles = StyleSheet.create({
   demandRow: {
     paddingHorizontal: SECTION_GUTTER,
     marginTop: spacing.md,
+  },
+  // "Also available" line under the headline price, sharing the section gutter.
+  alsoAvailableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: SECTION_GUTTER,
+    marginTop: spacing.md,
+  },
+  alsoAvailableText: {
+    fontSize: 13,
+    color: colors.COLOR_BLACK_LIGHT_3,
   },
   divider: {
     borderTopWidth: hairline.width,

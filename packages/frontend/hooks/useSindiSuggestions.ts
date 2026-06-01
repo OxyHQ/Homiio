@@ -51,7 +51,9 @@ export function useSindiSuggestions({ property, conversationContext }: UseSindiS
                     city: property.address?.city,
                     bedrooms: property.bedrooms,
                     bathrooms: property.bathrooms,
-                    rent: property.rent,
+                    offerings: property.offerings,
+                    longTermRent: property.longTermRent,
+                    shortTermRent: property.shortTermRent,
                     amenities: property.amenities || [],
                 };
 

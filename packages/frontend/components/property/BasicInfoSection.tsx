@@ -24,55 +24,41 @@ import { TruncatedDescription } from '@/components/ui/TruncatedDescription';
 import { SECTION_GUTTER } from '@/components/property/Section';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
-
-type PriceUnitKey = 'day' | 'night' | 'week' | 'month' | 'year';
-
-interface Property {
-  priceUnit?: PriceUnitKey;
-  rent?: { amount?: number; currency?: string; paymentFrequency?: string };
-  description?: string;
-  isExternal?: boolean;
-  source?: string;
-}
+import { type Property } from '@homiio/shared-types';
+import type { RentalMode } from '@/utils/propertyUtils';
 
 interface Props {
   property: Property | null | undefined;
+  /** The active rent experience — selects which priced block headlines here. */
+  mode: RentalMode;
   hasActiveViewing: boolean;
   onViewingsPress: () => void;
 }
 
 export const BasicInfoSection: React.FC<Props> = ({
   property,
+  mode,
   hasActiveViewing,
   onViewingsPress,
 }) => {
   const { t } = useTranslation();
-  const priceUnit: PriceUnitKey = property?.priceUnit ?? 'month';
-  const rentAmount = property?.rent?.amount ?? 0;
-  const rentCurrency = property?.rent?.currency || 'USD';
+  // Read the active mode's priced block — the unit is fixed per block.
+  const isVacation = mode === 'vacation';
+  const rentAmount = isVacation
+    ? property?.shortTermRent?.nightlyRate ?? 0
+    : property?.longTermRent?.monthlyAmount ?? 0;
+  const rentCurrency =
+    (isVacation ? property?.shortTermRent?.currency : property?.longTermRent?.currency) || 'USD';
   const description = property?.description;
 
-  const getRentLabel = (unit: PriceUnitKey): string => {
-    switch (unit) {
-      case 'day':
-        return t('Daily Rent', 'Daily Rent') || 'Daily Rent';
-      case 'night':
-        return t('Nightly Rent', 'Nightly Rent') || 'Nightly Rent';
-      case 'week':
-        return t('Weekly Rent', 'Weekly Rent') || 'Weekly Rent';
-      case 'month':
-        return t('Monthly Rent', 'Monthly Rent') || 'Monthly Rent';
-      case 'year':
-        return t('Yearly Rent', 'Yearly Rent') || 'Yearly Rent';
-      default:
-        return t('Rent', 'Rent') || 'Rent';
-    }
-  };
+  const rentLabel = isVacation
+    ? t('Nightly Rent', 'Nightly Rent') || 'Nightly Rent'
+    : t('Monthly Rent', 'Monthly Rent') || 'Monthly Rent';
 
   return (
     <View style={styles.container}>
       <View style={styles.priceRow}>
-        <BloomText style={styles.priceLabel}>{getRentLabel(priceUnit)}</BloomText>
+        <BloomText style={styles.priceLabel}>{rentLabel}</BloomText>
         <CurrencyFormatter
           amount={rentAmount}
           originalCurrency={rentCurrency}

@@ -60,12 +60,11 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
   const [moveInDate, setMoveInDate] = useState<Date | null>(null);
 
   // Compact price/requirements line — same headline rule as the rest of the
-  // detail surfaces (rent → sale → exchange).
+  // detail surfaces (the active mode's priced block; long-term here).
   const { priceLabel } = useMemo(
     () => resolveHeadlinePrice(property, 'long_term', t),
     [property, t],
   );
-  const minStay = property.minStay;
 
   const openCalendar = useCallback(() => setCalendarOpen(true), []);
   const closeCalendar = useCallback(() => setCalendarOpen(false), []);
@@ -144,33 +143,16 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
         )}
       </BloomText>
 
-      {priceLabel || minStay ? (
+      {priceLabel ? (
         <View style={styles.metaRow}>
-          {priceLabel ? (
-            <View style={styles.metaItem}>
-              <Ionicons
-                name="pricetag-outline"
-                size={14}
-                color={colors.COLOR_BLACK_LIGHT_3}
-              />
-              <BloomText style={styles.metaText}>{priceLabel}</BloomText>
-            </View>
-          ) : null}
-          {minStay ? (
-            <View style={styles.metaItem}>
-              <Ionicons
-                name="time-outline"
-                size={14}
-                color={colors.COLOR_BLACK_LIGHT_3}
-              />
-              <BloomText style={styles.metaText}>
-                {t('applications.cta.minStay', {
-                  defaultValue: 'Min {{count}} months',
-                  count: minStay,
-                })}
-              </BloomText>
-            </View>
-          ) : null}
+          <View style={styles.metaItem}>
+            <Ionicons
+              name="pricetag-outline"
+              size={14}
+              color={colors.COLOR_BLACK_LIGHT_3}
+            />
+            <BloomText style={styles.metaText}>{priceLabel}</BloomText>
+          </View>
         </View>
       ) : null}
 

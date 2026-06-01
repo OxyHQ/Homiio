@@ -18,8 +18,9 @@
  *  - Footer: a "Report this listing" link.
  */
 import React, { useState } from 'react';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Badge } from '@oxyhq/bloom/badge';
@@ -47,7 +48,6 @@ interface BookingCardProps {
   landlordProfile?: Profile | null;
 }
 
-const REPORT_URL = 'https://homiio.com/report-listing';
 const RATING_STAR_SIZE = 14;
 const SAVE_ICON_SIZE = 22;
 
@@ -58,10 +58,12 @@ export const BookingCard: React.FC<BookingCardProps> = ({
   landlordProfile = null,
 }) => {
   const { t } = useTranslation();
+  const router = useRouter();
   const { mode: rentalMode } = useRentalMode();
   const [reportPressed, setReportPressed] = useState(false);
 
   const bookingMode = resolveBookingMode(property, rentalMode);
+  const propertyId = String(property._id ?? property.id ?? '');
 
   // Rating from the same source the Reviews block reads (shared cache key).
   const { ratingSummary } = useAddressReviews(property);
@@ -71,9 +73,8 @@ export const BookingCard: React.FC<BookingCardProps> = ({
   const hostIsSuper = isSuperHost(landlordProfile);
 
   const handleReport = () => {
-    Linking.openURL(REPORT_URL).catch(() => {
-      // best-effort; the OS surfaces its own error if the URL is unreachable
-    });
+    if (!propertyId) return;
+    router.push({ pathname: '/properties/[id]/report', params: { id: propertyId } });
   };
 
   return (

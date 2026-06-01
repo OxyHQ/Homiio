@@ -7,6 +7,9 @@ import { Request, Response, NextFunction } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import { logger } from './logging';
 
+/** Currency codes accepted on every priced block (rent / sale / exchange). */
+const CURRENCY_CODES = ['USD', 'EUR', 'GBP', 'CAD', 'FAIR'];
+
 /**
  * Handle validation errors
  */
@@ -54,30 +57,48 @@ const validateProperty = [
     }
     return true;
   }),
-  // Rent is OPTIONAL at this layer: a sale-only listing legitimately omits rent
-  // (or sends amount 0). The "rent OR sale price" rule is enforced by the
-  // schema's `hasTransactablePrice` path validator, not here. When present, the
-  // amount must be non-negative (matching the schema's `min: 0`).
-  body('rent.amount').optional().isFloat({ min: 0 }).withMessage('Rent amount must be non-negative'),
-  body('rent.currency').optional().isIn(['USD', 'EUR', 'GBP', 'CAD', 'FAIR']).withMessage('Invalid currency'),
   body('bedrooms').optional().isInt({ min: 0 }).withMessage('Bedrooms must be a non-negative integer'),
   body('bathrooms').optional().isFloat({ min: 0 }).withMessage('Bathrooms must be non-negative'),
   body('squareFootage').optional().isFloat({ min: 0 }).withMessage('Square footage must be non-negative'),
   body('type').isIn(['apartment', 'house', 'room', 'studio', 'couchsurfing', 'roommates', 'coliving', 'hostel', 'guesthouse', 'campsite', 'boat', 'treehouse', 'yurt', 'other']).withMessage('Invalid property type'),
   body('housingType').optional().isIn(['private', 'public']).withMessage('Invalid housing type'),
-  // ---- Hybrid rental fields ----
-  body('rentMode').optional().isIn(['long_term', 'vacation', 'both']).withMessage('Invalid rent mode'),
-  body('instantBook').optional().isBoolean().withMessage('instantBook must be a boolean'),
-  body('cancellationPolicy').optional().isIn(['flexible', 'moderate', 'strict', 'super_strict']).withMessage('Invalid cancellation policy'),
-  body('minStay').optional().isInt({ min: 1 }).withMessage('minStay must be a positive integer'),
-  body('maxStay').optional().isInt({ min: 1 }).withMessage('maxStay must be a positive integer'),
-  body('maxStay').optional().custom((value, { req }) => {
-    const min = req.body?.minStay;
+  // ---- Per-offering fields ----
+  // The "offerings equals the present blocks, each with a positive price" rule
+  // is enforced once in the offeringRules controller + schema validator. This
+  // layer validates the SHAPE of each field when present.
+  body('offerings').isArray({ min: 1 }).withMessage('offerings must be a non-empty array'),
+  body('offerings.*').isIn(['long_term_rent', 'short_term_rent', 'sale', 'exchange']).withMessage('Invalid offering type'),
+  // Long-term rent block
+  body('longTermRent.monthlyAmount').optional().isFloat({ gt: 0 }).withMessage('monthlyAmount must be a positive number'),
+  body('longTermRent.currency').optional().isIn(CURRENCY_CODES).withMessage('Invalid currency'),
+  body('longTermRent.deposit').optional().isFloat({ min: 0 }).withMessage('deposit must be non-negative'),
+  body('longTermRent.applicationFee').optional().isFloat({ min: 0 }).withMessage('applicationFee must be non-negative'),
+  body('longTermRent.lateFee').optional().isFloat({ min: 0 }).withMessage('lateFee must be non-negative'),
+  body('longTermRent.utilities').optional().isIn(['included', 'excluded', 'partial']).withMessage('Invalid utilities value'),
+  // Short-term rent block
+  body('shortTermRent.nightlyRate').optional().isFloat({ gt: 0 }).withMessage('nightlyRate must be a positive number'),
+  body('shortTermRent.currency').optional().isIn(CURRENCY_CODES).withMessage('Invalid currency'),
+  body('shortTermRent.cleaningFee').optional().isFloat({ min: 0 }).withMessage('cleaningFee must be non-negative'),
+  body('shortTermRent.serviceFee').optional().isFloat({ min: 0 }).withMessage('serviceFee must be non-negative'),
+  body('shortTermRent.taxesPercent').optional().isFloat({ min: 0, max: 100 }).withMessage('taxesPercent must be between 0 and 100'),
+  body('shortTermRent.minNights').optional().isInt({ min: 1 }).withMessage('minNights must be a positive integer'),
+  body('shortTermRent.maxNights').optional().isInt({ min: 1 }).withMessage('maxNights must be a positive integer'),
+  body('shortTermRent.maxNights').optional().custom((value, { req }) => {
+    const min = req.body?.shortTermRent?.minNights;
     if (value !== undefined && min !== undefined && Number(value) < Number(min)) {
-      throw new Error('maxStay must be greater than or equal to minStay');
+      throw new Error('maxNights must be greater than or equal to minNights');
     }
     return true;
   }),
+  body('shortTermRent.instantBook').optional().isBoolean().withMessage('instantBook must be a boolean'),
+  body('shortTermRent.deposit').optional().isFloat({ min: 0 }).withMessage('deposit must be non-negative'),
+  // Sale block
+  body('sale.price').optional().isFloat({ gt: 0 }).withMessage('sale.price must be a positive number'),
+  body('sale.currency').optional().isIn(CURRENCY_CODES).withMessage('Invalid currency'),
+  // Exchange block
+  body('exchange.mode').optional().isIn(['swap', 'host', 'both']).withMessage('Invalid exchange mode'),
+  // Short-term calendar + booking policy
+  body('cancellationPolicy').optional().isIn(['flexible', 'moderate', 'strict', 'super_strict']).withMessage('Invalid cancellation policy'),
   body('maxGuests').optional().isInt({ min: 1 }).withMessage('maxGuests must be a positive integer'),
   body('availabilityWindows').optional().isArray().withMessage('availabilityWindows must be an array'),
   body('availabilityWindows.*.start').optional().isISO8601().withMessage('Each availability window start must be a valid ISO-8601 date'),
@@ -93,10 +114,6 @@ const validateProperty = [
     }
     return true;
   }),
-  body('priceBreakdown').optional().isObject().withMessage('priceBreakdown must be an object'),
-  body('priceBreakdown.cleaningFee').optional().isFloat({ min: 0 }).withMessage('cleaningFee must be non-negative'),
-  body('priceBreakdown.serviceFee').optional().isFloat({ min: 0 }).withMessage('serviceFee must be non-negative'),
-  body('priceBreakdown.taxesPercent').optional().isFloat({ min: 0, max: 100 }).withMessage('taxesPercent must be between 0 and 100'),
   handleValidationErrors
 ];
 

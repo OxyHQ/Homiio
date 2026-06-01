@@ -1,15 +1,43 @@
 import { Request, Response, NextFunction } from 'express';
 const { Property, Reservation } = require('../../models');
 import { paginationResponse } from '../../middlewares/errorHandler';
+import {
+  priceFieldForOffering,
+  DEFAULT_PRICE_FIELD,
+  FIELD_SHORT_TERM_INSTANT_BOOK,
+  PRICE_FIELD_SALE,
+} from './searchQueryBuilder';
+import { OfferingType } from '@homiio/shared-types';
 const {
-  RentMode,
-  ListingIntent,
   AvailabilityWindowStatus,
   ReservationStatus
 } = require('@homiio/shared-types');
 
-const HYBRID_RENT_MODES = new Set([RentMode.LONG_TERM, RentMode.VACATION]);
-const LISTING_INTENT_VALUES = new Set(Object.values(ListingIntent));
+const OFFERING_VALUES: ReadonlySet<string> = new Set(Object.values(OfferingType));
+
+// Price-preference bucket boundaries (monthly-rent scale) used by the
+// recommendation scorer to weight listings near a viewer's typical budget.
+const PRICE_BUCKET_LOW_MAX = 1000;
+const PRICE_BUCKET_MEDIUM_MAX = 2000;
+
+/**
+ * A representative monthly-scale price for recommendation bucketing: the
+ * long-term monthly amount when present, else the short-term nightly rate (so
+ * vacation-only listings still bucket). Returns 0 when neither is set.
+ */
+function representativePrice(property: {
+  longTermRent?: { monthlyAmount?: number };
+  shortTermRent?: { nightlyRate?: number };
+}): number {
+  return property.longTermRent?.monthlyAmount || property.shortTermRent?.nightlyRate || 0;
+}
+
+/** Map a representative price to a coarse low/medium/high preference bucket. */
+function priceBucket(price: number): 'low' | 'medium' | 'high' {
+  if (price < PRICE_BUCKET_LOW_MAX) return 'low';
+  if (price < PRICE_BUCKET_MEDIUM_MAX) return 'medium';
+  return 'high';
+}
 
 export const getProperties = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -45,7 +73,6 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       parkingType,
       petPolicy,
       leaseTerm,
-      priceUnit,
       proximityToTransport,
       proximityToSchools,
       proximityToShopping,
@@ -59,8 +86,9 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       lat,
       lng,
       radius,
-      rentMode,
-      intent,
+      offering,
+      minSalePrice,
+      maxSalePrice,
       instantBook,
       minGuests,
       checkIn,
@@ -171,7 +199,6 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     if (furnishedStatus) filters.furnishedStatus = String(furnishedStatus);
     if (petPolicy) filters.petPolicy = String(petPolicy);
     if (leaseTerm) filters.leaseTerm = String(leaseTerm);
-    if (priceUnit) filters.priceUnit = String(priceUnit);
     if (parkingType) filters.parkingType = String(parkingType);
     if (petFriendly !== undefined) filters.petFriendly = String(petFriendly) === 'true';
     if (utilitiesIncluded !== undefined) filters.utilitiesIncluded = String(utilitiesIncluded) === 'true';
@@ -190,11 +217,38 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       }
       if (Object.keys(af).length) filters.availableFrom = af;
     }
-    if (minRent !== undefined || maxRent !== undefined) {
-      filters['rent.amount'] = {};
-      if (minRent !== undefined) filters['rent.amount'].$gte = parseFloat(String(minRent));
-      if (maxRent !== undefined) filters['rent.amount'].$lte = parseFloat(String(maxRent));
+    // ---- Offering (long_term_rent / short_term_rent / sale / exchange) ----
+    // Resolved early because the price-range field below depends on it.
+    // `offerings` is an array, so equality matches membership.
+    let resolvedOffering: OfferingType | undefined;
+    if (offering) {
+      const offeringValue = String(offering).toLowerCase();
+      if (OFFERING_VALUES.has(offeringValue)) {
+        resolvedOffering = offeringValue as OfferingType;
+        filters.offerings = offeringValue;
+      }
     }
+
+    // ---- Price range (priceMin/priceMax aliased as minRent/maxRent) ----
+    // Applies to the requested offering's price field (long_term→monthlyAmount,
+    // short_term→nightlyRate; defaults to long-term). SALE uses minSalePrice /
+    // maxSalePrice below, so a bare range is not applied to a sale query.
+    if ((minRent !== undefined || maxRent !== undefined) && resolvedOffering !== OfferingType.SALE) {
+      const priceField = priceFieldForOffering(resolvedOffering) ?? DEFAULT_PRICE_FIELD;
+      const priceRange: { $gte?: number; $lte?: number } = {};
+      if (minRent !== undefined) priceRange.$gte = parseFloat(String(minRent));
+      if (maxRent !== undefined) priceRange.$lte = parseFloat(String(maxRent));
+      filters[priceField] = priceRange;
+    }
+
+    // ---- Sale price range (ONLY for an explicit sale query) ----
+    if ((minSalePrice !== undefined || maxSalePrice !== undefined) && resolvedOffering === OfferingType.SALE) {
+      const saleRange: { $gte?: number; $lte?: number } = {};
+      if (minSalePrice !== undefined) saleRange.$gte = parseFloat(String(minSalePrice));
+      if (maxSalePrice !== undefined) saleRange.$lte = parseFloat(String(maxSalePrice));
+      filters[PRICE_FIELD_SALE] = saleRange;
+    }
+
     if (excludeIds) {
       try {
         const mongoose = require('mongoose');
@@ -216,54 +270,11 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       filters.status = { $ne: 'draft' };
     }
 
-    // ---- Hybrid rental-mode filters ----
-    // rentMode: long_term | vacation | both — also includes `both` listings
-    // when the user asks for a specific mode (a "both" listing should appear
-    // in both feeds).
-    if (rentMode) {
-      const requestedMode = String(rentMode);
-      if (HYBRID_RENT_MODES.has(requestedMode)) {
-        filters.rentMode = { $in: [requestedMode, RentMode.BOTH] };
-      } else if (requestedMode === RentMode.BOTH) {
-        filters.rentMode = RentMode.BOTH;
-      }
-    }
-
-    // ---- Listing intent (rent / sale / exchange) ----
-    // Mirrors `applyIntentFilter` in searchQueryBuilder so the home/list feed
-    // and the search endpoint scope to intents identically. `intents` is an
-    // array, so equality matches membership. Legacy listings predate the field
-    // and are rent-only, so a `rent` query must ALSO match docs where `intents`
-    // is missing or empty (the same set the read-time back-compat surfaces as
-    // `['rent']`).
-    if (intent) {
-      const intentValue = String(intent).toLowerCase();
-      if (LISTING_INTENT_VALUES.has(intentValue)) {
-        if (intentValue !== ListingIntent.RENT) {
-          filters.intents = intentValue;
-        } else {
-          const rentOr = [
-            { intents: ListingIntent.RENT },
-            { intents: { $exists: false } },
-            { intents: { $size: 0 } }
-          ];
-          // Compose with any pre-existing $or rather than clobbering it.
-          if (Array.isArray(filters.$or)) {
-            filters.$and = [
-              ...(Array.isArray(filters.$and) ? filters.$and : []),
-              { $or: filters.$or },
-              { $or: rentOr }
-            ];
-            delete filters.$or;
-          } else {
-            filters.$or = rentOr;
-          }
-        }
-      }
-    }
+    // (Offering membership is applied above, alongside the price-range field it
+    // selects, so the home/list feed and the search endpoint scope identically.)
 
     if (instantBook !== undefined) {
-      filters.instantBook = String(instantBook) === 'true';
+      filters[FIELD_SHORT_TERM_INSTANT_BOOK] = String(instantBook) === 'true';
     }
 
     if (minGuests !== undefined) {
@@ -432,9 +443,9 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
             const property = orderedMap.get(viewPropId); // O(1) instead of O(n)
             if (property) {
               preferenceWeights.propertyTypes[property.type] = (preferenceWeights.propertyTypes[property.type] || 0) + 1;
-              const rent = property.rent?.amount || 0;
-              if (rent > 0) {
-                const priceRange = rent < 1000 ? 'low' : rent < 2000 ? 'medium' : 'high';
+              const price = representativePrice(property);
+              if (price > 0) {
+                const priceRange = priceBucket(price);
                 preferenceWeights.priceRanges[priceRange] = (preferenceWeights.priceRanges[priceRange] || 0) + 1;
               }
               if (property.address?.city) {
@@ -453,9 +464,9 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
             const isSaved = savedIds.has(propertyId);
             let personalizedScore = (property.savesCount || 0) * 10;
             personalizedScore += (preferenceWeights.propertyTypes[property.type] || 0) * 15;
-            const rent = property.rent?.amount || 0;
-            if (rent > 0) {
-              const priceRange = rent < 1000 ? 'low' : rent < 2000 ? 'medium' : 'high';
+            const price = representativePrice(property);
+            if (price > 0) {
+              const priceRange = priceBucket(price);
               personalizedScore += (preferenceWeights.priceRanges[priceRange] || 0) * 12;
             }
             if (property.addressId?.city) personalizedScore += (preferenceWeights.locations[property.addressId.city] || 0) * 20;

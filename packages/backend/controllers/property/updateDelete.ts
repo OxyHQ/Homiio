@@ -1,4 +1,4 @@
-import { applyIntentRules, IntentValidationError } from './intentValidation';
+import { applyOfferingRulesForUpdate, OfferingValidationError } from './offeringRules';
 const { Property } = require('../../models');
 const { AppError, successResponse } = require('../../middlewares/errorHandler');
 
@@ -7,11 +7,6 @@ export async function updateProperty(req, res, next) {
     const { propertyId } = req.params;
     const updateData = { ...req.body };
 
-    // Validate & normalize multi-intent fields on the update body. `false`:
-    // a partial update that omits `intents` leaves the stored value untouched
-    // (required sub-payload checks only fire when `intents` is in the body),
-    // but sale.pricePerSqm is still derived when price + area are provided.
-    applyIntentRules(updateData, false);
     const oxyUserId = req.user?.id || req.user?._id || req.userId;
     if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
     const { Profile } = require('../../models');
@@ -20,7 +15,19 @@ export async function updateProperty(req, res, next) {
     const property = await Property.findById(propertyId);
     if (!property) return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));
     if (property.profileId.toString() !== activeProfile._id.toString()) return next(new AppError('Access denied - you can only edit your own properties', 403, 'FORBIDDEN'));
-    
+
+    // Validate & normalize per-offering fields against the listing's CURRENT
+    // stored state: a partial body may touch `offerings` and/or any block
+    // independently, so coherence is checked on the effective (stored ⊕ body)
+    // document. Also derives `sale.pricePerSqm`.
+    applyOfferingRulesForUpdate(updateData, {
+      offerings: property.offerings,
+      longTermRent: property.longTermRent,
+      shortTermRent: property.shortTermRent,
+      sale: property.sale,
+      exchange: property.exchange,
+    });
+
     // Handle address update if provided
     if (updateData.address) {
       const { Address } = require('../../models');
@@ -56,7 +63,7 @@ export async function updateProperty(req, res, next) {
     if (!updatedProperty) return next(new AppError('Failed to update property', 500, 'UPDATE_FAILED'));
     res.json(successResponse(updatedProperty.toJSON(), 'Property updated successfully'));
   } catch (error) {
-    if (error instanceof IntentValidationError) {
+    if (error instanceof OfferingValidationError) {
       return next(new AppError(error.message, 400, error.code));
     }
     next(error);

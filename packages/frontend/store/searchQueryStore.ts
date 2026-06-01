@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { PropertyType, RentMode } from '@homiio/shared-types';
+import { OfferingType, PropertyType } from '@homiio/shared-types';
 import type {
   SearchBounds,
   SearchDateRange,
@@ -22,9 +22,8 @@ import type {
  * and the results screen reads `useSearchQueryStore((s) => s.query)`.
  */
 export const DEFAULT_SEARCH_QUERY: SearchQuery = {
-  rentMode: RentMode.LONG_TERM,
+  offering: OfferingType.LONG_TERM_RENT,
   location: undefined,
-  intent: undefined,
   propertyTypes: [],
   priceMin: undefined,
   priceMax: undefined,
@@ -48,22 +47,26 @@ interface SearchQueryState {
 
   /** Set/clear the resolved "Where" location. */
   setLocation: (location: SearchLocation | undefined) => void;
-  /** Switch long-term/vacation. Clears vacation-only fields when leaving vacation. */
-  setRentMode: (rentMode: RentMode) => void;
+  /**
+   * Switch the active offering (long-term / short-term / sale / exchange).
+   * Clears the short-term-only fields (dates/guests) when leaving short-term,
+   * and clears the price range since it is denominated per-offering.
+   */
+  setOffering: (offering: OfferingType) => void;
   /** Toggle a property type in/out of the selection. */
   togglePropertyType: (type: PropertyType) => void;
   /** Set the inclusive price range (either bound may be undefined to clear). */
   setPriceRange: (min: number | undefined, max: number | undefined) => void;
-  /** Set the vacation date range (or clear it). */
+  /** Set the date range (or clear it). */
   setDates: (dates: SearchDateRange | undefined) => void;
-  /** Set the vacation guest count. */
+  /** Set the guest count. */
   setGuests: (guests: number | undefined) => void;
   /** Update the sort field + direction together. */
   setSort: (sortBy: SearchSortBy, sortOrder: SearchSortOrder) => void;
   /** Replace just the bounding box on the active location (map "search this area"). */
   setBounds: (bounds: SearchBounds) => void;
 
-  /** Reset to {@link DEFAULT_SEARCH_QUERY}, preserving the current rent mode. */
+  /** Reset to {@link DEFAULT_SEARCH_QUERY}, preserving the current offering. */
   reset: () => void;
 }
 
@@ -77,15 +80,19 @@ export const useSearchQueryStore = create<SearchQueryState>()((set) => ({
   setLocation: (location) =>
     set((state) => ({ query: { ...state.query, location } })),
 
-  setRentMode: (rentMode) =>
+  setOffering: (offering) =>
     set((state) => ({
       query: {
         ...state.query,
-        rentMode,
-        // Vacation-only fields are meaningless in long-term mode.
-        ...(rentMode === RentMode.LONG_TERM
-          ? { dates: undefined, guests: undefined }
-          : {}),
+        offering,
+        // The price range is per-offering (monthly vs nightly vs sale), so a
+        // range carried over from another offering would be nonsensical.
+        priceMin: undefined,
+        priceMax: undefined,
+        // Short-term-only fields are meaningless for the other offerings.
+        ...(offering === OfferingType.SHORT_TERM_RENT
+          ? {}
+          : { dates: undefined, guests: undefined }),
       },
     })),
 
@@ -121,6 +128,6 @@ export const useSearchQueryStore = create<SearchQueryState>()((set) => ({
 
   reset: () =>
     set((state) => ({
-      query: { ...DEFAULT_SEARCH_QUERY, rentMode: state.query.rentMode },
+      query: { ...DEFAULT_SEARCH_QUERY, offering: state.query.offering },
     })),
 }));

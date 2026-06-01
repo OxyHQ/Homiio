@@ -2,67 +2,53 @@ import type { TFunction } from 'i18next';
 
 import { type Property } from '@homiio/shared-types';
 
-import { resolvePrimaryOffering, type RentalMode } from './propertyUtils';
+import type { BrowseMode } from '@/components/search/types';
+import { resolvePrimaryOffering } from './propertyUtils';
 
 /**
  * The display-ready headline price + subtitle for a property detail surface.
  *
- * `priceLabel` is the formatted headline (e.g. `€1200/month`, `$350000`, or the
- * "Free" exchange label); `priceSubtitle` is the listing location
- * (`"City, Country"`). Both feed the sticky property header, the desktop
- * BookingCard (right column), and the PropertyBookingWidget.
+ * `priceLabel` is the formatted headline (e.g. `€1700/month`, `€110/night`,
+ * `€350000`, or the "Free" exchange label); `priceSubtitle` is the listing
+ * location (`"City, Country"`). Both feed the sticky property header, the
+ * desktop BookingCard (right column), and the PropertyBookingWidget.
  */
 export interface HeadlinePrice {
   priceLabel: string;
   priceSubtitle: string;
 }
 
+/** The per-unit suffix string shown after the rent amount in the headline. */
+const PRICE_UNIT_SUFFIX: Record<'month' | 'night' | 'day' | 'week' | 'year', string> = {
+  day: 'day',
+  night: 'night',
+  week: 'week',
+  month: 'month',
+  year: 'year',
+};
+
 /**
- * Resolve the headline price + subtitle a property detail surface should show.
+ * Resolve the headline price + subtitle a property detail surface should show
+ * for the active {@link BrowseMode}.
  *
  * Centralises the detail screen's price decision so the screen, the right-column
- * booking widget, and any future surface share one rule:
- *
- *  - The per-unit suffix derives from the stored `priceUnit`, falling back to a
- *    `paymentFrequency` mapping (daily → day, weekly → week, monthly → month),
- *    else `month`.
- *  - `resolvePrimaryOffering` (rent → sale → exchange) picks the offering: a
- *    sale listing shows its asking price (no per-unit suffix), an exchange
- *    listing shows the injected "Free" label, and rent keeps its exact
- *    `${currency}${amount}/${priceUnit}` display.
+ * booking widget, and any future surface share one rule. The unit is fixed per
+ * priced block and never reinterpreted: {@link resolvePrimaryOffering} picks the
+ * active offering's block — long-term shows `${currency}${amount}/month`,
+ * short-term `${currency}${amount}/night`, sale the asking price (no suffix),
+ * exchange the injected "Free" label.
  *
  * `t` is injected so this helper stays UI-agnostic (it only reads the
- * `listing.exchange.free` label for the exchange fallback).
+ * `listing.exchange.free` label for the exchange offering).
  */
 export function resolveHeadlinePrice(
   property: Property,
-  mode: RentalMode,
+  browseMode: BrowseMode,
   t: TFunction,
 ): HeadlinePrice {
-  const currency = property.rent?.currency || '⊜';
-
-  let priceUnit: 'day' | 'night' | 'week' | 'month' | 'year' = 'month';
-  if (property.priceUnit) {
-    priceUnit = property.priceUnit;
-  } else if (property.rent?.paymentFrequency) {
-    switch (property.rent.paymentFrequency) {
-      case 'daily':
-        priceUnit = 'day';
-        break;
-      case 'weekly':
-        priceUnit = 'week';
-        break;
-      case 'monthly':
-        priceUnit = 'month';
-        break;
-      default:
-        priceUnit = 'month';
-    }
-  }
-
   const offering = resolvePrimaryOffering(
     property,
-    mode,
+    browseMode,
     t('listing.exchange.free', 'Free'),
   );
 
@@ -71,8 +57,10 @@ export function resolveHeadlinePrice(
     priceLabel = offering.label;
   } else if (offering.kind === 'sale') {
     priceLabel = offering.amount > 0 ? `${offering.currency}${offering.amount}` : '';
+  } else if (offering.amount > 0 && offering.priceUnit) {
+    priceLabel = `${offering.currency}${offering.amount}/${PRICE_UNIT_SUFFIX[offering.priceUnit]}`;
   } else {
-    priceLabel = property.rent ? `${currency}${property.rent.amount}/${priceUnit}` : '';
+    priceLabel = '';
   }
 
   const priceSubtitle = `${property.address?.city || ''}, ${property.address?.country || ''}`;

@@ -161,10 +161,13 @@ class PropertyService {
   calculatePropertyMatchScore(property: Property, preferences: any): number {
     let score = 100;
 
-    // Budget match
-    if (preferences.budget && property.rent) {
-      const rentAmount = property.rent.amount;
-      if (rentAmount < preferences.budget.min || rentAmount > preferences.budget.max) {
+    // Budget match — compare against the listing's monthly rent (the budget is
+    // a long-term concept), falling back to the nightly rate for vacation-only
+    // listings.
+    const budgetAmount =
+      property.longTermRent?.monthlyAmount ?? property.shortTermRent?.nightlyRate;
+    if (preferences.budget && budgetAmount !== undefined) {
+      if (budgetAmount < preferences.budget.min || budgetAmount > preferences.budget.max) {
         score -= 20;
       }
     }
@@ -228,16 +231,24 @@ class PropertyService {
     return Math.max(0, score);
   }
 
-  // Format property price for display
+  // Format property price for display. Prefers the monthly (long-term) headline;
+  // falls back to the nightly (short-term) rate for vacation-only listings.
   formatPropertyPrice(property: Property): string {
-    if (!property.rent) return 'Contact for price';
+    const longTerm = property.longTermRent;
+    const shortTerm = property.shortTermRent;
+    const block = longTerm
+      ? { amount: longTerm.monthlyAmount, currency: longTerm.currency, unit: 'month' }
+      : shortTerm
+        ? { amount: shortTerm.nightlyRate, currency: shortTerm.currency, unit: 'night' }
+        : null;
+    if (!block) return 'Contact for price';
 
-    return property.rent.amount.toLocaleString('en-US', {
+    return block.amount.toLocaleString('en-US', {
       style: 'currency',
-      currency: property.rent.currency,
+      currency: block.currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }) + `/${property.rent.paymentFrequency.toLowerCase()}`;
+    }) + `/${block.unit}`;
   }
 
   // Get primary image URL

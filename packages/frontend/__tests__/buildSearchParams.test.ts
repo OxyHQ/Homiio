@@ -7,14 +7,14 @@
  * mapping logic, this suite also proves the jest-expo Babel transform +
  * `transformIgnorePatterns` correctly handle the app's ESM/native packages.
  */
-import { PropertyType, RentMode } from '@homiio/shared-types';
+import { OfferingType, PropertyType } from '@homiio/shared-types';
 import { buildSearchParams, searchQueryKey } from '@/hooks/usePropertySearch';
 import type { SearchQuery } from '@/components/search/types';
 
 /** A minimal valid query: only the always-present fields are populated. */
 function baseQuery(overrides: Partial<SearchQuery> = {}): SearchQuery {
   return {
-    rentMode: RentMode.LONG_TERM,
+    offering: OfferingType.LONG_TERM_RENT,
     propertyTypes: [],
     amenities: [],
     sortBy: 'relevance',
@@ -24,11 +24,11 @@ function baseQuery(overrides: Partial<SearchQuery> = {}): SearchQuery {
 }
 
 describe('buildSearchParams', () => {
-  it('always includes paging, rentMode and sort defaults', () => {
+  it('always includes paging, offering and sort defaults', () => {
     expect(buildSearchParams(baseQuery())).toEqual({
       page: 1,
       limit: 24,
-      rentMode: RentMode.LONG_TERM,
+      offering: OfferingType.LONG_TERM_RENT,
       sortBy: 'relevance',
       sortOrder: 'desc',
     });
@@ -95,16 +95,27 @@ describe('buildSearchParams', () => {
     expect(params).not.toHaveProperty('priceMax');
   });
 
-  it('includes vacation check-in/check-out dates when present', () => {
+  it('routes the price range to sale-price params when the offering is sale', () => {
+    const params = buildSearchParams(
+      baseQuery({ offering: OfferingType.SALE, priceMin: 100000, priceMax: 400000 }),
+    );
+    expect(params.offering).toBe(OfferingType.SALE);
+    expect(params.minSalePrice).toBe(100000);
+    expect(params.maxSalePrice).toBe(400000);
+    expect(params).not.toHaveProperty('priceMin');
+    expect(params).not.toHaveProperty('priceMax');
+  });
+
+  it('includes short-term check-in/check-out dates when present', () => {
     const params = buildSearchParams(
       baseQuery({
-        rentMode: RentMode.VACATION,
+        offering: OfferingType.SHORT_TERM_RENT,
         dates: { start: '2026-06-01', end: '2026-06-08' },
         guests: 2,
       }),
     );
     expect(params).toMatchObject({
-      rentMode: RentMode.VACATION,
+      offering: OfferingType.SHORT_TERM_RENT,
       checkIn: '2026-06-01',
       checkOut: '2026-06-08',
       guests: 2,
@@ -118,7 +129,7 @@ describe('searchQueryKey', () => {
     expect(namespace).toBe('propertySearch');
     expect(rest).not.toHaveProperty('page');
     expect(rest).not.toHaveProperty('limit');
-    expect(rest).toMatchObject({ priceMin: 800, rentMode: RentMode.LONG_TERM });
+    expect(rest).toMatchObject({ priceMin: 800, offering: OfferingType.LONG_TERM_RENT });
   });
 
   it('produces equal keys for equal queries (stable for React Query)', () => {

@@ -263,19 +263,19 @@ class CityController {
       }
 
       if (minPrice || maxPrice) {
-        query['rent.amount'] = {};
-        if (minPrice) query['rent.amount'].$gte = Number(minPrice);
-        if (maxPrice) query['rent.amount'].$lte = Number(maxPrice);
+        query['longTermRent.monthlyAmount'] = {};
+        if (minPrice) query['longTermRent.monthlyAmount'].$gte = Number(minPrice);
+        if (maxPrice) query['longTermRent.monthlyAmount'].$lte = Number(maxPrice);
       }
 
       // Build sort object
       let sortObj: any = {};
       switch (sort) {
         case 'price_asc':
-          sortObj['rent.amount'] = 1;
+          sortObj['longTermRent.monthlyAmount'] = 1;
           break;
         case 'price_desc':
-          sortObj['rent.amount'] = -1;
+          sortObj['longTermRent.monthlyAmount'] = -1;
           break;
         case 'createdAt':
           sortObj.createdAt = -1;

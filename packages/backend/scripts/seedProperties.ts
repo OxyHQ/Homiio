@@ -4,10 +4,13 @@
  * Populates the database with realistic demo listings so every property-backed
  * screen (home carousels, search, city pages, saved) renders with content.
  *
- * Covers the hybrid rental model:
- *   - long_term  (priceUnit: 'month')  — apartments / studios / rooms
- *   - vacation   (priceUnit: 'night')  — calendar windows, fees, instant book
- *   - both       — appears in both feeds
+ * Covers the per-offering pricing model (single `offerings` axis):
+ *   - long_term_rent  (longTermRent.monthlyAmount)  — apartments / studios / rooms
+ *   - short_term_rent (shortTermRent.nightlyRate)   — calendar windows, fees, instant book
+ *   - sale            (sale.price)                   — buy listings
+ *   - exchange        (exchange.mode)                — home swap / free hosting
+ * A listing may carry several offerings at once (e.g. monthly rent AND a nightly
+ * rate, with DIFFERENT numbers), each in its own priced block.
  *
  * Idempotent: each listing has a stable (source, sourceId) key. Re-running
  * upserts in place instead of creating duplicates. Addresses are deduplicated
@@ -23,13 +26,12 @@ require('dotenv').config();
 import {
   PropertyType,
   PropertyStatus,
-  PriceUnit,
-  PaymentFrequency,
   UtilitiesIncluded,
   LeaseDuration,
-  RentMode,
+  OfferingType,
   AvailabilityWindowStatus,
   CancellationPolicy,
+  ExchangeMode,
   ProfileType
 } from '@homiio/shared-types';
 import database from '../database/connection';
@@ -52,12 +54,12 @@ const SEED_SOURCE = 'seed';
 const SEED_OWNER_OXY_USER_ID = 'seed-demo-host';
 const CURRENCY = 'EUR';
 
-// Vacation availability runs from today for the next ~90 days.
+// Short-term availability runs from today for the next ~90 days.
 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
 const today = new Date();
 const ninetyDaysFromNow = new Date(today.getTime() + NINETY_DAYS_MS);
 
-const openVacationWindow = () => [
+const openShortTermWindow = () => [
   {
     start: today,
     end: ninetyDaysFromNow,
@@ -101,14 +103,48 @@ interface SeedAddress {
   coordinates: [number, number];
 }
 
+/** Monthly-rent offering block. */
+interface SeedLongTermRent {
+  monthlyAmount: number;
+  deposit?: number;
+  applicationFee?: number;
+  lateFee?: number;
+  utilities?: UtilitiesIncluded;
+}
+
+/** Per-night offering block. */
+interface SeedShortTermRent {
+  nightlyRate: number;
+  cleaningFee?: number;
+  serviceFee?: number;
+  taxesPercent?: number;
+  minNights?: number;
+  maxNights?: number;
+  instantBook?: boolean;
+  deposit?: number;
+}
+
+/** Sale offering block. */
+interface SeedSale {
+  price: number;
+  estimatedYield?: number;
+  isPriceReduced?: boolean;
+  chainStatus?: 'no_chain' | 'chain' | 'unknown';
+}
+
+/** Exchange offering block. */
+interface SeedExchange {
+  mode: ExchangeMode;
+  welcomeNote?: string;
+  languages?: string[];
+  mealsIncluded?: boolean;
+  requiresReciprocity?: boolean;
+}
+
 interface SeedProperty {
   sourceId: string;
   description: string;
   type: PropertyType;
-  rentMode: RentMode;
-  priceUnit: PriceUnit;
-  rentAmount: number;
-  deposit?: number;
   bedrooms: number;
   bathrooms: number;
   squareFootage: number;
@@ -127,12 +163,12 @@ interface SeedProperty {
   isVerified?: boolean;
   isEcoFriendly?: boolean;
   maxGuests?: number;
-  // Vacation-only
-  minStay?: number;
-  maxStay?: number;
-  instantBook?: boolean;
   cancellationPolicy?: CancellationPolicy;
-  priceBreakdown?: { cleaningFee?: number; serviceFee?: number; taxesPercent?: number };
+  // ---- Per-offering blocks (each present block adds its offering) ----
+  longTermRent?: SeedLongTermRent;
+  shortTermRent?: SeedShortTermRent;
+  sale?: SeedSale;
+  exchange?: SeedExchange;
   address: SeedAddress;
 }
 
@@ -147,10 +183,7 @@ const properties: SeedProperty[] = [
     description:
       'Bright renovated apartment in the heart of the Eixample, steps from Passeig de Gràcia. High ceilings, original mosaic floors and a sunny balcony overlooking a quiet inner courtyard. Fully furnished and move-in ready.',
     type: PropertyType.APARTMENT,
-    rentMode: RentMode.LONG_TERM,
-    priceUnit: PriceUnit.MONTH,
-    rentAmount: 1850,
-    deposit: 3700,
+    longTermRent: { monthlyAmount: 1850, deposit: 3700, utilities: UtilitiesIncluded.EXCLUDED },
     bedrooms: 3,
     bathrooms: 2,
     squareFootage: 95,
@@ -174,10 +207,7 @@ const properties: SeedProperty[] = [
     description:
       'Charming two-bedroom flat in bohemian Gràcia, surrounded by plazas, cafés and independent shops. Recently refurbished kitchen and a cozy reading nook. Ideal for a couple or small family who love village-in-the-city living.',
     type: PropertyType.APARTMENT,
-    rentMode: RentMode.LONG_TERM,
-    priceUnit: PriceUnit.MONTH,
-    rentAmount: 1400,
-    deposit: 2800,
+    longTermRent: { monthlyAmount: 1400, deposit: 2800 },
     bedrooms: 2,
     bathrooms: 1,
     squareFootage: 72,
@@ -201,10 +231,7 @@ const properties: SeedProperty[] = [
     description:
       'Designer loft in El Born with exposed brick walls and industrial finishes. Open-plan living, walking distance to the Picasso Museum and Santa Maria del Mar. Perfect for a professional who wants character and location.',
     type: PropertyType.APARTMENT,
-    rentMode: RentMode.LONG_TERM,
-    priceUnit: PriceUnit.MONTH,
-    rentAmount: 1650,
-    deposit: 3300,
+    longTermRent: { monthlyAmount: 1650, deposit: 3300 },
     bedrooms: 1,
     bathrooms: 1,
     squareFootage: 68,
@@ -229,10 +256,7 @@ const properties: SeedProperty[] = [
     description:
       'Spacious and affordable family apartment in Sants, well connected by metro and the Sants train station. Four bedrooms, a generous living room and an updated bathroom. Great value for long-term tenants.',
     type: PropertyType.APARTMENT,
-    rentMode: RentMode.LONG_TERM,
-    priceUnit: PriceUnit.MONTH,
-    rentAmount: 1550,
-    deposit: 3100,
+    longTermRent: { monthlyAmount: 1550, deposit: 3100 },
     bedrooms: 4,
     bathrooms: 2,
     squareFootage: 110,
@@ -255,10 +279,7 @@ const properties: SeedProperty[] = [
     description:
       'Compact, light-filled studio in the right Eixample, fully equipped for one person or a couple. Smart layout maximizes every meter, with a Murphy bed and a modern kitchenette. Bills can be included on request.',
     type: PropertyType.STUDIO,
-    rentMode: RentMode.LONG_TERM,
-    priceUnit: PriceUnit.MONTH,
-    rentAmount: 950,
-    deposit: 1900,
+    longTermRent: { monthlyAmount: 950, deposit: 1900, utilities: UtilitiesIncluded.INCLUDED },
     bedrooms: 0,
     bathrooms: 1,
     squareFootage: 38,
@@ -280,12 +301,9 @@ const properties: SeedProperty[] = [
   {
     sourceId: 'bcn-room-gracia-06',
     description:
-      'Private room in a friendly shared flat in Gràcia with two other young professionals. Includes a double bed, desk and large wardrobe. Shared kitchen, living room and a sunny terrace. Utilities and wifi included.',
-    type: PropertyType.ROOM,
-    rentMode: RentMode.LONG_TERM,
-    priceUnit: PriceUnit.MONTH,
-    rentAmount: 620,
-    deposit: 620,
+      'Cozy private studio in friendly Gràcia, ideal for one person. Compact and fully furnished with a double bed, desk, large wardrobe and a kitchenette. A sunny, quiet retreat. Utilities and wifi included.',
+    type: PropertyType.STUDIO,
+    longTermRent: { monthlyAmount: 620, deposit: 620, utilities: UtilitiesIncluded.INCLUDED },
     bedrooms: 1,
     bathrooms: 1,
     squareFootage: 16,
@@ -309,10 +327,7 @@ const properties: SeedProperty[] = [
     description:
       'Modern apartment in Poblenou, the 22@ innovation district, close to the beach and tech offices. Bright open kitchen, a private balcony and access to a communal rooftop with sea views. Eco-efficient building.',
     type: PropertyType.APARTMENT,
-    rentMode: RentMode.LONG_TERM,
-    priceUnit: PriceUnit.MONTH,
-    rentAmount: 1750,
-    deposit: 3500,
+    longTermRent: { monthlyAmount: 1750, deposit: 3500 },
     bedrooms: 2,
     bathrooms: 2,
     squareFootage: 85,
@@ -334,43 +349,11 @@ const properties: SeedProperty[] = [
     }
   },
   {
-    sourceId: 'bcn-sarria-08',
-    description:
-      'Elegant family home in the leafy, residential Sarrià district. Three bedrooms, a private garden and plenty of natural light. Quiet, safe and close to international schools. Unfurnished, ready for your own touch.',
-    type: PropertyType.HOUSE,
-    rentMode: RentMode.LONG_TERM,
-    priceUnit: PriceUnit.MONTH,
-    rentAmount: 2450,
-    deposit: 4900,
-    bedrooms: 3,
-    bathrooms: 2,
-    squareFootage: 140,
-    floor: 0,
-    yearBuilt: 1985,
-    hasElevator: false,
-    hasBalcony: false,
-    hasGarden: true,
-    furnishedStatus: FurnishedStatus.UNFURNISHED,
-    petFriendly: true,
-    parkingType: 'garage',
-    parkingSpaces: 2,
-    amenities: ['wifi', 'heating', 'air_conditioning', 'garden_access', 'parking_space', 'kitchen', 'dishwasher'],
-    imageUrls: [IMG.apartment2, IMG.livingRoom3, IMG.bedroom1, IMG.bedroom2, IMG.bathroom1],
-    isVerified: true,
-    address: {
-      street: 'Carrer de Margenat', number: '34', neighborhood: 'Sarrià', district: 'Sarrià-Sant Gervasi',
-      postal_code: '08017', coordinates: [2.1245, 41.3998], ...BCN
-    }
-  },
-  {
     sourceId: 'bcn-raval-09',
     description:
       'Central one-bedroom in El Raval, in the middle of Barcelona’s most vibrant cultural scene next to the MACBA and La Rambla. Renovated, affordable and perfect for someone who wants the city at their doorstep.',
     type: PropertyType.APARTMENT,
-    rentMode: RentMode.LONG_TERM,
-    priceUnit: PriceUnit.MONTH,
-    rentAmount: 1150,
-    deposit: 2300,
+    longTermRent: { monthlyAmount: 1150, deposit: 2300 },
     bedrooms: 1,
     bathrooms: 1,
     squareFootage: 55,
@@ -393,10 +376,7 @@ const properties: SeedProperty[] = [
     description:
       'Stylish apartment in trendy Malasaña, Madrid’s hippest neighborhood full of vintage shops, terraces and nightlife. Two bedrooms, a fully equipped kitchen and tons of character. Walk everywhere from here.',
     type: PropertyType.APARTMENT,
-    rentMode: RentMode.LONG_TERM,
-    priceUnit: PriceUnit.MONTH,
-    rentAmount: 1600,
-    deposit: 3200,
+    longTermRent: { monthlyAmount: 1600, deposit: 3200 },
     bedrooms: 2,
     bathrooms: 1,
     squareFootage: 78,
@@ -420,10 +400,7 @@ const properties: SeedProperty[] = [
     description:
       'Bright and well-located apartment in Chamberí, a classic Madrid neighborhood with grand architecture and great restaurants. Three bedrooms and a roomy living area, ideal for families or sharers.',
     type: PropertyType.APARTMENT,
-    rentMode: RentMode.LONG_TERM,
-    priceUnit: PriceUnit.MONTH,
-    rentAmount: 1900,
-    deposit: 3800,
+    longTermRent: { monthlyAmount: 1900, deposit: 3800 },
     bedrooms: 3,
     bathrooms: 2,
     squareFootage: 102,
@@ -447,10 +424,7 @@ const properties: SeedProperty[] = [
     description:
       'Cozy studio in multicultural Lavapiés, full of art, theaters and some of Madrid’s best international food. Compact and affordable, fully furnished with everything you need to settle in immediately.',
     type: PropertyType.STUDIO,
-    rentMode: RentMode.LONG_TERM,
-    priceUnit: PriceUnit.MONTH,
-    rentAmount: 850,
-    deposit: 1700,
+    longTermRent: { monthlyAmount: 850, deposit: 1700, utilities: UtilitiesIncluded.INCLUDED },
     bedrooms: 0,
     bathrooms: 1,
     squareFootage: 34,
@@ -468,15 +442,14 @@ const properties: SeedProperty[] = [
       postal_code: '28012', coordinates: [-3.7008, 40.4078], ...MAD
     }
   },
-  // ---------------------- VACATION (Barcelona) ----------------------
+  // ---------------------- SHORT TERM (Barcelona) ----------------------
   {
     sourceId: 'bcn-vac-barceloneta-13',
     description:
       'Sun-drenched beach apartment in Barceloneta, 50 meters from the Mediterranean. Wake up to sea breeze, walk to the boardwalk for tapas and swim before breakfast. Perfect summer getaway for couples and small families.',
     type: PropertyType.APARTMENT,
-    rentMode: RentMode.VACATION,
-    priceUnit: PriceUnit.NIGHT,
-    rentAmount: 145,
+    shortTermRent: { nightlyRate: 145, cleaningFee: 45, serviceFee: 20, taxesPercent: 10, minNights: 2, maxNights: 30, instantBook: true },
+    cancellationPolicy: CancellationPolicy.MODERATE,
     bedrooms: 2,
     bathrooms: 1,
     squareFootage: 62,
@@ -490,11 +463,6 @@ const properties: SeedProperty[] = [
     imageUrls: [IMG.apartment1, IMG.livingRoom1, IMG.bedroom1, IMG.kitchen1, IMG.terrace1],
     isVerified: true,
     maxGuests: 4,
-    minStay: 2,
-    maxStay: 30,
-    instantBook: true,
-    cancellationPolicy: CancellationPolicy.MODERATE,
-    priceBreakdown: { cleaningFee: 45, serviceFee: 20, taxesPercent: 10 },
     address: {
       street: 'Carrer del Mar', number: '24', neighborhood: 'Barceloneta', district: 'Ciutat Vella',
       postal_code: '08003', coordinates: [2.1898, 41.3782], ...BCN
@@ -505,9 +473,8 @@ const properties: SeedProperty[] = [
     description:
       'Historic apartment in the Gothic Quarter with medieval charm and modern comfort. Stone walls, beamed ceilings and a balcony over a romantic lantern-lit alley. Steps from the Cathedral and Plaça Reial.',
     type: PropertyType.APARTMENT,
-    rentMode: RentMode.VACATION,
-    priceUnit: PriceUnit.NIGHT,
-    rentAmount: 120,
+    shortTermRent: { nightlyRate: 120, cleaningFee: 35, serviceFee: 15, taxesPercent: 10, minNights: 2, maxNights: 21, instantBook: true },
+    cancellationPolicy: CancellationPolicy.FLEXIBLE,
     bedrooms: 1,
     bathrooms: 1,
     squareFootage: 48,
@@ -521,11 +488,6 @@ const properties: SeedProperty[] = [
     imageUrls: [IMG.apartment2, IMG.livingRoom2, IMG.bedroom2, IMG.kitchen2],
     isVerified: true,
     maxGuests: 2,
-    minStay: 2,
-    maxStay: 21,
-    instantBook: true,
-    cancellationPolicy: CancellationPolicy.FLEXIBLE,
-    priceBreakdown: { cleaningFee: 35, serviceFee: 15, taxesPercent: 10 },
     address: {
       street: 'Carrer dels Escudellers', number: '8', neighborhood: 'Barri Gòtic', district: 'Ciutat Vella',
       postal_code: '08002', coordinates: [2.1762, 41.3795], ...BCN
@@ -536,9 +498,8 @@ const properties: SeedProperty[] = [
     description:
       'Luxury designer loft in the Eixample with a private terrace and plunge pool. Floor-to-ceiling windows, premium furnishings and a rooftop chill-out. The ultimate stylish base to explore Gaudí’s Barcelona.',
     type: PropertyType.APARTMENT,
-    rentMode: RentMode.VACATION,
-    priceUnit: PriceUnit.NIGHT,
-    rentAmount: 195,
+    shortTermRent: { nightlyRate: 195, cleaningFee: 65, serviceFee: 30, taxesPercent: 10, minNights: 3, maxNights: 60, instantBook: false },
+    cancellationPolicy: CancellationPolicy.STRICT,
     bedrooms: 2,
     bathrooms: 2,
     squareFootage: 90,
@@ -554,56 +515,19 @@ const properties: SeedProperty[] = [
     isVerified: true,
     isEcoFriendly: true,
     maxGuests: 4,
-    minStay: 3,
-    maxStay: 60,
-    instantBook: false,
-    cancellationPolicy: CancellationPolicy.STRICT,
-    priceBreakdown: { cleaningFee: 65, serviceFee: 30, taxesPercent: 10 },
     address: {
       street: 'Carrer de València', number: '302', neighborhood: 'Eixample', district: "L'Eixample",
       postal_code: '08009', coordinates: [2.1648, 41.3938], ...BCN
     }
   },
-  {
-    sourceId: 'bcn-vac-gracia-16',
-    description:
-      'Quiet vacation flat in Gràcia, away from the crowds but close to everything. A genuine local neighborhood with plazas full of life. Comfortable for a family, with a fully equipped kitchen for long stays.',
-    type: PropertyType.APARTMENT,
-    rentMode: RentMode.VACATION,
-    priceUnit: PriceUnit.NIGHT,
-    rentAmount: 98,
-    bedrooms: 2,
-    bathrooms: 1,
-    squareFootage: 70,
-    floor: 1,
-    yearBuilt: 1962,
-    hasElevator: false,
-    hasBalcony: true,
-    furnishedStatus: FurnishedStatus.FURNISHED,
-    petFriendly: true,
-    parkingType: 'none',
-    amenities: ['wifi', 'air_conditioning', 'heating', 'kitchen', 'washing_machine', 'balcony', 'pet_friendly'],
-    imageUrls: [IMG.apartment3, IMG.livingRoom1, IMG.bedroom1, IMG.kitchen2],
-    maxGuests: 4,
-    minStay: 2,
-    maxStay: 45,
-    instantBook: true,
-    cancellationPolicy: CancellationPolicy.MODERATE,
-    priceBreakdown: { cleaningFee: 40, serviceFee: 18, taxesPercent: 10 },
-    address: {
-      street: 'Carrer de Torrijos', number: '57', neighborhood: 'Gràcia', district: 'Gràcia',
-      postal_code: '08012', coordinates: [2.1592, 41.4028], ...BCN
-    }
-  },
-  // ---------------------- VACATION (València) ----------------------
+  // ---------------------- SHORT TERM (València) ----------------------
   {
     sourceId: 'vlc-vac-carmen-17',
     description:
       'Atmospheric apartment in the historic Carmen quarter of València, surrounded by the old city walls, tapas bars and the buzzing Central Market. A characterful base to explore paella’s birthplace.',
     type: PropertyType.APARTMENT,
-    rentMode: RentMode.VACATION,
-    priceUnit: PriceUnit.NIGHT,
-    rentAmount: 78,
+    shortTermRent: { nightlyRate: 78, cleaningFee: 30, serviceFee: 12, taxesPercent: 10, minNights: 2, maxNights: 30, instantBook: true },
+    cancellationPolicy: CancellationPolicy.FLEXIBLE,
     bedrooms: 1,
     bathrooms: 1,
     squareFootage: 52,
@@ -617,11 +541,6 @@ const properties: SeedProperty[] = [
     imageUrls: [IMG.apartment1, IMG.livingRoom2, IMG.bedroom2, IMG.kitchen1],
     isVerified: true,
     maxGuests: 3,
-    minStay: 2,
-    maxStay: 30,
-    instantBook: true,
-    cancellationPolicy: CancellationPolicy.FLEXIBLE,
-    priceBreakdown: { cleaningFee: 30, serviceFee: 12, taxesPercent: 10 },
     address: {
       street: 'Carrer de Quart', number: '20', neighborhood: 'El Carme', district: 'Ciutat Vella',
       postal_code: '46001', coordinates: [-0.3825, 39.4762], ...VLC
@@ -632,9 +551,8 @@ const properties: SeedProperty[] = [
     description:
       'Beachfront apartment on Malvarrosa beach with panoramic sea views and direct boardwalk access. Spacious terrace for sunset dinners. The perfect Mediterranean escape for families and groups of friends.',
     type: PropertyType.APARTMENT,
-    rentMode: RentMode.VACATION,
-    priceUnit: PriceUnit.NIGHT,
-    rentAmount: 135,
+    shortTermRent: { nightlyRate: 135, cleaningFee: 55, serviceFee: 25, taxesPercent: 10, minNights: 3, maxNights: 60, instantBook: false },
+    cancellationPolicy: CancellationPolicy.MODERATE,
     bedrooms: 3,
     bathrooms: 2,
     squareFootage: 95,
@@ -649,26 +567,22 @@ const properties: SeedProperty[] = [
     imageUrls: [IMG.apartment2, IMG.livingRoom3, IMG.bedroom3, IMG.bedroom1, IMG.terrace1],
     isVerified: true,
     maxGuests: 6,
-    minStay: 3,
-    maxStay: 60,
-    instantBook: false,
-    cancellationPolicy: CancellationPolicy.MODERATE,
-    priceBreakdown: { cleaningFee: 55, serviceFee: 25, taxesPercent: 10 },
     address: {
       street: 'Passeig Marítim de la Patacona', number: '14', neighborhood: 'Malvarrosa', district: 'Poblats Marítims',
       postal_code: '46011', coordinates: [-0.3258, 39.4778], ...VLC
     }
   },
-  // ---------------------- BOTH (long-term + vacation) ----------------------
+  // ---------------------- MULTI-OFFERING: long-term + short-term ----------------------
+  // Eixample flat offered BOTH monthly (1700/month) AND by the night (110/night)
+  // — DIFFERENT numbers, each in its own block, so the price is never reinterpreted.
   {
     sourceId: 'bcn-both-eixample-19',
     description:
       'Flexible Eixample apartment available for both long stays and shorter vacation bookings. A beautifully furnished two-bedroom with a balcony, ideal whether you are relocating to Barcelona or visiting for a few weeks.',
     type: PropertyType.APARTMENT,
-    rentMode: RentMode.BOTH,
-    priceUnit: PriceUnit.MONTH,
-    rentAmount: 1700,
-    deposit: 3400,
+    longTermRent: { monthlyAmount: 1700, deposit: 3400 },
+    shortTermRent: { nightlyRate: 110, cleaningFee: 50, serviceFee: 22, taxesPercent: 10, minNights: 4, maxNights: 90, instantBook: true },
+    cancellationPolicy: CancellationPolicy.MODERATE,
     bedrooms: 2,
     bathrooms: 1,
     squareFootage: 80,
@@ -683,25 +597,20 @@ const properties: SeedProperty[] = [
     imageUrls: [IMG.apartment3, IMG.livingRoom1, IMG.bedroom2, IMG.kitchen2, IMG.bathroom1],
     isVerified: true,
     maxGuests: 4,
-    minStay: 4,
-    maxStay: 90,
-    instantBook: true,
-    cancellationPolicy: CancellationPolicy.MODERATE,
-    priceBreakdown: { cleaningFee: 50, serviceFee: 22, taxesPercent: 10 },
     address: {
       street: 'Carrer d’Aragó', number: '255', neighborhood: 'Eixample', district: "L'Eixample",
       postal_code: '08007', coordinates: [2.1612, 41.3905], ...BCN
     }
   },
+  // Salamanca flat offered BOTH monthly (2300/month) AND by the night (160/night).
   {
     sourceId: 'mad-both-salamanca-20',
     description:
       'Upscale apartment in Madrid’s elegant Salamanca district, offered for both monthly rentals and vacation stays. Designer interiors, doorman building and the city’s best shopping right outside. Premium living, your way.',
     type: PropertyType.APARTMENT,
-    rentMode: RentMode.BOTH,
-    priceUnit: PriceUnit.MONTH,
-    rentAmount: 2300,
-    deposit: 4600,
+    longTermRent: { monthlyAmount: 2300, deposit: 4600 },
+    shortTermRent: { nightlyRate: 160, cleaningFee: 70, serviceFee: 35, taxesPercent: 10, minNights: 5, maxNights: 120, instantBook: false },
+    cancellationPolicy: CancellationPolicy.STRICT,
     bedrooms: 2,
     bathrooms: 2,
     squareFootage: 98,
@@ -717,14 +626,93 @@ const properties: SeedProperty[] = [
     imageUrls: [IMG.apartment1, IMG.livingRoom3, IMG.bedroom1, IMG.bedroom3, IMG.kitchen1, IMG.bathroom1],
     isVerified: true,
     maxGuests: 4,
-    minStay: 5,
-    maxStay: 120,
-    instantBook: false,
-    cancellationPolicy: CancellationPolicy.STRICT,
-    priceBreakdown: { cleaningFee: 70, serviceFee: 35, taxesPercent: 10 },
     address: {
       street: 'Calle de Velázquez', number: '60', neighborhood: 'Salamanca', district: 'Salamanca',
       postal_code: '28001', coordinates: [-3.6838, 40.4285], ...MAD
+    }
+  },
+  // ---------------------- MULTI-OFFERING: long-term + sale ----------------------
+  // Sarrià family home offered for rent (2450/month) AND for sale (785,000).
+  {
+    sourceId: 'bcn-rent-sale-sarria-21',
+    description:
+      'Elegant family home in the leafy, residential Sarrià district — available to rent or to buy. Three bedrooms, a private garden and plenty of natural light. Quiet, safe and close to international schools.',
+    type: PropertyType.HOUSE,
+    longTermRent: { monthlyAmount: 2450, deposit: 4900 },
+    sale: { price: 785000, estimatedYield: 3, chainStatus: 'no_chain' },
+    bedrooms: 3,
+    bathrooms: 2,
+    squareFootage: 140,
+    floor: 0,
+    yearBuilt: 1985,
+    hasElevator: false,
+    hasBalcony: false,
+    hasGarden: true,
+    furnishedStatus: FurnishedStatus.UNFURNISHED,
+    petFriendly: true,
+    parkingType: 'garage',
+    parkingSpaces: 2,
+    amenities: ['wifi', 'heating', 'air_conditioning', 'garden_access', 'parking_space', 'kitchen', 'dishwasher'],
+    imageUrls: [IMG.apartment2, IMG.livingRoom3, IMG.bedroom1, IMG.bedroom2, IMG.bathroom1],
+    isVerified: true,
+    address: {
+      street: 'Carrer de Margenat', number: '34', neighborhood: 'Sarrià', district: 'Sarrià-Sant Gervasi',
+      postal_code: '08017', coordinates: [2.1245, 41.3998], ...BCN
+    }
+  },
+  // ---------------------- SALE-ONLY ----------------------
+  {
+    sourceId: 'mad-sale-retiro-22',
+    description:
+      'Bright, recently reformed apartment for sale beside El Retiro park. South-facing with parquet floors and a renovated kitchen. A solid investment in one of Madrid’s most sought-after locations.',
+    type: PropertyType.APARTMENT,
+    sale: { price: 620000, estimatedYield: 4, isPriceReduced: true, chainStatus: 'no_chain' },
+    bedrooms: 2,
+    bathrooms: 2,
+    squareFootage: 88,
+    floor: 3,
+    yearBuilt: 1965,
+    hasElevator: true,
+    hasBalcony: true,
+    furnishedStatus: FurnishedStatus.UNFURNISHED,
+    parkingType: 'none',
+    amenities: ['heating', 'air_conditioning', 'elevator', 'balcony', 'kitchen'],
+    imageUrls: [IMG.apartment3, IMG.livingRoom2, IMG.bedroom3, IMG.kitchen2],
+    isVerified: true,
+    address: {
+      street: 'Calle de Alcalá', number: '142', neighborhood: 'Retiro', district: 'Retiro',
+      postal_code: '28009', coordinates: [-3.6745, 40.4231], ...MAD
+    }
+  },
+  // ---------------------- EXCHANGE-ONLY ----------------------
+  {
+    sourceId: 'bcn-exchange-gracia-23',
+    description:
+      'Welcoming Gràcia apartment open to home exchange and free hosting. We love meeting travellers and would happily swap homes or host you while you explore Barcelona like a local. Tell us about your place!',
+    type: PropertyType.APARTMENT,
+    exchange: {
+      mode: ExchangeMode.BOTH,
+      welcomeNote: 'Happy to swap or host. We speak English, Spanish and Catalan and love sharing local tips.',
+      languages: ['en', 'es', 'ca'],
+      mealsIncluded: false,
+      requiresReciprocity: false
+    },
+    bedrooms: 2,
+    bathrooms: 1,
+    squareFootage: 70,
+    floor: 1,
+    yearBuilt: 1962,
+    hasElevator: false,
+    hasBalcony: true,
+    furnishedStatus: FurnishedStatus.FURNISHED,
+    petFriendly: true,
+    parkingType: 'none',
+    amenities: ['wifi', 'air_conditioning', 'heating', 'kitchen', 'washing_machine', 'balcony', 'pet_friendly'],
+    imageUrls: [IMG.apartment3, IMG.livingRoom1, IMG.bedroom1, IMG.kitchen2],
+    maxGuests: 4,
+    address: {
+      street: 'Carrer de Torrijos', number: '57', neighborhood: 'Gràcia', district: 'Gràcia',
+      postal_code: '08012', coordinates: [2.1592, 41.4028], ...BCN
     }
   }
 ];
@@ -736,6 +724,16 @@ function buildImages(urls: string[]) {
     url: `${url}${UNSPLASH_PARAMS}`,
     isPrimary: index === 0
   }));
+}
+
+/** Build the `offerings` array from whichever priced blocks the seed sets. */
+function resolveOfferings(seed: SeedProperty): OfferingType[] {
+  const offerings: OfferingType[] = [];
+  if (seed.longTermRent) offerings.push(OfferingType.LONG_TERM_RENT);
+  if (seed.shortTermRent) offerings.push(OfferingType.SHORT_TERM_RENT);
+  if (seed.sale) offerings.push(OfferingType.SALE);
+  if (seed.exchange) offerings.push(OfferingType.EXCHANGE);
+  return offerings;
 }
 
 async function ensureSeedOwner(): Promise<string> {
@@ -772,7 +770,20 @@ async function upsertProperty(seed: SeedProperty, profileId: string): Promise<'i
     }
   });
 
-  const isVacationCapable = seed.rentMode !== RentMode.LONG_TERM;
+  const offerings = resolveOfferings(seed);
+  const isShortTermCapable = offerings.includes(OfferingType.SHORT_TERM_RENT);
+  const isLongTermCapable = offerings.includes(OfferingType.LONG_TERM_RENT);
+
+  const longTermRent = seed.longTermRent
+    ? { ...seed.longTermRent, currency: CURRENCY }
+    : undefined;
+  const shortTermRent = seed.shortTermRent
+    ? { ...seed.shortTermRent, currency: CURRENCY }
+    : undefined;
+  const sale = seed.sale ? { ...seed.sale, currency: CURRENCY } : undefined;
+  const exchange = seed.exchange
+    ? { ...seed.exchange, availabilityWindows: openShortTermWindow() }
+    : undefined;
 
   const doc: Record<string, unknown> = {
     profileId,
@@ -794,30 +805,18 @@ async function upsertProperty(seed: SeedProperty, profileId: string): Promise<'i
     furnishedStatus: seed.furnishedStatus,
     parkingType: seed.parkingType ?? 'none',
     parkingSpaces: seed.parkingSpaces ?? 0,
-    priceUnit: seed.priceUnit,
-    rent: {
-      amount: seed.rentAmount,
-      currency: CURRENCY,
-      paymentFrequency:
-        seed.priceUnit === PriceUnit.NIGHT || seed.priceUnit === PriceUnit.DAY
-          ? PaymentFrequency.DAILY
-          : PaymentFrequency.MONTHLY,
-      deposit: seed.deposit ?? 0,
-      utilities: seed.utilitiesIncluded ? UtilitiesIncluded.INCLUDED : UtilitiesIncluded.EXCLUDED,
-      hasUtilitiesIncluded: seed.utilitiesIncluded ?? false
-    },
+    offerings,
+    longTermRent,
+    shortTermRent,
+    sale,
+    exchange,
     amenities: seed.amenities,
     images: buildImages(seed.imageUrls),
     coverImageIndex: 0,
-    leaseTerm: seed.priceUnit === PriceUnit.MONTH ? LeaseDuration.YEARLY : LeaseDuration.FLEXIBLE,
+    leaseTerm: isLongTermCapable ? LeaseDuration.YEARLY : LeaseDuration.FLEXIBLE,
     maxGuests: seed.maxGuests ?? Math.max(1, seed.bedrooms * 2 || 1),
-    rentMode: seed.rentMode,
-    availabilityWindows: isVacationCapable ? openVacationWindow() : [],
-    minStay: seed.minStay,
-    maxStay: seed.maxStay,
-    instantBook: seed.instantBook ?? false,
+    availabilityWindows: isShortTermCapable ? openShortTermWindow() : [],
     cancellationPolicy: seed.cancellationPolicy,
-    priceBreakdown: seed.priceBreakdown,
     isVerified: seed.isVerified ?? false,
     isEcoFriendly: seed.isEcoFriendly ?? false,
     status: PropertyStatus.PUBLISHED,
@@ -828,27 +827,29 @@ async function upsertProperty(seed: SeedProperty, profileId: string): Promise<'i
     availableFrom: today
   };
 
-  // Drop undefined keys so $set does not write nulls for optional vacation fields.
+  // Drop undefined keys so absent optional blocks aren't persisted as nulls.
   for (const key of Object.keys(doc)) {
     if (doc[key] === undefined) {
       delete doc[key];
     }
   }
 
-  const existing = await Property.findOne({ source: SEED_SOURCE, sourceId: seed.sourceId }).select('_id');
+  // Create a fresh document (the collection is wiped first in `run`). Using
+  // `new Property(...).save()` runs the full document-level validators — the
+  // cross-field `offerings`↔blocks check needs the whole document as `this`,
+  // which Mongoose's update-validators (on findOneAndUpdate) do not provide.
+  doc.sourceId = seed.sourceId;
+  await new Property(doc).save();
 
-  await Property.findOneAndUpdate(
-    { source: SEED_SOURCE, sourceId: seed.sourceId },
-    { $set: doc, $setOnInsert: { sourceId: seed.sourceId } },
-    { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }
-  );
-
-  return existing ? 'updated' : 'inserted';
+  return 'inserted';
 }
 
 async function run(): Promise<void> {
   console.log('[seed-properties] Connecting to database...');
   await database.connect();
+
+  console.log('[seed-properties] Wiping existing seed properties...');
+  await Property.deleteMany({ source: SEED_SOURCE });
 
   console.log('[seed-properties] Ensuring seed owner profile...');
   const profileId = await ensureSeedOwner();
@@ -865,7 +866,7 @@ async function run(): Promise<void> {
       } else {
         updated += 1;
       }
-      console.log(`[seed-properties] ${result.padEnd(8)} ${seed.sourceId} (${seed.rentMode})`);
+      console.log(`[seed-properties] ${result.padEnd(8)} ${seed.sourceId} (${resolveOfferings(seed).join('+')})`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error(`[seed-properties] FAILED ${seed.sourceId}: ${message}`);
@@ -874,20 +875,18 @@ async function run(): Promise<void> {
   }
 
   const totalSeed = await Property.countDocuments({ source: SEED_SOURCE });
-  const vacationCount = await Property.countDocuments({
-    source: SEED_SOURCE,
-    rentMode: { $in: [RentMode.VACATION, RentMode.BOTH] }
-  });
-  const longTermCount = await Property.countDocuments({
-    source: SEED_SOURCE,
-    rentMode: { $in: [RentMode.LONG_TERM, RentMode.BOTH] }
-  });
+  const longTermCount = await Property.countDocuments({ source: SEED_SOURCE, offerings: OfferingType.LONG_TERM_RENT });
+  const shortTermCount = await Property.countDocuments({ source: SEED_SOURCE, offerings: OfferingType.SHORT_TERM_RENT });
+  const saleCount = await Property.countDocuments({ source: SEED_SOURCE, offerings: OfferingType.SALE });
+  const exchangeCount = await Property.countDocuments({ source: SEED_SOURCE, offerings: OfferingType.EXCHANGE });
 
   console.log('[seed-properties] ----------------------------------------');
   console.log(`[seed-properties] Inserted: ${inserted}  Updated: ${updated}`);
-  console.log(`[seed-properties] Total seed properties:   ${totalSeed}`);
-  console.log(`[seed-properties] Vacation-feed listings:  ${vacationCount}`);
-  console.log(`[seed-properties] Long-term-feed listings: ${longTermCount}`);
+  console.log(`[seed-properties] Total seed properties:    ${totalSeed}`);
+  console.log(`[seed-properties] Long-term-rent listings:  ${longTermCount}`);
+  console.log(`[seed-properties] Short-term-rent listings: ${shortTermCount}`);
+  console.log(`[seed-properties] Sale listings:            ${saleCount}`);
+  console.log(`[seed-properties] Exchange listings:        ${exchangeCount}`);
   console.log('[seed-properties] Done.');
 }
 

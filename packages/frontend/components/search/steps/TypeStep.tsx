@@ -2,8 +2,8 @@
  * TypeStep — property-type multi-select for the search panel.
  *
  * Renders the four user-facing property types as Bloom Chips. The label set
- * adapts to the rental mode (vacation phrases "Whole house" / "Private room").
- * Selection is multi-select; an empty selection means "any type".
+ * adapts to the active offering (short-term phrases "Whole house" / "Private
+ * room"). Selection is multi-select; an empty selection means "any type".
  */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -12,11 +12,11 @@ import { useTranslation } from 'react-i18next';
 import { Chip } from '@oxyhq/bloom/chip';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
-import { PropertyType, RentMode } from '@homiio/shared-types';
+import { OfferingType, PropertyType } from '@homiio/shared-types';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
-/** A selectable property type with its long-term and vacation labels. */
+/** A selectable property type with its long-term and short-term labels. */
 interface TypeOption {
   type: PropertyType;
   longTerm: string;
@@ -31,14 +31,14 @@ const TYPE_OPTIONS: readonly TypeOption[] = [
 ] as const;
 
 interface TypeStepProps {
-  rentMode: RentMode;
+  offering: OfferingType;
   selected: PropertyType[];
   onToggle: (type: PropertyType) => void;
 }
 
-export const TypeStep: React.FC<TypeStepProps> = ({ rentMode, selected, onToggle }) => {
+export const TypeStep: React.FC<TypeStepProps> = ({ offering, selected, onToggle }) => {
   const { t } = useTranslation();
-  const isVacation = rentMode === RentMode.VACATION;
+  const isVacation = offering === OfferingType.SHORT_TERM_RENT;
 
   return (
     <View style={styles.container}>

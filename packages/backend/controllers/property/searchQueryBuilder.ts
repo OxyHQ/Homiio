@@ -13,7 +13,41 @@
  */
 
 import { Types, type FilterQuery, type SortOrder } from 'mongoose';
-import { PropertyType, PropertyStatus, RentMode, ListingIntent, ExchangeMode } from '@homiio/shared-types';
+import { PropertyType, PropertyStatus, OfferingType, ExchangeMode } from '@homiio/shared-types';
+
+// ---- Per-offering price fields ----
+/** Mongo field path holding the price for each offering. */
+export const PRICE_FIELD_LONG_TERM = 'longTermRent.monthlyAmount';
+export const PRICE_FIELD_SHORT_TERM = 'shortTermRent.nightlyRate';
+export const PRICE_FIELD_SALE = 'sale.price';
+/** Mongo field path for the short-term instant-book flag. */
+export const FIELD_SHORT_TERM_INSTANT_BOOK = 'shortTermRent.instantBook';
+
+/**
+ * Resolve the Mongo price-field path that `priceMin`/`priceMax` apply to for a
+ * given offering. `EXCHANGE` (and an absent offering) has no monetary price
+ * range, so it returns null. Exported so the search endpoint and the home/list
+ * feed resolve the SAME field and can't drift.
+ */
+export function priceFieldForOffering(offering: OfferingType | undefined): string | null {
+  switch (offering) {
+    case OfferingType.LONG_TERM_RENT:
+      return PRICE_FIELD_LONG_TERM;
+    case OfferingType.SHORT_TERM_RENT:
+      return PRICE_FIELD_SHORT_TERM;
+    case OfferingType.SALE:
+      return PRICE_FIELD_SALE;
+    default:
+      return null;
+  }
+}
+
+/**
+ * The default price-field used when no explicit offering is requested. The
+ * platform defaults to the long-term feed, so a bare `priceMin/priceMax`
+ * filters monthly rent (preserving the historical `minRent/maxRent` behaviour).
+ */
+export const DEFAULT_PRICE_FIELD = PRICE_FIELD_LONG_TERM;
 
 // ---- Pagination / limit constants ----
 export const DEFAULT_PAGE = 1;
@@ -50,11 +84,8 @@ export const SORT_ASC = 'asc';
 export const SORT_DESC = 'desc';
 export type SortDirection = typeof SORT_ASC | typeof SORT_DESC;
 
-/** Rent modes a caller may explicitly request (excludes the `both` storage value). */
-const REQUESTABLE_HYBRID_MODES: ReadonlySet<string> = new Set([RentMode.LONG_TERM, RentMode.VACATION]);
-
-/** Listing intents a caller may filter by. */
-const LISTING_INTENT_VALUES: ReadonlySet<string> = new Set(Object.values(ListingIntent));
+/** Offerings a caller may filter by. */
+const OFFERING_VALUES: ReadonlySet<string> = new Set(Object.values(OfferingType));
 
 /** All valid exchange modes (used to validate the `exchangeMode` filter). */
 const EXCHANGE_MODE_VALUES: ReadonlySet<string> = new Set(Object.values(ExchangeMode));
@@ -66,19 +97,18 @@ interface PropertyDoc {
   profileId: Types.ObjectId;
   type: string;
   status: string;
-  rentMode: string;
   bedrooms: number;
   bathrooms: number;
   amenities: string[];
   isVerified: boolean;
   isEcoFriendly: boolean;
-  instantBook: boolean;
   maxGuests: number;
   createdAt: Date;
-  rent: { amount: number };
   availability: { isAvailable: boolean };
-  // Multi-intent (rent / sale / exchange)
-  intents: ListingIntent[];
+  // Per-offering (long_term_rent / short_term_rent / sale / exchange)
+  offerings: OfferingType[];
+  longTermRent: { monthlyAmount: number };
+  shortTermRent: { nightlyRate: number; instantBook: boolean };
   sale: { price: number };
   exchange: { mode: ExchangeMode };
 }
@@ -286,30 +316,12 @@ function applyStatusFilter(filter: PropertyFilter, statusRaw: string | undefined
 }
 
 /**
- * Constrain the filter to listings carrying a given intent.
- *
- * `intents` is an array, so equality matches membership. Crucially, legacy
- * listings predate the field and are rent-only by definition — so a `rent`
- * query must ALSO match documents where `intents` is missing or empty (the
- * same set the read-time back-compat transform surfaces as `['rent']`). The
- * rent branch is merged under `$and` so it composes with the text-search
- * `$or` the controller may add later.
+ * Constrain the filter to listings carrying a given offering. `offerings` is an
+ * array, so equality matches membership — clean single-axis filter, no
+ * back-compat fallbacks.
  */
-function applyIntentFilter(filter: PropertyFilter, intent: ListingIntent): void {
-  if (intent !== ListingIntent.RENT) {
-    filter.intents = intent;
-    return;
-  }
-  const rentOr: PropertyFilter[] = [
-    { intents: ListingIntent.RENT },
-    { intents: { $exists: false } },
-    { intents: { $size: 0 } },
-  ];
-  if (Array.isArray(filter.$and)) {
-    filter.$and.push({ $or: rentOr });
-  } else {
-    filter.$and = [{ $or: rentOr }];
-  }
+function applyOfferingFilter(filter: PropertyFilter, offering: OfferingType): void {
+  filter.offerings = offering;
 }
 
 export interface ParsedSearchParams {
@@ -324,9 +336,9 @@ export interface ParsedSearchParams {
   centerRadius?: CenterRadius;
   sortField: SortField;
   sortDirection: SortDirection;
-  // Multi-intent filters (mirror the `filter` clauses for downstream visibility).
-  /** Listing intent the query was scoped to, when valid. */
-  intent?: ListingIntent;
+  // Per-offering filters (mirror the `filter` clauses for downstream visibility).
+  /** Offering the query was scoped to, when valid. */
+  offering?: OfferingType;
   /** Minimum sale price applied to `sale.price`, when present. */
   minSalePrice?: number;
   /** Maximum sale price applied to `sale.price`, when present. */
@@ -356,27 +368,31 @@ export function buildSearchPlan(
     filter.type = { $in: typeList };
   }
 
-  // --- Listing intent (rent / sale / exchange). Parsed early because the rent
-  //     price-range guard below depends on whether this is a sale query. ---
-  const intentRaw = asString(query.intent)?.toLowerCase();
-  const intent = intentRaw && LISTING_INTENT_VALUES.has(intentRaw)
-    ? (intentRaw as ListingIntent)
+  // --- Offering (long_term_rent / short_term_rent / sale / exchange). Parsed
+  //     early because the price-range field below is resolved from it. ---
+  const offeringRaw = asString(query.offering)?.toLowerCase();
+  const offering = offeringRaw && OFFERING_VALUES.has(offeringRaw)
+    ? (offeringRaw as OfferingType)
     : undefined;
-  if (intent !== undefined) {
-    applyIntentFilter(filter, intent);
+  if (offering !== undefined) {
+    applyOfferingFilter(filter, offering);
   }
 
   // --- Price range (accept Airbnb-style priceMin/priceMax and legacy minRent/maxRent) ---
-  // RISK guard: when filtering for SALE listings the price range refers to the
-  // SALE price (applied via minSalePrice/maxSalePrice below), so do NOT also
-  // constrain `rent.amount` — sale-only listings may have no meaningful rent.
+  // The range applies to the price field of the REQUESTED offering
+  // (long_term→monthlyAmount, short_term→nightlyRate, sale→sale.price), so a
+  // monthly price is never compared against a nightly one. When no offering is
+  // requested it defaults to the long-term field. SALE uses its dedicated
+  // minSalePrice/maxSalePrice params below, so a bare price range is not
+  // applied to a sale query here.
   const priceMin = parseFloatParam(query.priceMin) ?? parseFloatParam(query.minRent);
   const priceMax = parseFloatParam(query.priceMax) ?? parseFloatParam(query.maxRent);
-  if ((priceMin !== undefined || priceMax !== undefined) && intent !== ListingIntent.SALE) {
-    const rentFilter: { $gte?: number; $lte?: number } = {};
-    if (priceMin !== undefined) rentFilter.$gte = priceMin;
-    if (priceMax !== undefined) rentFilter.$lte = priceMax;
-    filter['rent.amount'] = rentFilter;
+  if ((priceMin !== undefined || priceMax !== undefined) && offering !== OfferingType.SALE) {
+    const priceField = priceFieldForOffering(offering) ?? DEFAULT_PRICE_FIELD;
+    const priceRange: { $gte?: number; $lte?: number } = {};
+    if (priceMin !== undefined) priceRange.$gte = priceMin;
+    if (priceMax !== undefined) priceRange.$lte = priceMax;
+    filter[priceField] = priceRange;
   }
 
   // --- Bedrooms (minimum) / bathrooms (minimum) ---
@@ -401,49 +417,34 @@ export function buildSearchPlan(
   const eco = parseBoolParam(query.eco);
   if (eco !== undefined) filter.isEcoFriendly = eco;
   const instantBook = parseBoolParam(query.instantBook);
-  if (instantBook !== undefined) filter.instantBook = instantBook;
+  if (instantBook !== undefined) filter[FIELD_SHORT_TERM_INSTANT_BOOK] = instantBook;
   const hasPhotos = parseBoolParam(query.hasPhotos);
   if (hasPhotos === true) filter['images.url'] = { $exists: true, $nin: [null, ''] };
 
-  // --- Minimum guests (vacation) ---
+  // --- Minimum guests (short-term) ---
   const minGuests = parseIntParam(query.minGuests ?? query.guests);
   if (minGuests !== undefined && minGuests > 0) {
     filter.maxGuests = { $gte: minGuests };
   }
 
-  // --- Rent mode (a `both` listing matches either specific request) ---
-  const rentMode = asString(query.rentMode);
-  if (rentMode) {
-    if (REQUESTABLE_HYBRID_MODES.has(rentMode)) {
-      filter.rentMode = { $in: [rentMode, RentMode.BOTH] };
-    } else if (rentMode === RentMode.BOTH) {
-      filter.rentMode = RentMode.BOTH;
-    }
-  }
-
   // --- Sale price range (ONLY applied for an explicit SALE query) ---
-  // `sale.price` lives in an intent-scoped sub-doc that can linger on a listing
-  // whose `sale` intent was later removed. Applying the range without the intent
-  // would match those stale sub-docs (and could stack a rent AND a sale range on
-  // the same query), so the filter is gated on `intent === SALE`. The values are
-  // still echoed in `params` regardless, for downstream visibility.
+  // Gated on `offering === SALE` so the dedicated sale range never stacks onto
+  // a non-sale query. The values are still echoed in `params` regardless.
   const minSalePrice = parseFloatParam(query.minSalePrice);
   const maxSalePrice = parseFloatParam(query.maxSalePrice);
-  if ((minSalePrice !== undefined || maxSalePrice !== undefined) && intent === ListingIntent.SALE) {
+  if ((minSalePrice !== undefined || maxSalePrice !== undefined) && offering === OfferingType.SALE) {
     const saleFilter: { $gte?: number; $lte?: number } = {};
     if (minSalePrice !== undefined) saleFilter.$gte = minSalePrice;
     if (maxSalePrice !== undefined) saleFilter.$lte = maxSalePrice;
-    filter['sale.price'] = saleFilter;
+    filter[PRICE_FIELD_SALE] = saleFilter;
   }
 
   // --- Exchange mode (ONLY applied for an explicit EXCHANGE query) ---
-  // Same rationale as the sale range: a stale `exchange.mode` sub-doc can survive
-  // the removal of the `exchange` intent, so the mode filter is gated on
-  // `intent === EXCHANGE`. The `applyIntentFilter` call above already constrains
-  // the query to listings carrying the exchange intent. A `both` listing matches
-  // a swap or host request.
+  // `applyOfferingFilter` already constrains the query to exchange listings; the
+  // mode filter is gated on `offering === EXCHANGE`. A `both` listing matches a
+  // swap or host request.
   const exchangeMode = asString(query.exchangeMode)?.toLowerCase();
-  if (exchangeMode && EXCHANGE_MODE_VALUES.has(exchangeMode) && intent === ListingIntent.EXCHANGE) {
+  if (exchangeMode && EXCHANGE_MODE_VALUES.has(exchangeMode) && offering === OfferingType.EXCHANGE) {
     if (exchangeMode === ExchangeMode.BOTH) {
       filter['exchange.mode'] = ExchangeMode.BOTH;
     } else {
@@ -486,7 +487,7 @@ export function buildSearchPlan(
       centerRadius: parseCenterRadius(query),
       sortField,
       sortDirection,
-      intent,
+      offering,
       minSalePrice,
       maxSalePrice,
       exchangeMode: exchangeModeParam,
@@ -497,6 +498,11 @@ export function buildSearchPlan(
 /**
  * Build a Mongoose sort spec. `relevance` only carries a text score when a
  * text search is active; otherwise it falls back to recency.
+ *
+ * The `price` sort resolves to the requested offering's price field
+ * (long_term→monthlyAmount, short_term→nightlyRate, sale→sale.price; defaults
+ * to long-term when no offering is set) so the feed never sorts a monthly price
+ * against a nightly one. `salePrice` always sorts on `sale.price`.
  */
 export function buildSort(
   params: ParsedSearchParams,
@@ -505,10 +511,11 @@ export function buildSort(
   const direction: SortOrder = params.sortDirection === SORT_ASC ? 1 : -1;
 
   if (params.sortField === SORT_PRICE) {
-    return { 'rent.amount': direction };
+    const priceField = priceFieldForOffering(params.offering) ?? DEFAULT_PRICE_FIELD;
+    return { [priceField]: direction };
   }
   if (params.sortField === SORT_SALE_PRICE) {
-    return { 'sale.price': direction };
+    return { [PRICE_FIELD_SALE]: direction };
   }
   if (params.sortField === SORT_RELEVANCE && hasTextScore) {
     return { score: { $meta: 'textScore' }, createdAt: -1 };

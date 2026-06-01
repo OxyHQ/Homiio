@@ -34,7 +34,6 @@ export async function findNearbyProperties(req, res, next) {
       parkingType, 
       petPolicy, 
       leaseTerm, 
-      priceUnit, 
       proximityToTransport, 
       proximityToSchools, 
       proximityToShopping, 
@@ -118,9 +117,9 @@ export async function findNearbyProperties(req, res, next) {
     if (type) filters.type = type;
     
     if (minRent || maxRent) {
-      filters['rent.amount'] = {};
-      if (minRent) filters['rent.amount'].$gte = parseInt(String(minRent));
-      if (maxRent) filters['rent.amount'].$lte = parseInt(String(maxRent));
+      filters['longTermRent.monthlyAmount'] = {};
+      if (minRent) filters['longTermRent.monthlyAmount'].$gte = parseInt(String(minRent));
+      if (maxRent) filters['longTermRent.monthlyAmount'].$lte = parseInt(String(maxRent));
     }
 
     if (minBedrooms || maxBedrooms) {
@@ -168,7 +167,6 @@ export async function findNearbyProperties(req, res, next) {
     if (furnishedStatus) filters.furnishedStatus = String(furnishedStatus);
     if (petPolicy) filters.petPolicy = String(petPolicy);
     if (leaseTerm) filters.leaseTerm = String(leaseTerm);
-    if (priceUnit) filters.priceUnit = String(priceUnit);
     if (parkingType) filters.parkingType = String(parkingType);
     if (petFriendly !== undefined) filters.petFriendly = String(petFriendly) === 'true';
     if (utilitiesIncluded !== undefined) filters.utilitiesIncluded = String(utilitiesIncluded) === 'true';
@@ -252,7 +250,6 @@ export async function findPropertiesInRadius(req, res, next) {
       parkingType, 
       petPolicy, 
       leaseTerm, 
-      priceUnit, 
       proximityToTransport, 
       proximityToSchools, 
       proximityToShopping, 
@@ -336,9 +333,9 @@ export async function findPropertiesInRadius(req, res, next) {
     if (type) filters.type = type;
     
     if (minRent || maxRent) {
-      filters['rent.amount'] = {};
-      if (minRent) filters['rent.amount'].$gte = parseInt(String(minRent));
-      if (maxRent) filters['rent.amount'].$lte = parseInt(String(maxRent));
+      filters['longTermRent.monthlyAmount'] = {};
+      if (minRent) filters['longTermRent.monthlyAmount'].$gte = parseInt(String(minRent));
+      if (maxRent) filters['longTermRent.monthlyAmount'].$lte = parseInt(String(maxRent));
     }
 
     if (minBedrooms || maxBedrooms) {
@@ -386,7 +383,6 @@ export async function findPropertiesInRadius(req, res, next) {
     if (furnishedStatus) filters.furnishedStatus = String(furnishedStatus);
     if (petPolicy) filters.petPolicy = String(petPolicy);
     if (leaseTerm) filters.leaseTerm = String(leaseTerm);
-    if (priceUnit) filters.priceUnit = String(priceUnit);
     if (parkingType) filters.parkingType = String(parkingType);
     if (petFriendly !== undefined) filters.petFriendly = String(petFriendly) === 'true';
     if (utilitiesIncluded !== undefined) filters.utilitiesIncluded = String(utilitiesIncluded) === 'true';

@@ -9,7 +9,7 @@ import {
   Property,
   PropertyType,
   PropertyStatus,
-  PaymentFrequency,
+  OfferingType,
   UtilitiesIncluded,
   type PropertyImage,
 } from '@homiio/shared-types';
@@ -274,13 +274,29 @@ export function PropertyPreviewWidget() {
       squareFootage: basicInfo.squareFootage,
       bedrooms: basicInfo.bedrooms,
       bathrooms: basicInfo.bathrooms,
-      rent: {
-        amount: pricing.monthlyRent ?? 0,
-        currency: pricing.currency || 'USD',
-        paymentFrequency: PaymentFrequency.MONTHLY,
-        deposit: pricing.securityDeposit ?? 0,
-        utilities: UtilitiesIncluded.EXCLUDED,
-      },
+      // Mirror the per-offering pricing so the live card preview reprices
+      // exactly like the published listing in each browse mode.
+      offerings: pricing.offerings,
+      longTermRent: pricing.offerings.includes(OfferingType.LONG_TERM_RENT)
+        ? {
+            monthlyAmount: pricing.monthlyRent ?? 0,
+            currency: pricing.currency || 'USD',
+            deposit: pricing.securityDeposit ?? 0,
+            utilities: UtilitiesIncluded.EXCLUDED,
+          }
+        : undefined,
+      shortTermRent: pricing.offerings.includes(OfferingType.SHORT_TERM_RENT)
+        ? {
+            nightlyRate: pricing.nightlyRate ?? 0,
+            currency: pricing.currency || 'USD',
+            cleaningFee: pricing.cleaningFee,
+            serviceFee: pricing.serviceFee,
+            taxesPercent: pricing.taxesPercent,
+            minNights: pricing.minNights,
+            maxNights: pricing.maxNights,
+            instantBook: pricing.instantBook,
+          }
+        : undefined,
       amenities: amenities.selectedAmenities ?? [],
       images,
       status: PropertyStatus.DRAFT,
@@ -478,6 +494,14 @@ export function PropertyPreviewWidget() {
                         </ThemedText>
                       </View>
                     )}
+                    {formData.pricing?.nightlyRate && formData.pricing.nightlyRate > 0 && (
+                      <View style={styles.dataItem}>
+                        <ThemedText style={styles.dataLabel}>Nightly Rate:</ThemedText>
+                        <ThemedText style={styles.dataValue}>
+                          ${formData.pricing.nightlyRate.toLocaleString()}
+                        </ThemedText>
+                      </View>
+                    )}
                     {formData.pricing?.securityDeposit && formData.pricing.securityDeposit > 0 && (
                       <View style={styles.dataItem}>
                         <ThemedText style={styles.dataLabel}>Security Deposit:</ThemedText>
@@ -494,15 +518,6 @@ export function PropertyPreviewWidget() {
                         </ThemedText>
                       </View>
                     )}
-                    {formData.pricing?.includedUtilities &&
-                      formData.pricing.includedUtilities.length > 0 && (
-                        <View style={styles.dataItem}>
-                          <ThemedText style={styles.dataLabel}>Included Utilities:</ThemedText>
-                          <ThemedText style={styles.dataValue}>
-                            {formData.pricing.includedUtilities.join(', ')}
-                          </ThemedText>
-                        </View>
-                      )}
                     {formData.pricing?.applicationFee && formData.pricing.applicationFee > 0 && (
                       <View style={styles.dataItem}>
                         <ThemedText style={styles.dataLabel}>Application Fee:</ThemedText>

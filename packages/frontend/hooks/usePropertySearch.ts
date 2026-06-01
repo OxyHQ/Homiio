@@ -9,9 +9,12 @@
  *
  * The endpoint accepts: `q`/`city`, a bounding box (`swLat/swLng/neLat/neLng`)
  * or center+radius (`lat/lng/radius`), `propertyType` (comma list),
- * `priceMin/priceMax`, `bedrooms/bathrooms`, `amenities` (comma), `guests`,
- * `rentMode`, `sortBy` ({price|createdAt|relevance}), `sortOrder` (asc|desc),
- * `page`, `limit` (≤50). Each returned property exposes
+ * `priceMin/priceMax` (or `minSalePrice/maxSalePrice` for sale),
+ * `bedrooms/bathrooms`, `amenities` (comma), `guests`, `offering`
+ * ({@link OfferingType}), `sortBy` ({price|createdAt|relevance}), `sortOrder`
+ * (asc|desc), `page`, `limit` (≤50). The backend resolves the price-range field
+ * from the requested `offering` (long-term → monthly amount, short-term →
+ * nightly rate, sale → sale price). Each returned property exposes
  * `address.coordinates.coordinates` as `[lng, lat]` for map pins.
  */
 import {
@@ -21,7 +24,7 @@ import {
 } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { api } from '@/utils/api';
-import { ListingIntent, type Property } from '@homiio/shared-types';
+import { OfferingType, type Property } from '@homiio/shared-types';
 import type { SearchBounds, SearchQuery } from '@/components/search/types';
 
 /** Hard cap matching the backend `MAX_LIMIT`. */
@@ -76,20 +79,19 @@ function boundsToParams(bounds: SearchBounds): Record<string, number> {
  * exported so the query key can be derived from the exact same object.
  */
 export function buildSearchParams(query: SearchQuery): Record<string, string | number> {
-  const isSaleIntent = query.intent === ListingIntent.SALE;
+  const isSale = query.offering === OfferingType.SALE;
   const params: Record<string, string | number> = {
     page: 1,
     limit: PAGE_SIZE,
-    rentMode: query.rentMode,
+    // The single offering axis the backend filters membership on AND resolves
+    // the price-range field from (long-term → monthly, short-term → nightly,
+    // sale → sale price).
+    offering: query.offering,
     // When scoped to sale, sort by sale price rather than rent (`price` ->
     // `salePrice`); the backend recognises the dedicated sale-price sort field.
-    sortBy: isSaleIntent && query.sortBy === 'price' ? 'salePrice' : query.sortBy,
+    sortBy: isSale && query.sortBy === 'price' ? 'salePrice' : query.sortBy,
     sortOrder: query.sortOrder,
   };
-
-  if (query.intent !== undefined) {
-    params.intent = query.intent;
-  }
 
   const location = query.location;
   if (location?.bounds) {
@@ -106,14 +108,14 @@ export function buildSearchParams(query: SearchQuery): Record<string, string | n
   if (query.propertyTypes.length > 0) {
     params.propertyType = query.propertyTypes.join(',');
   }
-  // For a sale search the price range refers to the SALE price (the backend
-  // ignores rent priceMin/priceMax when intent=sale), so route it to the
-  // dedicated sale-price params; otherwise it's the rent price range.
+  // For a sale search the price range refers to the SALE price, so route it to
+  // the dedicated sale-price params; otherwise it's the rent price range
+  // (resolved server-side to the active offering's monthly/nightly field).
   if (typeof query.priceMin === 'number') {
-    params[isSaleIntent ? 'minSalePrice' : 'priceMin'] = query.priceMin;
+    params[isSale ? 'minSalePrice' : 'priceMin'] = query.priceMin;
   }
   if (typeof query.priceMax === 'number') {
-    params[isSaleIntent ? 'maxSalePrice' : 'priceMax'] = query.priceMax;
+    params[isSale ? 'maxSalePrice' : 'priceMax'] = query.priceMax;
   }
   if (typeof query.bedrooms === 'number' && query.bedrooms > 0) {
     params.bedrooms = query.bedrooms;

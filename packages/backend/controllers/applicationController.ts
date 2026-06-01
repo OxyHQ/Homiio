@@ -19,7 +19,7 @@ const imageUploadService = require('../services/imageUploadService').default;
 const {
   TenantApplicationStatus,
   TenantApplicationDocumentType,
-  RentMode
+  OfferingType
 } = require('@homiio/shared-types');
 
 const ALLOWED_DOCUMENT_TYPES = new Set(Object.values(TenantApplicationDocumentType));
@@ -192,8 +192,9 @@ class ApplicationController {
       const property = await Property.findById(propertyId).lean();
       if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
       if (property.isExternal) return next(new AppError('Cannot apply to external listings', 400, 'EXTERNAL_PROPERTY'));
-      if (property.rentMode === RentMode.VACATION) {
-        return next(new AppError('This property is vacation-only and does not accept long-term applications', 400, 'NOT_APPLICABLE'));
+      const propertyOfferings = Array.isArray(property.offerings) ? property.offerings : [];
+      if (!propertyOfferings.includes(OfferingType.LONG_TERM_RENT)) {
+        return next(new AppError('This property is not offered for long-term rent and does not accept applications', 400, 'NOT_APPLICABLE'));
       }
 
       const applicantProfile = await Profile.findActiveByOxyUserId(oxyUserId);

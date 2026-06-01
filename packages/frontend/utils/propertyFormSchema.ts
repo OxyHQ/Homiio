@@ -182,16 +182,61 @@ export function validateLocationStep(
   return errors;
 }
 
+const MAX_TAXES_PERCENT = 100;
+
 /**
- * Pricing step. Monthly rent is required when visible.
+ * Offering selector. A listing must carry at least one offering (the selector
+ * never lets the host drop the last one, but we validate defensively).
  */
-export function validatePricingStep(
+export function validateOfferingStep(
   pricing: CreatePropertyFormData['pricing'],
-  fieldsToShow: readonly string[],
 ): StepValidationErrors {
   const errors: StepValidationErrors = {};
-  if (fieldsToShow.includes('monthlyRent') && !pricing.monthlyRent) {
-    errors.monthlyRent = 'Monthly rent is required';
+  if (pricing.offerings.length === 0) {
+    errors.offerings = 'Choose at least one way to offer this listing';
+  }
+  return errors;
+}
+
+/**
+ * Long-term Pricing step. Reachable only when the listing is offered monthly,
+ * so the monthly rent is required and must be positive (mirrors the backend's
+ * `longTermRent.monthlyAmount > 0` rule).
+ */
+export function validateLongTermPricingStep(
+  pricing: CreatePropertyFormData['pricing'],
+): StepValidationErrors {
+  const errors: StepValidationErrors = {};
+  if (!pricing.monthlyRent || pricing.monthlyRent <= 0) {
+    errors.monthlyRent = 'Monthly rent is required and must be greater than 0';
+  }
+  return errors;
+}
+
+/**
+ * Nightly Pricing step. Reachable only when the listing is offered by the
+ * night: the nightly rate must be positive, taxes 0–100, and (when both are
+ * set) `minNights <= maxNights` (mirrors the backend's short-term rules).
+ */
+export function validateNightlyPricingStep(
+  pricing: CreatePropertyFormData['pricing'],
+): StepValidationErrors {
+  const errors: StepValidationErrors = {};
+  if (!pricing.nightlyRate || pricing.nightlyRate <= 0) {
+    errors.nightlyRate = 'Nightly rate is required and must be greater than 0';
+  }
+  if (
+    pricing.taxesPercent !== undefined &&
+    (pricing.taxesPercent < 0 || pricing.taxesPercent > MAX_TAXES_PERCENT)
+  ) {
+    errors.taxesPercent = `Taxes must be between 0 and ${MAX_TAXES_PERCENT}%`;
+  }
+  if (
+    pricing.minNights !== undefined &&
+    pricing.maxNights !== undefined &&
+    pricing.minNights > pricing.maxNights
+  ) {
+    errors.minNights = 'Minimum nights cannot exceed maximum nights';
   }
   return errors;
 }

@@ -3,16 +3,17 @@ import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from '@/lib/sonner';
 import {
-  PaymentFrequency,
   UtilitiesIncluded,
   PropertyStatus,
-  ListingIntent,
+  OfferingType,
   type CreatePropertyData,
   type PropertyType,
   type Property,
   type PropertyImage,
   type PropertySale,
   type PropertyExchange,
+  type LongTermRent,
+  type ShortTermRent,
 } from '@homiio/shared-types';
 import {
   useCreatePropertyFormStore,
@@ -20,12 +21,6 @@ import {
 } from '@/store/createPropertyFormStore';
 import { propertyService } from '@/services/propertyService';
 import { logger } from '@/utils/logger';
-
-const VALID_UTILITIES: readonly UtilitiesIncluded[] = [
-  UtilitiesIncluded.INCLUDED,
-  UtilitiesIncluded.EXCLUDED,
-  UtilitiesIncluded.PARTIAL,
-];
 
 const DEFAULT_COUNTRY = 'US';
 const DEFAULT_CURRENCY = 'USD';
@@ -65,15 +60,6 @@ const toNumber = (
   return Number.isNaN(parsed) ? undefined : parsed;
 };
 
-const resolveUtilities = (utilities: string[] | undefined): UtilitiesIncluded => {
-  // Mirrors the legacy logic: the form stores utilities as an array, so the
-  // `typeof === 'string'` guard never matches and the result is EXCLUDED.
-  if (typeof utilities === 'string' && (VALID_UTILITIES as readonly string[]).includes(utilities)) {
-    return utilities as UtilitiesIncluded;
-  }
-  return UtilitiesIncluded.EXCLUDED;
-};
-
 /**
  * Builds the API payload from the wizard form state. The transformation matches
  * the previous inline `handleSubmit` logic exactly (same parsing, defaults, and
@@ -89,6 +75,9 @@ export function buildPropertyPayload(formData: CreatePropertyFormData): Property
           coordinates: [location.longitude, location.latitude] as [number, number],
         }
       : undefined;
+
+  const currency = pricing.currency || DEFAULT_CURRENCY;
+  const offerings = pricing.offerings;
 
   const payload: PropertySubmitPayload = {
     address: {
@@ -118,13 +107,6 @@ export function buildPropertyPayload(formData: CreatePropertyFormData): Property
     squareFootage: toNumber(basicInfo.squareFootage, (v) => parseInt(v, 10)),
     floor: toNumber(location.floor, (v) => parseInt(v, 10)),
     yearBuilt: toNumber(basicInfo.yearBuilt, (v) => parseInt(v, 10)),
-    rent: {
-      amount: pricing.monthlyRent ? parseFloat(pricing.monthlyRent.toString()) : 0,
-      currency: pricing.currency || DEFAULT_CURRENCY,
-      paymentFrequency: PaymentFrequency.MONTHLY,
-      deposit: pricing.securityDeposit ? parseFloat(pricing.securityDeposit.toString()) : 0,
-      utilities: resolveUtilities(pricing.utilities),
-    },
     amenities: amenities.selectedAmenities || [],
     images:
       media.images?.map((img) => ({
@@ -133,18 +115,66 @@ export function buildPropertyPayload(formData: CreatePropertyFormData): Property
         isPrimary: img.isPrimary || false,
       })) ?? [],
     status: PropertyStatus.PUBLISHED,
-    // Multi-intent offering. `intents` defaults to ['rent'] in the store, so
-    // it is always present; the backend additionally normalises an empty list.
-    intents: offering.intents,
+    // The single offering axis — authoritative on the property. The server
+    // validates it equals the set of present priced blocks below.
+    offerings,
   };
+
+  // Long-term (monthly) rent block — sent only when offered monthly. The
+  // backend requires `monthlyAmount > 0` and a non-empty `currency`.
+  if (offerings.includes(OfferingType.LONG_TERM_RENT)) {
+    const longTermRent: LongTermRent = {
+      monthlyAmount: pricing.monthlyRent ? parseFloat(pricing.monthlyRent.toString()) : 0,
+      currency,
+      deposit: pricing.securityDeposit
+        ? parseFloat(pricing.securityDeposit.toString())
+        : 0,
+      // The wizard does not yet collect a utilities-included selection, so we
+      // default to EXCLUDED (the host can refine it later via edit).
+      utilities: UtilitiesIncluded.EXCLUDED,
+    };
+    if (pricing.applicationFee) {
+      longTermRent.applicationFee = parseFloat(pricing.applicationFee.toString());
+    }
+    if (pricing.lateFee) {
+      longTermRent.lateFee = parseFloat(pricing.lateFee.toString());
+    }
+    payload.longTermRent = longTermRent;
+  }
+
+  // Short-term (per-night) rent block — sent only when offered by the night.
+  // The backend requires `nightlyRate > 0`; fees/taxes/min-max are optional.
+  if (offerings.includes(OfferingType.SHORT_TERM_RENT)) {
+    const shortTermRent: ShortTermRent = {
+      nightlyRate: pricing.nightlyRate ? parseFloat(pricing.nightlyRate.toString()) : 0,
+      currency,
+      instantBook: pricing.instantBook,
+    };
+    if (pricing.cleaningFee) {
+      shortTermRent.cleaningFee = parseFloat(pricing.cleaningFee.toString());
+    }
+    if (pricing.serviceFee) {
+      shortTermRent.serviceFee = parseFloat(pricing.serviceFee.toString());
+    }
+    if (pricing.taxesPercent) {
+      shortTermRent.taxesPercent = parseFloat(pricing.taxesPercent.toString());
+    }
+    if (pricing.minNights !== undefined) {
+      shortTermRent.minNights = pricing.minNights;
+    }
+    if (pricing.maxNights !== undefined) {
+      shortTermRent.maxNights = pricing.maxNights;
+    }
+    payload.shortTermRent = shortTermRent;
+  }
 
   // Sale block — sent only when the listing is for sale. The backend requires a
   // positive `price` and a non-empty `currency`; `pricePerSqm` is derived
   // server-side from price + squareFootage, so we never send it.
-  if (offering.intents.includes(ListingIntent.SALE)) {
+  if (offerings.includes(OfferingType.SALE)) {
     const sale: PropertySale = {
       price: offering.salePrice ?? 0,
-      currency: offering.saleCurrency || pricing.currency || DEFAULT_CURRENCY,
+      currency: offering.saleCurrency || currency,
     };
     const chainStatus = toChainStatus(offering.chainStatus);
     if (chainStatus) {
@@ -159,7 +189,7 @@ export function buildPropertyPayload(formData: CreatePropertyFormData): Property
   // Exchange block — sent only when the listing is open to exchange. `mode` and
   // `availabilityWindows` are always part of the shape; the rest are optional
   // and only included when set so we never overwrite stored data with blanks.
-  if (offering.intents.includes(ListingIntent.EXCHANGE)) {
+  if (offerings.includes(OfferingType.EXCHANGE)) {
     const exchange: PropertyExchange = {
       mode: offering.exchangeMode,
       availabilityWindows: offering.exchangeAvailabilityWindows,

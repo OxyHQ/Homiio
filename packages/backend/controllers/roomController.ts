@@ -67,7 +67,7 @@ class RoomController {
         const rentFilter: Record<string, number> = {};
         if (minRent !== undefined) rentFilter.$gte = parseFloat(String(minRent));
         if (maxRent !== undefined) rentFilter.$lte = parseFloat(String(maxRent));
-        filters['rent.amount'] = rentFilter;
+        filters['longTermRent.monthlyAmount'] = rentFilter;
       }
 
       if (furnishedStatus) filters.furnishedStatus = String(furnishedStatus);

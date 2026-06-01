@@ -9,9 +9,9 @@ import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
 import { useOxy, showSignInModal } from '@oxyhq/services';
 import {
   Property,
-  RentMode,
   CancellationPolicy,
 } from '@homiio/shared-types';
+import { isShortTermRentable } from '@/utils/propertyUtils';
 import { Ionicons } from '@expo/vector-icons';
 import {
   AvailabilityCalendar,
@@ -55,7 +55,8 @@ const computeNights = (
 };
 
 const isVacationCapable = (property: Property): boolean => {
-  if (property.rentMode === RentMode.LONG_TERM) return false;
+  // Bookable as a short-stay iff the listing carries the short-term offering.
+  if (!isShortTermRentable(property)) return false;
   if (property.isExternal) return false;
   return true;
 };
@@ -75,13 +76,17 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ property }) => {
 
   const createMutation = useCreateReservation();
 
-  const nightlyRate = property.rent?.amount ?? 0;
-  const currency = (property.rent?.currency || 'EUR').toUpperCase();
-  const cleaningFee = property.priceBreakdown?.cleaningFee ?? 0;
-  const serviceFee = property.priceBreakdown?.serviceFee ?? 0;
-  const taxesPercent = property.priceBreakdown?.taxesPercent ?? 0;
-  const minStay = property.minStay;
-  const maxStay = property.maxStay;
+  // All booking inputs come from the short-term priced block — the unit is a
+  // per-night rate, never a reinterpreted monthly figure (fixes the overcharge).
+  const shortTerm = property.shortTermRent;
+  const nightlyRate = shortTerm?.nightlyRate ?? 0;
+  const currency = (shortTerm?.currency || 'EUR').toUpperCase();
+  const cleaningFee = shortTerm?.cleaningFee ?? 0;
+  const serviceFee = shortTerm?.serviceFee ?? 0;
+  const taxesPercent = shortTerm?.taxesPercent ?? 0;
+  const minStay = shortTerm?.minNights;
+  const maxStay = shortTerm?.maxNights;
+  const instantBook = Boolean(shortTerm?.instantBook);
   const maxGuests = property.maxGuests;
 
   const nights = useMemo(() => computeNights(range), [range]);
@@ -145,7 +150,7 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ property }) => {
   if (!isVacationCapable(property)) return null;
   if (nightlyRate <= 0) return null;
 
-  const buttonLabel = property.instantBook ? 'Reserve' : 'Request to book';
+  const buttonLabel = instantBook ? 'Reserve' : 'Request to book';
 
   return (
     <View style={styles.card}>
@@ -154,7 +159,7 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ property }) => {
           {currency} {nightlyRate}
           <BloomText style={styles.pricePer}> / night</BloomText>
         </BloomText>
-        {property.instantBook ? (
+        {instantBook ? (
           <View style={styles.instantBookPill}>
             <Ionicons name="flash" size={12} color={colors.primaryColor} />
             <BloomText style={styles.instantBookLabel}>Instant book</BloomText>
@@ -208,7 +213,7 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ property }) => {
       >
         {buttonLabel}
       </Button>
-      {!property.instantBook ? (
+      {!instantBook ? (
         <BloomText style={styles.subnote}>
           You won&apos;t be charged yet. The host has 24 hours to respond.
         </BloomText>

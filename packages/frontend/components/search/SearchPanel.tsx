@@ -28,7 +28,7 @@ import { Button } from '@oxyhq/bloom/button';
 import * as SegmentedControl from '@oxyhq/bloom/segmented-control';
 import { H3 } from '@oxyhq/bloom/typography';
 
-import { PropertyType, RentMode } from '@homiio/shared-types';
+import { OfferingType, PropertyType } from '@homiio/shared-types';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { useRecentSearchesStore, type RecentSearch } from '@/store/recentSearchesStore';
 import { colors } from '@/styles/colors';
@@ -39,8 +39,8 @@ import { TypeStep } from './steps/TypeStep';
 import { PriceStep } from './steps/PriceStep';
 import { DatesStep } from './steps/DatesStep';
 import {
-  BROWSE_MODE_MAP,
-  browseModeFromAxes,
+  BROWSE_MODE_OFFERING,
+  browseModeFromOffering,
   type BrowseMode,
   type SearchDateRange,
   type SearchLocation,
@@ -130,37 +130,39 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
   // `useEffect` needed.
   const [step, setStep] = useState<SearchStep>(() => {
     const validSteps =
-      initialQuery.rentMode === RentMode.VACATION ? VACATION_STEPS : LONG_TERM_STEPS;
+      initialQuery.offering === OfferingType.SHORT_TERM_RENT
+        ? VACATION_STEPS
+        : LONG_TERM_STEPS;
     return validSteps.includes(initialStep) ? initialStep : 'where';
   });
 
   const steps = useMemo(
-    () => (draft.rentMode === RentMode.VACATION ? VACATION_STEPS : LONG_TERM_STEPS),
-    [draft.rentMode],
+    () =>
+      draft.offering === OfferingType.SHORT_TERM_RENT ? VACATION_STEPS : LONG_TERM_STEPS,
+    [draft.offering],
   );
   const stepIndex = Math.max(0, steps.indexOf(step));
   const isLastStep = stepIndex === steps.length - 1;
 
-  // The toggle's current value is derived from the draft's two axes rather than
-  // stored separately, so the panel keeps a single source of truth (the draft).
-  const draftBrowseMode = browseModeFromAxes(draft.rentMode, draft.intent);
+  // The toggle's current value is derived from the draft's active offering
+  // rather than stored separately, so the panel keeps one source of truth.
+  const draftBrowseMode = browseModeFromOffering(draft.offering);
 
   const handleBrowseMode = useCallback((next: BrowseMode) => {
-    const axes = BROWSE_MODE_MAP[next];
+    const offering = BROWSE_MODE_OFFERING[next];
+    const isShortTerm = offering === OfferingType.SHORT_TERM_RENT;
     setDraft((prev) => ({
       ...prev,
-      rentMode: axes.rentMode,
-      intent: axes.intent,
-      // Vacation-only fields are meaningless outside the vacation experience.
-      ...(axes.rentMode === RentMode.LONG_TERM
-        ? { dates: undefined, guests: undefined }
-        : {}),
+      offering,
+      // The price range is per-offering (monthly vs nightly vs sale), so clear
+      // it when switching; short-term-only fields are meaningless elsewhere.
+      priceMin: undefined,
+      priceMax: undefined,
+      ...(isShortTerm ? {} : { dates: undefined, guests: undefined }),
     }));
-    // Leaving the vacation experience while on the dates step would strand the
-    // user (long-term/buy/exchange have no calendar step).
-    setStep((prev) =>
-      axes.rentMode === RentMode.LONG_TERM && prev === 'dates' ? 'price' : prev,
-    );
+    // Leaving the short-term experience while on the dates step would strand the
+    // user (the other offerings have no calendar step).
+    setStep((prev) => (!isShortTerm && prev === 'dates' ? 'price' : prev));
   }, []);
 
   const handleSelectLocation = useCallback((location: SearchLocation) => {
@@ -236,7 +238,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
       case 'type':
         return (
           <TypeStep
-            rentMode={draft.rentMode}
+            offering={draft.offering}
             selected={draft.propertyTypes}
             onToggle={handleToggleType}
           />
@@ -246,7 +248,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
       case 'price':
         return (
           <PriceStep
-            rentMode={draft.rentMode}
+            offering={draft.offering}
             priceMin={draft.priceMin}
             priceMax={draft.priceMax}
             onChange={handlePriceChange}

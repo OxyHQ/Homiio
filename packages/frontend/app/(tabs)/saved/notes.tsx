@@ -58,8 +58,10 @@ export default function NotesScreen() {
       const notesArr = parseNotesString(p.notes);
       const title = getPropertyTitle(p) || p.address?.city || 'Property';
       const image = getPropertyImageSource(p);
-      const price = p.rent?.amount;
-      const currency = p.rent?.currency;
+      // Headline price for the saved-note card: monthly when present, else the
+      // nightly rate for vacation-only listings.
+      const price = p.longTermRent?.monthlyAmount ?? p.shortTermRent?.nightlyRate;
+      const currency = p.longTermRent?.currency ?? p.shortTermRent?.currency;
       const location = [p.address?.city, p.address?.state].filter(Boolean).join(', ');
       const bedrooms = p.bedrooms;
       const bathrooms = p.bathrooms;

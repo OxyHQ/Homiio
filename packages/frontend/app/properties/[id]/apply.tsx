@@ -378,10 +378,10 @@ export default function ApplyToRentScreen() {
                 {property.address?.city}
                 {property.address?.country ? `, ${property.address.country}` : ''}
               </ThemedText>
-              {property.rent && (
+              {property.longTermRent && (
                 <ThemedText style={styles.propertyPrice}>
-                  {property.rent.currency || ''}
-                  {property.rent.amount}
+                  {property.longTermRent.currency || ''}
+                  {property.longTermRent.monthlyAmount}
                   {' / '}
                   {t('common.month', 'month')}
                 </ThemedText>

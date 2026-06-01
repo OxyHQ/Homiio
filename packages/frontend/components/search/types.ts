@@ -7,7 +7,7 @@
  * data (no React) so both the Zustand stores and the components can depend on
  * them without a cycle.
  */
-import { ListingIntent, RentMode } from '@homiio/shared-types';
+import { OfferingType } from '@homiio/shared-types';
 import type { PropertyType } from '@homiio/shared-types';
 
 /**
@@ -57,24 +57,26 @@ export type SearchSortOrder = 'asc' | 'desc';
 /**
  * The full, serialisable active search query. This is the single source of
  * truth the results view reads and the `SearchPanel` writes. Every field is
- * optional except `rentMode` so an empty (default) query is valid.
+ * optional except `offering` so an empty (default) query is valid.
  */
 export interface SearchQuery {
-  /** Long-term (default) vs vacation experience. */
-  rentMode: RentMode;
+  /**
+   * The offering the user is browsing (`long_term_rent` by default). Selects
+   * BOTH the feed filter (`offering=<type>`) and which priced block the price
+   * range applies to — long-term → monthly amount, short-term → nightly rate,
+   * sale → sale price. The unit is fixed per offering and never reinterpreted.
+   */
+  offering: OfferingType;
   /** Resolved "Where" selection, if any. */
   location?: SearchLocation;
-  /**
-   * Listing type to scope to (rent / sale / exchange). Undefined = any
-   * (default). When `sale`, the price range below is interpreted as the SALE
-   * price range by the search hook (the backend ignores rent price for sale).
-   */
-  intent?: ListingIntent;
   /** Selected property types (empty = any). */
   propertyTypes: PropertyType[];
-  /** Minimum price (per-month long-term, per-night vacation). */
+  /**
+   * Minimum price, interpreted against the active offering's price field
+   * (monthly for long-term, nightly for short-term, sale price for buy).
+   */
   priceMin?: number;
-  /** Maximum price. */
+  /** Maximum price (same per-offering interpretation as {@link priceMin}). */
   priceMax?: number;
   /** Minimum bedrooms. */
   bedrooms?: number;
@@ -82,9 +84,9 @@ export interface SearchQuery {
   bathrooms?: number;
   /** Amenity slugs the listing must include. */
   amenities: string[];
-  /** Vacation-only date range. */
+  /** Short-term-only date range. */
   dates?: SearchDateRange;
-  /** Vacation-only guest count. */
+  /** Short-term-only guest count. */
   guests?: number;
   /** Sort field. */
   sortBy: SearchSortBy;
@@ -92,63 +94,51 @@ export interface SearchQuery {
   sortOrder: SearchSortOrder;
 }
 
-/** The ordered steps the panel walks through (Dates only in vacation mode). */
+/** The ordered steps the panel walks through (Dates only in short-term mode). */
 export type SearchStep = 'where' | 'type' | 'dates' | 'price';
 
 /**
  * The single top-level "what am I browsing for" selection the global mode
- * toggle (sidebar + hero) drives. It unifies the two axes the app already
- * filters on — the rent experience ({@link RentMode}: long-term | vacation) and
- * the listing {@link ListingIntent} (rent / sale / exchange) — into one typed
- * value, WITHOUT forking the filtering logic: a `BrowseMode` is just a named
- * alias over a `(rentMode, intent)` pair (see {@link BROWSE_MODE_MAP}).
+ * toggle (sidebar + hero) drives. It maps 1:1 onto an {@link OfferingType}: a
+ * `BrowseMode` is just the user-facing alias for "which offering am I looking
+ * at", and the active mode selects both the feed filter (`offering: <type>`)
+ * and the price field (see {@link BROWSE_MODE_OFFERING}).
  *
- *  - `long_term` / `vacation` → rent intent left undefined ("any", so legacy
- *    rent-only listings still surface), keeping today's behaviour unchanged.
- *  - `buy`      → `sale` intent.
- *  - `exchange` → `exchange` intent.
+ *  - `long_term` → {@link OfferingType.LONG_TERM_RENT} (monthly rent)
+ *  - `vacation`  → {@link OfferingType.SHORT_TERM_RENT} (per-night rent)
+ *  - `buy`       → {@link OfferingType.SALE}
+ *  - `exchange`  → {@link OfferingType.EXCHANGE}
  *
  * Pure data (no React) so the search store, the `RentalModeContext`, the
  * sidebar toggle, and the `SearchPanel` can all share one mapping.
  */
 export type BrowseMode = 'long_term' | 'vacation' | 'buy' | 'exchange';
 
-/** The two filter axes a {@link BrowseMode} decomposes into. */
-export interface BrowseModeAxes {
-  /** Rent experience (drives price unit + vacation-only fields). */
-  rentMode: RentMode;
-  /**
-   * Listing intent to scope to. `undefined` for the rent modes so legacy
-   * rent-only listings (no stored `intents`) still surface; `sale`/`exchange`
-   * for the dedicated buy/exchange browse modes.
-   */
-  intent: ListingIntent | undefined;
-}
-
 /**
- * Canonical decomposition of every {@link BrowseMode} into its
- * `(rentMode, intent)` axes. The ONE source of truth shared by the toggle, the
- * context, the search store, and the panel.
+ * Canonical 1:1 mapping of every {@link BrowseMode} to its {@link OfferingType}.
+ * The ONE source of truth shared by the toggle, the context, the search store,
+ * and the panel.
  */
-export const BROWSE_MODE_MAP: Record<BrowseMode, BrowseModeAxes> = {
-  long_term: { rentMode: RentMode.LONG_TERM, intent: undefined },
-  vacation: { rentMode: RentMode.VACATION, intent: undefined },
-  buy: { rentMode: RentMode.LONG_TERM, intent: ListingIntent.SALE },
-  exchange: { rentMode: RentMode.LONG_TERM, intent: ListingIntent.EXCHANGE },
+export const BROWSE_MODE_OFFERING: Record<BrowseMode, OfferingType> = {
+  long_term: OfferingType.LONG_TERM_RENT,
+  vacation: OfferingType.SHORT_TERM_RENT,
+  buy: OfferingType.SALE,
+  exchange: OfferingType.EXCHANGE,
+};
+
+/** Inverse of {@link BROWSE_MODE_OFFERING}: the browse mode for an offering. */
+export const OFFERING_BROWSE_MODE: Record<OfferingType, BrowseMode> = {
+  [OfferingType.LONG_TERM_RENT]: 'long_term',
+  [OfferingType.SHORT_TERM_RENT]: 'vacation',
+  [OfferingType.SALE]: 'buy',
+  [OfferingType.EXCHANGE]: 'exchange',
 };
 
 /**
- * Invert {@link BROWSE_MODE_MAP}: pick the {@link BrowseMode} implied by a
- * `(rentMode, intent)` pair. Intent wins when set (`sale` ⇒ buy, `exchange` ⇒
- * exchange); otherwise the rent experience selects long-term vs vacation. Used
- * by the `SearchPanel` toggle, whose draft stores the two axes rather than a
+ * Pick the {@link BrowseMode} implied by an {@link OfferingType}. Used by the
+ * `SearchPanel` toggle, whose draft stores the active offering rather than a
  * browse mode.
  */
-export function browseModeFromAxes(
-  rentMode: RentMode,
-  intent: ListingIntent | undefined,
-): BrowseMode {
-  if (intent === ListingIntent.SALE) return 'buy';
-  if (intent === ListingIntent.EXCHANGE) return 'exchange';
-  return rentMode === RentMode.VACATION ? 'vacation' : 'long_term';
+export function browseModeFromOffering(offering: OfferingType): BrowseMode {
+  return OFFERING_BROWSE_MODE[offering];
 }

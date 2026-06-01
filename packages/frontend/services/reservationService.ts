@@ -4,7 +4,7 @@ import {
   AvailabilityWindowStatus,
   CancellationPolicy,
   CreateReservationData,
-  RentMode,
+  OfferingType,
   Reservation,
   ReservationStatus,
   UpdateReservationData,
@@ -12,15 +12,18 @@ import {
 
 /**
  * Server availability response for a single property. Mirrors the shape the
- * backend's `GET /api/properties/:id/availability` route returns.
+ * backend's `GET /api/properties/:id/availability` route returns — the
+ * short-term booking knobs (`instantBook`, `minNights`/`maxNights`) come from
+ * the property's `shortTermRent` block, and `offerings` is the authoritative
+ * offering axis.
  */
 export interface PropertyAvailabilityResponse {
   propertyId: string;
-  rentMode?: RentMode;
+  offerings?: OfferingType[];
   instantBook?: boolean;
   cancellationPolicy?: CancellationPolicy;
-  minStay?: number;
-  maxStay?: number;
+  minNights?: number;
+  maxNights?: number;
   maxGuests?: number;
   windows: AvailabilityWindow[];
   booked: AvailabilityWindow[];

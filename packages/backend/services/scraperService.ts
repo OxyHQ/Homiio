@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { OfferingType } from '@homiio/shared-types';
 // API responses are now in the correct format, no transformer needed
 // CommonJS export, use require
 const Property = require('../models/schemas/PropertySchema');
@@ -138,10 +139,12 @@ function mapToProperty(raw: any) {
       floor: raw.floor ?? 0,
       hasElevator: !!raw.hasElevator,
       hasBalcony: !!raw.hasBalcony,
-      rent: {
-        amount: raw.rent?.amount ?? 0,
-        currency: raw.rent?.currency ?? 'EUR',
-        paymentFrequency: raw.rent?.paymentFrequency ?? 'MONTHLY'
+      // External listings (Idealista/Fotocasa-style) are long-term rentals: map
+      // the scraped rent into the long_term_rent offering block.
+      offerings: [OfferingType.LONG_TERM_RENT],
+      longTermRent: {
+        monthlyAmount: raw.rent?.amount ?? 0,
+        currency: raw.rent?.currency ?? 'EUR'
       },
       amenities: Array.isArray(raw.amenities) ? raw.amenities : [],
       furnishedStatus: raw.furnishedStatus ?? 'unfurnished',

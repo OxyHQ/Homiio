@@ -6,7 +6,7 @@
  * are unchanged to preserve the exact wizard behaviour (step order, which
  * fields are visible per type/step, and picker options).
  */
-import { ExchangeMode, ListingIntent } from '@homiio/shared-types';
+import { ExchangeMode, OfferingType } from '@homiio/shared-types';
 
 export interface PropertyTypeOption {
   id: string;
@@ -27,59 +27,61 @@ export const FALLBACK_PROPERTY_TYPE = 'other';
 
 // --- Wizard step names (named so the flow-resolver and the step switch stay
 //     in sync — no stringly-typed drift between the two). ---
+/** The 4-way offering selector (Rent monthly / Rent by night / Sell / Exchange). */
 export const STEP_OFFERING = 'Offering';
+export const STEP_LONG_TERM_PRICING = 'Long-term Pricing';
+export const STEP_NIGHTLY_PRICING = 'Nightly Pricing';
 export const STEP_SALE_DETAILS = 'Sale Details';
 export const STEP_EXCHANGE_SETTINGS = 'Exchange Settings';
 
 /**
- * Base step flow per property type. Every flow now includes the `Offering`
- * step (the multi-intent picker) right after `Pricing`: rent pricing is always
- * relevant (a listing always carries rent fields, and `intents` defaults to
- * rent), and the offering picker then lets the host add sale/exchange. The
- * conditional `Sale Details` step is inserted by {@link resolveStepFlow}, NOT
- * stored here, so the base flow stays declarative.
+ * Base step flow per property type. After `Location` comes the `Offering`
+ * selector (the 4-way multi-select); the conditional per-offering pricing steps
+ * (`Long-term Pricing`, `Nightly Pricing`, `Sale Details`, `Exchange Settings`)
+ * are inserted by {@link resolveStepFlow} based on the selection, NOT stored
+ * here, so the base flow stays declarative.
  */
 export const STEP_FLOWS: Record<string, string[]> = {
-  apartment: ['Basic Info', 'Location', 'Pricing', STEP_OFFERING, 'Amenities', 'Media', 'Preview'],
-  house: ['Basic Info', 'Location', 'Pricing', STEP_OFFERING, 'Amenities', 'Media', 'Preview'],
-  room: ['Basic Info', 'Location', 'Pricing', STEP_OFFERING, 'Amenities', 'Media', 'Preview'],
-  studio: ['Basic Info', 'Location', 'Pricing', STEP_OFFERING, 'Amenities', 'Media', 'Preview'],
+  apartment: ['Basic Info', 'Location', STEP_OFFERING, 'Amenities', 'Media', 'Preview'],
+  house: ['Basic Info', 'Location', STEP_OFFERING, 'Amenities', 'Media', 'Preview'],
+  room: ['Basic Info', 'Location', STEP_OFFERING, 'Amenities', 'Media', 'Preview'],
+  studio: ['Basic Info', 'Location', STEP_OFFERING, 'Amenities', 'Media', 'Preview'],
   coliving: [
     'Basic Info',
     'Location',
-    'Pricing',
     STEP_OFFERING,
     'Amenities',
     'Coliving Features',
     'Media',
     'Preview',
   ],
-  other: ['Basic Info', 'Location', 'Pricing', STEP_OFFERING, 'Media', 'Preview'],
+  other: ['Basic Info', 'Location', STEP_OFFERING, 'Media', 'Preview'],
 };
 
 /**
- * Resolve the active step list for a property type AND the selected intents.
+ * Resolve the active step list for a property type AND the selected offerings.
  * Replaces the static `STEP_FLOWS[type]` lookup: it starts from the type's base
- * flow and inserts the conditional `Sale Details` and `Exchange Settings` steps
- * immediately after `Offering` when the listing is (also) for sale / open to
- * exchange. When both intents are present, Sale Details precedes Exchange
- * Settings (commercial terms, then exchange terms). Unknown types fall back to
- * the {@link FALLBACK_PROPERTY_TYPE} flow, matching the previous lookup.
+ * flow and inserts the conditional per-offering pricing steps immediately after
+ * the `Offering` selector, in canonical order: Long-term Pricing → Nightly
+ * Pricing → Sale Details → Exchange Settings (only those the host selected).
+ * Unknown types fall back to the {@link FALLBACK_PROPERTY_TYPE} flow.
  */
 export function resolveStepFlow(
   propertyType: string,
-  intents: readonly ListingIntent[],
+  offerings: readonly OfferingType[],
 ): string[] {
   const base = STEP_FLOWS[propertyType] ?? STEP_FLOWS[FALLBACK_PROPERTY_TYPE];
   const inserts: string[] = [];
-  if (intents.includes(ListingIntent.SALE)) inserts.push(STEP_SALE_DETAILS);
-  if (intents.includes(ListingIntent.EXCHANGE)) inserts.push(STEP_EXCHANGE_SETTINGS);
+  if (offerings.includes(OfferingType.LONG_TERM_RENT)) inserts.push(STEP_LONG_TERM_PRICING);
+  if (offerings.includes(OfferingType.SHORT_TERM_RENT)) inserts.push(STEP_NIGHTLY_PRICING);
+  if (offerings.includes(OfferingType.SALE)) inserts.push(STEP_SALE_DETAILS);
+  if (offerings.includes(OfferingType.EXCHANGE)) inserts.push(STEP_EXCHANGE_SETTINGS);
   if (inserts.length === 0) {
     return [...base];
   }
   const offeringIndex = base.indexOf(STEP_OFFERING);
-  // Defensive: every base flow contains Offering, but if it ever didn't we
-  // append the conditional steps rather than dropping them.
+  // Defensive: every base flow contains the Offering selector, but if it ever
+  // didn't we append the conditional steps rather than dropping them.
   const insertAt = offeringIndex >= 0 ? offeringIndex + 1 : base.length;
   return [...base.slice(0, insertAt), ...inserts, ...base.slice(insertAt)];
 }
@@ -117,7 +119,6 @@ export const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
       'availableFrom',
       'leaseTerm',
     ],
-    Pricing: ['monthlyRent', 'currency', 'securityDeposit', 'applicationFee', 'lateFee'],
     Amenities: [
       'amenities',
       'petsAllowed',
@@ -159,7 +160,6 @@ export const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
       'availableFrom',
       'leaseTerm',
     ],
-    Pricing: ['monthlyRent', 'currency', 'securityDeposit', 'applicationFee', 'lateFee'],
     Amenities: [
       'amenities',
       'petsAllowed',
@@ -191,7 +191,6 @@ export const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
       'latitude',
       'longitude',
     ],
-    Pricing: ['monthlyRent', 'currency', 'securityDeposit'],
     Amenities: ['amenities'],
     Media: ['images'],
     Preview: [],
@@ -216,7 +215,6 @@ export const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
       'latitude',
       'longitude',
     ],
-    Pricing: ['monthlyRent', 'currency', 'securityDeposit'],
     Amenities: ['amenities'],
     Media: ['images'],
     Preview: [],
@@ -241,7 +239,6 @@ export const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
       'latitude',
       'longitude',
     ],
-    Pricing: ['monthlyRent', 'currency', 'securityDeposit'],
     Amenities: ['amenities'],
     'Coliving Features': ['sharedSpaces', 'communityEvents'],
     Media: ['images'],
@@ -251,7 +248,6 @@ export const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
     // Other: minimal fields
     'Basic Info': ['propertyType', 'bathrooms', 'squareFootage', 'floor', 'yearBuilt', 'description'],
     Location: ['address', 'city', 'state', 'postal_code', 'country', 'latitude', 'longitude'],
-    Pricing: ['monthlyRent', 'currency', 'securityDeposit'],
     Media: ['images'],
     Preview: [],
   },
@@ -365,21 +361,54 @@ export const CURRENCY_OPTIONS: readonly CurrencyOption[] = [
 ];
 
 /**
- * Sale-only multi-intent offerings shown as multi-select chips on the Offering
- * step. `value` is the canonical {@link ListingIntent}; the label is resolved
- * via i18n (`listing.intent.*`) at render time. Rent is the default and always
- * present, the others are opt-in.
+ * The 4-way offering picker shown as multi-select chips on the Offering step.
+ * `value` is the canonical {@link OfferingType}; label + helper copy resolve via
+ * i18n (`listing.offering.*`) at render time. A listing must carry at least one
+ * offering; long-term rent is the default but every option is independently
+ * toggleable (a listing can be offered several ways at once).
  */
 export interface OfferingOption {
-  value: ListingIntent;
+  value: OfferingType;
   i18nKey: string;
   fallback: string;
+  descriptionKey: string;
+  descriptionFallback: string;
+  icon: string;
 }
 
-export const OFFERING_OPTIONS: readonly OfferingOption[] = [
-  { value: ListingIntent.RENT, i18nKey: 'listing.intent.rent', fallback: 'Rent' },
-  { value: ListingIntent.SALE, i18nKey: 'listing.intent.sale', fallback: 'For sale' },
-  { value: ListingIntent.EXCHANGE, i18nKey: 'listing.intent.exchange', fallback: 'Exchange' },
+export const PRICING_OFFERING_OPTIONS: readonly OfferingOption[] = [
+  {
+    value: OfferingType.LONG_TERM_RENT,
+    i18nKey: 'listing.offering.longTerm',
+    fallback: 'Rent monthly',
+    descriptionKey: 'listing.offering.longTermHelp',
+    descriptionFallback: 'Traditional long-term lease, priced per month.',
+    icon: 'home-outline',
+  },
+  {
+    value: OfferingType.SHORT_TERM_RENT,
+    i18nKey: 'listing.offering.nightly',
+    fallback: 'Rent by night',
+    descriptionKey: 'listing.offering.nightlyHelp',
+    descriptionFallback: 'Vacation / short stays, priced per night.',
+    icon: 'moon-outline',
+  },
+  {
+    value: OfferingType.SALE,
+    i18nKey: 'listing.offering.sell',
+    fallback: 'Sell',
+    descriptionKey: 'listing.offering.sellHelp',
+    descriptionFallback: 'List the property for sale.',
+    icon: 'pricetag-outline',
+  },
+  {
+    value: OfferingType.EXCHANGE,
+    i18nKey: 'listing.offering.exchange',
+    fallback: 'Exchange',
+    descriptionKey: 'listing.offering.exchangeHelp',
+    descriptionFallback: 'Home swap or free hosting.',
+    icon: 'swap-horizontal-outline',
+  },
 ];
 
 /**

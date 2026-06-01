@@ -6,15 +6,22 @@ import type { CreatePropertyFormData } from '@/store/createPropertyFormStore';
 import type { StepValidationErrors } from '@/utils/propertyFormSchema';
 import { BasicInfoStep } from './BasicInfoStep';
 import { LocationStep } from './LocationStep';
-import { PricingStep } from './PricingStep';
-import { OfferingStep } from './OfferingStep';
+import { OfferingSelector } from './OfferingSelector';
+import { LongTermPricingStep } from './LongTermPricingStep';
+import { NightlyPricingStep } from './NightlyPricingStep';
 import { SaleDetailsStep } from './SaleDetailsStep';
 import { ExchangeSettingsStep } from './ExchangeSettingsStep';
 import { AmenitiesStep } from './AmenitiesStep';
 import { ColivingFeaturesStep } from './ColivingFeaturesStep';
 import { MediaStep } from './MediaStep';
 import { PreviewStep } from './PreviewStep';
-import { STEP_EXCHANGE_SETTINGS, STEP_OFFERING, STEP_SALE_DETAILS } from './constants';
+import {
+  STEP_EXCHANGE_SETTINGS,
+  STEP_LONG_TERM_PRICING,
+  STEP_NIGHTLY_PRICING,
+  STEP_OFFERING,
+  STEP_SALE_DETAILS,
+} from './constants';
 import type { SetFormData, UpdateFormField } from './types';
 
 interface CreatePropertyStepContentProps {
@@ -84,10 +91,12 @@ export function CreatePropertyStepContent({
           onShowFloorToggle={onShowFloorToggle}
         />
       );
-    case 'Pricing':
-      return <PricingStep {...sharedProps} />;
     case STEP_OFFERING:
-      return <OfferingStep {...sharedProps} />;
+      return <OfferingSelector {...sharedProps} />;
+    case STEP_LONG_TERM_PRICING:
+      return <LongTermPricingStep {...sharedProps} />;
+    case STEP_NIGHTLY_PRICING:
+      return <NightlyPricingStep {...sharedProps} />;
     case STEP_SALE_DETAILS:
       return <SaleDetailsStep {...sharedProps} />;
     case STEP_EXCHANGE_SETTINGS:

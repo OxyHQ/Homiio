@@ -34,3 +34,6 @@ export * from './application';
 
 // Home-exchange types (swap / free hosting)
 export * from './exchange';
+
+// Listing report types (trust & safety flagging)
+export * from './report';

@@ -195,13 +195,16 @@ export default function CityPropertiesPage() {
       result = result.filter(p => (p.bathrooms || 0) >= parseInt(filters.bathrooms));
     }
 
-    // Apply sorting
+    // Apply sorting. Sort by the listing's headline rent — monthly when present,
+    // else the nightly rate for vacation-only listings — so the order is stable.
+    const sortPrice = (p: Property): number =>
+      p.longTermRent?.monthlyAmount ?? p.shortTermRent?.nightlyRate ?? 0;
     switch (filters.sortBy) {
       case 'priceAsc':
-        result.sort((a, b) => (a.rent?.amount || 0) - (b.rent?.amount || 0));
+        result.sort((a, b) => sortPrice(a) - sortPrice(b));
         break;
       case 'priceDesc':
-        result.sort((a, b) => (b.rent?.amount || 0) - (a.rent?.amount || 0));
+        result.sort((a, b) => sortPrice(b) - sortPrice(a));
         break;
       case 'newest':
       default:

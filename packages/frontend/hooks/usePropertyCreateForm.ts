@@ -10,7 +10,7 @@ import { useProperty } from '@/hooks/usePropertyQueries';
 import type { UploadedImage } from '@/services/imageUploadService';
 import {
   ExchangeMode,
-  ListingIntent,
+  OfferingType,
   type Property,
   type PropertyImage,
 } from '@homiio/shared-types';
@@ -19,12 +19,17 @@ import {
   resolveStepFlow,
   FIELD_CONFIG,
   DEFAULT_PROPERTY_TYPE,
+  STEP_OFFERING,
+  STEP_LONG_TERM_PRICING,
+  STEP_NIGHTLY_PRICING,
   STEP_SALE_DETAILS,
 } from '@/components/property/create/constants';
 import {
   validateBasicInfoStep,
   validateLocationStep,
-  validatePricingStep,
+  validateOfferingStep,
+  validateLongTermPricingStep,
+  validateNightlyPricingStep,
   validateAmenitiesStep,
   validateSaleDetailsStep,
   validateFloor,
@@ -98,20 +103,20 @@ export function usePropertyCreateForm(id: string | undefined) {
   const mapRef = useRef<MapApi | null>(null);
   const fullscreenMapRef = useRef<MapApi | null>(null);
 
-  // Derived step list for the active property type AND the selected intents
-  // (no effect needed). The flow grows by a "Sale Details" step when the
-  // listing is also for sale, so it must recompute when either changes.
+  // Derived step list for the active property type AND the selected offerings
+  // (no effect needed). The flow grows a per-offering pricing step for each
+  // selected offering, so it must recompute when either changes.
   const propertyType = formData.basicInfo.propertyType || DEFAULT_PROPERTY_TYPE;
-  const intents = formData.offering.intents;
+  const offerings = formData.pricing.offerings;
   const steps = useMemo(
-    () => resolveStepFlow(propertyType, intents),
-    [propertyType, intents],
+    () => resolveStepFlow(propertyType, offerings),
+    [propertyType, offerings],
   );
 
   const currentType = formData.basicInfo.propertyType || DEFAULT_PROPERTY_TYPE;
   // Clamp the lookup index to the active flow. The flow can shrink when the
-  // host removes the 'sale' intent (dropping the Sale Details step); reading a
-  // clamped index keeps `stepName` valid (never `undefined`) without an effect.
+  // host deselects an offering (dropping its pricing step); reading a clamped
+  // index keeps `stepName` valid (never `undefined`) without an effect.
   const safeStepIndex = Math.min(currentStep, steps.length - 1);
   const stepName = steps[safeStepIndex];
   const fieldsToShow = useMemo(
@@ -164,12 +169,32 @@ export function usePropertyCreateForm(id: string | undefined) {
       reference: property.address?.reference || '',
     });
 
+    // Hydrate the per-offering pricing back from the stored blocks so editing
+    // round-trips every field (including deposit/fees, fixing the prior
+    // reset-to-0 gap). `offerings` is read straight off the property — it is the
+    // authoritative axis, equal to the set of present priced blocks.
+    const longTerm = property.longTermRent;
+    const shortTerm = property.shortTermRent;
+    const storedOfferings =
+      Array.isArray(property.offerings) && property.offerings.length > 0
+        ? property.offerings
+        : [OfferingType.LONG_TERM_RENT];
+    // Shared currency: prefer the long-term block's, else the short-term one.
+    const pricingCurrency = longTerm?.currency || shortTerm?.currency || 'EUR';
     setFormData('pricing', {
-      monthlyRent: property.rent?.amount || 0,
-      currency: property.rent?.currency || 'EUR',
-      securityDeposit: 0,
-      applicationFee: 0,
-      lateFee: 0,
+      offerings: storedOfferings,
+      currency: pricingCurrency,
+      monthlyRent: longTerm?.monthlyAmount ?? 0,
+      securityDeposit: longTerm?.deposit ?? 0,
+      applicationFee: longTerm?.applicationFee ?? 0,
+      lateFee: longTerm?.lateFee ?? 0,
+      nightlyRate: shortTerm?.nightlyRate ?? 0,
+      cleaningFee: shortTerm?.cleaningFee ?? 0,
+      serviceFee: shortTerm?.serviceFee ?? 0,
+      taxesPercent: shortTerm?.taxesPercent ?? 0,
+      minNights: shortTerm?.minNights,
+      maxNights: shortTerm?.maxNights,
+      instantBook: shortTerm?.instantBook ?? false,
     });
 
     setFormData('amenities', {
@@ -187,17 +212,11 @@ export function usePropertyCreateForm(id: string | undefined) {
       otherFeatures: '',
     });
 
-    // Hydrate the multi-intent offering. Legacy listings with no stored intents
-    // are rent-only; a stored `sale` block seeds the Sale Details fields and a
-    // stored `exchange` block seeds the Exchange Settings fields so editing a
-    // for-sale / exchange listing round-trips instead of dropping that data.
-    const storedIntents =
-      Array.isArray(property.intents) && property.intents.length > 0
-        ? property.intents
-        : [ListingIntent.RENT];
+    // Hydrate the sale + exchange sub-fields. A stored `sale` block seeds the
+    // Sale Details fields and a stored `exchange` block seeds the Exchange
+    // Settings fields so editing those listings round-trips that data.
     const exchange = property.exchange;
     setFormData('offering', {
-      intents: storedIntents,
       salePrice: property.sale?.price,
       saleCurrency: property.sale?.currency,
       chainStatus: property.sale?.chainStatus,
@@ -334,8 +353,12 @@ export function usePropertyCreateForm(id: string | undefined) {
       errors = validateBasicInfoStep(formData.basicInfo, fieldsToShow);
     } else if (stepName === 'Location') {
       errors = validateLocationStep(formData.location);
-    } else if (stepName === 'Pricing') {
-      errors = validatePricingStep(formData.pricing, fieldsToShow);
+    } else if (stepName === STEP_OFFERING) {
+      errors = validateOfferingStep(formData.pricing);
+    } else if (stepName === STEP_LONG_TERM_PRICING) {
+      errors = validateLongTermPricingStep(formData.pricing);
+    } else if (stepName === STEP_NIGHTLY_PRICING) {
+      errors = validateNightlyPricingStep(formData.pricing);
     } else if (stepName === 'Amenities') {
       errors = validateAmenitiesStep(formData.rules, fieldsToShow);
     } else if (stepName === STEP_SALE_DETAILS) {

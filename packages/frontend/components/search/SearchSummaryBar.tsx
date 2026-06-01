@@ -33,7 +33,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
-import { PropertyType, RentMode } from '@homiio/shared-types';
+import { OfferingType, PropertyType } from '@homiio/shared-types';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { colors } from '@/styles/colors';
 import { cardShadow, hairline, radius, spacing, tracker } from '@/constants/styles';
@@ -263,7 +263,7 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
     [onPressColumn, onPress],
   );
 
-  const isVacation = query.rentMode === RentMode.VACATION;
+  const isVacation = query.offering === OfferingType.SHORT_TERM_RENT;
 
   // Shared "Where" label, reused by both layouts.
   const whereLabel = useMemo(

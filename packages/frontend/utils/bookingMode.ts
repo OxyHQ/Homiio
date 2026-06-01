@@ -5,15 +5,15 @@
  * Centralised so the screen (mobile inline path), the `BookingCard`, and any
  * future surface share ONE rule instead of re-deriving the same booleans:
  *  - `'vacation'`   — the user is browsing vacation rentals AND the listing
- *                     supports short stays (rentMode VACATION or BOTH).
- *  - `'long_term'`  — the user is browsing long-term AND the listing is not
- *                     vacation-only (rentMode !== VACATION).
- *  - `'none'`       — neither applies (e.g. vacation mode on a long-term-only
- *                     listing), so no booking/apply surface is shown.
+ *                     carries the {@link OfferingType.SHORT_TERM_RENT} offering.
+ *  - `'long_term'`  — the user is browsing long-term AND the listing carries
+ *                     the {@link OfferingType.LONG_TERM_RENT} offering.
+ *  - `'none'`       — neither applies (e.g. vacation mode on a listing with no
+ *                     short-term offering), so no booking/apply surface shows.
  */
-import { RentMode, type Property } from '@homiio/shared-types';
+import { OfferingType, type Property } from '@homiio/shared-types';
 
-import type { RentalMode } from './propertyUtils';
+import { hasOffering, type RentalMode } from './propertyUtils';
 
 export type BookingMode = 'vacation' | 'long_term' | 'none';
 
@@ -21,13 +21,10 @@ export function resolveBookingMode(
   property: Property,
   rentalMode: RentalMode,
 ): BookingMode {
-  if (
-    rentalMode === 'vacation' &&
-    (property.rentMode === RentMode.VACATION || property.rentMode === RentMode.BOTH)
-  ) {
+  if (rentalMode === 'vacation' && hasOffering(property, OfferingType.SHORT_TERM_RENT)) {
     return 'vacation';
   }
-  if (rentalMode === 'long_term' && property.rentMode !== RentMode.VACATION) {
+  if (rentalMode === 'long_term' && hasOffering(property, OfferingType.LONG_TERM_RENT)) {
     return 'long_term';
   }
   return 'none';

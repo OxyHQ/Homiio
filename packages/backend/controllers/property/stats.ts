@@ -29,15 +29,15 @@ export async function getPropertyStats(req, res, next) {
         ]
       }).catch(()=>0),
       Lease.aggregate([{ $match: { propertyId: objId, status: 'active', 'leaseTerms.startDate': { $lte: now }, 'leaseTerms.endDate': { $gte: now } }}, { $group: { _id: null, total: { $sum: '$rentDetails.monthlyRent' }, avg: { $avg: '$rentDetails.monthlyRent' }, count: { $sum: 1 }}}]).catch(()=>[]),
-      Property.aggregate([{ $match: { $or: [{ parentPropertyId: objId }, { _id: objId, type: 'room' }], 'rent.amount': { $gt: 0 } }}, { $group: { _id: null, avg: { $avg: '$rent.amount' }, count: { $sum: 1 }}}]).catch(()=>[]),
-      Property.findById(propertyId).select('rent').lean().catch(()=>null)
+      Property.aggregate([{ $match: { $or: [{ parentPropertyId: objId }, { _id: objId, type: 'room' }], 'longTermRent.monthlyAmount': { $gt: 0 } }}, { $group: { _id: null, avg: { $avg: '$longTermRent.monthlyAmount' }, count: { $sum: 1 }}}]).catch(()=>[]),
+      Property.findById(propertyId).select('longTermRent').lean().catch(()=>null)
     ]);
     const totalRooms = typeof totalRoomsResult === 'number'? totalRoomsResult:0;
     const occupiedRooms = typeof occupiedRoomsResult === 'number'? occupiedRoomsResult:0;
     const availableRooms = typeof availableRoomsResult === 'number'? availableRoomsResult: Math.max(totalRooms-occupiedRooms,0);
     const leaseTotals = Array.isArray(leaseAgg) && leaseAgg[0]? leaseAgg[0]: { total:0, avg:null, count:0 };
     const monthlyRevenue = leaseTotals.total || 0;
-    let averageRent=0; if (leaseTotals.count>0 && leaseTotals.avg!=null) averageRent=leaseTotals.avg; else if (Array.isArray(roomRentAgg) && roomRentAgg[0]?.avg!=null) averageRent=roomRentAgg[0].avg; else if (propertyDoc?.rent?.amount!=null) averageRent=propertyDoc.rent.amount;
+    let averageRent=0; if (leaseTotals.count>0 && leaseTotals.avg!=null) averageRent=leaseTotals.avg; else if (Array.isArray(roomRentAgg) && roomRentAgg[0]?.avg!=null) averageRent=roomRentAgg[0].avg; else if (propertyDoc?.longTermRent?.monthlyAmount!=null) averageRent=propertyDoc.longTermRent.monthlyAmount;
     const occupancyRate = totalRooms>0? Math.round((occupiedRooms/totalRooms)*100):0;
     const stats = { totalRooms, occupiedRooms, availableRooms, monthlyRevenue, averageRent, occupancyRate, savesCount };
     res.json(successResponse(stats, 'Property statistics retrieved successfully'));

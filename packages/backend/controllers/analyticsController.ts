@@ -81,13 +81,13 @@ class AnalyticsController {
 
       // Pricing aggregates
       const pricingAgg = await Property.aggregate([
-        { $match: { 'rent.amount': { $gt: 0 } } },
+        { $match: { 'longTermRent.monthlyAmount': { $gt: 0 } } },
         {
           $group: {
             _id: null,
-            averageRent: { $avg: '$rent.amount' },
-            minRent: { $min: '$rent.amount' },
-            maxRent: { $max: '$rent.amount' },
+            averageRent: { $avg: '$longTermRent.monthlyAmount' },
+            minRent: { $min: '$longTermRent.monthlyAmount' },
+            maxRent: { $max: '$longTermRent.monthlyAmount' },
           },
         },
       ]).catch(() => []);
@@ -111,7 +111,7 @@ class AnalyticsController {
           $group: {
             _id: { city: '$address.city', state: '$address.state' },
             properties: { $sum: 1 },
-            averageRent: { $avg: '$rent.amount' },
+            averageRent: { $avg: '$longTermRent.monthlyAmount' },
           },
         },
         { $sort: { properties: -1 } },
@@ -120,10 +120,10 @@ class AnalyticsController {
 
       // Price buckets (preset boundaries)
       const priceBuckets = await Property.aggregate([
-        { $match: { 'rent.amount': { $gte: 0 } } },
+        { $match: { 'longTermRent.monthlyAmount': { $gte: 0 } } },
         {
           $bucket: {
-            groupBy: '$rent.amount',
+            groupBy: '$longTermRent.monthlyAmount',
             boundaries: [0, 500, 1000, 1500, 2000, 3000, 5000, 10000],
             default: '10000+',
             output: { count: { $sum: 1 } },

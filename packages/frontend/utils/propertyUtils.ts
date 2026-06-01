@@ -1,19 +1,21 @@
 import { generatePropertyTitle, TitleFormat } from './propertyTitleGenerator';
-import { ListingIntent, PriceUnit, Property, PropertyImage } from '@homiio/shared-types';
+import { OfferingType, PriceUnit, Property, PropertyImage } from '@homiio/shared-types';
+import type { BrowseMode } from '@/components/search/types';
 import propertyPlaceholder from '@/assets/images/property_placeholder.jpg';
 
 /** The rental experience the user is currently browsing in. */
 export type RentalMode = 'long_term' | 'vacation';
 
 /** Which offering a card/headline is displaying. */
-export type OfferingKind = 'rent' | 'sale' | 'exchange';
+export type OfferingKind = 'long_term' | 'short_term' | 'sale' | 'exchange';
 
 /**
  * The single, display-ready price decision for a property. `amount`/`currency`
- * feed `CurrencyFormatter`; `priceUnit` is the per-unit suffix (only set for
- * rent — sale has none); `label` is a ready-to-render fallback string used when
- * there is no numeric price (exchange → "Free"). `kind` lets callers branch
- * (e.g. render `label` instead of `CurrencyFormatter` for an exchange).
+ * feed `CurrencyFormatter`; `priceUnit` is the per-unit suffix (set for the rent
+ * offerings — `month` for long-term, `night` for short-term; absent for sale);
+ * `label` is a ready-to-render fallback string used when there is no numeric
+ * price (exchange → "Free"). `kind` lets callers branch (e.g. render `label`
+ * instead of `CurrencyFormatter` for an exchange).
  */
 export interface PrimaryOffering {
   amount: number;
@@ -24,40 +26,65 @@ export interface PrimaryOffering {
 }
 
 /**
- * Whether a property carries a given intent. A listing with no stored `intents`
- * is treated as rent-only for back-compat (mirrors the backend + shared-types).
+ * The set of offerings a listing carries. `offerings` is authoritative on the
+ * Property; this guards against an undefined/empty array so callers can treat a
+ * malformed listing as "no offerings" rather than crash.
  */
-function hasIntent(property: Property, intent: ListingIntent): boolean {
-  const intents = property.intents;
-  if (!Array.isArray(intents) || intents.length === 0) {
-    return intent === ListingIntent.RENT;
-  }
-  return intents.includes(intent);
+function offeringsOf(property: Property): readonly OfferingType[] {
+  return Array.isArray(property.offerings) ? property.offerings : [];
 }
 
-/**
- * Derive the displayed rent price unit for a property given the user's selected
- * rental mode. Vacation/both listings viewed in vacation mode always show
- * per-night pricing regardless of how the host stored the unit; long-term falls
- * back to the stored unit (typically MONTH). Centralised here so `PropertyCard`,
- * detail headlines, and any future surface share one rule.
- */
-export function resolvePriceUnit(property: Property, mode: RentalMode): PriceUnit {
-  if (mode === 'vacation') return PriceUnit.NIGHT;
-  if (property.priceUnit) return property.priceUnit;
-  return PriceUnit.MONTH;
+/** Whether a property carries a given offering. */
+export function hasOffering(property: Property, offering: OfferingType): boolean {
+  return offeringsOf(property).includes(offering);
+}
+
+/** A listing is bookable as a short-stay iff it carries the short-term offering. */
+export function isShortTermRentable(property: Property): boolean {
+  return hasOffering(property, OfferingType.SHORT_TERM_RENT);
 }
 
 /** A listing carries a usable sale price when it's for sale with a positive price. */
 function hasSalePrice(property: Property): boolean {
   return (
-    hasIntent(property, ListingIntent.SALE) &&
+    hasOffering(property, OfferingType.SALE) &&
     typeof property.sale?.price === 'number' &&
     property.sale.price > 0
   );
 }
 
-/** The display-ready sale offering (no per-unit suffix). Caller guards validity. */
+/** A neutral, price-less offering (card/headline render nothing for it). */
+function emptyOffering(kind: OfferingKind): PrimaryOffering {
+  return { amount: 0, currency: '', priceUnit: undefined, label: '', kind };
+}
+
+/** The display-ready long-term (monthly) offering. */
+function longTermOffering(property: Property): PrimaryOffering {
+  const block = property.longTermRent;
+  if (!block || !(block.monthlyAmount > 0)) return emptyOffering('long_term');
+  return {
+    amount: block.monthlyAmount,
+    currency: block.currency || 'EUR',
+    priceUnit: PriceUnit.MONTH,
+    label: '',
+    kind: 'long_term',
+  };
+}
+
+/** The display-ready short-term (per-night) offering. */
+function shortTermOffering(property: Property): PrimaryOffering {
+  const block = property.shortTermRent;
+  if (!block || !(block.nightlyRate > 0)) return emptyOffering('short_term');
+  return {
+    amount: block.nightlyRate,
+    currency: block.currency || 'EUR',
+    priceUnit: PriceUnit.NIGHT,
+    label: '',
+    kind: 'short_term',
+  };
+}
+
+/** The display-ready sale offering (no per-unit suffix). */
 function saleOffering(property: Property): PrimaryOffering {
   return {
     amount: property.sale?.price ?? 0,
@@ -68,67 +95,124 @@ function saleOffering(property: Property): PrimaryOffering {
   };
 }
 
-/** The display-ready rent offering (mode-aware per-unit suffix). */
-function rentOffering(property: Property, mode: RentalMode): PrimaryOffering {
-  return {
-    amount: property.rent?.amount ?? 0,
-    currency: property.rent?.currency ?? 'EUR',
-    priceUnit: resolvePriceUnit(property, mode),
-    label: '',
-    kind: 'rent',
-  };
-}
-
 /**
  * Resolve the ONE primary price/offering a card or headline should display for
- * a (possibly multi-intent) listing. Priority is rent → sale → exchange:
+ * a (possibly multi-offering) listing, given the active {@link BrowseMode}.
  *
- *  - Rent (default, and any listing that includes the rent intent) keeps the
- *    EXISTING behaviour exactly — rent amount + per-unit suffix (mode-aware).
- *    This guarantees rent listings, including "rent + sell" ones, are visually
- *    unchanged; the "For sale" badge communicates the secondary sale intent.
- *    Exception: a rent listing with a non-positive rent that ALSO has a valid
- *    sale price falls through to the sale price, so the card shows the real
- *    asking price instead of a 0 the price gate would hide.
- *  - Sale-only listings show the sale price with NO per-unit suffix. When the
- *    sale block is missing or its price is non-positive, a neutral sale
- *    offering (empty label, `amount: 0`) is returned so the card shows NO
- *    misleading rent price rather than falling back to rent.
- *  - Exchange-only listings have no price → `label: 'Free'`, `kind: 'exchange'`.
+ * The unit is a fixed property of each priced block and is NEVER reinterpreted
+ * by mode: long-term shows `/month`, short-term shows `/night`, sale shows the
+ * asking price (no suffix), exchange shows the injected "Free" label.
+ *
+ *  - The active mode's block is read first (long_term → `longTermRent`,
+ *    vacation → `shortTermRent`, buy → `sale`, exchange → free). If that block
+ *    is absent, a neutral price-less offering is returned so the card shows NO
+ *    misleading price rather than borrowing another offering's number.
+ *  - As a graceful fallback ONLY when the listing doesn't carry the active
+ *    offering at all (e.g. a rent-only listing surfaced in a buy feed), the
+ *    first present priced block is shown in priority long-term → short-term →
+ *    sale → exchange, so a card never renders blank for a real listing.
  *
  * `freeLabel` is injected by the caller (i18n: `listing.exchange.free`) so this
  * pure helper stays translation-agnostic.
  */
 export function resolvePrimaryOffering(
   property: Property,
-  mode: RentalMode,
+  browseMode: BrowseMode,
   freeLabel = 'Free',
 ): PrimaryOffering {
-  // Rent takes precedence so existing rent (and rent+sale) cards are unchanged.
-  if (hasIntent(property, ListingIntent.RENT)) {
-    const rentAmount = property.rent?.amount ?? 0;
-    // A rent listing whose rent isn't set yet but which has a real sale price
-    // should surface that sale price, not a 0 the card would suppress.
-    if (rentAmount <= 0 && hasSalePrice(property)) {
-      return saleOffering(property);
-    }
-    return rentOffering(property, mode);
+  const exchange = (): PrimaryOffering => ({
+    amount: 0,
+    currency: '',
+    priceUnit: undefined,
+    label: freeLabel,
+    kind: 'exchange',
+  });
+
+  // Active mode's block — the unit is fixed per block, never reinterpreted.
+  switch (browseMode) {
+    case 'long_term':
+      if (hasOffering(property, OfferingType.LONG_TERM_RENT)) return longTermOffering(property);
+      break;
+    case 'vacation':
+      if (hasOffering(property, OfferingType.SHORT_TERM_RENT)) return shortTermOffering(property);
+      break;
+    case 'buy':
+      if (hasOffering(property, OfferingType.SALE)) return saleOffering(property);
+      break;
+    case 'exchange':
+      if (hasOffering(property, OfferingType.EXCHANGE)) return exchange();
+      break;
   }
 
-  if (hasIntent(property, ListingIntent.SALE)) {
-    // Sale-only: show the asking price when present; otherwise a neutral sale
-    // offering (no price) — never a rent-priced fallback for a sale listing.
-    return saleOffering(property);
-  }
+  // Fallback: the listing doesn't carry the active offering — surface the first
+  // present priced block so a real listing never renders a blank price.
+  if (hasOffering(property, OfferingType.LONG_TERM_RENT)) return longTermOffering(property);
+  if (hasOffering(property, OfferingType.SHORT_TERM_RENT)) return shortTermOffering(property);
+  if (hasSalePrice(property)) return saleOffering(property);
+  if (hasOffering(property, OfferingType.EXCHANGE)) return exchange();
 
-  if (hasIntent(property, ListingIntent.EXCHANGE)) {
-    return { amount: 0, currency: '', priceUnit: undefined, label: freeLabel, kind: 'exchange' };
-  }
-
-  // Fallback: treat as rent (back-compat with listings that somehow carry no
-  // recognised intent), preserving the prior rent-amount display.
-  return rentOffering(property, mode);
+  // No recognised offering at all.
+  return emptyOffering('long_term');
 }
+
+/**
+ * A short, display-ready summary of a single offering, used by the "Also
+ * available" line. `i18nKey`/`fallback` resolve via i18n at render time so this
+ * pure helper stays translation-agnostic.
+ */
+export interface OfferingSummary {
+  offering: OfferingType;
+  i18nKey: string;
+  fallback: string;
+}
+
+const OFFERING_SUMMARY_META: Record<OfferingType, { i18nKey: string; fallback: string }> = {
+  [OfferingType.LONG_TERM_RENT]: { i18nKey: 'listing.offering.summary.longTerm', fallback: 'Monthly' },
+  [OfferingType.SHORT_TERM_RENT]: { i18nKey: 'listing.offering.summary.nightly', fallback: 'By night' },
+  [OfferingType.SALE]: { i18nKey: 'listing.offering.summary.sale', fallback: 'For sale' },
+  [OfferingType.EXCHANGE]: { i18nKey: 'listing.offering.summary.exchange', fallback: 'Exchange' },
+};
+
+/** Stable display order for the "Also available" summaries. */
+const OFFERING_ORDER: readonly OfferingType[] = [
+  OfferingType.LONG_TERM_RENT,
+  OfferingType.SHORT_TERM_RENT,
+  OfferingType.SALE,
+  OfferingType.EXCHANGE,
+];
+
+/**
+ * The OTHER offerings a multi-offering listing carries, excluding the one
+ * currently shown as the headline (selected by {@link browseMode}). Drives the
+ * subtle "Also available: By night · For sale" line on the card + detail.
+ * Returns an empty array for single-offering listings.
+ */
+export function resolveOfferingSummaries(
+  property: Property,
+  browseMode: BrowseMode,
+): OfferingSummary[] {
+  const active = BROWSE_MODE_TO_OFFERING[browseMode];
+  const present = offeringsOf(property);
+  return OFFERING_ORDER.filter(
+    (offering) => offering !== active && present.includes(offering),
+  ).map((offering) => ({
+    offering,
+    i18nKey: OFFERING_SUMMARY_META[offering].i18nKey,
+    fallback: OFFERING_SUMMARY_META[offering].fallback,
+  }));
+}
+
+/**
+ * Local 1:1 BrowseMode→OfferingType map. Duplicated from
+ * `components/search/types` (rather than imported) so this pure utility has no
+ * dependency cycle risk; kept tiny and asserted against the enum.
+ */
+const BROWSE_MODE_TO_OFFERING: Record<BrowseMode, OfferingType> = {
+  long_term: OfferingType.LONG_TERM_RENT,
+  vacation: OfferingType.SHORT_TERM_RENT,
+  buy: OfferingType.SALE,
+  exchange: OfferingType.EXCHANGE,
+};
 
 /**
  * A display-ready image source for `expo-image`/RN `Image`: either a remote URI

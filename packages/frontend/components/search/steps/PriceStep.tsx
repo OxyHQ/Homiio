@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { Chip } from '@oxyhq/bloom/chip';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
-import { RentMode } from '@homiio/shared-types';
+import { OfferingType } from '@homiio/shared-types';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 
@@ -54,7 +54,7 @@ function parsePrice(text: string): number | undefined {
 }
 
 interface PriceStepProps {
-  rentMode: RentMode;
+  offering: OfferingType;
   priceMin?: number;
   priceMax?: number;
   onChange: (min: number | undefined, max: number | undefined) => void;
@@ -63,14 +63,15 @@ interface PriceStepProps {
 }
 
 export const PriceStep: React.FC<PriceStepProps> = ({
-  rentMode,
+  offering,
   priceMin,
   priceMax,
   onChange,
   currencySymbol = '€',
 }) => {
   const { t } = useTranslation();
-  const bands = rentMode === RentMode.VACATION ? VACATION_BANDS : LONG_TERM_BANDS;
+  const isVacation = offering === OfferingType.SHORT_TERM_RENT;
+  const bands = isVacation ? VACATION_BANDS : LONG_TERM_BANDS;
 
   const activeBandIndex = useMemo(
     () =>
@@ -97,10 +98,9 @@ export const PriceStep: React.FC<PriceStepProps> = ({
     [onChange, priceMin],
   );
 
-  const unitLabel =
-    rentMode === RentMode.VACATION
-      ? t('search.step.price.perNight', 'per night') || 'per night'
-      : t('search.step.price.perMonth', 'per month') || 'per month';
+  const unitLabel = isVacation
+    ? t('search.step.price.perNight', 'per night') || 'per night'
+    : t('search.step.price.perMonth', 'per month') || 'per month';
 
   return (
     <View style={styles.container}>

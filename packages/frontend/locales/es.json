@@ -1185,11 +1185,6 @@
     }
   },
   "listing": {
-    "intent": {
-      "rent": "Alquiler",
-      "sale": "En venta",
-      "exchange": "Intercambio"
-    },
     "exchange": {
       "free": "Gratis",
       "sectionTitle": "Intercambio de casa",
@@ -1310,12 +1305,50 @@
       }
     },
     "badge": {
+      "byNight": "Por noche",
       "forSale": "En venta",
       "exchange": "Intercambio"
     },
     "offering": {
       "stepTitle": "¿Cómo lo ofreces?",
-      "stepHelp": "Elige una o varias opciones. Puedes alquilar y vender el mismo inmueble."
+      "stepHelp": "Elige una o varias opciones. Puedes alquilar y vender el mismo inmueble.",
+      "currency": "Moneda",
+      "alsoAvailable": "También disponible",
+      "perMonthUnit": "mes",
+      "perNightUnit": "noche",
+      "longTerm": "Alquiler mensual",
+      "longTermHelp": "Contrato de larga duración, precio por mes.",
+      "longTermStepTitle": "Alquiler mensual",
+      "nightly": "Alquiler por noche",
+      "nightlyHelp": "Vacaciones / estancias cortas, precio por noche.",
+      "nightlyStepTitle": "Tarifa por noche",
+      "sell": "Vender",
+      "sellHelp": "Pon el inmueble en venta.",
+      "exchange": "Intercambio",
+      "exchangeHelp": "Intercambio de casa o alojamiento gratuito.",
+      "summary": {
+        "longTerm": "Mensual",
+        "nightly": "Por noche",
+        "sale": "En venta",
+        "exchange": "Intercambio"
+      }
+    },
+    "pricing": {
+      "monthlyRent": "Alquiler mensual",
+      "securityDeposit": "Fianza",
+      "applicationFee": "Tarifa de solicitud",
+      "lateFee": "Recargo por demora"
+    },
+    "nightly": {
+      "nightlyRate": "Tarifa por noche",
+      "cleaningFee": "Tarifa de limpieza",
+      "serviceFee": "Tarifa de servicio",
+      "taxesPercent": "Impuestos (%)",
+      "minNights": "Noches mín.",
+      "maxNights": "Noches máx.",
+      "noMax": "Sin máx.",
+      "instantBook": "Reserva instantánea",
+      "previewTitle": "Total de ejemplo para {{count}} noches"
     },
     "sale": {
       "stepTitle": "Detalles de la venta",
