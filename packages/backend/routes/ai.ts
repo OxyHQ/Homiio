@@ -601,16 +601,22 @@ Return only the JSON array, no other text.`;
 
         const mergedLists = [...nearbyList.slice(0, RESULTS_RETURN_MAX), ...searchList.slice(0, RESULTS_RETURN_MAX)];
         const seen = new Set<string>();
-        const contexts = mergedLists
+        const deduped = mergedLists
           .filter((p: any) => {
             const id = p?._id?.toString?.() || p?.id;
             if (!id || seen.has(id)) return false;
             seen.add(id);
             return true;
           })
-          .slice(0, 8)
-          .map((p: any) =>
-            compact({
+          .slice(0, 8);
+
+        // Geo is relational: resolve city/neighborhood NAMES from the canonical
+        // geo docs (the address carries ids, not free-text names).
+        const { resolveAddressDisplay } = require('../services/geoDisplayService');
+        const contexts = await Promise.all(
+          deduped.map(async (p: any) => {
+            const geo = await resolveAddressDisplay(p.address);
+            return compact({
               id: p._id?.toString?.() || p.id,
               title: p.title,
               type: p.type,
@@ -621,16 +627,17 @@ Return only the JSON array, no other text.`;
               shortTermRent: p.shortTermRent?.nightlyRate
                 ? compact({ nightlyRate: p.shortTermRent.nightlyRate, currency: p.shortTermRent.currency })
                 : undefined,
-              city: p.address?.city,
-              neighborhood: p.address?.neighborhood || p.address?.district,
+              city: geo.city ?? undefined,
+              neighborhood: geo.neighborhood ?? p.address?.district,
               bedrooms: p.bedrooms ?? p.features?.bedrooms,
               bathrooms: p.bathrooms ?? p.features?.bathrooms,
               sizeSqm: p.size ?? p.area?.m2 ?? p.areaSqm,
               amenities: toAmenityFlags(p),
               availabilityDate: p.availableFrom ?? p.availability?.from,
               description: (p.description || p.summary) ? String(p.description || p.summary).slice(0, 240) : undefined,
-            }),
-          );
+            });
+          }),
+        );
 
         enhanced.push({ role: 'system', content: `<PROPERTIES_CONTEXT>${JSON.stringify(contexts)}</PROPERTIES_CONTEXT>` });
         enhanced.push({

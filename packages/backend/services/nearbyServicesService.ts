@@ -11,8 +11,10 @@
  * low-volume usage. We therefore mirror `geocodingService`:
  *   - send the configured User-Agent on every call,
  *   - issue a SINGLE union query per coordinate (all categories at once),
- *   - cache results in-memory keyed by rounded coordinates + radius with a long
- *     TTL (POIs change slowly), and
+ *   - PERSIST results in the `PlacePoi` collection keyed by a rounded-coordinate
+ *     cell + radius with a long TTL (POIs change slowly), so a fresh cell is
+ *     served straight from MongoDB — shared across instances and surviving
+ *     restarts — without calling Overpass, and
  *   - abort + degrade gracefully on timeout/failure instead of throwing.
  *
  * The result is deliberately aggregate-only (presence/count/nearest distance)
@@ -22,6 +24,7 @@
  * @see https://operations.osmfoundation.org/policies/
  */
 
+import type { Model } from 'mongoose';
 import type {
   NearbyServiceKey,
   NearbyServiceCategory,
@@ -45,10 +48,13 @@ const COORD_BOUNDS = {
   maxLatitude: 90,
 } as const;
 
-const CACHE = {
-  maxEntries: 500,
-  ttlMs: 24 * 60 * 60 * 1000, // 24h — nearby POIs are stable over a day.
-} as const;
+/**
+ * How long a persisted cell stays fresh. Nearby POIs are stable over days, so a
+ * 48h TTL keeps Overpass traffic minimal while still refreshing twice a week.
+ * Drives both the row's `expiresAt` (a MongoDB TTL index purges expired rows)
+ * and the staleness check on read.
+ */
+const CACHE_TTL_MS = 48 * 60 * 60 * 1000; // 48h
 
 /**
  * Decimal places the cache key rounds coordinates to. 3 decimals ≈ 110 m, so
@@ -113,35 +119,89 @@ interface OverpassResponse {
   elements?: OverpassElement[];
 }
 
-interface CacheEntry {
-  categories: NearbyServiceCategory[];
-  expiresAt: number;
+/** Rounded coordinate-cell anchor for a coordinate (the value embedded in the key). */
+interface CoordinateCell {
+  lat: number;
+  lng: number;
 }
 
-const cache = new Map<string, CacheEntry>();
+/** A persisted PlacePoi document (mirrors `PlacePoiSchema`). */
+interface PlacePoiDocument {
+  cellKey: string;
+  lat: number;
+  lng: number;
+  radiusM: number;
+  categories: NearbyServiceCategory[];
+  fetchedAt: Date;
+  expiresAt: Date;
+}
 
-const cacheKey = (longitude: number, latitude: number, radiusM: number): string => {
-  const lon = longitude.toFixed(CACHE_COORD_DECIMALS);
-  const lat = latitude.toFixed(CACHE_COORD_DECIMALS);
-  return `${lat},${lon}@${radiusM}`;
+/** The rounded cell a coordinate falls into, at the configured precision. */
+const coordinateCell = (longitude: number, latitude: number): CoordinateCell => ({
+  lat: Number(latitude.toFixed(CACHE_COORD_DECIMALS)),
+  lng: Number(longitude.toFixed(CACHE_COORD_DECIMALS)),
+});
+
+/** Canonical cache key: `"{lat},{lng}@{radiusM}"` over the rounded cell. */
+const cacheKey = (cell: CoordinateCell, radiusM: number): string =>
+  `${cell.lat.toFixed(CACHE_COORD_DECIMALS)},${cell.lng.toFixed(CACHE_COORD_DECIMALS)}@${radiusM}`;
+
+/**
+ * Lazily resolve the PlacePoi model. Resolved on demand (not at import) so the
+ * service can be imported in contexts where models register slightly later, and
+ * to reuse the single registration in `models/index`.
+ */
+const placePoiModel = (): Model<PlacePoiDocument> =>
+  require('../models').PlacePoi as Model<PlacePoiDocument>;
+
+/**
+ * Read a fresh persisted cell from the DB. Returns its categories on a hit,
+ * `null` on a miss or when the row is past its `expiresAt` (stale) — the caller
+ * then refreshes from Overpass. A stale row is left in place so it can still be
+ * served as a degraded fallback if Overpass is unavailable.
+ */
+const readCache = async (key: string): Promise<NearbyServiceCategory[] | null> => {
+  const row = await placePoiModel().findOne({ cellKey: key }).lean<PlacePoiDocument | null>();
+  if (!row) return null;
+  if (row.expiresAt.getTime() < Date.now()) return null;
+  return row.categories;
 };
 
-const readCache = (key: string): NearbyServiceCategory[] | null => {
-  const entry = cache.get(key);
-  if (!entry) return null;
-  if (entry.expiresAt < Date.now()) {
-    cache.delete(key);
-    return null;
-  }
-  return entry.categories;
+/**
+ * Read whatever persisted categories exist for a cell, ignoring freshness. Used
+ * only on the degraded path (Overpass failed) to serve a stale-but-real result
+ * instead of an all-absent baseline.
+ */
+const readStaleCache = async (key: string): Promise<NearbyServiceCategory[] | null> => {
+  const row = await placePoiModel().findOne({ cellKey: key }).lean<PlacePoiDocument | null>();
+  return row ? row.categories : null;
 };
 
-const writeCache = (key: string, categories: NearbyServiceCategory[]): void => {
-  if (cache.size >= CACHE.maxEntries) {
-    const oldestKey = cache.keys().next().value;
-    if (oldestKey !== undefined) cache.delete(oldestKey);
-  }
-  cache.set(key, { categories, expiresAt: Date.now() + CACHE.ttlMs });
+/**
+ * Upsert a freshly fetched cell, refreshing `fetchedAt`/`expiresAt`. Idempotent
+ * on `cellKey` so concurrent refreshes of the same cell converge on one row.
+ */
+const writeCache = async (
+  key: string,
+  cell: CoordinateCell,
+  radiusM: number,
+  categories: NearbyServiceCategory[]
+): Promise<void> => {
+  const now = Date.now();
+  await placePoiModel().updateOne(
+    { cellKey: key },
+    {
+      $set: {
+        lat: cell.lat,
+        lng: cell.lng,
+        radiusM,
+        categories,
+        fetchedAt: new Date(now),
+        expiresAt: new Date(now + CACHE_TTL_MS),
+      },
+    },
+    { upsert: true }
+  );
 };
 
 const toRadians = (degrees: number): number => (degrees * Math.PI) / DEGREES_IN_HALF_CIRCLE;
@@ -308,10 +368,12 @@ const fetchOverpassElements = async (
 /**
  * Return the nearby-services snapshot for a coordinate.
  *
- * Never throws: on Overpass timeout/failure it returns `partial: true` with
- * cached categories when available, otherwise an all-absent baseline. A
- * successful lookup is cached (keyed by rounded coordinates + radius) for
- * `CACHE.ttlMs`.
+ * Reads the persisted `PlacePoi` cell first: a fresh hit is served straight from
+ * MongoDB and Overpass is NOT called. On a miss or stale row it queries Overpass
+ * once, persists the result (refreshing `fetchedAt`/`expiresAt`) and returns it.
+ *
+ * Never throws: on Overpass timeout/failure it returns `partial: true` with the
+ * stale persisted categories when available, otherwise an all-absent baseline.
  *
  * @param longitude - Longitude ([-180, 180]), GeoJSON order.
  * @param latitude  - Latitude ([-90, 90]).
@@ -335,16 +397,20 @@ export async function getNearbyServices(
     return { radiusM, categories: emptyCategories(), partial: true };
   }
 
-  const key = cacheKey(longitude, latitude, radiusM);
-  const cached = readCache(key);
+  const cell = coordinateCell(longitude, latitude);
+  const key = cacheKey(cell, radiusM);
+
+  const cached = await readCache(key);
   if (cached) {
+    logger.debug('Nearby-services cell served from DB (no Overpass call)', { cellKey: key });
     return { radiusM, categories: cached, partial: false };
   }
 
   try {
+    logger.debug('Nearby-services cell miss/stale; querying Overpass', { cellKey: key });
     const elements = await fetchOverpassElements(longitude, latitude, radiusM);
     const categories = buildCategories(elements, longitude, latitude);
-    writeCache(key, categories);
+    await writeCache(key, cell, radiusM, categories);
     return { radiusM, categories, partial: false };
   } catch (error) {
     // Overpass is rate-limited and occasionally slow; a failure here is
@@ -355,7 +421,7 @@ export async function getNearbyServices(
       latitude,
       radiusM,
     });
-    const stale = readCache(key);
+    const stale = await readStaleCache(key);
     return {
       radiusM,
       categories: stale ?? emptyCategories(),
