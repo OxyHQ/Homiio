@@ -114,6 +114,9 @@ const validateProperty = [
     }
     return true;
   }),
+  // Optional partner referral code captured from the share link. Validated
+  // loosely (a short slug); resolved to a partner in the create controller.
+  body('referralCode').optional().isString().isLength({ max: 64 }).withMessage('referralCode must be a string up to 64 chars'),
   handleValidationErrors
 ];
 

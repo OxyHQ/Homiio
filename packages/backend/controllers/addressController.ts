@@ -35,11 +35,24 @@ export const getAddressById = async (req: Request, res: Response) => {
       return badRequest(res, { message: 'Invalid address ID' });
     }
 
-    const address = await Address.findById(id);
-    
+    // Deep-populate the geo refs so the resolved city/region/country/
+    // neighborhood NAMES can be attached (geo is relational; names live on the
+    // geo docs). `.lean()` so the serializer can decorate the plain object.
+    const address = await Address.findById(id)
+      .populate([
+        { path: 'cityId', select: 'name' },
+        { path: 'regionId', select: 'name' },
+        { path: 'countryId', select: 'name code' },
+        { path: 'neighborhoodId', select: 'name' },
+      ])
+      .lean();
+
     if (!address) {
       return notFound(res, { message: 'Address not found' });
     }
+
+    const { attachAddressGeoNames } = require('../services/propertyAddressSerializer');
+    attachAddressGeoNames(address);
 
     return ok(res, { address });
 
@@ -63,27 +76,35 @@ export const searchAddresses = async (req: Request, res: Response) => {
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    // Search addresses using text search or regex
-    const addresses = await Address.find({
-      $or: [
-        { street: { $regex: query, $options: 'i' } },
-        { city: { $regex: query, $options: 'i' } },
-        { neighborhood: { $regex: query, $options: 'i' } },
-        { fullAddress: { $regex: query, $options: 'i' } }
-      ]
-    })
-    .limit(Number(limit))
-    .skip(skip)
-    .sort({ createdAt: -1 });
+    // Geo is relational: match the building-level `street` directly, and resolve
+    // the term against the canonical City/Region/Neighborhood collections to
+    // include addresses in any matching place (no free-text city on the Address).
+    const { resolveGeoFilterAddressIds } = require('../services/geoQueryService');
+    const [byCity, byRegion, byNeighborhood] = await Promise.all([
+      resolveGeoFilterAddressIds({ city: String(query) }),
+      resolveGeoFilterAddressIds({ state: String(query) }),
+      resolveGeoFilterAddressIds({ neighborhood: String(query) }),
+    ]);
+    const geoAddressIds = [...(byCity ?? []), ...(byRegion ?? []), ...(byNeighborhood ?? [])];
 
-    const totalCount = await Address.countDocuments({
+    const searchFilter = {
       $or: [
         { street: { $regex: query, $options: 'i' } },
-        { city: { $regex: query, $options: 'i' } },
-        { neighborhood: { $regex: query, $options: 'i' } },
-        { fullAddress: { $regex: query, $options: 'i' } }
-      ]
-    });
+        ...(geoAddressIds.length > 0 ? [{ _id: { $in: geoAddressIds } }] : []),
+      ],
+    };
+
+    const addresses = await Address.find(searchFilter)
+      .populate([
+        { path: 'cityId', select: 'name' },
+        { path: 'regionId', select: 'name' },
+        { path: 'countryId', select: 'name code' },
+      ])
+      .limit(Number(limit))
+      .skip(skip)
+      .sort({ createdAt: -1 });
+
+    const totalCount = await Address.countDocuments(searchFilter);
 
     return ok(res, {
       addresses,
@@ -112,35 +133,27 @@ export const createAddress = async (req: Request, res: Response) => {
 
     // Validate required fields
     if (!addressData.street || !addressData.city || !addressData.country) {
-      return badRequest(res, { 
-        message: 'Street, city, and country are required' 
+      return badRequest(res, {
+        message: 'Street, city, and country are required'
       });
     }
+    if (!addressData.coordinates?.coordinates) {
+      return badRequest(res, { message: 'Coordinates are required to resolve the address location' });
+    }
 
-    // Create full address string
-    const fullAddressParts = [
-      addressData.street,
-      addressData.neighborhood,
-      addressData.city,
-      addressData.state,
-      addressData.postal_code,
-      addressData.country
-    ].filter(Boolean);
-    
-    addressData.fullAddress = fullAddressParts.join(', ');
-    addressData.location = `${addressData.city}, ${addressData.country}`;
+    // Geo is relational: `findOrCreateCanonical` resolves the country/region/
+    // city/neighborhood id chain from the coordinates/place names and dedupes
+    // the building. City/state/country NAMES are inputs only — never persisted.
+    const address = await Address.findOrCreateCanonical(addressData);
 
-    const address = new Address(addressData);
-    await address.save();
-
-    logger.info(`New address created: ${address._id}`);
+    logger.info(`Address resolved: ${address._id}`);
     return created(res, { address });
 
   } catch (error) {
     logger.error('Error creating address:', error);
     if (error.name === 'ValidationError') {
-      return badRequest(res, { 
-        message: 'Validation error', 
+      return badRequest(res, {
+        message: 'Validation error',
         errors: Object.values(error.errors).map((e: any) => e.message)
       });
     }
@@ -166,21 +179,12 @@ export const updateAddress = async (req: Request, res: Response) => {
       return notFound(res, { message: 'Address not found' });
     }
 
-    // Update full address string if address components changed
-    if (updateData.street || updateData.city || updateData.country || 
-        updateData.neighborhood || updateData.state || updateData.postal_code) {
-      
-      const fullAddressParts = [
-        updateData.street || address.street,
-        updateData.neighborhood || address.neighborhood,
-        updateData.city || address.city,
-        updateData.state || address.state,
-        updateData.postal_code || address.postal_code,
-        updateData.country || address.country
-      ].filter(Boolean);
-      
-      updateData.fullAddress = fullAddressParts.join(', ');
-      updateData.location = `${updateData.city || address.city}, ${updateData.country || address.country}`;
+    // Geo is relational and resolved at creation time; updates here cover only
+    // BUILDING-level fields. Reject attempts to mutate the geo references or the
+    // resolved-only NAME aliases via this endpoint (re-resolve via create flow).
+    const FORBIDDEN_GEO_KEYS = ['city', 'state', 'country', 'neighborhood', 'countryId', 'regionId', 'cityId', 'neighborhoodId'];
+    for (const key of FORBIDDEN_GEO_KEYS) {
+      delete updateData[key];
     }
 
     const updatedAddress = await Address.findByIdAndUpdate(

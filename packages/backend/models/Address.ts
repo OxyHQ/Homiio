@@ -1,57 +1,60 @@
 /**
  * Address Model
- * Modern ES module export for Address schema with international support
+ *
+ * A BUILDING-level record. Administrative geo is NOT stored as free text — it is
+ * referenced by id into the DB-owned geo collections (Country / Region / City /
+ * Neighborhood). The only denormalized geo field kept here is `countryCode`
+ * (ISO-2) for fast filtering without a join.
+ *
+ * `findOrCreateCanonical` resolves the geo id chain via `geoResolutionService`
+ * (from coordinates, falling back to provided place names) and stores the ids;
+ * it never persists city/state/country strings.
  */
 
-import { Schema, model, Document, Model } from 'mongoose';
+import { Schema, model, Document, Model, Types } from 'mongoose';
+import { resolveGeo, type GeoNames } from '../services/geoResolutionService';
 
-// Define the Address interface with new international fields
+const crypto = require('crypto');
+
 export interface IAddress extends Document {
-  // Core location fields
+  // ---- Relational geo references ----
+  countryId: Types.ObjectId;
+  regionId: Types.ObjectId;
+  cityId: Types.ObjectId;
+  neighborhoodId?: Types.ObjectId;
+  /** ISO-2 country code — the only denormalized geo field. */
+  countryCode: string;
+
+  // ---- Building-level fields ----
   street: string;
-  city: string;
-  state?: string; // Made optional for international support
-  postal_code: string; // Renamed from zipCode
-  country: string; // No default
-  countryCode: string; // ISO-2 country code
-  
-  // Detailed address components
-  number?: string; // Building/house number
-  building_name?: string; // Building or complex name
-  block?: string; // Block identifier
-  entrance?: string; // Entrance identifier
-  floor?: string; // Floor number
-  unit?: string; // Apartment/unit number
-  subunit?: string; // Sub-unit within unit
-  district?: string; // District/borough
-  neighborhood?: string;
-  address_lines: string[]; // Flexible address lines array
-  po_box?: string; // Post office box
-  reference?: string; // Reference landmark or identifier
-  
-  // Land plot information
+  postal_code: string;
+  number?: string;
+  building_name?: string;
+  block?: string;
+  entrance?: string;
+  floor?: string;
+  unit?: string;
+  subunit?: string;
+  district?: string;
+  address_lines: string[];
+  po_box?: string;
+  reference?: string;
+
   land_plot?: {
     block?: string;
     lot?: string;
     parcel?: string;
   };
-  
-  // Flexible additional data
-  extras?: any; // Mixed type for custom fields
-  
-  // Coordinates
+
+  extras?: Record<string, unknown>;
+
   coordinates: {
     type: 'Point';
-    coordinates: [number, number]; // [longitude, latitude]
+    coordinates: [number, number];
   };
-  
-  // Computed/index fields
-  normalizedKey?: string; // For uniqueness and deduplication
-  
-  // Computed fields
-  fullAddress: string;
-  location: string;
-  
+
+  normalizedKey?: string;
+
   // Methods
   getCoordinates(): { longitude: number; latitude: number } | null;
   setLocation(longitude: number, latitude: number): this;
@@ -62,39 +65,66 @@ export interface IAddress extends Document {
   computeNormalizedKey(): string;
 }
 
+/** Input accepted by the static factories: building fields, coordinates and
+ *  place NAMES (resolved to ids — never persisted as text) plus legacy aliases. */
+export interface AddressCanonicalInput extends GeoNames {
+  street: string;
+  postal_code?: string;
+  number?: string;
+  building_name?: string;
+  block?: string;
+  entrance?: string;
+  floor?: string;
+  unit?: string;
+  subunit?: string;
+  district?: string;
+  address_lines?: string[];
+  po_box?: string;
+  reference?: string;
+  land_plot?: { block?: string; lot?: string; parcel?: string };
+  extras?: Record<string, unknown>;
+  coordinates?: { type?: string; coordinates: [number, number] };
+  // Building-level aliases
+  zipCode?: string;
+  zip?: string;
+  postcode?: string;
+  codigo_postal?: string;
+  puerta?: string;
+  apartment?: string;
+  suite?: string;
+  apt?: string;
+  piso?: string;
+  bloque?: string;
+  torre?: string;
+  tower?: string;
+  building?: string;
+  planta?: string;
+  nivel?: string;
+  level?: string;
+  line1?: string;
+  line2?: string;
+}
+
 const AddressSchema = new Schema({
-  // Core location fields
-  street: {
-    type: String,
-    required: [true, 'Street address is required'],
-    trim: true,
-    maxlength: [200, 'Street address cannot exceed 200 characters']
+  // ---- Relational geo references ----
+  countryId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Country',
+    required: [true, 'Address must reference a country']
   },
-  city: {
-    type: String,
-    required: [true, 'City is required'],
-    trim: true,
-    maxlength: [100, 'City name cannot exceed 100 characters']
+  regionId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Region',
+    required: [true, 'Address must reference a region']
   },
-  state: {
-    type: String,
-    required: false, // Made optional for international support
-    trim: true,
-    maxlength: [50, 'State name cannot exceed 50 characters']
+  cityId: {
+    type: Schema.Types.ObjectId,
+    ref: 'City',
+    required: [true, 'Address must reference a city']
   },
-  postal_code: { // Renamed from zipCode
-    type: String,
-    required: [true, 'Postal code is required'],
-    trim: true,
-    maxlength: [20, 'Postal code cannot exceed 20 characters']
-    // Removed hardcoded U.S. ZIP regex for international support
-  },
-  country: {
-    type: String,
-    required: [true, 'Country is required'],
-    trim: true,
-    maxlength: [50, 'Country name cannot exceed 50 characters']
-    // Removed default: 'USA'
+  neighborhoodId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Neighborhood'
   },
   countryCode: {
     type: String,
@@ -108,100 +138,52 @@ const AddressSchema = new Schema({
       message: 'Country code must be a valid ISO-2 code (e.g., US, CA, GB)'
     }
   },
-  
-  // Detailed address components
-  number: {
+
+  // ---- Building-level fields ----
+  street: {
     type: String,
+    required: [true, 'Street address is required'],
     trim: true,
-    maxlength: [20, 'Building number cannot exceed 20 characters']
+    maxlength: [200, 'Street address cannot exceed 200 characters']
   },
-  building_name: {
+  postal_code: {
     type: String,
+    required: [true, 'Postal code is required'],
     trim: true,
-    maxlength: [100, 'Building name cannot exceed 100 characters']
+    maxlength: [20, 'Postal code cannot exceed 20 characters']
   },
-  block: {
-    type: String,
-    trim: true,
-    maxlength: [50, 'Block identifier cannot exceed 50 characters']
-  },
-  entrance: {
-    type: String,
-    trim: true,
-    maxlength: [20, 'Entrance identifier cannot exceed 20 characters']
-  },
-  floor: {
-    type: String,
-    trim: true,
-    maxlength: [10, 'Floor cannot exceed 10 characters']
-  },
-  unit: {
-    type: String,
-    trim: true,
-    maxlength: [20, 'Unit number cannot exceed 20 characters']
-  },
-  subunit: {
-    type: String,
-    trim: true,
-    maxlength: [20, 'Subunit cannot exceed 20 characters']
-  },
-  district: {
-    type: String,
-    trim: true,
-    maxlength: [100, 'District name cannot exceed 100 characters']
-  },
-  neighborhood: {
-    type: String,
-    trim: true,
-    maxlength: [100, 'Neighborhood name cannot exceed 100 characters']
-  },
+  number: { type: String, trim: true, maxlength: [20, 'Building number cannot exceed 20 characters'] },
+  building_name: { type: String, trim: true, maxlength: [100, 'Building name cannot exceed 100 characters'] },
+  block: { type: String, trim: true, maxlength: [50, 'Block identifier cannot exceed 50 characters'] },
+  entrance: { type: String, trim: true, maxlength: [20, 'Entrance identifier cannot exceed 20 characters'] },
+  floor: { type: String, trim: true, maxlength: [10, 'Floor cannot exceed 10 characters'] },
+  unit: { type: String, trim: true, maxlength: [20, 'Unit number cannot exceed 20 characters'] },
+  subunit: { type: String, trim: true, maxlength: [20, 'Subunit cannot exceed 20 characters'] },
+  district: { type: String, trim: true, maxlength: [100, 'District name cannot exceed 100 characters'] },
   address_lines: {
     type: [String],
     default: [],
     validate: {
       validator: function(lines: string[]) {
-        return lines.length <= 5 && lines.every(line => line.length <= 200);
+        return lines.length <= 5 && lines.every((line) => line.length <= 200);
       },
       message: 'Address lines must be 5 or fewer, each under 200 characters'
     }
   },
-  po_box: {
-    type: String,
-    trim: true,
-    maxlength: [20, 'PO Box cannot exceed 20 characters']
-  },
-  reference: {
-    type: String,
-    trim: true,
-    maxlength: [200, 'Reference cannot exceed 200 characters']
-  },
-  
-  // Land plot information
+  po_box: { type: String, trim: true, maxlength: [20, 'PO Box cannot exceed 20 characters'] },
+  reference: { type: String, trim: true, maxlength: [200, 'Reference cannot exceed 200 characters'] },
+
   land_plot: {
-    block: {
-      type: String,
-      trim: true,
-      maxlength: [50, 'Land block cannot exceed 50 characters']
-    },
-    lot: {
-      type: String,
-      trim: true,
-      maxlength: [50, 'Land lot cannot exceed 50 characters']
-    },
-    parcel: {
-      type: String,
-      trim: true,
-      maxlength: [50, 'Land parcel cannot exceed 50 characters']
-    }
+    block: { type: String, trim: true, maxlength: [50, 'Land block cannot exceed 50 characters'] },
+    lot: { type: String, trim: true, maxlength: [50, 'Land lot cannot exceed 50 characters'] },
+    parcel: { type: String, trim: true, maxlength: [50, 'Land parcel cannot exceed 50 characters'] }
   },
-  
-  // Flexible additional data
+
   extras: {
     type: Schema.Types.Mixed,
     default: {}
   },
-  
-  // Coordinates (required)
+
   coordinates: {
     type: {
       type: String,
@@ -224,20 +206,18 @@ const AddressSchema = new Schema({
       }
     }
   },
-  
-  // Computed/index fields
+
   normalizedKey: {
     type: String,
     index: true,
     unique: true,
-    sparse: true // Allow null values but ensure uniqueness when present
-  },
-  
+    sparse: true
+  }
 }, {
   timestamps: true,
-  toJSON: { 
+  toJSON: {
     virtuals: true,
-    transform: function(doc: any, ret: any) {
+    transform: function(_doc: unknown, ret: Record<string, unknown>) {
       ret.id = ret._id;
       return ret;
     }
@@ -245,90 +225,43 @@ const AddressSchema = new Schema({
   toObject: { virtuals: true }
 });
 
-// Indexes for better query performance
-AddressSchema.index({ coordinates: '2dsphere' }); // Keep 2dsphere index
-AddressSchema.index({ city: 1, state: 1, countryCode: 1 }); // City/state/country lookup
-AddressSchema.index({ postal_code: 1, countryCode: 1 }); // Postal code lookup
+// ---- Indexes ----
+AddressSchema.index({ coordinates: '2dsphere' });
+AddressSchema.index({ cityId: 1 });
+AddressSchema.index({ regionId: 1 });
+AddressSchema.index({ countryId: 1 });
+AddressSchema.index({ neighborhoodId: 1 });
+AddressSchema.index({ postal_code: 1, countryCode: 1 });
 
-// Virtual for full address (international-aware)
-AddressSchema.virtual('fullAddress').get(function(this: IAddress) {
-  const parts = [];
-  
-  // Add number and street
-  if (this.number && this.street) {
-    parts.push(`${this.number} ${this.street}`);
-  } else if (this.street) {
-    parts.push(this.street);
-  }
-  
-  // Add building name
-  if (this.building_name) {
-    parts.push(this.building_name);
-  }
-  
-  // Add unit information
-  if (this.unit) {
-    parts.push(`Unit ${this.unit}`);
-  }
-  
-  // Add city, state, postal code
-  const locationParts = [];
-  if (this.city) locationParts.push(this.city);
-  if (this.state) locationParts.push(this.state);
-  if (this.postal_code) locationParts.push(this.postal_code);
-  
-  if (locationParts.length > 0) {
-    parts.push(locationParts.join(', '));
-  }
-  
-  // Add country if not default
-  if (this.country) {
-    parts.push(this.country);
-  }
-  
-  return parts.join(', ');
-});
+// Populate-friendly virtuals for the geo entities (canonical names live there).
+AddressSchema.virtual('country', { ref: 'Country', localField: 'countryId', foreignField: '_id', justOne: true });
+AddressSchema.virtual('region', { ref: 'Region', localField: 'regionId', foreignField: '_id', justOne: true });
+AddressSchema.virtual('city', { ref: 'City', localField: 'cityId', foreignField: '_id', justOne: true });
+AddressSchema.virtual('neighborhood', { ref: 'Neighborhood', localField: 'neighborhoodId', foreignField: '_id', justOne: true });
 
-// Virtual for location string (international-aware)
-AddressSchema.virtual('location').get(function(this: IAddress) {
-  const parts = [];
-  if (this.city) parts.push(this.city);
-  if (this.state) parts.push(this.state);
-  if (this.country) parts.push(this.country);
-  return parts.join(', ');
-});
+/**
+ * Normalize building-level field aliases. Geo NAMES (city/state/country/
+ * neighborhood) are left untouched here — they are consumed by `resolveGeo` to
+ * derive ids and are never written to the document.
+ */
+AddressSchema.statics.normalizeAliases = function(input: AddressCanonicalInput): AddressCanonicalInput {
+  const normalized: AddressCanonicalInput = { ...input };
 
-// Pre-save hook to compute normalized key
-AddressSchema.pre('save', function(next) {
-  if (this.isModified() || this.isNew) {
-    this.normalizedKey = this.computeNormalizedKey();
-  }
-  next();
-});
-
-// Static method to normalize field aliases
-AddressSchema.statics.normalizeAliases = function(input: any) {
-  const normalized = { ...input };
-  
-  // Unit synonyms
   if (input.puerta) normalized.unit = input.puerta;
   if (input.apartment) normalized.unit = input.apartment;
   if (input.suite) normalized.unit = input.suite;
   if (input.apt) normalized.unit = input.apt;
   if (input.piso) normalized.unit = input.piso;
-  
-  // Block synonyms
+
   if (input.bloque) normalized.block = input.bloque;
   if (input.torre) normalized.block = input.torre;
   if (input.tower) normalized.block = input.tower;
   if (input.building) normalized.block = input.building;
-  
-  // Floor synonyms
+
   if (input.planta) normalized.floor = input.planta;
   if (input.nivel) normalized.floor = input.nivel;
   if (input.level) normalized.floor = input.level;
-  
-  // Address line synonyms
+
   if (input.line1) {
     normalized.address_lines = normalized.address_lines || [];
     normalized.address_lines[0] = input.line1;
@@ -337,92 +270,112 @@ AddressSchema.statics.normalizeAliases = function(input: any) {
     normalized.address_lines = normalized.address_lines || [];
     normalized.address_lines[1] = input.line2;
   }
-  
-  // Postal code synonyms
+
   if (input.zipCode) normalized.postal_code = input.zipCode;
   if (input.zip) normalized.postal_code = input.zip;
   if (input.postcode) normalized.postal_code = input.postcode;
   if (input.codigo_postal) normalized.postal_code = input.codigo_postal;
-  
-  // Country code normalization
-  if (input.country && !input.countryCode) {
-    // Simple country to code mapping (extend as needed)
-    const countryCodeMap: { [key: string]: string } = {
-      'United States': 'US',
-      'USA': 'US',
-      'Canada': 'CA',
-      'United Kingdom': 'GB',
-      'Spain': 'ES',
-      'France': 'FR',
-      'Germany': 'DE',
-      'Italy': 'IT',
-      'Mexico': 'MX',
-      'Brazil': 'BR',
-      'Argentina': 'AR',
-      'Colombia': 'CO',
-      'Chile': 'CL',
-      'Peru': 'PE'
-    };
-    
-    normalized.countryCode = countryCodeMap[input.country] || input.country.substring(0, 2).toUpperCase();
-  }
-  
+
   return normalized;
 };
 
-// Compute normalized key for uniqueness
-AddressSchema.methods.computeNormalizedKey = function(this: IAddress) {
-  const crypto = require('crypto');
+/**
+ * Deterministic dedup key for a building. Built from building-level fields plus
+ * the resolved `cityId` and `countryCode` (geo is relational, so the city id —
+ * not a free-text city string — anchors the building to its place).
+ */
+AddressSchema.methods.computeNormalizedKey = function(this: IAddress): string {
   const keyFields = [
     this.street?.toLowerCase().trim(),
     this.number?.toLowerCase().trim(),
     this.unit?.toLowerCase().trim(),
     this.building_name?.toLowerCase().trim(),
     this.block?.toLowerCase().trim(),
-    this.city?.toLowerCase().trim(),
-    this.state?.toLowerCase().trim(),
     this.postal_code?.toLowerCase().trim(),
+    this.cityId ? String(this.cityId) : undefined,
     this.countryCode?.toUpperCase()
-  ].filter(field => field && field.length > 0);
-  
+  ].filter((field): field is string => Boolean(field && field.length > 0));
+
   const keyString = keyFields.join('|');
   return crypto.createHash('sha1').update(keyString).digest('hex');
 };
 
-// Static method to find or create with canonical fields and coordinates
-AddressSchema.statics.findOrCreateCanonical = async function(this: IAddressModel, input: any) {
-  if (!input.coordinates) {
+/**
+ * Find or create a canonical building-level Address. Resolves the geo id chain
+ * (Country/Region/City/Neighborhood) from coordinates — falling back to the
+ * provided place names — via `resolveGeo`, then dedupes the building by its
+ * normalized key.
+ */
+AddressSchema.statics.findOrCreateCanonical = async function(
+  this: IAddressModel,
+  input: AddressCanonicalInput
+): Promise<IAddress> {
+  if (!input.coordinates?.coordinates) {
     throw new Error('Coordinates are required for address creation');
   }
-  
-  // Normalize aliases first
+
   const normalizedInput = this.normalizeAliases(input);
-  
-  // Create a temporary instance to compute the normalized key
-  const tempAddress = new this(normalizedInput);
+
+  // Resolve the canonical geo id chain (upserts Country/Region/City/Neighborhood).
+  const resolved = await resolveGeo({
+    coordinates: normalizedInput.coordinates?.coordinates,
+    names: {
+      city: normalizedInput.city,
+      state: normalizedInput.state,
+      country: normalizedInput.country,
+      countryCode: normalizedInput.countryCode,
+      neighborhood: normalizedInput.neighborhood,
+    },
+  });
+
+  const docFields = {
+    street: normalizedInput.street,
+    postal_code: normalizedInput.postal_code,
+    number: normalizedInput.number,
+    building_name: normalizedInput.building_name,
+    block: normalizedInput.block,
+    entrance: normalizedInput.entrance,
+    floor: normalizedInput.floor,
+    unit: normalizedInput.unit,
+    subunit: normalizedInput.subunit,
+    district: normalizedInput.district,
+    address_lines: normalizedInput.address_lines,
+    po_box: normalizedInput.po_box,
+    reference: normalizedInput.reference,
+    land_plot: normalizedInput.land_plot,
+    extras: normalizedInput.extras,
+    coordinates: {
+      type: 'Point' as const,
+      coordinates: normalizedInput.coordinates.coordinates,
+    },
+    countryId: resolved.countryId,
+    regionId: resolved.regionId,
+    cityId: resolved.cityId,
+    neighborhoodId: resolved.neighborhoodId,
+    countryCode: resolved.countryCode,
+  };
+
+  const tempAddress = new this(docFields);
   const normalizedKey = tempAddress.computeNormalizedKey();
-  
-  // First try to find existing address by normalized key
-  let address = await this.findOne({ normalizedKey });
-  
-  if (address) {
-    return address;
+
+  const existing = await this.findOne({ normalizedKey });
+  if (existing) {
+    return existing;
   }
-  
-  // Create new address if not found
-  normalizedInput.normalizedKey = normalizedKey;
-  address = new this(normalizedInput);
-  
-  return await address.save();
+
+  tempAddress.normalizedKey = normalizedKey;
+  return tempAddress.save();
 };
 
-// Static method to find or create address (legacy compatibility)
-AddressSchema.statics.findOrCreate = async function(this: IAddressModel, addressData: any) {
-  console.warn('Address.findOrCreate is deprecated. Use findOrCreateCanonical instead.');
-  return this.findOrCreateCanonical(addressData);
-};
+// Pre-save hook to (re)compute the normalized key.
+AddressSchema.pre('save', function(this: IAddress, next) {
+  if (this.isModified() || this.isNew) {
+    this.normalizedKey = this.computeNormalizedKey();
+  }
+  next();
+});
 
-// Instance methods
+// ---- Instance methods ----
 AddressSchema.methods.getCoordinates = function(this: IAddress) {
   if (this.coordinates && this.coordinates.coordinates && this.coordinates.coordinates.length === 2) {
     return {
@@ -434,46 +387,41 @@ AddressSchema.methods.getCoordinates = function(this: IAddress) {
 };
 
 AddressSchema.methods.setLocation = function(this: IAddress, longitude: number, latitude: number) {
-  this.coordinates = {
-    type: 'Point',
-    coordinates: [longitude, latitude]
-  };
+  this.coordinates = { type: 'Point', coordinates: [longitude, latitude] };
   return this;
 };
 
-// Address hierarchy level determination
 AddressSchema.methods.getAddressLevel = function(this: IAddress) {
-  // UNIT level: has floor, unit, or subunit details
   if (this.floor || this.unit || this.subunit) {
     return 'UNIT';
   }
-  
-  // BUILDING level: has number but no unit details
   if (this.number || this.building_name || this.block || this.entrance) {
     return 'BUILDING';
   }
-  
-  // STREET level: street name only
   return 'STREET';
 };
 
-// Create street-level address (street name only)
-AddressSchema.methods.createStreetLevel = function(this: IAddress) {
+/**
+ * Derive a STREET-level variant of this address (street + geo + coordinates,
+ * no building/unit detail). Geo is relational, so the canonical
+ * countryId/regionId/cityId/neighborhoodId references are carried over verbatim.
+ */
+AddressSchema.methods.createStreetLevel = function(this: IAddress): Partial<IAddress> {
   return {
     street: this.street,
-    city: this.city,
-    state: this.state,
     postal_code: this.postal_code,
-    country: this.country,
-    countryCode: this.countryCode,
-    neighborhood: this.neighborhood,
     district: this.district,
-    coordinates: this.coordinates
+    countryId: this.countryId,
+    regionId: this.regionId,
+    cityId: this.cityId,
+    neighborhoodId: this.neighborhoodId,
+    countryCode: this.countryCode,
+    coordinates: this.coordinates,
   };
 };
 
-// Create building-level address (street + number + building details)
-AddressSchema.methods.createBuildingLevel = function(this: IAddress) {
+/** Derive a BUILDING-level variant (street level + building identifiers). */
+AddressSchema.methods.createBuildingLevel = function(this: IAddress): Partial<IAddress> {
   return {
     ...this.createStreetLevel(),
     number: this.number,
@@ -481,24 +429,23 @@ AddressSchema.methods.createBuildingLevel = function(this: IAddress) {
     block: this.block,
     entrance: this.entrance,
     po_box: this.po_box,
-    reference: this.reference
+    reference: this.reference,
   };
 };
 
-// Create unit-level address (building + floor + unit details)
-AddressSchema.methods.createUnitLevel = function(this: IAddress) {
+/** Derive a UNIT-level variant (building level + floor/unit/subunit). */
+AddressSchema.methods.createUnitLevel = function(this: IAddress): Partial<IAddress> {
   return {
     ...this.createBuildingLevel(),
     floor: this.floor,
     unit: this.unit,
-    subunit: this.subunit
+    subunit: this.subunit,
   };
 };
 
-// Define model interface with static methods
 interface IAddressModel extends Model<IAddress> {
-  normalizeAliases(input: any): any;
-  findOrCreateCanonical(addressData: any): Promise<IAddress>;
+  normalizeAliases(input: AddressCanonicalInput): AddressCanonicalInput;
+  findOrCreateCanonical(input: AddressCanonicalInput): Promise<IAddress>;
 }
 
 export default model<IAddress, IAddressModel>('Address', AddressSchema);

@@ -63,9 +63,20 @@ export interface IProperty extends Document {
   };
   amenities?: string[];
   images?: Array<{
+    /** Reference to the canonical Image document (entityType 'property'). */
+    imageId?: Types.ObjectId;
+    /** Ready-to-render URL — the stored medium variant. Preserves the legacy shape. */
     url: string;
     caption?: string;
     isPrimary?: boolean;
+    order?: number;
+    /** All processed variant URLs, for callers that want a specific rendition. */
+    urls?: {
+      original?: string;
+      small?: string;
+      medium?: string;
+      large?: string;
+    };
   }>;
   status: PropertyStatus;
   floor?: number;
@@ -255,6 +266,10 @@ const PropertySchema = new Schema({
     lowercase: true
   }],
   images: [{
+    imageId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Image'
+    },
     url: {
       type: String,
       required: true
@@ -266,6 +281,20 @@ const PropertySchema = new Schema({
     isPrimary: {
       type: Boolean,
       default: false
+    },
+    order: {
+      type: Number,
+      default: 0,
+      min: [0, 'Image order cannot be negative']
+    },
+    urls: {
+      type: new Schema({
+        original: { type: String },
+        small: { type: String },
+        medium: { type: String },
+        large: { type: String }
+      }, { _id: false }),
+      default: undefined
     }
   }],
   status: {

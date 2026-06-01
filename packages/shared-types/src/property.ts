@@ -16,7 +16,8 @@ import {
   ExchangeMode,
   DeepPartial
 } from './common';
-import { Address } from './address';
+import { Address, AddressInput, PropertyAddress } from './address';
+import { PropertyImageRef } from './media';
 
 /**
  * Long-term (monthly) rent pricing for a listing carrying the
@@ -174,7 +175,14 @@ export interface Property {
   sourceUrl?: string; // URL to the property on the source website
   isExternal?: boolean; // Whether this property comes from external source
   expiresAt?: string; // TTL for external properties
-  address: Address;
+  /**
+   * The property's address as serialized by the API: building-level fields and
+   * relational geo ids, PLUS the server-resolved geo display names
+   * (`cityName` / `regionName` / `countryName` / `neighborhoodName` /
+   * `location`). Read the resolved NAMES for display — the geo `*Id` fields are
+   * ids, not human strings.
+   */
+  address: PropertyAddress;
   type: PropertyType;
   housingType?: HousingType;
   layoutType?: LayoutType;
@@ -193,7 +201,15 @@ export interface Property {
   /** Per-night pricing, present iff `offerings` includes `SHORT_TERM_RENT`. */
   shortTermRent?: ShortTermRent;
   amenities?: string[];
-  images?: string[] | PropertyImage[];
+  /**
+   * The property's photos. Backed by the canonical {@link Image} collection: each
+   * entry is a {@link PropertyImageRef} (an `imageId` reference plus the
+   * denormalized `{ url, caption, isPrimary }` projection — `url` is the stored
+   * medium variant — and the full variant `urls` for opt-in use). The
+   * `string[]` / `PropertyImage[]` members remain for legacy/external payloads
+   * that have not been migrated to the Image collection.
+   */
+  images?: string[] | PropertyImage[] | PropertyImageRef[];
   status: PropertyStatus;
   ownerId?: string; // Made optional since we use profileId
   roomCount?: number;
@@ -237,6 +253,11 @@ export interface Property {
   sale?: PropertySale;
   /** Home-exchange offer, present iff `offerings` includes `EXCHANGE`. */
   exchange?: PropertyExchange;
+  // Partner (agent) referral attribution
+  /** Id of the Partner who sourced this listing via their referral link. */
+  sourcedByPartner?: string;
+  /** Referral code captured at create time (audit copy of the partner's code). */
+  sourcedByReferralCode?: string;
   // Flags
   isVerified?: boolean;
   isEcoFriendly?: boolean;
@@ -261,7 +282,13 @@ export interface Property {
 }
 
 export interface CreatePropertyData {
-  address: Address;
+  /**
+   * Address INPUT for creation: callers supply human-readable place NAMES
+   * (`city`/`state`/`country`/`neighborhood`) and/or coordinates; the backend's
+   * geo-resolution service turns them into the canonical id chain. Names are
+   * never persisted as text on the Address — see {@link AddressInput}.
+   */
+  address: AddressInput;
   type: PropertyType;
   description?: string;
   squareFootage?: number;
@@ -274,7 +301,13 @@ export interface CreatePropertyData {
   /** Per-night pricing, required when `offerings` includes `SHORT_TERM_RENT`. */
   shortTermRent?: ShortTermRent;
   amenities?: string[];
-  images?: string[];
+  /**
+   * Photos for the new listing. Accepts bare URL strings, the
+   * `{ url, caption, isPrimary }` object form, or canonical
+   * {@link PropertyImageRef}s — mirroring `Property.images`, so a create/edit
+   * payload built from either shape conforms.
+   */
+  images?: string[] | PropertyImage[] | PropertyImageRef[];
   location?: GeoJSONPoint;
   // Additional comprehensive details for ethical pricing
   floor?: number;
@@ -433,7 +466,13 @@ export interface PropertyDraft {
   lastSaved: Date;
 }
 
-export type UpdatePropertyData = DeepPartial<Property>;
+/**
+ * Partial update payload for a property. A deep-partial of the INPUT shape
+ * ({@link CreatePropertyData}) — so its `address` is the resolvable
+ * {@link AddressInput} (place names + coordinates), matching how create works,
+ * rather than the serialized {@link PropertyAddress}.
+ */
+export type UpdatePropertyData = DeepPartial<CreatePropertyData>;
 
 /**
  * Verdict assigned to a listing's price relative to comparable homes in its

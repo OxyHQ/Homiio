@@ -7,6 +7,7 @@ const express = require('express');
 const propertyController = require('../controllers/propertyController');
 const telegramController = require('../controllers/telegramController');
 const cityController = require('../controllers/cityController').default;
+const imageController = require('../controllers/imageController').default;
 const tipsController = require('../controllers/tipsController');
 const analyticsController = require('../controllers/analyticsController');
 const geocodingController = require('../controllers/geocodingController').default;
@@ -43,6 +44,13 @@ export default function () {
   // Review WRITES (POST/PUT/DELETE) stay on the authenticated `/reviews` router.
   router.get('/reviews/address/:addressId', asyncHandler(reviewController.getReviewsByAddress));
   router.get('/reviews/address/:addressId/stats', asyncHandler(reviewController.getAddressReviewStats));
+
+  // Public self-hosted image store: serve a processed image's bytes by its
+  // bucket-relative key (used when object storage is not configured). Images are
+  // public assets — render-time photos must load without a token — so this lives
+  // on the public router. Mounted before `/cities` etc.; the wildcard captures
+  // the full key, e.g. GET /api/images/file/city/<uuid>-medium.webp.
+  router.get('/images/file/*', asyncHandler(imageController.serveLocalImage.bind(imageController)));
 
   // Public city routes
   router.get('/cities', asyncHandler(cityController.getCities));
