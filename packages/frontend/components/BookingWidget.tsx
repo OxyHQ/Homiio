@@ -300,14 +300,11 @@ const policyLabel = (policy: CancellationPolicy): string => {
 };
 
 const styles = StyleSheet.create({
+  // Flat content: no border / background / radius / outer margin — the
+  // BookingCard (and the host chrome around it) owns the surface. We keep
+  // only the internal vertical rhythm between rows.
   card: {
-    borderRadius: 16,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    padding: 20,
     gap: 14,
-    marginVertical: 16,
   },
   headerRow: {
     flexDirection: 'row',

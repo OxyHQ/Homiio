@@ -140,12 +140,17 @@ function formatDocumentSize(bytes?: number): string | null {
 export default function ApplyToRentScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, moveIn } = useLocalSearchParams<{ id: string; moveIn?: string }>();
   const { isAuthenticated } = useOxy();
   const propertyId = Array.isArray(id) ? id[0] : id;
   const { property } = useProperty(propertyId ?? '');
 
-  const [moveInDate, setMoveInDate] = useState('');
+  // The detail card can pre-fill the move-in date (`YYYY-MM-DD`) so the user
+  // doesn't re-enter it here; we still let them edit it on the form.
+  const initialMoveIn = Array.isArray(moveIn) ? moveIn[0] : moveIn;
+  const [moveInDate, setMoveInDate] = useState(
+    initialMoveIn && /^\d{4}-\d{2}-\d{2}$/.test(initialMoveIn) ? initialMoveIn : '',
+  );
   const [leaseTermMonths, setLeaseTermMonths] = useState(12);
   const [leaseTermCustom, setLeaseTermCustom] = useState('');
   const [usingCustomTerm, setUsingCustomTerm] = useState(false);

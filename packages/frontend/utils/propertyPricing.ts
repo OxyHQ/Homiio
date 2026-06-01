@@ -10,7 +10,7 @@ import { resolvePrimaryOffering, type RentalMode } from './propertyUtils';
  * `priceLabel` is the formatted headline (e.g. `€1200/month`, `$350000`, or the
  * "Free" exchange label); `priceSubtitle` is the listing location
  * (`"City, Country"`). Both feed the sticky property header, the desktop
- * StickyBookingCard (right column), and the PropertyBookingWidget.
+ * BookingCard (right column), and the PropertyBookingWidget.
  */
 export interface HeadlinePrice {
   priceLabel: string;

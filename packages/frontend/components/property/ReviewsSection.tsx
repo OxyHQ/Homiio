@@ -13,7 +13,6 @@
  */
 import React, { useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,7 +25,7 @@ import { ReviewCard, type ReviewData } from '@/components/ReviewCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionHeader, SECTION_GUTTER } from '@/components/property/Section';
-import { api } from '@/utils/api';
+import { useAddressReviews } from '@/hooks/useAddressReviews';
 import { colors } from '@/styles/colors';
 import { hairline, radius, spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
@@ -43,16 +42,6 @@ interface AggregatedStats {
   verifiedCount: number;
   withEvidenceCount: number;
 }
-
-type ReviewsResponse = {
-  success?: boolean;
-  buildingReviews?: ReviewData[];
-  unitReviews?: ReviewData[];
-  data?: {
-    buildingReviews?: ReviewData[];
-    unitReviews?: ReviewData[];
-  };
-};
 
 const normalizeReview = (raw: ReviewData): ReviewData => ({
   ...raw,
@@ -140,42 +129,17 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
   const isPreview = variant === 'preview';
   const maxVisible = isPreview ? 6 : 10;
 
-  // Defensive type extraction — address can land in a few shapes
-  // depending on whether the property was hydrated from list vs detail
-  // endpoint.
-  const addressId = useMemo<string | undefined>(() => {
-    const address = property?.address;
-    if (!address) return undefined;
-    if (typeof address === 'object' && '_id' in address) {
-      const id = (address as { _id?: unknown })._id;
-      if (typeof id === 'string') return id;
-    }
-    if (typeof address === 'object' && 'id' in address) {
-      const id = (address as { id?: unknown }).id;
-      if (typeof id === 'string') return id;
-    }
-    return undefined;
-  }, [property?.address]);
-
+  // Shared address-reviews source — the SAME `['addressReviews', addressId]`
+  // query the booking card reads, so the rating math comes from one cache key
+  // and no request is duplicated. Raw reviews are normalized here for the
+  // section's richer card + stats rendering.
   const {
-    data: reviews = [],
-    isLoading: loading,
-    error: queryError,
-    refetch,
-  } = useQuery<ReviewData[]>({
-    queryKey: ['addressReviews', addressId],
-    enabled: Boolean(addressId),
-    queryFn: async () => {
-      const response = await api.get<ReviewsResponse>(
-        `/api/reviews/address/${addressId}`,
-      );
-      const payload = response.data;
-      const responseData = payload?.success ? payload : payload?.data ?? payload;
-      const buildingReviews = responseData?.buildingReviews ?? [];
-      const unitReviews = responseData?.unitReviews ?? [];
-      return [...buildingReviews, ...unitReviews].map(normalizeReview);
-    },
-  });
+    addressId,
+    reviews: rawReviews,
+    query: { isLoading: loading, error: queryError, refetch },
+  } = useAddressReviews(property);
+
+  const reviews = useMemo(() => rawReviews.map(normalizeReview), [rawReviews]);
 
   const error = queryError
     ? queryError instanceof Error

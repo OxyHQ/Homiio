@@ -59,7 +59,6 @@ import ViewingService from '@/services/viewingService';
 import { ListingIntent, PropertyType, RentMode, type Property, type PropertyImage } from '@homiio/shared-types';
 
 import { PropertyDetailSkeleton } from '@/components/ui/skeletons/PropertyDetailSkeleton';
-import { BookingWidget } from '@/components/BookingWidget';
 
 import { PhotoGrid } from '@/components/property/PhotoGrid';
 import { HeaderSection } from '@/components/property/HeaderSection';
@@ -90,9 +89,10 @@ import { SimilarHomesSection } from '@/components/property/SimilarHomesSection';
 import { DemandSignal } from '@/components/property/DemandSignal';
 import { PropertyActionBar } from '@/components/property/PropertyActionBar';
 import { StickyPropertyHeader } from '@/components/property/StickyPropertyHeader';
-import { SECTION_GUTTER } from '@/components/property/Section';
-import { ApplyToRentCTA } from '@/components/property/ApplyToRentCTA';
+import { Section, SECTION_GUTTER } from '@/components/property/Section';
+import { BookingCard } from '@/components/property/BookingCard';
 
+import { resolveBookingMode } from '@/utils/bookingMode';
 import { colors } from '@/styles/colors';
 import { hairline, spacing } from '@/constants/styles';
 
@@ -518,15 +518,12 @@ export default function PropertyDetailPage() {
   // On wide screens the booking/apply card is rendered in the app shell's
   // right column (RightBar → PropertyBookingWidget), so the inline card only
   // shows when the RightBar is hidden (mobile/narrow). The screen stays
-  // single-column either way.
-  const showBookingWidget =
-    rentalMode === 'vacation' && isVacationRentable && !isRightBarVisible;
-
-  const showApplyCTA =
-    apiProperty &&
-    rentalMode === 'long_term' &&
-    apiProperty.rentMode !== RentMode.VACATION &&
-    !isRightBarVisible;
+  // single-column either way. `resolveBookingMode` is the ONE branching source
+  // shared with BookingCard — the mobile inline path renders the SAME card.
+  const bookingMode = apiProperty
+    ? resolveBookingMode(apiProperty as Property, rentalMode)
+    : 'none';
+  const showInlineBookingCard = bookingMode !== 'none' && !isRightBarVisible;
 
   const showSleepArrangement =
     rentalMode === 'vacation' && isVacationRentable;
@@ -665,17 +662,16 @@ export default function PropertyDetailPage() {
             />
           </View>
 
-          {showBookingWidget ? (
-            <View style={[styles.section, styles.gutter, styles.divider]}>
-              <BookingWidget property={apiProperty as Property} />
-            </View>
-          ) : null}
-
-          {showApplyCTA ? (
-            <View style={[styles.section, styles.gutter, styles.divider]}>
-              <ApplyToRentCTA
-                propertyId={String(apiProperty?._id ?? apiProperty?.id ?? '')}
-              />
+          {showInlineBookingCard && apiProperty ? (
+            <View style={[styles.section, styles.divider]}>
+              <Section>
+                <BookingCard
+                  property={apiProperty as Property}
+                  priceLabel={property.price}
+                  priceSubtitle={property.location}
+                  landlordProfile={landlordProfile}
+                />
+              </Section>
             </View>
           ) : null}
 
@@ -884,11 +880,6 @@ const styles = StyleSheet.create({
   // gutter is added per-section, not here.
   section: {
     paddingVertical: spacing.xl,
-  },
-  // Horizontal gutter for section roots that don't use the Section
-  // primitive (third-party widgets inlined on mobile).
-  gutter: {
-    paddingHorizontal: SECTION_GUTTER,
   },
   // Demand signal sits just under the host card, sharing its gutter.
   demandRow: {
