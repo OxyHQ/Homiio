@@ -15,6 +15,7 @@ import {
   type PropertyImage,
 } from '@homiio/shared-types';
 import { logger } from '@/utils/logger';
+import { resolveBackendImageUrl } from '@/utils/imageUrl';
 import {
   resolveStepFlow,
   FIELD_CONFIG,
@@ -48,14 +49,21 @@ interface GeoCoordinates {
  * Normalises a persisted property image (string URL or `PropertyImage`) into the
  * `UploadedImage` shape the form store and `ImageUpload` component expect. The
  * available URL is mirrored across the size slots so edit-mode previews render.
+ *
+ * `urls` is display-only and is re-homed onto the active API origin (see
+ * {@link resolveBackendImageUrl}) so a baked-in dev/emulator host previews on web
+ * too. `imageId` and `keys.original` are bookkeeping identifiers (the latter is
+ * passed verbatim to the delete endpoint), so they keep the ORIGINAL stored
+ * value and are never re-homed.
  */
 const toUploadedImage = (image: string | PropertyImage, index: number): UploadedImage => {
   const url = typeof image === 'string' ? image : image.url;
+  const displayUrl = resolveBackendImageUrl(url);
   const caption = typeof image === 'string' ? '' : image.caption ?? '';
   const isPrimary = typeof image === 'string' ? index === 0 : image.isPrimary ?? index === 0;
   return {
     imageId: url,
-    urls: { small: url, medium: url, large: url, original: url },
+    urls: { small: displayUrl, medium: displayUrl, large: displayUrl, original: displayUrl },
     keys: { original: url, variants: {} },
     metadata: { originalSize: 0, originalFormat: '', uploadedAt: new Date() },
     isPrimary,

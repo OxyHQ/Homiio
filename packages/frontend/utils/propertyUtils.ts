@@ -2,6 +2,7 @@ import { generatePropertyTitle, TitleFormat } from './propertyTitleGenerator';
 import { OfferingType, PriceUnit, Property, PropertyAddress, PropertyImage } from '@homiio/shared-types';
 import type { BrowseMode } from '@/components/search/types';
 import propertyPlaceholder from '@/assets/images/property_placeholder.jpg';
+import { resolveBackendImageUrl } from '@/utils/imageUrl';
 
 /** The rental experience the user is currently browsing in. */
 export type RentalMode = 'long_term' | 'vacation';
@@ -222,13 +223,18 @@ const BROWSE_MODE_TO_OFFERING: Record<BrowseMode, OfferingType> = {
  */
 export type ImageDisplaySource = { uri: string } | typeof propertyPlaceholder;
 
-/** Narrow a single image entry (URL string or `PropertyImage`) to its URL. */
+/**
+ * Narrow a single image entry (URL string or `PropertyImage`) to its URL,
+ * re-homing backend-served URLs onto the active API origin (see
+ * {@link resolveBackendImageUrl}) so DB images that baked in a dev/emulator host
+ * resolve on web/device/emulator alike. External/scraped URLs pass through.
+ */
 function imageEntryToUrl(entry: string | PropertyImage): string | undefined {
   if (typeof entry === 'string') {
-    return entry.length > 0 ? entry : undefined;
+    return entry.length > 0 ? resolveBackendImageUrl(entry) : undefined;
   }
   if (entry && typeof entry === 'object' && 'url' in entry) {
-    return entry.url.length > 0 ? entry.url : undefined;
+    return entry.url.length > 0 ? resolveBackendImageUrl(entry.url) : undefined;
   }
   return undefined;
 }
