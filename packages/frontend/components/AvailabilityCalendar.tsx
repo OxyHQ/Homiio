@@ -32,6 +32,14 @@ import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 
 export type AvailabilityCalendarMode = 'inline' | 'modal';
 
+/**
+ * Selection behavior:
+ * - `'range'` (default): two taps pick a check-in → check-out stay (vacation flow).
+ * - `'single'`: every tap picks a single day (long-term move-in flow); the range
+ *   is collapsed onto `checkIn === checkOut` and the extend branches never run.
+ */
+export type AvailabilityCalendarSelectionMode = 'range' | 'single';
+
 export interface AvailabilityCalendarRange {
   /** Selected check-in date (start of day). */
   checkIn: Date;
@@ -42,6 +50,8 @@ export interface AvailabilityCalendarRange {
 export interface AvailabilityCalendarProps {
   /** Inline shows confirm buttons; modal also exposes them but the consumer typically wraps it. */
   mode?: AvailabilityCalendarMode;
+  /** Range (two-tap stay) vs. single (one day per tap). Defaults to `'range'`. */
+  selectionMode?: AvailabilityCalendarSelectionMode;
   /** Host-defined availability windows (blocked/available). */
   windows?: AvailabilityWindow[];
   /** Booked windows derived from confirmed reservations. */
@@ -297,6 +307,7 @@ const WEEKDAY_LABELS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
 export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   mode = 'inline',
+  selectionMode = 'range',
   windows,
   booked,
   minStay,
@@ -333,8 +344,31 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
     (date: Date) => {
       const start = startOfDay(date);
       setSelection((current) => {
+        // Single mode: one day per tap. Re-pick on each tap; tapping the
+        // already-selected day clears it. The range/extend branches never run,
+        // and the collapsed range (checkIn === checkOut) carries the chosen day.
+        if (selectionMode === 'single') {
+          const single: AvailabilityCalendarRange | null =
+            current && isSameDay(current.checkIn, start)
+              ? null
+              : { checkIn: start, checkOut: start };
+          if (onChange) onChange(single);
+          if (
+            Platform.OS === 'web' &&
+            mode === 'modal' &&
+            hideActions &&
+            single &&
+            onApply
+          ) {
+            onApply(single);
+          }
+          return single;
+        }
         let next: AvailabilityCalendarRange | null = null;
-        if (!current || (current.checkIn && current.checkOut)) {
+        // Start a fresh single-day pick only when there is no selection or a
+        // COMPLETE range already exists (checkIn !== checkOut). An in-progress
+        // pick (checkIn === checkOut) falls through to the extend branches.
+        if (!current || !isSameDay(current.checkIn, current.checkOut)) {
           // Start a new range
           next = { checkIn: start, checkOut: start };
         } else if (isBefore(start, current.checkIn)) {
@@ -376,7 +410,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
         return next;
       });
     },
-    [disabledLookup, hideActions, minStay, maxStay, mode, onApply, onChange],
+    [disabledLookup, hideActions, minStay, maxStay, mode, onApply, onChange, selectionMode],
   );
 
   const handlePrev = useCallback(() => {

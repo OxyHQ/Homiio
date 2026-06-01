@@ -235,6 +235,7 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
             </View>
             <AvailabilityCalendar
               mode="modal"
+              selectionMode="single"
               initialRange={moveInDate ? { checkIn: moveInDate, checkOut: moveInDate } : null}
               onChange={handleSelectMoveIn}
               hideActions
