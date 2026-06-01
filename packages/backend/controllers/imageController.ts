@@ -5,6 +5,7 @@ import imageUploadService, {
   UploadedImage,
   ImageDocument,
 } from '../services/imageUploadService';
+import { validateImageStoreKey } from '../utils/imageStoreKey';
 
 // Minimal shape for an uploaded file to avoid relying on Express.Multer types
 type UploadedFile = {
@@ -289,23 +290,45 @@ export class ImageController {
   /**
    * Serve a processed image's bytes from the self-hosted LOCAL store (used when
    * object storage is not configured). The bucket-relative key is the wildcard
-   * tail of the route; the service guards against path traversal and returns 404
-   * when the file is absent.
+   * tail of the route (`GET /api/images/file/*`), which Express delivers already
+   * URL-decoded — so `..%2f..` arrives as `../..`. The key is UNTRUSTED input and
+   * is the FIRST of two independent path-traversal gates:
+   *
+   *  1. (here) validate the key by string analysis — reject `..`, absolute paths,
+   *     backslashes, NUL bytes, drive/UNC prefixes, and any non-image extension —
+   *     before it can reach the filesystem; serve only allowlisted image types.
+   *  2. ({@link ImageUploadService.readLocalImage}) re-resolve under the store
+   *     root with realpath containment, so a bypass of this gate still cannot
+   *     escape the store.
+   *
+   * Filesystem errors are never surfaced: a missing/forbidden file is a flat 404
+   * so the route leaks neither paths nor existence of out-of-store files.
    */
   async serveLocalImage(req: Request, res: Response): Promise<void> {
     try {
-      const key = req.params[0];
-      if (!key) {
+      const rawKey = req.params[0];
+      if (typeof rawKey !== 'string' || rawKey.length === 0) {
         res.status(400).json({ success: false, message: 'Image key is required' });
         return;
       }
-      const file = await imageUploadService.readLocalImage(key);
+
+      const validation = validateImageStoreKey(rawKey);
+      if (!validation.ok) {
+        res.status(400).json({ success: false, message: 'Invalid image key' });
+        return;
+      }
+
+      const file = await imageUploadService.readLocalImage(validation.key);
       if (!file) {
         res.status(404).json({ success: false, message: 'Image not found' });
         return;
       }
-      res.setHeader('Content-Type', file.contentType);
+
+      // Trust the extension-derived content type from the (allowlisted) key over
+      // whatever the store reports, so the response can only be an image type.
+      res.setHeader('Content-Type', validation.contentType);
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
       res.status(200).end(file.buffer);
     } catch (error) {
       res.status(500).json({

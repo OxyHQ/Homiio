@@ -2,7 +2,7 @@ import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
-import { promises as fs } from 'fs';
+import { promises as fs, realpathSync } from 'fs';
 import type { Document, Model, Types } from 'mongoose';
 import type {
   ImageEntityType,
@@ -11,6 +11,7 @@ import type {
   ImageVariantUrls,
 } from '@homiio/shared-types';
 import config from '../config';
+import { validateImageStoreKey } from '../utils/imageStoreKey';
 
 /**
  * Filesystem root of the self-hosted LOCAL image store. Used only when object
@@ -24,14 +25,6 @@ const LOCAL_IMAGE_STORE_DIR = path.join(__dirname, '..', '.local-image-store');
 
 /** Backend route prefix the local image store is served under (no trailing slash). */
 export const LOCAL_IMAGE_ROUTE = '/api/images/file';
-
-/** Map a processed variant's content type from its file extension. */
-const LOCAL_CONTENT_TYPES: Readonly<Record<string, string>> = {
-  '.webp': 'image/webp',
-  '.jpeg': 'image/jpeg',
-  '.jpg': 'image/jpeg',
-  '.png': 'image/png',
-};
 
 export interface ImageVariant {
   name: ImageVariantName;
@@ -401,23 +394,78 @@ export class ImageUploadService {
 
   /**
    * Read a stored image's bytes + content type from the self-hosted local store
-   * for a bucket-relative `key`, or null when the file does not exist. Guards
-   * against path traversal by resolving the key under the store root and
-   * rejecting anything that escapes it. Used by the backend's image-serve route.
+   * for a bucket-relative `key`, or `null` when the file is absent or the key is
+   * not safe to read. This is the SECOND, independent path-traversal gate (the
+   * serve controller validates first); it must hold on its own even if the
+   * controller's check were bypassed or a future caller passed an unchecked key:
+   *
+   *  1. Re-run the same string validation (reject `..`, absolute, backslash, NUL,
+   *     drive/UNC, and non-image extensions). A rejected key reads nothing.
+   *  2. Resolve the key under the store root and verify the REAL (fully
+   *     symlink-resolved) target path — leaf component included — still lives
+   *     inside the real store root, so a symlink planted inside the store cannot
+   *     redirect the read outside it.
+   *
+   * Returns `null` (never throws to the caller, never leaks a path) for any
+   * unsafe key, containment failure, or missing file; genuine read errors are
+   * surfaced. The content type is derived from the validated extension.
    */
   async readLocalImage(key: string): Promise<{ buffer: Buffer; contentType: string } | null> {
-    const target = path.resolve(LOCAL_IMAGE_STORE_DIR, key);
+    const validation = validateImageStoreKey(key);
+    if (!validation.ok) {
+      return null;
+    }
+
     const root = path.resolve(LOCAL_IMAGE_STORE_DIR);
-    if (target !== root && !target.startsWith(root + path.sep)) {
+    const resolved = path.resolve(root, validation.key);
+
+    // String-level containment on the resolved (lexical) path.
+    if (resolved !== root && !resolved.startsWith(root + path.sep)) {
       return null;
     }
+
+    // Realpath containment: resolve every symlink — on the store root AND on the
+    // FULL target path (its leaf component included) — then require the canonical
+    // target to still live under the canonical root. Resolving the whole target
+    // (not just its parent directory) is essential: the leaf itself may be a
+    // symlink (e.g. `city/x.webp -> /etc/passwd`) that `path.join` would not
+    // resolve, so `fs.readFile` would otherwise follow it out of the store.
+    //
+    // `realpathSync` throws ENOENT/ENOTDIR for a path that does not exist, which
+    // simply means "no such image" → null (no leak of the attempted path).
+    let realRoot: string;
+    let realTarget: string;
     try {
-      const buffer = await fs.readFile(target);
-      const contentType = LOCAL_CONTENT_TYPES[path.extname(target).toLowerCase()] ?? 'application/octet-stream';
-      return { buffer, contentType };
-    } catch {
+      realRoot = realpathSync(root);
+      realTarget = realpathSync(resolved);
+    } catch (error) {
+      if (this.isFileMissingError(error)) {
+        return null;
+      }
+      throw error;
+    }
+    if (realTarget !== realRoot && !realTarget.startsWith(realRoot + path.sep)) {
       return null;
     }
+
+    try {
+      const buffer = await fs.readFile(realTarget);
+      return { buffer, contentType: validation.contentType };
+    } catch (error) {
+      if (this.isFileMissingError(error)) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  /** Whether a filesystem error means the path simply does not exist. */
+  private isFileMissingError(error: unknown): boolean {
+    if (typeof error !== 'object' || error === null) {
+      return false;
+    }
+    const code = (error as { code?: string }).code;
+    return code === 'ENOENT' || code === 'ENOTDIR';
   }
 
   getAllImageUrls(uploadedImage: UploadedImage): Record<string, string> {
