@@ -15,44 +15,23 @@
  */
 import { Platform, type ViewStyle } from 'react-native';
 import { colors } from '@/styles/colors';
+import { shadowToken } from '@/styles/shadows';
 
-type ShadowStyle = Pick<
-  ViewStyle,
-  'shadowColor' | 'shadowOffset' | 'shadowOpacity' | 'shadowRadius' | 'elevation'
->;
+type ShadowStyle = Pick<ViewStyle, 'boxShadow' | 'elevation'>;
 
 export type ShadowLevel = 'sm' | 'md' | 'lg';
 
 /**
- * Three elevation tiers. iOS/web get `shadow*` props, Android gets `elevation`.
- * Color uses pure black with low opacity so the shadow tints any surface
- * the card sits on (cream, white, light gray) the same way.
- *
- * Web also picks up a CSS `boxShadow` via NativeWind/RN-Web for crisper
- * rendering, but the RN props above are the source of truth.
+ * Three elevation tiers. All platforms get a cross-platform `boxShadow`
+ * (RN 0.83 supports it on web AND native); Android additionally keeps
+ * `elevation` since `boxShadow` alone does not reproduce native elevation.
+ * Color uses pure black with low opacity so the shadow tints any surface the
+ * card sits on (cream, white, light gray) the same way.
  */
 export const cardShadow: Record<ShadowLevel, ShadowStyle> = {
-  sm: {
-    shadowColor: colors.COLOR_BLACK,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  md: {
-    shadowColor: colors.COLOR_BLACK,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 5,
-  },
-  lg: {
-    shadowColor: colors.COLOR_BLACK,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.12,
-    shadowRadius: 32,
-    elevation: 12,
-  },
+  sm: shadowToken({ y: 1, blur: 4, color: colors.COLOR_BLACK, opacity: 0.06, elevation: 2 }),
+  md: shadowToken({ y: 4, blur: 12, color: colors.COLOR_BLACK, opacity: 0.08, elevation: 5 }),
+  lg: shadowToken({ y: 12, blur: 32, color: colors.COLOR_BLACK, opacity: 0.12, elevation: 12 }),
 };
 
 /**
@@ -189,14 +168,30 @@ export const tracker = {
 
 /**
  * Grid gap presets for `gap` style or `gap-X` className. Use `tight` for
- * dense badge clusters, `normal` for typical cards-in-row, and
- * `comfortable` for hero-tier photo grids.
+ * dense badge clusters, `cozy` for the app-wide property grids (the single
+ * gap every `PropertyCard` grid/list shares), `normal` for typical
+ * cards-in-row, and `comfortable` for hero-tier photo grids.
+ *
+ * `cozy` (12) is the canonical property-grid gap: `PropertyResultsGrid`
+ * (search/explore + browse screens), `FeaturedGridSection` (home), and
+ * `PropertyList` all point at it so multi-column property tiles read at one
+ * consistent, Airbnb-2026 density across the whole app. Keep it in sync with
+ * `PropertyResultsGridSkeleton`'s default so loading shimmers don't shift.
  */
 export const gridGap = {
   tight: 8,
+  cozy: 12,
   normal: 16,
   comfortable: 24,
 } as const;
+
+/**
+ * The single gap shared by every property grid/list (`PropertyResultsGrid`,
+ * `FeaturedGridSection`, `PropertyList`, and the matching skeleton). Importing
+ * this alias — rather than re-deciding the tier per component — guarantees the
+ * grids never drift apart. Currently `gridGap.cozy` (12px).
+ */
+export const PROPERTY_GRID_GAP = gridGap.cozy;
 
 /**
  * Modal/sheet backdrop alpha — same value everywhere so dialogs and
@@ -256,3 +251,13 @@ export const pagePadding = {
  */
 export const resolvePagePadding = (isWide: boolean): number =>
   isWide ? pagePadding.desktop : pagePadding.mobile;
+
+/**
+ * Minimum height for a full-bleed CTA banner rendered in grid (`fill`) mode —
+ * i.e. two banners side-by-side as equal-height columns on wide screens. In
+ * that mode the banners drop their intrinsic `aspectRatio` and stretch to the
+ * taller sibling via row `alignItems: 'stretch'`; this floor keeps a half-width
+ * column from collapsing when its content is short. Standalone full-width
+ * banners keep using `aspectRatio` and ignore this token.
+ */
+export const BANNER_FILL_MIN_HEIGHT = 280;

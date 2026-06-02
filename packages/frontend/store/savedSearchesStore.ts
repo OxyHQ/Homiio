@@ -1,4 +1,11 @@
-import { create } from 'zustand';
+/**
+ * Saved-search domain types.
+ *
+ * Server state for saved searches lives entirely in React Query (see
+ * {@link useSavedSearches}); there is no Zustand mirror, so this module only
+ * exports the shared types. The filename is kept (`savedSearchesStore`) because
+ * several components import {@link SavedSearchFilters} from here.
+ */
 
 /**
  * Arbitrary filter criteria attached to a saved search (price range, property
@@ -7,7 +14,7 @@ import { create } from 'zustand';
  */
 export type SavedSearchFilters = Record<string, unknown>;
 
-// Saved Search Interface
+/** A normalised saved search as consumed across the app. */
 export interface SavedSearch {
   id: string;
   name: string;
@@ -22,67 +29,3 @@ export interface SavedSearch {
   createdAt: string;
   updatedAt: string;
 }
-
-// Saved Searches State Interface
-interface SavedSearchesState {
-  // Data
-  searches: SavedSearch[];
-
-  // Loading states
-  isLoading: boolean;
-  error: string | null;
-
-  // Actions
-  setSearches: (searches: SavedSearch[]) => void;
-  addSearch: (search: SavedSearch) => void;
-  updateSearch: (id: string, updates: Partial<SavedSearch>) => void;
-  removeSearch: (id: string) => void;
-  toggleNotifications: (id: string) => void;
-  setLoading: (loading: boolean) => void;
-  setError: (error: string | null) => void;
-  clearError: () => void;
-}
-
-export const useSavedSearchesStore = create<SavedSearchesState>()((set, get) => ({
-  // Initial state
-  searches: [],
-  isLoading: false,
-  error: null,
-
-  // Actions
-  setSearches: (searches) => set({ searches }),
-  addSearch: (search) =>
-    set((state) => ({
-      searches: [...state.searches, search],
-    })),
-  updateSearch: (id, updates) =>
-    set((state) => ({
-      searches: state.searches.map((s) => (s.id === id ? { ...s, ...updates } : s)),
-    })),
-  removeSearch: (id) =>
-    set((state) => ({
-      searches: state.searches.filter((s) => s.id !== id),
-    })),
-  toggleNotifications: (id) =>
-    set((state) => ({
-      searches: state.searches.map((s) =>
-        s.id === id ? { ...s, notifications: !s.notifications } : s,
-      ),
-    })),
-  setLoading: (loading) => set({ isLoading: loading }),
-  setError: (error) => set({ error }),
-  clearError: () => set({ error: null }),
-}));
-
-// Selector hooks for easier access
-export const useSavedSearchesSelectors = () => {
-  const searches = useSavedSearchesStore((state) => state.searches);
-  const isLoading = useSavedSearchesStore((state) => state.isLoading);
-  const error = useSavedSearchesStore((state) => state.error);
-
-  return {
-    searches,
-    isLoading,
-    error,
-  };
-};

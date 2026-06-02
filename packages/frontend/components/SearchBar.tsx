@@ -188,7 +188,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         }}
         onApply={() => {
           bottomSheet.closeBottomSheet();
-          router.push('/search');
+          router.push('/explore');
         }}
         onClear={() => bottomSheet.closeBottomSheet()}
       />,
@@ -196,7 +196,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   }, [bottomSheet, router]);
 
   const submitSearch = useCallback(() => {
-    router.push('/search');
+    router.push('/explore');
   }, [router]);
 
   const handleModeChange = useCallback(

@@ -1,6 +1,7 @@
 import { Platform, StyleSheet } from 'react-native';
 import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
+import { shadowToken } from '@/styles/shadows';
 
 /**
  * Shared StyleSheet for the Sindi chat experience.
@@ -113,7 +114,6 @@ export const sindiStyles = StyleSheet.create({
     paddingVertical: spacing.xs + 2,
     borderRadius: 18,
     overflow: 'hidden',
-    shadowColor: 'transparent',
     elevation: 0,
     gap: spacing.md,
   },
@@ -302,11 +302,7 @@ export const sindiStyles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    shadowColor: colors.COLOR_BLACK,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    ...shadowToken({ y: 1, blur: 2, color: colors.COLOR_BLACK, opacity: 0.05, elevation: 1 }),
   },
   filePreviewContainer: {
     flexDirection: 'row',

@@ -2,6 +2,7 @@ import React from 'react';
 import Svg, { Rect } from 'react-native-svg';
 import { ViewStyle } from 'react-native';
 import { colors } from '@/styles/colors';
+import { USE_NATIVE_DRIVER } from '@/utils/animation';
 import { Animated, Easing } from 'react-native';
 
 export const Loading = ({
@@ -21,7 +22,7 @@ export const Loading = ({
         toValue: 1,
         duration: 500,
         easing: Easing.linear,
-        useNativeDriver: true, // Enable native driver for rotation
+        useNativeDriver: USE_NATIVE_DRIVER,
       }),
     );
     animation.start();

@@ -198,12 +198,15 @@ export default function PropertyDetailPage() {
     return undefined;
   }, [apiProperty?.profileId]);
 
-  // Fetch landlord profile + their other listings.
+  // Fetch landlord profile + their other listings. The listing owner is public
+  // info shown on a public page, so this reads the public (no-auth) profile
+  // route and the public properties list — it must populate for logged-out
+  // visitors and never 401.
   useEffect(() => {
     const fetchLandlordData = async () => {
-      if (!landlordProfileId || !oxyServices || !activeSessionId) return;
+      if (!landlordProfileId) return;
       try {
-        const profile = await profileService.getProfileById(landlordProfileId);
+        const profile = await profileService.getPublicProfileById(landlordProfileId);
         setLandlordProfile(profile);
         const { properties } = await propertyService.getOwnerProperties(
           landlordProfileId,
@@ -216,7 +219,7 @@ export default function PropertyDetailPage() {
       }
     };
     fetchLandlordData();
-  }, [landlordProfileId, oxyServices, activeSessionId, id]);
+  }, [landlordProfileId, id]);
 
   // Property view-model derived from the API payload.
   const property = useMemo<PropertyDetailViewModel | null>(() => {

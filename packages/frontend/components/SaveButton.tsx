@@ -33,9 +33,10 @@
  */
 
 import React, { useState, useContext } from 'react';
-import { TouchableOpacity, StyleSheet, ViewStyle, View, Platform, StyleProp } from 'react-native';
+import { TouchableOpacity, StyleSheet, ViewStyle, View, StyleProp } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
+import { shadowToken } from '@/styles/shadows';
 import { Loading } from '@oxyhq/bloom/loading';
 import { SaveToFolderBottomSheet } from './SaveToFolderBottomSheet';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
@@ -330,15 +331,12 @@ export function SaveButton({
   );
 }
 
-const webShadow = Platform.select({
-  web: { boxShadow: '0 2px 8px rgba(0,0,0,0.08)' },
-  default: {
-    shadowColor: colors.COLOR_BLACK,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
+const webShadow = shadowToken({
+  y: 2,
+  blur: 8,
+  color: colors.COLOR_BLACK,
+  opacity: 0.08,
+  elevation: 3,
 });
 
 const styles = StyleSheet.create({

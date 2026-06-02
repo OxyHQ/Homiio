@@ -1,14 +1,23 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
-  useSavedSearchesStore,
-  useSavedSearchesSelectors,
   type SavedSearch,
   type SavedSearchFilters,
 } from '@/store/savedSearchesStore';
 import { toast } from '@/lib/sonner';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { useOxy } from '@oxyhq/services';
 import { api, ApiError } from '@/utils/api';
+
+/**
+ * Stable React Query key for the authenticated user's saved searches. Mutations
+ * write the freshly-returned server object back to this cache, so the list and
+ * every widget reading it stay in sync without a refetch flash.
+ */
+const SAVED_SEARCHES_KEY = ['savedSearches'] as const;
+
+/** Stable empty-list reference for the logged-out / not-yet-loaded state. */
+const EMPTY_SEARCHES: SavedSearch[] = [];
 
 /**
  * A saved search as it can arrive from the backend. The API has historically
@@ -84,6 +93,14 @@ const extractSearch = (envelope: SavedSearchEnvelope): RawSavedSearch => {
   return envelope.search ?? {};
 };
 
+/** Pulls the list of raw searches out of any known list-response envelope. */
+const extractSearchList = (payload: SavedSearchPayload): RawSavedSearch[] => {
+  if (Array.isArray(payload)) return payload;
+  const nested = payload?.data;
+  if (Array.isArray(nested)) return nested;
+  return payload?.searches ?? [];
+};
+
 const normalizeSearch = (raw: RawSavedSearch, defaults: Partial<SavedSearch> = {}): SavedSearch => ({
   id: raw.id ?? raw._id ?? defaults.id ?? '',
   name: raw.name ?? raw.title ?? defaults.name ?? '',
@@ -103,13 +120,11 @@ const normalizeSearch = (raw: RawSavedSearch, defaults: Partial<SavedSearch> = {
   updatedAt: raw.updatedAt ?? raw.updated_at ?? new Date().toISOString(),
 });
 
-export const useSavedSearches = (): {
+export interface UseSavedSearches {
   searches: SavedSearch[];
   isLoading: boolean;
   isSaving: boolean;
   error: string | null;
-  lastSynced: string | null;
-  fetchSavedSearches: () => Promise<void>;
   saveSearch: (
     name: string,
     query: string,
@@ -131,23 +146,61 @@ export const useSavedSearches = (): {
   getSearchById: (id: string) => SavedSearch | undefined;
   hasSearches: boolean;
   isAuthenticated: boolean;
-} => {
-  const { t } = useTranslation();
-  const { searches, isLoading, error } = useSavedSearchesSelectors();
-  const {
-    setSearches,
-    addSearch,
-    removeSearch,
-    updateSearch: updateSearchAction,
-    toggleNotifications: toggleNotificationsAction,
-    setLoading,
-    setError,
-  } = useSavedSearchesStore();
+}
 
-  const hasFetchedRef = useRef(false);
+export const useSavedSearches = (): UseSavedSearches => {
+  const { t } = useTranslation();
+  const { isAuthenticated } = useOxy();
   const queryClient = useQueryClient();
 
-  // Save search mutation using React Query
+  /**
+   * The single source of truth for the user's saved searches. Gated on
+   * `isAuthenticated` so a logged-out client never fires the request (the route
+   * sits behind `oxy.auth()` and `utils/api.ts` sends no `Authorization` header
+   * when there is no token, which would otherwise 401-spam).
+   */
+  const listQuery = useQuery({
+    queryKey: SAVED_SEARCHES_KEY,
+    enabled: isAuthenticated,
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+    queryFn: async (): Promise<SavedSearch[]> => {
+      const response = await api.get<SavedSearchPayload>('/api/profiles/me/saved-searches');
+      return extractSearchList(response.data).map((raw) => normalizeSearch(raw));
+    },
+  });
+
+  // When logged out the query is disabled and never resolves, so fall back to a
+  // stable empty list rather than leaving `searches` undefined. Memoised on the
+  // query data so consumers' `useCallback`/`useMemo` deps stay referentially
+  // stable across renders where the data is unchanged.
+  const searches = useMemo<SavedSearch[]>(() => listQuery.data ?? EMPTY_SEARCHES, [listQuery.data]);
+
+  /** Replace a single search in the cached list by id, or append if new. */
+  const upsertCachedSearch = useCallback(
+    (next: SavedSearch) => {
+      queryClient.setQueryData<SavedSearch[]>(SAVED_SEARCHES_KEY, (prev) => {
+        const list = prev ?? [];
+        const index = list.findIndex((s) => s.id === next.id);
+        if (index === -1) return [...list, next];
+        const copy = list.slice();
+        copy[index] = next;
+        return copy;
+      });
+    },
+    [queryClient],
+  );
+
+  /** Remove a single search from the cached list by id. */
+  const removeCachedSearch = useCallback(
+    (searchId: string) => {
+      queryClient.setQueryData<SavedSearch[]>(SAVED_SEARCHES_KEY, (prev) =>
+        (prev ?? []).filter((s) => s.id !== searchId),
+      );
+    },
+    [queryClient],
+  );
+
   const saveSearchMutation = useMutation({
     mutationKey: ['saveSearch'],
     mutationFn: async (vars: {
@@ -171,10 +224,9 @@ export const useSavedSearches = (): {
         filters: vars.filters,
       });
     },
-    onSuccess: async (normalized) => {
-      addSearch(normalized);
-      await queryClient.invalidateQueries({ queryKey: ['savedSearches'] });
-      toast.success(`Search "${normalized.name}" saved successfully`);
+    onSuccess: (saved) => {
+      upsertCachedSearch(saved);
+      toast.success(t('search.widgets.savedSearches.saveSuccess', { name: saved.name }));
     },
     onError: (error: unknown) => {
       if (isApiError(error) && error.status === 409) {
@@ -183,81 +235,123 @@ export const useSavedSearches = (): {
             ? error.response.message
             : t('search.duplicateName');
         toast.error(responseMessage + '. ' + t('search.tryDifferentName'));
-        setError(responseMessage);
         return;
       }
-      const msg = getErrorMessage(error, 'Failed to save search');
-      toast.error(msg);
-      setError(msg);
+      toast.error(getErrorMessage(error, t('search.widgets.savedSearches.saveFailed')));
     },
   });
 
-  // Fetch saved searches via React Query and sync to Zustand
-  const fetchSavedSearchesCallback = useCallback(async () => {
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await queryClient.fetchQuery({
-        queryKey: ['savedSearches'],
-        queryFn: async () => api.get<SavedSearchPayload>('/api/profiles/me/saved-searches'),
-        staleTime: 1000 * 30,
-        gcTime: 1000 * 60 * 10,
-      });
-
+  const updateSearchMutation = useMutation({
+    mutationKey: ['updateSearch'],
+    mutationFn: async (vars: {
+      searchId: string;
+      updates: {
+        name?: string;
+        query?: string;
+        filters?: SavedSearchFilters;
+        notificationsEnabled?: boolean;
+      };
+    }): Promise<SavedSearch> => {
+      const response = await api.put<SavedSearchPayload>(
+        `/api/profiles/me/saved-searches/${vars.searchId}`,
+        vars.updates,
+      );
       const payload = response.data;
-      let raw: RawSavedSearch[];
-      if (Array.isArray(payload)) {
-        raw = payload;
-      } else {
-        const nested = payload?.data;
-        raw = Array.isArray(nested) ? nested : (payload?.searches ?? []);
-      }
-      const normalized = raw.map((s) => normalizeSearch(s));
+      const raw = Array.isArray(payload) ? (payload[0] ?? {}) : extractSearch(payload);
+      return normalizeSearch(raw, {
+        id: vars.searchId,
+        name: vars.updates.name,
+        query: vars.updates.query,
+        filters: vars.updates.filters,
+      });
+    },
+    onSuccess: (updated) => {
+      upsertCachedSearch(updated);
+      toast.success(t('search.widgets.savedSearches.updateSuccess'));
+    },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, t('search.widgets.savedSearches.updateFailed')));
+    },
+  });
 
-      setSearches(normalized);
-    } catch (error: unknown) {
-      setError(getErrorMessage(error, 'Failed to fetch saved searches'));
-    } finally {
-      setLoading(false);
-    }
-  }, [setSearches, setLoading, setError, queryClient]);
+  const deleteSearchMutation = useMutation({
+    mutationKey: ['deleteSearch'],
+    mutationFn: async (vars: { searchId: string; searchName?: string }): Promise<void> => {
+      await api.delete(`/api/profiles/me/saved-searches/${vars.searchId}`);
+    },
+    onSuccess: (_result, vars) => {
+      removeCachedSearch(vars.searchId);
+      toast.success(
+        vars.searchName
+          ? t('search.widgets.savedSearches.deleteSuccessNamed', { name: vars.searchName })
+          : t('search.widgets.savedSearches.deleteSuccess'),
+      );
+    },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, t('search.widgets.savedSearches.deleteFailed')));
+    },
+  });
 
-  // Save a new search using Zustand store
+  const toggleNotificationsMutation = useMutation({
+    mutationKey: ['toggleSearchNotifications'],
+    mutationFn: async (vars: { searchId: string; enabled: boolean }): Promise<SavedSearch> => {
+      // The backend's `toggleSearchNotifications` reads `req.body.notificationsEnabled`,
+      // so the body key must match exactly (sending `{ enabled }` always persisted false).
+      const response = await api.put<SavedSearchPayload>(
+        `/api/profiles/me/saved-searches/${vars.searchId}/notifications`,
+        { notificationsEnabled: vars.enabled },
+      );
+      const payload = response.data;
+      const raw = Array.isArray(payload) ? (payload[0] ?? {}) : extractSearch(payload);
+      return normalizeSearch(raw, { id: vars.searchId });
+    },
+    onSuccess: (updated, vars) => {
+      upsertCachedSearch(updated);
+      toast.success(
+        vars.enabled
+          ? t('search.widgets.savedSearches.notificationsEnabled')
+          : t('search.widgets.savedSearches.notificationsDisabled'),
+      );
+    },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, t('search.widgets.savedSearches.notificationsFailed')));
+    },
+  });
+
   const saveSearch = useCallback(
     async (
       name: string,
       query: string,
       filters?: SavedSearchFilters,
       notificationsEnabled: boolean = false,
-    ) => {
-
+    ): Promise<boolean> => {
       if (!name.trim() || !query.trim()) {
-        toast.error('Search name and query are required');
+        toast.error(t('search.widgets.savedSearches.nameAndQueryRequired'));
+        return false;
+      }
+
+      const normalizedName = name.trim();
+      const normalizedQuery = query.trim();
+
+      // Prevent obvious duplicates client-side before hitting the network.
+      const duplicateExact = searches.some(
+        (s) =>
+          s.name.toLowerCase() === normalizedName.toLowerCase() &&
+          s.query.toLowerCase() === normalizedQuery.toLowerCase(),
+      );
+      if (duplicateExact) {
+        toast.error(t('search.duplicateExact'));
+        return false;
+      }
+      const duplicateByName = searches.some(
+        (s) => s.name.toLowerCase() === normalizedName.toLowerCase(),
+      );
+      if (duplicateByName) {
+        toast.error(t('search.duplicateName') + '. ' + t('search.tryDifferentName'));
         return false;
       }
 
       try {
-        // Prevent obvious duplicates client-side
-        const normalizedName = name.trim();
-        const normalizedQuery = query.trim();
-        const duplicateByName = searches.some(
-          (s) => String(s.name).toLowerCase() === normalizedName.toLowerCase(),
-        );
-        const duplicateExact = searches.some(
-          (s) =>
-            String(s.name).toLowerCase() === normalizedName.toLowerCase() &&
-            String(s.query).toLowerCase() === normalizedQuery.toLowerCase(),
-        );
-        if (duplicateExact) {
-          toast.error(t('search.duplicateExact'));
-          return false;
-        }
-        if (duplicateByName) {
-          toast.error(t('search.duplicateName') + '. ' + t('search.tryDifferentName'));
-          return false;
-        }
         await saveSearchMutation.mutateAsync({
           name: normalizedName,
           query: normalizedQuery,
@@ -266,38 +360,25 @@ export const useSavedSearches = (): {
         });
         return true;
       } catch {
-        // onError already handled toast/error
+        // onError surfaces the toast; the boolean tells the caller it failed.
         return false;
       }
     },
     [searches, t, saveSearchMutation],
   );
 
-  // Delete a saved search using Zustand store
   const deleteSavedSearch = useCallback(
-    async (searchId: string, searchName?: string) => {
+    async (searchId: string, searchName?: string): Promise<boolean> => {
       try {
-        await api.delete(`/api/profiles/me/saved-searches/${searchId}`);
-
-        // Remove from store
-        removeSearch(searchId);
-
-        // Invalidate cache
-        await queryClient.invalidateQueries({ queryKey: ['savedSearches'] });
-
-        toast.success(`Search ${searchName ? `"${searchName}"` : ''} deleted successfully`);
+        await deleteSearchMutation.mutateAsync({ searchId, searchName });
         return true;
-      } catch (error: unknown) {
-        const errorMessage = getErrorMessage(error, 'Failed to delete search');
-        toast.error(errorMessage);
-        setError(errorMessage);
+      } catch {
         return false;
       }
     },
-    [removeSearch, setError, queryClient],
+    [deleteSearchMutation],
   );
 
-  // Update a saved search using Zustand store
   const updateSearch = useCallback(
     async (
       searchId: string,
@@ -307,108 +388,64 @@ export const useSavedSearches = (): {
         filters?: SavedSearchFilters;
         notificationsEnabled?: boolean;
       },
-    ) => {
+    ): Promise<boolean> => {
       try {
-        await api.put(`/api/profiles/me/saved-searches/${searchId}`, updates);
-
-        // Update in store
-        updateSearchAction(searchId, updates);
-
-        await queryClient.invalidateQueries({ queryKey: ['savedSearches'] });
-
-        toast.success('Search updated successfully');
+        await updateSearchMutation.mutateAsync({ searchId, updates });
         return true;
-      } catch (error: unknown) {
-        const errorMessage = getErrorMessage(error, 'Failed to update search');
-        toast.error(errorMessage);
-        setError(errorMessage);
+      } catch {
         return false;
       }
     },
-    [updateSearchAction, setError, queryClient],
+    [updateSearchMutation],
   );
 
-  // Toggle notifications for a search using Zustand store
   const toggleNotifications = useCallback(
-    async (searchId: string, enabled: boolean) => {
+    async (searchId: string, enabled: boolean): Promise<boolean> => {
+      if (!searchId) {
+        toast.error(t('search.widgets.savedSearches.invalidSearch'));
+        return false;
+      }
       try {
-        if (!searchId) {
-          throw new Error('Invalid saved search');
-        }
-        await api.put(`/api/profiles/me/saved-searches/${searchId}/notifications`, { enabled });
-
-        // Toggle in store
-        toggleNotificationsAction(searchId);
-
-        await queryClient.invalidateQueries({ queryKey: ['savedSearches'] });
-
-        toast.success(
-          enabled ? t('search.enableNotifications') : t('search.disableNotifications')
-        );
+        await toggleNotificationsMutation.mutateAsync({ searchId, enabled });
         return true;
-      } catch (error: unknown) {
-        const message = getErrorMessage(error, 'Failed to update notifications');
-        toast.error(message);
-        setError(message);
+      } catch {
         return false;
       }
     },
-    [toggleNotificationsAction, setError, queryClient, t],
+    [toggleNotificationsMutation, t],
   );
 
-  // Check if a search exists by name or query
   const searchExists = useCallback(
-    (name: string, query?: string) => {
-      return searches.some(
+    (name: string, query?: string): boolean =>
+      searches.some(
         (search) =>
           search.name.toLowerCase() === name.toLowerCase() ||
-          (query && search.query.toLowerCase() === query.toLowerCase()),
-      );
-    },
+          (query !== undefined && search.query.toLowerCase() === query.toLowerCase()),
+      ),
     [searches],
   );
 
-  // Get search by ID
   const getSearchById = useCallback(
-    (searchId: string) => {
-      return searches.find((search) => search.id === searchId);
-    },
+    (searchId: string): SavedSearch | undefined => searches.find((search) => search.id === searchId),
     [searches],
   );
 
-  // Load saved searches on mount
-  useEffect(() => {
-    if (
-      !hasFetchedRef.current &&
-      searches.length === 0 &&
-      !isLoading
-    ) {
-      hasFetchedRef.current = true;
-      fetchSavedSearchesCallback();
-    }
-  }, [searches.length, isLoading, fetchSavedSearchesCallback]);
+  const error = listQuery.error
+    ? getErrorMessage(listQuery.error, t('search.widgets.savedSearches.loadFailed'))
+    : null;
 
   return {
-    // State
     searches,
-    isLoading,
+    isLoading: listQuery.isLoading,
     isSaving: saveSearchMutation.isPending,
     error,
-    lastSynced: null, // Not implemented in Zustand store yet
-
-    // Actions
-    fetchSavedSearches: fetchSavedSearchesCallback,
     saveSearch,
     deleteSavedSearch,
     updateSearch,
     toggleNotifications,
-
-    // Utilities
     searchExists,
     getSearchById,
-
-    // Computed
     hasSearches: searches.length > 0,
-    isAuthenticated: true, // Authentication is now handled by the API layer
+    isAuthenticated,
   };
 };

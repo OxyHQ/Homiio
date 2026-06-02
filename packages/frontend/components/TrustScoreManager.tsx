@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { colors } from '@/styles/colors';
+import { shadowToken } from '@/styles/shadows';
 import { useTrustScore } from '@/hooks/useTrustScore';
 import { useActiveProfile } from '@/hooks/useProfileQueries';
 import { TrustScore } from './TrustScore';
@@ -256,11 +257,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryLight,
     margin: 20,
     borderRadius: 12,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadowToken({ y: 2, blur: 4, color: colors.shadow, opacity: 0.1, elevation: 3 }),
   },
   scoreDescription: {
     fontSize: 16,
@@ -287,11 +284,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     marginBottom: 12,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    ...shadowToken({ y: 1, blur: 2, color: colors.shadow, opacity: 0.1, elevation: 2 }),
   },
   factorHeader: {
     flexDirection: 'row',
@@ -333,11 +326,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadowToken({ y: 2, blur: 4, color: colors.shadow, opacity: 0.1, elevation: 3 }),
     borderLeftWidth: 4,
     borderLeftColor: colors.primaryColor,
   },

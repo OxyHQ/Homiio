@@ -31,7 +31,7 @@ import { useMediaQuery } from 'react-responsive';
 
 import { PropertyCard } from '@/components/PropertyCard';
 import { colors } from '@/styles/colors';
-import { gridGap, radius } from '@/constants/styles';
+import { PROPERTY_GRID_GAP, radius } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
 
 interface PropertyResultsGridProps {
@@ -40,7 +40,7 @@ interface PropertyResultsGridProps {
   highlightedPropertyId?: string | null;
   /** Override default column counts per breakpoint. */
   columns?: Partial<{ sm: number; md: number; lg: number; xl: number }>;
-  /** Override the gap between cells. Defaults to `gridGap.comfortable`. */
+  /** Override the gap between cells. Defaults to the shared `PROPERTY_GRID_GAP`. */
   gap?: number;
   /** Container style. */
   style?: StyleProp<ViewStyle>;
@@ -60,7 +60,7 @@ export const PropertyResultsGrid: React.FC<PropertyResultsGridProps> = ({
   onPropertyPress,
   highlightedPropertyId,
   columns,
-  gap = gridGap.comfortable,
+  gap = PROPERTY_GRID_GAP,
   style,
   renderFooter,
 }) => {

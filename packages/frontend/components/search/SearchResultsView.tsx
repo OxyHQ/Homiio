@@ -607,10 +607,23 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
+  // The explore surface is mounted inside a fixed-viewport shell (see
+  // `app/_layout.tsx`), so on web it fills that bounded height and hides its own
+  // overflow — the page never scrolls; only the list column does. `height:'100%'`
+  // + `overflow:'hidden'` are web-only CSS values RN's `ViewStyle` lacks, so the
+  // web block is typed whole (same cast pattern as `topBar`/`listScroll` below).
+  container: Platform.select<ViewStyle>({
+    web: {
+      flex: 1,
+      height: '100%',
+      overflow: 'hidden',
+      backgroundColor: colors.background,
+    } as unknown as ViewStyle,
+    default: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+  }) as ViewStyle,
   topBar: Platform.select<ViewStyle>({
     web: {
       position: 'sticky',
@@ -652,20 +665,56 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  splitRow: {
-    flex: 1,
-    flexDirection: 'row',
-  },
-  splitListColumn: {
-    flex: 1,
-    minWidth: 0,
-  },
-  splitMapColumn: {
-    flex: 1,
-    minWidth: 0,
-    borderLeftWidth: hairline.width,
-    borderLeftColor: hairline.color,
-  },
+  // The split row fills the height left under the sticky `topBar`. On web a flex
+  // child defaults to `min-height:auto`, which would let the row grow to its
+  // content instead of clamping to the shell — so we pin `minHeight:0` (web-only
+  // CSS value) to make the inner list column the scroll boundary.
+  splitRow: Platform.select<ViewStyle>({
+    web: {
+      flex: 1,
+      minHeight: 0,
+      flexDirection: 'row',
+    } as unknown as ViewStyle,
+    default: {
+      flex: 1,
+      flexDirection: 'row',
+    },
+  }) as ViewStyle,
+  // The list column owns its own vertical scroll (`listScroll` → `overflow:auto`).
+  // For that inner scroller to get a bounded height it must NOT grow with its
+  // content, so on web the column hides overflow and allows itself to shrink
+  // (`minHeight:0`). `splitMapColumn` next to it stays pinned full-height.
+  splitListColumn: Platform.select<ViewStyle>({
+    web: {
+      flex: 1,
+      minWidth: 0,
+      minHeight: 0,
+      overflow: 'hidden',
+    } as unknown as ViewStyle,
+    default: {
+      flex: 1,
+      minWidth: 0,
+    },
+  }) as ViewStyle,
+  // Pinned, full-height map column. The map fills it absolutely and never
+  // scrolls — scrolling the list (left) leaves this column fixed. Slightly wider
+  // than the list on very wide screens for an edge-to-edge Airbnb-2026 map.
+  splitMapColumn: Platform.select<ViewStyle>({
+    web: {
+      flex: 1.15,
+      minWidth: 0,
+      height: '100%',
+      overflow: 'hidden',
+      borderLeftWidth: hairline.width,
+      borderLeftColor: hairline.color,
+    } as unknown as ViewStyle,
+    default: {
+      flex: 1,
+      minWidth: 0,
+      borderLeftWidth: hairline.width,
+      borderLeftColor: hairline.color,
+    },
+  }) as ViewStyle,
   fullColumn: {
     flex: 1,
   },
@@ -676,15 +725,21 @@ const styles = StyleSheet.create({
   listScrollContent: {
     paddingBottom: spacing['4xl'],
   },
+  // Airbnb-2026 results header: the gutter matches the grid below it and the
+  // rest of the property-grid screens (`spacing.lg`), with comfortable top
+  // breathing room and a tighter gap down to the first card.
   resultsHeader: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
   },
   resultsTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: colors.COLOR_BLACK,
   },
+  // Grid gutter aligned to the header gutter and every other property-grid
+  // screen (`spacing.lg`) for a clean, consistent left edge across the app.
   gridPadding: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,

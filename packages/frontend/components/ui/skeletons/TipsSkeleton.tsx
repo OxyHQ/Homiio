@@ -3,6 +3,7 @@ import { View, ScrollView } from 'react-native';
 import { Skeleton } from '@oxyhq/bloom';
 import { TextLines } from './TextLines';
 import { colors } from '@/styles/colors';
+import { shadowToken } from '@/styles/shadows';
 
 interface TipsSkeletonProps {
   itemCount?: number;
@@ -35,11 +36,7 @@ function TipCardSkeleton() {
         borderRadius: 12,
         marginBottom: 16,
         overflow: 'hidden',
-        shadowColor: colors.COLOR_BLACK,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 3,
+        ...shadowToken({ y: 1, blur: 8, color: colors.COLOR_BLACK, opacity: 0.08, elevation: 3 }),
       }}>
       {/* Gradient Header */}
       <Skeleton.Box width="100%" height={120} borderRadius={0} />

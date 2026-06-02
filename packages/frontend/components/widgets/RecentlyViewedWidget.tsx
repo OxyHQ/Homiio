@@ -10,6 +10,7 @@ import { useOxy } from '@oxyhq/services';
 import { BaseWidget } from './BaseWidget';
 import { PropertyCard } from '@/components/PropertyCard';
 import { colors } from '@/styles/colors';
+import { shadowToken } from '@/styles/shadows';
 
 
 export function RecentlyViewedWidget() {
@@ -191,11 +192,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: colors.COLOR_BLACK,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadowToken({ y: 2, blur: 4, color: colors.COLOR_BLACK, opacity: 0.15, elevation: 3 }),
     transform: [{ translateY: -18 }],
     borderWidth: 1,
     borderColor: 'rgba(0, 0, 0, 0.1)',

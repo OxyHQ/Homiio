@@ -10,6 +10,7 @@ import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/styles/colors';
+import { shadowToken } from '@/styles/shadows';
 
 import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
@@ -287,8 +288,7 @@ export default function CityPropertiesPage() {
             <LinearGradient
               colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.45)', 'rgba(0,0,0,0.72)']}
               locations={[0, 0.55, 1]}
-              style={styles.heroScrim}
-              pointerEvents="none"
+              style={[styles.heroScrim, { pointerEvents: 'none' }]}
             />
             <View style={styles.heroContent}>
               <Text style={styles.heroTitle}>{city.name}</Text>
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
   },
   loadingText: {
     marginTop: 16,
@@ -479,11 +479,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    ...shadowToken({ y: 2, blur: 8, color: colors.shadow, opacity: 0.08, elevation: 3 }),
   },
   statNumber: {
     fontSize: 24,
@@ -531,11 +527,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     backgroundColor: colors.white,
     borderRadius: 20,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    ...shadowToken({ y: 1, blur: 3, color: colors.shadow, opacity: 0.1, elevation: 2 }),
   },
   sortButtonText: {
     fontSize: 14,
@@ -561,11 +553,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: 25,
     marginRight: 12,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    ...shadowToken({ y: 1, blur: 3, color: colors.shadow, opacity: 0.1, elevation: 2 }),
   },
   activeFilterChip: {
     backgroundColor: colors.primaryColor,
@@ -588,11 +576,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    ...shadowToken({ y: 2, blur: 8, color: colors.shadow, opacity: 0.08, elevation: 3 }),
   },
   stickyHeaderWrapper: {
     zIndex: 100,

@@ -42,8 +42,7 @@ interface Props {
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
-interface FeatureRow {
-    key: string;
+interface FeatureRowData {
     label: string;
     /** Amenity catalog id to resolve a PNG; `undefined` ⇒ always use the glyph. */
     imageId?: string;
@@ -51,12 +50,17 @@ interface FeatureRow {
     icon: IoniconName;
 }
 
+/** Keyed variant used only for the list; `key` is consumed by the cell, never the row. */
+interface FeatureRow extends FeatureRowData {
+    key: string;
+}
+
 /**
  * One feature line: PNG-or-Ionicons + label. Mirrors AmenitiesGrid's
  * `AmenityRow` (same icon box + fallback) and delegates layout to the shared
  * `DetailIconRow` so it can't drift from the amenities grid.
  */
-const FeatureIconRow: React.FC<FeatureRow> = ({ label, imageId, icon }) => (
+const FeatureIconRow: React.FC<FeatureRowData> = ({ label, imageId, icon }) => (
     <DetailIconRow
         icon={<DetailIcon image={imageId ? getIconArt(imageId) : undefined} fallbackIcon={icon} />}
         label={label}
@@ -105,9 +109,9 @@ export const PropertyFeatures: React.FC<Props> = ({ property }) => {
     return (
         <Section title={t('Property Features')}>
             <DetailIconGrid>
-                {rows.map((row) => (
-                    <DetailIconCell key={row.key}>
-                        <FeatureIconRow {...row} />
+                {rows.map(({ key, ...data }) => (
+                    <DetailIconCell key={key}>
+                        <FeatureIconRow {...data} />
                     </DetailIconCell>
                 ))}
             </DetailIconGrid>

@@ -58,12 +58,15 @@ export function PropertyBookingWidget({ propertyId }: PropertyBookingWidgetProps
 
   const landlordProfileId = resolveProfileId(apiProperty?.profileId);
 
-  // Host profile for the card's host line + Super-host badge. Shares the
-  // `['profile', id]` cache key so it doesn't duplicate any other profile load.
+  // Host profile for the card's host line + Super-host badge. This is the
+  // listing OWNER's public profile, so it reads from the public (no-auth)
+  // profile route — it must render for logged-out visitors without 401ing.
+  // Shares the `['profile', id]` cache key so it doesn't duplicate any other
+  // profile load.
   const { data: landlordProfile = null } = useQuery<Profile | null>({
     queryKey: ['profile', landlordProfileId],
     enabled: Boolean(landlordProfileId),
-    queryFn: () => profileService.getProfileById(landlordProfileId ?? ''),
+    queryFn: () => profileService.getPublicProfileById(landlordProfileId ?? ''),
   });
 
   if (!propertyId || !apiProperty) {

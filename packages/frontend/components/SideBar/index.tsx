@@ -294,7 +294,7 @@ export function SideBar() {
         icon: Search,
         iconActive: Search,
         label: t('sidebar.navigation.explore'),
-        route: '/search',
+        route: '/explore',
       },
     ];
 
@@ -1073,8 +1073,7 @@ export function SideBar() {
       <Portal>
         <View
           className="flex-row"
-          style={StyleSheet.absoluteFill}
-          pointerEvents="box-none"
+          style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}
         >
           {mobileDrawerOpen && (
             <>

@@ -2,6 +2,7 @@ import React, { useCallback, useMemo } from 'react';
 import { View, Image, StyleSheet, Pressable, TouchableOpacity, ViewStyle, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
+import { boxShadow } from '@/styles/shadows';
 import { radius, spacing } from '@/constants/styles';
 import { PriceUnit, Property } from '@homiio/shared-types';
 import {
@@ -612,9 +613,9 @@ export function PropertyCard({
           photo's top-right corner. */}
       {showSaveButton && (
         <View
-          pointerEvents="box-none"
           style={[
             styles.mediaOverlay,
+            { pointerEvents: 'box-none' },
             orientation === 'horizontal'
               ? { width: finalImageHeight, height: finalImageHeight }
               : { left: 0, right: 0, aspectRatio: isGrid ? gridAspectRatio : 1 },
@@ -879,9 +880,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 6,
     paddingVertical: 0,
-    ...(Platform.OS === 'web'
-      ? { boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }
-      : { shadowColor: colors.COLOR_BLACK, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }),
+    boxShadow: boxShadow({ y: 1, blur: 2, color: colors.COLOR_BLACK, opacity: 0.1 }),
+    ...(Platform.OS === 'web' ? null : { elevation: 2 }),
     justifyContent: 'center',
   },
   ratingBadgeText: {
@@ -901,8 +901,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.COLOR_BLACK_LIGHT_6,
     ...(Platform.OS === 'web'
-      ? { boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }
-      : { shadowColor: colors.COLOR_BLACK, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 }),
+      ? { boxShadow: boxShadow({ y: 1, blur: 3, color: colors.COLOR_BLACK, opacity: 0.06 }) }
+      : { boxShadow: boxShadow({ y: 1, blur: 3, color: colors.COLOR_BLACK, opacity: 0.04 }), elevation: 1 }),
   },
   noteEmpty: {
     backgroundColor: colors.COLOR_BLACK_LIGHT_8,

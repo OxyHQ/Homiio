@@ -47,7 +47,7 @@ export const MapMarkerPopover: React.FC<MapMarkerPopoverProps> = ({
   }, [onPress]);
 
   return (
-    <View style={[styles.container, style]} pointerEvents="box-none">
+    <View style={[styles.container, style, { pointerEvents: 'box-none' }]}>
       <View style={[styles.card, cardShadow.lg]}>
         <View style={styles.dismissAnchor}>
           <Button

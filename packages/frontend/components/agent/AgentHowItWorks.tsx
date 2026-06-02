@@ -68,8 +68,7 @@ const StepCard: React.FC<StepCardProps> = ({ index, title, body, imageUrl, heigh
       <LinearGradient
         colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.25)']}
         locations={[0.5, 1]}
-        style={styles.photoScrim}
-        pointerEvents="none"
+        style={[styles.photoScrim, { pointerEvents: 'none' }]}
       />
       <View style={styles.badge}>
         <BloomText style={styles.badgeText}>{index}</BloomText>

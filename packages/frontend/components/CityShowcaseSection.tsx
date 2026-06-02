@@ -35,6 +35,7 @@ import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
 import type { City } from '@homiio/shared-types';
 
 import { colors } from '@/styles/colors';
+import { textShadow } from '@/styles/shadows';
 import { cardShadow, gridGap, radius, spacing, tracker } from '@/constants/styles';
 import { cityRegionName, getCityImageSource } from '@/utils/cityDisplay';
 
@@ -182,15 +183,13 @@ const CityCard: React.FC<CityCardProps> = ({ city, width, height, onPress }) => 
       ) : (
         <LinearGradient
           colors={[colors.primaryColor, colors.secondaryLight]}
-          style={styles.cardImage}
-          pointerEvents="none"
+          style={[styles.cardImage, { pointerEvents: 'none' }]}
         />
       )}
       <LinearGradient
         colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.55)']}
         locations={[0.4, 1]}
-        style={styles.cardScrim}
-        pointerEvents="none"
+        style={[styles.cardScrim, { pointerEvents: 'none' }]}
       />
       <View style={styles.cardCopy}>
         <BloomText style={styles.cardCity}>{city.name}</BloomText>
@@ -285,16 +284,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.white,
     letterSpacing: tracker.tight,
-    textShadowColor: 'rgba(0, 0, 0, 0.35)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+    textShadow: textShadow({ y: 1, blur: 4, color: 'rgba(0, 0, 0, 0.35)' }),
   },
   cardSubtitle: {
     fontSize: 13,
     fontWeight: '500',
     color: 'rgba(255, 255, 255, 0.92)',
-    textShadowColor: 'rgba(0, 0, 0, 0.35)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadow: textShadow({ y: 1, blur: 3, color: 'rgba(0, 0, 0, 0.35)' }),
   },
 });

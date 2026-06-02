@@ -408,7 +408,7 @@ const MONO_FONT = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
 const styles = StyleSheet.create({
   scrollRoot: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,

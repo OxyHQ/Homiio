@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Platform, View, StyleSheet, AppState, AppStateStatus } from 'react-native';
+import { Platform, View, StyleSheet, AppState, AppStateStatus, type ViewStyle } from 'react-native';
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
@@ -92,6 +92,23 @@ export default function RootLayout() {
    */
   const useNativeTabBar = Platform.OS !== 'web' && !isScreenNotMobile;
 
+  /**
+   * The explore screen (`/explore`) is a FIXED-VIEWPORT app screen, not a
+   * document that page-scrolls: its map is pinned full-height on the right and
+   * only the results list scrolls on the left (Airbnb-2026). On web/wide it must
+   * therefore render OUTSIDE the page-level `Animated.ScrollView` so the page
+   * itself never scrolls — otherwise scrolling drags the map along with the
+   * list. We gate on `/explore` and only take the fixed shell when the
+   * persistent shell is in use (web or wide native) — the native tab-bar branch
+   * is untouched. (The legacy `/search` path is a redirect to `/explore`, so it
+   * never needs the fixed viewport itself.)
+   *
+   * Derived from `usePathname()` (no effect): `startsWith('/explore/')` also
+   * covers `/explore/<query>` so deep-linked searches get the same fixed viewport.
+   */
+  const isExploreRoute = pathname === '/explore' || pathname.startsWith('/explore/');
+  const useFixedViewport = !useNativeTabBar && isExploreRoute;
+
   const styles = useMemo(() => StyleSheet.create({
     container: {
       ...(isScreenNotMobile ? {
@@ -117,6 +134,80 @@ export default function RootLayout() {
       } : {}),
       backgroundColor: colors.primaryLight,
     },
+    // --- Fixed-viewport shell (explore route) ---
+    // A non-scrolling page: the shell is clamped to the viewport height and
+    // hides overflow, so each region (SideBar / Slot / RightBar) owns its own
+    // internal scroll. `100dvh` (the dynamic viewport unit — accounts for mobile
+    // browser chrome, with `100vh` as the inherited fallback on engines without
+    // it) and `overflow:'hidden'` are web-only CSS values absent from RN's
+    // `ViewStyle`, so the web block is typed as a whole — mirroring the existing
+    // web-only style casts in `SearchResultsView`/`RightBar`.
+    fixedShell: Platform.select<ViewStyle>({
+      web: {
+        height: '100dvh',
+        overflow: 'hidden',
+        width: '100%',
+        marginHorizontal: 'auto',
+        flexDirection: 'row',
+      } as unknown as ViewStyle,
+      default: {
+        flex: 1,
+        width: '100%',
+        flexDirection: 'row',
+      },
+    }) as ViewStyle,
+    // Main region of the fixed shell: a full-height row holding the Slot
+    // (results surface) and the RightBar. Fills the space between SideBar and
+    // the viewport edge and never grows past it (`overflow:'hidden'`).
+    fixedMain: Platform.select<ViewStyle>({
+      web: {
+        flex: 1,
+        minWidth: 0,
+        height: '100%',
+        overflow: 'hidden',
+        maxWidth: 1800,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+      } as unknown as ViewStyle,
+      default: {
+        flex: 1,
+        minWidth: 0,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        maxWidth: 1800,
+      },
+    }) as ViewStyle,
+    // The Slot wrapper inside the fixed shell. Mirrors `mainContentWrapper`'s
+    // brand-light surface + right hairline, but is height-bounded so the
+    // explore surface (its own sticky top bar + split row) can size to it and
+    // scroll only its list column.
+    fixedSlotWrapper: Platform.select<ViewStyle>({
+      web: {
+        flex: 1,
+        minWidth: 0,
+        height: '100%',
+        overflow: 'hidden',
+        borderRightWidth: StyleSheet.hairlineWidth,
+        borderRightColor: colors.border,
+        backgroundColor: colors.primaryLight,
+      } as unknown as ViewStyle,
+      default: {
+        flex: 1,
+        minWidth: 0,
+        borderRightWidth: StyleSheet.hairlineWidth,
+        borderRightColor: colors.border,
+        backgroundColor: colors.primaryLight,
+      },
+    }) as ViewStyle,
+    // The RightBar column inside the fixed shell: a full-height right rail that
+    // scrolls internally if its widgets overflow (the page no longer scrolls).
+    fixedRightColumn: Platform.select<ViewStyle>({
+      web: {
+        height: '100%',
+        overflow: 'auto',
+      } as unknown as ViewStyle,
+      default: {},
+    }) as ViewStyle,
   }), [isScreenNotMobile]);
   const layoutScrollY = useSharedValue(0);
   const layoutScrollHandler = useAnimatedScrollHandler({
@@ -244,6 +335,37 @@ export default function RootLayout() {
                                           <SideBar />
                                           <Slot />
                                         </>
+                                      ) : useFixedViewport ? (
+                                        /*
+                                          Explore route (web/wide): a FIXED-VIEWPORT
+                                          app screen. The shell is clamped to the
+                                          viewport height with `overflow:'hidden'`,
+                                          so the page itself never scrolls — the
+                                          explore surface pins its map full-height
+                                          and scrolls only its results list. Same
+                                          left→right arrangement as the scrolling
+                                          shell (SideBar · Slot · RightBar) but
+                                          WITHOUT the outer `Animated.ScrollView`.
+                                          We still provide `LayoutScrollContext`
+                                          (with the shared, here-unscrolled
+                                          `scrollY`) so consumers that read it —
+                                          `Header`/feed/detail — never crash; the
+                                          explore surface uses its own sticky top
+                                          bar and doesn't depend on page scroll.
+                                        */
+                                        <LayoutScrollProvider value={layoutScrollContextValue}>
+                                          <View style={styles.fixedShell}>
+                                            <SideBar />
+                                            <View style={styles.fixedMain}>
+                                              <View style={styles.fixedSlotWrapper}>
+                                                <Slot />
+                                              </View>
+                                              <View style={styles.fixedRightColumn}>
+                                                <RightBar />
+                                              </View>
+                                            </View>
+                                          </View>
+                                        </LayoutScrollProvider>
                                       ) : (
                                         <LayoutScrollProvider value={layoutScrollContextValue}>
                                           <Animated.ScrollView

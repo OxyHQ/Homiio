@@ -238,7 +238,10 @@ class ProfileService {
   }
 
   /**
-   * Get profile by ID
+   * Get profile by ID (authenticated route).
+   *
+   * Mounted under `oxy.auth()`, so this requires a signed-in user. Use it only
+   * for the current user's own/account-scoped profile reads.
    */
   async getProfileById(profileId: string): Promise<Profile> {
     try {
@@ -247,6 +250,23 @@ class ProfileService {
     } catch (error) {
       throw error;
     }
+  }
+
+  /**
+   * Get a public profile by ID (no authentication required).
+   *
+   * Backed by the backend's public, read-only profile route
+   * (`GET /api/public/profiles/:profileId`), which shares the same controller
+   * as {@link getProfileById} but is mounted OUTSIDE `oxy.auth()`. Use this for
+   * listing-owner / host profiles surfaced to logged-out visitors (e.g. the
+   * property-detail page) so the read never 401s. `requireAuth: false` keeps the
+   * client from sending an `Authorization` header it doesn't have.
+   */
+  async getPublicProfileById(profileId: string): Promise<Profile> {
+    const response = await api.get(`/api/public/profiles/${profileId}`, {
+      requireAuth: false,
+    });
+    return response.data.data;
   }
 }
 

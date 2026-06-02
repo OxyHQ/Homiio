@@ -19,7 +19,7 @@ import { useMediaQuery } from 'react-responsive';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 
 import { colors } from '@/styles/colors';
-import { gridGap, radius, spacing } from '@/constants/styles';
+import { PROPERTY_GRID_GAP, radius, spacing } from '@/constants/styles';
 
 interface PropertyResultsGridSkeletonProps {
   count?: number;
@@ -32,7 +32,7 @@ const DEFAULT_COLUMNS = { sm: 1, md: 2, lg: 2, xl: 3 };
 
 export const PropertyResultsGridSkeleton: React.FC<
   PropertyResultsGridSkeletonProps
-> = ({ count = 6, columns, gap = gridGap.comfortable, style }) => {
+> = ({ count = 6, columns, gap = PROPERTY_GRID_GAP, style }) => {
   const isMd = useMediaQuery({ minWidth: 640 });
   const isLg = useMediaQuery({ minWidth: 1024 });
   const isXL = useMediaQuery({ minWidth: 1280 });

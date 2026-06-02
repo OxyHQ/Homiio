@@ -10,6 +10,7 @@
  * sync when either side changes.
  */
 
+import type { StyleSpecification } from 'maplibre-gl';
 import type {
   ClusterOptions,
   LonLat,
@@ -20,9 +21,6 @@ import type {
 const MAPLIBRE_VERSION = '4.7.1';
 const MAPLIBRE_JS_URL = `https://unpkg.com/maplibre-gl@${MAPLIBRE_VERSION}/dist/maplibre-gl.js`;
 const MAPLIBRE_CSS_URL = `https://unpkg.com/maplibre-gl@${MAPLIBRE_VERSION}/dist/maplibre-gl.css`;
-
-/** Free, keyless OpenStreetMap-based vector style (positron/bright are alternates). */
-export const DEFAULT_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
 
 /**
  * Attribution markup for the compact `AttributionControl`. Exported so the web
@@ -35,7 +33,13 @@ export const ATTRIBUTION =
 export interface MapDocumentOptions {
   center: LonLat;
   zoom: number;
-  styleURL: string;
+  /**
+   * MapLibre style for the document. Normally a sanitized {@link
+   * StyleSpecification} object (hardened by `sanitizeMapStyle` so the OpenFreeMap
+   * liberty layers can't throw on null-numeric tile properties); falls back to
+   * the bare style URL string when the host couldn't fetch/sanitize it.
+   */
+  style: string | StyleSpecification;
   markerStyle: Required<MarkerStyle>;
   cluster: Required<ClusterOptions>;
   enableAddressLookup: boolean;
@@ -91,12 +95,24 @@ ${PRICE_PILL_CSS}`;
  * differ.
  */
 const buildScript = (options: MapDocumentOptions): string => {
-  const { center, zoom, styleURL, cluster, enableAddressLookup } = options;
+  const { center, zoom, style, cluster, enableAddressLookup } = options;
   return `(function(){
   const isRN = !!window.ReactNativeWebView;
   const post = (msg)=>{const d=JSON.stringify(msg); if(isRN) window.ReactNativeWebView.postMessage(d); else window.parent&&window.parent.postMessage(d,'*');};
-  const map=new maplibregl.Map({container:'map',style:${JSON.stringify(styleURL)},center:${JSON.stringify(center)},zoom:${JSON.stringify(zoom)},attributionControl:false,hash:false});
+  const map=new maplibregl.Map({container:'map',style:${JSON.stringify(style)},center:${JSON.stringify(center)},zoom:${JSON.stringify(zoom)},attributionControl:false,hash:false});
   map.addControl(new maplibregl.AttributionControl({compact:true,customAttribution:${JSON.stringify(ATTRIBUTION)}}));
+
+  // The OpenFreeMap liberty poi layers set icon-image to the OSM feature
+  // class/subclass (e.g. office); many such names have no image in the sprite,
+  // so MapLibre logs a missing-image error and fires styleimagemissing. Supply a
+  // 1x1 transparent placeholder for any missing id (idempotent) so no POI class
+  // can request a non-existent sprite image. Mirrors installMissingImageFallback
+  // in mapStyle.ts for the native WebView document.
+  map.on('styleimagemissing', (e) => {
+    const missingId = e && e.id;
+    if (!missingId || map.hasImage(missingId)) return;
+    map.addImage(missingId, { width: 1, height: 1, data: new Uint8Array([0, 0, 0, 0]) });
+  });
 
   const toGeoJSON=(list)=>({type:'FeatureCollection',features:(Array.isArray(list)?list:[]).map(p=>({
     type:'Feature', id: p.id, geometry:{type:'Point',coordinates:p.coordinates},
