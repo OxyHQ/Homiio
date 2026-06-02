@@ -5,18 +5,25 @@
  * mounted by the caller). When `open` is true this panel presents the active
  * step. Presentation is breakpoint-driven from a SINGLE component:
  *
- *  - Wide screens (`useIsScreenNotMobile()`): an inline, elevated card the
- *    caller anchors under the pill.
- *  - Narrow screens: a full-screen `Modal` overlay/sheet.
+ *  - Wide screens (`useIsScreenNotMobile()`): a COMPACT centered dialog
+ *    (`CenteredDialog`) over a dimmed page. It shows ONLY the single tapped step
+ *    — a contextual title + close, the step's content, and a primary "Done" that
+ *    applies the draft to the live query (so the pill updates) and closes. There
+ *    is no multi-step back/next chrome on wide; the pill's own circular Search
+ *    button runs the actual search.
+ *  - Narrow screens: a full-screen slide-up `Modal` sheet that walks the full
+ *    Where → Type → (Dates) → Price flow with a browse-mode toggle and
+ *    Back/Next/Search footer.
  *
  * Steps (long-term, the default): Where → Type → Price. A Long-term/Vacation
  * toggle reveals an extra Dates step in vacation mode (Where → Type → Dates →
  * Price). Long-term mode never shows a calendar.
  *
- * The panel edits a LOCAL draft of the {@link SearchQuery} and only commits it
- * (via `onSubmit`) when the user presses Search, at which point it also records
- * the search in the persisted recent-searches store. This keeps the live
- * `searchQueryStore` stable while the user composes.
+ * The panel edits a LOCAL draft of the {@link SearchQuery}. The narrow sheet
+ * commits it (via `onSubmit`) when the user presses Search, recording the search
+ * in the persisted recent-searches store. The wide dialog applies it (via
+ * `onApply`, defaulting to `onSubmit`) when the user presses Done. This keeps
+ * the live `searchQueryStore` stable while the user composes.
  */
 import React, { useCallback, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -25,6 +32,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@oxyhq/bloom/button';
+import { CenteredDialog } from '@oxyhq/bloom/dialog';
 import * as SegmentedControl from '@oxyhq/bloom/segmented-control';
 import { H3 } from '@oxyhq/bloom/typography';
 
@@ -68,6 +76,27 @@ const BROWSE_MODE_LABELS: Record<BrowseMode, { key: string; fallback: string }> 
 const LONG_TERM_STEPS: readonly SearchStep[] = ['where', 'type', 'price'];
 const VACATION_STEPS: readonly SearchStep[] = ['where', 'type', 'dates', 'price'];
 
+/**
+ * Contextual title for the compact wide dialog's header — the short label of the
+ * single tapped step (mirrors the collapsed pill's column labels). The narrow
+ * sheet keeps its own generic "Search" title and per-step content headings.
+ */
+const STEP_TITLE: Record<SearchStep, { key: string; fallback: string }> = {
+  where: { key: 'searchBar.long.where', fallback: 'Where' },
+  type: { key: 'searchBar.long.propertyType', fallback: 'Property type' },
+  dates: { key: 'searchBar.vacation.when', fallback: 'When' },
+  price: { key: 'search.step.price.title', fallback: 'Price range' },
+};
+
+/**
+ * Compact wide-dialog width. The dialog shows a SINGLE step, so it stays snug
+ * and centered. Bloom's `CenteredDialog` caps the height itself (80% of the
+ * viewport, body scrolls) so the longer steps — the two-month calendar, the
+ * city autocomplete list — scroll inside the card rather than growing it
+ * off-screen; we only set the width here.
+ */
+const DIALOG_MAX_WIDTH = 420;
+
 /** Build a short recent-search label from a committed query. */
 function buildRecentLabel(query: SearchQuery): { label: string; sublabel?: string } {
   const where = query.location?.shortLabel ?? 'Anywhere';
@@ -99,9 +128,18 @@ interface SearchPanelProps {
   initialStep?: SearchStep;
   /**
    * Commit handler. Receives the fully-composed query. The caller persists it
-   * to the active-search store and navigates to results.
+   * to the active-search store and navigates to results. Used by the narrow
+   * sheet's "Search" button.
    */
   onSubmit: (query: SearchQuery) => void;
+  /**
+   * Apply handler for the wide dialog's "Done": persists the composed query to
+   * the live store (so the collapsed pill updates) WITHOUT navigating — the
+   * pill's own circular Search button runs the actual search. Defaults to
+   * {@link onSubmit} for callers (e.g. the results route) where applying and
+   * submitting are the same action.
+   */
+  onApply?: (query: SearchQuery) => void;
 }
 
 export const SearchPanel: React.FC<SearchPanelProps> = ({
@@ -110,11 +148,15 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
   initialQuery,
   initialStep = 'where',
   onSubmit,
+  onApply,
 }) => {
   const { t } = useTranslation();
   const isWide = useIsScreenNotMobile();
   const insets = useSafeAreaInsets();
   const addRecentSearch = useRecentSearchesStore((s) => s.addSearch);
+  // Apply (wide "Done") falls back to submit when the caller doesn't separate
+  // the two (the results route applies in place; the home hero navigates).
+  const applyQuery = onApply ?? onSubmit;
 
   // Local draft, seeded once from `initialQuery`. The panel early-returns
   // `null` when `open` is false (on both breakpoints), so it fully unmounts
@@ -165,11 +207,19 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
     setStep((prev) => (!isShortTerm && prev === 'dates' ? 'price' : prev));
   }, []);
 
-  const handleSelectLocation = useCallback((location: SearchLocation) => {
-    setDraft((prev) => ({ ...prev, location }));
-    setWhereText(location.label);
-    setStep('type');
-  }, []);
+  const handleSelectLocation = useCallback(
+    (location: SearchLocation) => {
+      setDraft((prev) => ({ ...prev, location }));
+      setWhereText(location.label);
+      // The narrow sheet walks the multi-step flow, so picking a place advances
+      // to the type step. The wide dialog shows ONLY the tapped step, so it
+      // stays on "where" with the now-filled input; the user presses Done.
+      if (!isWide) {
+        setStep('type');
+      }
+    },
+    [isWide],
+  );
 
   const handleSelectRecent = useCallback(
     (recent: RecentSearch) => {
@@ -224,6 +274,18 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
     onSubmit(draft);
   }, [draft, addRecentSearch, onSubmit]);
 
+  // Wide dialog "Done": push the draft to the live query so the collapsed pill
+  // reflects it, then close. No navigation and no recent-search entry — the pill
+  // updates and the user runs the search from the pill's circular Search button.
+  const handleApply = useCallback(() => {
+    applyQuery(draft);
+  }, [applyQuery, draft]);
+
+  // The wide path renders the step inside Bloom's compact `CenteredDialog`
+  // (whose header already names the step), so the steps drop their redundant
+  // internal heading and tighten their gaps via `compact`. The narrow sheet
+  // (`isWide` is false) keeps the full per-step heading. The two presentations
+  // are mutually exclusive, so `isWide` is the single source for compactness.
   const stepContent = useMemo(() => {
     switch (step) {
       case 'where':
@@ -233,6 +295,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
             onChangeText={setWhereText}
             onSelectLocation={handleSelectLocation}
             onSelectRecent={handleSelectRecent}
+            compact={isWide}
           />
         );
       case 'type':
@@ -241,10 +304,11 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
             offering={draft.offering}
             selected={draft.propertyTypes}
             onToggle={handleToggleType}
+            compact={isWide}
           />
         );
       case 'dates':
-        return <DatesStep value={draft.dates} onChange={handleDatesChange} />;
+        return <DatesStep value={draft.dates} onChange={handleDatesChange} compact={isWide} />;
       case 'price':
         return (
           <PriceStep
@@ -252,6 +316,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
             priceMin={draft.priceMin}
             priceMax={draft.priceMax}
             onChange={handlePriceChange}
+            compact={isWide}
           />
         );
       default:
@@ -261,6 +326,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
     step,
     whereText,
     draft,
+    isWide,
     handleSelectLocation,
     handleSelectRecent,
     handleToggleType,
@@ -307,9 +373,9 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
     <View
       style={[
         styles.footer,
-        // Full-screen (narrow) path pins this footer to the bottom edge, so the
-        // CTA must clear the home indicator. The wide path is an inline card.
-        isWide ? null : { paddingBottom: spacing.md + insets.bottom },
+        // The full-screen sheet pins this footer to the bottom edge, so the CTA
+        // must clear the home indicator.
+        { paddingBottom: spacing.md + insets.bottom },
       ]}
     >
       <Button
@@ -356,27 +422,42 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
     </View>
   );
 
-  const body = (
-    <View style={[styles.panel, isWide ? styles.panelWide : styles.panelFull, cardShadow.lg]}>
-      {header}
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+  // Wide: a COMPACT centered Bloom dialog showing ONLY the single tapped step.
+  // Bloom owns the chrome — a tight title + close header, the scrollable body
+  // (compact padding/gaps by default), and a footer slot with a hairline
+  // separator. We pass the contextual step title, the step content, and a
+  // primary "Done" footer button that applies the draft to the live query (so
+  // the collapsed pill updates) and closes. No browse-mode toggle and no
+  // Back/Next chrome: the pill's circular Search button runs the search.
+  if (isWide) {
+    const stepTitle =
+      t(STEP_TITLE[step].key, STEP_TITLE[step].fallback) || STEP_TITLE[step].fallback;
+    return (
+      <CenteredDialog
+        visible={open}
+        onClose={onClose}
+        title={stepTitle}
+        maxWidth={DIALOG_MAX_WIDTH}
+        closeAccessibilityLabel={t('common.close', 'Close') || 'Close'}
+        footer={
+          <View style={styles.dialogFooter}>
+            <Button
+              variant="primary"
+              size="medium"
+              onPress={handleApply}
+              accessibilityLabel={t('common.done', 'Done') || 'Done'}
+            >
+              {t('common.done', 'Done') || 'Done'}
+            </Button>
+          </View>
+        }
       >
         {stepContent}
-      </ScrollView>
-      {footer}
-    </View>
-  );
-
-  // Wide: inline elevated card the caller positions under the pill.
-  if (isWide) {
-    return body;
+      </CenteredDialog>
+    );
   }
 
-  // Narrow: full-screen modal overlay — SAME component, breakpoint-driven.
+  // Narrow: full-screen slide-up sheet that walks the full multi-step flow.
   return (
     <Modal visible={open} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.modalRoot}>
@@ -392,7 +473,18 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
               {t('search.panel.title', 'Search') || 'Search'}
             </H3>
           </View>
-          {body}
+          <View style={[styles.panel, styles.panelFull, cardShadow.lg]}>
+            {header}
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {stepContent}
+            </ScrollView>
+            {footer}
+          </View>
         </View>
       </View>
     </Modal>
@@ -405,16 +497,21 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     overflow: 'hidden',
   },
-  panelWide: {
-    width: '100%',
-    maxWidth: 720,
-    alignSelf: 'center',
-    maxHeight: 560,
-  },
   panelFull: {
     flex: 1,
     borderRadius: 0,
   },
+
+  // --- Wide compact dialog (single step) ---
+  // Bloom's `CenteredDialog` owns the header, body padding, and the footer's
+  // hairline + padding; this footer row only right-aligns the "Done" button
+  // inside that slot.
+  dialogFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+
+  // --- Narrow full-screen sheet ---
   header: {
     flexDirection: 'row',
     alignItems: 'center',

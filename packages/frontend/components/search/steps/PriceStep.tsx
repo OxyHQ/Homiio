@@ -60,6 +60,12 @@ interface PriceStepProps {
   onChange: (min: number | undefined, max: number | undefined) => void;
   /** Currency symbol to render. Defaults to the euro sign used app-wide. */
   currencySymbol?: string;
+  /**
+   * Compact mode for the wide centered dialog: the dialog header already names
+   * the step ("Price range"), so the step's internal heading is suppressed and
+   * the inter-element gap tightens. The narrow sheet leaves this `false`.
+   */
+  compact?: boolean;
 }
 
 export const PriceStep: React.FC<PriceStepProps> = ({
@@ -68,6 +74,7 @@ export const PriceStep: React.FC<PriceStepProps> = ({
   priceMax,
   onChange,
   currencySymbol = '€',
+  compact = false,
 }) => {
   const { t } = useTranslation();
   const isVacation = offering === OfferingType.SHORT_TERM_RENT;
@@ -103,11 +110,17 @@ export const PriceStep: React.FC<PriceStepProps> = ({
     : t('search.step.price.perMonth', 'per month') || 'per month';
 
   return (
-    <View style={styles.container}>
-      <BloomText style={styles.heading}>
-        {t('search.step.price.title', 'Price range') || 'Price range'}{' '}
-        <BloomText style={styles.unit}>({unitLabel})</BloomText>
-      </BloomText>
+    <View style={compact ? styles.containerCompact : styles.container}>
+      {compact ? (
+        // The dialog header already says "Price range"; keep only the unit
+        // hint (per month / per night), which the header does not convey.
+        <BloomText style={styles.unitStandalone}>{`(${unitLabel})`}</BloomText>
+      ) : (
+        <BloomText style={styles.heading}>
+          {t('search.step.price.title', 'Price range') || 'Price range'}{' '}
+          <BloomText style={styles.unit}>({unitLabel})</BloomText>
+        </BloomText>
+      )}
 
       <View style={styles.chips}>
         {bands.map((band, index) => {
@@ -170,6 +183,11 @@ const styles = StyleSheet.create({
   container: {
     gap: spacing.lg,
   },
+  // Compact drops the large heading for a slim unit hint, so the gap between
+  // that hint, the chips, and the inputs stays tight in the centered dialog.
+  containerCompact: {
+    gap: spacing.md,
+  },
   heading: {
     fontSize: 18,
     fontWeight: '700',
@@ -178,6 +196,11 @@ const styles = StyleSheet.create({
   unit: {
     fontSize: 14,
     fontWeight: '400',
+    color: colors.COLOR_BLACK_LIGHT_4,
+  },
+  unitStandalone: {
+    fontSize: 13,
+    fontWeight: '600',
     color: colors.COLOR_BLACK_LIGHT_4,
   },
   chips: {

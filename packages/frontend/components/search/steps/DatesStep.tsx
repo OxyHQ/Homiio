@@ -52,9 +52,15 @@ function buildMonth(year: number, month: number): (DayCell | null)[] {
 interface DatesStepProps {
   value?: SearchDateRange;
   onChange: (range: SearchDateRange | undefined) => void;
+  /**
+   * Compact mode for the wide centered dialog: the dialog header already names
+   * the step ("When"), so the step's internal heading is suppressed. The narrow
+   * sheet leaves this `false` and keeps the per-step heading.
+   */
+  compact?: boolean;
 }
 
-export const DatesStep: React.FC<DatesStepProps> = ({ value, onChange }) => {
+export const DatesStep: React.FC<DatesStepProps> = ({ value, onChange, compact = false }) => {
   const { t } = useTranslation();
   // Anchor the visible window on today; this is derived once on mount and never
   // needs to react to props, so plain useState (no effect) is correct.
@@ -110,9 +116,11 @@ export const DatesStep: React.FC<DatesStepProps> = ({ value, onChange }) => {
 
   return (
     <View style={styles.container}>
-      <BloomText style={styles.heading}>
-        {t('search.step.dates.title', 'When?') || 'When?'}
-      </BloomText>
+      {compact ? null : (
+        <BloomText style={styles.heading}>
+          {t('search.step.dates.title', 'When?') || 'When?'}
+        </BloomText>
+      )}
 
       <View style={styles.weekdays}>
         {WEEKDAY_KEYS.map((key) => (

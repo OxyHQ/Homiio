@@ -106,6 +106,12 @@ interface WhereStepProps {
   onSelectLocation: (location: SearchLocation) => void;
   /** Fired when a recent search row is chosen. */
   onSelectRecent: (recent: RecentSearch) => void;
+  /**
+   * Compact mode for the wide centered dialog: tightens the gap between the
+   * input and the suggestion/recent list so the dialog reads snug. The narrow
+   * sheet leaves this `false`.
+   */
+  compact?: boolean;
 }
 
 export const WhereStep: React.FC<WhereStepProps> = ({
@@ -113,6 +119,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   onChangeText,
   onSelectLocation,
   onSelectRecent,
+  compact = false,
 }) => {
   const { t } = useTranslation();
   const recentSearches = useRecentSearchesStore((s) => s.searches);
@@ -153,7 +160,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   const showRecents = value.trim().length < MIN_QUERY_LENGTH;
 
   return (
-    <View style={styles.container}>
+    <View style={compact ? styles.containerCompact : styles.container}>
       <SearchInput
         value={value}
         onChangeText={handleChange}
@@ -210,6 +217,10 @@ export const WhereStep: React.FC<WhereStepProps> = ({
 const styles = StyleSheet.create({
   container: {
     gap: spacing.lg,
+  },
+  // Tighter input → list gap for the compact centered dialog.
+  containerCompact: {
+    gap: spacing.md,
   },
   list: {
     gap: spacing.xs,

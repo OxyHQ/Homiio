@@ -1,16 +1,25 @@
 /**
- * Minimal confirmation dialog (Modal + Bloom Button). Bloom's Dialog primitive
- * is not mounted in this app, so consumers reach for this lightweight local
- * equivalent instead. Used by:
- *  - Reservation detail (cancel / approve / decline) — pre-existing inline copy
+ * Minimal confirmation dialog. A thin composition over Bloom's
+ * {@link CenteredDialog} primitive (`@oxyhq/bloom/dialog`) — Bloom owns the
+ * dimmed backdrop, the snug centered card, the title + close header, the
+ * scrollable body, and the footer's hairline + padding. ConfirmDialog only
+ * adds the message copy, the optional secondary content, and the
+ * cancel/confirm action row. Used by:
+ *  - Reservation detail (cancel / approve / decline)
  *  - Tenant application detail (withdraw)
- *  - Landlord applicant detail (approve / reject)
+ *  - Landlord applicant detail (approve / reject, with a notes field)
+ *  - Settings, drafts, viewings, host calendar, profile destructive flows
  */
 import React from 'react';
-import { Modal, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Button } from '@oxyhq/bloom/button';
-import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
+import { CenteredDialog } from '@oxyhq/bloom/dialog';
+import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { colors } from '@/styles/colors';
+import { spacing } from '@/constants/styles';
+
+/** Compact confirmation card width — narrower than Bloom's 440 default. */
+const CONFIRM_CARD_MAX_WIDTH = 420;
 
 export interface ConfirmDialogProps {
   visible: boolean;
@@ -38,57 +47,40 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onCancel,
   children,
 }) => (
-  <Modal
+  <CenteredDialog
     visible={visible}
-    transparent
-    animationType="fade"
-    onRequestClose={onCancel}
-  >
-    <View style={styles.backdrop}>
-      <View style={styles.card}>
-        <H3 style={styles.title}>{title}</H3>
-        <BloomText style={styles.body}>{message}</BloomText>
-        {children}
-        <View style={styles.actions}>
-          <Button variant="ghost" size="medium" onPress={onCancel} disabled={loading}>
-            {cancelLabel}
-          </Button>
-          <Button
-            variant="primary"
-            size="medium"
-            onPress={onConfirm}
-            loading={loading}
-            disabled={loading}
-            style={confirmDestructive ? styles.destructive : undefined}
-          >
-            {confirmLabel}
-          </Button>
-        </View>
+    onClose={onCancel}
+    title={title}
+    maxWidth={CONFIRM_CARD_MAX_WIDTH}
+    // While the action is in flight the buttons are disabled, so the backdrop /
+    // Escape / hardware-back must not dismiss it either — keep the confirm
+    // blocking until it resolves.
+    dismissible={!loading}
+    closeAccessibilityLabel={cancelLabel}
+    footer={
+      <View style={styles.actions}>
+        <Button variant="ghost" size="medium" onPress={onCancel} disabled={loading}>
+          {cancelLabel}
+        </Button>
+        <Button
+          variant="primary"
+          size="medium"
+          onPress={onConfirm}
+          loading={loading}
+          disabled={loading}
+          style={confirmDestructive ? styles.destructive : undefined}
+        >
+          {confirmLabel}
+        </Button>
       </View>
-    </View>
-  </Modal>
+    }
+  >
+    <BloomText style={styles.body}>{message}</BloomText>
+    {children}
+  </CenteredDialog>
 );
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: colors.overlay,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: 20,
-    gap: 12,
-  },
-  title: {
-    fontSize: 17,
-    fontWeight: '700',
-  },
   body: {
     fontSize: 14,
     color: colors.COLOR_BLACK_LIGHT_3,
@@ -97,8 +89,7 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 8,
-    marginTop: 8,
+    gap: spacing.sm,
   },
   destructive: {
     backgroundColor: colors.danger,

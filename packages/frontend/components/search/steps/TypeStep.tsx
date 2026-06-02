@@ -34,17 +34,31 @@ interface TypeStepProps {
   offering: OfferingType;
   selected: PropertyType[];
   onToggle: (type: PropertyType) => void;
+  /**
+   * Compact mode for the wide centered dialog: the dialog's own header already
+   * names the step ("Property type"), so the step's internal heading is
+   * suppressed and the inter-element gap tightens. The narrow sheet leaves this
+   * `false` and keeps the per-step heading.
+   */
+  compact?: boolean;
 }
 
-export const TypeStep: React.FC<TypeStepProps> = ({ offering, selected, onToggle }) => {
+export const TypeStep: React.FC<TypeStepProps> = ({
+  offering,
+  selected,
+  onToggle,
+  compact = false,
+}) => {
   const { t } = useTranslation();
   const isVacation = offering === OfferingType.SHORT_TERM_RENT;
 
   return (
-    <View style={styles.container}>
-      <BloomText style={styles.heading}>
-        {t('search.step.type.title', 'What type of place?') || 'What type of place?'}
-      </BloomText>
+    <View style={compact ? styles.containerCompact : styles.container}>
+      {compact ? null : (
+        <BloomText style={styles.heading}>
+          {t('search.step.type.title', 'What type of place?') || 'What type of place?'}
+        </BloomText>
+      )}
       <View style={styles.chips}>
         {TYPE_OPTIONS.map((option) => {
           const label = isVacation ? option.vacation : option.longTerm;
@@ -71,6 +85,11 @@ export const TypeStep: React.FC<TypeStepProps> = ({ offering, selected, onToggle
 const styles = StyleSheet.create({
   container: {
     gap: spacing.lg,
+  },
+  // Compact has no internal heading, so the only gap is between wrapped chip
+  // rows — keep it snug for the centered dialog.
+  containerCompact: {
+    gap: spacing.sm,
   },
   heading: {
     fontSize: 18,
