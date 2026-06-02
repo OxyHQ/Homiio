@@ -120,7 +120,6 @@ export default function RootLayout() {
       flexDirection: isScreenNotMobile ? 'row' : 'column',
     },
     mainContent: {
-      maxWidth: 1800,
       marginHorizontal: isScreenNotMobile ? 'auto' : 0,
       justifyContent: 'space-between',
       flexDirection: isScreenNotMobile ? 'row' : 'column',
@@ -165,7 +164,6 @@ export default function RootLayout() {
         minWidth: 0,
         height: '100%',
         overflow: 'hidden',
-        maxWidth: 1800,
         flexDirection: 'row',
         justifyContent: 'space-between',
       } as unknown as ViewStyle,
@@ -174,7 +172,6 @@ export default function RootLayout() {
         minWidth: 0,
         flexDirection: 'row',
         justifyContent: 'space-between',
-        maxWidth: 1800,
       },
     }) as ViewStyle,
     // The Slot wrapper inside the fixed shell. Mirrors `mainContentWrapper`'s

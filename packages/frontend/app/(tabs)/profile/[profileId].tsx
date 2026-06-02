@@ -14,10 +14,12 @@ import { Header } from '@/components/Header';
 import { SaveButton } from '@/components/SaveButton';
 import { useSavedProfiles } from '@/store/savedProfilesStore';
 import { PropertyCard } from '@/components/PropertyCard';
+import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
 import ProfileAvatar from '@/components/ProfileAvatar';
 import { ProfileExchangeReviews } from '@/components/exchange/ProfileExchangeReviews';
 import { colors } from '@/styles/colors';
 import { shadowToken } from '@/styles/shadows';
+import { spacing } from '@/constants/styles';
 import { useOxy } from '@oxyhq/services';
 import { api } from '@/utils/api';
 import { type Profile, ProfileType } from '@/services/profileService';
@@ -100,6 +102,19 @@ export default function PublicProfileScreen() {
       logger.warn('Failed to load profile info', e);
     }
   }, [profileId]);
+
+  const handlePropertyPress = useCallback(
+    (property: Property) => {
+      router.push(`/properties/${(property._id || property.id) as string}`);
+    },
+    [],
+  );
+
+  // Shared end-reached guard used by both the list FlatList and the grid
+  // ScrollView so infinite scroll behaves identically in either view mode.
+  const handleEndReached = useCallback(() => {
+    if (!isLoading && hasNext) loadProfileProperties();
+  }, [isLoading, hasNext, loadProfileProperties]);
 
   useEffect(() => {
     // Wrapped in an inline async function so the loaders' internal setState
@@ -280,36 +295,61 @@ export default function PublicProfileScreen() {
       )}
       {error && <Text style={styles.error}>{error}</Text>}
       {activeTab === 'listings' ? (
-        <FlatList
-          key={viewMode}
-          data={properties}
-          keyExtractor={(item) => (item._id || item.id) as string}
-          numColumns={viewMode === 'grid' ? 2 : 1}
-          columnWrapperStyle={viewMode === 'grid' ? styles.gridRow : undefined}
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <View style={[styles.cardWrap, viewMode === 'grid' && styles.gridItemWrap]}>
-              <PropertyCard
-                property={item}
-                variant="saved"
-                orientation={viewMode === 'grid' ? 'vertical' : 'horizontal'}
-                onPress={() => router.push(`/properties/${(item._id || item.id) as string}`)}
+        viewMode === 'grid' ? (
+          // Grid mode → the single app-wide responsive property grid. A
+          // ScrollView hosts it (the grid is a plain View) and drives infinite
+          // scroll + pull-to-refresh to match the list-mode FlatList.
+          <ScrollView
+            contentContainerStyle={styles.gridScrollContent}
+            showsVerticalScrollIndicator={false}
+            scrollEventThrottle={200}
+            onScroll={({ nativeEvent }) => {
+              const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+              const distanceFromEnd =
+                contentSize.height - (layoutMeasurement.height + contentOffset.y);
+              if (distanceFromEnd < layoutMeasurement.height) handleEndReached();
+            }}
+            refreshControl={
+              <RefreshControl
+                refreshing={isLoading}
+                onRefresh={() => loadProfileProperties({ reset: true })}
+                colors={[colors.primaryColor]}
+                tintColor={colors.primaryColor}
               />
-            </View>
-          )}
-          onEndReachedThreshold={0.5}
-          onEndReached={() => {
-            if (!isLoading && hasNext) loadProfileProperties();
-          }}
-          refreshControl={
-            <RefreshControl
-              refreshing={isLoading}
-              onRefresh={() => loadProfileProperties({ reset: true })}
-              colors={[colors.primaryColor]}
-              tintColor={colors.primaryColor}
+            }
+          >
+            <PropertyResultsGrid
+              properties={properties}
+              onPropertyPress={handlePropertyPress}
             />
-          }
-        />
+          </ScrollView>
+        ) : (
+          <FlatList
+            data={properties}
+            keyExtractor={(item) => (item._id || item.id) as string}
+            contentContainerStyle={styles.list}
+            renderItem={({ item }) => (
+              <View style={styles.cardWrap}>
+                <PropertyCard
+                  property={item}
+                  variant="saved"
+                  orientation="horizontal"
+                  onPress={() => router.push(`/properties/${(item._id || item.id) as string}`)}
+                />
+              </View>
+            )}
+            onEndReachedThreshold={0.5}
+            onEndReached={handleEndReached}
+            refreshControl={
+              <RefreshControl
+                refreshing={isLoading}
+                onRefresh={() => loadProfileProperties({ reset: true })}
+                colors={[colors.primaryColor]}
+                tintColor={colors.primaryColor}
+              />
+            }
+          />
+        )
       ) : (
         <ScrollView contentContainerStyle={styles.aboutContainer}>
           {/* Home-exchange trust signal — avg rating + recent reviews. Self-hides
@@ -410,10 +450,13 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 100,
   },
-  gridRow: {
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    marginBottom: 12,
+  // The grid owns its own column gaps; the surrounding scroll content just
+  // contributes the page gutter + bottom breathing room (matches the other
+  // property-grid screens' `spacing.lg`).
+  gridScrollContent: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: 100,
   },
   cover: {
     height: 96,
@@ -483,12 +526,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 100,
-  },
-  gridItemWrap: {
-    flex: 1,
-    marginBottom: 0,
-    // Ensure two columns have a small gap visually in RN
-    maxWidth: '48%',
   },
   avatarLarge: {
     marginRight: 12,

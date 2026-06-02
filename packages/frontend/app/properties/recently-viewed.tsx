@@ -31,8 +31,6 @@ import type { Property } from '@homiio/shared-types';
 
 /** Number of skeleton cards shown during the first load. */
 const SKELETON_COUNT = 4;
-/** Roomy columns — like `/properties`, this surface owns the full width. */
-const GRID_COLUMNS = { sm: 1, md: 2, lg: 3, xl: 3 } as const;
 
 export default function RecentlyViewedScreen() {
   const { t } = useTranslation();
@@ -59,7 +57,6 @@ export default function RecentlyViewedScreen() {
       return (
         <PropertyResultsGridSkeleton
           count={SKELETON_COUNT}
-          columns={GRID_COLUMNS}
           style={styles.gridPadding}
         />
       );
@@ -90,7 +87,6 @@ export default function RecentlyViewedScreen() {
       <PropertyResultsGrid
         properties={properties}
         onPropertyPress={handlePropertyPress}
-        columns={GRID_COLUMNS}
         style={styles.gridPadding}
       />
     );

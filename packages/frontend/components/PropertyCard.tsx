@@ -19,6 +19,7 @@ import { useRentalMode } from '@/context/RentalModeContext';
 import { SaveButton } from './SaveButton';
 import { CurrencyFormatter } from './CurrencyFormatter';
 import { OfferingBadge } from './property/OfferingBadge';
+import { MediaChip } from './property/MediaChip';
 import { PropertyImageCarousel } from './property/PropertyImageCarousel';
 import { ThemedText } from '@/components/ThemedText';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
@@ -293,9 +294,25 @@ export function PropertyCard({
           .join(' · ')}`
       : '';
 
+  // Property type surfaced in the META line below the photo (declutters the
+  // photo — the type icon no longer floats over the image). Icon follows the
+  // former on-photo logic (house → home glyph, everything else → building);
+  // the label reuses the `properties.titles.types.*` vocabulary, falling back to
+  // the capitalised raw type for kinds without a dedicated key.
+  const typeMeta: { icon: IoniconName; label: string } | null = propertyData.type
+    ? {
+        icon: propertyData.type === 'house' ? 'home-outline' : 'business-outline',
+        label: t(
+          `properties.titles.types.${propertyData.type}`,
+          propertyData.type.charAt(0).toUpperCase() + propertyData.type.slice(1),
+        ),
+      }
+    : null;
+
   const isEco = Boolean(property.isEcoFriendly);
   const isFeatured = variant === 'featured';
   const isGrid = variant === 'grid';
+  const isCompact = variant === 'compact';
   const propertyWithSavedHint = property as PropertyWithSavedHint;
   const isPropertySavedState = propertyData.id
     ? isInitialized
@@ -344,72 +361,69 @@ export function PropertyCard({
    */
   const mediaBadges = (
     <>
-      {/* Rating - moved to top-left (hidden in grid variant for photo-first feel) */}
-      {finalShowRating && propertyData.rating && !isGrid && (
-        <View style={styles.ratingBadge}>
-          <ThemedText style={styles.ratingBadgeText}>{propertyData.rating.toFixed(1)}</ThemedText>
-          <Ionicons name="star" size={12} color={colors.ratingStar} />
+      {/* Photo-overlay chip stack — ONE absolutely-positioned, flex-driven
+          container in the top-left. Every child is a `MediaChip` (or the
+          rating chip), so they share the same height, radius, padding and
+          frosted backdrop and align on a single row regardless of which are
+          present — absent chips leave no gap, present ones never collide, and
+          there are no per-badge magic offsets. Suppressed in the grid variant
+          to keep those cards photo-first. The stack lives in the top-LEFT, the
+          opposite corner from the save heart (top-right), so they never
+          overlap; the carousel dots sit bottom-centre, also clear.
+
+          Order (offerings lead, then provenance/status): rating → offerings →
+          instant book → verified → eco. The compact ("small") card is too
+          small to host any of this — its photo shows only the save heart — so
+          the whole stack is suppressed on compact as well as grid. */}
+      {!isGrid && !isCompact && (
+        <View style={styles.mediaChipStack}>
+          {finalShowRating && propertyData.rating ? (
+            <MediaChip
+              icon="star"
+              accent={colors.ratingStar}
+              label={propertyData.rating.toFixed(1)}
+            />
+          ) : null}
+
+          {/* Offering chips — "By night" / "For sale" / "Exchange" for each
+              OTHER offering this listing carries (the active one is the price). */}
+          {otherOfferings.map((summary) => (
+            <OfferingBadge key={summary.offering} offering={summary.offering} size="md" />
+          ))}
+
+          {/* Instant Book (vacation mode only). */}
+          {showInstantBook ? (
+            <MediaChip
+              icon="flash"
+              accent={colors.primarySubtleForeground}
+              label={t('listing.badge.instantBook', 'Instant book')}
+            />
+          ) : null}
+
+          {/* Verified — icon-only shield, brand accent. */}
+          {showVerifiedBadge && propertyData.isVerified ? (
+            <MediaChip icon="shield-checkmark" accent={colors.primarySubtleForeground} />
+          ) : null}
+
+          {/* Eco — icon-only leaf, green accent. */}
+          {isEco ? <MediaChip icon="leaf" accent={colors.success} /> : null}
         </View>
       )}
 
-      {/* Status badges — suppressed in grid variant to keep cards photo-first */}
-      {!isGrid && (
-        <>
-          {/* Offering badges — "By night" / "For sale" / "Exchange" for each
-              OTHER offering this listing carries (the active one is the price
-              above). Pinned top-left below the small eco/verified chips so
-              labeled chips never collide with the top-right save heart. */}
-          {otherOfferings.length > 0 && (
-            <View style={styles.intentBadgeRow}>
-              {otherOfferings.map((summary) => (
-                <OfferingBadge key={summary.offering} offering={summary.offering} size="md" />
-              ))}
-            </View>
-          )}
-
-          {/* Eco Badge */}
-          {isEco && (
-            <View style={[styles.ecoBadge, styles.statusChip, { backgroundColor: colors.successSubtle }]}>
-              <Ionicons name="leaf-outline" size={16} color={colors.success} />
-            </View>
-          )}
-
-          {/* Verified Badge */}
-          {showVerifiedBadge && propertyData.isVerified && (
-            <View style={[styles.verifiedBadge, styles.statusChip, { backgroundColor: colors.primaryColor }]}>
-              <Ionicons name="shield-checkmark" size={14} color={colors.primaryForeground} />
-            </View>
-          )}
-
-          {/* Instant Book badge (vacation mode only) */}
-          {showInstantBook && (
-            <View style={styles.instantBookBadge}>
-              <Ionicons name="flash" size={12} color={colors.white} />
-              <ThemedText style={styles.instantBookBadgeText}>Instant book</ThemedText>
-            </View>
-          )}
-
-          {/* Type Icon */}
-          {finalShowTypeIcon && propertyData.type && (
-            <View style={[styles.typeIcon, styles.statusChip, { backgroundColor: 'rgba(0, 0, 0, 0.6)' }]}>
-              <Ionicons
-                name={(propertyData.type === 'house' ? 'home-outline' : 'business-outline') as IoniconName}
-                size={16}
-                color={colors.white}
-              />
-            </View>
-          )}
-
-          {/* External Source Badge */}
-          {property.isExternal && property.source && property.source !== 'internal' && variant !== 'compact' && (
-            <View style={styles.sourceBadge}>
-              <ThemedText style={styles.sourceBadgeText}>
-                {property.source.charAt(0).toUpperCase() + property.source.slice(1)}
-              </ThemedText>
-            </View>
-          )}
-        </>
-      )}
+      {/* External Source Badge — provenance (the upstream provider), a different
+          category from the property's own attributes, so it keeps its own dark
+          pill pinned bottom-right (clear of the top-left stack and the dots). */}
+      {!isGrid &&
+        property.isExternal &&
+        property.source &&
+        property.source !== 'internal' &&
+        variant !== 'compact' && (
+          <View style={styles.sourceBadge}>
+            <ThemedText style={styles.sourceBadgeText}>
+              {property.source.charAt(0).toUpperCase() + property.source.slice(1)}
+            </ThemedText>
+          </View>
+        )}
 
       {/* Custom Badge Content */}
       {badgeContent && <View style={styles.customBadge}>{badgeContent as React.ReactNode}</View>}
@@ -457,6 +471,18 @@ export function PropertyCard({
       {/* Features — suppressed in grid variant to keep cards photo-first */}
       {finalShowFeatures && !isGrid && (
         <View style={styles.features}>
+          {/* Property type leads the meta line (moved off the photo). Shown for
+              the variants that previously surfaced the on-photo type icon; the
+              compact variant keeps its own trailing type text below. */}
+          {finalShowTypeIcon && typeMeta && variant !== 'compact' && (
+            <>
+              <View style={styles.typeMeta}>
+                <Ionicons name={typeMeta.icon} size={13} color={colors.COLOR_BLACK_LIGHT_4} />
+                <ThemedText style={styles.featureText}>{typeMeta.label}</ThemedText>
+              </View>
+              <ThemedText style={styles.featureSeparator}>•</ThemedText>
+            </>
+          )}
           <View style={styles.feature}>
             <ThemedText style={styles.featureText}>
               {`${propertyData.bedrooms} bed${propertyData.bedrooms !== 1 ? 's' : ''}`}
@@ -797,42 +823,31 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: spacing.sm,
   },
-  statusChip: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // Row of "For sale" / "Exchange" chips, pinned top-left and offset down so it
-  // clears the small (24px) eco/verified status chips that sit at top: 8. Only
-  // rendered for non-rent listings, so existing rent cards are unaffected.
-  intentBadgeRow: {
+  /**
+   * The single photo-overlay chip stack. Absolutely pinned to the top-left at a
+   * uniform `spacing.sm` inset (the same inset the save heart uses on the
+   * top-right), it lays its `MediaChip` children out with `flexDirection: 'row'`
+   * + `flexWrap` + `gap`, so the chips flow and align automatically — no
+   * per-badge `position`/`top`/`left` magic numbers. `maxWidth` keeps a busy
+   * stack from running under the top-right heart; overflow wraps to a new row.
+   */
+  mediaChipStack: {
     position: 'absolute',
-    top: 40,
+    top: spacing.sm,
     left: spacing.sm,
+    maxWidth: '78%',
     zIndex: 2,
     flexDirection: 'row',
     flexWrap: 'wrap',
+    alignItems: 'flex-start',
     gap: spacing.xs,
   },
-  ecoBadge: {
-    position: 'absolute',
-    top: spacing.sm,
-    left: spacing.sm,
-    zIndex: 2,
-  },
-  verifiedBadge: {
-    position: 'absolute',
-    top: spacing.sm,
-    left: 36,
-    zIndex: 2,
-  },
-  typeIcon: {
-    position: 'absolute',
-    bottom: spacing.sm,
-    left: spacing.sm,
-    zIndex: 2,
+  // Property type in the meta line below the photo (icon + label), replacing the
+  // former on-photo type chip.
+  typeMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   sourceBadge: {
     position: 'absolute',
@@ -844,51 +859,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
-  instantBookBadge: {
-    position: 'absolute',
-    bottom: spacing.sm,
-    left: spacing.sm,
-    zIndex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: 'rgba(0, 0, 0, 0.78)',
-    borderRadius: 12,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  instantBookBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.white,
-    letterSpacing: 0.2,
-  },
   sourceBadgeText: {
     fontSize: 10,
     fontWeight: '600',
     color: colors.white,
     textTransform: 'capitalize',
-  },
-  ratingBadge: {
-    position: 'absolute',
-    top: spacing.sm,
-    left: spacing.sm,
-    zIndex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 12,
-    paddingHorizontal: 6,
-    paddingVertical: 0,
-    boxShadow: boxShadow({ y: 1, blur: 2, color: colors.COLOR_BLACK, opacity: 0.1 }),
-    ...(Platform.OS === 'web' ? null : { elevation: 2 }),
-    justifyContent: 'center',
-  },
-  ratingBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-    marginRight: 1,
   },
 
   // Note styles (shared)

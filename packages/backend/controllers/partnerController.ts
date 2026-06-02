@@ -16,6 +16,7 @@
 import {
   COMMISSION_CONFIG,
   PropertyStatus,
+  type Commission as ApiCommission,
   type PartnerMeResponse,
   type PartnerStats,
 } from '@homiio/shared-types';
@@ -33,6 +34,23 @@ const ACTIVE_LISTING_STATUSES: ReadonlyArray<string> = [
 ];
 /** Commission statuses whose amounts roll up into "pending" earnings. */
 const PENDING_COMMISSION_STATUSES: ReadonlyArray<string> = ['pending', 'approved'];
+
+/**
+ * A lean Commission row: the persisted fields plus Mongoose's `_id`/`__v`. The
+ * model's `toJSON` only adds an `id` alias (no field is stripped or reshaped), so
+ * `{ ...doc, id }` reproduces the exact same response shape without hydrating a
+ * full document — see {@link toApiCommission}.
+ */
+type LeanCommissionDoc = Omit<ApiCommission, 'id'> & { _id: unknown };
+
+/**
+ * Map a lean Commission row to the API shape, mirroring the model's `toJSON`
+ * transform (`ret.id = ret._id`) so the `.lean()` ledger response is byte-for-
+ * byte identical to the hydrated `.toJSON()` one.
+ */
+function toApiCommission(doc: LeanCommissionDoc): ApiCommission {
+  return { ...doc, id: String(doc._id) };
+}
 
 /** Extract the authenticated Oxy user id from a request, or null. */
 function getOxyUserId(req: any): string | null {
@@ -230,8 +248,12 @@ class PartnerController {
       if (!partner) {
         return res.json(successResponse({ commissions: [] }, 'No earnings'));
       }
-      const commissions = await Commission.find({ partnerId: partner._id }).sort({ createdAt: -1 });
-      const payload = { commissions: commissions.map((c: any) => c.toJSON()) };
+      // Lean read: the Commission model's `toJSON` only aliases `_id`→`id`, so we
+      // reproduce that shape from plain rows (no full-document hydration).
+      const rows: LeanCommissionDoc[] = await Commission.find({ partnerId: partner._id })
+        .sort({ createdAt: -1 })
+        .lean();
+      const payload = { commissions: rows.map(toApiCommission) };
       return res.json(successResponse(payload, 'Partner earnings'));
     } catch (error) {
       next(error);

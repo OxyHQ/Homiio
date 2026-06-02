@@ -40,8 +40,6 @@ import { logger } from '@/utils/logger';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
-/** Roomy columns — match `/properties` so the loading skeleton lines up. */
-const GRID_COLUMNS = { sm: 1, md: 2, lg: 3, xl: 3 } as const;
 const SKELETON_COUNT = 4;
 /** AsyncStorage keys owned by the draft flow. */
 const DRAFTS_KEY = 'property_drafts';
@@ -265,7 +263,6 @@ export default function PropertyDraftsScreen() {
       return (
         <PropertyResultsGridSkeleton
           count={SKELETON_COUNT}
-          columns={GRID_COLUMNS}
           style={styles.gridPadding}
         />
       );

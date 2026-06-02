@@ -168,15 +168,16 @@ export const tracker = {
 
 /**
  * Grid gap presets for `gap` style or `gap-X` className. Use `tight` for
- * dense badge clusters, `cozy` for the app-wide property grids (the single
- * gap every `PropertyCard` grid/list shares), `normal` for typical
- * cards-in-row, and `comfortable` for hero-tier photo grids.
+ * dense badge clusters, `cozy` for the app-wide property grid (the single
+ * gap every `PropertyCard` grid shares), `normal` for typical cards-in-row,
+ * and `comfortable` for hero-tier photo grids.
  *
- * `cozy` (12) is the canonical property-grid gap: `PropertyResultsGrid`
- * (search/explore + browse screens), `FeaturedGridSection` (home), and
- * `PropertyList` all point at it so multi-column property tiles read at one
- * consistent, Airbnb-2026 density across the whole app. Keep it in sync with
- * `PropertyResultsGridSkeleton`'s default so loading shimmers don't shift.
+ * `cozy` (12) is the canonical property-grid gap: the single shared
+ * `PropertyResultsGrid` (used by search/explore, the browse screens, the home
+ * featured grid via `FeaturedGridSection`, Saved, and profile) points at it so
+ * multi-column property tiles read at one consistent, Airbnb-2026 density
+ * across the whole app. Keep it in sync with `PropertyResultsGridSkeleton`'s
+ * default so loading shimmers don't shift.
  */
 export const gridGap = {
   tight: 8,
@@ -186,12 +187,94 @@ export const gridGap = {
 } as const;
 
 /**
- * The single gap shared by every property grid/list (`PropertyResultsGrid`,
- * `FeaturedGridSection`, `PropertyList`, and the matching skeleton). Importing
- * this alias — rather than re-deciding the tier per component — guarantees the
- * grids never drift apart. Currently `gridGap.cozy` (12px).
+ * The single gap shared by every property grid (`PropertyResultsGrid` and its
+ * matching skeleton, plus the `FeaturedGridSection` wrapper that delegates to
+ * it). Importing this alias — rather than re-deciding the tier per component —
+ * guarantees the grids never drift apart. Currently `gridGap.cozy` (12px).
  */
 export const PROPERTY_GRID_GAP = gridGap.cozy;
+
+/**
+ * Container-responsive property-grid column tuning. The shared property grid
+ * (`PropertyResultsGrid` and its matching skeleton) derives its column count
+ * from the width it ACTUALLY occupies — measured via `onLayout` — rather than
+ * from window-width media queries. A grid living in a narrow split column (e.g.
+ * explore's list next to the map) therefore lays out the same as a standalone
+ * narrow grid, and a full-width grid spreads to more columns, all from one
+ * rule.
+ *
+ *  - `GRID_TARGET_CELL` (180) — the ideal card width we aim each column at. We
+ *    fit as many whole `GRID_TARGET_CELL`-wide columns as the measured width
+ *    allows.
+ *  - `GRID_MIN_COLUMNS` (2) — hard floor. Property grids never collapse to a
+ *    single full-bleed card, even on the narrowest column or first paint.
+ *  - `GRID_MAX_COLUMNS` (6) — ceiling so ultra-wide grids don't shrink cards to
+ *    postage stamps. Set high enough that full-width browse screens AND a wide
+ *    explore list column on ultra-wide displays can spread past 4 when there's
+ *    genuinely room, while `GRID_TARGET_CELL` still keeps each card readable.
+ *
+ * Worked examples (widths are the MEASURED inner/content width, after the
+ * `spacing.lg` gutter on each side):
+ *  - explore list column ≈ 438px content → floor(438 / 180) = 2 columns.
+ *  - wider explore list ≈ 820px content → floor(820 / 180) = 4 columns.
+ *  - full-width grid ≈ 1600px content → floor(1600 / 180) = 8 → clamped to 6 (the ceiling).
+ */
+export const GRID_TARGET_CELL = 180;
+export const GRID_MIN_COLUMNS = 2;
+export const GRID_MAX_COLUMNS = 6;
+
+/**
+ * Resolve the property-grid column count from a measured container width.
+ *
+ * Returns `GRID_MIN_COLUMNS` until the width is known (`measuredWidth <= 0`, the
+ * first paint) so grids never flash a single column before `onLayout` fires.
+ * Once measured, fits `floor(width / GRID_TARGET_CELL)` whole columns, clamped
+ * to `[GRID_MIN_COLUMNS, maxColumns]`. `maxColumns` defaults to
+ * `GRID_MAX_COLUMNS`; callers may pass a smaller cap to cap a particular grid
+ * (it can never push below `GRID_MIN_COLUMNS`).
+ */
+export const resolveGridColumns = (
+  measuredWidth: number,
+  maxColumns: number = GRID_MAX_COLUMNS,
+): number => {
+  const ceiling = Math.max(GRID_MIN_COLUMNS, maxColumns);
+  if (measuredWidth <= 0) return GRID_MIN_COLUMNS;
+  const fit = Math.floor(measuredWidth / GRID_TARGET_CELL);
+  return Math.min(Math.max(fit, GRID_MIN_COLUMNS), ceiling);
+};
+
+/**
+ * Safety margin (px) shaved off the total row width before dividing into
+ * cells, so N cells + (N-1) gaps always sum to strictly LESS than the measured
+ * container. Without it, an exact fit (`cells + gaps === containerWidth`)
+ * leaves zero slack and sub-pixel rounding tips `flex-wrap: wrap` into dropping
+ * every item onto its own row — collapsing a 2+ column grid to a single visual
+ * column of half-width cards. 1px is invisible but reliably prevents the wrap.
+ */
+export const GRID_CELL_SAFETY_MARGIN = 1;
+
+/**
+ * Width of one cell in an `columns`-column grid of `measuredWidth`, leaving a
+ * `GRID_CELL_SAFETY_MARGIN` (1px) gap so N cells + (N-1) gaps never exact-fill
+ * the row (which makes `flex-wrap` drop to a single column on sub-pixel
+ * rounding — see `GRID_CELL_SAFETY_MARGIN`). `Math.floor` keeps the result an
+ * integer so widths don't reintroduce sub-pixel slack of their own.
+ *
+ * Returns `undefined` until the width is known (`measuredWidth <= 0`, the first
+ * paint) so callers can fall back to a percentage basis while measuring.
+ *
+ * Worked example: a 586px container at 2 columns with the 12px grid gap →
+ * `floor((586 - 12 - 1) / 2) = 286`; `286 * 2 + 12 = 584 < 586`, so 2 cells fit.
+ */
+export const resolveGridCellWidth = (
+  measuredWidth: number,
+  columns: number,
+  gap: number,
+): number | undefined => {
+  if (measuredWidth <= 0 || columns <= 0) return undefined;
+  const totalGap = gap * (columns - 1);
+  return Math.floor((measuredWidth - totalGap - GRID_CELL_SAFETY_MARGIN) / columns);
+};
 
 /**
  * Modal/sheet backdrop alpha — same value everywhere so dialogs and

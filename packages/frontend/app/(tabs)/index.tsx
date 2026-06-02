@@ -156,16 +156,20 @@ export default function HomePage() {
     [activeQuery, browseOffering],
   );
 
-  const handleOpenSearchPanel = useCallback(() => {
-    setSearchPanelStep('where');
-    setSearchPanelOpen(true);
-  }, []);
   const handleOpenSearchPanelAt = useCallback((step: SearchStep) => {
     setSearchPanelStep(step);
     setSearchPanelOpen(true);
   }, []);
   const handleCloseSearchPanel = useCallback(() => setSearchPanelOpen(false), []);
 
+  // The pill's circular Search button runs the search with the live query
+  // (which the panel's "Done" has already updated). It does not open the panel —
+  // the three columns do that, seeded to the tapped step.
+  const handleRunSearch = useCallback(() => {
+    router.push('/explore');
+  }, [router]);
+
+  // Narrow sheet "Search": commit the composed query and navigate to results.
   const handleSubmitSearch = useCallback(
     (query: SearchQuery) => {
       useSearchQueryStore.getState().setQuery(query);
@@ -174,6 +178,14 @@ export default function HomePage() {
     },
     [router],
   );
+
+  // Wide dialog "Done": apply the composed query to the live store so the pill
+  // updates, then close — without navigating. The user runs the search from the
+  // pill's circular Search button.
+  const handleApplySearch = useCallback((query: SearchQuery) => {
+    useSearchQueryStore.getState().setQuery(query);
+    setSearchPanelOpen(false);
+  }, []);
 
   // Get user location on mount. Foreground permissions are an explicit
   // side effect — `useEffect` is the correct primitive.
@@ -443,27 +455,29 @@ export default function HomePage() {
             <P style={styles.heroSubtitle}>{t('home.hero.subtitle')}</P>
 
             {/* Collapsed search pill — centered ON the hero image at every
-                width. The expanding panel is breakpoint-driven inside
-                SearchPanel (inline anchored card on wide, full-screen modal on
-                narrow), so this single on-hero mount covers the whole flow. */}
+                width. Tapping a column opens the expanding SearchPanel
+                (breakpoint-driven inside SearchPanel: a centered compact dialog
+                on wide, a full-screen sheet on narrow); the circular Search
+                button runs the search with the live query. Both presentations
+                own their own positioning via a Modal, so the pill needs no
+                anchor wrapper. */}
             <View style={styles.searchPillSlot}>
               <SearchSummaryBar
                 query={activeQuery}
-                onPress={handleOpenSearchPanel}
+                onPress={handleRunSearch}
                 onPressColumn={handleOpenSearchPanelAt}
               />
-              {searchPanelOpen ? (
-                <View style={styles.searchPanelAnchor}>
-                  <SearchPanel
-                    open={searchPanelOpen}
-                    onClose={handleCloseSearchPanel}
-                    initialQuery={heroSearchSeed}
-                    initialStep={searchPanelStep}
-                    onSubmit={handleSubmitSearch}
-                  />
-                </View>
-              ) : null}
             </View>
+            {searchPanelOpen ? (
+              <SearchPanel
+                open={searchPanelOpen}
+                onClose={handleCloseSearchPanel}
+                initialQuery={heroSearchSeed}
+                initialStep={searchPanelStep}
+                onSubmit={handleSubmitSearch}
+                onApply={handleApplySearch}
+              />
+            ) : null}
           </View>
         </View>
 
@@ -513,13 +527,9 @@ export default function HomePage() {
             <FeaturedGridSection
               title={featuredGridTitle}
               items={gridProperties}
-              renderItem={(property) => (
-                <PropertyCard
-                  property={property}
-                  variant="grid"
-                  onPress={() => router.push(`/properties/${property._id || property.id}`)}
-                />
-              )}
+              onPropertyPress={(property) =>
+                router.push(`/properties/${property._id || property.id}`)
+              }
             />
           </View>
         ) : null}
@@ -735,22 +745,15 @@ const createStyles = (
     },
     // Single on-hero pill slot for every width. Centered with a sensible
     // max width so the pill never runs edge-to-edge on a phone and the
-    // circular search button on the right stays fully on-screen.
+    // circular search button on the right stays fully on-screen. The expanding
+    // panel renders in its own Modal (centered dialog on wide, sheet on narrow),
+    // so this slot only carries the collapsed pill — no anchored dropdown.
     searchPillSlot: {
       width: '100%',
       maxWidth: isWide ? 880 : 520,
       alignSelf: 'center',
       marginTop: spacing.lg,
-      position: 'relative',
       zIndex: 20,
-    },
-    searchPanelAnchor: {
-      position: 'absolute',
-      top: '100%',
-      left: 0,
-      right: 0,
-      marginTop: spacing.md,
-      zIndex: 30,
     },
 
     // Category strip

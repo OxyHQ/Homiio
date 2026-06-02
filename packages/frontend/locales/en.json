@@ -1633,7 +1633,10 @@
     "badge": {
       "byNight": "By night",
       "forSale": "For sale",
-      "exchange": "Exchange"
+      "exchange": "Exchange",
+      "verified": "Verified",
+      "eco": "Eco",
+      "instantBook": "Instant book"
     },
     "offering": {
       "stepTitle": "How are you offering this?",

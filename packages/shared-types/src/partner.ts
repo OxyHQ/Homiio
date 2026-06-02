@@ -41,6 +41,23 @@ export type CommissionOffering = 'rent' | 'sale' | 'exchange';
 /** How a partner payout was derived: a percentage of monthly rent, or a flat reward. */
 export type CommissionKind = 'percentOfMonthlyRent' | 'flat';
 
+/**
+ * Audit breakdown of how a commission payout was derived — the inputs and rule
+ * that produced `Commission.amount`. Shared by the API `Commission` shape and
+ * the backend's `ComputedCommission` so the two never drift.
+ */
+export interface CommissionBasis {
+  offering: CommissionOffering;
+  /** Monthly rent (rent) or sale price (sale) the payout was derived from; 0 for exchange. */
+  dealValue: number;
+  /** Whether the payout is a percentage of monthly rent or a flat reward. */
+  kind: CommissionKind;
+  /** Fraction of monthly rent paid out, when `kind` is `percentOfMonthlyRent`. */
+  rate?: number;
+  /** Flat payout amount, in major units, when `kind` is `flat`. */
+  flat?: number;
+}
+
 export interface Commission {
   id: string;
   partnerId: string;
@@ -49,17 +66,7 @@ export interface Commission {
   amount: number;
   /** ISO 4217 currency code. */
   currency: string;
-  basis: {
-    offering: CommissionOffering;
-    /** Monthly rent (rent) or sale price (sale) the payout was derived from; 0 for exchange. */
-    dealValue: number;
-    /** Whether the payout is a percentage of monthly rent or a flat reward. */
-    kind: CommissionKind;
-    /** Fraction of monthly rent paid out, when `kind` is `percentOfMonthlyRent`. */
-    rate?: number;
-    /** Flat payout amount, in major units, when `kind` is `flat`. */
-    flat?: number;
-  };
+  basis: CommissionBasis;
   status: CommissionStatus;
   createdAt: string;
   updatedAt: string;
@@ -108,6 +115,27 @@ export const COMMISSION_CONFIG = {
     exchange: { kind: 'flat', value: 15 },
   },
 } as const;
+
+/** Money rounding granularity — 2 decimal places (cents). */
+const COMMISSION_CENTS_PER_UNIT = 100;
+
+/**
+ * The single source of truth for the payout RULE: maps an offering + deal value
+ * to the partner payout in major currency units, straight from
+ * {@link COMMISSION_CONFIG}. Shared by the calculator (frontend preview) and the
+ * close trigger (backend ledger) so the displayed estimate and the recorded
+ * commission can never disagree.
+ *
+ *  - `percentOfMonthlyRent` → `dealValue × value` (e.g. €1,200 rent → €36)
+ *  - `flat`                 → `value` (the deal value is ignored)
+ *
+ * Result is rounded to 2 decimal places.
+ */
+export function commissionAmount(offering: CommissionOffering, dealValue: number): number {
+  const entry = COMMISSION_CONFIG.payout[offering];
+  const raw = entry.kind === 'percentOfMonthlyRent' ? dealValue * entry.value : entry.value;
+  return Math.round(raw * COMMISSION_CENTS_PER_UNIT) / COMMISSION_CENTS_PER_UNIT;
+}
 
 /**
  * Gamification points awarded when a sourced deal closes. Tier is derived from

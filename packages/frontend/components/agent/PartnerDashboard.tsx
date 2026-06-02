@@ -15,13 +15,15 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { format } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
 import { useMediaQuery } from 'react-responsive';
 
 import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { colors } from '@/styles/colors';
+import { ProgressBar } from '@/components/ui/ProgressBar';
+import { formatCurrency } from '@/utils/currency';
+import { formatLocalized } from '@/utils/dateLocale';
 import {
   hairline,
   ICON_SIZES,
@@ -50,15 +52,12 @@ interface PartnerDashboardProps {
   earningsLoading: boolean;
 }
 
-/** Format a major-unit amount as a whole-unit currency string. */
-function formatMoney(amount: number, currency: string): string {
-  return Math.round(amount).toLocaleString('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  });
-}
+/**
+ * Whole-unit display (no decimals) for the ledger amounts. Earnings are shown in
+ * the commission's OWN currency, so `formatCurrency` is used without FX
+ * conversion — it only renders the symbol + grouped amount.
+ */
+const WHOLE_CURRENCY = { minimumFractionDigits: 0, maximumFractionDigits: 0 } as const;
 
 /**
  * A populated city reference may ride on the address when the backend expands
@@ -117,11 +116,14 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
       : undefined;
   }, [currentTier]);
 
+  // 0–1 fraction toward the next tier (full at the top tier). `ProgressBar`
+  // clamps for display, so no manual clamp is needed here — only the
+  // divide-by-zero guard.
   const progress = useMemo(() => {
     if (!nextTier) return 1;
     const span = nextTier.minPoints - currentTier.minPoints;
     if (span <= 0) return 1;
-    return Math.min(Math.max((points - currentTier.minPoints) / span, 0), 1);
+    return (points - currentTier.minPoints) / span;
   }, [nextTier, currentTier, points]);
 
   const tierName = (key: RewardTierKey): string => t(`agent.rewards.tiers.${key}`, key);
@@ -173,11 +175,11 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
           )}
           {stat(
             t('agent.dashboard.pending', 'Pending'),
-            formatMoney(stats.pendingEarnings, stats.currency),
+            formatCurrency(stats.pendingEarnings, stats.currency, WHOLE_CURRENCY),
           )}
           {stat(
             t('agent.dashboard.earned', 'Earned'),
-            formatMoney(stats.paidEarnings, stats.currency),
+            formatCurrency(stats.paidEarnings, stats.currency, WHOLE_CURRENCY),
           )}
         </View>
 
@@ -192,9 +194,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
               {t('agent.dashboard.pointsValue', '{{count}} pts', { count: points })}
             </BloomText>
           </View>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` }]} />
-          </View>
+          <ProgressBar progress={progress} height={8} color={colors.primaryColor} />
           <BloomText style={styles.progressCaption}>
             {nextTier
               ? t('agent.dashboard.toNext', '{{points}} pts to {{tier}}', {
@@ -248,10 +248,10 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
               <View key={commission.id} style={styles.ledgerRow}>
                 <View style={styles.ledgerLeft}>
                   <BloomText style={styles.ledgerAmount}>
-                    {formatMoney(commission.amount, commission.currency)}
+                    {formatCurrency(commission.amount, commission.currency, WHOLE_CURRENCY)}
                   </BloomText>
                   <BloomText style={styles.ledgerMeta}>
-                    {`${offeringLabel(commission.basis.offering)} · ${format(
+                    {`${offeringLabel(commission.basis.offering)} · ${formatLocalized(
                       new Date(commission.createdAt),
                       'MMM d, yyyy',
                     )}`}
@@ -342,17 +342,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  progressTrack: {
-    height: 8,
-    borderRadius: radius.pill,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: 8,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primaryColor,
   },
   progressCaption: {
     fontSize: 13,

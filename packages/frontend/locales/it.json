@@ -1291,7 +1291,10 @@
     "badge": {
       "byNight": "A notte",
       "forSale": "In vendita",
-      "exchange": "Scambio"
+      "exchange": "Scambio",
+      "verified": "Verificato",
+      "eco": "Eco",
+      "instantBook": "Prenotazione immediata"
     },
     "offering": {
       "stepTitle": "Come lo offri?",

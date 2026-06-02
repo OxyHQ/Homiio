@@ -108,31 +108,18 @@ export function PropertyCardSkeleton({
           />
         )}
 
-        {/* Rating Badge Skeleton */}
+        {/* Top-left media-chip stack placeholder — mirrors the real card's
+            single flex chip stack (lead chip is the rating). Property type now
+            lives in the meta line below, covered by the features-row
+            placeholder, so there is no separate on-photo type placeholder. */}
         {showRating && (
           <Skeleton.Box
-            width={50}
-            height={24}
-            borderRadius={12}
-            style={styles.ratingBadgeSkeleton}
+            width={48}
+            height={28}
+            borderRadius={9999}
+            style={styles.mediaChipStackSkeleton}
           />
         )}
-
-        {/* Type Icon Skeleton */}
-        <Skeleton.Box
-          width={32}
-          height={32}
-          borderRadius={16}
-          style={styles.typeIconSkeleton}
-        />
-
-        {/* Verified Badge Skeleton */}
-        <Skeleton.Box
-          width={24}
-          height={24}
-          borderRadius={12}
-          style={styles.verifiedBadgeSkeleton}
-        />
       </View>
 
       {/* Content */}
@@ -256,22 +243,10 @@ const styles = StyleSheet.create({
     right: 8,
     zIndex: 2,
   },
-  ratingBadgeSkeleton: {
+  mediaChipStackSkeleton: {
     position: 'absolute',
     top: 8,
     left: 8,
-    zIndex: 2,
-  },
-  typeIconSkeleton: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    zIndex: 1,
-  },
-  verifiedBadgeSkeleton: {
-    position: 'absolute',
-    top: 40,
-    right: 8,
     zIndex: 2,
   },
 

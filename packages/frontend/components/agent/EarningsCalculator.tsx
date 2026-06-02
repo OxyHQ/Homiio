@@ -34,8 +34,12 @@ import * as SegmentedControl from '@oxyhq/bloom/segmented-control';
 import { colors } from '@/styles/colors';
 import { shadowToken } from '@/styles/shadows';
 import { hairline, radius, resolvePagePadding, spacing, tracker } from '@/constants/styles';
+import { formatCurrency } from '@/utils/currency';
 import { useMediaQuery } from 'react-responsive';
-import { COMMISSION_CONFIG, type CommissionOffering } from '@homiio/shared-types';
+import { COMMISSION_CONFIG, commissionAmount, type CommissionOffering } from '@homiio/shared-types';
+
+/** Whole-€ display (no decimals) for the calculator's amounts. */
+const WHOLE_CURRENCY = { minimumFractionDigits: 0, maximumFractionDigits: 0 } as const;
 
 /** Slider thumb diameter (matches the mortgage calculator). */
 const SLIDER_THUMB_SIZE = 24;
@@ -60,33 +64,6 @@ function clamp(value: number, min: number, max: number): number {
 function snap(value: number, min: number, max: number, step: number): number {
   const snapped = Math.round(value / step) * step;
   return clamp(snapped, min, max);
-}
-
-/**
- * Partner payout for a given offering + monthly rent, computed straight from
- * `COMMISSION_CONFIG`. Only rent varies with the deal value (3% of the first
- * month's rent); sale and exchange are flat rewards.
- */
-function computePayout(offering: CommissionOffering, monthlyRent: number): number {
-  const { payout } = COMMISSION_CONFIG;
-  switch (offering) {
-    case 'rent':
-      return monthlyRent * payout.rent.value;
-    case 'sale':
-      return payout.sale.value;
-    case 'exchange':
-      return payout.exchange.value;
-  }
-}
-
-/** Format a major-unit amount as a whole-€ currency string. */
-function formatCurrency(amount: number, currency: string): string {
-  return Math.round(amount).toLocaleString('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  });
 }
 
 interface ValueSliderProps {
@@ -198,17 +175,25 @@ export const EarningsCalculator: React.FC = () => {
     }
   }, []);
 
-  // Only rent varies with a deal value; sale/exchange payouts are flat.
-  const payout = useMemo(() => computePayout(offering, rent), [offering, rent]);
+  // Payout from the shared rule — the single source of truth with the backend
+  // ledger. Only rent varies with the deal value; sale/exchange are flat, so
+  // they ignore `rent`.
+  const payout = useMemo(() => commissionAmount(offering, rent), [offering, rent]);
 
   const { currency } = COMMISSION_CONFIG;
 
-  const offeringLabels: Record<CommissionOffering, string> = {
-    rent: t('agent.calculator.offerings.rent', 'Rent'),
-    sale: t('agent.calculator.offerings.sale', 'Sale'),
-    exchange: t('agent.calculator.offerings.exchange', 'Exchange'),
-  };
+  // `t` is stable per language; memoise so the label map isn't rebuilt on every
+  // slider-drag frame.
+  const offeringLabels = useMemo<Record<CommissionOffering, string>>(
+    () => ({
+      rent: t('agent.calculator.offerings.rent', 'Rent'),
+      sale: t('agent.calculator.offerings.sale', 'Sale'),
+      exchange: t('agent.calculator.offerings.exchange', 'Exchange'),
+    }),
+    [t],
+  );
 
+  const title = t('agent.calculator.title', 'See what you could earn');
   const inputLabel = t('agent.calculator.monthlyRent', 'Monthly rent');
 
   // Sale/exchange are flat rewards, so we show a short note instead of a
@@ -222,13 +207,11 @@ export const EarningsCalculator: React.FC = () => {
     <View style={{ paddingHorizontal: horizontalPadding }}>
       <View style={styles.card}>
         <View style={styles.header}>
-          <H1 style={styles.title}>
-            {t('agent.calculator.title', 'See what you could earn')}
-          </H1>
+          <H1 style={styles.title}>{title}</H1>
         </View>
 
         <SegmentedControl.Root
-          label={t('agent.calculator.title', 'See what you could earn')}
+          label={title}
           type="radio"
           value={offering}
           onChange={handleSetOffering}
@@ -245,7 +228,7 @@ export const EarningsCalculator: React.FC = () => {
             <View style={styles.controlHeader}>
               <BloomText style={styles.controlLabel}>{inputLabel}</BloomText>
               <BloomText style={styles.controlValue}>
-                {`${formatCurrency(rent, currency)} / ${t('agent.calculator.perMonth', 'mo')}`}
+                {`${formatCurrency(rent, currency, WHOLE_CURRENCY)} / ${t('agent.calculator.perMonth', 'mo')}`}
               </BloomText>
             </View>
             <ValueSlider
@@ -265,7 +248,7 @@ export const EarningsCalculator: React.FC = () => {
           <BloomText style={styles.resultLabel}>
             {t('agent.calculator.result', 'You earn')}
           </BloomText>
-          <H1 style={styles.resultAmount}>{formatCurrency(payout, currency)}</H1>
+          <H1 style={styles.resultAmount}>{formatCurrency(payout, currency, WHOLE_CURRENCY)}</H1>
           <BloomText style={styles.resultCaption}>
             {t('agent.calculator.caption', 'Paid when the deal closes — no license needed.')}
           </BloomText>

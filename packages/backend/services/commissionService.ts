@@ -16,7 +16,8 @@
 import {
   COMMISSION_CONFIG,
   POINTS_CONFIG,
-  type CommissionKind,
+  commissionAmount,
+  type CommissionBasis,
   type CommissionOffering,
 } from '@homiio/shared-types';
 import { OfferingType, PropertyStatus } from '@homiio/shared-types';
@@ -40,18 +41,8 @@ export interface ComputedCommission {
   amount: number;
   /** ISO 4217 currency code. */
   currency: string;
-  /** Audit breakdown of how the payout was derived. */
-  basis: {
-    offering: CommissionOffering;
-    /** Monthly rent (rent) or sale price (sale) the payout was derived from; 0 for exchange. */
-    dealValue: number;
-    /** Whether the payout is a percentage of monthly rent or a flat reward. */
-    kind: CommissionKind;
-    /** Fraction of monthly rent paid out, when `kind` is `percentOfMonthlyRent`. */
-    rate?: number;
-    /** Flat payout amount, in major units, when `kind` is `flat`. */
-    flat?: number;
-  };
+  /** Audit breakdown of how the payout was derived (shared with the API shape). */
+  basis: CommissionBasis;
 }
 
 /** Minimal shape of a property document this service reads. */
@@ -73,7 +64,6 @@ interface DealBasis {
   dealValue: number;
 }
 
-const CENTS_PER_UNIT = 100;
 /** Major-unit step the per-1,000 points bonus accrues on. */
 const POINTS_EARNED_STEP = 1000;
 /** Length of the random alphanumeric suffix appended to a referral code. */
@@ -89,57 +79,31 @@ function isPositiveNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }
 
-/** Round a major-unit money amount to 2 decimal places. */
-function roundMoney(amount: number): number {
-  return Math.round(amount * CENTS_PER_UNIT) / CENTS_PER_UNIT;
-}
-
 /**
- * Compute the partner payout for a closed deal. Homiio is a very low-fee
- * platform, so payouts are small and mostly flat:
- *  - rent: 3% of the first month's rent (`dealValue` × payout.rent.value)
- *  - sale: flat reward (payout.sale.value), independent of the sale price
- *  - exchange: flat reward (payout.exchange.value), no monetary deal value
+ * Compute the partner payout for a closed deal. The amount + rounding come from
+ * the shared {@link commissionAmount} rule (single source of truth with the
+ * calculator); the `basis` audit fields branch off the offering's payout `kind`:
+ *  - `percentOfMonthlyRent` → `dealValue × rate` (e.g. 3% of the first month)
+ *  - `flat`                 → a fixed reward, independent of the deal value
+ *
+ * The deal value is sanitised first (non-positive → 0), so exchange (which
+ * carries no monetary value) records `dealValue: 0` and the flat reward stands.
  */
 export function computeCommission(
   offering: CommissionOffering,
   dealValue: number
 ): ComputedCommission {
   const { payout, currency } = COMMISSION_CONFIG;
+  const entry = payout[offering];
+  const safeValue = isPositiveNumber(dealValue) ? dealValue : 0;
+  const amount = commissionAmount(offering, safeValue);
 
-  switch (offering) {
-    case 'rent': {
-      const safeValue = isPositiveNumber(dealValue) ? dealValue : 0;
-      const rate = payout.rent.value;
-      return {
-        amount: roundMoney(safeValue * rate),
-        currency,
-        basis: { offering: 'rent', dealValue: safeValue, kind: 'percentOfMonthlyRent', rate },
-      };
-    }
-    case 'sale': {
-      const safeValue = isPositiveNumber(dealValue) ? dealValue : 0;
-      const flat = payout.sale.value;
-      return {
-        amount: flat,
-        currency,
-        basis: { offering: 'sale', dealValue: safeValue, kind: 'flat', flat },
-      };
-    }
-    case 'exchange': {
-      const flat = payout.exchange.value;
-      return {
-        amount: flat,
-        currency,
-        basis: { offering: 'exchange', dealValue: 0, kind: 'flat', flat },
-      };
-    }
-    default: {
-      // Exhaustiveness guard: a new CommissionOffering must be handled above.
-      const exhaustive: never = offering;
-      throw new Error(`Unsupported commission offering: ${String(exhaustive)}`);
-    }
-  }
+  const basis: CommissionBasis =
+    entry.kind === 'percentOfMonthlyRent'
+      ? { offering, dealValue: safeValue, kind: entry.kind, rate: entry.value }
+      : { offering, dealValue: safeValue, kind: entry.kind, flat: entry.value };
+
+  return { amount, currency, basis };
 }
 
 /**

@@ -1494,7 +1494,10 @@
     "badge": {
       "byNight": "Por noche",
       "forSale": "En venta",
-      "exchange": "Intercambio"
+      "exchange": "Intercambio",
+      "verified": "Verificado",
+      "eco": "Eco",
+      "instantBook": "Reserva inmediata"
     },
     "offering": {
       "stepTitle": "¿Cómo lo ofreces?",

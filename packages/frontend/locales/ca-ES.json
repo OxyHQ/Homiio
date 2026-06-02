@@ -1406,7 +1406,10 @@
     "badge": {
       "byNight": "Per nit",
       "forSale": "En venda",
-      "exchange": "Intercanvi"
+      "exchange": "Intercanvi",
+      "verified": "Verificat",
+      "eco": "Eco",
+      "instantBook": "Reserva immediata"
     },
     "offering": {
       "stepTitle": "Com ho ofereixes?",

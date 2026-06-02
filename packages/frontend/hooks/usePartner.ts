@@ -53,10 +53,11 @@ export function usePartnerMe(): UseQueryResult<PartnerMeResponse> {
 }
 
 /**
- * Enrol the current user as a partner (idempotent). On success the fresh
- * `PartnerMeResponse` is written straight into the "me" cache so the screen can
- * reveal the referral link without a refetch round-trip, and the query is
- * invalidated to reconcile with the server.
+ * Enrol the current user as a partner (idempotent). The join endpoint returns
+ * the full, authoritative `PartnerMeResponse`, so it is written straight into the
+ * "me" cache — the screen reveals the referral link with no refetch round-trip,
+ * and no invalidation is needed (an immediate invalidate would discard this
+ * optimistic write for a redundant network fetch of the same payload).
  */
 export function useJoinPartner(): UseMutationResult<PartnerMeResponse, unknown, void> {
   const queryClient = useQueryClient();
@@ -64,7 +65,6 @@ export function useJoinPartner(): UseMutationResult<PartnerMeResponse, unknown, 
     mutationFn: () => partnerApi.join(),
     onSuccess: (data) => {
       queryClient.setQueryData(partnerKeys.me(), data);
-      queryClient.invalidateQueries({ queryKey: partnerKeys.me() });
     },
   });
 }

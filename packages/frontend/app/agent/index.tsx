@@ -100,8 +100,6 @@ export default function AgentScreen() {
     }
   }, [isAuthenticated, isPartner, link, joinMutation, t]);
 
-  const handleBannerCta = handleHeroCta;
-
   return (
     <View style={styles.root}>
       <Header options={{ transparent: true, showBackButton: true }} scrollY={scrollY} />
@@ -165,7 +163,7 @@ export default function AgentScreen() {
             subtitle={t('agent.banner.subtitle', 'Turn the homes around you into income.')}
             ctaLabel={t('agent.banner.cta', 'Become an agent')}
             trustLine={t('agent.banner.trust', 'No license needed. Work from your phone.')}
-            onPress={handleBannerCta}
+            onPress={handleHeroCta}
           />
         </View>
       </Animated.ScrollView>

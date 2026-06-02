@@ -54,8 +54,6 @@ import { PropertyType, type Property } from '@homiio/shared-types';
 const SKELETON_COUNT = 6;
 /** Diameter of the circular create FAB. */
 const FAB_SIZE = 56;
-/** Full-width browse has no side map, so it gets the roomy home-style columns. */
-const GRID_COLUMNS = { sm: 1, md: 2, lg: 3, xl: 3 } as const;
 
 /**
  * Derive the {@link SearchFilters} shape (consumed by the reused filters sheet)
@@ -241,7 +239,6 @@ export default function PropertiesScreen() {
       return (
         <PropertyResultsGridSkeleton
           count={SKELETON_COUNT}
-          columns={GRID_COLUMNS}
           style={styles.gridPadding}
         />
       );
@@ -275,7 +272,6 @@ export default function PropertiesScreen() {
       <PropertyResultsGrid
         properties={properties}
         onPropertyPress={handlePropertyPress}
-        columns={GRID_COLUMNS}
         style={styles.gridPadding}
       />
     );
@@ -352,7 +348,6 @@ export default function PropertiesScreen() {
         {isFetchingNextPage ? (
           <PropertyResultsGridSkeleton
             count={2}
-            columns={GRID_COLUMNS}
             style={styles.gridPadding}
           />
         ) : null}

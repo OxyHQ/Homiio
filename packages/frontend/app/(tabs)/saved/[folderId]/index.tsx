@@ -7,11 +7,10 @@
  */
 import React, { useCallback, useContext, useMemo } from 'react';
 import {
-  FlatList,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   View,
-  type ListRenderItem,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -20,18 +19,19 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOxy } from '@oxyhq/services';
 
 import { Button } from '@oxyhq/bloom/button';
+import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { Header } from '@/components/Header';
-import { PropertyCard } from '@/components/PropertyCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
+import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import savedPropertyService from '@/services/savedPropertyService';
 import savedPropertyFolderService from '@/services/savedPropertyFolderService';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
-import type { SavedProperty } from '@homiio/shared-types';
+import type { Property, SavedProperty } from '@homiio/shared-types';
 
 export default function SavedFolderScreen() {
   const { t } = useTranslation();
@@ -81,22 +81,35 @@ export default function SavedFolderScreen() {
     ]);
   }, [queryClient]);
 
-  const renderItem: ListRenderItem<SavedProperty> = useCallback(({ item }) => {
-    return (
-      <View style={styles.gridItem}>
-        <PropertyCard
-          property={item}
-          variant="compact"
-          orientation="vertical"
-          onPress={() => {
-            const id = (item._id || item.id) as string;
-            if (id) router.push(`/properties/${id}`);
-          }}
-          noteText={item.notes || ''}
-        />
-      </View>
-    );
+  // Map property id → saved note so the shared grid's footer slot can surface
+  // the note (the grid receives plain `Property` objects, not `SavedProperty`).
+  const notesById = useMemo(() => {
+    const map = new Map<string, string>();
+    propertiesInFolder.forEach((property) => {
+      const id = (property._id || property.id) as string | undefined;
+      const note = property.notes?.trim();
+      if (id && note) map.set(id, note);
+    });
+    return map;
+  }, [propertiesInFolder]);
+
+  const handlePropertyPress = useCallback((property: Property) => {
+    const id = (property._id || property.id) as string;
+    if (id) router.push(`/properties/${id}`);
   }, []);
+
+  const renderNoteFooter = useCallback(
+    (property: Property) => {
+      const note = notesById.get((property._id || property.id) as string);
+      if (!note) return undefined;
+      return (
+        <BloomText style={styles.noteText} numberOfLines={2}>
+          {note}
+        </BloomText>
+      );
+    },
+    [notesById],
+  );
 
   const isLoading = savedQuery.isPending || foldersQuery.isPending;
   const isError = savedQuery.isError || foldersQuery.isError;
@@ -189,14 +202,19 @@ export default function SavedFolderScreen() {
         }}
       />
 
-      <FlatList
-        data={propertiesInFolder}
-        keyExtractor={(item) => (item._id || item.id) as string}
-        numColumns={2}
-        columnWrapperStyle={styles.gridRow}
+      <ScrollView
         contentContainerStyle={styles.gridContent}
-        renderItem={renderItem}
-        ListEmptyComponent={
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            colors={[colors.primaryColor]}
+            tintColor={colors.primaryColor}
+          />
+        }
+      >
+        {propertiesInFolder.length === 0 ? (
           <View style={styles.emptyInner}>
             <EmptyState
               icon="folder-outline"
@@ -210,16 +228,14 @@ export default function SavedFolderScreen() {
               onAction={() => router.push('/explore')}
             />
           </View>
-        }
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            colors={[colors.primaryColor]}
-            tintColor={colors.primaryColor}
+        ) : (
+          <PropertyResultsGrid
+            properties={propertiesInFolder}
+            onPropertyPress={handlePropertyPress}
+            renderFooter={renderNoteFooter}
           />
-        }
-      />
+        )}
+      </ScrollView>
     </View>
   );
 }
@@ -243,13 +259,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing['4xl'],
-    gap: spacing.lg,
   },
-  gridRow: {
-    gap: spacing.lg,
-  },
-  gridItem: {
-    flex: 1,
+  noteText: {
+    fontSize: 13,
+    color: colors.muted,
+    paddingTop: spacing.xs,
   },
   emptyInner: {
     paddingVertical: spacing['4xl'],

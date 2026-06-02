@@ -17,6 +17,7 @@ import React, {
 import {
   FlatList,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   View,
   Pressable,
@@ -31,14 +32,14 @@ import * as SegmentedControl from '@oxyhq/bloom/segmented-control';
 import { SearchInput } from '@oxyhq/bloom/search-input';
 import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
 import { useOxy, showSignInModal } from '@oxyhq/services';
-import type { SavedProperty } from '@homiio/shared-types';
+import type { Property, SavedProperty } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
-import { PropertyCard } from '@/components/PropertyCard';
 import { CardSurface } from '@/components/ui/CardSurface';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
+import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
 import savedPropertyService from '@/services/savedPropertyService';
 import savedPropertyFolderService, {
   type SavedPropertyFolder,
@@ -192,19 +193,10 @@ export default function SavedPropertiesScreen() {
     <FolderTile folder={item} />
   );
 
-  const renderProperty: ListRenderItem<SavedProperty> = ({ item }) => (
-    <View style={styles.gridItem}>
-      <PropertyCard
-        property={item}
-        variant="compact"
-        orientation="vertical"
-        onPress={() => {
-          const id = (item._id || item.id) as string;
-          if (id) router.push(`/properties/${id}`);
-        }}
-      />
-    </View>
-  );
+  const handlePropertyPress = useCallback((property: Property) => {
+    const id = (property._id || property.id) as string;
+    if (id) router.push(`/properties/${id}`);
+  }, []);
 
   return (
     <View style={styles.root}>
@@ -309,15 +301,9 @@ export default function SavedPropertiesScreen() {
           }
         />
       ) : (
-        <FlatList
-          data={filteredRecent}
-          keyExtractor={(property) =>
-            (property._id || property.id) as string
-          }
-          numColumns={2}
-          columnWrapperStyle={styles.gridRow}
+        <ScrollView
           contentContainerStyle={styles.gridContent}
-          renderItem={renderProperty}
+          showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
@@ -326,7 +312,8 @@ export default function SavedPropertiesScreen() {
               tintColor={colors.primaryColor}
             />
           }
-          ListEmptyComponent={
+        >
+          {filteredRecent.length === 0 ? (
             <View style={styles.emptyInner}>
               <EmptyState
                 icon="bookmark-outline"
@@ -351,8 +338,13 @@ export default function SavedPropertiesScreen() {
                 onAction={() => router.push('/explore')}
               />
             </View>
-          }
-        />
+          ) : (
+            <PropertyResultsGrid
+              properties={filteredRecent}
+              onPropertyPress={handlePropertyPress}
+            />
+          )}
+        </ScrollView>
       )}
     </View>
   );
@@ -437,9 +429,6 @@ const styles = StyleSheet.create({
   },
   gridRow: {
     gap: spacing.lg,
-  },
-  gridItem: {
-    flex: 1,
   },
   emptyInner: {
     paddingVertical: spacing['4xl'],

@@ -66,6 +66,11 @@ import type {
 const DEFAULT_MAP_ZOOM = 12;
 /** Number of skeleton cards shown during the first load. */
 const SKELETON_COUNT = 6;
+/**
+ * Skeleton cards appended while paginating (the next-page shimmer). Fewer than
+ * the first-load count since it's just a hint that more rows are arriving.
+ */
+const NEXT_PAGE_SKELETON_COUNT = 2;
 
 /** Build map markers ([lng, lat] pins) from a property list. */
 function toMarkers(
@@ -212,6 +217,20 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     },
     [],
   );
+
+  // Card → chip (web only, wired in PropertyResultsGrid). Hovering a result card
+  // highlights its map price chip imperatively — the same `.is-selected` look a
+  // marker click gives — without touching the sticky `highlightedId` selection.
+  const handleCardHoverIn = useCallback((id: string) => {
+    mapRef.current?.highlightMarker(id);
+  }, []);
+
+  // Hover-out reverts the chip to the sticky marker-click selection (or clears
+  // it when nothing is selected), so a transient hover never leaves the map in a
+  // highlighted state that disagrees with `highlightedId`.
+  const handleCardHoverOut = useCallback(() => {
+    mapRef.current?.highlightMarker(highlightedId);
+  }, [highlightedId]);
 
   const handleRegionChange = useCallback(
     ({ bounds, isFinal }: { bounds: SearchBounds; isFinal?: boolean }) => {
@@ -437,12 +456,16 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     </View>
   );
 
-  const listBody = (gridColumns?: Partial<{ sm: number; md: number; lg: number; xl: number }>) => {
+  // The explore list lives in a half-window column beside the map, so it stays
+  // container-responsive with NO `maxColumns` cap: `PropertyResultsGrid` falls
+  // back to the global `GRID_MAX_COLUMNS` and the narrow column naturally lands
+  // on fewer columns than a full-width grid (≥2 via `GRID_MIN_COLUMNS`, more
+  // only when an ultra-wide window genuinely gives the list column the room).
+  const listBody = () => {
     if (isLoading && properties.length === 0) {
       return (
         <PropertyResultsGridSkeleton
           count={SKELETON_COUNT}
-          columns={gridColumns}
           style={styles.gridPadding}
         />
       );
@@ -480,13 +503,14 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         properties={properties}
         onPropertyPress={onPropertyPress}
         highlightedPropertyId={highlightedId}
-        columns={gridColumns}
+        onPropertyHoverIn={handleCardHoverIn}
+        onPropertyHoverOut={handleCardHoverOut}
         style={styles.gridPadding}
       />
     );
   };
 
-  const listScroll = (gridColumns?: Partial<{ sm: number; md: number; lg: number; xl: number }>) => (
+  const listScroll = (
     <ScrollView
       style={styles.listScroll}
       contentContainerStyle={styles.listScrollContent}
@@ -502,11 +526,10 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
       <View style={styles.resultsHeader}>
         <BloomText style={styles.resultsTitle}>{resultsHeading}</BloomText>
       </View>
-      {listBody(gridColumns)}
+      {listBody()}
       {isFetchingNextPage ? (
         <PropertyResultsGridSkeleton
-          count={2}
-          columns={gridColumns}
+          count={NEXT_PAGE_SKELETON_COUNT}
           style={styles.gridPadding}
         />
       ) : null}
@@ -574,7 +597,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
       <View style={styles.container}>
         {topBar}
         <View style={styles.splitRow}>
-          <View style={styles.splitListColumn}>{listScroll({ sm: 1, md: 2, lg: 2, xl: 2 })}</View>
+          <View style={styles.splitListColumn}>{listScroll}</View>
           <View style={styles.splitMapColumn}>{mapPanel}</View>
         </View>
       </View>
@@ -588,7 +611,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
       {showMobileMap ? (
         <View style={styles.fullColumn}>{mapPanel}</View>
       ) : (
-        <View style={styles.fullColumn}>{listScroll({ sm: 1, md: 2, lg: 2, xl: 2 })}</View>
+        <View style={styles.fullColumn}>{listScroll}</View>
       )}
       <MapFab
         onPress={() => setShowMobileMap((prev) => !prev)}

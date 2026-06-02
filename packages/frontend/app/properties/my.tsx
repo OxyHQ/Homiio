@@ -40,8 +40,6 @@ import { logger } from '@/utils/logger';
 
 /** Number of skeleton cards shown during the first load. */
 const SKELETON_COUNT = 4;
-/** Roomy columns — like `/properties`, this surface owns the full width. */
-const GRID_COLUMNS = { sm: 1, md: 2, lg: 3, xl: 3 } as const;
 
 /** A pending delete target, carried while the confirm dialog is open. */
 interface DeleteTarget {
@@ -138,7 +136,6 @@ export default function MyPropertiesScreen() {
       return (
         <PropertyResultsGridSkeleton
           count={SKELETON_COUNT}
-          columns={GRID_COLUMNS}
           style={styles.gridPadding}
         />
       );
@@ -169,7 +166,6 @@ export default function MyPropertiesScreen() {
       <PropertyResultsGrid
         properties={properties}
         onPropertyPress={handlePropertyPress}
-        columns={GRID_COLUMNS}
         style={styles.gridPadding}
         renderFooter={renderFooter}
       />

@@ -114,6 +114,45 @@ export const ModeToggle = React.memo(function ModeToggle() {
     indicatorY.value = withTiming(activeIndex * ROW_HEIGHT, ANIM_CONFIG);
   }, [activeIndex, indicatorY]);
 
+  /**
+   * Web-only keyboard shortcuts that mirror the per-row hover hint (`⌥⌃` +
+   * digit → Alt+Ctrl+1..4). This is a genuine event subscription, so a
+   * cleanup `useEffect` is the right tool — not the derived-state smell the
+   * project warns against. The digit→mode map is derived from {@link MODE_ROWS}
+   * on every keystroke so the hints and the handler can never drift apart.
+   */
+  React.useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only Alt+Ctrl chords; let Cmd-based combos (e.g. macOS) fall through.
+      if (!e.altKey || !e.ctrlKey || e.metaKey) return;
+
+      // Never hijack a digit the user is typing into a field.
+      const target = e.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+      ) {
+        return;
+      }
+
+      // `code` (physical key) is layout-stable while Alt is held; `key` can
+      // mutate to an alternate glyph under Alt on macOS.
+      const match = MODE_ROWS.find((row) => e.code === `Digit${row.shortcut}`);
+      if (!match) return;
+
+      e.preventDefault();
+      setBrowseMode(match.mode);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [setBrowseMode]);
+
   const indicatorStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: indicatorY.value }],
   }));
