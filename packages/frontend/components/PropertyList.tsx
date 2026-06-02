@@ -2,9 +2,17 @@ import React from 'react';
 import { View, StyleSheet, FlatList, ViewStyle, ViewProps, FlatListProps, Dimensions, Platform } from 'react-native';
 import { PropertyCard } from './PropertyCard';
 import { Property } from '@/services/propertyService';
+import { PROPERTY_GRID_GAP, spacing } from '@/constants/styles';
 
 const { width: screenWidth } = Dimensions.get('window');
 const AIRBNB_CARD_WIDTH = 180;
+
+/**
+ * Horizontal space the content padding reserves on both sides of a multi-column
+ * grid row, so the measured card width never overflows the gutter. Derived from
+ * the shared page gutter (`spacing.lg`) the rest of the property grids use.
+ */
+const GRID_CONTENT_INSET = spacing.lg * 2;
 
 // Web-only pointer handlers. RN's ViewProps omits mouse events, but RN-Web
 // forwards them; spreading the object keeps the View typings intact.
@@ -42,8 +50,13 @@ export function PropertyList({
       ...styles.card,
       ...(isGrid
         ? {
-          width: Math.min((screenWidth - 48) / numColumns, AIRBNB_CARD_WIDTH),
-          marginHorizontal: 4,
+          // Subtract the row inset and the inter-column gaps so N cards plus
+          // their `PROPERTY_GRID_GAP` gutters fit the content width exactly.
+          width: Math.min(
+            (screenWidth - GRID_CONTENT_INSET - PROPERTY_GRID_GAP * (numColumns - 1)) /
+              numColumns,
+            AIRBNB_CARD_WIDTH,
+          ),
         }
         : {}),
       ...(horizontal ? styles.horizontalCard : {}),
@@ -88,22 +101,28 @@ export function PropertyList({
 }
 
 const styles = StyleSheet.create({
+  // Page gutter shared with the rest of the property grids (`spacing.lg`), so a
+  // `PropertyList` lines up to the same left edge as `PropertyResultsGrid`.
   contentContainer: {
-    padding: 16,
+    padding: spacing.lg,
   },
+  // Multi-column rows: the inter-column gutter is the shared `PROPERTY_GRID_GAP`
+  // (same value the other property grids use). Row-to-row spacing is owned by
+  // each card's `marginBottom` below, so it stays a single source of truth and
+  // rows never double-space.
   columnWrapper: {
     justifyContent: 'flex-start',
-    marginBottom: 8,
+    gap: PROPERTY_GRID_GAP,
     alignItems: 'stretch',
     flexDirection: 'row',
   },
   card: {
-    marginBottom: 12,
+    marginBottom: PROPERTY_GRID_GAP,
     flex: 1,
     alignSelf: 'stretch',
   },
   horizontalCard: {
     width: AIRBNB_CARD_WIDTH,
-    marginRight: 12,
+    marginRight: PROPERTY_GRID_GAP,
   },
 });

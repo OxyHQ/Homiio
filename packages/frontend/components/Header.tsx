@@ -8,10 +8,23 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
+import { colorChannels } from '@/styles/shadows';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from './ThemedText';
 import { useLayoutScroll } from '@/context/LayoutScrollContext';
+
+/**
+ * Header drop shadow, expressed as an animated `boxShadow`: the blur/offset are
+ * fixed and the alpha is interpolated with scroll (see `backgroundStyle`). The
+ * `"r, g, b"` channels are derived from the theme color once so the worklet only
+ * has to interpolate the alpha — no hardcoded color literal.
+ */
+const HEADER_SHADOW_CHANNELS = colorChannels(colors.COLOR_BLACK);
+const HEADER_SHADOW_OFFSET_Y = 2;
+const HEADER_SHADOW_BLUR = 3;
+/** Resting shadow alpha when the header background is fully shown. */
+const HEADER_SHADOW_MAX_OPACITY = 0.1;
 
 interface Props {
   style?: ViewStyle;
@@ -55,7 +68,11 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
 
   const backgroundStyle = useAnimatedStyle(() => {
     if (!isTransparent) {
-      return { opacity: 1, shadowOpacity: 0.1, elevation: 3 };
+      return {
+        opacity: 1,
+        boxShadow: `0px ${HEADER_SHADOW_OFFSET_Y}px ${HEADER_SHADOW_BLUR}px rgba(${HEADER_SHADOW_CHANNELS}, ${HEADER_SHADOW_MAX_OPACITY})`,
+        elevation: 3,
+      };
     }
     const progress = interpolate(
       scrollY.value,
@@ -63,14 +80,15 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
       [0, 1],
       'clamp',
     );
+    const shadowAlpha = interpolate(
+      scrollY.value,
+      [0, scrollThreshold],
+      [0, HEADER_SHADOW_MAX_OPACITY],
+      'clamp',
+    );
     return {
       opacity: progress,
-      shadowOpacity: interpolate(
-        scrollY.value,
-        [0, scrollThreshold],
-        [0, 0.1],
-        'clamp',
-      ),
+      boxShadow: `0px ${HEADER_SHADOW_OFFSET_Y}px ${HEADER_SHADOW_BLUR}px rgba(${HEADER_SHADOW_CHANNELS}, ${shadowAlpha})`,
       elevation: interpolate(
         scrollY.value,
         [0, scrollThreshold],
@@ -88,12 +106,6 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
           styles.backgroundOverlay,
           {
             backgroundColor: colors.primaryLight,
-            shadowColor: colors.COLOR_BLACK,
-            shadowOffset: {
-              width: 0,
-              height: 2,
-            },
-            shadowRadius: 3,
             borderBottomWidth: 0.01,
             borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
           },
@@ -114,37 +126,37 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
           ))}
           {titlePosition === 'left' && (
             <View>
-              {options?.title && (
+              {options?.title ? (
                 <ThemedText
                   style={[
                     styles.topRowText,
-                    options?.subtitle && { fontSize: 14 },
+                    options?.subtitle ? { fontSize: 14 } : null,
                   ]}
                 >
                   {options.title}
                 </ThemedText>
-              )}
-              {options?.subtitle && (
+              ) : null}
+              {options?.subtitle ? (
                 <ThemedText style={styles.subtitleText}>{options.subtitle}</ThemedText>
-              )}
+              ) : null}
             </View>
           )}
         </View>
         {titlePosition === 'center' && (
           <View style={styles.centerContainer}>
-            {options?.title && (
+            {options?.title ? (
               <ThemedText
                 style={[
                   styles.topRowText,
-                  options?.subtitle && { fontSize: 14 },
+                  options?.subtitle ? { fontSize: 14 } : null,
                 ]}
               >
                 {options.title}
               </ThemedText>
-            )}
-            {options?.subtitle && (
+            ) : null}
+            {options?.subtitle ? (
               <ThemedText style={styles.subtitleText}>{options.subtitle}</ThemedText>
-            )}
+            ) : null}
           </View>
         )}
         <View style={styles.rightContainer}>

@@ -3,6 +3,7 @@ import { View, ScrollView, StyleSheet, Dimensions, LayoutChangeEvent } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
+import { shadowToken } from '@/styles/shadows';
 import { ThemedText } from '@/components/ThemedText';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Rect, Text as SvgText } from 'react-native-svg';
@@ -318,11 +319,7 @@ const styles = StyleSheet.create({
         minWidth: 160,
         borderRadius: 16,
         overflow: 'hidden',
-        shadowColor: colors.COLOR_BLACK,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 3,
+        ...shadowToken({ y: 1, blur: 8, color: colors.COLOR_BLACK, opacity: 0.08, elevation: 3 }),
     },
     kpiInner: {
         padding: 16,
@@ -365,11 +362,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         paddingHorizontal: 16,
         paddingVertical: 12,
-        shadowColor: colors.COLOR_BLACK,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 3,
+        ...shadowToken({ y: 1, blur: 8, color: colors.COLOR_BLACK, opacity: 0.08, elevation: 3 }),
     },
     cardTitle: {
         fontSize: 22,
@@ -392,11 +385,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.white,
         borderRadius: 16,
         padding: 12,
-        shadowColor: colors.COLOR_BLACK,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 3,
+        ...shadowToken({ y: 1, blur: 8, color: colors.COLOR_BLACK, opacity: 0.08, elevation: 3 }),
     },
     chart: {
         borderRadius: 16,
@@ -416,11 +405,7 @@ const styles = StyleSheet.create({
         padding: 12,
         flexGrow: 1,
         minWidth: 160,
-        shadowColor: colors.COLOR_BLACK,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 3,
+        ...shadowToken({ y: 1, blur: 8, color: colors.COLOR_BLACK, opacity: 0.08, elevation: 3 }),
     },
     cityHeaderRow: {
         flexDirection: 'row',

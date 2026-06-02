@@ -68,8 +68,7 @@ export const AgentHero: React.FC<AgentHeroProps> = ({
         colors={['rgba(0,0,0,0.65)', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0.15)']}
         start={{ x: 0, y: 1 }}
         end={{ x: 0.6, y: 0 }}
-        style={styles.scrim}
-        pointerEvents="none"
+        style={[styles.scrim, { pointerEvents: 'none' }]}
       />
       <View
         style={[

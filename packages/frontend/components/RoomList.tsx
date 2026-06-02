@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
+import { shadowToken } from '@/styles/shadows';
 import { propertyService, type Property } from '@/services/propertyService';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { logger } from '@/utils/logger';
@@ -412,11 +413,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.white,
         borderRadius: 12,
         marginBottom: 16,
-        shadowColor: colors.COLOR_BLACK,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        ...shadowToken({ y: 2, blur: 4, color: colors.COLOR_BLACK, opacity: 0.1, elevation: 3 }),
         overflow: 'hidden',
     },
     imageContainer: {

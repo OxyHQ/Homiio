@@ -16,6 +16,8 @@ import type {
   Region,
 } from '@homiio/shared-types';
 
+import { resolveBackendImageUrl } from '@/utils/imageUrl';
+
 /** A ready-to-render image source for `expo-image`, or null when none resolved. */
 export type CityImageSource = { uri: string } | null;
 
@@ -68,7 +70,9 @@ export function getCityImageSource(
   for (const name of ordered) {
     const url = urls[name];
     if (typeof url === 'string' && url.length > 0) {
-      return { uri: url };
+      // City covers are self-hosted by our backend; re-home the URL onto the
+      // active API origin so a baked-in dev/emulator host resolves on web too.
+      return { uri: resolveBackendImageUrl(url) };
     }
   }
   return null;

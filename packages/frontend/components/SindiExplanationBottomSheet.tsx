@@ -374,8 +374,11 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
       </Animated.View>
       {/* Bottom navigation */}
       <Animated.View
-        style={[styles.bottomNav, bottomNavAnimatedStyle]}
-        pointerEvents={currentStep === TOTAL_STEPS - 1 ? 'none' : 'auto'}
+        style={[
+          styles.bottomNav,
+          bottomNavAnimatedStyle,
+          { pointerEvents: currentStep === TOTAL_STEPS - 1 ? 'none' : 'auto' },
+        ]}
         onLayout={onNavLayout}
       >
         <Button

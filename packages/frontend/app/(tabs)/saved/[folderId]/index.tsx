@@ -207,7 +207,7 @@ export default function SavedFolderScreen() {
               )}
               actionText={t('saved.exploreCta', 'Explore properties')}
               actionIcon="search"
-              onAction={() => router.push('/search')}
+              onAction={() => router.push('/explore')}
             />
           </View>
         }

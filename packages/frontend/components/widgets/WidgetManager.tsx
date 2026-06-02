@@ -1,5 +1,7 @@
 import React, { ReactNode, useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
+import { colors } from '@/styles/colors';
+import { spacing } from '@/constants/styles';
 import { TrustScoreWidget } from './TrustScoreWidget';
 import { FeaturedPropertiesWidget } from './FeaturedPropertiesWidget';
 import { EcoCertificationWidget } from './EcoCertificationWidget';
@@ -27,8 +29,8 @@ export type ScreenId =
   | 'contracts'
   | 'payments'
   | 'messages'
-  | 'search'
-  | 'search-results'
+  | 'explore'
+  | 'explore-results'
   | 'create-property';
 
 interface WidgetManagerProps {
@@ -102,12 +104,12 @@ export const WidgetManager = React.memo(function WidgetManager({
       contracts: [],
       payments: [],
       messages: [],
-      search: [
+      explore: [
         <QuickFiltersWidget key="quick-filters" />,
         <SavedSearchesWidget key="saved-searches" />,
         <PropertyAlertWidget key="property-alert" />,
       ],
-      'search-results': [
+      'explore-results': [
         <QuickFiltersWidget key="quick-filters" />,
         <SavedSearchesWidget key="saved-searches" />,
         <PropertyAlertWidget key="property-alert" />,
@@ -140,8 +142,12 @@ export const WidgetManager = React.memo(function WidgetManager({
   return (
     <View style={styles.container}>
       {filteredScreenWidgets.map((widget, index) => (
-        <View key={`widget-${index}`} style={styles.widgetWrapper}>
-          {widget}
+        <View key={`widget-${index}`}>
+          {/* Full-bleed hairline between sections only — never above the first.
+              A thin rule + whitespace reads as "same panel, distinct sections"
+              (Airbnb-2026), without boxing any widget into a card. */}
+          {index > 0 && <View style={styles.divider} />}
+          <View style={styles.section}>{widget}</View>
         </View>
       ))}
     </View>
@@ -151,9 +157,12 @@ export const WidgetManager = React.memo(function WidgetManager({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'column',
-    gap: 15,
   },
-  widgetWrapper: {
-    marginBottom: 0, // No margin since we're using gap
+  section: {
+    paddingVertical: spacing.lg,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
   },
 });

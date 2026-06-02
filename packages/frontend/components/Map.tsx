@@ -1,10 +1,12 @@
 import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react';
 import { Platform, View, ViewStyle, Text } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
+import type { StyleSpecification } from 'maplibre-gl';
 import * as Location from 'expo-location';
 import { useMapState } from '@/context/MapStateContext';
 import { api, type ApiResponse } from '@/utils/api';
-import { buildMapDocument, DEFAULT_STYLE_URL } from './mapDocument';
+import { buildMapDocument } from './mapDocument';
+import { DEFAULT_STYLE_URL, fetchSanitizedMapStyle } from './mapStyle';
 import { colors } from '@/styles/colors';
 import type {
   AddressData,
@@ -111,6 +113,16 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   const pending = useRef<string[]>([]);
   const mapInitialized = useRef(false);
 
+  // The OpenFreeMap liberty style ships layer filters that throw on null-numeric
+  // tile properties (`Expected value to be of type number, but found null`). We
+  // fetch + harden it (sanitizeMapStyle) once and feed the WebView document the
+  // patched style OBJECT, so the WebView builds the map ONCE against the hardened
+  // style (no reload). `styleSettled` gates the WebView mount until the fetch
+  // resolves; on failure it settles to the raw URL so the map always renders
+  // (worst case: the original noisy log returns, but it's the same map).
+  const [resolvedStyle, setResolvedStyle] = useState<string | StyleSpecification>(styleURL);
+  const [styleSettled, setStyleSettled] = useState(false);
+
   // Get saved map state if screenId is provided
   const savedState = screenId ? getMapState(screenId) : null;
 
@@ -133,6 +145,30 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     color: cluster?.color ?? colors.info,
     textColor: cluster?.textColor ?? colors.white
   }), [cluster]);
+
+  // Fetch + sanitize the style once per URL, then mount the WebView with it.
+  // Settling to the raw URL on failure guarantees the map still renders.
+  useEffect(() => {
+    let cancelled = false;
+    setStyleSettled(false);
+    fetchSanitizedMapStyle(styleURL)
+      .then((style) => {
+        if (cancelled) return;
+        setResolvedStyle(style);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // Network/parse failure: fall back to the raw URL so the document still
+        // builds. No throw — the map must not fail to mount.
+        setResolvedStyle(styleURL);
+      })
+      .finally(() => {
+        if (!cancelled) setStyleSettled(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [styleURL]);
 
   // Get user location
   useEffect(() => {
@@ -167,12 +203,12 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     () => buildMapDocument({
       center: initialCenterRef.current,
       zoom: initialZoomRef.current,
-      styleURL,
+      style: resolvedStyle,
       markerStyle: markerStyleFinal,
       cluster: clusterFinal,
       enableAddressLookup,
     }),
-    [styleURL, markerStyleFinal, clusterFinal, enableAddressLookup]
+    [resolvedStyle, markerStyleFinal, clusterFinal, enableAddressLookup]
   );
 
   const webviewRef = useRef<WebView | null>(null);
@@ -405,16 +441,20 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
             </Text>
           </View>
         )}
-        <iframe
-          ref={iframeRef}
-          title="map"
-          srcDoc={html}
-          style={{ border: '0', width: '100%', height: '100%' }}
-          sandbox="allow-scripts allow-same-origin"
-          onLoad={() => {
-            mapInitialized.current = false;
-          }}
-        />
+        {/* Mount once the hardened style has settled so the document builds a
+            single time against the sanitized style (no reload). */}
+        {styleSettled ? (
+          <iframe
+            ref={iframeRef}
+            title="map"
+            srcDoc={html}
+            style={{ border: '0', width: '100%', height: '100%' }}
+            sandbox="allow-scripts allow-same-origin"
+            onLoad={() => {
+              mapInitialized.current = false;
+            }}
+          />
+        ) : null}
       </View>
     );
   }
@@ -428,18 +468,22 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
           </Text>
         </View>
       )}
-      <WebView
-        ref={webviewRef}
-        originWhitelist={['*']}
-        source={{ html }}
-        onMessage={handleNativeMessage}
-        javaScriptEnabled
-        domStorageEnabled
-        allowFileAccess
-        allowsInlineMediaPlayback
-        setSupportMultipleWindows={false}
-        injectedJavaScriptBeforeContentLoaded={`true;`}
-      />
+      {/* Mount once the hardened style has settled so the WebView builds a
+          single document against the sanitized style (no reload). */}
+      {styleSettled ? (
+        <WebView
+          ref={webviewRef}
+          originWhitelist={['*']}
+          source={{ html }}
+          onMessage={handleNativeMessage}
+          javaScriptEnabled
+          domStorageEnabled
+          allowFileAccess
+          allowsInlineMediaPlayback
+          setSupportMultipleWindows={false}
+          injectedJavaScriptBeforeContentLoaded={`true;`}
+        />
+      ) : null}
     </View>
   );
 });

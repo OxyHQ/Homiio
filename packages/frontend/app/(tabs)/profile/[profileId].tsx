@@ -17,6 +17,7 @@ import { PropertyCard } from '@/components/PropertyCard';
 import ProfileAvatar from '@/components/ProfileAvatar';
 import { ProfileExchangeReviews } from '@/components/exchange/ProfileExchangeReviews';
 import { colors } from '@/styles/colors';
+import { shadowToken } from '@/styles/shadows';
 import { useOxy } from '@oxyhq/services';
 import { api } from '@/utils/api';
 import { type Profile, ProfileType } from '@/services/profileService';
@@ -431,11 +432,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    shadowColor: colors.COLOR_BLACK,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    ...shadowToken({ y: 1, blur: 6, color: colors.COLOR_BLACK, opacity: 0.06, elevation: 2 }),
   },
   controlsRow: {
     flexDirection: 'row',
@@ -586,11 +583,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    shadowColor: colors.COLOR_BLACK,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    ...shadowToken({ y: 1, blur: 6, color: colors.COLOR_BLACK, opacity: 0.06, elevation: 2 }),
   },
 
   profileInfo: {

@@ -77,6 +77,7 @@ import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { useUIStore } from '@/store/uiStore';
 import { colors } from '@/styles/colors';
 import {
+  resolvePagePadding,
   resolveSectionSpacing,
   spacing,
   tracker,
@@ -169,7 +170,7 @@ export default function HomePage() {
     (query: SearchQuery) => {
       useSearchQueryStore.getState().setQuery(query);
       setSearchPanelOpen(false);
-      router.push('/search');
+      router.push('/explore');
     },
     [router],
   );
@@ -420,8 +421,7 @@ export default function HomePage() {
               'rgba(0,0,0,0.72)',
             ]}
             locations={[0, 0.35, 0.55, 0.7, 0.85, 1]}
-            style={styles.heroGradient}
-            pointerEvents="none"
+            style={[styles.heroGradient, { pointerEvents: 'none' }]}
           />
 
           {/* Drawer toggle — small screens only. Opens the overlay sidebar
@@ -592,33 +592,59 @@ export default function HomePage() {
           );
         })}
 
-        {/* === Host CTA banner === */}
-        <View style={{ marginTop: sectionGap }}>
-          <HostCtaBanner
-            title={t('home.hostCta.title', 'List your space, find a great tenant')}
-            subtitle={t(
-              'home.hostCta.subtitle',
-              'Reach verified renters across Spain — free to list, fair fees, real human support.',
-            )}
-            ctaLabel={t('home.hostCta.cta', 'Become a host')}
-            imageUrl={HOST_CTA_IMAGE}
-            onPress={handleBecomeHost}
-          />
-        </View>
-
-        {/* === Earn with Homiio (agent) banner === */}
-        <View style={{ marginTop: sectionGap }}>
-          <AgentCtaBanner
-            title={t('agent.banner.title', 'Start today. No license needed.')}
-            subtitle={t(
-              'agent.banner.subtitle',
-              'Turn the homes around you into income.',
-            )}
-            ctaLabel={t('agent.banner.cta', 'Become an agent')}
-            trustLine={t('agent.banner.trust', 'No license needed. Work from your phone.')}
-            onPress={handleBecomeAgent}
-          />
-        </View>
+        {/* === Closing CTA banners ===
+            Responsive 50/50 grid: side-by-side equal-height columns on wide
+            screens, stacked full-width on narrow / native (always narrow). The
+            row owns the outer page padding + a single `sectionGap` gutter; in
+            grid mode each banner runs in `fill` mode (no intrinsic aspectRatio,
+            no own page padding) so `alignItems: 'stretch'` equalises height. */}
+        {isWide ? (
+          <View style={[styles.ctaGridRow, { marginTop: sectionGap, gap: sectionGap }]}>
+            <HostCtaBanner
+              fill
+              title={t('home.hostCta.title', 'List your space, find a great tenant')}
+              subtitle={t(
+                'home.hostCta.subtitle',
+                'Reach verified renters across Spain — free to list, fair fees, real human support.',
+              )}
+              ctaLabel={t('home.hostCta.cta', 'Become a host')}
+              imageUrl={HOST_CTA_IMAGE}
+              onPress={handleBecomeHost}
+            />
+            <AgentCtaBanner
+              fill
+              title={t('agent.banner.title', 'Start today. No license needed.')}
+              subtitle={t('agent.banner.subtitle', 'Turn the homes around you into income.')}
+              ctaLabel={t('agent.banner.cta', 'Become an agent')}
+              trustLine={t('agent.banner.trust', 'No license needed. Work from your phone.')}
+              onPress={handleBecomeAgent}
+            />
+          </View>
+        ) : (
+          <>
+            <View style={{ marginTop: sectionGap }}>
+              <HostCtaBanner
+                title={t('home.hostCta.title', 'List your space, find a great tenant')}
+                subtitle={t(
+                  'home.hostCta.subtitle',
+                  'Reach verified renters across Spain — free to list, fair fees, real human support.',
+                )}
+                ctaLabel={t('home.hostCta.cta', 'Become a host')}
+                imageUrl={HOST_CTA_IMAGE}
+                onPress={handleBecomeHost}
+              />
+            </View>
+            <View style={{ marginTop: sectionGap }}>
+              <AgentCtaBanner
+                title={t('agent.banner.title', 'Start today. No license needed.')}
+                subtitle={t('agent.banner.subtitle', 'Turn the homes around you into income.')}
+                ctaLabel={t('agent.banner.cta', 'Become an agent')}
+                trustLine={t('agent.banner.trust', 'No license needed. Work from your phone.')}
+                onPress={handleBecomeAgent}
+              />
+            </View>
+          </>
+        )}
 
         {/* === Footer trust strip === */}
         <View style={{ marginTop: sectionGap }}>
@@ -731,6 +757,18 @@ const createStyles = (
     categoryStripWrap: {
       paddingTop: spacing.sm,
       paddingBottom: spacing.sm,
+    },
+
+    // Closing CTA banners — wide-screen 50/50 grid. The row owns the outer page
+    // padding (the `fill` banners drop their own) and lays out two equal columns
+    // that stretch to the taller one for a balanced, equal-height grid. The
+    // inter-column `gap` + `marginTop` are applied inline (they track the
+    // runtime `sectionGap`). Only mounted when `isWide`, so the padding always
+    // resolves to the wide/desktop value.
+    ctaGridRow: {
+      flexDirection: 'row',
+      alignItems: 'stretch',
+      paddingHorizontal: resolvePagePadding(isWide),
     },
   });
 };

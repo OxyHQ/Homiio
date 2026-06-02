@@ -455,10 +455,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   }, [selection]);
 
   return (
-    <View
-      style={styles.container}
-      pointerEvents="auto"
-    >
+    <View style={[styles.container, { pointerEvents: 'auto' }]}>
       <View style={styles.headerRow}>
         <Button
           variant="icon"

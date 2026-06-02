@@ -215,7 +215,7 @@ export default function MyApplicationsScreen() {
                 actionText={filter === 'all' ? 'Explore stays' : undefined}
                 actionIcon={filter === 'all' ? 'search-outline' : undefined}
                 onAction={
-                  filter === 'all' ? () => router.push('/search') : undefined
+                  filter === 'all' ? () => router.push('/explore') : undefined
                 }
               />
             </View>

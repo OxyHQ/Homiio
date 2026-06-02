@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { colors } from '@/styles/colors';
+import { shadowToken } from '@/styles/shadows';
 
 interface SectionCardProps {
     /**
@@ -95,13 +96,13 @@ export const SectionCard: React.FC<SectionCardProps> = ({
     );
 };
 
-const shadowStyles = {
-    shadowColor: colors.COLOR_BLACK,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+const shadowStyles = shadowToken({
+    y: 1,
+    blur: 4,
+    color: colors.COLOR_BLACK,
+    opacity: 0.05,
     elevation: 1,
-};
+});
 
 const styles = StyleSheet.create({
     container: {

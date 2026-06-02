@@ -32,6 +32,7 @@ import { Section } from '@/components/property/Section';
 import { CurrencyFormatter } from '@/components/CurrencyFormatter';
 import { parseLocaleNumber } from '@/utils/number';
 import { colors } from '@/styles/colors';
+import { shadowToken } from '@/styles/shadows';
 import { hairline, radius, spacing } from '@/constants/styles';
 import { DEFAULT_MORTGAGE_CONFIG } from '@homiio/shared-types';
 
@@ -438,11 +439,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.COLOR_BLACK_LIGHT_6,
-    shadowColor: colors.COLOR_BLACK,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.18,
-    shadowRadius: 3,
-    elevation: 3,
+    ...shadowToken({ y: 1, blur: 3, color: colors.COLOR_BLACK, opacity: 0.18, elevation: 3 }),
   },
   rateInputRow: {
     flexDirection: 'row',

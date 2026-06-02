@@ -2,6 +2,7 @@ import React from 'react';
 import { View, ScrollView } from 'react-native';
 import { Skeleton } from '@oxyhq/bloom';
 import { colors } from '@/styles/colors';
+import { shadowToken } from '@/styles/shadows';
 
 interface SearchSkeletonProps {
   showFilters?: boolean;
@@ -55,11 +56,7 @@ function SearchResultSkeleton() {
         borderRadius: 12,
         marginBottom: 16,
         overflow: 'hidden',
-        shadowColor: colors.COLOR_BLACK,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        ...shadowToken({ y: 2, blur: 4, color: colors.COLOR_BLACK, opacity: 0.1, elevation: 3 }),
       }}>
       {/* Image */}
       <Skeleton.Box width="100%" height={200} borderRadius={0} />

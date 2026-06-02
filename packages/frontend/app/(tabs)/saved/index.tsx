@@ -348,7 +348,7 @@ export default function SavedPropertiesScreen() {
                 }
                 actionText={t('saved.exploreCta', 'Explore properties')}
                 actionIcon="search"
-                onAction={() => router.push('/search')}
+                onAction={() => router.push('/explore')}
               />
             </View>
           }

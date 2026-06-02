@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { Header } from '@/components/Header';
 import { Button } from '@oxyhq/bloom/button';
 import { colors } from '@/styles/colors';
+import { shadowToken } from '@/styles/shadows';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import {
   parseNotesString,
@@ -382,11 +383,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     flex: 1,
     marginHorizontal: 4,
-    shadowColor: colors.COLOR_BLACK,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    elevation: 2,
+    ...shadowToken({ y: 1, blur: 3, color: colors.COLOR_BLACK, opacity: 0.06, elevation: 2 }),
   },
   archivedCard: {
     opacity: 0.6,

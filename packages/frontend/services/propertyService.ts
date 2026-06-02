@@ -1,4 +1,5 @@
 import { api } from '@/utils/api';
+import { resolveBackendImageUrl } from '@/utils/imageUrl';
 import {
   PropertyType,
   PropertyFilters,
@@ -254,25 +255,27 @@ class PropertyService {
     }) + `/${block.unit}`;
   }
 
-  // Get primary image URL
+  // Get primary image URL, re-homed onto the active API origin so DB images that
+  // baked in a dev/emulator host load on web/device alike (external URLs pass
+  // through). See resolveBackendImageUrl.
   getPrimaryImageUrl(property: Property): string | null {
     if (!property.images || property.images.length === 0) return null;
-    
-    const primaryImage = property.images.find(img => 
+
+    const primaryImage = property.images.find(img =>
       typeof img === 'object' && 'isPrimary' in img && img.isPrimary
     ) as PropertyImage | undefined;
-    
+
     if (primaryImage && typeof primaryImage === 'object' && 'url' in primaryImage) {
-      return primaryImage.url;
+      return resolveBackendImageUrl(primaryImage.url);
     }
-    
+
     const firstImage = property.images[0];
     if (typeof firstImage === 'string') {
-      return firstImage;
+      return resolveBackendImageUrl(firstImage);
     } else if (typeof firstImage === 'object' && 'url' in firstImage) {
-      return firstImage.url;
+      return resolveBackendImageUrl(firstImage.url);
     }
-    
+
     return null;
   }
 

@@ -3,6 +3,7 @@ import { View, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Skeleton } from '@oxyhq/bloom';
 import { colors } from '@/styles/colors';
+import { shadowToken } from '@/styles/shadows';
 
 export function InsightsSkeleton() {
   const insets = useSafeAreaInsets();
@@ -26,11 +27,7 @@ export function InsightsSkeleton() {
               backgroundColor: colors.white,
               padding: 16,
               borderRadius: 12,
-              shadowColor: colors.COLOR_BLACK,
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
-              elevation: 3,
+              ...shadowToken({ y: 2, blur: 4, color: colors.COLOR_BLACK, opacity: 0.1, elevation: 3 }),
             }}>
             <Skeleton.Box width={40} height={40} borderRadius={20} style={{ marginBottom: 12 }} />
             <Skeleton.Box width={60} height={24} style={{ marginBottom: 8 }} />
@@ -46,11 +43,7 @@ export function InsightsSkeleton() {
             backgroundColor: colors.white,
             padding: 20,
             borderRadius: 12,
-            shadowColor: colors.COLOR_BLACK,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 3,
+            ...shadowToken({ y: 2, blur: 4, color: colors.COLOR_BLACK, opacity: 0.1, elevation: 3 }),
           }}>
           <Skeleton.Box width={150} height={20} style={{ marginBottom: 16 }} />
           <Skeleton.Box width="100%" height={200} borderRadius={8} />
@@ -69,11 +62,7 @@ export function InsightsSkeleton() {
               borderRadius: 12,
               marginBottom: 12,
               overflow: 'hidden',
-              shadowColor: colors.COLOR_BLACK,
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
-              elevation: 3,
+              ...shadowToken({ y: 2, blur: 4, color: colors.COLOR_BLACK, opacity: 0.1, elevation: 3 }),
             }}>
             <View style={{ flexDirection: 'row' }}>
               <Skeleton.Box width={100} height={80} borderRadius={0} />

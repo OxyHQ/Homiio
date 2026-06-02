@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { colors } from '@/styles/colors';
+import { shadowToken } from '@/styles/shadows';
 
 /**
  * Shared styles for the property creation wizard.
@@ -135,11 +136,7 @@ export const createPropertyStyles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: colors.COLOR_BLACK,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadowToken({ y: 2, blur: 4, color: colors.COLOR_BLACK, opacity: 0.1, elevation: 3 }),
   },
   fullscreenMapContainer: {
     flex: 1,

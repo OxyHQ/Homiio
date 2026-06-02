@@ -4,8 +4,8 @@
  * Renders a single bold section title and a responsive grid of
  * `PropertyCard variant="grid"` cells. The grid collapses to 1 column on
  * narrow phones, 2 columns on tablets, 3 on small laptops, and 4 on wide
- * desktops. Gap follows `gridGap.comfortable` (24px) for hero-tier
- * spacing.
+ * desktops. Gap follows the shared `PROPERTY_GRID_GAP` so the home grid reads
+ * at the same density as the search/browse `PropertyResultsGrid`.
  *
  * The section hides itself if no items are provided — there is no
  * skeleton placeholder loop on the home page, per the Airbnb-2026
@@ -18,7 +18,7 @@ import { useMediaQuery } from 'react-responsive';
 import { H1 } from '@oxyhq/bloom/typography';
 
 import { colors } from '@/styles/colors';
-import { gridGap, resolvePagePadding, spacing, tracker } from '@/constants/styles';
+import { PROPERTY_GRID_GAP, resolvePagePadding, spacing, tracker } from '@/constants/styles';
 
 interface FeaturedGridSectionProps<T> {
   title: string;
@@ -53,7 +53,7 @@ export function FeaturedGridSection<T>({
     return merged.sm;
   }, [columns, isMd, isLg, isXL]);
 
-  const gap = gridGap.comfortable;
+  const gap = PROPERTY_GRID_GAP;
   const horizontalPadding = resolvePagePadding(isWide);
 
   /**

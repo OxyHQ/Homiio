@@ -1,25 +1,19 @@
-import { useEffect } from 'react';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, ActivityIndicator } from 'react-native';
+/**
+ * Backward-compat redirect for the path-param form `/search/<query>`. The
+ * explore surface moved from `/search` to `/explore`; this route is kept only so
+ * existing links/bookmarks/deep-links to `/search/<query>` keep working. It
+ * preserves the `query` segment and forwards to `/explore/<query>` (falling back
+ * to `/explore` when the segment is missing).
+ */
+import { Redirect, useLocalSearchParams } from 'expo-router';
 
-export default function SearchQueryScreen() {
-    const router = useRouter();
-    const params = useLocalSearchParams();
-    const query = params.query as string;
+export default function SearchQueryRedirect() {
+  const params = useLocalSearchParams<{ query?: string | string[] }>();
+  const raw = params.query;
+  const query = Array.isArray(raw) ? raw[0] : raw;
 
-    useEffect(() => {
-        if (query) {
-            // Redirect to the main search screen with the query
-            router.replace(`/search?query=${encodeURIComponent(query)}`);
-        } else {
-            // If no query, redirect to the main search screen
-            router.replace('/search');
-        }
-    }, [query, router]);
-
-    return (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ActivityIndicator size="large" />
-        </View>
-    );
+  if (!query) {
+    return <Redirect href="/explore" />;
+  }
+  return <Redirect href={`/explore/${query}`} />;
 }

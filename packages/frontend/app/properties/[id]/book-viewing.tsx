@@ -11,6 +11,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/styles/colors';
+import { shadowToken } from '@/styles/shadows';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
@@ -422,11 +423,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     padding: 15,
     marginBottom: 20,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    ...shadowToken({ y: 2, blur: 4, color: colors.shadow, opacity: 0.1, elevation: 2 }),
   },
   propertyTitle: {
     fontSize: 18,
@@ -498,11 +495,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
+    ...shadowToken({ y: 1, blur: 2, color: colors.shadow, opacity: 0.1, elevation: 1 }),
   },
   activeDateCard: {
     backgroundColor: colors.primaryColor,
@@ -538,11 +531,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
+    ...shadowToken({ y: 1, blur: 2, color: colors.shadow, opacity: 0.1, elevation: 1 }),
   },
   selectedSlot: {
     backgroundColor: colors.primaryColor,

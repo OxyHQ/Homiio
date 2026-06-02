@@ -124,7 +124,7 @@ export default function PropertiesScreen() {
   );
 
   const handleEditSearch = useCallback(() => {
-    router.push('/search');
+    router.push('/explore');
   }, [router]);
 
   const handlePropertyPress = useCallback(

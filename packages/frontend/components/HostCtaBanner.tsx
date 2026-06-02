@@ -18,6 +18,7 @@ import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { colors } from '@/styles/colors';
 import {
+  BANNER_FILL_MIN_HEIGHT,
   cardShadow,
   radius,
   resolvePagePadding,
@@ -31,6 +32,16 @@ interface HostCtaBannerProps {
   ctaLabel: string;
   imageUrl: string;
   onPress: () => void;
+  /**
+   * Grid mode. When true the banner drops its intrinsic `aspectRatio` and its
+   * own horizontal page padding, and instead fills the parent column
+   * (`flex: 1` + a shared `BANNER_FILL_MIN_HEIGHT`) so two banners placed in a
+   * `flexDirection: 'row'` (`alignItems: 'stretch'`) read as an equal-height
+   * grid. The parent owns the outer page padding and the inter-column gutter.
+   * Defaults to false — the standalone full-width banner behaviour everywhere
+   * else (home-narrow stack, `/agent`).
+   */
+  fill?: boolean;
 }
 
 export function HostCtaBanner({
@@ -39,9 +50,12 @@ export function HostCtaBanner({
   ctaLabel,
   imageUrl,
   onPress,
+  fill = false,
 }: HostCtaBannerProps) {
   const isWide = useMediaQuery({ minWidth: 768 });
-  const horizontalPadding = resolvePagePadding(isWide);
+  // In grid (`fill`) mode the parent supplies the outer page padding and the
+  // gutter, so the banner must not re-add its own horizontal page padding.
+  const horizontalPadding = fill ? 0 : resolvePagePadding(isWide);
   const aspectRatio = isWide ? 21 / 9 : 16 / 9;
   const [hovered, setHovered] = useState(false);
   const isWeb = Platform.OS === 'web';
@@ -57,12 +71,12 @@ export function HostCtaBanner({
     : {};
 
   return (
-    <View style={{ paddingHorizontal: horizontalPadding }}>
+    <View style={fill ? styles.fillWrap : { paddingHorizontal: horizontalPadding }}>
       <View
         {...hoverHandlers}
         style={[
           styles.banner,
-          { aspectRatio },
+          fill ? styles.bannerFill : { aspectRatio },
           hovered && isWeb ? styles.bannerHover : null,
         ]}
       >
@@ -77,8 +91,7 @@ export function HostCtaBanner({
           colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.15)', 'rgba(0,0,0,0)']}
           start={{ x: 0, y: 1 }}
           end={{ x: 0.85, y: 0 }}
-          style={styles.bannerScrim}
-          pointerEvents="none"
+          style={[styles.bannerScrim, { pointerEvents: 'none' }]}
         />
         <View style={[styles.copy, { padding: isWide ? spacing['4xl'] : spacing['2xl'] }]}>
           <H1 style={[styles.title, { fontSize: isWide ? 36 : 26, lineHeight: isWide ? 42 : 32 }]}>
@@ -99,12 +112,25 @@ export function HostCtaBanner({
 }
 
 const styles = StyleSheet.create({
+  // Grid-mode outer wrapper: fill the parent column so `flex: 1` propagates to
+  // the banner and `alignItems: 'stretch'` (row default) equalises height.
+  fillWrap: {
+    flex: 1,
+  },
   banner: {
     width: '100%',
     borderRadius: radius.xl,
     overflow: 'hidden',
     backgroundColor: colors.COLOR_BLACK_LIGHT_7,
     ...cardShadow.md,
+  },
+  // Grid mode: no intrinsic aspect ratio — fill the column height (the taller
+  // sibling defines it via row `alignItems: 'stretch'`) with a sensible floor
+  // so a half-width column never collapses. The image stays `contentFit:
+  // 'cover'` and absolutely fills, so it covers cleanly at any box shape.
+  bannerFill: {
+    flex: 1,
+    minHeight: BANNER_FILL_MIN_HEIGHT,
   },
   bannerHover: {
     transform: [{ scale: 1.005 }],

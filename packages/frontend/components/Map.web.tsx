@@ -28,6 +28,7 @@ import type {
   MapMouseEvent,
   MapOptions,
   Marker,
+  StyleSpecification,
 } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Feature, FeatureCollection, Point } from 'geojson';
@@ -37,11 +38,15 @@ import { useMapState } from '@/context/MapStateContext';
 import { api, type ApiResponse } from '@/utils/api';
 import {
   ATTRIBUTION,
-  DEFAULT_STYLE_URL,
   PRICE_PILL_CLASS,
   PRICE_PILL_CSS,
   PRICE_PILL_SELECTED_CLASS,
 } from './mapDocument';
+import {
+  DEFAULT_STYLE_URL,
+  fetchSanitizedMapStyle,
+  installMissingImageFallback,
+} from './mapStyle';
 import { colors } from '@/styles/colors';
 import type {
   AddressData,
@@ -362,149 +367,178 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
 
     ensurePillStyles();
 
-    const mapOptions: MapOptions = {
-      container,
-      style: styleURL,
-      center: initialCenterRef.current,
-      zoom: initialZoomRef.current,
-      attributionControl: false,
+    // The OpenFreeMap liberty style ships layer filters that throw on
+    // null-numeric tile properties. Construct against the HARDENED style object
+    // (sanitizeMapStyle) so no tile parse can throw; if the fetch fails, fall
+    // back to the bare URL — the map must always render.
+    let map: maplibregl.Map | null = null;
+    let resizeObserver: ResizeObserver | null = null;
+    let disposed = false;
+
+    const buildMap = (style: string | StyleSpecification) => {
+      if (disposed || !containerRef.current || mapRef.current) return;
+      const mapOptions: MapOptions = {
+        container,
+        style,
+        center: initialCenterRef.current,
+        zoom: initialZoomRef.current,
+        attributionControl: false,
+      };
+      map = new maplibregl.Map(mapOptions);
+      mapRef.current = map;
+
+      // Supply a transparent placeholder for any sprite the style references but
+      // doesn't ship (the liberty 'poi_*' layers request class names like
+      // 'office' that aren't in the sprite) — silences the missing-image error.
+      installMissingImageFallback(map);
+
+      map.addControl(
+        new maplibregl.AttributionControl({ compact: true, customAttribution: ATTRIBUTION }),
+      );
+
+      wireMap(map);
     };
-    const map = new maplibregl.Map(mapOptions);
-    mapRef.current = map;
 
-    map.addControl(
-      new maplibregl.AttributionControl({ compact: true, customAttribution: ATTRIBUTION }),
-    );
+    const wireMap = (map: maplibregl.Map) => {
+      const clusterEnabled = clusterFinal.enabled;
 
-    const clusterEnabled = clusterFinal.enabled;
+      map.on('load', () => {
+        loadedRef.current = true;
 
-    map.on('load', () => {
-      loadedRef.current = true;
-
-      map.addSource(SOURCE_ID, {
-        type: 'geojson',
-        data: toFeatureCollection([]),
-        cluster: clusterEnabled,
-        clusterRadius: clusterFinal.radius,
-        clusterMaxZoom: clusterFinal.maxZoom,
-        promoteId: 'id',
-      });
-
-      if (clusterEnabled) {
-        map.addLayer({
-          id: CLUSTER_LAYER_ID,
-          type: 'circle',
-          source: SOURCE_ID,
-          filter: ['has', 'point_count'],
-          paint: {
-            'circle-color': clusterFinal.color,
-            'circle-radius': ['step', ['get', 'point_count'], 16, 20, 18, 50, 22],
-            'circle-stroke-color': colors.white,
-            'circle-stroke-width': 2,
-          },
-        });
-        map.addLayer({
-          id: CLUSTER_COUNT_LAYER_ID,
-          type: 'symbol',
-          source: SOURCE_ID,
-          filter: ['has', 'point_count'],
-          layout: {
-            'text-field': ['get', 'point_count_abbreviated'],
-            'text-font': ['Noto Sans Bold'],
-            'text-size': 12,
-          },
-          paint: { 'text-color': clusterFinal.textColor },
+        map.addSource(SOURCE_ID, {
+          type: 'geojson',
+          data: toFeatureCollection([]),
+          cluster: clusterEnabled,
+          clusterRadius: clusterFinal.radius,
+          clusterMaxZoom: clusterFinal.maxZoom,
+          promoteId: 'id',
         });
 
-        map.on('click', CLUSTER_LAYER_ID, (event: MapLayerMouseEvent) => {
-          const features = map.queryRenderedFeatures(event.point, { layers: [CLUSTER_LAYER_ID] });
-          const feature = features[0];
-          if (!feature) return;
-          const clusterId = feature.properties?.cluster_id;
-          const source = map.getSource<GeoJSONSource>(SOURCE_ID);
-          if (typeof clusterId !== 'number' || !source) return;
-          source.getClusterExpansionZoom(clusterId).then((zoom) => {
-            const geometry = feature.geometry;
-            if (geometry.type === 'Point') {
-              map.easeTo({ center: toLonLat(geometry.coordinates), zoom });
-            }
-          }).catch(() => {
-            // Cluster expansion is best-effort; ignore lookup failures.
+        if (clusterEnabled) {
+          map.addLayer({
+            id: CLUSTER_LAYER_ID,
+            type: 'circle',
+            source: SOURCE_ID,
+            filter: ['has', 'point_count'],
+            paint: {
+              'circle-color': clusterFinal.color,
+              'circle-radius': ['step', ['get', 'point_count'], 16, 20, 18, 50, 22],
+              'circle-stroke-color': colors.white,
+              'circle-stroke-width': 2,
+            },
+          });
+          map.addLayer({
+            id: CLUSTER_COUNT_LAYER_ID,
+            type: 'symbol',
+            source: SOURCE_ID,
+            filter: ['has', 'point_count'],
+            layout: {
+              'text-field': ['get', 'point_count_abbreviated'],
+              'text-font': ['Noto Sans Bold'],
+              'text-size': 12,
+            },
+            paint: { 'text-color': clusterFinal.textColor },
           });
 
-          const leaves: ClusterLeaf[] = features.map((f) => ({
-            geometry: f.geometry.type === 'Point'
-              ? { type: 'Point', coordinates: toLonLat(f.geometry.coordinates) }
-              : undefined,
-            properties: {
-              id: String(f.properties?.id ?? ''),
-              price: String(f.properties?.price ?? ''),
-            },
-          }));
-          onClusterPressRef.current?.({ leaves });
-        });
+          map.on('click', CLUSTER_LAYER_ID, (event: MapLayerMouseEvent) => {
+            const features = map.queryRenderedFeatures(event.point, { layers: [CLUSTER_LAYER_ID] });
+            const feature = features[0];
+            if (!feature) return;
+            const clusterId = feature.properties?.cluster_id;
+            const source = map.getSource<GeoJSONSource>(SOURCE_ID);
+            if (typeof clusterId !== 'number' || !source) return;
+            source.getClusterExpansionZoom(clusterId).then((zoom) => {
+              const geometry = feature.geometry;
+              if (geometry.type === 'Point') {
+                map.easeTo({ center: toLonLat(geometry.coordinates), zoom });
+              }
+            }).catch(() => {
+              // Cluster expansion is best-effort; ignore lookup failures.
+            });
 
-        map.on('mouseenter', CLUSTER_LAYER_ID, () => {
-          map.getCanvas().style.cursor = 'pointer';
-        });
-        map.on('mouseleave', CLUSTER_LAYER_ID, () => {
-          map.getCanvas().style.cursor = '';
-        });
-      }
+            const leaves: ClusterLeaf[] = features.map((f) => ({
+              geometry: f.geometry.type === 'Point'
+                ? { type: 'Point', coordinates: toLonLat(f.geometry.coordinates) }
+                : undefined,
+              properties: {
+                id: String(f.properties?.id ?? ''),
+                price: String(f.properties?.price ?? ''),
+              },
+            }));
+            onClusterPressRef.current?.({ leaves });
+          });
 
-      // Render any markers/state that arrived before `load` completed.
-      const initialFeatures = savedState?.markers && savedState.markers.length > 0
-        ? savedState.markers
-        : markersRef.current;
-      if (initialFeatures.length > 0) {
-        const collection = toFeatureCollection(initialFeatures);
-        map.getSource<GeoJSONSource>(SOURCE_ID)?.setData(collection);
-        renderPillMarkers(collection);
-      }
-    });
+          map.on('mouseenter', CLUSTER_LAYER_ID, () => {
+            map.getCanvas().style.cursor = 'pointer';
+          });
+          map.on('mouseleave', CLUSTER_LAYER_ID, () => {
+            map.getCanvas().style.cursor = '';
+          });
+        }
 
-    map.on('click', (event: MapMouseEvent) => {
-      const coordinates: LonLat = [event.lngLat.lng, event.lngLat.lat];
+        // Render any markers/state that arrived before `load` completed.
+        const initialFeatures = savedState?.markers && savedState.markers.length > 0
+          ? savedState.markers
+          : markersRef.current;
+        if (initialFeatures.length > 0) {
+          const collection = toFeatureCollection(initialFeatures);
+          map.getSource<GeoJSONSource>(SOURCE_ID)?.setData(collection);
+          renderPillMarkers(collection);
+        }
+      });
 
-      if (enableAddressLookupRef.current && showInstructionsRef.current) {
-        setShowInstructions(false);
-      }
-      onMapPressRef.current?.({ lngLat: coordinates });
+      map.on('click', (event: MapMouseEvent) => {
+        const coordinates: LonLat = [event.lngLat.lng, event.lngLat.lat];
 
-      if (enableAddressLookupRef.current) {
-        addressMarkerRef.current?.remove();
-        addressMarkerRef.current = new maplibregl.Marker({ color: ADDRESS_MARKER_COLOR })
-          .setLngLat(coordinates)
-          .addTo(map);
+        if (enableAddressLookupRef.current && showInstructionsRef.current) {
+          setShowInstructions(false);
+        }
+        onMapPressRef.current?.({ lngLat: coordinates });
 
-        lookupAddressFromCoordinates(coordinates).then((address) => {
-          if (address) onAddressSelectRef.current?.(address, coordinates);
-        }).catch(() => {
-          // Reverse geocoding is best-effort; ignore lookup failures.
-        });
-      }
-    });
+        if (enableAddressLookupRef.current) {
+          addressMarkerRef.current?.remove();
+          addressMarkerRef.current = new maplibregl.Marker({ color: ADDRESS_MARKER_COLOR })
+            .setLngLat(coordinates)
+            .addTo(map);
 
-    const onMove = () => emitRegion(false);
-    const onMoveEnd = () => emitRegion(true);
-    (['move', 'zoom', 'rotate', 'pitch'] as const).forEach((ev) => map.on(ev, onMove));
-    (['moveend', 'zoomend', 'rotateend', 'pitchend'] as const).forEach((ev) => map.on(ev, onMoveEnd));
+          lookupAddressFromCoordinates(coordinates).then((address) => {
+            if (address) onAddressSelectRef.current?.(address, coordinates);
+          }).catch(() => {
+            // Reverse geocoding is best-effort; ignore lookup failures.
+          });
+        }
+      });
 
-    // Recompute size when the flex/grid parent resolves or resizes — the GL
-    // canvas needs an explicit pixel size and the container starts at 0×0 until
-    // RN-Web layout settles.
-    const resizeObserver = new ResizeObserver(() => map.resize());
-    resizeObserver.observe(container);
+      const onMove = () => emitRegion(false);
+      const onMoveEnd = () => emitRegion(true);
+      (['move', 'zoom', 'rotate', 'pitch'] as const).forEach((ev) => map.on(ev, onMove));
+      (['moveend', 'zoomend', 'rotateend', 'pitchend'] as const).forEach((ev) => map.on(ev, onMoveEnd));
+
+      // Recompute size when the flex/grid parent resolves or resizes — the GL
+      // canvas needs an explicit pixel size and the container starts at 0×0 until
+      // RN-Web layout settles.
+      resizeObserver = new ResizeObserver(() => map.resize());
+      resizeObserver.observe(container);
+    };
+
+    // Fetch + harden the style, then build. On failure, build against the raw
+    // URL so the map still renders (worst case: the original noisy log returns).
+    fetchSanitizedMapStyle(styleURL)
+      .then((style) => buildMap(style))
+      .catch(() => buildMap(styleURL));
 
     return () => {
-      resizeObserver.disconnect();
+      disposed = true;
+      resizeObserver?.disconnect();
+      resizeObserver = null;
       pillMarkers.forEach((marker) => marker.remove());
       pillMarkers.clear();
       addressMarkerRef.current?.remove();
       addressMarkerRef.current = null;
       loadedRef.current = false;
       mapRef.current = null;
-      map.remove();
+      map?.remove();
+      map = null;
     };
     // The map is intentionally created once; live values flow through refs.
     // eslint-disable-next-line react-hooks/exhaustive-deps

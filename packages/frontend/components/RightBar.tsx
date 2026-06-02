@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { View, StyleSheet, Platform, ViewStyle } from 'react-native';
 import { usePathname } from 'expo-router';
 import { WidgetManager } from './widgets';
+import { colors } from '@/styles/colors';
 import { useIsRightBarVisible } from '@/hooks/useOptimizedMediaQuery';
 import { useSearchMode } from '@/context/SearchModeContext';
 
@@ -34,8 +35,8 @@ export const RightBar = React.memo(function RightBar() {
     if (pathname === '/contracts' || pathname.startsWith('/contracts/')) return 'contracts';
     if (pathname === '/payments' || pathname.startsWith('/payments/')) return 'payments';
     if (pathname === '/messages' || pathname.startsWith('/messages/')) return 'messages';
-    if (pathname === '/search') return 'search';
-    if (pathname.startsWith('/search/')) return 'search-results';
+    if (pathname === '/explore') return 'explore';
+    if (pathname.startsWith('/explore/')) return 'explore-results';
     return 'home'; // Default to home
   }, [pathname]);
 
@@ -118,12 +119,15 @@ const styles = StyleSheet.create({
       } as unknown as ViewStyle,
     }),
   },
+  // One continuous flat panel on the app background — no border/shadow/card.
+  // The WidgetManager owns the section rhythm (per-section vertical padding +
+  // hairline dividers), so the rail itself adds no extra vertical padding that
+  // would double the first/last section's breathing room.
   stickyWidgetsContainer: {
-    gap: 10,
+    backgroundColor: colors.background,
     position: 'sticky',
     top: 0,
     zIndex: 10,
-    paddingVertical: 20,
     pointerEvents: 'none',
   } as unknown as ViewStyle,
 });

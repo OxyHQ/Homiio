@@ -17,12 +17,13 @@
  * filters); `>99` collapses to `99+`.
  */
 import React, { useState } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { colors } from '@/styles/colors';
+import { shadowToken } from '@/styles/shadows';
 import { hairline, radius, spacing, tracker } from '@/constants/styles';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -145,15 +146,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primaryColor,
-    ...(Platform.OS === 'web'
-      ? { boxShadow: '0 1px 2px rgba(0,0,0,0.18)' }
-      : {
-          shadowColor: colors.COLOR_BLACK,
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.18,
-          shadowRadius: 2,
-          elevation: 2,
-        }),
+    ...shadowToken({ y: 1, blur: 2, color: colors.COLOR_BLACK, opacity: 0.18, elevation: 2 }),
   },
   countText: {
     fontSize: 10,

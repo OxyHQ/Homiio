@@ -63,6 +63,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { webAlert } from '@/utils/api';
 import { getPropertyTitle } from '@/utils/propertyUtils';
+import { resolveBackendImageUrl } from '@/utils/imageUrl';
 import { LogoIcon } from '@/assets/logo';
 
 import { BaseSidebar } from './BaseSidebar';
@@ -293,7 +294,7 @@ export function SideBar() {
         icon: Search,
         iconActive: Search,
         label: t('sidebar.navigation.explore'),
-        route: '/search',
+        route: '/explore',
       },
     ];
 
@@ -390,13 +391,14 @@ export function SideBar() {
             const firstImage = Array.isArray(property.images)
               ? property.images[0]
               : undefined;
-            if (typeof firstImage === 'string') return firstImage;
+            // Re-home backend-served URLs so the folder thumbnails load on web.
+            if (typeof firstImage === 'string') return resolveBackendImageUrl(firstImage);
             if (
               firstImage &&
               typeof firstImage === 'object' &&
               'url' in firstImage
             ) {
-              return firstImage.url;
+              return resolveBackendImageUrl(firstImage.url);
             }
             return undefined;
           })
@@ -427,13 +429,14 @@ export function SideBar() {
       const firstImage = Array.isArray(property.images)
         ? property.images[0]
         : undefined;
+      // Re-home backend-served URLs so the recent-property thumbnail loads on web.
       const imageUrl =
         typeof firstImage === 'string'
-          ? firstImage
+          ? resolveBackendImageUrl(firstImage)
           : firstImage &&
               typeof firstImage === 'object' &&
               'url' in firstImage
-            ? firstImage.url
+            ? resolveBackendImageUrl(firstImage.url)
             : undefined;
 
       const title = getPropertyTitle(property, 'short');
@@ -1070,8 +1073,7 @@ export function SideBar() {
       <Portal>
         <View
           className="flex-row"
-          style={StyleSheet.absoluteFill}
-          pointerEvents="box-none"
+          style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}
         >
           {mobileDrawerOpen && (
             <>

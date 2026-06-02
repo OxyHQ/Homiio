@@ -32,6 +32,7 @@ import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
 import * as SegmentedControl from '@oxyhq/bloom/segmented-control';
 
 import { colors } from '@/styles/colors';
+import { shadowToken } from '@/styles/shadows';
 import { hairline, radius, resolvePagePadding, spacing, tracker } from '@/constants/styles';
 import { useMediaQuery } from 'react-responsive';
 import { COMMISSION_CONFIG, type CommissionOffering } from '@homiio/shared-types';
@@ -345,11 +346,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.COLOR_BLACK_LIGHT_6,
-    shadowColor: colors.COLOR_BLACK,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.18,
-    shadowRadius: 3,
-    elevation: 3,
+    ...shadowToken({ y: 1, blur: 3, color: colors.COLOR_BLACK, opacity: 0.18, elevation: 3 }),
   },
   resultBlock: {
     alignItems: 'center',

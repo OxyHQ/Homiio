@@ -230,7 +230,7 @@ const PaginationDots: React.FC<PaginationDotsProps> = ({ count, activeIndex }) =
   );
 
   return (
-    <View style={styles.dotsRow} pointerEvents="none">
+    <View style={[styles.dotsRow, { pointerEvents: 'none' }]}>
       {windowIndices.map((dotIndex, position) => {
         const isFirstInWindow = position === 0;
         const isLastInWindow = position === windowIndices.length - 1;

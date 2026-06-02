@@ -3,6 +3,7 @@ import { View, Animated } from 'react-native';
 import { LogoIcon } from '@/assets/logo';
 import { Loading } from '@oxyhq/bloom/loading';
 import { colors } from '@/styles/colors';
+import { USE_NATIVE_DRIVER } from '@/utils/animation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { cssInterop } from 'nativewind';
 
@@ -43,7 +44,7 @@ const AppSplashScreen: React.FC<AppSplashScreenProps> = ({ onFadeComplete, start
       animationRef.current = Animated.timing(fadeAnim, {
         toValue: 0,
         duration: 500,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       });
 
       animationRef.current.start(({ finished }) => {
