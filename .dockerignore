@@ -1,0 +1,56 @@
+# Build context for packages/backend/Dockerfile (context = monorepo root).
+# Keep the context lean: the backend image only needs the root package.json and
+# the shared-types + backend packages. Everything else is excluded.
+
+# Dependencies — reinstalled fresh inside the image
+**/node_modules
+.npm
+
+# Build outputs — recompiled inside the image
+**/dist
+**/build
+**/.next
+**/out
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# The Expo / React Native frontend is irrelevant to the backend image
+packages/frontend
+
+# VCS / CI
+.git
+.github
+
+# Local env & secrets — never bake into the image
+**/.env
+**/.env.*
+!**/.env.example
+
+# Expo
+**/.expo
+**/.expo-shared
+
+# Self-hosted local image store (dev-only backend fallback)
+**/.local-image-store
+
+# Logs & temp
+**/logs
+**/*.log
+**/tmp
+**/temp
+**/coverage
+**/.nyc_output
+
+# OS / editor cruft
+**/.DS_Store
+**/.vscode
+**/.idea
+*.swp
+*.swo
+
+# Docker artifacts
+**/Dockerfile
+**/.dockerignore
+
+# Misc docs not needed at build time
+**/*.md

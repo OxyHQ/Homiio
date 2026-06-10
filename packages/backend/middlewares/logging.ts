@@ -18,22 +18,39 @@ console.log('Logging environment:', {
 });
 
 /**
- * Ensure logs directory exists
+ * Whether file logging is still viable for this process. Set to `false` the
+ * first time the log directory can't be created or the log file can't be
+ * written (e.g. a read-only/non-root container filesystem). After that we log
+ * to stdout/stderr only — never re-attempting the filesystem, which avoids
+ * per-request EACCES/ENOENT spam in environments where the log path is not
+ * writable. Container orchestrators collect stdout, so no logs are lost.
  */
-const ensureLogDirectory = () => {
+let fileLoggingEnabled = true;
+
+/**
+ * Ensure logs directory exists. Returns `false` (and disables file logging for
+ * the rest of the process) if the directory cannot be created.
+ */
+const ensureLogDirectory = (): boolean => {
   // Skip directory creation in serverless environments
   if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.FUNCTION_TARGET) {
-    return;
+    return false;
   }
-  
+
   try {
     const logDir = path.dirname(config.logging.file);
     if (!fs.existsSync(logDir)) {
       fs.mkdirSync(logDir, { recursive: true });
     }
+    return true;
   } catch (error) {
-    console.error('Failed to create log directory:', error);
-    // Don't throw - logging should not break the application
+    // Disable file logging for the rest of the process and report once.
+    fileLoggingEnabled = false;
+    console.error(
+      `File logging disabled: cannot create log directory "${path.dirname(config.logging.file)}". Falling back to stdout. Set LOG_FILE to a writable path to enable file logs.`,
+      error
+    );
+    return false;
   }
 };
 
@@ -89,17 +106,24 @@ const log = (level: string, message: string, meta: Record<string, unknown> = {})
       console.log(consoleMessage, meta);
   }
 
-  // File output (in production, but not in serverless environments)
+  // File output (in production, but not in serverless environments).
+  // Skipped entirely once file logging has been disabled for this process
+  // (unwritable path) — stdout above is the source of truth in containers.
   const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.FUNCTION_TARGET;
-  if (config.environment === 'production' && !isServerless) {
+  if (config.environment === 'production' && !isServerless && fileLoggingEnabled) {
+    if (!ensureLogDirectory()) {
+      return;
+    }
     try {
-      ensureLogDirectory();
       const logLine = JSON.stringify(logEntry) + '\n';
       fs.appendFileSync(config.logging.file, logLine);
     } catch (error) {
-      // Log to console as fallback, but don't break the application
-      console.error('Failed to write to log file:', error);
-      console.log('Log entry that failed to write:', logEntry);
+      // Disable file logging for the rest of the process and report once.
+      fileLoggingEnabled = false;
+      console.error(
+        `File logging disabled: cannot write to "${config.logging.file}". Falling back to stdout.`,
+        error
+      );
     }
   }
 };
