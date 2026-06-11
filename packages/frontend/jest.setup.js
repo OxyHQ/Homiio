@@ -38,3 +38,31 @@ jest.mock('expo-font', () => {
     useFonts: () => [true, null],
   };
 });
+
+/**
+ * jest-expo@56.0.5 mocks ExpoCryptoAES (the native JSI module backing
+ * expo-crypto's AES API) with only function stubs (decryptAsync/encryptAsync).
+ * expo-crypto@56.0.4 introduced `AESEncryptionKey extends AesCryptoModule.EncryptionKey`
+ * and `AESSealedData extends AesCryptoModule.SealedData`, which require those
+ * fields to be extendible constructors — but the jest-expo mock omits them,
+ * causing `TypeError: Super expression must either be null or a function` at
+ * module load time.
+ *
+ * We intercept `requireNativeModule('ExpoCryptoAES')` by mocking the internal
+ * expo-crypto module that calls it, forwarding the actual module's exports but
+ * injecting stub constructors for EncryptionKey and SealedData so that the
+ * class extension succeeds in the Jest environment.
+ */
+jest.mock('expo-crypto', () => {
+  class EncryptionKey {}
+  class SealedData {
+    static fromParts() {
+      return new SealedData();
+    }
+  }
+  return {
+    ...jest.requireActual('expo-crypto'),
+    AESEncryptionKey: EncryptionKey,
+    AESSealedData: SealedData,
+  };
+});
