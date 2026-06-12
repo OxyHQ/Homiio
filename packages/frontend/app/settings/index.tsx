@@ -122,7 +122,7 @@ export default function SettingsScreen() {
             icon={<RowIcon name="person" />}
             title={userDisplayName}
             description={user?.username ?? ''}
-            onPress={() => showBottomSheet?.('AccountSettings')}
+            onPress={() => showBottomSheet?.('ManageAccount')}
           />
           <SettingsListItem
             icon={<RowIcon name="folder" />}
