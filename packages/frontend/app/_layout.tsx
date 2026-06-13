@@ -15,6 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { SideBar } from '@/components/SideBar';
 import { RightBar } from '@/components/RightBar';
+import { SindiPanel } from '@/components/sindi/SindiPanel';
 import { colors } from '@/styles/colors';
 import { Toaster } from '@/lib/sonner';
 import {
@@ -51,6 +52,7 @@ import { OXY_BASE_URL } from '@/config';
 import { QueryClient, QueryClientProvider, onlineManager, focusManager } from '@tanstack/react-query';
 import NetInfo from '@react-native-community/netinfo';
 import { logger } from '@/utils/logger';
+import { refreshExchangeRates } from '@/utils/exchangeRates';
 
 i18nUse(initReactI18next);
 
@@ -258,6 +260,9 @@ export default function RootLayout() {
   // unmount.
   useEffect(() => {
     let active = true;
+    refreshExchangeRates().catch((error: unknown) => {
+      logger.warn('Failed to refresh exchange rates:', error);
+    });
     (async () => {
       try {
         if (Platform.OS !== 'web') {
@@ -289,11 +294,9 @@ export default function RootLayout() {
             Pin Bloom to the YELLOW preset in LIGHT mode. `mode="light"` stops Bloom
             from following the OS into dark — Homiio's static `colors.ts` is a
             light-only palette, so following the OS produced a light-static /
-            dark-Bloom mismatch. This provider owns the splash screen + font
-            loading (both render before OxyProvider mounts). The same props are
-            passed to OxyProvider below so its internal BloomThemeProvider writes
-            identical CSS vars instead of clobbering them with its `oxy`/`system`
-            defaults — see OxyProvider's note that any outer provider is shadowed.
+            dark-Bloom mismatch. This provider is the single source of truth for
+            theme tokens; `@oxyhq/services` 8.1.2 no longer wraps its children in
+            an internal BloomThemeProvider.
           */}
           <BloomThemeProvider mode="light" colorPreset="yellow" fonts onFontsLoading={<AppSplashScreen />}>
           {!appIsReady ? (
@@ -304,7 +307,7 @@ export default function RootLayout() {
           ) : (
               <QueryClientProvider client={queryClient}>
                 <RentalModeProvider>
-                <OxyProvider baseURL={OXY_BASE_URL} themeMode="light" colorPreset="yellow">
+                <OxyProvider baseURL={OXY_BASE_URL}>
                   <ProfileProvider>
                     <SavedPropertiesProvider>
                       <NotificationProvider>
@@ -353,6 +356,7 @@ export default function RootLayout() {
                                         <LayoutScrollProvider value={layoutScrollContextValue}>
                                           <View style={styles.fixedShell}>
                                             <SideBar />
+                                            <SindiPanel />
                                             <View style={styles.fixedMain}>
                                               <View style={styles.fixedSlotWrapper}>
                                                 <Slot />
@@ -372,6 +376,7 @@ export default function RootLayout() {
                                             scrollEventThrottle={16}
                                           >
                                             <SideBar />
+                                            <SindiPanel />
                                             <View style={styles.mainContent}>
                                               <View style={styles.mainContentWrapper}>
                                                 <Slot />
