@@ -92,3 +92,13 @@ export const API_URL_SOCKET =
 export const OXY_BASE_URL =
   process.env.EXPO_PUBLIC_OXY_BASE_URL ||
   (process.env.NODE_ENV === 'production' ? 'https://api.oxy.so' : 'http://192.168.86.44:3001');
+
+/**
+ * Homiio's registered Oxy OAuth public client id. Required by `OxyProvider`
+ * (device sign-in) since `@oxyhq/services` 10.0.0 — the legacy `appName` prop
+ * was removed in that release. Overridable via `EXPO_PUBLIC_OXY_CLIENT_ID`; the
+ * fallback is the real registered public client id for Homiio.
+ */
+export const OXY_CLIENT_ID =
+  process.env.EXPO_PUBLIC_OXY_CLIENT_ID ||
+  'oxy_dk_85244d70394ab6e4ef62b6f2ff7e399e6e857464362c13bc';

@@ -47,7 +47,7 @@ import {
   Outlet as PortalOutlet,
 } from '@oxyhq/bloom/portal';
 import '../styles/global.css';
-import { OXY_BASE_URL } from '@/config';
+import { OXY_BASE_URL, OXY_CLIENT_ID } from '@/config';
 import { QueryClient, QueryClientProvider, onlineManager, focusManager } from '@tanstack/react-query';
 import NetInfo from '@react-native-community/netinfo';
 import { logger } from '@/utils/logger';
@@ -304,7 +304,7 @@ export default function RootLayout() {
           ) : (
               <QueryClientProvider client={queryClient}>
                 <RentalModeProvider>
-                <OxyProvider baseURL={OXY_BASE_URL} themeMode="light" colorPreset="yellow">
+                <OxyProvider baseURL={OXY_BASE_URL} clientId={OXY_CLIENT_ID}>
                   <ProfileProvider>
                     <SavedPropertiesProvider>
                       <NotificationProvider>
