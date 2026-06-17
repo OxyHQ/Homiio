@@ -44,12 +44,19 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
                 ...((options.headers as Record<string, string>) || {}),
             };
 
-            // Add authentication token if available
+            // Add the current Oxy access token if available.
             if (oxyServices && activeSessionId) {
                 try {
-                    const tokenData = await oxyServices.getTokenBySession(activeSessionId);
-                    if (tokenData) {
-                        headers['Authorization'] = `Bearer ${tokenData.accessToken}`;
+                    let accessToken = oxyServices.getAccessToken();
+                    if (!accessToken) {
+                        const refreshed = await oxyServices.refreshTokenViaCookie();
+                        if (refreshed?.accessToken) {
+                            oxyServices.setTokens(refreshed.accessToken);
+                            accessToken = refreshed.accessToken;
+                        }
+                    }
+                    if (accessToken) {
+                        headers['Authorization'] = `Bearer ${accessToken}`;
                     }
                 } catch (error) {
                     console.error('Failed to get authentication token:', error);
