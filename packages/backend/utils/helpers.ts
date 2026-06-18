@@ -7,13 +7,24 @@
  * Transform address fields for Property documents
  * Converts populated addressId to address field
  */
-const transformAddressFields = (obj) => {
-  if (obj && obj.addressId && typeof obj.addressId === 'object' && obj.addressId._id) {
-    obj.address = { ...obj.addressId };
+interface AddressTransformable {
+  addressId?: unknown;
+  address?: Record<string, unknown> & { showAddressNumber?: unknown };
+  [key: string]: unknown;
+}
+
+const transformAddressFields = <T extends AddressTransformable>(obj: T): T => {
+  if (
+    obj &&
+    obj.addressId &&
+    typeof obj.addressId === 'object' &&
+    (obj.addressId as { _id?: unknown })._id
+  ) {
+    obj.address = { ...(obj.addressId as Record<string, unknown>) };
 
     // Remove showAddressNumber from address object if present (legacy data cleanup)
     // showAddressNumber should only exist at property level, not address level
-    if (obj.address.showAddressNumber !== undefined) {
+    if (obj.address && obj.address.showAddressNumber !== undefined) {
       delete obj.address.showAddressNumber;
     }
 

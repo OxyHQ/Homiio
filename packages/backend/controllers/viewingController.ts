@@ -3,15 +3,18 @@
  * Handles viewing request lifecycle (create, list, approve, decline, cancel)
  */
 
-const { Property, ViewingRequest, Profile } = require('../models');
-const { logger } = require('../middlewares/logging');
-const { AppError, successResponse, paginationResponse } = require('../middlewares/errorHandler');
+import type { Request, Response, NextFunction } from 'express';
+
+import { Property, ViewingRequest, Profile } from '../models';
+import { PropertyStatus } from '@homiio/shared-types';
+import { logger } from '../middlewares/logging';
+import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
 
 class ViewingController {
   /**
    * Create a new viewing request for a property
    */
-  async createViewingRequest(req, res, next) {
+  async createViewingRequest(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
       const { propertyId } = req.params;
       const { date, time, message } = req.body;
@@ -23,7 +26,7 @@ class ViewingController {
 
       const property = await Property.findById(propertyId).lean();
       if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
-      if (property.status !== 'active') return next(new AppError('Property is not active', 400, 'PROPERTY_INACTIVE'));
+      if (property.status !== PropertyStatus.PUBLISHED) return next(new AppError('Property is not active', 400, 'PROPERTY_INACTIVE'));
       if (property.isExternal) return next(new AppError('Cannot book viewings for external properties', 400, 'EXTERNAL_PROPERTY'));
 
       // Get active profile for requester
@@ -94,7 +97,7 @@ class ViewingController {
   /**
    * List viewing requests for current user (requester)
    */
-  async listMyViewingRequests(req, res, next) {
+  async listMyViewingRequests(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
       const { page = 1, limit = 10, status } = req.query;
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
@@ -103,11 +106,11 @@ class ViewingController {
       const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
       if (!activeProfile) return res.json(paginationResponse([], 1, 10, 0, 'No profile found for user'));
 
-      const query = { requesterProfileId: activeProfile._id } as any;
+      const query: Record<string, unknown> = { requesterProfileId: activeProfile._id };
       if (status) query.status = status;
 
-      const pageNumber = parseInt(page);
-      const limitNumber = parseInt(limit);
+      const pageNumber = parseInt(String(page), 10) || 1;
+      const limitNumber = parseInt(String(limit), 10) || 10;
       const skip = (pageNumber - 1) * limitNumber;
 
       const [items, total] = await Promise.all([
@@ -130,7 +133,7 @@ class ViewingController {
    * If requester calls this, returns only their own requests for that property
    * If owner calls this, returns all requests for the property
    */
-  async listPropertyViewingRequests(req, res, next) {
+  async listPropertyViewingRequests(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
       const { propertyId } = req.params;
       const { page = 1, limit = 10, status } = req.query;
@@ -145,14 +148,14 @@ class ViewingController {
 
       const isOwner = String(property.profileId) === String(activeProfile._id);
 
-      const query = { propertyId } as any;
+      const query: Record<string, unknown> = { propertyId };
       if (!isOwner) {
         query.requesterProfileId = activeProfile._id;
       }
       if (status) query.status = status;
 
-      const pageNumber = parseInt(page);
-      const limitNumber = parseInt(limit);
+      const pageNumber = parseInt(String(page), 10) || 1;
+      const limitNumber = parseInt(String(limit), 10) || 10;
       const skip = (pageNumber - 1) * limitNumber;
 
       const [items, total] = await Promise.all([
@@ -171,7 +174,7 @@ class ViewingController {
   }
 
   /** Approve a pending viewing request (owner only) */
-  async approveViewingRequest(req, res, next) {
+  async approveViewingRequest(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
       const { viewingId } = req.params;
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
@@ -208,7 +211,7 @@ class ViewingController {
   }
 
   /** Decline a pending viewing request (owner only) */
-  async declineViewingRequest(req, res, next) {
+  async declineViewingRequest(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
       const { viewingId } = req.params;
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
@@ -236,7 +239,7 @@ class ViewingController {
   }
 
   /** Cancel a viewing request (requester or owner) */
-  async cancelViewingRequest(req, res, next) {
+  async cancelViewingRequest(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
       const { viewingId } = req.params;
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
@@ -266,7 +269,7 @@ class ViewingController {
   }
 
   /** Update a pending viewing request (requester only) */
-  async updateViewingRequest(req, res, next) {
+  async updateViewingRequest(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
       const { viewingId } = req.params;
       const { date, time, message } = req.body;

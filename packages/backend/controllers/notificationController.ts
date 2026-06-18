@@ -9,11 +9,21 @@
  * these handlers.
  */
 
-const { Notification } = require('../models');
-const { AppError, successResponse } = require('../middlewares/errorHandler');
-const { logger } = require('../middlewares/logging');
+import type { Request, Response, NextFunction } from 'express';
+
+import { Notification } from '../models';
+import { AppError, successResponse } from '../middlewares/errorHandler';
+import { logger } from '../middlewares/logging';
 
 const VALID_PRIORITIES = ['low', 'medium', 'high', 'urgent'];
+
+function errorName(error: unknown): string | undefined {
+  if (error && typeof error === 'object' && 'name' in error) {
+    const name = (error as { name: unknown }).name;
+    return typeof name === 'string' ? name : undefined;
+  }
+  return undefined;
+}
 
 class NotificationController {
   /**
@@ -24,7 +34,7 @@ class NotificationController {
    * notificationService, which reads `notifications` and `total` directly off
    * the response body.
    */
-  async getNotifications(req, res, next) {
+  async getNotifications(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) {
@@ -86,7 +96,7 @@ class NotificationController {
   /**
    * Create a notification for the authenticated user.
    */
-  async createNotification(req, res, next) {
+  async createNotification(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) {
@@ -119,7 +129,7 @@ class NotificationController {
         successResponse(notification.toJSON(), 'Notification created successfully')
       );
     } catch (error) {
-      if (error.name === 'ValidationError') {
+      if (errorName(error) === 'ValidationError') {
         return next(new AppError('Validation failed', 400, 'VALIDATION_ERROR'));
       }
       next(error);
@@ -129,7 +139,7 @@ class NotificationController {
   /**
    * Get a single notification owned by the authenticated user.
    */
-  async getNotificationById(req, res, next) {
+  async getNotificationById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) {
@@ -149,7 +159,7 @@ class NotificationController {
 
       res.json(successResponse(notification.toJSON(), 'Notification retrieved successfully'));
     } catch (error) {
-      if (error.name === 'CastError') {
+      if (errorName(error) === 'CastError') {
         return next(new AppError('Invalid notification ID', 400, 'VALIDATION_ERROR'));
       }
       next(error);
@@ -160,7 +170,7 @@ class NotificationController {
    * Update a notification owned by the authenticated user. Used primarily to
    * toggle read state, but also allows editing presentational fields.
    */
-  async updateNotification(req, res, next) {
+  async updateNotification(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) {
@@ -196,10 +206,10 @@ class NotificationController {
 
       res.json(successResponse(notification.toJSON(), 'Notification updated successfully'));
     } catch (error) {
-      if (error.name === 'CastError') {
+      if (errorName(error) === 'CastError') {
         return next(new AppError('Invalid notification ID', 400, 'VALIDATION_ERROR'));
       }
-      if (error.name === 'ValidationError') {
+      if (errorName(error) === 'ValidationError') {
         return next(new AppError('Validation failed', 400, 'VALIDATION_ERROR'));
       }
       next(error);
@@ -209,7 +219,7 @@ class NotificationController {
   /**
    * Mark a notification as read.
    */
-  async markAsRead(req, res, next) {
+  async markAsRead(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) {
@@ -232,7 +242,7 @@ class NotificationController {
 
       res.json(successResponse(notification.toJSON(), 'Notification marked as read'));
     } catch (error) {
-      if (error.name === 'CastError') {
+      if (errorName(error) === 'CastError') {
         return next(new AppError('Invalid notification ID', 400, 'VALIDATION_ERROR'));
       }
       next(error);
@@ -242,7 +252,7 @@ class NotificationController {
   /**
    * Delete a notification owned by the authenticated user.
    */
-  async deleteNotification(req, res, next) {
+  async deleteNotification(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) {
@@ -264,7 +274,7 @@ class NotificationController {
 
       res.json(successResponse(null, 'Notification deleted successfully'));
     } catch (error) {
-      if (error.name === 'CastError') {
+      if (errorName(error) === 'CastError') {
         return next(new AppError('Invalid notification ID', 400, 'VALIDATION_ERROR'));
       }
       next(error);
@@ -274,7 +284,7 @@ class NotificationController {
   /**
    * Mark all of the authenticated user's notifications as read.
    */
-  async markAllAsRead(req, res, next) {
+  async markAllAsRead(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) {
@@ -305,7 +315,7 @@ class NotificationController {
   /**
    * Permanently delete all of the authenticated user's notifications.
    */
-  async clearAllNotifications(req, res, next) {
+  async clearAllNotifications(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) {

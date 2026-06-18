@@ -1,9 +1,59 @@
 import axios from 'axios';
 import { OfferingType } from '@homiio/shared-types';
 import { forwardGeocode } from './geocodingService';
-// API responses are now in the correct format, no transformer needed
-// CommonJS export, use require
-const Property = require('../models/schemas/PropertySchema');
+import { Property } from '../models';
+
+function errorMessageOf(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
+function errorCodeOf(error: unknown): string | undefined {
+  if (error && typeof error === 'object' && 'code' in error) {
+    const code = (error as { code: unknown }).code;
+    return typeof code === 'string' ? code : undefined;
+  }
+  return undefined;
+}
+
+function errorStatusOf(error: unknown): number | undefined {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const resp = (error as { response?: { status?: unknown } }).response;
+    if (resp && typeof resp === 'object' && typeof resp.status === 'number') {
+      return resp.status;
+    }
+  }
+  return undefined;
+}
+
+interface ExternalRawImage { url?: string; caption?: string; isPrimary?: boolean }
+
+interface ExternalRawAddress {
+  street?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  coordinates?: { lat: number; lng: number };
+}
+
+interface ExternalRawListing {
+  id?: string;
+  address?: ExternalRawAddress;
+  rent?: { amount?: number; currency?: string };
+  description?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  squareFootage?: number;
+  floor?: number;
+  type?: string;
+  hasBalcony?: boolean;
+  amenities?: string[];
+  furnishedStatus?: string;
+  availableFrom?: string;
+  images?: ExternalRawImage[];
+  status?: string;
+  [key: string]: unknown;
+}
 
 // Configuration constants
 const SCRAPER_CONFIG = {
@@ -156,7 +206,7 @@ function mapToProperty(raw: any): { property: Record<string, unknown>; addressIn
       furnishedStatus: raw.furnishedStatus ?? 'unfurnished',
       availableFrom: raw.availableFrom,
       images: Array.isArray(raw.images)
-        ? raw.images.map((img, idx) => ({
+        ? raw.images.map((img: ExternalRawImage, idx: number) => ({
             url: img.url,
             caption: img.caption,
             isPrimary: !!img.isPrimary || idx === 0
@@ -167,7 +217,7 @@ function mapToProperty(raw: any): { property: Record<string, unknown>; addressIn
 
     return { property, addressInput };
   } catch (error) {
-    throw new Error(`Failed to map property data: ${error.message}`);
+    throw new Error(`Failed to map property data: ${errorMessageOf(error)}`);
   }
 }
 
@@ -179,7 +229,7 @@ export async function upsertExternalListing(
   ttlDays: number = SCRAPER_CONFIG.DEFAULT_TTL_DAYS
 ): Promise<{ status: 'created' | 'updated' | 'error'; error?: string }> {
   const maxRetries = SCRAPER_CONFIG.MAX_RETRIES;
-  let lastError: any;
+  let lastError: unknown;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -233,7 +283,7 @@ export async function upsertExternalListing(
       }
     } catch (error) {
       lastError = error;
-      logger.warn(`Upsert attempt ${attempt} failed for ${raw.id}:`, error.message);
+      logger.warn(`Upsert attempt ${attempt} failed for ${raw.id}:`, errorMessageOf(error));
       
       if (attempt < maxRetries) {
         // Wait before retrying
@@ -242,7 +292,7 @@ export async function upsertExternalListing(
     }
   }
 
-  const errorMessage = `Failed after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}`;
+  const errorMessage = `Failed after ${maxRetries} attempts: ${errorMessageOf(lastError) || 'Unknown error'}`;
   logger.error(`Upsert failed for ${raw.id}:`, errorMessage);
   return { status: 'error', error: errorMessage };
 }
@@ -273,29 +323,34 @@ async function makeRequest(
       return response.data;
     } catch (error) {
       const isLastAttempt = attempt === maxRetries;
-      const shouldRetry = error.code === 'ECONNRESET' || 
-                         error.code === 'ETIMEDOUT' || 
-                         (error.response?.status >= 500);
+      const code = errorCodeOf(error);
+      const status = errorStatusOf(error);
+      const shouldRetry = code === 'ECONNRESET' ||
+                         code === 'ETIMEDOUT' ||
+                         (status !== undefined && status >= 500);
 
       if (!shouldRetry || isLastAttempt) {
         throw error;
       }
 
-      logger.warn(`Request attempt ${attempt} failed, retrying:`, error.message);
+      logger.warn(`Request attempt ${attempt} failed, retrying:`, errorMessageOf(error));
       await new Promise(resolve => setTimeout(resolve, SCRAPER_CONFIG.RETRY_DELAY * attempt));
     }
   }
 }
 
 // Process listings in batches for better performance
+interface BatchErrorDetail { id?: string; error: string; timestamp: Date }
+interface BatchResult { created: number; updated: number; errors: number; errorDetails: BatchErrorDetail[] }
+
 async function processBatch(
-  listings: any[], 
-  source: string, 
+  listings: ExternalRawListing[],
+  source: string,
   logger: ScraperLogger,
   ttlDays: number
-): Promise<{ created: number; updated: number; errors: number; errorDetails: any[] }> {
-  const batchResult = { created: 0, updated: 0, errors: 0, errorDetails: [] };
-  
+): Promise<BatchResult> {
+  const batchResult: BatchResult = { created: 0, updated: 0, errors: 0, errorDetails: [] };
+
   const promises = listings.map(async (raw) => {
     if (!raw?.id || !raw.address || !raw.rent) {
       return { status: 'skipped', reason: 'Missing required fields' };
@@ -305,8 +360,8 @@ async function processBatch(
       const upsertResult = await upsertExternalListing(raw, source, logger, ttlDays);
       return upsertResult;
     } catch (error) {
-      logger.error(`Failed to process listing ${raw.id}:`, error);
-      return { status: 'error', error: error.message };
+      logger.error(`Failed to process listing ${raw.id}:`, errorMessageOf(error));
+      return { status: 'error', error: errorMessageOf(error) };
     }
   });
 
@@ -323,7 +378,7 @@ async function processBatch(
         batchResult.errors++;
         batchResult.errorDetails.push({
           id: listings[index]?.id,
-          error: value.error,
+          error: ('error' in value && typeof value.error === 'string') ? value.error : 'Unknown error',
           timestamp: new Date()
         });
       }
@@ -331,7 +386,7 @@ async function processBatch(
       batchResult.errors++;
       batchResult.errorDetails.push({
         id: listings[index]?.id,
-        error: promiseResult.reason,
+        error: errorMessageOf(promiseResult.reason),
         timestamp: new Date()
       });
     }
@@ -408,9 +463,9 @@ export async function runExternalScrape(options: ScraperOptions): Promise<Scrape
 
   } catch (error) {
     result.duration = Date.now() - startTime;
-    logger.error('Scrape failed:', error);
+    logger.error('Scrape failed:', errorMessageOf(error));
     result.errorDetails.push({
-      error: `Scrape failed: ${error.message}`,
+      error: `Scrape failed: ${errorMessageOf(error)}`,
       timestamp: new Date()
     });
   }

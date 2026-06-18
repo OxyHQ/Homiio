@@ -22,12 +22,12 @@ import type {
   ExchangeWindow,
 } from '@homiio/shared-types';
 
-const { Property, ExchangeRequest, Profile } = require('../models');
-const { logger } = require('../middlewares/logging');
-const { AppError, successResponse, paginationResponse } = require('../middlewares/errorHandler');
-const { ExchangeMode, ExchangeRequestStatus, OfferingType } = require('@homiio/shared-types');
-const { Types } = require('mongoose');
-const { windowsOverlap } = require('../utils/availabilityUtils');
+import { Property, ExchangeRequest, Profile } from '../models';
+import { logger } from '../middlewares/logging';
+import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
+import { ExchangeMode, ExchangeRequestStatus, OfferingType } from '@homiio/shared-types';
+import { Types } from 'mongoose';
+import { windowsOverlap } from '../utils/availabilityUtils';
 
 // ---- Tunable constants (no magic numbers / strings inline) ----
 /** Default page size for list endpoints. */
@@ -58,13 +58,19 @@ function hasExchangeOffering(property: { offerings?: unknown }): boolean {
   return Array.isArray(property.offerings) && property.offerings.includes(OfferingType.EXCHANGE);
 }
 
-/** Parse + validate a requested/offered window into concrete Dates. Returns null if malformed. */
-function parseWindow(window: ExchangeWindow | undefined): { start: Date; end: Date } | null {
+/**
+ * Parse + validate a requested/offered window into concrete Dates. The wire
+ * shape uses ISO strings (`ExchangeWindow`) but Mongoose hydrates persisted
+ * windows to `Date`, so accept either at the boundary.
+ */
+function parseWindow(
+  window: { start: Date | string; end: Date | string } | undefined,
+): { start: Date; end: Date } | null {
   if (!window || !window.start || !window.end) {
     return null;
   }
-  const start = new Date(window.start);
-  const end = new Date(window.end);
+  const start = window.start instanceof Date ? window.start : new Date(window.start);
+  const end = window.end instanceof Date ? window.end : new Date(window.end);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
     return null;
   }
@@ -111,9 +117,9 @@ async function hasPropertyConflict(
     baseQuery._id = { $ne: excludeRequestId };
   }
 
-  const committed: ConflictRow[] = await ExchangeRequest.find(baseQuery)
+  const committed = await ExchangeRequest.find(baseQuery)
     .select('propertyId offeredPropertyId requestedWindow offeredWindow')
-    .lean();
+    .lean<ConflictRow[]>();
 
   const target = String(propertyId);
   return committed.some((row) => {

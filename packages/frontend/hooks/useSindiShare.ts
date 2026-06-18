@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
-import { Alert, Platform, Share } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import * as Clipboard from 'expo-clipboard';
 import { logger } from '@/utils/logger';
+import { shareContent } from '@/utils/share';
 import type { Conversation } from '@/store/conversationStore';
 
 /**
@@ -35,9 +35,10 @@ function resolveShareOrigin(): string {
  * Share the current Sindi conversation.
  *
  * Validates the conversation can be shared (persisted + non-empty), mints a
- * share token via the store, then surfaces the link through the platform's
- * native share sheet (iOS/Android), the Web Share API where available, or a
- * clipboard fallback. All user-facing copy uses the `sindi.share.*` i18n keys.
+ * share token via the store, then surfaces the link through the shared
+ * `shareContent` ladder (Web Share API → native share sheet → clipboard
+ * fallback). All user-facing copy uses the `sindi.share.*` i18n keys; the
+ * outcome decides which (if any) confirmation to show.
  */
 export function useSindiShare({
   currentConversation,
@@ -58,43 +59,38 @@ export function useSindiShare({
       return;
     }
 
+    let shareToken: string | null;
     try {
-      const shareToken = await generateShareToken(currentConversation.id, authenticatedFetch);
-      if (!shareToken) {
-        Alert.alert(t('sindi.share.error.title'), t('sindi.share.error.failed'));
-        return;
-      }
-
-      const shareUrl = `${resolveShareOrigin()}/sindi/shared/${shareToken}`;
-      const shareText = t('sindi.share.text');
-
-      if (Platform.OS === 'web') {
-        if (typeof navigator !== 'undefined' && navigator.share) {
-          await navigator.share({
-            title: currentConversation.title,
-            text: shareText,
-            url: shareUrl,
-          });
-          return;
-        }
-        await Clipboard.setStringAsync(shareUrl);
-        Alert.alert(t('sindi.share.success.title'), t('sindi.share.success.copied'));
-        return;
-      }
-
-      // Native: present the OS share sheet, falling back to the clipboard.
-      const result = await Share.share({
-        title: currentConversation.title,
-        message: `${shareText}\n${shareUrl}`,
-        url: shareUrl,
-      });
-      if (result.action === Share.dismissedAction) {
-        // User dismissed the sheet — nothing to do.
-        return;
-      }
+      shareToken = await generateShareToken(currentConversation.id, authenticatedFetch);
     } catch (error) {
-      logger.error('Failed to share conversation:', error);
+      logger.error('Failed to mint Sindi share token:', error);
+      Alert.alert(t('sindi.share.error.title'), t('sindi.share.error.failed'));
+      return;
+    }
+
+    if (!shareToken) {
+      Alert.alert(t('sindi.share.error.title'), t('sindi.share.error.failed'));
+      return;
+    }
+
+    const shareUrl = `${resolveShareOrigin()}/sindi/shared/${shareToken}`;
+    const shareText = t('sindi.share.text');
+
+    const outcome = await shareContent({
+      title: currentConversation.title,
+      // Native share sheets take a single string; pair the text with the link.
+      message: `${shareText}\n${shareUrl}`,
+      url: shareUrl,
+      // Web Share takes `text` + `url` separately, so keep the text on its own.
+      webText: shareText,
+      copyText: shareUrl,
+    });
+
+    if (outcome === 'copied') {
+      Alert.alert(t('sindi.share.success.title'), t('sindi.share.success.copied'));
+    } else if (outcome === 'failed') {
       Alert.alert(t('sindi.share.error.title'), t('sindi.share.error.failed'));
     }
+    // 'shared' / 'dismissed' → nothing to surface.
   }, [currentConversation, generateShareToken, authenticatedFetch, t]);
 }

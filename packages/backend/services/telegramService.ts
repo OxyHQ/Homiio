@@ -8,8 +8,63 @@ import i18n from 'i18n';
 import path from 'path';
 import config from '../config';
 import { logger } from '../middlewares/logging';
-const { generateLargePropertyTitle } = require('../utils/propertyTitleGenerator');
-const { resolveAddressDisplay } = require('./geoDisplayService');
+import { generateLargePropertyTitle } from '../utils/propertyTitleGenerator';
+import { resolveAddressDisplay, type GeoDisplay, type AddressGeoLike } from './geoDisplayService';
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
+interface PropertyImageLike {
+  url?: string | null;
+  isPrimary?: boolean;
+}
+
+interface PropertyAddressLike extends AddressGeoLike {
+  street?: string;
+  postal_code?: string;
+  city?: string;
+  country?: string;
+}
+
+interface PropertyLike {
+  _id?: unknown;
+  type?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  longTermRent?: { monthlyAmount?: number; currency?: string };
+  shortTermRent?: { nightlyRate?: number; currency?: string };
+  sale?: { price?: number; currency?: string };
+  address?: PropertyAddressLike;
+  description?: string;
+  amenities?: string[];
+  availability?: { availableFrom?: Date | string };
+  images?: PropertyImageLike[];
+  squareFootage?: number;
+}
+
+interface GroupConfig {
+  id?: string | number;
+  language?: string;
+}
+
+interface BulkNotificationResults {
+  total: number;
+  successful: number;
+  failed: number;
+  skipped: number;
+  errors: Array<{ propertyId: unknown; error: string }>;
+}
+
+interface GroupsSummary {
+  defaultGroup: GroupConfig | undefined;
+  groups: Record<string, GroupConfig & { configured: boolean }>;
+  totalGroups: number;
+  configuredGroups: number;
+  supportedLocations: string[];
+  topicMappings: Record<string, number>;
+}
 
 // Configure i18n
 i18n.configure({
@@ -21,7 +76,7 @@ i18n.configure({
 });
 
 // City-Country to Topic ID mapping
-const CITY_TOPIC_MAPPING = {
+const CITY_TOPIC_MAPPING: Record<string, number> = {
   'New York, US': 4,
   'New York, United States': 4, // Handle both US and United States
   'Barcelona, Spain': 2,
@@ -64,7 +119,7 @@ class TelegramService {
       
       logger.info('Telegram bot initialized successfully');
     } catch (error) {
-      logger.error('Failed to initialize Telegram bot:', error);
+      logger.error('Failed to initialize Telegram bot:', { error: errorMessage(error) });
       this.isInitialized = false;
     }
   }
@@ -75,7 +130,7 @@ class TelegramService {
    * @param {string} city - The city name (for future expansion)
    * @returns {Object} - Group configuration with id and language
    */
-  getGroupForCity(city) {
+  getGroupForCity(_city: string | null | undefined): GroupConfig | undefined {
     // For now, all notifications go to the default Spanish group
     // In the future, this can be expanded to route based on city/region
     return config.telegram.defaultGroup;
@@ -87,13 +142,13 @@ class TelegramService {
    * @param {string} country - The country name
    * @returns {number|null} - Topic ID if found, null otherwise
    */
-  getTopicIdForLocation(city, country) {
+  getTopicIdForLocation(city: string | null | undefined, country: string | null | undefined): number | null {
     if (!city || !country) {
       return null;
     }
 
     const locationKey = `${city}, ${country}`;
-    return CITY_TOPIC_MAPPING[locationKey] || null;
+    return CITY_TOPIC_MAPPING[locationKey] ?? null;
   }
 
   /**
@@ -102,7 +157,7 @@ class TelegramService {
    * @param {string} country - The country name
    * @returns {boolean} - True if location is supported
    */
-  isLocationSupported(city, country) {
+  isLocationSupported(city: string | null | undefined, country: string | null | undefined): boolean {
     return this.getTopicIdForLocation(city, country) !== null;
   }
 
@@ -111,8 +166,8 @@ class TelegramService {
    * @param {string} language - Language code (es, en)
    * @returns {Object} - Configured i18n instance for the language
    */
-  getI18nForLanguage(language = 'es') {
-    const i18nInstance = Object.create(i18n);
+  getI18nForLanguage(language: string = 'es'): typeof i18n {
+    const i18nInstance: typeof i18n = Object.create(i18n);
     i18nInstance.setLocale(language);
     return i18nInstance;
   }
@@ -122,7 +177,7 @@ class TelegramService {
    * @param {string} text - Text to escape
    * @returns {string} - Escaped text
    */
-  escapeMarkdown(text) {
+  escapeMarkdown(text: string | null | undefined): string {
     if (!text) return '';
     // Escape special Markdown characters: _ * [ ] ( ) ~ ` > # + - = | { } . !
     return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
@@ -133,7 +188,7 @@ class TelegramService {
    * @param {Object} property - The property object
    * @returns {string} - Image URL (always returns a valid URL)
    */
-  getPropertyImage(property) {
+  getPropertyImage(property: PropertyLike): string {
     // Check if property has valid images array
     if (!property.images || !Array.isArray(property.images) || property.images.length === 0) {
       logger.info('No images found for property, using default placeholder', {
@@ -143,7 +198,7 @@ class TelegramService {
     }
 
     // Find primary image first
-    const primaryImage = property.images.find(img => img.isPrimary);
+    const primaryImage = property.images.find((img: PropertyImageLike) => img.isPrimary);
     if (primaryImage && primaryImage.url) {
       logger.debug('Using primary image for property', {
         propertyId: property._id,
@@ -176,7 +231,7 @@ class TelegramService {
    * @param {string} language - Language code for translations
    * @returns {string} - Formatted message
    */
-  formatPropertyMessage(property, language = 'es', geo = null) {
+  formatPropertyMessage(property: PropertyLike, language: string = 'es', geo: GeoDisplay | null = null): string {
     const {
       type,
       bedrooms,
@@ -201,7 +256,13 @@ class TelegramService {
       address,
       bedrooms,
       bathrooms,
-      geo
+      geo: geo
+        ? {
+            city: geo.city ?? undefined,
+            region: geo.region ?? undefined,
+            neighborhood: geo.neighborhood ?? undefined
+          }
+        : null
     });
 
     const dynamicTitle = `🏠 **${this.escapeMarkdown(largeTitle)}**`;
@@ -225,7 +286,7 @@ class TelegramService {
       : t.__('telegram.noneListedAmenities');
 
     // Available date
-    const availableDate = availability.availableFrom 
+    const availableDate = availability?.availableFrom
       ? new Date(availability.availableFrom).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')
       : t.__('telegram.immediately');
 
@@ -239,10 +300,10 @@ class TelegramService {
     }
 
     // Get property type for hashtags and details
-    const propertyType = t.__(`telegram.propertyTypes.${type}`) || type;
+    const propertyType: string = t.__(`telegram.propertyTypes.${type}`) || type || '';
     
     // Helper function to remove property numbers for privacy (used in details)
-    const removePropertyNumber = (street) => {
+    const removePropertyNumber = (street: string | undefined): string => {
       if (!street) return '';
       return street.replace(/,?\s*\d+.*$/, '').trim();
     };
@@ -253,8 +314,8 @@ class TelegramService {
     const regionLabel = (geo && geo.region) || '';
     const postalCode = address?.postal_code || '';
     const locationLine = [removePropertyNumber(address?.street), cityLabel, `${regionLabel} ${postalCode}`.trim()]
-      .filter(Boolean)
-      .map((part) => this.escapeMarkdown(part))
+      .filter((part): part is string => Boolean(part))
+      .map((part: string) => this.escapeMarkdown(part))
       .join(', ');
     const cityHashtag = cityLabel ? ` #${this.escapeMarkdown(cityLabel.replace(/\s+/g, ''))}` : '';
 
@@ -280,9 +341,9 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
    * @param {Object} property - The property object
    * @returns {Promise<boolean>} - Success status
    */
-  async sendPropertyNotification(property) {
+  async sendPropertyNotification(property: PropertyLike): Promise<boolean> {
     try {
-      if (!this.isInitialized) {
+      if (!this.isInitialized || !this.bot) {
         logger.warn('Telegram bot not initialized. Skipping notification.');
         return false;
       }
@@ -339,7 +400,7 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
       const imageUrl = this.getPropertyImage(property);
       
       // Prepare message options with topic support
-      const messageOptions: any = {
+      const messageOptions: TelegramBot.SendPhotoOptions = {
         caption: message,
         parse_mode: 'Markdown',
         reply_markup: keyboard
@@ -368,10 +429,10 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
         logger.warn('Failed to send image, falling back to text message', {
           propertyId: property._id,
           imageUrl: imageUrl,
-          error: imageError.message
+          error: errorMessage(imageError)
         });
 
-        const textMessageOptions: any = {
+        const textMessageOptions: TelegramBot.SendMessageOptions = {
           parse_mode: 'Markdown',
           disable_web_page_preview: true,
           reply_markup: keyboard
@@ -397,7 +458,7 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
       return true;
     } catch (error) {
       logger.error('Failed to send Telegram notification:', {
-        error: error.message,
+        error: errorMessage(error),
         propertyId: property._id,
         city: property.address?.city,
         country: property.address?.country
@@ -414,21 +475,27 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
    * @param {number} topicId - Optional topic ID for forum threads
    * @returns {Promise<boolean>} - Success status
    */
-  async sendTestMessage(groupId, message = null, includeButton = true, topicId = null) {
+  async sendTestMessage(
+    groupId: string | number,
+    message: string | null = null,
+    includeButton: boolean = true,
+    topicId: number | null = null
+  ): Promise<boolean> {
     try {
-      if (!this.isInitialized) {
+      if (!this.isInitialized || !this.bot) {
         throw new Error('Telegram bot not initialized');
       }
 
       // Get language for this group (default to Spanish)
-      const groupConfig = config.telegram.groups[groupId];
+      const groups = config.telegram.groups as Record<string, GroupConfig> | undefined;
+      const groupConfig = groups?.[String(groupId)];
       const language = groupConfig?.language || 'es';
       const t = this.getI18nForLanguage(language);
 
       // Use provided message or default translated message
       const finalMessage = message || t.__('telegram.testMessage');
 
-      const options: any = {
+      const options: TelegramBot.SendMessageOptions = {
         parse_mode: 'Markdown'
       };
 
@@ -456,7 +523,7 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
       return true;
     } catch (error) {
       logger.error('Failed to send test message:', {
-        error: error.message,
+        error: errorMessage(error),
         groupId,
         topicId
       });
@@ -468,16 +535,16 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
    * Get bot information
    * @returns {Promise<Object>} - Bot information
    */
-  async getBotInfo() {
+  async getBotInfo(): Promise<TelegramBot.User> {
     try {
-      if (!this.isInitialized) {
+      if (!this.isInitialized || !this.bot) {
         throw new Error('Telegram bot not initialized');
       }
 
       const botInfo = await this.bot.getMe();
       return botInfo;
     } catch (error) {
-      logger.error('Failed to get bot info:', error);
+      logger.error('Failed to get bot info:', { error: errorMessage(error) });
       throw error;
     }
   }
@@ -487,8 +554,8 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
    * @param {Array} properties - Array of property objects
    * @returns {Promise<Object>} - Results summary
    */
-  async sendBulkNotifications(properties) {
-    const results = {
+  async sendBulkNotifications(properties: PropertyLike[]): Promise<BulkNotificationResults> {
+    const results: BulkNotificationResults = {
       total: properties.length,
       successful: 0,
       failed: 0,
@@ -526,12 +593,12 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
         results.failed++;
         results.errors.push({
           propertyId: property._id,
-          error: error.message
+          error: errorMessage(error)
         });
       }
     }
 
-    logger.info('Bulk notifications completed', results);
+    logger.info('Bulk notifications completed', { ...results });
     return results;
   }
 
@@ -539,8 +606,8 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
    * Get configured groups summary
    * @returns {Object} - Groups configuration summary
    */
-  getGroupsSummary() {
-    const summary = {
+  getGroupsSummary(): GroupsSummary {
+    const summary: GroupsSummary = {
       defaultGroup: config.telegram.defaultGroup,
       groups: {},
       totalGroups: 0,
@@ -551,7 +618,8 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
 
     // Process configured groups
     if (config.telegram.groups) {
-      for (const [groupId, groupConfig] of Object.entries(config.telegram.groups)) {
+      const groupsRecord = config.telegram.groups as Record<string, GroupConfig>;
+      for (const [groupId, groupConfig] of Object.entries(groupsRecord)) {
         if (groupId && groupId !== 'undefined' && groupId !== 'null') {
           summary.groups[groupId] = {
             ...groupConfig,
@@ -571,7 +639,13 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
    * @param {Object} testProperty - Test property object
    * @returns {Object} - Test results
    */
-  testPropertyImageFunctionality(testProperty = null) {
+  testPropertyImageFunctionality(_testProperty: PropertyLike | null = null): {
+    success: boolean;
+    totalTests: number;
+    passedTests: number;
+    failedTests: number;
+    results: Array<{ name: string; expected: string; actual: string; passed: boolean }>;
+  } {
     const testCases = [
       {
         name: 'Property with no images',

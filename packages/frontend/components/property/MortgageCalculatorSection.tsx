@@ -9,20 +9,12 @@
  * single shared `DEFAULT_MORTGAGE_CONFIG` in `@homiio/shared-types` so the
  * frontend and backend never disagree on the baseline assumptions.
  *
- * The down-payment control is a self-contained `PanResponder` slider (no extra
- * dependency, works on native + RN-Web) constrained to 5%–50%. The term is a
- * Bloom `SegmentedControl` seeded from `termOptions`.
+ * The down-payment control is the shared `RangeSlider` (no extra dependency,
+ * works on native + RN-Web) constrained to 5%–50%, driven in fraction units. The
+ * term is a Bloom `SegmentedControl` seeded from `termOptions`.
  */
 import React, { useCallback, useMemo, useState } from 'react';
-import {
-  PanResponder,
-  StyleSheet,
-  TextInput,
-  View,
-  type GestureResponderEvent,
-  type LayoutChangeEvent,
-  type PanResponderGestureState,
-} from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Text as BloomText } from '@oxyhq/bloom/typography';
@@ -30,9 +22,9 @@ import * as SegmentedControl from '@oxyhq/bloom/segmented-control';
 
 import { Section } from '@/components/property/Section';
 import { CurrencyFormatter } from '@/components/CurrencyFormatter';
+import { RangeSlider } from '@/components/ui/RangeSlider';
 import { parseLocaleNumber } from '@/utils/number';
 import { colors } from '@/styles/colors';
-import { shadowToken } from '@/styles/shadows';
 import { hairline, radius, spacing } from '@/constants/styles';
 import { DEFAULT_MORTGAGE_CONFIG } from '@homiio/shared-types';
 
@@ -43,22 +35,18 @@ interface Props {
 
 const MIN_DOWN_PAYMENT_FRACTION = 0.05;
 const MAX_DOWN_PAYMENT_FRACTION = 0.5;
-/** Slider keyboard/tap step (5 percentage points). */
-const DOWN_PAYMENT_STEP = 0.05;
+/** Drag snaps to whole percentage points (1pp) for a tidy, predictable value. */
+const DOWN_PAYMENT_DRAG_STEP = 0.01;
+/** Screen-reader / keyboard increment & decrement step (5 percentage points). */
+const DOWN_PAYMENT_KEYBOARD_STEP = 0.05;
 const MONTHS_PER_YEAR = 12;
 const PERCENT = 100;
-const SLIDER_THUMB_SIZE = 24;
 /** Decimal places kept when seeding the rate field (avoids float-noise like 3.5000000000000004). */
 const RATE_PERCENT_PRECISION = 3;
 
 /** Format an annual-rate fraction (0.035) as a clean percent string ("3.5"). */
 function rateFractionToPercentText(fraction: number): string {
   return parseFloat((fraction * PERCENT).toFixed(RATE_PERCENT_PRECISION)).toString();
-}
-
-/** Clamp a number into [min, max]. */
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
 }
 
 /**
@@ -73,115 +61,10 @@ function monthlyPayment(principal: number, monthlyRate: number, months: number):
   return (principal * monthlyRate * growth) / (growth - 1);
 }
 
-interface DownPaymentSliderProps {
-  fraction: number;
-  onChange: (fraction: number) => void;
-  accessibilityLabel: string;
+/** Map a down-payment fraction (0.2) to its announced percent integer (20). */
+function fractionToPercent(fraction: number): number {
+  return Math.round(fraction * PERCENT);
 }
-
-/**
- * A minimal, dependency-free horizontal slider for the down-payment fraction.
- * Built on `PanResponder` (native + RN-Web) and constrained to
- * [MIN, MAX]_DOWN_PAYMENT_FRACTION. Exposes the adjustable a11y role with
- * 5-point increment/decrement actions.
- */
-const DownPaymentSlider: React.FC<DownPaymentSliderProps> = ({
-  fraction,
-  onChange,
-  accessibilityLabel,
-}) => {
-  // Track width is layout-derived state (not a ref), so the PanResponder can
-  // close over it directly and is simply rebuilt on the rare layout change.
-  const [trackWidth, setTrackWidth] = useState(0);
-
-  const handleLayout = useCallback((event: LayoutChangeEvent) => {
-    setTrackWidth(event.nativeEvent.layout.width);
-  }, []);
-
-  const positionToFraction = useCallback(
-    (x: number): number => {
-      if (trackWidth <= 0) return fraction;
-      const ratio = clamp(x / trackWidth, 0, 1);
-      const raw =
-        MIN_DOWN_PAYMENT_FRACTION +
-        ratio * (MAX_DOWN_PAYMENT_FRACTION - MIN_DOWN_PAYMENT_FRACTION);
-      // Snap to whole percentage points for a tidy, predictable value.
-      return clamp(
-        Math.round(raw * PERCENT) / PERCENT,
-        MIN_DOWN_PAYMENT_FRACTION,
-        MAX_DOWN_PAYMENT_FRACTION,
-      );
-    },
-    [fraction, trackWidth],
-  );
-
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: (event: GestureResponderEvent) => {
-          onChange(positionToFraction(event.nativeEvent.locationX));
-        },
-        onPanResponderMove: (
-          event: GestureResponderEvent,
-          gesture: PanResponderGestureState,
-        ) => {
-          // locationX is relative to the track; fall back to moveX math when 0.
-          const x =
-            event.nativeEvent.locationX || clamp(gesture.moveX, 0, trackWidth);
-          onChange(positionToFraction(x));
-        },
-      }),
-    [onChange, positionToFraction, trackWidth],
-  );
-
-  const ratio =
-    (fraction - MIN_DOWN_PAYMENT_FRACTION) /
-    (MAX_DOWN_PAYMENT_FRACTION - MIN_DOWN_PAYMENT_FRACTION);
-  const fillWidth = trackWidth * clamp(ratio, 0, 1);
-
-  return (
-    <View
-      style={styles.sliderHitbox}
-      onLayout={handleLayout}
-      accessibilityRole="adjustable"
-      accessibilityLabel={accessibilityLabel}
-      accessibilityValue={{ now: Math.round(fraction * PERCENT), min: 5, max: 50 }}
-      accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
-      onAccessibilityAction={(event) => {
-        if (event.nativeEvent.actionName === 'increment') {
-          onChange(
-            clamp(
-              fraction + DOWN_PAYMENT_STEP,
-              MIN_DOWN_PAYMENT_FRACTION,
-              MAX_DOWN_PAYMENT_FRACTION,
-            ),
-          );
-        } else if (event.nativeEvent.actionName === 'decrement') {
-          onChange(
-            clamp(
-              fraction - DOWN_PAYMENT_STEP,
-              MIN_DOWN_PAYMENT_FRACTION,
-              MAX_DOWN_PAYMENT_FRACTION,
-            ),
-          );
-        }
-      }}
-      {...panResponder.panHandlers}
-    >
-      <View style={styles.sliderTrack}>
-        <View style={[styles.sliderFill, { width: fillWidth }]} />
-        <View
-          style={[
-            styles.sliderThumb,
-            { left: clamp(fillWidth - SLIDER_THUMB_SIZE / 2, 0, Math.max(trackWidth - SLIDER_THUMB_SIZE, 0)) },
-          ]}
-        />
-      </View>
-    </View>
-  );
-};
 
 export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency }) => {
   const { t } = useTranslation();
@@ -262,10 +145,17 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
             />
           </BloomText>
         </View>
-        <DownPaymentSlider
-          fraction={downPaymentFraction}
+        <RangeSlider
+          value={downPaymentFraction}
+          min={MIN_DOWN_PAYMENT_FRACTION}
+          max={MAX_DOWN_PAYMENT_FRACTION}
+          step={DOWN_PAYMENT_DRAG_STEP}
+          keyboardStep={DOWN_PAYMENT_KEYBOARD_STEP}
           onChange={setDownPaymentFraction}
           accessibilityLabel={t('listing.mortgage.downPayment', 'Down payment')}
+          accessibilityNow={fractionToPercent}
+          accessibilityMin={fractionToPercent(MIN_DOWN_PAYMENT_FRACTION)}
+          accessibilityMax={fractionToPercent(MAX_DOWN_PAYMENT_FRACTION)}
         />
       </View>
 
@@ -412,34 +302,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  // Generous vertical hitbox around the thin track so the thumb is easy to grab.
-  sliderHitbox: {
-    height: SLIDER_THUMB_SIZE + spacing.md,
-    justifyContent: 'center',
-  },
-  sliderTrack: {
-    height: 6,
-    borderRadius: radius.pill,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
-    justifyContent: 'center',
-  },
-  sliderFill: {
-    position: 'absolute',
-    left: 0,
-    height: 6,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primaryColor,
-  },
-  sliderThumb: {
-    position: 'absolute',
-    width: SLIDER_THUMB_SIZE,
-    height: SLIDER_THUMB_SIZE,
-    borderRadius: SLIDER_THUMB_SIZE / 2,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    ...shadowToken({ y: 1, blur: 3, color: colors.COLOR_BLACK, opacity: 0.18, elevation: 3 }),
   },
   rateInputRow: {
     flexDirection: 'row',

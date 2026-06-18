@@ -23,7 +23,6 @@ import React, {
 import {
   Platform,
   Pressable,
-  Share,
   StyleSheet,
   View,
 } from 'react-native';
@@ -37,7 +36,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toast } from '@/lib/sonner';
 import * as Haptics from 'expo-haptics';
-import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -55,6 +53,7 @@ import { useIsRightBarVisible } from '@/hooks/useOptimizedMediaQuery';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { resolveHeadlinePrice } from '@/utils/propertyPricing';
 import { hasOffering, resolveOfferingSummaries } from '@/utils/propertyUtils';
+import { shareContent } from '@/utils/share';
 import { propertyService } from '@/services/propertyService';
 import profileService, { type Profile } from '@/services/profileService';
 import ViewingService from '@/services/viewingService';
@@ -412,20 +411,19 @@ export default function PropertyDetailPage() {
     if (!property) return;
     const propertyUrl = `https://homiio.com/properties/${property.id}`;
     const details = `${property.title}\n\n${property.location}\n${property.price}\n${property.bedrooms} Bedrooms\n${property.bathrooms} Bathrooms\n${property.size}m²\n\n${propertyUrl}`;
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      await Share.share({
-        message: details,
-        url: propertyUrl,
-        title: 'Share Property',
-      });
-    } catch {
-      try {
-        await Clipboard.setStringAsync(details);
-        toast.success('Property details copied to clipboard');
-      } catch {
-        toast.error('Failed to share property');
-      }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // The clipboard fallback copies the full details (not just the URL), matching
+    // the share-sheet message.
+    const outcome = await shareContent({
+      title: 'Share Property',
+      message: details,
+      url: propertyUrl,
+      copyText: details,
+    });
+    if (outcome === 'copied') {
+      toast.success('Property details copied to clipboard');
+    } else if (outcome === 'failed') {
+      toast.error('Failed to share property');
     }
   }, [property]);
 

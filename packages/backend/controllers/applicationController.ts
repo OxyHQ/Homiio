@@ -12,10 +12,10 @@
  *                     submitted -> withdrawn (applicant)
  */
 
-const { Property, TenantApplication, Profile } = require('../models');
-const { logger } = require('../middlewares/logging');
-const { AppError, successResponse, paginationResponse } = require('../middlewares/errorHandler');
-const imageUploadService = require('../services/imageUploadService').default;
+import { Property, TenantApplication, Profile } from '../models';
+import { logger } from '../middlewares/logging';
+import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
+import imageUploadService from '../services/imageUploadService';
 const {
   TenantApplicationStatus,
   TenantApplicationDocumentType,

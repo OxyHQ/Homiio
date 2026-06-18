@@ -13,11 +13,11 @@
 import type { Request, Response, NextFunction } from 'express';
 import type { ExchangeReviewCategories } from '@homiio/shared-types';
 
-const { ExchangeRequest, ExchangeReview, Profile } = require('../models');
-const { logger } = require('../middlewares/logging');
-const { AppError, successResponse, paginationResponse } = require('../middlewares/errorHandler');
-const { ExchangeRequestStatus } = require('@homiio/shared-types');
-const { Types } = require('mongoose');
+import { ExchangeRequest, ExchangeReview, Profile } from '../models';
+import { logger } from '../middlewares/logging';
+import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
+import { ExchangeRequestStatus } from '@homiio/shared-types';
+import { Types } from 'mongoose';
 
 // ---- Tunable constants (no magic numbers inline) ----
 /** Default page size for the profile-reviews list. */

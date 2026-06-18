@@ -23,9 +23,9 @@ import {
 import { generateReferralCode } from '../services/commissionService';
 import config from '../config';
 
-const { Partner, Property, Commission } = require('../models');
-const { logger } = require('../middlewares/logging');
-const { AppError, successResponse } = require('../middlewares/errorHandler');
+import { Partner, Property, Commission } from '../models';
+import { logger } from '../middlewares/logging';
+import { AppError, successResponse } from '../middlewares/errorHandler';
 
 /** Statuses that count a sourced listing as an "active listing" in the stats. */
 const ACTIVE_LISTING_STATUSES: ReadonlyArray<string> = [
@@ -225,7 +225,9 @@ class PartnerController {
       const properties = await Property.find({ sourcedByPartner: partner._id })
         .populate('addressId')
         .sort({ createdAt: -1 });
-      const payload = { properties: properties.map((p: any) => p.toJSON()) };
+      const payload = {
+        properties: properties.map((property: any) => property.toJSON()),
+      };
       return res.json(successResponse(payload, 'Partner referrals'));
     } catch (error) {
       next(error);
@@ -250,9 +252,9 @@ class PartnerController {
       }
       // Lean read: the Commission model's `toJSON` only aliases `_id`→`id`, so we
       // reproduce that shape from plain rows (no full-document hydration).
-      const rows: LeanCommissionDoc[] = await Commission.find({ partnerId: partner._id })
+      const rows = await Commission.find({ partnerId: partner._id })
         .sort({ createdAt: -1 })
-        .lean();
+        .lean<LeanCommissionDoc[]>();
       const payload = { commissions: rows.map(toApiCommission) };
       return res.json(successResponse(payload, 'Partner earnings'));
     } catch (error) {

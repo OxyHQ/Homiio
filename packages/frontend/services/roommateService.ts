@@ -1,6 +1,6 @@
 import { api } from '@/utils/api';
 import { OxyServices } from '@oxyhq/core';
-import { Profile, PersonalProfile, RoommatePreferences } from '@homiio/shared-types';
+import { Profile, PersonalProfile, PropertyPreferences, RoommatePreferences } from '@homiio/shared-types';
 
 // Re-export the types for backward compatibility
 export type { Profile, PersonalProfile, RoommatePreferences };
@@ -291,17 +291,20 @@ class RoommateService {
     return totalFactors > 0 ? Math.round((matchScore / totalFactors) * 100) : 0;
   }
 
-  // Extract display information from a profile for roommate matching
+  // Extract display information from a profile for roommate matching.
+  // Trust/verification fields are derived from the profile's real data;
+  // when the data is absent they fall back to undefined/false rather than
+  // optimistic fake values.
   getProfileDisplayInfo(profile: Profile): {
     name: string;
-    age: number;
+    age?: number;
     occupation: string;
     bio: string;
     location: string;
     budget: { min: number; max: number; currency: string };
     moveInDate: string;
     duration: string;
-    trustScore: number;
+    trustScore?: number;
     isVerified: boolean;
     hasReferences: boolean;
     rentalHistory: boolean;
@@ -324,13 +327,15 @@ class RoommateService {
       }
     }
 
+    const verification = personal?.verification;
+
     return {
       name,
-      age: this.calculateAge(personal?.personalInfo?.bio || ''),
+      age: undefined,
       occupation: personal?.personalInfo?.occupation || 'Not specified',
       bio: userData?.bio || personal?.personalInfo?.bio || 'No bio available',
       location:
-        userData?.location || this.extractLocation(roommatePrefs) || 'Location not specified',
+        userData?.location || this.extractLocation(personal?.preferences),
       budget: {
         min: roommatePrefs?.budget?.min || 0,
         max: roommatePrefs?.budget?.max || 0,
@@ -338,22 +343,20 @@ class RoommateService {
       },
       moveInDate: roommatePrefs?.moveInDate || 'Flexible',
       duration: roommatePrefs?.leaseDuration || 'Flexible',
-      trustScore: 85, // Placeholder - would come from trust system
-      isVerified: true, // Placeholder - would come from verification system
-      hasReferences: true, // Placeholder - would come from reference system
-      rentalHistory: true, // Placeholder - would come from rental history system
+      trustScore: typeof personal?.trustScore?.score === 'number'
+        ? personal.trustScore.score
+        : undefined,
+      isVerified: Boolean(verification?.identity),
+      hasReferences:
+        (personal?.references?.length ?? 0) > 0 || Boolean(verification?.references),
+      rentalHistory:
+        (personal?.rentalHistory?.length ?? 0) > 0 || Boolean(verification?.rentalHistory),
     };
   }
 
-  private calculateAge(bio: string): number {
-    // This would need to be calculated from actual birth date
-    // For now, return a default age
-    return 25;
-  }
-
-  private extractLocation(preferences?: any): string {
-    if (preferences?.preferredLocations && preferences.preferredLocations.length > 0) {
-      const location = preferences.preferredLocations[0];
+  private extractLocation(preferences?: PropertyPreferences): string {
+    const location = preferences?.preferredLocations?.[0];
+    if (location?.city && location?.state) {
       return `${location.city}, ${location.state}`;
     }
     return 'Location not specified';

@@ -37,10 +37,10 @@ import type {
 import type { IProperty } from '../../models/Property';
 import type { IAddress } from '../../models/Address';
 
-const models = require('../../models');
+import * as models from '../../models';
 const Property: Model<IProperty> = models.Property;
 const Address: Model<IAddress> = models.Address;
-const { AppError, successResponse } = require('../../middlewares/errorHandler');
+import { AppError, successResponse } from '../../middlewares/errorHandler';
 
 // ---- Tunable constants (no magic numbers inline) ----
 /** Radius, in kilometres, used for the primary (neighborhood-scale) comparison. */

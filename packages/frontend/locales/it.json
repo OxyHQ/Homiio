@@ -964,6 +964,16 @@
     "name": "Sindi",
     "title": "Sindi",
     "subtitle": "Difensore della Giustizia Abitativa con Informazioni in Tempo Reale",
+    "panel": {
+      "title": "Sindi",
+      "subtitle": "Assistente immobiliare IA",
+      "intro": "Il tuo assistente immobiliare IA. Chiedi dei diritti degli inquilini, dei contratti di affitto e dei problemi abitativi, proprio qui, senza lasciare la pagina.",
+      "newChat": "Nuova chat",
+      "startNew": "Avvia una nuova conversazione",
+      "close": "Chiudi",
+      "conversations": "Conversazioni",
+      "empty": "Avvia una nuova conversazione per ricevere aiuto."
+    },
     "status": {
       "thinking": "Pensando...",
       "online": "Online"

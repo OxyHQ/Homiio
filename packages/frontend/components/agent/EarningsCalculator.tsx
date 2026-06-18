@@ -10,29 +10,27 @@
  *   sale     payout = payout.sale.value                 (flat reward)
  *   exchange payout = payout.exchange.value             (flat reward)
  *
- * Only rent varies with a deal value, so only the rent tab shows a slider
- * (dependency-free `PanResponder`, native + RN-Web, mirroring
- * `MortgageCalculatorSection.DownPaymentSlider`). Sale and exchange are flat, so
- * they show the reward prominently with a short note instead of a misleading
- * slider. The result is rendered as a big gold number; slider bounds/steps are
- * named constants (no magic numbers).
+ * Only rent varies with a deal value, so only the rent tab shows a slider — the
+ * shared `RangeSlider` (the same control the mortgage calculator uses). Sale and
+ * exchange are flat, so they show the reward prominently with a short note
+ * instead of a misleading slider. The result is rendered as a big gold number;
+ * slider bounds/steps are named constants (no magic numbers).
+ *
+ * Render isolation: while the rent slider is dragged it updates `rent` every
+ * frame. The live "monthly rent" readout + slider live in their own memoised
+ * `RentControl` so a drag re-renders only that block — not the SegmentedControl
+ * or the result copy. The slider's `onChange` (`setRent`) is referentially
+ * stable, and `RangeSlider` is itself `React.memo`.
  */
 import React, { useCallback, useMemo, useState } from 'react';
-import {
-  PanResponder,
-  StyleSheet,
-  View,
-  type GestureResponderEvent,
-  type LayoutChangeEvent,
-  type PanResponderGestureState,
-} from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
 import * as SegmentedControl from '@oxyhq/bloom/segmented-control';
 
+import { RangeSlider } from '@/components/ui/RangeSlider';
 import { colors } from '@/styles/colors';
-import { shadowToken } from '@/styles/shadows';
 import { hairline, radius, resolvePagePadding, spacing, tracker } from '@/constants/styles';
 import { formatCurrency } from '@/utils/currency';
 import { useMediaQuery } from 'react-responsive';
@@ -40,9 +38,6 @@ import { COMMISSION_CONFIG, commissionAmount, type CommissionOffering } from '@h
 
 /** Whole-€ display (no decimals) for the calculator's amounts. */
 const WHOLE_CURRENCY = { minimumFractionDigits: 0, maximumFractionDigits: 0 } as const;
-
-/** Slider thumb diameter (matches the mortgage calculator). */
-const SLIDER_THUMB_SIZE = 24;
 
 /**
  * Slider bounds + step for the rent tab's monthly-rent input (in monthly €
@@ -55,111 +50,66 @@ const RENT_RANGE = { min: 400, max: 5000, step: 50, default: 1200 } as const;
 /** The three offerings, in display order, mapped to the segmented control. */
 const OFFERINGS: readonly CommissionOffering[] = ['rent', 'sale', 'exchange'] as const;
 
-/** Clamp a number into [min, max]. */
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
-
-/** Snap a raw value to the nearest `step` within [min, max]. */
-function snap(value: number, min: number, max: number, step: number): number {
-  const snapped = Math.round(value / step) * step;
-  return clamp(snapped, min, max);
-}
-
-interface ValueSliderProps {
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  onChange: (value: number) => void;
-  accessibilityLabel: string;
+interface OfferingSelectorProps {
+  offering: CommissionOffering;
+  onChange: (value: string) => void;
+  label: string;
+  offeringLabels: Record<CommissionOffering, string>;
 }
 
 /**
- * Dependency-free horizontal slider over a numeric range, built on
- * `PanResponder` (native + RN-Web). Exposes the adjustable a11y role with
- * single-step increment/decrement actions.
+ * Offering tabs (rent / sale / exchange), isolated behind `React.memo`. Its
+ * inputs don't change while the rent slider is dragged, so memoising it keeps
+ * the segmented control out of the per-frame drag re-renders. Requires a stable
+ * `onChange` and `offeringLabels`.
  */
-const ValueSlider: React.FC<ValueSliderProps> = ({
-  value,
-  min,
-  max,
-  step,
-  onChange,
-  accessibilityLabel,
-}) => {
-  const [trackWidth, setTrackWidth] = useState(0);
+const OfferingSelector: React.FC<OfferingSelectorProps> = React.memo(
+  ({ offering, onChange, label, offeringLabels }) => (
+    <SegmentedControl.Root label={label} type="radio" value={offering} onChange={onChange}>
+      {OFFERINGS.map((key) => (
+        <SegmentedControl.Item key={key} value={key}>
+          <SegmentedControl.ItemText>{offeringLabels[key]}</SegmentedControl.ItemText>
+        </SegmentedControl.Item>
+      ))}
+    </SegmentedControl.Root>
+  ),
+);
+OfferingSelector.displayName = 'OfferingSelector';
 
-  const handleLayout = useCallback((event: LayoutChangeEvent) => {
-    setTrackWidth(event.nativeEvent.layout.width);
-  }, []);
+interface RentControlProps {
+  rent: number;
+  onChange: (rent: number) => void;
+  label: string;
+  perMonth: string;
+  currency: string;
+}
 
-  const positionToValue = useCallback(
-    (x: number): number => {
-      if (trackWidth <= 0) return value;
-      const ratio = clamp(x / trackWidth, 0, 1);
-      return snap(min + ratio * (max - min), min, max, step);
-    },
-    [trackWidth, value, min, max, step],
-  );
-
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: (event: GestureResponderEvent) => {
-          onChange(positionToValue(event.nativeEvent.locationX));
-        },
-        onPanResponderMove: (
-          event: GestureResponderEvent,
-          gesture: PanResponderGestureState,
-        ) => {
-          const x = event.nativeEvent.locationX || clamp(gesture.moveX, 0, trackWidth);
-          onChange(positionToValue(x));
-        },
-      }),
-    [onChange, positionToValue, trackWidth],
-  );
-
-  const ratio = (value - min) / (max - min);
-  const fillWidth = trackWidth * clamp(ratio, 0, 1);
-
-  return (
-    <View
-      style={styles.sliderHitbox}
-      onLayout={handleLayout}
-      accessibilityRole="adjustable"
-      accessibilityLabel={accessibilityLabel}
-      accessibilityValue={{ now: Math.round(value), min, max }}
-      accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
-      onAccessibilityAction={(event) => {
-        if (event.nativeEvent.actionName === 'increment') {
-          onChange(clamp(value + step, min, max));
-        } else if (event.nativeEvent.actionName === 'decrement') {
-          onChange(clamp(value - step, min, max));
-        }
-      }}
-      {...panResponder.panHandlers}
-    >
-      <View style={styles.sliderTrack}>
-        <View style={[styles.sliderFill, { width: fillWidth }]} />
-        <View
-          style={[
-            styles.sliderThumb,
-            {
-              left: clamp(
-                fillWidth - SLIDER_THUMB_SIZE / 2,
-                0,
-                Math.max(trackWidth - SLIDER_THUMB_SIZE, 0),
-              ),
-            },
-          ]}
-        />
+/**
+ * Live monthly-rent readout + slider, isolated behind `React.memo` so dragging
+ * (which updates `rent` per frame) re-renders only this block, not the parent's
+ * segmented control or result copy. Requires a stable `onChange`.
+ */
+const RentControl: React.FC<RentControlProps> = React.memo(
+  ({ rent, onChange, label, perMonth, currency }) => (
+    <View style={styles.control}>
+      <View style={styles.controlHeader}>
+        <BloomText style={styles.controlLabel}>{label}</BloomText>
+        <BloomText style={styles.controlValue}>
+          {`${formatCurrency(rent, currency, WHOLE_CURRENCY)} / ${perMonth}`}
+        </BloomText>
       </View>
+      <RangeSlider
+        value={rent}
+        min={RENT_RANGE.min}
+        max={RENT_RANGE.max}
+        step={RENT_RANGE.step}
+        onChange={onChange}
+        accessibilityLabel={label}
+      />
     </View>
-  );
-};
+  ),
+);
+RentControl.displayName = 'RentControl';
 
 export const EarningsCalculator: React.FC = () => {
   const { t } = useTranslation();
@@ -195,6 +145,7 @@ export const EarningsCalculator: React.FC = () => {
 
   const title = t('agent.calculator.title', 'See what you could earn');
   const inputLabel = t('agent.calculator.monthlyRent', 'Monthly rent');
+  const perMonth = t('agent.calculator.perMonth', 'mo');
 
   // Sale/exchange are flat rewards, so we show a short note instead of a
   // misleading slider that would imply the payout scales with the deal value.
@@ -210,36 +161,21 @@ export const EarningsCalculator: React.FC = () => {
           <H1 style={styles.title}>{title}</H1>
         </View>
 
-        <SegmentedControl.Root
-          label={title}
-          type="radio"
-          value={offering}
+        <OfferingSelector
+          offering={offering}
           onChange={handleSetOffering}
-        >
-          {OFFERINGS.map((key) => (
-            <SegmentedControl.Item key={key} value={key}>
-              <SegmentedControl.ItemText>{offeringLabels[key]}</SegmentedControl.ItemText>
-            </SegmentedControl.Item>
-          ))}
-        </SegmentedControl.Root>
+          label={title}
+          offeringLabels={offeringLabels}
+        />
 
         {offering === 'rent' ? (
-          <View style={styles.control}>
-            <View style={styles.controlHeader}>
-              <BloomText style={styles.controlLabel}>{inputLabel}</BloomText>
-              <BloomText style={styles.controlValue}>
-                {`${formatCurrency(rent, currency, WHOLE_CURRENCY)} / ${t('agent.calculator.perMonth', 'mo')}`}
-              </BloomText>
-            </View>
-            <ValueSlider
-              value={rent}
-              min={RENT_RANGE.min}
-              max={RENT_RANGE.max}
-              step={RENT_RANGE.step}
-              onChange={setRent}
-              accessibilityLabel={inputLabel}
-            />
-          </View>
+          <RentControl
+            rent={rent}
+            onChange={setRent}
+            label={inputLabel}
+            perMonth={perMonth}
+            currency={currency}
+          />
         ) : (
           <BloomText style={styles.flatNote}>{flatNote}</BloomText>
         )}
@@ -303,33 +239,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  sliderHitbox: {
-    height: SLIDER_THUMB_SIZE + spacing.md,
-    justifyContent: 'center',
-  },
-  sliderTrack: {
-    height: 6,
-    borderRadius: radius.pill,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
-    justifyContent: 'center',
-  },
-  sliderFill: {
-    position: 'absolute',
-    left: 0,
-    height: 6,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primaryColor,
-  },
-  sliderThumb: {
-    position: 'absolute',
-    width: SLIDER_THUMB_SIZE,
-    height: SLIDER_THUMB_SIZE,
-    borderRadius: SLIDER_THUMB_SIZE / 2,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    ...shadowToken({ y: 1, blur: 3, color: colors.COLOR_BLACK, opacity: 0.18, elevation: 3 }),
   },
   resultBlock: {
     alignItems: 'center',

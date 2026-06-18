@@ -10,7 +10,6 @@
  *   - Skeleton.Box rows during load; EmptyState shared.
  */
 import React, {
-  memo,
   useCallback,
   useContext,
   useEffect,
@@ -19,13 +18,11 @@ import React, {
 } from 'react';
 import {
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { fetch as expoFetch } from 'expo/fetch';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,74 +35,16 @@ import { SindiIcon } from '@/assets/icons';
 import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
+import {
+  ConversationItem,
+  conversationListStyles,
+} from '@/components/sindi/ConversationItem';
+import { useSindiAuthenticatedFetch } from '@/hooks/useSindiAuthenticatedFetch';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SindiExplanationBottomSheet } from '@/components/SindiExplanationBottomSheet';
-import {
-  useConversationStore,
-  type Conversation,
-} from '@/store/conversationStore';
+import { useConversationStore } from '@/store/conversationStore';
 import { radius, spacing, withShadow } from '@/constants/styles';
 import { colors } from '@/styles/colors';
-
-const formatTimestamp = (date: Date): string => {
-  const now = new Date();
-  if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString(undefined, {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
-  return date.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-  });
-};
-
-interface ConversationItemProps {
-  conversation: Conversation;
-  isLast: boolean;
-  onPress: () => void;
-}
-
-const ConversationItem = memo<ConversationItemProps>(
-  ({ conversation, isLast, onPress }) => {
-    const last =
-      conversation.messages[conversation.messages.length - 1];
-    const [pressed, setPressed] = useState(false);
-    return (
-      <Pressable
-        onPress={onPress}
-        onPressIn={() => setPressed(true)}
-        onPressOut={() => setPressed(false)}
-        style={[
-          styles.conversationItem,
-          isLast && styles.conversationItemLast,
-          pressed && styles.conversationItemPressed,
-        ]}
-        accessibilityRole="button"
-        accessibilityLabel={conversation.title}
-      >
-        <View style={styles.conversationAvatar}>
-          <Ionicons name="chatbubble" size={18} color={colors.info} />
-        </View>
-        <View style={styles.conversationBody}>
-          <View style={styles.conversationHeader}>
-            <BloomText style={styles.conversationTitle} numberOfLines={1}>
-              {conversation.title}
-            </BloomText>
-            <BloomText style={styles.conversationDate}>
-              {formatTimestamp(new Date(conversation.updatedAt))}
-            </BloomText>
-          </View>
-          <BloomText style={styles.conversationPreview} numberOfLines={1}>
-            {last ? last.content : 'No messages yet'}
-          </BloomText>
-        </View>
-      </Pressable>
-    );
-  },
-);
-ConversationItem.displayName = 'ConversationItem';
 
 const SindiSkeleton: React.FC = () => (
   <View style={styles.skeletonList}>
@@ -139,34 +78,9 @@ export default function Sindi() {
     [oxyServices, activeSessionId],
   );
 
-  const authenticatedFetch = useCallback(
-    async (url: string, options: RequestInit = {}) => {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...((options.headers as Record<string, string>) || {}),
-      };
-      if (oxyServices && activeSessionId) {
-        try {
-          const tokenData = await oxyServices.getTokenBySession(activeSessionId);
-          if (tokenData) {
-            headers['Authorization'] = `Bearer ${tokenData.accessToken}`;
-          }
-        } catch {
-          // best-effort: leave unauthenticated header set
-        }
-      }
-      const { body, ...otherOptions } = options;
-      const fetchOptions = {
-        ...otherOptions,
-        headers,
-        ...(body !== null && body !== undefined ? { body } : null),
-      };
-      return expoFetch(url, fetchOptions as Parameters<typeof expoFetch>[1]);
-    },
-    [oxyServices, activeSessionId],
-  );
-
-  const conversationFetch = authenticatedFetch as unknown as typeof globalThis.fetch;
+  // Shared authenticated fetch (single source of truth across every Sindi
+  // surface — web-vs-native split + FormData handling live in the hook).
+  const conversationFetch = useSindiAuthenticatedFetch();
 
   const createNewConversation = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -349,7 +263,7 @@ export default function Sindi() {
               onAction={searchQuery ? undefined : createNewConversation}
             />
           ) : (
-            <View style={styles.conversationsList}>
+            <View style={conversationListStyles.list}>
               {sortedConversations.map((conversation, idx) => (
                 <ConversationItem
                   key={conversation.id}
@@ -432,58 +346,6 @@ const styles = StyleSheet.create({
   },
   historyTitle: {
     letterSpacing: -0.3,
-  },
-  conversationsList: {
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    ...withShadow('sm'),
-  },
-  conversationItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  conversationItemLast: {
-    borderBottomWidth: 0,
-  },
-  conversationItemPressed: {
-    backgroundColor: colors.mutedSubtle,
-  },
-  conversationAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.infoSubtle,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  conversationBody: {
-    flex: 1,
-    gap: 2,
-  },
-  conversationHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  conversationTitle: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-  conversationDate: {
-    fontSize: 12,
-    color: colors.muted,
-  },
-  conversationPreview: {
-    fontSize: 13,
-    color: colors.muted,
-    lineHeight: 18,
   },
   skeletonList: {
     gap: spacing.md,

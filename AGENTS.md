@@ -60,7 +60,8 @@ packages/
 
 ## Dependencies
 
-- `@oxyhq/core` (1.11.4), `@oxyhq/services` (6.9.12) — Oxy platform integration
+- `@oxyhq/core` (^3.4.5), `@oxyhq/services` (^10.2.2), `@oxyhq/bloom` (^0.8.5) — Oxy platform integration
+- Frontend `packages/frontend/app/+html.tsx` injects `getSsoCallbackBootstrapScript()` from `@oxyhq/core`; do not add per-app `/__oxy/sso-callback` routes or local SSO helper copies.
 
 ## Frontend Gotchas
 

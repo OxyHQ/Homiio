@@ -84,8 +84,8 @@ const TierCard: React.FC<TierCardProps> = ({
         <BloomText style={styles.tierPoints}>{pointsLabel}</BloomText>
       </View>
       <View style={styles.perks}>
-        {perks.map((perk, idx) => (
-          <View key={idx} style={styles.perkRow}>
+        {perks.map((perk) => (
+          <View key={perk} style={styles.perkRow}>
             <Ionicons
               name={reached ? 'checkmark-circle' : 'ellipse-outline'}
               size={ICON_SIZES.sm}

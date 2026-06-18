@@ -2,6 +2,9 @@ import React from 'react';
 import { View, Text, StyleSheet, ViewStyle, TextStyle, StyleProp } from 'react-native';
 import { colors } from '@/styles/colors';
 
+/** Default corner radius for the track and fill (matches the legacy look). */
+const DEFAULT_BAR_RADIUS = 4;
+
 type ProgressBarProps = {
   progress: number; // 0 to 1
   total?: number;
@@ -12,6 +15,8 @@ type ProgressBarProps = {
   color?: string;
   backgroundColor?: string;
   height?: number;
+  /** Corner radius of the track and fill; pass a large value for a pill bar. */
+  borderRadius?: number;
   style?: ViewStyle;
   labelStyle?: StyleProp<TextStyle>;
 };
@@ -26,6 +31,7 @@ export function ProgressBar({
   color = colors.primaryColor,
   backgroundColor = colors.COLOR_BLACK_LIGHT_6,
   height = 8,
+  borderRadius = DEFAULT_BAR_RADIUS,
   style,
   labelStyle,
 }: ProgressBarProps) {
@@ -52,13 +58,14 @@ export function ProgressBar({
         </View>
       )}
 
-      <View style={[styles.progressContainer, { height, backgroundColor }]}>
+      <View style={[styles.progressContainer, { height, backgroundColor, borderRadius }]}>
         <View
           style={[
             styles.progressFill,
             {
               width: `${clampedProgress * 100}%`,
               backgroundColor: color,
+              borderRadius,
             },
           ]}
         />
@@ -89,11 +96,9 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     width: '100%',
-    borderRadius: 4,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    borderRadius: 4,
   },
 });

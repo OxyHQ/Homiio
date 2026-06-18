@@ -3,19 +3,59 @@
  * Handles Telegram bot management and testing operations
  */
 
+import type { Request, Response, NextFunction } from 'express';
+
 import { telegramService } from '../services';
 import { AppError, successResponse } from '../middlewares/errorHandler';
-const { Property } = require('../models');
+import { Property } from '../models';
+import type { IProperty } from '../models/Property';
 import config from '../config';
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+function errorName(error: unknown): string | undefined {
+  if (error && typeof error === 'object' && 'name' in error) {
+    const name = (error as { name: unknown }).name;
+    return typeof name === 'string' ? name : undefined;
+  }
+  return undefined;
+}
+
+interface TelegramBotInfo {
+  id: number;
+  username: string;
+  first_name: string;
+  can_join_groups?: boolean;
+  can_read_all_group_messages?: boolean;
+  supports_inline_queries?: boolean;
+}
+
+interface TelegramBotStatus {
+  enabled: boolean;
+  initialized: boolean;
+  botToken: string;
+  groupMappings: unknown;
+  botInfo?: {
+    id: number;
+    username: string;
+    firstName: string;
+    canJoinGroups?: boolean;
+    canReadAllGroupMessages?: boolean;
+    supportsInlineQueries?: boolean;
+  };
+  botInfoError?: string;
+}
 
 class TelegramController {
   /**
    * Get Telegram bot status and configuration
    */
-  async getBotStatus(req, res, next) {
+  async getBotStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      
-      const status: any = {
+
+      const status: TelegramBotStatus = {
         enabled: config.telegram.enabled,
         initialized: false, // We'll determine this by trying to get bot info
         botToken: config.telegram.botToken ? '***CONFIGURED***' : 'NOT_CONFIGURED',
@@ -24,7 +64,7 @@ class TelegramController {
 
       // Try to get bot info to determine if initialized
       try {
-        const botInfo: any = await telegramService.getBotInfo();
+        const botInfo = (await telegramService.getBotInfo()) as TelegramBotInfo;
         status.initialized = true;
         status.botInfo = {
           id: botInfo.id,
@@ -36,7 +76,7 @@ class TelegramController {
         };
       } catch (error) {
         status.initialized = false;
-        status.botInfoError = error.message;
+        status.botInfoError = errorMessage(error);
       }
 
       res.json(successResponse(status, 'Telegram bot status retrieved successfully'));
@@ -48,7 +88,7 @@ class TelegramController {
   /**
    * Send a test message to a specific group
    */
-  async sendTestMessage(req, res, next) {
+  async sendTestMessage(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { groupId, message, topicId } = req.body;
 
@@ -77,7 +117,7 @@ class TelegramController {
   /**
    * Send property notification to appropriate group (manual trigger)
    */
-  async sendPropertyNotification(req, res, next) {
+  async sendPropertyNotification(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { propertyId } = req.params;
 
@@ -96,7 +136,7 @@ class TelegramController {
         success ? 'Property notification sent successfully' : 'Failed to send property notification'
       ));
     } catch (error) {
-      if (error.name === 'CastError') {
+      if (errorName(error) === 'CastError') {
         return next(new AppError('Invalid property ID', 400, 'INVALID_PROPERTY_ID'));
       }
       next(error);
@@ -106,18 +146,18 @@ class TelegramController {
   /**
    * Send bulk notifications for multiple properties
    */
-  async sendBulkNotifications(req, res, next) {
+  async sendBulkNotifications(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
       const { propertyIds, filters } = req.body;
 
-      let properties = [];
+      let properties: IProperty[] = [];
 
       if (propertyIds && propertyIds.length > 0) {
         // Send notifications for specific properties
         properties = await Property.find({ _id: { $in: propertyIds } }).populate('addressId');
       } else if (filters) {
         // Send notifications based on filters
-        const query: any = {};
+        const query: Record<string, unknown> = {};
         
         // Handle city filter via RELATIONAL geo resolution (name/id → cityId).
         if (filters.city) {
@@ -159,7 +199,7 @@ class TelegramController {
   /**
    * Get group mapping for a specific city
    */
-  async getGroupMapping(req, res, next) {
+  async getGroupMapping(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { city } = req.params;
       
@@ -180,7 +220,7 @@ class TelegramController {
   /**
    * Test location support functionality
    */
-  async testLocationSupport(req, res, next) {
+  async testLocationSupport(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const testResults = telegramService.testLocationSupport();
       
@@ -193,23 +233,25 @@ class TelegramController {
   /**
    * Check if a specific location is supported
    */
-  async checkLocationSupport(req, res, next) {
+  async checkLocationSupport(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { city, country } = req.query;
-      
+
       if (!city || !country) {
         return next(new AppError('Both city and country are required', 400, 'MISSING_PARAMETERS'));
       }
 
-      const isSupported = telegramService.isLocationSupported(city, country);
-      const topicId = telegramService.getTopicIdForLocation(city, country);
+      const cityStr = String(city);
+      const countryStr = String(country);
+      const isSupported = telegramService.isLocationSupported(cityStr, countryStr);
+      const topicId = telegramService.getTopicIdForLocation(cityStr, countryStr);
 
       res.json(successResponse({
-        city,
-        country,
+        city: cityStr,
+        country: countryStr,
         isSupported,
         topicId,
-        locationKey: `${city}, ${country}`
+        locationKey: `${cityStr}, ${countryStr}`
       }, 'Location support check completed'));
     } catch (error) {
       next(error);
@@ -219,26 +261,28 @@ class TelegramController {
   /**
    * Test notifications for recent properties
    */
-  async testRecentProperties(req, res, next) {
+  async testRecentProperties(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
       const { limit = 5, hours = 24 } = req.query;
-      
+      const limitNum = parseInt(String(limit), 10) || 5;
+      const hoursNum = parseInt(String(hours), 10) || 24;
+
       // Get recent properties
-      const sinceDate = new Date(Date.now() - hours * 60 * 60 * 1000);
+      const sinceDate = new Date(Date.now() - hoursNum * 60 * 60 * 1000);
       const recentProperties = await Property.find({
         createdAt: { $gte: sinceDate },
         status: 'active'
       })
       .populate('addressId')
-      .limit(parseInt(limit))
+      .limit(limitNum)
       .sort({ createdAt: -1 });
 
       if (recentProperties.length === 0) {
         return res.json(successResponse(
-          { 
+          {
             found: 0,
             sent: 0,
-            message: `No properties created in the last ${hours} hours`
+            message: `No properties created in the last ${hoursNum} hours`
           },
           'No recent properties to test with'
         ));
@@ -247,7 +291,7 @@ class TelegramController {
       const results = await telegramService.sendBulkNotifications(recentProperties);
 
       const { resolveAddressDisplay } = require('../services/geoDisplayService');
-      const properties = await Promise.all(recentProperties.map(async (p) => ({
+      const properties = await Promise.all(recentProperties.map(async (p: IProperty) => ({
         id: p._id,
         city: (await resolveAddressDisplay(p.address)).city,
         type: p.type,
@@ -256,7 +300,7 @@ class TelegramController {
 
       res.json(successResponse({
         ...results,
-        timeframe: `${hours} hours`,
+        timeframe: `${hoursNum} hours`,
         properties
       }, 'Test notifications sent for recent properties'));
     } catch (error) {
@@ -268,7 +312,7 @@ class TelegramController {
    * Get Telegram webhook info (for debugging)
    * Note: This functionality has been removed due to private property access restrictions
    */
-  async getWebhookInfo(req, res, next) {
+  async getWebhookInfo(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       return next(new AppError('Webhook info functionality not available', 501, 'NOT_IMPLEMENTED'));
     } catch (error) {

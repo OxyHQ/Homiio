@@ -21,11 +21,8 @@
     ],
     "author": "Homiio Team",
     "license": "UNLICENSED",
-    "dependencies": {
-        "mongoose": "^8.18.0",
-        "typescript": "^6.0.3"
-    },
     "devDependencies": {
+        "typescript": "^6.0.3",
         "@eslint/js": "^9.39.0",
         "@types/node": "^22.10.0",
         "@typescript-eslint/eslint-plugin": "^8.60.0",

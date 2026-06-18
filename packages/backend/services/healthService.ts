@@ -1,5 +1,8 @@
+import mongoose from 'mongoose';
 import { Logger } from '../utils/logger';
 import { getScraperHealth } from './scraperService';
+
+const DB_PING_TIMEOUT_MS = 2000;
 
 /**
  * Health service for monitoring scraper and system health
@@ -40,6 +43,40 @@ export class HealthService {
   }
 
   /**
+   * Get database health status.
+   *
+   * Reports `unhealthy` when the mongoose connection is not in the connected
+   * state (readyState !== 1), `degraded` when the connection reports connected
+   * but the admin ping fails or times out, and `healthy` when the ping succeeds.
+   */
+  async getDatabaseHealth(): Promise<'healthy' | 'degraded' | 'unhealthy'> {
+    const { readyState } = mongoose.connection;
+    if (readyState !== 1) {
+      this.logger.warn('Database connection not ready', { readyState });
+      return 'unhealthy';
+    }
+
+    const db = mongoose.connection.db;
+    if (!db) {
+      this.logger.warn('Database handle unavailable despite connected state');
+      return 'degraded';
+    }
+
+    try {
+      await Promise.race([
+        db.admin().ping(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Database ping timed out')), DB_PING_TIMEOUT_MS),
+        ),
+      ]);
+      return 'healthy';
+    } catch (error) {
+      this.logger.error('Database ping failed', error);
+      return 'degraded';
+    }
+  }
+
+  /**
    * Get system health overview
    */
   async getSystemHealth(): Promise<{
@@ -51,11 +88,11 @@ export class HealthService {
     timestamp: Date;
   }> {
     try {
-      const scraperHealth = await this.getScraperHealth();
-      
-      // In a real implementation, you'd check database connectivity here
-      const databaseHealth = 'healthy' as 'healthy' | 'degraded' | 'unhealthy';
-      
+      const [scraperHealth, databaseHealth] = await Promise.all([
+        this.getScraperHealth(),
+        this.getDatabaseHealth(),
+      ]);
+
       const overallStatus = scraperHealth.status === 'healthy' && databaseHealth === 'healthy' 
         ? 'healthy' 
         : (scraperHealth.status === 'unhealthy' || databaseHealth === 'unhealthy')

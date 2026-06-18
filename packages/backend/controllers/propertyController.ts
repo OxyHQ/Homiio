@@ -1,11 +1,10 @@
-// Thin compatibility wrapper around refactored modular handlers
-// Import individual handler functions
-const propertyHandlers = require('./property');
+// Thin compatibility wrapper around refactored modular handlers.
+import * as propertyHandlers from './property';
 
 class PropertyController { }
 
 // Attach handlers to preserve existing interface (instance methods)
-[
+const handlerNames: Array<keyof typeof propertyHandlers> = [
   'createProperty',
   'getProperties',
   'getPropertyById',
@@ -21,10 +20,16 @@ class PropertyController { }
   'getPropertyNearbyServices',
   'getPropertiesByIds',
   'getPropertiesByOwner'
-].forEach(name => {
-  if (propertyHandlers[name]) {
-    PropertyController.prototype[name] = propertyHandlers[name];
+];
+
+const controller = new PropertyController() as PropertyController &
+  Partial<Record<keyof typeof propertyHandlers, unknown>>;
+
+handlerNames.forEach((name) => {
+  const handler = propertyHandlers[name];
+  if (typeof handler === 'function') {
+    controller[name] = handler;
   }
 });
 
-module.exports = new PropertyController();
+module.exports = controller;

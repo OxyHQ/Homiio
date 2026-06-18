@@ -5,6 +5,7 @@
 
 import mongoose from 'mongoose';
 import config from '../config';
+import { getErrorMessage } from '../utils/errors';
 
 class Database {
   private connection: any;
@@ -154,8 +155,16 @@ class Database {
         };
       }
 
+      const database = mongoose.connection.db;
+      if (!database) {
+        return {
+          status: 'disconnected',
+          message: 'Database handle is not available'
+        };
+      }
+
       // Try to ping the database
-      await mongoose.connection.db.admin().ping();
+      await database.admin().ping();
 
       return {
         status: 'healthy',
@@ -166,7 +175,7 @@ class Database {
       return {
         status: 'unhealthy',
         message: 'Database health check failed',
-        error: error.message
+        error: getErrorMessage(error)
       };
     }
   }

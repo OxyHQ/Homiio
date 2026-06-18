@@ -3,11 +3,17 @@ import { View, StyleSheet, Platform, ViewStyle } from 'react-native';
 import { usePathname } from 'expo-router';
 import { WidgetManager } from './widgets';
 import { colors } from '@/styles/colors';
-import { useIsRightBarVisible } from '@/hooks/useOptimizedMediaQuery';
+import {
+  useIsRightBarVisible,
+  useIsLargeDesktop,
+} from '@/hooks/useOptimizedMediaQuery';
+import { useUIStore } from '@/store/uiStore';
 import { useSearchMode } from '@/context/SearchModeContext';
 
 export const RightBar = React.memo(function RightBar() {
   const isRightBarVisible = useIsRightBarVisible();
+  const isLargeDesktop = useIsLargeDesktop();
+  const sindiPanelOpen = useUIStore((s) => s.sindiPanelOpen);
   const pathname = usePathname() || '/';
 
   // Get search mode with fallback for backward compatibility
@@ -41,7 +47,7 @@ export const RightBar = React.memo(function RightBar() {
   }, [pathname]);
 
   // Memoize property information extraction
-  const propertyInfo = useMemo(() => {
+  const propertyInfo = useMemo<{ propertyId?: string; city?: string }>(() => {
     // Extract property ID from property details page
     if (
       pathname.startsWith('/properties/') &&
@@ -69,12 +75,10 @@ export const RightBar = React.memo(function RightBar() {
       const cityId = pathParts[3]; // /properties/city/[id]
 
       if (cityId) {
-        // You could fetch city details here or pass the city ID
-        return {
-          city: cityId,
-          state: 'Unknown', // This would come from city data
-          neighborhoodName: 'Downtown', // This would come from city data
-        };
+        // Only the city identifier is available from the route. State and
+        // neighborhood are intentionally omitted so downstream widgets fall
+        // back to their own data sources rather than rendering placeholders.
+        return { city: cityId };
       }
     }
 
@@ -82,6 +86,9 @@ export const RightBar = React.memo(function RightBar() {
   }, [pathname]);
 
   if (!isRightBarVisible) return null;
+  // Drop the 4th column while the Sindi panel is docked, unless the screen is
+  // large-desktop (>= 1440) where all four columns fit.
+  if (sindiPanelOpen && !isLargeDesktop) return null;
 
   return (
     <View style={styles.container}>
@@ -90,9 +97,7 @@ export const RightBar = React.memo(function RightBar() {
         <WidgetManager
           screenId={screenId}
           propertyId={propertyInfo.propertyId}
-          neighborhoodName={propertyInfo.neighborhoodName}
           city={propertyInfo.city}
-          state={propertyInfo.state}
         />
       </View>
     </View>

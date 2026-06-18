@@ -4,6 +4,7 @@
  */
 
 import { api } from '@/utils/api';
+import { API_URL } from '@/config';
 import { OxyServices } from '@oxyhq/core';
 import { ApiResponse } from '../types/api';
 import { 
@@ -49,7 +50,7 @@ export interface ReviewsResponse {
 }
 
 class ReviewService {
-  private baseUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+  private baseUrl = API_URL;
 
   /**
    * Get reviews for a specific address

@@ -92,7 +92,7 @@ packages/backend/
 
 1. Install dependencies:
 ```bash
-npm install
+bun install
 ```
 
 2. Set up environment variables:
@@ -103,12 +103,12 @@ cp .env.example .env
 
 3. Start the development server:
 ```bash
-npm run dev
+bun run dev
 ```
 
 4. Start production server:
 ```bash
-npm start
+bun run start
 ```
 
 ## Environment Variables
@@ -214,9 +214,9 @@ Paginated responses include pagination metadata:
 
 ### Scripts
 
-- `npm start` - Start production server
-- `npm run dev` - Start development server with nodemon
-- `npm run build` - Install latest dependencies
+- `bun run start` - Start production server
+- `bun run dev` - Start development server with nodemon
+- `bun run build` - Install latest dependencies
 - `npm test` - Run tests (placeholder)
 
 ### Code Style

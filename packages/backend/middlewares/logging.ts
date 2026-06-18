@@ -5,17 +5,8 @@
 
 import fs from 'fs';
 import path from 'path';
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import config from '../config';
-
-// Log environment information for debugging
-console.log('Logging environment:', {
-  environment: config.environment,
-  isVercel: !!process.env.VERCEL,
-  isLambda: !!process.env.AWS_LAMBDA_FUNCTION_NAME,
-  isFunction: !!process.env.FUNCTION_TARGET,
-  logFile: config.logging.file
-});
 
 /**
  * Whether file logging is still viable for this process. Set to `false` the
@@ -131,10 +122,10 @@ const log = (level: string, message: string, meta: Record<string, unknown> = {})
 /**
  * Request logging middleware
  */
-const requestLogger = (req: any, res: Response, next: NextFunction): void => {
+const requestLogger = (req: Request, res: Response, next: NextFunction): void => {
   const start = Date.now();
   const userAgent = req.get('User-Agent') || '';
-  const ip = req.ip || req.connection.remoteAddress;
+  const ip = req.ip || req.socket.remoteAddress;
 
   // Log request start
   logger.info('Request started', {
@@ -148,15 +139,27 @@ const requestLogger = (req: any, res: Response, next: NextFunction): void => {
 
   // Capture response
   const originalSend = res.send;
-  res.send = function(data) {
+  res.send = function(data: unknown) {
     const duration = Date.now() - start;
     
     // Call original send first
     const result = originalSend.call(this, data);
     
     // Then log response (after Content-Length is set)
-    const contentLength = res.get('Content-Length') || (data ? Buffer.byteLength(data, 'utf8') : 0);
-    
+    const headerLength = res.get('Content-Length');
+    let contentLength: number | string = headerLength || 0;
+    if (!headerLength && data !== undefined && data !== null) {
+      if (typeof data === 'string' || Buffer.isBuffer(data)) {
+        contentLength = Buffer.byteLength(data);
+      } else {
+        try {
+          contentLength = Buffer.byteLength(JSON.stringify(data));
+        } catch {
+          contentLength = 0;
+        }
+      }
+    }
+
     logger.info('Request completed', {
       method: req.method,
       url: req.originalUrl,
@@ -177,7 +180,15 @@ const requestLogger = (req: any, res: Response, next: NextFunction): void => {
 /**
  * Error logging middleware
  */
-const errorLogger = (err: any, req: any, res: Response, next: NextFunction): void => {
+interface LoggedError {
+  name?: string;
+  message?: string;
+  stack?: string;
+  code?: string | number;
+  statusCode?: number;
+}
+
+const errorLogger = (err: LoggedError, req: Request, res: Response, next: NextFunction): void => {
   logger.error('Request error', {
     method: req.method,
     url: req.originalUrl,
@@ -202,7 +213,7 @@ const errorLogger = (err: any, req: any, res: Response, next: NextFunction): voi
  * Security event logger
  */
 const securityLogger = {
-  loginAttempt: (email, success, ip, userAgent) => {
+  loginAttempt: (email: string, success: boolean, ip: string, userAgent: string): void => {
     logger.info('Login attempt', {
       event: 'AUTH_LOGIN_ATTEMPT',
       email: email,
@@ -212,7 +223,7 @@ const securityLogger = {
     });
   },
 
-  loginSuccess: (userId, email, ip, userAgent) => {
+  loginSuccess: (userId: string, email: string, ip: string, userAgent: string): void => {
     logger.info('Login successful', {
       event: 'AUTH_LOGIN_SUCCESS',
       userId: userId,
@@ -222,7 +233,7 @@ const securityLogger = {
     });
   },
 
-  loginFailure: (email, reason, ip, userAgent) => {
+  loginFailure: (email: string, reason: string, ip: string, userAgent: string): void => {
     logger.warn('Login failed', {
       event: 'AUTH_LOGIN_FAILURE',
       email: email,
@@ -232,7 +243,7 @@ const securityLogger = {
     });
   },
 
-  tokenRefresh: (userId, ip) => {
+  tokenRefresh: (userId: string, ip: string): void => {
     logger.info('Token refreshed', {
       event: 'AUTH_TOKEN_REFRESH',
       userId: userId,
@@ -240,7 +251,7 @@ const securityLogger = {
     });
   },
 
-  unauthorizedAccess: (url, method, ip, userAgent) => {
+  unauthorizedAccess: (url: string, method: string, ip: string, userAgent: string): void => {
     logger.warn('Unauthorized access attempt', {
       event: 'SECURITY_UNAUTHORIZED_ACCESS',
       url: url,
@@ -250,7 +261,7 @@ const securityLogger = {
     });
   },
 
-  suspiciousActivity: (userId, activity, details) => {
+  suspiciousActivity: (userId: string, activity: string, details: Record<string, unknown>): void => {
     logger.warn('Suspicious activity detected', {
       event: 'SECURITY_SUSPICIOUS_ACTIVITY',
       userId: userId,
@@ -264,7 +275,7 @@ const securityLogger = {
  * Business event logger
  */
 const businessLogger = {
-  propertyCreated: (propertyId, ownerId) => {
+  propertyCreated: (propertyId: string, ownerId: string): void => {
     logger.info('Property created', {
       event: 'BUSINESS_PROPERTY_CREATED',
       propertyId: propertyId,
@@ -272,7 +283,7 @@ const businessLogger = {
     });
   },
 
-  leaseCreated: (leaseId, propertyId, landlordId, tenantId) => {
+  leaseCreated: (leaseId: string, propertyId: string, landlordId: string, tenantId: string): void => {
     logger.info('Lease created', {
       event: 'BUSINESS_LEASE_CREATED',
       leaseId: leaseId,
@@ -282,7 +293,7 @@ const businessLogger = {
     });
   },
 
-  paymentProcessed: (paymentId, amount, method, status) => {
+  paymentProcessed: (paymentId: string, amount: number, method: string, status: string): void => {
     logger.info('Payment processed', {
       event: 'BUSINESS_PAYMENT_PROCESSED',
       paymentId: paymentId,

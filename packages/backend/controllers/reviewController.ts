@@ -8,7 +8,8 @@ import { Types } from 'mongoose';
 import { ProfileType } from '@homiio/shared-types';
 import { Review } from '../models/Review';
 import { forwardGeocode } from '../services/geocodingService';
-const { Address, Profile } = require('../models');
+import { Address, Profile } from '../models';
+import { getErrorName, getValidationMessages } from '../utils/errors';
 
 /**
  * Response helpers
@@ -334,10 +335,10 @@ export const createReview = async (req: Request, res: Response) => {
 
   } catch (error) {
     logger.error('Error creating review:', error);
-    if (error.name === 'ValidationError') {
+    if (getErrorName(error) === 'ValidationError') {
       return badRequest(res, { 
         message: 'Validation error', 
-        errors: Object.values(error.errors).map((e: any) => e.message)
+        errors: getValidationMessages(error)
       });
     }
     return serverError(res, { message: 'Failed to create review' });
@@ -417,10 +418,10 @@ export const updateReview = async (req: Request, res: Response) => {
 
   } catch (error) {
     logger.error('Error updating review:', error);
-    if (error.name === 'ValidationError') {
+    if (getErrorName(error) === 'ValidationError') {
       return badRequest(res, { 
         message: 'Validation error', 
-        errors: Object.values(error.errors).map((e: any) => e.message)
+        errors: getValidationMessages(error)
       });
     }
     return serverError(res, { message: 'Failed to update review' });

@@ -1,6 +1,10 @@
 import { Logger } from '../utils/logger';
 import { cleanupExpiredProperties } from './scraperService';
 
+const RECENTLY_VIEWED_RETENTION_DAYS = 90;
+const VIEWING_REQUEST_RETENTION_DAYS = 180;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 /**
  * Cleanup service for managing expired properties and data
  */
@@ -37,25 +41,51 @@ export class CleanupService {
   }
 
   /**
-   * Clean up old logs and temporary data
+   * Clean up stale user-activity data using conservative retention windows:
+   * - RecentlyViewed entries older than 90 days (by viewedAt)
+   * - Resolved ViewingRequests (declined or cancelled) older than 180 days
+   *   (by updatedAt — the time the request reached its terminal state)
+   *
+   * Returns the real total of removed documents. Failures in one collection do
+   * not prevent the other from being cleaned.
    */
   async cleanupOldData(): Promise<{
     deleted: number;
     errors: number;
   }> {
+    this.logger.info('Starting old data cleanup');
+
+    const { RecentlyViewed, ViewingRequest } = require('../models');
+    const now = Date.now();
+    const recentlyViewedCutoff = new Date(now - RECENTLY_VIEWED_RETENTION_DAYS * DAY_MS);
+    const viewingRequestCutoff = new Date(now - VIEWING_REQUEST_RETENTION_DAYS * DAY_MS);
+
+    let deleted = 0;
+    let errors = 0;
+
     try {
-      this.logger.info('Starting old data cleanup');
-      
-      // In a real implementation, you'd clean up old logs, temp files, etc.
-      // For now, we'll just return a placeholder
-      const deleted = 0;
-      
-      this.logger.info(`Cleaned up ${deleted} old data items`);
-      return { deleted, errors: 0 };
+      const result = await RecentlyViewed.deleteMany({ viewedAt: { $lt: recentlyViewedCutoff } });
+      deleted += result.deletedCount || 0;
+      this.logger.info(`Deleted ${result.deletedCount || 0} recently-viewed entries older than ${RECENTLY_VIEWED_RETENTION_DAYS} days`);
     } catch (error) {
-      this.logger.error('Old data cleanup failed', error);
-      return { deleted: 0, errors: 1 };
+      errors += 1;
+      this.logger.error('RecentlyViewed cleanup failed', error);
     }
+
+    try {
+      const result = await ViewingRequest.deleteMany({
+        status: { $in: ['declined', 'cancelled'] },
+        updatedAt: { $lt: viewingRequestCutoff },
+      });
+      deleted += result.deletedCount || 0;
+      this.logger.info(`Deleted ${result.deletedCount || 0} declined/cancelled viewing requests older than ${VIEWING_REQUEST_RETENTION_DAYS} days`);
+    } catch (error) {
+      errors += 1;
+      this.logger.error('ViewingRequest cleanup failed', error);
+    }
+
+    this.logger.info(`Old data cleanup completed: ${deleted} documents removed, ${errors} errors`);
+    return { deleted, errors };
   }
 
   /**

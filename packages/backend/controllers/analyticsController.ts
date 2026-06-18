@@ -1,55 +1,165 @@
 /**
  * Analytics Controller
- * Provides user analytics via Horizon service
+ * Per-profile analytics computed from real platform data
+ * (RecentlyViewed, Saved, ViewingRequest, Property) plus public app-wide stats.
  */
 
-// Try to import horizonService, but handle if it doesn't exist
-let horizonService;
-try {
-  const services = require('../services');
-  horizonService = services.horizonService;
-} catch (error) {
-  // horizonService not available
-  horizonService = null;
+import type { Request, Response, NextFunction } from 'express';
+
+import { AppError, successResponse } from '../middlewares/errorHandler';
+import { logger } from '../middlewares/logging';
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
 }
 
-const { successResponse } = require('../middlewares/errorHandler');
+interface TopCityRow {
+  _id: unknown;
+  city?: { name?: string };
+  region?: { name?: string };
+  properties: number;
+  averageRent: number;
+}
+
+interface PriceBucketRow {
+  _id: string | number;
+  count: number;
+}
+
+const PERIOD_DAYS: Record<string, number> = { '7d': 7, '30d': 30, '90d': 90 };
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 class AnalyticsController {
-  async getAnalytics(req, res, next) {
+  /**
+   * Get analytics for the authenticated profile.
+   *
+   * Aggregates real data over the requested period:
+   * - views: RecentlyViewed entries for the profile's properties
+   * - saves: Saved entries targeting the profile's properties
+   * - viewingRequests: ViewingRequest documents received as owner, by status
+   *
+   * Metrics with no backing data are returned as 0 — nothing is fabricated.
+   */
+  async getAnalytics(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
-      const userId = req.query.userID || req.userId;
-      const period = req.query.period || '30d';
-      
-      // Check if horizonService is available
-      if (horizonService) {
-        try {
-          const data = await horizonService.getEcosystemAnalytics(userId, period);
-          res.json(successResponse(data, 'Analytics retrieved successfully'));
-          return;
-        } catch (horizonError) {
-          // Fall through to fallback data
-        }
+      const oxyUserId = req.user?.id || req.user?._id || req.userId;
+      if (!oxyUserId) {
+        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
       }
-      
-      // Fallback to mock analytics when horizon service is unavailable
-      const fallbackData = {
-        totalInteractions: 145,
-        appsUsed: ['homio', 'fairmint', 'horizon'],
-        crossAppActions: 23,
-        dataShared: 8,
-        insights: [
-          'Your usage is 15% below average',
-          'You have 2 pending lease renewals',
-          'Property occupancy rate is 85%',
-        ],
-        trends: {
-          propertyRevenue: { current: 5200, change: 8, period: 'last_30_days' },
-          tenantSatisfaction: { current: 4.2, change: 0.3, period: 'last_30_days' },
-        },
+
+      const periodParam = String(req.query.period || '30d');
+      const periodDays = PERIOD_DAYS[periodParam] || PERIOD_DAYS['30d'];
+      const period = PERIOD_DAYS[periodParam] ? periodParam : '30d';
+      const since = new Date(Date.now() - periodDays * DAY_MS);
+
+      const { Profile, Property, RecentlyViewed, Saved, ViewingRequest } = require('../models');
+
+      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      if (!activeProfile) {
+        return res.json(
+          successResponse(
+            {
+              period,
+              totalInteractions: 0,
+              properties: { listed: 0 },
+              views: { total: 0, uniqueViewers: 0 },
+              saves: { total: 0 },
+              viewingRequests: { received: 0, pending: 0, approved: 0, declined: 0, cancelled: 0 },
+              insights: [],
+            },
+            'Analytics retrieved successfully',
+          ),
+        );
+      }
+
+      const propertyIds = await Property.distinct('_id', {
+        profileId: activeProfile._id,
+        status: { $ne: 'archived' },
+      });
+
+      const [viewsAgg, savesAgg, viewingAgg] = await Promise.all([
+        propertyIds.length
+          ? RecentlyViewed.aggregate([
+              { $match: { propertyId: { $in: propertyIds }, viewedAt: { $gte: since } } },
+              {
+                $group: {
+                  _id: null,
+                  total: { $sum: 1 },
+                  uniqueViewers: { $addToSet: '$profileId' },
+                },
+              },
+              { $project: { _id: 0, total: 1, uniqueViewers: { $size: '$uniqueViewers' } } },
+            ])
+          : Promise.resolve([]),
+        propertyIds.length
+          ? Saved.aggregate([
+              {
+                $match: {
+                  targetType: 'property',
+                  targetId: { $in: propertyIds },
+                  createdAt: { $gte: since },
+                },
+              },
+              { $group: { _id: null, total: { $sum: 1 } } },
+            ])
+          : Promise.resolve([]),
+        ViewingRequest.aggregate([
+          { $match: { ownerProfileId: activeProfile._id, createdAt: { $gte: since } } },
+          { $group: { _id: '$status', count: { $sum: 1 } } },
+        ]),
+      ]);
+
+      const views = {
+        total: viewsAgg[0]?.total || 0,
+        uniqueViewers: viewsAgg[0]?.uniqueViewers || 0,
       };
-      res.json(successResponse(fallbackData, 'Analytics retrieved successfully (fallback data)'));
+      const saves = { total: savesAgg[0]?.total || 0 };
+
+      const viewingByStatus: Record<string, number> = {};
+      let viewingReceived = 0;
+      for (const bucket of viewingAgg) {
+        viewingByStatus[bucket._id] = bucket.count;
+        viewingReceived += bucket.count;
+      }
+      const viewingRequests = {
+        received: viewingReceived,
+        pending: viewingByStatus.pending || 0,
+        approved: viewingByStatus.approved || 0,
+        declined: viewingByStatus.declined || 0,
+        cancelled: viewingByStatus.cancelled || 0,
+      };
+
+      const insights: string[] = [];
+      if (views.total > 0) {
+        insights.push(
+          `Your properties received ${views.total} view${views.total === 1 ? '' : 's'} from ${views.uniqueViewers} unique viewer${views.uniqueViewers === 1 ? '' : 's'} in the last ${periodDays} days`,
+        );
+      }
+      if (saves.total > 0) {
+        insights.push(
+          `${saves.total} ${saves.total === 1 ? 'person' : 'people'} saved your properties in the last ${periodDays} days`,
+        );
+      }
+      if (viewingRequests.pending > 0) {
+        insights.push(
+          `You have ${viewingRequests.pending} pending viewing request${viewingRequests.pending === 1 ? '' : 's'}`,
+        );
+      }
+
+      const data = {
+        period,
+        totalInteractions: views.total + saves.total + viewingRequests.received,
+        properties: { listed: propertyIds.length },
+        views,
+        saves,
+        viewingRequests,
+        insights,
+      };
+
+      res.json(successResponse(data, 'Analytics retrieved successfully'));
     } catch (error) {
+      logger.error('Failed to retrieve analytics', { error: errorMessage(error) });
       next(error);
     }
   }
@@ -61,22 +171,15 @@ class AnalyticsController {
    * - Top cities by property count with average rent
    * - Price buckets distribution
    */
-  async getAppStats(req, res, next) {
+  async getAppStats(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
-      const { Property, City } = require('../models');
-      let Saved;
-      try {
-        Saved = require('../models').Saved;
-      } catch (_) {
-        Saved = null;
-      }
+      const { Property, City, Saved } = require('../models');
 
-      // Totals with error handling
       const [totalProperties, totalCities, totalSaves, uniqueSavers] = await Promise.all([
-        Property.countDocuments({}).catch(() => 0),
-        City.countDocuments({}).catch(() => 0),
-        Saved ? Saved.countDocuments({ targetType: 'property' }).catch(() => 0) : Promise.resolve(0),
-        Saved ? Saved.distinct('profileId', { targetType: 'property' }).then((arr) => arr.length).catch(() => 0) : Promise.resolve(0),
+        Property.countDocuments({}),
+        City.countDocuments({}),
+        Saved.countDocuments({ targetType: 'property' }),
+        Saved.distinct('profileId', { targetType: 'property' }).then((arr: unknown[]) => arr.length),
       ]);
 
       // Pricing aggregates
@@ -90,7 +193,7 @@ class AnalyticsController {
             maxRent: { $max: '$longTermRent.monthlyAmount' },
           },
         },
-      ]).catch(() => []);
+      ]);
 
       const pricing = pricingAgg[0] || { averageRent: 0, minRent: 0, maxRent: 0 };
 
@@ -116,7 +219,7 @@ class AnalyticsController {
         { $unwind: { path: '$city', preserveNullAndEmptyArrays: true } },
         { $lookup: { from: 'regions', localField: 'regionId', foreignField: '_id', as: 'region' } },
         { $unwind: { path: '$region', preserveNullAndEmptyArrays: true } },
-      ]).catch(() => []);
+      ]);
 
       // Price buckets (preset boundaries)
       const priceBuckets = await Property.aggregate([
@@ -129,7 +232,7 @@ class AnalyticsController {
             output: { count: { $sum: 1 } },
           },
         },
-      ]).catch(() => []);
+      ]);
 
       return res.json(
         successResponse(
@@ -145,15 +248,15 @@ class AnalyticsController {
               minRent: pricing.minRent || 0,
               maxRent: pricing.maxRent || 0,
             },
-            topCities: topCities.map((c) => ({
+            topCities: (topCities as TopCityRow[]).map((c) => ({
               cityId: c._id,
               city: c.city?.name ?? null,
               state: c.region?.name ?? null,
               properties: c.properties,
               averageRent: Math.round(c.averageRent || 0),
             })),
-            priceBuckets: priceBuckets.map((b) => ({
-              bucket: typeof b._id === 'string' ? b._id : `${b._id}-${b._id + 499}`,
+            priceBuckets: (priceBuckets as PriceBucketRow[]).map((b) => ({
+              bucket: typeof b._id === 'string' ? b._id : `${b._id}-${Number(b._id) + 499}`,
               count: b.count,
             })),
           },
@@ -161,18 +264,8 @@ class AnalyticsController {
         ),
       );
     } catch (error) {
-      // If there's a complete failure, return empty/fallback data
-      return res.json(
-        successResponse(
-          {
-            totals: { properties: 0, cities: 0, saves: 0, uniqueSavers: 0 },
-            pricing: { averageRent: 0, minRent: 0, maxRent: 0 },
-            topCities: [],
-            priceBuckets: [],
-          },
-          'App stats retrieved successfully (fallback data)',
-        ),
-      );
+      logger.error('Failed to retrieve app stats', { error: errorMessage(error) });
+      return next(error);
     }
   }
 }

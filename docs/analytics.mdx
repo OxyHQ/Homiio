@@ -13,7 +13,7 @@ Homiio ships two analytics surfaces, both server-side:
 
 The corresponding controller lives at `packages/backend/controllers/analyticsController.ts`. The Insights screen at `packages/frontend/app/insights/index.tsx` consumes both endpoints through `packages/frontend/services/analyticsService.ts` over TanStack Query, with charts rendered via `react-native-chart-kit` over `react-native-svg`.
 
-There is currently no client-side product-analytics SDK (PostHog, Amplitude, Mixpanel) wired into the frontend tree. All analytics in production are server-aggregated from MongoDB.
+There is currently no client-side product-analytics SDK wired into the frontend tree. All analytics in production are server-aggregated from MongoDB.
 
 ## `GET /api/analytics`
 

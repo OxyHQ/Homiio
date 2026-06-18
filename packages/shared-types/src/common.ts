@@ -26,7 +26,9 @@ export enum PropertyStatus {
   RESERVED = 'reserved',
   RENTED = 'rented',
   SOLD = 'sold',
-  INACTIVE = 'inactive'
+  INACTIVE = 'inactive',
+  /** Soft-deleted listing: hidden from all public queries, kept for audit. */
+  ARCHIVED = 'archived'
 }
 
 export enum HousingType {

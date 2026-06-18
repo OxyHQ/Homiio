@@ -31,9 +31,9 @@ import {
   RADIUS_M,
 } from '../../services/nearbyServicesService';
 
-const models = require('../../models');
+import * as models from '../../models';
 const Property: Model<IProperty> = models.Property;
-const { AppError, successResponse } = require('../../middlewares/errorHandler');
+import { AppError, successResponse } from '../../middlewares/errorHandler';
 
 /**
  * Resolve a property's `[longitude, latitude]` from its populated address.

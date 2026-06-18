@@ -26,11 +26,11 @@ import {
   type PropertyFilter,
 } from './searchQueryBuilder';
 
-const models = require('../../models');
+import * as models from '../../models';
 const Property: Model<IProperty> = models.Property;
 const Address: Model<IAddress> = models.Address;
-const { paginationResponse } = require('../../middlewares/errorHandler');
-const { logger } = require('../../middlewares/logging');
+import { paginationResponse } from '../../middlewares/errorHandler';
+import { logger } from '../../middlewares/logging';
 const {
   resolveGeoFilterAddressIds,
   resolveCityId,

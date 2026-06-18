@@ -4,6 +4,8 @@
  * Uses shared types from @homiio/shared-types
  */
 
+import type { IProperty } from '../Property';
+
 const mongoose = require('mongoose');
 const validator = require('validator');
 const { transformAddressFields } = require('../../utils/helpers');
@@ -636,12 +638,18 @@ const propertySchema = new mongoose.Schema({
       type: Number,
       default: 0
     }
+  },
+  // Soft-delete timestamp: set when the listing is archived via deleteProperty.
+  // Public list/search/geo queries exclude archived docs via `deletedAt: null`.
+  deletedAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true,
   toJSON: {
     virtuals: true,
-    transform: function(doc, ret) {
+    transform: function(_doc: unknown, ret: Record<string, unknown>): Record<string, unknown> {
       ret.id = ret._id;
 
       // Apply address field transformation
@@ -652,7 +660,7 @@ const propertySchema = new mongoose.Schema({
   },
   toObject: {
     virtuals: true,
-    transform: function(doc, ret) {
+    transform: function(_doc: unknown, ret: Record<string, unknown>): Record<string, unknown> {
       // Apply address field transformation (used by lean queries)
       transformAddressFields(ret);
 
@@ -699,13 +707,13 @@ propertySchema.index({ offerings: 1, 'exchange.mode': 1, status: 1 });
  * and on `findOneAndUpdate` with `runValidators`.
  */
 propertySchema.path('offerings').validate({
-  validator: function(this: any): boolean {
+  validator: function(this: IProperty): boolean {
     // Only the document context exposes every block as `this.*`. Update
     // validators (findOneAndUpdate + runValidators) run with a Query `this`
     // where sibling blocks are not visible, which would wrongly reject a
     // partial edit — the update controller's `applyOfferingRulesForUpdate`
     // already enforces full coherence there, so skip when not a document.
-    if (typeof this.isModified !== 'function') {
+    if (typeof (this as { isModified?: unknown }).isModified !== 'function') {
       return true;
     }
     return validateOfferings(this) === null;
@@ -715,15 +723,31 @@ propertySchema.path('offerings').validate({
 
 // Helper: read a geo ref's name when the ref is DEEP-populated (id form yields
 // null — names are relational and live on the Country/Region/City docs).
-const geoRefName = (ref: any): string | null =>
-  ref && typeof ref === 'object' && typeof ref.name === 'string' ? ref.name : null;
+const geoRefName = (ref: unknown): string | null =>
+  ref && typeof ref === 'object' && typeof (ref as { name?: unknown }).name === 'string'
+    ? (ref as { name: string }).name
+    : null;
+
+interface PopulatedAddressLike {
+  street?: string;
+  postal_code?: string;
+  cityId?: unknown;
+  regionId?: unknown;
+  countryId?: unknown;
+}
+
+interface PropertyImageLike {
+  url: string;
+  isPrimary?: boolean;
+  [key: string]: unknown;
+}
 
 // Virtual for full address. Requires the address to be populated, and its
 // city/region/country to be DEEP-populated for the names (geo is relational).
-propertySchema.virtual('fullAddress').get(function() {
-  const address = this.address || this.addressId;
+propertySchema.virtual('fullAddress').get(function(this: IProperty): string | null {
+  const address = (this.address || this.addressId) as PopulatedAddressLike | undefined;
   if (!address || !address.street) return null;
-  const parts = [address.street];
+  const parts: string[] = [address.street];
   const city = geoRefName(address.cityId);
   const region = geoRefName(address.regionId);
   if (city) parts.push(city);
@@ -733,10 +757,10 @@ propertySchema.virtual('fullAddress').get(function() {
 });
 
 // Virtual for location string. Same deep-population requirement for names.
-propertySchema.virtual('location').get(function() {
-  const address = this.address || this.addressId;
+propertySchema.virtual('location').get(function(this: IProperty): string | null {
+  const address = (this.address || this.addressId) as PopulatedAddressLike | undefined;
   if (!address) return null;
-  const parts = [];
+  const parts: string[] = [];
   const city = geoRefName(address.cityId);
   const region = geoRefName(address.regionId);
   const country = geoRefName(address.countryId);
@@ -747,20 +771,22 @@ propertySchema.virtual('location').get(function() {
 });
 
 // Virtual for primary image
-propertySchema.virtual('primaryImage').get(function() {
-  const primary = this.images.find(img => img.isPrimary);
-  return primary || this.images[0] || null;
+propertySchema.virtual('primaryImage').get(function(this: IProperty): PropertyImageLike | null {
+  const images = (this.images || []) as PropertyImageLike[];
+  const primary = images.find((img) => img.isPrimary);
+  return primary || images[0] || null;
 });
 
 // Post-query hook for lean queries: lean() bypasses the toJSON/toObject
 // transforms, so normalize the address shape here so every read path is
 // consistent. Address transform only runs when the address is populated.
-propertySchema.post(['find', 'findOne'], function(docs) {
+propertySchema.post(['find', 'findOne'], function(docs: unknown): void {
   if (!docs) return;
-  const apply = (doc: any) => {
-    if (!doc) return;
-    if (doc.addressId && typeof doc.addressId === 'object') {
-      transformAddressFields(doc);
+  const apply = (doc: unknown): void => {
+    if (!doc || typeof doc !== 'object') return;
+    const candidate = doc as { addressId?: unknown };
+    if (candidate.addressId && typeof candidate.addressId === 'object') {
+      transformAddressFields(doc as Record<string, unknown>);
     }
   };
   if (Array.isArray(docs)) {
@@ -771,7 +797,7 @@ propertySchema.post(['find', 'findOne'], function(docs) {
 });
 
 // Pre-save middleware
-propertySchema.pre('save', function(next) {
+propertySchema.pre('save', function(this: IProperty, next: (err?: Error) => void): void {
   // Auto-set/refresh expiresAt for external listings (default 30 days or env override)
   if (this.isExternal) {
     const days = parseInt(process.env.EXTERNAL_PROPERTY_TTL_DAYS || '30', 10);
@@ -787,8 +813,9 @@ propertySchema.pre('save', function(next) {
 
   // Ensure only one primary image
   if (this.isModified('images')) {
+    const images = (this.images || []) as PropertyImageLike[];
     let hasPrimary = false;
-    this.images.forEach((img, index) => {
+    images.forEach((img) => {
       if (img.isPrimary && !hasPrimary) {
         hasPrimary = true;
       } else if (img.isPrimary && hasPrimary) {
@@ -797,8 +824,8 @@ propertySchema.pre('save', function(next) {
     });
 
     // If no primary image is set, make the first one primary
-    if (!hasPrimary && this.images.length > 0) {
-      this.images[0].isPrimary = true;
+    if (!hasPrimary && images.length > 0) {
+      images[0].isPrimary = true;
     }
   }
 
@@ -806,11 +833,16 @@ propertySchema.pre('save', function(next) {
 });
 
 // Static methods
-propertySchema.statics.findByProfile = function(profileId, options = {}) {
+type ObjectIdLike = string | { toString(): string };
+
+propertySchema.statics.findByProfile = function(
+  profileId: ObjectIdLike,
+  options: Record<string, unknown> = {}
+) {
   return this.find({ profileId, status: { $ne: 'archived' } }, null, options);
 };
 
-propertySchema.statics.findAvailable = function(filters = {}) {
+propertySchema.statics.findAvailable = function(filters: Record<string, unknown> = {}) {
   const query = { 
     'availability.isAvailable': true, 
     status: 'published',
@@ -819,7 +851,19 @@ propertySchema.statics.findAvailable = function(filters = {}) {
   return this.find(query);
 };
 
-propertySchema.statics.search = async function(searchParams) {
+interface PropertySearchParams {
+  city?: string;
+  state?: string;
+  type?: string;
+  minRent?: number;
+  maxRent?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  amenities?: string[];
+  available?: boolean;
+}
+
+propertySchema.statics.search = async function(searchParams: PropertySearchParams) {
   const {
     city,
     state,
@@ -832,7 +876,7 @@ propertySchema.statics.search = async function(searchParams) {
     available = true
   } = searchParams;
 
-  const query: any = {};
+  const query: Record<string, unknown> = {};
 
   if (available) {
     query['availability.isAvailable'] = true;
@@ -844,9 +888,10 @@ propertySchema.statics.search = async function(searchParams) {
   }
 
   if (minRent !== undefined || maxRent !== undefined) {
-    query['longTermRent.monthlyAmount'] = {};
-    if (minRent !== undefined) query['longTermRent.monthlyAmount'].$gte = minRent;
-    if (maxRent !== undefined) query['longTermRent.monthlyAmount'].$lte = maxRent;
+    const range: { $gte?: number; $lte?: number } = {};
+    if (minRent !== undefined) range.$gte = minRent;
+    if (maxRent !== undefined) range.$lte = maxRent;
+    query['longTermRent.monthlyAmount'] = range;
   }
 
   if (bedrooms !== undefined) {
@@ -877,10 +922,18 @@ propertySchema.statics.search = async function(searchParams) {
 };
 
 // Geospatial query methods
-propertySchema.statics.findNearby = async function(longitude, latitude, maxDistance = 10000) {
+interface AddressIdRef {
+  _id: unknown;
+}
+
+propertySchema.statics.findNearby = async function(
+  longitude: number,
+  latitude: number,
+  maxDistance: number = 10000
+) {
   // First find addresses within the specified distance
   const Address = mongoose.model('Address');
-  const nearbyAddresses = await Address.find({
+  const nearbyAddresses: AddressIdRef[] = await Address.find({
     coordinates: {
       $near: {
         $geometry: {
@@ -892,8 +945,8 @@ propertySchema.statics.findNearby = async function(longitude, latitude, maxDista
     }
   }).select('_id');
 
-  const addressIds = nearbyAddresses.map(addr => addr._id);
-  
+  const addressIds = nearbyAddresses.map((addr: AddressIdRef) => addr._id);
+
   if (addressIds.length === 0) {
     return [];
   }
@@ -905,10 +958,14 @@ propertySchema.statics.findNearby = async function(longitude, latitude, maxDista
   }).populate('addressId');
 };
 
-propertySchema.statics.findWithinRadius = async function(longitude, latitude, radiusInMeters) {
+propertySchema.statics.findWithinRadius = async function(
+  longitude: number,
+  latitude: number,
+  radiusInMeters: number
+) {
   // First find addresses within the specified radius
   const Address = mongoose.model('Address');
-  const nearbyAddresses = await Address.find({
+  const nearbyAddresses: AddressIdRef[] = await Address.find({
     coordinates: {
       $geoWithin: {
         $centerSphere: [[longitude, latitude], radiusInMeters / 6371000] // Convert to radians
@@ -916,8 +973,8 @@ propertySchema.statics.findWithinRadius = async function(longitude, latitude, ra
     }
   }).select('_id');
 
-  const addressIds = nearbyAddresses.map(addr => addr._id);
-  
+  const addressIds = nearbyAddresses.map((addr: AddressIdRef) => addr._id);
+
   if (addressIds.length === 0) {
     return [];
   }
@@ -929,7 +986,7 @@ propertySchema.statics.findWithinRadius = async function(longitude, latitude, ra
   }).populate('addressId');
 };
 
-propertySchema.statics.findInPolygon = async function(coordinates) {
+propertySchema.statics.findInPolygon = async function(coordinates: number[][]) {
   // First find addresses within the specified polygon
   const Address = mongoose.model('Address');
   const addressesInPolygon = await Address.find({
@@ -943,7 +1000,7 @@ propertySchema.statics.findInPolygon = async function(coordinates) {
     }
   }).select('_id');
 
-  const addressIds = addressesInPolygon.map(addr => addr._id);
+  const addressIds = addressesInPolygon.map((addr: AddressIdRef) => addr._id);
   
   if (addressIds.length === 0) {
     return [];
@@ -957,24 +1014,37 @@ propertySchema.statics.findInPolygon = async function(coordinates) {
 };
 
 // Instance methods
-propertySchema.methods.incrementViews = function() {
-  this.views += 1;
+propertySchema.methods.incrementViews = function(this: IProperty) {
+  this.views = (this.views || 0) + 1;
   return this.save();
 };
 
-propertySchema.methods.updateRating = function(newRating) {
-  const totalRating = (this.rating.average * this.rating.count) + newRating;
-  this.rating.count += 1;
-  this.rating.average = totalRating / this.rating.count;
+propertySchema.methods.updateRating = function(this: IProperty, newRating: number) {
+  const rating = this.rating || { average: 0, count: 0 };
+  const totalRating = (rating.average * rating.count) + newRating;
+  rating.count += 1;
+  rating.average = totalRating / rating.count;
+  this.rating = rating;
   return this.save();
 };
+
+interface AddressWithCoords {
+  coordinates?: {
+    coordinates?: number[];
+  };
+}
+
+interface AddressDocWithSetLocation {
+  setLocation(longitude: number, latitude: number): void;
+  save(): Promise<unknown>;
+}
 
 // GeoJSON helper methods
-propertySchema.methods.setLocation = async function(longitude, latitude) {
+propertySchema.methods.setLocation = async function(this: IProperty, longitude: number, latitude: number) {
   // This method now needs to update the referenced address
   if (this.addressId) {
     const Address = mongoose.model('Address');
-    const address = await Address.findById(this.addressId);
+    const address = (await Address.findById(this.addressId)) as AddressDocWithSetLocation | null;
     if (address) {
       address.setLocation(longitude, latitude);
       await address.save();
@@ -983,13 +1053,14 @@ propertySchema.methods.setLocation = async function(longitude, latitude) {
   return this;
 };
 
-propertySchema.methods.getCoordinates = function() {
+propertySchema.methods.getCoordinates = function(this: IProperty): { longitude: number; latitude: number } | null {
   // This method requires the address to be populated
-  const address = this.address || this.addressId;
-  if (address && address.coordinates && address.coordinates.coordinates && address.coordinates.coordinates.length === 2) {
+  const address = (this.address || this.addressId) as AddressWithCoords | undefined;
+  const coords = address?.coordinates?.coordinates;
+  if (coords && coords.length === 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
     return {
-      longitude: address.coordinates.coordinates[0],
-      latitude: address.coordinates.coordinates[1]
+      longitude: coords[0],
+      latitude: coords[1]
     };
   }
   return null;

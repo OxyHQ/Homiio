@@ -167,6 +167,36 @@ export interface IReview extends Document {
   verified: boolean;
 }
 
+interface ReviewSummaryStats {
+  averageRating: number;
+  totalReviews: number;
+  recommendationPercentage: number;
+}
+
+interface UnitViewData {
+  unitReviews: IReview[];
+  buildingSummary: ReviewSummaryStats;
+}
+
+interface BuildingViewData {
+  buildingReviews: IReview[];
+  unitReviews: IReview[];
+  aggregatedStats: ReviewSummaryStats;
+}
+
+interface StreetViewData {
+  aggregatedStats: ReviewSummaryStats;
+  buildingCount: number;
+}
+
+function createEmptyReviewSummary(): ReviewSummaryStats {
+  return {
+    averageRating: 0,
+    totalReviews: 0,
+    recommendationPercentage: 0
+  };
+}
+
 // Define static methods interface
 export interface IReviewModel extends Model<IReview> {
   // Hierarchical finder methods
@@ -175,36 +205,14 @@ export interface IReviewModel extends Model<IReview> {
   findByUnitLevel(unitLevelId: string | Types.ObjectId): Promise<IReview[]>;
   
   // Aggregation methods for hierarchical views
-  getUnitViewData(unitLevelId: string | Types.ObjectId): Promise<{
-    unitReviews: IReview[];
-    buildingSummary: {
-      averageRating: number;
-      totalReviews: number;
-      recommendationPercentage: number;
-    };
-  }>;
+  getUnitViewData(unitLevelId: string | Types.ObjectId): Promise<UnitViewData>;
   
-  getBuildingViewData(buildingLevelId: string | Types.ObjectId): Promise<{
-    buildingReviews: IReview[];
-    unitReviews: IReview[];
-    aggregatedStats: {
-      averageRating: number;
-      totalReviews: number;
-      recommendationPercentage: number;
-    };
-  }>;
+  getBuildingViewData(buildingLevelId: string | Types.ObjectId): Promise<BuildingViewData>;
   
-  getStreetViewData(streetLevelId: string | Types.ObjectId): Promise<{
-    aggregatedStats: {
-      averageRating: number;
-      totalReviews: number;
-      recommendationPercentage: number;
-    };
-    buildingCount: number;
-  }>;
+  getStreetViewData(streetLevelId: string | Types.ObjectId): Promise<StreetViewData>;
 }
 
-const ReviewSchema = new Schema({
+const ReviewSchema = new Schema<IReview, IReviewModel>({
   // Address Hierarchy
   addressId: {
     type: Schema.Types.ObjectId,
@@ -470,38 +478,53 @@ ReviewSchema.pre('save', function(this: IReview, next) {
 });
 
 // Static methods
-ReviewSchema.statics.findByStreetLevel = function(streetLevelId: string | Types.ObjectId) {
+ReviewSchema.static('findByStreetLevel', function findByStreetLevel(
+  this: IReviewModel,
+  streetLevelId: string | Types.ObjectId
+): Promise<IReview[]> {
   return this.find({ streetLevelId })
     .populate('profileId', 'name avatar') // Changed from userId to profileId
-    .sort({ createdAt: -1 });
-};
+    .sort({ createdAt: -1 })
+    .exec();
+});
 
-ReviewSchema.statics.findByBuildingLevel = function(buildingLevelId: string | Types.ObjectId) {
+ReviewSchema.static('findByBuildingLevel', function findByBuildingLevel(
+  this: IReviewModel,
+  buildingLevelId: string | Types.ObjectId
+): Promise<IReview[]> {
   return this.find({ buildingLevelId })
     .populate('profileId', 'name avatar') // Changed from userId to profileId
-    .sort({ createdAt: -1 });
-};
+    .sort({ createdAt: -1 })
+    .exec();
+});
 
-ReviewSchema.statics.findByUnitLevel = function(unitLevelId: string | Types.ObjectId) {
+ReviewSchema.static('findByUnitLevel', function findByUnitLevel(
+  this: IReviewModel,
+  unitLevelId: string | Types.ObjectId
+): Promise<IReview[]> {
   return this.find({ unitLevelId })
     .populate('profileId', 'name avatar') // Changed from userId to profileId
-    .sort({ createdAt: -1 });
-};
+    .sort({ createdAt: -1 })
+    .exec();
+});
 
 // UNIT view: own reviews + building summary
-ReviewSchema.statics.getUnitViewData = async function(this: IReviewModel, unitLevelId: string | Types.ObjectId) {
+ReviewSchema.static('getUnitViewData', async function getUnitViewData(
+  this: IReviewModel,
+  unitLevelId: string | Types.ObjectId
+): Promise<UnitViewData> {
   const unitReviews = await this.findByUnitLevel(unitLevelId);
   
   // Get the building level from one of the unit reviews
-  const sampleReview = await this.findOne({ unitLevelId });
+  const sampleReview = await this.findOne({ unitLevelId }).exec();
   if (!sampleReview?.buildingLevelId) {
     return {
       unitReviews,
-      buildingSummary: { averageRating: 0, totalReviews: 0, recommendationPercentage: 0 }
+      buildingSummary: createEmptyReviewSummary()
     };
   }
   
-  const buildingSummary = await this.aggregate([
+  const buildingSummaries = await this.aggregate<ReviewSummaryStats>([
     { $match: { buildingLevelId: sampleReview.buildingLevelId, addressLevel: 'BUILDING' } },
     {
       $group: {
@@ -513,28 +536,28 @@ ReviewSchema.statics.getUnitViewData = async function(this: IReviewModel, unitLe
         }
       }
     }
-  ]).then(result => result.length > 0 ? result[0] : {
-    averageRating: 0,
-    totalReviews: 0,
-    recommendationPercentage: 0
-  });
+  ]).exec();
+  const buildingSummary = buildingSummaries[0] ?? createEmptyReviewSummary();
   
   return { unitReviews, buildingSummary };
-};
+});
 
 // BUILDING view: building reviews + all unit reviews
-ReviewSchema.statics.getBuildingViewData = async function(this: IReviewModel, buildingLevelId: string | Types.ObjectId) {
+ReviewSchema.static('getBuildingViewData', async function getBuildingViewData(
+  this: IReviewModel,
+  buildingLevelId: string | Types.ObjectId
+): Promise<BuildingViewData> {
   const buildingReviews = await this.find({ 
     buildingLevelId, 
     addressLevel: 'BUILDING' 
-  }).populate('profileId', 'name avatar').sort({ createdAt: -1 }); // Changed from userId to profileId
+  }).populate('profileId', 'name avatar').sort({ createdAt: -1 }).exec(); // Changed from userId to profileId
   
   const unitReviews = await this.find({ 
     buildingLevelId, 
     addressLevel: 'UNIT' 
-  }).populate('profileId', 'name avatar').sort({ createdAt: -1 }); // Changed from userId to profileId
+  }).populate('profileId', 'name avatar').sort({ createdAt: -1 }).exec(); // Changed from userId to profileId
   
-  const aggregatedStats = await this.aggregate([
+  const aggregateResults = await this.aggregate<ReviewSummaryStats>([
     { $match: { buildingLevelId: new Types.ObjectId(buildingLevelId.toString()) } },
     {
       $group: {
@@ -546,18 +569,18 @@ ReviewSchema.statics.getBuildingViewData = async function(this: IReviewModel, bu
         }
       }
     }
-  ]).then(result => result.length > 0 ? result[0] : {
-    averageRating: 0,
-    totalReviews: 0,
-    recommendationPercentage: 0
-  });
+  ]).exec();
+  const aggregatedStats = aggregateResults[0] ?? createEmptyReviewSummary();
   
   return { buildingReviews, unitReviews, aggregatedStats };
-};
+});
 
 // STREET view: aggregates all building reviews
-ReviewSchema.statics.getStreetViewData = async function(this: IReviewModel, streetLevelId: string | Types.ObjectId) {
-  const aggregatedStats = await this.aggregate([
+ReviewSchema.static('getStreetViewData', async function getStreetViewData(
+  this: IReviewModel,
+  streetLevelId: string | Types.ObjectId
+): Promise<StreetViewData> {
+  const aggregateResults = await this.aggregate<ReviewSummaryStats>([
     { $match: { streetLevelId: new Types.ObjectId(streetLevelId.toString()) } },
     {
       $group: {
@@ -569,18 +592,15 @@ ReviewSchema.statics.getStreetViewData = async function(this: IReviewModel, stre
         }
       }
     }
-  ]).then(result => result.length > 0 ? result[0] : {
-    averageRating: 0,
-    totalReviews: 0,
-    recommendationPercentage: 0
-  });
+  ]).exec();
+  const aggregatedStats = aggregateResults[0] ?? createEmptyReviewSummary();
   
   const buildingCount = await this.distinct('buildingLevelId', { 
     streetLevelId: new Types.ObjectId(streetLevelId.toString()) 
-  }).then(buildings => buildings.length);
+  }).then((buildings: Types.ObjectId[]) => buildings.length);
   
   return { aggregatedStats, buildingCount };
-};
+});
 
 // Create and export the model
 export const Review = model<IReview, IReviewModel>('Review', ReviewSchema);

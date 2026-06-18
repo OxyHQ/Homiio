@@ -65,26 +65,26 @@ Homiio users can:
 2. Install dependencies:
 
 ```bash
-  yarn install
+  bun install
 ```
 
 3. Start the development server:
 
 ```bash
-  yarn start
+  bun run start
 ```
 
 4. Run on specific platforms:
 
 ```bash
 # For iOS
-yarn ios
+bun run ios
 
 # For Android
-yarn android
+bun run android
 
 # For Web
-yarn web
+bun run web
 ```
 
 ## Project Structure
@@ -121,12 +121,12 @@ frontend/
 1. Metro bundler issues
 
 ```bash
-yarn start --clear
+bun run start --clear
 ```
 
 2. Dependencies issues
 
 ```bash
 rm -rf node_modules
-yarn install
+bun install
 ```

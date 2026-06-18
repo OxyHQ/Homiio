@@ -1,6 +1,20 @@
-const mongoose = require('mongoose');
+import type { Document, Model, Types } from 'mongoose';
 
-const savedSearchSchema = new mongoose.Schema({
+const mongoose: typeof import('mongoose') = require('mongoose');
+
+interface ISavedSearch extends Document {
+  profileId: Types.ObjectId;
+  name: string;
+  query: string;
+  filters: Record<string, unknown>;
+  notificationsEnabled: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+type SavedSearchModel = Model<ISavedSearch>;
+
+const savedSearchSchema = new mongoose.Schema<ISavedSearch, SavedSearchModel>({
   profileId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Profile',
@@ -49,8 +63,8 @@ savedSearchSchema.index({ profileId: 1, createdAt: -1 });
 savedSearchSchema.index({ profileId: 1, notificationsEnabled: 1 });
 
 // Update the updatedAt field on save
-savedSearchSchema.pre('save', function() {
+savedSearchSchema.pre('save', function(this: ISavedSearch) {
   this.updatedAt = new Date();
 });
 
-module.exports = mongoose.model('SavedSearch', savedSearchSchema); 
+module.exports = mongoose.model<ISavedSearch, SavedSearchModel>('SavedSearch', savedSearchSchema); 

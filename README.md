@@ -32,83 +32,71 @@ cd homiio-monorepo
 
 2. Install all dependencies:
 ```bash
-npm run install:all
+bun run install:all
 ```
 
 ### Development
 
 #### Start all services in development mode:
 ```bash
-npm run dev
+bun run dev
 ```
 
 #### Start individual services:
 
 **Frontend (React Native/Expo):**
 ```bash
-npm run dev:frontend
+bun run dev:frontend
 # or
-npm run start:frontend
+bun run start:frontend
 ```
 
 **Backend (Node.js/Express):**
 ```bash
-npm run dev:backend
+bun run dev:backend
 # or
-npm run start:backend
+bun run start:backend
 ```
 
 ### Building
 
 #### Build all packages:
 ```bash
-npm run build
+bun run build
 ```
 
 #### Build individual packages:
 ```bash
-npm run build:frontend
-npm run build:backend
+bun run build:frontend
+bun run build:backend
 ```
 
 ### Testing
 
 Run tests for all packages:
 ```bash
-npm run test
+bun run test
 ```
 
 ### Linting
 
 Run linting for all packages:
 ```bash
-npm run lint
+bun run lint
 ```
 
 ### Cleaning
 
 Clean all build artifacts and node_modules:
 ```bash
-npm run clean
+bun run clean
 ```
 
 ## 🚀 Deployment
 
-### Vercel Deployment
+The backend deploys to AWS ECS Fargate via `.github/workflows/deploy-aws.yml` on push to `main`. The frontend web build deploys to Cloudflare Pages via `.github/workflows/deploy-frontends.yml`.
 
-The monorepo is configured for deployment to Vercel with proper shared-types handling.
-
-#### Frontend Deployment
-```bash
-./scripts/deploy-frontend.sh
-```
-
-#### Backend Deployment
-```bash
-./scripts/deploy-backend.sh
-```
-
-For detailed deployment instructions, see [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md).
+For detailed deployment instructions, see [docs/deployment](./docs/deployment.mdx).
 
 ## 📦 Packages
 

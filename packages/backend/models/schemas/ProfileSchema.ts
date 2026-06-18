@@ -1,3 +1,5 @@
+import type { IProfile, IAgencyMember } from '../documentTypes';
+
 const mongoose = require('mongoose');
 const {
   ProfileType,
@@ -614,66 +616,72 @@ profileSchema.index({ createdAt: -1 });
 profileSchema.index({ updatedAt: -1 });
 
 // Virtual for verification status
-profileSchema.virtual("isVerified").get(function() {
-  if (this.profileType === ProfileType.PERSONAL && this.personalProfile) {
-    return this.personalProfile.verification.identity && this.personalProfile.verification.income;
+profileSchema.virtual("isVerified").get(function(this: IProfile): boolean {
+  const personal = this.personalProfile as { verification?: { identity?: boolean; income?: boolean } } | undefined;
+  const agency = this.agencyProfile as { verification?: { businessLicense?: boolean; insurance?: boolean } } | undefined;
+  if (this.profileType === ProfileType.PERSONAL && personal) {
+    return Boolean(personal.verification?.identity && personal.verification?.income);
   }
-  if (this.profileType === ProfileType.AGENCY && this.agencyProfile) {
-    return this.agencyProfile.verification.businessLicense && this.agencyProfile.verification.insurance;
+  if (this.profileType === ProfileType.AGENCY && agency) {
+    return Boolean(agency.verification?.businessLicense && agency.verification?.insurance);
   }
   return false;
 });
 
 // Pre-save middleware to ensure only one active profile per user
-profileSchema.pre("save", async function(next) {
+profileSchema.pre("save", async function(this: IProfile, next: (err?: Error) => void): Promise<void> {
   // Ensure only one active profile per user
   if (this.isActive) {
     // Deactivate all other profiles for the same user
-    await this.constructor.updateMany(
+    const Model = this.constructor as import('mongoose').Model<IProfile>;
+    await Model.updateMany(
       { oxyUserId: this.oxyUserId, _id: { $ne: this._id } },
       { isActive: false }
     );
   }
-  
+
   next();
 });
 
 // Static methods
-profileSchema.statics.findActiveByOxyUserId = function(oxyUserId, select = null) {
-  const query = this.findOne({ 
-    oxyUserId, 
-    isActive: true 
+profileSchema.statics.findActiveByOxyUserId = function(oxyUserId: string, select: string | null = null) {
+  const query = this.findOne({
+    oxyUserId,
+    isActive: true
   });
-  
+
   if (select) {
     query.select(select);
   }
-  
+
   // Don't use lean() to preserve toJSON transform
   return query;
 };
 
-profileSchema.statics.findByOxyUserId = function(oxyUserId, select = null) {
-  const query = this.find({ 
+profileSchema.statics.findByOxyUserId = function(oxyUserId: string, select: string | null = null) {
+  const query = this.find({
     oxyUserId
   }).sort({ isActive: -1, createdAt: -1 });
-  
+
   if (select) {
     query.select(select);
   }
-  
+
   // Don't use lean() to preserve toJSON transform
   return query;
 };
 
-profileSchema.statics.findByOxyUserIdAndType = function(oxyUserId, profileType) {
-  return this.findOne({ 
-    oxyUserId, 
+profileSchema.statics.findByOxyUserIdAndType = function(oxyUserId: string, profileType: string) {
+  return this.findOne({
+    oxyUserId,
     profileType
   }); // Remove .lean() to preserve toJSON transform
 };
 
-profileSchema.statics.findActiveByOxyUserIdAndUpdate = function(oxyUserId, updateData) {
+profileSchema.statics.findActiveByOxyUserIdAndUpdate = function(
+  oxyUserId: string,
+  updateData: Record<string, unknown>
+) {
   return this.findOneAndUpdate(
     { oxyUserId, isActive: true },
     updateData,
@@ -681,7 +689,11 @@ profileSchema.statics.findActiveByOxyUserIdAndUpdate = function(oxyUserId, updat
   );
 };
 
-profileSchema.statics.findByOxyUserIdAndUpdate = function(oxyUserId, profileId, updateData) {
+profileSchema.statics.findByOxyUserIdAndUpdate = function(
+  oxyUserId: string,
+  profileId: string,
+  updateData: Record<string, unknown>
+) {
   return this.findOneAndUpdate(
     { oxyUserId, _id: profileId },
     updateData,
@@ -689,7 +701,7 @@ profileSchema.statics.findByOxyUserIdAndUpdate = function(oxyUserId, profileId, 
   );
 };
 
-profileSchema.statics.findAgencyMemberships = function(oxyUserId, select = null) {
+profileSchema.statics.findAgencyMemberships = function(oxyUserId: string, select: string | null = null) {
   const query = this.find({
           profileType: ProfileType.AGENCY,
     "agencyProfile.members.oxyUserId": oxyUserId,
@@ -702,7 +714,7 @@ profileSchema.statics.findAgencyMemberships = function(oxyUserId, select = null)
 };
 
 // Static method to safely activate a profile
-profileSchema.statics.activateProfile = async function(oxyUserId, profileId) {
+profileSchema.statics.activateProfile = async function(oxyUserId: string, profileId: string) {
   const session = await this.startSession();
   try {
     await session.withTransaction(async () => {
@@ -729,26 +741,86 @@ profileSchema.statics.activateProfile = async function(oxyUserId, profileId) {
 };
 
 // Instance methods
-profileSchema.methods.calculateTrustScore = function(forceRecalculate = false) {
+interface TrustScoreFactor {
+  type: string;
+  value: number;
+  maxValue?: number;
+  label?: string;
+  updatedAt?: Date;
+}
+
+interface PersonalProfileShape {
+  bio?: string;
+  personalInfo?: {
+    bio?: string;
+    occupation?: string;
+    employer?: string;
+    moveInDate?: Date;
+    employmentStatus?: string;
+    annualIncome?: number;
+  };
+  references?: Array<{ name?: string; relationship?: string; phone?: string; email?: string; verified?: boolean }>;
+  rentalHistory?: Array<{
+    address?: string;
+    startDate?: Date;
+    endDate?: Date;
+    reasonForLeaving?: string;
+    landlordContact?: { name?: string; phone?: string; email?: string };
+    verified?: boolean;
+  }>;
+  verification?: { identity?: boolean; income?: boolean; background?: boolean; rentalHistory?: boolean };
+  trustScore?: {
+    score: number;
+    factors: TrustScoreFactor[];
+    totalScore?: number;
+    maxScore?: number;
+    lastCalculated?: Date;
+  };
+}
+
+interface AgencyProfileShape {
+  businessInfo?: {
+    businessName?: string;
+    businessType?: string;
+    licenseNumber?: string;
+    taxId?: string;
+    website?: string;
+    businessPhone?: string;
+    businessEmail?: string;
+    businessAddress?: unknown;
+  };
+  verification?: { businessLicense?: boolean; insurance?: boolean; bonding?: boolean; backgroundCheck?: boolean };
+  members?: IAgencyMember[];
+}
+
+profileSchema.methods.calculateTrustScore = function(this: IProfile, forceRecalculate: boolean = false): {
+  score: number;
+  factors: TrustScoreFactor[];
+  totalScore: number;
+  maxScore: number;
+} {
+  const personalSource = this.personalProfile as PersonalProfileShape | undefined;
+  const agencySource = this.agencyProfile as AgencyProfileShape | undefined;
+
   // Check if trust score is already calculated and recent (within 1 hour)
-  if (!forceRecalculate && 
-      this.personalProfile?.trustScore?.lastCalculated && 
-      Date.now() - new Date(this.personalProfile.trustScore.lastCalculated).getTime() < 60 * 60 * 1000) {
+  if (!forceRecalculate &&
+      personalSource?.trustScore?.lastCalculated &&
+      Date.now() - new Date(personalSource.trustScore.lastCalculated).getTime() < 60 * 60 * 1000) {
     return {
-      score: this.personalProfile.trustScore.score,
-      factors: this.personalProfile.trustScore.factors,
-      totalScore: this.personalProfile.trustScore.totalScore,
-      maxScore: this.personalProfile.trustScore.maxScore
+      score: personalSource.trustScore.score,
+      factors: personalSource.trustScore.factors,
+      totalScore: personalSource.trustScore.totalScore ?? 0,
+      maxScore: personalSource.trustScore.maxScore ?? 0
     };
   }
 
   let totalScore = 0;
   let maxScore = 0;
-  const factors = [];
+  const factors: TrustScoreFactor[] = [];
 
   // Personal Profile Scoring
-  if (this.personalProfile) {
-    const personal = this.personalProfile;
+  if (personalSource) {
+    const personal = personalSource;
     
     // Basic Information (20 points) — uses personalInfo (schema field name)
     if (personal.personalInfo) {
@@ -794,8 +866,8 @@ profileSchema.methods.calculateTrustScore = function(forceRecalculate = false) {
     if (personal.references && personal.references.length > 0) {
       const referencesMax = 20;
       let referencesScore = 0;
-      
-      personal.references.forEach(ref => {
+
+      personal.references.forEach((ref) => {
         if (ref.name) referencesScore += 2;
         if (ref.relationship) referencesScore += 1;
         if (ref.phone) referencesScore += 2;
@@ -818,8 +890,8 @@ profileSchema.methods.calculateTrustScore = function(forceRecalculate = false) {
     if (personal.rentalHistory && personal.rentalHistory.length > 0) {
       const rentalMax = 20;
       let rentalScore = 0;
-      
-      personal.rentalHistory.forEach(rental => {
+
+      personal.rentalHistory.forEach((rental) => {
         if (rental.address) rentalScore += 3;
         if (rental.startDate) rentalScore += 2;
         if (rental.endDate) rentalScore += 2;
@@ -863,8 +935,8 @@ profileSchema.methods.calculateTrustScore = function(forceRecalculate = false) {
   }
 
   // Agency Profile Scoring
-  if (this.agencyProfile) {
-    const agency = this.agencyProfile;
+  if (agencySource) {
+    const agency = agencySource;
     
     // Business Information (20 points)
     if (agency.businessInfo) {
@@ -932,8 +1004,8 @@ profileSchema.methods.calculateTrustScore = function(forceRecalculate = false) {
   const finalScore = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
 
   // Update the trust score in the profile
-  if (this.personalProfile) {
-    this.personalProfile.trustScore = {
+  if (personalSource) {
+    personalSource.trustScore = {
       score: finalScore,
       factors: factors,
       totalScore: totalScore,
@@ -961,11 +1033,12 @@ profileSchema.methods.calculateTrustScore = function(forceRecalculate = false) {
   };
 };
 
-profileSchema.methods.updateTrustScore = function(factor, value) {
-  if (this.personalProfile) {
+profileSchema.methods.updateTrustScore = function(this: IProfile, factor: string, value: number) {
+  const personal = this.personalProfile as PersonalProfileShape | undefined;
+  if (personal) {
     // Initialize trustScore if it doesn't exist
-    if (!this.personalProfile.trustScore) {
-      this.personalProfile.trustScore = {
+    if (!personal.trustScore) {
+      personal.trustScore = {
         score: 0,
         factors: [],
         totalScore: 0,
@@ -973,88 +1046,100 @@ profileSchema.methods.updateTrustScore = function(factor, value) {
         lastCalculated: new Date()
       };
     }
-    
+
     // Initialize factors array if it doesn't exist
-    if (!this.personalProfile.trustScore.factors) {
-      this.personalProfile.trustScore.factors = [];
+    if (!personal.trustScore.factors) {
+      personal.trustScore.factors = [];
     }
-    
-    const existingFactor = this.personalProfile.trustScore.factors.find(f => f.type === factor);
-    
+
+    const existingFactor = personal.trustScore.factors.find((f: TrustScoreFactor) => f.type === factor);
+
     if (existingFactor) {
       existingFactor.value = value;
       existingFactor.updatedAt = new Date();
     } else {
-      this.personalProfile.trustScore.factors.push({
+      personal.trustScore.factors.push({
         type: factor,
         value: value,
         updatedAt: new Date(),
       });
     }
-    
+
     // Recalculate overall trust score
-    const totalScore = this.personalProfile.trustScore.factors.reduce(
-      (sum, factor) => sum + factor.value,
+    const totalScore = personal.trustScore.factors.reduce(
+      (sum: number, current: TrustScoreFactor) => sum + current.value,
       0
     );
-    this.personalProfile.trustScore.score = Math.round(
-      totalScore / this.personalProfile.trustScore.factors.length
+    personal.trustScore.score = Math.round(
+      totalScore / personal.trustScore.factors.length
     );
   }
-  
+
   return this.save();
 };
 
-profileSchema.methods.addAgencyMember = function(oxyUserId, role, addedBy) {
+profileSchema.methods.addAgencyMember = function(this: IProfile, oxyUserId: string, role: string, addedBy: string) {
   if (this.profileType !== ProfileType.AGENCY) {
     throw new Error("Can only add members to agency profiles");
   }
-  
+
+  const agency = this.agencyProfile as AgencyProfileShape | undefined;
+  if (!agency) {
+    throw new Error("Agency profile not initialised");
+  }
+  const members = agency.members || [];
+
   // Check if member already exists
-  const existingMember = this.agencyProfile.members.find(m => m.oxyUserId === oxyUserId);
+  const existingMember = members.find((m: IAgencyMember) => m.oxyUserId === oxyUserId);
   if (existingMember) {
     throw new Error("Member already exists in this agency");
   }
-  
-  this.agencyProfile.members.push({
+
+  members.push({
     oxyUserId,
     role,
     addedAt: new Date(),
     addedBy,
   });
-  
+  agency.members = members;
+
   return this.save();
 };
 
-profileSchema.methods.removeAgencyMember = function(oxyUserId) {
+profileSchema.methods.removeAgencyMember = function(this: IProfile, oxyUserId: string) {
   if (this.profileType !== ProfileType.AGENCY) {
     throw new Error("Can only remove members from agency profiles");
   }
-  
-  this.agencyProfile.members = this.agencyProfile.members.filter(
-    m => m.oxyUserId !== oxyUserId
+
+  const agency = this.agencyProfile as AgencyProfileShape | undefined;
+  if (!agency) {
+    throw new Error("Agency profile not initialised");
+  }
+  agency.members = (agency.members || []).filter(
+    (m: IAgencyMember) => m.oxyUserId !== oxyUserId
   );
-  
+
   return this.save();
 };
 
-profileSchema.methods.updateAgencyMemberRole = function(oxyUserId, newRole) {
+profileSchema.methods.updateAgencyMemberRole = function(this: IProfile, oxyUserId: string, newRole: string) {
   if (this.profileType !== ProfileType.AGENCY) {
     throw new Error("Can only update member roles in agency profiles");
   }
-  
-  const member = this.agencyProfile.members.find(m => m.oxyUserId === oxyUserId);
+
+  const agency = this.agencyProfile as AgencyProfileShape | undefined;
+  const member = agency?.members?.find((m: IAgencyMember) => m.oxyUserId === oxyUserId);
   if (!member) {
     throw new Error("Member not found in this agency");
   }
-  
+
   member.role = newRole;
   return this.save();
 };
 
 // Transform _id to id for frontend compatibility
 profileSchema.set('toJSON', {
-  transform: function(doc, ret) {
+  transform: function(_doc: unknown, ret: Record<string, unknown>): Record<string, unknown> {
     ret.id = ret._id;
     delete ret._id;
     delete ret.__v;

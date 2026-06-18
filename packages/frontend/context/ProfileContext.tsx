@@ -3,6 +3,7 @@ import { useOxy } from '@oxyhq/services';
 import { useProfileStore } from '@/store/profileStore';
 // Recently viewed is now handled by React Query hooks
 import type { Profile } from '@/services/profileService';
+import { logger } from '@/utils/logger';
 
 interface ProfileContextType {
   primaryProfile: Profile | null;
@@ -55,10 +56,12 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
       // Handle primary profile result
       if (primaryProfileResult.status === 'rejected') {
+        logger.warn('ProfileContext: fetchPrimaryProfile failed', primaryProfileResult.reason);
       }
 
       // Handle user profiles result
       if (userProfilesResult.status === 'rejected') {
+        logger.warn('ProfileContext: fetchUserProfiles failed', userProfilesResult.reason);
       }
 
       // Mark as initialized even if some calls failed
@@ -82,6 +85,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     if (isAuthenticated && oxyServices && activeSessionId) {
       loadProfiles().catch(error => {
         if (mounted) {
+          logger.error('ProfileContext: loadProfiles failed', error);
         }
       });
     } else if (!isAuthenticated) {

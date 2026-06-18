@@ -1,10 +1,21 @@
 /**
  * Property Title Generator
- * Automatically generates property titles based on property details with i18n support
+ * Automatically generates property titles based on property details with i18n support.
+ * The pure location/composition logic lives in `@homiio/shared-types`; this module
+ * layers i18next translations on top.
  */
 
 import i18next from 'i18next';
-import { PropertyType } from '@homiio/shared-types';
+import {
+  PropertyType,
+  buildLargeTitleLocation,
+  buildTitleDetails,
+  composeTitle,
+  removePropertyNumber,
+  resolveShortTitleLocation,
+  SHORT_TITLE_MAX_LENGTH,
+  LARGE_TITLE_MAX_LENGTH,
+} from '@homiio/shared-types';
 
 export interface PropertyData {
   type?: PropertyType;
@@ -23,18 +34,6 @@ export interface PropertyData {
 export type TitleFormat = 'default' | 'short' | 'large';
 
 /**
- * Helper function to remove property numbers for privacy
- * @param street - Street address
- * @returns Street address without property numbers
- */
-function removePropertyNumber(street: string): string {
-  if (!street) return '';
-  // Remove numbers, commas and extra spaces from street for privacy
-  // Examples: "Calle de Vicente Blasco Ibáñez, 6" -> "Calle de Vicente Blasco Ibáñez"
-  return street.replace(/,?\s*\d+.*$/, '').trim();
-}
-
-/**
  * Safe translation function with fallbacks
  * @param key - Translation key
  * @param fallback - Fallback value if translation is missing
@@ -51,6 +50,17 @@ function safeTranslate(key: string, fallback: string): string {
   }
 }
 
+function translatedPropertyType(type: PropertyType): string {
+  return safeTranslate(
+    `properties.titles.types.${type}`,
+    safeTranslate('properties.titles.types.apartment', 'Apartment'),
+  );
+}
+
+function locationNotSpecified(): string {
+  return safeTranslate('properties.titles.locationNotSpecified', 'Location not specified');
+}
+
 /**
  * Generate a short property title (e.g., "Room in Sant Andreu")
  * @param propertyData - Property data object
@@ -59,82 +69,19 @@ function safeTranslate(key: string, fallback: string): string {
 export function generateShortPropertyTitle(propertyData: PropertyData): string {
   const { type = PropertyType.APARTMENT, address = {} } = propertyData;
 
-  // Get translated property type with fallbacks
-  const propertyType = safeTranslate(
-    `properties.titles.types.${type}`,
-    safeTranslate('properties.titles.types.apartment', 'Apartment'),
+  const propertyType = translatedPropertyType(type);
+
+  const location = resolveShortTitleLocation(
+    {
+      neighborhood: address.neighborhood,
+      streetWithoutNumber: removePropertyNumber(address.street || ''),
+      city: address.city,
+      state: address.state,
+    },
+    locationNotSpecified(),
   );
 
-  // Build location string - prefer neighborhood-like information
-  let location = '';
-  
-  // First check if neighborhood is explicitly provided
-  if (address.neighborhood) {
-    location = address.neighborhood;
-  } else if (address.street) {
-    // Try to extract neighborhood from street name
-    const streetWithoutNumber = removePropertyNumber(address.street);
-    const streetParts = streetWithoutNumber.split(',').map(part => part.trim());
-    
-    // Look for neighborhood indicators in street name
-    // Common neighborhood patterns: "Carrer de [Neighborhood]", "Calle [Neighborhood]", etc.
-    const neighborhoodPatterns = [
-      /carrer\s+(?:de\s+)?([^,\s]+)/i,
-      /calle\s+(?:de\s+)?([^,\s]+)/i,
-      /street\s+(?:of\s+)?([^,\s]+)/i,
-      /avenue\s+(?:of\s+)?([^,\s]+)/i,
-      /plaza\s+(?:de\s+)?([^,\s]+)/i,
-      /passeig\s+(?:de\s+)?([^,\s]+)/i,
-      /rambla\s+(?:de\s+)?([^,\s]+)/i,
-    ];
-    
-    for (const pattern of neighborhoodPatterns) {
-      const match = streetWithoutNumber.match(pattern);
-      if (match && match[1]) {
-        location = match[1];
-        break;
-      }
-    }
-    
-    // If no neighborhood pattern found, use the first meaningful part of the street
-    if (!location && streetParts.length > 0) {
-      const firstPart = streetParts[0];
-      // Skip common street prefixes
-      const skipPrefixes = ['carrer', 'calle', 'street', 'avenue', 'plaza', 'passeig', 'rambla'];
-      const lowerFirstPart = firstPart.toLowerCase();
-      
-      if (!skipPrefixes.some(prefix => lowerFirstPart.startsWith(prefix))) {
-        location = firstPart;
-      } else if (streetParts.length > 1) {
-        // Use the second part if first is a prefix
-        location = streetParts[1];
-      } else {
-        // Fallback to the whole street name without number
-        location = streetWithoutNumber;
-      }
-    }
-  }
-  
-  // If no neighborhood found from street, fall back to city
-  if (!location && address.city) {
-    location = address.city;
-  } else if (!location && address.state) {
-    location = address.state;
-  } else if (!location) {
-    location = safeTranslate('properties.titles.locationNotSpecified', 'Location not specified');
-  }
-
-  // Generate the final title: "PropertyType in Location"
-  const title = `${propertyType} in ${location}`;
-
-  // Ensure title doesn't exceed maximum length (100 characters for short format)
-  if (title.length > 100) {
-    const maxLocationLength = 100 - propertyType.length - 4; // 4 for " in "
-    const truncatedLocation = location.substring(0, maxLocationLength).trim();
-    return `${propertyType} in ${truncatedLocation}`;
-  }
-
-  return title;
+  return composeTitle(`${propertyType} in`, location, SHORT_TITLE_MAX_LENGTH);
 }
 
 /**
@@ -145,47 +92,21 @@ export function generateShortPropertyTitle(propertyData: PropertyData): string {
 export function generateLargePropertyTitle(propertyData: PropertyData): string {
   const { type = PropertyType.APARTMENT, address = {} } = propertyData;
 
-  // Get translated property type with fallbacks
-  const propertyType = safeTranslate(
-    `properties.titles.types.${type}`,
-    safeTranslate('properties.titles.types.apartment', 'Apartment'),
-  );
+  const propertyType = translatedPropertyType(type);
 
   // Get "for rent in" text in current language with fallback
   const forRentText = safeTranslate('properties.titles.forRent', 'for rent in');
 
-  // Build location string with full details (including street numbers for large format)
-  let location = '';
-  if (address.street && address.city) {
-    // Keep street numbers for large format
-    const street = address.street.trim();
-    location = `${street}, ${address.city}`;
-    if (address.state) {
-      location += `, ${address.state}`;
-    }
-  } else if (address.city) {
-    location = address.city;
-    if (address.state) {
-      location += `, ${address.state}`;
-    }
-  } else {
-    location =
-      address.state ||
-      safeTranslate('properties.titles.locationNotSpecified', 'Location not specified');
-  }
+  const location = buildLargeTitleLocation(
+    {
+      street: address.street,
+      city: address.city,
+      state: address.state,
+    },
+    locationNotSpecified(),
+  );
 
-  // Generate the final title: "PropertyType for rent in Location"
-  const title = `${propertyType} ${forRentText} ${location}`;
-
-  // Ensure title doesn't exceed maximum length (200 characters for large format)
-  if (title.length > 200) {
-    // Truncate location if title is too long
-    const maxLocationLength = 200 - propertyType.length - forRentText.length - 2; // 2 for spaces
-    const truncatedLocation = location.substring(0, maxLocationLength).trim();
-    return `${propertyType} ${forRentText} ${truncatedLocation}`;
-  }
-
-  return title;
+  return composeTitle(`${propertyType} ${forRentText}`, location, LARGE_TITLE_MAX_LENGTH);
 }
 
 /**
@@ -230,32 +151,20 @@ export function generateDetailedPropertyTitle(
 
   const { bedrooms = 0, bathrooms = 0 } = propertyData;
 
-  // Add bedroom/bathroom details for properties with multiple rooms
-  if (bedrooms > 0 || bathrooms > 0) {
-    const details = [];
-    if (bedrooms > 0) {
-      const bedroomText = safeTranslate('properties.details.bedrooms', 'Bedrooms');
-      const bedroomLabel =
-        bedrooms === 1
-          ? bedroomText.slice(0, -1) // Remove 's' for singular
-          : bedroomText;
-      details.push(`${bedrooms} ${bedroomLabel.toLowerCase()}`);
-    }
-    if (bathrooms > 0) {
-      const bathroomText = safeTranslate('properties.details.bathrooms', 'Bathrooms');
-      const bathroomLabel =
-        bathrooms === 1
-          ? bathroomText.slice(0, -1) // Remove 's' for singular
-          : bathroomText;
-      details.push(`${bathrooms} ${bathroomLabel.toLowerCase()}`);
-    }
+  const formatBedrooms = (count: number): string => {
+    const bedroomText = safeTranslate('properties.details.bedrooms', 'Bedrooms');
+    const bedroomLabel = count === 1 ? bedroomText.slice(0, -1) : bedroomText;
+    return `${count} ${bedroomLabel.toLowerCase()}`;
+  };
+  const formatBathrooms = (count: number): string => {
+    const bathroomText = safeTranslate('properties.details.bathrooms', 'Bathrooms');
+    const bathroomLabel = count === 1 ? bathroomText.slice(0, -1) : bathroomText;
+    return `${count} ${bathroomLabel.toLowerCase()}`;
+  };
 
-    if (details.length > 0) {
-      return `${baseTitle} - ${details.join(', ')}`;
-    }
-  }
+  const details = buildTitleDetails(bedrooms, bathrooms, formatBedrooms, formatBathrooms);
 
-  return baseTitle;
+  return details ? `${baseTitle} - ${details}` : baseTitle;
 }
 
 /**

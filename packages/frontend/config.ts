@@ -75,11 +75,11 @@ function buildDevUrl(scheme: 'http' | 'ws'): string {
  *    `EXPO_PUBLIC_` prefix is what makes it survive into the client bundle).
  * 2. In dev, derive the host Metro is served from so native devices/emulators
  *    hit the developer machine instead of their own `localhost`.
- * 3. In production, fall back to `localhost` for now (kept overridable above).
+ * 3. In production, fall back to the deployed API domain.
  */
 export const API_URL =
   process.env.EXPO_PUBLIC_API_URL ||
-  (__DEV__ ? buildDevUrl('http') : 'http://localhost:4000');
+  (__DEV__ ? buildDevUrl('http') : 'https://api.homiio.com');
 
 /**
  * Realtime socket base URL. Mirrors {@link API_URL} but over `ws://`, honoring
@@ -87,17 +87,17 @@ export const API_URL =
  */
 export const API_URL_SOCKET =
   process.env.EXPO_PUBLIC_API_URL_SOCKET ||
-  (__DEV__ ? buildDevUrl('ws') : 'ws://localhost:4000');
+  (__DEV__ ? buildDevUrl('ws') : 'wss://api.homiio.com');
 
 export const OXY_BASE_URL =
+  process.env.EXPO_PUBLIC_OXY_API_URL ||
   process.env.EXPO_PUBLIC_OXY_BASE_URL ||
-  (process.env.NODE_ENV === 'production' ? 'https://api.oxy.so' : 'http://192.168.86.44:3001');
+  (__DEV__ ? 'http://192.168.86.44:3001' : 'https://api.oxy.so');
 
 /**
  * Homiio's registered Oxy OAuth public client id. Required by `OxyProvider`
- * (device sign-in) since `@oxyhq/services` 10.0.0 — the legacy `appName` prop
- * was removed in that release. Overridable via `EXPO_PUBLIC_OXY_CLIENT_ID`; the
- * fallback is the real registered public client id for Homiio.
+ * for device sign-in. Overridable via `EXPO_PUBLIC_OXY_CLIENT_ID`; the fallback
+ * is the real registered public client id for Homiio.
  */
 export const OXY_CLIENT_ID =
   process.env.EXPO_PUBLIC_OXY_CLIENT_ID ||

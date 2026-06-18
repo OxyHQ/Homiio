@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import config from '../config';
-const { Billing } = require('../models');
+import { Billing } from '../models';
+import { getErrorMessage } from '../utils/errors';
 
 // Lazy require Stripe to avoid hard crash if not configured
 function getStripe() {
@@ -439,7 +440,7 @@ export async function debugSubscriptionStatus(req: Request, res: Response) {
     const stripe = requireStripe(res);
     if (!stripe) return;
 
-    const oxyUserId = (req as any)?.user?.id || (req as any)?.user?._id;
+    const oxyUserId = req.user?.id || req.user?._id;
     if (!oxyUserId) {
       return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});
     }
@@ -450,7 +451,39 @@ export async function debugSubscriptionStatus(req: Request, res: Response) {
       return res.status(404).json({ success: false, error: { message: 'No billing record found' }});
     }
 
-    const debugInfo = {
+    interface SubscriptionDebugInfo {
+      database: {
+        oxyUserId: string;
+        plusActive: boolean;
+        plusStripeSubscriptionId?: string | null;
+        plusCanceledAt?: Date | null;
+        plusSince?: Date | null;
+        lastPaymentAt?: Date | null;
+      };
+      stripe:
+        | {
+            id: string;
+            status: string;
+            cancel_at_period_end: boolean;
+            canceled_at: number | null;
+            current_period_end: number | null;
+            created: number;
+          }
+        | { error: string }
+        | null;
+      comparison:
+        | {
+            databaseActive: boolean;
+            stripeActive: boolean;
+            stripeCanceled: boolean;
+            needsSync: boolean;
+            syncAction: string;
+          }
+        | { error: string }
+        | null;
+    }
+
+    const debugInfo: SubscriptionDebugInfo = {
       database: {
         oxyUserId: billing.oxyUserId,
         plusActive: billing.plusActive,
@@ -487,18 +520,18 @@ export async function debugSubscriptionStatus(req: Request, res: Response) {
           needsSync: (dbActive !== stripeActive) || (stripeCanceled && !billing.plusCanceledAt),
           syncAction: stripeCanceled ? 'mark_canceled' : stripeActive ? 'mark_active' : 'no_action'
         };
-      } catch (stripeError: any) {
-        debugInfo.stripe = { error: stripeError.message };
+      } catch (stripeError) {
+        debugInfo.stripe = { error: getErrorMessage(stripeError) };
         debugInfo.comparison = { error: 'Cannot compare - Stripe error' };
       }
     }
 
     return res.json({ success: true, debugInfo });
-  } catch (error: any) {
+  } catch (error) {
     return res.status(500).json({
       success: false,
       error: {
-        message: error.message || 'Internal server error',
+        message: getErrorMessage(error) || 'Internal server error',
         code: 'INTERNAL_ERROR'
       }
     });

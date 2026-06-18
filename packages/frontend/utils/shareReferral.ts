@@ -1,18 +1,18 @@
 /**
- * Share a partner referral link via the OS share sheet, falling back to a
- * clipboard copy when the sheet is unavailable (e.g. web without the Web Share
- * API). Shared by the agent hero CTA and the `ReferralLinkCard` so both entry
- * points behave identically.
+ * Share a partner referral link. Builds the referral-specific message/title and
+ * delegates the transport (native share → clipboard fallback, plus the web Web
+ * Share path) to the shared {@link shareContent} ladder, so the agent hero CTA
+ * and the `ReferralLinkCard` behave identically to every other share in the app.
  *
- * Returns the outcome so callers can surface the right toast:
- *  - 'shared'  → the share sheet opened (we can't tell if the user completed it)
- *  - 'copied'  → fell back to copying the link to the clipboard
- *  - 'failed'  → neither sharing nor copying worked
+ * Returns the {@link ShareOutcome} so callers can surface the right toast:
+ *  - 'shared'    → the share sheet / Web Share dialog completed
+ *  - 'copied'    → fell back to copying the link to the clipboard
+ *  - 'dismissed' → the native share sheet was dismissed without sharing
+ *  - 'failed'    → neither sharing nor copying worked
  */
-import { Share } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
+import { shareContent, type ShareOutcome } from '@/utils/share';
 
-export type ShareReferralOutcome = 'shared' | 'copied' | 'failed';
+export type ShareReferralOutcome = ShareOutcome;
 
 interface ShareReferralOptions {
   link: string;
@@ -20,20 +20,10 @@ interface ShareReferralOptions {
   title: string;
 }
 
-export async function shareReferralLink({
+export function shareReferralLink({
   link,
   message,
   title,
 }: ShareReferralOptions): Promise<ShareReferralOutcome> {
-  try {
-    await Share.share({ message, url: link, title });
-    return 'shared';
-  } catch {
-    try {
-      await Clipboard.setStringAsync(link);
-      return 'copied';
-    } catch {
-      return 'failed';
-    }
-  }
+  return shareContent({ message, url: link, title });
 }

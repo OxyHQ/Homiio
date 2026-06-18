@@ -8,7 +8,7 @@
 
 import { Request, Response } from 'express';
 import { Types } from 'mongoose';
-const { City, Country, Region, Property, Address } = require('../models');
+import { City, Country, Region, Property, Address } from '../models';
 const {
   serializePropertyAddresses,
   ADDRESS_GEO_POPULATE,

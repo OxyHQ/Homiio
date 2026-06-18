@@ -12,25 +12,9 @@
  * (no geo constraint at all), which the callers detect before calling.
  */
 
-import { Types, type Model } from 'mongoose';
+import { Types } from 'mongoose';
 
-/** Minimal document shapes for the geo collections this service reads. */
-interface CityGeoDoc { _id: Types.ObjectId; name: string }
-interface RegionGeoDoc { _id: Types.ObjectId; name: string }
-interface NeighborhoodGeoDoc { _id: Types.ObjectId; name: string; cityId: Types.ObjectId }
-interface AddressGeoDoc {
-  _id: Types.ObjectId;
-  cityId: Types.ObjectId;
-  regionId: Types.ObjectId;
-  neighborhoodId?: Types.ObjectId;
-  countryCode: string;
-}
-
-const registry = require('../models');
-const City: Model<CityGeoDoc> = registry.City;
-const Region: Model<RegionGeoDoc> = registry.Region;
-const Neighborhood: Model<NeighborhoodGeoDoc> = registry.Neighborhood;
-const Address: Model<AddressGeoDoc> = registry.Address;
+import { City, Region, Neighborhood, Address } from '../models';
 
 export interface GeoFilterInput {
   /** City name or City `_id`. */

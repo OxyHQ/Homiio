@@ -1,7 +1,9 @@
-const { Property } = require('../../models');
-const { paginationResponse } = require('../../middlewares/errorHandler');
+import { Property } from '../../models';
+import { paginationResponse } from '../../middlewares/errorHandler';
+import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
+import { getQueryInteger, getQueryNumber } from '../queryParams';
 
-export async function findNearbyProperties(req, res, next) {
+export async function findNearbyProperties(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
   try {
     const { 
       longitude, 
@@ -52,11 +54,11 @@ export async function findNearbyProperties(req, res, next) {
       });
     }
 
-    const lng = parseFloat(longitude);
-    const lat = parseFloat(latitude);
-    const distance = parseFloat(maxDistance);
+    const lng = getQueryNumber(longitude, Number.NaN);
+    const lat = getQueryNumber(latitude, Number.NaN);
+    const distance = getQueryNumber(maxDistance, 10000);
 
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
       return res.status(400).json({ 
         success: false, 
         message: 'Invalid coordinates provided', 
@@ -69,6 +71,8 @@ export async function findNearbyProperties(req, res, next) {
 
     // Apply additional filters
     const filters: any = {};
+    // Public geo feed: never surface soft-deleted (archived) listings.
+    filters.deletedAt = null;
     
     // Handle status parameter (preferred) or legacy available parameter
     if (status !== undefined) {
@@ -205,19 +209,21 @@ export async function findNearbyProperties(req, res, next) {
       nearbyQuery = nearbyQuery.find(filters);
     }
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const pageNumber = getQueryInteger(page, 1);
+    const limitNumber = getQueryInteger(limit, 10);
+    const skip = (pageNumber - 1) * limitNumber;
     const [properties, total] = await Promise.all([
-      nearbyQuery.skip(skip).limit(parseInt(limit)).lean(),
+      nearbyQuery.skip(skip).limit(limitNumber).lean(),
       nearbyQuery.clone().countDocuments()
     ]);
 
-    res.json(paginationResponse(properties, parseInt(page), parseInt(limit), total, 'Nearby properties found successfully'));
+    res.json(paginationResponse(properties, pageNumber, limitNumber, total, 'Nearby properties found successfully'));
   } catch (error) {
     next(error);
   }
 }
 
-export async function findPropertiesInRadius(req, res, next) {
+export async function findPropertiesInRadius(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
   try {
     const { 
       longitude, 
@@ -268,11 +274,11 @@ export async function findPropertiesInRadius(req, res, next) {
       });
     }
 
-    const lng = parseFloat(longitude);
-    const lat = parseFloat(latitude);
-    const radiusInMeters = parseFloat(radius);
+    const lng = getQueryNumber(longitude, Number.NaN);
+    const lat = getQueryNumber(latitude, Number.NaN);
+    const radiusInMeters = getQueryNumber(radius, Number.NaN);
 
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
       return res.status(400).json({ 
         success: false, 
         message: 'Invalid coordinates provided', 
@@ -285,6 +291,8 @@ export async function findPropertiesInRadius(req, res, next) {
 
     // Apply additional filters
     const filters: any = {};
+    // Public geo feed: never surface soft-deleted (archived) listings.
+    filters.deletedAt = null;
     
     // Handle status parameter (preferred) or legacy available parameter
     if (status !== undefined) {
@@ -421,13 +429,15 @@ export async function findPropertiesInRadius(req, res, next) {
       radiusQuery = radiusQuery.find(filters);
     }
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const pageNumber = getQueryInteger(page, 1);
+    const limitNumber = getQueryInteger(limit, 10);
+    const skip = (pageNumber - 1) * limitNumber;
     const [properties, total] = await Promise.all([
-      radiusQuery.skip(skip).limit(parseInt(limit)).lean(),
+      radiusQuery.skip(skip).limit(limitNumber).lean(),
       radiusQuery.clone().countDocuments()
     ]);
 
-    res.json(paginationResponse(properties, parseInt(page), parseInt(limit), total, 'Properties in radius found successfully'));
+    res.json(paginationResponse(properties, pageNumber, limitNumber, total, 'Properties in radius found successfully'));
   } catch (error) {
     next(error);
   }

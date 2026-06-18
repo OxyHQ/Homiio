@@ -174,7 +174,8 @@ const validateDateRange = [
   query('startDate').optional().isISO8601().withMessage('Start date must be valid'),
   query('endDate').optional().isISO8601().withMessage('End date must be valid'),
   query('endDate').custom((value, { req }) => {
-    if (value && req.query.startDate && new Date(value) <= new Date(req.query.startDate)) {
+    const startDate = req.query?.startDate;
+    if (value && startDate && new Date(value) <= new Date(String(startDate))) {
       throw new Error('End date must be after start date');
     }
     return true;
@@ -356,4 +357,311 @@ export {
   validateExchangeRequest,
   validateExchangeUpdate,
   validateExchangeReview,
+};
+
+/** Review currency codes accepted by the Review schema. */
+const REVIEW_CURRENCY_CODES = ['EUR', 'USD', 'GBP', 'CAD'];
+
+/**
+ * Address review create validation rules (POST /api/reviews)
+ *
+ * The body carries a nested `address` block plus flat review fields. The Review
+ * schema + controller own the required-field, enum and hierarchy rules; this
+ * layer closes injection / bad-input gaps by enforcing the SHAPE of the
+ * high-risk fields (rating range, bounded free text, numeric price, valid
+ * currency, ISO dates, image URLs). All review fields are optional here so the
+ * partial payloads the frontend sends are not rejected.
+ */
+const validateReviewCreate = [
+  body('address').isObject().withMessage('address must be an object'),
+  body('address.street').isString().trim().notEmpty().withMessage('address.street is required'),
+  body('address.city').isString().trim().notEmpty().withMessage('address.city is required'),
+  body('address.postal_code').isString().trim().notEmpty().withMessage('address.postal_code is required'),
+  body('address.country').isString().trim().notEmpty().withMessage('address.country is required'),
+  body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be an integer between 1 and 5'),
+  body('price').optional().isFloat({ min: 0 }).withMessage('price must be a non-negative number'),
+  body('currency').optional().isIn(REVIEW_CURRENCY_CODES).withMessage('Invalid currency'),
+  body('opinion').isString().isLength({ min: 10, max: 2000 }).withMessage('opinion must be between 10 and 2000 characters'),
+  body('positiveComment').optional().isString().isLength({ max: 1000 }).withMessage('positiveComment max length is 1000'),
+  body('negativeComment').optional().isString().isLength({ max: 1000 }).withMessage('negativeComment max length is 1000'),
+  body('greenHouse').optional().isString().isLength({ max: 200 }).withMessage('greenHouse max length is 200'),
+  body('recommendation').optional().isBoolean().withMessage('recommendation must be a boolean'),
+  body('depositReturned').optional().isBoolean().withMessage('depositReturned must be a boolean'),
+  body('touristApartments').optional().isBoolean().withMessage('touristApartments must be a boolean'),
+  body('livedForMonths').optional().isInt({ min: 0 }).withMessage('livedForMonths must be a non-negative integer'),
+  body('livedFrom').optional().isISO8601().withMessage('livedFrom must be a valid date'),
+  body('livedTo').optional().isISO8601().withMessage('livedTo must be a valid date'),
+  body('images').optional().isArray().withMessage('images must be an array'),
+  body('images.*').optional().isString().isLength({ max: 2048 }).withMessage('Each image must be a string URL'),
+  handleValidationErrors
+];
+
+/**
+ * Address review update validation rules (PUT /api/reviews/:reviewId)
+ *
+ * Updates are partial (the controller merges the body into the existing review)
+ * so every field is optional; only their type/range is enforced.
+ */
+const validateReviewUpdate = [
+  param('reviewId').isMongoId().withMessage('Invalid review ID'),
+  body('rating').optional().isInt({ min: 1, max: 5 }).withMessage('Rating must be an integer between 1 and 5'),
+  body('price').optional().isFloat({ min: 0 }).withMessage('price must be a non-negative number'),
+  body('currency').optional().isIn(REVIEW_CURRENCY_CODES).withMessage('Invalid currency'),
+  body('opinion').optional().isString().isLength({ min: 10, max: 2000 }).withMessage('opinion must be between 10 and 2000 characters'),
+  body('positiveComment').optional().isString().isLength({ max: 1000 }).withMessage('positiveComment max length is 1000'),
+  body('negativeComment').optional().isString().isLength({ max: 1000 }).withMessage('negativeComment max length is 1000'),
+  body('greenHouse').optional().isString().isLength({ max: 200 }).withMessage('greenHouse max length is 200'),
+  body('recommendation').optional().isBoolean().withMessage('recommendation must be a boolean'),
+  body('depositReturned').optional().isBoolean().withMessage('depositReturned must be a boolean'),
+  body('touristApartments').optional().isBoolean().withMessage('touristApartments must be a boolean'),
+  body('livedForMonths').optional().isInt({ min: 0 }).withMessage('livedForMonths must be a non-negative integer'),
+  body('livedFrom').optional().isISO8601().withMessage('livedFrom must be a valid date'),
+  body('livedTo').optional().isISO8601().withMessage('livedTo must be a valid date'),
+  body('images').optional().isArray().withMessage('images must be an array'),
+  body('images.*').optional().isString().isLength({ max: 2048 }).withMessage('Each image must be a string URL'),
+  handleValidationErrors
+];
+
+/** Review ID parameter validation (GET/DELETE /api/reviews/:reviewId). */
+const validateReviewId = [
+  param('reviewId').isMongoId().withMessage('Invalid review ID'),
+  handleValidationErrors
+];
+
+/** Profile ID parameter + pagination for owner-scoped review reads. */
+const validateProfileReviewsQuery = [
+  param('profileId').isMongoId().withMessage('Invalid profile ID'),
+  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1-100'),
+  handleValidationErrors
+];
+
+export {
+  validateReviewCreate,
+  validateReviewUpdate,
+  validateReviewId,
+  validateProfileReviewsQuery,
+};
+
+/** Lifestyle / gender enum values mirrored from the RoommatePreferences type. */
+const ROOMMATE_GENDERS = ['male', 'female', 'any'];
+const ROOMMATE_TRISTATE = ['yes', 'no', 'prefer_not'];
+const ROOMMATE_CLEANLINESS = ['very_clean', 'clean', 'average', 'relaxed'];
+const ROOMMATE_SCHEDULE = ['early_bird', 'night_owl', 'flexible'];
+
+/**
+ * Send roommate request validation rules (POST /api/roommates/:profileId/request)
+ *
+ * The route param is the target profile id (validated as an ObjectId to block
+ * NoSQL operator injection into `Profile.findById`); `message` is optional free
+ * text and length-bounded.
+ */
+const validateRoommateRequest = [
+  param('profileId').isMongoId().withMessage('Invalid profile ID'),
+  body('message').optional().isString().isLength({ max: 1000 }).withMessage('Message max length is 1000'),
+  handleValidationErrors
+];
+
+/**
+ * Update roommate preferences validation rules (PUT /api/roommates/preferences)
+ *
+ * The frontend sends the whole RoommatePreferences object. The controller
+ * spreads the nested fields into the profile document, so this validator
+ * enforces type/shape of each field WITHOUT requiring any of them (the whole
+ * body is optional/permissive to preserve existing behavior).
+ */
+const validateRoommatePreferences = [
+  body('enabled').optional().isBoolean().withMessage('enabled must be a boolean'),
+  body('gender').optional().isIn(ROOMMATE_GENDERS).withMessage('Invalid gender'),
+  body('location').optional().isString().isLength({ max: 200 }).withMessage('location max length is 200'),
+  body('moveInDate').optional().isString().isLength({ max: 100 }).withMessage('moveInDate max length is 100'),
+  body('leaseDuration').optional().isString().isLength({ max: 100 }).withMessage('leaseDuration max length is 100'),
+  body('ageRange.min').optional().isInt({ min: 0, max: 120 }).withMessage('ageRange.min must be between 0 and 120'),
+  body('ageRange.max').optional().isInt({ min: 0, max: 120 }).withMessage('ageRange.max must be between 0 and 120'),
+  body('budget.min').optional().isFloat({ min: 0 }).withMessage('budget.min must be non-negative'),
+  body('budget.max').optional().isFloat({ min: 0 }).withMessage('budget.max must be non-negative'),
+  body('lifestyle.smoking').optional().isIn(ROOMMATE_TRISTATE).withMessage('Invalid lifestyle.smoking'),
+  body('lifestyle.pets').optional().isIn(ROOMMATE_TRISTATE).withMessage('Invalid lifestyle.pets'),
+  body('lifestyle.partying').optional().isIn(ROOMMATE_TRISTATE).withMessage('Invalid lifestyle.partying'),
+  body('lifestyle.cleanliness').optional().isIn(ROOMMATE_CLEANLINESS).withMessage('Invalid lifestyle.cleanliness'),
+  body('lifestyle.schedule').optional().isIn(ROOMMATE_SCHEDULE).withMessage('Invalid lifestyle.schedule'),
+  body('interests').optional().isArray().withMessage('interests must be an array'),
+  body('interests.*').optional().isString().isLength({ max: 100 }).withMessage('Each interest must be a string'),
+  handleValidationErrors
+];
+
+/**
+ * Toggle roommate matching validation rules (PATCH /api/roommates/toggle).
+ */
+const validateRoommateToggle = [
+  body('enabled').isBoolean().withMessage('enabled must be a boolean'),
+  handleValidationErrors
+];
+
+/**
+ * Roommate request id parameter validation
+ * (POST /api/roommates/requests/:requestId/accept|decline).
+ */
+const validateRoommateRequestId = [
+  param('requestId').isMongoId().withMessage('Invalid roommate request ID'),
+  handleValidationErrors
+];
+
+/** Roommate listing pagination + filter validation (GET /api/roommates). */
+const validateRoommateListQuery = [
+  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1-100'),
+  query('minMatchPercentage').optional().isInt({ min: 0, max: 100 }).withMessage('minMatchPercentage must be between 0 and 100'),
+  query('maxBudget').optional().isFloat({ min: 0 }).withMessage('maxBudget must be non-negative'),
+  query('gender').optional().isString().isLength({ max: 50 }).withMessage('gender must be a string'),
+  query('location').optional().isString().isLength({ max: 200 }).withMessage('location max length is 200'),
+  handleValidationErrors
+];
+
+export {
+  validateRoommateRequest,
+  validateRoommatePreferences,
+  validateRoommateToggle,
+  validateRoommateRequestId,
+  validateRoommateListQuery,
+};
+
+/**
+ * Lease create validation rules (POST /api/leases)
+ *
+ * Matches the actual shape consumed by leaseController.createLease
+ * (propertyId, tenantProfileId, leaseTerms.startDate/endDate,
+ * rentDetails.monthlyRent). ObjectId fields are validated to block NoSQL
+ * operator injection into Property.findById / Lease.create. The controller
+ * still owns the required-field 400s and ownership checks; this layer is kept
+ * permissive (fields optional) so it never rejects a payload the controller
+ * would otherwise accept, while enforcing type/format when present.
+ */
+const validateLeaseCreate = [
+  body('propertyId').isMongoId().withMessage('Valid propertyId is required'),
+  body('tenantProfileId').optional().isMongoId().withMessage('tenantProfileId must be a valid id'),
+  body('tenantId').optional().isMongoId().withMessage('tenantId must be a valid id'),
+  body('leaseTerms.startDate').optional().isISO8601().withMessage('leaseTerms.startDate must be a valid date'),
+  body('leaseTerms.endDate').optional().isISO8601().withMessage('leaseTerms.endDate must be a valid date'),
+  body('leaseTerms.endDate').optional().custom((value, { req }) => {
+    const start = req.body?.leaseTerms?.startDate;
+    if (value && start && new Date(value) <= new Date(start)) {
+      throw new Error('leaseTerms.endDate must be after leaseTerms.startDate');
+    }
+    return true;
+  }),
+  body('rentDetails.monthlyRent').optional().isFloat({ min: 0 }).withMessage('rentDetails.monthlyRent must be non-negative'),
+  body('rentDetails.deposit').optional().isFloat({ min: 0 }).withMessage('rentDetails.deposit must be non-negative'),
+  handleValidationErrors
+];
+
+/**
+ * Lease update validation rules (PUT /api/leases/:id)
+ *
+ * Partial update; the controller filters immutable keys and enforces the
+ * landlord/editable-status rules. Only the id param and the type/format of any
+ * supplied mutable fields are validated here.
+ */
+const validateLeaseUpdate = [
+  param('id').isMongoId().withMessage('Invalid lease ID'),
+  body('leaseTerms.startDate').optional().isISO8601().withMessage('leaseTerms.startDate must be a valid date'),
+  body('leaseTerms.endDate').optional().isISO8601().withMessage('leaseTerms.endDate must be a valid date'),
+  body('leaseTerms.endDate').optional().custom((value, { req }) => {
+    const start = req.body?.leaseTerms?.startDate;
+    if (value && start && new Date(value) <= new Date(start)) {
+      throw new Error('leaseTerms.endDate must be after leaseTerms.startDate');
+    }
+    return true;
+  }),
+  body('rentDetails.monthlyRent').optional().isFloat({ min: 0 }).withMessage('rentDetails.monthlyRent must be non-negative'),
+  body('rentDetails.deposit').optional().isFloat({ min: 0 }).withMessage('rentDetails.deposit must be non-negative'),
+  handleValidationErrors
+];
+
+/** Lease id parameter validation (GET/DELETE /api/leases/:id). */
+const validateLeaseId = [
+  param('id').isMongoId().withMessage('Invalid lease ID'),
+  handleValidationErrors
+];
+
+/** Lease listing pagination + filter validation (GET /api/leases). */
+const validateLeaseListQuery = [
+  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1-100'),
+  query('status').optional().isString().isLength({ max: 50 }).withMessage('status must be a string'),
+  query('propertyId').optional().isMongoId().withMessage('propertyId must be a valid id'),
+  handleValidationErrors
+];
+
+export {
+  validateLeaseCreate,
+  validateLeaseUpdate,
+  validateLeaseId,
+  validateLeaseListQuery,
+};
+
+/**
+ * Viewing request update validation rules (PUT /api/viewings/:viewingId)
+ *
+ * The controller rebuilds `scheduledAt` from `date` (YYYY-MM-DD) + `time`
+ * (HH:mm) and enforces the future-date / conflict rules. This layer validates
+ * the id param and the date/time/message shape.
+ */
+const validateViewingUpdate = [
+  param('viewingId').isMongoId().withMessage('Invalid viewing request ID'),
+  body('date').isISO8601().withMessage('Valid date is required'),
+  body('time').matches(/^\d{2}:\d{2}$/).withMessage('Time must be in HH:MM format'),
+  body('message').optional().isString().isLength({ max: 1000 }).withMessage('Message max length is 1000'),
+  handleValidationErrors
+];
+
+/** Viewing request id parameter validation (POST .../approve|decline|cancel). */
+const validateViewingId = [
+  param('viewingId').isMongoId().withMessage('Invalid viewing request ID'),
+  handleValidationErrors
+];
+
+/** Current-user viewing list pagination + status filter (GET /api/viewings/me). */
+const validateViewingListQuery = [
+  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1-100'),
+  query('status').optional().isIn(['pending', 'approved', 'declined', 'cancelled']).withMessage('Invalid status filter'),
+  handleValidationErrors
+];
+
+export {
+  validateViewingUpdate,
+  validateViewingId,
+  validateViewingListQuery,
+};
+
+/**
+ * Tips query validation rules.
+ *
+ * The tips controller serves in-memory mock data (no Mongoose), so these rules
+ * are defensive bounds rather than injection guards: pagination/limit numeric
+ * bounds and length-bounded free-text search.
+ */
+const validateTipsFeaturedQuery = [
+  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1-100'),
+  handleValidationErrors
+];
+
+const validateTipsSearchQuery = [
+  query('q').optional().isString().isLength({ max: 200 }).withMessage('Search query max length is 200'),
+  query('category').optional().isString().isLength({ max: 100 }).withMessage('category max length is 100'),
+  query('tag').optional().isString().isLength({ max: 100 }).withMessage('tag max length is 100'),
+  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1-100'),
+  handleValidationErrors
+];
+
+const validateTipsCategoryParam = [
+  param('category').isString().isLength({ min: 1, max: 100 }).withMessage('category must be 1-100 characters'),
+  handleValidationErrors
+];
+
+export {
+  validateTipsFeaturedQuery,
+  validateTipsSearchQuery,
+  validateTipsCategoryParam,
 };

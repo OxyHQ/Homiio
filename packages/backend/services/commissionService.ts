@@ -22,8 +22,8 @@ import {
 } from '@homiio/shared-types';
 import { OfferingType, PropertyStatus } from '@homiio/shared-types';
 
-const { Partner, Commission } = require('../models');
-const { logger } = require('../middlewares/logging');
+import { Partner, Commission } from '../models';
+import { logger } from '../middlewares/logging';
 
 /**
  * A persisted Commission document, narrowed to the surface the trigger's
@@ -116,43 +116,50 @@ export function computeCommission(
  */
 function resolveDealBasis(property: TransactableProperty): DealBasis | null {
   const offerings = Array.isArray(property.offerings)
-    ? (property.offerings as unknown[]).filter((o): o is string => typeof o === 'string')
+    ? (property.offerings as unknown[]).filter(
+        (entry): entry is string => typeof entry === 'string',
+      )
     : [];
   const has = (offering: OfferingType): boolean => offerings.includes(offering);
   const status = property.status;
 
+  // Each priced offering, as a basis when the listing carries it AND its price is
+  // valid, else null. Defined once so the terminal-status branch and the
+  // fallback below share the field access instead of repeating it.
+  const saleBasis = (): DealBasis | null =>
+    has(OfferingType.SALE) && isPositiveNumber(property.sale?.price)
+      ? { offering: 'sale', dealValue: property.sale.price }
+      : null;
+  const longTermRentBasis = (): DealBasis | null =>
+    has(OfferingType.LONG_TERM_RENT) && isPositiveNumber(property.longTermRent?.monthlyAmount)
+      ? { offering: 'rent', dealValue: property.longTermRent.monthlyAmount }
+      : null;
+  const shortTermRentBasis = (): DealBasis | null =>
+    has(OfferingType.SHORT_TERM_RENT) && isPositiveNumber(property.shortTermRent?.nightlyRate)
+      ? { offering: 'rent', dealValue: property.shortTermRent.nightlyRate }
+      : null;
+
   // Sale close → price off the sale block.
-  if (status === PropertyStatus.SOLD && has(OfferingType.SALE) && isPositiveNumber(property.sale?.price)) {
-    return { offering: 'sale', dealValue: property.sale.price };
+  if (status === PropertyStatus.SOLD) {
+    const basis = saleBasis();
+    if (basis) return basis;
   }
 
   // Rent close → price off monthly rent, then nightly rate as a fallback.
   if (status === PropertyStatus.RENTED) {
-    if (has(OfferingType.LONG_TERM_RENT) && isPositiveNumber(property.longTermRent?.monthlyAmount)) {
-      return { offering: 'rent', dealValue: property.longTermRent.monthlyAmount };
-    }
-    if (has(OfferingType.SHORT_TERM_RENT) && isPositiveNumber(property.shortTermRent?.nightlyRate)) {
-      return { offering: 'rent', dealValue: property.shortTermRent.nightlyRate };
-    }
+    const basis = longTermRentBasis() ?? shortTermRentBasis();
+    if (basis) return basis;
   }
 
   // No terminal sale/rent match — fall back to the highest-value priced offering
   // the listing carries, so an inactive/closed listing still pays out correctly.
-  if (has(OfferingType.SALE) && isPositiveNumber(property.sale?.price)) {
-    return { offering: 'sale', dealValue: property.sale.price };
-  }
-  if (has(OfferingType.LONG_TERM_RENT) && isPositiveNumber(property.longTermRent?.monthlyAmount)) {
-    return { offering: 'rent', dealValue: property.longTermRent.monthlyAmount };
-  }
-  if (has(OfferingType.SHORT_TERM_RENT) && isPositiveNumber(property.shortTermRent?.nightlyRate)) {
-    return { offering: 'rent', dealValue: property.shortTermRent.nightlyRate };
-  }
   // Exchange has no monetary deal value — a flat fee still earns a commission.
-  if (has(OfferingType.EXCHANGE)) {
-    return { offering: 'exchange', dealValue: 0 };
-  }
-
-  return null;
+  return (
+    saleBasis() ??
+    longTermRentBasis() ??
+    shortTermRentBasis() ??
+    (has(OfferingType.EXCHANGE) ? { offering: 'exchange', dealValue: 0 } : null)
+  );
 }
 
 /**

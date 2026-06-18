@@ -1,14 +1,15 @@
 import { PropertyStatus } from '@homiio/shared-types';
 import { applyOfferingRulesForUpdate, OfferingValidationError } from './offeringRules';
 import { onPropertyTransacted } from '../../services/commissionService';
-const { Property } = require('../../models');
-const { AppError, successResponse } = require('../../middlewares/errorHandler');
-const { logger } = require('../../middlewares/logging');
+import { Property } from '../../models';
+import { AppError, successResponse } from '../../middlewares/errorHandler';
+import { logger } from '../../middlewares/logging';
+import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
 
 /** Statuses that close a deal and (for sourced listings) earn a commission. */
 const TERMINAL_STATUSES: ReadonlyArray<string> = [PropertyStatus.RENTED, PropertyStatus.SOLD];
 
-export async function updateProperty(req, res, next) {
+export async function updateProperty(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
   try {
     const { propertyId } = req.params;
     const updateData = { ...req.body };
@@ -20,6 +21,7 @@ export async function updateProperty(req, res, next) {
     if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
     const property = await Property.findById(propertyId);
     if (!property) return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));
+    if (!property.profileId) return next(new AppError('Property owner is missing', 500, 'PROPERTY_OWNER_MISSING'));
     if (property.profileId.toString() !== activeProfile._id.toString()) return next(new AppError('Access denied - you can only edit your own properties', 403, 'FORBIDDEN'));
 
     // Validate & normalize per-offering fields against the listing's CURRENT
@@ -44,7 +46,7 @@ export async function updateProperty(req, res, next) {
       // Handle coordinates from location field if provided
       if (updateData.location?.coordinates) {
         // Ensure coordinates are numbers
-        const coords = updateData.location.coordinates.map(coord => Number(coord));
+        const coords = updateData.location.coordinates.map((coord: unknown) => Number(coord));
         addressData.coordinates = {
           type: updateData.location.type || 'Point',
           coordinates: coords
@@ -94,10 +96,32 @@ export async function updateProperty(req, res, next) {
   }
 }
 
-export async function deleteProperty(req, res, next) {
+export async function deleteProperty(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
   try {
     const { propertyId } = req.params;
-    // TODO: implement soft delete & ownership check
+
+    const oxyUserId = req.user?.id || req.user?._id || req.userId;
+    if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
+    const { Profile } = require('../../models');
+    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
+    const property = await Property.findById(propertyId);
+    if (!property) return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));
+    if (!property.profileId) return next(new AppError('Property owner is missing', 500, 'PROPERTY_OWNER_MISSING'));
+    if (property.profileId.toString() !== activeProfile._id.toString()) return next(new AppError('Access denied - you can only delete your own properties', 403, 'FORBIDDEN'));
+
+    // Soft delete: archive the listing and stamp deletedAt. The document is
+    // kept for audit/history; public list/search/geo queries exclude it via
+    // the `deletedAt: null` guard, and getMyProperties excludes `archived`.
+    property.status = PropertyStatus.ARCHIVED;
+    property.deletedAt = new Date();
+    await property.save();
+
+    logger.info('Property soft-deleted', {
+      propertyId: String(propertyId),
+      profileId: activeProfile._id.toString(),
+    });
+
     res.json(successResponse(null, 'Property deleted successfully'));
   } catch (error) { next(error); }
 }

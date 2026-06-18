@@ -1,7 +1,8 @@
-const { Property } = require('../../models');
-const { AppError, successResponse } = require('../../middlewares/errorHandler');
+import { Property } from '../../models';
+import { AppError, successResponse } from '../../middlewares/errorHandler';
+import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
 
-export async function getPropertyStats(req, res, next) {
+export async function getPropertyStats(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
   try {
     const { propertyId } = req.params;
     const mongoose = require('mongoose');

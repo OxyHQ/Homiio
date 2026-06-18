@@ -46,3 +46,6 @@ export * from './report';
 
 // Partner (agent) referral-commission types
 export * from './partner';
+
+// Pure, dependency-free property-title helpers shared by frontend and backend
+export * from './utils/propertyTitle';

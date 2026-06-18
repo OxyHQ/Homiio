@@ -21,9 +21,6 @@ packages/
   frontend/       @homiio/frontend       Expo 56 / React Native 0.85 / React 19
   backend/        @homiio/backend        Express 4.21 / Mongoose 8.18 / Stripe 16.11
   shared-types/   @homiio/shared-types   Pure TS types — built first via postinstall
-scripts/
-  build-for-vercel.js                    Copies shared-types/dist into both node_modules trees
-  deploy-frontend.sh / deploy-backend.sh Vercel-targeted deploys
 ```
 
 ## Frontend stack
@@ -81,10 +78,10 @@ The root `_layout.tsx` wires (top-down):
 | AI | `ai@4.3` + `@ai-sdk/openai` — streams Sindi responses |
 | Messaging integrations | `node-telegram-bot-api`, `telegraf`, `whatsapp-web.js` |
 | Document parsing | `pdf-parse` (contract uploads) |
-| Cron | `node-cron`, initialised in `services/cron.ts` (skipped on Vercel) |
+| Cron | `node-cron`, initialised in `services/cron.ts` (skipped on serverless runtimes; runs on the long-lived ECS task) |
 | Validation | `express-validator` + a custom `middlewares/validation.ts` |
 
-CORS is locked to known origins (`homiio.com`, `vercel.app` preview deployments, `localhost`, LAN IPs in dev). The check is an O(1) `Set` lookup plus a single combined regex — see `server.ts` line 37 onward.
+CORS is locked to known origins (`homiio.com`, `localhost`, LAN IPs in dev). The check is an O(1) `Set` lookup plus a single combined regex — see `server.ts` line 37 onward.
 
 `server.ts` mounts middleware in a deliberate order:
 

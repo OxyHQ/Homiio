@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-const { Property, Reservation } = require('../../models');
+import { Property, Reservation } from '../../models';
 import { paginationResponse } from '../../middlewares/errorHandler';
 import {
   priceFieldForOffering,
@@ -12,7 +12,7 @@ const {
   AvailabilityWindowStatus,
   ReservationStatus
 } = require('@homiio/shared-types');
-const { serializePropertyAddresses, ADDRESS_GEO_POPULATE } = require('../../services/propertyAddressSerializer');
+import { serializePropertyAddresses, ADDRESS_GEO_POPULATE } from '../../services/propertyAddressSerializer';
 
 const OFFERING_VALUES: ReadonlySet<string> = new Set(Object.values(OfferingType));
 
@@ -116,6 +116,8 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     const limitNumber = Math.min(100, Math.max(1, parseInt(String(limit)) || 10));
 
     const filters: any = {};
+    // Public feed: never surface soft-deleted (archived) listings.
+    filters.deletedAt = null;
     if (profileId) filters.profileId = profileId;
     if (type) filters.type = type;
     

@@ -11,9 +11,9 @@
 import { OfferingType, PropertyStatus } from '@homiio/shared-types';
 import { onPropertyTransacted } from '../../services/commissionService';
 
-const { Property, Profile } = require('../../models');
-const { AppError, successResponse } = require('../../middlewares/errorHandler');
-const { logger } = require('../../middlewares/logging');
+import { Property, Profile } from '../../models';
+import { AppError, successResponse } from '../../middlewares/errorHandler';
+import { logger } from '../../middlewares/logging';
 
 /** Terminal statuses a listing may be moved into when its deal closes. */
 const TERMINAL_STATUSES: ReadonlyArray<string> = [PropertyStatus.RENTED, PropertyStatus.SOLD];

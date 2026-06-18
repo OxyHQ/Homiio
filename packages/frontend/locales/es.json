@@ -1018,6 +1018,16 @@
     "name": "Sindi",
     "title": "Sindi",
     "subtitle": "Defensor de Justicia Habitacional con Información en Tiempo Real",
+    "panel": {
+      "title": "Sindi",
+      "subtitle": "Asistente de vivienda con IA",
+      "intro": "Tu asistente de vivienda con IA. Pregúntale sobre derechos de inquilinos, contratos y problemas de vivienda, aquí mismo, sin salir de la página.",
+      "newChat": "Nuevo chat",
+      "startNew": "Iniciar nueva conversación",
+      "close": "Cerrar",
+      "conversations": "Conversaciones",
+      "empty": "Inicia una nueva conversación para recibir ayuda."
+    },
     "status": {
       "thinking": "Pensando...",
       "online": "En línea"

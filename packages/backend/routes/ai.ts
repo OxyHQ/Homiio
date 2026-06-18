@@ -101,7 +101,10 @@ Avoid repetition:
 /** Utilities */
 // -------------------------------
 const isObjectId = (id: string) => mongoose.Types.ObjectId.isValid(id);
-const getUserId = (req: any) => req.user?.oxyUserId || req.user?._id || req.user?.id;
+const getUserId = (req: Request): string | undefined => {
+  const userId = req.user?.oxyUserId || req.user?._id || req.user?.id;
+  return typeof userId === 'string' && userId.length > 0 ? userId : undefined;
+};
 const getBaseUrl = () => {
   const baseUrl = process.env.INTERNAL_API_BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
   return baseUrl;
@@ -958,22 +961,30 @@ Return only the JSON array, no other text.`;
   );
 
   // ---------- Legacy simple history on user ----------
-  router.get('/history', (async (req: any, res) => {
-    const user = req.user;
-    if (!user) return err(res, 401, 'Unauthorized');
-    const history = (user.chatHistory || []).slice().reverse();
+  router.get('/history', async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    if (!userId) return err(res, 401, 'Unauthorized');
+
+    const profile = await Profile.findOne({ oxyUserId: userId, profileType: 'personal' });
+    if (!profile) return err(res, 404, 'Personal profile not found');
+
+    const history = Array.isArray(profile.chatHistory) ? [...profile.chatHistory].reverse() : [];
     return ok(res, { success: true, history });
-  }) as any);
+  });
 
-  router.delete('/history', (async (req: any, res) => {
-    const user = req.user;
-    if (!user) return err(res, 401, 'Unauthorized');
-    user.chatHistory = [];
-    await user.save();
+  router.delete('/history', async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    if (!userId) return err(res, 401, 'Unauthorized');
+
+    const profile = await Profile.findOne({ oxyUserId: userId, profileType: 'personal' });
+    if (!profile) return err(res, 404, 'Personal profile not found');
+
+    profile.chatHistory = [];
+    await profile.save();
     return ok(res, { success: true });
-  }) as any);
+  });
 
-  router.post('/history', (async (req: any, res) => {
+  router.post('/history', async (req: Request, res: Response) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
@@ -991,10 +1002,10 @@ Return only the JSON array, no other text.`;
     await profile.save();
 
     return ok(res, { success: true });
-  }) as any);
+  });
 
   // ---------- Conversation CRUD ----------
-  router.get('/conversations', (async (req: any, res) => {
+  router.get('/conversations', (async (req: Request, res: Response) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
@@ -1020,7 +1031,7 @@ Return only the JSON array, no other text.`;
     return ok(res, { success: true, conversations: transformed });
   }) as any);
 
-  router.post('/conversations', (async (req: any, res) => {
+  router.post('/conversations', (async (req: Request, res: Response) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
@@ -1073,7 +1084,7 @@ Return only the JSON array, no other text.`;
     });
   }) as any);
 
-  router.get('/conversations/:id', (async (req: any, res) => {
+  router.get('/conversations/:id', (async (req: Request, res: Response) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
@@ -1089,7 +1100,7 @@ Return only the JSON array, no other text.`;
     return ok(res, { success: true, conversation });
   }) as any);
 
-  router.put('/conversations/:id', (async (req: any, res) => {
+  router.put('/conversations/:id', (async (req: Request, res: Response) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
@@ -1110,7 +1121,7 @@ Return only the JSON array, no other text.`;
     return ok(res, { success: true, conversation: saved });
   }) as any);
 
-  router.post('/conversations/:id/messages', (async (req: any, res) => {
+  router.post('/conversations/:id/messages', (async (req: Request, res: Response) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
@@ -1130,7 +1141,7 @@ Return only the JSON array, no other text.`;
     return ok(res, { success: true, message: newMessage, conversation });
   }) as any);
 
-  router.delete('/conversations/:id', (async (req: any, res) => {
+  router.delete('/conversations/:id', (async (req: Request, res: Response) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
@@ -1143,7 +1154,7 @@ Return only the JSON array, no other text.`;
     return ok(res, { success: true, message: 'Conversation deleted' });
   }) as any);
 
-  router.post('/conversations/:id/share', (async (req: any, res) => {
+  router.post('/conversations/:id/share', (async (req: Request, res: Response) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 

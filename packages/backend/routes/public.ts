@@ -3,18 +3,40 @@
  * These routes can be accessed without authentication
  */
 
-const express = require('express');
+import express from 'express';
 const propertyController = require('../controllers/propertyController');
 const telegramController = require('../controllers/telegramController');
-const cityController = require('../controllers/cityController').default;
-const imageController = require('../controllers/imageController').default;
+const cityController = require('../controllers/cityController');
+const imageController = require('../controllers/imageController');
 const tipsController = require('../controllers/tipsController');
 const analyticsController = require('../controllers/analyticsController');
-const geocodingController = require('../controllers/geocodingController').default;
+const geocodingController = require('../controllers/geocodingController');
 const reviewController = require('../controllers/reviewController');
-const { asyncHandler } = require('../middlewares');
-const performanceMonitor = require('../middlewares/performance').default;
-const Conversation = require('../models/schemas/ConversationSchema');
+import { asyncHandler } from '../middlewares';
+import performanceMonitor from '../middlewares/performance';
+import { Conversation } from '../models';
+
+const PROPERTY_ADJUSTMENTS = {
+  studio: 0.8,
+  room: 0.6,
+  apartment: 1.0,
+  house: 1.2,
+};
+
+function getPropertyAdjustmentFactor(propertyType: unknown): number {
+  switch (propertyType) {
+    case 'studio':
+      return PROPERTY_ADJUSTMENTS.studio;
+    case 'room':
+      return PROPERTY_ADJUSTMENTS.room;
+    case 'apartment':
+      return PROPERTY_ADJUSTMENTS.apartment;
+    case 'house':
+      return PROPERTY_ADJUSTMENTS.house;
+    default:
+      return 1.0;
+  }
+}
 
 export default function () {
   const router = express.Router();
@@ -159,25 +181,18 @@ export default function () {
       }
     }
 
-    // Add property-specific adjustments
-    const propertyAdjustments = {
-      studio: 0.8, // Studios typically cost less
-      room: 0.6,   // Rooms cost significantly less
-      apartment: 1.0, // Base rate
-      house: 1.2,  // Houses typically cost more
+    const adjustmentFactor = getPropertyAdjustmentFactor(propertyType);
+    const adjustedSuggestions = {
+      standardRent: Math.round(suggestions.standardRent * adjustmentFactor),
+      affordableRent: Math.round(suggestions.affordableRent * adjustmentFactor),
+      marketRate: suggestions.marketRate,
+      reducedDeposit: suggestions.reducedDeposit,
+      communityRent: Math.round(suggestions.communityRent * adjustmentFactor),
+      slidingScaleBase: Math.round(suggestions.slidingScaleBase * adjustmentFactor),
+      slidingScaleMax: Math.round(suggestions.slidingScaleMax * adjustmentFactor),
+      marketAdjustedRent: Math.round(suggestions.marketAdjustedRent * adjustmentFactor),
+      incomeBasedRent: Math.round(suggestions.incomeBasedRent * adjustmentFactor),
     };
-
-    const adjustmentFactor = propertyAdjustments[propertyType] || 1.0;
-    const adjustedSuggestions = {};
-
-    // Apply property type adjustments to relevant suggestions
-    Object.keys(suggestions).forEach(key => {
-      if (key !== 'marketRate' && key !== 'reducedDeposit') {
-        adjustedSuggestions[key] = Math.round(suggestions[key] * adjustmentFactor);
-      } else {
-        adjustedSuggestions[key] = suggestions[key];
-      }
-    });
 
     res.json({
       success: true,

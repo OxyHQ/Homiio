@@ -1,4 +1,11 @@
+import type { IConversation, IConversationMessage } from '../documentTypes';
+
 const mongoose = require('mongoose');
+
+interface ConversationDoc extends IConversation {
+  analytics: { messageCount: number; lastActivity: Date; totalTokens: number };
+  sharing: { isShared: boolean; shareToken?: string; sharedAt?: Date; expiresAt?: Date };
+}
 
 // Message Schema for individual messages within a conversation
 const messageSchema = new mongoose.Schema({
@@ -26,7 +33,7 @@ const messageSchema = new mongoose.Schema({
   }],
 }, { _id: true });
 
-messageSchema.pre('validate', function(next) {
+messageSchema.pre('validate', function(next: (err?: Error) => void): void {
   next();
 });
 
@@ -131,12 +138,12 @@ conversationSchema.index({ profileId: 1, status: 1, updatedAt: -1 });
 conversationSchema.index({ 'sharing.expiresAt': 1 }, { expireAfterSeconds: 0 });
 
 // Virtual for message count
-conversationSchema.virtual('messageCount').get(function() {
+conversationSchema.virtual('messageCount').get(function(this: ConversationDoc): number {
   return this.messages ? this.messages.length : 0;
 });
 
 // Virtual for last message
-conversationSchema.virtual('lastMessage').get(function() {
+conversationSchema.virtual('lastMessage').get(function(this: ConversationDoc): IConversationMessage | null {
   if (this.messages && this.messages.length > 0) {
     return this.messages[this.messages.length - 1];
   }
@@ -144,14 +151,14 @@ conversationSchema.virtual('lastMessage').get(function() {
 });
 
 // Pre-save middleware to update analytics
-conversationSchema.pre('save', function(next) {
+conversationSchema.pre('save', function(this: ConversationDoc, next: (err?: Error) => void): void {
   if (this.messages) {
     this.analytics.messageCount = this.messages.length;
     this.analytics.lastActivity = new Date();
-    
+
     // Generate title from first user message if title is "New Conversation" or not set
     if ((!this.title || this.title === 'New Conversation') && this.messages.length > 0) {
-      const firstUserMessage = this.messages.find(m => m.role === 'user');
+      const firstUserMessage = this.messages.find((m: IConversationMessage) => m.role === 'user');
       if (firstUserMessage) {
         // Take first 50 characters of the message as title
         this.title = firstUserMessage.content.substring(0, 50).trim();
@@ -164,30 +171,39 @@ conversationSchema.pre('save', function(next) {
   next();
 });
 
-conversationSchema.post('save', function(doc) {
+conversationSchema.post('save', function(_doc: unknown): void {
 });
 
-conversationSchema.pre('validate', function(next) {
+conversationSchema.pre('validate', function(next: (err?: Error) => void): void {
   next();
 });
 
 // Static methods
-conversationSchema.statics.findByProfileId = function(profileId, status = 'active') {
-  return this.find({ 
-    profileId, 
-    status 
+conversationSchema.statics.findByProfileId = function(profileId: string, status: string = 'active') {
+  return this.find({
+    profileId,
+    status
   }).sort({ updatedAt: -1 });
 };
 
-conversationSchema.statics.findByShareToken = function(shareToken) {
-  return this.findOne({ 
+conversationSchema.statics.findByShareToken = function(shareToken: string) {
+  return this.findOne({
     'sharing.shareToken': shareToken,
     'sharing.isShared': true,
     'sharing.expiresAt': { $gt: new Date() }
   });
 };
 
-conversationSchema.statics.createConversation = function(profileId, data) {
+interface CreateConversationData {
+  title?: string;
+  topic?: string;
+  initialMessage?: string;
+  source?: string;
+  language?: string;
+  messages?: IConversationMessage[];
+}
+
+conversationSchema.statics.createConversation = function(profileId: string, data: CreateConversationData) {
   return this.create({
     profileId,
     title: data.title || 'New Conversation',
@@ -202,7 +218,15 @@ conversationSchema.statics.createConversation = function(profileId, data) {
 };
 
 // Instance methods
-conversationSchema.methods.addMessage = function(role, content, attachments = []) {
+type MessageRole = 'user' | 'assistant' | 'system';
+type MessageAttachment = { type?: string; name?: string; url?: string; size?: number };
+
+conversationSchema.methods.addMessage = function(
+  this: ConversationDoc,
+  role: MessageRole,
+  content: string,
+  attachments: MessageAttachment[] = []
+) {
   this.messages.push({
     role,
     content,
@@ -210,12 +234,12 @@ conversationSchema.methods.addMessage = function(role, content, attachments = []
     timestamp: new Date(),
   });
 
-  return this.save().then(savedDoc => {
+  return this.save().then((savedDoc: ConversationDoc) => {
     return savedDoc;
   });
 };
 
-conversationSchema.methods.generateShareToken = function(expiresInHours = 24) {
+conversationSchema.methods.generateShareToken = function(this: ConversationDoc, expiresInHours: number = 24) {
   const crypto = require('crypto');
   this.sharing.shareToken = crypto.randomBytes(32).toString('hex');
   this.sharing.isShared = true;
@@ -224,7 +248,7 @@ conversationSchema.methods.generateShareToken = function(expiresInHours = 24) {
   return this.save();
 };
 
-conversationSchema.methods.revokeSharing = function() {
+conversationSchema.methods.revokeSharing = function(this: ConversationDoc) {
   this.sharing.isShared = false;
   this.sharing.shareToken = undefined;
   this.sharing.sharedAt = undefined;
@@ -232,24 +256,24 @@ conversationSchema.methods.revokeSharing = function() {
   return this.save();
 };
 
-conversationSchema.methods.archive = function() {
+conversationSchema.methods.archive = function(this: ConversationDoc) {
   this.status = 'archived';
   return this.save();
 };
 
-conversationSchema.methods.restore = function() {
+conversationSchema.methods.restore = function(this: ConversationDoc) {
   this.status = 'active';
   return this.save();
 };
 
-conversationSchema.methods.softDelete = function() {
+conversationSchema.methods.softDelete = function(this: ConversationDoc) {
   this.status = 'deleted';
   return this.save();
 };
 
 // Transform _id to id for frontend compatibility
 conversationSchema.set('toJSON', {
-  transform: function(doc, ret) {
+  transform: function(_doc: unknown, ret: Record<string, unknown>): Record<string, unknown> {
     ret.id = ret._id;
     delete ret._id;
     delete ret.__v;

@@ -1,70 +1,36 @@
 ---
 title: Deployment
-description: Vercel builds for frontend and backend, the shared-types-first build orchestration, and serverless concerns (Mongo, cron).
+description: AWS ECS Fargate for the backend, Cloudflare Pages for the frontend web build, and serverless/persistent-process concerns (Mongo, cron).
 order: 7
 ---
 
 # Deployment
 
-Both packages deploy to Vercel from the same repository. The trick is that `@homiio/shared-types` has to be built and copied into each package's `node_modules` **before** the frontend or backend tries to import it. `scripts/build-for-vercel.js` does that.
+The backend deploys to **AWS ECS Fargate** and the frontend web export deploys to **Cloudflare Pages**. Both are driven by GitHub Actions on push to `main`.
 
-## Frontend (Vercel — static export)
+## Backend (AWS ECS Fargate)
 
-Configured by the repo-root `vercel.json`:
+Workflow: `.github/workflows/deploy-aws.yml`
 
-```json
-{
-  "name": "homiio-monorepo",
-  "buildCommand": "VERCEL_TARGET=frontend node scripts/build-for-vercel.js",
-  "outputDirectory": "packages/frontend/dist",
-  "installCommand": "npm install",
-  "framework": null,
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
-}
-```
+- Region `eu-west-1`, cluster `oxy-cluster`, service `homiio`, port `4000`, domain `api.homiio.com` (ALB + ACM HTTPS).
+- Builds a `linux/arm64` Docker image from `packages/backend/Dockerfile` and pushes it to ECR (`237343248947.dkr.ecr.eu-west-1.amazonaws.com/oxy/homiio`), then runs `aws ecs update-service --force-new-deployment`.
+- Auth is GitHub OIDC assuming the `oxy-github-deploy` role — no AWS keys are stored in GitHub.
+- Secrets: GitHub Actions secrets are the source of truth. The workflow syncs them to AWS SSM (`/oxy/homiio/*`; shared secrets to `/oxy/_shared/*`) and ECS injects them into the container. To change a secret, edit it in GitHub — the next deploy applies it.
 
-The build script (`scripts/build-for-vercel.js`):
+## Frontend (Cloudflare Pages)
 
-1. `npm run build:shared-types` — builds the types package.
-2. Copies `packages/shared-types/dist/` into both `packages/frontend/node_modules/@homiio/shared-types/` and `packages/backend/node_modules/@homiio/shared-types/`.
-3. With `VERCEL_TARGET=frontend`, runs `expo export --platform web --output-dir dist` against `packages/frontend`.
+Workflow: `.github/workflows/deploy-frontends.yml`
 
-The rewrites send every unknown path to `/index.html` so Expo Router's client-side routing handles deep links.
+1. `bun install --frozen-lockfile`
+2. Builds `@homiio/shared-types` with `tsc`.
+3. Runs `bun run build` in `packages/frontend` (Expo web export to `dist/`).
+4. Deploys `packages/frontend/dist` with `wrangler pages deploy` to the `homiio-frontend` Pages project.
 
-Local equivalent:
+`EXPO_PUBLIC_*` variables are inlined into the bundle at build time. Anything not prefixed will not be visible at runtime.
 
-```sh
-./scripts/deploy-frontend.sh    # sets VERCEL_TARGET=frontend and runs `vercel --prod`
-```
+## Persistent-process vs serverless guards
 
-## Backend (Vercel — serverless functions)
-
-The backend uses a separate, scripted `vercel.json` because the layout is different:
-
-```json
-{
-  "name": "homiio-backend",
-  "buildCommand": "VERCEL_TARGET=backend node scripts/build-for-vercel.js",
-  "outputDirectory": "packages/backend/dist",
-  "installCommand": "npm install",
-  "framework": null,
-  "functions": {
-    "packages/backend/dist/server.js": { "runtime": "nodejs18.x" }
-  }
-}
-```
-
-`scripts/deploy-backend.sh` writes that config to `vercel.json`, runs `vercel --prod`, then restores the original repo-root `vercel.json` from git:
-
-```sh
-./scripts/deploy-backend.sh
-```
-
-Because the backend deploys as a single Node serverless function, `server.ts` is written to be re-entrant — see the `ensureDatabaseConnection` middleware that re-checks the Mongo connection on every request when running under Vercel or AWS Lambda.
-
-## Serverless considerations
+The backend code still carries guards for serverless runtimes (`process.env.VERCEL`, `AWS_LAMBDA_FUNCTION_NAME`). On ECS neither is set, so the backend runs as a normal long-lived process:
 
 `packages/backend/config.ts` switches Mongoose's connection pool sizing automatically:
 
@@ -75,8 +41,6 @@ socketTimeoutMS: process.env.VERCEL ? 60000 : 45000,
 bufferCommands: false,
 ```
 
-A pool of 1 on Vercel avoids hitting Atlas connection limits when many serverless instances spin up in parallel.
-
 `services/cron.ts` is **only** initialised in persistent environments:
 
 ```ts
@@ -85,24 +49,20 @@ if (!process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
 }
 ```
 
-Scheduled work (scraper refreshes, external-listing expiration) needs to run on a long-lived process, not a per-request lambda — deploy those workers elsewhere (a dedicated VM or a separate Render/Fly service) when the production environment is Vercel-only.
+On ECS this means cron jobs (scraper refreshes, external-listing expiration) run inside the service task.
 
 ## Environment
 
-Set these on the Vercel project (Settings → Environment Variables):
-
-**Frontend project:**
+**Frontend build:**
 
 ```
-EXPO_PUBLIC_OXY_BASE_URL=https://api.oxy.so
-API_URL=https://api.homiio.com
+EXPO_PUBLIC_API_URL=https://api.homiio.com
+EXPO_PUBLIC_OXY_API_URL=https://api.oxy.so
 EXPO_PUBLIC_STRIPE_LINK_PLUS=https://buy.stripe.com/...   # optional
 EXPO_PUBLIC_STRIPE_LINK_FILE=https://buy.stripe.com/...   # optional
 ```
 
-`EXPO_PUBLIC_*` variables are inlined into the bundle at build time. Anything not prefixed will not be visible at runtime.
-
-**Backend project:**
+**Backend (GitHub secrets → SSM → ECS):**
 
 ```
 NODE_ENV=production
@@ -124,11 +84,11 @@ AWS_S3_BUCKET=homiio-images
 
 ## CORS
 
-`server.ts` allow-lists `https://homiio.com`, every `*.vercel.app` preview, and (in dev) `localhost` plus private LAN IPs (RFC 1918). Anything else is rejected. Change the allow-list in `server.ts` if production lands on a custom domain.
+`server.ts` allow-lists `https://homiio.com` and (in dev) `localhost` plus private LAN IPs (RFC 1918). Anything else is rejected. Change the allow-list in `server.ts` if production lands on a new domain.
 
 ## Stripe webhook
 
-After deploying the backend, register the webhook endpoint with Stripe pointing at `https://<backend-host>/api/billing/webhook` and subscribe to:
+After deploying the backend, register the webhook endpoint with Stripe pointing at `https://api.homiio.com/api/billing/webhook` and subscribe to:
 
 - `checkout.session.completed`
 - `customer.subscription.updated`

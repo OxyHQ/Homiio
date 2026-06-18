@@ -1,9 +1,11 @@
 import { ProfileType } from '@homiio/shared-types';
 import { applyOfferingRulesForCreate, OfferingValidationError } from './offeringRules';
-const { Property } = require('../../models');
-const { telegramService } = require('../../services');
-const { logger, businessLogger } = require('../../middlewares/logging');
-const { AppError, successResponse } = require('../../middlewares/errorHandler');
+import { Property } from '../../models';
+import { telegramService } from '../../services';
+import { logger, businessLogger } from '../../middlewares/logging';
+import { AppError, successResponse } from '../../middlewares/errorHandler';
+import { getErrorMessage, getErrorName, getValidationMessages } from '../../utils/errors';
+import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
 
 /**
  * Validates and fixes coordinate order to ensure GeoJSON compliance
@@ -69,7 +71,7 @@ function validateAndFixCoordinateOrder(coords: number[]): number[] {
   return finalCoords;
 }
 
-export async function createProperty(req, res, next) {
+export async function createProperty(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
   try {
     if (!req.userId) {
       return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
@@ -128,7 +130,7 @@ export async function createProperty(req, res, next) {
       // Handle coordinates from location field if provided
       if (req.body.location?.coordinates) {
         // Ensure coordinates are numbers
-        const coords = req.body.location.coordinates.map(coord => Number(coord));
+        const coords = req.body.location.coordinates.map((coord: unknown) => Number(coord));
         
         // Validate coordinate order and fix if reversed
         // GeoJSON standard requires [longitude, latitude] format
@@ -171,17 +173,25 @@ export async function createProperty(req, res, next) {
     // Populate address for response
     await savedProperty.populate('addressId');
     
-    businessLogger.propertyCreated(savedProperty._id, savedProperty.profileId);
+    const savedProfileId = savedProperty.profileId?.toString();
+    if (savedProfileId) {
+      businessLogger.propertyCreated(savedProperty._id.toString(), savedProfileId);
+    } else {
+      logger.warn('Created property without profileId', { propertyId: savedProperty._id.toString() });
+    }
     telegramService.sendPropertyNotification(savedProperty).catch(error => {
-      logger.error('Failed to send Telegram notification for new property', { propertyId: savedProperty._id, error: error.message });
+      logger.error('Failed to send Telegram notification for new property', {
+        propertyId: savedProperty._id.toString(),
+        error: getErrorMessage(error),
+      });
     });
     res.status(201).json(successResponse(savedProperty.toJSON(), 'Property created successfully'));
   } catch (error) {
     if (error instanceof OfferingValidationError) {
       return next(new AppError(error.message, 400, error.code));
     }
-    if (error.name === 'ValidationError') {
-      const validationErrors = Object.values(error.errors).map((err: any) => err.message);
+    if (getErrorName(error) === 'ValidationError') {
+      const validationErrors = getValidationMessages(error);
       const validationError: any = new AppError('Property validation failed', 400, 'VALIDATION_ERROR');
       validationError.details = validationErrors;
       return next(validationError);

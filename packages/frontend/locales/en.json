@@ -969,6 +969,16 @@
     "name": "Sindi",
     "title": "Sindi",
     "subtitle": "Housing Justice Advocate with Real-Time Info",
+    "panel": {
+      "title": "Sindi",
+      "subtitle": "AI housing assistant",
+      "intro": "Your AI housing assistant. Ask about tenant rights, leases, and housing issues — right here, without leaving the page.",
+      "newChat": "New chat",
+      "startNew": "Start new conversation",
+      "close": "Close",
+      "conversations": "Conversations",
+      "empty": "Start a new conversation to get help."
+    },
     "status": {
       "thinking": "Thinking...",
       "online": "Online"

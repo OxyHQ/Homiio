@@ -32,6 +32,8 @@ import {
 import { notificationService, Notification } from '@/services/notificationService';
 import { initializeNotificationSocket, disconnectNotificationSocket } from '@/utils/notificationsSocket';
 import { useOxy } from '@oxyhq/services';
+import { logger } from '@/utils/logger';
+import { getData, storeData } from '@/utils/storage';
 
 export interface NotificationPreferences {
     property: boolean;
@@ -121,6 +123,8 @@ export interface NotificationContextType extends NotificationState, Notification
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
+const PREFERENCES_STORAGE_KEY = 'homiio.notificationPreferences';
+
 const DEFAULT_PREFERENCES: NotificationPreferences = {
     property: true,
     message: true,
@@ -156,10 +160,18 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const notificationListener = useRef<EventSubscription | null>(null);
     const responseListener = useRef<EventSubscription | null>(null);
     const appStateListener = useRef<NativeEventSubscription | null>(null);
+    const preferencesRef = useRef<NotificationPreferences>(DEFAULT_PREFERENCES);
 
     // Initialize notifications
     const initializeNotifications = useCallback(async () => {
         try {
+            const storedPreferences = await getData<NotificationPreferences>(PREFERENCES_STORAGE_KEY);
+            if (storedPreferences) {
+                const preferences = { ...DEFAULT_PREFERENCES, ...storedPreferences };
+                preferencesRef.current = preferences;
+                setState(prev => ({ ...prev, preferences }));
+            }
+
             if (Platform.OS === 'web') return;
 
             await setupNotifications();
@@ -178,6 +190,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                 }));
             }
         } catch (error) {
+            logger.error('Notifications: initialization failed', error);
             setState(prev => ({ ...prev, error: 'Failed to initialize notifications' }));
         }
     }, []);
@@ -189,16 +202,18 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             setState(prev => ({ ...prev, hasPermission }));
             return hasPermission;
         } catch (error) {
+            logger.error('Notifications: permission request failed', error);
             return false;
         }
     }, []);
 
-    // Badge management
+    // Badge management (best-effort: failures are non-fatal but logged)
     const updateBadgeCount = useCallback(async (count: number) => {
         try {
             await setBadgeCount(count);
             setState(prev => ({ ...prev, badgeCount: count }));
         } catch (error) {
+            logger.warn('Notifications: updateBadgeCount failed', error);
         }
     }, []);
 
@@ -207,6 +222,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             await clearBadge();
             setState(prev => ({ ...prev, badgeCount: 0 }));
         } catch (error) {
+            logger.warn('Notifications: clearBadgeCount failed', error);
         }
     }, []);
 
@@ -230,6 +246,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
             return notificationId;
         } catch (error) {
+            logger.error('Notifications: createLocalNotification failed', error);
             return undefined;
         }
     }, []);
@@ -248,6 +265,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
             return notificationId;
         } catch (error) {
+            logger.error('Notifications: scheduleLocalNotification failed', error);
             throw error;
         }
     }, []);
@@ -260,6 +278,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             const scheduledNotifications = await getScheduledNotifications();
             setState(prev => ({ ...prev, scheduledNotifications }));
         } catch (error) {
+            logger.error('Notifications: cancelLocalNotification failed', error);
         }
     }, []);
 
@@ -268,6 +287,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             await cancelAllNotifications();
             setState(prev => ({ ...prev, scheduledNotifications: [] }));
         } catch (error) {
+            logger.error('Notifications: cancelAllLocalNotifications failed', error);
         }
     }, []);
 
@@ -292,6 +312,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                 isLoading: false,
             }));
         } catch (error) {
+            logger.error('Notifications: loadNotifications failed', error);
             setState(prev => ({
                 ...prev,
                 error: 'Failed to load notifications',
@@ -322,6 +343,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             // Invalidate queries
             queryClient.invalidateQueries({ queryKey: ['notifications'] });
         } catch (error) {
+            logger.error('Notifications: markAsRead failed', error);
         }
     }, [oxyServices, activeSessionId, state.unreadCount, updateBadgeCount, queryClient]);
 
@@ -344,6 +366,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             // Invalidate queries
             queryClient.invalidateQueries({ queryKey: ['notifications'] });
         } catch (error) {
+            logger.error('Notifications: markAllAsRead failed', error);
         }
     }, [oxyServices, activeSessionId, clearBadgeCount, queryClient]);
 
@@ -365,20 +388,21 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             // Invalidate queries
             queryClient.invalidateQueries({ queryKey: ['notifications'] });
         } catch (error) {
+            logger.error('Notifications: deleteNotification failed', error);
         }
     }, [oxyServices, activeSessionId, queryClient]);
 
-    // Preferences
+    // Preferences — the backend exposes no notification-preferences endpoint,
+    // so preferences are persisted locally (AsyncStorage) to survive restarts.
     const updatePreferences = useCallback(async (preferences: Partial<NotificationPreferences>) => {
-        try {
-            setState(prev => ({
-                ...prev,
-                preferences: { ...prev.preferences, ...preferences },
-            }));
+        const nextPreferences = { ...preferencesRef.current, ...preferences };
+        preferencesRef.current = nextPreferences;
+        setState(prev => ({ ...prev, preferences: nextPreferences }));
 
-            // Here you would typically save preferences to the server
-            // await notificationService.updatePreferences(preferences);
+        try {
+            await storeData(PREFERENCES_STORAGE_KEY, nextPreferences);
         } catch (error) {
+            logger.error('Notifications: failed to persist preferences', error);
         }
     }, []);
 
@@ -407,6 +431,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                 });
             }
         } catch (error) {
+            logger.error('Notifications: connectSocket failed', error);
         }
     }, [oxyServices, activeSessionId, state.unreadCount, updateBadgeCount]);
 
@@ -415,6 +440,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             await disconnectNotificationSocket();
             setState(prev => ({ ...prev, isSocketConnected: false }));
         } catch (error) {
+            logger.warn('Notifications: disconnectSocket failed', error);
         }
     }, []);
 

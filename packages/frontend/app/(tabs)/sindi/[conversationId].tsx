@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -11,7 +11,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { Message } from '@ai-sdk/react';
-import { fetch as expoFetch } from 'expo/fetch';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useOxy, showSignInModal } from '@oxyhq/services';
@@ -20,14 +19,13 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ChatContent } from '@/components/sindi/ChatContent';
 import { sindiStyles } from '@/components/sindi/styles';
 import { useSindiShare } from '@/hooks/useSindiShare';
+import { useSindiAuthenticatedFetch } from '@/hooks/useSindiAuthenticatedFetch';
 import { useConversationStore } from '@/store/conversationStore';
 import { logger } from '@/utils/logger';
 import { colors } from '@/styles/colors';
 
 /** iOS keyboard offset accounting for the fixed Header height. */
 const IOS_KEYBOARD_OFFSET = 64;
-
-type ConversationFetch = typeof globalThis.fetch;
 
 /**
  * Web layout overrides for the screen shell. RN's StyleSheet types reject the
@@ -71,47 +69,9 @@ export default function ConversationDetail() {
   const isAuthenticated = Boolean(oxyServices) && Boolean(activeSessionId);
 
   // Authenticated fetch shared by conversation loading, the chat stream, and
-  // share-token minting. On web we use the browser's native fetch to preserve
-  // ReadableStream streaming semantics; native uses expo/fetch.
-  const authenticatedFetch = useCallback<ConversationFetch>(
-    async (input, init = {}) => {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...((init.headers as Record<string, string>) || {}),
-      };
-
-      if (oxyServices && activeSessionId) {
-        try {
-          const tokenData = await oxyServices.getTokenBySession(activeSessionId);
-          if (tokenData) {
-            headers['Authorization'] = `Bearer ${tokenData.accessToken}`;
-          }
-        } catch (error) {
-          logger.error('Failed to get authentication token:', error);
-        }
-      }
-
-      const { body, ...rest } = init;
-
-      // Let fetch set the multipart boundary header automatically.
-      if (typeof FormData !== 'undefined' && body instanceof FormData) {
-        delete headers['Content-Type'];
-      }
-
-      const fetchOptions: RequestInit = {
-        ...rest,
-        headers,
-        ...(body !== null ? { body } : {}),
-      };
-
-      const fetchImpl =
-        Platform.OS === 'web'
-          ? globalThis.fetch
-          : (expoFetch as unknown as ConversationFetch);
-      return fetchImpl(input, fetchOptions);
-    },
-    [oxyServices, activeSessionId],
-  );
+  // share-token minting (web-vs-native split + FormData handling lives in the
+  // shared hook — the single source of truth across every Sindi surface).
+  const authenticatedFetch = useSindiAuthenticatedFetch();
 
   // Seed the AI SDK with the conversation's persisted history.
   const initialMessages = useMemo<Message[]>(() => {

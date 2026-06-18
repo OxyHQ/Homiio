@@ -3,10 +3,11 @@
  * native Share actions.
  *
  * The link is displayed read-only in a flat field; "Copy" writes it to the
- * clipboard (`expo-clipboard`) and confirms with a toast, "Share" opens the OS
- * share sheet (`Share.share`, falling back to a clipboard copy if the sheet is
- * unavailable — the same resilient pattern the property detail uses). Buttons
- * are Bloom `Button`s so they inherit the brand styling.
+ * clipboard (`expo-clipboard`) directly and confirms with a toast — a copy
+ * button is its own distinct action. "Share" routes through `shareReferralLink`,
+ * which delegates to the shared `shareContent` ladder (native share / Web Share
+ * → clipboard fallback), so it behaves like every other share in the app.
+ * Buttons are Bloom `Button`s so they inherit the brand styling.
  */
 import React, { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';

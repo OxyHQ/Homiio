@@ -107,10 +107,10 @@ export const AgentHowItWorks: React.FC = () => {
           isWeb && isWide ? styles.stepsWebGap : null,
         ]}
       >
-        {STEPS.map((step, idx) => (
+        {STEPS.map((step, stepIndex) => (
           <StepCard
             key={step.key}
-            index={idx + 1}
+            index={stepIndex + 1}
             title={t(`agent.how.steps.${step.key}.title`)}
             body={t(`agent.how.steps.${step.key}.body`)}
             imageUrl={step.imageUrl}

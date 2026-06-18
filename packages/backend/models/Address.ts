@@ -11,10 +11,10 @@
  * it never persists city/state/country strings.
  */
 
-import { Schema, model, Document, Model, Types } from 'mongoose';
+import { Schema, model, Document, Model, Types, type FilterQuery } from 'mongoose';
 import { resolveGeo, type GeoNames } from '../services/geoResolutionService';
 
-const crypto = require('crypto');
+import * as crypto from 'crypto';
 
 export interface IAddress extends Document {
   // ---- Relational geo references ----
@@ -59,9 +59,14 @@ export interface IAddress extends Document {
   getCoordinates(): { longitude: number; latitude: number } | null;
   setLocation(longitude: number, latitude: number): this;
   getAddressLevel(): 'STREET' | 'BUILDING' | 'UNIT';
-  createStreetLevel(): Partial<IAddress>;
-  createBuildingLevel(): Partial<IAddress>;
-  createUnitLevel(): Partial<IAddress>;
+  /**
+   * Project this address down to its street-level twin (no building/unit
+   * identifying fields). The returned shape is also valid as a `findOne`
+   * filter, so callers use it to find-or-create the parent level row.
+   */
+  createStreetLevel(): FilterQuery<IAddress>;
+  createBuildingLevel(): FilterQuery<IAddress>;
+  createUnitLevel(): FilterQuery<IAddress>;
   computeNormalizedKey(): string;
 }
 
@@ -105,7 +110,7 @@ export interface AddressCanonicalInput extends GeoNames {
   line2?: string;
 }
 
-const AddressSchema = new Schema({
+const AddressSchema = new Schema<IAddress, IAddressModel>({
   // ---- Relational geo references ----
   countryId: {
     type: Schema.Types.ObjectId,
@@ -244,7 +249,7 @@ AddressSchema.virtual('neighborhood', { ref: 'Neighborhood', localField: 'neighb
  * neighborhood) are left untouched here — they are consumed by `resolveGeo` to
  * derive ids and are never written to the document.
  */
-AddressSchema.statics.normalizeAliases = function(input: AddressCanonicalInput): AddressCanonicalInput {
+AddressSchema.static('normalizeAliases', function normalizeAliases(input: AddressCanonicalInput): AddressCanonicalInput {
   const normalized: AddressCanonicalInput = { ...input };
 
   if (input.puerta) normalized.unit = input.puerta;
@@ -277,7 +282,7 @@ AddressSchema.statics.normalizeAliases = function(input: AddressCanonicalInput):
   if (input.codigo_postal) normalized.postal_code = input.codigo_postal;
 
   return normalized;
-};
+});
 
 /**
  * Deterministic dedup key for a building. Built from building-level fields plus
@@ -306,19 +311,20 @@ AddressSchema.methods.computeNormalizedKey = function(this: IAddress): string {
  * provided place names — via `resolveGeo`, then dedupes the building by its
  * normalized key.
  */
-AddressSchema.statics.findOrCreateCanonical = async function(
+AddressSchema.static('findOrCreateCanonical', async function findOrCreateCanonical(
   this: IAddressModel,
   input: AddressCanonicalInput
 ): Promise<IAddress> {
-  if (!input.coordinates?.coordinates) {
+  const normalizedInput = this.normalizeAliases(input);
+  const coordinates = normalizedInput.coordinates?.coordinates;
+
+  if (!coordinates) {
     throw new Error('Coordinates are required for address creation');
   }
 
-  const normalizedInput = this.normalizeAliases(input);
-
   // Resolve the canonical geo id chain (upserts Country/Region/City/Neighborhood).
   const resolved = await resolveGeo({
-    coordinates: normalizedInput.coordinates?.coordinates,
+    coordinates,
     names: {
       city: normalizedInput.city,
       state: normalizedInput.state,
@@ -346,7 +352,7 @@ AddressSchema.statics.findOrCreateCanonical = async function(
     extras: normalizedInput.extras,
     coordinates: {
       type: 'Point' as const,
-      coordinates: normalizedInput.coordinates.coordinates,
+      coordinates,
     },
     countryId: resolved.countryId,
     regionId: resolved.regionId,
@@ -365,7 +371,7 @@ AddressSchema.statics.findOrCreateCanonical = async function(
 
   tempAddress.normalizedKey = normalizedKey;
   return tempAddress.save();
-};
+});
 
 // Pre-save hook to (re)compute the normalized key.
 AddressSchema.pre('save', function(this: IAddress, next) {
@@ -406,7 +412,7 @@ AddressSchema.methods.getAddressLevel = function(this: IAddress) {
  * no building/unit detail). Geo is relational, so the canonical
  * countryId/regionId/cityId/neighborhoodId references are carried over verbatim.
  */
-AddressSchema.methods.createStreetLevel = function(this: IAddress): Partial<IAddress> {
+AddressSchema.methods.createStreetLevel = function(this: IAddress): FilterQuery<IAddress> {
   return {
     street: this.street,
     postal_code: this.postal_code,
@@ -421,7 +427,7 @@ AddressSchema.methods.createStreetLevel = function(this: IAddress): Partial<IAdd
 };
 
 /** Derive a BUILDING-level variant (street level + building identifiers). */
-AddressSchema.methods.createBuildingLevel = function(this: IAddress): Partial<IAddress> {
+AddressSchema.methods.createBuildingLevel = function(this: IAddress): FilterQuery<IAddress> {
   return {
     ...this.createStreetLevel(),
     number: this.number,
@@ -434,7 +440,7 @@ AddressSchema.methods.createBuildingLevel = function(this: IAddress): Partial<IA
 };
 
 /** Derive a UNIT-level variant (building level + floor/unit/subunit). */
-AddressSchema.methods.createUnitLevel = function(this: IAddress): Partial<IAddress> {
+AddressSchema.methods.createUnitLevel = function(this: IAddress): FilterQuery<IAddress> {
   return {
     ...this.createBuildingLevel(),
     floor: this.floor,
@@ -443,7 +449,7 @@ AddressSchema.methods.createUnitLevel = function(this: IAddress): Partial<IAddre
   };
 };
 
-interface IAddressModel extends Model<IAddress> {
+export interface IAddressModel extends Model<IAddress> {
   normalizeAliases(input: AddressCanonicalInput): AddressCanonicalInput;
   findOrCreateCanonical(input: AddressCanonicalInput): Promise<IAddress>;
 }

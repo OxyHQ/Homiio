@@ -3,19 +3,71 @@
  * Handles roommate matching operations with Oxy user data integration
  */
 
-const Profile = require('../models').Profile;
-const { ProfileType } = require('@homiio/shared-types');
+import type { Request, Response } from 'express';
+
+import { Profile, RoommateRequest } from '../models';
+import { ProfileType } from '@homiio/shared-types';
+import { logger } from '../middlewares/logging';
+import mongoose from 'mongoose';
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  return 'Unknown error';
+}
+
+const PUBLIC_PROFILE_FIELDS = 'profileType personalProfile isAnonymous';
+
+/**
+ * Domain shape of the roommate-matching slice stored under
+ * `IProfile.personalProfile.settings.roommate`. The schema persists this as a
+ * Mixed subdocument, so we re-declare the bits this controller actually
+ * touches and narrow at the read boundary (see `getRoommatePrefs` below).
+ */
+interface RoommatePreferences {
+  budget?: { min?: number; max?: number };
+  lifestyle?: {
+    pets?: string;
+    smoking?: string;
+    [key: string]: unknown;
+  };
+  ageRange?: { min?: number; max?: number };
+  gender?: string;
+  moveInDate?: string;
+  leaseDuration?: string;
+  interests?: string[];
+  location?: string;
+  enabled?: boolean;
+  [key: string]: unknown;
+}
+
+interface RoommateSlice {
+  enabled?: boolean;
+  preferences?: RoommatePreferences;
+}
+
+interface PersonalProfileShape {
+  settings?: { roommate?: RoommateSlice } & Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+/** Read the `personalProfile` slice with the controller's domain shape. */
+const personalOf = (profile: unknown): PersonalProfileShape | undefined => {
+  if (!profile || typeof profile !== 'object') return undefined;
+  const slice = (profile as { personalProfile?: unknown }).personalProfile;
+  return (slice ?? undefined) as PersonalProfileShape | undefined;
+};
 
 // Get all roommate profiles with enriched Oxy user data
-const getRoommateProfiles = async (req, res) => {
+const getRoommateProfiles = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { page = 1, limit = 20, minMatchPercentage, maxBudget, withPets, nonSmoking, interests, ageRange, gender, location } = req.query;
-    
+    const { page = 1, limit = 20, minMatchPercentage, maxBudget, withPets, nonSmoking, ageRange, gender, location } = req.query;
+
     // Build base query for personal profiles with roommate matching enabled
-    const query = {
+    const query: Record<string, unknown> = {
       profileType: ProfileType.PERSONAL, // Only personal profiles can have roommate matching
       'personalProfile.settings.roommate.enabled': true,
-      _id: { $ne: req.user.profileId } // Exclude current user's profile
+      _id: { $ne: req.user?.profileId } // Exclude current user's profile
     };
 
     // Add basic filters that apply to profile data (not preferences)
@@ -28,7 +80,7 @@ const getRoommateProfiles = async (req, res) => {
     }
 
     if (ageRange) {
-      const { min, max } = JSON.parse(ageRange);
+      const { min, max } = JSON.parse(String(ageRange)) as { min: number; max: number };
       const currentYear = new Date().getFullYear();
       query['personalProfile.dateOfBirth'] = {
         $gte: new Date(currentYear - max, 0, 1),
@@ -36,85 +88,93 @@ const getRoommateProfiles = async (req, res) => {
       };
     }
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    
+    const pageNum = parseInt(String(page), 10) || 1;
+    const limitNum = parseInt(String(limit), 10) || 20;
+    const skip = (pageNum - 1) * limitNum;
+
     const profiles = await Profile.find(query)
       .skip(skip)
-      .limit(parseInt(limit))
+      .limit(limitNum)
       .sort({ updatedAt: -1 });
 
     const total = await Profile.countDocuments(query);
-    const totalPages = Math.ceil(total / parseInt(limit));
+    const totalPages = Math.ceil(total / limitNum);
 
     // Get current user's profile and preferences
-    const currentProfile = await Profile.findById(req.user.profileId);
-    const currentUserPrefs = currentProfile?.personalProfile?.settings?.roommate?.preferences;
+    const currentProfile = await Profile.findById(req.user?.profileId);
+    const currentUserPrefs = personalOf(currentProfile)?.settings?.roommate?.preferences;
 
-    let profilesWithMatches = profiles;
+    type EnrichedProfile = Record<string, unknown> & { matchPercentage: number };
+    let profilesWithMatches: EnrichedProfile[] = profiles.map((profile) => ({
+      ...profile.toObject(),
+      matchPercentage: 0,
+    }));
 
     if (currentUserPrefs) {
-      profilesWithMatches = profiles.map(profile => {
-        const profilePrefs = profile.personalProfile?.settings?.roommate?.preferences;
+      profilesWithMatches = profiles.map((profile) => {
+        const profilePrefs = personalOf(profile)?.settings?.roommate?.preferences;
         const matchPercentage = calculateMatchPercentage(currentUserPrefs, profilePrefs);
-        
+
         return {
           ...profile.toObject(),
-          matchPercentage
+          matchPercentage,
         };
       });
 
       // Apply preference-based filters
       if (maxBudget) {
-        const budget = parseInt(maxBudget);
-        profilesWithMatches = profilesWithMatches.filter(profile => {
-          const profilePrefs = profile.personalProfile?.settings?.roommate?.preferences;
-          if (!profilePrefs?.budget?.max) return true; // Include if no budget preference
-          return profilePrefs.budget.max >= budget; // Profile owner's max budget should be >= current user's max budget
+        const budget = parseInt(String(maxBudget), 10);
+        profilesWithMatches = profilesWithMatches.filter((profile) => {
+          const profilePrefs = personalOf(profile)?.settings?.roommate?.preferences;
+          const profileMax = profilePrefs?.budget?.max;
+          if (typeof profileMax !== 'number') return true;
+          return profileMax >= budget;
         });
       }
 
       if (withPets === 'true') {
-        profilesWithMatches = profilesWithMatches.filter(profile => {
-          const profilePrefs = profile.personalProfile?.settings?.roommate?.preferences;
-          if (!profilePrefs?.lifestyle?.pets) return true; // Include if no pet preference
-          return profilePrefs.lifestyle.pets === 'yes'; // Profile owner should want pets
+        profilesWithMatches = profilesWithMatches.filter((profile) => {
+          const profilePrefs = personalOf(profile)?.settings?.roommate?.preferences;
+          if (!profilePrefs?.lifestyle?.pets) return true;
+          return profilePrefs.lifestyle.pets === 'yes';
         });
       }
 
       if (nonSmoking === 'true') {
-        profilesWithMatches = profilesWithMatches.filter(profile => {
-          const profilePrefs = profile.personalProfile?.settings?.roommate?.preferences;
-          if (!profilePrefs?.lifestyle?.smoking) return true; // Include if no smoking preference
-          return profilePrefs.lifestyle.smoking === 'no'; // Profile owner should not want smoking
+        profilesWithMatches = profilesWithMatches.filter((profile) => {
+          const profilePrefs = personalOf(profile)?.settings?.roommate?.preferences;
+          if (!profilePrefs?.lifestyle?.smoking) return true;
+          return profilePrefs.lifestyle.smoking === 'no';
         });
       }
 
       // Filter by minimum match percentage if specified
       if (minMatchPercentage) {
+        const minPct = parseInt(String(minMatchPercentage), 10);
         profilesWithMatches = profilesWithMatches.filter(
-          profile => profile.matchPercentage >= parseInt(minMatchPercentage)
+          (profile) => profile.matchPercentage >= minPct,
         );
       }
 
       // Sort by match percentage
       profilesWithMatches.sort((a, b) => b.matchPercentage - a.matchPercentage);
-    } else {
     }
 
     // No Oxy enrichment, just return profiles
     res.json({
       profiles: profilesWithMatches,
       total,
-      page: parseInt(page),
+      page: pageNum,
       totalPages
     });
   } catch (error) {
+    logger.error('Failed to fetch roommate profiles', { error: errorMessage(error) });
     res.status(500).json({ error: 'Failed to fetch roommate profiles' });
   }
 };
 
 // Get current user's roommate preferences
-const getMyRoommatePreferences = async (req, res) => {
+const getMyRoommatePreferences = async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const oxyUserId = req.user?.id || req.user?._id;
     
@@ -134,18 +194,19 @@ const getMyRoommatePreferences = async (req, res) => {
       return res.status(403).json({ error: 'Roommate preferences are only available for personal profiles' });
     }
     
-    if (!profile?.personalProfile?.settings?.roommate?.preferences) {
+    const prefs = personalOf(profile)?.settings?.roommate?.preferences;
+    if (!prefs) {
       return res.json({ data: null });
     }
 
-    res.json({ data: profile.personalProfile.settings.roommate.preferences });
+    res.json({ data: prefs });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch roommate preferences' });
   }
 };
 
 // Update roommate preferences
-const updateRoommatePreferences = async (req, res) => {
+const updateRoommatePreferences = async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const oxyUserId = req.user?.id || req.user?._id;
     const { ageRange, gender, lifestyle, budget, moveInDate, leaseDuration, interests, location, enabled } = req.body;
@@ -166,7 +227,7 @@ const updateRoommatePreferences = async (req, res) => {
       return res.status(403).json({ error: 'Roommate preferences are only available for personal profiles' });
     }
 
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       'personalProfile.settings.roommate.preferences': {
         ageRange,
         gender,
@@ -188,14 +249,18 @@ const updateRoommatePreferences = async (req, res) => {
       { new: true }
     );
 
-    res.json({ data: updatedProfile.personalProfile.settings.roommate.preferences, enabled: updatedProfile.personalProfile.settings?.roommate?.enabled || false });
+    const updatedRoommate = personalOf(updatedProfile)?.settings?.roommate;
+    res.json({
+      data: updatedRoommate?.preferences ?? null,
+      enabled: updatedRoommate?.enabled ?? false,
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update roommate preferences' });
   }
 };
 
 // Toggle roommate matching
-const toggleRoommateMatching = async (req, res) => {
+const toggleRoommateMatching = async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const { enabled } = req.body;
     const oxyUserId = req.user?.id || req.user?._id;
@@ -223,7 +288,7 @@ const toggleRoommateMatching = async (req, res) => {
     const updatedProfile = await Profile.findByIdAndUpdate(profile._id, updateData, { new: true });
 
     const updatedEnabled = Boolean(
-      updatedProfile?.personalProfile?.settings?.roommate?.enabled,
+      personalOf(updatedProfile)?.settings?.roommate?.enabled,
     );
 
     res.json({
@@ -236,7 +301,7 @@ const toggleRoommateMatching = async (req, res) => {
 };
 
 // Get roommate requests
-const getRoommateRequests = async (req, res) => {
+const getRoommateRequests = async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const oxyUserId = req.user?.id || req.user?._id;
     
@@ -256,21 +321,29 @@ const getRoommateRequests = async (req, res) => {
       return res.status(403).json({ error: 'Roommate requests are only available for personal profiles' });
     }
 
-    // This would typically involve a separate RoommateRequest model
-    // For now, return empty arrays
+    const [sent, received] = await Promise.all([
+      RoommateRequest.find({ fromProfileId: profile._id })
+        .populate('toProfileId', PUBLIC_PROFILE_FIELDS)
+        .sort({ createdAt: -1 }),
+      RoommateRequest.find({ toProfileId: profile._id })
+        .populate('fromProfileId', PUBLIC_PROFILE_FIELDS)
+        .sort({ createdAt: -1 })
+    ]);
+
     res.json({
       data: {
-        sent: [],
-        received: []
+        sent,
+        received
       }
     });
   } catch (error) {
+    logger.error('Failed to fetch roommate requests', { error: errorMessage(error) });
     res.status(500).json({ error: 'Failed to fetch roommate requests' });
   }
 };
 
 // Send roommate request
-const sendRoommateRequest = async (req, res) => {
+const sendRoommateRequest = async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const { profileId } = req.params;
     const { message } = req.body;
@@ -304,42 +377,104 @@ const sendRoommateRequest = async (req, res) => {
       return res.status(400).json({ error: 'Roommate requests can only be sent to personal profiles' });
     }
 
-    // This would typically involve creating a RoommateRequest document
-    // For now, just return success
-    res.json({ message: 'Roommate request sent successfully' });
+    if (currentProfile._id.toString() === targetProfile._id.toString()) {
+      return res.status(400).json({ error: 'You cannot send a roommate request to yourself' });
+    }
+
+    if (!personalOf(targetProfile)?.settings?.roommate?.enabled) {
+      return res.status(400).json({ error: 'Target profile does not have roommate matching enabled' });
+    }
+
+    const existingRequest = await RoommateRequest.findOne({
+      status: 'pending',
+      $or: [
+        { fromProfileId: currentProfile._id, toProfileId: targetProfile._id },
+        { fromProfileId: targetProfile._id, toProfileId: currentProfile._id }
+      ]
+    });
+
+    if (existingRequest) {
+      return res.status(409).json({ error: 'A pending roommate request already exists between these profiles' });
+    }
+
+    const request = await RoommateRequest.create({
+      fromProfileId: currentProfile._id,
+      toProfileId: targetProfile._id,
+      message: typeof message === 'string' ? message : undefined
+    });
+
+    res.status(201).json({
+      message: 'Roommate request sent successfully',
+      data: request
+    });
   } catch (error) {
+    if (error && typeof error === 'object' && (error as { code?: number }).code === 11000) {
+      return res.status(409).json({ error: 'A pending roommate request already exists between these profiles' });
+    }
+    logger.error('Failed to send roommate request', { error: errorMessage(error) });
     res.status(500).json({ error: 'Failed to send roommate request' });
   }
 };
 
-// Accept roommate request
-const acceptRoommateRequest = async (req, res) => {
+// Respond to a roommate request (accept/decline) - only the recipient may respond
+const respondToRoommateRequest = async (req: Request, res: Response, status: 'accepted' | 'declined'): Promise<Response | void> => {
+  const action = status === 'accepted' ? 'accept' : 'decline';
   try {
     const { requestId } = req.params;
+    const oxyUserId = req.user?.id || req.user?._id;
 
-    // This would typically involve updating a RoommateRequest document
-    // For now, just return success
-    res.json({ message: 'Roommate request accepted successfully' });
+    if (!oxyUserId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(requestId)) {
+      return res.status(404).json({ error: 'Roommate request not found' });
+    }
+
+    const profile = await Profile.findActiveByOxyUserId(oxyUserId);
+
+    if (!profile) {
+      return res.status(404).json({ error: 'Profile not found' });
+    }
+
+    const request = await RoommateRequest.findOne({
+      _id: requestId,
+      toProfileId: profile._id,
+      status: 'pending'
+    });
+
+    if (!request) {
+      return res.status(404).json({ error: 'Roommate request not found' });
+    }
+
+    request.status = status;
+    await request.save();
+
+    res.json({
+      message: `Roommate request ${status} successfully`,
+      data: request
+    });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to accept roommate request' });
+    logger.error(`Failed to ${action} roommate request`, { error: errorMessage(error) });
+    res.status(500).json({ error: `Failed to ${action} roommate request` });
   }
+};
+
+// Accept roommate request
+const acceptRoommateRequest = async (req: Request, res: Response): Promise<Response | void> => {
+  return respondToRoommateRequest(req, res, 'accepted');
 };
 
 // Decline roommate request
-const declineRoommateRequest = async (req, res) => {
-  try {
-    const { requestId } = req.params;
-
-    // This would typically involve updating a RoommateRequest document
-    // For now, just return success
-    res.json({ message: 'Roommate request declined successfully' });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to decline roommate request' });
-  }
+const declineRoommateRequest = async (req: Request, res: Response): Promise<Response | void> => {
+  return respondToRoommateRequest(req, res, 'declined');
 };
 
 // Helper function to calculate match percentage
-const calculateMatchPercentage = (prefs1, prefs2) => {
+const calculateMatchPercentage = (
+  prefs1: RoommatePreferences | undefined,
+  prefs2: RoommatePreferences | undefined
+): number => {
   if (!prefs1 || !prefs2) return 0;
 
   let matchScore = 0;
@@ -347,7 +482,11 @@ const calculateMatchPercentage = (prefs1, prefs2) => {
 
   // Budget compatibility
   if (prefs1.budget && prefs2.budget) {
-    const overlap = Math.min(prefs1.budget.max, prefs2.budget.max) - Math.max(prefs1.budget.min, prefs2.budget.min);
+    const max1 = prefs1.budget.max ?? 0;
+    const max2 = prefs2.budget.max ?? 0;
+    const min1 = prefs1.budget.min ?? 0;
+    const min2 = prefs2.budget.min ?? 0;
+    const overlap = Math.min(max1, max2) - Math.max(min1, min2);
     if (overlap > 0) {
       matchScore += 20;
     }
@@ -365,8 +504,9 @@ const calculateMatchPercentage = (prefs1, prefs2) => {
 
   // Interests compatibility
   if (prefs1.interests && prefs2.interests) {
-    const commonInterests = prefs1.interests.filter(interest => 
-      prefs2.interests.includes(interest)
+    const interests2 = prefs2.interests;
+    const commonInterests = prefs1.interests.filter((interest: string) =>
+      interests2.includes(interest)
     );
     const interestScore = (commonInterests.length / Math.max(prefs1.interests.length, prefs2.interests.length)) * 20;
     matchScore += interestScore;
@@ -377,7 +517,7 @@ const calculateMatchPercentage = (prefs1, prefs2) => {
 };
 
 // Get current user's roommate status with Oxy user data
-const getCurrentUserRoommateStatus = async (req, res) => {
+const getCurrentUserRoommateStatus = async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const oxyUserId = req.user?.id || req.user?._id;
     
@@ -401,16 +541,17 @@ const getCurrentUserRoommateStatus = async (req, res) => {
       });
     }
 
-    const hasRoommateMatching = profile?.personalProfile?.settings?.roommate?.enabled || false;
-    
+    const roommateSlice = personalOf(profile)?.settings?.roommate;
+    const hasRoommateMatching = Boolean(roommateSlice?.enabled);
+
     // Remove Oxy user data fetching and just return profile info
     res.json({
       hasRoommateMatching,
       profile: profile ? {
         id: profile._id,
         profileType: profile.profileType,
-        roommatePreferences: profile.personalProfile?.settings?.roommate?.preferences || null
-      } : null
+        roommatePreferences: roommateSlice?.preferences || null,
+      } : null,
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch roommate status' });

@@ -3,7 +3,7 @@
  * Modern ES module export for Property schema
  */
 
-import { Schema, model, Document, Types } from 'mongoose';
+import { Schema, model, Document, Model, Query, Types } from 'mongoose';
 import {
   PropertyType,
   PropertyStatus,
@@ -133,11 +133,45 @@ export interface IProperty extends Document {
   isEcoFriendly?: boolean;
   views?: number;
   lastSaved?: Date;
+  /** Soft-delete timestamp: set when the listing is archived via deleteProperty. */
+  deletedAt?: Date | null;
   parentPropertyId?: Types.ObjectId;
   rating?: {
     average: number;
     count: number;
   };
+  /** Partner attribution: set on create when the listing originated from a partner referral link. */
+  sourcedByPartner?: Types.ObjectId;
+  /** Audit copy of the referral code captured at create time (partners may rotate codes). */
+  sourcedByReferralCode?: string;
+  /** Populated runtime virtual added by the `toJSON`/`toObject` transform when `addressId` is populated. */
+  address?: Record<string, unknown>;
+  /** Auto-managed by `timestamps: true`. */
+  createdAt: Date;
+  /** Auto-managed by `timestamps: true`. */
+  updatedAt: Date;
+}
+
+/**
+ * Mongoose `Query` shape that the geospatial statics return. `findNearby` /
+ * `findWithinRadius` are written as `async function` over an early-return
+ * empty array, but their non-empty path returns a `Property.find(...).populate(...)`
+ * Query. Call sites chain `.find()`, `.skip()`, `.limit()`, `.clone()`,
+ * `.countDocuments()` on the result — so we expose the Query type, which is a
+ * thenable that callers can also `await`.
+ */
+export type PropertyQuery = Query<IProperty[], IProperty>;
+
+/** Custom statics defined on the runtime Property schema. */
+export interface IPropertyModel extends Model<IProperty> {
+  findByProfile(profileId: Types.ObjectId | string, options?: Record<string, unknown>): PropertyQuery;
+  findAvailable(filters?: Record<string, unknown>): PropertyQuery;
+  search(searchParams: Record<string, unknown>): Promise<IProperty[]>;
+  /** Returns a chainable Query (or an empty array when no addresses match). */
+  findNearby(longitude: number, latitude: number, maxDistance?: number): PropertyQuery;
+  /** Returns a chainable Query (or an empty array when no addresses match). */
+  findWithinRadius(longitude: number, latitude: number, radiusInMeters: number): PropertyQuery;
+  findInPolygon(coordinates: number[][]): PropertyQuery;
 }
 
 // Per-offering priced blocks. Each currency uses the shared 5-code set; 'FAIR'

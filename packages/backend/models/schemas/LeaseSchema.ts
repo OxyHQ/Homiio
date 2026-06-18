@@ -3,7 +3,32 @@
  * Mongoose schema for Lease model
  */
 
+import type { Types } from 'mongoose';
+import type { ILease } from '../documentTypes';
+
 const mongoose = require('mongoose');
+
+interface LeaseDoc extends ILease {
+  leaseTerms: {
+    startDate?: Date;
+    endDate?: Date;
+    [key: string]: unknown;
+  };
+  rentDetails: {
+    monthlyRent: number;
+    currency: string;
+    securityDeposit?: number;
+    dueDate?: number;
+    [key: string]: unknown;
+  };
+  signatures: {
+    landlord: { signed: boolean; signedDate?: Date; ipAddress?: string; digitalSignature?: string };
+    tenant: { signed: boolean; signedDate?: Date; ipAddress?: string; digitalSignature?: string };
+  };
+  inspections: Types.DocumentArray<import('mongoose').Document & Record<string, unknown>>;
+  isFullySigned?: boolean;
+  generatePaymentSchedule(): unknown;
+}
 
 const paymentScheduleSchema = new mongoose.Schema({
   dueDate: {
@@ -326,9 +351,11 @@ leaseSchema.index({ 'leaseTerms.startDate': 1, 'leaseTerms.endDate': 1 });
 leaseSchema.index({ 'paymentSchedule.dueDate': 1, 'paymentSchedule.status': 1 });
 
 // Virtual for lease duration
-leaseSchema.virtual('leaseDuration').get(function() {
-  if (this.leaseTerms.startDate && this.leaseTerms.endDate) {
-    const diffTime = Math.abs(this.leaseTerms.endDate - this.leaseTerms.startDate);
+leaseSchema.virtual('leaseDuration').get(function(this: LeaseDoc): number {
+  const start = this.leaseTerms.startDate;
+  const end = this.leaseTerms.endDate;
+  if (start && end) {
+    const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
   }
@@ -336,7 +363,7 @@ leaseSchema.virtual('leaseDuration').get(function() {
 });
 
 // Virtual for monthly rent with currency
-leaseSchema.virtual('formattedRent').get(function() {
+leaseSchema.virtual('formattedRent').get(function(this: LeaseDoc): string {
   const amount = this.rentDetails.monthlyRent;
   const currency = this.rentDetails.currency;
   return new Intl.NumberFormat('en-US', {
@@ -345,21 +372,25 @@ leaseSchema.virtual('formattedRent').get(function() {
   }).format(amount);
 });
 
+interface CoTenantLike { status?: string }
+
 // Virtual for fully signed status
-leaseSchema.virtual('isFullySigned').get(function() {
+leaseSchema.virtual('isFullySigned').get(function(this: LeaseDoc): boolean {
   const landlordSigned = this.signatures.landlord.signed;
   const tenantSigned = this.signatures.tenant.signed;
-  const coTenantsSigned = this.coTenants.length === 0 || 
-    this.coTenants.every(ct => ct.status === 'signed');
-  
+  const coTenants = (this.coTenants || []) as unknown as CoTenantLike[];
+  const coTenantsSigned = coTenants.length === 0 ||
+    coTenants.every((ct: CoTenantLike) => ct.status === 'signed');
+
   return landlordSigned && tenantSigned && coTenantsSigned;
 });
 
 // Virtual for days until expiration
-leaseSchema.virtual('daysUntilExpiration').get(function() {
-  if (this.leaseTerms.endDate) {
+leaseSchema.virtual('daysUntilExpiration').get(function(this: LeaseDoc): number | null {
+  const end = this.leaseTerms.endDate;
+  if (end) {
     const now = new Date();
-    const diffTime = this.leaseTerms.endDate.getTime() - now.getTime();
+    const diffTime = end.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
   }
@@ -367,7 +398,7 @@ leaseSchema.virtual('daysUntilExpiration').get(function() {
 });
 
 // Pre-save middleware
-leaseSchema.pre('save', function(next) {
+leaseSchema.pre('save', function(this: LeaseDoc, next: (err?: Error) => void): void {
   // Auto-update status based on signatures
   if (this.isModified('signatures') || this.isModified('coTenants')) {
     if (this.isFullySigned && this.status === 'pending_signatures') {
@@ -383,16 +414,18 @@ leaseSchema.pre('save', function(next) {
   next();
 });
 
+type ObjectIdLike = string | Types.ObjectId;
+
 // Static methods
-leaseSchema.statics.findByProperty = function(propertyId, options = {}) {
+leaseSchema.statics.findByProperty = function(propertyId: ObjectIdLike, options: Record<string, unknown> = {}) {
   return this.find({ propertyId }, null, options);
 };
 
-leaseSchema.statics.findByTenant = function(tenantProfileId, options = {}) {
+leaseSchema.statics.findByTenant = function(tenantProfileId: ObjectIdLike, options: Record<string, unknown> = {}) {
   return this.find({ tenantProfileId }, null, options);
 };
 
-leaseSchema.statics.findByLandlord = function(landlordProfileId, options = {}) {
+leaseSchema.statics.findByLandlord = function(landlordProfileId: ObjectIdLike, options: Record<string, unknown> = {}) {
   return this.find({ landlordProfileId }, null, options);
 };
 
@@ -405,7 +438,7 @@ leaseSchema.statics.findActive = function() {
   });
 };
 
-leaseSchema.statics.findExpiringSoon = function(days = 30) {
+leaseSchema.statics.findExpiringSoon = function(days: number = 30) {
   const now = new Date();
   const futureDate = new Date(now.getTime() + (days * 24 * 60 * 60 * 1000));
   
@@ -419,17 +452,20 @@ leaseSchema.statics.findExpiringSoon = function(days = 30) {
 };
 
 // Instance methods
-leaseSchema.methods.generatePaymentSchedule = function() {
+leaseSchema.methods.generatePaymentSchedule = function(this: LeaseDoc) {
+  if (!this.leaseTerms.startDate || !this.leaseTerms.endDate) {
+    return this.paymentSchedule;
+  }
   const startDate = new Date(this.leaseTerms.startDate);
   const endDate = new Date(this.leaseTerms.endDate);
   const monthlyRent = this.rentDetails.monthlyRent;
-  const dueDay = this.rentDetails.dueDate;
+  const dueDay = this.rentDetails.dueDate ?? startDate.getDate();
 
   // Clear existing schedule
-  this.paymentSchedule = [];
+  this.paymentSchedule.splice(0, this.paymentSchedule.length);
 
   // Add security deposit if applicable
-  if (this.rentDetails.securityDeposit > 0) {
+  if ((this.rentDetails.securityDeposit ?? 0) > 0) {
     this.paymentSchedule.push({
       dueDate: startDate,
       amount: this.rentDetails.securityDeposit,
@@ -451,14 +487,14 @@ leaseSchema.methods.generatePaymentSchedule = function() {
       type: 'rent',
       description: `Monthly Rent - ${currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`
     });
-    
+
     currentDate.setMonth(currentDate.getMonth() + 1);
   }
 
   return this.paymentSchedule;
 };
 
-leaseSchema.methods.signAsLandlord = function(ipAddress, digitalSignature) {
+leaseSchema.methods.signAsLandlord = function(this: LeaseDoc, ipAddress: string | undefined, digitalSignature?: string) {
   this.signatures.landlord = {
     signed: true,
     signedDate: new Date(),
@@ -475,7 +511,7 @@ leaseSchema.methods.signAsLandlord = function(ipAddress, digitalSignature) {
   return this.save();
 };
 
-leaseSchema.methods.signAsTenant = function(ipAddress, digitalSignature) {
+leaseSchema.methods.signAsTenant = function(this: LeaseDoc, ipAddress: string | undefined, digitalSignature?: string) {
   this.signatures.tenant = {
     signed: true,
     signedDate: new Date(),
@@ -492,8 +528,17 @@ leaseSchema.methods.signAsTenant = function(ipAddress, digitalSignature) {
   return this.save();
 };
 
-leaseSchema.methods.recordPayment = function(paymentId, amount, paymentMethod, transactionId) {
-  const payment = this.paymentSchedule.id(paymentId);
+type PaymentScheduleEntry = import('mongoose').Document & {
+  status?: string;
+  paidDate?: Date;
+  paidAmount?: number;
+  paymentMethod?: string;
+  transactionId?: string;
+  [key: string]: unknown;
+};
+
+leaseSchema.methods.recordPayment = function(this: LeaseDoc, paymentId: string, amount: number, paymentMethod: string, transactionId?: string) {
+  const payment = this.paymentSchedule.id(paymentId) as PaymentScheduleEntry | null;
   if (payment) {
     payment.status = 'paid';
     payment.paidDate = new Date();
@@ -505,7 +550,7 @@ leaseSchema.methods.recordPayment = function(paymentId, amount, paymentMethod, t
   throw new Error('Payment not found');
 };
 
-leaseSchema.methods.scheduleInspection = function(inspectionData) {
+leaseSchema.methods.scheduleInspection = function(this: LeaseDoc, inspectionData: Record<string, unknown>) {
   this.inspections.push({
     ...inspectionData,
     signedByTenant: false,

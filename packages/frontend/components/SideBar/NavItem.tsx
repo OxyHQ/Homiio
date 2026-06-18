@@ -1,14 +1,21 @@
 import React from 'react';
 import { View, Pressable, Platform } from 'react-native';
 import { Text } from '@oxyhq/bloom/typography';
-import type { LucideIcon } from 'lucide-react-native';
 import { colors } from '@/styles/colors';
 
+/**
+ * Common renderable shape for a nav icon: rendered as `<Icon size color />`.
+ * Lucide icons (`LucideIcon`) and the app's brand SVG icons (`SindiIcon` et al.,
+ * typed `{ size?: number; color?: string }`) both satisfy this, so the sidebar
+ * can mix a brand glyph in among the Lucide nav icons without a cast.
+ */
+export type NavItemIcon = React.ComponentType<{ size?: number; color?: string }>;
+
 interface NavItemProps {
-  /** Lucide icon component for the inactive state. */
-  icon: LucideIcon;
-  /** Optional Lucide icon component for the active state — falls back to `icon`. */
-  iconActive?: LucideIcon;
+  /** Icon component for the inactive state. */
+  icon: NavItemIcon;
+  /** Optional icon component for the active state — falls back to `icon`. */
+  iconActive?: NavItemIcon;
   /** Item label (also used as accessibility label when collapsed). */
   label: string;
   onPress: () => void;

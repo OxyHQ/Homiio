@@ -289,11 +289,9 @@ export default function RootLayout() {
             Pin Bloom to the YELLOW preset in LIGHT mode. `mode="light"` stops Bloom
             from following the OS into dark — Homiio's static `colors.ts` is a
             light-only palette, so following the OS produced a light-static /
-            dark-Bloom mismatch. This provider owns the splash screen + font
-            loading (both render before OxyProvider mounts). The same props are
-            passed to OxyProvider below so its internal BloomThemeProvider writes
-            identical CSS vars instead of clobbering them with its `oxy`/`system`
-            defaults — see OxyProvider's note that any outer provider is shadowed.
+            dark-Bloom mismatch. This provider is the single source of truth for
+            theme tokens; `@oxyhq/services` 8.1.2 no longer wraps its children in
+            an internal BloomThemeProvider.
           */}
           <BloomThemeProvider mode="light" colorPreset="yellow" fonts onFontsLoading={<AppSplashScreen />}>
           {!appIsReady ? (

@@ -9,7 +9,7 @@ This package contains TypeScript interfaces and types that are shared between th
 ## Installation
 
 ```bash
-npm install @homiio/shared-types
+bun install @homiio/shared-types
 ```
 
 ## Usage
@@ -71,19 +71,19 @@ import { Property, Profile, City, PropertyType, PropertyStatus } from '@homiio/s
 ### Building
 
 ```bash
-npm run build
+bun run build
 ```
 
 ### Development Mode
 
 ```bash
-npm run dev
+bun run dev
 ```
 
 ### Cleaning
 
 ```bash
-npm run clean
+bun run clean
 ```
 
 ## Structure

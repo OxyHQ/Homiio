@@ -7,5 +7,5 @@
   "versions": ["main"],
   "defaultVersion": "main",
   "docsPath": "docs/",
-  "description": "Real estate platform — Expo/RN + Stripe + PostHog + Oxy integration"
+  "description": "Real estate platform — Expo/RN + Stripe + Oxy integration"
 }

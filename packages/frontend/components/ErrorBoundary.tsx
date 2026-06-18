@@ -51,7 +51,7 @@ const ErrorBoundary = ({
   maxRetries = 3,
 }: Props) => {
   const handleError = (error: Error, errorInfo: ErrorInfo) => {
-    // Log in development; production reporting (PostHog/Sentry) lives in onError.
+    // Log in development; production error reporting lives in onError.
     if (__DEV__) {
       console.error('ErrorBoundary:', {
         message: error.message,

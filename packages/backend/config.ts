@@ -210,10 +210,13 @@ const config: Config = {
       ? 'https://api.homiio.com'
       : `http://localhost:${process.env.PORT || '4000'}`),
   
-  // Rate Limiting
+  // Rate Limiting. The global API limiter (server.ts) keys per authenticated
+  // user with realistic media-app budgets (see AUTHENTICATED_RATE_LIMIT_MAX /
+  // UNAUTHENTICATED_RATE_LIMIT_MAX) and only consumes `windowMs` from here.
+  // `max` is retained as the legacy/anonymous fallback documented value.
   rateLimit: {
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
+    max: 600, // anonymous per-IP fallback budget per window
   },
   
   // Logging

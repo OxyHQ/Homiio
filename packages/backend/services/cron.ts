@@ -293,7 +293,14 @@ class CronJobManager {
         this.logger.info(`Deleted ${result.deleted} expired properties`);
         metricsService.recordCleanupSuccess(result.deleted);
       }
-      
+
+      // Remove stale user-activity data (recently-viewed history, resolved viewing requests)
+      const dataResult = await cleanupService.cleanupOldData();
+      this.logger.info(`Removed ${dataResult.deleted} stale data records`);
+      if (dataResult.deleted > 0) {
+        metricsService.recordCleanupSuccess(dataResult.deleted);
+      }
+
     } catch (error) {
       this.logger.error('Cleanup failed', error);
       metricsService.recordCleanupFailure();

@@ -97,6 +97,7 @@ interface PropertyDoc {
   profileId: Types.ObjectId;
   type: string;
   status: string;
+  deletedAt: Date | null;
   bedrooms: number;
   bathrooms: number;
   amenities: string[];
@@ -356,6 +357,10 @@ export function buildSearchPlan(
   query: Record<string, RawQueryValue>
 ): { filter: PropertyFilter; params: ParsedSearchParams } {
   const filter: PropertyFilter = {};
+
+  // Public search: never surface soft-deleted (archived) listings, regardless
+  // of any explicit `status` value the caller passes.
+  filter.deletedAt = null;
 
   // --- Status / availability (also excludes drafts) ---
   applyStatusFilter(filter, asString(query.status));

@@ -65,6 +65,7 @@ import { webAlert } from '@/utils/api';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
 import { LogoIcon } from '@/assets/logo';
+import { SindiIcon } from '@/assets/icons';
 
 import { BaseSidebar } from './BaseSidebar';
 import { NavItem } from './NavItem';
@@ -74,14 +75,11 @@ import { DateSeparator } from './DateSeparator';
 import { RecentPropertyItem } from './RecentPropertyItem';
 import { FolderRow } from './FolderSection';
 
-/** Width breakpoint above which the user is allowed to collapse the sidebar. */
-const LARGE_SCREEN_MIN_WIDTH = 768;
-
-/** Width of the collapsed icon-only rail. */
-const COLLAPSED_WIDTH = 48;
-
-/** Width of the expanded sidebar. */
-const EXPANDED_WIDTH = 240;
+import {
+  LARGE_SCREEN_MIN_WIDTH,
+  SIDEBAR_COLLAPSED_WIDTH as COLLAPSED_WIDTH,
+  SIDEBAR_EXPANDED_WIDTH as EXPANDED_WIDTH,
+} from './dimensions';
 
 /**
  * Hairline styles for the sidebar's chrome border and inner dividers. Bloom's
@@ -260,6 +258,8 @@ export function SideBar() {
   const toggleSidebarCollapsed = useUIStore((s) => s.toggleSidebarCollapsed);
   const mobileDrawerOpen = useUIStore((s) => s.mobileDrawerOpen);
   const closeMobileDrawer = useUIStore((s) => s.closeMobileDrawer);
+  const sindiPanelOpen = useUIStore((s) => s.sindiPanelOpen);
+  const toggleSindiPanel = useUIStore((s) => s.toggleSindiPanel);
   const savedFoldersOpen = useUIStore((s) => s.savedFoldersOpen);
   const setSavedFoldersOpen = useUIStore((s) => s.setSavedFoldersOpen);
   const recentPropertiesOpen = useUIStore((s) => s.recentPropertiesOpen);
@@ -534,6 +534,17 @@ export function SideBar() {
     [handleNavigate],
   );
 
+  // Sindi is a docked panel on wide screens (toggle inline, no navigation) but
+  // the panel is wide-only, so on the mobile overlay drawer Sindi keeps
+  // navigating to the full-screen `/sindi` route (closing the drawer first).
+  const handleSindi = React.useCallback(() => {
+    if (isSidebarVisible) {
+      toggleSindiPanel();
+      return;
+    }
+    handleNavigate('/sindi');
+  }, [isSidebarVisible, toggleSindiPanel, handleNavigate]);
+
   const handleSignIn = React.useCallback(() => showSignInModal(), []);
   const handleRegister = React.useCallback(() => showSignInModal(), []);
 
@@ -627,6 +638,14 @@ export function SideBar() {
               collapsed
             />
           ))}
+          <NavItem
+            icon={SindiIcon}
+            iconActive={SindiIcon}
+            label={t('sidebar.navigation.sindi')}
+            onPress={handleSindi}
+            isActive={sindiPanelOpen}
+            collapsed
+          />
         </View>
 
         <View className="mx-2 w-8 my-1" style={sidebarBorders.divider} />
@@ -743,6 +762,13 @@ export function SideBar() {
             shortcut={entry.shortcut}
           />
         ))}
+        <NavItem
+          icon={SindiIcon}
+          iconActive={SindiIcon}
+          label={t('sidebar.navigation.sindi')}
+          onPress={handleSindi}
+          isActive={sindiPanelOpen}
+        />
       </View>
 
       <View className="mx-2 my-1" style={sidebarBorders.divider} />

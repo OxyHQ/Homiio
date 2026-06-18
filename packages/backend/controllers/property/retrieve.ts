@@ -1,12 +1,27 @@
-const { Property, RecentlyViewed } = require('../../models');
-const { AppError, successResponse, paginationResponse } = require('../../middlewares/errorHandler');
-const { serializePropertyAddresses, ADDRESS_GEO_POPULATE } = require('../../services/propertyAddressSerializer');
+import { Property, RecentlyViewed } from '../../models';
+import { AppError, successResponse, paginationResponse } from '../../middlewares/errorHandler';
+import { logger } from '../../middlewares/logging';
+import { serializePropertyAddresses, ADDRESS_GEO_POPULATE } from '../../services/propertyAddressSerializer';
+import { getErrorName } from '../../utils/errors';
+import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
+import { getQueryInteger } from '../queryParams';
 
-export async function getPropertyById(req, res, next) {
+export async function getPropertyById(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
   try {
     const { propertyId } = req.params;
     const property = await Property.findById(propertyId).populate(ADDRESS_GEO_POPULATE).lean();
     if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
+    // Soft-deleted listings are invisible to everyone except their owner.
+    if (property.deletedAt) {
+      let isOwner = false;
+      const oxyUserId = req.user?.id || req.user?._id;
+      if (oxyUserId) {
+        const { Profile } = require('../../models');
+        const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+        isOwner = Boolean(activeProfile) && property.profileId?.toString() === activeProfile._id.toString();
+      }
+      if (!isOwner) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
+    }
     // Resolve the address's city/region/country NAMES from the deep-populated
     // geo refs (geo is relational), then flatten the refs back to ids.
     serializePropertyAddresses(property);
@@ -22,37 +37,42 @@ export async function getPropertyById(req, res, next) {
             { profileId, propertyId },
             { profileId, propertyId, viewedAt: new Date() },
             { upsert: true, new: true }
-          ).catch(()=>{});
+          ).catch((error: unknown) => {
+            logger.warn('Failed to update recently viewed property', { propertyId, error });
+          });
         }
-      } catch {}
+      } catch (error) {
+        logger.warn('Failed to resolve profile for recently viewed property', { propertyId, error });
+      }
     }
     res.json(successResponse({ ...property }, 'Property retrieved successfully'));
   } catch (error) {
-    if (error.name === 'CastError') return next(new AppError('Invalid property ID', 400, 'INVALID_ID'));
+    if (getErrorName(error) === 'CastError') return next(new AppError('Invalid property ID', 400, 'INVALID_ID'));
     next(error);
   }
 }
 
-export async function getMyProperties(req, res, next) {
+export async function getMyProperties(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
   try {
-    const { page = 1, limit = 10 } = req.query;
+    const page = getQueryInteger(req.query.page, 1);
+    const limit = getQueryInteger(req.query.limit, 10);
     const oxyUserId = req.userId;
     const { Profile } = require('../../models');
     const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
     if (!activeProfile) {
-      return res.json(paginationResponse([], parseInt(page), parseInt(limit), 0, 'No profile found for user'));
+      return res.json(paginationResponse([], page, limit, 0, 'No profile found for user'));
     }
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const skip = (page - 1) * limit;
     const [properties, total] = await Promise.all([
       Property.find({ profileId: activeProfile._id, status: { $ne: 'archived' } })
         .populate(ADDRESS_GEO_POPULATE)
         .skip(skip)
-        .limit(parseInt(limit))
+        .limit(limit)
         .sort({ createdAt: -1 })
         .lean(),
       Property.countDocuments({ profileId: activeProfile._id, status: { $ne: 'archived' } })
     ]);
     serializePropertyAddresses(properties);
-    res.json(paginationResponse(properties, parseInt(page), parseInt(limit), total, 'Your properties retrieved successfully'));
+    res.json(paginationResponse(properties, page, limit, total, 'Your properties retrieved successfully'));
   } catch (error) { next(error); }
 }

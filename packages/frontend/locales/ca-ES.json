@@ -1037,6 +1037,16 @@
     "name": "Sindi",
     "title": "Sindi",
     "subtitle": "Defensor de Justícia Habitacional amb Informació en Temps Real",
+    "panel": {
+      "title": "Sindi",
+      "subtitle": "Assistent d'habitatge amb IA",
+      "intro": "El teu assistent d'habitatge amb IA. Pregunta-li sobre drets dels llogaters, contractes i problemes d'habitatge, aquí mateix, sense sortir de la pàgina.",
+      "newChat": "Xat nou",
+      "startNew": "Inicia una nova conversa",
+      "close": "Tanca",
+      "conversations": "Converses",
+      "empty": "Inicia una nova conversa per rebre ajuda."
+    },
     "status": {
       "thinking": "Pensant...",
       "online": "En línia"

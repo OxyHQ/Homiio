@@ -9,10 +9,10 @@
  * Distinct from `Review` (public address rating).
  */
 
-const { Property, ListingReport, Profile } = require('../models');
-const { logger } = require('../middlewares/logging');
-const { AppError, successResponse } = require('../middlewares/errorHandler');
-const { ListingReportReason, ListingReportStatus } = require('@homiio/shared-types');
+import { Property, ListingReport, Profile } from '../models';
+import { logger } from '../middlewares/logging';
+import { AppError, successResponse } from '../middlewares/errorHandler';
+import { ListingReportReason, ListingReportStatus } from '@homiio/shared-types';
 
 const ALLOWED_REASONS = new Set(Object.values(ListingReportReason));
 const MAX_DETAILS_LENGTH = 4000;

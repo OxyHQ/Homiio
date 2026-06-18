@@ -11,14 +11,10 @@
 
 import { Types, type Model } from 'mongoose';
 
-interface NamedGeoDoc { _id: Types.ObjectId; name: string }
-interface CountryGeoDoc { _id: Types.ObjectId; name: string; code: string }
+import { Country, Region, City, Neighborhood } from '../models';
 
-const registry = require('../models');
-const Country: Model<CountryGeoDoc> = registry.Country;
-const Region: Model<NamedGeoDoc> = registry.Region;
-const City: Model<NamedGeoDoc> = registry.City;
-const Neighborhood: Model<NamedGeoDoc> = registry.Neighborhood;
+interface NamedGeoDoc { _id: Types.ObjectId; name: string }
+interface CountryGeoDoc { _id: Types.ObjectId; name: string; code?: string }
 
 /** A geo ref as found on an Address: an id, a populated doc, or absent. */
 type GeoRef = Types.ObjectId | string | { _id?: unknown; name?: unknown; code?: unknown } | null | undefined;
@@ -62,7 +58,9 @@ function idFromRef(ref: GeoRef): Types.ObjectId | null {
   return null;
 }
 
-async function nameById(model: Model<NamedGeoDoc>, ref: GeoRef): Promise<string | null> {
+type AnyNameModel = Pick<Model<NamedGeoDoc>, 'findById'>;
+
+async function nameById(model: AnyNameModel, ref: GeoRef): Promise<string | null> {
   const populated = nameFromPopulatedRef(ref);
   if (populated) return populated;
   const id = idFromRef(ref);

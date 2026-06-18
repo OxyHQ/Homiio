@@ -1,4 +1,10 @@
+import type { Types } from 'mongoose';
+import type { ISavedPropertyFolder, ISavedFolderEntry } from '../documentTypes';
+
 const mongoose = require('mongoose');
+
+type ObjectIdLike = string | Types.ObjectId;
+type FolderEntry = ISavedFolderEntry & { notes?: string; savedAt?: Date };
 
 const savedPropertyFolderSchema = new mongoose.Schema({
   profileId: {
@@ -75,15 +81,21 @@ savedPropertyFolderSchema.index({ profileId: 1, name: 1 }, {
 savedPropertyFolderSchema.index({ 'properties.propertyId': 1 });
 
 // Virtual for property count
-savedPropertyFolderSchema.virtual('propertyCount').get(function() {
+savedPropertyFolderSchema.virtual('propertyCount').get(function(this: ISavedPropertyFolder): number {
   return this.properties.length;
 });
 
 // Method to add a property to this folder
-savedPropertyFolderSchema.methods.addProperty = async function(propertyId, notes = '') {
+savedPropertyFolderSchema.methods.addProperty = async function(
+  this: ISavedPropertyFolder,
+  propertyId: ObjectIdLike,
+  notes: string = ''
+) {
   // Check if property already exists in this folder
-  const existingProperty = this.properties.find(p => p.propertyId.toString() === propertyId.toString());
-  
+  const existingProperty = this.properties.find(
+    (p: FolderEntry) => p.propertyId.toString() === propertyId.toString()
+  );
+
   if (existingProperty) {
     // Update existing property
     existingProperty.notes = notes;
@@ -96,28 +108,42 @@ savedPropertyFolderSchema.methods.addProperty = async function(propertyId, notes
       savedAt: new Date(),
     });
   }
-  
+
   return this.save();
 };
 
 // Method to remove a property from this folder
-savedPropertyFolderSchema.methods.removeProperty = async function(propertyId) {
-  this.properties = this.properties.filter(p => p.propertyId.toString() !== propertyId.toString());
+savedPropertyFolderSchema.methods.removeProperty = async function(
+  this: ISavedPropertyFolder,
+  propertyId: ObjectIdLike
+) {
+  const remaining = this.properties.filter(
+    (p: FolderEntry) => p.propertyId.toString() !== propertyId.toString()
+  );
+  this.properties.splice(0, this.properties.length, ...remaining);
   return this.save();
 };
 
 // Method to check if a property exists in this folder
-savedPropertyFolderSchema.methods.hasProperty = function(propertyId) {
-  return this.properties.some(p => p.propertyId.toString() === propertyId.toString());
+savedPropertyFolderSchema.methods.hasProperty = function(this: ISavedPropertyFolder, propertyId: ObjectIdLike): boolean {
+  return this.properties.some((p: FolderEntry) => p.propertyId.toString() === propertyId.toString());
 };
 
 // Method to get property data
-savedPropertyFolderSchema.methods.getProperty = function(propertyId) {
-  return this.properties.find(p => p.propertyId.toString() === propertyId.toString());
+savedPropertyFolderSchema.methods.getProperty = function(this: ISavedPropertyFolder, propertyId: ObjectIdLike) {
+  return this.properties.find((p: FolderEntry) => p.propertyId.toString() === propertyId.toString());
 };
 
+interface FolderWithGetProperty extends ISavedPropertyFolder {
+  getProperty(id: ObjectIdLike): FolderEntry | undefined;
+}
+
 // Method to update property notes
-savedPropertyFolderSchema.methods.updatePropertyNotes = async function(propertyId, notes) {
+savedPropertyFolderSchema.methods.updatePropertyNotes = async function(
+  this: FolderWithGetProperty,
+  propertyId: ObjectIdLike,
+  notes: string
+) {
   const property = this.getProperty(propertyId);
   if (property) {
     property.notes = notes;

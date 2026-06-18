@@ -3,6 +3,7 @@
  * API calls for address-related operations
  */
 
+import { API_URL } from '@/config';
 import { ApiResponse } from '../types/api';
 
 export interface AddressData {
@@ -24,7 +25,7 @@ export interface AddressData {
 }
 
 class AddressService {
-  private baseUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+  private baseUrl = API_URL;
 
   /**
    * Get address by ID

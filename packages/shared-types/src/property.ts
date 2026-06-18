@@ -263,6 +263,8 @@ export interface Property {
   isEcoFriendly?: boolean;
   createdAt: string;
   updatedAt: string;
+  /** Set when the listing is soft-deleted (status moves to ARCHIVED). */
+  deletedAt?: string | null;
   // Accommodation-specific details
   accommodationDetails?: {
     sleepingArrangement?: 'couch' | 'air_mattress' | 'floor' | 'tent' | 'hammock';
@@ -400,6 +402,36 @@ export interface PropertyFilters {
   maxSalePrice?: number;
   /** Exchange mode filter. A `'both'` listing matches a `swap` or `host` request. */
   exchangeMode?: ExchangeMode;
+  // Range filters
+  minBedrooms?: number;
+  maxBedrooms?: number;
+  minBathrooms?: number;
+  maxBathrooms?: number;
+  minSquareFootage?: number;
+  maxSquareFootage?: number;
+  minYearBuilt?: number;
+  maxYearBuilt?: number;
+  // Media filters
+  hasPhotos?: boolean;
+  /** Alias of `hasPhotos`. */
+  hasImages?: boolean;
+  // Characteristic filters
+  budgetFriendly?: boolean;
+  housingType?: string;
+  layoutType?: string;
+  furnishedStatus?: string;
+  utilitiesIncluded?: boolean;
+  parkingType?: string;
+  petPolicy?: string;
+  leaseTerm?: string;
+  // Proximity filters
+  proximityToTransport?: boolean;
+  proximityToSchools?: boolean;
+  proximityToShopping?: boolean;
+  /** Latest acceptable availability date (ISO-8601). */
+  availableFromBefore?: string;
+  /** Earliest acceptable availability date (ISO-8601). */
+  availableFromAfter?: string;
 }
 
 export interface PropertyStructuredData {

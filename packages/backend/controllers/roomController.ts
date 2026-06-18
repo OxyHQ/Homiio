@@ -8,12 +8,37 @@
  * scoping every query to room-type properties.
  */
 
-const { Property, Address, Profile } = require('../models');
-const { PropertyType, ProfileType } = require('@homiio/shared-types');
-const { logger, businessLogger } = require('../middlewares/logging');
-const { AppError, successResponse, paginationResponse } = require('../middlewares/errorHandler');
+import type { Request, Response, NextFunction } from 'express';
+
+import { Property, Address, Profile } from '../models';
+import { PropertyType, PropertyStatus, ProfileType } from '@homiio/shared-types';
+import { logger } from '../middlewares/logging';
+import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
 
 const ROOM_TYPE = PropertyType.ROOM;
+
+function errorName(error: unknown): string | undefined {
+  if (error && typeof error === 'object' && 'name' in error) {
+    const name = (error as { name: unknown }).name;
+    return typeof name === 'string' ? name : undefined;
+  }
+  return undefined;
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
+function errorValidationErrors(error: unknown): Record<string, { message?: string }> {
+  if (error && typeof error === 'object' && 'errors' in error) {
+    const errs = (error as { errors?: unknown }).errors;
+    if (errs && typeof errs === 'object') {
+      return errs as Record<string, { message?: string }>;
+    }
+  }
+  return {};
+}
 
 class RoomController {
   /**
@@ -23,7 +48,7 @@ class RoomController {
    * common property filters (rent range, address/city, amenities, furnished,
    * availability) plus owner scoping via `profileId`.
    */
-  async getRooms(req, res, next) {
+  async getRooms(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
       const {
         page = 1,
@@ -107,7 +132,7 @@ class RoomController {
   /**
    * Create a room (a room-type property) owned by the authenticated user.
    */
-  async createRoom(req, res, next) {
+  async createRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) {
@@ -155,18 +180,17 @@ class RoomController {
       const savedRoom = await room.save();
       await savedRoom.populate('addressId');
 
-      logger.info('Room created', { roomId: savedRoom._id, profileId });
-      businessLogger.info('Room created', {
+      logger.info('Room created', {
         roomId: savedRoom._id,
         profileId,
-        rent: savedRoom.rent?.amount,
+        monthlyAmount: savedRoom.longTermRent?.monthlyAmount,
       });
 
       res.status(201).json(successResponse(savedRoom.toJSON(), 'Room created successfully'));
     } catch (error) {
-      if (error.name === 'ValidationError') {
-        const validationErrors = Object.values(error.errors || {}).map(
-          (err: { message?: string }) => err.message
+      if (errorName(error) === 'ValidationError') {
+        const validationErrors = Object.values(errorValidationErrors(error)).map(
+          (err) => err.message
         );
         const validationError: AppErrorWithDetails = new AppError(
           'Room validation failed',
@@ -183,7 +207,7 @@ class RoomController {
   /**
    * Get a single room by id.
    */
-  async getRoomById(req, res, next) {
+  async getRoomById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
 
@@ -202,7 +226,7 @@ class RoomController {
 
       res.json(successResponse({ ...room }, 'Room retrieved successfully'));
     } catch (error) {
-      if (error.name === 'CastError') {
+      if (errorName(error) === 'CastError') {
         return next(new AppError('Invalid room ID', 400, 'INVALID_ID'));
       }
       next(error);
@@ -212,7 +236,7 @@ class RoomController {
   /**
    * Update a room owned by the authenticated user.
    */
-  async updateRoom(req, res, next) {
+  async updateRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) {
@@ -250,10 +274,10 @@ class RoomController {
 
       res.json(successResponse(updatedRoom.toJSON(), 'Room updated successfully'));
     } catch (error) {
-      if (error.name === 'ValidationError') {
+      if (errorName(error) === 'ValidationError') {
         return next(new AppError('Room validation failed', 400, 'VALIDATION_ERROR'));
       }
-      if (error.name === 'CastError') {
+      if (errorName(error) === 'CastError') {
         return next(new AppError('Invalid room ID', 400, 'INVALID_ID'));
       }
       next(error);
@@ -263,7 +287,7 @@ class RoomController {
   /**
    * Delete (archive) a room owned by the authenticated user.
    */
-  async deleteRoom(req, res, next) {
+  async deleteRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) {
@@ -283,15 +307,14 @@ class RoomController {
       }
 
       // Soft delete by archiving, consistent with property lifecycle.
-      room.status = 'archived';
+      room.status = PropertyStatus.ARCHIVED;
       await room.save();
 
       logger.info('Room deleted', { roomId: id, profileId: activeProfile._id });
-      businessLogger.info('Room deleted', { roomId: id, profileId: activeProfile._id });
 
       res.json(successResponse(null, 'Room deleted successfully'));
     } catch (error) {
-      if (error.name === 'CastError') {
+      if (errorName(error) === 'CastError') {
         return next(new AppError('Invalid room ID', 400, 'INVALID_ID'));
       }
       next(error);

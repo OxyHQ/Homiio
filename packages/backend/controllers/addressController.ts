@@ -6,7 +6,8 @@
 import { Request, Response } from 'express';
 import { Types } from 'mongoose';
 
-const { Address } = require('../models');
+import { Address } from '../models';
+import { getErrorName, getValidationMessages } from '../utils/errors';
 
 /**
  * Response helpers
@@ -151,10 +152,10 @@ export const createAddress = async (req: Request, res: Response) => {
 
   } catch (error) {
     logger.error('Error creating address:', error);
-    if (error.name === 'ValidationError') {
+    if (getErrorName(error) === 'ValidationError') {
       return badRequest(res, {
         message: 'Validation error',
-        errors: Object.values(error.errors).map((e: any) => e.message)
+        errors: getValidationMessages(error)
       });
     }
     return serverError(res, { message: 'Failed to create address' });
@@ -198,10 +199,10 @@ export const updateAddress = async (req: Request, res: Response) => {
 
   } catch (error) {
     logger.error('Error updating address:', error);
-    if (error.name === 'ValidationError') {
+    if (getErrorName(error) === 'ValidationError') {
       return badRequest(res, { 
         message: 'Validation error', 
-        errors: Object.values(error.errors).map((e: any) => e.message)
+        errors: getValidationMessages(error)
       });
     }
     return serverError(res, { message: 'Failed to update address' });

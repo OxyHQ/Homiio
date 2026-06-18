@@ -1,123 +1,93 @@
 /**
  * Lease Controller
- * Handles lease management operations
+ * Handles lease management operations with real persistence via the Lease model.
  */
 
-const { successResponse, paginationResponse, AppError } = require('../middlewares/errorHandler');
-const { logger } = require('../middlewares/logging');
+import type { Request, Response, NextFunction } from 'express';
+import { LeaseStatus } from '@homiio/shared-types';
+
+import { successResponse, paginationResponse, AppError } from '../middlewares/errorHandler';
+import { logger } from '../middlewares/logging';
+
+import { Lease, Property, Profile } from '../models';
+import type { ILease, IProfile } from '../models';
+
+const MAX_PAGE_SIZE = 100;
+const DEFAULT_PAGE_SIZE = 10;
+
+const EDITABLE_STATUSES: ReadonlyArray<string> = [LeaseStatus.DRAFT, 'pending_signatures'];
+const DELETABLE_STATUSES: ReadonlyArray<string> = [LeaseStatus.DRAFT, 'pending_signatures'];
+
+function parsePagination(query: Request['query']): { page: number; limit: number; skip: number } {
+  const rawPage = parseInt(String(query.page ?? ''), 10);
+  const rawLimit = parseInt(String(query.limit ?? ''), 10);
+  const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, MAX_PAGE_SIZE) : DEFAULT_PAGE_SIZE;
+  return { page, limit, skip: (page - 1) * limit };
+}
+
+async function resolveActiveProfile(req: Request): Promise<IProfile> {
+  const oxyUserId = req.user?.id || req.user?._id || req.userId;
+  if (!oxyUserId) {
+    throw new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED');
+  }
+  const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+  if (!activeProfile) {
+    throw new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND');
+  }
+  return activeProfile;
+}
+
+function isLandlord(lease: ILease, profileId: string): boolean {
+  return lease.landlordProfileId?.toString() === profileId;
+}
+
+function isTenant(lease: ILease, profileId: string): boolean {
+  if (lease.tenantProfileId?.toString() === profileId) {
+    return true;
+  }
+  const coTenants = (lease.coTenants || []) as Array<{ profileId?: { toString(): string } }>;
+  return coTenants.some((ct) => ct.profileId?.toString() === profileId);
+}
+
+function isParty(lease: ILease, profileId: string): boolean {
+  return isLandlord(lease, profileId) || isTenant(lease, profileId);
+}
 
 class LeaseController {
   /**
-   * Get user's leases
+   * Get the active profile's leases (as landlord, tenant, or co-tenant).
    */
-  async getLeases(req, res, next) {
+  async getLeases(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.userId;
-      const {
-        page = 1,
-        limit = 10,
-        status,
-        propertyId,
-        sortBy = 'createdAt',
-        sortOrder = 'desc'
-      } = req.query;
+      const activeProfile = await resolveActiveProfile(req);
+      const profileId = activeProfile._id;
+      const { page, limit, skip } = parsePagination(req.query);
+      const { status, propertyId } = req.query;
 
-      // In a real implementation, fetch leases from database
-      // const leases = await LeaseModel.findByParticipant(userId, filters);
-
-      const mockLeases = [
-        {
-          id: 'lease_1',
-          propertyId: 'prop_1',
-          landlordId: 'user_landlord_1',
-          tenantId: userId,
-          status: 'active',
-          startDate: '2024-01-01T00:00:00Z',
-          endDate: '2024-12-31T23:59:59Z',
-          rent: {
-            amount: 1200,
-            currency: 'USD',
-            dueDay: 1,
-            paymentMethod: 'bank_transfer'
-          },
-          deposit: {
-            amount: 1200,
-            currency: 'USD',
-            status: 'paid'
-          },
-          terms: {
-            duration: 12, // months
-            noticePeriod: 30, // days
-            petPolicy: 'allowed',
-            smokingPolicy: 'not_allowed',
-            maintenanceResponsibility: 'landlord'
-          },
-          signatures: {
-            landlord: {
-              signedAt: '2023-12-15T10:00:00Z',
-              ipAddress: '192.168.1.1'
-            },
-            tenant: {
-              signedAt: '2023-12-16T14:30:00Z',
-              ipAddress: '192.168.1.100'
-            }
-          },
-          createdAt: '2023-12-01T00:00:00Z',
-          updatedAt: '2024-01-01T00:00:00Z'
-        },
-        {
-          id: 'lease_2',
-          propertyId: 'prop_2',
-          landlordId: userId,
-          tenantId: 'user_tenant_1',
-          status: 'pending_signature',
-          startDate: '2024-03-01T00:00:00Z',
-          endDate: '2025-02-28T23:59:59Z',
-          rent: {
-            amount: 950,
-            currency: 'USD',
-            dueDay: 5,
-            paymentMethod: 'faircoin'
-          },
-          deposit: {
-            amount: 950,
-            currency: 'USD',
-            status: 'pending'
-          },
-          terms: {
-            duration: 12,
-            noticePeriod: 30,
-            petPolicy: 'not_allowed',
-            smokingPolicy: 'not_allowed',
-            maintenanceResponsibility: 'shared'
-          },
-          signatures: {
-            landlord: {
-              signedAt: '2024-02-15T09:00:00Z',
-              ipAddress: '192.168.1.1'
-            },
-            tenant: null
-          },
-          createdAt: '2024-02-01T00:00:00Z',
-          updatedAt: '2024-02-15T09:00:00Z'
-        }
-      ];
-
-      // Apply filters
-      let filteredLeases = mockLeases;
+      const filter: Record<string, unknown> = {
+        $or: [
+          { landlordProfileId: profileId },
+          { tenantProfileId: profileId },
+          { 'coTenants.profileId': profileId },
+        ],
+      };
       if (status) {
-        filteredLeases = filteredLeases.filter(l => l.status === status);
+        filter.status = status;
       }
       if (propertyId) {
-        filteredLeases = filteredLeases.filter(l => l.propertyId === propertyId);
+        filter.propertyId = propertyId;
       }
 
-      const total = filteredLeases.length;
+      const [leases, total] = await Promise.all([
+        Lease.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        Lease.countDocuments(filter),
+      ]);
 
       res.json(paginationResponse(
-        filteredLeases,
-        parseInt(page),
-        parseInt(limit),
+        leases.map(lease => lease.toJSON()),
+        page,
+        limit,
         total,
         'Leases retrieved successfully'
       ));
@@ -127,198 +97,135 @@ class LeaseController {
   }
 
   /**
-   * Create a new lease
+   * Create a new lease. The requester must own the referenced property.
    */
-  async createLease(req, res, next) {
+  async createLease(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const leaseData = {
+      const activeProfile = await resolveActiveProfile(req);
+      const { propertyId, tenantProfileId, leaseTerms, rentDetails } = req.body;
+
+      if (!propertyId) {
+        throw new AppError('propertyId is required', 400, 'VALIDATION_ERROR');
+      }
+      if (!tenantProfileId) {
+        throw new AppError('tenantProfileId is required', 400, 'VALIDATION_ERROR');
+      }
+      if (!leaseTerms?.startDate || !leaseTerms?.endDate) {
+        throw new AppError('leaseTerms.startDate and leaseTerms.endDate are required', 400, 'VALIDATION_ERROR');
+      }
+      if (rentDetails?.monthlyRent === undefined || rentDetails?.monthlyRent === null) {
+        throw new AppError('rentDetails.monthlyRent is required', 400, 'VALIDATION_ERROR');
+      }
+
+      const property = await Property.findById(propertyId);
+      if (!property) {
+        throw new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND');
+      }
+      if (!property.profileId || property.profileId.toString() !== activeProfile._id.toString()) {
+        throw new AppError('Access denied - you can only create leases for your own properties', 403, 'FORBIDDEN');
+      }
+
+      const lease = await Lease.create({
         ...req.body,
-        landlordId: req.userId,
-        status: 'draft',
-        createdAt: new Date(),
-        signatures: {
-          landlord: null,
-          tenant: null
-        }
-      };
-
-      // In a real implementation, validate property ownership and save to database
-      // const property = await PropertyModel.findById(leaseData.propertyId);
-      // if (property.ownerId !== req.userId) {
-      //   throw new AppError('Access denied to this property', 403, 'FORBIDDEN');
-      // }
-      // const lease = await LeaseModel.create(leaseData);
-
-      const newLease = {
-        id: `lease_${Date.now()}`,
-        ...leaseData
-      };
-
-      logger.info('Lease created', {
-        leaseId: newLease.id,
-        landlordId: req.userId,
-        propertyId: leaseData.propertyId
+        propertyId,
+        tenantProfileId,
+        landlordProfileId: activeProfile._id,
+        status: LeaseStatus.DRAFT,
       });
 
-      res.status(201).json(successResponse(
-        newLease,
-        'Lease created successfully'
-      ));
+      logger.info('Lease created', {
+        leaseId: lease._id.toString(),
+        landlordProfileId: activeProfile._id.toString(),
+        propertyId: String(propertyId),
+      });
+
+      res.status(201).json(successResponse(lease.toJSON(), 'Lease created successfully'));
     } catch (error) {
       next(error);
     }
   }
 
   /**
-   * Get lease by ID
+   * Get a lease by ID. Only a party (landlord, tenant, or co-tenant) may view it.
    */
-  async getLeaseById(req, res, next) {
+  async getLeaseById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { leaseId } = req.params;
+      const activeProfile = await resolveActiveProfile(req);
+      const lease = await Lease.findById(req.params.id);
+      if (!lease) {
+        throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
+      }
+      if (!isParty(lease, activeProfile._id.toString())) {
+        throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');
+      }
 
-      // In a real implementation, fetch from database
-      // const lease = await LeaseModel.findById(leaseId);
-
-      const mockLease = {
-        id: leaseId,
-        propertyId: 'prop_1',
-        property: {
-          id: 'prop_1',
-          title: 'Downtown Apartment',
-          address: {
-            street: '123 Main St',
-            city: 'San Francisco',
-            state: 'CA',
-            zipCode: '94102'
-          }
-        },
-        landlordId: 'user_landlord_1',
-        landlord: {
-          id: 'user_landlord_1',
-          firstName: 'John',
-          lastName: 'Smith',
-          email: 'landlord@example.com',
-          phone: '+1234567890'
-        },
-        tenantId: req.userId,
-        tenant: {
-          id: req.userId,
-          firstName: 'Jane',
-          lastName: 'Doe',
-          email: req.user.email,
-          phone: '+1234567891'
-        },
-        status: 'active',
-        startDate: '2024-01-01T00:00:00Z',
-        endDate: '2024-12-31T23:59:59Z',
-        rent: {
-          amount: 1200,
-          currency: 'USD',
-          dueDay: 1,
-          paymentMethod: 'bank_transfer',
-          lateFee: {
-            amount: 50,
-            gracePeriod: 5
-          }
-        },
-        deposit: {
-          amount: 1200,
-          currency: 'USD',
-          status: 'paid',
-          paidAt: '2023-12-20T10:00:00Z'
-        },
-        terms: {
-          duration: 12,
-          noticePeriod: 30,
-          petPolicy: 'allowed',
-          smokingPolicy: 'not_allowed',
-          maintenanceResponsibility: 'landlord',
-          utilitiesIncluded: ['water', 'trash'],
-          additionalTerms: [
-            'No subleasing without written consent',
-            'Quiet hours from 10 PM to 8 AM',
-            'Maximum 2 guests for overnight stays'
-          ]
-        },
-        signatures: {
-          landlord: {
-            signedAt: '2023-12-15T10:00:00Z',
-            ipAddress: '192.168.1.1',
-            signature: 'digital_signature_hash_landlord'
-          },
-          tenant: {
-            signedAt: '2023-12-16T14:30:00Z',
-            ipAddress: '192.168.1.100',
-            signature: 'digital_signature_hash_tenant'
-          }
-        },
-        documents: [
-          {
-            id: 'doc_1',
-            type: 'lease_agreement',
-            filename: 'lease_agreement.pdf',
-            uploadedAt: '2023-12-01T10:00:00Z'
-          },
-          {
-            id: 'doc_2',
-            type: 'move_in_checklist',
-            filename: 'move_in_checklist.pdf',
-            uploadedAt: '2023-12-31T09:00:00Z'
-          }
-        ],
-        createdAt: '2023-12-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z'
-      };
-
-      res.json(successResponse(mockLease, 'Lease retrieved successfully'));
+      res.json(successResponse(lease.toJSON(), 'Lease retrieved successfully'));
     } catch (error) {
       next(error);
     }
   }
 
   /**
-   * Update lease
+   * Update a lease. Only the landlord may update, and only while the lease is
+   * still a draft or awaiting signatures.
    */
-  async updateLease(req, res, next) {
+  async updateLease(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { leaseId } = req.params;
-      const updateData = req.body;
+      const activeProfile = await resolveActiveProfile(req);
+      const lease = await Lease.findById(req.params.id);
+      if (!lease) {
+        throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
+      }
+      if (!isLandlord(lease, activeProfile._id.toString())) {
+        throw new AppError('Access denied - only the landlord can update this lease', 403, 'FORBIDDEN');
+      }
+      if (!EDITABLE_STATUSES.includes(lease.status)) {
+        throw new AppError('Cannot update a lease that is signed, active, or closed', 409, 'LEASE_NOT_EDITABLE');
+      }
 
-      // In a real implementation, update in database with proper validation
-      // const lease = await LeaseModel.findById(leaseId);
-      // if (lease.status === 'signed' && updateData.modifies_critical_terms) {
-      //   throw new AppError('Cannot modify signed lease terms', 400, 'INVALID_OPERATION');
-      // }
+      const immutable = ['landlordProfileId', 'propertyId', '_id', 'signatures', 'status', 'paymentSchedule'];
+      for (const key of Object.keys(req.body)) {
+        if (!immutable.includes(key)) {
+          lease[key] = req.body[key];
+        }
+      }
+      await lease.save();
 
-      const updatedLease = {
-        id: leaseId,
-        ...updateData,
-        updatedAt: new Date().toISOString()
-      };
+      logger.info('Lease updated', {
+        leaseId: lease._id.toString(),
+        updatedBy: activeProfile._id.toString(),
+      });
 
-      logger.info('Lease updated', { leaseId, updatedBy: req.userId });
-
-      res.json(successResponse(updatedLease, 'Lease updated successfully'));
+      res.json(successResponse(lease.toJSON(), 'Lease updated successfully'));
     } catch (error) {
       next(error);
     }
   }
 
   /**
-   * Delete lease
+   * Delete a lease. Only the landlord may delete, and only while it is a draft
+   * or awaiting signatures. Signed/active leases cannot be deleted.
    */
-  async deleteLease(req, res, next) {
+  async deleteLease(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { leaseId } = req.params;
+      const activeProfile = await resolveActiveProfile(req);
+      const lease = await Lease.findById(req.params.id);
+      if (!lease) {
+        throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
+      }
+      if (!isLandlord(lease, activeProfile._id.toString())) {
+        throw new AppError('Access denied - only the landlord can delete this lease', 403, 'FORBIDDEN');
+      }
+      if (!DELETABLE_STATUSES.includes(lease.status)) {
+        throw new AppError('Cannot delete a lease that is signed, active, or closed', 409, 'LEASE_NOT_DELETABLE');
+      }
 
-      // In a real implementation, check if lease can be deleted and soft delete
-      // const lease = await LeaseModel.findById(leaseId);
-      // if (lease.status === 'active') {
-      //   throw new AppError('Cannot delete active lease', 400, 'INVALID_OPERATION');
-      // }
-      // await LeaseModel.softDelete(leaseId);
+      await lease.deleteOne();
 
-      logger.info('Lease deleted', { leaseId, deletedBy: req.userId });
+      logger.info('Lease deleted', {
+        leaseId: lease._id.toString(),
+        deletedBy: activeProfile._id.toString(),
+      });
 
       res.json(successResponse(null, 'Lease deleted successfully'));
     } catch (error) {
@@ -327,158 +234,173 @@ class LeaseController {
   }
 
   /**
-   * Sign lease
+   * Sign a lease. The requester must be the landlord or tenant. Records the
+   * signature; the schema's pre-save hook transitions the lease to active once
+   * both parties have signed.
    */
-  async signLease(req, res, next) {
+  async signLease(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { leaseId } = req.params;
-      const { signature, acceptTerms } = req.body;
-
+      const activeProfile = await resolveActiveProfile(req);
+      const { acceptTerms, signature } = req.body;
       if (!acceptTerms) {
         throw new AppError('Must accept terms to sign lease', 400, 'TERMS_NOT_ACCEPTED');
       }
 
-      // In a real implementation, record signature and update lease status
-      // const lease = await LeaseModel.findById(leaseId);
-      // const userRole = lease.landlordId === req.userId ? 'landlord' : 'tenant';
-      // await LeaseModel.addSignature(leaseId, userRole, {
-      //   signedAt: new Date(),
-      //   signature: signature,
-      //   ipAddress: req.ip
-      // });
+      const lease = await Lease.findById(req.params.id);
+      if (!lease) {
+        throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
+      }
 
-      const signedLease = {
-        id: leaseId,
-        status: 'partially_signed', // or 'fully_signed' if both parties signed
-        signatures: {
-          // Updated signatures object
-        },
-        updatedAt: new Date().toISOString()
+      const profileId = activeProfile._id.toString();
+      const ipAddress = req.ip;
+      if (isLandlord(lease, profileId)) {
+        await lease.signAsLandlord(ipAddress, signature);
+      } else if (lease.tenantProfileId?.toString() === profileId) {
+        await lease.signAsTenant(ipAddress, signature);
+      } else {
+        throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');
+      }
+
+      logger.info('Lease signed', {
+        leaseId: lease._id.toString(),
+        signedBy: profileId,
+      });
+
+      res.json(successResponse(lease.toJSON(), 'Lease signed successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Terminate a lease. Only a party may terminate. Records a termination notice
+   * and moves the lease to the terminated status.
+   */
+  async terminateLease(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const activeProfile = await resolveActiveProfile(req);
+      const { reason, effectiveDate } = req.body;
+      const lease = await Lease.findById(req.params.id);
+      if (!lease) {
+        throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
+      }
+      const profileId = activeProfile._id.toString();
+      if (!isParty(lease, profileId)) {
+        throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');
+      }
+      if (lease.status === LeaseStatus.TERMINATED) {
+        throw new AppError('Lease is already terminated', 409, 'LEASE_ALREADY_TERMINATED');
+      }
+
+      lease.terminationNotice = {
+        givenBy: profileId,
+        givenDate: new Date(),
+        effectiveDate: effectiveDate ? new Date(effectiveDate) : new Date(),
+        reason: reason,
+        acknowledged: false,
       };
+      lease.status = LeaseStatus.TERMINATED;
+      await lease.save();
 
-      logger.info('Lease signed', { 
-        leaseId, 
-        signedBy: req.userId,
-        userAgent: req.get('User-Agent')
+      logger.info('Lease terminated', {
+        leaseId: lease._id.toString(),
+        terminatedBy: profileId,
+        reason: reason,
       });
 
-      res.json(successResponse(signedLease, 'Lease signed successfully'));
+      res.json(successResponse(lease.toJSON(), 'Lease terminated successfully'));
     } catch (error) {
       next(error);
     }
   }
 
   /**
-   * Terminate lease
+   * Renew a lease by creating a new lease document linked to the original via
+   * roomId/property and inheriting its terms with a new end date. Only the
+   * landlord may renew.
    */
-  async terminateLease(req, res, next) {
+  async renewLease(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { leaseId } = req.params;
-      const { reason, terminationDate, notice } = req.body;
+      const activeProfile = await resolveActiveProfile(req);
+      const { newEndDate, monthlyRent, startDate } = req.body;
+      if (!newEndDate) {
+        throw new AppError('newEndDate is required', 400, 'VALIDATION_ERROR');
+      }
 
-      // In a real implementation, handle lease termination process
-      // const lease = await LeaseModel.findById(leaseId);
-      // await LeaseModel.initializeTermination(leaseId, {
-      //   initiatedBy: req.userId,
-      //   reason: reason,
-      //   terminationDate: terminationDate,
-      //   notice: notice
-      // });
+      const original = await Lease.findById(req.params.id);
+      if (!original) {
+        throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
+      }
+      if (!isLandlord(original, activeProfile._id.toString())) {
+        throw new AppError('Access denied - only the landlord can renew this lease', 403, 'FORBIDDEN');
+      }
 
-      logger.info('Lease termination initiated', { 
-        leaseId, 
-        initiatedBy: req.userId,
-        reason: reason
-      });
+      const source = original.toObject() as Record<string, unknown>;
+      delete source._id;
+      delete source.id;
+      delete source.createdAt;
+      delete source.updatedAt;
+      delete source.signatures;
+      delete source.paymentSchedule;
+      delete source.terminationNotice;
+      delete source.inspections;
+      const sourceLeaseTerms = (source.leaseTerms || {}) as { endDate?: Date };
+      const sourceRentDetails = (source.rentDetails || {}) as { monthlyRent?: number };
 
-      res.json(successResponse(null, 'Lease termination initiated'));
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Renew lease
-   */
-  async renewLease(req, res, next) {
-    try {
-      const { leaseId } = req.params;
-      const { newEndDate, rentIncrease, updatedTerms } = req.body;
-
-      // In a real implementation, create lease renewal
-      // const originalLease = await LeaseModel.findById(leaseId);
-      // const renewalLease = await LeaseModel.createRenewal(leaseId, {
-      //   newEndDate: newEndDate,
-      //   rentIncrease: rentIncrease,
-      //   updatedTerms: updatedTerms
-      // });
-
-      const renewalLease = {
-        id: `lease_${Date.now()}_renewal`,
-        originalLeaseId: leaseId,
-        status: 'pending_signature',
-        newEndDate: newEndDate,
-        rentIncrease: rentIncrease,
-        updatedTerms: updatedTerms,
-        createdAt: new Date().toISOString()
-      };
-
-      logger.info('Lease renewal created', { 
-        originalLeaseId: leaseId, 
-        renewalLeaseId: renewalLease.id,
-        createdBy: req.userId
-      });
-
-      res.json(successResponse(renewalLease, 'Lease renewal created'));
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Get lease payments
-   */
-  async getLeasePayments(req, res, next) {
-    try {
-      const { leaseId } = req.params;
-      const { page = 1, limit = 10, status } = req.query;
-
-      // In a real implementation, fetch payments from database
-      // const payments = await PaymentModel.findByLeaseId(leaseId, filters);
-
-      const mockPayments = [
-        {
-          id: 'payment_1',
-          leaseId: leaseId,
-          type: 'rent',
-          amount: 1200,
-          currency: 'USD',
-          dueDate: '2024-01-01T00:00:00Z',
-          paidAt: '2023-12-30T15:00:00Z',
-          status: 'paid',
-          paymentMethod: 'bank_transfer',
-          reference: 'TXN123456'
+      const originalLeaseTerms = (original.leaseTerms || {}) as { endDate?: Date };
+      const renewal = await Lease.create({
+        ...source,
+        status: LeaseStatus.DRAFT,
+        leaseTerms: {
+          ...sourceLeaseTerms,
+          startDate: startDate ? new Date(startDate) : originalLeaseTerms.endDate,
+          endDate: new Date(newEndDate),
         },
-        {
-          id: 'payment_2',
-          leaseId: leaseId,
-          type: 'rent',
-          amount: 1200,
-          currency: 'USD',
-          dueDate: '2024-02-01T00:00:00Z',
-          paidAt: '2024-02-01T10:30:00Z',
-          status: 'paid',
-          paymentMethod: 'bank_transfer',
-          reference: 'TXN123457'
-        }
-      ];
+        rentDetails: {
+          ...sourceRentDetails,
+          monthlyRent: monthlyRent !== undefined ? monthlyRent : sourceRentDetails.monthlyRent,
+        },
+      });
 
-      const total = mockPayments.length;
+      logger.info('Lease renewal created', {
+        originalLeaseId: original._id.toString(),
+        renewalLeaseId: renewal._id.toString(),
+        createdBy: activeProfile._id.toString(),
+      });
+
+      res.status(201).json(successResponse(renewal.toJSON(), 'Lease renewal created successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get a lease's payment schedule. Only a party may view it.
+   */
+  async getLeasePayments(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const activeProfile = await resolveActiveProfile(req);
+      const lease = await Lease.findById(req.params.id);
+      if (!lease) {
+        throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
+      }
+      if (!isParty(lease, activeProfile._id.toString())) {
+        throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');
+      }
+
+      const { page, limit, skip } = parsePagination(req.query);
+      const { status } = req.query;
+      let schedule = (lease.paymentSchedule || []).map(p => p.toJSON());
+      if (status) {
+        schedule = schedule.filter(p => p.status === status);
+      }
+      const total = schedule.length;
+      const pageItems = schedule.slice(skip, skip + limit);
 
       res.json(paginationResponse(
-        mockPayments,
-        parseInt(page),
-        parseInt(limit),
+        pageItems,
+        page,
+        limit,
         total,
         'Lease payments retrieved successfully'
       ));
@@ -488,38 +410,65 @@ class LeaseController {
   }
 
   /**
-   * Create payment
+   * Add a scheduled payment to a lease. Only the landlord may add one.
    */
-  async createPayment(req, res, next) {
+  async createPayment(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { leaseId } = req.params;
-      const paymentData = {
-        ...req.body,
-        leaseId: leaseId,
-        createdBy: req.userId,
-        status: 'pending'
-      };
+      const activeProfile = await resolveActiveProfile(req);
+      const { dueDate, amount, type, description } = req.body;
+      if (!dueDate || amount === undefined || amount === null || !type) {
+        throw new AppError('dueDate, amount, and type are required', 400, 'VALIDATION_ERROR');
+      }
 
-      // In a real implementation, create payment and process
-      // const payment = await PaymentModel.create(paymentData);
-      // await PaymentProcessor.process(payment);
+      const lease = await Lease.findById(req.params.id);
+      if (!lease) {
+        throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
+      }
+      if (!isLandlord(lease, activeProfile._id.toString())) {
+        throw new AppError('Access denied - only the landlord can add payments', 403, 'FORBIDDEN');
+      }
 
-      const newPayment = {
-        id: `payment_${Date.now()}`,
-        ...paymentData,
-        createdAt: new Date().toISOString()
-      };
+      lease.paymentSchedule.push({
+        dueDate: new Date(dueDate),
+        amount,
+        type,
+        description,
+        status: 'pending',
+      });
+      await lease.save();
 
-      logger.info('Payment created', {
-        paymentId: newPayment.id,
-        leaseId: leaseId,
-        amount: paymentData.amount,
-        createdBy: req.userId
+      const created = lease.paymentSchedule[lease.paymentSchedule.length - 1];
+
+      logger.info('Lease payment created', {
+        leaseId: lease._id.toString(),
+        paymentId: created._id.toString(),
+        amount,
+        createdBy: activeProfile._id.toString(),
       });
 
-      res.status(201).json(successResponse(
-        newPayment,
-        'Payment created successfully'
+      res.status(201).json(successResponse(created.toJSON(), 'Payment created successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get a lease's documents metadata. Only a party may view them.
+   */
+  async getLeaseDocuments(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const activeProfile = await resolveActiveProfile(req);
+      const lease = await Lease.findById(req.params.id);
+      if (!lease) {
+        throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
+      }
+      if (!isParty(lease, activeProfile._id.toString())) {
+        throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');
+      }
+
+      res.json(successResponse(
+        (lease.documents || []).map(doc => doc.toJSON()),
+        'Lease documents retrieved successfully'
       ));
     } catch (error) {
       next(error);
@@ -527,84 +476,45 @@ class LeaseController {
   }
 
   /**
-   * Get lease documents
+   * Attach a document to a lease. Stores document metadata (name, url, type).
+   * The caller supplies the already-uploaded file URL; no inline file storage
+   * is wired for lease documents. Only a party may attach a document.
    */
-  async getLeaseDocuments(req, res, next) {
+  async uploadLeaseDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { leaseId } = req.params;
+      const activeProfile = await resolveActiveProfile(req);
+      const { name, url, type } = req.body;
+      if (!name || !url) {
+        throw new AppError('Document name and url are required', 400, 'VALIDATION_ERROR');
+      }
 
-      // In a real implementation, fetch documents from database
-      const mockDocuments = [
-        {
-          id: 'doc_1',
-          leaseId: leaseId,
-          type: 'lease_agreement',
-          filename: 'lease_agreement.pdf',
-          size: 256789,
-          uploadedBy: 'user_landlord_1',
-          uploadedAt: '2023-12-01T10:00:00Z',
-          downloadUrl: '/api/leases/lease_1/documents/doc_1/download'
-        },
-        {
-          id: 'doc_2',
-          leaseId: leaseId,
-          type: 'move_in_checklist',
-          filename: 'move_in_checklist.pdf',
-          size: 128456,
-          uploadedBy: 'user_tenant_1',
-          uploadedAt: '2023-12-31T09:00:00Z',
-          downloadUrl: '/api/leases/lease_1/documents/doc_2/download'
-        }
-      ];
+      const lease = await Lease.findById(req.params.id);
+      if (!lease) {
+        throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
+      }
+      const profileId = activeProfile._id.toString();
+      if (!isParty(lease, profileId)) {
+        throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');
+      }
 
-      res.json(successResponse(mockDocuments, 'Lease documents retrieved successfully'));
-    } catch (error) {
-      next(error);
-    }
-  }
+      lease.documents.push({
+        name,
+        url,
+        type: type || 'other',
+        uploadedBy: profileId,
+        uploadedDate: new Date(),
+      });
+      await lease.save();
 
-  /**
-   * Upload lease document
-   */
-  async uploadLeaseDocument(req, res, next) {
-    try {
-      const { leaseId } = req.params;
-      const { type, description } = req.body;
-      const file = req.file;
+      const created = lease.documents[lease.documents.length - 1];
 
-      // In a real implementation, save file and create document record
-      // const savedFile = await FileStorage.save(file);
-      // const document = await DocumentModel.create({
-      //   leaseId: leaseId,
-      //   type: type,
-      //   filename: file.originalname,
-      //   fileUrl: savedFile.url,
-      //   uploadedBy: req.userId
-      // });
-
-      const newDocument = {
-        id: `doc_${Date.now()}`,
-        leaseId: leaseId,
-        type: type,
-        filename: file.originalname,
-        size: file.size,
-        description: description,
-        uploadedBy: req.userId,
-        uploadedAt: new Date().toISOString(),
-        downloadUrl: `/api/leases/${leaseId}/documents/doc_${Date.now()}/download`
-      };
-
-      logger.info('Lease document uploaded', {
-        documentId: newDocument.id,
-        leaseId: leaseId,
-        filename: file.originalname,
-        uploadedBy: req.userId
+      logger.info('Lease document added', {
+        leaseId: lease._id.toString(),
+        documentId: created._id.toString(),
+        uploadedBy: profileId,
       });
 
-      res.status(201).json(successResponse(
-        newDocument,
-        'Document uploaded successfully'
-      ));
+      res.status(201).json(successResponse(created.toJSON(), 'Document added successfully'));
     } catch (error) {
       next(error);
     }

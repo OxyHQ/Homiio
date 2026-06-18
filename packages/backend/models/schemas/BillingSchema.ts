@@ -1,3 +1,6 @@
+import type { Model } from 'mongoose';
+import type { IBilling } from '../documentTypes';
+
 const mongoose = require('mongoose');
 
 const billingSchema = new mongoose.Schema({
@@ -46,11 +49,11 @@ billingSchema.index({ plusActive: 1 });
 billingSchema.index({ plusStripeSubscriptionId: 1 });
 
 // Static methods
-billingSchema.statics.findByOxyUserId = function(oxyUserId) {
+billingSchema.statics.findByOxyUserId = function(oxyUserId: string) {
   return this.findOne({ oxyUserId });
 };
 
-billingSchema.statics.findByStripeSubscriptionId = function(subscriptionId) {
+billingSchema.statics.findByStripeSubscriptionId = function(subscriptionId: string) {
   return this.findOne({ plusStripeSubscriptionId: subscriptionId });
 };
 
@@ -59,58 +62,59 @@ billingSchema.statics.findActiveSubscriptions = function() {
 };
 
 // Instance methods
-billingSchema.methods.addFileCredit = function(amount = 1) {
+billingSchema.methods.addFileCredit = function(this: IBilling, amount: number = 1) {
   this.fileCredits += amount;
   this.lastPaymentAt = new Date();
   return this.save();
 };
 
-billingSchema.methods.consumeFileCredit = function() {
+billingSchema.methods.consumeFileCredit = function(this: IBilling) {
   if (this.plusActive) {
-    return Promise.resolve({ consumed: false, remaining: 'unlimited' });
+    return Promise.resolve({ consumed: false, remaining: 'unlimited' as const });
   }
-  
+
   if (this.fileCredits <= 0) {
     throw new Error('No file credits available');
   }
-  
+
   this.fileCredits -= 1;
   return this.save().then(() => ({ consumed: true, remaining: this.fileCredits }));
 };
 
-billingSchema.methods.activatePlus = function(stripeSubscriptionId) {
+billingSchema.methods.activatePlus = function(this: IBilling, stripeSubscriptionId?: string) {
   this.plusActive = true;
   this.plusSince = new Date();
   this.lastPaymentAt = new Date();
-  
+
   if (stripeSubscriptionId) {
     this.plusStripeSubscriptionId = stripeSubscriptionId;
   }
-  
+
   return this.save();
 };
 
-billingSchema.methods.deactivatePlus = function() {
+billingSchema.methods.deactivatePlus = function(this: IBilling) {
   this.plusActive = false;
   this.plusStripeSubscriptionId = undefined;
   return this.save();
 };
 
-billingSchema.methods.addProcessedSession = function(sessionId) {
+billingSchema.methods.addProcessedSession = function(this: IBilling, sessionId: string) {
   if (!this.processedSessions.includes(sessionId)) {
     this.processedSessions.push(sessionId);
   }
   return this.save();
 };
 
-billingSchema.methods.isSessionProcessed = function(sessionId) {
+billingSchema.methods.isSessionProcessed = function(this: IBilling, sessionId: string): boolean {
   return this.processedSessions.includes(sessionId);
 };
 
 // Pre-save middleware to ensure unique oxyUserId
-billingSchema.pre('save', async function(next) {
+billingSchema.pre('save', async function(this: IBilling, next: (err?: Error) => void): Promise<void> {
   if (this.isNew) {
-    const existing = await this.constructor.findOne({ oxyUserId: this.oxyUserId });
+    const Model = this.constructor as Model<IBilling>;
+    const existing = await Model.findOne({ oxyUserId: this.oxyUserId });
     if (existing) {
       throw new Error(`Billing record already exists for Oxy user: ${this.oxyUserId}`);
     }

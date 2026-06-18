@@ -12,10 +12,10 @@
  * and confirmed -> cancelled | completed.
  */
 
-const { Property, Reservation, Profile } = require('../models');
-const { logger } = require('../middlewares/logging');
-const { AppError, successResponse, paginationResponse } = require('../middlewares/errorHandler');
-const { ReservationStatus, CancellationPolicy, OfferingType, AvailabilityWindowStatus } = require('@homiio/shared-types');
+import { Property, Reservation, Profile } from '../models';
+import { logger } from '../middlewares/logging';
+import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
+import { ReservationStatus, PropertyStatus, CancellationPolicy, OfferingType, AvailabilityWindowStatus } from '@homiio/shared-types';
 
 /** Default currency used when a short-term block somehow lacks one. */
 const DEFAULT_CURRENCY = 'EUR';
@@ -28,7 +28,7 @@ const CURRENCY_ROUNDING = 100;
 function isVacationBookable(property: { offerings?: unknown }): boolean {
   return Array.isArray(property.offerings) && property.offerings.includes(OfferingType.SHORT_TERM_RENT);
 }
-const { hasConflict } = require('../utils/availabilityUtils');
+import { hasConflict } from '../utils/availabilityUtils';
 import type { DateWindow } from '../utils/availabilityUtils';
 
 const ACTIVE_RESERVATION_STATUSES = [ReservationStatus.PENDING, ReservationStatus.CONFIRMED];
@@ -121,7 +121,7 @@ class ReservationController {
 
       const property = await Property.findById(propertyId).lean();
       if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
-      if (property.status !== 'published' && property.status !== 'active') {
+      if (property.status !== PropertyStatus.PUBLISHED) {
         return next(new AppError('Property is not available for booking', 400, 'PROPERTY_NOT_BOOKABLE'));
       }
       if (property.isExternal) {
@@ -184,7 +184,7 @@ class ReservationController {
       }
 
       // Conflict: property availability windows
-      if (isBlockedByWindows(property.availabilityWindows, checkInDate, checkOutDate)) {
+      if (isBlockedByWindows(property.availabilityWindows ?? [], checkInDate, checkOutDate)) {
         return next(new AppError('Selected dates are blocked by the host calendar', 409, 'BLOCKED_BY_HOST'));
       }
 

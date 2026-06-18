@@ -105,17 +105,22 @@ export function attachAddressGeoNames<T extends SerializableAddress>(address: T 
  * Apply {@link attachAddressGeoNames} to a property (or array of properties)
  * whose `address` has been deep-populated. Returns the input for chaining.
  */
-export function serializePropertyAddresses<T extends { address?: SerializableAddress }>(
+export function serializePropertyAddresses<T extends { address?: unknown }>(
   properties: T | T[] | null | undefined,
 ): T | T[] | null | undefined {
   if (!properties) return properties;
-  if (Array.isArray(properties)) {
-    for (const property of properties) {
-      if (property && property.address) attachAddressGeoNames(property.address);
+  const apply = (p: T) => {
+    // Address arrives as a Mixed/Loose-typed populated subdocument; we only
+    // mutate the geo-ref fields it actually carries, so cast in at the boundary.
+    if (p && p.address && typeof p.address === 'object') {
+      attachAddressGeoNames(p.address as SerializableAddress);
     }
+  };
+  if (Array.isArray(properties)) {
+    for (const property of properties) apply(property);
     return properties;
   }
-  if (properties.address) attachAddressGeoNames(properties.address);
+  apply(properties);
   return properties;
 }
 
@@ -125,7 +130,9 @@ export function serializePropertyAddresses<T extends { address?: SerializableAdd
  * DISPLAY (list / detail / search / city-properties), so location names resolve
  * in the same query with no N+1.
  */
-export const ADDRESS_GEO_POPULATE = {
+import type { PopulateOptions } from 'mongoose';
+
+export const ADDRESS_GEO_POPULATE: PopulateOptions = {
   path: 'addressId',
   populate: [
     { path: 'cityId', select: 'name' },
@@ -133,6 +140,6 @@ export const ADDRESS_GEO_POPULATE = {
     { path: 'countryId', select: 'name code' },
     { path: 'neighborhoodId', select: 'name' },
   ],
-} as const;
+};
 
 export default { attachAddressGeoNames, serializePropertyAddresses, ADDRESS_GEO_POPULATE };
