@@ -60,8 +60,11 @@ packages/
 
 ## Dependencies
 
-- `@oxyhq/core` (^3.4.5), `@oxyhq/services` (^10.2.2), `@oxyhq/bloom` (^0.8.5) — Oxy platform integration
+- `@oxyhq/core` (^3.4.13), `@oxyhq/services` (^10.2.10), `@oxyhq/bloom` (^0.8.5) — Oxy platform integration
 - Frontend `packages/frontend/app/+html.tsx` injects `getSsoCallbackBootstrapScript()` from `@oxyhq/core`; do not add per-app `/__oxy/sso-callback` routes or local SSO helper copies.
+- Frontend auth/session state belongs to `OxyProvider` with a registered `clientId`; SDK cold boot owns callback consumption, stored-session restore, FedCM/silent restore, and SSO bounce.
+- App backend clients must use `oxyServices.createLinkedClient({ baseURL })`. Do not add local token providers, auth interceptors, manual `Authorization` plumbing, refresh retries, or session invalidation.
+- Backend auth middleware comes from `@oxyhq/core/server` (`createOxyAuthMiddleware`, `createOptionalOxyAuth`, `createOxyRateLimit`, `requireOxyAuth`, `getRequiredOxyUserId`, `authSocket`). Do not define local `AuthRequest`, `requireAuth`, `getUserId`, bearer parsers, or token-decoding middleware. Bearer-authenticated writes do not fetch app-local CSRF tokens; CSRF remains for ambient cookie credentials.
 
 ## Frontend Gotchas
 
