@@ -59,4 +59,5 @@ const REM_PX = 16;
 module.exports = withNativeWind(config, {
   input: './styles/global.css',
   inlineRem: REM_PX,
+  inlineVariables: false,
 });

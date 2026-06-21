@@ -1,16 +1,65 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
+@import "nativewind/theme";
+
+@source "../app/**/*.{js,jsx,ts,tsx}";
+@source "../components/**/*.{js,jsx,ts,tsx}";
+@source "../context/**/*.{js,jsx,ts,tsx}";
+@source "../hooks/**/*.{js,jsx,ts,tsx}";
+@source "../services/**/*.{js,jsx,ts,tsx}";
+@source "../store/**/*.{js,jsx,ts,tsx}";
+@source "../utils/**/*.{js,jsx,ts,tsx}";
+@source "../styles/**/*.{js,jsx,ts,tsx}";
+@source "../../../node_modules/@oxyhq/services/lib/**/*.{js,jsx}";
+@source "../../../node_modules/@oxyhq/bloom/lib/**/*.{js,jsx}";
 
 /*
- * Bloom is the single source of truth for colors. The CSS variables below are
- * the `blue` preset exported from @oxyhq/bloom/theme (APP_COLOR_PRESETS.blue),
- * mirrored here so NativeWind utilities (bg-primary, bg-background,
- * text-foreground, border-border …) resolve to the same values Bloom uses.
- *
- * Bloom's BloomThemeProvider also injects these vars at runtime and toggles the
- * `.dark` class; this static block guarantees correct first-paint values on web
- * before hydration and keeps light/dark in sync with `darkMode: 'class'`.
+ * Bloom is the single source of truth for colors. The `--color-*` aliases below
+ * map NativeWind utilities (bg-primary, bg-background, text-foreground,
+ * border-border …) onto the base `--x` tokens, which Bloom's BloomThemeProvider
+ * injects at runtime (and which the `@layer base` block below seeds for correct
+ * first-paint values on web before hydration).
+ */
+@theme {
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: hsl(0 0% 100%);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-card: var(--surface);
+  --color-card-foreground: var(--surface-foreground);
+
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+}
+
+/*
+ * The CSS variables below are the `blue` preset exported from @oxyhq/bloom/theme
+ * (APP_COLOR_PRESETS.blue), mirrored here so NativeWind utilities resolve to the
+ * same values Bloom uses. Bloom's BloomThemeProvider also injects these vars at
+ * runtime and toggles the `.dark` class; this static block guarantees correct
+ * first-paint values on web before hydration and keeps light/dark in sync with
+ * `darkMode: 'class'`.
  */
 @layer base {
   :root {

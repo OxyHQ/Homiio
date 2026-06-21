@@ -6,7 +6,6 @@
     "composite": true,
     "noEmit": false,
     "jsx": "react-jsx",
-    "jsxImportSource": "nativewind",
     "types": ["node", "jest"],
     "paths": {
       "@/*": [
