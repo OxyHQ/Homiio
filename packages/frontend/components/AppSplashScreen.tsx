@@ -4,20 +4,21 @@ import { LogoIcon } from '@/assets/logo';
 import { Loading } from '@oxyhq/bloom/loading';
 import { colors } from '@/styles/colors';
 import { USE_NATIVE_DRIVER } from '@/utils/animation';
-import { LinearGradient } from 'expo-linear-gradient';
-import { cssInterop } from 'nativewind';
+import { LinearGradient, type LinearGradientProps } from 'expo-linear-gradient';
+import { styled } from 'nativewind';
 
 interface AppSplashScreenProps {
   onFadeComplete?: () => void;
   startFade?: boolean;
 }
 
+// NativeWind 5: `styled` wires `className` → `style` on a third-party component
+// once at module scope (the old NW4 per-render `cssInterop` call is gone).
+const StyledLinearGradient: React.ComponentType<LinearGradientProps> = styled(LinearGradient, {
+  className: 'style',
+});
+
 const AppSplashScreen: React.FC<AppSplashScreenProps> = ({ onFadeComplete, startFade = false }) => {
-  cssInterop(LinearGradient, {
-    className: {
-      target: 'style',
-    },
-  });
   // Lazy-init keeps a single Animated.Value across renders without reading a
   // ref during render (which the React Compiler / react-hooks rules forbid).
   const [fadeAnim] = useState(() => new Animated.Value(1));
@@ -76,7 +77,7 @@ const AppSplashScreen: React.FC<AppSplashScreenProps> = ({ onFadeComplete, start
 
   return (
     <Animated.View style={containerStyle}>
-      <LinearGradient
+      <StyledLinearGradient
         colors={gradientColors}
         className="flex-1 items-center justify-center"
       >
@@ -86,7 +87,7 @@ const AppSplashScreen: React.FC<AppSplashScreenProps> = ({ onFadeComplete, start
             <Loading iconSize={28} color={colors.secondaryColor} showText={false} />
           </View>
         </View>
-      </LinearGradient>
+      </StyledLinearGradient>
     </Animated.View>
   );
 };
