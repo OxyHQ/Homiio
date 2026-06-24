@@ -27,7 +27,11 @@ import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
-import * as SegmentedControl from '@oxyhq/bloom/segmented-control';
+import {
+  SegmentedControl,
+  SegmentedControlItem,
+  SegmentedControlItemText,
+} from '@oxyhq/bloom/segmented-control';
 
 import { RangeSlider } from '@/components/ui/RangeSlider';
 import { colors } from '@/styles/colors';
@@ -65,13 +69,13 @@ interface OfferingSelectorProps {
  */
 const OfferingSelector: React.FC<OfferingSelectorProps> = React.memo(
   ({ offering, onChange, label, offeringLabels }) => (
-    <SegmentedControl.Root label={label} type="radio" value={offering} onChange={onChange}>
+    <SegmentedControl label={label} type="radio" value={offering} onChange={onChange}>
       {OFFERINGS.map((key) => (
-        <SegmentedControl.Item key={key} value={key}>
-          <SegmentedControl.ItemText>{offeringLabels[key]}</SegmentedControl.ItemText>
-        </SegmentedControl.Item>
+        <SegmentedControlItem key={key} value={key}>
+          <SegmentedControlItemText>{offeringLabels[key]}</SegmentedControlItemText>
+        </SegmentedControlItem>
       ))}
-    </SegmentedControl.Root>
+    </SegmentedControl>
   ),
 );
 OfferingSelector.displayName = 'OfferingSelector';

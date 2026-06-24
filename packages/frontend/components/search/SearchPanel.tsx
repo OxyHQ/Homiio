@@ -6,7 +6,7 @@
  * step. Presentation is breakpoint-driven from a SINGLE component:
  *
  *  - Wide screens (`useIsScreenNotMobile()`): a COMPACT centered dialog
- *    (`CenteredDialog`) over a dimmed page. It shows ONLY the single tapped step
+ *    (`Dialog placement="center"`) over a dimmed page. It shows ONLY the single tapped step
  *    — a contextual title + close, the step's content, and a primary "Done" that
  *    applies the draft to the live query (so the pill updates) and closes. There
  *    is no multi-step back/next chrome on wide; the pill's own circular Search
@@ -32,8 +32,12 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@oxyhq/bloom/button';
-import { CenteredDialog } from '@oxyhq/bloom/dialog';
-import * as SegmentedControl from '@oxyhq/bloom/segmented-control';
+import { Dialog } from '@oxyhq/bloom/dialog';
+import {
+  SegmentedControl,
+  SegmentedControlItem,
+  SegmentedControlItemText,
+} from '@oxyhq/bloom/segmented-control';
 import { H3 } from '@oxyhq/bloom/typography';
 
 import { OfferingType, PropertyType } from '@homiio/shared-types';
@@ -90,7 +94,7 @@ const STEP_TITLE: Record<SearchStep, { key: string; fallback: string }> = {
 
 /**
  * Compact wide-dialog width. The dialog shows a SINGLE step, so it stays snug
- * and centered. Bloom's `CenteredDialog` caps the height itself (80% of the
+ * and centered. Bloom's `Dialog` caps the height itself (80% of the
  * viewport, body scrolls) so the longer steps — the two-month calendar, the
  * city autocomplete list — scroll inside the card rather than growing it
  * off-screen; we only set the width here.
@@ -281,7 +285,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
     applyQuery(draft);
   }, [applyQuery, draft]);
 
-  // The wide path renders the step inside Bloom's compact `CenteredDialog`
+  // The wide path renders the step inside Bloom's compact centered `Dialog`
   // (whose header already names the step), so the steps drop their redundant
   // internal heading and tighten their gaps via `compact`. The narrow sheet
   // (`isWide` is false) keeps the full per-step heading. The two presentations
@@ -348,7 +352,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
         <Ionicons name="close" size={22} color={colors.COLOR_BLACK} />
       </Pressable>
       <View style={styles.modeToggle}>
-        <SegmentedControl.Root<BrowseMode>
+        <SegmentedControl<BrowseMode>
           label={t('search.mode.label', 'Browse mode') || 'Browse mode'}
           type="tabs"
           size="small"
@@ -356,14 +360,14 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
           onChange={handleBrowseMode}
         >
           {BROWSE_MODE_ORDER.map((browseMode) => (
-            <SegmentedControl.Item key={browseMode} value={browseMode}>
-              <SegmentedControl.ItemText>
+            <SegmentedControlItem key={browseMode} value={browseMode}>
+              <SegmentedControlItemText>
                 {t(BROWSE_MODE_LABELS[browseMode].key, BROWSE_MODE_LABELS[browseMode].fallback) ||
                   BROWSE_MODE_LABELS[browseMode].fallback}
-              </SegmentedControl.ItemText>
-            </SegmentedControl.Item>
+              </SegmentedControlItemText>
+            </SegmentedControlItem>
           ))}
-        </SegmentedControl.Root>
+        </SegmentedControl>
       </View>
       <View style={styles.headerClose} />
     </View>
@@ -433,27 +437,26 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
     const stepTitle =
       t(STEP_TITLE[step].key, STEP_TITLE[step].fallback) || STEP_TITLE[step].fallback;
     return (
-      <CenteredDialog
-        visible={open}
+      <Dialog
+        placement="center"
+        open={open}
         onClose={onClose}
         title={stepTitle}
+        label={stepTitle}
         maxWidth={DIALOG_MAX_WIDTH}
-        closeAccessibilityLabel={t('common.close', 'Close') || 'Close'}
-        footer={
-          <View style={styles.dialogFooter}>
-            <Button
-              variant="primary"
-              size="medium"
-              onPress={handleApply}
-              accessibilityLabel={t('common.done', 'Done') || 'Done'}
-            >
-              {t('common.done', 'Done') || 'Done'}
-            </Button>
-          </View>
-        }
       >
         {stepContent}
-      </CenteredDialog>
+        <View style={styles.dialogFooter}>
+          <Button
+            variant="primary"
+            size="medium"
+            onPress={handleApply}
+            accessibilityLabel={t('common.done', 'Done') || 'Done'}
+          >
+            {t('common.done', 'Done') || 'Done'}
+          </Button>
+        </View>
+      </Dialog>
     );
   }
 
@@ -503,12 +506,12 @@ const styles = StyleSheet.create({
   },
 
   // --- Wide compact dialog (single step) ---
-  // Bloom's `CenteredDialog` owns the header, body padding, and the footer's
-  // hairline + padding; this footer row only right-aligns the "Done" button
-  // inside that slot.
+  // Bloom's `Dialog` owns the header and body padding; this footer row right-
+  // aligns the "Done" button below the step content inside the dialog body.
   dialogFooter: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
+    marginTop: spacing.lg,
   },
 
   // --- Narrow full-screen sheet ---

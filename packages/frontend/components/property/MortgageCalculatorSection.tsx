@@ -18,7 +18,11 @@ import { StyleSheet, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Text as BloomText } from '@oxyhq/bloom/typography';
-import * as SegmentedControl from '@oxyhq/bloom/segmented-control';
+import {
+  SegmentedControl,
+  SegmentedControlItem,
+  SegmentedControlItemText,
+} from '@oxyhq/bloom/segmented-control';
 
 import { Section } from '@/components/property/Section';
 import { CurrencyFormatter } from '@/components/CurrencyFormatter';
@@ -186,20 +190,20 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
             {t('listing.mortgage.term', 'Term')}
           </BloomText>
         </View>
-        <SegmentedControl.Root
+        <SegmentedControl
           label={t('listing.mortgage.term', 'Term')}
           type="radio"
           value={String(termYears)}
           onChange={handleSetTerm}
         >
           {DEFAULT_MORTGAGE_CONFIG.termOptions.map((option) => (
-            <SegmentedControl.Item key={option} value={String(option)}>
-              <SegmentedControl.ItemText>
+            <SegmentedControlItem key={option} value={String(option)}>
+              <SegmentedControlItemText>
                 {t('listing.mortgage.years', '{{count}} yr', { count: option })}
-              </SegmentedControl.ItemText>
-            </SegmentedControl.Item>
+              </SegmentedControlItemText>
+            </SegmentedControlItem>
           ))}
-        </SegmentedControl.Root>
+        </SegmentedControl>
       </View>
 
       {/* Principal vs interest split bar */}

@@ -8,7 +8,7 @@ import { useOxy } from '@oxyhq/services';
 import { Button } from '@oxyhq/bloom/button';
 import { Switch } from '@oxyhq/bloom/switch';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
-import * as TextField from '@oxyhq/bloom/text-field';
+import { TextFieldInput } from '@oxyhq/bloom/text-field';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { colors } from '@/styles/colors';
 import { ICON_SIZES, radius, spacing } from '@/constants/styles';
@@ -302,7 +302,7 @@ export function SavedSearchesWidget() {
             </View>
 
             <View style={styles.field}>
-              <TextField.Input
+              <TextFieldInput
                 label={t('search.widgets.savedSearches.nameLabel')}
                 placeholder={t('search.widgets.savedSearches.namePlaceholder')}
                 value={editName}
@@ -318,7 +318,7 @@ export function SavedSearchesWidget() {
             </View>
 
             <View style={styles.field}>
-              <TextField.Input
+              <TextFieldInput
                 label={t('search.widgets.savedSearches.queryLabel')}
                 placeholder={t('search.widgets.savedSearches.queryPlaceholder')}
                 value={editQuery}

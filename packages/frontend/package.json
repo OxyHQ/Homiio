@@ -23,7 +23,7 @@
     "@bitdrift/react-native": "^0.12.0",
     "@expo/vector-icons": "^15.1.1",
     "@homiio/shared-types": "workspace:*",
-    "@oxyhq/bloom": "^0.11.0",
+    "@oxyhq/bloom": "^0.18.0",
     "@oxyhq/core": "^3.7.1",
     "@oxyhq/services": "^10.5.0",
     "@react-native-community/netinfo": "12.0.1",

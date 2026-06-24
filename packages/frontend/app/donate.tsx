@@ -26,7 +26,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { Button } from '@oxyhq/bloom/button';
-import * as SegmentedControl from '@oxyhq/bloom/segmented-control';
+import {
+  SegmentedControl,
+  SegmentedControlItem,
+  SegmentedControlItemText,
+} from '@oxyhq/bloom/segmented-control';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { Header } from '@/components/Header';
@@ -192,23 +196,23 @@ export default function DonatePage() {
               title={t('donations.page.chooseContribution')}
               bodyStyle={styles.pickerBody}
             >
-              <SegmentedControl.Root<DonationFrequency>
+              <SegmentedControl<DonationFrequency>
                 label={t('donations.page.frequency.label')}
                 type="tabs"
                 value={frequency}
                 onChange={handleFrequencyChange}
               >
-                <SegmentedControl.Item value="monthly">
-                  <SegmentedControl.ItemText>
+                <SegmentedControlItem value="monthly">
+                  <SegmentedControlItemText>
                     {t('donations.page.frequency.monthly')}
-                  </SegmentedControl.ItemText>
-                </SegmentedControl.Item>
-                <SegmentedControl.Item value="one-time">
-                  <SegmentedControl.ItemText>
+                  </SegmentedControlItemText>
+                </SegmentedControlItem>
+                <SegmentedControlItem value="one-time">
+                  <SegmentedControlItemText>
                     {t('donations.page.frequency.oneTime')}
-                  </SegmentedControl.ItemText>
-                </SegmentedControl.Item>
-              </SegmentedControl.Root>
+                  </SegmentedControlItemText>
+                </SegmentedControlItem>
+              </SegmentedControl>
 
               <View style={styles.tierList}>
                 {visibleTiers.map((tier) => (

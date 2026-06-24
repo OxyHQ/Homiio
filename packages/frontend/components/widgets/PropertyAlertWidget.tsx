@@ -6,7 +6,7 @@ import { showSignInModal } from '@oxyhq/services';
 import { Button } from '@oxyhq/bloom/button';
 import { Switch } from '@oxyhq/bloom/switch';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
-import * as TextField from '@oxyhq/bloom/text-field';
+import { TextFieldInput } from '@oxyhq/bloom/text-field';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 import { toast } from '@/lib/sonner';
@@ -164,7 +164,7 @@ export function PropertyAlertWidget() {
       <View style={styles.container}>
         <BloomText style={styles.subtitle}>{t('search.widgets.alerts.subtitle')}</BloomText>
 
-        <TextField.Input
+        <TextFieldInput
           label={t('search.widgets.alerts.location')}
           placeholder={t('search.widgets.alerts.locationPlaceholder')}
           value={location}
@@ -173,7 +173,7 @@ export function PropertyAlertWidget() {
 
         <View style={styles.priceRow}>
           <View style={styles.priceField}>
-            <TextField.Input
+            <TextFieldInput
               label={t('search.widgets.alerts.minPrice')}
               placeholder={t('search.widgets.alerts.minPricePlaceholder')}
               value={minPrice}
@@ -186,7 +186,7 @@ export function PropertyAlertWidget() {
             />
           </View>
           <View style={styles.priceField}>
-            <TextField.Input
+            <TextFieldInput
               label={t('search.widgets.alerts.maxPrice')}
               placeholder={t('search.widgets.alerts.maxPricePlaceholder')}
               value={maxPrice}

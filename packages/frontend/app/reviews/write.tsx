@@ -23,7 +23,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@oxyhq/bloom/button';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
-import * as TextField from '@oxyhq/bloom/text-field';
+import { TextFieldInput } from '@oxyhq/bloom/text-field';
 import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
 import { useOxy } from '@oxyhq/services';
 import { Header } from '@/components/Header';
@@ -350,19 +350,19 @@ export default function WriteReviewPage() {
 
           <View style={styles.sectionCard}>
             <H3 style={styles.sectionTitle}>Address</H3>
-            <TextField.Input
+            <TextFieldInput
               label="Street address"
               placeholder="e.g. 123 Main Street"
               value={formData.street}
               onChangeText={(text) => updateFormData('street', text)}
             />
-            <TextField.Input
+            <TextFieldInput
               label="Building number"
               placeholder="e.g. 123A"
               value={formData.number || ''}
               onChangeText={(text) => updateFormData('number', text)}
             />
-            <TextField.Input
+            <TextFieldInput
               label="Building name"
               placeholder="e.g. Sunset Apartments"
               value={formData.building_name || ''}
@@ -370,7 +370,7 @@ export default function WriteReviewPage() {
             />
             <View style={styles.row}>
               <View style={styles.rowField}>
-                <TextField.Input
+                <TextFieldInput
                   label="Floor"
                   placeholder="e.g. 3"
                   value={formData.floor || ''}
@@ -378,7 +378,7 @@ export default function WriteReviewPage() {
                 />
               </View>
               <View style={styles.rowField}>
-                <TextField.Input
+                <TextFieldInput
                   label="Unit / Apt"
                   placeholder="e.g. 3B"
                   value={formData.unit || ''}
@@ -388,7 +388,7 @@ export default function WriteReviewPage() {
             </View>
             <View style={styles.row}>
               <View style={styles.rowField}>
-                <TextField.Input
+                <TextFieldInput
                   label="City"
                   placeholder="e.g. Barcelona"
                   value={formData.city}
@@ -396,7 +396,7 @@ export default function WriteReviewPage() {
                 />
               </View>
               <View style={styles.rowField}>
-                <TextField.Input
+                <TextFieldInput
                   label="State / Province"
                   placeholder="e.g. Catalonia"
                   value={formData.state}
@@ -406,7 +406,7 @@ export default function WriteReviewPage() {
             </View>
             <View style={styles.row}>
               <View style={styles.rowField}>
-                <TextField.Input
+                <TextFieldInput
                   label="Postal code"
                   placeholder="e.g. 08001"
                   value={formData.postal_code}
@@ -414,7 +414,7 @@ export default function WriteReviewPage() {
                 />
               </View>
               <View style={styles.rowField}>
-                <TextField.Input
+                <TextFieldInput
                   label="Country"
                   placeholder="e.g. Spain"
                   value={formData.country}
@@ -440,14 +440,14 @@ export default function WriteReviewPage() {
 
           <View style={styles.sectionCard}>
             <H3 style={styles.sectionTitle}>Basics</H3>
-            <TextField.Input
+            <TextFieldInput
               label="Monthly rent (€)"
               placeholder="0.00"
               value={formData.price}
               onChangeText={(text) => updateFormData('price', text)}
               keyboardType="numeric"
             />
-            <TextField.Input
+            <TextFieldInput
               label="Apartment description"
               placeholder="e.g. 2nd floor, garden view"
               value={formData.greenHouse}
@@ -456,7 +456,7 @@ export default function WriteReviewPage() {
             />
             <View style={styles.row}>
               <View style={styles.rowField}>
-                <TextField.Input
+                <TextFieldInput
                   label="Lived from"
                   placeholder="YYYY-MM-DD"
                   value={formData.livedFrom}
@@ -464,7 +464,7 @@ export default function WriteReviewPage() {
                 />
               </View>
               <View style={styles.rowField}>
-                <TextField.Input
+                <TextFieldInput
                   label="Lived to"
                   placeholder="YYYY-MM-DD"
                   value={formData.livedTo}
@@ -551,21 +551,21 @@ export default function WriteReviewPage() {
               </View>
             </View>
 
-            <TextField.Input
+            <TextFieldInput
               label="Your opinion"
               placeholder="Share your experience (10+ characters)"
               value={formData.opinion}
               onChangeText={(text) => updateFormData('opinion', text)}
               multiline
             />
-            <TextField.Input
+            <TextFieldInput
               label="What did you like?"
               placeholder="Positive aspects of living here"
               value={formData.positiveComment}
               onChangeText={(text) => updateFormData('positiveComment', text)}
               multiline
             />
-            <TextField.Input
+            <TextFieldInput
               label="What could be improved?"
               placeholder="Areas for improvement"
               value={formData.negativeComment}

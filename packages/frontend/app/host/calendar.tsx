@@ -18,9 +18,16 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@oxyhq/bloom/button';
 import { Loading } from '@oxyhq/bloom/loading';
-import * as Menu from '@oxyhq/bloom/menu';
+import {
+  Menu,
+  MenuContent,
+  MenuGroup,
+  MenuItem,
+  MenuItemText,
+  MenuTrigger,
+} from '@oxyhq/bloom/menu';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
-import * as TextField from '@oxyhq/bloom/text-field';
+import { TextFieldInput } from '@oxyhq/bloom/text-field';
 import { Text as BloomText, H2 } from '@oxyhq/bloom/typography';
 import { useOxy, showSignInModal } from '@oxyhq/services';
 import {
@@ -290,8 +297,8 @@ export default function HostCalendarScreen() {
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.pickerCard}>
             <SectionEyebrow>Property</SectionEyebrow>
-            <Menu.Root>
-              <Menu.Trigger label="Choose property">
+            <Menu>
+              <MenuTrigger label="Choose property">
                 {({ props: triggerProps }) => (
                   <Button
                     onPress={triggerProps.onPress}
@@ -314,24 +321,24 @@ export default function HostCalendarScreen() {
                       : 'Choose property'}
                   </Button>
                 )}
-              </Menu.Trigger>
-              <Menu.Outer>
-                <Menu.Group>
+              </MenuTrigger>
+              <MenuContent>
+                <MenuGroup>
                   {properties.map((property) => {
                     const id = property._id ?? property.id ?? '';
                     return (
-                      <Menu.Item
+                      <MenuItem
                         key={id}
                         label={getPropertyTitle(property)}
                         onPress={() => setSelectedPropertyId(id)}
                       >
-                        <Menu.ItemText>{getPropertyTitle(property)}</Menu.ItemText>
-                      </Menu.Item>
+                        <MenuItemText>{getPropertyTitle(property)}</MenuItemText>
+                      </MenuItem>
                     );
                   })}
-                </Menu.Group>
-              </Menu.Outer>
-            </Menu.Root>
+                </MenuGroup>
+              </MenuContent>
+            </Menu>
           </View>
 
           {selectedProperty ? (
@@ -399,7 +406,7 @@ export default function HostCalendarScreen() {
           onConfirm={handleConfirmBlock}
           onCancel={closeDialog}
         >
-          <TextField.Input
+          <TextFieldInput
             label="Reason (optional)"
             value={blockState.reason}
             onChangeText={(reason) =>

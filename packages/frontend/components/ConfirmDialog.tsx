@@ -1,9 +1,8 @@
 /**
- * Minimal confirmation dialog. A thin composition over Bloom's
- * {@link CenteredDialog} primitive (`@oxyhq/bloom/dialog`) — Bloom owns the
- * dimmed backdrop, the snug centered card, the title + close header, the
- * scrollable body, and the footer's hairline + padding. ConfirmDialog only
- * adds the message copy, the optional secondary content, and the
+ * Minimal confirmation dialog. A thin composition over Bloom's centered
+ * {@link Dialog} primitive (`@oxyhq/bloom/dialog`) — Bloom owns the dimmed
+ * backdrop, the snug centered card, the title header, and the body padding.
+ * ConfirmDialog adds the message copy, the optional secondary content, and the
  * cancel/confirm action row. Used by:
  *  - Reservation detail (cancel / approve / decline)
  *  - Tenant application detail (withdraw)
@@ -13,7 +12,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button } from '@oxyhq/bloom/button';
-import { CenteredDialog } from '@oxyhq/bloom/dialog';
+import { Dialog } from '@oxyhq/bloom/dialog';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
@@ -47,37 +46,36 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onCancel,
   children,
 }) => (
-  <CenteredDialog
-    visible={visible}
+  <Dialog
+    placement="center"
+    open={visible}
     onClose={onCancel}
     title={title}
+    label={title}
     maxWidth={CONFIRM_CARD_MAX_WIDTH}
     // While the action is in flight the buttons are disabled, so the backdrop /
     // Escape / hardware-back must not dismiss it either — keep the confirm
     // blocking until it resolves.
-    dismissible={!loading}
-    closeAccessibilityLabel={cancelLabel}
-    footer={
-      <View style={styles.actions}>
-        <Button variant="ghost" size="medium" onPress={onCancel} disabled={loading}>
-          {cancelLabel}
-        </Button>
-        <Button
-          variant="primary"
-          size="medium"
-          onPress={onConfirm}
-          loading={loading}
-          disabled={loading}
-          style={confirmDestructive ? styles.destructive : undefined}
-        >
-          {confirmLabel}
-        </Button>
-      </View>
-    }
+    dismissOnBackdrop={!loading}
   >
     <BloomText style={styles.body}>{message}</BloomText>
     {children}
-  </CenteredDialog>
+    <View style={styles.actions}>
+      <Button variant="ghost" size="medium" onPress={onCancel} disabled={loading}>
+        {cancelLabel}
+      </Button>
+      <Button
+        variant="primary"
+        size="medium"
+        onPress={onConfirm}
+        loading={loading}
+        disabled={loading}
+        style={confirmDestructive ? styles.destructive : undefined}
+      >
+        {confirmLabel}
+      </Button>
+    </View>
+  </Dialog>
 );
 
 const styles = StyleSheet.create({
@@ -90,6 +88,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: spacing.sm,
+    marginTop: spacing.lg,
   },
   destructive: {
     backgroundColor: colors.danger,

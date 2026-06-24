@@ -27,7 +27,7 @@ import { Button } from '@oxyhq/bloom/button';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { Text as BloomText, H2, H3 } from '@oxyhq/bloom/typography';
 import { Avatar } from '@oxyhq/bloom/avatar';
-import * as TextField from '@oxyhq/bloom/text-field';
+import { TextFieldInput } from '@oxyhq/bloom/text-field';
 import {
   Profile,
   TenantApplication,
@@ -568,7 +568,7 @@ export default function LandlordApplicationDetailScreen() {
           onConfirm={handleConfirm}
           onCancel={handleClose}
         >
-          <TextField.Input
+          <TextFieldInput
             label="Notes to applicant (optional)"
             value={actionNotes}
             onChangeText={setActionNotes}

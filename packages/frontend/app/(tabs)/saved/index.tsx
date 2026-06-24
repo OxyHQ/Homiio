@@ -28,7 +28,11 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Chip } from '@oxyhq/bloom/chip';
-import * as SegmentedControl from '@oxyhq/bloom/segmented-control';
+import {
+  SegmentedControl,
+  SegmentedControlItem,
+  SegmentedControlItemText,
+} from '@oxyhq/bloom/segmented-control';
 import { SearchInput } from '@oxyhq/bloom/search-input';
 import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
 import { useOxy, showSignInModal } from '@oxyhq/services';
@@ -211,23 +215,23 @@ export default function SavedPropertiesScreen() {
         />
 
         <View style={styles.segmentedWrap}>
-          <SegmentedControl.Root<Tab>
+          <SegmentedControl<Tab>
             label={t('saved.tabs.label', 'Saved view')}
             type="tabs"
             value={tab}
             onChange={setTab}
           >
-            <SegmentedControl.Item value="folders">
-              <SegmentedControl.ItemText>
+            <SegmentedControlItem value="folders">
+              <SegmentedControlItemText>
                 {t('saved.tabs.folders', 'Folders')}
-              </SegmentedControl.ItemText>
-            </SegmentedControl.Item>
-            <SegmentedControl.Item value="recent">
-              <SegmentedControl.ItemText>
+              </SegmentedControlItemText>
+            </SegmentedControlItem>
+            <SegmentedControlItem value="recent">
+              <SegmentedControlItemText>
                 {t('saved.tabs.recent', 'Recent')}
-              </SegmentedControl.ItemText>
-            </SegmentedControl.Item>
-          </SegmentedControl.Root>
+              </SegmentedControlItemText>
+            </SegmentedControlItem>
+          </SegmentedControl>
         </View>
 
         {tab === 'recent' ? (

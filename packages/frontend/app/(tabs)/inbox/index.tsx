@@ -35,7 +35,11 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import type * as Notifications from 'expo-notifications';
 
-import * as SegmentedControl from '@oxyhq/bloom/segmented-control';
+import {
+  SegmentedControl,
+  SegmentedControlItem,
+  SegmentedControlItemText,
+} from '@oxyhq/bloom/segmented-control';
 import { SearchInput } from '@oxyhq/bloom/search-input';
 import { H3, Text as BloomText } from '@oxyhq/bloom/typography';
 
@@ -353,25 +357,25 @@ export default function InboxScreen() {
           onClearText={() => setSearchQuery('')}
         />
 
-        <SegmentedControl.Root<InboxFilter>
+        <SegmentedControl<InboxFilter>
           label={t('notification.filter.label', 'Filter notifications')}
           type="tabs"
           value={filter}
           onChange={setFilter}
         >
-          <SegmentedControl.Item value="all">
-            <SegmentedControl.ItemText>
+          <SegmentedControlItem value="all">
+            <SegmentedControlItemText>
               {t('notification.filter.all', 'All')}
-            </SegmentedControl.ItemText>
-          </SegmentedControl.Item>
-          <SegmentedControl.Item value="unread">
-            <SegmentedControl.ItemText>
+            </SegmentedControlItemText>
+          </SegmentedControlItem>
+          <SegmentedControlItem value="unread">
+            <SegmentedControlItemText>
               {unreadCount > 0
                 ? `${t('notification.filter.unread', 'Unread')} · ${unreadCount}`
                 : t('notification.filter.unread', 'Unread')}
-            </SegmentedControl.ItemText>
-          </SegmentedControl.Item>
-        </SegmentedControl.Root>
+            </SegmentedControlItemText>
+          </SegmentedControlItem>
+        </SegmentedControl>
       </View>
 
       {isLoading && notifications.length === 0 ? (

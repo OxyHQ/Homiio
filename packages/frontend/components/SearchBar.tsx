@@ -23,7 +23,11 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
-import * as SegmentedControl from '@oxyhq/bloom/segmented-control';
+import {
+  SegmentedControl,
+  SegmentedControlItem,
+  SegmentedControlItemText,
+} from '@oxyhq/bloom/segmented-control';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { useRentalMode, type RentalMode } from '@/context/RentalModeContext';
@@ -211,7 +215,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   return (
     <View style={styles.root}>
       <View style={[styles.modeWrapper, isWeb ? styles.modeWrapperWeb : null]}>
-        <SegmentedControl.Root<RentalMode>
+        <SegmentedControl<RentalMode>
           label={t('searchBar.mode.label', 'Rental mode')}
           type="tabs"
           size="small"
@@ -222,17 +226,17 @@ export const SearchBar: React.FC<SearchBarProps> = ({
             'Switch between long-term rentals and vacation stays',
           )}
         >
-          <SegmentedControl.Item value="long_term">
-            <SegmentedControl.ItemText>
+          <SegmentedControlItem value="long_term">
+            <SegmentedControlItemText>
               {t('searchBar.mode.longTerm', 'Long-term')}
-            </SegmentedControl.ItemText>
-          </SegmentedControl.Item>
-          <SegmentedControl.Item value="vacation">
-            <SegmentedControl.ItemText>
+            </SegmentedControlItemText>
+          </SegmentedControlItem>
+          <SegmentedControlItem value="vacation">
+            <SegmentedControlItemText>
               {t('searchBar.mode.vacation', 'Vacation')}
-            </SegmentedControl.ItemText>
-          </SegmentedControl.Item>
-        </SegmentedControl.Root>
+            </SegmentedControlItemText>
+          </SegmentedControlItem>
+        </SegmentedControl>
       </View>
 
       <View style={[styles.pillShell, isWeb ? styles.pillShellWeb : null]}>
