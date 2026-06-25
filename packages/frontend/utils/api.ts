@@ -141,8 +141,8 @@ export const api = {
     },
   ): Promise<{ data: T }> {
     try {
-      const data = await getClient().get<T>(endpoint, { params: options?.params });
-      return { data };
+      const payload = await getClient().get<unknown>(endpoint, { params: options?.params });
+      return { data: normalizeEnvelope<T>(payload) };
     } catch (error) {
       throw toApiError(error);
     }
@@ -159,8 +159,8 @@ export const api = {
     },
   ): Promise<{ data: T }> {
     try {
-      const data = await getClient().post<T>(endpoint, body);
-      return { data };
+      const payload = await getClient().post<unknown>(endpoint, body);
+      return { data: normalizeEnvelope<T>(payload) };
     } catch (error) {
       throw toApiError(error);
     }
@@ -177,8 +177,8 @@ export const api = {
     },
   ): Promise<{ data: T }> {
     try {
-      const data = await getClient().put<T>(endpoint, body);
-      return { data };
+      const payload = await getClient().put<unknown>(endpoint, body);
+      return { data: normalizeEnvelope<T>(payload) };
     } catch (error) {
       throw toApiError(error);
     }
@@ -194,8 +194,8 @@ export const api = {
     },
   ): Promise<{ data: T }> {
     try {
-      const data = await getClient().delete<T>(endpoint);
-      return { data };
+      const payload = await getClient().delete<unknown>(endpoint);
+      return { data: normalizeEnvelope<T>(payload) };
     } catch (error) {
       throw toApiError(error);
     }
@@ -212,8 +212,8 @@ export const api = {
     },
   ): Promise<{ data: T }> {
     try {
-      const data = await getClient().patch<T>(endpoint, body);
-      return { data };
+      const payload = await getClient().patch<unknown>(endpoint, body);
+      return { data: normalizeEnvelope<T>(payload) };
     } catch (error) {
       throw toApiError(error);
     }
