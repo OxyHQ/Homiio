@@ -84,6 +84,45 @@ const toApiError = (error: unknown): ApiError => {
 };
 
 /**
+ * Re-wrap the linked client's payload back into the Homiio `{ success, data, … }`
+ * response envelope that every consumer reads (`response.data.data`,
+ * `response.data.pagination`, `response.data.results`, `response.data.success`,
+ * or `response.data` returned whole as an `ApiResponse<T>` / `*Response` type).
+ *
+ * Why this is needed: the linked client's `HttpService` AUTO-UNWRAPS the
+ * standardized success envelope before resolving. Its rule is:
+ *  - paginated bodies `{ data, pagination }` are returned UNCHANGED (envelope kept);
+ *  - bodies with a `data` key but no `pagination` resolve to just `body.data`
+ *    (envelope stripped — `success`/`message` are lost);
+ *  - bodies with no `data` key (e.g. `{ success, message }`) are returned UNCHANGED.
+ *
+ * Homiio's ~45 consumers, however, expect `response.data` to be the FULL
+ * envelope. So for the stripped case we reconstruct `{ success: true, data: payload }`,
+ * and for the kept-envelope cases we pass the payload straight through.
+ *
+ * Distinguishing a kept envelope from stripped inner data is unambiguous here:
+ * a kept envelope is the only object that carries `pagination`, or carries
+ * `success` without a `data` key. Stripped inner data is a domain payload
+ * (array, scalar, or a `*Response` object), which never has a bare top-level
+ * `success` and only pairs `pagination` with its own non-envelope keys (e.g.
+ * `{ city, properties, pagination }`). On any non-2xx the HttpService throws
+ * before resolving, so the reconstructed `success: true` is always correct for a
+ * resolved payload — consumers' `!response.data.success` guard only runs on the
+ * success path.
+ */
+const normalizeEnvelope = <T>(payload: unknown): T => {
+  if (payload !== null && typeof payload === 'object' && !Array.isArray(payload)) {
+    const obj = payload as Record<string, unknown>;
+    const isKeptEnvelope =
+      'pagination' in obj || ('success' in obj && !('data' in obj));
+    if (isKeptEnvelope) {
+      return payload as T;
+    }
+  }
+  return { success: true, data: payload } as T;
+};
+
+/**
  * Standard REST API methods for consistent usage across the app.
  *
  * `requireAuth` is retained for source-compatibility but is effectively a no-op:
