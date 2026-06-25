@@ -230,9 +230,13 @@ export const useSavedSearches = (): UseSavedSearches => {
     },
     onError: (error: unknown) => {
       if (isApiError(error) && error.status === 409) {
+        const response =
+          error.response && typeof error.response === 'object'
+            ? (error.response as { message?: unknown })
+            : undefined;
         const responseMessage =
-          error.response && typeof error.response.message === 'string'
-            ? error.response.message
+          typeof response?.message === 'string'
+            ? response.message
             : t('search.duplicateName');
         toast.error(responseMessage + '. ' + t('search.tryDifferentName'));
         return;

@@ -99,4 +99,39 @@ describe('property update/delete ownership', () => {
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe('PROPERTY_NOT_FOUND');
   });
+
+  it('ignores owner reassignment (profileId) in the update body — mass-assignment guard', async () => {
+    const owner = await createProfile('oxy-owner');
+    const otherProfile = await createProfile('oxy-other');
+    const property = await createRentProperty({ profileId: owner._id });
+
+    const res = await request(buildApp('oxy-owner'))
+      .put(`/properties/${property._id}`)
+      .send({ description: 'Legit edit', profileId: String(otherProfile._id) });
+
+    expect(res.status).toBe(200);
+    // The legitimate field is applied …
+    expect(res.body.data.description).toBe('Legit edit');
+
+    // … but ownership is unchanged: the client-supplied profileId is dropped.
+    const reloaded = await Property.findById(property._id);
+    expect(String(reloaded.profileId)).toBe(String(owner._id));
+    expect(String(reloaded.profileId)).not.toBe(String(otherProfile._id));
+  });
+
+  it('ignores system-managed fields (isVerified/views) in the update body', async () => {
+    const owner = await createProfile('oxy-owner');
+    const property = await createRentProperty({ profileId: owner._id });
+
+    const res = await request(buildApp('oxy-owner'))
+      .put(`/properties/${property._id}`)
+      .send({ description: 'Edit', isVerified: true, views: 9999 });
+
+    expect(res.status).toBe(200);
+
+    const reloaded = await Property.findById(property._id);
+    expect(reloaded.isVerified).toBe(false);
+    // The injected view count is dropped (whitelist excludes `views`).
+    expect(reloaded.views).not.toBe(9999);
+  });
 });

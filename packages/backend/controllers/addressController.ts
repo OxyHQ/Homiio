@@ -8,6 +8,7 @@ import { Types } from 'mongoose';
 
 import { Address } from '../models';
 import { getErrorName, getValidationMessages } from '../utils/errors';
+import { logger as appLogger } from '../middlewares/logging';
 
 /**
  * Response helpers
@@ -18,10 +19,17 @@ const badRequest = (res: Response, data: any) => res.status(400).json({ success:
 const notFound = (res: Response, data: any) => res.status(404).json({ success: false, ...data });
 const serverError = (res: Response, data: any) => res.status(500).json({ success: false, ...data });
 
+// Thin adapter onto the shared application logger so this controller logs
+// through the same structured pipeline (stdout + file) as the rest of the
+// backend, instead of writing to the console directly. An optional second
+// argument (typically the caught error) is folded into the structured `meta`.
 const logger = {
-  info: console.log,
-  error: console.error,
-  warn: console.warn
+  info: (message: string, detail?: unknown): void =>
+    appLogger.info(message, detail === undefined ? {} : { detail }),
+  warn: (message: string, detail?: unknown): void =>
+    appLogger.warn(message, detail === undefined ? {} : { detail }),
+  error: (message: string, detail?: unknown): void =>
+    appLogger.error(message, detail === undefined ? {} : { detail }),
 };
 
 /**

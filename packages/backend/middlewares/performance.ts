@@ -4,6 +4,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
+import { logger } from './logging';
 
 const SLOW_QUERY_THRESHOLD = 100; // 100ms
 
@@ -17,7 +18,11 @@ function performanceMonitor(req: Request, res: Response, next: NextFunction): vo
     
     // Log slow queries
     if (duration > SLOW_QUERY_THRESHOLD) {
-      console.warn(`🐌 Slow query detected: ${req.method} ${req.url} - ${duration}ms`);
+      logger.warn('Slow query detected', {
+        method: req.method,
+        url: req.url,
+        durationMs: duration,
+      });
     }
     
     // Add performance headers

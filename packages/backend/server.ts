@@ -16,6 +16,7 @@ import { notFound, errorHandler } from './middlewares/errorHandler';
 import database from './database/connection';
 import publicRoutes from './routes/public';
 import { OxyServices } from '@oxyhq/core';
+import { createOptionalOxyAuth, createOxyAuthMiddleware } from '@oxyhq/core/server';
 import { stripeWebhook, confirmCheckoutSession } from './controllers/billingController';
 import { initCronJobs } from './services/cron';
 import { getErrorMessage } from './utils/errors';
@@ -43,34 +44,14 @@ const UNAUTHENTICATED_RATE_LIMIT_MAX = 600; // ~0.66 req/sec per anonymous IP
 
 /**
  * Resolve the user from the bearer token WITHOUT rejecting unauthenticated
- * requests. Idempotent: if a prior pass (or a downstream router) already
- * resolved the user, it skips the costly token re-verification.
+ * requests, via the shared `@oxyhq/core/server` helper. It is idempotent (skips
+ * re-verification when a prior pass already resolved the user) and a
+ * failed/expired token never blocks public traffic.
  *
  * Runs BEFORE the global rate limiter so the limiter can key/scale per user
  * instead of per shared egress IP behind the ALB.
  */
-const optionalAuth = (req: Request, res: Response, next: NextFunction): void => {
-  if (req.user?.id || req.user?._id) {
-    next();
-    return;
-  }
-
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    next();
-    return;
-  }
-
-  const authMiddleware = oxy.auth();
-  authMiddleware(req, res, (err?: unknown) => {
-    // Optional auth: a failed/expired token must not block public traffic.
-    // Clear any partial user so the request proceeds as anonymous.
-    if (err) {
-      req.user = null;
-    }
-    next();
-  });
-};
+const optionalAuth = createOptionalOxyAuth(oxy);
 
 /**
  * Paths exempt from the global API rate limiter.
@@ -307,7 +288,7 @@ app.get('/health', async (req, res) => {
 app.use('/api', publicRoutes());
 
 // Mount authenticated API routes
-app.use('/api', oxy.auth(), routes());
+app.use('/api', createOxyAuthMiddleware(oxy), routes());
 
 // Error handling middleware
 app.use(errorLogger);

@@ -1,5 +1,6 @@
 import { PropertyStatus } from '@homiio/shared-types';
-import { applyOfferingRulesForUpdate, OfferingValidationError } from './offeringRules';
+import { applyOfferingRulesForUpdate, OfferingValidationError, type OfferingBearingPayload } from './offeringRules';
+import { EDITABLE_PROPERTY_FIELDS, pickFields } from './editableFields';
 import { onPropertyTransacted } from '../../services/commissionService';
 import { Property } from '../../models';
 import { AppError, successResponse } from '../../middlewares/errorHandler';
@@ -12,7 +13,12 @@ const TERMINAL_STATUSES: ReadonlyArray<string> = [PropertyStatus.RENTED, Propert
 export async function updateProperty(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
   try {
     const { propertyId } = req.params;
-    const updateData = { ...req.body };
+
+    // Whitelist the editable fields; never spread `req.body`. Ownership
+    // (`profileId`), `addressId`, partner attribution, verification, views,
+    // timestamps, and `type` are NOT client-assignable — owner reassignment /
+    // mass-assignment is impossible through this endpoint.
+    const updateData = pickFields<OfferingBearingPayload>(req.body, EDITABLE_PROPERTY_FIELDS);
 
     const oxyUserId = req.user?.id || req.user?._id || req.userId;
     if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
@@ -36,32 +42,27 @@ export async function updateProperty(req: ControllerRequest, res: ControllerResp
       exchange: property.exchange,
     });
 
-    // Handle address update if provided
-    if (updateData.address) {
+    // Handle address update if provided. `address`/`location` are read straight
+    // from the body (they are not whitelisted property fields); the server
+    // resolves them to a canonical Address and sets `addressId` itself.
+    if (req.body.address) {
       const { Address } = require('../../models');
-      
-      // Extract address data from request
-      let addressData = { ...updateData.address };
-      
+
+      const addressData = { ...req.body.address };
+
       // Handle coordinates from location field if provided
-      if (updateData.location?.coordinates) {
-        // Ensure coordinates are numbers
-        const coords = updateData.location.coordinates.map((coord: unknown) => Number(coord));
+      if (req.body.location?.coordinates) {
+        const coords = req.body.location.coordinates.map((coord: unknown) => Number(coord));
         addressData.coordinates = {
-          type: updateData.location.type || 'Point',
-          coordinates: coords
+          type: req.body.location.type || 'Point',
+          coordinates: coords,
         };
       }
-      
-      // Find or create address
+
       const address = await Address.findOrCreate(addressData);
       updateData.addressId = address._id;
-      
-      // Remove address data from updateData
-      delete updateData.address;
-      delete updateData.location;
     }
-    
+
     const updatedProperty = await Property.findByIdAndUpdate(
       propertyId,
       { ...updateData, updatedAt: new Date() },

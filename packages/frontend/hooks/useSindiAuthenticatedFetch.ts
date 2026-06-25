@@ -2,7 +2,6 @@ import { useCallback } from 'react';
 import { Platform } from 'react-native';
 import { fetch as expoFetch } from 'expo/fetch';
 import { useOxy } from '@oxyhq/services';
-import { logger } from '@/utils/logger';
 
 /** Shape compatible with the AI SDK / conversation store fetchers. */
 type ConversationFetch = typeof globalThis.fetch;
@@ -12,7 +11,12 @@ type ConversationFetch = typeof globalThis.fetch;
  * index, the `/sindi/[conversationId]` route, and the docked `SindiPanel`).
  *
  * Single source of truth so the three hosts stay byte-identical:
- *   - Bearer token resolved from the active Oxy access token.
+ *   - Bearer token read from the active Oxy access token. The SDK
+ *     (`OxyProvider`) OWNS token lifecycle — cold-boot restore plus background
+ *     refresh keep `getAccessToken()` live — so this hook does NOT re-implement
+ *     refresh/retry plumbing. Sindi is a streaming endpoint, which the SDK's
+ *     JSON-only HTTP client cannot proxy, so we keep a raw streaming fetch but
+ *     let the SDK own auth.
  *   - On web we use the browser's native `fetch` to preserve `ReadableStream`
  *     streaming semantics; native uses `expo/fetch`.
  *   - Multipart (`FormData`) bodies strip the `Content-Type` header so fetch
@@ -32,20 +36,9 @@ export function useSindiAuthenticatedFetch(): ConversationFetch {
       };
 
       if (oxyServices && activeSessionId) {
-        try {
-          let accessToken = oxyServices.getAccessToken();
-          if (!accessToken) {
-            const refreshed = await oxyServices.refreshTokenViaCookie();
-            if (refreshed?.accessToken) {
-              oxyServices.setTokens(refreshed.accessToken);
-              accessToken = refreshed.accessToken;
-            }
-          }
-          if (accessToken) {
-            headers['Authorization'] = `Bearer ${accessToken}`;
-          }
-        } catch (error) {
-          logger.error('Failed to get authentication token:', error);
+        const accessToken = oxyServices.getAccessToken();
+        if (accessToken) {
+          headers['Authorization'] = `Bearer ${accessToken}`;
         }
       }
 

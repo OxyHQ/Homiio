@@ -14,6 +14,11 @@ import { Property, Address, Profile } from '../models';
 import { PropertyType, PropertyStatus, ProfileType } from '@homiio/shared-types';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
+import {
+  CREATABLE_PROPERTY_FIELDS,
+  EDITABLE_PROPERTY_FIELDS,
+  pickFields,
+} from './property/editableFields';
 
 const ROOM_TYPE = PropertyType.ROOM;
 
@@ -139,21 +144,21 @@ class RoomController {
         return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
       }
 
-      // Resolve (or lazily create) the active profile that will own the room.
-      let profileId = req.body.profileId;
-      if (!profileId) {
-        let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-        if (!activeProfile) {
-          activeProfile = await Profile.create({
-            oxyUserId,
-            profileType: ProfileType.PERSONAL,
-            isPrimary: true,
-            isActive: true,
-            personalProfile: {},
-          });
-        }
-        profileId = activeProfile._id;
+      // Ownership: a room is ALWAYS owned by the authenticated user's active
+      // profile. The client cannot choose `profileId` (IDOR / mass-assignment) —
+      // it is resolved strictly server-side, creating the personal profile
+      // lazily if the user has none yet.
+      let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      if (!activeProfile) {
+        activeProfile = await Profile.create({
+          oxyUserId,
+          profileType: ProfileType.PERSONAL,
+          isPrimary: true,
+          isActive: true,
+          personalProfile: {},
+        });
       }
+      const profileId = activeProfile._id;
 
       // Resolve the address (either a full address object or an existing id).
       let addressId;
@@ -166,9 +171,10 @@ class RoomController {
         return next(new AppError('Address information is required', 400, 'MISSING_ADDRESS'));
       }
 
-      const roomData = { ...req.body };
-      delete roomData.address;
-      delete roomData.location;
+      // Build the room from an explicit field whitelist; never spread
+      // `req.body`. Ownership, address linkage and the room type are all set
+      // server-side below.
+      const roomData = pickFields(req.body, CREATABLE_PROPERTY_FIELDS);
 
       const room = new Property({
         ...roomData,
@@ -255,12 +261,11 @@ class RoomController {
         return next(new AppError('Access denied to this room', 403, 'FORBIDDEN'));
       }
 
-      const updateData = { ...req.body };
-      // Type, ownership and address linkage are immutable through this endpoint.
-      delete updateData.type;
-      delete updateData.profileId;
-      delete updateData.addressId;
-      delete updateData.address;
+      // Whitelist the editable fields; never spread `req.body`. Type, ownership
+      // (`profileId`) and address linkage (`addressId`) are not whitelisted, so
+      // they are immutable through this endpoint — no owner reassignment or
+      // mass-assignment is possible.
+      const updateData = pickFields(req.body, EDITABLE_PROPERTY_FIELDS);
 
       Object.assign(room, updateData);
       const updatedRoom = await room.save();

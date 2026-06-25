@@ -1,12 +1,19 @@
 import type { Request, Response } from 'express';
 import mongoose from 'mongoose';
+import { getOxyUserId } from '@oxyhq/core/server';
 
 import { Profile, Conversation } from '../../models';
 
 export { Profile, Conversation };
 
 export const isObjectId = (id: string) => mongoose.Types.ObjectId.isValid(id);
-export const getUserId = (req: any) => req.user?.oxyUserId || req.user?._id || req.user?.id;
+/**
+ * Resolve the authenticated Oxy user id (or null) from a request whose session
+ * was already populated by `@oxyhq/core/server` auth middleware mounted in
+ * server.ts. Returns null for anonymous requests so callers can emit their own
+ * 401 shape.
+ */
+export const getUserId = (req: Request): string | null => getOxyUserId(req);
 
 export const ok = (res: Response, data: any) => res.json(data);
 export const err = (res: Response, code: number, message: string) =>

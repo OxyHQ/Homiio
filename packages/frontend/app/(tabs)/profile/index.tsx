@@ -229,12 +229,8 @@ export default function ProfileScreen() {
   }
 
   const displayName =
-    typeof user?.name === 'string'
-      ? user.name
-      : user?.name?.full ||
-        user?.name?.first ||
-        user?.username ||
-        (activeProfile ? getProfileDisplayName(activeProfile) : 'Your profile');
+    user?.name?.displayName ||
+    (activeProfile ? getProfileDisplayName(activeProfile) : 'Your profile');
   const bio = activeProfile ? getProfileDescription(activeProfile) : undefined;
   const avatarUri = activeProfile?.personalProfile?.personalInfo?.avatar;
   const trustScore = activeProfile?.personalProfile?.trustScore?.score;

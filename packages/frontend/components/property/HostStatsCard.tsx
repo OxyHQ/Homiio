@@ -22,6 +22,7 @@ import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 import { SECTION_GUTTER } from '@/components/property/Section';
 import type { Profile, Property } from '@homiio/shared-types';
+import { useOxyAvatars } from '@/hooks/useOxyAvatars';
 
 interface HostStatsCardProps {
   property: Property;
@@ -74,6 +75,7 @@ export const HostStatsCard: React.FC<HostStatsCardProps> = ({
   const router = useRouter();
   const { t } = useTranslation();
   const [pressed, setPressed] = useState(false);
+  const { getAvatarFileId } = useOxyAvatars([landlordProfile?.oxyUserId]);
 
   const displayName = useMemo(
     () => getDisplayName(landlordProfile),
@@ -87,13 +89,16 @@ export const HostStatsCard: React.FC<HostStatsCardProps> = ({
 
   const isVerified = Boolean(landlordProfile?.isActive);
   const profileId = landlordProfile?._id ?? landlordProfile?.id;
+  // Prefer the Oxy avatar file id (resolved to a URL by the registered
+  // ImageResolver); fall back to a profile-local custom avatar.
   const avatarSource = useMemo(() => {
     if (!landlordProfile) return undefined;
-    if (landlordProfile.oxyUserId) {
-      return `https://cdn.oxy.so/avatars/${landlordProfile.oxyUserId}`;
-    }
-    return landlordProfile.personalProfile?.personalInfo?.avatar ?? landlordProfile.avatar;
-  }, [landlordProfile]);
+    return (
+      getAvatarFileId(landlordProfile.oxyUserId) ??
+      landlordProfile.personalProfile?.personalInfo?.avatar ??
+      landlordProfile.avatar
+    );
+  }, [landlordProfile, getAvatarFileId]);
 
   const handleOpenProfile = () => {
     if (profileId) {
@@ -142,6 +147,7 @@ export const HostStatsCard: React.FC<HostStatsCardProps> = ({
     >
       <Avatar
         source={avatarSource}
+        variant="thumb"
         name={displayName}
         size={72}
         verified={isVerified}

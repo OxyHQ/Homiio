@@ -23,7 +23,7 @@ const IMG_FALLBACK_MSG =
 
 export async function analyzeFile(req: Request, res: Response) {
   try {
-    const userId = getUserId(req as any);
+    const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
     const activeProfile = await Profile.findActiveByOxyUserId(userId);
@@ -129,7 +129,7 @@ export async function analyzeFileStream(req: Request, res: Response) {
       res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
     }
 
-    const userId = getUserId(req as any);
+    const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
     const activeProfile = await Profile.findActiveByOxyUserId(userId);

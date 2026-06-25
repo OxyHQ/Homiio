@@ -195,8 +195,10 @@ export default function ViewingsPage() {
 
   const extractErrorMessage = (error: unknown): string => {
     if (error instanceof ApiError) {
-      const response: { error?: { code?: string }; code?: string } | undefined =
-        error.response;
+      const response =
+        error.response && typeof error.response === 'object'
+          ? (error.response as { error?: { code?: string }; code?: string })
+          : undefined;
       const errorCode = response?.error?.code ?? response?.code;
       switch (errorCode) {
         case 'VIEWING_NOT_FOUND':

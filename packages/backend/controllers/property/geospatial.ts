@@ -1,5 +1,6 @@
 import { Property } from '../../models';
 import { paginationResponse } from '../../middlewares/errorHandler';
+import { logger } from '../../middlewares/logging';
 import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
 import { getQueryInteger, getQueryNumber } from '../queryParams';
 
@@ -201,7 +202,13 @@ export async function findNearbyProperties(req: ControllerRequest, res: Controll
           .filter(id => mongoose.Types.ObjectId.isValid(id))
           .map(id => new mongoose.Types.ObjectId(id));
         if (list.length) filters._id = { $nin: list };
-      } catch {}
+      } catch (error) {
+        // Best-effort exclude filter: a malformed excludeIds param must not fail
+        // the geo query, but we record it rather than swallowing it silently.
+        logger.warn('Failed to parse excludeIds filter; ignoring it', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
 
     // Apply additional filters to the nearby query
@@ -421,7 +428,13 @@ export async function findPropertiesInRadius(req: ControllerRequest, res: Contro
           .filter(id => mongoose.Types.ObjectId.isValid(id))
           .map(id => new mongoose.Types.ObjectId(id));
         if (list.length) filters._id = { $nin: list };
-      } catch {}
+      } catch (error) {
+        // Best-effort exclude filter: a malformed excludeIds param must not fail
+        // the geo query, but we record it rather than swallowing it silently.
+        logger.warn('Failed to parse excludeIds filter; ignoring it', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
 
     // Apply additional filters to the radius query

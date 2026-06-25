@@ -483,13 +483,10 @@ export function SideBar() {
      -------------------------------------------------------------- */
   const displayName = React.useMemo(() => {
     if (!user) return t('common.user', { defaultValue: 'User' });
-    if (typeof user.name === 'string') return user.name;
-    return (
-      user.name?.full ||
-      user.name?.first ||
-      user.username ||
-      t('common.user', { defaultValue: 'User' })
-    );
+    // `name.displayName` is the canonical, API-composed display string (required
+    // on every Oxy user DTO). Render it directly — never recompose from
+    // first/last/full/username on the client.
+    return user.name?.displayName || t('common.user', { defaultValue: 'User' });
   }, [user, t]);
 
   const avatarSource = React.useMemo<string | undefined>(() => {

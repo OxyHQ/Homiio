@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     StyleSheet,
     Dimensions,
-    Platform,
 } from 'react-native';
 import { ChatContent } from '@/components/sindi/ChatContent';
 import { Property } from '@homiio/shared-types';
 import { useOxy } from '@oxyhq/services';
 import { useConversationStore } from '@/store/conversationStore';
 import type { Conversation } from '@/store/conversationStore';
-import { fetch as expoFetch } from 'expo/fetch';
+import { useSindiAuthenticatedFetch } from '@/hooks/useSindiAuthenticatedFetch';
 import { ScrollView } from 'react-native-gesture-handler';
+import { logger } from '@/utils/logger';
 import { colors } from '@/styles/colors';
 
 const { height: screenHeight } = Dimensions.get('window');
@@ -36,57 +36,10 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
     const [initialMessageToSend, setInitialMessageToSend] = useState<string | undefined>();
     const isInitialized = useRef(false);
 
-    // Create authenticated fetch function like in the main screen
-    const authenticatedFetch = useCallback(
-        async (url: string | URL | Request, options: RequestInit = {}) => {
-            const headers: Record<string, string> = {
-                'Content-Type': 'application/json',
-                ...((options.headers as Record<string, string>) || {}),
-            };
-
-            // Add the current Oxy access token if available.
-            if (oxyServices && activeSessionId) {
-                try {
-                    let accessToken = oxyServices.getAccessToken();
-                    if (!accessToken) {
-                        const refreshed = await oxyServices.refreshTokenViaCookie();
-                        if (refreshed?.accessToken) {
-                            oxyServices.setTokens(refreshed.accessToken);
-                            accessToken = refreshed.accessToken;
-                        }
-                    }
-                    if (accessToken) {
-                        headers['Authorization'] = `Bearer ${accessToken}`;
-                    }
-                } catch (error) {
-                    console.error('Failed to get authentication token:', error);
-                }
-            }
-
-            // Create fetch options without null body
-            const { body, ...otherOptions } = options;
-
-            // If sending multipart, let fetch set the boundary header automatically
-            if (typeof FormData !== 'undefined' && body instanceof FormData) {
-                delete headers['Content-Type'];
-            }
-
-            const fetchOptions = {
-                ...otherOptions,
-                headers,
-                ...(body !== null && { body }),
-            };
-
-            // Use appropriate fetch implementation. Expo's fetch is runtime-compatible
-            // with the DOM fetch the caller expects, but its types diverge structurally.
-            const fetchImpl: typeof globalThis.fetch =
-                Platform.OS === 'web'
-                    ? globalThis.fetch
-                    : (expoFetch as unknown as typeof globalThis.fetch);
-            return fetchImpl(url, fetchOptions);
-        },
-        [oxyServices, activeSessionId],
-    );
+    // Shared streaming-capable authenticated fetch (single source of truth for
+    // every Sindi surface). The token comes straight from the SDK; no app-local
+    // refresh plumbing here.
+    const authenticatedFetch = useSindiAuthenticatedFetch();
 
     useEffect(() => {
         // Prevent multiple initializations and ensure auth is ready
@@ -94,7 +47,7 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
 
         // Validate required property data
         if (!property._id && !property.id) {
-            console.error('Property ID is required for Sindi chat');
+            logger.error('Property ID is required for Sindi chat');
             return;
         }
 
@@ -149,11 +102,11 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
                     // Set the message immediately - no timeout needed
                     setInitialMessageToSend(messageToSend);
                 } else {
-                    console.error('Failed to create conversation: Invalid response');
+                    logger.error('Failed to create conversation: Invalid response');
                     isInitialized.current = false;
                 }
             } catch (error) {
-                console.error('Failed to create conversation:', error);
+                logger.error('Failed to create conversation:', error);
                 // Reset so user can try again
                 isInitialized.current = false;
                 // Fallback to undefined conversation ID which will create a new one
@@ -174,7 +127,7 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
                 conversationId={conversationId}
                 currentConversation={currentConversation}
                 isAuthenticated={isAuthenticated}
-                authenticatedFetch={authenticatedFetch as typeof globalThis.fetch}
+                authenticatedFetch={authenticatedFetch}
                 initialMessages={[]}
                 messageFromUrl={initialMessageToSend}
                 style={{ flex: 1 }}

@@ -28,8 +28,12 @@ export interface ApplicationCardProps {
   variant?: 'applicant' | 'landlord';
   /** Landlord variant — applicant display name (resolved upstream). */
   applicantName?: string;
-  /** Landlord variant — applicant avatar URL. */
-  applicantAvatarUrl?: string;
+  /**
+   * Landlord variant — applicant avatar Oxy file id (resolved upstream). The
+   * registered ImageResolver turns it into the canonical media URL; a plain
+   * profile-local URL string is also accepted as a fallback.
+   */
+  applicantAvatarFileId?: string;
 }
 
 const APPLICATION_INCOME_CURRENCY = 'EUR';
@@ -44,7 +48,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
   href,
   variant = 'applicant',
   applicantName,
-  applicantAvatarUrl,
+  applicantAvatarFileId,
 }) => {
   const router = useRouter();
   const { property } = useProperty(application.propertyId);
@@ -86,7 +90,8 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
             <Avatar
               size={20}
               name={applicantName ?? 'A'}
-              source={applicantAvatarUrl ?? null}
+              source={applicantAvatarFileId ?? null}
+              variant="thumb"
             />
             <BloomText style={styles.subtitle} numberOfLines={1}>
               {propertyTitle}

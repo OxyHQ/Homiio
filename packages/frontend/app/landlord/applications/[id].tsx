@@ -40,6 +40,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useProperty } from '@/hooks';
+import { useOxyAvatars } from '@/hooks/useOxyAvatars';
 import { useProfile } from '@/context/ProfileContext';
 import {
   useApplicationById,
@@ -171,14 +172,21 @@ const getApplicantDisplayName = (
   }
 };
 
-const getApplicantAvatarUrl = (
+/**
+ * Applicant avatar to render: prefer the Oxy avatar file id (resolved to a URL
+ * downstream by the registered ImageResolver), else a profile-local custom
+ * avatar. `getAvatarFileId` comes from {@link useOxyAvatars} (batched lookup).
+ */
+const getApplicantAvatarFileId = (
   profile: Profile | null | undefined,
+  getAvatarFileId: (oxyUserId: string | undefined | null) => string | undefined,
 ): string | undefined => {
   if (!profile) return undefined;
-  if (profile.oxyUserId) {
-    return `https://cdn.oxy.so/avatars/${profile.oxyUserId}`;
-  }
-  return profile.personalProfile?.personalInfo?.avatar || profile.avatar;
+  return (
+    getAvatarFileId(profile.oxyUserId) ||
+    profile.personalProfile?.personalInfo?.avatar ||
+    profile.avatar
+  );
 };
 
 interface DocumentRowProps {
@@ -264,6 +272,10 @@ export default function LandlordApplicationDetailScreen() {
     enabled: Boolean(application?.applicantProfileId),
     staleTime: 1000 * 60 * 5,
   });
+
+  // Resolve the applicant's Oxy avatar file id (batched, cached). Called
+  // unconditionally so hook order is stable across the loading/error branches.
+  const { getAvatarFileId } = useOxyAvatars([applicantQuery.data?.oxyUserId]);
 
   const isLandlord = useMemo<boolean>(() => {
     if (!application || !primaryProfile) return false;
@@ -392,7 +404,7 @@ export default function LandlordApplicationDetailScreen() {
 
   const applicant = applicantQuery.data ?? null;
   const applicantName = getApplicantDisplayName(applicant);
-  const applicantAvatar = getApplicantAvatarUrl(applicant);
+  const applicantAvatar = getApplicantAvatarFileId(applicant, getAvatarFileId);
   const propertyTitle = property ? getPropertyTitle(property) : 'Property';
   const imageSource = property ? getPropertyImageSource(property) : null;
 
@@ -418,6 +430,7 @@ export default function LandlordApplicationDetailScreen() {
               size={56}
               name={applicantName}
               source={applicantAvatar ?? null}
+              variant="thumb"
             />
             <View style={styles.applicantHeaderText}>
               <H2 style={styles.applicantName}>{applicantName}</H2>

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { Property, Reservation } from '../../models';
 import { paginationResponse } from '../../middlewares/errorHandler';
+import { logger } from '../../middlewares/logging';
 import {
   priceFieldForOffering,
   DEFAULT_PRICE_FIELD,
@@ -275,7 +276,13 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
           .filter((id: string) => mongoose.Types.ObjectId.isValid(id))
           .map((id: string) => new mongoose.Types.ObjectId(id));
         if (list.length) filters._id = { $nin: list };
-      } catch { }
+      } catch (error) {
+        // Best-effort exclude filter: a malformed excludeIds param must not fail
+        // the listing, but we record it rather than swallowing it silently.
+        logger.warn('Failed to parse excludeIds filter; ignoring it', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
 
     // Exclude draft properties by default unless explicitly requested.
@@ -431,9 +438,9 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       ordered = properties.map((p: any) => ({ ...p, savesCount: savesMap[String(p._id)] || 0, isSaved: false }));
     }
 
-    if ((req as any).user?.id || (req as any).user?._id) {
+    if (req.user?.id || req.user?._id) {
       try {
-        const oxyUserId = (req as any).user.id || (req as any).user._id;
+        const oxyUserId = req.user.id || req.user._id;
         const { Profile, RecentlyViewed, Saved } = require('../../models');
         const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
         if (activeProfile) {
@@ -508,7 +515,13 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
           personalized.sort((a, b) => (b.personalizedScore || 0) - (a.personalizedScore || 0));
           ordered = personalized;
         }
-      } catch { }
+      } catch (error) {
+        // Personalization is a best-effort enhancement: if it fails we fall back
+        // to the default ordering instead of failing the request, but we log it.
+        logger.warn('Failed to personalize property ordering; using default order', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
 
     res.json(paginationResponse(

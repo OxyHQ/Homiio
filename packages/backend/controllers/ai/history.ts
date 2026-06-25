@@ -18,7 +18,7 @@ export async function clearHistory(req: Request, res: Response) {
 }
 
 export async function appendHistory(req: Request, res: Response) {
-  const userId = getUserId(req as any);
+  const userId = getUserId(req);
   if (!userId) return err(res, 401, 'Unauthorized');
 
   const profile = await Profile.findOne({ oxyUserId: userId, profileType: 'personal' });

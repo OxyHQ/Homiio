@@ -6,6 +6,7 @@
 import mongoose from 'mongoose';
 import config from '../config';
 import { getErrorMessage } from '../utils/errors';
+import { logger } from '../middlewares/logging';
 
 class Database {
   private connection: any;
@@ -65,7 +66,7 @@ class Database {
 
       // Handle connection events
       mongoose.connection.on('error', (error) => {
-        console.error('Database connection error:', error.message);
+        logger.error('Database connection error', { message: error.message });
         this.isConnected = false;
       });
 

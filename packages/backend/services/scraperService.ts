@@ -2,6 +2,7 @@ import axios from 'axios';
 import { OfferingType } from '@homiio/shared-types';
 import { forwardGeocode } from './geocodingService';
 import { Property } from '../models';
+import { logger as appLogger } from '../middlewares/logging';
 
 function errorMessageOf(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -100,22 +101,20 @@ class ScraperLogger {
     this.source = source;
   }
 
-  info(message: string, data?: any) {
-    console.log(`[Scraper:${this.source}] INFO: ${message}`, data ? JSON.stringify(data, null, 2) : '');
+  info(message: string, data?: unknown): void {
+    appLogger.info(`[Scraper:${this.source}] ${message}`, data === undefined ? {} : { data });
   }
 
-  warn(message: string, data?: any) {
-    console.warn(`[Scraper:${this.source}] WARN: ${message}`, data ? JSON.stringify(data, null, 2) : '');
+  warn(message: string, data?: unknown): void {
+    appLogger.warn(`[Scraper:${this.source}] ${message}`, data === undefined ? {} : { data });
   }
 
-  error(message: string, error?: any) {
-    console.error(`[Scraper:${this.source}] ERROR: ${message}`, error);
+  error(message: string, error?: unknown): void {
+    appLogger.error(`[Scraper:${this.source}] ${message}`, error === undefined ? {} : { error });
   }
 
-  debug(message: string, data?: any) {
-    if (process.env.NODE_ENV === 'development') {
-      console.debug(`[Scraper:${this.source}] DEBUG: ${message}`, data ? JSON.stringify(data, null, 2) : '');
-    }
+  debug(message: string, data?: unknown): void {
+    appLogger.debug(`[Scraper:${this.source}] ${message}`, data === undefined ? {} : { data });
   }
 }
 

@@ -13,7 +13,7 @@
  * Pure & typed against `@homiio/shared-types`; it mutates the passed body.
  */
 
-import { OfferingType, type PropertySale } from '@homiio/shared-types';
+import { OfferingType } from '@homiio/shared-types';
 import {
   validateOfferings,
   parseOfferings,
@@ -21,10 +21,24 @@ import {
   type OfferingBearing,
 } from '../../models/schemas/offeringValidation';
 
-/** Subset of an incoming property body this module reads/writes. */
+/**
+ * Server-side property write payload as seen by these rules.
+ *
+ * It is an index-signature record (built by `pickFields` from a whitelisted
+ * `req.body`, then augmented with server-resolved `addressId`/`profileId`), so
+ * the named offering fields are typed for the rules below while any other
+ * whitelisted field is carried through. The rules narrow every value internally,
+ * so no `any` is needed at any call site.
+ *
+ * It extends {@link OfferingBearing} (the exact shape `validateOfferings`
+ * consumes) so the payload is directly assignable to the shared validator
+ * without a cast; `sale` is widened to a mutable record so the controller can
+ * derive `sale.pricePerSqm` in place.
+ */
 export interface OfferingBearingPayload extends OfferingBearing {
-  sale?: Partial<PropertySale> | null;
-  squareFootage?: number;
+  sale?: Record<string, unknown> | null;
+  squareFootage?: unknown;
+  [key: string]: unknown;
 }
 
 /** Thrown when the offerings/blocks configuration is invalid. */
@@ -102,16 +116,18 @@ export function applyOfferingRulesForUpdate(
 
   // Overlay the body onto the stored state: a key present in the body wins
   // (including an explicit `null`, which clears a block); otherwise the stored
-  // value stands. This mirrors the `$set` Mongo will perform.
-  const pick = <K extends keyof OfferingBearing>(key: K): OfferingBearing[K] =>
-    (key in data ? (data as OfferingBearing)[key] : current[key]);
+  // value stands. This mirrors the `$set` Mongo will perform. `validateOfferings`
+  // inspects each block structurally (object-presence + numeric price), so the
+  // raw whitelisted values flow through unchanged.
+  const pick = (key: keyof OfferingBearing): unknown =>
+    (Object.prototype.hasOwnProperty.call(data, key) ? data[key] : current[key]);
 
   const effective: OfferingBearing = {
     offerings: pick('offerings'),
-    longTermRent: pick('longTermRent'),
-    shortTermRent: pick('shortTermRent'),
-    sale: pick('sale'),
-    exchange: pick('exchange'),
+    longTermRent: pick('longTermRent') as OfferingBearing['longTermRent'],
+    shortTermRent: pick('shortTermRent') as OfferingBearing['shortTermRent'],
+    sale: pick('sale') as OfferingBearing['sale'],
+    exchange: pick('exchange') as OfferingBearing['exchange'],
   };
 
   const error = validateOfferings(effective);

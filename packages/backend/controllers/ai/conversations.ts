@@ -4,7 +4,7 @@ import { Profile, Conversation, isObjectId, getUserId, ok, err } from './shared'
 import { generateAITitle, ChatMessage } from '../../services/aiService';
 
 export async function listConversations(req: Request, res: Response) {
-  const userId = getUserId(req as any);
+  const userId = getUserId(req);
   if (!userId) return err(res, 401, 'Unauthorized');
 
   const activeProfile = await Profile.findActiveByOxyUserId(userId);
@@ -32,7 +32,7 @@ export async function listConversations(req: Request, res: Response) {
 }
 
 export async function createConversation(req: Request, res: Response) {
-  const userId = getUserId(req as any);
+  const userId = getUserId(req);
   if (!userId) return err(res, 401, 'Unauthorized');
 
   const activeProfile = await Profile.findActiveByOxyUserId(userId);
@@ -89,7 +89,7 @@ export async function createConversation(req: Request, res: Response) {
 }
 
 export async function getConversation(req: Request, res: Response) {
-  const userId = getUserId(req as any);
+  const userId = getUserId(req);
   if (!userId) return err(res, 401, 'Unauthorized');
 
   const conversationId = String((req as any).params.id || '');
@@ -110,7 +110,7 @@ export async function getConversation(req: Request, res: Response) {
 }
 
 export async function updateConversation(req: Request, res: Response) {
-  const userId = getUserId(req as any);
+  const userId = getUserId(req);
   if (!userId) return err(res, 401, 'Unauthorized');
 
   const activeProfile = await Profile.findActiveByOxyUserId(userId);
@@ -138,7 +138,7 @@ export async function updateConversation(req: Request, res: Response) {
 }
 
 export async function addConversationMessage(req: Request, res: Response) {
-  const userId = getUserId(req as any);
+  const userId = getUserId(req);
   if (!userId) return err(res, 401, 'Unauthorized');
 
   const activeProfile = await Profile.findActiveByOxyUserId(userId);
@@ -161,7 +161,7 @@ export async function addConversationMessage(req: Request, res: Response) {
 }
 
 export async function deleteConversation(req: Request, res: Response) {
-  const userId = getUserId(req as any);
+  const userId = getUserId(req);
   if (!userId) return err(res, 401, 'Unauthorized');
 
   const activeProfile = await Profile.findActiveByOxyUserId(userId);
@@ -177,7 +177,7 @@ export async function deleteConversation(req: Request, res: Response) {
 }
 
 export async function shareConversation(req: Request, res: Response) {
-  const userId = getUserId(req as any);
+  const userId = getUserId(req);
   if (!userId) return err(res, 401, 'Unauthorized');
 
   const activeProfile = await Profile.findActiveByOxyUserId(userId);

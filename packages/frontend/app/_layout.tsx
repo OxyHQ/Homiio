@@ -40,8 +40,9 @@ import { MapStateProvider } from '@/context/MapStateContext';
 import { SearchModeProvider } from '@/context/SearchModeContext';
 import { RentalModeProvider } from '@/context/RentalModeContext';
 import { NotificationProvider } from '@/context/NotificationContext';
-import { OxyProvider } from '@oxyhq/services';
+import { OxyProvider, useOxy } from '@oxyhq/services';
 import { BloomThemeProvider } from '@oxyhq/bloom';
+import { ImageResolverProvider, type ImageResolver } from '@oxyhq/bloom/image-resolver';
 import {
   Provider as PortalProvider,
   Outlet as PortalOutlet,
@@ -66,7 +67,32 @@ i18nInit({
   interpolation: { escapeValue: false },
 })
   .catch((error: unknown) => {
+    logger.warn('Failed to initialize i18n:', error);
   });
+
+/**
+ * App-wide media chokepoint for Bloom `Avatar`/image components.
+ *
+ * Registers a single `ImageResolverProvider` whose resolver turns an Oxy file
+ * id (plus optional rendition variant) into the canonical Oxy media/signed
+ * URL via `oxyServices.getFileDownloadUrl` — the ONE place a media URL is built.
+ * Any Bloom surface that renders `Avatar source={<fileId>} variant="thumb"`
+ * gets correctly-resolved media for free; components never construct media URLs
+ * themselves.
+ */
+function MediaResolverProvider({ children }: { children: React.ReactNode }) {
+  const { oxyServices } = useOxy();
+  const resolver = useMemo<ImageResolver>(
+    () => (id: string, variant?: string) => {
+      if (!id) return undefined;
+      return oxyServices.getFileDownloadUrl(id, variant);
+    },
+    [oxyServices],
+  );
+  return (
+    <ImageResolverProvider value={resolver}>{children}</ImageResolverProvider>
+  );
+}
 
 
 
@@ -303,6 +329,7 @@ export default function RootLayout() {
               <QueryClientProvider client={queryClient}>
                 <RentalModeProvider>
                 <OxyProvider baseURL={OXY_BASE_URL} clientId={OXY_CLIENT_ID}>
+                  <MediaResolverProvider>
                   <ProfileProvider>
                     <SavedPropertiesProvider>
                       <NotificationProvider>
@@ -405,6 +432,7 @@ export default function RootLayout() {
                       </NotificationProvider>
                     </SavedPropertiesProvider>
                   </ProfileProvider>
+                  </MediaResolverProvider>
                 </OxyProvider>
                 </RentalModeProvider>
               </QueryClientProvider>

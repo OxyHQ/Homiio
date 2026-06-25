@@ -29,6 +29,7 @@ import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useHostStatus } from '@/hooks/useHostStatus';
 import { useLandlordApplications } from '@/hooks/useApplicationQueries';
 import { useProperty } from '@/hooks';
+import { useOxyAvatars } from '@/hooks/useOxyAvatars';
 import profileService from '@/services/profileService';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { radius, spacing, withShadow } from '@/constants/styles';
@@ -75,14 +76,21 @@ const getProfileDisplayName = (profile: Profile | null | undefined): string => {
   }
 };
 
-const getProfileAvatarUrl = (
+/**
+ * The applicant avatar to render: prefer the Oxy avatar file id (resolved to a
+ * URL downstream by the registered ImageResolver), else a profile-local custom
+ * avatar. `getAvatarFileId` comes from {@link useOxyAvatars} (batched lookup).
+ */
+const getProfileAvatarFileId = (
   profile: Profile | null | undefined,
+  getAvatarFileId: (oxyUserId: string | undefined | null) => string | undefined,
 ): string | undefined => {
   if (!profile) return undefined;
-  if (profile.oxyUserId) {
-    return `https://cdn.oxy.so/avatars/${profile.oxyUserId}`;
-  }
-  return profile.personalProfile?.personalInfo?.avatar || profile.avatar;
+  return (
+    getAvatarFileId(profile.oxyUserId) ||
+    profile.personalProfile?.personalInfo?.avatar ||
+    profile.avatar
+  );
 };
 
 interface PropertyGroup {
@@ -108,12 +116,14 @@ interface PropertyGroupBlockProps {
   propertyId: string;
   applications: TenantApplication[];
   applicants: Map<string, Profile | null>;
+  getAvatarFileId: (oxyUserId: string | undefined | null) => string | undefined;
 }
 
 const PropertyGroupBlock: React.FC<PropertyGroupBlockProps> = ({
   propertyId,
   applications,
   applicants,
+  getAvatarFileId,
 }) => {
   const { property } = useProperty(propertyId);
   const title = property ? getPropertyTitle(property) : 'Property';
@@ -133,7 +143,7 @@ const PropertyGroupBlock: React.FC<PropertyGroupBlockProps> = ({
             variant="landlord"
             href={`/landlord/applications/${application.id}`}
             applicantName={getProfileDisplayName(applicant)}
-            applicantAvatarUrl={getProfileAvatarUrl(applicant)}
+            applicantAvatarFileId={getProfileAvatarFileId(applicant, getAvatarFileId)}
           />
         );
       })}
@@ -196,6 +206,16 @@ export default function LandlordApplicationsScreen() {
     });
     return map;
   }, [uniqueApplicantIds, applicantQueries]);
+
+  // Batch-resolve every applicant's Oxy avatar in a single request (no N+1).
+  const applicantOxyUserIds = useMemo(
+    () =>
+      Array.from(applicantMap.values())
+        .map((profile) => profile?.oxyUserId)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0),
+    [applicantMap],
+  );
+  const { getAvatarFileId } = useOxyAvatars(applicantOxyUserIds);
 
   const filteredItems = useMemo<TenantApplication[]>(() => {
     const trimmed = searchQuery.trim().toLowerCase();
@@ -353,6 +373,7 @@ export default function LandlordApplicationsScreen() {
               propertyId={group.propertyId}
               applications={group.items}
               applicants={applicantMap}
+              getAvatarFileId={getAvatarFileId}
             />
           ))}
         </ScrollView>

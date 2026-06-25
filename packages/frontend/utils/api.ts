@@ -1,12 +1,22 @@
 import { Alert, Platform } from 'react-native';
 import { oxyClient } from '@oxyhq/core';
+import type { LinkedHttpClient } from '@oxyhq/core';
 import { API_URL } from '@/config';
+
+/** The HTTP client exposed by a linked backend client (Homiio's own API). */
+type LinkedClient = LinkedHttpClient['client'];
 
 // API Configuration
 const API_CONFIG = {
   baseURL: API_URL,
 };
 
+// `T = any` and `Record<string, any>` below preserve the pre-existing public
+// contract that 40+ call sites depend on (no-type-arg reads, typed filter
+// params). This adoption changes only the TRANSPORT (now the linked client),
+// not the consumer-facing types. eslint-disable kept narrow to these public
+// generics — no `any` is used in the request logic itself.
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface ApiResponse<T = any> {
   success: boolean;
   message?: string;
@@ -15,13 +25,19 @@ export interface ApiResponse<T = any> {
 }
 
 /**
- * Custom API Error class for handling API-specific errors
+ * Custom API Error class for handling API-specific errors.
+ *
+ * The linked client already extracts the structured `message`/`error` field
+ * from the API's JSON error body and surfaces it as the thrown error's
+ * `message`, plus a numeric `status`. We re-wrap that into the app's own
+ * `ApiError` so call sites keep their existing `error.status` / `error.response`
+ * contract.
  */
 export class ApiError extends Error {
   constructor(
     message: string,
     public status?: number,
-    public response?: any,
+    public response?: unknown,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -29,53 +45,50 @@ export class ApiError extends Error {
 }
 
 /**
- * Resolve the auth headers for a request.
+ * The Homiio backend client, linked to the Oxy session.
  *
- * The access token comes from the shared Oxy client. When there is no token
- * (e.g. the user is logged out), we deliberately attach NO `Authorization`
- * header rather than sending `Bearer null`/`Bearer undefined`: the backend's
- * Oxy auth middleware runs `jwtDecode` on whatever follows `Bearer `, so a
- * non-JWT string is rejected with a 401 "Invalid token format". Public-ish
- * reads must degrade to an unauthenticated request instead of hard-failing.
+ * `createLinkedClient` returns an HTTP client whose base URL is Homiio's own API
+ * (`api.homiio.com`) but whose bearer token is kept in lockstep with the Oxy
+ * session that `OxyProvider` owns: it mirrors the session's access token,
+ * delegates 401 refresh back to the session, and invalidates the session when a
+ * refresh ultimately fails. This replaces the hand-rolled `Authorization:
+ * Bearer` plumbing — apps must not manage tokens themselves.
  *
- * `getAccessToken()` is synchronous today but is awaited so a future async
- * token source can be swapped in without touching every call site.
+ * Created lazily (and once) so the module has no import-time side effects and so
+ * it binds to the live `oxyClient` singleton, which itself tracks whichever
+ * `OxyServices` instance owns the session. GET caching stays OFF (the SDK can't
+ * invalidate Homiio's own backend); React Query owns caching for these reads.
  */
-const buildAuthHeaders = async (): Promise<Record<string, string>> => {
-  const token = await oxyClient.getAccessToken();
-  if (typeof token === 'string' && token.length > 0) {
-    return { Authorization: `Bearer ${token}` };
+let linkedClient: LinkedClient | null = null;
+const getClient = (): LinkedClient => {
+  if (!linkedClient) {
+    linkedClient = oxyClient.createLinkedClient({ baseURL: API_CONFIG.baseURL }).client;
   }
-  return {};
+  return linkedClient;
 };
 
-const extractErrorMessage = (data: any, status: number): string => {
-  if (!data) return `HTTP ${status}`;
-  if (typeof data.message === 'string' && data.message.trim()) return data.message;
-  if (typeof data.error === 'string' && data.error.trim()) return data.error;
-  // Handle common validation/error shapes
-  if (data.error && typeof data.error === 'object') {
-    const err = data.error;
-    // Mongoose ValidationError format
-    if (err.errors && typeof err.errors === 'object') {
-      const details = Object.values(err.errors)
-        .map((e: any) => (typeof e?.message === 'string' ? e.message : ''))
-        .filter(Boolean)
-        .join('; ');
-      if (details) return details;
-    }
-    // Generic object -> try string fields
-    if (typeof err.message === 'string' && err.message.trim()) return err.message;
+/**
+ * Normalize an error thrown by the linked client into an {@link ApiError}.
+ * The linked client throws a plain `Error` carrying `status` + `response`; we
+ * preserve both.
+ */
+const toApiError = (error: unknown): ApiError => {
+  if (error instanceof ApiError) return error;
+  if (error && typeof error === 'object') {
+    const e = error as { message?: unknown; status?: unknown; response?: unknown };
+    const message = typeof e.message === 'string' ? e.message : 'Request failed';
+    const status = typeof e.status === 'number' ? e.status : undefined;
+    return new ApiError(message, status, e.response);
   }
-  try {
-    return JSON.stringify(data);
-  } catch {
-    return `HTTP ${status}`;
-  }
-}
+  return new ApiError('Request failed');
+};
 
 /**
- * Standard REST API methods for consistent usage across the app
+ * Standard REST API methods for consistent usage across the app.
+ *
+ * `requireAuth` is retained for source-compatibility but is effectively a no-op:
+ * the linked client attaches the bearer token only when a session exists, so
+ * public reads degrade to unauthenticated requests automatically.
  */
 export const api = {
   /**
@@ -88,39 +101,12 @@ export const api = {
       requireAuth?: boolean;
     },
   ): Promise<{ data: T }> {
-
-    const url = new URL(`${API_CONFIG.baseURL}${endpoint}`);
-
-    // Add query parameters if provided
-    if (options?.params) {
-      Object.entries(options.params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          url.searchParams.append(key, String(value));
-        }
-      });
+    try {
+      const data = await getClient().get<T>(endpoint, { params: options?.params });
+      return { data };
+    } catch (error) {
+      throw toApiError(error);
     }
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-
-    // Handle authentication if required
-    if (options?.requireAuth !== false) {
-      Object.assign(headers, await buildAuthHeaders());
-    }
-
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers,
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new ApiError(extractErrorMessage(data, response.status), response.status, data);
-    }
-
-    return { data };
   },
 
   /**
@@ -129,32 +115,16 @@ export const api = {
   async post<T = any>(
     endpoint: string,
     body?: any,
-    options?: {
+    _options?: {
       requireAuth?: boolean;
     },
   ): Promise<{ data: T }> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-
-    // Handle authentication if required
-    if (options?.requireAuth !== false) {
-      Object.assign(headers, await buildAuthHeaders());
+    try {
+      const data = await getClient().post<T>(endpoint, body);
+      return { data };
+    } catch (error) {
+      throw toApiError(error);
     }
-
-    const response = await fetch(`${API_CONFIG.baseURL}${endpoint}`, {
-      method: 'POST',
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new ApiError(extractErrorMessage(data, response.status), response.status, data);
-    }
-
-    return { data };
   },
 
   /**
@@ -163,32 +133,16 @@ export const api = {
   async put<T = any>(
     endpoint: string,
     body?: any,
-    options?: {
+    _options?: {
       requireAuth?: boolean;
     },
   ): Promise<{ data: T }> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-
-    // Handle authentication if required
-    if (options?.requireAuth !== false) {
-      Object.assign(headers, await buildAuthHeaders());
+    try {
+      const data = await getClient().put<T>(endpoint, body);
+      return { data };
+    } catch (error) {
+      throw toApiError(error);
     }
-
-    const response = await fetch(`${API_CONFIG.baseURL}${endpoint}`, {
-      method: 'PUT',
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new ApiError(extractErrorMessage(data, response.status), response.status, data);
-    }
-
-    return { data };
   },
 
   /**
@@ -196,31 +150,16 @@ export const api = {
    */
   async delete<T = any>(
     endpoint: string,
-    options?: {
+    _options?: {
       requireAuth?: boolean;
     },
   ): Promise<{ data: T }> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-
-    // Handle authentication if required
-    if (options?.requireAuth !== false) {
-      Object.assign(headers, await buildAuthHeaders());
+    try {
+      const data = await getClient().delete<T>(endpoint);
+      return { data };
+    } catch (error) {
+      throw toApiError(error);
     }
-
-    const response = await fetch(`${API_CONFIG.baseURL}${endpoint}`, {
-      method: 'DELETE',
-      headers,
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new ApiError(extractErrorMessage(data, response.status), response.status, data);
-    }
-
-    return { data };
   },
 
   /**
@@ -229,34 +168,19 @@ export const api = {
   async patch<T = any>(
     endpoint: string,
     body?: any,
-    options?: {
+    _options?: {
       requireAuth?: boolean;
     },
   ): Promise<{ data: T }> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-
-    // Handle authentication if required
-    if (options?.requireAuth !== false) {
-      Object.assign(headers, await buildAuthHeaders());
+    try {
+      const data = await getClient().patch<T>(endpoint, body);
+      return { data };
+    } catch (error) {
+      throw toApiError(error);
     }
-
-    const response = await fetch(`${API_CONFIG.baseURL}${endpoint}`, {
-      method: 'PATCH',
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new ApiError(extractErrorMessage(data, response.status), response.status, data);
-    }
-
-    return { data };
   },
 };
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // Web-compatible alert function
 export function webAlert(

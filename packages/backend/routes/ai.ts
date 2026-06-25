@@ -5,8 +5,11 @@
 import express, { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import multer from 'multer';
-import { streamText } from 'ai';
+import { streamText, type CoreMessage } from 'ai';
 import { openai } from '@ai-sdk/openai';
+import { getOxyUserId } from '@oxyhq/core/server';
+import { getErrorMessage } from '../utils/errors';
+import { logger } from '../middlewares/logging';
 
 // CJS model exports (mantengo CJS si tus modelos están así)
 const Profile = require('../models/schemas/ProfileSchema');
@@ -101,10 +104,9 @@ Avoid repetition:
 /** Utilities */
 // -------------------------------
 const isObjectId = (id: string) => mongoose.Types.ObjectId.isValid(id);
-const getUserId = (req: Request): string | undefined => {
-  const userId = req.user?.oxyUserId || req.user?._id || req.user?.id;
-  return typeof userId === 'string' && userId.length > 0 ? userId : undefined;
-};
+// Resolve the authenticated Oxy user id (or null) from a request whose session
+// was already populated by `@oxyhq/core/server` auth middleware in server.ts.
+const getUserId = (req: Request): string | null => getOxyUserId(req);
 const getBaseUrl = () => {
   const baseUrl = process.env.INTERNAL_API_BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
   return baseUrl;
@@ -128,14 +130,16 @@ const setStreamingHeaders = (res: Response) => {
   res.setHeader('X-Accel-Buffering', 'no');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
-  (res as any).setTimeout?.(0);
+  res.setTimeout(0);
 };
 
 const onGracefulClose = (req: Request, res: Response) => {
   const onClose = () => {
     try {
-  (res as any).end?.();
-    } catch {}
+      res.end();
+    } catch (error: unknown) {
+      logger.warn('Failed to end AI response on client disconnect', { error: getErrorMessage(error) });
+    }
   };
   req.on('aborted', onClose);
   res.on('close', onClose);
@@ -162,7 +166,11 @@ const extractLastPropertyIdsFromMessages = (msgs: ChatMessage[]): string[] => {
     try {
       const arr = JSON.parse(match[1].trim());
       if (Array.isArray(arr)) return arr.map(String).filter(Boolean);
-    } catch {}
+    } catch (error: unknown) {
+      logger.warn('Failed to parse <PROPERTIES_JSON> block from assistant message', {
+        error: getErrorMessage(error),
+      });
+    }
   }
   return [];
 };
@@ -392,6 +400,7 @@ async function performAppPropertySearch(query: string, priorMessages: ChatMessag
           const data = await resp.json();
           nearby = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
         } else {
+          logger.warn('AI nearby property search returned non-OK', { status: resp.status });
         }
       }
     }
@@ -451,7 +460,7 @@ export default function aiRouter() {
       const activeProfile = await Profile.findActiveByOxyUserId(userId);
       if (!activeProfile) return err(res, 404, 'No active profile found');
 
-      const { propertyId, propertyContext, userHistory, conversationContext } = (req as any).body || {};
+      const { propertyId, propertyContext, userHistory, conversationContext } = req.body || {};
       
       // Build context for AI suggestion generation
       let contextPrompt = 'Generate 5-6 relevant, actionable chat suggestions for a rental property chat assistant. ';
@@ -537,7 +546,8 @@ Return only the JSON array, no other text.`;
         propertyContext: !!propertyContext,
       });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      logger.error('AI suggestions failed', { error: getErrorMessage(error) });
       return err(res, 500, 'Failed to generate suggestions');
     }
   });
@@ -546,7 +556,7 @@ Return only the JSON array, no other text.`;
   router.post('/stream', async (req: Request, res: Response) => {
     try {
       setStreamingHeaders(res);
-      const { messages = [], conversationId } = (req as any).body as { messages: ChatMessage[]; conversationId?: string };
+      const { messages = [], conversationId } = (req.body ?? {}) as { messages?: ChatMessage[]; conversationId?: string };
 
       const userId = getUserId(req);
       if (!userId) return err(res, 401, 'Unauthorized');
@@ -741,7 +751,14 @@ Return only the JSON array, no other text.`;
           maxTokens: 1,
         } as any);
       } else {
-        result = streamText({ model: openai('gpt-4o'), temperature: 0.2, messages: enhanced as any });
+        // `enhanced` only ever holds system/user/assistant string messages
+        // (built from the system prompt + the incoming chat turns). Map to the
+        // AI SDK's CoreMessage shape, dropping the local `timestamp` field and
+        // any stray non-string `tool` turns (which the chat surface never sends).
+        const coreMessages: CoreMessage[] = enhanced
+          .filter((m) => m.role !== 'tool')
+          .map((m) => ({ role: m.role as 'system' | 'user' | 'assistant', content: m.content }));
+        result = streamText({ model: openai('gpt-4o'), temperature: 0.2, messages: coreMessages });
       }
 
       // Save last user message (strip inline base64)
@@ -750,7 +767,8 @@ Return only the JSON array, no other text.`;
         try {
           const toSave = hasInlineFile ? cleanedLastContent || 'Sent a file' : lastUser.content;
           await conversation.addMessage('user', toSave);
-        } catch (e) {
+        } catch (error: unknown) {
+          logger.warn('Failed to persist user message to conversation', { error: getErrorMessage(error) });
         }
       }
 
@@ -772,7 +790,8 @@ Return only the JSON array, no other text.`;
               }
             }
           }
-        } catch (e) {
+        } catch (error: unknown) {
+          logger.warn('Failed to persist assistant reply to conversation', { error: getErrorMessage(error) });
         }
       })();
 
@@ -782,31 +801,35 @@ Return only the JSON array, no other text.`;
 
       onGracefulClose(req, res);
       (await result).pipeDataStreamToResponse(res);
-    } catch (e: any) {
-      if ((res as any).headersSent) {
+    } catch (error: unknown) {
+      const message = getErrorMessage(error);
+      logger.error('AI stream failed', { error: message });
+      if (res.headersSent) {
         try {
-          (res as any).end?.();
-        } catch {}
+          res.end();
+        } catch (endError) {
+          logger.warn('Failed to end aborted AI stream response', { error: getErrorMessage(endError) });
+        }
         return;
       }
-      return res.status(500).json({ error: 'Failed to generate streaming response', details: e?.message });
+      return res.status(500).json({ error: 'Failed to generate streaming response', details: message });
     }
   });
 
   // ---------- Analyze single uploaded file (JSON response) ----------
   router.post('/analyze-file', upload.single('file'), async (req: Request, res: Response) => {
     try {
-      const userId = getUserId(req as any);
+      const userId = getUserId(req);
       if (!userId) return err(res, 401, 'Unauthorized');
 
       const activeProfile = await Profile.findActiveByOxyUserId(userId);
       if (!activeProfile) return err(res, 404, 'No active profile found');
 
-  const file = (req as any).file as any | undefined;
+  const file = req.file;
       if (!file?.buffer) return err(res, 400, 'file is required (multipart/form-data, key: file)');
 
       const mediaType = file.mimetype || 'application/octet-stream';
-      const userTextRaw: string = typeof (req as any).body?.text === 'string' ? (req as any).body.text : '';
+      const userTextRaw: string = typeof req.body?.text === 'string' ? req.body.text : '';
       const userText = userTextRaw.trim().slice(0, 2000);
       const buffer = file.buffer;
 
@@ -868,7 +891,8 @@ Return only the JSON array, no other text.`;
       }
 
       return err(res, 415, 'Unsupported media type. Please upload an image (png/jpeg/webp) or a PDF.');
-    } catch (e: any) {
+    } catch (error: unknown) {
+      logger.error('AI analyze-file failed', { error: getErrorMessage(error) });
       return err(res, 500, 'internal error');
     }
   });
@@ -882,21 +906,21 @@ Return only the JSON array, no other text.`;
         res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
       }
 
-      const userId = getUserId(req as any);
+      const userId = getUserId(req);
       if (!userId) return err(res, 401, 'Unauthorized');
 
       const activeProfile = await Profile.findActiveByOxyUserId(userId);
       if (!activeProfile) return err(res, 404, 'No active profile found');
 
-  const file = (req as any).file as any | undefined;
+  const file = req.file;
       if (!file?.buffer) return err(res, 400, 'file is required (multipart/form-data, key: file)');
 
       const mediaType = file.mimetype || 'application/octet-stream';
-      const userTextRaw: string = typeof (req as any).body?.text === 'string' ? (req as any).body.text : '';
+      const userTextRaw: string = typeof req.body?.text === 'string' ? req.body.text : '';
       const userText = userTextRaw.trim().slice(0, 2000);
       const buffer = file.buffer;
 
-      let result: any;
+      let result: Awaited<ReturnType<typeof streamText>>;
 
       if (mediaType.startsWith('application/pdf')) {
         const CONTRACT_SYSTEM =
@@ -939,11 +963,14 @@ Return only the JSON array, no other text.`;
 
       onGracefulClose(req, res);
       await result.pipeDataStreamToResponse(res);
-    } catch (e: any) {
-      if ((res as any).headersSent) {
+    } catch (error: unknown) {
+      logger.error('AI analyze-file stream failed', { error: getErrorMessage(error) });
+      if (res.headersSent) {
         try {
-          (res as any).end?.();
-        } catch {}
+          res.end();
+        } catch (endError) {
+          logger.warn('Failed to end aborted AI analyze-file stream response', { error: getErrorMessage(endError) });
+        }
         return;
       }
       return err(res, 500, 'internal error');

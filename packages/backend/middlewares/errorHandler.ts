@@ -5,6 +5,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import config from '../config';
+import { logger } from './logging';
 
 /**
  * Custom error class for application errors
@@ -41,7 +42,11 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
 
   // Only log full error in development to avoid PII in production logs
   if (config.environment === 'development') {
-    console.error(err);
+    logger.error('Unhandled request error', {
+      message: err?.message,
+      name: err?.name,
+      stack: err?.stack,
+    });
   }
 
   // Mongoose bad ObjectId
@@ -142,7 +147,7 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
       body: req.body,
       params: req.params,
       query: req.query,
-      user: (req as any).user ? { id: (req as any).user.id, role: (req as any).user.role } : null
+      user: req.user ? { id: req.user.id, role: req.user.role } : null
     };
   }
 

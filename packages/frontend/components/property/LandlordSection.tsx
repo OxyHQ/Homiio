@@ -12,6 +12,7 @@ import type { Profile, Property } from '@homiio/shared-types';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
 import { PropertyCard } from '@/components/PropertyCard';
 import { useRouter } from 'expo-router';
+import { useOxyAvatars } from '@/hooks/useOxyAvatars';
 
 interface LandlordSectionProps {
     property: Property;
@@ -32,6 +33,11 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
     const isPublicHousing = property?.housingType === 'public';
     // Public-housing authority label uses the resolved region NAME (geo is relational).
     const publicHousingState = property?.address?.regionName;
+
+    // Resolve the landlord's Oxy avatar file id (batched, cached). Rendered via
+    // Bloom Avatar + the app-wide ImageResolverProvider, which builds the
+    // canonical Oxy media URL — components never construct media URLs.
+    const { getAvatarFileId } = useOxyAvatars([landlordProfile?.oxyUserId]);
 
     const getLandlordDisplayName = (profile: Profile | null): string => {
         if (!profile) return 'Unknown Owner';
@@ -74,18 +80,16 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
     };
 
     const renderPersonalProfileAvatar = (profile: Profile) => {
-        // For personal profiles, use Oxy avatar
-        const oxyAvatarUrl = profile.oxyUserId
-            ? `https://cdn.oxy.so/avatars/${profile.oxyUserId}`
-            : undefined;
-
+        // Prefer the Oxy avatar (a file id resolved to a URL by the registered
+        // ImageResolver via getFileDownloadUrl); fall back to a profile-local
+        // custom avatar for non-Oxy / unresolved cases.
+        const avatarFileId = getAvatarFileId(profile.oxyUserId);
         const customAvatar = profile.personalProfile?.personalInfo?.avatar || profile.avatar;
-
-        const avatarSource = oxyAvatarUrl || customAvatar;
 
         return (
             <Avatar
-                source={avatarSource}
+                source={avatarFileId ?? customAvatar}
+                variant="thumb"
                 size={52}
                 style={styles.landlordAvatar}
             />

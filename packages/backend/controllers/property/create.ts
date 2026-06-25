@@ -1,5 +1,6 @@
 import { ProfileType } from '@homiio/shared-types';
-import { applyOfferingRulesForCreate, OfferingValidationError } from './offeringRules';
+import { applyOfferingRulesForCreate, OfferingValidationError, type OfferingBearingPayload } from './offeringRules';
+import { CREATABLE_PROPERTY_FIELDS, pickFields } from './editableFields';
 import { Property } from '../../models';
 import { telegramService } from '../../services';
 import { logger, businessLogger } from '../../middlewares/logging';
@@ -77,32 +78,36 @@ export async function createProperty(req: ControllerRequest, res: ControllerResp
       return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
     }
     const oxyUserId = req.user?.id || req.user?._id || req.userId;
-    if (!req.body.profileId) {
-      const { Profile } = require('../../models');
-      let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile) {
-        activeProfile = await Profile.create({
-          oxyUserId,
-            profileType: ProfileType.PERSONAL,
-            isPrimary: true,
-            isActive: true,
-            personalProfile: {}
-        });
-      }
-      req.body.profileId = activeProfile._id;
+
+    // Ownership: a listing is ALWAYS owned by the authenticated user's active
+    // profile. The client cannot choose `profileId` (IDOR / mass-assignment) —
+    // it is resolved strictly server-side, creating the personal profile lazily
+    // if the user has none yet.
+    const { Profile } = require('../../models');
+    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    if (!activeProfile) {
+      activeProfile = await Profile.create({
+        oxyUserId,
+        profileType: ProfileType.PERSONAL,
+        isPrimary: true,
+        isActive: true,
+        personalProfile: {},
+      });
     }
 
-    const propertyData = { ...req.body, profileId: req.body.profileId };
+    // Build the property from an explicit field whitelist; never spread
+    // `req.body`. Owner/system fields (profileId, isVerified, views, partner
+    // attribution, timestamps, …) are resolved/derived server-side only.
+    const propertyData = pickFields<OfferingBearingPayload>(req.body, CREATABLE_PROPERTY_FIELDS);
+    propertyData.profileId = activeProfile._id;
 
     // Resolve an optional partner referral code into an attribution: a valid,
     // active partner stamps `sourcedByPartner` + `sourcedByReferralCode` on the
     // listing. An unknown/inactive code is ignored (the listing is still
-    // created — referral attribution is best-effort, never a hard failure), and
-    // the raw `referralCode` is never persisted directly.
+    // created — referral attribution is best-effort, never a hard failure). The
+    // raw `referralCode` is read straight from the body and is never part of the
+    // whitelisted payload, so it is never persisted directly.
     const referralCode = typeof req.body.referralCode === 'string' ? req.body.referralCode.trim() : '';
-    delete propertyData.referralCode;
-    delete propertyData.sourcedByPartner;
-    delete propertyData.sourcedByReferralCode;
     if (referralCode) {
       const { Partner } = require('../../models');
       const partner = await Partner.findOne({ referralCode: referralCode.toLowerCase(), status: 'active' });
@@ -161,9 +166,8 @@ export async function createProperty(req: ControllerRequest, res: ControllerResp
       return next(new AppError('Address information is required', 400, 'MISSING_ADDRESS'));
     }
 
-    // Remove address data from property and set addressId
-    delete propertyData.address;
-    delete propertyData.location;
+    // Link the resolved address. (`address`/`location` are never whitelisted
+    // into propertyData, so there is nothing to strip here.)
     propertyData.addressId = addressId;
 
     logger.info('Creating property with data', { propertyData });
@@ -192,7 +196,11 @@ export async function createProperty(req: ControllerRequest, res: ControllerResp
     }
     if (getErrorName(error) === 'ValidationError') {
       const validationErrors = getValidationMessages(error);
-      const validationError: any = new AppError('Property validation failed', 400, 'VALIDATION_ERROR');
+      const validationError: AppError & { details?: unknown } = new AppError(
+        'Property validation failed',
+        400,
+        'VALIDATION_ERROR',
+      );
       validationError.details = validationErrors;
       return next(validationError);
     }
