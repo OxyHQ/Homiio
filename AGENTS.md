@@ -60,7 +60,7 @@ packages/
 
 ## Oxy SDK Conventions
 
-- **Versions**: `@oxyhq/core ^3.10.0`, `@oxyhq/services ^11.0.0`, `@oxyhq/bloom ^0.19.1`, `@oxyhq/contracts ^0.2.1` (transitive via core). `@oxyhq/services ^11.0.0` is a packaging-only major — deps moved to peerDependencies; app must declare TanStack Query peers.
+- **Versions**: `@oxyhq/core ^3.11.0`, `@oxyhq/services ^11.1.0`, `@oxyhq/bloom ^0.19.1`, `@oxyhq/contracts ^0.3.0` (transitive via core). **3.11.0 / services 11.1.0:** self-sovereign identity layer (did:web, signed records, export, domain verify) + "Sign in with Oxy" (shared-keychain SSO + cross-device QR/deep-link handoff via `Commons by Oxy`). **Accounts is now keyless "Accounts by Oxy"** (management-only; identity creation moved to Commons). `@oxyhq/services ^11.0.0` was a packaging-only major — deps moved to peerDependencies; app must declare TanStack Query peers.
 - **Media**: avatars/images resolve ONLY through `oxyServices.getFileDownloadUrl(id, variant)` via `useOxyAvatars` (`getUsersByIds` → `getFileDownloadUrl`) + bloom's variant-aware `<Avatar source={fileId} variant="thumb">`. Do NOT use `cdn.oxy.so` URLs directly — that pattern was removed.
 - **Display names**: render `name.displayName` directly (core 3.10 fixes the type under node resolution). No local name fallbacks.
 - **Backend auth**: `@oxyhq/core/server` only — `createOxyAuthMiddleware`/`getRequiredOxyUserId`/`authSocket`. No local auth middleware.
@@ -69,7 +69,7 @@ packages/
 
 ## Dependencies
 
-- `@oxyhq/core ^3.10.0`, `@oxyhq/services ^11.0.0`, `@oxyhq/bloom ^0.19.1` — Oxy platform integration
+- `@oxyhq/core ^3.11.0`, `@oxyhq/services ^11.1.0`, `@oxyhq/bloom ^0.19.1` — Oxy platform integration
 - Frontend `packages/frontend/app/+html.tsx` injects `getSsoCallbackBootstrapScript()` from `@oxyhq/core`; do not add per-app `/__oxy/sso-callback` routes or local SSO helper copies.
 - Frontend auth/session state belongs to `OxyProvider` with a registered `clientId`; SDK cold boot owns callback consumption, stored-session restore, FedCM/silent restore, and SSO bounce.
 - Backend auth middleware comes from `@oxyhq/core/server` (`createOxyAuthMiddleware`, `createOptionalOxyAuth`, `createOxyRateLimit`, `requireOxyAuth`, `getRequiredOxyUserId`, `authSocket`). Do not define local `AuthRequest`, `requireAuth`, `getUserId`, bearer parsers, or token-decoding middleware. Bearer-authenticated writes do not fetch app-local CSRF tokens; CSRF remains for ambient cookie credentials.
