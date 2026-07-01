@@ -31,27 +31,10 @@ import {
   ChevronsRight,
   ChevronRight,
   X,
-  PlusCircle,
-  UserCircle,
-  Mail,
-  Settings,
-  ShieldCheck,
-  LogOut,
-  LogIn,
-  UserPlus,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { Text } from '@oxyhq/bloom/typography';
-import { Button } from '@oxyhq/bloom/button';
-import { Avatar } from '@oxyhq/bloom/avatar';
-import { showSignInModal, useOxy } from '@oxyhq/services';
-import {
-  Menu,
-  MenuTrigger,
-  MenuOptions,
-  MenuOption,
-  renderers,
-} from 'react-native-popup-menu';
+import { showSignInModal, useOxy, ProfileButton } from '@oxyhq/services';
 
 import { colors } from '@/styles/colors';
 import { useRentalMode } from '@/context/RentalModeContext';
@@ -61,7 +44,6 @@ import { useHostStatus } from '@/hooks/useHostStatus';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useUIStore } from '@/store/uiStore';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
-import { webAlert } from '@/utils/api';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
 import { LogoIcon } from '@/assets/logo';
@@ -101,11 +83,6 @@ const sidebarBorders = StyleSheet.create({
   divider: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
-  },
-  /** Thin separator between groups inside the account popover menu. */
-  menuSeparator: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
   },
 });
 
@@ -268,7 +245,7 @@ export function SideBar() {
   const { mode } = useRentalMode();
   const { canAccessRoommates } = useProfile();
   const { isHost } = useHostStatus();
-  const { isAuthenticated, user, logout } = useOxy();
+  const { isAuthenticated } = useOxy();
 
   const { savedProperties, folders } = useSavedPropertiesContext();
   const { properties: recentProperties, removeProperty } = useRecentlyViewed();
@@ -479,23 +456,6 @@ export function SideBar() {
   }, [pathname]);
 
   /* --------------------------------------------------------------
-     Auth / display helpers
-     -------------------------------------------------------------- */
-  const displayName = React.useMemo(() => {
-    if (!user) return t('common.user', { defaultValue: 'User' });
-    // `name.displayName` is the canonical, API-composed display string (required
-    // on every Oxy user DTO). Render it directly — never recompose from
-    // first/last/full/username on the client.
-    return user.name?.displayName || t('common.user', { defaultValue: 'User' });
-  }, [user, t]);
-
-  const avatarSource = React.useMemo<string | undefined>(() => {
-    if (!user) return undefined;
-    const candidate = (user as { avatar?: unknown }).avatar;
-    return typeof candidate === 'string' ? candidate : undefined;
-  }, [user]);
-
-  /* --------------------------------------------------------------
      Handlers
      -------------------------------------------------------------- */
   const handleNavigate = React.useCallback(
@@ -518,14 +478,6 @@ export function SideBar() {
     () => handleNavigate('/profile'),
     [handleNavigate],
   );
-  const handleInbox = React.useCallback(
-    () => handleNavigate('/inbox'),
-    [handleNavigate],
-  );
-  const handleAddProperty = React.useCallback(
-    () => handleNavigate('/properties/create'),
-    [handleNavigate],
-  );
   const handleSaved = React.useCallback(
     () => handleNavigate('/saved'),
     [handleNavigate],
@@ -543,21 +495,6 @@ export function SideBar() {
   }, [isSidebarVisible, toggleSindiPanel, handleNavigate]);
 
   const handleSignIn = React.useCallback(() => showSignInModal(), []);
-  const handleRegister = React.useCallback(() => showSignInModal(), []);
-
-  const handleSignOut = React.useCallback(() => {
-    webAlert(t('settings.signOut'), t('settings.signOutMessage'), [
-      { text: t('cancel'), style: 'cancel' },
-      {
-        text: t('settings.signOut'),
-        style: 'destructive',
-        onPress: async () => {
-          await logout();
-          router.replace('/');
-        },
-      },
-    ]);
-  }, [t, logout, router]);
 
   const handleRemoveRecent = React.useCallback(
     (id: string) => {
@@ -671,37 +608,12 @@ export function SideBar() {
           >
             <ChevronsRight size={18} color={colors.primaryDark_2} />
           </Pressable>
-          {isAuthenticated ? (
-            <Pressable
-              onPress={handleProfile}
-              accessibilityRole="button"
-              accessibilityLabel={displayName}
-              className="rounded-full h-10 w-10 items-center justify-center"
-            >
-              <Avatar source={avatarSource} name={displayName} size={32} />
-            </Pressable>
-          ) : (
-            <Pressable
-              onPress={handleSignIn}
-              accessibilityRole="button"
-              accessibilityLabel={t('sidebar.actions.signIn')}
-              className="h-10 w-10 rounded-full items-center justify-center"
-              style={{ backgroundColor: `${colors.primaryColor}1A` }}
-            >
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: '700',
-                  color: colors.primaryColor,
-                }}
-              >
-                {(
-                  t('sidebar.actions.signIn', { defaultValue: 'Sign in' })[0] ??
-                  'S'
-                ).toUpperCase()}
-              </Text>
-            </Pressable>
-          )}
+          <ProfileButton
+            expanded={false}
+            onNavigateManage={handleSettings}
+            onNavigateProfile={handleProfile}
+            onAddAccount={handleSignIn}
+          />
         </View>
       </View>
     );
@@ -866,201 +778,40 @@ export function SideBar() {
 
   const footer = (
     <View className="flex flex-col gap-2 shrink-0 p-2 pt-1 w-full">
-      {isAuthenticated ? (
-        <Menu
-          renderer={renderers.Popover}
-          rendererProps={{ placement: 'top' }}
-        >
-          <MenuTrigger>
-            <View
-              accessibilityLabel="Account menu"
-              accessibilityRole="button"
-              className="rounded-full h-10 w-10 p-1 items-center justify-center"
-            >
-              <Avatar source={avatarSource} name={displayName} size={32} />
-            </View>
-          </MenuTrigger>
-          <MenuOptions
-            customStyles={{
-              optionsContainer: {
-                borderRadius: 12,
-                padding: 6,
-                minWidth: 220,
-              },
-            }}
-          >
-            {Platform.OS === 'web' && (
-              <View className="flex-row items-center gap-2.5 px-2 py-2">
-                <Avatar
-                  source={avatarSource}
-                  name={displayName}
-                  size={36}
-                />
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text
-                    style={{
-                      fontSize: 13,
-                      fontWeight: '600',
-                      color: colors.primaryDark,
-                    }}
-                    numberOfLines={1}
-                  >
-                    {displayName}
-                  </Text>
-                  {user?.username ? (
-                    <Text
-                      style={{
-                        fontSize: 11,
-                        color: colors.primaryDark_2,
-                      }}
-                      numberOfLines={1}
-                    >
-                      @{user.username}
-                    </Text>
-                  ) : null}
-                </View>
-              </View>
-            )}
-            {Platform.OS === 'web' && (
-              <View className="my-1 mx-1" style={sidebarBorders.menuSeparator} />
-            )}
-            <MenuOption onSelect={handleAddProperty}>
-              <View className="flex-row items-center gap-2 py-1.5 px-2">
-                <PlusCircle size={16} color={colors.primaryDark} />
-                <Text style={{ fontSize: 13, color: colors.primaryDark }}>
-                  {t('sidebar.actions.addProperty')}
-                </Text>
-              </View>
-            </MenuOption>
-            <MenuOption onSelect={handleProfile}>
-              <View className="flex-row items-center gap-2 py-1.5 px-2">
-                <UserCircle size={16} color={colors.primaryDark} />
-                <Text style={{ fontSize: 13, color: colors.primaryDark }}>
-                  {t('sidebar.menu.account', { defaultValue: 'Account' })}
-                </Text>
-              </View>
-            </MenuOption>
-            <MenuOption onSelect={handleInbox}>
-              <View className="flex-row items-center gap-2 py-1.5 px-2">
-                <Mail size={16} color={colors.primaryDark} />
-                <Text style={{ fontSize: 13, color: colors.primaryDark }}>
-                  {t('sidebar.menu.inbox', {
-                    defaultValue: 'Inbox',
-                  })}
-                </Text>
-              </View>
-            </MenuOption>
-            <MenuOption onSelect={handleSettings}>
-              <View className="flex-row items-center gap-2 py-1.5 px-2">
-                <Settings size={16} color={colors.primaryDark} />
-                <Text style={{ fontSize: 13, color: colors.primaryDark }}>
-                  {t('sidebar.navigation.settings')}
-                </Text>
-              </View>
-            </MenuOption>
-            <View className="my-1 mx-1" style={sidebarBorders.menuSeparator} />
-            <MenuOption onSelect={handleOpenTerms}>
-              <View className="flex-row items-center gap-2 py-1.5 px-2">
-                <FileText size={16} color={colors.primaryDark_2} />
-                <Text style={{ fontSize: 13, color: colors.primaryDark_2 }}>
-                  {t('sidebar.menu.terms', {
-                    defaultValue: 'Terms of service',
-                  })}
-                </Text>
-              </View>
-            </MenuOption>
-            <MenuOption onSelect={handleOpenPrivacy}>
-              <View className="flex-row items-center gap-2 py-1.5 px-2">
-                <ShieldCheck size={16} color={colors.primaryDark_2} />
-                <Text style={{ fontSize: 13, color: colors.primaryDark_2 }}>
-                  {t('sidebar.menu.privacy', {
-                    defaultValue: 'Privacy policy',
-                  })}
-                </Text>
-              </View>
-            </MenuOption>
-            <View className="my-1 mx-1" style={sidebarBorders.menuSeparator} />
-            <MenuOption onSelect={handleSignOut}>
-              <View className="flex-row items-center gap-2 py-1.5 px-2">
-                <LogOut size={16} color={colors.busy} />
-                <Text style={{ fontSize: 13, color: colors.busy }}>
-                  {t('settings.signOut')}
-                </Text>
-              </View>
-            </MenuOption>
-          </MenuOptions>
-        </Menu>
-      ) : (
-        <View className="gap-2 w-full">
-          <Button
-            onPress={handleSignIn}
-            variant="primary"
-            size="medium"
-            style={{ borderRadius: 999, width: '100%' }}
-            icon={<LogIn size={16} color={colors.primaryLight} />}
-            iconPosition="left"
-          >
+      <ProfileButton
+        onNavigateManage={handleSettings}
+        onNavigateProfile={handleProfile}
+        onAddAccount={handleSignIn}
+      />
+      {Platform.OS === 'web' && (
+        <View className="flex-row items-center justify-center gap-1 mt-1">
+          <Pressable onPress={handleOpenPrivacy}>
             <Text
               style={{
-                fontSize: 13,
-                fontWeight: '600',
-                color: colors.primaryLight,
+                fontSize: 10,
+                color: colors.primaryDark_2,
+                textDecorationLine: 'underline',
               }}
             >
-              {t('sidebar.actions.signIn')}
+              {t('sidebar.menu.privacy', {
+                defaultValue: 'Privacy policy',
+              })}
             </Text>
-          </Button>
-          <Button
-            onPress={handleRegister}
-            variant="secondary"
-            size="medium"
-            style={{ borderRadius: 999, width: '100%' }}
-            icon={<UserPlus size={16} color={colors.primaryDark} />}
-            iconPosition="left"
-          >
+          </Pressable>
+          <Text style={{ fontSize: 10, color: colors.primaryDark_2 }}>·</Text>
+          <Pressable onPress={handleOpenTerms}>
             <Text
               style={{
-                fontSize: 13,
-                fontWeight: '600',
-                color: colors.primaryDark,
+                fontSize: 10,
+                color: colors.primaryDark_2,
+                textDecorationLine: 'underline',
               }}
             >
-              {t('sidebar.actions.signUp')}
+              {t('sidebar.menu.terms', {
+                defaultValue: 'Terms of service',
+              })}
             </Text>
-          </Button>
-          {Platform.OS === 'web' && (
-            <View className="flex-row items-center justify-center gap-1 mt-1">
-              <Pressable onPress={handleOpenPrivacy}>
-                <Text
-                  style={{
-                    fontSize: 10,
-                    color: colors.primaryDark_2,
-                    textDecorationLine: 'underline',
-                  }}
-                >
-                  {t('sidebar.menu.privacy', {
-                    defaultValue: 'Privacy policy',
-                  })}
-                </Text>
-              </Pressable>
-              <Text style={{ fontSize: 10, color: colors.primaryDark_2 }}>
-                ·
-              </Text>
-              <Pressable onPress={handleOpenTerms}>
-                <Text
-                  style={{
-                    fontSize: 10,
-                    color: colors.primaryDark_2,
-                    textDecorationLine: 'underline',
-                  }}
-                >
-                  {t('sidebar.menu.terms', {
-                    defaultValue: 'Terms of service',
-                  })}
-                </Text>
-              </Pressable>
-            </View>
-          )}
+          </Pressable>
         </View>
       )}
     </View>
