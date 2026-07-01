@@ -9,7 +9,7 @@ import {
   initialWindowMetrics,
 } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import * as SplashScreen from 'expo-splash-screen';
+import { preventNativeSplashAutoHide, useHideNativeSplashWhenReady } from '@oxyhq/expo-splash';
 import { Slot, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
@@ -70,6 +70,15 @@ i18nInit({
     logger.warn('Failed to initialize i18n:', error);
   });
 
+// NATIVE ONLY: hold the OS splash so it stays visible until the app has finished
+// loading fonts + running init, then hide it once `appIsReady` flips (via
+// `useHideNativeSplashWhenReady`). This makes the native OS splash the SINGLE
+// splash on native — Homiio's logo centered on the dark brand background with the
+// Oxy symbol pinned to the bottom (configured by `@oxyhq/expo-splash` in
+// app.config.js). The custom `AppSplashScreen` React overlay is gated to web
+// only. No-op on web (the shared helper guards `Platform.OS === 'web'`).
+preventNativeSplashAutoHide();
+
 /**
  * App-wide media chokepoint for Bloom `Avatar`/image components.
  *
@@ -102,6 +111,7 @@ export default function RootLayout() {
   // other trigger — so we keep a single source of truth and derive the fade
   // flag instead of syncing it in an effect (which caused cascading renders).
   const [initializationComplete, setInitializationComplete] = useState(false);
+  const [fadeComplete, setFadeComplete] = useState(false);
   const startFade = initializationComplete;
   const isScreenNotMobile = useIsScreenNotMobile();
   const pathname = usePathname() || '/';
@@ -254,10 +264,37 @@ export default function RootLayout() {
     },
   }), []);
 
-  // --- Splash Fade Handler ---
+  // --- Splash Fade Handler (WEB only) ---
+  // The custom `AppSplashScreen` fades out on web once init completes; its
+  // `onFadeComplete` records that the fade finished. On native this callback
+  // never fires (no custom overlay is rendered), which is why native readiness
+  // must NOT depend on it (see the readiness gate below).
   const handleSplashFadeComplete = useCallback(() => {
-    setAppIsReady(true);
+    setFadeComplete(true);
   }, []);
+
+  // NATIVE ONLY: once ready, hide the held OS splash. The shared helper is a
+  // no-op on web (the OS splash was never held; the custom overlay handles the
+  // transition there).
+  useHideNativeSplashWhenReady(appIsReady);
+
+  // Readiness gate.
+  // - WEB keeps the fade-gated flow: the custom <AppSplashScreen> renders, fades
+  //   out when init completes, and its `onFadeComplete` sets `fadeComplete`, so
+  //   web readiness = init complete AND the custom splash finished fading.
+  // - NATIVE renders NO custom splash (the held OS splash covers the screen), so
+  //   `onFadeComplete` never fires; native readiness = init complete ONLY, else
+  //   the OS splash would hang forever.
+  useEffect(() => {
+    if (appIsReady) return;
+    const ready =
+      Platform.OS === 'web'
+        ? initializationComplete && fadeComplete
+        : initializationComplete;
+    if (ready) {
+      setAppIsReady(true);
+    }
+  }, [initializationComplete, fadeComplete, appIsReady]);
 
   useEffect(() => {
     // React Query online manager using NetInfo
@@ -277,11 +314,12 @@ export default function RootLayout() {
     };
   }, []);
 
-  // One-time app bootstrap: set up notifications (native only), hide the native
-  // splash, then mark initialization complete to start the JS splash fade. The
-  // completion state is set in an async continuation (after `await`) and guarded
-  // by `active` so it never runs synchronously within the effect or after
-  // unmount.
+  // One-time app bootstrap: set up notifications (native only), then mark
+  // initialization complete. On web this starts the custom JS splash fade; on
+  // native it flips `appIsReady` (via the readiness gate) which hides the held OS
+  // splash. The completion state is set in an async continuation (after `await`)
+  // and guarded by `active` so it never runs synchronously within the effect or
+  // after unmount.
   useEffect(() => {
     let active = true;
     (async () => {
@@ -293,12 +331,14 @@ export default function RootLayout() {
             await scheduleDemoNotification();
           }
         }
-        await SplashScreen.hideAsync();
         if (active) {
           setInitializationComplete(true);
         }
       } catch (error: unknown) {
         logger.warn('Failed to set up notifications:', error);
+        if (active) {
+          setInitializationComplete(true);
+        }
       }
     })();
     return () => {
@@ -319,12 +359,17 @@ export default function RootLayout() {
             theme tokens; `@oxyhq/services` 8.1.2 no longer wraps its children in
             an internal BloomThemeProvider.
           */}
-          <BloomThemeProvider mode="light" colorPreset="yellow" fonts onFontsLoading={<AppSplashScreen />}>
+          <BloomThemeProvider mode="light" colorPreset="yellow" fonts onFontsLoading={Platform.OS === 'web' ? <AppSplashScreen /> : null}>
           {!appIsReady ? (
-            <AppSplashScreen
-              startFade={startFade}
-              onFadeComplete={handleSplashFadeComplete}
-            />
+            // WEB: the custom splash covers font-load + init and fades out; its
+            // `onFadeComplete` gates `appIsReady`. NATIVE renders null here — the
+            // held OS splash is on top, so nothing underneath needs to paint.
+            Platform.OS === 'web' ? (
+              <AppSplashScreen
+                startFade={startFade}
+                onFadeComplete={handleSplashFadeComplete}
+              />
+            ) : null
           ) : (
               <QueryClientProvider client={queryClient}>
                 <RentalModeProvider>

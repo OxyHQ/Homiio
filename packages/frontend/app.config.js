@@ -1,4 +1,5 @@
 const pkg = require('./package.json');
+const { oxySplashScreenPlugin } = require('@oxyhq/expo-splash/config');
 
 module.exports = function (config) {
   /**
@@ -98,15 +99,17 @@ module.exports = function (config) {
       },
       plugins: [
         'expo-router',
-        [
-          'expo-splash-screen',
-          {
-            image: './assets/images/splash-icon.png',
-            imageWidth: 200,
-            resizeMode: 'contain',
-            backgroundColor: '#ffffff',
-          },
-        ],
+        // Native OS splash (Oxy family "Instagram, from Meta" pattern): Homiio's
+        // own logo (white on transparent) centered on the dark brand background,
+        // with the shared Oxy symbol pinned to the bottom. `oxySplashScreenPlugin`
+        // builds the expo-splash-screen tuple; the bare `@oxyhq/expo-splash` entry
+        // (bundled Oxy asset) MUST follow it to add the bottom branding.
+        oxySplashScreenPlugin({
+          image: './assets/images/splash-logo.png',
+          imageWidth: 176,
+          backgroundColor: '#0B0B0F',
+        }),
+        '@oxyhq/expo-splash',
         [
           'expo-notifications',
           {
