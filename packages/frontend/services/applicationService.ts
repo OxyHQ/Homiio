@@ -5,12 +5,13 @@
  * applicant flow (apply, view my applications, withdraw) and the landlord
  * inbox (review submissions, approve / reject).
  *
- * Multipart uploads bypass the JSON `api` helper and go through a direct
- * authenticated `fetch` so the browser/native runtime can set the multipart
- * boundary header automatically.
+ * Every request — including the multipart document upload — goes through the
+ * shared `api` helper, which is backed by the Oxy-linked backend client. The
+ * linked client keeps the bearer token in lockstep with the session, delegates
+ * preflight/401 refresh to the session owner, and detects `FormData` bodies to
+ * let the browser/native runtime set the multipart boundary header itself.
  */
 import { Platform } from 'react-native';
-import { oxyClient } from '@oxyhq/core';
 import {
   EmploymentStatus,
   ReferenceRelationship,
@@ -20,7 +21,6 @@ import {
 } from '@homiio/shared-types';
 
 import { api, ApiError, ApiResponse } from '@/utils/api';
-import { API_URL } from '@/config';
 
 export type ApplicationReferenceInput = {
   name: string;
@@ -69,17 +69,6 @@ export type ApplicationListResponse = {
 
 const API_BASE_PATH = '/api/applications';
 
-async function getAuthHeader(): Promise<Record<string, string>> {
-  try {
-    const token = await oxyClient.getAccessToken();
-    if (!token) throw new ApiError('Authentication required', 401);
-    return { Authorization: `Bearer ${token}` };
-  } catch (error) {
-    if (error instanceof ApiError) throw error;
-    throw new ApiError('Authentication required', 401);
-  }
-}
-
 async function appendFileToFormData(
   formData: FormData,
   field: string,
@@ -106,19 +95,6 @@ async function appendFileToFormData(
     name: doc.filename,
     type: doc.mimeType || 'application/octet-stream',
   } as unknown as Blob);
-}
-
-function extractErrorMessage(payload: unknown, status: number): string {
-  if (payload && typeof payload === 'object') {
-    const data = payload as Record<string, unknown>;
-    if (typeof data.message === 'string' && data.message.trim()) return data.message;
-    if (typeof data.error === 'string' && data.error.trim()) return data.error;
-    if (data.error && typeof data.error === 'object') {
-      const err = data.error as Record<string, unknown>;
-      if (typeof err.message === 'string' && err.message.trim()) return err.message;
-    }
-  }
-  return `HTTP ${status}`;
 }
 
 export const applicationService = {
@@ -148,24 +124,13 @@ export const applicationService = {
       }
     }
 
-    const headers = await getAuthHeader();
-    const response = await fetch(`${API_URL}${API_BASE_PATH}`, {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
-
-    const payload = await response.json().catch(() => null);
-    if (!response.ok) {
-      throw new ApiError(
-        extractErrorMessage(payload, response.status),
-        response.status,
-        payload,
-      );
-    }
-    const created = (payload as ApiResponse<TenantApplication> | null)?.data;
+    const response = await api.post<ApiResponse<TenantApplication>>(
+      API_BASE_PATH,
+      formData,
+    );
+    const created = response.data?.data;
     if (!created) {
-      throw new ApiError('Empty application response', response.status, payload);
+      throw new ApiError('Empty application response', 500, response.data);
     }
     return created;
   },
