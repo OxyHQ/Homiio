@@ -75,7 +75,7 @@ export function SavedSearchesWidget() {
   const { t } = useTranslation();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { showBottomSheet } = useOxy();
+  const { openAccountDialog } = useOxy();
   const {
     searches,
     isLoading,
@@ -185,7 +185,7 @@ export function SavedSearchesWidget() {
           <BloomText style={styles.stateText}>
             {t('search.widgets.savedSearches.signInPrompt')}
           </BloomText>
-          <Button variant="primary" size="medium" onPress={() => showBottomSheet?.('OxyAuth')}>
+          <Button variant="primary" size="medium" onPress={() => openAccountDialog('signin')}>
             {t('search.widgets.common.signIn')}
           </Button>
         </View>
