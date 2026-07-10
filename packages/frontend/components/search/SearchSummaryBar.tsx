@@ -284,7 +284,7 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
     return t('search.summary.typeCount', { count: query.propertyTypes.length });
   }, [query.propertyTypes, t]);
 
-  // Dates label for the wide pill's middle column.
+  // Dates label for the wide pill's middle column (vacation only).
   const datesLabel = useMemo(() => {
     if (query.dates?.start) {
       return query.dates.end
@@ -296,6 +296,20 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
     }
     return t('search.summary.addDates');
   }, [query.dates, isVacation, t]);
+
+  // Price label for the wide pill's middle column (long-term / buy / exchange).
+  const priceLabel = useMemo(() => {
+    if (query.priceMin !== undefined && query.priceMax !== undefined) {
+      return `€${query.priceMin}–€${query.priceMax}`;
+    }
+    if (query.priceMax !== undefined) {
+      return `≤ €${query.priceMax}`;
+    }
+    if (query.priceMin !== undefined) {
+      return `≥ €${query.priceMin}`;
+    }
+    return t('search.summary.anyPrice');
+  }, [query.priceMin, query.priceMax, t]);
 
   // Single-line summary segments (compact mode, results top bar).
   const segments = useMemo<SummarySegments>(() => {
@@ -335,7 +349,8 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
       t('searchBar.long.where');
     const middleColLabel = isVacation
       ? t('searchBar.vacation.when')
-      : t('searchBar.long.moveIn');
+      : t('search.step.price.title');
+    const middleColValue = isVacation ? datesLabel : priceLabel;
     const typeColLabel =
       t('searchBar.long.propertyType');
 
@@ -353,9 +368,9 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
         <PillColumn
           isNarrow={isNarrow}
           label={middleColLabel}
-          value={datesLabel}
-          onPress={() => openColumn(isVacation ? 'dates' : 'where')}
-          accessibilityLabel={`${middleColLabel}: ${datesLabel}`}
+          value={middleColValue}
+          onPress={() => openColumn(isVacation ? 'dates' : 'price')}
+          accessibilityLabel={`${middleColLabel}: ${middleColValue}`}
         />
         <View style={styles.divider} />
         <PillColumn
