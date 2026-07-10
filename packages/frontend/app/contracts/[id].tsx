@@ -96,7 +96,7 @@ export default function ContractDetailScreen() {
 
   const leaseQuery = useLease(id);
   const lease = leaseQuery.data;
-  const { primaryProfile } = useProfile();
+  const { profile } = useProfile();
   const { property: fetchedProperty } = useProperty(lease?.propertyId ?? '');
 
   const signMutation = useSignLease(id ?? '');
@@ -109,14 +109,14 @@ export default function ContractDetailScreen() {
   );
 
   const role = useMemo<Role | null>(() => {
-    if (!lease || !primaryProfile) return null;
-    const sessionOxyUserId = primaryProfile?.oxyUserId;
+    if (!lease || !profile) return null;
+    const sessionOxyUserId = profile?.oxyUserId;
     if (!sessionOxyUserId) return null;
     if (lease.landlordOxyUserId === sessionOxyUserId) return 'landlord';
     if (lease.tenantOxyUserId === sessionOxyUserId) return 'tenant';
-    if ((lease.coTenants ?? []).some((ct) => ct.profileId === sessionOxyUserId)) return 'cotenant';
+    if ((lease.coTenants ?? []).some((ct) => ct.oxyUserId === sessionOxyUserId)) return 'cotenant';
     return null;
-  }, [lease, primaryProfile]);
+  }, [lease, profile]);
 
   const handleSign = useCallback(async () => {
     if (!id) return;

@@ -161,27 +161,26 @@ class ExchangeReviewController {
    */
   async getProfileExchangeReviews(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { profileId } = req.params;
+      const { oxyUserId } = req.params;
       const { page = 1, limit = DEFAULT_PAGE_SIZE } = req.query;
 
-      if (!Types.ObjectId.isValid(profileId)) {
-        return next(new AppError('Invalid profile ID', 400, 'INVALID_ID'));
+      if (!oxyUserId) {
+        return next(new AppError('Oxy user id is required', 400, 'OXY_USER_ID_REQUIRED'));
       }
 
-      const subjectId = new Types.ObjectId(profileId);
       const pageNumber = Math.max(1, parseInt(String(page), 10) || 1);
       const limitNumber = Math.min(MAX_PAGE_SIZE, Math.max(1, parseInt(String(limit), 10) || DEFAULT_PAGE_SIZE));
       const skip = (pageNumber - 1) * limitNumber;
 
       const [items, total, aggregate] = await Promise.all([
-        ExchangeReview.find({ subjectOxyUserId: subjectId })
+        ExchangeReview.find({ subjectOxyUserId: oxyUserId })
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(limitNumber)
           .lean(),
-        ExchangeReview.countDocuments({ subjectOxyUserId: subjectId }),
+        ExchangeReview.countDocuments({ subjectOxyUserId: oxyUserId }),
         ExchangeReview.aggregate([
-          { $match: { subjectOxyUserId: subjectId } },
+          { $match: { subjectOxyUserId: oxyUserId } },
           { $group: { _id: null, averageRating: { $avg: '$rating' }, count: { $sum: 1 } } },
         ]),
       ]);

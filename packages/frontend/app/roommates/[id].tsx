@@ -24,14 +24,14 @@ import { colors } from '@/styles/colors';
 export default function RoommateProfilePage() {
   const { t } = useTranslation();
   const params = useLocalSearchParams<{ id: string }>();
-  const profileId = String(params.id);
+  const oxyUserId = String(params.id);
   const { sendRequest } = useRoommate();
   const [isSending, setIsSending] = useState(false);
 
   const profileQuery = useQuery({
-    queryKey: ['roommates', 'profile', profileId],
-    queryFn: async () => profileService.getProfileById(profileId),
-    enabled: Boolean(profileId),
+    queryKey: ['roommates', 'profile', oxyUserId],
+    queryFn: async () => profileService.getProfileByOxyUserId(oxyUserId),
+    enabled: Boolean(oxyUserId),
     staleTime: 1000 * 30,
   });
 
@@ -41,7 +41,7 @@ export default function RoommateProfilePage() {
   const handleSendRequest = async () => {
     setIsSending(true);
     try {
-      const ok = await sendRequest(profileId);
+      const ok = await sendRequest(oxyUserId);
       Alert.alert(
         ok ? t('roommates.profileDetail.requestSentTitle') : t('roommates.profileDetail.requestFailedTitle'),
         ok

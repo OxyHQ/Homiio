@@ -40,6 +40,6 @@ router.get('/status', asyncHandler(roommateController.getCurrentUserRoommateStat
   router.post('/requests/:requestId/decline', asyncHandler(roommateController.declineRoommateRequest));
 
   // Send roommate request
-  router.post('/:profileId/request', asyncHandler(roommateController.sendRoommateRequest));
+  router.post('/:oxyUserId/request', asyncHandler(roommateController.sendRoommateRequest));
 
 export default () => router; 

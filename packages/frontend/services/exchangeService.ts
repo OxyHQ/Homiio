@@ -177,14 +177,14 @@ class ExchangeService {
    * aggregate average rating + count carried in `meta`.
    */
   async getProfileReviews(
-    profileId: string,
+    oxyUserId: string,
     params: { page?: number; limit?: number } = {},
   ): Promise<ProfileExchangeReviewsResponse> {
     const response = await api.get<{
       data?: BackendExchangeReview[];
       pagination?: ExchangePagination;
       meta?: Partial<ProfileExchangeReviewsMeta>;
-    }>(`/api/profiles/${profileId}/exchange-reviews`, {
+    }>(`/api/profiles/oxy/${encodeURIComponent(oxyUserId)}/exchange-reviews`, {
       params: { page: params.page, limit: params.limit },
     });
     const items = (response.data.data ?? []).map(normalizeReview);

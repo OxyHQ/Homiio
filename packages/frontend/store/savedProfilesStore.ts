@@ -3,77 +3,77 @@ import { useOxy } from '@oxyhq/services';
 import { api } from '@/utils/api';
 
 type SavedProfilesState = {
-  savedProfileIds: string[];
+  savedOxyUserIds: string[];
   isSaving: boolean;
-  setSavedProfileIds: (ids: string[]) => void;
-  addSavedProfileId: (id: string) => void;
-  removeSavedProfileId: (id: string) => void;
+  setSavedOxyUserIds: (ids: string[]) => void;
+  addSavedOxyUserId: (id: string) => void;
+  removeSavedOxyUserId: (id: string) => void;
   setIsSaving: (saving: boolean) => void;
 };
 
 export const useSavedProfilesStore = create<SavedProfilesState>()((set) => ({
-  savedProfileIds: [],
+  savedOxyUserIds: [],
   isSaving: false,
-  setSavedProfileIds: (ids) => set({ savedProfileIds: ids }),
-  addSavedProfileId: (id) =>
+  setSavedOxyUserIds: (ids) => set({ savedOxyUserIds: ids }),
+  addSavedOxyUserId: (id) =>
     set((state) => ({
-      savedProfileIds: state.savedProfileIds.includes(id)
-        ? state.savedProfileIds
-        : [...state.savedProfileIds, id],
+      savedOxyUserIds: state.savedOxyUserIds.includes(id)
+        ? state.savedOxyUserIds
+        : [...state.savedOxyUserIds, id],
     })),
-  removeSavedProfileId: (id) =>
+  removeSavedOxyUserId: (id) =>
     set((state) => ({
-      savedProfileIds: state.savedProfileIds.filter((x) => x !== id),
+      savedOxyUserIds: state.savedOxyUserIds.filter((x) => x !== id),
     })),
   setIsSaving: (isSaving) => set({ isSaving }),
 }));
 
 export function useSavedProfiles() {
   const { oxyServices, activeSessionId } = useOxy();
-  const savedProfileIds = useSavedProfilesStore((s) => s.savedProfileIds);
+  const savedOxyUserIds = useSavedProfilesStore((s) => s.savedOxyUserIds);
   const isSaving = useSavedProfilesStore((s) => s.isSaving);
-  const setSavedProfileIds = useSavedProfilesStore((s) => s.setSavedProfileIds);
-  const addSavedProfileId = useSavedProfilesStore((s) => s.addSavedProfileId);
-  const removeSavedProfileId = useSavedProfilesStore((s) => s.removeSavedProfileId);
+  const setSavedOxyUserIds = useSavedProfilesStore((s) => s.setSavedOxyUserIds);
+  const addSavedOxyUserId = useSavedProfilesStore((s) => s.addSavedOxyUserId);
+  const removeSavedOxyUserId = useSavedProfilesStore((s) => s.removeSavedOxyUserId);
   const setIsSaving = useSavedProfilesStore((s) => s.setIsSaving);
 
-  const isProfileSaved = (profileId: string) => savedProfileIds.includes(profileId);
+  const isProfileSaved = (oxyUserId: string) => savedOxyUserIds.includes(oxyUserId);
 
   const refresh = async () => {
     if (!oxyServices || !activeSessionId) return;
     const res = await api.get('/api/profiles/me/saved-profiles');
     const profiles = res.data?.data || res.data || [];
-    const ids = profiles.map((p: any) => String(p._id));
-    setSavedProfileIds(ids);
+    const ids = profiles.map((p: { oxyUserId?: string }) => String(p.oxyUserId)).filter(Boolean);
+    setSavedOxyUserIds(ids);
   };
 
-  const saveProfile = async (profileId: string) => {
+  const saveProfile = async (oxyUserId: string) => {
     if (!oxyServices || !activeSessionId) throw new Error('Auth required');
     setIsSaving(true);
     try {
-      addSavedProfileId(profileId);
-      await api.post('/api/profiles/me/save-profile', { profileId });
+      addSavedOxyUserId(oxyUserId);
+      await api.post('/api/profiles/me/save-profile', { oxyUserId });
     } catch (e) {
-      removeSavedProfileId(profileId);
+      removeSavedOxyUserId(oxyUserId);
       throw e;
     } finally {
       setIsSaving(false);
     }
   };
 
-  const unsaveProfile = async (profileId: string) => {
+  const unsaveProfile = async (oxyUserId: string) => {
     if (!oxyServices || !activeSessionId) throw new Error('Auth required');
     setIsSaving(true);
     try {
-      removeSavedProfileId(profileId);
-      await api.delete(`/api/profiles/me/saved-profiles/${profileId}`);
+      removeSavedOxyUserId(oxyUserId);
+      await api.delete(`/api/profiles/me/saved-profiles/${oxyUserId}`);
     } catch (e) {
-      addSavedProfileId(profileId);
+      addSavedOxyUserId(oxyUserId);
       throw e;
     } finally {
       setIsSaving(false);
     }
   };
 
-  return { isSaving, savedProfileIds, isProfileSaved, saveProfile, unsaveProfile, refresh };
+  return { isSaving, savedOxyUserIds, isProfileSaved, saveProfile, unsaveProfile, refresh };
 }

@@ -1,8 +1,7 @@
-import type { IProfile, IAgencyMember } from '../documentTypes';
+import type { IProfile } from '../documentTypes';
 
 const mongoose = require('mongoose');
 const {
-  ProfileType,
   EmploymentStatus,
   LeaseDuration,
   PriceUnit,
@@ -10,17 +9,14 @@ const {
   ReferenceRelationship,
   ReasonForLeaving,
   ProfileVisibility,
-  TrustScoreFactorType,
   GenderPreference
 } = require('@homiio/shared-types');
 
-// Personal Profile Schema - only app-specific data
 const personalProfileSchema = new mongoose.Schema({
-  // Personal Information
   personalInfo: {
     bio: {
       type: String,
-      maxlength: [500, "Bio cannot exceed 500 characters"],
+      maxlength: [500, 'Bio cannot exceed 500 characters'],
     },
     occupation: {
       type: String,
@@ -32,7 +28,7 @@ const personalProfileSchema = new mongoose.Schema({
     },
     annualIncome: {
       type: Number,
-      min: [0, "Annual income cannot be negative"],
+      min: [0, 'Annual income cannot be negative'],
     },
     employmentStatus: {
       type: String,
@@ -47,7 +43,6 @@ const personalProfileSchema = new mongoose.Schema({
       default: LeaseDuration.YEARLY,
     },
   },
-  // App-specific preferences and settings
   preferences: {
     propertyTypes: [{
       type: String,
@@ -55,7 +50,7 @@ const personalProfileSchema = new mongoose.Schema({
     }],
     maxRent: {
       type: Number,
-      min: [0, "Maximum rent cannot be negative"],
+      min: [0, 'Maximum rent cannot be negative'],
     },
     priceUnit: {
       type: String,
@@ -64,12 +59,12 @@ const personalProfileSchema = new mongoose.Schema({
     },
     minBedrooms: {
       type: Number,
-      min: [0, "Minimum bedrooms cannot be negative"],
+      min: [0, 'Minimum bedrooms cannot be negative'],
       default: 0,
     },
     minBathrooms: {
       type: Number,
-      min: [0, "Minimum bathrooms cannot be negative"],
+      min: [0, 'Minimum bathrooms cannot be negative'],
       default: 0,
     },
     preferredAmenities: [{
@@ -82,8 +77,8 @@ const personalProfileSchema = new mongoose.Schema({
       state: String,
       radius: {
         type: Number,
-        min: [1, "Radius must be at least 1 mile"],
-        max: [100, "Radius cannot exceed 100 miles"],
+        min: [1, 'Radius must be at least 1 mile'],
+        max: [100, 'Radius cannot exceed 100 miles'],
         default: 10,
       },
     }],
@@ -108,7 +103,6 @@ const personalProfileSchema = new mongoose.Schema({
       default: false,
     },
   },
-  // References
   references: [{
     name: {
       type: String,
@@ -134,7 +128,6 @@ const personalProfileSchema = new mongoose.Schema({
       default: false,
     },
   }],
-  // Rental History
   rentalHistory: [{
     address: {
       type: String,
@@ -165,7 +158,6 @@ const personalProfileSchema = new mongoose.Schema({
       default: false,
     },
   }],
-  // App-specific verification status
   verification: {
     identity: {
       type: Boolean,
@@ -188,31 +180,6 @@ const personalProfileSchema = new mongoose.Schema({
       default: false,
     },
   },
-  // App-specific trust score
-  trustScore: {
-    score: {
-      type: Number,
-      min: [0, "Trust score cannot be negative"],
-      max: [100, "Trust score cannot exceed 100"],
-      default: 50,
-    },
-    factors: [{
-      type: {
-        type: String,
-        enum: Object.values(TrustScoreFactorType),
-      },
-      value: {
-        type: Number,
-        min: 0,
-        max: 100,
-      },
-      updatedAt: {
-        type: Date,
-        default: Date.now,
-      },
-    }],
-  },
-  // App-specific settings
   settings: {
     notifications: {
       email: {
@@ -272,14 +239,14 @@ const personalProfileSchema = new mongoose.Schema({
         ageRange: {
           min: {
             type: Number,
-            min: [18, "Minimum age must be at least 18"],
-            max: [100, "Minimum age cannot exceed 100"],
+            min: [18, 'Minimum age must be at least 18'],
+            max: [100, 'Minimum age cannot exceed 100'],
             default: 18,
           },
           max: {
             type: Number,
-            min: [18, "Maximum age must be at least 18"],
-            max: [100, "Maximum age cannot exceed 100"],
+            min: [18, 'Maximum age must be at least 18'],
+            max: [100, 'Maximum age cannot exceed 100'],
             default: 35,
           },
         },
@@ -291,39 +258,39 @@ const personalProfileSchema = new mongoose.Schema({
         lifestyle: {
           smoking: {
             type: String,
-            enum: ["yes", "no", "prefer_not"],
-            default: "no",
+            enum: ['yes', 'no', 'prefer_not'],
+            default: 'no',
           },
           pets: {
             type: String,
-            enum: ["yes", "no", "prefer_not"],
-            default: "prefer_not",
+            enum: ['yes', 'no', 'prefer_not'],
+            default: 'prefer_not',
           },
           partying: {
             type: String,
-            enum: ["yes", "no", "prefer_not"],
-            default: "no",
+            enum: ['yes', 'no', 'prefer_not'],
+            default: 'no',
           },
           cleanliness: {
             type: String,
-            enum: ["very_clean", "clean", "average", "relaxed"],
-            default: "clean",
+            enum: ['very_clean', 'clean', 'average', 'relaxed'],
+            default: 'clean',
           },
           schedule: {
             type: String,
-            enum: ["early_bird", "night_owl", "flexible"],
-            default: "flexible",
+            enum: ['early_bird', 'night_owl', 'flexible'],
+            default: 'flexible',
           },
         },
         budget: {
           min: {
             type: Number,
-            min: [0, "Minimum budget cannot be negative"],
+            min: [0, 'Minimum budget cannot be negative'],
             default: 800,
           },
           max: {
             type: Number,
-            min: [0, "Maximum budget cannot be negative"],
+            min: [0, 'Maximum budget cannot be negative'],
             default: 1500,
           },
         },
@@ -350,7 +317,7 @@ const personalProfileSchema = new mongoose.Schema({
         },
         roommateCount: {
           type: Number,
-          min: [1, "Roommate count must be at least 1"],
+          min: [1, 'Roommate count must be at least 1'],
         },
         reason: {
           type: String,
@@ -360,18 +327,17 @@ const personalProfileSchema = new mongoose.Schema({
     },
     language: {
       type: String,
-      default: "en",
+      default: 'en',
     },
     timezone: {
       type: String,
-      default: "UTC",
+      default: 'UTC',
     },
     currency: {
       type: String,
-      default: "USD",
+      default: 'USD',
     },
   },
-  // Sindi chat history
   chatHistory: [
     {
       role: {
@@ -391,753 +357,44 @@ const personalProfileSchema = new mongoose.Schema({
   ],
 }, { _id: false });
 
-// Agency Profile Schema - app-specific business data
-const agencyProfileSchema = new mongoose.Schema({
-  businessType: {
-    type: String,
-    enum: ["real_estate_agency", "property_management", "brokerage", "developer", "other"],
-    required: true,
-  },
-  legalCompanyName: {
-    type: String,
-    trim: true,
-    maxlength: [200, "Legal company name cannot exceed 200 characters"],
-  },
-  description: {
-    type: String,
-    trim: true,
-    maxlength: [1000, "Description cannot exceed 1000 characters"],
-  },
-  businessDetails: {
-    licenseNumber: String,
-    taxId: String,
-    yearEstablished: Number,
-    employeeCount: {
-      type: String,
-      enum: ["1-10", "11-50", "51-200", "200+"],
-    },
-    specialties: [{
-      type: String,
-      enum: ["residential", "commercial", "luxury", "student_housing", "senior_housing", "vacation_rentals"],
-    }],
-    serviceAreas: [{
-      city: String,
-      state: String,
-      radius: Number,
-    }],
-  },
-  verification: {
-    businessLicense: {
-      type: Boolean,
-      default: false,
-    },
-    insurance: {
-      type: Boolean,
-      default: false,
-    },
-    bonding: {
-      type: Boolean,
-      default: false,
-    },
-    backgroundCheck: {
-      type: Boolean,
-      default: false,
-    },
-  },
-  ratings: {
-    average: {
-      type: Number,
-      min: 0,
-      max: 5,
-      default: 0,
-    },
-    count: {
-      type: Number,
-      default: 0,
-    },
-  },
-  members: [{
-    oxyUserId: {
-      type: String,
-      required: true,
-    },
-    role: {
-      type: String,
-      enum: ["owner", "admin", "agent", "viewer"],
-      default: "agent",
-    },
-    addedAt: {
-      type: Date,
-      default: Date.now,
-    },
-    addedBy: {
-      type: String, // oxyUserId of who added this member
-    },
-  }],
-}, { _id: false });
-
-// Business Profile Schema
-const businessProfileSchema = new mongoose.Schema({
-  businessType: {
-    type: String,
-    enum: ["small_business", "startup", "freelancer", "consultant", "other"],
-    required: true,
-  },
-  legalCompanyName: {
-    type: String,
-    trim: true,
-  },
-  description: {
-    type: String,
-    maxlength: [1000, "Description cannot exceed 1000 characters"],
-  },
-  businessDetails: {
-    licenseNumber: {
-      type: String,
-      trim: true,
-    },
-    taxId: {
-      type: String,
-      trim: true,
-    },
-    yearEstablished: {
-      type: Number,
-      min: [1900, "Year established cannot be before 1900"],
-      max: [new Date().getFullYear(), "Year established cannot be in the future"],
-    },
-    employeeCount: {
-      type: String,
-      enum: ["1-5", "6-10", "11-25", "26+"],
-    },
-    industry: {
-      type: String,
-      trim: true,
-    },
-    specialties: [{
-      type: String,
-      trim: true,
-      lowercase: true,
-    }],
-    serviceAreas: [{
-      city: {
-        type: String,
-        required: true,
-        trim: true,
-      },
-      state: {
-        type: String,
-        required: true,
-        trim: true,
-      },
-      radius: {
-        type: Number,
-        min: [1, "Radius must be at least 1 mile"],
-        max: [100, "Radius cannot exceed 100 miles"],
-        default: 10,
-      },
-    }],
-  },
-  verification: {
-    businessLicense: {
-      type: Boolean,
-      default: false,
-    },
-    insurance: {
-      type: Boolean,
-      default: false,
-    },
-    backgroundCheck: {
-      type: Boolean,
-      default: false,
-    },
-  },
-  ratings: {
-    average: {
-      type: Number,
-      min: 0,
-      max: 5,
-      default: 0,
-    },
-    count: {
-      type: Number,
-      default: 0,
-    },
-  },
-}, { _id: false });
-
-// Main Profile Schema
 const profileSchema = new mongoose.Schema({
   oxyUserId: {
     type: String,
     required: true,
+    unique: true,
     index: true,
-  },
-  profileType: {
-    type: String,
-    enum: Object.values(ProfileType),
-    required: true,
-  },
-  isActive: {
-    type: Boolean,
-    default: true,
-  },
-  isPrimary: {
-    type: Boolean,
-    default: false,
   },
   personalProfile: {
     type: personalProfileSchema,
-  },
-  agencyProfile: {
-    type: agencyProfileSchema,
-  },
-  businessProfile: {
-    type: businessProfileSchema,
-  },
-  cooperativeProfile: {
-    legalName: { type: String, trim: true, maxlength: 200 },
-    description: { type: String, trim: true, maxlength: 1000 },
-    members: [{
-      oxyUserId: String,
-      role: { type: String, enum: ['owner', 'admin', 'member'] },
-      addedAt: { type: Date, default: Date.now }
-    }]
   },
 }, {
   timestamps: true,
 });
 
-// Indexes
-profileSchema.index({ oxyUserId: 1, profileType: 1 });
-profileSchema.index({ "agencyProfile.members.oxyUserId": 1 });
-// Unique compound index to ensure only one active profile per user
-profileSchema.index({ oxyUserId: 1, isActive: 1 }, { unique: true, partialFilterExpression: { isActive: true } });
 profileSchema.index({ createdAt: -1 });
 profileSchema.index({ updatedAt: -1 });
 
-// Virtual for verification status
-profileSchema.virtual("isVerified").get(function(this: IProfile): boolean {
-  const personal = this.personalProfile as { verification?: { identity?: boolean; income?: boolean } } | undefined;
-  const agency = this.agencyProfile as { verification?: { businessLicense?: boolean; insurance?: boolean } } | undefined;
-  if (this.profileType === ProfileType.PERSONAL && personal) {
-    return Boolean(personal.verification?.identity && personal.verification?.income);
-  }
-  if (this.profileType === ProfileType.AGENCY && agency) {
-    return Boolean(agency.verification?.businessLicense && agency.verification?.insurance);
-  }
-  return false;
-});
-
-// Pre-save middleware to ensure only one active profile per user
-profileSchema.pre("save", async function(this: IProfile, next: (err?: Error) => void): Promise<void> {
-  // Ensure only one active profile per user
-  if (this.isActive) {
-    // Deactivate all other profiles for the same user
-    const Model = this.constructor as import('mongoose').Model<IProfile>;
-    await Model.updateMany(
-      { oxyUserId: this.oxyUserId, _id: { $ne: this._id } },
-      { isActive: false }
-    );
-  }
-
-  next();
-});
-
-// Static methods
-profileSchema.statics.findActiveByOxyUserId = function(oxyUserId: string, select: string | null = null) {
-  const query = this.findOne({
-    oxyUserId,
-    isActive: true
-  });
-
-  if (select) {
-    query.select(select);
-  }
-
-  // Don't use lean() to preserve toJSON transform
-  return query;
-};
-
 profileSchema.statics.findByOxyUserId = function(oxyUserId: string, select: string | null = null) {
-  const query = this.find({
-    oxyUserId
-  }).sort({ isActive: -1, createdAt: -1 });
+  const query = this.findOne({ oxyUserId });
 
   if (select) {
     query.select(select);
   }
 
-  // Don't use lean() to preserve toJSON transform
   return query;
-};
-
-profileSchema.statics.findByOxyUserIdAndType = function(oxyUserId: string, profileType: string) {
-  return this.findOne({
-    oxyUserId,
-    profileType
-  }); // Remove .lean() to preserve toJSON transform
-};
-
-profileSchema.statics.findActiveByOxyUserIdAndUpdate = function(
-  oxyUserId: string,
-  updateData: Record<string, unknown>
-) {
-  return this.findOneAndUpdate(
-    { oxyUserId, isActive: true },
-    updateData,
-    { new: true, runValidators: true }
-  );
 };
 
 profileSchema.statics.findByOxyUserIdAndUpdate = function(
   oxyUserId: string,
-  profileId: string,
-  updateData: Record<string, unknown>
+  updateData: Record<string, unknown>,
 ) {
   return this.findOneAndUpdate(
-    { oxyUserId, _id: profileId },
+    { oxyUserId },
     updateData,
-    { new: true, runValidators: true }
+    { new: true, runValidators: true, upsert: false },
   );
 };
 
-profileSchema.statics.findAgencyMemberships = function(oxyUserId: string, select: string | null = null) {
-  const query = this.find({
-          profileType: ProfileType.AGENCY,
-    "agencyProfile.members.oxyUserId": oxyUserId,
-  });
-  if (select) {
-    query.select(select);
-  }
-  // Don't use lean() to preserve toJSON transform
-  return query;
-};
-
-// Static method to safely activate a profile
-profileSchema.statics.activateProfile = async function(oxyUserId: string, profileId: string) {
-  const session = await this.startSession();
-  try {
-    await session.withTransaction(async () => {
-      // First, deactivate all profiles for this user
-      await this.updateMany(
-        { oxyUserId },
-        { isActive: false },
-        { session }
-      );
-      
-      // Then activate the specified profile
-      await this.findByIdAndUpdate(
-        profileId,
-        { isActive: true },
-        { session, new: true, runValidators: true }
-      );
-    });
-    
-    // Return the activated profile
-    return await this.findById(profileId);
-  } finally {
-    await session.endSession();
-  }
-};
-
-// Instance methods
-interface TrustScoreFactor {
-  type: string;
-  value: number;
-  maxValue?: number;
-  label?: string;
-  updatedAt?: Date;
-}
-
-interface PersonalProfileShape {
-  bio?: string;
-  personalInfo?: {
-    bio?: string;
-    occupation?: string;
-    employer?: string;
-    moveInDate?: Date;
-    employmentStatus?: string;
-    annualIncome?: number;
-  };
-  references?: Array<{ name?: string; relationship?: string; phone?: string; email?: string; verified?: boolean }>;
-  rentalHistory?: Array<{
-    address?: string;
-    startDate?: Date;
-    endDate?: Date;
-    reasonForLeaving?: string;
-    landlordContact?: { name?: string; phone?: string; email?: string };
-    verified?: boolean;
-  }>;
-  verification?: { identity?: boolean; income?: boolean; background?: boolean; rentalHistory?: boolean };
-  trustScore?: {
-    score: number;
-    factors: TrustScoreFactor[];
-    totalScore?: number;
-    maxScore?: number;
-    lastCalculated?: Date;
-  };
-}
-
-interface AgencyProfileShape {
-  businessInfo?: {
-    businessName?: string;
-    businessType?: string;
-    licenseNumber?: string;
-    taxId?: string;
-    website?: string;
-    businessPhone?: string;
-    businessEmail?: string;
-    businessAddress?: unknown;
-  };
-  verification?: { businessLicense?: boolean; insurance?: boolean; bonding?: boolean; backgroundCheck?: boolean };
-  members?: IAgencyMember[];
-}
-
-profileSchema.methods.calculateTrustScore = function(this: IProfile, forceRecalculate: boolean = false): {
-  score: number;
-  factors: TrustScoreFactor[];
-  totalScore: number;
-  maxScore: number;
-} {
-  const personalSource = this.personalProfile as PersonalProfileShape | undefined;
-  const agencySource = this.agencyProfile as AgencyProfileShape | undefined;
-
-  // Check if trust score is already calculated and recent (within 1 hour)
-  if (!forceRecalculate &&
-      personalSource?.trustScore?.lastCalculated &&
-      Date.now() - new Date(personalSource.trustScore.lastCalculated).getTime() < 60 * 60 * 1000) {
-    return {
-      score: personalSource.trustScore.score,
-      factors: personalSource.trustScore.factors,
-      totalScore: personalSource.trustScore.totalScore ?? 0,
-      maxScore: personalSource.trustScore.maxScore ?? 0
-    };
-  }
-
-  let totalScore = 0;
-  let maxScore = 0;
-  const factors: TrustScoreFactor[] = [];
-
-  // Personal Profile Scoring
-  if (personalSource) {
-    const personal = personalSource;
-    
-    // Basic Information (20 points) — uses personalInfo (schema field name)
-    if (personal.personalInfo) {
-      const basicMax = 20;
-      let basicScore = 0;
-
-      if (personal.personalInfo.bio && personal.personalInfo.bio.length > 10) basicScore += 5;
-      if (personal.personalInfo.occupation) basicScore += 5;
-      if (personal.personalInfo.employer) basicScore += 5;
-      if (personal.personalInfo.moveInDate) basicScore += 5;
-
-      totalScore += basicScore;
-      maxScore += basicMax;
-      factors.push({
-        type: TrustScoreFactorType.BASIC_INFO,
-        value: basicScore,
-        maxValue: basicMax,
-        label: "Basic Information"
-      });
-    }
-
-    // Employment Information (25 points) — uses personalInfo fields (schema field names)
-    if (personal.personalInfo) {
-      const employmentMax = 25;
-      let employmentScore = 0;
-
-      if (personal.personalInfo.employmentStatus) employmentScore += 8;
-      if (personal.personalInfo.employer) employmentScore += 5;
-      if (personal.personalInfo.occupation) employmentScore += 5;
-      if (personal.personalInfo.annualIncome) employmentScore += 7;
-
-      totalScore += employmentScore;
-      maxScore += employmentMax;
-      factors.push({
-        type: TrustScoreFactorType.EMPLOYMENT,
-        value: employmentScore,
-        maxValue: employmentMax,
-        label: "Employment Information"
-      });
-    }
-
-    // References (20 points)
-    if (personal.references && personal.references.length > 0) {
-      const referencesMax = 20;
-      let referencesScore = 0;
-
-      personal.references.forEach((ref) => {
-        if (ref.name) referencesScore += 2;
-        if (ref.relationship) referencesScore += 1;
-        if (ref.phone) referencesScore += 2;
-        if (ref.email) referencesScore += 1;
-        if (ref.verified) referencesScore += 1;
-      });
-      
-      referencesScore = Math.min(referencesScore, referencesMax);
-      totalScore += referencesScore;
-      maxScore += referencesMax;
-      factors.push({
-        type: TrustScoreFactorType.REFERENCES,
-        value: referencesScore,
-        maxValue: referencesMax,
-        label: "References"
-      });
-    }
-
-    // Rental History (20 points)
-    if (personal.rentalHistory && personal.rentalHistory.length > 0) {
-      const rentalMax = 20;
-      let rentalScore = 0;
-
-      personal.rentalHistory.forEach((rental) => {
-        if (rental.address) rentalScore += 3;
-        if (rental.startDate) rentalScore += 2;
-        if (rental.endDate) rentalScore += 2;
-        if (rental.reasonForLeaving) rentalScore += 2;
-        if (rental.landlordContact?.name) rentalScore += 2;
-        if (rental.landlordContact?.phone) rentalScore += 2;
-        if (rental.landlordContact?.email) rentalScore += 2;
-        if (rental.verified) rentalScore += 2;
-      });
-      
-      rentalScore = Math.min(rentalScore, rentalMax);
-      totalScore += rentalScore;
-      maxScore += rentalMax;
-      factors.push({
-        type: TrustScoreFactorType.RENTAL_HISTORY,
-        value: rentalScore,
-        maxValue: rentalMax,
-        label: "Rental History"
-      });
-    }
-
-    // Verification Status (15 points)
-    if (personal.verification) {
-      const verificationMax = 15;
-      let verificationScore = 0;
-      
-      if (personal.verification.identity) verificationScore += 5;
-      if (personal.verification.income) verificationScore += 5;
-      if (personal.verification.background) verificationScore += 3;
-      if (personal.verification.rentalHistory) verificationScore += 2;
-      
-      totalScore += verificationScore;
-      maxScore += verificationMax;
-      factors.push({
-        type: TrustScoreFactorType.VERIFICATION,
-        value: verificationScore,
-        maxValue: verificationMax,
-        label: "Verification Status"
-      });
-    }
-  }
-
-  // Agency Profile Scoring
-  if (agencySource) {
-    const agency = agencySource;
-    
-    // Business Information (20 points)
-    if (agency.businessInfo) {
-      const businessMax = 20;
-      let businessScore = 0;
-      
-      if (agency.businessInfo.businessName) businessScore += 3;
-      if (agency.businessInfo.businessType) businessScore += 2;
-      if (agency.businessInfo.licenseNumber) businessScore += 5;
-      if (agency.businessInfo.taxId) businessScore += 3;
-      if (agency.businessInfo.website) businessScore += 2;
-      if (agency.businessInfo.businessPhone) businessScore += 2;
-      if (agency.businessInfo.businessEmail) businessScore += 2;
-      if (agency.businessInfo.businessAddress) businessScore += 1;
-      
-      totalScore += businessScore;
-      maxScore += businessMax;
-      factors.push({
-        type: TrustScoreFactorType.AGENCY_BUSINESS,
-        value: businessScore,
-        maxValue: businessMax,
-        label: "Business Information"
-      });
-    }
-
-    // Verification (15 points)
-    if (agency.verification) {
-      const agencyVerificationMax = 15;
-      let agencyVerificationScore = 0;
-      
-      if (agency.verification.businessLicense) agencyVerificationScore += 5;
-      if (agency.verification.insurance) agencyVerificationScore += 5;
-      if (agency.verification.bonding) agencyVerificationScore += 3;
-      if (agency.verification.backgroundCheck) agencyVerificationScore += 2;
-      
-      totalScore += agencyVerificationScore;
-      maxScore += agencyVerificationMax;
-      factors.push({
-        type: "agency_verification",
-        value: agencyVerificationScore,
-        maxValue: agencyVerificationMax,
-        label: "Agency Verification"
-      });
-    }
-
-    // Team Members (10 points)
-    if (agency.members && agency.members.length > 0) {
-      const membersMax = 10;
-      let membersScore = 0;
-      
-      membersScore = Math.min(agency.members.length * 2, membersMax);
-      
-      totalScore += membersScore;
-      maxScore += membersMax;
-      factors.push({
-        type: "agency_members",
-        value: membersScore,
-        maxValue: membersMax,
-        label: "Team Members"
-      });
-    }
-  }
-
-  // Calculate final score as percentage
-  const finalScore = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
-
-  // Update the trust score in the profile
-  if (personalSource) {
-    personalSource.trustScore = {
-      score: finalScore,
-      factors: factors,
-      totalScore: totalScore,
-      maxScore: maxScore,
-      lastCalculated: new Date()
-    };
-  } else if (this.profileType === ProfileType.PERSONAL) {
-    // Initialize personalProfile if it doesn't exist but this is a personal profile
-    this.personalProfile = {
-      trustScore: {
-        score: finalScore,
-        factors: factors,
-        totalScore: totalScore,
-        maxScore: maxScore,
-        lastCalculated: new Date()
-      }
-    };
-  }
-
-  return {
-    score: finalScore,
-    factors: factors,
-    totalScore: totalScore,
-    maxScore: maxScore
-  };
-};
-
-profileSchema.methods.updateTrustScore = function(this: IProfile, factor: string, value: number) {
-  const personal = this.personalProfile as PersonalProfileShape | undefined;
-  if (personal) {
-    // Initialize trustScore if it doesn't exist
-    if (!personal.trustScore) {
-      personal.trustScore = {
-        score: 0,
-        factors: [],
-        totalScore: 0,
-        maxScore: 0,
-        lastCalculated: new Date()
-      };
-    }
-
-    // Initialize factors array if it doesn't exist
-    if (!personal.trustScore.factors) {
-      personal.trustScore.factors = [];
-    }
-
-    const existingFactor = personal.trustScore.factors.find((f: TrustScoreFactor) => f.type === factor);
-
-    if (existingFactor) {
-      existingFactor.value = value;
-      existingFactor.updatedAt = new Date();
-    } else {
-      personal.trustScore.factors.push({
-        type: factor,
-        value: value,
-        updatedAt: new Date(),
-      });
-    }
-
-    // Recalculate overall trust score
-    const totalScore = personal.trustScore.factors.reduce(
-      (sum: number, current: TrustScoreFactor) => sum + current.value,
-      0
-    );
-    personal.trustScore.score = Math.round(
-      totalScore / personal.trustScore.factors.length
-    );
-  }
-
-  return this.save();
-};
-
-profileSchema.methods.addAgencyMember = function(this: IProfile, oxyUserId: string, role: string, addedBy: string) {
-  if (this.profileType !== ProfileType.AGENCY) {
-    throw new Error("Can only add members to agency profiles");
-  }
-
-  const agency = this.agencyProfile as AgencyProfileShape | undefined;
-  if (!agency) {
-    throw new Error("Agency profile not initialised");
-  }
-  const members = agency.members || [];
-
-  // Check if member already exists
-  const existingMember = members.find((m: IAgencyMember) => m.oxyUserId === oxyUserId);
-  if (existingMember) {
-    throw new Error("Member already exists in this agency");
-  }
-
-  members.push({
-    oxyUserId,
-    role,
-    addedAt: new Date(),
-    addedBy,
-  });
-  agency.members = members;
-
-  return this.save();
-};
-
-profileSchema.methods.removeAgencyMember = function(this: IProfile, oxyUserId: string) {
-  if (this.profileType !== ProfileType.AGENCY) {
-    throw new Error("Can only remove members from agency profiles");
-  }
-
-  const agency = this.agencyProfile as AgencyProfileShape | undefined;
-  if (!agency) {
-    throw new Error("Agency profile not initialised");
-  }
-  agency.members = (agency.members || []).filter(
-    (m: IAgencyMember) => m.oxyUserId !== oxyUserId
-  );
-
-  return this.save();
-};
-
-profileSchema.methods.updateAgencyMemberRole = function(this: IProfile, oxyUserId: string, newRole: string) {
-  if (this.profileType !== ProfileType.AGENCY) {
-    throw new Error("Can only update member roles in agency profiles");
-  }
-
-  const agency = this.agencyProfile as AgencyProfileShape | undefined;
-  const member = agency?.members?.find((m: IAgencyMember) => m.oxyUserId === oxyUserId);
-  if (!member) {
-    throw new Error("Member not found in this agency");
-  }
-
-  member.role = newRole;
-  return this.save();
-};
-
-// Transform _id to id for frontend compatibility
 profileSchema.set('toJSON', {
   transform: function(_doc: unknown, ret: Record<string, unknown>): Record<string, unknown> {
     ret.id = ret._id;
@@ -1147,4 +404,4 @@ profileSchema.set('toJSON', {
   }
 });
 
-module.exports = mongoose.model("Profile", profileSchema); 
+module.exports = mongoose.model('Profile', profileSchema);

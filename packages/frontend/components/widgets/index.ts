@@ -1,5 +1,4 @@
 export * from './BaseWidget';
-export * from './TrustScoreWidget';
 export * from './FeaturedPropertiesWidget';
 export * from './EcoCertificationWidget';
 export * from './HorizonInitiativeWidget';

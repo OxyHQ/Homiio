@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { TrustScore } from '@/components/TrustScore';
 import { profileEditStyles as styles } from './styles';
 import type {
   PersonalInfoForm,
@@ -59,7 +58,6 @@ interface PersonalProfileSectionsProps {
   settings: SettingsForm;
   references: ReferenceForm[];
   rentalHistory: RentalHistoryForm[];
-  trustScoreData: { score: number; factors: { type: string; value: number; maxValue: number; label: string }[] };
   updatePersonalInfo: (updates: Partial<PersonalInfoForm>) => void;
   updatePreferences: (updates: Partial<PreferencesForm>) => void;
   updateSettings: (updates: Partial<SettingsForm>) => void;
@@ -80,7 +78,6 @@ export function PersonalProfileSections({
   settings,
   references,
   rentalHistory,
-  trustScoreData,
   updatePersonalInfo,
   updatePreferences,
   updateSettings,
@@ -609,19 +606,6 @@ export function PersonalProfileSections({
               </View>
             </View>
           ))}
-        </View>
-      );
-
-    case 'trust-score':
-      return (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('profile.edit.sections.trustScore')}</Text>
-          <TrustScore
-            score={trustScoreData.score}
-            size="large"
-            showDetails={true}
-            factors={trustScoreData.factors}
-          />
         </View>
       );
 

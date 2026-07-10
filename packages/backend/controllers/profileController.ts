@@ -1,33 +1,17 @@
-// Thin compatibility wrapper around refactored modular handlers.
 import * as profileHandlers from './profile';
 
 class ProfileController { }
 
-// Attach handlers to preserve existing interface (instance methods)
 const handlerNames: Array<keyof typeof profileHandlers> = [
   'test',
-  'getOrCreateActiveProfile',
-  'getUserProfiles',
-  'getProfileByType',
-  'createProfile',
-  'updateProfile',
-  'deleteProfile',
-  'activateProfile',
-  'getProfileById',
+  'getOrCreateProfile',
   'getPublicProfileByOxyUserId',
-  'updateActiveProfile',
-  'getAgencyMemberships',
-  'addAgencyMember',
-  'removeAgencyMember',
-  'updateActiveTrustScore',
-  'updateTrustScore',
-  'getTrustScore',
-  'recalculateActiveTrustScore',
+  'getProfileByOxyUserId',
+  'updateMyProfile',
   'getSavedProperties',
   'saveProperty',
   'unsaveProperty',
   'updateSavedPropertyNotes',
-  'getProfileProperties',
   'getSavedPropertyFolders',
   'createSavedPropertyFolder',
   'updateSavedPropertyFolder',

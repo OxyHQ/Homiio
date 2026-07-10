@@ -133,13 +133,6 @@ export interface AvailabilityWindow {
   status: AvailabilityWindowStatus;
 }
 
-export enum ProfileType {
-  PERSONAL = 'personal',
-  AGENCY = 'agency',
-  BUSINESS = 'business',
-  COOPERATIVE = 'cooperative'
-}
-
 export enum EmploymentStatus {
   EMPLOYED = 'employed',
   SELF_EMPLOYED = 'self_employed',
@@ -155,18 +148,6 @@ export enum LeaseDuration {
   SIX_MONTHS = '6_months',
   YEARLY = 'yearly',
   FLEXIBLE = 'flexible'
-}
-
-export enum BusinessType {
-  REAL_ESTATE_AGENCY = 'real_estate_agency',
-  PROPERTY_MANAGEMENT = 'property_management',
-  BROKERAGE = 'brokerage',
-  DEVELOPER = 'developer',
-  SMALL_BUSINESS = 'small_business',
-  STARTUP = 'startup',
-  FREELANCER = 'freelancer',
-  CONSULTANT = 'consultant',
-  OTHER = 'other'
 }
 
 // AI Assistant Types
@@ -196,37 +177,10 @@ export enum ProfileVisibility {
   CONTACTS_ONLY = 'contacts_only'
 }
 
-export enum AgencyRole {
-  OWNER = 'owner',
-  ADMIN = 'admin',
-  AGENT = 'agent',
-  VIEWER = 'viewer'
-}
-
-export enum CooperativeRole {
-  OWNER = 'owner',
-  ADMIN = 'admin',
-  MEMBER = 'member'
-}
-
 export enum RecentlyViewedType {
   PROPERTY = 'property',
   ROOM = 'room',
   ROOMMATE = 'roommate'
-}
-
-export enum TrustScoreFactorType {
-  VERIFICATION = 'verification',
-  REVIEWS = 'reviews',
-  PAYMENT_HISTORY = 'payment_history',
-  COMMUNICATION = 'communication',
-  RENTAL_HISTORY = 'rental_history',
-  BASIC_INFO = 'basic_info',
-  EMPLOYMENT = 'employment',
-  REFERENCES = 'references',
-  ROOMMATE_PREFERENCES = 'roommate_preferences',
-  ROOMMATE_COMPATIBILITY = 'roommate_compatibility',
-  AGENCY_BUSINESS = 'agency_business'
 }
 
 export enum GenderPreference {

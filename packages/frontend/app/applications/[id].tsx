@@ -144,7 +144,7 @@ export default function ApplicationDetailScreen() {
   const id = typeof params.id === 'string' ? params.id : params.id?.[0];
   const applicationQuery = useApplicationById(id);
   const updateMutation = useUpdateApplicationMutation();
-  const { primaryProfile } = useProfile();
+  const { profile } = useProfile();
 
   const application = applicationQuery.data;
   const { property } = useProperty(application?.propertyId ?? '');
@@ -152,13 +152,13 @@ export default function ApplicationDetailScreen() {
   const [confirmWithdraw, setConfirmWithdraw] = useState(false);
 
   const role = useMemo<'applicant' | 'landlord' | null>(() => {
-    if (!application || !primaryProfile) return null;
-    const sessionOxyUserId = primaryProfile?.oxyUserId;
+    if (!application || !profile) return null;
+    const sessionOxyUserId = profile?.oxyUserId;
     if (!sessionOxyUserId) return null;
     if (String(application.landlordOxyUserId) === sessionOxyUserId) return 'landlord';
     if (String(application.applicantOxyUserId) === sessionOxyUserId) return 'applicant';
     return null;
-  }, [application, primaryProfile]);
+  }, [application, profile]);
 
   const canWithdraw = useMemo<boolean>(() => {
     if (!application || role !== 'applicant') return false;

@@ -55,7 +55,7 @@ class AnalyticsController {
 
       const { Profile, Property, RecentlyViewed, Saved, ViewingRequest } = require('../models');
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findByOxyUserId(oxyUserId);
       if (!activeProfile) {
         return res.json(
           successResponse(

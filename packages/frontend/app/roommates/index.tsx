@@ -129,7 +129,7 @@ export default function RoommatesPage() {
     endRelationship,
   } = useRoommate();
 
-  const { primaryProfile, isPersonalProfile, hasPersonalProfile } = useProfile();
+  const { profile, hasProfile } = useProfile();
 
   const statusQuery = useQuery({
     queryKey: ['roommates', 'status'],
@@ -141,9 +141,7 @@ export default function RoommatesPage() {
   });
 
   const computedEnabledFromProfile = Boolean(
-    isPersonalProfile &&
-      hasPersonalProfile &&
-      primaryProfile?.personalProfile?.settings?.roommate?.enabled,
+    hasProfile && profile?.personalProfile?.settings?.roommate?.enabled,
   );
 
   const hasRoommateMatching = Boolean(
@@ -152,7 +150,7 @@ export default function RoommatesPage() {
 
   // Tab-driven fetch (kept as effect since data is owned by the legacy hook)
   useEffect(() => {
-    if (!isPersonalProfile || !hasPersonalProfile) return;
+    if (!hasProfile || !hasProfile) return;
     switch (activeTab) {
       case 'discover':
         fetchProfiles();
@@ -168,7 +166,7 @@ export default function RoommatesPage() {
     }
     // useRoommate fns are stable but lint can't always see that
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, isPersonalProfile, hasPersonalProfile]);
+  }, [activeTab, hasProfile, hasProfile]);
 
   // When the user just enabled matching, refresh the discover list
   useEffect(() => {
@@ -181,8 +179,8 @@ export default function RoommatesPage() {
   // Auth-bound re-fetch on first mount so we don't race the auth context
   useEffect(() => {
     if (!oxyServices || !activeSessionId) return;
-    if (!isPersonalProfile || !hasPersonalProfile) return;
-    useProfileStore.getState().fetchPrimaryProfile();
+    if (!hasProfile || !hasProfile) return;
+    useProfileStore.getState().fetchProfile();
     if (activeTab === 'discover') fetchProfiles();
     if (activeTab === 'requests') fetchRequests();
     if (activeTab === 'relationships') fetchRelationships();
@@ -238,7 +236,7 @@ export default function RoommatesPage() {
         oxyServices,
         activeSessionId,
       );
-      await useProfileStore.getState().fetchPrimaryProfile();
+      await useProfileStore.getState().fetchProfile();
       queryClient.setQueryData(['roommates', 'status'], {
         hasRoommateMatching: result.enabled,
       });
@@ -303,7 +301,7 @@ export default function RoommatesPage() {
   }
 
   const renderDiscoverTab = () => {
-    if (!isPersonalProfile || !hasPersonalProfile) {
+    if (!hasProfile || !hasProfile) {
       return personalProfileEmpty;
     }
 
@@ -371,7 +369,7 @@ export default function RoommatesPage() {
   };
 
   const renderRequestsTab = () => {
-    if (!isPersonalProfile || !hasPersonalProfile) {
+    if (!hasProfile || !hasProfile) {
       return personalProfileEmpty;
     }
 
@@ -436,7 +434,7 @@ export default function RoommatesPage() {
   };
 
   const renderRelationshipsTab = () => {
-    if (!isPersonalProfile || !hasPersonalProfile) {
+    if (!hasProfile || !hasProfile) {
       return personalProfileEmpty;
     }
 
@@ -491,7 +489,7 @@ export default function RoommatesPage() {
   };
 
   const renderRoomsTab = () => {
-    if (!isPersonalProfile || !hasPersonalProfile) {
+    if (!hasProfile || !hasProfile) {
       return (
         <EmptyState
           icon="person-outline"

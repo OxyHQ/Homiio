@@ -62,7 +62,7 @@ export default function ExchangeRequestDetailScreen() {
 
   const requestQuery = useExchangeRequest(id);
   const updateMutation = useUpdateExchangeStatus(id ?? '');
-  const { primaryProfile } = useProfile();
+  const { profile } = useProfile();
 
   const request = requestQuery.data;
   const { property } = useProperty(request?.propertyId ?? '');
@@ -75,19 +75,19 @@ export default function ExchangeRequestDetailScreen() {
   const [now] = useState(() => Date.now());
 
   const role = useMemo<'guest' | 'host' | null>(() => {
-    if (!request || !primaryProfile) return null;
-    const sessionOxyUserId = primaryProfile?.oxyUserId;
+    if (!request || !profile) return null;
+    const sessionOxyUserId = profile?.oxyUserId;
     if (!sessionOxyUserId) return null;
     if (String(request.hostOxyUserId) === sessionOxyUserId) return 'host';
     if (String(request.requesterOxyUserId) === sessionOxyUserId) return 'guest';
     return null;
-  }, [request, primaryProfile]);
+  }, [request, profile]);
 
   // Reviews for this exchange (used to hide the form once I've already reviewed).
   const reviewsQuery = useExchangeRequestReviews(id, {
     enabled: request?.status === ExchangeRequestStatus.COMPLETED,
   });
-  const sessionOxyUserId = primaryProfile?.oxyUserId;
+  const sessionOxyUserId = profile?.oxyUserId;
   const alreadyReviewed = useMemo(
     () =>
       (reviewsQuery.data ?? []).some(

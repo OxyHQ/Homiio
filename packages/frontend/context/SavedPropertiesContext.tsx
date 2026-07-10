@@ -78,7 +78,7 @@ const propertyKey = (property: Pick<SavedProperty, '_id' | 'id'>): string | unde
 export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = ({ children }) => {
   const queryClient = useQueryClient();
   // `isAuthenticated` is the app-wide auth signal exposed by the Oxy provider
-  // (same value `ProfileContext`, `TrustScoreWidget`, etc. gate on). The two
+  // (same value `ProfileContext` gates on). The two saved-* reads below hit
   // saved-* reads below hit auth-only `/me/...` endpoints, so they must not run
   // logged out — `enabled: isAuthenticated` gates them declaratively (no
   // useEffect) and TanStack Query re-runs them automatically once the user

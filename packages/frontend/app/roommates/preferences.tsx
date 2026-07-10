@@ -197,10 +197,9 @@ export default function RoommatePreferencesPage() {
   const queryClient = useQueryClient();
   const [roommateEnabled, setRoommateEnabled] = useState(false);
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
-  const { primaryProfile, isPersonalProfile, hasPersonalProfile } = useProfile();
+  const { profile, hasProfile } = useProfile();
 
-  // Seed the enabled flag from the personal profile's saved settings.
-  const profileSettingsKey = isPersonalProfile ? primaryProfile : null;
+  const profileSettingsKey = hasProfile ? profile : null;
   const [prevProfileSettingsKey, setPrevProfileSettingsKey] = useState(profileSettingsKey);
   if (profileSettingsKey !== prevProfileSettingsKey) {
     setPrevProfileSettingsKey(profileSettingsKey);
@@ -232,7 +231,7 @@ export default function RoommatePreferencesPage() {
     mutationFn: async (vars: { preferences: RoommateMatchingPreferences; enabled: boolean }) =>
       roommateService.updateRoommatePreferences(vars.preferences, vars.enabled),
     onSuccess: async () => {
-      await useProfileStore.getState().fetchPrimaryProfile();
+      await useProfileStore.getState().fetchProfile();
       await queryClient.invalidateQueries({ queryKey: ['roommates', 'preferences'] });
       await queryClient.invalidateQueries({ queryKey: ['roommates', 'status'] });
       Alert.alert(t('roommates.alert.successTitle'), t('roommates.alert.preferencesSaved'));
@@ -250,7 +249,7 @@ export default function RoommatePreferencesPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  if (!isPersonalProfile || !hasPersonalProfile) {
+  if (!hasProfile || !hasProfile) {
     return (
       <View style={styles.root}>
         <Header

@@ -118,7 +118,7 @@ export async function clearRecentProperties(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const activeProfile = await Profile.findByOxyUserId(oxyUserId);
 
     if (!activeProfile) {
       return res.status(404).json(
@@ -153,7 +153,7 @@ export async function debugRecentProperties(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const activeProfile = await Profile.findByOxyUserId(oxyUserId);
 
     if (!activeProfile) {
       return res.json(
