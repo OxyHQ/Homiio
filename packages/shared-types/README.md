@@ -25,7 +25,6 @@ import { Property, Profile, City, PropertyType, PropertyStatus } from '@homiio/s
 #### Common Types
 - `PropertyType` - Enum for property types (apartment, house, room, etc.)
 - `PropertyStatus` - Enum for property status (available, occupied, etc.)
-- `ProfileType` - Enum for profile types (personal, agency, business, cooperative)
 - `ApiResponse<T>` - Generic API response interface
 - `Pagination` - Pagination interface
 - `Coordinates` - Geographic coordinates interface

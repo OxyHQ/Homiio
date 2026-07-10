@@ -48,7 +48,7 @@ packages/backend/
 
 Uses `@oxyhq/core/server` (`createOxyAuthMiddleware`, `requireOxyAuth`, `getRequiredOxyUserId`). The linked Oxy client on the frontend owns token refresh — no app-local bearer parsers.
 
-Profile ownership resolves via `Profile.findActiveByOxyUserId` — never trust client-supplied profile ids.
+Profile ownership resolves via `Profile.findByOxyUserId` — never trust client-supplied profile ids.
 
 ## Key API areas
 
