@@ -130,10 +130,14 @@ export class ImageUploadService {
     this.s3Client = new S3Client({
       ...(config.s3.endpoint ? { endpoint: config.s3.endpoint, forcePathStyle: true } : {}),
       region: config.s3.region,
-      credentials: {
-        accessKeyId: config.s3.accessKeyId,
-        secretAccessKey: config.s3.secretAccessKey,
-      },
+      ...(config.s3.accessKeyId && config.s3.secretAccessKey
+        ? {
+            credentials: {
+              accessKeyId: config.s3.accessKeyId,
+              secretAccessKey: config.s3.secretAccessKey,
+            },
+          }
+        : {}),
     });
   }
 
@@ -221,7 +225,10 @@ export class ImageUploadService {
    * the document structure without the upload).
    */
   isStorageConfigured(): boolean {
-    return Boolean(config.s3.accessKeyId && config.s3.secretAccessKey);
+    const { accessKeyId, secretAccessKey } = config.s3;
+    if (accessKeyId && secretAccessKey) return true;
+    // IAM task/instance role: no static keys; bucket must be set in env (not dev default).
+    return !accessKeyId && !secretAccessKey && Boolean(process.env.AWS_S3_BUCKET);
   }
 
   /**

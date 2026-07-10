@@ -329,9 +329,8 @@ export class ImageController {
       res.setHeader('Content-Type', validation.contentType);
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       res.setHeader('X-Content-Type-Options', 'nosniff');
-      // Embeddable from the Homiio frontend origin (and RN web). Helmet also
-      // sets this globally; keep it here so the image chokepoint stays correct
-      // even if helmet defaults change.
+      // Embeddable from the Homiio frontend origin (and RN web). Helmet keeps
+      // default `same-origin` CORP on other routes; only image bytes need cross-origin.
       res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
       res.status(200).end(file.buffer);
     } catch (error) {

@@ -248,11 +248,15 @@ export class PlaywrightBrowserPool implements UrlFetcher {
       const page = await context.newPage();
       if (this.blockAssets) {
         await page.route('**/*', async (route) => {
-          if (BLOCKED_BROWSER_RESOURCE_TYPES.has(route.request().resourceType())) {
-            await route.abort();
-            return;
+          try {
+            if (BLOCKED_BROWSER_RESOURCE_TYPES.has(route.request().resourceType())) {
+              await route.abort();
+              return;
+            }
+            await route.continue();
+          } catch {
+            // Context/page closed mid-intercept — ignore unhandled rejections.
           }
-          await route.continue();
         });
       }
       // External abort cancels the navigation via the context teardown below.
