@@ -187,8 +187,23 @@ export interface NormalizedListing {
   bathrooms?: number;
   squareFootage?: number;
   floor?: number;
+  /** Construction year, when the portal exposes it (e.g. immoweb `constructionYear`). */
+  yearBuilt?: number;
   amenities?: string[];
   furnishedStatus?: 'furnished' | 'unfurnished' | 'partially_furnished' | 'not_specified';
+  /**
+   * Structured feature booleans. When a portal exposes these explicitly (e.g.
+   * immoweb `hasLift`/`hasGarden`/`hasTerrace`) the provider sets them directly;
+   * otherwise the ingest derives them from {@link amenities}. A provider-set
+   * value always wins over derivation.
+   */
+  hasElevator?: boolean;
+  hasBalcony?: boolean;
+  hasGarden?: boolean;
+  /** Parking kind, matching the Property schema enum. */
+  parkingType?: 'none' | 'street' | 'assigned' | 'garage';
+  /** Number of parking spaces, when the portal exposes a count. */
+  parkingSpaces?: number;
   /** Source images fetched once at ingest and re-hosted; never hotlinked. */
   remoteImages: NormalizedRemoteImage[];
   /**
