@@ -19,6 +19,13 @@
  */
 
 import { BROWSER_USER_AGENT } from './http';
+import {
+  BLOCKED_BROWSER_RESOURCE_TYPES,
+  createProxySessionId,
+  type PlaywrightProxyOptions,
+  type ResidentialProxyConfig,
+  toPlaywrightProxy,
+} from './proxy';
 import type { FetchRuntimeInit, UrlFetcher } from './types';
 
 /** Hard per-navigation timeout when a caller does not pass one (ms). */
@@ -43,6 +50,7 @@ interface PwContextOptions {
   viewport: { width: number; height: number };
   extraHTTPHeaders?: Record<string, string>;
   javaScriptEnabled: boolean;
+  proxy?: PlaywrightProxyOptions;
 }
 
 interface PwGotoOptions {
@@ -50,9 +58,23 @@ interface PwGotoOptions {
   waitUntil: 'domcontentloaded' | 'load' | 'networkidle' | 'commit';
 }
 
+interface PwRouteRequest {
+  resourceType(): string;
+}
+
+interface PwRoute {
+  request(): PwRouteRequest;
+  abort(): Promise<void>;
+  continue(): Promise<void>;
+}
+
 interface PwPage {
   goto(url: string, options: PwGotoOptions): Promise<unknown>;
   content(): Promise<string>;
+  route(
+    pattern: string,
+    handler: (route: PwRoute) => void | Promise<void>,
+  ): Promise<void>;
 }
 
 interface PwBrowserContext {
@@ -109,6 +131,18 @@ export interface BrowserPoolOptions {
   userAgent?: string;
   /** Extra Chromium launch args (merged after the hardened defaults). */
   launchArgs?: string[];
+  /** Residential proxy for anti-bot bypass (HTML/JSON only — assets blocked separately). */
+  proxy?: ResidentialProxyConfig;
+  /**
+   * When true (default), abort image/media/font/stylesheet requests via `page.route`
+   * and use `domcontentloaded` instead of `networkidle`.
+   */
+  blockAssets?: boolean;
+  /**
+   * When true, each fetch gets a unique `-session-<id>` suffix on the proxy username
+   * (DataImpulse-compatible sticky IP per context).
+   */
+  stickyProxySession?: boolean;
 }
 
 /** Chromium flags that keep the headless browser lean and container-friendly. */
@@ -130,6 +164,9 @@ export class PlaywrightBrowserPool implements UrlFetcher {
   private readonly maxConcurrency: number;
   private readonly userAgent: string;
   private readonly launchArgs: string[];
+  private readonly proxy?: ResidentialProxyConfig;
+  private readonly blockAssets: boolean;
+  private readonly stickyProxySession: boolean;
 
   private browser?: PwBrowser;
   private launching?: Promise<PwBrowser>;
@@ -145,6 +182,9 @@ export class PlaywrightBrowserPool implements UrlFetcher {
     this.maxConcurrency = Math.max(1, options.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY);
     this.userAgent = options.userAgent ?? BROWSER_USER_AGENT;
     this.launchArgs = [...DEFAULT_LAUNCH_ARGS, ...(options.launchArgs ?? [])];
+    this.proxy = options.proxy;
+    this.blockAssets = options.blockAssets ?? true;
+    this.stickyProxySession = options.stickyProxySession ?? false;
   }
 
   /** Lazily launch (or relaunch after a crash) the single shared browser. */
@@ -189,7 +229,8 @@ export class PlaywrightBrowserPool implements UrlFetcher {
     let context: PwBrowserContext | undefined;
     try {
       const browser = await this.ensureBrowser();
-      context = await browser.newContext({
+      const sessionId = this.stickyProxySession ? createProxySessionId() : undefined;
+      const contextOptions: PwContextOptions = {
         userAgent: this.userAgent,
         locale: 'en-US',
         viewport: { width: 1366, height: 900 },
@@ -199,8 +240,21 @@ export class PlaywrightBrowserPool implements UrlFetcher {
           ...init?.headers,
         },
         javaScriptEnabled: true,
-      });
+      };
+      if (this.proxy) {
+        contextOptions.proxy = toPlaywrightProxy(this.proxy, sessionId);
+      }
+      context = await browser.newContext(contextOptions);
       const page = await context.newPage();
+      if (this.blockAssets) {
+        await page.route('**/*', async (route) => {
+          if (BLOCKED_BROWSER_RESOURCE_TYPES.has(route.request().resourceType())) {
+            await route.abort();
+            return;
+          }
+          await route.continue();
+        });
+      }
       // External abort cancels the navigation via the context teardown below.
       const onAbort = (): void => {
         void context?.close().catch(() => undefined);
@@ -210,7 +264,8 @@ export class PlaywrightBrowserPool implements UrlFetcher {
         else init.signal.addEventListener('abort', onAbort, { once: true });
       }
       try {
-        await page.goto(url, { timeout, waitUntil: 'networkidle' });
+        const waitUntil = this.blockAssets ? 'domcontentloaded' : 'networkidle';
+        await page.goto(url, { timeout, waitUntil });
         return await page.content();
       } finally {
         if (init?.signal) init.signal.removeEventListener('abort', onAbort);

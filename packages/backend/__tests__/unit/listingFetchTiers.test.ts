@@ -169,6 +169,7 @@ function fakePlaywright(html: string): { module: PlaywrightModule; counters: Fak
                 counters.closes += 1;
               },
               newPage: async () => ({
+                route: async () => undefined,
                 goto: async (url: string) => {
                   counters.gotos.push(url);
                   return null;
