@@ -26,7 +26,6 @@ export * from './strategy';
 
 export {
   isDataDomeAjaxChallenge,
-  isDataDomeHtmlChallenge,
   isCloudflareChallenge,
 } from './parse/challenge';
 export {
@@ -64,6 +63,7 @@ export {
 } from './providers/habitaclia/parse';
 export {
   HABITACLIA_CONTENT_SELECTOR,
+  HABITACLIA_LISTING_CARD_SELECTOR,
   HABITACLIA_LISTAINMUEBLES_URL,
   buildHabitacliaListainmueblesBody,
   extractHabitacliaListadoFormFields,
@@ -127,7 +127,6 @@ export {
   IDEALISTA_FIXTURE_GEOREACH_JSON,
   IDEALISTA_FIXTURE_GEOREACH_HTML_JSON,
   IDEALISTA_FIXTURE_GEOREACH_CHALLENGE,
-  IDEALISTA_FIXTURE_DATADOME_HTML,
   IDEALISTA_FIXTURE_CONTACT_PHONES_JSON,
   IDEALISTA_FIXTURE_CONTACT_INFO_JSON,
 } from './providers/idealista/fixtures';
