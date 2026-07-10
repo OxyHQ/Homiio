@@ -8,10 +8,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { hairline, spacing } from '@/constants/styles';
 import { ActionButton } from '@/components/ui/ActionButton';
+import { FollowButton } from '@oxyhq/services';
 import type { Profile, Property } from '@homiio/shared-types';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
 import { PropertyCard } from '@/components/PropertyCard';
 import { useRouter } from 'expo-router';
+import { useOxy } from '@oxyhq/services';
 import { useOxyAvatars } from '@/hooks/useOxyAvatars';
 
 interface LandlordSectionProps {
@@ -30,6 +32,7 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
     t,
 }) => {
     const router = useRouter();
+    const { user } = useOxy();
     const isPublicHousing = property?.housingType === 'public';
     // Public-housing authority label uses the resolved region NAME (geo is relational).
     const publicHousingState = property?.address?.regionName;
@@ -38,6 +41,10 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
     // Bloom Avatar + the app-wide ImageResolverProvider, which builds the
     // canonical Oxy media URL — components never construct media URLs.
     const { getAvatarFileId } = useOxyAvatars([landlordProfile?.oxyUserId]);
+    const landlordOxyUserId = landlordProfile?.oxyUserId;
+    const showFollowButton = Boolean(
+        landlordOxyUserId && user?.id && user.id !== landlordOxyUserId,
+    );
 
     const getLandlordDisplayName = (profile: Profile | null): string => {
         if (!profile) return 'Unknown Owner';
@@ -137,6 +144,12 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
                             <Ionicons name="chevron-forward" size={20} color={colors.COLOR_BLACK_LIGHT_3} />
                         </View>
                     </TouchableOpacity>
+
+                    {showFollowButton && landlordOxyUserId ? (
+                        <View style={[styles.gutter, styles.followRow]}>
+                            <FollowButton userId={landlordOxyUserId} size="small" />
+                        </View>
+                    ) : null}
 
                     {landlordProfile && ownerProperties.length > 0 && (
                         <View style={styles.propertiesSection}>
@@ -240,6 +253,9 @@ const styles = StyleSheet.create({
     chevronContainer: {
         padding: 4,
         marginRight: -4,
+    },
+    followRow: {
+        alignItems: 'flex-start',
     },
     actionButton: {
         marginTop: 2,

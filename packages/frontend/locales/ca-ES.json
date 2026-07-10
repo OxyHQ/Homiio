@@ -164,15 +164,13 @@
         "recent": "Recents",
         "noted": "Amb notes",
         "quickSaves": "Desats ràpids",
-        "folders": "Carpetes",
-        "profiles": "Perfils"
+        "folders": "Carpetes"
       },
       "view": {
         "list": "Llista",
         "grid": "Quadrícula"
       },
       "searchPlaceholder": "Cerca als teus desats...",
-      "profilesLabel": "perfils",
       "adjustFilters": "Prova d'ajustar la teva cerca o filtres",
       "sort": {
         "recent": "Recentment desats",
@@ -181,8 +179,6 @@
         "title": "Nom de la propietat",
         "notes": "Més notes"
       },
-      "noProfilesTitle": "No hi ha perfils desats",
-      "noProfilesDescription": "Segueix perfils per veure'ls aquí",
       "editFolder": "Editar carpeta",
       "defaultFolder": "Carpeta per defecte",
       "folderNamePlaceholder": "Nom de la carpeta",
@@ -245,8 +241,6 @@
     "insights": {
       "title": "Platform Insights"
     },
-    "noProfilesTitle": "No Saved Profiles",
-    "noProfilesDescription": "Follow profiles to see them here",
     "recommended": {
       "title": "Recommended homes",
       "eyebrow": "For you"
@@ -1791,7 +1785,9 @@
       "requestSentTitle": "Request sent",
       "requestSentBody": "Your roommate request was sent.",
       "requestFailedTitle": "Could not send request",
-      "requestFailedBody": "We could not send your request. Please try again."
+      "requestFailedBody": "We could not send your request. Please try again.",
+      "followers": "{{count}} followers",
+      "following": "{{count}} following"
     },
     "preferencesPage": {
       "title": "Preferències de company",
@@ -2349,7 +2345,6 @@
       "noted": "With Notes",
       "quickSaves": "Quick Saves",
       "folders": "Folders",
-      "profiles": "Profiles",
       "searches": "Saved Searches",
       "label": "Saved view"
     },
@@ -2358,7 +2353,6 @@
       "grid": "Grid"
     },
     "searchPlaceholder": "Search your saved items...",
-    "profilesLabel": "profiles",
     "adjustFilters": "Try adjusting your search or filter criteria",
     "sort": {
       "recent": "Recently Saved",

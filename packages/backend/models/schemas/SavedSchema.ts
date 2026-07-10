@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const savedSchema = new mongoose.Schema({
   oxyUserId: { type: String, required: true, index: true },
-  targetType: { type: String, enum: ['property', 'user'], required: true, index: true },
+  targetType: { type: String, enum: ['property'], required: true, index: true },
   targetId: { type: String, required: true, index: true },
   notes: { type: String },
   folderId: { type: mongoose.Schema.Types.ObjectId, ref: 'SavedPropertyFolder' },

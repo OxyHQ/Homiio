@@ -13,6 +13,7 @@ import { colors } from '@/styles/colors';
 import { shadowToken } from '@/styles/shadows';
 import type { RoommateProfile } from '@/hooks/useRoommate';
 import { ActionButton } from '@/components/ui/ActionButton';
+import { FollowButton } from '@oxyhq/services';
 
 
 interface RoommateMatchProps {
@@ -91,6 +92,7 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
             <Text style={styles.matchScoreLabel}>{getMatchScoreText(profile.matchScore)}</Text>
           </View>
         )}
+        <FollowButton userId={profile.oxyUserId} size="small" />
       </View>
 
       {/* Bio */}

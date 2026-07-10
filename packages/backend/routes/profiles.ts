@@ -21,7 +21,6 @@ export default function () {
   router.get('/me/recent-properties/debug', asyncHandler(profileController.debugRecentProperties));
   router.delete('/me/recent-properties', asyncHandler(profileController.clearRecentProperties));
   router.get('/me/saved-properties', asyncHandler(profileController.getSavedProperties));
-  router.get('/me/saved-profiles', asyncHandler(profileController.getSavedProfiles));
   router.post('/me/save-property', asyncHandler(profileController.saveProperty));
   router.delete('/me/saved-properties/:propertyId', asyncHandler(profileController.unsaveProperty));
   router.patch('/me/saved-properties/:propertyId/notes', asyncHandler(profileController.updateSavedPropertyNotes));
@@ -88,9 +87,6 @@ export default function () {
   router.delete('/me/saved-searches/:searchId', asyncHandler(profileController.deleteSavedSearch));
   router.put('/me/saved-searches/:searchId', asyncHandler(profileController.updateSavedSearch));
   router.put('/me/saved-searches/:searchId/notifications', asyncHandler(profileController.toggleSearchNotifications));
-  router.post('/me/save-profile', asyncHandler(profileController.saveProfile));
-  router.delete('/me/saved-profiles/:oxyUserId', asyncHandler(profileController.unsaveProfile));
-  router.get('/me/saved-profiles/:oxyUserId', asyncHandler(profileController.isProfileSaved));
   router.get('/oxy/:oxyUserId', asyncHandler(profileController.getProfileByOxyUserId));
   router.get('/oxy/:oxyUserId/exchange-reviews', asyncHandler(exchangeReviewController.getProfileExchangeReviews));
 

@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@oxyhq/bloom/button';
 import { Loading } from '@oxyhq/bloom/loading';
 import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
+import { FollowButton, useFollow, useOxy } from '@oxyhq/services';
 import { useTranslation } from 'react-i18next';
 
 import { Header } from '@/components/Header';
@@ -23,8 +24,11 @@ import { colors } from '@/styles/colors';
 
 export default function RoommateProfilePage() {
   const { t } = useTranslation();
+  const { user } = useOxy();
   const params = useLocalSearchParams<{ id: string }>();
   const oxyUserId = String(params.id);
+  const isOwnProfile = Boolean(user?.id && user.id === oxyUserId);
+  const { followerCount, followingCount } = useFollow(oxyUserId);
   const { sendRequest } = useRoommate();
   const [isSending, setIsSending] = useState(false);
 
@@ -89,6 +93,25 @@ export default function RoommateProfilePage() {
               <BloomText style={styles.metaText}>{info.location}</BloomText>
             </View>
           ) : null}
+          {!isOwnProfile ? (
+            <View style={styles.followRow}>
+              <FollowButton userId={oxyUserId} size="medium" />
+            </View>
+          ) : null}
+          {(followerCount != null || followingCount != null) && (
+            <View style={styles.statsRow}>
+              {followerCount != null ? (
+                <BloomText style={styles.statText}>
+                  {t('roommates.profileDetail.followers', { count: followerCount })}
+                </BloomText>
+              ) : null}
+              {followingCount != null ? (
+                <BloomText style={styles.statText}>
+                  {t('roommates.profileDetail.following', { count: followingCount })}
+                </BloomText>
+              ) : null}
+            </View>
+          )}
         </View>
 
         {info.bio ? (
@@ -222,6 +245,19 @@ const styles = StyleSheet.create({
   metaText: {
     fontSize: 13,
     color: colors.muted,
+  },
+  followRow: {
+    marginTop: spacing.md,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: spacing.lg,
+    marginTop: spacing.sm,
+  },
+  statText: {
+    fontSize: 13,
+    color: colors.muted,
+    fontWeight: '600',
   },
   card: {
     backgroundColor: colors.surfaceElevated,

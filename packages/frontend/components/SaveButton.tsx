@@ -41,7 +41,6 @@ import { Loading } from '@oxyhq/bloom/loading';
 import { SaveToFolderBottomSheet } from './SaveToFolderBottomSheet';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { Property } from '@homiio/shared-types';
-import { useSavedProfiles } from '@/store/savedProfilesStore';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { ThemedText } from '@/components/ThemedText';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
@@ -61,8 +60,6 @@ interface SaveButtonProps {
   isLoading?: boolean;
   // Only need the property object
   property?: Property;
-  // For saving profiles instead of properties
-  profileId?: string;
   showCount?: boolean;
   countBadgeStyle?: StyleProp<ViewStyle>;
   countDisplayMode?: 'badge' | 'inline';
@@ -82,14 +79,12 @@ export function SaveButton({
   isLoading = false,
   // Only need the property object
   property,
-  profileId,
   showCount = false,
   countBadgeStyle,
   countDisplayMode = 'badge',
 }: SaveButtonProps) {
   const [isPressed, setIsPressed] = useState(false);
   const bottomSheetContext = useContext(BottomSheetContext);
-  const { saveProfile, unsaveProfile } = useSavedProfiles();
   const sizeAll = Math.max(10, size * 1);
 
   // Use SavedPropertiesContext for all state management
@@ -169,18 +164,10 @@ export function SaveButton({
     if (!propertyId) return;
 
     try {
-      if (profileId) {
-        if (isSaved) {
-          await unsaveProfile(profileId);
-        } else {
-          await saveProfile(profileId);
-        }
-      } else if (propertyId) {
-        if (isSaved) {
-          await unsaveProperty(propertyId);
-        } else {
-          await savePropertyToFolder(propertyId, null, property);
-        }
+      if (isSaved) {
+        await unsaveProperty(propertyId);
+      } else {
+        await savePropertyToFolder(propertyId, null, property);
       }
     } catch (error) {
       console.error('Failed to toggle save:', error);
@@ -193,7 +180,7 @@ export function SaveButton({
 
     setIsPressed(true);
 
-    if (profileId || propertyId) {
+    if (propertyId) {
       handleInternalSave()
         .catch((error) => {
           console.error('Save operation failed:', error);
