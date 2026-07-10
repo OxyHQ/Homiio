@@ -14,6 +14,10 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 import { PropertyStatus } from '@homiio/shared-types';
 import database from '../database/connection';
 import { scoreAndPersistProperty } from '../services/priceEthicsService';
+import {
+  finalBatchToFlush,
+  readyBatchAfterAppend,
+} from './backfillPriceEthicsBatching';
 
 const { Property } = require('../models');
 
@@ -115,13 +119,22 @@ async function main(): Promise<void> {
     batch.push(String(doc._id));
     processed += 1;
 
-    if (batch.length >= BATCH_SIZE || processed >= LIMIT) {
-      const result = await processBatch(batch);
+    const ready = readyBatchAfterAppend(batch, BATCH_SIZE, processed, LIMIT);
+    if (ready) {
+      const result = await processBatch(ready);
       scored += result.scored;
       failed += result.failed;
       console.log(`  batch done: ${processed}/${toProcess} processed (${scored} scored, ${failed} failed)`);
       batch = [];
     }
+  }
+
+  const remaining = finalBatchToFlush(batch);
+  if (remaining) {
+    const result = await processBatch(remaining);
+    scored += result.scored;
+    failed += result.failed;
+    console.log(`  batch done: ${processed}/${toProcess} processed (${scored} scored, ${failed} failed)`);
   }
 
   console.log(`Finished: ${scored} scored, ${failed} failed out of ${processed} processed`);
