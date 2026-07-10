@@ -86,13 +86,33 @@ export {
 } from './providers/idealista/fixtures';
 
 export { FotocasaProvider, isFotocasaChallenge, fotocasaSourceIdFromUrl } from './providers/fotocasa';
-export { parseFotocasaDetail, parseFotocasaSearch, type FotocasaRaw } from './providers/fotocasa/parse';
+export {
+  parseFotocasaDetail,
+  parseFotocasaSearch,
+  parseFotocasaPropertyJson,
+  type FotocasaRaw,
+} from './providers/fotocasa/parse';
+export {
+  parseFotocasaSearchads,
+  parseFotocasaSsrSearch,
+  parseFotocasaLocationSegments,
+  fotocasaWarmSearchUrl,
+  fotocasaSearchadsUrl,
+  fotocasaUrlLocationSegmentsUrl,
+  fotocasaPropertyApiUrl,
+  isFotocasaSearchadsChallenge,
+} from './providers/fotocasa/searchads';
 export {
   FOTOCASA_BASE_URL,
   FOTOCASA_FIXTURE_DETAIL_HTML,
   FOTOCASA_FIXTURE_SEARCH_HTML,
   FOTOCASA_FIXTURE_REAL_ESTATE_LISTING_HTML,
   FOTOCASA_FIXTURE_NEXT_DATA_HTML,
+  FOTOCASA_FIXTURE_SEARCHADS_JSON,
+  FOTOCASA_FIXTURE_LOCATION_SEGMENTS_JSON,
+  FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE,
+  FOTOCASA_FIXTURE_PROPERTY_JSON,
+  FOTOCASA_FIXTURE_SSR_SEARCH_HTML,
 } from './providers/fotocasa/fixtures';
 
 export {

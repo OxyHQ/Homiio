@@ -114,6 +114,10 @@ The Oxy linked client is live in `packages/frontend/utils/api.ts` (`oxyClient.cr
 
 Homiio aggregates external market listings (Idealista, Fotocasa, Habitaclia, Blueground, apartments.com, Zillow, …) as **first-party data** — never hotlinked, never live-proxied.
 
+### Shared helpers (CRITICAL)
+
+New portal plugins MUST reuse existing `@homiio/listing-providers` helpers — never copy-paste Idealista/ES parsers per provider. Compose from shared session warm (`session.ts`, `browserSession.ts`), `fetchJsonInPage`, JSON-LD parsers (`providers/es/jsonLd.ts`, `providers/us/jsonLd.ts`, …), `__NEXT_DATA__` extraction, contact mapping, classifieds housing filter (`providers/es/housing.ts`), and market city env lists (`LISTING_*_CITIES`). Portal code is only URL builders, selectors, and field mapping. If a pattern appears twice, extract to shared first.
+
 ### Fetch strategy (CRITICAL)
 
 **JSON/AJAX first, HTML last.** Providers MUST prefer internal JSON/XHR/GraphQL/datalayer APIs — ideally after Playwright session warm. HTML parsing and embedded JSON-LD via `fetchListingViaLadder` are **fallback only** when no usable JSON endpoint exists.

@@ -144,3 +144,69 @@ export const FOTOCASA_FIXTURE_NEXT_DATA_HTML = `<!doctype html>
 </head>
 <body></body>
 </html>`;
+
+export const FOTOCASA_FIXTURE_SEARCHADS_JSON = `{
+  "total": 3,
+  "pageNumber": 1,
+  "realEstates": [
+    {
+      "propertyId": 187654321,
+      "detailUrl": "/es/alquiler/vivienda/madrid-capital/calefaccion-ascensor/187654321/d",
+      "transactionType": "RENT",
+      "price": { "amount": 1850 }
+    },
+    {
+      "propertyId": 187654322,
+      "detailUrl": "https://www.fotocasa.es/es/alquiler/vivienda/madrid-capital/terraza/187654322/d",
+      "transactionType": "RENT",
+      "price": { "amount": 1600 }
+    },
+    {
+      "propertyId": 187654323,
+      "detailUrl": "/es/alquiler/vivienda/madrid-capital/exterior/187654323/d",
+      "transactionType": "RENT",
+      "price": { "amount": 1200 }
+    }
+  ]
+}`;
+
+export const FOTOCASA_FIXTURE_LOCATION_SEGMENTS_JSON = `{
+  "ids": "724,14,28,173,0,28079,0,0,0",
+  "coordinates": { "latitude": 40.4096, "longitude": -3.68624 },
+  "locationLiteral": "Madrid"
+}`;
+
+export const FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE = `<!DOCTYPE html><html><head><title>SENTIMOS LA INTERRUPCIÓN</title></head><body></body></html>`;
+
+export const FOTOCASA_FIXTURE_PROPERTY_JSON = `{
+  "propertyId": "187654321",
+  "description": "Piso reformado de tres habitaciones en Chamberí.",
+  "rooms": 3,
+  "baths": 2,
+  "surface": 95,
+  "transactionType": "RENT",
+  "zipCode": "28010",
+  "street": "Calle de Almagro 30",
+  "uris": [
+    { "value": "/es/alquiler/vivienda/madrid-capital/calefaccion-ascensor/187654321/d", "language": "es_ES" }
+  ],
+  "prices": [{ "amount": 1850 }],
+  "location": {
+    "latitude": 40.4318,
+    "longitude": -3.6931,
+    "level5Name": "Madrid",
+    "level2Name": "Madrid",
+    "level7Name": "Chamberí"
+  },
+  "multimedia": [
+    { "url": "https://static.fotocasa.es/images/anuncios/187654321/1.jpg", "type": "2", "position": 1 }
+  ]
+}`;
+
+export const FOTOCASA_FIXTURE_SSR_SEARCH_HTML = `<!doctype html><html><body><script>{
+  "realEstates": [
+    { "propertyId": 187654321, "detailUrl": "/es/alquiler/vivienda/madrid-capital/x/187654321/d" },
+    { "propertyId": 187654324, "detailUrl": "/es/alquiler/vivienda/madrid-capital/x/187654324/d" }
+  ],
+  "total": 2
+}</script></body></html>`;
