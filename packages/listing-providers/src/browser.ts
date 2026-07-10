@@ -273,9 +273,9 @@ export class PlaywrightBrowserPool implements UrlFetcher {
         else init.signal.addEventListener('abort', onAbort, { once: true });
       }
       try {
-        // Prefer domcontentloaded (esp. with asset blocking) over a blind
-        // networkidle/90s goto — then soft-wait for content selectors.
-        const waitUntil = this.blockAssets ? 'domcontentloaded' : 'load';
+        // Prefer commit (fast first byte) over domcontentloaded — ES portals
+        // behind residential proxy often never fire DCL within 90s.
+        const waitUntil = this.blockAssets ? 'commit' : 'load';
         await page.goto(url, { timeout, waitUntil });
         if (page.waitForSelector) {
           try {

@@ -31,6 +31,11 @@ function citySlug(city: string): string {
     .replace(/^_+|_+$/g, '');
 }
 
+/** Habitaclia homepage — Imperva clearance before city search POST. */
+export function habitacliaWarmHomeUrl(): string {
+  return `${HABITACLIA_BASE_URL}/`;
+}
+
 /** Build a Habitaclia rental search URL for a city + 1-based page number. */
 export function habitacliaWarmSearchUrl(city: string, page: number): string {
   const slug = citySlug(city);

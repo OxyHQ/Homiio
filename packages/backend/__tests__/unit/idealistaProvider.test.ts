@@ -180,7 +180,7 @@ describe('Idealista georeach AJAX parser', () => {
 describe('IdealistaProvider.discover georeach path', () => {
   it('yields refs from a warmed session georeach AJAX response', async () => {
     const runtime: FetchRuntime = {
-      fetchHttp: async () => ({ status: 500, body: '' }),
+      fetchHttp: async () => ({ status: 403, body: IDEALISTA_FIXTURE_GEOREACH_CHALLENGE }),
       fetchJson: async () => {
         throw new Error('unused');
       },
@@ -192,6 +192,7 @@ describe('IdealistaProvider.discover georeach path', () => {
       },
       openBrowserSession: async () => ({
         request: async () => ({ status: 200, body: IDEALISTA_FIXTURE_GEOREACH_JSON }),
+        warmNavigate: async () => undefined,
         content: async () => IDEALISTA_FIXTURE_SEARCH_HTML,
         pageUrl: () => 'https://www.idealista.com/alquiler-viviendas/madrid/',
         exportStorageState: async () => ({ cookies: [] }),
@@ -233,6 +234,7 @@ describe('IdealistaProvider.discover georeach path', () => {
       },
       openBrowserSession: async () => ({
         request: async () => ({ status: 403, body: IDEALISTA_FIXTURE_GEOREACH_CHALLENGE }),
+        warmNavigate: async () => undefined,
         content: async () => '<html>datadome</html>',
         pageUrl: () => 'https://www.idealista.com/alquiler-viviendas/madrid/',
         exportStorageState: async () => ({ cookies: [] }),

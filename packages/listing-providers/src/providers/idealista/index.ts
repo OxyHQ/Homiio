@@ -54,6 +54,7 @@ import {
 } from './contact';
 import {
   idealistaGeoreachUrl,
+  idealistaWarmHomeUrl,
   idealistaWarmSearchUrl,
   isIdealistaGeoreachChallenge,
   parseIdealistaGeoreach,
@@ -204,6 +205,10 @@ export class IdealistaProvider implements ListingProvider {
     for (const city of cities) {
       if (yielded.count >= limit) return;
 
+      const viaHttp = await this.discoverCityViaHttp(runtime, city, job.signal, seen, limit, yielded);
+      for (const ref of viaHttp) yield ref;
+      if (yielded.count >= limit) return;
+
       const viaAjax = runtime.openBrowserSession
         ? await this.discoverCityViaGeoreach(runtime, city, job.signal, seen, limit, yielded)
         : [];
@@ -216,6 +221,64 @@ export class IdealistaProvider implements ListingProvider {
           yield ref;
         }
       }
+    }
+  }
+
+  /**
+   * Proxied HTTP search page (page 1) before Playwright warm-up. Returns refs
+   * yielded (empty when blocked — caller continues to georeach session).
+   */
+  private async discoverCityViaHttp(
+    runtime: FetchRuntime,
+    city: string,
+    signal: AbortSignal | undefined,
+    seen: Set<string>,
+    limit: number,
+    yielded: { count: number },
+  ): Promise<ExternalListingRef[]> {
+    const start = Date.now();
+    const url = idealistaWarmSearchUrl(city, 1);
+    try {
+      const { status, body } = await runtime.fetchHttp(url, {
+        signal,
+        headers: {
+          ...IDEALISTA_AJAX_HEADERS,
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
+      });
+      if (status >= 400 || isIdealistaChallenge(body)) {
+        this.metrics.record({
+          provider: this.id,
+          strategy: 'http',
+          outcome: status === 403 || status === 429 ? 'challenge' : 'error',
+          status,
+          latencyMs: Date.now() - start,
+          url,
+          detail: 'search HTTP blocked before georeach',
+        });
+        return [];
+      }
+      const pageRefs = parseIdealistaSearch(body);
+      this.metrics.record({
+        provider: this.id,
+        strategy: 'http',
+        outcome: 'success',
+        status,
+        latencyMs: Date.now() - start,
+        url,
+        detail: pageRefs.length > 0 ? 'search-http' : 'search-http-empty',
+      });
+      return yieldRefs(pageRefs, seen, limit, yielded);
+    } catch (error) {
+      this.metrics.record({
+        provider: this.id,
+        strategy: 'http',
+        outcome: 'error',
+        latencyMs: Date.now() - start,
+        url,
+        detail: error instanceof Error ? error.message : String(error),
+      });
+      return [];
     }
   }
 
@@ -239,19 +302,29 @@ export class IdealistaProvider implements ListingProvider {
     }
 
     let session: BrowserSession | undefined;
+    const searchUrl = idealistaWarmSearchUrl(city, 1);
     const start = Date.now();
     try {
       session = await runtime.openBrowserSession({
-        warmUrl: idealistaWarmSearchUrl(city, 1),
+        warmUrl: idealistaWarmHomeUrl(),
         signal,
         contentSelector: IDEALISTA_CONTENT_SELECTOR,
         isChallenge: isIdealistaChallenge,
+        challengeWaitMs: 60_000,
         stickyProxySession: sticky,
         proxySessionId: this.stickyProxySessionId,
         storageState: this.stickyStorageState,
         blockAssets: true,
         locale: 'es-ES',
         acceptLanguage: 'es-ES,es;q=0.9,en;q=0.8',
+      });
+
+      await session.warmNavigate({
+        warmUrl: searchUrl,
+        signal,
+        contentSelector: IDEALISTA_CONTENT_SELECTOR,
+        isChallenge: isIdealistaChallenge,
+        challengeWaitMs: 45_000,
       });
 
       const collected: ExternalListingRef[] = [];
