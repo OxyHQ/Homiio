@@ -21,17 +21,14 @@ export function isDataDomeAjaxChallenge(body: string): boolean {
 
 /**
  * Cloudflare / generic interstitial markers (Navent MX, Vivanuncios, …).
- * Also treats tiny / non-HTML bodies as challenges.
+ * Also treats tiny bodies as challenges. Does NOT treat normal HTML pages as
+ * challenges — use {@link isDataDomeAjaxChallenge} for AJAX/JSON bodies only
+ * (that helper flags any `<!DOCTYPE`/`<html` payload as a bot wall).
  */
 export function isCloudflareChallenge(html: string): boolean {
   const trimmed = html.trim();
   if (trimmed.length < 128) return true;
-  if (
-    /just a moment|cf-browser-verification|cf-mitigated|attention required|access denied|datadome|captcha-delivery|perimeterx|px-captcha|are you a robot|unusual traffic|enable javascript and cookies|cloudflare/i.test(
-      trimmed,
-    )
-  ) {
-    return true;
-  }
-  return isDataDomeAjaxChallenge(trimmed);
+  return /just a moment|cf-browser-verification|cf-mitigated|attention required|access denied|datadome|captcha-delivery|perimeterx|px-captcha|are you a robot|unusual traffic|enable javascript and cookies|cloudflare/i.test(
+    trimmed,
+  );
 }

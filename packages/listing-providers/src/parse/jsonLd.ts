@@ -7,8 +7,29 @@
 
 import { asNumberEu, asNumberUs, asString, deaccent, isRecord } from './guards';
 
-const LD_JSON_RE =
-  /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+const LD_JSON_TYPE = 'application/ld+json';
+
+/**
+ * Iterate `<script type="application/ld+json">…</script>` bodies.
+ * Index-based scan avoids polynomial-backtracking regex on large HTML.
+ */
+export function* ldJsonScriptBodies(html: string): Generator<string> {
+  let pos = 0;
+  while (pos < html.length) {
+    const scriptOpen = html.indexOf('<script', pos);
+    if (scriptOpen < 0) return;
+    const tagClose = html.indexOf('>', scriptOpen);
+    if (tagClose < 0) return;
+    const openTag = html.slice(scriptOpen, tagClose + 1);
+    pos = tagClose + 1;
+    if (!openTag.toLowerCase().includes(LD_JSON_TYPE)) continue;
+    const close = html.indexOf('</script>', pos);
+    if (close < 0) return;
+    const body = html.slice(pos, close).trim();
+    if (body) yield body;
+    pos = close + '</script>'.length;
+  }
+}
 
 export interface EurSchemaListing {
   types: string[];
@@ -236,14 +257,62 @@ function collectNodes(value: unknown, out: Record<string, unknown>[]): void {
     collectNodes(value['@graph'], out);
     return;
   }
+  // Unwrap ItemList / SearchResultsPage nesting (Lamudi MX, …).
+  if (Array.isArray(value.itemListElement)) {
+    for (const entry of value.itemListElement) {
+      if (isRecord(entry) && isRecord(entry.item)) collectNodes(entry.item, out);
+      else collectNodes(entry, out);
+    }
+  }
+  if (value.mainEntity !== undefined) {
+    collectNodes(value.mainEntity, out);
+  }
   out.push(value);
+}
+
+/** Collect every record node from LD+JSON script blocks. */
+export function collectJsonLdNodes(html: string): Record<string, unknown>[] {
+  const nodes: Record<string, unknown>[] = [];
+  for (const body of ldJsonScriptBodies(html)) {
+    try {
+      collectNodes(JSON.parse(body) as unknown, nodes);
+    } catch {
+      continue;
+    }
+  }
+  return nodes;
+}
+
+export function jsonLdTypes(node: Record<string, unknown>): string[] {
+  return readTypes(node['@type']);
+}
+
+export function resolveJsonLdRef(
+  nodes: readonly Record<string, unknown>[],
+  ref: unknown,
+): Record<string, unknown> | undefined {
+  if (isRecord(ref) && !ref['@id'] && Object.keys(ref).length > 1) return ref;
+  const id = isRecord(ref)
+    ? typeof ref['@id'] === 'string'
+      ? ref['@id']
+      : undefined
+    : typeof ref === 'string'
+      ? ref
+      : undefined;
+  if (!id) return undefined;
+  return nodes.find((node) => node['@id'] === id);
+}
+
+export function findJsonLdByType(
+  nodes: readonly Record<string, unknown>[],
+  typeName: string,
+): Record<string, unknown> | undefined {
+  return nodes.find((node) => jsonLdTypes(node).includes(typeName));
 }
 
 function extractEurSchemaListings(html: string, config: EurJsonLdConfig): EurSchemaListing[] {
   const nodes: Record<string, unknown>[] = [];
-  for (const match of html.matchAll(LD_JSON_RE)) {
-    const body = match[1]?.trim();
-    if (!body) continue;
+  for (const body of ldJsonScriptBodies(html)) {
     try {
       collectNodes(JSON.parse(body) as unknown, nodes);
     } catch {
@@ -366,9 +435,7 @@ function toUsListing(node: Record<string, unknown>): SchemaOrgListing {
 
 export function extractSchemaOrgListings(html: string): SchemaOrgListing[] {
   const nodes: Record<string, unknown>[] = [];
-  for (const match of html.matchAll(LD_JSON_RE)) {
-    const body = match[1]?.trim();
-    if (!body) continue;
+  for (const body of ldJsonScriptBodies(html)) {
     try {
       collectNodes(JSON.parse(body) as unknown, nodes);
     } catch {

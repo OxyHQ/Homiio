@@ -2,7 +2,7 @@
  * Discover city lists from `LISTING_<MARKET>_CITIES` env vars (comma-separated).
  */
 
-export type ListingMarket = 'ES' | 'GB' | 'US' | 'IT' | 'DE' | 'FR' | 'RO' | 'AR' | 'EC';
+export type ListingMarket = 'ES' | 'GB' | 'US' | 'IT' | 'DE' | 'FR' | 'RO' | 'AR' | 'EC' | 'MX';
 
 const ENV_KEYS: Readonly<Record<ListingMarket, string>> = {
   ES: 'LISTING_ES_CITIES',
@@ -14,6 +14,7 @@ const ENV_KEYS: Readonly<Record<ListingMarket, string>> = {
   RO: 'LISTING_RO_CITIES',
   AR: 'LISTING_AR_CITIES',
   EC: 'LISTING_EC_CITIES',
+  MX: 'LISTING_MX_CITIES',
 };
 /** Parse a comma-separated city list for a market. Empty when unset. */
 export function citiesFromEnv(market: ListingMarket): string[] {

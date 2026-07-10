@@ -1,34 +1,110 @@
 /**
- * Next.js `__NEXT_DATA__` / embedded page-model extraction.
+ * Next.js `__NEXT_DATA__` / `__PAGE_MODEL__` / `__PRELOADED_STATE__` extraction.
+ *
+ * Providers must not re-declare these regexes — import from here.
  */
 
 import { asNumberEu, asString, isRecord } from './guards';
 import type { EurSchemaListing } from './jsonLd';
-import {
-  extractNextData,
-  findNextDataArray,
-  findNextDataRecord,
-  nextDataPageProps,
-  parseNextData,
-  parseNextDataPageProps,
-  parsePreloadedState,
-} from '../nextData';
-
-export {
-  extractNextData,
-  findNextDataArray,
-  findNextDataRecord,
-  nextDataPageProps,
-  parseNextData,
-  parseNextDataPageProps,
-  parsePreloadedState,
-};
 
 export const NEXT_DATA_RE =
   /<script[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i;
 
 export const PAGE_MODEL_RE =
   /<script[^>]*id=["']__PAGE_MODEL__["'][^>]*>([\s\S]*?)<\/script>/i;
+
+const PRELOADED_STATE_RE =
+  /(?:window\.)?__PRELOADED_STATE__\s*=\s*(\{[\s\S]*?\})\s*;?\s*(?:<\/script>|$)/i;
+
+export function parseNextData(html: string): Record<string, unknown> | undefined {
+  const match = NEXT_DATA_RE.exec(html) ?? PAGE_MODEL_RE.exec(html);
+  const body = match?.[1]?.trim();
+  if (!body) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(body);
+    return isRecord(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export const extractNextData = parseNextData;
+
+export function parsePreloadedState(html: string): Record<string, unknown> | undefined {
+  const match = PRELOADED_STATE_RE.exec(html);
+  const body = match?.[1]?.trim();
+  if (!body) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(body);
+    return isRecord(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function nextDataPageProps(
+  nextData: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
+  if (!nextData) return undefined;
+  const props = nextData.props;
+  if (!isRecord(props)) return undefined;
+  const page = props.pageProps;
+  return isRecord(page) ? page : undefined;
+}
+
+export function parseNextDataPageProps(html: string): Record<string, unknown> | undefined {
+  return nextDataPageProps(parseNextData(html));
+}
+
+export function findNextDataArray(
+  root: unknown,
+  isItem: (value: unknown) => boolean,
+  maxDepth = 8,
+): unknown[] | undefined {
+  const walk = (value: unknown, depth: number): unknown[] | undefined => {
+    if (depth > maxDepth || value === null || value === undefined) return undefined;
+    if (Array.isArray(value)) {
+      if (value.length > 0 && isItem(value[0])) return value;
+      for (const entry of value) {
+        const found = walk(entry, depth + 1);
+        if (found) return found;
+      }
+      return undefined;
+    }
+    if (!isRecord(value)) return undefined;
+    for (const child of Object.values(value)) {
+      const found = walk(child, depth + 1);
+      if (found) return found;
+    }
+    return undefined;
+  };
+  return walk(root, 0);
+}
+
+export function findNextDataRecord(
+  root: unknown,
+  isMatch: (value: Record<string, unknown>) => boolean,
+  maxDepth = 8,
+): Record<string, unknown> | undefined {
+  const walk = (value: unknown, depth: number): Record<string, unknown> | undefined => {
+    if (depth > maxDepth || value === null || value === undefined) return undefined;
+    if (Array.isArray(value)) {
+      for (const entry of value) {
+        const found = walk(entry, depth + 1);
+        if (found) return found;
+      }
+      return undefined;
+    }
+    if (!isRecord(value)) return undefined;
+    if (isMatch(value)) return value;
+    for (const child of Object.values(value)) {
+      const found = walk(child, depth + 1);
+      if (found) return found;
+    }
+    return undefined;
+  };
+  return walk(root, 0);
+}
 
 export function readNestedPrice(record: Record<string, unknown>): number | undefined {
   const direct =
@@ -85,9 +161,7 @@ export function collectNestedImages(record: Record<string, unknown>): string[] {
 }
 
 function looksLikeListing(record: Record<string, unknown>): boolean {
-  const price = readNestedPrice(record);
-  const city = readNestedCity(record);
-  return price !== undefined && !!city;
+  return readNestedPrice(record) !== undefined && !!readNestedCity(record);
 }
 
 export function eurListingFromNextDataCandidate(
@@ -108,8 +182,7 @@ export function eurListingFromNextDataCandidate(
     asString(addressNode?.addressRegion) ??
     asString(addressNode?.region) ??
     asString(location?.region);
-  const postalCode =
-    asString(addressNode?.postalCode) ?? asString(record.postalCode);
+  const postalCode = asString(addressNode?.postalCode) ?? asString(record.postalCode);
   const neighborhood =
     asString(addressNode?.neighborhood) ??
     asString(location?.neighborhood) ??
@@ -121,7 +194,9 @@ export function eurListingFromNextDataCandidate(
       : undefined;
   const lat = asNumberEu(geo?.latitude) ?? asNumberEu(geo?.lat);
   const lng = asNumberEu(geo?.longitude) ?? asNumberEu(geo?.lng) ?? asNumberEu(geo?.lon);
-  const business = asString(isRecord(record.offers) ? record.offers.businessFunction : undefined)?.toLowerCase() ?? '';
+  const business =
+    asString(isRecord(record.offers) ? record.offers.businessFunction : undefined)?.toLowerCase() ??
+    '';
   const operation: 'rent' | 'sale' | undefined = /sell|sale|buy|venta|comprar/i.test(business)
     ? 'sale'
     : /rent|lease|alquiler/i.test(business)
@@ -143,11 +218,15 @@ export function eurListingFromNextDataCandidate(
     },
     coordinates: lat !== undefined && lng !== undefined ? { lat, lng } : undefined,
     images: collectNestedImages(record),
-    bedrooms: asNumberEu(record.numberOfRooms) ?? asNumberEu(record.bedrooms) ?? asNumberEu(record.rooms),
+    bedrooms:
+      asNumberEu(record.numberOfRooms) ?? asNumberEu(record.bedrooms) ?? asNumberEu(record.rooms),
     bathrooms: asNumberEu(record.numberOfBathroomsTotal) ?? asNumberEu(record.bathrooms),
-    squareMeters: asNumberEu(isRecord(record.floorSize) ? record.floorSize.value : record.floorSize) ?? asNumberEu(record.surface),
+    squareMeters:
+      asNumberEu(isRecord(record.floorSize) ? record.floorSize.value : record.floorSize) ??
+      asNumberEu(record.surface),
     price,
-    priceCurrency: asString(isRecord(record.offers) ? record.offers.priceCurrency : undefined) ?? 'EUR',
+    priceCurrency:
+      asString(isRecord(record.offers) ? record.offers.priceCurrency : undefined) ?? 'EUR',
     operation,
     amenities: [],
   };
@@ -161,9 +240,7 @@ export function extractEurListingFromNextData(
   const root = parseNextData(html);
   if (!root) return undefined;
   const pageProps = nextDataPageProps(root) ?? root;
-  const candidate = findNextDataRecord(pageProps, (value): value is Record<string, unknown> =>
-    looksLikeListing(value),
-  );
+  const candidate = findNextDataRecord(pageProps, (value) => looksLikeListing(value));
   if (!candidate) return undefined;
   return eurListingFromNextDataCandidate(candidate, options);
 }

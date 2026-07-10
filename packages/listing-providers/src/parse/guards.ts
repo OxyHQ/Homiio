@@ -16,15 +16,22 @@ export function asString(value: unknown): string | undefined {
   return undefined;
 }
 
-/** Coerce EU-style numeric strings (e.g. "1.234,50 €") to a number. */
+/** Coerce EU-style numeric strings (e.g. "1.234,50 €" or "1.250") to a number. */
 export function asNumberEu(value: unknown): number | undefined {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value === 'string') {
     const cleaned = value.replace(/[^0-9.,-]/g, '');
     if (!cleaned) return undefined;
-    const normalized = cleaned.includes(',')
-      ? cleaned.replace(/\./g, '').replace(',', '.')
-      : cleaned;
+    // German: dots are thousands separators when a comma decimal is present,
+    // OR when the pattern is groups of three (`1.250`, `12.500.000`).
+    let normalized: string;
+    if (cleaned.includes(',')) {
+      normalized = cleaned.replace(/\./g, '').replace(',', '.');
+    } else if (/^\d{1,3}(\.\d{3})+$/.test(cleaned)) {
+      normalized = cleaned.replace(/\./g, '');
+    } else {
+      normalized = cleaned;
+    }
     const parsed = Number.parseFloat(normalized);
     return Number.isFinite(parsed) ? parsed : undefined;
   }

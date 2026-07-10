@@ -713,6 +713,63 @@ export {
   type MercadolibreRawListing,
 } from './mercadolibre';
 
+// Mexico (MX) — Inmuebles24 (Navent) / Lamudi (JSON-LD) / Vivanuncios (housing-only) / Propiedades.
+export {
+  Inmuebles24Provider,
+  isInmuebles24Challenge,
+  inmuebles24SourceIdFromUrl,
+  parseInmuebles24Search,
+  parseInmuebles24SearchJson,
+  parseInmuebles24Detail,
+  parseInmuebles24PostingJson,
+  INMUEBLES24_SITE,
+} from './providers/mx/inmuebles24';
+export {
+  INMUEBLES24_BASE_URL,
+  INMUEBLES24_FIXTURE_DETAIL_HTML,
+  INMUEBLES24_FIXTURE_SEARCH_HTML,
+  INMUEBLES24_FIXTURE_SEARCH_JSON,
+} from './providers/mx/inmuebles24/fixtures';
+export {
+  LamudiProvider,
+  isLamudiChallenge,
+  lamudiSourceIdFromUrl,
+  parseLamudiDetail,
+  parseLamudiSearch,
+} from './providers/mx/lamudi';
+export {
+  LAMUDI_BASE_URL,
+  LAMUDI_FIXTURE_DETAIL_HTML,
+  LAMUDI_FIXTURE_SEARCH_HTML,
+} from './providers/mx/lamudi/fixtures';
+export type { LamudiRawListing, LamudiSearchRef } from './providers/mx/lamudi/parse';
+export {
+  VivanunciosProvider,
+  isVivanunciosChallenge,
+  parseVivanunciosDetail,
+  parseVivanunciosSearch,
+  vivanunciosSourceIdFromUrl,
+  VIVANUNCIOS_HOUSING_SLUGS,
+  VIVANUNCIOS_BASE_URL,
+} from './providers/mx/vivanuncios';
+export {
+  VIVANUNCIOS_FIXTURE_HOUSING_HTML,
+  VIVANUNCIOS_FIXTURE_CAR_HTML,
+  VIVANUNCIOS_FIXTURE_SEARCH_HTML,
+} from './providers/mx/vivanuncios/fixtures';
+export {
+  PropiedadesProvider,
+  isPropiedadesChallenge,
+  parsePropiedadesDetail,
+  parsePropiedadesSearch,
+  propiedadesSourceIdFromUrl,
+} from './providers/mx/propiedades';
+export {
+  PROPIEDADES_BASE_URL,
+  PROPIEDADES_FIXTURE_DETAIL_HTML,
+  PROPIEDADES_FIXTURE_SEARCH_HTML,
+} from './providers/mx/propiedades/fixtures';
+
 import type { ProviderId } from '@homiio/shared-types';
 import { ProviderRegistry } from './registry';
 import type { ListingProvider } from './types';
@@ -756,6 +813,10 @@ import { ProperatiEcProvider } from './providers/ec/properati';
 import { BieniciProvider } from './providers/fr/bienici';
 import { LeboncoinProvider } from './providers/fr/leboncoin';
 import { SelogerProvider } from './providers/fr/seloger';
+import { Inmuebles24Provider } from './providers/mx/inmuebles24';
+import { LamudiProvider } from './providers/mx/lamudi';
+import { VivanunciosProvider } from './providers/mx/vivanuncios';
+import { PropiedadesProvider } from './providers/mx/propiedades';
 
 /**
  * Whether a real portal provider is enabled via its env feature flag. Flags are
@@ -783,6 +844,7 @@ export function createDefaultRegistry(): ProviderRegistry {
   const roOptions = citiesOptionsFromEnv('RO');
   const ecOptions = citiesOptionsFromEnv('EC');
   const frOptions = citiesOptionsFromEnv('FR');
+  const mxOptions = citiesOptionsFromEnv('MX');
   const flaggedProviders: ListingProvider[] = [
     new HabitacliaProvider(),
     new BluegroundProvider(),
@@ -821,6 +883,10 @@ export function createDefaultRegistry(): ProviderRegistry {
     new BieniciProvider(frOptions),
     new LeboncoinProvider(frOptions),
     new SelogerProvider(frOptions),
+    new Inmuebles24Provider(mxOptions),
+    new LamudiProvider(mxOptions),
+    new VivanunciosProvider(mxOptions),
+    new PropiedadesProvider(mxOptions),
   ];
   for (const provider of flaggedProviders) {
     if (providerEnabled(provider.id)) {

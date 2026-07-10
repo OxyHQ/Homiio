@@ -214,6 +214,7 @@ export function contactFromRecord(value: unknown): PortalContact {
   if (whatsapp) contact.whatsapp = whatsapp;
   if (name) contact.name = name;
   if (agencyName) contact.agencyName = agencyName;
+  else if (kind === 'agency' && name) contact.agencyName = name;
   if (kind) contact.kind = kind;
   return contact;
 }
