@@ -76,10 +76,10 @@ export default function ExchangeRequestDetailScreen() {
 
   const role = useMemo<'guest' | 'host' | null>(() => {
     if (!request || !primaryProfile) return null;
-    const profileId = primaryProfile._id ?? primaryProfile.id;
-    if (!profileId) return null;
-    if (String(request.hostProfileId) === String(profileId)) return 'host';
-    if (String(request.requesterProfileId) === String(profileId)) return 'guest';
+    const sessionOxyUserId = primaryProfile?.oxyUserId;
+    if (!sessionOxyUserId) return null;
+    if (String(request.hostOxyUserId) === sessionOxyUserId) return 'host';
+    if (String(request.requesterOxyUserId) === sessionOxyUserId) return 'guest';
     return null;
   }, [request, primaryProfile]);
 
@@ -87,13 +87,13 @@ export default function ExchangeRequestDetailScreen() {
   const reviewsQuery = useExchangeRequestReviews(id, {
     enabled: request?.status === ExchangeRequestStatus.COMPLETED,
   });
-  const myProfileId = primaryProfile?._id ?? primaryProfile?.id;
+  const sessionOxyUserId = primaryProfile?.oxyUserId;
   const alreadyReviewed = useMemo(
     () =>
       (reviewsQuery.data ?? []).some(
-        (review) => String(review.reviewerProfileId) === String(myProfileId),
+        (review) => review.reviewerOxyUserId === sessionOxyUserId,
       ),
-    [reviewsQuery.data, myProfileId],
+    [reviewsQuery.data, sessionOxyUserId],
   );
 
   const handleAction = useCallback(

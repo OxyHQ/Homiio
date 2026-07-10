@@ -18,18 +18,8 @@ export async function getSavedPropertyFolders(req: any, res: any, next: any) {
         errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
       );
     }
-
-    // Get the active profile for the current user
-    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-
-    if (!activeProfile) {
-      return res.status(404).json(
-        errorResponse("Profile not found", "PROFILE_NOT_FOUND")
-      );
-    }
-
-    // Get all folders for this profile
-    const folders = await SavedPropertyFolder.find({ profileId: activeProfile._id })
+// Get all folders for this profile
+    const folders = await SavedPropertyFolder.find({ oxyUserId })
       .sort({ isDefault: -1, createdAt: 1 })
       .lean();
 
@@ -38,7 +28,7 @@ export async function getSavedPropertyFolders(req: any, res: any, next: any) {
     let countsByFolder: Record<string, number> = {};
     if (folderIds.length > 0) {
       const counts = await Saved.aggregate([
-        { $match: { profileId: activeProfile._id, targetType: 'property', folderId: { $in: folderIds } } },
+        { $match: { oxyUserId, targetType: 'property', folderId: { $in: folderIds } } },
         { $group: { _id: '$folderId', count: { $sum: 1 } } },
       ]);
       countsByFolder = counts.reduce((acc: any, row: any) => {
@@ -79,19 +69,9 @@ export async function createSavedPropertyFolder(req: any, res: any, next: any) {
         errorResponse("Folder name is required", "FOLDER_NAME_REQUIRED")
       );
     }
-
-    // Get the active profile for the current user
-    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-
-    if (!activeProfile) {
-      return res.status(404).json(
-        errorResponse("Profile not found", "PROFILE_NOT_FOUND")
-      );
-    }
-
-    // Check if folder with same name already exists
+// Check if folder with same name already exists
     const existingFolder = await SavedPropertyFolder.findOne({
-      profileId: activeProfile._id,
+      oxyUserId,
       name: { $regex: new RegExp(`^${name.trim()}$`, 'i') }
     });
 
@@ -103,7 +83,7 @@ export async function createSavedPropertyFolder(req: any, res: any, next: any) {
 
     // Create new folder
     const folder = new SavedPropertyFolder({
-      profileId: activeProfile._id,
+      oxyUserId,
       name: name.trim(),
       description: description?.trim() || '',
       color: color || '#3B82F6',
@@ -141,20 +121,10 @@ export async function updateSavedPropertyFolder(req: any, res: any, next: any) {
         errorResponse("Folder ID is required", "FOLDER_ID_REQUIRED")
       );
     }
-
-    // Get the active profile for the current user
-    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-
-    if (!activeProfile) {
-      return res.status(404).json(
-        errorResponse("Profile not found", "PROFILE_NOT_FOUND")
-      );
-    }
-
-    // Find the folder
+// Find the folder
     const folder = await SavedPropertyFolder.findOne({
       _id: folderId,
-      profileId: activeProfile._id
+      oxyUserId
     });
 
     if (!folder) {
@@ -173,7 +143,7 @@ export async function updateSavedPropertyFolder(req: any, res: any, next: any) {
     // Check if new name conflicts with existing folder
     if (name && name.trim() !== folder.name) {
       const existingFolder = await SavedPropertyFolder.findOne({
-        profileId: activeProfile._id,
+        oxyUserId,
         name: { $regex: new RegExp(`^${name.trim()}$`, 'i') },
         _id: { $ne: folderId }
       });
@@ -225,20 +195,10 @@ export async function deleteSavedPropertyFolder(req: any, res: any, next: any) {
         errorResponse("Folder ID is required", "FOLDER_ID_REQUIRED")
       );
     }
-
-    // Get the active profile for the current user
-    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-
-    if (!activeProfile) {
-      return res.status(404).json(
-        errorResponse("Profile not found", "PROFILE_NOT_FOUND")
-      );
-    }
-
-    // Find the folder
+// Find the folder
     const folder = await SavedPropertyFolder.findOne({
       _id: folderId,
-      profileId: activeProfile._id
+      oxyUserId
     });
 
     if (!folder) {
@@ -256,7 +216,7 @@ export async function deleteSavedPropertyFolder(req: any, res: any, next: any) {
 
     // Move all properties in this folder to no folder (null) in unified Saved collection
     await Saved.updateMany(
-      { profileId: activeProfile._id, targetType: 'property', folderId: folderId },
+      { oxyUserId, targetType: 'property', folderId: folderId },
       { $set: { folderId: null } }
     );
 

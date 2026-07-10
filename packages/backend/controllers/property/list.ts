@@ -470,17 +470,14 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     if (req.user?.id || req.user?._id) {
       try {
         const oxyUserId = req.user.id || req.user._id;
-        const { Profile, RecentlyViewed, Saved } = require('../../models');
-        const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
-        if (activeProfile) {
-          // Fetch recently viewed and saved in parallel (was sequential before)
+        const { RecentlyViewed, Saved } = require('../../models');
           const [recentlyViewed, savedProperties] = await Promise.all([
-            RecentlyViewed.find({ profileId: activeProfile._id })
+            RecentlyViewed.find({ oxyUserId })
               .sort({ viewedAt: -1 })
               .limit(10)
               .select('propertyId')
               .lean(),
-            Saved.find({ profileId: activeProfile._id, targetType: 'property' })
+            Saved.find({ oxyUserId, targetType: 'property' })
               .select('targetId')
               .lean()
           ]);
@@ -551,7 +548,6 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
           });
           personalized.sort((a, b) => (b.personalizedScore || 0) - (a.personalizedScore || 0));
           ordered = personalized;
-        }
       } catch (error) {
         // Personalization is a best-effort enhancement: if it fails we fall back
         // to the default ordering instead of failing the request, but we log it.

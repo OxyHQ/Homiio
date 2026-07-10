@@ -638,11 +638,11 @@ export default function PropertyDetailPage() {
             rightComponents: stickyHeaderVisible
               ? []
               : [
-                  landlordProfileId ? (
+                  landlordOxyUserId ? (
                     <Pressable
                       key="profile"
                       style={styles.headerButton}
-                      onPress={() => router.push(`/profile/${landlordProfileId}`)}
+                      onPress={() => router.push(`/profile/${landlordOxyUserId}`)}
                       accessibilityRole="button"
                       accessibilityLabel="Open host profile"
                     >

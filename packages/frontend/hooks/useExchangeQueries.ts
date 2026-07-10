@@ -139,7 +139,7 @@ export function useCreateExchangeReview(
     onSuccess: (review) => {
       queryClient.invalidateQueries({ queryKey: exchangeKeys.requestReviews(id) });
       queryClient.invalidateQueries({
-        queryKey: exchangeKeys.profileReviews(String(review.subjectProfileId)),
+        queryKey: exchangeKeys.profileReviews(String(review.subjectOxyUserId)),
       });
     },
   });

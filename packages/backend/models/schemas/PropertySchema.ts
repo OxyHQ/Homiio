@@ -836,7 +836,7 @@ propertySchema.pre('save', function(this: IProperty, next: (err?: Error) => void
     if (!this.expiresAt || (this.isModified() && this.expiresAt.getTime() < Date.now() + ms)) {
       this.expiresAt = new Date(Date.now() + ms);
     }
-    // Ensure profileId is removed for external listings
+    // Ensure oxyUserId is removed for external listings
     if (this.oxyUserId) {
       this.oxyUserId = undefined;
     }

@@ -19,8 +19,8 @@ export enum ReservationStatus {
 export interface Reservation {
   id: string;
   propertyId: string;
-  guestProfileId: string;
-  hostProfileId: string;
+  guestOxyUserId: string;
+  hostOxyUserId: string;
   checkIn: ISODate;
   checkOut: ISODate;
   guestCount: number;

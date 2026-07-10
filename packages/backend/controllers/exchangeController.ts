@@ -173,18 +173,11 @@ class ExchangeController {
         return next(new AppError(`This listing does not accept "${mode}" exchanges`, 400, 'MODE_NOT_ACCEPTED'));
       }
 
-      const requesterProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!requesterProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
-
       const hostOxyUserId = property.oxyUserId;
       if (!hostOxyUserId) return next(new AppError('Property has no host', 400, 'INVALID_PROPERTY'));
       if (hostOxyUserId === oxyUserId) {
         return next(new AppError('You cannot request an exchange with your own property', 403, 'FORBIDDEN'));
       }
-
-      const hostProfile = await Profile.findActiveByOxyUserId(hostOxyUserId);
-      if (!hostProfile) return next(new AppError('Property host profile not found', 404, 'PROFILE_NOT_FOUND'));
-      const hostProfileId = hostProfile._id;
 
       // Validate requested window: start < end, not in the past. A window
       // starting exactly now is allowed (`<`, not `<=`).
@@ -209,7 +202,7 @@ class ExchangeController {
         }
         const offeredProperty = await Property.findById(offeredPropertyId).lean();
         if (!offeredProperty) return next(new AppError('Offered property not found', 404, 'NOT_FOUND'));
-        if (String(offeredProperty.oxyUserId) !== String(requesterProfile.oxyUserId)) {
+        if (offeredProperty.oxyUserId !== oxyUserId) {
           return next(new AppError('Offered property does not belong to you', 403, 'FORBIDDEN'));
         }
         if (!hasExchangeOffering(offeredProperty)) {
@@ -246,8 +239,8 @@ class ExchangeController {
 
       const exchangeRequest = await ExchangeRequest.create({
         propertyId,
-        requesterProfileId: requesterProfile._id,
-        hostProfileId,
+        requesterOxyUserId: oxyUserId,
+        hostOxyUserId,
         mode,
         offeredPropertyId: mode === ExchangeMode.SWAP ? resolvedOfferedPropertyId : undefined,
         requestedWindow: requested,
@@ -287,9 +280,9 @@ class ExchangeController {
 
       const query: Record<string, unknown> = {};
       if (String(asHost) === 'true') {
-        query.hostProfileId = activeProfile._id;
+        query.hostOxyUserId = oxyUserId;
       } else {
-        query.requesterProfileId = activeProfile._id;
+        query.requesterOxyUserId = oxyUserId;
       }
       if (status) query.status = status;
 
@@ -326,14 +319,11 @@ class ExchangeController {
         return next(new AppError('Invalid exchange request ID', 400, 'INVALID_ID'));
       }
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
-
       const exchangeRequest = await ExchangeRequest.findById(id).lean();
       if (!exchangeRequest) return next(new AppError('Exchange request not found', 404, 'NOT_FOUND'));
 
-      const isRequester = String(exchangeRequest.requesterProfileId) === String(activeProfile._id);
-      const isHost = String(exchangeRequest.hostProfileId) === String(activeProfile._id);
+      const isRequester = String(exchangeRequest.requesterOxyUserId) === String(oxyUserId);
+      const isHost = String(exchangeRequest.hostOxyUserId) === String(oxyUserId);
       if (!isRequester && !isHost) {
         return next(new AppError('Not authorized to view this exchange request', 403, 'FORBIDDEN'));
       }
@@ -365,14 +355,11 @@ class ExchangeController {
         return next(new AppError('Invalid exchange request ID', 400, 'INVALID_ID'));
       }
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
-
       const exchangeRequest = await ExchangeRequest.findById(id);
       if (!exchangeRequest) return next(new AppError('Exchange request not found', 404, 'NOT_FOUND'));
 
-      const isRequester = String(exchangeRequest.requesterProfileId) === String(activeProfile._id);
-      const isHost = String(exchangeRequest.hostProfileId) === String(activeProfile._id);
+      const isRequester = String(exchangeRequest.requesterOxyUserId) === String(oxyUserId);
+      const isHost = String(exchangeRequest.hostOxyUserId) === String(oxyUserId);
       if (!isRequester && !isHost) {
         return next(new AppError('Not authorized to update this exchange request', 403, 'FORBIDDEN'));
       }

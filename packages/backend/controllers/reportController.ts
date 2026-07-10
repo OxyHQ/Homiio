@@ -9,7 +9,7 @@
  * Distinct from `Review` (public address rating).
  */
 
-import { Property, ListingReport, Profile } from '../models';
+import { Property, ListingReport } from '../models';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse } from '../middlewares/errorHandler';
 import { ListingReportReason, ListingReportStatus } from '@homiio/shared-types';
@@ -53,14 +53,9 @@ class ReportController {
       const property = await Property.findById(propertyId).lean();
       if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
 
-      const reporterProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!reporterProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
-
-      // Idempotent while open: return the existing open report instead of
-      // creating a duplicate (also enforced by a partial unique index).
       const existingOpen = await ListingReport.findOne({
         propertyId,
-        reporterProfileId: reporterProfile._id,
+        reporterOxyUserId: oxyUserId,
         status: ListingReportStatus.OPEN
       });
       if (existingOpen) {
@@ -69,7 +64,7 @@ class ReportController {
 
       const report = await ListingReport.create({
         propertyId,
-        reporterProfileId: reporterProfile._id,
+        reporterOxyUserId: oxyUserId,
         reason,
         details: trimmedDetails || undefined,
         contactEmail: typeof contactEmail === 'string' && contactEmail.trim() ? contactEmail.trim() : undefined,
@@ -79,7 +74,7 @@ class ReportController {
       logger.info('Listing report created', {
         reportId: String(report._id),
         propertyId: String(propertyId),
-        reporterProfileId: String(reporterProfile._id),
+        reporterOxyUserId: oxyUserId,
         reason
       });
 

@@ -105,7 +105,7 @@ class AnalyticsController {
             ])
           : Promise.resolve([]),
         ViewingRequest.aggregate([
-          { $match: { ownerProfileId: activeProfile._id, createdAt: { $gte: since } } },
+          { $match: { ownerOxyUserId: activeProfile._id, createdAt: { $gte: since } } },
           { $group: { _id: '$status', count: { $sum: 1 } } },
         ]),
       ]);

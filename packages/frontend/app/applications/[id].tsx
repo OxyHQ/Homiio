@@ -153,10 +153,10 @@ export default function ApplicationDetailScreen() {
 
   const role = useMemo<'applicant' | 'landlord' | null>(() => {
     if (!application || !primaryProfile) return null;
-    const profileId = primaryProfile._id ?? primaryProfile.id;
-    if (!profileId) return null;
-    if (String(application.landlordProfileId) === String(profileId)) return 'landlord';
-    if (String(application.applicantProfileId) === String(profileId)) return 'applicant';
+    const sessionOxyUserId = primaryProfile?.oxyUserId;
+    if (!sessionOxyUserId) return null;
+    if (String(application.landlordOxyUserId) === sessionOxyUserId) return 'landlord';
+    if (String(application.applicantOxyUserId) === sessionOxyUserId) return 'applicant';
     return null;
   }, [application, primaryProfile]);
 

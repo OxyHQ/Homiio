@@ -19,16 +19,8 @@ export async function getRecentProperties(req: any, res: any, next: any) {
         errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
       );
     }
-
-    // Get the active profile for the current user
-  let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-
-    if (!activeProfile) {
-      return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
-    }
-
-    // Get recently viewed properties
-    const recentViews = await RecentlyViewed.find({ profileId: activeProfile._id })
+// Get recently viewed properties
+    const recentViews = await RecentlyViewed.find({ oxyUserId })
       .sort({ viewedAt: -1 })
       .limit(parseInt(limit))
       .populate({
@@ -84,17 +76,9 @@ export async function trackPropertyView(req: any, res: any, next: any) {
         errorResponse("Property ID is required", "PROPERTY_ID_REQUIRED")
       );
     }
-
-    // Get the active profile for the current user
-    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-
-    if (!activeProfile) {
-      return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
-    }
-
-    // Check if view already exists
+// Check if view already exists
     const existingView = await RecentlyViewed.findOne({
-      profileId: activeProfile._id,
+      oxyUserId,
       propertyId
     });
 
@@ -105,7 +89,7 @@ export async function trackPropertyView(req: any, res: any, next: any) {
     } else {
       // Create new view record
       const propertyView = new RecentlyViewed({
-        profileId: activeProfile._id,
+        oxyUserId,
         propertyId,
         viewedAt: new Date()
       });
@@ -144,7 +128,7 @@ export async function clearRecentProperties(req: any, res: any, next: any) {
 
     // Clear all recently viewed properties for this profile
     const result = await RecentlyViewed.deleteMany({
-      profileId: activeProfile._id
+      oxyUserId
     });
 
     res.json(
@@ -182,12 +166,12 @@ export async function debugRecentProperties(req: any, res: any, next: any) {
     }
 
     // Get recently viewed records WITHOUT population
-    const rawRecentViews = await RecentlyViewed.find({ profileId: activeProfile._id })
+    const rawRecentViews = await RecentlyViewed.find({ oxyUserId })
       .sort({ viewedAt: -1 })
       .lean();
 
     // Get recently viewed records WITH population
-    const populatedRecentViews = await RecentlyViewed.find({ profileId: activeProfile._id })
+    const populatedRecentViews = await RecentlyViewed.find({ oxyUserId })
       .sort({ viewedAt: -1 })
       .populate({
         path: 'propertyId',
@@ -212,13 +196,11 @@ export async function debugRecentProperties(req: any, res: any, next: any) {
     );
 
     // Get total count
-    const totalCount = await RecentlyViewed.countDocuments({ profileId: activeProfile._id });
+    const totalCount = await RecentlyViewed.countDocuments({ oxyUserId });
 
     res.json(
       successResponse({
         oxyUserId,
-        profileId: activeProfile._id,
-        profileType: activeProfile.profileType,
         totalCount,
         rawRecentViews: rawRecentViews.map(view => ({
           propertyId: view.propertyId,

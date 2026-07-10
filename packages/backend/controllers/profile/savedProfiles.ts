@@ -24,8 +24,8 @@ export async function saveProfile(req: ControllerRequest, res: ControllerRespons
       return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
     }
     await Saved.updateOne(
-      { profileId: activeProfile._id, targetType: 'profile', targetId: profileId },
-      { $set: { profileId: activeProfile._id, targetType: 'profile', targetId: profileId, createdAt: new Date() } },
+      { oxyUserId, targetType: 'user', targetId: profileId },
+      { $set: { oxyUserId, targetType: 'user', targetId: oxyUserId, createdAt: new Date() } },
       { upsert: true }
     );
     return res.json(successResponse({}, "Profile saved"));
@@ -51,7 +51,7 @@ export async function unsaveProfile(req: ControllerRequest, res: ControllerRespo
     if (!activeProfile) {
       return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
     }
-    await Saved.deleteOne({ profileId: activeProfile._id, targetType: 'profile', targetId: profileId });
+    await Saved.deleteOne({ oxyUserId, targetType: 'user', targetId: profileId });
     return res.json(successResponse({}, "Profile unsaved"));
   } catch (error) {
     next(error);
@@ -75,7 +75,7 @@ export async function isProfileSaved(req: ControllerRequest, res: ControllerResp
     if (!activeProfile) {
       return res.json(successResponse({ saved: false }, "No active profile"));
     }
-    const exists = await Saved.findOne({ profileId: activeProfile._id, targetType: 'profile', targetId: profileId }).lean();
+    const exists = await Saved.findOne({ oxyUserId, targetType: 'user', targetId: profileId }).lean();
     return res.json(successResponse({ saved: !!exists }, "Saved status"));
   } catch (error) {
     next(error);
@@ -95,7 +95,7 @@ export async function getSavedProfiles(req: ControllerRequest, res: ControllerRe
     if (!activeProfile) {
       return res.json(successResponse([] , "No profile found for user"));
     }
-    const follows = await Saved.find({ profileId: activeProfile._id, targetType: 'profile' }).lean();
+    const follows = await Saved.find({ oxyUserId, targetType: 'user' }).lean();
     const ids = follows.map(f => f.targetId);
     const profiles = await Profile.find({ _id: { $in: ids } }).lean();
     return res.json(successResponse(profiles, "Saved profiles retrieved"));

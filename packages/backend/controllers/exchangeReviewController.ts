@@ -62,14 +62,11 @@ class ExchangeReviewController {
         return next(new AppError('Invalid exchange request ID', 400, 'INVALID_ID'));
       }
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
-
       const exchangeRequest = await ExchangeRequest.findById(id).lean();
       if (!exchangeRequest) return next(new AppError('Exchange request not found', 404, 'NOT_FOUND'));
 
-      const isRequester = String(exchangeRequest.requesterProfileId) === String(activeProfile._id);
-      const isHost = String(exchangeRequest.hostProfileId) === String(activeProfile._id);
+      const isRequester = String(exchangeRequest.requesterOxyUserId) === String(oxyUserId);
+      const isHost = String(exchangeRequest.hostOxyUserId) === String(oxyUserId);
       if (!isRequester && !isHost) {
         return next(new AppError('Not authorized to review this exchange', 403, 'FORBIDDEN'));
       }
@@ -79,9 +76,9 @@ class ExchangeReviewController {
       }
 
       // The reviewer reviews the other party.
-      const subjectProfileId = isRequester
-        ? exchangeRequest.hostProfileId
-        : exchangeRequest.requesterProfileId;
+      const subjectOxyUserId = isRequester
+        ? exchangeRequest.hostOxyUserId
+        : exchangeRequest.requesterOxyUserId;
 
       // Defensive pre-check: one review per reviewer per exchange. The unique
       // compound index is the race-safe backstop (handled below); this gives a
@@ -89,7 +86,7 @@ class ExchangeReviewController {
       // building on a freshly-created collection.
       const existingReview = await ExchangeReview.findOne({
         exchangeRequestId: exchangeRequest._id,
-        reviewerProfileId: activeProfile._id,
+        reviewerOxyUserId: oxyUserId,
       })
         .select('_id')
         .lean();
@@ -100,8 +97,8 @@ class ExchangeReviewController {
       try {
         const review = await ExchangeReview.create({
           exchangeRequestId: exchangeRequest._id,
-          reviewerProfileId: activeProfile._id,
-          subjectProfileId,
+          reviewerOxyUserId: oxyUserId,
+          subjectOxyUserId,
           rating,
           comment,
           categories,
@@ -138,14 +135,11 @@ class ExchangeReviewController {
         return next(new AppError('Invalid exchange request ID', 400, 'INVALID_ID'));
       }
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
-
       const exchangeRequest = await ExchangeRequest.findById(id).lean();
       if (!exchangeRequest) return next(new AppError('Exchange request not found', 404, 'NOT_FOUND'));
 
-      const isRequester = String(exchangeRequest.requesterProfileId) === String(activeProfile._id);
-      const isHost = String(exchangeRequest.hostProfileId) === String(activeProfile._id);
+      const isRequester = String(exchangeRequest.requesterOxyUserId) === String(oxyUserId);
+      const isHost = String(exchangeRequest.hostOxyUserId) === String(oxyUserId);
       if (!isRequester && !isHost) {
         return next(new AppError('Not authorized to view these reviews', 403, 'FORBIDDEN'));
       }
@@ -180,14 +174,14 @@ class ExchangeReviewController {
       const skip = (pageNumber - 1) * limitNumber;
 
       const [items, total, aggregate] = await Promise.all([
-        ExchangeReview.find({ subjectProfileId: subjectId })
+        ExchangeReview.find({ subjectOxyUserId: subjectId })
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(limitNumber)
           .lean(),
-        ExchangeReview.countDocuments({ subjectProfileId: subjectId }),
+        ExchangeReview.countDocuments({ subjectOxyUserId: subjectId }),
         ExchangeReview.aggregate([
-          { $match: { subjectProfileId: subjectId } },
+          { $match: { subjectOxyUserId: subjectId } },
           { $group: { _id: null, averageRating: { $avg: '$rating' }, count: { $sum: 1 } } },
         ]),
       ]);
