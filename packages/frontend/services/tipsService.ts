@@ -48,10 +48,22 @@ export interface TipsListResult {
 export interface TipsQueryParams {
   tag?: string;
   search?: string;
+  locale?: string;
 }
 
 const HOMIIO_PRODUCT = 'homiio';
 const TIPS_CATEGORY = 'Tips';
+
+/**
+ * Map Homiio i18n codes (`en-US`, `es-ES`, `ca-ES`, `it-IT`) to Newsroom
+ * locale codes (`en`, `es`, `ca`, `it`). Unknown / empty → `en`.
+ */
+export function toNewsroomLocale(language: string | undefined | null): string {
+  if (!language) return 'en';
+  const base = language.split('-')[0]?.toLowerCase().trim();
+  if (!base) return 'en';
+  return base;
+}
 
 function deriveReadTime(content: string): string {
   const words = content.trim().split(/\s+/).filter(Boolean).length;
@@ -101,6 +113,7 @@ class TipsService {
     });
     if (params?.tag) search.set('tag', params.tag);
     if (params?.search) search.set('search', params.search);
+    if (params?.locale) search.set('locale', params.locale);
     return `${this.baseUrl}?${search.toString()}`;
   }
 
@@ -116,8 +129,14 @@ class TipsService {
     };
   }
 
-  async getTipBySlug(slug: string): Promise<TipArticle> {
-    const response = await fetch(`${this.baseUrl}/${encodeURIComponent(slug)}`);
+  async getTipBySlug(slug: string, locale?: string): Promise<TipArticle> {
+    const search = new URLSearchParams();
+    if (locale) search.set('locale', locale);
+    const qs = search.toString();
+    const url = qs
+      ? `${this.baseUrl}/${encodeURIComponent(slug)}?${qs}`
+      : `${this.baseUrl}/${encodeURIComponent(slug)}`;
+    const response = await fetch(url);
     if (!response.ok) {
       if (response.status === 404) {
         throw new Error('Article not found');

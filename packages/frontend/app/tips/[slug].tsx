@@ -22,6 +22,7 @@ import { TipDetailSkeleton } from '@/components/ui/skeletons/TipsSkeleton';
 import {
   formatPublishDate,
   tipsService,
+  toNewsroomLocale,
   type TipArticle,
 } from '@/services/tipsService';
 import { radius, spacing, withShadow } from '@/constants/styles';
@@ -126,19 +127,20 @@ const RelatedCard: React.FC<RelatedCardProps> = ({ tip, onPress }) => {
 };
 
 export default function TipArticleScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const { slug } = useLocalSearchParams<{ slug: string }>();
+  const locale = toNewsroomLocale(i18n.language);
 
   const tipQuery = useQuery({
-    queryKey: ['tip', slug],
-    queryFn: () => tipsService.getTipBySlug(slug ?? ''),
+    queryKey: ['tip', slug, locale],
+    queryFn: () => tipsService.getTipBySlug(slug ?? '', locale),
     enabled: Boolean(slug),
   });
 
   const allTipsQuery = useQuery({
-    queryKey: ['tips', 'related'],
-    queryFn: () => tipsService.getTips(),
+    queryKey: ['tips', 'related', locale],
+    queryFn: () => tipsService.getTips({ locale }),
     enabled: Boolean(slug) && tipQuery.isSuccess,
   });
 
