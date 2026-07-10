@@ -1,8 +1,8 @@
 /**
- * HostCtaBanner — single end-of-page banner inviting hosts to list a
- * property. Full-width photo (21:9 on wide, 16:9 on mobile), gradient
- * scrim from bottom-left for legibility, a 2-line headline + supporting
- * one-liner + Bloom Button overlaid on top of the image.
+ * HostCtaBanner — compact end-of-page CTA inviting hosts to list a
+ * property. Photo card with gradient scrim, short headline + one-liner +
+ * Bloom Button overlaid bottom-left (Airbnb-2026 card density — not a
+ * hero slab).
  *
  * Sits as a closing visual beat on the home page (paired with AgentCtaBanner).
  */
@@ -13,7 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useMediaQuery } from 'react-responsive';
 
 import { Button } from '@oxyhq/bloom/button';
-import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
+import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { colors } from '@/styles/colors';
 import {
@@ -55,7 +55,8 @@ export function HostCtaBanner({
   // In grid (`fill`) mode the parent supplies the outer page padding and the
   // gutter, so the banner must not re-add its own horizontal page padding.
   const horizontalPadding = fill ? 0 : resolvePagePadding(isWide);
-  const aspectRatio = isWide ? 21 / 9 : 16 / 9;
+  // Flatter than classic 16:9 so stacked/full-width cards stay compact.
+  const aspectRatio = isWide ? 2.6 : 2.1;
   const [hovered, setHovered] = useState(false);
   const isWeb = Platform.OS === 'web';
 
@@ -87,20 +88,26 @@ export function HostCtaBanner({
           cachePolicy="memory-disk"
         />
         <LinearGradient
-          colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.15)', 'rgba(0,0,0,0)']}
+          colors={['rgba(0,0,0,0.55)', 'rgba(0,0,0,0.12)', 'rgba(0,0,0,0)']}
           start={{ x: 0, y: 1 }}
           end={{ x: 0.85, y: 0 }}
           style={[styles.bannerScrim, { pointerEvents: 'none' }]}
         />
-        <View style={[styles.copy, { padding: isWide ? spacing['4xl'] : spacing['2xl'] }]}>
-          <H1 style={[styles.title, { fontSize: isWide ? 36 : 26, lineHeight: isWide ? 42 : 32 }]}>
+        <View style={[styles.copy, { padding: isWide ? spacing.xl : spacing.lg }]}>
+          <BloomText
+            style={[
+              styles.title,
+              { fontSize: isWide ? 22 : 18, lineHeight: isWide ? 28 : 24 },
+            ]}
+            numberOfLines={2}
+          >
             {title}
-          </H1>
+          </BloomText>
           <BloomText style={styles.subtitle} numberOfLines={2}>
             {subtitle}
           </BloomText>
           <View style={styles.buttonWrap}>
-            <Button variant="inverse" size="large" onPress={onPress}>
+            <Button variant="inverse" size="medium" onPress={onPress}>
               {ctaLabel}
             </Button>
           </View>
@@ -121,7 +128,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     overflow: 'hidden',
     backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-    ...cardShadow.md,
+    ...cardShadow.sm,
   },
   // Grid mode: no intrinsic aspect ratio — fill the column height (the taller
   // sibling defines it via row `alignItems: 'stretch'`) with a sensible floor
@@ -152,22 +159,22 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
     alignItems: 'flex-start',
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   title: {
     color: colors.white,
-    fontWeight: '700',
+    fontWeight: '600',
     letterSpacing: tracker.tight,
-    maxWidth: 520,
+    maxWidth: 420,
   },
   subtitle: {
-    fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.92)',
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.9)',
     fontWeight: '400',
-    lineHeight: 22,
-    maxWidth: 480,
+    lineHeight: 18,
+    maxWidth: 400,
   },
   buttonWrap: {
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
 });

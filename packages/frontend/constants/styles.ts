@@ -341,7 +341,7 @@ export const resolvePagePadding = (isWide: boolean): number =>
  * i.e. two banners side-by-side as equal-height columns on wide screens. In
  * that mode the banners drop their intrinsic `aspectRatio` and stretch to the
  * taller sibling via row `alignItems: 'stretch'`; this floor keeps a half-width
- * column from collapsing when its content is short. Standalone full-width
- * banners keep using `aspectRatio` and ignore this token.
+ * column from collapsing when its content is short (~Airbnb card density).
+ * Standalone full-width banners keep using `aspectRatio` and ignore this token.
  */
-export const BANNER_FILL_MIN_HEIGHT = 280;
+export const BANNER_FILL_MIN_HEIGHT = 200;
