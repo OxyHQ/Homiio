@@ -6,8 +6,8 @@
  * Visual language:
  *   - Compact 40px isometric PNG render per category (full-color, never tinted)
  *     clipped to a `radius.lg` rounded square so it reads as a premium tile.
- *   - 12px label sitting just under the image, on a fixed-width item so
- *     labels line up across the row.
+ *   - 12px label flush under the image (no tile/label gap), on a fixed-width
+ *     item so labels line up across the row.
  *   - Active state = a soft rounded background highlight behind the whole
  *     item (icon + label) plus a dark + bold label and the image at full
  *     opacity; inactive = transparent background, muted label, image at
@@ -71,7 +71,7 @@ const VACATION_CATEGORIES: CategoryDef[] = [
 /** Edge length of the isometric tile — compact so more categories fit on screen. */
 const TILE_SIZE = 40;
 /** Fixed item width keeps labels aligned across the row regardless of label length. */
-const ITEM_WIDTH = 68;
+const ITEM_WIDTH = 64;
 
 const resolveCategoryImage = (id: HomeCategory): ImageSourcePropType =>
   getIconArt(id) ?? ICON_ART_PLACEHOLDER;
@@ -117,8 +117,8 @@ const CategoryItem: React.FC<CategoryItemProps> = ({ active, label, image, onPre
       onHoverOut={() => setHovered(false)}
       className={
         active
-          ? 'items-center justify-center rounded-2xl bg-secondary px-1.5 py-1.5'
-          : 'items-center justify-center rounded-2xl bg-transparent px-1.5 py-1.5'
+          ? 'items-center justify-center rounded-2xl bg-secondary px-1 py-1'
+          : 'items-center justify-center rounded-2xl bg-transparent px-1 py-1'
       }
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
@@ -126,7 +126,7 @@ const CategoryItem: React.FC<CategoryItemProps> = ({ active, label, image, onPre
       style={{ width: ITEM_WIDTH, transform: [{ scale }] }}
     >
       <View
-        className="mb-0.5 items-center justify-center overflow-hidden rounded-2xl"
+        className="items-center justify-center overflow-hidden rounded-2xl"
         style={{ width: TILE_SIZE, height: TILE_SIZE }}
       >
         <Image
@@ -199,13 +199,13 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({
       : null;
 
   return (
-    <View className={className ?? 'w-full py-2'} style={stickyStyle}>
+    <View className={className ?? 'w-full py-1'} style={stickyStyle}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         decelerationRate={isWeb ? 'normal' : 'fast'}
         snapToAlignment="start"
-        contentContainerClassName={isWeb ? 'gap-2 px-6' : 'gap-1.5 px-4'}
+        contentContainerClassName={isWeb ? 'gap-1 px-4' : 'gap-0.5 px-3'}
       >
         {items.map((item) => (
           <CategoryItem
