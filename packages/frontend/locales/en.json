@@ -150,6 +150,7 @@
       "luxury": "Luxury",
       "newListings": "New listings",
       "nearYou": "Near you",
+      "nearYouUnavailable": "Turn on location to see homes near you",
       "beachfront": "Beachfront",
       "cabins": "Cabins",
       "pools": "Pools",
@@ -174,10 +175,10 @@
     "featured": {
       "title": "Featured Properties",
       "empty": "No featured properties available at the moment",
-      "gridLongTerm": "Studios in Barcelona",
-      "gridVacation": "Beach apartments in València",
-      "gridBuy": "Homes for sale in Barcelona",
-      "gridExchange": "Home exchanges in Spain"
+      "gridLongTerm": "Studios in {{place}}",
+      "gridVacation": "Beach apartments in {{place}}",
+      "gridBuy": "Homes for sale in {{place}}",
+      "gridExchange": "Home exchanges in {{place}}"
     },
     "viewAll": "View All",
     "recentlyViewed": {

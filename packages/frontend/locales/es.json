@@ -141,10 +141,10 @@
     "featured": {
       "title": "Propiedades Destacadas",
       "empty": "No hay propiedades destacadas disponibles en este momento",
-      "gridLongTerm": "Estudios en Barcelona",
-      "gridVacation": "Apartamentos de playa en València",
-      "gridBuy": "Viviendas en venta en Barcelona",
-      "gridExchange": "Intercambios de casa en España"
+      "gridLongTerm": "Estudios en {{place}}",
+      "gridVacation": "Apartamentos de playa en {{place}}",
+      "gridBuy": "Viviendas en venta en {{place}}",
+      "gridExchange": "Intercambios de casa en {{place}}"
     },
     "viewAll": "Ver Todo",
     "recentlyViewed": {
@@ -241,6 +241,7 @@
       "luxury": "Lujo",
       "newListings": "Nuevos anuncios",
       "nearYou": "Cerca de ti",
+      "nearYouUnavailable": "Activa la ubicación para ver viviendas cerca de ti",
       "beachfront": "Frente al mar",
       "cabins": "Cabañas",
       "pools": "Piscinas",

@@ -294,10 +294,10 @@
     },
     "featured": {
       "title": "Proprietà in Evidenza",
-      "gridLongTerm": "Monolocali a Barcellona",
-      "gridVacation": "Appartamenti al mare a València",
-      "gridBuy": "Case in vendita a Barcellona",
-      "gridExchange": "Scambi di casa in Spagna",
+      "gridLongTerm": "Monolocali a {{place}}",
+      "gridVacation": "Appartamenti al mare a {{place}}",
+      "gridBuy": "Case in vendita a {{place}}",
+      "gridExchange": "Scambi di casa in {{place}}",
       "empty": "No featured properties available at the moment"
     },
     "recentlyViewed": {
@@ -397,6 +397,7 @@
       "luxury": "Lusso",
       "newListings": "Nuovi annunci",
       "nearYou": "Vicino a te",
+      "nearYouUnavailable": "Attiva la posizione per vedere le case vicino a te",
       "beachfront": "Fronte mare",
       "cabins": "Baita",
       "pools": "Piscine",

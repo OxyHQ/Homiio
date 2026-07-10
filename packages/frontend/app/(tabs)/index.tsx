@@ -9,8 +9,8 @@
  *      state.
  *   3. Property carousel — recommended for you.
  *   4. City showcase — large image cards of Spanish cities.
- *   5. Featured grid — mode-aware ("Studios in Barcelona" / "Beach
- *      apartments") in a 4-column web / 1-column mobile grid.
+ *   5. Featured grid — mode-aware, location-scoped titles in a 4-column
+ *      web / 1-column mobile grid.
  *   6. Continue browsing (recently viewed) — only if items exist.
  *   7. Saved properties carousel — only if items exist.
  *   8. Nearby cities carousels — only if user shares location and
@@ -22,7 +22,7 @@
  * so it does not participate. Long-form marketing copy (FAQ, stats, trust
  * grids) does NOT live on the home page — it belongs on /about.
  */
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   RefreshControl,
@@ -41,24 +41,25 @@ import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Location from 'expo-location';
 
 import { H1, P } from '@oxyhq/bloom/typography';
 
-import { OfferingType, type City, type Property, type PropertyFilters } from '@homiio/shared-types';
+import { OfferingType, type City, type Property } from '@homiio/shared-types';
 
-// Real data hooks
-import { useProperties } from '@/hooks';
+import {
+  HOME_FEED_LIMIT,
+  isNearYouBlocked,
+  useHomeFeedProperties,
+  useUserCoordinates,
+} from '@/hooks/useHomeFeed';
 import { cityQueryKeys, usePopularCities } from '@/hooks/useCityQueries';
 import { cityCountryName, cityRegionName } from '@/utils/cityDisplay';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { useRentalMode } from '@/context/RentalModeContext';
-import { useHomeCategoryStore, type HomeCategory } from '@/store/homeCategoryStore';
-import { getCategoryFilters } from '@/store/getCategoryFilters';
+import { useHomeCategoryStore } from '@/store/homeCategoryStore';
 import { resolveHomeCategory } from '@/store/homeCategories';
 
-// Components
 import { PropertyCard } from '@/components/PropertyCard';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
 import { HomeCategoryStrip } from '@/components/HomeCategoryStrip';
@@ -86,9 +87,6 @@ import { spacing, tracker, PAGE_GUTTER_CLASS } from '@/constants/styles';
 const HOST_CTA_IMAGE =
   'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=1600&q=80';
 
-/** How many listings the home feed loads (carousel 0–8 + grid 8–16). */
-const HOME_FEED_LIMIT = 16;
-
 /** How many DB cities to surface in the home Explore showcase. */
 const EXPLORE_CITY_LIMIT = 8;
 
@@ -102,7 +100,7 @@ const WITHIN_REGION_KM = 120;
 /** Haversine distance (km) between two lat/lng points; used for nearest-city. */
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const toRad = (v: number) => (v * Math.PI) / 180;
-  const R = 6371; // km
+  const R = 6371;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
   const a =
@@ -112,17 +110,25 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * c;
 }
 
-function buildHomeFeedFilters(
-  offering: OfferingType,
-  category: HomeCategory | null,
-  userLocation: { latitude: number; longitude: number } | null,
-): PropertyFilters {
-  return {
-    limit: HOME_FEED_LIMIT,
-    status: 'published',
-    offering,
-    ...getCategoryFilters(category, { userLocation, offering }),
-  };
+function resolveExplorePlace(
+  userLocation: { latitude: number; longitude: number } | null | undefined,
+  cities: City[],
+  citiesByDistance: Array<{ city: City; distance: number }>,
+  queryPlace: string | undefined,
+  defaultPlace: string,
+): string {
+  const nearest = citiesByDistance[0];
+  if (userLocation && nearest && nearest.distance <= WITHIN_REGION_KM) {
+    const region = cityRegionName(nearest.city);
+    if (region) return region;
+  }
+  if (userLocation && nearest) {
+    const country = cityCountryName(nearest.city);
+    if (country) return country;
+  }
+  if (queryPlace) return queryPlace;
+  const fallbackCountry = cities.map((c) => cityCountryName(c)).find(Boolean);
+  return fallbackCountry ?? defaultPlace;
 }
 
 export default function HomePage() {
@@ -133,167 +139,88 @@ export default function HomePage() {
   const selectedCategory = useHomeCategoryStore((s) => s.category);
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
-  // DB cities (with populated region/country + self-hosted cover image) power
-  // both the Explore showcase and the nearby-city carousels.
   const { data: cities = [], refetch: refetchCities } = usePopularCities(EXPLORE_CITY_LIMIT);
-  const [userLocation, setUserLocation] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
+  const { data: userLocation, isLoading: coordsLoading, refetch: refetchCoords } =
+    useUserCoordinates();
   const isWide = useMediaQuery({ minWidth: 768 });
   const isXL = useMediaQuery({ minWidth: 1024 });
-  // Matches the breakpoint that hides the persistent sidebar in _layout.tsx
-  // (useIsScreenNotMobile === minWidth 500). Below it, the sidebar is an
-  // on-demand overlay drawer, so the hero needs a way to open it.
   const isScreenNotMobile = useIsScreenNotMobile();
   const openMobileDrawer = useUIStore((s) => s.openMobileDrawer);
 
-  // Active search query (source of truth shared with the results route). The
-  // hero pill renders this collapsed; the expanding panel edits a draft of it.
   const activeQuery = useSearchQueryStore((s) => s.query);
   const [searchPanelOpen, setSearchPanelOpen] = useState(false);
-  // Step the panel should open on. The collapsed 3-column pill sets this to the
-  // tapped column; tapping the pill as a whole defaults to 'where'.
   const [searchPanelStep, setSearchPanelStep] = useState<SearchStep>('where');
 
-  // Seed the panel from the active query, overriding the offering with the
-  // user's current global browse selection so opening the hero search respects
-  // the Long-term / Vacation / Buy / Exchange mode they last picked in the
-  // sidebar or hero toggle.
-  const heroSearchSeed = useMemo<SearchQuery>(
-    () => ({
-      ...activeQuery,
-      offering: browseOffering,
-    }),
-    [activeQuery, browseOffering],
-  );
-
-  const handleOpenSearchPanelAt = useCallback((step: SearchStep) => {
-    setSearchPanelStep(step);
-    setSearchPanelOpen(true);
-  }, []);
-  const handleCloseSearchPanel = useCallback(() => setSearchPanelOpen(false), []);
-
-  // The pill's circular Search button runs the search with the live query
-  // (which the panel's "Done" has already updated). It does not open the panel —
-  // the three columns do that, seeded to the tapped step.
-  const handleRunSearch = useCallback(() => {
-    router.push('/explore');
-  }, [router]);
-
-  // Narrow sheet "Search": commit the composed query and navigate to results.
-  const handleSubmitSearch = useCallback(
-    (query: SearchQuery) => {
-      useSearchQueryStore.getState().setQuery(query);
-      setSearchPanelOpen(false);
-      router.push('/explore');
-    },
-    [router],
-  );
-
-  // Wide dialog "Done": apply the composed query to the live store so the pill
-  // updates, then close — without navigating. The user runs the search from the
-  // pill's circular Search button.
-  const handleApplySearch = useCallback((query: SearchQuery) => {
-    useSearchQueryStore.getState().setQuery(query);
-    setSearchPanelOpen(false);
-  }, []);
-
-  // Get user location on mount. Foreground permissions are an explicit
-  // side effect — `useEffect` is the correct primitive.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted' || cancelled) return;
-        const location = await Location.getCurrentPositionAsync({});
-        if (cancelled) return;
-        setUserLocation({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        });
-      } catch {
-        // Permission denied or geolocation unavailable — feed degrades gracefully.
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Cities that carry usable coordinates, each with its distance from the user
-  // (Infinity when the user's location is unknown). Drives both the adaptive
-  // Explore title (nearest city) and the nearby-city carousels.
-  const citiesByDistance = useMemo(() => {
-    const located = cities.filter(
-      (city): city is City & { coordinates: { lat: number; lng: number } } =>
-        typeof city.coordinates?.lat === 'number' && typeof city.coordinates?.lng === 'number',
-    );
-    if (!userLocation) {
-      return located.map((city) => ({ city, distance: Number.POSITIVE_INFINITY }));
-    }
-    return located
-      .map((city) => ({
-        city,
-        distance: getDistance(
-          userLocation.latitude,
-          userLocation.longitude,
-          city.coordinates.lat,
-          city.coordinates.lng,
-        ),
-      }))
-      .sort((a, b) => a.distance - b.distance);
-  }, [userLocation, cities]);
-
-  // The two closest cities (only when the user shared their location), used for
-  // the nearby-city carousels lower on the page.
-  const nearbyCities = useMemo<City[]>(() => {
-    if (!userLocation) return [];
-    return citiesByDistance.slice(0, 2).map((entry) => entry.city);
-  }, [userLocation, citiesByDistance]);
-
-  // The place the Explore showcase is scoped to, for its adaptive title.
-  // Priority: the region/province the user is clearly within (nearest located
-  // city inside WITHIN_REGION_KM) → that city's country → the search query's
-  // chosen place → the country of the first DB city → a neutral default.
-  const explorePlace = useMemo<string>(() => {
-    const nearest = citiesByDistance[0];
-    if (userLocation && nearest && nearest.distance <= WITHIN_REGION_KM) {
-      const region = cityRegionName(nearest.city);
-      if (region) return region;
-    }
-    if (userLocation && nearest) {
-      const country = cityCountryName(nearest.city);
-      if (country) return country;
-    }
-    const queryPlace = activeQuery.location?.shortLabel || activeQuery.location?.label;
-    if (queryPlace) return queryPlace;
-    const fallbackCountry = cities.map((c) => cityCountryName(c)).find(Boolean);
-    return fallbackCountry ?? t('home.cityShowcase.defaultPlace');
-  }, [userLocation, citiesByDistance, activeQuery.location, cities, t]);
+  const heroSearchSeed: SearchQuery = {
+    ...activeQuery,
+    offering: browseOffering,
+  };
 
   const activeCategory = resolveHomeCategory(selectedCategory, browseMode, mode);
+  const nearYouBlocked = isNearYouBlocked(activeCategory, userLocation, coordsLoading);
 
-  // Properties + cities loaded together on mount.
-  const { properties, loading: propertiesLoading, loadProperties } = useProperties();
+  const {
+    data: feedData,
+    isLoading: feedLoading,
+    refetch: refetchFeed,
+  } = useHomeFeedProperties(browseOffering, activeCategory, userLocation, coordsLoading);
+
   const { properties: recentlyViewedProperties, refetch: refetchRecentlyViewed } =
     useRecentlyViewed();
   const { savedProperties, isLoading: savedLoading, loadSavedProperties } =
     useSavedPropertiesContext();
 
-  useEffect(() => {
-    loadProperties(buildHomeFeedFilters(browseOffering, activeCategory, userLocation));
-  }, [loadProperties, browseOffering, activeCategory, userLocation]);
-
+  const properties = feedData?.properties;
+  const propertiesLoading = feedLoading;
   const featuredProperties = properties ? (properties.slice(0, 8) as Property[]) : [];
   const gridProperties = properties ? (properties.slice(8, HOME_FEED_LIMIT) as Property[]) : [];
+
+  const locatedCities = cities.filter(
+    (city): city is City & { coordinates: { lat: number; lng: number } } =>
+      typeof city.coordinates?.lat === 'number' && typeof city.coordinates?.lng === 'number',
+  );
+
+  const citiesByDistance = userLocation
+    ? locatedCities
+        .map((city) => ({
+          city,
+          distance: getDistance(
+            userLocation.latitude,
+            userLocation.longitude,
+            city.coordinates.lat,
+            city.coordinates.lng,
+          ),
+        }))
+        .sort((a, b) => a.distance - b.distance)
+    : locatedCities.map((city) => ({ city, distance: Number.POSITIVE_INFINITY }));
+
+  const nearbyCities = userLocation ? citiesByDistance.slice(0, 2).map((entry) => entry.city) : [];
+
+  const explorePlace = resolveExplorePlace(
+    userLocation,
+    cities,
+    citiesByDistance,
+    activeQuery.location?.shortLabel || activeQuery.location?.label,
+    t('home.cityShowcase.defaultPlace'),
+  );
+
+  const featuredGridTitle =
+    browseOffering === OfferingType.SALE
+      ? t('home.featured.gridBuy', { place: explorePlace })
+      : browseOffering === OfferingType.EXCHANGE
+        ? t('home.featured.gridExchange', { place: explorePlace })
+        : browseOffering === OfferingType.SHORT_TERM_RENT
+          ? t('home.featured.gridVacation', { place: explorePlace })
+          : t('home.featured.gridLongTerm', { place: explorePlace });
+
+  const feedEmptyText = nearYouBlocked ? t('home.category.nearYouUnavailable') : t('home.featured.empty');
 
   const onRefresh = async () => {
     setRefreshing(true);
     try {
       await Promise.all([
-        loadProperties(buildHomeFeedFilters(browseOffering, activeCategory, userLocation)),
+        refetchCoords(),
+        refetchFeed(),
         refetchCities(),
         ...nearbyCities.map((city) =>
           queryClient.invalidateQueries({
@@ -308,12 +235,8 @@ export default function HomePage() {
     }
   };
 
-  // Sole scroll owner: the document on web (mirrored into `scrollY` by
-  // `PageScrollView`), the screen's own `Animated.ScrollView` on native. Drives
-  // the hero parallax on both platforms — no dual writers.
   const scrollY = useSharedValue(0);
   const { height: windowHeight } = useWindowDimensions();
-  // Hero height is window-derived — keep as style=, not className.
   const heroHeight = isXL ? Math.min(640, windowHeight * 0.72) : isWide ? 520 : 560;
 
   const heroParallaxStyle = useAnimatedStyle(() => ({
@@ -329,44 +252,6 @@ export default function HomePage() {
     ],
   }));
 
-  /**
-   * Featured grid title leans on the current browse mode: buy users see homes
-   * for sale, exchange users see home swaps, vacation users see beach stays,
-   * and long-term users see the default city studios. Each falls back to a
-   * neutral, short, brand-tone copy if no translation is set.
-   */
-  const featuredGridTitle = useMemo(() => {
-    if (browseOffering === OfferingType.SALE) {
-      return t('home.featured.gridBuy');
-    }
-    if (browseOffering === OfferingType.EXCHANGE) {
-      return t('home.featured.gridExchange');
-    }
-    if (browseOffering === OfferingType.SHORT_TERM_RENT) {
-      return t('home.featured.gridVacation');
-    }
-    return t('home.featured.gridLongTerm');
-  }, [browseOffering, t]);
-
-  const handleNavigateToCity = useCallback(
-    (city: City) => {
-      router.push(`/properties/city/${city._id}`);
-    },
-    [router],
-  );
-
-  const handleViewAllFeatured = () => {
-    router.push('/explore');
-  };
-
-  const handleBecomeHost = useCallback(() => {
-    router.push('/properties/create');
-  }, [router]);
-
-  const handleBecomeAgent = useCallback(() => {
-    router.push('/agent');
-  }, [router]);
-
   return (
     <View className="flex-1">
       <PageScrollView
@@ -375,9 +260,6 @@ export default function HomePage() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* === Hero canvas ===
-            Outside the gap container — full-bleed hero should sit flush
-            against the first post-hero section, not participate in rhythm. */}
         <View
           className="relative w-full justify-end overflow-hidden"
           style={{
@@ -410,8 +292,6 @@ export default function HomePage() {
             style={{ pointerEvents: 'none' }}
           />
 
-          {/* Drawer toggle — small screens only. Opens the overlay sidebar
-              (the persistent sidebar is hidden below the 500px breakpoint). */}
           {!isScreenNotMobile ? (
             <Pressable
               onPress={openMobileDrawer}
@@ -457,13 +337,6 @@ export default function HomePage() {
               {t('home.hero.subtitle')}
             </P>
 
-            {/* Collapsed search pill — centered ON the hero image at every
-                width. Tapping a column opens the expanding SearchPanel
-                (breakpoint-driven inside SearchPanel: a centered compact dialog
-                on wide, a full-screen sheet on narrow); the circular Search
-                button runs the search with the live query. Both presentations
-                own their own positioning via a Modal, so the pill needs no
-                anchor wrapper. */}
             <View
               className={
                 isWide
@@ -473,161 +346,145 @@ export default function HomePage() {
             >
               <SearchSummaryBar
                 query={activeQuery}
-                onPress={handleRunSearch}
-                onPressColumn={handleOpenSearchPanelAt}
+                onPress={() => router.push('/explore')}
+                onPressColumn={(step) => {
+                  setSearchPanelStep(step);
+                  setSearchPanelOpen(true);
+                }}
               />
             </View>
             {searchPanelOpen ? (
               <SearchPanel
                 open={searchPanelOpen}
-                onClose={handleCloseSearchPanel}
+                onClose={() => setSearchPanelOpen(false)}
                 initialQuery={heroSearchSeed}
                 initialStep={searchPanelStep}
-                onSubmit={handleSubmitSearch}
-                onApply={handleApplySearch}
+                onSubmit={(query) => {
+                  useSearchQueryStore.getState().setQuery(query);
+                  setSearchPanelOpen(false);
+                  router.push('/explore');
+                }}
+                onApply={(query) => {
+                  useSearchQueryStore.getState().setQuery(query);
+                  setSearchPanelOpen(false);
+                }}
               />
             ) : null}
           </View>
         </View>
 
-        {/* Section rhythm is owned here by NativeWind `gap` — post-hero
-            sections only, evenly spaced (24px mobile / 32px web) with no
-            per-section `marginTop`. `pb-14` is bottom scroll padding;
-            gap never adds space after the last child. */}
         <View className="gap-6 md:gap-8 pb-14">
-        {/* === Category strip (sticky on web) === */}
-        <HomeCategoryStrip sticky />
+          <HomeCategoryStrip sticky />
 
-        {/* === Featured Properties carousel === */}
-        <HomeCarouselSection
-          eyebrow={t('home.recommended.eyebrow')}
-          title={t('home.featured.title')}
-          items={featuredProperties}
-          loading={propertiesLoading}
-          emptyText={t('home.featured.empty')}
-          viewAllText={t('home.viewAll')}
-          onViewAll={() => router.push('/explore')}
-          renderItem={(property) => (
-            <PropertyCard
-              property={property}
-              variant="featured"
-              // Home rows are themselves horizontal scrollers; an in-card
-              // photo pager would fight the row swipe, so keep one photo here.
-              enableImageCarousel={false}
-              onPress={() => router.push(`/properties/${property._id || property.id}`)}
-            />
-          )}
-        />
-
-        {/* === City Showcase (DB cities, adaptive region/country title) === */}
-        {cities.length > 0 ? (
-          <CityShowcaseSection
-            title={t('home.cityShowcase.title', { place: explorePlace })}
-            items={cities}
-            onPressCity={handleNavigateToCity}
-          />
-        ) : null}
-
-        {/* === Featured Grid (mode-aware) === */}
-        {gridProperties.length > 0 ? (
-          <FeaturedGridSection
-            title={featuredGridTitle}
-            items={gridProperties}
-            onPropertyPress={(property) =>
-              router.push(`/properties/${property._id || property.id}`)
-            }
-          />
-        ) : null}
-
-        {/* === Continue browsing (Recently Viewed) === */}
-        {recentlyViewedProperties && recentlyViewedProperties.length > 0 ? (
           <HomeCarouselSection
-            title={t('home.recentlyViewed.continue')}
-            items={recentlyViewedProperties}
-            loading={false}
+            eyebrow={t('home.recommended.eyebrow')}
+            title={t('home.featured.title')}
+            items={featuredProperties}
+            loading={propertiesLoading}
+            emptyText={feedEmptyText}
+            viewAllText={t('home.viewAll')}
+            onViewAll={() => router.push('/explore')}
             renderItem={(property) => (
               <PropertyCard
                 property={property}
                 variant="featured"
-                // Home rows are themselves horizontal scrollers; an in-card
-                // photo pager would fight the row swipe, so keep one photo here.
                 enableImageCarousel={false}
                 onPress={() => router.push(`/properties/${property._id || property.id}`)}
               />
             )}
           />
-        ) : null}
 
-        {/* === Saved Properties === */}
-        {savedProperties && savedProperties.length > 0 ? (
-          <HomeCarouselSection<Property>
-            title={t('home.saved.title')}
-            items={savedProperties as Property[]}
-            loading={savedLoading}
-            renderItem={(property) => (
-              <PropertyCard
-                property={property}
-                variant="featured"
-                // Home rows are themselves horizontal scrollers; an in-card
-                // photo pager would fight the row swipe, so keep one photo here.
-                enableImageCarousel={false}
-                onPress={() => router.push(`/properties/${property._id || property.id}`)}
+          {cities.length > 0 ? (
+            <CityShowcaseSection
+              title={t('home.cityShowcase.title', { place: explorePlace })}
+              items={cities}
+              onPressCity={(city) => router.push(`/properties/city/${city._id}`)}
+            />
+          ) : null}
+
+          {gridProperties.length > 0 ? (
+            <FeaturedGridSection
+              title={featuredGridTitle}
+              items={gridProperties}
+              onPropertyPress={(property) =>
+                router.push(`/properties/${property._id || property.id}`)
+              }
+            />
+          ) : null}
+
+          {recentlyViewedProperties && recentlyViewedProperties.length > 0 ? (
+            <HomeCarouselSection
+              title={t('home.recentlyViewed.continue')}
+              items={recentlyViewedProperties}
+              loading={false}
+              renderItem={(property) => (
+                <PropertyCard
+                  property={property}
+                  variant="featured"
+                  enableImageCarousel={false}
+                  onPress={() => router.push(`/properties/${property._id || property.id}`)}
+                />
+              )}
+            />
+          ) : null}
+
+          {savedProperties && savedProperties.length > 0 ? (
+            <HomeCarouselSection<Property>
+              title={t('home.saved.title')}
+              items={savedProperties as Property[]}
+              loading={savedLoading}
+              renderItem={(property) => (
+                <PropertyCard
+                  property={property}
+                  variant="featured"
+                  enableImageCarousel={false}
+                  onPress={() => router.push(`/properties/${property._id || property.id}`)}
+                />
+              )}
+            />
+          ) : null}
+
+          {nearbyCities.map((city) => (
+            <NearbyCityCarousel key={city._id} city={city} />
+          ))}
+
+          {isWide ? (
+            <View className={`flex-row items-stretch gap-6 md:gap-8 ${PAGE_GUTTER_CLASS}`}>
+              <HostCtaBanner
+                fill
+                title={t('home.hostCta.title')}
+                subtitle={t('home.hostCta.subtitle')}
+                ctaLabel={t('home.hostCta.cta')}
+                imageUrl={HOST_CTA_IMAGE}
+                onPress={() => router.push('/properties/create')}
               />
-            )}
-          />
-        ) : null}
-
-        {/* === Nearby city carousels (only when location + properties available) === */}
-        {nearbyCities.map((city) => (
-          <NearbyCityCarousel key={city._id} city={city} />
-        ))}
-
-        {/* === Closing CTA banners ===
-            Responsive 50/50 grid: side-by-side equal-height columns on wide
-            screens, stacked full-width on narrow / native (always narrow). On
-            wide the row owns the outer page padding and its inter-column gutter
-            comes from NativeWind `gap-6 md:gap-8`; in grid mode each banner
-            runs in `fill` mode (no intrinsic aspectRatio, no own page padding)
-            so `alignItems: 'stretch'` equalises height. On narrow the two
-            banners are plain scroll siblings and the page `gap` spaces them. */}
-        {isWide ? (
-          <View className={`flex-row items-stretch gap-6 md:gap-8 ${PAGE_GUTTER_CLASS}`}>
-            <HostCtaBanner
-              fill
-              title={t('home.hostCta.title')}
-              subtitle={t('home.hostCta.subtitle')}
-              ctaLabel={t('home.hostCta.cta')}
-              imageUrl={HOST_CTA_IMAGE}
-              onPress={handleBecomeHost}
-            />
-            <AgentCtaBanner
-              fill
-              title={t('agent.banner.title')}
-              subtitle={t('agent.banner.subtitle')}
-              ctaLabel={t('agent.banner.cta')}
-              trustLine={t('agent.banner.trust')}
-              onPress={handleBecomeAgent}
-            />
-          </View>
-        ) : (
-          <>
-            <HostCtaBanner
-              title={t('home.hostCta.title')}
-              subtitle={t('home.hostCta.subtitle')}
-              ctaLabel={t('home.hostCta.cta')}
-              imageUrl={HOST_CTA_IMAGE}
-              onPress={handleBecomeHost}
-            />
-            <AgentCtaBanner
-              title={t('agent.banner.title')}
-              subtitle={t('agent.banner.subtitle')}
-              ctaLabel={t('agent.banner.cta')}
-              trustLine={t('agent.banner.trust')}
-              onPress={handleBecomeAgent}
-            />
-          </>
-        )}
-
+              <AgentCtaBanner
+                fill
+                title={t('agent.banner.title')}
+                subtitle={t('agent.banner.subtitle')}
+                ctaLabel={t('agent.banner.cta')}
+                trustLine={t('agent.banner.trust')}
+                onPress={() => router.push('/agent')}
+              />
+            </View>
+          ) : (
+            <>
+              <HostCtaBanner
+                title={t('home.hostCta.title')}
+                subtitle={t('home.hostCta.subtitle')}
+                ctaLabel={t('home.hostCta.cta')}
+                imageUrl={HOST_CTA_IMAGE}
+                onPress={() => router.push('/properties/create')}
+              />
+              <AgentCtaBanner
+                title={t('agent.banner.title')}
+                subtitle={t('agent.banner.subtitle')}
+                ctaLabel={t('agent.banner.cta')}
+                trustLine={t('agent.banner.trust')}
+                onPress={() => router.push('/agent')}
+              />
+            </>
+          )}
         </View>
       </PageScrollView>
     </View>
