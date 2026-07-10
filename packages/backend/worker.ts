@@ -144,7 +144,18 @@ function startBullMq(): () => Promise<void> {
 
   async function enqueueBootDiscovery(): Promise<void> {
     for (const data of bootDiscoverJobs()) {
-      await discoverQueue.add(QUEUE_NAMES.discover, data, { jobId: discoverJobId(data) });
+      const jobId = discoverJobId(data);
+      // Boot uses deterministic ids for dedup; remove a prior completed/failed
+      // job so a redeploy actually re-runs discover (otherwise BullMQ keeps the
+      // stale failure from an older image, e.g. pre-HTML-scrape Blueground).
+      const existing = await discoverQueue.getJob(jobId);
+      if (existing) {
+        const state = await existing.getState();
+        if (state === 'completed' || state === 'failed') {
+          await existing.remove();
+        }
+      }
+      await discoverQueue.add(QUEUE_NAMES.discover, data, { jobId });
     }
     logger.info('Enqueued boot discovery jobs');
   }
