@@ -153,7 +153,6 @@ function AppShell() {
           flex: 1,
           justifyContent: 'space-between',
           flexDirection: isScreenNotMobile ? 'row' : 'column',
-          ...(isScreenNotMobile ? { maxWidth: 950, flexShrink: 1 } : {}),
         },
         // --- Fixed-viewport shell (explore route) ---
         fixedShell: Platform.select<ViewStyle>({
@@ -178,14 +177,12 @@ function AppShell() {
             overflow: 'hidden',
             flexDirection: 'row',
             justifyContent: 'space-between',
-            ...(isScreenNotMobile ? { maxWidth: 950, flexShrink: 1 } : {}),
           } as unknown as ViewStyle,
           default: {
             flex: 1,
             minWidth: 0,
             flexDirection: 'row',
             justifyContent: 'space-between',
-            ...(isScreenNotMobile ? { maxWidth: 950, flexShrink: 1 } : {}),
           },
         }) as ViewStyle,
         // Center column of the fixed shell — height-bounded so the framed panel
