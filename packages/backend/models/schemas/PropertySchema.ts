@@ -275,6 +275,15 @@ const propertySchema = new mongoose.Schema({
     default: false,
     index: true
   },
+  /** Best-effort portal advertiser contact (phone/email/WhatsApp/agency). */
+  externalContact: {
+    phone: { type: String, trim: true },
+    email: { type: String, trim: true },
+    whatsapp: { type: String, trim: true },
+    agencyName: { type: String, trim: true },
+    name: { type: String, trim: true },
+    kind: { type: String, enum: ['owner', 'agency', 'private', 'unknown'] },
+  },
   expiresAt: {
     type: Date,
     index: { expireAfterSeconds: 0 }, // TTL index; document auto-removed after this date

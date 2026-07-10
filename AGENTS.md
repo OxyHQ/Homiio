@@ -226,9 +226,15 @@ PROVIDER_IDEALISTA_ENABLED=true
 PROVIDER_FOTOCASA_ENABLED=true
 PROVIDER_HABITACLIA_ENABLED=true
 PROVIDER_BLUEGROUND_ENABLED=true
+PROVIDER_PISOS_ENABLED=true
+PROVIDER_MILANUNCIOS_ENABLED=false
+PROVIDER_YAENCONTRE_ENABLED=false
+PROVIDER_INDOMIO_ENABLED=false
 PROVIDER_APARTMENTS_COM_ENABLED=true
 PROVIDER_ZILLOW_ENABLED=true
 ```
+
+Classifieds providers must scope discover to real-estate categories and reject non-housing in normalize.
 
 The worker reads these at startup; disabled providers are not registered.
 

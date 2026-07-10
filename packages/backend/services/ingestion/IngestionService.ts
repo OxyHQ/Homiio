@@ -213,6 +213,16 @@ export class IngestionService {
     if (listing.floor !== undefined) fields.floor = listing.floor;
     if (listing.amenities !== undefined) fields.amenities = listing.amenities;
     if (listing.furnishedStatus !== undefined) fields.furnishedStatus = listing.furnishedStatus;
+    if (listing.contact) {
+      fields.externalContact = {
+        ...(listing.contact.phone ? { phone: listing.contact.phone } : {}),
+        ...(listing.contact.email ? { email: listing.contact.email } : {}),
+        ...(listing.contact.whatsapp ? { whatsapp: listing.contact.whatsapp } : {}),
+        ...(listing.contact.agencyName ? { agencyName: listing.contact.agencyName } : {}),
+        ...(listing.contact.name ? { name: listing.contact.name } : {}),
+        ...(listing.contact.kind ? { kind: listing.contact.kind } : {}),
+      };
+    }
 
     return fields as Partial<IProperty>;
   }

@@ -34,7 +34,24 @@ export type ProviderId =
   | 'habitaclia'
   | 'blueground'
   | 'apartments_com'
-  | 'zillow';
+  | 'zillow'
+  | 'pisos'
+  | 'milanuncios'
+  | 'yaencontre'
+  | 'indomio';
+
+/**
+ * Best-effort owner/agent contact from a portal. Missing fields are omitted —
+ * ingest must NOT fail when contact fetch 403s.
+ */
+export interface NormalizedListingContact {
+  phone?: string;
+  email?: string;
+  whatsapp?: string;
+  agencyName?: string;
+  name?: string;
+  kind?: 'owner' | 'agency' | 'private' | 'unknown';
+}
 
 /**
  * A remote source image for a listing, as reported by the provider. The `url`
@@ -104,6 +121,11 @@ export interface NormalizedListing {
   furnishedStatus?: 'furnished' | 'unfurnished' | 'partially_furnished' | 'not_specified';
   /** Source images fetched once at ingest and re-hosted; never hotlinked. */
   remoteImages: NormalizedRemoteImage[];
+  /**
+   * Best-effort advertiser contact from portal AJAX (phone / email / WhatsApp).
+   * Optional — never required for a successful ingest.
+   */
+  contact?: NormalizedListingContact;
   /**
    * Listing lifecycle status. External aggregator listings are always published
    * (visible in search) — the literal is fixed so a provider can't emit a

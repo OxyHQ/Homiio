@@ -124,6 +124,80 @@ export {
   type RecordedZillowPage,
 } from './providers/us/zillow/fixtures';
 
+export {
+  assertHousingListing,
+  isHousingCategory,
+  isHousingCategoryUrl,
+  NonHousingListingError,
+} from './providers/es/housing';
+
+export { PisosProvider, isPisosChallenge, pisosSourceIdFromUrl } from './providers/pisos';
+export {
+  parsePisosDetail,
+  parsePisosSearch,
+  mergePisosContact,
+  type PisosRaw,
+} from './providers/pisos/parse';
+export {
+  PISOS_BASE_URL,
+  PISOS_FIXTURE_DETAIL_HTML,
+  PISOS_FIXTURE_SEARCH_HTML,
+  PISOS_FIXTURE_CONTACT_JSON,
+} from './providers/pisos/fixtures';
+export {
+  pisosSearchUrl,
+  pisosContactPhoneUrl,
+  parsePisosContactPhone,
+} from './providers/pisos/ajax';
+
+export {
+  MilanunciosProvider,
+  isMilanunciosChallenge,
+  milanunciosSourceIdFromUrl,
+  normalizeMilanunciosRaw,
+  parseMilanunciosAdvert,
+} from './providers/milanuncios';
+export {
+  parseMilanunciosSearchJson,
+  type MilanunciosRaw,
+} from './providers/milanuncios/parse';
+export {
+  MILANUNCIOS_BASE_URL,
+  MILANUNCIOS_HOUSING_CATEGORY_SLUGS,
+  MILANUNCIOS_HOUSING_CATEGORY_IDS,
+  MILANUNCIOS_FIXTURE_HOUSING_JSON,
+  MILANUNCIOS_FIXTURE_CAR_JSON,
+  MILANUNCIOS_FIXTURE_SEARCH_JSON,
+  milanunciosHousingSearchUrl,
+  milanunciosListAjaxUrl,
+} from './providers/milanuncios/fixtures';
+
+export { YaencontreProvider, isYaencontreChallenge } from './providers/yaencontre';
+export {
+  parseYaencontreDetailJson,
+  parseYaencontreSearchJson,
+  normalizeYaencontreRaw,
+  type YaencontreRaw,
+} from './providers/yaencontre/parse';
+export {
+  YAENCONTRE_BASE_URL,
+  YAENCONTRE_FIXTURE_DETAIL_JSON,
+  YAENCONTRE_FIXTURE_SEARCH_JSON,
+} from './providers/yaencontre/fixtures';
+
+export { IndomioProvider, isIndomioChallenge } from './providers/indomio';
+export {
+  parseIndomioDetailJson,
+  parseIndomioSearchJson,
+  normalizeIndomioRaw,
+  type IndomioRaw,
+} from './providers/indomio/parse';
+export {
+  INDOMIO_BASE_URL,
+  INDOMIO_FIXTURE_DETAIL_JSON,
+  INDOMIO_FIXTURE_SEARCH_JSON,
+} from './providers/indomio/fixtures';
+
 import type { ProviderId } from '@homiio/shared-types';
 import { ProviderRegistry } from './registry';
 import type { ListingProvider } from './types';
@@ -132,6 +206,10 @@ import { HabitacliaProvider } from './providers/habitaclia';
 import { BluegroundProvider } from './providers/blueground';
 import { IdealistaProvider } from './providers/idealista';
 import { FotocasaProvider } from './providers/fotocasa';
+import { PisosProvider } from './providers/pisos';
+import { MilanunciosProvider } from './providers/milanuncios';
+import { YaencontreProvider } from './providers/yaencontre';
+import { IndomioProvider } from './providers/indomio';
 import { ApartmentsComProvider } from './providers/us/apartmentsCom';
 import { ZillowProvider } from './providers/us/zillow';
 
@@ -170,6 +248,10 @@ export function createDefaultRegistry(): ProviderRegistry {
     new BluegroundProvider(),
     new IdealistaProvider(esOptions),
     new FotocasaProvider(esOptions),
+    new PisosProvider(esOptions),
+    new MilanunciosProvider(esOptions),
+    new YaencontreProvider(esOptions),
+    new IndomioProvider(esOptions),
     new ApartmentsComProvider(),
     new ZillowProvider(),
   ];
