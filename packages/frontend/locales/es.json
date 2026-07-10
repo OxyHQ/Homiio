@@ -448,7 +448,8 @@
         "moderate": "Moderada",
         "strict": "Estricta",
         "superStrict": "Muy estricta"
-      }
+      },
+      "fairPrice": "Solo precio justo"
     },
     "mode": {
       "label": "Modo de búsqueda",
@@ -512,7 +513,8 @@
         "budget": "Menos de 1000 €",
         "apply": "Aplicar",
         "searchWithCount": "Buscar con {{count}} filtros",
-        "advancedFilters": "Filtros Avanzados"
+        "advancedFilters": "Filtros Avanzados",
+        "fairPrice": "Precio justo"
       },
       "alerts": {
         "title": "Alertas de propiedades",
@@ -656,7 +658,8 @@
       "recommended": "Recomendado",
       "priceAsc": "Precio: de menor a mayor",
       "priceDesc": "Precio: de mayor a menor",
-      "newest": "Más recientes"
+      "newest": "Más recientes",
+      "fairness": "Mejor valor"
     },
     "save": {
       "title": "Save this search",
@@ -1557,7 +1560,17 @@
       "cheaper": "cheaper",
       "pricier": "pricier"
     },
-    "fraudWarning": "Never pay or transfer funds outside the Homio platform"
+    "fraudWarning": "Never pay or transfer funds outside the Homio platform",
+    "priceEthics": {
+      "banner": {
+        "title": "No es un precio justo",
+        "exceedsEthical": "Este precio supera el máximo ético de Homiio ({{max}}/mes).",
+        "exceedsEthicalGeneric": "Este precio supera el máximo ético de Homiio para viviendas similares.",
+        "aboveMarket": "Este precio está un {{percent}}% por encima de viviendas similares en la zona.",
+        "aboveMarketGeneric": "Este precio está por encima de la media local para viviendas similares.",
+        "generic": "Este anuncio no cumple los criterios de precio justo de Homiio."
+      }
+    }
   },
   "viewings": {
     "title": "Visitas",
@@ -2728,7 +2741,8 @@
       "exchange": "Intercambio",
       "verified": "Verificado",
       "eco": "Ecológico",
-      "instantBook": "Reserva inmediata"
+      "instantBook": "Reserva inmediata",
+      "fairPrice": "Precio justo"
     },
     "offering": {
       "stepTitle": "¿Cómo lo ofreces?",

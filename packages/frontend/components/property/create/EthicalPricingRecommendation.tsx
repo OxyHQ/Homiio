@@ -3,9 +3,10 @@ import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
+import { PropertyType } from '@homiio/shared-types';
 import {
   validateEthicalPricing,
-  type PropertyCharacteristics,
+  type EthicalPricingCharacteristics,
 } from '@/utils/ethicalPricing';
 import type { CreatePropertyFormData } from '@/store/createPropertyFormStore';
 import { createPropertyStyles as styles } from './styles';
@@ -21,7 +22,7 @@ const COLOR_WARNING = colors.warning;
 
 const toFurnishedStatus = (
   isFurnished: boolean | undefined,
-): PropertyCharacteristics['furnishedStatus'] => (isFurnished ? 'furnished' : 'unfurnished');
+): EthicalPricingCharacteristics['furnishedStatus'] => (isFurnished ? 'furnished' : 'unfurnished');
 
 /**
  * Shows the ethical-pricing recommendation for the proposed monthly rent based
@@ -38,8 +39,8 @@ export function EthicalPricingRecommendation({
 
   const amenities = propertyData.amenities.selectedAmenities ?? [];
 
-  const propertyCharacteristics: PropertyCharacteristics = {
-    type: propertyData.basicInfo.propertyType as PropertyCharacteristics['type'],
+  const propertyCharacteristics: EthicalPricingCharacteristics = {
+    type: propertyData.basicInfo.propertyType as PropertyType,
     bedrooms: propertyData.basicInfo.bedrooms || 0,
     bathrooms: propertyData.basicInfo.bathrooms || 0,
     squareFootage: propertyData.basicInfo.squareFootage || 0,
@@ -96,6 +97,9 @@ export function EthicalPricingRecommendation({
           <View style={styles.ethicalPricingWarning}>
             <ThemedText style={styles.ethicalPricingWarningText}>
               {t('property.ethicalPricingWarning')}
+            </ThemedText>
+            <ThemedText style={styles.ethicalPricingWarningText}>
+              {t('property.ethicalPricingPublishWarning')}
             </ThemedText>
           </View>
         )}

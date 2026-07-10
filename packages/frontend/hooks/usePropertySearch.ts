@@ -11,7 +11,8 @@
  * or center+radius (`lat/lng/radius`), `propertyType` (comma list),
  * `priceMin/priceMax` (or `minSalePrice/maxSalePrice` for sale),
  * `bedrooms/bathrooms`, `amenities` (comma), `guests`, `offering`
- * ({@link OfferingType}), `sortBy` ({price|createdAt|relevance}), `sortOrder`
+ * ({@link OfferingType}), `sortBy` ({price|createdAt|relevance|fairness}),
+ * `fairPrice` (true → `priceEthics.isFairPrice`), `sortOrder`
  * (asc|desc), `page`, `limit` (≤50). The backend resolves the price-range field
  * from the requested `offering` (long-term → monthly amount, short-term →
  * nightly rate, sale → sale price). Each returned property exposes
@@ -132,6 +133,9 @@ export function buildSearchParams(query: SearchQuery): Record<string, string | n
   if (query.dates) {
     params.checkIn = query.dates.start;
     params.checkOut = query.dates.end;
+  }
+  if (query.fairPrice === true) {
+    params.fairPrice = 'true';
   }
 
   return params;

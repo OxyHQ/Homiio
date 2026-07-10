@@ -1,9 +1,9 @@
-import { ProfileType } from '@homiio/shared-types';
 import { applyOfferingRulesForCreate, OfferingValidationError, type OfferingBearingPayload } from './offeringRules';
 import { CREATABLE_PROPERTY_FIELDS } from './editableFields';
 import { pickFields } from '../../utils/pickFields';
 import { Property } from '../../models';
 import { telegramService } from '../../services';
+import { schedulePriceEthicsScore } from '../../services/priceEthicsService';
 import { logger, businessLogger } from '../../middlewares/logging';
 import { AppError, successResponse } from '../../middlewares/errorHandler';
 import { getErrorMessage, getErrorName, getValidationMessages } from '../../utils/errors';
@@ -85,16 +85,7 @@ export async function createProperty(req: ControllerRequest, res: ControllerResp
     // it is resolved strictly server-side, creating the personal profile lazily
     // if the user has none yet.
     const { Profile } = require('../../models');
-    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-    if (!activeProfile) {
-      activeProfile = await Profile.create({
-        oxyUserId,
-        profileType: ProfileType.PERSONAL,
-        isPrimary: true,
-        isActive: true,
-        personalProfile: {},
-      });
-    }
+    const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     // Build the property from an explicit field whitelist; never spread
     // `req.body`. Owner/system fields (profileId, isVerified, views, partner
@@ -190,6 +181,7 @@ export async function createProperty(req: ControllerRequest, res: ControllerResp
         error: getErrorMessage(error),
       });
     });
+    schedulePriceEthicsScore(savedProperty._id.toString());
     res.status(201).json(successResponse(savedProperty.toJSON(), 'Property created successfully'));
   } catch (error) {
     if (error instanceof OfferingValidationError) {
