@@ -9,6 +9,7 @@
 import { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import { City, Country, Region, Property, Address } from '../models';
+import { isPlausibleCityName } from '../utils/plausibleCityName';
 const {
   serializePropertyAddresses,
   ADDRESS_GEO_POPULATE,
@@ -121,8 +122,15 @@ class CityController {
   async getPopularCities(req: Request, res: Response) {
     try {
       const { limit = DEFAULT_POPULAR_LIMIT } = req.query;
-      const cities = await City.getPopularCities(Number(limit)).populate(GEO_POPULATE);
-      res.json({ success: true, data: cities });
+      const numericLimit = Number(limit);
+      const fetchLimit = Math.max(numericLimit * 2, numericLimit);
+      const cities = await City.getPopularCities(fetchLimit).populate(GEO_POPULATE);
+
+      const filtered = cities
+        .filter((city) => isPlausibleCityName(city.name) && hasPopulatedCoverImage(city.coverImageId))
+        .slice(0, numericLimit);
+
+      res.json({ success: true, data: filtered });
     } catch (error) {
       res.status(500).json({ success: false, message: 'Failed to fetch popular cities', error: (error as Error).message });
     }
@@ -373,6 +381,15 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/** True when populate resolved coverImageId to an Image doc with variant urls. */
+function hasPopulatedCoverImage(coverImageId: unknown): boolean {
+  if (coverImageId == null || typeof coverImageId !== 'object') {
+    return false;
+  }
+  const urls = (coverImageId as { urls?: unknown }).urls;
+  return urls != null && typeof urls === 'object';
+}
+
 /** Resolve a country ref (id or name/code) to a Country `_id`, or null. */
 async function resolveCountryRef(input: { countryId?: string; country?: string }): Promise<Types.ObjectId | null> {
   if (input.countryId && Types.ObjectId.isValid(input.countryId)) {
@@ -407,4 +424,4 @@ async function resolveRegionRef(input: { regionId?: string; state?: string; coun
   return null;
 }
 
-export default new CityController();
+module.exports = new CityController();
