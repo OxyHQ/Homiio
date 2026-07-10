@@ -1,0 +1,14 @@
+/**
+ * Recorded Kleinanzeigen fixtures (housing-only, hand-authored).
+ *
+ * Kleinanzeigen is a general classifieds portal — fixtures model the
+ * immobilien category (c203 Wohnung mieten) only. Non-housing categories must
+ * be rejected by the parser/normalize path.
+ */
+export declare const KLEINANZEIGEN_BASE_URL = "https://www.kleinanzeigen.de";
+/** Housing category ids allowed for discover/normalize. */
+export declare const KLEINANZEIGEN_HOUSING_CATEGORY_IDS: ReadonlySet<string>;
+export declare const KLEINANZEIGEN_FIXTURE_SEARCH_HTML = "<!doctype html>\n<html lang=\"de\"><body>\n<article>\n  <a href=\"/s-anzeige/helle-2-zimmer-wohnung-in-mitte/3367000001-203-3331\">Helle 2-Zimmer</a>\n  <a href=\"/s-anzeige/dachgeschoss-prenzlauer-berg/3367000002-203-3331\">Dachgeschoss</a>\n  <a href=\"/s-anzeige/bmw-320i-zu-verkaufen/1111222333-216-3331\">Car (must be ignored by housing filter on normalize)</a>\n</article>\n</body></html>";
+export declare const KLEINANZEIGEN_FIXTURE_DETAIL_HTML = "<!doctype html>\n<html lang=\"de\">\n<head>\n<meta property=\"og:title\" content=\"Helle 2-Zimmer-Wohnung in Mitte\" />\n<meta property=\"og:description\" content=\"Sch\u00F6ne Wohnung mit Balkon in Berlin-Mitte.\" />\n<meta property=\"og:url\" content=\"https://www.kleinanzeigen.de/s-anzeige/helle-2-zimmer-wohnung-in-mitte/3367000001-203-3331\" />\n<meta property=\"og:image\" content=\"https://img.kleinanzeigen.de/api/v1/prod-ads/images/aa/bb/example-1.jpg\" />\n<meta property=\"og:latitude\" content=\"52.531\" />\n<meta property=\"og:longitude\" content=\"13.401\" />\n<meta property=\"og:locality\" content=\"Mitte\" />\n<meta property=\"og:region\" content=\"Berlin\" />\n<meta property=\"og:type\" content=\"product\" />\n<title>Helle 2-Zimmer-Wohnung in Mitte | Wohnung mieten</title>\n</head>\n<body>\n<div class=\"boxedarticle--price\" id=\"viewad-price\">1.250 \u20AC</div>\n<ul>\n  <li class=\"addetailslist--detail\">Wohnfl\u00E4che<span class=\"addetailslist--detail--value\">65 m\u00B2</span></li>\n  <li class=\"addetailslist--detail\">Zimmer<span class=\"addetailslist--detail--value\">2</span></li>\n  <li class=\"addetailslist--detail\">Etage<span class=\"addetailslist--detail--value\">3</span></li>\n</ul>\n<a id=\"viewad-contact-phone\" href=\"tel:+493098765432\">+49 30 98765432</a>\n<a href=\"https://wa.me/493098765432\">WhatsApp</a>\n<span class=\"userprofile-poster\">Privat</span>\n</body>\n</html>";
+/** Non-housing detail (cars) — normalize must reject. */
+export declare const KLEINANZEIGEN_FIXTURE_NON_HOUSING_HTML = "<!doctype html>\n<html lang=\"de\">\n<head>\n<meta property=\"og:title\" content=\"BMW 320i zu verkaufen\" />\n<meta property=\"og:url\" content=\"https://www.kleinanzeigen.de/s-anzeige/bmw-320i/1111222333-216-3331\" />\n</head>\n<body><div id=\"viewad-price\">12.000 \u20AC</div></body>\n</html>";
