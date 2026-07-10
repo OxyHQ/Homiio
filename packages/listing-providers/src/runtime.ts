@@ -10,7 +10,9 @@
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import type { FetchRuntime, FetchRuntimeInit } from './types';
+import type { FetchRuntime, FetchRuntimeInit, UrlFetcher } from './types';
+import { createBrowserFetcher } from './browser';
+import { createManagedFetcher, type ManagedFetcherConfig } from './managed';
 
 /** Default per-request abort budget (ms). */
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -111,4 +113,104 @@ export class HttpFetchRuntime implements FetchRuntime {
 /** Convenience factory for the default HTTP runtime. */
 export function createFetchRuntime(options?: HttpFetchRuntimeOptions): FetchRuntime {
   return new HttpFetchRuntime(options);
+}
+
+/** Options for {@link createListingFetchRuntime}. */
+export interface ListingFetchRuntimeOptions extends HttpFetchRuntimeOptions {
+  /** Optional browser-tier fetcher; when omitted `fetchViaBrowser` is absent. */
+  browser?: UrlFetcher;
+  /** Optional managed-tier fetcher; when omitted `fetchViaManaged` is absent. */
+  managed?: UrlFetcher;
+}
+
+/**
+ * A composed runtime plus a shutdown that disposes any escalation-tier
+ * resources (the browser pool, managed-client sockets). The worker holds this so
+ * it can close the browser cleanly on SIGTERM/SIGINT.
+ */
+export interface ListingFetchRuntimeHandle {
+  runtime: FetchRuntime;
+  shutdown(): Promise<void>;
+}
+
+/**
+ * Compose the full listing fetch runtime: the HTTP base plus whichever
+ * escalation tiers were provided. Crucially, `fetchViaBrowser`/`fetchViaManaged`
+ * are attached ONLY when their fetcher is present, so the shared ladder skips a
+ * tier the deployment did not provision (it keys availability off method
+ * presence).
+ */
+export function createListingFetchRuntime(
+  options: ListingFetchRuntimeOptions = {},
+): ListingFetchRuntimeHandle {
+  const http = new HttpFetchRuntime(options);
+  const { browser, managed } = options;
+
+  const runtime: FetchRuntime = {
+    fetchJson: (url, init) => http.fetchJson(url, init),
+    fetchText: (url, init) => http.fetchText(url, init),
+    loadFixture: (key) => http.loadFixture(key),
+  };
+  if (browser) runtime.fetchViaBrowser = (url, init) => browser.fetch(url, init);
+  if (managed) runtime.fetchViaManaged = (url, init) => managed.fetch(url, init);
+
+  return {
+    runtime,
+    shutdown: async () => {
+      await browser?.close?.();
+      await managed?.close?.();
+    },
+  };
+}
+
+/** Read a positive integer env var, falling back when unset/invalid. */
+function envInt(name: string, fallback: number): number {
+  const parsed = Number.parseInt(process.env[name] ?? '', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+/** Assemble the managed-fetch config from env, or `undefined` when unconfigured. */
+function managedConfigFromEnv(): ManagedFetcherConfig | undefined {
+  const endpoint = process.env.LISTING_MANAGED_FETCH_URL?.trim();
+  if (!endpoint) return undefined;
+  const config: ManagedFetcherConfig = { endpoint };
+  const apiKey = process.env.LISTING_MANAGED_FETCH_KEY?.trim();
+  if (apiKey) config.apiKey = apiKey;
+  const urlParam = process.env.LISTING_MANAGED_FETCH_URL_PARAM?.trim();
+  if (urlParam) config.urlParam = urlParam;
+  const keyHeader = process.env.LISTING_MANAGED_FETCH_KEY_HEADER?.trim();
+  if (keyHeader) config.keyHeader = keyHeader;
+  const keyParam = process.env.LISTING_MANAGED_FETCH_KEY_PARAM?.trim();
+  if (keyParam) config.keyParam = keyParam;
+  config.timeoutMs = envInt('LISTING_MANAGED_FETCH_TIMEOUT_MS', 60_000);
+  return config;
+}
+
+/** Options for {@link createListingFetchRuntimeFromEnv}. */
+export interface ListingFetchRuntimeFromEnvOptions {
+  /** Structured log sink for operational notices (e.g. Playwright missing). */
+  onLog?: (message: string) => void;
+}
+
+/**
+ * Build the worker's fetch runtime from environment variables:
+ *   - browser tier: enabled by `LISTING_BROWSER_ENABLED=true`, tuned by
+ *     `LISTING_BROWSER_MAX_CONCURRENCY` / `LISTING_BROWSER_TIMEOUT_MS`. Skipped
+ *     (with a log notice) when Playwright is not installed.
+ *   - managed tier: enabled by `LISTING_MANAGED_FETCH_URL` (+ optional key/param
+ *     vars). Skipped when the endpoint is unset.
+ *
+ * The API/Express process must never call this — only the worker.
+ */
+export async function createListingFetchRuntimeFromEnv(
+  options: ListingFetchRuntimeFromEnvOptions = {},
+): Promise<ListingFetchRuntimeHandle> {
+  const browser = await createBrowserFetcher({
+    enabled: process.env.LISTING_BROWSER_ENABLED === 'true',
+    maxConcurrency: envInt('LISTING_BROWSER_MAX_CONCURRENCY', 2),
+    timeoutMs: envInt('LISTING_BROWSER_TIMEOUT_MS', 45_000),
+    onLog: options.onLog,
+  });
+  const managed = createManagedFetcher(managedConfigFromEnv());
+  return createListingFetchRuntime({ browser, managed });
 }

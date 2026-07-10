@@ -122,6 +122,21 @@ export interface FetchRuntimeInit {
 }
 
 /**
+ * A single escalation-tier fetcher: takes a URL, returns the fetched HTML body.
+ * The shared runtime's OPTIONAL {@link FetchRuntime.fetchViaBrowser} /
+ * {@link FetchRuntime.fetchViaManaged} tiers are backed by one of these. Kept
+ * separate from the runtime so a browser pool or a managed-service client can be
+ * built (and disposed via {@link UrlFetcher.close}) independently, then composed
+ * into a runtime by {@link createListingFetchRuntime}.
+ */
+export interface UrlFetcher {
+  /** Fetch a URL through this tier and return the raw HTML body. */
+  fetch(url: string, init?: FetchRuntimeInit): Promise<string>;
+  /** Release any owned resources (browser pool, sockets). Optional/idempotent. */
+  close?(): Promise<void>;
+}
+
+/**
  * A listing provider plugin. Implementations are pure w.r.t. persistence: they
  * never touch Mongo or S3 — they only turn a portal into a
  * {@link NormalizedListing} for the backend `IngestionService`.

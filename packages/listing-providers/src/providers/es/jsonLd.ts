@@ -196,14 +196,6 @@ function readAmenities(value: unknown): { amenities: string[]; furnished?: boole
   return { amenities, furnished };
 }
 
-/** Map a schema.org `@type` list onto a coarse property category string. */
-function readPropertyType(types: string[]): string {
-  const lower = types.map((type) => type.toLowerCase());
-  if (lower.some((type) => type.includes('house') || type.includes('singlefamily'))) return 'house';
-  if (lower.some((type) => type.includes('studio'))) return 'studio';
-  return 'apartment';
-}
-
 function toListing(node: Record<string, unknown>): EsSchemaListing {
   const offer = readOffer(node.offers);
   const { amenities, furnished } = readAmenities(node.amenityFeature);

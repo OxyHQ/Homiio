@@ -17,9 +17,10 @@ require('dotenv').config();
 import { Queue, Worker, type Job } from 'bullmq';
 import {
   createDefaultRegistry,
-  HttpFetchRuntime,
+  createListingFetchRuntimeFromEnv,
   type ExternalListingRef,
   type FetchRuntime,
+  type ListingFetchRuntimeHandle,
   type ProviderRegistry,
 } from '@homiio/listing-providers';
 import config from './config';
@@ -41,8 +42,16 @@ const logger = new Logger('ListingWorker');
 const FETCH_CONCURRENCY = parseInt(process.env.LISTING_FETCH_CONCURRENCY || '2', 10);
 
 const registry: ProviderRegistry = createDefaultRegistry();
-const runtime: FetchRuntime = new HttpFetchRuntime();
 const ingestionService = new IngestionService();
+
+/**
+ * Shared fetch runtime (HTTP + optional browser/managed escalation tiers),
+ * assembled from env in {@link main} before any job runs. The browser tier is
+ * gated on `LISTING_BROWSER_ENABLED` + an installed Playwright; the managed tier
+ * on `LISTING_MANAGED_FETCH_URL`. Absent tiers are skipped by the shared ladder.
+ */
+let runtimeHandle: ListingFetchRuntimeHandle;
+let runtime: FetchRuntime;
 
 /** Fetch + normalize a single listing ref and ingest the result. */
 async function processFetchRef(ref: ExternalListingRef): Promise<void> {
@@ -156,9 +165,15 @@ function startBullMq(): () => Promise<void> {
 
 async function main(): Promise<void> {
   await database.connect();
+  runtimeHandle = await createListingFetchRuntimeFromEnv({
+    onLog: (message) => logger.warn(message),
+  });
+  runtime = runtimeHandle.runtime;
   logger.info('Listing worker connected to database', {
     providers: registry.ids(),
     redis: config.listingWorker.redisConfigured,
+    browserTier: Boolean(runtime.fetchViaBrowser),
+    managedTier: Boolean(runtime.fetchViaManaged),
   });
 
   let closer: (() => Promise<void>) | undefined;
@@ -169,6 +184,7 @@ async function main(): Promise<void> {
   } else if (config.listingWorker.discoverOnBoot) {
     await runInlinePass();
     logger.info('Inline pass complete; no Redis configured, exiting');
+    await runtimeHandle.shutdown();
     await database.disconnect?.();
     return;
   } else {
@@ -178,6 +194,7 @@ async function main(): Promise<void> {
   const shutdown = async (signal: string): Promise<void> => {
     logger.info(`Received ${signal}, shutting down listing worker`);
     if (closer) await closer();
+    await runtimeHandle.shutdown();
     await database.disconnect?.();
     process.exit(0);
   };
