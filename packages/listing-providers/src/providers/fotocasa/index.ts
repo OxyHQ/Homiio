@@ -3,7 +3,7 @@
  *
  * Acquisition order (JSON/AJAX first, HTML last):
  *   Discover: warm session → urllocationsegments + searchads AJAX → SSR embed → HTML ladder.
- *   Fetch: warm session → property JSON API → warmed page HTML → ladder HTML.
+ *   Fetch: warm city search session → property JSON API (no HTML detail fallback).
  *
  * Registered OFF by default (`PROVIDER_FOTOCASA_ENABLED`).
  */
@@ -32,8 +32,9 @@ import { ChallengeError, fetchListingViaLadder } from '../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
 import type { EsSchemaListing } from '../../parse/jsonLd';
 import { FOTOCASA_BASE_URL } from './fixtures';
-import { fotocasaSourceIdFromUrl, parseFotocasaDetail, parseFotocasaSearch, type FotocasaRaw } from './parse';
+import { fotocasaSourceIdFromUrl, parseFotocasaSearch, type FotocasaRaw } from './parse';
 import {
+  fotocasaCityFromRefUrl,
   fotocasaDefaultLocationSegments,
   fotocasaSearchadsUrl,
   fotocasaUrlLocationSegmentsUrl,
@@ -357,19 +358,14 @@ export class FotocasaProvider implements ListingProvider {
    * Ladder HTML is last resort when the session pool is absent or warm-up fails.
    */
   async fetch(ref: ExternalListingRef, ctx: FetchContext): Promise<RawListing> {
-    if (ctx.runtime.openBrowserSession) {
-      const fromSession = await this.fetchDetailViaSession(ref, ctx);
-      if (fromSession) return fromSession;
+    if (!ctx.runtime.openBrowserSession) {
+      throw new ChallengeError(ref.url, 'browser', 503);
     }
 
-    const { html } = await fetchListingViaLadder(ctx.runtime, ref.url, {
-      provider: this.id,
-      isChallenge: isFotocasaChallenge,
-      init: { signal: ctx.signal },
-      metrics: this.metrics,
-    });
-    const payload = parseFotocasaDetail(html, ref.url);
-    return { ref, payload };
+    const fromSession = await this.fetchDetailViaSession(ref, ctx);
+    if (fromSession) return fromSession;
+
+    throw new ChallengeError(ref.url, 'browser', 403);
   }
 
   private async fetchDetailViaSession(
@@ -384,12 +380,14 @@ export class FotocasaProvider implements ListingProvider {
     }
 
     let session: BrowserSession | undefined;
+    const warmCity = fotocasaCityFromRefUrl(ref.url);
+    const warmUrl = fotocasaWarmSearchUrl(warmCity, 1);
     const start = Date.now();
     try {
       session = await ctx.runtime.openBrowserSession({
-        warmUrl: ref.url,
+        warmUrl,
         signal: ctx.signal,
-        contentSelector: 'script[type="application/ld+json"], main, h1',
+        contentSelector: FOTOCASA_CONTENT_SELECTOR,
         isChallenge: isFotocasaChallenge,
         challengeWaitMs: 45_000,
         stickyProxySession: sticky,
@@ -402,6 +400,7 @@ export class FotocasaProvider implements ListingProvider {
       const propertyUrl = fotocasaPropertyApiUrl(ref.sourceId, transactionType);
       const propertyRes = await session.request(propertyUrl, {
         referer: session.pageUrl(),
+        headers: { Origin: FOTOCASA_BASE_URL },
         timeoutMs: 30_000,
       });
 
@@ -409,77 +408,46 @@ export class FotocasaProvider implements ListingProvider {
         propertyRes.status < 400 &&
         !isFotocasaPropertyChallenge(propertyRes.body)
       ) {
-        try {
-          const payload = parseFotocasaPropertyJson(propertyRes.body, ref.url);
-          this.metrics.record({
-            provider: this.id,
-            strategy: 'browser',
-            outcome: 'success',
-            status: propertyRes.status,
-            latencyMs: Date.now() - start,
-            url: propertyUrl,
-            detail: 'property-json',
-          });
-          if (sticky) {
-            this.stickyStorageState = await session.exportStorageState();
-          }
-          return { ref, payload };
-        } catch {
-          // Fall through to warmed HTML when JSON shape is unexpected.
-        }
-      } else if (
-        propertyRes.status === 403 ||
-        propertyRes.status === 429 ||
-        isFotocasaPropertyChallenge(propertyRes.body)
-      ) {
+        const payload = parseFotocasaPropertyJson(propertyRes.body, ref.url);
         this.metrics.record({
           provider: this.id,
           strategy: 'browser',
-          outcome: 'challenge',
+          outcome: 'success',
           status: propertyRes.status,
           latencyMs: Date.now() - start,
           url: propertyUrl,
-          detail: 'property API PerimeterX challenge after warm-up',
+          detail: 'property-json',
         });
+        if (sticky) {
+          this.stickyStorageState = await session.exportStorageState();
+        }
+        return { ref, payload };
       }
 
-      const html = await session.content();
-      if (isFotocasaChallenge(html)) {
-        this.metrics.record({
-          provider: this.id,
-          strategy: 'browser',
-          outcome: 'challenge',
-          status: 200,
-          latencyMs: Date.now() - start,
-          url: ref.url,
-          detail: 'detail session still challenged',
-        });
-        return undefined;
-      }
-
-      const payload = parseFotocasaDetail(html, ref.url);
       this.metrics.record({
         provider: this.id,
         strategy: 'browser',
-        outcome: 'success',
-        status: 200,
+        outcome: 'challenge',
+        status: propertyRes.status,
         latencyMs: Date.now() - start,
-        url: ref.url,
-        detail: 'detail-html',
+        url: propertyUrl,
+        detail: 'property API PerimeterX challenge after search warm-up',
       });
-
-      if (sticky) {
-        this.stickyStorageState = await session.exportStorageState();
-      }
-      return { ref, payload };
-    } catch {
+      return undefined;
+    } catch (error) {
+      const detail =
+        error instanceof BrowserSessionChallengeError
+          ? error.detail
+          : error instanceof Error
+            ? error.message
+            : String(error);
       this.metrics.record({
         provider: this.id,
         strategy: 'browser',
         outcome: 'error',
         latencyMs: Date.now() - start,
-        url: ref.url,
-        detail: 'detail session warm-up failed; falling back to ladder',
+        url: warmUrl,
+        detail: `property fetch search warm-up failed: ${detail}`,
       });
       return undefined;
     } finally {

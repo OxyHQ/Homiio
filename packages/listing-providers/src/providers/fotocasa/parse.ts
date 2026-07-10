@@ -8,6 +8,7 @@
 import { extractEurListingFromNextData } from '../../parse/nextData';
 import { extractEsSchemaListings, pickEsListing, type EsSchemaListing } from '../../parse/jsonLd';
 import { FOTOCASA_BASE_URL } from './fixtures';
+import { isFotocasaSearchadsChallenge } from './searchads';
 
 /** The raw payload Fotocasa `fetch()` hands to `normalize()`. */
 export interface FotocasaRaw {
@@ -36,11 +37,7 @@ function resolveOperation(listing: EsSchemaListing, url: string): 'rent' | 'sale
  * page served instead of content).
  */
 export function isFotocasaDetailChallenge(html: string): boolean {
-  const trimmed = html.trim();
-  if (trimmed.length < 512) return true;
-  return /acceso denegado|verifica que eres|datadome|px-captcha|perimeterx|pardon our interruption|captcha-delivery/i.test(
-    trimmed,
-  );
+  return isFotocasaSearchadsChallenge(html);
 }
 
 export function parseFotocasaDetail(html: string, url: string): FotocasaRaw {

@@ -51,6 +51,21 @@ export function fotocasaLocationSlug(city: string): string {
   return CITY_LOCATION_SLUGS[slug] ?? `${slug}-capital`;
 }
 
+/**
+ * Derive a discover warm city from a Fotocasa detail URL (`…/vivienda/<slug>/…`).
+ * Used for fetch: warm the city search page (PerimeterX-friendly) before property JSON.
+ */
+export function fotocasaCityFromRefUrl(url: string): string {
+  const match = url.match(/\/vivienda(?:s)?\/([^/]+)\//i);
+  if (!match?.[1]) return 'madrid';
+  const location = match[1].toLowerCase();
+  if (location.endsWith('-capital')) return location.slice(0, -'-capital'.length);
+  for (const [city, slug] of Object.entries(CITY_LOCATION_SLUGS)) {
+    if (slug === location) return city;
+  }
+  return location;
+}
+
 /** Fotocasa rental search page used to warm PerimeterX before searchads AJAX. */
 export function fotocasaWarmSearchUrl(city: string, page = 1): string {
   const location = fotocasaLocationSlug(city);

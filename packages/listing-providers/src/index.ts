@@ -142,6 +142,7 @@ export {
   fotocasaSearchadsUrl,
   fotocasaUrlLocationSegmentsUrl,
   fotocasaWarmSearchUrl,
+  fotocasaCityFromRefUrl,
   fotocasaPropertyApiUrl,
   isFotocasaSearchadsChallenge,
   FOTOCASA_GW_BASE,
