@@ -430,7 +430,7 @@ const validateReviewId = [
 
 /** Profile ID parameter + pagination for owner-scoped review reads. */
 const validateProfileReviewsQuery = [
-  param('profileId').isMongoId().withMessage('Invalid profile ID'),
+  param('oxyUserId').isMongoId().withMessage('Invalid profile ID'),
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1-100'),
   handleValidationErrors
@@ -450,14 +450,14 @@ const ROOMMATE_CLEANLINESS = ['very_clean', 'clean', 'average', 'relaxed'];
 const ROOMMATE_SCHEDULE = ['early_bird', 'night_owl', 'flexible'];
 
 /**
- * Send roommate request validation rules (POST /api/roommates/:profileId/request)
+ * Send roommate request validation rules (POST /api/roommates/:oxyUserId/request)
  *
  * The route param is the target profile id (validated as an ObjectId to block
  * NoSQL operator injection into `Profile.findById`); `message` is optional free
  * text and length-bounded.
  */
 const validateRoommateRequest = [
-  param('profileId').isMongoId().withMessage('Invalid profile ID'),
+  param('oxyUserId').isMongoId().withMessage('Invalid profile ID'),
   body('message').optional().isString().isLength({ max: 1000 }).withMessage('Message max length is 1000'),
   handleValidationErrors
 ];
@@ -530,7 +530,7 @@ export {
  * Lease create validation rules (POST /api/leases)
  *
  * Matches the actual shape consumed by leaseController.createLease
- * (propertyId, tenantProfileId, leaseTerms.startDate/endDate,
+ * (propertyId, tenantOxyUserId, leaseTerms.startDate/endDate,
  * rentDetails.monthlyRent). ObjectId fields are validated to block NoSQL
  * operator injection into Property.findById / Lease.create. The controller
  * still owns the required-field 400s and ownership checks; this layer is kept
@@ -539,7 +539,7 @@ export {
  */
 const validateLeaseCreate = [
   body('propertyId').isMongoId().withMessage('Valid propertyId is required'),
-  body('tenantProfileId').optional().isMongoId().withMessage('tenantProfileId must be a valid id'),
+  body('tenantOxyUserId').optional().isMongoId().withMessage('tenantOxyUserId must be a valid id'),
   body('tenantId').optional().isMongoId().withMessage('tenantId must be a valid id'),
   body('leaseTerms.startDate').optional().isISO8601().withMessage('leaseTerms.startDate must be a valid date'),
   body('leaseTerms.endDate').optional().isISO8601().withMessage('leaseTerms.endDate must be a valid date'),

@@ -568,15 +568,15 @@ Return only the JSON array, no other text.`;
       let conversation: any;
       if (conversationId) {
         if (conversationId.startsWith('conv_')) {
-          conversation = new Conversation({ profileId: activeProfile._id.toString(), title: 'New Conversation', messages: [], status: 'active' });
+          conversation = new Conversation({ oxyUserId: activeProfile._id.toString(), title: 'New Conversation', messages: [], status: 'active' });
           await conversation.save();
         } else if (isObjectId(conversationId)) {
-          conversation = await Conversation.findOne({ _id: conversationId, profileId: activeProfile._id.toString() });
+          conversation = await Conversation.findOne({ _id: conversationId, oxyUserId: activeProfile._id.toString() });
         } else {
           return err(res, 400, 'Invalid conversation ID format');
         }
       } else {
-        conversation = new Conversation({ profileId: activeProfile._id.toString(), title: 'New Conversation', messages: [], status: 'active' });
+        conversation = new Conversation({ oxyUserId: activeProfile._id.toString(), title: 'New Conversation', messages: [], status: 'active' });
         await conversation.save();
       }
 
@@ -1039,7 +1039,7 @@ Return only the JSON array, no other text.`;
     const activeProfile = await Profile.findActiveByOxyUserId(userId);
     if (!activeProfile) return err(res, 404, 'No active profile found');
 
-    const conversations = await Conversation.find({ profileId: activeProfile._id.toString() }).sort({ updatedAt: -1 });
+    const conversations = await Conversation.find({ oxyUserId: activeProfile._id.toString() }).sort({ updatedAt: -1 });
     const transformed = conversations.map((c: any) => {
       const o = c.toObject({ virtuals: true });
       return {
@@ -1079,7 +1079,7 @@ Return only the JSON array, no other text.`;
     }
 
     const conversation = new Conversation({
-      profileId: activeProfile._id.toString(),
+      oxyUserId: activeProfile._id.toString(),
       title: title || 'New Conversation',
       messages: conversationMessages.map(m => ({ role: m.role || 'user', content: m.content || '', timestamp: m.timestamp || new Date() })),
       status: 'active',
@@ -1121,7 +1121,7 @@ Return only the JSON array, no other text.`;
     const activeProfile = await Profile.findActiveByOxyUserId(userId);
     if (!activeProfile) return err(res, 404, 'No active profile found');
 
-    const conversation = await Conversation.findOne({ _id: conversationId, profileId: activeProfile._id.toString() });
+    const conversation = await Conversation.findOne({ _id: conversationId, oxyUserId: activeProfile._id.toString() });
     if (!conversation) return err(res, 404, 'Conversation not found');
 
     return ok(res, { success: true, conversation });
@@ -1135,7 +1135,7 @@ Return only the JSON array, no other text.`;
     if (!activeProfile) return err(res, 404, 'No active profile found');
 
     const { title, messages, status } = req.body || {};
-    const conversation = await Conversation.findOne({ _id: req.params.id, profileId: activeProfile._id.toString() });
+    const conversation = await Conversation.findOne({ _id: req.params.id, oxyUserId: activeProfile._id.toString() });
     if (!conversation) return err(res, 404, 'Conversation not found');
 
     if (typeof title === 'string') conversation.title = title;
@@ -1158,7 +1158,7 @@ Return only the JSON array, no other text.`;
     const { role, content, attachments } = req.body || {};
     if (!role || !content) return err(res, 400, 'Role and content are required');
 
-    const conversation = await Conversation.findOne({ _id: req.params.id, profileId: activeProfile._id.toString() });
+    const conversation = await Conversation.findOne({ _id: req.params.id, oxyUserId: activeProfile._id.toString() });
     if (!conversation) return err(res, 404, 'Conversation not found');
 
     const newMessage = { role, content, timestamp: new Date(), attachments: attachments || [] };
@@ -1175,7 +1175,7 @@ Return only the JSON array, no other text.`;
     const activeProfile = await Profile.findActiveByOxyUserId(userId);
     if (!activeProfile) return err(res, 404, 'No active profile found');
 
-    const deleted = await Conversation.findOneAndDelete({ _id: req.params.id, profileId: activeProfile._id.toString() });
+    const deleted = await Conversation.findOneAndDelete({ _id: req.params.id, oxyUserId: activeProfile._id.toString() });
     if (!deleted) return err(res, 404, 'Conversation not found');
 
     return ok(res, { success: true, message: 'Conversation deleted' });
@@ -1188,7 +1188,7 @@ Return only the JSON array, no other text.`;
     const activeProfile = await Profile.findActiveByOxyUserId(userId);
     if (!activeProfile) return err(res, 404, 'No active profile found');
 
-    const conversation = await Conversation.findOne({ _id: req.params.id, profileId: activeProfile._id.toString() });
+    const conversation = await Conversation.findOne({ _id: req.params.id, oxyUserId: activeProfile._id.toString() });
     if (!conversation) return err(res, 404, 'Conversation not found');
 
     await conversation.generateShareToken();

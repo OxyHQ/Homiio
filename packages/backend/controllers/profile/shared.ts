@@ -111,7 +111,6 @@ function clearCachedProfile(oxyUserId: string, type = 'active') {
 }
 
 export {
-  Profile,
   Saved,
   SavedPropertyFolder,
   SavedSearch,

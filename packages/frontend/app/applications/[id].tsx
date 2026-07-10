@@ -155,8 +155,8 @@ export default function ApplicationDetailScreen() {
     if (!application || !primaryProfile) return null;
     const profileId = primaryProfile._id ?? primaryProfile.id;
     if (!profileId) return null;
-    if (String(application.landlordProfileId) === String(profileId)) return 'landlord';
-    if (String(application.applicantProfileId) === String(profileId)) return 'applicant';
+    if (String(application.landlordOxyUserId) === String(profileId)) return 'landlord';
+    if (String(application.applicantOxyUserId) === String(profileId)) return 'applicant';
     return null;
   }, [application, primaryProfile]);
 

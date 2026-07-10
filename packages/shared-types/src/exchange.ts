@@ -21,7 +21,7 @@ export interface ExchangeRequest {
   id: string;
   propertyId: string;
   /** Profile making the request (the would-be guest / swapper). */
-  requesterProfileId: string;
+  requesterOxyUserId: string;
   /** Profile that owns the requested listing (the host). */
   hostProfileId: string;
   mode: ExchangeMode;

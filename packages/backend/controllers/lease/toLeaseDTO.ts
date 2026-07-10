@@ -5,8 +5,8 @@
  * and landlord/tenant profiles) into the flat-ish DTO the frontend consumes:
  *   - `_id` → `id` on the lease and on every `documents` / `paymentSchedule`
  *     subdocument,
- *   - reference fields kept as string ids (`propertyId`, `landlordProfileId`,
- *     `tenantProfileId`) AND, when populated, surfaced as nested objects
+ *   - reference fields kept as string ids (`propertyId`, `landlordOxyUserId`,
+ *     `tenantOxyUserId`) AND, when populated, surfaced as nested objects
  *     (`property`, `landlord`, `tenant`).
  *
  * The shape mirrors `Lease` in `@homiio/shared-types`, which treats the Mongoose
@@ -74,7 +74,7 @@ export function toLeaseDTO(leaseDoc: unknown): Loose {
   const coTenants = Array.isArray(lease.coTenants)
     ? lease.coTenants.map((ct) => {
         const obj = plain(ct);
-        return { ...obj, profileId: refToId(obj.profileId) };
+        return { ...obj, oxyUserId: refToId(obj.oxyUserId) };
       })
     : [];
 
@@ -83,10 +83,10 @@ export function toLeaseDTO(leaseDoc: unknown): Loose {
     id: refToId(lease._id ?? lease.id),
     propertyId: refToId(lease.propertyId),
     property: refToDoc(lease.propertyId),
-    landlordProfileId: refToId(lease.landlordProfileId),
-    landlord: refToDoc(lease.landlordProfileId),
-    tenantProfileId: refToId(lease.tenantProfileId),
-    tenant: refToDoc(lease.tenantProfileId),
+    landlordOxyUserId: refToId(lease.landlordOxyUserId),
+    landlord: refToDoc(lease.landlordOxyUserId),
+    tenantOxyUserId: refToId(lease.tenantOxyUserId),
+    tenant: refToDoc(lease.tenantOxyUserId),
     roomId: refToId(lease.roomId),
     coTenants,
     documents,

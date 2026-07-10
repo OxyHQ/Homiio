@@ -66,7 +66,7 @@ describe('GB listing ingest mapping', () => {
     const property = await Property.findOne({ source: 'rightmove', sourceId: '90551949' }).lean();
     expect(property?.isExternal).toBe(true);
     expect(property?.status).toBe('published');
-    expect(property?.profileId).toBeFalsy();
+    expect(property?.oxyUserId).toBeFalsy();
     expect(property?.offerings).toEqual([OfferingType.LONG_TERM_RENT]);
     expect(property?.longTermRent.monthlyAmount).toBe(3400);
     expect(property?.type).toBe(PropertyType.APARTMENT);

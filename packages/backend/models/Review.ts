@@ -161,7 +161,7 @@ export interface IReview extends Document {
   areaSecurity: SecurityLevel;
   
   // Metadata
-  profileId: Types.ObjectId; // User profile reference
+  oxyUserId: Types.ObjectId; // User profile reference
   createdAt: Date;
   updatedAt: Date;
   verified: boolean;
@@ -424,7 +424,7 @@ const ReviewSchema = new Schema<IReview, IReviewModel>({
   },
   
   // Metadata
-  profileId: {
+  oxyUserId: {
     type: Schema.Types.ObjectId,
     ref: 'Profile', // Changed from 'User' to 'Profile'
     required: [true, 'Profile ID is required'],
@@ -442,7 +442,7 @@ const ReviewSchema = new Schema<IReview, IReviewModel>({
 
 // Indexes for efficient querying
 ReviewSchema.index({ addressId: 1, createdAt: -1 });
-ReviewSchema.index({ profileId: 1, createdAt: -1 });
+ReviewSchema.index({ oxyUserId: 1, createdAt: -1 });
 ReviewSchema.index({ rating: -1 });
 ReviewSchema.index({ recommendation: 1 });
 ReviewSchema.index({ verified: 1 });
@@ -483,7 +483,7 @@ ReviewSchema.static('findByStreetLevel', function findByStreetLevel(
   streetLevelId: string | Types.ObjectId
 ): Promise<IReview[]> {
   return this.find({ streetLevelId })
-    .populate('profileId', 'name avatar') // Changed from userId to profileId
+    .populate('oxyUserId', 'name avatar') // Changed from userId to oxyUserId
     .sort({ createdAt: -1 })
     .exec();
 });
@@ -493,7 +493,7 @@ ReviewSchema.static('findByBuildingLevel', function findByBuildingLevel(
   buildingLevelId: string | Types.ObjectId
 ): Promise<IReview[]> {
   return this.find({ buildingLevelId })
-    .populate('profileId', 'name avatar') // Changed from userId to profileId
+    .populate('oxyUserId', 'name avatar') // Changed from userId to oxyUserId
     .sort({ createdAt: -1 })
     .exec();
 });
@@ -503,7 +503,7 @@ ReviewSchema.static('findByUnitLevel', function findByUnitLevel(
   unitLevelId: string | Types.ObjectId
 ): Promise<IReview[]> {
   return this.find({ unitLevelId })
-    .populate('profileId', 'name avatar') // Changed from userId to profileId
+    .populate('oxyUserId', 'name avatar') // Changed from userId to oxyUserId
     .sort({ createdAt: -1 })
     .exec();
 });
@@ -550,12 +550,12 @@ ReviewSchema.static('getBuildingViewData', async function getBuildingViewData(
   const buildingReviews = await this.find({ 
     buildingLevelId, 
     addressLevel: 'BUILDING' 
-  }).populate('profileId', 'name avatar').sort({ createdAt: -1 }).exec(); // Changed from userId to profileId
+  }).populate('oxyUserId', 'name avatar').sort({ createdAt: -1 }).exec(); // Changed from userId to oxyUserId
   
   const unitReviews = await this.find({ 
     buildingLevelId, 
     addressLevel: 'UNIT' 
-  }).populate('profileId', 'name avatar').sort({ createdAt: -1 }).exec(); // Changed from userId to profileId
+  }).populate('oxyUserId', 'name avatar').sort({ createdAt: -1 }).exec(); // Changed from userId to oxyUserId
   
   const aggregateResults = await this.aggregate<ReviewSummaryStats>([
     { $match: { buildingLevelId: new Types.ObjectId(buildingLevelId.toString()) } },

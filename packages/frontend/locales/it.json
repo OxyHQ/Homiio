@@ -593,6 +593,7 @@
     },
     "filters": {
       "listingType": "Tipo di annuncio",
+      "fairPrice": "Solo prezzo giusto",
       "propertyType": "Tipo di immobile",
       "nightlyPrice": "Prezzo a notte",
       "monthlyPrice": "Prezzo mensile",
@@ -657,6 +658,7 @@
         "ecoFriendly": "Eco-compatibile",
         "verified": "Verificato",
         "budget": "Meno di 1000 €",
+        "fairPrice": "Prezzo giusto",
         "apply": "Applica",
         "searchWithCount": "Cerca con {{count}} filtri",
         "advancedFilters": "Filtri Avanzati"
@@ -822,6 +824,7 @@
     "sort": {
       "title": "Ordina per",
       "recommended": "Consigliati",
+      "fairness": "Miglior valore",
       "priceAsc": "Prezzo: dal più basso",
       "priceDesc": "Prezzo: dal più alto",
       "newest": "Più recenti"
@@ -1491,6 +1494,16 @@
     "ethicalPricingWarning": "Your price exceeds the ethical maximum. Consider lowering it to make housing more accessible.",
     "warningBullet": "• {{warning}}",
     "ethicalPricing": "Ethical Pricing",
+    "priceEthics": {
+      "banner": {
+        "title": "Non è un prezzo giusto",
+        "exceedsEthical": "Questo prezzo supera il massimo etico di Homiio ({{max}}/mese).",
+        "exceedsEthicalGeneric": "Questo prezzo supera il massimo etico di Homiio per abitazioni simili.",
+        "aboveMarket": "Questo prezzo è il {{percent}}% sopra abitazioni simili nella zona.",
+        "aboveMarketGeneric": "Questo prezzo è sopra la media locale per abitazioni simili.",
+        "generic": "Questo annuncio non soddisfa i criteri di prezzo giusto di Homiio."
+      }
+    },
     "toast": {
       "createSuccess": "Proprietà creata con successo",
       "updateSuccess": "Proprietà aggiornata con successo",
@@ -2582,7 +2595,8 @@
       "exchange": "Scambio",
       "verified": "Verificato",
       "eco": "Ecologico",
-      "instantBook": "Prenotazione immediata"
+      "instantBook": "Prenotazione immediata",
+      "fairPrice": "Prezzo giusto"
     },
     "offering": {
       "stepTitle": "Come lo offri?",

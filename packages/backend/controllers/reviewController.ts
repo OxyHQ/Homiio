@@ -263,7 +263,7 @@ export const createReview = async (req: Request, res: Response) => {
 
     // Check if user already has a review for this address
     const existingReview = await Review.findOne({ 
-      profileId: activeProfile._id, 
+      oxyUserId: activeProfile._id, 
       addressId: address._id 
     });
     
@@ -310,14 +310,14 @@ export const createReview = async (req: Request, res: Response) => {
     const review = new Review({
       ...reviewData,
       ...hierarchicalData,
-      profileId: activeProfile._id
+      oxyUserId: activeProfile._id
     });
 
     await review.save();
 
     // Populate the saved review for response
     const populatedReview = await Review.findById(review._id)
-      .populate('profileId', 'profileType personalProfile isAnonymous')
+      .populate('oxyUserId', 'profileType personalProfile isAnonymous')
       .populate({
         path: 'addressId',
         select: 'street postal_code countryCode cityId regionId countryId neighborhoodId coordinates',
@@ -358,7 +358,7 @@ export const getReviewById = async (req: Request, res: Response) => {
     }
 
     const review = await Review.findById(reviewId)
-      .populate('profileId', 'profileType personalProfile agencyProfile')
+      .populate('oxyUserId', 'profileType personalProfile agencyProfile')
       .populate('addressId');
 
     if (!review) {
@@ -404,14 +404,14 @@ export const updateReview = async (req: Request, res: Response) => {
     }
 
     // Check if user owns this review
-    if (review.profileId.toString() !== activeProfile._id.toString()) {
+    if (review.oxyUserId.toString() !== activeProfile._id.toString()) {
       return badRequest(res, { message: 'You can only update your own reviews' });
     }
 
     // Update the review
     Object.assign(review, updateData);
     await review.save();
-    await review.populate('profileId', 'profileType personalProfile agencyProfile');
+    await review.populate('oxyUserId', 'profileType personalProfile agencyProfile');
 
     logger.info(`Review ${reviewId} updated by user ${activeProfile._id}`);
     return ok(res, { review });
@@ -458,7 +458,7 @@ export const deleteReview = async (req: Request, res: Response) => {
     }
 
     // Check if user owns this review
-    if (review.profileId.toString() !== activeProfile._id.toString()) {
+    if (review.oxyUserId.toString() !== activeProfile._id.toString()) {
       return badRequest(res, { message: 'You can only delete your own reviews' });
     }
 
@@ -475,14 +475,14 @@ export const deleteReview = async (req: Request, res: Response) => {
 
 /**
  * Get profile's reviews
- * GET /api/reviews/profile/:profileId
+ * GET /api/reviews/profile/:oxyUserId
  */
 export const getUserReviews = async (req: Request, res: Response) => {
   try {
-    const { profileId } = req.params;
+    const { oxyUserId } = req.params;
     const { page = 1, limit = 10 } = req.query;
 
-    if (!Types.ObjectId.isValid(profileId)) {
+    if (!Types.ObjectId.isValid(oxyUserId)) {
       return badRequest(res, { message: 'Invalid profile ID' });
     }
 
@@ -490,14 +490,14 @@ export const getUserReviews = async (req: Request, res: Response) => {
     const limitNumber = parseInt(limit as string);
     const skip = (pageNumber - 1) * limitNumber;
 
-    const reviews = await Review.find({ profileId })
+    const reviews = await Review.find({ oxyUserId })
       .populate('addressId')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNumber)
       .lean();
 
-    const totalReviews = await Review.countDocuments({ profileId });
+    const totalReviews = await Review.countDocuments({ oxyUserId });
 
     return ok(res, {
       reviews,

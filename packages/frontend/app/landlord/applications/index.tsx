@@ -134,7 +134,7 @@ const PropertyGroupBlock: React.FC<PropertyGroupBlockProps> = ({
         <H3 style={styles.groupTitle}>{title}</H3>
       </View>
       {applications.map((application) => {
-        const applicantId = String(application.applicantProfileId);
+        const applicantId = String(application.applicantOxyUserId);
         const applicant = applicants.get(applicantId) ?? null;
         return (
           <ApplicationCard
@@ -185,7 +185,7 @@ export default function LandlordApplicationsScreen() {
   const uniqueApplicantIds = useMemo(() => {
     const set = new Set<string>();
     for (const application of items) {
-      set.add(String(application.applicantProfileId));
+      set.add(String(application.applicantOxyUserId));
     }
     return Array.from(set);
   }, [items]);
@@ -221,7 +221,7 @@ export default function LandlordApplicationsScreen() {
     const trimmed = searchQuery.trim().toLowerCase();
     if (!trimmed) return items;
     return items.filter((application) => {
-      const applicant = applicantMap.get(String(application.applicantProfileId));
+      const applicant = applicantMap.get(String(application.applicantOxyUserId));
       const name = getProfileDisplayName(applicant).toLowerCase();
       return name.includes(trimmed);
     });

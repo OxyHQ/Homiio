@@ -1,27 +1,10 @@
-// Thin compatibility wrapper around refactored modular handlers.
 import * as profileHandlers from './profile';
 
-class ProfileController { }
+class ProfileController {}
 
-// Attach handlers to preserve existing interface (instance methods)
 const handlerNames: Array<keyof typeof profileHandlers> = [
-  'test',
-  'getOrCreateActiveProfile',
-  'getUserProfiles',
-  'getProfileByType',
-  'createProfile',
-  'updateProfile',
-  'deleteProfile',
-  'activateProfile',
-  'getProfileById',
-  'updateActiveProfile',
-  'getAgencyMemberships',
-  'addAgencyMember',
-  'removeAgencyMember',
-  'updateActiveTrustScore',
-  'updateTrustScore',
-  'getTrustScore',
-  'recalculateActiveTrustScore',
+  'getSidecarProfile',
+  'updateSidecarProfile',
   'getSavedProperties',
   'saveProperty',
   'unsaveProperty',
@@ -36,10 +19,6 @@ const handlerNames: Array<keyof typeof profileHandlers> = [
   'deleteSavedSearch',
   'updateSavedSearch',
   'toggleSearchNotifications',
-  'saveProfile',
-  'unsaveProfile',
-  'isProfileSaved',
-  'getSavedProfiles',
   'getRecentProperties',
   'trackPropertyView',
   'clearRecentProperties',

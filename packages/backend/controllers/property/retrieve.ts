@@ -19,7 +19,7 @@ export async function getPropertyById(req: ControllerRequest, res: ControllerRes
       if (oxyUserId) {
         const { Profile } = require('../../models');
         const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-        isOwner = Boolean(activeProfile) && property.profileId?.toString() === activeProfile._id.toString();
+        isOwner = Boolean(activeProfile) && property.oxyUserId?.toString() === activeProfile._id.toString();
       }
       if (!isOwner) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
     }
@@ -34,10 +34,10 @@ export async function getPropertyById(req: ControllerRequest, res: ControllerRes
         const { Profile } = require('../../models');
         const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
         if (activeProfile) {
-          const profileId = activeProfile._id;
+          const oxyUserId = activeProfile._id;
           RecentlyViewed.findOneAndUpdate(
-            { profileId, propertyId },
-            { profileId, propertyId, viewedAt: new Date() },
+            { oxyUserId, propertyId },
+            { oxyUserId, propertyId, viewedAt: new Date() },
             { upsert: true, new: true }
           ).catch((error: unknown) => {
             logger.warn('Failed to update recently viewed property', { propertyId, error });
@@ -66,13 +66,13 @@ export async function getMyProperties(req: ControllerRequest, res: ControllerRes
     }
     const skip = (page - 1) * limit;
     const [properties, total] = await Promise.all([
-      Property.find({ profileId: activeProfile._id, status: { $ne: 'archived' } })
+      Property.find({ oxyUserId: activeProfile._id, status: { $ne: 'archived' } })
         .populate(ADDRESS_GEO_POPULATE)
         .skip(skip)
         .limit(limit)
         .sort({ createdAt: -1 })
         .lean(),
-      Property.countDocuments({ profileId: activeProfile._id, status: { $ne: 'archived' } })
+      Property.countDocuments({ oxyUserId: activeProfile._id, status: { $ne: 'archived' } })
     ]);
     serializePropertyAddresses(properties);
     serializePropertyImages(properties);

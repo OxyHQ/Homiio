@@ -1,28 +1,20 @@
 const mongoose = require('mongoose');
 
 /**
- * A confirmed roommate relationship between two personal profiles.
- *
- * Created when a `RoommateRequest` is accepted (see roommateController). The two
- * participant ids are stored sorted (`profile1Id` < `profile2Id` by string) so a
- * pair maps to a single canonical row regardless of who sent the request; this
- * also lets the unique partial index below prevent two concurrent `active`
- * relationships for the same pair.
+ * Confirmed roommate relationship between two Oxy accounts.
+ * Participant ids are stored sorted lexicographically for canonical pairing.
  */
 const roommateRelationshipSchema = new mongoose.Schema({
-  profile1Id: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Profile',
+  participant1OxyUserId: {
+    type: String,
     required: true,
     index: true,
   },
-  profile2Id: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Profile',
+  participant2OxyUserId: {
+    type: String,
     required: true,
     index: true,
   },
-  /** The request whose acceptance created this relationship (audit link). */
   requestId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'RoommateRequest',
@@ -50,9 +42,8 @@ const roommateRelationshipSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-// At most one ACTIVE relationship per sorted pair.
 roommateRelationshipSchema.index(
-  { profile1Id: 1, profile2Id: 1 },
+  { participant1OxyUserId: 1, participant2OxyUserId: 1 },
   { unique: true, partialFilterExpression: { status: 'active' } }
 );
 

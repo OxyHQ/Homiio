@@ -24,7 +24,7 @@ const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'FAIR'] as const;
 // Define the Property interface
 export interface IProperty extends Document {
   _id: Types.ObjectId;
-  profileId?: Types.ObjectId;
+  oxyUserId?: Types.ObjectId;
   addressId: Types.ObjectId;
   source?: string;
   sourceId?: string;
@@ -172,7 +172,7 @@ export type PropertyQuery = Query<IProperty[], IProperty>;
 
 /** Custom statics defined on the runtime Property schema. */
 export interface IPropertyModel extends Model<IProperty> {
-  findByProfile(profileId: Types.ObjectId | string, options?: Record<string, unknown>): PropertyQuery;
+  findByOxyUserId(oxyUserId: Types.ObjectId | string, options?: Record<string, unknown>): PropertyQuery;
   findAvailable(filters?: Record<string, unknown>): PropertyQuery;
   search(searchParams: Record<string, unknown>): Promise<IProperty[]>;
   /** Returns a chainable Query (or an empty array when no addresses match). */
@@ -226,7 +226,7 @@ const shortTermRentSchema = new Schema({
 }, { _id: false });
 
 const PropertySchema = new Schema({
-  profileId: {
+  oxyUserId: {
     type: Schema.Types.ObjectId,
     ref: 'Profile',
     required: function(this: any) { return !this.isExternal; }
@@ -546,7 +546,7 @@ const PropertySchema = new Schema({
 });
 
 // Indexes for better query performance
-PropertySchema.index({ profileId: 1, status: 1 });
+PropertySchema.index({ oxyUserId: 1, status: 1 });
 PropertySchema.index({ addressId: 1 });
 PropertySchema.index({ type: 1, status: 1 });
 PropertySchema.index({ bedrooms: 1, bathrooms: 1 });

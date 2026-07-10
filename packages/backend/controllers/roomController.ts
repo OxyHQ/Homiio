@@ -10,8 +10,9 @@
 
 import type { Request, Response, NextFunction } from 'express';
 
-import { Property, Address, Profile } from '../models';
-import { PropertyType, PropertyStatus, ProfileType } from '@homiio/shared-types';
+import { Property, Address } from '../models';
+import { PropertyType, PropertyStatus } from '@homiio/shared-types';
+import { requireSessionOxyUserId } from '../utils/sessionUser';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
 import {
@@ -55,7 +56,7 @@ class RoomController {
    *
    * Public-facing listing: excludes draft rooms by default and supports the
    * common property filters (rent range, address/city, amenities, furnished,
-   * availability) plus owner scoping via `profileId`.
+   * availability) plus owner scoping via `oxyUserId`.
    */
   async getRooms(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
@@ -69,7 +70,7 @@ class RoomController {
         furnishedStatus,
         amenities,
         status,
-        profileId,
+        oxyUserId,
         sortBy = 'createdAt',
         sortOrder = 'desc',
       } = req.query;
@@ -80,7 +81,7 @@ class RoomController {
 
       const filters: Record<string, unknown> = { type: ROOM_TYPE };
 
-      if (profileId) filters.profileId = profileId;
+      if (oxyUserId) filters.oxyUserId = oxyUserId;
 
       // Resolve city/state to address ids via RELATIONAL geo, matching the
       // property list handler (no free-text city/state matching on the Address).
@@ -143,31 +144,8 @@ class RoomController {
    */
   async createRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const oxyUserId = req.user?.id || req.user?._id || req.userId;
-      if (!oxyUserId) {
-        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
-      }
+      const oxyUserId = requireSessionOxyUserId(req);
 
-      // Ownership: a room is ALWAYS owned by the authenticated user's active
-      // profile. The client cannot choose `profileId` (IDOR / mass-assignment) —
-      // it is resolved strictly server-side, creating the personal profile
-      // lazily if the user has none yet.
-      let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile) {
-        activeProfile = await Profile.create({
-          oxyUserId,
-          profileType: ProfileType.PERSONAL,
-          isPrimary: true,
-          isActive: true,
-          personalProfile: {},
-        });
-      }
-      const profileId = activeProfile._id;
-
-      // A room is ALWAYS part of a parent property the caller owns. Resolve and
-      // ownership-check the parent server-side — attaching a room to a property
-      // you don't own would be an IDOR. The parent is mandatory (the schema
-      // requires `parentPropertyId` for room-type properties).
       const { parentPropertyId } = req.body;
       if (!parentPropertyId) {
         return next(new AppError('parentPropertyId is required to create a room', 400, 'VALIDATION_ERROR'));
@@ -176,7 +154,7 @@ class RoomController {
       if (!parent) {
         return next(new AppError('Parent property not found', 404, 'PARENT_PROPERTY_NOT_FOUND'));
       }
-      if (String(parent.profileId) !== String(profileId)) {
+      if (String(parent.oxyUserId) !== String(oxyUserId)) {
         return next(new AppError('Access denied - you can only add rooms to your own property', 403, 'FORBIDDEN'));
       }
 
@@ -201,7 +179,7 @@ class RoomController {
 
       const room = new Property({
         ...roomData,
-        profileId,
+        oxyUserId,
         addressId,
         parentPropertyId: parent._id,
         type: ROOM_TYPE,
@@ -212,7 +190,7 @@ class RoomController {
 
       logger.info('Room created', {
         roomId: savedRoom._id,
-        profileId,
+        oxyUserId,
         monthlyAmount: savedRoom.longTermRent?.monthlyAmount,
       });
 
@@ -268,25 +246,16 @@ class RoomController {
    */
   async updateRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const oxyUserId = req.user?.id || req.user?._id || req.userId;
-      if (!oxyUserId) {
-        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
-      }
-
+      const oxyUserId = requireSessionOxyUserId(req);
       const { id } = req.params;
 
-      const room = await Property.findOne({ _id: id, type: ROOM_TYPE });
+      const room = await Property.findOne({ _id: id, type: ROOM_TYPE, oxyUserId });
       if (!room) {
         return next(new AppError('Room not found', 404, 'NOT_FOUND'));
       }
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile || String(room.profileId) !== String(activeProfile._id)) {
-        return next(new AppError('Access denied to this room', 403, 'FORBIDDEN'));
-      }
-
       // Whitelist the editable fields; never spread `req.body`. Type, ownership
-      // (`profileId`) and address linkage (`addressId`) are not whitelisted, so
+      // (`oxyUserId`) and address linkage (`addressId`) are not whitelisted, so
       // they are immutable through this endpoint — no owner reassignment or
       // mass-assignment is possible.
       const updateData = pickFields(req.body, EDITABLE_PROPERTY_FIELDS);
@@ -320,7 +289,7 @@ class RoomController {
 
       logger.info('Room updated', {
         roomId: id,
-        profileId: activeProfile._id,
+        oxyUserId,
         updatedFields: Object.keys(updateData),
       });
 
@@ -341,28 +310,19 @@ class RoomController {
    */
   async deleteRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const oxyUserId = req.user?.id || req.user?._id || req.userId;
-      if (!oxyUserId) {
-        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
-      }
-
+      const oxyUserId = requireSessionOxyUserId(req);
       const { id } = req.params;
 
-      const room = await Property.findOne({ _id: id, type: ROOM_TYPE });
+      const room = await Property.findOne({ _id: id, type: ROOM_TYPE, oxyUserId });
       if (!room) {
         return next(new AppError('Room not found', 404, 'NOT_FOUND'));
-      }
-
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile || String(room.profileId) !== String(activeProfile._id)) {
-        return next(new AppError('Access denied to this room', 403, 'FORBIDDEN'));
       }
 
       // Soft delete by archiving, consistent with property lifecycle.
       room.status = PropertyStatus.ARCHIVED;
       await room.save();
 
-      logger.info('Room deleted', { roomId: id, profileId: activeProfile._id });
+      logger.info('Room deleted', { roomId: id, oxyUserId });
 
       res.json(successResponse(null, 'Room deleted successfully'));
     } catch (error) {

@@ -168,7 +168,7 @@ export interface PropertyCharacteristics {
 export interface Property {
   _id: string; // MongoDB ObjectId
   id?: string; // Optional fallback
-  profileId?: string; // Optional for external properties
+  oxyUserId?: string; // Optional for external properties
   // External sourcing metadata
   source?: string; // Source name (e.g., 'fotocasa', 'internal')
   sourceId?: string; // External source ID
@@ -224,7 +224,7 @@ export interface Property {
    */
   images?: string[] | PropertyImage[] | PropertyImageRef[];
   status: PropertyStatus;
-  ownerId?: string; // Made optional since we use profileId
+  ownerId?: string; // Made optional since we use oxyUserId
   roomCount?: number;
   location?: GeoJSONPoint;
   // Additional property details

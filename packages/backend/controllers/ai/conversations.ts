@@ -11,7 +11,7 @@ export async function listConversations(req: Request, res: Response) {
   if (!activeProfile) return err(res, 404, 'No active profile found');
 
   const conversations = await Conversation.find({
-    profileId: activeProfile._id.toString(),
+    oxyUserId: activeProfile._id.toString(),
   }).sort({ updatedAt: -1 });
   const transformed = conversations.map((c: any) => {
     const o = c.toObject({ virtuals: true });
@@ -52,7 +52,7 @@ export async function createConversation(req: Request, res: Response) {
   }
 
   const conversation = new Conversation({
-    profileId: activeProfile._id.toString(),
+    oxyUserId: activeProfile._id.toString(),
     title: title || 'New Conversation',
     messages: conversationMessages.map(m => ({
       role: m.role || 'user',
@@ -102,7 +102,7 @@ export async function getConversation(req: Request, res: Response) {
 
   const conversation = await Conversation.findOne({
     _id: conversationId,
-    profileId: activeProfile._id.toString(),
+    oxyUserId: activeProfile._id.toString(),
   });
   if (!conversation) return err(res, 404, 'Conversation not found');
 
@@ -119,7 +119,7 @@ export async function updateConversation(req: Request, res: Response) {
   const { title, messages, status } = (req as any).body || {};
   const conversation = await Conversation.findOne({
     _id: (req as any).params.id,
-    profileId: activeProfile._id.toString(),
+    oxyUserId: activeProfile._id.toString(),
   });
   if (!conversation) return err(res, 404, 'Conversation not found');
 
@@ -149,7 +149,7 @@ export async function addConversationMessage(req: Request, res: Response) {
 
   const conversation = await Conversation.findOne({
     _id: (req as any).params.id,
-    profileId: activeProfile._id.toString(),
+    oxyUserId: activeProfile._id.toString(),
   });
   if (!conversation) return err(res, 404, 'Conversation not found');
 
@@ -169,7 +169,7 @@ export async function deleteConversation(req: Request, res: Response) {
 
   const deleted = await Conversation.findOneAndDelete({
     _id: (req as any).params.id,
-    profileId: activeProfile._id.toString(),
+    oxyUserId: activeProfile._id.toString(),
   });
   if (!deleted) return err(res, 404, 'Conversation not found');
 
@@ -185,7 +185,7 @@ export async function shareConversation(req: Request, res: Response) {
 
   const conversation = await Conversation.findOne({
     _id: (req as any).params.id,
-    profileId: activeProfile._id.toString(),
+    oxyUserId: activeProfile._id.toString(),
   });
   if (!conversation) return err(res, 404, 'Conversation not found');
 

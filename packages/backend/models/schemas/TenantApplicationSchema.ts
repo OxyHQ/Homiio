@@ -75,16 +75,14 @@ const tenantApplicationSchema = new mongoose.Schema({
     required: [true, 'Property ID is required'],
     index: true
   },
-  applicantProfileId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Profile',
-    required: [true, 'Applicant profile ID is required'],
+  applicantOxyUserId: {
+    type: String,
+    required: [true, 'Applicant Oxy user ID is required'],
     index: true
   },
-  landlordProfileId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Profile',
-    required: [true, 'Landlord profile ID is required'],
+  landlordOxyUserId: {
+    type: String,
+    required: [true, 'Landlord Oxy user ID is required'],
     index: true
   },
   moveInDate: {
@@ -148,8 +146,8 @@ const tenantApplicationSchema = new mongoose.Schema({
 
 // Indexes for landlord/applicant dashboards and property pipeline views.
 tenantApplicationSchema.index({ propertyId: 1, status: 1 });
-tenantApplicationSchema.index({ applicantProfileId: 1, status: 1 });
-tenantApplicationSchema.index({ landlordProfileId: 1, status: 1, submittedAt: -1 });
+tenantApplicationSchema.index({ applicantOxyUserId: 1, status: 1 });
+tenantApplicationSchema.index({ landlordOxyUserId: 1, status: 1, submittedAt: -1 });
 
 // Pre-save: stamp `decidedAt` when status transitions to a terminal state.
 const TERMINAL_STATUSES = new Set([

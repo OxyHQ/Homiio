@@ -3,10 +3,10 @@
  *
  * `createLease`/`updateLease` must NEVER spread `req.body` straight into the
  * Lease model: that would let a client set owner/system-managed fields
- * (`landlordProfileId`, `status`, `signatures`, `paymentSchedule`, …) and
+ * (`landlordOxyUserId`, `status`, `signatures`, `paymentSchedule`, …) and
  * reassign ownership or force a lease active (IDOR / privilege escalation).
  * Instead the controllers pick ONLY the explicit, user-editable fields listed
- * here. Everything else is resolved server-side (`landlordProfileId`,
+ * here. Everything else is resolved server-side (`landlordOxyUserId`,
  * `propertyId`, `status`), managed by dedicated endpoints (`signatures` via
  * sign, `paymentSchedule` via payments, `documents` via upload,
  * `terminationNotice` via terminate), or simply rejected.
@@ -16,12 +16,12 @@
  */
 
 /**
- * Fields a user may set when CREATING a lease. `propertyId`, `landlordProfileId`
+ * Fields a user may set when CREATING a lease. `propertyId`, `landlordOxyUserId`
  * and `status` are resolved server-side and are intentionally absent — the
  * controller sets them explicitly after ownership is verified.
  */
 export const CREATABLE_LEASE_FIELDS: readonly string[] = [
-  'tenantProfileId',
+  'tenantOxyUserId',
   'roomId',
   'coTenants',
   'leaseTerms',

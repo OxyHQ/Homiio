@@ -78,20 +78,20 @@ class NotificationDispatchService {
    * missing profile) is skipped. Returns the created document or `null`.
    */
   async createForProfile(
-    profileId: string | undefined | null,
+    oxyUserId: string | undefined | null,
     payload: DispatchPayload,
   ): Promise<INotification | null> {
-    if (!profileId) {
+    if (!oxyUserId) {
       return null;
     }
     try {
-      const profile = await Profile.findById(profileId)
+      const profile = await Profile.findById(oxyUserId)
         .select('oxyUserId')
         .lean<{ oxyUserId?: string } | null>();
 
       if (!profile?.oxyUserId) {
         logger.warn('Notification dispatch skipped: profile has no oxyUserId', {
-          profileId: String(profileId),
+          oxyUserId: String(oxyUserId),
           type: payload.type,
         });
         return null;
@@ -100,7 +100,7 @@ class NotificationDispatchService {
       return this.createForUser(profile.oxyUserId, payload);
     } catch (error) {
       logger.error('Notification dispatch (profile) failed', {
-        profileId: String(profileId),
+        oxyUserId: String(oxyUserId),
         type: payload.type,
         error: error instanceof Error ? error.message : String(error),
       });

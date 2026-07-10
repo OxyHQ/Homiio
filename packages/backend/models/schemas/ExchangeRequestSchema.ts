@@ -35,7 +35,7 @@ const exchangeRequestSchema = new mongoose.Schema({
     required: [true, 'Property ID is required'],
     index: true
   },
-  requesterProfileId: {
+  requesterOxyUserId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Profile',
     required: [true, 'Requester profile ID is required'],
@@ -92,7 +92,7 @@ const exchangeRequestSchema = new mongoose.Schema({
 
 // Indexes for host/requester dashboards and calendar-overlap checks.
 exchangeRequestSchema.index({ propertyId: 1, status: 1 });
-exchangeRequestSchema.index({ requesterProfileId: 1, status: 1, createdAt: -1 });
+exchangeRequestSchema.index({ requesterOxyUserId: 1, status: 1, createdAt: -1 });
 exchangeRequestSchema.index({ hostProfileId: 1, status: 1, createdAt: -1 });
 exchangeRequestSchema.index({ 'requestedWindow.start': 1, 'requestedWindow.end': 1 });
 

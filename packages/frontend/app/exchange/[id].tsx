@@ -79,7 +79,7 @@ export default function ExchangeRequestDetailScreen() {
     const profileId = primaryProfile._id ?? primaryProfile.id;
     if (!profileId) return null;
     if (String(request.hostProfileId) === String(profileId)) return 'host';
-    if (String(request.requesterProfileId) === String(profileId)) return 'guest';
+    if (String(request.requesterOxyUserId) === String(profileId)) return 'guest';
     return null;
   }, [request, primaryProfile]);
 

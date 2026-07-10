@@ -25,8 +25,8 @@ export interface RoommateRequest {
 
 export interface RoommateRelationship {
   id: string;
-  profile1Id: string;
-  profile2Id: string;
+  participant1OxyUserId: string;
+  participant2OxyUserId: string;
   status: 'active' | 'inactive' | 'ended';
   startDate: string;
   endDate?: string;

@@ -216,7 +216,7 @@ export default function () {
 
   // Public profile route (read-only)
   const profileController = require('../controllers/profileController');
-  router.get('/public/profiles/:profileId', asyncHandler(profileController.getProfileById));
+  router.get('/public/profiles/:oxyUserId', asyncHandler(profileController.getProfileById));
 
   // Public shared conversation endpoint (no authentication required)
   router.get('/ai/shared/:token', asyncHandler(async (req, res) => {

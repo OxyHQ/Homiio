@@ -2,7 +2,7 @@
  * External listing ingest path (fixture provider -> IngestionService).
  *
  * Proves the Phase-0 done criteria against the in-memory Mongo:
- *  - a fixture-provider job produces `isExternal` Properties (no `profileId`,
+ *  - a fixture-provider job produces `isExternal` Properties (no `oxyUserId`,
  *    `status: 'published'`, always a `sourceUrl`);
  *  - every source image is RE-HOSTED through the real Sharp/Image pipeline as an
  *    `Image` document, and the persisted `images[].url` points at OUR host — the
@@ -92,8 +92,8 @@ describe('external listing ingest (fixture -> IngestionService)', () => {
     expect(property.status).toBe('published');
     expect(property.isExternal).toBe(true);
     expect(property.sourceUrl).toBe(FIRST_SOURCE_URL);
-    // Aggregator listings are ownerless — no profileId is ever written.
-    expect(property.profileId).toBeFalsy();
+    // Aggregator listings are ownerless — no oxyUserId is ever written.
+    expect(property.oxyUserId).toBeFalsy();
     expect(property.offerings).toEqual(['long_term_rent']);
     expect(property.longTermRent.monthlyAmount).toBe(1450);
     expect(property.expiresAt).toBeTruthy();

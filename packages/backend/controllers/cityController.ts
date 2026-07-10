@@ -263,7 +263,7 @@ class CityController {
           .skip(skip)
           .limit(numericLimit)
           .populate(ADDRESS_GEO_POPULATE)
-          .populate('profileId')
+          .populate('oxyUserId')
           .select('-__v')
           .lean(),
         Property.countDocuments(query),

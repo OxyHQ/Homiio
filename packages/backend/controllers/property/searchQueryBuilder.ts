@@ -94,7 +94,7 @@ const EXCHANGE_MODE_VALUES: ReadonlySet<string> = new Set(Object.values(Exchange
 interface PropertyDoc {
   _id: Types.ObjectId;
   addressId: Types.ObjectId;
-  profileId: Types.ObjectId;
+  oxyUserId: Types.ObjectId;
   type: string;
   status: string;
   deletedAt: Date | null;

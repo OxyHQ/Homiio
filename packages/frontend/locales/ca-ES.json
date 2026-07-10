@@ -433,6 +433,7 @@
     "more": "més",
     "filters": {
       "listingType": "Tipus d'anunci",
+      "fairPrice": "Només preu just",
       "propertyType": "Tipus de propietat",
       "nightlyPrice": "Preu per nit",
       "monthlyPrice": "Preu mensual",
@@ -535,6 +536,7 @@
         "ecoFriendly": "Ecològic",
         "verified": "Verificat",
         "budget": "Menys de 1000 €",
+        "fairPrice": "Preu just",
         "apply": "Aplica",
         "searchWithCount": "Cerca amb {{count}} filtres",
         "advancedFilters": "Filtres Avançats"
@@ -679,6 +681,7 @@
     "sort": {
       "title": "Ordenar per",
       "recommended": "Recomanat",
+      "fairness": "Millor valor",
       "priceAsc": "Preu: de menor a major",
       "priceDesc": "Preu: de major a menor",
       "newest": "Més recents"
@@ -1433,6 +1436,16 @@
     "ethicalPricingWarning": "Your price exceeds the ethical maximum. Consider lowering it to make housing more accessible.",
     "warningBullet": "• {{warning}}",
     "ethicalPricing": "Ethical Pricing",
+    "priceEthics": {
+      "banner": {
+        "title": "No és un preu just",
+        "exceedsEthical": "Aquest preu supera el màxim ètic d'Homiio ({{max}}/mes).",
+        "exceedsEthicalGeneric": "Aquest preu supera el màxim ètic d'Homiio per a habitatges similars.",
+        "aboveMarket": "Aquest preu està un {{percent}}% per sobre d'habitatges similars a la zona.",
+        "aboveMarketGeneric": "Aquest preu està per sobre de la mitjana local per a habitatges similars.",
+        "generic": "Aquest anunci no compleix els criteris de preu just d'Homiio."
+      }
+    },
     "toast": {
       "createSuccess": "Propietat creada correctament",
       "updateSuccess": "Propietat actualitzada correctament",
@@ -2675,7 +2688,8 @@
       "exchange": "Intercanvi",
       "verified": "Verificat",
       "eco": "Ecològic",
-      "instantBook": "Reserva immediata"
+      "instantBook": "Reserva immediata",
+      "fairPrice": "Preu just"
     },
     "offering": {
       "stepTitle": "Com ho ofereixes?",

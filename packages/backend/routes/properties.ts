@@ -28,7 +28,7 @@ router.post("/:propertyId/report", asyncHandler(reportController.createListingRe
 router.get("/me/list", asyncHandler(propertyController.getMyProperties));
 
 // Owner properties (requires authentication)
-router.get("/owner/:profileId", asyncHandler(propertyController.getPropertiesByOwner));
+router.get("/owner/:oxyUserId", asyncHandler(propertyController.getPropertiesByOwner));
 
 export default function() {
   return router;

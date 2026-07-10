@@ -112,8 +112,8 @@ export default function ContractDetailScreen() {
     if (!lease || !primaryProfile) return null;
     const profileId = String(primaryProfile._id ?? primaryProfile.id ?? '');
     if (!profileId) return null;
-    if (lease.landlordProfileId === profileId) return 'landlord';
-    if (lease.tenantProfileId === profileId) return 'tenant';
+    if (lease.landlordOxyUserId === profileId) return 'landlord';
+    if (lease.tenantOxyUserId === profileId) return 'tenant';
     if ((lease.coTenants ?? []).some((ct) => ct.profileId === profileId)) return 'cotenant';
     return null;
   }, [lease, primaryProfile]);

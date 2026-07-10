@@ -182,7 +182,7 @@ export default function PropertyDetailPage() {
   const [exchangeSheetVisible, setExchangeSheetVisible] = useState(false);
 
   // Normalize landlord id (handles legacy MongoDB $oid envelopes).
-  const landlordProfileId = useMemo<string | undefined>(() => {
+  const landlordOxyUserId = useMemo<string | undefined>(() => {
     const profileId = apiProperty?.profileId;
     if (!profileId) return undefined;
     if (
@@ -203,12 +203,12 @@ export default function PropertyDetailPage() {
   // visitors and never 401.
   useEffect(() => {
     const fetchLandlordData = async () => {
-      if (!landlordProfileId) return;
+      if (!landlordOxyUserId) return;
       try {
-        const profile = await profileService.getPublicProfileById(landlordProfileId);
+        const profile = await profileService.getPublicProfileById(landlordOxyUserId);
         setLandlordProfile(profile);
         const { properties } = await propertyService.getOwnerProperties(
-          landlordProfileId,
+          landlordOxyUserId,
           typeof id === 'string' ? id : '',
         );
         setOwnerProperties(properties);
@@ -218,7 +218,7 @@ export default function PropertyDetailPage() {
       }
     };
     fetchLandlordData();
-  }, [landlordProfileId, id]);
+  }, [landlordOxyUserId, id]);
 
   // Property view-model derived from the API payload.
   const property = useMemo<PropertyDetailViewModel | null>(() => {
@@ -633,11 +633,11 @@ export default function PropertyDetailPage() {
             rightComponents: stickyHeaderVisible
               ? []
               : [
-                  landlordProfileId ? (
+                  landlordOxyUserId ? (
                     <Pressable
                       key="profile"
                       style={styles.headerButton}
-                      onPress={() => router.push(`/profile/${landlordProfileId}`)}
+                      onPress={() => router.push(`/profile/${landlordOxyUserId}`)}
                       accessibilityRole="button"
                       accessibilityLabel="Open host profile"
                     >

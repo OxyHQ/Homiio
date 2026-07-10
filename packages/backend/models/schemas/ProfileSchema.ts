@@ -691,11 +691,11 @@ profileSchema.statics.findActiveByOxyUserIdAndUpdate = function(
 
 profileSchema.statics.findByOxyUserIdAndUpdate = function(
   oxyUserId: string,
-  profileId: string,
+  profileDocId: string,
   updateData: Record<string, unknown>
 ) {
   return this.findOneAndUpdate(
-    { oxyUserId, _id: profileId },
+    { oxyUserId, _id: profileDocId },
     updateData,
     { new: true, runValidators: true }
   );
@@ -714,7 +714,7 @@ profileSchema.statics.findAgencyMemberships = function(oxyUserId: string, select
 };
 
 // Static method to safely activate a profile
-profileSchema.statics.activateProfile = async function(oxyUserId: string, profileId: string) {
+profileSchema.statics.activateProfile = async function(oxyUserId: string, profileDocId: string) {
   const session = await this.startSession();
   try {
     await session.withTransaction(async () => {
@@ -727,14 +727,14 @@ profileSchema.statics.activateProfile = async function(oxyUserId: string, profil
       
       // Then activate the specified profile
       await this.findByIdAndUpdate(
-        profileId,
+        profileDocId,
         { isActive: true },
         { session, new: true, runValidators: true }
       );
     });
     
     // Return the activated profile
-    return await this.findById(profileId);
+    return await this.findById(profileDocId);
   } finally {
     await session.endSession();
   }

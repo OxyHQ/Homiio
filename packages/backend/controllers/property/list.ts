@@ -100,7 +100,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       excludeIds,
       sortBy = 'createdAt',
       sortOrder = 'desc',
-      profileId,
+      oxyUserId,
       addressId,
       lat,
       lng,
@@ -120,7 +120,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     const filters: any = {};
     // Public feed: never surface soft-deleted (archived) listings.
     filters.deletedAt = null;
-    if (profileId) filters.profileId = profileId;
+    if (oxyUserId) filters.oxyUserId = oxyUserId;
     if (type) filters.type = type;
     
     // Handle direct addressId filter
@@ -448,12 +448,12 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
         if (activeProfile) {
           // Fetch recently viewed and saved in parallel (was sequential before)
           const [recentlyViewed, savedProperties] = await Promise.all([
-            RecentlyViewed.find({ profileId: activeProfile._id })
+            RecentlyViewed.find({ oxyUserId: activeProfile._id })
               .sort({ viewedAt: -1 })
               .limit(10)
               .select('propertyId')
               .lean(),
-            Saved.find({ profileId: activeProfile._id, targetType: 'property' })
+            Saved.find({ oxyUserId: activeProfile._id, targetType: 'property' })
               .select('targetId')
               .lean()
           ]);

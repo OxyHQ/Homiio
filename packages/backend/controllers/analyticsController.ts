@@ -74,7 +74,7 @@ class AnalyticsController {
       }
 
       const propertyIds = await Property.distinct('_id', {
-        profileId: activeProfile._id,
+        oxyUserId: activeProfile._id,
         status: { $ne: 'archived' },
       });
 
@@ -86,7 +86,7 @@ class AnalyticsController {
                 $group: {
                   _id: null,
                   total: { $sum: 1 },
-                  uniqueViewers: { $addToSet: '$profileId' },
+                  uniqueViewers: { $addToSet: '$oxyUserId' },
                 },
               },
               { $project: { _id: 0, total: 1, uniqueViewers: { $size: '$uniqueViewers' } } },
@@ -105,7 +105,7 @@ class AnalyticsController {
             ])
           : Promise.resolve([]),
         ViewingRequest.aggregate([
-          { $match: { ownerProfileId: activeProfile._id, createdAt: { $gte: since } } },
+          { $match: { ownerOxyUserId: activeProfile._id, createdAt: { $gte: since } } },
           { $group: { _id: '$status', count: { $sum: 1 } } },
         ]),
       ]);
@@ -179,7 +179,7 @@ class AnalyticsController {
         Property.countDocuments({}),
         City.countDocuments({}),
         Saved.countDocuments({ targetType: 'property' }),
-        Saved.distinct('profileId', { targetType: 'property' }).then((arr: unknown[]) => arr.length),
+        Saved.distinct('oxyUserId', { targetType: 'property' }).then((arr: unknown[]) => arr.length),
       ]);
 
       // Pricing aggregates

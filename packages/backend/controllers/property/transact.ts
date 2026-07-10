@@ -3,7 +3,7 @@
  *
  * Marks a listing as closed — rented, sold or exchanged — and fires the
  * Partner commission trigger. Owner-only: the caller must own the listing
- * (its `profileId` must match the caller's active profile). The underlying
+ * (its `oxyUserId` must match the caller's active profile). The underlying
  * {@link onPropertyTransacted} trigger is idempotent, so re-marking a property
  * never creates a second commission.
  */
@@ -53,7 +53,7 @@ export async function markPropertyTransacted(req: any, res: any, next: any) {
     if (!property) {
       return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));
     }
-    if (!property.profileId || property.profileId.toString() !== activeProfile._id.toString()) {
+    if (!property.oxyUserId || property.oxyUserId.toString() !== activeProfile._id.toString()) {
       return next(new AppError('Access denied - you can only close your own properties', 403, 'FORBIDDEN'));
     }
 

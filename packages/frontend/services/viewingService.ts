@@ -5,8 +5,8 @@ export type ViewingStatus = 'pending' | 'approved' | 'declined' | 'cancelled';
 export interface ViewingRequest {
   _id: string;
   propertyId: string;
-  requesterProfileId: string;
-  ownerProfileId: string;
+  requesterOxyUserId: string;
+  ownerOxyUserId: string;
   scheduledAt: string;
   date: string; // Derived from scheduledAt for convenience
   time: string; // Derived from scheduledAt for convenience

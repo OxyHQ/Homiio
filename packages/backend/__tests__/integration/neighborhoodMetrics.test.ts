@@ -81,12 +81,12 @@ async function seedProfile(): Promise<{ _id: unknown }> {
 }
 
 async function seedListing(
-  profileId: unknown,
+  oxyUserId: unknown,
   addressId: unknown,
   monthlyAmount: number,
 ): Promise<{ _id: unknown }> {
   return Property.create({
-    profileId,
+    oxyUserId,
     addressId,
     type: PropertyType.APARTMENT,
     bedrooms: 2,

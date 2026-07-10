@@ -37,8 +37,8 @@ export interface RoommateRequestDTO {
 /** A serialized roommate relationship as returned by `GET /roommates/relationships`. */
 export interface RoommateRelationshipDTO {
   id: string;
-  profile1Id?: string;
-  profile2Id?: string;
+  participant1OxyUserId?: string;
+  participant2OxyUserId?: string;
   profile1: RoommateProfile | null;
   profile2: RoommateProfile | null;
   status: 'active' | 'inactive' | 'ended';

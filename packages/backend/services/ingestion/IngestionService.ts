@@ -5,13 +5,13 @@
  * listing: it validates the listing, resolves the canonical Address, upserts a
  * Property by `(source, sourceId)` as an EXTERNAL aggregator listing
  * (`isExternal: true`, `status: 'published'`, always `sourceUrl`, no
- * `profileId`), and re-hosts every source image via {@link ExternalMediaIngest}
+ * `oxyUserId`), and re-hosts every source image via {@link ExternalMediaIngest}
  * — never hotlinking a portal CDN.
  *
  * IDOR / mass-assignment: nothing here trusts a caller-supplied owner. Every
  * field written to the Property is either derived from the validated
  * `NormalizedListing` or set server-side; owner/lifecycle fields are fixed
- * (`profileId` never set, `status` fixed to published, `isExternal` fixed true).
+ * (`oxyUserId` never set, `status` fixed to published, `isExternal` fixed true).
  */
 
 import type { Types } from 'mongoose';
@@ -224,7 +224,7 @@ export class IngestionService {
   /**
    * Build the server-controlled Property field set from the listing. Only
    * derived/whitelisted fields are written; owner/lifecycle fields are fixed
-   * (no `profileId`, `status` published, `isExternal` true).
+   * (no `oxyUserId`, `status` published, `isExternal` true).
    */
   private buildPropertyFields(
     listing: NormalizedListing,

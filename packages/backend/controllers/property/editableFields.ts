@@ -3,10 +3,10 @@
  *
  * The create/update controllers must NEVER spread `req.body` straight into the
  * Property model: that would let a client set owner/system-managed fields
- * (`profileId`, `isVerified`, `views`, partner attribution, etc.) and reassign
+ * (`oxyUserId`, `isVerified`, `views`, partner attribution, etc.) and reassign
  * ownership (IDOR / privilege escalation). Instead, every write path picks ONLY
  * the explicit, user-editable fields listed here. Anything not on this list is
- * resolved server-side (`profileId`, `addressId`), derived (`sale.pricePerSqm`),
+ * resolved server-side (`oxyUserId`, `addressId`), derived (`sale.pricePerSqm`),
  * system-managed (`views`, `rating`, timestamps), or simply rejected.
  *
  * Keep this list in sync with the user-facing fields of the Property schema in

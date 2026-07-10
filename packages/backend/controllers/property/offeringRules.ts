@@ -25,7 +25,7 @@ import {
  * Server-side property write payload as seen by these rules.
  *
  * It is an index-signature record (built by `pickFields` from a whitelisted
- * `req.body`, then augmented with server-resolved `addressId`/`profileId`), so
+ * `req.body`, then augmented with server-resolved `addressId`/`oxyUserId`), so
  * the named offering fields are typed for the rules below while any other
  * whitelisted field is carried through. The rules narrow every value internally,
  * so no `any` is needed at any call site.

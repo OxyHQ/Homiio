@@ -763,7 +763,7 @@ async function ensureSeedOwner(): Promise<string> {
   return String(owner._id);
 }
 
-async function upsertProperty(seed: SeedProperty, profileId: string): Promise<'inserted' | 'updated'> {
+async function upsertProperty(seed: SeedProperty, oxyUserId: string): Promise<'inserted' | 'updated'> {
   const address = await Address.findOrCreateCanonical({
     street: seed.address.street,
     number: seed.address.number,
@@ -796,7 +796,7 @@ async function upsertProperty(seed: SeedProperty, profileId: string): Promise<'i
     : undefined;
 
   const doc: Record<string, unknown> = {
-    profileId,
+    oxyUserId,
     isExternal: false,
     source: SEED_SOURCE,
     description: seed.description,
@@ -928,15 +928,15 @@ async function run(): Promise<void> {
   await seedCityCoverImages();
 
   console.log('[seed-properties] Ensuring seed owner profile...');
-  const profileId = await ensureSeedOwner();
-  console.log(`[seed-properties] Seed owner profileId=${profileId}`);
+  const oxyUserId = await ensureSeedOwner();
+  console.log(`[seed-properties] Seed owner oxyUserId=${oxyUserId}`);
 
   let inserted = 0;
   let updated = 0;
 
   for (const seed of properties) {
     try {
-      const result = await upsertProperty(seed, profileId);
+      const result = await upsertProperty(seed, oxyUserId);
       if (result === 'inserted') {
         inserted += 1;
       } else {

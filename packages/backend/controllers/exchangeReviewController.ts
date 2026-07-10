@@ -68,7 +68,7 @@ class ExchangeReviewController {
       const exchangeRequest = await ExchangeRequest.findById(id).lean();
       if (!exchangeRequest) return next(new AppError('Exchange request not found', 404, 'NOT_FOUND'));
 
-      const isRequester = String(exchangeRequest.requesterProfileId) === String(activeProfile._id);
+      const isRequester = String(exchangeRequest.requesterOxyUserId) === String(activeProfile._id);
       const isHost = String(exchangeRequest.hostProfileId) === String(activeProfile._id);
       if (!isRequester && !isHost) {
         return next(new AppError('Not authorized to review this exchange', 403, 'FORBIDDEN'));
@@ -81,7 +81,7 @@ class ExchangeReviewController {
       // The reviewer reviews the other party.
       const subjectProfileId = isRequester
         ? exchangeRequest.hostProfileId
-        : exchangeRequest.requesterProfileId;
+        : exchangeRequest.requesterOxyUserId;
 
       // Defensive pre-check: one review per reviewer per exchange. The unique
       // compound index is the race-safe backstop (handled below); this gives a
@@ -144,7 +144,7 @@ class ExchangeReviewController {
       const exchangeRequest = await ExchangeRequest.findById(id).lean();
       if (!exchangeRequest) return next(new AppError('Exchange request not found', 404, 'NOT_FOUND'));
 
-      const isRequester = String(exchangeRequest.requesterProfileId) === String(activeProfile._id);
+      const isRequester = String(exchangeRequest.requesterOxyUserId) === String(activeProfile._id);
       const isHost = String(exchangeRequest.hostProfileId) === String(activeProfile._id);
       if (!isRequester && !isHost) {
         return next(new AppError('Not authorized to view these reviews', 403, 'FORBIDDEN'));
@@ -161,20 +161,20 @@ class ExchangeReviewController {
   }
 
   /**
-   * GET /api/profiles/:profileId/exchange-reviews
+   * GET /api/profiles/:oxyUserId/exchange-reviews
    * Reviews where a profile is the SUBJECT, newest first, paginated, with an
    * aggregate average rating + count. Public to any authed user.
    */
   async getProfileExchangeReviews(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { profileId } = req.params;
+      const { oxyUserId } = req.params;
       const { page = 1, limit = DEFAULT_PAGE_SIZE } = req.query;
 
-      if (!Types.ObjectId.isValid(profileId)) {
+      if (!Types.ObjectId.isValid(oxyUserId)) {
         return next(new AppError('Invalid profile ID', 400, 'INVALID_ID'));
       }
 
-      const subjectId = new Types.ObjectId(profileId);
+      const subjectId = new Types.ObjectId(oxyUserId);
       const pageNumber = Math.max(1, parseInt(String(page), 10) || 1);
       const limitNumber = Math.min(MAX_PAGE_SIZE, Math.max(1, parseInt(String(limit), 10) || DEFAULT_PAGE_SIZE));
       const skip = (pageNumber - 1) * limitNumber;
