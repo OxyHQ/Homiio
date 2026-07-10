@@ -179,12 +179,10 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({
   const framed = isWeb && isScreenNotMobile;
 
   /**
-   * Web-only `position: sticky` lives outside the RN style system. We
-   * inject it via the style object and rely on react-native-web to
-   * pass it through to the underlying div. On native, this is a no-op.
-   * Opaque fill must match ContentPanel's `bg-card` (not pure white) so
-   * scrolled content doesn't flash a competing surface under the strip.
-   * `top` stays numeric from PANEL_TOP_INSET when framed.
+   * Solid card surface on web + native so scrolled feed content never
+   * shows through the strip. Web-only `position: sticky` lives outside
+   * the RN style system — inject via style and rely on react-native-web
+   * to pass it through. `top` stays numeric from PANEL_TOP_INSET when framed.
    */
   const stickyStyle =
     sticky && isWeb
@@ -192,14 +190,16 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({
           position: 'sticky',
           top: framed ? PANEL_TOP_INSET : 0,
           zIndex: 30,
-          backgroundColor: themeColors.card,
           borderBottomWidth: 1,
           borderBottomColor: colors.border,
         } as unknown as object)
       : null;
 
   return (
-    <View className={className ?? 'w-full py-1'} style={stickyStyle}>
+    <View
+      className={className ?? 'w-full py-1'}
+      style={[{ backgroundColor: themeColors.card }, stickyStyle]}
+    >
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
