@@ -25,7 +25,7 @@ import {
 
 import { createProperty } from '../../controllers/property/create';
 import { markPropertyTransacted } from '../../controllers/property/transact';
-import { createProfile, createAddress, models } from '../helpers/factories';
+import { createAddress, models } from '../helpers/factories';
 
 const partnerController = require('../../controllers/partnerController');
 const roomController = require('../../controllers/roomController');
@@ -170,10 +170,9 @@ describe('partner earn close-deal loop', () => {
     const referralCode: string = joinRes.body.data.partner.referralCode;
     const partner = await Partner.findOne({ referralCode });
 
-    const owner = await createProfile('oxy-owner');
     const address = await createAddress();
     const parent = await Property.create({
-      profileId: owner._id,
+      oxyUserId: 'oxy-owner',
       addressId: address._id,
       type: PropertyType.APARTMENT,
       bedrooms: 3,
@@ -186,7 +185,7 @@ describe('partner earn close-deal loop', () => {
     // never accepts a referral code, but the trigger must still fire if a room
     // is sourced).
     const room = await Property.create({
-      profileId: owner._id,
+      oxyUserId: 'oxy-owner',
       addressId: address._id,
       parentPropertyId: parent._id,
       type: PropertyType.ROOM,
@@ -221,7 +220,6 @@ describe('partner earn close-deal loop', () => {
     const propertyId: string = createRes.body.data.id ?? createRes.body.data._id;
 
     // A different, unrelated user cannot close the owner's deal.
-    await createProfile('oxy-intruder');
     const intruderApp = buildApp('oxy-intruder');
     const markRes = await request(intruderApp)
       .post(`/properties/${propertyId}/mark-transacted`)
