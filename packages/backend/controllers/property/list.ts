@@ -114,7 +114,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       excludeIds,
       sortBy = 'createdAt',
       sortOrder = 'desc',
-      profileId,
+      oxyUserId: ownerOxyUserId,
       addressId,
       lat,
       lng,
@@ -135,7 +135,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     const filters: any = {};
     // Public feed: never surface soft-deleted (archived) listings.
     filters.deletedAt = null;
-    if (profileId) filters.profileId = profileId;
+    if (ownerOxyUserId) filters.oxyUserId = String(ownerOxyUserId);
     if (type) filters.type = type;
     
     // Handle direct addressId filter

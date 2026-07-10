@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { useOxy } from '@oxyhq/services';
-import { useProfile } from '@/context/ProfileContext';
 import { propertyService } from '@/services/propertyService';
 
 /**
@@ -16,18 +15,15 @@ export function useHostStatus(): {
   isLoading: boolean;
 } {
   const { oxyServices, activeSessionId } = useOxy();
-  const { primaryProfile } = useProfile();
-  const profileId = primaryProfile?._id ?? primaryProfile?.id;
   const isAuthed = Boolean(oxyServices && activeSessionId);
 
   const query = useQuery({
-    queryKey: ['host-status', profileId ?? ''],
+    queryKey: ['host-status'],
     queryFn: async () => {
-      if (!profileId) return 0;
-      const result = await propertyService.getOwnerProperties(profileId);
+      const result = await propertyService.getMyProperties(1, 1);
       return result.total;
     },
-    enabled: isAuthed && Boolean(profileId),
+    enabled: isAuthed,
     staleTime: 1000 * 60 * 5,
   });
 

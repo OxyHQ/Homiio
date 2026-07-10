@@ -216,6 +216,7 @@ export default function () {
 
   // Public profile route (read-only)
   const profileController = require('../controllers/profileController');
+  router.get('/public/profiles/by-user/:oxyUserId', asyncHandler(profileController.getPublicProfileByOxyUserId));
   router.get('/public/profiles/:profileId', asyncHandler(profileController.getProfileById));
 
   // Public shared conversation endpoint (no authentication required)

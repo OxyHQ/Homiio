@@ -44,7 +44,6 @@ import { HostCalendarGrid, HostCalendarSelection } from '@/components/HostCalend
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
-import { useProfile } from '@/context/ProfileContext';
 import {
   reservationKeys,
   usePropertyAvailabilityQuery,
@@ -75,10 +74,7 @@ export default function HostCalendarScreen() {
   const router = useRouter();
   const { oxyServices, activeSessionId } = useOxy();
   const isAuthed = Boolean(oxyServices && activeSessionId);
-  const { primaryProfile } = useProfile();
-  const profileId = primaryProfile?._id ?? primaryProfile?.id;
-
-  const propertiesQuery = useUserProperties(profileId);
+  const propertiesQuery = useUserProperties();
   const properties = propertiesQuery.data?.properties ?? [];
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(
     null,

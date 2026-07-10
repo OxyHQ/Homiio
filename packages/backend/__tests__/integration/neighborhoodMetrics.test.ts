@@ -71,22 +71,24 @@ async function seedAddress(
   });
 }
 
-async function seedProfile(): Promise<{ _id: unknown }> {
-  return Profile.create({
-    oxyUserId: `oxy-${Math.random().toString(36).slice(2)}`,
+async function seedProfile(): Promise<{ _id: unknown; oxyUserId: string }> {
+  const oxyUserId = `oxy-${Math.random().toString(36).slice(2)}`;
+  const profile = await Profile.create({
+    oxyUserId,
     profileType: ProfileType.PERSONAL,
     isActive: true,
     personalProfile: {},
   });
+  return profile;
 }
 
 async function seedListing(
-  profileId: unknown,
+  oxyUserId: string,
   addressId: unknown,
   monthlyAmount: number,
 ): Promise<{ _id: unknown }> {
   return Property.create({
-    profileId,
+    oxyUserId,
     addressId,
     type: PropertyType.APARTMENT,
     bedrooms: 2,
@@ -103,7 +105,7 @@ describe('GET /api/neighborhoods/by-property/:propertyId', () => {
     const gracia = await seedNeighborhood(geo, 'Gracia');
     const profile = await seedProfile();
     const address = await seedAddress(geo, gracia._id);
-    const listing = await seedListing(profile._id, address._id, 1000);
+    const listing = await seedListing(String(profile.oxyUserId), address._id, 1000);
 
     const res = await request(buildApp()).get(`/api/neighborhoods/by-property/${listing._id}`);
 
@@ -127,7 +129,7 @@ describe('GET /api/neighborhoods/by-property/:propertyId', () => {
     const geo = await seedCity();
     const profile = await seedProfile();
     const address = await seedAddress(geo, undefined);
-    const listing = await seedListing(profile._id, address._id, 1000);
+    const listing = await seedListing(profile.oxyUserId, address._id, 1000);
 
     const res = await request(buildApp()).get(`/api/neighborhoods/by-property/${listing._id}`);
 
@@ -150,8 +152,8 @@ describe('GET /api/neighborhoods/by-name', () => {
     const profile = await seedProfile();
 
     // Gracia: one 800€ listing. Eixample: one 2000€ listing. City avg = 1400€.
-    await seedListing(profile._id, (await seedAddress(geo, gracia._id))._id, 800);
-    await seedListing(profile._id, (await seedAddress(geo, eixample._id))._id, 2000);
+    await seedListing(profile.oxyUserId, (await seedAddress(geo, gracia._id))._id, 800);
+    await seedListing(profile.oxyUserId, (await seedAddress(geo, eixample._id))._id, 2000);
 
     const res = await request(buildApp())
       .get('/api/neighborhoods/by-name')
@@ -184,9 +186,9 @@ describe('GET /api/neighborhoods/popular', () => {
     const profile = await seedProfile();
 
     // Gracia: 2 listings, Eixample: 1 listing.
-    await seedListing(profile._id, (await seedAddress(geo, gracia._id))._id, 900);
-    await seedListing(profile._id, (await seedAddress(geo, gracia._id))._id, 1100);
-    await seedListing(profile._id, (await seedAddress(geo, eixample._id))._id, 2000);
+    await seedListing(profile.oxyUserId, (await seedAddress(geo, gracia._id))._id, 900);
+    await seedListing(profile.oxyUserId, (await seedAddress(geo, gracia._id))._id, 1100);
+    await seedListing(profile.oxyUserId, (await seedAddress(geo, eixample._id))._id, 2000);
 
     const res = await request(buildApp())
       .get('/api/neighborhoods/popular')
@@ -222,7 +224,7 @@ describe('GET /api/neighborhoods/search', () => {
     const gracia = await seedNeighborhood(geo, 'Gracia');
     await seedNeighborhood(geo, 'Eixample');
     const profile = await seedProfile();
-    await seedListing(profile._id, (await seedAddress(geo, gracia._id))._id, 1000);
+    await seedListing(profile.oxyUserId, (await seedAddress(geo, gracia._id))._id, 1000);
 
     const res = await request(buildApp())
       .get('/api/neighborhoods/search')
@@ -268,7 +270,7 @@ describe('GET /api/neighborhoods/by-location', () => {
     const gracia = await seedNeighborhood(geo, 'Gracia');
     const profile = await seedProfile();
     const address = await seedAddress(geo, gracia._id, [2.17, 41.39]);
-    await seedListing(profile._id, address._id, 1000);
+    await seedListing(profile.oxyUserId, address._id, 1000);
 
     const res = await request(buildApp())
       .get('/api/neighborhoods/by-location')

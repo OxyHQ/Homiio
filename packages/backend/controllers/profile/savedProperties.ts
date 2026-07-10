@@ -259,30 +259,15 @@ export async function getProfileProperties(req: any, res: any, next: any) {
       );
     }
 
-    // Get the active profile for the current user
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-
-    if (!activeProfile) {
-      return res.json(
-        successResponse({
-          properties: [],
-          total: 0,
-          page: parseInt(page),
-          totalPages: 0
-        }, "No profile found for user")
-      );
-    }
-
-    // Query database for user's properties using profileId
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [properties, total] = await Promise.all([
-      Property.find({ profileId: activeProfile._id, status: { $ne: 'archived' } })
+      Property.find({ oxyUserId, status: { $ne: 'archived' } })
         .populate('addressId')
         .skip(skip)
         .limit(parseInt(limit))
         .sort({ createdAt: -1 })
         .lean(),
-      Property.countDocuments({ profileId: activeProfile._id, status: { $ne: 'archived' } })
+      Property.countDocuments({ oxyUserId, status: { $ne: 'archived' } })
     ]);
 
     const totalPages = Math.ceil(total / parseInt(limit));

@@ -30,7 +30,6 @@ import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGrid
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { useProfile } from '@/context/ProfileContext';
 import { useUserProperties, useDeleteProperty } from '@/hooks/usePropertyQueries';
 import { useMarkPropertyTransacted } from '@/hooks/usePartner';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
@@ -81,10 +80,7 @@ function terminalStatusFor(offerings: readonly string[] | undefined): PropertySt
 export default function MyPropertiesScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { primaryProfile } = useProfile();
-  const profileId = primaryProfile?._id ?? primaryProfile?.id;
-
-  const { data, isLoading, error, refetch } = useUserProperties(profileId);
+  const { data, isLoading, error, refetch } = useUserProperties();
   const { deleteProperty, loading: isDeleting } = useDeleteProperty();
   const markTransacted = useMarkPropertyTransacted();
 

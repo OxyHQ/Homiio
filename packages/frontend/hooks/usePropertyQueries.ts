@@ -9,6 +9,7 @@ import {
 import { toast } from '@/lib/sonner';
 import i18next from 'i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useOxy } from '@oxyhq/services';
 
 /** Area-scale lookups (price insights, nearby services) are comparatively
  *  expensive to compute server-side and change slowly (they aggregate a whole
@@ -325,70 +326,22 @@ export const useDeleteProperty = () => {
   };
 };
 
-// Hook for user's owned properties
-export const useUserProperties = (profileId?: string) => {
-  const { loading, error } = usePropertySelectors();
-  const { setLoading, setError } = usePropertyStore();
+// Hook for the authenticated user's owned properties (session oxyUserId)
+export const useUserProperties = () => {
+  const { oxyServices, activeSessionId } = useOxy();
+  const isAuthed = Boolean(oxyServices && activeSessionId);
 
-  const [userProperties, setUserProperties] = useState<Property[]>([]);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    total: 0,
-    totalPages: 1,
+  const query = useQuery({
+    queryKey: ['my-properties'],
+    queryFn: () => propertyService.getMyProperties(),
+    enabled: isAuthed,
+    staleTime: 1000 * 60,
   });
 
-  const fetchUserProperties = useCallback(
-    async (_page = 1, _limit = 10) => {
-      if (!profileId) {
-        console.warn('No profile ID provided to fetch user properties');
-        return { properties: [], total: 0, page: 1, totalPages: 1 };
-      }
-
-      try {
-        setLoading('properties', true);
-        setError(null);
-
-        // Use propertyService to get owner properties
-        const response = await propertyService.getOwnerProperties(profileId);
-
-        const result = {
-          properties: response.properties || [],
-          total: response.total || 0,
-          page: response.page || 1,
-          totalPages: response.totalPages || 1,
-        };
-
-        setUserProperties(result.properties);
-        setPagination({
-          page: result.page,
-          total: result.total,
-          totalPages: result.totalPages,
-        });
-
-        return result;
-      } catch (error: any) {
-        const errorMessage = error.message || 'Failed to fetch user properties';
-        setError(errorMessage);
-        return { properties: [], total: 0, page: 1, totalPages: 1 };
-      } finally {
-        setLoading('properties', false);
-      }
-    },
-    [setLoading, setError, profileId],
-  );
-
-  // Load properties on mount
-  useEffect(() => {
-    fetchUserProperties();
-  }, [fetchUserProperties]);
-
   return {
-    data: {
-      properties: userProperties,
-      ...pagination,
-    },
-    isLoading: loading.properties,
-    error,
-    refetch: () => fetchUserProperties(),
+    data: query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
   };
 };
