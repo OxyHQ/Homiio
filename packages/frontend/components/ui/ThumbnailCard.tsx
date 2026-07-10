@@ -2,10 +2,10 @@
  * ThumbnailCard — the horizontal "thumbnail + body" list card.
  *
  * The application, reservation, and exchange-request cards all rendered the
- * same lifted white surface (radius `lg`, `withShadow('sm')`, clipped corners,
- * `spacing.md` bottom margin) wrapping a fixed-size thumbnail next to a flexible
- * body, with an optional action row beneath. This owns that shell so the three
- * cards can't drift; each one supplies its own thumbnail node, body, press
+ * same flat white surface (radius `lg`, a hairline `colors.border`, clipped
+ * corners, `spacing.md` bottom margin) wrapping a fixed-size thumbnail next to a
+ * flexible body, with an optional action row beneath. This owns that shell so the
+ * three cards can't drift; each one supplies its own thumbnail node, body, press
  * handler, and optional actions.
  *
  * Layout:
@@ -23,7 +23,7 @@ import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { colors } from '@/styles/colors';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { radius, spacing } from '@/constants/styles';
 import { CardActionsFooter } from './CardActionsFooter';
 
 /** Edge length of the square thumbnail slot. */
@@ -69,7 +69,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     overflow: 'hidden',
     marginBottom: spacing.md,
-    ...withShadow('sm'),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   row: {
     flexDirection: 'row',

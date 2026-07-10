@@ -181,7 +181,6 @@ const styles = StyleSheet.create({
   },
   ctaActive: {
     opacity: 0.9,
-    transform: [{ scale: 0.99 }],
   },
   ctaDisabled: {
     opacity: 0.6,

@@ -382,6 +382,15 @@ const [pressed, setPressed] = useState(false);
 - Canonical template: `packages/frontend/components/search/SearchSummaryBar.tsx`
 - Audit: `grep -rn "style={({" app components --include=*.tsx` must return ZERO.
 
+## Masked Image Zoom (ZoomableImage)
+
+Cards NEVER scale on hover/press ("cutrada"). The app-wide Airbnb-2026 move is the **image zooming inside the card's rounded mask** — the photo scales, the card stays put, corners stay clipped. There is **one** primitive: `components/ui/ZoomableImage.tsx`.
+
+- Wrap the `<Image>` (not the card): `<ZoomableImage borderRadius aspectRatio active style>` renders a `overflow:'hidden'` mask around an inner wrapper that applies `transform:[{scale: active?1.05:1}]`. Overlays (badges, scrim, heart, price) stay **siblings of** `ZoomableImage` so they don't zoom.
+- `active` = internal web hover (`onPointerEnter/Leave`, owned by the component) **OR** an external signal — a parent Pressable's press (native zoom) or a carousel's shared hover. It's its own component, so no hooks-in-`.map`; static style arrays only (§NativeWind Pressable).
+- Web transition + Safari corner-clip fix are baked in (web-cast `transitionProperty`/`willChange`, the sanctioned `as unknown as ViewStyle` web-CSS pattern). NEVER add a per-component variant — reuse this one.
+- Wired in: `PropertyImageCarousel`, `PropertyCard` (static path), `CityShowcaseSection`, `Host/AgentCtaBanner`, tips `TipCard`, `RoomList`. Card/banner/tile surfaces are otherwise **flat** — no `transform:[{scale}]` card interaction anywhere (audit: `grep -rnE "transform.*scale" components app` shows only `ZoomableImage`'s image-zoom + genuinely animated worklets).
+
 ## Infinite Scroll / Pagination Primitive
 
 Homiio has **one** reusable infinite-scroll primitive — never hand-roll `ScrollView.onScroll` distance math again. It respects the "one scroll owner per surface" rule above (web sentinel, native handler) rather than copying Mention's `FlatList.onEndReached`.

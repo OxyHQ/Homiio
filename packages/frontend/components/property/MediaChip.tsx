@@ -16,14 +16,13 @@
  * present. Icon-only chips (no `label`) collapse to a square of that height.
  */
 import React from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
-import { boxShadow } from '@/styles/shadows';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -92,16 +91,15 @@ export const MediaChip: React.FC<MediaChipProps> = ({
 };
 
 const styles = StyleSheet.create({
-  // Shared backdrop + shape. The frosted near-white surface and soft shadow
-  // match the save heart so the whole overlay set reads as one family.
+  // Shared backdrop + shape. The frosted near-white surface (flat, no shadow)
+  // matches the save heart and the "new" chip so the whole overlay set reads as
+  // one flat Airbnb-style family.
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.pill,
     backgroundColor: 'rgba(255, 255, 255, 0.92)',
-    boxShadow: boxShadow({ y: 1, blur: 3, color: colors.COLOR_BLACK, opacity: 0.12 }),
-    ...(Platform.OS === 'web' ? null : { elevation: 2 }),
   },
   chipMedium: {
     height: CHIP_HEIGHT_MD,

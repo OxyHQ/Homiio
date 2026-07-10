@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from './ThemedText';
 import { colors } from '@/styles/colors';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { radius, spacing } from '@/constants/styles';
 import { formatLocalized } from '@/utils/dateLocale';
 
 export interface ReviewData {
@@ -365,7 +365,8 @@ const styles = StyleSheet.create({
         borderRadius: radius.lg,
         padding: spacing.xl,
         marginBottom: spacing.lg,
-        ...withShadow('sm'),
+        borderWidth: 1,
+        borderColor: colors.border,
     },
     compactCard: {
         padding: spacing.lg,

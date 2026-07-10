@@ -22,8 +22,9 @@ import {
   toNewsroomLocale,
   type TipArticle,
 } from '@/services/tipsService';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
+import { ZoomableImage } from '@/components/ui/ZoomableImage';
 
 interface TipCardProps {
   tip: TipArticle;
@@ -49,13 +50,17 @@ const TipCard: React.FC<TipCardProps> = ({ tip, onPress, featured = false }) => 
     >
       <View style={[styles.tipImageContainer, featured && styles.tipImageFeatured]}>
         {tip.coverImageUrl ? (
-          <Image
-            source={{ uri: tip.coverImageUrl }}
-            style={styles.tipImage}
-            contentFit="cover"
-            transition={200}
-            cachePolicy="memory-disk"
-          />
+          // The photo zooms inside its mask on hover/press; the category badge is
+          // a sibling above the zoom, so it stays put and unclipped.
+          <ZoomableImage active={pressed} style={styles.tipImageFill}>
+            <Image
+              source={{ uri: tip.coverImageUrl }}
+              style={styles.tipImage}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+            />
+          </ZoomableImage>
         ) : (
           <View style={styles.tipImagePlaceholder}>
             <Ionicons name="newspaper-outline" size={featured ? 48 : 32} color={colors.muted} />
@@ -265,7 +270,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
     borderRadius: radius.lg,
     overflow: 'hidden',
-    ...withShadow('sm'),
   },
   tipCardFeatured: {
     borderRadius: radius.xl,
@@ -276,6 +280,14 @@ const styles = StyleSheet.create({
   tipImageContainer: {
     position: 'relative',
     height: 180,
+  },
+  // The masked zoom wrapper fills the image box so the photo scales inside it.
+  tipImageFill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   tipImageFeatured: {
     height: 260,

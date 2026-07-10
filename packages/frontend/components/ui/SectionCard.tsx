@@ -31,8 +31,8 @@ interface SectionCardProps {
     titleStyle?: ViewStyle;
 
     /**
-     * Whether to show the card shadow/elevation
-     * @default true
+     * Whether to show the card shadow/elevation. Defaults to `false`
+     * (Airbnb-flat) — the card's hairline border provides its separation.
      */
     showShadow?: boolean;
 
@@ -61,7 +61,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({
     containerStyle,
     cardStyle,
     titleStyle,
-    showShadow = true,
+    showShadow = false,
     padding = 16,
     borderRadius = 12,
     marginBottom = 20,

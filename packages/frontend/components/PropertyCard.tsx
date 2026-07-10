@@ -1,8 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Image, StyleSheet, Pressable, TouchableOpacity, ViewStyle, Platform } from 'react-native';
+import { View, Image, StyleSheet, Pressable, TouchableOpacity, ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
-import { boxShadow } from '@/styles/shadows';
 import { radius, spacing } from '@/constants/styles';
 import { PriceUnit, Property } from '@homiio/shared-types';
 import {
@@ -21,6 +20,7 @@ import { CurrencyFormatter } from './CurrencyFormatter';
 import { OfferingBadge } from './property/OfferingBadge';
 import { MediaChip } from './property/MediaChip';
 import { PropertyImageCarousel } from './property/PropertyImageCarousel';
+import { ZoomableImage } from '@/components/ui/ZoomableImage';
 import { ThemedText } from '@/components/ThemedText';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,28 +30,8 @@ import { PropertyCardSkeleton } from './ui/skeletons/PropertyCardSkeleton';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
-const IS_WEB = Platform.OS === 'web';
-
 /** A listing counts as "new" (badge) while its `createdAt` is within this window. */
 const NEW_LISTING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
-
-/** Card scale while hovered (web pointer) — a subtle Airbnb-style lift. */
-const HOVER_SCALE = 1.02;
-/** Card scale while pressed — a tactile push-down (native + web tap). */
-const PRESS_SCALE = 0.97;
-
-/**
- * Web-only CSS transition so the hover/press scale eases instead of snapping.
- * `transitionProperty` is a web value RN's `ViewStyle` lacks, so this block is
- * web-cast (the sanctioned pattern for web-only CSS in this codebase).
- */
-const WEB_INTERACTION_TRANSITION: ViewStyle | null = IS_WEB
-  ? ({
-      transitionProperty: 'transform',
-      transitionDuration: '160ms',
-      transitionTimingFunction: 'ease-out',
-    } as unknown as ViewStyle)
-  : null;
 
 function shouldShowInstantBook(
   property: Property,
@@ -242,20 +222,20 @@ export function PropertyCard({
     [property, mode],
   );
 
-  // Hover (web pointer) + press micro-interaction. Static-array styles driven by
-  // state, never the NativeWind-incompatible function-form `style` (AGENTS.md
-  // §NativeWind Pressable). Web hover uses `onPointerEnter/Leave` on the outer
-  // card wrapper; press is threaded through the inner Pressables below.
-  const [hovered, setHovered] = useState(false);
+  // Native press-zoom for the static-image path: the photo zooms inside its
+  // rounded mask via `ZoomableImage` (the card itself never scales). Web hover is
+  // owned by `ZoomableImage` internally; this only tracks the touch press so the
+  // image eases back out on release. Static-array styles driven by state, never
+  // the NativeWind-incompatible function-form `style` (AGENTS.md §NativeWind
+  // Pressable). The prefetch still fires on press-in.
   const [pressed, setPressed] = useState(false);
-  const handleInteractionPressIn = useCallback(() => {
+  const handleImagePressIn = useCallback(() => {
     setPressed(true);
     handlePressIn();
   }, [handlePressIn]);
-  const handleInteractionPressOut = useCallback(() => {
+  const handleImagePressOut = useCallback(() => {
     setPressed(false);
   }, []);
-  const interactionScale = pressed ? PRESS_SCALE : hovered ? HOVER_SCALE : 1;
 
   // "New" freshness badge — pure frontend, no pagination risk. Memoized on
   // `createdAt` so `Date.now()` is captured once per listing (the 7-day boundary
@@ -634,18 +614,10 @@ export function PropertyCard({
 
   return (
     <View
-      // Web hover lift: pointer enter/leave fire on the card's own boundary
-      // (they don't bubble from inner children), mapping to mouseenter/mouseleave
-      // on RN-Web. No-op on native — touch never produces hover.
-      onPointerEnter={IS_WEB ? () => setHovered(true) : undefined}
-      onPointerLeave={IS_WEB ? () => setHovered(false) : undefined}
       style={[
         styles.container,
-        WEB_INTERACTION_TRANSITION,
         style as ViewStyle,
         isProcessing ? { opacity: 0.7 } : null,
-        // Interaction transform last so the hover/press scale always wins.
-        { transform: [{ scale: interactionScale }] },
       ]}
     >
       {useCarousel ? (
@@ -661,8 +633,7 @@ export function PropertyCard({
             aspectRatio={mediaAspectRatio}
             borderRadius={isGrid ? radius.photo : radius.lg}
             onPress={onPress}
-            onPressIn={handleInteractionPressIn}
-            onPressOut={handleInteractionPressOut}
+            onPressIn={handlePressIn}
             onLongPress={onLongPress}
             accessibilityLabel={propertyData.title}
           >
@@ -671,8 +642,7 @@ export function PropertyCard({
           <Pressable
             style={styles.contentPressable}
             onPress={onPress}
-            onPressIn={handleInteractionPressIn}
-            onPressOut={handleInteractionPressOut}
+            onPressIn={handlePressIn}
             onLongPress={onLongPress}
             accessibilityRole="button"
             accessibilityLabel={propertyData.title}
@@ -687,8 +657,8 @@ export function PropertyCard({
             orientation === 'horizontal' ? styles.horizontalBody : null,
           ]}
           onPress={onPress}
-          onPressIn={handleInteractionPressIn}
-          onPressOut={handleInteractionPressOut}
+          onPressIn={handleImagePressIn}
+          onPressOut={handleImagePressOut}
           onLongPress={onLongPress}
           accessibilityRole="button"
           accessibilityLabel={propertyData.title}
@@ -706,7 +676,11 @@ export function PropertyCard({
                   : { width: '100%', aspectRatio: 1 },
             ]}
           >
-            <Image source={propertyData.imageSource} style={styles.image} resizeMode="cover" />
+            {/* The photo zooms inside the rounded mask on hover/press; the card
+                never moves. Badges are siblings of the zoom so they stay put. */}
+            <ZoomableImage active={pressed} style={styles.imageZoom}>
+              <Image source={propertyData.imageSource} style={styles.image} resizeMode="cover" />
+            </ZoomableImage>
             {mediaBadges}
           </View>
 
@@ -823,6 +797,15 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  // The masked zoom wrapper fills the image box so the photo scales inside the
+  // card's rounded corners without nudging the layout.
+  imageZoom: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   content: {
     flex: 1,
     justifyContent: 'space-between',
@@ -926,27 +909,23 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   /**
-   * Freshness "New" chip — a solid brand pill leading the top-left stack. Sized
-   * to `CHIP_HEIGHT_MD` (28) so it aligns on the same baseline as the frosted
-   * `MediaChip`s beside it; a solid brand fill (vs. the frosted chips) makes the
-   * freshness signal read first. Uses `primaryForeground` on the primary fill.
+   * Freshness "New" chip — a compact frosted-white pill that matches the on-card
+   * Save heart (`rgba(255,255,255,0.95)`, black glyph) sitting in the opposite
+   * corner, so the overlay set reads as one flat Airbnb-style family. Shorter and
+   * tighter than a `MediaChip`; no shadow (Airbnb-flat).
    */
   newChip: {
-    height: 28,
-    paddingHorizontal: spacing.md,
+    height: 20,
+    paddingHorizontal: spacing.sm,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primaryColor,
-    ...(Platform.OS === 'web'
-      ? { boxShadow: boxShadow({ y: 1, blur: 3, color: colors.COLOR_BLACK, opacity: 0.12 }) }
-      : { boxShadow: boxShadow({ y: 1, blur: 3, color: colors.COLOR_BLACK, opacity: 0.1 }), elevation: 2 }),
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
   },
   newChipText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
-    color: colors.primaryForeground,
-    letterSpacing: 0.2,
+    color: colors.COLOR_BLACK,
   },
   // Property type in the meta line below the photo (icon + label), replacing the
   // former on-photo type chip.
@@ -981,9 +960,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderWidth: 1,
     borderColor: colors.COLOR_BLACK_LIGHT_6,
-    ...(Platform.OS === 'web'
-      ? { boxShadow: boxShadow({ y: 1, blur: 3, color: colors.COLOR_BLACK, opacity: 0.06 }) }
-      : { boxShadow: boxShadow({ y: 1, blur: 3, color: colors.COLOR_BLACK, opacity: 0.04 }), elevation: 1 }),
   },
   noteEmpty: {
     backgroundColor: colors.COLOR_BLACK_LIGHT_8,

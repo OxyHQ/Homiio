@@ -1,10 +1,11 @@
 /**
- * CardSurface — Airbnb-2026 lifted card primitive.
+ * CardSurface — Airbnb-2026 flat card primitive.
  *
- * Wraps section content in a white surface with the small Homiio shadow
- * (`withShadow('sm')`), the standard card radius, and zero border. Personal
- * screens compose these instead of hand-rolling `style={{ backgroundColor:
- * colors.white, borderRadius: …, shadow*: … }}` everywhere.
+ * Wraps section content in a white surface with the standard card radius and no
+ * border or shadow (Airbnb-flat, image-forward). Personal screens compose these
+ * instead of hand-rolling `style={{ backgroundColor: colors.white, borderRadius:
+ * … }}` everywhere. The card is FLAT by default; pass `flat={false}` only for the
+ * rare floating surface that genuinely needs the small elevation shadow.
  *
  * Usage:
  *   <CardSurface>
@@ -24,7 +25,7 @@ export interface CardSurfaceProps {
   style?: StyleProp<ViewStyle>;
   /** Override inner padding. Defaults to `spacing.xl` (20). */
   padding?: number;
-  /** Skip the elevation shadow (useful when the parent already provides one). */
+  /** Add the small elevation shadow. Defaults to `true` (flat). */
   flat?: boolean;
 }
 
@@ -32,7 +33,7 @@ export const CardSurface: React.FC<CardSurfaceProps> = ({
   children,
   style,
   padding = spacing.xl,
-  flat = false,
+  flat = true,
 }) => (
   <View
     style={[
