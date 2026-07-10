@@ -251,7 +251,13 @@ async function purgeLegacyFotocasaDiscoverJobs(discoverQueue: BullQueue<Discover
     await removeDiscoverJobOrForceFail(legacyJob, 'legacy market-wide fotocasa discover');
   }
 
-  const candidates = await discoverQueue.getJobs(['active', 'waiting', 'delayed'], 0, 200);
+  const activeJobs = await discoverQueue.getJobs(['active'], 0, 50);
+  for (const job of activeJobs) {
+    if (job.data.provider !== 'fotocasa' || job.data.city) continue;
+    await removeDiscoverJobOrForceFail(job, 'superseded active fotocasa discover scope');
+  }
+
+  const candidates = await discoverQueue.getJobs(['waiting', 'delayed'], 0, 200);
   for (const job of candidates) {
     if (job.data.provider !== 'fotocasa' || job.data.city) continue;
     await removeDiscoverJobOrForceFail(job, 'superseded fotocasa discover scope');
@@ -275,11 +281,16 @@ async function releaseStaleActiveDiscoverJobs(discoverQueue: BullQueue<DiscoverJ
 }
 
 /** Wire the BullMQ queues + workers and return a graceful-shutdown closer. */
-function startBullMq(): () => Promise<void> {
+async function startBullMq(): Promise<() => Promise<void>> {
   const connection = parseRedisConnection(config.redis.url);
   const prefix = config.listingWorker.queuePrefix;
 
   const fetchQueue = new Queue<FetchJobData>(QUEUE_NAMES.fetch, { connection, prefix });
+  const discoverQueue = new Queue<DiscoverJobData>(QUEUE_NAMES.discover, { connection, prefix });
+
+  // Purge ghost/scoped jobs before the discover worker can claim them.
+  await purgeLegacyFotocasaDiscoverJobs(discoverQueue);
+  await releaseStaleActiveDiscoverJobs(discoverQueue);
 
   const discoverWorker = new Worker<DiscoverJobData>(
     QUEUE_NAMES.discover,
@@ -329,11 +340,7 @@ function startBullMq(): () => Promise<void> {
     });
   }
 
-  const discoverQueue = new Queue<DiscoverJobData>(QUEUE_NAMES.discover, { connection, prefix });
-
   async function enqueueBootDiscovery(): Promise<void> {
-    await purgeLegacyFotocasaDiscoverJobs(discoverQueue);
-    await releaseStaleActiveDiscoverJobs(discoverQueue);
     await logQueueCounts(discoverQueue, fetchQueue);
     for (const data of bootDiscoverJobs()) {
       const jobId = discoverJobId(data);
@@ -403,7 +410,7 @@ async function main(): Promise<void> {
   let closer: (() => Promise<void>) | undefined;
 
   if (config.listingWorker.redisConfigured) {
-    closer = startBullMq();
+    closer = await startBullMq();
     logger.info('Listing worker started on BullMQ', { queues: Object.values(QUEUE_NAMES) });
   } else if (config.listingWorker.discoverOnBoot) {
     await runInlinePass();

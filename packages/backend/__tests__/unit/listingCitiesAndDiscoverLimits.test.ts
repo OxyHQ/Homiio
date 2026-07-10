@@ -71,7 +71,7 @@ describe('fotocasaCitiesFromEnv', () => {
     process.env.LISTING_ES_CITIES = 'madrid,barcelona,valencia,sevilla,malaga,bilbao,zaragoza,alicante,murcia,palma,las-palmas-de-gran-canaria';
     const cities = fotocasaCitiesFromEnv();
     expect(cities).toEqual([...FOTOCASA_DEFAULT_CITIES]);
-    expect(cities.length).toBe(10);
+    expect(cities.length).toBe(3);
   });
 });
 

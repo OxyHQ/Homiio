@@ -12,13 +12,6 @@ export const FOTOCASA_DEFAULT_CITIES: readonly string[] = [
   'madrid',
   'barcelona',
   'valencia',
-  'sevilla',
-  'malaga',
-  'bilbao',
-  'zaragoza',
-  'alicante',
-  'murcia',
-  'palma',
 ];
 
 function parseCityList(raw: string | undefined): string[] {
