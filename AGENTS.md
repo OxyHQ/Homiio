@@ -99,6 +99,8 @@ interface ListingProvider {
 
 `FetchRuntime` (shared, not per-plugin) owns: rate limiting, retries, circuit breaker, Playwright pool, proxy/managed ladder, challenge/CAPTCHA detection → requeue or escalate.
 
+- **Escalation tiers are WORKER-ONLY and env-gated (default OFF).** Build the worker runtime with `createListingFetchRuntimeFromEnv()` (never in the API). Browser tier: `LISTING_BROWSER_ENABLED=true` + Playwright installed (it is an OPTIONAL peer of `@homiio/listing-providers`, loaded via dynamic `import()`; absent → tier skipped, logged, CI still green). Managed tier: `LISTING_MANAGED_FETCH_URL` (+ optional `LISTING_MANAGED_FETCH_KEY`/`*_KEY_HEADER`/`*_KEY_PARAM`/`*_URL_PARAM`); unset → rung does not exist (never faked). The ladder keys tier availability off method presence, so an unprovisioned rung is skipped, not attempted-and-failed. Worker must `await runtimeHandle.shutdown()` to close the browser pool.
+
 ### BullMQ queues (Valkey via `REDIS_URL`)
 
 | Queue | Purpose |

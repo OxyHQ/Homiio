@@ -19,7 +19,6 @@ import {
 import type {
   DiscoverJob,
   ExternalListingRef,
-  FetchContext,
   ListingProvider,
   ProviderHealth,
   RawListing,
@@ -83,7 +82,7 @@ export class FixtureProvider implements ListingProvider {
     }
   }
 
-  async fetch(ref: ExternalListingRef, _ctx: FetchContext): Promise<RawListing> {
+  async fetch(ref: ExternalListingRef): Promise<RawListing> {
     const listing = this.listings.find((item) => item.id === ref.sourceId);
     if (!listing) {
       throw new Error(`fixture provider has no listing for sourceId "${ref.sourceId}"`);
