@@ -174,6 +174,18 @@ export interface Property {
   sourceId?: string; // External source ID
   sourceUrl?: string; // URL to the property on the source website
   isExternal?: boolean; // Whether this property comes from external source
+  /**
+   * Best-effort advertiser contact captured from portal AJAX for external
+   * listings. When present, the app can offer tel:/mailto:/WhatsApp CTAs
+   * instead of only opening `sourceUrl`.
+   */
+  externalContact?: {
+    phone?: string;
+    email?: string;
+    whatsapp?: string;
+    name?: string;
+    agencyName?: string;
+  };
   expiresAt?: string; // TTL for external properties
   /**
    * The property's address as serialized by the API: building-level fields and

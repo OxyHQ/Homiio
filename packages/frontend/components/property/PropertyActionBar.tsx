@@ -119,14 +119,26 @@ export const PropertyActionBar: React.FC<Props> = ({
                         style={{ flex: 1 }}
                     />
                 ) : isExternal ? (
-                    <ActionButton
-                        icon="open-outline"
-                        text={t('View on Source Website')}
-                        onPress={onContact}
-                        variant="primary"
-                        size="large"
-                        style={{ flex: 1 }}
-                    />
+                    <>
+                        <ActionButton
+                            icon="open-outline"
+                            text={t('View on Source Website')}
+                            onPress={onContact}
+                            variant="primary"
+                            size="large"
+                            style={{ flex: 1, marginRight: canCall ? 10 : 0 }}
+                        />
+                        {canCall ? (
+                            <ActionButton
+                                icon="call-outline"
+                                text={t('Call Now')}
+                                onPress={onCall}
+                                variant="secondary"
+                                size="large"
+                                style={{ flex: 1 }}
+                            />
+                        ) : null}
+                    </>
                 ) : exchangePrimary ? (
                     exchangePrimary
                 ) : salePrimary ? (

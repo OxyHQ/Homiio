@@ -30,6 +30,13 @@ export interface IProperty extends Document {
   sourceId?: string;
   sourceUrl?: string;
   isExternal?: boolean;
+  externalContact?: {
+    phone?: string;
+    email?: string;
+    whatsapp?: string;
+    name?: string;
+    agencyName?: string;
+  };
   expiresAt?: Date;
   type: PropertyType;
   housingType?: HousingType;

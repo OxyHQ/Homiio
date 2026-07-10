@@ -213,6 +213,23 @@ export class IngestionService {
     if (listing.floor !== undefined) fields.floor = listing.floor;
     if (listing.amenities !== undefined) fields.amenities = listing.amenities;
     if (listing.furnishedStatus !== undefined) fields.furnishedStatus = listing.furnishedStatus;
+    if (listing.contact) {
+      const externalContact: NonNullable<IProperty['externalContact']> = {};
+      if (listing.contact.phone) externalContact.phone = listing.contact.phone;
+      if (listing.contact.email) externalContact.email = listing.contact.email;
+      if (listing.contact.whatsapp) externalContact.whatsapp = listing.contact.whatsapp;
+      if (listing.contact.name) externalContact.name = listing.contact.name;
+      if (listing.contact.agencyName) externalContact.agencyName = listing.contact.agencyName;
+      if (
+        externalContact.phone ||
+        externalContact.email ||
+        externalContact.whatsapp ||
+        externalContact.name ||
+        externalContact.agencyName
+      ) {
+        fields.externalContact = externalContact;
+      }
+    }
 
     return fields as Partial<IProperty>;
   }

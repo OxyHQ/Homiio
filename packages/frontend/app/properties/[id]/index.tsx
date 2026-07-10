@@ -69,6 +69,7 @@ import { LandlordSection } from '@/components/property/LandlordSection';
 import { SindiSection } from '@/components/property/SindiSection';
 import { FraudWarning } from '@/components/property/FraudWarning';
 import { BasicInfoSection } from '@/components/property/BasicInfoSection';
+import { ExternalContactSection } from '@/components/property/ExternalContactSection';
 import { PropertyDetailsCard } from '@/components/property/PropertyDetailsCard';
 import { PropertyFeatures } from '@/components/property/PropertyFeatures';
 import { PricingDetails } from '@/components/property/PricingDetails';
@@ -313,6 +314,31 @@ export default function PropertyDetailPage() {
 
   const handleContact = useCallback(async () => {
     if (apiProperty?.isExternal) {
+      const external = apiProperty.externalContact;
+      try {
+        if (external?.phone) {
+          await Linking.openURL(`tel:${external.phone}`);
+          return;
+        }
+        if (external?.whatsapp) {
+          const wa = external.whatsapp;
+          const waUrl = /wa\.me\/|api\.whatsapp\.com/i.test(wa)
+            ? wa
+            : `https://wa.me/${wa.replace(/\D/g, '')}`;
+          await Linking.openURL(waUrl);
+          return;
+        }
+        if (external?.email) {
+          await Linking.openURL(`mailto:${external.email}`);
+          return;
+        }
+      } catch {
+        toast.error(
+          t('error.contact.openFailed', 'Could not open contact link') ||
+            'Could not open contact link',
+        );
+        return;
+      }
       if (!apiProperty.sourceUrl) {
         toast.error(
           t('error.source.noUrl', 'Source website URL not available') ||
@@ -351,6 +377,40 @@ export default function PropertyDetailPage() {
   }, [apiProperty, oxyServices, activeSessionId, t, router, rentalMode, property?.id]);
 
   const handleCall = useCallback(async () => {
+    if (apiProperty?.isExternal) {
+      const phone = apiProperty.externalContact?.phone;
+      const whatsapp = apiProperty.externalContact?.whatsapp;
+      if (phone) {
+        try {
+          await Linking.openURL(`tel:${phone}`);
+        } catch {
+          toast.error(
+            t('error.contact.openFailed', 'Could not open contact link') ||
+              'Could not open contact link',
+          );
+        }
+        return;
+      }
+      if (whatsapp) {
+        try {
+          const waUrl = /wa\.me\/|api\.whatsapp\.com/i.test(whatsapp)
+            ? whatsapp
+            : `https://wa.me/${whatsapp.replace(/\D/g, '')}`;
+          await Linking.openURL(waUrl);
+        } catch {
+          toast.error(
+            t('error.contact.openFailed', 'Could not open contact link') ||
+              'Could not open contact link',
+          );
+        }
+        return;
+      }
+      toast.error(
+        t('error.contact.noPhone', 'No phone number available for this listing') ||
+          'No phone number available for this listing',
+      );
+      return;
+    }
     if (!oxyServices || !activeSessionId) {
       toast.error(
         t('error.auth.required', 'Please sign in to call the owner') ||
@@ -406,7 +466,7 @@ export default function PropertyDetailPage() {
           'Could not open phone dialer',
       );
     }
-  }, [oxyServices, activeSessionId, landlordProfile, t]);
+  }, [oxyServices, activeSessionId, landlordProfile, t, apiProperty]);
 
   const handlePublicHousingApply = useCallback(async () => {
     const state = (apiProperty?.address?.regionName || '').toLowerCase();
@@ -699,6 +759,7 @@ export default function PropertyDetailPage() {
               hasActiveViewing={hasActiveViewing}
               onViewingsPress={() => router.push('/viewings')}
             />
+            <ExternalContactSection property={apiProperty} />
             {property.alsoAvailable ? (
               <View style={styles.alsoAvailableRow}>
                 <Ionicons
@@ -881,7 +942,11 @@ export default function PropertyDetailPage() {
         property={apiProperty}
         landlordProfile={landlordProfile}
         canContact={Boolean(oxyServices && activeSessionId)}
-        canCall={Boolean(oxyServices && activeSessionId && landlordProfile)}
+        canCall={
+          apiProperty?.isExternal
+            ? Boolean(apiProperty.externalContact?.phone || apiProperty.externalContact?.whatsapp)
+            : Boolean(oxyServices && activeSessionId && landlordProfile)
+        }
         onContact={handleContact}
         onCall={handleCall}
         onApplyPublic={handlePublicHousingApply}

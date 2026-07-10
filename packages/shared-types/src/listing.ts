@@ -20,7 +20,7 @@ import type { LongTermRent, ShortTermRent, PropertySale } from './property';
  * The markets a provider can serve. Drives discover scheduling (which cities /
  * bounding boxes a provider is asked to enumerate).
  */
-export type ListingMarket = 'ES' | 'US';
+export type ListingMarket = 'ES' | 'US' | 'IT' | 'GB' | 'DE' | 'RO' | 'FR';
 
 /**
  * Stable identifier for a listing provider. New portals are added here as their
@@ -34,7 +34,49 @@ export type ProviderId =
   | 'habitaclia'
   | 'blueground'
   | 'apartments_com'
-  | 'zillow';
+  | 'zillow'
+  | 'realtor_com'
+  | 'hotpads'
+  | 'redfin'
+  | 'pisos'
+  | 'milanuncios'
+  | 'yaencontre'
+  | 'indomio'
+  | 'idealista_it'
+  | 'immobiliare'
+  | 'casa_it'
+  | 'subito'
+  | 'rightmove'
+  | 'zoopla'
+  | 'onthemarket'
+  | 'openrent'
+  | 'immobilienscout24'
+  | 'immowelt'
+  | 'kleinanzeigen'
+  | 'storia'
+  | 'imobiliare_ro'
+  | 'olx_ro'
+  | 'bienici'
+  | 'leboncoin'
+  | 'seloger';
+
+/**
+ * Best-effort owner/agent contact captured from a portal when an endpoint
+ * exposes it. Missing fields are omitted — ingest must NOT fail when contact
+ * fetch 403s or the portal hides the number behind a form. Homiio prefers these
+ * for direct contact UI (call / WhatsApp / email) over opening `sourceUrl` alone.
+ */
+export interface NormalizedListingContact {
+  phone?: string;
+  email?: string;
+  /** WhatsApp number digits (no wa.me URL). */
+  whatsapp?: string;
+  /** Person or agency display name when the portal exposes one. */
+  name?: string;
+  agencyName?: string;
+  /** Whether the contact is a private owner or an agency (when known). */
+  kind?: 'owner' | 'agency' | 'private' | 'unknown';
+}
 
 /**
  * A remote source image for a listing, as reported by the provider. The `url`
@@ -75,8 +117,8 @@ export interface NormalizedListingAddress {
 
 /**
  * Provider-agnostic, first-party representation of one external listing, ready
- * for {@link https ingestion}. Every provider's `normalize()` returns this shape
- * so the ingest path is identical regardless of the source portal.
+ * for ingestion. Every provider's `normalize()` returns this shape so the ingest
+ * path is identical regardless of the source portal.
  */
 export interface NormalizedListing {
   /** Which provider produced this listing. */
@@ -104,6 +146,12 @@ export interface NormalizedListing {
   furnishedStatus?: 'furnished' | 'unfurnished' | 'partially_furnished' | 'not_specified';
   /** Source images fetched once at ingest and re-hosted; never hotlinked. */
   remoteImages: NormalizedRemoteImage[];
+  /**
+   * Best-effort advertiser contact from portal AJAX (phone / email / WhatsApp).
+   * Optional — many portals keep this DataDome-gated; when present Homiio can
+   * offer direct contact UI instead of only opening `sourceUrl`.
+   */
+  contact?: NormalizedListingContact;
   /**
    * Listing lifecycle status. External aggregator listings are always published
    * (visible in search) — the literal is fixed so a provider can't emit a

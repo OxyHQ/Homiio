@@ -275,6 +275,20 @@ const propertySchema = new mongoose.Schema({
     default: false,
     index: true
   },
+  /**
+   * Best-effort advertiser contact from portal AJAX (external listings only).
+   * Optional — many portals keep phones DataDome-gated.
+   */
+  externalContact: {
+    type: new mongoose.Schema({
+      phone: { type: String, maxlength: 40 },
+      email: { type: String, maxlength: 200 },
+      whatsapp: { type: String, maxlength: 40 },
+      name: { type: String, maxlength: 200 },
+      agencyName: { type: String, maxlength: 200 },
+    }, { _id: false }),
+    required: false,
+  },
   expiresAt: {
     type: Date,
     index: { expireAfterSeconds: 0 }, // TTL index; document auto-removed after this date
