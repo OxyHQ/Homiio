@@ -471,7 +471,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       try {
         const oxyUserId = req.user.id || req.user._id;
         const { Profile, RecentlyViewed, Saved } = require('../../models');
-        const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
+        const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
         if (activeProfile) {
           // Fetch recently viewed and saved in parallel (was sequential before)
           const [recentlyViewed, savedProperties] = await Promise.all([

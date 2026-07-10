@@ -1,3 +1,4 @@
+import { ProfileType } from '@homiio/shared-types';
 import { applyOfferingRulesForCreate, OfferingValidationError, type OfferingBearingPayload } from './offeringRules';
 import { CREATABLE_PROPERTY_FIELDS } from './editableFields';
 import { pickFields } from '../../utils/pickFields';
@@ -85,7 +86,16 @@ export async function createProperty(req: ControllerRequest, res: ControllerResp
     // it is resolved strictly server-side, creating the personal profile lazily
     // if the user has none yet.
     const { Profile } = require('../../models');
-    const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
+    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    if (!activeProfile) {
+      activeProfile = await Profile.create({
+        oxyUserId,
+        profileType: ProfileType.PERSONAL,
+        isPrimary: true,
+        isActive: true,
+        personalProfile: {},
+      });
+    }
 
     // Build the property from an explicit field whitelist; never spread
     // `req.body`. Owner/system fields (profileId, isVerified, views, partner
