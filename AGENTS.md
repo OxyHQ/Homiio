@@ -381,3 +381,14 @@ const [pressed, setPressed] = useState(false);
 - Hooks can't run inside `.map()` — extract a small component when a function-form `Pressable` lives in a list.
 - Canonical template: `packages/frontend/components/search/SearchSummaryBar.tsx`
 - Audit: `grep -rn "style={({" app components --include=*.tsx` must return ZERO.
+
+## Infinite Scroll / Pagination Primitive
+
+Homiio has **one** reusable infinite-scroll primitive — never hand-roll `ScrollView.onScroll` distance math again. It respects the "one scroll owner per surface" rule above (web sentinel, native handler) rather than copying Mention's `FlatList.onEndReached`.
+
+- **Web** (document scroll or nested `overflow:auto`): render `components/common/LoadMoreSentinel.tsx` at the list's end — a 1px `View` + `IntersectionObserver` (600px `rootMargin`), inert on native.
+- **Native** (the surface's own scroll owner): `hooks/useInfiniteScroll.ts` returns an `{ onScroll }` end-detect handler (0.7 threshold, re-arms on scroll-up) to spread onto the screen's `ScrollView`. The home page instead gets end-detection from `components/PageScrollView.tsx`'s Reanimated worklet (`runOnJS`) firing `onEndReached`/`onEndReachedThreshold`, sharing the same `END_REACHED_THRESHOLD` constant.
+- A screen wires **both** (sentinel + native handler); each platform only fires its own. The guarded loader (`if (hasNextPage && !isFetchingNextPage) fetchNextPage()`) stays in the consumer, not the primitive.
+- Canonical data hooks — reuse, don't write a new pagination engine: `hooks/usePropertySearch.ts` (search/browse/home feed) and `hooks/useInfiniteCityProperties.ts` (a city's listings), both `useInfiniteQuery`-based and page-based. Render results with `components/ui/PropertyResultsGrid.tsx` / `PropertyResultsGridSkeleton` — a `.map` grid that intentionally does not own scroll, for embedding in the single page scroller.
+- Wired in: home `app/(tabs)/index.tsx`, `components/search/SearchResultsView.tsx`, `app/properties/index.tsx`, `app/properties/type/[type].tsx`, `app/properties/city/[id].tsx`; `app/(tabs)/saved/index.tsx` does client-side incremental reveal (no backend pagination endpoint).
+- Backend list endpoints feeding an infinite grid should expose flat `hasMore`/`totalPages` aliases alongside the nested `pagination` object (keeps `normalizeEnvelope` intact) — see `/api/properties/search` and `cityController.getPropertiesByCity`.
