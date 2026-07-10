@@ -1,5 +1,5 @@
 import React, { useEffect, ReactNode } from 'react';
-import { View, Platform, Pressable, type ViewStyle } from 'react-native';
+import { View, Platform, Pressable, StyleSheet, type ViewStyle } from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -163,19 +163,16 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
             <View>
               {options?.title ? (
                 <ThemedText
-                  className={
-                    options?.subtitle
-                      ? 'pl-px text-sm font-extrabold text-foreground'
-                      : 'pl-px text-xl font-extrabold text-foreground'
-                  }
+                  style={[
+                    styles.topRowText,
+                    options?.subtitle ? styles.topRowTextWithSubtitle : null,
+                  ]}
                 >
                   {options.title}
                 </ThemedText>
               ) : null}
               {options?.subtitle ? (
-                <ThemedText className="text-sm font-normal text-muted-foreground">
-                  {options.subtitle}
-                </ThemedText>
+                <ThemedText style={styles.subtitleText}>{options.subtitle}</ThemedText>
               ) : null}
             </View>
           )}
@@ -184,19 +181,16 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
           <View className="flex-1 items-center">
             {options?.title ? (
               <ThemedText
-                className={
-                  options?.subtitle
-                    ? 'pl-px text-sm font-extrabold text-foreground'
-                    : 'pl-px text-xl font-extrabold text-foreground'
-                }
+                style={[
+                  styles.topRowText,
+                  options?.subtitle ? styles.topRowTextWithSubtitle : null,
+                ]}
               >
                 {options.title}
               </ThemedText>
             ) : null}
             {options?.subtitle ? (
-              <ThemedText className="text-sm font-normal text-muted-foreground">
-                {options.subtitle}
-              </ThemedText>
+              <ThemedText style={styles.subtitleText}>{options.subtitle}</ThemedText>
             ) : null}
           </View>
         )}
@@ -209,3 +203,20 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  topRowText: {
+    paddingLeft: 1,
+    fontSize: 20,
+    color: colors.COLOR_BLACK,
+    fontWeight: '800',
+  },
+  topRowTextWithSubtitle: {
+    fontSize: 14,
+  },
+  subtitleText: {
+    fontSize: 14,
+    color: colors.COLOR_BLACK_LIGHT_3,
+    fontWeight: '400',
+  },
+});

@@ -140,12 +140,13 @@ const CategoryItem: React.FC<CategoryItemProps> = ({ item, active, label, onPres
       </View>
       <Text
         numberOfLines={1}
-        className={
-          active
-            ? 'text-center text-[13px] font-bold text-foreground'
-            : 'text-center text-[13px] font-medium text-muted-foreground'
-        }
-        style={{ letterSpacing: tracker.wide }}
+        style={{
+          fontSize: 13,
+          fontWeight: active ? '700' : '500',
+          color: active ? colors.COLOR_BLACK : colors.COLOR_BLACK_LIGHT_3,
+          letterSpacing: tracker.wide,
+          textAlign: 'center',
+        }}
       >
         {label}
       </Text>
