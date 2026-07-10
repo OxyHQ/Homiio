@@ -227,9 +227,9 @@ Root shims (`contact.ts`, `classifieds.ts`, `jsonLd.ts`, `nextData.ts`, `cities.
 
 ### General classifieds portals (CRITICAL)
 
-Homiio is real estate only. **General classifieds** — milanuncios, kleinanzeigen, subito, leboncoin (marketplace), olx.ro — must **never** be site-wide crawled.
+Homiio is real estate only. **General classifieds** — milanuncios, kleinanzeigen, subito, leboncoin (marketplace), olx.ro, vivanuncios — must **never** be site-wide crawled.
 
-- **`discover()`**: housing/rent/sale category URLs or API params only — explicit per-portal category allowlist (DE kleinanzeigen, IT subito, FR leboncoin, RO olx.ro, ES milanuncios).
+- **`discover()`**: housing/rent/sale category URLs or API params only — explicit per-portal category allowlist (DE kleinanzeigen, IT subito, FR leboncoin, RO olx.ro, ES milanuncios, MX vivanuncios).
 - **`normalize()`**: reject non-housing listings (cars, jobs, furniture, …); ingest must skip, never upsert.
 - **Tests**: housing fixture passes normalize; non-housing category fixture is rejected.
 
