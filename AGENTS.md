@@ -259,9 +259,14 @@ PROVIDER_MERCADOLIBRE_AR_ENABLED=true
 PROVIDER_ZONAPROP_ENABLED=true
 PROVIDER_ARGENPROP_ENABLED=true
 PROVIDER_PROPERATI_ENABLED=true
+PROVIDER_PLUSVALIA_ENABLED=true
+PROVIDER_MERCADOLIBRE_EC_ENABLED=true
+PROVIDER_PROPERATI_EC_ENABLED=true
 ```
 
 Argentina (`LISTING_AR_CITIES`): Zonaprop / Argenprop (Navent `rplis-api` + `__PRELOADED_STATE__` via shared `navent` / `naventProvider` — Cloudflare, keep OFF until sticky residential clears), MercadoLibre inmuebles (housing-only; cold HTML search+detail verified — enable), Properati (`__NEXT_DATA__` / JSON-LD via shared modules — Cloudflare, OFF). MercadoLibre uses shared `mercadolibre` / `mercadolibreProvider` (also EC). Never site-wide crawl ML.
+
+Ecuador (`LISTING_EC_CITIES`): Plusvalía (thin `createNaventProvider` — Cloudflare, OFF until sticky residential), MercadoLibre EC inmuebles (thin `createMercadolibreProvider` — housing-only, OFF until Playwright+proxy probe), Properati EC (JSON-LD fixtures — ALB 403, keep OFF). No duplicated parsers — reuse `session` / `jsonLd` / `nextData` / `contact` / `classifieds` / `navent` / `mercadolibre`. inmo.ec not viable.
 
 Romania (`LISTING_RO_CITIES`): Storia (`__NEXT_DATA__` + session), Imobiliare.ro (Inertia search + JSON-LD detail), OLX.ro (housing `/imobiliare/…` only). Shared parsers live in `@homiio/listing-providers` `src/parse/` (`jsonLd`, `nextData`, `contact`, `classifieds`, `cities`, `price`) plus root `html` / `slug` / `navent` / `mercadolibre` — providers must not duplicate them.
 

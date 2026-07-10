@@ -7,32 +7,13 @@
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
 import { buildContact } from '../../../parse/contact';
+import { asNumberUs as asNumber, asString, isRecord } from '../../../parse/guards';
+import { parseNextData } from '../../../parse/nextData';
 import { isGbHousingType, isOtmHousingPropSubId } from '../housing';
 import { ONTHEMARKET_BASE_URL } from './fixtures';
 
-const NEXT_DATA_RE = /<script[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i;
 const DETAIL_ID_RE = /\/details\/(\d+)/g;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function asString(value: unknown): string | undefined {
-  if (typeof value === 'string' && value.trim().length > 0) return value.trim();
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  return undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const cleaned = value.replace(/[^0-9.]/g, '');
-    if (!cleaned) return undefined;
-    const parsed = Number.parseFloat(cleaned);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  return undefined;
-}
 
 export interface OnTheMarketListingJson {
   sourceId: string;
@@ -133,17 +114,11 @@ function priceAmountFromProperty(prop: Record<string, unknown>): number | undefi
 
 /** Parse detail `__NEXT_DATA__` redux property JSON. */
 export function parseOnTheMarketDetail(html: string, url: string): OnTheMarketListingJson {
-  const match = NEXT_DATA_RE.exec(html);
-  if (!match?.[1]) {
+  const parsed = parseNextData(html);
+  if (!parsed) {
     throw new Error(`onthemarket: no __NEXT_DATA__ at ${url}`);
   }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(match[1]);
-  } catch {
-    throw new Error(`onthemarket: invalid __NEXT_DATA__ at ${url}`);
-  }
-  const props = isRecord(parsed) ? parsed.props : undefined;
+  const props = parsed.props;
   const redux = isRecord(props) ? props.initialReduxState : undefined;
   const prop = isRecord(redux) && isRecord(redux.property) ? redux.property : undefined;
   if (!prop) {

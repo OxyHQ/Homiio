@@ -7,7 +7,9 @@
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
 import { contactFromAdvertiser, normalizePhone } from '../../../parse/contact';
+import { asNumber as parseNumber, asRecord, asString } from '../../../parse/guards';
 import { extractItSchemaListings, pickItListing } from '../../../parse/jsonLd';
+import { parseNextData } from '../../../parse/nextData';
 import { SUBITO_BASE_URL, SUBITO_HOUSING_CATEGORIES } from './fixtures';
 
 export interface SubitoRaw {
@@ -29,32 +31,14 @@ export interface SubitoRaw {
   contact?: NormalizedListingContact;
 }
 
-const NEXT_DATA_RE = /<script[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i;
 const HOUSING_DETAIL_RE =
   /href=["']([^"']*\/(?:appartamenti|camere-posti-letto|ville-singole-e-a-schiera|terreni-e-rustici|garage-e-box|uffici-e-locali-commerciali)\/[^"']*-(\d{6,})\.htm)["']/gi;
 
 const HOUSING_SET = new Set<string>(SUBITO_HOUSING_CATEGORIES);
 
-function asRecord(value: unknown): Record<string, unknown> | undefined {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : undefined;
-}
-
-function asString(value: unknown): string | undefined {
-  if (typeof value === 'string' && value.trim()) return value.trim();
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  return undefined;
-}
-
+/** Coerce portal feature/price blobs that wrap the number in `{ value }`. */
 function asNumber(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const parsed = Number.parseFloat(value.replace(/[^0-9.,-]/g, '').replace(',', '.'));
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  if (asRecord(value)) return asNumber(asRecord(value)?.value);
-  return undefined;
+  return parseNumber(value) ?? parseNumber(asRecord(value)?.value);
 }
 
 export function isSubitoHousingCategory(uriOrPath: string): boolean {
@@ -154,10 +138,13 @@ export function parseSubitoSearchJson(body: string): { sourceId: string; url: st
 }
 
 export function parseSubitoSearch(html: string): { sourceId: string; url: string }[] {
-  const next = html.match(NEXT_DATA_RE)?.[1];
+  const next = parseNextData(html);
   if (next) {
-    const fromJson = parseSubitoSearchJson(next);
-    if (fromJson.length > 0) return fromJson;
+    const out = new Map<string, string>();
+    collectHousingRefs(next, out);
+    if (out.size > 0) {
+      return [...out.entries()].map(([sourceId, url]) => ({ sourceId, url }));
+    }
   }
   const seen = new Set<string>();
   const refs: { sourceId: string; url: string }[] = [];
@@ -267,11 +254,11 @@ function findAdNodes(value: unknown, out: Record<string, unknown>[]): void {
 }
 
 export function parseSubitoDetail(html: string, url: string): SubitoRaw {
-  const next = html.match(NEXT_DATA_RE)?.[1];
+  const next = parseNextData(html);
   if (next) {
     try {
       const ads: Record<string, unknown>[] = [];
-      findAdNodes(JSON.parse(next) as unknown, ads);
+      findAdNodes(next, ads);
       for (const ad of ads) {
         const listing = listingFromAd(ad, url);
         if (!isSubitoHousingCategory(listing.categoryUri || listing.url)) {

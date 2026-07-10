@@ -8,32 +8,13 @@
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
 import { buildContact, contactFromUnknown } from '../../../parse/contact';
+import { asNumberUs as asNumber, asString, isRecord } from '../../../parse/guards';
+import { parseNextData } from '../../../parse/nextData';
 import { isGbHousingType } from '../housing';
 import { ZOOPLA_BASE_URL } from './fixtures';
 
-const NEXT_DATA_RE = /<script[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i;
 const DETAIL_RE = /https?:\/\/www\.zoopla\.co\.uk\/(?:to-rent|for-sale)\/details\/(\d+)\/?/gi;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function asString(value: unknown): string | undefined {
-  if (typeof value === 'string' && value.trim().length > 0) return value.trim();
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  return undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const cleaned = value.replace(/[^0-9.]/g, '');
-    if (!cleaned) return undefined;
-    const parsed = Number.parseFloat(cleaned);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  return undefined;
-}
 
 export interface ZooplaListingJson {
   sourceId: string;
@@ -85,15 +66,8 @@ export function parseZooplaSearch(html: string): { sourceId: string; url: string
     byId.set(sourceId, { url: zooplaDetailUrl(sourceId, kind), kind });
   }
   // Also try __NEXT_DATA__ listing cards when present.
-  const next = NEXT_DATA_RE.exec(html);
-  if (next?.[1]) {
-    try {
-      const parsed = JSON.parse(next[1]) as unknown;
-      collectZooplaListingIds(parsed, byId, 0);
-    } catch {
-      // ignore
-    }
-  }
+  const parsed = parseNextData(html);
+  if (parsed) collectZooplaListingIds(parsed, byId, 0);
   return [...byId.entries()].map(([sourceId, value]) => ({
     sourceId,
     url: value.url,
@@ -185,10 +159,9 @@ export function parseZooplaDetail(html: string, url: string, kindHint: 'rent' | 
   const sourceId = zooplaSourceIdFromUrl(url);
   if (!sourceId) throw new Error(`zoopla: cannot parse source id from ${url}`);
 
-  const next = NEXT_DATA_RE.exec(html);
-  if (next?.[1]) {
+  const parsed = parseNextData(html);
+  if (parsed) {
     try {
-      const parsed = JSON.parse(next[1]) as unknown;
       const node = findListingNode(parsed);
       if (node) {
         const propertyType =
@@ -201,6 +174,19 @@ export function parseZooplaDetail(html: string, url: string, kindHint: 'rent' | 
         const address = isRecord(node.address) ? node.address : undefined;
         const location = isRecord(node.location) ? node.location : isRecord(node.coordinates) ? node.coordinates : undefined;
         const agent = node.branch ?? node.agent ?? node.advertiser;
+        const contact = isRecord(agent)
+          ? buildContact({
+              phone: asString(agent.telephone) ?? asString(agent.phone),
+              email: asString(agent.email),
+              agencyName: asString(agent.name) ?? asString(agent.displayName),
+              kind: 'agency',
+            })
+          : contactFromUnknown(agent) ??
+            buildContact({
+              phone: asString(node.phone),
+              agencyName: asString(node.agentName),
+              kind: 'agency',
+            });
         return {
           sourceId,
           url: zooplaDetailUrl(sourceId, kind),
@@ -218,11 +204,7 @@ export function parseZooplaDetail(html: string, url: string, kindHint: 'rent' | 
           latitude: location ? asNumber(location.latitude) ?? asNumber(location.lat) : undefined,
           longitude: location ? asNumber(location.longitude) ?? asNumber(location.lng) ?? asNumber(location.lon) : undefined,
           images: imagesFromNode(node),
-          contact: contactFromUnknown(agent) ?? buildContact({
-            phone: asString(node.phone),
-            agencyName: asString(node.agentName),
-            kind: 'agency',
-          }),
+          contact,
         };
       }
     } catch (error) {

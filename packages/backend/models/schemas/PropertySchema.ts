@@ -286,6 +286,7 @@ const propertySchema = new mongoose.Schema({
       whatsapp: { type: String, maxlength: 40 },
       name: { type: String, maxlength: 200 },
       agencyName: { type: String, maxlength: 200 },
+      kind: { type: String, enum: ['owner', 'agency', 'private', 'unknown'] },
     }, { _id: false }),
     required: false,
   },

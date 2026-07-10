@@ -4,6 +4,8 @@
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
 import { contactFromAdvertiser, mergeContact } from '../../../parse/contact';
+import { asNumber, asRecord, asString } from '../../../parse/guards';
+import { parseNextData } from '../../../parse/nextData';
 import { IMMOBILIARE_BASE_URL } from './fixtures';
 
 export interface ImmobiliareRaw {
@@ -31,29 +33,8 @@ export interface ImmobiliareRaw {
   contact?: NormalizedListingContact;
 }
 
-const NEXT_DATA_RE = /<script[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i;
 const DETAIL_LINK_RE = /\/annunci\/(\d+)\/?/gi;
 
-function asRecord(value: unknown): Record<string, unknown> | undefined {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const parsed = Number.parseFloat(value.replace(/[^0-9.,-]/g, '').replace(',', '.'));
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  return undefined;
-}
-
-function asString(value: unknown): string | undefined {
-  if (typeof value === 'string' && value.trim()) return value.trim();
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  return undefined;
-}
 
 export function immobiliareSourceIdFromUrl(url: string): string | undefined {
   return url.match(/\/annunci\/(\d+)/)?.[1];
@@ -254,10 +235,12 @@ export function parseImmobiliareSearchJson(body: string): { sourceId: string; ur
 /** Parse search HTML: prefer `__NEXT_DATA__`, merge with `/annunci/<id>/` links. */
 export function parseImmobiliareSearch(html: string): { sourceId: string; url: string }[] {
   const seen = new Map<string, string>();
-  const next = html.match(NEXT_DATA_RE)?.[1];
+  const next = parseNextData(html);
   if (next) {
-    for (const ref of parseImmobiliareSearchJson(next)) {
-      seen.set(ref.sourceId, ref.url);
+    const listings: ImmobiliareRaw[] = [];
+    collectListings(next, listings);
+    for (const listing of listings) {
+      seen.set(listing.sourceId, listing.url);
     }
   }
   for (const match of html.matchAll(DETAIL_LINK_RE)) {
@@ -270,15 +253,9 @@ export function parseImmobiliareSearch(html: string): { sourceId: string; url: s
 
 /** Parse detail HTML — `__NEXT_DATA__` is required (JSON-first). */
 export function parseImmobiliareDetail(html: string, url: string): ImmobiliareRaw {
-  const next = html.match(NEXT_DATA_RE)?.[1];
-  if (!next) {
+  const parsed = parseNextData(html);
+  if (!parsed) {
     throw new Error(`immobiliare: no __NEXT_DATA__ JSON found at ${url}`);
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(next);
-  } catch {
-    throw new Error(`immobiliare: malformed __NEXT_DATA__ at ${url}`);
   }
   const listings: ImmobiliareRaw[] = [];
   collectListings(parsed, listings);

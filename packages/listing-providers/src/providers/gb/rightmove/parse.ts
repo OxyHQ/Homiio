@@ -8,32 +8,13 @@
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
 import { buildContact } from '../../../parse/contact';
+import { asNumberUs as asNumber, asString, isRecord } from '../../../parse/guards';
+import { parseNextData } from '../../../parse/nextData';
 import { isGbHousingType } from '../housing';
 import { RIGHTMOVE_BASE_URL } from './fixtures';
 
-const NEXT_DATA_RE = /<script[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i;
 const PAGE_MODEL_RE = /window\.__PAGE_MODEL\s*=\s*(\{[\s\S]*?\})\s*;/;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function asString(value: unknown): string | undefined {
-  if (typeof value === 'string' && value.trim().length > 0) return value.trim();
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  return undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const cleaned = value.replace(/[^0-9.]/g, '');
-    if (!cleaned) return undefined;
-    const parsed = Number.parseFloat(cleaned);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  return undefined;
-}
 
 /** Flatten Rightmove's compressed `__PAGE_MODEL` integer-pointer graph. */
 export function resolvePageModelGraph(data: unknown[]): Record<string, unknown> | undefined {
@@ -151,15 +132,9 @@ export function parseRightmoveSearchJson(html: string): {
   kind: 'rent' | 'sale';
   card?: RightmoveListingJson;
 }[] {
-  const match = NEXT_DATA_RE.exec(html);
-  if (!match?.[1]) return [];
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(match[1]);
-  } catch {
-    return [];
-  }
-  const pageProps = isRecord(parsed) && isRecord(parsed.props) ? parsed.props.pageProps : undefined;
+  const parsed = parseNextData(html);
+  if (!parsed) return [];
+  const pageProps = isRecord(parsed.props) ? parsed.props.pageProps : undefined;
   const searchResults = isRecord(pageProps) ? pageProps.searchResults : undefined;
   const properties =
     isRecord(searchResults) && Array.isArray(searchResults.properties) ? searchResults.properties : [];

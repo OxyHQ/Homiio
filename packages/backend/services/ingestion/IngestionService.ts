@@ -227,12 +227,14 @@ export class IngestionService {
       if (listing.contact.whatsapp) externalContact.whatsapp = listing.contact.whatsapp;
       if (listing.contact.name) externalContact.name = listing.contact.name;
       if (listing.contact.agencyName) externalContact.agencyName = listing.contact.agencyName;
+      if (listing.contact.kind) externalContact.kind = listing.contact.kind;
       if (
         externalContact.phone ||
         externalContact.email ||
         externalContact.whatsapp ||
         externalContact.name ||
-        externalContact.agencyName
+        externalContact.agencyName ||
+        externalContact.kind
       ) {
         fields.externalContact = externalContact;
       }

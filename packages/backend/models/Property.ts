@@ -36,6 +36,7 @@ export interface IProperty extends Document {
     whatsapp?: string;
     name?: string;
     agencyName?: string;
+    kind?: 'owner' | 'agency' | 'private' | 'unknown';
   };
   expiresAt?: Date;
   type: PropertyType;
