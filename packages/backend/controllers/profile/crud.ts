@@ -505,6 +505,31 @@ export async function activateProfile(req: any, res: any, next: any) {
 }
 
 /**
+ * Get the active public profile for an Oxy user id (read-only).
+ */
+export async function getPublicProfileByOxyUserId(req: any, res: any, next: any) {
+  try {
+    const { oxyUserId } = req.params;
+    if (!oxyUserId) {
+      return res.status(400).json(
+        errorResponse('Oxy user id is required', 'OXY_USER_ID_REQUIRED'),
+      );
+    }
+
+    const profile = await Profile.findActiveByOxyUserId(oxyUserId);
+    if (!profile) {
+      return res.status(404).json(
+        errorResponse('Profile not found', 'PROFILE_NOT_FOUND'),
+      );
+    }
+
+    res.json(successResponse(profile, 'Profile retrieved successfully'));
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * Get profile by ID
  */
 export async function getProfileById(req: any, res: any, next: any) {

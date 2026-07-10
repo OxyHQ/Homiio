@@ -36,37 +36,17 @@ interface PropertyBookingWidgetProps {
 
 const STICKY_TOP_OFFSET = 80;
 
-/** Normalize a profile id off a property, handling legacy `$oid` envelopes. */
-function resolveProfileId(profileId: Property['profileId']): string | undefined {
-  if (!profileId) return undefined;
-  if (
-    typeof profileId === 'object' &&
-    profileId !== null &&
-    '$oid' in profileId &&
-    typeof (profileId as { $oid?: unknown }).$oid === 'string'
-  ) {
-    return (profileId as { $oid: string }).$oid;
-  }
-  if (typeof profileId === 'string') return profileId;
-  return undefined;
-}
-
 export function PropertyBookingWidget({ propertyId }: PropertyBookingWidgetProps) {
   const { t } = useTranslation();
   const { mode: rentalMode } = useRentalMode();
   const { property: apiProperty } = useProperty(propertyId ?? '');
 
-  const landlordProfileId = resolveProfileId(apiProperty?.profileId);
+  const landlordOxyUserId = apiProperty?.oxyUserId;
 
-  // Host profile for the card's host line + Super-host badge. This is the
-  // listing OWNER's public profile, so it reads from the public (no-auth)
-  // profile route — it must render for logged-out visitors without 401ing.
-  // Shares the `['profile', id]` cache key so it doesn't duplicate any other
-  // profile load.
   const { data: landlordProfile = null } = useQuery<Profile | null>({
-    queryKey: ['profile', landlordProfileId],
-    enabled: Boolean(landlordProfileId),
-    queryFn: () => profileService.getPublicProfileById(landlordProfileId ?? ''),
+    queryKey: ['profile-by-oxy', landlordOxyUserId],
+    enabled: Boolean(landlordOxyUserId),
+    queryFn: () => profileService.getPublicProfileByOxyUserId(landlordOxyUserId ?? ''),
   });
 
   if (!propertyId || !apiProperty) {

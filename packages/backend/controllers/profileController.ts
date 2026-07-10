@@ -14,6 +14,7 @@ const handlerNames: Array<keyof typeof profileHandlers> = [
   'deleteProfile',
   'activateProfile',
   'getProfileById',
+  'getPublicProfileByOxyUserId',
   'updateActiveProfile',
   'getAgencyMemberships',
   'addAgencyMember',

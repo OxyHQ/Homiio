@@ -17,12 +17,14 @@ export async function getPropertiesByIds(req: ControllerRequest, res: Controller
 
 export async function getPropertiesByOwner(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
   try {
-    const { profileId } = req.params;
+    const { oxyUserId } = req.params;
     const exclude = getQueryString(req.query.exclude);
     const page = getQueryInteger(req.query.page, 1);
     const limit = getQueryInteger(req.query.limit, 10);
-    if (!mongoose.Types.ObjectId.isValid(profileId)) return next(new AppError('Invalid profile ID',400,'INVALID_ID'));
-    const query: Record<string, unknown> = { profileId: new mongoose.Types.ObjectId(profileId), status:'active' };
+    if (!oxyUserId || typeof oxyUserId !== 'string') {
+      return next(new AppError('Invalid owner id', 400, 'INVALID_ID'));
+    }
+    const query: Record<string, unknown> = { oxyUserId, status: 'active' };
     if (exclude && mongoose.Types.ObjectId.isValid(exclude)) query._id = { $ne: new mongoose.Types.ObjectId(exclude) };
     const skip = (page - 1) * limit;
     const [properties,total] = await Promise.all([

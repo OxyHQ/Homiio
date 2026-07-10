@@ -27,7 +27,6 @@ import {
   AvailabilityCalendar,
   type AvailabilityCalendarRange,
 } from '@/components/AvailabilityCalendar';
-import { useProfile } from '@/context/ProfileContext';
 import { useCreateExchangeRequest } from '@/hooks/useExchangeQueries';
 import { useUserProperties } from '@/hooks/usePropertyQueries';
 import { getPropertyTitle, hasOffering } from '@/utils/propertyUtils';
@@ -82,8 +81,6 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { oxyServices, activeSessionId } = useOxy();
-  const { primaryProfile } = useProfile();
-
   const listingMode = property.exchange?.mode ?? ExchangeMode.BOTH;
   const allowsBoth = listingMode === ExchangeMode.BOTH;
 
@@ -98,8 +95,7 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
   const [message, setMessage] = useState('');
   const [calendarTarget, setCalendarTarget] = useState<CalendarTarget>(null);
 
-  const profileId = primaryProfile?._id ?? primaryProfile?.id;
-  const myPropertiesQuery = useUserProperties(profileId);
+  const myPropertiesQuery = useUserProperties();
 
   const myExchangeProperties = useMemo<Property[]>(() => {
     const target = propertyId(property);

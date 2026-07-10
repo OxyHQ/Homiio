@@ -168,7 +168,7 @@ export interface PropertyCharacteristics {
 export interface Property {
   _id: string; // MongoDB ObjectId
   id?: string; // Optional fallback
-  profileId?: string; // Optional for external properties
+  oxyUserId?: string;
   // External sourcing metadata
   source?: string; // Source name (e.g., 'fotocasa', 'internal')
   sourceId?: string; // External source ID

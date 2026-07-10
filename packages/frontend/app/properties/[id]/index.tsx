@@ -188,34 +188,16 @@ export default function PropertyDetailPage() {
   const [stickyHeaderVisible, setStickyHeaderVisible] = useState(false);
   const [exchangeSheetVisible, setExchangeSheetVisible] = useState(false);
 
-  // Normalize landlord id (handles legacy MongoDB $oid envelopes).
-  const landlordProfileId = useMemo<string | undefined>(() => {
-    const profileId = apiProperty?.profileId;
-    if (!profileId) return undefined;
-    if (
-      typeof profileId === 'object' &&
-      profileId !== null &&
-      '$oid' in profileId &&
-      typeof (profileId as { $oid?: unknown }).$oid === 'string'
-    ) {
-      return (profileId as { $oid: string }).$oid;
-    }
-    if (typeof profileId === 'string') return profileId;
-    return undefined;
-  }, [apiProperty?.profileId]);
+  const landlordOxyUserId = apiProperty?.oxyUserId;
 
-  // Fetch landlord profile + their other listings. The listing owner is public
-  // info shown on a public page, so this reads the public (no-auth) profile
-  // route and the public properties list — it must populate for logged-out
-  // visitors and never 401.
   useEffect(() => {
     const fetchLandlordData = async () => {
-      if (!landlordProfileId) return;
+      if (!landlordOxyUserId) return;
       try {
-        const profile = await profileService.getPublicProfileById(landlordProfileId);
+        const profile = await profileService.getPublicProfileByOxyUserId(landlordOxyUserId);
         setLandlordProfile(profile);
         const { properties } = await propertyService.getOwnerProperties(
-          landlordProfileId,
+          landlordOxyUserId,
           typeof id === 'string' ? id : '',
         );
         setOwnerProperties(properties);
@@ -225,7 +207,7 @@ export default function PropertyDetailPage() {
       }
     };
     fetchLandlordData();
-  }, [landlordProfileId, id]);
+  }, [landlordOxyUserId, id]);
 
   // Property view-model derived from the API payload.
   const property = useMemo<PropertyDetailViewModel | null>(() => {

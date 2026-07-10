@@ -119,9 +119,32 @@ class PropertyService {
     }
   }
 
-  // Get properties by owner
+  // Get properties owned by the authenticated user (session oxyUserId)
+  async getMyProperties(page = 1, limit = 10): Promise<{
+    properties: Property[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    try {
+      const response = await api.get(`${this.baseUrl}/me/list`, {
+        params: { page, limit },
+      });
+      const pagination = response.data.pagination ?? {};
+      return {
+        properties: response.data.data || [],
+        total: pagination.total || 0,
+        page: pagination.page || page,
+        totalPages: pagination.totalPages || 1,
+      };
+    } catch {
+      return { properties: [], total: 0, page: 1, totalPages: 1 };
+    }
+  }
+
+  // Get published properties owned by an Oxy user id
   async getOwnerProperties(
-    profileId: string,
+    oxyUserId: string,
     excludePropertyId?: string,
   ): Promise<{
     properties: Property[];
@@ -132,11 +155,11 @@ class PropertyService {
     try {
       const response = await api.get(`${this.baseUrl}`, {
         params: {
-          profileId,
+          oxyUserId,
           excludeIds: excludePropertyId,
           sortBy: 'createdAt',
-          sortOrder: 'desc'
-        }
+          sortOrder: 'desc',
+        },
       });
       return {
         properties: response.data.data || response.data.results || response.data.properties || [],

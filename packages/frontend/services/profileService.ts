@@ -262,6 +262,13 @@ class ProfileService {
    * property-detail page) so the read never 401s. `requireAuth: false` keeps the
    * client from sending an `Authorization` header it doesn't have.
    */
+  async getPublicProfileByOxyUserId(oxyUserId: string): Promise<Profile> {
+    const response = await api.get(`/api/public/profiles/by-user/${encodeURIComponent(oxyUserId)}`, {
+      requireAuth: false,
+    });
+    return response.data.data;
+  }
+
   async getPublicProfileById(profileId: string): Promise<Profile> {
     const response = await api.get(`/api/public/profiles/${profileId}`, {
       requireAuth: false,
