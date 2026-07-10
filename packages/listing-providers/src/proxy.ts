@@ -48,9 +48,17 @@ export function parseResidentialProxyUrl(raw: string | undefined): ResidentialPr
   const server = `${parsed.protocol}//${parsed.host}`;
   return {
     server,
-    username: decodeURIComponent(parsed.username),
-    password: decodeURIComponent(parsed.password),
+    username: safeDecode(parsed.username),
+    password: safeDecode(parsed.password),
   };
+}
+
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 /** Read `LISTING_RESIDENTIAL_PROXY_URL` when set and valid. */
@@ -114,8 +122,10 @@ export function toEmbeddedProxyUrl(
     sessionId !== undefined
       ? withStickySessionUsername(config.username, sessionId)
       : config.username;
-  const host = config.server.replace(/^[^:]+:\/\//, '');
-  return `http://${encodeURIComponent(username)}:${encodeURIComponent(config.password)}@${host}`;
+  const embedded = new URL(config.server);
+  embedded.username = username;
+  embedded.password = config.password;
+  return embedded.toString();
 }
 
 interface UndiciModule {
@@ -143,28 +153,38 @@ async function loadUndici(): Promise<UndiciModule | undefined> {
 
 type ProxiedFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
+const proxiedFetchCache = new Map<string, Promise<ProxiedFetch>>();
+
 /**
  * Return a `fetch` that routes through the residential proxy. Uses Bun's native
  * `proxy` option when available; otherwise falls back to undici's ProxyAgent.
+ * Cached by embedded proxy URL so undici connection pools are reused.
  */
 export async function createProxiedFetch(
   config: ResidentialProxyConfig,
   sessionId?: string,
 ): Promise<ProxiedFetch> {
   const embedded = toEmbeddedProxyUrl(config, sessionId);
+  const cached = proxiedFetchCache.get(embedded);
+  if (cached) return cached;
 
-  if (typeof process.versions.bun === 'string') {
+  const created = (async (): Promise<ProxiedFetch> => {
+    if (typeof process.versions.bun === 'string') {
+      return (input, init) =>
+        fetch(input, { ...init, proxy: embedded } as RequestInit & { proxy: string });
+    }
+
+    const undici = await loadUndici();
+    if (!undici) {
+      throw new Error(
+        'Residential proxy HTTP fetch requires Bun or the undici package (ProxyAgent)',
+      );
+    }
+    const dispatcher = new undici.ProxyAgent(embedded);
     return (input, init) =>
-      fetch(input, { ...init, proxy: embedded } as RequestInit & { proxy: string });
-  }
+      undici.fetch(input, { ...init, dispatcher } as RequestInit & { dispatcher: unknown });
+  })();
 
-  const undici = await loadUndici();
-  if (!undici) {
-    throw new Error(
-      'Residential proxy HTTP fetch requires Bun or the undici package (ProxyAgent)',
-    );
-  }
-  const dispatcher = new undici.ProxyAgent(embedded);
-  return (input, init) =>
-    undici.fetch(input, { ...init, dispatcher } as RequestInit & { dispatcher: unknown });
+  proxiedFetchCache.set(embedded, created);
+  return created;
 }

@@ -83,7 +83,7 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({ images, t }) => {
             accessibilityLabel={tLocal('property.photos.hero', 'Open photo 1')}
           >
             <ExpoImage
-              source={getPropertyImageSource(heroImage as PropertyImage, 'large')}
+              source={getPropertyImageSource(heroImage, 'large')}
               style={styles.heroImage}
               contentFit="cover"
               transition={200}
@@ -112,7 +112,7 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({ images, t }) => {
                   )}
                 >
                   <ExpoImage
-                    source={getPropertyImageSource(image as PropertyImage, 'medium')}
+                    source={getPropertyImageSource(image, 'medium')}
                     style={styles.sideImage}
                     contentFit="cover"
                     transition={200}

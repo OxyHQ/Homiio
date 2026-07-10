@@ -244,14 +244,20 @@ export type ImageDisplaySource = { uri: string } | typeof propertyPlaceholder;
  * Sharp renditions, then the legacy medium `url`. Mirrors city cover resolution
  * in `cityDisplay.getCityImageSource`.
  */
+const VARIANT_FALLBACK_ORDER: Record<ImageVariantName, ImageVariantName[]> = {
+  small: ['small', 'medium', 'large', 'original'],
+  medium: ['medium', 'large', 'small', 'original'],
+  large: ['large', 'medium', 'small', 'original'],
+  original: ['original', 'large', 'medium', 'small'],
+};
+
 function pickVariantUrl(
   entry: PropertyImageEntry,
   variant: ImageVariantName | undefined,
 ): string | undefined {
   const urls = entry.urls;
   if (urls && variant) {
-    const ordered: ImageVariantName[] = [variant, 'large', 'medium', 'small', 'original'];
-    for (const name of ordered) {
+    for (const name of VARIANT_FALLBACK_ORDER[variant]) {
       const candidate = urls[name];
       if (typeof candidate === 'string' && candidate.length > 0) {
         return candidate;
