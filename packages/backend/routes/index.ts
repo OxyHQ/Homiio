@@ -78,8 +78,8 @@ export default function() {
   router.use('/addresses', addressRoutes);
 
   // Admin-only city routes (authenticated)
-  router.post('/cities', asyncHandler(require('../controllers/cityController').default.createCity));
-  router.put('/cities/:id/update-count', asyncHandler(require('../controllers/cityController').default.updateCityPropertiesCount));
+  router.post('/cities', asyncHandler(require('../controllers').cityController.createCity));
+  router.put('/cities/:id/update-count', asyncHandler(require('../controllers').cityController.updateCityPropertiesCount));
 
   // Health check route
   router.get('/health', (req, res) => {
