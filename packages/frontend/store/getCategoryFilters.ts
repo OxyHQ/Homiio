@@ -55,20 +55,21 @@ export function getCategoryFilters(
     case 'near_you': {
       const loc = context.userLocation;
       if (!loc) return {};
+      // Consumers must gate the feed when location is missing — see `isNearYouBlocked`.
       return { lat: loc.latitude, lng: loc.longitude, radius: NEAR_YOU_RADIUS_KM };
     }
     case 'beachfront':
       return { amenities: ['waterfront_view'] };
     case 'cabins':
-      return { type: PropertyType.HOUSE };
+      return { amenities: ['fire_pit'] };
     case 'pools':
       return { amenities: ['swimming_pool'] };
     case 'mountain':
-      return { type: PropertyType.HOUSE };
+      return { amenities: ['nature_immersion'] };
     case 'city_breaks':
       return { type: PropertyType.APARTMENT };
     case 'countryside':
-      return { type: PropertyType.HOUSE };
+      return { amenities: ['garden_access'] };
     case 'instant_book':
       return { instantBook: true };
     case 'pet_friendly':

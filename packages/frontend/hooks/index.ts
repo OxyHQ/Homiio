@@ -14,6 +14,16 @@ export {
   useSearchProperties,
 } from './usePropertyQueries';
 
+export {
+  HOME_FEED_LIMIT,
+  buildHomeFeedFilters,
+  homeFeedQueryKeys,
+  isNearYouBlocked,
+  useHomeFeedProperties,
+  useUserCoordinates,
+  type UserCoordinates,
+} from './useHomeFeed';
+
 // Exchange hooks (home swap / free hosting)
 export {
   useMyExchangeRequests,

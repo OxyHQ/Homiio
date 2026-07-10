@@ -138,10 +138,10 @@
     "featured": {
       "title": "Propietats Destacades",
       "empty": "No hi ha propietats destacades disponibles en aquest moment",
-      "gridLongTerm": "Estudis a Barcelona",
-      "gridVacation": "Apartaments de platja a València",
-      "gridBuy": "Habitatges en venda a Barcelona",
-      "gridExchange": "Intercanvis de casa a Espanya"
+      "gridLongTerm": "Estudis a {{place}}",
+      "gridVacation": "Apartaments de platja a {{place}}",
+      "gridBuy": "Habitatges en venda a {{place}}",
+      "gridExchange": "Intercanvis de casa a {{place}}"
     },
     "viewAll": "Veure Tot",
     "recentlyViewed": {
@@ -262,6 +262,7 @@
       "luxury": "Luxury",
       "newListings": "Nous anuncis",
       "nearYou": "A prop teu",
+      "nearYouUnavailable": "Activa la ubicació per veure habitatges a prop teu",
       "beachfront": "Davant del mar",
       "cabins": "Cabanes",
       "pools": "Piscines",
