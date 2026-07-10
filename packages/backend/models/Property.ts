@@ -87,6 +87,13 @@ export interface IProperty extends Document {
       large?: string;
     };
   }>;
+  /**
+   * Denormalized flag: true when `images` holds at least one entry. Kept in
+   * lock-step with `images` by the schema pre-save / pre-update hooks so
+   * discovery feeds can rank image-bearing listings first with an index-backed
+   * sort. Always derived from `images` — never written directly.
+   */
+  hasImages?: boolean;
   status: PropertyStatus;
   floor?: number;
   hasElevator?: boolean;

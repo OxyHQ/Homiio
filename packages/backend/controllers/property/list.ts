@@ -9,6 +9,7 @@ import {
   FIELD_SHORT_TERM_INSTANT_BOOK,
   PRICE_FIELD_SALE,
   FIELD_PRICE_ETHICS_IS_FAIR_PRICE,
+  FIELD_HAS_IMAGES,
   buildSort,
   SORT_ASC,
   SORT_DESC,
@@ -47,6 +48,17 @@ function representativePrice(property: {
   shortTermRent?: { nightlyRate?: number };
 }): number {
   return property.longTermRent?.monthlyAmount || property.shortTermRent?.nightlyRate || 0;
+}
+
+/**
+ * Ground-truth image presence for the per-page re-sorts below (geo ranking and
+ * personalization). Read from the actual `images` array rather than the stored
+ * `hasImages` flag so the in-memory ordering can never contradict the data even
+ * if the denormalized flag is momentarily stale. The DB sort still uses the
+ * indexed `hasImages` field to decide page membership.
+ */
+function listingHasImages(property: { images?: unknown[] }): boolean {
+  return Array.isArray(property.images) && property.images.length > 0;
 }
 
 /** Map a representative price to a coarse low/medium/high preference bucket. */
@@ -376,6 +388,9 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     }
 
     const sortByValue = String(sortBy);
+    // `hasImages: -1` is the primary key for EVERY branch so image-bearing
+    // listings always rank first (product rule). `buildSort` already prepends it
+    // for the known sort fields; the arbitrary-field fallback prepends it here.
     const sortOptions: Record<string, SortOrder | { $meta: 'textScore' }> = LIST_SORT_FIELDS.has(sortByValue)
       ? buildSort(
           {
@@ -387,7 +402,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
           },
           false,
         )
-      : { [sortByValue]: (sortOrder === 'desc' ? -1 : 1) as SortOrder };
+      : { [FIELD_HAS_IMAGES]: -1, [sortByValue]: (sortOrder === 'desc' ? -1 : 1) as SortOrder };
     const skip = (pageNumber - 1) * limitNumber;
 
     const [properties, total] = await Promise.all([
@@ -449,11 +464,14 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
             index,
             distance,
             savesCount,
+            hasImages: listingHasImages(p),
             inside: Number.isFinite(distance) && distance <= preferredRadiusMeters,
             prop: { ...p, isSaved: false }
           };
         });
         decorated.sort((a, b) => {
+          // Image-bearing listings first (product rule), then the geo ranking.
+          if (a.hasImages !== b.hasImages) return a.hasImages ? -1 : 1;
           if (a.inside !== b.inside) return a.inside ? -1 : 1;
           if (b.savesCount !== a.savesCount) return b.savesCount - a.savesCount;
           if (a.distance !== b.distance) return a.distance - b.distance;
@@ -546,7 +564,13 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
             if (isSaved) personalizedScore -= 20;
             return { ...property, personalizedScore, isSaved };
           });
-          personalized.sort((a, b) => (b.personalizedScore || 0) - (a.personalizedScore || 0));
+          personalized.sort((a, b) => {
+            // Image-bearing listings first (product rule), then personalization.
+            const aHasImages = listingHasImages(a);
+            const bHasImages = listingHasImages(b);
+            if (aHasImages !== bHasImages) return aHasImages ? -1 : 1;
+            return (b.personalizedScore || 0) - (a.personalizedScore || 0);
+          });
           ordered = personalized;
       } catch (error) {
         // Personalization is a best-effort enhancement: if it fails we fall back

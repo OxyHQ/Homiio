@@ -5,6 +5,7 @@
  */
 
 import type { IProperty } from '../Property';
+import type { Query, UpdateQuery } from 'mongoose';
 
 const mongoose = require('mongoose');
 const validator = require('validator');
@@ -534,6 +535,15 @@ const propertySchema = new mongoose.Schema({
     type: Number,
     default: -1
   },
+  // Denormalized image-presence flag: true when `images` holds at least one
+  // entry. Maintained in lock-step with `images` by the pre-save and pre-update
+  // hooks below, so discovery feeds can rank image-bearing listings ahead of
+  // image-less ones with an index-backed sort (`{ hasImages: -1, ... }`) that
+  // keeps pagination correct. Always derived from `images` — never set directly.
+  hasImages: {
+    type: Boolean,
+    default: false
+  },
   documents: [{
     name: {
       type: String,
@@ -728,6 +738,10 @@ propertySchema.index({ offerings: 1, 'exchange.mode': 1, status: 1 });
 // Price ethics sort/filter (fairness ranking, fair-price chip).
 propertySchema.index({ 'priceEthics.isFairPrice': 1 });
 propertySchema.index({ 'priceEthics.fairnessScore': -1 });
+// Image-first discovery ordering: rank listings that HAVE images ahead of those
+// that don't, newest first within each group. Backs the default feed/search sort
+// (`{ hasImages: -1, createdAt: -1 }`) so pagination stays index-backed.
+propertySchema.index({ hasImages: -1, createdAt: -1 });
 
 /**
  * Offerings must be non-empty and equal exactly the set of present priced
@@ -860,7 +874,54 @@ propertySchema.pre('save', function(this: IProperty, next: (err?: Error) => void
     }
   }
 
+  // Keep the denormalized image-presence flag in lock-step with `images` so
+  // discovery feeds can rank image-bearing listings first (see `hasImages`).
+  this.hasImages = Array.isArray(this.images) && this.images.length > 0;
+
   next();
+});
+
+/**
+ * Keep `hasImages` in lock-step with `images` on atomic updates. The pre-save
+ * hook above does NOT run for findOneAndUpdate / updateOne / updateMany, so the
+ * flag is re-derived here whenever an update actually sets `images` (in a
+ * top-level field, `$set`, or `$setOnInsert`). Updates that don't touch `images`
+ * leave the flag untouched; aggregation-pipeline updates (array form) are
+ * skipped — the ingestion/write paths use plain-document updates.
+ */
+propertySchema.pre(['findOneAndUpdate', 'updateOne', 'updateMany'], function (
+  this: Query<unknown, IProperty>
+): void {
+  const rawUpdate = this.getUpdate();
+  if (!rawUpdate || Array.isArray(rawUpdate)) return;
+  const update = rawUpdate as Record<string, unknown>;
+  const set = update.$set as Record<string, unknown> | undefined;
+  const setOnInsert = update.$setOnInsert as Record<string, unknown> | undefined;
+
+  let images: unknown;
+  let target: 'top' | 'set' | 'setOnInsert';
+  if (set && 'images' in set) {
+    images = set.images;
+    target = 'set';
+  } else if ('images' in update) {
+    images = update.images;
+    target = 'top';
+  } else if (setOnInsert && 'images' in setOnInsert) {
+    images = setOnInsert.images;
+    target = 'setOnInsert';
+  } else {
+    return;
+  }
+
+  const hasImages = Array.isArray(images) && images.length > 0;
+  if (target === 'top') {
+    update.hasImages = hasImages;
+  } else if (target === 'set') {
+    update.$set = { ...(set ?? {}), hasImages };
+  } else {
+    update.$setOnInsert = { ...(setOnInsert ?? {}), hasImages };
+  }
+  this.setUpdate(update as UpdateQuery<IProperty>);
 });
 
 // Static methods

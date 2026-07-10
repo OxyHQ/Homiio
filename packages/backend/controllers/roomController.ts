@@ -13,6 +13,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { Property, Address } from '../models';
 import { PropertyType, PropertyStatus } from '@homiio/shared-types';
 import { logger } from '../middlewares/logging';
+import { FIELD_HAS_IMAGES } from './property/searchQueryBuilder';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
 import { requireSessionOxyUserId } from '../utils/sessionUser';
 import {
@@ -118,7 +119,8 @@ class RoomController {
         filters.status = { $ne: 'draft' };
       }
 
-      const sortOptions: Record<string, 1 | -1> = {};
+      // Image-bearing listings first (product rule), then the requested order.
+      const sortOptions: Record<string, 1 | -1> = { [FIELD_HAS_IMAGES]: -1 };
       sortOptions[String(sortBy)] = sortOrder === 'desc' ? -1 : 1;
 
       const [rooms, total] = await Promise.all([

@@ -3,6 +3,7 @@ import { paginationResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
 import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
 import { getQueryInteger, getQueryNumber } from '../queryParams';
+import { FIELD_HAS_IMAGES } from './searchQueryBuilder';
 
 export async function findNearbyProperties(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
   try {
@@ -219,8 +220,9 @@ export async function findNearbyProperties(req: ControllerRequest, res: Controll
     const pageNumber = getQueryInteger(page, 1);
     const limitNumber = getQueryInteger(limit, 10);
     const skip = (pageNumber - 1) * limitNumber;
+    // Image-bearing listings first (product rule), then newest.
     const [properties, total] = await Promise.all([
-      nearbyQuery.skip(skip).limit(limitNumber).lean(),
+      nearbyQuery.sort({ [FIELD_HAS_IMAGES]: -1, createdAt: -1 }).skip(skip).limit(limitNumber).lean(),
       nearbyQuery.clone().countDocuments()
     ]);
 
@@ -445,8 +447,9 @@ export async function findPropertiesInRadius(req: ControllerRequest, res: Contro
     const pageNumber = getQueryInteger(page, 1);
     const limitNumber = getQueryInteger(limit, 10);
     const skip = (pageNumber - 1) * limitNumber;
+    // Image-bearing listings first (product rule), then newest.
     const [properties, total] = await Promise.all([
-      radiusQuery.skip(skip).limit(limitNumber).lean(),
+      radiusQuery.sort({ [FIELD_HAS_IMAGES]: -1, createdAt: -1 }).skip(skip).limit(limitNumber).lean(),
       radiusQuery.clone().countDocuments()
     ]);
 
