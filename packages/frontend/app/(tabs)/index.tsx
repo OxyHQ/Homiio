@@ -23,7 +23,7 @@
  * grids) does NOT live on the home page — it belongs on /about.
  */
 import React, { useState } from 'react';
-import { View, RefreshControl, Pressable, useWindowDimensions } from 'react-native';
+import { View, RefreshControl, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import { useQueryClient } from '@tanstack/react-query';
 import { Menu } from 'lucide-react-native';
@@ -34,7 +34,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { H1, P } from '@oxyhq/bloom/typography';
@@ -129,7 +128,6 @@ function resolveExplorePlace(
 export default function HomePage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { offering: browseOffering, browseMode, mode } = useRentalMode();
   const selectedCategory = useHomeCategoryStore((s) => s.category);
   const queryClient = useQueryClient();
@@ -231,10 +229,6 @@ export default function HomePage() {
   };
 
   const scrollY = useSharedValue(0);
-  const { height: windowHeight } = useWindowDimensions();
-  // Cap height hard — `windowHeight * 0.62` was ~496px on common desktop
-  // viewports and read as empty photo above the title block.
-  const heroHeight = isXL ? Math.min(400, windowHeight * 0.45) : isWide ? 360 : 400;
 
   const heroParallaxStyle = useAnimatedStyle(() => ({
     transform: [
@@ -257,13 +251,7 @@ export default function HomePage() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
-        <View
-          className="relative w-full justify-end overflow-hidden"
-          style={{
-            height: heroHeight,
-            paddingTop: insets.top + spacing.sm,
-          }}
-        >
+        <View className="relative h-[400px] w-full justify-end overflow-hidden pt-[max(0.5rem,env(safe-area-inset-top))] md:h-[360px] xl:h-[min(400px,45vh)]">
           <Animated.View
             className="absolute inset-x-0"
             style={[{ top: -120, bottom: -120 }, heroParallaxStyle]}
@@ -296,11 +284,7 @@ export default function HomePage() {
               accessibilityRole="button"
               accessibilityLabel={t('sidebar.open')}
               hitSlop={spacing.sm}
-              className="absolute left-4 z-10 h-10 w-10 items-center justify-center rounded-full"
-              style={{
-                top: insets.top + spacing.sm,
-                backgroundColor: 'rgba(0,0,0,0.35)',
-              }}
+              className="absolute left-4 top-[max(0.5rem,env(safe-area-inset-top))] z-10 h-10 w-10 items-center justify-center rounded-full bg-black/35"
             >
               <Menu size={22} color={colors.primaryLight} />
             </Pressable>
