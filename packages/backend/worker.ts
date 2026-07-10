@@ -159,7 +159,7 @@ function startBullMq(): () => Promise<void> {
       const existing = await discoverQueue.getJob(jobId);
       if (existing) {
         const state = await existing.getState();
-        if (state === 'completed' || state === 'failed') {
+        if (state === 'completed' || state === 'failed' || state === 'waiting' || state === 'delayed') {
           await existing.remove();
         }
       }

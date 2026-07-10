@@ -21,6 +21,7 @@ const CITY_CODE_LOOKUP: Readonly<
 > = {
   MAD: { city: 'Madrid', country: 'Spain', countryCode: 'ES', region: 'Community of Madrid' },
   BCN: { city: 'Barcelona', country: 'Spain', countryCode: 'ES', region: 'Catalonia' },
+  VLC: { city: 'Valencia', country: 'Spain', countryCode: 'ES', region: 'Valencia' },
   NYC: { city: 'New York', country: 'United States', countryCode: 'US', region: 'New York' },
   LAX: { city: 'Los Angeles', country: 'United States', countryCode: 'US', region: 'California' },
   BOS: { city: 'Boston', country: 'United States', countryCode: 'US', region: 'Massachusetts' },
@@ -105,6 +106,10 @@ export function parseBluegroundDetail(html: string, ref: ExternalListingRef): Bl
   const sizeSqm = readJsonField(html, 'sizeSqm');
   const description = readMeta(html, 'og:description') ?? readJsonField(html, 'description');
 
+  const city = ogLocation.city ?? cityMeta?.city ?? '';
+  const region =
+    cityMeta && city.toLowerCase() === cityMeta.city.toLowerCase() ? cityMeta.region : undefined;
+
   return {
     id: ref.sourceId,
     slug: ref.sourceId,
@@ -121,8 +126,8 @@ export function parseBluegroundDetail(html: string, ref: ExternalListingRef): Bl
     address: {
       line1: ogLocation.street,
       neighborhood: ogLocation.neighborhood,
-      city: ogLocation.city ?? cityMeta?.city ?? '',
-      region: cityMeta?.region,
+      city,
+      region,
       country: cityMeta?.country,
       countryCode: cityMeta?.countryCode,
     },
