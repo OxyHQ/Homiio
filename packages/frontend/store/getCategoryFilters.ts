@@ -1,9 +1,15 @@
-import { PropertyType, type PropertyFilters } from '@homiio/shared-types';
+import {
+  ExchangeMode,
+  OfferingType,
+  PropertyType,
+  type PropertyFilters,
+} from '@homiio/shared-types';
 
 import type { HomeCategory } from './homeCategoryStore';
 
 interface CategoryFilterContext {
   userLocation?: { latitude: number; longitude: number } | null;
+  offering?: OfferingType;
 }
 
 /** Radius (km) for the "Near you" home-category lens. */
@@ -11,6 +17,9 @@ const NEAR_YOU_RADIUS_KM = 25;
 
 /** Monthly rent floor for the merchandised "Luxury" long-term bucket. */
 const LUXURY_MIN_RENT = 2500;
+
+/** Sale-price floor for the merchandised "Luxury" buy bucket. */
+const LUXURY_MIN_SALE_PRICE = 400_000;
 
 /**
  * Maps a selected {@link HomeCategory} to API-backed {@link PropertyFilters}.
@@ -21,6 +30,8 @@ export function getCategoryFilters(
   context: CategoryFilterContext = {},
 ): Partial<PropertyFilters> {
   if (!category) return {};
+
+  const offering = context.offering;
 
   switch (category) {
     case 'studios':
@@ -34,6 +45,9 @@ export function getCategoryFilters(
     case 'coliving':
       return { type: PropertyType.COLIVING };
     case 'luxury':
+      if (offering === OfferingType.SALE) {
+        return { minSalePrice: LUXURY_MIN_SALE_PRICE };
+      }
       return { minRent: LUXURY_MIN_RENT };
     case 'new_listings':
       // Default list sort is `createdAt desc` — no extra filter required.
@@ -59,6 +73,10 @@ export function getCategoryFilters(
       return { instantBook: true };
     case 'pet_friendly':
       return { petFriendly: true };
+    case 'home_swap':
+      return { exchangeMode: ExchangeMode.SWAP };
+    case 'hosting':
+      return { exchangeMode: ExchangeMode.HOST };
     default: {
       const _exhaustive: never = category;
       return _exhaustive;

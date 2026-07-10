@@ -12,14 +12,12 @@
  * rows", "no shimmer carpets").
  */
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { useMediaQuery } from 'react-responsive';
+import { View } from 'react-native';
 
 import { H1 } from '@oxyhq/bloom/typography';
 
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
-import { colors } from '@/styles/colors';
-import { resolvePagePadding, spacing, tracker } from '@/constants/styles';
+import { PAGE_GUTTER_CLASS } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
 
 interface FeaturedGridSectionProps {
@@ -41,15 +39,13 @@ export function FeaturedGridSection({
   onPropertyPress,
   maxColumns,
 }: FeaturedGridSectionProps) {
-  const isWide = useMediaQuery({ minWidth: 768 });
-
   if (items.length === 0) return null;
 
-  const horizontalPadding = resolvePagePadding(isWide);
-
   return (
-    <View style={[styles.section, { paddingHorizontal: horizontalPadding }]}>
-      <H1 style={styles.title}>{title}</H1>
+    <View className={`w-full ${PAGE_GUTTER_CLASS}`}>
+      <H1 className="mb-5 text-[26px] font-bold leading-8 tracking-tight text-foreground">
+        {title}
+      </H1>
       <PropertyResultsGrid
         properties={items}
         onPropertyPress={onPropertyPress}
@@ -58,17 +54,3 @@ export function FeaturedGridSection({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  section: {
-    width: '100%',
-  },
-  title: {
-    fontSize: 26,
-    color: colors.COLOR_BLACK,
-    fontWeight: '700',
-    letterSpacing: tracker.tight,
-    lineHeight: 32,
-    marginBottom: spacing.xl,
-  },
-});

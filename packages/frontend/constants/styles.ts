@@ -337,6 +337,12 @@ export const resolvePagePadding = (isWide: boolean): number =>
   isWide ? pagePadding.desktop : pagePadding.mobile;
 
 /**
+ * NativeWind class for responsive horizontal page gutters. Matches
+ * {@link resolvePagePadding}: 16px mobile (`px-4`), 32px from `md` (`px-8`).
+ */
+export const PAGE_GUTTER_CLASS = 'px-4 md:px-8';
+
+/**
  * Minimum height for a full-bleed CTA banner rendered in grid (`fill`) mode —
  * i.e. two banners side-by-side as equal-height columns on wide screens. In
  * that mode the banners drop their intrinsic `aspectRatio` and stretch to the

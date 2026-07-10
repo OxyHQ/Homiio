@@ -269,7 +269,9 @@
       "cityBreaks": "Escapades urbanes",
       "countryside": "Camp",
       "instantBook": "Reserva instantània",
-      "petFriendly": "Admet mascotes"
+      "petFriendly": "Admet mascotes",
+      "homeSwap": "Intercanvi de cases",
+      "hosting": "Allotjament"
     }
   },
   "agent": {

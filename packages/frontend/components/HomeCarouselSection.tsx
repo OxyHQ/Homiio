@@ -11,7 +11,7 @@
 import React, { useRef, useState } from 'react';
 import {
   View,
-  TouchableOpacity,
+  Pressable,
   ScrollView,
   NativeSyntheticEvent,
   NativeScrollEvent,
@@ -22,7 +22,7 @@ import { useMediaQuery } from 'react-responsive';
 import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { colors } from '@/styles/colors';
-import { cardShadow, gridGap, spacing, tracker } from '@/constants/styles';
+import { cardShadow, gridGap, PAGE_GUTTER_CLASS, pagePadding } from '@/constants/styles';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 
 interface HomeCarouselSectionProps<T> {
@@ -41,7 +41,6 @@ interface HomeCarouselSectionProps<T> {
 }
 
 const CARD_GAP = gridGap.normal;
-const HORIZONTAL_PADDING = spacing['2xl'] * 2;
 
 export function HomeCarouselSection<T>({
   eyebrow,
@@ -61,11 +60,12 @@ export function HomeCarouselSection<T>({
   const [scrollX, setScrollX] = useState(0);
   const [_isDragging, setIsDragging] = useState(false);
   const isWide = useMediaQuery({ minWidth: 768 });
+  const horizontalPadding = (isWide ? pagePadding.desktop : pagePadding.mobile) * 2;
 
   let calculatedCardWidth = maxCardWidth;
 
   if (containerWidth > 0) {
-    const availableWidth = Math.max(0, containerWidth - HORIZONTAL_PADDING);
+    const availableWidth = Math.max(0, containerWidth - horizontalPadding);
     const minCardsToFit = Math.max(
       1,
       Math.ceil((availableWidth + CARD_GAP) / (maxCardWidth + CARD_GAP)),
@@ -81,7 +81,7 @@ export function HomeCarouselSection<T>({
   }
 
   const totalCardsWidth = items.length * calculatedCardWidth + (items.length - 1) * CARD_GAP;
-  const availableScrollWidth = containerWidth - HORIZONTAL_PADDING;
+  const availableScrollWidth = containerWidth - horizontalPadding;
   const maxScroll = Math.max(0, totalCardsWidth - availableScrollWidth);
   const itemsPerPage =
     containerWidth > 0
@@ -190,27 +190,26 @@ export function HomeCarouselSection<T>({
 
   return (
     <View>
-      <View className="mb-4 flex-row items-end justify-between gap-4 px-4">
+      <View className={`mb-4 flex-row items-end justify-between gap-4 ${PAGE_GUTTER_CLASS}`}>
         <View className="min-w-0 flex-1 shrink">
           {eyebrow ? <SectionEyebrow>{eyebrow}</SectionEyebrow> : null}
           <H1
-            className="text-[26px] font-bold leading-8 text-foreground"
-            style={{ letterSpacing: tracker.tight }}
+            className="text-[26px] font-bold leading-8 tracking-tight text-foreground"
           >
             {title}
           </H1>
         </View>
         <View className="flex-row items-center gap-3">
-          {onViewAll && (
-            <TouchableOpacity onPress={onViewAll} hitSlop={8}>
+          {onViewAll ? (
+            <Pressable onPress={onViewAll} hitSlop={8} accessibilityRole="button">
               <BloomText className="text-sm font-semibold underline text-foreground">
                 {viewAllText}
               </BloomText>
-            </TouchableOpacity>
-          )}
+            </Pressable>
+          ) : null}
           {isWide && !(disableLeftArrow && disableRightArrow) ? (
             <View className="flex-row items-center gap-2">
-              <TouchableOpacity
+              <Pressable
                 onPress={handleScrollLeft}
                 disabled={disableLeftArrow}
                 className="h-8 w-8 items-center justify-center rounded-full bg-white"
@@ -219,8 +218,8 @@ export function HomeCarouselSection<T>({
                 accessibilityLabel="Scroll left"
               >
                 <Ionicons name="chevron-back" size={16} color={colors.primaryColor} />
-              </TouchableOpacity>
-              <TouchableOpacity
+              </Pressable>
+              <Pressable
                 onPress={handleScrollRight}
                 disabled={disableRightArrow}
                 className="h-8 w-8 items-center justify-center rounded-full bg-white"
@@ -229,7 +228,7 @@ export function HomeCarouselSection<T>({
                 accessibilityLabel="Scroll right"
               >
                 <Ionicons name="chevron-forward" size={16} color={colors.primaryColor} />
-              </TouchableOpacity>
+              </Pressable>
             </View>
           ) : null}
         </View>
@@ -239,7 +238,7 @@ export function HomeCarouselSection<T>({
         onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
       >
         {!loading && items.length === 0 && emptyText ? (
-          <View className="px-4 py-2">
+          <View className={`py-2 ${PAGE_GUTTER_CLASS}`}>
             <BloomText className="text-sm text-muted-foreground">{emptyText}</BloomText>
           </View>
         ) : (
@@ -248,7 +247,7 @@ export function HomeCarouselSection<T>({
             horizontal
             showsHorizontalScrollIndicator={false}
             className="flex-row"
-            contentContainerClassName="justify-start px-4"
+            contentContainerClassName={`justify-start ${PAGE_GUTTER_CLASS}`}
             scrollEnabled={true}
             onScrollBeginDrag={handleScrollBeginDrag}
             onScrollEndDrag={handleScrollEndDrag}

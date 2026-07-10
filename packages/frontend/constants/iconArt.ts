@@ -17,6 +17,8 @@ export const ICON_ART: Partial<Record<string, ImageSourcePropType>> = {
   pools: require('@/assets/icon-art/pools.png'),
   mountain: require('@/assets/icon-art/mountain.png'),
   pet_friendly: require('@/assets/icon-art/pet_friendly.png'),
+  home_swap: require('@/assets/icon-art/tent.png'),
+  hosting: require('@/assets/icon-art/breakfast.png'),
 
   // Reserved home / feature art (no consumer yet)
   beach_chair: require('@/assets/icon-art/beach_chair.png'),
