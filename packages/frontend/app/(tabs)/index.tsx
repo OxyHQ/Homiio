@@ -54,6 +54,8 @@ import { cityCountryName, cityRegionName } from '@/utils/cityDisplay';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { useRentalMode } from '@/context/RentalModeContext';
+import { useHomeCategoryStore } from '@/store/homeCategoryStore';
+import { getCategoryFilters } from '@/store/getCategoryFilters';
 
 // Components
 import { PropertyCard } from '@/components/PropertyCard';
@@ -82,6 +84,9 @@ import { spacing, tracker } from '@/constants/styles';
 const HOST_CTA_IMAGE =
   'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=1600&q=80';
 
+/** How many listings the home feed loads (carousel 0–8 + grid 8–16). */
+const HOME_FEED_LIMIT = 16;
+
 /** How many DB cities to surface in the home Explore showcase. */
 const EXPLORE_CITY_LIMIT = 8;
 
@@ -109,7 +114,8 @@ export default function HomePage() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { offering: browseOffering } = useRentalMode();
+  const { offering: browseOffering, browseMode } = useRentalMode();
+  const selectedCategory = useHomeCategoryStore((s) => s.category);
   const [refreshing, setRefreshing] = useState(false);
   // DB cities (with populated region/country + self-hosted cover image) power
   // both the Explore showcase and the nearby-city carousels.
@@ -286,16 +292,20 @@ export default function HomePage() {
   const { properties: recentlyViewedProperties } = useRecentlyViewed();
   const { savedProperties, isLoading: savedLoading } = useSavedPropertiesContext();
 
-  // Scope the home feed to the active offering so switching Long-term /
-  // Vacation / Buy / Exchange reloads with the matching listings (reusing the
-  // SAME `offering` axis the search endpoint filters on — no forked logic).
+  // Scope the home feed to the active offering and optional category lens.
+  const categoryFilters = useMemo(
+    () => getCategoryFilters(selectedCategory, { userLocation }),
+    [selectedCategory, userLocation],
+  );
+
   const feedFilters = useMemo<PropertyFilters>(
     () => ({
-      limit: 12,
+      limit: HOME_FEED_LIMIT,
       status: 'published',
       offering: browseOffering,
+      ...categoryFilters,
     }),
-    [browseOffering],
+    [browseOffering, categoryFilters],
   );
 
   useEffect(() => {
@@ -309,8 +319,10 @@ export default function HomePage() {
 
   const gridProperties = useMemo<Property[]>(() => {
     if (!properties) return [];
-    return properties.slice(0, 8) as Property[];
+    return properties.slice(8, HOME_FEED_LIMIT) as Property[];
   }, [properties]);
+
+  const showCategoryStrip = browseMode === 'long_term' || browseMode === 'vacation';
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -504,27 +516,26 @@ export default function HomePage() {
             per-section `marginTop`. `pb-14` is bottom scroll padding;
             gap never adds space after the last child. */}
         <View className="gap-6 md:gap-8 pb-14">
-        {/* === Category strip (sticky on web) === */}
-        <HomeCategoryStrip sticky />
+        {/* === Category strip (sticky on web) — rent modes only === */}
+        {showCategoryStrip ? <HomeCategoryStrip sticky /> : null}
 
         {/* === Featured Properties carousel === */}
-        {featuredProperties.length > 0 ? (
-          <HomeCarouselSection
-            title={t('home.featured.title')}
-            items={featuredProperties}
-            loading={propertiesLoading}
-            renderItem={(property) => (
-              <PropertyCard
-                property={property}
-                variant="featured"
-                // Home rows are themselves horizontal scrollers; an in-card
-                // photo pager would fight the row swipe, so keep one photo here.
-                enableImageCarousel={false}
-                onPress={() => router.push(`/properties/${property._id || property.id}`)}
-              />
-            )}
-          />
-        ) : null}
+        <HomeCarouselSection
+          title={t('home.featured.title')}
+          items={featuredProperties}
+          loading={propertiesLoading}
+          emptyText={t('home.featured.empty')}
+          renderItem={(property) => (
+            <PropertyCard
+              property={property}
+              variant="featured"
+              // Home rows are themselves horizontal scrollers; an in-card
+              // photo pager would fight the row swipe, so keep one photo here.
+              enableImageCarousel={false}
+              onPress={() => router.push(`/properties/${property._id || property.id}`)}
+            />
+          )}
+        />
 
         {/* === City Showcase (DB cities, adaptive region/country title) === */}
         {cities.length > 0 ? (

@@ -107,19 +107,19 @@ export default function AgentScreen() {
         className="flex-1"
         showsVerticalScrollIndicator={false}
       >
-        {/* Section rhythm owned here by NativeWind `gap` (24px mobile / 32px
-            web); each direct child is a page section with no per-section
-            `marginTop`. */}
-        <View className="gap-6 md:gap-8 pb-20">
-          <AgentHero
-            title={t('agent.hero.title')}
-            subtitle={t('agent.hero.subtitle')}
-            ctaLabel={ctaLabel}
-            onPressCta={handleHeroCta}
-            ctaLoading={joinMutation.isPending}
-            trustLine={t('agent.hero.trust')}
-          />
+        <AgentHero
+          title={t('agent.hero.title')}
+          subtitle={t('agent.hero.subtitle')}
+          ctaLabel={ctaLabel}
+          onPressCta={handleHeroCta}
+          ctaLoading={joinMutation.isPending}
+          trustLine={t('agent.hero.trust')}
+        />
 
+        {/* Section rhythm owned here by NativeWind `gap` (24px mobile / 32px
+            web); post-hero sections only. Hero sits outside so it does not
+            participate in the gap stack. */}
+        <View className="gap-6 md:gap-8 pb-20">
           <AgentHowItWorks />
 
           <EarningsCalculator />
