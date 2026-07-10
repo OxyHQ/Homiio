@@ -186,6 +186,7 @@
       "version": "1.0.0",
       "dependencies": {
         "@homiio/shared-types": "workspace:*",
+        "lz-string": "^1.5.0",
         "undici": "^7.16.0",
       },
       "devDependencies": {
