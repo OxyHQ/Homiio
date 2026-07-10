@@ -105,11 +105,29 @@ export function httpUseProxyFromEnv(): boolean {
 }
 
 /**
- * DataImpulse sticky sessions: append `-session-<id>` to the login username so
- * consecutive requests share an exit IP. Other providers can use the same pattern.
+ * Optional ISO-3166-1 alpha-2 country for DataImpulse geo targeting
+ * (`LISTING_PROXY_GEO=es` → `login__cr.es;sessid.<id>`).
  */
-export function withStickySessionUsername(baseUsername: string, sessionId: string): string {
-  return `${baseUsername}-session-${sessionId}`;
+export function proxyGeoCountryFromEnv(): string | undefined {
+  const raw = process.env.LISTING_PROXY_GEO?.trim().toLowerCase();
+  if (!raw || !/^[a-z]{2}$/.test(raw)) return undefined;
+  return raw;
+}
+
+/**
+ * DataImpulse sticky sessions: `login__cr.<cc>;sessid.<id>` (or `login__sessid.<id>`
+ * without geo). The legacy `-session-<id>` suffix returns HTTP 407 from DataImpulse.
+ */
+export function withStickySessionUsername(
+  baseUsername: string,
+  sessionId: string,
+  geoCountry?: string,
+): string {
+  const params: string[] = [];
+  const geo = geoCountry?.trim().toLowerCase();
+  if (geo && /^[a-z]{2}$/.test(geo)) params.push(`cr.${geo}`);
+  params.push(`sessid.${sessionId}`);
+  return `${baseUsername}__${params.join(';')}`;
 }
 
 /** Short random id for one sticky browser context or HTTP session. */
@@ -132,11 +150,14 @@ function resolveProxyUsername(
   sessionId?: string,
   countryCode?: string,
 ): string {
-  let username = withProxyCountryUsername(config.username, countryCode);
-  if (sessionId !== undefined) {
-    username = withStickySessionUsername(username, sessionId);
+  if (sessionId === undefined) {
+    return withProxyCountryUsername(config.username, countryCode);
   }
-  return username;
+  return withStickySessionUsername(
+    config.username,
+    sessionId,
+    countryCode ?? proxyGeoCountryFromEnv(),
+  );
 }
 
 /** Map structured config to Playwright proxy options (optional sticky session). */

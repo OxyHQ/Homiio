@@ -76,8 +76,11 @@ describe('parseResidentialProxyUrl', () => {
 });
 
 describe('withStickySessionUsername', () => {
-  it('appends DataImpulse-compatible -session-<id> suffix', () => {
-    expect(withStickySessionUsername('mylogin', 'abc123')).toBe('mylogin-session-abc123');
+  it('uses DataImpulse __sessid.<id> format (not legacy -session- suffix)', () => {
+    expect(withStickySessionUsername('mylogin', 'abc123')).toBe('mylogin__sessid.abc123');
+    expect(withStickySessionUsername('mylogin', 'abc123', 'es')).toBe(
+      'mylogin__cr.es;sessid.abc123',
+    );
   });
 });
 
@@ -98,8 +101,10 @@ describe('toPlaywrightProxy', () => {
       username: 'mylogin',
       password: 'mypass',
     });
-    expect(toPlaywrightProxy(config, 'sess1').username).toBe('mylogin-session-sess1');
-    expect(toPlaywrightProxy(config, 'sess1', 'es').username).toBe('mylogin__cr.es-session-sess1');
+    expect(toPlaywrightProxy(config, 'sess1').username).toBe('mylogin__sessid.sess1');
+    expect(toPlaywrightProxy(config, 'sess1', 'es').username).toBe(
+      'mylogin__cr.es;sessid.sess1',
+    );
   });
 });
 
@@ -193,7 +198,7 @@ describe('PlaywrightBrowserPool — residential proxy + asset blocking', () => {
 
     expect(counters.contexts).toHaveLength(1);
     expect(counters.contexts[0].proxy?.server).toBe('http://gw.dataimpulse.com:823');
-    expect(counters.contexts[0].proxy?.username).toMatch(/^mylogin-session-/);
+    expect(counters.contexts[0].proxy?.username).toMatch(/^mylogin__sessid\./);
     expect(counters.gotos[0].waitUntil).toBe('commit');
 
     const aborted = counters.routes

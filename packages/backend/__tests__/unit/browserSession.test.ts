@@ -9,6 +9,7 @@
 
 import {
   BrowserSessionChallengeError,
+  BrowserSessionNavigationError,
   exportStorageState,
   fetchJsonInPage,
   warmBrowserPage,
@@ -76,6 +77,21 @@ describe('warmBrowserPage', () => {
       }),
     ).resolves.toBeUndefined();
     expect(page.waitForTimeout).toHaveBeenCalled();
+  });
+
+  it('throws BrowserSessionNavigationError when goto times out', async () => {
+    const page = buildPage({
+      goto: jest.fn(async () => {
+        throw new Error('goto: Timeout 60000ms exceeded. Call log: waiting until "commit"');
+      }),
+    });
+    await expect(
+      warmBrowserPage(page, {
+        warmUrl: 'https://portal.example/',
+        timeoutMs: 100,
+        challengeWaitMs: 100,
+      }),
+    ).rejects.toBeInstanceOf(BrowserSessionNavigationError);
   });
 
   it('throws BrowserSessionChallengeError when challenge never clears', async () => {

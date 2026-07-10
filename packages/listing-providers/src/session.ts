@@ -25,6 +25,17 @@ export const DEFAULT_CHALLENGE_RELOAD_AFTER_POLLS = 6;
 export const DEFAULT_CONTENT_SELECTORS =
   'article.item, .items-list, section.items-container, main#main-content';
 
+/** Raised when `page.goto` times out (proxy hang, TLS, or portal never commits). */
+export class BrowserSessionNavigationError extends Error {
+  constructor(
+    readonly warmUrl: string,
+    readonly detail: string,
+  ) {
+    super(`Browser session navigation failed at ${warmUrl}: ${detail}`);
+    this.name = 'BrowserSessionNavigationError';
+  }
+}
+
 /** Raised when a warmed session is still on an anti-bot interstitial. */
 export class BrowserSessionChallengeError extends Error {
   constructor(
@@ -191,6 +202,25 @@ function isWarmPageChallenge(html: string, isChallenge?: (html: string) => boole
   return isDataDomeHtmlChallenge(html);
 }
 
+function isGotoTimeoutError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return /timeout.*exceeded|TimeoutError/i.test(error.message);
+}
+
+async function gotoWarmUrl(page: SessionPage, warmUrl: string, timeoutMs: number): Promise<void> {
+  try {
+    await page.goto(warmUrl, { timeout: timeoutMs, waitUntil: 'commit' });
+  } catch (error) {
+    if (isGotoTimeoutError(error)) {
+      throw new BrowserSessionNavigationError(
+        warmUrl,
+        `page.goto timed out after ${timeoutMs}ms (waitUntil=commit) — proxy hang, TLS failure, or portal never committed`,
+      );
+    }
+    throw error;
+  }
+}
+
 export async function warmBrowserPage(page: SessionPage, options: WarmBrowserPageOptions): Promise<void> {
   const perGotoTimeoutMs = options.timeoutMs ?? DEFAULT_SESSION_TIMEOUT_MS;
   const challengeWaitMs = options.challengeWaitMs ?? perGotoTimeoutMs;
@@ -201,7 +231,7 @@ export async function warmBrowserPage(page: SessionPage, options: WarmBrowserPag
   let challengePolls = 0;
   let clearedChallenge = false;
 
-  await page.goto(options.warmUrl, { timeout: perGotoTimeoutMs, waitUntil: 'commit' });
+  await gotoWarmUrl(page, options.warmUrl, perGotoTimeoutMs);
 
   while (Date.now() < deadline) {
     if (options.signal?.aborted) {
@@ -211,7 +241,7 @@ export async function warmBrowserPage(page: SessionPage, options: WarmBrowserPag
     if (isWarmPageChallenge(html, options.isChallenge)) {
       challengePolls += 1;
       if (reloadAfterPolls > 0 && challengePolls % reloadAfterPolls === 0) {
-        await page.goto(options.warmUrl, { timeout: perGotoTimeoutMs, waitUntil: 'commit' });
+        await gotoWarmUrl(page, options.warmUrl, perGotoTimeoutMs);
       } else {
         await page.waitForTimeout(CHALLENGE_POLL_MS);
       }
