@@ -33,7 +33,7 @@ import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetric
 import { providerMaxSearchPages } from '../../discoverLimits';
 import type { EsSchemaListing } from '../../parse/jsonLd';
 import { FOTOCASA_BASE_URL } from './fixtures';
-import { fotocasaSourceIdFromUrl, parseFotocasaSearch, type FotocasaRaw } from './parse';
+import { fotocasaSourceIdFromUrl, parseFotocasaDetail, parseFotocasaSearch, type FotocasaRaw } from './parse';
 import {
   fotocasaCityFromRefUrl,
   fotocasaDefaultLocationSegments,
@@ -498,6 +498,33 @@ export class FotocasaProvider implements ListingProvider {
         url: propertyUrl,
         detail: 'property API PerimeterX challenge after search warm-up',
       });
+
+      try {
+        await session.warmNavigate({
+          warmUrl: ref.url,
+          signal: ctx.signal,
+          contentSelector: 'script[type="application/ld+json"], main, h1',
+          isChallenge: isFotocasaChallenge,
+          challengeWaitMs: 30_000,
+        });
+        const detailHtml = await session.content();
+        const payload = parseFotocasaDetail(detailHtml, ref.url);
+        this.metrics.record({
+          provider: this.id,
+          strategy: 'browser',
+          outcome: 'success',
+          status: 200,
+          latencyMs: Date.now() - start,
+          url: ref.url,
+          detail: 'detail-html-fallback',
+        });
+        if (sticky) {
+          this.stickyStorageState = await session.exportStorageState();
+        }
+        return { ref, payload };
+      } catch {
+        // Detail HTML still challenged — caller throws ChallengeError.
+      }
       return undefined;
     } catch (error) {
       const detail =

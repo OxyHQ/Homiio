@@ -185,7 +185,7 @@ describe('PlaywrightBrowserPool — residential proxy + asset blocking', () => {
     expect(counters.contexts).toHaveLength(1);
     expect(counters.contexts[0].proxy?.server).toBe('http://gw.dataimpulse.com:823');
     expect(counters.contexts[0].proxy?.username).toMatch(/^mylogin-session-/);
-    expect(counters.gotos[0].waitUntil).toBe('domcontentloaded');
+    expect(counters.gotos[0].waitUntil).toBe('commit');
 
     const aborted = counters.routes
       .filter((r) => BLOCKED_BROWSER_RESOURCE_TYPES.has(r.resourceType))

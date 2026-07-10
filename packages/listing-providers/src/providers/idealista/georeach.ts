@@ -49,6 +49,11 @@ export function idealistaGeoreachUrl(city: string, page = 1): string {
   return `${base}?page=${page}`;
 }
 
+/** Idealista homepage — cheaper DataDome clearance before city search. */
+export function idealistaWarmHomeUrl(): string {
+  return `${IDEALISTA_BASE_URL}/`;
+}
+
 /** Idealista rental search page used to warm DataDome before georeach AJAX. */
 export function idealistaWarmSearchUrl(city: string, page = 1): string {
   const slug = citySlug(city);

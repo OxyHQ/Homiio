@@ -520,7 +520,44 @@ describe('FotocasaProvider.fetch property JSON path', () => {
     expect(local.normalize(raw).sourceId).toBe('187654321');
   });
 
-  it('throws ChallengeError when property JSON stays blocked after search warm-up', async () => {
+  it('falls back to detail HTML when property JSON is challenged', async () => {
+    const runtime: FetchRuntime = {
+      fetchHttp: async () => {
+        throw new Error('HTML ladder must not run for Fotocasa fetch');
+      },
+      fetchJson: async () => {
+        throw new Error('unused');
+      },
+      fetchText: async () => {
+        throw new Error('unused');
+      },
+      loadFixture: async () => {
+        throw new Error('unused');
+      },
+      openBrowserSession: async () => ({
+        request: async (url: string) =>
+          url.includes('/property?')
+            ? { status: 403, body: FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE }
+            : { status: 403, body: FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE },
+        warmNavigate: async () => undefined,
+        content: async () => FOTOCASA_FIXTURE_DETAIL_HTML,
+        pageUrl: () => 'https://www.fotocasa.es/es/alquiler/vivienda/madrid-capital/x/187654321/d',
+        exportStorageState: async () => ({ cookies: [] }),
+        close: async () => undefined,
+      }),
+    };
+
+    const local = new FotocasaProvider({ runtime });
+    const ref: ExternalListingRef = {
+      provider: 'fotocasa',
+      sourceId: '187654321',
+      url: 'https://www.fotocasa.es/es/alquiler/vivienda/madrid-capital/x/187654321/d',
+    };
+    const raw = await local.fetch(ref, { runtime, signal: new AbortController().signal });
+    expect(local.normalize(raw).sourceId).toBe('187654321');
+  });
+
+  it('throws ChallengeError when property JSON and detail HTML stay blocked', async () => {
     const runtime: FetchRuntime = {
       fetchHttp: async () => {
         throw new Error('HTML ladder must not run for Fotocasa fetch');
@@ -536,6 +573,9 @@ describe('FotocasaProvider.fetch property JSON path', () => {
       },
       openBrowserSession: async () => ({
         request: async () => ({ status: 403, body: FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE }),
+        warmNavigate: async () => {
+          throw new Error('detail warm blocked');
+        },
         content: async () => FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE,
         pageUrl: () => 'https://www.fotocasa.es/es/alquiler/viviendas/madrid-capital/todas-las-zonas/l',
         exportStorageState: async () => ({ cookies: [] }),

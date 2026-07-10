@@ -35,6 +35,7 @@ import {
   HABITACLIA_LISTING_CARD_SELECTOR,
   buildHabitacliaListainmueblesBody,
   extractHabitacliaListadoFormFields,
+  habitacliaWarmHomeUrl,
   habitacliaWarmSearchUrl,
   isHabitacliaListainmueblesChallenge,
   parseHabitacliaListainmuebles,
@@ -204,19 +205,26 @@ export class HabitacliaProvider implements ListingProvider {
       if (!firstCity) return;
 
       session = await runtime.openBrowserSession({
-        ...this.habitacliaSessionOptions(firstCity, sticky),
+        warmUrl: habitacliaWarmHomeUrl(),
+        contentSelector: HABITACLIA_LISTING_CARD_SELECTOR,
+        isChallenge: isHabitacliaChallenge,
+        stickyProxySession: sticky,
+        proxySessionId: this.stickyProxySessionId,
+        storageState: this.stickyStorageState,
+        blockAssets: true,
+        reloadAfterPolls: 4,
+        postChallengeSettleMs: 1_500,
+        challengeWaitMs: 60_000,
         signal,
       });
 
       for (const city of cities) {
         if (yielded.count >= limit) return;
 
-        if (city !== firstCity) {
-          await session.warmNavigate({
-            ...this.habitacliaSessionOptions(city, sticky),
-            signal,
-          });
-        }
+        await session.warmNavigate({
+          ...this.habitacliaSessionOptions(city, sticky),
+          signal,
+        });
 
         const searchHtml = await session.content();
         const formFields = extractHabitacliaListadoFormFields(searchHtml);
