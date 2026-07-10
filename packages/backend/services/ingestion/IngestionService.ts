@@ -35,6 +35,9 @@ import { Logger } from '../../utils/logger';
 /** Default TTL (days) for an ingested external listing when none is specified. */
 const DEFAULT_TTL_DAYS = 30;
 
+/** When portals omit a postcode and geocoders return none (Address requires a value). */
+const EXTERNAL_POSTAL_FALLBACK = '00000';
+
 /** Outcome of ingesting one listing. */
 export interface IngestResult {
   status: 'created' | 'updated';
@@ -137,38 +140,32 @@ export class IngestionService {
 
   /** Resolve the canonical building Address, geocoding coordinates if absent. */
   private async resolveAddress(address: NormalizedListingAddress): Promise<Types.ObjectId> {
-    let coordinates: [number, number];
     let postalCode = address.postalCode?.trim() ?? '';
+    let coordinates: [number, number];
 
     if (address.coordinates) {
       coordinates = [address.coordinates.lng, address.coordinates.lat];
-      if (!postalCode) {
-        const reversed = await reverseGeocode(address.coordinates.lng, address.coordinates.lat);
-        if (reversed.success && reversed.data?.postalCode?.trim()) {
-          postalCode = reversed.data.postalCode.trim();
-        }
-      }
     } else {
-      const query = [address.street, address.city, address.state, address.postalCode, address.country]
-        .filter(Boolean)
-        .join(', ');
-      const geocoded = await forwardGeocode(query);
-      const resolvedCoords = geocoded.success ? geocoded.data?.coordinates : undefined;
-      if (!resolvedCoords) {
-        throw new IngestionValidationError(
-          `Could not resolve coordinates for external listing address: ${query}`,
-        );
-      }
-      coordinates = resolvedCoords;
-      if (!postalCode && geocoded.data?.postalCode?.trim()) {
-        postalCode = geocoded.data.postalCode.trim();
+      const resolved = await this.resolveCoordinatesWithFallback(address);
+      coordinates = resolved.coordinates;
+      if (!postalCode && resolved.postalCode) {
+        postalCode = resolved.postalCode;
       }
     }
 
     if (!postalCode) {
-      throw new IngestionValidationError(
-        `External listing address requires a postal code (street=${address.street}, city=${address.city})`,
-      );
+      const reversed = await reverseGeocode(coordinates[0], coordinates[1]);
+      if (reversed.success && reversed.data?.postalCode?.trim()) {
+        postalCode = reversed.data.postalCode.trim();
+      }
+    }
+
+    if (!postalCode) {
+      this.logger.warn('External listing address missing postal code; using fallback', {
+        street: address.street,
+        city: address.city,
+      });
+      postalCode = EXTERNAL_POSTAL_FALLBACK;
     }
 
     const addressInput: AddressCanonicalInput = {
@@ -184,6 +181,44 @@ export class IngestionService {
 
     const resolved = await Address.findOrCreateCanonical(addressInput);
     return resolved._id;
+  }
+
+  /**
+   * Forward-geocode a listing address, falling back to the city centroid when
+   * the street-level query fails (common for partial portal addresses).
+   */
+  private async resolveCoordinatesWithFallback(
+    address: NormalizedListingAddress,
+  ): Promise<{ coordinates: [number, number]; postalCode?: string }> {
+    const fullQuery = [address.street, address.city, address.state, address.postalCode, address.country]
+      .filter(Boolean)
+      .join(', ');
+
+    const full = await forwardGeocode(fullQuery);
+    if (full.success && full.data?.coordinates) {
+      return {
+        coordinates: full.data.coordinates,
+        postalCode: full.data.postalCode?.trim() || undefined,
+      };
+    }
+
+    const cityQuery = [address.city, address.state, address.country].filter(Boolean).join(', ');
+    const city = await forwardGeocode(cityQuery);
+    if (city.success && city.data?.coordinates) {
+      this.logger.warn('Using city-centroid coordinates for external listing (street geocode failed)', {
+        street: address.street,
+        city: address.city,
+        fullQueryError: full.error,
+      });
+      return {
+        coordinates: city.data.coordinates,
+        postalCode: city.data.postalCode?.trim() || undefined,
+      };
+    }
+
+    throw new IngestionValidationError(
+      `Could not resolve coordinates for external listing address: ${fullQuery}`,
+    );
   }
 
   /**

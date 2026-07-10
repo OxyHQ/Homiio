@@ -78,12 +78,14 @@ describe('validateNormalizedListing', () => {
     ).toThrow(ListingValidationError);
   });
 
-  it('rejects too many remote images', () => {
+  it('truncates remoteImages to the cap instead of rejecting', () => {
     const images = Array.from({ length: 13 }, (_, index) => ({
       url: `https://example.com/${index}.jpg`,
     }));
-    expect(() => validateNormalizedListing({ ...baseListing, remoteImages: images })).toThrow(
-      /remoteImages exceeds cap/,
-    );
+    const listing = { ...baseListing, remoteImages: images };
+    expect(() => validateNormalizedListing(listing)).not.toThrow();
+    expect(listing.remoteImages).toHaveLength(12);
+    expect(listing.remoteImages[0]?.url).toBe('https://example.com/0.jpg');
+    expect(listing.remoteImages[11]?.url).toBe('https://example.com/11.jpg');
   });
 });

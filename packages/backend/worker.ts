@@ -229,6 +229,27 @@ function startBullMq(): () => Promise<void> {
     });
   }
 
+  const discoverIntervalHours = config.listingWorker.discoverIntervalHours;
+  if (discoverIntervalHours > 0) {
+    const intervalMs = discoverIntervalHours * 60 * 60 * 1000;
+    const recurringScopes = bootDiscoverJobs();
+    void (async () => {
+      for (const data of recurringScopes) {
+        await discoverQueue.add(QUEUE_NAMES.discover, data, {
+          repeat: { key: `repeat-${discoverJobId(data)}`, every: intervalMs },
+        });
+      }
+      logger.info('Scheduled recurring discovery jobs', {
+        intervalHours: discoverIntervalHours,
+        scopes: recurringScopes.length,
+      });
+    })().catch((error) => {
+      logger.error('Failed to schedule recurring discovery', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+  }
+
   return async () => {
     await Promise.all([discoverWorker.close(), fetchWorker.close()]);
     await Promise.all([discoverQueue.close(), fetchQueue.close()]);

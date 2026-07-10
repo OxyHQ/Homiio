@@ -45,6 +45,11 @@ export interface Config {
     queuePrefix: string;
     /** Enqueue an initial discover pass on worker boot (default false). */
     discoverOnBoot: boolean;
+    /**
+     * Repeat discover every N hours via BullMQ schedulers. `0` or unset =
+     * boot-only (when `discoverOnBoot` is true). Requires Redis.
+     */
+    discoverIntervalHours: number;
   };
   /**
    * Admin gate. Only these Oxy user ids may call privileged endpoints (e.g.
@@ -197,6 +202,10 @@ const config: Config = {
     // prefix and queue name with ':' itself, so keep our parts colon-free.
     queuePrefix: process.env.LISTING_QUEUE_PREFIX || 'bull-homiio-listings',
     discoverOnBoot: process.env.LISTING_DISCOVER_ON_BOOT === 'true',
+    discoverIntervalHours: Math.max(
+      0,
+      parseInt(process.env.LISTING_DISCOVER_INTERVAL_HOURS || '0', 10) || 0,
+    ),
   },
 
   // Admin gate for privileged endpoints (scraper/ingestion management).

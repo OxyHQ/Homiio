@@ -136,7 +136,7 @@ export function validateNormalizedListing(
     fail('remoteImages must be an array');
   }
   if (listing.remoteImages.length > maxImages) {
-    fail(`remoteImages exceeds cap of ${maxImages}`);
+    listing.remoteImages = listing.remoteImages.slice(0, maxImages);
   }
   for (const image of listing.remoteImages) {
     if (!image.url?.trim()) {
