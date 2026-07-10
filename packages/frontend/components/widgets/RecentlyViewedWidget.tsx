@@ -96,7 +96,6 @@ export function RecentlyViewedWidget() {
     <BaseWidget
       title={t('home.recentlyViewed.title')}
       icon={<Ionicons name="time-outline" size={22} color={colors.primaryColor} />}
-      noPadding={true}
     >
       <View style={styles.widgetContent}>
         {showArrows && (

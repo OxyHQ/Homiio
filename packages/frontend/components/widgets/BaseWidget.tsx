@@ -4,14 +4,11 @@ import { View, StyleSheet } from 'react-native';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { colors } from '@/styles/colors';
-import { spacing } from '@/constants/styles';
-import { SECTION_GUTTER } from '@/components/property/Section';
 
 type BaseWidgetProps = {
   title?: string;
   icon?: ReactNode;
   children: ReactNode;
-  noPadding?: boolean;
 };
 
 /**
@@ -20,61 +17,29 @@ type BaseWidgetProps = {
  * rounded box, no shadow, no filled surface. Content sits directly on the
  * rail background (WidgetManager + RightBar own the gap rhythm between widgets).
  *
- * Mirrors `components/property/Section.tsx`: an optional `SectionHeader`-style
- * title (20px / 700 / -0.2 tracking, with the optional `icon` aligned to the
- * right of the title row) inset by `SECTION_GUTTER`, then a body inset by the
- * same gutter with a `spacing.sm` title→content gap. `noPadding` lets a child
- * own its own edge-to-edge layout (e.g. lists).
+ * Horizontal inset lives on `RightBar` (`px-4`) only — same as Mention — so
+ * widgets do not add a second gutter.
  */
-export function BaseWidget({ title, icon, children, noPadding = false }: BaseWidgetProps) {
+export function BaseWidget({ title, icon, children }: BaseWidgetProps) {
   return (
-    <View style={styles.section}>
+    <View className="pointer-events-auto gap-2">
       {title && (
-        <View style={styles.header}>
+        <View className="flex-row items-center justify-between gap-4">
           <BloomText style={styles.title}>{title}</BloomText>
-          {icon && <View style={styles.icon}>{icon}</View>}
+          {icon ? <View className="shrink-0">{icon}</View> : null}
         </View>
       )}
-      <View
-        style={[
-          noPadding ? styles.bodyFullBleed : styles.body,
-          title ? styles.bodyWithHeader : undefined,
-        ]}
-      >
-        {children}
-      </View>
+      {children}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  section: {
-    pointerEvents: 'auto',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-    paddingHorizontal: SECTION_GUTTER,
-  },
   title: {
     flexShrink: 1,
     fontSize: 20,
     fontWeight: '700',
     letterSpacing: -0.2,
     color: colors.COLOR_BLACK,
-  },
-  icon: {
-    flexShrink: 0,
-  },
-  body: {
-    paddingHorizontal: SECTION_GUTTER,
-  },
-  bodyFullBleed: {
-    paddingHorizontal: 0,
-  },
-  bodyWithHeader: {
-    marginTop: spacing.sm,
   },
 });

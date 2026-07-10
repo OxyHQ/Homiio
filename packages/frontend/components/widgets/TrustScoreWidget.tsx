@@ -186,11 +186,9 @@ export const TrustScoreWidget = React.memo(function TrustScoreWidget() {
     return null; // Don't show the widget if the user is not authenticated
   }
 
-  // Chrome (primaryLight surface + radius) comes from the shared BaseWidget.
-  // This widget has no header, so `noPadding` suppresses BaseWidget's default
-  // content padding and we keep our own 20px content wrapper.
+  // Widget owns its own internal padding on `widgetContent`.
   return (
-    <BaseWidget noPadding>
+    <BaseWidget>
       <View style={styles.widgetContent}>{renderContent}</View>
     </BaseWidget>
   );
