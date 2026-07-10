@@ -3,6 +3,7 @@ import { CREATABLE_PROPERTY_FIELDS } from './editableFields';
 import { pickFields } from '../../utils/pickFields';
 import { Property } from '../../models';
 import { telegramService } from '../../services';
+import { schedulePriceEthicsScore } from '../../services/priceEthicsService';
 import { logger, businessLogger } from '../../middlewares/logging';
 import { AppError, successResponse } from '../../middlewares/errorHandler';
 import { getErrorMessage, getErrorName, getValidationMessages } from '../../utils/errors';
@@ -168,6 +169,7 @@ export async function createProperty(req: ControllerRequest, res: ControllerResp
         error: getErrorMessage(error),
       });
     });
+    schedulePriceEthicsScore(savedProperty._id.toString());
     res.status(201).json(successResponse(savedProperty.toJSON(), 'Property created successfully'));
   } catch (error) {
     if (error instanceof OfferingValidationError) {

@@ -3,6 +3,7 @@ import { applyOfferingRulesForUpdate, OfferingValidationError, type OfferingBear
 import { EDITABLE_PROPERTY_FIELDS } from './editableFields';
 import { pickFields } from '../../utils/pickFields';
 import { onPropertyTransacted } from '../../services/commissionService';
+import { schedulePriceEthicsScore } from '../../services/priceEthicsService';
 import { Property } from '../../models';
 import { AppError, successResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
@@ -63,6 +64,8 @@ export async function updateProperty(req: ControllerRequest, res: ControllerResp
         });
       }
     }
+
+    schedulePriceEthicsScore(String(propertyId));
 
     res.json(successResponse(updatedProperty.toJSON(), 'Property updated successfully'));
   } catch (error) {

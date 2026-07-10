@@ -274,6 +274,8 @@ export interface Property {
   // Flags
   isVerified?: boolean;
   isEcoFriendly?: boolean;
+  /** Persisted ethical + market price score (computed server-side on write). */
+  priceEthics?: PropertyPriceEthics;
   createdAt: string;
   updatedAt: string;
   /** Set when the listing is soft-deleted (status moves to ARCHIVED). */
@@ -518,6 +520,23 @@ export interface PropertyDraft {
  * rather than the serialized {@link PropertyAddress}.
  */
 export type UpdatePropertyData = DeepPartial<CreatePropertyData>;
+
+/**
+ * Persisted price-ethics snapshot written by the backend on create/update/ingest.
+ * `fairnessScore` is higher when the listing is more fairly priced; used for sort/ranking.
+ */
+export interface PropertyPriceEthics {
+  ethicalSuggested?: number;
+  ethicalMax?: number;
+  /** Omitted when ethical cap could not be computed (e.g. external listings). */
+  withinEthical?: boolean;
+  marketVerdict?: AreaPriceVerdict;
+  percentDiffFromAvg?: number;
+  /** Badge + filter: true when the listing qualifies as "fair price". */
+  isFairPrice: boolean;
+  fairnessScore: number;
+  scoredAt: string;
+}
 
 /**
  * Verdict assigned to a listing's price relative to comparable homes in its

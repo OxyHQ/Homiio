@@ -482,7 +482,8 @@
         "moderate": "Moderate",
         "strict": "Strict",
         "superStrict": "Super strict"
-      }
+      },
+      "fairPrice": "Fair price only"
     },
     "mode": {
       "label": "Browse mode",
@@ -546,7 +547,8 @@
         "budget": "Under €1000",
         "apply": "Apply",
         "searchWithCount": "Search with {{count}} filters",
-        "advancedFilters": "Advanced Filters"
+        "advancedFilters": "Advanced Filters",
+        "fairPrice": "Fair price"
       },
       "alerts": {
         "title": "Property Alerts",
@@ -680,7 +682,8 @@
       "recommended": "Recommended",
       "priceAsc": "Price: Low to high",
       "priceDesc": "Price: High to low",
-      "newest": "Newest first"
+      "newest": "Newest first",
+      "fairness": "Best value"
     },
     "save": {
       "title": "Save this search",
@@ -2453,7 +2456,17 @@
       "cheaper": "cheaper",
       "pricier": "pricier"
     },
-    "fraudWarning": "Never pay or transfer funds outside the Homio platform"
+    "fraudWarning": "Never pay or transfer funds outside the Homio platform",
+    "priceEthics": {
+      "banner": {
+        "title": "Not a fair price",
+        "exceedsEthical": "This price exceeds Homiio's ethical maximum ({{max}}/month).",
+        "exceedsEthicalGeneric": "This price exceeds Homiio's ethical maximum for similar homes.",
+        "aboveMarket": "This price is {{percent}}% above similar homes in the area.",
+        "aboveMarketGeneric": "This price is above the local average for similar homes.",
+        "generic": "This listing does not meet Homiio's fair-price criteria."
+      }
+    }
   },
   "viewings": {
     "title": "Viewings",
@@ -2705,7 +2718,8 @@
       "exchange": "Exchange",
       "verified": "Verified",
       "eco": "Eco",
-      "instantBook": "Instant book"
+      "instantBook": "Instant book",
+      "fairPrice": "Fair price"
     },
     "offering": {
       "stepTitle": "How are you offering this?",

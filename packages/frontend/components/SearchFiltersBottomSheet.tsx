@@ -33,6 +33,9 @@ export interface SearchFilters {
     leaseDuration?: string;
     maxDeposit?: number;
     furnished?: boolean;
+
+    /** Only listings with a fair-price badge (`priceEthics.isFairPrice`). */
+    fairPrice?: boolean;
 }
 
 interface SearchFiltersBottomSheetProps {
@@ -43,18 +46,18 @@ interface SearchFiltersBottomSheetProps {
 }
 
 const PROPERTY_TYPES_LONG_TERM = [
-    { id: 'apartment', labelKey: 'search.types.apartments' },
-    { id: 'house', labelKey: 'search.types.houses' },
-    { id: 'room', labelKey: 'search.types.rooms' },
-    { id: 'studio', labelKey: 'search.types.studios' },
-] as const;
+    { id: 'apartment', label: 'Apartments' },
+    { id: 'house', label: 'Houses' },
+    { id: 'room', label: 'Rooms' },
+    { id: 'studio', label: 'Studios' },
+];
 
 const PROPERTY_TYPES_VACATION = [
-    { id: 'apartment', labelKey: 'search.types.apartments' },
-    { id: 'house', labelKey: 'search.filters.propertyTypeVacation.wholeHouses' },
-    { id: 'room', labelKey: 'search.filters.propertyTypeVacation.privateRooms' },
-    { id: 'studio', labelKey: 'search.types.studios' },
-] as const;
+    { id: 'apartment', label: 'Apartments' },
+    { id: 'house', label: 'Whole houses' },
+    { id: 'room', label: 'Private rooms' },
+    { id: 'studio', label: 'Studios' },
+];
 
 const AMENITIES = [
     'wifi',
@@ -70,33 +73,19 @@ const AMENITIES = [
     'washing_machine',
 ];
 
-const AMENITY_I18N_KEYS: Record<string, string> = {
-    wifi: 'search.filters.amenity.wifi',
-    parking: 'search.filters.amenity.parking',
-    gym: 'search.filters.amenity.gym',
-    pool: 'search.filters.amenity.pool',
-    balcony: 'search.filters.amenity.balcony',
-    garden: 'search.filters.amenity.garden',
-    elevator: 'search.filters.amenity.elevator',
-    air_conditioning: 'search.filters.amenity.airConditioning',
-    heating: 'search.filters.amenity.heating',
-    dishwasher: 'search.filters.amenity.dishwasher',
-    washing_machine: 'search.filters.amenity.washingMachine',
-};
-
 const LEASE_DURATIONS = [
-    { id: '3_months', labelKey: 'search.filters.leaseDuration.3Months' },
-    { id: '6_months', labelKey: 'search.filters.leaseDuration.6Months' },
-    { id: '12_months', labelKey: 'search.filters.leaseDuration.12Months' },
-    { id: 'flexible', labelKey: 'search.filters.leaseDuration.flexible' },
-] as const;
+    { id: '3_months', label: '3 months' },
+    { id: '6_months', label: '6 months' },
+    { id: '12_months', label: '12 months' },
+    { id: 'flexible', label: 'Flexible' },
+];
 
 const CANCELLATION_POLICIES = [
-    { id: CancellationPolicy.FLEXIBLE, labelKey: 'search.filters.cancellation.flexible' },
-    { id: CancellationPolicy.MODERATE, labelKey: 'search.filters.cancellation.moderate' },
-    { id: CancellationPolicy.STRICT, labelKey: 'search.filters.cancellation.strict' },
-    { id: CancellationPolicy.SUPER_STRICT, labelKey: 'search.filters.cancellation.superStrict' },
-] as const;
+    { id: CancellationPolicy.FLEXIBLE, label: 'Flexible' },
+    { id: CancellationPolicy.MODERATE, label: 'Moderate' },
+    { id: CancellationPolicy.STRICT, label: 'Strict' },
+    { id: CancellationPolicy.SUPER_STRICT, label: 'Super strict' },
+];
 
 export function SearchFiltersBottomSheet({
     filters,
@@ -111,19 +100,25 @@ export function SearchFiltersBottomSheet({
         const propertyTypes = mode === 'vacation' ? PROPERTY_TYPES_VACATION : PROPERTY_TYPES_LONG_TERM;
         const sections: FilterSection[] = [
             {
+                id: 'fairPrice',
+                title: t('search.filters.fairPrice', 'Fair price only'),
+                type: 'toggle',
+                value: Boolean(filters.fairPrice),
+            },
+            {
                 id: 'type',
-                title: t('search.filters.propertyType'),
+                title: t('Property Type'),
                 type: 'chips',
                 options: propertyTypes.map((type) => ({
                     id: type.id,
-                    label: t(type.labelKey),
+                    label: t(type.label),
                     value: type.id,
                 })),
                 value: filters.type,
             },
             {
                 id: 'price',
-                title: mode === 'vacation' ? t('search.filters.nightlyPrice') : t('search.filters.monthlyPrice'),
+                title: mode === 'vacation' ? t('Nightly price') : t('Monthly price'),
                 type: 'range',
                 min: 0,
                 max: mode === 'vacation' ? 1000 : 10000,
@@ -134,7 +129,7 @@ export function SearchFiltersBottomSheet({
             },
             {
                 id: 'bedrooms',
-                title: t('property.sections.bedrooms'),
+                title: t('Bedrooms'),
                 type: 'chips',
                 options: [
                     { id: '1', label: '1', value: '1' },
@@ -147,7 +142,7 @@ export function SearchFiltersBottomSheet({
             },
             {
                 id: 'bathrooms',
-                title: t('property.sections.bathrooms'),
+                title: t('Bathrooms'),
                 type: 'chips',
                 options: [
                     { id: '1', label: '1', value: '1' },
@@ -163,37 +158,37 @@ export function SearchFiltersBottomSheet({
             sections.push(
                 {
                     id: 'checkIn',
-                    title: t('search.filters.checkIn'),
+                    title: t('Check-in'),
                     type: 'date',
                     value: filters.checkIn || '',
-                    placeholder: t('search.filters.addDate'),
+                    placeholder: t('Add date'),
                 },
                 {
                     id: 'checkOut',
-                    title: t('search.filters.checkOut'),
+                    title: t('Check-out'),
                     type: 'date',
                     value: filters.checkOut || '',
-                    placeholder: t('search.filters.addDate'),
+                    placeholder: t('Add date'),
                 },
                 {
                     id: 'guests',
-                    title: t('search.filters.guests'),
+                    title: t('Guests'),
                     type: 'counter',
                     value: typeof filters.guests === 'number' ? filters.guests : 0,
                 },
                 {
                     id: 'instantBook',
-                    title: t('search.filters.instantBook'),
+                    title: t('Instant book'),
                     type: 'toggle',
                     value: Boolean(filters.instantBook),
                 },
                 {
                     id: 'cancellationPolicy',
-                    title: t('search.filters.cancellationPolicy'),
+                    title: t('Cancellation policy'),
                     type: 'chips',
                     options: CANCELLATION_POLICIES.map((policy) => ({
                         id: policy.id,
-                        label: t(policy.labelKey),
+                        label: t(policy.label),
                         value: policy.id,
                     })),
                     value: filters.cancellationPolicy,
@@ -203,25 +198,25 @@ export function SearchFiltersBottomSheet({
             sections.push(
                 {
                     id: 'moveIn',
-                    title: t('search.filters.moveInDate'),
+                    title: t('Move-in date'),
                     type: 'date',
                     value: filters.moveIn || '',
-                    placeholder: t('search.filters.addDate'),
+                    placeholder: t('Add date'),
                 },
                 {
                     id: 'leaseDuration',
-                    title: t('search.filters.leaseDuration'),
+                    title: t('Lease duration'),
                     type: 'chips',
                     options: LEASE_DURATIONS.map((duration) => ({
                         id: duration.id,
-                        label: t(duration.labelKey),
+                        label: t(duration.label),
                         value: duration.id,
                     })),
                     value: filters.leaseDuration,
                 },
                 {
                     id: 'maxDeposit',
-                    title: t('search.filters.maxDeposit'),
+                    title: t('Max deposit'),
                     type: 'range',
                     min: 0,
                     max: 10000,
@@ -229,7 +224,7 @@ export function SearchFiltersBottomSheet({
                 },
                 {
                     id: 'furnished',
-                    title: t('property.sections.furnished'),
+                    title: t('Furnished'),
                     type: 'toggle',
                     value: Boolean(filters.furnished),
                 },
@@ -238,11 +233,11 @@ export function SearchFiltersBottomSheet({
 
         sections.push({
             id: 'amenities',
-            title: t('search.filters.amenities'),
+            title: t('Amenities'),
             type: 'chips',
             options: AMENITIES.map((amenity) => ({
                 id: amenity,
-                label: t(AMENITY_I18N_KEYS[amenity]),
+                label: t(amenity.replace('_', ' ')),
                 value: amenity,
             })),
             value: filters.amenities,
