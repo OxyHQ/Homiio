@@ -67,13 +67,13 @@ export function ThemedText({
     : [typeStyles[type], style];
 
   if (type === 'title') {
-    return <H1 {...rest} style={resolvedStyle} />;
+    return <H1 {...rest} className={className} style={resolvedStyle} />;
   }
   if (type === 'subtitle') {
-    return <H2 {...rest} style={resolvedStyle} />;
+    return <H2 {...rest} className={className} style={resolvedStyle} />;
   }
   if (type === 'default') {
-    return <P {...rest} style={resolvedStyle} />;
+    return <P {...rest} className={className} style={resolvedStyle} />;
   }
-  return <Text {...rest} style={resolvedStyle} />;
+  return <Text {...rest} className={className} style={resolvedStyle} />;
 }

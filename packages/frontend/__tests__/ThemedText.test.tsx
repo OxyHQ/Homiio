@@ -12,6 +12,7 @@
  * synchronously with no async font-loading side effects.
  */
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 // Import from the dedicated `theme` subpath (as the app does for `portal`/
 // `typography`) rather than the Bloom barrel, so the test only pulls the theme
@@ -49,5 +50,17 @@ describe('<ThemedText />', () => {
   it('forwards arbitrary Text props such as testID', () => {
     render(<ThemedText testID="greeting">Hola</ThemedText>, { wrapper: ThemeWrapper });
     expect(screen.getByTestId('greeting')).toBeTruthy();
+  });
+
+  it('skips typeStyles when className is set', () => {
+    render(
+      <ThemedText type="title" className="text-lg">
+        Title
+      </ThemedText>,
+      { wrapper: ThemeWrapper },
+    );
+    const node = screen.getByText('Title');
+    const flat = StyleSheet.flatten(node.props.style);
+    expect(flat?.fontSize).not.toBe(32);
   });
 });
