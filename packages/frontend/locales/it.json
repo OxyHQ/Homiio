@@ -385,11 +385,6 @@
       "subtitle": "Reach verified renters across Spain — free to list, fair fees, real human support.",
       "title": "List your space, find a great tenant"
     },
-    "footerStrip": {
-      "support": "Real support, real people",
-      "fair": "Fair agreements",
-      "verified": "Verified listings"
-    },
     "nearby": {
       "title": "Homes in {{city}}"
     },
@@ -2267,9 +2262,6 @@
     },
     "hero": {
       "tagline": "Trova la tua casa etica"
-    },
-    "footer": {
-      "brandName": "Homiio - Piattaforma Abitativa Etica"
     },
     "mode": {
       "longTerm": "Lunga durata",

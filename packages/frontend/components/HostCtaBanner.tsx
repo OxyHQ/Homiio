@@ -4,8 +4,7 @@
  * scrim from bottom-left for legibility, a 2-line headline + supporting
  * one-liner + Bloom Button overlaid on top of the image.
  *
- * Sits as the final visual beat on the home page; the page footer
- * follows with small-print trust messaging.
+ * Sits as a closing visual beat on the home page (paired with AgentCtaBanner).
  */
 import React, { useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';

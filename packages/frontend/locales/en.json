@@ -261,11 +261,6 @@
       "cta": "Become a host",
       "subtitle": "Reach verified renters across Spain — free to list, fair fees, real human support.",
       "title": "List your space, find a great tenant"
-    },
-    "footerStrip": {
-      "support": "Real support, real people",
-      "fair": "Fair agreements",
-      "verified": "Verified listings"
     }
   },
   "agent": {
@@ -1921,9 +1916,6 @@
     },
     "hero": {
       "tagline": "Find your ethical home"
-    },
-    "footer": {
-      "brandName": "Homiio - Ethical Housing Platform"
     },
     "mode": {
       "longTerm": "Long-term",
