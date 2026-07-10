@@ -35,12 +35,17 @@ class ViewingController {
       if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
       const requesterProfileId = activeProfile._id;
-      const ownerProfileId = property.profileId;
+      const ownerOxyUserId = property.oxyUserId;
+      if (!ownerOxyUserId) return next(new AppError('Property has no owner', 400, 'INVALID_PROPERTY'));
 
       // Prevent booking own property
-      if (String(ownerProfileId) === String(requesterProfileId)) {
+      if (ownerOxyUserId === oxyUserId) {
         return next(new AppError('You cannot book a viewing for your own property', 403, 'FORBIDDEN'));
       }
+
+      const ownerProfile = await Profile.findActiveByOxyUserId(ownerOxyUserId);
+      if (!ownerProfile) return next(new AppError('Property owner profile not found', 404, 'PROFILE_NOT_FOUND'));
+      const ownerProfileId = ownerProfile._id;
 
       // Build scheduledAt from date (YYYY-MM-DD) and time (HH:mm)
       // Create date in local timezone first
@@ -91,7 +96,7 @@ class ViewingController {
       logger.info('Viewing request created', { viewingId: viewing._id, propertyId, requesterProfileId, ownerProfileId });
 
       // Notify the property owner that someone requested a viewing.
-      await notificationDispatchService.createForProfile(String(ownerProfileId), {
+      await notificationDispatchService.createForUser(ownerOxyUserId, {
         type: 'property',
         title: 'New viewing request',
         message: 'Someone requested a viewing for your property.',
@@ -157,7 +162,7 @@ class ViewingController {
       const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
       if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
-      const isOwner = String(property.profileId) === String(activeProfile._id);
+      const isOwner = property.oxyUserId === oxyUserId;
 
       const query: Record<string, unknown> = { propertyId };
       if (!isOwner) {

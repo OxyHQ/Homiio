@@ -245,11 +245,9 @@ const exchangeSchema = new mongoose.Schema({
 }, { _id: false });
 
 const propertySchema = new mongoose.Schema({
-  profileId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Profile',
-    required: function(this: any) { return !this.isExternal; },
-    // When external, this can be null/undefined
+  oxyUserId: {
+    type: String,
+    required: function(this: { isExternal?: boolean }) { return !this.isExternal; },
   },
   // External sourcing metadata
   source: {
@@ -700,8 +698,8 @@ const propertySchema = new mongoose.Schema({
 });
 
 // Indexes for better query performance
-propertySchema.index({ profileId: 1, status: 1 });
-propertySchema.index({ profileId: 1, createdAt: -1 }); // User's property list queries
+propertySchema.index({ oxyUserId: 1, status: 1 });
+propertySchema.index({ oxyUserId: 1, createdAt: -1 });
 propertySchema.index({ addressId: 1 });
 propertySchema.index({ type: 1, 'availability.isAvailable': 1 });
 propertySchema.index({ status: 1, 'availability.isAvailable': 1 }); // Search queries
@@ -839,8 +837,8 @@ propertySchema.pre('save', function(this: IProperty, next: (err?: Error) => void
       this.expiresAt = new Date(Date.now() + ms);
     }
     // Ensure profileId is removed for external listings
-    if (this.profileId) {
-      this.profileId = undefined;
+    if (this.oxyUserId) {
+      this.oxyUserId = undefined;
     }
   }
 
@@ -868,11 +866,11 @@ propertySchema.pre('save', function(this: IProperty, next: (err?: Error) => void
 // Static methods
 type ObjectIdLike = string | { toString(): string };
 
-propertySchema.statics.findByProfile = function(
-  profileId: ObjectIdLike,
+propertySchema.statics.findByOxyUser = function(
+  oxyUserId: string,
   options: Record<string, unknown> = {}
 ) {
-  return this.find({ profileId, status: { $ne: 'archived' } }, null, options);
+  return this.find({ oxyUserId, status: { $ne: 'archived' } }, null, options);
 };
 
 propertySchema.statics.findAvailable = function(filters: Record<string, unknown> = {}) {

@@ -9,8 +9,9 @@ import { LeaseStatus } from '@homiio/shared-types';
 import { successResponse, paginationResponse, AppError } from '../middlewares/errorHandler';
 import { logger } from '../middlewares/logging';
 
-import { Lease, Property, Profile } from '../models';
-import type { ILease, IProfile } from '../models';
+import { Lease, Property } from '../models';
+import type { ILease } from '../models';
+import { requireSessionOxyUserId } from '../utils/sessionUser';
 import { pickFields } from '../utils/pickFields';
 import { CREATABLE_LEASE_FIELDS, EDITABLE_LEASE_FIELDS } from './lease/editableFields';
 import { toLeaseDTO, refToId } from './lease/toLeaseDTO';
@@ -23,7 +24,7 @@ const EDITABLE_STATUSES: ReadonlyArray<string> = [LeaseStatus.DRAFT, LeaseStatus
 const DELETABLE_STATUSES: ReadonlyArray<string> = [LeaseStatus.DRAFT, LeaseStatus.PENDING_SIGNATURES];
 
 /** Reference paths populated on list/detail reads so the DTO can carry nested docs. */
-const LEASE_POPULATE = ['propertyId', 'landlordProfileId', 'tenantProfileId'];
+const LEASE_POPULATE = ['propertyId'];
 
 function parsePagination(query: Request['query']): { page: number; limit: number; skip: number } {
   const rawPage = parseInt(String(query.page ?? ''), 10);
@@ -33,32 +34,20 @@ function parsePagination(query: Request['query']): { page: number; limit: number
   return { page, limit, skip: (page - 1) * limit };
 }
 
-async function resolveActiveProfile(req: Request): Promise<IProfile> {
-  const oxyUserId = req.user?.id || req.user?._id || req.userId;
-  if (!oxyUserId) {
-    throw new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED');
-  }
-  const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-  if (!activeProfile) {
-    throw new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND');
-  }
-  return activeProfile;
+function isLandlord(lease: ILease, oxyUserId: string): boolean {
+  return refToId(lease.landlordOxyUserId) === oxyUserId;
 }
 
-function isLandlord(lease: ILease, profileId: string): boolean {
-  return refToId(lease.landlordProfileId) === profileId;
-}
-
-function isTenant(lease: ILease, profileId: string): boolean {
-  if (refToId(lease.tenantProfileId) === profileId) {
+function isTenant(lease: ILease, oxyUserId: string): boolean {
+  if (refToId(lease.tenantOxyUserId) === oxyUserId) {
     return true;
   }
-  const coTenants = (lease.coTenants || []) as Array<{ profileId?: unknown }>;
-  return coTenants.some((ct) => refToId(ct.profileId) === profileId);
+  const coTenants = (lease.coTenants || []) as Array<{ oxyUserId?: unknown }>;
+  return coTenants.some((ct) => refToId(ct.oxyUserId) === oxyUserId);
 }
 
-function isParty(lease: ILease, profileId: string): boolean {
-  return isLandlord(lease, profileId) || isTenant(lease, profileId);
+function isParty(lease: ILease, oxyUserId: string): boolean {
+  return isLandlord(lease, oxyUserId) || isTenant(lease, oxyUserId);
 }
 
 class LeaseController {
@@ -67,16 +56,15 @@ class LeaseController {
    */
   async getLeases(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const activeProfile = await resolveActiveProfile(req);
-      const profileId = activeProfile._id;
+      const oxyUserId = requireSessionOxyUserId(req);
       const { page, limit, skip } = parsePagination(req.query);
       const { status, propertyId } = req.query;
 
       const filter: Record<string, unknown> = {
         $or: [
-          { landlordProfileId: profileId },
-          { tenantProfileId: profileId },
-          { 'coTenants.profileId': profileId },
+          { landlordOxyUserId: oxyUserId },
+          { tenantOxyUserId: oxyUserId },
+          { 'coTenants.oxyUserId': oxyUserId },
         ],
       };
       if (status) {
@@ -108,14 +96,14 @@ class LeaseController {
    */
   async createLease(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const activeProfile = await resolveActiveProfile(req);
-      const { propertyId, tenantProfileId, leaseTerms, rentDetails } = req.body;
+      const oxyUserId = requireSessionOxyUserId(req);
+      const { propertyId, tenantOxyUserId, leaseTerms, rentDetails } = req.body;
 
       if (!propertyId) {
         throw new AppError('propertyId is required', 400, 'VALIDATION_ERROR');
       }
-      if (!tenantProfileId) {
-        throw new AppError('tenantProfileId is required', 400, 'VALIDATION_ERROR');
+      if (!tenantOxyUserId) {
+        throw new AppError('tenantOxyUserId is required', 400, 'VALIDATION_ERROR');
       }
       if (!leaseTerms?.startDate || !leaseTerms?.endDate) {
         throw new AppError('leaseTerms.startDate and leaseTerms.endDate are required', 400, 'VALIDATION_ERROR');
@@ -128,7 +116,7 @@ class LeaseController {
       if (!property) {
         throw new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND');
       }
-      if (!property.profileId || property.profileId.toString() !== activeProfile._id.toString()) {
+      if (!property.oxyUserId || property.oxyUserId.toString() !== oxyUserId) {
         throw new AppError('Access denied - you can only create leases for your own properties', 403, 'FORBIDDEN');
       }
 
@@ -136,14 +124,14 @@ class LeaseController {
       const lease = await Lease.create({
         ...leaseData,
         propertyId,
-        tenantProfileId,
-        landlordProfileId: activeProfile._id,
+        tenantOxyUserId,
+        landlordOxyUserId: oxyUserId,
         status: LeaseStatus.DRAFT,
       });
 
       logger.info('Lease created', {
         leaseId: lease._id.toString(),
-        landlordProfileId: activeProfile._id.toString(),
+        landlordOxyUserId: oxyUserId,
         propertyId: String(propertyId),
       });
 
@@ -158,12 +146,12 @@ class LeaseController {
    */
   async getLeaseById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const activeProfile = await resolveActiveProfile(req);
+      const oxyUserId = requireSessionOxyUserId(req);
       const lease = await Lease.findById(req.params.id).populate(LEASE_POPULATE);
       if (!lease) {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
-      if (!isParty(lease, activeProfile._id.toString())) {
+      if (!isParty(lease, oxyUserId)) {
         throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');
       }
 
@@ -179,12 +167,12 @@ class LeaseController {
    */
   async updateLease(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const activeProfile = await resolveActiveProfile(req);
+      const oxyUserId = requireSessionOxyUserId(req);
       const lease = await Lease.findById(req.params.id);
       if (!lease) {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
-      if (!isLandlord(lease, activeProfile._id.toString())) {
+      if (!isLandlord(lease, oxyUserId)) {
         throw new AppError('Access denied - only the landlord can update this lease', 403, 'FORBIDDEN');
       }
       if (!EDITABLE_STATUSES.includes(lease.status)) {
@@ -197,7 +185,7 @@ class LeaseController {
 
       logger.info('Lease updated', {
         leaseId: lease._id.toString(),
-        updatedBy: activeProfile._id.toString(),
+        updatedBy: oxyUserId,
       });
 
       res.json(successResponse(toLeaseDTO(lease), 'Lease updated successfully'));
@@ -212,12 +200,12 @@ class LeaseController {
    */
   async deleteLease(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const activeProfile = await resolveActiveProfile(req);
+      const oxyUserId = requireSessionOxyUserId(req);
       const lease = await Lease.findById(req.params.id);
       if (!lease) {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
-      if (!isLandlord(lease, activeProfile._id.toString())) {
+      if (!isLandlord(lease, oxyUserId)) {
         throw new AppError('Access denied - only the landlord can delete this lease', 403, 'FORBIDDEN');
       }
       if (!DELETABLE_STATUSES.includes(lease.status)) {
@@ -228,7 +216,7 @@ class LeaseController {
 
       logger.info('Lease deleted', {
         leaseId: lease._id.toString(),
-        deletedBy: activeProfile._id.toString(),
+        deletedBy: oxyUserId,
       });
 
       res.json(successResponse(null, 'Lease deleted successfully'));
@@ -244,7 +232,7 @@ class LeaseController {
    */
   async signLease(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const activeProfile = await resolveActiveProfile(req);
+      const oxyUserId = requireSessionOxyUserId(req);
       const { acceptTerms, signature } = req.body;
       if (!acceptTerms) {
         throw new AppError('Must accept terms to sign lease', 400, 'TERMS_NOT_ACCEPTED');
@@ -255,29 +243,28 @@ class LeaseController {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
 
-      const profileId = activeProfile._id.toString();
       const ipAddress = req.ip;
-      let counterpartyProfileId: string | undefined;
-      if (isLandlord(lease, profileId)) {
+      let counterpartyOxyUserId: string | undefined;
+      if (isLandlord(lease, oxyUserId)) {
         await lease.signAsLandlord(ipAddress, signature);
-        counterpartyProfileId = refToId(lease.tenantProfileId);
-      } else if (refToId(lease.tenantProfileId) === profileId) {
+        counterpartyOxyUserId = refToId(lease.tenantOxyUserId);
+      } else if (refToId(lease.tenantOxyUserId) === oxyUserId) {
         await lease.signAsTenant(ipAddress, signature);
-        counterpartyProfileId = refToId(lease.landlordProfileId);
+        counterpartyOxyUserId = refToId(lease.landlordOxyUserId);
       } else {
         throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');
       }
 
       logger.info('Lease signed', {
         leaseId: lease._id.toString(),
-        signedBy: profileId,
+        signedBy: oxyUserId,
       });
 
       // Notify the counterparty: either the lease is now fully signed/active,
       // or it awaits their signature. Best-effort — never blocks the response.
       const leaseId = lease._id.toString();
       const isActive = lease.status === LeaseStatus.ACTIVE;
-      await notificationDispatchService.createForProfile(counterpartyProfileId, {
+      await notificationDispatchService.createForUser(counterpartyOxyUserId, {
         type: 'contract',
         title: isActive ? 'Lease is now active' : 'Lease awaiting your signature',
         message: isActive
@@ -299,14 +286,13 @@ class LeaseController {
    */
   async terminateLease(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const activeProfile = await resolveActiveProfile(req);
+      const oxyUserId = requireSessionOxyUserId(req);
       const { reason, effectiveDate } = req.body;
       const lease = await Lease.findById(req.params.id);
       if (!lease) {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
-      const profileId = activeProfile._id.toString();
-      if (!isParty(lease, profileId)) {
+      if (!isParty(lease, oxyUserId)) {
         throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');
       }
       if (lease.status === LeaseStatus.TERMINATED) {
@@ -314,7 +300,7 @@ class LeaseController {
       }
 
       lease.terminationNotice = {
-        givenBy: profileId,
+        givenBy: oxyUserId,
         givenDate: new Date(),
         effectiveDate: effectiveDate ? new Date(effectiveDate) : new Date(),
         reason: reason,
@@ -325,7 +311,7 @@ class LeaseController {
 
       logger.info('Lease terminated', {
         leaseId: lease._id.toString(),
-        terminatedBy: profileId,
+        terminatedBy: oxyUserId,
         reason: reason,
       });
 
@@ -342,7 +328,7 @@ class LeaseController {
    */
   async renewLease(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const activeProfile = await resolveActiveProfile(req);
+      const oxyUserId = requireSessionOxyUserId(req);
       const { newEndDate, monthlyRent, startDate } = req.body;
       if (!newEndDate) {
         throw new AppError('newEndDate is required', 400, 'VALIDATION_ERROR');
@@ -352,7 +338,7 @@ class LeaseController {
       if (!original) {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
-      if (!isLandlord(original, activeProfile._id.toString())) {
+      if (!isLandlord(original, oxyUserId)) {
         throw new AppError('Access denied - only the landlord can renew this lease', 403, 'FORBIDDEN');
       }
 
@@ -386,7 +372,7 @@ class LeaseController {
       logger.info('Lease renewal created', {
         originalLeaseId: original._id.toString(),
         renewalLeaseId: renewal._id.toString(),
-        createdBy: activeProfile._id.toString(),
+        createdBy: oxyUserId,
       });
 
       res.status(201).json(successResponse(toLeaseDTO(renewal), 'Lease renewal created successfully'));
@@ -400,12 +386,12 @@ class LeaseController {
    */
   async getLeasePayments(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const activeProfile = await resolveActiveProfile(req);
+      const oxyUserId = requireSessionOxyUserId(req);
       const lease = await Lease.findById(req.params.id);
       if (!lease) {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
-      if (!isParty(lease, activeProfile._id.toString())) {
+      if (!isParty(lease, oxyUserId)) {
         throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');
       }
 
@@ -437,7 +423,7 @@ class LeaseController {
    */
   async createPayment(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const activeProfile = await resolveActiveProfile(req);
+      const oxyUserId = requireSessionOxyUserId(req);
       const { dueDate, amount, type, description } = req.body;
       if (!dueDate || amount === undefined || amount === null || !type) {
         throw new AppError('dueDate, amount, and type are required', 400, 'VALIDATION_ERROR');
@@ -447,7 +433,7 @@ class LeaseController {
       if (!lease) {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
-      if (!isLandlord(lease, activeProfile._id.toString())) {
+      if (!isLandlord(lease, oxyUserId)) {
         throw new AppError('Access denied - only the landlord can add payments', 403, 'FORBIDDEN');
       }
 
@@ -466,7 +452,7 @@ class LeaseController {
         leaseId: lease._id.toString(),
         paymentId: created._id.toString(),
         amount,
-        createdBy: activeProfile._id.toString(),
+        createdBy: oxyUserId,
       });
 
       res.status(201).json(successResponse({ ...created.toJSON(), id: refToId(created._id) }, 'Payment created successfully'));
@@ -480,12 +466,12 @@ class LeaseController {
    */
   async getLeaseDocuments(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const activeProfile = await resolveActiveProfile(req);
+      const oxyUserId = requireSessionOxyUserId(req);
       const lease = await Lease.findById(req.params.id);
       if (!lease) {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
-      if (!isParty(lease, activeProfile._id.toString())) {
+      if (!isParty(lease, oxyUserId)) {
         throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');
       }
 
@@ -505,7 +491,7 @@ class LeaseController {
    */
   async uploadLeaseDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const activeProfile = await resolveActiveProfile(req);
+      const oxyUserId = requireSessionOxyUserId(req);
       const { name, url, type } = req.body;
       if (!name || !url) {
         throw new AppError('Document name and url are required', 400, 'VALIDATION_ERROR');
@@ -515,8 +501,7 @@ class LeaseController {
       if (!lease) {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
-      const profileId = activeProfile._id.toString();
-      if (!isParty(lease, profileId)) {
+      if (!isParty(lease, oxyUserId)) {
         throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');
       }
 
@@ -524,7 +509,7 @@ class LeaseController {
         name,
         url,
         type: type || 'other',
-        uploadedBy: profileId,
+        uploadedBy: oxyUserId,
         uploadedDate: new Date(),
       });
       await lease.save();
@@ -534,7 +519,7 @@ class LeaseController {
       logger.info('Lease document added', {
         leaseId: lease._id.toString(),
         documentId: created._id.toString(),
-        uploadedBy: profileId,
+        uploadedBy: oxyUserId,
       });
 
       res.status(201).json(successResponse({ ...created.toJSON(), id: refToId(created._id) }, 'Document added successfully'));

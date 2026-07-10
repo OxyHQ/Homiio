@@ -10,10 +10,11 @@
 
 import type { Request, Response, NextFunction } from 'express';
 
-import { Property, Address, Profile } from '../models';
-import { PropertyType, PropertyStatus, ProfileType } from '@homiio/shared-types';
+import { Property, Address } from '../models';
+import { PropertyType, PropertyStatus } from '@homiio/shared-types';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
+import { requireSessionOxyUserId } from '../utils/sessionUser';
 import {
   CREATABLE_PROPERTY_FIELDS,
   EDITABLE_PROPERTY_FIELDS,
@@ -69,7 +70,7 @@ class RoomController {
         furnishedStatus,
         amenities,
         status,
-        profileId,
+        oxyUserId: ownerOxyUserId,
         sortBy = 'createdAt',
         sortOrder = 'desc',
       } = req.query;
@@ -80,7 +81,7 @@ class RoomController {
 
       const filters: Record<string, unknown> = { type: ROOM_TYPE };
 
-      if (profileId) filters.profileId = profileId;
+      if (ownerOxyUserId) filters.oxyUserId = String(ownerOxyUserId);
 
       // Resolve city/state to address ids via RELATIONAL geo, matching the
       // property list handler (no free-text city/state matching on the Address).
@@ -143,45 +144,15 @@ class RoomController {
    */
   async createRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const oxyUserId = req.user?.id || req.user?._id || req.userId;
-      if (!oxyUserId) {
-        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
-      }
-
-      // Ownership: a room is ALWAYS owned by the authenticated user's active
-      // profile. The client cannot choose `profileId` (IDOR / mass-assignment) —
-      // it is resolved strictly server-side, creating the personal profile
-      // lazily if the user has none yet.
-      let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile) {
-        activeProfile = await Profile.create({
-          oxyUserId,
-          profileType: ProfileType.PERSONAL,
-          isPrimary: true,
-          isActive: true,
-          personalProfile: {},
-        });
-      }
-      const profileId = activeProfile._id;
-
-      // A room is ALWAYS part of a parent property the caller owns. Resolve and
-      // ownership-check the parent server-side — attaching a room to a property
-      // you don't own would be an IDOR. The parent is mandatory (the schema
-      // requires `parentPropertyId` for room-type properties).
+      const oxyUserId = requireSessionOxyUserId(req);
       const { parentPropertyId } = req.body;
       if (!parentPropertyId) {
         return next(new AppError('parentPropertyId is required to create a room', 400, 'VALIDATION_ERROR'));
       }
-      const parent = await Property.findById(parentPropertyId);
+      const parent = await Property.findOne({ _id: parentPropertyId, oxyUserId });
       if (!parent) {
         return next(new AppError('Parent property not found', 404, 'PARENT_PROPERTY_NOT_FOUND'));
       }
-      if (String(parent.profileId) !== String(profileId)) {
-        return next(new AppError('Access denied - you can only add rooms to your own property', 403, 'FORBIDDEN'));
-      }
-
-      // Resolve the address (either a full address object or an existing id),
-      // falling back to the parent property's address when none is supplied.
       let addressId;
       if (req.body.address) {
         const address = await Address.findOrCreateCanonical(req.body.address);
@@ -193,40 +164,22 @@ class RoomController {
       } else {
         return next(new AppError('Address information is required', 400, 'MISSING_ADDRESS'));
       }
-
-      // Build the room from an explicit field whitelist; never spread
-      // `req.body`. Ownership, address linkage, parent linkage and the room type
-      // are all set server-side below.
       const roomData = pickFields(req.body, CREATABLE_PROPERTY_FIELDS);
-
       const room = new Property({
         ...roomData,
-        profileId,
+        oxyUserId,
         addressId,
         parentPropertyId: parent._id,
         type: ROOM_TYPE,
       });
-
       const savedRoom = await room.save();
       await savedRoom.populate('addressId');
-
-      logger.info('Room created', {
-        roomId: savedRoom._id,
-        profileId,
-        monthlyAmount: savedRoom.longTermRent?.monthlyAmount,
-      });
-
+      logger.info('Room created', { roomId: savedRoom._id, oxyUserId, monthlyAmount: savedRoom.longTermRent?.monthlyAmount });
       res.status(201).json(successResponse(savedRoom.toJSON(), 'Room created successfully'));
     } catch (error) {
       if (errorName(error) === 'ValidationError') {
-        const validationErrors = Object.values(errorValidationErrors(error)).map(
-          (err) => err.message
-        );
-        const validationError: AppErrorWithDetails = new AppError(
-          'Room validation failed',
-          400,
-          'VALIDATION_ERROR'
-        );
+        const validationErrors = Object.values(errorValidationErrors(error)).map((err) => err.message);
+        const validationError: AppErrorWithDetails = new AppError('Room validation failed', 400, 'VALIDATION_ERROR');
         validationError.details = validationErrors;
         return next(validationError);
       }
@@ -266,72 +219,30 @@ class RoomController {
   /**
    * Update a room owned by the authenticated user.
    */
-  async updateRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
+    async updateRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const oxyUserId = req.user?.id || req.user?._id || req.userId;
-      if (!oxyUserId) {
-        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
-      }
-
+      const oxyUserId = requireSessionOxyUserId(req);
       const { id } = req.params;
-
-      const room = await Property.findOne({ _id: id, type: ROOM_TYPE });
+      const room = await Property.findOne({ _id: id, type: ROOM_TYPE, oxyUserId });
       if (!room) {
         return next(new AppError('Room not found', 404, 'NOT_FOUND'));
       }
-
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile || String(room.profileId) !== String(activeProfile._id)) {
-        return next(new AppError('Access denied to this room', 403, 'FORBIDDEN'));
-      }
-
-      // Whitelist the editable fields; never spread `req.body`. Type, ownership
-      // (`profileId`) and address linkage (`addressId`) are not whitelisted, so
-      // they are immutable through this endpoint — no owner reassignment or
-      // mass-assignment is possible.
       const updateData = pickFields(req.body, EDITABLE_PROPERTY_FIELDS);
-
-      // Capture the pre-update status so we can detect a deal-closing transition
-      // below (a room is a Property, so it closes deals identically to a full
-      // listing — mirroring updateProperty in property/updateDelete).
       const previousStatus = room.status;
-
       Object.assign(room, updateData);
       const updatedRoom = await room.save();
       await updatedRoom.populate('addressId');
-
-      // When this edit closes the deal (status → rented/sold) on a room sourced
-      // by a partner, fire the commission trigger — exactly as updateProperty
-      // does. It is idempotent (at most one commission per property, ever) and a
-      // no-op for the common case where the room carries no partner attribution.
-      const transitionedToTerminal =
-        previousStatus !== updatedRoom.status && TERMINAL_STATUSES.includes(updatedRoom.status);
+      const transitionedToTerminal = previousStatus !== updatedRoom.status && TERMINAL_STATUSES.includes(updatedRoom.status);
       if (transitionedToTerminal && updatedRoom.sourcedByPartner) {
-        try {
-          await onPropertyTransacted(updatedRoom);
-        } catch (commissionError) {
-          // A commission failure must not fail the room update itself.
-          logger.error('Failed to process commission on room close', {
-            roomId: id,
-            error: commissionError instanceof Error ? commissionError.message : String(commissionError),
-          });
+        try { await onPropertyTransacted(updatedRoom); } catch (commissionError) {
+          logger.error('Failed to process commission on room close', { roomId: id, error: commissionError instanceof Error ? commissionError.message : String(commissionError) });
         }
       }
-
-      logger.info('Room updated', {
-        roomId: id,
-        profileId: activeProfile._id,
-        updatedFields: Object.keys(updateData),
-      });
-
+      logger.info('Room updated', { roomId: id, oxyUserId, updatedFields: Object.keys(updateData) });
       res.json(successResponse(updatedRoom.toJSON(), 'Room updated successfully'));
     } catch (error) {
-      if (errorName(error) === 'ValidationError') {
-        return next(new AppError('Room validation failed', 400, 'VALIDATION_ERROR'));
-      }
-      if (errorName(error) === 'CastError') {
-        return next(new AppError('Invalid room ID', 400, 'INVALID_ID'));
-      }
+      if (errorName(error) === 'ValidationError') return next(new AppError('Room validation failed', 400, 'VALIDATION_ERROR'));
+      if (errorName(error) === 'CastError') return next(new AppError('Invalid room ID', 400, 'INVALID_ID'));
       next(error);
     }
   }
@@ -339,36 +250,18 @@ class RoomController {
   /**
    * Delete (archive) a room owned by the authenticated user.
    */
-  async deleteRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
+    async deleteRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const oxyUserId = req.user?.id || req.user?._id || req.userId;
-      if (!oxyUserId) {
-        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
-      }
-
+      const oxyUserId = requireSessionOxyUserId(req);
       const { id } = req.params;
-
-      const room = await Property.findOne({ _id: id, type: ROOM_TYPE });
-      if (!room) {
-        return next(new AppError('Room not found', 404, 'NOT_FOUND'));
-      }
-
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile || String(room.profileId) !== String(activeProfile._id)) {
-        return next(new AppError('Access denied to this room', 403, 'FORBIDDEN'));
-      }
-
-      // Soft delete by archiving, consistent with property lifecycle.
+      const room = await Property.findOne({ _id: id, type: ROOM_TYPE, oxyUserId });
+      if (!room) return next(new AppError('Room not found', 404, 'NOT_FOUND'));
       room.status = PropertyStatus.ARCHIVED;
       await room.save();
-
-      logger.info('Room deleted', { roomId: id, profileId: activeProfile._id });
-
+      logger.info('Room deleted', { roomId: id, oxyUserId });
       res.json(successResponse(null, 'Room deleted successfully'));
     } catch (error) {
-      if (errorName(error) === 'CastError') {
-        return next(new AppError('Invalid room ID', 400, 'INVALID_ID'));
-      }
+      if (errorName(error) === 'CastError') return next(new AppError('Invalid room ID', 400, 'INVALID_ID'));
       next(error);
     }
   }

@@ -17,9 +17,7 @@ export async function getPropertyById(req: ControllerRequest, res: ControllerRes
       let isOwner = false;
       const oxyUserId = req.user?.id || req.user?._id;
       if (oxyUserId) {
-        const { Profile } = require('../../models');
-        const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-        isOwner = Boolean(activeProfile) && property.profileId?.toString() === activeProfile._id.toString();
+        isOwner = property.oxyUserId === oxyUserId;
       }
       if (!isOwner) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
     }
@@ -59,20 +57,18 @@ export async function getMyProperties(req: ControllerRequest, res: ControllerRes
     const page = getQueryInteger(req.query.page, 1);
     const limit = getQueryInteger(req.query.limit, 10);
     const oxyUserId = req.userId;
-    const { Profile } = require('../../models');
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-    if (!activeProfile) {
-      return res.json(paginationResponse([], page, limit, 0, 'No profile found for user'));
+    if (!oxyUserId) {
+      return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
     }
     const skip = (page - 1) * limit;
     const [properties, total] = await Promise.all([
-      Property.find({ profileId: activeProfile._id, status: { $ne: 'archived' } })
+      Property.find({ oxyUserId, status: { $ne: 'archived' } })
         .populate(ADDRESS_GEO_POPULATE)
         .skip(skip)
         .limit(limit)
         .sort({ createdAt: -1 })
         .lean(),
-      Property.countDocuments({ profileId: activeProfile._id, status: { $ne: 'archived' } })
+      Property.countDocuments({ oxyUserId, status: { $ne: 'archived' } })
     ]);
     serializePropertyAddresses(properties);
     serializePropertyImages(properties);

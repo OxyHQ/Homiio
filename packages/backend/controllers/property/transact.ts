@@ -11,7 +11,7 @@
 import { OfferingType, PropertyStatus } from '@homiio/shared-types';
 import { onPropertyTransacted } from '../../services/commissionService';
 
-import { Property, Profile } from '../../models';
+import { Property } from '../../models';
 import { AppError, successResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
 
@@ -44,16 +44,11 @@ export async function markPropertyTransacted(req: any, res: any, next: any) {
       return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
     }
 
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-    if (!activeProfile) {
-      return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
-    }
-
     const property = await Property.findById(propertyId);
     if (!property) {
       return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));
     }
-    if (!property.profileId || property.profileId.toString() !== activeProfile._id.toString()) {
+    if (!property.oxyUserId || property.oxyUserId !== oxyUserId) {
       return next(new AppError('Access denied - you can only close your own properties', 403, 'FORBIDDEN'));
     }
 

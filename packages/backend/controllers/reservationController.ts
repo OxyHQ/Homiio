@@ -138,11 +138,15 @@ class ReservationController {
       const guestProfile = await Profile.findActiveByOxyUserId(oxyUserId);
       if (!guestProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
-      const hostProfileId = property.profileId;
-      if (!hostProfileId) return next(new AppError('Property has no host profile', 400, 'INVALID_PROPERTY'));
-      if (String(hostProfileId) === String(guestProfile._id)) {
+      const hostOxyUserId = property.oxyUserId;
+      if (!hostOxyUserId) return next(new AppError('Property has no host', 400, 'INVALID_PROPERTY'));
+      if (hostOxyUserId === oxyUserId) {
         return next(new AppError('You cannot book your own property', 403, 'FORBIDDEN'));
       }
+
+      const hostProfile = await Profile.findActiveByOxyUserId(hostOxyUserId);
+      if (!hostProfile) return next(new AppError('Property host profile not found', 404, 'PROFILE_NOT_FOUND'));
+      const hostProfileId = hostProfile._id;
 
       // Parse + validate date window
       const checkInDate = new Date(checkIn);

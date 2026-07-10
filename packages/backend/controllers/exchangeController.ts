@@ -176,11 +176,15 @@ class ExchangeController {
       const requesterProfile = await Profile.findActiveByOxyUserId(oxyUserId);
       if (!requesterProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
-      const hostProfileId = property.profileId;
-      if (!hostProfileId) return next(new AppError('Property has no host profile', 400, 'INVALID_PROPERTY'));
-      if (String(hostProfileId) === String(requesterProfile._id)) {
+      const hostOxyUserId = property.oxyUserId;
+      if (!hostOxyUserId) return next(new AppError('Property has no host', 400, 'INVALID_PROPERTY'));
+      if (hostOxyUserId === oxyUserId) {
         return next(new AppError('You cannot request an exchange with your own property', 403, 'FORBIDDEN'));
       }
+
+      const hostProfile = await Profile.findActiveByOxyUserId(hostOxyUserId);
+      if (!hostProfile) return next(new AppError('Property host profile not found', 404, 'PROFILE_NOT_FOUND'));
+      const hostProfileId = hostProfile._id;
 
       // Validate requested window: start < end, not in the past. A window
       // starting exactly now is allowed (`<`, not `<=`).
@@ -205,7 +209,7 @@ class ExchangeController {
         }
         const offeredProperty = await Property.findById(offeredPropertyId).lean();
         if (!offeredProperty) return next(new AppError('Offered property not found', 404, 'NOT_FOUND'));
-        if (String(offeredProperty.profileId) !== String(requesterProfile._id)) {
+        if (String(offeredProperty.oxyUserId) !== String(requesterProfile.oxyUserId)) {
           return next(new AppError('Offered property does not belong to you', 403, 'FORBIDDEN'));
         }
         if (!hasExchangeOffering(offeredProperty)) {

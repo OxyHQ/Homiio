@@ -25,7 +25,7 @@ const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'FAIR'] as const;
 // Define the Property interface
 export interface IProperty extends Document {
   _id: Types.ObjectId;
-  profileId?: Types.ObjectId;
+  oxyUserId?: string;
   addressId: Types.ObjectId;
   source?: string;
   sourceId?: string;
@@ -175,7 +175,7 @@ export type PropertyQuery = Query<IProperty[], IProperty>;
 
 /** Custom statics defined on the runtime Property schema. */
 export interface IPropertyModel extends Model<IProperty> {
-  findByProfile(profileId: Types.ObjectId | string, options?: Record<string, unknown>): PropertyQuery;
+  findByOxyUser(oxyUserId: string, options?: Record<string, unknown>): PropertyQuery;
   findAvailable(filters?: Record<string, unknown>): PropertyQuery;
   search(searchParams: Record<string, unknown>): Promise<IProperty[]>;
   /** Returns a chainable Query (or an empty array when no addresses match). */
