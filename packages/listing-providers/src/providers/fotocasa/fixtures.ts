@@ -110,3 +110,37 @@ export const FOTOCASA_FIXTURE_REAL_ESTATE_LISTING_HTML = `<!doctype html>
 </head>
 <body></body>
 </html>`;
+
+/** Detail page with listing data only in __NEXT_DATA__ (no JSON-LD). */
+export const FOTOCASA_FIXTURE_NEXT_DATA_HTML = `<!doctype html>
+<html lang="es">
+<head>
+<script id="__NEXT_DATA__" type="application/json">{
+  "props": {
+    "pageProps": {
+      "realEstate": {
+        "id": 187654321,
+        "title": "Piso en alquiler en Chamberí",
+        "description": "Piso reformado con ascensor.",
+        "url": "https://www.fotocasa.es/es/alquiler/vivienda/madrid-capital/calefaccion-ascensor/187654321/d",
+        "price": 1850,
+        "currency": "EUR",
+        "rooms": 3,
+        "bathrooms": 2,
+        "surface": 95,
+        "address": {
+          "streetAddress": "Calle de Almagro 30",
+          "addressLocality": "Madrid",
+          "addressRegion": "Madrid",
+          "postalCode": "28010",
+          "addressCountry": "ES"
+        },
+        "geo": { "latitude": 40.4318, "longitude": -3.6931 },
+        "images": ["https://static.fotocasa.es/images/anuncios/187654321/1.jpg"]
+      }
+    }
+  }
+}</script>
+</head>
+<body></body>
+</html>`;

@@ -16,6 +16,7 @@ import {
   FOTOCASA_FIXTURE_DETAIL_HTML,
   FOTOCASA_FIXTURE_SEARCH_HTML,
   FOTOCASA_FIXTURE_REAL_ESTATE_LISTING_HTML,
+  FOTOCASA_FIXTURE_NEXT_DATA_HTML,
 } from '@homiio/listing-providers';
 import type { ExternalListingRef } from '@homiio/listing-providers';
 import { OfferingType, PropertyType } from '@homiio/shared-types';
@@ -57,6 +58,16 @@ describe('FotocasaProvider.normalize', () => {
   it('parses RealEstateListing JSON-LD with a nested about node', () => {
     const payload = parseFotocasaDetail(
       FOTOCASA_FIXTURE_REAL_ESTATE_LISTING_HTML,
+      'https://www.fotocasa.es/es/alquiler/vivienda/madrid-capital/x/187654321/d',
+    );
+    expect(payload.sourceId).toBe('187654321');
+    expect(payload.listing.price).toBe(1850);
+    expect(payload.listing.address.city).toBe('Madrid');
+  });
+
+  it('parses listing data from __NEXT_DATA__ when JSON-LD is absent', () => {
+    const payload = parseFotocasaDetail(
+      FOTOCASA_FIXTURE_NEXT_DATA_HTML,
       'https://www.fotocasa.es/es/alquiler/vivienda/madrid-capital/x/187654321/d',
     );
     expect(payload.sourceId).toBe('187654321');
