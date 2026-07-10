@@ -23,6 +23,30 @@ export * from './managed';
 export * from './registry';
 export * from './metrics';
 export * from './strategy';
+
+export {
+  validateMonthlyRentAmount,
+  validateNightlyRateAmount,
+  validateSalePriceAmount,
+  validateOfferingPrices,
+  type MonthlyRentPriceContext,
+  type OfferingPriceInput,
+} from './parse/price';
+export {
+  ListingValidationError,
+  validateNormalizedListing,
+  DEFAULT_MAX_REMOTE_IMAGES,
+  type ValidateNormalizedListingOptions,
+} from './parse/listing';
+export {
+  assertHousingListing,
+  isHousingCategory,
+  isHousingCategoryUrl,
+  NonHousingListingError,
+  type HousingSignalInput,
+} from './parse/classifieds';
+export { isRecord, asString, asNumberEu, asNumberUs, deaccent, firstString } from './parse/guards';
+
 export { FixtureProvider } from './providers/fixture';
 export { FIXTURE_LISTINGS } from './providers/fixture/fixtures';
 export type { FixtureRawListing, FixtureRawImage } from './providers/fixture/fixtures';
@@ -43,6 +67,12 @@ export type {
 } from './providers/habitaclia/fixtures';
 
 export { BluegroundProvider, coerceBluegroundListing } from './providers/blueground';
+export {
+  BluegroundPartnerListingError,
+  isBluegroundPartnerListing,
+  readBluegroundLowestRent,
+  readBluegroundPartnerSignals,
+} from './providers/blueground';
 export {
   parseBluegroundDetail,
   parseBluegroundSearch,

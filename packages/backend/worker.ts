@@ -18,14 +18,19 @@ import { Queue, Worker, type Job } from 'bullmq';
 import {
   createDefaultRegistry,
   createListingFetchRuntimeFromEnv,
+  BluegroundPartnerListingError,
+  ListingValidationError,
+  NonHousingListingError,
   type ExternalListingRef,
   type FetchRuntime,
   type ListingFetchRuntimeHandle,
   type ProviderRegistry,
 } from '@homiio/listing-providers';
+import { PropertyStatus } from '@homiio/shared-types';
 import config from './config';
 import database from './database/connection';
 import { Logger } from './utils/logger';
+import { Property } from './models';
 import { IngestionService } from './services/ingestion/IngestionService';
 import {
   QUEUE_NAMES,
@@ -53,12 +58,52 @@ const ingestionService = new IngestionService();
 let runtimeHandle: ListingFetchRuntimeHandle;
 let runtime: FetchRuntime;
 
+/** Soft-remove a previously ingested external listing that must no longer publish. */
+async function expireExternalListing(source: string, sourceId: string, reason: string): Promise<void> {
+  const result = await Property.updateOne(
+    { source, sourceId, isExternal: true },
+    { $set: { status: PropertyStatus.ARCHIVED, expiresAt: new Date() } },
+  );
+  if (result.modifiedCount > 0 || result.matchedCount > 0) {
+    logger.info('Expired external listing after skip', { source, sourceId, reason, matched: result.matchedCount });
+  }
+}
+
 /** Fetch + normalize a single listing ref and ingest the result. */
 async function processFetchRef(ref: ExternalListingRef): Promise<void> {
   const provider = registry.get(ref.provider);
-  const raw = await provider.fetch(ref, { runtime });
-  const listing = provider.normalize(raw);
-  await ingestionService.ingest(listing);
+  try {
+    const raw = await provider.fetch(ref, { runtime });
+    const listing = provider.normalize(raw);
+    await ingestionService.ingest(listing);
+  } catch (error) {
+    if (error instanceof BluegroundPartnerListingError) {
+      logger.info('Skipped Blueground partner listing', {
+        sourceId: error.sourceId,
+        reason: error.reason,
+      });
+      await expireExternalListing(ref.provider, ref.sourceId, error.reason);
+      return;
+    }
+    if (error instanceof NonHousingListingError) {
+      logger.info('Skipped non-housing listing', {
+        provider: error.provider,
+        sourceId: error.sourceId,
+        reason: error.reason,
+      });
+      return;
+    }
+    if (error instanceof ListingValidationError) {
+      logger.info('Skipped listing (validation)', {
+        source: error.source,
+        sourceId: error.sourceId,
+        reason: error.reason,
+      });
+      await expireExternalListing(error.source, error.sourceId, error.reason);
+      return;
+    }
+    throw error;
+  }
 }
 
 /** Enumerate a discover job's refs (BullMQ path enqueues; inline path ingests). */

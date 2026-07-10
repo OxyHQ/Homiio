@@ -28,6 +28,9 @@ export interface BluegroundRawListing {
   description?: string;
   /** Blueground property category (`apartment`, `studio`, `house`, …). */
   propertyType?: string;
+  /** Present on partner-network inventory; never treat as firm monthly rent. */
+  businessModel?: string;
+  partnerSlug?: string;
   monthlyRent: {
     amount: number;
     currency: string;

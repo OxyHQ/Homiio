@@ -20,6 +20,11 @@ import {
   type NormalizedListing,
   type NormalizedListingAddress,
 } from '@homiio/shared-types';
+import {
+  DEFAULT_MAX_REMOTE_IMAGES,
+  ListingValidationError,
+  validateNormalizedListing,
+} from '@homiio/listing-providers';
 import { Property, Address, type IProperty } from '../../models';
 import type { AddressCanonicalInput } from '../../models/Address';
 import { validateOfferings } from '../../models/schemas/offeringValidation';
@@ -105,18 +110,20 @@ export class IngestionService {
 
   /** Structural validation before any DB work. */
   private validate(listing: NormalizedListing): void {
-    if (!listing.source) {
-      throw new IngestionValidationError('NormalizedListing.source is required');
+    try {
+      validateNormalizedListing(listing, { maxRemoteImages: DEFAULT_MAX_REMOTE_IMAGES });
+    } catch (error) {
+      if (error instanceof ListingValidationError) {
+        this.logger.warn('Skipping external listing (validation)', {
+          source: error.source,
+          sourceId: error.sourceId,
+          reason: error.reason,
+        });
+        throw error;
+      }
+      throw error;
     }
-    if (!listing.sourceId || !listing.sourceId.trim()) {
-      throw new IngestionValidationError('NormalizedListing.sourceId is required');
-    }
-    if (!listing.sourceUrl || !listing.sourceUrl.trim()) {
-      throw new IngestionValidationError('NormalizedListing.sourceUrl is required');
-    }
-    if (!listing.address?.street?.trim() || !listing.address?.city?.trim()) {
-      throw new IngestionValidationError('NormalizedListing.address requires street and city');
-    }
+
     const offeringError = validateOfferings({
       offerings: listing.offerings,
       longTermRent: listing.longTermRent,
