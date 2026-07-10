@@ -135,18 +135,11 @@ class ReservationController {
         return next(new AppError('This property has no short-term pricing', 400, 'NOT_VACATION_BOOKABLE'));
       }
 
-      const guestProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!guestProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
-
       const hostOxyUserId = property.oxyUserId;
       if (!hostOxyUserId) return next(new AppError('Property has no host', 400, 'INVALID_PROPERTY'));
       if (hostOxyUserId === oxyUserId) {
         return next(new AppError('You cannot book your own property', 403, 'FORBIDDEN'));
       }
-
-      const hostProfile = await Profile.findActiveByOxyUserId(hostOxyUserId);
-      if (!hostProfile) return next(new AppError('Property host profile not found', 404, 'PROFILE_NOT_FOUND'));
-      const hostProfileId = hostProfile._id;
 
       // Parse + validate date window
       const checkInDate = new Date(checkIn);
@@ -209,8 +202,8 @@ class ReservationController {
 
       const reservation = await Reservation.create({
         propertyId,
-        guestProfileId: guestProfile._id,
-        hostProfileId,
+        guestOxyUserId: oxyUserId,
+        hostOxyUserId,
         checkIn: checkInDate,
         checkOut: checkOutDate,
         guestCount,
@@ -251,14 +244,11 @@ class ReservationController {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile) return res.json(paginationResponse([], 1, 10, 0, 'No profile found for user'));
-
       const query: Record<string, unknown> = {};
       if (String(asHost) === 'true') {
-        query.hostProfileId = activeProfile._id;
+        query.hostOxyUserId = oxyUserId;
       } else {
-        query.guestProfileId = activeProfile._id;
+        query.guestOxyUserId = oxyUserId;
       }
       if (status) query.status = status;
 
@@ -290,14 +280,11 @@ class ReservationController {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
-
       const reservation = await Reservation.findById(id).lean();
       if (!reservation) return next(new AppError('Reservation not found', 404, 'NOT_FOUND'));
 
-      const isGuest = String(reservation.guestProfileId) === String(activeProfile._id);
-      const isHost = String(reservation.hostProfileId) === String(activeProfile._id);
+      const isGuest = String(reservation.guestOxyUserId) === String(oxyUserId);
+      const isHost = String(reservation.hostOxyUserId) === String(oxyUserId);
       if (!isGuest && !isHost) return next(new AppError('Not authorized to view this reservation', 403, 'FORBIDDEN'));
 
       res.json(successResponse(reservation, 'Reservation retrieved'));
@@ -319,14 +306,11 @@ class ReservationController {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
-
       const reservation = await Reservation.findById(id);
       if (!reservation) return next(new AppError('Reservation not found', 404, 'NOT_FOUND'));
 
-      const isGuest = String(reservation.guestProfileId) === String(activeProfile._id);
-      const isHost = String(reservation.hostProfileId) === String(activeProfile._id);
+      const isGuest = String(reservation.guestOxyUserId) === String(oxyUserId);
+      const isHost = String(reservation.hostOxyUserId) === String(oxyUserId);
       if (!isGuest && !isHost) return next(new AppError('Not authorized to update this reservation', 403, 'FORBIDDEN'));
 
       const now = new Date();

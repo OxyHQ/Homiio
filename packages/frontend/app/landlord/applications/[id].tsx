@@ -265,10 +265,10 @@ export default function LandlordApplicationDetailScreen() {
   const { property } = useProperty(application?.propertyId ?? '');
 
   const applicantQuery = useQuery({
-    queryKey: ['profile-by-id', application?.applicantProfileId ?? ''],
+    queryKey: ['profile-by-id', application?.applicantOxyUserId ?? ''],
     queryFn: async () =>
-      profileService.getProfileById(String(application?.applicantProfileId)),
-    enabled: Boolean(application?.applicantProfileId),
+      profileService.getProfileById(String(application?.applicantOxyUserId)),
+    enabled: Boolean(application?.applicantOxyUserId),
     staleTime: 1000 * 60 * 5,
   });
 
@@ -278,9 +278,9 @@ export default function LandlordApplicationDetailScreen() {
 
   const isLandlord = useMemo<boolean>(() => {
     if (!application || !primaryProfile) return false;
-    const profileId = primaryProfile._id ?? primaryProfile.id;
-    if (!profileId) return false;
-    return String(application.landlordProfileId) === String(profileId);
+    const sessionOxyUserId = primaryProfile?.oxyUserId;
+    if (!sessionOxyUserId) return false;
+    return String(application.landlordOxyUserId) === sessionOxyUserId;
   }, [application, primaryProfile]);
 
   const [pendingAction, setPendingAction] = useState<ReviewAction | null>(null);

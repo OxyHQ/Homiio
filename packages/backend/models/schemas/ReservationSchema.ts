@@ -15,16 +15,14 @@ const reservationSchema = new mongoose.Schema({
     required: [true, 'Property ID is required'],
     index: true
   },
-  guestProfileId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Profile',
-    required: [true, 'Guest profile ID is required'],
+  guestOxyUserId: {
+    type: String,
+    required: [true, 'Guest Oxy user ID is required'],
     index: true
   },
-  hostProfileId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Profile',
-    required: [true, 'Host profile ID is required'],
+  hostOxyUserId: {
+    type: String,
+    required: [true, 'Host Oxy user ID is required'],
     index: true
   },
   checkIn: {
@@ -124,8 +122,8 @@ const reservationSchema = new mongoose.Schema({
 
 // Indexes for availability conflict checks and host/guest dashboards.
 reservationSchema.index({ propertyId: 1, checkIn: 1, checkOut: 1 });
-reservationSchema.index({ guestProfileId: 1, status: 1 });
-reservationSchema.index({ hostProfileId: 1, status: 1, createdAt: -1 });
+reservationSchema.index({ guestOxyUserId: 1, status: 1 });
+reservationSchema.index({ hostOxyUserId: 1, status: 1, createdAt: -1 });
 
 // Pre-save: recompute `nights` so it always matches the date range.
 // Idempotent — safe to call on every save.

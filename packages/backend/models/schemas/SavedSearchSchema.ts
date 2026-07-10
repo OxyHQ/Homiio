@@ -3,7 +3,7 @@ import type { Document, Model, Types } from 'mongoose';
 const mongoose: typeof import('mongoose') = require('mongoose');
 
 interface ISavedSearch extends Document {
-  profileId: Types.ObjectId;
+  oxyUserId: string;
   name: string;
   query: string;
   filters: Record<string, unknown>;
@@ -15,9 +15,8 @@ interface ISavedSearch extends Document {
 type SavedSearchModel = Model<ISavedSearch>;
 
 const savedSearchSchema = new mongoose.Schema<ISavedSearch, SavedSearchModel>({
-  profileId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Profile',
+  oxyUserId: {
+    type: String,
     required: true,
     index: true,
   },
@@ -53,14 +52,14 @@ const savedSearchSchema = new mongoose.Schema<ISavedSearch, SavedSearchModel>({
   timestamps: true,
 });
 
-// Compound index to ensure unique profileId + name combinations (prevent duplicate search names per user)
-savedSearchSchema.index({ profileId: 1, name: 1 }, { unique: true });
+// Compound index to ensure unique oxyUserId + name combinations (prevent duplicate search names per user)
+savedSearchSchema.index({ oxyUserId: 1, name: 1 }, { unique: true });
 
-// Index for efficient queries by profileId and createdAt
-savedSearchSchema.index({ profileId: 1, createdAt: -1 });
+// Index for efficient queries by oxyUserId and createdAt
+savedSearchSchema.index({ oxyUserId: 1, createdAt: -1 });
 
 // Index for notification queries
-savedSearchSchema.index({ profileId: 1, notificationsEnabled: 1 });
+savedSearchSchema.index({ oxyUserId: 1, notificationsEnabled: 1 });
 
 // Update the updatedAt field on save
 savedSearchSchema.pre('save', function(this: ISavedSearch) {

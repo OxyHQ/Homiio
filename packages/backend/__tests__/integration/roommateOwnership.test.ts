@@ -149,8 +149,8 @@ describe('roommateController — accept creates a relationship', () => {
     const recipient = await createRoommateProfile('oxy-recipient');
 
     const req = await RoommateRequest.create({
-      fromProfileId: sender._id,
-      toProfileId: recipient._id,
+      fromOxyUserId: 'oxy-sender',
+      toOxyUserId: 'oxy-recipient',
       status: 'pending',
     });
 
@@ -162,10 +162,10 @@ describe('roommateController — accept creates a relationship', () => {
     const relationships = await RoommateRelationship.find({ status: 'active' });
     expect(relationships).toHaveLength(1);
     const participants = [
-      String(relationships[0].profile1Id),
-      String(relationships[0].profile2Id),
+      String(relationships[0].oxyUser1Id),
+      String(relationships[0].oxyUser2Id),
     ].sort();
-    expect(participants).toEqual([String(sender._id), String(recipient._id)].sort());
+    expect(participants).toEqual(['oxy-recipient', 'oxy-sender'].sort());
   });
 
   it('does not create a relationship when a request is declined', async () => {
@@ -173,8 +173,8 @@ describe('roommateController — accept creates a relationship', () => {
     const recipient = await createRoommateProfile('oxy-recipient');
 
     const req = await RoommateRequest.create({
-      fromProfileId: sender._id,
-      toProfileId: recipient._id,
+      fromOxyUserId: 'oxy-sender',
+      toOxyUserId: 'oxy-recipient',
       status: 'pending',
     });
 
@@ -192,15 +192,15 @@ describe('roommateController.getRoommateRelationships', () => {
     const stranger = await createRoommateProfile('oxy-stranger');
     const strangerB = await createRoommateProfile('oxy-stranger-b');
 
-    await RoommateRelationship.create({ profile1Id: me._id, profile2Id: other._id, status: 'active' });
-    await RoommateRelationship.create({ profile1Id: stranger._id, profile2Id: strangerB._id, status: 'active' });
+    await RoommateRelationship.create({ oxyUser1Id: 'oxy-me', oxyUser2Id: 'oxy-other', status: 'active' });
+    await RoommateRelationship.create({ oxyUser1Id: 'oxy-stranger', oxyUser2Id: 'oxy-stranger-b', status: 'active' });
 
     const res = await request(buildApp('oxy-me')).get('/roommates/relationships');
 
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(1);
-    const ids = [res.body.data[0].profile1Id, res.body.data[0].profile2Id].sort();
-    expect(ids).toEqual([String(me._id), String(other._id)].sort());
+    const ids = [res.body.data[0].oxyUser1Id, res.body.data[0].oxyUser2Id].sort();
+    expect(ids).toEqual(['oxy-me', 'oxy-other'].sort());
   });
 });
 
@@ -209,8 +209,8 @@ describe('roommateController.endRoommateRelationship — ownership (IDOR)', () =
     const me = await createRoommateProfile('oxy-me');
     const other = await createRoommateProfile('oxy-other');
     const rel = await RoommateRelationship.create({
-      profile1Id: me._id,
-      profile2Id: other._id,
+      oxyUser1Id: 'oxy-me',
+      oxyUser2Id: 'oxy-other',
       status: 'active',
     });
 
@@ -228,8 +228,8 @@ describe('roommateController.endRoommateRelationship — ownership (IDOR)', () =
     const other = await createRoommateProfile('oxy-other');
     await createRoommateProfile('oxy-intruder');
     const rel = await RoommateRelationship.create({
-      profile1Id: me._id,
-      profile2Id: other._id,
+      oxyUser1Id: 'oxy-me',
+      oxyUser2Id: 'oxy-other',
       status: 'active',
     });
 

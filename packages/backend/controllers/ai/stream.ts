@@ -4,7 +4,6 @@ import { openai } from '@ai-sdk/openai';
 
 import { logger } from '../../middlewares/logging';
 import {
-  Profile,
   Conversation,
   isObjectId,
   getUserId,
@@ -28,6 +27,14 @@ import {
   compact,
 } from '../../services/aiService';
 
+type StreamConversationDoc = {
+  save: () => Promise<unknown>;
+  addMessage: (role: string, content: string, attachments?: unknown[]) => Promise<unknown>;
+  messages: Array<{ role?: string; content?: string }>;
+  title: string;
+  _id: unknown;
+};
+
 async function sendEmptyStream(res: Response) {
   const result = streamText({
     model: openai('gpt-4o'),
@@ -50,36 +57,37 @@ export async function streamChat(req: Request, res: Response) {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const activeProfile = await Profile.findActiveByOxyUserId(userId);
-    if (!activeProfile) return err(res, 404, 'No active profile found');
-
     // Ensure conversation
-    let conversation: any;
+    let conversation: StreamConversationDoc | null = null;
     if (conversationId) {
       if (conversationId.startsWith('conv_')) {
         conversation = new Conversation({
-          profileId: activeProfile._id.toString(),
+          oxyUserId: userId,
           title: 'New Conversation',
           messages: [],
           status: 'active',
-        });
+        }) as unknown as StreamConversationDoc;
         await conversation.save();
       } else if (isObjectId(conversationId)) {
-        conversation = await Conversation.findOne({
+        conversation = (await Conversation.findOne({
           _id: conversationId,
-          profileId: activeProfile._id.toString(),
-        });
+          oxyUserId: userId,
+        })) as StreamConversationDoc | null;
       } else {
         return err(res, 400, 'Invalid conversation ID format');
       }
     } else {
       conversation = new Conversation({
-        profileId: activeProfile._id.toString(),
+        oxyUserId: userId,
         title: 'New Conversation',
         messages: [],
         status: 'active',
-      });
+      }) as unknown as StreamConversationDoc;
       await conversation.save();
+    }
+
+    if (!conversation) {
+      return err(res, 404, 'Conversation not found');
     }
 
     const last = messages[messages.length - 1];

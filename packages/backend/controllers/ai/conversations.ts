@@ -1,20 +1,18 @@
 import type { Request, Response } from 'express';
 
-import { Profile, Conversation, isObjectId, getUserId, ok, err } from './shared';
+import { Conversation, isObjectId, getUserId, ok, err } from './shared';
 import { generateAITitle, ChatMessage } from '../../services/aiService';
 
 export async function listConversations(req: Request, res: Response) {
   const userId = getUserId(req);
   if (!userId) return err(res, 401, 'Unauthorized');
 
-  const activeProfile = await Profile.findActiveByOxyUserId(userId);
-  if (!activeProfile) return err(res, 404, 'No active profile found');
-
   const conversations = await Conversation.find({
-    profileId: activeProfile._id.toString(),
+    oxyUserId: userId,
   }).sort({ updatedAt: -1 });
-  const transformed = conversations.map((c: any) => {
+  const transformed = conversations.map((c: { toObject: (opts: { virtuals: boolean }) => Record<string, unknown> }) => {
     const o = c.toObject({ virtuals: true });
+    const messages = Array.isArray(o.messages) ? o.messages : [];
     return {
       _id: o._id,
       id: o._id,
@@ -22,9 +20,9 @@ export async function listConversations(req: Request, res: Response) {
       status: o.status,
       createdAt: o.createdAt,
       updatedAt: o.updatedAt,
-      messageCount: o.messages?.length || 0,
-      lastMessage: o.messages?.[o.messages.length - 1] || null,
-      messages: o.messages || [],
+      messageCount: messages.length,
+      lastMessage: messages[messages.length - 1] || null,
+      messages,
     };
   });
 
@@ -35,24 +33,21 @@ export async function createConversation(req: Request, res: Response) {
   const userId = getUserId(req);
   if (!userId) return err(res, 401, 'Unauthorized');
 
-  const activeProfile = await Profile.findActiveByOxyUserId(userId);
-  if (!activeProfile) return err(res, 404, 'No active profile found');
-
-  const { title, initialMessage, messages } = (req as any).body || {};
+  const { title, initialMessage, messages } = (req as { body?: Record<string, unknown> }).body || {};
 
   let conversationMessages: ChatMessage[] = [];
   if (Array.isArray(messages)) {
-    conversationMessages = messages.map((m: any) => ({
-      role: m.role,
-      content: m.content,
+    conversationMessages = messages.map((m: { role?: string; content?: string; timestamp?: string | number | Date }) => ({
+      role: (m.role ?? 'user') as 'user' | 'assistant' | 'system',
+      content: m.content ?? '',
       timestamp: new Date(m.timestamp || Date.now()),
     }));
   } else if (initialMessage) {
-    conversationMessages = [{ role: 'user', content: initialMessage, timestamp: new Date() }];
+    conversationMessages = [{ role: 'user', content: String(initialMessage), timestamp: new Date() }];
   }
 
   const conversation = new Conversation({
-    profileId: activeProfile._id.toString(),
+    oxyUserId: userId,
     title: title || 'New Conversation',
     messages: conversationMessages.map(m => ({
       role: m.role || 'user',
@@ -65,7 +60,7 @@ export async function createConversation(req: Request, res: Response) {
   const saved = await conversation.save();
 
   if (saved.messages.length && saved.title === 'New Conversation') {
-    const firstUser = saved.messages.find((m: any) => m.role === 'user')?.content;
+    const firstUser = saved.messages.find((m: { role?: string; content?: string }) => m.role === 'user')?.content;
     if (firstUser) {
       const aiTitle = await generateAITitle(firstUser);
       if (aiTitle) {
@@ -92,17 +87,14 @@ export async function getConversation(req: Request, res: Response) {
   const userId = getUserId(req);
   if (!userId) return err(res, 401, 'Unauthorized');
 
-  const conversationId = String((req as any).params.id || '');
+  const conversationId = String((req as { params?: { id?: string } }).params?.id || '');
   if (!conversationId || !isObjectId(conversationId)) {
     return err(res, 400, 'Invalid conversation ID');
   }
 
-  const activeProfile = await Profile.findActiveByOxyUserId(userId);
-  if (!activeProfile) return err(res, 404, 'No active profile found');
-
   const conversation = await Conversation.findOne({
     _id: conversationId,
-    profileId: activeProfile._id.toString(),
+    oxyUserId: userId,
   });
   if (!conversation) return err(res, 404, 'Conversation not found');
 
@@ -113,21 +105,18 @@ export async function updateConversation(req: Request, res: Response) {
   const userId = getUserId(req);
   if (!userId) return err(res, 401, 'Unauthorized');
 
-  const activeProfile = await Profile.findActiveByOxyUserId(userId);
-  if (!activeProfile) return err(res, 404, 'No active profile found');
-
-  const { title, messages, status } = (req as any).body || {};
+  const { title, messages, status } = (req as { body?: Record<string, unknown>; params?: { id?: string } }).body || {};
   const conversation = await Conversation.findOne({
-    _id: (req as any).params.id,
-    profileId: activeProfile._id.toString(),
+    _id: (req as { params?: { id?: string } }).params?.id,
+    oxyUserId: userId,
   });
   if (!conversation) return err(res, 404, 'Conversation not found');
 
   if (typeof title === 'string') conversation.title = title;
   if (Array.isArray(messages)) {
-    conversation.messages = messages.map((m: any) => ({
-      role: m.role,
-      content: m.content,
+    conversation.messages = messages.map((m: { role?: string; content?: string; timestamp?: string | number | Date }) => ({
+      role: (m.role ?? 'user') as 'user' | 'assistant' | 'system',
+      content: m.content ?? '',
       timestamp: new Date(m.timestamp || Date.now()),
     }));
   }
@@ -141,19 +130,25 @@ export async function addConversationMessage(req: Request, res: Response) {
   const userId = getUserId(req);
   if (!userId) return err(res, 401, 'Unauthorized');
 
-  const activeProfile = await Profile.findActiveByOxyUserId(userId);
-  if (!activeProfile) return err(res, 404, 'No active profile found');
-
-  const { role, content, attachments } = (req as any).body || {};
+  const { role, content, attachments } = (req as { body?: { role?: string; content?: string; attachments?: unknown[] }; params?: { id?: string } }).body || {};
   if (!role || !content) return err(res, 400, 'Role and content are required');
+  if (role !== 'user' && role !== 'assistant' && role !== 'system') {
+    return err(res, 400, 'Invalid message role');
+  }
 
   const conversation = await Conversation.findOne({
-    _id: (req as any).params.id,
-    profileId: activeProfile._id.toString(),
+    _id: (req as { params?: { id?: string } }).params?.id,
+    oxyUserId: userId,
   });
   if (!conversation) return err(res, 404, 'Conversation not found');
 
-  const newMessage = { role, content, timestamp: new Date(), attachments: attachments || [] };
+  const attachmentsList = Array.isArray(attachments) ? attachments : [];
+  const newMessage = {
+    role: role as 'user' | 'assistant' | 'system',
+    content,
+    timestamp: new Date(),
+    attachments: attachmentsList as Array<{ type?: string; name?: string; url?: string; size?: number }>,
+  };
   conversation.messages.push(newMessage);
   await conversation.save();
 
@@ -164,12 +159,9 @@ export async function deleteConversation(req: Request, res: Response) {
   const userId = getUserId(req);
   if (!userId) return err(res, 401, 'Unauthorized');
 
-  const activeProfile = await Profile.findActiveByOxyUserId(userId);
-  if (!activeProfile) return err(res, 404, 'No active profile found');
-
   const deleted = await Conversation.findOneAndDelete({
-    _id: (req as any).params.id,
-    profileId: activeProfile._id.toString(),
+    _id: (req as { params?: { id?: string } }).params?.id,
+    oxyUserId: userId,
   });
   if (!deleted) return err(res, 404, 'Conversation not found');
 
@@ -180,12 +172,9 @@ export async function shareConversation(req: Request, res: Response) {
   const userId = getUserId(req);
   if (!userId) return err(res, 401, 'Unauthorized');
 
-  const activeProfile = await Profile.findActiveByOxyUserId(userId);
-  if (!activeProfile) return err(res, 404, 'No active profile found');
-
   const conversation = await Conversation.findOne({
-    _id: (req as any).params.id,
-    profileId: activeProfile._id.toString(),
+    _id: (req as { params?: { id?: string } }).params?.id,
+    oxyUserId: userId,
   });
   if (!conversation) return err(res, 404, 'Conversation not found');
 

@@ -42,8 +42,8 @@ export interface TenantApplicationDocument {
 export interface TenantApplication {
   id: string;
   propertyId: string;
-  applicantProfileId: string;
-  landlordProfileId: string;
+  applicantOxyUserId: string;
+  landlordOxyUserId: string;
   moveInDate: ISODate;
   /** Desired lease length in months. */
   leaseTermMonths: number;

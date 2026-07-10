@@ -399,8 +399,8 @@ export type IPlacePoi = Document & {
 
 export type IRoommateRequest = Document & {
   _id: Id;
-  fromProfileId: Id;
-  toProfileId: Id;
+  fromOxyUserId: Id;
+  toOxyUserId: Id;
   status: string;
   createdAt: Date;
   updatedAt: Date;
@@ -410,8 +410,8 @@ export type IRoommateRequest = Document & {
 
 export type IRoommateRelationship = Document & {
   _id: Id;
-  profile1Id: Id;
-  profile2Id: Id;
+  oxyUser1Id: Id;
+  oxyUser2Id: Id;
   requestId?: Id;
   matchScore: number;
   status: 'active' | 'ended';

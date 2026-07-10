@@ -1,15 +1,13 @@
 const mongoose = require('mongoose');
 
 const roommateRequestSchema = new mongoose.Schema({
-  fromProfileId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Profile',
+  fromOxyUserId: {
+    type: String,
     required: true,
     index: true,
   },
-  toProfileId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Profile',
+  toOxyUserId: {
+    type: String,
     required: true,
     index: true,
   },
@@ -30,7 +28,7 @@ const roommateRequestSchema = new mongoose.Schema({
 
 // Prevent duplicate pending requests between the same pair of profiles
 roommateRequestSchema.index(
-  { fromProfileId: 1, toProfileId: 1 },
+  { fromOxyUserId: 1, toOxyUserId: 1 },
   { unique: true, partialFilterExpression: { status: 'pending' } }
 );
 

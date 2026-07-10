@@ -29,25 +29,15 @@ class ViewingController {
       if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
       if (property.status !== PropertyStatus.PUBLISHED) return next(new AppError('Property is not active', 400, 'PROPERTY_INACTIVE'));
       if (property.isExternal) return next(new AppError('Cannot book viewings for external properties', 400, 'EXTERNAL_PROPERTY'));
-
-      // Get active profile for requester
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
-
-      const requesterProfileId = activeProfile._id;
-      const ownerOxyUserId = property.oxyUserId;
+      const requesterOxyUserId = oxyUserId;
+const ownerOxyUserId = property.oxyUserId;
       if (!ownerOxyUserId) return next(new AppError('Property has no owner', 400, 'INVALID_PROPERTY'));
 
       // Prevent booking own property
       if (ownerOxyUserId === oxyUserId) {
         return next(new AppError('You cannot book a viewing for your own property', 403, 'FORBIDDEN'));
       }
-
-      const ownerProfile = await Profile.findActiveByOxyUserId(ownerOxyUserId);
-      if (!ownerProfile) return next(new AppError('Property owner profile not found', 404, 'PROFILE_NOT_FOUND'));
-      const ownerProfileId = ownerProfile._id;
-
-      // Build scheduledAt from date (YYYY-MM-DD) and time (HH:mm)
+// Build scheduledAt from date (YYYY-MM-DD) and time (HH:mm)
       // Create date in local timezone first
       const localDate = new Date(`${date}T${time}`);
       // Convert to UTC ISO string
@@ -65,7 +55,7 @@ class ViewingController {
       // Prevent multiple active (pending/approved) viewing requests for the same property by the same profile
       const existingActiveForProfile = await ViewingRequest.findOne({
         propertyId,
-        requesterProfileId,
+        requesterOxyUserId,
         status: { $in: ['pending', 'approved'] },
       }).lean();
 
@@ -86,14 +76,14 @@ class ViewingController {
 
       const viewing = await ViewingRequest.create({
         propertyId,
-        requesterProfileId,
-        ownerProfileId,
+        requesterOxyUserId,
+        ownerOxyUserId,
         scheduledAt,
         message,
         status: 'pending',
       });
 
-      logger.info('Viewing request created', { viewingId: viewing._id, propertyId, requesterProfileId, ownerProfileId });
+      logger.info('Viewing request created', { viewingId: viewing._id, propertyId, requesterOxyUserId, ownerOxyUserId });
 
       // Notify the property owner that someone requested a viewing.
       await notificationDispatchService.createForUser(ownerOxyUserId, {
@@ -119,10 +109,7 @@ class ViewingController {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile) return res.json(paginationResponse([], 1, 10, 0, 'No profile found for user'));
-
-      const query: Record<string, unknown> = { requesterProfileId: activeProfile._id };
+      const query: Record<string, unknown> = { requesterOxyUserId: oxyUserId };
       if (status) query.status = status;
 
       const pageNumber = parseInt(String(page), 10) || 1;
@@ -159,14 +146,11 @@ class ViewingController {
       const property = await Property.findById(propertyId).lean();
       if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
-
       const isOwner = property.oxyUserId === oxyUserId;
 
       const query: Record<string, unknown> = { propertyId };
       if (!isOwner) {
-        query.requesterProfileId = activeProfile._id;
+        query.requesterOxyUserId = oxyUserId;
       }
       if (status) query.status = status;
 
@@ -196,13 +180,10 @@ class ViewingController {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
-
       const viewing = await ViewingRequest.findById(viewingId);
       if (!viewing) return next(new AppError('Viewing request not found', 404, 'NOT_FOUND'));
 
-      if (String(viewing.ownerProfileId) !== String(activeProfile._id)) {
+      if (String(viewing.ownerOxyUserId) !== String(oxyUserId)) {
         return next(new AppError('Only the property owner can approve', 403, 'FORBIDDEN'));
       }
       if (viewing.status !== 'pending') {
@@ -222,7 +203,7 @@ class ViewingController {
       await viewing.save();
 
       // Notify the requester that their viewing was approved.
-      await notificationDispatchService.createForProfile(String(viewing.requesterProfileId), {
+      await notificationDispatchService.createForUser(String(viewing.requesterOxyUserId), {
         type: 'property',
         title: 'Viewing approved',
         message: 'Your viewing request was approved.',
@@ -247,13 +228,10 @@ class ViewingController {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
-
       const viewing = await ViewingRequest.findById(viewingId);
       if (!viewing) return next(new AppError('Viewing request not found', 404, 'NOT_FOUND'));
 
-      if (String(viewing.ownerProfileId) !== String(activeProfile._id)) {
+      if (String(viewing.ownerOxyUserId) !== String(oxyUserId)) {
         return next(new AppError('Only the property owner can decline', 403, 'FORBIDDEN'));
       }
       if (viewing.status !== 'pending') {
@@ -264,7 +242,7 @@ class ViewingController {
       await viewing.save();
 
       // Notify the requester that their viewing was declined.
-      await notificationDispatchService.createForProfile(String(viewing.requesterProfileId), {
+      await notificationDispatchService.createForUser(String(viewing.requesterOxyUserId), {
         type: 'property',
         title: 'Viewing declined',
         message: 'Your viewing request was declined.',
@@ -289,14 +267,11 @@ class ViewingController {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
-
       const viewing = await ViewingRequest.findById(viewingId);
       if (!viewing) return next(new AppError('Viewing request not found', 404, 'NOT_FOUND'));
 
-      const isRequester = String(viewing.requesterProfileId) === String(activeProfile._id);
-      const isOwner = String(viewing.ownerProfileId) === String(activeProfile._id);
+      const isRequester = String(viewing.requesterOxyUserId) === String(oxyUserId);
+      const isOwner = String(viewing.ownerOxyUserId) === String(oxyUserId);
       if (!isRequester && !isOwner) return next(new AppError('Not authorized to cancel this request', 403, 'FORBIDDEN'));
 
       if (viewing.status === 'cancelled') {
@@ -309,9 +284,9 @@ class ViewingController {
 
       // Notify the counterparty that the viewing was cancelled.
       const cancelRecipientProfileId = isOwner
-        ? String(viewing.requesterProfileId)
-        : String(viewing.ownerProfileId);
-      await notificationDispatchService.createForProfile(cancelRecipientProfileId, {
+        ? String(viewing.requesterOxyUserId)
+        : String(viewing.ownerOxyUserId);
+      await notificationDispatchService.createForUser(cancelRecipientProfileId, {
         type: 'property',
         title: 'Viewing cancelled',
         message: isOwner
@@ -351,11 +326,8 @@ class ViewingController {
       }
 
       // Get active profile for requester
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
-
       // Only allow requester to modify
-      const isRequester = String(viewing.requesterProfileId) === String(activeProfile._id);
+      const isRequester = String(viewing.requesterOxyUserId) === String(oxyUserId);
       if (!isRequester) {
         return next(new AppError('Not authorized to modify this viewing request', 403, 'FORBIDDEN'));
       }

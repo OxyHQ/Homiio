@@ -3,8 +3,8 @@
  *
  * The Mongoose `Lease` schema (`packages/backend/models/schemas/LeaseSchema.ts`)
  * and the `toLeaseDTO` serializer are the single authority for this shape. These
- * interfaces mirror that authority: owner references are `landlordProfileId` /
- * `tenantProfileId`, terms live under `leaseTerms`, money under `rentDetails`,
+ * interfaces mirror that authority: owner references are session `landlordOxyUserId` /
+ * `tenantOxyUserId`, terms live under `leaseTerms`, money under `rentDetails`,
  * and `status` uses the schema enum (`pending_signatures`, plural). There is no
  * legacy flat shape.
  */
@@ -57,7 +57,7 @@ export interface LeaseSignatures {
 }
 
 export interface LeaseCoTenant {
-  profileId: string;
+  oxyUserId: string;
   role?: 'primary' | 'secondary' | 'guarantor';
   signedDate?: string;
   status?: 'pending' | 'signed' | 'declined';
@@ -100,9 +100,9 @@ export interface Lease {
   propertyId: string;
   property?: Property;
   roomId?: string;
-  landlordProfileId: string;
+  landlordOxyUserId: string;
   landlord?: Profile;
-  tenantProfileId: string;
+  tenantOxyUserId: string;
   tenant?: Profile;
   coTenants?: LeaseCoTenant[];
   status: LeaseStatus;
@@ -118,7 +118,7 @@ export interface Lease {
 
 export interface CreateLeaseData {
   propertyId: string;
-  tenantProfileId: string;
+  tenantOxyUserId: string;
   roomId?: string;
   leaseTerms: LeaseTerms;
   rentDetails: LeaseRentDetails;
@@ -126,7 +126,7 @@ export interface CreateLeaseData {
 }
 
 export interface UpdateLeaseData {
-  tenantProfileId?: string;
+  tenantOxyUserId?: string;
   roomId?: string;
   leaseTerms?: Partial<LeaseTerms>;
   rentDetails?: Partial<LeaseRentDetails>;

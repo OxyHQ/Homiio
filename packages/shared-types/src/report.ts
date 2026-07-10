@@ -31,7 +31,7 @@ export interface ListingReport {
   id: string;
   propertyId: string;
   /** Profile id of the reporter (resolved from the authenticated session). */
-  reporterProfileId: string;
+  reporterOxyUserId: string;
   reason: ListingReportReason;
   /** Free-text context. Required when `reason` is `OTHER`. */
   details?: string;

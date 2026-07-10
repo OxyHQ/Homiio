@@ -95,10 +95,10 @@ export default function ReservationDetailScreen() {
 
   const role = useMemo<'guest' | 'host' | null>(() => {
     if (!reservation || !primaryProfile) return null;
-    const profileId = primaryProfile._id ?? primaryProfile.id;
-    if (!profileId) return null;
-    if (String(reservation.hostProfileId) === String(profileId)) return 'host';
-    if (String(reservation.guestProfileId) === String(profileId)) return 'guest';
+    const sessionOxyUserId = primaryProfile?.oxyUserId;
+    if (!sessionOxyUserId) return null;
+    if (String(reservation.hostOxyUserId) === sessionOxyUserId) return 'host';
+    if (String(reservation.guestOxyUserId) === sessionOxyUserId) return 'guest';
     return null;
   }, [reservation, primaryProfile]);
 

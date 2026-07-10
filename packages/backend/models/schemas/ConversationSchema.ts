@@ -40,7 +40,7 @@ messageSchema.pre('validate', function(next: (err?: Error) => void): void {
 // Conversation Schema for Sindi AI conversations
 const conversationSchema = new mongoose.Schema({
   // Profile who owns this conversation
-  profileId: {
+  oxyUserId: {
     type: String,
     required: true,
     index: true,
@@ -133,8 +133,8 @@ const conversationSchema = new mongoose.Schema({
 });
 
 // Indexes for performance
-conversationSchema.index({ profileId: 1, createdAt: -1 });
-conversationSchema.index({ profileId: 1, status: 1, updatedAt: -1 });
+conversationSchema.index({ oxyUserId: 1, createdAt: -1 });
+conversationSchema.index({ oxyUserId: 1, status: 1, updatedAt: -1 });
 conversationSchema.index({ 'sharing.expiresAt': 1 }, { expireAfterSeconds: 0 });
 
 // Virtual for message count
@@ -179,9 +179,9 @@ conversationSchema.pre('validate', function(next: (err?: Error) => void): void {
 });
 
 // Static methods
-conversationSchema.statics.findByProfileId = function(profileId: string, status: string = 'active') {
+conversationSchema.statics.findByProfileId = function(oxyUserId: string, status: string = 'active') {
   return this.find({
-    profileId,
+    oxyUserId,
     status
   }).sort({ updatedAt: -1 });
 };
@@ -203,9 +203,9 @@ interface CreateConversationData {
   messages?: IConversationMessage[];
 }
 
-conversationSchema.statics.createConversation = function(profileId: string, data: CreateConversationData) {
+conversationSchema.statics.createConversation = function(oxyUserId: string, data: CreateConversationData) {
   return this.create({
-    profileId,
+    oxyUserId,
     title: data.title || 'New Conversation',
     topic: data.topic || 'general',
     metadata: {

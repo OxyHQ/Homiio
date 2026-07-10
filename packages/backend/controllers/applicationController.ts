@@ -13,11 +13,12 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
-import { Property, TenantApplication, Profile, Lease } from '../models';
+import { Property, TenantApplication, Lease } from '../models';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
 import imageUploadService from '../services/imageUploadService';
 import { toLeaseDTO } from './lease/toLeaseDTO';
+import { requireSessionOxyUserId } from '../utils/sessionUser';
 const {
   TenantApplicationStatus,
   TenantApplicationDocumentType,
@@ -181,8 +182,7 @@ class ApplicationController {
    */
   async createApplication(req: any, res: any, next: any) {
     try {
-      const oxyUserId = req.user?.id || req.user?._id || req.userId;
-      if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
+      const oxyUserId = requireSessionOxyUserId(req);
 
       const {
         propertyId,
@@ -204,23 +204,16 @@ class ApplicationController {
         return next(new AppError('This property is not offered for long-term rent and does not accept applications', 400, 'NOT_APPLICABLE'));
       }
 
-      const applicantProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!applicantProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
-
       const landlordOxyUserId = property.oxyUserId;
       if (!landlordOxyUserId) return next(new AppError('Property has no landlord', 400, 'INVALID_PROPERTY'));
       if (landlordOxyUserId === oxyUserId) {
         return next(new AppError('You cannot apply to your own property', 403, 'FORBIDDEN'));
       }
 
-      const landlordProfile = await Profile.findActiveByOxyUserId(landlordOxyUserId);
-      if (!landlordProfile) return next(new AppError('Property landlord profile not found', 404, 'PROFILE_NOT_FOUND'));
-      const landlordProfileId = landlordProfile._id;
-
       // Prevent duplicate active applications by the same applicant.
       const existingActive = await TenantApplication.findOne({
         propertyId,
-        applicantProfileId: applicantProfile._id,
+        applicantOxyUserId: oxyUserId,
         status: { $in: [TenantApplicationStatus.SUBMITTED, TenantApplicationStatus.REVIEWING] }
       }).lean();
       if (existingActive) {
@@ -246,8 +239,8 @@ class ApplicationController {
 
       const application = await TenantApplication.create({
         propertyId,
-        applicantProfileId: applicantProfile._id,
-        landlordProfileId,
+        applicantOxyUserId: oxyUserId,
+        landlordOxyUserId,
         moveInDate: moveInDateParsed,
         leaseTermMonths: Number(leaseTermMonths),
         monthlyIncome: Number(monthlyIncome),
@@ -262,7 +255,7 @@ class ApplicationController {
       logger.info('Tenant application created', {
         applicationId: String(application._id),
         propertyId: String(propertyId),
-        applicantProfileId: String(applicantProfile._id)
+        applicantOxyUserId: oxyUserId
       });
 
       res.status(201).json(successResponse(application.toJSON(), 'Application submitted'));
@@ -278,17 +271,13 @@ class ApplicationController {
   async listMyApplications(req: any, res: any, next: any) {
     try {
       const { page = 1, limit = 10, status, asLandlord } = req.query;
-      const oxyUserId = req.user?.id || req.user?._id || req.userId;
-      if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
-
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile) return res.json(paginationResponse([], 1, 10, 0, 'No profile found for user'));
+      const oxyUserId = requireSessionOxyUserId(req);
 
       const query: Record<string, unknown> = {};
       if (String(asLandlord) === 'true') {
-        query.landlordProfileId = activeProfile._id;
+        query.landlordOxyUserId = oxyUserId;
       } else {
-        query.applicantProfileId = activeProfile._id;
+        query.applicantOxyUserId = oxyUserId;
       }
       if (status) query.status = status;
 
@@ -317,17 +306,13 @@ class ApplicationController {
   async getApplicationById(req: any, res: any, next: any) {
     try {
       const { id } = req.params;
-      const oxyUserId = req.user?.id || req.user?._id || req.userId;
-      if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
-
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
+      const oxyUserId = requireSessionOxyUserId(req);
 
       const application = await TenantApplication.findById(id).lean();
       if (!application) return next(new AppError('Application not found', 404, 'NOT_FOUND'));
 
-      const isApplicant = String(application.applicantProfileId) === String(activeProfile._id);
-      const isLandlord = String(application.landlordProfileId) === String(activeProfile._id);
+      const isApplicant = application.applicantOxyUserId === oxyUserId;
+      const isLandlord = application.landlordOxyUserId === oxyUserId;
       if (!isApplicant && !isLandlord) {
         return next(new AppError('Not authorized to view this application', 403, 'FORBIDDEN'));
       }
@@ -348,17 +333,13 @@ class ApplicationController {
       const { id } = req.params;
       const { status: nextStatus, notes } = req.body;
 
-      const oxyUserId = req.user?.id || req.user?._id || req.userId;
-      if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
-
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
+      const oxyUserId = requireSessionOxyUserId(req);
 
       const application = await TenantApplication.findById(id);
       if (!application) return next(new AppError('Application not found', 404, 'NOT_FOUND'));
 
-      const isApplicant = String(application.applicantProfileId) === String(activeProfile._id);
-      const isLandlord = String(application.landlordProfileId) === String(activeProfile._id);
+      const isApplicant = application.applicantOxyUserId === oxyUserId;
+      const isLandlord = application.landlordOxyUserId === oxyUserId;
       if (!isApplicant && !isLandlord) {
         return next(new AppError('Not authorized to update this application', 403, 'FORBIDDEN'));
       }
@@ -419,16 +400,12 @@ class ApplicationController {
   async createLeaseFromApplication(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
-      const oxyUserId = req.user?.id || req.user?._id || req.userId;
-      if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
-
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
+      const oxyUserId = requireSessionOxyUserId(req);
 
       const application = await TenantApplication.findById(id);
       if (!application) return next(new AppError('Application not found', 404, 'NOT_FOUND'));
 
-      if (String(application.landlordProfileId) !== String(activeProfile._id)) {
+      if (application.landlordOxyUserId !== oxyUserId) {
         return next(new AppError('Only the landlord can create a lease from this application', 403, 'FORBIDDEN'));
       }
       if (application.status !== TenantApplicationStatus.APPROVED) {
@@ -440,7 +417,7 @@ class ApplicationController {
 
       const existing = await Lease.findOne({
         propertyId: application.propertyId,
-        tenantProfileId: application.applicantProfileId,
+        tenantOxyUserId: application.applicantOxyUserId,
         status: { $in: ACTIVE_LEASE_STATUSES }
       });
       if (existing) {
@@ -459,8 +436,8 @@ class ApplicationController {
 
       const lease = await Lease.create({
         propertyId: application.propertyId,
-        landlordProfileId: activeProfile._id,
-        tenantProfileId: application.applicantProfileId,
+        landlordOxyUserId: oxyUserId,
+        tenantOxyUserId: application.applicantOxyUserId,
         status: LeaseStatus.DRAFT,
         leaseTerms: { startDate, endDate },
         rentDetails: { monthlyRent: rentBlock.monthlyAmount, currency }
@@ -469,7 +446,7 @@ class ApplicationController {
       logger.info('Lease draft created from application', {
         applicationId: String(application._id),
         leaseId: String(lease._id),
-        landlordProfileId: String(activeProfile._id)
+        landlordOxyUserId: oxyUserId
       });
 
       res.status(201).json(successResponse(toLeaseDTO(lease), 'Lease draft created from application'));

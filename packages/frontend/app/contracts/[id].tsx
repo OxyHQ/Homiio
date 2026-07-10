@@ -110,11 +110,11 @@ export default function ContractDetailScreen() {
 
   const role = useMemo<Role | null>(() => {
     if (!lease || !primaryProfile) return null;
-    const profileId = String(primaryProfile._id ?? primaryProfile.id ?? '');
-    if (!profileId) return null;
-    if (lease.landlordProfileId === profileId) return 'landlord';
-    if (lease.tenantProfileId === profileId) return 'tenant';
-    if ((lease.coTenants ?? []).some((ct) => ct.profileId === profileId)) return 'cotenant';
+    const sessionOxyUserId = primaryProfile?.oxyUserId;
+    if (!sessionOxyUserId) return null;
+    if (lease.landlordOxyUserId === sessionOxyUserId) return 'landlord';
+    if (lease.tenantOxyUserId === sessionOxyUserId) return 'tenant';
+    if ((lease.coTenants ?? []).some((ct) => ct.profileId === sessionOxyUserId)) return 'cotenant';
     return null;
   }, [lease, primaryProfile]);
 

@@ -3,7 +3,7 @@
  *
  * Write endpoints must NEVER spread `req.body` straight into a Mongoose
  * create/update: that lets a client set owner/system-managed fields
- * (`profileId`, `landlordProfileId`, `status`, `signatures`, …) and reassign
+ * (`profileId`, `landlordOxyUserId`, `status`, `signatures`, …) and reassign
  * ownership (IDOR / privilege escalation). Instead, each controller declares an
  * explicit allowlist of user-editable fields and picks ONLY those. Anything not
  * on the list is resolved server-side, derived, system-managed, or rejected.

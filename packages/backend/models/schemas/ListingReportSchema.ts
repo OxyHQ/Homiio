@@ -24,10 +24,9 @@ const listingReportSchema = new mongoose.Schema({
     required: [true, 'Property ID is required'],
     index: true
   },
-  reporterProfileId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Profile',
-    required: [true, 'Reporter profile ID is required'],
+  reporterOxyUserId: {
+    type: String,
+    required: [true, 'Reporter Oxy user ID is required'],
     index: true
   },
   reason: {
@@ -75,7 +74,7 @@ listingReportSchema.index({ propertyId: 1, status: 1 });
 // One open report per reporter per property — re-filing while a report is
 // still open is a no-op at the controller layer (guarded by this index).
 listingReportSchema.index(
-  { propertyId: 1, reporterProfileId: 1, status: 1 },
+  { propertyId: 1, reporterOxyUserId: 1, status: 1 },
   {
     unique: true,
     partialFilterExpression: { status: ListingReportStatus.OPEN }

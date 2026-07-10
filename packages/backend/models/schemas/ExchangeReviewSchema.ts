@@ -19,16 +19,14 @@ const exchangeReviewSchema = new mongoose.Schema({
     required: [true, 'Exchange request ID is required'],
     index: true
   },
-  reviewerProfileId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Profile',
-    required: [true, 'Reviewer profile ID is required'],
+  reviewerOxyUserId: {
+    type: String,
+    required: [true, 'Reviewer Oxy user ID is required'],
     index: true
   },
-  subjectProfileId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Profile',
-    required: [true, 'Subject profile ID is required'],
+  subjectOxyUserId: {
+    type: String,
+    required: [true, 'Subject Oxy user ID is required'],
     index: true
   },
   rating: {
@@ -65,8 +63,8 @@ const exchangeReviewSchema = new mongoose.Schema({
 });
 
 // Subject profile review list (newest first).
-exchangeReviewSchema.index({ subjectProfileId: 1, createdAt: -1 });
+exchangeReviewSchema.index({ subjectOxyUserId: 1, createdAt: -1 });
 // One review per reviewer per exchange.
-exchangeReviewSchema.index({ exchangeRequestId: 1, reviewerProfileId: 1 }, { unique: true });
+exchangeReviewSchema.index({ exchangeRequestId: 1, reviewerOxyUserId: 1 }, { unique: true });
 
 module.exports = mongoose.model('ExchangeReview', exchangeReviewSchema);

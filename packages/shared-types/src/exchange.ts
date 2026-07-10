@@ -21,9 +21,9 @@ export interface ExchangeRequest {
   id: string;
   propertyId: string;
   /** Profile making the request (the would-be guest / swapper). */
-  requesterProfileId: string;
+  requesterOxyUserId: string;
   /** Profile that owns the requested listing (the host). */
-  hostProfileId: string;
+  hostOxyUserId: string;
   mode: ExchangeMode;
   /** For a SWAP: the property the requester offers in return. */
   offeredPropertyId?: string;
@@ -63,9 +63,9 @@ export interface ExchangeReview {
   id: string;
   exchangeRequestId: string;
   /** Profile writing the review. */
-  reviewerProfileId: string;
+  reviewerOxyUserId: string;
   /** Profile being reviewed. */
-  subjectProfileId: string;
+  subjectOxyUserId: string;
   /** Overall rating, 1-5. */
   rating: number;
   comment?: string;
