@@ -423,4 +423,6 @@ async function resolveRegionRef(input: { regionId?: string; state?: string; coun
   return null;
 }
 
-module.exports = new CityController();
+const cityController = new CityController();
+export default cityController;
+module.exports = cityController;
