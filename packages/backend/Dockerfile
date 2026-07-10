@@ -27,14 +27,15 @@ RUN npm install -g bun
 
 WORKDIR /app
 
-# Copy the workspace root and narrow `workspaces` to just the two packages the
-# API needs (shared-types + backend). This excludes the heavy Expo frontend.
+# Copy the workspace root and narrow `workspaces` to just the packages the
+# API needs (shared-types + listing-providers + backend). This excludes the
+# heavy Expo frontend.
 # Narrowing the workspace set invalidates bun.lock, so it is NOT copied — bun
 # resolves fresh from the package.json version ranges (still deterministic).
 # The root `postinstall` (build:shared-types) is stripped: source is not present
 # yet at install time, and shared-types is built explicitly below.
 COPY package.json ./
-RUN node -e "const p=require('./package.json'); p.workspaces=['packages/shared-types','packages/backend']; delete p.scripts.postinstall; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2));"
+RUN node -e "const p=require('./package.json'); p.workspaces=['packages/shared-types','packages/listing-providers','packages/backend']; delete p.scripts.postinstall; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2));"
 
 # bunfig.toml pins `linker = "hoisted"`. This is REQUIRED: with bun's default
 # isolated linker, @types/express-serve-static-core lands at a deeply-nested
@@ -45,18 +46,20 @@ COPY bunfig.toml ./
 
 # Copy package manifests first for a cacheable dependency install layer.
 COPY packages/shared-types/package.json packages/shared-types/
+COPY packages/listing-providers/package.json packages/listing-providers/
 COPY packages/backend/package.json packages/backend/
 
 # Install all dependencies (incl. dev: tsc/typescript) for the workspace subset.
 RUN bun install
 
-# Copy the source for both workspace packages.
+# Copy the source for all workspace packages.
 COPY packages/shared-types/ packages/shared-types/
+COPY packages/listing-providers/ packages/listing-providers/
 COPY packages/backend/ packages/backend/
 
-# Build shared-types first (backend imports @homiio/shared-types), then the
-# backend. Both compile with tsc to their respective dist/ folders.
+# Build in dependency order: shared-types → listing-providers → backend.
 RUN bun run --filter @homiio/shared-types build
+RUN bun run --filter @homiio/listing-providers build
 RUN bun run --filter @homiio/backend build
 
 # The backend reads i18n locale JSON at runtime from `<dist>/../locales`
@@ -82,16 +85,18 @@ WORKDIR /app
 # Re-create the narrowed workspace so `bun install --production` resolves the
 # same dependency subset (without dev tooling like tsc/eslint).
 COPY package.json ./
-RUN node -e "const p=require('./package.json'); p.workspaces=['packages/shared-types','packages/backend']; delete p.scripts.postinstall; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2));"
+RUN node -e "const p=require('./package.json'); p.workspaces=['packages/shared-types','packages/listing-providers','packages/backend']; delete p.scripts.postinstall; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2));"
 # Same hoisted linker as the build stage for consistent runtime resolution.
 COPY bunfig.toml ./
 COPY packages/shared-types/package.json packages/shared-types/
+COPY packages/listing-providers/package.json packages/listing-providers/
 COPY packages/backend/package.json packages/backend/
 
 RUN bun install --production
 
 # Copy the compiled JavaScript (incl. staged locales) from the build stage.
 COPY --from=builder /app/packages/shared-types/dist packages/shared-types/dist
+COPY --from=builder /app/packages/listing-providers/dist packages/listing-providers/dist
 COPY --from=builder /app/packages/backend/dist packages/backend/dist
 
 # Drop privileges — node:alpine ships a `node` user (uid 1000).
