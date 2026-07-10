@@ -404,7 +404,9 @@
       "cityBreaks": "Weekend in città",
       "countryside": "Campagna",
       "instantBook": "Prenotazione immediata",
-      "petFriendly": "Animali ammessi"
+      "petFriendly": "Animali ammessi",
+      "homeSwap": "Scambio casa",
+      "hosting": "Ospitalità"
     }
   },
   "agent": {

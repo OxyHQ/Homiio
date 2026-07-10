@@ -27,7 +27,10 @@ export type HomeCategory =
   | 'city_breaks'
   | 'countryside'
   | 'instant_book'
-  | 'pet_friendly';
+  | 'pet_friendly'
+  // Exchange
+  | 'home_swap'
+  | 'hosting';
 
 interface HomeCategoryState {
   /** Currently selected category, or null for "all". */

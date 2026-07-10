@@ -347,10 +347,10 @@ Remove `LayoutScrollProvider` / layout scroll handler when not needed. No dual w
 
 ### Section stacking (NativeWind gap)
 
-Use NativeWind `gap-8 md:gap-12` on the section container — **not** per-section `marginTop: sectionGap` or `resolveSectionSpacing()`. Bottom padding: `pb-14` (home) / `pb-20` (agent).
+Use NativeWind `gap-6 md:gap-8` on the section container — **not** per-section `marginTop: sectionGap` or `resolveSectionSpacing()`. Bottom padding: `pb-14` (home) / `pb-20` (agent).
 
 - Drop `HomeCarouselSection` outer `marginBottom`.
-- Wide CTA rows: `flex-row items-stretch gap-8 md:gap-12`.
+- Wide CTA rows: `flex-row items-stretch gap-6 md:gap-8`.
 
 ### Design-token CSS (no hand-copied radius)
 

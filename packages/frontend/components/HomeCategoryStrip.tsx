@@ -1,23 +1,10 @@
 /**
  * Home category strip — Airbnb-2026 inspired horizontal scroller that
  * switches the home feed's lens (Studios / Apartments / Houses for
- * long-term; Beachfront / Cabins / Pools for vacation).
- *
- * Visual language:
- *   - Compact 40px isometric PNG render per category (full-color, never tinted)
- *     clipped to a `radius.lg` rounded square so it reads as a premium tile.
- *   - 12px label flush under the image (no tile/label gap), on a fixed-width
- *     item so labels line up across the row.
- *   - Active state = a soft rounded background highlight behind the whole
- *     item (icon + label) plus a dark + bold label and the image at full
- *     opacity; inactive = transparent background, muted label, image at
- *     0.85 opacity (dim the tile, don't recolor the render). The item keeps
- *     identical padding in both states so the layout never shifts.
- *   - On web: subtle scale-1.04 on hover (never re-tints).
- *
- * Spacing is anchored on the design-token `spacing`/`radius` scale.
+ * long-term; Beachfront / Cabins / Pools for vacation; sale/exchange
+ * buckets for buy and exchange browse modes).
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Image,
   Platform,
@@ -36,35 +23,9 @@ import { PANEL_TOP_INSET } from '@oxyhq/bloom/content-panel';
 import { getIconArt, ICON_ART_PLACEHOLDER } from '@/constants/iconArt';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
+import { homeCategoriesForMode, resolveHomeCategory } from '@/store/homeCategories';
 import { useHomeCategoryStore, type HomeCategory } from '@/store/homeCategoryStore';
-import { tracker } from '@/constants/styles';
-
-interface CategoryDef {
-  id: HomeCategory;
-  labelKey: string;
-}
-
-const LONG_TERM_CATEGORIES: CategoryDef[] = [
-  { id: 'studios', labelKey: 'home.category.studios' },
-  { id: 'apartments', labelKey: 'home.category.apartments' },
-  { id: 'houses', labelKey: 'home.category.houses' },
-  { id: 'rooms', labelKey: 'home.category.rooms' },
-  { id: 'coliving', labelKey: 'home.category.coliving' },
-  { id: 'luxury', labelKey: 'home.category.luxury' },
-  { id: 'new_listings', labelKey: 'home.category.newListings' },
-  { id: 'near_you', labelKey: 'home.category.nearYou' },
-];
-
-const VACATION_CATEGORIES: CategoryDef[] = [
-  { id: 'beachfront', labelKey: 'home.category.beachfront' },
-  { id: 'cabins', labelKey: 'home.category.cabins' },
-  { id: 'pools', labelKey: 'home.category.pools' },
-  { id: 'mountain', labelKey: 'home.category.mountain' },
-  { id: 'city_breaks', labelKey: 'home.category.cityBreaks' },
-  { id: 'countryside', labelKey: 'home.category.countryside' },
-  { id: 'instant_book', labelKey: 'home.category.instantBook' },
-  { id: 'pet_friendly', labelKey: 'home.category.petFriendly' },
-];
+import { PAGE_GUTTER_CLASS, tracker } from '@/constants/styles';
 
 /** Edge length of the isometric tile — compact so more categories fit on screen. */
 const TILE_SIZE = 40;
@@ -95,17 +56,6 @@ interface CategoryItemProps {
 
 const CategoryItem: React.FC<CategoryItemProps> = ({ active, label, image, onPress }) => {
   const [hovered, setHovered] = useState(false);
-
-  /**
-   * The isometric render is full-color, so we never tint it — active vs
-   * inactive is conveyed by image opacity (1 vs 0.85), the label color/weight,
-   * and a soft rounded background highlight behind the whole item. The
-   * highlight uses the lightest neutral fill (`COLOR_BLACK_LIGHT_8`, Bloom
-   * `backgroundSecondary`) so the selected category reads as a subtle pill
-   * without competing with the colorful tile. Padding is identical in both
-   * states (so the row never reflows on selection); only the background
-   * toggles. Hover on web nudges scale slightly only.
-   */
   const scale = hovered && Platform.OS === 'web' ? 1.04 : 1;
 
   return (
@@ -154,35 +104,17 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({
   sticky = false,
 }) => {
   const { t } = useTranslation();
-  const { mode } = useRentalMode();
+  const { mode, browseMode } = useRentalMode();
   const { colors: themeColors } = useTheme();
   const category = useHomeCategoryStore((s) => s.category);
   const setCategory = useHomeCategoryStore((s) => s.setCategory);
-
-  const items = useMemo(
-    () => (mode === 'vacation' ? VACATION_CATEGORIES : LONG_TERM_CATEGORIES),
-    [mode],
-  );
-
-  const handlePress = useCallback(
-    (next: HomeCategory) => {
-      setCategory(category === next ? null : next);
-    },
-    [category, setCategory],
-  );
+  const items = homeCategoriesForMode(browseMode, mode);
+  const activeCategory = resolveHomeCategory(category, browseMode, mode);
 
   const isWeb = Platform.OS === 'web';
   const isScreenNotMobile = useIsScreenNotMobile();
-  // Match Header: framed ContentPanel bleed-mask clips sticky at top:0.
   const framed = isWeb && isScreenNotMobile;
 
-  /**
-   * Solid page background on web + native so scrolled feed content never
-   * shows through the strip (`bg-background` on the wrapper). Web-only
-   * `position: sticky` lives outside the RN style system — inject via style
-   * and rely on react-native-web to pass it through. `top` stays numeric
-   * from PANEL_TOP_INSET when framed.
-   */
   const stickyStyle =
     sticky && isWeb
       ? ({
@@ -204,15 +136,15 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({
         showsHorizontalScrollIndicator={false}
         decelerationRate={isWeb ? 'normal' : 'fast'}
         snapToAlignment="start"
-        contentContainerClassName={isWeb ? 'gap-1 px-4' : 'gap-0.5 px-3'}
+        contentContainerClassName={isWeb ? `gap-1 ${PAGE_GUTTER_CLASS}` : `gap-0.5 ${PAGE_GUTTER_CLASS}`}
       >
         {items.map((item) => (
           <CategoryItem
             key={item.id}
-            active={category === item.id}
+            active={activeCategory === item.id}
             label={t(item.labelKey)}
             image={resolveCategoryImage(item.id)}
-            onPress={() => handlePress(item.id)}
+            onPress={() => setCategory(activeCategory === item.id ? null : item.id)}
           />
         ))}
       </ScrollView>

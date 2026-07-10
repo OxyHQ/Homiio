@@ -30,6 +30,7 @@ import {
   Pressable,
   useWindowDimensions,
 } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { Menu } from 'lucide-react-native';
 import Animated, {
   interpolate,
@@ -48,19 +49,20 @@ import { OfferingType, type City, type Property, type PropertyFilters } from '@h
 
 // Real data hooks
 import { useProperties } from '@/hooks';
-import { cityService } from '@/services/cityService';
-import { usePopularCities } from '@/hooks/useCityQueries';
+import { cityQueryKeys, usePopularCities } from '@/hooks/useCityQueries';
 import { cityCountryName, cityRegionName } from '@/utils/cityDisplay';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { useRentalMode } from '@/context/RentalModeContext';
-import { useHomeCategoryStore } from '@/store/homeCategoryStore';
+import { useHomeCategoryStore, type HomeCategory } from '@/store/homeCategoryStore';
 import { getCategoryFilters } from '@/store/getCategoryFilters';
+import { resolveHomeCategory } from '@/store/homeCategories';
 
 // Components
 import { PropertyCard } from '@/components/PropertyCard';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
 import { HomeCategoryStrip } from '@/components/HomeCategoryStrip';
+import { NearbyCityCarousel } from '@/components/NearbyCityCarousel';
 import { SearchSummaryBar } from '@/components/search/SearchSummaryBar';
 import { SearchPanel } from '@/components/search/SearchPanel';
 import type { SearchQuery, SearchStep } from '@/components/search/types';
@@ -74,7 +76,7 @@ import { useMediaQuery } from 'react-responsive';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { useUIStore } from '@/store/uiStore';
 import { colors } from '@/styles/colors';
-import { spacing, tracker } from '@/constants/styles';
+import { spacing, tracker, PAGE_GUTTER_CLASS } from '@/constants/styles';
 
 /**
  * Hero photo used at the bottom of the home page Host CTA. Reuses a
@@ -110,21 +112,34 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * c;
 }
 
+function buildHomeFeedFilters(
+  offering: OfferingType,
+  category: HomeCategory | null,
+  userLocation: { latitude: number; longitude: number } | null,
+): PropertyFilters {
+  return {
+    limit: HOME_FEED_LIMIT,
+    status: 'published',
+    offering,
+    ...getCategoryFilters(category, { userLocation, offering }),
+  };
+}
+
 export default function HomePage() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { offering: browseOffering, browseMode } = useRentalMode();
+  const { offering: browseOffering, browseMode, mode } = useRentalMode();
   const selectedCategory = useHomeCategoryStore((s) => s.category);
+  const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   // DB cities (with populated region/country + self-hosted cover image) power
   // both the Explore showcase and the nearby-city carousels.
-  const { data: cities = [] } = usePopularCities(EXPLORE_CITY_LIMIT);
+  const { data: cities = [], refetch: refetchCities } = usePopularCities(EXPLORE_CITY_LIMIT);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
   } | null>(null);
-  const [nearbyProperties, setNearbyProperties] = useState<Record<string, Property[]>>({});
   const isWide = useMediaQuery({ minWidth: 768 });
   const isXL = useMediaQuery({ minWidth: 1024 });
   // Matches the breakpoint that hides the persistent sidebar in _layout.tsx
@@ -258,80 +273,40 @@ export default function HomePage() {
     return fallbackCountry ?? t('home.cityShowcase.defaultPlace');
   }, [userLocation, citiesByDistance, activeQuery.location, cities, t]);
 
-  // Fetch properties for the two closest cities. The nearbyCities array
-  // changes only when location or cities change, so this is the
-  // intrinsic place to load by-city data.
-  useEffect(() => {
-    if (nearbyCities.length === 0) return;
-    let cancelled = false;
-    Promise.all(
-      nearbyCities.map(async (city) => {
-        const cityId = city._id;
-        try {
-          const res = await cityService.getPropertiesByCity(cityId, { limit: 8 });
-          return { cityId, properties: (res.properties as Property[]) || [] };
-        } catch {
-          return { cityId, properties: [] as Property[] };
-        }
-      }),
-    ).then((results) => {
-      if (cancelled) return;
-      const map: Record<string, Property[]> = {};
-      results.forEach((r) => {
-        map[r.cityId] = r.properties;
-      });
-      setNearbyProperties(map);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [nearbyCities]);
+  const activeCategory = resolveHomeCategory(selectedCategory, browseMode, mode);
 
   // Properties + cities loaded together on mount.
   const { properties, loading: propertiesLoading, loadProperties } = useProperties();
-  const { properties: recentlyViewedProperties } = useRecentlyViewed();
-  const { savedProperties, isLoading: savedLoading } = useSavedPropertiesContext();
-
-  // Scope the home feed to the active offering and optional category lens.
-  const categoryFilters = useMemo(
-    () => getCategoryFilters(selectedCategory, { userLocation }),
-    [selectedCategory, userLocation],
-  );
-
-  const feedFilters = useMemo<PropertyFilters>(
-    () => ({
-      limit: HOME_FEED_LIMIT,
-      status: 'published',
-      offering: browseOffering,
-      ...categoryFilters,
-    }),
-    [browseOffering, categoryFilters],
-  );
+  const { properties: recentlyViewedProperties, refetch: refetchRecentlyViewed } =
+    useRecentlyViewed();
+  const { savedProperties, isLoading: savedLoading, loadSavedProperties } =
+    useSavedPropertiesContext();
 
   useEffect(() => {
-    loadProperties(feedFilters);
-  }, [loadProperties, feedFilters]);
+    loadProperties(buildHomeFeedFilters(browseOffering, activeCategory, userLocation));
+  }, [loadProperties, browseOffering, activeCategory, userLocation]);
 
-  const featuredProperties = useMemo<Property[]>(() => {
-    if (!properties) return [];
-    return properties.slice(0, 8) as Property[];
-  }, [properties]);
+  const featuredProperties = properties ? (properties.slice(0, 8) as Property[]) : [];
+  const gridProperties = properties ? (properties.slice(8, HOME_FEED_LIMIT) as Property[]) : [];
 
-  const gridProperties = useMemo<Property[]>(() => {
-    if (!properties) return [];
-    return properties.slice(8, HOME_FEED_LIMIT) as Property[];
-  }, [properties]);
-
-  const showCategoryStrip = browseMode === 'long_term' || browseMode === 'vacation';
-
-  const onRefresh = useCallback(async () => {
+  const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await loadProperties(feedFilters);
+      await Promise.all([
+        loadProperties(buildHomeFeedFilters(browseOffering, activeCategory, userLocation)),
+        refetchCities(),
+        ...nearbyCities.map((city) =>
+          queryClient.invalidateQueries({
+            queryKey: cityQueryKeys.properties(city._id, 8),
+          }),
+        ),
+        loadSavedProperties(),
+        refetchRecentlyViewed(),
+      ]);
     } finally {
       setRefreshing(false);
     }
-  }, [loadProperties, feedFilters]);
+  };
 
   // Sole scroll owner: the document on web (mirrored into `scrollY` by
   // `PageScrollView`), the screen's own `Animated.ScrollView` on native. Drives
@@ -379,6 +354,10 @@ export default function HomePage() {
     },
     [router],
   );
+
+  const handleViewAllFeatured = () => {
+    router.push('/explore');
+  };
 
   const handleBecomeHost = useCallback(() => {
     router.push('/properties/create');
@@ -516,15 +495,18 @@ export default function HomePage() {
             per-section `marginTop`. `pb-14` is bottom scroll padding;
             gap never adds space after the last child. */}
         <View className="gap-6 md:gap-8 pb-14">
-        {/* === Category strip (sticky on web) — rent modes only === */}
-        {showCategoryStrip ? <HomeCategoryStrip sticky /> : null}
+        {/* === Category strip (sticky on web) === */}
+        <HomeCategoryStrip sticky />
 
         {/* === Featured Properties carousel === */}
         <HomeCarouselSection
+          eyebrow={t('home.recommended.eyebrow')}
           title={t('home.featured.title')}
           items={featuredProperties}
           loading={propertiesLoading}
           emptyText={t('home.featured.empty')}
+          viewAllText={t('home.viewAll')}
+          onViewAll={() => router.push('/explore')}
           renderItem={(property) => (
             <PropertyCard
               property={property}
@@ -596,29 +578,9 @@ export default function HomePage() {
         ) : null}
 
         {/* === Nearby city carousels (only when location + properties available) === */}
-        {nearbyCities.map((city) => {
-          const cityId = city._id;
-          const cityProperties = nearbyProperties[cityId];
-          if (!cityProperties || cityProperties.length === 0) return null;
-          return (
-            <HomeCarouselSection
-              key={cityId}
-              title={t('home.nearby.title', { city: city.name })}
-              items={cityProperties}
-              loading={false}
-              renderItem={(property) => (
-                <PropertyCard
-                  property={property}
-                  variant="featured"
-                  // Home rows are themselves horizontal scrollers; an in-card
-                  // photo pager would fight the row swipe, so keep one photo here.
-                  enableImageCarousel={false}
-                  onPress={() => router.push(`/properties/${property._id || property.id}`)}
-                />
-              )}
-            />
-          );
-        })}
+        {nearbyCities.map((city) => (
+          <NearbyCityCarousel key={city._id} city={city} />
+        ))}
 
         {/* === Closing CTA banners ===
             Responsive 50/50 grid: side-by-side equal-height columns on wide
@@ -629,7 +591,7 @@ export default function HomePage() {
             so `alignItems: 'stretch'` equalises height. On narrow the two
             banners are plain scroll siblings and the page `gap` spaces them. */}
         {isWide ? (
-          <View className="flex-row items-stretch gap-6 px-8 md:gap-8">
+          <View className={`flex-row items-stretch gap-6 md:gap-8 ${PAGE_GUTTER_CLASS}`}>
             <HostCtaBanner
               fill
               title={t('home.hostCta.title')}

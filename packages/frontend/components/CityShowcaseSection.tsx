@@ -22,7 +22,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  TouchableOpacity,
   View,
   useWindowDimensions,
 } from 'react-native';
@@ -36,7 +35,7 @@ import type { City } from '@homiio/shared-types';
 
 import { colors } from '@/styles/colors';
 import { textShadow } from '@/styles/shadows';
-import { cardShadow, gridGap, radius, spacing, tracker } from '@/constants/styles';
+import { cardShadow, gridGap, PAGE_GUTTER_CLASS, pagePadding, radius, spacing, tracker } from '@/constants/styles';
 import { cityRegionName, getCityImageSource } from '@/utils/cityDisplay';
 
 interface CityShowcaseSectionProps {
@@ -51,6 +50,7 @@ const CARD_GAP = gridGap.normal;
 export function CityShowcaseSection({ title, items, onPressCity }: CityShowcaseSectionProps) {
   const isWide = useMediaQuery({ minWidth: 768 });
   const isXL = useMediaQuery({ minWidth: 1280 });
+  const pageGutter = isWide ? pagePadding.desktop : pagePadding.mobile;
   const { width: windowWidth } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
   const [scrollX, setScrollX] = useState(0);
@@ -65,7 +65,7 @@ export function CityShowcaseSection({ title, items, onPressCity }: CityShowcaseS
   const cardHeight = Math.round(cardWidth * 1.25);
 
   const totalContentWidth = items.length * cardWidth + (items.length - 1) * CARD_GAP;
-  const maxScroll = Math.max(0, totalContentWidth - containerWidth + spacing['2xl'] * 2);
+  const maxScroll = Math.max(0, totalContentWidth - containerWidth + pageGutter * 2);
   const canScrollLeft = scrollX > 4;
   const canScrollRight = scrollX < maxScroll - 4;
 
@@ -81,35 +81,39 @@ export function CityShowcaseSection({ title, items, onPressCity }: CityShowcaseS
   };
 
   return (
-    <View style={styles.section}>
-      <View style={styles.header}>
-        <H1 style={styles.title}>{title}</H1>
+    <View className="w-full">
+      <View className={`mb-4 flex-row items-end justify-between gap-4 ${PAGE_GUTTER_CLASS}`}>
+        <H1 className="min-w-0 flex-1 shrink text-[26px] font-bold leading-8 tracking-tight text-foreground">
+          {title}
+        </H1>
         {isWide && (canScrollLeft || canScrollRight) ? (
-          <View style={styles.arrowGroup}>
-            <TouchableOpacity
+          <View className="flex-row items-center gap-2">
+            <Pressable
               onPress={() => scrollByPage('left')}
               disabled={!canScrollLeft}
-              style={[styles.arrowButton, { opacity: canScrollLeft ? 1 : 0.3 }]}
+              className="h-8 w-8 items-center justify-center rounded-full bg-white"
+              style={[cardShadow.sm, { opacity: canScrollLeft ? 1 : 0.3 }]}
               accessibilityRole="button"
               accessibilityLabel="Scroll left"
             >
               <Ionicons name="chevron-back" size={16} color={colors.primaryColor} />
-            </TouchableOpacity>
-            <TouchableOpacity
+            </Pressable>
+            <Pressable
               onPress={() => scrollByPage('right')}
               disabled={!canScrollRight}
-              style={[styles.arrowButton, { opacity: canScrollRight ? 1 : 0.3 }]}
+              className="h-8 w-8 items-center justify-center rounded-full bg-white"
+              style={[cardShadow.sm, { opacity: canScrollRight ? 1 : 0.3 }]}
               accessibilityRole="button"
               accessibilityLabel="Scroll right"
             >
               <Ionicons name="chevron-forward" size={16} color={colors.primaryColor} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         ) : null}
       </View>
 
       <View
-        style={styles.scrollWrapper}
+        className="w-full"
         onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
       >
         <ScrollView
@@ -121,9 +125,9 @@ export function CityShowcaseSection({ title, items, onPressCity }: CityShowcaseS
           snapToAlignment="start"
           onScroll={handleScroll}
           scrollEventThrottle={16}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerClassName={PAGE_GUTTER_CLASS}
         >
-          <View style={styles.rowFlex}>
+          <View className="flex-row gap-4">
             {items.map((city) => (
               <CityCard
                 key={city._id}
@@ -204,50 +208,6 @@ const CityCard: React.FC<CityCardProps> = ({ city, width, height, onPress }) => 
 };
 
 const styles = StyleSheet.create({
-  section: {
-    width: '100%',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing['2xl'],
-    marginBottom: spacing.lg,
-    gap: spacing.lg,
-  },
-  title: {
-    fontSize: 26,
-    color: colors.COLOR_BLACK,
-    fontWeight: '700',
-    letterSpacing: tracker.tight,
-    lineHeight: 32,
-    flex: 1,
-    flexShrink: 1,
-  },
-  arrowGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  arrowButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...cardShadow.sm,
-  },
-  scrollWrapper: {
-    width: '100%',
-  },
-  scrollContent: {
-    paddingHorizontal: spacing['2xl'],
-  },
-  rowFlex: {
-    flexDirection: 'row',
-    gap: CARD_GAP,
-  },
   card: {
     position: 'relative',
     borderRadius: radius.photo,

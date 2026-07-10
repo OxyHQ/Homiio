@@ -248,7 +248,9 @@
       "cityBreaks": "Escapadas urbanas",
       "countryside": "Campo",
       "instantBook": "Reserva instantánea",
-      "petFriendly": "Admite mascotas"
+      "petFriendly": "Admite mascotas",
+      "homeSwap": "Intercambio de casas",
+      "hosting": "Alojamiento"
     }
   },
   "agent": {
