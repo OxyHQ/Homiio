@@ -60,6 +60,7 @@ export interface Config {
     password?: string;
   };
   s3: {
+    /** Custom S3-compatible endpoint. Empty = native AWS S3. */
     endpoint: string;
     region: string;
     accessKeyId: string;
@@ -213,10 +214,12 @@ const config: Config = {
     password: process.env.EMAIL_PASSWORD,
   },
   
-  // S3 Configuration (DigitalOcean Spaces)
+  // Object storage — native AWS S3 in production (oxy-infra media bucket).
+  // Set AWS_ENDPOINT_URL only for S3-compatible mocks / local MinIO; leave
+  // unset for real AWS so the SDK uses the regional endpoint.
   s3: {
-    endpoint: process.env.AWS_ENDPOINT_URL || 'https://nyc3.digitaloceanspaces.com',
-    region: process.env.AWS_REGION || 'nyc3',
+    endpoint: (process.env.AWS_ENDPOINT_URL || '').trim(),
+    region: process.env.AWS_REGION || 'us-west-2',
     accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
     bucketName: process.env.AWS_S3_BUCKET || 'homiio-images',
