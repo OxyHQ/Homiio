@@ -5,13 +5,13 @@
 
 import express from 'express';
 import neighborhoodRoutes from './neighborhoods';
+import cityController from '../controllers/cityController';
+import imageController from '../controllers/imageController';
+import geocodingController from '../controllers/geocodingController';
 const propertyController = require('../controllers/propertyController');
 const telegramController = require('../controllers/telegramController');
-const cityController = require('../controllers/cityController');
-const imageController = require('../controllers/imageController');
 const tipsController = require('../controllers/tipsController');
 const analyticsController = require('../controllers/analyticsController');
-const geocodingController = require('../controllers/geocodingController');
 const reviewController = require('../controllers/reviewController');
 import { asyncHandler } from '../middlewares';
 import performanceMonitor from '../middlewares/performance';

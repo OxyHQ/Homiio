@@ -63,13 +63,30 @@ jobs:
           docker push "$IMG:${{ github.sha }}"
           docker push "$IMG:latest"
 
-      - name: Deploy to ECS (rolling; skipped until the service exists)
+      - name: Deploy to ECS (API + listing worker; rolling)
         run: |
-          STATUS=$(aws ecs describe-services --cluster "$CLUSTER" --services "$APP" --query 'services[0].status' --output text 2>/dev/null || echo NONE)
-          if [ "$STATUS" = "ACTIVE" ]; then
-            aws ecs update-service --cluster "$CLUSTER" --service "$APP" --force-new-deployment >/dev/null
-            aws ecs wait services-stable --cluster "$CLUSTER" --services "$APP"
-            echo "deployed $APP"
-          else
-            echo "ECS service $APP not created yet — image is in ECR, skipping deploy"
+          deploy_one() {
+            local svc="$1"
+            local STATUS
+            STATUS=$(aws ecs describe-services --cluster "$CLUSTER" --services "$svc" --query 'services[0].status' --output text 2>/dev/null || echo NONE)
+            if [ "$STATUS" = "ACTIVE" ]; then
+              aws ecs update-service --cluster "$CLUSTER" --service "$svc" --force-new-deployment >/dev/null
+              echo "redeploying $svc"
+            else
+              echo "ECS service $svc not created yet — image is in ECR, skipping $svc"
+            fi
+          }
+          deploy_one "$APP"
+          deploy_one "${APP}-worker"
+          # Wait on whichever services exist so CI fails if a rollout breaks.
+          WAIT=()
+          for svc in "$APP" "${APP}-worker"; do
+            STATUS=$(aws ecs describe-services --cluster "$CLUSTER" --services "$svc" --query 'services[0].status' --output text 2>/dev/null || echo NONE)
+            if [ "$STATUS" = "ACTIVE" ]; then
+              WAIT+=("$svc")
+            fi
+          done
+          if [ "${#WAIT[@]}" -gt 0 ]; then
+            aws ecs wait services-stable --cluster "$CLUSTER" --services "${WAIT[@]}"
+            echo "deployed: ${WAIT[*]}"
           fi
