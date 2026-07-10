@@ -10,6 +10,13 @@ import { Logger } from '../utils/logger';
 
 const logger = new Logger('CityCoverSyncService');
 
+type CityCoverFields = {
+  _id: Types.ObjectId;
+  name: string;
+  coverImageId?: Types.ObjectId | null;
+  imageIds?: Types.ObjectId[];
+};
+
 function resolvePrimaryImageId(
   images: Array<{ imageId?: Types.ObjectId | null; isPrimary?: boolean }> | undefined,
 ): Types.ObjectId | null {
@@ -27,7 +34,7 @@ function resolvePrimaryImageId(
 /** Link a listing Image id as this city's cover when none is set yet. */
 export async function ensureCover(cityId: Types.ObjectId | string): Promise<void> {
   try {
-    const city = await City.findById(cityId).select('name coverImageId imageIds').lean();
+    const city = await City.findById(cityId).select('name coverImageId imageIds').lean<CityCoverFields>();
     if (!city) {
       return;
     }
