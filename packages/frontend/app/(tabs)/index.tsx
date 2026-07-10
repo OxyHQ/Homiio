@@ -16,14 +16,11 @@
  *   8. Nearby cities carousels — only if user shares location and
  *      properties exist.
  *   9. Host CTA banner.
- *  10. Footer trust strip (small print).
  *
  * Rhythm is 32px on web / 24px on mobile between post-hero sections
  * (NativeWind `gap-6 md:gap-8`). The hero sits outside that gap container
- * so it does not participate. Long-form copy (FAQ accordion, stats banner
- * with big H2 numbers, "Verified Listings / Fair Agreements / Trust Score"
- * 3-up grid) does NOT live on the home page — it belongs on /about and
- * footer respectively.
+ * so it does not participate. Long-form marketing copy (FAQ, stats, trust
+ * grids) does NOT live on the home page — it belongs on /about.
  */
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
@@ -70,7 +67,6 @@ import { CityShowcaseSection } from '@/components/CityShowcaseSection';
 import { FeaturedGridSection } from '@/components/FeaturedGridSection';
 import { HostCtaBanner } from '@/components/HostCtaBanner';
 import { AgentCtaBanner } from '@/components/agent/AgentCtaBanner';
-import { HomeFooterStrip } from '@/components/HomeFooterStrip';
 import { PageScrollView } from '@/components/PageScrollView';
 import { useMediaQuery } from 'react-responsive';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
@@ -380,15 +376,6 @@ export default function HomePage() {
     router.push('/agent');
   }, [router]);
 
-  const footerChunks = useMemo(
-    () => [
-      t('home.footerStrip.verified'),
-      t('home.footerStrip.fair'),
-      t('home.footerStrip.support'),
-    ],
-    [t],
-  );
-
   return (
     <View className="flex-1">
       <PageScrollView
@@ -668,8 +655,6 @@ export default function HomePage() {
           </>
         )}
 
-        {/* === Footer trust strip === */}
-        <HomeFooterStrip chunks={footerChunks} />
         </View>
       </PageScrollView>
     </View>
