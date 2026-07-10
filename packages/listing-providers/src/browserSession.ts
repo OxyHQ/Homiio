@@ -259,10 +259,9 @@ export class PlaywrightSessionPool {
       }
       const challengeWaitMs = options.challengeWaitMs ?? this.challengeWaitMs;
       try {
-        const navigationTimeoutMs = Math.max(options.timeoutMs ?? this.timeoutMs, challengeWaitMs);
         await warmBrowserPage(page, {
           warmUrl: options.warmUrl,
-          timeoutMs: navigationTimeoutMs,
+          timeoutMs: options.timeoutMs ?? this.timeoutMs,
           signal: options.signal,
           contentSelector: options.contentSelector,
           isChallenge: options.isChallenge,
