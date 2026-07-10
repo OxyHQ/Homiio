@@ -124,14 +124,16 @@ export class ImageUploadService {
   ];
 
   constructor() {
+    // Native AWS S3 when AWS_ENDPOINT_URL is unset; custom endpoint (MinIO /
+    // local mocks) only when explicitly configured. forcePathStyle is for
+    // S3-compatible stores — never for real AWS (virtual-hosted-style).
     this.s3Client = new S3Client({
-      endpoint: config.s3.endpoint,
+      ...(config.s3.endpoint ? { endpoint: config.s3.endpoint, forcePathStyle: true } : {}),
       region: config.s3.region,
       credentials: {
         accessKeyId: config.s3.accessKeyId,
         secretAccessKey: config.s3.secretAccessKey,
       },
-      forcePathStyle: true, // Use path-style URLs for DigitalOcean Spaces
     });
   }
 
@@ -378,7 +380,11 @@ export class ImageUploadService {
     if (!this.isStorageConfigured()) {
       return `${config.publicUrl}${LOCAL_IMAGE_ROUTE}/${key}`;
     }
-    return `${config.s3.endpoint}/${config.s3.bucketName}/${key}`;
+    if (config.s3.endpoint) {
+      return `${config.s3.endpoint.replace(/\/$/, '')}/${config.s3.bucketName}/${key}`;
+    }
+    // Native AWS virtual-hosted-style URL.
+    return `https://${config.s3.bucketName}.s3.${config.s3.region}.amazonaws.com/${key}`;
   }
 
   /**
