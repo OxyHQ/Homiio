@@ -27,9 +27,9 @@ function normalizeFixture(index: number) {
 }
 
 describe('BluegroundProvider', () => {
-  it('declares both ES and US markets', () => {
+  it('declares ES/US/IT/GB/DE/FR markets', () => {
     expect(provider.id).toBe('blueground');
-    expect([...provider.markets].sort()).toEqual(['ES', 'US']);
+    expect([...provider.markets].sort()).toEqual(['DE', 'ES', 'FR', 'GB', 'IT', 'US']);
   });
 
   it('normalizes the Madrid (EUR) fixture as a furnished long-term rental', () => {

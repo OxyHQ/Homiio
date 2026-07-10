@@ -275,6 +275,10 @@ PROVIDER_IDEALISTA_PT_ENABLED=true
 PROVIDER_REALTOR_CA_ENABLED=true
 PROVIDER_REALESTATE_COM_AU_ENABLED=true
 PROVIDER_BAYUT_ENABLED=true
+PROVIDER_DAFT_ENABLED=true
+PROVIDER_IMMOWEB_ENABLED=true
+PROVIDER_OTODOM_ENABLED=true
+PROVIDER_FUNDA_ENABLED=true
 ```
 
 **Multi-country brand expansion (thin wrappers reuse shared factories — default OFF):** Idealista ES/IT/**PT** (regional hosts + georeach AJAX); MercadoLibre AR/EC/CO/CL/PE/**MX** (`createMercadolibreProvider` + `rentSegment` for renta/arriendo); Navent Zonaprop/Argenprop/Plusvalía/Inmuebles24/Metrocuadrado (`createNaventProvider`); Blueground global (`blueground` one plugin, per-market city slugs). **Backlog (not yet wired):** Idealista (none — trio complete); MercadoLibre UY/VE/BO; Properati CO/PE; Lamudi ID/TH/TR; OLX PT/PL; Immowelt AT; Blueground PT/GR/AE/HK; ImmobiliareScout24 AT.
@@ -296,6 +300,8 @@ Argentina (`LISTING_AR_CITIES`): Zonaprop / Argenprop (Navent `rplis-api` + `__P
 Mexico (`LISTING_MX_CITIES`): Inmuebles24 (Navent — Cloudflare, OFF), Lamudi (JSON-LD MONTH rent — best HTTP candidate, OFF until live discover), Vivanuncios (housing-only classifieds — OFF), Propiedades (JSON-LD — Akamai, OFF), MercadoLibre inmuebles (thin `createMercadolibreProvider`, `renta` segment — OFF until probe). EasyBroker inactive — skip. Reuse shared `navent` / `jsonLd` / `contact` / `classifieds` / `cities` / `mercadolibre`.
 
 Portugal (`LISTING_PT_CITIES`): Idealista.pt (thin regional clone of `idealista_it` — `/imovel/`, `/arrendar-casas/`, georeach + contact AJAX; OFF until Playwright+proxy probe). Imovirtual/Casa Sapo — defer (bespoke parsers).
+
+Ireland / Belgium / Poland / Netherlands (`LISTING_IE_CITIES`, `LISTING_BE_CITIES`, `LISTING_PL_CITIES`, `LISTING_NL_CITIES`): **Daft.ie** (`__NEXT_DATA__` search + detail — cold HTTP verified), **Immoweb** (GET `/en/search-results` + `/en/classified/get-result/{id}` JSON — cold HTTP verified), **Otodom** (OLX vertical `__NEXT_DATA__` — cold HTTP verified), **Funda** (mobile `*.funda.io` NDJSON search + tinyId detail — Akamai 403 from datacenter, keep OFF until `LISTING_HTTP_USE_PROXY` or browser tier). Pararius / OLX PL housing-only / Willhaben AT / Immowelt AT — defer.
 
 Ecuador (`LISTING_EC_CITIES`): Plusvalía (thin `createNaventProvider` — Cloudflare, OFF until sticky residential), MercadoLibre EC inmuebles (thin `createMercadolibreProvider` — housing-only, OFF until Playwright+proxy probe), Properati EC (JSON-LD fixtures — ALB 403, keep OFF). No duplicated parsers — reuse `session` / `jsonLd` / `nextData` / `contact` / `classifieds` / `navent` / `mercadolibre`. inmo.ec not viable.
 

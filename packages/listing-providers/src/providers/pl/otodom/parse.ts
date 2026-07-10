@@ -240,10 +240,13 @@ export function parseOtodomDetail(html: string, url: string): OtodomRawListing {
   }
 
   const priceInfo =
-    moneyFromItem(isRecord(ad) ? ad : {}) ??
-    moneyFromItem(isRecord(unified) ? unified : {}) ??
-    (isRecord(unified?.price) || isRecord(ad?.totalPrice)
-      ? moneyFromItem({ transaction: ad?.transaction ?? unified?.transaction, totalPrice: ad?.totalPrice ?? unified?.price })
+    (ad ? moneyFromItem(ad) : undefined) ??
+    (unified
+      ? moneyFromItem({
+          ...unified,
+          transaction: unified.transaction ?? ad?.transaction,
+          totalPrice: unified.totalPrice ?? unified.price,
+        })
       : undefined);
   if (!priceInfo) {
     throw new Error(`otodom: listing ${sourceId} has no resolvable price`);
