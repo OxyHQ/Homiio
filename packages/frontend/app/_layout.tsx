@@ -1,9 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Platform, View, StyleSheet, AppState, AppStateStatus, type ViewStyle } from 'react-native';
-import Animated, {
-  useAnimatedScrollHandler,
-  useSharedValue,
-} from 'react-native-reanimated';
 import {
   SafeAreaProvider,
   initialWindowMetrics,
@@ -15,7 +11,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { SideBar } from '@/components/SideBar';
 import { RightBar } from '@/components/RightBar';
-import { colors } from '@/styles/colors';
+import { ContentPanel } from '@oxyhq/bloom/content-panel';
+import { useTheme } from '@oxyhq/bloom/theme';
 import { Toaster } from '@/lib/sonner';
 import {
   setupNotifications,
@@ -35,7 +32,6 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import { ProfileProvider } from '@/context/ProfileContext';
 import { SavedPropertiesProvider } from '@/context/SavedPropertiesContext';
 import { BottomSheetProvider } from '@/context/BottomSheetContext';
-import { LayoutScrollProvider } from '@/context/LayoutScrollContext';
 import { MapStateProvider } from '@/context/MapStateContext';
 import { SearchModeProvider } from '@/context/SearchModeContext';
 import { RentalModeProvider } from '@/context/RentalModeContext';
@@ -103,6 +99,163 @@ function MediaResolverProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * The persistent visual shell (Mention shape): `SideBar · gutter · ContentPanel
+ * · RightBar`. This lives BELOW `BloomThemeProvider` so it can read the unscoped
+ * app theme (`useTheme().colors.background`) for the panel's bleed-mask.
+ *
+ * There is exactly ONE scroll owner per surface and NO page-level `ScrollView`:
+ * - Web default: the DOCUMENT scrolls (the `html/body/#root` reset in
+ *   `global.css` re-enables it); each screen flows in normal document flow and
+ *   the sticky `SideBar`/`RightBar`/panel chrome pin to the viewport.
+ * - Native phones: the `(tabs)` `NativeTabs` navigator owns the screen, so
+ *   `<Slot/>` renders full-bleed (no `ContentPanel` frame) and each screen's own
+ *   `Animated.ScrollView` is the scroll owner. `SideBar` stays mounted for its
+ *   Portal overlay drawer.
+ * - Explore (`/explore`): a FIXED-VIEWPORT shell clamped to `100dvh` with
+ *   `overflow:'hidden'` so the page never scrolls; the explore surface pins its
+ *   map and scrolls only its results list. Still framed in a `ContentPanel` on
+ *   web/wide.
+ */
+function AppShell() {
+  const isScreenNotMobile = useIsScreenNotMobile();
+  const pathname = usePathname() || '/';
+  // Unscoped app theme (this runs outside any `BloomColorScope`), passed to the
+  // panel as `maskColor` so the sticky gutter bleed-mask matches the outer band.
+  const theme = useTheme();
+
+  const useNativeTabBar = Platform.OS !== 'web' && !isScreenNotMobile;
+  const isExploreRoute = pathname === '/explore' || pathname.startsWith('/explore/');
+  const useFixedViewport = !useNativeTabBar && isExploreRoute;
+  // Framed (floating rounded panel + bleed-mask) only on wide WEB; native and
+  // narrow web are full-bleed.
+  const framed = Platform.OS === 'web' && isScreenNotMobile;
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        // Desktop-web gutter: the app-background band around the floating panel.
+        // `p-2 pl-0` (8px, flush to the rail) only while the sidebar/frame show.
+        gutter: {
+          flex: isScreenNotMobile ? 2.2 : 1,
+          ...(Platform.OS === 'web' && isScreenNotMobile
+            ? { padding: 8, paddingLeft: 0 }
+            : {}),
+        },
+        shellRoot: {
+          flex: 1,
+          width: '100%',
+          marginHorizontal: 'auto',
+          flexDirection: isScreenNotMobile ? 'row' : 'column',
+          ...(isScreenNotMobile ? { justifyContent: 'center' } : {}),
+        },
+        shellMain: {
+          flex: 1,
+          justifyContent: 'space-between',
+          flexDirection: isScreenNotMobile ? 'row' : 'column',
+        },
+        // --- Fixed-viewport shell (explore route) ---
+        fixedShell: Platform.select<ViewStyle>({
+          web: {
+            height: '100dvh',
+            overflow: 'hidden',
+            width: '100%',
+            marginHorizontal: 'auto',
+            flexDirection: 'row',
+          } as unknown as ViewStyle,
+          default: {
+            flex: 1,
+            width: '100%',
+            flexDirection: 'row',
+          },
+        }) as ViewStyle,
+        fixedMain: Platform.select<ViewStyle>({
+          web: {
+            flex: 1,
+            minWidth: 0,
+            height: '100%',
+            overflow: 'hidden',
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+          } as unknown as ViewStyle,
+          default: {
+            flex: 1,
+            minWidth: 0,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+          },
+        }) as ViewStyle,
+        // Center column of the fixed shell — height-bounded so the framed panel
+        // (and the explore surface inside it) size to it and scroll only their
+        // own list column.
+        fixedGutter: Platform.select<ViewStyle>({
+          web: {
+            flex: 1,
+            minWidth: 0,
+            height: '100%',
+            overflow: 'hidden',
+            ...(isScreenNotMobile ? { padding: 8, paddingLeft: 0 } : {}),
+          } as unknown as ViewStyle,
+          default: {
+            flex: 1,
+            minWidth: 0,
+          },
+        }) as ViewStyle,
+        fixedRightColumn: Platform.select<ViewStyle>({
+          web: {
+            height: '100%',
+            overflow: 'auto',
+          } as unknown as ViewStyle,
+          default: {},
+        }) as ViewStyle,
+      }),
+    [isScreenNotMobile],
+  );
+
+  if (useNativeTabBar) {
+    // Native phones: the `(tabs)` `NativeTabs` navigator owns the screen
+    // container, so `<Slot/>` renders directly (no shell frame / right rail).
+    // `SideBar` stays mounted for its Portal overlay drawer.
+    return (
+      <>
+        <SideBar />
+        <Slot />
+      </>
+    );
+  }
+
+  if (useFixedViewport) {
+    return (
+      <View style={[styles.fixedShell, { backgroundColor: theme.colors.background }]}>
+        <SideBar />
+        <View style={styles.fixedMain}>
+          <View style={styles.fixedGutter}>
+            <ContentPanel framed={framed} maskColor={theme.colors.background}>
+              <Slot />
+            </ContentPanel>
+          </View>
+          <View style={styles.fixedRightColumn}>
+            <RightBar />
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.shellRoot, { backgroundColor: theme.colors.background }]}>
+      <SideBar />
+      <View style={styles.shellMain}>
+        <View style={[styles.gutter, { backgroundColor: theme.colors.background }]}>
+          <ContentPanel framed={framed} maskColor={theme.colors.background}>
+            <Slot />
+          </ContentPanel>
+        </View>
+        <RightBar />
+      </View>
+    </View>
+  );
+}
 
 
 export default function RootLayout() {
@@ -113,145 +266,7 @@ export default function RootLayout() {
   const [initializationComplete, setInitializationComplete] = useState(false);
   const [fadeComplete, setFadeComplete] = useState(false);
   const startFade = initializationComplete;
-  const isScreenNotMobile = useIsScreenNotMobile();
-  const pathname = usePathname() || '/';
 
-  /**
-   * On native phones the `(tabs)` group owns the screen container via
-   * `NativeTabs` (a navigator that renders the platform tab bar — `UITabBar` /
-   * `BottomNavigationView`). A navigator must directly own its screens, so on
-   * this branch we render `<Slot/>` without the outer `Animated.ScrollView` or
-   * `RightBar`, and let the native bar replace the old JS `BottomBar`. `SideBar`
-   * still mounts so its on-demand overlay drawer (opened from screen headers via
-   * the UI store) keeps working. Web and wide native screens keep the original
-   * persistent SideBar + content + RightBar shell.
-   */
-  const useNativeTabBar = Platform.OS !== 'web' && !isScreenNotMobile;
-
-  /**
-   * The explore screen (`/explore`) is a FIXED-VIEWPORT app screen, not a
-   * document that page-scrolls: its map is pinned full-height on the right and
-   * only the results list scrolls on the left (Airbnb-2026). On web/wide it must
-   * therefore render OUTSIDE the page-level `Animated.ScrollView` so the page
-   * itself never scrolls — otherwise scrolling drags the map along with the
-   * list. We gate on `/explore` and only take the fixed shell when the
-   * persistent shell is in use (web or wide native) — the native tab-bar branch
-   * is untouched. (The legacy `/search` path is a redirect to `/explore`, so it
-   * never needs the fixed viewport itself.)
-   *
-   * Derived from `usePathname()` (no effect): `startsWith('/explore/')` also
-   * covers `/explore/<query>` so deep-linked searches get the same fixed viewport.
-   */
-  const isExploreRoute = pathname === '/explore' || pathname.startsWith('/explore/');
-  const useFixedViewport = !useNativeTabBar && isExploreRoute;
-
-  const styles = useMemo(() => StyleSheet.create({
-    container: {
-      ...(isScreenNotMobile ? {
-      } : {
-        flex: 1,
-      }),
-      width: '100%',
-      marginHorizontal: 'auto',
-      flexDirection: isScreenNotMobile ? 'row' : 'column',
-    },
-    mainContent: {
-      marginHorizontal: isScreenNotMobile ? 'auto' : 0,
-      justifyContent: 'space-between',
-      flexDirection: isScreenNotMobile ? 'row' : 'column',
-      flex: 1,
-    },
-    mainContentWrapper: {
-      flex: isScreenNotMobile ? 2.2 : 1,
-      ...(isScreenNotMobile ? {
-        borderRightWidth: StyleSheet.hairlineWidth,
-        borderRightColor: colors.border,
-      } : {}),
-      backgroundColor: colors.primaryLight,
-    },
-    // --- Fixed-viewport shell (explore route) ---
-    // A non-scrolling page: the shell is clamped to the viewport height and
-    // hides overflow, so each region (SideBar / Slot / RightBar) owns its own
-    // internal scroll. `100dvh` (the dynamic viewport unit — accounts for mobile
-    // browser chrome, with `100vh` as the inherited fallback on engines without
-    // it) and `overflow:'hidden'` are web-only CSS values absent from RN's
-    // `ViewStyle`, so the web block is typed as a whole — mirroring the existing
-    // web-only style casts in `SearchResultsView`/`RightBar`.
-    fixedShell: Platform.select<ViewStyle>({
-      web: {
-        height: '100dvh',
-        overflow: 'hidden',
-        width: '100%',
-        marginHorizontal: 'auto',
-        flexDirection: 'row',
-      } as unknown as ViewStyle,
-      default: {
-        flex: 1,
-        width: '100%',
-        flexDirection: 'row',
-      },
-    }) as ViewStyle,
-    // Main region of the fixed shell: a full-height row holding the Slot
-    // (results surface) and the RightBar. Fills the space between SideBar and
-    // the viewport edge and never grows past it (`overflow:'hidden'`).
-    fixedMain: Platform.select<ViewStyle>({
-      web: {
-        flex: 1,
-        minWidth: 0,
-        height: '100%',
-        overflow: 'hidden',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-      } as unknown as ViewStyle,
-      default: {
-        flex: 1,
-        minWidth: 0,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-      },
-    }) as ViewStyle,
-    // The Slot wrapper inside the fixed shell. Mirrors `mainContentWrapper`'s
-    // brand-light surface + right hairline, but is height-bounded so the
-    // explore surface (its own sticky top bar + split row) can size to it and
-    // scroll only its list column.
-    fixedSlotWrapper: Platform.select<ViewStyle>({
-      web: {
-        flex: 1,
-        minWidth: 0,
-        height: '100%',
-        overflow: 'hidden',
-        borderRightWidth: StyleSheet.hairlineWidth,
-        borderRightColor: colors.border,
-        backgroundColor: colors.primaryLight,
-      } as unknown as ViewStyle,
-      default: {
-        flex: 1,
-        minWidth: 0,
-        borderRightWidth: StyleSheet.hairlineWidth,
-        borderRightColor: colors.border,
-        backgroundColor: colors.primaryLight,
-      },
-    }) as ViewStyle,
-    // The RightBar column inside the fixed shell: a full-height right rail that
-    // scrolls internally if its widgets overflow (the page no longer scrolls).
-    fixedRightColumn: Platform.select<ViewStyle>({
-      web: {
-        height: '100%',
-        overflow: 'auto',
-      } as unknown as ViewStyle,
-      default: {},
-    }) as ViewStyle,
-  }), [isScreenNotMobile]);
-  const layoutScrollY = useSharedValue(0);
-  const layoutScrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      layoutScrollY.value = event.contentOffset.y;
-    },
-  });
-  const layoutScrollContextValue = useMemo(
-    () => ({ scrollY: layoutScrollY }),
-    [layoutScrollY],
-  );
   const queryClient = useMemo(() => new QueryClient({
     defaultOptions: {
       queries: {
@@ -385,72 +400,7 @@ export default function RootLayout() {
                                 <ErrorBoundary>
                                   <MapStateProvider>
                                     <SearchModeProvider>
-                                      {useNativeTabBar ? (
-                                        /*
-                                          Native phones: the `(tabs)` group's
-                                          `NativeTabs` navigator owns the screen
-                                          container, so `<Slot/>` is rendered
-                                          directly (no outer scroll view / right
-                                          rail). `SideBar` stays mounted for its
-                                          Portal overlay drawer. The platform tab
-                                          bar replaces the old JS `BottomBar`.
-                                          Screens that read `LayoutScrollContext`
-                                          fall back to a local `scrollY` when the
-                                          provider is absent.
-                                        */
-                                        <>
-                                          <SideBar />
-                                          <Slot />
-                                        </>
-                                      ) : useFixedViewport ? (
-                                        /*
-                                          Explore route (web/wide): a FIXED-VIEWPORT
-                                          app screen. The shell is clamped to the
-                                          viewport height with `overflow:'hidden'`,
-                                          so the page itself never scrolls — the
-                                          explore surface pins its map full-height
-                                          and scrolls only its results list. Same
-                                          left→right arrangement as the scrolling
-                                          shell (SideBar · Slot · RightBar) but
-                                          WITHOUT the outer `Animated.ScrollView`.
-                                          We still provide `LayoutScrollContext`
-                                          (with the shared, here-unscrolled
-                                          `scrollY`) so consumers that read it —
-                                          `Header`/feed/detail — never crash; the
-                                          explore surface uses its own sticky top
-                                          bar and doesn't depend on page scroll.
-                                        */
-                                        <LayoutScrollProvider value={layoutScrollContextValue}>
-                                          <View style={styles.fixedShell}>
-                                            <SideBar />
-                                            <View style={styles.fixedMain}>
-                                              <View style={styles.fixedSlotWrapper}>
-                                                <Slot />
-                                              </View>
-                                              <View style={styles.fixedRightColumn}>
-                                                <RightBar />
-                                              </View>
-                                            </View>
-                                          </View>
-                                        </LayoutScrollProvider>
-                                      ) : (
-                                        <LayoutScrollProvider value={layoutScrollContextValue}>
-                                          <Animated.ScrollView
-                                            contentContainerStyle={styles.container}
-                                            style={{ flex: 1 }}
-                                            onScroll={layoutScrollHandler}
-                                            scrollEventThrottle={16}
-                                          >
-                                            <SideBar />
-                                            <View style={styles.mainContent}>
-                                              <View style={styles.mainContentWrapper}>
-                                                <Slot />
-                                              </View>
-                                              <RightBar />
-                                            </View>
-                                          </Animated.ScrollView>
-                                        </LayoutScrollProvider>
-                                      )}
+                                      <AppShell />
                                     </SearchModeProvider>
                                   </MapStateProvider>
                                   <StatusBar style="auto" />

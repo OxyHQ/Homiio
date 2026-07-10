@@ -26,9 +26,9 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import Animated, {
+import {
   runOnJS,
-  useAnimatedScrollHandler,
+  useAnimatedReaction,
   useSharedValue,
 } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
@@ -43,9 +43,9 @@ import { useOxy, showSignInModal } from '@oxyhq/services';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { Header } from '@/components/Header';
+import { PageScrollView } from '@/components/PageScrollView';
 import { SaveButton } from '@/components/SaveButton';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { useLayoutScroll } from '@/context/LayoutScrollContext';
 import { useAreaInsights, useNearbyServices, useProperty } from '@/hooks';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useRentalMode } from '@/context/RentalModeContext';
@@ -117,7 +117,6 @@ export default function PropertyDetailPage() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const { oxyServices, activeSessionId } = useOxy();
-  const layoutScrollContext = useLayoutScroll();
   const { mode: rentalMode, browseMode } = useRentalMode();
   const { addProperty } = useRecentlyViewed();
   // On wide screens the booking/apply card lives in the app shell's right
@@ -482,18 +481,20 @@ export default function PropertyDetailPage() {
     setExchangeSheetVisible(true);
   }, [oxyServices, activeSessionId]);
 
-  // Sticky header trigger driven by scrollY. Uses Reanimated SharedValue
-  // so the value stays UI-thread native; React state is toggled via runOnJS
-  // only when crossing the threshold.
-  const localScrollY = useSharedValue(0);
-  const scrollY = layoutScrollContext?.scrollY ?? localScrollY;
+  // Sticky header trigger driven by scrollY. The value stays UI-thread native
+  // (written by the sole scroll owner: the document on web via `PageScrollView`,
+  // the screen's `Animated.ScrollView` on native); React state is toggled via
+  // `runOnJS` only when crossing the threshold.
+  const scrollY = useSharedValue(0);
 
-  const handleScroll = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollY.value = event.contentOffset.y;
-      runOnJS(setStickyHeaderVisible)(event.contentOffset.y > STICKY_HEADER_THRESHOLD);
+  useAnimatedReaction(
+    () => scrollY.value > STICKY_HEADER_THRESHOLD,
+    (isPast, wasPast) => {
+      if (isPast !== wasPast) {
+        runOnJS(setStickyHeaderVisible)(isPast);
+      }
     },
-  });
+  );
 
   if (isLoading) {
     return <PropertyDetailSkeleton />;
@@ -653,14 +654,13 @@ export default function PropertyDetailPage() {
         onCtaPress={handleCtaPress}
       />
 
-      <Animated.ScrollView
+      <PageScrollView
+        scrollY={scrollY}
         style={styles.scroll}
         contentContainerStyle={[
           styles.scrollContent,
           { paddingBottom: spacing['7xl'] },
         ]}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
       >
         <HeaderSection
           title={property.title}
@@ -874,7 +874,7 @@ export default function PropertyDetailPage() {
             />
           </View>
         </View>
-      </Animated.ScrollView>
+      </PageScrollView>
 
       <PropertyActionBar
         property={apiProperty}
