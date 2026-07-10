@@ -652,8 +652,13 @@ export { citiesFromEnv, citiesOptionsFromEnv } from './cities';
 // Ecuador (EC) — Plusvalía (shared Navent) / MercadoLibre housing-only / Properati (OFF).
 export {
   PlusvaliaProvider,
+  PLUSVALIA_SITE,
   isPlusvaliaChallenge,
   plusvaliaSourceIdFromUrl,
+  parsePlusvaliaDetail,
+  parsePlusvaliaPostingJson,
+  parsePlusvaliaSearch,
+  parsePlusvaliaSearchJson,
 } from './providers/ec/plusvalia';
 export {
   PLUSVALIA_BASE_URL,
@@ -663,11 +668,13 @@ export {
 } from './providers/ec/plusvalia/fixtures';
 export {
   MercadolibreEcProvider,
+  MERCADOLIBRE_EC_SITE,
   isMercadolibreEcChallenge,
   isMercadolibreEcHousingCategory,
   mercadolibreEcHousingSearchUrl,
   mercadolibreEcSourceIdFromUrl,
   parseMercadolibreEcDetail,
+  parseMercadolibreEcItemJson,
   parseMercadolibreEcSearch,
   parseMercadolibreEcSearchJson,
 } from './providers/ec/mercadolibre';
@@ -749,11 +756,11 @@ export {
   parseVivanunciosDetail,
   parseVivanunciosSearch,
   vivanunciosSourceIdFromUrl,
-  VIVANUNCIOS_HOUSING_SLUGS,
-  VIVANUNCIOS_BASE_URL,
 } from './providers/mx/vivanuncios';
 export {
-  VIVANUNCIOS_FIXTURE_HOUSING_HTML,
+  VIVANUNCIOS_BASE_URL,
+  VIVANUNCIOS_HOUSING_SLUGS,
+  VIVANUNCIOS_FIXTURE_DETAIL_HTML,
   VIVANUNCIOS_FIXTURE_CAR_HTML,
   VIVANUNCIOS_FIXTURE_SEARCH_HTML,
 } from './providers/mx/vivanuncios/fixtures';
