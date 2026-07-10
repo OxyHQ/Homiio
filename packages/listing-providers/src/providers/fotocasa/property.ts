@@ -130,6 +130,45 @@ function findPropertyRecord(parsed: unknown): Record<string, unknown> | undefine
 }
 
 /**
+ * Parse a searchads card record (from `realEstates[]`) into {@link FotocasaRaw}.
+ * Used when the property JSON API is PerimeterX-blocked but discover captured
+ * enough fields from searchads to publish.
+ */
+export function parseFotocasaSearchCardRecord(
+  record: Record<string, unknown>,
+  url: string,
+  fallbackCity?: string,
+): FotocasaRaw {
+  const enriched: Record<string, unknown> = { ...record };
+  const addressNode = isRecord(enriched.address) ? { ...enriched.address } : {};
+  if (fallbackCity && !readFotocasaCity(enriched) && !readFotocasaCity({ address: addressNode })) {
+    addressNode.municipality = fallbackCity;
+    enriched.address = addressNode;
+  }
+
+  const listing = fotocasaRecordToListing(enriched, url);
+  if (!listing || listing.price === undefined) {
+    throw new Error(`fotocasa: searchads card has no resolvable price at ${url}`);
+  }
+
+  const rawId =
+    asString(enriched.propertyId) ?? asString(enriched.id) ?? asString(enriched.realEstateId);
+  const sourceId =
+    rawId?.replace(/\D/g, '') ??
+    fotocasaSourceIdFromUrl(listing.url ?? url) ??
+    fotocasaSourceIdFromUrl(url);
+  if (!sourceId) {
+    throw new Error(`fotocasa: cannot derive a source id from searchads card at ${url}`);
+  }
+
+  return {
+    sourceId,
+    url: listing.url ?? url,
+    listing,
+  };
+}
+
+/**
  * Parse a Fotocasa `/property` JSON body into {@link FotocasaRaw}. Throws when
  * the body is a challenge page or carries no recognizable listing fields.
  */

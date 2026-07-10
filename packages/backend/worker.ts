@@ -22,6 +22,8 @@ import {
   ListingValidationError,
   NonHousingListingError,
   fotocasaCitiesFromEnv,
+  habitacliaCitiesFromEnv,
+  idealistaCitiesFromEnv,
   type ExternalListingRef,
   type FetchRuntime,
   type ListingFetchRuntimeHandle,
@@ -135,15 +137,21 @@ async function collectDiscoverRefs(data: DiscoverJobData): Promise<ExternalListi
   return refs;
 }
 
-/** Providers whose discover pass warms a browser session per city — enqueue one job per city. */
-const PER_CITY_DISCOVER_PROVIDERS = new Set<string>(['fotocasa']);
+/** Providers whose discover pass warms a browser session per city — one job per city. */
+function discoverCitiesForProvider(providerId: string): string[] | undefined {
+  if (providerId === 'fotocasa') return fotocasaCitiesFromEnv();
+  if (providerId === 'habitaclia') return habitacliaCitiesFromEnv();
+  if (providerId === 'idealista') return idealistaCitiesFromEnv();
+  return undefined;
+}
 
 /** The discover scopes to enqueue on boot: one per (provider, market), or per-city for browser-heavy portals. */
 function bootDiscoverJobs(): DiscoverJobData[] {
   return registry.all().flatMap((provider) =>
     provider.markets.flatMap((market) => {
-      if (PER_CITY_DISCOVER_PROVIDERS.has(provider.id)) {
-        return fotocasaCitiesFromEnv().map((city) => ({
+      const perCity = discoverCitiesForProvider(provider.id);
+      if (perCity) {
+        return perCity.map((city) => ({
           provider: provider.id,
           market,
           city,
@@ -228,19 +236,23 @@ async function removeDiscoverJobOrForceFail(
   }
 }
 
-/** Drop pre per-city Fotocasa discover scopes that can block the queue for hours. */
-async function purgeLegacyFotocasaDiscoverJobs(discoverQueue: BullQueue<DiscoverJobData>): Promise<void> {
-  const legacyScope: DiscoverJobData = { provider: 'fotocasa', market: 'ES' };
+/** Drop pre per-city discover scopes that can block the queue for hours. */
+async function purgeLegacyMarketWideDiscoverJobs(
+  discoverQueue: BullQueue<DiscoverJobData>,
+  provider: string,
+): Promise<void> {
+  const legacyScope: DiscoverJobData = { provider, market: 'ES' };
   const legacyId = discoverJobId(legacyScope);
   const legacyRepeatKey = `repeat-${legacyId}`;
 
   try {
     const removed = await discoverQueue.removeRepeatableByKey(legacyRepeatKey);
     if (removed) {
-      logger.warn('Removed legacy fotocasa repeat scheduler', { legacyRepeatKey });
+      logger.warn('Removed legacy repeat scheduler', { provider, legacyRepeatKey });
     }
   } catch (error) {
-    logger.warn('Could not remove legacy fotocasa repeat scheduler', {
+    logger.warn('Could not remove legacy repeat scheduler', {
+      provider,
       legacyRepeatKey,
       error: error instanceof Error ? error.message : String(error),
     });
@@ -248,20 +260,25 @@ async function purgeLegacyFotocasaDiscoverJobs(discoverQueue: BullQueue<Discover
 
   const legacyJob = await discoverQueue.getJob(legacyId);
   if (legacyJob) {
-    await removeDiscoverJobOrForceFail(legacyJob, 'legacy market-wide fotocasa discover');
+    await removeDiscoverJobOrForceFail(legacyJob, `legacy market-wide ${provider} discover`);
   }
 
   const activeJobs = await discoverQueue.getJobs(['active'], 0, 50);
   for (const job of activeJobs) {
-    if (job.data.provider !== 'fotocasa' || job.data.city) continue;
-    await removeDiscoverJobOrForceFail(job, 'superseded active fotocasa discover scope');
+    if (job.data.provider !== provider || job.data.city) continue;
+    await removeDiscoverJobOrForceFail(job, `superseded active ${provider} discover scope`);
   }
 
   const candidates = await discoverQueue.getJobs(['waiting', 'delayed'], 0, 200);
   for (const job of candidates) {
-    if (job.data.provider !== 'fotocasa' || job.data.city) continue;
-    await removeDiscoverJobOrForceFail(job, 'superseded fotocasa discover scope');
+    if (job.data.provider !== provider || job.data.city) continue;
+    await removeDiscoverJobOrForceFail(job, `superseded ${provider} discover scope`);
   }
+}
+
+/** Drop pre per-city Fotocasa discover scopes that can block the queue for hours. */
+async function purgeLegacyFotocasaDiscoverJobs(discoverQueue: BullQueue<DiscoverJobData>): Promise<void> {
+  await purgeLegacyMarketWideDiscoverJobs(discoverQueue, 'fotocasa');
 }
 
 async function releaseStaleActiveDiscoverJobs(discoverQueue: BullQueue<DiscoverJobData>): Promise<number> {
@@ -290,6 +307,9 @@ async function startBullMq(): Promise<() => Promise<void>> {
 
   // Purge ghost/scoped jobs before the discover worker can claim them.
   await purgeLegacyFotocasaDiscoverJobs(discoverQueue);
+  for (const provider of ['habitaclia', 'idealista'] as const) {
+    await purgeLegacyMarketWideDiscoverJobs(discoverQueue, provider);
+  }
   await releaseStaleActiveDiscoverJobs(discoverQueue);
 
   const discoverWorker = new Worker<DiscoverJobData>(

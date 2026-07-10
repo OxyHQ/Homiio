@@ -44,13 +44,16 @@ import {
   parseFotocasaLocationSegments,
   parseFotocasaSearchads,
   parseFotocasaSsrSearch,
+  extractFotocasaSearchCards,
   type FotocasaLocationSegments,
   type FotocasaTransactionType,
 } from './searchads';
-import { fotocasaPropertyApiUrl, isFotocasaPropertyChallenge, parseFotocasaPropertyJson } from './property';
+import { fotocasaPropertyApiUrl, isFotocasaPropertyChallenge, parseFotocasaPropertyJson, parseFotocasaSearchCardRecord } from './property';
 import {
   fotocasaBrowserSessionHints,
+  fotocasaSearchCardHints,
   readFotocasaBrowserSessionHint,
+  readFotocasaSearchCardHint,
   type FotocasaBrowserSessionHint,
 } from './sessionHints';
 import { FOTOCASA_DEFAULT_CITIES, fotocasaCitiesFromEnv } from './cities';
@@ -135,14 +138,27 @@ function yieldRefs(
   limit: number,
   yielded: { count: number },
   browserSession?: FotocasaBrowserSessionHint,
+  searchCards?: Map<string, Record<string, unknown>>,
 ): ExternalListingRef[] {
   const out: ExternalListingRef[] = [];
-  const hints = browserSession ? fotocasaBrowserSessionHints(browserSession) : undefined;
   for (const ref of refs) {
     if (yielded.count >= limit) break;
     if (seen.has(ref.sourceId)) continue;
     seen.add(ref.sourceId);
-    out.push({ provider: PROVIDER_ID, sourceId: ref.sourceId, url: ref.url, hints });
+    const hints: Record<string, unknown> = {};
+    if (browserSession) {
+      Object.assign(hints, fotocasaBrowserSessionHints(browserSession));
+    }
+    const card = searchCards?.get(ref.sourceId);
+    if (card && browserSession) {
+      Object.assign(hints, fotocasaSearchCardHints(browserSession.warmCity, card));
+    }
+    out.push({
+      provider: PROVIDER_ID,
+      sourceId: ref.sourceId,
+      url: ref.url,
+      hints: Object.keys(hints).length > 0 ? hints : undefined,
+    });
     yielded.count += 1;
   }
   return out;
@@ -324,13 +340,17 @@ export class FotocasaProvider implements ListingProvider {
           });
           if (page === 1) {
             const ssrRefs = parseFotocasaSsrSearch(searchHtml);
+            const ssrCards = extractFotocasaSearchCards(searchHtml);
             if (ssrRefs.length > 0) {
-              collected.push(...yieldRefs(ssrRefs, seen, limit, yielded, browserSession));
+              collected.push(
+                ...yieldRefs(ssrRefs, seen, limit, yielded, browserSession, ssrCards),
+              );
             }
           }
           break;
         }
         if (status >= 400) break;
+        const searchCards = extractFotocasaSearchCards(response.body);
         pageRefs = parseFotocasaSearchads(response.body);
         if (page === 1 && pageRefs.length === 0) {
           pageRefs = parseFotocasaSsrSearch(searchHtml);
@@ -347,7 +367,9 @@ export class FotocasaProvider implements ListingProvider {
           url: requestUrl,
         });
         if (pageRefs.length === 0) break;
-        collected.push(...yieldRefs(pageRefs, seen, limit, yielded, browserSession));
+        collected.push(
+          ...yieldRefs(pageRefs, seen, limit, yielded, browserSession, searchCards),
+        );
       }
 
       if (sticky) {
@@ -410,6 +432,25 @@ export class FotocasaProvider implements ListingProvider {
    * Ladder HTML is last resort when the session pool is absent or warm-up fails.
    */
   async fetch(ref: ExternalListingRef, ctx: FetchContext): Promise<RawListing> {
+    const searchCard = readFotocasaSearchCardHint(ref.hints);
+    if (searchCard) {
+      try {
+        const payload = parseFotocasaSearchCardRecord(searchCard.card, ref.url, searchCard.warmCity);
+        this.metrics.record({
+          provider: this.id,
+          strategy: 'browser',
+          outcome: 'success',
+          status: 200,
+          latencyMs: 0,
+          url: ref.url,
+          detail: 'searchads-card (discover snapshot)',
+        });
+        return { ref, payload };
+      } catch {
+        // Fall through to warmed property JSON / HTML.
+      }
+    }
+
     if (!ctx.runtime.openBrowserSession) {
       throw new ChallengeError(ref.url, 'browser', 503);
     }

@@ -557,6 +557,52 @@ describe('FotocasaProvider.fetch property JSON path', () => {
     expect(local.normalize(raw).sourceId).toBe('187654321');
   });
 
+  it('publishes from discover searchads card when property JSON is blocked', async () => {
+    const runtime: FetchRuntime = {
+      fetchHttp: async () => {
+        throw new Error('HTML ladder must not run for Fotocasa fetch');
+      },
+      fetchJson: async () => {
+        throw new Error('unused');
+      },
+      fetchText: async () => {
+        throw new Error('unused');
+      },
+      loadFixture: async () => {
+        throw new Error('unused');
+      },
+      openBrowserSession: async () => {
+        throw new Error('browser must not open when search card hint is present');
+      },
+    };
+
+    const local = new FotocasaProvider({ runtime });
+    const ref: ExternalListingRef = {
+      provider: 'fotocasa',
+      sourceId: '187654321',
+      url: 'https://www.fotocasa.es/es/alquiler/vivienda/madrid-capital/x/187654321/d',
+      hints: {
+        fotocasaSearchCard: {
+          warmCity: 'madrid',
+          card: {
+            propertyId: '187654321',
+            detailUrl: '/es/alquiler/vivienda/madrid-capital/calefaccion-ascensor/187654321/d',
+            transaction: { type: 'RENT', price: 1850 },
+            rooms: 3,
+            baths: 2,
+            surface: 95,
+            address: { municipality: 'Madrid' },
+          },
+        },
+      },
+    };
+
+    const raw = await local.fetch(ref, { runtime, signal: new AbortController().signal });
+    const listing = local.normalize(raw);
+    expect(listing.sourceId).toBe('187654321');
+    expect(listing.longTermRent?.monthlyAmount).toBe(1850);
+  });
+
   it('throws ChallengeError when property JSON and detail HTML stay blocked', async () => {
     const runtime: FetchRuntime = {
       fetchHttp: async () => {

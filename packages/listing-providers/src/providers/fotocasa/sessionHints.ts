@@ -8,11 +8,17 @@
 import type { BrowserStorageState } from '../../session';
 
 export const FOTOCASA_BROWSER_SESSION_HINT = 'fotocasaBrowserSession';
+export const FOTOCASA_SEARCH_CARD_HINT = 'fotocasaSearchCard';
 
 export interface FotocasaBrowserSessionHint {
   warmCity: string;
   storageState: BrowserStorageState;
   proxySessionId?: string;
+}
+
+export interface FotocasaSearchCardHint {
+  warmCity: string;
+  card: Record<string, unknown>;
 }
 
 function isBrowserStorageState(value: unknown): value is BrowserStorageState {
@@ -35,8 +41,32 @@ export function readFotocasaBrowserSessionHint(
   return { warmCity, storageState: record.storageState, proxySessionId };
 }
 
+function isSearchCardRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** Read a searchads card snapshot carried from discover when detail JSON is blocked. */
+export function readFotocasaSearchCardHint(
+  hints: Record<string, unknown> | undefined,
+): FotocasaSearchCardHint | undefined {
+  if (!hints) return undefined;
+  const raw = hints[FOTOCASA_SEARCH_CARD_HINT];
+  if (!raw || typeof raw !== 'object') return undefined;
+  const record = raw as Record<string, unknown>;
+  const warmCity = typeof record.warmCity === 'string' ? record.warmCity : undefined;
+  if (!warmCity || !isSearchCardRecord(record.card)) return undefined;
+  return { warmCity, card: record.card };
+}
+
 export function fotocasaBrowserSessionHints(
   session: FotocasaBrowserSessionHint,
 ): Record<string, unknown> {
   return { [FOTOCASA_BROWSER_SESSION_HINT]: session };
+}
+
+export function fotocasaSearchCardHints(
+  warmCity: string,
+  card: Record<string, unknown>,
+): Record<string, unknown> {
+  return { [FOTOCASA_SEARCH_CARD_HINT]: { warmCity, card } };
 }
