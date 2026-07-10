@@ -7,17 +7,12 @@
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
 import { buildContact } from '../../../parse/contact';
+import { asNumberUs } from '../../../parse/guards';
 import { isGbHousingType } from '../housing';
 import { OPENRENT_BASE_URL } from './fixtures';
 
 const DETAIL_PATH_RE =
   /href="(\/property-to-rent\/[^"]+\/(\d+))"/gi;
-
-function asNumber(value: string | undefined): number | undefined {
-  if (!value) return undefined;
-  const parsed = Number.parseFloat(value.replace(/,/g, ''));
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
 
 export interface OpenRentListingJson {
   sourceId: string;
@@ -79,7 +74,7 @@ export function parseOpenRentDetail(html: string, url: string): OpenRentListingJ
   }
 
   const rentMatch = title?.match(/£([\d,]+\.?\d*)\s*p\/m/i);
-  const priceAmount = asNumber(rentMatch?.[1]);
+  const priceAmount = asNumberUs(rentMatch?.[1]);
   const bedsMatch = title?.match(/(\d+)\s*Bed/i);
   const bedrooms = bedsMatch ? Number.parseInt(bedsMatch[1], 10) : undefined;
 
