@@ -31,6 +31,8 @@ interface HomeCarouselSectionProps<T> {
   title: string;
   items: T[];
   loading: boolean;
+  /** Shown below the header when loading is false and `items` is empty. */
+  emptyText?: string;
   renderItem: (item: T, idx: number) => React.ReactNode;
   onViewAll?: () => void;
   viewAllText?: string;
@@ -46,6 +48,7 @@ export function HomeCarouselSection<T>({
   title,
   items,
   loading,
+  emptyText,
   renderItem,
   onViewAll,
   viewAllText = 'View All',
@@ -235,39 +238,45 @@ export function HomeCarouselSection<T>({
         className="flex-row items-center"
         onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
       >
-        <ScrollView
-          ref={carouselRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          className="flex-row"
-          contentContainerClassName="justify-start px-4"
-          scrollEnabled={true}
-          onScrollBeginDrag={handleScrollBeginDrag}
-          onScrollEndDrag={handleScrollEndDrag}
-          onMomentumScrollEnd={handleMomentumScrollEnd}
-          onScroll={handleScroll}
-          scrollEventThrottle={8}
-          decelerationRate={0.8}
-          snapToInterval={calculatedCardWidth + CARD_GAP}
-          snapToAlignment="start"
-          bounces={false}
-        >
-          <View className="flex-row" style={{ gap: CARD_GAP }}>
-            {loading
-              ? Array.from({ length: 4 }).map((_, idx) => (
-                <View
-                  key={idx}
-                  className="h-[200px] rounded-2xl bg-muted"
-                  style={{ width: calculatedCardWidth }}
-                />
-              ))
-              : items.map((item, idx) => (
-                <View key={idx} style={{ width: calculatedCardWidth }}>
-                  {renderItem(item, idx)}
-                </View>
-              ))}
+        {!loading && items.length === 0 && emptyText ? (
+          <View className="px-4 py-2">
+            <BloomText className="text-sm text-muted-foreground">{emptyText}</BloomText>
           </View>
-        </ScrollView>
+        ) : (
+          <ScrollView
+            ref={carouselRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            className="flex-row"
+            contentContainerClassName="justify-start px-4"
+            scrollEnabled={true}
+            onScrollBeginDrag={handleScrollBeginDrag}
+            onScrollEndDrag={handleScrollEndDrag}
+            onMomentumScrollEnd={handleMomentumScrollEnd}
+            onScroll={handleScroll}
+            scrollEventThrottle={8}
+            decelerationRate={0.8}
+            snapToInterval={calculatedCardWidth + CARD_GAP}
+            snapToAlignment="start"
+            bounces={false}
+          >
+            <View className="flex-row" style={{ gap: CARD_GAP }}>
+              {loading
+                ? Array.from({ length: 4 }).map((_, idx) => (
+                  <View
+                    key={idx}
+                    className="h-[200px] rounded-2xl bg-muted"
+                    style={{ width: calculatedCardWidth }}
+                  />
+                ))
+                : items.map((item, idx) => (
+                  <View key={idx} style={{ width: calculatedCardWidth }}>
+                    {renderItem(item, idx)}
+                  </View>
+                ))}
+            </View>
+          </ScrollView>
+        )}
       </View>
     </View>
   );
