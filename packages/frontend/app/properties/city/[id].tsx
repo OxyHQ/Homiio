@@ -3,26 +3,57 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  Platform,
+  ScrollView,
   ActivityIndicator,
+  type ViewStyle,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { shadowToken } from '@/styles/shadows';
+import { spacing } from '@/constants/styles';
 
 import { Header } from '@/components/Header';
-import { PropertyCard } from '@/components/PropertyCard';
+import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
+import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
+import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { Property } from '@homiio/shared-types';
-import { useCity, usePropertiesByCity } from '@/hooks/useCityQueries';
+import { useCity } from '@/hooks/useCityQueries';
+import {
+  useInfiniteCityProperties,
+  type CityPropertyFilters,
+  type CitySortBy,
+} from '@/hooks/useInfiniteCityProperties';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { cityCountryName, getCityImageSource } from '@/utils/cityDisplay';
 import { LinearGradient } from 'expo-linear-gradient';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { FiltersBar } from '@/components/FiltersBar';
 import { FiltersBottomSheet, type FilterSection, type FilterValue } from '@/components/FiltersBar/FiltersBottomSheet';
 
 import { BottomSheetContext } from '@/context/BottomSheetContext';
+
+/** Number of skeleton cards shown during the first properties load. */
+const SKELETON_COUNT = 6;
+
+interface CityFilterState {
+  verified: boolean;
+  ecoFriendly: boolean;
+  bedrooms: string;
+  bathrooms: string;
+  sortBy: CitySortBy;
+}
+
+const DEFAULT_FILTERS: CityFilterState = {
+  verified: false,
+  ecoFriendly: false,
+  bedrooms: '',
+  bathrooms: '',
+  sortBy: 'newest',
+};
 
 export default function CityPropertiesPage() {
   const { t } = useTranslation();
@@ -32,29 +63,47 @@ export default function CityPropertiesPage() {
   const [headerHeight, setHeaderHeight] = useState(0);
   const bottomSheet = useContext(BottomSheetContext);
 
-  // City + its published properties from the DB (relational geo + self-hosted
-  // cover image). React Query owns loading/error/caching — no local effects.
+  // City detail (hero + stats) from the DB-owned relational geo layer.
   const { data: city, isLoading: cityLoading, isError: cityError } = useCity(cityId);
-  const { data: cityProperties, isLoading: propertiesLoading } = usePropertiesByCity(cityId, {
-    limit: 50,
-    sort: 'createdAt',
-  });
-  const properties = useMemo<Property[]>(
-    () => cityProperties?.properties ?? [],
-    [cityProperties],
-  );
-  const loading = cityLoading || propertiesLoading;
-  const error = cityError ? 'City not found' : null;
   const cityImageSource = getCityImageSource(city ?? undefined, 'large');
   const countryName = cityCountryName(city ?? undefined);
 
-  const [filters, setFilters] = useState({
-    verified: false,
-    ecoFriendly: false,
-    bedrooms: '',
-    bathrooms: '',
-    amenities: [] as string[],
-    sortBy: 'newest'
+  const [filters, setFilters] = useState<CityFilterState>(DEFAULT_FILTERS);
+
+  // Server-resolved filters so the infinite grid paginates correctly (no
+  // client-side re-filtering of already-loaded pages). `verified`/`eco` map to
+  // the Property flags; bedrooms/bathrooms to the min-count params.
+  const propertyFilters = useMemo<CityPropertyFilters>(
+    () => ({
+      verified: filters.verified,
+      eco: filters.ecoFriendly,
+      minBedrooms: filters.bedrooms ? Number(filters.bedrooms) : undefined,
+      minBathrooms: filters.bathrooms ? Number(filters.bathrooms) : undefined,
+    }),
+    [filters.verified, filters.ecoFriendly, filters.bedrooms, filters.bathrooms],
+  );
+
+  const {
+    properties,
+    total,
+    isLoading: propertiesLoading,
+    isError: propertiesError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+  } = useInfiniteCityProperties(cityId, filters.sortBy, propertyFilters);
+
+  // Shared infinite-scroll primitive: native fires `onScroll` end-detect, web
+  // uses the `<LoadMoreSentinel>` at the grid's end.
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      void fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const { onScroll: handleListScroll } = useInfiniteScroll({
+    onEndReached: handleEndReached,
+    enabled: hasNextPage,
   });
 
   const filterSections: FilterSection[] = useMemo(() => [
@@ -125,81 +174,61 @@ export default function CityPropertiesPage() {
         onFilterChange={handleFilterChange}
         onApply={bottomSheet.closeBottomSheet}
         onClear={() => {
-          setFilters({
-            verified: false,
-            ecoFriendly: false,
-            bedrooms: '',
-            bathrooms: '',
-            amenities: [],
-            sortBy: 'newest'
-          });
+          setFilters(prev => ({
+            ...DEFAULT_FILTERS,
+            sortBy: prev.sortBy,
+          }));
           bottomSheet.closeBottomSheet();
         }}
       />
     );
   }, [bottomSheet, filterSections, handleFilterChange]);
 
-  const getFilteredAndSortedProperties = () => {
-    if (!properties || !Array.isArray(properties)) {
-      return [];
-    }
+  const handleOpenSort = useCallback(() => {
+    bottomSheet.openBottomSheet(
+      <FiltersBottomSheet
+        sections={[
+          {
+            id: 'sort',
+            title: t('properties.city.sortBy'),
+            type: 'chips',
+            options: [
+              { id: 'newest', label: t('properties.city.sortNewest'), value: 'newest' },
+              { id: 'priceAsc', label: t('properties.city.sortPriceAsc'), value: 'priceAsc' },
+              { id: 'priceDesc', label: t('properties.city.sortPriceDesc'), value: 'priceDesc' },
+            ],
+            value: filters.sortBy,
+          }
+        ]}
+        onFilterChange={(_, value) =>
+          setFilters(prev => ({ ...prev, sortBy: String(value) as CitySortBy }))
+        }
+        onApply={bottomSheet.closeBottomSheet}
+        onClear={() => {
+          setFilters(prev => ({ ...prev, sortBy: 'newest' }));
+          bottomSheet.closeBottomSheet();
+        }}
+      />
+    );
+  }, [bottomSheet, filters.sortBy, t]);
 
-    let result = [...properties];
+  const activeFiltersCount =
+    (filters.verified ? 1 : 0) +
+    (filters.ecoFriendly ? 1 : 0) +
+    (filters.bedrooms ? 1 : 0) +
+    (filters.bathrooms ? 1 : 0);
 
-    // Apply filters
-    if (filters.verified) {
-      result = result.filter(p => p.status === 'published');
-    }
-
-    if (filters.ecoFriendly) {
-      result = result.filter(p =>
-        p.amenities?.some((a: string) =>
-          a.toLowerCase().includes('eco') ||
-          a.toLowerCase().includes('green') ||
-          a.toLowerCase().includes('solar')
-        )
-      );
-    }
-
-    if (filters.bedrooms) {
-      result = result.filter(p => (p.bedrooms || 0) >= parseInt(filters.bedrooms));
-    }
-
-    if (filters.bathrooms) {
-      result = result.filter(p => (p.bathrooms || 0) >= parseInt(filters.bathrooms));
-    }
-
-    // Apply sorting. Sort by the listing's headline rent — monthly when present,
-    // else the nightly rate for vacation-only listings — so the order is stable.
-    const sortPrice = (p: Property): number =>
-      p.longTermRent?.monthlyAmount ?? p.shortTermRent?.nightlyRate ?? 0;
-    switch (filters.sortBy) {
-      case 'priceAsc':
-        result.sort((a, b) => sortPrice(a) - sortPrice(b));
-        break;
-      case 'priceDesc':
-        result.sort((a, b) => sortPrice(b) - sortPrice(a));
-        break;
-      case 'newest':
-      default:
-        result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        break;
-    }
-
-    return result;
-  };
-
-  const renderPropertyItem = ({ item }: { item: Property }) => (
-    <PropertyCard
-      property={item}
+  const handlePropertyPress = useCallback(
+    (property: Property) => {
       // The city-properties endpoint returns lean docs (only `_id`, no `id`
       // virtual), so prefer `_id` for navigation.
-      onPress={() => router.push(`/properties/${item._id || item.id}`)}
-      style={styles.propertyCard}
-    />
+      const propertyId = property._id || property.id;
+      if (propertyId) router.push(`/properties/${propertyId}`);
+    },
+    [router],
   );
 
-  if (loading) {
+  if (cityLoading) {
     return (
       <View style={styles.safeArea}>
         <View
@@ -224,7 +253,7 @@ export default function CityPropertiesPage() {
     );
   }
 
-  if (error || !city) {
+  if (cityError || !city) {
     return (
       <View style={styles.safeArea}>
         <View
@@ -242,7 +271,7 @@ export default function CityPropertiesPage() {
         <View style={{ paddingTop: headerHeight, flex: 1 }}>
           <EmptyState
             icon="alert-circle"
-            title={error || t('properties.city.notFound')}
+            title={t('properties.city.notFound')}
             actionText={t('common.goBack')}
             actionIcon="arrow-back"
             onAction={() => router.back()}
@@ -251,6 +280,44 @@ export default function CityPropertiesPage() {
       </View>
     );
   }
+
+  const propertiesBody = () => {
+    if (propertiesLoading && properties.length === 0) {
+      return <PropertyResultsGridSkeleton count={SKELETON_COUNT} />;
+    }
+    if (propertiesError) {
+      return (
+        <ErrorState
+          title={t('properties.city.notFound')}
+          retryLabel={t('common.tryAgain')}
+          onRetry={() => void refetch()}
+        />
+      );
+    }
+    if (properties.length === 0) {
+      return (
+        <EmptyState
+          icon="home-outline"
+          title={t('properties.city.noPropertiesFound')}
+          description={t('properties.city.tryAdjustFilters')}
+          actionText={t('properties.city.clearFilters')}
+          actionIcon="refresh"
+          onAction={() => setFilters(DEFAULT_FILTERS)}
+        />
+      );
+    }
+    return (
+      <>
+        <PropertyResultsGrid properties={properties} onPropertyPress={handlePropertyPress} />
+        {isFetchingNextPage ? (
+          <View style={styles.nextPageSkeleton}>
+            <PropertyResultsGridSkeleton count={2} />
+          </View>
+        ) : null}
+        <LoadMoreSentinel enabled={hasNextPage} onLoadMore={handleEndReached} />
+      </>
+    );
+  };
 
   return (
     <View style={styles.safeArea}>
@@ -266,7 +333,13 @@ export default function CityPropertiesPage() {
           }}
         />
       </View>
-      <View style={{ paddingTop: headerHeight, flex: 1 }}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={{ paddingTop: headerHeight, paddingBottom: spacing['4xl'] }}
+        onScroll={handleListScroll}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Hero Section — DB-stored cover image (self-hosted) behind a scrim,
             falling back to a brand gradient when the city has no cover image. */}
         <View style={styles.heroSection}>
@@ -322,79 +395,21 @@ export default function CityPropertiesPage() {
             <View>
               <Text style={styles.sectionTitle}>{t('properties.city.availableProperties')}</Text>
               <Text style={styles.propertiesSubtitle}>
-                {getFilteredAndSortedProperties().length} {t('properties.city.propertiesFound')}
+                {total} {t('properties.city.propertiesFound')}
               </Text>
             </View>
           </View>
 
           <FiltersBar
-            activeFiltersCount={
-              Object.values(filters).filter(value =>
-                value !== false &&
-                value !== '' &&
-                value !== 'newest' &&
-                (Array.isArray(value) ? value.length > 0 : true)
-              ).length
-            }
+            activeFiltersCount={activeFiltersCount}
             onFilterPress={handleOpenFilters}
             sortBy={filters.sortBy}
-            onSortPress={() => {
-              bottomSheet.openBottomSheet(
-                <FiltersBottomSheet
-                  sections={[
-                    {
-                      id: 'sort',
-                      title: t('properties.city.sortBy'),
-                      type: 'chips',
-                      options: [
-                        { id: 'newest', label: t('properties.city.sortNewest'), value: 'newest' },
-                        { id: 'priceAsc', label: t('properties.city.sortPriceAsc'), value: 'priceAsc' },
-                        { id: 'priceDesc', label: t('properties.city.sortPriceDesc'), value: 'priceDesc' },
-                      ],
-                      value: filters.sortBy
-                    }
-                  ]}
-                  onFilterChange={(_, value) => setFilters(prev => ({ ...prev, sortBy: value.toString() }))}
-                  onApply={bottomSheet.closeBottomSheet}
-                  onClear={() => {
-                    setFilters(prev => ({ ...prev, sortBy: 'newest' }));
-                    bottomSheet.closeBottomSheet();
-                  }}
-                />
-              );
-            }}
+            onSortPress={handleOpenSort}
           />
 
-          {/* Properties List */}
-          <FlatList
-            data={getFilteredAndSortedProperties()}
-            renderItem={renderPropertyItem}
-            keyExtractor={(item) => item._id || item.id || Math.random().toString()}
-            scrollEnabled={false}
-            contentContainerStyle={styles.propertiesList}
-            ListEmptyComponent={
-              <EmptyState
-                icon="home-outline"
-                title={t('properties.city.noPropertiesFound')}
-                description={t('properties.city.tryAdjustFilters')}
-                actionText={t('properties.city.clearFilters')}
-                actionIcon="refresh"
-                onAction={() => {
-                  setFilters(prev => ({
-                    ...prev,
-                    verified: false,
-                    ecoFriendly: false,
-                    bedrooms: '',
-                    bathrooms: '',
-                    amenities: [],
-                    sortBy: 'newest'
-                  }));
-                }}
-              />
-            }
-          />
+          <View style={styles.propertiesList}>{propertiesBody()}</View>
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -404,9 +419,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  container: {
-    flex: 1,
-  },
+  scroll: Platform.select<ViewStyle>({
+    web: { flex: 1, overflow: 'auto' } as unknown as ViewStyle,
+    default: { flex: 1 },
+  }) as ViewStyle,
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -516,67 +532,13 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_3,
     marginTop: 4,
   },
-  sortContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  sortButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: colors.white,
-    borderRadius: 20,
-    ...shadowToken({ y: 1, blur: 3, color: colors.shadow, opacity: 0.1, elevation: 2 }),
-  },
-  sortButtonText: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginLeft: 6,
-    fontWeight: '500',
-  },
-  activeSortButtonText: {
-    color: colors.primaryColor,
-    fontWeight: '600',
-  },
-
-  // Filters
-  filtersScroll: {
-    paddingRight: 20,
-    marginBottom: 24,
-  },
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    backgroundColor: colors.white,
-    borderRadius: 25,
-    marginRight: 12,
-    ...shadowToken({ y: 1, blur: 3, color: colors.shadow, opacity: 0.1, elevation: 2 }),
-  },
-  activeFilterChip: {
-    backgroundColor: colors.primaryColor,
-  },
-  filterChipText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: colors.COLOR_BLACK,
-    fontWeight: '500',
-  },
-  activeFilterChipText: {
-    color: colors.primaryForeground,
-  },
 
   // Properties List
   propertiesList: {
-    gap: 16,
+    marginTop: spacing.lg,
   },
-  propertyCard: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    overflow: 'hidden',
-    ...shadowToken({ y: 2, blur: 8, color: colors.shadow, opacity: 0.08, elevation: 3 }),
+  nextPageSkeleton: {
+    marginTop: spacing.lg,
   },
   stickyHeaderWrapper: {
     zIndex: 100,

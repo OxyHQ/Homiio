@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next';
 import { PropertyListHeader } from '@/components/ui/PropertyListHeader';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
+import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SearchActionPill } from '@/components/search/SearchActionPill';
@@ -39,6 +40,7 @@ import type {
 } from '@/components/search/types';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { DEFAULT_SEARCH_QUERY } from '@/store/searchQueryStore';
 import { colors } from '@/styles/colors';
 import { contentClamp, spacing } from '@/constants/styles';
@@ -219,11 +221,17 @@ export default function PropertyTypeScreen() {
     );
   }, [bottomSheet, query.sortBy, query.sortOrder, patchQuery]);
 
+  // Shared infinite-scroll primitive: native fires `onScroll` end-detect, web
+  // uses the `<LoadMoreSentinel>` at the grid's end (no hand-rolled distance math).
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       void fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const { onScroll: handleListScroll } = useInfiniteScroll({
+    onEndReached: handleEndReached,
+    enabled: hasNextPage,
+  });
 
   const typeName = getTypeName(typeId);
   const subtitle = isLoading
@@ -281,13 +289,8 @@ export default function PropertyTypeScreen() {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
-        onScroll={({ nativeEvent }) => {
-          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-          const distanceFromEnd =
-            contentSize.height - (layoutMeasurement.height + contentOffset.y);
-          if (distanceFromEnd < layoutMeasurement.height) handleEndReached();
-        }}
-        scrollEventThrottle={200}
+        onScroll={handleListScroll}
+        scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
       >
         <ScrollView
@@ -316,6 +319,7 @@ export default function PropertyTypeScreen() {
         {isFetchingNextPage ? (
           <PropertyResultsGridSkeleton count={2} style={styles.gridPadding} />
         ) : null}
+        <LoadMoreSentinel enabled={hasNextPage} onLoadMore={handleEndReached} />
       </ScrollView>
     </View>
   );

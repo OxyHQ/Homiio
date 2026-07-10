@@ -27,6 +27,7 @@ import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
+import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SearchSummaryBar } from '@/components/search/SearchSummaryBar';
@@ -45,6 +46,7 @@ import type {
 
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { DEFAULT_SEARCH_QUERY } from '@/store/searchQueryStore';
 import { colors } from '@/styles/colors';
 import { cardShadow, hairline, radius, spacing } from '@/constants/styles';
@@ -218,11 +220,18 @@ export default function PropertiesScreen() {
     );
   }, [bottomSheet, query, handleSheetFilterChange, patchQuery]);
 
+  // Shared infinite-scroll primitive: native fires `onScroll` end-detect, web
+  // uses the `<LoadMoreSentinel>` at the grid's end. Both funnel through the same
+  // guarded loader (no hand-rolled distance math).
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       void fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const { onScroll: handleListScroll } = useInfiniteScroll({
+    onEndReached: handleEndReached,
+    enabled: hasNextPage,
+  });
 
   const resultsHeading = useMemo(() => {
     if (isLoading) {
@@ -331,13 +340,8 @@ export default function PropertiesScreen() {
       <ScrollView
         style={styles.listScroll}
         contentContainerStyle={styles.listScrollContent}
-        onScroll={({ nativeEvent }) => {
-          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-          const distanceFromEnd =
-            contentSize.height - (layoutMeasurement.height + contentOffset.y);
-          if (distanceFromEnd < layoutMeasurement.height) handleEndReached();
-        }}
-        scrollEventThrottle={200}
+        onScroll={handleListScroll}
+        scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.resultsHeader}>
@@ -350,6 +354,7 @@ export default function PropertiesScreen() {
             style={styles.gridPadding}
           />
         ) : null}
+        <LoadMoreSentinel enabled={hasNextPage} onLoadMore={handleEndReached} />
       </ScrollView>
       <View style={[styles.fab, cardShadow.md, { bottom: insets.bottom + spacing['3xl'] }]}>
         <Button

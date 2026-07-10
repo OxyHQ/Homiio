@@ -22,12 +22,13 @@
  * so it does not participate. Long-form marketing copy (FAQ, stats, trust
  * grids) does NOT live on the home page — it belongs on /about.
  */
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, RefreshControl, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import { useQueryClient } from '@tanstack/react-query';
 import { Menu } from 'lucide-react-native';
 import Animated, {
+  FadeInDown,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
@@ -38,14 +39,23 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { H1, P } from '@oxyhq/bloom/typography';
 
-import { OfferingType, type City, type Property } from '@homiio/shared-types';
+import { OfferingType, PropertyType, type City, type Property } from '@homiio/shared-types';
 
 import {
   HOME_FEED_LIMIT,
   isNearYouBlocked,
   useHomeFeedProperties,
   useUserCoordinates,
+  type UserCoordinates,
 } from '@/hooks/useHomeFeed';
+import { usePropertySearch } from '@/hooks/usePropertySearch';
+import { getCategoryFilters } from '@/store/getCategoryFilters';
+import type { HomeCategory } from '@/store/homeCategoryStore';
+import { DEFAULT_SEARCH_QUERY } from '@/store/searchQueryStore';
+import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
+import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
+import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
+import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { cityQueryKeys, usePopularCities } from '@/hooks/useCityQueries';
 import { cityCountryName, cityRegionName } from '@/utils/cityDisplay';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
@@ -125,6 +135,58 @@ function resolveExplorePlace(
   return fallbackCountry ?? defaultPlace;
 }
 
+/**
+ * Seed the endless "Explore more homes" feed from the live home state (browse
+ * offering + selected category + device location). Reuses `getCategoryFilters` —
+ * the single source of truth for what each home category means — and translates
+ * its `PropertyFilters` output into the `SearchQuery` shape `usePropertySearch`
+ * consumes. Because every dimension folds into `searchQueryKey`, tapping a
+ * category chip re-keys the feed and refilters it in place.
+ */
+function buildExploreFeedQuery(
+  offering: OfferingType,
+  category: HomeCategory | null,
+  userLocation: UserCoordinates | null | undefined,
+): SearchQuery {
+  const filters = getCategoryFilters(category, {
+    userLocation: userLocation ?? null,
+    offering,
+  });
+
+  // `near_you` resolves to a lat/lng + a 25km radius, which equals the search
+  // endpoint's default radius when only a center is sent — so we seed the
+  // location with the coordinates and an EMPTY label. An empty label makes
+  // `buildSearchParams` emit lat/lng WITHOUT a free-text `q` (a non-empty label
+  // is text-matched, which a pure geo lens must not do).
+  const location =
+    typeof filters.lat === 'number' && typeof filters.lng === 'number'
+      ? {
+          label: '',
+          shortLabel: '',
+          center: [filters.lng, filters.lat] as [number, number],
+        }
+      : undefined;
+
+  return {
+    ...DEFAULT_SEARCH_QUERY,
+    offering,
+    // Newest-first (the backend already ranks image-bearing listings first) so
+    // freshly added homes surface on top each visit (freshness, Part 4).
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+    propertyTypes: filters.type ? [filters.type as PropertyType] : [],
+    amenities: filters.amenities ?? [],
+    // "Luxury" maps to a monthly-rent floor (or a sale-price floor when buying).
+    // `buildSearchParams` routes `priceMin` to the sale-price param for a SALE
+    // offering, so one `priceMin` seed covers both the rent and sale buckets.
+    priceMin: filters.minRent ?? filters.minSalePrice,
+    instantBook: filters.instantBook,
+    petFriendly: filters.petFriendly,
+    exchangeMode: filters.exchangeMode,
+    location,
+  };
+}
+
 export default function HomePage() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -162,6 +224,26 @@ export default function HomePage() {
     useRecentlyViewed();
   const { savedProperties, isLoading: savedLoading, loadSavedProperties } =
     useSavedPropertiesContext();
+
+  // Endless "Explore more homes" feed — the terminal, never-ending band below the
+  // curated sections. Seeded live from the browse offering + active category +
+  // location so a category chip tap re-keys it (React Query refetches page 1) and
+  // it refilters instantly. Same `usePropertySearch` engine + image-first,
+  // newest-first order as the search/browse screens.
+  const exploreQuery = useMemo(
+    () => buildExploreFeedQuery(browseOffering, activeCategory, userLocation),
+    [browseOffering, activeCategory, userLocation],
+  );
+  const exploreFeed = usePropertySearch(exploreQuery, { enabled: !nearYouBlocked });
+  const exploreProperties = exploreFeed.properties;
+  const exploreInitialLoading = exploreFeed.isLoading && exploreProperties.length === 0;
+  // Guarded loader (matches Mention's `handleLoadMore`): native fires it via
+  // `PageScrollView onEndReached`, web via the `LoadMoreSentinel` at the feed end.
+  const loadMoreExplore = useCallback(() => {
+    if (exploreFeed.hasNextPage && !exploreFeed.isFetchingNextPage) {
+      void exploreFeed.fetchNextPage();
+    }
+  }, [exploreFeed.hasNextPage, exploreFeed.isFetchingNextPage, exploreFeed.fetchNextPage]);
 
   const properties = feedData?.properties;
   const propertiesLoading = feedLoading;
@@ -222,6 +304,7 @@ export default function HomePage() {
         ),
         loadSavedProperties(),
         refetchRecentlyViewed(),
+        exploreFeed.refetch(),
       ]);
     } finally {
       setRefreshing(false);
@@ -250,6 +333,7 @@ export default function HomePage() {
         className="flex-1"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
+        onEndReached={loadMoreExplore}
       >
         <View className="relative h-[400px] w-full justify-end overflow-hidden pt-[max(0.5rem,env(safe-area-inset-top))] md:h-[360px] xl:h-[min(400px,45vh)]">
           <Animated.View
@@ -377,21 +461,25 @@ export default function HomePage() {
           />
 
           {cities.length > 0 ? (
-            <CityShowcaseSection
-              title={t('home.cityShowcase.title', { place: explorePlace })}
-              items={cities}
-              onPressCity={(city) => router.push(`/properties/city/${city._id}`)}
-            />
+            <Animated.View entering={FadeInDown.duration(420)}>
+              <CityShowcaseSection
+                title={t('home.cityShowcase.title', { place: explorePlace })}
+                items={cities}
+                onPressCity={(city) => router.push(`/properties/city/${city._id}`)}
+              />
+            </Animated.View>
           ) : null}
 
           {gridProperties.length > 0 ? (
-            <FeaturedGridSection
-              title={featuredGridTitle}
-              items={gridProperties}
-              onPropertyPress={(property) =>
-                router.push(`/properties/${property._id || property.id}`)
-              }
-            />
+            <Animated.View entering={FadeInDown.duration(420)}>
+              <FeaturedGridSection
+                title={featuredGridTitle}
+                items={gridProperties}
+                onPropertyPress={(property) =>
+                  router.push(`/properties/${property._id || property.id}`)
+                }
+              />
+            </Animated.View>
           ) : null}
 
           {recentlyViewedProperties && recentlyViewedProperties.length > 0 ? (
@@ -467,6 +555,51 @@ export default function HomePage() {
               />
             </>
           )}
+
+          {/* Explore more homes — the terminal, endless band. Curated sections
+              above give way to an image-first, category-driven feed that keeps
+              appending pages (web: the sentinel; native: PageScrollView
+              onEndReached). It reacts live to the category strip via its query
+              key. Rendered with the shared PropertyResultsGrid so it behaves
+              exactly like the search/browse grids. */}
+          <Animated.View entering={FadeInDown.duration(420)} className="gap-4">
+            <View className={PAGE_GUTTER_CLASS}>
+              <SectionEyebrow>{t('home.explore.eyebrow')}</SectionEyebrow>
+              <H1 className="text-[26px] font-bold leading-8 tracking-tight text-foreground">
+                {t('home.explore.title')}
+              </H1>
+            </View>
+
+            {exploreInitialLoading ? (
+              <View className={PAGE_GUTTER_CLASS}>
+                <PropertyResultsGridSkeleton count={8} />
+              </View>
+            ) : exploreProperties.length === 0 ? (
+              <View className={`py-2 ${PAGE_GUTTER_CLASS}`}>
+                <P className="text-sm text-muted-foreground">{feedEmptyText}</P>
+              </View>
+            ) : (
+              <View className={PAGE_GUTTER_CLASS}>
+                <PropertyResultsGrid
+                  properties={exploreProperties}
+                  onPropertyPress={(property) =>
+                    router.push(`/properties/${property._id || property.id}`)
+                  }
+                />
+                {exploreFeed.isFetchingNextPage ? (
+                  <View className="pt-6">
+                    <PropertyResultsGridSkeleton count={4} />
+                  </View>
+                ) : null}
+                {/* Web-only pagination trigger; native paginates via
+                    PageScrollView onEndReached. Inert on native. */}
+                <LoadMoreSentinel
+                  enabled={exploreFeed.hasNextPage}
+                  onLoadMore={loadMoreExplore}
+                />
+              </View>
+            )}
+          </Animated.View>
         </View>
       </PageScrollView>
     </View>

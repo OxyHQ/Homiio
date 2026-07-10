@@ -1,10 +1,11 @@
-import { OfferingType } from '@homiio/shared-types';
+import { ExchangeMode, OfferingType } from '@homiio/shared-types';
 import {
   buildSearchPlan,
   buildSort,
   FIELD_HAS_IMAGES,
   FIELD_PRICE_ETHICS_FAIRNESS_SCORE,
   FIELD_PRICE_ETHICS_IS_FAIR_PRICE,
+  FIELD_SHORT_TERM_INSTANT_BOOK,
   SORT_FAIRNESS,
 } from '../../controllers/property/searchQueryBuilder';
 
@@ -84,5 +85,37 @@ describe('buildSort image-first priority', () => {
     expect(Object.keys(sort)[0]).toBe(FIELD_HAS_IMAGES);
     expect(sort[FIELD_HAS_IMAGES]).toBe(-1);
     expect(sort.score).toEqual({ $meta: 'textScore' });
+  });
+});
+
+describe('buildSearchPlan category-lens filters', () => {
+  it('adds petFriendly when petFriendly=true (home "Pet friendly" lens)', () => {
+    const { filter } = buildSearchPlan({ petFriendly: 'true' });
+    expect(filter.petFriendly).toBe(true);
+  });
+
+  it('ignores petFriendly when not a literal boolean', () => {
+    const { filter } = buildSearchPlan({ petFriendly: 'maybe' });
+    expect(filter.petFriendly).toBeUndefined();
+  });
+
+  it('adds instantBook when instantBook=true (home "Instant book" lens)', () => {
+    const { filter } = buildSearchPlan({ instantBook: 'true' });
+    expect(filter[FIELD_SHORT_TERM_INSTANT_BOOK]).toBe(true);
+  });
+
+  it('applies exchangeMode only for an EXCHANGE offering', () => {
+    const swap = buildSearchPlan({
+      offering: OfferingType.EXCHANGE,
+      exchangeMode: ExchangeMode.SWAP,
+    });
+    expect(swap.filter['exchange.mode']).toEqual({
+      $in: [ExchangeMode.SWAP, ExchangeMode.BOTH],
+    });
+
+    // Without the exchange offering the mode is ignored (never stacks onto a
+    // non-exchange query).
+    const ignored = buildSearchPlan({ exchangeMode: ExchangeMode.SWAP });
+    expect(ignored.filter['exchange.mode']).toBeUndefined();
   });
 });

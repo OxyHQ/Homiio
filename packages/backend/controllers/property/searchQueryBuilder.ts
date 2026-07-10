@@ -444,6 +444,8 @@ export function buildSearchPlan(
   if (eco !== undefined) filter.isEcoFriendly = eco;
   const instantBook = parseBoolParam(query.instantBook);
   if (instantBook !== undefined) filter[FIELD_SHORT_TERM_INSTANT_BOOK] = instantBook;
+  const petFriendly = parseBoolParam(query.petFriendly);
+  if (petFriendly !== undefined) filter.petFriendly = petFriendly;
   const hasPhotos = parseBoolParam(query.hasPhotos);
   if (hasPhotos === true) filter['images.url'] = { $exists: true, $nin: [null, ''] };
   const fairPrice = parseBoolParam(query.fairPrice);

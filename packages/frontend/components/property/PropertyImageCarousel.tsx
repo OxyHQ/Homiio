@@ -85,6 +85,8 @@ interface PropertyImageCarouselProps {
   onPress?: () => void;
   /** Fires immediately before the press settles, used to prefetch detail data. */
   onPressIn?: () => void;
+  /** Fires when the press is released/cancelled (drives the card's pressed lift). */
+  onPressOut?: () => void;
   onLongPress?: () => void;
   /** Notifies the parent of the active page (e.g. to sync external chrome). */
   onIndexChange?: (index: number) => void;
@@ -115,6 +117,7 @@ interface CarouselPageProps {
   fillWhenUnmeasured?: boolean;
   onPress?: () => void;
   onPressIn?: () => void;
+  onPressOut?: () => void;
   onLongPress?: () => void;
   accessibilityLabel?: string;
 }
@@ -138,12 +141,14 @@ const CarouselPage: React.FC<CarouselPageProps> = ({
   fillWhenUnmeasured = false,
   onPress,
   onPressIn,
+  onPressOut,
   onLongPress,
   accessibilityLabel,
 }) => (
   <Pressable
     onPress={onPress}
     onPressIn={onPressIn}
+    onPressOut={onPressOut}
     onLongPress={onLongPress}
     accessibilityRole="button"
     accessibilityLabel={accessibilityLabel}
@@ -260,6 +265,7 @@ export const PropertyImageCarousel: React.FC<PropertyImageCarouselProps> = ({
   borderRadius,
   onPress,
   onPressIn,
+  onPressOut,
   onLongPress,
   onIndexChange,
   accessibilityLabel,
@@ -353,11 +359,12 @@ export const PropertyImageCarousel: React.FC<PropertyImageCarouselProps> = ({
         height={pageHeight}
         onPress={onPress}
         onPressIn={onPressIn}
+        onPressOut={onPressOut}
         onLongPress={onLongPress}
         accessibilityLabel={accessibilityLabel}
       />
     ),
-    [containerWidth, pageHeight, onPress, onPressIn, onLongPress, accessibilityLabel],
+    [containerWidth, pageHeight, onPress, onPressIn, onPressOut, onLongPress, accessibilityLabel],
   );
 
   const isMultiPage = sources.length > 1;
@@ -408,6 +415,7 @@ export const PropertyImageCarousel: React.FC<PropertyImageCarouselProps> = ({
           fillWhenUnmeasured
           onPress={onPress}
           onPressIn={onPressIn}
+          onPressOut={onPressOut}
           onLongPress={onLongPress}
           accessibilityLabel={accessibilityLabel}
         />

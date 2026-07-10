@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
   Platform,
   View,
@@ -7,10 +7,13 @@ import {
   type ViewStyle,
 } from 'react-native';
 import Animated, {
+  runOnJS,
   useAnimatedScrollHandler,
   useSharedValue,
   type SharedValue,
 } from 'react-native-reanimated';
+
+import { END_REACHED_THRESHOLD } from '@/hooks/useInfiniteScroll';
 
 const IS_WEB = Platform.OS === 'web';
 
@@ -30,6 +33,18 @@ interface PageScrollViewProps {
   /** Native-only — ignored on web where the document is the scroll owner. */
   refreshControl?: React.ReactElement<RefreshControlProps>;
   showsVerticalScrollIndicator?: boolean;
+  /**
+   * NATIVE-only infinite-scroll trigger. Fired (guarded, once per approach) when
+   * the native `Animated.ScrollView` scrolls past {@link onEndReachedThreshold}
+   * of its content. On web the document is the scroll owner, so a screen pairs
+   * this with a `<LoadMoreSentinel>` at the feed's end and the sentinel drives
+   * web pagination instead. The consumer's own
+   * `if (hasNextPage && !isFetchingNextPage) fetchNextPage()` guard keeps this
+   * idempotent.
+   */
+  onEndReached?: () => void;
+  /** Fraction of content height past which `onEndReached` fires (0–1). */
+  onEndReachedThreshold?: number;
 }
 
 /**
@@ -52,15 +67,46 @@ export function PageScrollView({
   contentContainerStyle,
   refreshControl,
   showsVerticalScrollIndicator,
+  onEndReached,
+  onEndReachedThreshold = END_REACHED_THRESHOLD,
 }: PageScrollViewProps) {
   const fallbackScrollY = useSharedValue(0);
   const value = scrollY ?? fallbackScrollY;
 
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      value.value = event.contentOffset.y;
+  // Keep the latest `onEndReached` without regenerating the worklet handler.
+  const onEndReachedRef = useRef(onEndReached);
+  onEndReachedRef.current = onEndReached;
+  const fireEndReached = useCallback(() => {
+    onEndReachedRef.current?.();
+  }, []);
+  const endEnabled = onEndReached != null;
+  // Re-arm on the UI thread once scrolled back above the threshold, so the burst
+  // of worklet `onScroll` events near the bottom hops to JS at most once per
+  // approach.
+  const endArmed = useSharedValue(true);
+
+  const scrollHandler = useAnimatedScrollHandler(
+    {
+      onScroll: (event) => {
+        value.value = event.contentOffset.y;
+        if (!endEnabled) return;
+        const { contentOffset, layoutMeasurement, contentSize } = event;
+        if (contentSize.height <= 0) return;
+        const reachedEnd =
+          contentOffset.y + layoutMeasurement.height >=
+          contentSize.height * onEndReachedThreshold;
+        if (!reachedEnd) {
+          endArmed.value = true;
+          return;
+        }
+        if (endArmed.value) {
+          endArmed.value = false;
+          runOnJS(fireEndReached)();
+        }
+      },
     },
-  });
+    [value, endArmed, endEnabled, onEndReachedThreshold, fireEndReached],
+  );
 
   useEffect(() => {
     if (!IS_WEB) return;

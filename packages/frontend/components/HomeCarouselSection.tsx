@@ -16,6 +16,7 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useMediaQuery } from 'react-responsive';
 
@@ -189,7 +190,7 @@ export function HomeCarouselSection<T>({
   const disableLeftArrow = scrollX <= 0;
 
   return (
-    <View>
+    <Animated.View entering={FadeInDown.duration(420)}>
       <View className={`mb-4 flex-row items-end justify-between gap-4 ${PAGE_GUTTER_CLASS}`}>
         <View className="min-w-0 flex-1 shrink">
           {eyebrow ? <SectionEyebrow>{eyebrow}</SectionEyebrow> : null}
@@ -277,6 +278,6 @@ export function HomeCarouselSection<T>({
           </ScrollView>
         )}
       </View>
-    </View>
+    </Animated.View>
   );
 }
