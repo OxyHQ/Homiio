@@ -1,19 +1,21 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 
 export default function NotFoundScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.container}>
       <Ionicons name="alert-circle-outline" size={80} color={colors.primaryColor} />
-      <Text style={styles.title}>Page Not Found</Text>
-      <Text style={styles.message}>The page you are looking for does not exist.</Text>
+      <Text style={styles.title}>{t('notFound.title')}</Text>
+      <Text style={styles.message}>{t('notFound.message')}</Text>
       <TouchableOpacity style={styles.button} onPress={() => router.back()}>
-        <Text style={styles.buttonText}>Go Back</Text>
+        <Text style={styles.buttonText}>{t('notFound.goBack')}</Text>
       </TouchableOpacity>
     </View>
   );

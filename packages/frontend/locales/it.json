@@ -285,7 +285,25 @@
     "tryAgain": "Riprova",
     "goBack": "Torna indietro",
     "goHome": "Vai alla home",
-    "signIn": "Accedi"
+    "signIn": "Accedi",
+    "saving": "Saving...",
+    "name": "Name",
+    "emoji": "Emoji",
+    "color": "Colore",
+    "Sign in to save searches": "Sign in to save searches",
+    "Go to Search": "Go to Search",
+    "No saved searches yet": "No saved searches yet",
+    "Create New Search": "Create New Search",
+    "View All": "View All",
+    "Sign in to create property alerts": "Sign in to create property alerts",
+    "Creating": {
+      "": {
+        "": {
+          "": "Creating..."
+        }
+      }
+    },
+    "Create Alert": "Create Alert"
   },
   "home": {
     "hero": {
@@ -338,7 +356,8 @@
       "gridLongTerm": "Monolocali a Barcellona",
       "gridVacation": "Appartamenti al mare a València",
       "gridBuy": "Case in vendita a Barcellona",
-      "gridExchange": "Scambi di casa in Spagna"
+      "gridExchange": "Scambi di casa in Spagna",
+      "empty": "No featured properties available at the moment"
     },
     "recentlyViewed": {
       "title": "Visualizzate di Recente",
@@ -352,7 +371,14 @@
       "filtered": "filtrati"
     },
     "saved": {
-      "title": "Proprietà Salvate"
+      "title": "Proprietà Salvate",
+      "editFolder": "Edit Folder",
+      "defaultFolder": "Default Folder",
+      "folderNamePlaceholder": "Folder name",
+      "noFolder": "Folder not found",
+      "noFolderDescription": "This folder may have been removed",
+      "noFolderItems": "No properties in this folder",
+      "noFolderItemsDescription": "Save properties to this folder to see them here"
     },
     "viewAll": "Visualizza Tutto",
     "tips": {
@@ -402,7 +428,12 @@
     "cityShowcase": {
       "title": "Esplora {{place}}",
       "defaultPlace": "Spagna"
-    }
+    },
+    "insights": {
+      "title": "Platform Insights"
+    },
+    "noProfilesTitle": "Nessun profilo salvato",
+    "noProfilesDescription": "Segui i profili per vederli qui"
   },
   "agent": {
     "menu": {
@@ -510,7 +541,16 @@
     }
   },
   "tips": {
-    "article": "Articolo"
+    "article": "Articolo",
+    "all": "Tutti",
+    "loadError": "Impossibile caricare i consigli",
+    "tryAgain": "Riprova.",
+    "emptyTitle": "Nessun consiglio ancora",
+    "emptyDescription": "Torna presto per nuove guide e consigli sull'affitto.",
+    "unavailable": "Articolo non disponibile",
+    "missingSlug": "Impossibile caricare questo consiglio.",
+    "loadFailed": "Impossibile caricare questo consiglio.",
+    "related": "Consigli correlati"
   },
   "search": {
     "title": "Cerca",
@@ -632,7 +672,43 @@
       }
     },
     "editSearch": "Modifica ricerca",
-    "searchQueryPlaceholder": "Inserisci la tua query di ricerca"
+    "searchQueryPlaceholder": "Inserisci la tua query di ricerca",
+    "placeholder": {
+      "suggestion1": "Trova il tuo appartamento ideale a Barcellona...",
+      "suggestion2": "Cerchi una casa pet-friendly?",
+      "suggestion3": "Scopri proprietà ecologiche...",
+      "suggestion4": "Cerca monolocali arredati vicino a te..."
+    },
+    "savedSearches": "Saved Searches",
+    "saveSearch": "Save Search",
+    "searchQuery": "Search Query",
+    "searchName": "Search Name",
+    "searchNamePlaceholder": "Enter a name for this search",
+    "enableNotifications": "Enable notifications",
+    "notificationsDescription": "Get notified when new properties match this search",
+    "disableNotifications": "Disattiva notifiche",
+    "withFilters": "With filters",
+    "error": "Errore",
+    "enterSearchQuery": "Please enter a search query first",
+    "deleteSearch": "Delete Search",
+    "deleteSearchConfirm": "Are you sure you want to delete the search \"{{name}}\"?",
+    "viewAllSaved": "View All Saved",
+    "duplicateName": "Esiste già una ricerca con questo nome",
+    "duplicateExact": "Hai già salvato questa ricerca esatta",
+    "tryDifferentName": "Scegli un nome diverso",
+    "more": "more",
+    "Eco-friendly": "Eco-friendly",
+    "Co-living": "Co-living",
+    "Furnished": "Furnished",
+    "Pets Allowed": "Pets Allowed",
+    "Verified": "Verified",
+    "Search with": "Search with",
+    "Advanced Filters": "Advanced Filters",
+    "errorLoadingData": "Failed to load data",
+    "noPropertyTypesAvailable": "No property types available",
+    "noCitiesAvailable": "No cities available",
+    "noPropertyTypes": "No property types available",
+    "searching": "Searching..."
   },
   "profile": {
     "editProfile": "Modifica Profilo",
@@ -642,7 +718,64 @@
     "trustScore": "Punteggio di Fiducia",
     "logOut": "Esci",
     "exchanges": "Scambi",
-    "exchangesDescription": "I tuoi scambi casa e le richieste di ospitalità."
+    "exchangesDescription": "I tuoi scambi casa e le richieste di ospitalità.",
+    "title": "Profile",
+    "tabs": {
+      "listings": "Listings",
+      "about": "About"
+    },
+    "loading": "Loading profile...",
+    "signInRequired": "Sign in required",
+    "signInMessage": "Please sign in to view your profile",
+    "createProfile": "Create Profile",
+    "deleteProfile": "Delete Profile",
+    "types": {
+      "personal": "Personal Profile",
+      "agency": "Agency Profile",
+      "business": "Business Profile"
+    },
+    "sections": {
+      "overview": "Overview",
+      "properties": "My Properties",
+      "contracts": "My Contracts",
+      "trustScore": "Trust Score",
+      "settings": "Settings"
+    },
+    "stats": {
+      "propertiesCount": "Properties",
+      "contractsCount": "Contracts",
+      "trustScore": "Trust Score"
+    },
+    "actions": {
+      "manageProperties": "Manage Properties",
+      "viewContracts": "View Contracts",
+      "editProfile": "Edit Profile",
+      "shareProfile": "Share Profile",
+      "signOut": "Sign Out"
+    },
+    "noProfilesTitle": "No Profiles Found",
+    "noProfilesMessage": "You don't have any profiles yet. Create your first profile to get started!",
+    "errors": {
+      "loadFailed": "Failed to load profiles",
+      "updateFailed": "Failed to update profile",
+      "deleteFailed": "Failed to delete profile"
+    },
+    "edit": {
+      "noProfile": "No profile found to update.",
+      "updateSuccess": "Profile updated successfully!",
+      "updateFailed": "Failed to update profile"
+    },
+    "toast": {
+      "loadFailed": "Failed to load profiles",
+      "createSuccess": "Profile created successfully",
+      "createFailed": "Failed to create profile",
+      "updateSuccess": "Profile updated successfully",
+      "updateFailed": "Failed to update profile",
+      "deleteSuccess": "Profile deleted successfully",
+      "deleteFailed": "Failed to delete profile",
+      "activateSuccess": "Profile activated successfully",
+      "activateFailed": "Failed to activate profile"
+    }
   },
   "notifications": {
     "title": "Notifiche",
@@ -720,7 +853,30 @@
         "duplex": "Duplex",
         "penthouse": "Attico"
       }
-    }
+    },
+    "type": {
+      "title": "{{type}}",
+      "subtitle": "{{count}} {{type}} disponibili",
+      "empty": "Nessun {{type}} disponibile al momento",
+      "filters": {
+        "title": "Filtri",
+        "price": "Fascia di prezzo",
+        "bedrooms": "Camere da letto",
+        "bathrooms": "Bagni",
+        "amenities": "Servizi",
+        "sort": {
+          "title": "Ordina per",
+          "newest": "Più recenti",
+          "priceAsc": "Prezzo: dal più basso",
+          "priceDesc": "Prezzo: dal più alto"
+        },
+        "apply": "Applica filtri",
+        "clear": "Cancella tutto"
+      }
+    },
+    "Housing Authority": "Housing Authority",
+    "Apply on State Website": "Apply on State Website",
+    "Contact Housing Authority": "Contact Housing Authority"
   },
   "property": {
     "amenities": {
@@ -846,6 +1002,33 @@
       "listedDaysAgo_other": "Pubblicato {{count}} giorni fa",
       "saved_one": "{{count}} salvato",
       "saved_other": "{{count}} salvati"
+    },
+    "loading": "Caricamento dettagli proprietà...",
+    "error": "Errore",
+    "notFound": "Proprietà non trovata",
+    "bed": "Camera",
+    "bath": "Bagno",
+    "pricingReviewNeeded": "Revisione prezzo necessaria",
+    "bedrooms": "Numero di camere",
+    "bathrooms": "Numero di bagni",
+    "customNumber": {
+      "title": "Inserisci un numero",
+      "placeholder": "Inserisci un numero",
+      "confirm": "Conferma",
+      "cancel": "Annulla"
+    },
+    "suggestedRent": "Suggerito: ${{amount}}/mese",
+    "maxEthicalRent": "Max etico: ${{amount}}/mese",
+    "ethicalPricingWarning": "Il tuo prezzo supera il massimo etico. Considera di abbassarlo per rendere l'alloggio più accessibile.",
+    "warningBullet": "• {{warning}}",
+    "ethicalPricing": "Prezzo etico",
+    "toast": {
+      "createSuccess": "Property created successfully",
+      "updateSuccess": "Property updated successfully",
+      "deleteSuccess": "Property deleted successfully",
+      "createFailed": "Failed to create property",
+      "updateFailed": "Failed to update property",
+      "deleteFailed": "Failed to delete property"
     }
   },
   "viewings": {
@@ -924,6 +1107,75 @@
       "download": "Scarica",
       "sign": "Firma",
       "renew": "Rinnova"
+    },
+    "list": {
+      "title": "Rental Contracts",
+      "eyebrow": "Agreements",
+      "subtitle": "Track every lease you sign or issue and pull up key terms in seconds.",
+      "filterAll": "All",
+      "filterActive": "Active",
+      "filterPending": "Pending",
+      "filterExpired": "Expired",
+      "filterDrafts": "Drafts",
+      "noRentalPropertiesTitle": "No rental contracts",
+      "noRentalPropertiesDescription": "You don't have any rental properties yet. Start by browsing available properties or listing your own.",
+      "browseProperties": "Browse properties",
+      "loadError": "Couldn't load contracts",
+      "tryAgain": "Please try again.",
+      "emptyTitle": "No contracts found",
+      "emptyAllDescription": "You don't have any rental contracts yet",
+      "emptyFilteredDescription": "No {{filter}} contracts to show",
+      "newContract": "New contract",
+      "createNew": "Create new contract"
+    },
+    "card": {
+      "start": "Start",
+      "end": "End",
+      "landlord": "Landlord",
+      "tenant": "Tenant",
+      "perMonth": "/ month",
+      "share": "Share",
+      "download": "Download",
+      "accessibility": "Contract {{title}}"
+    },
+    "detail": {
+      "title": "Contract",
+      "invalidIdTitle": "Invalid contract id",
+      "invalidIdDescription": "The link is missing the contract reference.",
+      "unavailableTitle": "Contract unavailable",
+      "unavailableDescription": "This contract could not be loaded.",
+      "term": "Term",
+      "rent": "Rent",
+      "start": "Start",
+      "end": "End",
+      "monthlyRent": "Monthly rent",
+      "securityDeposit": "Security deposit",
+      "signatures": "Signatures",
+      "landlord": "Landlord",
+      "tenant": "Tenant",
+      "payments": "Payment schedule",
+      "documents": "Documents",
+      "addDocument": "Add document",
+      "sign": "Sign contract",
+      "terminate": "Terminate lease",
+      "deleteDraft": "Delete draft",
+      "confirmSignTitle": "Sign this lease?",
+      "confirmSignBody": "Your signature confirms you accept the lease terms.",
+      "confirmTerminateTitle": "Terminate this lease?",
+      "confirmTerminateBody": "This ends the lease for all parties.",
+      "confirmDeleteTitle": "Delete this draft?",
+      "confirmDeleteBody": "This draft will be permanently removed.",
+      "toastSigned": "Lease signed",
+      "toastSignFailed": "Could not sign the lease",
+      "toastTerminated": "Lease terminated",
+      "toastTerminateFailed": "Could not terminate the lease",
+      "toastDeleted": "Draft deleted",
+      "toastDeleteFailed": "Could not delete the draft",
+      "toastDocumentAdded": "Document added",
+      "toastDocumentFailed": "Could not add the document",
+      "toastOpenDocumentFailed": "Could not open the document.",
+      "permissionRequired": "Media library permission is required to attach a document.",
+      "propertyFallback": "Property"
     }
   },
   "roommates": {
@@ -937,6 +1189,25 @@
       "message": "Messaggio",
       "connect": "Connetti",
       "viewProfile": "Visualizza Profilo"
+    },
+    "tabs": {
+      "discover": "Discover",
+      "requests": "Requests",
+      "matches": "Matches",
+      "rooms": "Rooms"
+    },
+    "alert": {
+      "requestSent": "Roommate request sent successfully!",
+      "requestFailed": "Failed to send roommate request",
+      "accepted": "Roommate request accepted!",
+      "acceptFailed": "Failed to accept roommate request",
+      "declined": "Roommate request declined",
+      "declineFailed": "Failed to decline roommate request",
+      "relationshipEnded": "Roommate relationship ended",
+      "relationshipEndFailed": "Failed to end roommate relationship",
+      "toggleFailed": "Failed to toggle roommate matching",
+      "preferencesSaved": "Your roommate preferences were updated.",
+      "preferencesFailed": "Failed to save roommate preferences. Please try again."
     }
   },
   "safety": {
@@ -1081,6 +1352,47 @@
     "errors": {
       "connection": "Errore di Connessione",
       "connectionMessage": "Controlla la tua connessione e riprova."
+    },
+    "shared": {
+      "loading": "Loading Shared Conversation",
+      "loadingMessage": "Loading conversation...",
+      "subtitle": "Shared Conversation",
+      "badge": "Shared Conversation",
+      "footer": "Powered by Sindi - Your AI Housing Justice Advocate",
+      "error": {
+        "title": "Conversation Not Found",
+        "notFound": "This shared conversation could not be found or has expired.",
+        "failed": "Failed to load shared conversation. Please try again.",
+        "description": "The conversation may have been removed or the link may be invalid."
+      },
+      "empty": {
+        "title": "Empty Conversation",
+        "subtitle": "This shared conversation doesn't have any messages yet."
+      }
+    },
+    "share": {
+      "text": "Check out this conversation with Sindi, your AI housing justice advocate",
+      "success": {
+        "title": "Conversation Shared",
+        "copied": "Share link copied to clipboard!"
+      },
+      "error": {
+        "title": "Cannot Share Conversation",
+        "saveFirst": "Please save the conversation by sending a message before sharing.",
+        "emptyConversation": "Cannot share an empty conversation. Please add some messages first.",
+        "failed": "Failed to generate share link. Please try again."
+      }
+    },
+    "conversation": {
+      "title": "Conversation",
+      "subtitle": "AI Housing Justice Advocate",
+      "loading": "Loading Conversation",
+      "loadingMessage": "Loading conversation...",
+      "error": "Conversation Error",
+      "empty": {
+        "title": "Start Your Conversation",
+        "subtitle": "Ask Sindi about tenant rights, housing search, or any housing-related questions. I'm here to help you fight for housing justice."
+      }
     }
   },
   "sidebar": {
@@ -1101,7 +1413,8 @@
       "tips": "Consigli",
       "hostCalendar": "Calendario host",
       "hostReservations": "Prenotazioni host",
-      "landlordApplications": "Casella candidature"
+      "landlordApplications": "Casella candidature",
+      "insights": "Approfondimenti"
     },
     "actions": {
       "addProperty": "Aggiungi Proprietà",
@@ -1176,7 +1489,38 @@
       "newest": "Prima i Più Recenti",
       "oldest": "Prima i Più Vecchi",
       "alphabetical": "Alfabetico"
-    }
+    },
+    "header": "Saved",
+    "tabs": {
+      "all": "All",
+      "recent": "Recent",
+      "noted": "With Notes",
+      "quickSaves": "Quick Saves",
+      "folders": "Folders",
+      "profiles": "Profiles",
+      "searches": "Ricerche salvate"
+    },
+    "view": {
+      "list": "List",
+      "grid": "Grid"
+    },
+    "searchPlaceholder": "Search your saved items...",
+    "profilesLabel": "profiles",
+    "adjustFilters": "Try adjusting your search or filter criteria",
+    "sort": {
+      "recent": "Recently Saved",
+      "price-low": "Price: Low to High",
+      "price-high": "Price: High to Low",
+      "title": "Property Name",
+      "notes": "Most Notes"
+    },
+    "editFolder": "Edit Folder",
+    "defaultFolder": "Default Folder",
+    "folderNamePlaceholder": "Folder name",
+    "noFolder": "Folder not found",
+    "noFolderDescription": "This folder may have been removed",
+    "noFolderItems": "No properties in this folder",
+    "noFolderItemsDescription": "Save properties to this folder to see them here"
   },
   "listing": {
     "exchange": {
@@ -1378,5 +1722,348 @@
       "totalPaid": "Totale pagato"
     }
   },
-  "goBack": "Indietro"
+  "goBack": "Indietro",
+  "navigation": {
+    "home": "Home",
+    "search": "Cerca",
+    "notifications": "Notifiche",
+    "messages": "Messaggi",
+    "settings": "Impostazioni",
+    "explore": "Esplora",
+    "chat": "Chat",
+    "bookmarks": "Segnalibri",
+    "feeds": "Feed",
+    "lists": "Liste",
+    "videos": "Video"
+  },
+  "actions": {
+    "save": "Salva",
+    "post": "Pubblica",
+    "follow": "Segui",
+    "following": "Segui già",
+    "signUp": "Registrati",
+    "signIn": "Accedi",
+    "showMore": "Mostra altro",
+    "applySettings": "Applica impostazioni"
+  },
+  "content": {
+    "newPost": "Nuovo post",
+    "whatsHappening": "Cosa succede?",
+    "posts": "post",
+    "samplePost": "Questo è un post di esempio",
+    "anotherPost": "Un altro post di esempio",
+    "likedPost": "ha messo mi piace al tuo post",
+    "repostedPost": "ha ripubblicato il tuo post",
+    "joinConversation": "Unisciti alla conversazione"
+  },
+  "app": {
+    "welcome": {
+      "title": "Benvenuto su Homiio! 👋",
+      "subtitle": "Grazie per provare la nostra app. Inizia a esplorare!"
+    },
+    "errors": {
+      "screenNotExist": "Questa schermata non esiste.",
+      "goHome": "Vai alla home!",
+      "noResults": "Nessun risultato trovato per"
+    },
+    "loading": "Caricamento...",
+    "battery": "Batteria"
+  },
+  "notification.search.placeholder": "Cerca notifiche...",
+  "notification.filter.all": "Tutte",
+  "notification.filter.unread": "Non lette",
+  "notification.filter.property": "Proprietà",
+  "notification.filter.message": "Messaggio",
+  "notification.filter.system": "Sistema",
+  "notification.empty.title": "Nessuna notifica",
+  "notification.empty.message": "Sei in pari! Le nuove notifiche appariranno qui.",
+  "notification.empty.filtered": "Nessuna notifica corrisponde al filtro attuale",
+  "notification.delete.title": "Elimina notifica",
+  "notification.delete.message": "Sei sicuro di voler eliminare questa notifica?",
+  "notification.delete.success": "Notifica eliminata",
+  "notification.delete.error": "Impossibile eliminare la notifica",
+  "notification.markAllRead.success": "Tutte le notifiche segnate come lette",
+  "notification.markAllRead.error": "Impossibile segnare tutte come lette",
+  "notification.permissions.title": "Attiva notifiche",
+  "notification.permissions.message": "Ricevi avvisi su nuove proprietà, messaggi e aggiornamenti importanti.",
+  "notification.permissions.enable": "Attiva notifiche",
+  "notification.permissions.granted": "Permessi notifiche concessi",
+  "notification.permissions.denied": "Permessi notifiche negati",
+  "notification.permissions.error": "Impossibile richiedere i permessi",
+  "notification.permissions.enabled": "Notifiche attivate",
+  "notification.permissions.disabled": "Notifiche disattivate",
+  "notification.permissions.enabled.description": "Riceverai notifiche per le categorie attivate.",
+  "notification.permissions.disabled.description": "Attiva le notifiche per ricevere aggiornamenti su proprietà, messaggi e altro.",
+  "notification.scheduled.title": "Notifiche programmate",
+  "notification.scheduled.clearAll": "Cancella tutto",
+  "notification.settings.title": "Impostazioni notifiche",
+  "notification.settings.permissions": "Permessi",
+  "notification.settings.categories": "Categorie notifiche",
+  "notification.settings.behavior": "Comportamento notifiche",
+  "notification.settings.test": "Prova notifiche",
+  "notification.settings.test.description": "Invia notifiche di prova per verificare le impostazioni.",
+  "notification.settings.manage": "Gestisci notifiche",
+  "notification.settings.clearAll": "Cancella tutte le notifiche",
+  "notification.settings.updated": "Impostazioni aggiornate",
+  "notification.settings.error": "Impossibile aggiornare le impostazioni",
+  "notification.settings.property.title": "Notifiche proprietà",
+  "notification.settings.property.description": "Nuove proprietà, variazioni di prezzo e promemoria visite",
+  "notification.settings.message.title": "Notifiche messaggi",
+  "notification.settings.message.description": "Nuovi messaggi da agenti, proprietari e altri utenti",
+  "notification.settings.contract.title": "Notifiche contratti",
+  "notification.settings.contract.description": "Aggiornamenti contratti, firme e scadenze importanti",
+  "notification.settings.payment.title": "Notifiche pagamenti",
+  "notification.settings.payment.description": "Conferme di pagamento, promemoria e ricevute",
+  "notification.settings.reminder.title": "Notifiche promemoria",
+  "notification.settings.reminder.description": "Promemoria visite, scadenze candidature e follow-up",
+  "notification.settings.system.title": "Notifiche di sistema",
+  "notification.settings.system.description": "Aggiornamenti app, manutenzione e annunci importanti",
+  "notification.settings.marketing.title": "Notifiche marketing",
+  "notification.settings.marketing.description": "Offerte promozionali, newsletter e sconti speciali",
+  "notification.settings.sound.title": "Suono",
+  "notification.settings.sound.description": "Riproduci suono all'arrivo delle notifiche",
+  "notification.settings.badge.title": "Contatore badge",
+  "notification.settings.badge.description": "Mostra il conteggio non lette sull'icona dell'app",
+  "notification.settings.push.title": "Notifiche push",
+  "notification.settings.push.description": "Ricevi notifiche anche quando l'app è chiusa",
+  "notification.test.property": "Prova proprietà",
+  "notification.test.message": "Prova messaggio",
+  "notification.test.reminder": "Prova promemoria",
+  "notification.test.repeating": "Prova ripetizione",
+  "notification.test.property.success": "Notifica proprietà inviata",
+  "notification.test.message.success": "Notifica messaggio inviata",
+  "notification.test.reminder.success": "Promemoria programmato",
+  "notification.test.repeating.success": "Notifica ripetuta programmata",
+  "notification.test.error": "Impossibile inviare la notifica di prova",
+  "notification.clearAll.title": "Cancella tutte le notifiche",
+  "notification.clearAll.message": "Verranno cancellate tutte le notifiche e azzerato il contatore. Questa azione non può essere annullata.",
+  "notification.clearAll.success": "Tutte le notifiche cancellate",
+  "notification.clearAll.error": "Impossibile cancellare le notifiche",
+  "notification.settings.ios.title": "Impostazioni iOS",
+  "notification.settings.ios.description": "Per un controllo più dettagliato, gestisci le notifiche in Impostazioni > Notifiche > Homiio.",
+  "notification.settings.android.title": "Impostazioni Android",
+  "notification.settings.android.description": "Gestisci i canali di notifica in Impostazioni > App > Homiio > Notifiche.",
+  "trust": {
+    "loadingVerification": "Loading verification status...",
+    "loadingScore": "Loading trust score...",
+    "errorVerification": "Unable to load verification status",
+    "errorScore": "Unable to load trust score",
+    "viewDetails": "View Details",
+    "noVerification": "No verification data",
+    "noScore": "No trust score data",
+    "verified": "Verified",
+    "completeVerification": "Complete Verification",
+    "yourScoreIs": "Your trust score is",
+    "improveScore": "Improve Score"
+  },
+  "donations": {
+    "widget": {
+      "title": "Support Our Mission",
+      "description": "Help us build the future of ethical housing. Your support makes a difference.",
+      "button": "Donate to Homiio"
+    },
+    "page": {
+      "title": "Donate to Homiio",
+      "subtitle": "Support the future of ethical housing",
+      "description": "Your contribution helps us build a transparent, fair, and ethical housing platform that benefits everyone in the rental ecosystem.",
+      "chooseContribution": "Choose Your Contribution",
+      "frequency": {
+        "label": "Donation frequency",
+        "monthly": "Monthly",
+        "oneTime": "One-time",
+        "perMonth": "/mo"
+      },
+      "error": {
+        "title": "Something went wrong",
+        "generic": "Unable to process your donation. Please try again later."
+      },
+      "tiers": {
+        "supporter": {
+          "title": "One-time donation",
+          "subtitle": "Help with a small contribution",
+          "button": "Donate Now"
+        },
+        "monthly": {
+          "title": "Monthly supporter",
+          "subtitle": "Become a regular supporter",
+          "button": "Start Supporting"
+        },
+        "founder": {
+          "title": "Founder supporter",
+          "subtitle": "Join our founding supporters",
+          "button": "Become a Founder"
+        }
+      },
+      "impact": {
+        "title": "What Your Support Enables",
+        "areas": {
+          "development": {
+            "title": "Platform Development",
+            "description": "Continuous improvement of our housing platform"
+          },
+          "safety": {
+            "title": "Trust & Safety",
+            "description": "Enhanced verification and fraud prevention"
+          },
+          "legal": {
+            "title": "Legal Integration",
+            "description": "Sindi legal support and transparent contracts"
+          },
+          "innovation": {
+            "title": "Innovation",
+            "description": "FairCoin payments and energy monitoring"
+          },
+          "community": {
+            "title": "Community Building",
+            "description": "Growing the ethical housing movement"
+          }
+        }
+      },
+      "mission": {
+        "title": "Why Support Homiio?",
+        "description": "We're building more than just a rental platform—we're creating a complete ecosystem for ethical housing. Your support helps us:",
+        "goals": [
+          "Fight against rental abuse and hidden fees",
+          "Create transparent processes for tenants and landlords",
+          "Integrate innovative payment methods like FairCoin",
+          "Provide legal support through our Sindi integration",
+          "Build sustainable, community-driven solutions"
+        ]
+      }
+    }
+  },
+  "notFound": {
+    "title": "Page Not Found",
+    "message": "The page you are looking for does not exist.",
+    "goBack": "Go Back"
+  },
+  "statusBadge": {
+    "draft": "Draft",
+    "pending": "Pending",
+    "pendingSignatures": "Pending signatures",
+    "active": "Active",
+    "expired": "Expired",
+    "terminated": "Terminated",
+    "cancelled": "Cancelled",
+    "processing": "Processing",
+    "completed": "Completed",
+    "failed": "Failed",
+    "refunded": "Refunded",
+    "success": "Success",
+    "warning": "Warning",
+    "error": "Error",
+    "info": "Info",
+    "investigating": "Investigating",
+    "resolved": "Resolved",
+    "online": "Online",
+    "offline": "Offline",
+    "unknown": "Unknown",
+    "application": {
+      "submitted": "Submitted",
+      "reviewing": "Reviewing",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "withdrawn": "Withdrawn"
+    },
+    "reservation": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "declined": "Declined",
+      "cancelled": "Cancelled",
+      "completed": "Completed"
+    }
+  },
+  "applications": {
+    "list": {
+      "title": "My applications",
+      "filterAll": "All",
+      "filterActive": "Active",
+      "filterDecided": "Decided",
+      "filterWithdrawn": "Withdrawn",
+      "signInTitle": "Sign in to see your applications",
+      "signInDescription": "Track tenant applications you've sent to landlords.",
+      "signIn": "Sign in",
+      "loadError": "Couldn't load your applications",
+      "tryAgain": "Please try again.",
+      "retry": "Retry",
+      "emptyAllTitle": "No applications yet.",
+      "emptyFilteredTitle": "Nothing in this view.",
+      "emptyAllDescription": "Browse listings and submit an application to a long-term rental.",
+      "emptyFilteredDescription": "Try a different filter or submit a new application.",
+      "exploreStays": "Explore stays",
+      "today": "Today",
+      "thisWeek": "This week",
+      "earlier": "Earlier"
+    },
+    "card": {
+      "propertyFallback": "Property",
+      "applicantFallback": "Applicant",
+      "monthLease": "{{count}}-month lease",
+      "moveIn": "Move-in",
+      "submitted": "Submitted {{date}}",
+      "perMonth": "/ month",
+      "accessibility": "Application {{id}}"
+    }
+  },
+  "reservations": {
+    "card": {
+      "propertyFallback": "Property",
+      "night": "night",
+      "nights": "nights",
+      "guest": "guest",
+      "guests": "guests",
+      "hostGuestSuffix": "(guest)",
+      "accessibility": "Reservation {{id}}"
+    }
+  },
+  "reviews": {
+    "card": {
+      "anonymous": "Anonymous",
+      "verifiedResident": "Verified Resident",
+      "verified": "Verified",
+      "confident": "{{score}}% confident",
+      "proof": "proof",
+      "proofs": "proofs",
+      "karma": "{{score}} karma",
+      "livedMonths": "Lived {{count}} months",
+      "perMonth": "{{price}} {{currency}}/month",
+      "moreIssues": "+{{count}} more",
+      "positive": "Positive:",
+      "negative": "Negative:",
+      "helpful": "Helpful ({{count}})",
+      "report": "Report",
+      "reply": "Reply",
+      "recommends": "✓ Recommends",
+      "doesNotRecommend": "✗ Does not recommend",
+      "underReview": "Under Review",
+      "alertThankYouTitle": "Thank you",
+      "alertThankYouBody": "Your feedback has been recorded.",
+      "alertReportTitle": "Report Review",
+      "alertReportBody": "Are you sure you want to report this review for inappropriate content?",
+      "alertReportConfirm": "Report",
+      "alertReportedTitle": "Reported",
+      "alertReportedBody": "This review has been reported to our moderation team.",
+      "alertReplyTitle": "Reply to Review",
+      "alertReplyBody": "Reply functionality will allow landlords and property managers to respond to reviews."
+    }
+  },
+  "subscriptions": {
+    "title": "Subscriptions",
+    "alertError": "Error",
+    "alertSuccess": "Success",
+    "authRequired": "Authentication required",
+    "checkoutFailed": "Failed to start checkout",
+    "portalFailed": "Failed to open subscription management",
+    "syncSuccess": "Subscription status synced from Stripe",
+    "syncFailed": "Failed to sync subscription",
+    "cancelImmediateSuccess": "Subscription canceled immediately",
+    "cancelFailed": "Failed to cancel subscription",
+    "cancelEndOfPeriodSuccess": "Subscription will be canceled at the end of the current period",
+    "debugFailed": "Failed to debug subscription"
+  },
+  "recentlyViewed": {
+    "trackFailed": "Failed to track property view",
+    "clearSuccess": "Recently viewed properties cleared",
+    "clearFailed": "Failed to clear recently viewed properties"
+  }
 }

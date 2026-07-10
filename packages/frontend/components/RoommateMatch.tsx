@@ -7,6 +7,7 @@ import {
   Alert,
   TextInput,
 } from 'react-native';
+import i18next from 'i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { shadowToken } from '@/styles/shadows';
@@ -41,10 +42,10 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
       if (success) {
         setShowMessageInput(false);
         setMessage('');
-        Alert.alert('Success', 'Roommate request sent successfully!');
+        Alert.alert(i18next.t('common.success'), i18next.t('roommates.alert.requestSent'));
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to send roommate request');
+      Alert.alert(i18next.t('common.error'), i18next.t('roommates.alert.requestFailed'));
     } finally {
       setIsLoading(false);
     }

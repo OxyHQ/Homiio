@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
+import i18next from 'i18next';
 import type { Profile, UpdateProfileData } from '@/services/profileService';
 import { usePrimaryProfileQuery, useUpdateProfileMutation } from '@/hooks/query/useProfiles';
 import { logger } from '@/utils/logger';
@@ -543,7 +544,7 @@ export function useProfileEditForm(): UseProfileEditFormResult {
 
   const handleSave = useCallback(async () => {
     if (!activeProfile) {
-      Alert.alert('Error', 'No profile found to update.');
+      Alert.alert(i18next.t('common.error'), i18next.t('profile.edit.noProfile'));
       return;
     }
 
@@ -568,7 +569,7 @@ export function useProfileEditForm(): UseProfileEditFormResult {
 
     if (!validation.success) {
       const message = validation.error.issues[0]?.message || 'Please review the form and try again.';
-      Alert.alert('Error', message);
+      Alert.alert(i18next.t('common.error'), message);
       return;
     }
 
@@ -604,11 +605,11 @@ export function useProfileEditForm(): UseProfileEditFormResult {
       await updateProfile({ profileId, data: updateData });
 
       setHasUnsavedChanges(false);
-      Alert.alert('Success', 'Profile updated successfully!');
+      Alert.alert(i18next.t('common.success'), i18next.t('profile.edit.updateSuccess'));
     } catch (error) {
       logger.error('Error saving profile', error);
       const message = error instanceof Error ? error.message : 'Failed to update profile.';
-      Alert.alert('Error', message);
+      Alert.alert(i18next.t('common.error'), message);
     } finally {
       setIsSaving(false);
     }

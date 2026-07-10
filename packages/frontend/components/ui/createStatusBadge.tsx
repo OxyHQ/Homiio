@@ -43,7 +43,7 @@ export function createStatusBadge<T extends string>(
   const StatusBadge: React.FC<StatusBadgeProps<T>> = ({ status }) => {
     const { t } = useTranslation();
     const entry = map[status];
-    const content = entry.i18nKey ? t(entry.i18nKey, entry.label) : entry.label;
+    const content = entry.i18nKey ? t(entry.i18nKey) : entry.label;
     return <Badge content={content} variant="subtle" color={entry.color} size="small" />;
   };
   return StatusBadge;

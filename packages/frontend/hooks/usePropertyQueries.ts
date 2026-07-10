@@ -1,4 +1,5 @@
 import { useCallback, useState, useEffect } from 'react';
+import i18next from 'i18next';
 import { usePropertyStore, usePropertySelectors } from '@/store/propertyStore';
 import { Property, PropertyFilters, propertyService } from '@/services/propertyService';
 import {
@@ -230,7 +231,7 @@ export const useCreateProperty = () => {
         // Use the propertyService instead of propertyApi
         const response = await propertyService.createProperty(data);
 
-        toast.success('Property created successfully');
+        toast.success(i18next.t('property.toast.createSuccess'));
         return response;
       } catch (error: any) {
         const errorMessage = error.message || 'Failed to create property';
@@ -267,7 +268,7 @@ export const useUpdateProperty = () => {
           data,
         );
 
-        toast.success('Property updated successfully');
+        toast.success(i18next.t('property.toast.updateSuccess'));
         return response;
       } catch (error: any) {
         const errorMessage = error.message || 'Failed to update property';
@@ -301,7 +302,7 @@ export const useDeleteProperty = () => {
         // Use propertyService instead of propertyApi
         await propertyService.deleteProperty(id);
 
-        toast.success('Property deleted successfully');
+        toast.success(i18next.t('property.toast.deleteSuccess'));
       } catch (error: any) {
         const errorMessage = error.message || 'Failed to delete property';
         setError(errorMessage);

@@ -13,6 +13,7 @@ import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { isThisWeek, isToday } from 'date-fns';
 
 import { Chip } from '@oxyhq/bloom/chip';
@@ -36,14 +37,14 @@ type Filter = 'all' | 'active' | 'decided' | 'withdrawn';
 
 interface FilterOption {
   value: Filter;
-  label: string;
+  i18nKey: string;
 }
 
 const FILTERS: FilterOption[] = [
-  { value: 'all', label: 'All' },
-  { value: 'active', label: 'Active' },
-  { value: 'decided', label: 'Decided' },
-  { value: 'withdrawn', label: 'Withdrawn' },
+  { value: 'all', i18nKey: 'applications.list.filterAll' },
+  { value: 'active', i18nKey: 'applications.list.filterActive' },
+  { value: 'decided', i18nKey: 'applications.list.filterDecided' },
+  { value: 'withdrawn', i18nKey: 'applications.list.filterWithdrawn' },
 ];
 
 interface Buckets {
@@ -78,7 +79,7 @@ interface DateGroup {
  * Group a list of applications by submission recency so the screen reads
  * Today → This week → Earlier instead of a single dense column.
  */
-const groupByDate = (items: TenantApplication[]): DateGroup[] => {
+const groupByDate = (items: TenantApplication[], t: (key: string) => string): DateGroup[] => {
   const today: TenantApplication[] = [];
   const thisWeek: TenantApplication[] = [];
   const earlier: TenantApplication[] = [];
@@ -95,13 +96,14 @@ const groupByDate = (items: TenantApplication[]): DateGroup[] => {
   }
 
   return [
-    { label: 'Today', items: today },
-    { label: 'This week', items: thisWeek },
-    { label: 'Earlier', items: earlier },
+    { label: t('applications.list.today'), items: today },
+    { label: t('applications.list.thisWeek'), items: thisWeek },
+    { label: t('applications.list.earlier'), items: earlier },
   ].filter((group) => group.items.length > 0);
 };
 
 export default function MyApplicationsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { isAuthenticated } = useOxy();
   const applicationsQuery = useMyApplications();
@@ -125,13 +127,13 @@ export default function MyApplicationsScreen() {
     }
   }, [filter, buckets]);
 
-  const dateGroups = useMemo(() => groupByDate(filtered), [filtered]);
+  const dateGroups = useMemo(() => groupByDate(filtered, t), [filtered, t]);
 
   const header = (
     <Header
       options={{
         showBackButton: true,
-        title: 'My applications',
+        title: t('applications.list.title'),
         titlePosition: 'center',
       }}
     />
@@ -145,9 +147,9 @@ export default function MyApplicationsScreen() {
           <View style={styles.centerWrap}>
             <EmptyState
               icon="document-text-outline"
-              title="Sign in to see your applications"
-              description="Track tenant applications you've sent to landlords."
-              actionText="Sign in"
+              title={t('applications.list.signInTitle')}
+              description={t('applications.list.signInDescription')}
+              actionText={t('applications.list.signIn')}
               actionIcon="log-in-outline"
               onAction={() => showSignInModal()}
             />
@@ -163,7 +165,7 @@ export default function MyApplicationsScreen() {
         {header}
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <View style={styles.content}>
-            <FilterRow value={filter} onChange={setFilter} />
+            <FilterRow value={filter} onChange={setFilter} t={t} />
             <ListSkeleton rows={5} rowHeight={120} />
           </View>
         </SafeAreaView>
@@ -178,11 +180,11 @@ export default function MyApplicationsScreen() {
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <View style={styles.centerWrap}>
             <ErrorState
-              title="Couldn't load your applications"
+              title={t('applications.list.loadError')}
               description={
-                applicationsQuery.error?.message ?? 'Please try again.'
+                applicationsQuery.error?.message ?? t('applications.list.tryAgain')
               }
-              retryLabel="Retry"
+              retryLabel={t('applications.list.retry')}
               onRetry={() => applicationsQuery.refetch()}
             />
           </View>
@@ -204,15 +206,15 @@ export default function MyApplicationsScreen() {
                 icon="document-text-outline"
                 title={
                   filter === 'all'
-                    ? 'No applications yet.'
-                    : 'Nothing in this view.'
+                    ? t('applications.list.emptyAllTitle')
+                    : t('applications.list.emptyFilteredTitle')
                 }
                 description={
                   filter === 'all'
-                    ? 'Browse listings and submit an application to a long-term rental.'
-                    : 'Try a different filter or submit a new application.'
+                    ? t('applications.list.emptyAllDescription')
+                    : t('applications.list.emptyFilteredDescription')
                 }
-                actionText={filter === 'all' ? 'Explore stays' : undefined}
+                actionText={filter === 'all' ? t('applications.list.exploreStays') : undefined}
                 actionIcon={filter === 'all' ? 'search-outline' : undefined}
                 onAction={
                   filter === 'all' ? () => router.push('/explore') : undefined
@@ -243,9 +245,10 @@ export default function MyApplicationsScreen() {
 interface FilterRowProps {
   value: Filter;
   onChange: (next: Filter) => void;
+  t: (key: string) => string;
 }
 
-const FilterRow: React.FC<FilterRowProps> = ({ value, onChange }) => (
+const FilterRow: React.FC<FilterRowProps> = ({ value, onChange, t }) => (
   <ScrollView
     horizontal
     showsHorizontalScrollIndicator={false}
@@ -260,7 +263,7 @@ const FilterRow: React.FC<FilterRowProps> = ({ value, onChange }) => (
         selected={value === option.value}
         onPress={() => onChange(option.value)}
       >
-        {option.label}
+        {t(option.i18nKey)}
       </Chip>
     ))}
   </ScrollView>

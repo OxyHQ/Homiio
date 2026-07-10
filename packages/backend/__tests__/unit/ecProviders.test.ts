@@ -1,11 +1,15 @@
 /**
  * Ecuador listing providers — Plusvalía / MercadoLibre EC / Properati.
- * Pure fixture → parse → normalize (no network).
+ * Pure fixture → parse → normalize (no network). Parsers come from shared
+ * navent / mercadolibre modules via thin EC wrappers.
  */
 import {
   PlusvaliaProvider,
+  PLUSVALIA_SITE,
   PLUSVALIA_FIXTURE_DETAIL_HTML,
   PLUSVALIA_FIXTURE_SEARCH_JSON,
+  parsePlusvaliaSearchJson,
+  parsePlusvaliaDetail,
   MercadolibreEcProvider,
   parseMercadolibreEcSearchJson,
   parseMercadolibreEcDetail,
@@ -17,21 +21,8 @@ import {
   parseProperatiEcDetail,
   PROPERATI_EC_FIXTURE_SEARCH_JSON,
   PROPERATI_EC_FIXTURE_DETAIL_HTML,
-  NonHousingListingError,
-  parseNaventSearchJson,
-  parseNaventDetail,
-  type NaventSiteConfig,
 } from '@homiio/listing-providers';
-import { OfferingType, PropertyType } from '@homiio/shared-types';
-
-const PLUSVALIA_SITE: NaventSiteConfig = {
-  provider: 'plusvalia',
-  baseUrl: 'https://www.plusvalia.com',
-  countryCode: 'EC',
-  defaultCity: 'Quito',
-  defaultCurrency: 'USD',
-  hrefRe: /href="((?:https:\/\/www\.plusvalia\.com)?\/propiedades\/[^"]+-(\d{5,})\.html)"/gi,
-};
+import { OfferingType } from '@homiio/shared-types';
 
 describe('PlusvaliaProvider', () => {
   const provider = new PlusvaliaProvider();
@@ -42,13 +33,13 @@ describe('PlusvaliaProvider', () => {
   });
 
   it('parses Navent search JSON into refs', () => {
-    const refs = parseNaventSearchJson(PLUSVALIA_SITE, PLUSVALIA_FIXTURE_SEARCH_JSON);
+    expect(PLUSVALIA_SITE.countryCode).toBe('EC');
+    const refs = parsePlusvaliaSearchJson(PLUSVALIA_FIXTURE_SEARCH_JSON);
     expect(refs.map((r) => r.sourceId).sort()).toEqual(['11002233', '11002234']);
   });
 
   it('normalizes detail with contact', () => {
-    const payload = parseNaventDetail(
-      PLUSVALIA_SITE,
+    const payload = parsePlusvaliaDetail(
       PLUSVALIA_FIXTURE_DETAIL_HTML,
       'https://www.plusvalia.com/propiedades/clasificado/alquilercasa-casa-en-alquiler-cumbaya-11002233.html',
     );

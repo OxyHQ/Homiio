@@ -16,6 +16,7 @@
     "test": "jest --ci",
     "test:watch": "jest --watch",
     "lint": "expo lint",
+    "check:i18n": "bun scripts/check-locale-parity.ts",
     "clean": "rm -rf dist .expo"
   },
   "dependencies": {

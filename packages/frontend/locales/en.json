@@ -653,7 +653,23 @@
       "deleteFailed": "Failed to delete profile"
     },
     "exchanges": "Exchanges",
-    "exchangesDescription": "Your home swaps and hosting requests."
+    "exchangesDescription": "Your home swaps and hosting requests.",
+    "edit": {
+      "noProfile": "No profile found to update.",
+      "updateSuccess": "Profile updated successfully!",
+      "updateFailed": "Failed to update profile"
+    },
+    "toast": {
+      "loadFailed": "Failed to load profiles",
+      "createSuccess": "Profile created successfully",
+      "createFailed": "Failed to create profile",
+      "updateSuccess": "Profile updated successfully",
+      "updateFailed": "Failed to update profile",
+      "deleteSuccess": "Profile deleted successfully",
+      "deleteFailed": "Failed to delete profile",
+      "activateSuccess": "Profile activated successfully",
+      "activateFailed": "Failed to activate profile"
+    }
   },
   "trust": {
     "loadingVerification": "Loading verification status...",
@@ -802,6 +818,75 @@
       "download": "Download",
       "sign": "Sign",
       "renew": "Renew"
+    },
+    "list": {
+      "title": "Rental Contracts",
+      "eyebrow": "Agreements",
+      "subtitle": "Track every lease you sign or issue and pull up key terms in seconds.",
+      "filterAll": "All",
+      "filterActive": "Active",
+      "filterPending": "Pending",
+      "filterExpired": "Expired",
+      "filterDrafts": "Drafts",
+      "noRentalPropertiesTitle": "No rental contracts",
+      "noRentalPropertiesDescription": "You don't have any rental properties yet. Start by browsing available properties or listing your own.",
+      "browseProperties": "Browse properties",
+      "loadError": "Couldn't load contracts",
+      "tryAgain": "Please try again.",
+      "emptyTitle": "No contracts found",
+      "emptyAllDescription": "You don't have any rental contracts yet",
+      "emptyFilteredDescription": "No {{filter}} contracts to show",
+      "newContract": "New contract",
+      "createNew": "Create new contract"
+    },
+    "card": {
+      "start": "Start",
+      "end": "End",
+      "landlord": "Landlord",
+      "tenant": "Tenant",
+      "perMonth": "/ month",
+      "share": "Share",
+      "download": "Download",
+      "accessibility": "Contract {{title}}"
+    },
+    "detail": {
+      "title": "Contract",
+      "invalidIdTitle": "Invalid contract id",
+      "invalidIdDescription": "The link is missing the contract reference.",
+      "unavailableTitle": "Contract unavailable",
+      "unavailableDescription": "This contract could not be loaded.",
+      "term": "Term",
+      "rent": "Rent",
+      "start": "Start",
+      "end": "End",
+      "monthlyRent": "Monthly rent",
+      "securityDeposit": "Security deposit",
+      "signatures": "Signatures",
+      "landlord": "Landlord",
+      "tenant": "Tenant",
+      "payments": "Payment schedule",
+      "documents": "Documents",
+      "addDocument": "Add document",
+      "sign": "Sign contract",
+      "terminate": "Terminate lease",
+      "deleteDraft": "Delete draft",
+      "confirmSignTitle": "Sign this lease?",
+      "confirmSignBody": "Your signature confirms you accept the lease terms.",
+      "confirmTerminateTitle": "Terminate this lease?",
+      "confirmTerminateBody": "This ends the lease for all parties.",
+      "confirmDeleteTitle": "Delete this draft?",
+      "confirmDeleteBody": "This draft will be permanently removed.",
+      "toastSigned": "Lease signed",
+      "toastSignFailed": "Could not sign the lease",
+      "toastTerminated": "Lease terminated",
+      "toastTerminateFailed": "Could not terminate the lease",
+      "toastDeleted": "Draft deleted",
+      "toastDeleteFailed": "Could not delete the draft",
+      "toastDocumentAdded": "Document added",
+      "toastDocumentFailed": "Could not add the document",
+      "toastOpenDocumentFailed": "Could not open the document.",
+      "permissionRequired": "Media library permission is required to attach a document.",
+      "propertyFallback": "Property"
     }
   },
   "roommates": {
@@ -815,6 +900,25 @@
       "message": "Message",
       "connect": "Connect",
       "viewProfile": "View Profile"
+    },
+    "tabs": {
+      "discover": "Discover",
+      "requests": "Requests",
+      "matches": "Matches",
+      "rooms": "Rooms"
+    },
+    "alert": {
+      "requestSent": "Roommate request sent successfully!",
+      "requestFailed": "Failed to send roommate request",
+      "accepted": "Roommate request accepted!",
+      "acceptFailed": "Failed to accept roommate request",
+      "declined": "Roommate request declined",
+      "declineFailed": "Failed to decline roommate request",
+      "relationshipEnded": "Roommate relationship ended",
+      "relationshipEndFailed": "Failed to end roommate relationship",
+      "toggleFailed": "Failed to toggle roommate matching",
+      "preferencesSaved": "Your roommate preferences were updated.",
+      "preferencesFailed": "Failed to save roommate preferences. Please try again."
     }
   },
   "safety": {
@@ -1408,6 +1512,14 @@
       "listedDaysAgo_other": "Listed {{count}} days ago",
       "saved_one": "{{count}} saved",
       "saved_other": "{{count}} saved"
+    },
+    "toast": {
+      "createSuccess": "Property created successfully",
+      "updateSuccess": "Property updated successfully",
+      "deleteSuccess": "Property deleted successfully",
+      "createFailed": "Failed to create property",
+      "updateFailed": "Failed to update property",
+      "deleteFailed": "Failed to delete property"
     }
   },
   "viewings": {
@@ -1729,5 +1841,139 @@
       "totalPaid": "Total paid"
     }
   },
-  "goBack": "Go back"
+  "goBack": "Go back",
+  "notFound": {
+    "title": "Page Not Found",
+    "message": "The page you are looking for does not exist.",
+    "goBack": "Go Back"
+  },
+  "statusBadge": {
+    "draft": "Draft",
+    "pending": "Pending",
+    "pendingSignatures": "Pending signatures",
+    "active": "Active",
+    "expired": "Expired",
+    "terminated": "Terminated",
+    "cancelled": "Cancelled",
+    "processing": "Processing",
+    "completed": "Completed",
+    "failed": "Failed",
+    "refunded": "Refunded",
+    "success": "Success",
+    "warning": "Warning",
+    "error": "Error",
+    "info": "Info",
+    "investigating": "Investigating",
+    "resolved": "Resolved",
+    "online": "Online",
+    "offline": "Offline",
+    "unknown": "Unknown",
+    "application": {
+      "submitted": "Submitted",
+      "reviewing": "Reviewing",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "withdrawn": "Withdrawn"
+    },
+    "reservation": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "declined": "Declined",
+      "cancelled": "Cancelled",
+      "completed": "Completed"
+    }
+  },
+  "applications": {
+    "list": {
+      "title": "My applications",
+      "filterAll": "All",
+      "filterActive": "Active",
+      "filterDecided": "Decided",
+      "filterWithdrawn": "Withdrawn",
+      "signInTitle": "Sign in to see your applications",
+      "signInDescription": "Track tenant applications you've sent to landlords.",
+      "signIn": "Sign in",
+      "loadError": "Couldn't load your applications",
+      "tryAgain": "Please try again.",
+      "retry": "Retry",
+      "emptyAllTitle": "No applications yet.",
+      "emptyFilteredTitle": "Nothing in this view.",
+      "emptyAllDescription": "Browse listings and submit an application to a long-term rental.",
+      "emptyFilteredDescription": "Try a different filter or submit a new application.",
+      "exploreStays": "Explore stays",
+      "today": "Today",
+      "thisWeek": "This week",
+      "earlier": "Earlier"
+    },
+    "card": {
+      "propertyFallback": "Property",
+      "applicantFallback": "Applicant",
+      "monthLease": "{{count}}-month lease",
+      "moveIn": "Move-in",
+      "submitted": "Submitted {{date}}",
+      "perMonth": "/ month",
+      "accessibility": "Application {{id}}"
+    }
+  },
+  "reservations": {
+    "card": {
+      "propertyFallback": "Property",
+      "night": "night",
+      "nights": "nights",
+      "guest": "guest",
+      "guests": "guests",
+      "hostGuestSuffix": "(guest)",
+      "accessibility": "Reservation {{id}}"
+    }
+  },
+  "reviews": {
+    "card": {
+      "anonymous": "Anonymous",
+      "verifiedResident": "Verified Resident",
+      "verified": "Verified",
+      "confident": "{{score}}% confident",
+      "proof": "proof",
+      "proofs": "proofs",
+      "karma": "{{score}} karma",
+      "livedMonths": "Lived {{count}} months",
+      "perMonth": "{{price}} {{currency}}/month",
+      "moreIssues": "+{{count}} more",
+      "positive": "Positive:",
+      "negative": "Negative:",
+      "helpful": "Helpful ({{count}})",
+      "report": "Report",
+      "reply": "Reply",
+      "recommends": "✓ Recommends",
+      "doesNotRecommend": "✗ Does not recommend",
+      "underReview": "Under Review",
+      "alertThankYouTitle": "Thank you",
+      "alertThankYouBody": "Your feedback has been recorded.",
+      "alertReportTitle": "Report Review",
+      "alertReportBody": "Are you sure you want to report this review for inappropriate content?",
+      "alertReportConfirm": "Report",
+      "alertReportedTitle": "Reported",
+      "alertReportedBody": "This review has been reported to our moderation team.",
+      "alertReplyTitle": "Reply to Review",
+      "alertReplyBody": "Reply functionality will allow landlords and property managers to respond to reviews."
+    }
+  },
+  "subscriptions": {
+    "title": "Subscriptions",
+    "alertError": "Error",
+    "alertSuccess": "Success",
+    "authRequired": "Authentication required",
+    "checkoutFailed": "Failed to start checkout",
+    "portalFailed": "Failed to open subscription management",
+    "syncSuccess": "Subscription status synced from Stripe",
+    "syncFailed": "Failed to sync subscription",
+    "cancelImmediateSuccess": "Subscription canceled immediately",
+    "cancelFailed": "Failed to cancel subscription",
+    "cancelEndOfPeriodSuccess": "Subscription will be canceled at the end of the current period",
+    "debugFailed": "Failed to debug subscription"
+  },
+  "recentlyViewed": {
+    "trackFailed": "Failed to track property view",
+    "clearSuccess": "Recently viewed properties cleared",
+    "clearFailed": "Failed to clear recently viewed properties"
+  }
 }
