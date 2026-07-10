@@ -33,7 +33,6 @@ import { AgentCtaBanner } from '@/components/agent/AgentCtaBanner';
 import { usePartnerMe, useJoinPartner, useReferrals, useEarnings } from '@/hooks/usePartner';
 import { shareReferralLink } from '@/utils/shareReferral';
 import { toast } from '@/lib/sonner';
-import { colors } from '@/styles/colors';
 
 export default function AgentScreen() {
   const { t } = useTranslation();
@@ -108,10 +107,10 @@ export default function AgentScreen() {
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        {/* Section rhythm owned here by NativeWind `gap` (32px mobile / 48px
+        {/* Section rhythm owned here by NativeWind `gap` (24px mobile / 32px
             web); each direct child is a page section with no per-section
             `marginTop`. */}
-        <View className="gap-8 md:gap-12 pb-20">
+        <View className="gap-6 md:gap-8 pb-20">
           <AgentHero
             title={t('agent.hero.title', 'Anyone can be a real estate agent.')}
             subtitle={t(
@@ -160,9 +159,9 @@ export default function AgentScreen() {
 }
 
 const styles = StyleSheet.create({
+  // Transparent — Bloom ContentPanel already owns the `bg-card` surface.
   root: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   scroll: {
     flex: 1,

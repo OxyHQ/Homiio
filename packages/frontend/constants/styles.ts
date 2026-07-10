@@ -99,12 +99,13 @@ export type IconSizeKey = keyof typeof ICON_SIZES;
  * Section spacing rhythm. Web is a touch more generous; mobile keeps
  * content dense enough to avoid scroll fatigue but still breathes.
  *
- * Tightened to an Airbnb-2026 rhythm (48 web / 32 mobile) — the prior
- * 96/56 left too much dead air between feed sections.
+ * Airbnb-2026 rhythm (32 web / 24 mobile). Home uses NativeWind
+ * `gap-6 md:gap-8`; this constant is the JS fallback for screens that
+ * still resolve spacing imperatively.
  */
 export const sectionSpacing = {
-  web: 48,
-  mobile: 32,
+  web: 32,
+  mobile: 24,
 } as const;
 
 /**

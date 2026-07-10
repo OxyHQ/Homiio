@@ -7,6 +7,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '@oxyhq/bloom/theme';
 import { colors } from '@/styles/colors';
 import { colorChannels } from '@/styles/shadows';
 import { useRouter } from 'expo-router';
@@ -44,6 +45,7 @@ interface Props {
 
 export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) => {
   const router = useRouter();
+  const { colors: themeColors } = useTheme();
   // Derived directly from the router rather than synced via an effect — this is
   // a pure read of navigation state and avoids cascading renders.
   const canGoBack = router.canGoBack();
@@ -119,7 +121,8 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
         style={[
           styles.backgroundOverlay,
           {
-            backgroundColor: colors.primaryLight,
+            // Match ContentPanel `bg-card` — not page `background` / pure white.
+            backgroundColor: themeColors.card,
             borderBottomWidth: 0.01,
             borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
           },

@@ -18,7 +18,8 @@
  *   9. Host CTA banner.
  *  10. Footer trust strip (small print).
  *
- * Rhythm is 96px on web / 56px on mobile between sections. Long-form
+ * Rhythm is 32px on web / 24px on mobile between sections (NativeWind
+ * `gap-6 md:gap-8`). Long-form
  * copy (FAQ accordion, stats banner with big H2 numbers, "Verified
  * Listings / Fair Agreements / Trust Score" 3-up grid) does NOT live on
  * the home page — it belongs on /about and footer respectively.
@@ -399,9 +400,9 @@ export default function HomePage() {
         showsVerticalScrollIndicator={false}
       >
         {/* Section rhythm is owned here by NativeWind `gap` — every direct
-            child below is a page section, evenly spaced (32px mobile / 48px
+            child below is a page section, evenly spaced (24px mobile / 32px
             web) with no per-section `marginTop`. */}
-        <View className="gap-8 md:gap-12 pb-14">
+        <View className="gap-6 md:gap-8 pb-14">
         {/* === Hero canvas === */}
         <View style={[styles.heroSection, { paddingTop: insets.top + (isWide ? spacing['3xl'] : spacing['5xl']) }]}>
           <Animated.View style={[styles.heroImageWrap, heroParallaxStyle]}>
@@ -471,9 +472,7 @@ export default function HomePage() {
         </View>
 
         {/* === Category strip (sticky on web) === */}
-        <View style={styles.categoryStripWrap}>
-          <HomeCategoryStrip sticky />
-        </View>
+        <HomeCategoryStrip sticky />
 
         {/* === Featured Properties carousel === */}
         {featuredProperties.length > 0 ? (
@@ -584,12 +583,12 @@ export default function HomePage() {
             Responsive 50/50 grid: side-by-side equal-height columns on wide
             screens, stacked full-width on narrow / native (always narrow). On
             wide the row owns the outer page padding and its inter-column gutter
-            comes from NativeWind `gap-8 md:gap-12`; in grid mode each banner
+            comes from NativeWind `gap-6 md:gap-8`; in grid mode each banner
             runs in `fill` mode (no intrinsic aspectRatio, no own page padding)
             so `alignItems: 'stretch'` equalises height. On narrow the two
             banners are plain scroll siblings and the page `gap` spaces them. */}
         {isWide ? (
-          <View className="gap-8 md:gap-12" style={styles.ctaGridRow}>
+          <View className="gap-6 md:gap-8" style={styles.ctaGridRow}>
             <HostCtaBanner
               fill
               title={t('home.hostCta.title', 'List your space, find a great tenant')}
@@ -696,7 +695,7 @@ const createStyles = (
       maxWidth: 1200,
       alignSelf: 'center',
       paddingHorizontal: isWide ? spacing['4xl'] : spacing.xl,
-      paddingBottom: isWide ? spacing['5xl'] : spacing['3xl'],
+      paddingBottom: isWide ? spacing['2xl'] : spacing.xl,
       alignItems: isWide ? 'center' : 'flex-start',
     },
     heroTitle: {
@@ -731,16 +730,10 @@ const createStyles = (
       zIndex: 20,
     },
 
-    // Category strip
-    categoryStripWrap: {
-      paddingTop: spacing.sm,
-      paddingBottom: spacing.sm,
-    },
-
     // Closing CTA banners — wide-screen 50/50 grid. The row owns the outer page
     // padding (the `fill` banners drop their own) and lays out two equal columns
     // that stretch to the taller one for a balanced, equal-height grid. The
-    // inter-column gutter comes from NativeWind `gap-8 md:gap-12` on the row.
+    // inter-column gutter comes from NativeWind `gap-6 md:gap-8` on the row.
     // Only mounted when `isWide`, so the padding always resolves to the
     // wide/desktop value.
     ctaGridRow: {

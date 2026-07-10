@@ -29,6 +29,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { Text } from '@oxyhq/bloom/typography';
+import { useTheme } from '@oxyhq/bloom/theme';
 
 import { PANEL_TOP_INSET } from '@oxyhq/bloom/content-panel';
 
@@ -170,6 +171,7 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({
 }) => {
   const { t } = useTranslation();
   const { mode } = useRentalMode();
+  const { colors: themeColors } = useTheme();
   const category = useHomeCategoryStore((s) => s.category);
   const setCategory = useHomeCategoryStore((s) => s.setCategory);
 
@@ -194,6 +196,8 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({
    * Web-only `position: sticky` lives outside the RN style system. We
    * inject it via the style object and rely on react-native-web to
    * pass it through to the underlying div. On native, this is a no-op.
+   * Opaque fill must match ContentPanel's `bg-card` (not pure white) so
+   * scrolled content doesn't flash a competing surface under the strip.
    */
   const stickyStyle =
     sticky && isWeb
@@ -201,7 +205,7 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({
           position: 'sticky',
           top: framed ? PANEL_TOP_INSET : 0,
           zIndex: 30,
-          backgroundColor: colors.white,
+          backgroundColor: themeColors.card,
           borderBottomWidth: 1,
           borderBottomColor: colors.border,
         } as unknown as object)
