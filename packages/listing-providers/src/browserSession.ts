@@ -47,6 +47,8 @@ export interface BrowserSessionOptions extends WarmBrowserPageOptions {
   storageState?: BrowserStorageState;
   /** When sticky, pin this id instead of generating a new one. */
   proxySessionId?: string;
+  /** DataImpulse country targeting (`__cr.<cc>` on proxy username). */
+  proxyCountry?: string;
   /** Abort image/CSS/font requests (default ON — cheap residential GB). */
   blockAssets?: boolean;
 }
@@ -242,7 +244,7 @@ export class PlaywrightSessionPool {
         javaScriptEnabled: true,
       };
       if (this.proxy) {
-        contextOptions.proxy = toPlaywrightProxy(this.proxy, sessionId);
+        contextOptions.proxy = toPlaywrightProxy(this.proxy, sessionId, options.proxyCountry);
       }
       if (options.storageState) {
         contextOptions.storageState = options.storageState;

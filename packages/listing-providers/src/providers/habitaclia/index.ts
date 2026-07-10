@@ -42,6 +42,7 @@ import {
 } from './listainmuebles';
 
 const PROVIDER_ID: ProviderId = 'habitaclia';
+const ES_PROXY_COUNTRY = 'es';
 
 export function isHabitacliaChallenge(html: string): boolean {
   if (html.trim().length < 512) return true;
@@ -176,6 +177,7 @@ export class HabitacliaProvider implements ListingProvider {
       blockAssets: true,
       reloadAfterPolls: 4,
       postChallengeSettleMs: 1_500,
+      proxyCountry: ES_PROXY_COUNTRY,
     } as const;
   }
 
@@ -324,6 +326,7 @@ export class HabitacliaProvider implements ListingProvider {
       if (yielded.count >= limit) break;
       const { status, body } = await runtime.fetchHttp(HABITACLIA_LISTAINMUEBLES_URL, {
         signal,
+        proxyCountry: ES_PROXY_COUNTRY,
         method: 'POST',
         body: buildHabitacliaListainmueblesBody(formFields, page),
         headers: {
