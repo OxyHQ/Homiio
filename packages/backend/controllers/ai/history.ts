@@ -21,8 +21,7 @@ export async function appendHistory(req: Request, res: Response) {
   const userId = getUserId(req);
   if (!userId) return err(res, 401, 'Unauthorized');
 
-  const profile = await Profile.findOne({ oxyUserId: userId, profileType: 'personal' });
-  if (!profile) return err(res, 404, 'Personal profile not found');
+  const profile = await Profile.findOrCreateByOxyUserId(userId);
 
   const { userMessage, assistantMessage } = (req as any).body || {};
   if (!userMessage || !assistantMessage) return err(res, 400, 'Missing userMessage or assistantMessage');

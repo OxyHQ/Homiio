@@ -658,6 +658,21 @@ profileSchema.statics.findActiveByOxyUserId = function(oxyUserId: string, select
   return query;
 };
 
+profileSchema.statics.findOrCreateByOxyUserId = async function(oxyUserId: string) {
+  const existing = await this.findActiveByOxyUserId(oxyUserId);
+  if (existing) {
+    return existing;
+  }
+
+  return this.create({
+    oxyUserId,
+    profileType: ProfileType.PERSONAL,
+    isActive: true,
+    isPrimary: true,
+    personalProfile: {},
+  });
+};
+
 profileSchema.statics.findByOxyUserId = function(oxyUserId: string, select: string | null = null) {
   const query = this.find({
     oxyUserId

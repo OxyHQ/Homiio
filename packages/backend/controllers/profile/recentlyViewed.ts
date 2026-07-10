@@ -218,7 +218,6 @@ export async function debugRecentProperties(req: any, res: any, next: any) {
       successResponse({
         oxyUserId,
         profileId: activeProfile._id,
-        profileType: activeProfile.profileType,
         totalCount,
         rawRecentViews: rawRecentViews.map(view => ({
           propertyId: view.propertyId,

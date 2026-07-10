@@ -25,7 +25,7 @@ export async function updateProperty(req: ControllerRequest, res: ControllerResp
     const oxyUserId = req.user?.id || req.user?._id || req.userId;
     if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
     const { Profile } = require('../../models');
-    const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
+    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
     if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
     const property = await Property.findById(propertyId);
     if (!property) return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));
@@ -108,7 +108,7 @@ export async function deleteProperty(req: ControllerRequest, res: ControllerResp
     const oxyUserId = req.user?.id || req.user?._id || req.userId;
     if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
     const { Profile } = require('../../models');
-    const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
+    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
     if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
     const property = await Property.findById(propertyId);
     if (!property) return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));

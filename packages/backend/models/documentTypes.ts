@@ -141,6 +141,7 @@ export type IProfile = Document & {
 
 export interface IProfileModel extends Model<IProfile> {
   findActiveByOxyUserId(oxyUserId: string, select?: string | null): Promise<IProfile | null>;
+  findOrCreateByOxyUserId(oxyUserId: string): Promise<IProfile>;
   findByOxyUserId(oxyUserId: string, select?: string | null): Promise<IProfile[]>;
   findByOxyUserIdAndType(oxyUserId: string, profileType: string): Promise<IProfile | null>;
   findActiveByOxyUserIdAndUpdate(
