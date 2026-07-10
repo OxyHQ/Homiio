@@ -29,7 +29,7 @@ import {
   type ListingFetchRuntimeHandle,
   type ProviderRegistry,
 } from '@homiio/listing-providers';
-import { PropertyStatus } from '@homiio/shared-types';
+import { PropertyStatus, type ProviderId } from '@homiio/shared-types';
 import config from './config';
 import database from './database/connection';
 import { Logger } from './utils/logger';
@@ -239,7 +239,7 @@ async function removeDiscoverJobOrForceFail(
 /** Drop pre per-city discover scopes that can block the queue for hours. */
 async function purgeLegacyMarketWideDiscoverJobs(
   discoverQueue: BullQueue<DiscoverJobData>,
-  provider: string,
+  provider: ProviderId,
 ): Promise<void> {
   const legacyScope: DiscoverJobData = { provider, market: 'ES' };
   const legacyId = discoverJobId(legacyScope);
@@ -307,7 +307,7 @@ async function startBullMq(): Promise<() => Promise<void>> {
 
   // Purge ghost/scoped jobs before the discover worker can claim them.
   await purgeLegacyFotocasaDiscoverJobs(discoverQueue);
-  for (const provider of ['habitaclia', 'idealista'] as const) {
+  for (const provider of ['habitaclia', 'idealista'] as const satisfies readonly ProviderId[]) {
     await purgeLegacyMarketWideDiscoverJobs(discoverQueue, provider);
   }
   await releaseStaleActiveDiscoverJobs(discoverQueue);
