@@ -27,7 +27,7 @@ import {
     DetailIconGrid,
     DetailIconRow,
 } from '@/components/property/DetailIconGrid';
-import { getIconArt } from '@/constants/amenities';
+import { getIconArt } from '@/constants/iconArt';
 
 type FurnishedStatus = 'furnished' | 'partially_furnished' | 'unfurnished';
 

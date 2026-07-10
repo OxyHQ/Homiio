@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import type { ImageSourcePropType } from 'react-native';
 
 export interface Amenity {
   id: string;
@@ -1197,34 +1196,6 @@ export const AMENITIES: Amenity[] = [
 export const getAmenityById = (id: string): Amenity | undefined => {
   return AMENITIES.find((amenity) => amenity.id === id);
 };
-
-/**
- * Isometric PNG art keyed by id — catalog amenity ids (wifi, balcony, …) plus a
- * few property-feature ids (e.g. `furnished`) that aren't catalog amenities. Ids
- * without art fall back to an Ionicons glyph.
- */
-export const ICON_ART: Partial<Record<string, ImageSourcePropType>> = {
-  wifi: require('@/assets/amenities/wifi.png'),
-  heating: require('@/assets/amenities/heating.png'),
-  washing_machine: require('@/assets/amenities/washing_machine.png'),
-  dishwasher: require('@/assets/amenities/dishwasher.png'),
-  air_conditioning: require('@/assets/amenities/air_conditioning.png'),
-  elevator: require('@/assets/amenities/elevator.png'),
-  balcony: require('@/assets/amenities/balcony.png'),
-  gym: require('@/assets/amenities/gym.png'),
-  secure_entry: require('@/assets/amenities/secure_entry.png'),
-  parking_space: require('@/assets/amenities/parking_space.png'),
-  kitchen: require('@/assets/amenities/kitchen.png'),
-  swimming_pool: require('@/assets/amenities/swimming_pool.png'),
-  smart_home: require('@/assets/amenities/smart_home.png'),
-  rooftop_deck: require('@/assets/amenities/rooftop_deck.png'),
-  refrigerator: require('@/assets/amenities/refrigerator.png'),
-  pet_friendly: require('@/assets/amenities/pet_friendly.png'),
-  furnished: require('@/assets/amenities/furnished.png'),
-};
-
-export const getIconArt = (id: string): ImageSourcePropType | undefined =>
-  ICON_ART[id];
 
 /**
  * A resolved amenity entry for display: keeps the raw id (so unknown ids still

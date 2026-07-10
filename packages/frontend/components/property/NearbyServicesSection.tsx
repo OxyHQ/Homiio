@@ -23,7 +23,7 @@
  * `AmenitiesGrid`) — no cards, no shadows.
  */
 import React, { useMemo } from 'react';
-import { StyleSheet, type ImageSourcePropType } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -37,6 +37,7 @@ import {
   DetailIconGrid,
   DetailIconRow,
 } from '@/components/property/DetailIconGrid';
+import { getIconArt } from '@/constants/iconArt';
 import { useNearbyServices } from '@/hooks';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
@@ -56,68 +57,55 @@ const SERVICE_META: Record<
   {
     icon: React.ComponentProps<typeof Ionicons>['name'];
     labelKey: string;
-    image: ImageSourcePropType;
   }
 > = {
   pharmacy: {
     icon: 'medkit-outline',
     labelKey: 'property.nearbyServices.labels.pharmacy',
-    image: require('@/assets/nearby/pharmacy.png'),
   },
   school: {
     icon: 'school-outline',
     labelKey: 'property.nearbyServices.labels.school',
-    image: require('@/assets/nearby/school.png'),
   },
   hospital: {
     icon: 'medical-outline',
     labelKey: 'property.nearbyServices.labels.hospital',
-    image: require('@/assets/nearby/hospital.png'),
   },
   police: {
     icon: 'shield-outline',
     labelKey: 'property.nearbyServices.labels.police',
-    image: require('@/assets/nearby/police.png'),
   },
   fire_station: {
     icon: 'flame-outline',
     labelKey: 'property.nearbyServices.labels.fire_station',
-    image: require('@/assets/nearby/fire_station.png'),
   },
   supermarket: {
     icon: 'cart-outline',
     labelKey: 'property.nearbyServices.labels.supermarket',
-    image: require('@/assets/nearby/supermarket.png'),
   },
   transit: {
     icon: 'bus-outline',
     labelKey: 'property.nearbyServices.labels.transit',
-    image: require('@/assets/nearby/transit.png'),
   },
   park: {
     icon: 'leaf-outline',
     labelKey: 'property.nearbyServices.labels.park',
-    image: require('@/assets/nearby/park.png'),
   },
   bank: {
     icon: 'card-outline',
     labelKey: 'property.nearbyServices.labels.bank',
-    image: require('@/assets/nearby/bank.png'),
   },
   restaurant: {
     icon: 'restaurant-outline',
     labelKey: 'property.nearbyServices.labels.restaurant',
-    image: require('@/assets/nearby/restaurant.png'),
   },
   gym: {
     icon: 'barbell-outline',
     labelKey: 'property.nearbyServices.labels.gym',
-    image: require('@/assets/nearby/gym.png'),
   },
   spa: {
     icon: 'flower-outline',
     labelKey: 'property.nearbyServices.labels.spa',
-    image: require('@/assets/nearby/spa.png'),
   },
 };
 
@@ -157,7 +145,7 @@ const ServiceRow: React.FC<ServiceRowProps> = ({ category, label, distanceLabel 
     <DetailIconRow
       icon={
         <DetailIcon
-          image={SERVICE_META[category.key].image}
+          image={getIconArt(category.key)}
           fallbackIcon={SERVICE_META[category.key].icon}
           muted={!present}
         />

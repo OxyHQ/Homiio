@@ -34,11 +34,11 @@ import {
 } from '@/components/property/DetailIconGrid';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
+import { getIconArt } from '@/constants/iconArt';
 import {
   type Amenity,
   type AmenityGroup,
   type ResolvedAmenity,
-  getIconArt,
   groupAmenitiesByCategory,
   UNCATEGORIZED_AMENITY_ID,
 } from '@/constants/amenities';
