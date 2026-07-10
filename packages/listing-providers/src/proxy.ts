@@ -117,16 +117,39 @@ export function createProxySessionId(): string {
   return randomBytes(6).toString('hex');
 }
 
+/**
+ * DataImpulse geo targeting: append `__cr.<cc>` to the login when not already
+ * present (see https://docs.dataimpulse.com/proxies/parameters).
+ */
+export function withProxyCountryUsername(username: string, countryCode?: string): string {
+  const country = countryCode?.trim().toLowerCase();
+  if (!country || /__cr\./i.test(username)) return username;
+  return `${username}__cr.${country}`;
+}
+
+function resolveProxyUsername(
+  config: ResidentialProxyConfig,
+  sessionId?: string,
+  countryCode?: string,
+): string {
+  let username = withProxyCountryUsername(config.username, countryCode);
+  if (sessionId !== undefined) {
+    username = withStickySessionUsername(username, sessionId);
+  }
+  return username;
+}
+
 /** Map structured config to Playwright proxy options (optional sticky session). */
 export function toPlaywrightProxy(
   config: ResidentialProxyConfig,
   sessionId?: string,
+  countryCode?: string,
 ): PlaywrightProxyOptions {
-  const username =
-    sessionId !== undefined
-      ? withStickySessionUsername(config.username, sessionId)
-      : config.username;
-  return { server: config.server, username, password: config.password };
+  return {
+    server: config.server,
+    username: resolveProxyUsername(config, sessionId, countryCode),
+    password: config.password,
+  };
 }
 
 /**
@@ -136,13 +159,10 @@ export function toPlaywrightProxy(
 export function toEmbeddedProxyUrl(
   config: ResidentialProxyConfig,
   sessionId?: string,
+  countryCode?: string,
 ): string {
-  const username =
-    sessionId !== undefined
-      ? withStickySessionUsername(config.username, sessionId)
-      : config.username;
   const embedded = new URL(config.server);
-  embedded.username = username;
+  embedded.username = resolveProxyUsername(config, sessionId, countryCode);
   embedded.password = config.password;
   return embedded.toString();
 }
@@ -183,8 +203,9 @@ const proxiedFetchCache = new Map<string, Promise<ProxiedFetch>>();
 export async function createProxiedFetch(
   config: ResidentialProxyConfig,
   sessionId?: string,
+  countryCode?: string,
 ): Promise<ProxiedFetch> {
-  const embedded = toEmbeddedProxyUrl(config, sessionId);
+  const embedded = toEmbeddedProxyUrl(config, sessionId, countryCode);
   const cached = proxiedFetchCache.get(embedded);
   if (cached) return cached;
 
