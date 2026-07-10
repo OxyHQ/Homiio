@@ -7,18 +7,41 @@
 import { asNumberEu, asString, isRecord } from './guards';
 import type { EurSchemaListing } from './jsonLd';
 
-export const NEXT_DATA_RE =
-  /<script[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i;
+function extractScriptBodyById(html: string, scriptId: string): string | undefined {
+  for (const quote of ['"', "'"] as const) {
+    const marker = `id=${quote}${scriptId}${quote}`;
+    const idx = html.indexOf(marker);
+    if (idx < 0) continue;
+    const openEnd = html.indexOf('>', idx + marker.length);
+    if (openEnd < 0) continue;
+    const close = html.indexOf('</script>', openEnd + 1);
+    if (close < 0) continue;
+    const body = html.slice(openEnd + 1, close).trim();
+    if (body.length > 0) return body;
+  }
+  return undefined;
+}
 
-export const PAGE_MODEL_RE =
-  /<script[^>]*id=["']__PAGE_MODEL__["'][^>]*>([\s\S]*?)<\/script>/i;
-
-const PRELOADED_STATE_RE =
-  /(?:window\.)?__PRELOADED_STATE__\s*=\s*(\{[\s\S]*?\})\s*;?\s*(?:<\/script>|$)/i;
+function extractBalancedJsonAfter(html: string, marker: string): string | undefined {
+  const idx = html.indexOf(marker);
+  if (idx < 0) return undefined;
+  const braceStart = html.indexOf('{', idx + marker.length);
+  if (braceStart < 0) return undefined;
+  let depth = 0;
+  for (let i = braceStart; i < html.length; i += 1) {
+    const ch = html[i];
+    if (ch === '{') depth += 1;
+    else if (ch === '}') {
+      depth -= 1;
+      if (depth === 0) return html.slice(braceStart, i + 1).trim();
+    }
+  }
+  return undefined;
+}
 
 export function parseNextData(html: string): Record<string, unknown> | undefined {
-  const match = NEXT_DATA_RE.exec(html) ?? PAGE_MODEL_RE.exec(html);
-  const body = match?.[1]?.trim();
+  const body =
+    extractScriptBodyById(html, '__NEXT_DATA__') ?? extractScriptBodyById(html, '__PAGE_MODEL__');
   if (!body) return undefined;
   try {
     const parsed: unknown = JSON.parse(body);
@@ -31,8 +54,9 @@ export function parseNextData(html: string): Record<string, unknown> | undefined
 export const extractNextData = parseNextData;
 
 export function parsePreloadedState(html: string): Record<string, unknown> | undefined {
-  const match = PRELOADED_STATE_RE.exec(html);
-  const body = match?.[1]?.trim();
+  const body =
+    extractBalancedJsonAfter(html, '__PRELOADED_STATE__ =') ??
+    extractBalancedJsonAfter(html, 'window.__PRELOADED_STATE__ =');
   if (!body) return undefined;
   try {
     const parsed: unknown = JSON.parse(body);

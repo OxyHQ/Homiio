@@ -67,6 +67,28 @@ function asNumber(value: unknown): number | undefined {
   return undefined;
 }
 
+function htmlFragmentToText(html: string): string {
+  let text = '';
+  let inTag = false;
+  for (let i = 0; i < html.length; i += 1) {
+    const ch = html[i];
+    if (ch === '<') {
+      const rest = html.slice(i).toLowerCase();
+      if (rest.startsWith('<br') || rest.startsWith('<br/') || rest.startsWith('<br ')) {
+        text += '\n';
+      }
+      inTag = true;
+      continue;
+    }
+    if (ch === '>') {
+      inTag = false;
+      continue;
+    }
+    if (!inTag) text += ch;
+  }
+  return text.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
 /** Strip accents and lowercase for alias lookup / slugging. */
 function deaccent(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
@@ -340,10 +362,10 @@ export function parseHabitacliaDetailHtml(html: string, url: string): Habitaclia
   const title =
     firstMatch(html, /<h1[^>]*>([^<]+)/i) ?? metaContent(html, 'og:title') ?? metaContent(html, 'title');
   const description =
-    firstMatch(html, /id=["']js-detail-description["'][^>]*>([\s\S]*?)<\/p>/i)
-      ?.replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<[^>]+>/g, '')
-      .trim() ?? metaContent(html, 'description');
+    (() => {
+      const fragment = firstMatch(html, /id=["']js-detail-description["'][^>]*>([\s\S]*?)<\/p>/i);
+      return fragment ? htmlFragmentToText(fragment) : undefined;
+    })() ?? metaContent(html, 'description');
 
   const city =
     firstMatch(html, /<h1[^>]*>[^<]*\ben\s+([A-Za-zÀ-ÿ\s.'-]+)\s*<\/h1>/i) ??

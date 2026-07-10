@@ -146,14 +146,9 @@ export function extractSelogerInitialData(html: string): unknown | undefined {
   );
   if (!match?.[1]) return undefined;
   try {
-    const unescaped = match[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\').replace(/\\n/g, '\n');
-    return JSON.parse(unescaped) as unknown;
+    return JSON.parse(JSON.parse(`"${match[1]}"`) as string) as unknown;
   } catch {
-    try {
-      return JSON.parse(JSON.parse(`"${match[1]}"`) as string) as unknown;
-    } catch {
-      return undefined;
-    }
+    return undefined;
   }
 }
 
