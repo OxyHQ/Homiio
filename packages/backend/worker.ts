@@ -366,13 +366,20 @@ async function startBullMq(): Promise<() => Promise<void>> {
     await logQueueCounts(discoverQueue, fetchQueue);
     for (const data of bootDiscoverJobs()) {
       const jobId = discoverJobId(data);
-      // Boot uses deterministic ids for dedup; remove a prior completed/failed
+      // Boot uses deterministic ids for dedup. Remove only a prior completed/failed
       // job so a redeploy actually re-runs discover (otherwise BullMQ keeps the
       // stale failure from an older image, e.g. pre-HTML-scrape Blueground).
+      //
+      // Do NOT remove a job still `waiting`/`delayed`: with ~290 per-city scopes,
+      // discover concurrency 1, and frequent redeploys, removing + re-adding every
+      // boot reshuffles the queue so a short-lived worker only ever drains the
+      // front — later scopes (e.g. habitaclia) starve indefinitely. Leaving
+      // pending jobs in place (the `add` is a no-op on an existing id) lets the
+      // worker advance through the backlog across restarts instead of resetting it.
       const existing = await discoverQueue.getJob(jobId);
       if (existing) {
         const state = await existing.getState();
-        if (state === 'completed' || state === 'failed' || state === 'waiting' || state === 'delayed') {
+        if (state === 'completed' || state === 'failed') {
           await existing.remove();
         }
       }

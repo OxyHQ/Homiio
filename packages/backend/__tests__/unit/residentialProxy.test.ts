@@ -10,7 +10,10 @@ import {
   createListingFetchRuntime,
   createListingFetchRuntimeFromEnv,
   parseResidentialProxyUrl,
+  proxyFormatFromEnv,
+  resolveProxyCredentials,
   toPlaywrightProxy,
+  withPasswordParams,
   withProxyCountryUsername,
   withStickySessionUsername,
   type PlaywrightModule,
@@ -91,8 +94,9 @@ describe('withProxyCountryUsername', () => {
   });
 });
 
-describe('toPlaywrightProxy', () => {
+describe('toPlaywrightProxy (dataimpulse dialect)', () => {
   it('maps config to Playwright proxy options', () => {
+    process.env.LISTING_PROXY_FORMAT = 'dataimpulse';
     const config = parseResidentialProxyUrl(PROXY_URL);
     expect(config).toBeDefined();
     if (!config) return;
@@ -105,6 +109,76 @@ describe('toPlaywrightProxy', () => {
     expect(toPlaywrightProxy(config, 'sess1', 'es').username).toBe(
       'mylogin__cr.es;sessid.sess1',
     );
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Evomi / IPRoyal password-parameter dialect                                 */
+/* -------------------------------------------------------------------------- */
+
+describe('proxyFormatFromEnv', () => {
+  it('defaults to password (Evomi/IPRoyal) and opts into dataimpulse only on exact match', () => {
+    delete process.env.LISTING_PROXY_FORMAT;
+    expect(proxyFormatFromEnv()).toBe('password');
+    process.env.LISTING_PROXY_FORMAT = 'dataimpulse';
+    expect(proxyFormatFromEnv()).toBe('dataimpulse');
+    process.env.LISTING_PROXY_FORMAT = 'DATAIMPULSE';
+    expect(proxyFormatFromEnv()).toBe('dataimpulse');
+    process.env.LISTING_PROXY_FORMAT = 'something-else';
+    expect(proxyFormatFromEnv()).toBe('password');
+  });
+});
+
+describe('withPasswordParams', () => {
+  it('appends underscore country + session params to the password (Evomi/IPRoyal)', () => {
+    expect(withPasswordParams('pass')).toBe('pass');
+    expect(withPasswordParams('pass', undefined, 'es')).toBe('pass_country-es');
+    expect(withPasswordParams('pass', 'abc123')).toBe('pass_session-abc123');
+    expect(withPasswordParams('pass', 'abc123', 'es')).toBe('pass_country-es_session-abc123');
+  });
+
+  it('ignores an invalid country code', () => {
+    expect(withPasswordParams('pass', 'abc123', 'spain')).toBe('pass_session-abc123');
+  });
+});
+
+describe('resolveProxyCredentials', () => {
+  const config = { server: 'http://rp.evomi.com:1000', username: 'user', password: 'pass' };
+
+  it('password format: params ride on the password, username untouched', () => {
+    expect(resolveProxyCredentials(config, 'sess1', 'es', 'password')).toEqual({
+      username: 'user',
+      password: 'pass_country-es_session-sess1',
+    });
+  });
+
+  it('dataimpulse format: params ride on the username, password untouched', () => {
+    expect(resolveProxyCredentials(config, 'sess1', 'es', 'dataimpulse')).toEqual({
+      username: 'user__cr.es;sessid.sess1',
+      password: 'pass',
+    });
+  });
+
+  it('honours LISTING_PROXY_FORMAT when the format arg is omitted', () => {
+    process.env.LISTING_PROXY_FORMAT = 'password';
+    expect(resolveProxyCredentials(config, 'sess1', 'es')).toEqual({
+      username: 'user',
+      password: 'pass_country-es_session-sess1',
+    });
+  });
+});
+
+describe('toPlaywrightProxy — password dialect', () => {
+  it('embeds geo + sticky on the password when LISTING_PROXY_FORMAT=password', () => {
+    process.env.LISTING_PROXY_FORMAT = 'password';
+    const config = parseResidentialProxyUrl('http://evomiuser:evomipass@rp.evomi.com:1000');
+    expect(config).toBeDefined();
+    if (!config) return;
+    expect(toPlaywrightProxy(config, 'sess1', 'es')).toEqual({
+      server: 'http://rp.evomi.com:1000',
+      username: 'evomiuser',
+      password: 'evomipass_country-es_session-sess1',
+    });
   });
 });
 
@@ -183,6 +257,7 @@ function fakePlaywrightWithRoutes(html: string): { module: PlaywrightModule; cou
 
 describe('PlaywrightBrowserPool — residential proxy + asset blocking', () => {
   it('passes proxy into context and aborts heavy asset types when blockAssets is on', async () => {
+    process.env.LISTING_PROXY_FORMAT = 'dataimpulse';
     const config = parseResidentialProxyUrl(PROXY_URL);
     expect(config).toBeDefined();
     if (!config) return;

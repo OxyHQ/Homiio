@@ -115,6 +115,45 @@ export function proxyGeoCountryFromEnv(): string | undefined {
 }
 
 /**
+ * How a provider expects geo + sticky parameters to be encoded in the proxy
+ * credentials. Providers split into two families:
+ * - `dataimpulse`: parameters ride on the USERNAME (`login__cr.es;sessid.<id>`).
+ * - `password`: parameters ride on the PASSWORD, underscore-separated
+ *   (`password_country-es_session-<id>`). This covers Evomi and IPRoyal, which
+ *   share the exact same syntax.
+ */
+export type ProxyCredentialFormat = 'dataimpulse' | 'password';
+
+/**
+ * Provider credential dialect from `LISTING_PROXY_FORMAT`. Defaults to
+ * `password` (Evomi / IPRoyal, the active residential proxy family); set
+ * `LISTING_PROXY_FORMAT=dataimpulse` to opt back into username-encoded params.
+ */
+export function proxyFormatFromEnv(): ProxyCredentialFormat {
+  return process.env.LISTING_PROXY_FORMAT?.trim().toLowerCase() === 'dataimpulse'
+    ? 'dataimpulse'
+    : 'password';
+}
+
+/**
+ * Evomi / IPRoyal style: geo + sticky parameters appended to the PASSWORD,
+ * underscore-separated (`password_country-es_session-<id>`). The username stays
+ * untouched. Session ids are alphanumeric (IPRoyal requires it); the shared
+ * {@link createProxySessionId} hex ids satisfy both providers.
+ */
+export function withPasswordParams(
+  basePassword: string,
+  sessionId?: string,
+  countryCode?: string,
+): string {
+  const params: string[] = [];
+  const country = countryCode?.trim().toLowerCase();
+  if (country && /^[a-z]{2}$/.test(country)) params.push(`country-${country}`);
+  if (sessionId) params.push(`session-${sessionId}`);
+  return params.length > 0 ? `${basePassword}_${params.join('_')}` : basePassword;
+}
+
+/**
  * DataImpulse sticky sessions: `login__cr.<cc>;sessid.<id>` (or `login__sessid.<id>`
  * without geo). The legacy `-session-<id>` suffix returns HTTP 407 from DataImpulse.
  */
@@ -145,19 +184,29 @@ export function withProxyCountryUsername(username: string, countryCode?: string)
   return `${username}__cr.${country}`;
 }
 
-function resolveProxyUsername(
+/**
+ * Resolve `{ username, password }` for the active provider dialect. DataImpulse
+ * encodes geo + sticky on the username; Evomi/IPRoyal encode them on the
+ * password. `format` defaults to the env-selected dialect.
+ */
+export function resolveProxyCredentials(
   config: ResidentialProxyConfig,
   sessionId?: string,
   countryCode?: string,
-): string {
-  if (sessionId === undefined) {
-    return withProxyCountryUsername(config.username, countryCode);
+  format: ProxyCredentialFormat = proxyFormatFromEnv(),
+): { username: string; password: string } {
+  const country = countryCode ?? proxyGeoCountryFromEnv();
+  if (format === 'password') {
+    return {
+      username: config.username,
+      password: withPasswordParams(config.password, sessionId, country),
+    };
   }
-  return withStickySessionUsername(
-    config.username,
-    sessionId,
-    countryCode ?? proxyGeoCountryFromEnv(),
-  );
+  const username =
+    sessionId === undefined
+      ? withProxyCountryUsername(config.username, country)
+      : withStickySessionUsername(config.username, sessionId, country);
+  return { username, password: config.password };
 }
 
 /** Map structured config to Playwright proxy options (optional sticky session). */
@@ -166,11 +215,8 @@ export function toPlaywrightProxy(
   sessionId?: string,
   countryCode?: string,
 ): PlaywrightProxyOptions {
-  return {
-    server: config.server,
-    username: resolveProxyUsername(config, sessionId, countryCode),
-    password: config.password,
-  };
+  const { username, password } = resolveProxyCredentials(config, sessionId, countryCode);
+  return { server: config.server, username, password };
 }
 
 /**
@@ -183,8 +229,9 @@ export function toEmbeddedProxyUrl(
   countryCode?: string,
 ): string {
   const embedded = new URL(config.server);
-  embedded.username = resolveProxyUsername(config, sessionId, countryCode);
-  embedded.password = config.password;
+  const { username, password } = resolveProxyCredentials(config, sessionId, countryCode);
+  embedded.username = username;
+  embedded.password = password;
   return embedded.toString();
 }
 
