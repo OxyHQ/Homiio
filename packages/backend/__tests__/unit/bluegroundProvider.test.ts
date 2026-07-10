@@ -9,6 +9,7 @@
 
 import {
   BluegroundProvider,
+  BluegroundPartnerListingError,
   BLUEGROUND_FIXTURES,
   coerceBluegroundListing,
 } from '@homiio/listing-providers';
@@ -57,6 +58,26 @@ describe('BluegroundProvider', () => {
     expect(listing.address.city).toBe('New York');
     expect(listing.address.countryCode).toBe('US');
     expect(listing.furnishedStatus).toBe('furnished');
+  });
+
+  it('rejects partner-network payloads in normalize (no false monthly from lowestRent)', () => {
+    const partnerPayload = {
+      ...BLUEGROUND_FIXTURES[0],
+      id: 'bcn-1549599p',
+      businessModel: 'PARTNERS_NETWORK',
+      partnerSlug: 'outsite1',
+      monthlyRent: { amount: 11628, currency: 'EUR' },
+    };
+    expect(() =>
+      provider.normalize({
+        ref: {
+          provider: 'blueground',
+          sourceId: 'bcn-1549599p',
+          url: 'https://www.theblueground.com/p/furnished-apartments/bcn-1549599p',
+        },
+        payload: partnerPayload,
+      }),
+    ).toThrow(BluegroundPartnerListingError);
   });
 
   it('coerces a valid payload and rejects an invalid one', () => {

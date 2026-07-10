@@ -139,6 +139,8 @@ export interface FetchRuntimeInit {
   signal?: AbortSignal;
   /** Per-request timeout in milliseconds. */
   timeoutMs?: number;
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD';
+  body?: string;
 }
 
 /**

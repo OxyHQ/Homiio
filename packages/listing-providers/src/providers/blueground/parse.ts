@@ -4,6 +4,11 @@
  * Blueground retired the unauthenticated `/api/v2/properties` JSON search API.
  * Discovery and detail acquisition now scrape SSR city pages and property detail
  * pages, extracting embedded JSON fields plus OpenGraph metadata.
+ *
+ * Partner-network inventory (`businessModel: PARTNERS_NETWORK` / `partnerSlug`)
+ * does not expose a trustworthy firm monthly rent — Blueground UI says "add
+ * dates to see prices" and embedded `lowestRent` is unreliable. Those listings
+ * are skipped rather than published with a misleading monthlyAmount.
  */
 
 import type { ExternalListingRef } from '../../types';
@@ -14,6 +19,15 @@ const BASE_HOST = 'https://www.theblueground.com';
 /** Property detail URLs: `/p/furnished-apartments/<city>-<id>p`. */
 const DETAIL_URL_RE =
   /https?:\/\/(?:www\.)?theblueground\.com\/p\/furnished-apartments\/[a-z0-9-]+/gi;
+
+/** Explicit lowestRent object — never a bare first `"amount"` match. */
+const LOWEST_RENT_RE =
+  /"lowestRent"\s*:\s*\{\s*"amount"\s*:\s*(\d+)\s*,\s*"currency"\s*:\s*"([A-Z]{3})"/i;
+
+const BUSINESS_MODEL_RE = /"businessModel"\s*:\s*"([^"]+)"/;
+const PARTNER_SLUG_RE = /"partnerSlug"\s*:\s*"([^"]*)"/;
+/** Property inventory source (not photo/CDN source fields). */
+const PROPERTY_SOURCE_RE = /"source"\s*:\s*"(partner_network)"/;
 
 /** Map Blueground `cityCode` tokens to a display city + country metadata. */
 const CITY_CODE_LOOKUP: Readonly<
@@ -29,6 +43,17 @@ const CITY_CODE_LOOKUP: Readonly<
   WDC: { city: 'Washington', country: 'United States', countryCode: 'US', region: 'District of Columbia' },
 };
 
+/** Raised when a Blueground listing is partner inventory without a firm monthly rent. */
+export class BluegroundPartnerListingError extends Error {
+  constructor(
+    readonly sourceId: string,
+    readonly reason: string,
+  ) {
+    super(`blueground: skipping partner listing ${sourceId}: ${reason}`);
+    this.name = 'BluegroundPartnerListingError';
+  }
+}
+
 function readMeta(html: string, property: string): string | undefined {
   const match = html.match(new RegExp(`property="${property}" content="([^"]+)"`, 'i'));
   return match?.[1]?.trim() || undefined;
@@ -38,6 +63,46 @@ function readJsonField(html: string, field: string): string | undefined {
   const match = html.match(new RegExp(`"${field}"\\s*:\\s*("([^"]+)"|(\\d+))`));
   if (!match) return undefined;
   return match[2] ?? match[3];
+}
+
+/** Read the embedded `lowestRent` object only — never the first bare `"amount"`. */
+export function readBluegroundLowestRent(
+  html: string,
+): { amount: number; currency: string } | undefined {
+  const match = html.match(LOWEST_RENT_RE);
+  if (!match?.[1] || !match[2]) return undefined;
+  const amount = Number.parseInt(match[1], 10);
+  if (!Number.isFinite(amount) || amount <= 0) return undefined;
+  return { amount, currency: match[2].toUpperCase() };
+}
+
+export interface BluegroundPartnerSignals {
+  businessModel?: string;
+  partnerSlug?: string;
+  propertySource?: string;
+}
+
+/** Extract partner / inventory signals from detail HTML. */
+export function readBluegroundPartnerSignals(html: string): BluegroundPartnerSignals {
+  const businessModel = html.match(BUSINESS_MODEL_RE)?.[1];
+  const partnerSlug = html.match(PARTNER_SLUG_RE)?.[1];
+  const propertySource = html.match(PROPERTY_SOURCE_RE)?.[1];
+  return {
+    businessModel: businessModel || undefined,
+    partnerSlug: partnerSlug || undefined,
+    propertySource: propertySource || undefined,
+  };
+}
+
+/**
+ * Partner-network inventory: dates required for price; `lowestRent` is not a
+ * firm monthly quote. Skip rather than publish a misleading monthlyAmount.
+ */
+export function isBluegroundPartnerListing(signals: BluegroundPartnerSignals): boolean {
+  if (signals.businessModel === 'PARTNERS_NETWORK') return true;
+  if (signals.propertySource === 'partner_network') return true;
+  if (signals.partnerSlug && signals.partnerSlug.trim().length > 0) return true;
+  return false;
 }
 
 function readPhotos(html: string): BluegroundRawPhoto[] {
@@ -88,16 +153,31 @@ function parseOgTitle(title: string | undefined): { street?: string; neighborhoo
 
 /** Parse a property detail page into the provider raw payload. */
 export function parseBluegroundDetail(html: string, ref: ExternalListingRef): BluegroundRawListing {
-  const amountRaw = readJsonField(html, 'amount');
-  const amount = amountRaw ? Number.parseInt(amountRaw, 10) : Number.NaN;
-  const currency = readJsonField(html, 'currency') ?? 'USD';
+  const partnerSignals = readBluegroundPartnerSignals(html);
+  if (isBluegroundPartnerListing(partnerSignals)) {
+    const label =
+      partnerSignals.partnerSlug?.trim() ||
+      partnerSignals.businessModel ||
+      partnerSignals.propertySource ||
+      'partner';
+    throw new BluegroundPartnerListingError(
+      ref.sourceId,
+      `unreliable lowestRent for ${label} (dates required for price)`,
+    );
+  }
+
+  const lowestRent = readBluegroundLowestRent(html);
+  if (!lowestRent) {
+    throw new Error(`blueground: missing lowestRent at ${ref.url}`);
+  }
+
   const cityCode = readJsonField(html, 'cityCode')?.toUpperCase();
   const cityMeta = cityCode ? CITY_CODE_LOOKUP[cityCode] : undefined;
   const ogTitle = readMeta(html, 'og:title');
   const ogLocation = parseOgTitle(ogTitle);
   const photos = readPhotos(html);
 
-  if (!Number.isFinite(amount) || photos.length === 0) {
+  if (photos.length === 0) {
     throw new Error(`blueground: insufficient detail data at ${ref.url}`);
   }
 
@@ -117,7 +197,9 @@ export function parseBluegroundDetail(html: string, ref: ExternalListingRef): Bl
     title: ogTitle,
     description,
     propertyType: readJsonField(html, 'propertyType') ?? 'apartment',
-    monthlyRent: { amount, currency },
+    businessModel: partnerSignals.businessModel,
+    partnerSlug: partnerSignals.partnerSlug,
+    monthlyRent: { amount: lowestRent.amount, currency: lowestRent.currency },
     bedrooms: bedrooms ? Number.parseInt(bedrooms, 10) : undefined,
     bathrooms: bathrooms ? Number.parseInt(bathrooms, 10) : undefined,
     sizeSqm: sizeSqm ? Number.parseInt(sizeSqm, 10) : undefined,

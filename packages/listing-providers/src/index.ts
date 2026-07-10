@@ -23,6 +23,30 @@ export * from './managed';
 export * from './registry';
 export * from './metrics';
 export * from './strategy';
+
+export {
+  validateMonthlyRentAmount,
+  validateNightlyRateAmount,
+  validateSalePriceAmount,
+  validateOfferingPrices,
+  type MonthlyRentPriceContext,
+  type OfferingPriceInput,
+} from './parse/price';
+export {
+  ListingValidationError,
+  validateNormalizedListing,
+  DEFAULT_MAX_REMOTE_IMAGES,
+  type ValidateNormalizedListingOptions,
+} from './parse/listing';
+export {
+  assertHousingListing,
+  isHousingCategory,
+  isHousingCategoryUrl,
+  NonHousingListingError,
+  type HousingSignalInput,
+} from './parse/classifieds';
+export { isRecord, asString, asNumberEu, asNumberUs, deaccent, firstString } from './parse/guards';
+
 export { FixtureProvider } from './providers/fixture';
 export { FIXTURE_LISTINGS } from './providers/fixture/fixtures';
 export type { FixtureRawListing, FixtureRawImage } from './providers/fixture/fixtures';
@@ -34,7 +58,17 @@ export {
   habitacliaSourceIdFromUrl,
 } from './providers/habitaclia/parse';
 export {
+  HABITACLIA_CONTENT_SELECTOR,
+  HABITACLIA_LISTAINMUEBLES_URL,
+  buildHabitacliaListainmueblesBody,
+  extractHabitacliaListadoFormFields,
+  habitacliaWarmSearchUrl,
+  isHabitacliaListainmueblesChallenge,
+  parseHabitacliaListainmuebles,
+} from './providers/habitaclia/listainmuebles';
+export {
   HABITACLIA_FIXTURE_DETAIL_HTML,
+  HABITACLIA_FIXTURE_DETAIL_HTML_LIVE,
   HABITACLIA_FIXTURE_SEARCH_HTML,
 } from './providers/habitaclia/fixtures';
 export type {
@@ -42,7 +76,14 @@ export type {
   HabitacliaRawImage,
 } from './providers/habitaclia/fixtures';
 
-export { BluegroundProvider, coerceBluegroundListing } from './providers/blueground';
+export {
+  BluegroundProvider,
+  coerceBluegroundListing,
+  BluegroundPartnerListingError,
+  isBluegroundPartnerListing,
+  readBluegroundLowestRent,
+  readBluegroundPartnerSignals,
+} from './providers/blueground';
 export {
   parseBluegroundDetail,
   parseBluegroundSearch,
@@ -94,6 +135,49 @@ export {
   FOTOCASA_FIXTURE_REAL_ESTATE_LISTING_HTML,
   FOTOCASA_FIXTURE_NEXT_DATA_HTML,
 } from './providers/fotocasa/fixtures';
+
+// FR market — Bien'ici / Leboncoin (housing 9/10) / SeLoger. All OFF by default.
+export {
+  BieniciProvider,
+  isBieniciChallenge,
+  parseBieniciDetail,
+  parseBieniciSearch,
+  resolveBieniciPrice,
+  bieniciSourceIdFromUrl,
+} from './providers/fr/bienici';
+export {
+  BIENICI_BASE_URL,
+  BIENICI_FIXTURE_SEARCH_JSON,
+  BIENICI_FIXTURE_DETAIL_JSON,
+  BIENICI_FIXTURE_BUY_DETAIL_JSON,
+} from './providers/fr/bienici/fixtures';
+export { contactFromBieniciRelative } from './providers/fr/contact';
+export {
+  LeboncoinProvider,
+  isLeboncoinChallenge,
+  parseLeboncoinDetail,
+  parseLeboncoinSearch,
+  leboncoinSourceIdFromUrl,
+} from './providers/fr/leboncoin';
+export {
+  LEBONCOIN_BASE_URL,
+  LEBONCOIN_HOUSING_CATEGORY_IDS,
+  LEBONCOIN_FIXTURE_FINDER_JSON,
+  LEBONCOIN_FIXTURE_DETAIL_JSON,
+} from './providers/fr/leboncoin/fixtures';
+export {
+  SelogerProvider,
+  isSelogerChallenge,
+  parseSelogerDetail,
+  parseSelogerSearch,
+  selogerSourceIdFromUrl,
+  extractSelogerInitialData,
+} from './providers/fr/seloger';
+export {
+  SELOGER_BASE_URL,
+  SELOGER_FIXTURE_SEARCH_HTML,
+  SELOGER_FIXTURE_DETAIL_HTML,
+} from './providers/fr/seloger/fixtures';
 
 export {
   extractEsSchemaListings,
@@ -362,13 +446,6 @@ export {
   milanunciosListAjaxUrl,
 } from './providers/milanuncios/fixtures';
 
-export {
-  assertHousingListing,
-  isHousingCategory,
-  isHousingCategoryUrl,
-  NonHousingListingError,
-} from './providers/es/housing';
-
 // ES — yaencontre / indomio (Cloudflare-gated; OFF).
 export { YaencontreProvider, isYaencontreChallenge } from './providers/yaencontre';
 export {
@@ -486,9 +563,160 @@ export {
   type ItSchemaListing,
 } from './providers/it/jsonLd';
 
+// Romania — Storia (__NEXT_DATA__) / Imobiliare.ro (Inertia+JSON-LD) / OLX.ro (housing-only).
+export {
+  StoriaProvider,
+  isStoriaChallenge,
+  parseStoriaDetail,
+  parseStoriaSearch,
+  storiaSourceIdFromUrl,
+} from './providers/ro/storia';
+export {
+  STORIA_BASE_URL,
+  STORIA_FIXTURE_DETAIL_HTML,
+  STORIA_FIXTURE_SEARCH_HTML,
+} from './providers/ro/storia/fixtures';
+export type { StoriaRawListing, StoriaSearchRef } from './providers/ro/storia/parse';
+
+export {
+  ImobiliareRoProvider,
+  isImobiliareRoChallenge,
+  parseImobiliareRoDetail,
+  parseImobiliareRoSearch,
+  imobiliareRoSourceIdFromUrl,
+} from './providers/ro/imobiliare';
+export {
+  IMOBILIARE_RO_BASE_URL,
+  IMOBILIARE_RO_FIXTURE_DETAIL_HTML,
+  IMOBILIARE_RO_FIXTURE_SEARCH_HTML,
+} from './providers/ro/imobiliare/fixtures';
+export type {
+  ImobiliareRoRawListing,
+  ImobiliareRoSearchRef,
+} from './providers/ro/imobiliare/parse';
+
+export {
+  OlxRoProvider,
+  isOlxRoChallenge,
+  isOlxRoHousingCategory,
+  parseOlxRoDetail,
+  parseOlxRoSearch,
+  olxRoSourceIdFromUrl,
+} from './providers/ro/olx';
+export {
+  OLX_RO_BASE_URL,
+  OLX_RO_FIXTURE_DETAIL_HTML,
+  OLX_RO_FIXTURE_NON_HOUSING_HTML,
+  OLX_RO_FIXTURE_SEARCH_HTML,
+} from './providers/ro/olx/fixtures';
+export {
+  OLX_RO_HOUSING_PATHS,
+  OLX_RO_HOUSING_SLUGS,
+  mergeOlxRoPhone,
+} from './providers/ro/olx/parse';
+export type { OlxRoRawListing, OlxRoSearchRef } from './providers/ro/olx/parse';
+
+// Shared helpers — ONE chokepoint per concern (providers must not duplicate).
+export {
+  normalizePhone,
+  normalizeWhatsapp,
+  normalizeEmail,
+  buildContact,
+  mergeContact,
+  mergeListingContact,
+  contactFromUnknown,
+  contactFromRecord,
+  contactFromAjaxBody,
+  extractContactFromHtml,
+  hasContactFields,
+  parseContactPhonesJson,
+  type ListingContact,
+} from './contact';
+export {
+  parseNextData,
+  extractNextData,
+  nextDataPageProps,
+  parseNextDataPageProps,
+  parsePreloadedState,
+} from './nextData';
+export {
+  collectJsonLdNodes,
+  jsonLdTypes,
+  resolveJsonLdRef,
+  findJsonLdByType,
+} from './jsonLd';
+export { citySlug } from './slug';
+export { citiesFromEnv, citiesOptionsFromEnv } from './cities';
+
+
+// Ecuador (EC) — Plusvalía (shared Navent) / MercadoLibre housing-only / Properati (OFF).
+export {
+  PlusvaliaProvider,
+  isPlusvaliaChallenge,
+  plusvaliaSourceIdFromUrl,
+} from './providers/ec/plusvalia';
+export {
+  PLUSVALIA_BASE_URL,
+  PLUSVALIA_FIXTURE_DETAIL_HTML,
+  PLUSVALIA_FIXTURE_SEARCH_HTML,
+  PLUSVALIA_FIXTURE_SEARCH_JSON,
+} from './providers/ec/plusvalia/fixtures';
+export {
+  MercadolibreEcProvider,
+  isMercadolibreEcChallenge,
+  isMercadolibreEcHousingCategory,
+  mercadolibreEcHousingSearchUrl,
+  mercadolibreEcSourceIdFromUrl,
+  parseMercadolibreEcDetail,
+  parseMercadolibreEcSearch,
+  parseMercadolibreEcSearchJson,
+} from './providers/ec/mercadolibre';
+export {
+  MERCADOLIBRE_EC_BASE_URL,
+  MERCADOLIBRE_EC_HOUSING_SLUGS,
+  MERCADOLIBRE_EC_FIXTURE_DETAIL_HTML,
+  MERCADOLIBRE_EC_FIXTURE_NON_HOUSING_JSON,
+  MERCADOLIBRE_EC_FIXTURE_SEARCH_HTML,
+  MERCADOLIBRE_EC_FIXTURE_SEARCH_JSON,
+} from './providers/ec/mercadolibre/fixtures';
+export {
+  ProperatiEcProvider,
+  isProperatiEcChallenge,
+  parseProperatiEcDetail,
+  parseProperatiEcSearchJson,
+  properatiEcSourceIdFromUrl,
+} from './providers/ec/properati';
+export {
+  PROPERATI_EC_BASE_URL,
+  PROPERATI_EC_FIXTURE_DETAIL_HTML,
+  PROPERATI_EC_FIXTURE_SEARCH_JSON,
+} from './providers/ec/properati/fixtures';
+
+export {
+  isNaventChallenge,
+  parseNaventSearch,
+  parseNaventSearchJson,
+  parseNaventDetail,
+  type NaventSiteConfig,
+  type NaventRawListing,
+} from './navent';
+
+
+// Argentina (AR) — shared Navent/ML factories; housing-only for MercadoLibre.
+export * from './providers/ar/exports';
+export {
+  isMercadolibreChallenge,
+  isMercadolibreHousingCategory,
+  parseMercadolibreSearch,
+  parseMercadolibreDetail,
+  type MercadolibreSiteConfig,
+  type MercadolibreRawListing,
+} from './mercadolibre';
+
 import type { ProviderId } from '@homiio/shared-types';
 import { ProviderRegistry } from './registry';
 import type { ListingProvider } from './types';
+import { citiesOptionsFromEnv } from './cities';
 import { FixtureProvider } from './providers/fixture';
 import { HabitacliaProvider } from './providers/habitaclia';
 import { BluegroundProvider } from './providers/blueground';
@@ -514,49 +742,20 @@ import { SubitoProvider } from './providers/it/subito';
 import { ImmobilienScout24Provider } from './providers/de/immobilienscout24';
 import { ImmoweltProvider } from './providers/de/immowelt';
 import { KleinanzeigenProvider } from './providers/de/kleinanzeigen';
+import { ZonapropProvider } from './providers/ar/zonaprop';
+import { ArgenpropProvider } from './providers/ar/argenprop';
+import { MercadolibreArProvider } from './providers/ar/mercadolibre';
+import { ProperatiProvider } from './providers/ar/properati';
 
-/**
- * Configurable ES discover cities from `LISTING_ES_CITIES` (comma-separated).
- * When unset, each ES provider falls back to its own default city list.
- */
-function esCitiesFromEnv(): string[] {
-  return (process.env.LISTING_ES_CITIES ?? '')
-    .split(',')
-    .map((city) => city.trim())
-    .filter(Boolean);
-}
-
-/** Configurable GB discover cities from `LISTING_GB_CITIES` (comma-separated). */
-function gbCitiesFromEnv(): string[] {
-  return (process.env.LISTING_GB_CITIES ?? '')
-    .split(',')
-    .map((city) => city.trim())
-    .filter(Boolean);
-}
-
-/** Configurable US discover cities from `LISTING_US_CITIES` (comma-separated). */
-function usCitiesFromEnv(): string[] {
-  return (process.env.LISTING_US_CITIES ?? '')
-    .split(',')
-    .map((city) => city.trim())
-    .filter(Boolean);
-}
-
-/** Configurable IT discover cities from `LISTING_IT_CITIES` (comma-separated). */
-function itCitiesFromEnv(): string[] {
-  return (process.env.LISTING_IT_CITIES ?? '')
-    .split(',')
-    .map((city) => city.trim())
-    .filter(Boolean);
-}
-
-/** Configurable DE discover cities from `LISTING_DE_CITIES` (comma-separated). */
-function deCitiesFromEnv(): string[] {
-  return (process.env.LISTING_DE_CITIES ?? '')
-    .split(',')
-    .map((city) => city.trim())
-    .filter(Boolean);
-}
+import { StoriaProvider } from './providers/ro/storia';
+import { ImobiliareRoProvider } from './providers/ro/imobiliare';
+import { OlxRoProvider } from './providers/ro/olx';
+import { PlusvaliaProvider } from './providers/ec/plusvalia';
+import { MercadolibreEcProvider } from './providers/ec/mercadolibre';
+import { ProperatiEcProvider } from './providers/ec/properati';
+import { BieniciProvider } from './providers/fr/bienici';
+import { LeboncoinProvider } from './providers/fr/leboncoin';
+import { SelogerProvider } from './providers/fr/seloger';
 
 /**
  * Whether a real portal provider is enabled via its env feature flag. Flags are
@@ -575,16 +774,15 @@ function providerEnabled(id: ProviderId): boolean {
  */
 export function createDefaultRegistry(): ProviderRegistry {
   const registry = new ProviderRegistry([new FixtureProvider()]);
-  const esCities = esCitiesFromEnv();
-  const esOptions = esCities.length > 0 ? { cities: esCities } : {};
-  const gbCities = gbCitiesFromEnv();
-  const gbOptions = gbCities.length > 0 ? { cities: gbCities } : {};
-  const usCities = usCitiesFromEnv();
-  const usOptions = usCities.length > 0 ? { cities: usCities } : {};
-  const itCities = itCitiesFromEnv();
-  const itOptions = itCities.length > 0 ? { cities: itCities } : {};
-  const deCities = deCitiesFromEnv();
-  const deOptions = deCities.length > 0 ? { cities: deCities } : {};
+  const esOptions = citiesOptionsFromEnv('ES');
+  const gbOptions = citiesOptionsFromEnv('GB');
+  const usOptions = citiesOptionsFromEnv('US');
+  const itOptions = citiesOptionsFromEnv('IT');
+  const deOptions = citiesOptionsFromEnv('DE');
+  const arOptions = citiesOptionsFromEnv('AR');
+  const roOptions = citiesOptionsFromEnv('RO');
+  const ecOptions = citiesOptionsFromEnv('EC');
+  const frOptions = citiesOptionsFromEnv('FR');
   const flaggedProviders: ListingProvider[] = [
     new HabitacliaProvider(),
     new BluegroundProvider(),
@@ -609,7 +807,20 @@ export function createDefaultRegistry(): ProviderRegistry {
     new SubitoProvider(itOptions),
     new ImmobilienScout24Provider(deOptions),
     new ImmoweltProvider(deOptions),
+    new ZonapropProvider(arOptions),
+    new ArgenpropProvider(arOptions),
+    new MercadolibreArProvider(arOptions),
+    new ProperatiProvider(arOptions),
     new KleinanzeigenProvider(deOptions),
+    new StoriaProvider(roOptions),
+    new ImobiliareRoProvider(roOptions),
+    new OlxRoProvider(roOptions),
+    new PlusvaliaProvider(ecOptions),
+    new MercadolibreEcProvider(ecOptions),
+    new ProperatiEcProvider(ecOptions),
+    new BieniciProvider(frOptions),
+    new LeboncoinProvider(frOptions),
+    new SelogerProvider(frOptions),
   ];
   for (const provider of flaggedProviders) {
     if (providerEnabled(provider.id)) {

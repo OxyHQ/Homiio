@@ -32,7 +32,7 @@ import type {
 import { createFetchRuntime } from '../../runtime';
 import { fetchListingViaLadder } from '../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
-import type { EsSchemaListing } from '../es/jsonLd';
+import type { EsSchemaListing } from '../../parse/jsonLd';
 import { FOTOCASA_BASE_URL } from './fixtures';
 import { fotocasaSourceIdFromUrl, parseFotocasaDetail, parseFotocasaSearch, type FotocasaRaw } from './parse';
 

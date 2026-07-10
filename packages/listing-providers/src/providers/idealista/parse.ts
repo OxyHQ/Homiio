@@ -9,7 +9,7 @@
  * identically in the worker and in unit tests, with zero extra dependencies.
  */
 
-import { extractEsSchemaListings, pickEsListing, type EsSchemaListing } from '../es/jsonLd';
+import { extractEsSchemaListings, pickEsListing, type EsSchemaListing } from '../../parse/jsonLd';
 import { IDEALISTA_BASE_URL } from './fixtures';
 import type { IdealistaContact } from './contact';
 

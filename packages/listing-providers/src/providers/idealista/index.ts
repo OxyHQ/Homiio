@@ -39,7 +39,7 @@ import type {
 import { createFetchRuntime } from '../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
-import type { EsSchemaListing } from '../es/jsonLd';
+import type { EsSchemaListing } from '../../parse/jsonLd';
 import { IDEALISTA_BASE_URL } from './fixtures';
 import {
   idealistaContactInfoUrl,

@@ -20,7 +20,17 @@ import type { LongTermRent, ShortTermRent, PropertySale } from './property';
  * The markets a provider can serve. Drives discover scheduling (which cities /
  * bounding boxes a provider is asked to enumerate).
  */
-export type ListingMarket = 'ES' | 'US' | 'IT' | 'GB' | 'DE' | 'RO' | 'FR';
+export type ListingMarket =
+  | 'ES'
+  | 'US'
+  | 'IT'
+  | 'GB'
+  | 'DE'
+  | 'RO'
+  | 'FR'
+  | 'AR'
+  | 'EC'
+  | 'MX';
 
 /**
  * Stable identifier for a listing provider. New portals are added here as their
@@ -58,7 +68,18 @@ export type ProviderId =
   | 'olx_ro'
   | 'bienici'
   | 'leboncoin'
-  | 'seloger';
+  | 'seloger'
+  | 'properati_ec'
+  | 'zonaprop'
+  | 'argenprop'
+  | 'mercadolibre_ar'
+  | 'properati'
+  | 'plusvalia'
+  | 'mercadolibre_ec'
+  | 'propiedades'
+  | 'vivanuncios'
+  | 'lamudi'
+  | 'inmuebles24';
 
 /**
  * Best-effort owner/agent contact captured from a portal when an endpoint

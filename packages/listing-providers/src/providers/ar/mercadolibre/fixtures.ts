@@ -1,0 +1,77 @@
+/**
+ * MercadoLibre Argentina inmuebles — general classifieds, HOUSING ONLY.
+ */
+
+export const MERCADOLIBRE_AR_BASE_URL = 'https://inmuebles.mercadolibre.com.ar';
+
+export const MERCADOLIBRE_AR_HOUSING_SLUGS: ReadonlySet<string> = new Set([
+  'inmuebles',
+  'departamentos',
+  'casas',
+  'monoambientes',
+  'ph',
+  'habitaciones',
+  'terrenos',
+  'oficinas',
+  'locales',
+  'alquiler',
+  'venta',
+]);
+
+export const MERCADOLIBRE_AR_FIXTURE_SEARCH_JSON = JSON.stringify({
+  results: [
+    {
+      id: 'MLA-3557653074',
+      permalink:
+        'https://departamento.mercadolibre.com.ar/MLA-3557653074-alquiler-departamento-2-ambientes-belgrano-_JM',
+      title: 'Alquiler departamento 2 ambientes Belgrano',
+      price: 650000,
+      currency_id: 'ARS',
+      category_id: 'MLA1459',
+      domain_id: 'MLA-APARTMENTS_FOR_RENT',
+      location: {
+        city: { name: 'Capital Federal' },
+        state: { name: 'Capital Federal' },
+        neighborhood: { name: 'Belgrano' },
+        address_line: 'Belgrano',
+      },
+      attributes: [
+        { id: 'BEDROOMS', value_name: '2' },
+        { id: 'FULL_BATHROOMS', value_name: '1' },
+        { id: 'COVERED_AREA', value_name: '55 m²' },
+      ],
+      thumbnail: 'https://http2.mlstatic.com/fixture-ml-ar-1.jpg',
+      seller: { nickname: 'InmoAR', phone: { number: '1155667788' } },
+    },
+  ],
+});
+
+export const MERCADOLIBRE_AR_FIXTURE_NON_HOUSING_JSON = JSON.stringify({
+  results: [
+    {
+      id: 'MLA-999000111',
+      permalink: 'https://auto.mercadolibre.com.ar/MLA-999000111-toyota-_JM',
+      title: 'Toyota Corolla 2020',
+      price: 15000000,
+      currency_id: 'ARS',
+      category_id: 'MLA1744',
+      domain_id: 'CARS_AND_VANS',
+      location: { city: { name: 'Capital Federal' } },
+    },
+  ],
+});
+
+export const MERCADOLIBRE_AR_FIXTURE_DETAIL_HTML = `<!DOCTYPE html><html><head>
+<script type="application/ld+json">
+{"name":"Alquiler Departamento 2 Ambientes Belgrano","image":"https://http2.mlstatic.com/fixture-ml-ar-1.jpg","offers":{"price":650000,"availability":"https://schema.org/InStock","url":"https://departamento.mercadolibre.com.ar/MLA-3557653074-alquiler-departamento-2-ambientes-belgrano-_JM","@type":"Offer","priceCurrency":"ARS"},"sku":"MLA3557653074","@context":"https://schema.org","@type":"Product","productID":"MLA3557653074"}
+</script>
+</head><body>
+<script>var x={"domain_id":"MLA-APARTMENTS_FOR_RENT","city":"Capital Federal","neighborhood":"Belgrano","state":"Capital Federal","whatsapp_available":true};</script>
+<a href="tel:+5491155667788">Llamar</a>
+<h1>Alquiler departamento</h1>
+</body></html>`;
+
+export const MERCADOLIBRE_AR_FIXTURE_SEARCH_HTML = `<!DOCTYPE html><html><body>
+<script>window.__PRELOADED_STATE__ = ${MERCADOLIBRE_AR_FIXTURE_SEARCH_JSON};</script>
+<a href="https://departamento.mercadolibre.com.ar/MLA-3557653074-alquiler-departamento-2-ambientes-belgrano-_JM">Depto</a>
+</body></html>`;

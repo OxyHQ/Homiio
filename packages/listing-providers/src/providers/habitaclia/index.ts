@@ -1,15 +1,9 @@
 /**
  * Habitaclia provider (Spain).
  *
- * Habitaclia (habitaclia.com) is a large ES rental/sale portal with no public
- * API, so this plugin scrapes seriously through the shared {@link FetchRuntime}
- * strategy ladder (HTTP → Playwright → managed) — it NEVER re-implements
- * anti-bot infrastructure. `discover()` pages ES city search results into
- * {@link ExternalListingRef}s; `fetch()` pulls a detail page's HTML; the pure
- * parser in `./parse` extracts the embedded schema.org JSON-LD into a
- * {@link HabitacliaRawListing}; `normalize()` maps that onto a first-party
- * {@link NormalizedListing}. It sits behind the SAME contract as every other
- * provider and is registered OFF by default (`PROVIDER_HABITACLIA_ENABLED`).
+ * Discover prefers warmed Playwright session → POST `/dotnet/listados/listainmuebles`
+ * (HTML fragments with `data-href` cards); fetch uses the shared ladder for detail
+ * HTML (JSON-LD when present, microdata/meta fallback). Registered OFF by default.
  */
 
 import {
@@ -31,23 +25,31 @@ import type {
 import { createFetchRuntime } from '../../runtime';
 import { fetchListingViaLadder } from '../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
+import { BrowserSessionChallengeError, type BrowserSession, type BrowserStorageState } from '../../browserSession';
+import { createProxySessionId, envBool } from '../../proxy';
 import { HABITACLIA_BASE_URL, type HabitacliaRawListing } from './fixtures';
 import { habitacliaSourceIdFromUrl, parseHabitacliaDetail, parseHabitacliaSearch } from './parse';
+import {
+  HABITACLIA_CONTENT_SELECTOR,
+  HABITACLIA_LISTAINMUEBLES_URL,
+  buildHabitacliaListainmueblesBody,
+  extractHabitacliaListadoFormFields,
+  habitacliaWarmSearchUrl,
+  isHabitacliaListainmueblesChallenge,
+  parseHabitacliaListainmuebles,
+} from './listainmuebles';
 
 const PROVIDER_ID: ProviderId = 'habitaclia';
 
-/** HTML markers of a Habitaclia interstitial/anti-bot page served with a 200. */
 export function isHabitacliaChallenge(html: string): boolean {
   if (html.trim().length < 512) return true;
-  return /acceso denegado|verifica|datadome|px-captcha/i.test(html);
+  return /acceso denegado|verifica|datadome|px-captcha|Pardon Our Interruption|hab_library/i.test(
+    html,
+  );
 }
 
-/** ES cities enumerated when a discover job omits an explicit `city`. */
 const DEFAULT_CITIES: readonly string[] = ['barcelona', 'madrid', 'valencia', 'sevilla', 'malaga'];
-
-/** Max search pages to page through per city in a single discover pass. */
 const MAX_SEARCH_PAGES = 5;
-
 const SUPPORTED_TYPES: ReadonlySet<string> = new Set(Object.values(PropertyType));
 
 function resolvePropertyType(raw: string): PropertyType {
@@ -60,26 +62,6 @@ function resolveFurnished(furnished: boolean | undefined): NormalizedListing['fu
   return 'not_specified';
 }
 
-/** Slugify a city name for the search URL path. */
-function citySlug(city: string): string {
-  return city
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-}
-
-/** Build a Habitaclia rental search URL for a city + 1-based page number. */
-function searchUrl(city: string, page: number): string {
-  const slug = citySlug(city);
-  return page <= 1
-    ? `${HABITACLIA_BASE_URL}/alquiler-${slug}.htm`
-    : `${HABITACLIA_BASE_URL}/alquiler-${slug}-${page}.htm`;
-}
-
-/** Narrow an opaque `RawListing.payload` back to a {@link HabitacliaRawListing}. */
 function asHabitaclia(payload: unknown): HabitacliaRawListing {
   const record = payload as { id?: unknown; url?: unknown } | null;
   if (!record || typeof record.id !== 'string' || typeof record.url !== 'string') {
@@ -96,14 +78,38 @@ function toRemoteImages(raw: HabitacliaRawListing): NormalizedRemoteImage[] {
   }));
 }
 
+function yieldRefs(
+  refs: readonly { sourceId: string; url: string }[],
+  seen: Set<string>,
+  limit: number,
+  yielded: { count: number },
+): ExternalListingRef[] {
+  const out: ExternalListingRef[] = [];
+  for (const ref of refs) {
+    if (yielded.count >= limit) break;
+    if (seen.has(ref.sourceId)) continue;
+    seen.add(ref.sourceId);
+    out.push({ provider: PROVIDER_ID, sourceId: ref.sourceId, url: ref.url });
+    yielded.count += 1;
+  }
+  return out;
+}
+
+export interface HabitacliaProviderOptions {
+  runtime?: FetchRuntime;
+  metrics?: ProviderMetricsSink & ProviderMetricsReader;
+}
+
 export class HabitacliaProvider implements ListingProvider {
   readonly id: ProviderId = PROVIDER_ID;
   readonly markets = ['ES'] as const;
 
   private readonly runtime: FetchRuntime;
   private readonly metrics: ProviderMetricsSink & ProviderMetricsReader;
+  private stickyProxySessionId?: string;
+  private stickyStorageState?: BrowserStorageState;
 
-  constructor(options: { runtime?: FetchRuntime; metrics?: ProviderMetricsSink & ProviderMetricsReader } = {}) {
+  constructor(options: HabitacliaProviderOptions = {}) {
     this.runtime = options.runtime ?? createFetchRuntime();
     this.metrics = options.metrics ?? defaultProviderMetrics;
   }
@@ -112,40 +118,208 @@ export class HabitacliaProvider implements ListingProvider {
     const cities = job.city ? [job.city] : DEFAULT_CITIES;
     const limit = job.limit ?? Number.POSITIVE_INFINITY;
     const seen = new Set<string>();
-    let yielded = 0;
+    const yielded = { count: 0 };
+    const runtime = job.runtime ?? this.runtime;
 
     for (const city of cities) {
+      if (yielded.count >= limit) return;
+
+      const viaAjax = runtime.openBrowserSession
+        ? await this.discoverCityViaListainmuebles(runtime, city, job.signal, seen, limit, yielded)
+        : [];
+      for (const ref of viaAjax) yield ref;
+      if (yielded.count >= limit) return;
+
+      if (viaAjax.length === 0) {
+        for await (const ref of this.discoverCityViaHtml(runtime, city, job.signal, seen, limit, yielded)) {
+          yield ref;
+        }
+      }
+    }
+  }
+
+  private async discoverCityViaListainmuebles(
+    runtime: FetchRuntime,
+    city: string,
+    signal: AbortSignal | undefined,
+    seen: Set<string>,
+    limit: number,
+    yielded: { count: number },
+  ): Promise<ExternalListingRef[]> {
+    if (!runtime.openBrowserSession) return [];
+
+    const sticky = envBool('LISTING_PROXY_STICKY', false);
+    if (sticky && !this.stickyProxySessionId) {
+      this.stickyProxySessionId = createProxySessionId();
+    }
+
+    let session: BrowserSession | undefined;
+    const warmUrl = habitacliaWarmSearchUrl(city, 1);
+    const start = Date.now();
+    try {
+      session = await runtime.openBrowserSession({
+        warmUrl,
+        signal,
+        contentSelector: HABITACLIA_CONTENT_SELECTOR,
+        isChallenge: isHabitacliaChallenge,
+        challengeWaitMs: 60_000,
+        stickyProxySession: sticky,
+        proxySessionId: this.stickyProxySessionId,
+        storageState: this.stickyStorageState,
+        blockAssets: true,
+      });
+
+      const searchHtml = await session.content();
+      const formFields = extractHabitacliaListadoFormFields(searchHtml);
+      const collected: ExternalListingRef[] = [];
+
       for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
-        if (yielded >= limit) return;
-        const searchPageUrl = searchUrl(city, page);
-        let { html } = await fetchListingViaLadder(job.runtime ?? this.runtime, searchPageUrl, {
-          provider: this.id,
-          isChallenge: isHabitacliaChallenge,
-          metrics: this.metrics,
-          init: { signal: job.signal },
-        });
-        let refs = parseHabitacliaSearch(html);
-        // Habitaclia often serves a JS shell over HTTP; escalate to the browser
-        // tier when the first page parses zero refs (same symptom as prod).
-        if (refs.length === 0 && page === 1) {
-          const browserResult = await fetchListingViaLadder(job.runtime ?? this.runtime, searchPageUrl, {
-            provider: this.id,
-            isChallenge: isHabitacliaChallenge,
-            metrics: this.metrics,
-            init: { signal: job.signal },
-            tiers: ['browser'],
+        if (yielded.count >= limit) break;
+
+        let body: string;
+        let status: number;
+        if (page === 1 && parseHabitacliaSearch(searchHtml).length > 0) {
+          body = searchHtml;
+          status = 200;
+        } else {
+          const response = await session.request(HABITACLIA_LISTAINMUEBLES_URL, {
+            method: 'POST',
+            data: buildHabitacliaListainmueblesBody(formFields, page),
+            referer: session.pageUrl(),
+            timeoutMs: 30_000,
+            headers: {
+              Accept: 'text/html, */*',
+              'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            },
           });
-          html = browserResult.html;
-          refs = parseHabitacliaSearch(html);
+          body = response.body;
+          status = response.status;
         }
-        if (refs.length === 0) break;
-        for (const ref of refs) {
-          if (yielded >= limit) return;
-          if (seen.has(ref.sourceId)) continue;
-          seen.add(ref.sourceId);
-          yield { provider: this.id, sourceId: ref.sourceId, url: ref.url };
-          yielded += 1;
+
+        if (status === 403 || status === 429 || isHabitacliaListainmueblesChallenge(body)) {
+          this.metrics.record({
+            provider: this.id,
+            strategy: 'browser',
+            outcome: 'challenge',
+            status,
+            latencyMs: Date.now() - start,
+            url: HABITACLIA_LISTAINMUEBLES_URL,
+            detail: 'listainmuebles challenge after warm-up',
+          });
+          break;
         }
+        if (status >= 400) break;
+
+        const pageRefs = parseHabitacliaListainmuebles(body);
+        this.metrics.record({
+          provider: this.id,
+          strategy: 'browser',
+          outcome: 'success',
+          status,
+          latencyMs: Date.now() - start,
+          url: HABITACLIA_LISTAINMUEBLES_URL,
+        });
+        if (pageRefs.length === 0) break;
+        collected.push(...yieldRefs(pageRefs, seen, limit, yielded));
+      }
+
+      if (sticky) {
+        this.stickyStorageState = await session.exportStorageState();
+      }
+      return collected;
+    } catch (error) {
+      const detail =
+        error instanceof BrowserSessionChallengeError
+          ? error.detail
+          : error instanceof Error
+            ? error.message
+            : String(error);
+      this.metrics.record({
+        provider: this.id,
+        strategy: 'browser',
+        outcome: 'challenge',
+        latencyMs: Date.now() - start,
+        url: warmUrl,
+        detail: `listainmuebles warm-up failed: ${detail}`,
+      });
+      return [];
+    } finally {
+      await session?.close();
+    }
+  }
+
+  private async discoverCityViaHttpAjax(
+    runtime: FetchRuntime,
+    city: string,
+    firstPageHtml: string,
+    signal: AbortSignal | undefined,
+    seen: Set<string>,
+    limit: number,
+    yielded: { count: number },
+  ): Promise<ExternalListingRef[]> {
+    const formFields = extractHabitacliaListadoFormFields(firstPageHtml);
+    if (Object.keys(formFields).length === 0) return [];
+
+    const collected: ExternalListingRef[] = [];
+    const referer = habitacliaWarmSearchUrl(city, 1);
+    for (let page = 2; page <= MAX_SEARCH_PAGES; page += 1) {
+      if (yielded.count >= limit) break;
+      const { status, body } = await runtime.fetchHttp(HABITACLIA_LISTAINMUEBLES_URL, {
+        signal,
+        method: 'POST',
+        body: buildHabitacliaListainmueblesBody(formFields, page),
+        headers: {
+          Accept: 'text/html, */*',
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          Referer: referer,
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+      });
+      if (status >= 400 || isHabitacliaListainmueblesChallenge(body)) break;
+      const pageRefs = parseHabitacliaListainmuebles(body);
+      if (pageRefs.length === 0) break;
+      collected.push(...yieldRefs(pageRefs, seen, limit, yielded));
+    }
+    return collected;
+  }
+
+  private async *discoverCityViaHtml(
+    runtime: FetchRuntime,
+    city: string,
+    signal: AbortSignal | undefined,
+    seen: Set<string>,
+    limit: number,
+    yielded: { count: number },
+  ): AsyncIterable<ExternalListingRef> {
+    let firstPageHtml = '';
+    for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
+      if (yielded.count >= limit) return;
+      const { html } = await fetchListingViaLadder(runtime, habitacliaWarmSearchUrl(city, page), {
+        provider: this.id,
+        isChallenge: isHabitacliaChallenge,
+        metrics: this.metrics,
+        init: { signal },
+        tiers: page === 1 ? undefined : ['browser'],
+      });
+      if (page === 1) firstPageHtml = html;
+      const refs = parseHabitacliaSearch(html);
+      if (refs.length === 0) break;
+      for (const ref of yieldRefs(refs, seen, limit, yielded)) {
+        yield ref;
+      }
+    }
+
+    if (firstPageHtml.length > 0) {
+      for (const ref of await this.discoverCityViaHttpAjax(
+        runtime,
+        city,
+        firstPageHtml,
+        signal,
+        seen,
+        limit,
+        yielded,
+      )) {
+        yield ref;
       }
     }
   }
@@ -157,8 +331,7 @@ export class HabitacliaProvider implements ListingProvider {
       init: { signal: ctx.signal },
       metrics: this.metrics,
     });
-    const payload = parseHabitacliaDetail(html, ref.url);
-    return { ref, payload };
+    return { ref, payload: parseHabitacliaDetail(html, ref.url) };
   }
 
   normalize(raw: RawListing): NormalizedListing {
@@ -206,10 +379,20 @@ export class HabitacliaProvider implements ListingProvider {
   }
 
   async health(): Promise<ProviderHealth> {
+    const snapshot = this.metrics.snapshot(this.id);
+    if (snapshot && snapshot.attempts > 0) {
+      const status =
+        snapshot.challengeRate >= 0.8 ? 'unhealthy' : snapshot.challengeRate >= 0.3 ? 'degraded' : 'healthy';
+      return {
+        provider: this.id,
+        status,
+        detail: `attempts=${snapshot.attempts} challengeRate=${snapshot.challengeRate.toFixed(2)} avgLatencyMs=${snapshot.avgLatencyMs}`,
+      };
+    }
     return {
       provider: this.id,
       status: 'healthy',
-      detail: `Serving ${this.markets.join(', ')} via ${HABITACLIA_BASE_URL}`,
+      detail: `Serving ${this.markets.join(', ')} via ${HABITACLIA_BASE_URL} (listainmuebles AJAX + HTML fallback)`,
     };
   }
 }

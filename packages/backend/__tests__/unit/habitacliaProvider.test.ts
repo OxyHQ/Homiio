@@ -11,8 +11,13 @@
 import {
   HabitacliaProvider,
   HABITACLIA_FIXTURE_DETAIL_HTML,
+  HABITACLIA_FIXTURE_DETAIL_HTML_LIVE,
   HABITACLIA_FIXTURE_SEARCH_HTML,
+  buildHabitacliaListainmueblesBody,
+  extractHabitacliaListadoFormFields,
+  isHabitacliaListainmueblesChallenge,
   parseHabitacliaDetail,
+  parseHabitacliaListainmuebles,
   parseHabitacliaSearch,
 } from '@homiio/listing-providers';
 import type { RawListing } from '@homiio/listing-providers';
@@ -54,10 +59,32 @@ describe('HabitacliaProvider', () => {
     expect(raw.images[0]?.isPrimary).toBe(true);
   });
 
-  it('throws on a page with no real-estate JSON-LD', () => {
+  it('throws on a page with no parseable listing data', () => {
     expect(() => parseHabitacliaDetail('<html><body>challenge</body></html>', DETAIL_URL)).toThrow(
-      /no real-estate JSON-LD/,
+      /no parseable price/,
     );
+  });
+
+  it('parses live detail HTML via microdata when JSON-LD is absent', () => {
+    const raw = parseHabitacliaDetail(HABITACLIA_FIXTURE_DETAIL_HTML_LIVE, DETAIL_URL);
+    expect(raw.id).toBe('55551000004519');
+    expect(raw.price).toBe(1600);
+    expect(raw.address.city).toBe('Barcelona');
+    expect(raw.address.neighborhood).toBe('Gràcia');
+    expect(raw.bedrooms).toBe(3);
+    expect(raw.bathrooms).toBe(2);
+    expect(raw.squareMeters).toBe(95);
+    expect(raw.amenities).toEqual(['elevator', 'terrace']);
+  });
+
+  it('extracts listainmuebles form fields and parses AJAX fragments', () => {
+    const fields = extractHabitacliaListadoFormFields(HABITACLIA_FIXTURE_SEARCH_HTML);
+    expect(fields['Filtros.Geo.CodProv']).toBe('1');
+    expect(fields['Filtros.Geo.NomPobBuscador']).toBe('barcelona');
+    expect(buildHabitacliaListainmueblesBody(fields, 2)).toContain('pagina=2');
+    const refs = parseHabitacliaListainmuebles(HABITACLIA_FIXTURE_SEARCH_HTML);
+    expect(refs).toHaveLength(2);
+    expect(isHabitacliaListainmueblesChallenge('403 ERROR')).toBe(true);
   });
 
   it('normalizes a recorded fixture into a published long-term rental', () => {
