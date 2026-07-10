@@ -420,12 +420,3 @@ export type IRoommateRelationship = Document & {
   createdAt: Date;
   updatedAt: Date;
 } & Loose;
-
-// ---------- Tip ----------
-
-export type ITip = Document & {
-  _id: Id;
-  title: string;
-  createdAt: Date;
-  updatedAt: Date;
-} & Loose;

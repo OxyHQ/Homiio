@@ -11,7 +11,6 @@ const leaseController = require('./leaseController');
 const profileController = require('./profileController');
 const telegramController = require('./telegramController');
 const cityController = require('./cityController');
-const tipsController = require('./tipsController');
 const imageController = require('./imageController');
 const billingController = require('./billingController');
 
@@ -24,7 +23,6 @@ module.exports = {
   profileController,
   telegramController,
   cityController,
-  tipsController,
   imageController,
   billingController,
 };

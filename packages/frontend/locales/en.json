@@ -435,7 +435,16 @@
     }
   },
   "tips": {
-    "article": "Article"
+    "article": "Article",
+    "all": "All",
+    "loadError": "Couldn't load tips",
+    "tryAgain": "Please try again.",
+    "emptyTitle": "No tips yet",
+    "emptyDescription": "Check back soon for new rental guides and advice.",
+    "unavailable": "Article unavailable",
+    "missingSlug": "This tip could not be loaded.",
+    "loadFailed": "This tip could not be loaded.",
+    "related": "Related tips"
   },
   "search": {
     "title": "Search",

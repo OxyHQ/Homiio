@@ -634,34 +634,3 @@ export {
   validateViewingId,
   validateViewingListQuery,
 };
-
-/**
- * Tips query validation rules.
- *
- * The tips controller serves in-memory mock data (no Mongoose), so these rules
- * are defensive bounds rather than injection guards: pagination/limit numeric
- * bounds and length-bounded free-text search.
- */
-const validateTipsFeaturedQuery = [
-  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1-100'),
-  handleValidationErrors
-];
-
-const validateTipsSearchQuery = [
-  query('q').optional().isString().isLength({ max: 200 }).withMessage('Search query max length is 200'),
-  query('category').optional().isString().isLength({ max: 100 }).withMessage('category max length is 100'),
-  query('tag').optional().isString().isLength({ max: 100 }).withMessage('tag max length is 100'),
-  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1-100'),
-  handleValidationErrors
-];
-
-const validateTipsCategoryParam = [
-  param('category').isString().isLength({ min: 1, max: 100 }).withMessage('category must be 1-100 characters'),
-  handleValidationErrors
-];
-
-export {
-  validateTipsFeaturedQuery,
-  validateTipsSearchQuery,
-  validateTipsCategoryParam,
-};

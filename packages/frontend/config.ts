@@ -94,3 +94,9 @@ export const OXY_BASE_URL =
 export const OXY_CLIENT_ID =
   process.env.EXPO_PUBLIC_OXY_CLIENT_ID ||
   'oxy_dk_85244d70394ab6e4ef62b6f2ff7e399e6e857464362c13bc';
+
+/**
+ * Oxy website Newsroom API — sole source for Homiio Tips content.
+ */
+export const WEBSITE_API_URL =
+  process.env.EXPO_PUBLIC_WEBSITE_API_URL || 'https://website-api.oxy.so';

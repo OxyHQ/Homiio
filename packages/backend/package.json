@@ -15,7 +15,6 @@
     "migrate:billing": "node scripts/migrate-billing-field.js",
     "seed:geo": "ts-node --transpile-only scripts/seedGeo.ts",
     "seed:properties": "ts-node --transpile-only scripts/seedProperties.ts",
-    "seed:tips": "ts-node --transpile-only scripts/seedTips.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:images": "ts-node --transpile-only scripts/test-image-upload.ts",

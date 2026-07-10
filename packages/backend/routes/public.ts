@@ -10,7 +10,6 @@ import imageController from '../controllers/imageController';
 import geocodingController from '../controllers/geocodingController';
 const propertyController = require('../controllers/propertyController');
 const telegramController = require('../controllers/telegramController');
-const tipsController = require('../controllers/tipsController');
 const analyticsController = require('../controllers/analyticsController');
 const reviewController = require('../controllers/reviewController');
 import { asyncHandler } from '../middlewares';
@@ -86,14 +85,8 @@ export default function () {
   // Public neighborhood routes (metrics derived from Homiio listings)
   router.use('/neighborhoods', neighborhoodRoutes());
 
-  // Public tips routes
-  router.get('/tips', asyncHandler(tipsController.getAllTips));
-  router.get('/tips/featured', asyncHandler(tipsController.getFeaturedTips));
   // Public analytics/stats (no auth)
   router.get('/analytics/stats', asyncHandler(analyticsController.getAppStats));
-  router.get('/tips/category/:category', asyncHandler(tipsController.getTipsByCategory));
-  router.get('/tips/search', asyncHandler(tipsController.searchTips));
-  router.get('/tips/:id', asyncHandler(tipsController.getTipById));
 
   // Ethical pricing calculation endpoint (public - no authentication required)
   router.post('/properties/calculate-ethical-pricing', asyncHandler(async (req, res) => {

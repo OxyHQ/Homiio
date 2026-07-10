@@ -47,7 +47,6 @@ import type {
   IPlacePoi,
   IRoommateRequest,
   IRoommateRelationship,
-  ITip,
 } from './documentTypes';
 
 // Schemas are CJS — `require` them and cast to typed Mongoose Models.
@@ -80,7 +79,6 @@ const ImageModel = require('./schemas/ImageSchema') as Model<IImage>;
 const PlacePoiModel = require('./schemas/PlacePoiSchema') as Model<IPlacePoi>;
 const RoommateRequestModel = require('./schemas/RoommateRequestSchema') as Model<IRoommateRequest>;
 const RoommateRelationshipModel = require('./schemas/RoommateRelationshipSchema') as Model<IRoommateRelationship>;
-const TipModel = require('./schemas/TipSchema') as Model<ITip>;
 
 // Named ES exports — preferred for new code.
 export const Property = PropertyModel;
@@ -111,7 +109,6 @@ export const Image = ImageModel;
 export const PlacePoi = PlacePoiModel;
 export const RoommateRequest = RoommateRequestModel;
 export const RoommateRelationship = RoommateRelationshipModel;
-export const Tip = TipModel;
 
 // Re-export the document interfaces so callers can `import type { ILease } from '../models'`.
 export type {
@@ -151,7 +148,6 @@ export type {
   IPlacePoi,
   IRoommateRequest,
   IRoommateRelationship,
-  ITip,
 };
 
 // Legacy CJS callers (`const models = require('../../models')` — used by the
@@ -189,5 +185,4 @@ module.exports = {
   PlacePoi: PlacePoiModel,
   RoommateRequest: RoommateRequestModel,
   RoommateRelationship: RoommateRelationshipModel,
-  Tip: TipModel,
 };
