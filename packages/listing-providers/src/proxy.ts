@@ -3,9 +3,10 @@
  *
  * Homiio scrapes with its OWN worker (Playwright / HTTP) — this module wires a
  * cheap DIY residential proxy (e.g. DataImpulse) for HTML/JSON only. Image/CSS/font
- * bytes are blocked in Playwright; listing photos are re-hosted via
- * {@link ExternalMediaIngest} on a direct fetch path (optional proxy fallback).
+ * bytes are blocked in Playwright; listing photos are re-hosted on a direct fetch path.
  */
+
+import { randomBytes } from 'node:crypto';
 
 /** Parsed residential proxy credentials (no userinfo in `server`). */
 export interface ResidentialProxyConfig {
@@ -86,7 +87,7 @@ export function withStickySessionUsername(baseUsername: string, sessionId: strin
 
 /** Short random id for one sticky browser context or HTTP session. */
 export function createProxySessionId(): string {
-  return Math.random().toString(36).slice(2, 12);
+  return randomBytes(6).toString('hex');
 }
 
 /** Map structured config to Playwright proxy options (optional sticky session). */
