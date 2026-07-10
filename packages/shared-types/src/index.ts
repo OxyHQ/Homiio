@@ -52,3 +52,6 @@ export * from './listing';
 
 // Pure, dependency-free property-title helpers shared by frontend and backend
 export * from './utils/propertyTitle';
+
+// Ethical rental pricing calculator (shared frontend + backend)
+export * from './ethicalPricing';

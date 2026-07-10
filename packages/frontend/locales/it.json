@@ -633,7 +633,8 @@
         "moderate": "Moderata",
         "strict": "Rigida",
         "superStrict": "Molto rigida"
-      }
+      },
+      "fairPrice": "Solo prezzo giusto"
     },
     "mode": {
       "label": "Modalità di ricerca",
@@ -659,7 +660,8 @@
         "budget": "Meno di 1000 €",
         "apply": "Applica",
         "searchWithCount": "Cerca con {{count}} filtri",
-        "advancedFilters": "Filtri Avanzati"
+        "advancedFilters": "Filtri Avanzati",
+        "fairPrice": "Prezzo giusto"
       },
       "alerts": {
         "title": "Avvisi immobili",
@@ -824,7 +826,8 @@
       "recommended": "Consigliati",
       "priceAsc": "Prezzo: dal più basso",
       "priceDesc": "Prezzo: dal più alto",
-      "newest": "Più recenti"
+      "newest": "Più recenti",
+      "fairness": "Miglior valore"
     },
     "save": {
       "title": "Save this search",
@@ -1640,7 +1643,17 @@
       "cheaper": "cheaper",
       "pricier": "pricier"
     },
-    "fraudWarning": "Never pay or transfer funds outside the Homio platform"
+    "fraudWarning": "Never pay or transfer funds outside the Homio platform",
+    "priceEthics": {
+      "banner": {
+        "title": "Non è un prezzo giusto",
+        "exceedsEthical": "Questo prezzo supera il massimo etico di Homiio ({{max}}/mese).",
+        "exceedsEthicalGeneric": "Questo prezzo supera il massimo etico di Homiio per alloggi simili.",
+        "aboveMarket": "Questo prezzo è il {{percent}}% sopra alloggi simili nella zona.",
+        "aboveMarketGeneric": "Questo prezzo è sopra la media locale per alloggi simili.",
+        "generic": "Questo annuncio non soddisfa i criteri di prezzo giusto di Homiio."
+      }
+    }
   },
   "viewings": {
     "title": "Visite",
@@ -2582,7 +2595,8 @@
       "exchange": "Scambio",
       "verified": "Verificato",
       "eco": "Ecologico",
-      "instantBook": "Prenotazione immediata"
+      "instantBook": "Prenotazione immediata",
+      "fairPrice": "Prezzo giusto"
     },
     "offering": {
       "stepTitle": "Come lo offri?",

@@ -24,7 +24,8 @@
     "check:subscriptions": "node scripts/check-subscription-db.js",
     "cleanup:external-profile-id": "ts-node --transpile-only scripts/cleanup-external-profileId.ts",
     "clean": "rm -rf dist",
-    "lint": "eslint . --ext .ts"
+    "lint": "eslint . --ext .ts",
+    "backfill:price-ethics": "ts-node --transpile-only scripts/backfillPriceEthics.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.3.22",

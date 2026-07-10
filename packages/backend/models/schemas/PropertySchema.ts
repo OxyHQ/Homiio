@@ -659,6 +659,21 @@ const propertySchema = new mongoose.Schema({
   deletedAt: {
     type: Date,
     default: null
+  },
+  // Server-computed ethical + market price score (see priceEthicsService).
+  // Written atomically on score — no subfield defaults (avoids partial subdocs on save).
+  priceEthics: {
+    ethicalSuggested: { type: Number, min: 0 },
+    ethicalMax: { type: Number, min: 0 },
+    withinEthical: { type: Boolean },
+    marketVerdict: {
+      type: String,
+      enum: ['good_deal', 'below_average', 'average', 'above_average']
+    },
+    percentDiffFromAvg: { type: Number },
+    isFairPrice: { type: Boolean },
+    fairnessScore: { type: Number, min: 0, max: 100 },
+    scoredAt: { type: Date }
   }
 }, {
   timestamps: true,
@@ -712,6 +727,9 @@ propertySchema.index({ 'availabilityWindows.start': 1 });
 propertySchema.index({ 'availabilityWindows.end': 1 });
 // Exchange feed queries scoped by offering + exchange mode + status.
 propertySchema.index({ offerings: 1, 'exchange.mode': 1, status: 1 });
+// Price ethics sort/filter (fairness ranking, fair-price chip).
+propertySchema.index({ 'priceEthics.isFairPrice': 1 });
+propertySchema.index({ 'priceEthics.fairnessScore': -1 });
 
 /**
  * Offerings must be non-empty and equal exactly the set of present priced

@@ -473,7 +473,8 @@
         "moderate": "Moderada",
         "strict": "Estricta",
         "superStrict": "Molt estricta"
-      }
+      },
+      "fairPrice": "Només preu just"
     },
     "mode": {
       "label": "Mode de cerca",
@@ -537,7 +538,8 @@
         "budget": "Menys de 1000 €",
         "apply": "Aplica",
         "searchWithCount": "Cerca amb {{count}} filtres",
-        "advancedFilters": "Filtres Avançats"
+        "advancedFilters": "Filtres Avançats",
+        "fairPrice": "Preu just"
       },
       "alerts": {
         "title": "Alertes de propietats",
@@ -681,7 +683,8 @@
       "recommended": "Recomanat",
       "priceAsc": "Preu: de menor a major",
       "priceDesc": "Preu: de major a menor",
-      "newest": "Més recents"
+      "newest": "Més recents",
+      "fairness": "Millor valor"
     },
     "save": {
       "title": "Save this search",
@@ -1582,7 +1585,17 @@
       "cheaper": "cheaper",
       "pricier": "pricier"
     },
-    "fraudWarning": "Never pay or transfer funds outside the Homio platform"
+    "fraudWarning": "Never pay or transfer funds outside the Homio platform",
+    "priceEthics": {
+      "banner": {
+        "title": "No és un preu just",
+        "exceedsEthical": "Aquest preu supera el màxim ètic d'Homiio ({{max}}/mes).",
+        "exceedsEthicalGeneric": "Aquest preu supera el màxim ètic d'Homiio per a habitatges similars.",
+        "aboveMarket": "Aquest preu està un {{percent}}% per sobre d'habitatges similars a la zona.",
+        "aboveMarketGeneric": "Aquest preu està per sobre de la mitjana local per a habitatges similars.",
+        "generic": "Aquest anunci no compleix els criteris de preu just d'Homiio."
+      }
+    }
   },
   "viewings": {
     "title": "Visites",
@@ -2675,7 +2688,8 @@
       "exchange": "Intercanvi",
       "verified": "Verificat",
       "eco": "Ecològic",
-      "instantBook": "Reserva immediata"
+      "instantBook": "Reserva immediata",
+      "fairPrice": "Preu just"
     },
     "offering": {
       "stepTitle": "Com ho ofereixes?",
