@@ -12,11 +12,10 @@
  *     seeder can embed it on the property — preserving the historical read shape
  *     while backing it with the Image collection.
  *
- *   - City covers: the six curated city images (the SAME URLs the frontend
- *     `CITY_SHOWCASE` array hardcodes) are fetched ONCE, processed and stored as
- *     `Image` docs (`entityType: 'city'`). The city's `coverImageId` is then set
- *     to point at our stored copy — so at runtime there is ZERO live external
- *     image dependency.
+ *   - City covers (local demo seed only): the six curated city images (the SAME
+ *     URLs the frontend `CITY_SHOWCASE` array hardcodes) are fetched ONCE,
+ *     processed and stored as `Image` docs (`entityType: 'city'`). Production
+ *     covers use `cityCoverSyncService` (Wikimedia Commons), not this seed path.
  *
  * Storage caveat: when object storage is not configured (no S3 credentials —
  * e.g. this local seed environment), the Image documents are still created with
