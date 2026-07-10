@@ -1,250 +1,87 @@
-# Homio Backend API
+# Homiio Backend API
 
-A comprehensive housing and rental solutions API built with Express.js, designed to manage properties, rooms, tenants, and more.
+Express + Mongoose API for the Homiio real estate platform. See `~/Oxy/Homiio/AGENTS.md` for architecture, IDOR rules, listing ingestion, and deployment detail.
 
-## Features
+## Packages in this monorepo
 
-- **Property Management**: Create, read, update, and delete properties
-- **Room Management**: Manage individual rooms within properties
-- **User Authentication**: Integration with Oxy ecosystem
-- **Search & Filtering**: Advanced property and room search capabilities
-- **API Documentation**: RESTful API with comprehensive endpoints
+| Package | Role |
+|---------|------|
+| `packages/backend` | HTTP API + worker entrypoint |
+| `packages/shared-types` | Cross-package DTOs and enums |
+| `packages/listing-providers` | External listing provider plugins + FetchRuntime |
+| `packages/frontend` | Expo/RN client (separate package) |
 
-## Tech Stack
+The production Dockerfile builds `shared-types` → `listing-providers` → `backend` in that order.
 
-- **Framework**: Express.js
-- **Authentication**: Oxy Services integration
-- **Validation**: Express Validator
-- **Logging**: Custom logging middleware
-- **Error Handling**: Centralized error management
+## Commands
 
-## Project Structure
+```bash
+# From repo root
+bun run dev:backend     # API with hot reload
+bun run test            # All packages
+bun run build           # All packages
+
+# This package only
+cd packages/backend
+bun run dev
+bun run start           # Production (compiled dist)
+```
+
+Worker (same Docker image, different command): `packages/backend/worker.ts`.
+
+## Layout
 
 ```
 packages/backend/
-├── controllers/          # Request handlers
-│   ├── propertyController.ts
-│   ├── roomController.ts
-│   └── index.ts
-├── models/              # Data models
-│   ├── Property.ts
-│   ├── Room.ts
-│   ├── User.ts
-│   ├── Lease.ts
-│   ├── Payment.ts
-│   └── index.ts
-├── routes/              # API routes
-│   ├── properties.ts
-│   ├── rooms.ts
-│   └── index.ts
-├── middlewares/         # Express middlewares
-│   ├── auth.ts
-│   ├── validation.ts
-│   ├── errorHandler.ts
-│   ├── logging.ts
-│   └── index.ts
-├── services/           # Business logic
-│   └── index.ts
-├── utils/              # Utility functions
-│   ├── helpers.ts
-│   └── index.ts
-├── config.ts           # Configuration
-├── server.ts           # Application entry point
-└── package.json
+├── controllers/        # Route handlers (property/, lease/, …)
+├── models/             # Mongoose schemas + documentTypes
+├── routes/             # Express routers mounted in routes/index.ts
+├── services/           # Business logic (ingestion, notifications, commission, …)
+├── middlewares/        # Auth (Oxy), validation, errorHandler, logging
+├── utils/              # pickFields, helpers
+├── worker.ts           # BullMQ listing-ingestion worker
+├── server.ts           # API entrypoint
+└── Dockerfile          # linux/arm64 → ECR oxy/homiio
 ```
 
-## API Endpoints
+## Auth
 
-### Properties
+Uses `@oxyhq/core/server` (`createOxyAuthMiddleware`, `requireOxyAuth`, `getRequiredOxyUserId`). The linked Oxy client on the frontend owns token refresh — no app-local bearer parsers.
 
-- `GET /api/properties` - List all properties (public)
-- `POST /api/properties` - Create a new property (authenticated)
-- `GET /api/properties/:id` - Get property details (public)
-- `PUT /api/properties/:id` - Update property (authenticated, owner only)
-- `DELETE /api/properties/:id` - Delete property (authenticated, owner only)
-- `GET /api/properties/my/properties` - Get current user's properties
+Profile ownership resolves via `Profile.findActiveByOxyUserId` — never trust client-supplied profile ids.
 
-### Rooms
+## Key API areas
 
-- `GET /api/properties/:propertyId/rooms` - List rooms in a property
-- `POST /api/properties/:propertyId/rooms` - Create a room (authenticated)
-- `GET /api/properties/:propertyId/rooms/:roomId` - Get room details
-- `PUT /api/properties/:propertyId/rooms/:roomId` - Update room (authenticated)
-- `DELETE /api/properties/:propertyId/rooms/:roomId` - Delete room (authenticated)
-- `GET /api/properties/:propertyId/rooms/search` - Search available rooms
-- `PATCH /api/properties/:propertyId/rooms/:roomId/availability` - Update room availability
+| Mount | Purpose |
+|-------|---------|
+| `/api/properties` | Listings CRUD, search, `POST /:id/mark-transacted` |
+| `/api/leases` | Lease CRUD, sign/terminate/renew, payments/documents |
+| `/api/applications` | Tenant applications, `POST /:id/create-lease` bridge |
+| `/api/roommates` | Matching, requests, `RoommateRelationship` |
+| `/api/notifications` | Mailbox read/mark (writes from `notificationDispatchService` only) |
+| `/api/viewings` | Viewing requests |
+| `/health` | Public health check |
 
-### Health & Testing
+Full route list: `routes/index.ts` and `~/Oxy/Homiio/AGENTS.md`.
 
-- `GET /health` - Public health check
-- `GET /api/health` - API health check
-- `POST /api/test` - Test authenticated endpoint
+## Write safety (IDOR)
 
-## Getting Started
+All create/update handlers use `utils/pickFields.ts` with explicit allowlists:
 
-### Prerequisites
+- `controllers/property/editableFields.ts` — property + room
+- `controllers/lease/editableFields.ts` — lease
 
-- Node.js 16+
-- npm or yarn
-- Oxy ecosystem account (for authentication)
+Never `new Model(req.body)` or spread `req.body`. Server-resolved owner ids + lifecycle fields set explicitly after picking.
 
-### Installation
+## Environment
 
-1. Install dependencies:
-```bash
-bun install
-```
+Copy `.env.example` → `.env`. Core vars: `PORT`, `MONGODB_URI`, Oxy auth config, optional `REDIS_URL` (BullMQ worker), provider feature flags (`PROVIDER_*_ENABLED`), listing fetch tiers (`LISTING_BROWSER_ENABLED`, `LISTING_MANAGED_FETCH_URL`).
 
-2. Set up environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
+Secrets for production live in GitHub repo secrets → SSM `/oxy/homiio/*` → ECS task env. See `~/Oxy/oxy-infra`.
 
-3. Start the development server:
-```bash
-bun run dev
-```
+## Deployment
 
-4. Start production server:
-```bash
-bun run start
-```
-
-## Environment Variables
-
-```env
-NODE_ENV=development
-PORT=4000
-OXY_API_URL=http://localhost:3001
-DATABASE_URL=mongodb://localhost:27017/homiio
-```
-
-## Models
-
-### Property
-- Basic property information (title, description, address)
-- Rent details and availability
-- Amenities and rules
-- Image and document management
-
-### Room
-- Individual room details within properties
-- Rent and availability per room
-- Roommate preferences and matching
-- Furniture and amenities
-- Occupancy management
-
-### User
-- User profiles and preferences
-- Verification status
-- Trust scores and ratings
-- Subscription management
-
-### Lease
-- Rental agreements between landlords and tenants
-- Terms and conditions
-- Digital signatures
-- Status tracking
-
-### Payment
-- Rent payments and transaction history
-- Multiple payment methods
-- Fee calculations
-- Receipt management
-
-## Authentication
-
-The API uses Oxy Services for authentication. Include the authentication token in the Authorization header:
-
-```
-Authorization: Bearer <your_token>
-```
-
-## Error Handling
-
-The API returns consistent error responses:
-
-```json
-{
-  "success": false,
-  "error": {
-    "message": "Error description",
-    "code": "ERROR_CODE",
-    "statusCode": 400
-  }
-}
-```
-
-## Response Format
-
-Successful responses follow this format:
-
-```json
-{
-  "success": true,
-  "message": "Operation successful",
-  "data": {...},
-  "meta": {
-    "timestamp": "2025-06-19T10:30:00.000Z"
-  }
-}
-```
-
-Paginated responses include pagination metadata:
-
-```json
-{
-  "success": true,
-  "message": "Data retrieved successfully",
-  "data": [...],
-  "pagination": {
-    "page": 1,
-    "limit": 10,
-    "total": 100,
-    "totalPages": 10,
-    "hasNext": true,
-    "hasPrev": false
-  }
-}
-```
-
-## Development
-
-### Scripts
-
-- `bun run start` - Start production server
-- `bun run dev` - Start development server with nodemon
-- `bun run build` - Install latest dependencies
-- `npm test` - Run tests (placeholder)
-
-### Code Style
-
-- Use ES6+ features
-- Follow consistent naming conventions
-- Add JSDoc comments for functions
-- Handle errors appropriately
-- Use async/await for asynchronous operations
-
-## Future Enhancements
-
-- Database integration (MongoDB/PostgreSQL)
-- Real-time WebSocket connections
-- File upload and image processing
-- Advanced search with Elasticsearch
-- Email notifications
-- SMS integration
-- Mobile app APIs
-- AI-powered matching algorithms
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## License
-
-ISC License
+- **Port**: 4000
+- **Domain**: `api.homiio.com`
+- **ECR**: `oxy/homiio` (linux/arm64)
+- Push to `main` triggers `.github/workflows/deploy-aws.yml`

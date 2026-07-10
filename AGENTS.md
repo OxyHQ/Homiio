@@ -23,12 +23,15 @@ bun run clean               # Clean everything
 
 ```
 packages/
-  frontend/       @homiio/frontend      Expo 56 / React Native 0.85 / React 19 / NativeWind 5 (preview)
-  backend/        @homiio/backend       Express 4.21 / Mongoose 8 / Stripe / Sharp
-  shared-types/   @homiio/shared-types  Types: address, city, lease, profile, property, review
+  frontend/           @homiio/frontend          Expo / RN / NativeWind
+  backend/            @homiio/backend           Express / Mongoose / Stripe / Sharp
+  shared-types/       @homiio/shared-types      address, city, lease, profile, property, review
+  listing-providers/  @homiio/listing-providers Plugin contract, FetchRuntime, provider plugins
 ```
 
 Version numbers live in each `package.json` — read them there, don't trust this block for exact pins.
+
+The production Dockerfile builds in dependency order: `shared-types` → `listing-providers` → `backend`. The API image includes `@homiio/listing-providers` (worker uses the same image, different start command).
 
 ## Key Features
 
@@ -46,6 +49,10 @@ Version numbers live in each `package.json` — read them there, don't trust thi
 
 **Backend**: addresses, ai, analytics, billing, cities, images, leases, notifications, profiles, properties, public, reviews, roommates, rooms, scraper, telegram, tips, viewings
 
+## Profile Resolution (CRITICAL)
+
+Every authenticated write resolves the caller's Homiio profile via `Profile.findActiveByOxyUserId(oxyUserId)` — never accept a `profileId` from the client for ownership. Controllers derive `oxyUserId` from `getRequiredOxyUserId` / `req.user` and look up the active profile server-side. Missing profile → 404 `PROFILE_NOT_FOUND`.
+
 ## IDOR Fix (CRITICAL)
 
 Property/room/**lease** create and update use a server-resolved owner id (`profileId` for property/room, `landlordProfileId` for lease) + an explicit editable-field whitelist. Never accept raw owner ids or lifecycle/system fields (`status`, `signatures`, `paymentSchedule`, …) from the request body — the backend resolves the owner from the authenticated user via `getRequiredOxyUserId`/`Profile.findActiveByOxyUserId`. Do not regress this.
@@ -53,6 +60,39 @@ Property/room/**lease** create and update use a server-resolved owner id (`profi
 - Shared guard: `packages/backend/utils/pickFields.ts` (one implementation for every write controller).
 - Whitelists: `controllers/property/editableFields.ts` (property + room) and `controllers/lease/editableFields.ts` (`CREATABLE_LEASE_FIELDS`/`EDITABLE_LEASE_FIELDS`).
 - Rule: never `new Model(req.body)`, never `...req.body`, never a denylist — pick the allowlist, then set server-only fields explicitly. Keep whitelists in sync with the schemas.
+
+## Leases & Contracts
+
+Leases are first-class Mongoose documents; the schema is the authority and `controllers/lease/toLeaseDTO.ts` serializes `_id` → `id` plus optional populated `property`/`landlord`/`tenant` for the frontend.
+
+- **Backend routes**: `/api/leases` — list (`?status=`, `?propertyId=`), CRUD, sub-resources (`/:id/payments`, `/:id/documents`), lifecycle (`/:id/sign`, `/:id/terminate`, `/:id/renew`). Static sub-routes are declared before `/:id`.
+- **Frontend screens**: `/contracts` (list), `/contracts/[id]` (detail/sign), `/contracts/new` (landlord draft from application).
+- **Create flow**: landlord-only bridge `POST /api/applications/:id/create-lease` resolves property, tenant, and rent server-side from an **approved** application and returns a draft lease. `/contracts/new?application=<id>` is the only create entry point — no standalone tenant picker or manual lease form.
+- **Writes**: same IDOR pattern — `CREATABLE_LEASE_FIELDS` / `EDITABLE_LEASE_FIELDS` in `controllers/lease/editableFields.ts`; `landlordProfileId` is server-resolved, never from `req.body`.
+
+## Notifications (CRITICAL)
+
+Event-driven in-app notifications have **one write chokepoint**: `services/notificationDispatchService.ts`. Controllers call `createForUser` / `createForProfile` for domain events (lease signed, viewing approved, roommate request, …) — never `Notification.create` directly. Dispatch is best-effort (swallow-and-log; domain action must succeed even if the mailbox write fails).
+
+The frontend has **no realtime socket client** for notifications. Mailbox refresh is refetch-on-focus + React Query invalidation after writes (`NotificationContext`, `services/notificationService.ts`). See `packages/frontend/docs/NOTIFICATIONS.md`.
+
+## Roommates
+
+Accepted roommate requests materialize a `RoommateRelationship` document (`models/schemas/RoommateRelationshipSchema.ts`). Routes: `GET /api/roommates/relationships`, `DELETE /api/roommates/relationships/:relationshipId`. Ownership and participant resolution use `Profile.findActiveByOxyUserId` — same rule as property/lease writes.
+
+## Partner Commissions (mark-transacted)
+
+Owner-only close endpoint: `POST /api/properties/:propertyId/mark-transacted` (`controllers/property/transact.ts`). Sets terminal status (`rented` | `sold`, inferred from offerings when omitted) and runs the idempotent `onPropertyTransacted` commission trigger. Re-marking never creates a second commission. Frontend: `useMarkPropertyTransacted` on `/properties/my`.
+
+## External Listings & Deep Links
+
+External properties (`isExternal: true`) block in-app apply/viewing. The contact CTA opens the portal via `Linking.openURL(sourceUrl)` — never route external listings to Homiio enquiry flows. Guard missing `sourceUrl` with a user-facing error.
+
+## Neighborhood Widget
+
+`NeighborhoodRatingWidget` renders **only real Homiio-derived metrics** (listing count, average rent, vs-city contrast). No invented walkability/transit/safety scores. When no neighborhood resolves or lookup errors, the widget renders nothing.
+
+Gated by `EXPO_PUBLIC_NEIGHBORHOOD_WIDGET_ENABLED=true` (off by default) in `components/widgets/WidgetManager.tsx` — enable only when neighborhood data coverage is broad enough.
 
 ## Backend Client (Live)
 

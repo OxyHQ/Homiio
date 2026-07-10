@@ -5,13 +5,16 @@ This document describes the comprehensive notification system implemented in the
 ## Overview
 
 The notification system provides:
-- **Local notifications** for immediate user feedback
+- **Local notifications** for immediate user feedback (Expo Notifications)
 - **Scheduled notifications** for reminders and timed alerts
-- **Server notifications** fetched on demand (refetch-on-focus + query invalidation after writes). There is no realtime socket channel; notifications are produced server-side by domain events (see `services/notificationDispatchService.ts` in the backend).
+- **Server mailbox** fetched on demand — refetch-on-focus + React Query invalidation after writes. **There is no realtime socket channel.**
 - **Badge management** for app icon unread counts
 - **Permission management** with user-friendly prompts
 - **Notification preferences** for granular control
-- **Notification categories** for different types of alerts
+
+### Backend write chokepoint
+
+Domain events (lease signed, viewing approved, roommate request received, …) produce in-app notifications **only** through `packages/backend/services/notificationDispatchService.ts`. Controllers call `createForUser` / `createForProfile` — never `Notification.create` directly for event-driven notifications. Dispatch is best-effort: a notification failure must never break the domain action that triggered it.
 
 ## Architecture
 
@@ -28,8 +31,12 @@ The notification system provides:
    - Utility functions for common notification types
 
 3. **Notification Service** (`services/notificationService.ts`)
-   - Server-side notification management
-   - API integration for fetching and managing notifications (list, mark-read, read-all, clear-all)
+   - Client-side mailbox API (list, mark-read, read-all, clear-all)
+   - No socket subscription — polling/invalidation only
+
+4. **Backend dispatch** (`packages/backend/services/notificationDispatchService.ts`)
+   - Sole producer of event-driven server notifications
+   - Resolves recipient via Oxy user id or Homiio profile id server-side
 
 ### Screens
 
@@ -450,13 +457,11 @@ clearBadge(): Promise<void>;
 
 ## Future Enhancements
 
-- **Rich Notifications**: Support for images, videos, and custom UI
+- **Rich Notifications**: Support for images and custom UI in push payloads
 - **Action Buttons**: Custom actions for different notification types
-- **Notification History**: Persistent storage of notification history
-- **Advanced Scheduling**: More complex scheduling patterns
 - **Analytics**: Track notification engagement and effectiveness
-- **A/B Testing**: Test different notification strategies
-- **Smart Notifications**: AI-powered notification timing and content
+
+Do **not** add a realtime socket channel for the mailbox — the refetch-on-focus + invalidation model is intentional.
 
 ## Contributing
 
