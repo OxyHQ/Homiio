@@ -52,7 +52,7 @@ function models(): {
   };
 }
 
-function indexUsesLegacyGeoFields(key: Record<string, number>): boolean {
+function indexUsesLegacyGeoFields(key: Record<string, unknown>): boolean {
   return Object.prototype.hasOwnProperty.call(key, 'state')
     || Object.prototype.hasOwnProperty.call(key, 'country');
 }
