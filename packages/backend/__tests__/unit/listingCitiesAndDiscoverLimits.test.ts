@@ -75,6 +75,35 @@ describe('fotocasaCitiesFromEnv', () => {
   });
 });
 
+describe('habitacliaCitiesFromEnv', () => {
+  it('uses LISTING_HABITACLIA_CITIES when set', () => {
+    process.env.LISTING_HABITACLIA_CITIES = 'madrid, barcelona';
+    const { habitacliaCitiesFromEnv } = require('@homiio/listing-providers');
+    expect(habitacliaCitiesFromEnv()).toEqual(['madrid', 'barcelona']);
+  });
+
+  it('defaults to madrid only', () => {
+    delete process.env.LISTING_HABITACLIA_CITIES;
+    process.env.LISTING_ES_CITIES = 'madrid,barcelona,valencia,sevilla';
+    const { habitacliaCitiesFromEnv, HABITACLIA_DEFAULT_CITIES } = require('@homiio/listing-providers');
+    expect(habitacliaCitiesFromEnv()).toEqual([...HABITACLIA_DEFAULT_CITIES]);
+  });
+});
+
+describe('idealistaCitiesFromEnv', () => {
+  it('uses LISTING_IDEALISTA_CITIES when set', () => {
+    process.env.LISTING_IDEALISTA_CITIES = 'madrid';
+    const { idealistaCitiesFromEnv } = require('@homiio/listing-providers');
+    expect(idealistaCitiesFromEnv()).toEqual(['madrid']);
+  });
+
+  it('defaults to madrid only', () => {
+    delete process.env.LISTING_IDEALISTA_CITIES;
+    const { idealistaCitiesFromEnv, IDEALISTA_DEFAULT_CITIES } = require('@homiio/listing-providers');
+    expect(idealistaCitiesFromEnv()).toEqual([...IDEALISTA_DEFAULT_CITIES]);
+  });
+});
+
 describe('discover pagination caps', () => {
   it('clamps env page caps to MAX_PAGES_CEILING', () => {
     process.env.LISTING_TEST_MAX = '9999';

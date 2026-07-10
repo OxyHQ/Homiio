@@ -23,7 +23,7 @@ import type {
   RawListing,
 } from '../../types';
 import { createFetchRuntime } from '../../runtime';
-import { fetchListingViaLadder } from '../../strategy';
+import { fetchListingViaLadder, ChallengeError } from '../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
 import { providerMaxSearchPages } from '../../discoverLimits';
 import { BrowserSessionChallengeError, type BrowserSession, type BrowserStorageState } from '../../browserSession';
@@ -65,6 +65,7 @@ const DEFAULT_CITIES: readonly string[] = [
 ];
 const DEFAULT_MAX_SEARCH_PAGES = 50;
 const LISTAINMUEBLES_POST_TIMEOUT_MS = 45_000;
+const HABITACLIA_HTTP_SEARCH_TIMEOUT_MS = 90_000;
 const SUPPORTED_TYPES: ReadonlySet<string> = new Set(Object.values(PropertyType));
 
 function resolvePropertyType(raw: string): PropertyType {
@@ -141,7 +142,22 @@ export class HabitacliaProvider implements ListingProvider {
     const yielded = { count: 0 };
     const runtime = job.runtime ?? this.runtime;
 
-    // Cold HTTP + listainmuebles POST first (cheaper than a full browser warm).
+    for (const city of cities) {
+      if (yielded.count >= limit) return;
+      for await (const ref of this.discoverCityViaHttpListainmuebles(
+        runtime,
+        city,
+        job.signal,
+        seen,
+        limit,
+        yielded,
+      )) {
+        yield ref;
+      }
+    }
+    if (yielded.count >= limit) return;
+
+    // Cold HTTP search HTML + listainmuebles POST pagination.
     for (const city of cities) {
       if (yielded.count >= limit) return;
       for await (const ref of this.discoverCityViaHtml(runtime, city, job.signal, seen, limit, yielded)) {
@@ -166,6 +182,48 @@ export class HabitacliaProvider implements ListingProvider {
     }
 
     if (yielded.count > beforeSession) return;
+  }
+
+  /**
+   * HTTP-first listainmuebles: proxied search page → POST pagination without
+   * Playwright when Imperva allows same-origin XHR on a sticky ES exit.
+   */
+  private async *discoverCityViaHttpListainmuebles(
+    runtime: FetchRuntime,
+    city: string,
+    signal: AbortSignal | undefined,
+    seen: Set<string>,
+    limit: number,
+    yielded: { count: number },
+  ): AsyncIterable<ExternalListingRef> {
+    const referer = habitacliaWarmSearchUrl(city, 1);
+    const { status, body } = await runtime.fetchHttp(referer, {
+      signal,
+      proxyCountry: ES_PROXY_COUNTRY,
+      timeoutMs: HABITACLIA_HTTP_SEARCH_TIMEOUT_MS,
+      headers: {
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+      },
+    });
+    if (status >= 400 || isHabitacliaChallenge(body)) return;
+
+    const pageRefs = parseHabitacliaSearch(body);
+    for (const ref of yieldRefs(pageRefs, seen, limit, yielded)) {
+      yield ref;
+    }
+
+    for (const ref of await this.discoverCityViaHttpAjax(
+      runtime,
+      city,
+      body,
+      signal,
+      seen,
+      limit,
+      yielded,
+    )) {
+      yield ref;
+    }
   }
 
   private habitacliaSessionOptions(city: string, sticky: boolean) {
@@ -358,18 +416,23 @@ export class HabitacliaProvider implements ListingProvider {
     for (let page = 1; page <= this.maxSearchPages; page += 1) {
       if (yielded.count >= limit) return;
       if (page > 1 && !runtime.fetchViaBrowser) break;
-      const { html } = await fetchListingViaLadder(runtime, habitacliaWarmSearchUrl(city, page), {
-        provider: this.id,
-        isChallenge: isHabitacliaChallenge,
-        metrics: this.metrics,
-        init: { signal, proxyCountry: ES_PROXY_COUNTRY },
-        tiers: page === 1 ? undefined : ['browser'],
-      });
-      if (page === 1) firstPageHtml = html;
-      const refs = parseHabitacliaSearch(html);
-      if (refs.length === 0) break;
-      for (const ref of yieldRefs(refs, seen, limit, yielded)) {
-        yield ref;
+      try {
+        const { html } = await fetchListingViaLadder(runtime, habitacliaWarmSearchUrl(city, page), {
+          provider: this.id,
+          isChallenge: isHabitacliaChallenge,
+          metrics: this.metrics,
+          init: { signal, proxyCountry: ES_PROXY_COUNTRY },
+          tiers: page === 1 ? undefined : ['browser'],
+        });
+        if (page === 1) firstPageHtml = html;
+        const refs = parseHabitacliaSearch(html);
+        if (refs.length === 0) break;
+        for (const ref of yieldRefs(refs, seen, limit, yielded)) {
+          yield ref;
+        }
+      } catch (error) {
+        if (error instanceof ChallengeError) return;
+        throw error;
       }
     }
 

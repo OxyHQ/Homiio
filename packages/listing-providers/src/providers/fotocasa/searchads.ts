@@ -216,6 +216,38 @@ export function parseFotocasaLocationSegments(body: string): FotocasaLocationSeg
   return { ids, latitude, longitude };
 }
 
+function collectCardsFromUnknown(
+  value: unknown,
+  cards: Map<string, Record<string, unknown>>,
+): void {
+  if (Array.isArray(value)) {
+    for (const entry of value) collectCardsFromUnknown(entry, cards);
+    return;
+  }
+  if (!isRecord(value)) return;
+
+  const ref = refFromRecord(value);
+  if (ref) cards.set(ref.sourceId, value);
+
+  for (const key of ['realEstates', 'ads', 'items', 'results', 'data', 'content', 'html']) {
+    if (key in value) collectCardsFromUnknown(value[key], cards);
+  }
+}
+
+/** Extract searchads listing cards keyed by source id (for discover → fetch handoff). */
+export function extractFotocasaSearchCards(body: string): Map<string, Record<string, unknown>> {
+  const trimmed = body.trim();
+  const cards = new Map<string, Record<string, unknown>>();
+  if (trimmed.length === 0 || isFotocasaSearchadsChallenge(trimmed)) return cards;
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return cards;
+  try {
+    collectCardsFromUnknown(JSON.parse(trimmed) as unknown, cards);
+  } catch {
+    return cards;
+  }
+  return cards;
+}
+
 /**
  * Parse a searchads AJAX body (or SSR-embedded JSON) into de-duplicated listing
  * refs. Accepts `{ realEstates: [...] }` or raw HTML with detail links.

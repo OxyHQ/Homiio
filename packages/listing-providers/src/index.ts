@@ -60,6 +60,11 @@ export type { FixtureRawListing, FixtureRawImage } from './providers/fixture/fix
 
 export { HabitacliaProvider } from './providers/habitaclia';
 export {
+  HABITACLIA_DEFAULT_CITIES,
+  habitacliaCitiesFromEnv,
+  habitacliaCitiesOptionsFromEnv,
+} from './providers/habitaclia/cities';
+export {
   parseHabitacliaDetail,
   parseHabitacliaSearch,
   habitacliaSourceIdFromUrl,
@@ -104,6 +109,11 @@ export type {
 } from './providers/blueground/fixtures';
 
 export { IdealistaProvider, isIdealistaChallenge, idealistaSourceIdFromUrl } from './providers/idealista';
+export {
+  IDEALISTA_DEFAULT_CITIES,
+  idealistaCitiesFromEnv,
+  idealistaCitiesOptionsFromEnv,
+} from './providers/idealista/cities';
 export { parseIdealistaDetail, parseIdealistaSearch, type IdealistaRaw } from './providers/idealista/parse';
 export {
   parseIdealistaGeoreach,
@@ -1076,8 +1086,10 @@ import type { ListingProvider } from './types';
 import { citiesOptionsFromEnv } from './cities';
 import { FixtureProvider } from './providers/fixture';
 import { HabitacliaProvider } from './providers/habitaclia';
+import { habitacliaCitiesOptionsFromEnv } from './providers/habitaclia/cities';
 import { BluegroundProvider } from './providers/blueground';
 import { IdealistaProvider } from './providers/idealista';
+import { idealistaCitiesOptionsFromEnv } from './providers/idealista/cities';
 import { FotocasaProvider, fotocasaCitiesOptionsFromEnv } from './providers/fotocasa';
 import { PisosProvider } from './providers/pisos';
 import { MilanunciosProvider } from './providers/milanuncios';
@@ -1170,9 +1182,9 @@ export function createDefaultRegistry(): ProviderRegistry {
   const plOptions = citiesOptionsFromEnv('PL');
   const nlOptions = citiesOptionsFromEnv('NL');
   const flaggedProviders: ListingProvider[] = [
-    new HabitacliaProvider(esOptions),
+    new HabitacliaProvider(habitacliaCitiesOptionsFromEnv()),
     new BluegroundProvider(),
-    new IdealistaProvider(esOptions),
+    new IdealistaProvider(idealistaCitiesOptionsFromEnv()),
     new FotocasaProvider(fotocasaCitiesOptionsFromEnv()),
     new PisosProvider(esOptions),
     new MilanunciosProvider(esOptions),
