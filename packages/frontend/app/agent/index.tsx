@@ -17,11 +17,12 @@
  */
 import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
+import { useSharedValue } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { showSignInModal, useOxy } from '@oxyhq/services';
 
 import { Header } from '@/components/Header';
+import { PageScrollView } from '@/components/PageScrollView';
 import { AgentHero } from '@/components/agent/AgentHero';
 import { AgentHowItWorks } from '@/components/agent/AgentHowItWorks';
 import { EarningsCalculator } from '@/components/agent/EarningsCalculator';
@@ -38,14 +39,10 @@ export default function AgentScreen() {
   const { t } = useTranslation();
   const { isAuthenticated } = useOxy();
 
-  // Drive the transparent Header's scroll-in background from this screen's own
-  // scroll position (the screen isn't inside the shared layout scroll context).
+  // Drive the transparent Header's scroll-in background from the sole scroll
+  // owner: the document on web (mirrored by `PageScrollView`), the screen's own
+  // `Animated.ScrollView` on native.
   const scrollY = useSharedValue(0);
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollY.value = event.contentOffset.y;
-    },
-  });
 
   const meQuery = usePartnerMe();
   const joinMutation = useJoinPartner();
@@ -106,11 +103,10 @@ export default function AgentScreen() {
     <View style={styles.root}>
       <Header options={{ transparent: true, showBackButton: true }} scrollY={scrollY} />
 
-      <Animated.ScrollView
+      <PageScrollView
+        scrollY={scrollY}
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
-        onScroll={scrollHandler}
-        scrollEventThrottle={16}
       >
         {/* Section rhythm owned here by NativeWind `gap` (32px mobile / 48px
             web); each direct child is a page section with no per-section
@@ -158,7 +154,7 @@ export default function AgentScreen() {
             onPress={handleHeroCta}
           />
         </View>
-      </Animated.ScrollView>
+      </PageScrollView>
     </View>
   );
 }

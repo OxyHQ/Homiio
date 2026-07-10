@@ -11,8 +11,9 @@ import { colors } from '@/styles/colors';
 import { colorChannels } from '@/styles/shadows';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PANEL_TOP_INSET } from '@oxyhq/bloom/content-panel';
 import { ThemedText } from './ThemedText';
-import { useLayoutScroll } from '@/context/LayoutScrollContext';
+import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 
 /**
  * Header drop shadow, expressed as an animated `boxShadow`: the blur/offset are
@@ -42,29 +43,36 @@ interface Props {
 }
 
 export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) => {
-  const layoutScroll = useLayoutScroll();
   const router = useRouter();
   // Derived directly from the router rather than synced via an effect — this is
   // a pure read of navigation state and avoids cascading renders.
   const canGoBack = router.canGoBack();
   const insets = useSafeAreaInsets();
+  const isScreenNotMobile = useIsScreenNotMobile();
   const internalScrollY = useSharedValue(0);
-  const scrollY = externalScrollY ?? layoutScroll?.scrollY ?? internalScrollY;
+  const scrollY = externalScrollY ?? internalScrollY;
+
+  // On web the DOCUMENT is the scroll owner and the shell frames content in a
+  // rounded `ContentPanel` at `PANEL_TOP_INSET` (8px) on wide screens, so a
+  // sticky header must pin at that inset (not top:0, where the panel's bleed
+  // mask would clip it); it pins flush on narrow/full-bleed web.
+  const framed = Platform.OS === 'web' && isScreenNotMobile;
 
   const titlePosition = options?.titlePosition || 'left';
   const isTransparent = options?.transparent || false;
   const scrollThreshold = options?.scrollThreshold || 20;
 
   useEffect(() => {
-    if (Platform.OS !== 'web' || externalScrollY || layoutScroll?.scrollY) return;
+    if (Platform.OS !== 'web' || externalScrollY) return;
     const handleScroll = () => {
       scrollY.value = window.scrollY;
     };
+    handleScroll();
     document.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
       document.removeEventListener('scroll', handleScroll);
     };
-  }, [scrollY, externalScrollY, layoutScroll]);
+  }, [scrollY, externalScrollY]);
 
   const backgroundStyle = useAnimatedStyle(() => {
     if (!isTransparent) {
@@ -99,7 +107,13 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
   });
 
   return (
-    <View style={[styles.topRow, { minHeight: 60 + insets.top }]}>
+    <View
+      style={[
+        styles.topRow,
+        { minHeight: 60 + insets.top },
+        Platform.OS === 'web' ? { top: framed ? PANEL_TOP_INSET : 0 } : null,
+      ]}
+    >
       {/* Animated Background */}
       <Animated.View
         style={[

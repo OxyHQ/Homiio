@@ -3,6 +3,17 @@
 @import "tailwindcss/utilities.css";
 @import "nativewind/theme";
 
+/*
+ * Bloom design tokens (single source of truth). Ships the `@theme` block
+ * generated from `bloomThemeCss()` — radius (`--radius-radius-28` that
+ * `ContentPanel` renders as `rounded-radius-28`), spacing, type and shadow
+ * scales — so they are NEVER hand-copied here. The `--color-*` aliases it adds
+ * map onto the same base `--x` tokens BloomThemeProvider injects at runtime;
+ * they merge additively with Homiio's app-local `@theme` below (the one shared
+ * key, `--color-border`, resolves to the identical `var(--border)`).
+ */
+@import "@oxyhq/bloom/design-tokens/theme.css";
+
 @source "../app/**/*.{js,jsx,ts,tsx}";
 @source "../components/**/*.{js,jsx,ts,tsx}";
 @source "../context/**/*.{js,jsx,ts,tsx}";
@@ -111,4 +122,33 @@
     --ring: hsl(205 87% 53%);
     --sidebar: hsl(205 30% 8%);
   }
+}
+
+/*
+ * Document-level scrolling (WEB). Expo / react-native-web inject a "recommended
+ * style reset" that locks `html, body { height: 100%; overflow: hidden }` and
+ * `#root { height: 100% }` for a native-like fixed viewport. These plain,
+ * UNLAYERED rules override it so the DOCUMENT is the single scroll owner: the
+ * shell renders no page-level `ScrollView`, the body grows with its content, and
+ * the sticky `SideBar`/`RightBar`/panel chrome pin to the viewport.
+ * `#root { min-height: 100vh }` keeps the flex root from collapsing to 0 height
+ * once `height: auto` applies. No runtime JS.
+ *
+ * `overflow` MUST stay `visible` on BOTH axes: setting one axis to
+ * hidden/clip/auto/scroll triggers CSS "overflow promotion" — the other axis
+ * computes to `auto`, turning body into a scroll container so the DOCUMENT stops
+ * scrolling. Any wanted clipping goes on a CHILD (e.g. the fixed explore shell),
+ * never here.
+ */
+html,
+body {
+  height: auto !important;
+  min-height: 100% !important;
+  overflow: visible !important;
+}
+
+#root {
+  height: auto !important;
+  min-height: 100vh !important;
+  overflow: visible !important;
 }

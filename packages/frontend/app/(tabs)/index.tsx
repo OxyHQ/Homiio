@@ -35,7 +35,6 @@ import {
 import { Menu } from 'lucide-react-native';
 import Animated, {
   interpolate,
-  useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
 } from 'react-native-reanimated';
@@ -71,8 +70,8 @@ import { FeaturedGridSection } from '@/components/FeaturedGridSection';
 import { HostCtaBanner } from '@/components/HostCtaBanner';
 import { AgentCtaBanner } from '@/components/agent/AgentCtaBanner';
 import { HomeFooterStrip } from '@/components/HomeFooterStrip';
+import { PageScrollView } from '@/components/PageScrollView';
 import { useMediaQuery } from 'react-responsive';
-import { useLayoutScroll } from '@/context/LayoutScrollContext';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { useUIStore } from '@/store/uiStore';
 import { colors } from '@/styles/colors';
@@ -325,20 +324,15 @@ export default function HomePage() {
     }
   }, [loadProperties, feedFilters]);
 
-  const layoutScroll = useLayoutScroll();
-  const localScrollY = useSharedValue(0);
-  const scrollY = layoutScroll?.scrollY ?? localScrollY;
+  // Sole scroll owner: the document on web (mirrored into `scrollY` by
+  // `PageScrollView`), the screen's own `Animated.ScrollView` on native. Drives
+  // the hero parallax on both platforms — no dual writers.
+  const scrollY = useSharedValue(0);
   const { height: windowHeight } = useWindowDimensions();
   const styles = useMemo(
     () => createStyles(isWide, isXL, windowHeight),
     [isWide, isXL, windowHeight],
   );
-
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollY.value = event.contentOffset.y;
-    },
-  });
 
   const heroParallaxStyle = useAnimatedStyle(() => ({
     transform: [
@@ -398,12 +392,11 @@ export default function HomePage() {
 
   return (
     <View style={styles.root}>
-      <Animated.ScrollView
+      <PageScrollView
+        scrollY={scrollY}
         style={styles.container}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
-        onScroll={scrollHandler}
-        scrollEventThrottle={16}
       >
         {/* Section rhythm is owned here by NativeWind `gap` — every direct
             child below is a page section, evenly spaced (32px mobile / 48px
@@ -589,10 +582,12 @@ export default function HomePage() {
 
         {/* === Closing CTA banners ===
             Responsive 50/50 grid: side-by-side equal-height columns on wide
-            screens, stacked full-width on narrow / native (always narrow). The
-            row owns the outer page padding + a single `sectionGap` gutter; in
-            grid mode each banner runs in `fill` mode (no intrinsic aspectRatio,
-            no own page padding) so `alignItems: 'stretch'` equalises height. */}
+            screens, stacked full-width on narrow / native (always narrow). On
+            wide the row owns the outer page padding and its inter-column gutter
+            comes from NativeWind `gap-8 md:gap-12`; in grid mode each banner
+            runs in `fill` mode (no intrinsic aspectRatio, no own page padding)
+            so `alignItems: 'stretch'` equalises height. On narrow the two
+            banners are plain scroll siblings and the page `gap` spaces them. */}
         {isWide ? (
           <View className="gap-8 md:gap-12" style={styles.ctaGridRow}>
             <HostCtaBanner
@@ -640,7 +635,7 @@ export default function HomePage() {
         {/* === Footer trust strip === */}
         <HomeFooterStrip chunks={footerChunks} />
         </View>
-      </Animated.ScrollView>
+      </PageScrollView>
     </View>
   );
 }
