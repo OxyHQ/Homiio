@@ -10,6 +10,7 @@ import {
   mergePisosContact,
   pisosSourceIdFromUrl,
   PISOS_FIXTURE_DETAIL_HTML,
+  PISOS_FIXTURE_DETAIL_VALLADOLID_HTML,
   PISOS_FIXTURE_SEARCH_HTML,
   PISOS_FIXTURE_CONTACT_JSON,
 } from '@homiio/listing-providers';
@@ -41,6 +42,33 @@ describe('PisosProvider.normalize', () => {
     expect(listing.contact?.kind).toBe('agency');
     expect(listing.remoteImages.length).toBeGreaterThan(0);
     expect(listing.amenities).toEqual(expect.arrayContaining(['ascensor', 'balcon', 'soleado']));
+    expect(listing.address.city).toBe('Madrid Capital');
+    expect(listing.address.coordinates).toEqual({ lat: 40.41593545782718, lng: -3.7083892232908435 });
+  });
+
+  it('assigns distinct portal coordinates and cities for two detail fixtures', () => {
+    const madridPayload = parsePisosDetail(
+      PISOS_FIXTURE_DETAIL_HTML,
+      'https://www.pisos.com/alquilar/piso-sol_barrio28012-20026385030_992099/',
+    );
+    const valladolidPayload = parsePisosDetail(
+      PISOS_FIXTURE_DETAIL_VALLADOLID_HTML,
+      'https://www.pisos.com/alquilar/piso-valladolid_capital_universidad-65009504308_106400/',
+    );
+    const madrid = provider.normalize({
+      ref: { provider: 'pisos', sourceId: madridPayload.sourceId, url: madridPayload.url },
+      payload: madridPayload,
+    });
+    const valladolid = provider.normalize({
+      ref: { provider: 'pisos', sourceId: valladolidPayload.sourceId, url: valladolidPayload.url },
+      payload: valladolidPayload,
+    });
+
+    expect(madrid.address.city).toBe('Madrid Capital');
+    expect(valladolid.address.city).toBe('Valladolid Capital');
+    expect(madrid.address.coordinates).toEqual({ lat: 40.41593545782718, lng: -3.7083892232908435 });
+    expect(valladolid.address.coordinates).toEqual({ lat: 41.6531628, lng: -4.7216201 });
+    expect(madrid.address.coordinates).not.toEqual(valladolid.address.coordinates);
   });
 
   it('parses contact AJAX JSON', () => {

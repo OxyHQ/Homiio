@@ -3,6 +3,12 @@
  */
 
 import { OfferingType, PropertyType, type NormalizedListing } from '@homiio/shared-types';
+import {
+  PisosProvider,
+  parsePisosDetail,
+  PISOS_FIXTURE_DETAIL_HTML,
+  PISOS_FIXTURE_DETAIL_VALLADOLID_HTML,
+} from '@homiio/listing-providers';
 
 import { IngestionService } from '../../services/ingestion/IngestionService';
 import { ExternalMediaIngest } from '../../services/ingestion/ExternalMediaIngest';
@@ -131,6 +137,45 @@ describe('IngestionService.resolveAddress geocode fallbacks', () => {
 
     const address = await Address.findById(property.get('addressId'));
     expect(address?.postal_code).toBe(EXTERNAL_POSTAL_FALLBACK);
+  });
+
+  it('ingests two pisos listings with distinct portal coordinates into different geo points', async () => {
+    mockedReverseGeocode.mockResolvedValue({ success: false, error: 'No address found' });
+
+    const pisos = new PisosProvider();
+    const madridRaw = parsePisosDetail(
+      PISOS_FIXTURE_DETAIL_HTML,
+      'https://www.pisos.com/alquilar/piso-sol_barrio28012-20026385030_992099/',
+    );
+    const valladolidRaw = parsePisosDetail(
+      PISOS_FIXTURE_DETAIL_VALLADOLID_HTML,
+      'https://www.pisos.com/alquilar/piso-valladolid_capital_universidad-65009504308_106400/',
+    );
+    const madridListing = pisos.normalize({
+      ref: { provider: 'pisos', sourceId: madridRaw.sourceId, url: madridRaw.url },
+      payload: madridRaw,
+    });
+    const valladolidListing = pisos.normalize({
+      ref: { provider: 'pisos', sourceId: valladolidRaw.sourceId, url: valladolidRaw.url },
+      payload: valladolidRaw,
+    });
+
+    const service = buildIngestionService();
+    const madridResult = await service.ingest(madridListing);
+    const valladolidResult = await service.ingest(valladolidListing);
+
+    expect(mockedForwardGeocode).not.toHaveBeenCalled();
+
+    const madridProperty = await Property.findById(madridResult.propertyId);
+    const valladolidProperty = await Property.findById(valladolidResult.propertyId);
+    expect(madridProperty?.addressId).toBeTruthy();
+    expect(valladolidProperty?.addressId).toBeTruthy();
+    expect(String(madridProperty?.addressId)).not.toBe(String(valladolidProperty?.addressId));
+
+    const madridAddress = await Address.findById(madridProperty?.addressId);
+    const valladolidAddress = await Address.findById(valladolidProperty?.addressId);
+    expect(madridAddress?.coordinates?.coordinates).toEqual([-3.7083892232908435, 40.41593545782718]);
+    expect(valladolidAddress?.coordinates?.coordinates).toEqual([-4.7216201, 41.6531628]);
   });
 });
 
