@@ -63,7 +63,6 @@ export {
 } from './providers/habitaclia/parse';
 export {
   HABITACLIA_CONTENT_SELECTOR,
-  HABITACLIA_LISTING_CARD_SELECTOR,
   HABITACLIA_LISTAINMUEBLES_URL,
   buildHabitacliaListainmueblesBody,
   extractHabitacliaListadoFormFields,
