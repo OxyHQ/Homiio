@@ -95,6 +95,23 @@ export class HttpFetchRuntime implements FetchRuntime {
     return this.proxiedFetch;
   }
 
+  async fetchHttp(url: string, init?: FetchRuntimeInit): Promise<{ status: number; body: string }> {
+    const timeoutMs = init?.timeoutMs ?? this.defaultTimeoutMs;
+    const requestFetch = await this.resolveFetch();
+    return withTimeout(timeoutMs, init?.signal, async (signal) => {
+      const response = await requestFetch(url, {
+        signal,
+        redirect: 'follow',
+        headers: {
+          'User-Agent': this.userAgent,
+          'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+          ...init?.headers,
+        },
+      });
+      return { status: response.status, body: await response.text() };
+    });
+  }
+
   private async request(url: string, init: FetchRuntimeInit | undefined): Promise<Response> {
     const timeoutMs = init?.timeoutMs ?? this.defaultTimeoutMs;
     const requestFetch = await this.resolveFetch();
@@ -169,6 +186,7 @@ export function createListingFetchRuntime(
   const { browser, managed } = options;
 
   const runtime: FetchRuntime = {
+    fetchHttp: (url, init) => http.fetchHttp(url, init),
     fetchJson: (url, init) => http.fetchJson(url, init),
     fetchText: (url, init) => http.fetchText(url, init),
     loadFixture: (key) => http.loadFixture(key),

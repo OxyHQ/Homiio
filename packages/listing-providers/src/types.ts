@@ -89,7 +89,19 @@ export interface ProviderHealth {
  * runtime; later phases extend it with the Playwright pool and managed-fetch
  * escalation ladder WITHOUT changing the provider contract.
  */
+export interface FetchHttpResult {
+  status: number;
+  body: string;
+}
+
 export interface FetchRuntime {
+  /**
+   * Status-aware GET used by the shared fetch ladder's HTTP tier. Must NOT
+   * throw on non-2xx so 403/404/challenge bodies can be classified and the
+   * ladder can escalate to browser/managed tiers. Routes through the
+   * residential proxy when the runtime was built with one.
+   */
+  fetchHttp(url: string, init?: FetchRuntimeInit): Promise<FetchHttpResult>;
   /** Fetch a URL and parse the JSON body. */
   fetchJson<T = unknown>(url: string, init?: FetchRuntimeInit): Promise<T>;
   /** Fetch a URL and return the raw text body (e.g. HTML). */

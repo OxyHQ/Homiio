@@ -24,12 +24,9 @@
 
 import type { ProviderId } from '@homiio/shared-types';
 import {
-  DEFAULT_TIMEOUT_MS,
-  DEFAULT_USER_AGENT,
   errorMessage,
   hostOf,
   sleep,
-  withAbortTimeout,
 } from './http';
 import {
   defaultProviderMetrics,
@@ -144,23 +141,6 @@ export interface ListingLadderOptions {
 const DEFAULT_MAX_RETRIES = 2;
 const RETRY_BASE_DELAY_MS = 500;
 
-/** A status-aware GET that does NOT throw on non-2xx (so blocks are classified). */
-async function httpGet(url: string, init: FetchRuntimeInit | undefined): Promise<{ status: number; body: string }> {
-  const timeoutMs = init?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  return withAbortTimeout(timeoutMs, init?.signal, async (signal) => {
-    const response = await fetch(url, {
-      signal,
-      redirect: 'follow',
-      headers: {
-        'User-Agent': DEFAULT_USER_AGENT,
-        'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-        ...init?.headers,
-      },
-    });
-    return { status: response.status, body: await response.text() };
-  });
-}
-
 /**
  * Walk the fetch tiers until one yields non-challenge HTML. Records one metric
  * event per attempt. Throws {@link ChallengeError} when every available tier is
@@ -233,7 +213,7 @@ function resolveRunner(
   init: FetchRuntimeInit | undefined,
 ): (() => Promise<{ status: number; body: string }>) | undefined {
   if (tier === 'http') {
-    return () => httpGet(url, init);
+    return () => runtime.fetchHttp(url, init);
   }
   if (tier === 'browser' && runtime.fetchViaBrowser) {
     const fetchViaBrowser = runtime.fetchViaBrowser.bind(runtime);

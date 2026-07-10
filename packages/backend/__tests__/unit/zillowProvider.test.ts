@@ -27,6 +27,11 @@ const provider = new ZillowProvider();
 
 function ladderRuntime(pages: Map<string, string>): FetchRuntime {
   return {
+    async fetchHttp(url: string): Promise<{ status: number; body: string }> {
+      const html = pages.get(url);
+      if (html === undefined) throw new Error(`ladderRuntime has no page for ${url}`);
+      return { status: 200, body: html };
+    },
     async fetchText(url: string): Promise<string> {
       const html = pages.get(url);
       if (html === undefined) throw new Error(`ladderRuntime has no page for ${url}`);

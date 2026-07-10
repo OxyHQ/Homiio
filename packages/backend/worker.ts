@@ -115,7 +115,15 @@ function startBullMq(): () => Promise<void> {
     async (job: Job<DiscoverJobData>) => {
       const refs = await collectDiscoverRefs(job.data);
       for (const ref of refs) {
-        await fetchQueue.add(QUEUE_NAMES.fetch, { ref }, { jobId: fetchJobId(ref) });
+        const jobId = fetchJobId(ref);
+        const existingFetch = await fetchQueue.getJob(jobId);
+        if (existingFetch) {
+          const state = await existingFetch.getState();
+          if (state === 'completed' || state === 'failed') {
+            await existingFetch.remove();
+          }
+        }
+        await fetchQueue.add(QUEUE_NAMES.fetch, { ref }, { jobId });
       }
       logger.info('Discover job enqueued fetch jobs', {
         provider: job.data.provider,

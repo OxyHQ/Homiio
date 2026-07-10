@@ -23,7 +23,7 @@ import {
 import { Property, Address, type IProperty } from '../../models';
 import type { AddressCanonicalInput } from '../../models/Address';
 import { validateOfferings } from '../../models/schemas/offeringValidation';
-import { forwardGeocode } from '../geocodingService';
+import { forwardGeocode, reverseGeocode } from '../geocodingService';
 import { ExternalMediaIngest } from './ExternalMediaIngest';
 import { Logger } from '../../utils/logger';
 
@@ -131,8 +131,16 @@ export class IngestionService {
   /** Resolve the canonical building Address, geocoding coordinates if absent. */
   private async resolveAddress(address: NormalizedListingAddress): Promise<Types.ObjectId> {
     let coordinates: [number, number];
+    let postalCode = address.postalCode?.trim() ?? '';
+
     if (address.coordinates) {
       coordinates = [address.coordinates.lng, address.coordinates.lat];
+      if (!postalCode) {
+        const reversed = await reverseGeocode(address.coordinates.lng, address.coordinates.lat);
+        if (reversed.success && reversed.data?.postalCode?.trim()) {
+          postalCode = reversed.data.postalCode.trim();
+        }
+      }
     } else {
       const query = [address.street, address.city, address.state, address.postalCode, address.country]
         .filter(Boolean)
@@ -145,11 +153,20 @@ export class IngestionService {
         );
       }
       coordinates = resolvedCoords;
+      if (!postalCode && geocoded.data?.postalCode?.trim()) {
+        postalCode = geocoded.data.postalCode.trim();
+      }
+    }
+
+    if (!postalCode) {
+      throw new IngestionValidationError(
+        `External listing address requires a postal code (street=${address.street}, city=${address.city})`,
+      );
     }
 
     const addressInput: AddressCanonicalInput = {
       street: address.street,
-      postal_code: address.postalCode ?? '',
+      postal_code: postalCode,
       city: address.city,
       state: address.state ?? '',
       country: address.country ?? '',

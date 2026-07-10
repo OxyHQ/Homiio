@@ -22,6 +22,14 @@ const BIG_OK_HTML = `<!doctype html><html><body>${'<p>ok</p>'.repeat(80)}</body>
 /** Minimal runtime; `fetchViaBrowser`/`fetchViaManaged` added per test. */
 function baseRuntime(extra: Partial<FetchRuntime> = {}): FetchRuntime {
   return {
+    fetchHttp: async (url, init) => {
+      const response = await fetch(url, {
+        signal: init?.signal,
+        redirect: 'follow',
+        headers: init?.headers,
+      });
+      return { status: response.status, body: await response.text() };
+    },
     fetchJson: async () => ({}),
     fetchText: async () => '',
     loadFixture: async () => ({}) as never,
