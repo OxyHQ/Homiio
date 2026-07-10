@@ -30,6 +30,7 @@ import type { AddressCanonicalInput } from '../../models/Address';
 import { validateOfferings } from '../../models/schemas/offeringValidation';
 import { forwardGeocode, reverseGeocode } from '../geocodingService';
 import { ExternalMediaIngest } from './ExternalMediaIngest';
+import { schedulePriceEthicsScore } from '../priceEthicsService';
 import { Logger } from '../../utils/logger';
 
 /** Default TTL (days) for an ingested external listing when none is specified. */
@@ -107,6 +108,7 @@ export class IngestionService {
       sourceId: listing.sourceId,
       imageCount,
     };
+    schedulePriceEthicsScore(result.propertyId);
     this.logger.info('Ingested external listing', result);
     return result;
   }

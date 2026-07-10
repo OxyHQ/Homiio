@@ -123,6 +123,7 @@ function toSheetFilters(query: SearchQuery): SearchFilters {
     guests: query.guests,
     checkIn: query.dates?.start,
     checkOut: query.dates?.end,
+    fairPrice: query.fairPrice,
   };
 }
 
@@ -139,6 +140,7 @@ function countActiveFilters(query: SearchQuery): number {
   if (query.bedrooms !== undefined) count += 1;
   if (query.bathrooms !== undefined) count += 1;
   count += query.amenities.length;
+  if (query.fairPrice === true) count += 1;
   return count;
 }
 
@@ -251,10 +253,10 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
       location: {
         label:
           query.location?.label ||
-          (t('search.summary.mapArea')),
+          (t('search.summary.mapArea', 'Map area') || 'Map area'),
         shortLabel:
           query.location?.shortLabel ||
-          (t('search.summary.mapArea')),
+          (t('search.summary.mapArea', 'Map area') || 'Map area'),
         center,
         bounds: pendingBounds,
       },
@@ -321,6 +323,9 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         case 'guests':
           onQueryChange({ guests: typeof value === 'number' ? value : undefined });
           return;
+        case 'fairPrice':
+          onQueryChange({ fairPrice: value === true ? true : undefined });
+          return;
         default:
           return;
       }
@@ -342,6 +347,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
             bedrooms: undefined,
             bathrooms: undefined,
             amenities: [],
+            fairPrice: undefined,
           });
           bottomSheet.closeBottomSheet();
         }}
@@ -384,12 +390,15 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
 
   const resultsHeading = useMemo(() => {
     if (isLoading) {
-      return t('search.header.loading');
+      return t('search.header.loading', 'Searching homes...') || 'Searching homes...';
     }
     if (total === 0) {
-      return t('search.header.noResults');
+      return t('search.header.noResults', 'No homes match this search') ||
+        'No homes match this search';
     }
-    return t('search.header.count', { count: total });
+    return (
+      t('search.header.count', `${total} homes`) || `${total} homes`
+    );
   }, [t, isLoading, total]);
 
   // --- shared sub-renders ---
@@ -410,8 +419,8 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
             isSaved={isSearchSaved}
             saveAccessibilityLabel={
               isSearchSaved
-                ? t('search.actions.saved')
-                : t('search.actions.save')
+                ? t('search.actions.saved', 'Saved') || 'Saved'
+                : t('search.actions.save', 'Save') || 'Save'
             }
           />
         </View>
@@ -426,27 +435,27 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
           contentContainerStyle={styles.topBarActions}
         >
           <SearchActionPill
-            label={t('search.actions.filters')}
+            label={t('search.actions.filters', 'Filters') || 'Filters'}
             icon="options-outline"
             active={activeFilterCount > 0}
             count={activeFilterCount}
             onPress={handleFiltersPress}
             accessibilityLabel={
               activeFilterCount > 0
-                ? `${t('search.actions.filters')}, ${activeFilterCount}`
-                : t('search.actions.filters')
+                ? `${t('search.actions.filters', 'Filters') || 'Filters'}, ${activeFilterCount}`
+                : t('search.actions.filters', 'Filters') || 'Filters'
             }
           />
           <SearchActionPill
             label={
               sort.isDefault
-                ? t('search.actions.sort')
+                ? t('search.actions.sort', 'Sort') || 'Sort'
                 : sort.label
             }
             icon="swap-vertical"
             active={!sort.isDefault}
             onPress={handleSortPress}
-            accessibilityLabel={`${t('search.actions.sort')}: ${sort.label}`}
+            accessibilityLabel={`${t('search.actions.sort', 'Sort') || 'Sort'}: ${sort.label}`}
           />
         </ScrollView>
       </View>
@@ -470,9 +479,9 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     if (isError) {
       return (
         <ErrorState
-          title={t('search.error.title')}
+          title={t('search.error.title', 'Could not load homes') || 'Could not load homes'}
           description={error?.message}
-          retryLabel={t('common.tryAgain')}
+          retryLabel={t('common.tryAgain', 'Try again') || 'Try again'}
           onRetry={() => void refetch()}
         />
       );
@@ -482,12 +491,14 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         <EmptyState
           icon="home-outline"
           title={
-            t('search.empty.title')
+            t('search.empty.title', 'No homes match this search') ||
+            'No homes match this search'
           }
           description={
-            t('search.empty.description')
+            t('search.empty.description', 'Try widening your area or relaxing your filters.') ||
+            'Try widening your area or relaxing your filters.'
           }
-          actionText={t('search.empty.action')}
+          actionText={t('search.empty.action', 'Edit search') || 'Edit search'}
           actionIcon="search"
           onAction={onEditSearch}
         />
@@ -554,10 +565,10 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
               icon={<Ionicons name="refresh" size={16} color={colors.primaryForeground} />}
               iconPosition="left"
               accessibilityLabel={
-                t('search.actions.searchArea')
+                t('search.actions.searchArea', 'Search this area') || 'Search this area'
               }
             >
-              {t('search.actions.searchArea')}
+              {t('search.actions.searchArea', 'Search this area') || 'Search this area'}
             </Button>
           </View>
         </View>
@@ -612,8 +623,8 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         onPress={() => setShowMobileMap((prev) => !prev)}
         label={
           showMobileMap
-            ? t('search.fab.list')
-            : t('search.fab.map')
+            ? t('search.fab.list', 'List') || 'List'
+            : t('search.fab.map', 'Map') || 'Map'
         }
         icon={showMobileMap ? 'list' : 'map'}
         // Lift the floating toggle above the home indicator (the FAB's default

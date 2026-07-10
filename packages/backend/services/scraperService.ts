@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { OfferingType } from '@homiio/shared-types';
 import { forwardGeocode } from './geocodingService';
+import { schedulePriceEthicsScore } from './priceEthicsService';
 import { Property } from '../models';
 import { logger as appLogger } from '../middlewares/logging';
 
@@ -280,10 +281,12 @@ export async function upsertExternalListing(
       if (existing) {
         await Property.updateOne({ _id: existing._id }, { $set: update });
         logger.debug(`Updated existing property: ${raw.id}`);
+        schedulePriceEthicsScore(String(existing._id));
         return { status: 'updated' };
       } else {
-        await Property.create(update);
+        const created = await Property.create(update);
         logger.debug(`Created new property: ${raw.id}`);
+        schedulePriceEthicsScore(String(created._id));
         return { status: 'created' };
       }
     } catch (error) {

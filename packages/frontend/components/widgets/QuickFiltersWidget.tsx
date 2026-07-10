@@ -43,7 +43,7 @@ const AMENITY_PET_FRIENDLY = 'pet_friendly';
  * chip can never apply a no-op.
  */
 type QuickFilterPatch = Partial<
-  Pick<SearchQuery, 'propertyTypes' | 'amenities' | 'priceMax'>
+  Pick<SearchQuery, 'propertyTypes' | 'amenities' | 'priceMax' | 'fairPrice'>
 >;
 
 /** A one-tap filter: its i18n label key and the structured fields it writes. */
@@ -60,6 +60,7 @@ interface QuickFilter {
  *  - Co-living  → `propertyType=coliving`         (`filter.type`)
  *  - Pets       → `amenities` includes `pet_friendly` (`$all` match)
  *  - Budget     → `priceMax=1000`                  (monthly price `$lte`)
+ *  - Fair price → `fairPrice=true`                 (`priceEthics.isFairPrice`)
  *
  * Deliberately omitted (no backing filter reachable from `SearchQuery`):
  *  - Furnished  — `furnishedStatus` is a separate, non-searchable field and the
@@ -83,6 +84,11 @@ const QUICK_FILTERS: readonly QuickFilter[] = [
     labelKey: 'search.widgets.quickFilters.budget',
     patch: { priceMax: BUDGET_PRICE_MAX },
   },
+  {
+    id: 'fairPrice',
+    labelKey: 'search.widgets.quickFilters.fairPrice',
+    patch: { fairPrice: true },
+  },
 ] as const;
 
 /**
@@ -94,18 +100,21 @@ function mergeSelectedPatches(selectedIds: readonly string[]): QuickFilterPatch 
   const propertyTypes = new Set<PropertyType>();
   const amenities = new Set<string>();
   let priceMax: number | undefined;
+  let fairPrice: boolean | undefined;
 
   for (const filter of QUICK_FILTERS) {
     if (!selectedIds.includes(filter.id)) continue;
     filter.patch.propertyTypes?.forEach((type) => propertyTypes.add(type));
     filter.patch.amenities?.forEach((slug) => amenities.add(slug));
     if (filter.patch.priceMax !== undefined) priceMax = filter.patch.priceMax;
+    if (filter.patch.fairPrice === true) fairPrice = true;
   }
 
   const patch: QuickFilterPatch = {};
   if (propertyTypes.size > 0) patch.propertyTypes = Array.from(propertyTypes);
   if (amenities.size > 0) patch.amenities = Array.from(amenities);
   if (priceMax !== undefined) patch.priceMax = priceMax;
+  if (fairPrice === true) patch.fairPrice = true;
   return patch;
 }
 

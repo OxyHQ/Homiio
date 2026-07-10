@@ -121,6 +121,17 @@ describe('buildSearchParams', () => {
       guests: 2,
     });
   });
+
+  it('emits fairPrice and fairness sort params when requested', () => {
+    const params = buildSearchParams(
+      baseQuery({ fairPrice: true, sortBy: 'fairness', sortOrder: 'desc' }),
+    );
+    expect(params).toMatchObject({
+      fairPrice: 'true',
+      sortBy: 'fairness',
+      sortOrder: 'desc',
+    });
+  });
 });
 
 describe('searchQueryKey', () => {
