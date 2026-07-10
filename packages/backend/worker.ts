@@ -21,6 +21,7 @@ import {
   BluegroundPartnerListingError,
   ListingValidationError,
   NonHousingListingError,
+  fotocasaCitiesFromEnv,
   type ExternalListingRef,
   type FetchRuntime,
   type ListingFetchRuntimeHandle,
@@ -134,10 +135,22 @@ async function collectDiscoverRefs(data: DiscoverJobData): Promise<ExternalListi
   return refs;
 }
 
-/** The discover scopes to enqueue on boot: one per (provider, market). */
+/** Providers whose discover pass warms a browser session per city — enqueue one job per city. */
+const PER_CITY_DISCOVER_PROVIDERS = new Set<string>(['fotocasa']);
+
+/** The discover scopes to enqueue on boot: one per (provider, market), or per-city for browser-heavy portals. */
 function bootDiscoverJobs(): DiscoverJobData[] {
   return registry.all().flatMap((provider) =>
-    provider.markets.map((market) => ({ provider: provider.id, market })),
+    provider.markets.flatMap((market) => {
+      if (PER_CITY_DISCOVER_PROVIDERS.has(provider.id)) {
+        return fotocasaCitiesFromEnv().map((city) => ({
+          provider: provider.id,
+          market,
+          city,
+        }));
+      }
+      return [{ provider: provider.id, market }];
+    }),
   );
 }
 

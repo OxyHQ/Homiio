@@ -53,23 +53,12 @@ import {
   readFotocasaBrowserSessionHint,
   type FotocasaBrowserSessionHint,
 } from './sessionHints';
+import { FOTOCASA_DEFAULT_CITIES, fotocasaCitiesFromEnv } from './cities';
+
+export { FOTOCASA_DEFAULT_CITIES, fotocasaCitiesFromEnv, fotocasaCitiesOptionsFromEnv } from './cities';
 
 const PROVIDER_ID: ProviderId = 'fotocasa';
 const ES_PROXY_COUNTRY = 'es';
-
-/** ES cities enumerated when a discover job carries no explicit `city`. */
-const DEFAULT_CITIES: readonly string[] = [
-  'madrid',
-  'barcelona',
-  'valencia',
-  'sevilla',
-  'malaga',
-  'bilbao',
-  'zaragoza',
-  'alicante',
-  'murcia',
-  'palma',
-];
 
 const DEFAULT_MAX_SEARCH_PAGES = 75;
 const DEFAULT_TRANSACTION_TYPES: readonly FotocasaTransactionType[] = ['RENT', 'BUY'];
@@ -174,7 +163,7 @@ export class FotocasaProvider implements ListingProvider {
 
   constructor(options: FotocasaProviderOptions = {}) {
     this.runtime = options.runtime ?? createFetchRuntime();
-    this.cities = options.cities && options.cities.length > 0 ? options.cities : DEFAULT_CITIES;
+    this.cities = options.cities && options.cities.length > 0 ? options.cities : FOTOCASA_DEFAULT_CITIES;
     this.metrics = options.metrics ?? defaultProviderMetrics;
     this.maxSearchPages = providerMaxSearchPages(PROVIDER_ID, DEFAULT_MAX_SEARCH_PAGES, 'ES');
     this.transactionTypes = resolveTransactionTypes();
