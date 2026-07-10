@@ -206,6 +206,57 @@ function readTrack(html: string): Record<string, unknown> | undefined {
   return readBalancedJsonAfter(html, '__pisosTrack');
 }
 
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => String.fromCharCode(Number.parseInt(hex, 16)));
+}
+
+/** Detail pages embed map coords in `locationmap` data-params (JSON-LD is search-only). */
+export function readPisosLocationMapCoordinates(html: string): { lat: number; lng: number } | undefined {
+  const match = html.match(/locationmap[^>]*data-params="([^"]+)"/i);
+  if (!match) return undefined;
+  const params = decodeHtmlEntities(match[1]);
+  const lat = asNumber(params.match(/(?:^|[&?])latitude=([^&]+)/)?.[1]);
+  const lng = asNumber(params.match(/(?:^|[&?])longitude=([^&]+)/)?.[1]);
+  if (lat === undefined || lng === undefined) return undefined;
+  return { lat, lng };
+}
+
+interface PisosAscendingGeo {
+  province?: string;
+  municipality?: string;
+  comarca?: string;
+}
+
+/** Breadcrumb geo rows (`ascending-geo__row`) carry province/municipality names. */
+export function readPisosAscendingGeo(html: string): PisosAscendingGeo {
+  const levels: PisosAscendingGeo = {};
+  let pos = 0;
+  while (pos < html.length) {
+    const rowStart = html.indexOf('ascending-geo__row', pos);
+    if (rowStart < 0) break;
+    const rowEnd = html.indexOf('</div>', rowStart);
+    if (rowEnd < 0) break;
+    const row = html.slice(rowStart, rowEnd);
+    pos = rowEnd + '</div>'.length;
+
+    const level = row.match(/data-ga-geoLevelName='([^']+)'/)?.[1];
+    const name = row.match(/<span property="name">([^<]+)<\/span>/)?.[1]?.trim();
+    if (!level || !name) continue;
+    if (level === 'provincia') levels.province = name;
+    else if (level === 'municipio') levels.municipality = name;
+    else if (level === 'comarca') levels.comarca = name;
+  }
+  return levels;
+}
+
+/** Five-digit postal codes are often embedded in the detail URL slug before the listing id. */
+export function postalCodeFromPisosUrl(url: string): string | undefined {
+  return url.match(/(\d{5})-\d+[._]\d+/)?.[1];
+}
+
 function amenityList(raw: unknown): string[] {
   if (typeof raw !== 'string' || raw.trim().length === 0) return [];
   return raw
@@ -257,8 +308,14 @@ export function parsePisosDetail(html: string, url: string): PisosRaw {
 
   const images = [...new Set(readPisosImageUrls(html))];
   const ld = extractEsSchemaListings(html)[0];
-  const city = ld?.address?.city ?? 'Madrid';
+  const geo = readPisosAscendingGeo(html);
+  const mapCoords = readPisosLocationMapCoordinates(html);
+  const city = geo.municipality ?? ld?.address?.city ?? geo.province ?? '';
+  if (!city) {
+    throw new Error(`pisos: listing ${resolvedId} has no resolvable city`);
+  }
   const street = ld?.address?.street ?? h1 ?? city;
+  const postalCode = ld?.address?.postalCode ?? postalCodeFromPisosUrl(url);
 
   const listing: EsSchemaListing = {
     types,
@@ -268,13 +325,13 @@ export function parsePisosDetail(html: string, url: string): PisosRaw {
     address: {
       street,
       city,
-      region: ld?.address?.region,
-      postalCode: ld?.address?.postalCode,
+      region: geo.province ?? ld?.address?.region,
+      postalCode,
       neighborhood: ld?.address?.neighborhood,
       country: ld?.address?.country,
       countryCode: ld?.address?.countryCode ?? 'ES',
     },
-    coordinates: ld?.coordinates,
+    coordinates: mapCoords ?? ld?.coordinates,
     images: images.length > 0 ? images : (ld?.images ?? []),
     bedrooms: asNumber(dataVar?.nHabitaciones) ?? ld?.bedrooms,
     bathrooms: asNumber(dataVar?.nBanios) ?? ld?.bathrooms,

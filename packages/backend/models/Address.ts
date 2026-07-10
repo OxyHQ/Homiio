@@ -366,6 +366,14 @@ AddressSchema.static('findOrCreateCanonical', async function findOrCreateCanonic
 
   const existing = await this.findOne({ normalizedKey });
   if (existing) {
+    const [existingLng, existingLat] = existing.coordinates.coordinates;
+    const [newLng, newLat] = coordinates;
+    const coordDrift =
+      Math.abs(existingLng - newLng) > 0.0005 || Math.abs(existingLat - newLat) > 0.0005;
+    if (coordDrift) {
+      existing.set('coordinates', { type: 'Point', coordinates: [newLng, newLat] });
+      await existing.save();
+    }
     return existing;
   }
 
