@@ -7,7 +7,7 @@
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
 import { contactFromAdvertiser, normalizePhone } from '../../../parse/contact';
-import { asNumber as parseNumber, asRecord, asString } from '../../../parse/guards';
+import { asNumber as parseNumberFromGuard, asRecord, asString } from '../../../parse/guards';
 import { extractItSchemaListings, pickItListing } from '../../../parse/jsonLd';
 import { parseNextData } from '../../../parse/nextData';
 import { SUBITO_BASE_URL, SUBITO_HOUSING_CATEGORIES } from './fixtures';
@@ -38,7 +38,7 @@ const HOUSING_SET = new Set<string>(SUBITO_HOUSING_CATEGORIES);
 
 /** Coerce portal feature/price blobs that wrap the number in `{ value }`. */
 function asNumber(value: unknown): number | undefined {
-  return parseNumber(value) ?? parseNumber(asRecord(value)?.value);
+  return parseNumberFromGuard(value) ?? parseNumberFromGuard(asRecord(value)?.value);
 }
 
 export function isSubitoHousingCategory(uriOrPath: string): boolean {
