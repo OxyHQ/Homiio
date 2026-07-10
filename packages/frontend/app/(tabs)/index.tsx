@@ -232,7 +232,9 @@ export default function HomePage() {
 
   const scrollY = useSharedValue(0);
   const { height: windowHeight } = useWindowDimensions();
-  const heroHeight = isXL ? Math.min(560, windowHeight * 0.62) : isWide ? 460 : 480;
+  // Cap height hard — `windowHeight * 0.62` was ~496px on common desktop
+  // viewports and read as empty photo above the title block.
+  const heroHeight = isXL ? Math.min(400, windowHeight * 0.45) : isWide ? 360 : 400;
 
   const heroParallaxStyle = useAnimatedStyle(() => ({
     transform: [
@@ -259,7 +261,7 @@ export default function HomePage() {
           className="relative w-full justify-end overflow-hidden"
           style={{
             height: heroHeight,
-            paddingTop: insets.top + (isWide ? spacing.md : spacing.lg),
+            paddingTop: insets.top + spacing.sm,
           }}
         >
           <Animated.View
