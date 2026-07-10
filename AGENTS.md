@@ -215,11 +215,13 @@ Convenience path when you do not own a page: `runtime.openBrowserSession(options
 | `parse/nextData.ts` | `__NEXT_DATA__` / `__PAGE_MODEL__` / `__PRELOADED_STATE__` |
 | `parse/contact.ts` | phone/email/whatsapp → `NormalizedListing.contact` |
 | `parse/classifieds.ts` | housing category allowlist + `assertHousingListing` |
-| `parse/cities.ts` | `LISTING_*_CITIES` env city lists |
+| `parse/cities.ts` | `LISTING_*_CITIES` env city lists + `providerCitiesFromEnv()` |
 | `parse/price.ts` + `parse/listing.ts` | monthly/sale price sanity + ingest validation |
 | `session.ts` / `browserSession.ts` | Idealista-like warm + AJAX |
 
 Root shims (`contact.ts`, `classifieds.ts`, `jsonLd.ts`, `nextData.ts`, `cities.ts`) re-export `parse/` for short imports — prefer `parse/` for new code. Portal-specific AJAX URL builders stay under `providers/<name>/`.
+
+**Discover city lists (CRITICAL):** use `citiesFromEnv(market)` / `DEFAULT_MARKET_CITIES` — never hardcode a tiny per-provider city allowlist that bypasses `LISTING_<MARKET>_CITIES` and silently excludes metros. Optional per-provider narrowing: `providerCitiesFromEnv('LISTING_<PROVIDER>_CITIES', market)` (falls back to the market list). Browser-heavy ES portals enqueue **one discover job per city** in `worker.ts`; queue fairness is handled there, not by shrinking defaults.
 
 ### General classifieds portals (CRITICAL)
 

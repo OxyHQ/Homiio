@@ -60,7 +60,6 @@ export type { FixtureRawListing, FixtureRawImage } from './providers/fixture/fix
 
 export { HabitacliaProvider } from './providers/habitaclia';
 export {
-  HABITACLIA_DEFAULT_CITIES,
   habitacliaCitiesFromEnv,
   habitacliaCitiesOptionsFromEnv,
 } from './providers/habitaclia/cities';
@@ -110,7 +109,6 @@ export type {
 
 export { IdealistaProvider, isIdealistaChallenge, idealistaSourceIdFromUrl } from './providers/idealista';
 export {
-  IDEALISTA_DEFAULT_CITIES,
   idealistaCitiesFromEnv,
   idealistaCitiesOptionsFromEnv,
 } from './providers/idealista/cities';
@@ -145,7 +143,6 @@ export {
 
 export { FotocasaProvider, isFotocasaChallenge, fotocasaSourceIdFromUrl } from './providers/fotocasa';
 export {
-  FOTOCASA_DEFAULT_CITIES,
   fotocasaCitiesFromEnv,
   fotocasaCitiesOptionsFromEnv,
 } from './providers/fotocasa/cities';
@@ -456,7 +453,6 @@ export {
 // ES — pisos.com (JSON-LD + embedded detail JSON), feature-flagged OFF by default.
 export { PisosProvider, isPisosChallenge, pisosSourceIdFromUrl } from './providers/pisos';
 export {
-  PISOS_DEFAULT_CITIES,
   pisosCitiesFromEnv,
   pisosCitiesOptionsFromEnv,
 } from './providers/pisos/cities';
@@ -711,7 +707,13 @@ export {
   findJsonLdByType,
 } from './jsonLd';
 export { citySlug } from './slug';
-export { citiesFromEnv, citiesOptionsFromEnv, DEFAULT_MARKET_CITIES } from './cities';
+export {
+  citiesFromEnv,
+  citiesOptionsFromEnv,
+  providerCitiesFromEnv,
+  providerCitiesOptionsFromEnv,
+  DEFAULT_MARKET_CITIES,
+} from './cities';
 export {
   MAX_PAGES_CEILING,
   maxSearchPagesFromEnv,

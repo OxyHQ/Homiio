@@ -49,9 +49,9 @@ import {
   type PisosBrowserSessionHint,
 } from './sessionHints';
 
-import { PISOS_DEFAULT_CITIES } from './cities';
+import { pisosCitiesFromEnv } from './cities';
 
-export { PISOS_DEFAULT_CITIES, pisosCitiesFromEnv, pisosCitiesOptionsFromEnv } from './cities';
+export { pisosCitiesFromEnv, pisosCitiesOptionsFromEnv } from './cities';
 
 const PROVIDER_ID: ProviderId = 'pisos';
 const ES_PROXY_COUNTRY = 'es';
@@ -126,7 +126,7 @@ export class PisosProvider implements ListingProvider {
 
   constructor(options: PisosProviderOptions = {}) {
     this.runtime = options.runtime ?? createFetchRuntime();
-    this.cities = options.cities && options.cities.length > 0 ? options.cities : PISOS_DEFAULT_CITIES;
+    this.cities = options.cities && options.cities.length > 0 ? options.cities : pisosCitiesFromEnv();
     this.metrics = options.metrics ?? defaultProviderMetrics;
     this.maxSearchPages = providerMaxSearchPages(PROVIDER_ID, DEFAULT_MAX_SEARCH_PAGES, 'ES');
   }

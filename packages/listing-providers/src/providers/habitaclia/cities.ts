@@ -1,29 +1,17 @@
 /**
- * Habitaclia discover city scope.
- *
- * Browser + listainmuebles discover warms a session per city. The full
- * `LISTING_ES_CITIES` list (~70 metros) in one discover job blocks the
- * single-concurrency queue for hours. Default to Madrid until coverage is broad.
+ * Habitaclia discover city scope — `LISTING_HABITACLIA_CITIES` override, else `LISTING_ES_CITIES`.
  */
 
-/** Default metros for Habitaclia browser discover. */
-export const HABITACLIA_DEFAULT_CITIES: readonly string[] = ['madrid'];
+import { providerCitiesFromEnv, providerCitiesOptionsFromEnv } from '../../parse/cities';
 
-function parseCityList(raw: string | undefined): string[] {
-  return (raw ?? '')
-    .split(',')
-    .map((city) => city.trim())
-    .filter(Boolean);
-}
+const PROVIDER_CITIES_ENV = 'LISTING_HABITACLIA_CITIES';
 
-/** Cities for Habitaclia discover: `LISTING_HABITACLIA_CITIES` or {@link HABITACLIA_DEFAULT_CITIES}. */
+/** Cities for Habitaclia discover: `LISTING_HABITACLIA_CITIES` or the ES market list. */
 export function habitacliaCitiesFromEnv(): string[] {
-  const envCities = parseCityList(process.env.LISTING_HABITACLIA_CITIES);
-  if (envCities.length > 0) return envCities;
-  return [...HABITACLIA_DEFAULT_CITIES];
+  return providerCitiesFromEnv(PROVIDER_CITIES_ENV, 'ES');
 }
 
-/** Provider options with the Habitaclia-specific city list. */
+/** Provider options with the Habitaclia city list. */
 export function habitacliaCitiesOptionsFromEnv(): { cities: readonly string[] } {
-  return { cities: habitacliaCitiesFromEnv() };
+  return providerCitiesOptionsFromEnv(PROVIDER_CITIES_ENV, 'ES');
 }

@@ -1,34 +1,17 @@
 /**
- * Fotocasa discover city scope.
- *
- * Fotocasa discover warms a Playwright session per city — using the full
- * `LISTING_ES_CITIES` list (~70 metros) makes a single discover job run for
- * hours before any fetch jobs enqueue. This module keeps Fotocasa on a smaller
- * default set with an optional `LISTING_FOTOCASA_CITIES` override.
+ * Fotocasa discover city scope — `LISTING_FOTOCASA_CITIES` override, else `LISTING_ES_CITIES`.
  */
 
-/** Default metros for Fotocasa browser discover (not the full ES market list). */
-export const FOTOCASA_DEFAULT_CITIES: readonly string[] = [
-  'madrid',
-  'barcelona',
-  'valencia',
-];
+import { providerCitiesFromEnv, providerCitiesOptionsFromEnv } from '../../parse/cities';
 
-function parseCityList(raw: string | undefined): string[] {
-  return (raw ?? '')
-    .split(',')
-    .map((city) => city.trim())
-    .filter(Boolean);
-}
+const PROVIDER_CITIES_ENV = 'LISTING_FOTOCASA_CITIES';
 
-/** Cities for Fotocasa discover: `LISTING_FOTOCASA_CITIES` or {@link FOTOCASA_DEFAULT_CITIES}. */
+/** Cities for Fotocasa discover: `LISTING_FOTOCASA_CITIES` or the ES market list. */
 export function fotocasaCitiesFromEnv(): string[] {
-  const envCities = parseCityList(process.env.LISTING_FOTOCASA_CITIES);
-  if (envCities.length > 0) return envCities;
-  return [...FOTOCASA_DEFAULT_CITIES];
+  return providerCitiesFromEnv(PROVIDER_CITIES_ENV, 'ES');
 }
 
-/** Provider options with the Fotocasa-specific city list. */
+/** Provider options with the Fotocasa city list. */
 export function fotocasaCitiesOptionsFromEnv(): { cities: readonly string[] } {
-  return { cities: fotocasaCitiesFromEnv() };
+  return providerCitiesOptionsFromEnv(PROVIDER_CITIES_ENV, 'ES');
 }
