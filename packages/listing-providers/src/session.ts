@@ -153,6 +153,7 @@ export interface SessionPage {
   waitForTimeout(ms: number): Promise<void>;
   route(pattern: string, handler: (route: PwRoute) => void | Promise<void>): Promise<void>;
   request: PwAPIRequestContext;
+  evaluate<R, A>(fn: (arg: A) => R | Promise<R>, arg: A): Promise<Awaited<R>>;
 }
 
 /** Browser context — exposes `request` and {@link exportStorageState}. */
