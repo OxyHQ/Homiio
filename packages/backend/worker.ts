@@ -14,7 +14,7 @@
 
 require('dotenv').config();
 
-import { Queue, Worker, type Job } from 'bullmq';
+import { Queue, Worker, type Job, type Queue as BullQueue } from 'bullmq';
 import {
   createDefaultRegistry,
   createListingFetchRuntimeFromEnv,
@@ -45,6 +45,9 @@ const logger = new Logger('ListingWorker');
 
 /** Fetch-worker concurrency (source portals are rate-sensitive; keep it small). */
 const FETCH_CONCURRENCY = parseInt(process.env.LISTING_FETCH_CONCURRENCY || '2', 10);
+
+/** Discover jobs may hold a browser session across many cities — match worker lockDuration. */
+const DISCOVER_LOCK_MS = 600_000;
 
 const registry: ProviderRegistry = createDefaultRegistry();
 const ingestionService = new IngestionService();
@@ -156,6 +159,50 @@ async function runInlinePass(): Promise<void> {
   }
 }
 
+/** Log queue depth so deploys show whether discover/fetch are backed up. */
+async function logQueueCounts(
+  discoverQueue: BullQueue<DiscoverJobData>,
+  fetchQueue: BullQueue<FetchJobData>,
+): Promise<void> {
+  const [discoverCounts, fetchCounts] = await Promise.all([
+    discoverQueue.getJobCounts('waiting', 'active', 'completed', 'failed', 'delayed'),
+    fetchQueue.getJobCounts('waiting', 'active', 'completed', 'failed', 'delayed'),
+  ]);
+  logger.info('Listing queue counts', {
+    discover: discoverCounts,
+    fetch: fetchCounts,
+  });
+}
+
+/**
+ * A redeployed ECS task can leave a discover job "active" in Valkey when the
+ * prior worker died mid-pass. Discover concurrency is 1, so that ghost lock
+ * blocks every boot job until stall recovery — clear it on boot.
+ */
+async function releaseStaleActiveDiscoverJobs(discoverQueue: BullQueue<DiscoverJobData>): Promise<number> {
+  const activeJobs = await discoverQueue.getJobs(['active'], 0, 50);
+  const staleBefore = Date.now() - DISCOVER_LOCK_MS;
+  let released = 0;
+  for (const job of activeJobs) {
+    const processedOn = job.processedOn ?? 0;
+    if (processedOn > staleBefore) continue;
+    try {
+      await job.remove();
+      released += 1;
+    } catch (error) {
+      logger.warn('Could not remove stale active discover job', {
+        jobId: job.id,
+        provider: job.data.provider,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+  if (released > 0) {
+    logger.warn('Released stale active discover jobs after redeploy', { released });
+  }
+  return released;
+}
+
 /** Wire the BullMQ queues + workers and return a graceful-shutdown closer. */
 function startBullMq(): () => Promise<void> {
   const connection = parseRedisConnection(config.redis.url);
@@ -166,6 +213,11 @@ function startBullMq(): () => Promise<void> {
   const discoverWorker = new Worker<DiscoverJobData>(
     QUEUE_NAMES.discover,
     async (job: Job<DiscoverJobData>) => {
+      logger.info('Discover job started', {
+        provider: job.data.provider,
+        market: job.data.market,
+        city: job.data.city,
+      });
       const refs = await collectDiscoverRefs(job.data);
       for (const ref of refs) {
         const jobId = fetchJobId(ref);
@@ -188,7 +240,7 @@ function startBullMq(): () => Promise<void> {
         count: refs.length,
       });
     },
-    { connection, prefix, concurrency: 1, lockDuration: 600_000 },
+    { connection, prefix, concurrency: 1, lockDuration: DISCOVER_LOCK_MS },
   );
 
   const fetchWorker = new Worker<FetchJobData>(
@@ -208,6 +260,8 @@ function startBullMq(): () => Promise<void> {
   const discoverQueue = new Queue<DiscoverJobData>(QUEUE_NAMES.discover, { connection, prefix });
 
   async function enqueueBootDiscovery(): Promise<void> {
+    await releaseStaleActiveDiscoverJobs(discoverQueue);
+    await logQueueCounts(discoverQueue, fetchQueue);
     for (const data of bootDiscoverJobs()) {
       const jobId = discoverJobId(data);
       // Boot uses deterministic ids for dedup; remove a prior completed/failed
