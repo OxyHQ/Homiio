@@ -4,9 +4,9 @@
  * long-term; Beachfront / Cabins / Pools for vacation).
  *
  * Visual language:
- *   - Rich 54px isometric PNG render per category (full-color, never tinted)
+ *   - Compact 40px isometric PNG render per category (full-color, never tinted)
  *     clipped to a `radius.lg` rounded square so it reads as a premium tile.
- *   - 13px label sitting just under the image, on a fixed-width item so
+ *   - 12px label sitting just under the image, on a fixed-width item so
  *     labels line up across the row.
  *   - Active state = a soft rounded background highlight behind the whole
  *     item (icon + label) plus a dark + bold label and the image at full
@@ -33,52 +33,48 @@ import { useTheme } from '@oxyhq/bloom/theme';
 
 import { PANEL_TOP_INSET } from '@oxyhq/bloom/content-panel';
 
+import { getIconArt, ICON_ART_PLACEHOLDER } from '@/constants/iconArt';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { useHomeCategoryStore, type HomeCategory } from '@/store/homeCategoryStore';
 import { colors } from '@/styles/colors';
 import { tracker } from '@/constants/styles';
 
-// Isometric 3D render shared by every category for now. Each category will
-// get its own distinct PNG later — swap the per-entry `image` source below
-// (the shape already supports a unique image per category). Loaded via
-// `require` (typed) so it renders through RN's `Image` on web + native alike,
-// matching the app's other local-asset images.
-const isometricIcon: ImageSourcePropType = require('@/assets/categories/isometric-icon.png');
-
 interface CategoryDef {
   id: HomeCategory;
   labelKey: string;
   fallback: string;
-  image: ImageSourcePropType;
 }
 
 const LONG_TERM_CATEGORIES: CategoryDef[] = [
-  { id: 'studios', labelKey: 'home.category.studios', fallback: 'Studios', image: isometricIcon },
-  { id: 'apartments', labelKey: 'home.category.apartments', fallback: 'Apartments', image: isometricIcon },
-  { id: 'houses', labelKey: 'home.category.houses', fallback: 'Houses', image: isometricIcon },
-  { id: 'rooms', labelKey: 'home.category.rooms', fallback: 'Rooms', image: isometricIcon },
-  { id: 'coliving', labelKey: 'home.category.coliving', fallback: 'Co-living', image: isometricIcon },
-  { id: 'luxury', labelKey: 'home.category.luxury', fallback: 'Luxury', image: isometricIcon },
-  { id: 'new_listings', labelKey: 'home.category.newListings', fallback: 'New listings', image: isometricIcon },
-  { id: 'near_you', labelKey: 'home.category.nearYou', fallback: 'Near you', image: isometricIcon },
+  { id: 'studios', labelKey: 'home.category.studios', fallback: 'Studios' },
+  { id: 'apartments', labelKey: 'home.category.apartments', fallback: 'Apartments' },
+  { id: 'houses', labelKey: 'home.category.houses', fallback: 'Houses' },
+  { id: 'rooms', labelKey: 'home.category.rooms', fallback: 'Rooms' },
+  { id: 'coliving', labelKey: 'home.category.coliving', fallback: 'Co-living' },
+  { id: 'luxury', labelKey: 'home.category.luxury', fallback: 'Luxury' },
+  { id: 'new_listings', labelKey: 'home.category.newListings', fallback: 'New listings' },
+  { id: 'near_you', labelKey: 'home.category.nearYou', fallback: 'Near you' },
 ];
 
 const VACATION_CATEGORIES: CategoryDef[] = [
-  { id: 'beachfront', labelKey: 'home.category.beachfront', fallback: 'Beachfront', image: isometricIcon },
-  { id: 'cabins', labelKey: 'home.category.cabins', fallback: 'Cabins', image: isometricIcon },
-  { id: 'pools', labelKey: 'home.category.pools', fallback: 'Pools', image: isometricIcon },
-  { id: 'mountain', labelKey: 'home.category.mountain', fallback: 'Mountain', image: isometricIcon },
-  { id: 'city_breaks', labelKey: 'home.category.cityBreaks', fallback: 'City breaks', image: isometricIcon },
-  { id: 'countryside', labelKey: 'home.category.countryside', fallback: 'Countryside', image: isometricIcon },
-  { id: 'instant_book', labelKey: 'home.category.instantBook', fallback: 'Instant book', image: isometricIcon },
-  { id: 'pet_friendly', labelKey: 'home.category.petFriendly', fallback: 'Pet friendly', image: isometricIcon },
+  { id: 'beachfront', labelKey: 'home.category.beachfront', fallback: 'Beachfront' },
+  { id: 'cabins', labelKey: 'home.category.cabins', fallback: 'Cabins' },
+  { id: 'pools', labelKey: 'home.category.pools', fallback: 'Pools' },
+  { id: 'mountain', labelKey: 'home.category.mountain', fallback: 'Mountain' },
+  { id: 'city_breaks', labelKey: 'home.category.cityBreaks', fallback: 'City breaks' },
+  { id: 'countryside', labelKey: 'home.category.countryside', fallback: 'Countryside' },
+  { id: 'instant_book', labelKey: 'home.category.instantBook', fallback: 'Instant book' },
+  { id: 'pet_friendly', labelKey: 'home.category.petFriendly', fallback: 'Pet friendly' },
 ];
 
-/** Edge length of the isometric tile — larger than a line icon so the 3D render reads. */
-const TILE_SIZE = 54;
+/** Edge length of the isometric tile — compact so more categories fit on screen. */
+const TILE_SIZE = 40;
 /** Fixed item width keeps labels aligned across the row regardless of label length. */
-const ITEM_WIDTH = 84;
+const ITEM_WIDTH = 68;
+
+const resolveCategoryImage = (id: HomeCategory): ImageSourcePropType =>
+  getIconArt(id) ?? ICON_ART_PLACEHOLDER;
 
 interface HomeCategoryStripProps {
   /** Optional class applied to the outer wrapper for custom spacing/background. */
@@ -93,13 +89,13 @@ interface HomeCategoryStripProps {
 }
 
 interface CategoryItemProps {
-  item: CategoryDef;
   active: boolean;
   label: string;
+  image: ImageSourcePropType;
   onPress: () => void;
 }
 
-const CategoryItem: React.FC<CategoryItemProps> = ({ item, active, label, onPress }) => {
+const CategoryItem: React.FC<CategoryItemProps> = ({ active, label, image, onPress }) => {
   const [hovered, setHovered] = useState(false);
 
   /**
@@ -121,18 +117,20 @@ const CategoryItem: React.FC<CategoryItemProps> = ({ item, active, label, onPres
       onHoverOut={() => setHovered(false)}
       className={
         active
-          ? 'w-[84px] items-center justify-center rounded-2xl bg-secondary px-2 py-2'
-          : 'w-[84px] items-center justify-center rounded-2xl bg-transparent px-2 py-2'
+          ? 'items-center justify-center rounded-2xl bg-secondary px-1.5 py-1.5'
+          : 'items-center justify-center rounded-2xl bg-transparent px-1.5 py-1.5'
       }
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       accessibilityLabel={label}
       style={{ width: ITEM_WIDTH, transform: [{ scale }] }}
     >
-      <View className="mb-1 h-[54px] w-[54px] items-center justify-center overflow-hidden rounded-2xl">
+      <View
+        className="mb-0.5 items-center justify-center overflow-hidden rounded-2xl"
+        style={{ width: TILE_SIZE, height: TILE_SIZE }}
+      >
         <Image
-          source={item.image}
-          className="h-[54px] w-[54px]"
+          source={image}
           style={{ opacity: active ? 1 : 0.85, width: TILE_SIZE, height: TILE_SIZE }}
           resizeMode="contain"
           accessible={false}
@@ -142,8 +140,8 @@ const CategoryItem: React.FC<CategoryItemProps> = ({ item, active, label, onPres
         numberOfLines={1}
         className={
           active
-            ? 'text-center text-[13px] font-bold text-foreground'
-            : 'text-center text-[13px] font-medium text-muted-foreground'
+            ? 'text-center text-[12px] font-bold text-foreground'
+            : 'text-center text-[12px] font-medium text-muted-foreground'
         }
         style={{ letterSpacing: tracker.wide }}
       >
@@ -201,20 +199,20 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({
       : null;
 
   return (
-    <View className={className ?? 'w-full py-4'} style={stickyStyle}>
+    <View className={className ?? 'w-full py-2'} style={stickyStyle}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         decelerationRate={isWeb ? 'normal' : 'fast'}
         snapToAlignment="start"
-        contentContainerClassName={isWeb ? 'gap-4 px-6' : 'gap-3 px-4'}
+        contentContainerClassName={isWeb ? 'gap-2 px-6' : 'gap-1.5 px-4'}
       >
         {items.map((item) => (
           <CategoryItem
             key={item.id}
-            item={item}
             active={category === item.id}
             label={t(item.labelKey, item.fallback)}
+            image={resolveCategoryImage(item.id)}
             onPress={() => handlePress(item.id)}
           />
         ))}
