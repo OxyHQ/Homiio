@@ -266,7 +266,7 @@ export const PropertyImageCarousel: React.FC<PropertyImageCarouselProps> = ({
   children,
 }) => {
   const sources = useMemo<ImageDisplaySource[]>(
-    () => getPropertyImageSources(images, coverIndex),
+    () => getPropertyImageSources(images, coverIndex, 'medium'),
     [images, coverIndex],
   );
 

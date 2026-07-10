@@ -25,7 +25,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
     return (
         <>
             <Image
-                source={getPropertyImageSource(images[0])}
+                source={getPropertyImageSource(images[0], 'large')}
                 style={Platform.OS === 'web' ? styles.mainImageWeb : styles.mainImage}
                 resizeMode="cover"
             />

@@ -52,7 +52,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, onOpen, t })
                             onPress={() => handleImagePress(index)}
                             activeOpacity={0.8}
                         >
-                            <Image source={getPropertyImageSource(image)} style={styles.galleryImage} resizeMode="cover" />
+                            <Image source={getPropertyImageSource(image, 'medium')} style={styles.galleryImage} resizeMode="cover" />
                             {index === MAX_THUMBS - 1 && images.length > MAX_THUMBS && (
                                 <View style={styles.moreImagesOverlay}>
                                     <BloomText style={styles.moreImagesText}>+{images.length - MAX_THUMBS}</BloomText>

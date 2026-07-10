@@ -1,8 +1,24 @@
 import { generatePropertyTitle, TitleFormat } from './propertyTitleGenerator';
-import { OfferingType, PriceUnit, Property, PropertyAddress, PropertyImage } from '@homiio/shared-types';
+import {
+  OfferingType,
+  PriceUnit,
+  Property,
+  PropertyAddress,
+  PropertyImage,
+  type ImageVariantName,
+} from '@homiio/shared-types';
 import type { BrowseMode } from '@/components/search/types';
 import propertyPlaceholder from '@/assets/images/property_placeholder.jpg';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
+
+/**
+ * Image entry that may carry the full Sharp variant map (`urls`) from
+ * {@link PropertyImageRef}. Legacy `{ url }` entries still work — `url` is the
+ * medium variant.
+ */
+type PropertyImageEntry = PropertyImage & {
+  urls?: Partial<Record<ImageVariantName, string>>;
+};
 
 /** The rental experience the user is currently browsing in. */
 export type RentalMode = 'long_term' | 'vacation';
@@ -224,17 +240,46 @@ const BROWSE_MODE_TO_OFFERING: Record<BrowseMode, OfferingType> = {
 export type ImageDisplaySource = { uri: string } | typeof propertyPlaceholder;
 
 /**
+ * Prefer `urls[variant]` when present, then fall back across the remaining
+ * Sharp renditions, then the legacy medium `url`. Mirrors city cover resolution
+ * in `cityDisplay.getCityImageSource`.
+ */
+function pickVariantUrl(
+  entry: PropertyImageEntry,
+  variant: ImageVariantName | undefined,
+): string | undefined {
+  const urls = entry.urls;
+  if (urls && variant) {
+    const ordered: ImageVariantName[] = [variant, 'large', 'medium', 'small', 'original'];
+    for (const name of ordered) {
+      const candidate = urls[name];
+      if (typeof candidate === 'string' && candidate.length > 0) {
+        return candidate;
+      }
+    }
+  }
+  return entry.url.length > 0 ? entry.url : undefined;
+}
+
+/**
  * Narrow a single image entry (URL string or `PropertyImage`) to its URL,
  * re-homing backend-served URLs onto the active API origin (see
  * {@link resolveBackendImageUrl}) so DB images that baked in a dev/emulator host
  * resolve on web/device/emulator alike. External/scraped URLs pass through.
+ *
+ * When `variant` is set and the entry carries `urls`, the matching Sharp
+ * rendition is preferred (cards → medium/small, detail hero/lightbox → large).
  */
-function imageEntryToUrl(entry: string | PropertyImage): string | undefined {
+function imageEntryToUrl(
+  entry: string | PropertyImageEntry,
+  variant?: ImageVariantName,
+): string | undefined {
   if (typeof entry === 'string') {
     return entry.length > 0 ? resolveBackendImageUrl(entry) : undefined;
   }
   if (entry && typeof entry === 'object' && 'url' in entry) {
-    return entry.url.length > 0 ? resolveBackendImageUrl(entry.url) : undefined;
+    const raw = pickVariantUrl(entry, variant);
+    return raw !== undefined ? resolveBackendImageUrl(raw) : undefined;
   }
   return undefined;
 }
@@ -341,10 +386,13 @@ export function getDetailedPropertyTitle(property: Property): string {
  * to read the index from.
  *
  * @param property - Property object, images array (string[] or PropertyImage[]), or single image (string or PropertyImage)
+ * @param variant - Optional Sharp rendition (`small` / `medium` / `large` / `original`).
+ *   Defaults to the embedded medium `url` when omitted or when `urls` is absent.
  * @returns The property image source (remote URI wrapper or the bundled placeholder)
  */
 export function getPropertyImageSource(
   property: Property | string[] | PropertyImage[] | string | PropertyImage | undefined,
+  variant?: ImageVariantName,
 ): ImageDisplaySource {
   if (!property) {
     return propertyPlaceholder;
@@ -352,24 +400,24 @@ export function getPropertyImageSource(
 
   // If property is a single string URL
   if (typeof property === 'string') {
-    const url = imageEntryToUrl(property);
+    const url = imageEntryToUrl(property, variant);
     return url !== undefined ? { uri: url } : propertyPlaceholder;
   }
 
   // If property is an array of images
   if (Array.isArray(property)) {
-    return getPropertyImageSources(property)[0];
+    return getPropertyImageSources(property, undefined, variant)[0];
   }
 
   // If property is a single PropertyImage object
   if ('url' in property) {
-    const url = imageEntryToUrl(property);
+    const url = imageEntryToUrl(property, variant);
     return url !== undefined ? { uri: url } : propertyPlaceholder;
   }
 
   // If property is a Property object, honour the host's cover photo choice.
   if ('images' in property) {
-    return getPropertyImageSources(property.images, property.coverImageIndex)[0];
+    return getPropertyImageSources(property.images, property.coverImageIndex, variant)[0];
   }
 
   return propertyPlaceholder;
@@ -392,17 +440,20 @@ export function getPropertyImageSource(
  * @param images - A property's `images` field, a pre-built image array, or undefined.
  * @param coverIndex - Optional index into `images` of the host's cover photo
  *   (`Property.coverImageIndex`). Ignored when undefined/non-integer/out of range.
+ * @param variant - Optional Sharp rendition for every entry (see
+ *   {@link getPropertyImageSource}).
  */
 export function getPropertyImageSources(
   images: Property['images'] | (string | PropertyImage)[] | undefined,
   coverIndex?: number,
+  variant?: ImageVariantName,
 ): ImageDisplaySource[] {
   if (!images || images.length === 0) {
     return [propertyPlaceholder];
   }
 
   const sources = moveCoverToFront(images, coverIndex)
-    .map(imageEntryToUrl)
+    .map((entry) => imageEntryToUrl(entry as string | PropertyImageEntry, variant))
     .filter((url): url is string => typeof url === 'string')
     .map((uri): ImageDisplaySource => ({ uri }));
 
