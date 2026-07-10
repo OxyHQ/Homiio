@@ -167,6 +167,7 @@ export {
   FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE,
   FOTOCASA_FIXTURE_PROPERTY_JSON,
   FOTOCASA_FIXTURE_SSR_SEARCH_HTML,
+  fotocasaSearchadsPageFixture,
 } from './providers/fotocasa/fixtures';
 
 // FR market — Bien'ici / Leboncoin (housing 9/10) / SeLoger. All OFF by default.
@@ -810,6 +811,140 @@ export {
   PROPIEDADES_FIXTURE_SEARCH_HTML,
 } from './providers/mx/propiedades/fixtures';
 
+// Colombia (CO) — MercadoLibre housing-only / Metrocuadrado (shared Navent).
+export {
+  MercadolibreCoProvider,
+  MERCADOLIBRE_CO_SITE,
+  isMercadolibreCoChallenge,
+  isMercadolibreCoHousingCategory,
+  mercadolibreCoHousingSearchUrl,
+  mercadolibreCoSourceIdFromUrl,
+  parseMercadolibreCoDetail,
+  parseMercadolibreCoItemJson,
+  parseMercadolibreCoSearch,
+  parseMercadolibreCoSearchJson,
+} from './providers/co/mercadolibre';
+export {
+  MERCADOLIBRE_CO_BASE_URL,
+  MERCADOLIBRE_CO_HOUSING_SLUGS,
+  MERCADOLIBRE_CO_FIXTURE_DETAIL_HTML,
+  MERCADOLIBRE_CO_FIXTURE_NON_HOUSING_JSON,
+  MERCADOLIBRE_CO_FIXTURE_SEARCH_HTML,
+  MERCADOLIBRE_CO_FIXTURE_SEARCH_JSON,
+} from './providers/co/mercadolibre/fixtures';
+export {
+  MetrocuadradoProvider,
+  METROCUADRADO_SITE,
+  isMetrocuadradoChallenge,
+  metrocuadradoSourceIdFromUrl,
+  parseMetrocuadradoDetail,
+  parseMetrocuadradoPostingJson,
+  parseMetrocuadradoSearch,
+  parseMetrocuadradoSearchJson,
+} from './providers/co/metrocuadrado';
+export {
+  METROCUADRADO_BASE_URL,
+  METROCUADRADO_FIXTURE_DETAIL_HTML,
+  METROCUADRADO_FIXTURE_SEARCH_HTML,
+  METROCUADRADO_FIXTURE_SEARCH_JSON,
+} from './providers/co/metrocuadrado/fixtures';
+
+// Chile (CL) — MercadoLibre housing-only (arriendo segment).
+export {
+  MercadolibreClProvider,
+  MERCADOLIBRE_CL_SITE,
+  isMercadolibreClChallenge,
+  isMercadolibreClHousingCategory,
+  mercadolibreClHousingSearchUrl,
+  mercadolibreClSourceIdFromUrl,
+  parseMercadolibreClDetail,
+  parseMercadolibreClItemJson,
+  parseMercadolibreClSearch,
+  parseMercadolibreClSearchJson,
+} from './providers/cl/mercadolibre';
+export {
+  MERCADOLIBRE_CL_BASE_URL,
+  MERCADOLIBRE_CL_HOUSING_SLUGS,
+  MERCADOLIBRE_CL_FIXTURE_DETAIL_HTML,
+  MERCADOLIBRE_CL_FIXTURE_NON_HOUSING_JSON,
+  MERCADOLIBRE_CL_FIXTURE_SEARCH_HTML,
+  MERCADOLIBRE_CL_FIXTURE_SEARCH_JSON,
+} from './providers/cl/mercadolibre/fixtures';
+
+// Peru (PE) — MercadoLibre housing-only.
+export {
+  MercadolibrePeProvider,
+  MERCADOLIBRE_PE_SITE,
+  isMercadolibrePeChallenge,
+  isMercadolibrePeHousingCategory,
+  mercadolibrePeHousingSearchUrl,
+  mercadolibrePeSourceIdFromUrl,
+  parseMercadolibrePeDetail,
+  parseMercadolibrePeItemJson,
+  parseMercadolibrePeSearch,
+  parseMercadolibrePeSearchJson,
+} from './providers/pe/mercadolibre';
+export {
+  MERCADOLIBRE_PE_BASE_URL,
+  MERCADOLIBRE_PE_HOUSING_SLUGS,
+  MERCADOLIBRE_PE_FIXTURE_DETAIL_HTML,
+  MERCADOLIBRE_PE_FIXTURE_NON_HOUSING_JSON,
+  MERCADOLIBRE_PE_FIXTURE_SEARCH_HTML,
+  MERCADOLIBRE_PE_FIXTURE_SEARCH_JSON,
+} from './providers/pe/mercadolibre/fixtures';
+
+// Mexico — MercadoLibre housing-only (renta segment).
+export {
+  MercadolibreMxProvider,
+  MERCADOLIBRE_MX_SITE,
+  isMercadolibreMxChallenge,
+  isMercadolibreMxHousingCategory,
+  mercadolibreMxHousingSearchUrl,
+  mercadolibreMxSourceIdFromUrl,
+  parseMercadolibreMxDetail,
+  parseMercadolibreMxItemJson,
+  parseMercadolibreMxSearch,
+  parseMercadolibreMxSearchJson,
+} from './providers/mx/mercadolibre';
+export {
+  MERCADOLIBRE_MX_BASE_URL,
+  MERCADOLIBRE_MX_HOUSING_SLUGS,
+  MERCADOLIBRE_MX_FIXTURE_DETAIL_HTML,
+  MERCADOLIBRE_MX_FIXTURE_NON_HOUSING_JSON,
+  MERCADOLIBRE_MX_FIXTURE_SEARCH_HTML,
+  MERCADOLIBRE_MX_FIXTURE_SEARCH_JSON,
+} from './providers/mx/mercadolibre/fixtures';
+
+// Portugal — Idealista.pt (georeach AJAX + contact).
+export {
+  IdealistaPtProvider,
+  isIdealistaPtChallenge,
+  idealistaPtSourceIdFromUrl,
+} from './providers/pt/idealistaPt';
+export {
+  parseIdealistaPtDetail,
+  parseIdealistaPtSearch,
+  type IdealistaPtRaw,
+} from './providers/pt/idealistaPt/parse';
+export {
+  parseIdealistaPtGeoreach,
+  idealistaPtGeoreachUrl,
+  idealistaPtWarmSearchUrl,
+  isIdealistaPtGeoreachChallenge,
+} from './providers/pt/idealistaPt/georeach';
+export {
+  IDEALISTA_PT_BASE_URL,
+  IDEALISTA_PT_FIXTURE_DETAIL_HTML,
+  IDEALISTA_PT_FIXTURE_SEARCH_HTML,
+  IDEALISTA_PT_FIXTURE_GEOREACH_JSON,
+  IDEALISTA_PT_FIXTURE_GEOREACH_CHALLENGE,
+  IDEALISTA_PT_FIXTURE_CONTACT_JSON,
+} from './providers/pt/idealistaPt/fixtures';
+export {
+  parseIdealistaPtContactInfo,
+  parseIdealistaPtContactPhones,
+} from './providers/pt/idealistaPt/contact';
+
 import type { ProviderId } from '@homiio/shared-types';
 import { ProviderRegistry } from './registry';
 import type { ListingProvider } from './types';
@@ -857,6 +992,12 @@ import { Inmuebles24Provider } from './providers/mx/inmuebles24';
 import { LamudiProvider } from './providers/mx/lamudi';
 import { VivanunciosProvider } from './providers/mx/vivanuncios';
 import { PropiedadesProvider } from './providers/mx/propiedades';
+import { MercadolibreCoProvider } from './providers/co/mercadolibre';
+import { MetrocuadradoProvider } from './providers/co/metrocuadrado';
+import { MercadolibreClProvider } from './providers/cl/mercadolibre';
+import { MercadolibrePeProvider } from './providers/pe/mercadolibre';
+import { MercadolibreMxProvider } from './providers/mx/mercadolibre';
+import { IdealistaPtProvider } from './providers/pt/idealistaPt';
 
 /**
  * Whether a real portal provider is enabled via its env feature flag. Flags are
@@ -885,8 +1026,12 @@ export function createDefaultRegistry(): ProviderRegistry {
   const ecOptions = citiesOptionsFromEnv('EC');
   const frOptions = citiesOptionsFromEnv('FR');
   const mxOptions = citiesOptionsFromEnv('MX');
+  const coOptions = citiesOptionsFromEnv('CO');
+  const clOptions = citiesOptionsFromEnv('CL');
+  const peOptions = citiesOptionsFromEnv('PE');
+  const ptOptions = citiesOptionsFromEnv('PT');
   const flaggedProviders: ListingProvider[] = [
-    new HabitacliaProvider(),
+    new HabitacliaProvider(esOptions),
     new BluegroundProvider(),
     new IdealistaProvider(esOptions),
     new FotocasaProvider(esOptions),
@@ -927,6 +1072,12 @@ export function createDefaultRegistry(): ProviderRegistry {
     new LamudiProvider(mxOptions),
     new VivanunciosProvider(mxOptions),
     new PropiedadesProvider(mxOptions),
+    new MercadolibreMxProvider(mxOptions),
+    new MercadolibreCoProvider(coOptions),
+    new MetrocuadradoProvider(coOptions),
+    new MercadolibreClProvider(clOptions),
+    new MercadolibrePeProvider(peOptions),
+    new IdealistaPtProvider(ptOptions),
   ];
   for (const provider of flaggedProviders) {
     if (providerEnabled(provider.id)) {

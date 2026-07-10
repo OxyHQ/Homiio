@@ -25,6 +25,7 @@ import type {
 import { createFetchRuntime } from '../../runtime';
 import { fetchListingViaLadder } from '../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
+import { providerMaxSearchPages } from '../../discoverLimits';
 import { BrowserSessionChallengeError, type BrowserSession, type BrowserStorageState } from '../../browserSession';
 import { createProxySessionId, envBool } from '../../proxy';
 import { HABITACLIA_BASE_URL, type HabitacliaRawListing } from './fixtures';
@@ -48,8 +49,19 @@ export function isHabitacliaChallenge(html: string): boolean {
   );
 }
 
-const DEFAULT_CITIES: readonly string[] = ['barcelona', 'madrid', 'valencia', 'sevilla', 'malaga'];
-const MAX_SEARCH_PAGES = 5;
+const DEFAULT_CITIES: readonly string[] = [
+  'barcelona',
+  'madrid',
+  'valencia',
+  'sevilla',
+  'malaga',
+  'bilbao',
+  'zaragoza',
+  'alicante',
+  'murcia',
+  'palma',
+];
+const DEFAULT_MAX_SEARCH_PAGES = 50;
 const LISTAINMUEBLES_POST_TIMEOUT_MS = 45_000;
 const SUPPORTED_TYPES: ReadonlySet<string> = new Set(Object.values(PropertyType));
 
@@ -98,6 +110,7 @@ function yieldRefs(
 
 export interface HabitacliaProviderOptions {
   runtime?: FetchRuntime;
+  cities?: readonly string[];
   metrics?: ProviderMetricsSink & ProviderMetricsReader;
 }
 
@@ -106,17 +119,21 @@ export class HabitacliaProvider implements ListingProvider {
   readonly markets = ['ES'] as const;
 
   private readonly runtime: FetchRuntime;
+  private readonly cities: readonly string[];
   private readonly metrics: ProviderMetricsSink & ProviderMetricsReader;
+  private readonly maxSearchPages: number;
   private stickyProxySessionId?: string;
   private stickyStorageState?: BrowserStorageState;
 
   constructor(options: HabitacliaProviderOptions = {}) {
     this.runtime = options.runtime ?? createFetchRuntime();
+    this.cities = options.cities && options.cities.length > 0 ? options.cities : DEFAULT_CITIES;
     this.metrics = options.metrics ?? defaultProviderMetrics;
+    this.maxSearchPages = providerMaxSearchPages(PROVIDER_ID, DEFAULT_MAX_SEARCH_PAGES, 'ES');
   }
 
   async *discover(job: DiscoverJob): AsyncIterable<ExternalListingRef> {
-    const cities = job.city ? [job.city] : DEFAULT_CITIES;
+    const cities = job.city ? [job.city] : this.cities;
     const limit = job.limit ?? Number.POSITIVE_INFINITY;
     const seen = new Set<string>();
     const yielded = { count: 0 };
@@ -205,7 +222,7 @@ export class HabitacliaProvider implements ListingProvider {
         const formFields = extractHabitacliaListadoFormFields(searchHtml);
         if (Object.keys(formFields).length === 0) continue;
 
-        for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
+        for (let page = 1; page <= this.maxSearchPages; page += 1) {
           if (yielded.count >= limit) return;
 
           let body: string;
@@ -295,7 +312,7 @@ export class HabitacliaProvider implements ListingProvider {
 
     const collected: ExternalListingRef[] = [];
     const referer = habitacliaWarmSearchUrl(city, 1);
-    for (let page = 2; page <= MAX_SEARCH_PAGES; page += 1) {
+    for (let page = 2; page <= this.maxSearchPages; page += 1) {
       if (yielded.count >= limit) break;
       const { status, body } = await runtime.fetchHttp(HABITACLIA_LISTAINMUEBLES_URL, {
         signal,
@@ -325,7 +342,7 @@ export class HabitacliaProvider implements ListingProvider {
     yielded: { count: number },
   ): AsyncIterable<ExternalListingRef> {
     let firstPageHtml = '';
-    for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
+    for (let page = 1; page <= this.maxSearchPages; page += 1) {
       if (yielded.count >= limit) return;
       if (page > 1 && !runtime.fetchViaBrowser) break;
       const { html } = await fetchListingViaLadder(runtime, habitacliaWarmSearchUrl(city, page), {

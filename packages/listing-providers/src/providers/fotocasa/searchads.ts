@@ -17,6 +17,9 @@ import { asString, isRecord } from '../../parse/guards';
 /** Fotocasa property-search gateway (internal JSON API). */
 export const FOTOCASA_GW_BASE = 'https://web.gw.fotocasa.es/v2/propertysearch';
 
+/** Fotocasa searchads transaction types (rent vs buy). */
+export type FotocasaTransactionType = 'RENT' | 'BUY';
+
 /** Known Fotocasa location slugs for default discover cities. */
 const CITY_LOCATION_SLUGS: Readonly<Record<string, string>> = {
   madrid: 'madrid-capital',
@@ -24,6 +27,25 @@ const CITY_LOCATION_SLUGS: Readonly<Record<string, string>> = {
   valencia: 'valencia-capital',
   sevilla: 'sevilla-capital',
   malaga: 'malaga-capital',
+  bilbao: 'bilbao-capital',
+  zaragoza: 'zaragoza-capital',
+  alicante: 'alicante-alacant',
+  murcia: 'murcia-capital',
+  palma: 'palma-de-mallorca',
+};
+
+/** Default combinedLocations + coordinates when urllocationsegments is unavailable. */
+const CITY_DEFAULT_SEGMENTS: Readonly<Record<string, FotocasaLocationSegments>> = {
+  madrid: { ids: '724,14,28,173,0,28079,0,0,0', latitude: 40.4096, longitude: -3.68624 },
+  barcelona: { ids: '724,8,8,232,0,08019,0,0,0', latitude: 41.3874, longitude: 2.1686 },
+  valencia: { ids: '724,10,46,183,0,46250,0,0,0', latitude: 39.4699, longitude: -0.3763 },
+  sevilla: { ids: '724,1,41,191,0,41091,0,0,0', latitude: 37.3891, longitude: -5.9845 },
+  malaga: { ids: '724,1,29,178,0,29067,0,0,0', latitude: 36.7213, longitude: -4.4214 },
+  bilbao: { ids: '724,16,48,209,0,48020,0,0,0', latitude: 43.263, longitude: -2.935 },
+  zaragoza: { ids: '724,12,50,226,0,50297,0,0,0', latitude: 41.6488, longitude: -0.8891 },
+  alicante: { ids: '724,10,3,14,0,03014,0,0,0', latitude: 38.3452, longitude: -0.481 },
+  murcia: { ids: '724,17,30,193,0,30030,0,0,0', latitude: 37.9922, longitude: -1.1307 },
+  palma: { ids: '724,4,7,40,0,07040,0,0,0', latitude: 39.5696, longitude: 2.6502 },
 };
 
 /** Madrid-capital combinedLocations when urllocationsegments is unavailable. */
@@ -66,10 +88,15 @@ export function fotocasaCityFromRefUrl(url: string): string {
   return location;
 }
 
-/** Fotocasa rental search page used to warm PerimeterX before searchads AJAX. */
-export function fotocasaWarmSearchUrl(city: string, page = 1): string {
+/** Fotocasa search page used to warm PerimeterX before searchads AJAX. */
+export function fotocasaWarmSearchUrl(
+  city: string,
+  page = 1,
+  transactionType: FotocasaTransactionType = 'RENT',
+): string {
   const location = fotocasaLocationSlug(city);
-  const base = `${FOTOCASA_BASE_URL}/es/alquiler/viviendas/${location}/todas-las-zonas/l`;
+  const segment = transactionType === 'BUY' ? 'comprar' : 'alquiler';
+  const base = `${FOTOCASA_BASE_URL}/es/${segment}/viviendas/${location}/todas-las-zonas/l`;
   return page <= 1 ? base : `${base}?page=${page}`;
 }
 
@@ -80,14 +107,18 @@ export function fotocasaUrlLocationSegmentsUrl(city: string): string {
 }
 
 /** Build searchads URL from resolved location segments + 1-based page. */
-export function fotocasaSearchadsUrl(segments: FotocasaLocationSegments, page = 1): string {
+export function fotocasaSearchadsUrl(
+  segments: FotocasaLocationSegments,
+  page = 1,
+  transactionType: FotocasaTransactionType = 'RENT',
+): string {
   const params = new URLSearchParams({
     combinedLocations: segments.ids,
     latitude: String(segments.latitude),
     longitude: String(segments.longitude),
     pageNumber: String(page),
     size: '30',
-    transactionType: 'RENT',
+    transactionType,
     propertyType: 'HOMES',
     sortType: 'publicationDate',
     sortOrderDesc: 'true',
@@ -234,9 +265,8 @@ export function parseFotocasaSsrSearch(html: string): { sourceId: string; url: s
 /** Resolve default location segments for a city when urllocationsegments fails. */
 export function fotocasaDefaultLocationSegments(city: string): FotocasaLocationSegments {
   const slug = citySlug(city);
-  if (slug === 'madrid') {
-    return { ids: FOTOCASA_DEFAULT_MADRID_LOCATIONS, latitude: 40.4096, longitude: -3.68624 };
-  }
+  const known = CITY_DEFAULT_SEGMENTS[slug];
+  if (known) return known;
   return {
     ids: FOTOCASA_DEFAULT_MADRID_LOCATIONS,
     latitude: 40.4096,

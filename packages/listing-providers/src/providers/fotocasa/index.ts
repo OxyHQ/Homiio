@@ -30,6 +30,7 @@ import type {
 import { createFetchRuntime } from '../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
+import { providerMaxSearchPages } from '../../discoverLimits';
 import type { EsSchemaListing } from '../../parse/jsonLd';
 import { FOTOCASA_BASE_URL } from './fixtures';
 import { fotocasaSourceIdFromUrl, parseFotocasaSearch, type FotocasaRaw } from './parse';
@@ -44,6 +45,7 @@ import {
   parseFotocasaSearchads,
   parseFotocasaSsrSearch,
   type FotocasaLocationSegments,
+  type FotocasaTransactionType,
 } from './searchads';
 import { fotocasaPropertyApiUrl, isFotocasaPropertyChallenge, parseFotocasaPropertyJson } from './property';
 import {
@@ -55,10 +57,21 @@ import {
 const PROVIDER_ID: ProviderId = 'fotocasa';
 
 /** ES cities enumerated when a discover job carries no explicit `city`. */
-const DEFAULT_CITIES: readonly string[] = ['madrid', 'barcelona', 'valencia', 'sevilla', 'malaga'];
+const DEFAULT_CITIES: readonly string[] = [
+  'madrid',
+  'barcelona',
+  'valencia',
+  'sevilla',
+  'malaga',
+  'bilbao',
+  'zaragoza',
+  'alicante',
+  'murcia',
+  'palma',
+];
 
-/** Max search pages paged through per city in one discover pass. */
-const MAX_SEARCH_PAGES = 3;
+const DEFAULT_MAX_SEARCH_PAGES = 75;
+const DEFAULT_TRANSACTION_TYPES: readonly FotocasaTransactionType[] = ['RENT', 'BUY'];
 
 /** Fotocasa content markers after PerimeterX warm-up. */
 const FOTOCASA_CONTENT_SELECTOR =
@@ -82,8 +95,18 @@ export interface FotocasaProviderOptions {
   metrics?: ProviderMetricsSink & ProviderMetricsReader;
 }
 
-function searchUrl(city: string, page: number): string {
-  return fotocasaWarmSearchUrl(city, page);
+function resolveTransactionTypes(): readonly FotocasaTransactionType[] {
+  const raw = process.env.LISTING_FOTOCASA_TRANSACTION_TYPES;
+  if (!raw?.trim()) return DEFAULT_TRANSACTION_TYPES;
+  const types = raw
+    .split(',')
+    .map((entry) => entry.trim().toUpperCase())
+    .filter((entry): entry is FotocasaTransactionType => entry === 'RENT' || entry === 'BUY');
+  return types.length > 0 ? types : DEFAULT_TRANSACTION_TYPES;
+}
+
+function searchUrl(city: string, page: number, transactionType: FotocasaTransactionType = 'RENT'): string {
+  return fotocasaWarmSearchUrl(city, page, transactionType);
 }
 
 function resolvePropertyType(types: readonly string[]): PropertyType {
@@ -142,6 +165,8 @@ export class FotocasaProvider implements ListingProvider {
   private readonly runtime: FetchRuntime;
   private readonly cities: readonly string[];
   private readonly metrics: ProviderMetricsSink & ProviderMetricsReader;
+  private readonly maxSearchPages: number;
+  private readonly transactionTypes: readonly FotocasaTransactionType[];
 
   private stickyProxySessionId?: string;
   private stickyStorageState?: BrowserStorageState;
@@ -150,6 +175,8 @@ export class FotocasaProvider implements ListingProvider {
     this.runtime = options.runtime ?? createFetchRuntime();
     this.cities = options.cities && options.cities.length > 0 ? options.cities : DEFAULT_CITIES;
     this.metrics = options.metrics ?? defaultProviderMetrics;
+    this.maxSearchPages = providerMaxSearchPages(PROVIDER_ID, DEFAULT_MAX_SEARCH_PAGES, 'ES');
+    this.transactionTypes = resolveTransactionTypes();
   }
 
   async *discover(job: DiscoverJob): AsyncIterable<ExternalListingRef> {
@@ -169,8 +196,19 @@ export class FotocasaProvider implements ListingProvider {
       if (yielded.count >= limit) return;
 
       if (viaAjax.length === 0) {
-        for await (const ref of this.discoverCityViaHtml(runtime, city, job.signal, seen, limit, yielded)) {
-          yield ref;
+        for (const transactionType of this.transactionTypes) {
+          for await (const ref of this.discoverCityViaHtml(
+            runtime,
+            city,
+            job.signal,
+            seen,
+            limit,
+            yielded,
+            transactionType,
+          )) {
+            yield ref;
+          }
+          if (yielded.count >= limit) return;
         }
       }
     }
@@ -190,13 +228,46 @@ export class FotocasaProvider implements ListingProvider {
   ): Promise<ExternalListingRef[]> {
     if (!runtime.openBrowserSession) return [];
 
+    const collected: ExternalListingRef[] = [];
+    for (const transactionType of this.transactionTypes) {
+      if (yielded.count >= limit) break;
+      const refs = await this.discoverCityTransactionViaSearchads(
+        runtime,
+        city,
+        transactionType,
+        signal,
+        seen,
+        limit,
+        yielded,
+      );
+      collected.push(...refs);
+    }
+    return collected;
+  }
+
+  /**
+   * Warm session on city search → urllocationsegments + searchads AJAX pages
+   * for one transaction type (RENT or BUY). Returns refs yielded (empty when
+   * warm-up/challenge fails — caller falls back).
+   */
+  private async discoverCityTransactionViaSearchads(
+    runtime: FetchRuntime,
+    city: string,
+    transactionType: FotocasaTransactionType,
+    signal: AbortSignal | undefined,
+    seen: Set<string>,
+    limit: number,
+    yielded: { count: number },
+  ): Promise<ExternalListingRef[]> {
+    if (!runtime.openBrowserSession) return [];
+
     const sticky = envBool('LISTING_PROXY_STICKY', false);
     if (sticky && !this.stickyProxySessionId) {
       this.stickyProxySessionId = createProxySessionId();
     }
 
     let session: BrowserSession | undefined;
-    const warmUrl = fotocasaWarmSearchUrl(city, 1);
+    const warmUrl = fotocasaWarmSearchUrl(city, 1, transactionType);
     const start = Date.now();
     try {
       session = await runtime.openBrowserSession({
@@ -233,70 +304,47 @@ export class FotocasaProvider implements ListingProvider {
 
       const collected: ExternalListingRef[] = [];
 
-      for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
+      for (let page = 1; page <= this.maxSearchPages; page += 1) {
         if (yielded.count >= limit) break;
 
         let pageRefs: { sourceId: string; url: string }[];
         let status: number;
         let requestUrl: string;
 
-        if (page === 1) {
-          const ssrRefs = parseFotocasaSsrSearch(searchHtml);
-          if (ssrRefs.length > 0) {
-            pageRefs = ssrRefs;
-            status = 200;
-            requestUrl = warmUrl;
-          } else {
-            requestUrl = fotocasaSearchadsUrl(segments, page);
-            const response = await session.request(requestUrl, {
-              referer: session.pageUrl(),
-              timeoutMs: 30_000,
-            });
-            status = response.status;
-            if (
-              status === 403 ||
-              status === 429 ||
-              isFotocasaSearchadsChallenge(response.body)
-            ) {
-              this.metrics.record({
-                provider: this.id,
-                strategy: 'browser',
-                outcome: 'challenge',
-                status,
-                latencyMs: Date.now() - start,
-                url: requestUrl,
-                detail: 'searchads PerimeterX challenge after warm-up',
-              });
-              break;
-            }
-            if (status >= 400) break;
-            pageRefs = parseFotocasaSearchads(response.body);
-          }
-        } else {
-          requestUrl = fotocasaSearchadsUrl(segments, page);
-          const response = await session.request(requestUrl, {
-            referer: session.pageUrl(),
-            timeoutMs: 30_000,
+        requestUrl = fotocasaSearchadsUrl(segments, page, transactionType);
+        const response = await session.request(requestUrl, {
+          referer: session.pageUrl(),
+          timeoutMs: 30_000,
+        });
+        status = response.status;
+        if (
+          status === 403 ||
+          status === 429 ||
+          isFotocasaSearchadsChallenge(response.body)
+        ) {
+          this.metrics.record({
+            provider: this.id,
+            strategy: 'browser',
+            outcome: 'challenge',
+            status,
+            latencyMs: Date.now() - start,
+            url: requestUrl,
+            detail: `searchads PerimeterX challenge after warm-up (${transactionType})`,
           });
-          status = response.status;
-          if (
-            status === 403 ||
-            status === 429 ||
-            isFotocasaSearchadsChallenge(response.body)
-          ) {
-            this.metrics.record({
-              provider: this.id,
-              strategy: 'browser',
-              outcome: 'challenge',
-              status,
-              latencyMs: Date.now() - start,
-              url: requestUrl,
-              detail: 'searchads PerimeterX challenge after warm-up',
-            });
-            break;
+          if (page === 1) {
+            const ssrRefs = parseFotocasaSsrSearch(searchHtml);
+            if (ssrRefs.length > 0) {
+              collected.push(...yieldRefs(ssrRefs, seen, limit, yielded, browserSession));
+            }
           }
-          if (status >= 400) break;
-          pageRefs = parseFotocasaSearchads(response.body);
+          break;
+        }
+        if (status >= 400) break;
+        pageRefs = parseFotocasaSearchads(response.body);
+        if (page === 1 && pageRefs.length === 0) {
+          pageRefs = parseFotocasaSsrSearch(searchHtml);
+          requestUrl = warmUrl;
+          status = 200;
         }
 
         this.metrics.record({
@@ -343,11 +391,12 @@ export class FotocasaProvider implements ListingProvider {
     seen: Set<string>,
     limit: number,
     yielded: { count: number },
+    transactionType: FotocasaTransactionType = 'RENT',
   ): AsyncIterable<ExternalListingRef> {
-    for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
+    for (let page = 1; page <= this.maxSearchPages; page += 1) {
       if (yielded.count >= limit) return;
       try {
-        const { html } = await fetchListingViaLadder(runtime, searchUrl(city, page), {
+        const { html } = await fetchListingViaLadder(runtime, searchUrl(city, page, transactionType), {
           provider: this.id,
           isChallenge: isFotocasaChallenge,
           metrics: this.metrics,

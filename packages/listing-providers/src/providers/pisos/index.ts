@@ -30,6 +30,7 @@ import type {
 import { createFetchRuntime } from '../../runtime';
 import { fetchListingViaLadder } from '../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
+import { providerMaxSearchPages } from '../../discoverLimits';
 import type { EsSchemaListing } from '../../parse/jsonLd';
 import { createProxySessionId, envBool } from '../../proxy';
 import type { BrowserSession, BrowserStorageState } from '../../browserSession';
@@ -44,8 +45,19 @@ import {
 } from './parse';
 
 const PROVIDER_ID: ProviderId = 'pisos';
-const DEFAULT_CITIES: readonly string[] = ['madrid', 'barcelona', 'valencia', 'sevilla', 'malaga'];
-const MAX_SEARCH_PAGES = 3;
+const DEFAULT_CITIES: readonly string[] = [
+  'madrid',
+  'barcelona',
+  'valencia',
+  'sevilla',
+  'malaga',
+  'bilbao',
+  'zaragoza',
+  'alicante',
+  'murcia',
+  'palma',
+];
+const DEFAULT_MAX_SEARCH_PAGES = 50;
 const PISOS_SEARCH_CONTENT_SELECTOR = 'script[type="application/ld+json"], [href*="/alquilar/"]';
 
 export function isPisosChallenge(html: string): boolean {
@@ -91,6 +103,7 @@ export class PisosProvider implements ListingProvider {
   private readonly runtime: FetchRuntime;
   private readonly cities: readonly string[];
   private readonly metrics: ProviderMetricsSink & ProviderMetricsReader;
+  private readonly maxSearchPages: number;
   private stickyProxySessionId?: string;
   private stickyStorageState?: BrowserStorageState;
 
@@ -98,6 +111,7 @@ export class PisosProvider implements ListingProvider {
     this.runtime = options.runtime ?? createFetchRuntime();
     this.cities = options.cities && options.cities.length > 0 ? options.cities : DEFAULT_CITIES;
     this.metrics = options.metrics ?? defaultProviderMetrics;
+    this.maxSearchPages = providerMaxSearchPages(PROVIDER_ID, DEFAULT_MAX_SEARCH_PAGES, 'ES');
   }
 
   async *discover(job: DiscoverJob): AsyncIterable<ExternalListingRef> {
@@ -111,7 +125,7 @@ export class PisosProvider implements ListingProvider {
       if (yielded.count >= limit) return;
 
       const beforeCity = yielded.count;
-      for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
+      for (let page = 1; page <= this.maxSearchPages; page += 1) {
         if (yielded.count >= limit) return;
         const html = await this.fetchSearchHtml(runtime, city, page, job.signal);
         if (!html) break;
@@ -201,7 +215,7 @@ export class PisosProvider implements ListingProvider {
         signal,
       });
 
-      for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
+      for (let page = 1; page <= this.maxSearchPages; page += 1) {
         if (yielded.count >= limit) return;
 
         if (page > 1) {

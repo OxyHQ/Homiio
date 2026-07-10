@@ -39,6 +39,7 @@ import type {
 import { createFetchRuntime } from '../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
+import { providerMaxSearchPages } from '../../discoverLimits';
 import { isDataDomeHtmlChallenge } from '../../parse/challenge';
 import type { EsSchemaListing } from '../../parse/jsonLd';
 import { IDEALISTA_BASE_URL } from './fixtures';
@@ -62,10 +63,20 @@ import { idealistaSourceIdFromUrl, parseIdealistaDetail, parseIdealistaSearch, t
 const PROVIDER_ID: ProviderId = 'idealista';
 
 /** ES cities enumerated when a discover job carries no explicit `city`. */
-const DEFAULT_CITIES: readonly string[] = ['madrid', 'barcelona', 'valencia', 'sevilla', 'malaga'];
+const DEFAULT_CITIES: readonly string[] = [
+  'madrid',
+  'barcelona',
+  'valencia',
+  'sevilla',
+  'malaga',
+  'bilbao',
+  'zaragoza',
+  'alicante',
+  'murcia',
+  'palma',
+];
 
-/** Max search / georeach pages paged through per city in one discover pass. */
-const MAX_SEARCH_PAGES = 3;
+const DEFAULT_MAX_SEARCH_PAGES = 50;
 
 /** Idealista content markers after warm-up (search results, filters, or main shell). */
 const IDEALISTA_CONTENT_SELECTOR =
@@ -170,6 +181,7 @@ export class IdealistaProvider implements ListingProvider {
   private readonly runtime: FetchRuntime;
   private readonly cities: readonly string[];
   private readonly metrics: ProviderMetricsSink & ProviderMetricsReader;
+  private readonly maxSearchPages: number;
 
   /** Sticky proxy session id + storage reused across cities when sticky is on. */
   private stickyProxySessionId?: string;
@@ -179,6 +191,7 @@ export class IdealistaProvider implements ListingProvider {
     this.runtime = options.runtime ?? createFetchRuntime();
     this.cities = options.cities && options.cities.length > 0 ? options.cities : DEFAULT_CITIES;
     this.metrics = options.metrics ?? defaultProviderMetrics;
+    this.maxSearchPages = providerMaxSearchPages(PROVIDER_ID, DEFAULT_MAX_SEARCH_PAGES, 'ES');
   }
 
   async *discover(job: DiscoverJob): AsyncIterable<ExternalListingRef> {
@@ -242,7 +255,7 @@ export class IdealistaProvider implements ListingProvider {
       });
 
       const collected: ExternalListingRef[] = [];
-      for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
+      for (let page = 1; page <= this.maxSearchPages; page += 1) {
         if (yielded.count >= limit) break;
         const ajaxUrl = idealistaGeoreachUrl(city, page);
         const { status, body } = await session.request(ajaxUrl, {
@@ -321,7 +334,7 @@ export class IdealistaProvider implements ListingProvider {
     limit: number,
     yielded: { count: number },
   ): AsyncIterable<ExternalListingRef> {
-    for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
+    for (let page = 1; page <= this.maxSearchPages; page += 1) {
       if (yielded.count >= limit) return;
       try {
         const { html } = await fetchListingViaLadder(runtime, searchUrl(city, page), {

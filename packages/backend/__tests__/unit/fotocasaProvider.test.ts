@@ -27,6 +27,7 @@ import {
   FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE,
   FOTOCASA_FIXTURE_PROPERTY_JSON,
   FOTOCASA_FIXTURE_SSR_SEARCH_HTML,
+  fotocasaSearchadsPageFixture,
   fotocasaCityFromRefUrl,
   readFotocasaBrowserSessionHint,
   FOTOCASA_BROWSER_SESSION_HINT,
@@ -279,6 +280,131 @@ describe('FotocasaProvider.discover searchads path', () => {
 
     expect(htmlFetches).toBeGreaterThan(0);
     expect(refs.map((ref) => ref.sourceId).sort()).toEqual(['187654321', '187654322', '187654323']);
+  });
+
+  it('paginates searchads across pages until an empty page', async () => {
+    const requestedPages: number[] = [];
+    const runtime: FetchRuntime = {
+      fetchHttp: async () => ({ status: 500, body: '' }),
+      fetchJson: async () => {
+        throw new Error('unused');
+      },
+      fetchText: async () => {
+        throw new Error('unused');
+      },
+      loadFixture: async () => {
+        throw new Error('unused');
+      },
+      openBrowserSession: async () => ({
+        request: async (url: string) => {
+          if (url.includes('urllocationsegments')) {
+            return { status: 200, body: FOTOCASA_FIXTURE_LOCATION_SEGMENTS_JSON };
+          }
+          const pageMatch = url.match(/pageNumber=(\d+)/);
+          const page = pageMatch ? Number(pageMatch[1]) : 1;
+          requestedPages.push(page);
+          if (page <= 3) {
+            return { status: 200, body: fotocasaSearchadsPageFixture(page, 2) };
+          }
+          return { status: 200, body: JSON.stringify({ realEstates: [], pageNumber: page }) };
+        },
+        content: async () => '<html><main class="re-Searchresult"><h1>Alquiler Madrid</h1></main></html>',
+        pageUrl: () => 'https://www.fotocasa.es/es/alquiler/viviendas/madrid-capital/todas-las-zonas/l',
+        exportStorageState: async () => ({ cookies: [] }),
+        close: async () => undefined,
+      }),
+    };
+
+    const previousRentOnly = process.env.LISTING_FOTOCASA_TRANSACTION_TYPES;
+    const previousMaxPages = process.env.LISTING_FOTOCASA_MAX_PAGES;
+    process.env.LISTING_FOTOCASA_TRANSACTION_TYPES = 'RENT';
+    process.env.LISTING_FOTOCASA_MAX_PAGES = '10';
+    try {
+      const local = new FotocasaProvider({ runtime, cities: ['madrid'] });
+      const refs: ExternalListingRef[] = [];
+      for await (const ref of local.discover({
+        provider: 'fotocasa',
+        market: 'ES',
+        city: 'madrid',
+        runtime,
+      })) {
+        refs.push(ref);
+      }
+
+      expect(requestedPages).toEqual([1, 2, 3, 4]);
+      expect(refs).toHaveLength(6);
+      expect(new Set(refs.map((ref) => ref.sourceId)).size).toBe(6);
+    } finally {
+      if (previousRentOnly === undefined) delete process.env.LISTING_FOTOCASA_TRANSACTION_TYPES;
+      else process.env.LISTING_FOTOCASA_TRANSACTION_TYPES = previousRentOnly;
+      if (previousMaxPages === undefined) delete process.env.LISTING_FOTOCASA_MAX_PAGES;
+      else process.env.LISTING_FOTOCASA_MAX_PAGES = previousMaxPages;
+    }
+  });
+
+  it('discovers both RENT and BUY transaction passes', async () => {
+    const transactionTypes: string[] = [];
+    const runtime: FetchRuntime = {
+      fetchHttp: async () => ({ status: 500, body: '' }),
+      fetchJson: async () => {
+        throw new Error('unused');
+      },
+      fetchText: async () => {
+        throw new Error('unused');
+      },
+      loadFixture: async () => {
+        throw new Error('unused');
+      },
+      openBrowserSession: async (options) => {
+        if (options.warmUrl.includes('/comprar/')) transactionTypes.push('BUY');
+        if (options.warmUrl.includes('/alquiler/')) transactionTypes.push('RENT');
+        return {
+          request: async (url: string) => {
+            if (url.includes('urllocationsegments')) {
+              return { status: 200, body: FOTOCASA_FIXTURE_LOCATION_SEGMENTS_JSON };
+            }
+            if (url.includes('transactionType=BUY')) {
+              return {
+                status: 200,
+                body: JSON.stringify({
+                  realEstates: [{ propertyId: '299900001', detailUrl: '/es/comprar/vivienda/madrid-capital/x/299900001/d' }],
+                }),
+              };
+            }
+            return { status: 200, body: FOTOCASA_FIXTURE_SEARCHADS_JSON };
+          },
+          content: async () => '<html><main class="re-Searchresult"><h1>Search</h1></main></html>',
+          pageUrl: () => options.warmUrl,
+          exportStorageState: async () => ({ cookies: [] }),
+          close: async () => undefined,
+        };
+      },
+    };
+
+    const previousTypes = process.env.LISTING_FOTOCASA_TRANSACTION_TYPES;
+    const previousMaxPages = process.env.LISTING_FOTOCASA_MAX_PAGES;
+    process.env.LISTING_FOTOCASA_TRANSACTION_TYPES = 'RENT,BUY';
+    process.env.LISTING_FOTOCASA_MAX_PAGES = '1';
+    try {
+      const local = new FotocasaProvider({ runtime, cities: ['madrid'] });
+      const refs: ExternalListingRef[] = [];
+      for await (const ref of local.discover({
+        provider: 'fotocasa',
+        market: 'ES',
+        city: 'madrid',
+        runtime,
+      })) {
+        refs.push(ref);
+      }
+
+      expect(transactionTypes).toEqual(['RENT', 'BUY']);
+      expect(refs.map((ref) => ref.sourceId).sort()).toEqual(['187654321', '187654322', '187654323', '299900001']);
+    } finally {
+      if (previousTypes === undefined) delete process.env.LISTING_FOTOCASA_TRANSACTION_TYPES;
+      else process.env.LISTING_FOTOCASA_TRANSACTION_TYPES = previousTypes;
+      if (previousMaxPages === undefined) delete process.env.LISTING_FOTOCASA_MAX_PAGES;
+      else process.env.LISTING_FOTOCASA_MAX_PAGES = previousMaxPages;
+    }
   });
 });
 

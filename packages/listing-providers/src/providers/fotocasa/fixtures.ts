@@ -169,6 +169,16 @@ export const FOTOCASA_FIXTURE_SEARCHADS_JSON = JSON.stringify({
   totalItems: 3,
 });
 
+/** Build a searchads page fixture with distinct property ids. */
+export function fotocasaSearchadsPageFixture(page: number, count = 2): string {
+  const baseId = page * 100_000;
+  const realEstates = Array.from({ length: count }, (_, index) => ({
+    propertyId: String(baseId + index),
+    detailUrl: `/es/alquiler/vivienda/madrid-capital/page-${page}/${baseId + index}/d`,
+  }));
+  return JSON.stringify({ realEstates, pageNumber: page, totalItems: count });
+}
+
 /** urllocationsegments AJAX response for Madrid-capital. */
 export const FOTOCASA_FIXTURE_LOCATION_SEGMENTS_JSON = JSON.stringify({
   ids: '724,14,28,173,0,28079,0,0,0',
