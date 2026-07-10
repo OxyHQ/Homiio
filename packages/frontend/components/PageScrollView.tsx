@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import {
   Platform,
   View,
+  type RefreshControlProps,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -22,10 +23,12 @@ interface PageScrollViewProps {
    * animations. A local fallback is used when a screen does not need to read it.
    */
   scrollY?: SharedValue<number>;
+  className?: string;
+  contentClassName?: string;
   style?: StyleProp<ViewStyle>;
   contentContainerStyle?: StyleProp<ViewStyle>;
   /** Native-only — ignored on web where the document is the scroll owner. */
-  refreshControl?: React.ReactElement;
+  refreshControl?: React.ReactElement<RefreshControlProps>;
   showsVerticalScrollIndicator?: boolean;
 }
 
@@ -43,6 +46,8 @@ interface PageScrollViewProps {
 export function PageScrollView({
   children,
   scrollY,
+  className,
+  contentClassName,
   style,
   contentContainerStyle,
   refreshControl,
@@ -71,14 +76,17 @@ export function PageScrollView({
 
   if (IS_WEB) {
     return (
-      <View style={style}>
-        <View style={contentContainerStyle}>{children}</View>
+      <View className={className ?? 'flex-1'} style={style}>
+        <View className={contentClassName} style={contentContainerStyle}>
+          {children}
+        </View>
       </View>
     );
   }
 
   return (
     <Animated.ScrollView
+      className={className ?? 'flex-1'}
       style={style}
       contentContainerStyle={contentContainerStyle}
       onScroll={scrollHandler}

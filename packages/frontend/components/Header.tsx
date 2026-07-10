@@ -1,5 +1,5 @@
 import React, { useEffect, ReactNode } from 'react';
-import { StyleSheet, View, ViewStyle, Platform, Pressable } from 'react-native';
+import { View, Platform, Pressable, type ViewStyle } from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -29,7 +29,6 @@ const HEADER_SHADOW_BLUR = 3;
 const HEADER_SHADOW_MAX_OPACITY = 0.1;
 
 interface Props {
-  style?: ViewStyle;
   options?: {
     title?: string;
     titlePosition?: 'left' | 'center';
@@ -108,33 +107,52 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
     };
   });
 
+  // Sticky / relative chrome + dynamic inset height stay as style= (web sticky
+  // + PANEL_TOP_INSET / safe-area are numeric and platform-split).
+  const topRowStyle = {
+    minHeight: 60 + insets.top,
+    ...Platform.select({
+      web: {
+        position: 'sticky',
+        top: framed ? PANEL_TOP_INSET : 0,
+        zIndex: 1000,
+      },
+      default: {
+        position: 'relative',
+        zIndex: 100,
+      },
+    }),
+  } as ViewStyle;
+
   return (
-    <View
-      style={[
-        styles.topRow,
-        { minHeight: 60 + insets.top },
-        Platform.OS === 'web' ? { top: framed ? PANEL_TOP_INSET : 0 } : null,
-      ]}
-    >
+    <View style={topRowStyle}>
       {/* Animated Background */}
       <Animated.View
+        className="absolute inset-0"
         style={[
-          styles.backgroundOverlay,
           {
             // Match ContentPanel `bg-card` — not page `background` / pure white.
             backgroundColor: themeColors.card,
             borderBottomWidth: 0.01,
             borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
+            ...(Platform.OS === 'web' ? { backdropFilter: 'blur(10px)' } : null),
           },
           backgroundStyle,
         ]}
       />
 
       {/* Header Content - Always Visible */}
-      <View style={[styles.contentContainer, { paddingTop: insets.top }]}>
-        <View style={styles.leftContainer}>
+      <View
+        className={
+          Platform.OS === 'web'
+            ? 'relative min-h-[60px] flex-1 flex-row items-center justify-between px-[15px] pb-[5px]'
+            : 'relative flex-1 flex-row items-center justify-between px-[15px] pb-1'
+        }
+        style={{ paddingTop: insets.top + (Platform.OS === 'web' ? 5 : 12) }}
+      >
+        <View className="flex-1 flex-row items-center gap-2.5">
           {options?.showBackButton && canGoBack && (
-            <Pressable onPress={() => router.back()} style={styles.backButton}>
+            <Pressable onPress={() => router.back()} className="mr-2.5">
               <Ionicons name="arrow-back" size={24} color={colors.COLOR_BLACK} />
             </Pressable>
           )}
@@ -145,38 +163,44 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
             <View>
               {options?.title ? (
                 <ThemedText
-                  style={[
-                    styles.topRowText,
-                    options?.subtitle ? { fontSize: 14 } : null,
-                  ]}
+                  className={
+                    options?.subtitle
+                      ? 'pl-px text-sm font-extrabold text-foreground'
+                      : 'pl-px text-xl font-extrabold text-foreground'
+                  }
                 >
                   {options.title}
                 </ThemedText>
               ) : null}
               {options?.subtitle ? (
-                <ThemedText style={styles.subtitleText}>{options.subtitle}</ThemedText>
+                <ThemedText className="text-sm font-normal text-muted-foreground">
+                  {options.subtitle}
+                </ThemedText>
               ) : null}
             </View>
           )}
         </View>
         {titlePosition === 'center' && (
-          <View style={styles.centerContainer}>
+          <View className="flex-1 items-center">
             {options?.title ? (
               <ThemedText
-                style={[
-                  styles.topRowText,
-                  options?.subtitle ? { fontSize: 14 } : null,
-                ]}
+                className={
+                  options?.subtitle
+                    ? 'pl-px text-sm font-extrabold text-foreground'
+                    : 'pl-px text-xl font-extrabold text-foreground'
+                }
               >
                 {options.title}
               </ThemedText>
             ) : null}
             {options?.subtitle ? (
-              <ThemedText style={styles.subtitleText}>{options.subtitle}</ThemedText>
+              <ThemedText className="text-sm font-normal text-muted-foreground">
+                {options.subtitle}
+              </ThemedText>
             ) : null}
           </View>
         )}
-        <View style={styles.rightContainer}>
+        <View className="flex-1 flex-row items-center justify-end gap-2.5">
           {options?.rightComponents?.map((component, index) => (
             <React.Fragment key={index}>{component}</React.Fragment>
           ))}
@@ -185,96 +209,3 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-    paddingBottom: 10,
-  },
-  topRow: {
-    ...Platform.select({
-      web: {
-        position: 'sticky',
-        top: 0,
-        zIndex: 1000,
-      },
-      default: {
-        position: 'relative',
-        zIndex: 100,
-      },
-    }),
-  } as ViewStyle,
-  backgroundOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(10px)',
-      },
-    }),
-  },
-  contentContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingTop: Platform.select({
-      web: 5,
-      default: 12,
-    }),
-    paddingBottom: Platform.select({
-      web: 5,
-      default: 4,
-    }),
-    position: 'relative',
-    elevation: 5,
-    ...Platform.select({
-      web: {
-        minHeight: 60,
-      },
-    }),
-  },
-  topRowText: {
-    fontSize: 20,
-    color: colors.COLOR_BLACK,
-    fontWeight: '800',
-    paddingStart: 1,
-  },
-  subtitleText: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    fontWeight: '400',
-  },
-  startContainer: {
-    borderRadius: 100,
-    padding: 10,
-  },
-  backButton: {
-    marginRight: 10,
-  },
-  leftContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: 10,
-  },
-  centerContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  rightContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'flex-end',
-    gap: 10,
-  },
-  stickyHeader: {
-    borderTopEndRadius: 0,
-    borderTopStartRadius: 0,
-  },
-});

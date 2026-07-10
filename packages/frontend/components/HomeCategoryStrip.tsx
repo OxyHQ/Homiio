@@ -37,7 +37,7 @@ import { useRentalMode } from '@/context/RentalModeContext';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { useHomeCategoryStore, type HomeCategory } from '@/store/homeCategoryStore';
 import { colors } from '@/styles/colors';
-import { radius, spacing, tracker } from '@/constants/styles';
+import { tracker } from '@/constants/styles';
 
 // Isometric 3D render shared by every category for now. Each category will
 // get its own distinct PNG later — swap the per-entry `image` source below
@@ -112,7 +112,6 @@ const CategoryItem: React.FC<CategoryItemProps> = ({ item, active, label, onPres
    * states (so the row never reflows on selection); only the background
    * toggles. Hover on web nudges scale slightly only.
    */
-  const labelColor = active ? colors.COLOR_BLACK : colors.COLOR_BLACK_LIGHT_3;
   const scale = hovered && Platform.OS === 'web' ? 1.04 : 1;
 
   return (
@@ -120,44 +119,33 @@ const CategoryItem: React.FC<CategoryItemProps> = ({ item, active, label, onPres
       onPress={onPress}
       onHoverIn={() => setHovered(true)}
       onHoverOut={() => setHovered(false)}
-      className="items-center justify-center"
+      className={
+        active
+          ? 'w-[84px] items-center justify-center rounded-2xl bg-secondary px-2 py-2'
+          : 'w-[84px] items-center justify-center rounded-2xl bg-transparent px-2 py-2'
+      }
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       accessibilityLabel={label}
-      style={{
-        width: ITEM_WIDTH,
-        paddingVertical: spacing.sm,
-        paddingHorizontal: spacing.sm,
-        borderRadius: radius.lg,
-        backgroundColor: active ? colors.COLOR_BLACK_LIGHT_8 : 'transparent',
-        transform: [{ scale }],
-      }}
+      style={{ width: ITEM_WIDTH, transform: [{ scale }] }}
     >
-      <View
-        className="items-center justify-center overflow-hidden"
-        style={{
-          width: TILE_SIZE,
-          height: TILE_SIZE,
-          borderRadius: radius.lg,
-          marginBottom: spacing.xs,
-        }}
-      >
+      <View className="mb-1 h-[54px] w-[54px] items-center justify-center overflow-hidden rounded-2xl">
         <Image
           source={item.image}
-          style={{ width: TILE_SIZE, height: TILE_SIZE, opacity: active ? 1 : 0.85 }}
+          className="h-[54px] w-[54px]"
+          style={{ opacity: active ? 1 : 0.85, width: TILE_SIZE, height: TILE_SIZE }}
           resizeMode="contain"
           accessible={false}
         />
       </View>
       <Text
         numberOfLines={1}
-        style={{
-          fontSize: 13,
-          fontWeight: active ? '700' : '500',
-          color: labelColor,
-          letterSpacing: tracker.wide,
-          textAlign: 'center',
-        }}
+        className={
+          active
+            ? 'text-center text-[13px] font-bold text-foreground'
+            : 'text-center text-[13px] font-medium text-muted-foreground'
+        }
+        style={{ letterSpacing: tracker.wide }}
       >
         {label}
       </Text>
@@ -198,6 +186,7 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({
    * pass it through to the underlying div. On native, this is a no-op.
    * Opaque fill must match ContentPanel's `bg-card` (not pure white) so
    * scrolled content doesn't flash a competing surface under the strip.
+   * `top` stays numeric from PANEL_TOP_INSET when framed.
    */
   const stickyStyle =
     sticky && isWeb
@@ -218,11 +207,7 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({
         showsHorizontalScrollIndicator={false}
         decelerationRate={isWeb ? 'normal' : 'fast'}
         snapToAlignment="start"
-        contentContainerStyle={
-          isWeb
-            ? { paddingHorizontal: spacing['2xl'], gap: spacing.lg }
-            : { paddingHorizontal: spacing.lg, gap: spacing.md }
-        }
+        contentContainerClassName={isWeb ? 'gap-4 px-6' : 'gap-3 px-4'}
       >
         {items.map((item) => (
           <CategoryItem

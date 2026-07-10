@@ -27,7 +27,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   View,
-  StyleSheet,
   RefreshControl,
   Image,
   Pressable,
@@ -76,7 +75,7 @@ import { useMediaQuery } from 'react-responsive';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { useUIStore } from '@/store/uiStore';
 import { colors } from '@/styles/colors';
-import { resolvePagePadding, spacing, tracker } from '@/constants/styles';
+import { spacing, tracker } from '@/constants/styles';
 
 /**
  * Hero photo used at the bottom of the home page Host CTA. Reuses a
@@ -330,10 +329,8 @@ export default function HomePage() {
   // the hero parallax on both platforms — no dual writers.
   const scrollY = useSharedValue(0);
   const { height: windowHeight } = useWindowDimensions();
-  const styles = useMemo(
-    () => createStyles(isWide, isXL, windowHeight),
-    [isWide, isXL, windowHeight],
-  );
+  // Hero height is window-derived — keep as style=, not className.
+  const heroHeight = isXL ? Math.min(640, windowHeight * 0.72) : isWide ? 520 : 560;
 
   const heroParallaxStyle = useAnimatedStyle(() => ({
     transform: [
@@ -392,10 +389,10 @@ export default function HomePage() {
   );
 
   return (
-    <View style={styles.root}>
+    <View className="flex-1">
       <PageScrollView
         scrollY={scrollY}
-        style={styles.container}
+        className="flex-1"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
@@ -404,11 +401,20 @@ export default function HomePage() {
             web) with no per-section `marginTop`. */}
         <View className="gap-6 md:gap-8 pb-14">
         {/* === Hero canvas === */}
-        <View style={[styles.heroSection, { paddingTop: insets.top + (isWide ? spacing['3xl'] : spacing['5xl']) }]}>
-          <Animated.View style={[styles.heroImageWrap, heroParallaxStyle]}>
+        <View
+          className="relative w-full justify-end overflow-hidden"
+          style={{
+            height: heroHeight,
+            paddingTop: insets.top + (isWide ? spacing['3xl'] : spacing['5xl']),
+          }}
+        >
+          <Animated.View
+            className="absolute inset-x-0"
+            style={[{ top: -120, bottom: -120 }, heroParallaxStyle]}
+          >
             <Image
               source={require('@/assets/images/hero.jpg')}
-              style={styles.heroImage}
+              className="h-full w-full"
               resizeMode="cover"
             />
           </Animated.View>
@@ -423,7 +429,8 @@ export default function HomePage() {
               'rgba(0,0,0,0.72)',
             ]}
             locations={[0, 0.35, 0.55, 0.7, 0.85, 1]}
-            style={[styles.heroGradient, { pointerEvents: 'none' }]}
+            className="absolute inset-0"
+            style={{ pointerEvents: 'none' }}
           />
 
           {/* Drawer toggle — small screens only. Opens the overlay sidebar
@@ -434,15 +441,44 @@ export default function HomePage() {
               accessibilityRole="button"
               accessibilityLabel={t('sidebar.open', { defaultValue: 'Open menu' })}
               hitSlop={spacing.sm}
-              style={[styles.heroMenuButton, { top: insets.top + spacing.sm }]}
+              className="absolute left-4 z-10 h-10 w-10 items-center justify-center rounded-full"
+              style={{
+                top: insets.top + spacing.sm,
+                backgroundColor: 'rgba(0,0,0,0.35)',
+              }}
             >
               <Menu size={22} color={colors.primaryLight} />
             </Pressable>
           ) : null}
 
-          <View style={styles.heroContent}>
-            <H1 style={styles.heroTitle}>{t('home.hero.title')}</H1>
-            <P style={styles.heroSubtitle}>{t('home.hero.subtitle')}</P>
+          <View
+            className={
+              isWide
+                ? 'w-full max-w-[1200px] self-center items-center px-10 pb-6'
+                : 'w-full max-w-[1200px] self-center items-start px-5 pb-5'
+            }
+          >
+            <H1
+              className={
+                isXL
+                  ? 'mb-3 max-w-[720px] text-center text-[56px] font-bold leading-[60px] text-white'
+                  : isWide
+                    ? 'mb-3 max-w-[720px] text-center text-[44px] font-bold leading-[48px] text-white'
+                    : 'mb-3 max-w-[720px] text-left text-[34px] font-bold leading-[38px] text-white'
+              }
+              style={{ letterSpacing: tracker.tight }}
+            >
+              {t('home.hero.title')}
+            </H1>
+            <P
+              className={
+                isWide
+                  ? 'mb-6 max-w-[520px] text-center text-lg leading-[26px] text-white opacity-90'
+                  : 'mb-6 max-w-[520px] text-left text-base leading-[22px] text-white opacity-90'
+              }
+            >
+              {t('home.hero.subtitle')}
+            </P>
 
             {/* Collapsed search pill — centered ON the hero image at every
                 width. Tapping a column opens the expanding SearchPanel
@@ -451,7 +487,13 @@ export default function HomePage() {
                 button runs the search with the live query. Both presentations
                 own their own positioning via a Modal, so the pill needs no
                 anchor wrapper. */}
-            <View style={styles.searchPillSlot}>
+            <View
+              className={
+                isWide
+                  ? 'z-20 mt-4 w-full max-w-[880px] self-center'
+                  : 'z-20 mt-4 w-full max-w-[520px] self-center'
+              }
+            >
               <SearchSummaryBar
                 query={activeQuery}
                 onPress={handleRunSearch}
@@ -588,7 +630,7 @@ export default function HomePage() {
             so `alignItems: 'stretch'` equalises height. On narrow the two
             banners are plain scroll siblings and the page `gap` spaces them. */}
         {isWide ? (
-          <View className="gap-6 md:gap-8" style={styles.ctaGridRow}>
+          <View className="flex-row items-stretch gap-6 px-8 md:gap-8">
             <HostCtaBanner
               fill
               title={t('home.hostCta.title', 'List your space, find a great tenant')}
@@ -638,108 +680,3 @@ export default function HomePage() {
     </View>
   );
 }
-
-const createStyles = (
-  isWide: boolean,
-  isXL: boolean,
-  windowHeight: number,
-) => {
-  const heroHeight = isXL ? Math.min(640, windowHeight * 0.72) : isWide ? 520 : 560;
-  return StyleSheet.create({
-    root: {
-      flex: 1,
-    },
-    container: {
-      flex: 1,
-    },
-
-    // Hero
-    heroSection: {
-      width: '100%',
-      height: heroHeight,
-      position: 'relative',
-      overflow: 'hidden',
-      justifyContent: 'flex-end',
-    },
-    heroImageWrap: {
-      position: 'absolute',
-      top: -120,
-      left: 0,
-      right: 0,
-      bottom: -120,
-    },
-    heroImage: {
-      width: '100%',
-      height: '100%',
-    },
-    heroGradient: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-    },
-    heroMenuButton: {
-      position: 'absolute',
-      left: spacing.lg,
-      zIndex: 10,
-      width: 40,
-      height: 40,
-      borderRadius: 999,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: 'rgba(0,0,0,0.35)',
-    },
-    heroContent: {
-      width: '100%',
-      maxWidth: 1200,
-      alignSelf: 'center',
-      paddingHorizontal: isWide ? spacing['4xl'] : spacing.xl,
-      paddingBottom: isWide ? spacing['2xl'] : spacing.xl,
-      alignItems: isWide ? 'center' : 'flex-start',
-    },
-    heroTitle: {
-      fontSize: isXL ? 56 : isWide ? 44 : 34,
-      lineHeight: isXL ? 60 : isWide ? 48 : 38,
-      color: colors.white,
-      fontWeight: '700',
-      letterSpacing: tracker.tight,
-      textAlign: isWide ? 'center' : 'left',
-      marginBottom: spacing.md,
-      maxWidth: 720,
-    },
-    heroSubtitle: {
-      fontSize: isWide ? 18 : 16,
-      lineHeight: isWide ? 26 : 22,
-      color: colors.white,
-      opacity: 0.92,
-      textAlign: isWide ? 'center' : 'left',
-      marginBottom: spacing['2xl'],
-      maxWidth: 520,
-    },
-    // Single on-hero pill slot for every width. Centered with a sensible
-    // max width so the pill never runs edge-to-edge on a phone and the
-    // circular search button on the right stays fully on-screen. The expanding
-    // panel renders in its own Modal (centered dialog on wide, sheet on narrow),
-    // so this slot only carries the collapsed pill — no anchored dropdown.
-    searchPillSlot: {
-      width: '100%',
-      maxWidth: isWide ? 880 : 520,
-      alignSelf: 'center',
-      marginTop: spacing.lg,
-      zIndex: 20,
-    },
-
-    // Closing CTA banners — wide-screen 50/50 grid. The row owns the outer page
-    // padding (the `fill` banners drop their own) and lays out two equal columns
-    // that stretch to the taller one for a balanced, equal-height grid. The
-    // inter-column gutter comes from NativeWind `gap-6 md:gap-8` on the row.
-    // Only mounted when `isWide`, so the padding always resolves to the
-    // wide/desktop value.
-    ctaGridRow: {
-      flexDirection: 'row',
-      alignItems: 'stretch',
-      paddingHorizontal: resolvePagePadding(isWide),
-    },
-  });
-};

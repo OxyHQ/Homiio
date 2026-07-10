@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Platform, View, StyleSheet, AppState, AppStateStatus, type ViewStyle } from 'react-native';
+import { Platform, View, AppState, AppStateStatus } from 'react-native';
 import {
   SafeAreaProvider,
   initialWindowMetrics,
@@ -130,87 +130,8 @@ function AppShell() {
   // Framed (floating rounded panel + bleed-mask) only on wide WEB; native and
   // narrow web are full-bleed.
   const framed = Platform.OS === 'web' && isScreenNotMobile;
-
-  const styles = useMemo(
-    () =>
-      StyleSheet.create({
-        // Desktop-web gutter: the app-background band around the floating panel.
-        // `p-2 pl-0` (8px, flush to the rail) only while the sidebar/frame show.
-        gutter: {
-          flex: isScreenNotMobile ? 2.2 : 1,
-          ...(Platform.OS === 'web' && isScreenNotMobile
-            ? { padding: 8, paddingLeft: 0 }
-            : {}),
-        },
-        shellRoot: {
-          flex: 1,
-          width: '100%',
-          marginHorizontal: 'auto',
-          flexDirection: isScreenNotMobile ? 'row' : 'column',
-          ...(isScreenNotMobile ? { justifyContent: 'center' } : {}),
-        },
-        shellMain: {
-          flex: 1,
-          justifyContent: 'space-between',
-          flexDirection: isScreenNotMobile ? 'row' : 'column',
-        },
-        // --- Fixed-viewport shell (explore route) ---
-        fixedShell: Platform.select<ViewStyle>({
-          web: {
-            height: '100dvh',
-            overflow: 'hidden',
-            width: '100%',
-            marginHorizontal: 'auto',
-            flexDirection: 'row',
-          } as unknown as ViewStyle,
-          default: {
-            flex: 1,
-            width: '100%',
-            flexDirection: 'row',
-          },
-        }) as ViewStyle,
-        fixedMain: Platform.select<ViewStyle>({
-          web: {
-            flex: 1,
-            minWidth: 0,
-            height: '100%',
-            overflow: 'hidden',
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-          } as unknown as ViewStyle,
-          default: {
-            flex: 1,
-            minWidth: 0,
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-          },
-        }) as ViewStyle,
-        // Center column of the fixed shell — height-bounded so the framed panel
-        // (and the explore surface inside it) size to it and scroll only their
-        // own list column.
-        fixedGutter: Platform.select<ViewStyle>({
-          web: {
-            flex: 1,
-            minWidth: 0,
-            height: '100%',
-            overflow: 'hidden',
-            ...(isScreenNotMobile ? { padding: 8, paddingLeft: 0 } : {}),
-          } as unknown as ViewStyle,
-          default: {
-            flex: 1,
-            minWidth: 0,
-          },
-        }) as ViewStyle,
-        fixedRightColumn: Platform.select<ViewStyle>({
-          web: {
-            height: '100%',
-            overflow: 'auto',
-          } as unknown as ViewStyle,
-          default: {},
-        }) as ViewStyle,
-      }),
-    [isScreenNotMobile],
-  );
+  // Desktop-web gutter: `p-2 pl-0` (8px, flush to the rail) only while framed.
+  const gutterPad = framed ? 'p-2 pl-0' : '';
 
   if (useNativeTabBar) {
     // Native phones: the `(tabs)` `NativeTabs` navigator owns the screen
@@ -226,15 +147,33 @@ function AppShell() {
 
   if (useFixedViewport) {
     return (
-      <View style={[styles.fixedShell, { backgroundColor: theme.colors.background }]}>
+      <View
+        className={
+          Platform.OS === 'web'
+            ? 'h-dvh w-full mx-auto flex-row overflow-hidden bg-background'
+            : 'flex-1 w-full flex-row bg-background'
+        }
+      >
         <SideBar />
-        <View style={styles.fixedMain}>
-          <View style={styles.fixedGutter}>
+        <View
+          className={
+            Platform.OS === 'web'
+              ? 'flex-1 min-w-0 h-full flex-row justify-between overflow-hidden'
+              : 'flex-1 min-w-0 flex-row justify-between'
+          }
+        >
+          <View
+            className={
+              Platform.OS === 'web'
+                ? `flex-1 min-w-0 h-full overflow-hidden ${gutterPad}`
+                : 'flex-1 min-w-0'
+            }
+          >
             <ContentPanel framed={framed} maskColor={theme.colors.background}>
               <Slot />
             </ContentPanel>
           </View>
-          <View style={styles.fixedRightColumn}>
+          <View className={Platform.OS === 'web' ? 'h-full overflow-auto' : undefined}>
             <RightBar />
           </View>
         </View>
@@ -243,10 +182,29 @@ function AppShell() {
   }
 
   return (
-    <View style={[styles.shellRoot, { backgroundColor: theme.colors.background }]}>
+    <View
+      className={
+        isScreenNotMobile
+          ? 'flex-1 w-full mx-auto flex-row justify-center bg-background'
+          : 'flex-1 w-full flex-col bg-background'
+      }
+    >
       <SideBar />
-      <View style={styles.shellMain}>
-        <View style={[styles.gutter, { backgroundColor: theme.colors.background }]}>
+      <View
+        className={
+          isScreenNotMobile
+            ? 'flex-1 flex-row justify-between'
+            : 'flex-1 flex-col justify-between'
+        }
+      >
+        {/* flex-[2.2] keeps the center column wider than the right rail on desktop */}
+        <View
+          className={
+            isScreenNotMobile
+              ? `flex-[2.2] bg-background ${gutterPad}`
+              : 'flex-1 bg-background'
+          }
+        >
           <ContentPanel framed={framed} maskColor={theme.colors.background}>
             <Slot />
           </ContentPanel>
@@ -363,9 +321,9 @@ export default function RootLayout() {
 
 
   return (
-    <View style={{ flex: 1 }}>
+    <View className="flex-1">
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <GestureHandlerRootView style={{ flex: 1 }}>
+        <GestureHandlerRootView className="flex-1">
           {/*
             Pin Bloom to the YELLOW preset in LIGHT mode. `mode="light"` stops Bloom
             from following the OS into dark — Homiio's static `colors.ts` is a

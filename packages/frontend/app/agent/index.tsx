@@ -16,7 +16,7 @@
  * flat with per-section gutter; the page root is the app background.
  */
 import React, { useCallback, useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { showSignInModal, useOxy } from '@oxyhq/services';
@@ -99,12 +99,12 @@ export default function AgentScreen() {
   }, [isAuthenticated, isPartner, link, joinMutation, t]);
 
   return (
-    <View style={styles.root}>
+    <View className="flex-1">
       <Header options={{ transparent: true, showBackButton: true }} scrollY={scrollY} />
 
       <PageScrollView
         scrollY={scrollY}
-        style={styles.scroll}
+        className="flex-1"
         showsVerticalScrollIndicator={false}
       >
         {/* Section rhythm owned here by NativeWind `gap` (24px mobile / 32px
@@ -157,13 +157,3 @@ export default function AgentScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  // Transparent — Bloom ContentPanel already owns the `bg-card` surface.
-  root: {
-    flex: 1,
-  },
-  scroll: {
-    flex: 1,
-  },
-});

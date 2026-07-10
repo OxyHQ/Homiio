@@ -11,7 +11,6 @@
 import React, { useRef, useState } from 'react';
 import {
   View,
-  StyleSheet,
   TouchableOpacity,
   ScrollView,
   NativeSyntheticEvent,
@@ -188,23 +187,31 @@ export function HomeCarouselSection<T>({
 
   return (
     <View>
-      <View style={styles.sectionHeader}>
-        <View style={styles.headerText}>
+      <View className="mb-4 flex-row items-end justify-between gap-4 px-4">
+        <View className="min-w-0 flex-1 shrink">
           {eyebrow ? <SectionEyebrow>{eyebrow}</SectionEyebrow> : null}
-          <H1 style={styles.sectionTitle}>{title}</H1>
+          <H1
+            className="text-[26px] font-bold leading-8 text-foreground"
+            style={{ letterSpacing: tracker.tight }}
+          >
+            {title}
+          </H1>
         </View>
-        <View style={styles.headerActions}>
+        <View className="flex-row items-center gap-3">
           {onViewAll && (
             <TouchableOpacity onPress={onViewAll} hitSlop={8}>
-              <BloomText style={styles.viewAllText}>{viewAllText}</BloomText>
+              <BloomText className="text-sm font-semibold underline text-foreground">
+                {viewAllText}
+              </BloomText>
             </TouchableOpacity>
           )}
           {isWide && !(disableLeftArrow && disableRightArrow) ? (
-            <View style={styles.arrowGroup}>
+            <View className="flex-row items-center gap-2">
               <TouchableOpacity
                 onPress={handleScrollLeft}
                 disabled={disableLeftArrow}
-                style={[styles.arrowButton, { opacity: disableLeftArrow ? 0.3 : 1 }]}
+                className="h-8 w-8 items-center justify-center rounded-full bg-white"
+                style={[cardShadow.sm, { opacity: disableLeftArrow ? 0.3 : 1 }]}
                 accessibilityRole="button"
                 accessibilityLabel="Scroll left"
               >
@@ -213,7 +220,8 @@ export function HomeCarouselSection<T>({
               <TouchableOpacity
                 onPress={handleScrollRight}
                 disabled={disableRightArrow}
-                style={[styles.arrowButton, { opacity: disableRightArrow ? 0.3 : 1 }]}
+                className="h-8 w-8 items-center justify-center rounded-full bg-white"
+                style={[cardShadow.sm, { opacity: disableRightArrow ? 0.3 : 1 }]}
                 accessibilityRole="button"
                 accessibilityLabel="Scroll right"
               >
@@ -224,15 +232,15 @@ export function HomeCarouselSection<T>({
         </View>
       </View>
       <View
-        style={styles.scrollWrapper}
+        className="flex-row items-center"
         onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
       >
         <ScrollView
           ref={carouselRef}
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={styles.horizontalScroll}
-          contentContainerStyle={styles.horizontalScrollContent}
+          className="flex-row"
+          contentContainerClassName="justify-start px-4"
           scrollEnabled={true}
           onScrollBeginDrag={handleScrollBeginDrag}
           onScrollEndDrag={handleScrollEndDrag}
@@ -244,17 +252,13 @@ export function HomeCarouselSection<T>({
           snapToAlignment="start"
           bounces={false}
         >
-          <View style={styles.rowFlex}>
+          <View className="flex-row" style={{ gap: CARD_GAP }}>
             {loading
               ? Array.from({ length: 4 }).map((_, idx) => (
                 <View
                   key={idx}
-                  style={[
-                    styles.skeleton,
-                    {
-                      width: calculatedCardWidth,
-                    },
-                  ]}
+                  className="h-[200px] rounded-2xl bg-muted"
+                  style={{ width: calculatedCardWidth }}
                 />
               ))
               : items.map((item, idx) => (
@@ -268,70 +272,3 @@ export function HomeCarouselSection<T>({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    marginBottom: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    gap: spacing.lg,
-  },
-  headerText: {
-    flex: 1,
-    flexShrink: 1,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  sectionTitle: {
-    fontSize: 26,
-    color: colors.COLOR_BLACK,
-    fontWeight: '700',
-    letterSpacing: tracker.tight,
-    lineHeight: 32,
-  },
-  viewAllText: {
-    color: colors.COLOR_BLACK,
-    fontWeight: '600',
-    fontSize: 14,
-    textDecorationLine: 'underline',
-  },
-  arrowGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  scrollWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  horizontalScroll: {
-    flexDirection: 'row',
-  },
-  horizontalScrollContent: {
-    paddingHorizontal: spacing.lg,
-    justifyContent: 'flex-start',
-  },
-  rowFlex: {
-    flexDirection: 'row',
-    gap: CARD_GAP,
-  },
-  skeleton: {
-    height: 200,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-    borderRadius: 16,
-  },
-  arrowButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...cardShadow.sm,
-  },
-});

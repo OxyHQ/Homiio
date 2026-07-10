@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, Platform, ViewStyle } from 'react-native';
+import { View, Platform, type ViewStyle } from 'react-native';
 import { usePathname } from 'expo-router';
 import { WidgetManager } from './widgets';
 import {
@@ -7,22 +7,12 @@ import {
   useIsLargeDesktop,
 } from '@/hooks/useOptimizedMediaQuery';
 import { useUIStore } from '@/store/uiStore';
-import { useSearchMode } from '@/context/SearchModeContext';
 
 export const RightBar = React.memo(function RightBar() {
   const isRightBarVisible = useIsRightBarVisible();
   const isLargeDesktop = useIsLargeDesktop();
   const sindiPanelOpen = useUIStore((s) => s.sindiPanelOpen);
   const pathname = usePathname() || '/';
-
-  // Get search mode with fallback for backward compatibility
-  let isMapMode = true; // Default to true for backward compatibility
-  try {
-    const searchMode = useSearchMode();
-    isMapMode = searchMode.isMapMode;
-  } catch (error) {
-    // Context not available, use default
-  }
 
   // Memoize screen ID calculation
   const screenId = useMemo(() => {
@@ -89,21 +79,10 @@ export const RightBar = React.memo(function RightBar() {
   // large-desktop (>= 1440) where all four columns fit.
   if (sindiPanelOpen && !isLargeDesktop) return null;
 
-  return (
-    <View className="flex-col px-4 pt-4 gap-4" style={styles.container}>
-      <WidgetManager
-        screenId={screenId}
-        propertyId={propertyInfo.propertyId}
-        city={propertyInfo.city}
-      />
-    </View>
-  );
-});
-
-const styles = StyleSheet.create({
-  container: {
-    width: 350,
-    ...(Platform.OS === 'web'
+  // Web sticky pin — RN style system has no sticky utility that survives
+  // react-native-web cleanly for this rail; keep the numeric sticky object.
+  const stickyStyle =
+    Platform.OS === 'web'
       ? ({
           position: 'sticky',
           // Keep the column at its content height so sticky pins while the
@@ -111,6 +90,15 @@ const styles = StyleSheet.create({
           alignSelf: 'flex-start',
           top: 0,
         } as unknown as ViewStyle)
-      : null),
-  },
+      : undefined;
+
+  return (
+    <View className="w-[350px] flex-col px-4 pt-4 gap-4" style={stickyStyle}>
+      <WidgetManager
+        screenId={screenId}
+        propertyId={propertyInfo.propertyId}
+        city={propertyInfo.city}
+      />
+    </View>
+  );
 });

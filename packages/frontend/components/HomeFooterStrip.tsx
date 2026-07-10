@@ -8,13 +8,9 @@
  * not loud.
  */
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { useMediaQuery } from 'react-responsive';
+import { View } from 'react-native';
 
 import { Text as BloomText } from '@oxyhq/bloom/typography';
-
-import { colors } from '@/styles/colors';
-import { resolvePagePadding, spacing } from '@/constants/styles';
 
 interface HomeFooterStripProps {
   /** Pre-translated label list. Each chunk renders separated by a middot. */
@@ -22,37 +18,20 @@ interface HomeFooterStripProps {
 }
 
 export function HomeFooterStrip({ chunks }: HomeFooterStripProps) {
-  const isWide = useMediaQuery({ minWidth: 768 });
-  const horizontalPadding = resolvePagePadding(isWide);
-
   return (
-    <View style={[styles.strip, { paddingHorizontal: horizontalPadding }]}>
-      <BloomText style={styles.text}>
+    <View className="w-full items-center px-4 md:px-8 py-5">
+      <BloomText className="text-center text-xs font-medium leading-[18px] text-muted-foreground">
         {chunks.map((chunk, idx) => (
           <React.Fragment key={idx}>
-            {idx > 0 ? <BloomText style={styles.separator}> · </BloomText> : null}
-            <BloomText style={styles.text}>{chunk}</BloomText>
+            {idx > 0 ? (
+              <BloomText className="text-muted-foreground/70"> · </BloomText>
+            ) : null}
+            <BloomText className="text-center text-xs font-medium leading-[18px] text-muted-foreground">
+              {chunk}
+            </BloomText>
           </React.Fragment>
         ))}
       </BloomText>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  strip: {
-    width: '100%',
-    paddingVertical: spacing.xl,
-    alignItems: 'center',
-  },
-  text: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.COLOR_BLACK_LIGHT_4,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  separator: {
-    color: colors.COLOR_BLACK_LIGHT_5,
-  },
-});
