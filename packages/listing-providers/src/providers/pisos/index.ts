@@ -30,7 +30,7 @@ import type {
 import { createFetchRuntime } from '../../runtime';
 import { fetchListingViaLadder } from '../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
-import type { EsSchemaListing } from '../es/jsonLd';
+import type { EsSchemaListing } from '../../parse/jsonLd';
 import { PISOS_BASE_URL } from './fixtures';
 import { parsePisosContactPhone, pisosContactPhoneUrl, pisosSearchUrl } from './ajax';
 import {
@@ -73,6 +73,7 @@ function asPisosRaw(payload: unknown): PisosRaw {
     !record ||
     typeof record.sourceId !== 'string' ||
     typeof record.url !== 'string' ||
+    !record.listing ||
     typeof record.listing !== 'object'
   ) {
     throw new Error('pisos: normalize received a payload that is not a PisosRaw');

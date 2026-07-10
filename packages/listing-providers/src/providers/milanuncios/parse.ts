@@ -10,7 +10,8 @@ import {
   type NormalizedRemoteImage,
   type ProviderId,
 } from '@homiio/shared-types';
-import { assertHousingListing, isHousingCategory } from '../es/housing';
+import { assertHousingListing, isHousingCategory } from '../../parse/classifieds';
+import { asNumber, asString, isRecord } from '../../parse/guards';
 import {
   MILANUNCIOS_BASE_URL,
   MILANUNCIOS_HOUSING_CATEGORY_IDS,
@@ -38,23 +39,6 @@ export interface MilanunciosRaw {
   province?: string;
   images: string[];
   contact?: NormalizedListingContact;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function asString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const parsed = Number.parseFloat(value.replace(/[^0-9.,-]/g, '').replace(/\./g, '').replace(',', '.'));
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  return undefined;
 }
 
 export function milanunciosSourceIdFromUrl(url: string): string | undefined {
@@ -245,7 +229,7 @@ export function normalizeMilanunciosRaw(raw: MilanunciosRaw): NormalizedListing 
     sourceId: raw.sourceId,
     sourceUrl: raw.url,
     address: {
-      street: raw.neighborhood ?? raw.city,
+      street: raw.neighborhood || raw.city || raw.province || '',
       city: raw.city || raw.province || '',
       state: raw.province,
       neighborhood: raw.neighborhood,

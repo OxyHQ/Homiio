@@ -29,21 +29,31 @@ import type {
 import { createFetchRuntime } from '../../runtime';
 import { fetchListingViaLadder } from '../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
+import { validateMonthlyRentAmount } from '../../parse/price';
 import {
   BLUEGROUND_BASE_URL,
   type BluegroundRawListing,
   type BluegroundRawPhoto,
 } from './fixtures';
 import {
+  BluegroundPartnerListingError,
   bluegroundCitySearchUrl,
+  isBluegroundPartnerListing,
   parseBluegroundDetail,
   parseBluegroundSearch,
+} from './parse';
+
+export {
+  BluegroundPartnerListingError,
+  isBluegroundPartnerListing,
+  readBluegroundLowestRent,
+  readBluegroundPartnerSignals,
 } from './parse';
 
 const PROVIDER_ID: ProviderId = 'blueground';
 
 /** City slugs for `/m/furnished-apartments/<slug>` search pages. */
-const DEFAULT_CITIES: Readonly<Record<ListingMarket, readonly string[]>> = {
+const DEFAULT_CITIES: Readonly<Partial<Record<ListingMarket, readonly string[]>>> = {
   ES: ['madrid-esp', 'barcelona-esp', 'valencia-esp'],
   US: ['nyc-usa', 'los-angeles-usa', 'boston-usa', 'chicago-usa', 'washington-dc-usa'],
 };
@@ -115,7 +125,9 @@ export class BluegroundProvider implements ListingProvider {
   }
 
   async *discover(job: DiscoverJob): AsyncIterable<ExternalListingRef> {
-    const cities = job.city ? [job.city] : DEFAULT_CITIES[job.market];
+    const cities = job.city
+      ? [job.city]
+      : (DEFAULT_CITIES[job.market] ?? DEFAULT_CITIES.ES ?? ['madrid-esp']);
     const limit = job.limit ?? Number.POSITIVE_INFINITY;
     const seen = new Set<string>();
     let yielded = 0;
@@ -150,6 +162,27 @@ export class BluegroundProvider implements ListingProvider {
 
   normalize(raw: RawListing): NormalizedListing {
     const listing = coerceBluegroundListing(raw.payload);
+    if (
+      isBluegroundPartnerListing({
+        businessModel: listing.businessModel,
+        partnerSlug: listing.partnerSlug,
+      })
+    ) {
+      throw new BluegroundPartnerListingError(
+        listing.id,
+        `unreliable lowestRent for ${listing.partnerSlug ?? listing.businessModel ?? 'partner'} (dates required for price)`,
+      );
+    }
+
+    const priceError = validateMonthlyRentAmount(
+      listing.monthlyRent.amount,
+      listing.monthlyRent.currency,
+      { bedrooms: listing.bedrooms },
+    );
+    if (priceError) {
+      throw new Error(`blueground: rejecting listing ${listing.id}: ${priceError}`);
+    }
+
     return {
       source: this.id,
       sourceId: listing.id,

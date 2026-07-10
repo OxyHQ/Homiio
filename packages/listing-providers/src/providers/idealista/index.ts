@@ -1,16 +1,13 @@
 /**
  * Idealista provider (Spain) — reference AJAX-with-Playwright-session pattern.
  *
- * Acquisition order (discover):
- *   1. Warm a Playwright session on a city search page (residential proxy +
- *      asset blocking; wait for content / DataDome clearance).
- *   2. Call `/es/ajax/listing/georeach/{city}-{province}` via
- *      `session.request` (cookies + Referer + X-Requested-With).
- *   3. Fall back to HTML search scrape via {@link fetchListingViaLadder}
- *      when the session pool is absent or georeach stays challenged.
+ * Acquisition order (JSON/AJAX first, HTML last):
+ *   Discover: warm session → georeach AJAX → HTML search ladder fallback.
+ *   Fetch: warm detail session → contact AJAX (phones / adContactInfo) →
+ *   detail HTML JSON-LD from the warmed page → ladder HTML fallback.
  *
- * Fetch prefers detail HTML JSON-LD (address + images). Datalayer AJAX is
- * analytics-only and used only as a last-resort supplement — never alone.
+ * Datalayer alone is analytics-only and never the sole ingest source.
+ * Contact is best-effort: DataDome may still block after warm-up.
  *
  * Official partner API remains gated (`hasOfficialApi`). Registered OFF by
  * default (`PROVIDER_IDEALISTA_ENABLED`).
@@ -20,6 +17,7 @@ import {
   OfferingType,
   PropertyType,
   type NormalizedListing,
+  type NormalizedListingContact,
   type NormalizedRemoteImage,
   type ProviderId,
 } from '@homiio/shared-types';
@@ -41,8 +39,17 @@ import type {
 import { createFetchRuntime } from '../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
-import type { EsSchemaListing } from '../es/jsonLd';
+import type { EsSchemaListing } from '../../parse/jsonLd';
 import { IDEALISTA_BASE_URL } from './fixtures';
+import {
+  idealistaContactInfoUrl,
+  idealistaContactPhonesUrl,
+  isIdealistaContactChallenge,
+  mergeIdealistaContact,
+  parseIdealistaContactInfo,
+  parseIdealistaContactPhones,
+  type IdealistaContact,
+} from './contact';
 import {
   idealistaGeoreachUrl,
   idealistaWarmSearchUrl,
@@ -102,7 +109,7 @@ function toRemoteImages(listing: EsSchemaListing): NormalizedRemoteImage[] {
 }
 
 function asIdealistaRaw(payload: unknown): IdealistaRaw {
-  const record = payload as { sourceId?: unknown; url?: unknown; listing?: unknown } | null;
+  const record = payload as IdealistaRaw | null;
   if (
     !record ||
     typeof record.sourceId !== 'string' ||
@@ -111,7 +118,20 @@ function asIdealistaRaw(payload: unknown): IdealistaRaw {
   ) {
     throw new Error('idealista: normalize received a payload that is not an IdealistaRaw');
   }
-  return payload as IdealistaRaw;
+  return record;
+}
+
+function toNormalizedContact(contact: IdealistaContact | undefined): NormalizedListingContact | undefined {
+  if (!contact) return undefined;
+  const mapped: NormalizedListingContact = {};
+  if (contact.phone) mapped.phone = contact.phone;
+  if (contact.email) mapped.email = contact.email;
+  if (contact.whatsapp) mapped.whatsapp = contact.whatsapp;
+  if (contact.name) mapped.name = contact.name;
+  if (contact.agencyName) mapped.agencyName = contact.agencyName;
+  return mapped.phone || mapped.email || mapped.whatsapp || mapped.name || mapped.agencyName
+    ? mapped
+    : undefined;
 }
 
 function yieldRefs(
@@ -311,9 +331,9 @@ export class IdealistaProvider implements ListingProvider {
   }
 
   /**
-   * Prefer detail HTML JSON-LD (full address/images). When a session pool is
-   * available, warm the detail page in-browser first; otherwise use the ladder.
-   * Datalayer is never used as the sole payload.
+   * AJAX-first detail fetch: warm session → contact AJAX → JSON-LD from warmed
+   * page HTML. Ladder HTML is last resort when the session pool is absent or
+   * warm-up fails.
    */
   async fetch(ref: ExternalListingRef, ctx: FetchContext): Promise<RawListing> {
     if (ctx.runtime.openBrowserSession) {
@@ -329,6 +349,42 @@ export class IdealistaProvider implements ListingProvider {
     });
     const payload = parseIdealistaDetail(html, ref.url);
     return { ref, payload };
+  }
+
+  /**
+   * Best-effort contact AJAX from a warmed session. Never throws — challenge
+   * or empty bodies yield undefined.
+   */
+  private async fetchContactViaSession(
+    session: BrowserSession,
+    adId: string,
+  ): Promise<IdealistaContact | undefined> {
+    const referer = session.pageUrl();
+    let fromPhones: IdealistaContact | undefined;
+    let fromInfo: IdealistaContact | undefined;
+
+    try {
+      const phonesUrl = idealistaContactPhonesUrl(adId);
+      const phonesRes = await session.request(phonesUrl, { referer, timeoutMs: 20_000 });
+      if (phonesRes.status < 400 && !isIdealistaContactChallenge(phonesRes.body)) {
+        const phones = parseIdealistaContactPhones(phonesRes.body);
+        if (phones[0]) fromPhones = { phone: phones[0] };
+      }
+    } catch {
+      // Best-effort — contact is optional.
+    }
+
+    try {
+      const infoUrl = idealistaContactInfoUrl(adId);
+      const infoRes = await session.request(infoUrl, { referer, timeoutMs: 20_000 });
+      if (infoRes.status < 400 && !isIdealistaContactChallenge(infoRes.body)) {
+        fromInfo = parseIdealistaContactInfo(infoRes.body);
+      }
+    } catch {
+      // Best-effort — contact is optional.
+    }
+
+    return mergeIdealistaContact(fromPhones, fromInfo);
   }
 
   private async fetchDetailViaSession(
@@ -357,7 +413,10 @@ export class IdealistaProvider implements ListingProvider {
         blockAssets: true,
       });
 
-      // Warmed page already navigated to the detail URL — read HTML for JSON-LD.
+      // Contact AJAX first (JSON) while the DataDome session is warm.
+      const contact = await this.fetchContactViaSession(session, ref.sourceId);
+
+      // Listing body: warmed page HTML JSON-LD (no rich public detail AJAX).
       const html = await session.content();
       if (isIdealistaChallenge(html)) {
         this.metrics.record({
@@ -373,6 +432,8 @@ export class IdealistaProvider implements ListingProvider {
       }
 
       const payload = parseIdealistaDetail(html, ref.url);
+      if (contact) payload.contact = contact;
+
       this.metrics.record({
         provider: this.id,
         strategy: 'browser',
@@ -380,6 +441,7 @@ export class IdealistaProvider implements ListingProvider {
         status: 200,
         latencyMs: Date.now() - start,
         url: ref.url,
+        detail: contact ? 'detail+contact' : 'detail-only',
       });
 
       if (sticky) {
@@ -402,7 +464,7 @@ export class IdealistaProvider implements ListingProvider {
   }
 
   normalize(raw: RawListing): NormalizedListing {
-    const { sourceId, url, listing } = asIdealistaRaw(raw.payload);
+    const { sourceId, url, listing, contact } = asIdealistaRaw(raw.payload);
     if (listing.price === undefined) {
       throw new Error(`idealista: listing ${sourceId} has no resolvable price`);
     }
@@ -439,6 +501,8 @@ export class IdealistaProvider implements ListingProvider {
     if (listing.amenities.length > 0) result.amenities = listing.amenities;
     const furnished = resolveFurnished(listing.furnished);
     if (furnished !== 'not_specified') result.furnishedStatus = furnished;
+    const normalizedContact = toNormalizedContact(contact);
+    if (normalizedContact) result.contact = normalizedContact;
 
     return result;
   }
@@ -457,7 +521,7 @@ export class IdealistaProvider implements ListingProvider {
     return {
       provider: this.id,
       status: 'healthy',
-      detail: `Serving ES via ${IDEALISTA_BASE_URL} (georeach AJAX + HTML fallback; official API gated)`,
+      detail: `Serving ES via ${IDEALISTA_BASE_URL} (georeach+contact AJAX, HTML fallback; official API gated)`,
     };
   }
 }

@@ -7,8 +7,10 @@
  */
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
-import { extractEsSchemaListings, type EsSchemaListing } from '../es/jsonLd';
+import { ldJsonScriptBodies } from '../../html';
+import { extractEsSchemaListings, type EsSchemaListing } from '../../parse/jsonLd';
 import { PISOS_BASE_URL } from './fixtures';
+import { asNumber } from '../../parse/guards';
 
 /** Raw payload `fetch()` hands to `normalize()`. */
 export interface PisosRaw {
@@ -19,29 +21,98 @@ export interface PisosRaw {
 }
 
 const DETAIL_PATH_RE = /\/(?:alquilar|comprar)\/[^"'?\s]*?-(\d+[._]\d+|\d+)\/?/i;
-const DATA_VAR_RE = /data-var=['"](\{[\s\S]*?\})['"]/i;
-const TRACK_RE =
-  /\{[^{}]*"tipoContenido"\s*:\s*"detalle"[^{}]*"precio(?:Inmueble)?"\s*:\s*"?\d+"?[^{}]*\}/;
 const PRECIO_VAR_RE = /var\s+precio\s*=\s*(\d+)/i;
-const H1_RE = /<h1[^>]*>([\s\S]*?)<\/h1>/i;
-const IMG_RE = /https:\/\/fotos\.imghs\.net\/[^"'?\s]+\.(?:jpg|jpeg|webp|png)/gi;
-const DESC_RE = /<(?:p|div)[^>]*class="[^"]*description[^"]*"[^>]*>([\s\S]*?)<\/(?:p|div)>/i;
-const HDN_ID_RE = /hdnIdPiso"[^>]*value="([^"]+)"/i;
-const LD_JSON_RE =
-  /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+const PISOS_IMG_HOST = 'https://fotos.imghs.net/';
 
 function stripTags(html: string): string {
-  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  let out = '';
+  let inTag = false;
+  for (let i = 0; i < html.length; i += 1) {
+    const ch = html[i];
+    if (ch === '<') inTag = true;
+    else if (ch === '>') inTag = false;
+    else if (!inTag) out += ch;
+  }
+  return out.replace(/\s+/g, ' ').trim();
 }
 
-function asNumber(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const cleaned = value.replace(/[^0-9.,-]/g, '').replace(/\./g, '').replace(',', '.');
-    const parsed = Number.parseFloat(cleaned);
-    return Number.isFinite(parsed) ? parsed : undefined;
+function readBalancedJsonAfter(html: string, marker: string): Record<string, unknown> | undefined {
+  const idx = html.indexOf(marker);
+  if (idx < 0) return undefined;
+  const braceStart = html.indexOf('{', idx + marker.length);
+  if (braceStart < 0) return undefined;
+  let depth = 0;
+  for (let i = braceStart; i < html.length; i += 1) {
+    const ch = html[i];
+    if (ch === '{') depth += 1;
+    else if (ch === '}') {
+      depth -= 1;
+      if (depth === 0) return parseJsonObject(html.slice(braceStart, i + 1));
+    }
   }
   return undefined;
+}
+
+function readFirstH1Text(html: string): string | undefined {
+  const open = html.search(/<h1\b/i);
+  if (open < 0) return undefined;
+  const contentStart = html.indexOf('>', open);
+  if (contentStart < 0) return undefined;
+  const close = html.indexOf('</h1>', contentStart + 1);
+  if (close < 0) return undefined;
+  const raw = html.slice(contentStart + 1, close);
+  return raw.length > 0 ? stripTags(raw) : undefined;
+}
+
+function readDescriptionText(html: string): string | undefined {
+  const marker = 'class="description"';
+  const idx = html.indexOf(marker);
+  if (idx < 0) return undefined;
+  const contentStart = html.indexOf('>', idx + marker.length);
+  if (contentStart < 0) return undefined;
+  const closeP = html.indexOf('</p>', contentStart + 1);
+  const closeDiv = html.indexOf('</div>', contentStart + 1);
+  const close =
+    closeP >= 0 && closeDiv >= 0 ? Math.min(closeP, closeDiv) : Math.max(closeP, closeDiv);
+  if (close < 0) return undefined;
+  const raw = html.slice(contentStart + 1, close);
+  return raw.length > 0 ? stripTags(raw) : undefined;
+}
+
+function readPisosImageUrls(html: string): string[] {
+  const urls: string[] = [];
+  let cursor = 0;
+  while (cursor < html.length) {
+    const idx = html.indexOf(PISOS_IMG_HOST, cursor);
+    if (idx < 0) break;
+    let end = idx + PISOS_IMG_HOST.length;
+    while (end < html.length) {
+      const ch = html[end];
+      if (/[a-zA-Z0-9_./%-]/.test(ch)) {
+        end += 1;
+        continue;
+      }
+      break;
+    }
+    const candidate = html.slice(idx, end);
+    if (/\.(?:jpg|jpeg|webp|png)$/i.test(candidate)) urls.push(candidate);
+    cursor = end;
+  }
+  return urls;
+}
+
+function readHiddenPisoId(html: string): string | undefined {
+  const marker = 'hdnIdPiso';
+  const idx = html.indexOf(marker);
+  if (idx < 0) return undefined;
+  const valueMarker = 'value="';
+  const valueStart = html.indexOf(valueMarker, idx);
+  if (valueStart < 0) return undefined;
+  const start = valueStart + valueMarker.length;
+  const end = html.indexOf('"', start);
+  if (end < 0) return undefined;
+  const value = html.slice(start, end);
+  return value.length > 0 ? value : undefined;
 }
 
 function parseJsonObject(raw: string): Record<string, unknown> | undefined {
@@ -74,9 +145,7 @@ export function parsePisosSearch(html: string): { sourceId: string; url: string 
   const seen = new Set<string>();
   const refs: { sourceId: string; url: string }[] = [];
 
-  for (const match of html.matchAll(LD_JSON_RE)) {
-    const body = match[1]?.trim();
-    if (!body) continue;
+  for (const body of ldJsonScriptBodies(html)) {
     const record = parseJsonObject(body);
     if (!record) continue;
     const path = typeof record.url === 'string' ? record.url : undefined;
@@ -97,15 +166,31 @@ export function parsePisosSearch(html: string): { sourceId: string; url: string 
 }
 
 function readDataVar(html: string): Record<string, unknown> | undefined {
-  const match = html.match(DATA_VAR_RE);
-  if (!match?.[1]) return undefined;
-  return parseJsonObject(match[1].replace(/&quot;/g, '"'));
+  const marker = 'data-var=';
+  const idx = html.indexOf(marker);
+  if (idx < 0) return undefined;
+  const quoteStart = idx + marker.length;
+  const quote = html[quoteStart];
+  if (quote !== '"' && quote !== "'") return undefined;
+  const jsonStart = quoteStart + 1;
+  if (html[jsonStart] !== '{') return undefined;
+  let depth = 0;
+  for (let i = jsonStart; i < html.length; i += 1) {
+    const ch = html[i];
+    if (ch === '{') depth += 1;
+    else if (ch === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        if (html[i + 1] !== quote) return undefined;
+        return parseJsonObject(html.slice(jsonStart, i + 1).replace(/&quot;/g, '"'));
+      }
+    }
+  }
+  return undefined;
 }
 
 function readTrack(html: string): Record<string, unknown> | undefined {
-  const match = html.match(TRACK_RE);
-  if (!match?.[0]) return undefined;
-  return parseJsonObject(match[0]);
+  return readBalancedJsonAfter(html, '__pisosTrack');
 }
 
 function amenityList(raw: unknown): string[] {
@@ -131,7 +216,7 @@ function amenityList(raw: unknown): string[] {
 export function parsePisosDetail(html: string, url: string): PisosRaw {
   const dataVar = readDataVar(html);
   const track = readTrack(html);
-  const resolvedId = pisosSourceIdFromUrl(url) ?? html.match(HDN_ID_RE)?.[1];
+  const resolvedId = pisosSourceIdFromUrl(url) ?? readHiddenPisoId(html);
   if (!resolvedId) {
     throw new Error(`pisos: cannot derive a source id from ${url}`);
   }
@@ -154,15 +239,13 @@ export function parsePisosDetail(html: string, url: string): PisosRaw {
   if (subtype.includes('chalet') || subtype.includes('casa')) types.push('House');
   if (subtype.includes('estudio')) types.push('Studio');
 
-  const h1Raw = html.match(H1_RE)?.[1];
-  const h1 = h1Raw ? stripTags(h1Raw) : undefined;
-  const descMatch = html.match(DESC_RE);
-  const description = descMatch ? stripTags(descMatch[1] ?? '') : h1;
+  const h1 = readFirstH1Text(html);
+  const description = readDescriptionText(html) ?? h1;
 
-  const images = [...new Set(html.match(IMG_RE) ?? [])];
+  const images = [...new Set(readPisosImageUrls(html))];
   const ld = extractEsSchemaListings(html)[0];
-  const city = ld?.address.city ?? 'Madrid';
-  const street = ld?.address.street ?? h1 ?? city;
+  const city = ld?.address?.city ?? 'Madrid';
+  const street = ld?.address?.street ?? h1 ?? city;
 
   const listing: EsSchemaListing = {
     types,
@@ -172,11 +255,11 @@ export function parsePisosDetail(html: string, url: string): PisosRaw {
     address: {
       street,
       city,
-      region: ld?.address.region,
-      postalCode: ld?.address.postalCode,
-      neighborhood: ld?.address.neighborhood,
-      country: ld?.address.country,
-      countryCode: ld?.address.countryCode ?? 'ES',
+      region: ld?.address?.region,
+      postalCode: ld?.address?.postalCode,
+      neighborhood: ld?.address?.neighborhood,
+      country: ld?.address?.country,
+      countryCode: ld?.address?.countryCode ?? 'ES',
     },
     coordinates: ld?.coordinates,
     images: images.length > 0 ? images : (ld?.images ?? []),

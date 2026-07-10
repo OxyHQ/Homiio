@@ -275,14 +275,20 @@ const propertySchema = new mongoose.Schema({
     default: false,
     index: true
   },
-  /** Best-effort portal advertiser contact (phone/email/WhatsApp/agency). */
+  /**
+   * Best-effort advertiser contact from portal AJAX (external listings only).
+   * Optional — many portals keep phones DataDome-gated.
+   */
   externalContact: {
-    phone: { type: String, trim: true },
-    email: { type: String, trim: true },
-    whatsapp: { type: String, trim: true },
-    agencyName: { type: String, trim: true },
-    name: { type: String, trim: true },
-    kind: { type: String, enum: ['owner', 'agency', 'private', 'unknown'] },
+    type: new mongoose.Schema({
+      phone: { type: String, maxlength: 40 },
+      email: { type: String, maxlength: 200 },
+      whatsapp: { type: String, maxlength: 40 },
+      name: { type: String, maxlength: 200 },
+      agencyName: { type: String, maxlength: 200 },
+      kind: { type: String, enum: ['owner', 'agency', 'private', 'unknown'] },
+    }, { _id: false }),
+    required: false,
   },
   expiresAt: {
     type: Date,

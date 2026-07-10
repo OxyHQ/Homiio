@@ -22,7 +22,7 @@ import type {
 } from '../../types';
 import { createFetchRuntime } from '../../runtime';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
-import { isHousingCategoryUrl } from '../es/housing';
+import { isHousingCategoryUrl } from '../../parse/classifieds';
 import {
   MILANUNCIOS_BASE_URL,
   MILANUNCIOS_HOUSING_CATEGORY_SLUGS,

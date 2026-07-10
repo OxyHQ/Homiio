@@ -12,6 +12,7 @@
  */
 
 import { HABITACLIA_BASE_URL, type HabitacliaRawImage, type HabitacliaRawListing } from './fixtures';
+import { asNumber, asString } from '../../parse/guards';
 
 /** Match every `<script type="application/ld+json">…</script>` block. */
 const JSON_LD_RE =
@@ -19,6 +20,9 @@ const JSON_LD_RE =
 
 /** Match a Habitaclia detail-page link and capture its numeric listing id. */
 const DETAIL_LINK_RE = /href=["']([^"']*-i(\d+)\.htm)["']/gi;
+/** List cards expose detail URLs in `data-href` (live search + listainmuebles AJAX). */
+const DETAIL_DATA_HREF_RE =
+  /data-href=["']([^"']*-i(\d+)\.htm(?:\?[^"']*)?)["']/gi;
 /** Fallback when anchors omit the `-i` prefix but keep the trailing id segment. */
 const DETAIL_LINK_FALLBACK_RE = /href=["']([^"']*\/alquiler-[^"']*-(\d{6,})\.htm)["']/gi;
 
@@ -49,19 +53,26 @@ function asArray(value: unknown): unknown[] {
   return [value];
 }
 
-function asString(value: unknown): string | undefined {
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  return undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const parsed = Number.parseFloat(value.replace(/[^0-9.,-]/g, '').replace(',', '.'));
-    return Number.isFinite(parsed) ? parsed : undefined;
+function htmlFragmentToText(html: string): string {
+  let text = '';
+  let inTag = false;
+  for (let i = 0; i < html.length; i += 1) {
+    const ch = html[i];
+    if (ch === '<') {
+      const rest = html.slice(i).toLowerCase();
+      if (rest.startsWith('<br') || rest.startsWith('<br/') || rest.startsWith('<br ')) {
+        text += '\n';
+      }
+      inTag = true;
+      continue;
+    }
+    if (ch === '>') {
+      inTag = false;
+      continue;
+    }
+    if (!inTag) text += ch;
   }
-  return undefined;
+  return text.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 /** Strip accents and lowercase for alias lookup / slugging. */
@@ -142,7 +153,7 @@ export function habitacliaSourceIdFromUrl(url: string): string | undefined {
 }
 
 /** Infer rent vs sale from a JSON-LD offer's business function or the URL. */
-function resolveOperation(offer: Record<string, unknown>, url: string): 'rent' | 'sale' {
+function resolveOperationFromOffer(offer: Record<string, unknown>, url: string): 'rent' | 'sale' {
   const businessFunction = asString(offer['businessFunction'])?.toLowerCase() ?? '';
   if (businessFunction.includes('leaseout') || businessFunction.includes('rent')) return 'rent';
   if (businessFunction.includes('sell') || businessFunction.includes('sale')) return 'sale';
@@ -164,10 +175,13 @@ function resolvePropertyType(node: Record<string, unknown>): string {
  */
 export function parseHabitacliaDetail(html: string, url: string): HabitacliaRawListing {
   const node = extractJsonLdNodes(html).find(isListingNode);
-  if (!node) {
-    throw new Error(`habitaclia: no real-estate JSON-LD found at ${url}`);
+  if (node) {
+    return parseHabitacliaDetailFromJsonLd(node, url);
   }
+  return parseHabitacliaDetailHtml(html, url);
+}
 
+function parseHabitacliaDetailFromJsonLd(node: Record<string, unknown>, url: string): HabitacliaRawListing {
   const offer = asRecord(node['offers']) ?? {};
   const address = asRecord(node['address']) ?? {};
   const geo = asRecord(node['geo']);
@@ -201,7 +215,7 @@ export function parseHabitacliaDetail(html: string, url: string): HabitacliaRawL
     description: asString(node['description']),
     price,
     currency: asString(offer['priceCurrency']) ?? 'EUR',
-    operation: resolveOperation(offer, canonicalUrl),
+    operation: resolveOperationFromOffer(offer, canonicalUrl),
     address: {
       street: asString(address['streetAddress']),
       city,
@@ -234,13 +248,19 @@ function pushHabitacliaRef(
 ): void {
   if (!href || !sourceId || seen.has(sourceId)) return;
   seen.add(sourceId);
-  const url = href.startsWith('http') ? href : `${HABITACLIA_BASE_URL}${href}`;
+  const normalizedHref = href.replace(/&amp;/g, '&').split('?')[0] ?? href;
+  const url = normalizedHref.startsWith('http')
+    ? normalizedHref
+    : `${HABITACLIA_BASE_URL}${normalizedHref.startsWith('/') ? normalizedHref : `/${normalizedHref}`}`;
   refs.push({ sourceId, url });
 }
 
 export function parseHabitacliaSearch(html: string): { sourceId: string; url: string }[] {
   const seen = new Set<string>();
   const refs: { sourceId: string; url: string }[] = [];
+  for (const match of html.matchAll(DETAIL_DATA_HREF_RE)) {
+    pushHabitacliaRef(refs, seen, match[1], match[2]);
+  }
   for (const match of html.matchAll(DETAIL_LINK_RE)) {
     pushHabitacliaRef(refs, seen, match[1], match[2]);
   }
@@ -250,4 +270,144 @@ export function parseHabitacliaSearch(html: string): { sourceId: string; url: st
     }
   }
   return refs;
+}
+
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&#x20AC;/gi, '€')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&#(\d+);/g, (_, code: string) => String.fromCharCode(Number.parseInt(code, 10)));
+}
+
+function parseSpanishPrice(raw: string): number | undefined {
+  const decoded = decodeHtmlEntities(raw).trim();
+  const digits = decoded.replace(/[^\d.,]/g, '');
+  if (!digits) return undefined;
+  const normalized =
+    digits.includes(',') && digits.lastIndexOf(',') > digits.lastIndexOf('.')
+      ? digits.replace(/\./g, '').replace(',', '.')
+      : digits.replace(/\./g, '');
+  const parsed = Number.parseFloat(normalized);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function metaContent(html: string, name: string): string | undefined {
+  const re = new RegExp(
+    `<meta[^>]*(?:name|property)=["']${name}["'][^>]*content=["']([^"']*)["']`,
+    'i',
+  );
+  const match = html.match(re);
+  return match?.[1] ? decodeHtmlEntities(match[1].trim()) : undefined;
+}
+
+function firstMatch(html: string, re: RegExp): string | undefined {
+  const match = html.match(re);
+  return match?.[1] ? decodeHtmlEntities(match[1].trim()) : undefined;
+}
+
+function collectItempropImages(html: string): HabitacliaRawImage[] {
+  const urls: string[] = [];
+  for (const match of html.matchAll(/itemprop=["']image["'][^>]*src=["']([^"']+)["']/gi)) {
+    const src = match[1];
+    if (src) urls.push(src.startsWith('//') ? `https:${src}` : src);
+  }
+  const unique = [...new Set(urls)];
+  return unique.map((url, index) => ({ url, isPrimary: index === 0 }));
+}
+
+function resolvePropertyTypeFromUrl(url: string): string {
+  const segment = url.match(/\/(?:alquiler|venta|pisos)-([a-z0-9_]+)-/i)?.[1]?.toLowerCase() ?? '';
+  if (segment.includes('casa')) return 'house';
+  if (segment.includes('studio') || segment.includes('estudio')) return 'studio';
+  return 'apartment';
+}
+
+function resolveOperationFromUrl(url: string, title: string): 'rent' | 'sale' {
+  const lower = `${url} ${title}`.toLowerCase();
+  if (lower.includes('/venta') || lower.includes('venta ') || lower.includes('/pisos-')) return 'sale';
+  return 'rent';
+}
+
+/** Parse live detail HTML (microdata + meta) when JSON-LD is absent. */
+export function parseHabitacliaDetailHtml(html: string, url: string): HabitacliaRawListing {
+  const canonicalUrl = metaContent(html, 'og:url') ?? url.split('?')[0] ?? url;
+  const sourceId = habitacliaSourceIdFromUrl(canonicalUrl) ?? habitacliaSourceIdFromUrl(url);
+  if (!sourceId) {
+    throw new Error(`habitaclia: cannot derive a source id from ${url}`);
+  }
+
+  const priceRaw =
+    firstMatch(html, /itemprop=["']price["'][^>]*>([^<]+)/i) ??
+    firstMatch(html, /por\s+([\d.]+\s*€)/i) ??
+    firstMatch(html, /<title>[^<]*?por\s+([\d.]+\s*€)/i);
+  const price = priceRaw ? parseSpanishPrice(priceRaw) : undefined;
+  if (price === undefined) {
+    throw new Error(`habitaclia: listing at ${url} has no parseable price`);
+  }
+
+  const title =
+    firstMatch(html, /<h1[^>]*>([^<]+)/i) ?? metaContent(html, 'og:title') ?? metaContent(html, 'title');
+  const description =
+    (() => {
+      const fragment = firstMatch(html, /id=["']js-detail-description["'][^>]*>([\s\S]*?)<\/p>/i);
+      return fragment ? htmlFragmentToText(fragment) : undefined;
+    })() ?? metaContent(html, 'description');
+
+  const city =
+    firstMatch(html, /<h1[^>]*>[^<]*\ben\s+([A-Za-zÀ-ÿ\s.'-]+)\s*<\/h1>/i) ??
+    firstMatch(html, /nom_prov['"]\s*,\s*['"]([^'"]+)['"]/i) ??
+    firstMatch(html, /Filtros\.Geo\.NomPobBuscador["'][^>]*value=["']([^"']+)/i);
+  if (!city) {
+    throw new Error(`habitaclia: listing at ${url} has no city`);
+  }
+
+  const neighborhood = firstMatch(html, /id=["']js-ver-mapa-zona["'][^>]*title=["']([^"']+)/i);
+  const bedrooms = asNumber(firstMatch(html, /<strong>(\d+)<\/strong>\s*hab\.?/i));
+  const bathrooms = asNumber(firstMatch(html, /<strong>(\d+)<\/strong>\s*ba/i));
+  const squareMeters = asNumber(firstMatch(html, /<strong>(\d+)<\/strong>\s*m(?:<sup>2<\/sup>|²)/i));
+
+  const amenities: string[] = [];
+  let furnished: boolean | undefined;
+  for (const match of html.matchAll(/<li>([^<]{2,60})<\/li>/gi)) {
+    const label = match[1]?.trim();
+    if (!label || /habitacion|baño|ba\u00F1o|m2|€\/m/i.test(label)) continue;
+    const key = normalizeAmenity(label);
+    if (key === 'furnished') {
+      furnished = true;
+      continue;
+    }
+    if (key) amenities.push(key);
+  }
+
+  const images = collectItempropImages(html);
+  const ogImage = metaContent(html, 'og:image');
+  if (ogImage) {
+    const absolute = ogImage.startsWith('//') ? `https:${ogImage}` : ogImage;
+    if (!images.some((image) => image.url === absolute)) {
+      images.unshift({ url: absolute, isPrimary: true });
+    }
+  }
+
+  return {
+    id: sourceId,
+    url: canonicalUrl,
+    propertyType: resolvePropertyTypeFromUrl(canonicalUrl),
+    title,
+    description,
+    price,
+    currency: 'EUR',
+    operation: resolveOperationFromUrl(canonicalUrl, title ?? ''),
+    address: {
+      city,
+      region: city,
+      countryCode: 'ES',
+      neighborhood,
+    },
+    bedrooms,
+    bathrooms,
+    squareMeters,
+    furnished,
+    amenities: amenities.length > 0 ? amenities : undefined,
+    images,
+  };
 }

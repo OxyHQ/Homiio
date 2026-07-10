@@ -12,6 +12,7 @@
  *   - Raw HTML fragments (reuses {@link parseIdealistaSearch})
  */
 
+import { isDataDomeAjaxChallenge } from '../../parse/challenge';
 import { IDEALISTA_BASE_URL } from './fixtures';
 import { idealistaSourceIdFromUrl, parseIdealistaSearch } from './parse';
 
@@ -57,13 +58,7 @@ export function idealistaWarmSearchUrl(city: string, page = 1): string {
 
 /** DataDome captcha JSON served instead of georeach listings. */
 export function isIdealistaGeoreachChallenge(body: string): boolean {
-  const trimmed = body.trim();
-  if (trimmed.length === 0) return true;
-  if (/captcha-delivery\.com|geo\.captcha|datadome/i.test(trimmed)) return true;
-  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-    return /"url"\s*:\s*"https?:\/\/geo\.captcha/i.test(trimmed);
-  }
-  return false;
+  return isDataDomeAjaxChallenge(body);
 }
 
 function refFromId(rawId: unknown): { sourceId: string; url: string } | undefined {

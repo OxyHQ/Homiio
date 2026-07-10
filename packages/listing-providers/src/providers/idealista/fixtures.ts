@@ -135,3 +135,19 @@ export const IDEALISTA_FIXTURE_GEOREACH_CHALLENGE = `{
   "url": "https://geo.captcha-delivery.com/captcha/?initialCid=x&cid=y",
   "cookie": "datadome=blocked"
 }`;
+
+/** contact-phones AJAX sample (portal-shaped). */
+export const IDEALISTA_FIXTURE_CONTACT_PHONES_JSON = `{
+  "phones": [
+    { "phoneNumber": "+34 612 345 678", "formattedPhone": "612 345 678" },
+    { "phoneNumber": "934001122" }
+  ]
+}`;
+
+/** adContactInfoForDetail AJAX sample (portal-shaped). */
+export const IDEALISTA_FIXTURE_CONTACT_INFO_JSON = `{
+  "agencyName": "Inmobiliaria Eixample SL",
+  "email": "contacto@eixample-example.es",
+  "whatsapp": "34612345678",
+  "phone": "934001122"
+}`;

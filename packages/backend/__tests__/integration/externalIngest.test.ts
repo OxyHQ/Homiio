@@ -141,4 +141,29 @@ describe('external listing ingest (fixture -> IngestionService)', () => {
     const withoutUrl: NormalizedListing = { ...first, sourceUrl: '' };
     await expect(ingestion.ingest(withoutUrl)).rejects.toThrow(/sourceUrl/);
   });
+
+  it('persists externalContact when the normalized listing carries contact', async () => {
+    const ingestion = buildIngestionService();
+    const [first] = await normalizeAll();
+    const withContact: NormalizedListing = {
+      ...first,
+      contact: {
+        phone: '+34612345678',
+        email: 'agent@example.com',
+        whatsapp: '34612345678',
+        name: 'María López',
+        agencyName: 'Agencia Demo SL',
+      },
+    };
+
+    await ingestion.ingest(withContact);
+    const property = await Property.findOne({ source: 'fixture', sourceId: FIRST_SOURCE_ID }).lean();
+    expect(property?.externalContact).toEqual({
+      phone: '+34612345678',
+      email: 'agent@example.com',
+      whatsapp: '34612345678',
+      name: 'María López',
+      agencyName: 'Agencia Demo SL',
+    });
+  });
 });

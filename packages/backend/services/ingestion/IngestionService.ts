@@ -20,6 +20,11 @@ import {
   type NormalizedListing,
   type NormalizedListingAddress,
 } from '@homiio/shared-types';
+import {
+  DEFAULT_MAX_REMOTE_IMAGES,
+  ListingValidationError,
+  validateNormalizedListing,
+} from '@homiio/listing-providers';
 import { Property, Address, type IProperty } from '../../models';
 import type { AddressCanonicalInput } from '../../models/Address';
 import { validateOfferings } from '../../models/schemas/offeringValidation';
@@ -105,18 +110,20 @@ export class IngestionService {
 
   /** Structural validation before any DB work. */
   private validate(listing: NormalizedListing): void {
-    if (!listing.source) {
-      throw new IngestionValidationError('NormalizedListing.source is required');
+    try {
+      validateNormalizedListing(listing, { maxRemoteImages: DEFAULT_MAX_REMOTE_IMAGES });
+    } catch (error) {
+      if (error instanceof ListingValidationError) {
+        this.logger.warn('Skipping external listing (validation)', {
+          source: error.source,
+          sourceId: error.sourceId,
+          reason: error.reason,
+        });
+        throw error;
+      }
+      throw error;
     }
-    if (!listing.sourceId || !listing.sourceId.trim()) {
-      throw new IngestionValidationError('NormalizedListing.sourceId is required');
-    }
-    if (!listing.sourceUrl || !listing.sourceUrl.trim()) {
-      throw new IngestionValidationError('NormalizedListing.sourceUrl is required');
-    }
-    if (!listing.address?.street?.trim() || !listing.address?.city?.trim()) {
-      throw new IngestionValidationError('NormalizedListing.address requires street and city');
-    }
+
     const offeringError = validateOfferings({
       offerings: listing.offerings,
       longTermRent: listing.longTermRent,
@@ -214,14 +221,23 @@ export class IngestionService {
     if (listing.amenities !== undefined) fields.amenities = listing.amenities;
     if (listing.furnishedStatus !== undefined) fields.furnishedStatus = listing.furnishedStatus;
     if (listing.contact) {
-      fields.externalContact = {
-        ...(listing.contact.phone ? { phone: listing.contact.phone } : {}),
-        ...(listing.contact.email ? { email: listing.contact.email } : {}),
-        ...(listing.contact.whatsapp ? { whatsapp: listing.contact.whatsapp } : {}),
-        ...(listing.contact.agencyName ? { agencyName: listing.contact.agencyName } : {}),
-        ...(listing.contact.name ? { name: listing.contact.name } : {}),
-        ...(listing.contact.kind ? { kind: listing.contact.kind } : {}),
-      };
+      const externalContact: NonNullable<IProperty['externalContact']> = {};
+      if (listing.contact.phone) externalContact.phone = listing.contact.phone;
+      if (listing.contact.email) externalContact.email = listing.contact.email;
+      if (listing.contact.whatsapp) externalContact.whatsapp = listing.contact.whatsapp;
+      if (listing.contact.name) externalContact.name = listing.contact.name;
+      if (listing.contact.agencyName) externalContact.agencyName = listing.contact.agencyName;
+      if (listing.contact.kind) externalContact.kind = listing.contact.kind;
+      if (
+        externalContact.phone ||
+        externalContact.email ||
+        externalContact.whatsapp ||
+        externalContact.name ||
+        externalContact.agencyName ||
+        externalContact.kind
+      ) {
+        fields.externalContact = externalContact;
+      }
     }
 
     return fields as Partial<IProperty>;

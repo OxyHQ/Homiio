@@ -32,11 +32,14 @@ describe('PisosProvider.normalize', () => {
     expect(listing.type).toBe(PropertyType.APARTMENT);
     expect(listing.offerings).toEqual([OfferingType.LONG_TERM_RENT]);
     expect(listing.longTermRent?.monthlyAmount).toBe(2550);
+    expect(listing.longTermRent?.currency).toBe('EUR');
     expect(listing.bedrooms).toBe(2);
     expect(listing.bathrooms).toBe(2);
     expect(listing.squareFootage).toBe(107);
     expect(listing.contact?.phone).toBe('919376345');
     expect(listing.contact?.kind).toBe('agency');
+    expect(listing.remoteImages.length).toBeGreaterThan(0);
+    expect(listing.amenities).toEqual(expect.arrayContaining(['ascensor', 'balcon', 'soleado']));
   });
 
   it('parses contact AJAX JSON', () => {
@@ -53,6 +56,9 @@ describe('PisosProvider search + helpers', () => {
       '61688075258.280500',
       '65072508446.519513',
     ]);
+    for (const ref of refs) {
+      expect(ref.url.startsWith('https://www.pisos.com/')).toBe(true);
+    }
   });
 
   it('extracts a source id from a detail url', () => {

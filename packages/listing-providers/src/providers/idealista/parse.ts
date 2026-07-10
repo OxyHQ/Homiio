@@ -9,14 +9,17 @@
  * identically in the worker and in unit tests, with zero extra dependencies.
  */
 
-import { extractEsSchemaListings, pickEsListing, type EsSchemaListing } from '../es/jsonLd';
+import { extractEsSchemaListings, pickEsListing, type EsSchemaListing } from '../../parse/jsonLd';
 import { IDEALISTA_BASE_URL } from './fixtures';
+import type { IdealistaContact } from './contact';
 
 /** The raw payload Idealista `fetch()` hands to `normalize()`. */
 export interface IdealistaRaw {
   sourceId: string;
   url: string;
   listing: EsSchemaListing;
+  /** Best-effort contact from warmed-session AJAX (optional). */
+  contact?: IdealistaContact;
 }
 
 /** Match Idealista detail links and capture the numeric listing id. */

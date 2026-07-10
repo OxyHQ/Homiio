@@ -19,12 +19,17 @@ import {
   idealistaGeoreachSlug,
   idealistaWarmSearchUrl,
   isIdealistaGeoreachChallenge,
+  parseIdealistaContactPhones,
+  parseIdealistaContactInfo,
+  mergeIdealistaContact,
   IDEALISTA_FIXTURE_DETAIL_HTML,
   IDEALISTA_FIXTURE_SALE_DETAIL_HTML,
   IDEALISTA_FIXTURE_SEARCH_HTML,
   IDEALISTA_FIXTURE_GEOREACH_JSON,
   IDEALISTA_FIXTURE_GEOREACH_HTML_JSON,
   IDEALISTA_FIXTURE_GEOREACH_CHALLENGE,
+  IDEALISTA_FIXTURE_CONTACT_PHONES_JSON,
+  IDEALISTA_FIXTURE_CONTACT_INFO_JSON,
 } from '@homiio/listing-providers';
 import type { ExternalListingRef, FetchRuntime } from '@homiio/listing-providers';
 import { OfferingType, PropertyType } from '@homiio/shared-types';
@@ -240,5 +245,47 @@ describe('IdealistaProvider.discover georeach path', () => {
 
     expect(htmlFetches).toBeGreaterThan(0);
     expect(refs.map((ref) => ref.sourceId).sort()).toEqual(['98765432', '98765433', '98765434']);
+  });
+});
+
+describe('Idealista contact AJAX parser', () => {
+  it('parses contact-phones into normalized phone digits', () => {
+    const phones = parseIdealistaContactPhones(IDEALISTA_FIXTURE_CONTACT_PHONES_JSON);
+    expect(phones[0]).toBe('+34612345678');
+    expect(phones).toContain('934001122');
+  });
+
+  it('parses adContactInfo into phone/email/whatsapp/agency', () => {
+    const contact = parseIdealistaContactInfo(IDEALISTA_FIXTURE_CONTACT_INFO_JSON);
+    expect(contact.agencyName).toBe('Inmobiliaria Eixample SL');
+    expect(contact.email).toBe('contacto@eixample-example.es');
+    expect(contact.whatsapp).toBe('34612345678');
+    expect(contact.phone).toBe('934001122');
+  });
+
+  it('merges phone-first and info contact fragments', () => {
+    const merged = mergeIdealistaContact(
+      { phone: '+34611111111' },
+      parseIdealistaContactInfo(IDEALISTA_FIXTURE_CONTACT_INFO_JSON),
+    );
+    expect(merged?.phone).toBe('934001122');
+    expect(merged?.email).toBe('contacto@eixample-example.es');
+    expect(merged?.agencyName).toBe('Inmobiliaria Eixample SL');
+  });
+
+  it('maps contact onto NormalizedListing via normalize', () => {
+    const payload = parseIdealistaDetail(
+      IDEALISTA_FIXTURE_DETAIL_HTML,
+      'https://www.idealista.com/inmueble/98765432/',
+    );
+    payload.contact = parseIdealistaContactInfo(IDEALISTA_FIXTURE_CONTACT_INFO_JSON);
+    const listing = provider.normalize({
+      ref: { provider: 'idealista', sourceId: payload.sourceId, url: payload.url },
+      payload,
+    });
+    expect(listing.contact?.phone).toBe('934001122');
+    expect(listing.contact?.email).toBe('contacto@eixample-example.es');
+    expect(listing.contact?.whatsapp).toBe('34612345678');
+    expect(listing.contact?.agencyName).toBe('Inmobiliaria Eixample SL');
   });
 });

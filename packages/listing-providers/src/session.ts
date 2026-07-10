@@ -35,6 +35,8 @@ export interface BrowserSessionRequestInit {
   headers?: Record<string, string>;
   referer?: string;
   timeoutMs?: number;
+  method?: 'GET' | 'POST';
+  data?: string;
 }
 
 export interface BrowserSessionRequestResult {
@@ -109,6 +111,10 @@ export interface PwAPIRequestContext {
   get(
     url: string,
     options?: { headers?: Record<string, string>; timeout?: number },
+  ): Promise<PwAPIResponse>;
+  post(
+    url: string,
+    options?: { headers?: Record<string, string>; timeout?: number; data?: string },
   ): Promise<PwAPIResponse>;
 }
 
@@ -207,9 +213,8 @@ export async function warmBrowserPage(page: SessionPage, options: WarmBrowserPag
 }
 
 /**
- * Same-origin AJAX GET from a warmed page or context. Uses Playwright's
- * `request` API so portal cookies ride along. Adds XHR headers (Referer,
- * `X-Requested-With`, JSON Accept) suitable for portal JSON endpoints.
+ * Same-origin AJAX from a warmed page or context (GET or POST). Uses Playwright's
+ * `request` API so portal cookies ride along.
  */
 export async function fetchJsonInPage(
   target: InPageRequestTarget,
@@ -218,15 +223,17 @@ export async function fetchJsonInPage(
 ): Promise<BrowserSessionRequestResult> {
   const timeout = init?.timeoutMs ?? DEFAULT_SESSION_TIMEOUT_MS;
   const referer = resolveReferer(target, init);
-  const response = await target.request.get(url, {
-    timeout,
-    headers: {
-      Accept: 'application/json, text/javascript, */*; q=0.01',
-      'X-Requested-With': 'XMLHttpRequest',
-      ...(referer ? { Referer: referer } : {}),
-      ...init?.headers,
-    },
-  });
+  const headers = {
+    Accept: 'application/json, text/javascript, text/html, */*; q=0.01',
+    'X-Requested-With': 'XMLHttpRequest',
+    ...(referer ? { Referer: referer } : {}),
+    ...init?.headers,
+  };
+  const method = init?.method ?? 'GET';
+  const response =
+    method === 'POST'
+      ? await target.request.post(url, { timeout, headers, data: init?.data })
+      : await target.request.get(url, { timeout, headers });
   const body = await response.text();
   return { status: response.status(), body };
 }

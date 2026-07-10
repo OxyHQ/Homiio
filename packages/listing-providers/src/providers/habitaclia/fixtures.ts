@@ -106,16 +106,40 @@ export const HABITACLIA_FIXTURE_DETAIL_HTML = `<!doctype html>
 
 /**
  * A recorded Habitaclia SEARCH-results page (trimmed to the anchors the
- * discover parser reads). Includes non-listing links to prove they are ignored.
+ * discover parser reads). Live pages use `data-href` on cards; legacy pages use `href`.
  */
 export const HABITACLIA_FIXTURE_SEARCH_HTML = `<!doctype html>
 <html lang="es"><body>
 <ul class="list-items">
+  <li data-href="/alquiler-piso-esquerra_de_leixample-barcelona-i12345678900000.htm?from=list">Piso card</li>
+  <li data-href="https://www.habitaclia.com/alquiler-atico-gracia-barcelona-i98765432100000.htm">Ático card</li>
   <li><a class="list-item-link" href="/alquiler-piso-esquerra_de_leixample-barcelona-i12345678900000.htm">Piso en Provença</a></li>
-  <li><a class="list-item-link" href="https://www.habitaclia.com/alquiler-atico-gracia-barcelona-i98765432100000.htm">Ático en Gràcia</a></li>
   <li><a href="/agencias/inmobiliaria-ejemplo/">Inmobiliaria Ejemplo</a></li>
-  <li><a href="/alquiler-piso-esquerra_de_leixample-barcelona-i12345678900000.htm">Duplicate link</a></li>
 </ul>
+<input name="Filtros.Geo.CodProv" value="1" />
+<input name="Filtros.Geo.NomPobBuscador" value="barcelona" />
+</body></html>`;
+
+/** Trimmed live detail page (microdata + meta; no JSON-LD). */
+export const HABITACLIA_FIXTURE_DETAIL_HTML_LIVE = `<!doctype html>
+<html lang="es"><head>
+<meta property="og:url" content="https://www.habitaclia.com/alquiler-piso-gracia-barcelona-i55551000004519.htm" />
+<meta name="description" content="Luminoso piso en Gràcia con terraza." />
+<meta property="og:image" content="//images.habimg.com/imgh/55551-4519/sample-xl.jpg" />
+</head><body>
+<section class="summary">
+  <span itemprop="price">1.600 &#x20AC;</span>
+  <h1>Alquiler piso reformado con terraza en Gràcia en Barcelona</h1>
+  <a id="js-ver-mapa-zona" title="Gràcia">Gràcia</a>
+  <ul class="feature-container">
+    <li class="feature"><strong>95</strong> m<sup>2</sup></li>
+    <li class="feature"><strong>3</strong> hab.</li>
+    <li class="feature"><strong>2</strong> baños</li>
+  </ul>
+</section>
+<p id="js-detail-description" class="detail-description">Luminoso piso reformado en Gràcia.</p>
+<ul><li>Ascensor </li><li>Terraza </li></ul>
+<img itemprop="image" src="//images.habimg.com/imgh/55551-4519/sample-g.jpg" />
 </body></html>`;
 
 /** The base host used to build absolute Habitaclia URLs during discovery. */
