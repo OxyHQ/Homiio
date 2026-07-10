@@ -106,8 +106,8 @@ export const PriceStep: React.FC<PriceStepProps> = ({
   );
 
   const unitLabel = isVacation
-    ? t('search.step.price.perNight', 'per night') || 'per night'
-    : t('search.step.price.perMonth', 'per month') || 'per month';
+    ? t('search.step.price.perNight')
+    : t('search.step.price.perMonth');
 
   return (
     <View style={compact ? styles.containerCompact : styles.container}>
@@ -117,7 +117,7 @@ export const PriceStep: React.FC<PriceStepProps> = ({
         <BloomText style={styles.unitStandalone}>{`(${unitLabel})`}</BloomText>
       ) : (
         <BloomText style={styles.heading}>
-          {t('search.step.price.title', 'Price range') || 'Price range'}{' '}
+          {t('search.step.price.title')}{' '}
           <BloomText style={styles.unit}>({unitLabel})</BloomText>
         </BloomText>
       )}
@@ -145,7 +145,7 @@ export const PriceStep: React.FC<PriceStepProps> = ({
       <View style={styles.inputs}>
         <View style={styles.inputGroup}>
           <BloomText style={styles.inputLabel}>
-            {t('search.step.price.min', 'Minimum') || 'Minimum'}
+            {t('search.step.price.min')}
           </BloomText>
           <TextInput
             style={styles.input}
@@ -155,13 +155,13 @@ export const PriceStep: React.FC<PriceStepProps> = ({
             inputMode="numeric"
             placeholder={`${currencySymbol}0`}
             placeholderTextColor={colors.COLOR_BLACK_LIGHT_5}
-            accessibilityLabel={t('search.step.price.min', 'Minimum') || 'Minimum'}
+            accessibilityLabel={t('search.step.price.min')}
           />
         </View>
         <View style={styles.separator} />
         <View style={styles.inputGroup}>
           <BloomText style={styles.inputLabel}>
-            {t('search.step.price.max', 'Maximum') || 'Maximum'}
+            {t('search.step.price.max')}
           </BloomText>
           <TextInput
             style={styles.input}
@@ -169,9 +169,9 @@ export const PriceStep: React.FC<PriceStepProps> = ({
             onChangeText={handleMaxChange}
             keyboardType="number-pad"
             inputMode="numeric"
-            placeholder={t('search.step.price.any', 'Any') || 'Any'}
+            placeholder={t('search.step.price.any')}
             placeholderTextColor={colors.COLOR_BLACK_LIGHT_5}
-            accessibilityLabel={t('search.step.price.max', 'Maximum') || 'Maximum'}
+            accessibilityLabel={t('search.step.price.max')}
           />
         </View>
       </View>

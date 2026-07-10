@@ -67,6 +67,7 @@ export const AMENITY_CATEGORIES: AmenityCategory[] = [
   {
     id: 'kitchen',
     name: 'Kitchen & dining',
+    nameKey: 'amenities.kitchen',
     nameKey: 'amenities.categories.kitchen',
     icon: 'restaurant',
     color: '#ea580c',
@@ -210,6 +211,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'wheelchair_accessible',
     name: 'Wheelchair Accessible',
+    nameKey: 'amenities.wheelchairAccessible',
     icon: 'accessibility',
     category: 'accessibility',
     description: 'Full ADA compliance with ramps, wide doorways, and accessible bathrooms',
@@ -221,6 +223,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'elevator',
     name: 'Elevator Access',
+    nameKey: 'amenities.elevator',
     icon: 'arrow-up',
     category: 'accessibility',
     description: 'Building elevator for multi-floor access',
@@ -232,6 +235,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'grab_bars',
     name: 'Safety Grab Bars',
+    nameKey: 'amenities.grabBars',
     icon: 'hand-right',
     category: 'accessibility',
     description: 'Bathroom safety grab bars and support rails',
@@ -243,6 +247,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'wide_doorways',
     name: 'Wide Doorways',
+    nameKey: 'amenities.wideDoorways',
     icon: 'resize',
     category: 'accessibility',
     description: 'Extra-wide doorways for accessibility',
@@ -254,6 +259,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'ramp_access',
     name: 'Ramp Access',
+    nameKey: 'amenities.rampAccess',
     icon: 'trending-up',
     category: 'accessibility',
     description: 'Wheelchair ramp access to building',
@@ -267,6 +273,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'solar_panels',
     name: 'Solar Energy System',
+    nameKey: 'amenities.solarPanels',
     icon: 'sunny',
     category: 'eco',
     description: 'Renewable energy reducing environmental impact',
@@ -277,6 +284,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'energy_efficient',
     name: 'Energy Star Appliances',
+    nameKey: 'amenities.energyEfficient',
     icon: 'leaf',
     category: 'eco',
     description: 'ENERGY STAR certified appliances for efficiency',
@@ -287,6 +295,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'recycling_program',
     name: 'Comprehensive Recycling',
+    nameKey: 'amenities.recyclingProgram',
     icon: 'refresh',
     category: 'eco',
     description: 'Full recycling and composting programs',
@@ -297,6 +306,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'green_roof',
     name: 'Living Roof System',
+    nameKey: 'amenities.greenRoof',
     icon: 'leaf',
     category: 'eco',
     description: 'Green roof with plants for insulation and air quality',
@@ -307,6 +317,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'rainwater_collection',
     name: 'Rainwater Harvesting',
+    nameKey: 'amenities.rainwaterCollection',
     icon: 'water',
     category: 'eco',
     description: 'Rainwater collection system for sustainability',
@@ -319,6 +330,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'air_conditioning',
     name: 'Air Conditioning',
+    nameKey: 'amenities.airConditioning',
     icon: 'snow',
     category: 'comfort',
     description: 'Cooling system for health and safety in hot weather',
@@ -329,6 +341,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'insulation',
     name: 'Proper Insulation',
+    nameKey: 'amenities.insulation',
     icon: 'shield',
     category: 'comfort',
     description: 'Well-insulated for energy efficiency and comfort',
@@ -339,6 +352,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'ceiling_fans',
     name: 'Ceiling Fans',
+    nameKey: 'amenities.ceilingFans',
     icon: 'refresh',
     category: 'comfort',
     description: 'Energy-efficient ceiling fans for air circulation',
@@ -362,6 +376,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'refrigerator',
     name: 'Full-Size Refrigerator',
+    nameKey: 'amenities.refrigerator',
     icon: 'snow',
     category: 'kitchen',
     description: 'Essential food storage appliance',
@@ -373,6 +388,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'stove',
     name: 'Cooking Range',
+    nameKey: 'amenities.stove',
     icon: 'flame',
     category: 'kitchen',
     description: 'Gas or electric cooking range for food preparation',
@@ -384,6 +400,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'oven',
     name: 'Oven',
+    nameKey: 'amenities.oven',
     icon: 'flame',
     category: 'kitchen',
     description: 'Built-in oven for cooking and baking',
@@ -395,6 +412,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'microwave',
     name: 'Microwave',
+    nameKey: 'amenities.microwave',
     icon: 'radio',
     category: 'kitchen',
     description: 'Energy-efficient microwave for quick food preparation',
@@ -405,6 +423,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'dishwasher',
     name: 'Dishwasher',
+    nameKey: 'amenities.dishwasher',
     icon: 'water',
     category: 'kitchen',
     description: 'Energy-efficient dishwasher',
@@ -417,6 +436,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'washing_machine',
     name: 'In-Unit Washer',
+    nameKey: 'amenities.washingMachine',
     icon: 'shirt',
     category: 'essential',
     description: 'Private washing machine in unit',
@@ -427,6 +447,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'dryer',
     name: 'In-Unit Dryer',
+    nameKey: 'amenities.dryer',
     icon: 'shirt',
     category: 'essential',
     description: 'Private clothes dryer in unit',
@@ -437,6 +458,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'laundry_room',
     name: 'Shared Laundry Facility',
+    nameKey: 'amenities.laundryRoom',
     icon: 'business',
     category: 'essential',
     description: 'Clean, well-maintained shared laundry room',
@@ -450,6 +472,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'bike_storage',
     name: 'Secure Bike Storage',
+    nameKey: 'amenities.bikeStorage',
     icon: 'bicycle',
     category: 'transportation',
     description: 'Safe bicycle storage facility',
@@ -460,6 +483,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'parking_space',
     name: 'Parking Space',
+    nameKey: 'amenities.parkingSpace',
     icon: 'car',
     category: 'transportation',
     description: 'Assigned parking spot',
@@ -470,6 +494,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'ev_charging',
     name: 'Electric Vehicle Charging',
+    nameKey: 'amenities.evCharging',
     icon: 'battery-charging',
     category: 'transportation',
     description: 'Electric vehicle charging station access',
@@ -480,6 +505,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'public_transit_access',
     name: 'Public Transit Access',
+    nameKey: 'amenities.publicTransitAccess',
     icon: 'bus',
     category: 'transportation',
     description: 'Close proximity to public transportation',
@@ -492,6 +518,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'fire_safety',
     name: 'Fire Safety System',
+    nameKey: 'amenities.fireSafety',
     icon: 'flame',
     category: 'security',
     description: 'Sprinklers, alarms, and emergency systems',
@@ -503,6 +530,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'secure_entry',
     name: 'Controlled Access',
+    nameKey: 'amenities.secureEntry',
     icon: 'key',
     category: 'security',
     description: 'Secure building entry with access control',
@@ -513,6 +541,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'security_cameras',
     name: 'Security Cameras',
+    nameKey: 'amenities.securityCameras',
     icon: 'videocam',
     category: 'security',
     description: 'CCTV surveillance in common areas (with privacy protections)',
@@ -523,6 +552,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'intercom',
     name: 'Intercom System',
+    nameKey: 'amenities.intercom',
     icon: 'chatbubble',
     category: 'security',
     description: 'Building intercom for visitor communication',
@@ -535,6 +565,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'storage_unit',
     name: 'Storage Space',
+    nameKey: 'amenities.storageUnit',
     icon: 'cube',
     category: 'storage',
     description: 'Additional storage space',
@@ -545,6 +576,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'walk_in_closet',
     name: 'Walk-in Closet',
+    nameKey: 'amenities.walkInCloset',
     icon: 'shirt',
     category: 'storage',
     description: 'Large walk-in closet space',
@@ -555,6 +587,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'pantry',
     name: 'Kitchen Pantry',
+    nameKey: 'amenities.pantry',
     icon: 'library',
     category: 'storage',
     description: 'Kitchen pantry for food storage',
@@ -567,6 +600,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'community_room',
     name: 'Community Room',
+    nameKey: 'amenities.communityRoom',
     icon: 'people',
     category: 'community',
     description: 'Shared community space for residents',
@@ -577,6 +611,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'gym',
     name: 'Fitness Center',
+    nameKey: 'amenities.gym',
     icon: 'fitness',
     category: 'wellness',
     description: 'On-site fitness facility',
@@ -597,6 +632,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'garden_space',
     name: 'Community Garden',
+    nameKey: 'amenities.gardenSpace',
     icon: 'flower',
     category: 'community',
     description: 'Shared gardening space for residents',
@@ -609,6 +645,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'fiber_internet',
     name: 'Fiber Internet',
+    nameKey: 'amenities.fiberInternet',
     icon: 'wifi',
     category: 'technology',
     description: 'Ultra-high-speed fiber internet connection',
@@ -620,6 +657,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'cable_tv',
     name: 'Cable TV Ready',
+    nameKey: 'amenities.cableTv',
     icon: 'tv',
     category: 'technology',
     description: 'Pre-wired for cable television service',
@@ -632,6 +670,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'balcony',
     name: 'Private Balcony',
+    nameKey: 'amenities.balcony',
     icon: 'leaf',
     category: 'outdoor',
     description: 'Private outdoor balcony space',
@@ -642,6 +681,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'garden_access',
     name: 'Garden Access',
+    nameKey: 'amenities.gardenAccess',
     icon: 'flower',
     category: 'outdoor',
     description: 'Access to shared garden space',
@@ -652,6 +692,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'natural_light',
     name: 'Abundant Natural Light',
+    nameKey: 'amenities.naturalLight',
     icon: 'sunny',
     category: 'outdoor',
     description: 'Large windows and good natural light',
@@ -664,6 +705,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'pet_friendly',
     name: 'Pet-Friendly Policy',
+    nameKey: 'amenities.petFriendly',
     icon: 'paw',
     category: 'community',
     description: 'Welcomes pets with reasonable policies',
@@ -675,6 +717,7 @@ export const AMENITIES: Amenity[] = [
   {
     id: 'dog_park',
     name: 'Pet Exercise Area',
+    nameKey: 'amenities.dogPark',
     icon: 'paw',
     category: 'outdoor',
     description: 'Dedicated pet exercise and socialization area',

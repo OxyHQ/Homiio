@@ -9,15 +9,12 @@ export function EcoCertificationWidget() {
 
   return (
     <BaseWidget
-      title={t('home.eco.title', 'Eco-Certified Properties')}
+      title={t('home.eco.title')}
       icon={<Ionicons name="leaf" size={22} color="green" />}
     >
       <View style={styles.ecoCertContent}>
         <Text style={styles.ecoText}>
-          {t(
-            'home.eco.description',
-            'Find sustainable properties that meet eco-friendly standards',
-          )}
+          {t('home.eco.description')}
         </Text>
       </View>
     </BaseWidget>

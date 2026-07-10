@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
 import { shadowToken } from '@/styles/shadows';
 import { useTrustScore } from '@/hooks/useTrustScore';
@@ -8,7 +9,30 @@ import { TrustScore } from './TrustScore';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
+const TRUST_FACTOR_TYPES = [
+  'verification',
+  'reviews',
+  'payment_history',
+  'communication',
+  'rental_history',
+] as const;
+
+type TrustFactorType = (typeof TRUST_FACTOR_TYPES)[number];
+
+function isTrustFactorType(value: string): value is TrustFactorType {
+  return (TRUST_FACTOR_TYPES as readonly string[]).includes(value);
+}
+
+const PROFILE_SECTIONS: Record<TrustFactorType, string> = {
+  verification: 'personal',
+  reviews: 'references',
+  payment_history: 'rental-history',
+  communication: 'personal',
+  rental_history: 'rental-history',
+};
+
 export function TrustScoreManager() {
+  const { t } = useTranslation();
   const { data: activeProfile } = useActiveProfile();
   const currentProfileId = activeProfile?.id || activeProfile?._id;
   const router = useRouter();
@@ -21,7 +45,6 @@ export function TrustScoreManager() {
     fetchTrustScoreData,
   } = useTrustScore(currentProfileId);
 
-  // Set the profile ID and fetch trust score when active profile changes
   useEffect(() => {
     if (currentProfileId) {
       setCurrentProfileId(currentProfileId);
@@ -29,10 +52,58 @@ export function TrustScoreManager() {
     }
   }, [currentProfileId, setCurrentProfileId, fetchTrustScoreData]);
 
+  const factorLabel = (factorType: string) =>
+    isTrustFactorType(factorType)
+      ? t(`trust.manager.factors.${factorType}.label`)
+      : factorType;
+
+  const factorDescription = (factorType: string) =>
+    isTrustFactorType(factorType)
+      ? t(`trust.manager.factors.${factorType}.description`)
+      : t('trust.manager.factors.default.description');
+
+  const factorActionText = (factorType: string) =>
+    isTrustFactorType(factorType)
+      ? t(`trust.manager.factors.${factorType}.action`)
+      : t('trust.manager.factors.default.action');
+
+  const getProfileSection = (factorType: string) =>
+    isTrustFactorType(factorType) ? PROFILE_SECTIONS[factorType] : 'personal';
+
+  const handleEditProfile = (section?: string) => {
+    if (section) {
+      router.push(`/profile/edit?section=${section}`);
+    } else {
+      router.push('/profile/edit');
+    }
+  };
+
+  const showFactorDetails = (factorType: string) => {
+    const factor = trustScoreData?.factors.find((f) => f.type === factorType);
+    if (!factor) return;
+
+    const section = getProfileSection(factorType);
+    Alert.alert(
+      factorLabel(factorType),
+      t('trust.manager.factorAlertBody', {
+        description: factorDescription(factorType),
+        score: factor.value,
+        action: factorActionText(factorType),
+      }),
+      [
+        { text: t('trust.manager.cancel'), style: 'cancel' },
+        {
+          text: t('trust.manager.editProfile'),
+          onPress: () => handleEditProfile(section),
+        },
+      ],
+    );
+  };
+
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <Text style={styles.loadingText}>Loading trust score...</Text>
+        <Text style={styles.loadingText}>{t('trust.manager.loading')}</Text>
       </View>
     );
   }
@@ -40,7 +111,7 @@ export function TrustScoreManager() {
   if (error) {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Error loading trust score</Text>
+        <Text style={styles.errorText}>{t('trust.manager.error')}</Text>
       </View>
     );
   }
@@ -48,116 +119,39 @@ export function TrustScoreManager() {
   if (!trustScoreData || trustScoreData.type !== 'personal') {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>No personal trust score data found</Text>
+        <Text style={styles.errorText}>{t('trust.manager.noData')}</Text>
       </View>
     );
   }
 
   const factors = trustScoreData.factors;
 
-  const getFactorLabel = (factorType: string) => {
-    const labels: Record<string, string> = {
-      verification: 'Identity Verification',
-      reviews: 'User Reviews',
-      payment_history: 'Payment History',
-      communication: 'Communication',
-      rental_history: 'Rental History',
-    };
-    return (
-      labels[factorType] || factorType.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
-    );
-  };
-
-  const getFactorDescription = (factorType: string) => {
-    const descriptions: Record<string, string> = {
-      verification: 'Complete identity verification to build trust',
-      reviews: 'Get positive reviews from landlords and roommates',
-      payment_history: 'Maintain a good payment history',
-      communication: 'Respond promptly to messages and requests',
-      rental_history: 'Build a positive rental history',
-    };
-    return descriptions[factorType] || 'Improve this factor to increase your trust score';
-  };
-
-  const getFactorActionText = (factorType: string) => {
-    const actions: Record<string, string> = {
-      verification: 'Add personal information and income details',
-      reviews: 'Add references from previous landlords',
-      payment_history: 'Add rental history with payment records',
-      communication: 'Complete your profile bio and contact info',
-      rental_history: 'Add your previous rental addresses',
-    };
-    return actions[factorType] || 'Complete your profile to improve this factor';
-  };
-
-  const handleEditProfile = (section?: string) => {
-    if (section) {
-      // Navigate to specific section if provided
-      router.push(`/profile/edit?section=${section}`);
-    } else {
-      router.push('/profile/edit');
-    }
-  };
-
-  const getProfileSection = (factorType: string) => {
-    const sections: Record<string, string> = {
-      verification: 'personal',
-      reviews: 'references',
-      payment_history: 'rental-history',
-      communication: 'personal',
-      rental_history: 'rental-history',
-    };
-    return sections[factorType] || 'personal';
-  };
-
-  const showFactorDetails = (factorType: string) => {
-    const factor = factors.find((f) => f.type === factorType);
-    if (!factor) return;
-
-    const section = getProfileSection(factorType);
-    const actionText = getFactorActionText(factorType);
-
-    Alert.alert(
-      getFactorLabel(factorType),
-      `${getFactorDescription(factorType)}\n\nCurrent Score: ${factor.value}/100\n\nTo improve: ${actionText}`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Edit Profile',
-          onPress: () => handleEditProfile(section),
-        },
-      ],
-    );
-  };
-
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Trust Score</Text>
-        <Text style={styles.subtitle}>Build trust with landlords and roommates</Text>
+        <Text style={styles.title}>{t('trust.manager.title')}</Text>
+        <Text style={styles.subtitle}>{t('trust.manager.subtitle')}</Text>
       </View>
 
       <View style={styles.scoreSection}>
         <TrustScore score={trustScoreData.score} size="large" showLabel={true} />
         <Text style={styles.scoreDescription}>
-          Your overall trust score is {trustScoreData.score}/100
+          {t('trust.manager.scoreDescription', { score: trustScoreData.score })}
         </Text>
       </View>
 
       <View style={styles.factorsSection}>
-        <Text style={styles.sectionTitle}>Trust Factors</Text>
-        <Text style={styles.sectionSubtitle}>
-          Improve these factors to increase your trust score
-        </Text>
+        <Text style={styles.sectionTitle}>{t('trust.manager.factorsTitle')}</Text>
+        <Text style={styles.sectionSubtitle}>{t('trust.manager.factorsSubtitle')}</Text>
 
-        {factors.map((factor, index) => (
+        {factors.map((factor) => (
           <TouchableOpacity
-            key={index}
+            key={factor.type}
             style={styles.factorCard}
             onPress={() => showFactorDetails(factor.type)}
           >
             <View style={styles.factorHeader}>
-              <Text style={styles.factorTitle}>{getFactorLabel(factor.type)}</Text>
+              <Text style={styles.factorTitle}>{factorLabel(factor.type)}</Text>
               <Text style={styles.factorScore}>{factor.value}/100</Text>
             </View>
 
@@ -178,33 +172,33 @@ export function TrustScoreManager() {
               />
             </View>
 
-            <Text style={styles.factorDescription}>{getFactorDescription(factor.type)}</Text>
+            <Text style={styles.factorDescription}>{factorDescription(factor.type)}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
       <View style={styles.tipsSection}>
-        <Text style={styles.sectionTitle}>Quick Actions to Improve Score</Text>
+        <Text style={styles.sectionTitle}>{t('trust.manager.quickActionsTitle')}</Text>
 
         <TouchableOpacity style={styles.actionCard} onPress={() => handleEditProfile('personal')}>
           <View style={styles.actionCardHeader}>
             <Ionicons name="person-outline" size={24} color={colors.primaryColor} />
-            <Text style={styles.actionCardTitle}>Complete Personal Info</Text>
+            <Text style={styles.actionCardTitle}>{t('trust.manager.actions.personalInfo.title')}</Text>
             <Ionicons name="chevron-forward" size={20} color={colors.COLOR_BLACK_LIGHT_5} />
           </View>
           <Text style={styles.actionCardText}>
-            Add your occupation, income, and employment details to build trust.
+            {t('trust.manager.actions.personalInfo.description')}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionCard} onPress={() => handleEditProfile('references')}>
           <View style={styles.actionCardHeader}>
             <Ionicons name="people-outline" size={24} color={colors.primaryColor} />
-            <Text style={styles.actionCardTitle}>Add References</Text>
+            <Text style={styles.actionCardTitle}>{t('trust.manager.actions.references.title')}</Text>
             <Ionicons name="chevron-forward" size={20} color={colors.COLOR_BLACK_LIGHT_5} />
           </View>
           <Text style={styles.actionCardText}>
-            Include references from previous landlords and employers.
+            {t('trust.manager.actions.references.description')}
           </Text>
         </TouchableOpacity>
 
@@ -214,17 +208,17 @@ export function TrustScoreManager() {
         >
           <View style={styles.actionCardHeader}>
             <Ionicons name="home-outline" size={24} color={colors.primaryColor} />
-            <Text style={styles.actionCardTitle}>Add Rental History</Text>
+            <Text style={styles.actionCardTitle}>{t('trust.manager.actions.rentalHistory.title')}</Text>
             <Ionicons name="chevron-forward" size={20} color={colors.COLOR_BLACK_LIGHT_5} />
           </View>
           <Text style={styles.actionCardText}>
-            Document your rental history to show your reliability as a tenant.
+            {t('trust.manager.actions.rentalHistory.description')}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.primaryActionButton} onPress={() => handleEditProfile()}>
           <Ionicons name="create-outline" size={20} color={colors.primaryLight} />
-          <Text style={styles.primaryActionButtonText}>Complete Profile</Text>
+          <Text style={styles.primaryActionButtonText}>{t('trust.manager.completeProfile')}</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -362,25 +356,6 @@ const styles = StyleSheet.create({
     color: colors.primaryLight,
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  tipCard: {
-    backgroundColor: colors.primaryLight_1,
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.primaryColor,
-  },
-  tipTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-    marginBottom: 4,
-  },
-  tipText: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_5,
-    lineHeight: 20,
   },
   loadingText: {
     fontSize: 16,

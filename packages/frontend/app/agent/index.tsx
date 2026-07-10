@@ -58,9 +58,9 @@ export default function AgentScreen() {
   // CTA copy + behaviour by state.
   const ctaLabel = useMemo(() => {
     if (!isAuthenticated || !isPartner) {
-      return t('agent.cta.start', 'Start earning');
+      return t('agent.cta.start');
     }
-    return t('agent.cta.share', 'Share your link');
+    return t('agent.cta.share');
   }, [isAuthenticated, isPartner, t]);
 
   const handleHeroCta = useCallback(async () => {
@@ -74,7 +74,7 @@ export default function AgentScreen() {
       joinMutation.mutate(undefined, {
         onError: () => {
           toast.error(
-            t('agent.join.error', 'Could not start earning right now. Please try again.'),
+            t('agent.join.error'),
           );
         },
       });
@@ -85,15 +85,15 @@ export default function AgentScreen() {
     if (link) {
       const outcome = await shareReferralLink({
         link,
-        message: t('agent.referral.shareMessage', 'List your home on Homiio: {{link}}', {
+        message: t('agent.referral.shareMessage', {
           link,
         }),
-        title: t('agent.referral.shareTitle', 'Earn with Homiio'),
+        title: t('agent.referral.shareTitle'),
       });
       if (outcome === 'copied') {
-        toast.success(t('agent.referral.copied', 'Link copied'));
+        toast.success(t('agent.referral.copied'));
       } else if (outcome === 'failed') {
-        toast.error(t('agent.referral.shareFailed', 'Could not share the link'));
+        toast.error(t('agent.referral.shareFailed'));
       }
     }
   }, [isAuthenticated, isPartner, link, joinMutation, t]);
@@ -112,15 +112,12 @@ export default function AgentScreen() {
             `marginTop`. */}
         <View className="gap-6 md:gap-8 pb-20">
           <AgentHero
-            title={t('agent.hero.title', 'Anyone can be a real estate agent.')}
-            subtitle={t(
-              'agent.hero.subtitle',
-              'Bring a home to Homiio. When it rents or sells, you earn.',
-            )}
+            title={t('agent.hero.title')}
+            subtitle={t('agent.hero.subtitle')}
             ctaLabel={ctaLabel}
             onPressCta={handleHeroCta}
             ctaLoading={joinMutation.isPending}
-            trustLine={t('agent.hero.trust', 'No license needed. Work from your phone.')}
+            trustLine={t('agent.hero.trust')}
           />
 
           <AgentHowItWorks />
@@ -146,10 +143,10 @@ export default function AgentScreen() {
           ) : null}
 
           <AgentCtaBanner
-            title={t('agent.banner.title', 'Start today. No license needed.')}
-            subtitle={t('agent.banner.subtitle', 'Turn the homes around you into income.')}
-            ctaLabel={t('agent.banner.cta', 'Become an agent')}
-            trustLine={t('agent.banner.trust', 'No license needed. Work from your phone.')}
+            title={t('agent.banner.title')}
+            subtitle={t('agent.banner.subtitle')}
+            ctaLabel={t('agent.banner.cta')}
+            trustLine={t('agent.banner.trust')}
             onPress={handleHeroCta}
           />
         </View>

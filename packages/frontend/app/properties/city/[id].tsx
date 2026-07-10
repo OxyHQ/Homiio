@@ -60,25 +60,25 @@ export default function CityPropertiesPage() {
   const filterSections: FilterSection[] = useMemo(() => [
     {
       id: 'verified',
-      title: t('Verified Properties'),
+      title: t('properties.city.verifiedProperties'),
       type: 'chips',
       options: [
-        { id: 'true', label: t('Verified Only'), value: 'true' }
+        { id: 'true', label: t('properties.city.verifiedOnly'), value: 'true' }
       ],
       value: filters.verified ? 'true' : undefined
     },
     {
       id: 'ecoFriendly',
-      title: t('Eco-Friendly'),
+      title: t('properties.city.ecoFriendly'),
       type: 'chips',
       options: [
-        { id: 'true', label: t('Eco-Friendly Only'), value: 'true' }
+        { id: 'true', label: t('properties.city.ecoFriendlyOnly'), value: 'true' }
       ],
       value: filters.ecoFriendly ? 'true' : undefined
     },
     {
       id: 'bedrooms',
-      title: t('Bedrooms'),
+      title: t('property.sections.bedrooms'),
       type: 'chips',
       options: [
         { id: '1', label: '1+', value: '1' },
@@ -90,7 +90,7 @@ export default function CityPropertiesPage() {
     },
     {
       id: 'bathrooms',
-      title: t('Bathrooms'),
+      title: t('property.sections.bathrooms'),
       type: 'chips',
       options: [
         { id: '1', label: '1+', value: '1' },
@@ -209,7 +209,7 @@ export default function CityPropertiesPage() {
           <Header
             options={{
               showBackButton: true,
-              title: t('Loading...'),
+              title: t('app.loading'),
               titlePosition: 'center',
             }}
           />
@@ -217,7 +217,7 @@ export default function CityPropertiesPage() {
         <View style={{ paddingTop: headerHeight, flex: 1 }}>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primaryColor} />
-            <Text style={styles.loadingText}>{t('Loading properties...')}</Text>
+            <Text style={styles.loadingText}>{t('properties.city.loadingProperties')}</Text>
           </View>
         </View>
       </View>
@@ -234,7 +234,7 @@ export default function CityPropertiesPage() {
           <Header
             options={{
               showBackButton: true,
-              title: t('Error'),
+              title: t('common.error'),
               titlePosition: 'center',
             }}
           />
@@ -242,8 +242,8 @@ export default function CityPropertiesPage() {
         <View style={{ paddingTop: headerHeight, flex: 1 }}>
           <EmptyState
             icon="alert-circle"
-            title={error || t('City not found')}
-            actionText={t('Go Back')}
+            title={error || t('properties.city.notFound')}
+            actionText={t('common.goBack')}
             actionIcon="arrow-back"
             onAction={() => router.back()}
           />
@@ -306,12 +306,12 @@ export default function CityPropertiesPage() {
         <View style={styles.statsSection}>
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>{city.propertiesCount}</Text>
-            <Text style={styles.statLabel}>{t('Properties')}</Text>
+            <Text style={styles.statLabel}>{t('properties.city.properties')}</Text>
           </View>
           {typeof city.population === 'number' && city.population > 0 ? (
             <View style={styles.statCard}>
               <Text style={styles.statNumber}>{city.population.toLocaleString()}</Text>
-              <Text style={styles.statLabel}>{t('Population')}</Text>
+              <Text style={styles.statLabel}>{t('properties.city.population')}</Text>
             </View>
           ) : null}
         </View>
@@ -320,9 +320,9 @@ export default function CityPropertiesPage() {
         <View style={styles.propertiesSection}>
           <View style={styles.propertiesHeader}>
             <View>
-              <Text style={styles.sectionTitle}>{t('Available Properties')}</Text>
+              <Text style={styles.sectionTitle}>{t('properties.city.availableProperties')}</Text>
               <Text style={styles.propertiesSubtitle}>
-                {getFilteredAndSortedProperties().length} {t('properties found')}
+                {getFilteredAndSortedProperties().length} {t('properties.city.propertiesFound')}
               </Text>
             </View>
           </View>
@@ -344,12 +344,12 @@ export default function CityPropertiesPage() {
                   sections={[
                     {
                       id: 'sort',
-                      title: t('Sort By'),
+                      title: t('properties.city.sortBy'),
                       type: 'chips',
                       options: [
-                        { id: 'newest', label: t('Newest First'), value: 'newest' },
-                        { id: 'priceAsc', label: t('Price: Low to High'), value: 'priceAsc' },
-                        { id: 'priceDesc', label: t('Price: High to Low'), value: 'priceDesc' },
+                        { id: 'newest', label: t('properties.city.sortNewest'), value: 'newest' },
+                        { id: 'priceAsc', label: t('properties.city.sortPriceAsc'), value: 'priceAsc' },
+                        { id: 'priceDesc', label: t('properties.city.sortPriceDesc'), value: 'priceDesc' },
                       ],
                       value: filters.sortBy
                     }
@@ -375,9 +375,9 @@ export default function CityPropertiesPage() {
             ListEmptyComponent={
               <EmptyState
                 icon="home-outline"
-                title={t('No properties found')}
-                description={t('Try adjusting your filters or check back later')}
-                actionText={t('Clear Filters')}
+                title={t('properties.city.noPropertiesFound')}
+                description={t('properties.city.tryAdjustFilters')}
+                actionText={t('properties.city.clearFilters')}
                 actionIcon="refresh"
                 onAction={() => {
                   setFilters(prev => ({

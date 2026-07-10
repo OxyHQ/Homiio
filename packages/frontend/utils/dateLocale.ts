@@ -39,6 +39,22 @@ function resolveLocale(language: string | undefined): Locale {
   }
 }
 
+/** BCP-47 tag for `Date#toLocaleDateString` / `Intl` from an i18next language code. */
+export function getDateLocale(language?: string): string {
+  const tag = (language ?? i18next.language ?? 'en-US').toLowerCase();
+  const base = tag.split('-')[0];
+  switch (base) {
+    case 'es':
+      return 'es-ES';
+    case 'ca':
+      return 'ca-ES';
+    case 'it':
+      return 'it-IT';
+    default:
+      return 'en-US';
+  }
+}
+
 /** The `date-fns` locale matching the active i18next language (English fallback). */
 export function getDateFnsLocale(): Locale {
   return resolveLocale(i18next.language);

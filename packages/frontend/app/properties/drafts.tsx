@@ -232,11 +232,11 @@ export default function PropertyDraftsScreen() {
     },
     onSuccess: (next) => {
       queryClient.setQueryData(DRAFTS_QUERY_KEY, next);
-      toast.success('Draft deleted successfully');
+      toast.success(t('property.drafts.toastDeleted'));
     },
     onError: (error: unknown) => {
       logger.error('Error deleting draft:', error);
-      toast.error('Failed to delete draft');
+      toast.error(t('property.drafts.toastDeleteFailed'));
     },
   });
 
@@ -247,7 +247,7 @@ export default function PropertyDraftsScreen() {
         router.push('/properties/create');
       } catch (error: unknown) {
         logger.error('Error setting current draft:', error);
-        toast.error('Failed to load draft');
+        toast.error(t('property.drafts.toastLoadFailed'));
       }
     },
     [router],
@@ -271,9 +271,9 @@ export default function PropertyDraftsScreen() {
       return (
         <EmptyState
           icon="folder-open-outline"
-          title="No drafts found"
-          description="You don't have any saved property drafts yet. Start creating a property to save drafts automatically."
-          actionText="Create new property"
+          title={t('property.drafts.emptyTitle')}
+          description={t('property.drafts.emptyDescription')}
+          actionText={t('property.drafts.createFirst')}
           actionIcon="add"
           onAction={() => router.push('/properties/create')}
         />
@@ -297,7 +297,7 @@ export default function PropertyDraftsScreen() {
           icon={<Ionicons name="add-circle" size={20} color={colors.primaryColor} />}
           style={styles.createNewButton}
         >
-          Create new property
+          {t('property.drafts.createFirst')}
         </Button>
       </View>
     );
@@ -306,7 +306,7 @@ export default function PropertyDraftsScreen() {
   return (
     <View style={styles.container}>
       <PropertyListHeader
-        title="Drafts"
+        title={t('property.drafts.title')}
         subtitle={drafts.length > 0 ? `${drafts.length} saved` : undefined}
       />
       <ScrollView
@@ -318,8 +318,8 @@ export default function PropertyDraftsScreen() {
       </ScrollView>
       <ConfirmDialog
         visible={deleteId !== null}
-        title="Delete draft"
-        message="Are you sure you want to delete this draft? This action cannot be undone."
+        title={t('property.drafts.deleteTitle')}
+        message={t('property.drafts.deleteMessage')}
         confirmLabel={t('common.delete')}
         cancelLabel={t('common.cancel')}
         confirmDestructive

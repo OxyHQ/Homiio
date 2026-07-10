@@ -33,9 +33,9 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, onOpen, t })
         <>
             <View style={styles.photoGalleryContainer}>
                 <View style={styles.galleryHeader}>
-                    <BloomText style={styles.sectionTitle}>{t('Photo Gallery')}</BloomText>
+                    <BloomText style={styles.sectionTitle}>{t('property.sections.photoGallery')}</BloomText>
                     <TouchableOpacity style={styles.viewAllButton} onPress={() => handleImagePress(0)}>
-                        <BloomText style={styles.viewAllButtonText}>{t('View All')}</BloomText>
+                        <BloomText style={styles.viewAllButtonText}>{t('property.sections.viewAll')}</BloomText>
                         <Ionicons name="chevron-forward" size={16} color={colors.primaryColor} />
                     </TouchableOpacity>
                 </View>

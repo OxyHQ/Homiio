@@ -45,7 +45,7 @@ const ReviewItem: React.FC<{ review: ExchangeReview }> = ({ review }) => {
         </View>
         <View style={styles.reviewHeaderText}>
           <BloomText style={styles.author}>
-            {t('listing.exchange.review.guestAuthor', 'Exchange guest')}
+            {t('listing.exchange.review.guestAuthor')}
           </BloomText>
           {date ? <BloomText style={styles.reviewDate}>{date}</BloomText> : null}
         </View>
@@ -76,12 +76,12 @@ export const ProfileExchangeReviews: React.FC<Props> = ({ profileId }) => {
     <View style={styles.container}>
       <View style={styles.summary}>
         <BloomText style={styles.heading}>
-          {t('listing.exchange.review.profileHeading', 'Exchange reviews')}
+          {t('listing.exchange.review.profileHeading')}
         </BloomText>
         <View style={styles.summaryRow}>
           <Stars rating={average} size={16} />
           <BloomText style={styles.summaryText}>
-            {t('listing.exchange.review.summary', '{{average}} · {{count}} reviews', {
+            {t('listing.exchange.review.summary', {
               average: average.toFixed(RATING_FRACTION_DIGITS),
               count: reviewCount,
             })}

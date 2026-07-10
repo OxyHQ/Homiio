@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { profileEditStyles as styles } from './styles';
 import type {
   BusinessBusinessTypeValue,
@@ -24,9 +25,6 @@ const BUSINESS_EMPLOYEE_COUNTS = ['1-5', '6-10', '11-25', '26+'] as const;
 
 const PROFILE_VISIBILITIES = ['public', 'private', 'contacts_only'] as const;
 
-const titleizeUnderscore = (value: string) =>
-  value.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase());
-
 interface BusinessProfileSectionsProps {
   activeSection: string;
   businessInfo: BusinessInfoForm;
@@ -42,14 +40,16 @@ export function BusinessProfileSections({
   updateBusinessInfo,
   updateSettings,
 }: BusinessProfileSectionsProps) {
+  const { t } = useTranslation();
+
   switch (activeSection) {
     case 'business':
       return (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Business Information</Text>
+          <Text style={styles.sectionTitle}>{t('profile.edit.sections.businessInformation')}</Text>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Business Type *</Text>
+            <Text style={styles.label}>{t('profile.edit.labels.businessType')}</Text>
             <View style={styles.checkboxGroup}>
               {BUSINESS_TYPES.map((type) => (
                 <TouchableOpacity
@@ -68,7 +68,7 @@ export function BusinessProfileSections({
                       businessInfo.businessType === type && styles.checkboxTextSelected,
                     ]}
                   >
-                    {titleizeUnderscore(type)}
+                    {t(`profile.edit.options.businessType.${type}`)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -76,22 +76,22 @@ export function BusinessProfileSections({
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Legal Company Name *</Text>
+            <Text style={styles.label}>{t('profile.edit.labels.legalCompanyName')}</Text>
             <TextInput
               style={styles.input}
               value={businessInfo.legalCompanyName}
               onChangeText={(text) => updateBusinessInfo({ legalCompanyName: text })}
-              placeholder="Enter your legal company name"
+              placeholder={t('profile.edit.placeholders.legalCompanyName')}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Description</Text>
+            <Text style={styles.label}>{t('profile.edit.labels.description')}</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
               value={businessInfo.description}
               onChangeText={(text) => updateBusinessInfo({ description: text })}
-              placeholder="Describe your business..."
+              placeholder={t('profile.edit.placeholders.description')}
               multiline
               numberOfLines={4}
             />
@@ -99,7 +99,7 @@ export function BusinessProfileSections({
 
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>License Number</Text>
+              <Text style={styles.label}>{t('profile.edit.labels.licenseNumber')}</Text>
               <TextInput
                 style={styles.input}
                 value={businessInfo.businessDetails.licenseNumber}
@@ -108,11 +108,11 @@ export function BusinessProfileSections({
                     businessDetails: { ...businessInfo.businessDetails, licenseNumber: text },
                   })
                 }
-                placeholder="Enter license number"
+                placeholder={t('profile.edit.placeholders.licenseNumber')}
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Tax ID</Text>
+              <Text style={styles.label}>{t('profile.edit.labels.taxId')}</Text>
               <TextInput
                 style={styles.input}
                 value={businessInfo.businessDetails.taxId}
@@ -121,14 +121,14 @@ export function BusinessProfileSections({
                     businessDetails: { ...businessInfo.businessDetails, taxId: text },
                   })
                 }
-                placeholder="Enter tax ID"
+                placeholder={t('profile.edit.placeholders.taxId')}
               />
             </View>
           </View>
 
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Year Established</Text>
+              <Text style={styles.label}>{t('profile.edit.labels.yearEstablished')}</Text>
               <TextInput
                 style={styles.input}
                 value={businessInfo.businessDetails.yearEstablished}
@@ -137,12 +137,12 @@ export function BusinessProfileSections({
                     businessDetails: { ...businessInfo.businessDetails, yearEstablished: text },
                   })
                 }
-                placeholder="e.g., 2020"
+                placeholder={t('profile.edit.placeholders.yearEstablished')}
                 keyboardType="numeric"
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Number of Employees</Text>
+              <Text style={styles.label}>{t('profile.edit.labels.employeeCount')}</Text>
               <View style={styles.pickerContainer}>
                 {BUSINESS_EMPLOYEE_COUNTS.map((count) => (
                   <TouchableOpacity
@@ -177,7 +177,7 @@ export function BusinessProfileSections({
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Industry</Text>
+            <Text style={styles.label}>{t('profile.edit.labels.industry')}</Text>
             <TextInput
               style={styles.input}
               value={businessInfo.businessDetails.industry}
@@ -186,7 +186,7 @@ export function BusinessProfileSections({
                   businessDetails: { ...businessInfo.businessDetails, industry: text },
                 })
               }
-              placeholder="Enter industry"
+              placeholder={t('profile.edit.placeholders.industry')}
             />
           </View>
         </View>
@@ -195,13 +195,11 @@ export function BusinessProfileSections({
     case 'verification':
       return (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Business Verification</Text>
-          <Text style={styles.sectionSubtitle}>
-            Complete these verifications to build trust with clients
-          </Text>
+          <Text style={styles.sectionTitle}>{t('profile.edit.sections.businessVerification')}</Text>
+          <Text style={styles.sectionSubtitle}>{t('profile.edit.subtitles.businessVerification')}</Text>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Verification Status</Text>
+            <Text style={styles.label}>{t('profile.edit.labels.verificationStatus')}</Text>
 
             <TouchableOpacity
               style={[
@@ -218,9 +216,11 @@ export function BusinessProfileSections({
               }
             >
               <View style={styles.verificationItemContent}>
-                <Text style={styles.verificationItemTitle}>Business License</Text>
+                <Text style={styles.verificationItemTitle}>
+                  {t('profile.edit.verification.businessLicenseTitle')}
+                </Text>
                 <Text style={styles.verificationItemDescription}>
-                  Upload your business license for verification
+                  {t('profile.edit.verification.businessLicenseDescription')}
                 </Text>
               </View>
               <View
@@ -250,9 +250,11 @@ export function BusinessProfileSections({
               }
             >
               <View style={styles.verificationItemContent}>
-                <Text style={styles.verificationItemTitle}>Insurance</Text>
+                <Text style={styles.verificationItemTitle}>
+                  {t('profile.edit.verification.insuranceTitle')}
+                </Text>
                 <Text style={styles.verificationItemDescription}>
-                  Provide proof of business insurance
+                  {t('profile.edit.verification.insuranceDescription')}
                 </Text>
               </View>
               <View
@@ -282,9 +284,11 @@ export function BusinessProfileSections({
               }
             >
               <View style={styles.verificationItemContent}>
-                <Text style={styles.verificationItemTitle}>Background Check</Text>
+                <Text style={styles.verificationItemTitle}>
+                  {t('profile.edit.verification.backgroundCheckTitle')}
+                </Text>
                 <Text style={styles.verificationItemDescription}>
-                  Complete background check for all team members
+                  {t('profile.edit.verification.backgroundCheckDescription')}
                 </Text>
               </View>
               <View
@@ -305,11 +309,11 @@ export function BusinessProfileSections({
     case 'settings':
       return (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Business Settings</Text>
-          <Text style={styles.sectionSubtitle}>Configure your business profile settings</Text>
+          <Text style={styles.sectionTitle}>{t('profile.edit.sections.businessSettings')}</Text>
+          <Text style={styles.sectionSubtitle}>{t('profile.edit.subtitles.businessSettings')}</Text>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Profile Visibility</Text>
+            <Text style={styles.label}>{t('profile.edit.labels.profileVisibility')}</Text>
             <View style={styles.pickerContainer}>
               {PROFILE_VISIBILITIES.map((visibility) => (
                 <TouchableOpacity
@@ -335,7 +339,7 @@ export function BusinessProfileSections({
                         styles.pickerOptionTextSelected,
                     ]}
                   >
-                    {visibility.replace('_', ' ').toUpperCase()}
+                    {t(`profile.edit.options.profileVisibility.${visibility}`)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -343,7 +347,7 @@ export function BusinessProfileSections({
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Notifications</Text>
+            <Text style={styles.label}>{t('profile.edit.labels.notifications')}</Text>
             <View style={styles.checkboxGroup}>
               <TouchableOpacity
                 style={[styles.checkbox, settings.notifications.email && styles.checkboxSelected]}
@@ -362,7 +366,7 @@ export function BusinessProfileSections({
                     settings.notifications.email && styles.checkboxTextSelected,
                   ]}
                 >
-                  Email Notifications
+                  {t('profile.edit.toggles.emailNotifications')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -382,7 +386,7 @@ export function BusinessProfileSections({
                     settings.notifications.push && styles.checkboxTextSelected,
                   ]}
                 >
-                  Push Notifications
+                  {t('profile.edit.toggles.pushNotifications')}
                 </Text>
               </TouchableOpacity>
             </View>

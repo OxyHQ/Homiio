@@ -174,20 +174,19 @@ export function resolvePrimaryOffering(
 
 /**
  * A short, display-ready summary of a single offering, used by the "Also
- * available" line. `i18nKey`/`fallback` resolve via i18n at render time so this
+ * available" line. `i18nKey` resolves via i18n at render time so this
  * pure helper stays translation-agnostic.
  */
 export interface OfferingSummary {
   offering: OfferingType;
   i18nKey: string;
-  fallback: string;
 }
 
-const OFFERING_SUMMARY_META: Record<OfferingType, { i18nKey: string; fallback: string }> = {
-  [OfferingType.LONG_TERM_RENT]: { i18nKey: 'listing.offering.summary.longTerm', fallback: 'Monthly' },
-  [OfferingType.SHORT_TERM_RENT]: { i18nKey: 'listing.offering.summary.nightly', fallback: 'By night' },
-  [OfferingType.SALE]: { i18nKey: 'listing.offering.summary.sale', fallback: 'For sale' },
-  [OfferingType.EXCHANGE]: { i18nKey: 'listing.offering.summary.exchange', fallback: 'Exchange' },
+const OFFERING_SUMMARY_META: Record<OfferingType, { i18nKey: string }> = {
+  [OfferingType.LONG_TERM_RENT]: { i18nKey: 'listing.offering.summary.longTerm' },
+  [OfferingType.SHORT_TERM_RENT]: { i18nKey: 'listing.offering.summary.nightly' },
+  [OfferingType.SALE]: { i18nKey: 'listing.offering.summary.sale' },
+  [OfferingType.EXCHANGE]: { i18nKey: 'listing.offering.summary.exchange' },
 };
 
 /** Stable display order for the "Also available" summaries. */
@@ -215,7 +214,6 @@ export function resolveOfferingSummaries(
   ).map((offering) => ({
     offering,
     i18nKey: OFFERING_SUMMARY_META[offering].i18nKey,
-    fallback: OFFERING_SUMMARY_META[offering].fallback,
   }));
 }
 

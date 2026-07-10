@@ -80,8 +80,8 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
       : styles.barNative;
 
   const ctaLabel = rentalMode === 'vacation'
-    ? t('property.cta.reserve', 'Reserve') || 'Reserve'
-    : t('property.cta.apply', 'Apply') || 'Apply';
+    ? t('property.cta.reserve')
+    : t('property.cta.apply');
 
   return (
     <View style={[styles.bar, containerStyle, { paddingTop: insets.top }]}>
@@ -92,7 +92,7 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
           onPressOut={() => setBackPressed(false)}
           style={[styles.iconButton, backPressed && styles.iconButtonPressed]}
           accessibilityRole="button"
-          accessibilityLabel={t('goBack', 'Go back') || 'Go back'}
+          accessibilityLabel={t('goBack')}
         >
           <Ionicons name="arrow-back" size={22} color={colors.COLOR_BLACK} />
         </Pressable>
@@ -111,7 +111,7 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
             onPressOut={() => setSharePressed(false)}
             style={[styles.iconButton, sharePressed && styles.iconButtonPressed]}
             accessibilityRole="button"
-            accessibilityLabel={t('common.share', 'Share') || 'Share'}
+            accessibilityLabel={t('common.share')}
           >
             <Ionicons name="share-outline" size={20} color={colors.COLOR_BLACK} />
           </Pressable>

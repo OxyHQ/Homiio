@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import i18next from 'i18next';
 import { useProfileStore } from '@/store/profileStore';
 import { Profile, CreateProfileData } from '@/services/profileService';
 import { useOxy } from '@oxyhq/services';
@@ -26,7 +27,7 @@ export const useProfile = () => {
       setAllProfiles(allProfiles || []);
     } catch (error: any) {
       setError(error.message || 'Failed to load profiles');
-      toast.error('Failed to load profiles');
+      toast.error(i18next.t('profile.toast.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -47,11 +48,11 @@ export const useProfile = () => {
           setPrimaryProfile(newProfile);
         }
 
-        toast.success('Profile created successfully');
+        toast.success(i18next.t('profile.toast.createSuccess'));
         return newProfile;
       } catch (error: any) {
         setError(error.message || 'Failed to create profile');
-        toast.error('Failed to create profile');
+        toast.error(i18next.t('profile.toast.createFailed'));
         throw error;
       } finally {
         setLoading(false);
@@ -86,11 +87,11 @@ export const useProfile = () => {
           setPrimaryProfile(updatedProfile);
         }
 
-        toast.success('Profile updated successfully');
+        toast.success(i18next.t('profile.toast.updateSuccess'));
         return updatedProfile;
       } catch (error: any) {
         setError(error.message || 'Failed to update profile');
-        toast.error('Failed to update profile');
+        toast.error(i18next.t('profile.toast.updateFailed'));
         throw error;
       } finally {
         setLoading(false);
@@ -125,10 +126,10 @@ export const useProfile = () => {
           setPrimaryProfile(null);
         }
 
-        toast.success('Profile deleted successfully');
+        toast.success(i18next.t('profile.toast.deleteSuccess'));
       } catch (error: any) {
         setError(error.message || 'Failed to delete profile');
-        toast.error('Failed to delete profile');
+        toast.error(i18next.t('profile.toast.deleteFailed'));
         throw error;
       } finally {
         setLoading(false);
@@ -165,11 +166,11 @@ export const useProfile = () => {
         setAllProfiles(updatedProfiles);
         setPrimaryProfile(activatedProfile);
 
-        toast.success('Profile activated successfully');
+        toast.success(i18next.t('profile.toast.activateSuccess'));
         return activatedProfile;
       } catch (error: any) {
         setError(error.message || 'Failed to activate profile');
-        toast.error('Failed to activate profile');
+        toast.error(i18next.t('profile.toast.activateFailed'));
         throw error;
       } finally {
         setLoading(false);

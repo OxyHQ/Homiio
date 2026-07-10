@@ -52,8 +52,8 @@ export const BasicInfoSection: React.FC<Props> = ({
   const description = property?.description;
 
   const rentLabel = isVacation
-    ? t('Nightly Rent', 'Nightly Rent') || 'Nightly Rent'
-    : t('Monthly Rent', 'Monthly Rent') || 'Monthly Rent';
+    ? t('property.sections.nightlyRent')
+    : t('property.sections.monthlyRent');
 
   return (
     <View style={styles.container}>
@@ -75,7 +75,7 @@ export const BasicInfoSection: React.FC<Props> = ({
               color={colors.COLOR_BLACK_LIGHT_3}
             />
             <BloomText style={styles.sourceBadgeText}>
-              {`${t('Sourced from', 'Sourced from') || 'Sourced from'} ${property.source.charAt(0).toUpperCase()}${property.source.slice(1)}`}
+              {`${t('property.sections.sourcedFrom')} ${property.source.charAt(0).toUpperCase()}${property.source.slice(1)}`}
             </BloomText>
           </View>
         </View>
@@ -84,8 +84,7 @@ export const BasicInfoSection: React.FC<Props> = ({
       {description && description.trim() !== '' ? (
         <View style={styles.descriptionBlock}>
           <BloomText style={styles.aboutTitle}>
-            {t('property.about.title', 'About this property') ||
-              'About this property'}
+            {t('property.about.title')}
           </BloomText>
           <TruncatedDescription text={description} />
         </View>
@@ -97,18 +96,17 @@ export const BasicInfoSection: React.FC<Props> = ({
             <Ionicons name="calendar" size={20} color={colors.primaryColor} />
           </View>
           <BloomText style={styles.viewingBannerText}>
-            {t('viewings.banner.hasViewing', 'You have a viewing scheduled') ||
-              'You have a viewing scheduled'}
+            {t('viewings.banner.hasViewing')}
           </BloomText>
           <Button
             onPress={onViewingsPress}
             variant="primary"
             size="small"
             accessibilityLabel={
-              t('viewings.banner.viewDetails', 'View details') || 'View details'
+              t('viewings.banner.viewDetails')
             }
           >
-            {t('viewings.banner.viewDetails', 'View details') || 'View details'}
+            {t('viewings.banner.viewDetails')}
           </Button>
         </View>
       ) : null}

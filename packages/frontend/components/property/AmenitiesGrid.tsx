@@ -60,11 +60,8 @@ function useAmenityLabel(): (entry: ResolvedAmenity) => string {
   const { t } = useTranslation();
   return useCallback(
     ({ id, amenity }: ResolvedAmenity): string => {
-      if (amenity?.nameKey) {
-        const translated = t(amenity.nameKey, amenity.name);
-        return translated || amenity.name || id;
-      }
-      return amenity?.name ?? id;
+      if (!amenity?.nameKey) return id;
+      return t(amenity.nameKey);
     },
     [t],
   );
@@ -113,14 +110,10 @@ const AmenitiesSheet: React.FC<AmenitiesSheetProps> = ({ ids, maxScrollHeight })
   const resolveGroupTitle = useCallback(
     (group: AmenityGroup): string => {
       if (group.categoryId === UNCATEGORIZED_AMENITY_ID || !group.category) {
-        return t('amenities.categories.other', 'More');
+        return t('amenities.categories.other');
       }
-      const { nameKey, name } = group.category;
-      if (nameKey) {
-        const translated = t(nameKey, name);
-        return translated || name;
-      }
-      return name;
+      const { nameKey } = group.category;
+      return nameKey ? t(nameKey) : group.categoryId;
     },
     [t],
   );
@@ -128,7 +121,7 @@ const AmenitiesSheet: React.FC<AmenitiesSheetProps> = ({ ids, maxScrollHeight })
   return (
     <View style={styles.sheet}>
       <View style={styles.sheetHeader}>
-        <SectionHeader title={t('property.amenities.title', 'What this place offers')} />
+        <SectionHeader title={t('property.amenities.title')} />
       </View>
       <ScrollView
         style={[styles.sheetScroll, { maxHeight: maxScrollHeight }]}
@@ -191,7 +184,7 @@ export const AmenitiesGrid: React.FC<AmenitiesGridProps> = ({
   const showAllLabel = t('property.amenities.showAll', { count: ids.length });
 
   return (
-    <Section title={t('property.amenities.title', 'What this place offers')}>
+    <Section title={t('property.amenities.title')}>
       <DetailIconGrid>
         {previewEntries.map((entry, idx) => (
           <DetailIconCell key={`${entry.id}-${idx}`}>

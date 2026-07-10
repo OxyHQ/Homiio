@@ -27,6 +27,7 @@ import { Button } from '@oxyhq/bloom/button';
 import { Loading } from '@oxyhq/bloom/loading';
 import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
 import { useOxy } from '@oxyhq/services';
+import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
@@ -45,11 +46,11 @@ import { colors } from '@/styles/colors';
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 type Tab = 'discover' | 'requests' | 'relationships' | 'rooms';
 
-const TABS: { id: Tab; label: string; icon: IoniconName }[] = [
-  { id: 'discover', label: 'Discover', icon: 'search-outline' },
-  { id: 'requests', label: 'Requests', icon: 'mail-outline' },
-  { id: 'relationships', label: 'Matches', icon: 'people-circle-outline' },
-  { id: 'rooms', label: 'Rooms', icon: 'bed-outline' },
+const TAB_IDS: { id: Tab; icon: IoniconName; labelKey: string }[] = [
+  { id: 'discover', labelKey: 'roommates.tabs.discover', icon: 'search-outline' },
+  { id: 'requests', labelKey: 'roommates.tabs.requests', icon: 'mail-outline' },
+  { id: 'relationships', labelKey: 'roommates.tabs.matches', icon: 'people-circle-outline' },
+  { id: 'rooms', labelKey: 'roommates.tabs.rooms', icon: 'bed-outline' },
 ];
 
 const TabButton: React.FC<{
@@ -86,13 +87,14 @@ const TabButton: React.FC<{
 const TabBar: React.FC<{
   activeTab: Tab;
   onChange: (tab: Tab) => void;
-}> = ({ activeTab, onChange }) => (
+  tabs: { id: Tab; label: string; icon: IoniconName }[];
+}> = ({ activeTab, onChange, tabs }) => (
   <ScrollView
     horizontal
     showsHorizontalScrollIndicator={false}
     contentContainerStyle={styles.tabBarContent}
   >
-    {TABS.map((tab) => (
+    {tabs.map((tab) => (
       <TabButton
         key={tab.id}
         tab={tab}
@@ -104,6 +106,7 @@ const TabBar: React.FC<{
 );
 
 export default function RoommatesPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { oxyServices, activeSessionId } = useOxy();
@@ -207,6 +210,23 @@ export default function RoommatesPage() {
     }
   }, [activeTab, fetchProfiles, fetchRequests, fetchRelationships]);
 
+  const tabs = TAB_IDS.map((entry) => ({
+    id: entry.id,
+    icon: entry.icon,
+    label: t(entry.labelKey),
+  }));
+
+  const personalProfileEmpty = (
+    <EmptyState
+      icon="person-outline"
+      title={t('roommates.screen.personalProfileRequired')}
+      description={t('roommates.screen.personalProfileDescription')}
+      actionText={t('roommates.screen.switchToPersonal')}
+      actionIcon="person-circle"
+      onAction={() => router.push('/profile')}
+    />
+  );
+
   const handleToggleMatching = useCallback(async () => {
     if (!oxyServices || !activeSessionId) return;
     if (isToggling) return;
@@ -226,12 +246,14 @@ export default function RoommatesPage() {
         fetchProfiles();
       }
       Alert.alert(
-        'Success',
+        t('roommates.alert.successTitle'),
         result.message ||
-          `Roommate matching ${result.enabled ? 'enabled' : 'disabled'}`,
+          (result.enabled
+            ? t('roommates.screen.matchingEnabled')
+            : t('roommates.screen.matchingDisabled')),
       );
     } catch {
-      Alert.alert('Error', 'Failed to toggle roommate matching');
+      Alert.alert(t('roommates.alert.errorTitle'), t('roommates.alert.toggleFailed'));
     } finally {
       setIsToggling(false);
     }
@@ -242,6 +264,7 @@ export default function RoommatesPage() {
     hasRoommateMatching,
     queryClient,
     fetchProfiles,
+    t,
   ]);
 
   const handleViewProfile = (profileId: string) => {
@@ -281,16 +304,7 @@ export default function RoommatesPage() {
 
   const renderDiscoverTab = () => {
     if (!isPersonalProfile || !hasPersonalProfile) {
-      return (
-        <EmptyState
-          icon="person-outline"
-          title="Personal profile required"
-          description="Roommate matching is only available for personal profiles. Switch to your personal profile to use this feature."
-          actionText="Switch to personal profile"
-          actionIcon="person-circle"
-          onAction={() => router.push('/profile')}
-        />
-      );
+      return personalProfileEmpty;
     }
 
     if (isLoading) {
@@ -304,7 +318,7 @@ export default function RoommatesPage() {
     if (error && profiles.length === 0) {
       return (
         <ErrorState
-          title="Couldn't load roommates"
+          title={t('roommates.screen.loadError')}
           description={error}
           onRetry={fetchProfiles}
         />
@@ -315,9 +329,9 @@ export default function RoommatesPage() {
       return (
         <EmptyState
           icon="people-outline"
-          title="Enable roommate matching"
-          description="Turn on roommate matching to discover potential roommates based on your preferences."
-          actionText={isToggling ? 'Enabling…' : 'Enable matching'}
+          title={t('roommates.screen.enableMatchingTitle')}
+          description={t('roommates.screen.enableMatchingDescription')}
+          actionText={isToggling ? t('roommates.screen.enabling') : t('roommates.screen.enableMatching')}
           actionIcon="checkmark-circle"
           onAction={handleToggleMatching}
         />
@@ -328,9 +342,9 @@ export default function RoommatesPage() {
       return (
         <EmptyState
           icon="people-outline"
-          title="No roommates found"
-          description="We couldn't find anyone matching your preferences. Try adjusting your settings."
-          actionText="Update preferences"
+          title={t('roommates.screen.emptyDiscoverTitle')}
+          description={t('roommates.screen.emptyDiscoverDescription')}
+          actionText={t('roommates.screen.updatePreferences')}
           actionIcon="settings"
           onAction={() => router.push('/roommates/preferences')}
         />
@@ -358,16 +372,7 @@ export default function RoommatesPage() {
 
   const renderRequestsTab = () => {
     if (!isPersonalProfile || !hasPersonalProfile) {
-      return (
-        <EmptyState
-          icon="person-outline"
-          title="Personal profile required"
-          description="Roommate matching is only available for personal profiles. Switch to your personal profile to use this feature."
-          actionText="Switch to personal profile"
-          actionIcon="person-circle"
-          onAction={() => router.push('/profile')}
-        />
-      );
+      return personalProfileEmpty;
     }
 
     if (isLoading) {
@@ -381,7 +386,7 @@ export default function RoommatesPage() {
     if (error && requests.sent.length === 0 && requests.received.length === 0) {
       return (
         <ErrorState
-          title="Couldn't load requests"
+          title={t('roommates.screen.loadRequestsError')}
           description={error}
           onRetry={fetchRequests}
         />
@@ -392,9 +397,9 @@ export default function RoommatesPage() {
       return (
         <EmptyState
           icon="mail-outline"
-          title="No requests yet"
-          description="When you send or receive roommate requests, they'll appear here."
-          actionText="Discover roommates"
+          title={t('roommates.screen.emptyRequestsTitle')}
+          description={t('roommates.screen.emptyRequestsDescription')}
+          actionText={t('roommates.screen.discoverRoommates')}
           actionIcon="search"
           onAction={() => setActiveTab('discover')}
         />
@@ -432,16 +437,7 @@ export default function RoommatesPage() {
 
   const renderRelationshipsTab = () => {
     if (!isPersonalProfile || !hasPersonalProfile) {
-      return (
-        <EmptyState
-          icon="person-outline"
-          title="Personal profile required"
-          description="Roommate matching is only available for personal profiles. Switch to your personal profile to use this feature."
-          actionText="Switch to personal profile"
-          actionIcon="person-circle"
-          onAction={() => router.push('/profile')}
-        />
-      );
+      return personalProfileEmpty;
     }
 
     if (isLoading) {
@@ -455,7 +451,7 @@ export default function RoommatesPage() {
     if (error && relationships.length === 0) {
       return (
         <ErrorState
-          title="Couldn't load relationships"
+          title={t('roommates.screen.loadRelationshipsError')}
           description={error}
           onRetry={fetchRelationships}
         />
@@ -466,9 +462,9 @@ export default function RoommatesPage() {
       return (
         <EmptyState
           icon="people-circle-outline"
-          title="No active relationships"
-          description="When you accept roommate requests, your relationships will appear here."
-          actionText="Discover roommates"
+          title={t('roommates.screen.emptyRelationshipsTitle')}
+          description={t('roommates.screen.emptyRelationshipsDescription')}
+          actionText={t('roommates.screen.discoverRoommates')}
           actionIcon="search"
           onAction={() => setActiveTab('discover')}
         />
@@ -499,9 +495,9 @@ export default function RoommatesPage() {
       return (
         <EmptyState
           icon="person-outline"
-          title="Personal profile required"
-          description="Room search is only available for personal profiles. Switch to your personal profile to use this feature."
-          actionText="Switch to personal profile"
+          title={t('roommates.screen.personalProfileRequired')}
+          description={t('roommates.screen.roomSearchPersonalOnly')}
+          actionText={t('roommates.screen.switchToPersonal')}
           actionIcon="person-circle"
           onAction={() => router.push('/profile')}
         />
@@ -535,8 +531,8 @@ export default function RoommatesPage() {
       <SafeAreaView edges={['top']} style={styles.headerWrap}>
         <View style={styles.headerInner}>
           <View style={styles.titleBlock}>
-            <SectionEyebrow>Together</SectionEyebrow>
-            <H1 style={styles.title}>Roommates</H1>
+            <SectionEyebrow>{t('roommates.screen.eyebrow')}</SectionEyebrow>
+            <H1 style={styles.title}>{t('roommates.screen.title')}</H1>
           </View>
           <Button
             variant="secondary"
@@ -550,10 +546,10 @@ export default function RoommatesPage() {
               />
             }
           >
-            Preferences
+            {t('roommates.preferences')}
           </Button>
         </View>
-        <TabBar activeTab={activeTab} onChange={setActiveTab} />
+        <TabBar activeTab={activeTab} onChange={setActiveTab} tabs={tabs} />
       </SafeAreaView>
 
       <View style={styles.content}>{renderTabContent()}</View>

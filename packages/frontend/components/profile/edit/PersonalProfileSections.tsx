@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { TrustScore } from '@/components/TrustScore';
 import { profileEditStyles as styles } from './styles';
 import type {
@@ -51,9 +52,6 @@ const REASONS_FOR_LEAVING = [
   'other',
 ] as const;
 
-const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
-const titleizeUnderscore = (value: string) => value.replace('_', ' ').toUpperCase();
-
 interface PersonalProfileSectionsProps {
   activeSection: string;
   personalInfo: PersonalInfoForm;
@@ -95,19 +93,21 @@ export function PersonalProfileSections({
   updateRentalHistory,
   removeRentalHistory,
 }: PersonalProfileSectionsProps) {
+  const { t } = useTranslation();
+
   switch (activeSection) {
     case 'personal':
       return (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Personal Information</Text>
+          <Text style={styles.sectionTitle}>{t('profile.edit.sections.personalInformation')}</Text>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Bio</Text>
+            <Text style={styles.label}>{t('profile.edit.labels.bio')}</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
               value={personalInfo.bio}
               onChangeText={(text) => updatePersonalInfo({ bio: text })}
-              placeholder="Tell us about yourself..."
+              placeholder={t('profile.edit.placeholders.bio')}
               multiline
               numberOfLines={4}
             />
@@ -115,38 +115,38 @@ export function PersonalProfileSections({
 
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Occupation</Text>
+              <Text style={styles.label}>{t('profile.edit.labels.occupation')}</Text>
               <TextInput
                 style={styles.input}
                 value={personalInfo.occupation}
                 onChangeText={(text) => updatePersonalInfo({ occupation: text })}
-                placeholder="e.g., Software Engineer"
+                placeholder={t('profile.edit.placeholders.occupation')}
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Employer</Text>
+              <Text style={styles.label}>{t('profile.edit.labels.employer')}</Text>
               <TextInput
                 style={styles.input}
                 value={personalInfo.employer}
                 onChangeText={(text) => updatePersonalInfo({ employer: text })}
-                placeholder="e.g., Tech Corp"
+                placeholder={t('profile.edit.placeholders.employer')}
               />
             </View>
           </View>
 
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Annual Income ($)</Text>
+              <Text style={styles.label}>{t('profile.edit.labels.annualIncome')}</Text>
               <TextInput
                 style={styles.input}
                 value={personalInfo.annualIncome}
                 onChangeText={(text) => updatePersonalInfo({ annualIncome: text })}
-                placeholder="e.g., 75000"
+                placeholder={t('profile.edit.placeholders.annualIncome')}
                 keyboardType="numeric"
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Employment Status</Text>
+              <Text style={styles.label}>{t('profile.edit.labels.employmentStatus')}</Text>
               <View style={styles.pickerContainer}>
                 {EMPLOYMENT_STATUSES.map((status) => (
                   <TouchableOpacity
@@ -164,7 +164,7 @@ export function PersonalProfileSections({
                           styles.pickerOptionTextSelected,
                       ]}
                     >
-                      {titleizeUnderscore(status)}
+                      {t(`profile.edit.options.employmentStatus.${status}`)}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -174,16 +174,16 @@ export function PersonalProfileSections({
 
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Move-in Date</Text>
+              <Text style={styles.label}>{t('profile.edit.labels.moveInDate')}</Text>
               <TextInput
                 style={styles.input}
                 value={personalInfo.moveInDate}
                 onChangeText={(text) => updatePersonalInfo({ moveInDate: text })}
-                placeholder="YYYY-MM-DD"
+                placeholder={t('profile.edit.placeholders.moveInDate')}
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Lease Duration</Text>
+              <Text style={styles.label}>{t('profile.edit.labels.leaseDuration')}</Text>
               <View style={styles.pickerContainer}>
                 {LEASE_DURATIONS.map((duration) => (
                   <TouchableOpacity
@@ -201,7 +201,7 @@ export function PersonalProfileSections({
                           styles.pickerOptionTextSelected,
                       ]}
                     >
-                      {titleizeUnderscore(duration)}
+                      {t(`profile.edit.options.leaseDuration.${duration}`)}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -214,21 +214,21 @@ export function PersonalProfileSections({
     case 'preferences':
       return (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Property Preferences</Text>
+          <Text style={styles.sectionTitle}>{t('profile.edit.sections.propertyPreferences')}</Text>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Maximum Rent ($)</Text>
+            <Text style={styles.label}>{t('profile.edit.labels.maxRent')}</Text>
             <TextInput
               style={styles.input}
               value={preferences.maxRent}
               onChangeText={(text) => updatePreferences({ maxRent: text })}
-              placeholder="Enter maximum rent"
+              placeholder={t('profile.edit.placeholders.maxRent')}
               keyboardType="numeric"
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Rent Period</Text>
+            <Text style={styles.label}>{t('profile.edit.labels.rentPeriod')}</Text>
             <View style={styles.pickerContainer}>
               {PRICE_UNITS.map((unit) => (
                 <TouchableOpacity
@@ -245,7 +245,7 @@ export function PersonalProfileSections({
                       preferences.priceUnit === unit && styles.pickerOptionTextSelected,
                     ]}
                   >
-                    {capitalize(unit)}
+                    {t(`profile.edit.options.priceUnit.${unit}`)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -254,7 +254,7 @@ export function PersonalProfileSections({
 
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Min Bedrooms</Text>
+              <Text style={styles.label}>{t('profile.edit.labels.minBedrooms')}</Text>
               <TextInput
                 style={styles.input}
                 value={preferences.minBedrooms}
@@ -264,7 +264,7 @@ export function PersonalProfileSections({
               />
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Min Bathrooms</Text>
+              <Text style={styles.label}>{t('profile.edit.labels.minBathrooms')}</Text>
               <TextInput
                 style={styles.input}
                 value={preferences.minBathrooms}
@@ -276,7 +276,7 @@ export function PersonalProfileSections({
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Property Types</Text>
+            <Text style={styles.label}>{t('profile.edit.labels.propertyTypes')}</Text>
             <View style={styles.checkboxGroup}>
               {PROPERTY_TYPES.map((type) => (
                 <TouchableOpacity
@@ -293,7 +293,7 @@ export function PersonalProfileSections({
                       preferences.propertyTypes.includes(type) && styles.checkboxTextSelected,
                     ]}
                   >
-                    {capitalize(type)}
+                    {t(`profile.edit.options.propertyType.${type}`)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -301,7 +301,7 @@ export function PersonalProfileSections({
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Preferred Amenities</Text>
+            <Text style={styles.label}>{t('profile.edit.labels.preferredAmenities')}</Text>
             <View style={styles.checkboxGroup}>
               {AMENITIES.map((amenity) => (
                 <TouchableOpacity
@@ -319,7 +319,7 @@ export function PersonalProfileSections({
                         styles.checkboxTextSelected,
                     ]}
                   >
-                    {capitalize(amenity)}
+                    {t(`profile.edit.options.amenity.${amenity}`)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -327,7 +327,7 @@ export function PersonalProfileSections({
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Additional Preferences</Text>
+            <Text style={styles.label}>{t('profile.edit.labels.additionalPreferences')}</Text>
             <View style={styles.switchGroup}>
               <TouchableOpacity
                 style={[styles.switch, preferences.petFriendly && styles.switchActive]}
@@ -336,7 +336,7 @@ export function PersonalProfileSections({
                 <Text
                   style={[styles.switchText, preferences.petFriendly && styles.switchTextActive]}
                 >
-                  Pet Friendly
+                  {t('profile.edit.toggles.petFriendly')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -346,7 +346,7 @@ export function PersonalProfileSections({
                 <Text
                   style={[styles.switchText, preferences.smokingAllowed && styles.switchTextActive]}
                 >
-                  Smoking Allowed
+                  {t('profile.edit.toggles.smokingAllowed')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -354,7 +354,7 @@ export function PersonalProfileSections({
                 onPress={() => updatePreferences({ furnished: !preferences.furnished })}
               >
                 <Text style={[styles.switchText, preferences.furnished && styles.switchTextActive]}>
-                  Furnished
+                  {t('profile.edit.toggles.furnished')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -367,7 +367,7 @@ export function PersonalProfileSections({
                     preferences.parkingRequired && styles.switchTextActive,
                   ]}
                 >
-                  Parking Required
+                  {t('profile.edit.toggles.parkingRequired')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -377,7 +377,7 @@ export function PersonalProfileSections({
                 <Text
                   style={[styles.switchText, preferences.accessibility && styles.switchTextActive]}
                 >
-                  Accessibility Features
+                  {t('profile.edit.toggles.accessibilityFeatures')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -389,33 +389,35 @@ export function PersonalProfileSections({
       return (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>References</Text>
+            <Text style={styles.sectionTitle}>{t('profile.edit.sections.references')}</Text>
             <TouchableOpacity style={styles.addButton} onPress={addReference}>
-              <Text style={styles.addButtonText}>+ Add Reference</Text>
+              <Text style={styles.addButtonText}>{t('profile.edit.actions.addReference')}</Text>
             </TouchableOpacity>
           </View>
 
           {references.map((reference, index) => (
             <View key={index} style={styles.referenceCard}>
               <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>Reference {index + 1}</Text>
+                <Text style={styles.cardTitle}>
+                  {t('profile.edit.actions.referenceLabel', { index: index + 1 })}
+                </Text>
                 <TouchableOpacity onPress={() => removeReference(index)}>
-                  <Text style={styles.removeButton}>Remove</Text>
+                  <Text style={styles.removeButton}>{t('profile.edit.actions.remove')}</Text>
                 </TouchableOpacity>
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Name</Text>
+                <Text style={styles.label}>{t('profile.edit.labels.name')}</Text>
                 <TextInput
                   style={styles.input}
                   value={reference.name}
                   onChangeText={(text) => updateReference(index, { name: text })}
-                  placeholder="Full name"
+                  placeholder={t('profile.edit.placeholders.fullName')}
                 />
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Relationship</Text>
+                <Text style={styles.label}>{t('profile.edit.labels.relationship')}</Text>
                 <View style={styles.pickerContainer}>
                   {REFERENCE_RELATIONSHIPS.map((rel) => (
                     <TouchableOpacity
@@ -436,7 +438,7 @@ export function PersonalProfileSections({
                           reference.relationship === rel && styles.pickerOptionTextSelected,
                         ]}
                       >
-                        {capitalize(rel)}
+                        {t(`profile.edit.options.referenceRelationship.${rel}`)}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -445,22 +447,22 @@ export function PersonalProfileSections({
 
               <View style={styles.row}>
                 <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>Phone</Text>
+                  <Text style={styles.label}>{t('profile.edit.labels.phone')}</Text>
                   <TextInput
                     style={styles.input}
                     value={reference.phone}
                     onChangeText={(text) => updateReference(index, { phone: text })}
-                    placeholder="Phone number"
+                    placeholder={t('profile.edit.placeholders.phoneNumber')}
                     keyboardType="phone-pad"
                   />
                 </View>
                 <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>Email</Text>
+                  <Text style={styles.label}>{t('profile.edit.labels.email')}</Text>
                   <TextInput
                     style={styles.input}
                     value={reference.email}
                     onChangeText={(text) => updateReference(index, { email: text })}
-                    placeholder="Email address"
+                    placeholder={t('profile.edit.placeholders.emailAddress')}
                     keyboardType="email-address"
                   />
                 </View>
@@ -474,65 +476,67 @@ export function PersonalProfileSections({
       return (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Rental History</Text>
+            <Text style={styles.sectionTitle}>{t('profile.edit.sections.rentalHistory')}</Text>
             <TouchableOpacity style={styles.addButton} onPress={addRentalHistory}>
-              <Text style={styles.addButtonText}>+ Add History</Text>
+              <Text style={styles.addButtonText}>{t('profile.edit.actions.addHistory')}</Text>
             </TouchableOpacity>
           </View>
 
           {rentalHistory.map((history, index) => (
             <View key={index} style={styles.referenceCard}>
               <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>Rental {index + 1}</Text>
+                <Text style={styles.cardTitle}>
+                  {t('profile.edit.actions.rentalLabel', { index: index + 1 })}
+                </Text>
                 <TouchableOpacity onPress={() => removeRentalHistory(index)}>
-                  <Text style={styles.removeButton}>Remove</Text>
+                  <Text style={styles.removeButton}>{t('profile.edit.actions.remove')}</Text>
                 </TouchableOpacity>
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Address</Text>
+                <Text style={styles.label}>{t('profile.edit.labels.address')}</Text>
                 <TextInput
                   style={styles.input}
                   value={history.address}
                   onChangeText={(text) => updateRentalHistory(index, { address: text })}
-                  placeholder="Full address"
+                  placeholder={t('profile.edit.placeholders.fullAddress')}
                 />
               </View>
 
               <View style={styles.row}>
                 <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>Start Date</Text>
+                  <Text style={styles.label}>{t('profile.edit.labels.startDate')}</Text>
                   <TextInput
                     style={styles.input}
                     value={history.startDate}
                     onChangeText={(text) => updateRentalHistory(index, { startDate: text })}
-                    placeholder="YYYY-MM-DD"
+                    placeholder={t('profile.edit.placeholders.moveInDate')}
                   />
                 </View>
                 <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>End Date</Text>
+                  <Text style={styles.label}>{t('profile.edit.labels.endDate')}</Text>
                   <TextInput
                     style={styles.input}
                     value={history.endDate}
                     onChangeText={(text) => updateRentalHistory(index, { endDate: text })}
-                    placeholder="YYYY-MM-DD (optional)"
+                    placeholder={t('profile.edit.placeholders.endDateOptional')}
                   />
                 </View>
               </View>
 
               <View style={styles.row}>
                 <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>Monthly Rent ($)</Text>
+                  <Text style={styles.label}>{t('profile.edit.labels.monthlyRent')}</Text>
                   <TextInput
                     style={styles.input}
                     value={history.monthlyRent}
                     onChangeText={(text) => updateRentalHistory(index, { monthlyRent: text })}
-                    placeholder="e.g., 1500"
+                    placeholder={t('profile.edit.placeholders.monthlyRent')}
                     keyboardType="numeric"
                   />
                 </View>
                 <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>Reason for Leaving</Text>
+                  <Text style={styles.label}>{t('profile.edit.labels.reasonForLeaving')}</Text>
                   <View style={styles.pickerContainer}>
                     {REASONS_FOR_LEAVING.map((reason) => (
                       <TouchableOpacity
@@ -554,7 +558,7 @@ export function PersonalProfileSections({
                               styles.pickerOptionTextSelected,
                           ]}
                         >
-                          {titleizeUnderscore(reason)}
+                          {t(`profile.edit.options.reasonForLeaving.${reason}`)}
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -563,7 +567,7 @@ export function PersonalProfileSections({
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Landlord Contact</Text>
+                <Text style={styles.label}>{t('profile.edit.labels.landlordContact')}</Text>
                 <View style={styles.row}>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
                     <TextInput
@@ -574,7 +578,7 @@ export function PersonalProfileSections({
                           landlordContact: { ...history.landlordContact, name: text },
                         })
                       }
-                      placeholder="Landlord name"
+                      placeholder={t('profile.edit.placeholders.landlordName')}
                     />
                   </View>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -586,7 +590,7 @@ export function PersonalProfileSections({
                           landlordContact: { ...history.landlordContact, phone: text },
                         })
                       }
-                      placeholder="Phone"
+                      placeholder={t('profile.edit.placeholders.phone')}
                       keyboardType="phone-pad"
                     />
                   </View>
@@ -599,7 +603,7 @@ export function PersonalProfileSections({
                       landlordContact: { ...history.landlordContact, email: text },
                     })
                   }
-                  placeholder="Email"
+                  placeholder={t('profile.edit.placeholders.email')}
                   keyboardType="email-address"
                 />
               </View>
@@ -611,7 +615,7 @@ export function PersonalProfileSections({
     case 'trust-score':
       return (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Trust Score</Text>
+          <Text style={styles.sectionTitle}>{t('profile.edit.sections.trustScore')}</Text>
           <TrustScore
             score={trustScoreData.score}
             size="large"
@@ -624,10 +628,10 @@ export function PersonalProfileSections({
     case 'settings':
       return (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Settings</Text>
+          <Text style={styles.sectionTitle}>{t('profile.edit.sections.settings')}</Text>
 
           <View style={styles.subsection}>
-            <Text style={styles.subsectionTitle}>Notifications</Text>
+            <Text style={styles.subsectionTitle}>{t('profile.edit.labels.notifications')}</Text>
             <View style={styles.switchGroup}>
               <TouchableOpacity
                 style={[styles.switch, settings.notifications.email && styles.switchActive]}
@@ -646,7 +650,7 @@ export function PersonalProfileSections({
                     settings.notifications.email && styles.switchTextActive,
                   ]}
                 >
-                  Email Notifications
+                  {t('profile.edit.toggles.emailNotifications')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -666,14 +670,14 @@ export function PersonalProfileSections({
                     settings.notifications.push && styles.switchTextActive,
                   ]}
                 >
-                  Push Notifications
+                  {t('profile.edit.toggles.pushNotifications')}
                 </Text>
               </TouchableOpacity>
             </View>
           </View>
 
           <View style={styles.subsection}>
-            <Text style={styles.subsectionTitle}>Privacy</Text>
+            <Text style={styles.subsectionTitle}>{t('profile.edit.labels.privacy')}</Text>
             <View style={styles.switchGroup}>
               <TouchableOpacity
                 style={[styles.switch, settings.privacy.showContactInfo && styles.switchActive]}
@@ -692,7 +696,7 @@ export function PersonalProfileSections({
                     settings.privacy.showContactInfo && styles.switchTextActive,
                   ]}
                 >
-                  Show Contact Info
+                  {t('profile.edit.toggles.showContactInfo')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -709,7 +713,7 @@ export function PersonalProfileSections({
                     settings.privacy.showIncome && styles.switchTextActive,
                   ]}
                 >
-                  Show Income
+                  {t('profile.edit.toggles.showIncome')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -729,7 +733,7 @@ export function PersonalProfileSections({
                     settings.privacy.showRentalHistory && styles.switchTextActive,
                   ]}
                 >
-                  Show Rental History
+                  {t('profile.edit.toggles.showRentalHistory')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -749,7 +753,7 @@ export function PersonalProfileSections({
                     settings.privacy.showReferences && styles.switchTextActive,
                   ]}
                 >
-                  Show References
+                  {t('profile.edit.toggles.showReferences')}
                 </Text>
               </TouchableOpacity>
             </View>

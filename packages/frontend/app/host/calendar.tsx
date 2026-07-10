@@ -30,6 +30,7 @@ import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { TextFieldInput } from '@oxyhq/bloom/text-field';
 import { Text as BloomText, H2 } from '@oxyhq/bloom/typography';
 import { useOxy, showSignInModal } from '@oxyhq/services';
+import { useTranslation } from 'react-i18next';
 import {
   AvailabilityWindow,
   AvailabilityWindowStatus,
@@ -69,9 +70,8 @@ const INITIAL_BLOCK_STATE: BlockDialogState = {
   reason: '',
 };
 
-const HOST_CALENDAR_TITLE = 'Host calendar';
-
 export default function HostCalendarScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { oxyServices, activeSessionId } = useOxy();
   const isAuthed = Boolean(oxyServices && activeSessionId);
@@ -148,7 +148,7 @@ export default function HostCalendarScreen() {
     try {
       const property = await propertyService.getPropertyById(effectivePropertyId);
       if (!property) {
-        throw new Error('Property not found');
+        throw new Error(t('host.calendar.propertyNotFound'));
       }
       const next: AvailabilityWindow = {
         start: blockState.start.toISOString(),
@@ -165,10 +165,10 @@ export default function HostCalendarScreen() {
       queryClient.invalidateQueries({
         queryKey: reservationKeys.availability(effectivePropertyId),
       });
-      toast.success('Dates blocked');
+      toast.success(t('host.calendar.toastBlocked'));
       closeDialog();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Block failed';
+      const message = error instanceof Error ? error.message : t('host.calendar.toastBlockFailed');
       toast.error(message);
     } finally {
       setSubmitting(false);
@@ -179,6 +179,7 @@ export default function HostCalendarScreen() {
     closeDialog,
     effectivePropertyId,
     queryClient,
+    t,
   ]);
 
   if (!isAuthed) {
@@ -187,7 +188,7 @@ export default function HostCalendarScreen() {
         <Header
           options={{
             showBackButton: true,
-            title: HOST_CALENDAR_TITLE,
+            title: t('host.calendar.title'),
             titlePosition: 'center',
           }}
         />
@@ -195,9 +196,9 @@ export default function HostCalendarScreen() {
           <View style={styles.emptyWrap}>
             <EmptyState
               icon="calendar-outline"
-              title="Sign in to manage your calendar"
-              description="Block dates and track bookings from one place."
-              actionText="Sign in"
+              title={t('host.calendar.signInTitle')}
+              description={t('host.calendar.signInDescription')}
+              actionText={t('host.calendar.signIn')}
               actionIcon="log-in-outline"
               onAction={() => showSignInModal()}
             />
@@ -213,7 +214,7 @@ export default function HostCalendarScreen() {
         <Header
           options={{
             showBackButton: true,
-            title: HOST_CALENDAR_TITLE,
+            title: t('host.calendar.title'),
             titlePosition: 'center',
           }}
         />
@@ -238,18 +239,18 @@ export default function HostCalendarScreen() {
         <Header
           options={{
             showBackButton: true,
-            title: HOST_CALENDAR_TITLE,
+            title: t('host.calendar.title'),
             titlePosition: 'center',
           }}
         />
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <ErrorState
             icon="cloud-offline-outline"
-            title="Couldn't load your properties"
+            title={t('host.calendar.loadPropertiesError')}
             description={
               typeof propertiesQuery.error === 'string'
                 ? propertiesQuery.error
-                : 'Please try again.'
+                : t('host.calendar.tryAgain')
             }
             onRetry={() => propertiesQuery.refetch()}
           />
@@ -264,7 +265,7 @@ export default function HostCalendarScreen() {
         <Header
           options={{
             showBackButton: true,
-            title: HOST_CALENDAR_TITLE,
+            title: t('host.calendar.title'),
             titlePosition: 'center',
           }}
         />
@@ -272,9 +273,9 @@ export default function HostCalendarScreen() {
           <View style={styles.emptyWrap}>
             <EmptyState
               icon="home-outline"
-              title="Add your first property"
-              description="List a place so guests can request dates here."
-              actionText="Create listing"
+              title={t('host.calendar.emptyTitle')}
+              description={t('host.calendar.emptyDescription')}
+              actionText={t('host.calendar.createListing')}
               actionIcon="add"
               onAction={() => router.push('/properties/create')}
             />
@@ -289,16 +290,16 @@ export default function HostCalendarScreen() {
       <Header
         options={{
           showBackButton: true,
-          title: HOST_CALENDAR_TITLE,
+          title: t('host.calendar.title'),
           titlePosition: 'center',
         }}
       />
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.pickerCard}>
-            <SectionEyebrow>Property</SectionEyebrow>
+            <SectionEyebrow>{t('host.calendar.property')}</SectionEyebrow>
             <Menu>
-              <MenuTrigger label="Choose property">
+              <MenuTrigger label={t('host.calendar.chooseProperty')}>
                 {({ props: triggerProps }) => (
                   <Button
                     onPress={triggerProps.onPress}
@@ -318,7 +319,7 @@ export default function HostCalendarScreen() {
                   >
                     {selectedProperty
                       ? getPropertyTitle(selectedProperty)
-                      : 'Choose property'}
+                      : t('host.calendar.chooseProperty')}
                   </Button>
                 )}
               </MenuTrigger>
@@ -355,10 +356,10 @@ export default function HostCalendarScreen() {
               </View>
 
               <View style={styles.legendRow}>
-                <LegendChip color={colors.successSubtle} dot={colors.success} label="Confirmed" />
-                <LegendChip color={colors.warningSubtle} dot={colors.warning} label="Pending" />
-                <LegendChip color={colors.blockedSubtle} dot={colors.danger} label="Blocked" />
-                <LegendChip color={colors.mutedSubtle} dot={colors.COLOR_BLACK_LIGHT_4} label="Available" />
+                <LegendChip color={colors.successSubtle} dot={colors.success} label={t('host.calendar.legendConfirmed')} />
+                <LegendChip color={colors.warningSubtle} dot={colors.warning} label={t('host.calendar.legendPending')} />
+                <LegendChip color={colors.blockedSubtle} dot={colors.danger} label={t('host.calendar.legendBlocked')} />
+                <LegendChip color={colors.mutedSubtle} dot={colors.COLOR_BLACK_LIGHT_4} label={t('host.calendar.legendAvailable')} />
               </View>
 
               <View style={styles.calendarCard}>
@@ -369,9 +370,9 @@ export default function HostCalendarScreen() {
                 ) : availabilityQuery.isError ? (
                   <ErrorState
                     icon="cloud-offline-outline"
-                    title="Couldn't load availability"
+                    title={t('host.calendar.availabilityError')}
                     description={
-                      availabilityQuery.error?.message ?? 'Please try again.'
+                      availabilityQuery.error?.message ?? t('host.calendar.tryAgain')
                     }
                     onRetry={() => availabilityQuery.refetch()}
                   />
@@ -392,28 +393,31 @@ export default function HostCalendarScreen() {
 
         <ConfirmDialog
           visible={blockState.visible}
-          title="Block these dates"
+          title={t('host.calendar.blockTitle')}
           message={
             blockState.start && blockState.end
-              ? `${format(blockState.start, 'EEE, MMM d')} → ${format(
-                  new Date(blockState.end.getTime() - 24 * 60 * 60 * 1000),
-                  'EEE, MMM d, yyyy',
-                )}`
-              : 'Choose how long these dates are unavailable.'
+              ? t('host.calendar.blockBodyRange', {
+                  start: format(blockState.start, 'EEE, MMM d'),
+                  end: format(
+                    new Date(blockState.end.getTime() - 24 * 60 * 60 * 1000),
+                    'EEE, MMM d, yyyy',
+                  ),
+                })
+              : t('host.calendar.blockBodySingle')
           }
-          confirmLabel="Block"
+          confirmLabel={t('host.calendar.blockConfirm')}
           loading={submitting}
           onConfirm={handleConfirmBlock}
           onCancel={closeDialog}
         >
           <TextFieldInput
-            label="Reason (optional)"
+            label={t('host.calendar.blockReasonLabel')}
             value={blockState.reason}
             onChangeText={(reason) =>
               setBlockState((state) => ({ ...state, reason }))
             }
             editable={!submitting}
-            placeholder="Maintenance, personal use, ..."
+            placeholder={t('host.calendar.blockReasonPlaceholder')}
           />
         </ConfirmDialog>
       </SafeAreaView>

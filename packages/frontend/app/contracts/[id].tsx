@@ -16,7 +16,8 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Image, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
+import i18next from 'i18next';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { toast } from '@/lib/sonner';
@@ -41,6 +42,7 @@ import {
   useUploadLeaseDocument,
 } from '@/hooks/useLeaseQueries';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
+import { formatLocalized } from '@/utils/dateLocale';
 import { colors } from '@/styles/colors';
 import { radius, spacing, tracker } from '@/constants/styles';
 
@@ -50,13 +52,13 @@ const formatDate = (raw?: string): string => {
   if (!raw) return '—';
   const date = new Date(raw);
   if (Number.isNaN(date.getTime())) return raw;
-  return format(date, 'MMM d, yyyy');
+  return formatLocalized(date, 'MMM d, yyyy');
 };
 
 const formatMoney = (amount?: number, currency?: string): string => {
   if (amount === undefined || amount === null) return '—';
   try {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(i18next.language, {
       style: 'currency',
       currency: currency || 'USD',
       maximumFractionDigits: 0,
@@ -66,12 +68,12 @@ const formatMoney = (amount?: number, currency?: string): string => {
   }
 };
 
-const openDocument = (url: string): void => {
+const openDocument = (url: string, t: (key: string) => string): void => {
   if (Platform.OS === 'web') {
     window.open(url, '_blank', 'noopener,noreferrer');
     return;
   }
-  Linking.openURL(url).catch(() => toast.error('Could not open the document.'));
+  Linking.openURL(url).catch(() => toast.error(t('contracts.detail.toastOpenDocumentFailed')));
 };
 
 interface DetailRowProps {
@@ -87,6 +89,7 @@ const DetailRow: React.FC<DetailRowProps> = ({ label, value }) => (
 );
 
 export default function ContractDetailScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
   const id = typeof params.id === 'string' ? params.id : params.id?.[0];
@@ -119,45 +122,45 @@ export default function ContractDetailScreen() {
     if (!id) return;
     try {
       await signMutation.mutateAsync({ signature: 'accepted-in-app', acceptTerms: true });
-      toast.success('Lease signed');
+      toast.success(t('contracts.detail.toastSigned'));
       setPendingAction(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not sign the lease');
+      toast.error(error instanceof Error ? error.message : t('contracts.detail.toastSignFailed'));
       setPendingAction(null);
     }
-  }, [id, signMutation]);
+  }, [id, signMutation, t]);
 
   const handleTerminate = useCallback(async () => {
     if (!id) return;
     try {
       await terminateMutation.mutateAsync({});
-      toast.success('Lease terminated');
+      toast.success(t('contracts.detail.toastTerminated'));
       setPendingAction(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not terminate the lease');
+      toast.error(error instanceof Error ? error.message : t('contracts.detail.toastTerminateFailed'));
       setPendingAction(null);
     }
-  }, [id, terminateMutation]);
+  }, [id, terminateMutation, t]);
 
   const handleDelete = useCallback(async () => {
     if (!id) return;
     try {
       await deleteMutation.mutateAsync(id);
-      toast.success('Draft deleted');
+      toast.success(t('contracts.detail.toastDeleted'));
       setPendingAction(null);
       router.back();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not delete the draft');
+      toast.error(error instanceof Error ? error.message : t('contracts.detail.toastDeleteFailed'));
       setPendingAction(null);
     }
-  }, [id, deleteMutation, router]);
+  }, [id, deleteMutation, router, t]);
 
   const handleAddDocument = useCallback(async () => {
     if (!id) return;
     if (Platform.OS !== 'web') {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (permission.status !== 'granted') {
-        toast.error('Media library permission is required to attach a document.');
+        toast.error(t('contracts.detail.permissionRequired'));
         return;
       }
     }
@@ -173,15 +176,19 @@ export default function ContractDetailScreen() {
         name: asset.fileName ?? `lease-document-${Date.now()}.jpg`,
         type: 'other',
       });
-      toast.success('Document added');
+      toast.success(t('contracts.detail.toastDocumentAdded'));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not add the document');
+      toast.error(error instanceof Error ? error.message : t('contracts.detail.toastDocumentFailed'));
     }
-  }, [id, uploadMutation]);
+  }, [id, uploadMutation, t]);
 
   const header = (
     <Header
-      options={{ showBackButton: true, title: 'Contract', titlePosition: 'center' }}
+      options={{
+        showBackButton: true,
+        title: t('contracts.detail.title'),
+        titlePosition: 'center',
+      }}
     />
   );
 
@@ -192,9 +199,9 @@ export default function ContractDetailScreen() {
         <View style={styles.centerWrap}>
           <ErrorState
             icon="warning-outline"
-            title="Invalid contract id"
-            description="The link is missing the contract reference."
-            retryLabel="Go back"
+            title={t('contracts.detail.invalidIdTitle')}
+            description={t('contracts.detail.invalidIdDescription')}
+            retryLabel={t('contracts.detail.goBack')}
             onRetry={() => router.back()}
           />
         </View>
@@ -219,9 +226,11 @@ export default function ContractDetailScreen() {
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
-            title="Contract unavailable"
-            description={leaseQuery.error?.message ?? 'This contract could not be loaded.'}
-            retryLabel="Go back"
+            title={t('contracts.detail.unavailableTitle')}
+            description={
+              leaseQuery.error?.message ?? t('contracts.detail.unavailableDescription')
+            }
+            retryLabel={t('contracts.detail.goBack')}
             onRetry={() => router.back()}
           />
         </View>
@@ -230,7 +239,9 @@ export default function ContractDetailScreen() {
   }
 
   const property = lease.property ?? fetchedProperty;
-  const propertyTitle = property ? getPropertyTitle(property) : 'Property';
+  const propertyTitle = property
+    ? getPropertyTitle(property)
+    : t('contracts.detail.propertyFallback');
   const imageSource = property ? getPropertyImageSource(property) : null;
 
   const isParty = role === 'landlord' || role === 'tenant';
@@ -283,43 +294,54 @@ export default function ContractDetailScreen() {
           </CardSurface>
 
           <CardSurface>
-            <BloomText style={styles.sectionLabel}>Term</BloomText>
-            <DetailRow label="Start" value={formatDate(lease.leaseTerms?.startDate)} />
-            <DetailRow label="End" value={formatDate(lease.leaseTerms?.endDate)} />
+            <BloomText style={styles.sectionLabel}>{t('contracts.detail.term')}</BloomText>
+            <DetailRow label={t('contracts.detail.start')} value={formatDate(lease.leaseTerms?.startDate)} />
+            <DetailRow label={t('contracts.detail.end')} value={formatDate(lease.leaseTerms?.endDate)} />
           </CardSurface>
 
           <CardSurface>
-            <BloomText style={styles.sectionLabel}>Rent</BloomText>
+            <BloomText style={styles.sectionLabel}>{t('contracts.detail.rent')}</BloomText>
             <DetailRow
-              label="Monthly rent"
+              label={t('contracts.detail.monthlyRent')}
               value={formatMoney(lease.rentDetails?.monthlyRent, lease.rentDetails?.currency)}
             />
             {lease.rentDetails?.securityDeposit ? (
               <DetailRow
-                label="Security deposit"
+                label={t('contracts.detail.securityDeposit')}
                 value={formatMoney(lease.rentDetails.securityDeposit, lease.rentDetails.currency)}
               />
             ) : null}
             {lease.rentDetails?.dueDate ? (
-              <DetailRow label="Due day" value={`Day ${lease.rentDetails.dueDate} of the month`} />
+              <DetailRow
+                label={t('contracts.detail.dueDayLabel')}
+                value={t('contracts.detail.dueDay', { day: lease.rentDetails.dueDate })}
+              />
             ) : null}
           </CardSurface>
 
           <CardSurface>
-            <BloomText style={styles.sectionLabel}>Signatures</BloomText>
+            <BloomText style={styles.sectionLabel}>{t('contracts.detail.signatures')}</BloomText>
             <DetailRow
-              label="Landlord"
-              value={lease.signatures?.landlord?.signed ? 'Signed' : 'Pending'}
+              label={t('contracts.detail.landlord')}
+              value={
+                lease.signatures?.landlord?.signed
+                  ? t('contracts.detail.signed')
+                  : t('contracts.detail.signaturePending')
+              }
             />
             <DetailRow
-              label="Tenant"
-              value={lease.signatures?.tenant?.signed ? 'Signed' : 'Pending'}
+              label={t('contracts.detail.tenant')}
+              value={
+                lease.signatures?.tenant?.signed
+                  ? t('contracts.detail.signed')
+                  : t('contracts.detail.signaturePending')
+              }
             />
           </CardSurface>
 
           {payments.length > 0 ? (
             <CardSurface>
-              <BloomText style={styles.sectionLabel}>Payment schedule</BloomText>
+              <BloomText style={styles.sectionLabel}>{t('contracts.detail.payments')}</BloomText>
               {payments.map((payment) => (
                 <View key={payment.id} style={styles.paymentRow}>
                   <View style={styles.paymentMeta}>
@@ -354,7 +376,7 @@ export default function ContractDetailScreen() {
 
           <CardSurface>
             <View style={styles.docHeader}>
-              <BloomText style={styles.sectionLabel}>Documents</BloomText>
+              <BloomText style={styles.sectionLabel}>{t('contracts.detail.documents')}</BloomText>
               {isParty ? (
                 <Button
                   variant="secondary"
@@ -364,20 +386,20 @@ export default function ContractDetailScreen() {
                   loading={uploadMutation.isPending}
                   icon={<Ionicons name="add" size={16} color={colors.COLOR_BLACK} />}
                 >
-                  Add
+                  {t('contracts.detail.addShort')}
                 </Button>
               ) : null}
             </View>
             {documents.length === 0 ? (
-              <BloomText style={styles.emptyHint}>No documents attached.</BloomText>
+              <BloomText style={styles.emptyHint}>{t('contracts.detail.emptyDocuments')}</BloomText>
             ) : (
               documents.map((document) => (
                 <Pressable
                   key={document.id}
-                  onPress={() => openDocument(document.url)}
+                  onPress={() => openDocument(document.url, t)}
                   style={styles.documentRow}
                   accessibilityRole="link"
-                  accessibilityLabel={`Open document ${document.name}`}
+                  accessibilityLabel={t('contracts.detail.openDocument', { name: document.name })}
                 >
                   <Ionicons name="document-text-outline" size={20} color={colors.primaryDark} />
                   <View style={styles.documentMeta}>
@@ -385,7 +407,7 @@ export default function ContractDetailScreen() {
                       {document.name}
                     </BloomText>
                     <BloomText style={styles.documentType}>
-                      {document.type.replace(/_/g, ' ')}
+                      {t(`contracts.documentType.${document.type}`)}
                     </BloomText>
                   </View>
                   <Ionicons name="open-outline" size={18} color={colors.muted} />
@@ -404,7 +426,7 @@ export default function ContractDetailScreen() {
                   disabled={busy}
                   style={styles.actionButton}
                 >
-                  Sign lease
+                  {t('contracts.detail.signLease')}
                 </Button>
               ) : null}
               {canTerminate ? (
@@ -415,7 +437,7 @@ export default function ContractDetailScreen() {
                   disabled={busy}
                   style={styles.actionButton}
                 >
-                  Terminate
+                  {t('contracts.detail.terminate')}
                 </Button>
               ) : null}
               {canDelete ? (
@@ -426,7 +448,7 @@ export default function ContractDetailScreen() {
                   disabled={busy}
                   style={styles.actionButton}
                 >
-                  Delete draft
+                  {t('contracts.detail.deleteDraft')}
                 </Button>
               ) : null}
             </View>
@@ -435,18 +457,18 @@ export default function ContractDetailScreen() {
 
         <ConfirmDialog
           visible={pendingAction === 'sign'}
-          title="Sign this lease?"
-          message="By signing you agree to the lease terms. Once both parties sign, the lease becomes active."
-          confirmLabel="Sign"
+          title={t('contracts.detail.confirmSignTitle')}
+          message={t('contracts.detail.confirmSignExtended')}
+          confirmLabel={t('contracts.detail.confirmSignAction')}
           loading={signMutation.isPending}
           onConfirm={handleSign}
           onCancel={() => setPendingAction(null)}
         />
         <ConfirmDialog
           visible={pendingAction === 'terminate'}
-          title="Terminate lease?"
-          message="This records a termination notice and ends the lease. This cannot be undone."
-          confirmLabel="Terminate"
+          title={t('contracts.detail.confirmTerminateShortTitle')}
+          message={t('contracts.detail.confirmTerminateExtended')}
+          confirmLabel={t('contracts.detail.terminate')}
           confirmDestructive
           loading={terminateMutation.isPending}
           onConfirm={handleTerminate}
@@ -454,9 +476,9 @@ export default function ContractDetailScreen() {
         />
         <ConfirmDialog
           visible={pendingAction === 'delete'}
-          title="Delete draft?"
-          message="This permanently removes the draft lease."
-          confirmLabel="Delete"
+          title={t('contracts.detail.confirmDeleteTitle')}
+          message={t('contracts.detail.confirmDeleteExtended')}
+          confirmLabel={t('contracts.detail.confirmDeleteAction')}
           confirmDestructive
           loading={deleteMutation.isPending}
           onConfirm={handleDelete}

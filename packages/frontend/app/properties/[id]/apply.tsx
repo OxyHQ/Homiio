@@ -51,27 +51,27 @@ const MAX_LEASE_MONTHS = 60;
 const LEASE_PRESET_MONTHS: number[] = [3, 6, 12, 18, 24];
 const MOVE_IN_MAX_OFFSET_DAYS = 180; // ~6 months
 
-const EMPLOYMENT_OPTIONS: { value: EmploymentStatus; labelKey: string; fallback: string }[] = [
-  { value: EmploymentStatus.EMPLOYED, labelKey: 'applications.employment.employed', fallback: 'Employed' },
-  { value: EmploymentStatus.SELF_EMPLOYED, labelKey: 'applications.employment.selfEmployed', fallback: 'Self-employed' },
-  { value: EmploymentStatus.STUDENT, labelKey: 'applications.employment.student', fallback: 'Student' },
-  { value: EmploymentStatus.RETIRED, labelKey: 'applications.employment.retired', fallback: 'Retired' },
-  { value: EmploymentStatus.UNEMPLOYED, labelKey: 'applications.employment.unemployed', fallback: 'Unemployed' },
-  { value: EmploymentStatus.OTHER, labelKey: 'applications.employment.other', fallback: 'Other' },
+const EMPLOYMENT_OPTIONS: { value: EmploymentStatus; labelKey: string }[] = [
+  { value: EmploymentStatus.EMPLOYED, labelKey: 'applications.employment.employed' },
+  { value: EmploymentStatus.SELF_EMPLOYED, labelKey: 'applications.employment.selfEmployed' },
+  { value: EmploymentStatus.STUDENT, labelKey: 'applications.employment.student' },
+  { value: EmploymentStatus.RETIRED, labelKey: 'applications.employment.retired' },
+  { value: EmploymentStatus.UNEMPLOYED, labelKey: 'applications.employment.unemployed' },
+  { value: EmploymentStatus.OTHER, labelKey: 'applications.employment.other' },
 ];
 
-const RELATIONSHIP_OPTIONS: { value: ReferenceRelationship; labelKey: string; fallback: string }[] = [
-  { value: ReferenceRelationship.LANDLORD, labelKey: 'applications.relationship.landlord', fallback: 'Previous landlord' },
-  { value: ReferenceRelationship.EMPLOYER, labelKey: 'applications.relationship.employer', fallback: 'Employer' },
-  { value: ReferenceRelationship.PERSONAL, labelKey: 'applications.relationship.personal', fallback: 'Personal' },
-  { value: ReferenceRelationship.OTHER, labelKey: 'applications.relationship.other', fallback: 'Other' },
+const RELATIONSHIP_OPTIONS: { value: ReferenceRelationship; labelKey: string }[] = [
+  { value: ReferenceRelationship.LANDLORD, labelKey: 'applications.relationship.landlord' },
+  { value: ReferenceRelationship.EMPLOYER, labelKey: 'applications.relationship.employer' },
+  { value: ReferenceRelationship.PERSONAL, labelKey: 'applications.relationship.personal' },
+  { value: ReferenceRelationship.OTHER, labelKey: 'applications.relationship.other' },
 ];
 
-const DOCUMENT_TYPE_OPTIONS: { value: TenantApplicationDocumentType; labelKey: string; fallback: string }[] = [
-  { value: TenantApplicationDocumentType.ID, labelKey: 'applications.docType.id', fallback: 'ID' },
-  { value: TenantApplicationDocumentType.INCOME, labelKey: 'applications.docType.income', fallback: 'Income proof' },
-  { value: TenantApplicationDocumentType.REFERENCE, labelKey: 'applications.docType.reference', fallback: 'Reference letter' },
-  { value: TenantApplicationDocumentType.OTHER, labelKey: 'applications.docType.other', fallback: 'Other' },
+const DOCUMENT_TYPE_OPTIONS: { value: TenantApplicationDocumentType; labelKey: string }[] = [
+  { value: TenantApplicationDocumentType.ID, labelKey: 'applications.docType.id' },
+  { value: TenantApplicationDocumentType.INCOME, labelKey: 'applications.docType.income' },
+  { value: TenantApplicationDocumentType.REFERENCE, labelKey: 'applications.docType.reference' },
+  { value: TenantApplicationDocumentType.OTHER, labelKey: 'applications.docType.other' },
 ];
 
 const IconComponent = Ionicons as unknown as React.ComponentType<{
@@ -258,10 +258,7 @@ export default function ApplyToRentScreen() {
       for (const asset of slice) {
         if (asset.size != null && asset.size > MAX_DOCUMENT_BYTES) {
           toast.error(
-            t(
-              'applications.documents.tooLarge',
-              { defaultValue: '{{name}} is over 10 MB and was skipped.', name: asset.name },
-            ),
+            t('applications.documents.tooLarge', { name: asset.name }),
           );
           continue;
         }
@@ -278,17 +275,14 @@ export default function ApplyToRentScreen() {
       }
       if (slice.length < assets.length) {
         toast.error(
-          t('applications.documents.limit', {
-            defaultValue: 'You can upload up to {{max}} documents per application.',
-            max: MAX_DOCUMENTS,
-          }),
+          t('applications.documents.limit', { max: MAX_DOCUMENTS }),
         );
       }
       if (next.length > 0) {
         setDocuments((prev) => [...prev, ...next]);
       }
     } catch {
-      toast.error(t('applications.documents.pickFailed', 'Could not pick documents'));
+      toast.error(t('applications.documents.pickFailed'));
     }
   };
 
@@ -297,21 +291,21 @@ export default function ApplyToRentScreen() {
       const response = err.response as { error?: { code?: string }; code?: string } | undefined;
       const code = response?.error?.code || response?.code;
       if (code === 'ALREADY_APPLIED') {
-        return t('applications.error.alreadyApplied', 'You already have an active application for this property.');
+        return t('applications.error.alreadyApplied');
       }
       if (code === 'EXTERNAL_PROPERTY') {
-        return t('applications.error.external', 'External listings cannot be applied to from Homiio.');
+        return t('applications.error.external');
       }
       if (code === 'NOT_APPLICABLE') {
-        return t('applications.error.notApplicable', 'This property does not accept long-term applications.');
+        return t('applications.error.notApplicable');
       }
       if (code === 'AUTHENTICATION_REQUIRED') {
-        return t('applications.error.auth', 'Please sign in to apply.');
+        return t('applications.error.auth');
       }
       return err.message;
     }
     if (err instanceof Error) return err.message;
-    return t('applications.error.generic', 'Something went wrong. Please try again.');
+    return t('applications.error.generic');
   };
 
   const handleSubmit = async () => {
@@ -321,12 +315,12 @@ export default function ApplyToRentScreen() {
     }
     if (!propertyId) return;
     if (!formIsValid) {
-      toast.error(t('applications.error.invalidForm', 'Please complete every required field.'));
+      toast.error(t('applications.error.invalidForm'));
       return;
     }
     const moveInIso = toIsoDate(moveInDate);
     if (!moveInIso || effectiveTermMonths == null || monthlyIncomeNumber == null) {
-      toast.error(t('applications.error.invalidForm', 'Please complete every required field.'));
+      toast.error(t('applications.error.invalidForm'));
       return;
     }
     const referencePayload: ApplicationReferenceInput[] = references.map((ref) => ({
@@ -353,7 +347,7 @@ export default function ApplyToRentScreen() {
         documents: documentPayload,
         notes: notes.trim() || undefined,
       });
-      toast.success(t('applications.success.submitted', 'Application submitted'));
+      toast.success(t('applications.success.submitted'));
       router.replace({ pathname: '/applications/[id]', params: { id: String(created.id) } });
     } catch (err) {
       toast.error(extractError(err));
@@ -365,7 +359,7 @@ export default function ApplyToRentScreen() {
       <Header
         options={{
           showBackButton: true,
-          title: t('applications.apply.title', 'Apply to rent'),
+          title: t('applications.apply.title'),
           titlePosition: 'center',
         }}
       />
@@ -383,14 +377,14 @@ export default function ApplyToRentScreen() {
                   {property.longTermRent.currency || ''}
                   {property.longTermRent.monthlyAmount}
                   {' / '}
-                  {t('common.month', 'month')}
+                  {t('common.month')}
                 </ThemedText>
               )}
             </View>
           )}
 
-          <Section title={t('applications.section.timing', 'Move-in & lease term')}>
-            <FieldLabel>{t('applications.field.moveInDate', 'Move-in date')}</FieldLabel>
+          <Section title={t('applications.section.timing')}>
+            <FieldLabel>{t('applications.field.moveInDate')}</FieldLabel>
             <TextInput
               style={styles.input}
               value={moveInDate}
@@ -403,10 +397,10 @@ export default function ApplyToRentScreen() {
               maxLength={10}
             />
             <ThemedText style={styles.helperText}>
-              {t('applications.field.moveInHelper', 'Within the next 6 months.')}
+              {t('applications.field.moveInHelper')}
             </ThemedText>
 
-            <FieldLabel>{t('applications.field.leaseTerm', 'Lease term')}</FieldLabel>
+            <FieldLabel>{t('applications.field.leaseTerm')}</FieldLabel>
             <View style={styles.chipRow}>
               {LEASE_PRESET_MONTHS.map((preset) => {
                 const isActive = !usingCustomTerm && leaseTermMonths === preset;
@@ -420,7 +414,7 @@ export default function ApplyToRentScreen() {
                     }}
                     style={styles.chip}
                   >
-                    {t('applications.field.leaseTermMonths', '{{count}} months', { count: preset })}
+                    {t('applications.field.leaseTermMonths', { count: preset })}
                   </Chip>
                 );
               })}
@@ -429,7 +423,7 @@ export default function ApplyToRentScreen() {
                 onPress={() => setUsingCustomTerm(true)}
                 style={styles.chip}
               >
-                {t('applications.field.leaseTermCustom', 'Other')}
+                {t('applications.field.leaseTermCustom')}
               </Chip>
             </View>
             {usingCustomTerm && (
@@ -437,7 +431,7 @@ export default function ApplyToRentScreen() {
                 style={styles.input}
                 value={leaseTermCustom}
                 onChangeText={(text) => setLeaseTermCustom(text.replace(/[^0-9]/g, ''))}
-                placeholder={t('applications.field.leaseTermCustomPlaceholder', 'Number of months')}
+                placeholder={t('applications.field.leaseTermCustomPlaceholder')}
                 placeholderTextColor={colors.COLOR_BLACK_LIGHT_3}
                 inputMode="numeric"
                 maxLength={2}
@@ -445,19 +439,19 @@ export default function ApplyToRentScreen() {
             )}
           </Section>
 
-          <Section title={t('applications.section.finances', 'Income & employment')}>
-            <FieldLabel>{t('applications.field.monthlyIncome', 'Gross monthly income')}</FieldLabel>
+          <Section title={t('applications.section.finances')}>
+            <FieldLabel>{t('applications.field.monthlyIncome')}</FieldLabel>
             <TextInput
               style={styles.input}
               value={monthlyIncome}
               onChangeText={setMonthlyIncome}
-              placeholder={t('applications.field.monthlyIncomePlaceholder', 'e.g. 2400')}
+              placeholder={t('applications.field.monthlyIncomePlaceholder')}
               placeholderTextColor={colors.COLOR_BLACK_LIGHT_3}
               inputMode="decimal"
               keyboardType="decimal-pad"
             />
 
-            <FieldLabel>{t('applications.field.employment', 'Employment status')}</FieldLabel>
+            <FieldLabel>{t('applications.field.employment')}</FieldLabel>
             <View style={styles.chipRow}>
               {EMPLOYMENT_OPTIONS.map((option) => (
                 <Chip
@@ -466,45 +460,42 @@ export default function ApplyToRentScreen() {
                   onPress={() => setEmploymentStatus(option.value)}
                   style={styles.chip}
                 >
-                  {t(option.labelKey, option.fallback)}
+                  {t(option.labelKey)}
                 </Chip>
               ))}
             </View>
           </Section>
 
           <Section
-            title={t('applications.section.references', 'References')}
-            description={t(
-              'applications.section.referencesHelp',
-              'Add 1 to 3 contacts the landlord can call to vouch for you.',
-            )}
+            title={t('applications.section.references')}
+            description={t('applications.section.referencesHelp')}
           >
             {references.map((reference, index) => (
               <View key={index} style={styles.referenceCard}>
                 <View style={styles.referenceHeader}>
                   <ThemedText style={styles.referenceTitle}>
-                    {t('applications.field.referenceIndex', 'Reference {{index}}', { index: index + 1 })}
+                    {t('applications.field.referenceIndex', { index: index + 1 })}
                   </ThemedText>
                   {references.length > 1 && (
                     <Pressable
                       onPress={() => handleRemoveReference(index)}
-                      accessibilityLabel={t('applications.field.removeReference', 'Remove reference')}
+                      accessibilityLabel={t('applications.field.removeReference')}
                       hitSlop={8}
                     >
                       <IconComponent name="close" size={18} color={colors.COLOR_BLACK_LIGHT_3} />
                     </Pressable>
                   )}
                 </View>
-                <FieldLabel>{t('applications.field.name', 'Full name')}</FieldLabel>
+                <FieldLabel>{t('applications.field.name')}</FieldLabel>
                 <TextInput
                   style={styles.input}
                   value={reference.name}
                   onChangeText={(value) => handleReferenceChange(index, { name: value })}
-                  placeholder={t('applications.field.namePlaceholder', 'Jane Doe')}
+                  placeholder={t('applications.field.namePlaceholder')}
                   placeholderTextColor={colors.COLOR_BLACK_LIGHT_3}
                   autoCapitalize="words"
                 />
-                <FieldLabel>{t('applications.field.relationship', 'Relationship')}</FieldLabel>
+                <FieldLabel>{t('applications.field.relationship')}</FieldLabel>
                 <View style={styles.chipRow}>
                   {RELATIONSHIP_OPTIONS.map((option) => (
                     <Chip
@@ -513,11 +504,11 @@ export default function ApplyToRentScreen() {
                       onPress={() => handleReferenceChange(index, { relationship: option.value })}
                       style={styles.chip}
                     >
-                      {t(option.labelKey, option.fallback)}
+                      {t(option.labelKey)}
                     </Chip>
                   ))}
                 </View>
-                <FieldLabel>{t('applications.field.phone', 'Phone number')}</FieldLabel>
+                <FieldLabel>{t('applications.field.phone')}</FieldLabel>
                 <TextInput
                   style={styles.input}
                   value={reference.phone}
@@ -527,7 +518,7 @@ export default function ApplyToRentScreen() {
                   inputMode="tel"
                   keyboardType="phone-pad"
                 />
-                <FieldLabel>{t('applications.field.email', 'Email')}</FieldLabel>
+                <FieldLabel>{t('applications.field.email')}</FieldLabel>
                 <TextInput
                   style={styles.input}
                   value={reference.email}
@@ -547,18 +538,15 @@ export default function ApplyToRentScreen() {
                 icon={<IconComponent name="add" size={16} color={colors.primaryDark} />}
                 style={styles.secondaryAction}
               >
-                {t('applications.field.addReference', 'Add another reference')}
+                {t('applications.field.addReference')}
               </Button>
             )}
           </Section>
 
           <Section
-            title={t('applications.section.documents', 'Documents (optional)')}
-            description={t(
-              'applications.section.documentsHelp',
-              'Upload up to {{max}} PDFs or images (10 MB each). Pick a category per file.',
-              { max: MAX_DOCUMENTS },
-            )}
+            title={t('applications.section.documents')}
+            description={t('applications.section.documentsHelp',
+              { max: MAX_DOCUMENTS },)}
           >
             <Button
               variant="secondary"
@@ -567,7 +555,7 @@ export default function ApplyToRentScreen() {
               icon={<IconComponent name="cloud-upload-outline" size={16} color={colors.primaryDark} />}
               style={styles.secondaryAction}
             >
-              {t('applications.field.pickDocuments', 'Add documents')}
+              {t('applications.field.pickDocuments')}
             </Button>
             {documents.map((doc) => (
               <View key={doc.id} style={styles.documentCard}>
@@ -582,7 +570,7 @@ export default function ApplyToRentScreen() {
                   </ThemedText>
                   <Pressable
                     onPress={() => handleRemoveDocument(doc.id)}
-                    accessibilityLabel={t('applications.field.removeDocument', 'Remove document')}
+                    accessibilityLabel={t('applications.field.removeDocument')}
                     hitSlop={8}
                   >
                     <IconComponent name="close" size={18} color={colors.COLOR_BLACK_LIGHT_3} />
@@ -601,7 +589,7 @@ export default function ApplyToRentScreen() {
                       onPress={() => handleDocumentTypeChange(doc.id, option.value)}
                       style={styles.chip}
                     >
-                      {t(option.labelKey, option.fallback)}
+                      {t(option.labelKey)}
                     </Chip>
                   ))}
                 </View>
@@ -609,15 +597,12 @@ export default function ApplyToRentScreen() {
             ))}
           </Section>
 
-          <Section title={t('applications.section.notes', 'Notes to landlord (optional)')}>
+          <Section title={t('applications.section.notes')}>
             <TextInput
               style={[styles.input, styles.notesInput]}
               value={notes}
               onChangeText={setNotes}
-              placeholder={t(
-                'applications.field.notesPlaceholder',
-                'Anything else the landlord should know about you?',
-              )}
+              placeholder={t('applications.field.notesPlaceholder')}
               placeholderTextColor={colors.COLOR_BLACK_LIGHT_3}
               multiline
               numberOfLines={4}
@@ -633,7 +618,7 @@ export default function ApplyToRentScreen() {
             size="large"
             style={styles.submitButton}
           >
-            {t('applications.actions.submit', 'Submit application')}
+            {t('applications.actions.submit')}
           </Button>
         </ScrollView>
       </SafeAreaView>

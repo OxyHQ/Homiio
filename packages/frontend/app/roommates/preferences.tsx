@@ -14,6 +14,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@oxyhq/bloom/button';
 import { Switch } from '@oxyhq/bloom/switch';
 import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
+import { useTranslation } from 'react-i18next';
 import { LeaseDuration } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -59,37 +60,37 @@ const DEFAULT_FORM: FormState = {
   schedule: 'flexible',
 };
 
-const GENDER_OPTIONS: { value: GenderPref; label: string }[] = [
-  { value: 'any', label: 'Any' },
-  { value: 'male', label: 'Male' },
-  { value: 'female', label: 'Female' },
+const GENDER_OPTIONS: { value: GenderPref; labelKey: string }[] = [
+  { value: 'any', labelKey: 'roommates.preferencesPage.options.gender.any' },
+  { value: 'male', labelKey: 'roommates.preferencesPage.options.gender.male' },
+  { value: 'female', labelKey: 'roommates.preferencesPage.options.gender.female' },
 ];
 
-const LIFESTYLE_OPTIONS: { value: LifestyleChoice; label: string }[] = [
-  { value: 'yes', label: 'Yes' },
-  { value: 'no', label: 'No' },
-  { value: 'prefer_not', label: 'No pref.' },
+const LIFESTYLE_OPTIONS: { value: LifestyleChoice; labelKey: string }[] = [
+  { value: 'yes', labelKey: 'roommates.preferencesPage.options.lifestyle.yes' },
+  { value: 'no', labelKey: 'roommates.preferencesPage.options.lifestyle.no' },
+  { value: 'prefer_not', labelKey: 'roommates.preferencesPage.options.lifestyle.prefer_not' },
 ];
 
-const CLEANLINESS_OPTIONS: { value: Cleanliness; label: string }[] = [
-  { value: 'very_clean', label: 'Very clean' },
-  { value: 'clean', label: 'Clean' },
-  { value: 'average', label: 'Average' },
-  { value: 'relaxed', label: 'Relaxed' },
+const CLEANLINESS_OPTIONS: { value: Cleanliness; labelKey: string }[] = [
+  { value: 'very_clean', labelKey: 'roommates.preferencesPage.options.cleanliness.very_clean' },
+  { value: 'clean', labelKey: 'roommates.preferencesPage.options.cleanliness.clean' },
+  { value: 'average', labelKey: 'roommates.preferencesPage.options.cleanliness.average' },
+  { value: 'relaxed', labelKey: 'roommates.preferencesPage.options.cleanliness.relaxed' },
 ];
 
-const SCHEDULE_OPTIONS: { value: Schedule; label: string }[] = [
-  { value: 'early_bird', label: 'Early bird' },
-  { value: 'night_owl', label: 'Night owl' },
-  { value: 'flexible', label: 'Flexible' },
+const SCHEDULE_OPTIONS: { value: Schedule; labelKey: string }[] = [
+  { value: 'early_bird', labelKey: 'roommates.preferencesPage.options.schedule.early_bird' },
+  { value: 'night_owl', labelKey: 'roommates.preferencesPage.options.schedule.night_owl' },
+  { value: 'flexible', labelKey: 'roommates.preferencesPage.options.schedule.flexible' },
 ];
 
-const LEASE_OPTIONS: { value: LeaseDuration; label: string }[] = [
-  { value: LeaseDuration.MONTHLY, label: 'Monthly' },
-  { value: LeaseDuration.THREE_MONTHS, label: '3 months' },
-  { value: LeaseDuration.SIX_MONTHS, label: '6 months' },
-  { value: LeaseDuration.YEARLY, label: 'Yearly' },
-  { value: LeaseDuration.FLEXIBLE, label: 'Flexible' },
+const LEASE_OPTIONS: { value: LeaseDuration; labelKey: string }[] = [
+  { value: LeaseDuration.MONTHLY, labelKey: 'roommates.preferencesPage.options.lease.monthly' },
+  { value: LeaseDuration.THREE_MONTHS, labelKey: 'roommates.preferencesPage.options.lease.3_months' },
+  { value: LeaseDuration.SIX_MONTHS, labelKey: 'roommates.preferencesPage.options.lease.6_months' },
+  { value: LeaseDuration.YEARLY, labelKey: 'roommates.preferencesPage.options.lease.yearly' },
+  { value: LeaseDuration.FLEXIBLE, labelKey: 'roommates.preferencesPage.options.lease.flexible' },
 ];
 
 function toNumber(value: string): number | undefined {
@@ -134,9 +135,10 @@ function ChipRow<T extends string>({
 }: {
   label: string;
   value: T;
-  options: { value: T; label: string }[];
+  options: { value: T; labelKey: string }[];
   onChange: (next: T) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.field}>
       <BloomText style={styles.fieldLabel}>{label}</BloomText>
@@ -144,7 +146,7 @@ function ChipRow<T extends string>({
         {options.map((option) => (
           <Chip
             key={option.value}
-            label={option.label}
+            label={t(option.labelKey)}
             selected={option.value === value}
             onPress={() => onChange(option.value)}
           />
@@ -190,6 +192,7 @@ function toPreferences(form: FormState): RoommateMatchingPreferences {
 }
 
 export default function RoommatePreferencesPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [roommateEnabled, setRoommateEnabled] = useState(false);
@@ -232,10 +235,10 @@ export default function RoommatePreferencesPage() {
       await useProfileStore.getState().fetchPrimaryProfile();
       await queryClient.invalidateQueries({ queryKey: ['roommates', 'preferences'] });
       await queryClient.invalidateQueries({ queryKey: ['roommates', 'status'] });
-      Alert.alert('Saved', 'Your roommate preferences were updated.');
+      Alert.alert(t('roommates.alert.successTitle'), t('roommates.alert.preferencesSaved'));
     },
     onError: () => {
-      Alert.alert('Error', 'Failed to save roommate preferences. Please try again.');
+      Alert.alert(t('roommates.alert.errorTitle'), t('roommates.alert.preferencesFailed'));
     },
   });
 
@@ -252,7 +255,7 @@ export default function RoommatePreferencesPage() {
       <View style={styles.root}>
         <Header
           options={{
-            title: 'Roommate preferences',
+            title: t('roommates.preferencesPage.title'),
             showBackButton: true,
             titlePosition: 'center',
           }}
@@ -261,9 +264,9 @@ export default function RoommatePreferencesPage() {
           <View style={styles.emptyWrap}>
             <EmptyState
               icon="person-outline"
-              title="Personal profile required"
-              description="Roommate preferences are only available for personal profiles. Please switch to your personal profile to manage your roommate settings."
-              actionText="Switch to personal profile"
+              title={t('roommates.preferencesPage.personalProfileRequired')}
+              description={t('roommates.preferencesPage.personalProfileDescription')}
+              actionText={t('roommates.preferencesPage.switchToPersonal')}
               actionIcon="person-circle"
               onAction={() => router.push('/profile')}
             />
@@ -277,7 +280,7 @@ export default function RoommatePreferencesPage() {
     <View style={styles.root}>
       <Header
         options={{
-          title: 'Roommate preferences',
+          title: t('roommates.preferencesPage.title'),
           showBackButton: true,
           titlePosition: 'center',
         }}
@@ -285,22 +288,19 @@ export default function RoommatePreferencesPage() {
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.titleBlock}>
-            <SectionEyebrow>Sharing a place</SectionEyebrow>
-            <H2 style={styles.title}>Roommate matching</H2>
-            <BloomText style={styles.subtitle}>
-              Let other Homiio users find you when their preferences and yours
-              line up.
-            </BloomText>
+            <SectionEyebrow>{t('roommates.preferencesPage.eyebrow')}</SectionEyebrow>
+            <H2 style={styles.title}>{t('roommates.preferences')}</H2>
+            <BloomText style={styles.subtitle}>{t('roommates.preferencesPage.subtitle')}</BloomText>
           </View>
 
           <View style={styles.card}>
             <View style={styles.toggleHeader}>
               <View style={styles.toggleHeaderText}>
                 <BloomText style={styles.toggleTitle}>
-                  Enable roommate matching
+                  {t('roommates.preferencesPage.enableTitle')}
                 </BloomText>
                 <BloomText style={styles.toggleDescription}>
-                  Allow other users to discover your profile for matching.
+                  {t('roommates.preferencesPage.enableDescription')}
                 </BloomText>
               </View>
               <Switch value={roommateEnabled} onValueChange={setRoommateEnabled} />
@@ -308,40 +308,40 @@ export default function RoommatePreferencesPage() {
           </View>
 
           <View style={styles.card}>
-            <H3 style={styles.cardTitle}>Budget & timeline</H3>
+            <H3 style={styles.cardTitle}>{t('roommates.preferencesPage.budgetTimeline')}</H3>
             <View style={styles.field}>
-              <BloomText style={styles.fieldLabel}>Monthly budget (€)</BloomText>
+              <BloomText style={styles.fieldLabel}>{t('roommates.preferencesPage.monthlyBudget')}</BloomText>
               <View style={styles.inlineInputs}>
                 <TextInput
                   style={styles.input}
                   keyboardType="numeric"
-                  placeholder="Min"
+                  placeholder={t('roommates.preferencesPage.min')}
                   placeholderTextColor={colors.muted}
                   value={form.budgetMin}
-                  onChangeText={(t) => updateField('budgetMin', t)}
+                  onChangeText={(text) => updateField('budgetMin', text)}
                 />
                 <TextInput
                   style={styles.input}
                   keyboardType="numeric"
-                  placeholder="Max"
+                  placeholder={t('roommates.preferencesPage.max')}
                   placeholderTextColor={colors.muted}
                   value={form.budgetMax}
-                  onChangeText={(t) => updateField('budgetMax', t)}
+                  onChangeText={(text) => updateField('budgetMax', text)}
                 />
               </View>
             </View>
             <View style={styles.field}>
-              <BloomText style={styles.fieldLabel}>Move-in date</BloomText>
+              <BloomText style={styles.fieldLabel}>{t('roommates.preferencesPage.moveInDate')}</BloomText>
               <TextInput
                 style={styles.input}
                 placeholder="YYYY-MM-DD"
                 placeholderTextColor={colors.muted}
                 value={form.moveInDate}
-                onChangeText={(t) => updateField('moveInDate', t)}
+                onChangeText={(text) => updateField('moveInDate', text)}
               />
             </View>
             <ChipRow
-              label="Lease length"
+              label={t('roommates.preferencesPage.leaseLength')}
               value={form.leaseDuration}
               options={LEASE_OPTIONS}
               onChange={(v) => updateField('leaseDuration', v)}
@@ -349,64 +349,64 @@ export default function RoommatePreferencesPage() {
           </View>
 
           <View style={styles.card}>
-            <H3 style={styles.cardTitle}>Roommate</H3>
+            <H3 style={styles.cardTitle}>{t('roommates.preferencesPage.roommateSection')}</H3>
             <ChipRow
-              label="Preferred gender"
+              label={t('roommates.preferencesPage.preferredGender')}
               value={form.gender}
               options={GENDER_OPTIONS}
               onChange={(v) => updateField('gender', v)}
             />
             <View style={styles.field}>
-              <BloomText style={styles.fieldLabel}>Age range</BloomText>
+              <BloomText style={styles.fieldLabel}>{t('roommates.preferencesPage.ageRange')}</BloomText>
               <View style={styles.inlineInputs}>
                 <TextInput
                   style={styles.input}
                   keyboardType="numeric"
-                  placeholder="Min"
+                  placeholder={t('roommates.preferencesPage.min')}
                   placeholderTextColor={colors.muted}
                   value={form.ageMin}
-                  onChangeText={(t) => updateField('ageMin', t)}
+                  onChangeText={(text) => updateField('ageMin', text)}
                 />
                 <TextInput
                   style={styles.input}
                   keyboardType="numeric"
-                  placeholder="Max"
+                  placeholder={t('roommates.preferencesPage.max')}
                   placeholderTextColor={colors.muted}
                   value={form.ageMax}
-                  onChangeText={(t) => updateField('ageMax', t)}
+                  onChangeText={(text) => updateField('ageMax', text)}
                 />
               </View>
             </View>
           </View>
 
           <View style={styles.card}>
-            <H3 style={styles.cardTitle}>Lifestyle</H3>
+            <H3 style={styles.cardTitle}>{t('roommates.preferencesPage.lifestyle')}</H3>
             <ChipRow
-              label="Smoking"
+              label={t('roommates.preferencesPage.smoking')}
               value={form.smoking}
               options={LIFESTYLE_OPTIONS}
               onChange={(v) => updateField('smoking', v)}
             />
             <ChipRow
-              label="Pets"
+              label={t('roommates.preferencesPage.pets')}
               value={form.pets}
               options={LIFESTYLE_OPTIONS}
               onChange={(v) => updateField('pets', v)}
             />
             <ChipRow
-              label="Partying"
+              label={t('roommates.preferencesPage.partying')}
               value={form.partying}
               options={LIFESTYLE_OPTIONS}
               onChange={(v) => updateField('partying', v)}
             />
             <ChipRow
-              label="Cleanliness"
+              label={t('roommates.preferencesPage.cleanliness')}
               value={form.cleanliness}
               options={CLEANLINESS_OPTIONS}
               onChange={(v) => updateField('cleanliness', v)}
             />
             <ChipRow
-              label="Schedule"
+              label={t('roommates.preferencesPage.schedule')}
               value={form.schedule}
               options={SCHEDULE_OPTIONS}
               onChange={(v) => updateField('schedule', v)}
@@ -420,7 +420,7 @@ export default function RoommatePreferencesPage() {
             disabled={saveMutation.isPending}
             style={styles.saveButton}
           >
-            {saveMutation.isPending ? 'Saving…' : 'Save preferences'}
+            {saveMutation.isPending ? t('roommates.preferencesPage.saving') : t('roommates.preferencesPage.save')}
           </Button>
         </ScrollView>
       </SafeAreaView>

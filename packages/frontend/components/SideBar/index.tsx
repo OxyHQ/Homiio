@@ -279,9 +279,7 @@ export function SideBar() {
           key: 'applications',
           icon: FileText,
           iconActive: FileText,
-          label: t('sidebar.navigation.applications', {
-            defaultValue: 'My applications',
-          }),
+          label: t('sidebar.navigation.applications'),
           route: '/applications',
         });
       } else {
@@ -289,7 +287,7 @@ export function SideBar() {
           key: 'stays',
           icon: BedDouble,
           iconActive: BedDouble,
-          label: t('sidebar.navigation.stays', { defaultValue: 'Stays' }),
+          label: t('sidebar.navigation.stays'),
           route: '/stays',
         });
       }
@@ -307,7 +305,7 @@ export function SideBar() {
       key: 'tips',
       icon: Lightbulb,
       iconActive: Lightbulb,
-      label: t('sidebar.navigation.tips', { defaultValue: 'Tips' }),
+      label: t('sidebar.navigation.tips'),
       route: '/tips',
     });
 
@@ -326,9 +324,7 @@ export function SideBar() {
         key: 'host-calendar',
         icon: CalendarClock,
         iconActive: CalendarClock,
-        label: t('sidebar.navigation.hostCalendar', {
-          defaultValue: 'Host calendar',
-        }),
+        label: t('sidebar.navigation.hostCalendar'),
         route: '/host/calendar',
       });
     }
@@ -437,11 +433,9 @@ export function SideBar() {
   const dateGroups = React.useMemo(
     () =>
       groupByDate(recentEntries, {
-        today: t('sidebar.recent.today', { defaultValue: 'Today' }),
-        yesterday: t('sidebar.recent.yesterday', {
-          defaultValue: 'Yesterday',
-        }),
-        earlier: t('sidebar.recent.earlier', { defaultValue: 'Earlier' }),
+        today: t('sidebar.recent.today'),
+        yesterday: t('sidebar.recent.yesterday'),
+        earlier: t('sidebar.recent.earlier'),
       }),
     [recentEntries, t],
   );
@@ -596,9 +590,7 @@ export function SideBar() {
           <Pressable
             onPress={toggleSidebarCollapsed}
             accessibilityRole="button"
-            accessibilityLabel={t('sidebar.expand', {
-              defaultValue: 'Expand sidebar',
-            })}
+            accessibilityLabel={t('sidebar.expand')}
             className="h-10 w-10 rounded-xl items-center justify-center hover:bg-muted active:bg-muted/80"
           >
             <ChevronsRight size={18} color={colors.primaryDark_2} />
@@ -626,9 +618,7 @@ export function SideBar() {
             <Pressable
               onPress={closeMobileDrawer}
               accessibilityRole="button"
-              accessibilityLabel={t('sidebar.close', {
-                defaultValue: 'Close menu',
-              })}
+              accessibilityLabel={t('sidebar.close')}
               className="h-10 w-10 rounded-xl items-center justify-center hover:bg-muted active:bg-muted/80"
             >
               <X size={20} color={colors.primaryDark_2} />
@@ -639,9 +629,7 @@ export function SideBar() {
             <Pressable
               onPress={toggleSidebarCollapsed}
               accessibilityRole="button"
-              accessibilityLabel={t('sidebar.collapse', {
-                defaultValue: 'Collapse sidebar',
-              })}
+              accessibilityLabel={t('sidebar.collapse')}
               className="h-10 w-10 rounded-xl items-center justify-center hover:bg-muted active:bg-muted/80"
             >
               <ChevronsLeft size={18} color={colors.primaryDark_2} />
@@ -682,18 +670,14 @@ export function SideBar() {
   const middle = (
     <>
       <SectionHeader
-        label={t('sidebar.savedProperties.title', {
-          defaultValue: 'Saved folders',
-        })}
+        label={t('sidebar.savedProperties.title')}
         isOpen={savedFoldersOpen}
         onToggle={toggleSavedFolders}
         action={
           <Pressable
             onPress={handleSaved}
             accessibilityRole="button"
-            accessibilityLabel={t('sidebar.savedProperties.viewAll', {
-              defaultValue: 'View all',
-            })}
+            accessibilityLabel={t('sidebar.savedProperties.viewAll')}
             className="h-6 w-6 items-center justify-center rounded-md hover:bg-muted"
           >
             <ChevronRight size={14} color={colors.primaryDark_2} />
@@ -708,9 +692,7 @@ export function SideBar() {
                 style={{ fontSize: 12, color: colors.primaryDark_2 }}
                 numberOfLines={2}
               >
-                {t('sidebar.savedProperties.empty', {
-                  defaultValue: 'No saved folders yet',
-                })}
+                {t('sidebar.savedProperties.empty')}
               </Text>
             </View>
           ) : (
@@ -730,7 +712,7 @@ export function SideBar() {
       )}
 
       <SectionHeader
-        label={t('sidebar.recent.title', { defaultValue: 'Recently viewed' })}
+        label={t('sidebar.recent.title')}
         isOpen={recentPropertiesOpen}
         onToggle={toggleRecentProperties}
       />
@@ -742,9 +724,7 @@ export function SideBar() {
                 style={{ fontSize: 12, color: colors.primaryDark_2 }}
                 numberOfLines={2}
               >
-                {t('sidebar.recent.empty', {
-                  defaultValue: 'Properties you view will appear here',
-                })}
+                {t('sidebar.recent.empty')}
               </Text>
             </View>
           ) : (
@@ -788,9 +768,7 @@ export function SideBar() {
                 textDecorationLine: 'underline',
               }}
             >
-              {t('sidebar.menu.privacy', {
-                defaultValue: 'Privacy policy',
-              })}
+              {t('sidebar.menu.privacy')}
             </Text>
           </Pressable>
           <Text style={{ fontSize: 10, color: colors.primaryDark_2 }}>·</Text>
@@ -802,9 +780,7 @@ export function SideBar() {
                 textDecorationLine: 'underline',
               }}
             >
-              {t('sidebar.menu.terms', {
-                defaultValue: 'Terms of service',
-              })}
+              {t('sidebar.menu.terms')}
             </Text>
           </Pressable>
         </View>
@@ -850,9 +826,7 @@ export function SideBar() {
                 entering={FadeIn.duration(MOBILE_DRAWER_DURATION)}
                 exiting={FadeOut.duration(MOBILE_DRAWER_DURATION)}
                 accessibilityRole="button"
-                accessibilityLabel={t('sidebar.close', {
-                  defaultValue: 'Close menu',
-                })}
+                accessibilityLabel={t('sidebar.close')}
                 onPress={closeMobileDrawer}
                 style={[
                   StyleSheet.absoluteFill,

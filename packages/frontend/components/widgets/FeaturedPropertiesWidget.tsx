@@ -54,7 +54,7 @@ export function FeaturedPropertiesWidget() {
         {loading ? (
           <View style={styles.loadingContainer}>
             <Loading iconSize={16} showText={false} />
-            <ThemedText style={styles.loadingText}>{t('state.loading')}</ThemedText>
+            <ThemedText style={styles.loadingText}>{t('common.loading')}</ThemedText>
           </View>
         ) : (
           <FeaturedProperties properties={featured} />

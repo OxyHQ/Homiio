@@ -41,21 +41,21 @@ export const PropertyOverview: React.FC<Props> = ({ property }) => {
 
   const rows: Row[] = [
     {
-      label: t('Bedrooms', 'Bedrooms') || 'Bedrooms',
+      label: t('property.sections.bedrooms'),
       value: property?.bedrooms !== undefined ? String(property.bedrooms) : '-',
     },
     {
-      label: t('Bathrooms', 'Bathrooms') || 'Bathrooms',
+      label: t('property.sections.bathrooms'),
       value: property?.bathrooms !== undefined ? String(property.bathrooms) : '-',
     },
     {
-      label: t('Size', 'Size') || 'Size',
+      label: t('property.sections.size'),
       value: size !== undefined ? `${size}m²` : '-',
     },
     ...(property?.floor !== undefined
       ? [
           {
-            label: t('Floor', 'Floor') || 'Floor',
+            label: t('property.sections.floor'),
             value: String(property.floor),
           },
         ]
@@ -63,7 +63,7 @@ export const PropertyOverview: React.FC<Props> = ({ property }) => {
   ];
 
   return (
-    <Section title={t('Property Overview', 'Property Overview')}>
+    <Section title={t('property.sections.overview')}>
       {rows.map((row, idx) => (
         <React.Fragment key={row.label}>
           <View style={styles.row}>

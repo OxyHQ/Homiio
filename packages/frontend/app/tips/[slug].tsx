@@ -162,9 +162,9 @@ export default function TipArticleScreen() {
         <Header options={{ title: t('tips.article'), showBackButton: true }} />
         <ErrorState
           icon="document-text-outline"
-          title={t('tips.unavailable', 'Article unavailable')}
-          description={t('tips.missingSlug', 'This tip could not be loaded.')}
-          retryLabel={t('common.goBack', 'Go back')}
+          title={t('tips.unavailable')}
+          description={t('tips.missingSlug')}
+          retryLabel={t('common.goBack')}
           onRetry={() => router.back()}
         />
       </View>
@@ -186,9 +186,9 @@ export default function TipArticleScreen() {
         <Header options={{ title: t('tips.article'), showBackButton: true }} />
         <ErrorState
           icon="document-text-outline"
-          title={t('tips.unavailable', 'Article unavailable')}
-          description={tipQuery.error?.message ?? t('tips.loadFailed', 'This tip could not be loaded.')}
-          retryLabel={t('common.goBack', 'Go back')}
+          title={t('tips.unavailable')}
+          description={tipQuery.error?.message ?? t('tips.loadFailed')}
+          retryLabel={t('common.goBack')}
           onRetry={() => router.back()}
         />
       </View>
@@ -249,7 +249,7 @@ export default function TipArticleScreen() {
         {relatedTips.length >= 2 ? (
           <View style={styles.relatedSection}>
             <H2 style={styles.relatedHeading}>
-              {t('tips.related', 'Related tips')}
+              {t('tips.related')}
             </H2>
             <View style={styles.relatedGrid}>
               {relatedTips.map((related) => (

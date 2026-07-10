@@ -147,7 +147,7 @@ export default function ProfileScreen() {
     if (!profile) return;
     const profileId = profile.id || profile._id;
     if (!profileId) {
-      toast.error(t('profile.invalidProfile', 'Invalid profile data'));
+      toast.error(t('profile.invalidProfile'));
       setPendingSwitch(null);
       return;
     }
@@ -155,7 +155,7 @@ export default function ProfileScreen() {
     try {
       await activateProfile(profileId);
       toast.success(
-        t('profile.switched', 'Switched to {{name}}', {
+        t('profile.switched', {
           name: getProfileDisplayName(profile),
         }),
       );
@@ -165,7 +165,7 @@ export default function ProfileScreen() {
       const message =
         error instanceof Error
           ? error.message
-          : t('profile.switchFailed', 'Failed to switch profile');
+          : t('profile.switchFailed');
       toast.error(message);
     } finally {
       setBusySwitch(false);
@@ -177,10 +177,10 @@ export default function ProfileScreen() {
     try {
       await logout();
       router.replace('/');
-      toast.success(t('settings.signOutSuccess', 'Signed out'));
+      toast.success(t('settings.signOutSuccess'));
     } catch (error: unknown) {
       logger.error('Failed to sign out:', error);
-      toast.error(t('settings.signOutFailed', 'Failed to sign out'));
+      toast.error(t('settings.signOutFailed'));
     } finally {
       setBusyLogout(false);
       setPendingLogout(false);
@@ -190,7 +190,7 @@ export default function ProfileScreen() {
   const header = (
     <Header
       options={{
-        title: t('profile.title', 'Profile'),
+        title: t('profile.title'),
       }}
     />
   );
@@ -215,9 +215,9 @@ export default function ProfileScreen() {
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
-            title={t('profile.loadFailed', 'Failed to load profile')}
-            description={t('profile.loadFailedHint', 'Please try again later.')}
-            retryLabel={t('common.retry', 'Retry')}
+            title={t('profile.loadFailed')}
+            description={t('profile.loadFailedHint')}
+            retryLabel={t('common.retry')}
             onRetry={() => {
               primaryProfileQuery.refetch();
               profilesQuery.refetch();
@@ -297,14 +297,14 @@ export default function ProfileScreen() {
                 size="medium"
                 onPress={() => router.push('/profile/edit')}
               >
-                {t('profile.edit', 'Edit profile')}
+                {t('profile.actions.editProfile')}
               </Button>
               <Button
                 variant="ghost"
                 size="medium"
                 onPress={() => router.push('/profile/trust-score')}
               >
-                {t('profile.trustScoreCta', 'View trust score')}
+                {t('profile.trustScoreCta')}
               </Button>
             </View>
           </CardSurface>
@@ -312,16 +312,16 @@ export default function ProfileScreen() {
 
         <View style={styles.statsWrap}>
           <StatTile
-            label={t('profile.stats.saved', 'Saved')}
+            label={t('profile.stats.saved')}
             value={totalSaved}
             onPress={() => router.push('/saved')}
           />
           <StatTile
-            label={t('profile.stats.applications', 'Applications')}
+            label={t('profile.stats.applications')}
             value={totalApplications}
             description={
               approvedApplications > 0
-                ? t('profile.stats.applicationsApproved', '{{count}} approved', {
+                ? t('profile.stats.applicationsApproved', {
                     count: approvedApplications,
                   })
                 : undefined
@@ -329,47 +329,44 @@ export default function ProfileScreen() {
             onPress={() => router.push('/applications')}
           />
           <StatTile
-            label={t('profile.stats.stays', 'Stays')}
+            label={t('profile.stats.stays')}
             value={totalReservations}
             onPress={() => router.push('/stays')}
           />
         </View>
 
-        <SettingsListGroup title={t('profile.sections.activity', 'Activity')}>
+        <SettingsListGroup title={t('profile.sections.activity')}>
           <SettingsListItem
             icon={<RowIcon name="bookmark-outline" />}
-            title={t('saved.header', 'Saved')}
+            title={t('saved.header')}
             value={String(totalSaved)}
             onPress={() => router.push('/saved')}
           />
           <SettingsListItem
             icon={<RowIcon name="document-text-outline" />}
-            title={t('profile.applications', 'My applications')}
+            title={t('profile.applications')}
             value={String(totalApplications)}
             onPress={() => router.push('/applications')}
           />
           <SettingsListItem
             icon={<RowIcon name="bed-outline" />}
-            title={t('profile.stays', 'Stays')}
+            title={t('profile.stays')}
             value={String(totalReservations)}
             onPress={() => router.push('/stays')}
           />
           <SettingsListItem
             icon={<RowIcon name="swap-horizontal" />}
-            title={t('profile.exchanges', 'Exchanges')}
-            description={t(
-              'profile.exchangesDescription',
-              'Your home swaps and hosting requests.',
-            )}
+            title={t('profile.exchanges')}
+            description={t('profile.exchangesDescription')}
             onPress={() => router.push('/exchange/requests')}
           />
         </SettingsListGroup>
 
         <SettingsListGroup
-          title={t('profile.sections.profile', 'Profile')}
+          title={t('profile.sections.profile')}
           footer={
             activeProfile
-              ? t('profile.activeFooter', 'Active: {{name}}', {
+              ? t('profile.activeFooter', {
                   name: getProfileDisplayName(activeProfile),
                 })
               : undefined
@@ -386,7 +383,7 @@ export default function ProfileScreen() {
                 rightElement={
                   isActive ? (
                     <Badge
-                      content={t('profile.active', 'Active')}
+                      content={t('profile.active')}
                       variant="subtle"
                       color="success"
                       size="small"
@@ -401,40 +398,31 @@ export default function ProfileScreen() {
           })}
           <SettingsListItem
             icon={<RowIcon name="add-circle-outline" />}
-            title={t('profile.createNew', 'Create new profile')}
-            description={t(
-              'profile.createNewDescription',
-              'Add a business, agency, or cooperative profile.',
-            )}
+            title={t('profile.createNew')}
+            description={t('profile.createNewDescription')}
             onPress={() => router.push('/profile/create')}
           />
         </SettingsListGroup>
 
-        <SettingsListGroup title={t('agent.menu.section', 'Earn')}>
+        <SettingsListGroup title={t('agent.menu.section')}>
           <SettingsListItem
             icon={<RowIcon name="cash-outline" />}
-            title={t('agent.menu.title', 'Earn with Homiio')}
-            description={t(
-              'agent.menu.description',
-              'Bring homes to Homiio and earn when they rent or sell.',
-            )}
+            title={t('agent.menu.title')}
+            description={t('agent.menu.description')}
             onPress={() => router.push('/agent')}
           />
         </SettingsListGroup>
 
-        <SettingsListGroup title={t('profile.sections.account', 'Account')}>
+        <SettingsListGroup title={t('profile.sections.account')}>
           <SettingsListItem
             icon={<RowIcon name="star-outline" />}
-            title={t('profile.subscriptions', 'Subscriptions')}
-            description={t(
-              'profile.subscriptionsDescription',
-              'Manage Homiio Plus or buy one-time file analysis.',
-            )}
+            title={t('profile.subscriptions')}
+            description={t('profile.subscriptionsDescription')}
             onPress={() => router.push('/profile/subscriptions')}
           />
           <SettingsListItem
             icon={<RowIcon name="settings-outline" />}
-            title={t('settings.title', 'Settings')}
+            title={t('settings.title')}
             onPress={() => router.push('/settings')}
           />
         </SettingsListGroup>
@@ -442,7 +430,7 @@ export default function ProfileScreen() {
         <SettingsListGroup>
           <SettingsListItem
             icon={<RowIcon name="log-out" destructive />}
-            title={t('settings.signOut', 'Sign out')}
+            title={t('settings.signOut')}
             destructive
             onPress={() => setPendingLogout(true)}
           />
@@ -453,24 +441,24 @@ export default function ProfileScreen() {
 
       <ConfirmDialog
         visible={Boolean(pendingSwitch)}
-        title={t('profile.switchTitle', 'Switch profile?')}
+        title={t('profile.switchTitle')}
         message={
           pendingSwitch
-            ? t('profile.switchMessage', 'Activate {{name}}?', {
+            ? t('profile.switchMessage', {
                 name: getProfileDisplayName(pendingSwitch),
               })
             : ''
         }
-        confirmLabel={t('profile.switchConfirm', 'Switch')}
+        confirmLabel={t('profile.switchConfirm')}
         loading={busySwitch}
         onConfirm={handleSwitch}
         onCancel={() => setPendingSwitch(null)}
       />
       <ConfirmDialog
         visible={pendingLogout}
-        title={t('settings.signOut', 'Sign out')}
-        message={t('settings.signOutMessage', 'Are you sure you want to sign out?')}
-        confirmLabel={t('settings.signOut', 'Sign out')}
+        title={t('settings.signOut')}
+        message={t('settings.signOutMessage')}
+        confirmLabel={t('settings.signOut')}
         confirmDestructive
         loading={busyLogout}
         onConfirm={handleLogout}

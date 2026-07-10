@@ -10,10 +10,12 @@ import {
     TouchableOpacity,
     Alert,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from './ThemedText';
 import { colors } from '@/styles/colors';
 import { radius, spacing, withShadow } from '@/constants/styles';
+import { formatLocalized } from '@/utils/dateLocale';
 
 export interface ReviewData {
     _id: string;
@@ -97,6 +99,8 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
     variant = 'default',
     showActions = true
 }) => {
+    const { t } = useTranslation();
+
     const renderStars = (rating: number) => {
         const fullStars = Math.floor(rating);
         const halfStar = rating % 1 >= 0.5;
@@ -119,7 +123,10 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
         if (onHelpful) {
             onHelpful(review._id);
         } else {
-            Alert.alert('Thank you', 'Your feedback has been recorded.');
+            Alert.alert(
+                t('reviews.card.alertThankYouTitle'),
+                t('reviews.card.alertThankYouBody'),
+            );
         }
     };
 
@@ -128,15 +135,18 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
             onReport(review._id);
         } else {
             Alert.alert(
-                'Report Review',
-                'Are you sure you want to report this review for inappropriate content?',
+                t('reviews.card.alertReportTitle'),
+                t('reviews.card.alertReportBody'),
                 [
-                    { text: 'Cancel', style: 'cancel' },
+                    { text: t('common.cancel'), style: 'cancel' },
                     {
-                        text: 'Report',
+                        text: t('reviews.card.alertReportConfirm'),
                         style: 'destructive',
                         onPress: () => {
-                            Alert.alert('Reported', 'This review has been reported to our moderation team.');
+                            Alert.alert(
+                                t('reviews.card.alertReportedTitle'),
+                                t('reviews.card.alertReportedBody'),
+                            );
                         }
                     }
                 ]
@@ -149,13 +159,14 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
             onReply(review._id);
         } else {
             Alert.alert(
-                'Reply to Review',
-                'Reply functionality will allow landlords and property managers to respond to reviews.',
-                [{ text: 'OK' }]
+                t('reviews.card.alertReplyTitle'),
+                t('reviews.card.alertReplyBody'),
+                [{ text: t('common.ok') }]
             );
         }
     };
 
+    const evidenceCount = review.evidenceCount || 1;
     const isCompact = variant === 'compact';
 
     return (
@@ -168,45 +179,50 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
                     <View style={styles.reviewerDetails}>
                         <View style={styles.reviewerNameRow}>
                             <ThemedText style={styles.reviewerName}>
-                                {review.isAnonymous ? 'Anonymous' : 'Verified Resident'}
+                                {review.isAnonymous
+                                    ? t('reviews.card.anonymous')
+                                    : t('reviews.card.verifiedResident')}
                             </ThemedText>
 
-                            {/* Verification and Trust Indicators */}
                             <View style={styles.trustIndicators}>
                                 {review.verified && (
                                     <View style={styles.verifiedBadge}>
                                         <Ionicons name="checkmark-circle" size={14} color={colors.primaryColor} />
-                                        <ThemedText style={styles.verifiedText}>Verified</ThemedText>
+                                        <ThemedText style={styles.verifiedText}>
+                                            {t('reviews.card.verified')}
+                                        </ThemedText>
                                     </View>
                                 )}
 
-                                {/* Confidence Score */}
                                 {!isCompact && (
                                     <View style={[styles.confidenceBadge, {
                                         backgroundColor: (review.confidenceScore || 0) >= 80 ? colors.success :
                                             (review.confidenceScore || 0) >= 60 ? colors.warning : colors.danger
                                     }]}>
                                         <ThemedText style={styles.confidenceText}>
-                                            {review.confidenceScore || 0}% confident
+                                            {t('reviews.card.confident', { score: review.confidenceScore || 0 })}
                                         </ThemedText>
                                     </View>
                                 )}
 
-                                {/* Evidence Indicator */}
                                 {review.evidenceAttached && (
                                     <View style={styles.evidenceBadge}>
                                         <Ionicons name="document-attach" size={12} color={colors.COLOR_BLACK_LIGHT_3} />
                                         <ThemedText style={styles.evidenceText}>
-                                            {review.evidenceCount || 1} proof{(review.evidenceCount || 1) > 1 ? 's' : ''}
+                                            {evidenceCount}{' '}
+                                            {evidenceCount > 1
+                                                ? t('reviews.card.proofs')
+                                                : t('reviews.card.proof')}
                                         </ThemedText>
                                     </View>
                                 )}
 
-                                {/* Karma Score */}
                                 {!isCompact && (review.karmaScore || 0) > 0 && (
                                     <View style={styles.karmaBadge}>
                                         <Ionicons name="trending-up" size={12} color={colors.info} />
-                                        <ThemedText style={styles.karmaText}>{review.karmaScore || 0} karma</ThemedText>
+                                        <ThemedText style={styles.karmaText}>
+                                            {t('reviews.card.karma', { score: review.karmaScore || 0 })}
+                                        </ThemedText>
                                     </View>
                                 )}
                             </View>
@@ -214,19 +230,21 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
 
                         <View style={styles.reviewMetaRow}>
                             <ThemedText style={styles.reviewDate}>
-                                {new Date(review.createdAt).toLocaleDateString()}
+                                {formatLocalized(new Date(review.createdAt), 'PP')}
                             </ThemedText>
                             <ThemedText style={styles.livedDuration}>
-                                Lived {review.livedForMonths} months
+                                {t('reviews.card.livedMonths', { count: review.livedForMonths })}
                             </ThemedText>
-                            {review.price && (
+                            {review.price ? (
                                 <ThemedText style={styles.price}>
-                                    {review.price} {review.currency}/month
+                                    {t('reviews.card.perMonth', {
+                                        price: review.price,
+                                        currency: review.currency,
+                                    })}
                                 </ThemedText>
-                            )}
+                            ) : null}
                         </View>
 
-                        {/* Flagged Issues Tags */}
                         {!isCompact && review.flaggedIssues && review.flaggedIssues.length > 0 && (
                             <View style={styles.issueTagsContainer}>
                                 {review.flaggedIssues.slice(0, 3).map((issue, index) => (
@@ -236,7 +254,11 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
                                 ))}
                                 {review.flaggedIssues.length > 3 && (
                                     <View style={styles.issueTag}>
-                                        <ThemedText style={styles.issueTagText}>+{review.flaggedIssues.length - 3} more</ThemedText>
+                                        <ThemedText style={styles.issueTagText}>
+                                            {t('reviews.card.moreIssues', {
+                                                count: review.flaggedIssues.length - 3,
+                                            })}
+                                        </ThemedText>
                                     </View>
                                 )}
                             </View>
@@ -252,21 +274,20 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
 
             {!isCompact && review.positiveComment && (
                 <View style={styles.commentSection}>
-                    <ThemedText style={styles.commentLabel}>Positive:</ThemedText>
+                    <ThemedText style={styles.commentLabel}>{t('reviews.card.positive')}</ThemedText>
                     <ThemedText style={styles.commentText}>{review.positiveComment}</ThemedText>
                 </View>
             )}
 
             {!isCompact && review.negativeComment && (
                 <View style={styles.commentSection}>
-                    <ThemedText style={styles.commentLabel}>Negative:</ThemedText>
+                    <ThemedText style={styles.commentLabel}>{t('reviews.card.negative')}</ThemedText>
                     <ThemedText style={styles.commentText}>{review.negativeComment}</ThemedText>
                 </View>
             )}
 
             {showActions && (
                 <View style={styles.reviewFooter}>
-                    {/* Community Moderation Section */}
                     <View style={styles.moderationSection}>
                         <TouchableOpacity
                             style={[styles.helpfulButton, {
@@ -283,7 +304,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
                             <ThemedText style={[styles.helpfulText, {
                                 color: (review.helpfulVotes || 0) > 0 ? colors.success : colors.COLOR_BLACK_LIGHT_4
                             }]}>
-                                Helpful ({review.helpfulVotes || 0})
+                                {t('reviews.card.helpful', { count: review.helpfulVotes || 0 })}
                             </ThemedText>
                         </TouchableOpacity>
 
@@ -295,10 +316,11 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
                             onPress={handleReport}
                         >
                             <Ionicons name="flag" size={18} color={colors.error} />
-                            <ThemedText style={[styles.helpfulText, { color: colors.error }]}>Report</ThemedText>
+                            <ThemedText style={[styles.helpfulText, { color: colors.error }]}>
+                                {t('reviews.card.report')}
+                            </ThemedText>
                         </TouchableOpacity>
 
-                        {/* Right of Reply Button */}
                         {review.replyAllowed && (
                             <TouchableOpacity
                                 style={[styles.helpfulButton, {
@@ -308,22 +330,26 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
                                 onPress={handleReply}
                             >
                                 <Ionicons name="chatbubble" size={18} color={colors.primaryColor} />
-                                <ThemedText style={[styles.helpfulText, { color: colors.primaryColor }]}>Reply</ThemedText>
+                                <ThemedText style={[styles.helpfulText, { color: colors.primaryColor }]}>
+                                    {t('reviews.card.reply')}
+                                </ThemedText>
                             </TouchableOpacity>
                         )}
                     </View>
 
-                    {/* Recommendation and Trust Info */}
                     <View style={styles.recommendationSection}>
                         <ThemedText style={styles.recommendationText}>
-                            {review.recommendation ? '✓ Recommends' : '✗ Does not recommend'}
+                            {review.recommendation
+                                ? t('reviews.card.recommends')
+                                : t('reviews.card.doesNotRecommend')}
                         </ThemedText>
 
-                        {/* Moderation Status Indicator */}
                         {review.moderationStatus === 'flagged' && (
                             <View style={styles.flaggedIndicator}>
                                 <Ionicons name="warning" size={12} color={colors.warning} />
-                                <ThemedText style={styles.flaggedText}>Under Review</ThemedText>
+                                <ThemedText style={styles.flaggedText}>
+                                    {t('reviews.card.underReview')}
+                                </ThemedText>
                             </View>
                         )}
                     </View>

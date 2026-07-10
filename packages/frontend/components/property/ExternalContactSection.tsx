@@ -105,8 +105,7 @@ export const ExternalContactSection: React.FC<Props> = ({ property }) => {
   return (
     <View style={styles.container}>
       <BloomText style={styles.title}>
-        {t('property.external.contactTitle', 'Contact on listing') ||
-          'Contact on listing'}
+        {t('property.external.contactTitle')}
       </BloomText>
       {displayName ? (
         <BloomText style={styles.subtitle}>{displayName}</BloomText>

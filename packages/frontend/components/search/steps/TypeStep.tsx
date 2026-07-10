@@ -19,15 +19,15 @@ import { spacing } from '@/constants/styles';
 /** A selectable property type with its long-term and short-term labels. */
 interface TypeOption {
   type: PropertyType;
-  longTerm: string;
-  vacation: string;
+  longTermKey: string;
+  vacationKey: string;
 }
 
 const TYPE_OPTIONS: readonly TypeOption[] = [
-  { type: PropertyType.APARTMENT, longTerm: 'Apartments', vacation: 'Apartments' },
-  { type: PropertyType.HOUSE, longTerm: 'Houses', vacation: 'Whole houses' },
-  { type: PropertyType.ROOM, longTerm: 'Rooms', vacation: 'Private rooms' },
-  { type: PropertyType.STUDIO, longTerm: 'Studios', vacation: 'Studios' },
+  { type: PropertyType.APARTMENT, longTermKey: 'search.types.apartments', vacationKey: 'search.types.apartments' },
+  { type: PropertyType.HOUSE, longTermKey: 'search.types.houses', vacationKey: 'search.filters.propertyTypeVacation.wholeHouses' },
+  { type: PropertyType.ROOM, longTermKey: 'search.types.rooms', vacationKey: 'search.filters.propertyTypeVacation.privateRooms' },
+  { type: PropertyType.STUDIO, longTermKey: 'search.types.studios', vacationKey: 'search.types.studios' },
 ] as const;
 
 interface TypeStepProps {
@@ -56,12 +56,12 @@ export const TypeStep: React.FC<TypeStepProps> = ({
     <View style={compact ? styles.containerCompact : styles.container}>
       {compact ? null : (
         <BloomText style={styles.heading}>
-          {t('search.step.type.title', 'What type of place?') || 'What type of place?'}
+          {t('search.step.type.title')}
         </BloomText>
       )}
       <View style={styles.chips}>
         {TYPE_OPTIONS.map((option) => {
-          const label = isVacation ? option.vacation : option.longTerm;
+          const labelKey = isVacation ? option.vacationKey : option.longTermKey;
           const isSelected = selected.includes(option.type);
           return (
             <Chip
@@ -71,9 +71,9 @@ export const TypeStep: React.FC<TypeStepProps> = ({
               size="large"
               selected={isSelected}
               onPress={() => onToggle(option.type)}
-              accessibilityLabel={t(label, label) || label}
+              accessibilityLabel={t(labelKey)}
             >
-              {t(label, label) || label}
+              {t(labelKey)}
             </Chip>
           );
         })}

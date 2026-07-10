@@ -105,7 +105,6 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               </BloomText>
               <BloomText style={styles.ratingCount}>
                 {t('property.reviews.countWithNumber', {
-                  defaultValue: '({{count}} reviews)',
                   count: ratingSummary.totalReviews,
                 })}
               </BloomText>
@@ -119,11 +118,11 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                 color={colors.COLOR_BLACK_LIGHT_3}
               />
               <BloomText style={styles.hostName} numberOfLines={1}>
-                {t('property.host.hostedBy', 'Hosted by')} {hostName}
+                {t('property.host.hostedBy')} {hostName}
               </BloomText>
               {hostIsSuper ? (
                 <Badge
-                  content={t('property.host.superHost', 'Super host')}
+                  content={t('property.host.superHost')}
                   variant="solid"
                   color="success"
                   size="small"
@@ -148,7 +147,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
       >
         <Ionicons name="flag-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
         <BloomText style={styles.reportLabel}>
-          {t('property.report', 'Report this listing')}
+          {t('property.report')}
         </BloomText>
       </Pressable>
     </View>

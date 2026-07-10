@@ -160,13 +160,13 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
     return (points - currentTier.minPoints) / pointsBetweenTiers;
   }, [nextTier, currentTier, points]);
 
-  const tierName = (key: RewardTierKey): string => t(`agent.rewards.tiers.${key}`, key);
+  const tierName = (key: RewardTierKey): string => t(`agent.rewards.tiers.${key}`);
 
   const offeringLabel = (offering: CommissionOffering): string =>
-    t(`agent.calculator.offerings.${offering}`, offering);
+    t(`agent.calculator.offerings.${offering}`);
 
   const statusLabel = (status: CommissionStatus): string =>
-    t(`agent.dashboard.status.${status}`, status);
+    t(`agent.dashboard.status.${status}`);
 
   const statusColor = (status: CommissionStatus): string => {
     switch (status) {
@@ -187,22 +187,22 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
   const summaryCells: ReadonlyArray<{ key: string; label: string; value: string }> = [
     {
       key: 'referrals',
-      label: t('agent.dashboard.referrals', 'Referrals'),
+      label: t('agent.dashboard.referrals'),
       value: String(stats.referredCount),
     },
     {
       key: 'listings',
-      label: t('agent.dashboard.listings', 'Listings'),
+      label: t('agent.dashboard.listings'),
       value: String(stats.activeListings),
     },
     {
       key: 'pending',
-      label: t('agent.dashboard.pending', 'Pending'),
+      label: t('agent.dashboard.pending'),
       value: formatCurrency(stats.pendingEarnings, stats.currency, WHOLE_CURRENCY),
     },
     {
       key: 'earned',
-      label: t('agent.dashboard.earned', 'Earned'),
+      label: t('agent.dashboard.earned'),
       value: formatCurrency(stats.paidEarnings, stats.currency, WHOLE_CURRENCY),
     },
   ];
@@ -213,7 +213,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
   return (
     <View style={{ paddingHorizontal: horizontalPadding }}>
       <View style={styles.panel}>
-        <H1 style={styles.heading}>{t('agent.dashboard.title', 'Your dashboard')}</H1>
+        <H1 style={styles.heading}>{t('agent.dashboard.title')}</H1>
 
         {/* Stat grid */}
         <View style={styles.statGrid}>
@@ -233,7 +233,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
               <BloomText style={styles.tierName}>{tierName(currentTier.key)}</BloomText>
             </View>
             <BloomText style={styles.pointsValue}>
-              {t('agent.dashboard.pointsValue', '{{count}} pts', { count: points })}
+              {t('agent.dashboard.pointsValue', { count: points })}
             </BloomText>
           </View>
           <ProgressBar
@@ -245,24 +245,21 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
           />
           <BloomText style={styles.progressCaption}>
             {nextTier
-              ? t('agent.dashboard.toNext', '{{points}} pts to {{tier}}', {
+              ? t('agent.dashboard.toNext', {
                   points: Math.max(nextTier.minPoints - points, 0),
                   tier: tierName(nextTier.key),
                 })
-              : t('agent.dashboard.maxTier', "You've reached the top tier.")}
+              : t('agent.dashboard.maxTier')}
           </BloomText>
         </View>
 
         {/* Recent referrals */}
         <ListSection
-          title={t('agent.dashboard.recentReferrals', 'Your referrals')}
+          title={t('agent.dashboard.recentReferrals')}
           loading={referralsLoading}
           isEmpty={recentReferrals.length === 0}
-          loadingText={t('common.loading', 'Loading…')}
-          emptyText={t(
-            'agent.dashboard.noReferrals',
-            'No referred listings yet — share your link to get started.',
-          )}
+          loadingText={t('common.loading')}
+          emptyText={t('agent.dashboard.noReferrals')}
         >
           {recentReferrals.map((property) => (
             <View key={String(property._id ?? property.id)} style={styles.row}>
@@ -280,14 +277,11 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
 
         {/* Recent commissions (ledger) */}
         <ListSection
-          title={t('agent.dashboard.recentEarnings', 'Recent earnings')}
+          title={t('agent.dashboard.recentEarnings')}
           loading={earningsLoading}
           isEmpty={recentCommissions.length === 0}
-          loadingText={t('common.loading', 'Loading…')}
-          emptyText={t(
-            'agent.dashboard.noEarnings',
-            "No earnings yet — you'll see payouts here when a referred deal closes.",
-          )}
+          loadingText={t('common.loading')}
+          emptyText={t('agent.dashboard.noEarnings')}
         >
           {recentCommissions.map((commission) => {
             const tint = statusColor(commission.status);

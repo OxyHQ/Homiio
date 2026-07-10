@@ -308,9 +308,7 @@ export function SindiPanel() {
             <Pressable
               onPress={handleBackToList}
               accessibilityRole="button"
-              accessibilityLabel={t('sindi.panel.conversations', {
-                defaultValue: 'Conversations',
-              })}
+              accessibilityLabel={t('sindi.panel.conversations')}
               style={styles.headerIconButton}
             >
               <Ionicons name="chevron-back" size={20} color={colors.primaryDark} />
@@ -322,10 +320,10 @@ export function SindiPanel() {
           )}
           <View style={styles.headerTitleWrap}>
             <BloomText style={styles.headerTitle} numberOfLines={1}>
-              {t('sindi.panel.title', { defaultValue: t('sindi.title') })}
+              {t('sindi.panel.title')}
             </BloomText>
             <BloomText style={styles.headerSubtitle} numberOfLines={1}>
-              {t('sindi.panel.subtitle', { defaultValue: t('sindi.subtitle') })}
+              {t('sindi.panel.subtitle')}
             </BloomText>
           </View>
         </View>
@@ -333,9 +331,7 @@ export function SindiPanel() {
           <Pressable
             onPress={handleNewChat}
             accessibilityRole="button"
-            accessibilityLabel={t('sindi.panel.newChat', {
-              defaultValue: 'New chat',
-            })}
+            accessibilityLabel={t('sindi.panel.newChat')}
             style={styles.headerIconButton}
           >
             <Ionicons name="create-outline" size={20} color={colors.primaryDark} />
@@ -343,7 +339,7 @@ export function SindiPanel() {
           <Pressable
             onPress={closeSindiPanel}
             accessibilityRole="button"
-            accessibilityLabel={t('sindi.panel.close', { defaultValue: 'Close' })}
+            accessibilityLabel={t('sindi.panel.close')}
             style={styles.headerIconButton}
           >
             <Ionicons name="close" size={20} color={colors.primaryDark} />
@@ -357,7 +353,7 @@ export function SindiPanel() {
           icon="lock-closed"
           title={t('sindi.auth.required')}
           description={t('sindi.auth.message')}
-          actionText={t('Sign in')}
+          actionText={t('common.signIn')}
           actionIcon="log-in"
           onAction={() => showSignInModal()}
           iconColor={colors.primaryColor}
@@ -387,34 +383,28 @@ export function SindiPanel() {
               <SindiIcon size={40} color={colors.primaryColor} />
             </View>
             <BloomText style={styles.introTitle}>
-              {t('sindi.panel.title', { defaultValue: t('sindi.title') })}
+              {t('sindi.panel.title')}
             </BloomText>
             <BloomText style={styles.introBody}>
-              {t('sindi.panel.intro', {
-                defaultValue: t('sindi.subtitle'),
-              })}
+              {t('sindi.panel.intro')}
             </BloomText>
           </View>
 
           <Pressable
             onPress={handleNewChat}
             accessibilityRole="button"
-            accessibilityLabel={t('sindi.panel.startNew', {
-              defaultValue: 'Start new conversation',
-            })}
+            accessibilityLabel={t('sindi.panel.startNew')}
             style={styles.startButton}
           >
             <Ionicons name="add" size={18} color={colors.primaryForeground} />
             <BloomText style={styles.startButtonLabel}>
-              {t('sindi.panel.startNew', {
-                defaultValue: 'Start new conversation',
-              })}
+              {t('sindi.panel.startNew')}
             </BloomText>
           </Pressable>
 
           <View style={styles.historyBlock}>
             <H3 style={styles.historyTitle}>
-              {t('sindi.panel.conversations', { defaultValue: 'Conversations' })}
+              {t('sindi.panel.conversations')}
             </H3>
             {loading ? (
               <PanelSkeleton />
@@ -426,9 +416,7 @@ export function SindiPanel() {
                   color={colors.muted}
                 />
                 <BloomText style={styles.emptyHistoryText}>
-                  {t('sindi.panel.empty', {
-                    defaultValue: 'Start a new conversation to get help.',
-                  })}
+                  {t('sindi.panel.empty')}
                 </BloomText>
               </View>
             ) : (
@@ -486,7 +474,7 @@ export function SindiPanel() {
           entering={FadeIn.duration(SCRIM_FADE_DURATION)}
           exiting={FadeOut.duration(SCRIM_FADE_DURATION)}
           accessibilityRole="button"
-          accessibilityLabel={t('sindi.panel.close', { defaultValue: 'Close' })}
+          accessibilityLabel={t('sindi.panel.close')}
           onPress={closeSindiPanel}
           style={[
             StyleSheet.absoluteFill,

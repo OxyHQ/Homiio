@@ -47,17 +47,17 @@ export const SaveSearchBottomSheet: React.FC<SaveSearchBottomSheetProps> = ({
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.title}>{t('Save this search')}</Text>
+                <Text style={styles.title}>{t('search.save.title')}</Text>
                 <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
                     <Ionicons name="close" size={22} color={colors.COLOR_BLACK_LIGHT_4} />
                 </TouchableOpacity>
             </View>
 
             <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>{t('Name')}</Text>
+                <Text style={styles.inputLabel}>{t('common.name')}</Text>
                 <TextInput
                     style={styles.input}
-                    placeholder={t('Give your search a name')}
+                    placeholder={t('search.save.namePlaceholder')}
                     value={name}
                     onChangeText={setName}
                     maxLength={60}
@@ -65,7 +65,7 @@ export const SaveSearchBottomSheet: React.FC<SaveSearchBottomSheetProps> = ({
             </View>
 
             <View style={styles.row}>
-                <Text style={styles.toggleLabel}>{t('Enable notifications')}</Text>
+                <Text style={styles.toggleLabel}>{t('search.save.enableNotifications')}</Text>
                 <Switch
                     value={notificationsEnabled}
                     onValueChange={setNotificationsEnabled}
@@ -83,7 +83,7 @@ export const SaveSearchBottomSheet: React.FC<SaveSearchBottomSheetProps> = ({
                     disabled={!name.trim() || !query.trim() || submitting}
                     onPress={handleSave}
                 >
-                    <Text style={styles.saveText}>{submitting ? t('Saving...') : t('common.save')}</Text>
+                    <Text style={styles.saveText}>{submitting ? t('common.saving') : t('common.save')}</Text>
                 </TouchableOpacity>
             </View>
         </View>

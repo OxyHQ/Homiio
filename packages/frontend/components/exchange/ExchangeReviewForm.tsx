@@ -37,7 +37,7 @@ const StarPicker: React.FC<{ value: number; onChange: (next: number) => void }> 
             key={rating}
             onPress={() => onChange(rating)}
             accessibilityRole="button"
-            accessibilityLabel={t('listing.exchange.review.starLabel', '{{count}} stars', {
+            accessibilityLabel={t('listing.exchange.review.starLabel', {
               count: rating,
             })}
             hitSlop={6}
@@ -70,7 +70,7 @@ export const ExchangeReviewForm: React.FC<ExchangeReviewFormProps> = ({
 
   const handleSubmit = useCallback(async () => {
     if (rating < 1) {
-      toast.error(t('listing.exchange.review.pickRating', 'Pick a star rating first'));
+      toast.error(t('listing.exchange.review.pickRating'));
       return;
     }
     try {
@@ -78,13 +78,13 @@ export const ExchangeReviewForm: React.FC<ExchangeReviewFormProps> = ({
         rating,
         comment: comment.trim() || undefined,
       });
-      toast.success(t('listing.exchange.review.thanks', 'Thanks for your review'));
+      toast.success(t('listing.exchange.review.thanks'));
       onSubmitted();
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
-          : t('listing.exchange.review.failed', 'Could not submit review');
+          : t('listing.exchange.review.failed');
       toast.error(message);
     }
   }, [rating, comment, mutation, onSubmitted, t]);
@@ -92,23 +92,17 @@ export const ExchangeReviewForm: React.FC<ExchangeReviewFormProps> = ({
   return (
     <View style={styles.container}>
       <BloomText style={styles.title}>
-        {t('listing.exchange.review.title', 'Leave a review')}
+        {t('listing.exchange.review.title')}
       </BloomText>
       <BloomText style={styles.subtitle}>
-        {t(
-          'listing.exchange.review.subtitle',
-          'Rate your exchange — your feedback builds trust for everyone.',
-        )}
+        {t('listing.exchange.review.subtitle')}
       </BloomText>
       <StarPicker value={rating} onChange={setRating} />
       <TextInput
         style={styles.input}
         value={comment}
         onChangeText={setComment}
-        placeholder={t(
-          'listing.exchange.review.placeholder',
-          'Share how the stay went (optional).',
-        )}
+        placeholder={t('listing.exchange.review.placeholder')}
         placeholderTextColor={colors.COLOR_BLACK_LIGHT_4}
         multiline
         textAlignVertical="top"
@@ -122,7 +116,7 @@ export const ExchangeReviewForm: React.FC<ExchangeReviewFormProps> = ({
         disabled={mutation.isPending}
         style={styles.submit}
       >
-        {t('listing.exchange.review.submit', 'Submit review')}
+        {t('listing.exchange.review.submit')}
       </Button>
     </View>
   );

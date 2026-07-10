@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { profileEditStyles as styles } from './styles';
 import type { CooperativeInfoForm, ProfileVisibilityValue, SettingsForm } from './types';
 
@@ -20,29 +21,31 @@ export function CooperativeProfileSections({
   updateCooperativeInfo,
   updateSettings,
 }: CooperativeProfileSectionsProps) {
+  const { t } = useTranslation();
+
   switch (activeSection) {
     case 'cooperative':
       return (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Cooperative Information</Text>
+          <Text style={styles.sectionTitle}>{t('profile.edit.sections.cooperativeInformation')}</Text>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Legal Name *</Text>
+            <Text style={styles.label}>{t('profile.edit.labels.legalName')}</Text>
             <TextInput
               style={styles.input}
               value={cooperativeInfo.legalName}
               onChangeText={(text) => updateCooperativeInfo({ legalName: text })}
-              placeholder="Enter cooperative legal name"
+              placeholder={t('profile.edit.placeholders.cooperativeLegalName')}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Description</Text>
+            <Text style={styles.label}>{t('profile.edit.labels.description')}</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
               value={cooperativeInfo.description}
               onChangeText={(text) => updateCooperativeInfo({ description: text })}
-              placeholder="Describe your cooperative..."
+              placeholder={t('profile.edit.placeholders.cooperativeDescription')}
               multiline
               numberOfLines={4}
             />
@@ -53,11 +56,11 @@ export function CooperativeProfileSections({
     case 'settings':
       return (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Cooperative Settings</Text>
-          <Text style={styles.sectionSubtitle}>Configure your cooperative profile settings</Text>
+          <Text style={styles.sectionTitle}>{t('profile.edit.sections.cooperativeSettings')}</Text>
+          <Text style={styles.sectionSubtitle}>{t('profile.edit.subtitles.cooperativeSettings')}</Text>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Profile Visibility</Text>
+            <Text style={styles.label}>{t('profile.edit.labels.profileVisibility')}</Text>
             <View style={styles.pickerContainer}>
               {PROFILE_VISIBILITIES.map((visibility) => (
                 <TouchableOpacity
@@ -83,7 +86,7 @@ export function CooperativeProfileSections({
                         styles.pickerOptionTextSelected,
                     ]}
                   >
-                    {visibility.replace('_', ' ').toUpperCase()}
+                    {t(`profile.edit.options.profileVisibility.${visibility}`)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -91,7 +94,7 @@ export function CooperativeProfileSections({
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Notifications</Text>
+            <Text style={styles.label}>{t('profile.edit.labels.notifications')}</Text>
             <View style={styles.checkboxGroup}>
               <TouchableOpacity
                 style={[styles.checkbox, settings.notifications.email && styles.checkboxSelected]}
@@ -110,7 +113,7 @@ export function CooperativeProfileSections({
                     settings.notifications.email && styles.checkboxTextSelected,
                   ]}
                 >
-                  Email Notifications
+                  {t('profile.edit.toggles.emailNotifications')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -130,7 +133,7 @@ export function CooperativeProfileSections({
                     settings.notifications.push && styles.checkboxTextSelected,
                   ]}
                 >
-                  Push Notifications
+                  {t('profile.edit.toggles.pushNotifications')}
                 </Text>
               </TouchableOpacity>
             </View>

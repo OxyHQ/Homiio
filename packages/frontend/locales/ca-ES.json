@@ -14,128 +14,96 @@
       "transportation": "Aparcament i transport",
       "community": "Espais comuns",
       "other": "Més"
-    }
+    },
+    "airConditioning": "Aire condicionat",
+    "airPurifier": "Sistema de purificació d'aire",
+    "balcony": "Balcó privat",
+    "bbqArea": "Zona de barbacoa",
+    "bikeStorage": "Emmagatzematge segur per a bicicletes",
+    "builtInShelving": "Prestatgeries encastades",
+    "cableTv": "Preparat per a TV per cable",
+    "ceilingFans": "Ventiladors de sostre",
+    "coatCloset": "Armari d'entrada",
+    "communityRoom": "Sala comunitària",
+    "conferenceRoom": "Sala de reunions",
+    "coworkingSpace": "Espai de coworking",
+    "daycare": "Llar d'infants a la finca",
+    "dimmerSwitches": "Interruptors reguladors",
+    "dishwasher": "Rentavaixelles",
+    "dogPark": "Zona d'exercici per a mascotes",
+    "doubleVanity": "Doble lavabo",
+    "dryer": "Assecadora a la vivenda",
+    "electricity": "Electricitat inclosa",
+    "elevator": "Accés amb ascensor",
+    "energyEfficient": "Electrodomèstics eficients",
+    "evCharging": "Càrrega per a vehicle elèctric",
+    "familyRoom": "Sala d'activitats familiar",
+    "fiberInternet": "Internet de fibra",
+    "firePit": "Zona amb foguera",
+    "fireSafety": "Sistema de seguretat contra incendis",
+    "garbageDisposal": "Triturador de brossa",
+    "gardenAccess": "Accés al jardí",
+    "gardenSpace": "Hort comunitari",
+    "grabBars": "Barres d'apoi",
+    "graniteCounters": "Taulells de granit",
+    "greenRoof": "Terrat verd",
+    "gym": "Gimnàs",
+    "hardwoodFloors": "Sòl de fusta",
+    "heatedFloors": "Sòl radiant",
+    "heating": "Calefacció adequada",
+    "homeOffice": "Espai d'oficina a casa",
+    "hotTub": "Banyera d'hidromassatge",
+    "humidifier": "Humidificador central",
+    "iceMaker": "Màquina de gel",
+    "insulation": "Aïllament adequat",
+    "intercom": "Porter automàtic",
+    "jettedTub": "Banyera d'hidromassatge",
+    "kitchen": "Cuina",
+    "laundryRoom": "Bugaderia compartida",
+    "ledLighting": "Il·luminació LED",
+    "linenCloset": "Armari de roba blanca",
+    "mailRoom": "Sala de paquets i correu",
+    "microwave": "Microones",
+    "mobilityAssistance": "Accessibilitat i mobilitat",
+    "naturalLight": "Llum natural abundant",
+    "oven": "Forn",
+    "pantry": "Despensa",
+    "parkingSpace": "Plaça d'aparcament",
+    "pendantLighting": "Il·luminació de disseny",
+    "petFriendly": "S'admeten mascotes",
+    "printingStation": "Centre d'impressió i còpies",
+    "publicTransitAccess": "Accés al transport públic",
+    "rainwaterCollection": "Recollida d'aigua de pluja",
+    "rampAccess": "Accés amb rampa",
+    "recyclingProgram": "Programa de reciclatge integral",
+    "refrigerator": "Nevera de mida completa",
+    "rooftopDeck": "Terrassa a la coberta",
+    "secureEntry": "Accés controlat",
+    "securityCameras": "Càmeres de seguretat",
+    "seniorServices": "Serveis de suport per a gent gran",
+    "smartDoorbell": "Timbre amb vídeo",
+    "smartHome": "Llar intel·ligent",
+    "solarPanels": "Energia solar",
+    "stainlessAppliances": "Electrodomèstics d'acer inoxidable",
+    "storageUnit": "Espai d'emmagatzematge",
+    "stove": "Cuina",
+    "studyRoom": "Espai d'estudi tranquil",
+    "swimmingPool": "Piscina",
+    "teenRoom": "Sala d'activitats per a adolescents",
+    "tileFloors": "Sòl de rajoles",
+    "trashPickup": "Recollida de residus",
+    "usbOutlets": "Endolls USB",
+    "walkInCloset": "Vestidor",
+    "walkInShower": "Dutxa a ras de terra",
+    "washingMachine": "Rentadora a la vivenda",
+    "water": "Aigua i clavegueram inclosos",
+    "waterFilter": "Sistema de filtratge d'aigua",
+    "wheelchairAccessible": "Accessible amb cadira de rodes",
+    "wholeHouseFan": "Ventilador de tota la casa",
+    "wideDoorways": "Portes amples",
+    "wifi": "Internet d'alta velocitat",
+    "wineFridge": "Nevera per a vins"
   },
-  "Home": "Inici",
-  "Search": "Cercar",
-  "Notifications": "Notificacions",
-  "Messages": "Missatges",
-  "New Post": "Nova Publicació",
-  "What's happening?": "Què està passant?",
-  "Post": "Publicar",
-  "Save": "Guardar",
-  "Settings": "Configuració",
-  "Language": "Idioma",
-  "Primary Color": "Color Principal",
-  "Apply Settings": "Aplicar Configuració",
-  "Welcome to Homiio! 👋": "Benvingut a Homiio! 👋",
-  "Thanks for trying out our app. Start exploring now!": "Gràcies per provar la nostra aplicació. Comença a explorar ara!",
-  "This screen doesn't exist.": "Aquesta pantalla no existeix.",
-  "Go to home screen!": "Vés a la pantalla d'inici!",
-  "Hey, how are you?": "Hola, com estàs?",
-  "Let's catch up soon!": "Posem-nos al dia aviat!",
-  "liked your Post": "ha donat m'agrada a la teva publicació",
-  "reposted your Post": "ha republicat la teva publicació",
-  "This is a sample post": "Aquesta és una publicació d'exemple",
-  "Another example post": "Una altra publicació d'exemple",
-  "Customize your view": "Personalitza la teva vista",
-  "These settings affect all the Mention accounts on this device.": "Aquesta configuració afecta tots els comptes de Homiio en aquest dispositiu.",
-  "Account": "Compte",
-  "Manage your account settings": "Gestiona la configuració del teu compte",
-  "Notification preferences": "Preferències de notificacions",
-  "Privacy and security settings": "Configuració de privacitat i seguretat",
-  "Appearance": "Aparença",
-  "Theme, font size, colors": "Tema, mida de lletra, colors",
-  "Help & Support": "Ajuda i Suport",
-  "Get help and support": "Obtenir ajuda i suport",
-  "About": "Sobre",
-  "About this app": "Sobre aquesta aplicació",
-  "Battery": "Bateria",
-  "Loading...": "Carregant...",
-  "Trends for you": "Tendències per a tu",
-  "Show more": "Mostrar més",
-  "posts": "publicacions",
-  "File Manager": "Gestor d'Arxius",
-  "Filter files by name": "Filtrar arxius per nom",
-  "Filter files by date (MM/DD/YYYY)": "Filtrar arxius per data (DD/MM/AAAA)",
-  "Filter files by type (e.g., image, video)": "Filtrar arxius per tipus (p. ex., imatge, vídeo)",
-  "Who to follow": "A qui seguir",
-  "Search...": "Cercar...",
-  "No results found for": "No s'han trobat resultats per",
-  "Follow": "Seguir",
-  "Following": "Seguint",
-  "Explore": "Explorar",
-  "Chat": "Xat",
-  "Bookmarks": "Marcadors",
-  "Feeds": "Feeds",
-  "Lists": "Llistes",
-  "Videos": "Vídeos",
-  "Sign Up": "Registrar-se",
-  "Sign In": "Iniciar Sessió",
-  "Join the conversation": "Uneix-te a la conversa",
-  "error.socket.not_connected": "No connectat al servidor de xat",
-  "error.message.send_timeout": "Temps d'espera per enviar missatge. Torna-ho a provar.",
-  "error.message.edit_timeout": "Temps d'espera per editar. Torna-ho a provar.",
-  "error.message.delete_timeout": "Temps d'espera per eliminar. Torna-ho a provar.",
-  "error.signup.missing_fields": "Si us plau, omple tots els camps",
-  "error.signup.failed": "Error en el registre:",
-  "error.boundary.title": "Alguna cosa ha anat malament",
-  "error.boundary.message": "Un problema inesperat ha interromput el que estaves fent. Pots tornar-ho a provar o enviar-nos un informe ràpid perquè ho investiguem.",
-  "error.boundary.retry": "Torna-ho a provar",
-  "error.boundary.reportIssue": "Informar del problema",
-  "error.boundary.errorId": "ID d'error",
-  "error.boundary.copyIdHint": "Toca per copiar l'ID",
-  "error.boundary.copiedToClipboard": "Copiat al porta-retalls",
-  "error.boundary.showDetails": "Mostrar detalls tècnics",
-  "error.boundary.hideDetails": "Amagar detalls tècnics",
-  "error.boundary.technicalDetails": "Detalls tècnics",
-  "error.boundary.maxRetriesTitle": "Segueix sense funcionar",
-  "error.boundary.maxRetriesMessage": "Has assolit el límit de reintents. Si us plau, informa del problema perquè ho puguem revisar.",
-  "error.boundary.forceRetry": "Forçar reintent",
-  "error.boundary.reportCopiedTitle": "Informe copiat",
-  "error.boundary.reportCopiedMessage": "L'informe d'error s'ha copiat al porta-retalls.",
-  "error.boundary.reportFailedTitle": "No s'ha pogut copiar",
-  "error.boundary.reportFailedMessage": "No hem pogut copiar l'informe al porta-retalls. Torna-ho a provar.",
-  "error.boundary.errorMessage": "Missatge d'error",
-  "error.boundary.errorType": "Tipus d'error",
-  "error.boundary.stackTrace": "Traça de pila",
-  "error.boundary.componentStack": "Pila de components",
-  "error.boundary.deviceInformation": "Informació del dispositiu",
-  "error.file_selection": "Error processant els arxius seleccionats. Si us plau, torna-ho a provar.",
-  "error.login_required": "Si us plau, inicia sessió per gestionar arxius",
-  "error.load_notifications": "Error carregant notificacions",
-  "error.fetch_trends": "Error carregant tendències",
-  "error.signup.password_mismatch": "Les contrasenyes no coincideixen",
-  "error.validation.token_expired": "El token ha caducat",
-  "error.validation.token_invalid": "El format del token no és vàlid",
-  "error.validation.token_signature": "La signatura del token no és vàlida",
-  "error.auth.invalid_token": "Token d'autenticació invàlid",
-  "error.chat.forward_failed": "No s'ha pogut reenviar el missatge",
-  "error.chat.delete_failed": "No s'ha pogut eliminar el missatge",
-  "error.chat.send_failed": "Error enviant missatge",
-  "error.chat.load_failed": "Error carregant missatges",
-  "error.data.fetch_failed": "Error obtenint dades: {{message}}",
-  "error.users.fetch_failed": "Error obtenint usuaris: {{message}}",
-  "inbox.title": "Bústia",
-  "notification.welcome.title": "Benvingut a Homiio! 👋",
-  "notification.welcome.body": "Gràcies per provar la nostra aplicació. Comença a explorar ara!",
-  "success.signup": "Registre exitós",
-  "action.retry": "Tornar a provar",
-  "status.loading": "Carregant...",
-  "state.loading": "Carregant...",
-  "state.no_results": "Sense resultats",
-  "state.empty_state": "Res a mostrar",
-  "state.not_connected": "No connectat",
-  "state.session_expired": "Sessió caducada",
-  "state.no_session": "Si us plau, inicia sessió",
-  "state.retrying": "Tornant a provar...",
-  "state.uploading": "Pujant...",
-  "state.downloading": "Descarregant...",
-  "state.processing": "Processant...",
-  "state.please_wait": "Si us plau, espera...",
-  "file.size_mb": "MB",
-  "profile.edit": "Editar perfil",
-  "profile.chat": "Xat",
   "home": {
     "hero": {
       "title": "Troba la teva llar ètica",
@@ -200,7 +168,8 @@
       "errorDescription": "Si us plau, torna-ho a provar.",
       "retry": "Tornar a provar",
       "results": "Resultats",
-      "filtered": "filtrades"
+      "filtered": "filtrades",
+      "continue": "Continue browsing"
     },
     "saved": {
       "header": "Desats",
@@ -238,7 +207,32 @@
       "noFolderItemsDescription": "Desa propietats en aquesta carpeta per veure-les aquí"
     },
     "tips": {
-      "article": "Article"
+      "article": "Article",
+      "title": "Rental Tips & Guides",
+      "categories": {
+        "search": "Search",
+        "safety": "Safety",
+        "legal": "Legal",
+        "inspection": "Inspection"
+      },
+      "firstTimeRenting": {
+        "title": "First Time Renting? Here's Your Complete Guide",
+        "description": "Everything you need to know about finding, viewing, and securing your first rental property."
+      },
+      "avoidScams": {
+        "title": "How to Avoid Rental Scams: Red Flags to Watch For",
+        "description": "Learn to identify common rental scams and protect yourself from fraud when searching for a new home."
+      },
+      "rentalAgreement": {
+        "title": "Understanding Your Rental Agreement: Key Terms Explained",
+        "description": "Break down complex legal terms and understand what you're signing before committing to a rental."
+      },
+      "propertyInspection": {
+        "title": "Property Inspection Checklist: What to Look For",
+        "description": "A comprehensive guide to inspecting potential rental properties and identifying potential issues."
+      },
+      "subtitle": "Practical guides from local tenants, legal experts, and the Homiio editorial team.",
+      "eyebrow": "Renting smarter"
     },
     "faq": {
       "title": "Preguntes Freqüents",
@@ -262,6 +256,46 @@
     "cityShowcase": {
       "title": "Explora {{place}}",
       "defaultPlace": "Espanya"
+    },
+    "insights": {
+      "title": "Platform Insights"
+    },
+    "noProfilesTitle": "No Saved Profiles",
+    "noProfilesDescription": "Follow profiles to see them here",
+    "recommended": {
+      "title": "Recommended homes",
+      "eyebrow": "For you"
+    },
+    "hostCta": {
+      "cta": "Become a host",
+      "subtitle": "Reach verified renters across Spain — free to list, fair fees, real human support.",
+      "title": "List your space, find a great tenant"
+    },
+    "footerStrip": {
+      "support": "Real support, real people",
+      "fair": "Fair agreements",
+      "verified": "Verified listings"
+    },
+    "nearby": {
+      "title": "Homes in {{city}}"
+    },
+    "category": {
+      "studios": "Estudis",
+      "apartments": "Apartaments",
+      "houses": "Cases",
+      "rooms": "Habitacions",
+      "coliving": "Co-living",
+      "luxury": "Luxury",
+      "newListings": "Nous anuncis",
+      "nearYou": "A prop teu",
+      "beachfront": "Davant del mar",
+      "cabins": "Cabanes",
+      "pools": "Piscines",
+      "mountain": "Muntanya",
+      "cityBreaks": "Escapades urbanes",
+      "countryside": "Camp",
+      "instantBook": "Reserva instantània",
+      "petFriendly": "Admet mascotes"
     }
   },
   "agent": {
@@ -367,6 +401,9 @@
       "subtitle": "Converteix les llars que t'envolten en ingressos.",
       "cta": "Fes-te agent",
       "trust": "Sense llicència. Treballa des del mòbil."
+    },
+    "join": {
+      "error": "Could not start earning right now. Please try again."
     }
   },
   "search": {
@@ -386,20 +423,57 @@
     "enableNotifications": "Habilitar Notificacions",
     "notificationsDescription": "Rep notificacions quan noves propietats coincideixin amb aquesta cerca",
     "withFilters": "Amb filtres",
-    "error": "Error",
+    "error": {
+      "title": "Could not load homes"
+    },
     "enterSearchQuery": "Si us plau introdueix una consulta de cerca primer",
     "deleteSearch": "Eliminar Cerca",
     "deleteSearchConfirm": "Estàs segur que vols eliminar la cerca \"{{name}}\"?",
     "viewAllSaved": "Veure Totes Guardades",
     "more": "més",
-    "Eco-friendly": "Ecològic",
-    "Co-living": "Convivència",
-    "Furnished": "Amoblat",
-    "Pets Allowed": "Mascotes Permeses",
-    "Verified": "Verificat",
-    "Search with": "Cercar amb",
     "filters": {
-      "listingType": "Tipus d'anunci"
+      "listingType": "Tipus d'anunci",
+      "propertyType": "Tipus de propietat",
+      "nightlyPrice": "Preu per nit",
+      "monthlyPrice": "Preu mensual",
+      "checkIn": "Entrada",
+      "checkOut": "Sortida",
+      "addDate": "Afegir data",
+      "guests": "Hostes",
+      "instantBook": "Reserva instantània",
+      "cancellationPolicy": "Política de cancel·lació",
+      "moveInDate": "Data d'entrada",
+      "leaseDuration": {
+        "3Months": "3 mesos",
+        "6Months": "6 mesos",
+        "12Months": "12 mesos",
+        "flexible": "Flexible"
+      },
+      "maxDeposit": "Dipòsit màxim",
+      "amenities": "Comoditats",
+      "amenity": {
+        "wifi": "Wi-Fi",
+        "parking": "Aparcament",
+        "gym": "Gimnàs",
+        "pool": "Piscina",
+        "balcony": "Balcó",
+        "garden": "Jardí",
+        "elevator": "Ascensor",
+        "airConditioning": "Aire condicionat",
+        "heating": "Calefacció",
+        "dishwasher": "Rentaplats",
+        "washingMachine": "Rentadora"
+      },
+      "propertyTypeVacation": {
+        "wholeHouses": "Cases senceres",
+        "privateRooms": "Habitacions privades"
+      },
+      "cancellation": {
+        "flexible": "Flexible",
+        "moderate": "Moderada",
+        "strict": "Estricta",
+        "superStrict": "Molt estricta"
+      }
     },
     "mode": {
       "label": "Mode de cerca",
@@ -408,7 +482,6 @@
       "buy": "Comprar",
       "exchange": "Intercanvi"
     },
-    "Advanced Filters": "Filtres Avançats",
     "types": {
       "apartments": "Apartaments",
       "houses": "Cases",
@@ -430,7 +503,16 @@
       "rooms": "Habitacions",
       "studios": "Estudis",
       "coliving": "Convivència",
-      "publicHousing": "Habitatge Públic"
+      "publicHousing": "Habitatge Públic",
+      "couchsurfing": "Couchsurfing",
+      "roommates": "Roommates",
+      "hostel": "Hostel",
+      "guesthouse": "Guesthouse",
+      "campsite": "Campsite",
+      "boat": "Boat",
+      "treehouse": "Treehouse",
+      "yurt": "Yurt",
+      "other": "Other"
     },
     "areas": {
       "downtown": "Centre",
@@ -515,7 +597,97 @@
       }
     },
     "editSearch": "Edita la cerca",
-    "searchQueryPlaceholder": "Introdueix la teva consulta de cerca"
+    "searchQueryPlaceholder": "Introdueix la teva consulta de cerca",
+    "placeholder": {
+      "suggestion1": "Find your dream apartment in Barcelona...",
+      "suggestion2": "Looking for a pet-friendly home?",
+      "suggestion3": "Discover eco-friendly properties...",
+      "suggestion4": "Search for furnished studios near you..."
+    },
+    "disableNotifications": "Disable notifications",
+    "duplicateName": "A search with this name already exists",
+    "duplicateExact": "You already saved this exact search",
+    "tryDifferentName": "Please choose a different name",
+    "actions": {
+      "save": "Save",
+      "search": "Search",
+      "clearAll": "Clear all",
+      "searchArea": "Search this area",
+      "sort": "Sort",
+      "filters": "Filters",
+      "saved": "Saved"
+    },
+    "summary": {
+      "edit": "Edit search",
+      "anyPrice": "Any price",
+      "addDates": "Add dates",
+      "anyTime": "Any time",
+      "anyType": "Any type",
+      "anywhere": "Anywhere",
+      "mapArea": "Map area",
+      "typeCount": "{{count}} types"
+    },
+    "step": {
+      "dates": {
+        "title": "When?",
+        "weekday": {
+          "Mo": "Dl",
+          "Tu": "Dt",
+          "We": "Dc",
+          "Th": "Dj",
+          "Fr": "Dv",
+          "Sa": "Ds",
+          "Su": "Dg"
+        }
+      },
+      "type": {
+        "title": "What type of place?"
+      },
+      "price": {
+        "max": "Maximum",
+        "any": "Any",
+        "min": "Minimum",
+        "title": "Price range",
+        "perMonth": "per month",
+        "perNight": "per night"
+      }
+    },
+    "header": {
+      "geocoding": "Looking up location...",
+      "noResults": "No homes match this search",
+      "loading": "Searching homes...",
+      "count": "{{count}} homes"
+    },
+    "recent": {
+      "title": "Recent searches"
+    },
+    "input": {
+      "placeholder": "Search cities, neighborhoods, or addresses"
+    },
+    "panel": {
+      "title": "Search"
+    },
+    "fab": {
+      "map": "Map",
+      "list": "List"
+    },
+    "empty": {
+      "action": "Edit search",
+      "description": "Try widening your area or relaxing your filters.",
+      "title": "No homes match this search"
+    },
+    "sort": {
+      "title": "Ordenar per",
+      "recommended": "Recomanat",
+      "priceAsc": "Preu: de menor a major",
+      "priceDesc": "Preu: de major a menor",
+      "newest": "Més recents"
+    },
+    "save": {
+      "title": "Save this search",
+      "namePlaceholder": "Give your search a name",
+      "enableNotifications": "Enable notifications"
+    }
   },
   "profile": {
     "title": "Perfil",
@@ -544,12 +716,19 @@
       "properties": "Les Meves Propietats",
       "contracts": "Els Meus Contractes",
       "trustScore": "Puntuació de Confiança",
-      "settings": "Configuració"
+      "settings": "Configuració",
+      "account": "Account",
+      "profile": "Profile",
+      "activity": "Activity"
     },
     "stats": {
       "propertiesCount": "Propietats",
       "contractsCount": "Contractes",
-      "trustScore": "Puntuació de Confiança"
+      "trustScore": "Puntuació de Confiança",
+      "stays": "Stays",
+      "applications": "Applications",
+      "saved": "Saved",
+      "applicationsApproved": "{{count}} aprovades"
     },
     "actions": {
       "manageProperties": "Gestionar Propietats",
@@ -566,7 +745,323 @@
       "deleteFailed": "Error eliminant perfil"
     },
     "exchanges": "Intercanvis",
-    "exchangesDescription": "Els teus intercanvis de casa i sol·licituds d’allotjament."
+    "exchangesDescription": "Els teus intercanvis de casa i sol·licituds d’allotjament.",
+    "edit": {
+      "noProfile": "No s'ha trobat cap perfil per actualitzar.",
+      "updateSuccess": "Perfil actualitzat correctament!",
+      "updateFailed": "No s'ha pogut actualitzar el perfil",
+      "sections": {
+        "agencyInformation": "Agency Information",
+        "agencyVerification": "Agency Verification",
+        "teamManagement": "Team Management",
+        "businessSettings": "Business Settings",
+        "businessInformation": "Informació del negoci",
+        "businessVerification": "Business Verification",
+        "cooperativeInformation": "Informació de la cooperativa",
+        "cooperativeSettings": "Cooperative Settings",
+        "personalInformation": "Informació personal",
+        "propertyPreferences": "Property Preferences",
+        "references": "References",
+        "rentalHistory": "Rental History",
+        "trustScore": "Trust Score",
+        "settings": "Settings"
+      },
+      "labels": {
+        "businessType": "Business Type *",
+        "legalCompanyName": "Legal Company Name *",
+        "description": "Description",
+        "licenseNumber": "License Number",
+        "taxId": "Tax ID",
+        "yearEstablished": "Year Established",
+        "employeeCount": "Number of Employees",
+        "specialties": "Specialties",
+        "verificationStatus": "Verification Status",
+        "profileVisibility": "Profile Visibility",
+        "notifications": "Notifications",
+        "emailNotifications": "Email Notifications",
+        "pushNotifications": "Push Notifications",
+        "legalName": "Legal Name *",
+        "industry": "Industry",
+        "bio": "Biografia",
+        "occupation": "Occupation",
+        "employer": "Employer",
+        "annualIncome": "Annual Income ($)",
+        "employmentStatus": "Employment Status",
+        "moveInDate": "Move-in Date",
+        "leaseDuration": "Lease Duration",
+        "maxRent": "Maximum Rent ($)",
+        "rentPeriod": "Rent Period",
+        "minBedrooms": "Min Bedrooms",
+        "minBathrooms": "Min Bathrooms",
+        "propertyTypes": "Property Types",
+        "preferredAmenities": "Preferred Amenities",
+        "additionalPreferences": "Additional Preferences",
+        "name": "Name",
+        "relationship": "Relationship",
+        "phone": "Phone",
+        "email": "Email",
+        "address": "Address",
+        "startDate": "Start Date",
+        "endDate": "End Date",
+        "monthlyRent": "Monthly Rent ($)",
+        "reasonForLeaving": "Reason for Leaving",
+        "landlordContact": "Landlord Contact",
+        "privacy": "Privacy"
+      },
+      "subtitles": {
+        "agencyVerification": "Complete these verifications to build trust with clients",
+        "businessVerification": "Complete these verifications to build trust with clients",
+        "businessSettings": "Configure your business profile settings",
+        "cooperativeSettings": "Configure your cooperative profile settings"
+      },
+      "placeholders": {
+        "legalCompanyName": "Enter your legal company name",
+        "description": "Describe your business...",
+        "licenseNumber": "Enter license number",
+        "taxId": "Enter tax ID",
+        "yearEstablished": "e.g., 2020",
+        "industry": "Enter industry",
+        "cooperativeLegalName": "Enter cooperative legal name",
+        "cooperativeDescription": "Describe your cooperative...",
+        "bio": "Explica'ns sobre tu...",
+        "occupation": "p. ex., Enginyer de programari",
+        "employer": "p. ex., Tech Corp",
+        "annualIncome": "p. ex., 75000",
+        "moveInDate": "AAAA-MM-DD",
+        "maxRent": "Introdueix el lloguer màxim",
+        "fullName": "Nom complet",
+        "phoneNumber": "Número de telèfon",
+        "emailAddress": "Correu electrònic",
+        "fullAddress": "Adreça completa",
+        "landlordName": "Nom del propietari",
+        "phone": "Telèfon",
+        "email": "Correu",
+        "endDateOptional": "AAAA-MM-DD (opcional)",
+        "monthlyRent": "p. ex., 1500"
+      },
+      "options": {
+        "agencyBusinessType": {
+          "real_estate_agency": "Agència immobiliària",
+          "property_management": "Gestió de propietats",
+          "brokerage": "Corretatge",
+          "developer": "Promotora",
+          "other": "Altre"
+        },
+        "agencySpecialty": {
+          "residential": "Residencial",
+          "commercial": "Comercial",
+          "luxury": "Luxury",
+          "student_housing": "Habitatge estudiantil",
+          "senior_housing": "Habitatge senior",
+          "vacation_rentals": "Lloguer vacacional"
+        },
+        "businessType": {
+          "small_business": "Petita empresa",
+          "startup": "Startup",
+          "freelancer": "Autònom",
+          "consultant": "Consultor",
+          "other": "Altre"
+        },
+        "employmentStatus": {
+          "employed": "Empleat",
+          "self_employed": "Autònom",
+          "student": "Estudiant",
+          "retired": "Jubilat",
+          "unemployed": "Aturat",
+          "other": "Altre"
+        },
+        "leaseDuration": {
+          "monthly": "Mensual",
+          "3_months": "3 mesos",
+          "6_months": "6 mesos",
+          "yearly": "Anual",
+          "flexible": "Flexible"
+        },
+        "priceUnit": {
+          "day": "Dia",
+          "night": "Nit",
+          "week": "Setmana",
+          "month": "Mes",
+          "year": "Any"
+        },
+        "propertyType": {
+          "apartment": "Apartament",
+          "house": "Casa",
+          "room": "Habitació",
+          "studio": "Estudi"
+        },
+        "amenity": {
+          "parking": "Aparcament",
+          "gym": "Gimnàs",
+          "pool": "Piscina",
+          "washer": "Rentadora",
+          "dishwasher": "Rentaplats",
+          "balcony": "Balcó",
+          "elevator": "Ascensor",
+          "ac": "Aire condicionat",
+          "heating": "Calefacció",
+          "internet": "Internet"
+        },
+        "referenceRelationship": {
+          "landlord": "Propietari",
+          "employer": "Empresa",
+          "personal": "Personal",
+          "other": "Altre"
+        },
+        "reasonForLeaving": {
+          "lease_ended": "Fi de contracte",
+          "bought_home": "Va comprar habitatge",
+          "job_relocation": "Trasllat laboral",
+          "family_reasons": "Motius familiars",
+          "upgrade": "Millora",
+          "other": "Altre"
+        },
+        "profileVisibility": {
+          "public": "Públic",
+          "private": "Privat",
+          "contacts_only": "Només contactes"
+        }
+      },
+      "verification": {
+        "businessLicenseTitle": "Llicència comercial",
+        "businessLicenseDescription": "Puja la teva llicència comercial per a verificació",
+        "insuranceTitle": "Assegurança",
+        "insuranceDescription": "Aporta prova de l'assegurança comercial",
+        "bondingTitle": "Fiador",
+        "bondingDescription": "Aporta informació de la fiança",
+        "backgroundCheckTitle": "Verificació d'antecedents",
+        "backgroundCheckDescription": "Completa la verificació d'antecedents de tot l'equip"
+      },
+      "toggles": {
+        "emailNotifications": "Notificacions per correu",
+        "pushNotifications": "Notificacions push",
+        "petFriendly": "Admet mascotes",
+        "smokingAllowed": "Fumar permès",
+        "furnished": "Moblat",
+        "parkingRequired": "Aparcament obligatori",
+        "accessibilityFeatures": "Accessibilitat",
+        "showContactInfo": "Mostrar dades de contacte",
+        "showIncome": "Mostrar ingressos",
+        "showRentalHistory": "Mostrar historial de lloguer",
+        "showReferences": "Mostrar referències"
+      },
+      "team": {
+        "subtitle": "Gestiona els membres de l'equip i els seus rols",
+        "memberLabel": "Membre {{index}}",
+        "addedLabel": "Afegit: {{date}}",
+        "emptyText": "Encara no hi ha membres a l'equip.",
+        "addMember": "+ Afegir membre de l'equip"
+      },
+      "actions": {
+        "addReference": "+ Afegir referència",
+        "addHistory": "+ Afegir historial",
+        "remove": "Eliminar",
+        "referenceLabel": "Referència {{index}}",
+        "rentalLabel": "Lloguer {{index}}"
+      }
+    },
+    "create": {
+      "selectType": "Selecciona un tipus de perfil.",
+      "selectBusinessType": "Selecciona un tipus de negoci.",
+      "cooperativeLegalNameRequired": "Introdueix el nom legal de la cooperativa.",
+      "createdSuccess": "{{type}} creat correctament!",
+      "headerTitle": "Create Profile",
+      "createButton": "Create",
+      "chooseType": "Choose Business Profile Type",
+      "types": {
+        "agency": {
+          "title": "Agency Profile",
+          "description": "For real estate agencies and property management"
+        },
+        "business": {
+          "title": "Business Profile",
+          "description": "For small businesses and freelancers"
+        },
+        "cooperative": {
+          "title": "Cooperative Profile",
+          "description": "For housing or member-owned cooperatives"
+        }
+      },
+      "sections": {
+        "agencyInfo": "Agency Information",
+        "businessInfo": "Business Information",
+        "cooperativeInfo": "Cooperative Information",
+        "whatsNext": "What's Next?",
+        "profileSetup": "Profile Setup"
+      },
+      "whatsNext": {
+        "description": "After creating your {{type}} profile, you can customize preferences, add verification documents, and build your trust score."
+      },
+      "placeholders": {
+        "agencyDescription": "Describe your agency...",
+        "businessDescription": "Describe your business...",
+        "licenseOptional": "Enter license number (if applicable)",
+        "cooperativeLegalName": "Cooperative Legal Name",
+        "cooperativeDescription": "Describe the cooperative"
+      },
+      "options": {
+        "agencySpecialty": {
+          "residential": "Residential",
+          "commercial": "Commercial",
+          "investment": "Investment",
+          "rental": "Rental",
+          "new_construction": "New Construction"
+        },
+        "businessSpecialty": {
+          "consulting": "Consulting",
+          "technology": "Technology",
+          "design": "Design",
+          "marketing": "Marketing",
+          "finance": "Finance",
+          "healthcare": "Healthcare",
+          "education": "Education",
+          "retail": "Retail",
+          "services": "Services"
+        }
+      }
+    },
+    "toast": {
+      "loadFailed": "No s'han pogut carregar els perfils",
+      "createSuccess": "Perfil creat correctament",
+      "createFailed": "No s'ha pogut crear el perfil",
+      "updateSuccess": "Perfil actualitzat correctament",
+      "updateFailed": "No s'ha pogut actualitzar el perfil",
+      "deleteSuccess": "Perfil eliminat correctament",
+      "deleteFailed": "No s'ha pogut eliminar el perfil",
+      "activateSuccess": "Perfil activat correctament",
+      "activateFailed": "No s'ha pogut activar el perfil"
+    },
+    "trustScoreHint": "Complete your profile information to improve your trust score.",
+    "trustScoreSubtitle": "Build trust with landlords and roommates through verification and positive interactions.",
+    "established": "Established",
+    "serviceAreas": "Service areas",
+    "specialties": "Specialties",
+    "about": "About",
+    "preferences": "Preferences",
+    "budget": "Budget",
+    "employer": "Employer",
+    "occupation": "Occupation",
+    "listings": "Listings",
+    "switchConfirm": "Switch",
+    "switchMessage": "Activate {{name}}?",
+    "switchTitle": "Switch profile?",
+    "subscriptionsDescription": "Manage Homiio Plus or buy one-time file analysis.",
+    "subscriptions": "Subscriptions",
+    "createNewDescription": "Add a business, agency, or cooperative profile.",
+    "createNew": "Create new profile",
+    "active": "Active",
+    "activeFooter": "Active: {{name}}",
+    "stays": "Stays",
+    "applications": "My applications",
+    "trustScoreCta": "View trust score",
+    "loadFailedHint": "Please try again later.",
+    "loadFailed": "Failed to load profile",
+    "switchFailed": "Failed to switch profile",
+    "switched": "Switched to {{name}}",
+    "invalidProfile": "Invalid profile data",
+    "trustScorePage": {
+      "title": "Trust Score"
+    }
   },
   "trust": {
     "loadingVerification": "Carregant estat de verificació...",
@@ -579,7 +1074,79 @@
     "verified": "Verificat",
     "completeVerification": "Completar verificació",
     "yourScoreIs": "La teva puntuació de confiança és",
-    "improveScore": "Millorar puntuació"
+    "improveScore": "Millorar puntuació",
+    "manager": {
+      "loading": "Carregant puntuació de confiança...",
+      "error": "Error en carregar la puntuació de confiança",
+      "noData": "No s'han trobat dades de puntuació personal",
+      "title": "Puntuació de confiança",
+      "subtitle": "Genera confiança amb propietaris i companys de pis",
+      "scoreDescription": "La teva puntuació global és {{score}}/100",
+      "factorsTitle": "Factors de confiança",
+      "factorsSubtitle": "Millora aquests factors per augmentar la puntuació",
+      "quickActionsTitle": "Accions ràpides per millorar",
+      "completeProfile": "Completar perfil",
+      "cancel": "Cancel·lar",
+      "editProfile": "Editar perfil",
+      "factorAlertBody": "{{description}}\n\nPuntuació actual: {{score}}/100\n\nPer millorar: {{action}}",
+      "factors": {
+        "verification": {
+          "label": "Verificació d'identitat",
+          "description": "Completa la verificació d'identitat per generar confiança",
+          "action": "Afegeix informació personal i dades d'ingressos"
+        },
+        "reviews": {
+          "label": "Ressenyes d'usuaris",
+          "description": "Obtén ressenyes positives de propietaris i companys",
+          "action": "Afegeix referències de propietaris anteriors"
+        },
+        "payment_history": {
+          "label": "Historial de pagaments",
+          "description": "Mantén un bon historial de pagaments",
+          "action": "Afegeix historial de lloguer amb registres de pagament"
+        },
+        "communication": {
+          "label": "Comunicació",
+          "description": "Respon amb promptitud a missatges i sol·licituds",
+          "action": "Completa la biografia i la informació de contacte"
+        },
+        "rental_history": {
+          "label": "Historial de lloguer",
+          "description": "Construeix un historial de lloguer positiu",
+          "action": "Afegeix les teves adreces de lloguer anteriors"
+        },
+        "default": {
+          "description": "Millora aquest factor per augmentar la puntuació",
+          "action": "Completa el teu perfil per millorar aquest factor"
+        }
+      },
+      "actions": {
+        "personalInfo": {
+          "title": "Completar informació personal",
+          "description": "Afegeix la teva ocupació, ingressos i dades laborals per generar confiança."
+        },
+        "references": {
+          "title": "Afegir referències",
+          "description": "Inclou referències de propietaris i empresaris anteriors."
+        },
+        "rentalHistory": {
+          "title": "Afegir historial de lloguer",
+          "description": "Documenta el teu historial de lloguer per demostrar fiabilitat."
+        }
+      }
+    },
+    "score": {
+      "levels": {
+        "excellent": "Excel·lent",
+        "good": "Bo",
+        "average": "Mitjà",
+        "fair": "Regular",
+        "needsImprovement": "Cal millorar"
+      },
+      "breakdown": "Desglossament de la puntuació de confiança",
+      "recalculate": "Recalcular",
+      "recalculating": "Recalculant…"
+    }
   },
   "notifications": {
     "title": "Notificacions",
@@ -620,9 +1187,6 @@
     "share": "Compartir",
     "contact": "Contactar",
     "bookViewing": "Reservar Visita",
-    "Housing Authority": "Autoritat d'Habitatge",
-    "Apply on State Website": "Aplicar al Lloc Web de l'Estat",
-    "Contact Housing Authority": "Contactar Autoritat d'Habitatge",
     "my": {
       "title": "Les Meves Propietats",
       "edit": "Editar",
@@ -634,7 +1198,15 @@
       "emptyDescription": "Encara no has creat cap propietat. Comença afegint la teva primera llista de propietat.",
       "createFirst": "Crear La Teva Primera Propietat",
       "errorTitle": "Error Carregant Propietats",
-      "errorDescription": "Hi ha hagut un error carregant les teves propietats. Si us plau, torna-ho a provar."
+      "errorDescription": "Hi ha hagut un error carregant les teves propietats. Si us plau, torna-ho a provar.",
+      "markRented": "Mark as rented",
+      "markSold": "Mark as sold",
+      "transactMessage": "This closes \"{{title}}\" and removes it from active listings. This cannot be undone.",
+      "markRentedTitle": "Mark as rented?",
+      "markSoldTitle": "Mark as sold?",
+      "transactError": "Could not close this listing",
+      "transactDone": "Listing marked as closed",
+      "transactCommission": "Deal closed — commission recorded"
     },
     "details": {
       "price": "Preu",
@@ -660,6 +1232,61 @@
         "duplex": "Dúplex",
         "penthouse": "Àtic"
       }
+    },
+    "type": {
+      "title": "{{type}}",
+      "subtitle": "{{count}} {{type}} available",
+      "empty": "No {{type}} available at the moment",
+      "filters": {
+        "title": "Filters",
+        "price": "Price Range",
+        "bedrooms": "Bedrooms",
+        "bathrooms": "Bathrooms",
+        "amenities": "Amenities",
+        "sort": {
+          "title": "Sort By",
+          "newest": "Newest First",
+          "priceAsc": "Price: Low to High",
+          "priceDesc": "Price: High to Low"
+        },
+        "apply": "Apply Filters",
+        "clear": "Clear All"
+      }
+    },
+    "actions": {
+      "create": "Add property",
+      "recent": "Recently viewed"
+    },
+    "empty": {
+      "action": "Clear filters",
+      "description": "Try relaxing your filters.",
+      "title": "No homes available"
+    },
+    "error": {
+      "title": "Could not load homes"
+    },
+    "header": {
+      "empty": "No homes available",
+      "loading": "Loading homes…"
+    },
+    "city": {
+      "verifiedProperties": "Verified Properties",
+      "verifiedOnly": "Verified Only",
+      "ecoFriendly": "Eco-Friendly",
+      "ecoFriendlyOnly": "Eco-Friendly Only",
+      "loadingProperties": "Loading properties...",
+      "notFound": "City not found",
+      "properties": "Properties",
+      "population": "Population",
+      "availableProperties": "Available Properties",
+      "propertiesFound": "properties found",
+      "sortBy": "Sort By",
+      "sortNewest": "Newest First",
+      "sortPriceAsc": "Price: Low to High",
+      "sortPriceDesc": "Price: High to Low",
+      "noPropertiesFound": "No properties found",
+      "tryAdjustFilters": "Try adjusting your filters or check back later",
+      "clearFilters": "Clear Filters"
     }
   },
   "property": {
@@ -786,7 +1413,176 @@
       "listedDaysAgo_other": "Publicat fa {{count}} dies",
       "saved_one": "{{count}} desat",
       "saved_other": "{{count}} desats"
-    }
+    },
+    "loading": "Loading property details...",
+    "error": "Error",
+    "notFound": "Property not found",
+    "bed": "Bed",
+    "bath": "Bath",
+    "pricingReviewNeeded": "Pricing Review Needed",
+    "bedrooms": "Number of Bedrooms",
+    "bathrooms": "Number of Bathrooms",
+    "customNumber": {
+      "title": "Enter Custom Number",
+      "placeholder": "Enter number",
+      "confirm": "Confirm",
+      "cancel": "Cancel"
+    },
+    "suggestedRent": "Suggested: ${{amount}}/month",
+    "maxEthicalRent": "Max Ethical: ${{amount}}/month",
+    "ethicalPricingWarning": "Your price exceeds the ethical maximum. Consider lowering it to make housing more accessible.",
+    "warningBullet": "• {{warning}}",
+    "ethicalPricing": "Ethical Pricing",
+    "toast": {
+      "createSuccess": "Propietat creada correctament",
+      "updateSuccess": "Propietat actualitzada correctament",
+      "deleteSuccess": "Propietat eliminada correctament",
+      "createFailed": "No s'ha pogut crear la propietat",
+      "updateFailed": "No s'ha pogut actualitzar la propietat",
+      "deleteFailed": "No s'ha pogut eliminar la propietat",
+      "shareCopied": "Detalls de la propietat copiats al porta-retalls",
+      "shareFailed": "No s'ha pogut compartir la propietat",
+      "shareTitle": "Share Property"
+    },
+    "drafts": {
+      "title": "Esborranys",
+      "emptyTitle": "No hi ha esborranys",
+      "emptyDescription": "Encara no tens esborranys guardats. Comença a crear una propietat per desar-los automàticament.",
+      "createFirst": "Crear nova propietat",
+      "deleteTitle": "Eliminar esborrany",
+      "deleteMessage": "Segur que vols eliminar aquest esborrany? Aquesta acció no es pot desfer.",
+      "toastDeleted": "Esborrany eliminat correctament",
+      "toastDeleteFailed": "No s'ha pogut eliminar l'esborrany",
+      "toastLoadFailed": "No s'ha pogut carregar l'esborrany"
+    },
+    "description": {
+      "showMore": "Show more",
+      "showLess": "Show less"
+    },
+    "external": {
+      "contactTitle": "Contact on listing"
+    },
+    "location": {
+      "title": "Where you'll be"
+    },
+    "cta": {
+      "apply": "Apply",
+      "reserve": "Reserve"
+    },
+    "host": {
+      "verified": "Verified",
+      "responseRate": "Typically responds within an hour",
+      "hostingSince": "Hosting since",
+      "hostedBy": "Hosted by",
+      "openProfile": "Open host profile",
+      "publicSubtitle": "Government-managed affordable housing",
+      "publicAuthority": "Public Housing Authority",
+      "superHost": "Super host"
+    },
+    "report": {
+      "actions": {
+        "submit": "Enviar denúncia"
+      },
+      "notice": "Les denúncies falses o abusives poden afectar el teu compte. Denuncia només problemes reals.",
+      "section": {
+        "contactHelp": "Comparteix un correu si vols que et contactem sobre aquesta denúncia.",
+        "contact": "Correu de contacte (opcional)",
+        "detailsHelp": "Afegeix qualsevol detall que ens ajudi a entendre el problema.",
+        "details": "Detalls (opcional)",
+        "detailsRequired": "Detalls",
+        "reason": "Per què denuncies aquest anunci?"
+      },
+      "field": {
+        "detailsPlaceholder": "Descriu què és inexacte, sospitós o inadequat…"
+      },
+      "intro": "Explica'ns què falla en aquest anunci. Les denúncies són confidencials i les revisa el nostre equip — mai es comparteixen amb l'amfitrió.",
+      "title": "Denunciar aquest anunci",
+      "success": "Gràcies — la teva denúncia s'ha enviat.",
+      "error": {
+        "invalidForm": "Tria un motiu abans d'enviar.",
+        "generic": "Alguna cosa ha anat malament. Torna-ho a provar.",
+        "notFound": "Aquest anunci ja no existeix.",
+        "auth": "Inicia sessió per denunciar un anunci.",
+        "detailsRequired": "Afegeix alguns detalls sobre el problema.",
+        "invalidReason": "Tria un motiu per a la teva denúncia."
+      },
+      "reason": {
+        "inaccurate": "Informació inexacta",
+        "scam": "Possible estafa o frau",
+        "inappropriate": "Contingut inadequat",
+        "unavailable": "Ja llogat o no disponible",
+        "other": "Un altre motiu"
+      }
+    },
+    "about": {
+      "title": "About this property"
+    },
+    "sleep": {
+      "title": "Where you'll sleep",
+      "oneBed": "1 bed",
+      "mainBedroom": "Main bedroom"
+    },
+    "reviews": {
+      "writeAction": "Write a review",
+      "emptyDescription": "Be the first to share what it was like to live here.",
+      "emptyTitle": "No reviews yet",
+      "errorTitle": "Could not load reviews",
+      "disclaimer": "Community-verified reviews about the building. Experiences may vary by unit.",
+      "title": "Reviews",
+      "evidence": "With evidence",
+      "verified": "Verified",
+      "recommend": "Recommend",
+      "count": "reviews",
+      "countWithNumber": "({{count}} ressenyes)"
+    },
+    "notFoundHelp": "It may have been removed or the link is broken.",
+    "sections": {
+      "photoGallery": "Galeria de fotos",
+      "viewAll": "Veure-ho tot",
+      "features": "Característiques",
+      "furnished": "Moblat",
+      "partiallyFurnished": "Parcialment moblat",
+      "unfurnished": "Sense moblar",
+      "balcony": "Balcó",
+      "garden": "Jardí",
+      "elevator": "Ascensor",
+      "overview": "Resum",
+      "bedrooms": "Dormitoris",
+      "bathrooms": "Banys",
+      "size": "Mida",
+      "floor": "Planta",
+      "details": "Detalls",
+      "notSpecified": "No especificat",
+      "yearBuilt": "Any de construcció",
+      "parkingSpaces": "Places d'aparcament",
+      "pricingAndCosts": "Preu i costos",
+      "rent": "Lloguer",
+      "deposit": "Dipòsit",
+      "utilitiesIncluded": "Serveis inclosos",
+      "nightlyRent": "Lloguer per nit",
+      "monthlyRent": "Lloguer mensual",
+      "sourcedFrom": "Font",
+      "availability": "Disponibilitat",
+      "availableFrom": "Disponible des de",
+      "leaseTerm": "Durada del contracte",
+      "location": "Ubicació",
+      "nearbyAmenities": "Serveis propers",
+      "publicTransport": "Transport públic",
+      "schools": "Escoles",
+      "shopping": "Comerços"
+    },
+    "neighborhood": {
+      "title": "Neighborhood",
+      "listings": "Listings",
+      "avgRentPerMonth": "Avg. rent / mo",
+      "onParWithCity": "On par with the city average",
+      "listingCount": "{{count}} listings",
+      "avgAmountPerMonth": "Avg. {{amount}}/mo",
+      "pctVsCity": "{{pct}}% {{dir}} than the city average",
+      "cheaper": "cheaper",
+      "pricier": "pricier"
+    },
+    "fraudWarning": "Never pay or transfer funds outside the Homio platform"
   },
   "viewings": {
     "title": "Visites",
@@ -806,7 +1602,8 @@
       "timeInPast": "L'hora programada ha de ser en el futur.",
       "authRequired": "Si us plau, inicieu sessió per sol·licitar una visita.",
       "notFound": "Sol·licitud de visita no trobada.",
-      "cannotCancel": "No es pot cancel·lar aquesta sol·licitud de visita."
+      "cannotCancel": "No es pot cancel·lar aquesta sol·licitud de visita.",
+      "externalProperty": "Cannot book viewings for external properties"
     },
     "selectDate": "Selecciona data",
     "availableTimeSlots": "Franges horàries disponibles",
@@ -829,6 +1626,10 @@
     },
     "cancel": {
       "confirmMessage": "Esteu segur que voleu cancel·lar aquesta sol·licitud de visita?"
+    },
+    "banner": {
+      "viewDetails": "View details",
+      "hasViewing": "You have a viewing scheduled"
     }
   },
   "payments": {
@@ -864,6 +1665,116 @@
       "download": "Descarregar",
       "sign": "Signar",
       "renew": "Renovar"
+    },
+    "list": {
+      "title": "Contractes de lloguer",
+      "eyebrow": "Acords",
+      "subtitle": "Fes seguiment de cada contracte que signis o emetis i consulta els termes clau a l'instant.",
+      "filterAll": "Tots",
+      "filterActive": "Actius",
+      "filterPending": "Pendents",
+      "filterExpired": "Vençuts",
+      "filterDrafts": "Esborranys",
+      "noRentalPropertiesTitle": "Sense contractes de lloguer",
+      "noRentalPropertiesDescription": "Encara no tens propietats de lloguer. Comença explorant propietats disponibles o publicant la teva.",
+      "browseProperties": "Explorar propietats",
+      "loadError": "No s'han pogut carregar els contractes",
+      "tryAgain": "Torna-ho a provar.",
+      "emptyTitle": "No s'han trobat contractes",
+      "emptyAllDescription": "Encara no tens contractes de lloguer",
+      "emptyFilteredDescription": "No hi ha contractes {{filter}} per mostrar",
+      "newContract": "Nou contracte",
+      "createNew": "Crear nou contracte"
+    },
+    "card": {
+      "start": "Inici",
+      "end": "Fi",
+      "landlord": "Arrendador",
+      "tenant": "Inquilí",
+      "perMonth": "/ mes",
+      "share": "Compartir",
+      "download": "Descarregar",
+      "accessibility": "Contracte {{title}}"
+    },
+    "detail": {
+      "title": "Contracte",
+      "invalidIdTitle": "ID de contracte no vàlid",
+      "invalidIdDescription": "L'enllaç no inclou la referència del contracte.",
+      "unavailableTitle": "Contracte no disponible",
+      "unavailableDescription": "No s'ha pogut carregar aquest contracte.",
+      "term": "Termini",
+      "rent": "Lloguer",
+      "start": "Inici",
+      "end": "Fi",
+      "monthlyRent": "Lloguer mensual",
+      "securityDeposit": "Dipòsit de garantia",
+      "signatures": "Signatures",
+      "landlord": "Arrendador",
+      "tenant": "Inquilí",
+      "payments": "Calendari de pagaments",
+      "documents": "Documents",
+      "addDocument": "Afegir document",
+      "sign": "Signar contracte",
+      "terminate": "Rescindir contracte",
+      "deleteDraft": "Eliminar esborrany",
+      "confirmSignTitle": "Signar aquest contracte?",
+      "confirmSignBody": "La teva signatura confirma que acceptes els termes del contracte.",
+      "confirmTerminateTitle": "Rescindir aquest contracte?",
+      "confirmTerminateBody": "Això finalitza el contracte per a totes les parts.",
+      "confirmDeleteTitle": "Eliminar aquest esborrany?",
+      "confirmDeleteBody": "Aquest esborrany s'eliminarà permanentment.",
+      "toastSigned": "Contracte signat",
+      "toastSignFailed": "No s'ha pogut signar el contracte",
+      "toastTerminated": "Contracte rescindit",
+      "toastTerminateFailed": "No s'ha pogut rescindir el contracte",
+      "toastDeleted": "Esborrany eliminat",
+      "toastDeleteFailed": "No s'ha pogut eliminar l'esborrany",
+      "toastDocumentAdded": "Document afegit",
+      "toastDocumentFailed": "No s'ha pogut afegir el document",
+      "toastOpenDocumentFailed": "No s'ha pogut obrir el document.",
+      "permissionRequired": "Es requereix permís de la biblioteca multimèdia per adjuntar un document.",
+      "propertyFallback": "Propietat",
+      "goBack": "Go back",
+      "dueDay": "Day {{day}} of the month",
+      "signed": "Signed",
+      "signaturePending": "Pending",
+      "emptyDocuments": "No documents attached.",
+      "addShort": "Add",
+      "signLease": "Sign lease",
+      "confirmSignExtended": "By signing you agree to the lease terms. Once both parties sign, the lease becomes active.",
+      "confirmSignAction": "Sign",
+      "confirmTerminateShortTitle": "Terminate lease?",
+      "confirmTerminateExtended": "This records a termination notice and ends the lease. This cannot be undone.",
+      "confirmDeleteExtended": "This permanently removes the draft lease.",
+      "confirmDeleteAction": "Delete",
+      "openDocument": "Open document {{name}}",
+      "dueDayLabel": "Due day"
+    },
+    "new": {
+      "title": "Nou contracte",
+      "noApplicationTitle": "Comença des d'una sol·licitud",
+      "noApplicationDescription": "Els contractes es creen des d'una sol·licitud de llogater aprovada. Obre una sol·licitud aprovada i tria \"Crear contracte\".",
+      "viewApplications": "Veure sol·licituds",
+      "applicationUnavailableTitle": "Sol·licitud no disponible",
+      "loadFailedDescription": "No s'ha pogut carregar aquesta sol·licitud.",
+      "goBack": "Tornar",
+      "subtitle": "Crea un esborrany de contracte des d'aquesta sol·licitud. Pots editar els termes i signar-lo a la pantalla següent.",
+      "seededTerms": "Termes inicials",
+      "moveIn": "Entrada",
+      "leaseTerm": "Durada del contracte",
+      "leaseTermMonths": "{{count}} mesos",
+      "notApprovedWarning": "Aquesta sol·licitud encara no està aprovada. Aprova-la primer per crear un contracte.",
+      "createButton": "Crear esborrany de contracte",
+      "toastCreated": "Esborrany de contracte creat",
+      "toastCreateFailed": "No s'ha pogut crear el contracte",
+      "propertyFallback": "Propietat"
+    },
+    "documentType": {
+      "lease_agreement": "Contracte de lloguer",
+      "addendum": "Annex",
+      "inspection_report": "Informe d'inspecció",
+      "insurance": "Assegurança",
+      "other": "Altre"
     }
   },
   "roommates": {
@@ -877,6 +1788,185 @@
       "message": "Missatge",
       "connect": "Connectar",
       "viewProfile": "Veure Perfil"
+    },
+    "tabs": {
+      "discover": "Descobrir",
+      "requests": "Sol·licituds",
+      "matches": "Coincidències",
+      "rooms": "Habitacions"
+    },
+    "alert": {
+      "requestSent": "Sol·licitud de company de pis enviada correctament!",
+      "requestFailed": "No s'ha pogut enviar la sol·licitud de company de pis",
+      "accepted": "Sol·licitud de company de pis acceptada!",
+      "acceptFailed": "No s'ha pogut acceptar la sol·licitud de company de pis",
+      "declined": "Sol·licitud de company de pis rebutjada",
+      "declineFailed": "No s'ha pogut rebutjar la sol·licitud de company de pis",
+      "relationshipEnded": "Relació de companys de pis finalitzada",
+      "relationshipEndFailed": "No s'ha pogut finalitzar la relació de companys de pis",
+      "toggleFailed": "No s'ha pogut canviar la cerca de companys de pis",
+      "preferencesSaved": "Les teves preferències de company de pis s'han actualitzat.",
+      "preferencesFailed": "No s'han pogut desar les preferències de company de pis. Torna-ho a provar.",
+      "successTitle": "Èxit",
+      "errorTitle": "Error"
+    },
+    "screen": {
+      "title": "Company de pis",
+      "signInTitle": "Sign in to find roommates",
+      "signInDescription": "Discover compatible roommates and manage your requests.",
+      "signIn": "Sign in",
+      "loadError": "Couldn't load roommates",
+      "tryAgain": "Please try again.",
+      "emptyDiscoverTitle": "No matches yet",
+      "emptyDiscoverDescription": "Complete your roommate profile to start discovering matches.",
+      "emptyRequestsTitle": "No requests",
+      "emptyRequestsDescription": "Incoming and outgoing roommate requests will appear here.",
+      "emptyRelationshipsTitle": "No matches yet",
+      "emptyRelationshipsDescription": "Accepted roommate requests become matches here.",
+      "emptyRoomsTitle": "No rooms listed",
+      "emptyRoomsDescription": "Room listings from your network will appear here.",
+      "enableMatching": "Enable roommate matching",
+      "editPreferences": "Edit preferences",
+      "fallbackName": "Company",
+      "eyebrow": "Junts",
+      "loadRequestsError": "Couldn't load requests",
+      "loadRelationshipsError": "Couldn't load relationships",
+      "personalProfileRequired": "Perfil personal requerit",
+      "personalProfileDescription": "La cerca de company només està disponible per a perfils personals. Canvia al teu perfil personal per usar aquesta funció.",
+      "roomSearchPersonalOnly": "Room search is only available for personal profiles. Switch to your personal profile to use this feature.",
+      "switchToPersonal": "Canviar a perfil personal",
+      "enableMatchingTitle": "Activar cerca de company",
+      "enableMatchingDescription": "Turn on roommate matching to discover potential roommates based on your preferences.",
+      "enabling": "Enabling…",
+      "discoverRoommates": "Descobrir companys",
+      "updatePreferences": "Update preferences",
+      "matchingEnabled": "Roommate matching enabled",
+      "matchingDisabled": "Roommate matching disabled"
+    },
+    "request": {
+      "accept": "Accept",
+      "decline": "Decline",
+      "viewProfile": "View profile",
+      "sent": "Sent",
+      "received": "Received",
+      "pending": "Pending",
+      "accepted": "Accepted",
+      "declined": "Declined",
+      "responsePlaceholder": "Add an optional message..."
+    },
+    "relationship": {
+      "endRelationship": "End relationship",
+      "confirmEndTitle": "End roommate relationship?",
+      "confirmEndBody": "You will no longer appear as roommates.",
+      "message": "Message",
+      "title": "Roommate Relationship",
+      "duration": "Duration: {{duration}}",
+      "started": "Started: {{date}}",
+      "endedOn": "Ended on {{date}}",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "statusEnded": "Ended",
+      "statusUnknown": "Unknown",
+      "durationDays": "{{count}} days",
+      "durationMonth": "{{count}} month",
+      "durationMonths": "{{count}} months",
+      "durationYear": "{{count}} year",
+      "durationYears": "{{count}} years",
+      "percentMatch": "{{score}}% Match",
+      "roommatesSection": "Roommates",
+      "confirmEndAction": "End Relationship"
+    },
+    "match": {
+      "compatibility": "{{score}}% match",
+      "viewProfile": "View profile",
+      "connect": "Connect",
+      "excellent": "Excellent Match",
+      "good": "Good Match",
+      "fair": "Fair Match",
+      "preferences": "Preferences",
+      "flexible": "Flexible",
+      "messageLabel": "Add a message (optional):",
+      "messagePlaceholder": "Hi! I think we'd be great roommates...",
+      "sendRequest": "Send Request",
+      "fallbackName": "Roommate"
+    },
+    "profileDetail": {
+      "title": "Company",
+      "loadError": "Couldn't load profile",
+      "loadErrorDescription": "We couldn't load this roommate profile. Please try again.",
+      "about": "About",
+      "preferencesTitle": "Roommate preferences",
+      "budget": "Budget",
+      "moveIn": "Move-in",
+      "leaseLength": "Lease length",
+      "notSpecified": "Not specified",
+      "trust": "Trust",
+      "verified": "Verified",
+      "references": "References",
+      "rentalHistory": "Rental history",
+      "sending": "Sending…",
+      "sendRequest": "Enviar sol·licitud de company",
+      "requestSentTitle": "Request sent",
+      "requestSentBody": "Your roommate request was sent.",
+      "requestFailedTitle": "Could not send request",
+      "requestFailedBody": "We could not send your request. Please try again."
+    },
+    "preferencesPage": {
+      "title": "Preferències de company",
+      "eyebrow": "Sharing a place",
+      "subtitle": "Let other Homiio users find you when their preferences and yours line up.",
+      "enableTitle": "Enable roommate matching",
+      "enableDescription": "Allow other users to discover your profile for matching.",
+      "budgetTimeline": "Budget & timeline",
+      "monthlyBudget": "Monthly budget (€)",
+      "min": "Min",
+      "max": "Max",
+      "moveInDate": "Move-in date",
+      "leaseLength": "Lease length",
+      "roommateSection": "Roommate",
+      "preferredGender": "Preferred gender",
+      "ageRange": "Age range",
+      "lifestyle": "Lifestyle",
+      "smoking": "Smoking",
+      "pets": "Pets",
+      "partying": "Partying",
+      "cleanliness": "Cleanliness",
+      "schedule": "Schedule",
+      "saving": "Saving…",
+      "save": "Desar preferències",
+      "personalProfileRequired": "Personal profile required",
+      "personalProfileDescription": "Roommate preferences are only available for personal profiles. Please switch to your personal profile to manage your roommate settings.",
+      "switchToPersonal": "Switch to personal profile",
+      "options": {
+        "gender": {
+          "any": "Any",
+          "male": "Male",
+          "female": "Female"
+        },
+        "lifestyle": {
+          "yes": "Yes",
+          "no": "No",
+          "prefer_not": "No pref."
+        },
+        "cleanliness": {
+          "very_clean": "Very clean",
+          "clean": "Clean",
+          "average": "Average",
+          "relaxed": "Relaxed"
+        },
+        "schedule": {
+          "early_bird": "Early bird",
+          "night_owl": "Night owl",
+          "flexible": "Flexible"
+        },
+        "lease": {
+          "monthly": "Monthly",
+          "3_months": "3 months",
+          "6_months": "6 months",
+          "yearly": "Yearly",
+          "flexible": "Flexible"
+        }
+      }
     }
   },
   "safety": {
@@ -894,11 +1984,57 @@
     }
   },
   "horizon": {
-    "title": "Iniciativa Horizon",
+    "title": "Horizon Initiative",
     "description": "Iniciativa global per a habitatge just, assistència sanitària i suport de viatge",
     "benefits": "Beneficis",
     "join": "Uneix-te a Horizon",
-    "learnMore": "Saber Més"
+    "learnMore": "Saber Més",
+    "page": {
+      "benefits": {
+        "fairHousing": {
+          "title": "Habitatge just",
+          "description": "Accés a habitatge assequible en més de 120 ciutats amb contractes ètics estandarditzats"
+        },
+        "healthcare": {
+          "title": "Accés a la salut",
+          "description": "Cobertura sanitària universal amb clíniques associades i telemedicina a cada ciutat Horizon"
+        },
+        "travel": {
+          "title": "Xarxa de viatges",
+          "description": "Transport i allotjament amb descompte en viatjar entre ubicacions Horizon"
+        },
+        "community": {
+          "title": "Suport comunitari",
+          "description": "Connecta amb membres locals per a integració cultural, intercanvi d'idiomes i activitats socials"
+        }
+      },
+      "heroTitle": "Iniciativa global d'habitatge",
+      "heroSubtitle": "Creant un món d'habitatge, salut i mobilitat ètiques",
+      "aboutTitle": "Sobre Horizon",
+      "aboutBody1": "Horizon és una iniciativa global dissenyada per fer l'habitatge més accessible, assequible i ètic per a tothom. En unir-te a una xarxa de propietats en més de 120 ciutats, els membres accedeixen a habitatge just, beneficis sanitaris i suport de viatge.",
+      "aboutBody2": "La nostra missió és crear entorns de vida sostenibles que fomentin la comunitat i el benestar, reduint l'impacte ambiental de l'habitatge.",
+      "benefitsTitle": "Beneficis per a membres",
+      "howItWorksTitle": "Com funciona",
+      "steps": {
+        "apply": {
+          "title": "Sol·licitar membresia",
+          "description": "Completa el teu perfil i envia una sol·licitud amb les teves necessitats i preferències d'habitatge."
+        },
+        "verify": {
+          "title": "Verificació",
+          "description": "El nostre equip revisa la sol·licitud i verifica la identitat i la informació de fons."
+        },
+        "access": {
+          "title": "Accedeix a la xarxa",
+          "description": "Un cop aprovat, explora i reserva propietats a la xarxa global amb accés prioritari."
+        }
+      },
+      "joinTitle": "Preparat per unir-te a Horizon?",
+      "joinSubtitle": "Sol·licita-ho avui i fes el primer pas cap a un habitatge ètic i accessible arreu del món.",
+      "storiesTitle": "Històries de membres",
+      "story1": "Horizon em va facilitar molt la meva mudança. Vaig trobar un pis ètic a Berlín en una setmana i la cobertura sanitària em va ajudar quan vaig necessitar atenció urgent.",
+      "story2": "Com a nòmada digital, tenir accés a habitatge de qualitat en diverses ciutats ha canviat la meva vida. L'aspecte comunitari és el que fa especial Horizon."
+    }
   },
   "settings": {
     "title": "Configuració",
@@ -911,7 +2047,8 @@
       "supportFeedback": "Suport i Comentaris",
       "preferences": "Preferències de l'App",
       "quickActions": "Accions Ràpides",
-      "data": "Gestió de Dades"
+      "data": "Gestió de Dades",
+      "notifications": "Notifications"
     },
     "aboutHomiio": {
       "appName": "Homiio",
@@ -967,8 +2104,27 @@
       "title": "Moneda",
       "selectCurrency": "Selecciona la teva moneda preferida",
       "description": "Això s'utilitzarà per mostrar preus a tota l'aplicació",
-      "currencyChanged": "Moneda canviada amb èxit"
-    }
+      "currencyChanged": "Moneda canviada amb èxit",
+      "errorChanging": "Failed to change currency. Please try again."
+    },
+    "language": {
+      "title": "Language",
+      "choose": "Tria un idioma",
+      "footer": "Canviar l'idioma actualitza les etiquetes de l'app a l'instant.",
+      "emptyTitle": "No s'han trobat idiomes",
+      "emptyDescription": "No hi ha opcions d'idioma disponibles",
+      "subtitle": "Select your preferred language"
+    },
+    "notifications": {
+      "detailDesc": "Choose which alerts you receive",
+      "detail": "Notification categories"
+    },
+    "account": {
+      "filesDescription": "Manage uploaded documents",
+      "files": "Files"
+    },
+    "signOutFailed": "Failed to sign out",
+    "signOutSuccess": "Signed out"
   },
   "common": {
     "cancel": "Cancel·lar",
@@ -983,7 +2139,7 @@
     "loading": "Carregant...",
     "retry": "Tornar a provar",
     "save": "Guardar",
-    "saving": "Guardant...",
+    "saving": "Saving...",
     "delete": "Eliminar",
     "edit": "Editar",
     "close": "Tancar",
@@ -1014,14 +2170,7 @@
     "view": "Veure",
     "details": "Detalls",
     "more": "Més",
-    "Sign in to save searches": "Inicia sessió per guardar cerques",
-    "Go to Search": "Anar a Cercar",
-    "No saved searches yet": "Encara no hi ha cerques guardades",
-    "Create New Search": "Crear Nova Cerca",
-    "View All": "Veure Tot",
-    "Sign in to create property alerts": "Inicia sessió per crear alertes de propietats",
     "Creating...": "Creant...",
-    "Create Alert": "Crear Alerta",
     "less": "Menys",
     "all": "Tot",
     "none": "Cap",
@@ -1029,9 +2178,14 @@
     "noData": "No hi ha dades disponibles",
     "noResults": "No s'han trobat resultats",
     "tryAgain": "Provar de nou",
-    "goBack": "Tornar",
+    "goBack": "Go Back",
     "goHome": "Anar a l'inici",
-    "signIn": "Inicia sessió"
+    "signIn": "Inicia sessió",
+    "name": "Name",
+    "emoji": "Emoji",
+    "color": "Color",
+    "month": "month",
+    "reset": "Reset"
   },
   "sindi": {
     "name": "Sindi",
@@ -1153,7 +2307,9 @@
     },
     "errors": {
       "connection": "Error de Connexió",
-      "connectionMessage": "Si us plau, verifiqueu la vostra connexió i intenteu-ho de nou."
+      "connectionMessage": "Si us plau, verifiqueu la vostra connexió i intenteu-ho de nou.",
+      "uploadFailedTitle": "Error en pujar",
+      "uploadAnalyzeFailed": "No s'ha pogut analitzar el fitxer."
     },
     "shared": {
       "loading": "Carregant Conversació Compartida",
@@ -1195,6 +2351,18 @@
         "title": "Inicieu la Vostra Conversació",
         "subtitle": "Pregunteu a Sindi sobre drets de llogaters, cerca d'habitatge, o qualsevol pregunta relacionada amb habitatge. Estic aquí per ajudar-vos a lluitar per la justícia habitacional."
       }
+    },
+    "settings": {
+      "resetMessage": "This will reset all Sindi preferences to their defaults.",
+      "resetTitle": "Reset Sindi?",
+      "reset": "Reset Sindi to defaults",
+      "actions": "Actions",
+      "tipsDescription": "Surface inline guidance while you chat.",
+      "tips": "Show tips & hints",
+      "behaviorFooter": "Tune how Sindi behaves while you browse properties.",
+      "behavior": "Behavior",
+      "title": "Sindi preferences",
+      "resetDone": "Sindi preferences reset."
     }
   },
   "sidebar": {
@@ -1215,7 +2383,8 @@
       "tips": "Consells",
       "hostCalendar": "Calendari d'amfitrió",
       "hostReservations": "Reserves d'amfitrió",
-      "landlordApplications": "Safata de sol·licituds"
+      "landlordApplications": "Safata de sol·licituds",
+      "insights": "Insights"
     },
     "actions": {
       "addProperty": "Afegir Propietat",
@@ -1291,7 +2460,94 @@
       "newest": "Més Recents Primer",
       "oldest": "Més Antics Primer",
       "alphabetical": "Alfabètic"
-    }
+    },
+    "tabs": {
+      "all": "All",
+      "recent": "Recent",
+      "noted": "With Notes",
+      "quickSaves": "Quick Saves",
+      "folders": "Folders",
+      "profiles": "Profiles",
+      "searches": "Saved Searches",
+      "label": "Saved view"
+    },
+    "view": {
+      "list": "List",
+      "grid": "Grid"
+    },
+    "searchPlaceholder": "Search your saved items...",
+    "profilesLabel": "profiles",
+    "adjustFilters": "Try adjusting your search or filter criteria",
+    "sort": {
+      "recent": "Recently Saved",
+      "price-low": "Price: Low to High",
+      "price-high": "Price: High to Low",
+      "title": "Property Name",
+      "notes": "Most Notes"
+    },
+    "editFolder": "Edit Folder",
+    "defaultFolder": "Default Folder",
+    "folderNamePlaceholder": "Folder name",
+    "noFolder": "Folder not found",
+    "noFolderDescription": "This folder may have been removed",
+    "noFolderItems": "No properties in this folder",
+    "noFolderItemsDescription": "Save properties to this folder to see them here",
+    "toast": {
+      "loadFoldersFailed": "Failed to load folders",
+      "folderCreated": "Folder created successfully",
+      "folderCreateFailed": "Failed to create folder",
+      "folderUpdated": "Folder updated successfully",
+      "folderUpdateFailed": "Failed to update folder",
+      "folderDeleted": "Folder deleted successfully",
+      "folderDeleteFailed": "Failed to delete folder",
+      "propertySaved": "Propietat desada correctament",
+      "propertySaveFailed": "Failed to save property",
+      "propertyRemoved": "Property removed from saved",
+      "propertyUnsaveFailed": "Failed to unsave property",
+      "propertySavedToFolder": "Propietat guardada a la carpeta",
+      "saveToFolderFailed": "No s'ha pogut guardar a la carpeta"
+    },
+    "folder": {
+      "title": "Guardar a carpeta",
+      "createNew": "Crear carpeta nova",
+      "folderNamePlaceholder": "Nom de la carpeta",
+      "chooseColor": "Triar color",
+      "chooseEmoji": "Triar emoji",
+      "creating": "Creant...",
+      "createAndSave": "Crear i guardar",
+      "propertyCount_one": "{{count}} propietat",
+      "propertyCount_other": "{{count}} propietats",
+      "alertFolderNameRequired": "Introdueix un nom per a la carpeta",
+      "alertDefaultFolderRename": "La carpeta predeterminada no es pot reanomenar."
+    },
+    "exploreCta": "Explore properties",
+    "loadFailed": "We couldn't load this folder",
+    "noPropertiesDescription": "Save properties to see them here.",
+    "noProperties": "No saved properties",
+    "noResults": "No matches",
+    "createFolder": "Create folder",
+    "noFoldersDescription": "Create folders to organise the places you like.",
+    "noFolders": "No folders yet"
+  },
+  "imageUpload": {
+    "permissionTitle": "Permís necessari",
+    "permissionMessage": "Necessitem permís per accedir a la galeria i pujar imatges.",
+    "maxImagesTitle": "Màxim d'imatges assolit",
+    "maxImagesMessage": "Pots pujar un màxim de {{max}} imatges.",
+    "selectFailed": "No s'han pogut seleccionar les imatges. Torna-ho a provar.",
+    "photoFailed": "No s'ha pogut fer la foto. Torna-ho a provar.",
+    "uploadFailed": "No s'han pogut pujar algunes imatges. Torna-ho a provar.",
+    "deleteTitle": "Eliminar imatge",
+    "deleteMessage": "Segur que vols eliminar aquesta imatge?",
+    "deleteFailed": "No s'ha pogut eliminar la imatge. Torna-ho a provar.",
+    "choosePhotos": "Choose Photos",
+    "takePhoto": "Take Photo",
+    "uploading": "Uploading images...",
+    "imageCount": "{{current}} of {{max}} images uploaded",
+    "primary": "Primary",
+    "addMore": "Add More",
+    "helperText": "Upload high-quality images of your property. Include photos of all rooms, exterior, and any special features.",
+    "helperPrimaryNote": " The first image will be set as the primary image."
   },
   "listing": {
     "exchange": {
@@ -1418,7 +2674,7 @@
       "forSale": "En venda",
       "exchange": "Intercanvi",
       "verified": "Verificat",
-      "eco": "Eco",
+      "eco": "Ecològic",
       "instantBook": "Reserva immediata"
     },
     "offering": {
@@ -1491,7 +2747,876 @@
       "loanAmount": "Import del préstec",
       "totalInterest": "Interessos totals",
       "totalPaid": "Total pagat"
+    },
+    "cta": {
+      "housingAuthority": "Habitatge públic",
+      "landlord": "Propietari",
+      "applyOnStateWebsite": "Sol·licitar al web oficial",
+      "viewOnSourceWebsite": "Veure al portal d'origen",
+      "callNow": "Trucar ara",
+      "moreByOwner": "Més propietats d'aquest propietari"
     }
   },
-  "goBack": "Tornar"
+  "goBack": "Tornar",
+  "app": {
+    "welcome": {
+      "title": "Welcome to Homiio! 👋",
+      "subtitle": "Thanks for trying out our app. Start exploring now!"
+    },
+    "errors": {
+      "screenNotExist": "This screen doesn't exist.",
+      "goHome": "Go to home screen!",
+      "noResults": "No results found for"
+    },
+    "loading": "Loading...",
+    "battery": "Battery"
+  },
+  "tips": {
+    "article": "Article",
+    "all": "All",
+    "loadError": "Couldn't load tips",
+    "tryAgain": "Please try again.",
+    "emptyTitle": "No tips yet",
+    "emptyDescription": "Check back soon for new rental guides and advice.",
+    "unavailable": "Article unavailable",
+    "missingSlug": "This tip could not be loaded.",
+    "loadFailed": "This tip could not be loaded.",
+    "related": "Related tips"
+  },
+  "donations": {
+    "widget": {
+      "title": "Support Our Mission",
+      "description": "Help us build the future of ethical housing. Your support makes a difference.",
+      "button": "Donate to Homiio"
+    },
+    "page": {
+      "title": "Donate to Homiio",
+      "subtitle": "Support the future of ethical housing",
+      "description": "Your contribution helps us build a transparent, fair, and ethical housing platform that benefits everyone in the rental ecosystem.",
+      "chooseContribution": "Choose Your Contribution",
+      "frequency": {
+        "label": "Donation frequency",
+        "monthly": "Monthly",
+        "oneTime": "One-time",
+        "perMonth": "/mo"
+      },
+      "error": {
+        "title": "Something went wrong",
+        "generic": "Unable to process your donation. Please try again later."
+      },
+      "tiers": {
+        "supporter": {
+          "title": "One-time donation",
+          "subtitle": "Help with a small contribution",
+          "button": "Donate Now"
+        },
+        "monthly": {
+          "title": "Monthly supporter",
+          "subtitle": "Become a regular supporter",
+          "button": "Start Supporting"
+        },
+        "founder": {
+          "title": "Founder supporter",
+          "subtitle": "Join our founding supporters",
+          "button": "Become a Founder"
+        }
+      },
+      "impact": {
+        "title": "What Your Support Enables",
+        "areas": {
+          "development": {
+            "title": "Platform Development",
+            "description": "Continuous improvement of our housing platform"
+          },
+          "safety": {
+            "title": "Trust & Safety",
+            "description": "Enhanced verification and fraud prevention"
+          },
+          "legal": {
+            "title": "Legal Integration",
+            "description": "Sindi legal support and transparent contracts"
+          },
+          "innovation": {
+            "title": "Innovation",
+            "description": "FairCoin payments and energy monitoring"
+          },
+          "community": {
+            "title": "Community Building",
+            "description": "Growing the ethical housing movement"
+          }
+        }
+      },
+      "mission": {
+        "title": "Why Support Homiio?",
+        "description": "We're building more than just a rental platform—we're creating a complete ecosystem for ethical housing. Your support helps us:",
+        "goals": [
+          "Fight against rental abuse and hidden fees",
+          "Create transparent processes for tenants and landlords",
+          "Integrate innovative payment methods like FairCoin",
+          "Provide legal support through our Sindi integration",
+          "Build sustainable, community-driven solutions"
+        ]
+      }
+    }
+  },
+  "notFound": {
+    "title": "Pàgina no trobada",
+    "message": "La pàgina que busques no existeix.",
+    "goBack": "Tornar"
+  },
+  "statusBadge": {
+    "draft": "Esborrany",
+    "pending": "Pendent",
+    "pendingSignatures": "Signatures pendents",
+    "active": "Actiu",
+    "expired": "Vençut",
+    "terminated": "Rescindit",
+    "cancelled": "Cancel·lat",
+    "processing": "Processant",
+    "completed": "Completat",
+    "failed": "Fallit",
+    "refunded": "Reemborsat",
+    "success": "Èxit",
+    "warning": "Advertència",
+    "error": "Error",
+    "info": "Informació",
+    "investigating": "En investigació",
+    "resolved": "Resolt",
+    "online": "En línia",
+    "offline": "Sense connexió",
+    "unknown": "Desconegut",
+    "application": {
+      "submitted": "Enviada",
+      "reviewing": "En revisió",
+      "approved": "Aprovada",
+      "rejected": "Rebutjada",
+      "withdrawn": "Retirada"
+    },
+    "reservation": {
+      "pending": "Pendent",
+      "confirmed": "Confirmada",
+      "declined": "Rebutjada",
+      "cancelled": "Cancel·lada",
+      "completed": "Completada"
+    }
+  },
+  "applications": {
+    "list": {
+      "title": "Les meves sol·licituds",
+      "filterAll": "Totes",
+      "filterActive": "Actives",
+      "filterDecided": "Decidides",
+      "filterWithdrawn": "Retirades",
+      "signInTitle": "Inicia sessió per veure les teves sol·licituds",
+      "signInDescription": "Fes seguiment de les sol·licituds d'inquilí que has enviat a arrendadors.",
+      "signIn": "Iniciar sessió",
+      "loadError": "No s'han pogut carregar les teves sol·licituds",
+      "tryAgain": "Torna-ho a provar.",
+      "retry": "Reintentar",
+      "emptyAllTitle": "Encara no hi ha sol·licituds.",
+      "emptyFilteredTitle": "Res en aquesta vista.",
+      "emptyAllDescription": "Explora anuncis i envia una sol·licitud per a un lloguer a llarg termini.",
+      "emptyFilteredDescription": "Prova un altre filtre o envia una nova sol·licitud.",
+      "exploreStays": "Explorar allotjaments",
+      "today": "Avui",
+      "thisWeek": "Aquesta setmana",
+      "earlier": "Anteriors"
+    },
+    "card": {
+      "propertyFallback": "Propietat",
+      "applicantFallback": "Sol·licitant",
+      "monthLease": "Contracte de {{count}} mesos",
+      "moveIn": "Entrada",
+      "submitted": "Enviada el {{date}}",
+      "perMonth": "/ mes",
+      "accessibility": "Sol·licitud {{id}}"
+    },
+    "toast": {
+      "openDocumentFailed": "No s'ha pogut obrir el document.",
+      "withdrawn": "Sol·licitud retirada",
+      "withdrawFailed": "No s'ha pogut retirar la sol·licitud"
+    },
+    "documentType": {
+      "id": "Identificació",
+      "income": "Ingressos",
+      "reference": "Referència",
+      "other": "Altre"
+    },
+    "landlord": {
+      "toastOpenDocumentFailed": "No s'ha pogut obrir el document.",
+      "review": {
+        "reviewing": {
+          "title": "Marcar com a en revisió?",
+          "message": "El sol·licitant sabrà que tens la seva sol·licitud oberta. Podràs aprovar o rebutjar després.",
+          "confirm": "Marcar com a en revisió",
+          "successToast": "Sol·licitud marcada com a en revisió"
+        },
+        "approve": {
+          "title": "Aprovar sol·licitud?",
+          "message": "Es notificarà al sol·licitant i podrà avançar per signar el contracte.",
+          "confirm": "Aprovar",
+          "successToast": "Sol·licitud aprovada"
+        },
+        "reject": {
+          "title": "Rebutjar sol·licitud?",
+          "message": "Es notificarà al sol·licitant. No es pot desfer, però pot enviar una nova sol·licitud més endavant.",
+          "confirm": "Rebutjar",
+          "successToast": "Sol·licitud rebutjada"
+        }
+      },
+      "toastUpdateFailed": "No s'ha pogut actualitzar la sol·licitud"
+    },
+    "field": {
+      "moveInDate": "Move-in date",
+      "notesPlaceholder": "Anything else the landlord should know about you?",
+      "removeDocument": "Remove document",
+      "pickDocuments": "Add documents",
+      "addReference": "Add another reference",
+      "email": "Email",
+      "phone": "Phone number",
+      "relationship": "Relationship",
+      "namePlaceholder": "Jane Doe",
+      "name": "Full name",
+      "removeReference": "Remove reference",
+      "referenceIndex": "Reference {{index}}",
+      "employment": "Employment status",
+      "monthlyIncomePlaceholder": "e.g. 2400",
+      "monthlyIncome": "Gross monthly income",
+      "leaseTermCustomPlaceholder": "Number of months",
+      "leaseTermCustom": "Other",
+      "leaseTerm": "Lease term",
+      "moveInHelper": "Within the next 6 months.",
+      "leaseTermMonths": "{{count}} months"
+    },
+    "cta": {
+      "apply": "Apply to rent",
+      "subtitle": "Submit a quick application with your move-in date, income and references — the landlord reviews and replies inside Homiio.",
+      "title": "Interested in this place?",
+      "addMoveIn": "Add move-in date"
+    },
+    "detail": {
+      "viewStatus": "View status",
+      "alreadySubmittedBody": "You already have an application in review for this property.",
+      "alreadySubmitted": "Application submitted"
+    },
+    "actions": {
+      "submit": "Submit application"
+    },
+    "section": {
+      "notes": "Notes to landlord (optional)",
+      "documentsHelp": "Upload up to {{max}} PDFs or images (10 MB each). Pick a category per file.",
+      "documents": "Documents (optional)",
+      "referencesHelp": "Add 1 to 3 contacts the landlord can call to vouch for you.",
+      "references": "References",
+      "finances": "Income & employment",
+      "timing": "Move-in & lease term"
+    },
+    "apply": {
+      "title": "Apply to rent"
+    },
+    "success": {
+      "submitted": "Application submitted"
+    },
+    "error": {
+      "invalidForm": "Please complete every required field.",
+      "generic": "Something went wrong. Please try again.",
+      "auth": "Please sign in to apply.",
+      "notApplicable": "This property does not accept long-term applications.",
+      "external": "External listings cannot be applied to from Homiio.",
+      "alreadyApplied": "You already have an active application for this property."
+    },
+    "documents": {
+      "pickFailed": "Could not pick documents",
+      "tooLarge": "{{name}} supera els 10 MB i s'ha omès.",
+      "limit": "Pots pujar fins a {{max}} documents per sol·licitud."
+    },
+    "employment": {
+      "employed": "Employed",
+      "selfEmployed": "Self-employed",
+      "student": "Student",
+      "retired": "Retired",
+      "unemployed": "Unemployed",
+      "other": "Other"
+    },
+    "relationship": {
+      "landlord": "Previous landlord",
+      "employer": "Employer",
+      "personal": "Personal",
+      "other": "Other"
+    },
+    "docType": {
+      "id": "ID",
+      "income": "Income proof",
+      "reference": "Reference letter",
+      "other": "Other"
+    }
+  },
+  "reservations": {
+    "card": {
+      "propertyFallback": "Propietat",
+      "night": "nit",
+      "nights": "nits",
+      "guest": "hoste",
+      "guests": "hostes",
+      "hostGuestSuffix": "(hoste)",
+      "accessibility": "Reserva {{id}}"
+    },
+    "detail": {
+      "title": "Reserva",
+      "invalidId": "ID de reserva no vàlid",
+      "invalidIdDescription": "L'enllaç no inclou la referència de la reserva.",
+      "unavailable": "Reserva no disponible",
+      "unavailableDescription": "No s'ha pogut carregar aquesta reserva.",
+      "goBack": "Tornar",
+      "tripDetails": "Detalls del viatge",
+      "checkIn": "Entrada",
+      "checkOut": "Sortida",
+      "guests": "Hostes",
+      "nights": "Nits",
+      "price": "Preu",
+      "approve": "Aprovar",
+      "decline": "Rebutjar",
+      "cancelReservation": "Cancel reservation",
+      "cancelPolicyNote": "Cancellation is no longer possible under the {{policy}} policy. Contact your host if you need to make changes.",
+      "confirmCancelTitle": "Cancel reservation?",
+      "confirmCancelBody": "This will release the dates back to the host and end the booking.",
+      "confirmCancelAction": "Yes, cancel",
+      "confirmApproveTitle": "Approve reservation?",
+      "confirmApproveBody": "The guest will be notified and the dates will be marked confirmed on your calendar.",
+      "confirmDeclineTitle": "Decline reservation?",
+      "confirmDeclineBody": "The guest will be notified that this request was declined.",
+      "toastConfirmed": "Reservation confirmed",
+      "toastDeclined": "Reservation declined",
+      "toastCancelled": "Reservation cancelled",
+      "toastUpdateFailed": "Update failed"
+    }
+  },
+  "reviews": {
+    "card": {
+      "anonymous": "Anònim",
+      "verifiedResident": "Resident verificat",
+      "verified": "Verificat",
+      "confident": "{{score}}% de confiança",
+      "proof": "prova",
+      "proofs": "proves",
+      "karma": "{{score}} karma",
+      "livedMonths": "Va viure {{count}} mesos",
+      "perMonth": "{{price}} {{currency}}/mes",
+      "moreIssues": "+{{count}} més",
+      "positive": "Positiu:",
+      "negative": "Negatiu:",
+      "helpful": "Útil ({{count}})",
+      "report": "Reportar",
+      "reply": "Respondre",
+      "recommends": "✓ Recomana",
+      "doesNotRecommend": "✗ No recomana",
+      "underReview": "En revisió",
+      "alertThankYouTitle": "Gràcies",
+      "alertThankYouBody": "El teu comentari s'ha registrat.",
+      "alertReportTitle": "Reportar ressenya",
+      "alertReportBody": "Segur que vols reportar aquesta ressenya per contingut inapropiat?",
+      "alertReportConfirm": "Reportar",
+      "alertReportedTitle": "Reportada",
+      "alertReportedBody": "Aquesta ressenya s'ha reportat al nostre equip de moderació.",
+      "alertReplyTitle": "Respondre a la ressenya",
+      "alertReplyBody": "La funció de resposta permetrà a arrendadors i administradors de propietats respondre a les ressenyes."
+    },
+    "write": {
+      "validationTitle": "Error de validació",
+      "streetRequired": "Introdueix un carrer.",
+      "cityRequired": "Introdueix una ciutat.",
+      "postalCodeRequired": "Introdueix un codi postal.",
+      "countryRequired": "Introdueix un país.",
+      "opinionRequired": "Comparteix la teva opinió sobre aquesta adreça.",
+      "opinionMinLength": "La teva opinió ha de tenir almenys 10 caràcters.",
+      "priceRequired": "Introdueix un preu vàlid.",
+      "datesRequired": "Introdueix les dates d'inici i fi.",
+      "recommendationRequired": "Indica si recomanaries aquesta adreça.",
+      "ratingRequired": "Assigna una valoració de l'1 al 5.",
+      "submitSuccess": "La teva ressenya s'ha enviat correctament!",
+      "submitFailed": "No s'ha pogut enviar la ressenya",
+      "submitFailedRetry": "No s'ha pogut enviar la ressenya. Torna-ho a provar.",
+      "loadAddressFailed": "Couldn't load address",
+      "title": "Write review"
+    }
+  },
+  "subscriptions": {
+    "title": "Subscripcions",
+    "alertError": "Error",
+    "alertSuccess": "Èxit",
+    "authRequired": "Autenticació requerida",
+    "checkoutFailed": "No s'ha pogut iniciar el pagament",
+    "portalFailed": "No s'ha pogut obrir la gestió de subscripcions",
+    "syncSuccess": "Estat de subscripció sincronitzat des de Stripe",
+    "syncFailed": "No s'ha pogut sincronitzar la subscripció",
+    "cancelImmediateSuccess": "Subscripció cancel·lada immediatament",
+    "cancelFailed": "No s'ha pogut cancel·lar la subscripció",
+    "cancelEndOfPeriodSuccess": "La subscripció es cancel·larà al final del període actual",
+    "debugFailed": "No s'ha pogut depurar la subscripció",
+    "plusActive": "Homiio Plus active",
+    "plusInactive": "Upgrade to Homiio Plus",
+    "manage": "Manage subscription",
+    "sync": "Sync from Stripe",
+    "cancel": "Cancel subscription",
+    "cancelImmediate": "Cancel immediately",
+    "cancelEndOfPeriod": "Cancel at period end",
+    "fileCredits": "{{count}} file credits",
+    "since": "Member since {{date}}",
+    "canceledOn": "Canceled on {{date}}",
+    "lastPayment": "Last payment {{date}}",
+    "products": {
+      "plus": "Homiio Plus",
+      "plusDescription": "Priority support and premium features",
+      "file": "File credits",
+      "fileDescription": "Extra document storage credits",
+      "founder": "Founder",
+      "founderDescription": "Support Homiio and unlock founder perks"
+    },
+    "subscribe": "Subscribe",
+    "buyCredits": "Buy credits",
+    "becomeFounder": "Become a founder",
+    "page": {
+      "headerTitle": "Homiio+",
+      "headerSubtitle": "El teu aliat d'habitatge ètic",
+      "introText": "Your subscription gives you access to Sindi, the legal assistant that scans your rental contracts and flags abusive clauses. No ads, no speculation, no data selling.",
+      "payPerContract": {
+        "title": "Pay per contract",
+        "price": "5 € per contract review",
+        "description": "Perfect for one-time use.",
+        "reviewButton": "Review Contract"
+      },
+      "plus": {
+        "title": "Homiio+ Subscription",
+        "price": "9.99 €/month",
+        "description": "Includes up to 10 contracts per month free. From the 11th contract onwards: 2.50 € each.",
+        "activeBadge": "Active subscription",
+        "canceledBadge": "Canceled on {{date}}",
+        "featureHistory": "Unlimited contract history",
+        "featureAlerts": "Legal alerts & notifications",
+        "featureSupport": "Priority support",
+        "manage": "Manage subscription",
+        "resubscribe": "Resubscribe",
+        "subscribeNow": "Subscribe now"
+      },
+      "founder": {
+        "title": "Founder supporter",
+        "price": "Contribution from 10 €/month",
+        "description": "Support Homiio's independence. Get recognition in the app + early access to features.",
+        "becomeSupporter": "Become a Supporter"
+      },
+      "footer": "Every euro keeps Homiio ethical, independent, and community-driven.",
+      "starting": "Starting…",
+      "back": "Tornar",
+      "notAvailable": "N/A",
+      "cancelImmediateTitle": "Cancel Immediately",
+      "cancelImmediateBody": "This will immediately cancel your subscription and you will lose access to Homiio+ features. Are you sure?",
+      "no": "No",
+      "yesCancelNow": "Yes, Cancel Now"
+    }
+  },
+  "recentlyViewed": {
+    "trackFailed": "No s'ha pogut registrar la visita a la propietat",
+    "clearSuccess": "Propietats vistes recentment esborrades",
+    "clearFailed": "No s'han pogut esborrar les propietats vistes recentment"
+  },
+  "host": {
+    "calendar": {
+      "title": "Calendari d'amfitrió",
+      "signInTitle": "Inicia sessió per gestionar el calendari",
+      "signInDescription": "Bloqueja dates i fes seguiment de reserves des d'un sol lloc.",
+      "signIn": "Iniciar sessió",
+      "loadPropertiesError": "No s'han pogut carregar les teves propietats",
+      "tryAgain": "Torna-ho a provar.",
+      "emptyTitle": "Afegeix la teva primera propietat",
+      "emptyDescription": "Publica un allotjament perquè els hostes puguin sol·licitar dates aquí.",
+      "createListing": "Crear anunci",
+      "chooseProperty": "Triar propietat",
+      "legendConfirmed": "Confirmada",
+      "legendPending": "Pendent",
+      "legendBlocked": "Bloquejada",
+      "legendAvailable": "Disponible",
+      "availabilityError": "No s'ha pogut carregar la disponibilitat",
+      "blockTitle": "Bloquejar aquestes dates",
+      "blockBodyRange": "Block from {{start}} to {{end}}.",
+      "blockBodySingle": "Choose how long these dates are unavailable.",
+      "blockConfirm": "Bloquejar",
+      "blockReasonLabel": "Reason (optional)",
+      "blockReasonPlaceholder": "Maintenance, personal use, ...",
+      "toastBlocked": "Dates bloquejades",
+      "toastBlockFailed": "No s'ha pogut bloquejar",
+      "propertyNotFound": "Propietat no trobada",
+      "property": "Propietat"
+    },
+    "reservations": {
+      "title": "Reserves",
+      "allReservations": "All reservations",
+      "signInTitle": "Sign in to manage reservations",
+      "signInDescription": "Approve or decline guest requests from one place.",
+      "signIn": "Sign in",
+      "filterAll": "All",
+      "loadError": "Couldn't load reservations",
+      "tryAgain": "Please try again.",
+      "emptyTitle": "No reservations yet",
+      "emptyDescription": "Guest requests will appear here once someone books.",
+      "toastConfirmed": "Reservation confirmed",
+      "toastDeclined": "Reservation declined",
+      "toastUpdateFailed": "Update failed",
+      "confirm": "Confirm",
+      "decline": "Decline",
+      "approve": "Aprovar",
+      "view": "Veure",
+      "filterPending": "Pending",
+      "filterConfirmed": "Confirmed",
+      "filterDeclined": "Declined",
+      "filterCancelled": "Cancelled",
+      "filterCompleted": "Completed"
+    }
+  },
+  "stays": {
+    "list": {
+      "title": "Estades",
+      "filterAll": "Totes",
+      "filterUpcoming": "Properes",
+      "filterPast": "Passades",
+      "filterCancelled": "Cancel·lades",
+      "groupUpcoming": "Upcoming",
+      "groupPast": "Past",
+      "groupCancelled": "Cancelled",
+      "signInTitle": "Sign in to see your stays",
+      "signInDescription": "Track short-term bookings you've made.",
+      "signIn": "Sign in",
+      "loadError": "Couldn't load stays",
+      "tryAgain": "Please try again.",
+      "emptyAllTitle": "No stays yet",
+      "emptyFilteredTitle": "Nothing in this view.",
+      "emptyAllDescription": "Once you book a place it will show up here.",
+      "emptyFilteredDescription": "Try a different filter or explore new stays.",
+      "exploreStays": "Explorar estades"
+    }
+  },
+  "addresses": {
+    "detail": {
+      "title": "Address",
+      "loadError": "No s'ha pogut carregar aquesta adreça",
+      "tryAgain": "Torna-ho a provar.",
+      "propertiesSection": "Propietats",
+      "reviewsSection": "Ressenyes",
+      "emptyPropertiesTitle": "Encara no hi ha propietats aquí",
+      "emptyPropertiesDescription": "Els anuncis en aquesta adreça apareixeran aquí.",
+      "emptyReviewsTitle": "Encara no hi ha ressenyes",
+      "emptyReviewsDescription": "Sigues el primer a compartir la teva experiència en aquesta adreça.",
+      "writeReview": "Escriure una ressenya",
+      "switchLevel": "Canviar nivell",
+      "buildingLevel": "Edifici",
+      "unitLevel": "Unitat",
+      "notFound": "Adreça no trobada",
+      "notFoundDescription": "We couldn't find any details for this address.",
+      "storiesTitle": "Històries de residents",
+      "tabOverall": "General",
+      "tabApartments": "Apartaments",
+      "tabCommunity": "Comunitat",
+      "tabArea": "Zona",
+      "tabProperties": "Propietats ({{count}})",
+      "tabReviews": "Ressenyes ({{count}})"
+    },
+    "display": {
+      "copySuccess": "Adreça copiada al porta-retalls",
+      "copyFailed": "No s'ha pogut copiar l'adreça",
+      "mapsFailed": "No s'ha pogut obrir mapes"
+    }
+  },
+  "propertyCreate": {
+    "location": {
+      "title": "Location",
+      "instructions": "📍 Address Details: Fill in the complete address information. Our system uses a hierarchical structure:\n• STREET level: Street name only\n• BUILDING level: Street + number + building details\n• UNIT level: Building + floor + unit/apartment details\nReviews and listings are organized by these levels for better organization.",
+      "country": "Country or Region",
+      "countryPickerTitle": "Country or Region",
+      "state": "State / Province / Region",
+      "statePickerTitle": "State / Province / Region",
+      "city": "City",
+      "street": "Street",
+      "number": "Number",
+      "postalCode": "Postal code",
+      "floor": "Floor",
+      "unit": "Unit / Apartment",
+      "showFloor": "Show floor field",
+      "hideFloor": "Hide floor field",
+      "selectCountry": "Select country or region",
+      "streetPlaceholder": "Street name",
+      "unitOptional": "Unit/Apartment Number (optional)",
+      "unitPlaceholder": "Apartment, suite, etc. (optional)",
+      "buildingNameOptional": "Nom de l'edifici (opcional)",
+      "buildingNamePlaceholder": "p. ex., Torre Barcelona",
+      "blockOptional": "Bloc (opcional)",
+      "blockPlaceholder": "p. ex., Bloc A",
+      "entranceOptional": "Entrada/Porta (opcional)",
+      "entrancePlaceholder": "p. ex., Porta 1, Entrada B",
+      "subunitOptional": "Subunitat (opcional)",
+      "subunitPlaceholder": "p. ex., Habitació A",
+      "numberPlaceholder": "Introdueix el número",
+      "floorPlaceholder": "Introdueix la planta",
+      "floorPublic": "Públic",
+      "floorPrivate": "Privat",
+      "floorPrivacyHint": "ℹ️ Es mostrarà de forma aproximada per privacitat",
+      "neighborhoodOptional": "Barri (opcional)",
+      "neighborhoodPlaceholder": "p. ex., Gràcia, Sant Andreu, Eixample",
+      "districtOptional": "Districte (opcional)",
+      "districtPlaceholder": "p. ex., Districte administratiu",
+      "poBoxOptional": "Apartat de correus (opcional)",
+      "poBoxPlaceholder": "p. ex., Apartat 123",
+      "referenceOptional": "Referència (opcional)",
+      "referencePlaceholder": "p. ex., A prop del metro",
+      "cityDistrict": "Ciutat/Districte",
+      "cityDistrictPlaceholder": "Ciutat o districte",
+      "selectState": "Selecciona província/regió",
+      "zipPostalCode": "Codi postal",
+      "zipPlaceholder": "Codi postal",
+      "availableFrom": "Disponible des de",
+      "availableFromPlaceholder": "Data de disponibilitat",
+      "leaseTerm": "Durada del contracte",
+      "leaseTermPlaceholder": "Durada del contracte"
+    },
+    "amenities": {
+      "title": "Amenities",
+      "subtitle": "Select the amenities available at this property.",
+      "rulesTitle": "Serveis i normes",
+      "houseRules": "House Rules",
+      "petsAllowed": "Pets Allowed",
+      "smokingAllowed": "Smoking Allowed",
+      "partiesAllowed": "Parties Allowed",
+      "guestsAllowed": "Guests Allowed",
+      "maxGuests": "Maximum Number of Guests",
+      "maxGuestsPlaceholder": "e.g., 2",
+      "yes": "Yes",
+      "no": "No"
+    }
+  },
+  "booking": {
+    "toast": {
+      "pickDates": "Selecciona primer les dates d'entrada i sortida",
+      "minStay": "Estada mínima de {{count}} {{unit}}",
+      "maxStay": "Estada màxima de {{count}} {{unit}}",
+      "night": "nit",
+      "nights": "nits",
+      "failed": "Error en la reserva"
+    },
+    "accessibility": {
+      "selectDates": "Select dates",
+      "selectGuests": "Select guests",
+      "close": "Close"
+    }
+  },
+  "searchBar": {
+    "search": "Cerca",
+    "long": {
+      "propertyType": "Tipus de propietat",
+      "moveIn": "Data d'entrada",
+      "where": "On",
+      "where.value": "Qualsevol ciutat",
+      "moveIn.value": "Afegir data",
+      "propertyType.value": "Qualsevol tipus"
+    },
+    "vacation": {
+      "where": "On",
+      "when": "Quan",
+      "who": "Qui",
+      "where.value": "Qualsevol destinació",
+      "when.value": "Afegir dates",
+      "who.value": "Afegir hostes"
+    },
+    "mode": {
+      "vacation": "Vacances",
+      "longTerm": "Llarg termini",
+      "hint": "Canvia entre lloguers a llarg termini i estades vacacionals",
+      "label": "Mode de lloguer"
+    }
+  },
+  "error": {
+    "publicHousing": {
+      "openFailed": "No s'ha pogut obrir el lloc web d'habitatge"
+    },
+    "call": {
+      "failed": "No s'ha pogut obrir el marcador telefònic",
+      "noPhone": "No hi ha número de telèfon disponible",
+      "notAllowed": "El propietari no accepta trucades"
+    },
+    "profile": {
+      "notFound": "Perfil del propietari no trobat"
+    },
+    "auth": {
+      "required": "Inicia sessió per trucar al propietari"
+    },
+    "contact": {
+      "noPhone": "No hi ha telèfon disponible per a aquest anunci",
+      "openFailed": "No s'ha pogut obrir l'enllaç de contacte"
+    },
+    "source": {
+      "openFailed": "No s'ha pogut obrir el lloc web d'origen",
+      "noUrl": "URL del lloc d'origen no disponible"
+    },
+    "boundary": {
+      "title": "Alguna cosa ha anat malament",
+      "message": "Un problema inesperat ha interromput el que estaves fent. Pots tornar-ho a provar o enviar-nos un informe ràpid perquè ho investiguem.",
+      "retry": "Torna-ho a provar",
+      "reportIssue": "Informar del problema",
+      "errorId": "ID d'error",
+      "copyIdHint": "Toca per copiar l'ID",
+      "copiedToClipboard": "Copiat al porta-retalls",
+      "showDetails": "Mostrar detalls tècnics",
+      "hideDetails": "Amagar detalls tècnics",
+      "technicalDetails": "Detalls tècnics",
+      "maxRetriesTitle": "Segueix sense funcionar",
+      "maxRetriesMessage": "Has assolit el límit de reintents. Si us plau, informa del problema perquè ho puguem revisar.",
+      "forceRetry": "Forçar reintent",
+      "reportCopiedTitle": "Informe copiat",
+      "reportCopiedMessage": "L'informe d'error s'ha copiat al porta-retalls.",
+      "reportFailedTitle": "No s'ha pogut copiar",
+      "reportFailedMessage": "No hem pogut copiar l'informe al porta-retalls. Torna-ho a provar.",
+      "errorMessage": "Missatge d'error",
+      "errorType": "Tipus d'error",
+      "stackTrace": "Traça de pila",
+      "componentStack": "Pila de components",
+      "deviceInformation": "Informació del dispositiu"
+    },
+    "loadNotifications": "Error carregant notificacions"
+  },
+  "notification": {
+    "settings": {
+      "android": {
+        "openSettings": "Obrir configuració del sistema",
+        "title": "Android Settings",
+        "description": "You can manage notification channels and advanced settings in your device's Settings app under Apps > Homiio > Notifications."
+      },
+      "ios": {
+        "openSettings": "Obrir configuració del sistema",
+        "title": "iOS Settings",
+        "description": "For more granular control, you can also manage notification settings in your device's Settings app under Notifications > Homiio."
+      },
+      "test": {
+        "title": "Test Notifications",
+        "description": "Envia notificacions de prova per verificar que la teva configuració funciona correctament."
+      },
+      "property": {
+        "title": "Property Notifications",
+        "description": "New properties, price changes, and viewing reminders"
+      },
+      "message": {
+        "title": "Message Notifications",
+        "description": "New messages from agents, landlords, and other users"
+      },
+      "contract": {
+        "title": "Contract Notifications",
+        "description": "Contract updates, signatures, and important deadlines"
+      },
+      "payment": {
+        "title": "Payment Notifications",
+        "description": "Payment confirmations, reminders, and receipts"
+      },
+      "reminder": {
+        "title": "Reminder Notifications",
+        "description": "Viewing reminders, application deadlines, and follow-ups"
+      },
+      "system": {
+        "title": "System Notifications",
+        "description": "App updates, maintenance, and important announcements"
+      },
+      "marketing": {
+        "title": "Marketing Notifications",
+        "description": "Promotional offers, newsletters, and special deals"
+      },
+      "sound": {
+        "title": "Sound",
+        "description": "Play sound when notifications arrive"
+      },
+      "badge": {
+        "title": "Badge Count",
+        "description": "Show unread count on app icon"
+      },
+      "push": {
+        "title": "Push Notifications",
+        "description": "Receive notifications even when app is closed"
+      },
+      "title": "Notification Settings",
+      "categories": "Notification Categories",
+      "behavior": "Notification Behavior",
+      "manage": "Manage Notifications",
+      "clearAll": "Clear All Notifications",
+      "updated": "Settings updated",
+      "error": "Failed to update settings"
+    },
+    "test": {
+      "success": "Notificació de prova enviada",
+      "property": "Test Property",
+      "message": "Test Message",
+      "reminder": "Test Reminder",
+      "repeating": "Test Repeating",
+      "error": "Failed to send test notification"
+    },
+    "empty": {
+      "filteredTitle": "Sense coincidències",
+      "title": "No notifications",
+      "message": "You're all caught up! New notifications will appear here.",
+      "filtered": "No notifications match your current filter"
+    },
+    "filter": {
+      "label": "Filtrar notificacions",
+      "all": "All",
+      "unread": "Unread"
+    },
+    "scheduled": {
+      "label": "Notificació programada",
+      "title": "Scheduled Notifications",
+      "clearAll": "Clear All"
+    },
+    "markAllRead": {
+      "action": "Marcar-ho tot com a llegit",
+      "success": "All notifications marked as read",
+      "error": "Failed to mark all as read"
+    },
+    "permissions": {
+      "enabled": {
+        "title": "Notifications Enabled",
+        "description": "Rebràs notificacions de les categories activades."
+      },
+      "disabled": {
+        "title": "Notifications Disabled",
+        "description": "Activa les notificacions per rebre novetats sobre propietats, missatges i més."
+      },
+      "title": "Enable Notifications",
+      "message": "Get notified about new properties, messages, and important updates.",
+      "enable": "Enable Notifications",
+      "granted": "Notification permissions granted",
+      "denied": "Notification permissions denied",
+      "error": "Failed to request permissions"
+    },
+    "welcome": {
+      "title": "Benvingut a Homiio! 👋",
+      "body": "Gràcies per provar la nostra aplicació. Comença a explorar ara!"
+    },
+    "search": {
+      "placeholder": "Search notifications..."
+    },
+    "delete": {
+      "title": "Delete Notification",
+      "message": "Are you sure you want to delete this notification?",
+      "success": "Notification deleted",
+      "error": "Failed to delete notification"
+    },
+    "clearAll": {
+      "title": "Clear All Notifications",
+      "message": "This will clear all notifications and reset the badge count. This action cannot be undone.",
+      "success": "All notifications cleared",
+      "error": "Failed to clear notifications"
+    }
+  },
+  "address": {
+    "display": {
+      "mapPlaceholder": "Map view available",
+      "copy": "Copy",
+      "openInMaps": "Open in Maps"
+    }
+  },
+  "inbox": {
+    "title": "Bústia"
+  }
 }

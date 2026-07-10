@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import { toast } from '@/lib/sonner';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@oxyhq/bloom/button';
 import { Loading } from '@oxyhq/bloom/loading';
@@ -77,6 +78,7 @@ const canGuestCancelPreview = (reservation: Reservation): boolean => {
 };
 
 export default function ReservationDetailScreen() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const id = typeof params.id === 'string' ? params.id : params.id?.[0];
@@ -105,28 +107,28 @@ export default function ReservationDetailScreen() {
       if (!id) return;
       try {
         await updateMutation.mutateAsync({ status: target });
-        const verb =
+        const toastKey =
           target === ReservationStatus.CONFIRMED
-            ? 'confirmed'
+            ? 'reservations.detail.toastConfirmed'
             : target === ReservationStatus.DECLINED
-              ? 'declined'
-              : 'cancelled';
-        toast.success(`Reservation ${verb}`);
+              ? 'reservations.detail.toastDeclined'
+              : 'reservations.detail.toastCancelled';
+        toast.success(t(toastKey));
         setPendingAction(null);
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Update failed';
+        const message = error instanceof Error ? error.message : t('reservations.detail.toastUpdateFailed');
         toast.error(message);
         setPendingAction(null);
       }
     },
-    [id, updateMutation],
+    [id, updateMutation, t],
   );
 
   const header = (
     <Header
       options={{
         showBackButton: true,
-        title: 'Reservation',
+        title: t('reservations.detail.title'),
         titlePosition: 'center',
       }}
     />
@@ -139,9 +141,9 @@ export default function ReservationDetailScreen() {
         <View style={styles.centerWrap}>
           <ErrorState
             icon="warning-outline"
-            title="Invalid reservation id"
-            description="The link is missing the reservation reference."
-            retryLabel="Go back"
+            title={t('reservations.detail.invalidId')}
+            description={t('reservations.detail.invalidIdDescription')}
+            retryLabel={t('reservations.detail.goBack')}
             onRetry={() => router.back()}
           />
         </View>
@@ -166,11 +168,11 @@ export default function ReservationDetailScreen() {
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
-            title="Reservation unavailable"
+            title={t('reservations.detail.unavailable')}
             description={
-              reservationQuery.error?.message ?? 'This reservation could not be loaded.'
+              reservationQuery.error?.message ?? t('reservations.detail.unavailableDescription')
             }
-            retryLabel="Go back"
+            retryLabel={t('reservations.detail.goBack')}
             onRetry={() => router.back()}
           />
         </View>
@@ -178,7 +180,7 @@ export default function ReservationDetailScreen() {
     );
   }
 
-  const propertyTitle = property ? getPropertyTitle(property) : 'Property';
+  const propertyTitle = property ? getPropertyTitle(property) : t('reservations.card.propertyFallback');
   const imageSource = property ? getPropertyImageSource(property) : null;
   const showGuestCancel =
     role === 'guest' &&
@@ -220,26 +222,28 @@ export default function ReservationDetailScreen() {
           </CardSurface>
 
           <CardSurface>
-            <BloomText style={styles.sectionLabel}>Trip details</BloomText>
+            <BloomText style={styles.sectionLabel}>{t('reservations.detail.tripDetails')}</BloomText>
             <DetailRow
-              label="Check-in"
+              label={t('reservations.detail.checkIn')}
               value={format(new Date(reservation.checkIn), 'EEE, MMM d, yyyy')}
             />
             <DetailRow
-              label="Check-out"
+              label={t('reservations.detail.checkOut')}
               value={format(new Date(reservation.checkOut), 'EEE, MMM d, yyyy')}
             />
             <DetailRow
-              label="Guests"
+              label={t('reservations.detail.guests')}
               value={`${reservation.guestCount} ${
-                reservation.guestCount === 1 ? 'guest' : 'guests'
+                reservation.guestCount === 1
+                  ? t('reservations.card.guest')
+                  : t('reservations.card.guests')
               }`}
             />
-            <DetailRow label="Nights" value={String(reservation.nights)} />
+            <DetailRow label={t('reservations.detail.nights')} value={String(reservation.nights)} />
           </CardSurface>
 
           <CardSurface>
-            <BloomText style={styles.sectionLabel}>Price</BloomText>
+            <BloomText style={styles.sectionLabel}>{t('reservations.detail.price')}</BloomText>
             <PriceBreakdown
               nights={reservation.nights}
               nightlyRate={reservation.nightlyRate}
@@ -271,7 +275,7 @@ export default function ReservationDetailScreen() {
                     disabled={updateMutation.isPending}
                     style={styles.actionButton}
                   >
-                    Approve
+                    {t('reservations.detail.approve')}
                   </Button>
                   <Button
                     variant="secondary"
@@ -280,7 +284,7 @@ export default function ReservationDetailScreen() {
                     disabled={updateMutation.isPending}
                     style={styles.actionButton}
                   >
-                    Decline
+                    {t('reservations.detail.decline')}
                   </Button>
                 </>
               ) : null}
@@ -292,7 +296,7 @@ export default function ReservationDetailScreen() {
                   disabled={updateMutation.isPending}
                   style={styles.actionButton}
                 >
-                  Cancel reservation
+                  {t('reservations.detail.cancelReservation')}
                 </Button>
               ) : null}
             </View>
@@ -302,18 +306,18 @@ export default function ReservationDetailScreen() {
           reservation.status === ReservationStatus.CONFIRMED &&
           !showGuestCancel ? (
             <BloomText style={styles.policyNote}>
-              Cancellation is no longer possible under the{' '}
-              {reservation.cancellationPolicy.replace('_', ' ')} policy. Contact your
-              host if you need to make changes.
+              {t('reservations.detail.cancelPolicyNote', {
+                policy: reservation.cancellationPolicy.replace('_', ' '),
+              })}
             </BloomText>
           ) : null}
         </ScrollView>
 
         <ConfirmDialog
           visible={pendingAction === 'cancel'}
-          title="Cancel reservation?"
-          message="This will release the dates back to the host and end the booking."
-          confirmLabel="Yes, cancel"
+          title={t('reservations.detail.confirmCancelTitle')}
+          message={t('reservations.detail.confirmCancelBody')}
+          confirmLabel={t('reservations.detail.confirmCancelAction')}
           confirmDestructive
           loading={updateMutation.isPending}
           onConfirm={() => handleAction(ReservationStatus.CANCELLED)}
@@ -321,18 +325,18 @@ export default function ReservationDetailScreen() {
         />
         <ConfirmDialog
           visible={pendingAction === 'confirm'}
-          title="Approve reservation?"
-          message="The guest will be notified and the dates will be marked confirmed on your calendar."
-          confirmLabel="Approve"
+          title={t('reservations.detail.confirmApproveTitle')}
+          message={t('reservations.detail.confirmApproveBody')}
+          confirmLabel={t('reservations.detail.approve')}
           loading={updateMutation.isPending}
           onConfirm={() => handleAction(ReservationStatus.CONFIRMED)}
           onCancel={() => setPendingAction(null)}
         />
         <ConfirmDialog
           visible={pendingAction === 'decline'}
-          title="Decline reservation?"
-          message="The guest will be notified that this request was declined."
-          confirmLabel="Decline"
+          title={t('reservations.detail.confirmDeclineTitle')}
+          message={t('reservations.detail.confirmDeclineBody')}
+          confirmLabel={t('reservations.detail.decline')}
           confirmDestructive
           loading={updateMutation.isPending}
           onConfirm={() => handleAction(ReservationStatus.DECLINED)}

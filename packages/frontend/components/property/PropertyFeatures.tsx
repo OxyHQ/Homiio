@@ -80,22 +80,22 @@ export const PropertyFeatures: React.FC<Props> = ({ property }) => {
         if (furnishedStatus !== undefined) {
             const label =
                 furnishedStatus === 'furnished'
-                    ? t('Furnished')
+                    ? t('property.sections.furnished')
                     : furnishedStatus === 'partially_furnished'
-                        ? t('Partially Furnished')
-                        : t('Unfurnished');
+                        ? t('property.sections.partiallyFurnished')
+                        : t('property.sections.unfurnished');
             next.push({ key: 'furnished', label, imageId: 'furnished', icon: 'cube' });
         }
         if (hasBalcony === true) {
-            next.push({ key: 'balcony', label: t('Balcony'), imageId: 'balcony', icon: 'home' });
+            next.push({ key: 'balcony', label: t('property.sections.balcony'), imageId: 'balcony', icon: 'home' });
         }
         if (hasGarden === true) {
-            next.push({ key: 'garden', label: t('Garden'), icon: 'leaf' });
+            next.push({ key: 'garden', label: t('property.sections.garden'), icon: 'leaf' });
         }
         if (hasElevator === true) {
             next.push({
                 key: 'elevator',
-                label: t('Elevator'),
+                label: t('property.sections.elevator'),
                 imageId: 'elevator',
                 icon: 'arrow-up-circle',
             });
@@ -107,7 +107,7 @@ export const PropertyFeatures: React.FC<Props> = ({ property }) => {
     if (rows.length === 0) return null;
 
     return (
-        <Section title={t('Property Features')}>
+        <Section title={t('property.sections.features')}>
             <DetailIconGrid>
                 {rows.map(({ key, ...data }) => (
                     <DetailIconCell key={key}>

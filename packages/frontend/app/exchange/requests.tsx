@@ -36,13 +36,13 @@ import { radius, spacing } from '@/constants/styles';
 type RoleView = 'guest' | 'host';
 type StatusFilter = 'all' | ExchangeRequestStatus;
 
-const STATUS_FILTERS: { id: StatusFilter; i18nKey: string; fallback: string }[] = [
-  { id: 'all', i18nKey: 'common.all', fallback: 'All' },
-  { id: ExchangeRequestStatus.PENDING, i18nKey: 'listing.exchange.status.pending', fallback: 'Pending' },
-  { id: ExchangeRequestStatus.CONFIRMED, i18nKey: 'listing.exchange.status.confirmed', fallback: 'Confirmed' },
-  { id: ExchangeRequestStatus.COMPLETED, i18nKey: 'listing.exchange.status.completed', fallback: 'Completed' },
-  { id: ExchangeRequestStatus.DECLINED, i18nKey: 'listing.exchange.status.declined', fallback: 'Declined' },
-  { id: ExchangeRequestStatus.CANCELLED, i18nKey: 'listing.exchange.status.cancelled', fallback: 'Cancelled' },
+const STATUS_FILTERS: { id: StatusFilter; i18nKey: string }[] = [
+  { id: 'all', i18nKey: 'common.all' },
+  { id: ExchangeRequestStatus.PENDING, i18nKey: 'listing.exchange.status.pending' },
+  { id: ExchangeRequestStatus.CONFIRMED, i18nKey: 'listing.exchange.status.confirmed' },
+  { id: ExchangeRequestStatus.COMPLETED, i18nKey: 'listing.exchange.status.completed' },
+  { id: ExchangeRequestStatus.DECLINED, i18nKey: 'listing.exchange.status.declined' },
+  { id: ExchangeRequestStatus.CANCELLED, i18nKey: 'listing.exchange.status.cancelled' },
 ];
 
 /** Host inline approve/decline for a pending request. Owns its own mutation. */
@@ -59,14 +59,14 @@ const HostPendingActions: React.FC<{ request: ExchangeRequest }> = ({ request })
       await mutation.mutateAsync({ status });
       toast.success(
         status === ExchangeRequestStatus.CONFIRMED
-          ? t('listing.exchange.toasts.confirmed', 'Exchange confirmed')
-          : t('listing.exchange.toasts.declined', 'Exchange declined'),
+          ? t('listing.exchange.toasts.confirmed')
+          : t('listing.exchange.toasts.declined'),
       );
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
-          : t('listing.exchange.errors.failed', 'Could not update request');
+          : t('listing.exchange.errors.failed');
       toast.error(message);
     } finally {
       setBusy(null);
@@ -82,7 +82,7 @@ const HostPendingActions: React.FC<{ request: ExchangeRequest }> = ({ request })
         disabled={mutation.isPending}
         onPress={() => handle(ExchangeRequestStatus.CONFIRMED)}
       >
-        {t('listing.exchange.actions.approve', 'Approve')}
+        {t('listing.exchange.actions.approve')}
       </Button>
       <Button
         variant="secondary"
@@ -91,7 +91,7 @@ const HostPendingActions: React.FC<{ request: ExchangeRequest }> = ({ request })
         disabled={mutation.isPending}
         onPress={() => handle(ExchangeRequestStatus.DECLINED)}
       >
-        {t('listing.exchange.actions.decline', 'Decline')}
+        {t('listing.exchange.actions.decline')}
       </Button>
     </>
   );
@@ -123,7 +123,7 @@ export default function ExchangeRequestsScreen() {
     <Header
       options={{
         showBackButton: true,
-        title: t('listing.exchange.requestsTitle', 'Exchanges'),
+        title: t('listing.exchange.requestsTitle'),
         titlePosition: 'center',
       }}
     />
@@ -137,12 +137,9 @@ export default function ExchangeRequestsScreen() {
           <View style={styles.centerWrap}>
             <EmptyState
               icon="swap-horizontal"
-              title={t('listing.exchange.signInTitle', 'Sign in to see your exchanges')}
-              description={t(
-                'listing.exchange.signInBody',
-                'Your home swaps and hosting requests live here.',
-              )}
-              actionText={t('common.signIn', 'Sign in')}
+              title={t('listing.exchange.signInTitle')}
+              description={t('listing.exchange.signInBody')}
+              actionText={t('common.signIn')}
               actionIcon="log-in-outline"
               onAction={() => showSignInModal()}
             />
@@ -160,12 +157,12 @@ export default function ExchangeRequestsScreen() {
           {/* Role segmented toggle */}
           <View style={styles.segmented}>
             <SegmentButton
-              label={t('listing.exchange.asGuest', 'My requests')}
+              label={t('listing.exchange.asGuest')}
               active={role === 'guest'}
               onPress={() => setRole('guest')}
             />
             <SegmentButton
-              label={t('listing.exchange.asHost', 'For my homes')}
+              label={t('listing.exchange.asHost')}
               active={role === 'host'}
               onPress={() => setRole('host')}
             />
@@ -187,7 +184,7 @@ export default function ExchangeRequestsScreen() {
                   selected={active}
                   onPress={() => setStatusFilter(entry.id)}
                 >
-                  {t(entry.i18nKey, entry.fallback)}
+                  {t(entry.i18nKey)}
                 </Chip>
               );
             })}
@@ -198,9 +195,9 @@ export default function ExchangeRequestsScreen() {
           {query.isError ? (
             <ErrorState
               icon="cloud-offline-outline"
-              title={t('listing.exchange.loadErrorTitle', 'Couldn’t load exchanges')}
-              description={query.error?.message ?? t('common.tryAgain', 'Please try again.')}
-              retryLabel={t('common.retry', 'Retry')}
+              title={t('listing.exchange.loadErrorTitle')}
+              description={query.error?.message ?? t('common.tryAgain')}
+              retryLabel={t('common.retry')}
               onRetry={() => query.refetch()}
             />
           ) : null}
@@ -211,19 +208,13 @@ export default function ExchangeRequestsScreen() {
                 icon="swap-horizontal"
                 title={
                   role === 'guest'
-                    ? t('listing.exchange.emptyGuestTitle', 'No exchange requests yet')
-                    : t('listing.exchange.emptyHostTitle', 'No requests for your homes yet')
+                    ? t('listing.exchange.emptyGuestTitle')
+                    : t('listing.exchange.emptyHostTitle')
                 }
                 description={
                   role === 'guest'
-                    ? t(
-                        'listing.exchange.emptyGuestBody',
-                        'When you request a swap or hosting stay it shows up here.',
-                      )
-                    : t(
-                        'listing.exchange.emptyHostBody',
-                        'When someone proposes an exchange with your home it shows up here.',
-                      )
+                    ? t('listing.exchange.emptyGuestBody')
+                    : t('listing.exchange.emptyHostBody')
                 }
               />
             </View>

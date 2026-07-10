@@ -36,12 +36,12 @@ export function LongTermPricingStep({
   return (
     <View>
       <ThemedText type="subtitle">
-        {t('listing.offering.longTermStepTitle', 'Monthly rent')}
+        {t('listing.offering.longTermStepTitle')}
       </ThemedText>
 
       <View style={styles.formGroup}>
         <ThemedText style={styles.label}>
-          {t('listing.pricing.monthlyRent', 'Monthly Rent')}
+          {t('listing.pricing.monthlyRent')}
         </ThemedText>
         <TextInput
           style={[styles.input, validationErrors.monthlyRent && styles.inputError]}
@@ -64,7 +64,7 @@ export function LongTermPricingStep({
 
       <View style={styles.formGroup}>
         <ThemedText style={styles.label}>
-          {t('listing.pricing.securityDeposit', 'Security Deposit')}
+          {t('listing.pricing.securityDeposit')}
         </ThemedText>
         <TextInput
           style={styles.input}
@@ -77,7 +77,7 @@ export function LongTermPricingStep({
 
       <View style={styles.formGroup}>
         <ThemedText style={styles.label}>
-          {t('listing.pricing.applicationFee', 'Application Fee')}
+          {t('listing.pricing.applicationFee')}
         </ThemedText>
         <TextInput
           style={styles.input}
@@ -90,7 +90,7 @@ export function LongTermPricingStep({
 
       <View style={styles.formGroup}>
         <ThemedText style={styles.label}>
-          {t('listing.pricing.lateFee', 'Late Fee')}
+          {t('listing.pricing.lateFee')}
         </ThemedText>
         <TextInput
           style={styles.input}

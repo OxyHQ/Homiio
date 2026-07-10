@@ -252,7 +252,7 @@ export default function HomePage() {
     const queryPlace = activeQuery.location?.shortLabel || activeQuery.location?.label;
     if (queryPlace) return queryPlace;
     const fallbackCountry = cities.map((c) => cityCountryName(c)).find(Boolean);
-    return fallbackCountry ?? t('home.cityShowcase.defaultPlace', 'Spain');
+    return fallbackCountry ?? t('home.cityShowcase.defaultPlace');
   }, [userLocation, citiesByDistance, activeQuery.location, cities, t]);
 
   // Fetch properties for the two closest cities. The nearbyCities array
@@ -353,15 +353,15 @@ export default function HomePage() {
    */
   const featuredGridTitle = useMemo(() => {
     if (browseOffering === OfferingType.SALE) {
-      return t('home.featured.gridBuy', 'Homes for sale in Barcelona');
+      return t('home.featured.gridBuy');
     }
     if (browseOffering === OfferingType.EXCHANGE) {
-      return t('home.featured.gridExchange', 'Home exchanges in Spain');
+      return t('home.featured.gridExchange');
     }
     if (browseOffering === OfferingType.SHORT_TERM_RENT) {
-      return t('home.featured.gridVacation', 'Beach apartments in València');
+      return t('home.featured.gridVacation');
     }
-    return t('home.featured.gridLongTerm', 'Studios in Barcelona');
+    return t('home.featured.gridLongTerm');
   }, [browseOffering, t]);
 
   const handleNavigateToCity = useCallback(
@@ -381,9 +381,9 @@ export default function HomePage() {
 
   const footerChunks = useMemo(
     () => [
-      t('home.footerStrip.verified', 'Verified listings'),
-      t('home.footerStrip.fair', 'Fair agreements'),
-      t('home.footerStrip.support', 'Real support, real people'),
+      t('home.footerStrip.verified'),
+      t('home.footerStrip.fair'),
+      t('home.footerStrip.support'),
     ],
     [t],
   );
@@ -439,7 +439,7 @@ export default function HomePage() {
             <Pressable
               onPress={openMobileDrawer}
               accessibilityRole="button"
-              accessibilityLabel={t('sidebar.open', { defaultValue: 'Open menu' })}
+              accessibilityLabel={t('sidebar.open')}
               hitSlop={spacing.sm}
               className="absolute left-4 z-10 h-10 w-10 items-center justify-center rounded-full"
               style={{
@@ -519,7 +519,7 @@ export default function HomePage() {
         {/* === Featured Properties carousel === */}
         {featuredProperties.length > 0 ? (
           <HomeCarouselSection
-            title={t('home.featured.title', 'Top picks for you')}
+            title={t('home.featured.title')}
             items={featuredProperties}
             loading={propertiesLoading}
             renderItem={(property) => (
@@ -538,10 +538,7 @@ export default function HomePage() {
         {/* === City Showcase (DB cities, adaptive region/country title) === */}
         {cities.length > 0 ? (
           <CityShowcaseSection
-            title={t('home.cityShowcase.title', {
-              defaultValue: 'Explore {{place}}',
-              place: explorePlace,
-            })}
+            title={t('home.cityShowcase.title', { place: explorePlace })}
             items={cities}
             onPressCity={handleNavigateToCity}
           />
@@ -561,7 +558,7 @@ export default function HomePage() {
         {/* === Continue browsing (Recently Viewed) === */}
         {recentlyViewedProperties && recentlyViewedProperties.length > 0 ? (
           <HomeCarouselSection
-            title={t('home.recentlyViewed.continue', 'Continue browsing')}
+            title={t('home.recentlyViewed.continue')}
             items={recentlyViewedProperties}
             loading={false}
             renderItem={(property) => (
@@ -580,7 +577,7 @@ export default function HomePage() {
         {/* === Saved Properties === */}
         {savedProperties && savedProperties.length > 0 ? (
           <HomeCarouselSection<Property>
-            title={t('home.saved.title') || 'Saved properties'}
+            title={t('home.saved.title')}
             items={savedProperties as Property[]}
             loading={savedLoading}
             renderItem={(property) => (
@@ -604,7 +601,7 @@ export default function HomePage() {
           return (
             <HomeCarouselSection
               key={cityId}
-              title={t('home.nearby.title', { city: city.name }) || `Homes in ${city.name}`}
+              title={t('home.nearby.title', { city: city.name })}
               items={cityProperties}
               loading={false}
               renderItem={(property) => (
@@ -633,41 +630,35 @@ export default function HomePage() {
           <View className="flex-row items-stretch gap-6 px-8 md:gap-8">
             <HostCtaBanner
               fill
-              title={t('home.hostCta.title', 'List your space, find a great tenant')}
-              subtitle={t(
-                'home.hostCta.subtitle',
-                'Reach verified renters across Spain — free to list, fair fees, real human support.',
-              )}
-              ctaLabel={t('home.hostCta.cta', 'Become a host')}
+              title={t('home.hostCta.title')}
+              subtitle={t('home.hostCta.subtitle')}
+              ctaLabel={t('home.hostCta.cta')}
               imageUrl={HOST_CTA_IMAGE}
               onPress={handleBecomeHost}
             />
             <AgentCtaBanner
               fill
-              title={t('agent.banner.title', 'Start today. No license needed.')}
-              subtitle={t('agent.banner.subtitle', 'Turn the homes around you into income.')}
-              ctaLabel={t('agent.banner.cta', 'Become an agent')}
-              trustLine={t('agent.banner.trust', 'No license needed. Work from your phone.')}
+              title={t('agent.banner.title')}
+              subtitle={t('agent.banner.subtitle')}
+              ctaLabel={t('agent.banner.cta')}
+              trustLine={t('agent.banner.trust')}
               onPress={handleBecomeAgent}
             />
           </View>
         ) : (
           <>
             <HostCtaBanner
-              title={t('home.hostCta.title', 'List your space, find a great tenant')}
-              subtitle={t(
-                'home.hostCta.subtitle',
-                'Reach verified renters across Spain — free to list, fair fees, real human support.',
-              )}
-              ctaLabel={t('home.hostCta.cta', 'Become a host')}
+              title={t('home.hostCta.title')}
+              subtitle={t('home.hostCta.subtitle')}
+              ctaLabel={t('home.hostCta.cta')}
               imageUrl={HOST_CTA_IMAGE}
               onPress={handleBecomeHost}
             />
             <AgentCtaBanner
-              title={t('agent.banner.title', 'Start today. No license needed.')}
-              subtitle={t('agent.banner.subtitle', 'Turn the homes around you into income.')}
-              ctaLabel={t('agent.banner.cta', 'Become an agent')}
-              trustLine={t('agent.banner.trust', 'No license needed. Work from your phone.')}
+              title={t('agent.banner.title')}
+              subtitle={t('agent.banner.subtitle')}
+              ctaLabel={t('agent.banner.cta')}
+              trustLine={t('agent.banner.trust')}
               onPress={handleBecomeAgent}
             />
           </>

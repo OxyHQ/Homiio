@@ -63,13 +63,13 @@ export const TruncatedDescription: React.FC<TruncatedDescriptionProps> = ({
             size="small"
             accessibilityLabel={
               expanded
-                ? t('property.description.showLess', 'Show less') || 'Show less'
-                : t('property.description.showMore', 'Show more') || 'Show more'
+                ? t('property.description.showLess')
+                : t('property.description.showMore')
             }
           >
             {expanded
-              ? t('property.description.showLess', 'Show less') || 'Show less'
-              : t('property.description.showMore', 'Show more') || 'Show more'}
+              ? t('property.description.showLess')
+              : t('property.description.showMore')}
           </Button>
         </View>
       ) : null}

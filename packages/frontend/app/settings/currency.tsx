@@ -30,12 +30,12 @@ export default function CurrencySettingsScreen() {
     try {
       await changeCurrency(currencyCode);
       toast.success(
-        t('settings.currency.currencyChanged', 'Currency changed successfully'),
+        t('settings.currency.currencyChanged'),
       );
       router.back();
     } catch {
       toast.error(
-        t('settings.currency.errorChanging', 'Failed to change currency. Please try again.'),
+        t('settings.currency.errorChanging'),
       );
     }
   };
@@ -44,18 +44,15 @@ export default function CurrencySettingsScreen() {
     <View style={styles.root}>
       <Header
         options={{
-          title: t('settings.currency.title', 'Currency'),
+          title: t('settings.currency.title'),
           showBackButton: true,
           titlePosition: 'center',
         }}
       />
       <ScrollView contentContainerStyle={styles.scroll}>
         <SettingsListGroup
-          title={t('settings.currency.selectCurrency', 'Select your preferred currency')}
-          footer={t(
-            'settings.currency.description',
-            'This will be used to display prices throughout the app. Exchange rates are approximate.',
-          )}
+          title={t('settings.currency.selectCurrency')}
+          footer={t('settings.currency.description')}
         >
           {CURRENCIES.map((currency) => {
             const isActive = currentCurrency === currency.code;

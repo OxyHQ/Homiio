@@ -7,8 +7,8 @@
  * Centered on mobile (handled by parent), left-aligned by default.
  *
  * Usage:
- *   <SectionEyebrow>{t('home.recommended.eyebrow', 'For you')}</SectionEyebrow>
- *   <H1>{t('home.recommended.title', 'Recommended homes')}</H1>
+ *   <SectionEyebrow>{t('home.recommended.eyebrow')}</SectionEyebrow>
+ *   <H1>{t('home.recommended.title')}</H1>
  */
 import React from 'react';
 import { StyleSheet, type StyleProp, type TextStyle } from 'react-native';

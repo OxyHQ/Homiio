@@ -117,17 +117,16 @@ export const RewardsTeaser: React.FC<RewardsTeaserProps> = ({ points }) => {
 
   const cardWidth = isWide ? 260 : 220;
 
-  const tierName = (key: RewardTierKey): string =>
-    t(`agent.rewards.tiers.${key}`, key);
+  const tierName = (key: RewardTierKey): string => t(`agent.rewards.tiers.${key}`);
 
   return (
     <View>
       <View style={[styles.header, { paddingHorizontal: horizontalPadding }]}>
         <H1 style={styles.title}>
-          {t('agent.rewards.title', 'Level up, get rewarded')}
+          {t('agent.rewards.title')}
         </H1>
         <BloomText style={styles.subtitle}>
-          {t('agent.rewards.subtitle', 'The more you bring in, the more you unlock.')}
+          {t('agent.rewards.subtitle')}
         </BloomText>
       </View>
 
@@ -143,12 +142,8 @@ export const RewardsTeaser: React.FC<RewardsTeaserProps> = ({ points }) => {
               key={tier.key}
               tier={tier}
               name={tierName(tier.key)}
-              pointsLabel={t('agent.rewards.pointsLabel', '{{count}} pts', {
-                count: tier.minPoints,
-              })}
-              perks={tier.perkKeys.map((perkKey) =>
-                t(`agent.rewards.perks.${perkKey}`, perkKey),
-              )}
+              pointsLabel={t('agent.rewards.pointsLabel', { count: tier.minPoints })}
+              perks={tier.perkKeys.map((perkKey) => t(`agent.rewards.perks.${perkKey}`))}
               reached={reached}
               isCurrent={currentTierKey === tier.key}
               width={cardWidth}

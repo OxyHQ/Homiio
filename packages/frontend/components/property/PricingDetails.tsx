@@ -54,8 +54,8 @@ export const PricingDetails: React.FC<Props> = ({ property, mode }) => {
   const rentAmount = isVacation ? shortTerm?.nightlyRate : longTerm?.monthlyAmount;
   const currency = (isVacation ? shortTerm?.currency : longTerm?.currency) ?? 'EUR';
   const rentUnit = isVacation
-    ? t('listing.offering.perNightUnit', 'night')
-    : t('listing.offering.perMonthUnit', 'month');
+    ? t('listing.offering.perNightUnit')
+    : t('listing.offering.perMonthUnit');
   const deposit = isVacation ? shortTerm?.deposit : longTerm?.deposit;
   const utilitiesValue = isVacation ? undefined : longTerm?.utilities;
   const utilitiesIncluded =
@@ -72,12 +72,12 @@ export const PricingDetails: React.FC<Props> = ({ property, mode }) => {
   // ----- Pricing & Costs rows -----
   const rows: MoneyRow[] = [];
   if (rentAmount !== undefined) {
-    rows.push({ key: 'rent', label: t('Rent', 'Rent') || 'Rent', amount: rentAmount });
+    rows.push({ key: 'rent', label: t('property.sections.rent'), amount: rentAmount });
   }
   if (deposit !== undefined) {
     rows.push({
       key: 'deposit',
-      label: t('Deposit', 'Deposit') || 'Deposit',
+      label: t('property.sections.deposit'),
       amount: deposit,
     });
   }
@@ -149,7 +149,7 @@ export const PricingDetails: React.FC<Props> = ({ property, mode }) => {
     : t('property.moveInCost.total');
 
   return (
-    <Section title={t('Pricing & Costs', 'Pricing & Costs')}>
+    <Section title={t('property.sections.pricingAndCosts')}>
       {rows.map((row, idx) => (
         <React.Fragment key={row.key}>
           <View style={styles.row}>
@@ -175,12 +175,12 @@ export const PricingDetails: React.FC<Props> = ({ property, mode }) => {
           <Divider />
           <View style={styles.row}>
             <BloomText style={styles.label}>
-              {t('Utilities Included', 'Utilities Included') || 'Utilities Included'}
+              {t('property.sections.utilitiesIncluded')}
             </BloomText>
             <BloomText style={styles.value}>
               {utilitiesIncluded
-                ? t('Yes', 'Yes') || 'Yes'
-                : t('No', 'No') || 'No'}
+                ? t('propertyCreate.amenities.yes')
+                : t('propertyCreate.amenities.no')}
             </BloomText>
           </View>
         </>

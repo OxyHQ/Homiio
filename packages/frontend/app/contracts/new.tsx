@@ -12,7 +12,7 @@ import React, { useCallback } from 'react';
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import { toast } from '@/lib/sonner';
 
 import { Button } from '@oxyhq/bloom/button';
@@ -28,15 +28,9 @@ import { useProperty } from '@/hooks';
 import { useApplicationById } from '@/hooks/useApplicationQueries';
 import { useCreateLeaseFromApplication } from '@/hooks/useLeaseQueries';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
+import { formatLocalized } from '@/utils/dateLocale';
 import { colors } from '@/styles/colors';
 import { radius, spacing, tracker } from '@/constants/styles';
-
-const formatDate = (raw?: string): string => {
-  if (!raw) return '—';
-  const date = new Date(raw);
-  if (Number.isNaN(date.getTime())) return raw;
-  return format(date, 'EEE, MMM d, yyyy');
-};
 
 interface DetailRowProps {
   label: string;
@@ -51,6 +45,7 @@ const DetailRow: React.FC<DetailRowProps> = ({ label, value }) => (
 );
 
 export default function NewContractScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams<{ application?: string }>();
   const applicationId =
@@ -61,21 +56,33 @@ export default function NewContractScreen() {
   const { property } = useProperty(application?.propertyId ?? '');
   const createLease = useCreateLeaseFromApplication();
 
+  const formatDate = useCallback((raw?: string): string => {
+    if (!raw) return '—';
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) return raw;
+    return formatLocalized(date, 'EEE, MMM d, yyyy');
+  }, []);
+
   const handleCreate = useCallback(async () => {
     if (!applicationId) return;
     try {
       const lease = await createLease.mutateAsync(applicationId);
-      toast.success('Draft lease created');
+      toast.success(t('contracts.new.toastCreated'));
       router.replace(`/contracts/${lease.id}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Could not create the lease';
+      const message =
+        error instanceof Error ? error.message : t('contracts.new.toastCreateFailed');
       toast.error(message);
     }
-  }, [applicationId, createLease, router]);
+  }, [applicationId, createLease, router, t]);
 
   const header = (
     <Header
-      options={{ showBackButton: true, title: 'New contract', titlePosition: 'center' }}
+      options={{
+        showBackButton: true,
+        title: t('contracts.new.title'),
+        titlePosition: 'center',
+      }}
     />
   );
 
@@ -87,9 +94,9 @@ export default function NewContractScreen() {
           <View style={styles.centerWrap}>
             <EmptyState
               icon="document-text-outline"
-              title="Start from an application"
-              description="Leases are created from an approved tenant application. Open an approved application and choose “Create lease”."
-              actionText="View applications"
+              title={t('contracts.new.noApplicationTitle')}
+              description={t('contracts.new.noApplicationDescription')}
+              actionText={t('contracts.new.viewApplications')}
               actionIcon="albums-outline"
               onAction={() => router.replace('/applications')}
             />
@@ -116,11 +123,11 @@ export default function NewContractScreen() {
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
-            title="Application unavailable"
+            title={t('contracts.new.applicationUnavailableTitle')}
             description={
-              applicationQuery.error?.message ?? 'This application could not be loaded.'
+              applicationQuery.error?.message ?? t('contracts.new.loadFailedDescription')
             }
-            retryLabel="Go back"
+            retryLabel={t('contracts.new.goBack')}
             onRetry={() => router.back()}
           />
         </View>
@@ -129,7 +136,9 @@ export default function NewContractScreen() {
   }
 
   const isApproved = application.status === TenantApplicationStatus.APPROVED;
-  const propertyTitle = property ? getPropertyTitle(property) : 'Property';
+  const propertyTitle = property
+    ? getPropertyTitle(property)
+    : t('contracts.new.propertyFallback');
   const imageSource = property ? getPropertyImageSource(property) : null;
 
   return (
@@ -147,22 +156,23 @@ export default function NewContractScreen() {
 
           <CardSurface>
             <H2 style={styles.title}>{propertyTitle}</H2>
-            <BloomText style={styles.subtitle}>
-              Create a draft lease from this application. You can edit the terms and
-              sign it on the next screen.
-            </BloomText>
+            <BloomText style={styles.subtitle}>{t('contracts.new.subtitle')}</BloomText>
           </CardSurface>
 
           <CardSurface>
-            <BloomText style={styles.sectionLabel}>Seeded terms</BloomText>
-            <DetailRow label="Move-in" value={formatDate(application.moveInDate)} />
-            <DetailRow label="Lease term" value={`${application.leaseTermMonths} months`} />
+            <BloomText style={styles.sectionLabel}>{t('contracts.new.seededTerms')}</BloomText>
+            <DetailRow
+              label={t('contracts.new.moveIn')}
+              value={formatDate(application.moveInDate)}
+            />
+            <DetailRow
+              label={t('contracts.new.leaseTerm')}
+              value={t('contracts.new.leaseTermMonths', { count: application.leaseTermMonths })}
+            />
           </CardSurface>
 
           {!isApproved ? (
-            <BloomText style={styles.warning}>
-              This application is not approved yet. Approve it first to create a lease.
-            </BloomText>
+            <BloomText style={styles.warning}>{t('contracts.new.notApprovedWarning')}</BloomText>
           ) : null}
         </ScrollView>
 
@@ -175,7 +185,7 @@ export default function NewContractScreen() {
             loading={createLease.isPending}
             style={styles.footerButton}
           >
-            Create draft lease
+            {t('contracts.new.createButton')}
           </Button>
         </View>
       </SafeAreaView>

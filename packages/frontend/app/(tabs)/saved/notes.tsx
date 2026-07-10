@@ -170,7 +170,7 @@ export default function NotesScreen() {
 
   return (
     <View style={styles.container}>
-      <Header options={{ title: t('saved.notes.title', 'Notes'), showBackButton: true }} />
+      <Header options={{ title: t('saved.notes.title'), showBackButton: true }} />
       <View style={styles.tabsContainer}>
         {([
           { key: 'all', label: 'All' },

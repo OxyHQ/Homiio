@@ -7,6 +7,7 @@ import {
   Alert,
   TextInput,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { shadowToken } from '@/styles/shadows';
@@ -25,6 +26,7 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
   onSendRequest,
   onViewProfile,
 }) => {
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [showMessageInput, setShowMessageInput] = useState(false);
   const [message, setMessage] = useState('');
@@ -41,16 +43,16 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
       if (success) {
         setShowMessageInput(false);
         setMessage('');
-        Alert.alert('Success', 'Roommate request sent successfully!');
+        Alert.alert(t('roommates.alert.successTitle'), t('roommates.alert.requestSent'));
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to send roommate request');
+    } catch {
+      Alert.alert(t('roommates.alert.errorTitle'), t('roommates.alert.requestFailed'));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getDisplayName = () => profile.displayName?.trim() || 'Roommate';
+  const getDisplayName = () => profile.displayName?.trim() || t('roommates.match.fallbackName');
 
   const getMatchScoreColor = (score: number) => {
     if (score >= 80) return colors.success; // Green for success
@@ -59,9 +61,9 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
   };
 
   const getMatchScoreText = (score: number) => {
-    if (score >= 80) return 'Excellent Match';
-    if (score >= 60) return 'Good Match';
-    return 'Fair Match';
+    if (score >= 80) return t('roommates.match.excellent');
+    if (score >= 60) return t('roommates.match.good');
+    return t('roommates.match.fair');
   };
 
   return (
@@ -101,7 +103,7 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
       {/* Preferences */}
       {profile.personalProfile?.settings?.roommate?.preferences && (
         <View style={styles.preferencesSection}>
-          <Text style={styles.sectionTitle}>Preferences</Text>
+          <Text style={styles.sectionTitle}>{t('roommates.match.preferences')}</Text>
           <View style={styles.preferencesGrid}>
             <View style={styles.preferenceItem}>
               <Ionicons name="cash-outline" size={16} color={colors.COLOR_BLACK_LIGHT_5} />
@@ -112,13 +114,13 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
             <View style={styles.preferenceItem}>
               <Ionicons name="calendar-outline" size={16} color={colors.COLOR_BLACK_LIGHT_5} />
               <Text style={styles.preferenceText}>
-                {profile.personalProfile.settings.roommate.preferences.moveInDate || 'Flexible'}
+                {profile.personalProfile.settings.roommate.preferences.moveInDate || t('roommates.match.flexible')}
               </Text>
             </View>
             <View style={styles.preferenceItem}>
               <Ionicons name="home-outline" size={16} color={colors.COLOR_BLACK_LIGHT_5} />
               <Text style={styles.preferenceText}>
-                {profile.personalProfile.settings.roommate.preferences.leaseDuration || 'Flexible'}
+                {profile.personalProfile.settings.roommate.preferences.leaseDuration || t('roommates.match.flexible')}
               </Text>
             </View>
           </View>
@@ -128,12 +130,12 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
       {/* Message input */}
       {showMessageInput && (
         <View style={styles.messageSection}>
-          <Text style={styles.messageLabel}>Add a message (optional):</Text>
+          <Text style={styles.messageLabel}>{t('roommates.match.messageLabel')}</Text>
           <TextInput
             style={styles.messageInput}
             value={message}
             onChangeText={setMessage}
-            placeholder="Hi! I think we'd be great roommates..."
+            placeholder={t('roommates.match.messagePlaceholder')}
             multiline
             maxLength={500}
           />
@@ -147,12 +149,12 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
           onPress={() => onViewProfile(profile.id)}
         >
           <Ionicons name="eye-outline" size={20} color={colors.primaryDark} />
-          <Text style={styles.viewProfileText}>View Profile</Text>
+          <Text style={styles.viewProfileText}>{t('roommates.match.viewProfile')}</Text>
         </TouchableOpacity>
 
         <ActionButton
           icon={showMessageInput ? 'send' : 'person-add'}
-          text={showMessageInput ? 'Send Request' : 'Send Request'}
+          text={t('roommates.match.sendRequest')}
           onPress={handleSendRequest}
           variant="primary"
           loading={isLoading}

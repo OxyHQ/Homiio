@@ -60,7 +60,7 @@ export const PropertyActionBar: React.FC<Props> = ({
             <>
                 <ActionButton
                     icon="swap-horizontal"
-                    text={t('listing.exchange.requestCta', 'Request exchange')}
+                    text={t('listing.exchange.requestCta')}
                     onPress={onRequestExchange}
                     variant="primary"
                     size="large"
@@ -88,7 +88,7 @@ export const PropertyActionBar: React.FC<Props> = ({
             <>
                 <ActionButton
                     icon="calendar-outline"
-                    text={t('listing.sale.requestViewing', 'Request viewing')}
+                    text={t('listing.sale.requestViewing')}
                     onPress={onRequestViewing}
                     variant="primary"
                     size="large"
@@ -112,7 +112,7 @@ export const PropertyActionBar: React.FC<Props> = ({
                 {isPublic ? (
                     <ActionButton
                         icon="globe"
-                        text={t('Apply on State Website')}
+                        text={t('listing.cta.applyOnStateWebsite')}
                         onPress={onApplyPublic}
                         variant="primary"
                         size="large"
@@ -122,7 +122,7 @@ export const PropertyActionBar: React.FC<Props> = ({
                     <>
                         <ActionButton
                             icon="open-outline"
-                            text={t('View on Source Website')}
+                            text={t('listing.cta.viewOnSourceWebsite')}
                             onPress={onContact}
                             variant="primary"
                             size="large"
@@ -131,7 +131,7 @@ export const PropertyActionBar: React.FC<Props> = ({
                         {canCall ? (
                             <ActionButton
                                 icon="call-outline"
-                                text={t('Call Now')}
+                                text={t('listing.cta.callNow')}
                                 onPress={onCall}
                                 variant="secondary"
                                 size="large"
@@ -157,7 +157,7 @@ export const PropertyActionBar: React.FC<Props> = ({
                         {canCall && landlordProfile && (
                             <ActionButton
                                 icon="call-outline"
-                                text={t('Call Now')}
+                                text={t('listing.cta.callNow')}
                                 onPress={onCall}
                                 variant="secondary"
                                 size="large"

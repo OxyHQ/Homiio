@@ -33,32 +33,16 @@ export interface PropertyData {
 
 export type TitleFormat = 'default' | 'short' | 'large';
 
-/**
- * Safe translation function with fallbacks
- * @param key - Translation key
- * @param fallback - Fallback value if translation is missing
- * @returns Translated text or fallback
- */
-function safeTranslate(key: string, fallback: string): string {
-  try {
-    const translation = i18next.t(key);
-    // Check if translation exists and is not the same as the key (which means it failed)
-    return translation && translation !== key ? translation : fallback;
-  } catch (error) {
-    console.warn(`Translation failed for key: ${key}`, error);
-    return fallback;
-  }
+function translate(key: string): string {
+  return i18next.t(key);
 }
 
 function translatedPropertyType(type: PropertyType): string {
-  return safeTranslate(
-    `properties.titles.types.${type}`,
-    safeTranslate('properties.titles.types.apartment', 'Apartment'),
-  );
+  return translate(`properties.titles.types.${type}`);
 }
 
 function locationNotSpecified(): string {
-  return safeTranslate('properties.titles.locationNotSpecified', 'Location not specified');
+  return translate('properties.titles.locationNotSpecified');
 }
 
 /**
@@ -94,8 +78,7 @@ export function generateLargePropertyTitle(propertyData: PropertyData): string {
 
   const propertyType = translatedPropertyType(type);
 
-  // Get "for rent in" text in current language with fallback
-  const forRentText = safeTranslate('properties.titles.forRent', 'for rent in');
+  const forRentText = translate('properties.titles.forRent');
 
   const location = buildLargeTitleLocation(
     {
@@ -152,12 +135,12 @@ export function generateDetailedPropertyTitle(
   const { bedrooms = 0, bathrooms = 0 } = propertyData;
 
   const formatBedrooms = (count: number): string => {
-    const bedroomText = safeTranslate('properties.details.bedrooms', 'Bedrooms');
+    const bedroomText = translate('properties.details.bedrooms');
     const bedroomLabel = count === 1 ? bedroomText.slice(0, -1) : bedroomText;
     return `${count} ${bedroomLabel.toLowerCase()}`;
   };
   const formatBathrooms = (count: number): string => {
-    const bathroomText = safeTranslate('properties.details.bathrooms', 'Bathrooms');
+    const bathroomText = translate('properties.details.bathrooms');
     const bathroomLabel = count === 1 ? bathroomText.slice(0, -1) : bathroomText;
     return `${count} ${bathroomLabel.toLowerCase()}`;
   };

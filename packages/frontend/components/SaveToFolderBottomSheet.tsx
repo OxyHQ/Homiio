@@ -54,7 +54,7 @@ export function SaveToFolderBottomSheet({
   onClose,
   onSave,
 }: SaveToFolderBottomSheetProps) {
-  const { t: _t } = useTranslation();
+  const { t } = useTranslation();
   const { folders, isLoading, loadFolders } = useSavedPropertiesContext();
   const queryClient = useQueryClient();
 
@@ -71,11 +71,11 @@ export function SaveToFolderBottomSheet({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
       queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
-      toast.success('Property saved to folder');
+      toast.success(t('saved.toast.propertySavedToFolder'));
     },
     onError: (error: Error) => {
       console.error('Failed to save to folder:', error);
-      toast.error('Failed to save to folder');
+      toast.error(t('saved.toast.saveToFolderFailed'));
     },
   });
 
@@ -85,11 +85,11 @@ export function SaveToFolderBottomSheet({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
-      toast.success('Folder created successfully');
+      toast.success(t('saved.toast.folderCreated'));
     },
     onError: (error: Error) => {
       console.error('Failed to create folder:', error);
-      toast.error('Failed to create folder');
+      toast.error(t('saved.toast.folderCreateFailed'));
     },
   });
 
@@ -112,7 +112,7 @@ export function SaveToFolderBottomSheet({
 
   const handleCreateFolder = useCallback(async () => {
     if (!newFolderName.trim()) {
-      Alert.alert('Error', 'Please enter a folder name');
+      Alert.alert(t('common.error'), t('saved.folder.alertFolderNameRequired'));
       return;
     }
 
@@ -145,7 +145,7 @@ export function SaveToFolderBottomSheet({
       <View style={styles.folderInfo}>
         <ThemedText style={styles.folderName}>{folder.name}</ThemedText>
         <ThemedText style={styles.folderCount}>
-          {folder.propertyCount} {folder.propertyCount === 1 ? 'property' : 'properties'}
+          {t('saved.folder.propertyCount', { count: folder.propertyCount })}
         </ThemedText>
       </View>
       <Ionicons name="chevron-forward" size={20} color={colors.COLOR_BLACK_LIGHT_4} />
@@ -154,17 +154,17 @@ export function SaveToFolderBottomSheet({
 
   const renderCreateFolderForm = () => (
     <View style={styles.createFolderForm}>
-      <ThemedText style={styles.sectionTitle}>Create New Folder</ThemedText>
+      <ThemedText style={styles.sectionTitle}>{t('saved.folder.createNew')}</ThemedText>
 
       <TextInput
         style={styles.input}
-        placeholder="Folder name"
+        placeholder={t('saved.folder.folderNamePlaceholder')}
         value={newFolderName}
         onChangeText={setNewFolderName}
         maxLength={100}
       />
 
-      <ThemedText style={styles.sectionTitle}>Choose Color</ThemedText>
+      <ThemedText style={styles.sectionTitle}>{t('saved.folder.chooseColor')}</ThemedText>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.colorPicker}>
         {FOLDER_COLORS.map((color) => (
           <TouchableOpacity
@@ -181,7 +181,7 @@ export function SaveToFolderBottomSheet({
         ))}
       </ScrollView>
 
-      <ThemedText style={styles.sectionTitle}>Choose Emoji</ThemedText>
+      <ThemedText style={styles.sectionTitle}>{t('saved.folder.chooseEmoji')}</ThemedText>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.iconPicker}>
         {FOLDER_EMOJIS.map((emoji) => (
           <TouchableOpacity
@@ -198,14 +198,14 @@ export function SaveToFolderBottomSheet({
 
       <View style={styles.createFolderActions}>
         <TouchableOpacity onPress={() => setShowCreateFolder(false)} style={styles.cancelButton}>
-          <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
+          <ThemedText style={styles.cancelButtonText}>{t('common.cancel')}</ThemedText>
         </TouchableOpacity>
         <Button
           onPress={handleCreateFolder}
           disabled={createFolderMutation.isPending || !newFolderName.trim()}
           style={styles.createButton}
         >
-          {createFolderMutation.isPending ? 'Creating...' : 'Create & Save'}
+          {createFolderMutation.isPending ? t('saved.folder.creating') : t('saved.folder.createAndSave')}
         </Button>
       </View>
     </View>
@@ -214,7 +214,7 @@ export function SaveToFolderBottomSheet({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <ThemedText style={styles.title}>Save to Folder</ThemedText>
+        <ThemedText style={styles.title}>{t('saved.folder.title')}</ThemedText>
         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
           <Ionicons name="close" size={24} color={colors.COLOR_BLACK_LIGHT_4} />
         </TouchableOpacity>
@@ -257,7 +257,7 @@ export function SaveToFolderBottomSheet({
               disabled={isLoading}
             >
               <Ionicons name="add-circle-outline" size={24} color={colors.primaryColor} />
-              <ThemedText style={styles.createFolderText}>Create New Folder</ThemedText>
+              <ThemedText style={styles.createFolderText}>{t('saved.folder.createNew')}</ThemedText>
             </TouchableOpacity>
           </>
         )}

@@ -107,13 +107,10 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
     return (
       <View style={styles.content}>
         <BloomText style={styles.title}>
-          {t('applications.detail.alreadySubmitted', 'Application submitted')}
+          {t('applications.detail.alreadySubmitted')}
         </BloomText>
         <BloomText style={styles.subtitle}>
-          {t(
-            'applications.detail.alreadySubmittedBody',
-            'You already have an application in review for this property.',
-          )}
+          {t('applications.detail.alreadySubmittedBody')}
         </BloomText>
         <Button
           variant="primary"
@@ -121,7 +118,7 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
           onPress={handleViewStatus}
           style={styles.button}
         >
-          {t('applications.detail.viewStatus', 'View status')}
+          {t('applications.detail.viewStatus')}
         </Button>
       </View>
     );
@@ -129,18 +126,15 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
 
   const moveInLabel = moveInDate
     ? format(moveInDate, 'MMM d, yyyy')
-    : t('applications.cta.addMoveIn', 'Add move-in date');
+    : t('applications.cta.addMoveIn');
 
   return (
     <View style={styles.content}>
       <BloomText style={styles.title}>
-        {t('applications.cta.title', 'Interested in this place?')}
+        {t('applications.cta.title')}
       </BloomText>
       <BloomText style={styles.subtitle}>
-        {t(
-          'applications.cta.subtitle',
-          'Submit a quick application with your move-in date, income and references — the landlord reviews and replies inside Homiio.',
-        )}
+        {t('applications.cta.subtitle')}
       </BloomText>
 
       {priceLabel ? (
@@ -159,11 +153,11 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
       <Pressable
         onPress={openCalendar}
         accessibilityRole="button"
-        accessibilityLabel={t('applications.field.moveInDate', 'Move-in date')}
+        accessibilityLabel={t('applications.field.moveInDate')}
         style={styles.moveInField}
       >
         <BloomText style={styles.moveInLabel}>
-          {t('applications.field.moveInDate', 'Move-in date')}
+          {t('applications.field.moveInDate')}
         </BloomText>
         <View style={styles.moveInValueRow}>
           <BloomText
@@ -186,7 +180,7 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
         onPress={handleApply}
         style={styles.button}
       >
-        {t('applications.cta.apply', 'Apply to rent')}
+        {t('applications.cta.apply')}
       </Button>
 
       <Modal
@@ -204,13 +198,13 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
           >
             <View style={styles.modalHeader}>
               <H3 style={styles.modalTitle}>
-                {t('applications.field.moveInDate', 'Move-in date')}
+                {t('applications.field.moveInDate')}
               </H3>
               <Button
                 variant="icon"
                 size="small"
                 onPress={closeCalendar}
-                accessibilityLabel={t('common.close', 'Close')}
+                accessibilityLabel={t('common.close')}
               >
                 {'×'}
               </Button>

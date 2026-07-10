@@ -147,7 +147,7 @@ export default function WriteReviewPage() {
           mapRef.current.navigateToLocation([lng, lat], 15);
         }
       } catch {
-        if (!cancelled) setError('Failed to load address information');
+        if (!cancelled) setError(t('reviews.write.loadAddressFailed'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -156,7 +156,7 @@ export default function WriteReviewPage() {
     return () => {
       cancelled = true;
     };
-  }, [addressId, oxyServices, activeSessionId]);
+  }, [addressId, oxyServices, activeSessionId, t]);
 
   const handleAddressSelect = useCallback(
     (address: AddressLookupResult, coordinates: [number, number]) => {
@@ -187,57 +187,57 @@ export default function WriteReviewPage() {
 
   const validateForm = (): boolean => {
     if (!formData.street.trim()) {
-      Alert.alert('Validation Error', 'Please provide a street address.');
+      Alert.alert(t('reviews.write.validationTitle'), t('reviews.write.streetRequired'));
       return false;
     }
     if (!formData.city.trim()) {
-      Alert.alert('Validation Error', 'Please provide a city.');
+      Alert.alert(t('reviews.write.validationTitle'), t('reviews.write.cityRequired'));
       return false;
     }
     if (!formData.postal_code.trim()) {
-      Alert.alert('Validation Error', 'Please provide a postal code.');
+      Alert.alert(t('reviews.write.validationTitle'), t('reviews.write.postalCodeRequired'));
       return false;
     }
     if (!formData.country.trim()) {
-      Alert.alert('Validation Error', 'Please provide a country.');
+      Alert.alert(t('reviews.write.validationTitle'), t('reviews.write.countryRequired'));
       return false;
     }
     if (!formData.opinion.trim()) {
       Alert.alert(
-        'Validation Error',
-        'Please provide your opinion about this address.',
+        t('reviews.write.validationTitle'),
+        t('reviews.write.opinionRequired'),
       );
       return false;
     }
     if (formData.opinion.trim().length < 10) {
       Alert.alert(
-        'Validation Error',
-        'Your opinion must be at least 10 characters long.',
+        t('reviews.write.validationTitle'),
+        t('reviews.write.opinionMinLength'),
       );
       return false;
     }
     if (!formData.price || parseFloat(formData.price) <= 0) {
-      Alert.alert('Validation Error', 'Please provide a valid price.');
+      Alert.alert(t('reviews.write.validationTitle'), t('reviews.write.priceRequired'));
       return false;
     }
     if (!formData.livedFrom || !formData.livedTo) {
       Alert.alert(
-        'Validation Error',
-        'Please provide both start and end dates.',
+        t('reviews.write.validationTitle'),
+        t('reviews.write.datesRequired'),
       );
       return false;
     }
     if (formData.recommendation === null) {
       Alert.alert(
-        'Validation Error',
-        'Please indicate whether you would recommend this address.',
+        t('reviews.write.validationTitle'),
+        t('reviews.write.recommendationRequired'),
       );
       return false;
     }
     if (formData.rating === 0) {
       Alert.alert(
-        'Validation Error',
-        'Please provide a rating from 1 to 5.',
+        t('reviews.write.validationTitle'),
+        t('reviews.write.ratingRequired'),
       );
       return false;
     }
@@ -289,14 +289,17 @@ export default function WriteReviewPage() {
         activeSessionId,
       );
       if (result.success) {
-        Alert.alert('Success', 'Your review has been submitted successfully!', [
-          { text: 'OK', onPress: () => router.back() },
+        Alert.alert(t('common.success'), t('reviews.write.submitSuccess'), [
+          { text: t('common.ok'), onPress: () => router.back() },
         ]);
       } else {
-        Alert.alert('Error', result.error || 'Failed to submit review');
+        Alert.alert(
+          t('common.error'),
+          result.error || t('reviews.write.submitFailed'),
+        );
       }
     } catch {
-      Alert.alert('Error', 'Failed to submit review. Please try again.');
+      Alert.alert(t('common.error'), t('reviews.write.submitFailedRetry'));
     } finally {
       setSubmitting(false);
     }
@@ -306,7 +309,7 @@ export default function WriteReviewPage() {
     return (
       <View style={styles.root}>
         <Header
-          options={{ title: t('Write review'), showBackButton: true }}
+          options={{ title: t('reviews.write.title'), showBackButton: true }}
         />
         <ScrollView>
           <WriteReviewSkeleton />
@@ -319,13 +322,13 @@ export default function WriteReviewPage() {
     return (
       <View style={styles.root}>
         <Header
-          options={{ title: t('Write review'), showBackButton: true }}
+          options={{ title: t('reviews.write.title'), showBackButton: true }}
         />
         <ErrorState
           icon="cloud-offline-outline"
-          title={t("Couldn't load address")}
+          title={t('reviews.write.loadAddressFailed')}
           description={error}
-          retryLabel={t('Go back')}
+          retryLabel={t('common.goBack')}
           onRetry={() => router.back()}
         />
       </View>
@@ -335,7 +338,7 @@ export default function WriteReviewPage() {
   return (
     <View style={styles.root}>
       <Header
-        options={{ title: t('Write review'), showBackButton: true }}
+        options={{ title: t('reviews.write.title'), showBackButton: true }}
       />
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>

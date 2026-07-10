@@ -46,13 +46,10 @@ export function OfferingSelector({ formData, setFormData }: PropertyStepProps) {
   return (
     <View>
       <ThemedText type="subtitle">
-        {t('listing.offering.stepTitle', 'How are you offering this?')}
+        {t('listing.offering.stepTitle')}
       </ThemedText>
       <ThemedText style={styles.addressInstructions}>
-        {t(
-          'listing.offering.stepHelp',
-          'Choose one or more. You can rent and sell the same place.',
-        )}
+        {t('listing.offering.stepHelp')}
       </ThemedText>
 
       <View style={offeringSelectorStyles.list}>
@@ -68,7 +65,7 @@ export function OfferingSelector({ formData, setFormData }: PropertyStepProps) {
               onPress={() => toggleOffering(option.value)}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: selected }}
-              accessibilityLabel={t(option.i18nKey, option.fallback)}
+              accessibilityLabel={t(option.i18nKey)}
             >
               <View style={offeringSelectorStyles.rowIcon}>
                 <Ionicons
@@ -84,10 +81,10 @@ export function OfferingSelector({ formData, setFormData }: PropertyStepProps) {
                     selected && offeringSelectorStyles.rowTitleSelected,
                   ]}
                 >
-                  {t(option.i18nKey, option.fallback)}
+                  {t(option.i18nKey)}
                 </ThemedText>
                 <ThemedText style={offeringSelectorStyles.rowDescription}>
-                  {t(option.descriptionKey, option.descriptionFallback)}
+                  {t(option.descriptionKey)}
                 </ThemedText>
               </View>
               <Ionicons
@@ -102,7 +99,7 @@ export function OfferingSelector({ formData, setFormData }: PropertyStepProps) {
 
       <View style={styles.formGroup}>
         <ThemedText style={styles.label}>
-          {t('listing.offering.currency', 'Currency')}
+          {t('listing.offering.currency')}
         </ThemedText>
         <View style={styles.optionRow}>
           {CURRENCY_OPTIONS.map((option) => (

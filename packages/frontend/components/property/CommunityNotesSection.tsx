@@ -316,7 +316,7 @@ export const CommunityNotesSection: React.FC<CommunityNotesSectionProps> = ({
             icon="chatbubbles-outline"
             title={t('property.communityNotes.errorTitle')}
             description={error}
-            retryLabel={t('common.tryAgain', 'Try again') || 'Try again'}
+            retryLabel={t('common.tryAgain')}
             onRetry={() => {
               refetch();
             }}

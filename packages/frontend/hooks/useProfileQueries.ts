@@ -1,4 +1,5 @@
 import { useCallback, useEffect } from 'react';
+import i18next from 'i18next';
 import { useProfileStore } from '@/store/profileStore';
 import { useOxy } from '@oxyhq/services';
 import { toast } from '@/lib/sonner';
@@ -45,10 +46,11 @@ export const useProfileRedux = () => {
           .getState()
           .updateProfile(profileId, profileData);
 
-        toast.success('Profile updated successfully');
+        toast.success(i18next.t('profile.toast.updateSuccess'));
         return updatedProfile;
-      } catch (error: any) {
-        toast.error(error.message || 'Failed to update profile');
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : i18next.t('profile.toast.updateFailed');
+        toast.error(message);
         throw error;
       }
     },
@@ -66,10 +68,11 @@ export const useProfileRedux = () => {
         .getState()
         .createProfile({ profileType: ProfileType.PERSONAL });
 
-      toast.success('Profile created successfully');
+      toast.success(i18next.t('profile.toast.createSuccess'));
       return profile;
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create profile');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : i18next.t('profile.toast.createFailed');
+      toast.error(message);
       throw error;
     }
   }, [oxyServices, activeSessionId]);

@@ -15,24 +15,24 @@ export const HouseRules: React.FC<Props> = ({ property }) => {
     const smokingAllowed = property?.rules?.smokingAllowed;
     const partiesAllowed = property?.rules?.partiesAllowed;
     if (petsAllowed === undefined && smokingAllowed === undefined && partiesAllowed === undefined) return null;
-    const yesNo = (v?: boolean) => v === undefined ? '-' : v ? t('Yes') : t('No');
+    const yesNo = (v?: boolean) => v === undefined ? '-' : v ? t('propertyCreate.amenities.yes') : t('propertyCreate.amenities.no');
     return (
-        <Section title={t('House Rules')} bodyStyle={styles.body}>
+        <Section title={t('propertyCreate.amenities.houseRules')} bodyStyle={styles.body}>
             {petsAllowed !== undefined && (
                 <View style={styles.row}>
-                    <BloomText style={styles.label}>{t('Pets Allowed')}</BloomText>
+                    <BloomText style={styles.label}>{t('propertyCreate.amenities.petsAllowed')}</BloomText>
                     <BloomText style={styles.value}>{yesNo(petsAllowed)}</BloomText>
                 </View>
             )}
             {smokingAllowed !== undefined && (
                 <View style={styles.row}>
-                    <BloomText style={styles.label}>{t('Smoking Allowed')}</BloomText>
+                    <BloomText style={styles.label}>{t('propertyCreate.amenities.smokingAllowed')}</BloomText>
                     <BloomText style={styles.value}>{yesNo(smokingAllowed)}</BloomText>
                 </View>
             )}
             {partiesAllowed !== undefined && (
                 <View style={styles.row}>
-                    <BloomText style={styles.label}>{t('Parties Allowed')}</BloomText>
+                    <BloomText style={styles.label}>{t('propertyCreate.amenities.partiesAllowed')}</BloomText>
                     <BloomText style={styles.value}>{yesNo(partiesAllowed)}</BloomText>
                 </View>
             )}

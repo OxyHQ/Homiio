@@ -140,19 +140,19 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
     }
     if (!requestedWindow) {
       toast.error(
-        t('listing.exchange.errors.pickDates', 'Pick the dates you want to stay'),
+        t('listing.exchange.errors.pickDates'),
       );
       return;
     }
     if (isSwap && !offeredPropertyId) {
       toast.error(
-        t('listing.exchange.errors.pickProperty', 'Choose the home you’re offering'),
+        t('listing.exchange.errors.pickProperty'),
       );
       return;
     }
     if (isSwap && !offeredWindow) {
       toast.error(
-        t('listing.exchange.errors.pickOfferedDates', 'Pick the dates you’re offering'),
+        t('listing.exchange.errors.pickOfferedDates'),
       );
       return;
     }
@@ -176,14 +176,14 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
 
     try {
       const request = await createMutation.mutateAsync(payload);
-      toast.success(t('listing.exchange.requestSent', 'Exchange request sent'));
+      toast.success(t('listing.exchange.requestSent'));
       onClose();
       router.push(`/exchange/${request.id}`);
     } catch (error) {
       const messageText =
         error instanceof Error
           ? error.message
-          : t('listing.exchange.errors.failed', 'Could not send request');
+          : t('listing.exchange.errors.failed');
       toast.error(messageText);
     }
   }, [
@@ -220,13 +220,13 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
         >
           <View style={styles.header}>
             <H3 style={styles.title}>
-              {t('listing.exchange.requestTitle', 'Request exchange')}
+              {t('listing.exchange.requestTitle')}
             </H3>
             <Button
               variant="icon"
               size="small"
               onPress={onClose}
-              accessibilityLabel={t('common.close', 'Close')}
+              accessibilityLabel={t('common.close')}
             >
               {'×'}
             </Button>
@@ -241,19 +241,19 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
             {allowsBoth ? (
               <View style={styles.field}>
                 <BloomText style={styles.label}>
-                  {t('listing.exchange.requestModeLabel', 'What are you proposing?')}
+                  {t('listing.exchange.requestModeLabel')}
                 </BloomText>
                 <View style={styles.modeRow}>
                   <ModeChip
                     active={mode === ExchangeMode.SWAP}
                     icon="swap-horizontal"
-                    label={t('listing.exchange.mode.swap', 'Home swap')}
+                    label={t('listing.exchange.mode.swap')}
                     onPress={() => setMode(ExchangeMode.SWAP)}
                   />
                   <ModeChip
                     active={mode === ExchangeMode.HOST}
                     icon="bed-outline"
-                    label={t('listing.exchange.mode.host', 'Free hosting')}
+                    label={t('listing.exchange.mode.host')}
                     onPress={() => setMode(ExchangeMode.HOST)}
                   />
                 </View>
@@ -263,16 +263,13 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
             {/* Requested window */}
             <View style={styles.field}>
               <BloomText style={styles.label}>
-                {t('listing.exchange.requestedWindow', 'Dates you want to stay')}
+                {t('listing.exchange.requestedWindow')}
               </BloomText>
               <Pressable
                 style={styles.dateTrigger}
                 onPress={() => setCalendarTarget('requested')}
                 accessibilityRole="button"
-                accessibilityLabel={t(
-                  'listing.exchange.requestedWindow',
-                  'Dates you want to stay',
-                )}
+                accessibilityLabel={t('listing.exchange.requestedWindow')}
               >
                 <Ionicons
                   name="calendar-outline"
@@ -288,7 +285,7 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
                 >
                   {requestedWindow
                     ? formatRange(requestedWindow)
-                    : t('listing.exchange.addDates', 'Add dates')}
+                    : t('listing.exchange.addDates')}
                 </BloomText>
               </Pressable>
             </View>
@@ -298,7 +295,7 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
               <>
                 <View style={styles.field}>
                   <BloomText style={styles.label}>
-                    {t('listing.exchange.offeredProperty', 'Home you’re offering')}
+                    {t('listing.exchange.offeredProperty')}
                   </BloomText>
                   {myExchangeProperties.length > 0 ? (
                     <View style={styles.propertyList}>
@@ -334,26 +331,20 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
                     </View>
                   ) : (
                     <BloomText style={styles.helperText}>
-                      {t(
-                        'listing.exchange.noExchangeProperties',
-                        'You have no exchange-enabled homes yet. List one to propose a swap.',
-                      )}
+                      {t('listing.exchange.noExchangeProperties')}
                     </BloomText>
                   )}
                 </View>
 
                 <View style={styles.field}>
                   <BloomText style={styles.label}>
-                    {t('listing.exchange.offeredWindow', 'Dates you’re offering')}
+                    {t('listing.exchange.offeredWindow')}
                   </BloomText>
                   <Pressable
                     style={styles.dateTrigger}
                     onPress={() => setCalendarTarget('offered')}
                     accessibilityRole="button"
-                    accessibilityLabel={t(
-                      'listing.exchange.offeredWindow',
-                      'Dates you’re offering',
-                    )}
+                    accessibilityLabel={t('listing.exchange.offeredWindow')}
                   >
                     <Ionicons
                       name="calendar-outline"
@@ -369,7 +360,7 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
                     >
                       {offeredWindow
                         ? formatRange(offeredWindow)
-                        : t('listing.exchange.addDates', 'Add dates')}
+                        : t('listing.exchange.addDates')}
                     </BloomText>
                   </Pressable>
                 </View>
@@ -379,16 +370,13 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
             {/* Message */}
             <View style={styles.field}>
               <BloomText style={styles.label}>
-                {t('listing.exchange.messageLabel', 'Message to the host')}
+                {t('listing.exchange.messageLabel')}
               </BloomText>
               <TextInput
                 style={styles.messageInput}
                 value={message}
                 onChangeText={setMessage}
-                placeholder={t(
-                  'listing.exchange.messagePlaceholder',
-                  'Introduce yourself and your trip.',
-                )}
+                placeholder={t('listing.exchange.messagePlaceholder')}
                 placeholderTextColor={colors.COLOR_BLACK_LIGHT_4}
                 multiline
                 textAlignVertical="top"
@@ -405,7 +393,7 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
             disabled={createMutation.isPending}
             style={styles.submit}
           >
-            {t('listing.exchange.sendRequest', 'Send request')}
+            {t('listing.exchange.sendRequest')}
           </Button>
         </View>
       </View>
@@ -429,14 +417,14 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
             <View style={styles.header}>
               <H3 style={styles.title}>
                 {calendarTarget === 'offered'
-                  ? t('listing.exchange.offeredWindow', 'Dates you’re offering')
-                  : t('listing.exchange.requestedWindow', 'Dates you want to stay')}
+                  ? t('listing.exchange.offeredWindow')
+                  : t('listing.exchange.requestedWindow')}
               </H3>
               <Button
                 variant="icon"
                 size="small"
                 onPress={() => setCalendarTarget(null)}
-                accessibilityLabel={t('common.close', 'Close')}
+                accessibilityLabel={t('common.close')}
               >
                 {'×'}
               </Button>

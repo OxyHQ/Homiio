@@ -93,7 +93,7 @@ export default function BookViewingPage() {
         if (code === 'TIME_CONFLICT') return t('viewings.error.timeConflict');
         if (code === 'TIME_IN_PAST') return t('viewings.error.timeInPast');
         if (code === 'AUTHENTICATION_REQUIRED') return t('viewings.error.authRequired');
-        if (code === 'EXTERNAL_PROPERTY') return t('viewings.error.externalProperty', 'Cannot book viewings for external properties');
+        if (code === 'EXTERNAL_PROPERTY') return t('viewings.error.externalProperty');
         if (msg) return msg;
         if (err.message) return err.message;
       } else if (err instanceof Error) {
@@ -263,7 +263,7 @@ export default function BookViewingPage() {
         <Header
           options={{
             showBackButton: true,
-            title: t('Loading...'),
+            title: t('app.loading'),
             titlePosition: 'center',
           }}
         />

@@ -45,24 +45,24 @@ export const ReferralLinkCard: React.FC<ReferralLinkCardProps> = ({ link }) => {
     try {
       await Clipboard.setStringAsync(link);
       setCopied(true);
-      toast.success(t('agent.referral.copied', 'Link copied'));
+      toast.success(t('agent.referral.copied'));
     } catch {
-      toast.error(t('agent.referral.copyFailed', 'Could not copy the link'));
+      toast.error(t('agent.referral.copyFailed'));
     }
   }, [link, t]);
 
   const handleShare = useCallback(async () => {
     const outcome = await shareReferralLink({
       link,
-      message: t('agent.referral.shareMessage', 'List your home on Homiio: {{link}}', {
+      message: t('agent.referral.shareMessage', {
         link,
       }),
-      title: t('agent.referral.shareTitle', 'Earn with Homiio'),
+      title: t('agent.referral.shareTitle'),
     });
     if (outcome === 'copied') {
-      toast.success(t('agent.referral.copied', 'Link copied'));
+      toast.success(t('agent.referral.copied'));
     } else if (outcome === 'failed') {
-      toast.error(t('agent.referral.shareFailed', 'Could not share the link'));
+      toast.error(t('agent.referral.shareFailed'));
     }
   }, [link, t]);
 
@@ -70,7 +70,7 @@ export const ReferralLinkCard: React.FC<ReferralLinkCardProps> = ({ link }) => {
     <View style={{ paddingHorizontal: horizontalPadding }}>
       <View style={styles.card}>
         <BloomText style={styles.label}>
-          {t('agent.referral.title', 'Your referral link')}
+          {t('agent.referral.title')}
         </BloomText>
 
         <View style={styles.linkRow}>
@@ -92,8 +92,8 @@ export const ReferralLinkCard: React.FC<ReferralLinkCardProps> = ({ link }) => {
             style={styles.action}
           >
             {copied
-              ? t('agent.referral.copiedShort', 'Copied')
-              : t('agent.referral.copy', 'Copy')}
+              ? t('agent.referral.copiedShort')
+              : t('agent.referral.copy')}
           </Button>
           <Button
             variant="secondary"
@@ -101,7 +101,7 @@ export const ReferralLinkCard: React.FC<ReferralLinkCardProps> = ({ link }) => {
             onPress={handleShare}
             style={styles.action}
           >
-            {t('agent.referral.share', 'Share your link')}
+            {t('agent.referral.share')}
           </Button>
         </View>
       </View>

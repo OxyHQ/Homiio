@@ -155,7 +155,7 @@ export default function Sindi() {
           icon="lock-closed"
           title={t('sindi.auth.required')}
           description={t('sindi.auth.message')}
-          actionText={t('Sign in')}
+          actionText={t('common.signIn')}
           actionIcon="log-in"
           onAction={() => showSignInModal()}
           iconColor={colors.primaryColor}

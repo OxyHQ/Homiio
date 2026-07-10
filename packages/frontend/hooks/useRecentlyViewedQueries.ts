@@ -4,6 +4,7 @@ import { recentlyViewedService } from '@/services/recentlyViewedService';
 import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
 import { RecentlyViewedType, Property } from '@homiio/shared-types';
 import { toast } from '@/lib/sonner';
+import i18next from 'i18next';
 
 /**
  * Hook for fetching recently viewed properties
@@ -86,7 +87,7 @@ export const useTrackPropertyView = () => {
     },
     // No optimistic updates - let the main hook handle all cache updates
     onError: (err, propertyId) => {
-      toast.error('Failed to track property view');
+      toast.error(i18next.t('recentlyViewed.trackFailed'));
     },
     // No onSettled callback to avoid interfering with local cache updates
   });
@@ -120,10 +121,10 @@ export const useClearRecentlyViewed = () => {
       
       // Invalidate queries
       await queryClient.invalidateQueries({ queryKey: ['recentlyViewed', 'properties'] });
-      toast.success('Recently viewed properties cleared');
+      toast.success(i18next.t('recentlyViewed.clearSuccess'));
     },
-    onError: (error: any) => {
-      toast.error('Failed to clear recently viewed properties');
+    onError: () => {
+      toast.error(i18next.t('recentlyViewed.clearFailed'));
     },
   });
 };

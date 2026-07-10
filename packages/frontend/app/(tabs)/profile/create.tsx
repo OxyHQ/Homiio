@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, TextInput, ScrollView } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { useTranslation } from 'react-i18next';
@@ -17,8 +17,44 @@ type ProfileType = 'agency' | 'business' | 'cooperative';
 
 type EmployeeCount = NonNullable<BusinessDetails['employeeCount']>;
 
+const AGENCY_BUSINESS_TYPES = [
+  BusinessType.REAL_ESTATE_AGENCY,
+  BusinessType.PROPERTY_MANAGEMENT,
+  BusinessType.BROKERAGE,
+  BusinessType.DEVELOPER,
+  BusinessType.OTHER,
+] as const;
+
+const BUSINESS_BUSINESS_TYPES = [
+  BusinessType.SMALL_BUSINESS,
+  BusinessType.STARTUP,
+  BusinessType.FREELANCER,
+  BusinessType.CONSULTANT,
+  BusinessType.OTHER,
+] as const;
+
+const AGENCY_SPECIALTIES = [
+  'residential',
+  'commercial',
+  'investment',
+  'rental',
+  'new_construction',
+] as const;
+
+const BUSINESS_SPECIALTIES = [
+  'consulting',
+  'technology',
+  'design',
+  'marketing',
+  'finance',
+  'healthcare',
+  'education',
+  'retail',
+  'services',
+] as const;
+
 export default function ProfileCreateScreen() {
-  useTranslation();
+  const { t } = useTranslation();
   const router = useRouter();
   const { mutateAsync: createProfile, isPending: isCreatingMut } = useCreateProfileMutation();
   const [isCreating, setIsCreating] = useState(false);
@@ -37,81 +73,58 @@ export default function ProfileCreateScreen() {
     legalName: '',
   });
 
-  const profileTypes: { type: ProfileType; title: string; description: string; icon: IoniconName }[] = [
-    {
-      type: 'agency',
-      title: 'Agency Profile',
-      description: 'For real estate agencies and property management',
-      icon: 'business-outline',
-    },
-    {
-      type: 'business',
-      title: 'Business Profile',
-      description: 'For small businesses and freelancers',
-      icon: 'briefcase-outline',
-    },
-    {
-      type: 'cooperative',
-      title: 'Cooperative Profile',
-      description: 'For housing or member-owned cooperatives',
-      icon: 'people-outline',
-    },
-  ];
+  const profileTypes = useMemo(
+    (): { type: ProfileType; title: string; description: string; icon: IoniconName }[] => [
+      {
+        type: 'agency',
+        title: t('profile.create.types.agency.title'),
+        description: t('profile.create.types.agency.description'),
+        icon: 'business-outline',
+      },
+      {
+        type: 'business',
+        title: t('profile.create.types.business.title'),
+        description: t('profile.create.types.business.description'),
+        icon: 'briefcase-outline',
+      },
+      {
+        type: 'cooperative',
+        title: t('profile.create.types.cooperative.title'),
+        description: t('profile.create.types.cooperative.description'),
+        icon: 'people-outline',
+      },
+    ],
+    [t],
+  );
 
   const handleCreateProfile = async () => {
     if (!selectedType) {
-      toast.error('Please select a profile type.');
+      toast.error(t('profile.create.selectType'));
       return;
     }
 
     setIsCreating(true);
     try {
-      const toSharedType = (t: ProfileType): SharedProfileType =>
+      const toSharedType = (profileType: ProfileType): SharedProfileType =>
         ({
           agency: SharedProfileType.AGENCY,
           business: SharedProfileType.BUSINESS,
           cooperative: SharedProfileType.COOPERATIVE,
-        } as const)[t];
+        } as const)[profileType];
 
       const profileData: CreateProfileData = {
         profileType: toSharedType(selectedType),
         data: {},
       };
 
-      // Add type-specific data
-      if (selectedType === 'agency') {
-        // Validate required fields
+      if (selectedType === 'agency' || selectedType === 'business') {
         if (!formData.businessType) {
-          toast.error('Please select a business type.');
+          toast.error(t('profile.create.selectBusinessType'));
           return;
         }
 
         const yearEstablished = formData.businessDetails.yearEstablished
-          ? parseInt(formData.businessDetails.yearEstablished)
-          : undefined;
-        const employeeCount = formData.businessDetails.employeeCount || undefined;
-
-        profileData.data = {
-          businessType: formData.businessType,
-          description: formData.description,
-          businessDetails: {
-            licenseNumber: formData.businessDetails.licenseNumber || undefined,
-            taxId: formData.businessDetails.taxId || undefined,
-            yearEstablished,
-            employeeCount,
-            specialties: formData.businessDetails.specialties,
-          },
-          legalCompanyName: formData.legalCompanyName,
-        };
-      } else if (selectedType === 'business') {
-        // Validate required fields
-        if (!formData.businessType) {
-          toast.error('Please select a business type.');
-          return;
-        }
-
-        const yearEstablished = formData.businessDetails.yearEstablished
-          ? parseInt(formData.businessDetails.yearEstablished)
+          ? parseInt(formData.businessDetails.yearEstablished, 10)
           : undefined;
         const employeeCount = formData.businessDetails.employeeCount || undefined;
 
@@ -129,7 +142,7 @@ export default function ProfileCreateScreen() {
         };
       } else if (selectedType === 'cooperative') {
         if (!formData.legalName) {
-          toast.error('Please enter a legal name for the cooperative.');
+          toast.error(t('profile.create.cooperativeLegalNameRequired'));
           return;
         }
         profileData.data = {
@@ -138,14 +151,16 @@ export default function ProfileCreateScreen() {
         };
       }
 
-  await createProfile(profileData);
+      await createProfile(profileData);
       toast.success(
-        `${profileTypes.find((p) => p.type === selectedType)?.title} created successfully!`,
+        t('profile.create.createdSuccess', {
+          type: profileTypes.find((p) => p.type === selectedType)?.title ?? '',
+        }),
       );
       router.back();
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : 'Failed to create profile. Please try again.';
+        error instanceof Error ? error.message : t('profile.toast.createFailed');
       toast.error(message);
     } finally {
       setIsCreating(false);
@@ -164,16 +179,207 @@ export default function ProfileCreateScreen() {
     }));
   };
 
-  const employeeCountOptions: EmployeeCount[] = ['1-10', '11-50', '51-200', '200+'];
+  const agencyEmployeeCounts: EmployeeCount[] = ['1-10', '11-50', '51-200', '200+'];
+  const businessEmployeeCounts = ['1-5', '6-10', '11-25', '26+'] as const satisfies readonly EmployeeCount[];
+
+  const businessTypeLabel = (type: BusinessType, profileType: 'agency' | 'business') => {
+    const namespace =
+      profileType === 'agency'
+        ? 'profile.edit.options.agencyBusinessType'
+        : 'profile.edit.options.businessType';
+    return t(`${namespace}.${type}`);
+  };
+
+  const specialtyLabel = (specialty: string, profileType: 'agency' | 'business') => {
+    const namespace =
+      profileType === 'agency'
+        ? 'profile.create.options.agencySpecialty'
+        : 'profile.create.options.businessSpecialty';
+    return t(`${namespace}.${specialty}`);
+  };
+
+  const renderBusinessForm = (profileType: 'agency' | 'business') => {
+    const businessTypes =
+      profileType === 'agency' ? AGENCY_BUSINESS_TYPES : BUSINESS_BUSINESS_TYPES;
+    const employeeCounts =
+      profileType === 'agency' ? agencyEmployeeCounts : businessEmployeeCounts;
+    const specialties =
+      profileType === 'agency' ? AGENCY_SPECIALTIES : BUSINESS_SPECIALTIES;
+    const sectionKey =
+      profileType === 'agency' ? 'profile.create.sections.agencyInfo' : 'profile.create.sections.businessInfo';
+    const descriptionPlaceholder =
+      profileType === 'agency'
+        ? t('profile.create.placeholders.agencyDescription')
+        : t('profile.create.placeholders.businessDescription');
+
+    return (
+      <View style={styles.section}>
+        <ThemedText style={styles.sectionTitle}>{t(sectionKey)}</ThemedText>
+
+        <View style={styles.inputGroup}>
+          <ThemedText style={styles.label}>{t('profile.edit.labels.businessType')}</ThemedText>
+          <View style={styles.radioGroup}>
+            {businessTypes.map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={[
+                  styles.radioButton,
+                  formData.businessType === type && styles.radioButtonSelected,
+                ]}
+                onPress={() => setFormData((prev) => ({ ...prev, businessType: type }))}
+              >
+                <ThemedText
+                  style={[
+                    styles.radioButtonText,
+                    formData.businessType === type && styles.radioButtonTextSelected,
+                  ]}
+                >
+                  {businessTypeLabel(type, profileType)}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <ThemedText style={styles.label}>{t('profile.edit.labels.description')}</ThemedText>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={formData.description}
+            onChangeText={(text) => setFormData((prev) => ({ ...prev, description: text }))}
+            placeholder={descriptionPlaceholder}
+            multiline
+            numberOfLines={4}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <ThemedText style={styles.label}>{t('profile.edit.labels.licenseNumber')}</ThemedText>
+          <TextInput
+            style={styles.input}
+            value={formData.businessDetails.licenseNumber}
+            onChangeText={(text) =>
+              setFormData((prev) => ({
+                ...prev,
+                businessDetails: { ...prev.businessDetails, licenseNumber: text },
+              }))
+            }
+            placeholder={
+              profileType === 'business'
+                ? t('profile.create.placeholders.licenseOptional')
+                : t('profile.edit.placeholders.licenseNumber')
+            }
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <ThemedText style={styles.label}>{t('profile.edit.labels.taxId')}</ThemedText>
+          <TextInput
+            style={styles.input}
+            value={formData.businessDetails.taxId}
+            onChangeText={(text) =>
+              setFormData((prev) => ({
+                ...prev,
+                businessDetails: { ...prev.businessDetails, taxId: text },
+              }))
+            }
+            placeholder={t('profile.edit.placeholders.taxId')}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <ThemedText style={styles.label}>{t('profile.edit.labels.yearEstablished')}</ThemedText>
+          <TextInput
+            style={styles.input}
+            value={formData.businessDetails.yearEstablished}
+            onChangeText={(text) =>
+              setFormData((prev) => ({
+                ...prev,
+                businessDetails: { ...prev.businessDetails, yearEstablished: text },
+              }))
+            }
+            placeholder={t('profile.edit.placeholders.yearEstablished')}
+            keyboardType="numeric"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <ThemedText style={styles.label}>{t('profile.edit.labels.employeeCount')}</ThemedText>
+          <View style={styles.radioGroup}>
+            {employeeCounts.map((count) => (
+              <TouchableOpacity
+                key={count}
+                style={[
+                  styles.radioButton,
+                  formData.businessDetails.employeeCount === count && styles.radioButtonSelected,
+                ]}
+                onPress={() =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    businessDetails: { ...prev.businessDetails, employeeCount: count },
+                  }))
+                }
+              >
+                <ThemedText
+                  style={[
+                    styles.radioButtonText,
+                    formData.businessDetails.employeeCount === count &&
+                      styles.radioButtonTextSelected,
+                  ]}
+                >
+                  {count}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <ThemedText style={styles.label}>{t('profile.edit.labels.specialties')}</ThemedText>
+          <View style={styles.checkboxGroup}>
+            {specialties.map((specialty) => (
+              <TouchableOpacity
+                key={specialty}
+                style={[
+                  styles.checkbox,
+                  formData.businessDetails.specialties.includes(specialty) && styles.checkboxSelected,
+                ]}
+                onPress={() => toggleSpecialty(specialty)}
+              >
+                <ThemedText
+                  style={[
+                    styles.checkboxText,
+                    formData.businessDetails.specialties.includes(specialty) &&
+                      styles.checkboxTextSelected,
+                  ]}
+                >
+                  {specialtyLabel(specialty, profileType)}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <ThemedText style={styles.label}>{t('profile.edit.labels.legalCompanyName')}</ThemedText>
+          <TextInput
+            style={styles.input}
+            value={formData.legalCompanyName}
+            onChangeText={(text) => setFormData((prev) => ({ ...prev, legalCompanyName: text }))}
+            placeholder={t('profile.edit.placeholders.legalCompanyName')}
+          />
+        </View>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.COLOR_BLACK} />
         </TouchableOpacity>
-        <ThemedText style={styles.headerTitle}>Create Profile</ThemedText>
+        <ThemedText style={styles.headerTitle}>{t('profile.create.headerTitle')}</ThemedText>
         <TouchableOpacity
           onPress={handleCreateProfile}
           style={[styles.createButton, !selectedType && styles.createButtonDisabled]}
@@ -182,15 +388,14 @@ export default function ProfileCreateScreen() {
           {isCreating || isCreatingMut ? (
             <Ionicons name="refresh" size={20} color={colors.primaryForeground} />
           ) : (
-            <ThemedText style={styles.createButtonText}>Create</ThemedText>
+            <ThemedText style={styles.createButtonText}>{t('profile.create.createButton')}</ThemedText>
           )}
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content}>
-        {/* Profile Type Selection */}
         <View style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>Choose Business Profile Type</ThemedText>
+          <ThemedText style={styles.sectionTitle}>{t('profile.create.chooseType')}</ThemedText>
 
           {profileTypes.map((profileType, index) => (
             <TouchableOpacity
@@ -224,389 +429,46 @@ export default function ProfileCreateScreen() {
                   </ThemedText>
                 </View>
               </View>
-              {selectedType === profileType.type && (
+              {selectedType === profileType.type ? (
                 <Ionicons name="checkmark" size={20} color={colors.primaryColor} />
-              )}
+              ) : null}
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Agency-specific form */}
-        {selectedType === 'agency' && (
+        {selectedType === 'agency' ? renderBusinessForm('agency') : null}
+        {selectedType === 'business' ? renderBusinessForm('business') : null}
+
+        {selectedType === 'cooperative' ? (
           <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Agency Information</ThemedText>
-
+            <ThemedText style={styles.sectionTitle}>
+              {t('profile.create.sections.cooperativeInfo')}
+            </ThemedText>
             <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Business Type *</ThemedText>
-              <View style={styles.radioGroup}>
-                {[
-                  BusinessType.REAL_ESTATE_AGENCY,
-                  BusinessType.PROPERTY_MANAGEMENT,
-                  BusinessType.BROKERAGE,
-                  BusinessType.DEVELOPER,
-                  BusinessType.OTHER,
-                ].map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    style={[
-                      styles.radioButton,
-                      formData.businessType === type && styles.radioButtonSelected,
-                    ]}
-                    onPress={() => setFormData((prev) => ({ ...prev, businessType: type }))}
-                  >
-                    <ThemedText
-                      style={[
-                        styles.radioButtonText,
-                        formData.businessType === type && styles.radioButtonTextSelected,
-                      ]}
-                    >
-                      {type.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
-                    </ThemedText>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Description</ThemedText>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={formData.description}
-                onChangeText={(text) => setFormData((prev) => ({ ...prev, description: text }))}
-                placeholder="Describe your agency..."
-                multiline
-                numberOfLines={4}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>License Number</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={formData.businessDetails.licenseNumber}
-                onChangeText={(text) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    businessDetails: { ...prev.businessDetails, licenseNumber: text },
-                  }))
-                }
-                placeholder="Enter license number"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Tax ID</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={formData.businessDetails.taxId}
-                onChangeText={(text) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    businessDetails: { ...prev.businessDetails, taxId: text },
-                  }))
-                }
-                placeholder="Enter tax ID"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Year Established</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={formData.businessDetails.yearEstablished}
-                onChangeText={(text) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    businessDetails: { ...prev.businessDetails, yearEstablished: text },
-                  }))
-                }
-                placeholder="e.g., 2020"
-                keyboardType="numeric"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Number of Employees</ThemedText>
-              <View style={styles.radioGroup}>
-                {employeeCountOptions.map((count) => (
-                  <TouchableOpacity
-                    key={count}
-                    style={[
-                      styles.radioButton,
-                      formData.businessDetails.employeeCount === count &&
-                        styles.radioButtonSelected,
-                    ]}
-                    onPress={() =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        businessDetails: { ...prev.businessDetails, employeeCount: count },
-                      }))
-                    }
-                  >
-                    <ThemedText
-                      style={[
-                        styles.radioButtonText,
-                        formData.businessDetails.employeeCount === count &&
-                          styles.radioButtonTextSelected,
-                      ]}
-                    >
-                      {count}
-                    </ThemedText>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Specialties</ThemedText>
-              <View style={styles.checkboxGroup}>
-                {['residential', 'commercial', 'investment', 'rental', 'new_construction'].map(
-                  (specialty) => (
-                    <TouchableOpacity
-                      key={specialty}
-                      style={[
-                        styles.checkbox,
-                        formData.businessDetails.specialties.includes(specialty) &&
-                          styles.checkboxSelected,
-                      ]}
-                      onPress={() => toggleSpecialty(specialty)}
-                    >
-                      <ThemedText
-                        style={[
-                          styles.checkboxText,
-                          formData.businessDetails.specialties.includes(specialty) &&
-                            styles.checkboxTextSelected,
-                        ]}
-                      >
-                        {specialty.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  ),
-                )}
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Legal Company Name *</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={formData.legalCompanyName}
-                onChangeText={(text) =>
-                  setFormData((prev) => ({ ...prev, legalCompanyName: text }))
-                }
-                placeholder="Enter your legal company name"
-              />
-            </View>
-          </View>
-        )}
-
-        {/* Business-specific form */}
-        {selectedType === 'business' && (
-          <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Business Information</ThemedText>
-
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Business Type *</ThemedText>
-              <View style={styles.radioGroup}>
-                {[
-                  BusinessType.SMALL_BUSINESS,
-                  BusinessType.STARTUP,
-                  BusinessType.FREELANCER,
-                  BusinessType.CONSULTANT,
-                  BusinessType.OTHER,
-                ].map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    style={[
-                      styles.radioButton,
-                      formData.businessType === type && styles.radioButtonSelected,
-                    ]}
-                    onPress={() => setFormData((prev) => ({ ...prev, businessType: type }))}
-                  >
-                    <ThemedText
-                      style={[
-                        styles.radioButtonText,
-                        formData.businessType === type && styles.radioButtonTextSelected,
-                      ]}
-                    >
-                      {type.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
-                    </ThemedText>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Description</ThemedText>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={formData.description}
-                onChangeText={(text) => setFormData((prev) => ({ ...prev, description: text }))}
-                placeholder="Describe your business..."
-                multiline
-                numberOfLines={4}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>License Number</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={formData.businessDetails.licenseNumber}
-                onChangeText={(text) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    businessDetails: { ...prev.businessDetails, licenseNumber: text },
-                  }))
-                }
-                placeholder="Enter license number (if applicable)"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Tax ID</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={formData.businessDetails.taxId}
-                onChangeText={(text) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    businessDetails: { ...prev.businessDetails, taxId: text },
-                  }))
-                }
-                placeholder="Enter tax ID"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Year Established</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={formData.businessDetails.yearEstablished}
-                onChangeText={(text) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    businessDetails: { ...prev.businessDetails, yearEstablished: text },
-                  }))
-                }
-                placeholder="e.g., 2020"
-                keyboardType="numeric"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Number of Employees</ThemedText>
-              <View style={styles.radioGroup}>
-                {(['1-5', '6-10', '11-25', '26+'] satisfies EmployeeCount[]).map((count) => (
-                  <TouchableOpacity
-                    key={count}
-                    style={[
-                      styles.radioButton,
-                      formData.businessDetails.employeeCount === count &&
-                        styles.radioButtonSelected,
-                    ]}
-                    onPress={() =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        businessDetails: { ...prev.businessDetails, employeeCount: count },
-                      }))
-                    }
-                  >
-                    <ThemedText
-                      style={[
-                        styles.radioButtonText,
-                        formData.businessDetails.employeeCount === count &&
-                          styles.radioButtonTextSelected,
-                      ]}
-                    >
-                      {count}
-                    </ThemedText>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Specialties</ThemedText>
-              <View style={styles.checkboxGroup}>
-                {[
-                  'consulting',
-                  'technology',
-                  'design',
-                  'marketing',
-                  'finance',
-                  'healthcare',
-                  'education',
-                  'retail',
-                  'services',
-                ].map((specialty) => (
-                  <TouchableOpacity
-                    key={specialty}
-                    style={[
-                      styles.checkbox,
-                      formData.businessDetails.specialties.includes(specialty) &&
-                        styles.checkboxSelected,
-                    ]}
-                    onPress={() => toggleSpecialty(specialty)}
-                  >
-                    <ThemedText
-                      style={[
-                        styles.checkboxText,
-                        formData.businessDetails.specialties.includes(specialty) &&
-                          styles.checkboxTextSelected,
-                      ]}
-                    >
-                      {specialty.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
-                    </ThemedText>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Legal Company Name *</ThemedText>
-              <TextInput
-                style={styles.input}
-                value={formData.legalCompanyName}
-                onChangeText={(text) =>
-                  setFormData((prev) => ({ ...prev, legalCompanyName: text }))
-                }
-                placeholder="Enter your legal company name"
-              />
-            </View>
-          </View>
-        )}
-
-        {/* Cooperative-specific form */}
-        {selectedType === 'cooperative' && (
-          <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Cooperative Information</ThemedText>
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Legal Name *</ThemedText>
+              <ThemedText style={styles.label}>{t('profile.edit.labels.legalName')}</ThemedText>
               <TextInput
                 style={styles.input}
                 value={formData.legalName}
                 onChangeText={(text) => setFormData((prev) => ({ ...prev, legalName: text }))}
-                placeholder="Cooperative Legal Name"
+                placeholder={t('profile.create.placeholders.cooperativeLegalName')}
               />
             </View>
             <View style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Description</ThemedText>
+              <ThemedText style={styles.label}>{t('profile.edit.labels.description')}</ThemedText>
               <TextInput
                 style={[styles.input, { height: 80 }]}
                 value={formData.description}
                 onChangeText={(text) => setFormData((prev) => ({ ...prev, description: text }))}
-                placeholder="Describe the cooperative"
+                placeholder={t('profile.create.placeholders.cooperativeDescription')}
                 multiline
               />
             </View>
           </View>
-        )}
+        ) : null}
 
-        {/* Profile Type Info */}
-        {selectedType && (
+        {selectedType ? (
           <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>What&apos;s Next?</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{t('profile.create.sections.whatsNext')}</ThemedText>
             <View style={[styles.settingItem, styles.firstSettingItem, styles.lastSettingItem]}>
               <View style={styles.settingInfo}>
                 <Ionicons
@@ -616,16 +478,17 @@ export default function ProfileCreateScreen() {
                   style={styles.settingIcon}
                 />
                 <View style={styles.infoContent}>
-                  <ThemedText style={styles.settingLabel}>Profile Setup</ThemedText>
+                  <ThemedText style={styles.settingLabel}>
+                    {t('profile.create.sections.profileSetup')}
+                  </ThemedText>
                   <ThemedText style={styles.settingDescription}>
-                    After creating your {selectedType} profile, you can customize preferences, add
-                    verification documents, and build your trust score.
+                    {t('profile.create.whatsNext.description', { type: selectedType })}
                   </ThemedText>
                 </View>
               </View>
             </View>
           </View>
-        )}
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );

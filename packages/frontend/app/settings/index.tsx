@@ -74,9 +74,9 @@ export default function SettingsScreen() {
       setDialogLoading(true);
       await logout();
       router.replace('/');
-      toast.success(t('settings.signOutSuccess', 'Signed out'));
+      toast.success(t('settings.signOutSuccess'));
     } catch {
-      toast.error(t('settings.signOutFailed', 'Failed to sign out'));
+      toast.error(t('settings.signOutFailed'));
     } finally {
       setDialogLoading(false);
       setPendingDialog(null);
@@ -89,7 +89,7 @@ export default function SettingsScreen() {
       // Implementation would clear app cache here.
       toast.success(t('settings.data.clearCacheSuccess'));
     } catch {
-      toast.error(t('common.error', 'Something went wrong'));
+      toast.error(t('common.error'));
     } finally {
       setDialogLoading(false);
       setPendingDialog(null);
@@ -101,7 +101,7 @@ export default function SettingsScreen() {
       setDialogLoading(true);
       toast.success(t('settings.data.exportDataSuccess'));
     } catch {
-      toast.error(t('common.error', 'Something went wrong'));
+      toast.error(t('common.error'));
     } finally {
       setDialogLoading(false);
       setPendingDialog(null);
@@ -126,11 +126,8 @@ export default function SettingsScreen() {
           />
           <SettingsListItem
             icon={<RowIcon name="folder" />}
-            title={t('settings.account.files', 'Files')}
-            description={t(
-              'settings.account.filesDescription',
-              'Manage uploaded documents',
-            )}
+            title={t('settings.account.files')}
+            description={t('settings.account.filesDescription')}
             onPress={() => showBottomSheet?.('FileManagement')}
           />
         </SettingsListGroup>
@@ -138,13 +135,13 @@ export default function SettingsScreen() {
         <SettingsListGroup title={t('settings.sections.preferences')}>
           <SettingsListItem
             icon={<RowIcon name="language" />}
-            title={t('Language')}
-            value={t('Select your preferred language')}
+            title={t('settings.language.title')}
+            value={t('settings.language.subtitle')}
             onPress={() => router.push('/settings/language')}
           />
           <SettingsListItem
             icon={<RowIcon name="cash" />}
-            title={t('settings.preferences.currency', 'Currency')}
+            title={t('settings.preferences.currency')}
             value={`${currentCurrencyInfo.symbol} ${currentCurrencyInfo.code}`}
             onPress={() => router.push('/settings/currency')}
           />
@@ -157,7 +154,7 @@ export default function SettingsScreen() {
           */}
         </SettingsListGroup>
 
-        <SettingsListGroup title={t('settings.sections.notifications', 'Notifications')}>
+        <SettingsListGroup title={t('settings.sections.notifications')}>
           <SettingsListItem
             icon={<RowIcon name="notifications" />}
             title={t('settings.preferences.notifications')}
@@ -168,11 +165,8 @@ export default function SettingsScreen() {
           />
           <SettingsListItem
             icon={<RowIcon name="options-outline" />}
-            title={t('settings.notifications.detail', 'Notification categories')}
-            description={t(
-              'settings.notifications.detailDesc',
-              'Choose which alerts you receive',
-            )}
+            title={t('settings.notifications.detail')}
+            description={t('settings.notifications.detailDesc')}
             onPress={() => router.push('/settings/notifications')}
           />
         </SettingsListGroup>

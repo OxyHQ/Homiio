@@ -72,9 +72,9 @@ export default function NotificationSettingsScreen() {
       try {
         setIsUpdating(true);
         await updatePreferences({ [key]: value });
-        toast.success(t('notification.settings.updated', 'Settings updated'));
+        toast.success(t('notification.settings.updated'));
       } catch {
-        toast.error(t('notification.settings.error', 'Failed to update settings'));
+        toast.error(t('notification.settings.error'));
       } finally {
         setIsUpdating(false);
       }
@@ -87,16 +87,16 @@ export default function NotificationSettingsScreen() {
       const granted = await requestPermissions();
       if (granted) {
         toast.success(
-          t('notification.permissions.granted', 'Notification permissions granted'),
+          t('notification.permissions.granted'),
         );
       } else {
         toast.error(
-          t('notification.permissions.denied', 'Notification permissions denied'),
+          t('notification.permissions.denied'),
         );
       }
     } catch {
       toast.error(
-        t('notification.permissions.error', 'Failed to request permissions'),
+        t('notification.permissions.error'),
       );
     }
   }, [requestPermissions, t]);
@@ -106,11 +106,11 @@ export default function NotificationSettingsScreen() {
       setClearing(true);
       await clearAllNotifications();
       toast.success(
-        t('notification.clearAll.success', 'All notifications cleared'),
+        t('notification.clearAll.success'),
       );
     } catch {
       toast.error(
-        t('notification.clearAll.error', 'Failed to clear notifications'),
+        t('notification.clearAll.error'),
       );
     } finally {
       setClearing(false);
@@ -121,65 +121,44 @@ export default function NotificationSettingsScreen() {
   const categoryRows: PreferenceRow[] = [
     {
       key: 'property',
-      title: t('notification.settings.property.title', 'Property notifications'),
-      description: t(
-        'notification.settings.property.description',
-        'New properties, price changes, and viewing reminders',
-      ),
+      title: t('notification.settings.property.title'),
+      description: t('notification.settings.property.description'),
       icon: 'home-outline',
     },
     {
       key: 'message',
-      title: t('notification.settings.message.title', 'Message notifications'),
-      description: t(
-        'notification.settings.message.description',
-        'New messages from agents, landlords, and other users',
-      ),
+      title: t('notification.settings.message.title'),
+      description: t('notification.settings.message.description'),
       icon: 'chatbubble-outline',
     },
     {
       key: 'contract',
-      title: t('notification.settings.contract.title', 'Contract notifications'),
-      description: t(
-        'notification.settings.contract.description',
-        'Contract updates, signatures, and important deadlines',
-      ),
+      title: t('notification.settings.contract.title'),
+      description: t('notification.settings.contract.description'),
       icon: 'document-text-outline',
     },
     {
       key: 'payment',
-      title: t('notification.settings.payment.title', 'Payment notifications'),
-      description: t(
-        'notification.settings.payment.description',
-        'Payment confirmations, reminders, and receipts',
-      ),
+      title: t('notification.settings.payment.title'),
+      description: t('notification.settings.payment.description'),
       icon: 'card-outline',
     },
     {
       key: 'reminder',
-      title: t('notification.settings.reminder.title', 'Reminder notifications'),
-      description: t(
-        'notification.settings.reminder.description',
-        'Viewing reminders, application deadlines, and follow-ups',
-      ),
+      title: t('notification.settings.reminder.title'),
+      description: t('notification.settings.reminder.description'),
       icon: 'alarm-outline',
     },
     {
       key: 'system',
-      title: t('notification.settings.system.title', 'System notifications'),
-      description: t(
-        'notification.settings.system.description',
-        'App updates, maintenance, and important announcements',
-      ),
+      title: t('notification.settings.system.title'),
+      description: t('notification.settings.system.description'),
       icon: 'settings-outline',
     },
     {
       key: 'marketing',
-      title: t('notification.settings.marketing.title', 'Marketing notifications'),
-      description: t(
-        'notification.settings.marketing.description',
-        'Promotional offers, newsletters, and special deals',
-      ),
+      title: t('notification.settings.marketing.title'),
+      description: t('notification.settings.marketing.description'),
       icon: 'megaphone-outline',
     },
   ];
@@ -187,36 +166,27 @@ export default function NotificationSettingsScreen() {
   const behaviorRows: PreferenceRow[] = [
     {
       key: 'sound',
-      title: t('notification.settings.sound.title', 'Sound'),
-      description: t(
-        'notification.settings.sound.description',
-        'Play sound when notifications arrive',
-      ),
+      title: t('notification.settings.sound.title'),
+      description: t('notification.settings.sound.description'),
       icon: 'volume-high-outline',
     },
     {
       key: 'badge',
-      title: t('notification.settings.badge.title', 'Badge count'),
-      description: t(
-        'notification.settings.badge.description',
-        'Show unread count on the app icon',
-      ),
+      title: t('notification.settings.badge.title'),
+      description: t('notification.settings.badge.description'),
       icon: 'notifications-outline',
     },
     {
       key: 'push',
-      title: t('notification.settings.push.title', 'Push notifications'),
-      description: t(
-        'notification.settings.push.description',
-        'Receive notifications even when the app is closed',
-      ),
+      title: t('notification.settings.push.title'),
+      description: t('notification.settings.push.description'),
       icon: 'phone-portrait-outline',
     },
   ];
 
   const testActions: { label: string; icon: IoniconName; run: () => Promise<unknown> }[] = [
     {
-      label: t('notification.test.property', 'Test property'),
+      label: t('notification.test.property'),
       icon: 'home-outline',
       run: () =>
         createPropertyNotification(
@@ -227,7 +197,7 @@ export default function NotificationSettingsScreen() {
         ),
     },
     {
-      label: t('notification.test.message', 'Test message'),
+      label: t('notification.test.message'),
       icon: 'chatbubble-outline',
       run: () =>
         createMessageNotification(
@@ -238,7 +208,7 @@ export default function NotificationSettingsScreen() {
         ),
     },
     {
-      label: t('notification.test.reminder', 'Test reminder'),
+      label: t('notification.test.reminder'),
       icon: 'alarm-outline',
       run: () => {
         const tomorrow = new Date();
@@ -253,7 +223,7 @@ export default function NotificationSettingsScreen() {
       },
     },
     {
-      label: t('notification.test.repeating', 'Test repeating'),
+      label: t('notification.test.repeating'),
       icon: 'repeat-outline',
       run: () =>
         createRepeatingNotification(
@@ -270,11 +240,11 @@ export default function NotificationSettingsScreen() {
       try {
         await run();
         toast.success(
-          t('notification.test.success', 'Test notification sent'),
+          t('notification.test.success'),
         );
       } catch {
         toast.error(
-          t('notification.test.error', 'Failed to send test notification'),
+          t('notification.test.error'),
         );
       }
     },
@@ -285,7 +255,7 @@ export default function NotificationSettingsScreen() {
     <View style={styles.root}>
       <Header
         options={{
-          title: t('notification.settings.title', 'Notifications'),
+          title: t('notification.settings.title'),
           showBackButton: true,
           titlePosition: 'center',
         }}
@@ -302,25 +272,13 @@ export default function NotificationSettingsScreen() {
               <View style={styles.permissionTextWrap}>
                 <H3 style={styles.permissionTitle}>
                   {hasPermission
-                    ? t(
-                        'notification.permissions.enabled',
-                        'Notifications enabled',
-                      )
-                    : t(
-                        'notification.permissions.disabled',
-                        'Notifications disabled',
-                      )}
+                    ? t('notification.permissions.enabled.title')
+                    : t('notification.permissions.disabled.title')}
                 </H3>
                 <BloomText style={styles.permissionBody}>
                   {hasPermission
-                    ? t(
-                        'notification.permissions.enabled.description',
-                        'You will receive notifications for enabled categories.',
-                      )
-                    : t(
-                        'notification.permissions.disabled.description',
-                        'Enable notifications to receive updates about properties, messages and more.',
-                      )}
+                    ? t('notification.permissions.enabled.description')
+                    : t('notification.permissions.disabled.description')}
                 </BloomText>
               </View>
             </View>
@@ -331,10 +289,7 @@ export default function NotificationSettingsScreen() {
                   size="medium"
                   onPress={handleRequestPermissions}
                 >
-                  {t(
-                    'notification.permissions.enable',
-                    'Enable notifications',
-                  )}
+                  {t('notification.permissions.enable')}
                 </Button>
               </View>
             ) : null}
@@ -342,7 +297,7 @@ export default function NotificationSettingsScreen() {
         </View>
 
         <SettingsListGroup
-          title={t('notification.settings.categories', 'Notification categories')}
+          title={t('notification.settings.categories')}
         >
           {categoryRows.map((row) => (
             <SettingsListItem
@@ -364,7 +319,7 @@ export default function NotificationSettingsScreen() {
         </SettingsListGroup>
 
         <SettingsListGroup
-          title={t('notification.settings.behavior', 'Notification behavior')}
+          title={t('notification.settings.behavior')}
         >
           {behaviorRows.map((row) => (
             <SettingsListItem
@@ -387,11 +342,8 @@ export default function NotificationSettingsScreen() {
 
         {__DEV__ && hasPermission ? (
           <SettingsListGroup
-            title={t('notification.settings.test', 'Test notifications')}
-            footer={t(
-              'notification.settings.test.description',
-              'Send test notifications to verify your settings are working correctly.',
-            )}
+            title={t('notification.settings.test.title')}
+            footer={t('notification.settings.test.description')}
           >
             {testActions.map((action) => (
               <SettingsListItem
@@ -405,11 +357,11 @@ export default function NotificationSettingsScreen() {
         ) : null}
 
         <SettingsListGroup
-          title={t('notification.settings.manage', 'Manage notifications')}
+          title={t('notification.settings.manage')}
         >
           <SettingsListItem
             icon={<RowIcon name="trash-outline" destructive />}
-            title={t('notification.settings.clearAll', 'Clear all notifications')}
+            title={t('notification.settings.clearAll')}
             destructive
             onPress={() => setConfirmClear(true)}
           />
@@ -417,18 +369,12 @@ export default function NotificationSettingsScreen() {
 
         {Platform.OS === 'ios' ? (
           <SettingsListGroup
-            title={t('notification.settings.ios.title', 'iOS settings')}
-            footer={t(
-              'notification.settings.ios.description',
-              "For more granular control, manage notifications in Settings > Notifications > Homiio.",
-            )}
+            title={t('notification.settings.ios.title')}
+            footer={t('notification.settings.ios.description')}
           >
             <SettingsListItem
               icon={<RowIcon name="information-circle-outline" />}
-              title={t(
-                'notification.settings.ios.openSettings',
-                'Open system settings',
-              )}
+              title={t('notification.settings.ios.openSettings')}
               onPress={() => {
                 /* surfaced as guidance only */
               }}
@@ -439,18 +385,12 @@ export default function NotificationSettingsScreen() {
 
         {Platform.OS === 'android' ? (
           <SettingsListGroup
-            title={t('notification.settings.android.title', 'Android settings')}
-            footer={t(
-              'notification.settings.android.description',
-              "Manage notification channels in Settings > Apps > Homiio > Notifications.",
-            )}
+            title={t('notification.settings.android.title')}
+            footer={t('notification.settings.android.description')}
           >
             <SettingsListItem
               icon={<RowIcon name="information-circle-outline" />}
-              title={t(
-                'notification.settings.android.openSettings',
-                'Open system settings',
-              )}
+              title={t('notification.settings.android.openSettings')}
               onPress={() => {
                 /* surfaced as guidance only */
               }}
@@ -462,12 +402,9 @@ export default function NotificationSettingsScreen() {
 
       <ConfirmDialog
         visible={confirmClear}
-        title={t('notification.clearAll.title', 'Clear all notifications')}
-        message={t(
-          'notification.clearAll.message',
-          'This will clear all notifications and reset the badge count. This action cannot be undone.',
-        )}
-        confirmLabel={t('common.clear', 'Clear all')}
+        title={t('notification.clearAll.title')}
+        message={t('notification.clearAll.message')}
+        confirmLabel={t('common.clear')}
         confirmDestructive
         loading={clearing}
         onConfirm={handleClearAll}

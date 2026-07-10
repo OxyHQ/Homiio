@@ -18,31 +18,23 @@ export default function HorizonPage() {
   }[] = [
     {
       icon: 'home-outline',
-      title: t('Fair Housing'),
-      description: t(
-        'Access to affordable housing in 120+ cities worldwide with standardized ethical rental agreements',
-      ),
+      title: t('horizon.page.benefits.fairHousing.title'),
+      description: t('horizon.page.benefits.fairHousing.description'),
     },
     {
       icon: 'medkit-outline',
-      title: t('Healthcare Access'),
-      description: t(
-        'Universal healthcare coverage with partner clinics and telehealth services in every Horizon city',
-      ),
+      title: t('horizon.page.benefits.healthcare.title'),
+      description: t('horizon.page.benefits.healthcare.description'),
     },
     {
       icon: 'airplane-outline',
-      title: t('Travel Network'),
-      description: t(
-        'Discounted transportation and accommodation when traveling between Horizon locations',
-      ),
+      title: t('horizon.page.benefits.travel.title'),
+      description: t('horizon.page.benefits.travel.description'),
     },
     {
       icon: 'people-outline',
-      title: t('Community Support'),
-      description: t(
-        'Connect with local members for cultural integration, language exchange, and social activities',
-      ),
+      title: t('horizon.page.benefits.community.title'),
+      description: t('horizon.page.benefits.community.description'),
     },
   ];
 
@@ -51,7 +43,7 @@ export default function HorizonPage() {
       <Header
         options={{
           showBackButton: true,
-          title: t('Horizon Initiative'),
+          title: t('horizon.title'),
           titlePosition: 'center',
         }}
       />
@@ -61,31 +53,27 @@ export default function HorizonPage() {
         <View style={styles.heroSection}>
           <View style={styles.heroOverlay}>
             <Ionicons name="globe-outline" size={80} color={colors.ratingStar} style={styles.heroIcon} />
-            <Text style={styles.heroTitle}>{t('Global Housing Initiative')}</Text>
+            <Text style={styles.heroTitle}>{t('horizon.page.heroTitle')}</Text>
             <Text style={styles.heroSubtitle}>
-              {t('Creating a world of ethical housing, healthcare, and mobility')}
+              {t('horizon.page.heroSubtitle')}
             </Text>
           </View>
         </View>
 
         {/* About Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('About Horizon')}</Text>
+          <Text style={styles.sectionTitle}>{t('horizon.page.aboutTitle')}</Text>
           <Text style={styles.sectionText}>
-            {t(
-              'Horizon is a global initiative designed to make housing more accessible, affordable, and ethical for everyone. By joining a network of properties across 120+ cities worldwide, members gain access to fair housing, healthcare benefits, and travel support.',
-            )}
+            {t('horizon.page.aboutBody1')}
           </Text>
           <Text style={styles.sectionText}>
-            {t(
-              'Our mission is to create sustainable living environments that foster community and wellbeing while reducing the environmental impact of housing.',
-            )}
+            {t('horizon.page.aboutBody2')}
           </Text>
         </View>
 
         {/* Benefits Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('Member Benefits')}</Text>
+          <Text style={styles.sectionTitle}>{t('horizon.page.benefitsTitle')}</Text>
 
           {benefitItems.map((item, index) => (
             <View key={index} style={styles.benefitItem}>
@@ -102,18 +90,16 @@ export default function HorizonPage() {
 
         {/* How It Works */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('How It Works')}</Text>
+          <Text style={styles.sectionTitle}>{t('horizon.page.howItWorksTitle')}</Text>
 
           <View style={styles.stepContainer}>
             <View style={styles.stepCircle}>
               <Text style={styles.stepNumber}>1</Text>
             </View>
             <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>{t('Apply for Membership')}</Text>
+              <Text style={styles.stepTitle}>{t('horizon.page.steps.apply.title')}</Text>
               <Text style={styles.stepDescription}>
-                {t(
-                  'Complete your profile and submit a membership application with your housing needs and preferences.',
-                )}
+                {t('horizon.page.steps.apply.description')}
               </Text>
             </View>
           </View>
@@ -123,11 +109,9 @@ export default function HorizonPage() {
               <Text style={styles.stepNumber}>2</Text>
             </View>
             <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>{t('Get Verified')}</Text>
+              <Text style={styles.stepTitle}>{t('horizon.page.steps.verify.title')}</Text>
               <Text style={styles.stepDescription}>
-                {t(
-                  'Our team reviews your application and verifies your identity and background information.',
-                )}
+                {t('horizon.page.steps.verify.description')}
               </Text>
             </View>
           </View>
@@ -137,11 +121,9 @@ export default function HorizonPage() {
               <Text style={styles.stepNumber}>3</Text>
             </View>
             <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>{t('Access the Network')}</Text>
+              <Text style={styles.stepTitle}>{t('horizon.page.steps.access.title')}</Text>
               <Text style={styles.stepDescription}>
-                {t(
-                  'Once approved, browse and book properties across our global network with priority access.',
-                )}
+                {t('horizon.page.steps.access.description')}
               </Text>
             </View>
           </View>
@@ -149,9 +131,9 @@ export default function HorizonPage() {
 
         {/* Join Now */}
         <View style={styles.joinSection}>
-          <Text style={styles.joinTitle}>{t('Ready to join Horizon?')}</Text>
+          <Text style={styles.joinTitle}>{t('horizon.page.joinTitle')}</Text>
           <Text style={styles.joinDescription}>
-            {t('Apply today and take the first step toward ethical, accessible housing worldwide.')}
+            {t('horizon.page.joinSubtitle')}
           </Text>
           <TouchableOpacity
             style={styles.joinButton}
@@ -159,13 +141,13 @@ export default function HorizonPage() {
               Linking.openURL('https://oxy.so/horizon').catch(() => undefined);
             }}
           >
-            <Text style={styles.joinButtonText}>{t('Apply for Membership')}</Text>
+            <Text style={styles.joinButtonText}>{t('horizon.page.steps.apply.title')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Testimonials */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('Member Stories')}</Text>
+          <Text style={styles.sectionTitle}>{t('horizon.page.storiesTitle')}</Text>
 
           <View style={styles.testimonialCard}>
             <View style={styles.testimonialHeader}>
@@ -178,9 +160,7 @@ export default function HorizonPage() {
               </View>
             </View>
             <Text style={styles.testimonialText}>
-              {t(
-                'Horizon made my relocation so much easier. I found an ethical apartment in Berlin within a week and the healthcare coverage saved me when I needed emergency care.',
-              )}
+              {t('horizon.page.story1')}
             </Text>
           </View>
 
@@ -195,9 +175,7 @@ export default function HorizonPage() {
               </View>
             </View>
             <Text style={styles.testimonialText}>
-              {t(
-                'As a digital nomad, having access to quality housing in multiple cities has been life-changing. The community aspect is what makes Horizon truly special.',
-              )}
+              {t('horizon.page.story2')}
             </Text>
           </View>
         </View>

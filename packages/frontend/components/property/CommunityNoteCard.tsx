@@ -191,7 +191,7 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({
       t('property.communityNotes.reportTitle'),
       t('property.communityNotes.reportBody'),
       [
-        { text: t('common.cancel', 'Cancel') || 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
           text: t('property.communityNotes.reportConfirm'),
           style: 'destructive',
