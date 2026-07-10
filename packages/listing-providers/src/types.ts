@@ -16,6 +16,8 @@ import type {
   NormalizedListing,
   ProviderId,
 } from '@homiio/shared-types';
+import type { BrowserSession } from './session';
+import type { BrowserSessionOptions } from './browserSession';
 
 /**
  * A discover job: enumerate listing references for a provider within a market
@@ -123,6 +125,12 @@ export interface FetchRuntime {
    * tier also hit a challenge. Absent on the Phase-0 HTTP runtime.
    */
   fetchViaManaged?(url: string, init?: FetchRuntimeInit): Promise<string>;
+  /**
+   * Open a warmed Playwright session for in-page AJAX (e.g. Idealista georeach).
+   * OPTIONAL — only runtimes wired with a session pool implement it. Caller must
+   * {@link BrowserSession.close} when finished.
+   */
+  openBrowserSession?(options: BrowserSessionOptions): Promise<BrowserSession>;
 }
 
 /** Minimal request options accepted by the {@link FetchRuntime}. */

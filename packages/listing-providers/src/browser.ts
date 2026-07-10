@@ -71,11 +71,16 @@ interface PwRoute {
 interface PwPage {
   goto(url: string, options: PwGotoOptions): Promise<unknown>;
   content(): Promise<string>;
+  waitForSelector?(selector: string, options?: { timeout?: number }): Promise<unknown>;
   route(
     pattern: string,
     handler: (route: PwRoute) => void | Promise<void>,
   ): Promise<void>;
 }
+
+/** Soft content markers — waited after goto when present (not a hard failure). */
+const SOFT_CONTENT_SELECTORS =
+  'article.item, .items-list, section.items-container, main, [itemtype*="schema.org"], script[type="application/ld+json"]';
 
 interface PwBrowserContext {
   newPage(): Promise<PwPage>;
@@ -268,8 +273,19 @@ export class PlaywrightBrowserPool implements UrlFetcher {
         else init.signal.addEventListener('abort', onAbort, { once: true });
       }
       try {
-        const waitUntil = this.blockAssets ? 'domcontentloaded' : 'networkidle';
+        // Prefer domcontentloaded (esp. with asset blocking) over a blind
+        // networkidle/90s goto — then soft-wait for content selectors.
+        const waitUntil = this.blockAssets ? 'domcontentloaded' : 'load';
         await page.goto(url, { timeout, waitUntil });
+        if (page.waitForSelector) {
+          try {
+            await page.waitForSelector(SOFT_CONTENT_SELECTORS, {
+              timeout: Math.min(12_000, Math.max(3_000, Math.floor(timeout / 4))),
+            });
+          } catch {
+            // Soft wait — page may still be usable without matching selectors.
+          }
+        }
         return await page.content();
       } finally {
         if (init?.signal) init.signal.removeEventListener('abort', onAbort);

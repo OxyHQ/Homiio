@@ -92,7 +92,10 @@ Owner-only close endpoint: `POST /api/properties/:propertyId/mark-transacted` (`
 
 ## External Listings & Deep Links
 
-External properties (`isExternal: true`) block in-app apply/viewing. The contact CTA opens the portal via `Linking.openURL(sourceUrl)` — never route external listings to Homiio enquiry flows. Guard missing `sourceUrl` with a user-facing error.
+External properties (`isExternal: true`) block in-app apply/viewing — never route them to Homiio enquiry flows. Guard missing `sourceUrl` with a user-facing error.
+
+- **Portal CTA:** always offer `Linking.openURL(sourceUrl)` as the fallback.
+- **Direct contact:** when ingest captured owner/agent contact from portal AJAX (phone, email, WhatsApp, agency name), show in-app direct contact actions too — not only the portal link. Never invent contacts.
 
 ## Neighborhood Widget
 
@@ -111,9 +114,28 @@ The Oxy linked client is live in `packages/frontend/utils/api.ts` (`oxyClient.cr
 
 Homiio aggregates external market listings (Idealista, Fotocasa, Habitaclia, Blueground, apartments.com, Zillow, …) as **first-party data** — never hotlinked, never live-proxied.
 
+### Fetch strategy (CRITICAL)
+
+**JSON/AJAX first, HTML last.** Providers MUST prefer internal JSON/XHR/GraphQL/datalayer APIs — ideally after Playwright session warm. HTML parsing and embedded JSON-LD via `fetchListingViaLadder` are **fallback only** when no usable JSON endpoint exists.
+
+### AJAX-with-session pattern (Idealista is the reference)
+
+When a portal gates JSON behind DataDome/JS:
+
+1. `runtime.openBrowserSession` / `warmSession` — warm cookies on a search/home page (residential proxy, asset blocking ON, poll for content / challenge clearance).
+2. `session.request` / `fetchAjaxInPage` / `fetchJsonInPage` — same-origin XHR with Referer + `X-Requested-With`.
+3. Fall back to HTML JSON-LD only when AJAX fails or the session pool is absent.
+
+Sticky reuse: `LISTING_PROXY_STICKY=true` keeps `proxySessionId` + `storageState` across discover pages. Shared helpers live in `packages/listing-providers/src/session.ts` + `browserSession.ts`.
+
+### External listing contact (CRITICAL)
+
+**Capture owner/agent contact when the portal exposes it.** After listing fetch, call portal contact AJAX when available (e.g. Idealista `contact-phones`, `adContactInfo`). Persist phone, email, WhatsApp, and agency name on the external Property / `NormalizedListing` so the app can show direct contact — not only `sourceUrl`. Never invent or guess contacts. Classifieds housing-only filter still applies (see below).
+
 ### Model
 - External properties have `isExternal: true`, no `profileId`, `status: 'published'`, and a mandatory `sourceUrl`.
-- The frontend already handles these: source badge, blocked apply/viewing, CTA to `sourceUrl`. Do not remove that differentiation.
+- Optional ingested contact fields (phone, email, WhatsApp, agency name) when the portal AJAX exposes them — see § External listing contact.
+- The frontend already handles these: source badge, blocked apply/viewing, portal CTA to `sourceUrl`, plus direct contact when ingested. Do not remove that differentiation.
 - Upsert key is `(source, sourceId)` — handled by `scraperService.upsertExternalListing`.
 
 ### Package layout
@@ -145,6 +167,16 @@ interface ListingProvider {
 
 `FetchRuntime` (shared, not per-plugin) owns: rate limiting, retries, circuit breaker, Playwright pool, proxy/managed ladder, challenge/CAPTCHA detection → requeue or escalate.
 
+### Warm Playwright session (preferred portal ingest)
+
+For DataDome / JS-gated portals (Idealista georeach, Fotocasa AJAX, …), use the shared helpers in `@homiio/listing-providers` (`src/session.ts`):
+
+1. **`warmBrowserPage(page, { warmUrl, contentSelector?, isChallenge? })`** — goto origin, poll until challenge clears / content selector appears.
+2. **`fetchJsonInPage(page | context, url, { headers?, referer?, timeoutMs? })`** — same-origin JSON via `page.request` (cookies ride along; XHR headers set automatically).
+3. **`exportStorageState(context)`** — optional sticky reuse: pass the snapshot into the next `openBrowserSession({ storageState })` call on the same proxy session id.
+
+Convenience path when you do not own a page: `runtime.openBrowserSession(options)` → `session.request(url)` / `session.exportStorageState()` → `session.close()`. Asset blocking (`LISTING_BROWSER_BLOCK_ASSETS`, default ON) and residential proxy (`LISTING_RESIDENTIAL_PROXY_URL`, sticky via `LISTING_PROXY_STICKY`) are wired in `PlaywrightSessionPool` — providers only supply `warmUrl`, challenge detectors, and portal-specific selectors.
+
 - **Escalation tiers are WORKER-ONLY and env-gated (default OFF).** Build the worker runtime with `createListingFetchRuntimeFromEnv()` (never in the API). Browser tier: `LISTING_BROWSER_ENABLED=true` + Playwright installed (it is an OPTIONAL peer of `@homiio/listing-providers`, loaded via dynamic `import()`; absent → tier skipped, logged, CI still green). Managed tier: `LISTING_MANAGED_FETCH_URL` (+ optional `LISTING_MANAGED_FETCH_KEY`/`*_KEY_HEADER`/`*_KEY_PARAM`/`*_URL_PARAM`); unset → rung does not exist (never faked). The ladder keys tier availability off method presence, so an unprovisioned rung is skipped, not attempted-and-failed. Worker must `await runtimeHandle.shutdown()` to close the browser pool.
 - **Residential proxy (DIY anti-bot, not a scraping API).** Homiio's worker scrapes with Playwright/HTTP; `LISTING_RESIDENTIAL_PROXY_URL` (`http://user:pass@host:port`, DataImpulse-compatible) routes **listing HTML/JSON only** through a cheap residential proxy. Playwright blocks images/CSS/fonts by default (`LISTING_BROWSER_BLOCK_ASSETS`, default ON) and uses `domcontentloaded`. Listing photos stay on a **direct** fetch in `ExternalMediaIngest`; optional `LISTING_MEDIA_PROXY_FALLBACK=true` retries once via proxy on failure. Optional `LISTING_HTTP_USE_PROXY=true` proxies the HTTP tier; `LISTING_PROXY_STICKY=true` appends `-session-<id>` to the proxy username (DataImpulse sticky IP). Do not set proxy env in prod SSM until credentials exist.
 
@@ -174,6 +206,16 @@ interface ListingProvider {
 2. Register it in `packages/listing-providers/src/registry.ts`.
 3. Gate it with a feature flag env var `PROVIDER_<NAME>_ENABLED=true` (see below).
 4. Add integration test: normalize fixture → upsert → Image refs with storage mock.
+
+### General classifieds portals (CRITICAL)
+
+Homiio is real estate only. **General classifieds** — milanuncios, kleinanzeigen, subito, leboncoin (marketplace), olx.ro — must **never** be site-wide crawled.
+
+- **`discover()`**: housing/rent/sale category URLs or API params only — explicit per-portal category allowlist (DE kleinanzeigen, IT subito, FR leboncoin, RO olx.ro, ES milanuncios).
+- **`normalize()`**: reject non-housing listings (cars, jobs, furniture, …); ingest must skip, never upsert.
+- **Tests**: housing fixture passes normalize; non-housing category fixture is rejected.
+
+Dedicated real-estate portals (Idealista, Fotocasa, Habitaclia, Immobiliare, …) are exempt — housing-native, no classifieds guard needed.
 
 ### Feature flags
 

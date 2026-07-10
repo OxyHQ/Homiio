@@ -11,6 +11,13 @@
 export * from './types';
 export * from './runtime';
 export * from './browser';
+export * from './session';
+export {
+  PlaywrightSessionPool,
+  warmSession,
+  type BrowserSessionOptions,
+  type PlaywrightSessionPoolOptions,
+} from './browserSession';
 export * from './proxy';
 export * from './managed';
 export * from './registry';
@@ -51,10 +58,20 @@ export type {
 export { IdealistaProvider, isIdealistaChallenge, idealistaSourceIdFromUrl } from './providers/idealista';
 export { parseIdealistaDetail, parseIdealistaSearch, type IdealistaRaw } from './providers/idealista/parse';
 export {
+  parseIdealistaGeoreach,
+  idealistaGeoreachUrl,
+  idealistaGeoreachSlug,
+  idealistaWarmSearchUrl,
+  isIdealistaGeoreachChallenge,
+} from './providers/idealista/georeach';
+export {
   IDEALISTA_BASE_URL,
   IDEALISTA_FIXTURE_DETAIL_HTML,
   IDEALISTA_FIXTURE_SALE_DETAIL_HTML,
   IDEALISTA_FIXTURE_SEARCH_HTML,
+  IDEALISTA_FIXTURE_GEOREACH_JSON,
+  IDEALISTA_FIXTURE_GEOREACH_HTML_JSON,
+  IDEALISTA_FIXTURE_GEOREACH_CHALLENGE,
 } from './providers/idealista/fixtures';
 
 export { FotocasaProvider, isFotocasaChallenge, fotocasaSourceIdFromUrl } from './providers/fotocasa';

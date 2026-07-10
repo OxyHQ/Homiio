@@ -107,3 +107,31 @@ export const IDEALISTA_FIXTURE_SEARCH_HTML = `<!doctype html>
   <article class="item"><a class="item-link" href="/inmueble/98765434/" title="Estudio">Estudio</a></article>
 </section>
 </body></html>`;
+
+/**
+ * Recorded georeach AJAX JSON (portal-shaped, hand-authored).
+ *
+ * Idealista's georeach endpoint returns listing ids for map/infinite-scroll UI.
+ * Exact field names vary; this fixture models a common `{ items: [{ adId, url }] }`
+ * envelope observed in third-party scrapers. Used only in unit tests.
+ */
+export const IDEALISTA_FIXTURE_GEOREACH_JSON = `{
+  "total": 3,
+  "page": 1,
+  "items": [
+    { "adId": "98765432", "url": "/inmueble/98765432/" },
+    { "adId": "98765433", "url": "/inmueble/98765433/" },
+    { "propertyCode": "98765434", "detailUrl": "https://www.idealista.com/inmueble/98765434/" }
+  ]
+}`;
+
+/** Georeach body that embeds listing HTML instead of a typed items array. */
+export const IDEALISTA_FIXTURE_GEOREACH_HTML_JSON = `{
+  "html": "<article class=\\"item\\"><a href=\\"/inmueble/55556666/\\">Piso</a></article><article class=\\"item\\"><a href=\\"/inmueble/55557777/\\">Estudio</a></article>"
+}`;
+
+/** DataDome captcha JSON returned by georeach when the session is cold/blocked. */
+export const IDEALISTA_FIXTURE_GEOREACH_CHALLENGE = `{
+  "url": "https://geo.captcha-delivery.com/captcha/?initialCid=x&cid=y",
+  "cookie": "datadome=blocked"
+}`;

@@ -11,7 +11,8 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { FetchRuntime, FetchRuntimeInit, UrlFetcher } from './types';
-import { createBrowserFetcher } from './browser';
+import { createBrowserFetcher, loadPlaywright } from './browser';
+import { PlaywrightSessionPool } from './browserSession';
 import { createManagedFetcher, type ManagedFetcherConfig } from './managed';
 import {
   browserBlockAssetsFromEnv,
@@ -160,6 +161,8 @@ export interface ListingFetchRuntimeOptions extends HttpFetchRuntimeOptions {
   browser?: UrlFetcher;
   /** Optional managed-tier fetcher; when omitted `fetchViaManaged` is absent. */
   managed?: UrlFetcher;
+  /** Optional warmed-session pool for in-page AJAX discover paths. */
+  sessionPool?: PlaywrightSessionPool;
 }
 
 /**
@@ -183,7 +186,7 @@ export function createListingFetchRuntime(
   options: ListingFetchRuntimeOptions = {},
 ): ListingFetchRuntimeHandle {
   const http = new HttpFetchRuntime(options);
-  const { browser, managed } = options;
+  const { browser, managed, sessionPool } = options;
 
   const runtime: FetchRuntime = {
     fetchHttp: (url, init) => http.fetchHttp(url, init),
@@ -193,10 +196,12 @@ export function createListingFetchRuntime(
   };
   if (browser) runtime.fetchViaBrowser = (url, init) => browser.fetch(url, init);
   if (managed) runtime.fetchViaManaged = (url, init) => managed.fetch(url, init);
+  if (sessionPool) runtime.openBrowserSession = (opts) => sessionPool.openSession(opts);
 
   return {
     runtime,
     shutdown: async () => {
+      await sessionPool?.close();
       await browser?.close?.();
       await managed?.close?.();
     },
@@ -249,16 +254,32 @@ export async function createListingFetchRuntimeFromEnv(
 ): Promise<ListingFetchRuntimeHandle> {
   const proxy = residentialProxyFromEnv();
   const stickyProxySession = envBool('LISTING_PROXY_STICKY', false);
+  const browserEnabled = process.env.LISTING_BROWSER_ENABLED === 'true';
+  const browserTimeoutMs = envInt('LISTING_BROWSER_TIMEOUT_MS', 45_000);
+  const browserMaxConcurrency = envInt('LISTING_BROWSER_MAX_CONCURRENCY', 2);
+  const blockAssets = browserBlockAssetsFromEnv();
+  const playwright = browserEnabled ? await loadPlaywright() : undefined;
   const browser = await createBrowserFetcher({
-    enabled: process.env.LISTING_BROWSER_ENABLED === 'true',
-    maxConcurrency: envInt('LISTING_BROWSER_MAX_CONCURRENCY', 2),
-    timeoutMs: envInt('LISTING_BROWSER_TIMEOUT_MS', 45_000),
+    enabled: browserEnabled,
+    maxConcurrency: browserMaxConcurrency,
+    timeoutMs: browserTimeoutMs,
     proxy,
-    blockAssets: browserBlockAssetsFromEnv(),
+    blockAssets,
     stickyProxySession,
+    playwright,
     onLog: options.onLog,
   });
+  const sessionPool =
+    browserEnabled && playwright
+      ? new PlaywrightSessionPool(playwright, {
+          maxConcurrency: browserMaxConcurrency,
+          timeoutMs: browserTimeoutMs,
+          proxy,
+          blockAssets,
+          stickyProxySession,
+        })
+      : undefined;
   const managed = createManagedFetcher(managedConfigFromEnv());
   const httpProxy = proxy && httpUseProxyFromEnv() ? proxy : undefined;
-  return createListingFetchRuntime({ browser, managed, proxy: httpProxy });
+  return createListingFetchRuntime({ browser, managed, sessionPool, proxy: httpProxy });
 }

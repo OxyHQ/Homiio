@@ -1,19 +1,19 @@
 /**
- * Idealista provider (Spain).
+ * Idealista provider (Spain) — reference AJAX-with-Playwright-session pattern.
  *
- * Idealista (idealista.com) is Spain's largest portal. It DOES offer an
- * official partner API ("official API if usable" — the first rung of the plan's
- * ladder), but access requires partner credentials that are not provisioned in
- * this phase, so the active acquisition path is the shared anti-bot
- * {@link fetchListingViaLadder} (HTTP → headless browser → managed). The
- * provider NEVER re-implements rate limiting, retries, challenge detection or
- * metrics — all of that lives in the shared runtime/ladder.
+ * Acquisition order (discover):
+ *   1. Warm a Playwright session on a city search page (residential proxy +
+ *      asset blocking; wait for content / DataDome clearance).
+ *   2. Call `/es/ajax/listing/georeach/{city}-{province}` via
+ *      `session.request` (cookies + Referer + X-Requested-With).
+ *   3. Fall back to HTML search scrape via {@link fetchListingViaLadder}
+ *      when the session pool is absent or georeach stays challenged.
  *
- * `discover()` pages ES-city rental search results into refs; `fetch()` pulls a
- * detail page's HTML; the pure parser in `./parse` flattens its schema.org
- * JSON-LD into an {@link IdealistaRaw}; `normalize()` maps that onto a
- * first-party {@link NormalizedListing}. Registered OFF by default
- * (`PROVIDER_IDEALISTA_ENABLED`).
+ * Fetch prefers detail HTML JSON-LD (address + images). Datalayer AJAX is
+ * analytics-only and used only as a last-resort supplement — never alone.
+ *
+ * Official partner API remains gated (`hasOfficialApi`). Registered OFF by
+ * default (`PROVIDER_IDEALISTA_ENABLED`).
  */
 
 import {
@@ -24,6 +24,12 @@ import {
   type ProviderId,
 } from '@homiio/shared-types';
 import type {
+  BrowserSession,
+  BrowserStorageState,
+} from '../../session';
+import { BrowserSessionChallengeError } from '../../session';
+import { createProxySessionId, envBool } from '../../proxy';
+import type {
   DiscoverJob,
   ExternalListingRef,
   FetchContext,
@@ -33,10 +39,16 @@ import type {
   RawListing,
 } from '../../types';
 import { createFetchRuntime } from '../../runtime';
-import { fetchListingViaLadder } from '../../strategy';
+import { ChallengeError, fetchListingViaLadder } from '../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
 import type { EsSchemaListing } from '../es/jsonLd';
 import { IDEALISTA_BASE_URL } from './fixtures';
+import {
+  idealistaGeoreachUrl,
+  idealistaWarmSearchUrl,
+  isIdealistaGeoreachChallenge,
+  parseIdealistaGeoreach,
+} from './georeach';
 import { idealistaSourceIdFromUrl, parseIdealistaDetail, parseIdealistaSearch, type IdealistaRaw } from './parse';
 
 const PROVIDER_ID: ProviderId = 'idealista';
@@ -44,13 +56,17 @@ const PROVIDER_ID: ProviderId = 'idealista';
 /** ES cities enumerated when a discover job carries no explicit `city`. */
 const DEFAULT_CITIES: readonly string[] = ['madrid', 'barcelona', 'valencia', 'sevilla', 'malaga'];
 
-/** Max search pages paged through per city in one discover pass. */
+/** Max search / georeach pages paged through per city in one discover pass. */
 const MAX_SEARCH_PAGES = 3;
+
+/** Idealista content markers after warm-up (search results or main shell). */
+const IDEALISTA_CONTENT_SELECTOR =
+  'article.item, .items-list, section.items-container, main#main-content, #main-content';
 
 /** HTML markers of an Idealista interstitial/anti-bot page served with a 200. */
 export function isIdealistaChallenge(html: string): boolean {
   if (html.trim().length < 512) return true;
-  return /acceso denegado|comprueba que eres humano|datadome/i.test(html);
+  return /acceso denegado|comprueba que eres humano|datadome|captcha-delivery/i.test(html);
 }
 
 /** Options for {@link IdealistaProvider}. */
@@ -63,20 +79,9 @@ export interface IdealistaProviderOptions {
   metrics?: ProviderMetricsSink & ProviderMetricsReader;
 }
 
-function citySlug(city: string): string {
-  return city
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
 /** Build an Idealista rental search URL for a city + 1-based page number. */
 function searchUrl(city: string, page: number): string {
-  const base = `${IDEALISTA_BASE_URL}/alquiler-viviendas/${citySlug(city)}/`;
-  return page <= 1 ? base : `${base}pagina-${page}.htm`;
+  return idealistaWarmSearchUrl(city, page);
 }
 
 function resolvePropertyType(types: readonly string[]): PropertyType {
@@ -109,6 +114,23 @@ function asIdealistaRaw(payload: unknown): IdealistaRaw {
   return payload as IdealistaRaw;
 }
 
+function yieldRefs(
+  refs: readonly { sourceId: string; url: string }[],
+  seen: Set<string>,
+  limit: number,
+  yielded: { count: number },
+): ExternalListingRef[] {
+  const out: ExternalListingRef[] = [];
+  for (const ref of refs) {
+    if (yielded.count >= limit) break;
+    if (seen.has(ref.sourceId)) continue;
+    seen.add(ref.sourceId);
+    out.push({ provider: PROVIDER_ID, sourceId: ref.sourceId, url: ref.url });
+    yielded.count += 1;
+  }
+  return out;
+}
+
 export class IdealistaProvider implements ListingProvider {
   readonly id: ProviderId = PROVIDER_ID;
   readonly markets = ['ES'] as const;
@@ -118,6 +140,10 @@ export class IdealistaProvider implements ListingProvider {
   private readonly runtime: FetchRuntime;
   private readonly cities: readonly string[];
   private readonly metrics: ProviderMetricsSink & ProviderMetricsReader;
+
+  /** Sticky proxy session id + storage reused across cities when sticky is on. */
+  private stickyProxySessionId?: string;
+  private stickyStorageState?: BrowserStorageState;
 
   constructor(options: IdealistaProviderOptions = {}) {
     this.runtime = options.runtime ?? createFetchRuntime();
@@ -129,31 +155,172 @@ export class IdealistaProvider implements ListingProvider {
     const cities = job.city ? [job.city] : this.cities;
     const limit = job.limit ?? Number.POSITIVE_INFINITY;
     const seen = new Set<string>();
-    let yielded = 0;
+    const yielded = { count: 0 };
+    const runtime = job.runtime ?? this.runtime;
 
     for (const city of cities) {
-      for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
-        if (yielded >= limit) return;
-        const { html } = await fetchListingViaLadder(job.runtime ?? this.runtime, searchUrl(city, page), {
-          provider: this.id,
-          isChallenge: isIdealistaChallenge,
-          metrics: this.metrics,
-          init: { signal: job.signal },
-        });
-        const refs = parseIdealistaSearch(html);
-        if (refs.length === 0) break;
-        for (const ref of refs) {
-          if (yielded >= limit) return;
-          if (seen.has(ref.sourceId)) continue;
-          seen.add(ref.sourceId);
-          yield { provider: this.id, sourceId: ref.sourceId, url: ref.url };
-          yielded += 1;
+      if (yielded.count >= limit) return;
+
+      const viaAjax = runtime.openBrowserSession
+        ? await this.discoverCityViaGeoreach(runtime, city, job.signal, seen, limit, yielded)
+        : [];
+      for (const ref of viaAjax) yield ref;
+      if (yielded.count >= limit) return;
+
+      // HTML fallback when georeach yielded nothing (no session, challenge, empty).
+      if (viaAjax.length === 0) {
+        for await (const ref of this.discoverCityViaHtml(runtime, city, job.signal, seen, limit, yielded)) {
+          yield ref;
         }
       }
     }
   }
 
+  /**
+   * Warm session on city search → georeach AJAX pages. Returns refs yielded
+   * (empty when warm-up/challenge fails — caller falls back to HTML).
+   */
+  private async discoverCityViaGeoreach(
+    runtime: FetchRuntime,
+    city: string,
+    signal: AbortSignal | undefined,
+    seen: Set<string>,
+    limit: number,
+    yielded: { count: number },
+  ): Promise<ExternalListingRef[]> {
+    if (!runtime.openBrowserSession) return [];
+
+    const sticky = envBool('LISTING_PROXY_STICKY', false);
+    if (sticky && !this.stickyProxySessionId) {
+      this.stickyProxySessionId = createProxySessionId();
+    }
+
+    let session: BrowserSession | undefined;
+    const start = Date.now();
+    try {
+      session = await runtime.openBrowserSession({
+        warmUrl: idealistaWarmSearchUrl(city, 1),
+        signal,
+        contentSelector: IDEALISTA_CONTENT_SELECTOR,
+        isChallenge: isIdealistaChallenge,
+        challengeWaitMs: 45_000,
+        stickyProxySession: sticky,
+        proxySessionId: this.stickyProxySessionId,
+        storageState: this.stickyStorageState,
+        blockAssets: true,
+      });
+
+      const collected: ExternalListingRef[] = [];
+      for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
+        if (yielded.count >= limit) break;
+        const ajaxUrl = idealistaGeoreachUrl(city, page);
+        const { status, body } = await session.request(ajaxUrl, {
+          referer: session.pageUrl(),
+          timeoutMs: 30_000,
+        });
+
+        if (status === 403 || status === 429 || isIdealistaGeoreachChallenge(body)) {
+          this.metrics.record({
+            provider: this.id,
+            strategy: 'browser',
+            outcome: 'challenge',
+            status,
+            latencyMs: Date.now() - start,
+            url: ajaxUrl,
+            detail: 'georeach DataDome challenge after warm-up',
+          });
+          break;
+        }
+        if (status >= 400) {
+          this.metrics.record({
+            provider: this.id,
+            strategy: 'browser',
+            outcome: 'error',
+            status,
+            latencyMs: Date.now() - start,
+            url: ajaxUrl,
+          });
+          break;
+        }
+
+        const pageRefs = parseIdealistaGeoreach(body);
+        this.metrics.record({
+          provider: this.id,
+          strategy: 'browser',
+          outcome: 'success',
+          status,
+          latencyMs: Date.now() - start,
+          url: ajaxUrl,
+        });
+        if (pageRefs.length === 0) break;
+        collected.push(...yieldRefs(pageRefs, seen, limit, yielded));
+      }
+
+      if (sticky) {
+        this.stickyStorageState = await session.exportStorageState();
+      }
+      return collected;
+    } catch (error) {
+      const detail =
+        error instanceof BrowserSessionChallengeError
+          ? error.detail
+          : error instanceof Error
+            ? error.message
+            : String(error);
+      this.metrics.record({
+        provider: this.id,
+        strategy: 'browser',
+        outcome: 'challenge',
+        latencyMs: Date.now() - start,
+        url: idealistaWarmSearchUrl(city, 1),
+        detail: `georeach warm-up failed: ${detail}`,
+      });
+      return [];
+    } finally {
+      await session?.close();
+    }
+  }
+
+  private async *discoverCityViaHtml(
+    runtime: FetchRuntime,
+    city: string,
+    signal: AbortSignal | undefined,
+    seen: Set<string>,
+    limit: number,
+    yielded: { count: number },
+  ): AsyncIterable<ExternalListingRef> {
+    for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
+      if (yielded.count >= limit) return;
+      try {
+        const { html } = await fetchListingViaLadder(runtime, searchUrl(city, page), {
+          provider: this.id,
+          isChallenge: isIdealistaChallenge,
+          metrics: this.metrics,
+          init: { signal },
+        });
+        const refs = parseIdealistaSearch(html);
+        if (refs.length === 0) return;
+        for (const ref of yieldRefs(refs, seen, limit, yielded)) {
+          yield ref;
+        }
+      } catch (error) {
+        if (error instanceof ChallengeError) return;
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * Prefer detail HTML JSON-LD (full address/images). When a session pool is
+   * available, warm the detail page in-browser first; otherwise use the ladder.
+   * Datalayer is never used as the sole payload.
+   */
   async fetch(ref: ExternalListingRef, ctx: FetchContext): Promise<RawListing> {
+    if (ctx.runtime.openBrowserSession) {
+      const fromSession = await this.fetchDetailViaSession(ref, ctx);
+      if (fromSession) return fromSession;
+    }
+
     const { html } = await fetchListingViaLadder(ctx.runtime, ref.url, {
       provider: this.id,
       isChallenge: isIdealistaChallenge,
@@ -162,6 +329,76 @@ export class IdealistaProvider implements ListingProvider {
     });
     const payload = parseIdealistaDetail(html, ref.url);
     return { ref, payload };
+  }
+
+  private async fetchDetailViaSession(
+    ref: ExternalListingRef,
+    ctx: FetchContext,
+  ): Promise<RawListing | undefined> {
+    if (!ctx.runtime.openBrowserSession) return undefined;
+
+    const sticky = envBool('LISTING_PROXY_STICKY', false);
+    if (sticky && !this.stickyProxySessionId) {
+      this.stickyProxySessionId = createProxySessionId();
+    }
+
+    let session: BrowserSession | undefined;
+    const start = Date.now();
+    try {
+      session = await ctx.runtime.openBrowserSession({
+        warmUrl: ref.url,
+        signal: ctx.signal,
+        contentSelector: 'script[type="application/ld+json"], main, h1',
+        isChallenge: isIdealistaChallenge,
+        challengeWaitMs: 45_000,
+        stickyProxySession: sticky,
+        proxySessionId: this.stickyProxySessionId,
+        storageState: this.stickyStorageState,
+        blockAssets: true,
+      });
+
+      // Warmed page already navigated to the detail URL — read HTML for JSON-LD.
+      const html = await session.content();
+      if (isIdealistaChallenge(html)) {
+        this.metrics.record({
+          provider: this.id,
+          strategy: 'browser',
+          outcome: 'challenge',
+          status: 200,
+          latencyMs: Date.now() - start,
+          url: ref.url,
+          detail: 'detail session still challenged',
+        });
+        return undefined;
+      }
+
+      const payload = parseIdealistaDetail(html, ref.url);
+      this.metrics.record({
+        provider: this.id,
+        strategy: 'browser',
+        outcome: 'success',
+        status: 200,
+        latencyMs: Date.now() - start,
+        url: ref.url,
+      });
+
+      if (sticky) {
+        this.stickyStorageState = await session.exportStorageState();
+      }
+      return { ref, payload };
+    } catch {
+      this.metrics.record({
+        provider: this.id,
+        strategy: 'browser',
+        outcome: 'error',
+        latencyMs: Date.now() - start,
+        url: ref.url,
+        detail: 'detail session warm-up failed; falling back to ladder',
+      });
+      return undefined;
+    } finally {
+      await session?.close();
+    }
   }
 
   normalize(raw: RawListing): NormalizedListing {
@@ -220,7 +457,7 @@ export class IdealistaProvider implements ListingProvider {
     return {
       provider: this.id,
       status: 'healthy',
-      detail: `Serving ES via ${IDEALISTA_BASE_URL} (official API gated; HTML ladder active)`,
+      detail: `Serving ES via ${IDEALISTA_BASE_URL} (georeach AJAX + HTML fallback; official API gated)`,
     };
   }
 }

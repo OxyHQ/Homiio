@@ -3,9 +3,9 @@
  *
  * Exercises the recorded-fixture → parse → normalize path: the provider turns
  * an Idealista detail page's embedded schema.org JSON-LD into a first-party,
- * published, sourced {@link NormalizedListing}, and its search parser yields
- * de-duplicated `/inmueble/<id>/` refs. NO live portal is touched (Idealista is
- * behind anti-bot walls and the provider ships OFF by default).
+ * published, sourced {@link NormalizedListing}, and its search / georeach
+ * parsers yield de-duplicated `/inmueble/<id>/` refs. NO live portal is touched
+ * (Idealista is behind anti-bot walls and the provider ships OFF by default).
  */
 
 import {
@@ -14,11 +14,19 @@ import {
   idealistaSourceIdFromUrl,
   parseIdealistaDetail,
   parseIdealistaSearch,
+  parseIdealistaGeoreach,
+  idealistaGeoreachUrl,
+  idealistaGeoreachSlug,
+  idealistaWarmSearchUrl,
+  isIdealistaGeoreachChallenge,
   IDEALISTA_FIXTURE_DETAIL_HTML,
   IDEALISTA_FIXTURE_SALE_DETAIL_HTML,
   IDEALISTA_FIXTURE_SEARCH_HTML,
+  IDEALISTA_FIXTURE_GEOREACH_JSON,
+  IDEALISTA_FIXTURE_GEOREACH_HTML_JSON,
+  IDEALISTA_FIXTURE_GEOREACH_CHALLENGE,
 } from '@homiio/listing-providers';
-import type { ExternalListingRef } from '@homiio/listing-providers';
+import type { ExternalListingRef, FetchRuntime } from '@homiio/listing-providers';
 import { OfferingType, PropertyType } from '@homiio/shared-types';
 
 const provider = new IdealistaProvider();
@@ -120,5 +128,117 @@ describe('IdealistaProvider search + helpers', () => {
     const health = await provider.health();
     expect(health.provider).toBe('idealista');
     expect(['healthy', 'degraded', 'unhealthy']).toContain(health.status);
+  });
+});
+
+describe('Idealista georeach AJAX parser', () => {
+  it('builds city-province georeach and warm URLs', () => {
+    expect(idealistaGeoreachSlug('Madrid')).toBe('madrid-madrid');
+    expect(idealistaGeoreachSlug('Barcelona')).toBe('barcelona-barcelona');
+    expect(idealistaGeoreachUrl('madrid')).toBe(
+      'https://www.idealista.com/es/ajax/listing/georeach/madrid-madrid',
+    );
+    expect(idealistaGeoreachUrl('madrid', 2)).toContain('page=2');
+    expect(idealistaWarmSearchUrl('valencia')).toBe(
+      'https://www.idealista.com/alquiler-viviendas/valencia/',
+    );
+  });
+
+  it('parses adId / propertyCode items from georeach JSON', () => {
+    const refs = parseIdealistaGeoreach(IDEALISTA_FIXTURE_GEOREACH_JSON);
+    expect(refs.map((ref) => ref.sourceId).sort()).toEqual(['98765432', '98765433', '98765434']);
+    for (const ref of refs) {
+      expect(ref.url).toBe(`https://www.idealista.com/inmueble/${ref.sourceId}/`);
+    }
+  });
+
+  it('parses listing ids from an embedded HTML georeach payload', () => {
+    const refs = parseIdealistaGeoreach(IDEALISTA_FIXTURE_GEOREACH_HTML_JSON);
+    expect(refs.map((ref) => ref.sourceId).sort()).toEqual(['55556666', '55557777']);
+  });
+
+  it('treats DataDome captcha JSON as a challenge and yields no refs', () => {
+    expect(isIdealistaGeoreachChallenge(IDEALISTA_FIXTURE_GEOREACH_CHALLENGE)).toBe(true);
+    expect(parseIdealistaGeoreach(IDEALISTA_FIXTURE_GEOREACH_CHALLENGE)).toEqual([]);
+  });
+});
+
+describe('IdealistaProvider.discover georeach path', () => {
+  it('yields refs from a warmed session georeach AJAX response', async () => {
+    const runtime: FetchRuntime = {
+      fetchHttp: async () => ({ status: 500, body: '' }),
+      fetchJson: async () => {
+        throw new Error('unused');
+      },
+      fetchText: async () => {
+        throw new Error('unused');
+      },
+      loadFixture: async () => {
+        throw new Error('unused');
+      },
+      openBrowserSession: async () => ({
+        request: async () => ({ status: 200, body: IDEALISTA_FIXTURE_GEOREACH_JSON }),
+        content: async () => IDEALISTA_FIXTURE_SEARCH_HTML,
+        pageUrl: () => 'https://www.idealista.com/alquiler-viviendas/madrid/',
+        exportStorageState: async () => ({ cookies: [] }),
+        close: async () => undefined,
+      }),
+    };
+
+    const local = new IdealistaProvider({ runtime, cities: ['madrid'] });
+    const refs: ExternalListingRef[] = [];
+    for await (const ref of local.discover({
+      provider: 'idealista',
+      market: 'ES',
+      city: 'madrid',
+      limit: 10,
+      runtime,
+    })) {
+      refs.push(ref);
+    }
+
+    expect(refs.map((ref) => ref.sourceId).sort()).toEqual(['98765432', '98765433', '98765434']);
+    expect(refs.every((ref) => ref.provider === 'idealista')).toBe(true);
+  });
+
+  it('falls back to HTML ladder when georeach returns a challenge', async () => {
+    let htmlFetches = 0;
+    const runtime: FetchRuntime = {
+      fetchHttp: async () => {
+        htmlFetches += 1;
+        return { status: 200, body: IDEALISTA_FIXTURE_SEARCH_HTML };
+      },
+      fetchJson: async () => {
+        throw new Error('unused');
+      },
+      fetchText: async () => {
+        throw new Error('unused');
+      },
+      loadFixture: async () => {
+        throw new Error('unused');
+      },
+      openBrowserSession: async () => ({
+        request: async () => ({ status: 403, body: IDEALISTA_FIXTURE_GEOREACH_CHALLENGE }),
+        content: async () => '<html>datadome</html>',
+        pageUrl: () => 'https://www.idealista.com/alquiler-viviendas/madrid/',
+        exportStorageState: async () => ({ cookies: [] }),
+        close: async () => undefined,
+      }),
+    };
+
+    const local = new IdealistaProvider({ runtime, cities: ['madrid'] });
+    const refs: ExternalListingRef[] = [];
+    for await (const ref of local.discover({
+      provider: 'idealista',
+      market: 'ES',
+      city: 'madrid',
+      limit: 5,
+      runtime,
+    })) {
+      refs.push(ref);
+    }
+
+    expect(htmlFetches).toBeGreaterThan(0);
+    expect(refs.map((ref) => ref.sourceId).sort()).toEqual(['98765432', '98765433', '98765434']);
   });
 });
