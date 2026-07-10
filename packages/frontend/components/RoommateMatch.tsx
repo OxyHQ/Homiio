@@ -50,17 +50,7 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
     }
   };
 
-  const getDisplayName = () => {
-    const personal = profile.personalProfile;
-    // Try to get name from bio or use default
-    if (personal?.personalInfo?.bio) {
-      const bioWords = personal.personalInfo.bio.split(' ');
-      if (bioWords.length > 0 && bioWords[0].length > 2) {
-        return bioWords[0];
-      }
-    }
-    return 'User';
-  };
+  const getDisplayName = () => profile.displayName?.trim() || 'Roommate';
 
   const getMatchScoreColor = (score: number) => {
     if (score >= 80) return colors.success; // Green for success
@@ -87,8 +77,6 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
 
         <View style={styles.headerInfo}>
           <Text style={styles.name}>{getDisplayName()}</Text>
-          <Text style={styles.age}>25 years old</Text>
-          <Text style={styles.location}>Los Angeles, CA</Text>
         </View>
 
         {profile.matchScore && (

@@ -63,12 +63,12 @@ const leasePropertyTitle = (property?: Lease['property']): string => {
   });
 };
 
-type FilterOption = 'all' | 'active' | 'pending_signature' | 'expired' | 'draft';
+type FilterOption = 'all' | 'active' | 'pending_signatures' | 'expired' | 'draft';
 
 const FILTERS: { id: FilterOption; label: string }[] = [
   { id: 'all', label: 'All' },
   { id: 'active', label: 'Active' },
-  { id: 'pending_signature', label: 'Pending' },
+  { id: 'pending_signatures', label: 'Pending' },
   { id: 'expired', label: 'Expired' },
   { id: 'draft', label: 'Drafts' },
 ];
@@ -112,13 +112,13 @@ export default function ContractsScreen() {
         title: propertyTitle,
         propertyId: lease.propertyId,
         propertyName: propertyTitle,
-        startDate: lease.startDate,
-        endDate: lease.endDate,
+        startDate: lease.leaseTerms?.startDate ?? '',
+        endDate: lease.leaseTerms?.endDate ?? '',
         status: lease.status as ContractStatus,
         landlordName: profileDisplayName(lease.landlord),
         tenantName: profileDisplayName(lease.tenant),
-        monthlyRent: lease.rent.amount,
-        currency: lease.rent.currency,
+        monthlyRent: lease.rentDetails?.monthlyRent ?? 0,
+        currency: lease.rentDetails?.currency,
       };
     });
   }, [leasesData]);
@@ -208,7 +208,7 @@ export default function ContractsScreen() {
             <ErrorState
               icon="cloud-offline-outline"
               title={t("Couldn't load contracts")}
-              description={String(leasesError) || t('Please try again.')}
+              description={leasesError?.message || t('Please try again.')}
               onRetry={() => refetchLeases()}
             />
           ) : null}

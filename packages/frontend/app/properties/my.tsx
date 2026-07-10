@@ -32,10 +32,12 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useProfile } from '@/context/ProfileContext';
 import { useUserProperties, useDeleteProperty } from '@/hooks/usePropertyQueries';
+import { useMarkPropertyTransacted } from '@/hooks/usePartner';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
+import { toast } from '@/lib/sonner';
 import { colors } from '@/styles/colors';
 import { contentClamp, spacing } from '@/constants/styles';
-import type { Property } from '@homiio/shared-types';
+import { OfferingType, PropertyStatus, type Property } from '@homiio/shared-types';
 import { logger } from '@/utils/logger';
 
 /** Number of skeleton cards shown during the first load. */
@@ -47,6 +49,35 @@ interface DeleteTarget {
   title: string;
 }
 
+/** A pending close-deal target, carried while the transact confirm is open. */
+interface TransactTarget {
+  id: string;
+  title: string;
+  /** Terminal status this listing closes into (sold for sale listings, else rented). */
+  status: PropertyStatus;
+}
+
+/**
+ * Whether an owned listing can still be closed as a deal: only a live
+ * (published) listing — drafts, already-closed (rented/sold), reserved and
+ * archived listings show no close action.
+ */
+function canCloseDeal(status: string | undefined): boolean {
+  return status === PropertyStatus.PUBLISHED;
+}
+
+/**
+ * The terminal status a listing closes into: a listing that offers a SALE
+ * closes as SOLD, otherwise as RENTED (long/short-term rent, exchange). Mirrors
+ * the backend's `defaultTerminalStatus` inference so the confirm copy matches
+ * what actually persists.
+ */
+function terminalStatusFor(offerings: readonly string[] | undefined): PropertyStatus {
+  return Array.isArray(offerings) && offerings.includes(OfferingType.SALE)
+    ? PropertyStatus.SOLD
+    : PropertyStatus.RENTED;
+}
+
 export default function MyPropertiesScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -55,8 +86,10 @@ export default function MyPropertiesScreen() {
 
   const { data, isLoading, error, refetch } = useUserProperties(profileId);
   const { deleteProperty, loading: isDeleting } = useDeleteProperty();
+  const markTransacted = useMarkPropertyTransacted();
 
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [transactTarget, setTransactTarget] = useState<TransactTarget | null>(null);
 
   const properties = useMemo<Property[]>(
     () => data?.properties ?? [],
@@ -93,6 +126,29 @@ export default function MyPropertiesScreen() {
     }
   }, [deleteTarget, deleteProperty, refetch]);
 
+  const handleConfirmTransact = useCallback(async () => {
+    if (!transactTarget) return;
+    try {
+      const result = await markTransacted.mutateAsync({
+        propertyId: transactTarget.id,
+        status: transactTarget.status,
+      });
+      await refetch();
+      if (result.commission) {
+        toast.success(
+          t('properties.my.transactCommission', 'Deal closed — commission recorded'),
+        );
+      } else {
+        toast.success(t('properties.my.transactDone', 'Listing marked as closed'));
+      }
+    } catch (transactError: unknown) {
+      logger.error('Failed to mark property transacted:', transactError);
+      toast.error(t('properties.my.transactError', 'Could not close this listing'));
+    } finally {
+      setTransactTarget(null);
+    }
+  }, [transactTarget, markTransacted, refetch, t]);
+
   const renderFooter = useCallback(
     (property: Property) => {
       const propertyId = (property._id || property.id) as string;
@@ -102,29 +158,53 @@ export default function MyPropertiesScreen() {
         bedrooms: property.bedrooms,
         bathrooms: property.bathrooms,
       });
+      const closeStatus = terminalStatusFor(property.offerings);
       return (
-        <View style={styles.ownerActions}>
-          <Button
-            variant="secondary"
-            size="small"
-            onPress={() => handleEditProperty(propertyId)}
-            icon={
-              <Ionicons name="create-outline" size={16} color={colors.primaryColor} />
-            }
-            style={styles.ownerActionButton}
-          >
-            {t('properties.my.edit')}
-          </Button>
-          <Button
-            variant="secondary"
-            size="small"
-            onPress={() => setDeleteTarget({ id: propertyId, title })}
-            icon={<Ionicons name="trash-outline" size={16} color={colors.danger} />}
-            textStyle={styles.deleteText}
-            style={styles.ownerActionButton}
-          >
-            {t('properties.my.delete')}
-          </Button>
+        <View style={styles.ownerActionsColumn}>
+          {canCloseDeal(property.status) ? (
+            <Button
+              variant="primary"
+              size="small"
+              onPress={() =>
+                setTransactTarget({ id: propertyId, title, status: closeStatus })
+              }
+              icon={
+                <Ionicons
+                  name="checkmark-done-outline"
+                  size={16}
+                  color={colors.primaryForeground}
+                />
+              }
+              style={styles.ownerActionButton}
+            >
+              {closeStatus === PropertyStatus.SOLD
+                ? t('properties.my.markSold', 'Mark as sold')
+                : t('properties.my.markRented', 'Mark as rented')}
+            </Button>
+          ) : null}
+          <View style={styles.ownerActions}>
+            <Button
+              variant="secondary"
+              size="small"
+              onPress={() => handleEditProperty(propertyId)}
+              icon={
+                <Ionicons name="create-outline" size={16} color={colors.primaryColor} />
+              }
+              style={styles.ownerActionButton}
+            >
+              {t('properties.my.edit')}
+            </Button>
+            <Button
+              variant="secondary"
+              size="small"
+              onPress={() => setDeleteTarget({ id: propertyId, title })}
+              icon={<Ionicons name="trash-outline" size={16} color={colors.danger} />}
+              textStyle={styles.deleteText}
+              style={styles.ownerActionButton}
+            >
+              {t('properties.my.delete')}
+            </Button>
+          </View>
         </View>
       );
     },
@@ -206,6 +286,28 @@ export default function MyPropertiesScreen() {
         onConfirm={() => void handleConfirmDelete()}
         onCancel={() => setDeleteTarget(null)}
       />
+      <ConfirmDialog
+        visible={transactTarget !== null}
+        title={
+          transactTarget?.status === PropertyStatus.SOLD
+            ? t('properties.my.markSoldTitle', 'Mark as sold?')
+            : t('properties.my.markRentedTitle', 'Mark as rented?')
+        }
+        message={t(
+          'properties.my.transactMessage',
+          'This closes "{{title}}" and removes it from active listings. This cannot be undone.',
+          { title: transactTarget?.title ?? '' },
+        )}
+        confirmLabel={
+          transactTarget?.status === PropertyStatus.SOLD
+            ? t('properties.my.markSold', 'Mark as sold')
+            : t('properties.my.markRented', 'Mark as rented')
+        }
+        cancelLabel={t('common.cancel')}
+        loading={markTransacted.isPending}
+        onConfirm={() => void handleConfirmTransact()}
+        onCancel={() => setTransactTarget(null)}
+      />
     </View>
   );
 }
@@ -230,10 +332,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
   },
+  ownerActionsColumn: {
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
   ownerActions: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginTop: spacing.xs,
   },
   ownerActionButton: {
     flex: 1,

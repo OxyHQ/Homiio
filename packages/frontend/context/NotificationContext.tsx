@@ -11,7 +11,6 @@ import { AppState, AppStateStatus, NativeEventSubscription, Platform } from 'rea
 import type { EventSubscription } from 'expo-modules-core';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { toast } from '@/lib/sonner';
 
 import {
     requestNotificationPermissions,
@@ -30,7 +29,6 @@ import {
     NotificationCategory,
 } from '@/utils/notifications';
 import { notificationService, Notification } from '@/services/notificationService';
-import { initializeNotificationSocket, disconnectNotificationSocket } from '@/utils/notificationsSocket';
 import { useOxy } from '@oxyhq/services';
 import { logger } from '@/utils/logger';
 import { getData, storeData } from '@/utils/storage';
@@ -62,9 +60,6 @@ export interface NotificationState {
 
     // Preferences
     preferences: NotificationPreferences;
-
-    // Socket state
-    isSocketConnected: boolean;
 }
 
 export interface NotificationActions {
@@ -107,13 +102,10 @@ export interface NotificationActions {
     markAsRead: (notificationId: string) => Promise<void>;
     markAllAsRead: () => Promise<void>;
     deleteNotification: (notificationId: string) => Promise<void>;
+    clearAllNotifications: () => Promise<void>;
 
     // Preferences
     updatePreferences: (preferences: Partial<NotificationPreferences>) => Promise<void>;
-
-    // Socket management
-    connectSocket: () => Promise<void>;
-    disconnectSocket: () => Promise<void>;
 
     // Utility
     refreshAll: () => Promise<void>;
@@ -153,7 +145,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         isLoading: false,
         error: null,
         preferences: DEFAULT_PREFERENCES,
-        isSocketConnected: false,
     });
 
     // Refs
@@ -308,7 +299,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             setState(prev => ({
                 ...prev,
                 notifications: response.notifications,
-                unreadCount: response.notifications.filter(n => !n.read).length,
+                unreadCount: response.unreadCount,
                 isLoading: false,
             }));
         } catch (error) {
@@ -392,6 +383,27 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         }
     }, [oxyServices, activeSessionId, queryClient]);
 
+    const clearAllNotifications = useCallback(async () => {
+        if (!oxyServices || !activeSessionId) return;
+
+        try {
+            await notificationService.clearAllNotifications();
+
+            setState(prev => ({
+                ...prev,
+                notifications: [],
+                unreadCount: 0,
+            }));
+
+            await clearBadgeCount();
+
+            queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        } catch (error) {
+            logger.error('Notifications: clearAllNotifications failed', error);
+            throw error;
+        }
+    }, [oxyServices, activeSessionId, clearBadgeCount, queryClient]);
+
     // Preferences — the backend exposes no notification-preferences endpoint,
     // so preferences are persisted locally (AsyncStorage) to survive restarts.
     const updatePreferences = useCallback(async (preferences: Partial<NotificationPreferences>) => {
@@ -406,51 +418,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         }
     }, []);
 
-    // Socket management
-    const connectSocket = useCallback(async () => {
-        if (!oxyServices || !activeSessionId) return;
-
-        try {
-            const socket = await initializeNotificationSocket();
-            if (socket) {
-                setState(prev => ({ ...prev, isSocketConnected: true }));
-
-                // Listen for new notifications
-                socket.on('notification', (notification: Notification) => {
-                    setState(prev => ({
-                        ...prev,
-                        notifications: [notification, ...prev.notifications],
-                        unreadCount: prev.unreadCount + 1,
-                    }));
-
-                    // Update badge count
-                    updateBadgeCount(state.unreadCount + 1);
-
-                    // Show toast
-                    toast.success(notification.title);
-                });
-            }
-        } catch (error) {
-            logger.error('Notifications: connectSocket failed', error);
-        }
-    }, [oxyServices, activeSessionId, state.unreadCount, updateBadgeCount]);
-
-    const disconnectSocket = useCallback(async () => {
-        try {
-            await disconnectNotificationSocket();
-            setState(prev => ({ ...prev, isSocketConnected: false }));
-        } catch (error) {
-            logger.warn('Notifications: disconnectSocket failed', error);
-        }
-    }, []);
-
-    // Utility
+    // Utility — the app has no realtime notifications channel; the inbox stays
+    // fresh via refetch-on-focus (AppState) + query invalidation after writes.
     const refreshAll = useCallback(async () => {
-        await Promise.all([
-            loadNotifications(),
-            connectSocket(),
-        ]);
-    }, [loadNotifications, connectSocket]);
+        await loadNotifications();
+    }, [loadNotifications]);
 
     // Set up notification listeners
     useEffect(() => {
@@ -465,8 +437,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             const propertyId = data?.propertyId;
             if (data?.type === 'property' && typeof propertyId === 'string') {
                 router.push(`/properties/${propertyId}`);
-            } else if (data?.type === 'message' && data?.messageId) {
-                router.push('/messages');
             }
 
             // Update badge count
@@ -514,15 +484,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         initializeNotifications();
     }, [initializeNotifications]);
 
-    // Connect socket when authenticated
+    // Load the mailbox when authenticated.
     useEffect(() => {
         if (oxyServices && activeSessionId) {
-            connectSocket();
             loadNotifications();
-        } else {
-            disconnectSocket();
         }
-    }, [oxyServices, activeSessionId, connectSocket, disconnectSocket, loadNotifications]);
+    }, [oxyServices, activeSessionId, loadNotifications]);
 
     const contextValue: NotificationContextType = {
         ...state,
@@ -537,9 +504,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         markAsRead,
         markAllAsRead,
         deleteNotification,
+        clearAllNotifications,
         updatePreferences,
-        connectSocket,
-        disconnectSocket,
         refreshAll,
     };
 

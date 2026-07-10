@@ -11,12 +11,19 @@ import { logger } from '../middlewares/logging';
 
 import { Lease, Property, Profile } from '../models';
 import type { ILease, IProfile } from '../models';
+import { pickFields } from '../utils/pickFields';
+import { CREATABLE_LEASE_FIELDS, EDITABLE_LEASE_FIELDS } from './lease/editableFields';
+import { toLeaseDTO, refToId } from './lease/toLeaseDTO';
+import { notificationDispatchService } from '../services/notificationDispatchService';
 
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 10;
 
-const EDITABLE_STATUSES: ReadonlyArray<string> = [LeaseStatus.DRAFT, 'pending_signatures'];
-const DELETABLE_STATUSES: ReadonlyArray<string> = [LeaseStatus.DRAFT, 'pending_signatures'];
+const EDITABLE_STATUSES: ReadonlyArray<string> = [LeaseStatus.DRAFT, LeaseStatus.PENDING_SIGNATURES];
+const DELETABLE_STATUSES: ReadonlyArray<string> = [LeaseStatus.DRAFT, LeaseStatus.PENDING_SIGNATURES];
+
+/** Reference paths populated on list/detail reads so the DTO can carry nested docs. */
+const LEASE_POPULATE = ['propertyId', 'landlordProfileId', 'tenantProfileId'];
 
 function parsePagination(query: Request['query']): { page: number; limit: number; skip: number } {
   const rawPage = parseInt(String(query.page ?? ''), 10);
@@ -39,15 +46,15 @@ async function resolveActiveProfile(req: Request): Promise<IProfile> {
 }
 
 function isLandlord(lease: ILease, profileId: string): boolean {
-  return lease.landlordProfileId?.toString() === profileId;
+  return refToId(lease.landlordProfileId) === profileId;
 }
 
 function isTenant(lease: ILease, profileId: string): boolean {
-  if (lease.tenantProfileId?.toString() === profileId) {
+  if (refToId(lease.tenantProfileId) === profileId) {
     return true;
   }
-  const coTenants = (lease.coTenants || []) as Array<{ profileId?: { toString(): string } }>;
-  return coTenants.some((ct) => ct.profileId?.toString() === profileId);
+  const coTenants = (lease.coTenants || []) as Array<{ profileId?: unknown }>;
+  return coTenants.some((ct) => refToId(ct.profileId) === profileId);
 }
 
 function isParty(lease: ILease, profileId: string): boolean {
@@ -80,12 +87,12 @@ class LeaseController {
       }
 
       const [leases, total] = await Promise.all([
-        Lease.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        Lease.find(filter).populate(LEASE_POPULATE).sort({ createdAt: -1 }).skip(skip).limit(limit),
         Lease.countDocuments(filter),
       ]);
 
       res.json(paginationResponse(
-        leases.map(lease => lease.toJSON()),
+        leases.map(toLeaseDTO),
         page,
         limit,
         total,
@@ -125,8 +132,9 @@ class LeaseController {
         throw new AppError('Access denied - you can only create leases for your own properties', 403, 'FORBIDDEN');
       }
 
+      const leaseData = pickFields<Record<string, unknown>>(req.body, CREATABLE_LEASE_FIELDS);
       const lease = await Lease.create({
-        ...req.body,
+        ...leaseData,
         propertyId,
         tenantProfileId,
         landlordProfileId: activeProfile._id,
@@ -139,7 +147,7 @@ class LeaseController {
         propertyId: String(propertyId),
       });
 
-      res.status(201).json(successResponse(lease.toJSON(), 'Lease created successfully'));
+      res.status(201).json(successResponse(toLeaseDTO(lease), 'Lease created successfully'));
     } catch (error) {
       next(error);
     }
@@ -151,7 +159,7 @@ class LeaseController {
   async getLeaseById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const activeProfile = await resolveActiveProfile(req);
-      const lease = await Lease.findById(req.params.id);
+      const lease = await Lease.findById(req.params.id).populate(LEASE_POPULATE);
       if (!lease) {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
@@ -159,7 +167,7 @@ class LeaseController {
         throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');
       }
 
-      res.json(successResponse(lease.toJSON(), 'Lease retrieved successfully'));
+      res.json(successResponse(toLeaseDTO(lease), 'Lease retrieved successfully'));
     } catch (error) {
       next(error);
     }
@@ -183,12 +191,8 @@ class LeaseController {
         throw new AppError('Cannot update a lease that is signed, active, or closed', 409, 'LEASE_NOT_EDITABLE');
       }
 
-      const immutable = ['landlordProfileId', 'propertyId', '_id', 'signatures', 'status', 'paymentSchedule'];
-      for (const key of Object.keys(req.body)) {
-        if (!immutable.includes(key)) {
-          lease[key] = req.body[key];
-        }
-      }
+      const updates = pickFields<Record<string, unknown>>(req.body, EDITABLE_LEASE_FIELDS);
+      Object.assign(lease, updates);
       await lease.save();
 
       logger.info('Lease updated', {
@@ -196,7 +200,7 @@ class LeaseController {
         updatedBy: activeProfile._id.toString(),
       });
 
-      res.json(successResponse(lease.toJSON(), 'Lease updated successfully'));
+      res.json(successResponse(toLeaseDTO(lease), 'Lease updated successfully'));
     } catch (error) {
       next(error);
     }
@@ -253,10 +257,13 @@ class LeaseController {
 
       const profileId = activeProfile._id.toString();
       const ipAddress = req.ip;
+      let counterpartyProfileId: string | undefined;
       if (isLandlord(lease, profileId)) {
         await lease.signAsLandlord(ipAddress, signature);
-      } else if (lease.tenantProfileId?.toString() === profileId) {
+        counterpartyProfileId = refToId(lease.tenantProfileId);
+      } else if (refToId(lease.tenantProfileId) === profileId) {
         await lease.signAsTenant(ipAddress, signature);
+        counterpartyProfileId = refToId(lease.landlordProfileId);
       } else {
         throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');
       }
@@ -266,7 +273,21 @@ class LeaseController {
         signedBy: profileId,
       });
 
-      res.json(successResponse(lease.toJSON(), 'Lease signed successfully'));
+      // Notify the counterparty: either the lease is now fully signed/active,
+      // or it awaits their signature. Best-effort — never blocks the response.
+      const leaseId = lease._id.toString();
+      const isActive = lease.status === LeaseStatus.ACTIVE;
+      await notificationDispatchService.createForProfile(counterpartyProfileId, {
+        type: 'contract',
+        title: isActive ? 'Lease is now active' : 'Lease awaiting your signature',
+        message: isActive
+          ? 'Both parties have signed. Your lease is now active.'
+          : 'The other party signed the lease. Review and sign to activate it.',
+        priority: isActive ? 'medium' : 'high',
+        data: { leaseId, screen: '/contracts', propertyId: refToId(lease.propertyId) },
+      });
+
+      res.json(successResponse(toLeaseDTO(lease), 'Lease signed successfully'));
     } catch (error) {
       next(error);
     }
@@ -308,7 +329,7 @@ class LeaseController {
         reason: reason,
       });
 
-      res.json(successResponse(lease.toJSON(), 'Lease terminated successfully'));
+      res.json(successResponse(toLeaseDTO(lease), 'Lease terminated successfully'));
     } catch (error) {
       next(error);
     }
@@ -368,7 +389,7 @@ class LeaseController {
         createdBy: activeProfile._id.toString(),
       });
 
-      res.status(201).json(successResponse(renewal.toJSON(), 'Lease renewal created successfully'));
+      res.status(201).json(successResponse(toLeaseDTO(renewal), 'Lease renewal created successfully'));
     } catch (error) {
       next(error);
     }
@@ -390,7 +411,9 @@ class LeaseController {
 
       const { page, limit, skip } = parsePagination(req.query);
       const { status } = req.query;
-      let schedule = (lease.paymentSchedule || []).map(p => p.toJSON());
+      let schedule: Array<Record<string, unknown>> = (lease.paymentSchedule || []).map(
+        p => ({ ...p.toJSON(), id: refToId(p._id) })
+      );
       if (status) {
         schedule = schedule.filter(p => p.status === status);
       }
@@ -446,7 +469,7 @@ class LeaseController {
         createdBy: activeProfile._id.toString(),
       });
 
-      res.status(201).json(successResponse(created.toJSON(), 'Payment created successfully'));
+      res.status(201).json(successResponse({ ...created.toJSON(), id: refToId(created._id) }, 'Payment created successfully'));
     } catch (error) {
       next(error);
     }
@@ -467,7 +490,7 @@ class LeaseController {
       }
 
       res.json(successResponse(
-        (lease.documents || []).map(doc => doc.toJSON()),
+        (lease.documents || []).map(doc => ({ ...doc.toJSON(), id: refToId(doc._id) })),
         'Lease documents retrieved successfully'
       ));
     } catch (error) {
@@ -514,7 +537,7 @@ class LeaseController {
         uploadedBy: profileId,
       });
 
-      res.status(201).json(successResponse(created.toJSON(), 'Document added successfully'));
+      res.status(201).json(successResponse({ ...created.toJSON(), id: refToId(created._id) }, 'Document added successfully'));
     } catch (error) {
       next(error);
     }

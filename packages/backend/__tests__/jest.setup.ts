@@ -13,6 +13,11 @@
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
+// Give config a real https public URL so self-hosted image URLs
+// (`${publicUrl}/api/images/file/...`) are accepted by the Property image-URL
+// validator during tests (a bare localhost host can trip `validator.isURL`).
+process.env.PUBLIC_API_URL = process.env.PUBLIC_API_URL || 'https://api.homiio.test';
+
 let mongoServer: MongoMemoryServer | undefined;
 
 beforeAll(async () => {

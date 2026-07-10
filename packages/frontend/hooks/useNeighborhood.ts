@@ -1,185 +1,63 @@
-import { useCallback } from 'react';
-import { useNeighborhoodStore } from '@/store/neighborhoodStore';
-import type { NeighborhoodFilters } from '@/services/neighborhoodService';
-import { api } from '@/utils/api';
+/**
+ * Neighborhood TanStack Query hooks.
+ *
+ * ONE data path: every read delegates to `neighborhoodService`, which hits the
+ * public `/api/neighborhoods/*` endpoints. Metrics are derived from Homiio's own
+ * listings — there are no mocks, no invented scores, and no local fallbacks. A
+ * lookup that resolves nothing returns `null`, which consumers render as hidden.
+ */
 
-export function useNeighborhood() {
-  const {
-    currentNeighborhood,
-    nearbyNeighborhoods,
-    isLoading,
-    error,
-    setCurrentNeighborhood,
-    setNearbyNeighborhoods,
-    setLoading,
-    setError,
-    clearError,
-  } = useNeighborhoodStore();
+import { useQuery } from '@tanstack/react-query';
+import type { NeighborhoodMetrics } from '@homiio/shared-types';
+import { neighborhoodService } from '@/services/neighborhoodService';
 
+/** Neighborhood geo + listing metrics change slowly; cache generously. */
+const NEIGHBORHOOD_STALE_TIME = 1000 * 60 * 10;
+const NEIGHBORHOOD_GC_TIME = 1000 * 60 * 60;
 
-  // Fetch neighborhood by location
-  const fetchByLocation = useCallback(
-    async (latitude: number, longitude: number) => {
-      try {
-        setLoading(true);
-        setError(null);
+export interface UseNeighborhoodArgs {
+  /** Preferred selector: resolve the neighborhood a property sits in. */
+  propertyId?: string;
+  /** Fallback selector: resolve by neighborhood name (optionally city-scoped). */
+  name?: string;
+  /** City id or name, used only with `name`. */
+  city?: string;
+}
 
-        const response = await api.get('/neighborhoods/location', {
-          params: { latitude, longitude }
-        });
+/**
+ * Resolve a single neighborhood's metrics. Prefers `propertyId`; otherwise uses
+ * `name` (+ optional `city`). Disabled (and returns `undefined`) when neither a
+ * property id nor a name is supplied. `null` means "resolved, but no matching
+ * neighborhood" — consumers hide the surface in that case.
+ */
+export function useNeighborhood({ propertyId, name, city }: UseNeighborhoodArgs) {
+  const trimmedName = name?.trim();
+  const byProperty = Boolean(propertyId);
+  const byName = !byProperty && Boolean(trimmedName);
 
-        setCurrentNeighborhood(response.data);
-      } catch (error: any) {
-        setError(error.message || 'Failed to fetch neighborhood by location');
-      } finally {
-        setLoading(false);
-      }
+  return useQuery<NeighborhoodMetrics | null>({
+    queryKey: byProperty
+      ? ['neighborhood', 'by-property', propertyId]
+      : ['neighborhood', 'by-name', trimmedName ?? '', city ?? ''],
+    queryFn: async () => {
+      if (propertyId) return neighborhoodService.getByProperty(propertyId);
+      if (trimmedName) return neighborhoodService.getByName(trimmedName, city);
+      return null;
     },
-    [setCurrentNeighborhood, setLoading, setError],
-  );
+    enabled: byProperty || byName,
+    staleTime: NEIGHBORHOOD_STALE_TIME,
+    gcTime: NEIGHBORHOOD_GC_TIME,
+    retry: false,
+  });
+}
 
-  // Fetch neighborhood by name
-  const fetchByName = useCallback(
-    async (name: string, city?: string, state?: string) => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const response = await api.get('/neighborhoods/name', {
-          params: { name, city, state }
-        });
-
-        setCurrentNeighborhood(response.data);
-      } catch (error: any) {
-        setError(error.message || 'Failed to fetch neighborhood by name');
-      } finally {
-        setLoading(false);
-      }
-    },
-    [setCurrentNeighborhood, setLoading, setError],
-  );
-
-  // Fetch neighborhood by property
-  const fetchByProperty = useCallback(
-    async (propertyId: string) => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const response = await api.get(`/neighborhoods/property/${propertyId}`);
-
-        setCurrentNeighborhood(response.data);
-      } catch (error: any) {
-        setError(error.message || 'Failed to fetch neighborhood by property');
-      } finally {
-        setLoading(false);
-      }
-    },
-    [setCurrentNeighborhood, setLoading, setError],
-  );
-
-  // Search neighborhoods
-  const search = useCallback(
-    async (filters: NeighborhoodFilters) => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const response = await api.get('/neighborhoods/search', {
-          params: filters
-        });
-
-        setNearbyNeighborhoods(response.data || []);
-      } catch (error: any) {
-        setError(error.message || 'Failed to search neighborhoods');
-      } finally {
-        setLoading(false);
-      }
-    },
-    [setNearbyNeighborhoods, setLoading, setError],
-  );
-
-  // Fetch popular neighborhoods
-  const fetchPopular = useCallback(
-    async (city: string, state?: string, limit?: number) => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const response = await api.get('/neighborhoods/popular', {
-          params: { city, state, limit }
-        });
-
-        setNearbyNeighborhoods(response.data || []);
-      } catch (error: any) {
-        setError(error.message || 'Failed to fetch popular neighborhoods');
-      } finally {
-        setLoading(false);
-      }
-    },
-    [setNearbyNeighborhoods, setLoading, setError],
-  );
-
-  // Manual actions
-  const setCurrent = useCallback(
-    (neighborhood: any) => {
-      setCurrentNeighborhood(neighborhood);
-    },
-    [setCurrentNeighborhood],
-  );
-
-  const clearCurrent = useCallback(() => {
-    setCurrentNeighborhood(null);
-  }, [setCurrentNeighborhood]);
-
-  const clearSearch = useCallback(() => {
-    setNearbyNeighborhoods([]);
-  }, [setNearbyNeighborhoods]);
-
-  const setErrorState = useCallback(
-    (error: string | null) => {
-      setError(error);
-    },
-    [setError],
-  );
-
-  const clearErrorState = useCallback(() => {
-    clearError();
-  }, [clearError]);
-
-  const reset = useCallback(() => {
-    setCurrentNeighborhood(null);
-    setNearbyNeighborhoods([]);
-    clearError();
-  }, [setCurrentNeighborhood, setNearbyNeighborhoods, clearError]);
-
-  // Check if data is stale (older than 5 minutes)
-  const isDataStale = useCallback(() => {
-    // Not implemented in Zustand store yet
-    return false;
-  }, []);
-
-  return {
-    // State
-    currentNeighborhood,
-    nearbyNeighborhoods,
-    isLoading,
-    isSearching: isLoading, // Not implemented in Zustand store yet
-    error,
-    lastFetched: null, // Not implemented in Zustand store yet
-    isDataStale,
-
-    // Actions
-    fetchByLocation,
-    fetchByName,
-    fetchByProperty,
-    search,
-    fetchPopular,
-    setCurrent,
-    clearCurrent,
-    clearSearch,
-    setError: setErrorState,
-    clearError: clearErrorState,
-    reset,
-  };
+/** A city's neighborhoods ranked by real listing count. */
+export function usePopularNeighborhoods(city: string | undefined, limit = 10) {
+  return useQuery<NeighborhoodMetrics[]>({
+    queryKey: ['neighborhood', 'popular', city ?? '', limit],
+    queryFn: async () => (city ? neighborhoodService.getPopular(city, limit) : []),
+    enabled: Boolean(city),
+    staleTime: NEIGHBORHOOD_STALE_TIME,
+    gcTime: NEIGHBORHOOD_GC_TIME,
+  });
 }

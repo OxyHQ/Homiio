@@ -1,0 +1,109 @@
+/**
+ * Recorded Idealista fixtures for unit tests.
+ *
+ * These are hand-authored, portal-SHAPED HTML snapshots (NOT copies of real
+ * listings) modelling the embedded schema.org JSON-LD an Idealista detail page
+ * ships and the `/inmueble/<id>/` links a search-results page carries. They let
+ * the full parse → normalize path be tested without ever touching the live
+ * portal (which is behind anti-bot walls and a feature flag default OFF).
+ *
+ * `image` URLs point at an example CDN host; they are only ever used ONCE at
+ * ingest time to re-host the bytes via Sharp/S3 — never hotlinked at runtime.
+ */
+
+export const IDEALISTA_BASE_URL = 'https://www.idealista.com';
+
+/** A rent detail page: one schema.org node carrying the full listing. */
+export const IDEALISTA_FIXTURE_DETAIL_HTML = `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Piso en alquiler en Carrer de Mallorca, Barcelona — idealista</title>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": ["Product", "Residence"],
+  "name": "Piso en alquiler en Carrer de Mallorca 250",
+  "description": "Luminoso piso de dos habitaciones en el Eixample, con balcón y ascensor.",
+  "url": "https://www.idealista.com/inmueble/98765432/",
+  "image": [
+    "https://img3.idealista.com/blur/WEB_DETAIL/0/id.pro.es.image.master/aa/bb/98765432-1.jpg",
+    "https://img3.idealista.com/blur/WEB_DETAIL/0/id.pro.es.image.master/aa/bb/98765432-2.jpg"
+  ],
+  "numberOfRooms": 2,
+  "numberOfBathroomsTotal": 1,
+  "floorSize": { "@type": "QuantitativeValue", "value": "78", "unitCode": "MTK" },
+  "amenityFeature": [
+    { "@type": "LocationFeatureSpecification", "name": "Ascensor", "value": true },
+    { "@type": "LocationFeatureSpecification", "name": "Aire acondicionado", "value": true },
+    { "@type": "LocationFeatureSpecification", "name": "Terraza", "value": true },
+    { "@type": "LocationFeatureSpecification", "name": "Amueblado", "value": true }
+  ],
+  "offers": {
+    "@type": "Offer",
+    "price": "1450",
+    "priceCurrency": "EUR",
+    "businessFunction": "http://purl.org/goodrelations/v1#LeaseOut"
+  },
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "Carrer de Mallorca 250",
+    "addressLocality": "Barcelona",
+    "addressRegion": "Barcelona",
+    "addressSubLocality": "L'Antiga Esquerra de l'Eixample",
+    "postalCode": "08008",
+    "addressCountry": "ES"
+  },
+  "geo": { "@type": "GeoCoordinates", "latitude": 41.3947, "longitude": 2.1636 }
+}
+</script>
+</head>
+<body><main><h1>Piso en alquiler en Carrer de Mallorca 250</h1></main></body>
+</html>`;
+
+/** A sale detail page (venta), used to prove the SALE offering mapping. */
+export const IDEALISTA_FIXTURE_SALE_DETAIL_HTML = `<!doctype html>
+<html lang="es">
+<head>
+<title>Casa en venta — idealista</title>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": ["Product", "House"],
+  "name": "Casa en venta en Pozuelo de Alarcón",
+  "url": "https://www.idealista.com/inmueble/11223344/",
+  "image": ["https://img3.idealista.com/blur/WEB_DETAIL/0/id.pro.es.image.master/cc/dd/11223344-1.jpg"],
+  "numberOfRooms": 4,
+  "numberOfBathroomsTotal": 3,
+  "floorSize": { "@type": "QuantitativeValue", "value": "220" },
+  "offers": {
+    "@type": "Offer",
+    "price": "685000",
+    "priceCurrency": "EUR",
+    "businessFunction": "http://purl.org/goodrelations/v1#Sell"
+  },
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "Calle de la Vega 12",
+    "addressLocality": "Pozuelo de Alarcón",
+    "addressRegion": "Madrid",
+    "postalCode": "28223",
+    "addressCountry": "ES"
+  },
+  "geo": { "@type": "GeoCoordinates", "latitude": 40.4361, "longitude": -3.8134 }
+}
+</script>
+</head>
+<body><main><h1>Casa en venta</h1></main></body>
+</html>`;
+
+/** A search-results page carrying several `/inmueble/<id>/` detail links. */
+export const IDEALISTA_FIXTURE_SEARCH_HTML = `<!doctype html>
+<html lang="es"><body>
+<section class="items-container">
+  <article class="item"><a class="item-link" href="/inmueble/98765432/" title="Piso">Piso 1</a></article>
+  <article class="item"><a class="item-link" href="https://www.idealista.com/inmueble/98765433/" title="Piso">Piso 2</a></article>
+  <article class="item"><a class="item-link" href="/inmueble/98765432/#gallery">Duplicate</a></article>
+  <article class="item"><a class="item-link" href="/inmueble/98765434/" title="Estudio">Estudio</a></article>
+</section>
+</body></html>`;

@@ -1,147 +1,48 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { useNeighborhood } from '@/hooks/useNeighborhood';
-import { useOxy } from '@oxyhq/services';
-import { Loading } from '@oxyhq/bloom/loading';
-import { Button } from '@oxyhq/bloom/button';
-import type { NeighborhoodRating } from '@/services/neighborhoodService';
+import { formatCurrency } from '@/utils/currency';
 
 interface NeighborhoodRatingWidgetProps {
   propertyId?: string;
   neighborhoodName?: string;
   city?: string;
+  /** Kept for call-site compatibility; not used for lookups (geo is relational). */
   state?: string;
 }
 
+/**
+ * Neighborhood metrics widget.
+ *
+ * Renders ONLY real, Homiio-derived metrics (listing count, average rent,
+ * vs-city contrast) for the resolved neighborhood. There are no invented
+ * walkability/transit/safety scores. When no neighborhood resolves (or the
+ * lookup errors), the widget renders nothing rather than showing placeholder
+ * data.
+ */
 export function NeighborhoodRatingWidget({
   propertyId,
   neighborhoodName,
   city,
-  state,
 }: NeighborhoodRatingWidgetProps = {}) {
   const { t } = useTranslation();
-  const { activeSessionId } = useOxy();
-  const isAuthenticated = Boolean(activeSessionId);
-  const {
-    currentNeighborhood,
-    isLoading,
-    error,
-    isDataStale,
-    fetchByName,
-    fetchByProperty,
-  } = useNeighborhood();
-
-  // Default neighborhood data for when API is not available
-  const defaultNeighborhood = {
-    name: neighborhoodName || 'El Born, Barcelona',
-    overallScore: 4.2,
-    ratings: [
-      { category: 'Safety', score: 4.5, icon: 'shield-checkmark-outline' },
-      { category: 'Dining', score: 4.8, icon: 'restaurant-outline' },
-      { category: 'Transit', score: 4.3, icon: 'subway-outline' },
-      { category: 'Nightlife', score: 4.0, icon: 'wine-outline' },
-      { category: 'Shopping', score: 3.9, icon: 'bag-outline' },
-    ] as NeighborhoodRating[],
-  };
-
-  // The neighborhood store only persists the location/stats summary, so the
-  // rated categories and overall score always come from the curated defaults.
-  // When a neighborhood has been resolved we still prefer its real name.
-  const displayName = currentNeighborhood?.name || defaultNeighborhood.name;
-  const overallScore = defaultNeighborhood.overallScore;
-  const categories = defaultNeighborhood.ratings;
-
-  // Load neighborhood data on component mount if authenticated and data is stale
-  useEffect(() => {
-    if (isAuthenticated && (!currentNeighborhood || isDataStale())) {
-      if (propertyId) {
-        // If we have a property ID, fetch neighborhood data for that property
-        fetchByProperty(propertyId);
-      } else if (neighborhoodName && city) {
-        // If we have neighborhood name and city, fetch by name
-        fetchByName(neighborhoodName, city, state);
-      }
-      // Otherwise the curated default neighborhood data is used.
-    }
-  }, [
-    isAuthenticated,
-    currentNeighborhood,
-    isDataStale,
-    fetchByName,
-    fetchByProperty,
+  const { data: neighborhood, isLoading } = useNeighborhood({
     propertyId,
-    neighborhoodName,
+    name: neighborhoodName,
     city,
-    state,
-  ]);
+  });
 
-  // Helper to render stars based on rating
-  const renderStars = (rating: number) => {
-    const fullStars = Math.floor(rating);
-    const halfStar = rating % 1 >= 0.5;
-    const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
-
-    return (
-      <View style={styles.starsContainer}>
-        {[...Array(fullStars)].map((_, i) => (
-          <Ionicons key={`full-${i}`} name="star" size={14} color={colors.ratingStar} />
-        ))}
-        {halfStar && <Ionicons name="star-half" size={14} color={colors.ratingStar} />}
-        {[...Array(emptyStars)].map((_, i) => (
-          <Ionicons key={`empty-${i}`} name="star-outline" size={14} color={colors.ratingStar} />
-        ))}
-        <Text style={styles.ratingNumber}>{rating.toFixed(1)}</Text>
-      </View>
-    );
-  };
-
-  // Show loading state
-  if (isLoading) {
-    return (
-      <BaseWidget
-        title={t('Neighborhood')}
-        icon={<Ionicons name="location" size={22} color={colors.primaryColor} />}
-      >
-        <View style={styles.loadingContainer}>
-          <Loading iconSize={16} showText={false} />
-          <Text style={styles.loadingText}>{t('Loading neighborhood data...')}</Text>
-        </View>
-      </BaseWidget>
-    );
+  // No resolvable neighborhood (or an error) → hide the widget entirely.
+  if (isLoading || !neighborhood) {
+    return null;
   }
 
-  // Show error state
-  if (error && !currentNeighborhood) {
-    return (
-      <BaseWidget
-        title={t('Neighborhood')}
-        icon={<Ionicons name="location" size={22} color={colors.primaryColor} />}
-      >
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle-outline" size={24} color={colors.COLOR_BLACK_LIGHT_4} />
-          <Text style={styles.errorText}>{t('Unable to load neighborhood data')}</Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={() => {
-              if (propertyId) {
-                fetchByProperty(propertyId);
-              } else if (neighborhoodName && city) {
-                fetchByName(neighborhoodName, city, state);
-              } else {
-                fetchByName('El Born', 'Barcelona', 'Catalonia');
-              }
-            }}
-          >
-            <Text style={styles.retryButtonText}>{t('Retry')}</Text>
-          </TouchableOpacity>
-        </View>
-      </BaseWidget>
-    );
-  }
+  const { name, city: cityName, listingCount, averageRent, currency, vsCity } = neighborhood;
+  const currencyCode = currency ?? 'EUR';
 
   return (
     <BaseWidget
@@ -150,25 +51,40 @@ export function NeighborhoodRatingWidget({
     >
       <View style={styles.container}>
         <View style={styles.headerSection}>
-          <Text style={styles.neighborhoodName}>{displayName}</Text>
-          <View style={styles.overallRating}>{renderStars(overallScore)}</View>
+          <Text style={styles.neighborhoodName}>{name}</Text>
+          {cityName ? <Text style={styles.citySubtitle}>{cityName}</Text> : null}
         </View>
 
-        <View style={styles.categoriesSection}>
-          {categories.map((category, index) => (
-            <View key={index} style={styles.categoryItem}>
-              <View style={styles.categoryInfo}>
-                <Ionicons name={category.icon as keyof typeof Ionicons.glyphMap} size={16} color={colors.primaryColor} />
-                <Text style={styles.categoryName}>{category.category}</Text>
-              </View>
-              {renderStars(category.score)}
+        <View style={styles.metricsRow}>
+          <View style={styles.metric}>
+            <Text style={styles.metricValue}>{listingCount}</Text>
+            <Text style={styles.metricLabel}>{t('Listings')}</Text>
+          </View>
+          {averageRent !== null ? (
+            <View style={styles.metric}>
+              <Text style={styles.metricValue}>{formatCurrency(averageRent, currencyCode)}</Text>
+              <Text style={styles.metricLabel}>{t('Avg. rent / mo')}</Text>
             </View>
-          ))}
+          ) : null}
         </View>
 
-        <Button style={styles.moreButton}>
-          {t('View Neighborhood Guide')}
-        </Button>
+        {vsCity ? (
+          <View style={styles.vsCityRow}>
+            <Ionicons
+              name={vsCity.percentDiff <= 0 ? 'trending-down-outline' : 'trending-up-outline'}
+              size={16}
+              color={vsCity.percentDiff <= 0 ? colors.success : colors.COLOR_BLACK_LIGHT_3}
+            />
+            <Text style={styles.vsCityText}>
+              {vsCity.percentDiff === 0
+                ? t('On par with the city average')
+                : t('{{pct}}% {{dir}} than the city average', {
+                    pct: Math.abs(vsCity.percentDiff),
+                    dir: vsCity.percentDiff < 0 ? t('cheaper') : t('pricier'),
+                  })}
+            </Text>
+          </View>
+        ) : null}
       </View>
     </BaseWidget>
   );
@@ -177,90 +93,44 @@ export function NeighborhoodRatingWidget({
 const styles = StyleSheet.create({
   container: {
     paddingVertical: 10,
-  },
-  loadingContainer: {
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    marginTop: 8,
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_4,
-  },
-  errorContainer: {
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  errorText: {
-    marginTop: 8,
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: colors.primaryColor,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: colors.primaryForeground,
-    fontSize: 14,
-    fontWeight: '600',
+    gap: 14,
   },
   headerSection: {
-    marginBottom: 15,
+    gap: 2,
   },
   neighborhoodName: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 5,
   },
-  overallRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  starsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ratingNumber: {
-    marginLeft: 5,
-    fontSize: 14,
+  citySubtitle: {
+    fontSize: 13,
     color: colors.COLOR_BLACK_LIGHT_4,
   },
-  categoriesSection: {
-    marginBottom: 15,
-  },
-  categoryItem: {
+  metricsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
+    gap: 12,
   },
-  categoryInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  metric: {
+    flex: 1,
+    gap: 2,
   },
-  categoryName: {
-    marginLeft: 8,
-    fontSize: 14,
-  },
-  moreButton: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-    alignItems: 'center',
-  },
-  moreButtonText: {
+  metricValue: {
+    fontSize: 18,
+    fontWeight: '700',
     color: colors.primaryColor,
-    fontWeight: '600',
-    fontSize: 14,
+  },
+  metricLabel: {
+    fontSize: 12,
+    color: colors.COLOR_BLACK_LIGHT_4,
+  },
+  vsCityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  vsCityText: {
+    fontSize: 13,
+    color: colors.COLOR_BLACK_LIGHT_3,
+    flexShrink: 1,
   },
 });

@@ -1,0 +1,38 @@
+{
+  "name": "@homiio/listing-providers",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "description": "Plugin-based listing providers for the Homiio market aggregator (contract + runtime + provider plugins)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "bunx tsc",
+    "dev": "bunx tsc --watch",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "lint": "eslint src --ext .ts",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": [
+    "homiio",
+    "listings",
+    "providers",
+    "ingestion"
+  ],
+  "author": "Homiio Team",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@homiio/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "@types/node": "^22.10.0",
+    "@typescript-eslint/eslint-plugin": "^8.60.0",
+    "@typescript-eslint/parser": "^8.60.0",
+    "eslint": "^9.39.0",
+    "globals": "^17.6.0",
+    "typescript": "^6.0.3"
+  },
+  "files": [
+    "dist/**/*"
+  ]
+}

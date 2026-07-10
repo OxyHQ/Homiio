@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
+import * as Linking from 'expo-linking';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { BaseWidget } from './BaseWidget';
@@ -25,8 +26,7 @@ export function HorizonInitiativeWidget() {
         style={styles.joinButton}
         textStyle={styles.joinButtonText}
         onPress={() => {
-          const url = 'https://oxy.so/horizon';
-          window.open(url, '_blank');
+          Linking.openURL('https://oxy.so/horizon').catch(() => undefined);
         }}
       >
         {t('home.horizon.learnMore', 'Learn More')}

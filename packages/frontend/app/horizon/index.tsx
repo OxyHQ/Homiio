@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useRouter } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { colors } from '@/styles/colors';
 import { shadowToken } from '@/styles/shadows';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +10,6 @@ import { Header } from '@/components/Header';
 
 export default function HorizonPage() {
   const { t } = useTranslation();
-  const router = useRouter();
 
   const benefitItems: {
     icon: 'home-outline' | 'medkit-outline' | 'airplane-outline' | 'people-outline';
@@ -154,7 +153,12 @@ export default function HorizonPage() {
           <Text style={styles.joinDescription}>
             {t('Apply today and take the first step toward ethical, accessible housing worldwide.')}
           </Text>
-          <TouchableOpacity style={styles.joinButton} onPress={() => router.push('/horizon/apply')}>
+          <TouchableOpacity
+            style={styles.joinButton}
+            onPress={() => {
+              Linking.openURL('https://oxy.so/horizon').catch(() => undefined);
+            }}
+          >
             <Text style={styles.joinButtonText}>{t('Apply for Membership')}</Text>
           </TouchableOpacity>
         </View>

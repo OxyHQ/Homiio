@@ -7,8 +7,8 @@
  * presentation type used by the area-insights UI.
  */
 
-import { Pagination } from './common';
-import { City } from './geo';
+import { Coordinates, Pagination } from './common';
+import { City, CurrencyCode } from './geo';
 import { Property } from './property';
 
 export interface CityFilters {
@@ -34,41 +34,41 @@ export interface CitiesResponse {
 }
 
 /**
- * Neighborhood scoring/insights presentation type (area-insights UI). Distinct
- * from the canonical `Neighborhood` entity in `./geo`: this carries derived
- * ratings/amenities for display, not the stored geo document.
+ * Neighborhood-vs-city rent contrast. Present only when BOTH the neighborhood
+ * and its city expose at least one comparable long-term listing average.
  */
-export interface NeighborhoodData {
-  id: string;
-  name: string;
-  /** Owning city id (relational ref into the City collection). */
-  cityId: string;
-  overallScore: number;
-  ratings: NeighborhoodRating[];
-  description?: string;
-  population?: number;
-  averageRent?: number;
-  crimeRate?: number;
-  walkScore?: number;
-  transitScore?: number;
-  bikeScore?: number;
-  amenities?: {
-    restaurants: number;
-    cafes: number;
-    bars: number;
-    groceryStores: number;
-    parks: number;
-    schools: number;
-    hospitals: number;
-    shoppingCenters: number;
-  };
-  images?: string[];
-  lastUpdated: string;
+export interface NeighborhoodVsCity {
+  /** City-wide average long-term monthly rent (same basis as the neighborhood avg). */
+  cityAverageRent: number;
+  /** Integer percent difference of the neighborhood vs the city (negative = cheaper). */
+  percentDiff: number;
 }
 
-export interface NeighborhoodRating {
-  category: string;
-  score: number;
-  weight: number;
-  description: string;
+/**
+ * Neighborhood metrics DTO returned by `/api/neighborhoods/*`.
+ *
+ * Derived ENTIRELY from Homiio's own listings — there are no invented
+ * walkability / transit / safety scores. When a metric has no real source it is
+ * `null`/omitted rather than fabricated, and consumers hide the surface.
+ */
+export interface NeighborhoodMetrics {
+  id: string;
+  name: string;
+  /** Owning city display name. */
+  city: string;
+  /** Owning city id (relational ref into the City collection). */
+  cityId: string;
+  /** Optional centroid for map framing. */
+  centroid?: Coordinates;
+  /** Count of published, available listings whose address resolves to this neighborhood. */
+  listingCount: number;
+  /**
+   * Average long-term monthly rent (rounded) across those listings, or `null`
+   * when none of them carry a positive monthly rent.
+   */
+  averageRent: number | null;
+  /** Currency the `averageRent` is denominated in (the owning city's currency). */
+  currency?: CurrencyCode;
+  /** Neighborhood-vs-city rent contrast, or `null` when it can't be computed. */
+  vsCity: NeighborhoodVsCity | null;
 }

@@ -7,7 +7,7 @@ This document describes the comprehensive notification system implemented in the
 The notification system provides:
 - **Local notifications** for immediate user feedback
 - **Scheduled notifications** for reminders and timed alerts
-- **Server notifications** via WebSocket for real-time updates
+- **Server notifications** fetched on demand (refetch-on-focus + query invalidation after writes). There is no realtime socket channel; notifications are produced server-side by domain events (see `services/notificationDispatchService.ts` in the backend).
 - **Badge management** for app icon unread counts
 - **Permission management** with user-friendly prompts
 - **Notification preferences** for granular control
@@ -19,7 +19,7 @@ The notification system provides:
 
 1. **NotificationContext** (`context/NotificationContext.tsx`)
    - Central state management for all notification-related data
-   - Handles permission requests, badge management, and socket connections
+   - Handles permission requests, badge management, and mailbox refresh
    - Provides unified API for notification operations
 
 2. **Notification Utilities** (`utils/notifications.ts`)
@@ -29,13 +29,7 @@ The notification system provides:
 
 3. **Notification Service** (`services/notificationService.ts`)
    - Server-side notification management
-   - API integration for fetching and managing notifications
-   - Real-time notification handling
-
-4. **Notification Socket** (`utils/notificationsSocket.ts`)
-   - WebSocket connection for real-time notifications
-   - Automatic reconnection and error handling
-   - Token refresh management
+   - API integration for fetching and managing notifications (list, mark-read, read-all, clear-all)
 
 ### Screens
 

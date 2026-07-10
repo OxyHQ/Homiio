@@ -15,9 +15,11 @@ import { PropertyPreviewWidget } from './PropertyPreviewWidget';
 import { PropertyBookingWidget } from './PropertyBookingWidget';
 import { DonationWidget } from './DonationWidget';
 
-// Feature flag: controls whether the Neighborhood widget is rendered
+// Feature flag: controls whether the Neighborhood widget is rendered.
+// Off by default — the widget only renders real, Homiio-derived metrics, so it
+// stays gated until neighborhood data coverage is broad enough to be useful.
 const NEIGHBORHOOD_WIDGET_ENABLED =
-  (process.env.NEXT_PUBLIC_NEIGHBORHOOD_WIDGET_ENABLED || '').toLowerCase() === 'true';
+  (process.env.EXPO_PUBLIC_NEIGHBORHOOD_WIDGET_ENABLED || '').toLowerCase() === 'true';
 
 // Define screen IDs
 export type ScreenId =

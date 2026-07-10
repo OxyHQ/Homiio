@@ -118,7 +118,6 @@ NODE_ENV=development
 PORT=4000
 OXY_API_URL=http://localhost:3001
 DATABASE_URL=mongodb://localhost:27017/homiio
-JWT_SECRET=your_jwt_secret
 ```
 
 ## Models

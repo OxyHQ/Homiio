@@ -76,12 +76,7 @@ import { useLayoutScroll } from '@/context/LayoutScrollContext';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { useUIStore } from '@/store/uiStore';
 import { colors } from '@/styles/colors';
-import {
-  resolvePagePadding,
-  resolveSectionSpacing,
-  spacing,
-  tracker,
-} from '@/constants/styles';
+import { resolvePagePadding, spacing, tracker } from '@/constants/styles';
 
 /**
  * Hero photo used at the bottom of the home page Host CTA. Reuses a
@@ -358,8 +353,6 @@ export default function HomePage() {
     ],
   }));
 
-  const sectionGap = resolveSectionSpacing(isWide);
-
   /**
    * Featured grid title leans on the current browse mode: buy users see homes
    * for sale, exchange users see home swaps, vacation users see beach stays,
@@ -407,12 +400,15 @@ export default function HomePage() {
     <View style={styles.root}>
       <Animated.ScrollView
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: spacing['5xl'] }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
       >
+        {/* Section rhythm is owned here by NativeWind `gap` — every direct
+            child below is a page section, evenly spaced (32px mobile / 48px
+            web) with no per-section `marginTop`. */}
+        <View className="gap-8 md:gap-12 pb-14">
         {/* === Hero canvas === */}
         <View style={[styles.heroSection, { paddingTop: insets.top + (isWide ? spacing['3xl'] : spacing['5xl']) }]}>
           <Animated.View style={[styles.heroImageWrap, heroParallaxStyle]}>
@@ -482,64 +478,100 @@ export default function HomePage() {
         </View>
 
         {/* === Category strip (sticky on web) === */}
-        <View style={[styles.categoryStripWrap, { marginTop: sectionGap }]}>
+        <View style={styles.categoryStripWrap}>
           <HomeCategoryStrip sticky />
         </View>
 
         {/* === Featured Properties carousel === */}
         {featuredProperties.length > 0 ? (
-          <View style={{ marginTop: sectionGap }}>
-            <HomeCarouselSection
-              title={t('home.featured.title', 'Top picks for you')}
-              items={featuredProperties}
-              loading={propertiesLoading}
-              renderItem={(property) => (
-                <PropertyCard
-                  property={property}
-                  variant="featured"
-                  // Home rows are themselves horizontal scrollers; an in-card
-                  // photo pager would fight the row swipe, so keep one photo here.
-                  enableImageCarousel={false}
-                  onPress={() => router.push(`/properties/${property._id || property.id}`)}
-                />
-              )}
-            />
-          </View>
+          <HomeCarouselSection
+            title={t('home.featured.title', 'Top picks for you')}
+            items={featuredProperties}
+            loading={propertiesLoading}
+            renderItem={(property) => (
+              <PropertyCard
+                property={property}
+                variant="featured"
+                // Home rows are themselves horizontal scrollers; an in-card
+                // photo pager would fight the row swipe, so keep one photo here.
+                enableImageCarousel={false}
+                onPress={() => router.push(`/properties/${property._id || property.id}`)}
+              />
+            )}
+          />
         ) : null}
 
         {/* === City Showcase (DB cities, adaptive region/country title) === */}
         {cities.length > 0 ? (
-          <View style={{ marginTop: sectionGap }}>
-            <CityShowcaseSection
-              title={t('home.cityShowcase.title', {
-                defaultValue: 'Explore {{place}}',
-                place: explorePlace,
-              })}
-              items={cities}
-              onPressCity={handleNavigateToCity}
-            />
-          </View>
+          <CityShowcaseSection
+            title={t('home.cityShowcase.title', {
+              defaultValue: 'Explore {{place}}',
+              place: explorePlace,
+            })}
+            items={cities}
+            onPressCity={handleNavigateToCity}
+          />
         ) : null}
 
         {/* === Featured Grid (mode-aware) === */}
         {gridProperties.length > 0 ? (
-          <View style={{ marginTop: sectionGap }}>
-            <FeaturedGridSection
-              title={featuredGridTitle}
-              items={gridProperties}
-              onPropertyPress={(property) =>
-                router.push(`/properties/${property._id || property.id}`)
-              }
-            />
-          </View>
+          <FeaturedGridSection
+            title={featuredGridTitle}
+            items={gridProperties}
+            onPropertyPress={(property) =>
+              router.push(`/properties/${property._id || property.id}`)
+            }
+          />
         ) : null}
 
         {/* === Continue browsing (Recently Viewed) === */}
         {recentlyViewedProperties && recentlyViewedProperties.length > 0 ? (
-          <View style={{ marginTop: sectionGap }}>
+          <HomeCarouselSection
+            title={t('home.recentlyViewed.continue', 'Continue browsing')}
+            items={recentlyViewedProperties}
+            loading={false}
+            renderItem={(property) => (
+              <PropertyCard
+                property={property}
+                variant="featured"
+                // Home rows are themselves horizontal scrollers; an in-card
+                // photo pager would fight the row swipe, so keep one photo here.
+                enableImageCarousel={false}
+                onPress={() => router.push(`/properties/${property._id || property.id}`)}
+              />
+            )}
+          />
+        ) : null}
+
+        {/* === Saved Properties === */}
+        {savedProperties && savedProperties.length > 0 ? (
+          <HomeCarouselSection<Property>
+            title={t('home.saved.title') || 'Saved properties'}
+            items={savedProperties as Property[]}
+            loading={savedLoading}
+            renderItem={(property) => (
+              <PropertyCard
+                property={property}
+                variant="featured"
+                // Home rows are themselves horizontal scrollers; an in-card
+                // photo pager would fight the row swipe, so keep one photo here.
+                enableImageCarousel={false}
+                onPress={() => router.push(`/properties/${property._id || property.id}`)}
+              />
+            )}
+          />
+        ) : null}
+
+        {/* === Nearby city carousels (only when location + properties available) === */}
+        {nearbyCities.map((city) => {
+          const cityId = city._id;
+          const cityProperties = nearbyProperties[cityId];
+          if (!cityProperties || cityProperties.length === 0) return null;
+          return (
             <HomeCarouselSection
-              title={t('home.recentlyViewed.continue', 'Continue browsing')}
-              items={recentlyViewedProperties}
+              key={cityId}
+              title={t('home.nearby.title', { city: city.name }) || `Homes in ${city.name}`}
+              items={cityProperties}
               loading={false}
               renderItem={(property) => (
                 <PropertyCard
@@ -552,53 +584,6 @@ export default function HomePage() {
                 />
               )}
             />
-          </View>
-        ) : null}
-
-        {/* === Saved Properties === */}
-        {savedProperties && savedProperties.length > 0 ? (
-          <View style={{ marginTop: sectionGap }}>
-            <HomeCarouselSection<Property>
-              title={t('home.saved.title') || 'Saved properties'}
-              items={savedProperties as Property[]}
-              loading={savedLoading}
-              renderItem={(property) => (
-                <PropertyCard
-                  property={property}
-                  variant="featured"
-                  // Home rows are themselves horizontal scrollers; an in-card
-                  // photo pager would fight the row swipe, so keep one photo here.
-                  enableImageCarousel={false}
-                  onPress={() => router.push(`/properties/${property._id || property.id}`)}
-                />
-              )}
-            />
-          </View>
-        ) : null}
-
-        {/* === Nearby city carousels (only when location + properties available) === */}
-        {nearbyCities.map((city) => {
-          const cityId = city._id;
-          const cityProperties = nearbyProperties[cityId];
-          if (!cityProperties || cityProperties.length === 0) return null;
-          return (
-            <View key={cityId} style={{ marginTop: sectionGap }}>
-              <HomeCarouselSection
-                title={t('home.nearby.title', { city: city.name }) || `Homes in ${city.name}`}
-                items={cityProperties}
-                loading={false}
-                renderItem={(property) => (
-                  <PropertyCard
-                    property={property}
-                    variant="featured"
-                    // Home rows are themselves horizontal scrollers; an in-card
-                    // photo pager would fight the row swipe, so keep one photo here.
-                    enableImageCarousel={false}
-                    onPress={() => router.push(`/properties/${property._id || property.id}`)}
-                  />
-                )}
-              />
-            </View>
           );
         })}
 
@@ -609,7 +594,7 @@ export default function HomePage() {
             grid mode each banner runs in `fill` mode (no intrinsic aspectRatio,
             no own page padding) so `alignItems: 'stretch'` equalises height. */}
         {isWide ? (
-          <View style={[styles.ctaGridRow, { marginTop: sectionGap, gap: sectionGap }]}>
+          <View className="gap-8 md:gap-12" style={styles.ctaGridRow}>
             <HostCtaBanner
               fill
               title={t('home.hostCta.title', 'List your space, find a great tenant')}
@@ -632,33 +617,28 @@ export default function HomePage() {
           </View>
         ) : (
           <>
-            <View style={{ marginTop: sectionGap }}>
-              <HostCtaBanner
-                title={t('home.hostCta.title', 'List your space, find a great tenant')}
-                subtitle={t(
-                  'home.hostCta.subtitle',
-                  'Reach verified renters across Spain — free to list, fair fees, real human support.',
-                )}
-                ctaLabel={t('home.hostCta.cta', 'Become a host')}
-                imageUrl={HOST_CTA_IMAGE}
-                onPress={handleBecomeHost}
-              />
-            </View>
-            <View style={{ marginTop: sectionGap }}>
-              <AgentCtaBanner
-                title={t('agent.banner.title', 'Start today. No license needed.')}
-                subtitle={t('agent.banner.subtitle', 'Turn the homes around you into income.')}
-                ctaLabel={t('agent.banner.cta', 'Become an agent')}
-                trustLine={t('agent.banner.trust', 'No license needed. Work from your phone.')}
-                onPress={handleBecomeAgent}
-              />
-            </View>
+            <HostCtaBanner
+              title={t('home.hostCta.title', 'List your space, find a great tenant')}
+              subtitle={t(
+                'home.hostCta.subtitle',
+                'Reach verified renters across Spain — free to list, fair fees, real human support.',
+              )}
+              ctaLabel={t('home.hostCta.cta', 'Become a host')}
+              imageUrl={HOST_CTA_IMAGE}
+              onPress={handleBecomeHost}
+            />
+            <AgentCtaBanner
+              title={t('agent.banner.title', 'Start today. No license needed.')}
+              subtitle={t('agent.banner.subtitle', 'Turn the homes around you into income.')}
+              ctaLabel={t('agent.banner.cta', 'Become an agent')}
+              trustLine={t('agent.banner.trust', 'No license needed. Work from your phone.')}
+              onPress={handleBecomeAgent}
+            />
           </>
         )}
 
         {/* === Footer trust strip === */}
-        <View style={{ marginTop: sectionGap }}>
-          <HomeFooterStrip chunks={footerChunks} />
+        <HomeFooterStrip chunks={footerChunks} />
         </View>
       </Animated.ScrollView>
     </View>
@@ -765,9 +745,9 @@ const createStyles = (
     // Closing CTA banners — wide-screen 50/50 grid. The row owns the outer page
     // padding (the `fill` banners drop their own) and lays out two equal columns
     // that stretch to the taller one for a balanced, equal-height grid. The
-    // inter-column `gap` + `marginTop` are applied inline (they track the
-    // runtime `sectionGap`). Only mounted when `isWide`, so the padding always
-    // resolves to the wide/desktop value.
+    // inter-column gutter comes from NativeWind `gap-8 md:gap-12` on the row.
+    // Only mounted when `isWide`, so the padding always resolves to the
+    // wide/desktop value.
     ctaGridRow: {
       flexDirection: 'row',
       alignItems: 'stretch',

@@ -9,6 +9,7 @@ import { Property, ViewingRequest, Profile } from '../models';
 import { PropertyStatus } from '@homiio/shared-types';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
+import { notificationDispatchService } from '../services/notificationDispatchService';
 
 class ViewingController {
   /**
@@ -88,6 +89,16 @@ class ViewingController {
       });
 
       logger.info('Viewing request created', { viewingId: viewing._id, propertyId, requesterProfileId, ownerProfileId });
+
+      // Notify the property owner that someone requested a viewing.
+      await notificationDispatchService.createForProfile(String(ownerProfileId), {
+        type: 'property',
+        title: 'New viewing request',
+        message: 'Someone requested a viewing for your property.',
+        priority: 'high',
+        data: { viewingId: viewing._id.toString(), propertyId: String(propertyId), screen: '/viewings' },
+      });
+
       res.status(201).json(successResponse(viewing.toJSON(), 'Viewing request created'));
     } catch (error) {
       next(error);
@@ -204,6 +215,20 @@ class ViewingController {
 
       viewing.status = 'approved';
       await viewing.save();
+
+      // Notify the requester that their viewing was approved.
+      await notificationDispatchService.createForProfile(String(viewing.requesterProfileId), {
+        type: 'property',
+        title: 'Viewing approved',
+        message: 'Your viewing request was approved.',
+        priority: 'high',
+        data: {
+          viewingId: viewing._id.toString(),
+          propertyId: String(viewing.propertyId),
+          screen: '/viewings',
+        },
+      });
+
       res.json(successResponse(viewing.toJSON(), 'Viewing request approved'));
     } catch (error) {
       next(error);
@@ -232,6 +257,20 @@ class ViewingController {
 
       viewing.status = 'declined';
       await viewing.save();
+
+      // Notify the requester that their viewing was declined.
+      await notificationDispatchService.createForProfile(String(viewing.requesterProfileId), {
+        type: 'property',
+        title: 'Viewing declined',
+        message: 'Your viewing request was declined.',
+        priority: 'medium',
+        data: {
+          viewingId: viewing._id.toString(),
+          propertyId: String(viewing.propertyId),
+          screen: '/viewings',
+        },
+      });
+
       res.json(successResponse(viewing.toJSON(), 'Viewing request declined'));
     } catch (error) {
       next(error);
@@ -262,6 +301,25 @@ class ViewingController {
       viewing.status = 'cancelled';
       viewing.cancelledBy = isOwner ? 'owner' : 'requester';
       await viewing.save();
+
+      // Notify the counterparty that the viewing was cancelled.
+      const cancelRecipientProfileId = isOwner
+        ? String(viewing.requesterProfileId)
+        : String(viewing.ownerProfileId);
+      await notificationDispatchService.createForProfile(cancelRecipientProfileId, {
+        type: 'property',
+        title: 'Viewing cancelled',
+        message: isOwner
+          ? 'The owner cancelled a viewing you requested.'
+          : 'A viewing request for your property was cancelled.',
+        priority: 'medium',
+        data: {
+          viewingId: viewing._id.toString(),
+          propertyId: String(viewing.propertyId),
+          screen: '/viewings',
+        },
+      });
+
       res.json(successResponse(viewing.toJSON(), 'Viewing request cancelled'));
     } catch (error) {
       next(error);

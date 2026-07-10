@@ -4,6 +4,7 @@
  */
 
 import express from 'express';
+import neighborhoodRoutes from './neighborhoods';
 const propertyController = require('../controllers/propertyController');
 const telegramController = require('../controllers/telegramController');
 const cityController = require('../controllers/cityController');
@@ -81,6 +82,9 @@ export default function () {
   router.get('/cities/lookup', asyncHandler(cityController.getCityByLocation));
   router.get('/cities/:id', asyncHandler(cityController.getCityById));
   router.get('/cities/:id/properties', asyncHandler(cityController.getPropertiesByCity));
+
+  // Public neighborhood routes (metrics derived from Homiio listings)
+  router.use('/neighborhoods', neighborhoodRoutes());
 
   // Public tips routes
   router.get('/tips', asyncHandler(tipsController.getAllTips));

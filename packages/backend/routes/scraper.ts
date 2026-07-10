@@ -6,8 +6,14 @@
 import express from 'express';
 import { runExternalScrape, getScraperHealth, cleanupExpiredProperties, ScraperOptions } from '../services/scraperService';
 import { asyncHandler } from '../middlewares';
+import { requireAdmin } from '../middlewares/requireAdmin';
 
 const router = express.Router();
+
+// External ingestion management is admin-only. These routes are mounted under
+// the authenticated router (server.ts), so `req.user` is resolved here; this
+// gate additionally restricts them to configured platform admins.
+router.use(requireAdmin);
 
 /**
  * GET /api/scraper/health
@@ -75,23 +81,18 @@ router.post('/cleanup', asyncHandler(async (req: express.Request, res: express.R
 
 /**
  * GET /api/scraper/sources
- * Get available scraper sources and their configuration
+ *
+ * Legacy source list. The Fotocasa `localhost:3000` sidecar source has been
+ * retired: external listing ingestion now runs in the dedicated worker via the
+ * `@homiio/listing-providers` plugins (see `worker.ts`), not through a
+ * hardcoded HTTP endpoint here. Returns an empty list so no stale sidecar
+ * dependency is advertised.
  */
 router.get('/sources', asyncHandler(async (req: express.Request, res: express.Response) => {
-  const sources = [
-    {
-      source: 'fotocasa',
-      endpoint: process.env.FOTOCASA_BASE || 'http://localhost:3000/search/all/barcelona',
-      transformerName: 'fotocasa',
-      enabled: true,
-      description: 'Fotocasa property listings'
-    }
-    // Add more sources as they become available
-  ];
-
   res.json({
     success: true,
-    data: sources
+    data: [],
+    message: 'Legacy scraper sources retired; external ingestion runs in the listing worker.',
   });
 }));
 

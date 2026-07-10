@@ -3,9 +3,8 @@
  *
  * Shows the submitted application payload. Renders role-appropriate actions:
  *  - Applicant on submitted/reviewing: "Withdraw" (confirm dialog)
- *  - Applicant on approved:            "Sign lease" (deep link placeholder)
- *  - Landlord actions live on the dedicated /landlord/applications/[id]
- *    screen so this stays focused on the applicant flow.
+ *  - Landlord on approved:             "Create lease" → /contracts/new?application=
+ *    (the landlord-only bridge seeds a draft lease from this application)
  *
  * Documents are linked via signed S3 URLs returned by the API.
  *
@@ -169,10 +168,10 @@ export default function ApplicationDetailScreen() {
     );
   }, [application, role]);
 
-  const showSignLease = useMemo<boolean>(() => {
+  const showCreateLease = useMemo<boolean>(() => {
     if (!application) return false;
     return (
-      role === 'applicant' &&
+      role === 'landlord' &&
       application.status === TenantApplicationStatus.APPROVED
     );
   }, [application, role]);
@@ -193,10 +192,10 @@ export default function ApplicationDetailScreen() {
     }
   }, [id, application, updateMutation]);
 
-  const handleSignLease = useCallback(() => {
+  const handleCreateLease = useCallback(() => {
     if (!id) return;
     router.push({
-      pathname: '/leases/new',
+      pathname: '/contracts/new',
       params: { application: id },
     });
   }, [id, router]);
@@ -360,16 +359,16 @@ export default function ApplicationDetailScreen() {
             </CardSurface>
           ) : null}
 
-          {(showSignLease || canWithdraw) ? (
+          {(showCreateLease || canWithdraw) ? (
             <View style={styles.actionRow}>
-              {showSignLease ? (
+              {showCreateLease ? (
                 <Button
                   variant="primary"
                   size="medium"
-                  onPress={handleSignLease}
+                  onPress={handleCreateLease}
                   style={styles.actionButton}
                 >
-                  Sign lease
+                  Create lease
                 </Button>
               ) : null}
               {canWithdraw ? (

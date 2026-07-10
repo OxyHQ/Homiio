@@ -7,6 +7,8 @@ import { useOxy } from '@oxyhq/services';
 
 export interface RoommateProfile extends Profile {
   matchScore?: number;
+  /** Oxy account display name, hydrated by the backend serializer. */
+  displayName?: string;
 }
 
 export interface RoommateRequest {
@@ -121,10 +123,20 @@ export const useRoommate = () => {
 
   // Fetch roommate relationships
   const fetchRelationships = useCallback(async () => {
-    // Backend endpoint not available yet; avoid 404 noise and show empty state
-    setRelationships([]);
+    if (!oxyServices || !activeSessionId) return;
+    setLoading(true);
     setError(null);
-  }, [setRelationships, setError]);
+    try {
+      const result = await relationshipsQuery.refetch();
+      if (result.error) {
+        setError(result.error.message || 'Failed to fetch relationships');
+        return;
+      }
+      setRelationships(Array.isArray(result.data) ? [...result.data] : []);
+    } finally {
+      setLoading(false);
+    }
+  }, [oxyServices, activeSessionId, relationshipsQuery, setLoading, setError, setRelationships]);
 
   // Mutations
   const sendRequestMutation = useMutation({

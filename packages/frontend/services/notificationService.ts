@@ -20,56 +20,18 @@ export interface NotificationFilters {
   limit?: number;
 }
 
-export interface NotificationSettings {
-  userId: string;
-  emailNotifications: {
-    enabled: boolean;
-    types: {
-      payment_reminders: boolean;
-      maintenance_requests: boolean;
-      system_updates: boolean;
-      marketing: boolean;
-    };
-  };
-  pushNotifications: {
-    enabled: boolean;
-    types: {
-      payment_reminders: boolean;
-      maintenance_requests: boolean;
-      system_updates: boolean;
-      marketing: boolean;
-    };
-  };
-  smsNotifications: {
-    enabled: boolean;
-    types: {
-      payment_reminders: boolean;
-      maintenance_requests: boolean;
-      system_updates: boolean;
-      marketing: boolean;
-    };
-  };
-  quietHours: {
-    enabled: boolean;
-    startTime: string;
-    endTime: string;
-    timezone: string;
-  };
-  frequency: {
-    digest: 'daily' | 'weekly' | 'never';
-    realTime: boolean;
-  };
+export interface NotificationListResponse {
+  notifications: Notification[];
+  unreadCount: number;
+  total: number;
+  page: number;
+  totalPages: number;
 }
 
 class NotificationService {
   private baseUrl = '/api/notifications';
 
-  async getNotifications(filters?: NotificationFilters): Promise<{
-    notifications: Notification[];
-    total: number;
-    page: number;
-    totalPages: number;
-  }> {
+  async getNotifications(filters?: NotificationFilters): Promise<NotificationListResponse> {
     const response = await api.get(this.baseUrl, { params: filters });
     return response.data;
   }
@@ -95,44 +57,10 @@ class NotificationService {
     await api.delete(`${this.baseUrl}/clear-all`);
   }
 
-  async getNotificationSettings(): Promise<NotificationSettings> {
-    const response = await api.get(`${this.baseUrl}/preferences/settings`);
-    return response.data.data;
-  }
-
-  async updateNotificationSettings(
-    settings: Partial<NotificationSettings>,
-  ): Promise<NotificationSettings> {
-    const response = await api.put(`${this.baseUrl}/preferences/settings`, settings);
-    return response.data.data;
-  }
-
   // Utility methods
   async getUnreadCount(): Promise<number> {
-    try {
-      const response = await this.getNotifications({ unreadOnly: true, limit: 1 });
-      return response.total;
-    } catch (error) {
-      return 0;
-    }
-  }
-
-  async getNotificationsByType(type: string, limit = 10): Promise<Notification[]> {
-    try {
-      const response = await this.getNotifications({ type, limit });
-      return response.notifications;
-    } catch (error) {
-      return [];
-    }
-  }
-
-  async getHighPriorityNotifications(limit = 5): Promise<Notification[]> {
-    try {
-      const response = await this.getNotifications({ priority: 'high', limit });
-      return response.notifications;
-    } catch (error) {
-      return [];
-    }
+    const response = await this.getNotifications({ limit: 1 });
+    return response.unreadCount;
   }
 }
 

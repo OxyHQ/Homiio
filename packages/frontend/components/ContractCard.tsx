@@ -26,10 +26,11 @@ import { StatusBadge, type StatusType } from './ui/StatusBadge';
 export type ContractStatus =
   | 'draft'
   | 'pending'
-  | 'pending_signature'
+  | 'pending_signatures'
   | 'active'
   | 'expired'
-  | 'terminated';
+  | 'terminated'
+  | 'cancelled';
 
 interface ContractCardProps {
   id: string;

@@ -27,13 +27,19 @@ router.get('/status', asyncHandler(roommateController.getCurrentUserRoommateStat
   // Get roommate requests
   router.get('/requests', asyncHandler(roommateController.getRoommateRequests));
 
-  // Send roommate request
-  router.post('/:profileId/request', asyncHandler(roommateController.sendRoommateRequest));
+  // Get confirmed roommate relationships
+  router.get('/relationships', asyncHandler(roommateController.getRoommateRelationships));
 
-  // Accept roommate request
+  // End a roommate relationship (participant only)
+  router.delete('/relationships/:relationshipId', asyncHandler(roommateController.endRoommateRelationship));
+
+  // Accept roommate request (static path before the dynamic `/:profileId/request`)
   router.post('/requests/:requestId/accept', asyncHandler(roommateController.acceptRoommateRequest));
 
   // Decline roommate request
   router.post('/requests/:requestId/decline', asyncHandler(roommateController.declineRoommateRequest));
+
+  // Send roommate request
+  router.post('/:profileId/request', asyncHandler(roommateController.sendRoommateRequest));
 
 export default () => router; 

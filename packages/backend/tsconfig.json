@@ -17,6 +17,12 @@
       ],
       "@homiio/shared-types/*": [
         "../shared-types/src/*"
+      ],
+      "@homiio/listing-providers": [
+        "../listing-providers/src"
+      ],
+      "@homiio/listing-providers/*": [
+        "../listing-providers/src/*"
       ]
     }
   },
@@ -32,6 +38,9 @@
   "references": [
     {
       "path": "../shared-types"
+    },
+    {
+      "path": "../listing-providers"
     }
   ]
 }

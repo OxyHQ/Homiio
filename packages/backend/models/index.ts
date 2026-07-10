@@ -46,6 +46,7 @@ import type {
   IImage,
   IPlacePoi,
   IRoommateRequest,
+  IRoommateRelationship,
   ITip,
 } from './documentTypes';
 
@@ -78,6 +79,7 @@ const CommissionModel = require('./schemas/CommissionSchema') as Model<ICommissi
 const ImageModel = require('./schemas/ImageSchema') as Model<IImage>;
 const PlacePoiModel = require('./schemas/PlacePoiSchema') as Model<IPlacePoi>;
 const RoommateRequestModel = require('./schemas/RoommateRequestSchema') as Model<IRoommateRequest>;
+const RoommateRelationshipModel = require('./schemas/RoommateRelationshipSchema') as Model<IRoommateRelationship>;
 const TipModel = require('./schemas/TipSchema') as Model<ITip>;
 
 // Named ES exports — preferred for new code.
@@ -108,6 +110,7 @@ export const Commission = CommissionModel;
 export const Image = ImageModel;
 export const PlacePoi = PlacePoiModel;
 export const RoommateRequest = RoommateRequestModel;
+export const RoommateRelationship = RoommateRelationshipModel;
 export const Tip = TipModel;
 
 // Re-export the document interfaces so callers can `import type { ILease } from '../models'`.
@@ -147,6 +150,7 @@ export type {
   IImage,
   IPlacePoi,
   IRoommateRequest,
+  IRoommateRelationship,
   ITip,
 };
 
@@ -184,5 +188,6 @@ module.exports = {
   Image: ImageModel,
   PlacePoi: PlacePoiModel,
   RoommateRequest: RoommateRequestModel,
+  RoommateRelationship: RoommateRelationshipModel,
   Tip: TipModel,
 };

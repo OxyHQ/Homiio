@@ -30,15 +30,29 @@ export interface Config {
       bufferCommands?: boolean;
     };
   };
-  jwt: {
-    secret: string;
-    expiresIn: string;
-    refreshSecret: string;
-    refreshExpiresIn: string;
-  };
   redis: {
     url: string;
     ttl: number;
+  };
+  /**
+   * Listing-ingestion worker + queue settings. `enabled` is env-gated on an
+   * explicit `REDIS_URL`; without it the worker falls back to inline processing.
+   */
+  listingWorker: {
+    /** Whether a real Redis/Valkey URL is configured (enables BullMQ). */
+    redisConfigured: boolean;
+    /** BullMQ key prefix (Oxy convention `bull:homiio-listings`). */
+    queuePrefix: string;
+    /** Enqueue an initial discover pass on worker boot (default false). */
+    discoverOnBoot: boolean;
+  };
+  /**
+   * Admin gate. Only these Oxy user ids may call privileged endpoints (e.g.
+   * `/api/scraper/*`). Sourced from `HOMIIO_ADMIN_OXY_USER_IDS` (comma-separated).
+   * An empty list denies everyone — privileged routes are locked until set.
+   */
+  admin: {
+    oxyUserIds: string[];
   };
   email: {
     service: string;
@@ -169,18 +183,27 @@ const config: Config = {
     }
   },
   
-  // JWT Configuration
-  jwt: {
-    secret: process.env.JWT_SECRET || 'your-secret-key',
-    expiresIn: process.env.JWT_EXPIRES_IN || '24h',
-    refreshSecret: process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key',
-    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
-  },
-  
   // Redis Configuration (for caching and sessions)
   redis: {
     url: process.env.REDIS_URL || 'redis://localhost:6379',
     ttl: parseInt(process.env.REDIS_TTL || '3600', 10), // 1 hour
+  },
+
+  // Listing-ingestion worker + queue (BullMQ on the existing REDIS_URL).
+  listingWorker: {
+    redisConfigured: Boolean(process.env.REDIS_URL),
+    // Oxy convention: queue/prefix names must not contain ':'; BullMQ joins the
+    // prefix and queue name with ':' itself, so keep our parts colon-free.
+    queuePrefix: process.env.LISTING_QUEUE_PREFIX || 'bull-homiio-listings',
+    discoverOnBoot: process.env.LISTING_DISCOVER_ON_BOOT === 'true',
+  },
+
+  // Admin gate for privileged endpoints (scraper/ingestion management).
+  admin: {
+    oxyUserIds: (process.env.HOMIIO_ADMIN_OXY_USER_IDS || '')
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean),
   },
   
   // Email Configuration

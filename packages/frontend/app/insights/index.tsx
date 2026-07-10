@@ -109,6 +109,9 @@ export default function InsightsScreen() {
                 <ThemedText style={styles.subtitle}>Marketplace overview for rentals</ThemedText>
             </LinearGradient>
 
+            {/* Vertical rhythm between the stacked blocks is owned here by
+                NativeWind `gap` — no per-block stacking margins. */}
+            <View className="w-full items-center gap-2">
             {/* KPI cards use a coordinated multi-hue data-viz accent palette
                 (indigo / green / amber / cyan). These accent gradients and tint
                 circles are intentional chart colors, not Bloom theme tokens. */}
@@ -276,6 +279,7 @@ export default function InsightsScreen() {
                     )}
                 />
             </View>
+            </View>
         </ScrollView>
     );
 }
@@ -346,7 +350,6 @@ const styles = StyleSheet.create({
     section: {
         width: '100%',
         alignItems: 'center',
-        marginTop: 8,
     },
     sectionTitle: {
         width: '100%',

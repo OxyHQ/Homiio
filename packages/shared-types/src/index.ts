@@ -47,5 +47,8 @@ export * from './report';
 // Partner (agent) referral-commission types
 export * from './partner';
 
+// Listing-provider ingestion DTO (NormalizedListing + provider identifiers)
+export * from './listing';
+
 // Pure, dependency-free property-title helpers shared by frontend and backend
 export * from './utils/propertyTitle';

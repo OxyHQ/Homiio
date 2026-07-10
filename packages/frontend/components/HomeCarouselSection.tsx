@@ -5,9 +5,8 @@
  * left/right arrow controls that only appear when the content overflows
  * on wide breakpoints (hidden on mobile — touch swipe is enough there).
  *
- * Section rhythm is owned by the parent — this component renders the
- * scroller and only adds a small bottom margin so consecutive sections
- * still breathe even when no eyebrow is passed.
+ * Section rhythm is owned entirely by the parent (NativeWind `gap`); this
+ * component renders only its header + scroller and carries no outer margin.
  */
 import React, { useRef, useState } from 'react';
 import {
@@ -188,7 +187,7 @@ export function HomeCarouselSection<T>({
   const disableLeftArrow = scrollX <= 0;
 
   return (
-    <View style={styles.section}>
+    <View>
       <View style={styles.sectionHeader}>
         <View style={styles.headerText}>
           {eyebrow ? <SectionEyebrow>{eyebrow}</SectionEyebrow> : null}
@@ -271,9 +270,6 @@ export function HomeCarouselSection<T>({
 }
 
 const styles = StyleSheet.create({
-  section: {
-    marginBottom: spacing['3xl'],
-  },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'flex-end',

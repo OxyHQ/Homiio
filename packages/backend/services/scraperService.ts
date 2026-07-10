@@ -39,6 +39,8 @@ interface ExternalRawAddress {
 
 interface ExternalRawListing {
   id?: string;
+  sourceUrl?: string;
+  url?: string;
   address?: ExternalRawAddress;
   rent?: { amount?: number; currency?: string };
   description?: string;
@@ -211,7 +213,9 @@ function mapToProperty(raw: any): { property: Record<string, unknown>; addressIn
             isPrimary: !!img.isPrimary || idx === 0
           }))
         : [],
-      status: raw.status ?? 'active',
+      // External aggregator listings are published (visible in search). The
+      // Property status enum has no 'active' member — 'published' is correct.
+      status: raw.status ?? 'published',
     };
 
     return { property, addressInput };
@@ -264,6 +268,8 @@ export async function upsertExternalListing(
         addressId: address._id,
         source,
         sourceId: raw.id,
+        // Always record the canonical source URL (the aggregator CTA target).
+        sourceUrl: raw.sourceUrl || raw.url,
         isExternal: true,
         // Extend TTL by resetting expiresAt each refresh
         expiresAt: new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000)

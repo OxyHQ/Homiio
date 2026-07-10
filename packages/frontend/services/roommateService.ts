@@ -11,6 +11,42 @@ export type { Profile, PersonalProfile, RoommatePreferences };
  */
 export type RoommateMatchingPreferences = NonNullable<RoommatePreferences['preferences']>;
 
+/**
+ * A profile as returned inside roommate DTOs. Extends the base {@link Profile}
+ * with the backend-hydrated Oxy `displayName` and the computed compatibility
+ * `matchScore`.
+ */
+export interface RoommateProfile extends Profile {
+  displayName?: string;
+  matchScore?: number;
+}
+
+/** A serialized roommate request as returned by `GET /roommates/requests`. */
+export interface RoommateRequestDTO {
+  id: string;
+  senderProfileId?: string;
+  receiverProfileId?: string;
+  sender: RoommateProfile | null;
+  receiver: RoommateProfile | null;
+  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  message?: string;
+  matchScore: number;
+  createdAt: string;
+}
+
+/** A serialized roommate relationship as returned by `GET /roommates/relationships`. */
+export interface RoommateRelationshipDTO {
+  id: string;
+  profile1Id?: string;
+  profile2Id?: string;
+  profile1: RoommateProfile | null;
+  profile2: RoommateProfile | null;
+  status: 'active' | 'inactive' | 'ended';
+  matchScore: number;
+  startDate: string;
+  endDate?: string;
+}
+
 export interface RoommateFilters {
   minMatchPercentage?: number;
   maxBudget?: number;
@@ -62,37 +98,39 @@ class RoommateService {
     _oxyServices?: OxyServices,
     _activeSessionId?: string,
   ): Promise<{
-    profiles: Profile[];
+    profiles: RoommateProfile[];
     total: number;
     page: number;
     totalPages: number;
   }> {
-    try {
-      const response = await api.get(this.baseUrl, { params: filters });
-      const data = response.data;
-      if (Array.isArray(data?.profiles)) {
-        data.profiles = data.profiles.map((p: any) => ({
-          ...p,
-          matchScore: p.matchPercentage ?? p.matchScore,
-        }));
-      }
-      return data;
-    } catch (error) {
-      return { profiles: [], total: 0, page: 1, totalPages: 1 };
-    }
+    const response = await api.get<{
+      profiles?: (Profile & { matchPercentage?: number; matchScore?: number })[];
+      total?: number;
+      page?: number;
+      totalPages?: number;
+    }>(this.baseUrl, { params: filters });
+    const data = response.data;
+    return {
+      profiles: (data.profiles ?? []).map((p) => ({
+        ...p,
+        matchScore: p.matchPercentage ?? p.matchScore,
+      })),
+      total: data.total ?? 0,
+      page: data.page ?? 1,
+      totalPages: data.totalPages ?? 1,
+    };
   }
 
-  // Get current user's roommate preferences
+  // Get current user's roommate preferences (the inner matching-preferences
+  // slice persisted under `roommate.preferences`).
   async getMyRoommatePreferences(
     _oxyServices?: OxyServices,
     _activeSessionId?: string,
-  ): Promise<RoommatePreferences | null> {
-    try {
-      const response = await api.get(`${this.baseUrl}/preferences`);
-      return response.data.data;
-    } catch (error) {
-      return null;
-    }
+  ): Promise<RoommateMatchingPreferences | null> {
+    const response = await api.get<{ data?: RoommateMatchingPreferences | null }>(
+      `${this.baseUrl}/preferences`,
+    );
+    return response.data.data ?? null;
   }
 
   // Get current user's roommate matching status (enabled flag)
@@ -108,18 +146,22 @@ class RoommateService {
     }
   }
 
-  // Update roommate preferences
+  // Update roommate preferences. The matching-preference fields are sent flat
+  // (top-level) to match the backend's field whitelist; `enabled` toggles the
+  // matching flag in the same call when provided. Returns the saved prefs.
   async updateRoommatePreferences(
-    preferences: RoommatePreferences,
-    _oxyServices?: OxyServices,
-    _activeSessionId?: string,
-  ): Promise<RoommatePreferences> {
-    try {
-      const response = await api.put(`${this.baseUrl}/preferences`, preferences);
-      return response.data.data;
-    } catch (error) {
-      throw error;
+    preferences: RoommateMatchingPreferences,
+    enabled?: boolean,
+  ): Promise<RoommateMatchingPreferences | null> {
+    const body: Record<string, unknown> = { ...preferences };
+    if (typeof enabled === 'boolean') {
+      body.enabled = enabled;
     }
+    const response = await api.put<{ data?: RoommateMatchingPreferences | null }>(
+      `${this.baseUrl}/preferences`,
+      body,
+    );
+    return response.data.data ?? null;
   }
 
   // Enable/disable roommate matching for current profile
@@ -160,28 +202,17 @@ class RoommateService {
     _oxyServices?: OxyServices,
     _activeSessionId?: string,
   ): Promise<{
-    sent: any[];
-    received: any[];
+    sent: RoommateRequestDTO[];
+    received: RoommateRequestDTO[];
   }> {
-    try {
-      const response = await api.get(`${this.baseUrl}/requests`);
-      const data = response.data.data;
-      if (Array.isArray(data?.sent)) {
-        data.sent = data.sent.map((r: any) => ({
-          ...r,
-          matchScore: r.matchPercentage ?? r.matchScore,
-        }));
-      }
-      if (Array.isArray(data?.received)) {
-        data.received = data.received.map((r: any) => ({
-          ...r,
-          matchScore: r.matchPercentage ?? r.matchScore,
-        }));
-      }
-      return data;
-    } catch (error) {
-      return { sent: [], received: [] };
-    }
+    const response = await api.get<{ data?: { sent?: RoommateRequestDTO[]; received?: RoommateRequestDTO[] } }>(
+      `${this.baseUrl}/requests`,
+    );
+    const data = response.data.data;
+    return {
+      sent: data?.sent ?? [],
+      received: data?.received ?? [],
+    };
   }
 
   // Decline roommate request
@@ -212,13 +243,15 @@ class RoommateService {
     }
   }
 
-  // Get roommate relationships (not yet implemented on backend)
+  // Get roommate relationships for the current profile
   async getRoommateRelationships(
     _oxyServices?: OxyServices,
     _activeSessionId?: string,
-  ): Promise<{ data: any[] }> {
-    // Gracefully return empty list to avoid 404s until backend is ready
-    return { data: [] };
+  ): Promise<{ data: RoommateRelationshipDTO[] }> {
+    const response = await api.get<{ data?: RoommateRelationshipDTO[] }>(
+      `${this.baseUrl}/relationships`,
+    );
+    return { data: response.data.data ?? [] };
   }
 
   // End roommate relationship

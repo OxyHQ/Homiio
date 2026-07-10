@@ -11,6 +11,8 @@ module.exports = {
   moduleNameMapper: {
     '^@homiio/shared-types$': '<rootDir>/../shared-types/src',
     '^@homiio/shared-types/(.*)$': '<rootDir>/../shared-types/src/$1',
+    '^@homiio/listing-providers$': '<rootDir>/../listing-providers/src',
+    '^@homiio/listing-providers/(.*)$': '<rootDir>/../listing-providers/src/$1',
   },
   transform: {
     '^.+\\.ts$': [

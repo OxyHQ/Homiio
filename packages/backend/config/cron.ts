@@ -1,70 +1,33 @@
-import { CronConfig, ScrapeSource } from '../types/cron';
+import { CronConfig } from '../types/cron';
 
 /**
- * Cron service configuration
+ * Cron service configuration.
+ *
+ * The legacy per-source scrape schedule (and the Fotocasa `localhost:3000`
+ * sidecar source list) has been RETIRED: external listing ingestion now runs in
+ * the dedicated worker via `@homiio/listing-providers` on BullMQ, not on a cron
+ * in the API process. Only the housekeeping schedules (health + TTL cleanup)
+ * remain here.
  */
 export const cronConfig: CronConfig = {
-  scrapeInterval: '*/30 * * * * *', // Every 30 seconds
+  scrapeInterval: '', // retired — no scrape loop runs in the API process
   healthCheckInterval: '*/5 * * * *', // Every 5 minutes
   cleanupSchedule: '0 2 * * *', // Daily at 2 AM
   timezone: 'UTC'
 };
 
 /**
- * Scrape sources configuration
- *
- * NOTE: The Fotocasa scraper depends on an external proxy service running at
- * the configured FOTOCASA_ENDPOINT (defaults to a local sidecar at
- * http://localhost:3000). When that service is absent or its credentials are
- * misconfigured the upstream returns 401/403, the cron loop fires every 30
- * seconds, and the backend log fills with noise. To avoid that the source is
- * OPT-IN: set `FOTOCASA_ENABLED=true` AND provide a working endpoint to turn
- * it back on. See `services/scraper-notes.md` for the long-term plan.
- */
-export const scrapeSources: ScrapeSource[] = [
-  {
-    source: 'fotocasa',
-    endpoint: process.env.FOTOCASA_ENDPOINT || 'http://localhost:3000/search/all/barcelona',
-    pages: parseInt(process.env.FOTOCASA_PAGES || '1', 10),
-    enabled: process.env.FOTOCASA_ENABLED === 'true',
-    timeout: parseInt(process.env.FOTOCASA_TIMEOUT || '30000', 10),
-    maxRetries: parseInt(process.env.FOTOCASA_MAX_RETRIES || '3', 10),
-    batchSize: parseInt(process.env.FOTOCASA_BATCH_SIZE || '25', 10),
-    ttlDays: parseInt(process.env.FOTOCASA_TTL_DAYS || '30', 10)
-  },
-  // Add more sources here as needed
-  // {
-  //   source: 'idealista',
-  //   endpoint: process.env.IDEALISTA_ENDPOINT || 'http://localhost:3000/search/all/madrid',
-  //   pages: parseInt(process.env.IDEALISTA_PAGES || '1', 10),
-  //   enabled: process.env.IDEALISTA_ENABLED === 'true',
-  //   timeout: parseInt(process.env.IDEALISTA_TIMEOUT || '30000', 10),
-  //   maxRetries: parseInt(process.env.IDEALISTA_MAX_RETRIES || '3', 10),
-  //   batchSize: parseInt(process.env.IDEALISTA_BATCH_SIZE || '25', 10),
-  //   ttlDays: parseInt(process.env.IDEALISTA_TTL_DAYS || '30', 10)
-  // }
-];
-
-/**
- * Get environment-specific configuration
+ * Get environment-specific cron configuration (health + cleanup schedules).
  */
 export function getCronConfig(): CronConfig {
   const env = process.env.NODE_ENV || 'development';
-  
+
   if (env === 'production') {
     return {
       ...cronConfig,
-      scrapeInterval: '*/60 * * * * *', // Every minute in production
       healthCheckInterval: '*/10 * * * *', // Every 10 minutes in production
     };
   }
-  
-  return cronConfig;
-}
 
-/**
- * Get enabled scrape sources
- */
-export function getEnabledSources(): ScrapeSource[] {
-  return scrapeSources.filter(source => source.enabled);
+  return cronConfig;
 }

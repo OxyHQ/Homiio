@@ -2,6 +2,7 @@ import { api } from '@/utils/api';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
 import {
   PropertyType,
+  PropertyStatus,
   PropertyFilters,
   Property,
   PropertyImage,
@@ -9,7 +10,15 @@ import {
   PropertyNearbyServices,
   CreatePropertyData,
   UpdatePropertyData,
+  Commission,
 } from '@homiio/shared-types';
+
+/** The `{ property, commission }` payload returned by mark-transacted. */
+export interface MarkTransactedResult {
+  property: Property;
+  /** Commission created on close, or null when the listing was not sourced. */
+  commission: Commission | null;
+}
 
 // Re-export types for use in other files
 export { Property, PropertyFilters, PropertyType } from '@homiio/shared-types';
@@ -409,6 +418,28 @@ class PropertyService {
     } catch (error) {
       throw error;
     }
+  }
+
+  /**
+   * Close a deal on an owned listing: mark it rented/sold and (for
+   * partner-sourced listings) fire the Partner commission trigger. Owner-only —
+   * the backend resolves ownership from the Oxy session and rejects a
+   * non-owner. The optional terminal `status` (`rented` | `sold`) is inferred
+   * from the listing's offerings when omitted.
+   *
+   * Returns the updated property plus the commission created on close (null
+   * when the listing was not sourced by a partner). Transport/HTTP errors
+   * propagate so the calling mutation owns the error/toast state.
+   */
+  async markPropertyTransacted(
+    propertyId: string,
+    status?: PropertyStatus,
+  ): Promise<MarkTransactedResult> {
+    const response = await api.post(
+      `${this.baseUrl}/${propertyId}/mark-transacted`,
+      status ? { status } : {},
+    );
+    return response.data.data as MarkTransactedResult;
   }
 }
 

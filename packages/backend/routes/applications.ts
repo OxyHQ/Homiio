@@ -72,5 +72,12 @@ export default function () {
     asyncHandler(applicationController.updateApplicationStatus)
   );
 
+  // POST /api/applications/:id/create-lease — landlord turns an approved
+  // application into a draft lease (owner ids resolved server-side).
+  router.post(
+    '/:id/create-lease',
+    asyncHandler(applicationController.createLeaseFromApplication)
+  );
+
   return router;
 }

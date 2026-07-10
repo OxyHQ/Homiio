@@ -28,6 +28,7 @@ import { Loading } from '@oxyhq/bloom/loading';
 import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
 import { useOxy } from '@oxyhq/services';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { RoommateMatch } from '@/components/RoommateMatch';
 import { RoommateRequestComponent } from '@/components/RoommateRequest';
@@ -115,6 +116,7 @@ export default function RoommatesPage() {
     requests,
     relationships,
     isLoading,
+    error,
     fetchProfiles,
     fetchRequests,
     fetchRelationships,
@@ -268,12 +270,11 @@ export default function RoommatesPage() {
   const [prevPreferencesData, setPrevPreferencesData] = useState(preferencesData);
   if (preferencesData !== prevPreferencesData) {
     setPrevPreferencesData(preferencesData);
-    if (preferencesData?.preferences) {
-      const prefs = preferencesData.preferences;
+    if (preferencesData?.budget) {
       setRoomFilters((prev: PropertyFilters) => ({
         ...prev,
-        minPrice: prefs.budget?.min,
-        maxPrice: prefs.budget?.max,
+        minPrice: preferencesData.budget?.min,
+        maxPrice: preferencesData.budget?.max,
       }));
     }
   }
@@ -297,6 +298,16 @@ export default function RoommatesPage() {
         <View style={styles.loadingWrap}>
           <Loading variant="spinner" />
         </View>
+      );
+    }
+
+    if (error && profiles.length === 0) {
+      return (
+        <ErrorState
+          title="Couldn't load roommates"
+          description={error}
+          onRetry={fetchProfiles}
+        />
       );
     }
 
@@ -367,6 +378,16 @@ export default function RoommatesPage() {
       );
     }
 
+    if (error && requests.sent.length === 0 && requests.received.length === 0) {
+      return (
+        <ErrorState
+          title="Couldn't load requests"
+          description={error}
+          onRetry={fetchRequests}
+        />
+      );
+    }
+
     if (requests.sent.length === 0 && requests.received.length === 0) {
       return (
         <EmptyState
@@ -428,6 +449,16 @@ export default function RoommatesPage() {
         <View style={styles.loadingWrap}>
           <Loading variant="spinner" />
         </View>
+      );
+    }
+
+    if (error && relationships.length === 0) {
+      return (
+        <ErrorState
+          title="Couldn't load relationships"
+          description={error}
+          onRetry={fetchRelationships}
+        />
       );
     }
 

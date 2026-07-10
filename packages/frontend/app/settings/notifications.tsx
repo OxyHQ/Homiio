@@ -60,7 +60,7 @@ export default function NotificationSettingsScreen() {
     hasPermission,
     updatePreferences,
     requestPermissions,
-    clearBadgeCount,
+    clearAllNotifications,
   } = useNotifications();
 
   const [isUpdating, setIsUpdating] = useState(false);
@@ -104,7 +104,7 @@ export default function NotificationSettingsScreen() {
   const handleClearAll = useCallback(async () => {
     try {
       setClearing(true);
-      await clearBadgeCount();
+      await clearAllNotifications();
       toast.success(
         t('notification.clearAll.success', 'All notifications cleared'),
       );
@@ -116,7 +116,7 @@ export default function NotificationSettingsScreen() {
       setClearing(false);
       setConfirmClear(false);
     }
-  }, [clearBadgeCount, t]);
+  }, [clearAllNotifications, t]);
 
   const categoryRows: PreferenceRow[] = [
     {
@@ -385,7 +385,7 @@ export default function NotificationSettingsScreen() {
           ))}
         </SettingsListGroup>
 
-        {hasPermission ? (
+        {__DEV__ && hasPermission ? (
           <SettingsListGroup
             title={t('notification.settings.test', 'Test notifications')}
             footer={t(

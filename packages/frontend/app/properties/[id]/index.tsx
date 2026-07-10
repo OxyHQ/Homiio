@@ -312,7 +312,7 @@ export default function PropertyDetailPage() {
     checkActiveViewing();
   }, [id, oxyServices, activeSessionId]);
 
-  const handleContact = useCallback(() => {
+  const handleContact = useCallback(async () => {
     if (apiProperty?.isExternal) {
       if (!apiProperty.sourceUrl) {
         toast.error(
@@ -321,7 +321,14 @@ export default function PropertyDetailPage() {
         );
         return;
       }
-      router.push(`/browser?url=${encodeURIComponent(apiProperty.sourceUrl)}`);
+      try {
+        await Linking.openURL(apiProperty.sourceUrl);
+      } catch {
+        toast.error(
+          t('error.source.openFailed', 'Could not open the source website') ||
+            'Could not open the source website',
+        );
+      }
       return;
     }
     if (!oxyServices || !activeSessionId) {
@@ -332,8 +339,17 @@ export default function PropertyDetailPage() {
       showSignInModal();
       return;
     }
-    router.push(`/chat/${property?.id}`);
-  }, [apiProperty, oxyServices, activeSessionId, t, router, property?.id]);
+    // Homiio has no in-app messaging product, so "contact the owner" resolves to
+    // the real enquiry surface: a viewing request for short-stay listings and a
+    // tenant application otherwise. Never route to a non-existent chat screen.
+    const targetId = apiProperty?._id ?? apiProperty?.id ?? property?.id;
+    if (!targetId) return;
+    if (rentalMode === 'vacation') {
+      router.push(`/properties/${targetId}/book-viewing`);
+    } else {
+      router.push(`/properties/${targetId}/apply`);
+    }
+  }, [apiProperty, oxyServices, activeSessionId, t, router, rentalMode, property?.id]);
 
   const handleCall = useCallback(async () => {
     if (!oxyServices || !activeSessionId) {
@@ -393,7 +409,7 @@ export default function PropertyDetailPage() {
     }
   }, [oxyServices, activeSessionId, landlordProfile, t]);
 
-  const handlePublicHousingApply = useCallback(() => {
+  const handlePublicHousingApply = useCallback(async () => {
     const state = (apiProperty?.address?.regionName || '').toLowerCase();
     const stateWebsites: Record<string, string> = {
       california:
@@ -404,8 +420,15 @@ export default function PropertyDetailPage() {
     };
     const websiteUrl =
       stateWebsites[state] || 'https://www.hud.gov/topics/rental_assistance/phprog';
-    router.push(`/browser?url=${encodeURIComponent(websiteUrl)}`);
-  }, [apiProperty?.address?.regionName, router]);
+    try {
+      await Linking.openURL(websiteUrl);
+    } catch {
+      toast.error(
+        t('error.publicHousing.openFailed', 'Could not open the housing website') ||
+          'Could not open the housing website',
+      );
+    }
+  }, [apiProperty?.address?.regionName, t]);
 
   const handleShare = useCallback(async () => {
     if (!property) return;

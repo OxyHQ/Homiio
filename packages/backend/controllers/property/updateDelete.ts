@@ -1,6 +1,7 @@
 import { PropertyStatus } from '@homiio/shared-types';
 import { applyOfferingRulesForUpdate, OfferingValidationError, type OfferingBearingPayload } from './offeringRules';
-import { EDITABLE_PROPERTY_FIELDS, pickFields } from './editableFields';
+import { EDITABLE_PROPERTY_FIELDS } from './editableFields';
+import { pickFields } from '../../utils/pickFields';
 import { onPropertyTransacted } from '../../services/commissionService';
 import { Property } from '../../models';
 import { AppError, successResponse } from '../../middlewares/errorHandler';

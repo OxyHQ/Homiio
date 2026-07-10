@@ -292,6 +292,10 @@ const leaseSchema = new mongoose.Schema({
     enum: ['draft', 'pending_signatures', 'active', 'expired', 'terminated', 'cancelled'],
     default: 'draft'
   },
+  notes: {
+    type: String,
+    trim: true
+  },
   inspections: [{
     type: {
       type: String,

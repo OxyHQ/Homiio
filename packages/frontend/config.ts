@@ -81,14 +81,6 @@ export const API_URL =
   process.env.EXPO_PUBLIC_API_URL ||
   (__DEV__ ? buildDevUrl('http') : 'https://api.homiio.com');
 
-/**
- * Realtime socket base URL. Mirrors {@link API_URL} but over `ws://`, honoring
- * `EXPO_PUBLIC_API_URL_SOCKET` when present.
- */
-export const API_URL_SOCKET =
-  process.env.EXPO_PUBLIC_API_URL_SOCKET ||
-  (__DEV__ ? buildDevUrl('ws') : 'wss://api.homiio.com');
-
 export const OXY_BASE_URL =
   process.env.EXPO_PUBLIC_OXY_API_URL ||
   process.env.EXPO_PUBLIC_OXY_BASE_URL ||

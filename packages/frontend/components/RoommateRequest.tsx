@@ -73,17 +73,8 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
     }
   };
 
-  const getDisplayName = (profile: RoommateProfile) => {
-    const personal = profile.personalProfile;
-    // Try to get name from bio or use default
-    if (personal?.personalInfo?.bio) {
-      const bioWords = personal.personalInfo.bio.split(' ');
-      if (bioWords.length > 0 && bioWords[0].length > 2) {
-        return bioWords[0];
-      }
-    }
-    return 'User';
-  };
+  const getDisplayName = (profile: RoommateProfile) =>
+    profile.displayName?.trim() || 'Roommate';
 
   const getStatusColor = (status: string) => {
     switch (status) {

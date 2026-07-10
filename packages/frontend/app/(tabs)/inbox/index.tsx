@@ -133,6 +133,9 @@ export default function InboxScreen() {
           await markAsRead(notification.id);
         }
 
+        // Prefer the producer-supplied deep link; every screen we emit is a real
+        // route. Fall back to type-based routing for legacy notifications, and
+        // only to routes that actually exist in the app.
         const screen = notification.data?.screen;
         if (typeof screen === 'string') {
           router.push(screen);
@@ -141,12 +144,10 @@ export default function InboxScreen() {
           notification.data?.propertyId
         ) {
           router.push(`/properties/${notification.data.propertyId}`);
-        } else if (notification.type === 'message') {
-          router.push('/messages');
         } else if (notification.type === 'contract') {
           router.push('/contracts');
-        } else if (notification.type === 'payment') {
-          router.push('/payments');
+        } else if (notification.type === 'roommate') {
+          router.push('/roommates');
         }
       } catch (pressError: unknown) {
         logger.error('Failed to handle notification press:', pressError);

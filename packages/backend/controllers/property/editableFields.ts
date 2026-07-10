@@ -67,27 +67,3 @@ export const CREATABLE_PROPERTY_FIELDS: readonly string[] = [
 export const EDITABLE_PROPERTY_FIELDS: readonly string[] = CREATABLE_PROPERTY_FIELDS.filter(
   (field) => field !== 'type',
 );
-
-/**
- * Return a new object containing only the `allowed` keys that are actually
- * present on `body`. Never mutates `body`; never carries over unknown keys.
- *
- * `req.body` is untyped (Express types it as `any`); the picked keys form a
- * partial property payload that downstream consumers (the offering rules and the
- * Mongoose model) validate field-by-field. The generic `T` lets a caller name
- * the partial-payload shape it expects at this validated boundary, so the result
- * is typed without `any` and without re-spreading the raw body.
- */
-export function pickFields<T extends object>(
-  body: unknown,
-  allowed: readonly string[],
-): Partial<T> {
-  const source = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
-  const picked: Record<string, unknown> = {};
-  for (const key of allowed) {
-    if (Object.prototype.hasOwnProperty.call(source, key)) {
-      picked[key] = source[key];
-    }
-  }
-  return picked as Partial<T>;
-}

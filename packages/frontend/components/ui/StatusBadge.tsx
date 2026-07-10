@@ -10,9 +10,11 @@ export type StatusType =
   // Contract statuses
   | 'draft'
   | 'pending'
+  | 'pending_signatures'
   | 'active'
   | 'expired'
   | 'terminated'
+  | 'cancelled'
   // Payment statuses
   | 'processing'
   | 'completed'
@@ -54,12 +56,16 @@ function getStatusInfo(status: StatusType): StatusInfo {
       return { icon: 'document-outline', color: colors.COLOR_BLACK_LIGHT_3, badgeColor: 'default', label: 'Draft' };
     case 'pending':
       return { icon: 'hourglass-outline', color: colors.warning, badgeColor: 'warning', label: 'Pending' };
+    case 'pending_signatures':
+      return { icon: 'create-outline', color: colors.warning, badgeColor: 'warning', label: 'Pending signatures' };
     case 'active':
       return { icon: 'checkmark-circle', color: colors.success, badgeColor: 'success', label: 'Active' };
     case 'expired':
       return { icon: 'calendar-outline', color: colors.textTertiary, badgeColor: 'default', label: 'Expired' };
     case 'terminated':
       return { icon: 'close-circle-outline', color: colors.danger, badgeColor: 'error', label: 'Terminated' };
+    case 'cancelled':
+      return { icon: 'close-circle-outline', color: colors.textTertiary, badgeColor: 'default', label: 'Cancelled' };
     // Payment statuses
     case 'processing':
       return { icon: 'reload-outline', color: colors.info, badgeColor: 'info', label: 'Processing' };

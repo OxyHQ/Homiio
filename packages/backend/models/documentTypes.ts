@@ -406,6 +406,21 @@ export type IRoommateRequest = Document & {
   updatedAt: Date;
 } & Loose;
 
+// ---------- Roommate Relationship ----------
+
+export type IRoommateRelationship = Document & {
+  _id: Id;
+  profile1Id: Id;
+  profile2Id: Id;
+  requestId?: Id;
+  matchScore: number;
+  status: 'active' | 'ended';
+  startDate: Date;
+  endDate?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+} & Loose;
+
 // ---------- Tip ----------
 
 export type ITip = Document & {

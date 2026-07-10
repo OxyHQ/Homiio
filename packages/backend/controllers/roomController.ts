@@ -17,10 +17,14 @@ import { AppError, successResponse, paginationResponse } from '../middlewares/er
 import {
   CREATABLE_PROPERTY_FIELDS,
   EDITABLE_PROPERTY_FIELDS,
-  pickFields,
 } from './property/editableFields';
+import { pickFields } from '../utils/pickFields';
+import { onPropertyTransacted } from '../services/commissionService';
 
 const ROOM_TYPE = PropertyType.ROOM;
+
+/** Statuses that close a deal and (for sourced rooms) earn a commission. */
+const TERMINAL_STATUSES: ReadonlyArray<string> = [PropertyStatus.RENTED, PropertyStatus.SOLD];
 
 function errorName(error: unknown): string | undefined {
   if (error && typeof error === 'object' && 'name' in error) {
@@ -160,26 +164,46 @@ class RoomController {
       }
       const profileId = activeProfile._id;
 
-      // Resolve the address (either a full address object or an existing id).
+      // A room is ALWAYS part of a parent property the caller owns. Resolve and
+      // ownership-check the parent server-side — attaching a room to a property
+      // you don't own would be an IDOR. The parent is mandatory (the schema
+      // requires `parentPropertyId` for room-type properties).
+      const { parentPropertyId } = req.body;
+      if (!parentPropertyId) {
+        return next(new AppError('parentPropertyId is required to create a room', 400, 'VALIDATION_ERROR'));
+      }
+      const parent = await Property.findById(parentPropertyId);
+      if (!parent) {
+        return next(new AppError('Parent property not found', 404, 'PARENT_PROPERTY_NOT_FOUND'));
+      }
+      if (String(parent.profileId) !== String(profileId)) {
+        return next(new AppError('Access denied - you can only add rooms to your own property', 403, 'FORBIDDEN'));
+      }
+
+      // Resolve the address (either a full address object or an existing id),
+      // falling back to the parent property's address when none is supplied.
       let addressId;
       if (req.body.address) {
         const address = await Address.findOrCreateCanonical(req.body.address);
         addressId = address._id;
       } else if (req.body.addressId) {
         addressId = req.body.addressId;
+      } else if (parent.addressId) {
+        addressId = parent.addressId;
       } else {
         return next(new AppError('Address information is required', 400, 'MISSING_ADDRESS'));
       }
 
       // Build the room from an explicit field whitelist; never spread
-      // `req.body`. Ownership, address linkage and the room type are all set
-      // server-side below.
+      // `req.body`. Ownership, address linkage, parent linkage and the room type
+      // are all set server-side below.
       const roomData = pickFields(req.body, CREATABLE_PROPERTY_FIELDS);
 
       const room = new Property({
         ...roomData,
         profileId,
         addressId,
+        parentPropertyId: parent._id,
         type: ROOM_TYPE,
       });
 
@@ -267,9 +291,32 @@ class RoomController {
       // mass-assignment is possible.
       const updateData = pickFields(req.body, EDITABLE_PROPERTY_FIELDS);
 
+      // Capture the pre-update status so we can detect a deal-closing transition
+      // below (a room is a Property, so it closes deals identically to a full
+      // listing — mirroring updateProperty in property/updateDelete).
+      const previousStatus = room.status;
+
       Object.assign(room, updateData);
       const updatedRoom = await room.save();
       await updatedRoom.populate('addressId');
+
+      // When this edit closes the deal (status → rented/sold) on a room sourced
+      // by a partner, fire the commission trigger — exactly as updateProperty
+      // does. It is idempotent (at most one commission per property, ever) and a
+      // no-op for the common case where the room carries no partner attribution.
+      const transitionedToTerminal =
+        previousStatus !== updatedRoom.status && TERMINAL_STATUSES.includes(updatedRoom.status);
+      if (transitionedToTerminal && updatedRoom.sourcedByPartner) {
+        try {
+          await onPropertyTransacted(updatedRoom);
+        } catch (commissionError) {
+          // A commission failure must not fail the room update itself.
+          logger.error('Failed to process commission on room close', {
+            roomId: id,
+            error: commissionError instanceof Error ? commissionError.message : String(commissionError),
+          });
+        }
+      }
 
       logger.info('Room updated', {
         roomId: id,

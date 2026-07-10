@@ -12,15 +12,22 @@
  *                     submitted -> withdrawn (applicant)
  */
 
-import { Property, TenantApplication, Profile } from '../models';
+import type { Request, Response, NextFunction } from 'express';
+import { Property, TenantApplication, Profile, Lease } from '../models';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
 import imageUploadService from '../services/imageUploadService';
+import { toLeaseDTO } from './lease/toLeaseDTO';
 const {
   TenantApplicationStatus,
   TenantApplicationDocumentType,
-  OfferingType
+  OfferingType,
+  LeaseStatus
 } = require('@homiio/shared-types');
+
+/** Currency codes the Lease `rentDetails` block accepts (schema enum). */
+const LEASE_CURRENCIES = new Set(['USD', 'EUR', 'GBP', 'CAD']);
+const ACTIVE_LEASE_STATUSES = [LeaseStatus.DRAFT, LeaseStatus.PENDING_SIGNATURES, LeaseStatus.ACTIVE];
 
 const ALLOWED_DOCUMENT_TYPES = new Set(Object.values(TenantApplicationDocumentType));
 const APPLICATION_DOCUMENTS_FOLDER = 'applications/documents';
@@ -391,6 +398,77 @@ class ApplicationController {
       });
 
       res.json(successResponse(application.toJSON(), 'Application updated'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/applications/:id/create-lease
+   *
+   * Landlord-only bridge: turn an APPROVED application into a DRAFT lease. All
+   * owner ids and lifecycle fields are resolved server-side (no request body is
+   * trusted) — the landlord edits the draft afterwards via PUT /api/leases/:id.
+   * The lease terms are seeded from the application (move-in date + term months)
+   * and the rent from the property's long-term-rent block.
+   */
+  async createLeaseFromApplication(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const oxyUserId = req.user?.id || req.user?._id || req.userId;
+      if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
+
+      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
+
+      const application = await TenantApplication.findById(id);
+      if (!application) return next(new AppError('Application not found', 404, 'NOT_FOUND'));
+
+      if (String(application.landlordProfileId) !== String(activeProfile._id)) {
+        return next(new AppError('Only the landlord can create a lease from this application', 403, 'FORBIDDEN'));
+      }
+      if (application.status !== TenantApplicationStatus.APPROVED) {
+        return next(new AppError('Application must be approved before creating a lease', 400, 'INVALID_STATE'));
+      }
+
+      const property = await Property.findById(application.propertyId);
+      if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
+
+      const existing = await Lease.findOne({
+        propertyId: application.propertyId,
+        tenantProfileId: application.applicantProfileId,
+        status: { $in: ACTIVE_LEASE_STATUSES }
+      });
+      if (existing) {
+        return next(new AppError('A lease already exists for this tenant and property', 409, 'LEASE_ALREADY_EXISTS'));
+      }
+
+      const startDate = new Date(application.moveInDate as string | number | Date);
+      const endDate = new Date(startDate);
+      endDate.setMonth(endDate.getMonth() + Number(application.leaseTermMonths || 0));
+
+      const rentBlock = (property.longTermRent || {}) as { monthlyAmount?: number; currency?: string };
+      if (rentBlock.monthlyAmount === undefined || rentBlock.monthlyAmount === null) {
+        return next(new AppError('Property has no long-term rent price to base the lease on', 400, 'INVALID_PROPERTY'));
+      }
+      const currency = rentBlock.currency && LEASE_CURRENCIES.has(rentBlock.currency) ? rentBlock.currency : 'USD';
+
+      const lease = await Lease.create({
+        propertyId: application.propertyId,
+        landlordProfileId: activeProfile._id,
+        tenantProfileId: application.applicantProfileId,
+        status: LeaseStatus.DRAFT,
+        leaseTerms: { startDate, endDate },
+        rentDetails: { monthlyRent: rentBlock.monthlyAmount, currency }
+      });
+
+      logger.info('Lease draft created from application', {
+        applicationId: String(application._id),
+        leaseId: String(lease._id),
+        landlordProfileId: String(activeProfile._id)
+      });
+
+      res.status(201).json(successResponse(toLeaseDTO(lease), 'Lease draft created from application'));
     } catch (error) {
       next(error);
     }

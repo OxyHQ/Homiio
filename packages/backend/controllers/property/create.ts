@@ -1,6 +1,7 @@
 import { ProfileType } from '@homiio/shared-types';
 import { applyOfferingRulesForCreate, OfferingValidationError, type OfferingBearingPayload } from './offeringRules';
-import { CREATABLE_PROPERTY_FIELDS, pickFields } from './editableFields';
+import { CREATABLE_PROPERTY_FIELDS } from './editableFields';
+import { pickFields } from '../../utils/pickFields';
 import { Property } from '../../models';
 import { telegramService } from '../../services';
 import { logger, businessLogger } from '../../middlewares/logging';

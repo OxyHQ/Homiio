@@ -1,113 +1,202 @@
 /**
- * Roommate preferences — toggle matching and review preference summary.
+ * Roommate preferences — editable matching profile.
  *
- * Stream Q polish:
- *   - Bloom Switch replaces RN Switch, Bloom Typography for every text,
- *     Bloom Button for navigation.
- *   - withShadow('sm') cards with radius.lg, no border-only separators.
- *   - Shared EmptyState component, SectionEyebrow for hierarchy.
- *   - No more "as any" Ionicons alias.
+ * Toggles roommate matching and edits the matching-preference fields
+ * (`RoommateMatchingPreferences` from shared-types: budget, ageRange, gender,
+ * lifestyle, move-in, lease length). Saving PUTs the preferences to
+ * `PUT /api/roommates/preferences` via `roommateService.updateRoommatePreferences`.
  */
-import React, { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@oxyhq/bloom/button';
 import { Switch } from '@oxyhq/bloom/switch';
 import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
+import { LeaseDuration } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useProfile } from '@/context/ProfileContext';
-import { roommateService } from '@/services/roommateService';
+import { roommateService, type RoommateMatchingPreferences } from '@/services/roommateService';
 import { useProfileStore } from '@/store/profileStore';
 import { radius, spacing, withShadow } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
+type LifestyleChoice = 'yes' | 'no' | 'prefer_not';
 type Cleanliness = 'very_clean' | 'clean' | 'average' | 'relaxed';
-type NoiseLevel = 'quiet' | 'moderate' | 'lively';
-type StudyHabits = 'early_bird' | 'night_owl' | 'flexible';
-type SocialLevel = 'introvert' | 'ambivert' | 'extrovert';
+type Schedule = 'early_bird' | 'night_owl' | 'flexible';
+type GenderPref = 'male' | 'female' | 'any';
 
-interface PreferencesState {
-  maxRent: number;
+interface FormState {
+  budgetMin: string;
+  budgetMax: string;
+  ageMin: string;
+  ageMax: string;
   moveInDate: string;
-  leaseLength: number;
-  smoking: boolean;
-  pets: boolean;
+  leaseDuration: LeaseDuration;
+  gender: GenderPref;
+  smoking: LifestyleChoice;
+  pets: LifestyleChoice;
+  partying: LifestyleChoice;
   cleanliness: Cleanliness;
-  noiseLevel: NoiseLevel;
-  studyHabits: StudyHabits;
-  socialLevel: SocialLevel;
-  interests: string[];
+  schedule: Schedule;
 }
 
-const INITIAL_PREFERENCES: PreferencesState = {
-  maxRent: 1500,
-  moveInDate: '2024-09-01',
-  leaseLength: 12,
-  smoking: false,
-  pets: false,
+const DEFAULT_FORM: FormState = {
+  budgetMin: '',
+  budgetMax: '',
+  ageMin: '',
+  ageMax: '',
+  moveInDate: '',
+  leaseDuration: LeaseDuration.FLEXIBLE,
+  gender: 'any',
+  smoking: 'prefer_not',
+  pets: 'prefer_not',
+  partying: 'prefer_not',
   cleanliness: 'clean',
-  noiseLevel: 'moderate',
-  studyHabits: 'flexible',
-  socialLevel: 'ambivert',
-  interests: [],
+  schedule: 'flexible',
 };
 
-interface PreferenceRowProps {
-  title: string;
-  value: string;
-  onPress?: () => void;
+const GENDER_OPTIONS: { value: GenderPref; label: string }[] = [
+  { value: 'any', label: 'Any' },
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+];
+
+const LIFESTYLE_OPTIONS: { value: LifestyleChoice; label: string }[] = [
+  { value: 'yes', label: 'Yes' },
+  { value: 'no', label: 'No' },
+  { value: 'prefer_not', label: 'No pref.' },
+];
+
+const CLEANLINESS_OPTIONS: { value: Cleanliness; label: string }[] = [
+  { value: 'very_clean', label: 'Very clean' },
+  { value: 'clean', label: 'Clean' },
+  { value: 'average', label: 'Average' },
+  { value: 'relaxed', label: 'Relaxed' },
+];
+
+const SCHEDULE_OPTIONS: { value: Schedule; label: string }[] = [
+  { value: 'early_bird', label: 'Early bird' },
+  { value: 'night_owl', label: 'Night owl' },
+  { value: 'flexible', label: 'Flexible' },
+];
+
+const LEASE_OPTIONS: { value: LeaseDuration; label: string }[] = [
+  { value: LeaseDuration.MONTHLY, label: 'Monthly' },
+  { value: LeaseDuration.THREE_MONTHS, label: '3 months' },
+  { value: LeaseDuration.SIX_MONTHS, label: '6 months' },
+  { value: LeaseDuration.YEARLY, label: 'Yearly' },
+  { value: LeaseDuration.FLEXIBLE, label: 'Flexible' },
+];
+
+function toNumber(value: string): number | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-const PreferenceRow: React.FC<PreferenceRowProps> = ({
-  title,
-  value,
-  onPress,
-}) => {
+/** A selectable option chip. Owns its own pressed state (NativeWind-safe). */
+const Chip: React.FC<{
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}> = ({ label, selected, onPress }) => {
   const [pressed, setPressed] = useState(false);
   return (
-  <Pressable
-    onPress={onPress}
-    disabled={!onPress}
-    onPressIn={() => setPressed(true)}
-    onPressOut={() => setPressed(false)}
-    style={[
-      styles.preferenceRow,
-      pressed && onPress ? styles.preferenceRowPressed : null,
-    ]}
-    accessibilityRole={onPress ? 'button' : undefined}
-  >
-    <BloomText style={styles.preferenceTitle}>{title}</BloomText>
-    <View style={styles.preferenceValueWrap}>
-      <BloomText style={styles.preferenceValueText}>{value}</BloomText>
-      {onPress ? (
-        <Ionicons
-          name="chevron-forward"
-          size={18}
-          color={colors.muted}
-        />
-      ) : null}
-    </View>
-  </Pressable>
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      style={[
+        styles.chip,
+        selected && styles.chipSelected,
+        pressed && !selected && styles.chipPressed,
+      ]}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+    >
+      <BloomText style={[styles.chipText, selected && styles.chipTextSelected]}>
+        {label}
+      </BloomText>
+    </Pressable>
   );
 };
+
+function ChipRow<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (next: T) => void;
+}) {
+  return (
+    <View style={styles.field}>
+      <BloomText style={styles.fieldLabel}>{label}</BloomText>
+      <View style={styles.chipWrap}>
+        {options.map((option) => (
+          <Chip
+            key={option.value}
+            label={option.label}
+            selected={option.value === value}
+            onPress={() => onChange(option.value)}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function seedForm(prefs: RoommateMatchingPreferences | null | undefined): FormState {
+  if (!prefs) return DEFAULT_FORM;
+  return {
+    budgetMin: prefs.budget?.min != null ? String(prefs.budget.min) : '',
+    budgetMax: prefs.budget?.max != null ? String(prefs.budget.max) : '',
+    ageMin: prefs.ageRange?.min != null ? String(prefs.ageRange.min) : '',
+    ageMax: prefs.ageRange?.max != null ? String(prefs.ageRange.max) : '',
+    moveInDate: prefs.moveInDate ?? '',
+    leaseDuration: prefs.leaseDuration ?? LeaseDuration.FLEXIBLE,
+    gender: prefs.gender ?? 'any',
+    smoking: prefs.lifestyle?.smoking ?? 'prefer_not',
+    pets: prefs.lifestyle?.pets ?? 'prefer_not',
+    partying: prefs.lifestyle?.partying ?? 'prefer_not',
+    cleanliness: prefs.lifestyle?.cleanliness ?? 'clean',
+    schedule: prefs.lifestyle?.schedule ?? 'flexible',
+  };
+}
+
+function toPreferences(form: FormState): RoommateMatchingPreferences {
+  return {
+    budget: { min: toNumber(form.budgetMin) ?? 0, max: toNumber(form.budgetMax) ?? 0 },
+    ageRange: { min: toNumber(form.ageMin) ?? 0, max: toNumber(form.ageMax) ?? 0 },
+    gender: form.gender,
+    moveInDate: form.moveInDate.trim() || undefined,
+    leaseDuration: form.leaseDuration,
+    lifestyle: {
+      smoking: form.smoking,
+      pets: form.pets,
+      partying: form.partying,
+      cleanliness: form.cleanliness,
+      schedule: form.schedule,
+    },
+  };
+}
 
 export default function RoommatePreferencesPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [isSaving, setIsSaving] = useState(false);
   const [roommateEnabled, setRoommateEnabled] = useState(false);
-  const [preferences, setPreferences] =
-    useState<PreferencesState>(INITIAL_PREFERENCES);
+  const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const { primaryProfile, isPersonalProfile, hasPersonalProfile } = useProfile();
 
-  // Seed the form from the personal profile's saved roommate settings. Uses
-  // React's "adjust state when a tracked value changes" pattern rather than an
-  // effect to avoid cascading renders; the form stays user-editable afterwards.
+  // Seed the enabled flag from the personal profile's saved settings.
   const profileSettingsKey = isPersonalProfile ? primaryProfile : null;
   const [prevProfileSettingsKey, setPrevProfileSettingsKey] = useState(profileSettingsKey);
   if (profileSettingsKey !== prevProfileSettingsKey) {
@@ -115,29 +204,8 @@ export default function RoommatePreferencesPage() {
     const roommateSettings = profileSettingsKey?.personalProfile?.settings?.roommate;
     if (roommateSettings) {
       setRoommateEnabled(Boolean(roommateSettings.enabled));
-      if (roommateSettings.preferences) {
-        setPreferences((prev) => ({
-          ...prev,
-          ...roommateSettings.preferences,
-        }));
-      }
     }
   }
-
-  useEffect(() => {
-    let cancelled = false;
-    const sync = async () => {
-      const status = await roommateService.getMyRoommateStatus();
-      if (cancelled) return;
-      if (status && typeof status.hasRoommateMatching === 'boolean') {
-        setRoommateEnabled(Boolean(status.hasRoommateMatching));
-      }
-    };
-    sync();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const preferencesQuery = useQuery({
     queryKey: ['roommates', 'preferences'],
@@ -147,60 +215,36 @@ export default function RoommatePreferencesPage() {
   });
 
   // Merge server-saved preferences into the form once the query resolves.
-  // Adjust-on-change pattern (not an effect) to avoid cascading renders.
   const preferencesData = preferencesQuery.data;
   const [prevPreferencesData, setPrevPreferencesData] = useState(preferencesData);
   if (preferencesData !== prevPreferencesData) {
     setPrevPreferencesData(preferencesData);
     if (preferencesData) {
-      setPreferences((prev) => ({ ...prev, ...preferencesData }));
+      setForm(seedForm(preferencesData));
     }
   }
 
-  const toggleMutation = useMutation({
-    mutationKey: ['roommates', 'toggle'],
-    mutationFn: async (enabled: boolean) =>
-      roommateService.toggleRoommateMatching(enabled),
-    onMutate: async (enabled: boolean) => {
-      const previous = roommateEnabled;
-      setRoommateEnabled(enabled);
-      return { previous };
-    },
-    onSuccess: async (data) => {
+  const saveMutation = useMutation({
+    mutationKey: ['roommates', 'savePreferences'],
+    mutationFn: async (vars: { preferences: RoommateMatchingPreferences; enabled: boolean }) =>
+      roommateService.updateRoommatePreferences(vars.preferences, vars.enabled),
+    onSuccess: async () => {
       await useProfileStore.getState().fetchPrimaryProfile();
-      const storeEnabled = Boolean(
-        useProfileStore.getState().primaryProfile?.personalProfile?.settings
-          ?.roommate?.enabled,
-      );
-      const nextEnabled =
-        typeof data?.enabled === 'boolean' ? data.enabled : storeEnabled;
-      setRoommateEnabled(nextEnabled);
-      Alert.alert(
-        'Success',
-        data?.message ||
-          `Roommate matching ${nextEnabled ? 'enabled' : 'disabled'}`,
-      );
+      await queryClient.invalidateQueries({ queryKey: ['roommates', 'preferences'] });
+      await queryClient.invalidateQueries({ queryKey: ['roommates', 'status'] });
+      Alert.alert('Saved', 'Your roommate preferences were updated.');
     },
-    onError: (_err, _enabled, context) => {
-      if (context?.previous !== undefined) {
-        setRoommateEnabled(context.previous);
-      }
-      Alert.alert('Error', 'Failed to update roommate matching settings');
-    },
-    onSettled: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ['roommates', 'preferences'],
-      });
+    onError: () => {
+      Alert.alert('Error', 'Failed to save roommate preferences. Please try again.');
     },
   });
 
-  const handleToggleRoommateMatching = async (enabled: boolean) => {
-    setIsSaving(true);
-    try {
-      await toggleMutation.mutateAsync(enabled);
-    } finally {
-      setIsSaving(false);
-    }
+  const handleSave = () => {
+    saveMutation.mutate({ preferences: toPreferences(form), enabled: roommateEnabled });
+  };
+
+  const updateField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
   };
 
   if (!isPersonalProfile || !hasPersonalProfile) {
@@ -259,89 +303,125 @@ export default function RoommatePreferencesPage() {
                   Allow other users to discover your profile for matching.
                 </BloomText>
               </View>
-              <Switch
-                value={roommateEnabled}
-                onValueChange={handleToggleRoommateMatching}
-                disabled={isSaving || toggleMutation.isPending}
-              />
+              <Switch value={roommateEnabled} onValueChange={setRoommateEnabled} />
             </View>
           </View>
 
-          {roommateEnabled ? (
-            <>
-              <View style={styles.card}>
-                <H3 style={styles.cardTitle}>Budget & timeline</H3>
-                <PreferenceRow
-                  title="Maximum rent"
-                  value={`€${preferences.maxRent} / month`}
+          <View style={styles.card}>
+            <H3 style={styles.cardTitle}>Budget & timeline</H3>
+            <View style={styles.field}>
+              <BloomText style={styles.fieldLabel}>Monthly budget (€)</BloomText>
+              <View style={styles.inlineInputs}>
+                <TextInput
+                  style={styles.input}
+                  keyboardType="numeric"
+                  placeholder="Min"
+                  placeholderTextColor={colors.muted}
+                  value={form.budgetMin}
+                  onChangeText={(t) => updateField('budgetMin', t)}
                 />
-                <PreferenceRow
-                  title="Move-in date"
-                  value={preferences.moveInDate}
-                />
-                <PreferenceRow
-                  title="Lease length"
-                  value={`${preferences.leaseLength} months`}
-                />
-              </View>
-
-              <View style={styles.card}>
-                <H3 style={styles.cardTitle}>Lifestyle</H3>
-                <PreferenceRow
-                  title="Smoking"
-                  value={preferences.smoking ? 'Yes' : 'No'}
-                />
-                <PreferenceRow
-                  title="Pets"
-                  value={preferences.pets ? 'Yes' : 'No'}
-                />
-                <PreferenceRow
-                  title="Cleanliness"
-                  value={preferences.cleanliness}
-                />
-                <PreferenceRow
-                  title="Noise level"
-                  value={preferences.noiseLevel}
-                />
-                <PreferenceRow
-                  title="Study habits"
-                  value={preferences.studyHabits}
-                />
-                <PreferenceRow
-                  title="Social level"
-                  value={preferences.socialLevel}
+                <TextInput
+                  style={styles.input}
+                  keyboardType="numeric"
+                  placeholder="Max"
+                  placeholderTextColor={colors.muted}
+                  value={form.budgetMax}
+                  onChangeText={(t) => updateField('budgetMax', t)}
                 />
               </View>
+            </View>
+            <View style={styles.field}>
+              <BloomText style={styles.fieldLabel}>Move-in date</BloomText>
+              <TextInput
+                style={styles.input}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor={colors.muted}
+                value={form.moveInDate}
+                onChangeText={(t) => updateField('moveInDate', t)}
+              />
+            </View>
+            <ChipRow
+              label="Lease length"
+              value={form.leaseDuration}
+              options={LEASE_OPTIONS}
+              onChange={(v) => updateField('leaseDuration', v)}
+            />
+          </View>
 
-              <View style={styles.card}>
-                <H3 style={styles.cardTitle}>Interests</H3>
-                <View style={styles.interestsWrap}>
-                  {preferences.interests.length > 0 ? (
-                    preferences.interests.map((interest) => (
-                      <View key={interest} style={styles.interestTag}>
-                        <BloomText style={styles.interestText}>
-                          {interest}
-                        </BloomText>
-                      </View>
-                    ))
-                  ) : (
-                    <BloomText style={styles.emptyHint}>
-                      No interests added yet.
-                    </BloomText>
-                  )}
-                </View>
+          <View style={styles.card}>
+            <H3 style={styles.cardTitle}>Roommate</H3>
+            <ChipRow
+              label="Preferred gender"
+              value={form.gender}
+              options={GENDER_OPTIONS}
+              onChange={(v) => updateField('gender', v)}
+            />
+            <View style={styles.field}>
+              <BloomText style={styles.fieldLabel}>Age range</BloomText>
+              <View style={styles.inlineInputs}>
+                <TextInput
+                  style={styles.input}
+                  keyboardType="numeric"
+                  placeholder="Min"
+                  placeholderTextColor={colors.muted}
+                  value={form.ageMin}
+                  onChangeText={(t) => updateField('ageMin', t)}
+                />
+                <TextInput
+                  style={styles.input}
+                  keyboardType="numeric"
+                  placeholder="Max"
+                  placeholderTextColor={colors.muted}
+                  value={form.ageMax}
+                  onChangeText={(t) => updateField('ageMax', t)}
+                />
               </View>
+            </View>
+          </View>
 
-              <Button
-                variant="primary"
-                size="large"
-                onPress={() => router.push('/profile/edit')}
-                style={styles.editButton}
-              >
-                Edit profile
-              </Button>
-            </>
-          ) : null}
+          <View style={styles.card}>
+            <H3 style={styles.cardTitle}>Lifestyle</H3>
+            <ChipRow
+              label="Smoking"
+              value={form.smoking}
+              options={LIFESTYLE_OPTIONS}
+              onChange={(v) => updateField('smoking', v)}
+            />
+            <ChipRow
+              label="Pets"
+              value={form.pets}
+              options={LIFESTYLE_OPTIONS}
+              onChange={(v) => updateField('pets', v)}
+            />
+            <ChipRow
+              label="Partying"
+              value={form.partying}
+              options={LIFESTYLE_OPTIONS}
+              onChange={(v) => updateField('partying', v)}
+            />
+            <ChipRow
+              label="Cleanliness"
+              value={form.cleanliness}
+              options={CLEANLINESS_OPTIONS}
+              onChange={(v) => updateField('cleanliness', v)}
+            />
+            <ChipRow
+              label="Schedule"
+              value={form.schedule}
+              options={SCHEDULE_OPTIONS}
+              onChange={(v) => updateField('schedule', v)}
+            />
+          </View>
+
+          <Button
+            variant="primary"
+            size="large"
+            onPress={handleSave}
+            disabled={saveMutation.isPending}
+            style={styles.saveButton}
+          >
+            {saveMutation.isPending ? 'Saving…' : 'Save preferences'}
+          </Button>
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -379,7 +459,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
     padding: spacing.lg,
     borderRadius: radius.lg,
-    gap: spacing.sm,
+    gap: spacing.md,
     ...withShadow('sm'),
   },
   cardTitle: {
@@ -405,52 +485,58 @@ const styles = StyleSheet.create({
     color: colors.muted,
     lineHeight: 18,
   },
-  preferenceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  preferenceRowPressed: {
-    opacity: 0.6,
-  },
-  preferenceTitle: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_2,
-  },
-  preferenceValueWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  field: {
     gap: spacing.xs,
   },
-  preferenceValueText: {
+  fieldLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.COLOR_BLACK,
+    color: colors.COLOR_BLACK_LIGHT_2,
   },
-  interestsWrap: {
+  inlineInputs: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  input: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: 14,
+    color: colors.COLOR_BLACK,
+    backgroundColor: colors.background,
+  },
+  chipWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
-  interestTag: {
-    backgroundColor: colors.infoSubtle,
+  chip: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radius.pill,
+    backgroundColor: colors.mutedSubtle,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
-  interestText: {
-    fontSize: 12,
-    color: colors.info,
-    fontWeight: '600',
+  chipSelected: {
+    backgroundColor: colors.COLOR_BLACK,
+    borderColor: colors.COLOR_BLACK,
   },
-  emptyHint: {
+  chipPressed: {
+    opacity: 0.7,
+  },
+  chipText: {
     fontSize: 13,
-    color: colors.muted,
+    fontWeight: '600',
+    color: colors.COLOR_BLACK_LIGHT_2,
   },
-  editButton: {
+  chipTextSelected: {
+    color: colors.white,
+  },
+  saveButton: {
     alignSelf: 'stretch',
   },
 });

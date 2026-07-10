@@ -22,9 +22,11 @@ import type {
   Commission,
   PartnerMeResponse,
   Property,
+  PropertyStatus,
 } from '@homiio/shared-types';
 
 import { partnerApi } from '@/services/partnerApi';
+import { propertyService, type MarkTransactedResult } from '@/services/propertyService';
 
 /** Stable query-key factory so invalidation never drifts from the queries. */
 export const partnerKeys = {
@@ -94,5 +96,38 @@ export function useEarnings(isPartner: boolean): UseQueryResult<Commission[]> {
     queryFn: () => partnerApi.getEarnings(),
     enabled: isAuthenticated && isPartner,
     staleTime: PARTNER_STALE_TIME,
+  });
+}
+
+/** Variables for {@link useMarkPropertyTransacted}. */
+export interface MarkTransactedVars {
+  propertyId: string;
+  /** Terminal status; inferred from the listing's offerings server-side when omitted. */
+  status?: PropertyStatus;
+}
+
+/**
+ * Close a deal on an owned listing (mark rented/sold). On success this can flip
+ * the caller's partner earnings — a sourced listing closing creates a
+ * commission and awards points server-side — so the whole `partner` cache tree
+ * (`me`/`referrals`/`earnings`) is invalidated, alongside the property caches
+ * that show the listing's status. The owner screen owns the confirm dialog and
+ * the success/error toast.
+ */
+export function useMarkPropertyTransacted(): UseMutationResult<
+  MarkTransactedResult,
+  unknown,
+  MarkTransactedVars
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ propertyId, status }: MarkTransactedVars) =>
+      propertyService.markPropertyTransacted(propertyId, status),
+    onSuccess: () => {
+      // Prefix invalidation of `['partner']` refreshes me/referrals/earnings.
+      queryClient.invalidateQueries({ queryKey: partnerKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['property'] });
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
+    },
   });
 }

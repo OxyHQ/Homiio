@@ -1,229 +1,96 @@
-import { api } from '@/utils/api';
+/**
+ * Neighborhood Service
+ *
+ * Thin client over the public `/api/neighborhoods/*` endpoints. Every value is
+ * derived from Homiio's own listings on the backend — there are NO mocks and no
+ * invented scores. Lookups that resolve no neighborhood (HTTP 404) map to
+ * `null`, which callers render as "hidden", not as an error.
+ */
 
-export interface NeighborhoodRating {
-  category: string;
-  score: number;
-  icon: string;
-  description?: string;
+import api, { ApiError } from '@/utils/api';
+import type { NeighborhoodMetrics } from '@homiio/shared-types';
+
+export type { NeighborhoodMetrics };
+
+/** Envelope shape returned by the single-neighborhood endpoints. */
+interface SingleEnvelope {
+  success?: boolean;
+  data?: NeighborhoodMetrics;
 }
 
-export interface NeighborhoodData {
-  id: string;
-  name: string;
-  city: string;
-  state: string;
-  country: string;
-  overallScore: number;
-  ratings: NeighborhoodRating[];
-  description?: string;
-  population?: number;
-  averageRent?: number;
-  crimeRate?: number;
-  walkScore?: number;
-  transitScore?: number;
-  bikeScore?: number;
-  amenities?: {
-    restaurants: number;
-    cafes: number;
-    bars: number;
-    groceryStores: number;
-    parks: number;
-    schools: number;
-    hospitals: number;
-    shoppingCenters: number;
-  };
-  images?: string[];
-  lastUpdated: string;
+/** Envelope shape returned by the list endpoints. */
+interface ListEnvelope {
+  success?: boolean;
+  data?: NeighborhoodMetrics[];
 }
 
-export interface NeighborhoodFilters {
+export interface NeighborhoodSearchFilters {
+  /** City id or name to scope the search. */
   city?: string;
-  state?: string;
-  country?: string;
-  minScore?: number;
-  maxScore?: number;
+  /** Free-text neighborhood-name filter. */
+  query?: string;
+  limit?: number;
+}
+
+/** Map a "not found" (404) response to `null`; rethrow every other error. */
+function nullIfNotFound(error: unknown): null {
+  if (error instanceof ApiError && error.status === 404) return null;
+  throw error;
 }
 
 class NeighborhoodService {
-  /**
-   * Get neighborhood data by coordinates or address
-   */
-  async getNeighborhoodByLocation(
-    latitude: number,
-    longitude: number,
-  ): Promise<NeighborhoodData> {
+  /** Nearest neighborhood to a coordinate, or `null` when none is near enough. */
+  async getByLocation(latitude: number, longitude: number): Promise<NeighborhoodMetrics | null> {
     try {
-      const response = await api.get<NeighborhoodData>('/api/neighborhoods/by-location', {
+      const response = await api.get<SingleEnvelope>('/api/neighborhoods/by-location', {
         params: { latitude, longitude },
       });
-      return response.data;
+      return response.data.data ?? null;
     } catch (error) {
-      // Return mock data for development
-      return this.getMockNeighborhoodData();
+      return nullIfNotFound(error);
     }
   }
 
-  /**
-   * Get neighborhood data by name
-   */
-  async getNeighborhoodByName(
-    name: string,
-    city?: string,
-    state?: string,
-  ): Promise<NeighborhoodData> {
+  /** A neighborhood by name (optionally scoped to a city id/name), or `null`. */
+  async getByName(name: string, city?: string): Promise<NeighborhoodMetrics | null> {
     try {
-      const response = await api.get<NeighborhoodData>('/api/neighborhoods/by-name', {
-        params: { name, city, state },
+      const response = await api.get<SingleEnvelope>('/api/neighborhoods/by-name', {
+        params: { name, city },
       });
-      return response.data;
+      return response.data.data ?? null;
     } catch (error) {
-      // Return mock data for development
-      return this.getMockNeighborhoodData(name, city, state);
+      return nullIfNotFound(error);
     }
   }
 
-  /**
-   * Get neighborhood data by property ID
-   */
-  async getNeighborhoodByProperty(propertyId: string): Promise<NeighborhoodData> {
+  /** The neighborhood a property sits in, or `null` when it has none resolved. */
+  async getByProperty(propertyId: string): Promise<NeighborhoodMetrics | null> {
     try {
-      const response = await api.get<NeighborhoodData>(
+      const response = await api.get<SingleEnvelope>(
         `/api/neighborhoods/by-property/${propertyId}`,
       );
-      return response.data;
+      return response.data.data ?? null;
     } catch (error) {
-      // Return mock data for development
-      return this.getMockNeighborhoodData();
+      return nullIfNotFound(error);
     }
   }
 
-  /**
-   * Search neighborhoods
-   */
-  async searchNeighborhoods(filters: NeighborhoodFilters): Promise<NeighborhoodData[]> {
-    try {
-      const response = await api.get<NeighborhoodData[]>('/api/neighborhoods/search', {
-        params: filters,
-      });
-      return response.data;
-    } catch (error) {
-      // Return mock data for development
-      return [this.getMockNeighborhoodData()];
-    }
+  /** Neighborhoods matching the filters, each with derived metrics. */
+  async search(filters: NeighborhoodSearchFilters = {}): Promise<NeighborhoodMetrics[]> {
+    const response = await api.get<ListEnvelope>('/api/neighborhoods/search', {
+      params: filters,
+    });
+    return response.data.data ?? [];
   }
 
-  /**
-   * Get popular neighborhoods for a city
-   */
-  async getPopularNeighborhoods(
-    city: string,
-    state?: string,
-    limit: number = 10,
-  ): Promise<NeighborhoodData[]> {
-    try {
-      const response = await api.get<NeighborhoodData[]>('/api/neighborhoods/popular', {
-        params: { city, state, limit },
-      });
-      return response.data;
-    } catch (error) {
-      // Return mock data for development
-      return [
-        this.getMockNeighborhoodData('El Born', city, state),
-        this.getMockNeighborhoodData('Gothic Quarter', city, state),
-        this.getMockNeighborhoodData('Eixample', city, state),
-      ];
-    }
-  }
-
-  /**
-   * Mock data for development
-   */
-  private getMockNeighborhoodData(
-    name: string = 'El Born',
-    city: string = 'Barcelona',
-    state: string = 'Catalonia',
-  ): NeighborhoodData {
-    return {
-      id: `neighborhood-${Date.now()}`,
-      name,
-      city,
-      state,
-      country: 'Spain',
-      overallScore: 4.2,
-      description: `${name} is a vibrant neighborhood known for its historic architecture, trendy boutiques, and excellent dining scene.`,
-      population: 15000,
-      averageRent: 1200,
-      crimeRate: 2.1,
-      walkScore: 95,
-      transitScore: 88,
-      bikeScore: 92,
-      amenities: {
-        restaurants: 45,
-        cafes: 23,
-        bars: 18,
-        groceryStores: 8,
-        parks: 5,
-        schools: 3,
-        hospitals: 1,
-        shoppingCenters: 2,
-      },
-      ratings: [
-        {
-          category: 'Safety',
-          score: 4.5,
-          icon: 'shield-checkmark-outline',
-          description: 'Low crime rate, well-lit streets',
-        },
-        {
-          category: 'Dining',
-          score: 4.8,
-          icon: 'restaurant-outline',
-          description: 'Excellent variety of restaurants',
-        },
-        {
-          category: 'Transit',
-          score: 4.3,
-          icon: 'subway-outline',
-          description: 'Good public transportation access',
-        },
-        {
-          category: 'Nightlife',
-          score: 4.0,
-          icon: 'wine-outline',
-          description: 'Lively bars and entertainment',
-        },
-        {
-          category: 'Shopping',
-          score: 3.9,
-          icon: 'bag-outline',
-          description: 'Good mix of local and chain stores',
-        },
-        {
-          category: 'Parks',
-          score: 4.1,
-          icon: 'leaf-outline',
-          description: 'Several green spaces nearby',
-        },
-        {
-          category: 'Schools',
-          score: 4.2,
-          icon: 'school-outline',
-          description: 'Quality educational institutions',
-        },
-        {
-          category: 'Healthcare',
-          score: 4.4,
-          icon: 'medical-outline',
-          description: 'Access to medical facilities',
-        },
-      ],
-      images: [
-        'https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=400',
-        'https://images.unsplash.com/photo-1555992336-03a23c7b20ee?w=400',
-      ],
-      lastUpdated: new Date().toISOString(),
-    };
+  /** A city's neighborhoods ranked by real listing count. */
+  async getPopular(city: string, limit = 10): Promise<NeighborhoodMetrics[]> {
+    const response = await api.get<ListEnvelope>('/api/neighborhoods/popular', {
+      params: { city, limit },
+    });
+    return response.data.data ?? [];
   }
 }
 
-export default new NeighborhoodService();
+export const neighborhoodService = new NeighborhoodService();
+export default neighborhoodService;

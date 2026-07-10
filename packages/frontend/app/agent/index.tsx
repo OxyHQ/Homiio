@@ -19,7 +19,6 @@ import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
-import { useMediaQuery } from 'react-responsive';
 import { showSignInModal, useOxy } from '@oxyhq/services';
 
 import { Header } from '@/components/Header';
@@ -34,13 +33,10 @@ import { usePartnerMe, useJoinPartner, useReferrals, useEarnings } from '@/hooks
 import { shareReferralLink } from '@/utils/shareReferral';
 import { toast } from '@/lib/sonner';
 import { colors } from '@/styles/colors';
-import { resolveSectionSpacing, spacing } from '@/constants/styles';
 
 export default function AgentScreen() {
   const { t } = useTranslation();
   const { isAuthenticated } = useOxy();
-  const isWide = useMediaQuery({ minWidth: 768 });
-  const sectionGap = resolveSectionSpacing(isWide);
 
   // Drive the transparent Header's scroll-in background from this screen's own
   // scroll position (the screen isn't inside the shared layout scroll context).
@@ -79,7 +75,13 @@ export default function AgentScreen() {
       return;
     }
     if (!isPartner) {
-      joinMutation.mutate();
+      joinMutation.mutate(undefined, {
+        onError: () => {
+          toast.error(
+            t('agent.join.error', 'Could not start earning right now. Please try again.'),
+          );
+        },
+      });
       return;
     }
     // Already a partner — share the link straight from the hero (same behaviour
@@ -106,46 +108,38 @@ export default function AgentScreen() {
 
       <Animated.ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
       >
-        <AgentHero
-          title={t('agent.hero.title', 'Anyone can be a real estate agent.')}
-          subtitle={t(
-            'agent.hero.subtitle',
-            'Bring a home to Homiio. When it rents or sells, you earn.',
-          )}
-          ctaLabel={ctaLabel}
-          onPressCta={handleHeroCta}
-          ctaLoading={joinMutation.isPending}
-          trustLine={t('agent.hero.trust', 'No license needed. Work from your phone.')}
-        />
+        {/* Section rhythm owned here by NativeWind `gap` (32px mobile / 48px
+            web); each direct child is a page section with no per-section
+            `marginTop`. */}
+        <View className="gap-8 md:gap-12 pb-20">
+          <AgentHero
+            title={t('agent.hero.title', 'Anyone can be a real estate agent.')}
+            subtitle={t(
+              'agent.hero.subtitle',
+              'Bring a home to Homiio. When it rents or sells, you earn.',
+            )}
+            ctaLabel={ctaLabel}
+            onPressCta={handleHeroCta}
+            ctaLoading={joinMutation.isPending}
+            trustLine={t('agent.hero.trust', 'No license needed. Work from your phone.')}
+          />
 
-        <View style={{ marginTop: sectionGap }}>
           <AgentHowItWorks />
-        </View>
 
-        <View style={{ marginTop: sectionGap }}>
           <EarningsCalculator />
-        </View>
 
-        <View style={{ marginTop: sectionGap }}>
           <RewardsTeaser points={partner?.points} />
-        </View>
 
-        {/* Partner-only: referral link + dashboard. Rendered only once the
-            join has succeeded (or on a returning partner) — derived purely from
-            the query, no effect. */}
-        {isPartner && link ? (
-          <View style={{ marginTop: sectionGap }}>
-            <ReferralLinkCard link={link} />
-          </View>
-        ) : null}
+          {/* Partner-only: referral link + dashboard. Rendered only once the
+              join has succeeded (or on a returning partner) — derived purely
+              from the query, no effect. */}
+          {isPartner && link ? <ReferralLinkCard link={link} /> : null}
 
-        {isPartner && stats ? (
-          <View style={{ marginTop: sectionGap }}>
+          {isPartner && stats ? (
             <PartnerDashboard
               stats={stats}
               points={partner?.points ?? 0}
@@ -154,10 +148,8 @@ export default function AgentScreen() {
               referralsLoading={referralsQuery.isLoading}
               earningsLoading={earningsQuery.isLoading}
             />
-          </View>
-        ) : null}
+          ) : null}
 
-        <View style={{ marginTop: sectionGap }}>
           <AgentCtaBanner
             title={t('agent.banner.title', 'Start today. No license needed.')}
             subtitle={t('agent.banner.subtitle', 'Turn the homes around you into income.')}
@@ -178,8 +170,5 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flex: 1,
-  },
-  content: {
-    paddingBottom: spacing['6xl'],
   },
 });
