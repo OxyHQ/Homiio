@@ -37,7 +37,6 @@ import { getIconArt, ICON_ART_PLACEHOLDER } from '@/constants/iconArt';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { useHomeCategoryStore, type HomeCategory } from '@/store/homeCategoryStore';
-import { colors } from '@/styles/colors';
 import { tracker } from '@/constants/styles';
 
 interface CategoryDef {
@@ -180,10 +179,10 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({
 
   /**
    * Solid page background on web + native so scrolled feed content never
-   * shows through the strip (`background` → Bloom `--background` /
-   * NativeWind `bg-background`). Web-only `position: sticky` lives outside
-   * the RN style system — inject via style and rely on react-native-web
-   * to pass it through. `top` stays numeric from PANEL_TOP_INSET when framed.
+   * shows through the strip (`bg-background` on the wrapper). Web-only
+   * `position: sticky` lives outside the RN style system — inject via style
+   * and rely on react-native-web to pass it through. `top` stays numeric
+   * from PANEL_TOP_INSET when framed.
    */
   const stickyStyle =
     sticky && isWeb
@@ -192,14 +191,14 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({
           top: framed ? PANEL_TOP_INSET : 0,
           zIndex: 30,
           borderBottomWidth: 1,
-          borderBottomColor: colors.border,
+          borderBottomColor: themeColors.border,
         } as unknown as object)
       : null;
 
   return (
     <View
-      className={className ?? 'w-full py-1'}
-      style={[{ backgroundColor: themeColors.background }, stickyStyle]}
+      className={className ?? 'w-full py-1 bg-background'}
+      style={stickyStyle}
     >
       <ScrollView
         horizontal
