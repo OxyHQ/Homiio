@@ -207,7 +207,7 @@ class ApplicationController {
       const applicantProfile = await Profile.findActiveByOxyUserId(oxyUserId);
       if (!applicantProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
-      const landlordProfileId = property.profileId;
+      const landlordProfileId = property.oxyUserId;
       if (!landlordProfileId) return next(new AppError('Property has no landlord profile', 400, 'INVALID_PROPERTY'));
       if (String(landlordProfileId) === String(applicantProfile._id)) {
         return next(new AppError('You cannot apply to your own property', 403, 'FORBIDDEN'));

@@ -11,6 +11,11 @@
  *
  * Official partner API remains gated (`hasOfficialApi`). Registered OFF by
  * default (`PROVIDER_IDEALISTA_ENABLED`).
+ *
+ * **DataDome (2026-07):** Even with DataImpulse sticky `__cr.es;sessid.<id>` and
+ * 120s+ challenge wait, `page.goto` on idealista.com often times out at 90s.
+ * Treat as blocked until Idealista partner API or a managed anti-bot tier is
+ * provisioned — do not burn worker cycles on repeated discover passes.
  */
 
 import {

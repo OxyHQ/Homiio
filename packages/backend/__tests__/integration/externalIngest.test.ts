@@ -93,7 +93,7 @@ describe('external listing ingest (fixture -> IngestionService)', () => {
     expect(property.isExternal).toBe(true);
     expect(property.sourceUrl).toBe(FIRST_SOURCE_URL);
     // Aggregator listings are ownerless — no profileId is ever written.
-    expect(property.profileId).toBeFalsy();
+    expect(property.oxyUserId).toBeFalsy();
     expect(property.offerings).toEqual(['long_term_rent']);
     expect(property.longTermRent.monthlyAmount).toBe(1450);
     expect(property.expiresAt).toBeTruthy();

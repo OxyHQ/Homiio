@@ -1,3 +1,4 @@
+import { requireSessionOxyUserId } from '../../utils/sessionUser';
 import {
   Profile,
   SavedSearch,
@@ -10,24 +11,12 @@ import {
  */
 export async function getSavedSearches(req: any, res: any, next: any) {
   try {
-    const oxyUserId = req.user?.id || req.user?._id;
-
-    if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
-    }
+    const oxyUserId = requireSessionOxyUserId(req as Parameters<typeof requireSessionOxyUserId>[0]);
 
     // Get the active profile for the current user
-  let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-
-    if (!activeProfile) {
-      // If user has no active profile, return empty list rather than creating data implicitly
-      return res.json(successResponse([], "No profile found for user"));
-    }
 
     // Get saved searches
-    const savedSearches = await SavedSearch.find({ profileId: activeProfile._id })
+    const savedSearches = await SavedSearch.find({ oxyUserId })
       .sort({ createdAt: -1 })
       .lean();
 
@@ -60,14 +49,10 @@ export async function saveSearch(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-    if (!activeProfile) {
-      return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
-    }
 
     // Check if search with same name already exists
     const existingSearch = await SavedSearch.findOne({
-      profileId: activeProfile._id,
+      oxyUserId,
       name: name.trim()
     });
 
@@ -79,7 +64,7 @@ export async function saveSearch(req: any, res: any, next: any) {
 
     // Create new saved search
     const savedSearch = new SavedSearch({
-      profileId: activeProfile._id,
+      oxyUserId,
       name: name.trim(),
       query: query.trim(),
       filters: filters || {},
@@ -119,18 +104,11 @@ export async function deleteSavedSearch(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-
-    if (!activeProfile) {
-      return res.status(404).json(
-        errorResponse("Saved search not found", "SAVED_SEARCH_NOT_FOUND")
-      );
-    }
 
     // Remove saved search
     const result = await SavedSearch.deleteOne({
       _id: searchId,
-      profileId: activeProfile._id
+      oxyUserId
     });
 
     if (result.deletedCount === 0) {
@@ -169,13 +147,6 @@ export async function updateSavedSearch(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-
-    if (!activeProfile) {
-      return res.status(404).json(
-        errorResponse("Saved search not found", "SAVED_SEARCH_NOT_FOUND")
-      );
-    }
 
     // Prepare update data
     const updateData: any = { updatedAt: new Date() };
@@ -186,7 +157,7 @@ export async function updateSavedSearch(req: any, res: any, next: any) {
 
     // Update saved search
     const savedSearch = await SavedSearch.findOneAndUpdate(
-      { _id: searchId, profileId: activeProfile._id },
+      { _id: searchId, oxyUserId },
       updateData,
       { new: true }
     );
@@ -227,17 +198,10 @@ export async function toggleSearchNotifications(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-
-    if (!activeProfile) {
-      return res.status(404).json(
-        errorResponse("Saved search not found", "SAVED_SEARCH_NOT_FOUND")
-      );
-    }
 
     // Update notifications setting
     const savedSearch = await SavedSearch.findOneAndUpdate(
-      { _id: searchId, profileId: activeProfile._id },
+      { _id: searchId, oxyUserId },
       {
         notificationsEnabled: !!notificationsEnabled,
         updatedAt: new Date()

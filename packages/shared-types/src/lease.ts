@@ -57,7 +57,7 @@ export interface LeaseSignatures {
 }
 
 export interface LeaseCoTenant {
-  profileId: string;
+  oxyUserId: string;
   role?: 'primary' | 'secondary' | 'guarantor';
   signedDate?: string;
   status?: 'pending' | 'signed' | 'declined';

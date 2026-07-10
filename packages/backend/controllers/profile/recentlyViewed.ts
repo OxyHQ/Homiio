@@ -1,3 +1,4 @@
+import { requireSessionOxyUserId } from '../../utils/sessionUser';
 import {
   Profile,
   RecentlyViewed,
@@ -21,14 +22,9 @@ export async function getRecentProperties(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-  let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-
-    if (!activeProfile) {
-      return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
-    }
 
     // Get recently viewed properties
-    const recentViews = await RecentlyViewed.find({ profileId: activeProfile._id })
+    const recentViews = await RecentlyViewed.find({ oxyUserId })
       .sort({ viewedAt: -1 })
       .limit(parseInt(limit))
       .populate({
@@ -86,15 +82,10 @@ export async function trackPropertyView(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-
-    if (!activeProfile) {
-      return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
-    }
 
     // Check if view already exists
     const existingView = await RecentlyViewed.findOne({
-      profileId: activeProfile._id,
+      oxyUserId,
       propertyId
     });
 
@@ -105,7 +96,7 @@ export async function trackPropertyView(req: any, res: any, next: any) {
     } else {
       // Create new view record
       const propertyView = new RecentlyViewed({
-        profileId: activeProfile._id,
+        oxyUserId,
         propertyId,
         viewedAt: new Date()
       });
@@ -125,26 +116,13 @@ export async function trackPropertyView(req: any, res: any, next: any) {
  */
 export async function clearRecentProperties(req: any, res: any, next: any) {
   try {
-    const oxyUserId = req.user?.id || req.user?._id;
-
-    if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
-    }
+    const oxyUserId = requireSessionOxyUserId(req as Parameters<typeof requireSessionOxyUserId>[0]);
 
     // Get the active profile for the current user
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-
-    if (!activeProfile) {
-      return res.status(404).json(
-        errorResponse("Profile not found", "PROFILE_NOT_FOUND")
-      );
-    }
 
     // Clear all recently viewed properties for this profile
     const result = await RecentlyViewed.deleteMany({
-      profileId: activeProfile._id
+      oxyUserId
     });
 
     res.json(
@@ -160,34 +138,17 @@ export async function clearRecentProperties(req: any, res: any, next: any) {
  */
 export async function debugRecentProperties(req: any, res: any, next: any) {
   try {
-    const oxyUserId = req.user?.id || req.user?._id;
-
-    if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
-    }
+    const oxyUserId = requireSessionOxyUserId(req as Parameters<typeof requireSessionOxyUserId>[0]);
 
     // Get the active profile for the current user
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-
-    if (!activeProfile) {
-      return res.json(
-        successResponse({
-          error: "No active profile found",
-          oxyUserId,
-          debugInfo: "User needs to create a profile first"
-        }, "Debug info retrieved")
-      );
-    }
 
     // Get recently viewed records WITHOUT population
-    const rawRecentViews = await RecentlyViewed.find({ profileId: activeProfile._id })
+    const rawRecentViews = await RecentlyViewed.find({ oxyUserId })
       .sort({ viewedAt: -1 })
       .lean();
 
     // Get recently viewed records WITH population
-    const populatedRecentViews = await RecentlyViewed.find({ profileId: activeProfile._id })
+    const populatedRecentViews = await RecentlyViewed.find({ oxyUserId })
       .sort({ viewedAt: -1 })
       .populate({
         path: 'propertyId',
@@ -212,13 +173,11 @@ export async function debugRecentProperties(req: any, res: any, next: any) {
     );
 
     // Get total count
-    const totalCount = await RecentlyViewed.countDocuments({ profileId: activeProfile._id });
+    const totalCount = await RecentlyViewed.countDocuments({ oxyUserId });
 
     res.json(
       successResponse({
         oxyUserId,
-        profileId: activeProfile._id,
-        profileType: activeProfile.profileType,
         totalCount,
         rawRecentViews: rawRecentViews.map(view => ({
           propertyId: view.propertyId,

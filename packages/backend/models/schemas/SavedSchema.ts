@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const savedSchema = new mongoose.Schema({
-  profileId: { type: mongoose.Schema.Types.ObjectId, ref: 'Profile', required: true, index: true },
+  oxyUserId: { type: String, required: true, index: true },
   targetType: { type: String, enum: ['property', 'profile'], required: true, index: true },
   targetId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
   notes: { type: String },

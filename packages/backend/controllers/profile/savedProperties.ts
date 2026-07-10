@@ -1,3 +1,4 @@
+import { requireSessionOxyUserId } from '../../utils/sessionUser';
 import {
   Profile,
   Saved,
@@ -12,23 +13,12 @@ import {
  */
 export async function getSavedProperties(req: any, res: any, next: any) {
   try {
-    const oxyUserId = req.user?.id || req.user?._id;
-
-    if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
-    }
+    const oxyUserId = requireSessionOxyUserId(req as Parameters<typeof requireSessionOxyUserId>[0]);
 
     // Get the active profile for the current user
-  let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-
-    if (!activeProfile) {
-      return res.json(successResponse([], "No profile found for user"));
-    }
 
     // Use unified Saved collection
-    const savedRows = await Saved.find({ profileId: activeProfile._id, targetType: 'property' })
+    const savedRows = await Saved.find({ oxyUserId, targetType: 'property' })
       .sort({ createdAt: -1 })
       .lean();
 
@@ -81,10 +71,6 @@ export async function saveProperty(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-    if (!activeProfile) {
-      return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
-    }
 
     // Find or create default folder if no folderId provided
     let targetFolder;
@@ -92,7 +78,7 @@ export async function saveProperty(req: any, res: any, next: any) {
       // Verify the folder exists
       targetFolder = await SavedPropertyFolder.findOne({
         _id: folderId,
-        profileId: activeProfile._id
+        oxyUserId
       });
 
       if (!targetFolder) {
@@ -103,14 +89,14 @@ export async function saveProperty(req: any, res: any, next: any) {
     } else {
       // Find or create default folder
       targetFolder = await SavedPropertyFolder.findOne({
-        profileId: activeProfile._id,
+        oxyUserId,
         isDefault: true
       });
 
       if (!targetFolder) {
         // Create default folder
         targetFolder = new SavedPropertyFolder({
-          profileId: activeProfile._id,
+          oxyUserId,
           name: "Favorites",
           description: "Default folder for saved properties",
           icon: "❤️",
@@ -122,12 +108,12 @@ export async function saveProperty(req: any, res: any, next: any) {
     }
 
     // Check if property is already saved
-    const existingSaved = await Saved.findOne({ profileId: activeProfile._id, targetType: 'property', targetId: propertyId });
+    const existingSaved = await Saved.findOne({ oxyUserId, targetType: 'property', targetId: propertyId });
 
     // Upsert in unified Saved collection
     await Saved.updateOne(
-      { profileId: activeProfile._id, targetType: 'property', targetId: propertyId },
-      { $set: { profileId: activeProfile._id, targetType: 'property', targetId: propertyId, notes: notes || null, folderId: targetFolder?._id, createdAt: new Date() } },
+      { oxyUserId, targetType: 'property', targetId: propertyId },
+      { $set: { oxyUserId, targetType: 'property', targetId: propertyId, notes: notes || null, folderId: targetFolder?._id, createdAt: new Date() } },
       { upsert: true }
     );
 
@@ -160,16 +146,8 @@ export async function unsaveProperty(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
 
-    if (!activeProfile) {
-      // If no active profile exists, there can't be any saved properties
-      return res.status(404).json(
-        errorResponse("Saved property not found", "SAVED_PROPERTY_NOT_FOUND")
-      );
-    }
-
-    const result = await Saved.deleteOne({ profileId: activeProfile._id, targetType: 'property', targetId: propertyId });
+    const result = await Saved.deleteOne({ oxyUserId, targetType: 'property', targetId: propertyId });
     if (result.deletedCount === 0) {
       return res.status(404).json(errorResponse("Saved property not found", "SAVED_PROPERTY_NOT_FOUND"));
     }
@@ -204,18 +182,10 @@ export async function updateSavedPropertyNotes(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-
-    if (!activeProfile) {
-      // If no active profile exists, there can't be any saved properties
-      return res.status(404).json(
-        errorResponse("Saved property not found", "SAVED_PROPERTY_NOT_FOUND")
-      );
-    }
 
     // Update notes on the saved record
     const updated = await Saved.findOneAndUpdate(
-      { profileId: activeProfile._id, targetType: 'property', targetId: propertyId },
+      { oxyUserId, targetType: 'property', targetId: propertyId },
       { $set: { notes: notes || '' } },
       { new: true }
     );
@@ -226,7 +196,7 @@ export async function updateSavedPropertyNotes(req: any, res: any, next: any) {
     // Best-effort: if property exists inside a folder's properties array, mirror notes there too
     try {
       const folder = await SavedPropertyFolder.findOne({
-        profileId: activeProfile._id,
+        oxyUserId,
         'properties.propertyId': propertyId
       });
       if (folder) {
@@ -250,39 +220,18 @@ export async function updateSavedPropertyNotes(req: any, res: any, next: any) {
  */
 export async function getProfileProperties(req: any, res: any, next: any) {
   try {
-    const oxyUserId = req.user?.id || req.user?._id;
+    const oxyUserId = requireSessionOxyUserId(req as Parameters<typeof requireSessionOxyUserId>[0]);
     const { page = 1, limit = 10 } = req.query;
 
-    if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
-    }
-
-    // Get the active profile for the current user
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-
-    if (!activeProfile) {
-      return res.json(
-        successResponse({
-          properties: [],
-          total: 0,
-          page: parseInt(page),
-          totalPages: 0
-        }, "No profile found for user")
-      );
-    }
-
-    // Query database for user's properties using profileId
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [properties, total] = await Promise.all([
-      Property.find({ profileId: activeProfile._id, status: { $ne: 'archived' } })
+      Property.find({ oxyUserId, status: { $ne: 'archived' } })
         .populate('addressId')
         .skip(skip)
         .limit(parseInt(limit))
         .sort({ createdAt: -1 })
         .lean(),
-      Property.countDocuments({ profileId: activeProfile._id, status: { $ne: 'archived' } })
+      Property.countDocuments({ oxyUserId, status: { $ne: 'archived' } })
     ]);
 
     const totalPages = Math.ceil(total / parseInt(limit));

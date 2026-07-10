@@ -161,7 +161,7 @@ export interface IReview extends Document {
   areaSecurity: SecurityLevel;
   
   // Metadata
-  profileId: Types.ObjectId; // User profile reference
+  oxyUserId: Types.ObjectId; // User profile reference
   createdAt: Date;
   updatedAt: Date;
   verified: boolean;
@@ -424,7 +424,7 @@ const ReviewSchema = new Schema<IReview, IReviewModel>({
   },
   
   // Metadata
-  profileId: {
+  oxyUserId: {
     type: Schema.Types.ObjectId,
     ref: 'Profile', // Changed from 'User' to 'Profile'
     required: [true, 'Profile ID is required'],
@@ -442,7 +442,7 @@ const ReviewSchema = new Schema<IReview, IReviewModel>({
 
 // Indexes for efficient querying
 ReviewSchema.index({ addressId: 1, createdAt: -1 });
-ReviewSchema.index({ profileId: 1, createdAt: -1 });
+ReviewSchema.index({ oxyUserId: 1, createdAt: -1 });
 ReviewSchema.index({ rating: -1 });
 ReviewSchema.index({ recommendation: 1 });
 ReviewSchema.index({ verified: 1 });

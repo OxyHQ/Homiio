@@ -35,7 +35,7 @@ class ViewingController {
       if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
       const requesterProfileId = activeProfile._id;
-      const ownerProfileId = property.profileId;
+      const ownerProfileId = property.oxyUserId;
 
       // Prevent booking own property
       if (String(ownerProfileId) === String(requesterProfileId)) {
@@ -157,7 +157,7 @@ class ViewingController {
       const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
       if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
-      const isOwner = String(property.profileId) === String(activeProfile._id);
+      const isOwner = String(property.oxyUserId) === String(activeProfile._id);
 
       const query: Record<string, unknown> = { propertyId };
       if (!isOwner) {

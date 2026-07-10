@@ -245,11 +245,9 @@ const exchangeSchema = new mongoose.Schema({
 }, { _id: false });
 
 const propertySchema = new mongoose.Schema({
-  profileId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Profile',
+  oxyUserId: {
+    type: String,
     required: function(this: any) { return !this.isExternal; },
-    // When external, this can be null/undefined
   },
   // External sourcing metadata
   source: {
@@ -659,6 +657,21 @@ const propertySchema = new mongoose.Schema({
   deletedAt: {
     type: Date,
     default: null
+  },
+  // Server-computed ethical + market price score (see priceEthicsService).
+  // Written atomically on score — no subfield defaults (avoids partial subdocs on save).
+  priceEthics: {
+    ethicalSuggested: { type: Number, min: 0 },
+    ethicalMax: { type: Number, min: 0 },
+    withinEthical: { type: Boolean },
+    marketVerdict: {
+      type: String,
+      enum: ['good_deal', 'below_average', 'average', 'above_average']
+    },
+    percentDiffFromAvg: { type: Number },
+    isFairPrice: { type: Boolean },
+    fairnessScore: { type: Number, min: 0, max: 100 },
+    scoredAt: { type: Date }
   }
 }, {
   timestamps: true,
@@ -685,8 +698,8 @@ const propertySchema = new mongoose.Schema({
 });
 
 // Indexes for better query performance
-propertySchema.index({ profileId: 1, status: 1 });
-propertySchema.index({ profileId: 1, createdAt: -1 }); // User's property list queries
+propertySchema.index({ oxyUserId: 1, status: 1 });
+propertySchema.index({ oxyUserId: 1, createdAt: -1 });
 propertySchema.index({ addressId: 1 });
 propertySchema.index({ type: 1, 'availability.isAvailable': 1 });
 propertySchema.index({ status: 1, 'availability.isAvailable': 1 }); // Search queries
@@ -712,6 +725,9 @@ propertySchema.index({ 'availabilityWindows.start': 1 });
 propertySchema.index({ 'availabilityWindows.end': 1 });
 // Exchange feed queries scoped by offering + exchange mode + status.
 propertySchema.index({ offerings: 1, 'exchange.mode': 1, status: 1 });
+// Price ethics sort/filter (fairness ranking, fair-price chip).
+propertySchema.index({ 'priceEthics.isFairPrice': 1 });
+propertySchema.index({ 'priceEthics.fairnessScore': -1 });
 
 /**
  * Offerings must be non-empty and equal exactly the set of present priced
@@ -821,8 +837,8 @@ propertySchema.pre('save', function(this: IProperty, next: (err?: Error) => void
       this.expiresAt = new Date(Date.now() + ms);
     }
     // Ensure profileId is removed for external listings
-    if (this.profileId) {
-      this.profileId = undefined;
+    if (this.oxyUserId) {
+      this.oxyUserId = undefined;
     }
   }
 
@@ -851,10 +867,10 @@ propertySchema.pre('save', function(this: IProperty, next: (err?: Error) => void
 type ObjectIdLike = string | { toString(): string };
 
 propertySchema.statics.findByProfile = function(
-  profileId: ObjectIdLike,
+  oxyUserId: string,
   options: Record<string, unknown> = {}
 ) {
-  return this.find({ profileId, status: { $ne: 'archived' } }, null, options);
+  return this.find({ oxyUserId, status: { $ne: 'archived' } }, null, options);
 };
 
 propertySchema.statics.findAvailable = function(filters: Record<string, unknown> = {}) {

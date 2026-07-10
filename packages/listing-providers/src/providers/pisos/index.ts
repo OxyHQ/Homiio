@@ -43,8 +43,14 @@ import {
   pisosSourceIdFromUrl,
   type PisosRaw,
 } from './parse';
+import {
+  pisosBrowserSessionHints,
+  readPisosBrowserSessionHint,
+  type PisosBrowserSessionHint,
+} from './sessionHints';
 
 const PROVIDER_ID: ProviderId = 'pisos';
+const ES_PROXY_COUNTRY = 'es';
 const DEFAULT_CITIES: readonly string[] = [
   'madrid',
   'barcelona',
@@ -96,6 +102,25 @@ function asPisosRaw(payload: unknown): PisosRaw {
   return payload as PisosRaw;
 }
 
+function yieldRefs(
+  refs: readonly { sourceId: string; url: string }[],
+  seen: Set<string>,
+  limit: number,
+  yielded: { count: number },
+  browserSession?: PisosBrowserSessionHint,
+): ExternalListingRef[] {
+  const out: ExternalListingRef[] = [];
+  const hints = browserSession ? pisosBrowserSessionHints(browserSession) : undefined;
+  for (const ref of refs) {
+    if (yielded.count >= limit) break;
+    if (seen.has(ref.sourceId)) continue;
+    seen.add(ref.sourceId);
+    out.push({ provider: PROVIDER_ID, sourceId: ref.sourceId, url: ref.url, hints });
+    yielded.count += 1;
+  }
+  return out;
+}
+
 export class PisosProvider implements ListingProvider {
   readonly id: ProviderId = PROVIDER_ID;
   readonly markets = ['ES'] as const;
@@ -120,6 +145,14 @@ export class PisosProvider implements ListingProvider {
     const seen = new Set<string>();
     const yielded = { count: 0 };
     const runtime = job.runtime ?? this.runtime;
+    const sticky = envBool('LISTING_PROXY_STICKY', false);
+    if (sticky && !this.stickyProxySessionId) {
+      this.stickyProxySessionId = createProxySessionId();
+    }
+    const httpSessionHint: PisosBrowserSessionHint | undefined =
+      sticky && this.stickyProxySessionId
+        ? { proxySessionId: this.stickyProxySessionId, storageState: this.stickyStorageState }
+        : undefined;
 
     for (const city of cities) {
       if (yielded.count >= limit) return;
@@ -132,12 +165,8 @@ export class PisosProvider implements ListingProvider {
 
         const refs = parsePisosSearch(html);
         if (refs.length === 0) break;
-        for (const ref of refs) {
-          if (yielded.count >= limit) return;
-          if (seen.has(ref.sourceId)) continue;
-          seen.add(ref.sourceId);
-          yield { provider: this.id, sourceId: ref.sourceId, url: ref.url };
-          yielded.count += 1;
+        for (const ref of yieldRefs(refs, seen, limit, yielded, httpSessionHint)) {
+          yield ref;
         }
       }
 
@@ -169,7 +198,7 @@ export class PisosProvider implements ListingProvider {
         provider: this.id,
         isChallenge: isPisosChallenge,
         metrics: this.metrics,
-        init: { signal },
+        init: { signal, proxyCountry: ES_PROXY_COUNTRY },
         tiers: ['http', 'browser'],
       });
       if (status >= 400 || isPisosChallenge(html)) return undefined;
@@ -189,6 +218,7 @@ export class PisosProvider implements ListingProvider {
       storageState: this.stickyStorageState,
       blockAssets: true,
       postChallengeSettleMs: 1_000,
+      proxyCountry: ES_PROXY_COUNTRY,
     } as const;
   }
 
@@ -238,12 +268,12 @@ export class PisosProvider implements ListingProvider {
           url: pisosSearchUrl(city, page),
         });
         if (refs.length === 0) break;
-        for (const ref of refs) {
-          if (yielded.count >= limit) return;
-          if (seen.has(ref.sourceId)) continue;
-          seen.add(ref.sourceId);
-          yield { provider: this.id, sourceId: ref.sourceId, url: ref.url };
-          yielded.count += 1;
+        const browserSession: PisosBrowserSessionHint = {
+          proxySessionId: this.stickyProxySessionId,
+          storageState: sticky ? await session.exportStorageState() : undefined,
+        };
+        for (const ref of yieldRefs(refs, seen, limit, yielded, browserSession)) {
+          yield ref;
         }
       }
 
@@ -265,26 +295,103 @@ export class PisosProvider implements ListingProvider {
   }
 
   async fetch(ref: ExternalListingRef, ctx: FetchContext): Promise<RawListing> {
+    const discoverSession = readPisosBrowserSessionHint(ref.hints);
+    const fromSession = await this.fetchDetailViaSession(ref, ctx, discoverSession);
+    if (fromSession) return fromSession;
+
     const { html } = await fetchListingViaLadder(ctx.runtime, ref.url, {
       provider: this.id,
       isChallenge: isPisosChallenge,
-      init: { signal: ctx.signal },
+      init: { signal: ctx.signal, proxyCountry: ES_PROXY_COUNTRY },
       metrics: this.metrics,
       tiers: ['http', 'browser', 'managed'],
     });
     let payload = parsePisosDetail(html, ref.url);
+    payload = await this.enrichPisosContact(ref, ctx, payload, discoverSession);
+    return { ref, payload };
+  }
 
-    // Best-effort contact AJAX — never fail ingest on 403/empty.
+  private async fetchDetailViaSession(
+    ref: ExternalListingRef,
+    ctx: FetchContext,
+    discoverSession: PisosBrowserSessionHint | undefined,
+  ): Promise<RawListing | undefined> {
+    if (!ctx.runtime.openBrowserSession) return undefined;
+
+    const sticky = envBool('LISTING_PROXY_STICKY', false);
+    let proxySessionId = discoverSession?.proxySessionId ?? this.stickyProxySessionId;
+    if (sticky && !proxySessionId) {
+      proxySessionId = createProxySessionId();
+      this.stickyProxySessionId = proxySessionId;
+    }
+    const storageState = discoverSession?.storageState ?? this.stickyStorageState;
+
+    let session: BrowserSession | undefined;
+    try {
+      session = await ctx.runtime.openBrowserSession({
+        warmUrl: ref.url,
+        signal: ctx.signal,
+        contentSelector: 'h1, #hdnIdPiso, script[type="application/ld+json"]',
+        isChallenge: isPisosChallenge,
+        stickyProxySession: sticky,
+        proxySessionId,
+        storageState,
+        blockAssets: true,
+        postChallengeSettleMs: 500,
+        proxyCountry: ES_PROXY_COUNTRY,
+        challengeWaitMs: discoverSession ? 20_000 : 45_000,
+      });
+      const html = await session.content();
+      if (isPisosChallenge(html)) return undefined;
+      let payload = parsePisosDetail(html, ref.url);
+      payload = await this.enrichPisosContact(ref, ctx, payload, discoverSession, session);
+      if (sticky) {
+        this.stickyStorageState = await session.exportStorageState();
+      }
+      return { ref, payload };
+    } catch {
+      return undefined;
+    } finally {
+      await session?.close();
+    }
+  }
+
+  private async enrichPisosContact(
+    ref: ExternalListingRef,
+    ctx: FetchContext,
+    payload: PisosRaw,
+    discoverSession: PisosBrowserSessionHint | undefined,
+    existingSession?: BrowserSession,
+  ): Promise<PisosRaw> {
     try {
       const contactUrl = pisosContactPhoneUrl(payload.sourceId);
-      if (ctx.runtime.openBrowserSession) {
+      if (existingSession) {
+        const { status, body } = await existingSession.request(contactUrl, {
+          referer: ref.url,
+          timeoutMs: 15_000,
+          headers: { Accept: 'application/json' },
+        });
+        if (status >= 200 && status < 300) {
+          return mergePisosContact(payload, parsePisosContactPhone(body));
+        }
+      } else if (ctx.runtime.openBrowserSession) {
+        const sticky = envBool('LISTING_PROXY_STICKY', false);
+        let proxySessionId = discoverSession?.proxySessionId ?? this.stickyProxySessionId;
+        if (sticky && !proxySessionId) {
+          proxySessionId = createProxySessionId();
+          this.stickyProxySessionId = proxySessionId;
+        }
         const session = await ctx.runtime.openBrowserSession({
           warmUrl: ref.url,
           signal: ctx.signal,
           contentSelector: 'h1, #hdnIdPiso',
           isChallenge: isPisosChallenge,
+          stickyProxySession: sticky,
+          proxySessionId,
+          storageState: discoverSession?.storageState ?? this.stickyStorageState,
           blockAssets: true,
           postChallengeSettleMs: 500,
+          proxyCountry: ES_PROXY_COUNTRY,
         });
         try {
           const { status, body } = await session.request(contactUrl, {
@@ -293,27 +400,27 @@ export class PisosProvider implements ListingProvider {
             headers: { Accept: 'application/json' },
           });
           if (status >= 200 && status < 300) {
-            payload = mergePisosContact(payload, parsePisosContactPhone(body));
+            return mergePisosContact(payload, parsePisosContactPhone(body));
           }
         } finally {
           await session.close();
         }
       } else {
-        const body = await ctx.runtime.fetchText(contactUrl, {
+        const { body } = await ctx.runtime.fetchHttp(contactUrl, {
           headers: {
             Accept: 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
             Referer: ref.url,
           },
           signal: ctx.signal,
+          proxyCountry: ES_PROXY_COUNTRY,
         });
-        payload = mergePisosContact(payload, parsePisosContactPhone(body));
+        return mergePisosContact(payload, parsePisosContactPhone(body));
       }
     } catch {
       // Contact is optional; embedded `data-var` phone already on payload when present.
     }
-
-    return { ref, payload };
+    return payload;
   }
 
   normalize(raw: RawListing): NormalizedListing {

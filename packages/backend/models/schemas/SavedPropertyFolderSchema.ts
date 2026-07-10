@@ -7,9 +7,8 @@ type ObjectIdLike = string | Types.ObjectId;
 type FolderEntry = ISavedFolderEntry & { notes?: string; savedAt?: Date };
 
 const savedPropertyFolderSchema = new mongoose.Schema({
-  profileId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Profile',
+  oxyUserId: {
+    type: String,
     required: true,
     index: true,
   },
@@ -72,7 +71,7 @@ const savedPropertyFolderSchema = new mongoose.Schema({
 });
 
 // Compound index to ensure unique profileId + name combinations (case insensitive)
-savedPropertyFolderSchema.index({ profileId: 1, name: 1 }, { 
+savedPropertyFolderSchema.index({ oxyUserId: 1, name: 1 }, { 
   unique: true,
   collation: { locale: 'en', strength: 2 }
 });

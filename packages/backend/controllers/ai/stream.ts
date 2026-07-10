@@ -49,16 +49,12 @@ export async function streamChat(req: Request, res: Response) {
 
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
-
-    const activeProfile = await Profile.findActiveByOxyUserId(userId);
-    if (!activeProfile) return err(res, 404, 'No active profile found');
-
-    // Ensure conversation
+// Ensure conversation
     let conversation: any;
     if (conversationId) {
       if (conversationId.startsWith('conv_')) {
         conversation = new Conversation({
-          profileId: activeProfile._id.toString(),
+          oxyUserId: userId.toString(),
           title: 'New Conversation',
           messages: [],
           status: 'active',
@@ -67,14 +63,14 @@ export async function streamChat(req: Request, res: Response) {
       } else if (isObjectId(conversationId)) {
         conversation = await Conversation.findOne({
           _id: conversationId,
-          profileId: activeProfile._id.toString(),
+          oxyUserId: userId.toString(),
         });
       } else {
         return err(res, 400, 'Invalid conversation ID format');
       }
     } else {
       conversation = new Conversation({
-        profileId: activeProfile._id.toString(),
+        oxyUserId: userId.toString(),
         title: 'New Conversation',
         messages: [],
         status: 'active',

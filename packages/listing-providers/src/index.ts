@@ -440,6 +440,12 @@ export {
 // ES — pisos.com (JSON-LD + embedded detail JSON), feature-flagged OFF by default.
 export { PisosProvider, isPisosChallenge, pisosSourceIdFromUrl } from './providers/pisos';
 export {
+  readPisosBrowserSessionHint,
+  pisosBrowserSessionHints,
+  PISOS_BROWSER_SESSION_HINT,
+  type PisosBrowserSessionHint,
+} from './providers/pisos/sessionHints';
+export {
   parsePisosDetail,
   parsePisosSearch,
   mergePisosContact,

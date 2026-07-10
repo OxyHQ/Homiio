@@ -404,7 +404,7 @@ export const updateReview = async (req: Request, res: Response) => {
     }
 
     // Check if user owns this review
-    if (review.profileId.toString() !== activeProfile._id.toString()) {
+    if (review.oxyUserId.toString() !== activeProfile._id.toString()) {
       return badRequest(res, { message: 'You can only update your own reviews' });
     }
 
@@ -458,7 +458,7 @@ export const deleteReview = async (req: Request, res: Response) => {
     }
 
     // Check if user owns this review
-    if (review.profileId.toString() !== activeProfile._id.toString()) {
+    if (review.oxyUserId.toString() !== activeProfile._id.toString()) {
       return badRequest(res, { message: 'You can only delete your own reviews' });
     }
 

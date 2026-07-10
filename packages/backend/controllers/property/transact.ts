@@ -11,9 +11,10 @@
 import { OfferingType, PropertyStatus } from '@homiio/shared-types';
 import { onPropertyTransacted } from '../../services/commissionService';
 
-import { Property, Profile } from '../../models';
+import { Property } from '../../models';
 import { AppError, successResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
+import { requireSessionOxyUserId } from '../../utils/sessionUser';
 
 /** Terminal statuses a listing may be moved into when its deal closes. */
 const TERMINAL_STATUSES: ReadonlyArray<string> = [PropertyStatus.RENTED, PropertyStatus.SOLD];
@@ -39,22 +40,11 @@ export async function markPropertyTransacted(req: any, res: any, next: any) {
   try {
     const { propertyId } = req.params;
 
-    const oxyUserId = req.user?.id || req.user?._id || req.userId;
-    if (!oxyUserId) {
-      return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
-    }
+    const oxyUserId = requireSessionOxyUserId(req as Parameters<typeof requireSessionOxyUserId>[0]);
 
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-    if (!activeProfile) {
-      return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
-    }
-
-    const property = await Property.findById(propertyId);
+    const property = await Property.findOne({ _id: propertyId, oxyUserId });
     if (!property) {
-      return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));
-    }
-    if (!property.profileId || property.profileId.toString() !== activeProfile._id.toString()) {
-      return next(new AppError('Access denied - you can only close your own properties', 403, 'FORBIDDEN'));
+      return next(new AppError('Property not found', 404, 'NOT_FOUND'));
     }
 
     // Resolve the requested terminal status, defaulting from the offerings.

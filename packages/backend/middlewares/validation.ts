@@ -530,7 +530,7 @@ export {
  * Lease create validation rules (POST /api/leases)
  *
  * Matches the actual shape consumed by leaseController.createLease
- * (propertyId, tenantProfileId, leaseTerms.startDate/endDate,
+ * (propertyId, tenantOxyUserId, leaseTerms.startDate/endDate,
  * rentDetails.monthlyRent). ObjectId fields are validated to block NoSQL
  * operator injection into Property.findById / Lease.create. The controller
  * still owns the required-field 400s and ownership checks; this layer is kept
@@ -539,7 +539,7 @@ export {
  */
 const validateLeaseCreate = [
   body('propertyId').isMongoId().withMessage('Valid propertyId is required'),
-  body('tenantProfileId').optional().isMongoId().withMessage('tenantProfileId must be a valid id'),
+  body('tenantOxyUserId').optional().isMongoId().withMessage('tenantOxyUserId must be a valid id'),
   body('tenantId').optional().isMongoId().withMessage('tenantId must be a valid id'),
   body('leaseTerms.startDate').optional().isISO8601().withMessage('leaseTerms.startDate must be a valid date'),
   body('leaseTerms.endDate').optional().isISO8601().withMessage('leaseTerms.endDate must be a valid date'),

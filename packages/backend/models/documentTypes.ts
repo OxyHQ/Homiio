@@ -69,8 +69,8 @@ export type ILease = Document & {
   _id: Id;
   propertyId: Id;
   roomId?: Id;
-  landlordProfileId: Id;
-  tenantProfileId: Id;
+  landlordOxyUserId: Id;
+  tenantOxyUserId: Id;
   coTenants: ILeaseSubdoc[];
   leaseTerms: Loose;
   rentDetails: Loose;
@@ -88,8 +88,8 @@ export type ILease = Document & {
 
 export interface ILeaseModel extends Model<ILease> {
   findByProperty(propertyId: Id | string, options?: Loose): Promise<ILease[]>;
-  findByTenant(tenantProfileId: Id | string, options?: Loose): Promise<ILease[]>;
-  findByLandlord(landlordProfileId: Id | string, options?: Loose): Promise<ILease[]>;
+  findByTenant(tenantOxyUserId: Id | string, options?: Loose): Promise<ILease[]>;
+  findByLandlord(landlordOxyUserId: Id | string, options?: Loose): Promise<ILease[]>;
   findActive(): Promise<ILease[]>;
 }
 
@@ -156,8 +156,8 @@ export interface IProfileModel extends Model<IProfile> {
 export type IReservation = Document & {
   _id: Id;
   propertyId: Id;
-  profileId: Id;
-  oxyUserId?: string;
+  guestOxyUserId: string;
+  hostOxyUserId: string;
   status: string;
   createdAt: Date;
   updatedAt: Date;
@@ -168,8 +168,8 @@ export type IReservation = Document & {
 export type ITenantApplication = Document & {
   _id: Id;
   propertyId: Id;
-  applicantProfileId: Id;
-  landlordProfileId: Id;
+  applicantOxyUserId: Id;
+  landlordOxyUserId: Id;
   status: string;
   notes?: string;
   createdAt: Date;
@@ -190,7 +190,7 @@ export type IViewingRequest = Document & {
 
 export type ISaved = Document & {
   _id: Id;
-  profileId?: Id;
+  oxyUserId?: Id;
   targetType?: string;
   targetId?: Id;
   folderId?: Id;
@@ -200,7 +200,7 @@ export type ISaved = Document & {
 
 export type ISavedSearch = Document & {
   _id: Id;
-  profileId: Id;
+  oxyUserId: Id;
   name: string;
   createdAt: Date;
   updatedAt: Date;
@@ -216,7 +216,7 @@ export interface ISavedFolderEntry {
 
 export type ISavedPropertyFolder = Document & {
   _id: Id;
-  profileId: Id;
+  oxyUserId: Id;
   name: string;
   properties: Types.DocumentArray<ISavedFolderEntry & Document>;
   createdAt: Date;
@@ -225,7 +225,7 @@ export type ISavedPropertyFolder = Document & {
 
 export type IRecentlyViewed = Document & {
   _id: Id;
-  profileId: Id;
+  oxyUserId: Id;
   propertyId: Id;
   viewedAt: Date;
 } & Loose;
@@ -253,7 +253,7 @@ export interface IConversationMessage {
 
 export type IConversation = Document & {
   _id: Id;
-  profileId: string;
+  oxyUserId: string;
   title: string;
   messages: IConversationMessage[];
   status: string;
@@ -321,8 +321,8 @@ export interface IExchangeWindow {
 
 export type IExchangeRequest = Document & {
   _id: Id;
-  requesterProfileId: Id;
-  hostProfileId: Id;
+  requesterOxyUserId: Id;
+  hostOxyUserId: Id;
   propertyId: Id;
   mode: string;
   status: string;
@@ -337,7 +337,7 @@ export type IExchangeRequest = Document & {
 export type IExchangeReview = Document & {
   _id: Id;
   exchangeRequestId: Id;
-  reviewerProfileId: Id;
+  reviewerOxyUserId: Id;
   rating: number;
   comment?: string;
   createdAt: Date;
@@ -399,8 +399,8 @@ export type IPlacePoi = Document & {
 
 export type IRoommateRequest = Document & {
   _id: Id;
-  fromProfileId: Id;
-  toProfileId: Id;
+  fromOxyUserId: Id;
+  toOxyUserId: Id;
   status: string;
   createdAt: Date;
   updatedAt: Date;
@@ -410,8 +410,8 @@ export type IRoommateRequest = Document & {
 
 export type IRoommateRelationship = Document & {
   _id: Id;
-  profile1Id: Id;
-  profile2Id: Id;
+  participant1OxyUserId: Id;
+  participant2OxyUserId: Id;
   requestId?: Id;
   matchScore: number;
   status: 'active' | 'ended';

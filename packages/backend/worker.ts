@@ -176,7 +176,11 @@ function startBullMq(): () => Promise<void> {
             await existingFetch.remove();
           }
         }
-        await fetchQueue.add(QUEUE_NAMES.fetch, { ref }, { jobId });
+        await fetchQueue.add(QUEUE_NAMES.fetch, { ref }, {
+          jobId,
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 60_000 },
+        });
       }
       logger.info('Discover job enqueued fetch jobs', {
         provider: job.data.provider,

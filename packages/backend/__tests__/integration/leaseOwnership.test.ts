@@ -10,7 +10,7 @@
 import express, { type Express } from 'express';
 import request from 'supertest';
 
-import { createProfile, createRentProperty, createLease } from '../helpers/factories';
+import { createRentProperty, createLease } from '../helpers/factories';
 
 const leaseController = require('../../controllers/leaseController');
 const { Lease } = require('../../models');
@@ -36,16 +36,14 @@ function buildApp(oxyUserId: string): Express {
 }
 
 async function seedLease(status = 'draft') {
-  const landlord = await createProfile('oxy-landlord');
-  const tenant = await createProfile('oxy-tenant');
-  const property = await createRentProperty({ profileId: landlord._id });
+  const property = await createRentProperty({ oxyUserId: 'oxy-landlord' });
   const lease = await createLease({
     propertyId: property._id,
-    landlordProfileId: landlord._id,
-    tenantProfileId: tenant._id,
+    landlordOxyUserId: 'oxy-landlord',
+    tenantOxyUserId: 'oxy-tenant',
     status,
   });
-  return { landlord, tenant, lease };
+  return { lease };
 }
 
 describe('leaseController.getLeaseById', () => {
@@ -64,14 +62,14 @@ describe('leaseController.getLeaseById', () => {
 
   it('rejects a non-party with 403', async () => {
     const { lease } = await seedLease();
-    await createProfile('oxy-stranger');
+    // stranger;
     const res = await request(buildApp('oxy-stranger')).get(`/leases/${lease._id}`);
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe('FORBIDDEN');
   });
 
   it('returns 404 for a missing lease', async () => {
-    await createProfile('oxy-landlord');
+    // landlord;
     const res = await request(buildApp('oxy-landlord')).get('/leases/507f1f77bcf86cd799439011');
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe('LEASE_NOT_FOUND');
@@ -124,7 +122,7 @@ describe('leaseController.updateLease', () => {
     const res = await request(buildApp('oxy-landlord'))
       .put(`/leases/${lease._id}`)
       .send({
-        landlordProfileId: tenant._id,
+        landlordOxyUserId: 'oxy-tenant',
         status: 'active',
         signatures: { landlord: { signed: true }, tenant: { signed: true } },
         rentDetails: { monthlyRent: 1500, currency: 'EUR' },
@@ -133,7 +131,7 @@ describe('leaseController.updateLease', () => {
     const persisted = await Lease.findById(lease._id);
     // Whitelisted field changed; owner + lifecycle fields untouched.
     expect(persisted.rentDetails.monthlyRent).toBe(1500);
-    expect(persisted.landlordProfileId.toString()).not.toBe(tenant._id.toString());
+    expect(persisted.landlordOxyUserId.toString()).not.toBe('oxy-tenant'.toString());
     expect(persisted.status).toBe('draft');
     expect(persisted.signatures.landlord.signed).toBe(false);
     expect(persisted.signatures.tenant.signed).toBe(false);
@@ -142,15 +140,15 @@ describe('leaseController.updateLease', () => {
 
 describe('leaseController.createLease', () => {
   async function seedForCreate() {
-    const landlord = await createProfile('oxy-landlord');
+    const landlord = // landlord;
     const tenant = await createProfile('oxy-tenant');
-    const stranger = await createProfile('oxy-stranger');
-    const property = await createRentProperty({ profileId: landlord._id });
+    const stranger = // stranger;
+    const property = await createRentProperty({ oxyUserId: 'oxy-landlord' });
     const now = new Date();
     const end = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
     const validBody = {
       propertyId: property._id,
-      tenantProfileId: tenant._id,
+      tenantOxyUserId: 'oxy-tenant',
       leaseTerms: { startDate: now, endDate: end },
       rentDetails: { monthlyRent: 1200, currency: 'EUR' },
     };
@@ -162,7 +160,7 @@ describe('leaseController.createLease', () => {
     const res = await request(buildApp('oxy-landlord')).post('/leases').send(validBody);
     expect(res.status).toBe(201);
     const persisted = await Lease.findById(res.body.data.id ?? res.body.data._id);
-    expect(persisted.landlordProfileId.toString()).toBe(landlord._id.toString());
+    expect(persisted.landlordOxyUserId.toString()).toBe('oxy-landlord'.toString());
     expect(persisted.status).toBe('draft');
   });
 
@@ -172,14 +170,14 @@ describe('leaseController.createLease', () => {
       .post('/leases')
       .send({
         ...validBody,
-        landlordProfileId: stranger._id,
+        landlordOxyUserId: stranger._id,
         status: 'active',
         signatures: { landlord: { signed: true }, tenant: { signed: true } },
         paymentSchedule: [{ dueDate: new Date(), amount: 999, type: 'rent' }],
       });
     expect(res.status).toBe(201);
     const persisted = await Lease.findById(res.body.data.id ?? res.body.data._id);
-    expect(persisted.landlordProfileId.toString()).toBe(landlord._id.toString());
+    expect(persisted.landlordOxyUserId.toString()).toBe('oxy-landlord'.toString());
     expect(persisted.status).toBe('draft');
     expect(persisted.signatures.landlord.signed).toBe(false);
     expect(persisted.paymentSchedule.length).toBe(0);
@@ -232,7 +230,7 @@ describe('leaseController.signLease', () => {
 
   it('rejects a non-party signer with 403', async () => {
     const { lease } = await seedLease('draft');
-    await createProfile('oxy-stranger');
+    // stranger;
     const res = await request(buildApp('oxy-stranger'))
       .post(`/leases/${lease._id}/sign`)
       .send({ acceptTerms: true });
@@ -298,11 +296,11 @@ describe('leaseController.uploadLeaseDocument', () => {
         name: 'Signed agreement',
         url: 'https://files.example.com/lease.pdf',
         type: 'lease_agreement',
-        uploadedBy: tenant._id,
+        uploadedBy: 'oxy-tenant',
       });
     expect(res.status).toBe(201);
-    expect(res.body.data.uploadedBy).toBe(landlord._id.toString());
-    expect(res.body.data.uploadedBy).not.toBe(tenant._id.toString());
+    expect(res.body.data.uploadedBy).toBe('oxy-landlord'.toString());
+    expect(res.body.data.uploadedBy).not.toBe('oxy-tenant'.toString());
     const persisted = await Lease.findById(lease._id);
     expect(persisted.documents.length).toBe(1);
     expect(persisted.documents[0].url).toBe('https://files.example.com/lease.pdf');
@@ -311,7 +309,7 @@ describe('leaseController.uploadLeaseDocument', () => {
 
   it('rejects a non-party attaching a document with 403', async () => {
     const { lease } = await seedLease('active');
-    await createProfile('oxy-stranger');
+    // stranger;
     const res = await request(buildApp('oxy-stranger'))
       .post(`/leases/${lease._id}/documents`)
       .send({ name: 'x', url: 'https://files.example.com/x.pdf' });

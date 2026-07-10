@@ -185,7 +185,7 @@ export interface Review {
   unitLevelId?: string; // Reference to unit-level address (only for UNIT level reviews)
 
   // User reference
-  profileId: string;
+  oxyUserId: string;
   
   // Basic information
   greenHouse?: string;
@@ -281,8 +281,8 @@ export interface ReviewDocument extends Review {
   };
 }
 
-export interface ReviewData extends Omit<Review, 'profileId' | 'addressId'> {
-  profileId?: string;
+export interface ReviewData extends Omit<Review, 'oxyUserId' | 'addressId'> {
+  oxyUserId?: string;
   addressId?: string;
 }
 
@@ -299,7 +299,7 @@ export interface UpdateReviewRequest {
 
 export interface ReviewQuery {
   addressId?: string;
-  profileId?: string;
+  oxyUserId?: string;
   page?: number;
   limit?: number;
   sort?: 'newest' | 'oldest' | 'highest_rated' | 'lowest_rated';
