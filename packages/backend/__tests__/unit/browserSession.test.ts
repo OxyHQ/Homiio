@@ -59,7 +59,7 @@ describe('warmBrowserPage', () => {
     ).resolves.toBeUndefined();
     expect(page.goto).toHaveBeenCalledWith('https://portal.example/search/', {
       timeout: 60_000,
-      waitUntil: 'domcontentloaded',
+      waitUntil: 'commit',
     });
     expect(page.waitForSelector).toHaveBeenCalled();
   });

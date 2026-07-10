@@ -201,7 +201,7 @@ export async function warmBrowserPage(page: SessionPage, options: WarmBrowserPag
   let challengePolls = 0;
   let clearedChallenge = false;
 
-  await page.goto(options.warmUrl, { timeout: timeoutMs, waitUntil: 'domcontentloaded' });
+  await page.goto(options.warmUrl, { timeout: timeoutMs, waitUntil: 'commit' });
 
   while (Date.now() < deadline) {
     if (options.signal?.aborted) {
@@ -211,7 +211,7 @@ export async function warmBrowserPage(page: SessionPage, options: WarmBrowserPag
     if (isWarmPageChallenge(html, options.isChallenge)) {
       challengePolls += 1;
       if (reloadAfterPolls > 0 && challengePolls % reloadAfterPolls === 0) {
-        await page.goto(options.warmUrl, { timeout: timeoutMs, waitUntil: 'domcontentloaded' });
+        await page.goto(options.warmUrl, { timeout: timeoutMs, waitUntil: 'commit' });
       } else {
         await page.waitForTimeout(CHALLENGE_POLL_MS);
       }
