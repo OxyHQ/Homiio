@@ -5,6 +5,7 @@ import { CleanupService } from './cleanupService';
 import { MetricsService } from '../utils/metrics';
 import { syncCovers } from './cityCoverSyncService';
 import { repairCorruptCityCoordinates } from './cityCoordinateRepairService';
+import { Property } from '../models';
 
 // Initialize services
 const logger = new Logger('CronService');
@@ -46,6 +47,11 @@ class CronJobManager {
 
   private async runBootHousekeeping(): Promise<void> {
     try {
+      await this.backfillPropertyHasImages();
+    } catch (error) {
+      this.logger.error('Boot hasImages backfill failed', error);
+    }
+    try {
       const repaired = await repairCorruptCityCoordinates(200);
       this.logger.info('Boot city coordinate repair completed', { repaired });
     } catch (error) {
@@ -56,6 +62,25 @@ class CronJobManager {
       this.logger.info('Boot city cover sync completed', { processed });
     } catch (error) {
       this.logger.error('Boot city cover sync failed', error);
+    }
+  }
+
+  /**
+   * One-time, idempotent backfill of the denormalized `hasImages` flag for
+   * legacy properties that predate the field. A pipeline update derives it from
+   * the ground-truth `images` array server-side in a single pass; the schema
+   * pre-save / pre-update hooks maintain it on every write thereafter. The
+   * `{ hasImages: { $exists: false } }` filter means it only ever touches
+   * un-migrated docs and becomes a no-op on subsequent boots.
+   */
+  private async backfillPropertyHasImages(): Promise<void> {
+    const result = await Property.updateMany(
+      { hasImages: { $exists: false } },
+      [{ $set: { hasImages: { $gt: [{ $size: { $ifNull: ['$images', []] } }, 0] } } }]
+    );
+    const modified = (result as { modifiedCount?: number }).modifiedCount ?? 0;
+    if (modified > 0) {
+      this.logger.info('Backfilled hasImages on legacy properties', { modified });
     }
   }
 

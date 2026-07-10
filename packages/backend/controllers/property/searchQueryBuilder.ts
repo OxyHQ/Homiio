@@ -91,6 +91,13 @@ const SORT_FIELDS: ReadonlySet<string> = new Set([
 export const FIELD_PRICE_ETHICS_FAIRNESS_SCORE = 'priceEthics.fairnessScore';
 /** Mongo path for the fair-price badge/filter flag. */
 export const FIELD_PRICE_ETHICS_IS_FAIR_PRICE = 'priceEthics.isFairPrice';
+/**
+ * Denormalized boolean set true when a listing has ≥1 image (maintained by the
+ * Property schema hooks). Used as the PRIMARY sort key across every discovery
+ * feed so image-bearing listings always rank ahead of image-less ones, with the
+ * previous ordering preserved within each group. `-1` puts `true` first.
+ */
+export const FIELD_HAS_IMAGES = 'hasImages';
 
 export const SORT_ASC = 'asc';
 export const SORT_DESC = 'desc';
@@ -532,20 +539,25 @@ export function buildSort(
 ): Record<string, SortOrder | { $meta: 'textScore' }> {
   const direction: SortOrder = params.sortDirection === SORT_ASC ? 1 : -1;
 
+  // `hasImages: -1` is prepended to EVERY sort so listings that have images
+  // always rank ahead of image-less ones (product rule), with the requested
+  // ordering (price / relevance / fairness / recency) applied within each
+  // group. Index-backed via the `{ hasImages: -1, createdAt: -1 }` index; the
+  // primary key is set at the DB layer so pagination stays correct.
   if (params.sortField === SORT_PRICE) {
     const priceField = priceFieldForOffering(params.offering) ?? DEFAULT_PRICE_FIELD;
-    return { [priceField]: direction };
+    return { [FIELD_HAS_IMAGES]: -1, [priceField]: direction };
   }
   if (params.sortField === SORT_SALE_PRICE) {
-    return { [PRICE_FIELD_SALE]: direction };
+    return { [FIELD_HAS_IMAGES]: -1, [PRICE_FIELD_SALE]: direction };
   }
   if (params.sortField === SORT_RELEVANCE && hasTextScore) {
-    return { score: { $meta: 'textScore' }, createdAt: -1 };
+    return { [FIELD_HAS_IMAGES]: -1, score: { $meta: 'textScore' }, createdAt: -1 };
   }
   if (params.sortField === SORT_FAIRNESS) {
-    return { [FIELD_PRICE_ETHICS_FAIRNESS_SCORE]: direction, createdAt: -1 };
+    return { [FIELD_HAS_IMAGES]: -1, [FIELD_PRICE_ETHICS_FAIRNESS_SCORE]: direction, createdAt: -1 };
   }
-  return { createdAt: direction };
+  return { [FIELD_HAS_IMAGES]: -1, createdAt: direction };
 }
 
 /**

@@ -10,6 +10,7 @@ import { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import { City, Country, Region, Property, Address } from '../models';
 import { isPlausibleCityName } from '../utils/plausibleCityName';
+import { FIELD_HAS_IMAGES } from './property/searchQueryBuilder';
 const {
   serializePropertyAddresses,
   ADDRESS_GEO_POPULATE,
@@ -257,7 +258,8 @@ class CityController {
         query['longTermRent.monthlyAmount'] = priceRange;
       }
 
-      const sortObj: Record<string, 1 | -1> = {};
+      // Image-bearing listings first (product rule), then the requested order.
+      const sortObj: Record<string, 1 | -1> = { [FIELD_HAS_IMAGES]: -1 };
       switch (sort) {
         case 'price_asc': sortObj['longTermRent.monthlyAmount'] = 1; break;
         case 'price_desc': sortObj['longTermRent.monthlyAmount'] = -1; break;

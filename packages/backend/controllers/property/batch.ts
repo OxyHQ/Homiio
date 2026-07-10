@@ -3,6 +3,7 @@ import { successResponse, paginationResponse, AppError } from '../../middlewares
 import mongoose from 'mongoose';
 import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
 import { getQueryInteger, getQueryString } from '../queryParams';
+import { FIELD_HAS_IMAGES } from './searchQueryBuilder';
 
 export async function getPropertiesByIds(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
   try {
@@ -28,7 +29,8 @@ export async function getPropertiesByOwner(req: ControllerRequest, res: Controll
     if (exclude && mongoose.Types.ObjectId.isValid(exclude)) query._id = { $ne: new mongoose.Types.ObjectId(exclude) };
     const skip = (page - 1) * limit;
     const [properties,total] = await Promise.all([
-      Property.find(query).populate('addressId').sort({ createdAt:-1 }).skip(skip).limit(limit).lean(),
+      // Image-bearing listings first (product rule), then newest.
+      Property.find(query).populate('addressId').sort({ [FIELD_HAS_IMAGES]:-1, createdAt:-1 }).skip(skip).limit(limit).lean(),
       Property.countDocuments(query)
     ]);
     res.json(paginationResponse(properties, page, limit, total, "Owner's properties retrieved successfully"));
