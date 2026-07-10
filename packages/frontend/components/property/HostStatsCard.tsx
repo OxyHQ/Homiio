@@ -38,34 +38,11 @@ const monthYear = (input: string | Date | undefined): string => {
 
 const getDisplayName = (profile: Profile | null): string => {
   if (!profile) return 'Unknown host';
-  switch (profile.profileType) {
-    case 'personal':
-      return (
-        profile.personalProfile?.personalInfo?.bio ||
-        profile.oxyUserId ||
-        'Property owner'
-      );
-    case 'agency':
-      return (
-        profile.agencyProfile?.legalCompanyName ||
-        profile.oxyUserId ||
-        'Real estate agency'
-      );
-    case 'business':
-      return (
-        profile.businessProfile?.legalCompanyName ||
-        profile.oxyUserId ||
-        'Property management'
-      );
-    case 'cooperative':
-      return (
-        profile.cooperativeProfile?.legalName ||
-        profile.oxyUserId ||
-        'Housing cooperative'
-      );
-    default:
-      return profile.oxyUserId || 'Property owner';
-  }
+  return (
+    profile.personalProfile?.personalInfo?.bio ||
+    profile.oxyUserId ||
+    'Property owner'
+  );
 };
 
 export const HostStatsCard: React.FC<HostStatsCardProps> = ({
@@ -87,8 +64,8 @@ export const HostStatsCard: React.FC<HostStatsCardProps> = ({
     return monthYear(created);
   }, [landlordProfile]);
 
-  const isVerified = Boolean(landlordProfile?.isActive);
-  const profileId = landlordProfile?._id ?? landlordProfile?.id;
+  const isVerified = Boolean(landlordProfile?.personalProfile?.verification?.identity);
+  const oxyUserId = landlordProfile?.oxyUserId;
   // Prefer the Oxy avatar file id (resolved to a URL by the registered
   // ImageResolver); fall back to a profile-local custom avatar.
   const avatarSource = useMemo(() => {
@@ -101,8 +78,8 @@ export const HostStatsCard: React.FC<HostStatsCardProps> = ({
   }, [landlordProfile, getAvatarFileId]);
 
   const handleOpenProfile = () => {
-    if (profileId) {
-      router.push(`/profile/${profileId}`);
+    if (oxyUserId) {
+      router.push(`/roommates/${oxyUserId}`);
     }
   };
 

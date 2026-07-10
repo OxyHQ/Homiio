@@ -24,8 +24,8 @@ export interface RoommateProfile extends Profile {
 /** A serialized roommate request as returned by `GET /roommates/requests`. */
 export interface RoommateRequestDTO {
   id: string;
-  senderProfileId?: string;
-  receiverProfileId?: string;
+  senderOxyUserId?: string;
+  receiverOxyUserId?: string;
   sender: RoommateProfile | null;
   receiver: RoommateProfile | null;
   status: 'pending' | 'accepted' | 'declined' | 'expired';
@@ -185,13 +185,13 @@ class RoommateService {
 
   // Send roommate request
   async sendRoommateRequest(
-    profileId: string,
+    oxyUserId: string,
     message?: string,
     _oxyServices?: OxyServices,
     _activeSessionId?: string,
   ): Promise<void> {
     try {
-      await api.post(`${this.baseUrl}/${profileId}/request`, { message });
+      await api.post(`${this.baseUrl}/${encodeURIComponent(oxyUserId)}/request`, { message });
     } catch (error) {
       throw error;
     }
@@ -337,7 +337,6 @@ class RoommateService {
     budget: { min: number; max: number; currency: string };
     moveInDate: string;
     duration: string;
-    trustScore?: number;
     isVerified: boolean;
     hasReferences: boolean;
     rentalHistory: boolean;
@@ -376,9 +375,6 @@ class RoommateService {
       },
       moveInDate: roommatePrefs?.moveInDate || 'Flexible',
       duration: roommatePrefs?.leaseDuration || 'Flexible',
-      trustScore: typeof personal?.trustScore?.score === 'number'
-        ? personal.trustScore.score
-        : undefined,
       isVerified: Boolean(verification?.identity),
       hasReferences:
         (personal?.references?.length ?? 0) > 0 || Boolean(verification?.references),

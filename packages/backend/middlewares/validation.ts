@@ -428,9 +428,9 @@ const validateReviewId = [
   handleValidationErrors
 ];
 
-/** Profile ID parameter + pagination for owner-scoped review reads. */
-const validateProfileReviewsQuery = [
-  param('profileId').isMongoId().withMessage('Invalid profile ID'),
+/** Oxy user id parameter + pagination for user-scoped review reads. */
+const validateUserReviewsQuery = [
+  param('oxyUserId').isString().trim().notEmpty().withMessage('Invalid user ID'),
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1-100'),
   handleValidationErrors
@@ -440,7 +440,7 @@ export {
   validateReviewCreate,
   validateReviewUpdate,
   validateReviewId,
-  validateProfileReviewsQuery,
+  validateUserReviewsQuery,
 };
 
 /** Lifestyle / gender enum values mirrored from the RoommatePreferences type. */
@@ -450,14 +450,12 @@ const ROOMMATE_CLEANLINESS = ['very_clean', 'clean', 'average', 'relaxed'];
 const ROOMMATE_SCHEDULE = ['early_bird', 'night_owl', 'flexible'];
 
 /**
- * Send roommate request validation rules (POST /api/roommates/:profileId/request)
+ * Send roommate request validation rules (POST /api/roommates/:oxyUserId/request)
  *
- * The route param is the target profile id (validated as an ObjectId to block
- * NoSQL operator injection into `Profile.findById`); `message` is optional free
- * text and length-bounded.
+ * The route param is the target Oxy user id; `message` is optional free text.
  */
 const validateRoommateRequest = [
-  param('profileId').isMongoId().withMessage('Invalid profile ID'),
+  param('oxyUserId').isString().trim().notEmpty().withMessage('Invalid user ID'),
   body('message').optional().isString().isLength({ max: 1000 }).withMessage('Message max length is 1000'),
   handleValidationErrors
 ];

@@ -423,15 +423,6 @@ export default function PropertyDetailPage() {
       allowCalls =
         landlordProfile.personalProfile.settings?.privacy?.showContactInfo ??
         false;
-    } else if (landlordProfile.agencyProfile) {
-      phoneNumber = landlordProfile.agencyProfile.businessDetails?.licenseNumber;
-      allowCalls = true;
-    } else if (landlordProfile.businessProfile) {
-      phoneNumber = landlordProfile.businessProfile.businessDetails?.licenseNumber;
-      allowCalls = true;
-    } else if (landlordProfile.cooperativeProfile) {
-      phoneNumber = landlordProfile.cooperativeProfile.legalName;
-      allowCalls = true;
     }
     if (!allowCalls) {
       toast.error(
@@ -642,7 +633,7 @@ export default function PropertyDetailPage() {
                     <Pressable
                       key="profile"
                       style={styles.headerButton}
-                      onPress={() => router.push(`/profile/${landlordOxyUserId}`)}
+                      onPress={() => router.push(`/roommates/${landlordOxyUserId}`)}
                       accessibilityRole="button"
                       accessibilityLabel="Open host profile"
                     >

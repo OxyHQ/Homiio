@@ -1,12 +1,3 @@
-/**
- * Profile — personal home for the signed-in tenant/host.
- *
- * Stream P polish: an Airbnb-2026 layout. Hero block with large Avatar,
- * display name, optional bio, trust badges and an outline "Edit profile"
- * button. Below: a 3-up stats row (saved / applications / reservations)
- * with big H2 numerals. Below that: SettingsList-style sections (Profile
- * switcher, Trust score, Subscriptions, Sign out).
- */
 import React, { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -34,15 +25,10 @@ import { CardSurface } from '@/components/ui/CardSurface';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import {
-  useActivateProfileMutation,
-  usePrimaryProfileQuery,
-  useUserProfilesQuery,
-} from '@/hooks/query/useProfiles';
+import { useProfileQuery } from '@/hooks/query/useProfiles';
 import { useMyApplications } from '@/hooks/useApplicationQueries';
 import { useReservationsQuery } from '@/hooks/useReservationQueries';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
-import type { Profile } from '@/services/profileService';
 import { colors } from '@/styles/colors';
 import { spacing, tracker } from '@/constants/styles';
 import { logger } from '@/utils/logger';
@@ -60,117 +46,33 @@ const RowIcon: React.FC<{ name: IoniconName; destructive?: boolean }> = ({
   />
 );
 
-const getProfileDisplayName = (profile: Profile): string => {
-  switch (profile.profileType) {
-    case 'personal':
-      return 'Personal profile';
-    case 'agency':
-      return profile.agencyProfile?.legalCompanyName || 'Agency profile';
-    case 'business':
-      return profile.businessProfile?.legalCompanyName || 'Business profile';
-    case 'cooperative':
-      return profile.cooperativeProfile?.legalName || 'Cooperative profile';
-    default:
-      return 'Profile';
-  }
-};
-
-const getProfileDescription = (profile: Profile): string | undefined => {
-  switch (profile.profileType) {
-    case 'agency':
-      return profile.agencyProfile?.description;
-    case 'business':
-      return profile.businessProfile?.description;
-    case 'cooperative':
-      return profile.cooperativeProfile?.description;
-    default:
-      return profile.personalProfile?.personalInfo?.bio;
-  }
-};
-
-const profileTypeIcon = (type: Profile['profileType']): IoniconName => {
-  switch (type) {
-    case 'personal':
-      return 'person-outline';
-    case 'agency':
-      return 'briefcase-outline';
-    case 'business':
-      return 'business-outline';
-    case 'cooperative':
-      return 'people-outline';
-    default:
-      return 'person-outline';
-  }
-};
-
 export default function ProfileScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { logout, user } = useOxy();
 
-  const primaryProfileQuery = usePrimaryProfileQuery();
-  const profilesQuery = useUserProfilesQuery();
-  const { mutateAsync: activateProfile } = useActivateProfileMutation();
-
+  const profileQuery = useProfileQuery();
   const applicationsQuery = useMyApplications();
   const reservationsQuery = useReservationsQuery({ limit: 200 });
   const { savedProperties } = useSavedPropertiesContext();
 
-  const [pendingSwitch, setPendingSwitch] = useState<Profile | null>(null);
   const [pendingLogout, setPendingLogout] = useState(false);
   const [busyLogout, setBusyLogout] = useState(false);
-  const [busySwitch, setBusySwitch] = useState(false);
 
-  const profiles = profilesQuery.data ?? [];
-  const activeProfile = useMemo(
-    () => profiles.find((profile) => profile.isActive) ?? primaryProfileQuery.data ?? null,
-    [profiles, primaryProfileQuery.data],
-  );
-
-  const isLoading = primaryProfileQuery.isLoading || profilesQuery.isLoading;
-  const isError = primaryProfileQuery.isError || profilesQuery.isError;
+  const profile = profileQuery.data ?? null;
+  const isLoading = profileQuery.isLoading;
+  const isError = profileQuery.isError;
 
   const totalApplications = applicationsQuery.data?.data?.length ?? 0;
   const approvedApplications = useMemo(
     () =>
       (applicationsQuery.data?.data ?? []).filter(
-        (application) =>
-          application.status === TenantApplicationStatus.APPROVED,
+        (application) => application.status === TenantApplicationStatus.APPROVED,
       ).length,
     [applicationsQuery.data?.data],
   );
   const totalReservations = reservationsQuery.data?.items?.length ?? 0;
   const totalSaved = savedProperties.length;
-
-  const handleSwitch = useCallback(async () => {
-    const profile = pendingSwitch;
-    if (!profile) return;
-    const profileId = profile.id || profile._id;
-    if (!profileId) {
-      toast.error(t('profile.invalidProfile'));
-      setPendingSwitch(null);
-      return;
-    }
-    setBusySwitch(true);
-    try {
-      await activateProfile(profileId);
-      toast.success(
-        t('profile.switched', {
-          name: getProfileDisplayName(profile),
-        }),
-      );
-      setPendingSwitch(null);
-    } catch (error: unknown) {
-      logger.error('Failed to switch profile:', error);
-      const message =
-        error instanceof Error
-          ? error.message
-          : t('profile.switchFailed');
-      toast.error(message);
-    } finally {
-      setBusySwitch(false);
-    }
-  }, [pendingSwitch, activateProfile, t]);
 
   const handleLogout = useCallback(async () => {
     setBusyLogout(true);
@@ -218,30 +120,22 @@ export default function ProfileScreen() {
             title={t('profile.loadFailed')}
             description={t('profile.loadFailedHint')}
             retryLabel={t('common.retry')}
-            onRetry={() => {
-              primaryProfileQuery.refetch();
-              profilesQuery.refetch();
-            }}
+            onRetry={() => profileQuery.refetch()}
           />
         </View>
       </View>
     );
   }
 
-  const displayName =
-    user?.name?.displayName ||
-    (activeProfile ? getProfileDisplayName(activeProfile) : 'Your profile');
-  const bio = activeProfile ? getProfileDescription(activeProfile) : undefined;
-  const avatarUri = activeProfile?.personalProfile?.personalInfo?.avatar;
-  const trustScore = activeProfile?.personalProfile?.trustScore?.score;
-  const verification = activeProfile?.personalProfile?.verification;
+  const displayName = user?.name?.displayName || user?.username || 'Your profile';
+  const bio = profile?.personalProfile?.personalInfo?.bio;
+  const avatarUri = profile?.personalProfile?.personalInfo?.avatar;
+  const verification = profile?.personalProfile?.verification;
   const verifiedBadges: { label: string; key: string }[] = [];
   if (verification?.identity) verifiedBadges.push({ label: 'ID verified', key: 'identity' });
   if (verification?.income) verifiedBadges.push({ label: 'Income verified', key: 'income' });
-  if (verification?.references)
-    verifiedBadges.push({ label: 'References verified', key: 'references' });
-  if (verification?.background)
-    verifiedBadges.push({ label: 'Background verified', key: 'background' });
+  if (verification?.references) verifiedBadges.push({ label: 'References verified', key: 'references' });
+  if (verification?.background) verifiedBadges.push({ label: 'Background verified', key: 'background' });
 
   return (
     <View style={styles.root}>
@@ -250,12 +144,7 @@ export default function ProfileScreen() {
         <View style={styles.heroWrap}>
           <CardSurface padding={spacing['2xl']}>
             <View style={styles.heroRow}>
-              <Avatar
-                size={88}
-                shape="squircle"
-                uri={avatarUri}
-                name={displayName}
-              />
+              <Avatar size={88} shape="squircle" uri={avatarUri} name={displayName} />
               <View style={styles.heroBody}>
                 <H1 style={styles.heroName}>{displayName}</H1>
                 <BloomText style={styles.heroSubtitle}>
@@ -269,16 +158,8 @@ export default function ProfileScreen() {
               </View>
             </View>
 
-            {verifiedBadges.length > 0 || typeof trustScore === 'number' ? (
+            {verifiedBadges.length > 0 ? (
               <View style={styles.badgesRow}>
-                {typeof trustScore === 'number' ? (
-                  <Badge
-                    content={`Trust ${Math.round(trustScore)}`}
-                    color="success"
-                    variant="subtle"
-                    size="small"
-                  />
-                ) : null}
                 {verifiedBadges.map((badge) => (
                   <Badge
                     key={badge.key}
@@ -299,13 +180,6 @@ export default function ProfileScreen() {
               >
                 {t('profile.actions.editProfile')}
               </Button>
-              <Button
-                variant="ghost"
-                size="medium"
-                onPress={() => router.push('/profile/trust-score')}
-              >
-                {t('profile.trustScoreCta')}
-              </Button>
             </View>
           </CardSurface>
         </View>
@@ -321,9 +195,7 @@ export default function ProfileScreen() {
             value={totalApplications}
             description={
               approvedApplications > 0
-                ? t('profile.stats.applicationsApproved', {
-                    count: approvedApplications,
-                  })
+                ? t('profile.stats.applicationsApproved', { count: approvedApplications })
                 : undefined
             }
             onPress={() => router.push('/applications')}
@@ -359,48 +231,6 @@ export default function ProfileScreen() {
             title={t('profile.exchanges')}
             description={t('profile.exchangesDescription')}
             onPress={() => router.push('/exchange/requests')}
-          />
-        </SettingsListGroup>
-
-        <SettingsListGroup
-          title={t('profile.sections.profile')}
-          footer={
-            activeProfile
-              ? t('profile.activeFooter', {
-                  name: getProfileDisplayName(activeProfile),
-                })
-              : undefined
-          }
-        >
-          {profiles.map((profile) => {
-            const isActive = profile.isActive;
-            return (
-              <SettingsListItem
-                key={profile.id || profile._id}
-                icon={<RowIcon name={profileTypeIcon(profile.profileType)} />}
-                title={getProfileDisplayName(profile)}
-                description={getProfileDescription(profile) ?? undefined}
-                rightElement={
-                  isActive ? (
-                    <Badge
-                      content={t('profile.active')}
-                      variant="subtle"
-                      color="success"
-                      size="small"
-                    />
-                  ) : undefined
-                }
-                onPress={
-                  isActive ? undefined : () => setPendingSwitch(profile)
-                }
-              />
-            );
-          })}
-          <SettingsListItem
-            icon={<RowIcon name="add-circle-outline" />}
-            title={t('profile.createNew')}
-            description={t('profile.createNewDescription')}
-            onPress={() => router.push('/profile/create')}
           />
         </SettingsListGroup>
 
@@ -440,21 +270,6 @@ export default function ProfileScreen() {
       </ScrollView>
 
       <ConfirmDialog
-        visible={Boolean(pendingSwitch)}
-        title={t('profile.switchTitle')}
-        message={
-          pendingSwitch
-            ? t('profile.switchMessage', {
-                name: getProfileDisplayName(pendingSwitch),
-              })
-            : ''
-        }
-        confirmLabel={t('profile.switchConfirm')}
-        loading={busySwitch}
-        onConfirm={handleSwitch}
-        onCancel={() => setPendingSwitch(null)}
-      />
-      <ConfirmDialog
         visible={pendingLogout}
         title={t('settings.signOut')}
         message={t('settings.signOutMessage')}
@@ -481,19 +296,11 @@ const StatTile: React.FC<StatTileProps> = ({ label, value, description, onPress 
     <>
       <H2 style={styles.statValue}>{value}</H2>
       <BloomText style={styles.statLabel}>{label}</BloomText>
-      {description ? (
-        <BloomText style={styles.statDescription}>{description}</BloomText>
-      ) : null}
+      {description ? <BloomText style={styles.statDescription}>{description}</BloomText> : null}
       {onPress ? (
         <View style={styles.statLink}>
-          <BloomText style={styles.statLinkText}>
-            {`View ${label.toLowerCase()}`}
-          </BloomText>
-          <Ionicons
-            name="chevron-forward"
-            size={14}
-            color={colors.primaryColor}
-          />
+          <BloomText style={styles.statLinkText}>{`View ${label.toLowerCase()}`}</BloomText>
+          <Ionicons name="chevron-forward" size={14} color={colors.muted} />
         </View>
       ) : null}
     </>
@@ -579,46 +386,45 @@ const styles = StyleSheet.create({
   },
   statsWrap: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
     paddingHorizontal: spacing.lg,
-    gap: spacing.sm,
     marginBottom: spacing.lg,
   },
   statTile: {
     flex: 1,
+    minWidth: 100,
+  },
+  statTilePressed: {
+    opacity: 0.92,
   },
   statValue: {
     fontSize: 28,
     fontWeight: '700',
-    letterSpacing: tracker.tight,
+    marginBottom: spacing.xs,
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 13,
     color: colors.muted,
-    textTransform: 'uppercase',
-    letterSpacing: tracker.eyebrow,
     fontWeight: '600',
-    marginTop: spacing.xs,
   },
   statDescription: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.muted,
     marginTop: spacing.xs,
   },
   statLink: {
-    marginTop: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
+    marginTop: spacing.sm,
   },
   statLinkText: {
-    fontSize: 13,
+    fontSize: 12,
+    color: colors.primary,
     fontWeight: '600',
-    color: colors.primaryColor,
-  },
-  statTilePressed: {
-    opacity: 0.85,
   },
   bottomPadding: {
-    height: spacing['4xl'],
+    height: spacing['2xl'],
   },
 });

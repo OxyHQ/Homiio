@@ -1,22 +1,10 @@
 /**
  * Roommate request / relationship DTO serialization.
- *
- * Roommate rows reference Homiio `Profile` documents, but the human-facing name
- * lives on the Oxy user account (`name.displayName`), not on the Homiio profile.
- * This module resolves those names in ONE round-trip via Oxy's
- * `POST /users/by-ids` endpoint (dual-mode auth, cap 100 ids per call) and maps
- * them back onto the serialized profiles, so the frontend renders real names
- * instead of guessing from a bio.
- *
- * The endpoint is best-effort for display purposes: if it is unreachable we log
- * and fall back to `undefined` display names rather than failing the whole
- * roommate request/relationship read.
  */
 
 import config from '../../config';
 import { logger } from '../../middlewares/logging';
 
-/** The subset of Oxy's `PublicUserProfile` payload we consume. */
 interface OxyPublicUser {
   id?: string;
   _id?: string;
@@ -24,40 +12,23 @@ interface OxyPublicUser {
   name?: { displayName?: string };
 }
 
-/** Public projection of a Homiio profile referenced by a roommate row. */
 export interface SerializedRoommateProfile {
   id: string;
   oxyUserId?: string;
   displayName?: string;
-  profileType?: string;
-  isAnonymous?: boolean;
   personalProfile?: unknown;
 }
 
-/**
- * A populated `Profile` document (or lean object) with the fields this
- * serializer reads. The `personalProfile` slice is passed through untouched for
- * the frontend match cards.
- */
 export interface PopulatedProfileLike {
   _id: unknown;
   oxyUserId?: string;
-  profileType?: string;
-  isAnonymous?: boolean;
   personalProfile?: unknown;
 }
 
-/** Oxy user fields the roommate serializer needs from a populated profile. */
-export const ROOMMATE_PROFILE_FIELDS = 'oxyUserId profileType personalProfile isAnonymous';
+export const ROOMMATE_PROFILE_FIELDS = 'oxyUserId personalProfile';
 
 const USERS_BY_IDS_CAP = 100;
 
-/**
- * Resolve `oxyUserId → displayName` for the given ids in a single Oxy
- * `POST /users/by-ids` call. Ids are de-duplicated, empties dropped, and the
- * list is capped at 100 (the endpoint's documented limit). Returns an empty map
- * on any transport/parse failure — display names are non-critical.
- */
 export async function hydrateDisplayNames(
   oxyUserIds: ReadonlyArray<string | undefined | null>,
 ): Promise<Map<string, string>> {
@@ -109,7 +80,6 @@ export async function hydrateDisplayNames(
   return result;
 }
 
-/** Serialize a populated profile into the public roommate DTO shape. */
 export function serializeRoommateProfile(
   profile: PopulatedProfileLike | null | undefined,
   displayNames: Map<string, string>,
@@ -122,8 +92,6 @@ export function serializeRoommateProfile(
     id: String(profile._id),
     oxyUserId,
     displayName: oxyUserId ? displayNames.get(oxyUserId) : undefined,
-    profileType: profile.profileType,
-    isAnonymous: profile.isAnonymous,
     personalProfile: profile.personalProfile,
   };
 }

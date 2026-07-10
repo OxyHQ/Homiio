@@ -1,6 +1,5 @@
 import React, { ReactNode, useMemo } from 'react';
 import { View } from 'react-native';
-import { TrustScoreWidget } from './TrustScoreWidget';
 import { FeaturedPropertiesWidget } from './FeaturedPropertiesWidget';
 import { EcoCertificationWidget } from './EcoCertificationWidget';
 import { HorizonInitiativeWidget } from './HorizonInitiativeWidget';
@@ -58,7 +57,6 @@ export const WidgetManager = React.memo(function WidgetManager({
   const widgetConfig = useMemo(() => {
     const config: Record<ScreenId, ReactNode[]> = {
       home: [
-        <TrustScoreWidget key="trust-score" />,
         <RecentlyViewedWidget key="recently-viewed" />,
         <FeaturedPropertiesWidget key="featured-properties" />,
         <DonationWidget key="donation" />,
@@ -98,7 +96,6 @@ export const WidgetManager = React.memo(function WidgetManager({
         />,
       ],
       profile: [
-        <TrustScoreWidget key="trust-score" />,
         <DonationWidget key="donation" />,
       ],
       contracts: [],

@@ -30,7 +30,7 @@ export async function getPropertyById(req: ControllerRequest, res: ControllerRes
       const oxyUserId = req.user.id || req.user._id;
       try {
         const { Profile } = require('../../models');
-        const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+        const activeProfile = await Profile.findByOxyUserId(oxyUserId);
         if (activeProfile) {
           const profileId = activeProfile._id;
           RecentlyViewed.findOneAndUpdate(

@@ -21,7 +21,7 @@ export async function generateSuggestions(req: Request, res: Response) {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const activeProfile = await Profile.findActiveByOxyUserId(userId);
+    const activeProfile = await Profile.findByOxyUserId(userId);
     if (!activeProfile) return err(res, 404, 'No active profile found');
 
     const { propertyContext, conversationContext } = (req as any).body || {};

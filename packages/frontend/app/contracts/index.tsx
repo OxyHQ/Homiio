@@ -36,17 +36,7 @@ import { colors } from '@/styles/colors';
  */
 const profileDisplayName = (profile?: Profile): string => {
   if (!profile) return 'Unknown';
-  switch (profile.profileType) {
-    case 'agency':
-      return profile.agencyProfile?.legalCompanyName || profile.oxyUserId || 'Real Estate Agency';
-    case 'business':
-      return profile.businessProfile?.legalCompanyName || profile.oxyUserId || 'Property Management';
-    case 'cooperative':
-      return profile.cooperativeProfile?.legalName || profile.oxyUserId || 'Housing Cooperative';
-    case 'personal':
-    default:
-      return profile.oxyUserId || 'Unknown';
-  }
+  return profile.personalProfile?.personalInfo?.bio?.trim() || profile.oxyUserId || 'Unknown';
 };
 
 /**

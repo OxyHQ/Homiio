@@ -3,20 +3,12 @@ import {
   EmploymentStatus,
   LeaseDuration,
   PriceUnit,
-  BusinessType,
   ReferenceRelationship,
   ReasonForLeaving,
   ProfileVisibility,
 } from '@/services/profileService';
 import type { UpdateProfileData } from '@/services/profileService';
 import type {
-  AgencyBusinessTypeValue,
-  AgencyEmployeeCountValue,
-  AgencyInfoForm,
-  BusinessBusinessTypeValue,
-  BusinessEmployeeCountValue,
-  BusinessInfoForm,
-  CooperativeInfoForm,
   EmploymentStatusValue,
   LeaseDurationValue,
   PersonalInfoForm,
@@ -28,10 +20,6 @@ import type {
   SettingsForm,
 } from './types';
 
-/* -------------------------------------------------------------------------- */
-/*  String-literal-union schemas (mirror the form value types)                */
-/* -------------------------------------------------------------------------- */
-
 const employmentStatusSchema = z.enum([
   'employed',
   'self_employed',
@@ -42,26 +30,6 @@ const employmentStatusSchema = z.enum([
 ]);
 
 const leaseDurationSchema = z.enum(['monthly', '3_months', '6_months', 'yearly', 'flexible']);
-
-const agencyBusinessTypeSchema = z.enum([
-  'real_estate_agency',
-  'property_management',
-  'brokerage',
-  'developer',
-  'other',
-]);
-
-const businessBusinessTypeSchema = z.enum([
-  'small_business',
-  'startup',
-  'freelancer',
-  'consultant',
-  'other',
-]);
-
-const agencyEmployeeCountSchema = z.enum(['1-10', '11-50', '51-200', '200+']);
-
-const businessEmployeeCountSchema = z.enum(['1-5', '6-10', '11-25', '26+']);
 
 const priceUnitSchema = z.enum(['day', 'night', 'week', 'month', 'year']);
 
@@ -77,15 +45,6 @@ const reasonForLeavingSchema = z.enum([
   'upgrade',
   'other',
 ]);
-
-/* -------------------------------------------------------------------------- */
-/*  Form schemas — validated on submit. They describe the *shape* of the      */
-/*  local form state and guard against corrupted values (e.g. an out-of-range */
-/*  enum). They intentionally do NOT add field requiredness the original      */
-/*  screen never enforced: empty legal names / bios still save, and           */
-/*  references / rental-history rows are pruned by their key field at         */
-/*  serialization time (see the builders below), matching prior behaviour.    */
-/* -------------------------------------------------------------------------- */
 
 export const personalInfoSchema = z.object({
   bio: z.string(),
@@ -160,78 +119,14 @@ export const personalProfileFormSchema = z.object({
   settings: settingsSchema,
 });
 
-export const agencyInfoSchema = z.object({
-  businessType: agencyBusinessTypeSchema,
-  legalCompanyName: z.string(),
-  description: z.string(),
-  businessDetails: z.object({
-    licenseNumber: z.string(),
-    taxId: z.string(),
-    yearEstablished: z.string(),
-    employeeCount: agencyEmployeeCountSchema,
-    specialties: z.array(z.string()),
-  }),
-  verification: z.object({
-    businessLicense: z.boolean(),
-    insurance: z.boolean(),
-    bonding: z.boolean(),
-    backgroundCheck: z.boolean(),
-  }),
-});
-
-export const businessInfoSchema = z.object({
-  businessType: businessBusinessTypeSchema,
-  legalCompanyName: z.string(),
-  description: z.string(),
-  businessDetails: z.object({
-    licenseNumber: z.string(),
-    taxId: z.string(),
-    yearEstablished: z.string(),
-    employeeCount: businessEmployeeCountSchema,
-    industry: z.string(),
-    specialties: z.array(z.string()),
-  }),
-  verification: z.object({
-    businessLicense: z.boolean(),
-    insurance: z.boolean(),
-    backgroundCheck: z.boolean(),
-  }),
-});
-
-export const cooperativeInfoSchema = z.object({
-  legalName: z.string(),
-  description: z.string(),
-});
-
-/* -------------------------------------------------------------------------- */
-/*  Enum coercion helpers — read a possibly-invalid value from the server     */
-/*  profile and narrow it to a valid form value, falling back to a default.   */
-/* -------------------------------------------------------------------------- */
-
 export const toEmploymentStatus = (val: unknown): EmploymentStatusValue =>
   employmentStatusSchema.safeParse(val).data ?? 'employed';
 
 export const toLeaseDuration = (val: unknown): LeaseDurationValue =>
   leaseDurationSchema.safeParse(val).data ?? 'yearly';
 
-export const toAgencyBusinessType = (val: unknown): AgencyBusinessTypeValue =>
-  agencyBusinessTypeSchema.safeParse(val).data ?? 'real_estate_agency';
-
-export const toBusinessBusinessType = (val: unknown): BusinessBusinessTypeValue =>
-  businessBusinessTypeSchema.safeParse(val).data ?? 'startup';
-
-export const toAgencyEmployeeCount = (val: unknown): AgencyEmployeeCountValue =>
-  agencyEmployeeCountSchema.safeParse(val).data ?? '1-10';
-
-export const toBusinessEmployeeCount = (val: unknown): BusinessEmployeeCountValue =>
-  businessEmployeeCountSchema.safeParse(val).data ?? '1-5';
-
 export const toReasonForLeaving = (val: unknown): ReasonForLeavingValue =>
   reasonForLeavingSchema.safeParse(val).data ?? 'lease_ended';
-
-/* -------------------------------------------------------------------------- */
-/*  Form value -> shared enum maps (used when serializing to the API).        */
-/* -------------------------------------------------------------------------- */
 
 const EMPLOYMENT_STATUS_MAP: Record<EmploymentStatusValue, EmploymentStatus> = {
   employed: EmploymentStatus.EMPLOYED,
@@ -281,30 +176,9 @@ const PROFILE_VISIBILITY_MAP: Record<SettingsForm['privacy']['profileVisibility'
     contacts_only: ProfileVisibility.CONTACTS_ONLY,
   };
 
-const AGENCY_BUSINESS_TYPE_MAP: Record<AgencyBusinessTypeValue, BusinessType> = {
-  real_estate_agency: BusinessType.REAL_ESTATE_AGENCY,
-  property_management: BusinessType.PROPERTY_MANAGEMENT,
-  brokerage: BusinessType.BROKERAGE,
-  developer: BusinessType.DEVELOPER,
-  other: BusinessType.OTHER,
-};
-
-const BUSINESS_BUSINESS_TYPE_MAP: Record<BusinessBusinessTypeValue, BusinessType> = {
-  small_business: BusinessType.SMALL_BUSINESS,
-  startup: BusinessType.STARTUP,
-  freelancer: BusinessType.FREELANCER,
-  consultant: BusinessType.CONSULTANT,
-  other: BusinessType.OTHER,
-};
-
 const toOptionalInt = (val: string): number | undefined => (val ? parseInt(val, 10) : undefined);
 
 const toOptionalString = (val: string): string | undefined => val || undefined;
-
-/* -------------------------------------------------------------------------- */
-/*  Form -> UpdateProfileData builders. These reproduce, field for field, the */
-/*  payload that the original `handleSave` sent for each profile type.        */
-/* -------------------------------------------------------------------------- */
 
 export function buildPersonalUpdateData(input: {
   personalInfo: PersonalInfoForm;
@@ -376,71 +250,6 @@ export function buildPersonalUpdateData(input: {
         timezone: settings.timezone,
         currency: settings.currency,
       },
-    },
-  };
-}
-
-export function buildAgencyUpdateData(agencyInfo: AgencyInfoForm): UpdateProfileData {
-  return {
-    agencyProfile: {
-      businessType: AGENCY_BUSINESS_TYPE_MAP[agencyInfo.businessType],
-      description: agencyInfo.description,
-      legalCompanyName: agencyInfo.legalCompanyName || undefined,
-      businessDetails: {
-        licenseNumber: agencyInfo.businessDetails.licenseNumber || undefined,
-        taxId: agencyInfo.businessDetails.taxId || undefined,
-        yearEstablished: toOptionalInt(agencyInfo.businessDetails.yearEstablished),
-        employeeCount: agencyInfo.businessDetails.employeeCount,
-        specialties: agencyInfo.businessDetails.specialties,
-      },
-      verification: agencyInfo.verification,
-    },
-  };
-}
-
-export function buildBusinessUpdateData(businessInfo: BusinessInfoForm): UpdateProfileData {
-  return {
-    businessProfile: {
-      businessType: BUSINESS_BUSINESS_TYPE_MAP[businessInfo.businessType],
-      description: businessInfo.description,
-      legalCompanyName: businessInfo.legalCompanyName,
-      businessDetails: {
-        licenseNumber: businessInfo.businessDetails.licenseNumber || undefined,
-        taxId: businessInfo.businessDetails.taxId || undefined,
-        yearEstablished: toOptionalInt(businessInfo.businessDetails.yearEstablished),
-        employeeCount: businessInfo.businessDetails.employeeCount,
-        industry: businessInfo.businessDetails.industry,
-        specialties: businessInfo.businessDetails.specialties,
-        serviceAreas: [],
-      },
-      verification: businessInfo.verification,
-    },
-  };
-}
-
-/**
- * Cooperative updates are not modelled by the shared {@link UpdateProfileData}
- * envelope (it only covers personal/agency/business), yet the backend's update
- * handler assigns any unknown top-level key straight onto the document, so the
- * original screen sent a `cooperativeProfile` payload directly. We preserve
- * that exact wire shape by extending the shared envelope locally — the result
- * is still assignable to `UpdateProfileData`, so no cast is needed at the call
- * site and the mutation contract is honoured.
- */
-export interface CooperativeUpdatePayload extends UpdateProfileData {
-  cooperativeProfile: {
-    legalName: string;
-    description: string;
-  };
-}
-
-export function buildCooperativeUpdateData(
-  cooperativeInfo: CooperativeInfoForm,
-): CooperativeUpdatePayload {
-  return {
-    cooperativeProfile: {
-      legalName: cooperativeInfo.legalName,
-      description: cooperativeInfo.description,
     },
   };
 }

@@ -26,7 +26,7 @@ router.put('/:reviewId', updateReview);
 router.delete('/:reviewId', deleteReview);
 
 // Profile-specific reviews
-router.get('/profile/:profileId', getUserReviews);
+router.get('/user/:oxyUserId', getUserReviews);
 
 export default function() {
   return router;

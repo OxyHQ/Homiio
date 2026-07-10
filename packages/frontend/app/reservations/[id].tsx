@@ -84,7 +84,7 @@ export default function ReservationDetailScreen() {
   const id = typeof params.id === 'string' ? params.id : params.id?.[0];
   const reservationQuery = useReservationQuery(id);
   const updateMutation = useUpdateReservation(id ?? '');
-  const { primaryProfile } = useProfile();
+  const { profile } = useProfile();
 
   const reservation = reservationQuery.data;
   const { property } = useProperty(reservation?.propertyId ?? '');
@@ -94,13 +94,13 @@ export default function ReservationDetailScreen() {
   >(null);
 
   const role = useMemo<'guest' | 'host' | null>(() => {
-    if (!reservation || !primaryProfile) return null;
-    const sessionOxyUserId = primaryProfile?.oxyUserId;
+    if (!reservation || !profile) return null;
+    const sessionOxyUserId = profile?.oxyUserId;
     if (!sessionOxyUserId) return null;
     if (String(reservation.hostOxyUserId) === sessionOxyUserId) return 'host';
     if (String(reservation.guestOxyUserId) === sessionOxyUserId) return 'guest';
     return null;
-  }, [reservation, primaryProfile]);
+  }, [reservation, profile]);
 
   const handleAction = useCallback(
     async (target: ReservationStatus) => {

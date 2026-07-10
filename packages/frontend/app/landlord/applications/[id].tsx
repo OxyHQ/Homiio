@@ -138,32 +138,8 @@ const getApplicantDisplayName = (
   profile: Profile | null | undefined,
 ): string => {
   if (!profile) return 'Applicant';
-  switch (profile.profileType) {
-    case 'personal': {
-      const bio = profile.personalProfile?.personalInfo?.bio;
-      return bio?.trim() || profile.oxyUserId || 'Applicant';
-    }
-    case 'agency':
-      return (
-        profile.agencyProfile?.legalCompanyName?.trim() ||
-        profile.oxyUserId ||
-        'Agency'
-      );
-    case 'business':
-      return (
-        profile.businessProfile?.legalCompanyName?.trim() ||
-        profile.oxyUserId ||
-        'Business'
-      );
-    case 'cooperative':
-      return (
-        profile.cooperativeProfile?.legalName?.trim() ||
-        profile.oxyUserId ||
-        'Cooperative'
-      );
-    default:
-      return profile.oxyUserId || 'Applicant';
-  }
+  const bio = profile.personalProfile?.personalInfo?.bio;
+  return bio?.trim() || profile.oxyUserId || 'Applicant';
 };
 
 /**
@@ -259,7 +235,7 @@ export default function LandlordApplicationDetailScreen() {
   const id = typeof params.id === 'string' ? params.id : params.id?.[0];
   const applicationQuery = useApplicationById(id);
   const updateMutation = useUpdateApplicationMutation();
-  const { primaryProfile } = useProfile();
+  const { profile } = useProfile();
 
   const application: TenantApplication | undefined = applicationQuery.data;
   const { property } = useProperty(application?.propertyId ?? '');
@@ -267,7 +243,7 @@ export default function LandlordApplicationDetailScreen() {
   const applicantQuery = useQuery({
     queryKey: ['profile-by-id', application?.applicantOxyUserId ?? ''],
     queryFn: async () =>
-      profileService.getProfileById(String(application?.applicantOxyUserId)),
+      profileService.getProfileByOxyUserId(String(application?.applicantOxyUserId)),
     enabled: Boolean(application?.applicantOxyUserId),
     staleTime: 1000 * 60 * 5,
   });
@@ -277,11 +253,11 @@ export default function LandlordApplicationDetailScreen() {
   const { getAvatarFileId } = useOxyAvatars([applicantQuery.data?.oxyUserId]);
 
   const isLandlord = useMemo<boolean>(() => {
-    if (!application || !primaryProfile) return false;
-    const sessionOxyUserId = primaryProfile?.oxyUserId;
+    if (!application || !profile) return false;
+    const sessionOxyUserId = profile?.oxyUserId;
     if (!sessionOxyUserId) return false;
     return String(application.landlordOxyUserId) === sessionOxyUserId;
-  }, [application, primaryProfile]);
+  }, [application, profile]);
 
   const [pendingAction, setPendingAction] = useState<ReviewAction | null>(null);
   const [actionNotes, setActionNotes] = useState('');

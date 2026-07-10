@@ -1,105 +1,63 @@
 import { create } from 'zustand';
 import profileService from '@/services/profileService';
-import {
-  Profile,
-  UpdateProfileData,
-  ProfileType,
-  type CreateProfileData,
-} from '@homiio/shared-types';
-
-/**
- * Input accepted by the store's `createProfile` action. Callers provide the
- * target profile type plus the optional type-specific payload; the action maps
- * it to the {@link CreateProfileData} envelope expected by the service.
- */
-interface CreateProfileInput {
-  profileType: ProfileType;
-  data?: CreateProfileData['data'];
-}
+import { Profile, UpdateProfileData } from '@homiio/shared-types';
 
 interface ProfileState {
-  // State
-  primaryProfile: Profile | null;
-  allProfiles: Profile[];
+  profile: Profile | null;
   isLoading: boolean;
   error: string | null;
   landlordProfile: Profile | null;
   landlordProfileLoading: boolean;
   landlordProfileError: string | null;
 
-  // Actions
-  setPrimaryProfile: (profile: Profile | null) => void;
-  setAllProfiles: (profiles: Profile[]) => void;
+  setProfile: (profile: Profile | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setLandlordProfile: (profile: Profile | null) => void;
   setLandlordProfileLoading: (loading: boolean) => void;
   setLandlordProfileError: (error: string | null) => void;
 
-  // Async Actions
-  fetchPrimaryProfile: () => Promise<Profile | null>;
-  fetchUserProfiles: () => Promise<Profile[]>;
-  fetchLandlordProfileById: (profileId: string) => Promise<Profile | null>;
-  createProfile: (profileData: CreateProfileInput) => Promise<Profile>;
-  updateProfile: (profileId: string, profileData: UpdateProfileData) => Promise<Profile>;
-  deleteProfile: (profileId: string) => Promise<void>;
-  activateProfile: (profileId: string) => Promise<Profile>;
+  fetchProfile: () => Promise<Profile | null>;
+  fetchLandlordProfileByOxyUserId: (oxyUserId: string) => Promise<Profile | null>;
+  updateProfile: (updateData: UpdateProfileData) => Promise<Profile>;
 }
 
-export const useProfileStore = create<ProfileState>((set, get) => ({
-  // Initial state
-  primaryProfile: null,
-  allProfiles: [],
+export const useProfileStore = create<ProfileState>((set) => ({
+  profile: null,
   isLoading: false,
   error: null,
   landlordProfile: null,
   landlordProfileLoading: false,
   landlordProfileError: null,
 
-  // Synchronous actions
-  setPrimaryProfile: (profile: Profile | null) => set({ primaryProfile: profile }),
-  setAllProfiles: (profiles: Profile[]) => set({ allProfiles: profiles }),
-  setLoading: (loading: boolean) => set({ isLoading: loading }),
-  setError: (error: string | null) => set({ error }),
-  setLandlordProfile: (profile: Profile | null) => set({ landlordProfile: profile }),
-  setLandlordProfileLoading: (loading: boolean) => set({ landlordProfileLoading: loading }),
-  setLandlordProfileError: (error: string | null) => set({ landlordProfileError: error }),
+  setProfile: (profile) => set({ profile }),
+  setLoading: (isLoading) => set({ isLoading }),
+  setError: (error) => set({ error }),
+  setLandlordProfile: (landlordProfile) => set({ landlordProfile }),
+  setLandlordProfileLoading: (landlordProfileLoading) => set({ landlordProfileLoading }),
+  setLandlordProfileError: (landlordProfileError) => set({ landlordProfileError }),
 
-  // Async actions
-  fetchPrimaryProfile: async () => {
+  fetchProfile: async () => {
     try {
       set({ isLoading: true, error: null });
-      const profile = await profileService.getOrCreatePrimaryProfile();
-      set({ primaryProfile: profile, isLoading: false });
+      const profile = await profileService.getOrCreateProfile();
+      set({ profile, isLoading: false });
       return profile;
-    } catch (error: any) {
-      const errorMessage = error.message || 'Failed to fetch primary profile';
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch profile';
       set({ error: errorMessage, isLoading: false });
       throw error;
     }
   },
 
-  fetchUserProfiles: async () => {
-    try {
-      set({ isLoading: true, error: null });
-      const profiles = await profileService.getUserProfiles();
-      set({ allProfiles: profiles, isLoading: false });
-      return profiles;
-    } catch (error: any) {
-      const errorMessage = error.message || 'Failed to fetch profiles';
-      set({ error: errorMessage, isLoading: false });
-      throw error;
-    }
-  },
-
-  fetchLandlordProfileById: async (profileId: string) => {
+  fetchLandlordProfileByOxyUserId: async (oxyUserId: string) => {
     try {
       set({ landlordProfileLoading: true, landlordProfileError: null, landlordProfile: null });
-      const profile = await profileService.getProfileById(profileId);
+      const profile = await profileService.getProfileByOxyUserId(oxyUserId);
       set({ landlordProfile: profile, landlordProfileLoading: false });
       return profile;
-    } catch (error: any) {
-      const errorMessage = error.message || 'Failed to fetch landlord profile';
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch landlord profile';
       set({
         landlordProfileError: errorMessage,
         landlordProfileLoading: false,
@@ -109,133 +67,14 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     }
   },
 
-  createProfile: async (profileData: CreateProfileInput) => {
-    try {
-      // Check if trying to create a personal profile
-      if (profileData.profileType === ProfileType.PERSONAL) {
-        throw new Error(
-          'Personal profiles cannot be created manually. They are created automatically when you first access the system.',
-        );
-      }
-
-      set({ isLoading: true, error: null });
-
-      const createData: CreateProfileData = {
-        profileType: profileData.profileType,
-        data: profileData.data ?? {},
-      };
-      const profile = await profileService.createProfile(createData);
-
-      // Update state
-      const { allProfiles } = get();
-      const newAllProfiles = [...allProfiles, profile];
-      set({
-        allProfiles: newAllProfiles,
-        isLoading: false,
-        // If this is the first profile, set it as primary
-        primaryProfile: allProfiles.length === 0 ? profile : get().primaryProfile,
-      });
-
-      return profile;
-    } catch (error: any) {
-      const errorMessage = error.message || 'Failed to create profile';
-      set({ error: errorMessage, isLoading: false });
-      throw error;
-    }
-  },
-
-  updateProfile: async (profileId: string, updateData: UpdateProfileData) => {
+  updateProfile: async (updateData) => {
     try {
       set({ isLoading: true, error: null });
-      const updatedProfile = await profileService.updateProfile(profileId, updateData);
-
-      // Update state
-      const { allProfiles, primaryProfile } = get();
-
-      // Update in allProfiles
-      const updatedAllProfiles = allProfiles.map((profile: Profile) =>
-        profile.id === updatedProfile.id || profile._id === updatedProfile._id
-          ? updatedProfile
-          : profile,
-      );
-
-      // Update primary profile if it's the same
-      const newPrimaryProfile =
-        primaryProfile &&
-        (primaryProfile.id === updatedProfile.id || primaryProfile._id === updatedProfile._id)
-          ? updatedProfile
-          : primaryProfile;
-
-      set({
-        allProfiles: updatedAllProfiles,
-        primaryProfile: newPrimaryProfile,
-        isLoading: false,
-      });
-
+      const updatedProfile = await profileService.updateMyProfile(updateData);
+      set({ profile: updatedProfile, isLoading: false });
       return updatedProfile;
-    } catch (error: any) {
-      const errorMessage = error.message || 'Failed to update profile';
-      set({ error: errorMessage, isLoading: false });
-      throw error;
-    }
-  },
-
-  deleteProfile: async (profileId: string) => {
-    try {
-      set({ isLoading: true, error: null });
-      await profileService.deleteProfile(profileId);
-
-      // Update state
-      const { allProfiles, primaryProfile } = get();
-
-      // Remove from allProfiles
-      const updatedAllProfiles = allProfiles.filter(
-        (profile: Profile) => !(profile.id === profileId || profile._id === profileId),
-      );
-
-      // If primary profile was deleted, set the first remaining profile as primary
-      let newPrimaryProfile = primaryProfile;
-      if (primaryProfile && (primaryProfile.id === profileId || primaryProfile._id === profileId)) {
-        newPrimaryProfile = updatedAllProfiles.length > 0 ? updatedAllProfiles[0] : null;
-      }
-
-      set({
-        allProfiles: updatedAllProfiles,
-        primaryProfile: newPrimaryProfile,
-        isLoading: false,
-      });
-    } catch (error: any) {
-      const errorMessage = error.message || 'Failed to delete profile';
-      set({ error: errorMessage, isLoading: false });
-      throw error;
-    }
-  },
-
-  activateProfile: async (profileId: string) => {
-    try {
-      set({ isLoading: true, error: null });
-
-      // Use the new activateProfile method in the service
-      const activatedProfile = await profileService.activateProfile(profileId);
-
-      // Update state
-      const { allProfiles } = get();
-
-      // Update all profiles to set isActive correctly
-      const updatedAllProfiles = allProfiles.map((profile: Profile) => ({
-        ...profile,
-        isActive: profile.id === activatedProfile.id || profile._id === activatedProfile._id,
-      }));
-
-      set({
-        allProfiles: updatedAllProfiles,
-        primaryProfile: activatedProfile,
-        isLoading: false,
-      });
-
-      return activatedProfile;
-    } catch (error: any) {
-      const errorMessage = error.message || 'Failed to activate profile';
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update profile';
       set({ error: errorMessage, isLoading: false });
       throw error;
     }

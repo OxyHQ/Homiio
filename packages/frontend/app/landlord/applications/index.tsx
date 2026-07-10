@@ -48,32 +48,8 @@ const FILTERS: { id: StatusFilter; label: string }[] = [
 
 const getProfileDisplayName = (profile: Profile | null | undefined): string => {
   if (!profile) return 'Applicant';
-  switch (profile.profileType) {
-    case 'personal': {
-      const bio = profile.personalProfile?.personalInfo?.bio;
-      return bio?.trim() || profile.oxyUserId || 'Applicant';
-    }
-    case 'agency':
-      return (
-        profile.agencyProfile?.legalCompanyName?.trim() ||
-        profile.oxyUserId ||
-        'Agency applicant'
-      );
-    case 'business':
-      return (
-        profile.businessProfile?.legalCompanyName?.trim() ||
-        profile.oxyUserId ||
-        'Business applicant'
-      );
-    case 'cooperative':
-      return (
-        profile.cooperativeProfile?.legalName?.trim() ||
-        profile.oxyUserId ||
-        'Cooperative applicant'
-      );
-    default:
-      return profile.oxyUserId || 'Applicant';
-  }
+  const bio = profile.personalProfile?.personalInfo?.bio;
+  return bio?.trim() || profile.oxyUserId || 'Applicant';
 };
 
 /**
@@ -191,9 +167,9 @@ export default function LandlordApplicationsScreen() {
   }, [items]);
 
   const applicantQueries = useQueries({
-    queries: uniqueApplicantIds.map((profileId) => ({
-      queryKey: ['profile-by-id', profileId] as const,
-      queryFn: async () => profileService.getProfileById(profileId),
+    queries: uniqueApplicantIds.map((oxyUserId) => ({
+      queryKey: ['profile-by-oxy-user-id', oxyUserId] as const,
+      queryFn: async () => profileService.getProfileByOxyUserId(oxyUserId),
       staleTime: 1000 * 60 * 5,
       gcTime: 1000 * 60 * 30,
     })),

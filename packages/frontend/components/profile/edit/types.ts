@@ -1,7 +1,7 @@
 /**
  * Local form-value types for the profile edit screen.
  *
- * The form keeps numeric fields (income, rent, bedrooms, year, …) as strings so
+ * The form keeps numeric fields (income, rent, bedrooms, …) as strings so
  * they bind directly to `TextInput`, and uses plain string-literal unions for
  * enum-like fields so the picker UI stays simple. These shapes are mapped to the
  * shared `UpdateProfileData` envelope (with the proper enums) only on submit.
@@ -16,24 +16,6 @@ export type EmploymentStatusValue =
   | 'other';
 
 export type LeaseDurationValue = 'monthly' | '3_months' | '6_months' | 'yearly' | 'flexible';
-
-export type AgencyBusinessTypeValue =
-  | 'real_estate_agency'
-  | 'property_management'
-  | 'brokerage'
-  | 'developer'
-  | 'other';
-
-export type BusinessBusinessTypeValue =
-  | 'small_business'
-  | 'startup'
-  | 'freelancer'
-  | 'consultant'
-  | 'other';
-
-export type AgencyEmployeeCountValue = '1-10' | '11-50' | '51-200' | '200+';
-
-export type BusinessEmployeeCountValue = '1-5' | '6-10' | '11-25' | '26+';
 
 export type PriceUnitValue = 'day' | 'night' | 'week' | 'month' | 'year';
 
@@ -57,49 +39,6 @@ export interface PersonalInfoForm {
   employmentStatus: EmploymentStatusValue;
   moveInDate: string;
   leaseDuration: LeaseDurationValue;
-}
-
-export interface AgencyInfoForm {
-  businessType: AgencyBusinessTypeValue;
-  legalCompanyName: string;
-  description: string;
-  businessDetails: {
-    licenseNumber: string;
-    taxId: string;
-    yearEstablished: string;
-    employeeCount: AgencyEmployeeCountValue;
-    specialties: string[];
-  };
-  verification: {
-    businessLicense: boolean;
-    insurance: boolean;
-    bonding: boolean;
-    backgroundCheck: boolean;
-  };
-}
-
-export interface BusinessInfoForm {
-  businessType: BusinessBusinessTypeValue;
-  legalCompanyName: string;
-  description: string;
-  businessDetails: {
-    licenseNumber: string;
-    taxId: string;
-    yearEstablished: string;
-    employeeCount: BusinessEmployeeCountValue;
-    industry: string;
-    specialties: string[];
-  };
-  verification: {
-    businessLicense: boolean;
-    insurance: boolean;
-    backgroundCheck: boolean;
-  };
-}
-
-export interface CooperativeInfoForm {
-  legalName: string;
-  description: string;
 }
 
 export interface PreferencesForm {
@@ -157,9 +96,6 @@ export interface RentalHistoryForm {
   };
 }
 
-/** Verification flags toggled from the agency verification section. */
-export type AgencyVerificationField = 'businessLicense' | 'insurance' | 'bonding' | 'backgroundCheck';
-
 export interface ProfileTab {
   key: string;
   label: string;
@@ -170,25 +106,6 @@ export const PERSONAL_TABS: ProfileTab[] = [
   { key: 'preferences', label: 'Preferences' },
   { key: 'references', label: 'References' },
   { key: 'rental-history', label: 'History' },
-  { key: 'trust-score', label: 'Trust Score' },
-  { key: 'settings', label: 'Settings' },
-];
-
-export const AGENCY_TABS: ProfileTab[] = [
-  { key: 'business', label: 'Agency' },
-  { key: 'verification', label: 'Verification' },
-  { key: 'team', label: 'Team' },
-  { key: 'settings', label: 'Settings' },
-];
-
-export const BUSINESS_TABS: ProfileTab[] = [
-  { key: 'business', label: 'Business' },
-  { key: 'verification', label: 'Verification' },
-  { key: 'settings', label: 'Settings' },
-];
-
-export const COOPERATIVE_TABS: ProfileTab[] = [
-  { key: 'cooperative', label: 'Cooperative' },
   { key: 'settings', label: 'Settings' },
 ];
 
@@ -199,8 +116,7 @@ export const ACTIVE_SECTION_STORAGE_KEY = 'profile-edit-active-section';
 export const PERSISTABLE_SECTIONS = [
   'personal',
   'preferences',
-  'verification',
-  'business',
-  'cooperative',
   'settings',
+  'references',
+  'rental-history',
 ] as const;

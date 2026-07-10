@@ -272,7 +272,7 @@ class ExchangeController {
       const oxyUserId = resolveOxyUserId(req);
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findByOxyUserId(oxyUserId);
       if (!activeProfile) {
         res.json(paginationResponse([], 1, DEFAULT_PAGE_SIZE, 0, 'No profile found for user'));
         return;

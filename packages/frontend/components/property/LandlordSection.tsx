@@ -41,42 +41,13 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
 
     const getLandlordDisplayName = (profile: Profile | null): string => {
         if (!profile) return 'Unknown Owner';
-        switch (profile.profileType) {
-            case 'personal':
-                const bio = profile.personalProfile?.personalInfo?.bio;
-                return bio || profile.oxyUserId || 'Property Owner';
-            case 'agency':
-                return profile.agencyProfile?.legalCompanyName || profile.oxyUserId || 'Real Estate Agency';
-            case 'business':
-                return profile.businessProfile?.legalCompanyName || profile.oxyUserId || 'Property Management';
-            case 'cooperative':
-                return profile.cooperativeProfile?.legalName || profile.oxyUserId || 'Housing Cooperative';
-            default:
-                return profile.oxyUserId || 'Property Owner';
-        }
+        const bio = profile.personalProfile?.personalInfo?.bio;
+        return bio || profile.oxyUserId || 'Property Owner';
     };
 
     const getLandlordSubtitle = (profile: Profile | null): string => {
         if (!profile) return 'Profile not available';
-
-        const trustScore = profile.profileType === 'personal'
-            ? profile.personalProfile?.trustScore?.score
-            : null;
-
-        switch (profile.profileType) {
-            case 'personal':
-                return trustScore ? `Trust Score: ${trustScore}/10` : 'Property Owner';
-            case 'agency':
-                const agencyRating = profile.agencyProfile?.ratings?.average;
-                return agencyRating ? `Real Estate Agency • ${agencyRating.toFixed(1)}★` : 'Real Estate Agency';
-            case 'business':
-                const businessRating = profile.businessProfile?.ratings?.average;
-                return businessRating ? `Property Management • ${businessRating.toFixed(1)}★` : 'Property Management Company';
-            case 'cooperative':
-                return 'Housing Cooperative';
-            default:
-                return 'Property Owner';
-        }
+        return 'Property Owner';
     };
 
     const renderPersonalProfileAvatar = (profile: Profile) => {
@@ -105,11 +76,7 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
             );
         }
 
-        if (profile.profileType === 'personal') {
-            return renderPersonalProfileAvatar(profile);
-        }
-
-        return <ProfileAvatar profile={profile} size={52} style={styles.landlordAvatar} />;
+        return renderPersonalProfileAvatar(profile);
     };
     return (
         <Section
@@ -147,14 +114,18 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
                 <View style={styles.contentContainer}>
                     <TouchableOpacity
                         style={[styles.landlordHeader, styles.gutter]}
-                        onPress={() => router.push(`/profile/${landlordProfile?._id || landlordProfile?.id}`)}
+                        onPress={() => {
+                            if (landlordProfile?.oxyUserId) {
+                                router.push(`/roommates/${landlordProfile.oxyUserId}`);
+                            }
+                        }}
                         activeOpacity={0.7}
                     >
                         {renderAvatar(landlordProfile)}
                         <View style={styles.landlordInfo}>
                             <View style={styles.landlordNameRow}>
                                 <ThemedText style={styles.landlordName}>{getLandlordDisplayName(landlordProfile)}</ThemedText>
-                                {landlordProfile?.isActive && (
+                                {landlordProfile?.personalProfile?.verification?.identity && (
                                     <View style={styles.verifiedBadge}>
                                         <Ionicons name="checkmark" size={12} color={colors.white} />
                                     </View>

@@ -32,7 +32,6 @@ import {
   AvailabilityWindowStatus,
   CancellationPolicy,
   ExchangeMode,
-  ProfileType
 } from '@homiio/shared-types';
 import database from '../database/connection';
 import { seedGeo } from './seedGeo';
@@ -752,9 +751,6 @@ async function ensureSeedOwner(): Promise<string> {
     {
       $setOnInsert: {
         oxyUserId: SEED_OWNER_OXY_USER_ID,
-        profileType: ProfileType.PERSONAL,
-        isActive: true,
-        isPrimary: true,
         personalProfile: {}
       }
     },
