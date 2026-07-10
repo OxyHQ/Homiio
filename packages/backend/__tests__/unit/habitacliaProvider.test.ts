@@ -2,17 +2,21 @@
  * Habitaclia provider contract test (pure — no DB, no live portal).
  *
  * Drives the `habitaclia` plugin from RECORDED HTML fixtures: the search parser
- * yields de-duplicated detail refs, the detail parser extracts the embedded
- * schema.org JSON-LD into a raw payload, and `normalize()` maps that onto a
- * provider-agnostic, published, self-describing `NormalizedListing`. No network
- * is touched — CI never scrapes.
+ * yields de-duplicated detail refs (href + data-href), the detail parser
+ * extracts JSON-LD or live microdata into a raw payload, and `normalize()` maps
+ * that onto a provider-agnostic, published, self-describing `NormalizedListing`.
  */
 
 import {
   HabitacliaProvider,
   HABITACLIA_FIXTURE_DETAIL_HTML,
+  HABITACLIA_FIXTURE_DETAIL_HTML_LIVE,
   HABITACLIA_FIXTURE_SEARCH_HTML,
+  buildHabitacliaListainmueblesBody,
+  extractHabitacliaListadoFormFields,
   parseHabitacliaDetail,
+  parseHabitacliaDetailHtml,
+  parseHabitacliaListainmuebles,
   parseHabitacliaSearch,
 } from '@homiio/listing-providers';
 import type { RawListing } from '@homiio/listing-providers';
@@ -21,6 +25,8 @@ import { OfferingType, PropertyType } from '@homiio/shared-types';
 const provider = new HabitacliaProvider();
 const DETAIL_URL =
   'https://www.habitaclia.com/alquiler-piso-esquerra_de_leixample-barcelona-i12345678900000.htm';
+const LIVE_DETAIL_URL =
+  'https://www.habitaclia.com/alquiler-piso-gracia-barcelona-i55551000004519.htm';
 
 describe('HabitacliaProvider', () => {
   it('declares the ES market and habitaclia id', () => {
@@ -28,13 +34,26 @@ describe('HabitacliaProvider', () => {
     expect(provider.markets).toEqual(['ES']);
   });
 
-  it('parses the search page into de-duplicated detail refs', () => {
+  it('parses the search page into de-duplicated detail refs (data-href + href)', () => {
     const refs = parseHabitacliaSearch(HABITACLIA_FIXTURE_SEARCH_HTML);
     expect(refs).toHaveLength(2);
     expect(refs.map((ref) => ref.sourceId)).toEqual(['12345678900000', '98765432100000']);
     for (const ref of refs) {
       expect(ref.url.startsWith('https://www.habitaclia.com/')).toBe(true);
     }
+  });
+
+  it('parses listainmuebles AJAX HTML fragments via the shared search parser', () => {
+    const refs = parseHabitacliaListainmuebles(HABITACLIA_FIXTURE_SEARCH_HTML);
+    expect(refs).toHaveLength(2);
+  });
+
+  it('builds listainmuebles POST bodies from hidden Filtros fields', () => {
+    const fields = extractHabitacliaListadoFormFields(HABITACLIA_FIXTURE_SEARCH_HTML);
+    expect(fields['Filtros.Geo.CodProv']).toBe('1');
+    const body = buildHabitacliaListainmueblesBody(fields, 2);
+    expect(body).toContain('pagina=2');
+    expect(body).toContain('Filtros.Geo.CodProv=1');
   });
 
   it('extracts the real-estate JSON-LD from the detail HTML', () => {
@@ -54,9 +73,22 @@ describe('HabitacliaProvider', () => {
     expect(raw.images[0]?.isPrimary).toBe(true);
   });
 
-  it('throws on a page with no real-estate JSON-LD', () => {
+  it('parses live microdata detail HTML when JSON-LD is absent', () => {
+    const raw = parseHabitacliaDetailHtml(HABITACLIA_FIXTURE_DETAIL_HTML_LIVE, LIVE_DETAIL_URL);
+    expect(raw.id).toBe('55551000004519');
+    expect(raw.price).toBe(1600);
+    expect(raw.address.city).toBe('Barcelona');
+    expect(raw.address.neighborhood).toBe('Gràcia');
+    expect(raw.bedrooms).toBe(3);
+    expect(raw.bathrooms).toBe(2);
+    expect(raw.squareMeters).toBe(95);
+    expect(raw.amenities).toEqual(['elevator', 'terrace']);
+    expect(raw.images[0]?.url.startsWith('https://')).toBe(true);
+  });
+
+  it('throws on a page with no listing data', () => {
     expect(() => parseHabitacliaDetail('<html><body>challenge</body></html>', DETAIL_URL)).toThrow(
-      /no real-estate JSON-LD/,
+      /parseable price|no city/,
     );
   });
 
@@ -96,5 +128,6 @@ describe('HabitacliaProvider', () => {
     const health = await provider.health();
     expect(health.provider).toBe('habitaclia');
     expect(health.status).toBe('healthy');
+    expect(health.detail).toContain('listainmuebles');
   });
 });

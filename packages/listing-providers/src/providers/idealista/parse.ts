@@ -9,7 +9,7 @@
  * identically in the worker and in unit tests, with zero extra dependencies.
  */
 
-import { extractEsSchemaListings, pickEsListing, type EsSchemaListing } from '../es/jsonLd';
+import { extractEsSchemaListings, pickEsListing, type EurSchemaListing } from '../../parse/jsonLd';
 import { IDEALISTA_BASE_URL } from './fixtures';
 import type { IdealistaContact } from './contact';
 
@@ -17,7 +17,7 @@ import type { IdealistaContact } from './contact';
 export interface IdealistaRaw {
   sourceId: string;
   url: string;
-  listing: EsSchemaListing;
+  listing: EurSchemaListing;
   /** Best-effort contact from warmed-session AJAX (optional). */
   contact?: IdealistaContact;
 }
@@ -31,7 +31,7 @@ export function idealistaSourceIdFromUrl(url: string): string | undefined {
 }
 
 /** Rent vs sale: prefer the JSON-LD offer, fall back to the URL (`/venta`). */
-function resolveOperation(listing: EsSchemaListing, url: string): 'rent' | 'sale' {
+function resolveOperation(listing: EurSchemaListing, url: string): 'rent' | 'sale' {
   if (listing.operation) return listing.operation;
   return url.includes('/venta') || url.includes('-venta') ? 'sale' : 'rent';
 }

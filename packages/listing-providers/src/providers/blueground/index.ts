@@ -43,7 +43,7 @@ import {
 const PROVIDER_ID: ProviderId = 'blueground';
 
 /** City slugs for `/m/furnished-apartments/<slug>` search pages. */
-const DEFAULT_CITIES: Readonly<Record<ListingMarket, readonly string[]>> = {
+const DEFAULT_CITIES: Readonly<Partial<Record<ListingMarket, readonly string[]>>> = {
   ES: ['madrid-esp', 'barcelona-esp', 'valencia-esp'],
   US: ['nyc-usa', 'los-angeles-usa', 'boston-usa', 'chicago-usa', 'washington-dc-usa'],
 };

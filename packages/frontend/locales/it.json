@@ -285,7 +285,25 @@
     "tryAgain": "Riprova",
     "goBack": "Torna indietro",
     "goHome": "Vai alla home",
-    "signIn": "Accedi"
+    "signIn": "Accedi",
+    "saving": "Saving...",
+    "name": "Name",
+    "emoji": "Emoji",
+    "color": "Color",
+    "Sign in to save searches": "Sign in to save searches",
+    "Go to Search": "Go to Search",
+    "No saved searches yet": "No saved searches yet",
+    "Create New Search": "Create New Search",
+    "View All": "View All",
+    "Sign in to create property alerts": "Sign in to create property alerts",
+    "Creating": {
+      "": {
+        "": {
+          "": "Creating..."
+        }
+      }
+    },
+    "Create Alert": "Create Alert"
   },
   "home": {
     "hero": {
@@ -338,7 +356,8 @@
       "gridLongTerm": "Monolocali a Barcellona",
       "gridVacation": "Appartamenti al mare a València",
       "gridBuy": "Case in vendita a Barcellona",
-      "gridExchange": "Scambi di casa in Spagna"
+      "gridExchange": "Scambi di casa in Spagna",
+      "empty": "No featured properties available at the moment"
     },
     "recentlyViewed": {
       "title": "Visualizzate di Recente",
@@ -352,7 +371,14 @@
       "filtered": "filtrati"
     },
     "saved": {
-      "title": "Proprietà Salvate"
+      "title": "Proprietà Salvate",
+      "editFolder": "Edit Folder",
+      "defaultFolder": "Default Folder",
+      "folderNamePlaceholder": "Folder name",
+      "noFolder": "Folder not found",
+      "noFolderDescription": "This folder may have been removed",
+      "noFolderItems": "No properties in this folder",
+      "noFolderItemsDescription": "Save properties to this folder to see them here"
     },
     "viewAll": "Visualizza Tutto",
     "tips": {
@@ -402,7 +428,12 @@
     "cityShowcase": {
       "title": "Esplora {{place}}",
       "defaultPlace": "Spagna"
-    }
+    },
+    "insights": {
+      "title": "Platform Insights"
+    },
+    "noProfilesTitle": "No Saved Profiles",
+    "noProfilesDescription": "Follow profiles to see them here"
   },
   "agent": {
     "menu": {
@@ -510,7 +541,16 @@
     }
   },
   "tips": {
-    "article": "Articolo"
+    "article": "Articolo",
+    "all": "All",
+    "loadError": "Couldn't load tips",
+    "tryAgain": "Please try again.",
+    "emptyTitle": "No tips yet",
+    "emptyDescription": "Check back soon for new rental guides and advice.",
+    "unavailable": "Article unavailable",
+    "missingSlug": "This tip could not be loaded.",
+    "loadFailed": "This tip could not be loaded.",
+    "related": "Related tips"
   },
   "search": {
     "title": "Cerca",
@@ -632,7 +672,43 @@
       }
     },
     "editSearch": "Modifica ricerca",
-    "searchQueryPlaceholder": "Inserisci la tua query di ricerca"
+    "searchQueryPlaceholder": "Inserisci la tua query di ricerca",
+    "placeholder": {
+      "suggestion1": "Find your dream apartment in Barcelona...",
+      "suggestion2": "Looking for a pet-friendly home?",
+      "suggestion3": "Discover eco-friendly properties...",
+      "suggestion4": "Search for furnished studios near you..."
+    },
+    "savedSearches": "Saved Searches",
+    "saveSearch": "Save Search",
+    "searchQuery": "Search Query",
+    "searchName": "Search Name",
+    "searchNamePlaceholder": "Enter a name for this search",
+    "enableNotifications": "Enable notifications",
+    "notificationsDescription": "Get notified when new properties match this search",
+    "disableNotifications": "Disable notifications",
+    "withFilters": "With filters",
+    "error": "Error",
+    "enterSearchQuery": "Please enter a search query first",
+    "deleteSearch": "Delete Search",
+    "deleteSearchConfirm": "Are you sure you want to delete the search \"{{name}}\"?",
+    "viewAllSaved": "View All Saved",
+    "duplicateName": "A search with this name already exists",
+    "duplicateExact": "You already saved this exact search",
+    "tryDifferentName": "Please choose a different name",
+    "more": "more",
+    "Eco-friendly": "Eco-friendly",
+    "Co-living": "Co-living",
+    "Furnished": "Furnished",
+    "Pets Allowed": "Pets Allowed",
+    "Verified": "Verified",
+    "Search with": "Search with",
+    "Advanced Filters": "Advanced Filters",
+    "errorLoadingData": "Failed to load data",
+    "noPropertyTypesAvailable": "No property types available",
+    "noCitiesAvailable": "No cities available",
+    "noPropertyTypes": "No property types available",
+    "searching": "Searching..."
   },
   "profile": {
     "editProfile": "Modifica Profilo",
@@ -642,7 +718,48 @@
     "trustScore": "Punteggio di Fiducia",
     "logOut": "Esci",
     "exchanges": "Scambi",
-    "exchangesDescription": "I tuoi scambi casa e le richieste di ospitalità."
+    "exchangesDescription": "I tuoi scambi casa e le richieste di ospitalità.",
+    "title": "Profile",
+    "tabs": {
+      "listings": "Listings",
+      "about": "About"
+    },
+    "loading": "Loading profile...",
+    "signInRequired": "Sign in required",
+    "signInMessage": "Please sign in to view your profile",
+    "createProfile": "Create Profile",
+    "deleteProfile": "Delete Profile",
+    "types": {
+      "personal": "Personal Profile",
+      "agency": "Agency Profile",
+      "business": "Business Profile"
+    },
+    "sections": {
+      "overview": "Overview",
+      "properties": "My Properties",
+      "contracts": "My Contracts",
+      "trustScore": "Trust Score",
+      "settings": "Settings"
+    },
+    "stats": {
+      "propertiesCount": "Properties",
+      "contractsCount": "Contracts",
+      "trustScore": "Trust Score"
+    },
+    "actions": {
+      "manageProperties": "Manage Properties",
+      "viewContracts": "View Contracts",
+      "editProfile": "Edit Profile",
+      "shareProfile": "Share Profile",
+      "signOut": "Sign Out"
+    },
+    "noProfilesTitle": "No Profiles Found",
+    "noProfilesMessage": "You don't have any profiles yet. Create your first profile to get started!",
+    "errors": {
+      "loadFailed": "Failed to load profiles",
+      "updateFailed": "Failed to update profile",
+      "deleteFailed": "Failed to delete profile"
+    }
   },
   "notifications": {
     "title": "Notifiche",
@@ -720,7 +837,30 @@
         "duplex": "Duplex",
         "penthouse": "Attico"
       }
-    }
+    },
+    "type": {
+      "title": "{{type}}",
+      "subtitle": "{{count}} {{type}} available",
+      "empty": "No {{type}} available at the moment",
+      "filters": {
+        "title": "Filters",
+        "price": "Price Range",
+        "bedrooms": "Bedrooms",
+        "bathrooms": "Bathrooms",
+        "amenities": "Amenities",
+        "sort": {
+          "title": "Sort By",
+          "newest": "Newest First",
+          "priceAsc": "Price: Low to High",
+          "priceDesc": "Price: High to Low"
+        },
+        "apply": "Apply Filters",
+        "clear": "Clear All"
+      }
+    },
+    "Housing Authority": "Housing Authority",
+    "Apply on State Website": "Apply on State Website",
+    "Contact Housing Authority": "Contact Housing Authority"
   },
   "property": {
     "amenities": {
@@ -846,7 +986,26 @@
       "listedDaysAgo_other": "Pubblicato {{count}} giorni fa",
       "saved_one": "{{count}} salvato",
       "saved_other": "{{count}} salvati"
-    }
+    },
+    "loading": "Loading property details...",
+    "error": "Error",
+    "notFound": "Property not found",
+    "bed": "Bed",
+    "bath": "Bath",
+    "pricingReviewNeeded": "Pricing Review Needed",
+    "bedrooms": "Number of Bedrooms",
+    "bathrooms": "Number of Bathrooms",
+    "customNumber": {
+      "title": "Enter Custom Number",
+      "placeholder": "Enter number",
+      "confirm": "Confirm",
+      "cancel": "Cancel"
+    },
+    "suggestedRent": "Suggested: ${{amount}}/month",
+    "maxEthicalRent": "Max Ethical: ${{amount}}/month",
+    "ethicalPricingWarning": "Your price exceeds the ethical maximum. Consider lowering it to make housing more accessible.",
+    "warningBullet": "• {{warning}}",
+    "ethicalPricing": "Ethical Pricing"
   },
   "viewings": {
     "title": "Visite",
@@ -1081,6 +1240,47 @@
     "errors": {
       "connection": "Errore di Connessione",
       "connectionMessage": "Controlla la tua connessione e riprova."
+    },
+    "shared": {
+      "loading": "Loading Shared Conversation",
+      "loadingMessage": "Loading conversation...",
+      "subtitle": "Shared Conversation",
+      "badge": "Shared Conversation",
+      "footer": "Powered by Sindi - Your AI Housing Justice Advocate",
+      "error": {
+        "title": "Conversation Not Found",
+        "notFound": "This shared conversation could not be found or has expired.",
+        "failed": "Failed to load shared conversation. Please try again.",
+        "description": "The conversation may have been removed or the link may be invalid."
+      },
+      "empty": {
+        "title": "Empty Conversation",
+        "subtitle": "This shared conversation doesn't have any messages yet."
+      }
+    },
+    "share": {
+      "text": "Check out this conversation with Sindi, your AI housing justice advocate",
+      "success": {
+        "title": "Conversation Shared",
+        "copied": "Share link copied to clipboard!"
+      },
+      "error": {
+        "title": "Cannot Share Conversation",
+        "saveFirst": "Please save the conversation by sending a message before sharing.",
+        "emptyConversation": "Cannot share an empty conversation. Please add some messages first.",
+        "failed": "Failed to generate share link. Please try again."
+      }
+    },
+    "conversation": {
+      "title": "Conversation",
+      "subtitle": "AI Housing Justice Advocate",
+      "loading": "Loading Conversation",
+      "loadingMessage": "Loading conversation...",
+      "error": "Conversation Error",
+      "empty": {
+        "title": "Start Your Conversation",
+        "subtitle": "Ask Sindi about tenant rights, housing search, or any housing-related questions. I'm here to help you fight for housing justice."
+      }
     }
   },
   "sidebar": {
@@ -1101,7 +1301,8 @@
       "tips": "Consigli",
       "hostCalendar": "Calendario host",
       "hostReservations": "Prenotazioni host",
-      "landlordApplications": "Casella candidature"
+      "landlordApplications": "Casella candidature",
+      "insights": "Insights"
     },
     "actions": {
       "addProperty": "Aggiungi Proprietà",
@@ -1176,7 +1377,38 @@
       "newest": "Prima i Più Recenti",
       "oldest": "Prima i Più Vecchi",
       "alphabetical": "Alfabetico"
-    }
+    },
+    "header": "Saved",
+    "tabs": {
+      "all": "All",
+      "recent": "Recent",
+      "noted": "With Notes",
+      "quickSaves": "Quick Saves",
+      "folders": "Folders",
+      "profiles": "Profiles",
+      "searches": "Saved Searches"
+    },
+    "view": {
+      "list": "List",
+      "grid": "Grid"
+    },
+    "searchPlaceholder": "Search your saved items...",
+    "profilesLabel": "profiles",
+    "adjustFilters": "Try adjusting your search or filter criteria",
+    "sort": {
+      "recent": "Recently Saved",
+      "price-low": "Price: Low to High",
+      "price-high": "Price: High to Low",
+      "title": "Property Name",
+      "notes": "Most Notes"
+    },
+    "editFolder": "Edit Folder",
+    "defaultFolder": "Default Folder",
+    "folderNamePlaceholder": "Folder name",
+    "noFolder": "Folder not found",
+    "noFolderDescription": "This folder may have been removed",
+    "noFolderItems": "No properties in this folder",
+    "noFolderItemsDescription": "Save properties to this folder to see them here"
   },
   "listing": {
     "exchange": {
@@ -1378,5 +1610,214 @@
       "totalPaid": "Totale pagato"
     }
   },
-  "goBack": "Indietro"
+  "goBack": "Indietro",
+  "navigation": {
+    "home": "Home",
+    "search": "Search",
+    "notifications": "Notifications",
+    "messages": "Messages",
+    "settings": "Settings",
+    "explore": "Explore",
+    "chat": "Chat",
+    "bookmarks": "Bookmarks",
+    "feeds": "Feeds",
+    "lists": "Lists",
+    "videos": "Videos"
+  },
+  "actions": {
+    "save": "Save",
+    "post": "Post",
+    "follow": "Follow",
+    "following": "Following",
+    "signUp": "Sign Up",
+    "signIn": "Sign In",
+    "showMore": "Show more",
+    "applySettings": "Apply Settings"
+  },
+  "content": {
+    "newPost": "New Post",
+    "whatsHappening": "What's happening?",
+    "posts": "posts",
+    "samplePost": "This is a sample post",
+    "anotherPost": "Another example post",
+    "likedPost": "liked your Post",
+    "repostedPost": "reposted your Post",
+    "joinConversation": "Join the conversation"
+  },
+  "app": {
+    "welcome": {
+      "title": "Welcome to Homiio! 👋",
+      "subtitle": "Thanks for trying out our app. Start exploring now!"
+    },
+    "errors": {
+      "screenNotExist": "This screen doesn't exist.",
+      "goHome": "Go to home screen!",
+      "noResults": "No results found for"
+    },
+    "loading": "Loading...",
+    "battery": "Battery"
+  },
+  "notification.search.placeholder": "Search notifications...",
+  "notification.filter.all": "All",
+  "notification.filter.unread": "Unread",
+  "notification.filter.property": "Property",
+  "notification.filter.message": "Message",
+  "notification.filter.system": "System",
+  "notification.empty.title": "No notifications",
+  "notification.empty.message": "You're all caught up! New notifications will appear here.",
+  "notification.empty.filtered": "No notifications match your current filter",
+  "notification.delete.title": "Delete Notification",
+  "notification.delete.message": "Are you sure you want to delete this notification?",
+  "notification.delete.success": "Notification deleted",
+  "notification.delete.error": "Failed to delete notification",
+  "notification.markAllRead.success": "All notifications marked as read",
+  "notification.markAllRead.error": "Failed to mark all as read",
+  "notification.permissions.title": "Enable Notifications",
+  "notification.permissions.message": "Get notified about new properties, messages, and important updates.",
+  "notification.permissions.enable": "Enable Notifications",
+  "notification.permissions.granted": "Notification permissions granted",
+  "notification.permissions.denied": "Notification permissions denied",
+  "notification.permissions.error": "Failed to request permissions",
+  "notification.permissions.enabled": "Notifications Enabled",
+  "notification.permissions.disabled": "Notifications Disabled",
+  "notification.permissions.enabled.description": "You will receive notifications for enabled categories.",
+  "notification.permissions.disabled.description": "Enable notifications to receive updates about properties, messages, and more.",
+  "notification.scheduled.title": "Scheduled Notifications",
+  "notification.scheduled.clearAll": "Clear All",
+  "notification.settings.title": "Notification Settings",
+  "notification.settings.permissions": "Permissions",
+  "notification.settings.categories": "Notification Categories",
+  "notification.settings.behavior": "Notification Behavior",
+  "notification.settings.test": "Test Notifications",
+  "notification.settings.test.description": "Send test notifications to verify your settings are working correctly.",
+  "notification.settings.manage": "Manage Notifications",
+  "notification.settings.clearAll": "Clear All Notifications",
+  "notification.settings.updated": "Settings updated",
+  "notification.settings.error": "Failed to update settings",
+  "notification.settings.property.title": "Property Notifications",
+  "notification.settings.property.description": "New properties, price changes, and viewing reminders",
+  "notification.settings.message.title": "Message Notifications",
+  "notification.settings.message.description": "New messages from agents, landlords, and other users",
+  "notification.settings.contract.title": "Contract Notifications",
+  "notification.settings.contract.description": "Contract updates, signatures, and important deadlines",
+  "notification.settings.payment.title": "Payment Notifications",
+  "notification.settings.payment.description": "Payment confirmations, reminders, and receipts",
+  "notification.settings.reminder.title": "Reminder Notifications",
+  "notification.settings.reminder.description": "Viewing reminders, application deadlines, and follow-ups",
+  "notification.settings.system.title": "System Notifications",
+  "notification.settings.system.description": "App updates, maintenance, and important announcements",
+  "notification.settings.marketing.title": "Marketing Notifications",
+  "notification.settings.marketing.description": "Promotional offers, newsletters, and special deals",
+  "notification.settings.sound.title": "Sound",
+  "notification.settings.sound.description": "Play sound when notifications arrive",
+  "notification.settings.badge.title": "Badge Count",
+  "notification.settings.badge.description": "Show unread count on app icon",
+  "notification.settings.push.title": "Push Notifications",
+  "notification.settings.push.description": "Receive notifications even when app is closed",
+  "notification.test.property": "Test Property",
+  "notification.test.message": "Test Message",
+  "notification.test.reminder": "Test Reminder",
+  "notification.test.repeating": "Test Repeating",
+  "notification.test.property.success": "Property notification sent",
+  "notification.test.message.success": "Message notification sent",
+  "notification.test.reminder.success": "Reminder notification scheduled",
+  "notification.test.repeating.success": "Repeating notification scheduled",
+  "notification.test.error": "Failed to send test notification",
+  "notification.clearAll.title": "Clear All Notifications",
+  "notification.clearAll.message": "This will clear all notifications and reset the badge count. This action cannot be undone.",
+  "notification.clearAll.success": "All notifications cleared",
+  "notification.clearAll.error": "Failed to clear notifications",
+  "notification.settings.ios.title": "iOS Settings",
+  "notification.settings.ios.description": "For more granular control, you can also manage notification settings in your device's Settings app under Notifications > Homiio.",
+  "notification.settings.android.title": "Android Settings",
+  "notification.settings.android.description": "You can manage notification channels and advanced settings in your device's Settings app under Apps > Homiio > Notifications.",
+  "trust": {
+    "loadingVerification": "Loading verification status...",
+    "loadingScore": "Loading trust score...",
+    "errorVerification": "Unable to load verification status",
+    "errorScore": "Unable to load trust score",
+    "viewDetails": "View Details",
+    "noVerification": "No verification data",
+    "noScore": "No trust score data",
+    "verified": "Verified",
+    "completeVerification": "Complete Verification",
+    "yourScoreIs": "Your trust score is",
+    "improveScore": "Improve Score"
+  },
+  "donations": {
+    "widget": {
+      "title": "Support Our Mission",
+      "description": "Help us build the future of ethical housing. Your support makes a difference.",
+      "button": "Donate to Homiio"
+    },
+    "page": {
+      "title": "Donate to Homiio",
+      "subtitle": "Support the future of ethical housing",
+      "description": "Your contribution helps us build a transparent, fair, and ethical housing platform that benefits everyone in the rental ecosystem.",
+      "chooseContribution": "Choose Your Contribution",
+      "frequency": {
+        "label": "Donation frequency",
+        "monthly": "Monthly",
+        "oneTime": "One-time",
+        "perMonth": "/mo"
+      },
+      "error": {
+        "title": "Something went wrong",
+        "generic": "Unable to process your donation. Please try again later."
+      },
+      "tiers": {
+        "supporter": {
+          "title": "One-time donation",
+          "subtitle": "Help with a small contribution",
+          "button": "Donate Now"
+        },
+        "monthly": {
+          "title": "Monthly supporter",
+          "subtitle": "Become a regular supporter",
+          "button": "Start Supporting"
+        },
+        "founder": {
+          "title": "Founder supporter",
+          "subtitle": "Join our founding supporters",
+          "button": "Become a Founder"
+        }
+      },
+      "impact": {
+        "title": "What Your Support Enables",
+        "areas": {
+          "development": {
+            "title": "Platform Development",
+            "description": "Continuous improvement of our housing platform"
+          },
+          "safety": {
+            "title": "Trust & Safety",
+            "description": "Enhanced verification and fraud prevention"
+          },
+          "legal": {
+            "title": "Legal Integration",
+            "description": "Sindi legal support and transparent contracts"
+          },
+          "innovation": {
+            "title": "Innovation",
+            "description": "FairCoin payments and energy monitoring"
+          },
+          "community": {
+            "title": "Community Building",
+            "description": "Growing the ethical housing movement"
+          }
+        }
+      },
+      "mission": {
+        "title": "Why Support Homiio?",
+        "description": "We're building more than just a rental platform—we're creating a complete ecosystem for ethical housing. Your support helps us:",
+        "goals": [
+          "Fight against rental abuse and hidden fees",
+          "Create transparent processes for tenants and landlords",
+          "Integrate innovative payment methods like FairCoin",
+          "Provide legal support through our Sindi integration",
+          "Build sustainable, community-driven solutions"
+        ]
+      }
+    }
+  }
 }

@@ -23,6 +23,53 @@ export * from './managed';
 export * from './registry';
 export * from './metrics';
 export * from './strategy';
+
+// Shared parse helpers — ONE chokepoint for contact / HTML embeds / classifieds.
+export {
+  normalizePhone,
+  normalizeWhatsapp,
+  normalizeEmail,
+  buildContact,
+  mergeContact,
+  mergeListingContact,
+  contactFromUnknown,
+  contactFromRecord,
+  extractContactFromHtml,
+  hasContactFields,
+  contactFromAjaxBody,
+  parseContactPhonesJson,
+  type ListingContact,
+} from './contact';
+export {
+  extractNextData,
+  parseNextData,
+  parseNextDataPageProps,
+  nextDataPageProps,
+  parsePreloadedState,
+  asRecord,
+  asString,
+  asNumber,
+  citySlugDe,
+  parseEuroAmount,
+  extractMetaProperties,
+  extractJsonParseBlob,
+} from './html';
+export {
+  NonHousingListingError,
+  isHousingCategory,
+  isHousingCategoryUrl,
+  assertHousingListing,
+  type HousingSignalInput,
+} from './classifieds';
+export { citiesFromEnv, citiesOptionsFromEnv, type ListingMarket } from './cities';
+export { citySlug } from './slug';
+export {
+  collectJsonLdNodes,
+  jsonLdTypes,
+  resolveJsonLdRef,
+  findJsonLdByType,
+} from './jsonLd';
+
 export { FixtureProvider } from './providers/fixture';
 export { FIXTURE_LISTINGS } from './providers/fixture/fixtures';
 export type { FixtureRawListing, FixtureRawImage } from './providers/fixture/fixtures';
@@ -181,7 +228,6 @@ export {
   RedfinProvider,
   parseRedfinGisResponse,
   parseRedfinDetailResponse,
-  redfinKindFromHome,
   type RedfinRaw,
 } from './providers/us/redfin';
 export {
@@ -194,6 +240,7 @@ export {
   redfinGisUrl,
   redfinWarmUrl,
   redfinInitialInfoUrl,
+  redfinKindFromHome,
   isRedfinStingrayChallenge,
   REDFIN_CONTENT_SELECTOR,
   type RedfinKind,
@@ -362,13 +409,6 @@ export {
   milanunciosListAjaxUrl,
 } from './providers/milanuncios/fixtures';
 
-export {
-  assertHousingListing,
-  isHousingCategory,
-  isHousingCategoryUrl,
-  NonHousingListingError,
-} from './providers/es/housing';
-
 // ES — yaencontre / indomio (Cloudflare-gated; OFF).
 export { YaencontreProvider, isYaencontreChallenge } from './providers/yaencontre';
 export {
@@ -486,9 +526,63 @@ export {
   type ItSchemaListing,
 } from './providers/it/jsonLd';
 
+// Romania market — Storia (__NEXT_DATA__) / Imobiliare.ro (Inertia+JSON-LD) / OLX.ro (housing-only).
+export {
+  StoriaProvider,
+  isStoriaChallenge,
+  parseStoriaDetail,
+  parseStoriaSearch,
+  storiaSourceIdFromUrl,
+} from './providers/ro/storia';
+export {
+  STORIA_BASE_URL,
+  STORIA_FIXTURE_DETAIL_HTML,
+  STORIA_FIXTURE_SEARCH_HTML,
+} from './providers/ro/storia/fixtures';
+export type { StoriaRawListing, StoriaSearchRef } from './providers/ro/storia/parse';
+
+export {
+  ImobiliareRoProvider,
+  isImobiliareRoChallenge,
+  parseImobiliareRoDetail,
+  parseImobiliareRoSearch,
+  imobiliareRoSourceIdFromUrl,
+} from './providers/ro/imobiliare';
+export {
+  IMOBILIARE_RO_BASE_URL,
+  IMOBILIARE_RO_FIXTURE_DETAIL_HTML,
+  IMOBILIARE_RO_FIXTURE_SEARCH_HTML,
+} from './providers/ro/imobiliare/fixtures';
+export type {
+  ImobiliareRoRawListing,
+  ImobiliareRoSearchRef,
+} from './providers/ro/imobiliare/parse';
+
+export {
+  OlxRoProvider,
+  isOlxRoChallenge,
+  isOlxRoHousingCategory,
+  parseOlxRoDetail,
+  parseOlxRoSearch,
+  olxRoSourceIdFromUrl,
+} from './providers/ro/olx';
+export {
+  OLX_RO_BASE_URL,
+  OLX_RO_FIXTURE_DETAIL_HTML,
+  OLX_RO_FIXTURE_NON_HOUSING_HTML,
+  OLX_RO_FIXTURE_SEARCH_HTML,
+} from './providers/ro/olx/fixtures';
+export {
+  OLX_RO_HOUSING_PATHS,
+  OLX_RO_HOUSING_SLUGS,
+  mergeOlxRoPhone,
+} from './providers/ro/olx/parse';
+export type { OlxRoRawListing, OlxRoSearchRef } from './providers/ro/olx/parse';
+
 import type { ProviderId } from '@homiio/shared-types';
 import { ProviderRegistry } from './registry';
 import type { ListingProvider } from './types';
+import { citiesOptionsFromEnv } from './cities';
 import { FixtureProvider } from './providers/fixture';
 import { HabitacliaProvider } from './providers/habitaclia';
 import { BluegroundProvider } from './providers/blueground';
@@ -514,49 +608,12 @@ import { SubitoProvider } from './providers/it/subito';
 import { ImmobilienScout24Provider } from './providers/de/immobilienscout24';
 import { ImmoweltProvider } from './providers/de/immowelt';
 import { KleinanzeigenProvider } from './providers/de/kleinanzeigen';
-
-/**
- * Configurable ES discover cities from `LISTING_ES_CITIES` (comma-separated).
- * When unset, each ES provider falls back to its own default city list.
- */
-function esCitiesFromEnv(): string[] {
-  return (process.env.LISTING_ES_CITIES ?? '')
-    .split(',')
-    .map((city) => city.trim())
-    .filter(Boolean);
-}
-
-/** Configurable GB discover cities from `LISTING_GB_CITIES` (comma-separated). */
-function gbCitiesFromEnv(): string[] {
-  return (process.env.LISTING_GB_CITIES ?? '')
-    .split(',')
-    .map((city) => city.trim())
-    .filter(Boolean);
-}
-
-/** Configurable US discover cities from `LISTING_US_CITIES` (comma-separated). */
-function usCitiesFromEnv(): string[] {
-  return (process.env.LISTING_US_CITIES ?? '')
-    .split(',')
-    .map((city) => city.trim())
-    .filter(Boolean);
-}
-
-/** Configurable IT discover cities from `LISTING_IT_CITIES` (comma-separated). */
-function itCitiesFromEnv(): string[] {
-  return (process.env.LISTING_IT_CITIES ?? '')
-    .split(',')
-    .map((city) => city.trim())
-    .filter(Boolean);
-}
-
-/** Configurable DE discover cities from `LISTING_DE_CITIES` (comma-separated). */
-function deCitiesFromEnv(): string[] {
-  return (process.env.LISTING_DE_CITIES ?? '')
-    .split(',')
-    .map((city) => city.trim())
-    .filter(Boolean);
-}
+import { StoriaProvider } from './providers/ro/storia';
+import { ImobiliareRoProvider } from './providers/ro/imobiliare';
+import { OlxRoProvider } from './providers/ro/olx';
+import { BieniciProvider } from './providers/fr/bienici';
+import { LeboncoinProvider } from './providers/fr/leboncoin';
+import { SelogerProvider } from './providers/fr/seloger';
 
 /**
  * Whether a real portal provider is enabled via its env feature flag. Flags are
@@ -575,16 +632,13 @@ function providerEnabled(id: ProviderId): boolean {
  */
 export function createDefaultRegistry(): ProviderRegistry {
   const registry = new ProviderRegistry([new FixtureProvider()]);
-  const esCities = esCitiesFromEnv();
-  const esOptions = esCities.length > 0 ? { cities: esCities } : {};
-  const gbCities = gbCitiesFromEnv();
-  const gbOptions = gbCities.length > 0 ? { cities: gbCities } : {};
-  const usCities = usCitiesFromEnv();
-  const usOptions = usCities.length > 0 ? { cities: usCities } : {};
-  const itCities = itCitiesFromEnv();
-  const itOptions = itCities.length > 0 ? { cities: itCities } : {};
-  const deCities = deCitiesFromEnv();
-  const deOptions = deCities.length > 0 ? { cities: deCities } : {};
+  const esOptions = citiesOptionsFromEnv('ES');
+  const gbOptions = citiesOptionsFromEnv('GB');
+  const usOptions = citiesOptionsFromEnv('US');
+  const itOptions = citiesOptionsFromEnv('IT');
+  const deOptions = citiesOptionsFromEnv('DE');
+  const roOptions = citiesOptionsFromEnv('RO');
+  const frOptions = citiesOptionsFromEnv('FR');
   const flaggedProviders: ListingProvider[] = [
     new HabitacliaProvider(),
     new BluegroundProvider(),
@@ -594,8 +648,8 @@ export function createDefaultRegistry(): ProviderRegistry {
     new MilanunciosProvider(esOptions),
     new YaencontreProvider(esOptions),
     new IndomioProvider(esOptions),
-    new ApartmentsComProvider(),
-    new ZillowProvider(),
+    new ApartmentsComProvider(usOptions),
+    new ZillowProvider(usOptions),
     new RealtorComProvider(usOptions),
     new HotpadsProvider(usOptions),
     new RedfinProvider(usOptions),
@@ -610,6 +664,12 @@ export function createDefaultRegistry(): ProviderRegistry {
     new ImmobilienScout24Provider(deOptions),
     new ImmoweltProvider(deOptions),
     new KleinanzeigenProvider(deOptions),
+    new StoriaProvider(roOptions),
+    new ImobiliareRoProvider(roOptions),
+    new OlxRoProvider(roOptions),
+    new BieniciProvider(frOptions),
+    new LeboncoinProvider(frOptions),
+    new SelogerProvider(frOptions),
   ];
   for (const provider of flaggedProviders) {
     if (providerEnabled(provider.id)) {

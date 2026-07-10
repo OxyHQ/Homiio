@@ -16,21 +16,32 @@ import {
 } from './proxy';
 import type { PlaywrightModule } from './browser';
 import {
+  BrowserSessionChallengeError,
   DEFAULT_SESSION_TIMEOUT_MS,
   exportStorageState,
   fetchJsonInPage,
   setupAssetBlocking,
   warmBrowserPage,
+  type BrowserSession,
   type BrowserSessionRequestInit,
   type BrowserSessionRequestResult,
   type BrowserStorageState,
   type SessionContext,
   type SessionPage,
   type WarmBrowserPageOptions,
-  type BrowserSession,
 } from './session';
 
+export {
+  BrowserSessionChallengeError,
+  type BrowserSession,
+  type BrowserStorageState,
+};
+
 export interface BrowserSessionOptions extends WarmBrowserPageOptions {
+  /** Playwright context locale (default `es-ES`). */
+  locale?: string;
+  /** Optional Accept-Language header override for the browser context. */
+  acceptLanguage?: string;
   userAgent?: string;
   proxy?: ResidentialProxyConfig;
   stickyProxySession?: boolean;
@@ -205,13 +216,15 @@ export class PlaywrightSessionPool {
       const sessionId =
         options.proxySessionId ??
         (this.stickyProxySession || options.stickyProxySession ? createProxySessionId() : undefined);
+      const locale = options.locale ?? 'es-ES';
+      const acceptLanguage = options.acceptLanguage ?? `${locale},${locale.split('-')[0]};q=0.9,en;q=0.8`;
       const contextOptions: PwContextOptions = {
         userAgent: options.userAgent ?? this.userAgent,
-        locale: 'es-ES',
+        locale,
         viewport: { width: 1366, height: 900 },
         extraHTTPHeaders: {
           Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+          'Accept-Language': acceptLanguage,
         },
         javaScriptEnabled: true,
       };

@@ -228,7 +228,15 @@ PROVIDER_HABITACLIA_ENABLED=true
 PROVIDER_BLUEGROUND_ENABLED=true
 PROVIDER_APARTMENTS_COM_ENABLED=true
 PROVIDER_ZILLOW_ENABLED=true
+PROVIDER_IMMOBILIENSCOUT24_ENABLED=true
+PROVIDER_IMMOWELT_ENABLED=true
+PROVIDER_KLEINANZEIGEN_ENABLED=true
+PROVIDER_STORIA_ENABLED=true
+PROVIDER_IMOBILIARE_RO_ENABLED=true
+PROVIDER_OLX_RO_ENABLED=true
 ```
+
+Romania (`LISTING_RO_CITIES`): Storia (`__NEXT_DATA__` + session), Imobiliare.ro (Inertia search + JSON-LD detail), OLX.ro (housing `/imobiliare/…` only). Shared parsers live in `@homiio/listing-providers` root (`contact`, `nextData`, `jsonLd`, `classifieds`, `slug`, `cities`) — providers must not duplicate them.
 
 The worker reads these at startup; disabled providers are not registered.
 
