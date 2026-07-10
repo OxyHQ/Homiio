@@ -235,13 +235,14 @@ export class PlaywrightBrowserPool implements UrlFetcher {
     try {
       const browser = await this.ensureBrowser();
       const sessionId = this.stickyProxySession ? createProxySessionId() : undefined;
+      const esLocale = init?.proxyCountry?.toLowerCase() === 'es';
       const contextOptions: PwContextOptions = {
         userAgent: this.userAgent,
-        locale: 'en-US',
+        locale: esLocale ? 'es-ES' : 'en-US',
         viewport: { width: 1366, height: 900 },
         extraHTTPHeaders: {
           Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Language': esLocale ? 'es-ES,es;q=0.9,en;q=0.8' : 'en-US,en;q=0.9',
           ...init?.headers,
         },
         javaScriptEnabled: true,

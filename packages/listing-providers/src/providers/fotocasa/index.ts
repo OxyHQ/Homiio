@@ -448,10 +448,8 @@ export class FotocasaProvider implements ListingProvider {
 
     let session: BrowserSession | undefined;
     const warmCity = discoverSession?.warmCity ?? fotocasaCityFromRefUrl(ref.url);
-    const warmUrl =
-      discoverSession?.storageState?.cookies?.length
-        ? ref.url
-        : fotocasaWarmSearchUrl(warmCity, 1);
+    const transactionType = ref.url.includes('/comprar') || ref.url.includes('/venta') ? 'BUY' : 'RENT';
+    const warmUrl = fotocasaWarmSearchUrl(warmCity, 1, transactionType);
     const start = Date.now();
     try {
       session = await ctx.runtime.openBrowserSession({
@@ -467,7 +465,6 @@ export class FotocasaProvider implements ListingProvider {
         proxyCountry: ES_PROXY_COUNTRY,
       });
 
-      const transactionType = ref.url.includes('/comprar') || ref.url.includes('/venta') ? 'BUY' : 'RENT';
       const propertyUrl = fotocasaPropertyApiUrl(ref.sourceId, transactionType);
       const propertyRes = await session.request(propertyUrl, {
         referer: session.pageUrl(),

@@ -141,6 +141,15 @@ export class HabitacliaProvider implements ListingProvider {
     const yielded = { count: 0 };
     const runtime = job.runtime ?? this.runtime;
 
+    // Cold HTTP + listainmuebles POST first (cheaper than a full browser warm).
+    for (const city of cities) {
+      if (yielded.count >= limit) return;
+      for await (const ref of this.discoverCityViaHtml(runtime, city, job.signal, seen, limit, yielded)) {
+        yield ref;
+      }
+    }
+    if (yielded.count >= limit) return;
+
     const beforeSession = yielded.count;
     if (runtime.openBrowserSession) {
       for await (const ref of this.discoverViaListainmueblesSession(
@@ -157,13 +166,6 @@ export class HabitacliaProvider implements ListingProvider {
     }
 
     if (yielded.count > beforeSession) return;
-
-    for (const city of cities) {
-      if (yielded.count >= limit) return;
-      for await (const ref of this.discoverCityViaHtml(runtime, city, job.signal, seen, limit, yielded)) {
-        yield ref;
-      }
-    }
   }
 
   private habitacliaSessionOptions(city: string, sticky: boolean) {
@@ -360,7 +362,7 @@ export class HabitacliaProvider implements ListingProvider {
         provider: this.id,
         isChallenge: isHabitacliaChallenge,
         metrics: this.metrics,
-        init: { signal },
+        init: { signal, proxyCountry: ES_PROXY_COUNTRY },
         tiers: page === 1 ? undefined : ['browser'],
       });
       if (page === 1) firstPageHtml = html;
@@ -390,7 +392,7 @@ export class HabitacliaProvider implements ListingProvider {
     const { html } = await fetchListingViaLadder(ctx.runtime, ref.url, {
       provider: this.id,
       isChallenge: isHabitacliaChallenge,
-      init: { signal: ctx.signal },
+      init: { signal: ctx.signal, proxyCountry: ES_PROXY_COUNTRY },
       metrics: this.metrics,
     });
     return { ref, payload: parseHabitacliaDetail(html, ref.url) };

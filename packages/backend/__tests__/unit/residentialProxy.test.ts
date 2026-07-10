@@ -276,7 +276,7 @@ describe('createListingFetchRuntime — explicit HTTP proxy option', () => {
     const { runtime } = createListingFetchRuntime({ proxy: config });
     await runtime.fetchText('https://portal.example/x');
 
-    expect(proxyModule.createProxiedFetch).toHaveBeenCalledWith(config);
+    expect(proxyModule.createProxiedFetch).toHaveBeenCalledWith(config, undefined, undefined);
     expect(proxiedFetch).toHaveBeenCalled();
   });
 });

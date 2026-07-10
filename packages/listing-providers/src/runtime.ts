@@ -15,12 +15,14 @@ import { createBrowserFetcher, loadPlaywright } from './browser';
 import { PlaywrightSessionPool } from './browserSession';
 import { DEFAULT_SESSION_TIMEOUT_MS } from './session';
 import { createManagedFetcher, type ManagedFetcherConfig } from './managed';
+import { BROWSER_USER_AGENT } from './http';
 import {
   browserBlockAssetsFromEnv,
   createProxiedFetch,
   envBool,
   httpUseProxyFromEnv,
   maskProxyUrl,
+  proxyGeoCountryFromEnv,
   residentialProxyFromEnv,
   type ResidentialProxyConfig,
 } from './proxy';
@@ -85,7 +87,10 @@ export class HttpFetchRuntime implements FetchRuntime {
 
   constructor(options: HttpFetchRuntimeOptions = {}) {
     this.defaultTimeoutMs = options.defaultTimeoutMs ?? DEFAULT_TIMEOUT_MS;
-    this.userAgent = options.userAgent ?? DEFAULT_USER_AGENT;
+    // Portals block the ingest UA; when routing through a residential proxy use a
+    // desktop Chrome UA so cold HTTP discover/fetch matches the browser tier.
+    this.userAgent =
+      options.userAgent ?? (options.proxy ? BROWSER_USER_AGENT : DEFAULT_USER_AGENT);
     this.fixturesDir = options.fixturesDir;
     this.proxy = options.proxy;
   }
@@ -93,16 +98,17 @@ export class HttpFetchRuntime implements FetchRuntime {
   private async resolveFetch(): Promise<typeof fetch> {
     if (!this.proxy) return fetch;
     if (!this.proxiedFetch) {
-      this.proxiedFetch = await createProxiedFetch(this.proxy);
+      this.proxiedFetch = await createProxiedFetch(this.proxy, undefined, proxyGeoCountryFromEnv());
     }
     return this.proxiedFetch;
   }
 
   async fetchHttp(url: string, init?: FetchRuntimeInit): Promise<{ status: number; body: string }> {
     const timeoutMs = init?.timeoutMs ?? this.defaultTimeoutMs;
+    const proxyCountry = init?.proxyCountry ?? proxyGeoCountryFromEnv();
     const requestFetch =
-      init?.proxyCountry && this.proxy
-        ? await createProxiedFetch(this.proxy, undefined, init.proxyCountry)
+      proxyCountry && this.proxy
+        ? await createProxiedFetch(this.proxy, undefined, proxyCountry)
         : await this.resolveFetch();
     return withTimeout(timeoutMs, init?.signal, async (signal) => {
       const response = await requestFetch(url, {
