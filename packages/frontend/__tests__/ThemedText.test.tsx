@@ -50,4 +50,16 @@ describe('<ThemedText />', () => {
     render(<ThemedText testID="greeting">Hola</ThemedText>, { wrapper: ThemeWrapper });
     expect(screen.getByTestId('greeting')).toBeTruthy();
   });
+
+  it('forwards className to Bloom typography', () => {
+    render(
+      <ThemedText className="text-sm text-muted-foreground" testID="subtitle">
+        Subtitle
+      </ThemedText>,
+      { wrapper: ThemeWrapper },
+    );
+    expect(screen.getByTestId('subtitle').props.className).toBe(
+      'text-sm text-muted-foreground',
+    );
+  });
 });
