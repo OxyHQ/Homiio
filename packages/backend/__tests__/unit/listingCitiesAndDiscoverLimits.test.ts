@@ -90,6 +90,22 @@ describe('habitacliaCitiesFromEnv', () => {
   });
 });
 
+describe('pisosCitiesFromEnv', () => {
+  it('uses LISTING_PISOS_CITIES when set', () => {
+    process.env.LISTING_PISOS_CITIES = 'madrid, barcelona';
+    const { pisosCitiesFromEnv } = require('@homiio/listing-providers');
+    expect(pisosCitiesFromEnv()).toEqual(['madrid', 'barcelona']);
+  });
+
+  it('falls back to Pisos defaults, not the full ES market list', () => {
+    delete process.env.LISTING_PISOS_CITIES;
+    process.env.LISTING_ES_CITIES = 'madrid,barcelona,valencia,sevilla,malaga,bilbao,zaragoza,alicante,murcia,palma,las-palmas-de-gran-canaria';
+    const { pisosCitiesFromEnv, PISOS_DEFAULT_CITIES } = require('@homiio/listing-providers');
+    expect(pisosCitiesFromEnv()).toEqual([...PISOS_DEFAULT_CITIES]);
+    expect(pisosCitiesFromEnv().length).toBe(10);
+  });
+});
+
 describe('idealistaCitiesFromEnv', () => {
   it('uses LISTING_IDEALISTA_CITIES when set', () => {
     process.env.LISTING_IDEALISTA_CITIES = 'madrid';

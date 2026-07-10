@@ -24,6 +24,7 @@ import {
   fotocasaCitiesFromEnv,
   habitacliaCitiesFromEnv,
   idealistaCitiesFromEnv,
+  pisosCitiesFromEnv,
   type ExternalListingRef,
   type FetchRuntime,
   type ListingFetchRuntimeHandle,
@@ -142,6 +143,7 @@ function discoverCitiesForProvider(providerId: string): string[] | undefined {
   if (providerId === 'fotocasa') return fotocasaCitiesFromEnv();
   if (providerId === 'habitaclia') return habitacliaCitiesFromEnv();
   if (providerId === 'idealista') return idealistaCitiesFromEnv();
+  if (providerId === 'pisos') return pisosCitiesFromEnv();
   return undefined;
 }
 
@@ -276,9 +278,12 @@ async function purgeLegacyMarketWideDiscoverJobs(
   }
 }
 
-/** Drop pre per-city Fotocasa discover scopes that can block the queue for hours. */
-async function purgeLegacyFotocasaDiscoverJobs(discoverQueue: BullQueue<DiscoverJobData>): Promise<void> {
+/** Drop pre per-city discover scopes that can block the queue for hours. */
+async function purgeLegacyPerCityDiscoverJobs(discoverQueue: BullQueue<DiscoverJobData>): Promise<void> {
   await purgeLegacyMarketWideDiscoverJobs(discoverQueue, 'fotocasa');
+  for (const provider of ['habitaclia', 'idealista', 'pisos'] as const satisfies readonly ProviderId[]) {
+    await purgeLegacyMarketWideDiscoverJobs(discoverQueue, provider);
+  }
 }
 
 async function releaseStaleActiveDiscoverJobs(discoverQueue: BullQueue<DiscoverJobData>): Promise<number> {
@@ -306,10 +311,7 @@ async function startBullMq(): Promise<() => Promise<void>> {
   const discoverQueue = new Queue<DiscoverJobData>(QUEUE_NAMES.discover, { connection, prefix });
 
   // Purge ghost/scoped jobs before the discover worker can claim them.
-  await purgeLegacyFotocasaDiscoverJobs(discoverQueue);
-  for (const provider of ['habitaclia', 'idealista'] as const satisfies readonly ProviderId[]) {
-    await purgeLegacyMarketWideDiscoverJobs(discoverQueue, provider);
-  }
+  await purgeLegacyPerCityDiscoverJobs(discoverQueue);
   await releaseStaleActiveDiscoverJobs(discoverQueue);
 
   const discoverWorker = new Worker<DiscoverJobData>(

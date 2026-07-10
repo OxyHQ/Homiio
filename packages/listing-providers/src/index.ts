@@ -456,6 +456,11 @@ export {
 // ES — pisos.com (JSON-LD + embedded detail JSON), feature-flagged OFF by default.
 export { PisosProvider, isPisosChallenge, pisosSourceIdFromUrl } from './providers/pisos';
 export {
+  PISOS_DEFAULT_CITIES,
+  pisosCitiesFromEnv,
+  pisosCitiesOptionsFromEnv,
+} from './providers/pisos/cities';
+export {
   readPisosBrowserSessionHint,
   pisosBrowserSessionHints,
   PISOS_BROWSER_SESSION_HINT,
@@ -1093,6 +1098,7 @@ import { IdealistaProvider } from './providers/idealista';
 import { idealistaCitiesOptionsFromEnv } from './providers/idealista/cities';
 import { FotocasaProvider, fotocasaCitiesOptionsFromEnv } from './providers/fotocasa';
 import { PisosProvider } from './providers/pisos';
+import { pisosCitiesOptionsFromEnv } from './providers/pisos/cities';
 import { MilanunciosProvider } from './providers/milanuncios';
 import { YaencontreProvider } from './providers/yaencontre';
 import { IndomioProvider } from './providers/indomio';
@@ -1187,7 +1193,7 @@ export function createDefaultRegistry(): ProviderRegistry {
     new BluegroundProvider(),
     new IdealistaProvider(idealistaCitiesOptionsFromEnv()),
     new FotocasaProvider(fotocasaCitiesOptionsFromEnv()),
-    new PisosProvider(esOptions),
+    new PisosProvider(pisosCitiesOptionsFromEnv()),
     new MilanunciosProvider(esOptions),
     new YaencontreProvider(esOptions),
     new IndomioProvider(esOptions),

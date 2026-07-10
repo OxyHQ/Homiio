@@ -49,20 +49,12 @@ import {
   type PisosBrowserSessionHint,
 } from './sessionHints';
 
+import { PISOS_DEFAULT_CITIES } from './cities';
+
+export { PISOS_DEFAULT_CITIES, pisosCitiesFromEnv, pisosCitiesOptionsFromEnv } from './cities';
+
 const PROVIDER_ID: ProviderId = 'pisos';
 const ES_PROXY_COUNTRY = 'es';
-const DEFAULT_CITIES: readonly string[] = [
-  'madrid',
-  'barcelona',
-  'valencia',
-  'sevilla',
-  'malaga',
-  'bilbao',
-  'zaragoza',
-  'alicante',
-  'murcia',
-  'palma',
-];
 const DEFAULT_MAX_SEARCH_PAGES = 50;
 const PISOS_SEARCH_CONTENT_SELECTOR = 'script[type="application/ld+json"], [href*="/alquilar/"]';
 
@@ -134,7 +126,7 @@ export class PisosProvider implements ListingProvider {
 
   constructor(options: PisosProviderOptions = {}) {
     this.runtime = options.runtime ?? createFetchRuntime();
-    this.cities = options.cities && options.cities.length > 0 ? options.cities : DEFAULT_CITIES;
+    this.cities = options.cities && options.cities.length > 0 ? options.cities : PISOS_DEFAULT_CITIES;
     this.metrics = options.metrics ?? defaultProviderMetrics;
     this.maxSearchPages = providerMaxSearchPages(PROVIDER_ID, DEFAULT_MAX_SEARCH_PAGES, 'ES');
   }
