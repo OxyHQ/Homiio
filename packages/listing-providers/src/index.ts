@@ -35,11 +35,16 @@ export type {
 } from './providers/habitaclia/fixtures';
 
 export { BluegroundProvider, coerceBluegroundListing } from './providers/blueground';
+export {
+  parseBluegroundDetail,
+  parseBluegroundSearch,
+  bluegroundCitySearchUrl,
+  bluegroundSourceIdFromUrl,
+} from './providers/blueground/parse';
 export { BLUEGROUND_FIXTURES } from './providers/blueground/fixtures';
 export type {
   BluegroundRawListing,
   BluegroundRawPhoto,
-  BluegroundSearchResponse,
 } from './providers/blueground/fixtures';
 
 export { IdealistaProvider, isIdealistaChallenge, idealistaSourceIdFromUrl } from './providers/idealista';

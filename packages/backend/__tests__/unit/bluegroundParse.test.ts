@@ -1,4 +1,4 @@
-import { parseBluegroundDetail, parseBluegroundSearch } from '@homiio/listing-providers/src/providers/blueground/parse';
+import { parseBluegroundDetail, parseBluegroundSearch } from '@homiio/listing-providers';
 
 const SEARCH_HTML = `
   <a href="https://www.theblueground.com/p/furnished-apartments/mad-1490341p">A</a>
