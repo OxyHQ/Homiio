@@ -19,7 +19,7 @@ export async function getPropertyById(req: ControllerRequest, res: ControllerRes
       if (oxyUserId) {
         const { Profile } = require('../../models');
         const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-        isOwner = Boolean(activeProfile) && property.profileId?.toString() === activeProfile._id.toString();
+        isOwner = Boolean(activeProfile) && property.oxyUserId?.toString() === activeProfile._id.toString();
       }
       if (!isOwner) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
     }

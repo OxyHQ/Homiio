@@ -59,13 +59,9 @@ The production Dockerfile builds in dependency order: `shared-types` → `listin
 
 **Backend**: addresses, ai, analytics, billing, cities, images, leases, notifications, profiles, properties, public, reviews, roommates, rooms, scraper, telegram, tips, viewings
 
-## Profile Resolution (CRITICAL)
+## Ownership (CRITICAL)
 
-Every authenticated write resolves the caller's Homiio profile via `Profile.findActiveByOxyUserId(oxyUserId)` — never accept a `profileId` from the client for ownership. Controllers derive `oxyUserId` from `getRequiredOxyUserId` / `req.user` and look up the active profile server-side. Missing profile → 404 `PROFILE_NOT_FOUND`.
-
-## IDOR Fix (CRITICAL)
-
-Property/room/**lease** create and update use a server-resolved owner id (`profileId` for property/room, `landlordProfileId` for lease) + an explicit editable-field whitelist. Never accept raw owner ids or lifecycle/system fields (`status`, `signatures`, `paymentSchedule`, …) from the request body — the backend resolves the owner from the authenticated user via `getRequiredOxyUserId`/`Profile.findActiveByOxyUserId`. Do not regress this.
+Property/room/**lease** create and update use the session `oxyUserId` from `@oxyhq/core/server` (`requireSessionOxyUserId`) — never accept owner ids from the client. Writes use `Model.findOne({ _id, oxyUserId })` for updates/deletes (non-owner → 404). Profile is an optional RE sidecar keyed by `oxyUserId`, not an ownership authority.
 
 - Shared guard: `packages/backend/utils/pickFields.ts` (one implementation for every write controller).
 - Whitelists: `controllers/property/editableFields.ts` (property + room) and `controllers/lease/editableFields.ts` (`CREATABLE_LEASE_FIELDS`/`EDITABLE_LEASE_FIELDS`).
@@ -137,7 +133,7 @@ Sticky reuse: `LISTING_PROXY_STICKY=true` keeps `proxySessionId` + `storageState
 **Capture owner/agent contact when the portal exposes it.** After listing fetch, call portal contact AJAX when available (e.g. Idealista `contact-phones`, `adContactInfo`). Persist phone, email, WhatsApp, and agency name on the external Property / `NormalizedListing` so the app can show direct contact — not only `sourceUrl`. Never invent or guess contacts. Classifieds housing-only filter still applies (see below).
 
 ### Model
-- External properties have `isExternal: true`, no `profileId`, `status: 'published'`, and a mandatory `sourceUrl`.
+- External properties have `isExternal: true`, no `oxyUserId`, `status: 'published'`, and a mandatory `sourceUrl`.
 - Optional ingested contact fields (phone, email, WhatsApp, agency name) when the portal AJAX exposes them — see § External listing contact.
 - The frontend already handles these: source badge, blocked apply/viewing, portal CTA to `sourceUrl`, plus direct contact when ingested. Do not remove that differentiation.
 - Upsert key is `(source, sourceId)` — handled by `scraperService.upsertExternalListing`.

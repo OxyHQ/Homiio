@@ -1,4 +1,3 @@
-import { ProfileType } from '@homiio/shared-types';
 import { applyOfferingRulesForCreate, OfferingValidationError, type OfferingBearingPayload } from './offeringRules';
 import { CREATABLE_PROPERTY_FIELDS } from './editableFields';
 import { pickFields } from '../../utils/pickFields';
@@ -7,6 +6,7 @@ import { telegramService } from '../../services';
 import { logger, businessLogger } from '../../middlewares/logging';
 import { AppError, successResponse } from '../../middlewares/errorHandler';
 import { getErrorMessage, getErrorName, getValidationMessages } from '../../utils/errors';
+import { requireSessionOxyUserId } from '../../utils/sessionUser';
 import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
 
 /**
@@ -75,32 +75,10 @@ function validateAndFixCoordinateOrder(coords: number[]): number[] {
 
 export async function createProperty(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
   try {
-    if (!req.userId) {
-      return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
-    }
-    const oxyUserId = req.user?.id || req.user?._id || req.userId;
+    const oxyUserId = requireSessionOxyUserId(req);
 
-    // Ownership: a listing is ALWAYS owned by the authenticated user's active
-    // profile. The client cannot choose `profileId` (IDOR / mass-assignment) —
-    // it is resolved strictly server-side, creating the personal profile lazily
-    // if the user has none yet.
-    const { Profile } = require('../../models');
-    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-    if (!activeProfile) {
-      activeProfile = await Profile.create({
-        oxyUserId,
-        profileType: ProfileType.PERSONAL,
-        isPrimary: true,
-        isActive: true,
-        personalProfile: {},
-      });
-    }
-
-    // Build the property from an explicit field whitelist; never spread
-    // `req.body`. Owner/system fields (profileId, isVerified, views, partner
-    // attribution, timestamps, …) are resolved/derived server-side only.
     const propertyData = pickFields<OfferingBearingPayload>(req.body, CREATABLE_PROPERTY_FIELDS);
-    propertyData.profileId = activeProfile._id;
+    propertyData.oxyUserId = oxyUserId;
 
     // Resolve an optional partner referral code into an attribution: a valid,
     // active partner stamps `sourcedByPartner` + `sourcedByReferralCode` on the
@@ -178,11 +156,11 @@ export async function createProperty(req: ControllerRequest, res: ControllerResp
     // Populate address for response
     await savedProperty.populate('addressId');
     
-    const savedProfileId = savedProperty.profileId?.toString();
-    if (savedProfileId) {
-      businessLogger.propertyCreated(savedProperty._id.toString(), savedProfileId);
+    const savedOwnerId = savedProperty.oxyUserId;
+    if (savedOwnerId) {
+      businessLogger.propertyCreated(savedProperty._id.toString(), savedOwnerId);
     } else {
-      logger.warn('Created property without profileId', { propertyId: savedProperty._id.toString() });
+      logger.warn('Created property without oxyUserId', { propertyId: savedProperty._id.toString() });
     }
     telegramService.sendPropertyNotification(savedProperty).catch(error => {
       logger.error('Failed to send Telegram notification for new property', {

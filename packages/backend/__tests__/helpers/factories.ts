@@ -1,32 +1,20 @@
 /**
- * Test data factories. They use the REAL Mongoose models from `models/index.ts`
- * against the in-memory Mongo started in `jest.setup.ts`, so persisted documents
- * exercise the same schemas, validators and hooks as production.
+ * Test data factories using real Mongoose models against in-memory Mongo.
  */
 
-import { OfferingType, ProfileType, PropertyType, PropertyStatus } from '@homiio/shared-types';
+import { OfferingType, PropertyType, PropertyStatus } from '@homiio/shared-types';
 
 const models = require('../../models');
-const { Profile, Property, Address, Country, Region, City, Lease } = models;
+const { Property, Address, Country, Region, City, Lease } = models;
 
 let geoChain: { countryId: unknown; regionId: unknown; cityId: unknown } | null = null;
 
-/** Create (once per test, cleared between) a Country → Region → City chain. */
 async function ensureGeo(): Promise<{ countryId: unknown; regionId: unknown; cityId: unknown }> {
   const country = await Country.create({ code: 'ES', name: 'Spain' });
   const region = await Region.create({ countryId: country._id, name: 'Catalonia' });
   const city = await City.create({ countryId: country._id, regionId: region._id, name: 'Barcelona' });
   geoChain = { countryId: country._id, regionId: region._id, cityId: city._id };
   return geoChain;
-}
-
-export async function createProfile(oxyUserId: string): Promise<{ _id: unknown; oxyUserId: string }> {
-  return Profile.create({
-    oxyUserId,
-    profileType: ProfileType.PERSONAL,
-    isActive: true,
-    personalProfile: {},
-  });
 }
 
 export async function createAddress(): Promise<{ _id: unknown }> {
@@ -41,17 +29,17 @@ export async function createAddress(): Promise<{ _id: unknown }> {
 }
 
 export interface CreatePropertyOptions {
-  profileId: unknown;
+  oxyUserId: string;
   status?: string;
   monthlyAmount?: number;
 }
 
 export async function createRentProperty(
   options: CreatePropertyOptions,
-): Promise<{ _id: unknown; profileId: unknown; status: string; toJSON(): unknown }> {
+): Promise<{ _id: unknown; oxyUserId: string; status: string; toJSON(): unknown }> {
   const address = await createAddress();
   return Property.create({
-    profileId: options.profileId,
+    oxyUserId: options.oxyUserId,
     addressId: address._id,
     type: PropertyType.APARTMENT,
     bedrooms: 2,
@@ -64,8 +52,8 @@ export async function createRentProperty(
 
 export interface CreateLeaseOptions {
   propertyId: unknown;
-  landlordProfileId: unknown;
-  tenantProfileId: unknown;
+  landlordOxyUserId: string;
+  tenantOxyUserId: string;
   status?: string;
 }
 
@@ -76,11 +64,11 @@ export async function createLease(
   const end = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
   return Lease.create({
     propertyId: options.propertyId,
-    landlordProfileId: options.landlordProfileId,
-    tenantProfileId: options.tenantProfileId,
-    leaseTerms: { startDate: now, endDate: end },
-    rentDetails: { monthlyRent: 1200, currency: 'EUR' },
+    landlordOxyUserId: options.landlordOxyUserId,
+    tenantOxyUserId: options.tenantOxyUserId,
     status: options.status ?? 'draft',
+    leaseTerms: { startDate: now, endDate: end },
+    rentDetails: { monthlyRent: 1200, currency: 'EUR', dueDay: 1 },
   });
 }
 

@@ -53,7 +53,7 @@ export async function markPropertyTransacted(req: any, res: any, next: any) {
     if (!property) {
       return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));
     }
-    if (!property.profileId || property.profileId.toString() !== activeProfile._id.toString()) {
+    if (!property.oxyUserId || property.oxyUserId.toString() !== activeProfile._id.toString()) {
       return next(new AppError('Access denied - you can only close your own properties', 403, 'FORBIDDEN'));
     }
 

@@ -138,7 +138,7 @@ class ReservationController {
       const guestProfile = await Profile.findActiveByOxyUserId(oxyUserId);
       if (!guestProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
-      const hostProfileId = property.profileId;
+      const hostProfileId = property.oxyUserId;
       if (!hostProfileId) return next(new AppError('Property has no host profile', 400, 'INVALID_PROPERTY'));
       if (String(hostProfileId) === String(guestProfile._id)) {
         return next(new AppError('You cannot book your own property', 403, 'FORBIDDEN'));
