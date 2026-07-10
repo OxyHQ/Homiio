@@ -46,6 +46,11 @@ import {
   type FotocasaLocationSegments,
 } from './searchads';
 import { fotocasaPropertyApiUrl, isFotocasaPropertyChallenge, parseFotocasaPropertyJson } from './property';
+import {
+  fotocasaBrowserSessionHints,
+  readFotocasaBrowserSessionHint,
+  type FotocasaBrowserSessionHint,
+} from './sessionHints';
 
 const PROVIDER_ID: ProviderId = 'fotocasa';
 
@@ -116,13 +121,15 @@ function yieldRefs(
   seen: Set<string>,
   limit: number,
   yielded: { count: number },
+  browserSession?: FotocasaBrowserSessionHint,
 ): ExternalListingRef[] {
   const out: ExternalListingRef[] = [];
+  const hints = browserSession ? fotocasaBrowserSessionHints(browserSession) : undefined;
   for (const ref of refs) {
     if (yielded.count >= limit) break;
     if (seen.has(ref.sourceId)) continue;
     seen.add(ref.sourceId);
-    out.push({ provider: PROVIDER_ID, sourceId: ref.sourceId, url: ref.url });
+    out.push({ provider: PROVIDER_ID, sourceId: ref.sourceId, url: ref.url, hints });
     yielded.count += 1;
   }
   return out;
@@ -205,6 +212,11 @@ export class FotocasaProvider implements ListingProvider {
       });
 
       const searchHtml = await session.content();
+      const browserSession: FotocasaBrowserSessionHint = {
+        warmCity: city,
+        proxySessionId: this.stickyProxySessionId,
+        storageState: await session.exportStorageState(),
+      };
       let segments: FotocasaLocationSegments | undefined;
 
       const segmentsUrl = fotocasaUrlLocationSegmentsUrl(city);
@@ -296,11 +308,11 @@ export class FotocasaProvider implements ListingProvider {
           url: requestUrl,
         });
         if (pageRefs.length === 0) break;
-        collected.push(...yieldRefs(pageRefs, seen, limit, yielded));
+        collected.push(...yieldRefs(pageRefs, seen, limit, yielded, browserSession));
       }
 
       if (sticky) {
-        this.stickyStorageState = await session.exportStorageState();
+        this.stickyStorageState = browserSession.storageState;
       }
       return collected;
     } catch (error) {
@@ -374,13 +386,17 @@ export class FotocasaProvider implements ListingProvider {
   ): Promise<RawListing | undefined> {
     if (!ctx.runtime.openBrowserSession) return undefined;
 
+    const discoverSession = readFotocasaBrowserSessionHint(ref.hints);
     const sticky = envBool('LISTING_PROXY_STICKY', false);
-    if (sticky && !this.stickyProxySessionId) {
-      this.stickyProxySessionId = createProxySessionId();
+    let proxySessionId = discoverSession?.proxySessionId ?? this.stickyProxySessionId;
+    if (sticky && !proxySessionId) {
+      proxySessionId = createProxySessionId();
+      this.stickyProxySessionId = proxySessionId;
     }
+    const storageState = discoverSession?.storageState ?? this.stickyStorageState;
 
     let session: BrowserSession | undefined;
-    const warmCity = fotocasaCityFromRefUrl(ref.url);
+    const warmCity = discoverSession?.warmCity ?? fotocasaCityFromRefUrl(ref.url);
     const warmUrl = fotocasaWarmSearchUrl(warmCity, 1);
     const start = Date.now();
     try {
@@ -389,10 +405,10 @@ export class FotocasaProvider implements ListingProvider {
         signal: ctx.signal,
         contentSelector: FOTOCASA_CONTENT_SELECTOR,
         isChallenge: isFotocasaChallenge,
-        challengeWaitMs: 45_000,
+        challengeWaitMs: discoverSession ? 20_000 : 45_000,
         stickyProxySession: sticky,
-        proxySessionId: this.stickyProxySessionId,
-        storageState: this.stickyStorageState,
+        proxySessionId,
+        storageState,
         blockAssets: true,
       });
 
@@ -416,7 +432,7 @@ export class FotocasaProvider implements ListingProvider {
           status: propertyRes.status,
           latencyMs: Date.now() - start,
           url: propertyUrl,
-          detail: 'property-json',
+          detail: discoverSession ? 'property-json (discover session)' : 'property-json',
         });
         if (sticky) {
           this.stickyStorageState = await session.exportStorageState();

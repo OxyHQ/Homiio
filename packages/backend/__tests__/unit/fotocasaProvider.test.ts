@@ -28,6 +28,8 @@ import {
   FOTOCASA_FIXTURE_PROPERTY_JSON,
   FOTOCASA_FIXTURE_SSR_SEARCH_HTML,
   fotocasaCityFromRefUrl,
+  readFotocasaBrowserSessionHint,
+  FOTOCASA_BROWSER_SESSION_HINT,
   ChallengeError,
 } from '@homiio/listing-providers';
 import type { ExternalListingRef, FetchRuntime } from '@homiio/listing-providers';
@@ -233,6 +235,9 @@ describe('FotocasaProvider.discover searchads path', () => {
 
     expect(refs.map((ref) => ref.sourceId).sort()).toEqual(['187654321', '187654322', '187654323']);
     expect(refs.every((ref) => ref.provider === 'fotocasa')).toBe(true);
+    const sessionHint = readFotocasaBrowserSessionHint(refs[0]?.hints);
+    expect(sessionHint?.warmCity).toBe('madrid');
+    expect(sessionHint?.storageState.cookies).toEqual([]);
   });
 
   it('falls back to HTML ladder when searchads returns a challenge', async () => {
@@ -333,6 +338,60 @@ describe('FotocasaProvider.fetch property JSON path', () => {
     expect(warmUrl).toContain('/viviendas/madrid-capital/todas-las-zonas/l');
     expect(listing.sourceId).toBe('187654321');
     expect(listing.longTermRent?.monthlyAmount).toBe(1850);
+  });
+
+  it('reuses discover session hints instead of cold re-warm', async () => {
+    let sessionOptions: { warmUrl: string; storageState?: { cookies: unknown[] }; proxySessionId?: string } | undefined;
+    const discoverCookies = [{ name: '_px3', value: 'cleared', domain: '.fotocasa.es', path: '/' }];
+    const runtime: FetchRuntime = {
+      fetchHttp: async () => {
+        throw new Error('HTML ladder must not run for Fotocasa fetch');
+      },
+      fetchJson: async () => {
+        throw new Error('unused');
+      },
+      fetchText: async () => {
+        throw new Error('unused');
+      },
+      loadFixture: async () => {
+        throw new Error('unused');
+      },
+      openBrowserSession: async (options) => {
+        sessionOptions = options;
+        return {
+          request: async (url: string) => {
+            if (url.includes('/property?')) {
+              return { status: 200, body: FOTOCASA_FIXTURE_PROPERTY_JSON };
+            }
+            return { status: 403, body: FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE };
+          },
+          content: async () => FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE,
+          pageUrl: () => 'https://www.fotocasa.es/es/alquiler/viviendas/madrid-capital/todas-las-zonas/l',
+          exportStorageState: async () => ({ cookies: discoverCookies }),
+          close: async () => undefined,
+        };
+      },
+    };
+
+    const local = new FotocasaProvider({ runtime });
+    const ref: ExternalListingRef = {
+      provider: 'fotocasa',
+      sourceId: '187654321',
+      url: 'https://www.fotocasa.es/es/alquiler/vivienda/aranjuez/parking/190037811/d',
+      hints: {
+        [FOTOCASA_BROWSER_SESSION_HINT]: {
+          warmCity: 'madrid',
+          proxySessionId: 'discover-session-abc',
+          storageState: { cookies: discoverCookies },
+        },
+      },
+    };
+    const raw = await local.fetch(ref, { runtime, signal: new AbortController().signal });
+
+    expect(sessionOptions?.warmUrl).toContain('/viviendas/madrid-capital/todas-las-zonas/l');
+    expect(sessionOptions?.proxySessionId).toBe('discover-session-abc');
+    expect(sessionOptions?.storageState?.cookies).toEqual(discoverCookies);
+    expect(local.normalize(raw).sourceId).toBe('187654321');
   });
 
   it('throws ChallengeError when property JSON stays blocked after search warm-up', async () => {
