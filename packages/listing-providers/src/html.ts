@@ -5,6 +5,8 @@
 
 import { citySlug } from './slug';
 
+export { citySlug };
+
 export {
   extractNextData,
   parseNextData,
@@ -28,8 +30,6 @@ export {
 } from './parse/guards';
 
 export { ldJsonScriptBodies } from './parse/jsonLd';
-
-export { citySlug } from './slug';
 
 /** German city slug alias used by DE portal parsers. */
 export function citySlugDe(city: string): string {

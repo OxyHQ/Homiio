@@ -185,6 +185,7 @@ export interface Property {
     whatsapp?: string;
     name?: string;
     agencyName?: string;
+    kind?: 'owner' | 'agency' | 'private' | 'unknown';
   };
   expiresAt?: string; // TTL for external properties
   /**

@@ -47,7 +47,7 @@ describe('OnTheMarketProvider', () => {
     expect(listing.longTermRent?.currency).toBe('GBP');
     expect(listing.type).toBe(PropertyType.APARTMENT);
     expect(listing.contact?.phone).toContain('020');
-    expect(listing.contact?.whatsapp).toContain('wa.me');
+    expect(listing.contact?.whatsapp).toBe('442080227422');
   });
 
   it('rejects garage detail payloads', () => {
