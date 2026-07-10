@@ -14,6 +14,7 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 
 import { Queue } from 'bullmq';
+import { Types } from 'mongoose';
 import { PropertyStatus } from '@homiio/shared-types';
 import type { ExternalListingRef } from '@homiio/listing-providers';
 import {
@@ -40,26 +41,61 @@ function isMadridCentroid(lng: number, lat: number): boolean {
   );
 }
 
+/** Legacy external listings store the Address ref under `address`, not `addressId`. */
+function resolveAddressRef(doc: {
+  addressId?: unknown;
+  address?: unknown;
+}): Types.ObjectId | null {
+  if (doc.addressId instanceof Types.ObjectId) return doc.addressId;
+  if (typeof doc.addressId === 'string' && Types.ObjectId.isValid(doc.addressId)) {
+    return new Types.ObjectId(doc.addressId);
+  }
+
+  const legacy = doc.address;
+  if (legacy instanceof Types.ObjectId) return legacy;
+  if (typeof legacy === 'string' && Types.ObjectId.isValid(legacy)) {
+    return new Types.ObjectId(legacy);
+  }
+  if (legacy && typeof legacy === 'object') {
+    const candidate = legacy as { _id?: unknown; buffer?: { data?: number[] } };
+    if (candidate._id instanceof Types.ObjectId) return candidate._id;
+    if (typeof candidate._id === 'string' && Types.ObjectId.isValid(candidate._id)) {
+      return new Types.ObjectId(candidate._id);
+    }
+    if (Array.isArray(candidate.buffer?.data)) {
+      return new Types.ObjectId(Buffer.from(candidate.buffer.data));
+    }
+  }
+
+  return null;
+}
+
 async function main(): Promise<void> {
   await database.connect();
 
-  const pisosProperties = await Property.find({
-    source: 'pisos',
-    isExternal: true,
-    status: PropertyStatus.PUBLISHED,
-    sourceUrl: { $exists: true, $type: 'string', $ne: '' },
-  })
-    .select({ sourceId: 1, sourceUrl: 1, addressId: 1 })
-    .lean();
+  const pisosCursor = Property.collection.find(
+    {
+      source: 'pisos',
+      isExternal: true,
+      status: PropertyStatus.PUBLISHED,
+      sourceUrl: { $exists: true, $type: 'string', $ne: '' },
+    },
+    {
+      projection: { sourceId: 1, sourceUrl: 1, addressId: 1 },
+    },
+  );
 
   const stuck: Array<{ sourceId: string; sourceUrl: string; ref: ExternalListingRef }> = [];
 
-  for (const doc of pisosProperties) {
+  for await (const doc of pisosCursor) {
     const sourceId = typeof doc.sourceId === 'string' ? doc.sourceId : '';
     const sourceUrl = typeof doc.sourceUrl === 'string' ? doc.sourceUrl : '';
-    if (!sourceId || !sourceUrl || !doc.addressId) continue;
+    if (!sourceId || !sourceUrl) continue;
 
-    const address = await Address.findById(doc.addressId).select({ coordinates: 1 }).lean();
+    const addressRef = resolveAddressRef(doc);
+    if (!addressRef) continue;
+
+    const address = await Address.findById(addressRef).select({ coordinates: 1 }).lean();
     const coords = address?.coordinates?.coordinates;
     if (!Array.isArray(coords) || coords.length !== 2) continue;
     const [lng, lat] = coords;
