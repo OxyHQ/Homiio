@@ -273,6 +273,58 @@ describe('cityCoverSyncService.syncMissingCovers', () => {
   });
 });
 
+describe('GET /api/cities/:id/properties', () => {
+  const app = buildApp();
+
+  it('returns published properties for a city without populating profileId', async () => {
+    const geo = await seedGeo('London');
+    const address = await Address.create({
+      countryId: geo.country._id,
+      regionId: geo.region._id,
+      cityId: geo.city._id,
+      countryCode: 'ES',
+      street: 'Test Street 1',
+      postal_code: 'SW1A 1AA',
+      coordinates: { type: 'Point', coordinates: [-0.12, 51.5] },
+    });
+    const property = await Property.create({
+      addressId: address._id,
+      type: PropertyType.APARTMENT,
+      bedrooms: 2,
+      offerings: [OfferingType.LONG_TERM_RENT],
+      longTermRent: { monthlyAmount: 1800, currency: 'EUR' },
+      status: PropertyStatus.PUBLISHED,
+      isExternal: true,
+      source: 'fixture',
+      sourceId: 'london-city-props-1',
+      sourceUrl: 'https://fixtures.homiio.com/london',
+      images: [],
+    });
+
+    const res = await request(app)
+      .get(`/api/cities/${geo.city._id}/properties?limit=8`)
+      .expect(200);
+
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.city.name).toBe('London');
+    expect(res.body.data.properties).toHaveLength(1);
+    expect(String(res.body.data.properties[0]._id)).toBe(String(property._id));
+    expect(res.body.data.pagination.total).toBe(1);
+  });
+
+  it('returns an empty list when the city has no addresses', async () => {
+    const geo = await seedGeo('Emptyville');
+
+    const res = await request(app)
+      .get(`/api/cities/${geo.city._id}/properties?limit=8`)
+      .expect(200);
+
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.properties).toEqual([]);
+    expect(res.body.data.pagination.total).toBe(0);
+  });
+});
+
 describe('GET /api/cities/popular', () => {
   const app = buildApp();
 
