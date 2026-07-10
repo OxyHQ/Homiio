@@ -8,8 +8,9 @@
 import type { NormalizedListingContact } from '@homiio/shared-types';
 import { buildContact } from '../../../parse/contact';
 import { asNumberUs as asNumber, asString, isRecord } from '../../../parse/guards';
+import { stripHtmlToPlainText } from '../../../parse/htmlText';
 import { parseNextData } from '../../../parse/nextData';
-import { isGbHousingType, isOtmHousingPropSubId } from '../housing';
+import { isGbHousingType, isOtmHousingPropSubId, rejectGbNonHousing } from '../housing';
 import { ONTHEMARKET_BASE_URL } from './fixtures';
 
 const DETAIL_ID_RE = /\/details\/(\d+)/g;
@@ -64,11 +65,14 @@ export function parseOnTheMarketSearch(html: string): { sourceId: string; url: s
     if (!isGbHousingType(label) || /garage|parking|storage/i.test(label)) continue;
     byId.set(sourceId, onthemarketDetailUrl(sourceId));
   }
-  // Fallback: bare /details/ids when anchors lack labels (still skip if nearby garage token).
+  // Fallback: bare /details/ids when anchors lack labels — still filter by nearby context.
   if (byId.size === 0) {
     for (const match of html.matchAll(DETAIL_ID_RE)) {
       const sourceId = match[1];
       if (!sourceId || byId.has(sourceId)) continue;
+      const index = match.index ?? 0;
+      const context = html.slice(Math.max(0, index - 200), index + 200);
+      if (!isGbHousingType(context) || /garage|parking|storage/i.test(context)) continue;
       byId.set(sourceId, onthemarketDetailUrl(sourceId));
     }
   }
@@ -125,12 +129,6 @@ export function parseOnTheMarketDetail(html: string, url: string): OnTheMarketLi
     throw new Error(`onthemarket: missing property redux state at ${url}`);
   }
 
-  const propSubId = asString(prop.propSubId);
-  const humanised = asString(prop.humanisedPropertyType);
-  if (!isOtmHousingPropSubId(propSubId) || !isGbHousingType(humanised)) {
-    throw new Error(`onthemarket: non-housing listing rejected at ${url}`);
-  }
-
   const sourceId =
     asString(prop.id) ??
     (asNumber(prop.id) !== undefined ? String(Math.trunc(asNumber(prop.id)!)) : undefined) ??
@@ -139,12 +137,20 @@ export function parseOnTheMarketDetail(html: string, url: string): OnTheMarketLi
     throw new Error(`onthemarket: missing listing id at ${url}`);
   }
 
+  const propSubId = asString(prop.propSubId);
+  const humanised = asString(prop.humanisedPropertyType);
+  if (!isOtmHousingPropSubId(propSubId)) {
+    rejectGbNonHousing('onthemarket', sourceId, `propSubId "${propSubId ?? ''}"`);
+  }
+  if (!isGbHousingType(humanised)) {
+    rejectGbNonHousing('onthemarket', sourceId, `property type "${humanised ?? ''}"`);
+  }
+
   const location = isRecord(prop.location) ? prop.location : undefined;
   const toRent = prop.toRent === true || asString(prop.searchType) === 'to-rent';
   const descriptionHtml = asString(prop.description);
-  const description = descriptionHtml
-    ? descriptionHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-    : asString(prop.summary);
+  const description =
+    stripHtmlToPlainText(descriptionHtml) ?? stripHtmlToPlainText(asString(prop.summary));
 
   return {
     sourceId,

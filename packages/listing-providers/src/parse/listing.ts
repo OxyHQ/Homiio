@@ -3,6 +3,7 @@
  */
 
 import { OfferingType, type NormalizedListing } from '@homiio/shared-types';
+import { stripHtmlToPlainText } from './htmlText';
 import { validateOfferingPrices } from './price';
 
 /** Default cap aligned with {@link ExternalMediaIngest} in the backend worker. */
@@ -34,6 +35,51 @@ function parseOfferings(raw: unknown): OfferingType[] | null {
   return Array.from(new Set(valid));
 }
 
+/** Strip portal HTML from user-visible text fields on a normalized listing (in-place). */
+export function sanitizeNormalizedListingTextFields(listing: NormalizedListing): void {
+  if (listing.description !== undefined) {
+    listing.description = stripHtmlToPlainText(listing.description);
+  }
+
+  if (listing.amenities) {
+    listing.amenities = listing.amenities
+      .map((item) => stripHtmlToPlainText(item) ?? '')
+      .filter((item) => item.length > 0);
+    if (listing.amenities.length === 0) {
+      delete listing.amenities;
+    }
+  }
+
+  if (listing.contact) {
+    if (listing.contact.name !== undefined) {
+      listing.contact.name = stripHtmlToPlainText(listing.contact.name);
+    }
+    if (listing.contact.agencyName !== undefined) {
+      listing.contact.agencyName = stripHtmlToPlainText(listing.contact.agencyName);
+    }
+  }
+
+  for (const image of listing.remoteImages) {
+    if (image.caption !== undefined) {
+      image.caption = stripHtmlToPlainText(image.caption);
+    }
+  }
+
+  const address = listing.address;
+  if (address.street !== undefined) {
+    address.street = stripHtmlToPlainText(address.street) ?? address.street;
+  }
+  if (address.city !== undefined) {
+    address.city = stripHtmlToPlainText(address.city) ?? address.city;
+  }
+  if (address.neighborhood !== undefined) {
+    address.neighborhood = stripHtmlToPlainText(address.neighborhood);
+  }
+  if (address.state !== undefined) {
+    address.state = stripHtmlToPlainText(address.state);
+  }
+}
+
 /**
  * Validate a {@link NormalizedListing} before upsert. Throws {@link ListingValidationError}
  * with a clear reason on the first violation.
@@ -42,6 +88,8 @@ export function validateNormalizedListing(
   listing: NormalizedListing,
   options: ValidateNormalizedListingOptions = {},
 ): void {
+  sanitizeNormalizedListingTextFields(listing);
+
   const source = listing.source?.trim();
   const sourceId = listing.sourceId?.trim();
   if (!source) {

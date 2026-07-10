@@ -39,9 +39,11 @@ export {
 export {
   ListingValidationError,
   validateNormalizedListing,
+  sanitizeNormalizedListingTextFields,
   DEFAULT_MAX_REMOTE_IMAGES,
   type ValidateNormalizedListingOptions,
 } from './parse/listing';
+export { stripHtmlToPlainText } from './parse/htmlText';
 export {
   assertHousingListing,
   isHousingCategory,

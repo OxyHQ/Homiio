@@ -30,6 +30,7 @@ export {
 } from './parse/guards';
 
 export { ldJsonScriptBodies } from './parse/jsonLd';
+export { stripHtmlToPlainText } from './parse/htmlText';
 
 /** German city slug alias used by DE portal parsers. */
 export function citySlugDe(city: string): string {
