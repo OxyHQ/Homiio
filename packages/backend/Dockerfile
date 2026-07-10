@@ -117,10 +117,10 @@ RUN bun add --cwd packages/backend playwright@1.61.1 \
 
 # Install Chromium + its OS dependencies into PLAYWRIGHT_BROWSERS_PATH.
 # Kept in the shared image so one ECR tag serves API + worker; the API never
-# launches a browser (LISTING_* flags are worker-only). Use the local binary
-# (not `bunx --cwd`, which mis-resolves the package name as a GitHub repo).
-RUN cd packages/backend \
- && ./node_modules/.bin/playwright install --with-deps chromium \
+# launches a browser (LISTING_* flags are worker-only). With `linker=hoisted`
+# the playwright CLI lands in the workspace-root node_modules/.bin — not under
+# packages/backend (and `bunx --cwd` mis-resolves the package as a GitHub repo).
+RUN ./node_modules/.bin/playwright install --with-deps chromium \
  && chmod -R a+rX /ms-playwright
 
 # Copy the compiled JavaScript (incl. staged locales) from the build stage.
