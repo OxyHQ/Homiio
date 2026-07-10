@@ -78,6 +78,7 @@ function toSheetFilters(query: SearchQuery): SearchFilters {
     guests: query.guests,
     checkIn: query.dates?.start,
     checkOut: query.dates?.end,
+    fairPrice: query.fairPrice,
   };
 }
 
@@ -91,6 +92,7 @@ function countActiveFilters(query: SearchQuery): number {
   if (query.bedrooms !== undefined) count += 1;
   if (query.bathrooms !== undefined) count += 1;
   count += query.amenities.length;
+  if (query.fairPrice === true) count += 1;
   return count;
 }
 
@@ -179,6 +181,9 @@ export default function PropertyTypeScreen() {
           patchQuery({ amenities: next });
           return;
         }
+        case 'fairPrice':
+          patchQuery({ fairPrice: value === true ? true : undefined });
+          return;
         default:
           return;
       }
@@ -199,6 +204,7 @@ export default function PropertyTypeScreen() {
             bedrooms: undefined,
             bathrooms: undefined,
             amenities: [],
+            fairPrice: undefined,
           });
           bottomSheet.closeBottomSheet();
         }}

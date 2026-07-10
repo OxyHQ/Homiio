@@ -61,11 +61,26 @@ The production Dockerfile builds in dependency order: `shared-types` → `listin
 
 ## Profile Resolution (CRITICAL)
 
-Every authenticated write resolves the caller's Homiio profile via `Profile.findActiveByOxyUserId(oxyUserId)` — never accept a `profileId` from the client for ownership. Controllers derive `oxyUserId` from `getRequiredOxyUserId` / `req.user` and look up the active profile server-side. Missing profile → 404 `PROFILE_NOT_FOUND`.
+**One Homiio sidecar `Profile` per Oxy account id (`oxyUserId`).** Identity, account switching, follow, trust/reputation, teams, and display name/avatar/handle live entirely in `@oxyhq/core` + `@oxyhq/services` — same pattern as Mention. Homiio never reinvents `profileType`, multi-profile switching, local trust score, or saved-profile follow.
+
+Every authenticated write resolves the caller's sidecar via `Profile.findOrCreateByOxyUserId(oxyUserId)` where `oxyUserId = req.user.id` (the **active session account**, including org accounts after `switchToAccount`). Never accept a `profileId` from the client for ownership. Missing sidecar is lazily created on first need.
+
+**Frontend SDK-first (Mention parity):**
+- `OxyProvider` with shared `queryClient` + `oxyServices` singleton + `storageKeyPrefix="homiio"`.
+- `AccountSwitchReset` clears Homiio RQ/Zustand on account switch.
+- Auth gates: prefer `useAuth()` (`isAuthResolved`, `canUsePrivateApi`).
+- Accounts: `showBottomSheet('ManageAccount' | 'CreateAccount' | 'AccountMembers')`.
+- Follow landlords/agencies: Oxy `FollowButton` / `useFollow` — not Homiio `savedProfiles`.
+- Trust UI: `showBottomSheet('TrustCenter')` — no local trust score stack.
+- Display: `user.name.displayName` + `getNormalizedUserHandle` + Bloom `Avatar source={fileId}`.
+
+**Billing** is keyed to the active session account id (`oxyUserId` on `Billing` doc = whoever is signed in after switch).
+
+**Upstream blockers (do not ship local shims):** `organizationCategory` on Oxy Account Graph for agency/cooperative taxonomy; Homiio `ReputationRule`s + service credential `reputation:write` for lease lifecycle awards.
 
 ## IDOR Fix (CRITICAL)
 
-Property/room/**lease** create and update use a server-resolved owner id (`profileId` for property/room, `landlordProfileId` for lease) + an explicit editable-field whitelist. Never accept raw owner ids or lifecycle/system fields (`status`, `signatures`, `paymentSchedule`, …) from the request body — the backend resolves the owner from the authenticated user via `getRequiredOxyUserId`/`Profile.findActiveByOxyUserId`. Do not regress this.
+Property/room/**lease** create and update use a server-resolved owner id (`profileId` for property/room, `landlordProfileId` for lease) + an explicit editable-field whitelist. Never accept raw owner ids or lifecycle/system fields (`status`, `signatures`, `paymentSchedule`, …) from the request body — the backend resolves the owner from the authenticated user via `getRequiredOxyUserId`/`Profile.findOrCreateByOxyUserId`. Do not regress this.
 
 - Shared guard: `packages/backend/utils/pickFields.ts` (one implementation for every write controller).
 - Whitelists: `controllers/property/editableFields.ts` (property + room) and `controllers/lease/editableFields.ts` (`CREATABLE_LEASE_FIELDS`/`EDITABLE_LEASE_FIELDS`).
@@ -182,7 +197,7 @@ For DataDome / JS-gated portals (Idealista georeach, Fotocasa AJAX, …), use th
 Convenience path when you do not own a page: `runtime.openBrowserSession(options)` → `session.request(url)` / `session.exportStorageState()` → `session.close()`. Asset blocking (`LISTING_BROWSER_BLOCK_ASSETS`, default ON) and residential proxy (`LISTING_RESIDENTIAL_PROXY_URL`, sticky via `LISTING_PROXY_STICKY`) are wired in `PlaywrightSessionPool` — providers only supply `warmUrl`, challenge detectors, and portal-specific selectors.
 
 - **Escalation tiers are WORKER-ONLY and env-gated (default OFF).** Build the worker runtime with `createListingFetchRuntimeFromEnv()` (never in the API). Browser tier: `LISTING_BROWSER_ENABLED=true` + Playwright installed (it is an OPTIONAL peer of `@homiio/listing-providers`, loaded via dynamic `import()`; absent → tier skipped, logged, CI still green). Managed tier: `LISTING_MANAGED_FETCH_URL` (+ optional `LISTING_MANAGED_FETCH_KEY`/`*_KEY_HEADER`/`*_KEY_PARAM`/`*_URL_PARAM`); unset → rung does not exist (never faked). The ladder keys tier availability off method presence, so an unprovisioned rung is skipped, not attempted-and-failed. Worker must `await runtimeHandle.shutdown()` to close the browser pool.
-- **Residential proxy (DIY anti-bot, not a scraping API).** Homiio's worker scrapes with Playwright/HTTP; `LISTING_RESIDENTIAL_PROXY_URL` (`http://user:pass@host:port`, DataImpulse-compatible) routes **listing HTML/JSON only** through a cheap residential proxy. Playwright blocks images/CSS/fonts by default (`LISTING_BROWSER_BLOCK_ASSETS`, default ON) and uses `domcontentloaded`. Listing photos stay on a **direct** fetch in `ExternalMediaIngest`; optional `LISTING_MEDIA_PROXY_FALLBACK=true` retries once via proxy on failure. Optional `LISTING_HTTP_USE_PROXY=true` proxies the HTTP tier; `LISTING_PROXY_STICKY=true` appends `-session-<id>` to the proxy username (DataImpulse sticky IP). Do not set proxy env in prod SSM until credentials exist.
+- **Residential proxy (DIY anti-bot, not a scraping API).** Homiio's worker scrapes with Playwright/HTTP; `LISTING_RESIDENTIAL_PROXY_URL` (`http://user:pass@host:port`, DataImpulse-compatible) routes **listing HTML/JSON only** through a cheap residential proxy. Playwright blocks images/CSS/fonts by default (`LISTING_BROWSER_BLOCK_ASSETS`, default ON) and uses `commit` waitUntil on warmed sessions (not `domcontentloaded` — ES portals hang 90s behind proxy). Listing photos stay on a **direct** fetch in `ExternalMediaIngest`; optional `LISTING_MEDIA_PROXY_FALLBACK=true` retries once via proxy on failure. Optional `LISTING_HTTP_USE_PROXY=true` proxies the HTTP tier; `LISTING_PROXY_STICKY=true` uses DataImpulse `login__sessid.<id>` (or `login__cr.<cc>;sessid.<id>` via `LISTING_PROXY_GEO` / provider `proxyGeo`). ES portals pass `proxyGeo: 'es'`. Do not set proxy env in prod SSM until credentials exist.
 
 ### BullMQ queues (Valkey via `REDIS_URL`)
 

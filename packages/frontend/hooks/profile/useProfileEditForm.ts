@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import type { Profile, UpdateProfileData } from '@/services/profileService';
 import { usePrimaryProfileQuery, useUpdateProfileMutation } from '@/hooks/query/useProfiles';
 import { logger } from '@/utils/logger';
+import { inferSidecarKind } from '@/utils/sidecarProfile';
 import type { z } from 'zod';
 import {
   agencyInfoSchema,
@@ -330,7 +331,7 @@ export function useProfileEditForm(): UseProfileEditFormResult {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isFormInitialized, setIsFormInitialized] = useState(false);
 
-  const profileType = activeProfile?.profileType || 'personal';
+  const profileType = inferSidecarKind(activeProfile);
 
   const [personalInfo, setPersonalInfo] = useState<PersonalInfoForm>(DEFAULT_PERSONAL_INFO);
   const [agencyInfo, setAgencyInfo] = useState<AgencyInfoForm>(DEFAULT_AGENCY_INFO);
@@ -381,22 +382,7 @@ export function useProfileEditForm(): UseProfileEditFormResult {
     }
   }
 
-  const trustScoreData = useMemo(() => {
-    const trustScore = activeProfile?.personalProfile?.trustScore;
-    if (!trustScore) {
-      return { score: 0, factors: [] as TrustFactorView[] };
-    }
-    return {
-      score: trustScore.score || 0,
-      factors:
-        trustScore.factors?.map((factor) => ({
-          type: factor.type,
-          value: factor.value,
-          maxValue: TRUST_FACTOR_MAX_VALUE,
-          label: factor.type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
-        })) || [],
-    };
-  }, [activeProfile?.personalProfile?.trustScore]);
+  const trustScoreData = useMemo(() => ({ score: 0, factors: [] as TrustFactorView[] }), []);
 
   const updatePersonalInfo = useCallback((updates: Partial<PersonalInfoForm>) => {
     setPersonalInfo((prev) => ({ ...prev, ...updates }));

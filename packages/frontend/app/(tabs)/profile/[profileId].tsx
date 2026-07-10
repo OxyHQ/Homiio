@@ -22,7 +22,8 @@ import { shadowToken } from '@/styles/shadows';
 import { spacing } from '@/constants/styles';
 import { useOxy } from '@oxyhq/services';
 import { api } from '@/utils/api';
-import { type Profile, ProfileType } from '@/services/profileService';
+import { type Profile } from '@/services/profileService';
+import { inferSidecarKind } from '@/utils/sidecarProfile';
 import { Ionicons } from '@expo/vector-icons';
 import { PropertyType, type Property } from '@homiio/shared-types';
 import { logger } from '@/utils/logger';
@@ -158,7 +159,7 @@ export default function PublicProfileScreen() {
             />
             <View style={styles.profileHeaderInfo}>
               <Text style={styles.profileNameLarge} numberOfLines={1}>
-                {profile.profileType === ProfileType.PERSONAL
+                {inferSidecarKind(profile) === 'personal'
                   ? profile.personalProfile?.personalInfo?.bio || profile.oxyUserId
                   : profile.agencyProfile?.legalCompanyName ||
                   profile.businessProfile?.legalCompanyName ||
@@ -263,7 +264,7 @@ export default function PublicProfileScreen() {
             profile.cooperativeProfile?.description) && (
               <View style={styles.bioCard}>
                 <Text style={styles.sectionText}>
-                  {profile.profileType === ProfileType.PERSONAL
+                  {inferSidecarKind(profile) === 'personal'
                     ? profile.personalProfile?.personalInfo?.occupation || ''
                     : profile.agencyProfile?.description ||
                     profile.businessProfile?.description ||
@@ -360,7 +361,7 @@ export default function PublicProfileScreen() {
             </View>
           ) : null}
           {/* About details by type */}
-          {profile && profile.profileType === ProfileType.PERSONAL && (
+          {profile && inferSidecarKind(profile) === 'personal' && (
             <View style={styles.aboutCard}>
               <Text style={styles.aboutTitle}>{t('profile.about', 'About')}</Text>
               {profile.personalProfile?.personalInfo?.bio ? (
@@ -391,18 +392,12 @@ export default function PublicProfileScreen() {
                   {profile.personalProfile?.preferences?.minBathrooms ?? 0} ba
                 </Text>
               ) : null}
-              {profile.personalProfile?.trustScore?.score ? (
-                <Text style={styles.aboutItem}>
-                  {t('profile.trustScore', 'Trust score')}:{' '}
-                  {profile.personalProfile.trustScore.score}
-                </Text>
-              ) : null}
             </View>
           )}
           {profile &&
-            (profile.profileType === ProfileType.AGENCY ||
-              profile.profileType === ProfileType.BUSINESS ||
-              profile.profileType === ProfileType.COOPERATIVE) && (
+            (inferSidecarKind(profile) === 'agency' ||
+              inferSidecarKind(profile) === 'business' ||
+              inferSidecarKind(profile) === 'cooperative') && (
               <View style={styles.aboutCard}>
                 <Text style={styles.aboutTitle}>{t('profile.about', 'About')}</Text>
                 {profile.agencyProfile?.description ? (

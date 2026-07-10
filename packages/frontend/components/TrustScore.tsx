@@ -1,7 +1,6 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { colors } from '@/styles/colors';
-import { useProfile } from '@/hooks/useProfile';
 
 type TrustFactor = {
   type: string;
@@ -27,7 +26,7 @@ export function TrustScore({
   showDetails = false,
   onRecalculate,
 }: TrustScoreProps) {
-  const { updateProfile, isLoading } = useProfile();
+  const isLoading = false;
 
   // Memoize expensive calculations
   const { color, trustLevel, sizeStyle } = useMemo(() => {

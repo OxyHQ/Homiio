@@ -1,105 +1,53 @@
 import { useCallback, useEffect } from 'react';
 import { useProfileStore } from '@/store/profileStore';
-import { useOxy } from '@oxyhq/services';
+import { useAuth } from '@oxyhq/services';
 import { toast } from '@/lib/sonner';
-import { ProfileType, type UpdateProfileData } from '@homiio/shared-types';
+import type { UpdateProfileData } from '@homiio/shared-types';
 
-// Profile Zustand Hook
 export const useProfileRedux = () => {
-  const { primaryProfile, allProfiles, isLoading, error } = useProfileStore();
-  const { setPrimaryProfile, setAllProfiles, setLoading, setError } = useProfileStore();
-  const { oxyServices, activeSessionId } = useOxy();
+  const { profile, isLoading, error, fetchProfile, updateProfile: storeUpdate } = useProfileStore();
+  const { isAuthenticated } = useAuth();
 
-  const fetchProfile = useCallback(async () => {
-    if (!oxyServices || !activeSessionId) {
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
+  const fetchProfileSafe = useCallback(async () => {
+    if (!isAuthenticated) return;
     try {
-      // Use the profile store's async action
-      await useProfileStore.getState().fetchPrimaryProfile();
-    } catch (error: any) {
-      setError(error.message || 'Failed to fetch profile');
-    } finally {
-      setLoading(false);
+      await fetchProfile();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch profile';
+      toast.error(message);
     }
-  }, [oxyServices, activeSessionId, setPrimaryProfile, setAllProfiles, setLoading, setError]);
+  }, [isAuthenticated, fetchProfile]);
 
   const updateProfile = useCallback(
     async (profileData: UpdateProfileData) => {
-      if (!oxyServices || !activeSessionId) {
-        throw new Error('OxyServices not available');
-      }
-
-      const profileId = primaryProfile?.id || primaryProfile?._id;
-      if (!profileId) {
-        throw new Error('No primary profile to update');
-      }
-
-      try {
-        // Use the profile store's async action for the primary profile
-        const updatedProfile = await useProfileStore
-          .getState()
-          .updateProfile(profileId, profileData);
-
-        toast.success('Profile updated successfully');
-        return updatedProfile;
-      } catch (error: any) {
-        toast.error(error.message || 'Failed to update profile');
-        throw error;
-      }
+      const profileId = profile?.id || profile?._id;
+      if (!profileId) throw new Error('No profile to update');
+      const updated = await storeUpdate(profileId, profileData);
+      toast.success('Profile updated successfully');
+      return updated;
     },
-    [oxyServices, activeSessionId, primaryProfile],
+    [profile, storeUpdate],
   );
 
-  const createProfile = useCallback(async () => {
-    if (!oxyServices || !activeSessionId) {
-      throw new Error('OxyServices not available');
-    }
-
-    try {
-      // Use the profile store's async action
-      const profile = await useProfileStore
-        .getState()
-        .createProfile({ profileType: ProfileType.PERSONAL });
-
-      toast.success('Profile created successfully');
-      return profile;
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create profile');
-      throw error;
-    }
-  }, [oxyServices, activeSessionId]);
-
-  // Load profile on mount
   useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
+    fetchProfileSafe();
+  }, [fetchProfileSafe]);
 
   return {
-    profile: primaryProfile,
-    allProfiles,
-    primaryProfile,
+    profile,
+    allProfiles: profile ? [profile] : [],
+    primaryProfile: profile,
     isLoading,
     error,
-    refetchProfiles: fetchProfile,
+    refetchProfiles: fetchProfileSafe,
     updateProfile,
-    createProfile,
+    createProfile: () => Promise.reject(new Error('Use Oxy CreateAccount')),
     deleteProfile: () => Promise.reject(new Error('Profile deletion not supported')),
-    activateProfile: () => Promise.reject(new Error('Profile activation not supported')),
+    activateProfile: () => Promise.reject(new Error('Use Oxy account switch')),
   };
 };
 
-// Hook to get the active profile
 export const useActiveProfile = () => {
-  const { primaryProfile, isLoading, error } = useProfileStore();
-
-  return {
-    data: primaryProfile,
-    isLoading,
-    error,
-  };
+  const { profile, isLoading, error } = useProfileStore();
+  return { data: profile, isLoading, error };
 };

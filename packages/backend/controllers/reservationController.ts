@@ -135,7 +135,7 @@ class ReservationController {
         return next(new AppError('This property has no short-term pricing', 400, 'NOT_VACATION_BOOKABLE'));
       }
 
-      const guestProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const guestProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!guestProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
       const hostProfileId = property.profileId;
@@ -247,7 +247,7 @@ class ReservationController {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!activeProfile) return res.json(paginationResponse([], 1, 10, 0, 'No profile found for user'));
 
       const query: Record<string, unknown> = {};
@@ -286,7 +286,7 @@ class ReservationController {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
       const reservation = await Reservation.findById(id).lean();
@@ -315,7 +315,7 @@ class ReservationController {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
       const reservation = await Reservation.findById(id);

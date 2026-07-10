@@ -5,7 +5,6 @@
 
 import { Request, Response } from 'express';
 import { Types } from 'mongoose';
-import { ProfileType } from '@homiio/shared-types';
 import { Review } from '../models/Review';
 import { forwardGeocode } from '../services/geocodingService';
 import { Address, Profile } from '../models';
@@ -193,16 +192,9 @@ export const createReview = async (req: Request, res: Response) => {
     }
 
     // Get the active profile for this user
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
     if (!activeProfile) {
       return badRequest(res, { message: 'No active profile found' });
-    }
-
-    // Validate that only personal profiles can create reviews
-    if (activeProfile.profileType !== ProfileType.PERSONAL) {
-      return badRequest(res, { 
-        message: 'Only personal profiles can create reviews. Agencies and businesses cannot create reviews.' 
-      });
     }
 
     // Validate address data
@@ -317,7 +309,7 @@ export const createReview = async (req: Request, res: Response) => {
 
     // Populate the saved review for response
     const populatedReview = await Review.findById(review._id)
-      .populate('profileId', 'profileType personalProfile isAnonymous')
+      .populate('profileId', 'personalProfile isAnonymous')
       .populate({
         path: 'addressId',
         select: 'street postal_code countryCode cityId regionId countryId neighborhoodId coordinates',
@@ -358,7 +350,7 @@ export const getReviewById = async (req: Request, res: Response) => {
     }
 
     const review = await Review.findById(reviewId)
-      .populate('profileId', 'profileType personalProfile agencyProfile')
+      .populate('profileId', 'personalProfile agencyProfile')
       .populate('addressId');
 
     if (!review) {
@@ -389,7 +381,7 @@ export const updateReview = async (req: Request, res: Response) => {
     }
 
     // Get the active profile for this user
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
     if (!activeProfile) {
       return badRequest(res, { message: 'No active profile found' });
     }
@@ -443,7 +435,7 @@ export const deleteReview = async (req: Request, res: Response) => {
     }
 
     // Get the active profile for this user
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
     if (!activeProfile) {
       return badRequest(res, { message: 'No active profile found' });
     }

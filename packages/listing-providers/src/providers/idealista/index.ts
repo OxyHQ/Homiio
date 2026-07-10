@@ -25,7 +25,7 @@ import type {
   BrowserSession,
   BrowserStorageState,
 } from '../../session';
-import { BrowserSessionChallengeError } from '../../session';
+import { BrowserSessionChallengeError, BrowserSessionNavigationError } from '../../session';
 import { createProxySessionId, envBool } from '../../proxy';
 import type {
   DiscoverJob,
@@ -78,6 +78,9 @@ const DEFAULT_CITIES: readonly string[] = [
 ];
 
 const DEFAULT_MAX_SEARCH_PAGES = 50;
+/** ES residential IPs + DataDome clearance need a longer poll than GB portals. */
+const IDEALISTA_ES_CHALLENGE_WAIT_MS = 150_000;
+const IDEALISTA_ES_PROXY_GEO = 'es';
 
 /** Idealista content markers after warm-up (search results, filters, or main shell). */
 const IDEALISTA_CONTENT_SELECTOR =
@@ -308,13 +311,15 @@ export class IdealistaProvider implements ListingProvider {
       session = await runtime.openBrowserSession({
         warmUrl: idealistaWarmHomeUrl(),
         signal,
-        contentSelector: IDEALISTA_CONTENT_SELECTOR,
+        contentSelector: 'main, #main-content, body',
         isChallenge: isIdealistaChallenge,
-        challengeWaitMs: 60_000,
+        challengeWaitMs: IDEALISTA_ES_CHALLENGE_WAIT_MS,
         stickyProxySession: sticky,
         proxySessionId: this.stickyProxySessionId,
         storageState: this.stickyStorageState,
-        blockAssets: true,
+        blockAssets: false,
+        proxyGeo: IDEALISTA_ES_PROXY_GEO,
+        reloadAfterPolls: 4,
         locale: 'es-ES',
         acceptLanguage: 'es-ES,es;q=0.9,en;q=0.8',
       });
@@ -324,10 +329,18 @@ export class IdealistaProvider implements ListingProvider {
         signal,
         contentSelector: IDEALISTA_CONTENT_SELECTOR,
         isChallenge: isIdealistaChallenge,
-        challengeWaitMs: 45_000,
+        challengeWaitMs: IDEALISTA_ES_CHALLENGE_WAIT_MS,
+        reloadAfterPolls: 4,
+        postChallengeSettleMs: 3_000,
       });
 
       const collected: ExternalListingRef[] = [];
+      const searchHtml = await session.content();
+      const htmlRefs = parseIdealistaSearch(searchHtml);
+      if (htmlRefs.length > 0) {
+        collected.push(...yieldRefs(htmlRefs, seen, limit, yielded));
+      }
+
       for (let page = 1; page <= this.maxSearchPages; page += 1) {
         if (yielded.count >= limit) break;
         const ajaxUrl = idealistaGeoreachUrl(city, page);
@@ -382,15 +395,17 @@ export class IdealistaProvider implements ListingProvider {
       const detail =
         error instanceof BrowserSessionChallengeError
           ? error.detail
-          : error instanceof Error
-            ? error.message
-            : String(error);
+          : error instanceof BrowserSessionNavigationError
+            ? error.detail
+            : error instanceof Error
+              ? error.message
+              : String(error);
       this.metrics.record({
         provider: this.id,
         strategy: 'browser',
-        outcome: 'challenge',
+        outcome: error instanceof BrowserSessionNavigationError ? 'error' : 'challenge',
         latencyMs: Date.now() - start,
-        url: idealistaWarmSearchUrl(city, 1),
+        url: searchUrl,
         detail: `georeach warm-up failed: ${detail}`,
       });
       return [];
@@ -515,7 +530,9 @@ export class IdealistaProvider implements ListingProvider {
         stickyProxySession: sticky,
         proxySessionId: this.stickyProxySessionId,
         storageState: this.stickyStorageState,
-        blockAssets: true,
+        blockAssets: false,
+        proxyGeo: IDEALISTA_ES_PROXY_GEO,
+        challengeWaitMs: IDEALISTA_ES_CHALLENGE_WAIT_MS,
         locale: 'es-ES',
         acceptLanguage: 'es-ES,es;q=0.9,en;q=0.8',
       });

@@ -62,7 +62,7 @@ class ExchangeReviewController {
         return next(new AppError('Invalid exchange request ID', 400, 'INVALID_ID'));
       }
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
       const exchangeRequest = await ExchangeRequest.findById(id).lean();
@@ -138,7 +138,7 @@ class ExchangeReviewController {
         return next(new AppError('Invalid exchange request ID', 400, 'INVALID_ID'));
       }
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
       const exchangeRequest = await ExchangeRequest.findById(id).lean();

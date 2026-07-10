@@ -53,7 +53,7 @@ class ReportController {
       const property = await Property.findById(propertyId).lean();
       if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
 
-      const reporterProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const reporterProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!reporterProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
       // Idempotent while open: return the existing open report instead of

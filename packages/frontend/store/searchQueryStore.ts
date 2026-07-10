@@ -34,6 +34,7 @@ export const DEFAULT_SEARCH_QUERY: SearchQuery = {
   guests: undefined,
   sortBy: 'relevance',
   sortOrder: 'desc',
+  fairPrice: undefined,
 };
 
 interface SearchQueryState {

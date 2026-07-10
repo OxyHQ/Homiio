@@ -1,215 +1,95 @@
 import React, { createContext, useContext, useEffect, useMemo, useCallback } from 'react';
-import { useOxy } from '@oxyhq/services';
+import { useAuth } from '@oxyhq/services';
 import { useProfileStore } from '@/store/profileStore';
-// Recently viewed is now handled by React Query hooks
 import type { Profile } from '@/services/profileService';
 import { logger } from '@/utils/logger';
 
 interface ProfileContextType {
+  profile: Profile | null;
+  /** @deprecated Use profile */
   primaryProfile: Profile | null;
-  allProfiles: Profile[];
   isLoading: boolean;
   error: string | null;
-  hasPrimaryProfile: boolean;
+  hasProfile: boolean;
   refetch: () => void;
-  // Profile type specific helpers
-  personalProfile: Profile | null;
-  agencyProfiles: Profile[];
-  businessProfiles: Profile[];
-  ownedAgencyProfiles: Profile[];
-  // Profile checks
-  isPersonalProfile: boolean;
-  hasPersonalProfile: boolean;
   canAccessRoommates: boolean;
-  // New utility methods
+  /** @deprecated Always true when profile exists — use Oxy account kind for gating */
+  isPersonalProfile: boolean;
+  /** @deprecated Use hasProfile */
+  hasPersonalProfile: boolean;
   refresh: () => Promise<void>;
-  activateProfile: (profileId: string) => Promise<Profile>;
   isInitialized: boolean;
 }
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
-  const { oxyServices, activeSessionId, isAuthenticated } = useOxy();
-  const {
-    primaryProfile,
-    allProfiles,
-    isLoading,
-    error,
-    setPrimaryProfile,
-    setAllProfiles,
-    setError,
-    activateProfile: storeActivateProfile,
-  } = useProfileStore();
-
-  // Track initialization state
+  const { isAuthenticated } = useAuth();
+  const { profile, isLoading, error, setProfile, setError, fetchProfile, reset } = useProfileStore();
   const [isInitialized, setIsInitialized] = React.useState(false);
 
-  // Memoize load profiles function with better error handling
-  const loadProfiles = useCallback(async () => {
+  const loadProfile = useCallback(async () => {
     try {
-      // Load both primary profile and all profiles concurrently
-      const [primaryProfileResult, userProfilesResult] = await Promise.allSettled([
-        useProfileStore.getState().fetchPrimaryProfile(),
-        useProfileStore.getState().fetchUserProfiles(),
-      ]);
-
-      // Handle primary profile result
-      if (primaryProfileResult.status === 'rejected') {
-        logger.warn('ProfileContext: fetchPrimaryProfile failed', primaryProfileResult.reason);
-      }
-
-      // Handle user profiles result
-      if (userProfilesResult.status === 'rejected') {
-        logger.warn('ProfileContext: fetchUserProfiles failed', userProfilesResult.reason);
-      }
-
-      // Mark as initialized even if some calls failed
+      await fetchProfile();
       setIsInitialized(true);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load profiles');
-      setIsInitialized(true); // Still mark as initialized to prevent infinite loading
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to load profile';
+      setError(message);
+      setIsInitialized(true);
     }
-  }, [setError]);
+  }, [fetchProfile, setError]);
 
-  // Refresh function for manual refresh
   const refresh = useCallback(async () => {
     setIsInitialized(false);
-    await loadProfiles();
-  }, [loadProfiles]);
+    await loadProfile();
+  }, [loadProfile]);
 
-  // Authentication effect with improved logic
   useEffect(() => {
     let mounted = true;
 
-    if (isAuthenticated && oxyServices && activeSessionId) {
-      loadProfiles().catch(error => {
-        if (mounted) {
-          logger.error('ProfileContext: loadProfiles failed', error);
-        }
+    if (isAuthenticated) {
+      loadProfile().catch((loadError) => {
+        if (mounted) logger.error('ProfileContext: loadProfile failed', loadError);
       });
-    } else if (!isAuthenticated) {
-      setPrimaryProfile(null);
-      setAllProfiles([]);
+    } else {
+      reset();
       setIsInitialized(false);
     }
 
     return () => {
       mounted = false;
     };
-  }, [isAuthenticated, oxyServices, activeSessionId, loadProfiles, setPrimaryProfile, setAllProfiles]);
-
-  // Memoize profile helpers
-  const personalProfile = useMemo(
-    () => allProfiles.find((profile) => profile.profileType === 'personal') || null,
-    [allProfiles],
-  );
-
-  const agencyProfiles = useMemo(
-    () => allProfiles.filter((profile) => profile.profileType === 'agency'),
-    [allProfiles],
-  );
-
-  const businessProfiles = useMemo(
-    () => allProfiles.filter((profile) => profile.profileType === 'business'),
-    [allProfiles],
-  );
-
-  const ownedAgencyProfiles = useMemo(() => {
-    if (!activeSessionId) return [];
-
-    return allProfiles.filter(
-      (profile): boolean =>
-        profile.profileType === 'agency' &&
-        (profile as Profile & { ownerId?: string }).ownerId === activeSessionId,
-    );
-  }, [allProfiles, activeSessionId]);
-
-  // Memoize profile checks
-  const isPersonalProfile = useMemo(
-    () => primaryProfile?.profileType === 'personal',
-    [primaryProfile?.profileType],
-  );
-
-  const hasPersonalProfile = useMemo(
-    () => personalProfile !== null,
-    [personalProfile],
-  );
-
-  const hasPrimaryProfile = useMemo(
-    () => primaryProfile !== null,
-    [primaryProfile],
-  );
+  }, [isAuthenticated, loadProfile, reset]);
 
   const canAccessRoommates = useMemo(
-    () => hasPersonalProfile && isPersonalProfile,
-    [hasPersonalProfile, isPersonalProfile],
+    () => Boolean(profile?.personalProfile?.settings?.roommate?.enabled),
+    [profile?.personalProfile?.settings?.roommate?.enabled],
   );
 
-  // Wrap the store's activateProfile method
-  const activateProfile = useCallback(async (profileId: string) => {
-    try {
-      const activatedProfile = await storeActivateProfile(profileId);
-      // The store handles state updates, we just return the result
-      return activatedProfile;
-    } catch (error) {
-      throw error;
-    }
-  }, [storeActivateProfile]);
-
-  // Memoize refetch function
   const refetch = useCallback(() => {
-    if (isAuthenticated && oxyServices && activeSessionId) {
-      loadProfiles().catch(error => {
-      });
+    if (isAuthenticated) {
+      loadProfile().catch(() => undefined);
     }
-  }, [isAuthenticated, oxyServices, activeSessionId, loadProfiles]);
+  }, [isAuthenticated, loadProfile]);
 
-  // Memoize context value
   const contextValue = useMemo(
     () => ({
-      primaryProfile,
-      allProfiles,
+      profile,
+      primaryProfile: profile,
       isLoading,
       error,
-      hasPrimaryProfile,
+      hasProfile: profile !== null,
       refetch,
-      personalProfile,
-      agencyProfiles,
-      businessProfiles,
-      ownedAgencyProfiles,
-      isPersonalProfile,
-      hasPersonalProfile,
       canAccessRoommates,
+      isPersonalProfile: profile !== null,
+      hasPersonalProfile: profile !== null,
       refresh,
-      activateProfile,
       isInitialized,
     }),
-    [
-      primaryProfile,
-      allProfiles,
-      isLoading,
-      error,
-      hasPrimaryProfile,
-      refetch,
-      personalProfile,
-      agencyProfiles,
-      businessProfiles,
-      ownedAgencyProfiles,
-      isPersonalProfile,
-      hasPersonalProfile,
-      canAccessRoommates,
-      refresh,
-      activateProfile,
-      isInitialized,
-    ],
+    [profile, isLoading, error, refetch, canAccessRoommates, refresh, isInitialized],
   );
 
-  return (
-    <ProfileContext.Provider value={contextValue}>
-      {children}
-    </ProfileContext.Provider>
-  );
+  return <ProfileContext.Provider value={contextValue}>{children}</ProfileContext.Provider>;
 }
 
 export function useProfile() {
@@ -220,23 +100,22 @@ export function useProfile() {
   return context;
 }
 
-// Legacy hooks for backward compatibility
+/** @deprecated Use useProfile().profile */
 export function usePersonalProfile() {
-  const { personalProfile } = useProfile();
-  return personalProfile;
+  return useProfile().profile;
 }
 
+/** @deprecated Agency accounts are Oxy org accounts — use Oxy SDK. */
 export function useAgencyProfiles() {
-  const { agencyProfiles } = useProfile();
-  return agencyProfiles;
+  return [] as Profile[];
 }
 
+/** @deprecated */
 export function useBusinessProfiles() {
-  const { businessProfiles } = useProfile();
-  return businessProfiles;
+  return [] as Profile[];
 }
 
+/** @deprecated */
 export function useOwnedAgencyProfiles() {
-  const { ownedAgencyProfiles } = useProfile();
-  return ownedAgencyProfiles;
+  return [] as Profile[];
 }

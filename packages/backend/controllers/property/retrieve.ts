@@ -18,7 +18,7 @@ export async function getPropertyById(req: ControllerRequest, res: ControllerRes
       const oxyUserId = req.user?.id || req.user?._id;
       if (oxyUserId) {
         const { Profile } = require('../../models');
-        const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+        const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
         isOwner = Boolean(activeProfile) && property.profileId?.toString() === activeProfile._id.toString();
       }
       if (!isOwner) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
@@ -32,7 +32,7 @@ export async function getPropertyById(req: ControllerRequest, res: ControllerRes
       const oxyUserId = req.user.id || req.user._id;
       try {
         const { Profile } = require('../../models');
-        const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+        const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
         if (activeProfile) {
           const profileId = activeProfile._id;
           RecentlyViewed.findOneAndUpdate(
@@ -60,7 +60,7 @@ export async function getMyProperties(req: ControllerRequest, res: ControllerRes
     const limit = getQueryInteger(req.query.limit, 10);
     const oxyUserId = req.userId;
     const { Profile } = require('../../models');
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
     if (!activeProfile) {
       return res.json(paginationResponse([], page, limit, 0, 'No profile found for user'));
     }

@@ -1,11 +1,6 @@
 /**
  * Profile — personal home for the signed-in tenant/host.
- *
- * Stream P polish: an Airbnb-2026 layout. Hero block with large Avatar,
- * display name, optional bio, trust badges and an outline "Edit profile"
- * button. Below: a 3-up stats row (saved / applications / reservations)
- * with big H2 numerals. Below that: SettingsList-style sections (Profile
- * switcher, Trust score, Subscriptions, Sign out).
+ * Identity/switching/trust via Oxy SDK; Homiio sidecar = RE data only.
  */
 import React, { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -13,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from '@/lib/sonner';
 import { Ionicons } from '@expo/vector-icons';
+import { getNormalizedUserHandle } from '@oxyhq/core';
 
 import { Avatar } from '@oxyhq/bloom/avatar';
 import { Badge } from '@oxyhq/bloom/badge';
@@ -26,7 +22,7 @@ import {
   H2,
   Text as BloomText,
 } from '@oxyhq/bloom/typography';
-import { useOxy } from '@oxyhq/services';
+import { useAuth, useOxy } from '@oxyhq/services';
 import { TenantApplicationStatus } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
@@ -34,15 +30,10 @@ import { CardSurface } from '@/components/ui/CardSurface';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import {
-  useActivateProfileMutation,
-  usePrimaryProfileQuery,
-  useUserProfilesQuery,
-} from '@/hooks/query/useProfiles';
+import { useProfileQuery } from '@/hooks/query/useProfiles';
 import { useMyApplications } from '@/hooks/useApplicationQueries';
 import { useReservationsQuery } from '@/hooks/useReservationQueries';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
-import type { Profile } from '@/services/profileService';
 import { colors } from '@/styles/colors';
 import { spacing, tracker } from '@/constants/styles';
 import { logger } from '@/utils/logger';
@@ -60,75 +51,23 @@ const RowIcon: React.FC<{ name: IoniconName; destructive?: boolean }> = ({
   />
 );
 
-const getProfileDisplayName = (profile: Profile): string => {
-  switch (profile.profileType) {
-    case 'personal':
-      return 'Personal profile';
-    case 'agency':
-      return profile.agencyProfile?.legalCompanyName || 'Agency profile';
-    case 'business':
-      return profile.businessProfile?.legalCompanyName || 'Business profile';
-    case 'cooperative':
-      return profile.cooperativeProfile?.legalName || 'Cooperative profile';
-    default:
-      return 'Profile';
-  }
-};
-
-const getProfileDescription = (profile: Profile): string | undefined => {
-  switch (profile.profileType) {
-    case 'agency':
-      return profile.agencyProfile?.description;
-    case 'business':
-      return profile.businessProfile?.description;
-    case 'cooperative':
-      return profile.cooperativeProfile?.description;
-    default:
-      return profile.personalProfile?.personalInfo?.bio;
-  }
-};
-
-const profileTypeIcon = (type: Profile['profileType']): IoniconName => {
-  switch (type) {
-    case 'personal':
-      return 'person-outline';
-    case 'agency':
-      return 'briefcase-outline';
-    case 'business':
-      return 'business-outline';
-    case 'cooperative':
-      return 'people-outline';
-    default:
-      return 'person-outline';
-  }
-};
-
 export default function ProfileScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { logout, user } = useOxy();
+  const { logout, showBottomSheet, user } = useOxy();
+  const { isAuthResolved } = useAuth();
 
-  const primaryProfileQuery = usePrimaryProfileQuery();
-  const profilesQuery = useUserProfilesQuery();
-  const { mutateAsync: activateProfile } = useActivateProfileMutation();
-
+  const profileQuery = useProfileQuery();
   const applicationsQuery = useMyApplications();
   const reservationsQuery = useReservationsQuery({ limit: 200 });
   const { savedProperties } = useSavedPropertiesContext();
 
-  const [pendingSwitch, setPendingSwitch] = useState<Profile | null>(null);
   const [pendingLogout, setPendingLogout] = useState(false);
   const [busyLogout, setBusyLogout] = useState(false);
-  const [busySwitch, setBusySwitch] = useState(false);
 
-  const profiles = profilesQuery.data ?? [];
-  const activeProfile = useMemo(
-    () => profiles.find((profile) => profile.isActive) ?? primaryProfileQuery.data ?? null,
-    [profiles, primaryProfileQuery.data],
-  );
-
-  const isLoading = primaryProfileQuery.isLoading || profilesQuery.isLoading;
-  const isError = primaryProfileQuery.isError || profilesQuery.isError;
+  const sidecarProfile = profileQuery.data ?? null;
+  const isLoading = !isAuthResolved || profileQuery.isLoading;
+  const isError = profileQuery.isError;
 
   const totalApplications = applicationsQuery.data?.data?.length ?? 0;
   const approvedApplications = useMemo(
@@ -141,36 +80,6 @@ export default function ProfileScreen() {
   );
   const totalReservations = reservationsQuery.data?.items?.length ?? 0;
   const totalSaved = savedProperties.length;
-
-  const handleSwitch = useCallback(async () => {
-    const profile = pendingSwitch;
-    if (!profile) return;
-    const profileId = profile.id || profile._id;
-    if (!profileId) {
-      toast.error(t('profile.invalidProfile', 'Invalid profile data'));
-      setPendingSwitch(null);
-      return;
-    }
-    setBusySwitch(true);
-    try {
-      await activateProfile(profileId);
-      toast.success(
-        t('profile.switched', 'Switched to {{name}}', {
-          name: getProfileDisplayName(profile),
-        }),
-      );
-      setPendingSwitch(null);
-    } catch (error: unknown) {
-      logger.error('Failed to switch profile:', error);
-      const message =
-        error instanceof Error
-          ? error.message
-          : t('profile.switchFailed', 'Failed to switch profile');
-      toast.error(message);
-    } finally {
-      setBusySwitch(false);
-    }
-  }, [pendingSwitch, activateProfile, t]);
 
   const handleLogout = useCallback(async () => {
     setBusyLogout(true);
@@ -218,23 +127,19 @@ export default function ProfileScreen() {
             title={t('profile.loadFailed', 'Failed to load profile')}
             description={t('profile.loadFailedHint', 'Please try again later.')}
             retryLabel={t('common.retry', 'Retry')}
-            onRetry={() => {
-              primaryProfileQuery.refetch();
-              profilesQuery.refetch();
-            }}
+            onRetry={() => profileQuery.refetch()}
           />
         </View>
       </View>
     );
   }
 
-  const displayName =
-    user?.name?.displayName ||
-    (activeProfile ? getProfileDisplayName(activeProfile) : 'Your profile');
-  const bio = activeProfile ? getProfileDescription(activeProfile) : undefined;
-  const avatarUri = activeProfile?.personalProfile?.personalInfo?.avatar;
-  const trustScore = activeProfile?.personalProfile?.trustScore?.score;
-  const verification = activeProfile?.personalProfile?.verification;
+  const handle = user ? getNormalizedUserHandle(user) : undefined;
+  const displayName = user?.name?.displayName?.trim() || handle || t('profile.title', 'Profile');
+  const bio = sidecarProfile?.personalProfile?.personalInfo?.bio
+    ?? sidecarProfile?.agencyProfile?.description;
+  const avatarSource = user?.avatar;
+  const verification = sidecarProfile?.personalProfile?.verification;
   const verifiedBadges: { label: string; key: string }[] = [];
   if (verification?.identity) verifiedBadges.push({ label: 'ID verified', key: 'identity' });
   if (verification?.income) verifiedBadges.push({ label: 'Income verified', key: 'income' });
@@ -253,13 +158,13 @@ export default function ProfileScreen() {
               <Avatar
                 size={88}
                 shape="squircle"
-                uri={avatarUri}
+                source={avatarSource}
                 name={displayName}
               />
               <View style={styles.heroBody}>
                 <H1 style={styles.heroName}>{displayName}</H1>
                 <BloomText style={styles.heroSubtitle}>
-                  {user?.username ? `@${user.username}` : ''}
+                  {handle ? `@${handle}` : ''}
                 </BloomText>
                 {bio ? (
                   <BloomText style={styles.heroBio} numberOfLines={3}>
@@ -269,16 +174,8 @@ export default function ProfileScreen() {
               </View>
             </View>
 
-            {verifiedBadges.length > 0 || typeof trustScore === 'number' ? (
+            {verifiedBadges.length > 0 ? (
               <View style={styles.badgesRow}>
-                {typeof trustScore === 'number' ? (
-                  <Badge
-                    content={`Trust ${Math.round(trustScore)}`}
-                    color="success"
-                    variant="subtle"
-                    size="small"
-                  />
-                ) : null}
                 {verifiedBadges.map((badge) => (
                   <Badge
                     key={badge.key}
@@ -302,9 +199,9 @@ export default function ProfileScreen() {
               <Button
                 variant="ghost"
                 size="medium"
-                onPress={() => router.push('/profile/trust-score')}
+                onPress={() => showBottomSheet?.('TrustCenter')}
               >
-                {t('profile.trustScoreCta', 'View trust score')}
+                {t('profile.trustCenter', 'Trust center')}
               </Button>
             </View>
           </CardSurface>
@@ -365,51 +262,6 @@ export default function ProfileScreen() {
           />
         </SettingsListGroup>
 
-        <SettingsListGroup
-          title={t('profile.sections.profile', 'Profile')}
-          footer={
-            activeProfile
-              ? t('profile.activeFooter', 'Active: {{name}}', {
-                  name: getProfileDisplayName(activeProfile),
-                })
-              : undefined
-          }
-        >
-          {profiles.map((profile) => {
-            const isActive = profile.isActive;
-            return (
-              <SettingsListItem
-                key={profile.id || profile._id}
-                icon={<RowIcon name={profileTypeIcon(profile.profileType)} />}
-                title={getProfileDisplayName(profile)}
-                description={getProfileDescription(profile) ?? undefined}
-                rightElement={
-                  isActive ? (
-                    <Badge
-                      content={t('profile.active', 'Active')}
-                      variant="subtle"
-                      color="success"
-                      size="small"
-                    />
-                  ) : undefined
-                }
-                onPress={
-                  isActive ? undefined : () => setPendingSwitch(profile)
-                }
-              />
-            );
-          })}
-          <SettingsListItem
-            icon={<RowIcon name="add-circle-outline" />}
-            title={t('profile.createNew', 'Create new profile')}
-            description={t(
-              'profile.createNewDescription',
-              'Add a business, agency, or cooperative profile.',
-            )}
-            onPress={() => router.push('/profile/create')}
-          />
-        </SettingsListGroup>
-
         <SettingsListGroup title={t('agent.menu.section', 'Earn')}>
           <SettingsListItem
             icon={<RowIcon name="cash-outline" />}
@@ -423,6 +275,12 @@ export default function ProfileScreen() {
         </SettingsListGroup>
 
         <SettingsListGroup title={t('profile.sections.account', 'Account')}>
+          <SettingsListItem
+            icon={<RowIcon name="person-circle-outline" />}
+            title={t('settings.manageAccount', 'Manage account')}
+            description={t('settings.manageAccountDescription', 'Profile, security, and connected apps')}
+            onPress={() => showBottomSheet?.('ManageAccount')}
+          />
           <SettingsListItem
             icon={<RowIcon name="star-outline" />}
             title={t('profile.subscriptions', 'Subscriptions')}
@@ -451,21 +309,6 @@ export default function ProfileScreen() {
         <View style={styles.bottomPadding} />
       </ScrollView>
 
-      <ConfirmDialog
-        visible={Boolean(pendingSwitch)}
-        title={t('profile.switchTitle', 'Switch profile?')}
-        message={
-          pendingSwitch
-            ? t('profile.switchMessage', 'Activate {{name}}?', {
-                name: getProfileDisplayName(pendingSwitch),
-              })
-            : ''
-        }
-        confirmLabel={t('profile.switchConfirm', 'Switch')}
-        loading={busySwitch}
-        onConfirm={handleSwitch}
-        onCancel={() => setPendingSwitch(null)}
-      />
       <ConfirmDialog
         visible={pendingLogout}
         title={t('settings.signOut', 'Sign out')}

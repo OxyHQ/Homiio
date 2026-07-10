@@ -1,17 +1,17 @@
 /**
- * Profile-related types shared across Homiio frontend and backend
+ * Profile-related types shared across Homiio frontend and backend.
+ *
+ * Identity (name, avatar, handle, kind) and follow/trust/teams live in Oxy SDK.
+ * Homiio sidecar = one document per oxyUserId with RE-domain fields only.
  */
 
-import { 
-  ProfileType, 
-  EmploymentStatus, 
-  LeaseDuration, 
-  BusinessType, 
-  ReferenceRelationship, 
-  ReasonForLeaving, 
-  ProfileVisibility, 
-  AgencyRole, 
-  CooperativeRole,
+import {
+  EmploymentStatus,
+  LeaseDuration,
+  BusinessType,
+  ReferenceRelationship,
+  ReasonForLeaving,
+  ProfileVisibility,
   PriceUnit,
   Location,
 } from './common';
@@ -24,7 +24,6 @@ export interface PersonalInfo {
   employmentStatus?: EmploymentStatus;
   moveInDate?: string;
   leaseDuration?: LeaseDuration;
-  avatar?: string;
 }
 
 export interface PropertyPreferences {
@@ -72,15 +71,6 @@ export interface Verification {
   references?: boolean;
 }
 
-export interface TrustScore {
-  score: number;
-  factors: Array<{
-    type: string;
-    value: number;
-    updatedAt: string;
-  }>;
-}
-
 export interface NotificationSettings {
   email: boolean;
   push: boolean;
@@ -101,10 +91,7 @@ export interface PrivacySettings {
 export interface RoommatePreferences {
   enabled: boolean;
   preferences?: {
-    ageRange?: {
-      min: number;
-      max: number;
-    };
+    ageRange?: { min: number; max: number };
     gender?: 'male' | 'female' | 'any';
     lifestyle?: {
       smoking: 'yes' | 'no' | 'prefer_not';
@@ -113,10 +100,7 @@ export interface RoommatePreferences {
       cleanliness: 'very_clean' | 'clean' | 'average' | 'relaxed';
       schedule: 'early_bird' | 'night_owl' | 'flexible';
     };
-    budget?: {
-      min: number;
-      max: number;
-    };
+    budget?: { min: number; max: number };
     moveInDate?: string;
     leaseDuration?: LeaseDuration;
   };
@@ -144,7 +128,6 @@ export interface PersonalProfile {
   references?: Reference[];
   rentalHistory?: RentalHistory[];
   verification: Verification;
-  trustScore: TrustScore;
   settings: ProfileSettings;
 }
 
@@ -156,7 +139,6 @@ export interface BusinessDetails {
   specialties?: string[];
   serviceAreas?: Location[];
   industry?: string;
-  logo?: string;
 }
 
 export interface BusinessVerification {
@@ -171,13 +153,6 @@ export interface BusinessRatings {
   count: number;
 }
 
-export interface AgencyMember {
-  oxyUserId: string;
-  role: AgencyRole;
-  addedAt: string;
-  addedBy?: string;
-}
-
 export interface AgencyProfile {
   businessType: BusinessType;
   legalCompanyName?: string;
@@ -185,7 +160,6 @@ export interface AgencyProfile {
   businessDetails: BusinessDetails;
   verification: BusinessVerification;
   ratings: BusinessRatings;
-  members: AgencyMember[];
 }
 
 export interface BusinessProfile {
@@ -197,26 +171,16 @@ export interface BusinessProfile {
   ratings: BusinessRatings;
 }
 
-export interface CooperativeMember {
-  oxyUserId: string;
-  role: CooperativeRole;
-  addedAt: string;
-}
-
 export interface CooperativeProfile {
   legalName: string;
   description?: string;
-  members: CooperativeMember[];
 }
 
+/** Homiio RE sidecar — one per Oxy account id. */
 export interface Profile {
   id: string;
   _id?: string;
   oxyUserId: string;
-  profileType: ProfileType;
-  isPrimary: boolean;
-  isActive: boolean;
-  avatar?: string;
   personalProfile?: PersonalProfile;
   agencyProfile?: AgencyProfile;
   businessProfile?: BusinessProfile;
@@ -225,26 +189,11 @@ export interface Profile {
   updatedAt: string;
 }
 
-export interface CreateProfileData {
-  profileType: ProfileType;
-  data: {
-    preferences?: PropertyPreferences;
-    verification?: Verification;
-    settings?: ProfileSettings;
-    businessType?: BusinessType;
-    description?: string;
-    businessDetails?: BusinessDetails;
-    legalCompanyName?: string;
-    legalName?: string;
-  };
-}
-
 export interface UpdateProfileData {
   personalProfile?: Partial<PersonalProfile>;
   agencyProfile?: Partial<AgencyProfile>;
   businessProfile?: Partial<BusinessProfile>;
-  isPrimary?: boolean;
-  isActive?: boolean;
+  cooperativeProfile?: Partial<CooperativeProfile>;
 }
 
 export interface UserProfile {
@@ -256,4 +205,4 @@ export interface UserProfile {
 
 export interface RoommateProfile extends Profile {
   matchScore?: number;
-} 
+}

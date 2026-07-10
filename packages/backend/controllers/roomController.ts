@@ -10,8 +10,9 @@
 
 import type { Request, Response, NextFunction } from 'express';
 
+import { PropertyType, PropertyStatus } from '@homiio/shared-types';
+
 import { Property, Address, Profile } from '../models';
-import { PropertyType, PropertyStatus, ProfileType } from '@homiio/shared-types';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
 import {
@@ -152,16 +153,7 @@ class RoomController {
       // profile. The client cannot choose `profileId` (IDOR / mass-assignment) —
       // it is resolved strictly server-side, creating the personal profile
       // lazily if the user has none yet.
-      let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
-      if (!activeProfile) {
-        activeProfile = await Profile.create({
-          oxyUserId,
-          profileType: ProfileType.PERSONAL,
-          isPrimary: true,
-          isActive: true,
-          personalProfile: {},
-        });
-      }
+      let activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       const profileId = activeProfile._id;
 
       // A room is ALWAYS part of a parent property the caller owns. Resolve and
@@ -280,7 +272,7 @@ class RoomController {
         return next(new AppError('Room not found', 404, 'NOT_FOUND'));
       }
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!activeProfile || String(room.profileId) !== String(activeProfile._id)) {
         return next(new AppError('Access denied to this room', 403, 'FORBIDDEN'));
       }
@@ -353,7 +345,7 @@ class RoomController {
         return next(new AppError('Room not found', 404, 'NOT_FOUND'));
       }
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!activeProfile || String(room.profileId) !== String(activeProfile._id)) {
         return next(new AppError('Access denied to this room', 403, 'FORBIDDEN'));
       }

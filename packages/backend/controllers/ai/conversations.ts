@@ -7,7 +7,7 @@ export async function listConversations(req: Request, res: Response) {
   const userId = getUserId(req);
   if (!userId) return err(res, 401, 'Unauthorized');
 
-  const activeProfile = await Profile.findActiveByOxyUserId(userId);
+  const activeProfile = await Profile.findOrCreateByOxyUserId(userId);
   if (!activeProfile) return err(res, 404, 'No active profile found');
 
   const conversations = await Conversation.find({
@@ -35,7 +35,7 @@ export async function createConversation(req: Request, res: Response) {
   const userId = getUserId(req);
   if (!userId) return err(res, 401, 'Unauthorized');
 
-  const activeProfile = await Profile.findActiveByOxyUserId(userId);
+  const activeProfile = await Profile.findOrCreateByOxyUserId(userId);
   if (!activeProfile) return err(res, 404, 'No active profile found');
 
   const { title, initialMessage, messages } = (req as any).body || {};
@@ -97,7 +97,7 @@ export async function getConversation(req: Request, res: Response) {
     return err(res, 400, 'Invalid conversation ID');
   }
 
-  const activeProfile = await Profile.findActiveByOxyUserId(userId);
+  const activeProfile = await Profile.findOrCreateByOxyUserId(userId);
   if (!activeProfile) return err(res, 404, 'No active profile found');
 
   const conversation = await Conversation.findOne({
@@ -113,7 +113,7 @@ export async function updateConversation(req: Request, res: Response) {
   const userId = getUserId(req);
   if (!userId) return err(res, 401, 'Unauthorized');
 
-  const activeProfile = await Profile.findActiveByOxyUserId(userId);
+  const activeProfile = await Profile.findOrCreateByOxyUserId(userId);
   if (!activeProfile) return err(res, 404, 'No active profile found');
 
   const { title, messages, status } = (req as any).body || {};
@@ -141,7 +141,7 @@ export async function addConversationMessage(req: Request, res: Response) {
   const userId = getUserId(req);
   if (!userId) return err(res, 401, 'Unauthorized');
 
-  const activeProfile = await Profile.findActiveByOxyUserId(userId);
+  const activeProfile = await Profile.findOrCreateByOxyUserId(userId);
   if (!activeProfile) return err(res, 404, 'No active profile found');
 
   const { role, content, attachments } = (req as any).body || {};
@@ -164,7 +164,7 @@ export async function deleteConversation(req: Request, res: Response) {
   const userId = getUserId(req);
   if (!userId) return err(res, 401, 'Unauthorized');
 
-  const activeProfile = await Profile.findActiveByOxyUserId(userId);
+  const activeProfile = await Profile.findOrCreateByOxyUserId(userId);
   if (!activeProfile) return err(res, 404, 'No active profile found');
 
   const deleted = await Conversation.findOneAndDelete({
@@ -180,7 +180,7 @@ export async function shareConversation(req: Request, res: Response) {
   const userId = getUserId(req);
   if (!userId) return err(res, 401, 'Unauthorized');
 
-  const activeProfile = await Profile.findActiveByOxyUserId(userId);
+  const activeProfile = await Profile.findOrCreateByOxyUserId(userId);
   if (!activeProfile) return err(res, 404, 'No active profile found');
 
   const conversation = await Conversation.findOne({

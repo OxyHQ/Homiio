@@ -12,6 +12,7 @@ import type { Profile, Property } from '@homiio/shared-types';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
 import { PropertyCard } from '@/components/PropertyCard';
 import { useRouter } from 'expo-router';
+import { inferSidecarKind } from '@/utils/sidecarProfile';
 import { useOxyAvatars } from '@/hooks/useOxyAvatars';
 
 interface LandlordSectionProps {
@@ -41,10 +42,9 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
 
     const getLandlordDisplayName = (profile: Profile | null): string => {
         if (!profile) return 'Unknown Owner';
-        switch (profile.profileType) {
+        switch (inferSidecarKind(profile)) {
             case 'personal':
-                const bio = profile.personalProfile?.personalInfo?.bio;
-                return bio || profile.oxyUserId || 'Property Owner';
+                return profile.personalProfile?.personalInfo?.bio || profile.oxyUserId || 'Property Owner';
             case 'agency':
                 return profile.agencyProfile?.legalCompanyName || profile.oxyUserId || 'Real Estate Agency';
             case 'business':
@@ -58,20 +58,17 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
 
     const getLandlordSubtitle = (profile: Profile | null): string => {
         if (!profile) return 'Profile not available';
-
-        const trustScore = profile.profileType === 'personal'
-            ? profile.personalProfile?.trustScore?.score
-            : null;
-
-        switch (profile.profileType) {
+        switch (inferSidecarKind(profile)) {
             case 'personal':
-                return trustScore ? `Trust Score: ${trustScore}/10` : 'Property Owner';
-            case 'agency':
+                return 'Property Owner';
+            case 'agency': {
                 const agencyRating = profile.agencyProfile?.ratings?.average;
                 return agencyRating ? `Real Estate Agency • ${agencyRating.toFixed(1)}★` : 'Real Estate Agency';
-            case 'business':
+            }
+            case 'business': {
                 const businessRating = profile.businessProfile?.ratings?.average;
                 return businessRating ? `Property Management • ${businessRating.toFixed(1)}★` : 'Property Management Company';
+            }
             case 'cooperative':
                 return 'Housing Cooperative';
             default:
@@ -80,15 +77,11 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
     };
 
     const renderPersonalProfileAvatar = (profile: Profile) => {
-        // Prefer the Oxy avatar (a file id resolved to a URL by the registered
-        // ImageResolver via getFileDownloadUrl); fall back to a profile-local
-        // custom avatar for non-Oxy / unresolved cases.
         const avatarFileId = getAvatarFileId(profile.oxyUserId);
-        const customAvatar = profile.personalProfile?.personalInfo?.avatar || profile.avatar;
 
         return (
             <Avatar
-                source={avatarFileId ?? customAvatar}
+                source={avatarFileId}
                 variant="thumb"
                 size={52}
                 style={styles.landlordAvatar}
@@ -105,7 +98,7 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
             );
         }
 
-        if (profile.profileType === 'personal') {
+        if (inferSidecarKind(profile) === 'personal') {
             return renderPersonalProfileAvatar(profile);
         }
 
@@ -154,11 +147,6 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
                         <View style={styles.landlordInfo}>
                             <View style={styles.landlordNameRow}>
                                 <ThemedText style={styles.landlordName}>{getLandlordDisplayName(landlordProfile)}</ThemedText>
-                                {landlordProfile?.isActive && (
-                                    <View style={styles.verifiedBadge}>
-                                        <Ionicons name="checkmark" size={12} color={colors.white} />
-                                    </View>
-                                )}
                             </View>
                             <ThemedText style={styles.landlordSubtitle}>{getLandlordSubtitle(landlordProfile)}</ThemedText>
                         </View>

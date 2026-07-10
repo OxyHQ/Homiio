@@ -33,6 +33,9 @@ export interface SearchFilters {
     leaseDuration?: string;
     maxDeposit?: number;
     furnished?: boolean;
+
+    /** Only listings with a fair-price badge (`priceEthics.isFairPrice`). */
+    fairPrice?: boolean;
 }
 
 interface SearchFiltersBottomSheetProps {
@@ -96,6 +99,12 @@ export function SearchFiltersBottomSheet({
     const filterSections: FilterSection[] = useMemo(() => {
         const propertyTypes = mode === 'vacation' ? PROPERTY_TYPES_VACATION : PROPERTY_TYPES_LONG_TERM;
         const sections: FilterSection[] = [
+            {
+                id: 'fairPrice',
+                title: t('search.filters.fairPrice', 'Fair price only'),
+                type: 'toggle',
+                value: Boolean(filters.fairPrice),
+            },
             {
                 id: 'type',
                 title: t('Property Type'),

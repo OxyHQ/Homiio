@@ -376,9 +376,7 @@ class RoommateService {
       },
       moveInDate: roommatePrefs?.moveInDate || 'Flexible',
       duration: roommatePrefs?.leaseDuration || 'Flexible',
-      trustScore: typeof personal?.trustScore?.score === 'number'
-        ? personal.trustScore.score
-        : undefined,
+      trustScore: undefined,
       isVerified: Boolean(verification?.identity),
       hasReferences:
         (personal?.references?.length ?? 0) > 0 || Boolean(verification?.references),

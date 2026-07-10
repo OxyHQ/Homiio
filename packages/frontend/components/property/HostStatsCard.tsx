@@ -23,6 +23,7 @@ import { spacing } from '@/constants/styles';
 import { SECTION_GUTTER } from '@/components/property/Section';
 import type { Profile, Property } from '@homiio/shared-types';
 import { useOxyAvatars } from '@/hooks/useOxyAvatars';
+import { sidecarDisplayTitle } from '@/utils/sidecarProfile';
 
 interface HostStatsCardProps {
   property: Property;
@@ -38,34 +39,7 @@ const monthYear = (input: string | Date | undefined): string => {
 
 const getDisplayName = (profile: Profile | null): string => {
   if (!profile) return 'Unknown host';
-  switch (profile.profileType) {
-    case 'personal':
-      return (
-        profile.personalProfile?.personalInfo?.bio ||
-        profile.oxyUserId ||
-        'Property owner'
-      );
-    case 'agency':
-      return (
-        profile.agencyProfile?.legalCompanyName ||
-        profile.oxyUserId ||
-        'Real estate agency'
-      );
-    case 'business':
-      return (
-        profile.businessProfile?.legalCompanyName ||
-        profile.oxyUserId ||
-        'Property management'
-      );
-    case 'cooperative':
-      return (
-        profile.cooperativeProfile?.legalName ||
-        profile.oxyUserId ||
-        'Housing cooperative'
-      );
-    default:
-      return profile.oxyUserId || 'Property owner';
-  }
+  return sidecarDisplayTitle(profile) || profile.oxyUserId || 'Property owner';
 };
 
 export const HostStatsCard: React.FC<HostStatsCardProps> = ({
@@ -87,17 +61,11 @@ export const HostStatsCard: React.FC<HostStatsCardProps> = ({
     return monthYear(created);
   }, [landlordProfile]);
 
-  const isVerified = Boolean(landlordProfile?.isActive);
+  const isVerified = Boolean(landlordProfile?.personalProfile?.verification?.identity);
   const profileId = landlordProfile?._id ?? landlordProfile?.id;
-  // Prefer the Oxy avatar file id (resolved to a URL by the registered
-  // ImageResolver); fall back to a profile-local custom avatar.
   const avatarSource = useMemo(() => {
     if (!landlordProfile) return undefined;
-    return (
-      getAvatarFileId(landlordProfile.oxyUserId) ??
-      landlordProfile.personalProfile?.personalInfo?.avatar ??
-      landlordProfile.avatar
-    );
+    return getAvatarFileId(landlordProfile.oxyUserId);
   }, [landlordProfile, getAvatarFileId]);
 
   const handleOpenProfile = () => {

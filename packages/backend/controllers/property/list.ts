@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import type { SortOrder } from 'mongoose';
 import { Property, Reservation } from '../../models';
 import { paginationResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
@@ -7,6 +8,11 @@ import {
   DEFAULT_PRICE_FIELD,
   FIELD_SHORT_TERM_INSTANT_BOOK,
   PRICE_FIELD_SALE,
+  FIELD_PRICE_ETHICS_IS_FAIR_PRICE,
+  buildSort,
+  SORT_ASC,
+  SORT_DESC,
+  type SortField,
 } from './searchQueryBuilder';
 import { OfferingType } from '@homiio/shared-types';
 const {
@@ -17,6 +23,14 @@ import { serializePropertyAddresses, ADDRESS_GEO_POPULATE } from '../../services
 import { serializePropertyImages } from '../../services/imageSerializer';
 
 const OFFERING_VALUES: ReadonlySet<string> = new Set(Object.values(OfferingType));
+
+const LIST_SORT_FIELDS: ReadonlySet<string> = new Set([
+  'price',
+  'salePrice',
+  'createdAt',
+  'relevance',
+  'fairness',
+]);
 
 // Price-preference bucket boundaries (monthly-rent scale) used by the
 // recommendation scorer to weight listings near a viewer's typical budget.
@@ -111,7 +125,8 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       instantBook,
       minGuests,
       checkIn,
-      checkOut
+      checkOut,
+      fairPrice,
     } = req.query as any;
 
     const pageNumber = Math.max(1, parseInt(String(page)) || 1);
@@ -212,6 +227,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     if (hasPhotos === 'true') filters['images.url'] = { $exists: true, $nin: [null, ''] };
     if (verified === 'true') filters.isVerified = true;
     if (eco === 'true') filters.isEcoFriendly = true;
+    if (fairPrice === 'true') filters[FIELD_PRICE_ETHICS_IS_FAIR_PRICE] = true;
     if (housingType) filters.housingType = String(housingType);
     if (layoutType) filters.layoutType = String(layoutType);
     if (furnishedStatus) filters.furnishedStatus = String(furnishedStatus);
@@ -359,8 +375,19 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       }
     }
 
-    const sortOptions: any = {};
-    sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    const sortByValue = String(sortBy);
+    const sortOptions: Record<string, SortOrder | { $meta: 'textScore' }> = LIST_SORT_FIELDS.has(sortByValue)
+      ? buildSort(
+          {
+            page: pageNumber,
+            limit: limitNumber,
+            sortField: sortByValue as SortField,
+            sortDirection: sortOrder === SORT_ASC ? SORT_ASC : SORT_DESC,
+            offering: resolvedOffering,
+          },
+          false,
+        )
+      : { [sortByValue]: (sortOrder === 'desc' ? -1 : 1) as SortOrder };
     const skip = (pageNumber - 1) * limitNumber;
 
     const [properties, total] = await Promise.all([
@@ -444,7 +471,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       try {
         const oxyUserId = req.user.id || req.user._id;
         const { Profile, RecentlyViewed, Saved } = require('../../models');
-        const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+        const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
         if (activeProfile) {
           // Fetch recently viewed and saved in parallel (was sequential before)
           const [recentlyViewed, savedProperties] = await Promise.all([
@@ -510,6 +537,14 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
             }
             if (property.isVerified) personalizedScore += 25;
             if (property.isEcoFriendly) personalizedScore += 15;
+            const priceEthics = property.priceEthics;
+            if (priceEthics?.isFairPrice) personalizedScore += 30;
+            if (
+              priceEthics?.withinEthical === false ||
+              priceEthics?.marketVerdict === 'above_average'
+            ) {
+              personalizedScore -= 20;
+            }
             if (recentlyViewedIds.has(propertyId)) personalizedScore -= 30; // O(1) instead of O(n) .some()
             if (isSaved) personalizedScore -= 20;
             return { ...property, personalizedScore, isSaved };

@@ -101,29 +101,11 @@ export interface IProfileChatMessage {
   timestamp?: Date;
 }
 
-/**
- * Agency-profile slice. Stores membership/role rows and is updated through
- * the `addAgencyMember` / `removeAgencyMember` / `updateAgencyMemberRole`
- * instance methods. The remaining fields are open (Loose) — the schema stores
- * a Mixed subdocument with branding/contact details that are read directly.
- */
-export interface IAgencyMember {
-  oxyUserId: string;
-  role: 'owner' | 'admin' | 'member' | string;
-  addedBy?: string;
-  addedAt?: Date;
-}
-
-export type IAgencyProfileSlice = Loose & {
-  members: IAgencyMember[];
-};
+export type IAgencyProfileSlice = Loose;
 
 export type IProfile = Document & {
   _id: Id;
   oxyUserId: string;
-  profileType: string;
-  isActive: boolean;
-  isPrimary: boolean;
   isAnonymous?: boolean;
   personalProfile?: Loose;
   agencyProfile?: IAgencyProfileSlice;
@@ -132,23 +114,12 @@ export type IProfile = Document & {
   chatHistory?: IProfileChatMessage[];
   createdAt: Date;
   updatedAt: Date;
-  addAgencyMember(oxyUserId: string, role: string, addedBy: string): Promise<IProfile>;
-  removeAgencyMember(oxyUserId: string): Promise<IProfile>;
-  updateAgencyMemberRole(oxyUserId: string, newRole: string): Promise<IProfile>;
-  calculateTrustScore(forceRecalculate?: boolean): Promise<unknown>;
-  updateTrustScore(factor: string, value: unknown): Promise<IProfile>;
 } & Loose;
 
 export interface IProfileModel extends Model<IProfile> {
-  findActiveByOxyUserId(oxyUserId: string, select?: string | null): Promise<IProfile | null>;
-  findByOxyUserId(oxyUserId: string, select?: string | null): Promise<IProfile[]>;
-  findByOxyUserIdAndType(oxyUserId: string, profileType: string): Promise<IProfile | null>;
-  findActiveByOxyUserIdAndUpdate(
-    oxyUserId: string,
-    updateData: Loose,
-  ): Promise<IProfile | null>;
-  findAgencyMemberships?(...args: unknown[]): Promise<unknown>;
-  activateProfile?(...args: unknown[]): Promise<unknown>;
+  findByOxyUserId(oxyUserId: string, select?: string | null): Promise<IProfile | null>;
+  findOrCreateByOxyUserId(oxyUserId: string): Promise<IProfile>;
+  findByOxyUserIdAndUpdate(oxyUserId: string, updateData: Loose): Promise<IProfile | null>;
 }
 
 // ---------- Reservation ----------

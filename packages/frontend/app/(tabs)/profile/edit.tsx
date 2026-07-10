@@ -51,7 +51,7 @@ export default function ProfileEditScreen() {
           activeSection={activeSection}
           agencyInfo={form.agencyInfo}
           settings={form.settings}
-          members={activeProfile?.agencyProfile?.members}
+          members={[]}
           updateAgencyInfo={form.updateAgencyInfo}
           updateSettings={form.updateSettings}
           toggleSpecialty={form.toggleSpecialty}

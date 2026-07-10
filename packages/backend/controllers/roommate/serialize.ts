@@ -29,7 +29,6 @@ export interface SerializedRoommateProfile {
   id: string;
   oxyUserId?: string;
   displayName?: string;
-  profileType?: string;
   isAnonymous?: boolean;
   personalProfile?: unknown;
 }
@@ -42,13 +41,12 @@ export interface SerializedRoommateProfile {
 export interface PopulatedProfileLike {
   _id: unknown;
   oxyUserId?: string;
-  profileType?: string;
   isAnonymous?: boolean;
   personalProfile?: unknown;
 }
 
-/** Oxy user fields the roommate serializer needs from a populated profile. */
-export const ROOMMATE_PROFILE_FIELDS = 'oxyUserId profileType personalProfile isAnonymous';
+/** Fields the roommate serializer needs from a populated profile. */
+export const ROOMMATE_PROFILE_FIELDS = 'oxyUserId personalProfile isAnonymous';
 
 const USERS_BY_IDS_CAP = 100;
 
@@ -122,7 +120,6 @@ export function serializeRoommateProfile(
     id: String(profile._id),
     oxyUserId,
     displayName: oxyUserId ? displayNames.get(oxyUserId) : undefined,
-    profileType: profile.profileType,
     isAnonymous: profile.isAnonymous,
     personalProfile: profile.personalProfile,
   };

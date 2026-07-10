@@ -64,6 +64,8 @@ const DEFAULT_CITIES: readonly string[] = [
 ];
 const DEFAULT_MAX_SEARCH_PAGES = 50;
 const LISTAINMUEBLES_POST_TIMEOUT_MS = 45_000;
+const HABITACLIA_ES_PROXY_GEO = 'es';
+const HABITACLIA_ES_CHALLENGE_WAIT_MS = 90_000;
 const SUPPORTED_TYPES: ReadonlySet<string> = new Set(Object.values(PropertyType));
 
 function resolvePropertyType(raw: string): PropertyType {
@@ -174,6 +176,8 @@ export class HabitacliaProvider implements ListingProvider {
       proxySessionId: this.stickyProxySessionId,
       storageState: this.stickyStorageState,
       blockAssets: true,
+      proxyGeo: HABITACLIA_ES_PROXY_GEO,
+      challengeWaitMs: HABITACLIA_ES_CHALLENGE_WAIT_MS,
       reloadAfterPolls: 4,
       postChallengeSettleMs: 1_500,
     } as const;
@@ -212,9 +216,10 @@ export class HabitacliaProvider implements ListingProvider {
         proxySessionId: this.stickyProxySessionId,
         storageState: this.stickyStorageState,
         blockAssets: true,
+        proxyGeo: HABITACLIA_ES_PROXY_GEO,
         reloadAfterPolls: 4,
         postChallengeSettleMs: 1_500,
-        challengeWaitMs: 60_000,
+        challengeWaitMs: HABITACLIA_ES_CHALLENGE_WAIT_MS,
         signal,
       });
 

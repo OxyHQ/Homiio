@@ -15,7 +15,7 @@ import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
 import { Chip } from '@oxyhq/bloom/chip';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { SearchInput } from '@oxyhq/bloom/search-input';
-import { useOxy, showSignInModal } from '@oxyhq/services';
+import { useOxy, openAccountDialog } from '@oxyhq/services';
 import {
   Profile,
   TenantApplication,
@@ -31,6 +31,7 @@ import { useLandlordApplications } from '@/hooks/useApplicationQueries';
 import { useProperty } from '@/hooks';
 import { useOxyAvatars } from '@/hooks/useOxyAvatars';
 import profileService from '@/services/profileService';
+import { inferSidecarKind } from '@/utils/sidecarProfile';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { radius, spacing, withShadow } from '@/constants/styles';
 import { colors } from '@/styles/colors';
@@ -48,7 +49,7 @@ const FILTERS: { id: StatusFilter; label: string }[] = [
 
 const getProfileDisplayName = (profile: Profile | null | undefined): string => {
   if (!profile) return 'Applicant';
-  switch (profile.profileType) {
+  switch (inferSidecarKind(profile)) {
     case 'personal': {
       const bio = profile.personalProfile?.personalInfo?.bio;
       return bio?.trim() || profile.oxyUserId || 'Applicant';
@@ -86,11 +87,7 @@ const getProfileAvatarFileId = (
   getAvatarFileId: (oxyUserId: string | undefined | null) => string | undefined,
 ): string | undefined => {
   if (!profile) return undefined;
-  return (
-    getAvatarFileId(profile.oxyUserId) ||
-    profile.personalProfile?.personalInfo?.avatar ||
-    profile.avatar
-  );
+  return getAvatarFileId(profile.oxyUserId);
 };
 
 interface PropertyGroup {
@@ -247,7 +244,7 @@ export default function LandlordApplicationsScreen() {
               description="See who wants to rent your places, all in one place."
               actionText="Sign in"
               actionIcon="log-in-outline"
-              onAction={() => showSignInModal()}
+              onAction={() => openAccountDialog('signin')}
             />
           </View>
         </SafeAreaView>

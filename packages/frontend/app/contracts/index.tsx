@@ -29,24 +29,11 @@ import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { radius, spacing, withShadow } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
-/**
- * Derive a human-readable name from a Homiio Profile. Profiles do not carry a
- * raw person name; the displayable identity depends on the profile type
- * (matches the derivation used in LandlordSection / HostStatsCard).
- */
+import { sidecarDisplayTitle } from '@/utils/sidecarProfile';
+
 const profileDisplayName = (profile?: Profile): string => {
   if (!profile) return 'Unknown';
-  switch (profile.profileType) {
-    case 'agency':
-      return profile.agencyProfile?.legalCompanyName || profile.oxyUserId || 'Real Estate Agency';
-    case 'business':
-      return profile.businessProfile?.legalCompanyName || profile.oxyUserId || 'Property Management';
-    case 'cooperative':
-      return profile.cooperativeProfile?.legalName || profile.oxyUserId || 'Housing Cooperative';
-    case 'personal':
-    default:
-      return profile.oxyUserId || 'Unknown';
-  }
+  return sidecarDisplayTitle(profile) || profile.oxyUserId || 'Unknown';
 };
 
 /**

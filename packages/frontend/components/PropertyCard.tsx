@@ -310,6 +310,7 @@ export function PropertyCard({
     : null;
 
   const isEco = Boolean(property.isEcoFriendly);
+  const isFairPrice = Boolean(property.priceEthics?.isFairPrice);
   const isFeatured = variant === 'featured';
   const isGrid = variant === 'grid';
   const isCompact = variant === 'compact';
@@ -390,6 +391,15 @@ export function PropertyCard({
           {otherOfferings.map((summary) => (
             <OfferingBadge key={summary.offering} offering={summary.offering} size="md" />
           ))}
+
+          {/* Fair price — Homiio ethical + market badge. */}
+          {isFairPrice ? (
+            <MediaChip
+              icon="pricetag"
+              accent={colors.success}
+              label={t('listing.badge.fairPrice', 'Fair price')}
+            />
+          ) : null}
 
           {/* Instant Book (vacation mode only). */}
           {showInstantBook ? (

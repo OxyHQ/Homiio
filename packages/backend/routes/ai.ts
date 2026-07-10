@@ -457,7 +457,7 @@ export default function aiRouter() {
       const userId = getUserId(req);
       if (!userId) return err(res, 401, 'Unauthorized');
 
-      const activeProfile = await Profile.findActiveByOxyUserId(userId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(userId);
       if (!activeProfile) return err(res, 404, 'No active profile found');
 
       const { propertyId, propertyContext, userHistory, conversationContext } = req.body || {};
@@ -561,7 +561,7 @@ Return only the JSON array, no other text.`;
       const userId = getUserId(req);
       if (!userId) return err(res, 401, 'Unauthorized');
 
-      const activeProfile = await Profile.findActiveByOxyUserId(userId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(userId);
       if (!activeProfile) return err(res, 404, 'No active profile found');
 
       // Ensure conversation
@@ -822,7 +822,7 @@ Return only the JSON array, no other text.`;
       const userId = getUserId(req);
       if (!userId) return err(res, 401, 'Unauthorized');
 
-      const activeProfile = await Profile.findActiveByOxyUserId(userId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(userId);
       if (!activeProfile) return err(res, 404, 'No active profile found');
 
   const file = req.file;
@@ -909,7 +909,7 @@ Return only the JSON array, no other text.`;
       const userId = getUserId(req);
       if (!userId) return err(res, 401, 'Unauthorized');
 
-      const activeProfile = await Profile.findActiveByOxyUserId(userId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(userId);
       if (!activeProfile) return err(res, 404, 'No active profile found');
 
   const file = req.file;
@@ -992,7 +992,7 @@ Return only the JSON array, no other text.`;
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const profile = await Profile.findOne({ oxyUserId: userId, profileType: 'personal' });
+    const profile = await Profile.findOrCreateByOxyUserId(userId);
     if (!profile) return err(res, 404, 'Personal profile not found');
 
     const history = Array.isArray(profile.chatHistory) ? [...profile.chatHistory].reverse() : [];
@@ -1003,7 +1003,7 @@ Return only the JSON array, no other text.`;
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const profile = await Profile.findOne({ oxyUserId: userId, profileType: 'personal' });
+    const profile = await Profile.findOrCreateByOxyUserId(userId);
     if (!profile) return err(res, 404, 'Personal profile not found');
 
     profile.chatHistory = [];
@@ -1015,7 +1015,7 @@ Return only the JSON array, no other text.`;
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const profile = await Profile.findOne({ oxyUserId: userId, profileType: 'personal' });
+    const profile = await Profile.findOrCreateByOxyUserId(userId);
     if (!profile) return err(res, 404, 'Personal profile not found');
 
     const { userMessage, assistantMessage } = req.body || {};
@@ -1036,7 +1036,7 @@ Return only the JSON array, no other text.`;
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const activeProfile = await Profile.findActiveByOxyUserId(userId);
+    const activeProfile = await Profile.findOrCreateByOxyUserId(userId);
     if (!activeProfile) return err(res, 404, 'No active profile found');
 
     const conversations = await Conversation.find({ profileId: activeProfile._id.toString() }).sort({ updatedAt: -1 });
@@ -1062,7 +1062,7 @@ Return only the JSON array, no other text.`;
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const activeProfile = await Profile.findActiveByOxyUserId(userId);
+    const activeProfile = await Profile.findOrCreateByOxyUserId(userId);
     if (!activeProfile) return err(res, 404, 'No active profile found');
 
     const { title, initialMessage, messages } = req.body || {};
@@ -1118,7 +1118,7 @@ Return only the JSON array, no other text.`;
     const conversationId = String(req.params.id || '');
     if (!conversationId || !isObjectId(conversationId)) return err(res, 400, 'Invalid conversation ID');
 
-    const activeProfile = await Profile.findActiveByOxyUserId(userId);
+    const activeProfile = await Profile.findOrCreateByOxyUserId(userId);
     if (!activeProfile) return err(res, 404, 'No active profile found');
 
     const conversation = await Conversation.findOne({ _id: conversationId, profileId: activeProfile._id.toString() });
@@ -1131,7 +1131,7 @@ Return only the JSON array, no other text.`;
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const activeProfile = await Profile.findActiveByOxyUserId(userId);
+    const activeProfile = await Profile.findOrCreateByOxyUserId(userId);
     if (!activeProfile) return err(res, 404, 'No active profile found');
 
     const { title, messages, status } = req.body || {};
@@ -1152,7 +1152,7 @@ Return only the JSON array, no other text.`;
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const activeProfile = await Profile.findActiveByOxyUserId(userId);
+    const activeProfile = await Profile.findOrCreateByOxyUserId(userId);
     if (!activeProfile) return err(res, 404, 'No active profile found');
 
     const { role, content, attachments } = req.body || {};
@@ -1172,7 +1172,7 @@ Return only the JSON array, no other text.`;
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const activeProfile = await Profile.findActiveByOxyUserId(userId);
+    const activeProfile = await Profile.findOrCreateByOxyUserId(userId);
     if (!activeProfile) return err(res, 404, 'No active profile found');
 
     const deleted = await Conversation.findOneAndDelete({ _id: req.params.id, profileId: activeProfile._id.toString() });
@@ -1185,7 +1185,7 @@ Return only the JSON array, no other text.`;
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const activeProfile = await Profile.findActiveByOxyUserId(userId);
+    const activeProfile = await Profile.findOrCreateByOxyUserId(userId);
     if (!activeProfile) return err(res, 404, 'No active profile found');
 
     const conversation = await Conversation.findOne({ _id: req.params.id, profileId: activeProfile._id.toString() });

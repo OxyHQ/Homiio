@@ -44,7 +44,7 @@ export async function markPropertyTransacted(req: any, res: any, next: any) {
       return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
     }
 
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
     if (!activeProfile) {
       return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
     }

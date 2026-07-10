@@ -31,7 +31,7 @@ class ViewingController {
       if (property.isExternal) return next(new AppError('Cannot book viewings for external properties', 400, 'EXTERNAL_PROPERTY'));
 
       // Get active profile for requester
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
       const requesterProfileId = activeProfile._id;
@@ -114,7 +114,7 @@ class ViewingController {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!activeProfile) return res.json(paginationResponse([], 1, 10, 0, 'No profile found for user'));
 
       const query: Record<string, unknown> = { requesterProfileId: activeProfile._id };
@@ -154,7 +154,7 @@ class ViewingController {
       const property = await Property.findById(propertyId).lean();
       if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
       const isOwner = String(property.profileId) === String(activeProfile._id);
@@ -191,7 +191,7 @@ class ViewingController {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
       const viewing = await ViewingRequest.findById(viewingId);
@@ -242,7 +242,7 @@ class ViewingController {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
       const viewing = await ViewingRequest.findById(viewingId);
@@ -284,7 +284,7 @@ class ViewingController {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
       const viewing = await ViewingRequest.findById(viewingId);
@@ -346,7 +346,7 @@ class ViewingController {
       }
 
       // Get active profile for requester
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
       // Only allow requester to modify

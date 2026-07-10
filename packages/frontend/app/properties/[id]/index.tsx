@@ -39,7 +39,7 @@ import * as Haptics from 'expo-haptics';
 import * as Linking from 'expo-linking';
 import { Ionicons } from '@expo/vector-icons';
 
-import { useOxy, showSignInModal } from '@oxyhq/services';
+import { useOxy, openAccountDialog } from '@oxyhq/services';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { Header } from '@/components/Header';
@@ -87,6 +87,7 @@ import { AmenitiesSection } from '@/components/property/AmenitiesSection';
 import { CommunityNotesSection } from '@/components/property/CommunityNotesSection';
 import { ReviewsSection } from '@/components/property/ReviewsSection';
 import { PriceRangeSection } from '@/components/property/PriceRangeSection';
+import { PriceEthicsBanner } from '@/components/property/PriceEthicsBanner';
 import { SimilarHomesSection } from '@/components/property/SimilarHomesSection';
 import { DemandSignal } from '@/components/property/DemandSignal';
 import { PropertyActionBar } from '@/components/property/PropertyActionBar';
@@ -147,6 +148,12 @@ export default function PropertyDetailPage() {
 
   const showPriceRangeSection =
     !areaInsightsError && (areaInsightsLoading || Boolean(areaInsights));
+  const showPriceEthicsBanner = apiProperty?.priceEthics?.isFairPrice === false;
+  const priceEthicsCurrency =
+    apiProperty?.longTermRent?.currency ??
+    apiProperty?.shortTermRent?.currency ??
+    apiProperty?.sale?.currency ??
+    'EUR';
   const showSimilarHomesSection =
     !areaInsightsError &&
     !areaInsightsLoading &&
@@ -361,7 +368,7 @@ export default function PropertyDetailPage() {
         t('error.auth.required', 'Please sign in to contact the owner') ||
           'Please sign in to contact the owner',
       );
-      showSignInModal();
+      openAccountDialog('signin');
       return;
     }
     // Homiio has no in-app messaging product, so "contact the owner" resolves to
@@ -416,7 +423,7 @@ export default function PropertyDetailPage() {
         t('error.auth.required', 'Please sign in to call the owner') ||
           'Please sign in to call the owner',
       );
-      showSignInModal();
+      openAccountDialog('signin');
       return;
     }
     if (!landlordProfile) {
@@ -535,7 +542,7 @@ export default function PropertyDetailPage() {
   // sign-in first when unauthenticated, matching the other gated actions.
   const handleRequestExchange = useCallback(() => {
     if (!oxyServices || !activeSessionId) {
-      showSignInModal();
+      openAccountDialog('signin');
       return;
     }
     setExchangeSheetVisible(true);
@@ -893,6 +900,15 @@ export default function PropertyDetailPage() {
               between Community Notes and the landlord's own listings. Each
               wrapper is gated so a fail-soft/empty section never leaves a
               bare hairline divider behind. */}
+          {showPriceEthicsBanner && apiProperty?.priceEthics ? (
+            <View style={[styles.section, styles.divider]}>
+              <PriceEthicsBanner
+                priceEthics={apiProperty.priceEthics}
+                currency={priceEthicsCurrency}
+              />
+            </View>
+          ) : null}
+
           {showPriceRangeSection ? (
             <View style={[styles.section, styles.divider]}>
               <PriceRangeSection

@@ -19,7 +19,7 @@ export async function getSavedSearches(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-  let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+  let activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!activeProfile) {
       // If user has no active profile, return empty list rather than creating data implicitly
@@ -60,7 +60,7 @@ export async function saveSearch(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    let activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
     if (!activeProfile) {
       return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
     }
@@ -119,7 +119,7 @@ export async function deleteSavedSearch(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!activeProfile) {
       return res.status(404).json(
@@ -169,7 +169,7 @@ export async function updateSavedSearch(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!activeProfile) {
       return res.status(404).json(
@@ -227,7 +227,7 @@ export async function toggleSearchNotifications(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!activeProfile) {
       return res.status(404).json(

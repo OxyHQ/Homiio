@@ -15,6 +15,7 @@ import { pickFields } from '../utils/pickFields';
 import { CREATABLE_LEASE_FIELDS, EDITABLE_LEASE_FIELDS } from './lease/editableFields';
 import { toLeaseDTO, refToId } from './lease/toLeaseDTO';
 import { notificationDispatchService } from '../services/notificationDispatchService';
+import { awardLeaseReputation } from '../services/reputationAwardService';
 
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 10;
@@ -38,7 +39,7 @@ async function resolveActiveProfile(req: Request): Promise<IProfile> {
   if (!oxyUserId) {
     throw new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED');
   }
-  const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+  const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
   if (!activeProfile) {
     throw new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND');
   }
@@ -286,6 +287,19 @@ class LeaseController {
         priority: isActive ? 'medium' : 'high',
         data: { leaseId, screen: '/contracts', propertyId: refToId(lease.propertyId) },
       });
+
+      if (isActive) {
+        const partyProfiles = await Profile.find({
+          _id: { $in: [lease.landlordProfileId, lease.tenantProfileId] },
+        }).select('oxyUserId');
+        const sourceActionId = `lease-signed:${leaseId}`;
+        await Promise.all(
+          partyProfiles
+            .map((p) => p.oxyUserId)
+            .filter((id): id is string => Boolean(id))
+            .map((userId) => awardLeaseReputation(userId, 'lease_signed', sourceActionId)),
+        );
+      }
 
       res.json(successResponse(toLeaseDTO(lease), 'Lease signed successfully'));
     } catch (error) {

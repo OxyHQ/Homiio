@@ -173,7 +173,7 @@ class ExchangeController {
         return next(new AppError(`This listing does not accept "${mode}" exchanges`, 400, 'MODE_NOT_ACCEPTED'));
       }
 
-      const requesterProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const requesterProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!requesterProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
       const hostProfileId = property.profileId;
@@ -275,7 +275,7 @@ class ExchangeController {
       const oxyUserId = resolveOxyUserId(req);
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!activeProfile) {
         res.json(paginationResponse([], 1, DEFAULT_PAGE_SIZE, 0, 'No profile found for user'));
         return;
@@ -322,7 +322,7 @@ class ExchangeController {
         return next(new AppError('Invalid exchange request ID', 400, 'INVALID_ID'));
       }
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
       const exchangeRequest = await ExchangeRequest.findById(id).lean();
@@ -361,7 +361,7 @@ class ExchangeController {
         return next(new AppError('Invalid exchange request ID', 400, 'INVALID_ID'));
       }
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
       const exchangeRequest = await ExchangeRequest.findById(id);

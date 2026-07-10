@@ -37,6 +37,9 @@ import { SearchModeProvider } from '@/context/SearchModeContext';
 import { RentalModeProvider } from '@/context/RentalModeContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { OxyProvider, useOxy } from '@oxyhq/services';
+import { oxyServices } from '@/lib/oxyServices';
+import { queryClient } from '@/lib/queryClient';
+import { AccountSwitchReset } from '@/components/providers/AccountSwitchReset';
 import { BloomThemeProvider } from '@oxyhq/bloom';
 import { ImageResolverProvider, type ImageResolver } from '@oxyhq/bloom/image-resolver';
 import {
@@ -225,17 +228,7 @@ export default function RootLayout() {
   const [fadeComplete, setFadeComplete] = useState(false);
   const startFade = initializationComplete;
 
-  const queryClient = useMemo(() => new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: 2,
-        staleTime: 1000 * 60 * 5,  // 5 min — reduces duplicate fetches
-        gcTime: 1000 * 60 * 30,    // 30 min — keeps data in cache longer
-        refetchOnReconnect: true,
-        refetchOnWindowFocus: false, // Disable to prevent unnecessary refetches
-      },
-    },
-  }), []);
+  // Shared singleton — same instance OxyProvider and Homiio RQ hooks use.
 
   // --- Splash Fade Handler (WEB only) ---
   // The custom `AppSplashScreen` fades out on web once init completes; its
@@ -346,7 +339,14 @@ export default function RootLayout() {
           ) : (
               <QueryClientProvider client={queryClient}>
                 <RentalModeProvider>
-                <OxyProvider baseURL={OXY_BASE_URL} clientId={OXY_CLIENT_ID}>
+                <OxyProvider
+                  oxyServices={oxyServices}
+                  baseURL={OXY_BASE_URL}
+                  clientId={OXY_CLIENT_ID}
+                  storageKeyPrefix="homiio"
+                  queryClient={queryClient}
+                >
+                  <AccountSwitchReset />
                   <MediaResolverProvider>
                   <ProfileProvider>
                     <SavedPropertiesProvider>

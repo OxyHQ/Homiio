@@ -47,6 +47,7 @@ import {
   useUpdateApplicationMutation,
 } from '@/hooks/useApplicationQueries';
 import profileService from '@/services/profileService';
+import { inferSidecarKind } from '@/utils/sidecarProfile';
 import {
   getPropertyImageSource,
   getPropertyTitle,
@@ -144,7 +145,7 @@ const getApplicantDisplayName = (
   profile: Profile | null | undefined,
 ): string => {
   if (!profile) return 'Applicant';
-  switch (profile.profileType) {
+  switch (inferSidecarKind(profile)) {
     case 'personal': {
       const bio = profile.personalProfile?.personalInfo?.bio;
       return bio?.trim() || profile.oxyUserId || 'Applicant';
@@ -182,11 +183,7 @@ const getApplicantAvatarFileId = (
   getAvatarFileId: (oxyUserId: string | undefined | null) => string | undefined,
 ): string | undefined => {
   if (!profile) return undefined;
-  return (
-    getAvatarFileId(profile.oxyUserId) ||
-    profile.personalProfile?.personalInfo?.avatar ||
-    profile.avatar
-  );
+  return getAvatarFileId(profile.oxyUserId);
 };
 
 interface DocumentRowProps {

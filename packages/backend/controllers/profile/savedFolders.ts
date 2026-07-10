@@ -20,7 +20,7 @@ export async function getSavedPropertyFolders(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    let activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!activeProfile) {
       return res.status(404).json(
@@ -81,7 +81,7 @@ export async function createSavedPropertyFolder(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    let activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!activeProfile) {
       return res.status(404).json(
@@ -143,7 +143,7 @@ export async function updateSavedPropertyFolder(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    let activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!activeProfile) {
       return res.status(404).json(
@@ -227,7 +227,7 @@ export async function deleteSavedPropertyFolder(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    let activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!activeProfile) {
       return res.status(404).json(

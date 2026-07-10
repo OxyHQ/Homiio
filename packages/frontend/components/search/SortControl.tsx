@@ -36,6 +36,13 @@ const SORT_OPTIONS: readonly SortOption[] = [
     sortOrder: 'desc',
   },
   {
+    key: 'fairness',
+    labelKey: 'search.sort.fairness',
+    fallback: 'Best value',
+    sortBy: 'fairness',
+    sortOrder: 'desc',
+  },
+  {
     key: 'price_asc',
     labelKey: 'search.sort.priceAsc',
     fallback: 'Price: Low to high',

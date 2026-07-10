@@ -71,6 +71,9 @@ function FeaturedProperties({ properties }: { properties: FeaturedProperty[] }) 
   // Order most saved to less saved, then limit to 4
   const sorted = Array.isArray(properties)
     ? [...properties].sort((a, b) => {
+      const aFair = a.priceEthics?.isFairPrice ? 1 : 0;
+      const bFair = b.priceEthics?.isFairPrice ? 1 : 0;
+      if (bFair !== aFair) return bFair - aFair;
       const aSaves = typeof a.savesCount === 'number' ? a.savesCount : 0;
       const bSaves = typeof b.savesCount === 'number' ? b.savesCount : 0;
       return bSaves - aSaves;

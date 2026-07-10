@@ -4,7 +4,7 @@
  * exercise the same schemas, validators and hooks as production.
  */
 
-import { OfferingType, ProfileType, PropertyType, PropertyStatus } from '@homiio/shared-types';
+import { OfferingType, PropertyType, PropertyStatus } from '@homiio/shared-types';
 
 const models = require('../../models');
 const { Profile, Property, Address, Country, Region, City, Lease } = models;
@@ -23,8 +23,6 @@ async function ensureGeo(): Promise<{ countryId: unknown; regionId: unknown; cit
 export async function createProfile(oxyUserId: string): Promise<{ _id: unknown; oxyUserId: string }> {
   return Profile.create({
     oxyUserId,
-    profileType: ProfileType.PERSONAL,
-    isActive: true,
     personalProfile: {},
   });
 }

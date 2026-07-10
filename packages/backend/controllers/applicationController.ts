@@ -204,7 +204,7 @@ class ApplicationController {
         return next(new AppError('This property is not offered for long-term rent and does not accept applications', 400, 'NOT_APPLICABLE'));
       }
 
-      const applicantProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const applicantProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!applicantProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
       const landlordProfileId = property.profileId;
@@ -277,7 +277,7 @@ class ApplicationController {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!activeProfile) return res.json(paginationResponse([], 1, 10, 0, 'No profile found for user'));
 
       const query: Record<string, unknown> = {};
@@ -316,7 +316,7 @@ class ApplicationController {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
       const application = await TenantApplication.findById(id).lean();
@@ -347,7 +347,7 @@ class ApplicationController {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
       const application = await TenantApplication.findById(id);
@@ -418,7 +418,7 @@ class ApplicationController {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+      const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
       if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
 
       const application = await TenantApplication.findById(id);

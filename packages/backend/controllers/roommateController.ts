@@ -6,7 +6,6 @@
 import type { Request, Response } from 'express';
 
 import { Profile, RoommateRequest, RoommateRelationship } from '../models';
-import { ProfileType } from '@homiio/shared-types';
 import { logger } from '../middlewares/logging';
 import { notificationDispatchService } from '../services/notificationDispatchService';
 import { pickFields } from '../utils/pickFields';
@@ -87,16 +86,15 @@ const getRoommateProfiles = async (req: Request, res: Response): Promise<Respons
 
     // Resolve the caller's active profile server-side so we can exclude it and
     // score candidates against its preferences.
-    const currentProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const currentProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
     if (!currentProfile) {
       return res.status(404).json({ error: 'Profile not found' });
     }
 
     // Build base query for personal profiles with roommate matching enabled
     const query: Record<string, unknown> = {
-      profileType: ProfileType.PERSONAL, // Only personal profiles can have roommate matching
       'personalProfile.settings.roommate.enabled': true,
-      _id: { $ne: currentProfile._id } // Exclude current user's profile
+      _id: { $ne: currentProfile._id },
     };
 
     // Add basic filters that apply to profile data (not preferences)
@@ -210,15 +208,10 @@ const getMyRoommatePreferences = async (req: Request, res: Response): Promise<Re
     }
 
     // Get user's active profile
-    const profile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const profile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!profile) {
       return res.status(404).json({ error: 'Profile not found' });
-    }
-
-    // Check if profile is personal type
-    if (profile.profileType !== ProfileType.PERSONAL) {
-      return res.status(403).json({ error: 'Roommate preferences are only available for personal profiles' });
     }
 
     const prefs = personalOf(profile)?.settings?.roommate?.preferences;
@@ -243,15 +236,10 @@ const updateRoommatePreferences = async (req: Request, res: Response): Promise<R
     }
 
     // Get user's active profile
-    const profile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const profile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!profile) {
       return res.status(404).json({ error: 'Profile not found' });
-    }
-
-    // Check if profile is personal type
-    if (profile.profileType !== ProfileType.PERSONAL) {
-      return res.status(403).json({ error: 'Roommate preferences are only available for personal profiles' });
     }
 
     // Mass-assignment guard: only the whitelisted matching-preference fields may
@@ -300,15 +288,10 @@ const toggleRoommateMatching = async (req: Request, res: Response): Promise<Resp
     }
 
     // Get user's active profile
-    const profile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const profile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!profile) {
       return res.status(404).json({ error: 'Profile not found' });
-    }
-
-    // Check if profile is personal type
-    if (profile.profileType !== ProfileType.PERSONAL) {
-      return res.status(403).json({ error: 'Roommate matching is only available for personal profiles' });
     }
 
     const updateData = {
@@ -372,15 +355,10 @@ const getRoommateRequests = async (req: Request, res: Response): Promise<Respons
     }
 
     // Get user's active profile
-    const profile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const profile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!profile) {
       return res.status(404).json({ error: 'Profile not found' });
-    }
-
-    // Check if profile is personal type
-    if (profile.profileType !== ProfileType.PERSONAL) {
-      return res.status(403).json({ error: 'Roommate requests are only available for personal profiles' });
     }
 
     const [sent, received] = await Promise.all([
@@ -426,15 +404,10 @@ const sendRoommateRequest = async (req: Request, res: Response): Promise<Respons
     }
 
     // Get current user's profile
-    const currentProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const currentProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!currentProfile) {
       return res.status(404).json({ error: 'Profile not found' });
-    }
-
-    // Check if current user has a personal profile
-    if (currentProfile.profileType !== ProfileType.PERSONAL) {
-      return res.status(403).json({ error: 'Roommate requests are only available for personal profiles' });
     }
 
     // Get target profile
@@ -442,11 +415,6 @@ const sendRoommateRequest = async (req: Request, res: Response): Promise<Respons
 
     if (!targetProfile) {
       return res.status(404).json({ error: 'Target profile not found' });
-    }
-
-    // Check if target profile is personal
-    if (targetProfile.profileType !== ProfileType.PERSONAL) {
-      return res.status(400).json({ error: 'Roommate requests can only be sent to personal profiles' });
     }
 
     if (currentProfile._id.toString() === targetProfile._id.toString()) {
@@ -551,7 +519,7 @@ const respondToRoommateRequest = async (req: Request, res: Response, status: 'ac
       return res.status(404).json({ error: 'Roommate request not found' });
     }
 
-    const profile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const profile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!profile) {
       return res.status(404).json({ error: 'Profile not found' });
@@ -648,14 +616,10 @@ const getRoommateRelationships = async (req: Request, res: Response): Promise<Re
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const profile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const profile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!profile) {
       return res.status(404).json({ error: 'Profile not found' });
-    }
-
-    if (profile.profileType !== ProfileType.PERSONAL) {
-      return res.status(403).json({ error: 'Roommate relationships are only available for personal profiles' });
     }
 
     const relationships = await RoommateRelationship.find({
@@ -695,7 +659,7 @@ const endRoommateRelationship = async (req: Request, res: Response): Promise<Res
       return res.status(404).json({ error: 'Roommate relationship not found' });
     }
 
-    const profile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const profile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!profile) {
       return res.status(404).json({ error: 'Profile not found' });
@@ -797,30 +761,19 @@ const getCurrentUserRoommateStatus = async (req: Request, res: Response): Promis
     }
 
     // Get user's active profile
-    const profile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const profile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!profile) {
       return res.status(404).json({ error: 'Profile not found' });
     }
 
-    // Check if profile is personal type
-    if (profile.profileType !== ProfileType.PERSONAL) {
-      return res.json({
-        hasRoommateMatching: false,
-        profile: null,
-        error: 'Roommate matching is only available for personal profiles'
-      });
-    }
-
     const roommateSlice = personalOf(profile)?.settings?.roommate;
     const hasRoommateMatching = Boolean(roommateSlice?.enabled);
 
-    // Remove Oxy user data fetching and just return profile info
     res.json({
       hasRoommateMatching,
       profile: profile ? {
         id: profile._id,
-        profileType: profile.profileType,
         roommatePreferences: roommateSlice?.preferences || null,
       } : null,
     });

@@ -29,7 +29,7 @@ import {
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { TextFieldInput } from '@oxyhq/bloom/text-field';
 import { Text as BloomText, H2 } from '@oxyhq/bloom/typography';
-import { useOxy, showSignInModal } from '@oxyhq/services';
+import { useOxy, openAccountDialog } from '@oxyhq/services';
 import {
   AvailabilityWindow,
   AvailabilityWindowStatus,
@@ -199,7 +199,7 @@ export default function HostCalendarScreen() {
               description="Block dates and track bookings from one place."
               actionText="Sign in"
               actionIcon="log-in-outline"
-              onAction={() => showSignInModal()}
+              onAction={() => openAccountDialog('signin')}
             />
           </View>
         </SafeAreaView>

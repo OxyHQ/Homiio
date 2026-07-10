@@ -51,7 +51,7 @@ export interface SearchDateRange {
 }
 
 /** Sort options exposed by the results `SortControl`. */
-export type SearchSortBy = 'relevance' | 'price' | 'createdAt';
+export type SearchSortBy = 'relevance' | 'price' | 'createdAt' | 'fairness';
 export type SearchSortOrder = 'asc' | 'desc';
 
 /**
@@ -92,6 +92,8 @@ export interface SearchQuery {
   sortBy: SearchSortBy;
   /** Sort direction. */
   sortOrder: SearchSortOrder;
+  /** When true, only listings with `priceEthics.isFairPrice`. */
+  fairPrice?: boolean;
 }
 
 /** The ordered steps the panel walks through (Dates only in short-term mode). */

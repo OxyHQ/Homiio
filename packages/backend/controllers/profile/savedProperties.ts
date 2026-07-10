@@ -21,7 +21,7 @@ export async function getSavedProperties(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-  let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+  let activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!activeProfile) {
       return res.json(successResponse([], "No profile found for user"));
@@ -81,7 +81,7 @@ export async function saveProperty(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    let activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
     if (!activeProfile) {
       return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
     }
@@ -160,7 +160,7 @@ export async function unsaveProperty(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    let activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!activeProfile) {
       // If no active profile exists, there can't be any saved properties
@@ -204,7 +204,7 @@ export async function updateSavedPropertyNotes(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    let activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!activeProfile) {
       // If no active profile exists, there can't be any saved properties
@@ -260,7 +260,7 @@ export async function getProfileProperties(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!activeProfile) {
       return res.json(

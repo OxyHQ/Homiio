@@ -3,13 +3,23 @@
  * Usage: LISTING_RESIDENTIAL_PROXY_URL='http://...' bun run packages/listing-providers/scripts/probe-es-warm.ts
  */
 
-import { createProxiedFetch, createProxySessionId, parseResidentialProxyUrl, toPlaywrightProxy } from '../src/proxy';
+import {
+  createProxiedFetch,
+  createProxySessionId,
+  parseResidentialProxyUrl,
+  toPlaywrightProxy,
+  withStickySessionUsername,
+} from '../src/proxy';
 import { loadPlaywright } from '../src/browser';
+import { warmBrowserPage, setupAssetBlocking } from '../src/session';
 import { idealistaWarmSearchUrl } from '../src/providers/idealista/georeach';
-import { habitacliaWarmSearchUrl } from '../src/providers/habitaclia/listainmuebles';
+import { habitacliaWarmSearchUrl, HABITACLIA_LISTING_CARD_SELECTOR } from '../src/providers/habitaclia/listainmuebles';
+import { isIdealistaChallenge } from '../src/providers/idealista/index';
+import { isHabitacliaChallenge } from '../src/providers/habitaclia/index';
 
 const PROXY_RAW = process.env.LISTING_RESIDENTIAL_PROXY_URL?.trim();
 const STICKY = process.env.LISTING_PROXY_STICKY === 'true';
+const GEO = 'es';
 
 async function probeHttp(label: string, url: string): Promise<void> {
   const proxy = parseResidentialProxyUrl(PROXY_RAW);
@@ -18,7 +28,7 @@ async function probeHttp(label: string, url: string): Promise<void> {
     return;
   }
   const sessionId = STICKY ? createProxySessionId() : undefined;
-  const proxied = await createProxiedFetch(proxy, sessionId);
+  const proxied = await createProxiedFetch(proxy, sessionId, GEO);
   const start = Date.now();
   try {
     const res = await proxied(url, {
@@ -40,11 +50,7 @@ async function probeHttp(label: string, url: string): Promise<void> {
   }
 }
 
-async function probeGoto(
-  label: string,
-  url: string,
-  waitUntil: 'commit' | 'domcontentloaded' | 'load',
-): Promise<void> {
+async function probeWarm(label: string, url: string, isChallenge: (html: string) => boolean, selector: string, blockAssets: boolean): Promise<void> {
   const proxy = parseResidentialProxyUrl(PROXY_RAW);
   const pw = await loadPlaywright();
   if (!proxy || !pw) {
@@ -52,53 +58,45 @@ async function probeGoto(
     return;
   }
   const sessionId = STICKY ? createProxySessionId() : undefined;
-  const browser = await pw.chromium.launch({ headless: true, args: ['--no-sandbox'] });
+  const username = sessionId
+    ? withStickySessionUsername(proxy.username, sessionId, GEO)
+    : proxy.username;
+  console.log(`[${label}] sticky user format: ${username.slice(0, 24)}...`);
+  const browser = await pw.chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
   const context = await browser.newContext({
-    proxy: toPlaywrightProxy(proxy, sessionId),
+    proxy: toPlaywrightProxy(proxy, sessionId, GEO),
     locale: 'es-ES',
     userAgent:
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
     extraHTTPHeaders: { 'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8' },
   });
   const page = await context.newPage();
-  await page.route('**/*', async (route) => {
-    const type = route.request().resourceType();
-    if (type === 'image' || type === 'stylesheet' || type === 'font' || type === 'media') {
-      await route.abort();
-      return;
-    }
-    await route.continue();
-  });
+  await setupAssetBlocking(page, blockAssets);
   const start = Date.now();
   try {
-    await page.goto(url, { timeout: 45_000, waitUntil });
+    await warmBrowserPage(page, {
+      warmUrl: url,
+      timeoutMs: 90_000,
+      challengeWaitMs: 90_000,
+      isChallenge,
+      contentSelector: selector,
+      reloadAfterPolls: 4,
+    });
     const html = await page.content();
-    console.log(
-      `[${label}] goto(${waitUntil}) ok ${html.length}B ${Date.now() - start}ms challenge=${/captcha-delivery|datadome|incapsula/i.test(html)}`,
-    );
+    console.log(`[${label}] WARM OK ${Date.now() - start}ms ${html.length}B`);
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.log(`[${label}] goto(${waitUntil}) FAIL ${Date.now() - start}ms — ${msg}`);
+    console.log(`[${label}] WARM FAIL ${Date.now() - start}ms — ${msg}`);
   } finally {
     await context.close();
     await browser.close();
   }
 }
 
-const idealistaHome = 'https://www.idealista.com/';
-const idealistaSearch = idealistaWarmSearchUrl('madrid', 1);
-const habitacliaHome = 'https://www.habitaclia.com/';
-const habitacliaSearch = habitacliaWarmSearchUrl('madrid', 1);
+console.log('proxy configured:', Boolean(PROXY_RAW), 'sticky:', STICKY, 'geo:', GEO);
 
-console.log('proxy configured:', Boolean(PROXY_RAW), 'sticky:', STICKY);
+await probeHttp('idealista-search', idealistaWarmSearchUrl('madrid', 1));
+await probeHttp('habitaclia-search', habitacliaWarmSearchUrl('madrid', 1));
 
-await probeHttp('idealista-home', idealistaHome);
-await probeHttp('idealista-search', idealistaSearch);
-await probeHttp('habitaclia-home', habitacliaHome);
-await probeHttp('habitaclia-search', habitacliaSearch);
-
-await probeGoto('idealista-home', idealistaHome, 'commit');
-await probeGoto('idealista-search', idealistaSearch, 'commit');
-await probeGoto('idealista-search-dcl', idealistaSearch, 'domcontentloaded');
-await probeGoto('habitaclia-home', habitacliaHome, 'commit');
-await probeGoto('habitaclia-search', habitacliaSearch, 'commit');
+await probeWarm('idealista-search', idealistaWarmSearchUrl('madrid', 1), isIdealistaChallenge, 'article.item, .items-list', false);
+await probeWarm('habitaclia-search', habitacliaWarmSearchUrl('madrid', 1), isHabitacliaChallenge, HABITACLIA_LISTING_CARD_SELECTOR, true);

@@ -399,7 +399,16 @@
     "Verified": "Verificat",
     "Search with": "Cercar amb",
     "filters": {
-      "listingType": "Tipus d'anunci"
+      "listingType": "Tipus d'anunci",
+      "fairPrice": "Només preu just"
+    },
+    "sort": {
+      "title": "Ordena per",
+      "recommended": "Recomanat",
+      "fairness": "Millor valor",
+      "priceAsc": "Preu: de menor a major",
+      "priceDesc": "Preu: de major a menor",
+      "newest": "Més recents"
     },
     "mode": {
       "label": "Mode de cerca",
@@ -453,6 +462,7 @@
         "ecoFriendly": "Ecològic",
         "verified": "Verificat",
         "budget": "Menys de 1000 €",
+        "fairPrice": "Preu just",
         "apply": "Aplica",
         "searchWithCount": "Cerca amb {{count}} filtres",
         "advancedFilters": "Filtres Avançats"
@@ -663,6 +673,23 @@
     }
   },
   "property": {
+    "pricingReviewNeeded": "Cal revisar el preu",
+    "suggestedRent": "Suggerit: {{amount}} €/mes",
+    "maxEthicalRent": "Màxim ètic: {{amount}} €/mes",
+    "ethicalPricingWarning": "El teu preu supera el màxim ètic. Considera baixar-lo per fer l'habitatge més accessible.",
+    "ethicalPricingPublishWarning": "Pots publicar, però aquest anunci no obtindrà la insígnia de Preu just i pot aparèixer més avall als resultats.",
+    "warningBullet": "• {{warning}}",
+    "ethicalPricing": "Preu ètic",
+    "priceEthics": {
+      "banner": {
+        "title": "No és un preu just",
+        "exceedsEthical": "Aquest preu supera el màxim ètic d'Homiio ({{max}}/mes).",
+        "exceedsEthicalGeneric": "Aquest preu supera el màxim ètic d'Homiio per a habitatges similars.",
+        "aboveMarket": "Aquest preu està un {{percent}}% per sobre d'habitatges similars a la zona.",
+        "aboveMarketGeneric": "Aquest preu està per sobre de la mitjana local per a habitatges similars.",
+        "generic": "Aquest anunci no compleix els criteris de preu just d'Homiio."
+      }
+    },
     "amenities": {
       "title": "El que ofereix aquest lloc",
       "showAll": "Mostrar les {{count}} comoditats"
@@ -1419,7 +1446,8 @@
       "exchange": "Intercanvi",
       "verified": "Verificat",
       "eco": "Eco",
-      "instantBook": "Reserva immediata"
+      "instantBook": "Reserva immediata",
+      "fairPrice": "Preu just"
     },
     "offering": {
       "stepTitle": "Com ho ofereixes?",

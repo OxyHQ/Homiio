@@ -1,39 +1,29 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import profileService, { type Profile, type CreateProfileData, type UpdateProfileData } from '@/services/profileService';
+import profileService, { type Profile, type UpdateProfileData } from '@/services/profileService';
 
 const keys = {
-  primary: () => ['profile', 'primary'] as const,
-  all: () => ['profiles', 'all'] as const,
+  profile: () => ['profile', 'me'] as const,
 };
 
+export function useProfileQuery() {
+  return useQuery({
+    queryKey: keys.profile(),
+    queryFn: async (): Promise<Profile> => profileService.getOrCreateProfile(),
+  });
+}
+
+/** @deprecated Use useProfileQuery — one sidecar per Oxy account. */
 export function usePrimaryProfileQuery() {
-  return useQuery({
-    queryKey: keys.primary(),
-    queryFn: async (): Promise<Profile | null> =>
-      profileService.getOrCreatePrimaryProfile(),
-  });
+  return useProfileQuery();
 }
 
+/** @deprecated Multi-profile listing removed. */
 export function useUserProfilesQuery() {
-  return useQuery({
-    queryKey: keys.all(),
-    queryFn: async (): Promise<Profile[]> =>
-      profileService.getUserProfiles(),
-  });
-}
-
-export function useCreateProfileMutation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (payload: CreateProfileData): Promise<Profile> =>
-      profileService.createProfile(payload),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: keys.primary() }),
-        queryClient.invalidateQueries({ queryKey: keys.all() }),
-      ]);
-    },
-  });
+  const query = useProfileQuery();
+  return {
+    ...query,
+    data: query.data ? [query.data] : [],
+  };
 }
 
 export function useUpdateProfileMutation() {
@@ -42,38 +32,7 @@ export function useUpdateProfileMutation() {
     mutationFn: async ({ profileId, data }: { profileId: string; data: UpdateProfileData }): Promise<Profile> =>
       profileService.updateProfile(profileId, data),
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: keys.primary() }),
-        queryClient.invalidateQueries({ queryKey: keys.all() }),
-      ]);
-    },
-  });
-}
-
-export function useDeleteProfileMutation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (profileId: string): Promise<void> =>
-      profileService.deleteProfile(profileId),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: keys.all() });
-    },
-  });
-}
-
-export function useActivateProfileMutation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (profileId: string): Promise<Profile> => {
-      // Use the service directly since the store will handle its own state updates
-      const activatedProfile = await profileService.activateProfile(profileId);
-      return activatedProfile;
-    },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: keys.primary() }),
-        queryClient.invalidateQueries({ queryKey: keys.all() }),
-      ]);
+      await queryClient.invalidateQueries({ queryKey: keys.profile() });
     },
   });
 }

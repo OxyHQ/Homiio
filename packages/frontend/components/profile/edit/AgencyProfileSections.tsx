@@ -39,7 +39,7 @@ interface AgencyProfileSectionsProps {
   activeSection: string;
   agencyInfo: AgencyInfoForm;
   settings: SettingsForm;
-  members: AgencyProfile['members'] | undefined;
+  members?: ReadonlyArray<{ role: string; addedAt: string }>;
   updateAgencyInfo: (updates: Partial<AgencyInfoForm>) => void;
   updateSettings: (updates: Partial<SettingsForm>) => void;
   toggleSpecialty: (specialty: string) => void;
@@ -337,27 +337,9 @@ export function AgencyProfileSections({
       return (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Team Management</Text>
-          <Text style={styles.sectionSubtitle}>Manage your team members and their roles</Text>
-
-          {members && members.length > 0 ? (
-            members.map((member, index) => (
-              <View key={index} style={styles.teamMemberItem}>
-                <View style={styles.teamMemberInfo}>
-                  <Text style={styles.teamMemberName}>Member {index + 1}</Text>
-                  <Text style={styles.teamMemberRole}>{member.role}</Text>
-                  <Text style={styles.teamMemberDate}>
-                    Added: {new Date(member.addedAt).toLocaleDateString()}
-                  </Text>
-                </View>
-              </View>
-            ))
-          ) : (
-            <Text style={styles.emptyStateText}>No team members added yet.</Text>
-          )}
-
-          <TouchableOpacity style={styles.addButton}>
-            <Text style={styles.addButtonText}>+ Add Team Member</Text>
-          </TouchableOpacity>
+          <Text style={styles.sectionSubtitle}>
+            Manage team members in Oxy (Manage Account → Members).
+          </Text>
         </View>
       );
 

@@ -73,12 +73,24 @@ export const SORT_PRICE = 'price';
 export const SORT_SALE_PRICE = 'salePrice';
 export const SORT_CREATED_AT = 'createdAt';
 export const SORT_RELEVANCE = 'relevance';
+export const SORT_FAIRNESS = 'fairness';
 export type SortField =
   | typeof SORT_PRICE
   | typeof SORT_SALE_PRICE
   | typeof SORT_CREATED_AT
-  | typeof SORT_RELEVANCE;
-const SORT_FIELDS: ReadonlySet<string> = new Set([SORT_PRICE, SORT_SALE_PRICE, SORT_CREATED_AT, SORT_RELEVANCE]);
+  | typeof SORT_RELEVANCE
+  | typeof SORT_FAIRNESS;
+const SORT_FIELDS: ReadonlySet<string> = new Set([
+  SORT_PRICE,
+  SORT_SALE_PRICE,
+  SORT_CREATED_AT,
+  SORT_RELEVANCE,
+  SORT_FAIRNESS,
+]);
+/** Mongo path for the persisted price-ethics fairness score. */
+export const FIELD_PRICE_ETHICS_FAIRNESS_SCORE = 'priceEthics.fairnessScore';
+/** Mongo path for the fair-price badge/filter flag. */
+export const FIELD_PRICE_ETHICS_IS_FAIR_PRICE = 'priceEthics.isFairPrice';
 
 export const SORT_ASC = 'asc';
 export const SORT_DESC = 'desc';
@@ -346,6 +358,8 @@ export interface ParsedSearchParams {
   maxSalePrice?: number;
   /** Exchange mode the query was scoped to, when valid. */
   exchangeMode?: ExchangeMode;
+  /** When true, only listings with `priceEthics.isFairPrice`. */
+  fairPrice?: boolean;
 }
 
 /**
@@ -425,6 +439,8 @@ export function buildSearchPlan(
   if (instantBook !== undefined) filter[FIELD_SHORT_TERM_INSTANT_BOOK] = instantBook;
   const hasPhotos = parseBoolParam(query.hasPhotos);
   if (hasPhotos === true) filter['images.url'] = { $exists: true, $nin: [null, ''] };
+  const fairPrice = parseBoolParam(query.fairPrice);
+  if (fairPrice === true) filter[FIELD_PRICE_ETHICS_IS_FAIR_PRICE] = true;
 
   // --- Minimum guests (short-term) ---
   const minGuests = parseIntParam(query.minGuests ?? query.guests);
@@ -496,6 +512,7 @@ export function buildSearchPlan(
       minSalePrice,
       maxSalePrice,
       exchangeMode: exchangeModeParam,
+      fairPrice: fairPrice === true ? true : undefined,
     },
   };
 }
@@ -524,6 +541,9 @@ export function buildSort(
   }
   if (params.sortField === SORT_RELEVANCE && hasTextScore) {
     return { score: { $meta: 'textScore' }, createdAt: -1 };
+  }
+  if (params.sortField === SORT_FAIRNESS) {
+    return { [FIELD_PRICE_ETHICS_FAIRNESS_SCORE]: direction, createdAt: -1 };
   }
   return { createdAt: direction };
 }

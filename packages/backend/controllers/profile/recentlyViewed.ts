@@ -21,7 +21,7 @@ export async function getRecentProperties(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-  let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+  let activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!activeProfile) {
       return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
@@ -86,7 +86,7 @@ export async function trackPropertyView(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    let activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    let activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!activeProfile) {
       return res.status(404).json(errorResponse("Active profile not found", "ACTIVE_PROFILE_NOT_FOUND"));
@@ -134,7 +134,7 @@ export async function clearRecentProperties(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!activeProfile) {
       return res.status(404).json(
@@ -169,7 +169,7 @@ export async function debugRecentProperties(req: any, res: any, next: any) {
     }
 
     // Get the active profile for the current user
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
 
     if (!activeProfile) {
       return res.json(
@@ -218,7 +218,6 @@ export async function debugRecentProperties(req: any, res: any, next: any) {
       successResponse({
         oxyUserId,
         profileId: activeProfile._id,
-        profileType: activeProfile.profileType,
         totalCount,
         rawRecentViews: rawRecentViews.map(view => ({
           propertyId: view.propertyId,

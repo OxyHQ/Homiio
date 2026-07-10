@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Portal } from '@oxyhq/bloom/portal';
 import { H3, Text as BloomText } from '@oxyhq/bloom/typography';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
-import { useOxy, showSignInModal } from '@oxyhq/services';
+import { useOxy, openAccountDialog } from '@oxyhq/services';
 import { SindiIcon } from '@/assets/icons';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ChatContent } from '@/components/sindi/ChatContent';
@@ -256,7 +256,7 @@ export function SindiPanel() {
 
   const handleNewChat = useCallback(async () => {
     if (!isAuthenticated) {
-      showSignInModal();
+      openAccountDialog('signin');
       return;
     }
     const created = await createConversation(
@@ -359,7 +359,7 @@ export function SindiPanel() {
           description={t('sindi.auth.message')}
           actionText={t('Sign in')}
           actionIcon="log-in"
-          onAction={() => showSignInModal()}
+          onAction={() => openAccountDialog('signin')}
           iconColor={colors.primaryColor}
         />
       ) : hasActiveConversation ? (

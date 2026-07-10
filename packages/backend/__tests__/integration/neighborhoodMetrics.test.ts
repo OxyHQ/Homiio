@@ -10,7 +10,7 @@
 
 import express, { type Express } from 'express';
 import request from 'supertest';
-import { OfferingType, PropertyType, PropertyStatus, ProfileType } from '@homiio/shared-types';
+import { OfferingType, PropertyType, PropertyStatus } from '@homiio/shared-types';
 
 import neighborhoodRoutes from '../../routes/neighborhoods';
 import { models } from '../helpers/factories';
@@ -74,8 +74,6 @@ async function seedAddress(
 async function seedProfile(): Promise<{ _id: unknown }> {
   return Profile.create({
     oxyUserId: `oxy-${Math.random().toString(36).slice(2)}`,
-    profileType: ProfileType.PERSONAL,
-    isActive: true,
     personalProfile: {},
   });
 }

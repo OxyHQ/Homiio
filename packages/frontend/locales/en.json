@@ -486,7 +486,16 @@
     "Verified": "Verified",
     "Search with": "Search with",
     "filters": {
-      "listingType": "Listing type"
+      "listingType": "Listing type",
+      "fairPrice": "Fair price only"
+    },
+    "sort": {
+      "title": "Sort by",
+      "recommended": "Recommended",
+      "fairness": "Best value",
+      "priceAsc": "Price: Low to high",
+      "priceDesc": "Price: High to low",
+      "newest": "Newest first"
     },
     "mode": {
       "label": "Browse mode",
@@ -540,6 +549,7 @@
         "ecoFriendly": "Eco-friendly",
         "verified": "Verified",
         "budget": "Under €1000",
+        "fairPrice": "Fair price",
         "apply": "Apply",
         "searchWithCount": "Search with {{count}} filters",
         "advancedFilters": "Advanced Filters"
@@ -1283,8 +1293,19 @@
     "suggestedRent": "Suggested: ${{amount}}/month",
     "maxEthicalRent": "Max Ethical: ${{amount}}/month",
     "ethicalPricingWarning": "Your price exceeds the ethical maximum. Consider lowering it to make housing more accessible.",
+    "ethicalPricingPublishWarning": "You can still publish, but this listing won't earn the Fair Price badge and may appear lower in search results.",
     "warningBullet": "• {{warning}}",
     "ethicalPricing": "Ethical Pricing",
+    "priceEthics": {
+      "banner": {
+        "title": "Not a fair price",
+        "exceedsEthical": "This price exceeds Homiio's ethical maximum ({{max}}/month).",
+        "exceedsEthicalGeneric": "This price exceeds Homiio's ethical maximum for similar homes.",
+        "aboveMarket": "This price is {{percent}}% above similar homes in the area.",
+        "aboveMarketGeneric": "This price is above the local average for similar homes.",
+        "generic": "This listing does not meet Homiio's fair-price criteria."
+      }
+    },
     "amenities": {
       "title": "What this place offers",
       "showAll": "Show all {{count}} amenities"
@@ -1655,7 +1676,8 @@
       "exchange": "Exchange",
       "verified": "Verified",
       "eco": "Eco",
-      "instantBook": "Instant book"
+      "instantBook": "Instant book",
+      "fairPrice": "Fair price"
     },
     "offering": {
       "stepTitle": "How are you offering this?",

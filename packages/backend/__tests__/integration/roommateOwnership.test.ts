@@ -20,7 +20,6 @@
 
 import express, { type Express } from 'express';
 import request from 'supertest';
-import { ProfileType } from '@homiio/shared-types';
 
 const roommateController = require('../../controllers/roommateController');
 const { asyncHandler } = require('../../middlewares');
@@ -63,8 +62,6 @@ async function createRoommateProfile(
 ) {
   return Profile.create({
     oxyUserId,
-    profileType: ProfileType.PERSONAL,
-    isActive: true,
     personalProfile: {
       settings: {
         roommate: {
@@ -115,7 +112,6 @@ describe('roommateController.updateRoommatePreferences — mass-assignment (IDOR
         gender: 'any',
         // Injected owner/system fields must be ignored.
         oxyUserId: 'oxy-attacker',
-        profileType: ProfileType.AGENCY,
         _id: '000000000000000000000000',
       });
 
@@ -123,9 +119,7 @@ describe('roommateController.updateRoommatePreferences — mass-assignment (IDOR
     expect(res.body.data.budget.max).toBe(1500);
 
     const reloaded = await Profile.findById(me._id);
-    // Owner + type are untouched.
     expect(reloaded.oxyUserId).toBe('oxy-me');
-    expect(reloaded.profileType).toBe(ProfileType.PERSONAL);
     // Whitelisted field persisted.
     expect(reloaded.personalProfile.settings.roommate.preferences.budget.max).toBe(1500);
   });

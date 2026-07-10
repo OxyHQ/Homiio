@@ -105,11 +105,29 @@ export function httpUseProxyFromEnv(): boolean {
 }
 
 /**
- * DataImpulse sticky sessions: append `-session-<id>` to the login username so
- * consecutive requests share an exit IP. Other providers can use the same pattern.
+ * Optional ISO-3166-1 alpha-2 country for DataImpulse geo targeting
+ * (`LISTING_PROXY_GEO=es` → `login__cr.es;sessid.<id>`).
  */
-export function withStickySessionUsername(baseUsername: string, sessionId: string): string {
-  return `${baseUsername}-session-${sessionId}`;
+export function proxyGeoCountryFromEnv(): string | undefined {
+  const raw = process.env.LISTING_PROXY_GEO?.trim().toLowerCase();
+  if (!raw || !/^[a-z]{2}$/.test(raw)) return undefined;
+  return raw;
+}
+
+/**
+ * DataImpulse sticky sessions: `login__cr.<cc>;sessid.<id>` (or `login__sessid.<id>`
+ * without geo). The legacy `-session-<id>` suffix returns HTTP 407 from DataImpulse.
+ */
+export function withStickySessionUsername(
+  baseUsername: string,
+  sessionId: string,
+  geoCountry?: string,
+): string {
+  const params: string[] = [];
+  const geo = geoCountry?.trim().toLowerCase();
+  if (geo && /^[a-z]{2}$/.test(geo)) params.push(`cr.${geo}`);
+  params.push(`sessid.${sessionId}`);
+  return `${baseUsername}__${params.join(';')}`;
 }
 
 /** Short random id for one sticky browser context or HTTP session. */
@@ -117,14 +135,19 @@ export function createProxySessionId(): string {
   return randomBytes(6).toString('hex');
 }
 
-/** Map structured config to Playwright proxy options (optional sticky session). */
+/** Map structured config to Playwright proxy options (optional sticky session + geo). */
 export function toPlaywrightProxy(
   config: ResidentialProxyConfig,
   sessionId?: string,
+  geoCountry?: string,
 ): PlaywrightProxyOptions {
   const username =
     sessionId !== undefined
-      ? withStickySessionUsername(config.username, sessionId)
+      ? withStickySessionUsername(
+          config.username,
+          sessionId,
+          geoCountry ?? proxyGeoCountryFromEnv(),
+        )
       : config.username;
   return { server: config.server, username, password: config.password };
 }
@@ -136,10 +159,15 @@ export function toPlaywrightProxy(
 export function toEmbeddedProxyUrl(
   config: ResidentialProxyConfig,
   sessionId?: string,
+  geoCountry?: string,
 ): string {
   const username =
     sessionId !== undefined
-      ? withStickySessionUsername(config.username, sessionId)
+      ? withStickySessionUsername(
+          config.username,
+          sessionId,
+          geoCountry ?? proxyGeoCountryFromEnv(),
+        )
       : config.username;
   const embedded = new URL(config.server);
   embedded.username = username;
@@ -183,8 +211,9 @@ const proxiedFetchCache = new Map<string, Promise<ProxiedFetch>>();
 export async function createProxiedFetch(
   config: ResidentialProxyConfig,
   sessionId?: string,
+  geoCountry?: string,
 ): Promise<ProxiedFetch> {
-  const embedded = toEmbeddedProxyUrl(config, sessionId);
+  const embedded = toEmbeddedProxyUrl(config, sessionId, geoCountry);
   const cached = proxiedFetchCache.get(embedded);
   if (cached) return cached;
 

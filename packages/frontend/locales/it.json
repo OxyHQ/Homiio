@@ -546,7 +546,16 @@
       "residentialArea": "Area Residenziale"
     },
     "filters": {
-      "listingType": "Tipo di annuncio"
+      "listingType": "Tipo di annuncio",
+      "fairPrice": "Solo prezzo giusto"
+    },
+    "sort": {
+      "title": "Ordina per",
+      "recommended": "Consigliati",
+      "fairness": "Miglior valore",
+      "priceAsc": "Prezzo: dal più basso",
+      "priceDesc": "Prezzo: dal più alto",
+      "newest": "Più recenti"
     },
     "mode": {
       "label": "Modalità di ricerca",
@@ -570,6 +579,7 @@
         "ecoFriendly": "Eco-compatibile",
         "verified": "Verificato",
         "budget": "Meno di 1000 €",
+        "fairPrice": "Prezzo giusto",
         "apply": "Applica",
         "searchWithCount": "Cerca con {{count}} filtri",
         "advancedFilters": "Filtri Avanzati"
@@ -723,6 +733,23 @@
     }
   },
   "property": {
+    "pricingReviewNeeded": "Revisione del prezzo necessaria",
+    "suggestedRent": "Suggerito: {{amount}} €/mese",
+    "maxEthicalRent": "Massimo etico: {{amount}} €/mese",
+    "ethicalPricingWarning": "Il tuo prezzo supera il massimo etico. Valuta di abbassarlo per rendere l'alloggio più accessibile.",
+    "ethicalPricingPublishWarning": "Puoi pubblicare, ma questo annuncio non otterrà il badge Prezzo giusto e potrebbe apparire più in basso nei risultati.",
+    "warningBullet": "• {{warning}}",
+    "ethicalPricing": "Prezzo etico",
+    "priceEthics": {
+      "banner": {
+        "title": "Non è un prezzo giusto",
+        "exceedsEthical": "Questo prezzo supera il massimo etico di Homiio ({{max}}/mese).",
+        "exceedsEthicalGeneric": "Questo prezzo supera il massimo etico di Homiio per alloggi simili.",
+        "aboveMarket": "Questo prezzo è il {{percent}}% sopra alloggi simili nella zona.",
+        "aboveMarketGeneric": "Questo prezzo è sopra la media locale per alloggi simili.",
+        "generic": "Questo annuncio non soddisfa i criteri di prezzo giusto di Homiio."
+      }
+    },
     "amenities": {
       "title": "Cosa offre questo alloggio",
       "showAll": "Mostra tutti i {{count}} servizi"
@@ -1304,7 +1331,8 @@
       "exchange": "Scambio",
       "verified": "Verificato",
       "eco": "Eco",
-      "instantBook": "Prenotazione immediata"
+      "instantBook": "Prenotazione immediata",
+      "fairPrice": "Prezzo giusto"
     },
     "offering": {
       "stepTitle": "Come lo offri?",
