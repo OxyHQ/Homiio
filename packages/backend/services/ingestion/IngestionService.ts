@@ -105,11 +105,9 @@ export class IngestionService {
       imageCount = refs.length;
     }
 
-    if (imageCount > 0) {
-      const address = await Address.findById(property.addressId).select('cityId').lean();
-      if (address?.cityId) {
-        void ensureCover(address.cityId);
-      }
+    const address = await Address.findById(property.addressId).select('cityId').lean();
+    if (address?.cityId) {
+      void ensureCover(address.cityId);
     }
 
     const result: IngestResult = {

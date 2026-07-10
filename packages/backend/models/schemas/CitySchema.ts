@@ -67,8 +67,8 @@ const citySchema = new mongoose.Schema({
     default: 'EUR'
   },
   /**
-   * The city's cover photo: the `_id` of an existing Image document (typically
-   * a re-hosted listing photo linked by `cityCoverSyncService.ensureCover`).
+   * The city's cover photo: the `_id` of an Image document (`entityType: 'city'`,
+   * sourced from Wikimedia Commons by `cityCoverSyncService.ensureCover`).
    */
   coverImageId: {
     type: mongoose.Schema.Types.ObjectId,

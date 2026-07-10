@@ -3,7 +3,7 @@ import { Logger } from '../utils/logger';
 import { HealthService } from './healthService';
 import { CleanupService } from './cleanupService';
 import { MetricsService } from '../utils/metrics';
-import { syncMissingCovers } from './cityCoverSyncService';
+import { syncCovers } from './cityCoverSyncService';
 
 // Initialize services
 const logger = new Logger('CronService');
@@ -89,7 +89,7 @@ class CronJobManager {
   }
 
   /**
-   * Backfill city cover images from listing photos
+   * Backfill city cover images from Wikimedia Commons and replace listing-linked covers.
    */
   private async runCityCoverSync(): Promise<void> {
     const status = this.jobStatus.get('cityCovers');
@@ -99,7 +99,7 @@ class CronJobManager {
     }
 
     try {
-      const processed = await syncMissingCovers({ limit: 50 });
+      const processed = await syncCovers({ limit: 50, forceReplaceListingCovers: true });
       this.logger.info('City cover sync completed', { processed });
     } catch (error) {
       this.logger.error('City cover sync failed', error);
