@@ -1,7 +1,5 @@
 import React, { ReactNode, useMemo } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { colors } from '@/styles/colors';
-import { spacing } from '@/constants/styles';
+import { View } from 'react-native';
 import { TrustScoreWidget } from './TrustScoreWidget';
 import { FeaturedPropertiesWidget } from './FeaturedPropertiesWidget';
 import { EcoCertificationWidget } from './EcoCertificationWidget';
@@ -141,30 +139,5 @@ export const WidgetManager = React.memo(function WidgetManager({
     return null;
   }
 
-  return (
-    <View style={styles.container}>
-      {filteredScreenWidgets.map((widget, index) => (
-        <View key={`widget-${index}`}>
-          {/* Full-bleed hairline between sections only — never above the first.
-              A thin rule + whitespace reads as "same panel, distinct sections"
-              (Airbnb-2026), without boxing any widget into a card. */}
-          {index > 0 && <View style={styles.divider} />}
-          <View style={styles.section}>{widget}</View>
-        </View>
-      ))}
-    </View>
-  );
-});
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'column',
-  },
-  section: {
-    paddingVertical: spacing.lg,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
-  },
+  return <View className="flex-col gap-4">{filteredScreenWidgets}</View>;
 });

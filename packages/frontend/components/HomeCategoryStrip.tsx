@@ -30,7 +30,10 @@ import { useTranslation } from 'react-i18next';
 
 import { Text } from '@oxyhq/bloom/typography';
 
+import { PANEL_TOP_INSET } from '@oxyhq/bloom/content-panel';
+
 import { useRentalMode } from '@/context/RentalModeContext';
+import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { useHomeCategoryStore, type HomeCategory } from '@/store/homeCategoryStore';
 import { colors } from '@/styles/colors';
 import { radius, spacing, tracker } from '@/constants/styles';
@@ -81,8 +84,9 @@ interface HomeCategoryStripProps {
   className?: string;
   /**
    * When true, on web breakpoints the strip becomes a sticky sub-header
-   * pinned just below the layout top bar (top: 0). Mobile keeps native
-   * scroll behavior — sticky reads as broken on touch.
+   * pinned at `PANEL_TOP_INSET` when the shell frames content (wide web),
+   * or `top: 0` on full-bleed/narrow web. Mobile keeps native scroll
+   * behavior — sticky reads as broken on touch.
    */
   sticky?: boolean;
 }
@@ -182,6 +186,9 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({
   );
 
   const isWeb = Platform.OS === 'web';
+  const isScreenNotMobile = useIsScreenNotMobile();
+  // Match Header: framed ContentPanel bleed-mask clips sticky at top:0.
+  const framed = isWeb && isScreenNotMobile;
 
   /**
    * Web-only `position: sticky` lives outside the RN style system. We
@@ -192,7 +199,7 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({
     sticky && isWeb
       ? ({
           position: 'sticky',
-          top: 0,
+          top: framed ? PANEL_TOP_INSET : 0,
           zIndex: 30,
           backgroundColor: colors.white,
           borderBottomWidth: 1,

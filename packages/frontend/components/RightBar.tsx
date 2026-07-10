@@ -2,7 +2,6 @@ import React, { useMemo } from 'react';
 import { View, StyleSheet, Platform, ViewStyle } from 'react-native';
 import { usePathname } from 'expo-router';
 import { WidgetManager } from './widgets';
-import { colors } from '@/styles/colors';
 import {
   useIsRightBarVisible,
   useIsLargeDesktop,
@@ -91,15 +90,12 @@ export const RightBar = React.memo(function RightBar() {
   if (sindiPanelOpen && !isLargeDesktop) return null;
 
   return (
-    <View style={styles.container}>
-      {/* Sticky Widgets Container */}
-      <View style={styles.stickyWidgetsContainer}>
-        <WidgetManager
-          screenId={screenId}
-          propertyId={propertyInfo.propertyId}
-          city={propertyInfo.city}
-        />
-      </View>
+    <View className="flex-col px-4 pt-4 gap-4" style={styles.container}>
+      <WidgetManager
+        screenId={screenId}
+        propertyId={propertyInfo.propertyId}
+        city={propertyInfo.city}
+      />
     </View>
   );
 });
@@ -107,32 +103,14 @@ export const RightBar = React.memo(function RightBar() {
 const styles = StyleSheet.create({
   container: {
     width: 350,
-    flexDirection: 'column',
+    ...(Platform.OS === 'web'
+      ? ({
+          position: 'sticky',
+          // Keep the column at its content height so sticky pins while the
+          // center feed scrolls (default flex stretch would stretch to the row).
+          alignSelf: 'flex-start',
+          top: 0,
+        } as unknown as ViewStyle)
+      : null),
   },
-  fixedContainer: {
-    ...Platform.select({
-      // RN-Web supports CSS-only values (`fixed`, `overflowY`, `100vh`) that are
-      // absent from RN's ViewStyle, so the web block is typed as a whole.
-      web: {
-        position: 'fixed',
-        top: 0,
-        right: 20,
-        zIndex: 1000,
-        overflowY: 'auto',
-        height: '100vh',
-        pointerEvents: 'none',
-      } as unknown as ViewStyle,
-    }),
-  },
-  // One continuous flat panel on the app background — no border/shadow/card.
-  // The WidgetManager owns the section rhythm (per-section vertical padding +
-  // hairline dividers), so the rail itself adds no extra vertical padding that
-  // would double the first/last section's breathing room.
-  stickyWidgetsContainer: {
-    backgroundColor: colors.background,
-    position: 'sticky',
-    top: 0,
-    zIndex: 10,
-    pointerEvents: 'none',
-  } as unknown as ViewStyle,
 });

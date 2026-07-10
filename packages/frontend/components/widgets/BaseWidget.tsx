@@ -18,8 +18,7 @@ type BaseWidgetProps = {
  * Flat section shell for the right-rail widgets — the rail reads as ONE
  * continuous panel, so this primitive adds NO card chrome: no border, no
  * rounded box, no shadow, no filled surface. Content sits directly on the
- * rail background (the WidgetManager owns the hairline dividers + vertical
- * rhythm between sections).
+ * rail background (WidgetManager + RightBar own the gap rhythm between widgets).
  *
  * Mirrors `components/property/Section.tsx`: an optional `SectionHeader`-style
  * title (20px / 700 / -0.2 tracking, with the optional `icon` aligned to the

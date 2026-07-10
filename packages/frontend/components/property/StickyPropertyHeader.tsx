@@ -9,8 +9,8 @@
  * sticky` on web and `position: absolute` on native, overlaying the
  * floating `Header` (which the screen strips of its right icons while
  * this bar is visible so nothing doubles up). The bar respects the
- * device safe-area inset (`insets.top`); on web that inset is 0, so the
- * `sticky; top: 0` placement is unchanged.
+ * device safe-area inset (`insets.top`). On framed web it pins at
+ * `PANEL_TOP_INSET` so the ContentPanel bleed-mask does not clip it.
  */
 import React, { useCallback, useState } from 'react';
 import {
@@ -25,9 +25,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@oxyhq/bloom/button';
+import { PANEL_TOP_INSET } from '@oxyhq/bloom/content-panel';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { SaveButton } from '@/components/SaveButton';
+import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { colors } from '@/styles/colors';
 import { contentClamp, hairline, spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
@@ -56,6 +58,7 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
 }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const isScreenNotMobile = useIsScreenNotMobile();
   const [backPressed, setBackPressed] = useState(false);
   const [sharePressed, setSharePressed] = useState(false);
 
@@ -66,9 +69,14 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
   // Anchor to the top on both platforms. Web uses CSS `position: sticky`
   // (RN-Web honours the string); native uses absolute positioning so the
   // bar overlays the floating Header. zIndex sits above the Header's 1000.
+  // Framed web pins at PANEL_TOP_INSET (same as Header) to clear the bleed mask.
+  const framed = Platform.OS === 'web' && isScreenNotMobile;
   const containerStyle: ViewStyle =
     Platform.OS === 'web'
-      ? ({ position: 'sticky', top: 0 } as unknown as ViewStyle)
+      ? ({
+          position: 'sticky',
+          top: framed ? PANEL_TOP_INSET : 0,
+        } as unknown as ViewStyle)
       : styles.barNative;
 
   const ctaLabel = rentalMode === 'vacation'

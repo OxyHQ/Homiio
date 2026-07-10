@@ -70,7 +70,11 @@ export function PageScrollView({
   }, [value]);
 
   if (IS_WEB) {
-    return <View style={[style, contentContainerStyle]}>{children}</View>;
+    return (
+      <View style={style}>
+        <View style={contentContainerStyle}>{children}</View>
+      </View>
+    );
   }
 
   return (

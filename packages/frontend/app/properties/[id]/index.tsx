@@ -494,6 +494,7 @@ export default function PropertyDetailPage() {
         runOnJS(setStickyHeaderVisible)(isPast);
       }
     },
+    [scrollY],
   );
 
   if (isLoading) {
