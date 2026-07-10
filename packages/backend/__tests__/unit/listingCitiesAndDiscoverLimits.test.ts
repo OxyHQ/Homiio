@@ -6,6 +6,8 @@ import {
   citiesFromEnv,
   citiesOptionsFromEnv,
   DEFAULT_MARKET_CITIES,
+  FOTOCASA_DEFAULT_CITIES,
+  fotocasaCitiesFromEnv,
   MAX_PAGES_CEILING,
   maxSearchPagesFromEnv,
   providerMaxSearchPages,
@@ -55,6 +57,21 @@ describe('citiesFromEnv', () => {
     const options = citiesOptionsFromEnv('GB');
     expect(options.cities.length).toBeGreaterThan(10);
     expect(options.cities).toContain('London');
+  });
+});
+
+describe('fotocasaCitiesFromEnv', () => {
+  it('uses LISTING_FOTOCASA_CITIES when set', () => {
+    process.env.LISTING_FOTOCASA_CITIES = 'madrid, barcelona';
+    expect(fotocasaCitiesFromEnv()).toEqual(['madrid', 'barcelona']);
+  });
+
+  it('falls back to Fotocasa defaults, not the full ES market list', () => {
+    delete process.env.LISTING_FOTOCASA_CITIES;
+    process.env.LISTING_ES_CITIES = 'madrid,barcelona,valencia,sevilla,malaga,bilbao,zaragoza,alicante,murcia,palma,las-palmas-de-gran-canaria';
+    const cities = fotocasaCitiesFromEnv();
+    expect(cities).toEqual([...FOTOCASA_DEFAULT_CITIES]);
+    expect(cities.length).toBe(10);
   });
 });
 

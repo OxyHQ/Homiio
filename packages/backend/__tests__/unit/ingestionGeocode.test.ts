@@ -133,3 +133,30 @@ describe('IngestionService.resolveAddress geocode fallbacks', () => {
     expect(address?.postal_code).toBe(EXTERNAL_POSTAL_FALLBACK);
   });
 });
+
+describe('IngestionService external description truncation', () => {
+  it('truncates portal descriptions to the Property schema maxlength', async () => {
+    mockedForwardGeocode.mockResolvedValue({
+      success: true,
+      data: {
+        coordinates: [-0.1276, 51.5074],
+        city: 'London',
+        country: 'United Kingdom',
+        postalCode: 'SW1A 1AA',
+      },
+    });
+    mockedReverseGeocode.mockResolvedValue({ success: false, error: 'No address found' });
+
+    const longDescription = 'x'.repeat(2500);
+    const listing: NormalizedListing = {
+      ...baseListing,
+      sourceId: 'long-description',
+      description: longDescription,
+    };
+
+    const result = await buildIngestionService().ingest(listing);
+    const property = await Property.findById(result.propertyId);
+    expect(property?.description).toHaveLength(2000);
+    expect(property?.description).toBe('x'.repeat(2000));
+  });
+});

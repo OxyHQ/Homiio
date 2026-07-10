@@ -134,6 +134,11 @@ export {
 } from './providers/idealista/fixtures';
 
 export { FotocasaProvider, isFotocasaChallenge, fotocasaSourceIdFromUrl } from './providers/fotocasa';
+export {
+  FOTOCASA_DEFAULT_CITIES,
+  fotocasaCitiesFromEnv,
+  fotocasaCitiesOptionsFromEnv,
+} from './providers/fotocasa/cities';
 export { parseFotocasaDetail, parseFotocasaSearch, type FotocasaRaw } from './providers/fotocasa/parse';
 export {
   parseFotocasaSearchads,
@@ -1069,7 +1074,7 @@ import { FixtureProvider } from './providers/fixture';
 import { HabitacliaProvider } from './providers/habitaclia';
 import { BluegroundProvider } from './providers/blueground';
 import { IdealistaProvider } from './providers/idealista';
-import { FotocasaProvider } from './providers/fotocasa';
+import { FotocasaProvider, fotocasaCitiesOptionsFromEnv } from './providers/fotocasa';
 import { PisosProvider } from './providers/pisos';
 import { MilanunciosProvider } from './providers/milanuncios';
 import { YaencontreProvider } from './providers/yaencontre';
@@ -1164,7 +1169,7 @@ export function createDefaultRegistry(): ProviderRegistry {
     new HabitacliaProvider(esOptions),
     new BluegroundProvider(),
     new IdealistaProvider(esOptions),
-    new FotocasaProvider(esOptions),
+    new FotocasaProvider(fotocasaCitiesOptionsFromEnv()),
     new PisosProvider(esOptions),
     new MilanunciosProvider(esOptions),
     new YaencontreProvider(esOptions),

@@ -36,6 +36,9 @@ import { Logger } from '../../utils/logger';
 /** Default TTL (days) for an ingested external listing when none is specified. */
 const DEFAULT_TTL_DAYS = 30;
 
+/** Property schema cap for portal descriptions (must match PropertySchema). */
+const MAX_EXTERNAL_DESCRIPTION_LENGTH = 2000;
+
 /** When portals omit a postcode and geocoders return none (Address requires a value). */
 const EXTERNAL_POSTAL_FALLBACK = '00000';
 
@@ -250,7 +253,13 @@ export class IngestionService {
     if (listing.longTermRent) fields.longTermRent = listing.longTermRent;
     if (listing.shortTermRent) fields.shortTermRent = listing.shortTermRent;
     if (listing.sale) fields.sale = listing.sale;
-    if (listing.description !== undefined) fields.description = listing.description;
+    if (listing.description !== undefined) {
+      const description = listing.description.trim();
+      fields.description =
+        description.length > MAX_EXTERNAL_DESCRIPTION_LENGTH
+          ? description.slice(0, MAX_EXTERNAL_DESCRIPTION_LENGTH)
+          : description;
+    }
     if (listing.bedrooms !== undefined) fields.bedrooms = listing.bedrooms;
     if (listing.bathrooms !== undefined) fields.bathrooms = listing.bathrooms;
     if (listing.squareFootage !== undefined) fields.squareFootage = listing.squareFootage;
