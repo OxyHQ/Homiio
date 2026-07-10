@@ -4,6 +4,24 @@
  * Providers must import these — never re-copy challenge regexes per portal.
  */
 
+const DATADOME_MARKERS =
+  /captcha-delivery\.com|geo\.captcha|ct\.captcha-delivery|var\s+dd\s*=|datadome\.co\/|dd\.js/i;
+
+/**
+ * True when a full HTML page is still on a DataDome interstitial (not real portal
+ * content). Callers may pass `hasContent` to skip the check when listing markup
+ * is already present (e.g. Idealista `article.item` on a warmed search page).
+ */
+export function isDataDomeHtmlChallenge(html: string, hasContent?: boolean): boolean {
+  const trimmed = (html ?? '').trim();
+  if (trimmed.length < 512) return true;
+  if (hasContent) return false;
+  if (/acceso denegado|comprueba que eres humano|verifica que eres|sentimos la interrupci|pardon our interruption/i.test(trimmed)) {
+    return true;
+  }
+  return DATADOME_MARKERS.test(trimmed);
+}
+
 /** True when an AJAX body is a bot challenge rather than portal JSON/HTML. */
 export function isDataDomeAjaxChallenge(body: string): boolean {
   const trimmed = body.trim();

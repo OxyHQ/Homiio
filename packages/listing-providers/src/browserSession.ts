@@ -97,6 +97,7 @@ class PlaywrightBrowserSession implements BrowserSession {
     private readonly page: SessionPage,
     private readonly context: PwBrowserContext,
     private readonly defaultTimeoutMs: number,
+    private readonly defaultChallengeWaitMs: number,
     private readonly onClose: () => void,
   ) {}
 
@@ -106,6 +107,15 @@ class PlaywrightBrowserSession implements BrowserSession {
 
   async content(): Promise<string> {
     return this.page.content();
+  }
+
+  async warmNavigate(options: WarmBrowserPageOptions): Promise<void> {
+    const challengeWaitMs = options.challengeWaitMs ?? this.defaultChallengeWaitMs;
+    await warmBrowserPage(this.page, {
+      ...options,
+      timeoutMs: Math.max(options.timeoutMs ?? this.defaultTimeoutMs, challengeWaitMs),
+      challengeWaitMs,
+    });
   }
 
   async request(url: string, init?: BrowserSessionRequestInit): Promise<BrowserSessionRequestResult> {
@@ -128,6 +138,8 @@ class PlaywrightBrowserSession implements BrowserSession {
 /** Options for {@link PlaywrightSessionPool}. */
 export interface PlaywrightSessionPoolOptions {
   timeoutMs?: number;
+  /** Default challenge-clearance budget for sessions that omit `challengeWaitMs`. */
+  challengeWaitMs?: number;
   maxConcurrency?: number;
   userAgent?: string;
   launchArgs?: string[];
@@ -142,6 +154,7 @@ export interface PlaywrightSessionPoolOptions {
  */
 export class PlaywrightSessionPool {
   private readonly timeoutMs: number;
+  private readonly challengeWaitMs: number;
   private readonly maxConcurrency: number;
   private readonly userAgent: string;
   private readonly launchArgs: string[];
@@ -160,6 +173,7 @@ export class PlaywrightSessionPool {
     options: PlaywrightSessionPoolOptions = {},
   ) {
     this.timeoutMs = options.timeoutMs ?? DEFAULT_SESSION_TIMEOUT_MS;
+    this.challengeWaitMs = options.challengeWaitMs ?? this.timeoutMs;
     this.maxConcurrency = Math.max(1, options.maxConcurrency ?? 2);
     this.userAgent = options.userAgent ?? BROWSER_USER_AGENT;
     this.launchArgs = [...DEFAULT_LAUNCH_ARGS, ...(options.launchArgs ?? [])];
@@ -243,20 +257,28 @@ export class PlaywrightSessionPool {
         if (options.signal.aborted) onAbort();
         else options.signal.addEventListener('abort', onAbort, { once: true });
       }
+      const challengeWaitMs = options.challengeWaitMs ?? this.challengeWaitMs;
       try {
+        const navigationTimeoutMs = Math.max(options.timeoutMs ?? this.timeoutMs, challengeWaitMs);
         await warmBrowserPage(page, {
           warmUrl: options.warmUrl,
-          timeoutMs: options.timeoutMs ?? this.timeoutMs,
+          timeoutMs: navigationTimeoutMs,
           signal: options.signal,
           contentSelector: options.contentSelector,
           isChallenge: options.isChallenge,
-          challengeWaitMs: options.challengeWaitMs,
+          challengeWaitMs,
+          reloadAfterPolls: options.reloadAfterPolls,
+          postChallengeSettleMs: options.postChallengeSettleMs,
         });
       } finally {
         if (options.signal) options.signal.removeEventListener('abort', onAbort);
       }
-      return new PlaywrightBrowserSession(page, context, options.timeoutMs ?? this.timeoutMs, () =>
-        this.release(),
+      return new PlaywrightBrowserSession(
+        page,
+        context,
+        options.timeoutMs ?? this.timeoutMs,
+        challengeWaitMs,
+        () => this.release(),
       );
     } catch (error) {
       if (context) await context.close().catch(() => undefined);

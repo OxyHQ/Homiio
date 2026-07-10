@@ -136,6 +136,12 @@ export const IDEALISTA_FIXTURE_GEOREACH_CHALLENGE = `{
   "cookie": "datadome=blocked"
 }`;
 
+/** DataDome interstitial HTML served with HTTP 200 before clearance. */
+export const IDEALISTA_FIXTURE_DATADOME_HTML = `<!doctype html>
+<html lang="es"><head><title>idealista.com</title>
+<script src="https://ct.captcha-delivery.com/c.js"></script></head>
+<body><p>Comprueba que eres humano</p></body></html>`;
+
 /** contact-phones AJAX sample (portal-shaped). */
 export const IDEALISTA_FIXTURE_CONTACT_PHONES_JSON = `{
   "phones": [

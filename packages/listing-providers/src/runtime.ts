@@ -13,12 +13,14 @@ import path from 'node:path';
 import type { FetchRuntime, FetchRuntimeInit, UrlFetcher } from './types';
 import { createBrowserFetcher, loadPlaywright } from './browser';
 import { PlaywrightSessionPool } from './browserSession';
+import { DEFAULT_SESSION_TIMEOUT_MS } from './session';
 import { createManagedFetcher, type ManagedFetcherConfig } from './managed';
 import {
   browserBlockAssetsFromEnv,
   createProxiedFetch,
   envBool,
   httpUseProxyFromEnv,
+  maskProxyUrl,
   residentialProxyFromEnv,
   type ResidentialProxyConfig,
 } from './proxy';
@@ -218,6 +220,19 @@ function envInt(name: string, fallback: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+/**
+ * Challenge-clearance budget for warmed Playwright sessions. DataDome on a
+ * residential proxy often exceeds the navigation timeout — this defaults to at
+ * least 120s or navigation timeout + 30s unless `LISTING_BROWSER_CHALLENGE_WAIT_MS`
+ * is set explicitly.
+ */
+export function browserChallengeWaitMsFromEnv(browserTimeoutMs?: number): number {
+  const explicit = envInt('LISTING_BROWSER_CHALLENGE_WAIT_MS', 0);
+  if (explicit > 0) return explicit;
+  const nav = browserTimeoutMs ?? envInt('LISTING_BROWSER_TIMEOUT_MS', DEFAULT_SESSION_TIMEOUT_MS);
+  return Math.max(120_000, nav + 30_000);
+}
+
 /** Assemble the managed-fetch config from env, or `undefined` when unconfigured. */
 function managedConfigFromEnv(): ManagedFetcherConfig | undefined {
   const endpoint = process.env.LISTING_MANAGED_FETCH_URL?.trim();
@@ -257,9 +272,15 @@ export async function createListingFetchRuntimeFromEnv(
   options: ListingFetchRuntimeFromEnvOptions = {},
 ): Promise<ListingFetchRuntimeHandle> {
   const proxy = residentialProxyFromEnv();
+  if (proxy && options.onLog) {
+    options.onLog(
+      `listing-providers: residential proxy configured (${maskProxyUrl(process.env.LISTING_RESIDENTIAL_PROXY_URL)})`,
+    );
+  }
   const stickyProxySession = envBool('LISTING_PROXY_STICKY', false);
   const browserEnabled = process.env.LISTING_BROWSER_ENABLED === 'true';
-  const browserTimeoutMs = envInt('LISTING_BROWSER_TIMEOUT_MS', 45_000);
+  const browserTimeoutMs = envInt('LISTING_BROWSER_TIMEOUT_MS', DEFAULT_SESSION_TIMEOUT_MS);
+  const browserChallengeWaitMs = browserChallengeWaitMsFromEnv(browserTimeoutMs);
   const browserMaxConcurrency = envInt('LISTING_BROWSER_MAX_CONCURRENCY', 2);
   const blockAssets = browserBlockAssetsFromEnv();
   const playwright = browserEnabled ? await loadPlaywright() : undefined;
@@ -278,6 +299,7 @@ export async function createListingFetchRuntimeFromEnv(
       ? new PlaywrightSessionPool(playwright, {
           maxConcurrency: browserMaxConcurrency,
           timeoutMs: browserTimeoutMs,
+          challengeWaitMs: browserChallengeWaitMs,
           proxy,
           blockAssets,
           stickyProxySession,

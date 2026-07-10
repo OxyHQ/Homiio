@@ -26,6 +26,7 @@ export * from './strategy';
 
 export {
   isDataDomeAjaxChallenge,
+  isDataDomeHtmlChallenge,
   isCloudflareChallenge,
 } from './parse/challenge';
 export {

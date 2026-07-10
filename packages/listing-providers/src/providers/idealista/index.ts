@@ -39,6 +39,7 @@ import type {
 import { createFetchRuntime } from '../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
+import { isDataDomeHtmlChallenge } from '../../parse/challenge';
 import type { EsSchemaListing } from '../../parse/jsonLd';
 import { IDEALISTA_BASE_URL } from './fixtures';
 import {
@@ -66,14 +67,23 @@ const DEFAULT_CITIES: readonly string[] = ['madrid', 'barcelona', 'valencia', 's
 /** Max search / georeach pages paged through per city in one discover pass. */
 const MAX_SEARCH_PAGES = 3;
 
-/** Idealista content markers after warm-up (search results or main shell). */
+/** Idealista content markers after warm-up (search results, filters, or main shell). */
 const IDEALISTA_CONTENT_SELECTOR =
-  'article.item, .items-list, section.items-container, main#main-content, #main-content';
+  'article.item, .items-list, section.items-container, #listingFilter, .list-notices, main#main-content, #main-content';
+
+/** Headers for georeach/contact AJAX from a warmed ES session. */
+const IDEALISTA_AJAX_HEADERS: Readonly<Record<string, string>> = {
+  'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+};
+
+/** True when warmed HTML still carries listing/search markup (not a bot wall). */
+function idealistaPageHasContent(html: string): boolean {
+  return /article\.item|items-container|inmueble\/\d{5,}|application\/ld\+json|listingFilter/i.test(html);
+}
 
 /** HTML markers of an Idealista interstitial/anti-bot page served with a 200. */
 export function isIdealistaChallenge(html: string): boolean {
-  if (html.trim().length < 512) return true;
-  return /acceso denegado|comprueba que eres humano|datadome|captcha-delivery/i.test(html);
+  return isDataDomeHtmlChallenge(html, idealistaPageHasContent(html));
 }
 
 /** Options for {@link IdealistaProvider}. */
@@ -223,11 +233,12 @@ export class IdealistaProvider implements ListingProvider {
         signal,
         contentSelector: IDEALISTA_CONTENT_SELECTOR,
         isChallenge: isIdealistaChallenge,
-        challengeWaitMs: 45_000,
         stickyProxySession: sticky,
         proxySessionId: this.stickyProxySessionId,
         storageState: this.stickyStorageState,
         blockAssets: true,
+        locale: 'es-ES',
+        acceptLanguage: 'es-ES,es;q=0.9,en;q=0.8',
       });
 
       const collected: ExternalListingRef[] = [];
@@ -237,6 +248,7 @@ export class IdealistaProvider implements ListingProvider {
         const { status, body } = await session.request(ajaxUrl, {
           referer: session.pageUrl(),
           timeoutMs: 30_000,
+          headers: IDEALISTA_AJAX_HEADERS,
         });
 
         if (status === 403 || status === 429 || isIdealistaGeoreachChallenge(body)) {
@@ -365,7 +377,11 @@ export class IdealistaProvider implements ListingProvider {
 
     try {
       const phonesUrl = idealistaContactPhonesUrl(adId);
-      const phonesRes = await session.request(phonesUrl, { referer, timeoutMs: 20_000 });
+      const phonesRes = await session.request(phonesUrl, {
+        referer,
+        timeoutMs: 20_000,
+        headers: IDEALISTA_AJAX_HEADERS,
+      });
       if (phonesRes.status < 400 && !isIdealistaContactChallenge(phonesRes.body)) {
         const phones = parseIdealistaContactPhones(phonesRes.body);
         if (phones[0]) fromPhones = { phone: phones[0] };
@@ -376,7 +392,11 @@ export class IdealistaProvider implements ListingProvider {
 
     try {
       const infoUrl = idealistaContactInfoUrl(adId);
-      const infoRes = await session.request(infoUrl, { referer, timeoutMs: 20_000 });
+      const infoRes = await session.request(infoUrl, {
+        referer,
+        timeoutMs: 20_000,
+        headers: IDEALISTA_AJAX_HEADERS,
+      });
       if (infoRes.status < 400 && !isIdealistaContactChallenge(infoRes.body)) {
         fromInfo = parseIdealistaContactInfo(infoRes.body);
       }
@@ -404,13 +424,14 @@ export class IdealistaProvider implements ListingProvider {
       session = await ctx.runtime.openBrowserSession({
         warmUrl: ref.url,
         signal: ctx.signal,
-        contentSelector: 'script[type="application/ld+json"], main, h1',
+        contentSelector: 'script[type="application/ld+json"], main, h1, article',
         isChallenge: isIdealistaChallenge,
-        challengeWaitMs: 45_000,
         stickyProxySession: sticky,
         proxySessionId: this.stickyProxySessionId,
         storageState: this.stickyStorageState,
         blockAssets: true,
+        locale: 'es-ES',
+        acceptLanguage: 'es-ES,es;q=0.9,en;q=0.8',
       });
 
       // Contact AJAX first (JSON) while the DataDome session is warm.

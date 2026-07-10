@@ -10,12 +10,17 @@
  * (`browserSession.ts`) and the browser escalation tier (`browser.ts`).
  */
 
+import { isDataDomeHtmlChallenge } from './parse/challenge';
 import { BLOCKED_BROWSER_RESOURCE_TYPES } from './proxy';
 
 /** Hard per-navigation timeout when a caller does not pass one (ms). */
 export const DEFAULT_SESSION_TIMEOUT_MS = 60_000;
 /** Poll interval while waiting for a DataDome interstitial to clear (ms). */
 const CHALLENGE_POLL_MS = 1_500;
+/** Brief pause after challenge markers clear before waiting for content (ms). */
+const DEFAULT_POST_CHALLENGE_SETTLE_MS = 2_000;
+/** Reload warmUrl after this many challenge polls without clearance (0 = off). */
+export const DEFAULT_CHALLENGE_RELOAD_AFTER_POLLS = 6;
 /** Selectors that indicate Idealista (or similar) real content loaded. */
 export const DEFAULT_CONTENT_SELECTORS =
   'article.item, .items-list, section.items-container, main#main-content';
@@ -64,6 +69,10 @@ export interface WarmBrowserPageOptions {
   isChallenge?: (html: string) => boolean;
   /** Max time to poll for challenge clearance after the initial goto (ms). */
   challengeWaitMs?: number;
+  /** Reload `warmUrl` every N challenge polls when clearance stalls (0 = disabled). */
+  reloadAfterPolls?: number;
+  /** Pause after challenge markers clear before waiting for content selectors (ms). */
+  postChallengeSettleMs?: number;
 }
 
 /** A warmed Playwright page + request context; caller must {@link close} it. */
@@ -74,6 +83,12 @@ export interface BrowserSession {
   content(): Promise<string>;
   /** Current page URL after warm-up (used as default Referer). */
   pageUrl(): string;
+  /**
+   * Navigate the existing page to another portal URL and poll until content
+   * loads. Reuses cookies from the current context (cheaper than `close` +
+   * `openBrowserSession` per city/page).
+   */
+  warmNavigate(options: WarmBrowserPageOptions): Promise<void>;
   /** Serialized cookies/localStorage for reuse on the next sticky context. */
   exportStorageState(): Promise<BrowserStorageState>;
   close(): Promise<void>;
@@ -141,10 +156,6 @@ function isSessionPage(target: InPageRequestTarget): target is SessionPage {
   return typeof (target as SessionPage).url === 'function';
 }
 
-function isDataDomeCaptchaBody(body: string): boolean {
-  return /captcha-delivery\.com|geo\.captcha/i.test(body);
-}
-
 function resolveReferer(target: InPageRequestTarget, init?: BrowserSessionRequestInit): string {
   if (init?.referer) return init.referer;
   if (isSessionPage(target)) return target.url();
@@ -175,11 +186,20 @@ export async function setupAssetBlocking(page: SessionPage, enabled = true): Pro
  * wait budget expires. Throws {@link BrowserSessionChallengeError} when still
  * blocked.
  */
+function isWarmPageChallenge(html: string, isChallenge?: (html: string) => boolean): boolean {
+  if (isChallenge?.(html)) return true;
+  return isDataDomeHtmlChallenge(html);
+}
+
 export async function warmBrowserPage(page: SessionPage, options: WarmBrowserPageOptions): Promise<void> {
-  const timeoutMs = options.timeoutMs ?? DEFAULT_SESSION_TIMEOUT_MS;
+  const challengeWaitMs = options.challengeWaitMs ?? options.timeoutMs ?? DEFAULT_SESSION_TIMEOUT_MS;
+  const timeoutMs = Math.max(options.timeoutMs ?? DEFAULT_SESSION_TIMEOUT_MS, challengeWaitMs);
   const selector = options.contentSelector ?? DEFAULT_CONTENT_SELECTORS;
-  const challengeWaitMs = options.challengeWaitMs ?? timeoutMs;
   const deadline = Date.now() + challengeWaitMs;
+  const reloadAfterPolls = options.reloadAfterPolls ?? DEFAULT_CHALLENGE_RELOAD_AFTER_POLLS;
+  const postChallengeSettleMs = options.postChallengeSettleMs ?? DEFAULT_POST_CHALLENGE_SETTLE_MS;
+  let challengePolls = 0;
+  let clearedChallenge = false;
 
   await page.goto(options.warmUrl, { timeout: timeoutMs, waitUntil: 'domcontentloaded' });
 
@@ -188,15 +208,30 @@ export async function warmBrowserPage(page: SessionPage, options: WarmBrowserPag
       throw new Error('Browser session warm-up aborted');
     }
     const html = await page.content();
-    if (options.isChallenge?.(html) || isDataDomeCaptchaBody(html)) {
-      await page.waitForTimeout(CHALLENGE_POLL_MS);
+    if (isWarmPageChallenge(html, options.isChallenge)) {
+      challengePolls += 1;
+      if (reloadAfterPolls > 0 && challengePolls % reloadAfterPolls === 0) {
+        await page.goto(options.warmUrl, { timeout: timeoutMs, waitUntil: 'domcontentloaded' });
+      } else {
+        await page.waitForTimeout(CHALLENGE_POLL_MS);
+      }
       continue;
     }
+    if (!clearedChallenge && postChallengeSettleMs > 0) {
+      clearedChallenge = true;
+      await page.waitForTimeout(postChallengeSettleMs);
+    }
     try {
-      await page.waitForSelector(selector, { timeout: Math.min(8_000, deadline - Date.now()) });
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) break;
+      await page.waitForSelector(selector, { timeout: Math.min(12_000, remaining) });
       return;
     } catch {
-      if (html.length >= 4_096 && !options.isChallenge?.(html)) {
+      const settledHtml = await page.content();
+      if (
+        settledHtml.length >= 4_096 &&
+        !isWarmPageChallenge(settledHtml, options.isChallenge)
+      ) {
         return;
       }
       await page.waitForTimeout(CHALLENGE_POLL_MS);
@@ -204,11 +239,11 @@ export async function warmBrowserPage(page: SessionPage, options: WarmBrowserPag
   }
 
   const finalHtml = await page.content();
-  const detail = options.isChallenge?.(finalHtml)
-    ? 'portal-specific challenge markers still present'
-    : isDataDomeCaptchaBody(finalHtml)
-      ? 'DataDome captcha-delivery interstitial'
-      : `content selector "${selector}" not found within ${challengeWaitMs}ms`;
+  const detail = isWarmPageChallenge(finalHtml, options.isChallenge)
+    ? options.isChallenge?.(finalHtml)
+      ? 'portal-specific challenge markers still present'
+      : 'DataDome captcha-delivery interstitial'
+    : `content selector "${selector}" not found within ${challengeWaitMs}ms`;
   throw new BrowserSessionChallengeError(options.warmUrl, detail);
 }
 
