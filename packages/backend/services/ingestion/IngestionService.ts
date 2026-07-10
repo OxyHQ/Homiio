@@ -31,6 +31,7 @@ import type { AddressCanonicalInput } from '../../models/Address';
 import { validateOfferings } from '../../models/schemas/offeringValidation';
 import { forwardGeocode, reverseGeocode } from '../geocodingService';
 import { sanitizeGeoJsonCoordinates } from '../../utils/geoCoordinates';
+import { deriveStructuredFeatures } from './deriveFeatures';
 import { ExternalMediaIngest } from './ExternalMediaIngest';
 import { schedulePriceEthicsScore } from '../priceEthicsService';
 import { Logger } from '../../utils/logger';
@@ -279,8 +280,24 @@ export class IngestionService {
     if (listing.bathrooms !== undefined) fields.bathrooms = listing.bathrooms;
     if (listing.squareFootage !== undefined) fields.squareFootage = listing.squareFootage;
     if (listing.floor !== undefined) fields.floor = listing.floor;
+    if (listing.yearBuilt !== undefined) fields.yearBuilt = listing.yearBuilt;
     if (listing.amenities !== undefined) fields.amenities = listing.amenities;
-    if (listing.furnishedStatus !== undefined) fields.furnishedStatus = listing.furnishedStatus;
+    if (listing.parkingSpaces !== undefined) fields.parkingSpaces = listing.parkingSpaces;
+
+    // Promote amenity tags to the structured feature columns the search filters
+    // and UI read. A provider-explicit value always wins over derivation.
+    const derived = deriveStructuredFeatures(listing.amenities);
+    const hasElevator = listing.hasElevator ?? derived.hasElevator;
+    if (hasElevator !== undefined) fields.hasElevator = hasElevator;
+    const hasBalcony = listing.hasBalcony ?? derived.hasBalcony;
+    if (hasBalcony !== undefined) fields.hasBalcony = hasBalcony;
+    const hasGarden = listing.hasGarden ?? derived.hasGarden;
+    if (hasGarden !== undefined) fields.hasGarden = hasGarden;
+    const parkingType = listing.parkingType ?? derived.parkingType;
+    if (parkingType !== undefined) fields.parkingType = parkingType;
+    const furnishedStatus = listing.furnishedStatus ?? derived.furnishedStatus;
+    if (furnishedStatus !== undefined) fields.furnishedStatus = furnishedStatus;
+
     if (listing.contact) {
       const externalContact: NonNullable<IProperty['externalContact']> = {};
       if (listing.contact.phone) externalContact.phone = listing.contact.phone;
