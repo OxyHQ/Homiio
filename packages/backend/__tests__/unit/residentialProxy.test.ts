@@ -22,6 +22,13 @@ import {
 
 const PROXY_URL = 'http://mylogin:mypass@gw.dataimpulse.com:823';
 
+describe('maskProxyUrl', () => {
+  it('redacts userinfo for logs', () => {
+    expect(proxyModule.maskProxyUrl(PROXY_URL)).toBe('http://***:***@gw.dataimpulse.com:823/');
+    expect(proxyModule.maskProxyUrl(undefined)).toBe('');
+  });
+});
+
 const originalFetch = global.fetch;
 const originalEnv = { ...process.env };
 

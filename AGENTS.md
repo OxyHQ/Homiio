@@ -227,9 +227,9 @@ Root shims (`contact.ts`, `classifieds.ts`, `jsonLd.ts`, `nextData.ts`, `cities.
 
 ### General classifieds portals (CRITICAL)
 
-Homiio is real estate only. **General classifieds** — milanuncios, kleinanzeigen, subito, leboncoin (marketplace), olx.ro — must **never** be site-wide crawled.
+Homiio is real estate only. **General classifieds** — milanuncios, kleinanzeigen, subito, leboncoin (marketplace), olx.ro, vivanuncios — must **never** be site-wide crawled.
 
-- **`discover()`**: housing/rent/sale category URLs or API params only — explicit per-portal category allowlist (DE kleinanzeigen, IT subito, FR leboncoin, RO olx.ro, ES milanuncios).
+- **`discover()`**: housing/rent/sale category URLs or API params only — explicit per-portal category allowlist (DE kleinanzeigen, IT subito, FR leboncoin, RO olx.ro, ES milanuncios, MX vivanuncios).
 - **`normalize()`**: reject non-housing listings (cars, jobs, furniture, …); ingest must skip, never upsert.
 - **Tests**: housing fixture passes normalize; non-housing category fixture is rejected.
 
@@ -259,9 +259,15 @@ PROVIDER_MERCADOLIBRE_AR_ENABLED=true
 PROVIDER_ZONAPROP_ENABLED=true
 PROVIDER_ARGENPROP_ENABLED=true
 PROVIDER_PROPERATI_ENABLED=true
+PROVIDER_INMUEBLES24_ENABLED=true
+PROVIDER_LAMUDI_ENABLED=true
+PROVIDER_VIVANUNCIOS_ENABLED=true
+PROVIDER_PROPIEDADES_ENABLED=true
 ```
 
 Argentina (`LISTING_AR_CITIES`): Zonaprop / Argenprop (Navent `rplis-api` + `__PRELOADED_STATE__` via shared `navent` / `naventProvider` — Cloudflare, keep OFF until sticky residential clears), MercadoLibre inmuebles (housing-only; cold HTML search+detail verified — enable), Properati (`__NEXT_DATA__` / JSON-LD via shared modules — Cloudflare, OFF). MercadoLibre uses shared `mercadolibre` / `mercadolibreProvider` (also EC). Never site-wide crawl ML.
+
+Mexico (`LISTING_MX_CITIES`): Inmuebles24 (Navent thin wrapper — Cloudflare, OFF), Lamudi (JSON-LD ItemList / MONTH rent — best HTTP candidate, OFF until live discover), Vivanuncios (housing-only classifieds — Cloudflare, OFF), Propiedades (JSON-LD — Akamai, OFF). EasyBroker public site inactive — skip. Reuse shared `navent` / `jsonLd` / `contact` / `classifieds` / `cities` — never fork per-portal copies.
 
 Romania (`LISTING_RO_CITIES`): Storia (`__NEXT_DATA__` + session), Imobiliare.ro (Inertia search + JSON-LD detail), OLX.ro (housing `/imobiliare/…` only). Shared parsers live in `@homiio/listing-providers` `src/parse/` (`jsonLd`, `nextData`, `contact`, `classifieds`, `cities`, `price`) plus root `html` / `slug` / `navent` / `mercadolibre` — providers must not duplicate them.
 
