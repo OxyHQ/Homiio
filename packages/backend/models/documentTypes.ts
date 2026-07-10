@@ -69,8 +69,8 @@ export type ILease = Document & {
   _id: Id;
   propertyId: Id;
   roomId?: Id;
-  landlordOxyUserId: Id;
-  tenantOxyUserId: Id;
+  landlordOxyUserId: string;
+  tenantOxyUserId: string;
   coTenants: ILeaseSubdoc[];
   leaseTerms: Loose;
   rentDetails: Loose;
@@ -168,8 +168,8 @@ export type IReservation = Document & {
 export type ITenantApplication = Document & {
   _id: Id;
   propertyId: Id;
-  applicantOxyUserId: Id;
-  landlordOxyUserId: Id;
+  applicantOxyUserId: string;
+  landlordOxyUserId: string;
   status: string;
   notes?: string;
   createdAt: Date;
@@ -321,8 +321,8 @@ export interface IExchangeWindow {
 
 export type IExchangeRequest = Document & {
   _id: Id;
-  requesterOxyUserId: Id;
-  hostOxyUserId: Id;
+  requesterOxyUserId: string;
+  hostOxyUserId: string;
   propertyId: Id;
   mode: string;
   status: string;
@@ -337,7 +337,7 @@ export type IExchangeRequest = Document & {
 export type IExchangeReview = Document & {
   _id: Id;
   exchangeRequestId: Id;
-  reviewerOxyUserId: Id;
+  reviewerOxyUserId: string;
   rating: number;
   comment?: string;
   createdAt: Date;

@@ -847,7 +847,7 @@ propertySchema.pre('save', function(this: IProperty, next: (err?: Error) => void
 // Static methods
 type ObjectIdLike = string | { toString(): string };
 
-propertySchema.statics.findByProfile = function(
+propertySchema.statics.findByOxyUser = function(
   oxyUserId: string,
   options: Record<string, unknown> = {}
 ) {

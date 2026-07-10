@@ -142,7 +142,7 @@ class RoomController {
   /**
    * Create a room (a room-type property) owned by the authenticated user.
    */
-    async createRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async createRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const { parentPropertyId } = req.body;
