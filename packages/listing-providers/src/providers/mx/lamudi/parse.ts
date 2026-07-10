@@ -9,7 +9,7 @@
 import type { NormalizedListingContact } from '@homiio/shared-types';
 import { buildContact, extractContactFromHtml, mergeContact } from '../../../contact';
 import { collectJsonLdNodes, jsonLdTypes } from '../../../jsonLd';
-import { asNumberEu, asString, isRecord } from '../../../parse/guards';
+import { asCoordinate, asNumberEu, asString, isRecord } from '../../../parse/guards';
 import { isCloudflareChallenge } from '../../../parse/challenge';
 import { LAMUDI_BASE_URL } from './fixtures';
 
@@ -133,8 +133,8 @@ function nodeToRaw(node: Record<string, unknown>): LamudiRawListing | undefined 
       city,
       region: asString(address?.addressRegion),
       countryCode: 'MX',
-      lat: asNumberEu(geo?.latitude),
-      lng: asNumberEu(geo?.longitude),
+      lat: asCoordinate(geo?.latitude),
+      lng: asCoordinate(geo?.longitude),
     },
     images: collectImages(node),
     contact: buildContact({ phone: asString(node.telephone) }),

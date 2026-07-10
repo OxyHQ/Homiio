@@ -10,7 +10,7 @@ import type { NormalizedListingContact } from '@homiio/shared-types';
 import { ldJsonScriptBodies } from '../../html';
 import { extractEsSchemaListings, type EsSchemaListing } from '../../parse/jsonLd';
 import { PISOS_BASE_URL } from './fixtures';
-import { asNumber } from '../../parse/guards';
+import { asCoordinate, asNumber } from '../../parse/guards';
 
 /** Raw payload `fetch()` hands to `normalize()`. */
 export interface PisosRaw {
@@ -218,8 +218,8 @@ export function readPisosLocationMapCoordinates(html: string): { lat: number; ln
   const match = html.match(/locationmap[^>]*data-params="([^"]+)"/i);
   if (!match) return undefined;
   const params = decodeHtmlEntities(match[1]);
-  const lat = asNumber(params.match(/(?:^|[&?])latitude=([^&]+)/)?.[1]);
-  const lng = asNumber(params.match(/(?:^|[&?])longitude=([^&]+)/)?.[1]);
+  const lat = asCoordinate(params.match(/(?:^|[&?])latitude=([^&]+)/)?.[1]);
+  const lng = asCoordinate(params.match(/(?:^|[&?])longitude=([^&]+)/)?.[1]);
   if (lat === undefined || lng === undefined) return undefined;
   return { lat, lng };
 }

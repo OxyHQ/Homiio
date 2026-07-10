@@ -12,7 +12,7 @@
  */
 
 import { HABITACLIA_BASE_URL, type HabitacliaRawImage, type HabitacliaRawListing } from './fixtures';
-import { asNumber, asString } from '../../parse/guards';
+import { asCoordinate, asNumber, asString } from '../../parse/guards';
 
 /** Match every `<script type="application/ld+json">…</script>` block. */
 const JSON_LD_RE =
@@ -223,8 +223,8 @@ function parseHabitacliaDetailFromJsonLd(node: Record<string, unknown>, url: str
       postalCode: asString(address['postalCode']),
       country: countryValue && countryValue.length > 2 ? countryValue : undefined,
       countryCode: countryValue && countryValue.length === 2 ? countryValue.toUpperCase() : 'ES',
-      lat: geo ? asNumber(geo['latitude']) : undefined,
-      lng: geo ? asNumber(geo['longitude']) : undefined,
+      lat: geo ? asCoordinate(geo['latitude']) : undefined,
+      lng: geo ? asCoordinate(geo['longitude']) : undefined,
     },
     bedrooms: asNumber(node['numberOfRooms']),
     bathrooms: asNumber(node['numberOfBathroomsTotal']),

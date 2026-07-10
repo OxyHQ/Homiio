@@ -4,6 +4,7 @@ import { HealthService } from './healthService';
 import { CleanupService } from './cleanupService';
 import { MetricsService } from '../utils/metrics';
 import { syncCovers } from './cityCoverSyncService';
+import { repairCorruptCityCoordinates } from './cityCoordinateRepairService';
 
 // Initialize services
 const logger = new Logger('CronService');
@@ -36,8 +37,26 @@ class CronJobManager {
     this.setupHealthCheckJob();
     this.setupCleanupJob();
     this.setupCityCoverSyncJob();
+    // Boot sweeps: repair mangled coords + start Wikimedia cover backfill
+    // without waiting for the top of the hour.
+    void this.runBootHousekeeping();
 
     this.logger.info('Cron jobs initialized (health + cleanup + city covers; scrape loop retired)');
+  }
+
+  private async runBootHousekeeping(): Promise<void> {
+    try {
+      const repaired = await repairCorruptCityCoordinates(200);
+      this.logger.info('Boot city coordinate repair completed', { repaired });
+    } catch (error) {
+      this.logger.error('Boot city coordinate repair failed', error);
+    }
+    try {
+      const processed = await syncCovers({ limit: 100, forceReplaceListingCovers: true });
+      this.logger.info('Boot city cover sync completed', { processed });
+    } catch (error) {
+      this.logger.error('Boot city cover sync failed', error);
+    }
   }
 
   /**
@@ -73,10 +92,11 @@ class CronJobManager {
   }
 
   /**
-   * Setup city cover sync job - runs every hour
+   * Setup city cover sync job — every 15 minutes while listing-linked covers
+   * are still being replaced by Wikimedia cityscapes.
    */
   private setupCityCoverSyncJob(): void {
-    const job = cron.schedule('0 * * * *', async () => {
+    const job = cron.schedule('*/15 * * * *', async () => {
       await this.runCityCoverSync();
     }, {
       timezone: 'UTC',

@@ -52,7 +52,7 @@ export {
   NonHousingListingError,
   type HousingSignalInput,
 } from './parse/classifieds';
-export { isRecord, asString, asNumberEu, asNumberUs, deaccent, firstString } from './parse/guards';
+export { isRecord, asString, asNumberEu, asNumberUs, asCoordinate, deaccent, firstString } from './parse/guards';
 
 export { FixtureProvider } from './providers/fixture';
 export { FIXTURE_LISTINGS } from './providers/fixture/fixtures';

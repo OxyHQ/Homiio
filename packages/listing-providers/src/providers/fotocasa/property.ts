@@ -7,7 +7,7 @@
  */
 
 import type { EsSchemaListing } from '../../parse/jsonLd';
-import { asNumberEu, asString, isRecord } from '../../parse/guards';
+import { asCoordinate, asNumberEu, asString, isRecord } from '../../parse/guards';
 import {
   collectNestedImages,
   eurListingFromNextDataCandidate,
@@ -70,8 +70,8 @@ function fotocasaRecordToListing(
   const operation = resolveOperation(record, url);
   const addressNode = isRecord(record.address) ? record.address : undefined;
   const location = isRecord(record.location) ? record.location : undefined;
-  const lat = asNumberEu(location?.latitude);
-  const lng = asNumberEu(location?.longitude);
+  const lat = asCoordinate(location?.latitude);
+  const lng = asCoordinate(location?.longitude);
   const detailUrl =
     asString(record.detailUrl) ??
     asString(record.url) ??
