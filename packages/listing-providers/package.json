@@ -21,7 +21,8 @@
   "author": "Homiio Team",
   "license": "UNLICENSED",
   "dependencies": {
-    "@homiio/shared-types": "workspace:*"
+    "@homiio/shared-types": "workspace:*",
+    "undici": "^7.16.0"
   },
   "peerDependencies": {
     "playwright": ">=1.40.0"

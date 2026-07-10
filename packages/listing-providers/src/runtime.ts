@@ -13,6 +13,14 @@ import path from 'node:path';
 import type { FetchRuntime, FetchRuntimeInit, UrlFetcher } from './types';
 import { createBrowserFetcher } from './browser';
 import { createManagedFetcher, type ManagedFetcherConfig } from './managed';
+import {
+  browserBlockAssetsFromEnv,
+  createProxiedFetch,
+  envBool,
+  httpUseProxyFromEnv,
+  residentialProxyFromEnv,
+  type ResidentialProxyConfig,
+} from './proxy';
 
 /** Default per-request abort budget (ms). */
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -32,6 +40,8 @@ export interface HttpFetchRuntimeOptions {
    * their own dataset (e.g. the Phase-0 fixture provider) never call it.
    */
   fixturesDir?: string;
+  /** When set, listing HTTP fetches route through this residential proxy. */
+  proxy?: ResidentialProxyConfig;
 }
 
 /**
@@ -67,17 +77,29 @@ export class HttpFetchRuntime implements FetchRuntime {
   private readonly defaultTimeoutMs: number;
   private readonly userAgent: string;
   private readonly fixturesDir?: string;
+  private readonly proxy?: ResidentialProxyConfig;
+  private proxiedFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
   constructor(options: HttpFetchRuntimeOptions = {}) {
     this.defaultTimeoutMs = options.defaultTimeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.userAgent = options.userAgent ?? DEFAULT_USER_AGENT;
     this.fixturesDir = options.fixturesDir;
+    this.proxy = options.proxy;
+  }
+
+  private async resolveFetch(): Promise<typeof fetch> {
+    if (!this.proxy) return fetch;
+    if (!this.proxiedFetch) {
+      this.proxiedFetch = await createProxiedFetch(this.proxy);
+    }
+    return this.proxiedFetch;
   }
 
   private async request(url: string, init: FetchRuntimeInit | undefined): Promise<Response> {
     const timeoutMs = init?.timeoutMs ?? this.defaultTimeoutMs;
+    const requestFetch = await this.resolveFetch();
     return withTimeout(timeoutMs, init?.signal, async (signal) => {
-      const response = await fetch(url, {
+      const response = await requestFetch(url, {
         signal,
         headers: { 'User-Agent': this.userAgent, ...init?.headers },
       });
@@ -197,6 +219,8 @@ export interface ListingFetchRuntimeFromEnvOptions {
  *   - browser tier: enabled by `LISTING_BROWSER_ENABLED=true`, tuned by
  *     `LISTING_BROWSER_MAX_CONCURRENCY` / `LISTING_BROWSER_TIMEOUT_MS`. Skipped
  *     (with a log notice) when Playwright is not installed.
+ *   - residential proxy: `LISTING_RESIDENTIAL_PROXY_URL` (+ optional
+ *     `LISTING_HTTP_USE_PROXY`, `LISTING_PROXY_STICKY`, `LISTING_BROWSER_BLOCK_ASSETS`).
  *   - managed tier: enabled by `LISTING_MANAGED_FETCH_URL` (+ optional key/param
  *     vars). Skipped when the endpoint is unset.
  *
@@ -205,12 +229,18 @@ export interface ListingFetchRuntimeFromEnvOptions {
 export async function createListingFetchRuntimeFromEnv(
   options: ListingFetchRuntimeFromEnvOptions = {},
 ): Promise<ListingFetchRuntimeHandle> {
+  const proxy = residentialProxyFromEnv();
+  const stickyProxySession = envBool('LISTING_PROXY_STICKY', false);
   const browser = await createBrowserFetcher({
     enabled: process.env.LISTING_BROWSER_ENABLED === 'true',
     maxConcurrency: envInt('LISTING_BROWSER_MAX_CONCURRENCY', 2),
     timeoutMs: envInt('LISTING_BROWSER_TIMEOUT_MS', 45_000),
+    proxy,
+    blockAssets: browserBlockAssetsFromEnv(),
+    stickyProxySession,
     onLog: options.onLog,
   });
   const managed = createManagedFetcher(managedConfigFromEnv());
-  return createListingFetchRuntime({ browser, managed });
+  const httpProxy = proxy && httpUseProxyFromEnv() ? proxy : undefined;
+  return createListingFetchRuntime({ browser, managed, proxy: httpProxy });
 }

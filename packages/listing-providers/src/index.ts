@@ -11,6 +11,7 @@
 export * from './types';
 export * from './runtime';
 export * from './browser';
+export * from './proxy';
 export * from './managed';
 export * from './registry';
 export * from './metrics';

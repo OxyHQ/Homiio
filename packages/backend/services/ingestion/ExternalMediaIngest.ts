@@ -15,6 +15,11 @@
 
 import type { Types } from 'mongoose';
 import type { NormalizedRemoteImage, PropertyImageRef } from '@homiio/shared-types';
+import {
+  createProxiedFetch,
+  residentialProxyFromEnv,
+  type ResidentialProxyConfig,
+} from '@homiio/listing-providers';
 import imageUploadService, {
   ImageUploadService,
   type ImageBufferInput,
@@ -40,10 +45,17 @@ export type RemoteImageFetcher = (url: string) => Promise<ImageBufferInput>;
 
 /** Default HTTP fetcher: one GET with a timeout + descriptive User-Agent. */
 export async function fetchRemoteImage(url: string): Promise<ImageBufferInput> {
+  return fetchRemoteImageVia(url, fetch);
+}
+
+async function fetchRemoteImageVia(
+  url: string,
+  requestFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>,
+): Promise<ImageBufferInput> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const response = await fetch(url, {
+    const response = await requestFetch(url, {
       signal: controller.signal,
       headers: { 'User-Agent': FETCH_USER_AGENT },
     });
@@ -58,6 +70,35 @@ export async function fetchRemoteImage(url: string): Promise<ImageBufferInput> {
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * Direct fetch first; on failure, retry once through the residential proxy.
+ * Used only when `LISTING_MEDIA_PROXY_FALLBACK=true` and proxy URL is configured.
+ */
+export async function fetchRemoteImageWithProxyFallback(
+  url: string,
+  proxy: ResidentialProxyConfig,
+): Promise<ImageBufferInput> {
+  try {
+    return await fetchRemoteImage(url);
+  } catch (directError) {
+    const proxiedFetch = await createProxiedFetch(proxy);
+    return fetchRemoteImageVia(url, proxiedFetch);
+  }
+}
+
+/**
+ * Build the default remote-image fetcher from env. Listing photos stay on a direct
+ * fetch path unless `LISTING_MEDIA_PROXY_FALLBACK=true` (one proxy retry on failure).
+ */
+export function createRemoteImageFetcherFromEnv(): RemoteImageFetcher {
+  const proxy = residentialProxyFromEnv();
+  const fallbackEnabled = process.env.LISTING_MEDIA_PROXY_FALLBACK === 'true';
+  if (!fallbackEnabled || !proxy) {
+    return fetchRemoteImage;
+  }
+  return (url) => fetchRemoteImageWithProxyFallback(url, proxy);
 }
 
 export interface ExternalMediaIngestOptions {
@@ -78,7 +119,7 @@ export class ExternalMediaIngest {
 
   constructor(options: ExternalMediaIngestOptions = {}) {
     this.imageService = options.imageService ?? imageUploadService;
-    this.fetchImage = options.fetchImage ?? fetchRemoteImage;
+    this.fetchImage = options.fetchImage ?? createRemoteImageFetcherFromEnv();
     this.maxImages = options.maxImages ?? DEFAULT_MAX_IMAGES;
     this.logger = options.logger ?? new Logger('ExternalMediaIngest');
   }
