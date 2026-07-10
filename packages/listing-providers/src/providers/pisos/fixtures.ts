@@ -2,7 +2,8 @@
  * Recorded pisos.com fixtures (portal-shaped, hand-authored).
  *
  * Search pages ship schema.org JSON-LD for each card; detail pages embed a
- * `data-var` JSON blob (rooms/baths/m²/phone) plus a tracking JSON object with
+ * `data-var` JSON blob (rooms/baths/m²/phone plus optional planta / año de
+ * construcción / plazas de garaje) plus a tracking JSON object with
  * price/operation. Image URLs point at example CDN hosts and are re-hosted at
  * ingest — never hotlinked at runtime.
  */
@@ -34,7 +35,7 @@ export const PISOS_FIXTURE_DETAIL_HTML = `<!doctype html>
 <div class="ascending-geo__row" data-zone="M00000000028079" data-ga-geoLevelName='municipio' property="itemListElement" typeof="ListItem">
 <a href="/alquiler/piso-madrid_capital/" class="ascending-geo__result" property="item" typeof="WebPage"><span property="name">Madrid Capital</span></a>
 </div>
-<div data-var='{"fechaModificacion":"17/06/2026","fechaPrimeraPublicacion":"04/05/2026","telefono":"919376345","caracteristicasInmueble":"ascensor,balcon,soleado","nHabitaciones":"2","nBanios":"2","superficieInmueble":"107","descuentoAplicado":"8"}'></div>
+<div data-var='{"fechaModificacion":"17/06/2026","fechaPrimeraPublicacion":"04/05/2026","telefono":"919376345","caracteristicasInmueble":"ascensor,balcon,soleado","nHabitaciones":"2","nBanios":"2","superficieInmueble":"107","planta":"3","anioConstruccion":"1998","nPlazasGaraje":"1","descuentoAplicado":"8"}'></div>
 <div class="locationmap" data-params="latitude=40.41593545782718&amp;longitude=-3.7083892232908435&amp;zoom=17&amp;showMarker=True"></div>
 <script>
 window.__pisosTrack = {"tipoContenido":"detalle","tipoOperacion":"alquiler","seccion":"alquiler","idioma":"ES","subseccion1":"casas-pisos","tipoContenidoA":"detalle-casas-pisos","provincia":"P00000000000028","municipio":"M00000000028079","distrito":"G00000002807901","precioInmueble":"2550","precio":"2550","tipoVendedor":"profesional","referenciaInmueble":"","marca":"196080","tipoInmueble":"casas-pisos","subTipoInmueble":"piso-apartamento"};
