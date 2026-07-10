@@ -25,6 +25,11 @@ export * from './metrics';
 export * from './strategy';
 
 export {
+  isDataDomeAjaxChallenge,
+  isDataDomeHtmlChallenge,
+  isCloudflareChallenge,
+} from './parse/challenge';
+export {
   validateMonthlyRentAmount,
   validateNightlyRateAmount,
   validateSalePriceAmount,
@@ -122,6 +127,7 @@ export {
   IDEALISTA_FIXTURE_GEOREACH_JSON,
   IDEALISTA_FIXTURE_GEOREACH_HTML_JSON,
   IDEALISTA_FIXTURE_GEOREACH_CHALLENGE,
+  IDEALISTA_FIXTURE_DATADOME_HTML,
   IDEALISTA_FIXTURE_CONTACT_PHONES_JSON,
   IDEALISTA_FIXTURE_CONTACT_INFO_JSON,
 } from './providers/idealista/fixtures';
@@ -129,11 +135,31 @@ export {
 export { FotocasaProvider, isFotocasaChallenge, fotocasaSourceIdFromUrl } from './providers/fotocasa';
 export { parseFotocasaDetail, parseFotocasaSearch, type FotocasaRaw } from './providers/fotocasa/parse';
 export {
+  parseFotocasaSearchads,
+  parseFotocasaLocationSegments,
+  parseFotocasaSsrSearch,
+  fotocasaSearchadsUrl,
+  fotocasaUrlLocationSegmentsUrl,
+  fotocasaWarmSearchUrl,
+  fotocasaPropertyApiUrl,
+  isFotocasaSearchadsChallenge,
+  FOTOCASA_GW_BASE,
+} from './providers/fotocasa/searchads';
+export {
+  parseFotocasaPropertyJson,
+  isFotocasaPropertyChallenge,
+} from './providers/fotocasa/property';
+export {
   FOTOCASA_BASE_URL,
   FOTOCASA_FIXTURE_DETAIL_HTML,
   FOTOCASA_FIXTURE_SEARCH_HTML,
   FOTOCASA_FIXTURE_REAL_ESTATE_LISTING_HTML,
   FOTOCASA_FIXTURE_NEXT_DATA_HTML,
+  FOTOCASA_FIXTURE_SEARCHADS_JSON,
+  FOTOCASA_FIXTURE_LOCATION_SEGMENTS_JSON,
+  FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE,
+  FOTOCASA_FIXTURE_PROPERTY_JSON,
+  FOTOCASA_FIXTURE_SSR_SEARCH_HTML,
 } from './providers/fotocasa/fixtures';
 
 // FR market — Bien'ici / Leboncoin (housing 9/10) / SeLoger. All OFF by default.

@@ -35,7 +35,18 @@ function resolveOperation(listing: EsSchemaListing, url: string): 'rent' | 'sale
  * page carries no recognizable real-estate JSON-LD (delisted or a challenge
  * page served instead of content).
  */
+export function isFotocasaDetailChallenge(html: string): boolean {
+  const trimmed = html.trim();
+  if (trimmed.length < 512) return true;
+  return /acceso denegado|verifica que eres|datadome|px-captcha|perimeterx|pardon our interruption|captcha-delivery/i.test(
+    trimmed,
+  );
+}
+
 export function parseFotocasaDetail(html: string, url: string): FotocasaRaw {
+  if (isFotocasaDetailChallenge(html)) {
+    throw new Error(`fotocasa: anti-bot challenge at ${url}`);
+  }
   const listing =
     pickEsListing(extractEsSchemaListings(html)) ??
     extractEurListingFromNextData(html, { url, defaultCountryCode: 'ES' });

@@ -144,3 +144,69 @@ export const FOTOCASA_FIXTURE_NEXT_DATA_HTML = `<!doctype html>
 </head>
 <body></body>
 </html>`;
+
+/** searchads AJAX `{ realEstates: [...] }` discover payload. */
+export const FOTOCASA_FIXTURE_SEARCHADS_JSON = JSON.stringify({
+  realEstates: [
+    {
+      propertyId: '187654321',
+      detailUrl: '/es/alquiler/vivienda/madrid-capital/calefaccion-ascensor/187654321/d',
+      transaction: { type: 'RENT', price: 1850 },
+      rooms: 3,
+      baths: 2,
+      surface: 95,
+    },
+    {
+      propertyId: '187654322',
+      detailUrl: 'https://www.fotocasa.es/es/alquiler/vivienda/madrid-capital/terraza/187654322/d',
+      transaction: { type: 'RENT', price: 1200 },
+    },
+    {
+      id: '187654323',
+      uris: [{ value: '/es/alquiler/vivienda/madrid-capital/exterior/187654323/d' }],
+    },
+  ],
+  totalItems: 3,
+});
+
+/** urllocationsegments AJAX response for Madrid-capital. */
+export const FOTOCASA_FIXTURE_LOCATION_SEGMENTS_JSON = JSON.stringify({
+  ids: '724,14,28,173,0,28079,0,0,0',
+  coordinates: { latitude: 40.4096, longitude: -3.68624 },
+});
+
+/** PerimeterX challenge HTML served instead of searchads/property JSON. */
+export const FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE =
+  '<!DOCTYPE html><html><body><div id="px-captcha">Verifica que eres una persona</div></body></html>';
+
+/** Property detail JSON from `web.gw.fotocasa.es/.../property`. */
+export const FOTOCASA_FIXTURE_PROPERTY_JSON = JSON.stringify({
+  propertyId: '187654321',
+  title: 'Piso en alquiler en Calle de Almagro',
+  description: 'Piso reformado de tres habitaciones en Chamberí, con calefacción y ascensor.',
+  detailUrl: '/es/alquiler/vivienda/madrid-capital/calefaccion-ascensor/187654321/d',
+  transaction: { type: 'RENT', price: 1850 },
+  rooms: 3,
+  baths: 2,
+  surface: 95,
+  street: 'Calle de Almagro',
+  number: '30',
+  address: {
+    country: 'España',
+    district: 'Chamberí',
+    municipality: 'Madrid',
+    province: 'Madrid',
+  },
+  location: { latitude: '40.4318', longitude: '-3.6931' },
+  multimedia: [
+    { url: 'https://static.fotocasa.es/images/anuncios/187654321/1.jpg', type: 'image' },
+    { url: 'https://static.fotocasa.es/images/anuncios/187654321/2.jpg', type: 'image' },
+  ],
+});
+
+/** SSR search HTML embedding a `realEstates` JSON array. */
+export const FOTOCASA_FIXTURE_SSR_SEARCH_HTML = `<!doctype html>
+<html lang="es"><body>
+<script>window.__STATE__={"realEstates":[{"propertyId":"187654321","detailUrl":"/es/alquiler/vivienda/madrid-capital/calefaccion-ascensor/187654321/d"},{"propertyId":"187654322","detailUrl":"/es/alquiler/vivienda/madrid-capital/terraza/187654322/d"}],"pageNumber":1};</script>
+<main class="re-Searchresult"><h1>Alquiler Madrid</h1></main>
+</body></html>`;
