@@ -459,27 +459,23 @@ export default function HomePage() {
             }
           >
             <H1
-              className="mb-3 max-w-[720px]"
-              style={{
-                fontSize: isXL ? 56 : isWide ? 44 : 34,
-                lineHeight: isXL ? 60 : isWide ? 48 : 38,
-                color: colors.white,
-                fontWeight: '700',
-                letterSpacing: tracker.tight,
-                textAlign: isWide ? 'center' : 'left',
-              }}
+              className={
+                isXL
+                  ? 'mb-3 max-w-[720px] text-center text-[56px] font-bold leading-[60px] text-white'
+                  : isWide
+                    ? 'mb-3 max-w-[720px] text-center text-[44px] font-bold leading-[48px] text-white'
+                    : 'mb-3 max-w-[720px] text-left text-[34px] font-bold leading-[38px] text-white'
+              }
+              style={{ letterSpacing: tracker.tight }}
             >
               {t('home.hero.title')}
             </H1>
             <P
-              className="mb-6 max-w-[520px]"
-              style={{
-                fontSize: isWide ? 18 : 16,
-                lineHeight: isWide ? 26 : 22,
-                color: colors.white,
-                opacity: 0.92,
-                textAlign: isWide ? 'center' : 'left',
-              }}
+              className={
+                isWide
+                  ? 'mb-6 max-w-[520px] text-center text-lg leading-[26px] text-white opacity-90'
+                  : 'mb-6 max-w-[520px] text-left text-base leading-[22px] text-white opacity-90'
+              }
             >
               {t('home.hero.subtitle')}
             </P>

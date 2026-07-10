@@ -191,13 +191,8 @@ export function HomeCarouselSection<T>({
         <View className="min-w-0 flex-1 shrink">
           {eyebrow ? <SectionEyebrow>{eyebrow}</SectionEyebrow> : null}
           <H1
-            style={{
-              fontSize: 26,
-              lineHeight: 32,
-              color: colors.COLOR_BLACK,
-              fontWeight: '700',
-              letterSpacing: tracker.tight,
-            }}
+            className="text-[26px] font-bold leading-8 text-foreground"
+            style={{ letterSpacing: tracker.tight }}
           >
             {title}
           </H1>
@@ -205,14 +200,7 @@ export function HomeCarouselSection<T>({
         <View className="flex-row items-center gap-3">
           {onViewAll && (
             <TouchableOpacity onPress={onViewAll} hitSlop={8}>
-              <BloomText
-                style={{
-                  fontSize: 14,
-                  fontWeight: '600',
-                  textDecorationLine: 'underline',
-                  color: colors.COLOR_BLACK,
-                }}
-              >
+              <BloomText className="text-sm font-semibold underline text-foreground">
                 {viewAllText}
               </BloomText>
             </TouchableOpacity>

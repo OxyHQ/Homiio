@@ -8,11 +8,9 @@
  * not loud.
  */
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Text as BloomText } from '@oxyhq/bloom/typography';
-
-import { colors } from '@/styles/colors';
 
 interface HomeFooterStripProps {
   /** Pre-translated label list. Each chunk renders separated by a middot. */
@@ -22,27 +20,18 @@ interface HomeFooterStripProps {
 export function HomeFooterStrip({ chunks }: HomeFooterStripProps) {
   return (
     <View className="w-full items-center px-4 py-5 md:px-8">
-      <BloomText style={styles.text}>
+      <BloomText className="text-center text-xs font-medium leading-[18px] text-muted-foreground">
         {chunks.map((chunk, idx) => (
           <React.Fragment key={idx}>
-            {idx > 0 ? <BloomText style={styles.separator}> · </BloomText> : null}
-            <BloomText style={styles.text}>{chunk}</BloomText>
+            {idx > 0 ? (
+              <BloomText className="text-muted-foreground/70"> · </BloomText>
+            ) : null}
+            <BloomText className="text-center text-xs font-medium leading-[18px] text-muted-foreground">
+              {chunk}
+            </BloomText>
           </React.Fragment>
         ))}
       </BloomText>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  text: {
-    fontSize: 12,
-    fontWeight: '500',
-    lineHeight: 18,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    textAlign: 'center',
-  },
-  separator: {
-    color: colors.COLOR_BLACK_LIGHT_4,
-  },
-});

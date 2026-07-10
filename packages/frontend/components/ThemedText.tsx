@@ -59,9 +59,12 @@ const typeStyles = StyleSheet.create({
 export function ThemedText({
   style,
   type = 'default',
+  className,
   ...rest
 }: ThemedTextProps) {
-  const resolvedStyle: StyleProp<TextStyle> = [typeStyles[type], style];
+  const resolvedStyle: StyleProp<TextStyle> = className?.trim()
+    ? style
+    : [typeStyles[type], style];
 
   if (type === 'title') {
     return <H1 {...rest} style={resolvedStyle} />;
