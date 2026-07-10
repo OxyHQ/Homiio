@@ -4,8 +4,14 @@ Expo/RN frontend + Express backend. Agent: `homiio`.
 
 ## Deployment
 
-- **Port**: `4000` | **Domain**: `api.homiio.com` | **ECR**: `oxy/homiio`
+Homiio runs on **AWS ECS Fargate** — not DigitalOcean App Platform or droplets. Infra (ECS task defs, ALB, ECR, SSM, S3 bucket) lives in `~/Oxy/oxy-infra/terraform-uswest2/`.
+
+- **Port**: `4000` | **Domain**: `api.homiio.com` | **ECR**: `oxy/homiio` | **Region**: `us-west-2`
 - Build: `linux/arm64` Dockerfile in `packages/backend/`.
+- Deploy: push to `main` → `.github/workflows/deploy-aws.yml` (OIDC `oxy-github-deploy`, no AWS keys in GitHub).
+- Secrets: GitHub repo secrets → SSM `/oxy/homiio/*` and `/oxy/_shared/*` → injected by ECS at task launch.
+- Media: S3 bucket `oxy-homiio-media-usw2-237343248947` (set via `AWS_S3_BUCKET` in ECS env).
+- Worker: same ECR image, separate ECS service (`app-homiio-worker.tf`); entrypoint `packages/backend/worker.ts`.
 
 ## Commands
 
