@@ -18,11 +18,12 @@
  *   9. Host CTA banner.
  *  10. Footer trust strip (small print).
  *
- * Rhythm is 32px on web / 24px on mobile between sections (NativeWind
- * `gap-6 md:gap-8`). Long-form
- * copy (FAQ accordion, stats banner with big H2 numbers, "Verified
- * Listings / Fair Agreements / Trust Score" 3-up grid) does NOT live on
- * the home page — it belongs on /about and footer respectively.
+ * Rhythm is 32px on web / 24px on mobile between post-hero sections
+ * (NativeWind `gap-6 md:gap-8`). The hero sits outside that gap container
+ * so it does not participate. Long-form copy (FAQ accordion, stats banner
+ * with big H2 numbers, "Verified Listings / Fair Agreements / Trust Score"
+ * 3-up grid) does NOT live on the home page — it belongs on /about and
+ * footer respectively.
  */
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
@@ -396,11 +397,9 @@ export default function HomePage() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* Section rhythm is owned here by NativeWind `gap` — every direct
-            child below is a page section, evenly spaced (24px mobile / 32px
-            web) with no per-section `marginTop`. */}
-        <View className="gap-6 md:gap-8 pb-14">
-        {/* === Hero canvas === */}
+        {/* === Hero canvas ===
+            Outside the gap container — full-bleed hero should sit flush
+            against the first post-hero section, not participate in rhythm. */}
         <View
           className="relative w-full justify-end overflow-hidden"
           style={{
@@ -513,6 +512,11 @@ export default function HomePage() {
           </View>
         </View>
 
+        {/* Section rhythm is owned here by NativeWind `gap` — post-hero
+            sections only, evenly spaced (24px mobile / 32px web) with no
+            per-section `marginTop`. `pb-14` is bottom scroll padding;
+            gap never adds space after the last child. */}
+        <View className="gap-6 md:gap-8 pb-14">
         {/* === Category strip (sticky on web) === */}
         <HomeCategoryStrip sticky />
 
