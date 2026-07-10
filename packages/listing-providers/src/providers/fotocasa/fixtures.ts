@@ -71,3 +71,42 @@ export const FOTOCASA_FIXTURE_SEARCH_HTML = `<!doctype html>
   <a class="re-Card-link" href="/es/alquiler/vivienda/madrid-capital/exterior/187654323/d">Estudio</a>
 </div>
 </body></html>`;
+
+/** Fotocasa detail page using schema.org RealEstateListing with nested `about`. */
+export const FOTOCASA_FIXTURE_REAL_ESTATE_LISTING_HTML = `<!doctype html>
+<html lang="es">
+<head>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "RealEstateListing",
+  "name": "Piso en alquiler en Calle de Almagro",
+  "description": "Piso reformado de tres habitaciones en Chamberí.",
+  "url": "https://www.fotocasa.es/es/alquiler/vivienda/madrid-capital/calefaccion-ascensor/187654321/d",
+  "offers": {
+    "@type": "Offer",
+    "price": "1850",
+    "priceCurrency": "EUR",
+    "businessFunction": "http://purl.org/goodrelations/v1#LeaseOut"
+  },
+  "about": {
+    "@type": "Apartment",
+    "numberOfRooms": 3,
+    "numberOfBathroomsTotal": 2,
+    "floorSize": { "@type": "QuantitativeValue", "value": "95", "unitCode": "MTK" },
+    "image": ["https://static.fotocasa.es/images/anuncios/187654321/1.jpg"],
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "Calle de Almagro 30",
+      "addressLocality": "Madrid",
+      "addressRegion": "Madrid",
+      "postalCode": "28010",
+      "addressCountry": "ES"
+    },
+    "geo": { "@type": "GeoCoordinates", "latitude": 40.4318, "longitude": -3.6931 }
+  }
+}
+</script>
+</head>
+<body></body>
+</html>`;

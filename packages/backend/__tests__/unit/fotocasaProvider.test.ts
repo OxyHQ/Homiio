@@ -15,6 +15,7 @@ import {
   parseFotocasaSearch,
   FOTOCASA_FIXTURE_DETAIL_HTML,
   FOTOCASA_FIXTURE_SEARCH_HTML,
+  FOTOCASA_FIXTURE_REAL_ESTATE_LISTING_HTML,
 } from '@homiio/listing-providers';
 import type { ExternalListingRef } from '@homiio/listing-providers';
 import { OfferingType, PropertyType } from '@homiio/shared-types';
@@ -51,6 +52,16 @@ describe('FotocasaProvider.normalize', () => {
     expect(listing.amenities).toEqual(expect.arrayContaining(['elevator', 'heating', 'air_conditioning']));
     expect(listing.remoteImages).toHaveLength(3);
     expect(listing.remoteImages[0].isPrimary).toBe(true);
+  });
+
+  it('parses RealEstateListing JSON-LD with a nested about node', () => {
+    const payload = parseFotocasaDetail(
+      FOTOCASA_FIXTURE_REAL_ESTATE_LISTING_HTML,
+      'https://www.fotocasa.es/es/alquiler/vivienda/madrid-capital/x/187654321/d',
+    );
+    expect(payload.sourceId).toBe('187654321');
+    expect(payload.listing.price).toBe(1850);
+    expect(payload.listing.address.city).toBe('Madrid');
   });
 
   it('throws on a page with no real-estate JSON-LD', () => {

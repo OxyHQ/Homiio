@@ -19,6 +19,8 @@ const JSON_LD_RE =
 
 /** Match a Habitaclia detail-page link and capture its numeric listing id. */
 const DETAIL_LINK_RE = /href=["']([^"']*-i(\d+)\.htm)["']/gi;
+/** Fallback when anchors omit the `-i` prefix but keep the trailing id segment. */
+const DETAIL_LINK_FALLBACK_RE = /href=["']([^"']*\/alquiler-[^"']*-(\d{6,})\.htm)["']/gi;
 
 /** Spanish → canonical amenity keys; unknown names fall back to a slug. */
 const AMENITY_ALIASES: Readonly<Record<string, string>> = {
@@ -224,16 +226,28 @@ export function parseHabitacliaDetail(html: string, url: string): HabitacliaRawL
  * (`{ sourceId, url }`). Non-listing links are ignored; relative links are
  * resolved against {@link HABITACLIA_BASE_URL}.
  */
+function pushHabitacliaRef(
+  refs: { sourceId: string; url: string }[],
+  seen: Set<string>,
+  href: string | undefined,
+  sourceId: string | undefined,
+): void {
+  if (!href || !sourceId || seen.has(sourceId)) return;
+  seen.add(sourceId);
+  const url = href.startsWith('http') ? href : `${HABITACLIA_BASE_URL}${href}`;
+  refs.push({ sourceId, url });
+}
+
 export function parseHabitacliaSearch(html: string): { sourceId: string; url: string }[] {
   const seen = new Set<string>();
   const refs: { sourceId: string; url: string }[] = [];
   for (const match of html.matchAll(DETAIL_LINK_RE)) {
-    const href = match[1];
-    const sourceId = match[2];
-    if (!href || !sourceId || seen.has(sourceId)) continue;
-    seen.add(sourceId);
-    const url = href.startsWith('http') ? href : `${HABITACLIA_BASE_URL}${href}`;
-    refs.push({ sourceId, url });
+    pushHabitacliaRef(refs, seen, match[1], match[2]);
+  }
+  if (refs.length === 0) {
+    for (const match of html.matchAll(DETAIL_LINK_FALLBACK_RE)) {
+      pushHabitacliaRef(refs, seen, match[1], match[2]);
+    }
   }
   return refs;
 }

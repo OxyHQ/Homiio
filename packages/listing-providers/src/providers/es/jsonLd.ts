@@ -196,23 +196,39 @@ function readAmenities(value: unknown): { amenities: string[]; furnished?: boole
   return { amenities, furnished };
 }
 
+/** RealEstateListing nodes nest the residence under `about` or `mainEntity`. */
+function readSubject(node: Record<string, unknown>): Record<string, unknown> {
+  const nested = node.about ?? node.mainEntity;
+  return isRecord(nested) ? nested : node;
+}
+
 function toListing(node: Record<string, unknown>): EsSchemaListing {
-  const offer = readOffer(node.offers);
-  const { amenities, furnished } = readAmenities(node.amenityFeature);
-  const types = readTypes(node['@type']);
+  const subject = readSubject(node);
+  const offer = readOffer(node.offers ?? subject.offers);
+  const topLevelPrice = asNumber(node.price);
+  const { amenities, furnished } = readAmenities(subject.amenityFeature ?? node.amenityFeature);
+  const types = [...readTypes(node['@type']), ...readTypes(subject['@type'])];
   return {
     types,
-    name: asString(node.name),
-    description: asString(node.description),
-    url: asString(node.url),
-    address: readAddress(node.address),
-    coordinates: readCoordinates(node.geo),
-    images: collectImages(node.image ?? node.photo),
-    bedrooms: asNumber(node.numberOfRooms) ?? asNumber(node.numberOfBedrooms),
-    bathrooms: asNumber(node.numberOfBathroomsTotal) ?? asNumber(node.numberOfBathrooms),
-    squareMeters: readFloorSize(node.floorSize),
-    price: offer.price,
-    priceCurrency: offer.currency,
+    name: asString(node.name) ?? asString(subject.name),
+    description: asString(node.description) ?? asString(subject.description),
+    url: asString(node.url) ?? asString(subject.url),
+    address: readAddress(subject.address ?? node.address),
+    coordinates: readCoordinates(subject.geo ?? node.geo),
+    images: collectImages(subject.image ?? subject.photo ?? node.image ?? node.photo),
+    bedrooms:
+      asNumber(subject.numberOfRooms) ??
+      asNumber(subject.numberOfBedrooms) ??
+      asNumber(node.numberOfRooms) ??
+      asNumber(node.numberOfBedrooms),
+    bathrooms:
+      asNumber(subject.numberOfBathroomsTotal) ??
+      asNumber(subject.numberOfBathrooms) ??
+      asNumber(node.numberOfBathroomsTotal) ??
+      asNumber(node.numberOfBathrooms),
+    squareMeters: readFloorSize(subject.floorSize ?? node.floorSize),
+    price: offer.price ?? topLevelPrice,
+    priceCurrency: offer.currency ?? asString(node.priceCurrency),
     operation: offer.operation,
     amenities,
     furnished,

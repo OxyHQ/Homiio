@@ -63,6 +63,7 @@ export {
   FOTOCASA_BASE_URL,
   FOTOCASA_FIXTURE_DETAIL_HTML,
   FOTOCASA_FIXTURE_SEARCH_HTML,
+  FOTOCASA_FIXTURE_REAL_ESTATE_LISTING_HTML,
 } from './providers/fotocasa/fixtures';
 
 export {

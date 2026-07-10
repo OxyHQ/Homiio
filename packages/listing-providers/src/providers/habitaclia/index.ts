@@ -117,13 +117,27 @@ export class HabitacliaProvider implements ListingProvider {
     for (const city of cities) {
       for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
         if (yielded >= limit) return;
-        const { html } = await fetchListingViaLadder(job.runtime ?? this.runtime, searchUrl(city, page), {
+        const searchPageUrl = searchUrl(city, page);
+        let { html } = await fetchListingViaLadder(job.runtime ?? this.runtime, searchPageUrl, {
           provider: this.id,
           isChallenge: isHabitacliaChallenge,
           metrics: this.metrics,
           init: { signal: job.signal },
         });
-        const refs = parseHabitacliaSearch(html);
+        let refs = parseHabitacliaSearch(html);
+        // Habitaclia often serves a JS shell over HTTP; escalate to the browser
+        // tier when the first page parses zero refs (same symptom as prod).
+        if (refs.length === 0 && page === 1) {
+          const browserResult = await fetchListingViaLadder(job.runtime ?? this.runtime, searchPageUrl, {
+            provider: this.id,
+            isChallenge: isHabitacliaChallenge,
+            metrics: this.metrics,
+            init: { signal: job.signal },
+            tiers: ['browser'],
+          });
+          html = browserResult.html;
+          refs = parseHabitacliaSearch(html);
+        }
         if (refs.length === 0) break;
         for (const ref of refs) {
           if (yielded >= limit) return;
