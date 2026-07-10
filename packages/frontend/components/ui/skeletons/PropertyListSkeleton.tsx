@@ -3,7 +3,6 @@ import { View, StyleSheet, ScrollView } from 'react-native';
 import { Skeleton } from '@oxyhq/bloom';
 import { TextLines } from './TextLines';
 import { colors } from '@/styles/colors';
-import { shadowToken } from '@/styles/shadows';
 
 interface PropertyListSkeletonProps {
   viewMode?: 'list' | 'grid';
@@ -80,7 +79,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: 12,
     overflow: 'hidden',
-    ...shadowToken({ y: 1, blur: 4, color: colors.COLOR_BLACK, opacity: 0.1, elevation: 2 }),
   },
   gridImage: {
     backgroundColor: colors.COLOR_BLACK_LIGHT_6,
@@ -110,7 +108,6 @@ const styles = StyleSheet.create({
     padding: 12,
     flexDirection: 'row',
     gap: 12,
-    ...shadowToken({ y: 1, blur: 4, color: colors.COLOR_BLACK, opacity: 0.1, elevation: 2 }),
   },
   listImage: {
     backgroundColor: colors.COLOR_BLACK_LIGHT_6,

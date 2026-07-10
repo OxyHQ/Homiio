@@ -37,6 +37,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { colors } from '@/styles/colors';
+import { ZoomableImage } from '@/components/ui/ZoomableImage';
 import {
   type ImageDisplaySource,
   getPropertyImageSources,
@@ -85,8 +86,6 @@ interface PropertyImageCarouselProps {
   onPress?: () => void;
   /** Fires immediately before the press settles, used to prefetch detail data. */
   onPressIn?: () => void;
-  /** Fires when the press is released/cancelled (drives the card's pressed lift). */
-  onPressOut?: () => void;
   onLongPress?: () => void;
   /** Notifies the parent of the active page (e.g. to sync external chrome). */
   onIndexChange?: (index: number) => void;
@@ -117,7 +116,6 @@ interface CarouselPageProps {
   fillWhenUnmeasured?: boolean;
   onPress?: () => void;
   onPressIn?: () => void;
-  onPressOut?: () => void;
   onLongPress?: () => void;
   accessibilityLabel?: string;
 }
@@ -127,6 +125,9 @@ interface CarouselPageProps {
  * detail screen while a horizontal drag is consumed by the parent scroller —
  * React Native's responder system hands the gesture to the scroll view once it
  * travels horizontally, so the press only fires on a genuine tap.
+ *
+ * The photo zooms inside the page's rounded mask on hover (web, owned by
+ * `ZoomableImage`) / press (native) — the Airbnb move; the card never scales.
  *
  * Uses React Native's `Image` (not `expo-image`): `expo-image` fails to paint
  * remote photos on web here, leaving the page blank while the chrome renders
@@ -141,27 +142,36 @@ const CarouselPage: React.FC<CarouselPageProps> = ({
   fillWhenUnmeasured = false,
   onPress,
   onPressIn,
-  onPressOut,
   onLongPress,
   accessibilityLabel,
-}) => (
-  <Pressable
-    onPress={onPress}
-    onPressIn={onPressIn}
-    onPressOut={onPressOut}
-    onLongPress={onLongPress}
-    accessibilityRole="button"
-    accessibilityLabel={accessibilityLabel}
-    style={[
-      styles.page,
-      fillWhenUnmeasured && (width <= 0 || height <= 0)
-        ? styles.pageFill
-        : { width, height },
-    ]}
-  >
-    <Image source={source} style={styles.image} resizeMode="cover" />
-  </Pressable>
-);
+}) => {
+  // Local press state drives the native press-zoom (`ZoomableImage` owns web
+  // hover itself). Static-array style + state, never function-form `style`.
+  const [pressed, setPressed] = useState(false);
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => {
+        setPressed(true);
+        onPressIn?.();
+      }}
+      onPressOut={() => setPressed(false)}
+      onLongPress={onLongPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      style={[
+        styles.page,
+        fillWhenUnmeasured && (width <= 0 || height <= 0)
+          ? styles.pageFill
+          : { width, height },
+      ]}
+    >
+      <ZoomableImage active={pressed} style={styles.pageZoom}>
+        <Image source={source} style={styles.image} resizeMode="cover" />
+      </ZoomableImage>
+    </Pressable>
+  );
+};
 
 interface NavArrowProps {
   direction: 'prev' | 'next';
@@ -265,7 +275,6 @@ export const PropertyImageCarousel: React.FC<PropertyImageCarouselProps> = ({
   borderRadius,
   onPress,
   onPressIn,
-  onPressOut,
   onLongPress,
   onIndexChange,
   accessibilityLabel,
@@ -359,12 +368,11 @@ export const PropertyImageCarousel: React.FC<PropertyImageCarouselProps> = ({
         height={pageHeight}
         onPress={onPress}
         onPressIn={onPressIn}
-        onPressOut={onPressOut}
         onLongPress={onLongPress}
         accessibilityLabel={accessibilityLabel}
       />
     ),
-    [containerWidth, pageHeight, onPress, onPressIn, onPressOut, onLongPress, accessibilityLabel],
+    [containerWidth, pageHeight, onPress, onPressIn, onLongPress, accessibilityLabel],
   );
 
   const isMultiPage = sources.length > 1;
@@ -415,7 +423,6 @@ export const PropertyImageCarousel: React.FC<PropertyImageCarouselProps> = ({
           fillWhenUnmeasured
           onPress={onPress}
           onPressIn={onPressIn}
-          onPressOut={onPressOut}
           onLongPress={onLongPress}
           accessibilityLabel={accessibilityLabel}
         />
@@ -456,6 +463,15 @@ const styles = StyleSheet.create({
   pageFill: {
     width: '100%',
     height: '100%',
+  },
+  // The masked zoom wrapper fills the page so the photo scales inside the page
+  // bounds (and the carousel's rounded container) without moving the layout.
+  pageZoom: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   image: {
     width: '100%',

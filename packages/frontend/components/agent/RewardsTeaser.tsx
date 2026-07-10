@@ -21,7 +21,6 @@ import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { colors } from '@/styles/colors';
 import {
-  cardShadow,
   ICON_SIZES,
   radius,
   resolvePagePadding,
@@ -184,7 +183,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.xl,
     gap: spacing.md,
-    ...cardShadow.sm,
   },
   medal: {
     width: 48,

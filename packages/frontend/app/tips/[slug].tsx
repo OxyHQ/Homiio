@@ -25,7 +25,7 @@ import {
   toNewsroomLocale,
   type TipArticle,
 } from '@/services/tipsService';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
 const renderMarkdown = (content: string): React.ReactNode[] => {
@@ -282,7 +282,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     overflow: 'hidden',
     backgroundColor: colors.surfaceElevated,
-    ...withShadow('sm'),
   },
   heroImage: {
     width: '100%',
@@ -395,7 +394,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
     borderRadius: radius.lg,
     overflow: 'hidden',
-    ...withShadow('sm'),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   relatedCardPressed: {
     opacity: 0.92,

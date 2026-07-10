@@ -6,8 +6,8 @@
  *
  * Sits as a closing visual beat on the home page (paired with AgentCtaBanner).
  */
-import React, { useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useMediaQuery } from 'react-responsive';
@@ -18,12 +18,12 @@ import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { colors } from '@/styles/colors';
 import {
   BANNER_FILL_MIN_HEIGHT,
-  cardShadow,
   radius,
   resolvePagePadding,
   spacing,
   tracker,
 } from '@/constants/styles';
+import { ZoomableImage } from '@/components/ui/ZoomableImage';
 
 interface HostCtaBannerProps {
   title: string;
@@ -57,36 +57,29 @@ export function HostCtaBanner({
   const horizontalPadding = fill ? 0 : resolvePagePadding(isWide);
   // Flatter than classic 16:9 so stacked/full-width cards stay compact.
   const aspectRatio = isWide ? 2.6 : 2.1;
-  const [hovered, setHovered] = useState(false);
-  const isWeb = Platform.OS === 'web';
 
   // The banner itself is NOT a pressable — only the Bloom Button below is the
   // tap target. Wrapping the whole banner in a Pressable while it also contains
   // a Button produces a nested <button> on web (invalid HTML + hydration error).
-  const hoverHandlers = isWeb
-    ? {
-        onMouseEnter: () => setHovered(true),
-        onMouseLeave: () => setHovered(false),
-      }
-    : {};
-
   return (
     <View style={fill ? styles.fillWrap : { paddingHorizontal: horizontalPadding }}>
       <View
-        {...hoverHandlers}
         style={[
           styles.banner,
           fill ? styles.bannerFill : { aspectRatio },
-          hovered && isWeb ? styles.bannerHover : null,
         ]}
       >
-        <Image
-          source={{ uri: imageUrl }}
-          style={styles.bannerImage}
-          contentFit="cover"
-          transition={250}
-          cachePolicy="memory-disk"
-        />
+        {/* The photo zooms inside the banner's rounded mask on hover; the banner
+            never moves. Scrim + copy are siblings, so they stay put. */}
+        <ZoomableImage style={styles.bannerMedia}>
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.bannerImage}
+            contentFit="cover"
+            transition={250}
+            cachePolicy="memory-disk"
+          />
+        </ZoomableImage>
         <LinearGradient
           colors={['rgba(0,0,0,0.55)', 'rgba(0,0,0,0.12)', 'rgba(0,0,0,0)']}
           start={{ x: 0, y: 1 }}
@@ -128,7 +121,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     overflow: 'hidden',
     backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-    ...cardShadow.sm,
   },
   // Grid mode: no intrinsic aspect ratio — fill the column height (the taller
   // sibling defines it via row `alignItems: 'stretch'`) with a sensible floor
@@ -138,8 +130,14 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: BANNER_FILL_MIN_HEIGHT,
   },
-  bannerHover: {
-    transform: [{ scale: 1.005 }],
+  // The masked zoom wrapper fills the banner so the photo scales inside the
+  // rounded corners; the scrim and copy sit above it as siblings.
+  bannerMedia: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   bannerImage: {
     position: 'absolute',

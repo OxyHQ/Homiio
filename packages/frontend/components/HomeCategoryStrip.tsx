@@ -4,7 +4,7 @@
  * long-term; Beachfront / Cabins / Pools for vacation; sale/exchange
  * buckets for buy and exchange browse modes).
  */
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Image,
   Platform,
@@ -55,14 +55,9 @@ interface CategoryItemProps {
 }
 
 const CategoryItem: React.FC<CategoryItemProps> = ({ active, label, image, onPress }) => {
-  const [hovered, setHovered] = useState(false);
-  const scale = hovered && Platform.OS === 'web' ? 1.04 : 1;
-
   return (
     <Pressable
       onPress={onPress}
-      onHoverIn={() => setHovered(true)}
-      onHoverOut={() => setHovered(false)}
       className={
         active
           ? 'items-center justify-center rounded-2xl bg-secondary px-1 py-1'
@@ -71,7 +66,7 @@ const CategoryItem: React.FC<CategoryItemProps> = ({ active, label, image, onPre
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       accessibilityLabel={label}
-      style={{ width: ITEM_WIDTH, transform: [{ scale }] }}
+      style={{ width: ITEM_WIDTH }}
     >
       <View
         className="items-center justify-center overflow-hidden rounded-2xl"

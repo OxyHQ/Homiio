@@ -18,7 +18,6 @@ import React, { useRef, useState } from 'react';
 import {
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -37,6 +36,7 @@ import { colors } from '@/styles/colors';
 import { textShadow } from '@/styles/shadows';
 import { cardShadow, gridGap, PAGE_GUTTER_CLASS, pagePadding, radius, spacing, tracker } from '@/constants/styles';
 import { cityRegionName, getCityImageSource } from '@/utils/cityDisplay';
+import { ZoomableImage } from '@/components/ui/ZoomableImage';
 
 interface CityShowcaseSectionProps {
   title: string;
@@ -152,8 +152,7 @@ interface CityCardProps {
 }
 
 const CityCard: React.FC<CityCardProps> = ({ city, width, height, onPress }) => {
-  const [hovered, setHovered] = useState(false);
-  const isWeb = Platform.OS === 'web';
+  const [pressed, setPressed] = useState(false);
   const imageSource = getCityImageSource(city, 'large');
   // Subtitle: the city's region (e.g. "Catalonia"), resolved from the populated
   // region ref. Falls back to a short property-count line when no region name.
@@ -166,30 +165,30 @@ const CityCard: React.FC<CityCardProps> = ({ city, width, height, onPress }) => 
   return (
     <Pressable
       onPress={onPress}
-      onHoverIn={() => setHovered(true)}
-      onHoverOut={() => setHovered(false)}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
       accessibilityRole="button"
       accessibilityLabel={`Explore homes in ${city.name}`}
-      style={[
-        styles.card,
-        { width, height },
-        hovered && isWeb ? styles.cardHover : null,
-      ]}
+      style={[styles.card, { width, height }]}
     >
-      {imageSource ? (
-        <Image
-          source={imageSource}
-          style={styles.cardImage}
-          contentFit="cover"
-          transition={200}
-          cachePolicy="memory-disk"
-        />
-      ) : (
-        <LinearGradient
-          colors={[colors.primaryColor, colors.secondaryLight]}
-          style={[styles.cardImage, { pointerEvents: 'none' }]}
-        />
-      )}
+      {/* The photo zooms inside the card's rounded mask on hover/press; the card
+          itself never moves. Scrim + copy are siblings, so they stay put. */}
+      <ZoomableImage active={pressed} style={styles.cardMedia}>
+        {imageSource ? (
+          <Image
+            source={imageSource}
+            style={styles.cardImage}
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
+          />
+        ) : (
+          <LinearGradient
+            colors={[colors.primaryColor, colors.secondaryLight]}
+            style={[styles.cardImage, { pointerEvents: 'none' }]}
+          />
+        )}
+      </ZoomableImage>
       <LinearGradient
         colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.55)']}
         locations={[0.4, 1]}
@@ -213,10 +212,15 @@ const styles = StyleSheet.create({
     borderRadius: radius.photo,
     overflow: 'hidden',
     backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-    ...cardShadow.sm,
   },
-  cardHover: {
-    transform: [{ scale: 1.01 }],
+  // The masked zoom wrapper fills the card so the photo scales inside the
+  // rounded corners; the scrim and copy sit above it as siblings.
+  cardMedia: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   cardImage: {
     position: 'absolute',

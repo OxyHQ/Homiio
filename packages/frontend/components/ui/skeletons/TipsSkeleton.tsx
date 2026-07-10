@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { Skeleton } from '@oxyhq/bloom';
 import { TextLines } from './TextLines';
 import { colors } from '@/styles/colors';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { radius, spacing } from '@/constants/styles';
 
 interface TipsSkeletonProps {
   itemCount?: number;
@@ -30,7 +30,6 @@ function FeaturedTipCardSkeleton() {
         backgroundColor: colors.surfaceElevated,
         borderRadius: radius.xl,
         overflow: 'hidden',
-        ...withShadow('sm'),
       }}
     >
       <Skeleton.Box width="100%" height={260} borderRadius={0} />
@@ -53,7 +52,6 @@ function TipCardSkeleton() {
         backgroundColor: colors.surfaceElevated,
         borderRadius: radius.lg,
         overflow: 'hidden',
-        ...withShadow('sm'),
       }}
     >
       <Skeleton.Box width="100%" height={180} borderRadius={0} />

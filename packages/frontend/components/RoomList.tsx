@@ -14,7 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
-import { shadowToken } from '@/styles/shadows';
+import { ZoomableImage } from '@/components/ui/ZoomableImage';
 import { propertyService, type Property } from '@/services/propertyService';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { logger } from '@/utils/logger';
@@ -59,11 +59,15 @@ const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
             {/* Room Image */}
             <View style={styles.imageContainer}>
                 {primaryImage ? (
-                    <Image
-                        source={{ uri: primaryImage }}
-                        style={styles.roomImage}
-                        resizeMode="cover"
-                    />
+                    // The photo zooms inside its mask on hover; the card never
+                    // moves. The match-score badge is a sibling above the zoom.
+                    <ZoomableImage style={styles.roomImageFill}>
+                        <Image
+                            source={{ uri: primaryImage }}
+                            style={styles.roomImage}
+                            resizeMode="cover"
+                        />
+                    </ZoomableImage>
                 ) : (
                     <View style={[styles.roomImage, styles.placeholderImage]}>
                         <Ionicons name="image-outline" size={32} color={colors.COLOR_BLACK_LIGHT_5} />
@@ -413,7 +417,8 @@ const styles = StyleSheet.create({
         backgroundColor: colors.white,
         borderRadius: 12,
         marginBottom: 16,
-        ...shadowToken({ y: 2, blur: 4, color: colors.COLOR_BLACK, opacity: 0.1, elevation: 3 }),
+        borderWidth: 1,
+        borderColor: colors.border,
         overflow: 'hidden',
     },
     imageContainer: {
@@ -423,6 +428,14 @@ const styles = StyleSheet.create({
     roomImage: {
         width: '100%',
         height: '100%',
+    },
+    // The masked zoom wrapper fills the image box so the photo scales inside it.
+    roomImageFill: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
     },
     placeholderImage: {
         backgroundColor: colors.mutedSubtle,
