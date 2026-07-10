@@ -1,25 +1,36 @@
 ##
-## Dockerfile for the Homiio Backend API (@homiio/backend)
+## Dockerfile for the Homiio Backend API + listing worker (@homiio/backend)
 ##
-## Production image for the Express + Mongoose API. Built for AWS Graviton
-## (linux/arm64) but also runs on linux/amd64. The build context MUST be the
-## monorepo root so the workspace packages (shared-types + backend) resolve:
+## Production image for the Express + Mongoose API and the listing-ingestion
+## worker. Built for AWS Graviton (linux/arm64) but also runs on linux/amd64.
+## The build context MUST be the monorepo root so the workspace packages
+## (shared-types + listing-providers + backend) resolve:
 ##
 ##   Build:  docker build -f packages/backend/Dockerfile -t homiio-backend .
-##   Run:    docker run --env-file packages/backend/.env -p 4000:4000 homiio-backend
+##   API:    docker run --env-file packages/backend/.env -p 4000:4000 homiio-backend
+##   Worker: docker run --env-file packages/backend/.env \
+##             homiio-backend node packages/backend/dist/worker.js
+##
+## Same ECR image serves both processes — ECS overrides the command for the
+## worker task. Playwright Chromium is installed so LISTING_BROWSER_ENABLED
+## can escalate anti-bot portals on the worker (the API never scrapes).
 ##
 ## Listens on $PORT (default 4000). See packages/backend/.env.example for the
 ## full list of runtime environment variables.
 ##
 
 # ── Build stage ───────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:20-bookworm-slim AS builder
 
-# Toolchain for any node-gyp fallback (sharp ships arm64 musl prebuilds, but
+# Toolchain for any node-gyp fallback (sharp ships arm64 glibc prebuilds, but
 # keep the compiler available so a source build never fails the image).
-RUN apk add --no-cache python3 make g++
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      python3 make g++ ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-# whatsapp-web.js depends on puppeteer; never download Chromium into the image.
+# whatsapp-web.js depends on puppeteer; never download Chromium into the image
+# for that path — Playwright Chromium is installed explicitly in the runtime
+# stage for the listing worker only.
 ENV PUPPETEER_SKIP_DOWNLOAD=true \
     PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
@@ -28,8 +39,8 @@ RUN npm install -g bun
 WORKDIR /app
 
 # Copy the workspace root and narrow `workspaces` to just the packages the
-# API needs (shared-types + listing-providers + backend). This excludes the
-# heavy Expo frontend.
+# API/worker need (shared-types + listing-providers + backend). This excludes
+# the heavy Expo frontend.
 # Narrowing the workspace set invalidates bun.lock, so it is NOT copied — bun
 # resolves fresh from the package.json version ranges (still deterministic).
 # The root `postinstall` (build:shared-types) is stripped: source is not present
@@ -68,15 +79,21 @@ RUN bun run --filter @homiio/backend build
 RUN cp -r packages/backend/locales packages/backend/dist/locales
 
 # ── Production stage ──────────────────────────────────────────────
-FROM node:20-alpine
+FROM node:20-bookworm-slim
 
-# Runtime deps: libc++/libstdc++ for sharp's prebuilt musl binary; tini as a
-# proper PID 1 for clean signal handling and zombie reaping.
-RUN apk add --no-cache libstdc++ tini
+# Runtime deps: tini as PID 1; Playwright OS libs installed via
+# `playwright install-deps` below (Chromium needs a full set of shared libs).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates tini \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production \
     PUPPETEER_SKIP_DOWNLOAD=true \
-    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    # Writable log path for the non-root `node` user (default ./logs is EACCES).
+    LOG_FILE=/tmp/homiio-app.log \
+    # Playwright browsers land under this path (owned by root, readable by node).
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 RUN npm install -g bun
 
@@ -92,19 +109,29 @@ COPY packages/shared-types/package.json packages/shared-types/
 COPY packages/listing-providers/package.json packages/listing-providers/
 COPY packages/backend/package.json packages/backend/
 
-RUN bun install --production
+# Playwright is an optional peer of @homiio/listing-providers. Install it as a
+# production dependency of the backend workspace so the worker can escalate to
+# the browser fetch tier when LISTING_BROWSER_ENABLED=true.
+RUN bun add --cwd packages/backend playwright@1.61.1 \
+ && bun install --production
+
+# Install Chromium + its OS dependencies into PLAYWRIGHT_BROWSERS_PATH.
+# Kept in the shared image so one ECR tag serves API + worker; the API never
+# launches a browser (LISTING_* flags are worker-only).
+RUN bunx --cwd packages/backend playwright install --with-deps chromium \
+ && chmod -R a+rX /ms-playwright
 
 # Copy the compiled JavaScript (incl. staged locales) from the build stage.
 COPY --from=builder /app/packages/shared-types/dist packages/shared-types/dist
 COPY --from=builder /app/packages/listing-providers/dist packages/listing-providers/dist
 COPY --from=builder /app/packages/backend/dist packages/backend/dist
 
-# Drop privileges — node:alpine ships a `node` user (uid 1000).
+# Drop privileges — node:bookworm-slim ships a `node` user (uid 1000).
 USER node
 
 # Express listens on $PORT (default 4000, see config.ts).
 EXPOSE 4000
 
-# tini handles SIGTERM/SIGINT and reaps children (Telegram/WhatsApp workers).
-ENTRYPOINT ["/sbin/tini", "--"]
+# tini handles SIGTERM/SIGINT and reaps children (Telegram/WhatsApp/Playwright).
+ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["node", "packages/backend/dist/server.js"]
