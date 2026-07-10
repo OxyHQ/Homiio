@@ -7,6 +7,7 @@ import mongoose from 'mongoose';
 import config from '../config';
 import { getErrorMessage } from '../utils/errors';
 import { logger } from '../middlewares/logging';
+import { ensureCityGeoIndexes } from '../services/cityGeoMigration';
 
 class Database {
   private connection: any;
@@ -62,7 +63,9 @@ class Database {
 
       this.isConnected = true;
 
-      // Connection successful
+      // Retire legacy City `(name, state, country)` indexes before ingest/geo
+      // upserts run — idempotent, fast once production is clean.
+      await ensureCityGeoIndexes();
 
       // Handle connection events
       mongoose.connection.on('error', (error) => {

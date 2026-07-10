@@ -13,6 +13,7 @@
     "dev:worker": "nodemon --watch \"**/*.ts\" --exec ts-node --transpile-only worker.ts",
     "build": "tsc",
     "migrate:billing": "node scripts/migrate-billing-field.js",
+    "migrate:city-geo": "ts-node --transpile-only scripts/migrate-city-geo.ts",
     "seed:geo": "ts-node --transpile-only scripts/seedGeo.ts",
     "seed:properties": "ts-node --transpile-only scripts/seedProperties.ts",
     "test": "cd ../listing-providers && bun run build && cd ../backend && NODE_OPTIONS='--max-old-space-size=6144' jest",
