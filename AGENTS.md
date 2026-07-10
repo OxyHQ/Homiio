@@ -25,6 +25,10 @@ bun run lint                # Lint all
 bun run clean               # Clean everything
 ```
 
+## Workflow
+
+**Automated PR reviews (`listing-providers` + `backend`).** After opening a PR, address automated review comments (Gemini, Bugbot, CodeQL, Copilot) before merge — fix high-confidence security/correctness findings; defer bikeshed/docs-only unless trivial.
+
 ## Architecture
 
 ```
@@ -207,6 +211,20 @@ Convenience path when you do not own a page: `runtime.openBrowserSession(options
 3. Gate it with a feature flag env var `PROVIDER_<NAME>_ENABLED=true` (see below).
 4. Add integration test: normalize fixture → upsert → Image refs with storage mock.
 
+**Shared parse modules (CRITICAL — no copy-paste):** new portals MUST import from `packages/listing-providers/src/parse/` (plus `session.ts` / `browserSession.ts`). Do **not** re-implement JSON-LD / `__NEXT_DATA__` / contact / classifieds / city-list parsers per portal.
+
+| Module | Use for |
+|--------|---------|
+| `parse/jsonLd.ts` | schema.org LD+JSON (`extractEsSchemaListings` / `extractItSchemaListings` / `extractSchemaOrgListings`, `collectJsonLdNodes`) |
+| `parse/nextData.ts` | `__NEXT_DATA__` / `__PAGE_MODEL__` / `__PRELOADED_STATE__` |
+| `parse/contact.ts` | phone/email/whatsapp → `NormalizedListing.contact` |
+| `parse/classifieds.ts` | housing category allowlist + `assertHousingListing` |
+| `parse/cities.ts` | `LISTING_*_CITIES` env city lists |
+| `parse/price.ts` + `parse/listing.ts` | monthly/sale price sanity + ingest validation |
+| `session.ts` / `browserSession.ts` | Idealista-like warm + AJAX |
+
+Root shims (`contact.ts`, `classifieds.ts`, `jsonLd.ts`, `nextData.ts`, `cities.ts`) re-export `parse/` for short imports — prefer `parse/` for new code. Portal-specific AJAX URL builders stay under `providers/<name>/`.
+
 ### General classifieds portals (CRITICAL)
 
 Homiio is real estate only. **General classifieds** — milanuncios, kleinanzeigen, subito, leboncoin (marketplace), olx.ro — must **never** be site-wide crawled.
@@ -228,7 +246,28 @@ PROVIDER_HABITACLIA_ENABLED=true
 PROVIDER_BLUEGROUND_ENABLED=true
 PROVIDER_APARTMENTS_COM_ENABLED=true
 PROVIDER_ZILLOW_ENABLED=true
+PROVIDER_REALTOR_COM_ENABLED=true
+PROVIDER_HOTPADS_ENABLED=true
+PROVIDER_REDFIN_ENABLED=true
+PROVIDER_IMMOBILIENSCOUT24_ENABLED=true
+PROVIDER_IMMOWELT_ENABLED=true
+PROVIDER_KLEINANZEIGEN_ENABLED=true
+PROVIDER_STORIA_ENABLED=true
+PROVIDER_IMOBILIARE_RO_ENABLED=true
+PROVIDER_OLX_RO_ENABLED=true
+PROVIDER_MERCADOLIBRE_AR_ENABLED=true
+PROVIDER_ZONAPROP_ENABLED=true
+PROVIDER_ARGENPROP_ENABLED=true
+PROVIDER_PROPERATI_ENABLED=true
 ```
+
+Argentina (`LISTING_AR_CITIES`): Zonaprop / Argenprop (Navent `rplis-api` + `__PRELOADED_STATE__` via shared `navent` / `naventProvider` — Cloudflare, keep OFF until sticky residential clears), MercadoLibre inmuebles (housing-only; cold HTML search+detail verified — enable), Properati (`__NEXT_DATA__` / JSON-LD via shared modules — Cloudflare, OFF). MercadoLibre uses shared `mercadolibre` / `mercadolibreProvider` (also EC). Never site-wide crawl ML.
+
+Romania (`LISTING_RO_CITIES`): Storia (`__NEXT_DATA__` + session), Imobiliare.ro (Inertia search + JSON-LD detail), OLX.ro (housing `/imobiliare/…` only). Shared parsers live in `@homiio/listing-providers` `src/parse/` (`jsonLd`, `nextData`, `contact`, `classifieds`, `cities`, `price`) plus root `html` / `slug` / `navent` / `mercadolibre` — providers must not duplicate them.
+
+Germany (`LISTING_DE_CITIES`): ImmobilienScout24 (mobile JSON), Immowelt (LZ SERP JSON + optional session), Kleinanzeigen (housing categories only — never site-wide). Same shared contact/html/classifieds chokepoints.
+
+United States (`LISTING_US_CITIES`): realtor.com (direct GraphQL HTTP), HotPads (public JSON API), Redfin (Playwright session + Stingray AJAX — requires `LISTING_BROWSER_ENABLED`). Skipped: rent.com (rate-limited), trulia.com (Zillow Group overlap).
 
 The worker reads these at startup; disabled providers are not registered.
 

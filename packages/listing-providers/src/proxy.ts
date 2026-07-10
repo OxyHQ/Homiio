@@ -67,6 +67,25 @@ export function residentialProxyFromEnv(): ResidentialProxyConfig | undefined {
 }
 
 /**
+ * Mask userinfo in a proxy URL for logs (SSM secrets must never appear in
+ * CloudWatch). `http://user:pass@host:823` → `http://***:***@host:823`.
+ */
+export function maskProxyUrl(raw: string | undefined): string {
+  const trimmed = raw?.trim();
+  if (!trimmed) return '';
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.username || parsed.password) {
+      parsed.username = '***';
+      parsed.password = '***';
+    }
+    return parsed.toString();
+  } catch {
+    return trimmed.replace(/\/\/[^@/]+@/g, '//***:***@');
+  }
+}
+
+/**
  * Whether an env var is explicitly `"true"`. When unset, returns `defaultValue`.
  */
 export function envBool(name: string, defaultValue: boolean): boolean {
@@ -153,6 +172,7 @@ async function loadUndici(): Promise<UndiciModule | undefined> {
 
 type ProxiedFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
+const PROXIED_FETCH_CACHE_MAX = 100;
 const proxiedFetchCache = new Map<string, Promise<ProxiedFetch>>();
 
 /**
@@ -185,6 +205,10 @@ export async function createProxiedFetch(
       undici.fetch(input, { ...init, dispatcher } as RequestInit & { dispatcher: unknown });
   })();
 
+  if (proxiedFetchCache.size >= PROXIED_FETCH_CACHE_MAX) {
+    const firstKey = proxiedFetchCache.keys().next().value;
+    if (firstKey !== undefined) proxiedFetchCache.delete(firstKey);
+  }
   proxiedFetchCache.set(embedded, created);
   return created;
 }

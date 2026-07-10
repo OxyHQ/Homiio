@@ -103,6 +103,8 @@ export class HttpFetchRuntime implements FetchRuntime {
       const response = await requestFetch(url, {
         signal,
         redirect: 'follow',
+        method: init?.method ?? 'GET',
+        body: init?.body,
         headers: {
           'User-Agent': this.userAgent,
           'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
@@ -119,6 +121,8 @@ export class HttpFetchRuntime implements FetchRuntime {
     return withTimeout(timeoutMs, init?.signal, async (signal) => {
       const response = await requestFetch(url, {
         signal,
+        method: init?.method ?? 'GET',
+        body: init?.body,
         headers: { 'User-Agent': this.userAgent, ...init?.headers },
       });
       if (!response.ok) {
