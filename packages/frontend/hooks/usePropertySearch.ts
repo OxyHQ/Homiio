@@ -137,6 +137,19 @@ export function buildSearchParams(query: SearchQuery): Record<string, string | n
   if (query.fairPrice === true) {
     params.fairPrice = 'true';
   }
+  // Category-lens flags. The backend gates `instantBook`/`petFriendly` on the
+  // boolean and `exchangeMode` on `offering === EXCHANGE`, so these are safe to
+  // always emit when set; they also fold into `searchQueryKey` so toggling a
+  // home category re-keys the feed and refetches.
+  if (query.instantBook === true) {
+    params.instantBook = 'true';
+  }
+  if (query.petFriendly === true) {
+    params.petFriendly = 'true';
+  }
+  if (query.exchangeMode) {
+    params.exchangeMode = query.exchangeMode;
+  }
 
   return params;
 }

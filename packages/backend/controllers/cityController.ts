@@ -50,6 +50,7 @@ interface PropertyFilters {
   verified?: string;
   eco?: string;
   minBedrooms?: string;
+  minBathrooms?: string;
   maxPrice?: string;
   minPrice?: string;
 }
@@ -218,6 +219,7 @@ class CityController {
         verified,
         eco,
         minBedrooms,
+        minBathrooms,
         maxPrice,
         minPrice,
       }: PropertyFilters = req.query;
@@ -239,7 +241,16 @@ class CityController {
         return res.json({
           success: true,
           message: 'Properties retrieved successfully',
-          data: { city, properties: [], pagination: { page: numericPage, limit: numericLimit, total: 0, pages: 0 } },
+          // Flat `hasMore`/`totalPages` aliases mirror `/properties/search` so
+          // the infinite city hook reads paging metadata the same way; the
+          // `pagination` key is kept so `normalizeEnvelope` preserves the envelope.
+          data: {
+            city,
+            properties: [],
+            pagination: { page: numericPage, limit: numericLimit, total: 0, pages: 0 },
+            hasMore: false,
+            totalPages: 0,
+          },
         });
       }
 
@@ -251,6 +262,7 @@ class CityController {
       if (verified === 'true') query.isVerified = true;
       if (eco === 'true') query.isEcoFriendly = true;
       if (minBedrooms) query.bedrooms = { $gte: Number(minBedrooms) };
+      if (minBathrooms) query.bathrooms = { $gte: Number(minBathrooms) };
       if (minPrice || maxPrice) {
         const priceRange: { $gte?: number; $lte?: number } = {};
         if (minPrice) priceRange.$gte = Number(minPrice);
@@ -292,12 +304,17 @@ class CityController {
         await city.save();
       }
 
+      const pages = Math.ceil(total / numericLimit);
       res.json({
         success: true,
         data: {
           city,
           properties,
-          pagination: { page: numericPage, limit: numericLimit, total, pages: Math.ceil(total / numericLimit) },
+          pagination: { page: numericPage, limit: numericLimit, total, pages },
+          // Flat aliases for parity with `/properties/search` — the infinite city
+          // hook reads `hasMore` in `getNextPageParam` and `totalPages` for display.
+          hasMore: skip + properties.length < total,
+          totalPages: pages,
         },
       });
     } catch (error) {

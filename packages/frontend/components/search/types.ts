@@ -8,7 +8,7 @@
  * them without a cycle.
  */
 import { OfferingType } from '@homiio/shared-types';
-import type { PropertyType } from '@homiio/shared-types';
+import type { ExchangeMode, PropertyType } from '@homiio/shared-types';
 
 /**
  * A geographic bounding box in the same `{ west, south, east, north }` shape the
@@ -94,6 +94,19 @@ export interface SearchQuery {
   sortOrder: SearchSortOrder;
   /** When true, only listings with `priceEthics.isFairPrice`. */
   fairPrice?: boolean;
+  /**
+   * Short-term-only: restrict to instant-bookable listings. Carried here (not
+   * only in the filters sheet) so a home category like "Instant book" can seed
+   * the endless feed through the same query path.
+   */
+  instantBook?: boolean;
+  /** Restrict to pet-friendly listings (home "Pet friendly" category lens). */
+  petFriendly?: boolean;
+  /**
+   * Exchange-only: restrict to a swap/host exchange mode. Only meaningful when
+   * `offering` is {@link OfferingType.EXCHANGE}; the backend ignores it otherwise.
+   */
+  exchangeMode?: ExchangeMode;
 }
 
 /** The ordered steps the panel walks through (Dates only in short-term mode). */

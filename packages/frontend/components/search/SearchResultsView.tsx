@@ -28,6 +28,8 @@ import { Button } from '@oxyhq/bloom/button';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { useSavedSearches } from '@/hooks/useSavedSearches';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import MapView, { type MapApi } from '@/components/Map';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
@@ -382,11 +384,18 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     );
   }, [bottomSheet, canSaveSearch, onRequireAuth, query]);
 
+  // Shared infinite-scroll primitive: native fires `onScroll` end-detect, web
+  // uses the `<LoadMoreSentinel>` below. Both funnel through the same guarded
+  // loader, replacing the hand-rolled `ScrollView.onScroll` distance math.
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       void fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const { onScroll: handleListScroll } = useInfiniteScroll({
+    onEndReached: handleEndReached,
+    enabled: hasNextPage,
+  });
 
   const resultsHeading = useMemo(() => {
     if (isLoading) {
@@ -520,13 +529,8 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     <ScrollView
       style={styles.listScroll}
       contentContainerStyle={styles.listScrollContent}
-      onScroll={({ nativeEvent }) => {
-        const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-        const distanceFromEnd =
-          contentSize.height - (layoutMeasurement.height + contentOffset.y);
-        if (distanceFromEnd < layoutMeasurement.height) handleEndReached();
-      }}
-      scrollEventThrottle={200}
+      onScroll={handleListScroll}
+      scrollEventThrottle={16}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.resultsHeader}>
@@ -539,6 +543,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
           style={styles.gridPadding}
         />
       ) : null}
+      <LoadMoreSentinel enabled={hasNextPage} onLoadMore={handleEndReached} />
     </ScrollView>
   );
 

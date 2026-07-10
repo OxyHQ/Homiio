@@ -44,6 +44,8 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
+import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import savedPropertyService from '@/services/savedPropertyService';
 import savedPropertyFolderService, {
   type SavedPropertyFolder,
@@ -62,6 +64,12 @@ const RECENCY_CHIPS: { value: RecencyFilter; label: string }[] = [
 ];
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Saved has no backend list endpoint, so the Recent grid reveals its in-memory
+ *  array incrementally: an initial window, grown a page at a time via the same
+ *  sentinel (web) / onEndReached (native) primitive as the server-paginated grids. */
+const SAVED_INITIAL_WINDOW = 24;
+const SAVED_WINDOW_STEP = 24;
 
 export default function SavedPropertiesScreen() {
   const { t } = useTranslation();
@@ -151,6 +159,33 @@ export default function SavedPropertiesScreen() {
       }
     });
   }, [savedProperties, searchQuery, recency, dataUpdatedAt]);
+
+  // Incremental reveal for the Recent grid. Reset the window when the filter set
+  // changes — the "adjust state during render" pattern (React's sanctioned way to
+  // reset state on a derived change) keeps it effect-free.
+  const [visibleCount, setVisibleCount] = useState(SAVED_INITIAL_WINDOW);
+  const filterSignature = `${tab}|${searchQuery}|${recency}`;
+  const [prevSignature, setPrevSignature] = useState(filterSignature);
+  if (filterSignature !== prevSignature) {
+    setPrevSignature(filterSignature);
+    setVisibleCount(SAVED_INITIAL_WINDOW);
+  }
+  const visibleRecent = useMemo(
+    () => filteredRecent.slice(0, visibleCount),
+    [filteredRecent, visibleCount],
+  );
+  const hasMoreRecent = visibleCount < filteredRecent.length;
+  const loadMoreRecent = useCallback(() => {
+    setVisibleCount((count) =>
+      count < filteredRecent.length
+        ? Math.min(count + SAVED_WINDOW_STEP, filteredRecent.length)
+        : count,
+    );
+  }, [filteredRecent.length]);
+  const { onScroll: handleRecentScroll } = useInfiniteScroll({
+    onEndReached: loadMoreRecent,
+    enabled: hasMoreRecent,
+  });
 
   const handleRefresh = useCallback(async () => {
     await Promise.all([
@@ -302,6 +337,8 @@ export default function SavedPropertiesScreen() {
         <ScrollView
           contentContainerStyle={styles.gridContent}
           showsVerticalScrollIndicator={false}
+          onScroll={handleRecentScroll}
+          scrollEventThrottle={16}
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
@@ -331,10 +368,16 @@ export default function SavedPropertiesScreen() {
               />
             </View>
           ) : (
-            <PropertyResultsGrid
-              properties={filteredRecent}
-              onPropertyPress={handlePropertyPress}
-            />
+            <>
+              <PropertyResultsGrid
+                properties={visibleRecent}
+                onPropertyPress={handlePropertyPress}
+              />
+              {/* Reveal is synchronous (a client-side slice grows), so no loading
+                  skeleton — the next window renders instantly. Web reveals via the
+                  sentinel; native via the ScrollView onScroll. */}
+              <LoadMoreSentinel enabled={hasMoreRecent} onLoadMore={loadMoreRecent} />
+            </>
           )}
         </ScrollView>
       )}

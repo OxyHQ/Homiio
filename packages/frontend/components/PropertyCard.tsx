@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Image, StyleSheet, Pressable, TouchableOpacity, ViewStyle, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
@@ -29,6 +29,29 @@ import { prefetchProperty, prefetchPropertyStats } from '@/utils/queryPrefetch';
 import { PropertyCardSkeleton } from './ui/skeletons/PropertyCardSkeleton';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+const IS_WEB = Platform.OS === 'web';
+
+/** A listing counts as "new" (badge) while its `createdAt` is within this window. */
+const NEW_LISTING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Card scale while hovered (web pointer) — a subtle Airbnb-style lift. */
+const HOVER_SCALE = 1.02;
+/** Card scale while pressed — a tactile push-down (native + web tap). */
+const PRESS_SCALE = 0.97;
+
+/**
+ * Web-only CSS transition so the hover/press scale eases instead of snapping.
+ * `transitionProperty` is a web value RN's `ViewStyle` lacks, so this block is
+ * web-cast (the sanctioned pattern for web-only CSS in this codebase).
+ */
+const WEB_INTERACTION_TRANSITION: ViewStyle | null = IS_WEB
+  ? ({
+      transitionProperty: 'transform',
+      transitionDuration: '160ms',
+      transitionTimingFunction: 'ease-out',
+    } as unknown as ViewStyle)
+  : null;
 
 function shouldShowInstantBook(
   property: Property,
@@ -219,6 +242,31 @@ export function PropertyCard({
     [property, mode],
   );
 
+  // Hover (web pointer) + press micro-interaction. Static-array styles driven by
+  // state, never the NativeWind-incompatible function-form `style` (AGENTS.md
+  // §NativeWind Pressable). Web hover uses `onPointerEnter/Leave` on the outer
+  // card wrapper; press is threaded through the inner Pressables below.
+  const [hovered, setHovered] = useState(false);
+  const [pressed, setPressed] = useState(false);
+  const handleInteractionPressIn = useCallback(() => {
+    setPressed(true);
+    handlePressIn();
+  }, [handlePressIn]);
+  const handleInteractionPressOut = useCallback(() => {
+    setPressed(false);
+  }, []);
+  const interactionScale = pressed ? PRESS_SCALE : hovered ? HOVER_SCALE : 1;
+
+  // "New" freshness badge — pure frontend, no pagination risk. Memoized on
+  // `createdAt` so `Date.now()` is captured once per listing (the 7-day boundary
+  // rarely flips mid-session) rather than read impurely on every render.
+  const isNew = useMemo(() => {
+    const createdAt = property?.createdAt;
+    if (!createdAt) return false;
+    const created = new Date(createdAt).getTime();
+    return Number.isFinite(created) && Date.now() - created <= NEW_LISTING_WINDOW_MS;
+  }, [property?.createdAt]);
+
   // Show skeleton loading state
   if (isLoading) {
     return (
@@ -372,12 +420,24 @@ export function PropertyCard({
           opposite corner from the save heart (top-right), so they never
           overlap; the carousel dots sit bottom-centre, also clear.
 
-          Order (offerings lead, then provenance/status): rating → offerings →
-          instant book → verified → eco. The compact ("small") card is too
-          small to host any of this — its photo shows only the save heart — so
-          the whole stack is suppressed on compact as well as grid. */}
-      {!isGrid && !isCompact && (
+          Order (freshness leads, then offerings, then provenance/status): new →
+          rating → offerings → instant book → verified → eco. The compact
+          ("small") card is too small to host any of this — its photo shows only
+          the save heart — so the whole stack is suppressed on compact. The grid
+          variant stays photo-first, so it renders ONLY the freshness chip (the
+          rich chips are gated on `!isGrid`). */}
+      {!isCompact && (isNew || !isGrid) && (
         <View style={styles.mediaChipStack}>
+          {isNew ? (
+            <View style={styles.newChip}>
+              <BloomText style={styles.newChipText}>
+                {t('listing.badge.new', 'New')}
+              </BloomText>
+            </View>
+          ) : null}
+
+          {!isGrid ? (
+            <>
           {finalShowRating && propertyData.rating ? (
             <MediaChip
               icon="star"
@@ -417,6 +477,8 @@ export function PropertyCard({
 
           {/* Eco — icon-only leaf, green accent. */}
           {isEco ? <MediaChip icon="leaf" accent={colors.success} /> : null}
+            </>
+          ) : null}
         </View>
       )}
 
@@ -572,10 +634,18 @@ export function PropertyCard({
 
   return (
     <View
+      // Web hover lift: pointer enter/leave fire on the card's own boundary
+      // (they don't bubble from inner children), mapping to mouseenter/mouseleave
+      // on RN-Web. No-op on native — touch never produces hover.
+      onPointerEnter={IS_WEB ? () => setHovered(true) : undefined}
+      onPointerLeave={IS_WEB ? () => setHovered(false) : undefined}
       style={[
         styles.container,
+        WEB_INTERACTION_TRANSITION,
         style as ViewStyle,
         isProcessing ? { opacity: 0.7 } : null,
+        // Interaction transform last so the hover/press scale always wins.
+        { transform: [{ scale: interactionScale }] },
       ]}
     >
       {useCarousel ? (
@@ -591,7 +661,8 @@ export function PropertyCard({
             aspectRatio={mediaAspectRatio}
             borderRadius={isGrid ? radius.photo : radius.lg}
             onPress={onPress}
-            onPressIn={handlePressIn}
+            onPressIn={handleInteractionPressIn}
+            onPressOut={handleInteractionPressOut}
             onLongPress={onLongPress}
             accessibilityLabel={propertyData.title}
           >
@@ -600,7 +671,8 @@ export function PropertyCard({
           <Pressable
             style={styles.contentPressable}
             onPress={onPress}
-            onPressIn={handlePressIn}
+            onPressIn={handleInteractionPressIn}
+            onPressOut={handleInteractionPressOut}
             onLongPress={onLongPress}
             accessibilityRole="button"
             accessibilityLabel={propertyData.title}
@@ -615,7 +687,8 @@ export function PropertyCard({
             orientation === 'horizontal' ? styles.horizontalBody : null,
           ]}
           onPress={onPress}
-          onPressIn={handlePressIn}
+          onPressIn={handleInteractionPressIn}
+          onPressOut={handleInteractionPressOut}
           onLongPress={onLongPress}
           accessibilityRole="button"
           accessibilityLabel={propertyData.title}
@@ -851,6 +924,29 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'flex-start',
     gap: spacing.xs,
+  },
+  /**
+   * Freshness "New" chip — a solid brand pill leading the top-left stack. Sized
+   * to `CHIP_HEIGHT_MD` (28) so it aligns on the same baseline as the frosted
+   * `MediaChip`s beside it; a solid brand fill (vs. the frosted chips) makes the
+   * freshness signal read first. Uses `primaryForeground` on the primary fill.
+   */
+  newChip: {
+    height: 28,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryColor,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: boxShadow({ y: 1, blur: 3, color: colors.COLOR_BLACK, opacity: 0.12 }) }
+      : { boxShadow: boxShadow({ y: 1, blur: 3, color: colors.COLOR_BLACK, opacity: 0.1 }), elevation: 2 }),
+  },
+  newChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primaryForeground,
+    letterSpacing: 0.2,
   },
   // Property type in the meta line below the photo (icon + label), replacing the
   // former on-photo type chip.

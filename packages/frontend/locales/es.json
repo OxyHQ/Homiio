@@ -224,6 +224,10 @@
       "title": "Recommended homes",
       "eyebrow": "For you"
     },
+    "explore": {
+      "eyebrow": "Sigue explorando",
+      "title": "Explora más viviendas"
+    },
     "hostCta": {
       "cta": "Become a host",
       "subtitle": "Reach verified renters across Spain — free to list, fair fees, real human support.",
@@ -2602,7 +2606,8 @@
       "verified": "Verificado",
       "eco": "Ecológico",
       "instantBook": "Reserva inmediata",
-      "fairPrice": "Precio justo"
+      "fairPrice": "Precio justo",
+      "new": "Nuevo"
     },
     "offering": {
       "stepTitle": "¿Cómo lo ofreces?",
