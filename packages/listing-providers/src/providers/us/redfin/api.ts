@@ -4,6 +4,7 @@
 
 import { stripStingrayPrefix } from '../portals';
 import { REDFIN_BASE_URL, type RedfinHomeFixture } from './fixtures';
+import { asNumberUs as asNumber, asString, isRecord } from '../../../parse/guards';
 
 /** Known Redfin `region_id` values for default US discover cities. */
 export const REDFIN_CITY_REGIONS: Readonly<Record<string, { regionId: number; path: string }>> = {
@@ -15,19 +16,6 @@ export const REDFIN_CITY_REGIONS: Readonly<Record<string, { regionId: number; pa
 };
 
 export type RedfinKind = 'rent' | 'sale';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function asString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  return undefined;
-}
 
 function readNestedNumber(value: unknown): number | undefined {
   if (!isRecord(value)) return asNumber(value);

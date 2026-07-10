@@ -7,6 +7,7 @@ import { buildContact, contactFromUnknown, extractContactFromHtml, mergeContact 
 import { collectJsonLdNodes, findJsonLdByType, jsonLdTypes } from '../../../jsonLd';
 import { findNextDataArray, findNextDataRecord, parseNextDataPageProps } from '../../../nextData';
 import { PROPERATI_BASE_URL } from './fixtures';
+import { asNumber, asString, isRecord } from '../../../parse/guards';
 
 export interface ProperatiSearchRef {
   sourceId: string;
@@ -35,24 +36,6 @@ export interface ProperatiRawListing {
   contact?: NormalizedListingContact;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function asString(value: unknown): string | undefined {
-  if (typeof value === 'string' && value.trim().length > 0) return value.trim();
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  return undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const parsed = Number.parseFloat(value.replace(/[^0-9.,-]/g, '').replace(',', '.'));
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  return undefined;
-}
 
 export function isProperatiChallenge(body: string): boolean {
   if (body.trim().length < 128) return true;

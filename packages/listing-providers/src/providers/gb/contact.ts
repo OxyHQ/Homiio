@@ -3,16 +3,7 @@
  */
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function asString(value: unknown): string | undefined {
-  if (typeof value === 'string' && value.trim().length > 0) return value.trim();
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  return undefined;
-}
+import { asString, isRecord } from '../../parse/guards';
 
 /** Strip to a dialable phone string; returns undefined when too short. */
 export function normalizePhone(raw: string | undefined): string | undefined {

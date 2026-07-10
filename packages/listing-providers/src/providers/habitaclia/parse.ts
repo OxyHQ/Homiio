@@ -12,6 +12,7 @@
  */
 
 import { HABITACLIA_BASE_URL, type HabitacliaRawImage, type HabitacliaRawListing } from './fixtures';
+import { asNumber, asString } from '../../parse/guards';
 
 /** Match every `<script type="application/ld+json">…</script>` block. */
 const JSON_LD_RE =
@@ -50,21 +51,6 @@ function asArray(value: unknown): unknown[] {
   if (Array.isArray(value)) return value;
   if (value === undefined || value === null) return [];
   return [value];
-}
-
-function asString(value: unknown): string | undefined {
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  return undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const parsed = Number.parseFloat(value.replace(/[^0-9.,-]/g, '').replace(',', '.'));
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  return undefined;
 }
 
 function htmlFragmentToText(html: string): string {

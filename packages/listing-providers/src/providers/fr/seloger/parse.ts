@@ -6,6 +6,7 @@ import type { NormalizedListingContact } from '@homiio/shared-types';
 import { parseNextData } from '../../../parse/nextData';
 import { contactFromUnknown } from '../../../parse/contact';
 import { SELOGER_BASE_URL } from './fixtures';
+import { asNumber, asString, isRecord } from '../../../parse/guards';
 
 export interface SelogerRawListing {
   sourceId: string;
@@ -24,26 +25,6 @@ export interface SelogerRawListing {
   images: string[];
   coordinates?: { lat: number; lng: number };
   contact?: NormalizedListingContact;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function asString(value: unknown): string | undefined {
-  if (typeof value === 'string' && value.trim().length > 0) return value.trim();
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  return undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string' && value.trim().length > 0) {
-    const cleaned = value.replace(/[^\d.,]/g, '').replace(/\s/g, '').replace(',', '.');
-    const n = Number(cleaned);
-    return Number.isFinite(n) ? n : undefined;
-  }
-  return undefined;
 }
 
 function priceFromCard(card: Record<string, unknown>): number | undefined {

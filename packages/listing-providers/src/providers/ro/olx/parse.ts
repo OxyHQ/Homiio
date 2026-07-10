@@ -9,6 +9,7 @@ import type { NormalizedListingContact } from '@homiio/shared-types';
 import { isHousingCategory } from '../../../classifieds';
 import { buildContact, contactFromAjaxBody, mergeContact } from '../../../contact';
 import { OLX_RO_BASE_URL } from './fixtures';
+import { asNumber, asString, isRecord } from '../../../parse/guards';
 
 const OFFER_HREF_RE =
   /href="((?:https:\/\/www\.olx\.ro)?\/d\/oferta\/[^"]+-ID[A-Za-z0-9]+\.html)[^"]*"/gi;
@@ -66,24 +67,6 @@ export interface OlxRoRawListing {
   numericId?: string;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function asString(value: unknown): string | undefined {
-  if (typeof value === 'string' && value.trim().length > 0) return value.trim();
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  return undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const parsed = Number.parseFloat(value.replace(/[^0-9.,-]/g, '').replace(',', '.'));
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  return undefined;
-}
 
 export function olxRoSourceIdFromUrl(url: string): string | undefined {
   const match = /-ID([A-Za-z0-9]+)(?:\.html)?(?:\?|$)/i.exec(url);

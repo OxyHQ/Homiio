@@ -12,6 +12,7 @@
 
 import { FOTOCASA_BASE_URL } from './fixtures';
 import { fotocasaSourceIdFromUrl, parseFotocasaSearch } from './parse';
+import { asString, isRecord } from '../../parse/guards';
 
 /** Fotocasa property-search gateway (internal JSON API). */
 export const FOTOCASA_GW_BASE = 'https://web.gw.fotocasa.es/v2/propertysearch';
@@ -100,16 +101,6 @@ export function isFotocasaSearchadsChallenge(body: string): boolean {
   if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) return true;
   if (/sentimos la interrupci|pardon our interruption|verifica que eres/i.test(trimmed)) return true;
   return false;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function asString(value: unknown): string | undefined {
-  if (typeof value === 'string' && value.trim().length > 0) return value.trim();
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  return undefined;
 }
 
 function refFromRecord(record: Record<string, unknown>): { sourceId: string; url: string } | undefined {

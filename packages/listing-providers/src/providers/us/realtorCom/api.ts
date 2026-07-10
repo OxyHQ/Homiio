@@ -4,6 +4,7 @@
 
 import { REALTOR_COM_BASE_URL } from './fixtures';
 import type { RecordedRealtorListing } from './fixtures';
+import { asNumberUs as asNumber, asString, isRecord } from '../../../parse/guards';
 
 export const REALTOR_GRAPHQL_URL =
   'https://www.realtor.com/frontdoor/graphql?client_id=rdc-x&schema=vesta';
@@ -102,19 +103,6 @@ export function realtorDetailBody(propertyId: string): string {
     query: DETAIL_QUERY,
     variables: { property_id: propertyId },
   });
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function asNumber(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  return undefined;
-}
-
-function asString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
 }
 
 function readCoordinate(value: unknown): { lat: number; lon: number } | undefined {

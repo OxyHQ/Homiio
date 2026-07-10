@@ -10,6 +10,7 @@ import type { NormalizedListingContact } from '@homiio/shared-types';
 import { ldJsonScriptBodies } from '../../html';
 import { extractEsSchemaListings, type EsSchemaListing } from '../../parse/jsonLd';
 import { PISOS_BASE_URL } from './fixtures';
+import { asNumber } from '../../parse/guards';
 
 /** Raw payload `fetch()` hands to `normalize()`. */
 export interface PisosRaw {
@@ -112,16 +113,6 @@ function readHiddenPisoId(html: string): string | undefined {
   if (end < 0) return undefined;
   const value = html.slice(start, end);
   return value.length > 0 ? value : undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const cleaned = value.replace(/[^0-9.,-]/g, '').replace(/\./g, '').replace(',', '.');
-    const parsed = Number.parseFloat(cleaned);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  return undefined;
 }
 
 function parseJsonObject(raw: string): Record<string, unknown> | undefined {

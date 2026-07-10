@@ -5,6 +5,7 @@
 import type { NormalizedListingContact } from '@homiio/shared-types';
 import { NonHousingListingError, assertHousingListing } from '../../../parse/classifieds';
 import { contactFromUnknown } from '../../../parse/contact';
+import { asNumber, asString, isRecord } from '../../../parse/guards';
 import {
   LEBONCOIN_BASE_URL,
   LEBONCOIN_HOUSING_CATEGORY_IDS,
@@ -30,25 +31,6 @@ export interface LeboncoinRawListing {
   categoryId: string;
   categoryName?: string;
   contact?: NormalizedListingContact;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function asString(value: unknown): string | undefined {
-  if (typeof value === 'string' && value.trim().length > 0) return value.trim();
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  return undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string' && value.trim().length > 0) {
-    const n = Number(value.replace(/\s/g, '').replace(',', '.'));
-    return Number.isFinite(n) ? n : undefined;
-  }
-  return undefined;
 }
 
 export function resolveLeboncoinPrice(raw: unknown): number | undefined {

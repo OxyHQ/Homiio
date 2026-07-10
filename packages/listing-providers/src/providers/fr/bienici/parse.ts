@@ -9,6 +9,7 @@
 import type { NormalizedListingContact } from '@homiio/shared-types';
 import { contactFromBieniciRelative } from '../contact';
 import { BIENICI_BASE_URL } from './fixtures';
+import { asNumber, asString, isRecord } from '../../../parse/guards';
 
 export interface BieniciRawListing {
   sourceId: string;
@@ -32,25 +33,6 @@ export interface BieniciRawListing {
   images: string[];
   coordinates?: { lat: number; lng: number };
   contact?: NormalizedListingContact;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function asString(value: unknown): string | undefined {
-  if (typeof value === 'string' && value.trim().length > 0) return value.trim();
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  return undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string' && value.trim().length > 0) {
-    const n = Number(value.replace(/\s/g, '').replace(',', '.'));
-    return Number.isFinite(n) ? n : undefined;
-  }
-  return undefined;
 }
 
 /**

@@ -2,6 +2,7 @@
  * HotPads public JSON API helpers (pure URL building + response parsing).
  */
 
+import { asNumberUs as asNumber, asString, isRecord } from '../../../parse/guards';
 import {
   HOTPADS_API_BASE,
   HOTPADS_BASE_URL,
@@ -24,19 +25,6 @@ export interface HotpadsSearchRef {
   sourceId: string;
   url: string;
   lotIdEncoded: string;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function asString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  return undefined;
 }
 
 export function hotpadsAreaUrl(resourceId: string): string {

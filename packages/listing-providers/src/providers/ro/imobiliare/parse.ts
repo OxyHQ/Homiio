@@ -12,6 +12,7 @@ import {
   resolveJsonLdRef,
 } from '../../../jsonLd';
 import { IMOBILIARE_RO_BASE_URL } from './fixtures';
+import { asNumber, asString, isRecord } from '../../../parse/guards';
 
 const DATA_PAGE_RE = /data-page="([^"]+)"/i;
 
@@ -46,34 +47,6 @@ export interface ImobiliareRoRawListing {
   };
   images: string[];
   contact?: NormalizedListingContact;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function asString(value: unknown): string | undefined {
-  if (typeof value === 'string' && value.trim().length > 0) return value.trim();
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  return undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const cleaned = value.replace(/[^0-9.,-]/g, '');
-    if (!cleaned) return undefined;
-    // RO display prices use `.` as thousands: "228.690" → 228690
-    if (/^\d{1,3}(\.\d{3})+$/.test(cleaned)) {
-      return Number.parseFloat(cleaned.replace(/\./g, ''));
-    }
-    const normalized = cleaned.includes(',')
-      ? cleaned.replace(/\./g, '').replace(',', '.')
-      : cleaned;
-    const parsed = Number.parseFloat(normalized);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  return undefined;
 }
 
 function decodeDataPage(html: string): Record<string, unknown> | undefined {
