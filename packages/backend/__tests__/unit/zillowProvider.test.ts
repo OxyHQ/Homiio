@@ -19,25 +19,27 @@ import {
 import type {
   ExternalListingRef,
   FetchRuntime,
-  FetchRuntimeInit,
   RawListing,
 } from '@homiio/listing-providers';
 import { OfferingType, PropertyType } from '@homiio/shared-types';
 
 const provider = new ZillowProvider();
 
-function fakeRuntime(pages: Map<string, string>): FetchRuntime {
+function ladderRuntime(pages: Map<string, string>): FetchRuntime {
   return {
-    async fetchText(url: string, _init?: FetchRuntimeInit): Promise<string> {
+    async fetchText(url: string): Promise<string> {
       const html = pages.get(url);
-      if (html === undefined) throw new Error(`fakeRuntime has no page for ${url}`);
+      if (html === undefined) throw new Error(`ladderRuntime has no page for ${url}`);
       return html;
     },
     async fetchJson<T = unknown>(): Promise<T> {
-      throw new Error('zillow fake runtime does not serve JSON');
+      throw new Error('zillow ladder runtime does not serve JSON');
     },
     async loadFixture<T = unknown>(): Promise<T> {
-      throw new Error('zillow fake runtime has no fixtures');
+      throw new Error('zillow ladder runtime has no fixtures');
+    },
+    async fetchViaBrowser(url: string): Promise<string> {
+      return this.fetchText(url);
     },
   };
 }
@@ -65,18 +67,19 @@ describe('ZillowProvider', () => {
     }
   });
 
-  it('discovers refs from a fake runtime, honouring the limit', async () => {
-    const runtime = fakeRuntime(new Map([[
-      'https://www.zillow.com/homes/for_rent/portland-or/',
-      ZILLOW_SEARCH_FIXTURE,
-    ]]));
+  it('discovers refs from a ladder-backed runtime, honouring the limit', async () => {
+    const testProvider = new ZillowProvider({
+      runtime: ladderRuntime(
+        new Map([['https://www.zillow.com/homes/for_rent/portland-or/', ZILLOW_SEARCH_FIXTURE]]),
+      ),
+      ladderTiers: ['browser'],
+    });
     const refs: ExternalListingRef[] = [];
-    for await (const ref of provider.discover({
+    for await (const ref of testProvider.discover({
       provider: 'zillow',
       market: 'US',
       city: 'Portland, OR',
       limit: 5,
-      runtime,
     })) {
       refs.push(ref);
     }
@@ -84,9 +87,19 @@ describe('ZillowProvider', () => {
     expect(refs[0]?.hints?.kind).toBe('rent');
   });
 
-  it('discover throws without a runtime on the job', async () => {
-    const iterator = provider.discover({ provider: 'zillow', market: 'US' });
-    await expect(iterator[Symbol.asyncIterator]().next()).rejects.toThrow(/requires a FetchRuntime/);
+  it('fetch pulls detail HTML through the ladder runtime', async () => {
+    const runtime = ladderRuntime(new Map([[rentPage.url, rentPage.html]]));
+    const testProvider = new ZillowProvider({ runtime, ladderTiers: ['browser'] });
+    const ref: ExternalListingRef = {
+      provider: 'zillow',
+      sourceId: rentPage.sourceId,
+      url: rentPage.url,
+      hints: { kind: 'rent' },
+    };
+    const raw = await testProvider.fetch(ref, { runtime });
+    expect((raw.payload as { listing: { address: { locality?: string } } }).listing.address.locality).toBe(
+      'Portland',
+    );
   });
 
   it('normalizes a for-rent apartment into a published long-term rental', () => {

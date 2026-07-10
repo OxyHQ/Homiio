@@ -13,6 +13,7 @@ const {
   serializePropertyAddresses,
   ADDRESS_GEO_POPULATE,
 } = require('../services/propertyAddressSerializer');
+const { serializePropertyImages } = require('../services/imageSerializer');
 
 const DEFAULT_CITY_LIMIT = 50;
 const DEFAULT_POPULAR_LIMIT = 10;
@@ -273,6 +274,7 @@ class CityController {
       // geo refs, then flatten the refs back to ids, so cards in the city view
       // render a location label without an N+1 lookup.
       serializePropertyAddresses(properties);
+      serializePropertyImages(properties);
 
       // Keep the cached count fresh (cheap, single field write when it drifts).
       if (city.propertiesCount !== total) {

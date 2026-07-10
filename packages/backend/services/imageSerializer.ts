@@ -12,7 +12,7 @@
  */
 
 import type { ImageVariantName, PropertyImageRef } from '@homiio/shared-types';
-import type { ImageDocument } from './imageUploadService';
+import imageUploadService, { type ImageDocument } from './imageUploadService';
 
 /** The variant used as the default `url` on a denormalized property image entry. */
 const DEFAULT_DISPLAY_VARIANT: ImageVariantName = 'medium';
@@ -23,14 +23,63 @@ const DEFAULT_DISPLAY_VARIANT: ImageVariantName = 'medium';
  * consumes); `urls` carries every variant for opt-in use.
  */
 export function toPropertyImageRef(image: ImageDocument): PropertyImageRef {
+  const urls = Object.fromEntries(
+    Object.entries(image.urls).map(([variant, url]) => [
+      variant,
+      imageUploadService.resolveStoredImageUrl(url),
+    ]),
+  ) as PropertyImageRef['urls'];
+
   return {
     imageId: String(image._id),
-    url: image.urls[DEFAULT_DISPLAY_VARIANT],
+    url: imageUploadService.resolveStoredImageUrl(image.urls[DEFAULT_DISPLAY_VARIANT]),
     caption: image.caption,
     isPrimary: image.isPrimary ?? false,
     order: image.order ?? 0,
-    urls: { ...image.urls },
+    urls,
   };
+}
+
+/** Rewrite legacy S3 image URLs on a persisted property `images[]` entry. */
+export function rewritePropertyImageRef(ref: StoredPropertyImage): StoredPropertyImage {
+  const urls = ref.urls
+    ? Object.fromEntries(
+        Object.entries(ref.urls).map(([variant, url]) => [
+          variant,
+          url ? imageUploadService.resolveStoredImageUrl(url) : url,
+        ]),
+      )
+    : undefined;
+
+  return {
+    ...ref,
+    url: imageUploadService.resolveStoredImageUrl(ref.url),
+    urls,
+  };
+}
+
+/** Minimal image shape stored on Property documents (Mongoose lean() is wider than PropertyImageRef). */
+type StoredPropertyImage = {
+  url: string;
+  urls?: Partial<Record<string, string>>;
+  imageId?: string | { toString(): string };
+  caption?: string;
+  isPrimary?: boolean;
+  order?: number;
+};
+
+/**
+ * Rewrite legacy direct-S3 URLs on every embedded property image before an API
+ * response is sent. Safe to call on Mongoose docs or plain objects.
+ */
+export function serializePropertyImages<T extends { images?: StoredPropertyImage[] }>(
+  target: T | T[],
+): void {
+  const items = Array.isArray(target) ? target : [target];
+  for (const item of items) {
+    if (!item.images || item.images.length === 0) continue;
+    item.images = item.images.map(rewritePropertyImageRef);
+  }
 }
 
 /**

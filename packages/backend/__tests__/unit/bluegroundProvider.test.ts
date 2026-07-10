@@ -34,17 +34,16 @@ describe('BluegroundProvider', () => {
   it('normalizes the Madrid (EUR) fixture as a furnished long-term rental', () => {
     const listing = normalizeFixture(0);
     expect(listing.source).toBe('blueground');
-    expect(listing.sourceId).toBe('bg-mad-4471');
+    expect(listing.sourceId).toBe('mad-1490341p');
     expect(listing.sourceUrl.startsWith('http')).toBe(true);
     expect(listing.status).toBe('published');
     expect(listing.type).toBe(PropertyType.APARTMENT);
     expect(listing.offerings).toEqual([OfferingType.LONG_TERM_RENT]);
-    expect(listing.longTermRent?.monthlyAmount).toBe(2650);
+    expect(listing.longTermRent?.monthlyAmount).toBe(3473);
     expect(listing.longTermRent?.currency).toBe('EUR');
     expect(listing.address.city).toBe('Madrid');
     expect(listing.address.countryCode).toBe('ES');
-    expect(listing.address.neighborhood).toBe('Salamanca');
-    expect(listing.address.coordinates).toEqual({ lat: 40.4256, lng: -3.6845 });
+    expect(listing.address.neighborhood).toBe('Chueca Justicia');
     expect(listing.furnishedStatus).toBe('furnished');
     expect(listing.remoteImages).toHaveLength(2);
     expect(listing.remoteImages.filter((image) => image.isPrimary)).toHaveLength(1);
@@ -52,7 +51,7 @@ describe('BluegroundProvider', () => {
 
   it('normalizes the New York (USD) fixture with US currency and country', () => {
     const listing = normalizeFixture(1);
-    expect(listing.sourceId).toBe('bg-nyc-9182');
+    expect(listing.sourceId).toBe('nyc-1234567p');
     expect(listing.longTermRent?.monthlyAmount).toBe(4200);
     expect(listing.longTermRent?.currency).toBe('USD');
     expect(listing.address.city).toBe('New York');
@@ -61,7 +60,7 @@ describe('BluegroundProvider', () => {
   });
 
   it('coerces a valid payload and rejects an invalid one', () => {
-    expect(coerceBluegroundListing(BLUEGROUND_FIXTURES[0]).id).toBe('bg-mad-4471');
+    expect(coerceBluegroundListing(BLUEGROUND_FIXTURES[0]).id).toBe('mad-1490341p');
     expect(() => coerceBluegroundListing({ id: 'x' })).toThrow(/BluegroundRawListing/);
   });
 

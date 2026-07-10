@@ -23,14 +23,24 @@ import type {
   DiscoverJob,
   ExternalListingRef,
   FetchContext,
+  FetchRuntime,
   ListingProvider,
   ProviderHealth,
   RawListing,
 } from '../../types';
+import { createFetchRuntime } from '../../runtime';
+import { fetchListingViaLadder } from '../../strategy';
+import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
 import { HABITACLIA_BASE_URL, type HabitacliaRawListing } from './fixtures';
 import { habitacliaSourceIdFromUrl, parseHabitacliaDetail, parseHabitacliaSearch } from './parse';
 
 const PROVIDER_ID: ProviderId = 'habitaclia';
+
+/** HTML markers of a Habitaclia interstitial/anti-bot page served with a 200. */
+export function isHabitacliaChallenge(html: string): boolean {
+  if (html.trim().length < 512) return true;
+  return /acceso denegado|verifica|datadome|px-captcha/i.test(html);
+}
 
 /** ES cities enumerated when a discover job omits an explicit `city`. */
 const DEFAULT_CITIES: readonly string[] = ['barcelona', 'madrid', 'valencia', 'sevilla', 'malaga'];
@@ -90,11 +100,15 @@ export class HabitacliaProvider implements ListingProvider {
   readonly id: ProviderId = PROVIDER_ID;
   readonly markets = ['ES'] as const;
 
+  private readonly runtime: FetchRuntime;
+  private readonly metrics: ProviderMetricsSink & ProviderMetricsReader;
+
+  constructor(options: { runtime?: FetchRuntime; metrics?: ProviderMetricsSink & ProviderMetricsReader } = {}) {
+    this.runtime = options.runtime ?? createFetchRuntime();
+    this.metrics = options.metrics ?? defaultProviderMetrics;
+  }
+
   async *discover(job: DiscoverJob): AsyncIterable<ExternalListingRef> {
-    const { runtime } = job;
-    if (!runtime) {
-      throw new Error('habitaclia discover requires a FetchRuntime on the job');
-    }
     const cities = job.city ? [job.city] : DEFAULT_CITIES;
     const limit = job.limit ?? Number.POSITIVE_INFINITY;
     const seen = new Set<string>();
@@ -103,7 +117,12 @@ export class HabitacliaProvider implements ListingProvider {
     for (const city of cities) {
       for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
         if (yielded >= limit) return;
-        const html = await runtime.fetchText(searchUrl(city, page), { signal: job.signal });
+        const { html } = await fetchListingViaLadder(this.runtime, searchUrl(city, page), {
+          provider: this.id,
+          isChallenge: isHabitacliaChallenge,
+          metrics: this.metrics,
+          init: { signal: job.signal },
+        });
         const refs = parseHabitacliaSearch(html);
         if (refs.length === 0) break;
         for (const ref of refs) {
@@ -118,7 +137,12 @@ export class HabitacliaProvider implements ListingProvider {
   }
 
   async fetch(ref: ExternalListingRef, ctx: FetchContext): Promise<RawListing> {
-    const html = await ctx.runtime.fetchText(ref.url, { signal: ctx.signal });
+    const { html } = await fetchListingViaLadder(ctx.runtime, ref.url, {
+      provider: this.id,
+      isChallenge: isHabitacliaChallenge,
+      init: { signal: ctx.signal },
+      metrics: this.metrics,
+    });
     const payload = parseHabitacliaDetail(html, ref.url);
     return { ref, payload };
   }

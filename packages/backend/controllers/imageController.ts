@@ -318,7 +318,7 @@ export class ImageController {
         return;
       }
 
-      const file = await imageUploadService.readLocalImage(validation.key);
+      const file = await imageUploadService.readStoredImage(validation.key);
       if (!file) {
         res.status(404).json({ success: false, message: 'Image not found' });
         return;

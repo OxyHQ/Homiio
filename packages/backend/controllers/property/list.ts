@@ -14,6 +14,7 @@ const {
   ReservationStatus
 } = require('@homiio/shared-types');
 import { serializePropertyAddresses, ADDRESS_GEO_POPULATE } from '../../services/propertyAddressSerializer';
+import { serializePropertyImages } from '../../services/imageSerializer';
 
 const OFFERING_VALUES: ReadonlySet<string> = new Set(Object.values(OfferingType));
 
@@ -377,6 +378,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     // in-place, before the personalization/ordering spreads (which preserve the
     // `address` reference), so cards render a location label with no N+1.
     serializePropertyAddresses(properties);
+    serializePropertyImages(properties);
 
     const mongoose = require('mongoose');
     const { Saved } = require('../../models');

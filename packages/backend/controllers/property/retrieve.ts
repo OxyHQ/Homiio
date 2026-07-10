@@ -2,6 +2,7 @@ import { Property, RecentlyViewed } from '../../models';
 import { AppError, successResponse, paginationResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
 import { serializePropertyAddresses, ADDRESS_GEO_POPULATE } from '../../services/propertyAddressSerializer';
+import { serializePropertyImages } from '../../services/imageSerializer';
 import { getErrorName } from '../../utils/errors';
 import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
 import { getQueryInteger } from '../queryParams';
@@ -25,6 +26,7 @@ export async function getPropertyById(req: ControllerRequest, res: ControllerRes
     // Resolve the address's city/region/country NAMES from the deep-populated
     // geo refs (geo is relational), then flatten the refs back to ids.
     serializePropertyAddresses(property);
+    serializePropertyImages(property);
     await Property.findByIdAndUpdate(propertyId, { $inc: { views: 1 } });
     if (req.userId && (req.user?.id || req.user?._id)) {
       const oxyUserId = req.user.id || req.user._id;
@@ -73,6 +75,7 @@ export async function getMyProperties(req: ControllerRequest, res: ControllerRes
       Property.countDocuments({ profileId: activeProfile._id, status: { $ne: 'archived' } })
     ]);
     serializePropertyAddresses(properties);
+    serializePropertyImages(properties);
     res.json(paginationResponse(properties, page, limit, total, 'Your properties retrieved successfully'));
   } catch (error) { next(error); }
 }

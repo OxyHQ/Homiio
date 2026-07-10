@@ -1,16 +1,12 @@
 /**
  * Blueground provider (Spain + United States).
  *
- * Blueground rents furnished, move-in-ready apartments by the month; its site
- * is backed by a structured JSON API, so this provider consumes JSON directly
- * through the shared {@link FetchRuntime} (still on the same rate-limit / retry
- * / escalation ladder — it never re-implements that infra) and needs no HTML
- * parsing. `discover()` pages the per-city search endpoint into
- * {@link ExternalListingRef}s; `fetch()` pulls one property's JSON; and
- * `normalize()` maps it onto a first-party {@link NormalizedListing} (always a
- * furnished monthly rental). Registered OFF by default
- * (`PROVIDER_BLUEGROUND_ENABLED`); `markets` reflect Blueground's ES + US
- * footprint.
+ * Blueground retired the unauthenticated `/api/v2/properties` JSON API (404).
+ * This provider now scrapes SSR city search pages and property detail pages
+ * through the shared anti-bot {@link fetchListingViaLadder} (HTTP → browser →
+ * managed). `discover()` pages per-city search results into
+ * {@link ExternalListingRef}s; `fetch()` pulls a detail page's HTML; `normalize()`
+ * maps the parsed payload onto a first-party furnished monthly rental.
  */
 
 import {
@@ -25,42 +21,43 @@ import type {
   DiscoverJob,
   ExternalListingRef,
   FetchContext,
+  FetchRuntime,
   ListingProvider,
   ProviderHealth,
   RawListing,
 } from '../../types';
+import { createFetchRuntime } from '../../runtime';
+import { fetchListingViaLadder } from '../../strategy';
+import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
 import {
   BLUEGROUND_BASE_URL,
   type BluegroundRawListing,
   type BluegroundRawPhoto,
-  type BluegroundSearchResponse,
 } from './fixtures';
+import {
+  bluegroundCitySearchUrl,
+  parseBluegroundDetail,
+  parseBluegroundSearch,
+} from './parse';
 
 const PROVIDER_ID: ProviderId = 'blueground';
 
-/** Cities enumerated per market when a discover job omits an explicit `city`. */
+/** City slugs for `/m/furnished-apartments/<slug>` search pages. */
 const DEFAULT_CITIES: Readonly<Record<ListingMarket, readonly string[]>> = {
-  ES: ['madrid', 'barcelona'],
-  US: ['new-york', 'los-angeles', 'boston', 'chicago', 'washington-dc'],
+  ES: ['madrid-esp', 'barcelona-esp', 'valencia-esp'],
+  US: ['nyc-usa', 'los-angeles-usa', 'boston-usa', 'chicago-usa', 'washington-dc-usa'],
 };
-
-/** Max search pages to page through per city in a single discover pass. */
-const MAX_SEARCH_PAGES = 10;
 
 const SUPPORTED_TYPES: ReadonlySet<string> = new Set(Object.values(PropertyType));
 
+/** HTML markers of a Blueground challenge/empty shell (common on bot-blocked US pages). */
+export function isBluegroundChallenge(html: string): boolean {
+  if (html.trim().length < 1024) return true;
+  return /access denied|cf-browser-verification|datadome/i.test(html);
+}
+
 function resolvePropertyType(raw: string | undefined): PropertyType {
   return raw && SUPPORTED_TYPES.has(raw) ? (raw as PropertyType) : PropertyType.APARTMENT;
-}
-
-/** Build the per-city search endpoint URL for a 1-based page number. */
-function searchUrl(city: string, page: number): string {
-  return `${BLUEGROUND_BASE_URL}/api/v2/properties?city=${encodeURIComponent(city)}&page=${page}`;
-}
-
-/** Build the JSON detail endpoint URL for a property id. */
-function detailUrl(sourceId: string): string {
-  return `${BLUEGROUND_BASE_URL}/api/v2/properties/${encodeURIComponent(sourceId)}`;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
@@ -70,9 +67,8 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
 }
 
 /**
- * Validate a JSON payload into a {@link BluegroundRawListing}, throwing when a
- * required field is missing (a delisted unit or a challenge response yields a
- * shape without `id` / `monthlyRent` / `address.city`).
+ * Validate a parsed payload into a {@link BluegroundRawListing}, throwing when a
+ * required field is missing.
  */
 export function coerceBluegroundListing(payload: unknown): BluegroundRawListing {
   const record = asRecord(payload);
@@ -85,7 +81,8 @@ export function coerceBluegroundListing(payload: unknown): BluegroundRawListing 
     typeof record['id'] !== 'string' ||
     typeof record['url'] !== 'string' ||
     typeof amount !== 'number' ||
-    typeof city !== 'string'
+    typeof city !== 'string' ||
+    city.length === 0
   ) {
     throw new Error('blueground provider received a payload that is not a BluegroundRawListing');
   }
@@ -100,46 +97,55 @@ function toRemoteImages(photos: readonly BluegroundRawPhoto[]): NormalizedRemote
   }));
 }
 
+export interface BluegroundProviderOptions {
+  runtime?: FetchRuntime;
+  metrics?: ProviderMetricsSink & ProviderMetricsReader;
+}
+
 export class BluegroundProvider implements ListingProvider {
   readonly id: ProviderId = PROVIDER_ID;
   readonly markets = ['ES', 'US'] as const;
 
+  private readonly runtime: FetchRuntime;
+  private readonly metrics: ProviderMetricsSink & ProviderMetricsReader;
+
+  constructor(options: BluegroundProviderOptions = {}) {
+    this.runtime = options.runtime ?? createFetchRuntime();
+    this.metrics = options.metrics ?? defaultProviderMetrics;
+  }
+
   async *discover(job: DiscoverJob): AsyncIterable<ExternalListingRef> {
-    const { runtime } = job;
-    if (!runtime) {
-      throw new Error('blueground discover requires a FetchRuntime on the job');
-    }
     const cities = job.city ? [job.city] : DEFAULT_CITIES[job.market];
     const limit = job.limit ?? Number.POSITIVE_INFINITY;
     const seen = new Set<string>();
     let yielded = 0;
 
     for (const city of cities) {
-      for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
+      if (yielded >= limit) return;
+      const { html } = await fetchListingViaLadder(this.runtime, bluegroundCitySearchUrl(city), {
+        provider: this.id,
+        isChallenge: isBluegroundChallenge,
+        metrics: this.metrics,
+        init: { signal: job.signal },
+      });
+      for (const ref of parseBluegroundSearch(html)) {
         if (yielded >= limit) return;
-        const response = await runtime.fetchJson<BluegroundSearchResponse>(searchUrl(city, page), {
-          signal: job.signal,
-        });
-        const properties = response?.properties ?? [];
-        if (properties.length === 0) break;
-        for (const property of properties) {
-          if (yielded >= limit) return;
-          if (!property?.id || seen.has(property.id)) continue;
-          seen.add(property.id);
-          yield {
-            provider: this.id,
-            sourceId: property.id,
-            url: property.url ?? detailUrl(property.id),
-          };
-          yielded += 1;
-        }
+        if (seen.has(ref.sourceId)) continue;
+        seen.add(ref.sourceId);
+        yield ref;
+        yielded += 1;
       }
     }
   }
 
   async fetch(ref: ExternalListingRef, ctx: FetchContext): Promise<RawListing> {
-    const json = await ctx.runtime.fetchJson<unknown>(detailUrl(ref.sourceId), { signal: ctx.signal });
-    return { ref, payload: coerceBluegroundListing(json) };
+    const { html } = await fetchListingViaLadder(ctx.runtime, ref.url, {
+      provider: this.id,
+      isChallenge: isBluegroundChallenge,
+      init: { signal: ctx.signal },
+      metrics: this.metrics,
+    });
+    return { ref, payload: parseBluegroundDetail(html, ref) };
   }
 
   normalize(raw: RawListing): NormalizedListing {
@@ -180,10 +186,20 @@ export class BluegroundProvider implements ListingProvider {
   }
 
   async health(): Promise<ProviderHealth> {
+    const snapshot = this.metrics.snapshot(this.id);
+    if (snapshot && snapshot.attempts > 0) {
+      const status =
+        snapshot.challengeRate >= 0.8 ? 'unhealthy' : snapshot.challengeRate >= 0.3 ? 'degraded' : 'healthy';
+      return {
+        provider: this.id,
+        status,
+        detail: `attempts=${snapshot.attempts} challengeRate=${snapshot.challengeRate.toFixed(2)} avgLatencyMs=${snapshot.avgLatencyMs}`,
+      };
+    }
     return {
       provider: this.id,
       status: 'healthy',
-      detail: `Serving ${this.markets.join(', ')} via ${BLUEGROUND_BASE_URL}`,
+      detail: `Serving ${this.markets.join(', ')} via ${BLUEGROUND_BASE_URL} (HTML ladder)`,
     };
   }
 }

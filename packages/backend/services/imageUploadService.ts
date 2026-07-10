@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
@@ -375,17 +375,56 @@ export class ImageUploadService {
   }
 
   getImageUrl(key: string): string {
-    // Self-hosted local store when S3 is unconfigured: serve through the backend
-    // so the URL is genuinely reachable (and the product has no external image
-    // host). Otherwise build the object-storage public URL.
-    if (!this.isStorageConfigured()) {
-      return `${config.publicUrl}${LOCAL_IMAGE_ROUTE}/${key}`;
+    // All stored images are served through the backend's public image route so
+    // private S3 buckets (BucketOwnerEnforced) remain reachable without ACLs or
+    // long-lived presigned URLs baked into every Property document.
+    return `${config.publicUrl}${LOCAL_IMAGE_ROUTE}/${key}`;
+  }
+
+  /**
+   * Rewrite a legacy absolute S3 object URL (written before the API-proxy
+   * delivery fix) onto the public image route. Non-matching URLs pass through.
+   */
+  resolveStoredImageUrl(url: string): string {
+    if (!url || !this.isStorageConfigured()) return url;
+    const bucket = config.s3.bucketName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const virtualHosted = new RegExp(`^https://${bucket}\\.s3\\.[^/]+/(.+)$`);
+    const pathStyle = config.s3.endpoint
+      ? new RegExp(`^${config.s3.endpoint.replace(/\/$/, '')}/${bucket}/(.+)$`)
+      : undefined;
+    const match = virtualHosted.exec(url) ?? (pathStyle ? pathStyle.exec(url) : undefined);
+    if (!match) return url;
+    return this.getImageUrl(match[1]);
+  }
+
+  /**
+   * Read a stored image's bytes + content type from S3 (when configured) or the
+   * self-hosted local store. Returns `null` when the object is absent.
+   */
+  async readStoredImage(key: string): Promise<{ buffer: Buffer; contentType: string } | null> {
+    const validation = validateImageStoreKey(key);
+    if (!validation.ok) return null;
+
+    if (this.isStorageConfigured()) {
+      try {
+        const response = await this.s3Client.send(
+          new GetObjectCommand({
+            Bucket: config.s3.bucketName,
+            Key: validation.key,
+          }),
+        );
+        const body = response.Body;
+        if (!body) return null;
+        const buffer = Buffer.from(await body.transformToByteArray());
+        const contentType = response.ContentType ?? validation.contentType;
+        return { buffer, contentType };
+      } catch (error) {
+        if (this.isFileMissingError(error)) return null;
+        throw error;
+      }
     }
-    if (config.s3.endpoint) {
-      return `${config.s3.endpoint.replace(/\/$/, '')}/${config.s3.bucketName}/${key}`;
-    }
-    // Native AWS virtual-hosted-style URL.
-    return `https://${config.s3.bucketName}.s3.${config.s3.region}.amazonaws.com/${key}`;
+
+    return this.readLocalImage(validation.key);
   }
 
   /**

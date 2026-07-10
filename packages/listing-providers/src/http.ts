@@ -11,6 +11,10 @@ export const DEFAULT_TIMEOUT_MS = 30_000;
 /** Descriptive User-Agent so portals/CDNs can identify Homiio's ingest fetches. */
 export const DEFAULT_USER_AGENT = 'Homiio-Listings/1.0 (+https://homiio.com)';
 
+/** Chrome desktop UA used by the browser tier (less bot-like than the ingest UA). */
+export const BROWSER_USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
 /** Raised when a cancellable {@link sleep} is aborted by its signal. */
 export class AbortError extends Error {
   constructor(message = 'Aborted') {

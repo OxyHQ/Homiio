@@ -53,58 +53,48 @@ export interface BluegroundRawListing {
   photos: BluegroundRawPhoto[];
 }
 
-/** The JSON shape returned by the Blueground property-search endpoint. */
-export interface BluegroundSearchResponse {
-  properties: Array<Pick<BluegroundRawListing, 'id' | 'slug' | 'url'>>;
-}
-
-/** The base host used to build absolute Blueground API/detail URLs. */
+/** The base host used to build absolute Blueground detail URLs. */
 export const BLUEGROUND_BASE_URL = 'https://www.theblueground.com';
 
 /** Recorded raw payloads: one Madrid (EUR) unit and one New York (USD) unit. */
 export const BLUEGROUND_FIXTURES: readonly BluegroundRawListing[] = [
   {
-    id: 'bg-mad-4471',
-    slug: 'madrid-salamanca-2br-4471',
-    url: 'https://www.theblueground.com/furnished-apartments-madrid-spain/madrid-salamanca-2br-4471',
+    id: 'mad-1490341p',
+    slug: 'mad-1490341p',
+    url: 'https://www.theblueground.com/p/furnished-apartments/mad-1490341p',
     title: 'Furnished 2-bedroom apartment in Salamanca, Madrid',
     description:
       'Turnkey furnished two-bedroom apartment in the Salamanca district, steps from Retiro Park, with A/C, high-speed wifi and a fully equipped kitchen.',
     propertyType: 'apartment',
-    monthlyRent: { amount: 2650, currency: 'EUR' },
-    bedrooms: 2,
-    bathrooms: 2,
-    sizeSqm: 88,
-    floor: 4,
+    monthlyRent: { amount: 3473, currency: 'EUR' },
+    bedrooms: 1,
+    bathrooms: 1,
     furnished: true,
     amenities: ['air_conditioning', 'wifi', 'elevator', 'washer', 'heating'],
     address: {
-      line1: 'Calle de Velázquez 50',
-      neighborhood: 'Salamanca',
+      line1: 'Calle de San Bartolomé',
+      neighborhood: 'Chueca Justicia',
       city: 'Madrid',
       region: 'Community of Madrid',
-      postalCode: '28001',
       country: 'Spain',
       countryCode: 'ES',
-      latitude: 40.4256,
-      longitude: -3.6845,
     },
     photos: [
       {
-        url: 'https://static.theblueground.com/units/bg-mad-4471/living-room.jpg',
+        url: 'https://photos2.theblueground.com/736/partner-network/flat-sweet-home/de-live/flat-sweet-home/full/9f7a6a9e83c151fa.jpg',
         caption: 'Living room',
         isCover: true,
       },
       {
-        url: 'https://static.theblueground.com/units/bg-mad-4471/bedroom.jpg',
+        url: 'https://photos2.theblueground.com/736/partner-network/flat-sweet-home/de-live/flat-sweet-home/full/ba1d419ad8356312.jpg',
         caption: 'Primary bedroom',
       },
     ],
   },
   {
-    id: 'bg-nyc-9182',
-    slug: 'new-york-midtown-1br-9182',
-    url: 'https://www.theblueground.com/furnished-apartments-new-york-ny/new-york-midtown-1br-9182',
+    id: 'nyc-1234567p',
+    slug: 'nyc-1234567p',
+    url: 'https://www.theblueground.com/p/furnished-apartments/nyc-1234567p',
     title: 'Furnished 1-bedroom apartment in Midtown, New York',
     description:
       'Move-in-ready one-bedroom in Midtown Manhattan with a doorman, in-unit laundry and skyline views.',
@@ -112,8 +102,6 @@ export const BLUEGROUND_FIXTURES: readonly BluegroundRawListing[] = [
     monthlyRent: { amount: 4200, currency: 'USD' },
     bedrooms: 1,
     bathrooms: 1,
-    sizeSqm: 65,
-    floor: 18,
     furnished: true,
     amenities: ['air_conditioning', 'wifi', 'doorman', 'washer', 'gym'],
     address: {
@@ -121,15 +109,12 @@ export const BLUEGROUND_FIXTURES: readonly BluegroundRawListing[] = [
       neighborhood: 'Midtown',
       city: 'New York',
       region: 'New York',
-      postalCode: '10036',
       country: 'United States',
       countryCode: 'US',
-      latitude: 40.7579,
-      longitude: -73.9911,
     },
     photos: [
       {
-        url: 'https://static.theblueground.com/units/bg-nyc-9182/living-room.jpg',
+        url: 'https://photos2.theblueground.com/736/partner-network/sample/nyc-living-room.jpg',
         caption: 'Living room',
         isCover: true,
       },

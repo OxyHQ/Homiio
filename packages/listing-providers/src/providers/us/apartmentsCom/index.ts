@@ -26,11 +26,16 @@ import type {
   DiscoverJob,
   ExternalListingRef,
   FetchContext,
+  FetchRuntime,
   ListingProvider,
   ProviderHealth,
   RawListing,
 } from '../../../types';
+import { createFetchRuntime } from '../../../runtime';
+import { fetchListingViaLadder } from '../../../strategy';
+import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink, type StrategyName } from '../../../metrics';
 import { extractSchemaOrgListings, pickPrimaryListing, type SchemaOrgListing } from '../jsonLd';
+import { isUsPortalChallenge } from '../challenge';
 
 const PROVIDER_ID: ProviderId = 'apartments_com';
 const BASE_URL = 'https://www.apartments.com';
@@ -137,15 +142,27 @@ function asApartmentsCom(payload: unknown): ApartmentsComRaw {
   return payload as ApartmentsComRaw;
 }
 
+export interface ApartmentsComProviderOptions {
+  runtime?: FetchRuntime;
+  metrics?: ProviderMetricsSink & ProviderMetricsReader;
+  ladderTiers?: readonly StrategyName[];
+}
+
 export class ApartmentsComProvider implements ListingProvider {
   readonly id: ProviderId = PROVIDER_ID;
   readonly markets = ['US'] as const;
 
+  private readonly runtime: FetchRuntime;
+  private readonly metrics: ProviderMetricsSink & ProviderMetricsReader;
+  private readonly ladderTiers?: readonly StrategyName[];
+
+  constructor(options: ApartmentsComProviderOptions = {}) {
+    this.runtime = options.runtime ?? createFetchRuntime();
+    this.metrics = options.metrics ?? defaultProviderMetrics;
+    this.ladderTiers = options.ladderTiers;
+  }
+
   async *discover(job: DiscoverJob): AsyncIterable<ExternalListingRef> {
-    const { runtime } = job;
-    if (!runtime) {
-      throw new Error('apartments_com discover requires a FetchRuntime on the job');
-    }
     const cities = job.city ? [job.city] : DEFAULT_CITIES;
     const limit = job.limit ?? Number.POSITIVE_INFINITY;
     const seen = new Set<string>();
@@ -153,7 +170,13 @@ export class ApartmentsComProvider implements ListingProvider {
 
     for (const city of cities) {
       if (yielded >= limit) return;
-      const html = await runtime.fetchText(searchUrl(city), { signal: job.signal });
+      const { html } = await fetchListingViaLadder(this.runtime, searchUrl(city), {
+        provider: this.id,
+        isChallenge: isUsPortalChallenge,
+        metrics: this.metrics,
+        init: { signal: job.signal },
+        tiers: this.ladderTiers,
+      });
       for (const ref of parseApartmentsComSearch(html)) {
         if (yielded >= limit) return;
         if (seen.has(ref.sourceId)) continue;
@@ -165,7 +188,13 @@ export class ApartmentsComProvider implements ListingProvider {
   }
 
   async fetch(ref: ExternalListingRef, ctx: FetchContext): Promise<RawListing> {
-    const html = await ctx.runtime.fetchText(ref.url, { signal: ctx.signal });
+    const { html } = await fetchListingViaLadder(ctx.runtime, ref.url, {
+      provider: this.id,
+      isChallenge: isUsPortalChallenge,
+      init: { signal: ctx.signal },
+      metrics: this.metrics,
+      tiers: this.ladderTiers,
+    });
     return { ref, payload: parseApartmentsComDetail(html, ref) };
   }
 

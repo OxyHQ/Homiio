@@ -1,6 +1,13 @@
 import { API_URL } from '@/config';
 
 /**
+ * Matches a legacy Homiio media bucket virtual-hosted S3 URL so it can be
+ * rewritten onto the API image proxy route at read time.
+ */
+const HOMIIO_S3_IMAGE_RE =
+  /^https:\/\/oxy-[a-z]+-media-[a-z0-9-]+\.s3\.[a-z0-9-]+\.amazonaws\.com\/(.+)$/i;
+
+/**
  * Re-home a backend-served image URL onto the active platform's API origin.
  *
  * WHY THIS EXISTS
@@ -64,6 +71,11 @@ const API_ORIGIN = API_URL.replace(/\/+$/, '');
  *   strings) are returned unchanged.
  */
 export function resolveBackendImageUrl(url: string): string {
+  const s3Match = HOMIIO_S3_IMAGE_RE.exec(url);
+  if (s3Match) {
+    return `${API_ORIGIN}/api/images/file/${s3Match[1]}`;
+  }
+
   const match = DEV_ORIGIN_RE.exec(url);
   if (!match) return url;
 

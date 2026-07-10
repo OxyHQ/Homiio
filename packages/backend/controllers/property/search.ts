@@ -40,6 +40,7 @@ const {
   serializePropertyAddresses,
   ADDRESS_GEO_POPULATE,
 } = require('../../services/propertyAddressSerializer');
+const { serializePropertyImages } = require('../../services/imageSerializer');
 
 /** Address subset selected for id-resolution lookups. */
 type AddressIdLean = { _id: Types.ObjectId };
@@ -232,6 +233,7 @@ export async function searchProperties(req: Request, res: Response, next: NextFu
     // geo refs, then flatten the refs back to ids, so result cards/map pins
     // render a location label without an N+1 lookup.
     serializePropertyAddresses(properties);
+    serializePropertyImages(properties);
 
     res.json(buildSearchResponse(properties, params.page, params.limit, total, 'Search completed successfully'));
   } catch (error) {

@@ -18,26 +18,27 @@ import {
 import type {
   ExternalListingRef,
   FetchRuntime,
-  FetchRuntimeInit,
   RawListing,
 } from '@homiio/listing-providers';
 import { OfferingType, PropertyType } from '@homiio/shared-types';
 
 const provider = new ApartmentsComProvider();
 
-/** A FetchRuntime that serves recorded HTML by URL — no real network. */
-function fakeRuntime(pages: Map<string, string>): FetchRuntime {
+function ladderRuntime(pages: Map<string, string>): FetchRuntime {
   return {
-    async fetchText(url: string, _init?: FetchRuntimeInit): Promise<string> {
+    async fetchText(url: string): Promise<string> {
       const html = pages.get(url);
-      if (html === undefined) throw new Error(`fakeRuntime has no page for ${url}`);
+      if (html === undefined) throw new Error(`ladderRuntime has no page for ${url}`);
       return html;
     },
     async fetchJson<T = unknown>(): Promise<T> {
-      throw new Error('apartments_com fake runtime does not serve JSON');
+      throw new Error('apartments_com ladder runtime does not serve JSON');
     },
     async loadFixture<T = unknown>(): Promise<T> {
-      throw new Error('apartments_com fake runtime has no fixtures');
+      throw new Error('apartments_com ladder runtime has no fixtures');
+    },
+    async fetchViaBrowser(url: string): Promise<string> {
+      return this.fetchText(url);
     },
   };
 }
@@ -61,37 +62,32 @@ describe('ApartmentsComProvider', () => {
     }
   });
 
-  it('discovers refs from a fake runtime, honouring the limit', async () => {
-    const runtime = fakeRuntime(new Map([[
-      'https://www.apartments.com/austin-tx/',
-      APARTMENTS_COM_SEARCH_FIXTURE,
-    ]]));
+  it('discovers refs from a ladder-backed runtime, honouring the limit', async () => {
+    const testProvider = new ApartmentsComProvider({
+      runtime: ladderRuntime(new Map([['https://www.apartments.com/austin-tx/', APARTMENTS_COM_SEARCH_FIXTURE]])),
+      ladderTiers: ['browser'],
+    });
     const refs: ExternalListingRef[] = [];
-    for await (const ref of provider.discover({
+    for await (const ref of testProvider.discover({
       provider: 'apartments_com',
       market: 'US',
       city: 'Austin, TX',
       limit: 1,
-      runtime,
     })) {
       refs.push(ref);
     }
     expect(refs).toHaveLength(1);
   });
 
-  it('discover throws without a runtime on the job', async () => {
-    const iterator = provider.discover({ provider: 'apartments_com', market: 'US' });
-    await expect(iterator[Symbol.asyncIterator]().next()).rejects.toThrow(/requires a FetchRuntime/);
-  });
-
   it('fetch pulls detail HTML and extracts the JSON-LD listing', async () => {
-    const runtime = fakeRuntime(new Map([[harlow.url, harlow.html]]));
+    const runtime = ladderRuntime(new Map([[harlow.url, harlow.html]]));
+    const testProvider = new ApartmentsComProvider({ runtime, ladderTiers: ['browser'] });
     const ref: ExternalListingRef = {
       provider: 'apartments_com',
       sourceId: harlow.sourceId,
       url: harlow.url,
     };
-    const raw = await provider.fetch(ref, { runtime });
+    const raw = await testProvider.fetch(ref, { runtime });
     const payload = raw.payload as { listing: { address: { locality?: string } } };
     expect(payload.listing.address.locality).toBe('Austin');
   });

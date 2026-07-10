@@ -18,7 +18,7 @@
  * memory-heavy, so we keep the footprint small.
  */
 
-import { DEFAULT_USER_AGENT } from './http';
+import { BROWSER_USER_AGENT } from './http';
 import type { FetchRuntimeInit, UrlFetcher } from './types';
 
 /** Hard per-navigation timeout when a caller does not pass one (ms). */
@@ -143,7 +143,7 @@ export class PlaywrightBrowserPool implements UrlFetcher {
   ) {
     this.timeoutMs = options.timeoutMs ?? DEFAULT_BROWSER_TIMEOUT_MS;
     this.maxConcurrency = Math.max(1, options.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY);
-    this.userAgent = options.userAgent ?? DEFAULT_USER_AGENT;
+    this.userAgent = options.userAgent ?? BROWSER_USER_AGENT;
     this.launchArgs = [...DEFAULT_LAUNCH_ARGS, ...(options.launchArgs ?? [])];
   }
 
@@ -191,9 +191,13 @@ export class PlaywrightBrowserPool implements UrlFetcher {
       const browser = await this.ensureBrowser();
       context = await browser.newContext({
         userAgent: this.userAgent,
-        locale: 'es-ES',
+        locale: 'en-US',
         viewport: { width: 1366, height: 900 },
-        extraHTTPHeaders: init?.headers,
+        extraHTTPHeaders: {
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          ...init?.headers,
+        },
         javaScriptEnabled: true,
       });
       const page = await context.newPage();
@@ -206,7 +210,7 @@ export class PlaywrightBrowserPool implements UrlFetcher {
         else init.signal.addEventListener('abort', onAbort, { once: true });
       }
       try {
-        await page.goto(url, { timeout, waitUntil: 'domcontentloaded' });
+        await page.goto(url, { timeout, waitUntil: 'networkidle' });
         return await page.content();
       } finally {
         if (init?.signal) init.signal.removeEventListener('abort', onAbort);
