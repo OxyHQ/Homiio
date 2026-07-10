@@ -154,6 +154,7 @@ export {
   parseFotocasaSearchads,
   parseFotocasaLocationSegments,
   parseFotocasaSsrSearch,
+  extractFotocasaSearchCards,
   fotocasaSearchadsUrl,
   fotocasaUrlLocationSegmentsUrl,
   fotocasaWarmSearchUrl,

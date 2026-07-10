@@ -150,7 +150,7 @@ export function isFotocasaSearchadsChallenge(body: string): boolean {
 }
 
 function refFromRecord(record: Record<string, unknown>): { sourceId: string; url: string } | undefined {
-  const rawId = record.propertyId ?? record.id ?? record.adId;
+  const rawId = record.propertyId ?? record.id ?? record.adId ?? record.realEstateId;
   const sourceId = asString(rawId)?.replace(/\D/g, '');
   if (!sourceId || !/^\d{5,}$/.test(sourceId)) return undefined;
 
@@ -234,16 +234,79 @@ function collectCardsFromUnknown(
   }
 }
 
+/** Pull the SSR-embedded `realEstates` JSON array from warmed search HTML. */
+function extractFotocasaSsrRealEstatesJson(html: string): string | undefined {
+  const marker = '"realEstates":[';
+  const keyIndex = html.indexOf(marker);
+  if (keyIndex < 0) return undefined;
+  const openBracket = keyIndex + '"realEstates":'.length;
+  return extractJsonArrayFromOpenBracket(html, openBracket);
+}
+
+/** Bracket-match a JSON array starting at `openBracket` (must be `[`). */
+function extractJsonArrayFromOpenBracket(html: string, openBracket: number): string | undefined {
+  if (html[openBracket] !== '[') return undefined;
+
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let index = openBracket; index < html.length; index += 1) {
+    const char = html[index];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (char === '\\' && inString) {
+      escape = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (char === '[') depth += 1;
+    if (char === ']') {
+      depth -= 1;
+      if (depth === 0) return html.slice(openBracket, index + 1);
+    }
+  }
+  return undefined;
+}
+
+/** Bracket-match a top-level JSON array value after `"key":`. */
+function extractJsonArrayAfterKey(html: string, key: string): string | undefined {
+  const marker = `"${key}":[`;
+  const keyIndex = html.indexOf(marker);
+  if (keyIndex < 0) return undefined;
+  const openBracket = keyIndex + `"${key}":`.length;
+  return extractJsonArrayFromOpenBracket(html, openBracket);
+}
+
 /** Extract searchads listing cards keyed by source id (for discover → fetch handoff). */
 export function extractFotocasaSearchCards(body: string): Map<string, Record<string, unknown>> {
   const trimmed = body.trim();
   const cards = new Map<string, Record<string, unknown>>();
-  if (trimmed.length === 0 || isFotocasaSearchadsChallenge(trimmed)) return cards;
-  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return cards;
-  try {
-    collectCardsFromUnknown(JSON.parse(trimmed) as unknown, cards);
-  } catch {
-    return cards;
+  if (trimmed.length === 0) return cards;
+
+  const ssrArray = extractFotocasaSsrRealEstatesJson(trimmed);
+  if (ssrArray) {
+    try {
+      collectCardsFromUnknown(JSON.parse(ssrArray) as unknown, cards);
+      if (cards.size > 0) return cards;
+    } catch {
+      // Fall through to JSON/HTML parsing.
+    }
+  }
+
+  if (isFotocasaSearchadsChallenge(trimmed)) return cards;
+
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    try {
+      collectCardsFromUnknown(JSON.parse(trimmed) as unknown, cards);
+    } catch {
+      return cards;
+    }
   }
   return cards;
 }
@@ -285,10 +348,10 @@ export function parseFotocasaSearchads(body: string): { sourceId: string; url: s
  * (observed on warmed search pages when searchads XHR is not separately captured).
  */
 export function parseFotocasaSsrSearch(html: string): { sourceId: string; url: string }[] {
-  const match = html.match(/"realEstates"\s*:\s*(\[[\s\S]{0,200000}?\])\s*,\s*"/);
-  if (!match?.[1]) return parseFotocasaSearch(html);
+  const ssrArray = extractFotocasaSsrRealEstatesJson(html);
+  if (!ssrArray) return parseFotocasaSearch(html);
   try {
-    return parseFotocasaSearchads(match[1]);
+    return parseFotocasaSearchads(ssrArray);
   } catch {
     return parseFotocasaSearch(html);
   }
