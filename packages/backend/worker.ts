@@ -192,6 +192,72 @@ async function logQueueCounts(
  * prior worker died mid-pass. Discover concurrency is 1, so that ghost lock
  * blocks every boot job until stall recovery — clear it on boot.
  */
+async function removeDiscoverJobOrForceFail(
+  job: Job<DiscoverJobData>,
+  reason: string,
+): Promise<boolean> {
+  try {
+    await job.remove();
+    logger.warn('Removed discover job', {
+      jobId: job.id,
+      provider: job.data.provider,
+      city: job.data.city,
+      reason,
+    });
+    return true;
+  } catch (removeError) {
+    try {
+      await job.moveToFailed(new Error(reason), '0', true);
+      logger.warn('Force-failed locked discover job', {
+        jobId: job.id,
+        provider: job.data.provider,
+        city: job.data.city,
+        reason,
+      });
+      return true;
+    } catch (failError) {
+      logger.warn('Could not remove or fail discover job', {
+        jobId: job.id,
+        provider: job.data.provider,
+        city: job.data.city,
+        removeError: removeError instanceof Error ? removeError.message : String(removeError),
+        failError: failError instanceof Error ? failError.message : String(failError),
+      });
+      return false;
+    }
+  }
+}
+
+/** Drop pre per-city Fotocasa discover scopes that can block the queue for hours. */
+async function purgeLegacyFotocasaDiscoverJobs(discoverQueue: BullQueue<DiscoverJobData>): Promise<void> {
+  const legacyScope: DiscoverJobData = { provider: 'fotocasa', market: 'ES' };
+  const legacyId = discoverJobId(legacyScope);
+  const legacyRepeatKey = `repeat-${legacyId}`;
+
+  try {
+    const removed = await discoverQueue.removeRepeatableByKey(legacyRepeatKey);
+    if (removed) {
+      logger.warn('Removed legacy fotocasa repeat scheduler', { legacyRepeatKey });
+    }
+  } catch (error) {
+    logger.warn('Could not remove legacy fotocasa repeat scheduler', {
+      legacyRepeatKey,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  const legacyJob = await discoverQueue.getJob(legacyId);
+  if (legacyJob) {
+    await removeDiscoverJobOrForceFail(legacyJob, 'legacy market-wide fotocasa discover');
+  }
+
+  const candidates = await discoverQueue.getJobs(['active', 'waiting', 'delayed'], 0, 200);
+  for (const job of candidates) {
+    if (job.data.provider !== 'fotocasa' || job.data.city) continue;
+    await removeDiscoverJobOrForceFail(job, 'superseded fotocasa discover scope');
+  }
+}
+
 async function releaseStaleActiveDiscoverJobs(discoverQueue: BullQueue<DiscoverJobData>): Promise<number> {
   const activeJobs = await discoverQueue.getJobs(['active'], 0, 50);
   const staleBefore = Date.now() - DISCOVER_LOCK_MS;
@@ -199,16 +265,8 @@ async function releaseStaleActiveDiscoverJobs(discoverQueue: BullQueue<DiscoverJ
   for (const job of activeJobs) {
     const processedOn = job.processedOn ?? 0;
     if (processedOn > staleBefore) continue;
-    try {
-      await job.remove();
-      released += 1;
-    } catch (error) {
-      logger.warn('Could not remove stale active discover job', {
-        jobId: job.id,
-        provider: job.data.provider,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+    const removed = await removeDiscoverJobOrForceFail(job, 'stale active discover after redeploy');
+    if (removed) released += 1;
   }
   if (released > 0) {
     logger.warn('Released stale active discover jobs after redeploy', { released });
@@ -250,6 +308,7 @@ function startBullMq(): () => Promise<void> {
       logger.info('Discover job enqueued fetch jobs', {
         provider: job.data.provider,
         market: job.data.market,
+        city: job.data.city,
         count: refs.length,
       });
     },
@@ -273,6 +332,7 @@ function startBullMq(): () => Promise<void> {
   const discoverQueue = new Queue<DiscoverJobData>(QUEUE_NAMES.discover, { connection, prefix });
 
   async function enqueueBootDiscovery(): Promise<void> {
+    await purgeLegacyFotocasaDiscoverJobs(discoverQueue);
     await releaseStaleActiveDiscoverJobs(discoverQueue);
     await logQueueCounts(discoverQueue, fetchQueue);
     for (const data of bootDiscoverJobs()) {
