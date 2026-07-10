@@ -1388,7 +1388,9 @@
       "requestSentTitle": "Request sent",
       "requestSentBody": "Your roommate request was sent.",
       "requestFailedTitle": "Could not send request",
-      "requestFailedBody": "We could not send your request. Please try again."
+      "requestFailedBody": "We could not send your request. Please try again.",
+      "followers": "{{count}} followers",
+      "following": "{{count}} following"
     },
     "preferencesPage": {
       "title": "Roommate preferences",

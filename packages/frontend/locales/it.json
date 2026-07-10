@@ -376,8 +376,6 @@
     "insights": {
       "title": "Platform Insights"
     },
-    "noProfilesTitle": "No Saved Profiles",
-    "noProfilesDescription": "Follow profiles to see them here",
     "recommended": {
       "title": "Recommended homes",
       "eyebrow": "For you"
@@ -1934,7 +1932,9 @@
       "requestSentTitle": "Request sent",
       "requestSentBody": "Your roommate request was sent.",
       "requestFailedTitle": "Could not send request",
-      "requestFailedBody": "We could not send your request. Please try again."
+      "requestFailedBody": "We could not send your request. Please try again.",
+      "followers": "{{count}} followers",
+      "following": "{{count}} following"
     },
     "preferencesPage": {
       "title": "Preferenze coinquilino",
@@ -2341,7 +2341,6 @@
       "noted": "With Notes",
       "quickSaves": "Quick Saves",
       "folders": "Folders",
-      "profiles": "Profiles",
       "searches": "Saved Searches",
       "label": "Saved view"
     },
@@ -2350,7 +2349,6 @@
       "grid": "Grid"
     },
     "searchPlaceholder": "Search your saved items...",
-    "profilesLabel": "profiles",
     "adjustFilters": "Try adjusting your search or filter criteria",
     "sort": {
       "recent": "Recently Saved",

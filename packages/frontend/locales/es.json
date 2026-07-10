@@ -220,8 +220,6 @@
       "title": "Explora {{place}}",
       "defaultPlace": "España"
     },
-    "noProfilesTitle": "No Saved Profiles",
-    "noProfilesDescription": "Follow profiles to see them here",
     "recommended": {
       "title": "Recommended homes",
       "eyebrow": "For you"
@@ -1766,7 +1764,9 @@
       "requestSentTitle": "Solicitud enviada",
       "requestSentBody": "Tu solicitud de compañero fue enviada.",
       "requestFailedTitle": "No se pudo enviar la solicitud",
-      "requestFailedBody": "No pudimos enviar tu solicitud. Inténtalo de nuevo."
+      "requestFailedBody": "No pudimos enviar tu solicitud. Inténtalo de nuevo.",
+      "followers": "{{count}} seguidores",
+      "following": "{{count}} siguiendo"
     },
     "preferencesPage": {
       "title": "Preferencias de compañero",
@@ -2293,7 +2293,6 @@
       "noted": "Con notas",
       "quickSaves": "Guardados rápidos",
       "folders": "Carpetas",
-      "profiles": "Perfiles",
       "searches": "Saved Searches",
       "label": "Saved view"
     },
@@ -2302,7 +2301,6 @@
       "grid": "Cuadrícula"
     },
     "searchPlaceholder": "Busca en tus guardados...",
-    "profilesLabel": "perfiles",
     "adjustFilters": "Prueba ajustando tu búsqueda o filtros",
     "sort": {
       "recent": "Recientemente guardados",
@@ -2311,8 +2309,6 @@
       "title": "Nombre de la propiedad",
       "notes": "Más notas"
     },
-    "noProfilesTitle": "No hay perfiles guardados",
-    "noProfilesDescription": "Sigue perfiles para verlos aquí",
     "emptyTitle": "No Hay Propiedades Guardadas",
     "emptyDescription": "Aún no has guardado ninguna propiedad. ¡Comienza a explorar y guarda las propiedades que te gusten!",
     "startExploring": "Comenzar a Explorar",
