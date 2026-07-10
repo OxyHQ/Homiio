@@ -205,6 +205,14 @@ export class ImmowebProvider implements ListingProvider {
     if (listing.bedrooms !== undefined) result.bedrooms = listing.bedrooms;
     if (listing.bathrooms !== undefined) result.bathrooms = listing.bathrooms;
     if (listing.squareMeters !== undefined) result.squareFootage = listing.squareMeters;
+    if (listing.yearBuilt !== undefined) result.yearBuilt = listing.yearBuilt;
+    if (listing.hasElevator !== undefined) result.hasElevator = listing.hasElevator;
+    if (listing.hasGarden !== undefined) result.hasGarden = listing.hasGarden;
+    if (listing.hasBalcony !== undefined) result.hasBalcony = listing.hasBalcony;
+    if (listing.parkingSpaces !== undefined) result.parkingSpaces = listing.parkingSpaces;
+    if (listing.parkingType !== undefined) result.parkingType = listing.parkingType;
+    if (listing.furnished === true) result.furnishedStatus = 'furnished';
+    if (listing.furnished === false) result.furnishedStatus = 'unfurnished';
     if (listing.contact) result.contact = listing.contact;
 
     return result;
