@@ -1,13 +1,13 @@
 # Image Upload Service
 
-This service provides image upload functionality using AWS SDK for S3, optimized for DigitalOcean Spaces. It includes automatic image optimization, multiple variants, and quality reduction to minimize file sizes.
+This service provides image upload functionality using the AWS SDK for S3. Production stores images in the Homiio media bucket (`oxy-homiio-media-usw2-237343248947`, region `us-west-2`) provisioned by `~/Oxy/oxy-infra`. It includes automatic image optimization, multiple variants, and quality reduction to minimize file sizes.
 
 ## Features
 
 - **Multiple Image Variants**: Automatically generates small, medium, large, and original variants
 - **Quality Optimization**: Reduces file sizes while maintaining visual quality
 - **Format Conversion**: Converts images to WebP for better compression (except original)
-- **S3 Integration**: Uses AWS SDK for S3 compatible with DigitalOcean Spaces
+- **S3 Integration**: Uses AWS SDK for S3 (native AWS in production)
 - **Error Handling**: Comprehensive error handling and validation
 - **Batch Upload**: Support for uploading multiple images at once
 
@@ -16,12 +16,12 @@ This service provides image upload functionality using AWS SDK for S3, optimized
 Add the following environment variables to your `.env` file:
 
 ```env
-# DigitalOcean Spaces Configuration
-S3_ENDPOINT=https://nyc3.digitaloceanspaces.com
-S3_REGION=nyc3
-S3_ACCESS_KEY_ID=your_access_key_id
-S3_SECRET_ACCESS_KEY=your_secret_access_key
-S3_BUCKET_NAME=homiio-images
+# AWS S3 (production — set by ECS via oxy-infra)
+AWS_REGION=us-west-2
+AWS_ACCESS_KEY_ID=your_access_key_id
+AWS_SECRET_ACCESS_KEY=your_secret_access_key
+AWS_S3_BUCKET=oxy-homiio-media-usw2-237343248947
+# Omit AWS_ENDPOINT_URL for native AWS S3. Only set for local S3-compatible mocks.
 ```
 
 ## API Endpoints
@@ -44,10 +44,10 @@ Body:
   "data": {
     "imageId": "uuid",
     "urls": {
-      "small": "https://nyc3.digitaloceanspaces.com/bucket/small-url",
-      "medium": "https://nyc3.digitaloceanspaces.com/bucket/medium-url",
-      "large": "https://nyc3.digitaloceanspaces.com/bucket/large-url",
-      "original": "https://nyc3.digitaloceanspaces.com/bucket/original-url"
+      "small": "https://<bucket>.s3.us-west-2.amazonaws.com/.../small.webp",
+      "medium": "https://<bucket>.s3.us-west-2.amazonaws.com/.../medium.webp",
+      "large": "https://<bucket>.s3.us-west-2.amazonaws.com/.../large.webp",
+      "original": "https://<bucket>.s3.us-west-2.amazonaws.com/.../original.jpeg"
     },
     "metadata": {
       "originalSize": 1024000,

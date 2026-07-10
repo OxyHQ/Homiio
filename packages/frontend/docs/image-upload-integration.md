@@ -234,7 +234,7 @@ Required dependencies (already included):
 To test the image upload functionality:
 
 1. **Start the backend server** with image upload endpoints
-2. **Configure environment variables** for S3/DigitalOcean Spaces
+2. **Configure backend environment variables** for AWS S3 (`AWS_REGION`, `AWS_S3_BUCKET`, credentials)
 3. **Run the frontend app** in development mode
 4. **Navigate to property creation** and go to Media step
 5. **Test image selection** from gallery
@@ -258,5 +258,5 @@ To test the image upload functionality:
 1. Check console logs for error messages
 2. Verify API endpoints are accessible
 3. Test authentication token validity
-4. Check S3/DigitalOcean Spaces configuration
+4. Check AWS S3 configuration on the backend (`AWS_S3_BUCKET`, `AWS_REGION`, credentials)
 5. Verify image file formats and sizes
