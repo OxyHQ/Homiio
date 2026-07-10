@@ -179,8 +179,9 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({
   const framed = isWeb && isScreenNotMobile;
 
   /**
-   * Solid card surface on web + native so scrolled feed content never
-   * shows through the strip. Web-only `position: sticky` lives outside
+   * Solid muted surface on web + native so scrolled feed content never
+   * shows through the strip (`backgroundTertiary` → Bloom `--muted` /
+   * NativeWind `bg-muted`). Web-only `position: sticky` lives outside
    * the RN style system — inject via style and rely on react-native-web
    * to pass it through. `top` stays numeric from PANEL_TOP_INSET when framed.
    */
@@ -198,7 +199,7 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({
   return (
     <View
       className={className ?? 'w-full py-1'}
-      style={[{ backgroundColor: themeColors.card }, stickyStyle]}
+      style={[{ backgroundColor: themeColors.backgroundTertiary }, stickyStyle]}
     >
       <ScrollView
         horizontal
