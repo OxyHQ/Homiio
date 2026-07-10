@@ -94,8 +94,9 @@ describe('withProxyCountryUsername', () => {
   });
 });
 
-describe('toPlaywrightProxy', () => {
+describe('toPlaywrightProxy (dataimpulse dialect)', () => {
   it('maps config to Playwright proxy options', () => {
+    process.env.LISTING_PROXY_FORMAT = 'dataimpulse';
     const config = parseResidentialProxyUrl(PROXY_URL);
     expect(config).toBeDefined();
     if (!config) return;
@@ -116,15 +117,15 @@ describe('toPlaywrightProxy', () => {
 /* -------------------------------------------------------------------------- */
 
 describe('proxyFormatFromEnv', () => {
-  it('defaults to dataimpulse and switches to password only on exact opt-in', () => {
+  it('defaults to password (Evomi/IPRoyal) and opts into dataimpulse only on exact match', () => {
     delete process.env.LISTING_PROXY_FORMAT;
+    expect(proxyFormatFromEnv()).toBe('password');
+    process.env.LISTING_PROXY_FORMAT = 'dataimpulse';
     expect(proxyFormatFromEnv()).toBe('dataimpulse');
-    process.env.LISTING_PROXY_FORMAT = 'password';
-    expect(proxyFormatFromEnv()).toBe('password');
-    process.env.LISTING_PROXY_FORMAT = 'PASSWORD';
-    expect(proxyFormatFromEnv()).toBe('password');
+    process.env.LISTING_PROXY_FORMAT = 'DATAIMPULSE';
+    expect(proxyFormatFromEnv()).toBe('dataimpulse');
     process.env.LISTING_PROXY_FORMAT = 'something-else';
-    expect(proxyFormatFromEnv()).toBe('dataimpulse');
+    expect(proxyFormatFromEnv()).toBe('password');
   });
 });
 
@@ -256,6 +257,7 @@ function fakePlaywrightWithRoutes(html: string): { module: PlaywrightModule; cou
 
 describe('PlaywrightBrowserPool — residential proxy + asset blocking', () => {
   it('passes proxy into context and aborts heavy asset types when blockAssets is on', async () => {
+    process.env.LISTING_PROXY_FORMAT = 'dataimpulse';
     const config = parseResidentialProxyUrl(PROXY_URL);
     expect(config).toBeDefined();
     if (!config) return;

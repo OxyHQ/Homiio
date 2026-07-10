@@ -126,13 +126,13 @@ export type ProxyCredentialFormat = 'dataimpulse' | 'password';
 
 /**
  * Provider credential dialect from `LISTING_PROXY_FORMAT`. Defaults to
- * `dataimpulse` so behaviour is unchanged unless infra opts into `password`
- * alongside the matching proxy host + secret.
+ * `password` (Evomi / IPRoyal, the active residential proxy family); set
+ * `LISTING_PROXY_FORMAT=dataimpulse` to opt back into username-encoded params.
  */
 export function proxyFormatFromEnv(): ProxyCredentialFormat {
-  return process.env.LISTING_PROXY_FORMAT?.trim().toLowerCase() === 'password'
-    ? 'password'
-    : 'dataimpulse';
+  return process.env.LISTING_PROXY_FORMAT?.trim().toLowerCase() === 'dataimpulse'
+    ? 'dataimpulse'
+    : 'password';
 }
 
 /**
