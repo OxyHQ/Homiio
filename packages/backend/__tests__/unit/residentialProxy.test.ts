@@ -11,6 +11,7 @@ import {
   createListingFetchRuntimeFromEnv,
   parseResidentialProxyUrl,
   toPlaywrightProxy,
+  withProxyCountryUsername,
   withStickySessionUsername,
   type PlaywrightModule,
 } from '@homiio/listing-providers';
@@ -80,6 +81,13 @@ describe('withStickySessionUsername', () => {
   });
 });
 
+describe('withProxyCountryUsername', () => {
+  it('appends DataImpulse __cr.<cc> geo param once', () => {
+    expect(withProxyCountryUsername('mylogin', 'es')).toBe('mylogin__cr.es');
+    expect(withProxyCountryUsername('mylogin__cr.es', 'es')).toBe('mylogin__cr.es');
+  });
+});
+
 describe('toPlaywrightProxy', () => {
   it('maps config to Playwright proxy options', () => {
     const config = parseResidentialProxyUrl(PROXY_URL);
@@ -91,6 +99,7 @@ describe('toPlaywrightProxy', () => {
       password: 'mypass',
     });
     expect(toPlaywrightProxy(config, 'sess1').username).toBe('mylogin-session-sess1');
+    expect(toPlaywrightProxy(config, 'sess1', 'es').username).toBe('mylogin__cr.es-session-sess1');
   });
 });
 

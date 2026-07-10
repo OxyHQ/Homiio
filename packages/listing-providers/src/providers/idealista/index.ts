@@ -61,6 +61,7 @@ import {
 } from './georeach';
 import { idealistaSourceIdFromUrl, parseIdealistaDetail, parseIdealistaSearch, type IdealistaRaw } from './parse';
 
+const ES_PROXY_COUNTRY = 'es';
 const PROVIDER_ID: ProviderId = 'idealista';
 
 /** ES cities enumerated when a discover job carries no explicit `city`. */
@@ -241,6 +242,7 @@ export class IdealistaProvider implements ListingProvider {
     try {
       const { status, body } = await runtime.fetchHttp(url, {
         signal,
+        proxyCountry: ES_PROXY_COUNTRY,
         headers: {
           ...IDEALISTA_AJAX_HEADERS,
           Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -317,6 +319,7 @@ export class IdealistaProvider implements ListingProvider {
         blockAssets: true,
         locale: 'es-ES',
         acceptLanguage: 'es-ES,es;q=0.9,en;q=0.8',
+        proxyCountry: ES_PROXY_COUNTRY,
       });
 
       await session.warmNavigate({
@@ -518,6 +521,7 @@ export class IdealistaProvider implements ListingProvider {
         blockAssets: true,
         locale: 'es-ES',
         acceptLanguage: 'es-ES,es;q=0.9,en;q=0.8',
+        proxyCountry: ES_PROXY_COUNTRY,
       });
 
       // Contact AJAX first (JSON) while the DataDome session is warm.

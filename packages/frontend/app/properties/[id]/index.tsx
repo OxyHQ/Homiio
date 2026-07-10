@@ -39,7 +39,7 @@ import * as Haptics from 'expo-haptics';
 import * as Linking from 'expo-linking';
 import { Ionicons } from '@expo/vector-icons';
 
-import { useOxy, showSignInModal } from '@oxyhq/services';
+import { useOxy, openAccountDialog } from '@oxyhq/services';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { Header } from '@/components/Header';
@@ -87,6 +87,7 @@ import { AmenitiesSection } from '@/components/property/AmenitiesSection';
 import { CommunityNotesSection } from '@/components/property/CommunityNotesSection';
 import { ReviewsSection } from '@/components/property/ReviewsSection';
 import { PriceRangeSection } from '@/components/property/PriceRangeSection';
+import { PriceEthicsBanner } from '@/components/property/PriceEthicsBanner';
 import { SimilarHomesSection } from '@/components/property/SimilarHomesSection';
 import { DemandSignal } from '@/components/property/DemandSignal';
 import { PropertyActionBar } from '@/components/property/PropertyActionBar';
@@ -147,6 +148,12 @@ export default function PropertyDetailPage() {
 
   const showPriceRangeSection =
     !areaInsightsError && (areaInsightsLoading || Boolean(areaInsights));
+  const showPriceEthicsBanner = apiProperty?.priceEthics?.isFairPrice === false;
+  const priceEthicsCurrency =
+    apiProperty?.longTermRent?.currency ??
+    apiProperty?.shortTermRent?.currency ??
+    apiProperty?.sale?.currency ??
+    'EUR';
   const showSimilarHomesSection =
     !areaInsightsError &&
     !areaInsightsLoading &&
@@ -241,8 +248,8 @@ export default function PropertyDetailPage() {
     const summaries = resolveOfferingSummaries(apiProperty, browseMode);
     const alsoAvailable =
       summaries.length > 0
-        ? `${t('listing.offering.alsoAvailable')}: ${summaries
-            .map((summary) => t(summary.i18nKey))
+        ? `${t('listing.offering.alsoAvailable', 'Also available')}: ${summaries
+            .map((summary) => t(summary.i18nKey, summary.fallback))
             .join(' · ')}`
         : '';
 
@@ -334,13 +341,15 @@ export default function PropertyDetailPage() {
         }
       } catch {
         toast.error(
-          t('error.contact.openFailed'),
+          t('error.contact.openFailed', 'Could not open contact link') ||
+            'Could not open contact link',
         );
         return;
       }
       if (!apiProperty.sourceUrl) {
         toast.error(
-          t('error.source.noUrl'),
+          t('error.source.noUrl', 'Source website URL not available') ||
+            'Source website URL not available',
         );
         return;
       }
@@ -348,16 +357,18 @@ export default function PropertyDetailPage() {
         await Linking.openURL(apiProperty.sourceUrl);
       } catch {
         toast.error(
-          t('error.source.openFailed'),
+          t('error.source.openFailed', 'Could not open the source website') ||
+            'Could not open the source website',
         );
       }
       return;
     }
     if (!oxyServices || !activeSessionId) {
       toast.error(
-        t('error.auth.required'),
+        t('error.auth.required', 'Please sign in to contact the owner') ||
+          'Please sign in to contact the owner',
       );
-      showSignInModal();
+      openAccountDialog('signin');
       return;
     }
     // Homiio has no in-app messaging product, so "contact the owner" resolves to
@@ -381,7 +392,8 @@ export default function PropertyDetailPage() {
           await Linking.openURL(`tel:${phone}`);
         } catch {
           toast.error(
-            t('error.contact.openFailed'),
+            t('error.contact.openFailed', 'Could not open contact link') ||
+              'Could not open contact link',
           );
         }
         return;
@@ -394,26 +406,30 @@ export default function PropertyDetailPage() {
           await Linking.openURL(waUrl);
         } catch {
           toast.error(
-            t('error.contact.openFailed'),
+            t('error.contact.openFailed', 'Could not open contact link') ||
+              'Could not open contact link',
           );
         }
         return;
       }
       toast.error(
-        t('error.contact.noPhone'),
+        t('error.contact.noPhone', 'No phone number available for this listing') ||
+          'No phone number available for this listing',
       );
       return;
     }
     if (!oxyServices || !activeSessionId) {
       toast.error(
-        t('error.auth.required'),
+        t('error.auth.required', 'Please sign in to call the owner') ||
+          'Please sign in to call the owner',
       );
-      showSignInModal();
+      openAccountDialog('signin');
       return;
     }
     if (!landlordProfile) {
       toast.error(
-        t('error.profile.notFound'),
+        t('error.profile.notFound', 'Owner profile not found') ||
+          'Owner profile not found',
       );
       return;
     }
@@ -437,13 +453,15 @@ export default function PropertyDetailPage() {
     }
     if (!allowCalls) {
       toast.error(
-        t('error.call.notAllowed'),
+        t('error.call.notAllowed', 'Owner does not accept calls') ||
+          'Owner does not accept calls',
       );
       return;
     }
     if (!phoneNumber) {
       toast.error(
-        t('error.call.noPhone'),
+        t('error.call.noPhone', 'No phone number available') ||
+          'No phone number available',
       );
       return;
     }
@@ -451,7 +469,8 @@ export default function PropertyDetailPage() {
       await Linking.openURL(`tel:${phoneNumber}`);
     } catch {
       toast.error(
-        t('error.call.failed'),
+        t('error.call.failed', 'Could not open phone dialer') ||
+          'Could not open phone dialer',
       );
     }
   }, [oxyServices, activeSessionId, landlordProfile, t, apiProperty]);
@@ -471,7 +490,8 @@ export default function PropertyDetailPage() {
       await Linking.openURL(websiteUrl);
     } catch {
       toast.error(
-        t('error.publicHousing.openFailed'),
+        t('error.publicHousing.openFailed', 'Could not open the housing website') ||
+          'Could not open the housing website',
       );
     }
   }, [apiProperty?.address?.regionName, t]);
@@ -484,17 +504,17 @@ export default function PropertyDetailPage() {
     // The clipboard fallback copies the full details (not just the URL), matching
     // the share-sheet message.
     const outcome = await shareContent({
-      title: t('property.toast.shareTitle'),
+      title: 'Share Property',
       message: details,
       url: propertyUrl,
       copyText: details,
     });
     if (outcome === 'copied') {
-      toast.success(t('property.toast.shareCopied'));
+      toast.success('Property details copied to clipboard');
     } else if (outcome === 'failed') {
-      toast.error(t('property.toast.shareFailed'));
+      toast.error('Failed to share property');
     }
-  }, [property, t]);
+  }, [property]);
 
   const handleCtaPress = useCallback(() => {
     if (apiProperty?.housingType === 'public') {
@@ -522,7 +542,7 @@ export default function PropertyDetailPage() {
   // sign-in first when unauthenticated, matching the other gated actions.
   const handleRequestExchange = useCallback(() => {
     if (!oxyServices || !activeSessionId) {
-      showSignInModal();
+      openAccountDialog('signin');
       return;
     }
     setExchangeSheetVisible(true);
@@ -554,18 +574,21 @@ export default function PropertyDetailPage() {
         <Header
           options={{
             showBackButton: true,
-            title: t('property.error'),
+            title: t('property.error', 'Error') || 'Error',
             titlePosition: 'center',
           }}
         />
         <SafeAreaView style={styles.errorBody} edges={['bottom']}>
           <ErrorState
             icon="home-outline"
-            title={t('property.notFound')}
+            title={t('property.notFound', 'Property not found') || 'Property not found'}
             description={
-              t('property.notFoundHelp')
+              t(
+                'property.notFoundHelp',
+                'It may have been removed or the link is broken.',
+              ) || 'It may have been removed or the link is broken.'
             }
-            retryLabel={t('goBack')}
+            retryLabel={t('goBack', 'Go back') || 'Go back'}
             onRetry={() => router.back()}
           />
         </SafeAreaView>
@@ -877,6 +900,15 @@ export default function PropertyDetailPage() {
               between Community Notes and the landlord's own listings. Each
               wrapper is gated so a fail-soft/empty section never leaves a
               bare hairline divider behind. */}
+          {showPriceEthicsBanner && apiProperty?.priceEthics ? (
+            <View style={[styles.section, styles.divider]}>
+              <PriceEthicsBanner
+                priceEthics={apiProperty.priceEthics}
+                currency={priceEthicsCurrency}
+              />
+            </View>
+          ) : null}
+
           {showPriceRangeSection ? (
             <View style={[styles.section, styles.divider]}>
               <PriceRangeSection
@@ -899,7 +931,7 @@ export default function PropertyDetailPage() {
                 landlordProfile={landlordProfile}
                 ownerProperties={ownerProperties}
                 onApplyPublic={handlePublicHousingApply}
-                t={(key) => t(key)}
+                t={(k, d) => t(k, d ?? '') || (d ?? k)}
               />
             </View>
           ) : null}
@@ -912,7 +944,10 @@ export default function PropertyDetailPage() {
           <View style={[styles.section, styles.divider]}>
             <FraudWarning
               text={
-                t('property.fraudWarning')
+                t(
+                  'Never pay or transfer funds outside the Homio platform',
+                  'Never pay or transfer funds outside the Homio platform',
+                ) || 'Never pay or transfer funds outside the Homio platform'
               }
             />
           </View>

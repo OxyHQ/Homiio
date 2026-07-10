@@ -100,7 +100,10 @@ export class HttpFetchRuntime implements FetchRuntime {
 
   async fetchHttp(url: string, init?: FetchRuntimeInit): Promise<{ status: number; body: string }> {
     const timeoutMs = init?.timeoutMs ?? this.defaultTimeoutMs;
-    const requestFetch = await this.resolveFetch();
+    const requestFetch =
+      init?.proxyCountry && this.proxy
+        ? await createProxiedFetch(this.proxy, undefined, init.proxyCountry)
+        : await this.resolveFetch();
     return withTimeout(timeoutMs, init?.signal, async (signal) => {
       const response = await requestFetch(url, {
         signal,

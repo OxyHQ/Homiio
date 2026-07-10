@@ -14,7 +14,8 @@ import {
   AvailabilityWindowStatus,
   CancellationPolicy,
   OfferingType,
-  ExchangeMode
+  ExchangeMode,
+  PropertyPriceEthics,
 } from '@homiio/shared-types';
 import { validateOfferings } from './schemas/offeringValidation';
 
@@ -152,6 +153,8 @@ export interface IProperty extends Document {
   sourcedByPartner?: Types.ObjectId;
   /** Audit copy of the referral code captured at create time (partners may rotate codes). */
   sourcedByReferralCode?: string;
+  /** Server-computed ethical + market price score. */
+  priceEthics?: Omit<PropertyPriceEthics, 'scoredAt'> & { scoredAt: Date };
   /** Populated runtime virtual added by the `toJSON`/`toObject` transform when `addressId` is populated. */
   address?: Record<string, unknown>;
   /** Auto-managed by `timestamps: true`. */

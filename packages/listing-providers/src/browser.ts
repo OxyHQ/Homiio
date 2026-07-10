@@ -247,7 +247,7 @@ export class PlaywrightBrowserPool implements UrlFetcher {
         javaScriptEnabled: true,
       };
       if (this.proxy) {
-        contextOptions.proxy = toPlaywrightProxy(this.proxy, sessionId);
+        contextOptions.proxy = toPlaywrightProxy(this.proxy, sessionId, init?.proxyCountry);
       }
       context = await browser.newContext(contextOptions);
       const page = await context.newPage();

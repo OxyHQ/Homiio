@@ -55,6 +55,7 @@ import {
 } from './sessionHints';
 
 const PROVIDER_ID: ProviderId = 'fotocasa';
+const ES_PROXY_COUNTRY = 'es';
 
 /** ES cities enumerated when a discover job carries no explicit `city`. */
 const DEFAULT_CITIES: readonly string[] = [
@@ -280,6 +281,7 @@ export class FotocasaProvider implements ListingProvider {
         proxySessionId: this.stickyProxySessionId,
         storageState: this.stickyStorageState,
         blockAssets: true,
+        proxyCountry: ES_PROXY_COUNTRY,
       });
 
       const searchHtml = await session.content();
@@ -446,7 +448,10 @@ export class FotocasaProvider implements ListingProvider {
 
     let session: BrowserSession | undefined;
     const warmCity = discoverSession?.warmCity ?? fotocasaCityFromRefUrl(ref.url);
-    const warmUrl = fotocasaWarmSearchUrl(warmCity, 1);
+    const warmUrl =
+      discoverSession?.storageState?.cookies?.length
+        ? ref.url
+        : fotocasaWarmSearchUrl(warmCity, 1);
     const start = Date.now();
     try {
       session = await ctx.runtime.openBrowserSession({
@@ -459,6 +464,7 @@ export class FotocasaProvider implements ListingProvider {
         proxySessionId,
         storageState,
         blockAssets: true,
+        proxyCountry: ES_PROXY_COUNTRY,
       });
 
       const transactionType = ref.url.includes('/comprar') || ref.url.includes('/venta') ? 'BUY' : 'RENT';

@@ -3,6 +3,7 @@ import { applyOfferingRulesForUpdate, OfferingValidationError, type OfferingBear
 import { EDITABLE_PROPERTY_FIELDS } from './editableFields';
 import { pickFields } from '../../utils/pickFields';
 import { onPropertyTransacted } from '../../services/commissionService';
+import { schedulePriceEthicsScore } from '../../services/priceEthicsService';
 import { Property } from '../../models';
 import { AppError, successResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
@@ -24,7 +25,7 @@ export async function updateProperty(req: ControllerRequest, res: ControllerResp
     const oxyUserId = req.user?.id || req.user?._id || req.userId;
     if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
     const { Profile } = require('../../models');
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
     if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
     const property = await Property.findById(propertyId);
     if (!property) return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));
@@ -89,6 +90,8 @@ export async function updateProperty(req: ControllerRequest, res: ControllerResp
       }
     }
 
+    schedulePriceEthicsScore(String(propertyId));
+
     res.json(successResponse(updatedProperty.toJSON(), 'Property updated successfully'));
   } catch (error) {
     if (error instanceof OfferingValidationError) {
@@ -105,7 +108,7 @@ export async function deleteProperty(req: ControllerRequest, res: ControllerResp
     const oxyUserId = req.user?.id || req.user?._id || req.userId;
     if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
     const { Profile } = require('../../models');
-    const activeProfile = await Profile.findActiveByOxyUserId(oxyUserId);
+    const activeProfile = await Profile.findOrCreateByOxyUserId(oxyUserId);
     if (!activeProfile) return next(new AppError('No active profile found', 404, 'PROFILE_NOT_FOUND'));
     const property = await Property.findById(propertyId);
     if (!property) return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));

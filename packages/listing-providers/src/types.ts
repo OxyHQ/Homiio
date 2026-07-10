@@ -139,6 +139,8 @@ export interface FetchRuntimeInit {
   signal?: AbortSignal;
   /** Per-request timeout in milliseconds. */
   timeoutMs?: number;
+  /** ISO country code for residential proxy geo (DataImpulse `__cr.<cc>`). */
+  proxyCountry?: string;
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD';
   body?: string;
 }

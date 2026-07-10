@@ -249,7 +249,7 @@ export function PropertyCard({
   const primaryOffering = resolvePrimaryOffering(
     property,
     browseMode,
-    t('listing.exchange.free'),
+    t('listing.exchange.free', 'Free'),
   );
 
   // The OTHER offerings this multi-offering listing carries (excluding the one
@@ -282,15 +282,15 @@ export function PropertyCard({
   // long-term → "month", short-term → "night"; sale/exchange have none.
   const priceUnitSuffix = propertyData.priceUnit
     ? propertyData.priceUnit === PriceUnit.NIGHT
-      ? t('listing.offering.perNightUnit')
-      : t('listing.offering.perMonthUnit')
+      ? t('listing.offering.perNightUnit', 'night')
+      : t('listing.offering.perMonthUnit', 'month')
     : '';
 
   // "Also available: By night · For sale" — joins the other offerings' labels.
   const alsoAvailableLabel =
     otherOfferings.length > 0
-      ? `${t('listing.offering.alsoAvailable')}: ${otherOfferings
-          .map((summary) => t(summary.i18nKey))
+      ? `${t('listing.offering.alsoAvailable', 'Also available')}: ${otherOfferings
+          .map((summary) => t(summary.i18nKey, summary.fallback))
           .join(' · ')}`
       : '';
 
@@ -302,11 +302,15 @@ export function PropertyCard({
   const typeMeta: { icon: IoniconName; label: string } | null = propertyData.type
     ? {
         icon: propertyData.type === 'house' ? 'home-outline' : 'business-outline',
-        label: t(`properties.titles.types.${propertyData.type}`),
+        label: t(
+          `properties.titles.types.${propertyData.type}`,
+          propertyData.type.charAt(0).toUpperCase() + propertyData.type.slice(1),
+        ),
       }
     : null;
 
   const isEco = Boolean(property.isEcoFriendly);
+  const isFairPrice = Boolean(property.priceEthics?.isFairPrice);
   const isFeatured = variant === 'featured';
   const isGrid = variant === 'grid';
   const isCompact = variant === 'compact';
@@ -388,12 +392,21 @@ export function PropertyCard({
             <OfferingBadge key={summary.offering} offering={summary.offering} size="md" />
           ))}
 
+          {/* Fair price — Homiio ethical + market badge. */}
+          {isFairPrice ? (
+            <MediaChip
+              icon="pricetag"
+              accent={colors.success}
+              label={t('listing.badge.fairPrice', 'Fair price')}
+            />
+          ) : null}
+
           {/* Instant Book (vacation mode only). */}
           {showInstantBook ? (
             <MediaChip
               icon="flash"
               accent={colors.primarySubtleForeground}
-              label={t('listing.badge.instantBook')}
+              label={t('listing.badge.instantBook', 'Instant book')}
             />
           ) : null}
 
