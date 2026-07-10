@@ -153,6 +153,45 @@ The worker reads these at startup; disabled providers are not registered.
 
 `packages/backend/worker.ts` is the worker entrypoint — same Docker image as the API, different start command. Run with a separate ECS task definition. Separate container only if Playwright memory becomes a concern.
 
+## Layout Shell & Design Tokens (CRITICAL)
+
+### ContentPanel (Bloom, Mention-shaped)
+
+The center column uses Bloom `ContentPanel` (`framed` + `maskColor`) — **not** a flat `mainContentWrapper` or custom bleed-mask. Reference: Mention `app/(app)/_layout.tsx`.
+
+- `framed={Platform.OS === 'web' && isScreenNotMobile}` (≥500 px wide).
+- `maskColor={theme.colors.background}` (unscoped — matches page bg).
+- Native phone: `framed={false}` / full-bleed.
+- Explore is fixed-viewport: no page scroll; still wraps center in ContentPanel when framed.
+- **Never hand-roll a bleed-mask** — ContentPanel owns it.
+
+### Scroll ownership (one owner per surface)
+
+Web default = **document scroll**. Do NOT wrap SideBar+Slot in a layout-level `Animated.ScrollView`. The layout is a static flex row; only the screen (or document on web) scrolls.
+
+| Surface | Owner |
+|---------|-------|
+| Web (default) | Document |
+| Native tabs | Screen `Animated.ScrollView` (local SharedValue) |
+| Explore | Fixed shell (no page scroll) |
+
+Remove `LayoutScrollProvider` / layout scroll handler when not needed. No dual writers of `scrollY`. Sticky Header `top` = Bloom `PANEL_TOP_INSET` (8) when framed.
+
+### Section stacking (NativeWind gap)
+
+Use NativeWind `gap-8 md:gap-12` on the section container — **not** per-section `marginTop: sectionGap` or `resolveSectionSpacing()`. Bottom padding: `pb-14` (home) / `pb-20` (agent).
+
+- Drop `HomeCarouselSection` outer `marginBottom`.
+- Wide CTA rows: `flex-row items-stretch gap-8 md:gap-12`.
+
+### Design-token CSS (no hand-copied radius)
+
+`@import "@oxyhq/bloom/design-tokens/theme.css"` in `packages/frontend/styles/global.css` after the Tailwind import. This provides `rounded-radius-28`, `p-space-8`, etc. without pasting anything locally.
+
+- **Never declare `--radius-radius-*` or other Bloom scales in `global.css`** — the Bloom import is the sole authority.
+- Keep only Homiio-local color seeds / `:root` overrides in `global.css`.
+- Bump `@oxyhq/bloom` in `packages/frontend/package.json` + lockfile in the same commit when the import is added.
+
 ## NativeWind — `Pressable` Function-Form `style`
 
 The NativeWind css-interop (v4 `react-native-css-interop`, and the v5 preview / `react-native-css` this app now runs) does NOT support React Native's function-form `style={({ pressed }) => [...]}` — the function is swallowed and the `Pressable` renders with no style at all.
