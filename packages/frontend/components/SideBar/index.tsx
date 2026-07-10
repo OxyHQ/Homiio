@@ -64,21 +64,17 @@ import {
 } from './dimensions';
 
 /**
- * Hairline styles for the sidebar's chrome border and inner dividers. Bloom's
- * `--border`/`--muted` CSS variables only resolve to the themed hairline on
- * web; on native the `border-border` / `bg-border` color classes don't pick up
- * the runtime variable reliably and a `borderWidth: 1` renders as a full
- * device-pixel rule that reads as a hard black line. Using an explicit Bloom
- * token (`colors.border`) at `StyleSheet.hairlineWidth` matches the subtle,
- * flat hairline the rest of the app draws (see the ~15 `borderColor:
- * colors.border` call sites) and renders identically on web and native.
+ * Horizontal section dividers inside the sidebar. Bloom's `--border` CSS
+ * variable only resolves reliably on web; on native `border-border` /
+ * `bg-border` don't pick up the runtime token, so we paint an explicit
+ * `colors.border` hairline (same pattern as the rest of the app).
+ *
+ * No right-edge rail border — the SideBar sits flush against the ContentPanel
+ * gutter (Mention shape). A `borderRight` hairline reads as an unintended
+ * seam between the rail and the center column on explore and every other
+ * framed shell route.
  */
 const sidebarBorders = StyleSheet.create({
-  /** Right edge of the persistent rail / expanded panel + the drawer panel. */
-  railEdge: {
-    borderRightWidth: StyleSheet.hairlineWidth,
-    borderRightColor: colors.border,
-  },
   /** Horizontal divider between sidebar sections (header → body, body → footer). */
   divider: {
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -543,7 +539,6 @@ export function SideBar() {
       <View
         className="flex flex-col bg-background items-center"
         style={[
-          sidebarBorders.railEdge,
           { width: COLLAPSED_WIDTH },
           Platform.OS === 'web'
             ? ({
@@ -867,7 +862,7 @@ export function SideBar() {
               <Animated.View
                 entering={slideIn}
                 exiting={slideOut}
-                style={[{ width: drawerWidth }, sidebarBorders.railEdge]}
+                style={{ width: drawerWidth }}
                 className="h-full bg-background"
               >
                 <BaseSidebar header={header} footer={footer}>
@@ -883,7 +878,7 @@ export function SideBar() {
 
   return (
     <View
-      style={[{ width: EXPANDED_WIDTH }, sidebarBorders.railEdge]}
+      style={{ width: EXPANDED_WIDTH }}
       className="h-full"
     >
       <BaseSidebar header={header} footer={footer}>
