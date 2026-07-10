@@ -232,7 +232,7 @@ export default function HomePage() {
 
   const scrollY = useSharedValue(0);
   const { height: windowHeight } = useWindowDimensions();
-  const heroHeight = isXL ? Math.min(640, windowHeight * 0.72) : isWide ? 520 : 560;
+  const heroHeight = isXL ? Math.min(560, windowHeight * 0.62) : isWide ? 460 : 480;
 
   const heroParallaxStyle = useAnimatedStyle(() => ({
     transform: [
@@ -259,7 +259,7 @@ export default function HomePage() {
           className="relative w-full justify-end overflow-hidden"
           style={{
             height: heroHeight,
-            paddingTop: insets.top + (isWide ? spacing['3xl'] : spacing['5xl']),
+            paddingTop: insets.top + (isWide ? spacing.md : spacing.lg),
           }}
         >
           <Animated.View
@@ -307,17 +307,17 @@ export default function HomePage() {
           <View
             className={
               isWide
-                ? 'w-full max-w-[1200px] self-center items-center px-10 pb-6'
-                : 'w-full max-w-[1200px] self-center items-start px-5 pb-5'
+                ? 'w-full max-w-[1200px] self-center items-center px-10 pb-4'
+                : 'w-full max-w-[1200px] self-center items-start px-5 pb-4'
             }
           >
             <H1
               className={
                 isXL
-                  ? 'mb-3 max-w-[720px] text-center text-[56px] font-bold leading-[60px] text-white'
+                  ? 'mb-2 max-w-[720px] text-center text-[56px] font-bold leading-[60px] text-white'
                   : isWide
-                    ? 'mb-3 max-w-[720px] text-center text-[44px] font-bold leading-[48px] text-white'
-                    : 'mb-3 max-w-[720px] text-left text-[34px] font-bold leading-[38px] text-white'
+                    ? 'mb-2 max-w-[720px] text-center text-[44px] font-bold leading-[48px] text-white'
+                    : 'mb-2 max-w-[720px] text-left text-[34px] font-bold leading-[38px] text-white'
               }
               style={{ letterSpacing: tracker.tight }}
             >
@@ -326,8 +326,8 @@ export default function HomePage() {
             <P
               className={
                 isWide
-                  ? 'mb-6 max-w-[520px] text-center text-lg leading-[26px] text-white opacity-90'
-                  : 'mb-6 max-w-[520px] text-left text-base leading-[22px] text-white opacity-90'
+                  ? 'mb-4 max-w-[520px] text-center text-lg leading-[26px] text-white opacity-90'
+                  : 'mb-4 max-w-[520px] text-left text-base leading-[22px] text-white opacity-90'
               }
             >
               {t('home.hero.subtitle')}
@@ -336,8 +336,8 @@ export default function HomePage() {
             <View
               className={
                 isWide
-                  ? 'z-20 mt-4 w-full max-w-[880px] self-center'
-                  : 'z-20 mt-4 w-full max-w-[520px] self-center'
+                  ? 'z-20 mt-2 w-full max-w-[880px] self-center'
+                  : 'z-20 mt-2 w-full max-w-[520px] self-center'
               }
             >
               <SearchSummaryBar
