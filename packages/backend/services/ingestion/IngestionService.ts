@@ -30,7 +30,7 @@ import { ensureCover } from '../cityCoverSyncService';
 import type { AddressCanonicalInput } from '../../models/Address';
 import { validateOfferings } from '../../models/schemas/offeringValidation';
 import { forwardGeocode, reverseGeocode } from '../geocodingService';
-import { sanitizeGeoJsonCoordinates } from '../utils/geoCoordinates';
+import { sanitizeGeoJsonCoordinates } from '../../utils/geoCoordinates';
 import { ExternalMediaIngest } from './ExternalMediaIngest';
 import { schedulePriceEthicsScore } from '../priceEthicsService';
 import { Logger } from '../../utils/logger';
