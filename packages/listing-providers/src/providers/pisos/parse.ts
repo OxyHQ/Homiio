@@ -21,6 +21,7 @@ export interface PisosRaw {
 }
 
 const DETAIL_PATH_RE = /\/(?:alquilar|comprar)\/[^"'?\s]*?-(\d+[._]\d+|\d+)\/?/i;
+const SEARCH_LINK_RE = /href=["'](\/alquilar\/[^"'?\s]+-\d+_\d+\/)["']/gi;
 const PRECIO_VAR_RE = /var\s+precio\s*=\s*(\d+)/i;
 const PISOS_IMG_HOST = 'https://fotos.imghs.net/';
 
@@ -160,6 +161,18 @@ export function parsePisosSearch(html: string): { sourceId: string; url: string 
     if (!sourceId || seen.has(sourceId)) continue;
     seen.add(sourceId);
     refs.push({ sourceId, url });
+  }
+
+  if (refs.length === 0) {
+    for (const match of html.matchAll(SEARCH_LINK_RE)) {
+      const path = match[1];
+      if (!path) continue;
+      const url = absoluteUrl(path);
+      const sourceId = pisosSourceIdFromUrl(url);
+      if (!sourceId || seen.has(sourceId)) continue;
+      seen.add(sourceId);
+      refs.push({ sourceId, url });
+    }
   }
 
   return refs;

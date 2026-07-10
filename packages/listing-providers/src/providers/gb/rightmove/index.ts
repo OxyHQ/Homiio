@@ -37,7 +37,7 @@ import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
 import { isGbPortalChallenge } from '../challenge';
-import { resolveGbPropertyType } from '../housing';
+import { resolveGbPropertyType, splitGbDisplayAddress } from '../housing';
 import {
   RIGHTMOVE_BASE_URL,
 } from './fixtures';
@@ -81,38 +81,12 @@ function asRightmoveRaw(payload: unknown): RightmoveListingJson {
   return payload as RightmoveListingJson;
 }
 
-function splitAddress(displayAddress: string | undefined): { street: string; city: string; postalCode?: string } {
-  if (!displayAddress) return { street: '', city: '' };
-  const parts = displayAddress.split(',').map((part) => part.trim()).filter(Boolean);
-  if (parts.length === 0) return { street: '', city: '' };
-  if (parts.length === 1) return { street: parts[0], city: parts[0] };
-
-  // "Holland Street, London, SE1" — last token may be outcode-only; prefer named locality.
-  const last = parts[parts.length - 1];
-  const postcodeOnly = /^[A-Z]{1,2}\d[A-Z\d]?(?:\s*\d[A-Z]{2})?$/i.test(last);
-  const postcodeMatch = last.match(/\b([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})\b/i);
-  let city: string;
-  let streetParts: string[];
-  if (postcodeMatch || postcodeOnly) {
-    city = parts[parts.length - 2] ?? last;
-    streetParts = parts.slice(0, Math.max(1, parts.length - 2));
-  } else {
-    city = last;
-    streetParts = parts.slice(0, parts.length - 1);
-  }
-  return {
-    street: streetParts.join(', ') || city,
-    city,
-    postalCode: postcodeMatch?.[1]?.toUpperCase() ?? (postcodeOnly ? last.toUpperCase() : undefined),
-  };
-}
-
 function toRemoteImages(urls: readonly string[]): NormalizedRemoteImage[] {
   return urls.map((url, index) => ({ url, isPrimary: index === 0 }));
 }
 
 function buildAddress(listing: RightmoveListingJson): NormalizedListingAddress {
-  const split = splitAddress(listing.displayAddress);
+  const split = splitGbDisplayAddress(listing.displayAddress);
   const postalCode =
     listing.outcode && listing.incode
       ? `${listing.outcode} ${listing.incode}`

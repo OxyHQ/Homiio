@@ -1,15 +1,20 @@
 /**
- * OnTheMarket / OpenRent / Zoopla GB provider contract tests (fixtures only).
+ * OnTheMarket / OpenRent / Rightmove / Zoopla GB provider contract tests (fixtures only).
  */
 
 import {
+  NonHousingListingError,
   OnTheMarketProvider,
   OpenRentProvider,
+  RightmoveProvider,
   ZooplaProvider,
   parseOnTheMarketDetail,
   parseOnTheMarketSearch,
   parseOpenRentDetail,
   parseOpenRentSearch,
+  parseRightmoveDetail,
+  parseRightmoveSearchJson,
+  parseRightmoveTypeahead,
   parseZooplaDetail,
   parseZooplaSearch,
   ONTHEMARKET_FIXTURE_DETAIL_HTML,
@@ -17,6 +22,9 @@ import {
   ONTHEMARKET_FIXTURE_SEARCH_HTML,
   OPENRENT_FIXTURE_DETAIL_HTML,
   OPENRENT_FIXTURE_SEARCH_HTML,
+  RIGHTMOVE_FIXTURE_DETAIL_HTML,
+  RIGHTMOVE_FIXTURE_SEARCH_HTML,
+  RIGHTMOVE_FIXTURE_TYPEAHEAD_JSON,
   ZOOPLA_FIXTURE_DETAIL_HTML,
   ZOOPLA_FIXTURE_SEARCH_HTML,
 } from '@homiio/listing-providers';
@@ -56,7 +64,35 @@ describe('OnTheMarketProvider', () => {
         ONTHEMARKET_FIXTURE_GARAGE_HTML,
         'https://www.onthemarket.com/details/19890062/',
       ),
-    ).toThrow(/non-housing/);
+    ).toThrow(NonHousingListingError);
+  });
+});
+
+describe('RightmoveProvider', () => {
+  const provider = new RightmoveProvider();
+
+  it('parses typeahead, filters garages from search, and normalizes __PAGE_MODEL detail', () => {
+    expect(provider.markets).toEqual(['GB']);
+    expect(parseRightmoveTypeahead(RIGHTMOVE_FIXTURE_TYPEAHEAD_JSON)).toBe('REGION^87490');
+
+    const refs = parseRightmoveSearchJson(RIGHTMOVE_FIXTURE_SEARCH_HTML);
+    expect(refs.map((ref) => ref.sourceId).sort()).toEqual(['90551949', '90551951']);
+    expect(refs.map((ref) => ref.sourceId)).not.toContain('90551950');
+
+    const payload = parseRightmoveDetail(
+      RIGHTMOVE_FIXTURE_DETAIL_HTML,
+      'https://www.rightmove.co.uk/properties/90551949',
+    );
+    const listing = provider.normalize({
+      ref: { provider: 'rightmove', sourceId: payload.sourceId, url: payload.url },
+      payload,
+    });
+    expect(listing.source).toBe('rightmove');
+    expect(listing.longTermRent?.monthlyAmount).toBe(3400);
+    expect(listing.address.postalCode).toBe('SE1 9JF');
+    expect(listing.address.coordinates).toEqual({ lat: 51.506931, lng: -0.10097 });
+    expect(listing.contact?.phone).toContain('020');
+    expect(listing.remoteImages.length).toBeGreaterThan(0);
   });
 });
 
@@ -81,6 +117,7 @@ describe('OpenRentProvider', () => {
     expect(listing.contact?.phone).toContain('020');
     expect(listing.contact?.email).toBe('landlord@example.com');
     expect(listing.address.countryCode).toBe('GB');
+    expect(listing.address.postalCode).toBe('WC2N');
   });
 });
 

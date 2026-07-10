@@ -7,7 +7,7 @@
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
 import { buildContact } from '../../../parse/contact';
-import { isGbHousingType } from '../housing';
+import { isGbHousingType, rejectGbNonHousing } from '../housing';
 import { OPENRENT_BASE_URL } from './fixtures';
 
 const DETAIL_PATH_RE =
@@ -75,7 +75,7 @@ export function parseOpenRentDetail(html: string, url: string): OpenRentListingJ
     .trim();
 
   if (title && !isGbHousingType(title)) {
-    throw new Error(`openrent: non-housing listing rejected at ${url}`);
+    rejectGbNonHousing('openrent', sourceId, `title "${title}"`);
   }
 
   const rentMatch = title?.match(/£([\d,]+\.?\d*)\s*p\/m/i);

@@ -31,7 +31,7 @@ import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
 import { isGbPortalChallenge } from '../challenge';
-import { resolveGbPropertyType } from '../housing';
+import { resolveGbPropertyType, splitGbDisplayAddress } from '../housing';
 import { ONTHEMARKET_BASE_URL } from './fixtures';
 import {
   onthemarketSearchUrl,
@@ -68,27 +68,12 @@ function asOtmRaw(payload: unknown): OnTheMarketListingJson {
   return payload as OnTheMarketListingJson;
 }
 
-function splitAddress(displayAddress: string | undefined, locality?: string): {
-  street: string;
-  city: string;
-  postalCode?: string;
-} {
-  if (!displayAddress) return { street: '', city: locality ?? '' };
-  const parts = displayAddress.split(',').map((part) => part.trim()).filter(Boolean);
-  if (parts.length === 0) return { street: '', city: locality ?? '' };
-  const last = parts[parts.length - 1];
-  const postcodeMatch = last.match(/\b([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})\b/i);
-  const city = locality ?? (postcodeMatch ? parts[parts.length - 2] ?? last : last);
-  const street = parts.slice(0, Math.max(1, parts.length - 1)).join(', ');
-  return { street: street || city, city, postalCode: postcodeMatch?.[1]?.toUpperCase() };
-}
-
 function toRemoteImages(urls: readonly string[]): NormalizedRemoteImage[] {
   return urls.map((url, index) => ({ url, isPrimary: index === 0 }));
 }
 
 function buildAddress(listing: OnTheMarketListingJson): NormalizedListingAddress {
-  const split = splitAddress(listing.displayAddress, listing.addressLocality);
+  const split = splitGbDisplayAddress(listing.displayAddress, listing.addressLocality);
   const address: NormalizedListingAddress = {
     street: split.street,
     city: split.city,

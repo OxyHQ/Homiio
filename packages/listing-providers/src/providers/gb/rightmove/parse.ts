@@ -10,7 +10,7 @@ import type { NormalizedListingContact } from '@homiio/shared-types';
 import { buildContact } from '../../../parse/contact';
 import { asNumberUs as asNumber, asString, isRecord } from '../../../parse/guards';
 import { parseNextData } from '../../../parse/nextData';
-import { isGbHousingType } from '../housing';
+import { isGbHousingType, rejectGbNonHousing } from '../housing';
 import { RIGHTMOVE_BASE_URL } from './fixtures';
 
 const PAGE_MODEL_RE = /window\.__PAGE_MODEL\s*=\s*(\{[\s\S]*?\})\s*;/;
@@ -248,16 +248,16 @@ export function parseRightmoveDetail(html: string, url: string): RightmoveListin
   if (!prop) {
     throw new Error(`rightmove: could not resolve propertyData at ${url}`);
   }
-  if (!isGbHousingType(asString(prop.propertySubType))) {
-    throw new Error(`rightmove: non-housing listing rejected at ${url}`);
-  }
-
   const sourceId =
     asString(prop.id) ??
     (asNumber(prop.id) !== undefined ? String(Math.trunc(asNumber(prop.id)!)) : undefined) ??
     rightmoveSourceIdFromUrl(url);
   if (!sourceId) {
     throw new Error(`rightmove: missing property id at ${url}`);
+  }
+
+  if (!isGbHousingType(asString(prop.propertySubType))) {
+    rejectGbNonHousing('rightmove', sourceId, `propertySubType "${asString(prop.propertySubType) ?? ''}"`);
   }
 
   const address = isRecord(prop.address) ? prop.address : undefined;

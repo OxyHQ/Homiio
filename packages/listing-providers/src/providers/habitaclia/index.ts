@@ -30,8 +30,8 @@ import { createProxySessionId, envBool } from '../../proxy';
 import { HABITACLIA_BASE_URL, type HabitacliaRawListing } from './fixtures';
 import { habitacliaSourceIdFromUrl, parseHabitacliaDetail, parseHabitacliaSearch } from './parse';
 import {
-  HABITACLIA_CONTENT_SELECTOR,
   HABITACLIA_LISTAINMUEBLES_URL,
+  HABITACLIA_LISTING_CARD_SELECTOR,
   buildHabitacliaListainmueblesBody,
   extractHabitacliaListadoFormFields,
   habitacliaWarmSearchUrl,
@@ -50,6 +50,7 @@ export function isHabitacliaChallenge(html: string): boolean {
 
 const DEFAULT_CITIES: readonly string[] = ['barcelona', 'madrid', 'valencia', 'sevilla', 'malaga'];
 const MAX_SEARCH_PAGES = 5;
+const LISTAINMUEBLES_POST_TIMEOUT_MS = 45_000;
 const SUPPORTED_TYPES: ReadonlySet<string> = new Set(Object.values(PropertyType));
 
 function resolvePropertyType(raw: string): PropertyType {
@@ -121,32 +122,58 @@ export class HabitacliaProvider implements ListingProvider {
     const yielded = { count: 0 };
     const runtime = job.runtime ?? this.runtime;
 
+    const beforeSession = yielded.count;
+    if (runtime.openBrowserSession) {
+      for await (const ref of this.discoverViaListainmueblesSession(
+        runtime,
+        cities,
+        job.signal,
+        seen,
+        limit,
+        yielded,
+      )) {
+        yield ref;
+      }
+      if (yielded.count >= limit) return;
+    }
+
+    if (yielded.count > beforeSession) return;
+
     for (const city of cities) {
       if (yielded.count >= limit) return;
-
-      const viaAjax = runtime.openBrowserSession
-        ? await this.discoverCityViaListainmuebles(runtime, city, job.signal, seen, limit, yielded)
-        : [];
-      for (const ref of viaAjax) yield ref;
-      if (yielded.count >= limit) return;
-
-      if (viaAjax.length === 0) {
-        for await (const ref of this.discoverCityViaHtml(runtime, city, job.signal, seen, limit, yielded)) {
-          yield ref;
-        }
+      for await (const ref of this.discoverCityViaHtml(runtime, city, job.signal, seen, limit, yielded)) {
+        yield ref;
       }
     }
   }
 
-  private async discoverCityViaListainmuebles(
+  private habitacliaSessionOptions(city: string, sticky: boolean) {
+    return {
+      warmUrl: habitacliaWarmSearchUrl(city, 1),
+      contentSelector: HABITACLIA_LISTING_CARD_SELECTOR,
+      isChallenge: isHabitacliaChallenge,
+      stickyProxySession: sticky,
+      proxySessionId: this.stickyProxySessionId,
+      storageState: this.stickyStorageState,
+      blockAssets: true,
+      reloadAfterPolls: 4,
+      postChallengeSettleMs: 1_500,
+    } as const;
+  }
+
+  /**
+   * One warmed Playwright session serves every city: warm page 1, POST
+   * listainmuebles for pages 2+, then `warmNavigate` to the next city.
+   */
+  private async *discoverViaListainmueblesSession(
     runtime: FetchRuntime,
-    city: string,
+    cities: readonly string[],
     signal: AbortSignal | undefined,
     seen: Set<string>,
     limit: number,
     yielded: { count: number },
-  ): Promise<ExternalListingRef[]> {
-    if (!runtime.openBrowserSession) return [];
+  ): AsyncIterable<ExternalListingRef> {
+    if (!runtime.openBrowserSession) return;
 
     const sticky = envBool('LISTING_PROXY_STICKY', false);
     if (sticky && !this.stickyProxySessionId) {
@@ -154,79 +181,86 @@ export class HabitacliaProvider implements ListingProvider {
     }
 
     let session: BrowserSession | undefined;
-    const warmUrl = habitacliaWarmSearchUrl(city, 1);
     const start = Date.now();
     try {
+      const firstCity = cities[0];
+      if (!firstCity) return;
+
       session = await runtime.openBrowserSession({
-        warmUrl,
+        ...this.habitacliaSessionOptions(firstCity, sticky),
         signal,
-        contentSelector: HABITACLIA_CONTENT_SELECTOR,
-        isChallenge: isHabitacliaChallenge,
-        challengeWaitMs: 60_000,
-        stickyProxySession: sticky,
-        proxySessionId: this.stickyProxySessionId,
-        storageState: this.stickyStorageState,
-        blockAssets: true,
       });
 
-      const searchHtml = await session.content();
-      const formFields = extractHabitacliaListadoFormFields(searchHtml);
-      const collected: ExternalListingRef[] = [];
+      for (const city of cities) {
+        if (yielded.count >= limit) return;
 
-      for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
-        if (yielded.count >= limit) break;
-
-        let body: string;
-        let status: number;
-        if (page === 1 && parseHabitacliaSearch(searchHtml).length > 0) {
-          body = searchHtml;
-          status = 200;
-        } else {
-          const response = await session.request(HABITACLIA_LISTAINMUEBLES_URL, {
-            method: 'POST',
-            data: buildHabitacliaListainmueblesBody(formFields, page),
-            referer: session.pageUrl(),
-            timeoutMs: 30_000,
-            headers: {
-              Accept: 'text/html, */*',
-              'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            },
+        if (city !== firstCity) {
+          await session.warmNavigate({
+            ...this.habitacliaSessionOptions(city, sticky),
+            signal,
           });
-          body = response.body;
-          status = response.status;
         }
 
-        if (status === 403 || status === 429 || isHabitacliaListainmueblesChallenge(body)) {
+        const searchHtml = await session.content();
+        const formFields = extractHabitacliaListadoFormFields(searchHtml);
+        if (Object.keys(formFields).length === 0) continue;
+
+        for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
+          if (yielded.count >= limit) return;
+
+          let body: string;
+          let status: number;
+          if (page === 1 && parseHabitacliaSearch(searchHtml).length > 0) {
+            body = searchHtml;
+            status = 200;
+          } else {
+            const response = await session.request(HABITACLIA_LISTAINMUEBLES_URL, {
+              method: 'POST',
+              data: buildHabitacliaListainmueblesBody(formFields, page),
+              referer: session.pageUrl(),
+              timeoutMs: LISTAINMUEBLES_POST_TIMEOUT_MS,
+              headers: {
+                Accept: 'text/html, */*',
+                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+              },
+            });
+            body = response.body;
+            status = response.status;
+          }
+
+          if (status === 403 || status === 429 || isHabitacliaListainmueblesChallenge(body)) {
+            this.metrics.record({
+              provider: this.id,
+              strategy: 'browser',
+              outcome: 'challenge',
+              status,
+              latencyMs: Date.now() - start,
+              url: HABITACLIA_LISTAINMUEBLES_URL,
+              detail: `listainmuebles challenge on ${city} page ${page}`,
+            });
+            break;
+          }
+          if (status >= 400) break;
+
+          const pageRefs = parseHabitacliaListainmuebles(body);
           this.metrics.record({
             provider: this.id,
             strategy: 'browser',
-            outcome: 'challenge',
+            outcome: 'success',
             status,
             latencyMs: Date.now() - start,
             url: HABITACLIA_LISTAINMUEBLES_URL,
-            detail: 'listainmuebles challenge after warm-up',
           });
-          break;
+          if (pageRefs.length === 0) break;
+          for (const ref of yieldRefs(pageRefs, seen, limit, yielded)) {
+            yield ref;
+          }
         }
-        if (status >= 400) break;
-
-        const pageRefs = parseHabitacliaListainmuebles(body);
-        this.metrics.record({
-          provider: this.id,
-          strategy: 'browser',
-          outcome: 'success',
-          status,
-          latencyMs: Date.now() - start,
-          url: HABITACLIA_LISTAINMUEBLES_URL,
-        });
-        if (pageRefs.length === 0) break;
-        collected.push(...yieldRefs(pageRefs, seen, limit, yielded));
       }
 
       if (sticky) {
         this.stickyStorageState = await session.exportStorageState();
       }
-      return collected;
     } catch (error) {
       const detail =
         error instanceof BrowserSessionChallengeError
@@ -239,10 +273,9 @@ export class HabitacliaProvider implements ListingProvider {
         strategy: 'browser',
         outcome: 'challenge',
         latencyMs: Date.now() - start,
-        url: warmUrl,
-        detail: `listainmuebles warm-up failed: ${detail}`,
+        url: habitacliaWarmSearchUrl(cities[0] ?? 'madrid', 1),
+        detail: `listainmuebles session failed: ${detail}`,
       });
-      return [];
     } finally {
       await session?.close();
     }
@@ -294,6 +327,7 @@ export class HabitacliaProvider implements ListingProvider {
     let firstPageHtml = '';
     for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
       if (yielded.count >= limit) return;
+      if (page > 1 && !runtime.fetchViaBrowser) break;
       const { html } = await fetchListingViaLadder(runtime, habitacliaWarmSearchUrl(city, page), {
         provider: this.id,
         isChallenge: isHabitacliaChallenge,

@@ -31,7 +31,7 @@ import config from './config';
 import database from './database/connection';
 import { Logger } from './utils/logger';
 import { Property } from './models';
-import { IngestionService } from './services/ingestion/IngestionService';
+import { IngestionService, IngestionValidationError } from './services/ingestion/IngestionService';
 import {
   QUEUE_NAMES,
   discoverJobId,
@@ -100,6 +100,14 @@ async function processFetchRef(ref: ExternalListingRef): Promise<void> {
         reason: error.reason,
       });
       await expireExternalListing(error.source, error.sourceId, error.reason);
+      return;
+    }
+    if (error instanceof IngestionValidationError) {
+      logger.info('Skipped listing (ingest validation)', {
+        provider: ref.provider,
+        sourceId: ref.sourceId,
+        reason: error.message,
+      });
       return;
     }
     throw error;
@@ -176,7 +184,7 @@ function startBullMq(): () => Promise<void> {
         count: refs.length,
       });
     },
-    { connection, prefix, concurrency: 1 },
+    { connection, prefix, concurrency: 1, lockDuration: 600_000 },
   );
 
   const fetchWorker = new Worker<FetchJobData>(

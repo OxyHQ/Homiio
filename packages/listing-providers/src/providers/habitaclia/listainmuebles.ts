@@ -15,6 +15,9 @@ import { parseHabitacliaSearch } from './parse';
 export const HABITACLIA_CONTENT_SELECTOR =
   '[data-href*="-i"], .listado, .list-items, .js-list-items, main';
 
+/** Fast path: listing cards expose detail URLs in `data-href`. */
+export const HABITACLIA_LISTING_CARD_SELECTOR = '[data-href*="-i"]';
+
 /** POST target for paginated search results (returns HTML fragments). */
 export const HABITACLIA_LISTAINMUEBLES_URL = `${HABITACLIA_BASE_URL}/dotnet/listados/listainmuebles`;
 

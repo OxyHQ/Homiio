@@ -7,12 +7,13 @@ import {
   parsePisosDetail,
   parsePisosSearch,
   parsePisosContactPhone,
+  mergePisosContact,
   pisosSourceIdFromUrl,
   PISOS_FIXTURE_DETAIL_HTML,
   PISOS_FIXTURE_SEARCH_HTML,
   PISOS_FIXTURE_CONTACT_JSON,
 } from '@homiio/listing-providers';
-import type { ExternalListingRef } from '@homiio/listing-providers';
+import type { ExternalListingRef, FetchRuntime } from '@homiio/listing-providers';
 import { OfferingType, PropertyType } from '@homiio/shared-types';
 
 const provider = new PisosProvider();
@@ -45,6 +46,15 @@ describe('PisosProvider.normalize', () => {
   it('parses contact AJAX JSON', () => {
     expect(parsePisosContactPhone(PISOS_FIXTURE_CONTACT_JSON)).toBe('+34919376345');
   });
+
+  it('keeps embedded phone when contact AJAX returns null', () => {
+    const raw = parsePisosDetail(
+      PISOS_FIXTURE_DETAIL_HTML,
+      'https://www.pisos.com/alquilar/piso-sol_barrio28012-20026385030_992099/',
+    );
+    const merged = mergePisosContact(raw, parsePisosContactPhone('{"phone":null}'));
+    expect(merged.contact?.phone).toBe('919376345');
+  });
 });
 
 describe('PisosProvider search + helpers', () => {
@@ -65,5 +75,80 @@ describe('PisosProvider search + helpers', () => {
     expect(
       pisosSourceIdFromUrl('https://www.pisos.com/alquilar/piso-sol_barrio28012-20026385030_992099/'),
     ).toBe('20026385030.992099');
+  });
+});
+
+describe('PisosProvider.discover', () => {
+  it('yields refs from cold HTTP JSON-LD without opening a browser session', async () => {
+    let sessionsOpened = 0;
+    const runtime: FetchRuntime = {
+      fetchHttp: async () => ({ status: 200, body: PISOS_FIXTURE_SEARCH_HTML }),
+      fetchJson: async () => {
+        throw new Error('unused');
+      },
+      fetchText: async () => {
+        throw new Error('unused');
+      },
+      loadFixture: async () => {
+        throw new Error('unused');
+      },
+      openBrowserSession: async () => {
+        sessionsOpened += 1;
+        throw new Error('browser should not be needed');
+      },
+    };
+
+    const local = new PisosProvider({ runtime, cities: ['madrid'] });
+    const refs: ExternalListingRef[] = [];
+    for await (const ref of local.discover({
+      provider: 'pisos',
+      market: 'ES',
+      city: 'madrid',
+      limit: 10,
+      runtime,
+    })) {
+      refs.push(ref);
+    }
+
+    expect(sessionsOpened).toBe(0);
+    expect(refs.length).toBe(3);
+    expect(refs.every((ref) => ref.provider === 'pisos')).toBe(true);
+  });
+
+  it('falls back to a warmed session when HTTP search is challenged', async () => {
+    const runtime: FetchRuntime = {
+      fetchHttp: async () => ({ status: 403, body: 'access denied' }),
+      fetchJson: async () => {
+        throw new Error('unused');
+      },
+      fetchText: async () => {
+        throw new Error('unused');
+      },
+      loadFixture: async () => {
+        throw new Error('unused');
+      },
+      openBrowserSession: async () => ({
+        content: async () => PISOS_FIXTURE_SEARCH_HTML,
+        pageUrl: () => 'https://www.pisos.com/alquiler/pisos-madrid/',
+        warmNavigate: async () => undefined,
+        request: async () => ({ status: 200, body: '{}' }),
+        exportStorageState: async () => ({ cookies: [] }),
+        close: async () => undefined,
+      }),
+    };
+
+    const local = new PisosProvider({ runtime, cities: ['madrid'] });
+    const refs: ExternalListingRef[] = [];
+    for await (const ref of local.discover({
+      provider: 'pisos',
+      market: 'ES',
+      city: 'madrid',
+      limit: 5,
+      runtime,
+    })) {
+      refs.push(ref);
+    }
+
+    expect(refs.length).toBe(3);
   });
 });

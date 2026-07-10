@@ -262,9 +262,15 @@ PROVIDER_PROPERATI_ENABLED=true
 PROVIDER_PLUSVALIA_ENABLED=true
 PROVIDER_MERCADOLIBRE_EC_ENABLED=true
 PROVIDER_PROPERATI_EC_ENABLED=true
+PROVIDER_INMUEBLES24_ENABLED=true
+PROVIDER_LAMUDI_ENABLED=true
+PROVIDER_VIVANUNCIOS_ENABLED=true
+PROVIDER_PROPIEDADES_ENABLED=true
 ```
 
 Argentina (`LISTING_AR_CITIES`): Zonaprop / Argenprop (Navent `rplis-api` + `__PRELOADED_STATE__` via shared `navent` / `naventProvider` — Cloudflare, keep OFF until sticky residential clears), MercadoLibre inmuebles (housing-only; cold HTML search+detail verified — enable), Properati (`__NEXT_DATA__` / JSON-LD via shared modules — Cloudflare, OFF). MercadoLibre uses shared `mercadolibre` / `mercadolibreProvider` (also EC). Never site-wide crawl ML.
+
+Mexico (`LISTING_MX_CITIES`): Inmuebles24 (Navent — Cloudflare, OFF), Lamudi (JSON-LD MONTH rent — best HTTP candidate, OFF until live discover), Vivanuncios (housing-only classifieds — OFF), Propiedades (JSON-LD — Akamai, OFF). EasyBroker inactive — skip. Reuse shared `navent` / `jsonLd` / `contact` / `classifieds` / `cities`.
 
 Ecuador (`LISTING_EC_CITIES`): Plusvalía (thin `createNaventProvider` — Cloudflare, OFF until sticky residential), MercadoLibre EC inmuebles (thin `createMercadolibreProvider` — housing-only, OFF until Playwright+proxy probe), Properati EC (JSON-LD fixtures — ALB 403, keep OFF). No duplicated parsers — reuse `session` / `jsonLd` / `nextData` / `contact` / `classifieds` / `navent` / `mercadolibre`. inmo.ec not viable.
 

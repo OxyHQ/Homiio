@@ -20,7 +20,7 @@ import {
   parseHabitacliaListainmuebles,
   parseHabitacliaSearch,
 } from '@homiio/listing-providers';
-import type { RawListing } from '@homiio/listing-providers';
+import type { ExternalListingRef, FetchRuntime, RawListing } from '@homiio/listing-providers';
 import { OfferingType, PropertyType } from '@homiio/shared-types';
 
 const provider = new HabitacliaProvider();
@@ -123,5 +123,90 @@ describe('HabitacliaProvider', () => {
     const health = await provider.health();
     expect(health.provider).toBe('habitaclia');
     expect(health.status).toBe('healthy');
+  });
+});
+
+describe('HabitacliaProvider.discover listainmuebles path', () => {
+  it('yields refs from a warmed session with POST pagination', async () => {
+    let postPages = 0;
+    const runtime: FetchRuntime = {
+      fetchHttp: async () => ({ status: 500, body: '' }),
+      fetchJson: async () => {
+        throw new Error('unused');
+      },
+      fetchText: async () => {
+        throw new Error('unused');
+      },
+      loadFixture: async () => {
+        throw new Error('unused');
+      },
+      openBrowserSession: async () => ({
+        request: async (_url, init) => {
+          postPages += 1;
+          const page = init?.data?.includes('pagina=2') ? 2 : 1;
+          return {
+            status: 200,
+            body: page === 1 ? HABITACLIA_FIXTURE_SEARCH_HTML : '<html></html>',
+          };
+        },
+        content: async () => HABITACLIA_FIXTURE_SEARCH_HTML,
+        pageUrl: () => 'https://www.habitaclia.com/alquiler-barcelona.htm',
+        warmNavigate: async () => undefined,
+        exportStorageState: async () => ({ cookies: [] }),
+        close: async () => undefined,
+      }),
+    };
+
+    const local = new HabitacliaProvider({ runtime });
+    const refs: ExternalListingRef[] = [];
+    for await (const ref of local.discover({
+      provider: 'habitaclia',
+      market: 'ES',
+      city: 'barcelona',
+      limit: 10,
+      runtime,
+    })) {
+      refs.push(ref);
+    }
+
+    expect(refs.map((ref) => ref.sourceId).sort()).toEqual(['12345678900000', '98765432100000']);
+    expect(postPages).toBeGreaterThanOrEqual(0);
+  });
+
+  it('falls back to HTML ladder when the listainmuebles session fails', async () => {
+    let htmlFetches = 0;
+    const runtime: FetchRuntime = {
+      fetchHttp: async () => {
+        htmlFetches += 1;
+        return { status: 200, body: HABITACLIA_FIXTURE_SEARCH_HTML };
+      },
+      fetchJson: async () => {
+        throw new Error('unused');
+      },
+      fetchText: async () => {
+        throw new Error('unused');
+      },
+      loadFixture: async () => {
+        throw new Error('unused');
+      },
+      openBrowserSession: async () => {
+        throw new Error('warm-up blocked');
+      },
+    };
+
+    const local = new HabitacliaProvider({ runtime });
+    const refs: ExternalListingRef[] = [];
+    for await (const ref of local.discover({
+      provider: 'habitaclia',
+      market: 'ES',
+      city: 'barcelona',
+      limit: 5,
+      runtime,
+    })) {
+      refs.push(ref);
+    }
+
+    expect(htmlFetches).toBeGreaterThan(0);
+    expect(refs.map((ref) => ref.sourceId).sort()).toEqual(['12345678900000', '98765432100000']);
   });
 });

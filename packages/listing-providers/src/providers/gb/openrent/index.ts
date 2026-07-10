@@ -30,7 +30,7 @@ import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
 import { isGbPortalChallenge } from '../challenge';
-import { resolveGbPropertyType } from '../housing';
+import { resolveGbPropertyType, splitGbDisplayAddress } from '../housing';
 import { OPENRENT_BASE_URL } from './fixtures';
 import {
   openrentSearchUrl,
@@ -60,22 +60,6 @@ function asOpenRentRaw(payload: unknown): OpenRentListingJson {
     throw new Error('openrent: normalize received an invalid payload');
   }
   return payload as OpenRentListingJson;
-}
-
-function splitAddress(displayAddress: string | undefined): {
-  street: string;
-  city: string;
-  postalCode?: string;
-} {
-  if (!displayAddress) return { street: '', city: '' };
-  const parts = displayAddress.split(',').map((part) => part.trim()).filter(Boolean);
-  if (parts.length === 0) return { street: '', city: '' };
-  if (parts.length === 1) return { street: parts[0], city: parts[0] };
-  const last = parts[parts.length - 1];
-  const postcodeMatch = last.match(/\b([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})\b/i);
-  const city = postcodeMatch ? parts[parts.length - 2] ?? last : last;
-  const street = parts.slice(0, Math.max(1, parts.length - (postcodeMatch ? 2 : 1))).join(', ');
-  return { street: street || city, city, postalCode: postcodeMatch?.[1]?.toUpperCase() };
 }
 
 function toRemoteImages(urls: readonly string[]): NormalizedRemoteImage[] {
@@ -190,7 +174,7 @@ export class OpenRentProvider implements ListingProvider {
     if (listing.priceAmount === undefined) {
       throw new Error(`openrent: listing ${listing.sourceId} has no resolvable price`);
     }
-    const split = splitAddress(listing.displayAddress);
+    const split = splitGbDisplayAddress(listing.displayAddress);
     const address: NormalizedListingAddress = {
       street: split.street,
       city: split.city,

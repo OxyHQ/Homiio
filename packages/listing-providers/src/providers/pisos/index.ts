@@ -2,8 +2,8 @@
  * pisos.com provider (Spain) — JSON-first.
  *
  * Acquisition:
- *   - `discover()`: city rental search pages → schema.org JSON-LD cards (structured
- *     listing refs). Optional Playwright session warm-up when the ladder challenges.
+ *   - `discover()`: cold HTTP JSON-LD search pages first; optional warmed session
+ *     when the ladder challenges (one sticky session per city, `warmNavigate` pages).
  *   - `fetch()`: detail page embedded JSON (`data-var` + tracking blob) for price /
  *     rooms / m² / phone; best-effort `/WebsiteUserInfo/GetNormalizedPhone` AJAX.
  *   - HTML is last-resort for title/images/description only.
@@ -31,6 +31,8 @@ import { createFetchRuntime } from '../../runtime';
 import { fetchListingViaLadder } from '../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
 import type { EsSchemaListing } from '../../parse/jsonLd';
+import { createProxySessionId, envBool } from '../../proxy';
+import type { BrowserSession, BrowserStorageState } from '../../browserSession';
 import { PISOS_BASE_URL } from './fixtures';
 import { parsePisosContactPhone, pisosContactPhoneUrl, pisosSearchUrl } from './ajax';
 import {
@@ -44,6 +46,7 @@ import {
 const PROVIDER_ID: ProviderId = 'pisos';
 const DEFAULT_CITIES: readonly string[] = ['madrid', 'barcelona', 'valencia', 'sevilla', 'malaga'];
 const MAX_SEARCH_PAGES = 3;
+const PISOS_SEARCH_CONTENT_SELECTOR = 'script[type="application/ld+json"], [href*="/alquilar/"]';
 
 export function isPisosChallenge(html: string): boolean {
   if (html.trim().length < 512) return true;
@@ -88,6 +91,8 @@ export class PisosProvider implements ListingProvider {
   private readonly runtime: FetchRuntime;
   private readonly cities: readonly string[];
   private readonly metrics: ProviderMetricsSink & ProviderMetricsReader;
+  private stickyProxySessionId?: string;
+  private stickyStorageState?: BrowserStorageState;
 
   constructor(options: PisosProviderOptions = {}) {
     this.runtime = options.runtime ?? createFetchRuntime();
@@ -99,79 +104,147 @@ export class PisosProvider implements ListingProvider {
     const cities = job.city ? [job.city] : this.cities;
     const limit = job.limit ?? Number.POSITIVE_INFINITY;
     const seen = new Set<string>();
-    let yielded = 0;
+    const yielded = { count: 0 };
     const runtime = job.runtime ?? this.runtime;
 
     for (const city of cities) {
-      for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
-        if (yielded >= limit) return;
-        const url = pisosSearchUrl(city, page);
+      if (yielded.count >= limit) return;
 
-        // Prefer warmed-session fetch when available (JSON-LD still in HTML shell).
-        let html: string | undefined;
-        if (runtime.openBrowserSession) {
-          html = await this.fetchSearchViaSession(runtime, url, job.signal);
-        }
-        if (!html) {
-          const result = await fetchListingViaLadder(runtime, url, {
-            provider: this.id,
-            isChallenge: isPisosChallenge,
-            metrics: this.metrics,
-            init: { signal: job.signal },
-          });
-          html = result.html;
-        }
+      const beforeCity = yielded.count;
+      for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
+        if (yielded.count >= limit) return;
+        const html = await this.fetchSearchHtml(runtime, city, page, job.signal);
+        if (!html) break;
 
         const refs = parsePisosSearch(html);
         if (refs.length === 0) break;
         for (const ref of refs) {
-          if (yielded >= limit) return;
+          if (yielded.count >= limit) return;
           if (seen.has(ref.sourceId)) continue;
           seen.add(ref.sourceId);
           yield { provider: this.id, sourceId: ref.sourceId, url: ref.url };
-          yielded += 1;
+          yielded.count += 1;
+        }
+      }
+
+      if (yielded.count === beforeCity && runtime.openBrowserSession) {
+        for await (const ref of this.discoverCityViaSession(
+          runtime,
+          city,
+          job.signal,
+          seen,
+          limit,
+          yielded,
+        )) {
+          yield ref;
         }
       }
     }
   }
 
-  private async fetchSearchViaSession(
+  /** JSON-LD search pages work on cold HTTP — prefer that before any browser warm. */
+  private async fetchSearchHtml(
     runtime: FetchRuntime,
-    url: string,
+    city: string,
+    page: number,
     signal: AbortSignal | undefined,
   ): Promise<string | undefined> {
-    if (!runtime.openBrowserSession) return undefined;
+    const url = pisosSearchUrl(city, page);
+    try {
+      const { html, status } = await fetchListingViaLadder(runtime, url, {
+        provider: this.id,
+        isChallenge: isPisosChallenge,
+        metrics: this.metrics,
+        init: { signal },
+        tiers: ['http', 'browser'],
+      });
+      if (status >= 400 || isPisosChallenge(html)) return undefined;
+      return html;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private pisosSessionOptions(city: string, page: number, sticky: boolean) {
+    return {
+      warmUrl: pisosSearchUrl(city, page),
+      contentSelector: PISOS_SEARCH_CONTENT_SELECTOR,
+      isChallenge: isPisosChallenge,
+      stickyProxySession: sticky,
+      proxySessionId: this.stickyProxySessionId,
+      storageState: this.stickyStorageState,
+      blockAssets: true,
+      postChallengeSettleMs: 1_000,
+    } as const;
+  }
+
+  private async *discoverCityViaSession(
+    runtime: FetchRuntime,
+    city: string,
+    signal: AbortSignal | undefined,
+    seen: Set<string>,
+    limit: number,
+    yielded: { count: number },
+  ): AsyncIterable<ExternalListingRef> {
+    if (!runtime.openBrowserSession) return;
+
+    const sticky = envBool('LISTING_PROXY_STICKY', false);
+    if (sticky && !this.stickyProxySessionId) {
+      this.stickyProxySessionId = createProxySessionId();
+    }
+
+    let session: BrowserSession | undefined;
     const start = Date.now();
-    let session: Awaited<ReturnType<NonNullable<FetchRuntime['openBrowserSession']>>> | undefined;
     try {
       session = await runtime.openBrowserSession({
-        warmUrl: url,
+        ...this.pisosSessionOptions(city, 1, sticky),
         signal,
-        contentSelector: 'script[type="application/ld+json"], h1, main',
-        isChallenge: isPisosChallenge,
-        challengeWaitMs: 30_000,
-        blockAssets: true,
       });
-      const html = await session.content();
-      this.metrics.record({
-        provider: this.id,
-        strategy: 'browser',
-        outcome: isPisosChallenge(html) ? 'challenge' : 'success',
-        status: 200,
-        latencyMs: Date.now() - start,
-        url,
-      });
-      return isPisosChallenge(html) ? undefined : html;
+
+      for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
+        if (yielded.count >= limit) return;
+
+        if (page > 1) {
+          await session.warmNavigate({
+            ...this.pisosSessionOptions(city, page, sticky),
+            signal,
+          });
+        }
+
+        const html = await session.content();
+        if (isPisosChallenge(html)) break;
+
+        const refs = parsePisosSearch(html);
+        this.metrics.record({
+          provider: this.id,
+          strategy: 'browser',
+          outcome: 'success',
+          status: 200,
+          latencyMs: Date.now() - start,
+          url: pisosSearchUrl(city, page),
+        });
+        if (refs.length === 0) break;
+        for (const ref of refs) {
+          if (yielded.count >= limit) return;
+          if (seen.has(ref.sourceId)) continue;
+          seen.add(ref.sourceId);
+          yield { provider: this.id, sourceId: ref.sourceId, url: ref.url };
+          yielded.count += 1;
+        }
+      }
+
+      if (sticky) {
+        this.stickyStorageState = await session.exportStorageState();
+      }
     } catch {
       this.metrics.record({
         provider: this.id,
         strategy: 'browser',
         outcome: 'error',
         latencyMs: Date.now() - start,
-        url,
+        url: pisosSearchUrl(city, 1),
         detail: 'pisos search session warm-up failed',
       });
-      return undefined;
     } finally {
       await session?.close();
     }
@@ -183,6 +256,7 @@ export class PisosProvider implements ListingProvider {
       isChallenge: isPisosChallenge,
       init: { signal: ctx.signal },
       metrics: this.metrics,
+      tiers: ['http', 'browser', 'managed'],
     });
     let payload = parsePisosDetail(html, ref.url);
 
@@ -195,13 +269,14 @@ export class PisosProvider implements ListingProvider {
           signal: ctx.signal,
           contentSelector: 'h1, #hdnIdPiso',
           isChallenge: isPisosChallenge,
-          challengeWaitMs: 20_000,
           blockAssets: true,
+          postChallengeSettleMs: 500,
         });
         try {
           const { status, body } = await session.request(contactUrl, {
             referer: ref.url,
             timeoutMs: 15_000,
+            headers: { Accept: 'application/json' },
           });
           if (status >= 200 && status < 300) {
             payload = mergePisosContact(payload, parsePisosContactPhone(body));
@@ -221,7 +296,7 @@ export class PisosProvider implements ListingProvider {
         payload = mergePisosContact(payload, parsePisosContactPhone(body));
       }
     } catch {
-      // Contact is optional.
+      // Contact is optional; embedded `data-var` phone already on payload when present.
     }
 
     return { ref, payload };
@@ -284,7 +359,7 @@ export class PisosProvider implements ListingProvider {
     return {
       provider: this.id,
       status: 'healthy',
-      detail: `Serving ES via ${PISOS_BASE_URL} (JSON-LD discover + embedded detail JSON)`,
+      detail: `Serving ES via ${PISOS_BASE_URL} (HTTP JSON-LD discover + embedded detail JSON)`,
     };
   }
 }
