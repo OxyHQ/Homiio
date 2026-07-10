@@ -5,7 +5,7 @@
  * {@link SchemaOrgListing}. Portal markup changes are fixed here.
  */
 
-import { asNumberEu, asNumberUs, asString, deaccent, isRecord } from './guards';
+import { asCoordinate, asNumberEu, asNumberUs, asString, deaccent, isRecord } from './guards';
 
 const LD_JSON_TYPE = 'application/ld+json';
 
@@ -150,8 +150,8 @@ function readEurAddress(value: unknown, defaultCountryCode: string): EurSchemaLi
 
 function readCoordinates(value: unknown): EurSchemaListing['coordinates'] {
   if (!isRecord(value)) return undefined;
-  const lat = asNumberEu(value.latitude);
-  const lng = asNumberEu(value.longitude);
+  const lat = asCoordinate(value.latitude);
+  const lng = asCoordinate(value.longitude);
   if (lat === undefined || lng === undefined) return undefined;
   return { lat, lng };
 }
@@ -381,8 +381,8 @@ function readUsAddress(value: unknown): SchemaOrgListing['address'] {
 
 function readUsCoordinates(value: unknown): SchemaOrgListing['coordinates'] {
   if (!isRecord(value)) return undefined;
-  const lat = asNumberUs(value.latitude);
-  const lng = asNumberUs(value.longitude);
+  const lat = asCoordinate(value.latitude);
+  const lng = asCoordinate(value.longitude);
   if (lat === undefined || lng === undefined) return undefined;
   return { lat, lng };
 }

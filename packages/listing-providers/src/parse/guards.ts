@@ -41,6 +41,25 @@ export function asNumberEu(value: unknown): number | undefined {
 /** Alias used by most EU portal parsers. */
 export const asNumber = asNumberEu;
 
+/**
+ * Parse a geographic latitude/longitude value. Unlike {@link asNumberEu}, never
+ * treats dot-separated digit groups as thousands separators — "43.541" must stay
+ * 43.541 (Barreiros), not 43541.
+ */
+export function asCoordinate(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const cleaned = value.trim().replace(/[^0-9.,+-]/g, '');
+    if (!cleaned) return undefined;
+    const normalized = cleaned.includes(',') && !cleaned.includes('.')
+      ? cleaned.replace(',', '.')
+      : cleaned;
+    const parsed = Number.parseFloat(normalized);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
 /** Coerce US-style numeric strings (e.g. "1,234 sqft") to a number. */
 export function asNumberUs(value: unknown): number | undefined {
   if (typeof value === 'number' && Number.isFinite(value)) return value;

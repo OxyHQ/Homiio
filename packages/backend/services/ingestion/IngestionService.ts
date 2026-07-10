@@ -30,6 +30,7 @@ import { ensureCover } from '../cityCoverSyncService';
 import type { AddressCanonicalInput } from '../../models/Address';
 import { validateOfferings } from '../../models/schemas/offeringValidation';
 import { forwardGeocode, reverseGeocode } from '../geocodingService';
+import { sanitizeGeoJsonCoordinates } from '../utils/geoCoordinates';
 import { ExternalMediaIngest } from './ExternalMediaIngest';
 import { schedulePriceEthicsScore } from '../priceEthicsService';
 import { Logger } from '../../utils/logger';
@@ -163,6 +164,14 @@ export class IngestionService {
         postalCode = resolved.postalCode;
       }
     }
+
+    const sanitized = sanitizeGeoJsonCoordinates(coordinates);
+    if (!sanitized) {
+      throw new IngestionValidationError(
+        `Invalid coordinates for external listing address: lat=${coordinates[1]} lng=${coordinates[0]}`,
+      );
+    }
+    coordinates = sanitized;
 
     if (!postalCode) {
       const reversed = await reverseGeocode(coordinates[0], coordinates[1]);

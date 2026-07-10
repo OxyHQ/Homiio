@@ -24,6 +24,7 @@
 import type { Model, Types } from 'mongoose';
 import { reverseGeocode, forwardGeocode, type AddressData } from './geocodingService';
 import { countryNameToCode, countryCodeToName, defaultCurrencyForCountry } from '../utils/countryData';
+import { sanitizeGeoJsonCoordinates } from '../utils/geoCoordinates';
 
 /** Resolved geo id chain returned to callers (Address stores these). */
 export interface ResolvedGeo {
@@ -203,7 +204,10 @@ async function upsertCity(
     isActive: true,
   };
   if (coordinates) {
-    setOnInsert.coordinates = { lng: coordinates[0], lat: coordinates[1] };
+    const sanitized = sanitizeGeoJsonCoordinates(coordinates);
+    if (sanitized) {
+      setOnInsert.coordinates = { lng: sanitized[0], lat: sanitized[1] };
+    }
   }
   const doc = await City.findOneAndUpdate(
     { regionId, name },

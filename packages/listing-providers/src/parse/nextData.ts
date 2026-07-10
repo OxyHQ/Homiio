@@ -4,7 +4,7 @@
  * Providers must not re-declare these regexes — import from here.
  */
 
-import { asNumberEu, asString, isRecord } from './guards';
+import { asCoordinate, asNumberEu, asString, isRecord } from './guards';
 import type { EurSchemaListing } from './jsonLd';
 
 function extractScriptBodyById(html: string, scriptId: string): string | undefined {
@@ -216,8 +216,8 @@ export function eurListingFromNextDataCandidate(
     : isRecord(location?.coordinates)
       ? location.coordinates
       : undefined;
-  const lat = asNumberEu(geo?.latitude) ?? asNumberEu(geo?.lat);
-  const lng = asNumberEu(geo?.longitude) ?? asNumberEu(geo?.lng) ?? asNumberEu(geo?.lon);
+  const lat = asCoordinate(geo?.latitude) ?? asCoordinate(geo?.lat);
+  const lng = asCoordinate(geo?.longitude) ?? asCoordinate(geo?.lng) ?? asCoordinate(geo?.lon);
   const business =
     asString(isRecord(record.offers) ? record.offers.businessFunction : undefined)?.toLowerCase() ??
     '';
