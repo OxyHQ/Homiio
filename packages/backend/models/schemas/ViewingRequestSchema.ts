@@ -7,18 +7,12 @@ const viewingRequestSchema = new mongoose.Schema({
     required: true,
     index: true,
   },
-  requesterProfileId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Profile',
-    required: true,
+  requesterOxyUserId: { type: String, required: true,
     index: true,
-  },
-  ownerProfileId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Profile',
-    required: true,
+   },
+  ownerOxyUserId: { type: String, required: true,
     index: true,
-  },
+   },
   scheduledAt: {
     type: Date,
     required: true,
@@ -45,7 +39,7 @@ const viewingRequestSchema = new mongoose.Schema({
 
 // Ensure an owner cannot be double-booked for the exact same property/time slot
 viewingRequestSchema.index({ propertyId: 1, scheduledAt: 1, status: 1 });
-viewingRequestSchema.index({ ownerProfileId: 1, scheduledAt: 1, status: 1 });
+viewingRequestSchema.index({ ownerOxyUserId: 1, scheduledAt: 1, status: 1 });
 
 module.exports = mongoose.model('ViewingRequest', viewingRequestSchema);
 

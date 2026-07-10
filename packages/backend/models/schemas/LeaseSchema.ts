@@ -76,20 +76,17 @@ const leaseSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Room'
   },
-  landlordProfileId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Profile',
-    required: [true, 'Landlord profile ID is required']
+  landlordOxyUserId: {
+    type: String,
+    required: [true, 'Landlord Oxy user ID is required']
   },
-  tenantProfileId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Profile',
-    required: [true, 'Tenant profile ID is required']
+  tenantOxyUserId: {
+    type: String,
+    required: [true, 'Tenant Oxy user ID is required']
   },
   coTenants: [{
-    profileId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Profile',
+    oxyUserId: {
+      type: String,
       required: true
     },
     role: {
@@ -349,8 +346,8 @@ const leaseSchema = new mongoose.Schema({
 
 // Indexes
 leaseSchema.index({ propertyId: 1, status: 1 });
-leaseSchema.index({ landlordProfileId: 1, status: 1 });
-leaseSchema.index({ tenantProfileId: 1, status: 1 });
+leaseSchema.index({ landlordOxyUserId: 1, status: 1 });
+leaseSchema.index({ tenantOxyUserId: 1, status: 1 });
 leaseSchema.index({ 'leaseTerms.startDate': 1, 'leaseTerms.endDate': 1 });
 leaseSchema.index({ 'paymentSchedule.dueDate': 1, 'paymentSchedule.status': 1 });
 
@@ -425,12 +422,12 @@ leaseSchema.statics.findByProperty = function(propertyId: ObjectIdLike, options:
   return this.find({ propertyId }, null, options);
 };
 
-leaseSchema.statics.findByTenant = function(tenantProfileId: ObjectIdLike, options: Record<string, unknown> = {}) {
-  return this.find({ tenantProfileId }, null, options);
+leaseSchema.statics.findByTenant = function(tenantOxyUserId: string, options: Record<string, unknown> = {}) {
+  return this.find({ tenantOxyUserId }, null, options);
 };
 
-leaseSchema.statics.findByLandlord = function(landlordProfileId: ObjectIdLike, options: Record<string, unknown> = {}) {
-  return this.find({ landlordProfileId }, null, options);
+leaseSchema.statics.findByLandlord = function(landlordOxyUserId: string, options: Record<string, unknown> = {}) {
+  return this.find({ landlordOxyUserId }, null, options);
 };
 
 leaseSchema.statics.findActive = function() {
