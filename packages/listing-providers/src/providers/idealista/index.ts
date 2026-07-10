@@ -60,23 +60,10 @@ import {
   parseIdealistaGeoreach,
 } from './georeach';
 import { idealistaSourceIdFromUrl, parseIdealistaDetail, parseIdealistaSearch, type IdealistaRaw } from './parse';
+import { idealistaCitiesFromEnv } from './cities';
 
 const ES_PROXY_COUNTRY = 'es';
 const PROVIDER_ID: ProviderId = 'idealista';
-
-/** ES cities enumerated when a discover job carries no explicit `city`. */
-const DEFAULT_CITIES: readonly string[] = [
-  'madrid',
-  'barcelona',
-  'valencia',
-  'sevilla',
-  'malaga',
-  'bilbao',
-  'zaragoza',
-  'alicante',
-  'murcia',
-  'palma',
-];
 
 const DEFAULT_MAX_SEARCH_PAGES = 50;
 
@@ -191,7 +178,7 @@ export class IdealistaProvider implements ListingProvider {
 
   constructor(options: IdealistaProviderOptions = {}) {
     this.runtime = options.runtime ?? createFetchRuntime();
-    this.cities = options.cities && options.cities.length > 0 ? options.cities : DEFAULT_CITIES;
+    this.cities = options.cities && options.cities.length > 0 ? options.cities : idealistaCitiesFromEnv();
     this.metrics = options.metrics ?? defaultProviderMetrics;
     this.maxSearchPages = providerMaxSearchPages(PROVIDER_ID, DEFAULT_MAX_SEARCH_PAGES, 'ES');
   }

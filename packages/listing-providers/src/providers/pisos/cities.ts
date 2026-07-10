@@ -1,41 +1,17 @@
 /**
- * Pisos discover city scope.
- *
- * Pisos discover can warm a browser session per city and paginate deeply. A
- * single market-wide job over the full `LISTING_ES_CITIES` list blocks the
- * single-concurrency discover worker for hours before Fotocasa/Habitaclia jobs
- * run. Keep Pisos on its own default metros with `LISTING_PISOS_CITIES`.
+ * Pisos discover city scope — `LISTING_PISOS_CITIES` override, else `LISTING_ES_CITIES`.
  */
 
-/** Default metros for Pisos discover (matches the provider's historical scope). */
-export const PISOS_DEFAULT_CITIES: readonly string[] = [
-  'madrid',
-  'barcelona',
-  'valencia',
-  'sevilla',
-  'malaga',
-  'bilbao',
-  'zaragoza',
-  'alicante',
-  'murcia',
-  'palma',
-];
+import { providerCitiesFromEnv, providerCitiesOptionsFromEnv } from '../../parse/cities';
 
-function parseCityList(raw: string | undefined): string[] {
-  return (raw ?? '')
-    .split(',')
-    .map((city) => city.trim())
-    .filter(Boolean);
-}
+const PROVIDER_CITIES_ENV = 'LISTING_PISOS_CITIES';
 
-/** Cities for Pisos discover: `LISTING_PISOS_CITIES` or {@link PISOS_DEFAULT_CITIES}. */
+/** Cities for Pisos discover: `LISTING_PISOS_CITIES` or the ES market list. */
 export function pisosCitiesFromEnv(): string[] {
-  const envCities = parseCityList(process.env.LISTING_PISOS_CITIES);
-  if (envCities.length > 0) return envCities;
-  return [...PISOS_DEFAULT_CITIES];
+  return providerCitiesFromEnv(PROVIDER_CITIES_ENV, 'ES');
 }
 
-/** Provider options with the Pisos-specific city list. */
+/** Provider options with the Pisos city list. */
 export function pisosCitiesOptionsFromEnv(): { cities: readonly string[] } {
-  return { cities: pisosCitiesFromEnv() };
+  return providerCitiesOptionsFromEnv(PROVIDER_CITIES_ENV, 'ES');
 }

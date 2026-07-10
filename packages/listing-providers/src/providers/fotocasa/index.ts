@@ -56,9 +56,9 @@ import {
   readFotocasaSearchCardHint,
   type FotocasaBrowserSessionHint,
 } from './sessionHints';
-import { FOTOCASA_DEFAULT_CITIES, fotocasaCitiesFromEnv } from './cities';
+import { fotocasaCitiesFromEnv } from './cities';
 
-export { FOTOCASA_DEFAULT_CITIES, fotocasaCitiesFromEnv, fotocasaCitiesOptionsFromEnv } from './cities';
+export { fotocasaCitiesFromEnv, fotocasaCitiesOptionsFromEnv } from './cities';
 
 const PROVIDER_ID: ProviderId = 'fotocasa';
 const ES_PROXY_COUNTRY = 'es';
@@ -180,7 +180,7 @@ export class FotocasaProvider implements ListingProvider {
 
   constructor(options: FotocasaProviderOptions = {}) {
     this.runtime = options.runtime ?? createFetchRuntime();
-    this.cities = options.cities && options.cities.length > 0 ? options.cities : FOTOCASA_DEFAULT_CITIES;
+    this.cities = options.cities && options.cities.length > 0 ? options.cities : fotocasaCitiesFromEnv();
     this.metrics = options.metrics ?? defaultProviderMetrics;
     this.maxSearchPages = providerMaxSearchPages(PROVIDER_ID, DEFAULT_MAX_SEARCH_PAGES, 'ES');
     this.transactionTypes = resolveTransactionTypes();

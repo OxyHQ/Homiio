@@ -90,3 +90,22 @@ export function citiesFromEnv(market: ListingMarket): string[] {
 export function citiesOptionsFromEnv(market: ListingMarket): { cities: string[] } {
   return { cities: citiesFromEnv(market) };
 }
+
+/**
+ * Discover cities for one provider: optional `LISTING_<PROVIDER>_CITIES` override,
+ * otherwise the market list from `LISTING_<MARKET>_CITIES` / bundled defaults.
+ */
+export function providerCitiesFromEnv(providerEnvKey: string, market: ListingMarket): string[] {
+  const envRaw = process.env[providerEnvKey];
+  const envCities = market === 'US' ? parseUsCityList(envRaw) : parseCityList(envRaw);
+  if (envCities.length > 0) return envCities;
+  return citiesFromEnv(market);
+}
+
+/** Provider options with optional per-provider city override. */
+export function providerCitiesOptionsFromEnv(
+  providerEnvKey: string,
+  market: ListingMarket,
+): { cities: string[] } {
+  return { cities: providerCitiesFromEnv(providerEnvKey, market) };
+}

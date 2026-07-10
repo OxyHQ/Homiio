@@ -40,6 +40,7 @@ import {
   isHabitacliaListainmueblesChallenge,
   parseHabitacliaListainmuebles,
 } from './listainmuebles';
+import { habitacliaCitiesFromEnv } from './cities';
 
 const PROVIDER_ID: ProviderId = 'habitaclia';
 const ES_PROXY_COUNTRY = 'es';
@@ -51,18 +52,6 @@ export function isHabitacliaChallenge(html: string): boolean {
   );
 }
 
-const DEFAULT_CITIES: readonly string[] = [
-  'barcelona',
-  'madrid',
-  'valencia',
-  'sevilla',
-  'malaga',
-  'bilbao',
-  'zaragoza',
-  'alicante',
-  'murcia',
-  'palma',
-];
 const DEFAULT_MAX_SEARCH_PAGES = 50;
 const LISTAINMUEBLES_POST_TIMEOUT_MS = 45_000;
 const HABITACLIA_HTTP_SEARCH_TIMEOUT_MS = 90_000;
@@ -130,7 +119,7 @@ export class HabitacliaProvider implements ListingProvider {
 
   constructor(options: HabitacliaProviderOptions = {}) {
     this.runtime = options.runtime ?? createFetchRuntime();
-    this.cities = options.cities && options.cities.length > 0 ? options.cities : DEFAULT_CITIES;
+    this.cities = options.cities && options.cities.length > 0 ? options.cities : habitacliaCitiesFromEnv();
     this.metrics = options.metrics ?? defaultProviderMetrics;
     this.maxSearchPages = providerMaxSearchPages(PROVIDER_ID, DEFAULT_MAX_SEARCH_PAGES, 'ES');
   }
