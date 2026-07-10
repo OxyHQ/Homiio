@@ -114,21 +114,6 @@
       "searchPlaceholder": "¿Dónde quieres vivir?",
       "searchButton": "Buscar"
     },
-    "trust": {
-      "title": "Vivienda en la que Puedes Confiar",
-      "verifiedListings": {
-        "title": "Listados Verificados",
-        "description": "Todas las propiedades verificadas por autenticidad y condición"
-      },
-      "fairAgreements": {
-        "title": "Acuerdos Justos",
-        "description": "Contratos transparentes sin términos ocultos"
-      },
-      "trustScore": {
-        "title": "Puntuación de Confianza",
-        "description": "Sistema de reputación tanto para inquilinos como para propietarios"
-      }
-    },
     "cities": {
       "title": "Ciudades Destacadas",
       "properties": "propiedades"
@@ -677,23 +662,16 @@
     "myProperties": "Mis Propiedades",
     "savedProperties": "Propiedades Guardadas",
     "myContracts": "Mis Contratos",
-    "trustScore": "Puntuación de Confianza",
     "logOut": "Cerrar Sesión",
     "loading": "Cargando perfil...",
     "signInRequired": "Inicio de sesión requerido",
     "signInMessage": "Por favor inicia sesión para ver tu perfil",
     "createProfile": "Crear Perfil",
     "deleteProfile": "Eliminar Perfil",
-    "types": {
-      "personal": "Perfil Personal",
-      "agency": "Perfil de Agencia",
-      "business": "Perfil de Negocio"
-    },
     "sections": {
       "overview": "Resumen",
       "properties": "Mis Propiedades",
       "contracts": "Mis Contratos",
-      "trustScore": "Puntuación de Confianza",
       "settings": "Configuración",
       "account": "Account",
       "profile": "Profile",
@@ -702,7 +680,6 @@
     "stats": {
       "propertiesCount": "Propiedades",
       "contractsCount": "Contratos",
-      "trustScore": "Puntuación de Confianza",
       "stays": "Stays",
       "applications": "Applications",
       "saved": "Saved",
@@ -741,7 +718,6 @@
         "propertyPreferences": "Preferencias de propiedad",
         "references": "References",
         "rentalHistory": "Rental History",
-        "trustScore": "Trust Score",
         "settings": "Settings"
       },
       "labels": {
@@ -1000,17 +976,9 @@
     },
     "toast": {
       "loadFailed": "No se pudieron cargar los perfiles",
-      "createSuccess": "Perfil creado correctamente",
-      "createFailed": "No se pudo crear el perfil",
       "updateSuccess": "Perfil actualizado correctamente",
-      "updateFailed": "No se pudo actualizar el perfil",
-      "deleteSuccess": "Perfil eliminado correctamente",
-      "deleteFailed": "No se pudo eliminar el perfil",
-      "activateSuccess": "Perfil activado correctamente",
-      "activateFailed": "No se pudo activar el perfil"
+      "updateFailed": "No se pudo actualizar el perfil"
     },
-    "trustScoreHint": "Complete your profile information to improve your trust score.",
-    "trustScoreSubtitle": "Build trust with landlords and roommates through verification and positive interactions.",
     "established": "Established",
     "serviceAreas": "Service areas",
     "specialties": "Specialties",
@@ -1020,111 +988,12 @@
     "employer": "Employer",
     "occupation": "Occupation",
     "listings": "Listings",
-    "switchConfirm": "Switch",
-    "switchMessage": "Activate {{name}}?",
-    "switchTitle": "Switch profile?",
     "subscriptionsDescription": "Manage Homiio Plus or buy one-time file analysis.",
     "subscriptions": "Subscriptions",
-    "createNewDescription": "Add a business, agency, or cooperative profile.",
-    "createNew": "Create new profile",
-    "active": "Active",
-    "activeFooter": "Active: {{name}}",
     "stays": "Stays",
     "applications": "My applications",
-    "trustScoreCta": "View trust score",
     "loadFailedHint": "Please try again later.",
-    "loadFailed": "Failed to load profile",
-    "switchFailed": "Failed to switch profile",
-    "switched": "Switched to {{name}}",
-    "invalidProfile": "Invalid profile data",
-    "trustScorePage": {
-      "title": "Trust Score"
-    }
-  },
-  "trust": {
-    "loadingVerification": "Cargando estado de verificación...",
-    "loadingScore": "Cargando puntuación de confianza...",
-    "errorVerification": "No se puede cargar el estado de verificación",
-    "errorScore": "No se puede cargar la puntuación de confianza",
-    "viewDetails": "Ver detalles",
-    "noVerification": "Sin datos de verificación",
-    "noScore": "Sin datos de puntuación de confianza",
-    "verified": "Verificado",
-    "completeVerification": "Completar verificación",
-    "yourScoreIs": "Tu puntuación de confianza es",
-    "improveScore": "Mejorar puntuación",
-    "manager": {
-      "loading": "Cargando puntuación de confianza...",
-      "error": "Error al cargar la puntuación de confianza",
-      "noData": "No se encontraron datos de puntuación personal",
-      "title": "Puntuación de confianza",
-      "subtitle": "Genera confianza con arrendadores y compañeros de piso",
-      "scoreDescription": "Tu puntuación global es {{score}}/100",
-      "factorsTitle": "Factores de confianza",
-      "factorsSubtitle": "Mejora estos factores para aumentar tu puntuación",
-      "quickActionsTitle": "Acciones rápidas para mejorar",
-      "completeProfile": "Completar perfil",
-      "cancel": "Cancelar",
-      "editProfile": "Editar perfil",
-      "factorAlertBody": "{{description}}\n\nPuntuación actual: {{score}}/100\n\nPara mejorar: {{action}}",
-      "factors": {
-        "verification": {
-          "label": "Verificación de identidad",
-          "description": "Completa la verificación de identidad para generar confianza",
-          "action": "Añade información personal y datos de ingresos"
-        },
-        "reviews": {
-          "label": "Reseñas de usuarios",
-          "description": "Obtén reseñas positivas de arrendadores y compañeros",
-          "action": "Añade referencias de arrendadores anteriores"
-        },
-        "payment_history": {
-          "label": "Historial de pagos",
-          "description": "Mantén un buen historial de pagos",
-          "action": "Añade historial de alquiler con registros de pago"
-        },
-        "communication": {
-          "label": "Comunicación",
-          "description": "Responde con prontitud a mensajes y solicitudes",
-          "action": "Completa la biografía y la información de contacto"
-        },
-        "rental_history": {
-          "label": "Historial de alquiler",
-          "description": "Construye un historial de alquiler positivo",
-          "action": "Añade tus direcciones de alquiler anteriores"
-        },
-        "default": {
-          "description": "Mejora este factor para aumentar tu puntuación",
-          "action": "Completa tu perfil para mejorar este factor"
-        }
-      },
-      "actions": {
-        "personalInfo": {
-          "title": "Completar información personal",
-          "description": "Añade tu ocupación, ingresos y datos laborales para generar confianza."
-        },
-        "references": {
-          "title": "Añadir referencias",
-          "description": "Incluye referencias de arrendadores y empleadores anteriores."
-        },
-        "rentalHistory": {
-          "title": "Añadir historial de alquiler",
-          "description": "Documenta tu historial de alquiler para demostrar fiabilidad."
-        }
-      }
-    },
-    "score": {
-      "levels": {
-        "excellent": "Excelente",
-        "good": "Bueno",
-        "average": "Medio",
-        "fair": "Regular",
-        "needsImprovement": "Necesita mejorar"
-      },
-      "breakdown": "Desglose de la puntuación de confianza",
-      "recalculate": "Recalcular",
-      "recalculating": "Recalculando…"
-    }
+    "loadFailed": "Failed to load profile"
   },
   "notifications": {
     "title": "Notificaciones",

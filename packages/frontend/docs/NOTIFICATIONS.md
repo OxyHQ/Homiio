@@ -14,7 +14,7 @@ The notification system provides:
 
 ### Backend write chokepoint
 
-Domain events (lease signed, viewing approved, roommate request received, …) produce in-app notifications **only** through `packages/backend/services/notificationDispatchService.ts`. Controllers call `createForUser` / `createForProfile` — never `Notification.create` directly for event-driven notifications. Dispatch is best-effort: a notification failure must never break the domain action that triggered it.
+Domain events (lease signed, viewing approved, roommate request received, …) produce in-app notifications **only** through `packages/backend/services/notificationDispatchService.ts`. Controllers call `createForUser` — never `Notification.create` directly for event-driven notifications. Dispatch is best-effort: a notification failure must never break the domain action that triggered it.
 
 ## Architecture
 

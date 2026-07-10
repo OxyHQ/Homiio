@@ -127,23 +127,6 @@
       "searchPlaceholder": "Where do you want to live?",
       "searchButton": "Search"
     },
-    "noProfilesTitle": "No Saved Profiles",
-    "noProfilesDescription": "Follow profiles to see them here",
-    "trust": {
-      "title": "Housing You Can Trust",
-      "verifiedListings": {
-        "title": "Verified Listings",
-        "description": "All properties verified for authenticity and condition"
-      },
-      "fairAgreements": {
-        "title": "Fair Agreements",
-        "description": "Transparent contracts with no hidden terms"
-      },
-      "trustScore": {
-        "title": "Trust Score",
-        "description": "Reputation system for both tenants and landlords"
-      }
-    },
     "cities": {
       "title": "Featured Cities",
       "properties": "properties"
@@ -701,23 +684,16 @@
     "myProperties": "My Properties",
     "savedProperties": "Saved Properties",
     "myContracts": "My Contracts",
-    "trustScore": "Trust Score",
     "logOut": "Log Out",
     "loading": "Loading profile...",
     "signInRequired": "Sign in required",
     "signInMessage": "Please sign in to view your profile",
     "createProfile": "Create Profile",
     "deleteProfile": "Delete Profile",
-    "types": {
-      "personal": "Personal Profile",
-      "agency": "Agency Profile",
-      "business": "Business Profile"
-    },
     "sections": {
       "overview": "Overview",
       "properties": "My Properties",
       "contracts": "My Contracts",
-      "trustScore": "Trust Score",
       "settings": "Settings",
       "account": "Account",
       "profile": "Profile",
@@ -726,7 +702,6 @@
     "stats": {
       "propertiesCount": "Properties",
       "contractsCount": "Contracts",
-      "trustScore": "Trust Score",
       "stays": "Stays",
       "applications": "Applications",
       "applicationsApproved": "{{count}} approved",
@@ -765,7 +740,6 @@
         "propertyPreferences": "Property Preferences",
         "references": "References",
         "rentalHistory": "Rental History",
-        "trustScore": "Trust Score",
         "settings": "Settings"
       },
       "labels": {
@@ -1024,17 +998,9 @@
     },
     "toast": {
       "loadFailed": "Failed to load profiles",
-      "createSuccess": "Profile created successfully",
-      "createFailed": "Failed to create profile",
       "updateSuccess": "Profile updated successfully",
-      "updateFailed": "Failed to update profile",
-      "deleteSuccess": "Profile deleted successfully",
-      "deleteFailed": "Failed to delete profile",
-      "activateSuccess": "Profile activated successfully",
-      "activateFailed": "Failed to activate profile"
+      "updateFailed": "Failed to update profile"
     },
-    "trustScoreHint": "Complete your profile information to improve your trust score.",
-    "trustScoreSubtitle": "Build trust with landlords and roommates through verification and positive interactions.",
     "established": "Established",
     "serviceAreas": "Service areas",
     "specialties": "Specialties",
@@ -1044,111 +1010,12 @@
     "employer": "Employer",
     "occupation": "Occupation",
     "listings": "Listings",
-    "switchConfirm": "Switch",
-    "switchMessage": "Activate {{name}}?",
-    "switchTitle": "Switch profile?",
     "subscriptionsDescription": "Manage Homiio Plus or buy one-time file analysis.",
     "subscriptions": "Subscriptions",
-    "createNewDescription": "Add a business, agency, or cooperative profile.",
-    "createNew": "Create new profile",
-    "active": "Active",
-    "activeFooter": "Active: {{name}}",
     "stays": "Stays",
     "applications": "My applications",
-    "trustScoreCta": "View trust score",
     "loadFailedHint": "Please try again later.",
-    "loadFailed": "Failed to load profile",
-    "switchFailed": "Failed to switch profile",
-    "switched": "Switched to {{name}}",
-    "invalidProfile": "Invalid profile data",
-    "trustScorePage": {
-      "title": "Trust Score"
-    }
-  },
-  "trust": {
-    "loadingVerification": "Loading verification status...",
-    "loadingScore": "Loading trust score...",
-    "errorVerification": "Unable to load verification status",
-    "errorScore": "Unable to load trust score",
-    "viewDetails": "View Details",
-    "noVerification": "No verification data",
-    "noScore": "No trust score data",
-    "verified": "Verified",
-    "completeVerification": "Complete Verification",
-    "yourScoreIs": "Your trust score is",
-    "improveScore": "Improve Score",
-    "manager": {
-      "loading": "Loading trust score...",
-      "error": "Error loading trust score",
-      "noData": "No personal trust score data found",
-      "title": "Trust Score",
-      "subtitle": "Build trust with landlords and roommates",
-      "scoreDescription": "Your overall trust score is {{score}}/100",
-      "factorsTitle": "Trust Factors",
-      "factorsSubtitle": "Improve these factors to increase your trust score",
-      "quickActionsTitle": "Quick Actions to Improve Score",
-      "completeProfile": "Complete Profile",
-      "cancel": "Cancel",
-      "editProfile": "Edit Profile",
-      "factorAlertBody": "{{description}}\n\nCurrent Score: {{score}}/100\n\nTo improve: {{action}}",
-      "factors": {
-        "verification": {
-          "label": "Identity Verification",
-          "description": "Complete identity verification to build trust",
-          "action": "Add personal information and income details"
-        },
-        "reviews": {
-          "label": "User Reviews",
-          "description": "Get positive reviews from landlords and roommates",
-          "action": "Add references from previous landlords"
-        },
-        "payment_history": {
-          "label": "Payment History",
-          "description": "Maintain a good payment history",
-          "action": "Add rental history with payment records"
-        },
-        "communication": {
-          "label": "Communication",
-          "description": "Respond promptly to messages and requests",
-          "action": "Complete your profile bio and contact info"
-        },
-        "rental_history": {
-          "label": "Rental History",
-          "description": "Build a positive rental history",
-          "action": "Add your previous rental addresses"
-        },
-        "default": {
-          "description": "Improve this factor to increase your trust score",
-          "action": "Complete your profile to improve this factor"
-        }
-      },
-      "actions": {
-        "personalInfo": {
-          "title": "Complete Personal Info",
-          "description": "Add your occupation, income, and employment details to build trust."
-        },
-        "references": {
-          "title": "Add References",
-          "description": "Include references from previous landlords and employers."
-        },
-        "rentalHistory": {
-          "title": "Add Rental History",
-          "description": "Document your rental history to show your reliability as a tenant."
-        }
-      }
-    },
-    "score": {
-      "levels": {
-        "excellent": "Excellent",
-        "good": "Good",
-        "average": "Average",
-        "fair": "Fair",
-        "needsImprovement": "Needs Improvement"
-      },
-      "breakdown": "Trust Score Breakdown",
-      "recalculate": "Recalculate",
-      "recalculating": "Recalculating..."
-    }
+    "loadFailed": "Failed to load profile"
   },
   "notifications": {
     "title": "Notifications",

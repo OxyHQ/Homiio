@@ -111,21 +111,6 @@
       "searchPlaceholder": "On vols viure?",
       "searchButton": "Cercar"
     },
-    "trust": {
-      "title": "Habitatge en Què Pots Confiar",
-      "verifiedListings": {
-        "title": "Llistats Verificats",
-        "description": "Totes les propietats verificades per autenticitat i condició"
-      },
-      "fairAgreements": {
-        "title": "Acords Justos",
-        "description": "Contractes transparents sense termes ocults"
-      },
-      "trustScore": {
-        "title": "Puntuació de Confiança",
-        "description": "Sistema de reputació tant per llogaters com per propietaris"
-      }
-    },
     "cities": {
       "title": "Ciutats Destacades",
       "properties": "propietats"
@@ -702,23 +687,16 @@
     "myProperties": "Les Meves Propietats",
     "savedProperties": "Propietats Guardades",
     "myContracts": "Els Meus Contractes",
-    "trustScore": "Puntuació de Confiança",
     "logOut": "Tancar Sessió",
     "loading": "Carregant perfil...",
     "signInRequired": "Inici de sessió requerit",
     "signInMessage": "Si us plau inicia sessió per veure el teu perfil",
     "createProfile": "Crear Perfil",
     "deleteProfile": "Eliminar Perfil",
-    "types": {
-      "personal": "Perfil Personal",
-      "agency": "Perfil d'Agència",
-      "business": "Perfil de Negoci"
-    },
     "sections": {
       "overview": "Resum",
       "properties": "Les Meves Propietats",
       "contracts": "Els Meus Contractes",
-      "trustScore": "Puntuació de Confiança",
       "settings": "Configuració",
       "account": "Account",
       "profile": "Profile",
@@ -727,7 +705,6 @@
     "stats": {
       "propertiesCount": "Propietats",
       "contractsCount": "Contractes",
-      "trustScore": "Puntuació de Confiança",
       "stays": "Stays",
       "applications": "Applications",
       "saved": "Saved",
@@ -766,7 +743,6 @@
         "propertyPreferences": "Property Preferences",
         "references": "References",
         "rentalHistory": "Rental History",
-        "trustScore": "Trust Score",
         "settings": "Settings"
       },
       "labels": {
@@ -1025,17 +1001,9 @@
     },
     "toast": {
       "loadFailed": "No s'han pogut carregar els perfils",
-      "createSuccess": "Perfil creat correctament",
-      "createFailed": "No s'ha pogut crear el perfil",
       "updateSuccess": "Perfil actualitzat correctament",
-      "updateFailed": "No s'ha pogut actualitzar el perfil",
-      "deleteSuccess": "Perfil eliminat correctament",
-      "deleteFailed": "No s'ha pogut eliminar el perfil",
-      "activateSuccess": "Perfil activat correctament",
-      "activateFailed": "No s'ha pogut activar el perfil"
+      "updateFailed": "No s'ha pogut actualitzar el perfil"
     },
-    "trustScoreHint": "Complete your profile information to improve your trust score.",
-    "trustScoreSubtitle": "Build trust with landlords and roommates through verification and positive interactions.",
     "established": "Established",
     "serviceAreas": "Service areas",
     "specialties": "Specialties",
@@ -1045,111 +1013,12 @@
     "employer": "Employer",
     "occupation": "Occupation",
     "listings": "Listings",
-    "switchConfirm": "Switch",
-    "switchMessage": "Activate {{name}}?",
-    "switchTitle": "Switch profile?",
     "subscriptionsDescription": "Manage Homiio Plus or buy one-time file analysis.",
     "subscriptions": "Subscriptions",
-    "createNewDescription": "Add a business, agency, or cooperative profile.",
-    "createNew": "Create new profile",
-    "active": "Active",
-    "activeFooter": "Active: {{name}}",
     "stays": "Stays",
     "applications": "My applications",
-    "trustScoreCta": "View trust score",
     "loadFailedHint": "Please try again later.",
-    "loadFailed": "Failed to load profile",
-    "switchFailed": "Failed to switch profile",
-    "switched": "Switched to {{name}}",
-    "invalidProfile": "Invalid profile data",
-    "trustScorePage": {
-      "title": "Trust Score"
-    }
-  },
-  "trust": {
-    "loadingVerification": "Carregant estat de verificació...",
-    "loadingScore": "Carregant puntuació de confiança...",
-    "errorVerification": "No es pot carregar l'estat de verificació",
-    "errorScore": "No es pot carregar la puntuació de confiança",
-    "viewDetails": "Veure detalls",
-    "noVerification": "Sense dades de verificació",
-    "noScore": "Sense dades de puntuació de confiança",
-    "verified": "Verificat",
-    "completeVerification": "Completar verificació",
-    "yourScoreIs": "La teva puntuació de confiança és",
-    "improveScore": "Millorar puntuació",
-    "manager": {
-      "loading": "Carregant puntuació de confiança...",
-      "error": "Error en carregar la puntuació de confiança",
-      "noData": "No s'han trobat dades de puntuació personal",
-      "title": "Puntuació de confiança",
-      "subtitle": "Genera confiança amb propietaris i companys de pis",
-      "scoreDescription": "La teva puntuació global és {{score}}/100",
-      "factorsTitle": "Factors de confiança",
-      "factorsSubtitle": "Millora aquests factors per augmentar la puntuació",
-      "quickActionsTitle": "Accions ràpides per millorar",
-      "completeProfile": "Completar perfil",
-      "cancel": "Cancel·lar",
-      "editProfile": "Editar perfil",
-      "factorAlertBody": "{{description}}\n\nPuntuació actual: {{score}}/100\n\nPer millorar: {{action}}",
-      "factors": {
-        "verification": {
-          "label": "Verificació d'identitat",
-          "description": "Completa la verificació d'identitat per generar confiança",
-          "action": "Afegeix informació personal i dades d'ingressos"
-        },
-        "reviews": {
-          "label": "Ressenyes d'usuaris",
-          "description": "Obtén ressenyes positives de propietaris i companys",
-          "action": "Afegeix referències de propietaris anteriors"
-        },
-        "payment_history": {
-          "label": "Historial de pagaments",
-          "description": "Mantén un bon historial de pagaments",
-          "action": "Afegeix historial de lloguer amb registres de pagament"
-        },
-        "communication": {
-          "label": "Comunicació",
-          "description": "Respon amb promptitud a missatges i sol·licituds",
-          "action": "Completa la biografia i la informació de contacte"
-        },
-        "rental_history": {
-          "label": "Historial de lloguer",
-          "description": "Construeix un historial de lloguer positiu",
-          "action": "Afegeix les teves adreces de lloguer anteriors"
-        },
-        "default": {
-          "description": "Millora aquest factor per augmentar la puntuació",
-          "action": "Completa el teu perfil per millorar aquest factor"
-        }
-      },
-      "actions": {
-        "personalInfo": {
-          "title": "Completar informació personal",
-          "description": "Afegeix la teva ocupació, ingressos i dades laborals per generar confiança."
-        },
-        "references": {
-          "title": "Afegir referències",
-          "description": "Inclou referències de propietaris i empresaris anteriors."
-        },
-        "rentalHistory": {
-          "title": "Afegir historial de lloguer",
-          "description": "Documenta el teu historial de lloguer per demostrar fiabilitat."
-        }
-      }
-    },
-    "score": {
-      "levels": {
-        "excellent": "Excel·lent",
-        "good": "Bo",
-        "average": "Mitjà",
-        "fair": "Regular",
-        "needsImprovement": "Cal millorar"
-      },
-      "breakdown": "Desglossament de la puntuació de confiança",
-      "recalculate": "Recalcular",
-      "recalculating": "Recalculant…"
-    }
+    "loadFailed": "Failed to load profile"
   },
   "notifications": {
     "title": "Notificacions",

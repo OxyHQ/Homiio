@@ -3,7 +3,7 @@
  *
  * `updateRoommatePreferences` must NEVER spread `req.body` into the Mongoose
  * update: the profile document also holds owner/system fields (`oxyUserId`,
- * `profileType`, verification, trust score, agency membership, …) that a client
+ * verification, …) that a client
  * must not be able to reach through the roommate settings endpoint. The
  * controller instead picks ONLY the roommate-matching preference fields listed
  * here and writes them under `personalProfile.settings.roommate.preferences`.

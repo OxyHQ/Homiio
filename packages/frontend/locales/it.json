@@ -268,21 +268,6 @@
       "searchPlaceholder": "Dove vuoi vivere?",
       "searchButton": "Cerca"
     },
-    "trust": {
-      "title": "Abitazioni di cui Puoi Fidarti",
-      "verifiedListings": {
-        "title": "Annunci Verificati",
-        "description": "Tutte le proprietà verificate per autenticità e condizioni"
-      },
-      "fairAgreements": {
-        "title": "Accordi Equi",
-        "description": "Contratti trasparenti senza termini nascosti"
-      },
-      "trustScore": {
-        "title": "Punteggio di Fiducia",
-        "description": "Sistema di reputazione per inquilini e proprietari"
-      }
-    },
     "cities": {
       "title": "Città in Evidenza",
       "properties": "proprietà"
@@ -840,7 +825,6 @@
     "myProperties": "Le Mie Proprietà",
     "savedProperties": "Proprietà Salvate",
     "myContracts": "I Miei Contratti",
-    "trustScore": "Punteggio di Fiducia",
     "logOut": "Esci",
     "exchanges": "Scambi",
     "exchangesDescription": "I tuoi scambi casa e le richieste di ospitalità.",
@@ -854,16 +838,10 @@
     "signInMessage": "Please sign in to view your profile",
     "createProfile": "Create Profile",
     "deleteProfile": "Delete Profile",
-    "types": {
-      "personal": "Personal Profile",
-      "agency": "Agency Profile",
-      "business": "Business Profile"
-    },
     "sections": {
       "overview": "Overview",
       "properties": "My Properties",
       "contracts": "My Contracts",
-      "trustScore": "Trust Score",
       "settings": "Settings",
       "account": "Account",
       "profile": "Profile",
@@ -872,7 +850,6 @@
     "stats": {
       "propertiesCount": "Properties",
       "contractsCount": "Contracts",
-      "trustScore": "Trust Score",
       "stays": "Stays",
       "applications": "Applications",
       "saved": "Saved",
@@ -909,7 +886,6 @@
         "propertyPreferences": "Property Preferences",
         "references": "References",
         "rentalHistory": "Rental History",
-        "trustScore": "Trust Score",
         "settings": "Settings"
       },
       "labels": {
@@ -1168,17 +1144,9 @@
     },
     "toast": {
       "loadFailed": "Impossibile caricare i profili",
-      "createSuccess": "Profilo creato con successo",
-      "createFailed": "Impossibile creare il profilo",
       "updateSuccess": "Profilo aggiornato con successo",
-      "updateFailed": "Impossibile aggiornare il profilo",
-      "deleteSuccess": "Profilo eliminato con successo",
-      "deleteFailed": "Impossibile eliminare il profilo",
-      "activateSuccess": "Profilo attivato con successo",
-      "activateFailed": "Impossibile attivare il profilo"
+      "updateFailed": "Impossibile aggiornare il profilo"
     },
-    "trustScoreHint": "Complete your profile information to improve your trust score.",
-    "trustScoreSubtitle": "Build trust with landlords and roommates through verification and positive interactions.",
     "established": "Established",
     "serviceAreas": "Service areas",
     "specialties": "Specialties",
@@ -1188,26 +1156,12 @@
     "employer": "Employer",
     "occupation": "Occupation",
     "listings": "Listings",
-    "switchConfirm": "Switch",
-    "switchMessage": "Activate {{name}}?",
-    "switchTitle": "Switch profile?",
     "subscriptionsDescription": "Manage Homiio Plus or buy one-time file analysis.",
     "subscriptions": "Subscriptions",
-    "createNewDescription": "Add a business, agency, or cooperative profile.",
-    "createNew": "Create new profile",
-    "active": "Active",
-    "activeFooter": "Active: {{name}}",
     "stays": "Stays",
     "applications": "My applications",
-    "trustScoreCta": "View trust score",
     "loadFailedHint": "Please try again later.",
-    "loadFailed": "Failed to load profile",
-    "switchFailed": "Failed to switch profile",
-    "switched": "Switched to {{name}}",
-    "invalidProfile": "Invalid profile data",
-    "trustScorePage": {
-      "title": "Trust Score"
-    }
+    "loadFailed": "Failed to load profile"
   },
   "notifications": {
     "title": "Notifiche",
@@ -2691,91 +2645,6 @@
     },
     "loading": "Loading...",
     "battery": "Battery"
-  },
-  "trust": {
-    "loadingVerification": "Loading verification status...",
-    "loadingScore": "Loading trust score...",
-    "errorVerification": "Unable to load verification status",
-    "errorScore": "Unable to load trust score",
-    "viewDetails": "View Details",
-    "noVerification": "No verification data",
-    "noScore": "No trust score data",
-    "verified": "Verified",
-    "completeVerification": "Complete Verification",
-    "yourScoreIs": "Your trust score is",
-    "improveScore": "Improve Score",
-    "manager": {
-      "loading": "Caricamento punteggio di fiducia...",
-      "error": "Errore nel caricamento del punteggio",
-      "noData": "Nessun dato di punteggio personale trovato",
-      "title": "Punteggio di fiducia",
-      "subtitle": "Costruisci fiducia con proprietari e coinquilini",
-      "scoreDescription": "Il tuo punteggio complessivo è {{score}}/100",
-      "factorsTitle": "Fattori di fiducia",
-      "factorsSubtitle": "Migliora questi fattori per aumentare il punteggio",
-      "quickActionsTitle": "Azioni rapide per migliorare",
-      "completeProfile": "Completa profilo",
-      "cancel": "Annulla",
-      "editProfile": "Modifica profilo",
-      "factorAlertBody": "{{description}}\n\nPunteggio attuale: {{score}}/100\n\nPer migliorare: {{action}}",
-      "factors": {
-        "verification": {
-          "label": "Verifica identità",
-          "description": "Completa la verifica dell'identità per costruire fiducia",
-          "action": "Aggiungi informazioni personali e dati sul reddito"
-        },
-        "reviews": {
-          "label": "Recensioni utenti",
-          "description": "Ottieni recensioni positive da proprietari e coinquilini",
-          "action": "Aggiungi referenze di precedenti proprietari"
-        },
-        "payment_history": {
-          "label": "Storico pagamenti",
-          "description": "Mantieni un buono storico dei pagamenti",
-          "action": "Aggiungi storico affitti con registri di pagamento"
-        },
-        "communication": {
-          "label": "Comunicazione",
-          "description": "Rispondi tempestivamente a messaggi e richieste",
-          "action": "Completa bio e informazioni di contatto"
-        },
-        "rental_history": {
-          "label": "Storico affitti",
-          "description": "Costruisci uno storico affitti positivo",
-          "action": "Aggiungi i tuoi precedenti indirizzi di affitto"
-        },
-        "default": {
-          "description": "Migliora questo fattore per aumentare il punteggio",
-          "action": "Completa il profilo per migliorare questo fattore"
-        }
-      },
-      "actions": {
-        "personalInfo": {
-          "title": "Completa informazioni personali",
-          "description": "Aggiungi occupazione, reddito e dati lavorativi per costruire fiducia."
-        },
-        "references": {
-          "title": "Aggiungi referenze",
-          "description": "Includi referenze di precedenti proprietari e datori di lavoro."
-        },
-        "rentalHistory": {
-          "title": "Aggiungi storico affitti",
-          "description": "Documenta il tuo storico affitti per dimostrare affidabilità."
-        }
-      }
-    },
-    "score": {
-      "levels": {
-        "excellent": "Eccellente",
-        "good": "Buono",
-        "average": "Nella media",
-        "fair": "Discreto",
-        "needsImprovement": "Da migliorare"
-      },
-      "breakdown": "Dettaglio punteggio di fiducia",
-      "recalculate": "Ricalcola",
-      "recalculating": "Ricalcolo in corso…"
-    }
   },
   "donations": {
     "widget": {

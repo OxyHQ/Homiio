@@ -78,13 +78,13 @@ Leases are first-class Mongoose documents; the schema is the authority and `cont
 
 ## Notifications (CRITICAL)
 
-Event-driven in-app notifications have **one write chokepoint**: `services/notificationDispatchService.ts`. Controllers call `createForUser` / `createForProfile` for domain events (lease signed, viewing approved, roommate request, …) — never `Notification.create` directly. Dispatch is best-effort (swallow-and-log; domain action must succeed even if the mailbox write fails).
+Event-driven in-app notifications have **one write chokepoint**: `services/notificationDispatchService.ts`. Controllers call `createForUser` for domain events (lease signed, viewing approved, roommate request, …) — never `Notification.create` directly. Dispatch is best-effort (swallow-and-log; domain action must succeed even if the mailbox write fails).
 
 The frontend has **no realtime socket client** for notifications. Mailbox refresh is refetch-on-focus + React Query invalidation after writes (`NotificationContext`, `services/notificationService.ts`). See `packages/frontend/docs/NOTIFICATIONS.md`.
 
 ## Roommates
 
-Accepted roommate requests materialize a `RoommateRelationship` document (`models/schemas/RoommateRelationshipSchema.ts`). Routes: `GET /api/roommates/relationships`, `DELETE /api/roommates/relationships/:relationshipId`. Ownership and participant resolution use `Profile.findActiveByOxyUserId` — same rule as property/lease writes.
+Accepted roommate requests materialize a `RoommateRelationship` document (`models/schemas/RoommateRelationshipSchema.ts`). Routes: `GET /api/roommates/relationships`, `DELETE /api/roommates/relationships/:relationshipId`. Ownership and participant resolution use `Profile.findByOxyUserId` — same rule as property/lease writes.
 
 ## Partner Commissions (mark-transacted)
 
