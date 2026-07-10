@@ -11,9 +11,10 @@ build/
 .next/
 out/
 
-# Environment variables
+# Environment variables (keep .env.example tracked)
 .env
 .env.local
+.env.*.local
 .env.development.local
 .env.test.local
 .env.production.local
@@ -100,6 +101,27 @@ ios/Pods/
 # Temporary files
 tmp/
 temp/
+.scratch/
+
+# Playwright / browser session (listing worker probes)
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+playwright/.cache/
+**/storageState*.json
+**/session-dump*.json
+
+# Portal probe / debug dumps (scripts stay tracked; outputs do not)
+**/probe-*.html
+**/probe-*.json
+
+# Accidental tsc emit alongside listing-providers sources (build → dist/)
+packages/listing-providers/src/**/*.js
+packages/listing-providers/src/**/*.d.ts
+
+# Agent / IDE worktree noise
+.cursor/
 
 # TypeScript
 *.tsbuildinfo
