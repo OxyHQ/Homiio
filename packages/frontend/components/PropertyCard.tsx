@@ -268,7 +268,7 @@ export function PropertyCard({
     offeringKind: primaryOffering.kind,
     offeringLabel: primaryOffering.label,
     type: property.type === 'room' ? 'apartment' : property.type === 'studio' ? 'apartment' : property.type,
-    imageSource: getPropertyImageSource(property),
+    imageSource: getPropertyImageSource(property, variant === 'compact' ? 'small' : 'medium'),
     bedrooms: property.bedrooms || 0,
     bathrooms: property.bathrooms || 0,
     size: property.squareFootage || 0,

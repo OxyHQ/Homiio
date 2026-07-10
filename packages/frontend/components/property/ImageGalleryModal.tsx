@@ -301,7 +301,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
                                     <GestureDetector gesture={composedGesture}>
                                         <Animated.View style={styles.imageWrapper}>
                                             <Animated.Image
-                                                source={getPropertyImageSource(item)}
+                                                source={getPropertyImageSource(item, 'large')}
                                                 style={[styles.image, animatedStyle]}
                                                 resizeMode="contain"
                                             />
@@ -310,7 +310,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
                                 ) : (
                                     <View style={styles.imageWrapper}>
                                         <Image
-                                            source={getPropertyImageSource(item)}
+                                            source={getPropertyImageSource(item, 'large')}
                                             style={styles.image}
                                             resizeMode="contain"
                                         />
@@ -385,7 +385,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
                                 }}
                             >
                                 <Image
-                                    source={getPropertyImageSource(item)}
+                                    source={getPropertyImageSource(item, 'small')}
                                     style={styles.thumbnailImage}
                                     resizeMode="cover"
                                 />

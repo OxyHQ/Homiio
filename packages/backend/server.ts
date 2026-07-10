@@ -105,7 +105,14 @@ const app = express();
 // Behind AWS ALB — trust the first proxy hop so req.ip reflects the client IP
 app.set('trust proxy', 1);
 
-app.use(helmet());
+// CORP must be cross-origin: Homiio's web app (homiio.com / Expo web) loads
+// listing images from api.homiio.com. Helmet's default `same-origin` CORP
+// triggers `ERR_BLOCKED_BY_RESPONSE.NotSameOrigin` in <img>/canvas.
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }),
+);
 
 // CORS configuration — O(1) Set lookup instead of Array.includes per request
 const allowedOriginsSet = new Set([
