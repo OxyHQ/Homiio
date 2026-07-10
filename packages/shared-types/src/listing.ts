@@ -30,7 +30,18 @@ export type ListingMarket =
   | 'FR'
   | 'AR'
   | 'EC'
-  | 'MX';
+  | 'MX'
+  | 'CO'
+  | 'CL'
+  | 'PE'
+  | 'PT'
+  | 'CA'
+  | 'AU'
+  | 'AE'
+  | 'IE'
+  | 'BE'
+  | 'PL'
+  | 'NL';
 
 /**
  * Stable identifier for a listing provider. New portals are added here as their
@@ -79,7 +90,20 @@ export type ProviderId =
   | 'propiedades'
   | 'vivanuncios'
   | 'lamudi'
-  | 'inmuebles24';
+  | 'inmuebles24'
+  | 'mercadolibre_co'
+  | 'mercadolibre_cl'
+  | 'mercadolibre_pe'
+  | 'mercadolibre_mx'
+  | 'idealista_pt'
+  | 'metrocuadrado'
+  | 'realestate_com_au'
+  | 'realtor_ca'
+  | 'bayut'
+  | 'daft'
+  | 'immoweb'
+  | 'otodom'
+  | 'funda';
 
 /**
  * Best-effort owner/agent contact captured from a portal when an endpoint

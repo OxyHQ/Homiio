@@ -37,6 +37,7 @@ import { fetchListingViaLadder } from '../../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink, type StrategyName } from '../../../metrics';
 import { extractSchemaOrgListings, pickPrimaryListing, type SchemaOrgListing } from '../jsonLd';
 import { isUsPortalChallenge } from '../challenge';
+import { DEFAULT_US_CITIES } from '../portals';
 
 const PROVIDER_ID: ProviderId = 'zillow';
 const BASE_URL = 'https://www.zillow.com';
@@ -45,15 +46,6 @@ const COUNTRY = 'United States';
 
 /** The buy/rent intent a Zillow listing was discovered under. */
 export type ZillowKind = 'rent' | 'sale';
-
-/** US cities enumerated when a discover job omits an explicit `city`. */
-const DEFAULT_CITIES: readonly string[] = [
-  'New York, NY',
-  'Los Angeles, CA',
-  'Chicago, IL',
-  'Austin, TX',
-  'Miami, FL',
-];
 
 /** Zillow home-details URLs end in `/<zpid>_zpid/`; the zpid is the source id. */
 const DETAIL_URL_RE = /https?:\/\/www\.zillow\.com\/homedetails\/[^"'\s]+?\/(\d+)_zpid\/?/gi;
@@ -167,6 +159,7 @@ function asZillow(payload: unknown): ZillowRaw {
 
 export interface ZillowProviderOptions {
   runtime?: FetchRuntime;
+  cities?: readonly string[];
   metrics?: ProviderMetricsSink & ProviderMetricsReader;
   /** Test-only: restrict which ladder tiers run (default http → browser → managed). */
   ladderTiers?: readonly StrategyName[];
@@ -177,17 +170,19 @@ export class ZillowProvider implements ListingProvider {
   readonly markets = ['US'] as const;
 
   private readonly runtime: FetchRuntime;
+  private readonly cities: readonly string[];
   private readonly metrics: ProviderMetricsSink & ProviderMetricsReader;
   private readonly ladderTiers?: readonly StrategyName[];
 
   constructor(options: ZillowProviderOptions = {}) {
     this.runtime = options.runtime ?? createFetchRuntime();
+    this.cities = options.cities && options.cities.length > 0 ? options.cities : DEFAULT_US_CITIES;
     this.metrics = options.metrics ?? defaultProviderMetrics;
     this.ladderTiers = options.ladderTiers;
   }
 
   async *discover(job: DiscoverJob): AsyncIterable<ExternalListingRef> {
-    const cities = job.city ? [job.city] : DEFAULT_CITIES;
+    const cities = job.city ? [job.city] : this.cities;
     const limit = job.limit ?? Number.POSITIVE_INFINITY;
     const seen = new Set<string>();
     let yielded = 0;

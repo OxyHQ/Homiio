@@ -36,11 +36,19 @@ const CITY_CODE_LOOKUP: Readonly<
   MAD: { city: 'Madrid', country: 'Spain', countryCode: 'ES', region: 'Community of Madrid' },
   BCN: { city: 'Barcelona', country: 'Spain', countryCode: 'ES', region: 'Catalonia' },
   VLC: { city: 'Valencia', country: 'Spain', countryCode: 'ES', region: 'Valencia' },
+  SVQ: { city: 'Seville', country: 'Spain', countryCode: 'ES', region: 'Andalusia' },
   NYC: { city: 'New York', country: 'United States', countryCode: 'US', region: 'New York' },
   LAX: { city: 'Los Angeles', country: 'United States', countryCode: 'US', region: 'California' },
   BOS: { city: 'Boston', country: 'United States', countryCode: 'US', region: 'Massachusetts' },
   CHI: { city: 'Chicago', country: 'United States', countryCode: 'US', region: 'Illinois' },
   WDC: { city: 'Washington', country: 'United States', countryCode: 'US', region: 'District of Columbia' },
+  MIA: { city: 'Miami', country: 'United States', countryCode: 'US', region: 'Florida' },
+  SFO: { city: 'San Francisco', country: 'United States', countryCode: 'US', region: 'California' },
+  ROM: { city: 'Rome', country: 'Italy', countryCode: 'IT', region: 'Lazio' },
+  MIL: { city: 'Milan', country: 'Italy', countryCode: 'IT', region: 'Lombardy' },
+  LON: { city: 'London', country: 'United Kingdom', countryCode: 'GB', region: 'England' },
+  BER: { city: 'Berlin', country: 'Germany', countryCode: 'DE', region: 'Berlin' },
+  PAR: { city: 'Paris', country: 'France', countryCode: 'FR', region: 'Île-de-France' },
 };
 
 /** Raised when a Blueground listing is partner inventory without a firm monthly rent. */

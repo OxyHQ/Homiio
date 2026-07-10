@@ -266,11 +266,36 @@ PROVIDER_INMUEBLES24_ENABLED=true
 PROVIDER_LAMUDI_ENABLED=true
 PROVIDER_VIVANUNCIOS_ENABLED=true
 PROVIDER_PROPIEDADES_ENABLED=true
+PROVIDER_MERCADOLIBRE_CO_ENABLED=true
+PROVIDER_METROCUADRADO_ENABLED=true
+PROVIDER_MERCADOLIBRE_CL_ENABLED=true
+PROVIDER_MERCADOLIBRE_PE_ENABLED=true
+PROVIDER_MERCADOLIBRE_MX_ENABLED=true
+PROVIDER_IDEALISTA_PT_ENABLED=true
+PROVIDER_REALTOR_CA_ENABLED=true
+PROVIDER_REALESTATE_COM_AU_ENABLED=true
+PROVIDER_BAYUT_ENABLED=true
 ```
+
+**Multi-country brand expansion (thin wrappers reuse shared factories — default OFF):** Idealista ES/IT/**PT** (regional hosts + georeach AJAX); MercadoLibre AR/EC/CO/CL/PE/**MX** (`createMercadolibreProvider` + `rentSegment` for renta/arriendo); Navent Zonaprop/Argenprop/Plusvalía/Inmuebles24/Metrocuadrado (`createNaventProvider`); Blueground global (`blueground` one plugin, per-market city slugs). **Backlog (not yet wired):** Idealista (none — trio complete); MercadoLibre UY/VE/BO; Properati CO/PE; Lamudi ID/TH/TR; OLX PT/PL; Immowelt AT; Blueground PT/GR/AE/HK; ImmobiliareScout24 AT.
+
+Canada (`LISTING_CA_CITIES`): Realtor.ca (`api2.realtor.ca` form JSON after Imperva session warm — OFF). Rentals.ca / Kijiji housing-only — defer (Cloudflare / thin Next.js cards).
+
+Australia (`LISTING_AU_CITIES`): realestate.com.au (`window.ArgonautExchange` JSON — Kasada, OFF until AU browser+residential). Domain.com.au — defer (Akamai). Shared parsers: `nextData` / `contact` / `session` / `strategy`.
+
+UAE (`LISTING_AE_CITIES`): Bayut (`__NEXT_DATA__` search + detail — hb-captcha, OFF until AE browser+residential). Property Finder — defer (CloudFront 403). Never use paid RapidAPI mirrors in the worker.
+
+Colombia (`LISTING_CO_CITIES`): MercadoLibre inmuebles (thin `createMercadolibreProvider` — housing-only, OFF until Playwright+proxy probe), Metrocuadrado (Navent `rplis-api` + `__PRELOADED_STATE__` — Cloudflare, OFF). Fincaraiz is the same Navent stack — add later if needed; do not duplicate parsers.
+
+Chile (`LISTING_CL_CITIES`): MercadoLibre inmuebles (uses `arriendo` rent segment via shared `mercadolibre` — OFF until probe). Portalinmobiliario/TocToc need bespoke parsers — defer.
+
+Peru (`LISTING_PE_CITIES`): MercadoLibre inmuebles (thin `createMercadolibreProvider` — housing-only, OFF until probe). Urbania/Adondevivir (same RE group, JSON-LD) — defer until cold HTTP verified.
 
 Argentina (`LISTING_AR_CITIES`): Zonaprop / Argenprop (Navent `rplis-api` + `__PRELOADED_STATE__` via shared `navent` / `naventProvider` — Cloudflare, keep OFF until sticky residential clears), MercadoLibre inmuebles (housing-only; cold HTML search+detail verified — enable), Properati (`__NEXT_DATA__` / JSON-LD via shared modules — Cloudflare, OFF). MercadoLibre uses shared `mercadolibre` / `mercadolibreProvider` (also EC). Never site-wide crawl ML.
 
-Mexico (`LISTING_MX_CITIES`): Inmuebles24 (Navent — Cloudflare, OFF), Lamudi (JSON-LD MONTH rent — best HTTP candidate, OFF until live discover), Vivanuncios (housing-only classifieds — OFF), Propiedades (JSON-LD — Akamai, OFF). EasyBroker inactive — skip. Reuse shared `navent` / `jsonLd` / `contact` / `classifieds` / `cities`.
+Mexico (`LISTING_MX_CITIES`): Inmuebles24 (Navent — Cloudflare, OFF), Lamudi (JSON-LD MONTH rent — best HTTP candidate, OFF until live discover), Vivanuncios (housing-only classifieds — OFF), Propiedades (JSON-LD — Akamai, OFF), MercadoLibre inmuebles (thin `createMercadolibreProvider`, `renta` segment — OFF until probe). EasyBroker inactive — skip. Reuse shared `navent` / `jsonLd` / `contact` / `classifieds` / `cities` / `mercadolibre`.
+
+Portugal (`LISTING_PT_CITIES`): Idealista.pt (thin regional clone of `idealista_it` — `/imovel/`, `/arrendar-casas/`, georeach + contact AJAX; OFF until Playwright+proxy probe). Imovirtual/Casa Sapo — defer (bespoke parsers).
 
 Ecuador (`LISTING_EC_CITIES`): Plusvalía (thin `createNaventProvider` — Cloudflare, OFF until sticky residential), MercadoLibre EC inmuebles (thin `createMercadolibreProvider` — housing-only, OFF until Playwright+proxy probe), Properati EC (JSON-LD fixtures — ALB 403, keep OFF). No duplicated parsers — reuse `session` / `jsonLd` / `nextData` / `contact` / `classifieds` / `navent` / `mercadolibre`. inmo.ec not viable.
 

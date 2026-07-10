@@ -1,5 +1,5 @@
 /**
- * Blueground provider (Spain + United States).
+ * Blueground provider (global furnished rentals — ES/US/IT/GB/DE/FR).
  *
  * Blueground retired the unauthenticated `/api/v2/properties` JSON API (404).
  * This provider now scrapes SSR city search pages and property detail pages
@@ -54,8 +54,12 @@ const PROVIDER_ID: ProviderId = 'blueground';
 
 /** City slugs for `/m/furnished-apartments/<slug>` search pages. */
 const DEFAULT_CITIES: Readonly<Partial<Record<ListingMarket, readonly string[]>>> = {
-  ES: ['madrid-esp', 'barcelona-esp', 'valencia-esp'],
-  US: ['nyc-usa', 'los-angeles-usa', 'boston-usa', 'chicago-usa', 'washington-dc-usa'],
+  ES: ['madrid-esp', 'barcelona-esp', 'valencia-esp', 'sevilla-esp'],
+  US: ['nyc-usa', 'los-angeles-usa', 'boston-usa', 'chicago-usa', 'washington-dc-usa', 'miami-usa', 'san-francisco-usa'],
+  IT: ['rome-ita', 'milan-ita'],
+  GB: ['london-gbr'],
+  DE: ['berlin-deu'],
+  FR: ['paris-fra'],
 };
 
 const SUPPORTED_TYPES: ReadonlySet<string> = new Set(Object.values(PropertyType));
@@ -114,7 +118,7 @@ export interface BluegroundProviderOptions {
 
 export class BluegroundProvider implements ListingProvider {
   readonly id: ProviderId = PROVIDER_ID;
-  readonly markets = ['ES', 'US'] as const;
+  readonly markets = ['ES', 'US', 'IT', 'GB', 'DE', 'FR'] as const;
 
   private readonly runtime: FetchRuntime;
   private readonly metrics: ProviderMetricsSink & ProviderMetricsReader;

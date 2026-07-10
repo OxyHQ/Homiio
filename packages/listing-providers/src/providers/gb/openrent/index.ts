@@ -29,6 +29,8 @@ import type {
 import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import { providerMaxSearchPages } from '../../../discoverLimits';
+import { DEFAULT_GB_CITIES } from '../../../parse/defaultMarketCities';
 import { isGbPortalChallenge } from '../challenge';
 import { resolveGbPropertyType, splitGbDisplayAddress } from '../housing';
 import { OPENRENT_BASE_URL } from './fixtures';
@@ -41,8 +43,7 @@ import {
 } from './parse';
 
 const PROVIDER_ID: ProviderId = 'openrent';
-const DEFAULT_CITIES: readonly string[] = ['london', 'manchester', 'birmingham', 'edinburgh', 'bristol'];
-const MAX_SEARCH_PAGES = 3;
+const DEFAULT_MAX_SEARCH_PAGES = 50;
 
 export function isOpenRentChallenge(html: string): boolean {
   return isGbPortalChallenge(html);
@@ -73,13 +74,15 @@ export class OpenRentProvider implements ListingProvider {
   private readonly runtime: FetchRuntime;
   private readonly cities: readonly string[];
   private readonly metrics: ProviderMetricsSink & ProviderMetricsReader;
+  private readonly maxSearchPages: number;
   private stickyProxySessionId?: string;
   private stickyStorageState?: BrowserStorageState;
 
   constructor(options: OpenRentProviderOptions = {}) {
     this.runtime = options.runtime ?? createFetchRuntime();
-    this.cities = options.cities && options.cities.length > 0 ? options.cities : DEFAULT_CITIES;
+    this.cities = options.cities && options.cities.length > 0 ? options.cities : DEFAULT_GB_CITIES;
     this.metrics = options.metrics ?? defaultProviderMetrics;
+    this.maxSearchPages = providerMaxSearchPages(PROVIDER_ID, DEFAULT_MAX_SEARCH_PAGES, 'GB');
   }
 
   async *discover(job: DiscoverJob): AsyncIterable<ExternalListingRef> {
@@ -90,7 +93,7 @@ export class OpenRentProvider implements ListingProvider {
     const runtime = job.runtime ?? this.runtime;
 
     for (const city of cities) {
-      for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
+      for (let page = 1; page <= this.maxSearchPages; page += 1) {
         if (yielded >= limit) return;
         const searchUrl = openrentSearchUrl(city, page);
         let html: string | undefined;

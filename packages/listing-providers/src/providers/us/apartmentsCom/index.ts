@@ -36,20 +36,12 @@ import { fetchListingViaLadder } from '../../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink, type StrategyName } from '../../../metrics';
 import { extractSchemaOrgListings, pickPrimaryListing, type SchemaOrgListing } from '../jsonLd';
 import { isUsPortalChallenge } from '../challenge';
+import { DEFAULT_US_CITIES } from '../portals';
 
 const PROVIDER_ID: ProviderId = 'apartments_com';
 const BASE_URL = 'https://www.apartments.com';
 const CURRENCY = 'USD';
 const COUNTRY = 'United States';
-
-/** US cities enumerated when a discover job omits an explicit `city`. */
-const DEFAULT_CITIES: readonly string[] = [
-  'New York, NY',
-  'Los Angeles, CA',
-  'Chicago, IL',
-  'Austin, TX',
-  'Miami, FL',
-];
 
 /** apartments.com detail URLs: `/<complex-city-slug>/<alnum-code>/`. */
 const DETAIL_URL_RE = /https?:\/\/www\.apartments\.com\/[a-z0-9-]+\/[a-z0-9]+\/?/gi;
@@ -144,6 +136,7 @@ function asApartmentsCom(payload: unknown): ApartmentsComRaw {
 
 export interface ApartmentsComProviderOptions {
   runtime?: FetchRuntime;
+  cities?: readonly string[];
   metrics?: ProviderMetricsSink & ProviderMetricsReader;
   ladderTiers?: readonly StrategyName[];
 }
@@ -153,17 +146,19 @@ export class ApartmentsComProvider implements ListingProvider {
   readonly markets = ['US'] as const;
 
   private readonly runtime: FetchRuntime;
+  private readonly cities: readonly string[];
   private readonly metrics: ProviderMetricsSink & ProviderMetricsReader;
   private readonly ladderTiers?: readonly StrategyName[];
 
   constructor(options: ApartmentsComProviderOptions = {}) {
     this.runtime = options.runtime ?? createFetchRuntime();
+    this.cities = options.cities && options.cities.length > 0 ? options.cities : DEFAULT_US_CITIES;
     this.metrics = options.metrics ?? defaultProviderMetrics;
     this.ladderTiers = options.ladderTiers;
   }
 
   async *discover(job: DiscoverJob): AsyncIterable<ExternalListingRef> {
-    const cities = job.city ? [job.city] : DEFAULT_CITIES;
+    const cities = job.city ? [job.city] : this.cities;
     const limit = job.limit ?? Number.POSITIVE_INFINITY;
     const seen = new Set<string>();
     let yielded = 0;

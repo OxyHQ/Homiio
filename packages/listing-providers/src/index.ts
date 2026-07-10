@@ -680,7 +680,12 @@ export {
   findJsonLdByType,
 } from './jsonLd';
 export { citySlug } from './slug';
-export { citiesFromEnv, citiesOptionsFromEnv } from './cities';
+export { citiesFromEnv, citiesOptionsFromEnv, DEFAULT_MARKET_CITIES } from './cities';
+export {
+  MAX_PAGES_CEILING,
+  maxSearchPagesFromEnv,
+  providerMaxSearchPages,
+} from './discoverLimits';
 
 
 // Ecuador (EC) — Plusvalía (shared Navent) / MercadoLibre housing-only / Properati (OFF).
@@ -945,6 +950,111 @@ export {
   parseIdealistaPtContactPhones,
 } from './providers/pt/idealistaPt/contact';
 
+// Canada (CA) — Realtor.ca (api2 JSON + Imperva session).
+export {
+  RealtorCaProvider,
+  isRealtorCaChallenge,
+  parseRealtorCaDetail,
+  parseRealtorCaSearch,
+  realtorCaSourceIdFromUrl,
+} from './providers/ca/realtorCa';
+export {
+  REALTOR_CA_BASE_URL,
+  REALTOR_CA_FIXTURE_DETAIL_JSON,
+  REALTOR_CA_FIXTURE_SEARCH_JSON,
+} from './providers/ca/realtorCa/fixtures';
+
+// Australia (AU) — realestate.com.au (ArgonautExchange JSON).
+export {
+  RealestateComAuProvider,
+  isRealestateComAuChallenge,
+  parseRealestateComAuDetail,
+  parseRealestateComAuSearch,
+  realestateComAuSourceIdFromUrl,
+} from './providers/au/realestateCom';
+export {
+  REALESTATE_COM_AU_BASE_URL,
+  REALESTATE_COM_AU_FIXTURE_DETAIL_HTML,
+  REALESTATE_COM_AU_FIXTURE_SEARCH_HTML,
+} from './providers/au/realestateCom/fixtures';
+
+// UAE (AE) — Bayut (__NEXT_DATA__ JSON).
+export {
+  BayutProvider,
+  isBayutChallenge,
+  parseBayutDetail,
+  parseBayutSearch,
+  bayutSourceIdFromUrl,
+} from './providers/ae/bayut';
+export {
+  BAYUT_BASE_URL,
+  BAYUT_FIXTURE_DETAIL_HTML,
+  BAYUT_FIXTURE_SEARCH_HTML,
+} from './providers/ae/bayut/fixtures';
+
+// Ireland (IE) — Daft.ie __NEXT_DATA__ JSON.
+export {
+  DaftProvider,
+  isDaftChallenge,
+  parseDaftDetail,
+  parseDaftSearch,
+  daftSearchUrl,
+  daftSourceIdFromUrl,
+} from './providers/ie/daft';
+export {
+  DAFT_BASE_URL,
+  DAFT_FIXTURE_DETAIL_HTML,
+  DAFT_FIXTURE_SEARCH_HTML,
+} from './providers/ie/daft/fixtures';
+
+// Belgium (BE) — Immoweb search-results + classified JSON.
+export {
+  ImmowebProvider,
+  isImmowebChallenge,
+  parseImmowebDetail,
+  parseImmowebSearch,
+  immowebSearchUrl,
+  immowebDetailUrl,
+  immowebSourceIdFromUrl,
+} from './providers/be/immoweb';
+export {
+  IMMOWEB_BASE_URL,
+  IMMOWEB_FIXTURE_DETAIL_JSON,
+  IMMOWEB_FIXTURE_SEARCH_JSON,
+} from './providers/be/immoweb/fixtures';
+
+// Poland (PL) — Otodom __NEXT_DATA__ (OLX vertical).
+export {
+  OtodomProvider,
+  isOtodomChallenge,
+  parseOtodomDetail,
+  parseOtodomSearch,
+  otodomSearchUrl,
+  otodomSourceIdFromUrl,
+} from './providers/pl/otodom';
+export {
+  OTODOM_BASE_URL,
+  OTODOM_FIXTURE_DETAIL_HTML,
+  OTODOM_FIXTURE_SEARCH_HTML,
+} from './providers/pl/otodom/fixtures';
+
+// Netherlands (NL) — Funda mobile JSON API (Akamai — proxy required).
+export {
+  FundaProvider,
+  isFundaChallenge,
+  parseFundaDetail,
+  parseFundaSearch,
+  fundaSearchBody,
+  fundaDetailUrl,
+  fundaSourceIdFromUrl,
+  FUNDA_JSON_HEADERS,
+} from './providers/nl/funda';
+export {
+  FUNDA_BASE_URL,
+  FUNDA_FIXTURE_DETAIL_JSON,
+  FUNDA_FIXTURE_SEARCH_JSON,
+} from './providers/nl/funda/fixtures';
+
 import type { ProviderId } from '@homiio/shared-types';
 import { ProviderRegistry } from './registry';
 import type { ListingProvider } from './types';
@@ -998,6 +1108,13 @@ import { MercadolibreClProvider } from './providers/cl/mercadolibre';
 import { MercadolibrePeProvider } from './providers/pe/mercadolibre';
 import { MercadolibreMxProvider } from './providers/mx/mercadolibre';
 import { IdealistaPtProvider } from './providers/pt/idealistaPt';
+import { RealtorCaProvider } from './providers/ca/realtorCa';
+import { RealestateComAuProvider } from './providers/au/realestateCom';
+import { BayutProvider } from './providers/ae/bayut';
+import { DaftProvider } from './providers/ie/daft';
+import { ImmowebProvider } from './providers/be/immoweb';
+import { OtodomProvider } from './providers/pl/otodom';
+import { FundaProvider } from './providers/nl/funda';
 
 /**
  * Whether a real portal provider is enabled via its env feature flag. Flags are
@@ -1030,6 +1147,13 @@ export function createDefaultRegistry(): ProviderRegistry {
   const clOptions = citiesOptionsFromEnv('CL');
   const peOptions = citiesOptionsFromEnv('PE');
   const ptOptions = citiesOptionsFromEnv('PT');
+  const caOptions = citiesOptionsFromEnv('CA');
+  const auOptions = citiesOptionsFromEnv('AU');
+  const aeOptions = citiesOptionsFromEnv('AE');
+  const ieOptions = citiesOptionsFromEnv('IE');
+  const beOptions = citiesOptionsFromEnv('BE');
+  const plOptions = citiesOptionsFromEnv('PL');
+  const nlOptions = citiesOptionsFromEnv('NL');
   const flaggedProviders: ListingProvider[] = [
     new HabitacliaProvider(esOptions),
     new BluegroundProvider(),
@@ -1039,8 +1163,8 @@ export function createDefaultRegistry(): ProviderRegistry {
     new MilanunciosProvider(esOptions),
     new YaencontreProvider(esOptions),
     new IndomioProvider(esOptions),
-    new ApartmentsComProvider(),
-    new ZillowProvider(),
+    new ApartmentsComProvider(usOptions),
+    new ZillowProvider(usOptions),
     new RealtorComProvider(usOptions),
     new HotpadsProvider(usOptions),
     new RedfinProvider(usOptions),
@@ -1078,6 +1202,13 @@ export function createDefaultRegistry(): ProviderRegistry {
     new MercadolibreClProvider(clOptions),
     new MercadolibrePeProvider(peOptions),
     new IdealistaPtProvider(ptOptions),
+    new RealtorCaProvider(caOptions),
+    new RealestateComAuProvider(auOptions),
+    new BayutProvider(aeOptions),
+    new DaftProvider(ieOptions),
+    new ImmowebProvider(beOptions),
+    new OtodomProvider(plOptions),
+    new FundaProvider(nlOptions),
   ];
   for (const provider of flaggedProviders) {
     if (providerEnabled(provider.id)) {

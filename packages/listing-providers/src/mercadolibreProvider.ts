@@ -104,8 +104,12 @@ export function createMercadolibreProvider(
       let yielded = 0;
       const rt = job.runtime ?? runtime;
 
+      const rentSegment = options.site.rentSegment ?? 'alquiler';
+      const operations: readonly ('alquiler' | 'arriendo' | 'renta' | 'venta')[] =
+        rentSegment === 'alquiler' ? ['alquiler', 'venta'] : [rentSegment, 'venta'];
+
       for (const city of jobCities) {
-        for (const kind of ['alquiler', 'venta'] as const) {
+        for (const kind of operations) {
           for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
             if (yielded >= limit) return;
             const warmUrl = mercadolibreHousingSearchUrl(options.site, city, page, kind);

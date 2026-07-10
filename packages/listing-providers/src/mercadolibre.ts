@@ -33,6 +33,8 @@ export interface MercadolibreSiteConfig {
   inmueblesBaseUrl: string;
   /** Path tokens required for housing discover URLs. */
   housingSlugs: ReadonlySet<string>;
+  /** Rent URL segment (default `alquiler`; Chile uses `arriendo`). */
+  rentSegment?: 'alquiler' | 'arriendo' | 'renta';
   /**
    * Regex (global) for search-card hrefs. Group 1 = full URL.
    * Must match only real-estate host paths when possible.
@@ -433,10 +435,12 @@ export function mercadolibreHousingSearchUrl(
   config: MercadolibreSiteConfig,
   city: string,
   page = 1,
-  kind: 'alquiler' | 'venta' = 'alquiler',
+  kind: 'alquiler' | 'arriendo' | 'renta' | 'venta' = 'alquiler',
 ): string {
   const slug = citySlug(city);
-  const base = `${config.inmueblesBaseUrl}/departamentos/${kind}/${slug}/`;
+  const rentSegment = config.rentSegment ?? 'alquiler';
+  const segment = kind === 'venta' ? 'venta' : rentSegment;
+  const base = `${config.inmueblesBaseUrl}/departamentos/${segment}/${slug}/`;
   return page <= 1 ? base : `${base}_Desde_${(page - 1) * 48 + 1}_NoIndex_True`;
 }
 

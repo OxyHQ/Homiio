@@ -10,7 +10,7 @@
     "dev": "bunx tsc --watch",
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
     "lint": "eslint src --ext .ts",
-    "test": "cd ../backend && bun run test -- --testPathPattern=\"listing|provider|ingest|proxy|browser|strategy|blueground|fixture|klein|idealista|fotocasa|habitaclia|price|contact|classifieds|registry\""
+    "test": "cd ../backend && bun run test -- --testPathPattern=\"listing|provider|ingest|proxy|browser|strategy|blueground|fixture|klein|idealista|fotocasa|habitaclia|price|contact|classifieds|registry|realtor|realestate|bayut\""
   },
   "keywords": [
     "homiio",

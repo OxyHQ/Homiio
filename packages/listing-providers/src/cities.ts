@@ -6,3 +6,4 @@ export {
   citiesOptionsFromEnv,
   type ListingMarket,
 } from './parse/cities';
+export { DEFAULT_MARKET_CITIES } from './parse/defaultMarketCities';
