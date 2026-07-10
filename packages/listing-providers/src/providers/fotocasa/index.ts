@@ -137,6 +137,7 @@ function yieldRefs(
   seen: Set<string>,
   limit: number,
   yielded: { count: number },
+  warmCity: string,
   browserSession?: FotocasaBrowserSessionHint,
   searchCards?: Map<string, Record<string, unknown>>,
 ): ExternalListingRef[] {
@@ -150,8 +151,8 @@ function yieldRefs(
       Object.assign(hints, fotocasaBrowserSessionHints(browserSession));
     }
     const card = searchCards?.get(ref.sourceId);
-    if (card && browserSession) {
-      Object.assign(hints, fotocasaSearchCardHints(browserSession.warmCity, card));
+    if (card) {
+      Object.assign(hints, fotocasaSearchCardHints(warmCity, card));
     }
     out.push({
       provider: PROVIDER_ID,
@@ -343,13 +344,33 @@ export class FotocasaProvider implements ListingProvider {
             const ssrCards = extractFotocasaSearchCards(searchHtml);
             if (ssrRefs.length > 0) {
               collected.push(
-                ...yieldRefs(ssrRefs, seen, limit, yielded, browserSession, ssrCards),
+                ...yieldRefs(ssrRefs, seen, limit, yielded, city, browserSession, ssrCards),
               );
             }
           }
           break;
         }
-        if (status >= 400) break;
+        if (status >= 400) {
+          if (page === 1) {
+            const ssrRefs = parseFotocasaSsrSearch(searchHtml);
+            const ssrCards = extractFotocasaSearchCards(searchHtml);
+            if (ssrRefs.length > 0) {
+              this.metrics.record({
+                provider: this.id,
+                strategy: 'browser',
+                outcome: 'success',
+                status: 200,
+                latencyMs: Date.now() - start,
+                url: warmUrl,
+                detail: `searchads ${status} — SSR realEstates fallback (${transactionType})`,
+              });
+              collected.push(
+                ...yieldRefs(ssrRefs, seen, limit, yielded, city, browserSession, ssrCards),
+              );
+            }
+          }
+          break;
+        }
         const searchCards = extractFotocasaSearchCards(response.body);
         pageRefs = parseFotocasaSearchads(response.body);
         if (page === 1 && pageRefs.length === 0) {
@@ -368,7 +389,7 @@ export class FotocasaProvider implements ListingProvider {
         });
         if (pageRefs.length === 0) break;
         collected.push(
-          ...yieldRefs(pageRefs, seen, limit, yielded, browserSession, searchCards),
+          ...yieldRefs(pageRefs, seen, limit, yielded, city, browserSession, searchCards),
         );
       }
 
@@ -417,7 +438,8 @@ export class FotocasaProvider implements ListingProvider {
         });
         const refs = parseFotocasaSearch(html);
         if (refs.length === 0) return;
-        for (const ref of yieldRefs(refs, seen, limit, yielded)) {
+        const ssrCards = extractFotocasaSearchCards(html);
+        for (const ref of yieldRefs(refs, seen, limit, yielded, city, undefined, ssrCards)) {
           yield ref;
         }
       } catch (error) {

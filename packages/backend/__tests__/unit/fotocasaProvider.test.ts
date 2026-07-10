@@ -14,6 +14,7 @@ import {
   parseFotocasaSearchads,
   parseFotocasaLocationSegments,
   parseFotocasaSsrSearch,
+  extractFotocasaSearchCards,
   parseFotocasaPropertyJson,
   isFotocasaSearchadsChallenge,
   isFotocasaPropertyChallenge,
@@ -149,6 +150,13 @@ describe('Fotocasa searchads + property JSON parsers', () => {
   it('parses SSR-embedded realEstates from warmed search HTML', () => {
     const refs = parseFotocasaSsrSearch(FOTOCASA_FIXTURE_SSR_SEARCH_HTML);
     expect(refs.map((ref) => ref.sourceId).sort()).toEqual(['187654321', '187654322']);
+  });
+
+  it('parses listing array when HTML also embeds a realEstates counter field', () => {
+    const html = `<!doctype html><html><body><script>window.__STATE__={"counters":{"realEstates":10529},"realEstates":[{"id":187654321,"price":1200,"address":{"municipality":"Madrid"},"detail":"/es/alquiler/vivienda/madrid-capital/x/187654321/d"},{"id":187654322,"price":950,"address":{"municipality":"Madrid"},"detail":"/es/alquiler/vivienda/madrid-capital/x/187654322/d"}],"totalItems":2};</script></body></html>`;
+    const refs = parseFotocasaSsrSearch(html);
+    expect(refs.map((ref) => ref.sourceId).sort()).toEqual(['187654321', '187654322']);
+    expect(extractFotocasaSearchCards(html).size).toBe(2);
   });
 
   it('treats PerimeterX challenge bodies as non-parseable', () => {

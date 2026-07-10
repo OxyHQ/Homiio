@@ -48,7 +48,7 @@ export function habitacliaWarmSearchUrl(city: string, page: number): string {
 export function isHabitacliaListainmueblesChallenge(body: string): boolean {
   const trimmed = body.trim();
   if (trimmed.length < 512) return true;
-  return /403 ERROR|Pardon Our Interruption|hab_library|Request unsuccessful\. Incapsula/i.test(
+  return /403 ERROR|Pardon Our Interruption|Request unsuccessful\. Incapsula/i.test(
     trimmed,
   );
 }

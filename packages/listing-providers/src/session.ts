@@ -173,6 +173,61 @@ function resolveReferer(target: InPageRequestTarget, init?: BrowserSessionReques
   return '';
 }
 
+/** Ensure cross-origin gateway URLs stay absolute for Playwright's request API. */
+function resolveAbsoluteRequestUrl(url: string, referer: string): string {
+  if (/^https?:\/\//i.test(url)) return url;
+  if (!referer) {
+    throw new Error(`Cannot resolve relative AJAX URL without referer: ${url}`);
+  }
+  return new URL(url, referer).toString();
+}
+
+function isCrossOriginRequest(pageUrl: string, requestUrl: string): boolean {
+  try {
+    return new URL(pageUrl).origin !== new URL(requestUrl).origin;
+  } catch {
+    return false;
+  }
+}
+
+async function fetchViaPageEvaluate(
+  page: SessionPage,
+  absoluteUrl: string,
+  referer: string,
+  init?: BrowserSessionRequestInit,
+): Promise<BrowserSessionRequestResult> {
+  const method = init?.method ?? 'GET';
+  const headers: Record<string, string> = {
+    Accept: 'application/json, text/javascript, text/html, */*; q=0.01',
+    'X-Requested-With': 'XMLHttpRequest',
+    ...(referer ? { Referer: referer } : {}),
+    ...init?.headers,
+  };
+  const payload = await page.evaluate(
+    async (args: {
+      url: string;
+      method: string;
+      headers: Record<string, string>;
+      body?: string;
+    }) => {
+      const response = await fetch(args.url, {
+        method: args.method,
+        headers: args.headers,
+        credentials: 'include',
+        body: args.method === 'POST' ? args.body : undefined,
+      });
+      return { status: response.status, body: await response.text() };
+    },
+    {
+      url: absoluteUrl,
+      method,
+      headers,
+      body: init?.data,
+    },
+  );
+  return payload;
+}
+
 /**
  * Abort image/CSS/font requests on a page (default ON in session pools — cheap
  * residential proxy GB). Safe to call when asset blocking is disabled (no-op).
@@ -288,6 +343,7 @@ export async function fetchJsonInPage(
 ): Promise<BrowserSessionRequestResult> {
   const timeout = init?.timeoutMs ?? DEFAULT_SESSION_TIMEOUT_MS;
   const referer = resolveReferer(target, init);
+  const absoluteUrl = resolveAbsoluteRequestUrl(url, referer);
   const headers = {
     Accept: 'application/json, text/javascript, text/html, */*; q=0.01',
     'X-Requested-With': 'XMLHttpRequest',
@@ -295,10 +351,13 @@ export async function fetchJsonInPage(
     ...init?.headers,
   };
   const method = init?.method ?? 'GET';
+  if (isSessionPage(target) && referer && isCrossOriginRequest(referer, absoluteUrl)) {
+    return fetchViaPageEvaluate(target, absoluteUrl, referer, init);
+  }
   const response =
     method === 'POST'
-      ? await target.request.post(url, { timeout, headers, data: init?.data })
-      : await target.request.get(url, { timeout, headers });
+      ? await target.request.post(absoluteUrl, { timeout, headers, data: init?.data })
+      : await target.request.get(absoluteUrl, { timeout, headers });
   const body = await response.text();
   return { status: response.status(), body };
 }

@@ -46,7 +46,7 @@ const ES_PROXY_COUNTRY = 'es';
 
 export function isHabitacliaChallenge(html: string): boolean {
   if (html.trim().length < 512) return true;
-  return /acceso denegado|verifica|datadome|px-captcha|Pardon Our Interruption|hab_library/i.test(
+  return /acceso denegado|verifica que eres|datadome|px-captcha|Pardon Our Interruption|Request unsuccessful\. Incapsula/i.test(
     html,
   );
 }

@@ -123,6 +123,7 @@ class PlaywrightBrowserSession implements BrowserSession {
   async request(url: string, init?: BrowserSessionRequestInit): Promise<BrowserSessionRequestResult> {
     return fetchJsonInPage(this.page, url, {
       ...init,
+      referer: init?.referer ?? this.pageUrl(),
       timeoutMs: init?.timeoutMs ?? this.defaultTimeoutMs,
     });
   }
