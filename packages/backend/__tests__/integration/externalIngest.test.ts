@@ -19,9 +19,13 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-import { FixtureProvider, createFetchRuntime } from '@homiio/listing-providers';
+import {
+  FixtureProvider,
+  ListingValidationError,
+  createFetchRuntime,
+} from '@homiio/listing-providers';
 import type { FetchContext } from '@homiio/listing-providers';
-import type { NormalizedListing } from '@homiio/shared-types';
+import { OfferingType, PropertyType, type NormalizedListing } from '@homiio/shared-types';
 
 import { IngestionService } from '../../services/ingestion/IngestionService';
 import { ExternalMediaIngest } from '../../services/ingestion/ExternalMediaIngest';
@@ -165,5 +169,57 @@ describe('external listing ingest (fixture -> IngestionService)', () => {
       name: 'María López',
       agencyName: 'Agencia Demo SL',
     });
+  });
+
+  it('updates externalContact on re-ingest without duplicating media', async () => {
+    const ingestion = buildIngestionService();
+    const [first] = await normalizeAll();
+    const initial: NormalizedListing = {
+      ...first,
+      contact: { phone: '+34111111111', name: 'First Agent' },
+    };
+    await ingestion.ingest(initial);
+    expect(fetchImage).toHaveBeenCalledTimes(2);
+
+    const updatedContact: NormalizedListing = {
+      ...first,
+      contact: {
+        phone: '+34622222222',
+        email: 'updated@example.com',
+        agencyName: 'Updated Agency',
+        kind: 'agency',
+      },
+    };
+    const result = await ingestion.ingest(updatedContact);
+    expect(result.status).toBe('updated');
+    expect(fetchImage).toHaveBeenCalledTimes(2);
+
+    const property = await Property.findOne({ source: 'fixture', sourceId: FIRST_SOURCE_ID }).lean();
+    expect(property?.externalContact).toEqual({
+      phone: '+34622222222',
+      email: 'updated@example.com',
+      agencyName: 'Updated Agency',
+      kind: 'agency',
+    });
+  });
+
+  it('rejects partner-style absurd monthly rent at the ingest gate (11628 EUR)', async () => {
+    const ingestion = buildIngestionService();
+    const absurdListing: NormalizedListing = {
+      source: 'blueground',
+      sourceId: 'bcn-1549599p',
+      sourceUrl: 'https://www.theblueground.com/p/furnished-apartments/bcn-1549599p',
+      address: { street: 'Carrer de Simó Oller', city: 'Barcelona', countryCode: 'ES' },
+      type: PropertyType.APARTMENT,
+      offerings: [OfferingType.LONG_TERM_RENT],
+      longTermRent: { monthlyAmount: 11_628, currency: 'EUR' },
+      bedrooms: 1,
+      remoteImages: [{ url: 'https://example.com/photo.jpg', isPrimary: true }],
+      status: 'published',
+    };
+
+    await expect(ingestion.ingest(absurdListing)).rejects.toBeInstanceOf(ListingValidationError);
+    expect(await Property.countDocuments({ source: 'blueground', sourceId: 'bcn-1549599p' })).toBe(0);
+    expect(fetchImage).not.toHaveBeenCalled();
   });
 });

@@ -15,7 +15,7 @@
     "migrate:billing": "node scripts/migrate-billing-field.js",
     "seed:geo": "ts-node --transpile-only scripts/seedGeo.ts",
     "seed:properties": "ts-node --transpile-only scripts/seedProperties.ts",
-    "test": "jest",
+    "test": "cd ../listing-providers && bun run build && cd ../backend && NODE_OPTIONS='--max-old-space-size=6144' jest",
     "test:watch": "jest --watch",
     "test:images": "ts-node --transpile-only scripts/test-image-upload.ts",
     "test:webhook": "node scripts/test-stripe-webhook.js",

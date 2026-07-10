@@ -7,12 +7,14 @@ module.exports = {
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
   modulePathIgnorePatterns: ['<rootDir>/dist/'],
   testTimeout: 30000,
+  maxWorkers: 2,
+  workerIdleMemoryLimit: '512MB',
   setupFilesAfterEnv: ['<rootDir>/__tests__/jest.setup.ts'],
   moduleNameMapper: {
     '^@homiio/shared-types$': '<rootDir>/../shared-types/src',
     '^@homiio/shared-types/(.*)$': '<rootDir>/../shared-types/src/$1',
-    '^@homiio/listing-providers$': '<rootDir>/../listing-providers/src',
-    '^@homiio/listing-providers/(.*)$': '<rootDir>/../listing-providers/src/$1',
+    '^@homiio/listing-providers$': '<rootDir>/../listing-providers/dist/index.js',
+    '^@homiio/listing-providers/(.*)$': '<rootDir>/../listing-providers/dist/$1.js',
   },
   transform: {
     '^.+\\.ts$': [

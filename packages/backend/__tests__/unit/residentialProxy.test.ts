@@ -47,6 +47,17 @@ afterEach(() => {
 /* Proxy URL parsing                                                          */
 /* -------------------------------------------------------------------------- */
 
+
+describe('maskProxyUrl', () => {
+  it('redacts userinfo from proxy URLs for safe logging', () => {
+    expect(proxyModule.maskProxyUrl('http://user:pass@host:823')).toBe('http://***:***@host:823/');
+  });
+
+  it('returns empty string for missing input', () => {
+    expect(proxyModule.maskProxyUrl(undefined)).toBe('');
+  });
+});
+
 describe('parseResidentialProxyUrl', () => {
   it('parses user:pass@host:port into server + credentials', () => {
     const config = parseResidentialProxyUrl(PROXY_URL);
