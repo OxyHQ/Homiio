@@ -101,6 +101,8 @@ export class HttpFetchRuntime implements FetchRuntime {
     const requestFetch = await this.resolveFetch();
     return withTimeout(timeoutMs, init?.signal, async (signal) => {
       const response = await requestFetch(url, {
+        method: init?.method ?? 'GET',
+        body: init?.body,
         signal,
         redirect: 'follow',
         headers: {

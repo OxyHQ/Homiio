@@ -65,12 +65,12 @@ const leasePropertyTitle = (property?: Lease['property']): string => {
 
 type FilterOption = 'all' | 'active' | 'pending_signatures' | 'expired' | 'draft';
 
-const FILTERS: { id: FilterOption; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'active', label: 'Active' },
-  { id: 'pending_signatures', label: 'Pending' },
-  { id: 'expired', label: 'Expired' },
-  { id: 'draft', label: 'Drafts' },
+const FILTER_OPTIONS: { id: FilterOption; labelKey: string }[] = [
+  { id: 'all', labelKey: 'contracts.list.filters.all' },
+  { id: 'active', labelKey: 'contracts.list.filters.active' },
+  { id: 'pending_signatures', labelKey: 'contracts.list.filters.pending' },
+  { id: 'expired', labelKey: 'contracts.list.filters.expired' },
+  { id: 'draft', labelKey: 'contracts.list.filters.draft' },
 ];
 
 const ContractsSkeleton: React.FC = () => (
@@ -141,7 +141,7 @@ export default function ContractsScreen() {
       <View style={styles.root}>
         <Header
           options={{
-            title: t('Rental Contracts'),
+            title: t('contracts.list.title'),
             titlePosition: 'center',
           }}
         />
@@ -165,7 +165,7 @@ export default function ContractsScreen() {
     <View style={styles.root}>
       <Header
         options={{
-          title: t('Rental Contracts'),
+          title: t('contracts.list.title'),
           titlePosition: 'center',
         }}
       />
@@ -173,7 +173,7 @@ export default function ContractsScreen() {
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.titleBlock}>
             <SectionEyebrow>Agreements</SectionEyebrow>
-            <H2 style={styles.title}>{t('Rental Contracts')}</H2>
+            <H2 style={styles.title}>{t('contracts.list.title')}</H2>
             <BloomText style={styles.subtitle}>
               {t(
                 'Track every lease you sign or issue and pull up key terms in seconds.',
@@ -186,7 +186,7 @@ export default function ContractsScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.filterRow}
           >
-            {FILTERS.map((entry) => {
+            {FILTER_OPTIONS.map((entry) => {
               const isActive = filter === entry.id;
               return (
                 <Chip
@@ -196,7 +196,7 @@ export default function ContractsScreen() {
                   color={isActive ? 'primary' : 'default'}
                   selected={isActive}
                 >
-                  {t(entry.label)}
+                  {t(entry.labelKey)}
                 </Chip>
               );
             })}

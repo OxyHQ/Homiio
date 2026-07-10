@@ -226,9 +226,36 @@ PROVIDER_IDEALISTA_ENABLED=true
 PROVIDER_FOTOCASA_ENABLED=true
 PROVIDER_HABITACLIA_ENABLED=true
 PROVIDER_BLUEGROUND_ENABLED=true
+PROVIDER_PISOS_ENABLED=true
+PROVIDER_MILANUNCIOS_ENABLED=false
+PROVIDER_YAENCONTRE_ENABLED=false
+PROVIDER_INDOMIO_ENABLED=false
 PROVIDER_APARTMENTS_COM_ENABLED=true
 PROVIDER_ZILLOW_ENABLED=true
+PROVIDER_REALTOR_COM_ENABLED=true
+PROVIDER_HOTPADS_ENABLED=true
+PROVIDER_REDFIN_ENABLED=true
+PROVIDER_RIGHTMOVE_ENABLED=true
+PROVIDER_ZOOPLA_ENABLED=true
+PROVIDER_ONTHEMARKET_ENABLED=true
+PROVIDER_OPENRENT_ENABLED=true
+PROVIDER_IDEALISTA_IT_ENABLED=false
+PROVIDER_IMMOBILIARE_ENABLED=false
+PROVIDER_CASA_IT_ENABLED=false
+PROVIDER_SUBITO_ENABLED=false
+PROVIDER_IMMOBILIENSCOUT24_ENABLED=true
+PROVIDER_IMMOWELT_ENABLED=true
+PROVIDER_KLEINANZEIGEN_ENABLED=true
+PROVIDER_STORIA_ENABLED=true
+PROVIDER_IMOBILIARE_RO_ENABLED=true
+PROVIDER_OLX_RO_ENABLED=true
 ```
+
+GB market uses ISO `ListingMarket = 'GB'`. Optional `LISTING_GB_CITIES`. Rightmove/OnTheMarket/OpenRent work over HTTP+JSON; Zoopla needs browser + residential proxy (Cloudflare). Dedicated UK portals still filter non-housing (garages/parking/land) at discover/normalize. Contact (phone/email/WhatsApp/agency) maps to `Property.externalContact` for direct CTAs.
+
+DE market uses ISO `ListingMarket = 'DE'`. Optional `LISTING_DE_CITIES`. ImmobilienScout24 uses the mobile JSON API; Immowelt prefers LZ-decompressed SERP JSON (session AJAX when available); Kleinanzeigen is housing-category-only (c203/c205/…). Contact maps to `Property.externalContact`.
+
+RO market uses ISO `ListingMarket = 'RO'`. Optional `LISTING_RO_CITIES`. Storia prefers `__NEXT_DATA__` JSON (+ Playwright session); Imobiliare.ro uses Inertia `data-page` JSON + schema.org `@graph`; OLX.ro is **housing-category-only** (`/imobiliare/…` allowlist, reject non-`real_estate`). Contact maps to `Property.externalContact`.
 
 The worker reads these at startup; disabled providers are not registered.
 

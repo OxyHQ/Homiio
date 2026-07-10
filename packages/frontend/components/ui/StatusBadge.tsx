@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Badge, type BadgeColor, type BadgeSize } from '@oxyhq/bloom/badge';
 import { colors } from '@/styles/colors';
@@ -46,56 +47,38 @@ interface StatusInfo {
   icon: IoniconName;
   color: string;
   badgeColor: BadgeColor;
-  label: string;
+  i18nKey: string;
 }
 
+const STATUS_I18N: Record<StatusType, StatusInfo> = {
+  draft: { icon: 'document-outline', color: colors.COLOR_BLACK_LIGHT_3, badgeColor: 'default', i18nKey: 'status.draft' },
+  pending: { icon: 'hourglass-outline', color: colors.warning, badgeColor: 'warning', i18nKey: 'status.pending' },
+  pending_signatures: { icon: 'create-outline', color: colors.warning, badgeColor: 'warning', i18nKey: 'status.pendingSignatures' },
+  active: { icon: 'checkmark-circle', color: colors.success, badgeColor: 'success', i18nKey: 'status.active' },
+  expired: { icon: 'calendar-outline', color: colors.textTertiary, badgeColor: 'default', i18nKey: 'status.expired' },
+  terminated: { icon: 'close-circle-outline', color: colors.danger, badgeColor: 'error', i18nKey: 'status.terminated' },
+  cancelled: { icon: 'close-circle-outline', color: colors.textTertiary, badgeColor: 'default', i18nKey: 'status.cancelled' },
+  processing: { icon: 'reload-outline', color: colors.info, badgeColor: 'info', i18nKey: 'status.processing' },
+  completed: { icon: 'checkmark-circle', color: colors.success, badgeColor: 'success', i18nKey: 'status.completed' },
+  failed: { icon: 'close-circle-outline', color: colors.danger, badgeColor: 'error', i18nKey: 'status.failed' },
+  refunded: { icon: 'refresh-circle-outline', color: colors.textTertiary, badgeColor: 'default', i18nKey: 'status.refunded' },
+  success: { icon: 'checkmark-circle', color: colors.success, badgeColor: 'success', i18nKey: 'status.success' },
+  warning: { icon: 'warning', color: colors.warning, badgeColor: 'warning', i18nKey: 'status.warning' },
+  error: { icon: 'close-circle-outline', color: colors.danger, badgeColor: 'error', i18nKey: 'status.error' },
+  info: { icon: 'information-circle-outline', color: colors.info, badgeColor: 'info', i18nKey: 'status.info' },
+  investigating: { icon: 'search-outline', color: colors.warning, badgeColor: 'warning', i18nKey: 'status.investigating' },
+  resolved: { icon: 'checkmark-circle', color: colors.success, badgeColor: 'success', i18nKey: 'status.resolved' },
+  online: { icon: 'radio-button-on', color: colors.success, badgeColor: 'success', i18nKey: 'status.online' },
+  offline: { icon: 'radio-button-off', color: colors.textTertiary, badgeColor: 'default', i18nKey: 'status.offline' },
+};
+
 function getStatusInfo(status: StatusType): StatusInfo {
-  switch (status) {
-    // Contract statuses
-    case 'draft':
-      return { icon: 'document-outline', color: colors.COLOR_BLACK_LIGHT_3, badgeColor: 'default', label: 'Draft' };
-    case 'pending':
-      return { icon: 'hourglass-outline', color: colors.warning, badgeColor: 'warning', label: 'Pending' };
-    case 'pending_signatures':
-      return { icon: 'create-outline', color: colors.warning, badgeColor: 'warning', label: 'Pending signatures' };
-    case 'active':
-      return { icon: 'checkmark-circle', color: colors.success, badgeColor: 'success', label: 'Active' };
-    case 'expired':
-      return { icon: 'calendar-outline', color: colors.textTertiary, badgeColor: 'default', label: 'Expired' };
-    case 'terminated':
-      return { icon: 'close-circle-outline', color: colors.danger, badgeColor: 'error', label: 'Terminated' };
-    case 'cancelled':
-      return { icon: 'close-circle-outline', color: colors.textTertiary, badgeColor: 'default', label: 'Cancelled' };
-    // Payment statuses
-    case 'processing':
-      return { icon: 'reload-outline', color: colors.info, badgeColor: 'info', label: 'Processing' };
-    case 'completed':
-      return { icon: 'checkmark-circle', color: colors.success, badgeColor: 'success', label: 'Completed' };
-    case 'failed':
-      return { icon: 'close-circle-outline', color: colors.danger, badgeColor: 'error', label: 'Failed' };
-    case 'refunded':
-      return { icon: 'refresh-circle-outline', color: colors.textTertiary, badgeColor: 'default', label: 'Refunded' };
-    // General statuses
-    case 'success':
-      return { icon: 'checkmark-circle', color: colors.success, badgeColor: 'success', label: 'Success' };
-    case 'warning':
-      return { icon: 'warning', color: colors.warning, badgeColor: 'warning', label: 'Warning' };
-    case 'error':
-      return { icon: 'close-circle-outline', color: colors.danger, badgeColor: 'error', label: 'Error' };
-    case 'info':
-      return { icon: 'information-circle-outline', color: colors.info, badgeColor: 'info', label: 'Info' };
-    // Custom statuses
-    case 'investigating':
-      return { icon: 'search-outline', color: colors.warning, badgeColor: 'warning', label: 'Investigating' };
-    case 'resolved':
-      return { icon: 'checkmark-circle', color: colors.success, badgeColor: 'success', label: 'Resolved' };
-    case 'online':
-      return { icon: 'radio-button-on', color: colors.success, badgeColor: 'success', label: 'Online' };
-    case 'offline':
-      return { icon: 'radio-button-off', color: colors.textTertiary, badgeColor: 'default', label: 'Offline' };
-    default:
-      return { icon: 'help-circle-outline', color: colors.COLOR_BLACK_LIGHT_3, badgeColor: 'default', label: 'Unknown' };
-  }
+  return STATUS_I18N[status] ?? {
+    icon: 'help-circle-outline',
+    color: colors.COLOR_BLACK_LIGHT_3,
+    badgeColor: 'default',
+    i18nKey: 'status.unknown',
+  };
 }
 
 const BADGE_SIZE_MAP: Record<'small' | 'medium' | 'large', BadgeSize> = {
@@ -120,10 +103,11 @@ export function StatusBadge({
   customIcon,
   customText,
 }: StatusBadgeProps) {
+  const { t } = useTranslation();
   const statusInfo = getStatusInfo(status);
   const finalColor = customColor || statusInfo.color;
   const finalIcon = (customIcon as IoniconName | undefined) || statusInfo.icon;
-  const finalText = customText || statusInfo.label;
+  const finalText = customText || t(statusInfo.i18nKey);
 
   // When icon + text is desired with a custom override color, render a custom row
   // so we can keep the original Homiio look (solid bg + white icon + white text).

@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { Reservation } from '@homiio/shared-types';
@@ -26,13 +27,14 @@ export const ReservationCard: React.FC<ReservationCardProps> = ({
   variant = 'guest',
   actions,
 }) => {
+  const { t } = useTranslation();
   const router = useRouter();
   const { property } = useProperty(reservation.propertyId);
 
   const title = useMemo(() => {
-    if (!property) return 'Property';
+    if (!property) return t('reservations.card.propertyFallback');
     return getPropertyTitle(property);
-  }, [property]);
+  }, [property, t]);
 
   const imageSource = useMemo(() => {
     if (!property) return null;
@@ -43,13 +45,21 @@ export const ReservationCard: React.FC<ReservationCardProps> = ({
     router.push(`/reservations/${reservation.id}`);
   };
 
-  const guestLabel = reservation.guestCount === 1 ? 'guest' : 'guests';
+  const guestLabel =
+    reservation.guestCount === 1
+      ? t('reservations.card.guestSingular')
+      : t('reservations.card.guestPlural');
+  const nightLabel =
+    reservation.nights === 1
+      ? t('reservations.card.nightSingular')
+      : t('reservations.card.nightPlural');
+  const hostSuffix = variant === 'host' ? t('reservations.card.hostGuestSuffix') : '';
 
   return (
     <ThumbnailCard
       thumbnail={<ThumbnailImage source={imageSource} />}
       onPress={handlePress}
-      accessibilityLabel={`Reservation ${reservation.id}`}
+      accessibilityLabel={t('reservations.card.accessibility', { id: reservation.id })}
       actions={actions}
     >
       <View style={styles.headerRow}>
@@ -62,10 +72,13 @@ export const ReservationCard: React.FC<ReservationCardProps> = ({
         {formatDateRange(reservation.checkIn, reservation.checkOut)}
       </BloomText>
       <BloomText style={styles.meta} numberOfLines={1}>
-        {reservation.nights} {reservation.nights === 1 ? 'night' : 'nights'} ·{' '}
-        {reservation.guestCount} {guestLabel}
-        {variant === 'host' ? ' (guest)' : ''} ·{' '}
-        {formatCurrency(reservation.total, reservation.currency)}
+        {t('reservations.card.meta', {
+          nights: `${reservation.nights} ${nightLabel}`,
+          guestCount: reservation.guestCount,
+          guestLabel,
+          hostSuffix,
+          total: formatCurrency(reservation.total, reservation.currency),
+        })}
       </BloomText>
     </ThumbnailCard>
   );

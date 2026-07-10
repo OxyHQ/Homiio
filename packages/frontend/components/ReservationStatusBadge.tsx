@@ -2,11 +2,11 @@ import { ReservationStatus } from '@homiio/shared-types';
 import { createStatusBadge, type StatusBadgeEntry } from '@/components/ui/createStatusBadge';
 
 const STATUS_MAP: Record<ReservationStatus, StatusBadgeEntry> = {
-  [ReservationStatus.PENDING]: { label: 'Pending', color: 'warning' },
-  [ReservationStatus.CONFIRMED]: { label: 'Confirmed', color: 'success' },
-  [ReservationStatus.DECLINED]: { label: 'Declined', color: 'error' },
-  [ReservationStatus.CANCELLED]: { label: 'Cancelled', color: 'default' },
-  [ReservationStatus.COMPLETED]: { label: 'Completed', color: 'info' },
+  [ReservationStatus.PENDING]: { i18nKey: 'status.reservation.pending', label: 'Pending', color: 'warning' },
+  [ReservationStatus.CONFIRMED]: { i18nKey: 'status.reservation.confirmed', label: 'Confirmed', color: 'success' },
+  [ReservationStatus.DECLINED]: { i18nKey: 'status.reservation.declined', label: 'Declined', color: 'error' },
+  [ReservationStatus.CANCELLED]: { i18nKey: 'status.reservation.cancelled', label: 'Cancelled', color: 'default' },
+  [ReservationStatus.COMPLETED]: { i18nKey: 'status.reservation.completed', label: 'Completed', color: 'info' },
 };
 
 export const ReservationStatusBadge = createStatusBadge(STATUS_MAP);

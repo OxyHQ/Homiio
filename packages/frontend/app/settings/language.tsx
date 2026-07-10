@@ -18,9 +18,14 @@ import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
+import {
+  SUPPORTED_LANGUAGE_CODES,
+  type SupportedLanguageCode,
+  setStoredLanguage,
+} from '@/utils/languagePreference';
 
 interface LanguageOption {
-  code: string;
+  code: SupportedLanguageCode;
   label: string;
   description: string;
   flag: string;
@@ -29,15 +34,8 @@ interface LanguageOption {
 const LANGUAGES: LanguageOption[] = [
   { code: 'en-US', label: 'English', description: 'English (United States)', flag: '🇺🇸' },
   { code: 'es-ES', label: 'Español', description: 'Español (España)', flag: '🇪🇸' },
-  { code: 'ca-ES', label: 'Català', description: 'Català (Espanya)', flag: '🇪🇸' },
-  { code: 'fr-FR', label: 'Français', description: 'Français (France)', flag: '🇫🇷' },
-  { code: 'de-DE', label: 'Deutsch', description: 'Deutsch (Deutschland)', flag: '🇩🇪' },
+  { code: 'ca-ES', label: 'Català', description: 'Català (Espanya)', flag: '🏴' },
   { code: 'it-IT', label: 'Italiano', description: 'Italiano (Italia)', flag: '🇮🇹' },
-  { code: 'pt-PT', label: 'Português', description: 'Português (Portugal)', flag: '🇵🇹' },
-  { code: 'zh-CN', label: '中文', description: 'Chinese (Simplified)', flag: '🇨🇳' },
-  { code: 'ja-JP', label: '日本語', description: 'Japanese (Japan)', flag: '🇯🇵' },
-  { code: 'ru-RU', label: 'Русский', description: 'Russian (Russia)', flag: '🇷🇺' },
-  { code: 'ar-AR', label: 'العربية', description: 'Arabic', flag: '🇸🇦' },
 ];
 
 export default function LanguageSettingsScreen() {
@@ -48,25 +46,22 @@ export default function LanguageSettingsScreen() {
     <View style={styles.root}>
       <Header
         options={{
-          title: t('Language'),
+          title: t('settings.language.title'),
           showBackButton: true,
           titlePosition: 'center',
         }}
       />
       <ScrollView contentContainerStyle={styles.scroll}>
-        {LANGUAGES.length === 0 ? (
+        {SUPPORTED_LANGUAGE_CODES.length === 0 ? (
           <EmptyState
             icon="language-outline"
-            title={t('No languages found')}
-            description={t('No language options are currently available')}
+            title={t('settings.language.emptyTitle')}
+            description={t('settings.language.emptyDescription')}
           />
         ) : (
           <SettingsListGroup
-            title={t('settings.language.choose', 'Choose a language')}
-            footer={t(
-              'settings.language.footer',
-              'Changing the language updates labels across the app immediately.',
-            )}
+            title={t('settings.language.choose')}
+            footer={t('settings.language.footer')}
           >
             {LANGUAGES.map((lang) => {
               const isActive = i18n.language === lang.code;
@@ -86,8 +81,9 @@ export default function LanguageSettingsScreen() {
                     ) : undefined
                   }
                   showChevron={!isActive}
-                  onPress={() => {
-                    i18n.changeLanguage(lang.code);
+                  onPress={async () => {
+                    await setStoredLanguage(lang.code);
+                    await i18n.changeLanguage(lang.code);
                     router.back();
                   }}
                 />

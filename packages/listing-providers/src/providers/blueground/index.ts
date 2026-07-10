@@ -43,7 +43,7 @@ import {
 const PROVIDER_ID: ProviderId = 'blueground';
 
 /** City slugs for `/m/furnished-apartments/<slug>` search pages. */
-const DEFAULT_CITIES: Readonly<Record<ListingMarket, readonly string[]>> = {
+const DEFAULT_CITIES: Readonly<Partial<Record<ListingMarket, readonly string[]>>> = {
   ES: ['madrid-esp', 'barcelona-esp', 'valencia-esp'],
   US: ['nyc-usa', 'los-angeles-usa', 'boston-usa', 'chicago-usa', 'washington-dc-usa'],
 };
@@ -115,7 +115,9 @@ export class BluegroundProvider implements ListingProvider {
   }
 
   async *discover(job: DiscoverJob): AsyncIterable<ExternalListingRef> {
-    const cities = job.city ? [job.city] : DEFAULT_CITIES[job.market];
+    const cities = job.city
+      ? [job.city]
+      : (DEFAULT_CITIES[job.market] ?? DEFAULT_CITIES.ES ?? ['madrid-esp']);
     const limit = job.limit ?? Number.POSITIVE_INFINITY;
     const seen = new Set<string>();
     let yielded = 0;

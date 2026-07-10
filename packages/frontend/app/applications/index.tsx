@@ -12,6 +12,7 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { isThisWeek, isToday } from 'date-fns';
 
@@ -36,14 +37,14 @@ type Filter = 'all' | 'active' | 'decided' | 'withdrawn';
 
 interface FilterOption {
   value: Filter;
-  label: string;
+  labelKey: string;
 }
 
-const FILTERS: FilterOption[] = [
-  { value: 'all', label: 'All' },
-  { value: 'active', label: 'Active' },
-  { value: 'decided', label: 'Decided' },
-  { value: 'withdrawn', label: 'Withdrawn' },
+const FILTER_OPTIONS: FilterOption[] = [
+  { value: 'all', labelKey: 'applications.list.filters.all' },
+  { value: 'active', labelKey: 'applications.list.filters.active' },
+  { value: 'decided', labelKey: 'applications.list.filters.decided' },
+  { value: 'withdrawn', labelKey: 'applications.list.filters.withdrawn' },
 ];
 
 interface Buckets {
@@ -70,14 +71,10 @@ const bucketApplications = (items: TenantApplication[]): Buckets => {
 };
 
 interface DateGroup {
-  label: string;
+  labelKey: string;
   items: TenantApplication[];
 }
 
-/**
- * Group a list of applications by submission recency so the screen reads
- * Today → This week → Earlier instead of a single dense column.
- */
 const groupByDate = (items: TenantApplication[]): DateGroup[] => {
   const today: TenantApplication[] = [];
   const thisWeek: TenantApplication[] = [];
@@ -95,13 +92,14 @@ const groupByDate = (items: TenantApplication[]): DateGroup[] => {
   }
 
   return [
-    { label: 'Today', items: today },
-    { label: 'This week', items: thisWeek },
-    { label: 'Earlier', items: earlier },
+    { labelKey: 'applications.list.groups.today', items: today },
+    { labelKey: 'applications.list.groups.thisWeek', items: thisWeek },
+    { labelKey: 'applications.list.groups.earlier', items: earlier },
   ].filter((group) => group.items.length > 0);
 };
 
 export default function MyApplicationsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { isAuthenticated } = useOxy();
   const applicationsQuery = useMyApplications();
@@ -131,7 +129,7 @@ export default function MyApplicationsScreen() {
     <Header
       options={{
         showBackButton: true,
-        title: 'My applications',
+        title: t('applications.list.title'),
         titlePosition: 'center',
       }}
     />
@@ -163,7 +161,7 @@ export default function MyApplicationsScreen() {
         {header}
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <View style={styles.content}>
-            <FilterRow value={filter} onChange={setFilter} />
+            <FilterRow value={filter} onChange={setFilter} t={t} />
             <ListSkeleton rows={5} rowHeight={120} />
           </View>
         </SafeAreaView>
@@ -196,7 +194,7 @@ export default function MyApplicationsScreen() {
       {header}
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
-          <FilterRow value={filter} onChange={setFilter} />
+          <FilterRow value={filter} onChange={setFilter} t={t} />
 
           {filtered.length === 0 ? (
             <View style={styles.emptyWrap}>
@@ -221,8 +219,8 @@ export default function MyApplicationsScreen() {
             </View>
           ) : (
             dateGroups.map((group) => (
-              <View key={group.label} style={styles.section}>
-                <BloomText style={styles.sectionEyebrow}>{group.label}</BloomText>
+              <View key={group.labelKey} style={styles.section}>
+                <BloomText style={styles.sectionEyebrow}>{t(group.labelKey)}</BloomText>
                 <View style={styles.cards}>
                   {group.items.map((application) => (
                     <ApplicationCard
@@ -243,15 +241,16 @@ export default function MyApplicationsScreen() {
 interface FilterRowProps {
   value: Filter;
   onChange: (next: Filter) => void;
+  t: (key: string) => string;
 }
 
-const FilterRow: React.FC<FilterRowProps> = ({ value, onChange }) => (
+const FilterRow: React.FC<FilterRowProps> = ({ value, onChange, t }) => (
   <ScrollView
     horizontal
     showsHorizontalScrollIndicator={false}
     contentContainerStyle={styles.filterRow}
   >
-    {FILTERS.map((option) => (
+    {FILTER_OPTIONS.map((option) => (
       <Chip
         key={option.value}
         variant={value === option.value ? 'solid' : 'outlined'}
@@ -260,7 +259,7 @@ const FilterRow: React.FC<FilterRowProps> = ({ value, onChange }) => (
         selected={value === option.value}
         onPress={() => onChange(option.value)}
       >
-        {option.label}
+        {t(option.labelKey)}
       </Chip>
     ))}
   </ScrollView>

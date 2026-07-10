@@ -233,3 +233,116 @@ export function parseFotocasaSearch(html: string): { sourceId: string; url: stri
   }
   return refs;
 }
+
+function resolveTransactionType(value: unknown): 'rent' | 'sale' | undefined {
+  const raw = asString(value)?.toUpperCase();
+  if (!raw) return undefined;
+  if (raw === 'RENT' || raw === '3' || raw.includes('RENT')) return 'rent';
+  if (raw === 'BUY' || raw === 'SALE' || raw === '1' || raw.includes('SALE') || raw.includes('BUY')) {
+    return 'sale';
+  }
+  return undefined;
+}
+
+function readPrice(record: Record<string, unknown>): number | undefined {
+  if (isRecord(record.price)) return asNumber(record.price.amount) ?? asNumber(record.price.value);
+  const fromPrices = Array.isArray(record.prices) ? record.prices[0] : undefined;
+  if (isRecord(fromPrices)) return asNumber(fromPrices.amount);
+  return asNumber(record.price) ?? asNumber(record.rawPrice);
+}
+
+function collectImageUrls(record: Record<string, unknown>): string[] {
+  const out: string[] = [];
+  const push = (entry: unknown): void => {
+    if (typeof entry === 'string') {
+      out.push(entry);
+      return;
+    }
+    if (!isRecord(entry)) return;
+    const url = asString(entry.url) ?? asString(entry.src);
+    if (url) out.push(url);
+  };
+  for (const key of ['multimedia', 'multimedias', 'images', 'image']) {
+    const value = record[key];
+    if (Array.isArray(value)) value.forEach(push);
+    else push(value);
+  }
+  return [...new Set(out)];
+}
+
+/**
+ * Parse a Fotocasa property JSON API body (`web.gw.fotocasa.es/.../property`)
+ * into a {@link FotocasaRaw}. Used when detail HTML lacks JSON-LD but the warmed
+ * session can reach the internal property endpoint.
+ */
+export function parseFotocasaPropertyJson(body: string, url: string): FotocasaRaw | undefined {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body.trim());
+  } catch {
+    return undefined;
+  }
+  const root = isRecord(parsed) && isRecord(parsed.data) ? parsed.data : parsed;
+  if (!isRecord(root)) return undefined;
+
+  const propertyId = asString(root.propertyId) ?? asString(root.id)?.replace(/^\d_/, '');
+  if (!propertyId) return undefined;
+
+  const detailUri = Array.isArray(root.uris)
+    ? asString((root.uris[0] as Record<string, unknown> | undefined)?.value)
+    : undefined;
+  const canonicalUrl = detailUri
+    ? detailUri.startsWith('http')
+      ? detailUri
+      : `${FOTOCASA_BASE_URL}${detailUri}`
+    : url;
+
+  const location = isRecord(root.location) ? root.location : {};
+  const operation =
+    resolveTransactionType(root.transactionType) ??
+    resolveTransactionType(root.transactionTypeId) ??
+    (canonicalUrl.includes('/comprar') || canonicalUrl.includes('/venta') ? 'sale' : 'rent');
+
+  const price = readPrice(root);
+  const city =
+    asString(location.level5Name) ??
+    asString(location.level3Name) ??
+    asString(location.level1Name) ??
+    asString(root.city) ??
+    '';
+
+  const listing: EsSchemaListing = {
+    types: ['Residence'],
+    name: asString(root.title) ?? asString(root.name),
+    description: asString(root.description),
+    url: canonicalUrl,
+    address: {
+      street: asString(root.street) ?? asString(root.streetType),
+      city,
+      region: asString(location.level2Name) ?? asString(location.level1Name),
+      postalCode: asString(root.zipCode) ?? asString(root.postalCode),
+      neighborhood: asString(location.level7Name) ?? asString(location.level8Name),
+      countryCode: 'ES',
+    },
+    coordinates:
+      asNumber(location.latitude) !== undefined && asNumber(location.longitude) !== undefined
+        ? { lat: asNumber(location.latitude) as number, lng: asNumber(location.longitude) as number }
+        : undefined,
+    images: collectImageUrls(root),
+    bedrooms: asNumber(root.rooms) ?? asNumber(root.bedrooms),
+    bathrooms: asNumber(root.baths) ?? asNumber(root.bathrooms),
+    squareMeters: asNumber(root.surface) ?? asNumber(root.squareMeters),
+    price,
+    priceCurrency: 'EUR',
+    operation,
+    amenities: [],
+  };
+
+  if (price === undefined || !city) return undefined;
+
+  return {
+    sourceId: fotocasaSourceIdFromUrl(canonicalUrl) ?? propertyId.replace(/\D/g, ''),
+    url: canonicalUrl,
+    listing,
+  };
+}

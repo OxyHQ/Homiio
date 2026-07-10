@@ -86,13 +86,33 @@ export {
 } from './providers/idealista/fixtures';
 
 export { FotocasaProvider, isFotocasaChallenge, fotocasaSourceIdFromUrl } from './providers/fotocasa';
-export { parseFotocasaDetail, parseFotocasaSearch, type FotocasaRaw } from './providers/fotocasa/parse';
+export {
+  parseFotocasaDetail,
+  parseFotocasaSearch,
+  parseFotocasaPropertyJson,
+  type FotocasaRaw,
+} from './providers/fotocasa/parse';
+export {
+  parseFotocasaSearchads,
+  parseFotocasaSsrSearch,
+  parseFotocasaLocationSegments,
+  fotocasaWarmSearchUrl,
+  fotocasaSearchadsUrl,
+  fotocasaUrlLocationSegmentsUrl,
+  fotocasaPropertyApiUrl,
+  isFotocasaSearchadsChallenge,
+} from './providers/fotocasa/searchads';
 export {
   FOTOCASA_BASE_URL,
   FOTOCASA_FIXTURE_DETAIL_HTML,
   FOTOCASA_FIXTURE_SEARCH_HTML,
   FOTOCASA_FIXTURE_REAL_ESTATE_LISTING_HTML,
   FOTOCASA_FIXTURE_NEXT_DATA_HTML,
+  FOTOCASA_FIXTURE_SEARCHADS_JSON,
+  FOTOCASA_FIXTURE_LOCATION_SEGMENTS_JSON,
+  FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE,
+  FOTOCASA_FIXTURE_PROPERTY_JSON,
+  FOTOCASA_FIXTURE_SSR_SEARCH_HTML,
 } from './providers/fotocasa/fixtures';
 
 export {
@@ -271,20 +291,6 @@ export {
 
 // DE market — ImmobilienScout24 (mobile JSON) / Immowelt (SERP JSON) / Kleinanzeigen (housing-only).
 export {
-  ImmobilienScout24Provider,
-  is24SourceIdFromUrl,
-  is24PublicUrl,
-  parseIs24Search,
-  parseIs24Expose,
-} from './providers/de/immobilienscout24';
-export {
-  IMMOBILIENSCOUT24_BASE_URL,
-  IMMOBILIENSCOUT24_MOBILE_API,
-  IS24_FIXTURE_SEARCH_JSON,
-  IS24_FIXTURE_EXPOSE_JSON,
-} from './providers/de/immobilienscout24/fixtures';
-
-export {
   ImmoweltProvider,
   immoweltSourceIdFromUrl,
   immoweltExposeUrl,
@@ -300,8 +306,28 @@ export {
   parseImmoweltCard,
   parseImmoweltSearchCards,
   isImmoweltChallenge,
+  immoweltSearchUrl,
   type ImmoweltRawListing,
 } from './providers/de/immowelt/parse';
+
+export {
+  ImmobilienScout24Provider,
+  is24SourceIdFromUrl,
+  is24PublicUrl,
+  parseIs24Search,
+  parseIs24Expose,
+} from './providers/de/immobilienscout24';
+export {
+  IMMOBILIENSCOUT24_BASE_URL,
+  IMMOBILIENSCOUT24_MOBILE_API,
+  IS24_FIXTURE_SEARCH_JSON,
+  IS24_FIXTURE_EXPOSE_JSON,
+} from './providers/de/immobilienscout24/fixtures';
+export {
+  is24SearchListUrl,
+  is24ExposeUrl,
+  is24Geocode,
+} from './providers/de/immobilienscout24/parse';
 
 export {
   KleinanzeigenProvider,
@@ -318,6 +344,49 @@ export {
   KLEINANZEIGEN_FIXTURE_DETAIL_HTML,
   KLEINANZEIGEN_FIXTURE_NON_HOUSING_HTML,
 } from './providers/de/kleinanzeigen/fixtures';
+
+// RO market — Storia / Imobiliare.ro / OLX.ro imobiliare (housing-only).
+export {
+  StoriaProvider,
+  isStoriaChallenge,
+  parseStoriaDetail,
+  parseStoriaSearch,
+  storiaSourceIdFromUrl,
+} from './providers/ro/storia';
+export {
+  STORIA_BASE_URL,
+  STORIA_FIXTURE_DETAIL_HTML,
+  STORIA_FIXTURE_RENT_DETAIL_HTML,
+  STORIA_FIXTURE_SEARCH_HTML,
+} from './providers/ro/storia/fixtures';
+
+export {
+  ImobiliareRoProvider,
+  isImobiliareRoChallenge,
+  parseImobiliareRoDetail,
+  parseImobiliareRoSearch,
+  imobiliareRoSourceIdFromUrl,
+} from './providers/ro/imobiliare';
+export {
+  IMOBILIARE_RO_BASE_URL,
+  IMOBILIARE_RO_FIXTURE_DETAIL_HTML,
+  IMOBILIARE_RO_FIXTURE_SEARCH_HTML,
+} from './providers/ro/imobiliare/fixtures';
+
+export {
+  OlxRoProvider,
+  isOlxRoChallenge,
+  isOlxRoHousingCategory,
+  parseOlxRoDetail,
+  parseOlxRoSearch,
+  olxRoSourceIdFromUrl,
+} from './providers/ro/olx';
+export {
+  OLX_RO_BASE_URL,
+  OLX_RO_FIXTURE_DETAIL_HTML,
+  OLX_RO_FIXTURE_NON_HOUSING_HTML,
+  OLX_RO_FIXTURE_SEARCH_HTML,
+} from './providers/ro/olx/fixtures';
 
 // ES — pisos.com (JSON-LD + embedded detail JSON), feature-flagged OFF by default.
 export { PisosProvider, isPisosChallenge, pisosSourceIdFromUrl } from './providers/pisos';
@@ -514,6 +583,9 @@ import { SubitoProvider } from './providers/it/subito';
 import { ImmobilienScout24Provider } from './providers/de/immobilienscout24';
 import { ImmoweltProvider } from './providers/de/immowelt';
 import { KleinanzeigenProvider } from './providers/de/kleinanzeigen';
+import { StoriaProvider } from './providers/ro/storia';
+import { ImobiliareRoProvider } from './providers/ro/imobiliare';
+import { OlxRoProvider } from './providers/ro/olx';
 
 /**
  * Configurable ES discover cities from `LISTING_ES_CITIES` (comma-separated).
@@ -558,6 +630,14 @@ function deCitiesFromEnv(): string[] {
     .filter(Boolean);
 }
 
+/** Configurable RO discover cities from `LISTING_RO_CITIES` (comma-separated). */
+function roCitiesFromEnv(): string[] {
+  return (process.env.LISTING_RO_CITIES ?? '')
+    .split(',')
+    .map((city) => city.trim())
+    .filter(Boolean);
+}
+
 /**
  * Whether a real portal provider is enabled via its env feature flag. Flags are
  * `PROVIDER_<ID>_ENABLED` (e.g. `PROVIDER_HABITACLIA_ENABLED`) and default OFF —
@@ -585,6 +665,8 @@ export function createDefaultRegistry(): ProviderRegistry {
   const itOptions = itCities.length > 0 ? { cities: itCities } : {};
   const deCities = deCitiesFromEnv();
   const deOptions = deCities.length > 0 ? { cities: deCities } : {};
+  const roCities = roCitiesFromEnv();
+  const roOptions = roCities.length > 0 ? { cities: roCities } : {};
   const flaggedProviders: ListingProvider[] = [
     new HabitacliaProvider(),
     new BluegroundProvider(),
@@ -610,6 +692,9 @@ export function createDefaultRegistry(): ProviderRegistry {
     new ImmobilienScout24Provider(deOptions),
     new ImmoweltProvider(deOptions),
     new KleinanzeigenProvider(deOptions),
+    new StoriaProvider(roOptions),
+    new ImobiliareRoProvider(roOptions),
+    new OlxRoProvider(roOptions),
   ];
   for (const provider of flaggedProviders) {
     if (providerEnabled(provider.id)) {

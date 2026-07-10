@@ -1,24 +1,15 @@
 /**
  * ContractCard — lease summary used by `/contracts` and shared list views.
- *
- * Stream Q polish:
- *   - CardSurface (surfaceElevated, withShadow('sm'), radius.lg) container.
- *   - Bloom Typography for every label / value, no raw <Text>.
- *   - Inline Bloom Button actions for share / download (when provided), laid
- *     out by the shared CardActionsFooter.
- *
- * The property / parties rows stay bespoke (a 16px icon + small label, and a
- * fixed-width-label + value row): the shared `DetailIconRow` renders a 32px
- * icon box + 15px label with its own vertical padding and a single shrinking
- * label, which can't express either of these without changing the visual.
  */
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@oxyhq/bloom/button';
 import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
+import { formatLocalized } from '@/utils/dateLocale';
 import { CardSurface } from './ui/CardSurface';
 import { CardActionsFooter } from './ui/CardActionsFooter';
 import { StatusBadge, type StatusType } from './ui/StatusBadge';
@@ -52,11 +43,7 @@ interface ContractCardProps {
 const formatDate = (raw: string): string => {
   const date = new Date(raw);
   if (Number.isNaN(date.getTime())) return raw;
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+  return formatLocalized(date, 'MMM d, yyyy');
 };
 
 export const ContractCard: React.FC<ContractCardProps> = ({
@@ -73,6 +60,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
   onSharePress,
   onDownloadPress,
 }) => {
+  const { t } = useTranslation();
   const [pressed, setPressed] = useState(false);
 
   const formattedRent = useMemo(
@@ -91,7 +79,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
         </View>
         <View style={styles.rentBlock}>
           <BloomText style={styles.rentAmount}>{formattedRent}</BloomText>
-          <BloomText style={styles.rentPeriod}> / month</BloomText>
+          <BloomText style={styles.rentPeriod}>{t('contracts.card.perMonth')}</BloomText>
         </View>
       </View>
 
@@ -108,11 +96,11 @@ export const ContractCard: React.FC<ContractCardProps> = ({
 
       <View style={styles.datesContainer}>
         <View style={styles.dateRow}>
-          <BloomText style={styles.dateLabel}>Start</BloomText>
+          <BloomText style={styles.dateLabel}>{t('contracts.card.start')}</BloomText>
           <BloomText style={styles.dateValue}>{formatDate(startDate)}</BloomText>
         </View>
         <View style={styles.dateRow}>
-          <BloomText style={styles.dateLabel}>End</BloomText>
+          <BloomText style={styles.dateLabel}>{t('contracts.card.end')}</BloomText>
           <BloomText style={styles.dateValue}>{formatDate(endDate)}</BloomText>
         </View>
       </View>
@@ -124,7 +112,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
             size={16}
             color={colors.COLOR_BLACK_LIGHT_2}
           />
-          <BloomText style={styles.partyLabel}>Landlord</BloomText>
+          <BloomText style={styles.partyLabel}>{t('contracts.card.landlord')}</BloomText>
           <BloomText style={styles.partyName} numberOfLines={1}>
             {landlordName}
           </BloomText>
@@ -135,7 +123,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
             size={16}
             color={colors.COLOR_BLACK_LIGHT_2}
           />
-          <BloomText style={styles.partyLabel}>Tenant</BloomText>
+          <BloomText style={styles.partyLabel}>{t('contracts.card.tenant')}</BloomText>
           <BloomText style={styles.partyName} numberOfLines={1}>
             {tenantName}
           </BloomText>
@@ -153,7 +141,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
           onPressOut={() => setPressed(false)}
           style={[styles.bodyPressable, pressed && styles.containerPressed]}
           accessibilityRole="button"
-          accessibilityLabel={`Contract ${title}`}
+          accessibilityLabel={t('contracts.card.accessibility', { title })}
         >
           {body}
         </Pressable>
@@ -176,7 +164,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
                 />
               }
             >
-              Share
+              {t('contracts.card.share')}
             </Button>
           ) : null}
           {onDownloadPress ? (
@@ -192,7 +180,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
                 />
               }
             >
-              Download
+              {t('contracts.card.download')}
             </Button>
           ) : null}
         </CardActionsFooter>

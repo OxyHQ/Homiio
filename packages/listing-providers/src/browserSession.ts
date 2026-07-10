@@ -30,6 +30,28 @@ import {
   type BrowserSession,
 } from './session';
 
+export type {
+  BrowserSession,
+  BrowserSessionRequestInit,
+  BrowserSessionRequestResult,
+  BrowserStorageState,
+  InPageRequestTarget,
+  SessionContext,
+  SessionPage,
+  WarmBrowserPageOptions,
+} from './session';
+
+export {
+  BrowserSessionChallengeError,
+  DEFAULT_CONTENT_SELECTORS,
+  DEFAULT_SESSION_TIMEOUT_MS,
+  exportStorageState,
+  fetchAjaxInPage,
+  fetchJsonInPage,
+  setupAssetBlocking,
+  warmBrowserPage,
+} from './session';
+
 export interface BrowserSessionOptions extends WarmBrowserPageOptions {
   userAgent?: string;
   proxy?: ResidentialProxyConfig;
@@ -40,6 +62,10 @@ export interface BrowserSessionOptions extends WarmBrowserPageOptions {
   proxySessionId?: string;
   /** Abort image/CSS/font requests (default ON — cheap residential GB). */
   blockAssets?: boolean;
+  /** Playwright locale (default `es-ES`). IT portals should pass `it-IT`. */
+  locale?: string;
+  /** Accept-Language header (default derived from locale). */
+  acceptLanguage?: string;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -205,13 +231,27 @@ export class PlaywrightSessionPool {
       const sessionId =
         options.proxySessionId ??
         (this.stickyProxySession || options.stickyProxySession ? createProxySessionId() : undefined);
+      const locale = options.locale ?? 'es-ES';
+      const acceptLanguage =
+        options.acceptLanguage ??
+        (locale.startsWith('fr')
+          ? 'fr-FR,fr;q=0.9,en;q=0.8'
+          : locale.startsWith('it')
+            ? 'it-IT,it;q=0.9,en;q=0.8'
+            : locale.startsWith('en')
+              ? 'en-US,en;q=0.9'
+              : locale.startsWith('de')
+                ? 'de-DE,de;q=0.9,en;q=0.8'
+                : locale.startsWith('ro')
+                  ? 'ro-RO,ro;q=0.9,en;q=0.8'
+                  : 'es-ES,es;q=0.9,en;q=0.8');
       const contextOptions: PwContextOptions = {
         userAgent: options.userAgent ?? this.userAgent,
-        locale: 'es-ES',
+        locale,
         viewport: { width: 1366, height: 900 },
         extraHTTPHeaders: {
           Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+          'Accept-Language': acceptLanguage,
         },
         javaScriptEnabled: true,
       };

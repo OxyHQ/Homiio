@@ -48,6 +48,7 @@ import { OXY_BASE_URL, OXY_CLIENT_ID } from '@/config';
 import { QueryClient, QueryClientProvider, onlineManager, focusManager } from '@tanstack/react-query';
 import NetInfo from '@react-native-community/netinfo';
 import { logger } from '@/utils/logger';
+import { getStoredLanguage, DEFAULT_LANGUAGE_CODE } from '@/utils/languagePreference';
 
 i18nUse(initReactI18next);
 
@@ -297,6 +298,13 @@ export default function RootLayout() {
     let active = true;
     (async () => {
       try {
+        const storedLanguage = await getStoredLanguage();
+        if (storedLanguage) {
+          await i18n.changeLanguage(storedLanguage);
+        } else if (i18n.language !== DEFAULT_LANGUAGE_CODE) {
+          await i18n.changeLanguage(DEFAULT_LANGUAGE_CODE);
+        }
+
         if (Platform.OS !== 'web') {
           await setupNotifications();
           const hasPermission = await requestNotificationPermissions();

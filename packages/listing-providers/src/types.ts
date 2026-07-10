@@ -139,6 +139,10 @@ export interface FetchRuntimeInit {
   signal?: AbortSignal;
   /** Per-request timeout in milliseconds. */
   timeoutMs?: number;
+  /** HTTP method (default GET). */
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD';
+  /** Request body (e.g. GraphQL JSON POST). */
+  body?: string;
 }
 
 /**
