@@ -345,12 +345,13 @@ export class ImageUploadService {
   }
 
   private async uploadToS3(buffer: Buffer, key: string, contentType: string): Promise<void> {
+    // Homiio media buckets use BucketOwnerEnforced (ACLs disabled). Do not set
+    // ACL — public delivery is via signed URL / CDN, not object ACLs.
     const command = new PutObjectCommand({
       Bucket: config.s3.bucketName,
       Key: key,
       Body: buffer,
       ContentType: contentType,
-      ACL: 'public-read',
       CacheControl: 'public, max-age=31536000', // 1 year cache
     });
 
