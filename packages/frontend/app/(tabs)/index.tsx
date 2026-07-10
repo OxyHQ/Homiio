@@ -23,13 +23,8 @@
  * grids) does NOT live on the home page — it belongs on /about.
  */
 import React, { useState } from 'react';
-import {
-  View,
-  RefreshControl,
-  Image,
-  Pressable,
-  useWindowDimensions,
-} from 'react-native';
+import { View, RefreshControl, Pressable, useWindowDimensions } from 'react-native';
+import { Image } from 'expo-image';
 import { useQueryClient } from '@tanstack/react-query';
 import { Menu } from 'lucide-react-native';
 import Animated, {
@@ -273,8 +268,9 @@ export default function HomePage() {
           >
             <Image
               source={require('@/assets/images/hero.jpg')}
-              className="h-full w-full"
-              resizeMode="cover"
+              className="h-full w-full object-cover object-center"
+              contentFit="cover"
+              contentPosition="center"
             />
           </Animated.View>
 
