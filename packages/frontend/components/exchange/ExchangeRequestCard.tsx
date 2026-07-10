@@ -34,7 +34,7 @@ export const ExchangeRequestCard: React.FC<ExchangeRequestCardProps> = ({
   const { property } = useProperty(request.propertyId);
 
   const title = useMemo(
-    () => (property ? getPropertyTitle(property) : t('listing.exchange.cardFallback', 'Home')),
+    () => (property ? getPropertyTitle(property) : t('listing.exchange.cardFallback')),
     [property, t],
   );
   const imageSource = useMemo(
@@ -44,8 +44,8 @@ export const ExchangeRequestCard: React.FC<ExchangeRequestCardProps> = ({
 
   const modeLabel =
     request.mode === ExchangeMode.SWAP
-      ? t('listing.exchange.mode.swap', 'Home swap')
-      : t('listing.exchange.mode.host', 'Free hosting');
+      ? t('listing.exchange.mode.swap')
+      : t('listing.exchange.mode.host');
 
   return (
     <ThumbnailCard

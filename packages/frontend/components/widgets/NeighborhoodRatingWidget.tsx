@@ -46,7 +46,7 @@ export function NeighborhoodRatingWidget({
 
   return (
     <BaseWidget
-      title={t('Neighborhood')}
+      title={t('property.neighborhood.title')}
       icon={<Ionicons name="location" size={22} color={colors.primaryColor} />}
     >
       <View style={styles.container}>
@@ -58,12 +58,12 @@ export function NeighborhoodRatingWidget({
         <View style={styles.metricsRow}>
           <View style={styles.metric}>
             <Text style={styles.metricValue}>{listingCount}</Text>
-            <Text style={styles.metricLabel}>{t('Listings')}</Text>
+            <Text style={styles.metricLabel}>{t('property.neighborhood.listings')}</Text>
           </View>
           {averageRent !== null ? (
             <View style={styles.metric}>
               <Text style={styles.metricValue}>{formatCurrency(averageRent, currencyCode)}</Text>
-              <Text style={styles.metricLabel}>{t('Avg. rent / mo')}</Text>
+              <Text style={styles.metricLabel}>{t('property.neighborhood.avgRentPerMonth')}</Text>
             </View>
           ) : null}
         </View>
@@ -77,10 +77,10 @@ export function NeighborhoodRatingWidget({
             />
             <Text style={styles.vsCityText}>
               {vsCity.percentDiff === 0
-                ? t('On par with the city average')
-                : t('{{pct}}% {{dir}} than the city average', {
+                ? t('property.neighborhood.onParWithCity')
+                : t('property.neighborhood.pctVsCity', {
                     pct: Math.abs(vsCity.percentDiff),
-                    dir: vsCity.percentDiff < 0 ? t('cheaper') : t('pricier'),
+                    dir: vsCity.percentDiff < 0 ? t('property.neighborhood.cheaper') : t('property.neighborhood.pricier'),
                   })}
             </Text>
           </View>

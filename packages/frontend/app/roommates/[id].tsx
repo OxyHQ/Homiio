@@ -1,11 +1,5 @@
 /**
  * Roommate profile detail — `/roommates/:id`.
- *
- * Shows a single roommate candidate's public profile (display name, bio,
- * verification, matching preferences) and lets the viewer send a roommate
- * request. Data comes from the authenticated profile-by-id read; the roommate
- * matching preferences and trust signals are derived through
- * `roommateService.getProfileDisplayInfo` (no invented values).
  */
 import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
@@ -16,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@oxyhq/bloom/button';
 import { Loading } from '@oxyhq/bloom/loading';
 import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
+import { useTranslation } from 'react-i18next';
 
 import { Header } from '@/components/Header';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -27,6 +22,7 @@ import { radius, spacing, withShadow } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
 export default function RoommateProfilePage() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id: string }>();
   const profileId = String(params.id);
   const { sendRequest } = useRoommate();
@@ -47,10 +43,10 @@ export default function RoommateProfilePage() {
     try {
       const ok = await sendRequest(profileId);
       Alert.alert(
-        ok ? 'Request sent' : 'Could not send request',
+        ok ? t('roommates.profileDetail.requestSentTitle') : t('roommates.profileDetail.requestFailedTitle'),
         ok
-          ? 'Your roommate request was sent.'
-          : 'We could not send your request. Please try again.',
+          ? t('roommates.profileDetail.requestSentBody')
+          : t('roommates.profileDetail.requestFailedBody'),
       );
     } finally {
       setIsSending(false);
@@ -69,8 +65,8 @@ export default function RoommateProfilePage() {
     if (profileQuery.isError || !profile || !info) {
       return (
         <ErrorState
-          title="Couldn't load profile"
-          description="We couldn't load this roommate profile. Please try again."
+          title={t('roommates.profileDetail.loadError')}
+          description={t('roommates.profileDetail.loadErrorDescription')}
           onRetry={() => profileQuery.refetch()}
         />
       );
@@ -82,7 +78,7 @@ export default function RoommateProfilePage() {
           <View style={styles.avatar}>
             <Ionicons name="person" size={36} color={colors.COLOR_BLACK_LIGHT_4} />
           </View>
-          <SectionEyebrow>Roommate</SectionEyebrow>
+          <SectionEyebrow>{t('roommates.profileDetail.title')}</SectionEyebrow>
           <H2 style={styles.name}>{info.name}</H2>
           {info.occupation ? (
             <BloomText style={styles.subtitle}>{info.occupation}</BloomText>
@@ -97,37 +93,37 @@ export default function RoommateProfilePage() {
 
         {info.bio ? (
           <View style={styles.card}>
-            <H3 style={styles.cardTitle}>About</H3>
+            <H3 style={styles.cardTitle}>{t('roommates.profileDetail.about')}</H3>
             <BloomText style={styles.bodyText}>{info.bio}</BloomText>
           </View>
         ) : null}
 
         <View style={styles.card}>
-          <H3 style={styles.cardTitle}>Roommate preferences</H3>
+          <H3 style={styles.cardTitle}>{t('roommates.profileDetail.preferencesTitle')}</H3>
           <View style={styles.detailRow}>
-            <BloomText style={styles.detailLabel}>Budget</BloomText>
+            <BloomText style={styles.detailLabel}>{t('roommates.profileDetail.budget')}</BloomText>
             <BloomText style={styles.detailValue}>
               {info.budget.max > 0
                 ? `${info.budget.currency} ${info.budget.min}–${info.budget.max}/mo`
-                : 'Not specified'}
+                : t('roommates.profileDetail.notSpecified')}
             </BloomText>
           </View>
           <View style={styles.detailRow}>
-            <BloomText style={styles.detailLabel}>Move-in</BloomText>
+            <BloomText style={styles.detailLabel}>{t('roommates.profileDetail.moveIn')}</BloomText>
             <BloomText style={styles.detailValue}>{info.moveInDate}</BloomText>
           </View>
           <View style={styles.detailRow}>
-            <BloomText style={styles.detailLabel}>Lease length</BloomText>
+            <BloomText style={styles.detailLabel}>{t('roommates.profileDetail.leaseLength')}</BloomText>
             <BloomText style={styles.detailValue}>{info.duration}</BloomText>
           </View>
         </View>
 
         <View style={styles.card}>
-          <H3 style={styles.cardTitle}>Trust</H3>
+          <H3 style={styles.cardTitle}>{t('roommates.profileDetail.trust')}</H3>
           <View style={styles.badgeRow}>
-            <TrustBadge label="Verified" active={info.isVerified} />
-            <TrustBadge label="References" active={info.hasReferences} />
-            <TrustBadge label="Rental history" active={info.rentalHistory} />
+            <TrustBadge label={t('roommates.profileDetail.verified')} active={info.isVerified} />
+            <TrustBadge label={t('roommates.profileDetail.references')} active={info.hasReferences} />
+            <TrustBadge label={t('roommates.profileDetail.rentalHistory')} active={info.rentalHistory} />
           </View>
         </View>
 
@@ -138,7 +134,7 @@ export default function RoommateProfilePage() {
           disabled={isSending}
           style={styles.sendButton}
         >
-          {isSending ? 'Sending…' : 'Send roommate request'}
+          {isSending ? t('roommates.profileDetail.sending') : t('roommates.profileDetail.sendRequest')}
         </Button>
       </ScrollView>
     );
@@ -148,7 +144,7 @@ export default function RoommateProfilePage() {
     <View style={styles.root}>
       <Header
         options={{
-          title: 'Roommate',
+          title: t('roommates.profileDetail.title'),
           showBackButton: true,
           titlePosition: 'center',
         }}

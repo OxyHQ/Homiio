@@ -3,6 +3,32 @@ import { useTrustScoreStore } from '@/store/trustScoreStore';
 import profileService from '@/services/profileService';
 import { colors } from '@/styles/colors';
 
+type TrustLevelKey = 'excellent' | 'good' | 'average' | 'fair' | 'needsImprovement';
+
+function trustLevelKey(score: number): TrustLevelKey {
+  if (score >= 90) return 'excellent';
+  if (score >= 70) return 'good';
+  if (score >= 50) return 'average';
+  if (score >= 30) return 'fair';
+  return 'needsImprovement';
+}
+
+type TrustScoreFactor = {
+  id: string;
+  type: string;
+  score: number;
+  weight: number;
+};
+
+function mapTrustFactors(factors: Array<{ type: string; value: number }>): TrustScoreFactor[] {
+  return factors.map((factor, index) => ({
+    id: `${factor.type}-${index}`,
+    type: factor.type,
+    score: factor.value,
+    weight: 1,
+  }));
+}
+
 export const useTrustScore = (profileId?: string) => {
   const {
     score,
@@ -15,16 +41,13 @@ export const useTrustScore = (profileId?: string) => {
     setHistory,
     setLoading,
     setError,
-    clearError,
   } = useTrustScoreStore();
 
-  // Local state for current profile ID
   const [currentProfileId, setCurrentProfileId] = useState<string | undefined>(profileId);
   const [profileType, setProfileType] = useState<
     'personal' | 'agency' | 'business' | 'cooperative'
   >('personal');
 
-  // Fetch trust score for a specific profile
   const fetchTrustScoreData = useCallback(
     async (targetProfileId?: string) => {
       const profileToFetch = targetProfileId || currentProfileId || profileId;
@@ -40,54 +63,30 @@ export const useTrustScore = (profileId?: string) => {
         setLoading(true);
         setError(null);
 
-        const profile = await profileService.getProfileById(
-          profileToFetch,
-        );
+        const profile = await profileService.getProfileById(profileToFetch);
 
-        // Update store with response data
         if (profile && profile.personalProfile?.trustScore) {
           const trustScore = profile.personalProfile.trustScore;
           setScore(trustScore.score || 0);
-
-          // Transform factors to match the store interface
-          const transformedFactors = (trustScore.factors || []).map((factor, index) => ({
-            id: `${factor.type}-${index}`,
-            name: factor.type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
-            score: factor.value,
-            weight: 1,
-            description: `Trust factor: ${factor.type}`,
-          }));
-
-          setFactors(transformedFactors);
-          setHistory([]); // History not available in current structure
-
-          // Set profile type
+          setFactors(mapTrustFactors(trustScore.factors || []));
+          setHistory([]);
           setProfileType(profile.profileType);
         } else {
-          // No trust score data available
           setScore(0);
           setFactors([]);
           setHistory([]);
           setProfileType(profile?.profileType || 'personal');
         }
-      } catch (error: any) {
-        setError(error.message || 'Failed to fetch trust score');
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Failed to fetch trust score';
+        setError(message);
       } finally {
         setLoading(false);
       }
     },
-    [
-      currentProfileId,
-      profileId,
-      setLoading,
-      setError,
-      setScore,
-      setFactors,
-      setHistory,
-    ],
+    [currentProfileId, profileId, setLoading, setError, setScore, setFactors, setHistory],
   );
 
-  // Update trust score for a specific profile
   const updateTrustScoreData = useCallback(
     async (factor: string, value: number, targetProfileId?: string) => {
       const profileToUpdate = targetProfileId || currentProfileId || profileId;
@@ -103,47 +102,24 @@ export const useTrustScore = (profileId?: string) => {
         setLoading(true);
         setError(null);
 
-        const profile = await profileService.updateTrustScore(
-          profileToUpdate,
-          factor,
-          value
-        );
+        const profile = await profileService.updateTrustScore(profileToUpdate, factor, value);
 
-        // Update store with response data
         if (profile && profile.personalProfile?.trustScore) {
           const trustScore = profile.personalProfile.trustScore;
           setScore(trustScore.score || 0);
-
-          // Transform factors to match the store interface
-          const transformedFactors = (trustScore.factors || []).map((factor, index) => ({
-            id: `${factor.type}-${index}`,
-            name: factor.type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
-            score: factor.value,
-            weight: 1,
-            description: `Trust factor: ${factor.type}`,
-          }));
-
-          setFactors(transformedFactors);
-          setHistory([]); // History not available in current structure
+          setFactors(mapTrustFactors(trustScore.factors || []));
+          setHistory([]);
         }
-      } catch (error: any) {
-        setError(error.message || 'Failed to update trust score');
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Failed to update trust score';
+        setError(message);
       } finally {
         setLoading(false);
       }
     },
-    [
-      currentProfileId,
-      profileId,
-      setLoading,
-      setError,
-      setScore,
-      setFactors,
-      setHistory,
-    ],
+    [currentProfileId, profileId, setLoading, setError, setScore, setFactors, setHistory],
   );
 
-  // Recalculate trust score for a specific profile
   const recalculateTrustScoreData = useCallback(
     async (targetProfileId?: string) => {
       const profileToRecalculate = targetProfileId || currentProfileId || profileId;
@@ -161,41 +137,23 @@ export const useTrustScore = (profileId?: string) => {
 
         const response = await profileService.recalculatePrimaryTrustScore();
 
-        // Update store with response data
         if (response && response.profile && response.profile.personalProfile?.trustScore) {
           const trustScore = response.profile.personalProfile.trustScore;
           setScore(trustScore.score || 0);
-
-          // Transform factors to match the store interface
-          const transformedFactors = (trustScore.factors || []).map((factor, index) => ({
-            id: `${factor.type}-${index}`,
-            name: factor.type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
-            score: factor.value,
-            weight: 1,
-            description: `Trust factor: ${factor.type}`,
-          }));
-
-          setFactors(transformedFactors);
-          setHistory([]); // History not available in current structure
+          setFactors(mapTrustFactors(trustScore.factors || []));
+          setHistory([]);
         }
-      } catch (error: any) {
-        setError(error.message || 'Failed to recalculate trust score');
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to recalculate trust score';
+        setError(message);
       } finally {
         setLoading(false);
       }
     },
-    [
-      currentProfileId,
-      profileId,
-      setLoading,
-      setError,
-      setScore,
-      setFactors,
-      setHistory,
-    ],
+    [currentProfileId, profileId, setLoading, setError, setScore, setFactors, setHistory],
   );
 
-  // Clear trust score data
   const clearTrustScoreData = useCallback(() => {
     setScore(0);
     setFactors([]);
@@ -203,23 +161,20 @@ export const useTrustScore = (profileId?: string) => {
     setError(null);
   }, [setScore, setFactors, setHistory, setError]);
 
-  // Create trust score data object for components
   const trustScoreData = {
     score,
     factors: factors.map((factor) => ({
-      type: factor.name.toLowerCase().replace(/\s+/g, '_'),
+      type: factor.type,
       value: factor.score,
       maxValue: 100,
-      label: factor.name,
     })),
     history,
     type: profileType,
     color: score >= 80 ? colors.success : score >= 60 ? colors.warning : colors.danger,
-    level: score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : score >= 40 ? 'Fair' : 'Poor',
+    levelKey: trustLevelKey(score),
   };
 
   return {
-    // State
     trustScoreData,
     score,
     factors,
@@ -228,8 +183,6 @@ export const useTrustScore = (profileId?: string) => {
     error,
     profileType,
     currentProfileId,
-
-    // Actions
     setCurrentProfileId,
     fetchTrustScoreData,
     updateTrustScoreData,

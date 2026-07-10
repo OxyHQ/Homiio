@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, TextInput, TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { ThemedText } from '@/components/ThemedText';
@@ -9,15 +10,13 @@ import type { AmenitiesStepProps } from './types';
 
 interface RuleToggleProps {
   label: string;
+  yesLabel: string;
+  noLabel: string;
   value: boolean | undefined;
   onToggle: () => void;
 }
 
-/**
- * A single yes/no house-rule toggle. Markup matches the previous inline toggles
- * exactly (icon, colour, and label behaviour).
- */
-function RuleToggle({ label, value, onToggle }: RuleToggleProps) {
+function RuleToggle({ label, yesLabel, noLabel, value, onToggle }: RuleToggleProps) {
   return (
     <View style={styles.toggleContainer}>
       <ThemedText style={styles.label}>{label}</ThemedText>
@@ -30,27 +29,24 @@ function RuleToggle({ label, value, onToggle }: RuleToggleProps) {
           size={24}
           color={value ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
         />
-        <ThemedText style={styles.toggleText}>{value ? 'Yes' : 'No'}</ThemedText>
+        <ThemedText style={styles.toggleText}>{value ? yesLabel : noLabel}</ThemedText>
       </TouchableOpacity>
     </View>
   );
 }
 
-/**
- * "Amenities" wizard step: amenities selector plus the combined house-rules
- * toggles and the conditional max-guests field.
- */
 export function AmenitiesStep({
   formData,
   validationErrors,
   updateFormField,
   onAmenityToggle,
 }: AmenitiesStepProps) {
+  const { t } = useTranslation();
   const { amenities, rules, basicInfo } = formData;
 
   return (
     <View>
-      <ThemedText type="subtitle">Amenities & Rules</ThemedText>
+      <ThemedText type="subtitle">{t('propertyCreate.amenities.rulesTitle')}</ThemedText>
 
       <AmenitiesSelector
         selectedAmenities={amenities.selectedAmenities || []}
@@ -61,43 +57,51 @@ export function AmenitiesStep({
 
       <View>
         <ThemedText type="subtitle" style={styles.rulesSectionTitle}>
-          House Rules
+          {t('propertyCreate.amenities.houseRules')}
         </ThemedText>
 
         <RuleToggle
-          label="Pets Allowed"
+          label={t('propertyCreate.amenities.petsAllowed')}
+          yesLabel={t('propertyCreate.amenities.yes')}
+          noLabel={t('propertyCreate.amenities.no')}
           value={rules?.petsAllowed}
           onToggle={() => updateFormField('rules', 'petsAllowed', !rules?.petsAllowed)}
         />
 
         <RuleToggle
-          label="Smoking Allowed"
+          label={t('propertyCreate.amenities.smokingAllowed')}
+          yesLabel={t('propertyCreate.amenities.yes')}
+          noLabel={t('propertyCreate.amenities.no')}
           value={rules?.smokingAllowed}
           onToggle={() => updateFormField('rules', 'smokingAllowed', !rules?.smokingAllowed)}
         />
 
         <RuleToggle
-          label="Parties Allowed"
+          label={t('propertyCreate.amenities.partiesAllowed')}
+          yesLabel={t('propertyCreate.amenities.yes')}
+          noLabel={t('propertyCreate.amenities.no')}
           value={rules?.partiesAllowed}
           onToggle={() => updateFormField('rules', 'partiesAllowed', !rules?.partiesAllowed)}
         />
 
         <RuleToggle
-          label="Guests Allowed"
+          label={t('propertyCreate.amenities.guestsAllowed')}
+          yesLabel={t('propertyCreate.amenities.yes')}
+          noLabel={t('propertyCreate.amenities.no')}
           value={rules?.guestsAllowed}
           onToggle={() => updateFormField('rules', 'guestsAllowed', !rules?.guestsAllowed)}
         />
 
         {rules?.guestsAllowed && (
           <View style={styles.formGroup}>
-            <ThemedText style={styles.label}>Maximum Number of Guests</ThemedText>
+            <ThemedText style={styles.label}>{t('propertyCreate.amenities.maxGuests')}</ThemedText>
             <TextInput
               style={[styles.input, validationErrors.maxGuests && styles.inputError]}
               value={rules.maxGuests?.toString() || ''}
               onChangeText={(text) =>
                 updateFormField('rules', 'maxGuests', parseInt(text, 10) || undefined)
               }
-              placeholder="e.g., 2"
+              placeholder={t('propertyCreate.amenities.maxGuestsPlaceholder')}
               keyboardType="numeric"
             />
             {validationErrors.maxGuests && (

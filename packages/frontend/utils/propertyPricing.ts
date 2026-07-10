@@ -49,7 +49,7 @@ export function resolveHeadlinePrice(
   const offering = resolvePrimaryOffering(
     property,
     browseMode,
-    t('listing.exchange.free', 'Free'),
+    t('listing.exchange.free'),
   );
 
   let priceLabel: string;

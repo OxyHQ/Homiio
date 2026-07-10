@@ -1,5 +1,6 @@
 import React, { useContext } from 'react';
 import { View, TextInput, TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { ThemedText } from '@/components/ThemedText';
@@ -26,21 +27,17 @@ export function LocationStep({
   onFloorChange,
   onShowFloorToggle,
 }: LocationStepProps) {
+  const { t } = useTranslation();
   const bottomSheet = useContext(BottomSheetContext);
   const { location } = formData;
 
   return (
     <View>
-      <ThemedText type="subtitle">Location</ThemedText>
+      <ThemedText type="subtitle">{t('propertyCreate.location.title')}</ThemedText>
 
       <View style={styles.formGroup}>
         <ThemedText style={styles.addressInstructions}>
-          📍 Address Details: Fill in the complete address information. Our system uses a
-          hierarchical structure:
-          {'\n'}• STREET level: Street name only
-          {'\n'}• BUILDING level: Street + number + building details
-          {'\n'}• UNIT level: Building + floor + unit/apartment details
-          {'\n'}Reviews and listings are organized by these levels for better organization.
+          {t('propertyCreate.location.instructions')}
         </ThemedText>
       </View>
 
@@ -64,7 +61,7 @@ export function LocationStep({
       </View>
 
       <View style={styles.formGroup}>
-        <ThemedText style={styles.label}>Country or Region</ThemedText>
+        <ThemedText style={styles.label}>{t('propertyCreate.location.country')}</ThemedText>
         <TouchableOpacity
           style={[styles.input, styles.inputCentered]}
           onPress={() =>
@@ -73,7 +70,7 @@ export function LocationStep({
                 options={[...COUNTRY_OPTIONS]}
                 selected={location.country || ''}
                 onSelect={(value) => updateFormField('location', 'country', value)}
-                title="Country or Region"
+                title={t('propertyCreate.location.countryPickerTitle')}
                 onClose={() => {}}
               />,
             )
@@ -82,18 +79,18 @@ export function LocationStep({
           <ThemedText
             style={location.country ? styles.pickerValueSelected : styles.pickerValuePlaceholder}
           >
-            {location.country || 'Select country or region'}
+            {location.country || t('propertyCreate.location.selectCountry')}
           </ThemedText>
         </TouchableOpacity>
       </View>
 
       <View style={styles.formGroup}>
-        <ThemedText style={styles.label}>Address</ThemedText>
+        <ThemedText style={styles.label}>{t('propertyCreate.location.street')}</ThemedText>
         <TextInput
           style={[styles.input, validationErrors.address && styles.inputError]}
           value={location.address}
           onChangeText={(text) => updateFormField('location', 'address', text)}
-          placeholder="Street name"
+          placeholder={t('propertyCreate.location.streetPlaceholder')}
         />
         {validationErrors.address && (
           <ThemedText style={styles.errorText}>{validationErrors.address}</ThemedText>
@@ -101,56 +98,56 @@ export function LocationStep({
       </View>
 
       <View style={styles.formGroup}>
-        <ThemedText style={styles.label}>Unit/Apartment Number (optional)</ThemedText>
+        <ThemedText style={styles.label}>{t('propertyCreate.location.unitOptional')}</ThemedText>
         <TextInput
           style={styles.input}
           value={location.unit || ''}
           onChangeText={(text) => updateFormField('location', 'unit', text)}
-          placeholder="Apartment, suite, etc. (optional)"
+          placeholder={t('propertyCreate.location.unitPlaceholder')}
         />
       </View>
 
       {/* Additional Canonical Address Fields */}
       <View style={styles.formRow}>
         <View style={[styles.formGroup, styles.formGroupLeft]}>
-          <ThemedText style={styles.label}>Building Name (optional)</ThemedText>
+          <ThemedText style={styles.label}>{t('propertyCreate.location.buildingNameOptional')}</ThemedText>
           <TextInput
             style={styles.input}
             value={location.building_name || ''}
             onChangeText={(text) => updateFormField('location', 'building_name', text)}
-            placeholder="e.g., Torre Barcelona"
+            placeholder={t('propertyCreate.location.buildingNamePlaceholder')}
           />
         </View>
 
         <View style={[styles.formGroup, styles.formGroupRight]}>
-          <ThemedText style={styles.label}>Block (optional)</ThemedText>
+          <ThemedText style={styles.label}>{t('propertyCreate.location.blockOptional')}</ThemedText>
           <TextInput
             style={styles.input}
             value={location.block || ''}
             onChangeText={(text) => updateFormField('location', 'block', text)}
-            placeholder="e.g., Block A"
+            placeholder={t('propertyCreate.location.blockPlaceholder')}
           />
         </View>
       </View>
 
       <View style={styles.formRow}>
         <View style={[styles.formGroup, styles.formGroupLeft]}>
-          <ThemedText style={styles.label}>Entrance/Door (optional)</ThemedText>
+          <ThemedText style={styles.label}>{t('propertyCreate.location.entranceOptional')}</ThemedText>
           <TextInput
             style={styles.input}
             value={location.entrance || ''}
             onChangeText={(text) => updateFormField('location', 'entrance', text)}
-            placeholder="e.g., Door 1, Entrance B"
+            placeholder={t('propertyCreate.location.entrancePlaceholder')}
           />
         </View>
 
         <View style={[styles.formGroup, styles.formGroupRight]}>
-          <ThemedText style={styles.label}>Sub-unit (optional)</ThemedText>
+          <ThemedText style={styles.label}>{t('propertyCreate.location.subunitOptional')}</ThemedText>
           <TextInput
             style={styles.input}
             value={location.subunit || ''}
             onChangeText={(text) => updateFormField('location', 'subunit', text)}
-            placeholder="e.g., Room A"
+            placeholder={t('propertyCreate.location.subunitPlaceholder')}
           />
         </View>
       </View>
@@ -158,7 +155,7 @@ export function LocationStep({
       <View style={styles.formRow}>
         <View style={[styles.formGroup, styles.formGroupLeft]}>
           <View style={styles.labelContainer}>
-            <ThemedText style={styles.label}>Street Number</ThemedText>
+            <ThemedText style={styles.label}>{t('propertyCreate.location.number')}</ThemedText>
             <Ionicons
               name="information-circle-outline"
               size={16}
@@ -171,7 +168,7 @@ export function LocationStep({
                 style={[styles.detailInput, validationErrors.number && styles.inputError]}
                 value={location.number || ''}
                 onChangeText={(text) => updateFormField('location', 'number', text)}
-                placeholder="Enter number"
+                placeholder={t('propertyCreate.location.numberPlaceholder')}
                 keyboardType="numeric"
               />
             </View>
@@ -185,7 +182,7 @@ export function LocationStep({
 
         <View style={[styles.formGroup, styles.formGroupRight]}>
           <View style={styles.labelContainer}>
-            <ThemedText style={styles.label}>Floor</ThemedText>
+            <ThemedText style={styles.label}>{t('propertyCreate.location.floor')}</ThemedText>
             <Ionicons
               name="information-circle-outline"
               size={16}
@@ -198,7 +195,7 @@ export function LocationStep({
                 style={[styles.detailInput, validationErrors.floor && styles.inputError]}
                 value={location.floor?.toString() || ''}
                 onChangeText={onFloorChange}
-                placeholder="Enter floor"
+                placeholder={t('propertyCreate.location.floorPlaceholder')}
                 keyboardType="numeric"
               />
               <TouchableOpacity
@@ -216,7 +213,7 @@ export function LocationStep({
                     location.showFloor && styles.privacyToggleTextActive,
                   ]}
                 >
-                  {location.showFloor ? 'Public' : 'Private'}
+                  {location.showFloor ? t('propertyCreate.location.floorPublic') : t('propertyCreate.location.floorPrivate')}
                 </ThemedText>
               </TouchableOpacity>
             </View>
@@ -226,7 +223,7 @@ export function LocationStep({
               )}
               {location.floor && !location.showFloor && (
                 <ThemedText style={styles.privacyMessage}>
-                  ℹ️ Will be shown as approximate for privacy
+                  {t('propertyCreate.location.floorPrivacyHint')}
                 </ThemedText>
               )}
             </View>
@@ -235,55 +232,55 @@ export function LocationStep({
       </View>
 
       <View style={styles.formGroup}>
-        <ThemedText style={styles.label}>Neighborhood (optional)</ThemedText>
+        <ThemedText style={styles.label}>{t('propertyCreate.location.neighborhoodOptional')}</ThemedText>
         <TextInput
           style={styles.input}
           value={location.neighborhood || ''}
           onChangeText={(text) => updateFormField('location', 'neighborhood', text)}
-          placeholder="e.g., Gràcia, Sant Andreu, Eixample"
+          placeholder={t('propertyCreate.location.neighborhoodPlaceholder')}
         />
       </View>
 
       <View style={styles.formGroup}>
-        <ThemedText style={styles.label}>District (optional)</ThemedText>
+        <ThemedText style={styles.label}>{t('propertyCreate.location.districtOptional')}</ThemedText>
         <TextInput
           style={styles.input}
           value={location.district || ''}
           onChangeText={(text) => updateFormField('location', 'district', text)}
-          placeholder="e.g., Administrative district"
+          placeholder={t('propertyCreate.location.districtPlaceholder')}
         />
       </View>
 
       <View style={styles.formRow}>
         <View style={[styles.formGroup, styles.formGroupLeft]}>
-          <ThemedText style={styles.label}>PO Box (optional)</ThemedText>
+          <ThemedText style={styles.label}>{t('propertyCreate.location.poBoxOptional')}</ThemedText>
           <TextInput
             style={styles.input}
             value={location.po_box || ''}
             onChangeText={(text) => updateFormField('location', 'po_box', text)}
-            placeholder="e.g., PO Box 123"
+            placeholder={t('propertyCreate.location.poBoxPlaceholder')}
           />
         </View>
 
         <View style={[styles.formGroup, styles.formGroupRight]}>
-          <ThemedText style={styles.label}>Reference (optional)</ThemedText>
+          <ThemedText style={styles.label}>{t('propertyCreate.location.referenceOptional')}</ThemedText>
           <TextInput
             style={styles.input}
             value={location.reference || ''}
             onChangeText={(text) => updateFormField('location', 'reference', text)}
-            placeholder="e.g., Near Metro Station"
+            placeholder={t('propertyCreate.location.referencePlaceholder')}
           />
         </View>
       </View>
 
       <View style={styles.formRow}>
         <View style={[styles.formGroup, styles.formGroupLeft]}>
-          <ThemedText style={styles.label}>City/District</ThemedText>
+          <ThemedText style={styles.label}>{t('propertyCreate.location.cityDistrict')}</ThemedText>
           <TextInput
             style={[styles.input, validationErrors.city && styles.inputError]}
             value={location.city}
             onChangeText={(text) => updateFormField('location', 'city', text)}
-            placeholder="City or district"
+            placeholder={t('propertyCreate.location.cityDistrictPlaceholder')}
           />
           {validationErrors.city && (
             <ThemedText style={styles.errorText}>{validationErrors.city}</ThemedText>
@@ -291,7 +288,7 @@ export function LocationStep({
         </View>
 
         <View style={[styles.formGroup, styles.formGroupRight]}>
-          <ThemedText style={styles.label}>State/Province/Region</ThemedText>
+          <ThemedText style={styles.label}>{t('propertyCreate.location.state')}</ThemedText>
           <TouchableOpacity
             style={[styles.input, styles.inputCentered]}
             onPress={() =>
@@ -300,7 +297,7 @@ export function LocationStep({
                   options={[...STATE_OPTIONS]}
                   selected={location.state || ''}
                   onSelect={(value) => updateFormField('location', 'state', value)}
-                  title="State/Province/Region"
+                  title={t('propertyCreate.location.statePickerTitle')}
                   onClose={() => {}}
                 />,
               )
@@ -309,7 +306,7 @@ export function LocationStep({
             <ThemedText
               style={location.state ? styles.pickerValueSelected : styles.pickerValuePlaceholder}
             >
-              {location.state || 'Select state/province/region'}
+              {location.state || t('propertyCreate.location.selectState')}
             </ThemedText>
           </TouchableOpacity>
           {validationErrors.state && (
@@ -319,12 +316,12 @@ export function LocationStep({
       </View>
 
       <View style={styles.formGroup}>
-        <ThemedText style={styles.label}>ZIP/Postal Code</ThemedText>
+        <ThemedText style={styles.label}>{t('propertyCreate.location.zipPostalCode')}</ThemedText>
         <TextInput
           style={[styles.input, validationErrors.postal_code && styles.inputError]}
           value={location.postal_code}
           onChangeText={(text) => updateFormField('location', 'postal_code', text)}
-          placeholder="ZIP or postal code"
+          placeholder={t('propertyCreate.location.zipPlaceholder')}
           keyboardType="numeric"
         />
         {validationErrors.postal_code && (
@@ -334,22 +331,22 @@ export function LocationStep({
 
       <View style={styles.formRow}>
         <View style={[styles.formGroup, styles.formGroupLeft]}>
-          <ThemedText style={styles.label}>Available From</ThemedText>
+          <ThemedText style={styles.label}>{t('propertyCreate.location.availableFrom')}</ThemedText>
           <TextInput
             style={styles.input}
             value={location.availableFrom}
             onChangeText={(text) => updateFormField('location', 'availableFrom', text)}
-            placeholder="Available from date"
+            placeholder={t('propertyCreate.location.availableFromPlaceholder')}
           />
         </View>
 
         <View style={[styles.formGroup, styles.formGroupRight]}>
-          <ThemedText style={styles.label}>Lease Term</ThemedText>
+          <ThemedText style={styles.label}>{t('propertyCreate.location.leaseTerm')}</ThemedText>
           <TextInput
             style={styles.input}
             value={location.leaseTerm}
             onChangeText={(text) => updateFormField('location', 'leaseTerm', text)}
-            placeholder="Lease term"
+            placeholder={t('propertyCreate.location.leaseTermPlaceholder')}
           />
         </View>
       </View>

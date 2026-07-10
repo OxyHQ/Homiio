@@ -251,10 +251,10 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
       location: {
         label:
           query.location?.label ||
-          (t('search.summary.mapArea', 'Map area') || 'Map area'),
+          (t('search.summary.mapArea')),
         shortLabel:
           query.location?.shortLabel ||
-          (t('search.summary.mapArea', 'Map area') || 'Map area'),
+          (t('search.summary.mapArea')),
         center,
         bounds: pendingBounds,
       },
@@ -384,15 +384,12 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
 
   const resultsHeading = useMemo(() => {
     if (isLoading) {
-      return t('search.header.loading', 'Searching homes...') || 'Searching homes...';
+      return t('search.header.loading');
     }
     if (total === 0) {
-      return t('search.header.noResults', 'No homes match this search') ||
-        'No homes match this search';
+      return t('search.header.noResults');
     }
-    return (
-      t('search.header.count', `${total} homes`) || `${total} homes`
-    );
+    return t('search.header.count', { count: total });
   }, [t, isLoading, total]);
 
   // --- shared sub-renders ---
@@ -413,8 +410,8 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
             isSaved={isSearchSaved}
             saveAccessibilityLabel={
               isSearchSaved
-                ? t('search.actions.saved', 'Saved') || 'Saved'
-                : t('search.actions.save', 'Save') || 'Save'
+                ? t('search.actions.saved')
+                : t('search.actions.save')
             }
           />
         </View>
@@ -429,27 +426,27 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
           contentContainerStyle={styles.topBarActions}
         >
           <SearchActionPill
-            label={t('search.actions.filters', 'Filters') || 'Filters'}
+            label={t('search.actions.filters')}
             icon="options-outline"
             active={activeFilterCount > 0}
             count={activeFilterCount}
             onPress={handleFiltersPress}
             accessibilityLabel={
               activeFilterCount > 0
-                ? `${t('search.actions.filters', 'Filters') || 'Filters'}, ${activeFilterCount}`
-                : t('search.actions.filters', 'Filters') || 'Filters'
+                ? `${t('search.actions.filters')}, ${activeFilterCount}`
+                : t('search.actions.filters')
             }
           />
           <SearchActionPill
             label={
               sort.isDefault
-                ? t('search.actions.sort', 'Sort') || 'Sort'
+                ? t('search.actions.sort')
                 : sort.label
             }
             icon="swap-vertical"
             active={!sort.isDefault}
             onPress={handleSortPress}
-            accessibilityLabel={`${t('search.actions.sort', 'Sort') || 'Sort'}: ${sort.label}`}
+            accessibilityLabel={`${t('search.actions.sort')}: ${sort.label}`}
           />
         </ScrollView>
       </View>
@@ -473,9 +470,9 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     if (isError) {
       return (
         <ErrorState
-          title={t('search.error.title', 'Could not load homes') || 'Could not load homes'}
+          title={t('search.error.title')}
           description={error?.message}
-          retryLabel={t('common.tryAgain', 'Try again') || 'Try again'}
+          retryLabel={t('common.tryAgain')}
           onRetry={() => void refetch()}
         />
       );
@@ -485,14 +482,12 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         <EmptyState
           icon="home-outline"
           title={
-            t('search.empty.title', 'No homes match this search') ||
-            'No homes match this search'
+            t('search.empty.title')
           }
           description={
-            t('search.empty.description', 'Try widening your area or relaxing your filters.') ||
-            'Try widening your area or relaxing your filters.'
+            t('search.empty.description')
           }
-          actionText={t('search.empty.action', 'Edit search') || 'Edit search'}
+          actionText={t('search.empty.action')}
           actionIcon="search"
           onAction={onEditSearch}
         />
@@ -559,10 +554,10 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
               icon={<Ionicons name="refresh" size={16} color={colors.primaryForeground} />}
               iconPosition="left"
               accessibilityLabel={
-                t('search.actions.searchArea', 'Search this area') || 'Search this area'
+                t('search.actions.searchArea')
               }
             >
-              {t('search.actions.searchArea', 'Search this area') || 'Search this area'}
+              {t('search.actions.searchArea')}
             </Button>
           </View>
         </View>
@@ -617,8 +612,8 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         onPress={() => setShowMobileMap((prev) => !prev)}
         label={
           showMobileMap
-            ? t('search.fab.list', 'List') || 'List'
-            : t('search.fab.map', 'Map') || 'Map'
+            ? t('search.fab.list')
+            : t('search.fab.map')
         }
         icon={showMobileMap ? 'list' : 'map'}
         // Lift the floating toggle above the home indicator (the FAB's default

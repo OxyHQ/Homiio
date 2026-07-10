@@ -140,23 +140,23 @@ export const EarningsCalculator: React.FC = () => {
   // slider-drag frame.
   const offeringLabels = useMemo<Record<CommissionOffering, string>>(
     () => ({
-      rent: t('agent.calculator.offerings.rent', 'Rent'),
-      sale: t('agent.calculator.offerings.sale', 'Sale'),
-      exchange: t('agent.calculator.offerings.exchange', 'Exchange'),
+      rent: t('agent.calculator.offerings.rent'),
+      sale: t('agent.calculator.offerings.sale'),
+      exchange: t('agent.calculator.offerings.exchange'),
     }),
     [t],
   );
 
-  const title = t('agent.calculator.title', 'See what you could earn');
-  const inputLabel = t('agent.calculator.monthlyRent', 'Monthly rent');
-  const perMonth = t('agent.calculator.perMonth', 'mo');
+  const title = t('agent.calculator.title');
+  const inputLabel = t('agent.calculator.monthlyRent');
+  const perMonth = t('agent.calculator.perMonth');
 
   // Sale/exchange are flat rewards, so we show a short note instead of a
   // misleading slider that would imply the payout scales with the deal value.
   const flatNote =
     offering === 'sale'
-      ? t('agent.calculator.flatNoteSale', 'Flat reward per closed sale')
-      : t('agent.calculator.flatNoteExchange', 'Flat reward per exchange');
+      ? t('agent.calculator.flatNoteSale')
+      : t('agent.calculator.flatNoteExchange');
 
   return (
     <View style={{ paddingHorizontal: horizontalPadding }}>
@@ -186,11 +186,11 @@ export const EarningsCalculator: React.FC = () => {
 
         <View style={styles.resultBlock}>
           <BloomText style={styles.resultLabel}>
-            {t('agent.calculator.result', 'You earn')}
+            {t('agent.calculator.result')}
           </BloomText>
           <H1 style={styles.resultAmount}>{formatCurrency(payout, currency, WHOLE_CURRENCY)}</H1>
           <BloomText style={styles.resultCaption}>
-            {t('agent.calculator.caption', 'Paid when the deal closes — no license needed.')}
+            {t('agent.calculator.caption')}
           </BloomText>
         </View>
       </View>

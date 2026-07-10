@@ -11,6 +11,7 @@ import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { Chip } from '@oxyhq/bloom/chip';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
@@ -33,14 +34,14 @@ type Filter = 'all' | 'upcoming' | 'past' | 'cancelled';
 
 interface FilterOption {
   value: Filter;
-  label: string;
+  i18nKey: string;
 }
 
 const FILTERS: FilterOption[] = [
-  { value: 'all', label: 'All' },
-  { value: 'upcoming', label: 'Upcoming' },
-  { value: 'past', label: 'Past' },
-  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'all', i18nKey: 'stays.list.filterAll' },
+  { value: 'upcoming', i18nKey: 'stays.list.filterUpcoming' },
+  { value: 'past', i18nKey: 'stays.list.filterPast' },
+  { value: 'cancelled', i18nKey: 'stays.list.filterCancelled' },
 ];
 
 interface Buckets {
@@ -80,6 +81,7 @@ const bucketReservations = (items: Reservation[]): Buckets => {
 };
 
 export default function StaysScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { oxyServices, activeSessionId } = useOxy();
   const isAuthed = Boolean(oxyServices && activeSessionId);
@@ -97,31 +99,31 @@ export default function StaysScreen() {
   const filteredGroups = useMemo<{ label: string; items: Reservation[] }[]>(() => {
     if (filter === 'all') {
       return [
-        { label: 'Upcoming', items: buckets.upcoming },
-        { label: 'Past', items: buckets.past },
-        { label: 'Cancelled', items: buckets.cancelled },
+        { label: t('stays.list.groupUpcoming'), items: buckets.upcoming },
+        { label: t('stays.list.groupPast'), items: buckets.past },
+        { label: t('stays.list.groupCancelled'), items: buckets.cancelled },
       ].filter((group) => group.items.length > 0);
     }
     if (filter === 'upcoming') {
       return buckets.upcoming.length > 0
-        ? [{ label: 'Upcoming', items: buckets.upcoming }]
+        ? [{ label: t('stays.list.groupUpcoming'), items: buckets.upcoming }]
         : [];
     }
     if (filter === 'past') {
       return buckets.past.length > 0
-        ? [{ label: 'Past', items: buckets.past }]
+        ? [{ label: t('stays.list.groupPast'), items: buckets.past }]
         : [];
     }
     return buckets.cancelled.length > 0
-      ? [{ label: 'Cancelled', items: buckets.cancelled }]
+      ? [{ label: t('stays.list.groupCancelled'), items: buckets.cancelled }]
       : [];
-  }, [filter, buckets]);
+  }, [filter, buckets, t]);
 
   const header = (
     <Header
       options={{
         showBackButton: true,
-        title: 'Stays',
+        title: t('stays.list.title'),
         titlePosition: 'center',
       }}
     />
@@ -135,9 +137,9 @@ export default function StaysScreen() {
           <View style={styles.centerWrap}>
             <EmptyState
               icon="bed-outline"
-              title="Sign in to see your stays"
-              description="Bookings across hosts and dates live here."
-              actionText="Sign in"
+              title={t('stays.list.signInTitle')}
+              description={t('stays.list.signInDescription')}
+              actionText={t('stays.list.signIn')}
               actionIcon="log-in-outline"
               onAction={() => showSignInModal()}
             />
@@ -153,7 +155,7 @@ export default function StaysScreen() {
         {header}
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <View style={styles.content}>
-            <FilterRow value={filter} onChange={setFilter} />
+            <FilterRow value={filter} onChange={setFilter} t={t} />
             <ListSkeleton rows={4} rowHeight={140} />
           </View>
         </SafeAreaView>
@@ -168,9 +170,9 @@ export default function StaysScreen() {
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <View style={styles.centerWrap}>
             <ErrorState
-              title="Couldn't load your stays"
-              description={reservationsQuery.error?.message ?? 'Please try again.'}
-              retryLabel="Retry"
+              title={t('stays.list.loadError')}
+              description={reservationsQuery.error?.message ?? t('stays.list.tryAgain')}
+              retryLabel={t('applications.list.retry')}
               onRetry={() => reservationsQuery.refetch()}
             />
           </View>
@@ -190,13 +192,17 @@ export default function StaysScreen() {
             <View style={styles.emptyWrap}>
               <EmptyState
                 icon="bed-outline"
-                title={filter === 'all' ? 'No stays yet' : 'Nothing in this view.'}
+                title={
+                  filter === 'all'
+                    ? t('stays.list.emptyAllTitle')
+                    : t('stays.list.emptyFilteredTitle')
+                }
                 description={
                   filter === 'all'
-                    ? 'Once you book a place it will show up here.'
-                    : 'Try a different filter or explore new stays.'
+                    ? t('stays.list.emptyAllDescription')
+                    : t('stays.list.emptyFilteredDescription')
                 }
-                actionText={filter === 'all' ? 'Explore stays' : 'Explore stays'}
+                actionText={t('stays.list.exploreStays')}
                 actionIcon="search-outline"
                 onAction={() => router.push('/explore?offering=short_term_rent')}
               />
@@ -225,9 +231,10 @@ export default function StaysScreen() {
 interface FilterRowProps {
   value: Filter;
   onChange: (next: Filter) => void;
+  t: (key: string) => string;
 }
 
-const FilterRow: React.FC<FilterRowProps> = ({ value, onChange }) => (
+const FilterRow: React.FC<FilterRowProps> = ({ value, onChange, t }) => (
   <ScrollView
     horizontal
     showsHorizontalScrollIndicator={false}
@@ -242,7 +249,7 @@ const FilterRow: React.FC<FilterRowProps> = ({ value, onChange }) => (
         selected={value === option.value}
         onPress={() => onChange(option.value)}
       >
-        {option.label}
+        {t(option.i18nKey)}
       </Chip>
     ))}
   </ScrollView>

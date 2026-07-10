@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { shadowToken } from '@/styles/shadows';
@@ -23,6 +24,7 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
   onDecline,
   onViewProfile,
 }) => {
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [showResponseInput, setShowResponseInput] = useState(false);
   const [responseMessage, setResponseMessage] = useState('');
@@ -41,10 +43,10 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
       if (success) {
         setShowResponseInput(false);
         setResponseMessage('');
-        Alert.alert('Success', 'Roommate request accepted!');
+        Alert.alert(t('roommates.alert.successTitle'), t('roommates.alert.accepted'));
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to accept roommate request');
+    } catch {
+      Alert.alert(t('roommates.alert.errorTitle'), t('roommates.alert.acceptFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -64,17 +66,17 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
       if (success) {
         setShowResponseInput(false);
         setResponseMessage('');
-        Alert.alert('Success', 'Roommate request declined');
+        Alert.alert(t('roommates.alert.successTitle'), t('roommates.alert.declined'));
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to decline roommate request');
+    } catch {
+      Alert.alert(t('roommates.alert.errorTitle'), t('roommates.alert.declineFailed'));
     } finally {
       setIsLoading(false);
     }
   };
 
   const getDisplayName = (profile: RoommateProfile) =>
-    profile.displayName?.trim() || 'Roommate';
+    profile.displayName?.trim() || t('roommates.screen.fallbackName');
 
   const getStatusColor = (status: string) => {
     switch (status) {

@@ -1,6 +1,17 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
+
+type TrustLevelKey = 'excellent' | 'good' | 'average' | 'fair' | 'needsImprovement';
+
+function trustLevelKey(score: number): TrustLevelKey {
+  if (score >= 90) return 'excellent';
+  if (score >= 70) return 'good';
+  if (score >= 50) return 'average';
+  if (score >= 30) return 'fair';
+  return 'needsImprovement';
+}
 
 type TrustScoreCompactProps = {
   score: number;
@@ -15,22 +26,15 @@ export function TrustScoreCompact({
   showLabel = true,
   showPercentage = false,
 }: TrustScoreCompactProps) {
-  // Memoize expensive calculations
-  const { color, trustLevel, sizeStyle } = useMemo(() => {
-    const getColor = (score: number) => {
-      if (score >= 90) return colors.success;
-      if (score >= 70) return colors.success;
-      if (score >= 50) return colors.warning;
-      if (score >= 30) return colors.warning;
-      return colors.danger;
-    };
+  const { t } = useTranslation();
 
-    const getTrustLevel = (score: number) => {
-      if (score >= 90) return 'Excellent';
-      if (score >= 70) return 'Good';
-      if (score >= 50) return 'Average';
-      if (score >= 30) return 'Fair';
-      return 'Needs Improvement';
+  const { color, levelKey, sizeStyle } = useMemo(() => {
+    const getColor = (value: number) => {
+      if (value >= 90) return colors.success;
+      if (value >= 70) return colors.success;
+      if (value >= 50) return colors.warning;
+      if (value >= 30) return colors.warning;
+      return colors.danger;
     };
 
     const sizeStyles = {
@@ -56,7 +60,7 @@ export function TrustScoreCompact({
 
     return {
       color: getColor(score),
-      trustLevel: getTrustLevel(score),
+      levelKey: trustLevelKey(score),
       sizeStyle: sizeStyles[size],
     };
   }, [score, size]);
@@ -71,7 +75,9 @@ export function TrustScoreCompact({
         </View>
       </View>
       {showLabel && (
-        <Text style={[styles.label, { fontSize: sizeStyle.labelSize, color }]}>{trustLevel}</Text>
+        <Text style={[styles.label, { fontSize: sizeStyle.labelSize, color }]}>
+          {t(`trust.score.levels.${levelKey}`)}
+        </Text>
       )}
     </View>
   );

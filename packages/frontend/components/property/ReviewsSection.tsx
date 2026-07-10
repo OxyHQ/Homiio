@@ -88,7 +88,7 @@ const RatingHeader: React.FC<RatingHeaderProps> = ({ stats }) => {
         <H1 style={styles.ratingNumber}>{stats.averageRating.toFixed(1)}</H1>
         <BloomText style={styles.ratingMeta}>
           · {stats.totalReviews}{' '}
-          {t('property.reviews.count', 'reviews') || 'reviews'}
+          {t('property.reviews.count')}
         </BloomText>
       </View>
       <View style={styles.statsRow}>
@@ -97,13 +97,13 @@ const RatingHeader: React.FC<RatingHeaderProps> = ({ stats }) => {
             {Math.round(stats.recommendationPercentage)}%
           </BloomText>
           <BloomText style={styles.statLabel}>
-            {t('property.reviews.recommend', 'Recommend') || 'Recommend'}
+            {t('property.reviews.recommend')}
           </BloomText>
         </View>
         <View style={styles.statItem}>
           <BloomText style={styles.statValue}>{stats.verifiedCount}</BloomText>
           <BloomText style={styles.statLabel}>
-            {t('property.reviews.verified', 'Verified') || 'Verified'}
+            {t('property.reviews.verified')}
           </BloomText>
         </View>
         <View style={styles.statItem}>
@@ -111,7 +111,7 @@ const RatingHeader: React.FC<RatingHeaderProps> = ({ stats }) => {
             {stats.withEvidenceCount}
           </BloomText>
           <BloomText style={styles.statLabel}>
-            {t('property.reviews.evidence', 'With evidence') || 'With evidence'}
+            {t('property.reviews.evidence')}
           </BloomText>
         </View>
       </View>
@@ -166,14 +166,10 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
 
   return (
     <View>
-      <SectionHeader title={t('property.reviews.title', 'Reviews') || 'Reviews'} />
+      <SectionHeader title={t('property.reviews.title')} />
       <View style={styles.body}>
       <BloomText style={styles.disclaimer}>
-        {t(
-          'property.reviews.disclaimer',
-          'Community-verified reviews about the building. Experiences may vary by unit.',
-        ) ||
-          'Community-verified reviews about the building. Experiences may vary by unit.'}
+        {t('property.reviews.disclaimer')}
       </BloomText>
 
       {loading ? (
@@ -208,11 +204,10 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
         <ErrorState
           icon="chatbubbles-outline"
           title={
-            t('property.reviews.errorTitle', 'Could not load reviews') ||
-            'Could not load reviews'
+            t('property.reviews.errorTitle')
           }
           description={error}
-          retryLabel={t('common.tryAgain', 'Try again') || 'Try again'}
+          retryLabel={t('common.tryAgain')}
           onRetry={() => {
             refetch();
           }}
@@ -223,18 +218,13 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
         <EmptyState
           icon="chatbubbles-outline"
           title={
-            t('property.reviews.emptyTitle', 'No reviews yet') ||
-            'No reviews yet'
+            t('property.reviews.emptyTitle')
           }
           description={
-            t(
-              'property.reviews.emptyDescription',
-              'Be the first to share what it was like to live here.',
-            ) || 'Be the first to share what it was like to live here.'
+            t('property.reviews.emptyDescription')
           }
           actionText={
-            t('property.reviews.writeAction', 'Write a review') ||
-            'Write a review'
+            t('property.reviews.writeAction')
           }
           actionIcon="create-outline"
           onAction={handleWriteReview}
@@ -287,12 +277,10 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
               }
               iconPosition="left"
               accessibilityLabel={
-                t('property.reviews.writeAction', 'Write a review') ||
-                'Write a review'
+                t('property.reviews.writeAction')
               }
             >
-              {t('property.reviews.writeAction', 'Write a review') ||
-                'Write a review'}
+              {t('property.reviews.writeAction')}
             </Button>
           </View>
         </>

@@ -49,11 +49,11 @@ export const SleepArrangement: React.FC<SleepArrangementProps> = ({ property }) 
       id: idx + 1,
       title:
         idx === 0
-          ? t('property.sleep.mainBedroom', 'Main bedroom') ?? 'Main bedroom'
+          ? t('property.sleep.mainBedroom') ?? 'Main bedroom'
           : (t('property.sleep.bedroomN', { n: idx + 1 }) as string) ||
             `Bedroom ${idx + 1}`,
       description:
-        (t('property.sleep.oneBed', '1 bed') as string) || '1 bed',
+        (t('property.sleep.oneBed') as string) || '1 bed',
     }));
   }, [property.bedrooms, t]);
 
@@ -61,7 +61,7 @@ export const SleepArrangement: React.FC<SleepArrangementProps> = ({ property }) 
 
   return (
     <View>
-      <SectionHeader title={t('property.sleep.title', "Where you'll sleep")} />
+      <SectionHeader title={t('property.sleep.title')} />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}

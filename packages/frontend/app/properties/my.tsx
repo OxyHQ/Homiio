@@ -136,14 +136,14 @@ export default function MyPropertiesScreen() {
       await refetch();
       if (result.commission) {
         toast.success(
-          t('properties.my.transactCommission', 'Deal closed — commission recorded'),
+          t('properties.my.transactCommission'),
         );
       } else {
-        toast.success(t('properties.my.transactDone', 'Listing marked as closed'));
+        toast.success(t('properties.my.transactDone'));
       }
     } catch (transactError: unknown) {
       logger.error('Failed to mark property transacted:', transactError);
-      toast.error(t('properties.my.transactError', 'Could not close this listing'));
+      toast.error(t('properties.my.transactError'));
     } finally {
       setTransactTarget(null);
     }
@@ -178,8 +178,8 @@ export default function MyPropertiesScreen() {
               style={styles.ownerActionButton}
             >
               {closeStatus === PropertyStatus.SOLD
-                ? t('properties.my.markSold', 'Mark as sold')
-                : t('properties.my.markRented', 'Mark as rented')}
+                ? t('properties.my.markSold')
+                : t('properties.my.markRented')}
             </Button>
           ) : null}
           <View style={styles.ownerActions}>
@@ -290,18 +290,15 @@ export default function MyPropertiesScreen() {
         visible={transactTarget !== null}
         title={
           transactTarget?.status === PropertyStatus.SOLD
-            ? t('properties.my.markSoldTitle', 'Mark as sold?')
-            : t('properties.my.markRentedTitle', 'Mark as rented?')
+            ? t('properties.my.markSoldTitle')
+            : t('properties.my.markRentedTitle')
         }
-        message={t(
-          'properties.my.transactMessage',
-          'This closes "{{title}}" and removes it from active listings. This cannot be undone.',
-          { title: transactTarget?.title ?? '' },
-        )}
+        message={t('properties.my.transactMessage',
+          { title: transactTarget?.title ?? '' },)}
         confirmLabel={
           transactTarget?.status === PropertyStatus.SOLD
-            ? t('properties.my.markSold', 'Mark as sold')
-            : t('properties.my.markRented', 'Mark as rented')
+            ? t('properties.my.markSold')
+            : t('properties.my.markRented')
         }
         cancelLabel={t('common.cancel')}
         loading={markTransacted.isPending}

@@ -16,16 +16,16 @@ export const AvailabilitySection: React.FC<Props> = ({ property }) => {
     if (!availableFrom && !leaseTerm) return null;
     const dateStr = availableFrom ? new Date(availableFrom).toLocaleDateString() : undefined;
     return (
-        <Section title={t('Availability')} bodyStyle={styles.body}>
+        <Section title={t('property.sections.availability')} bodyStyle={styles.body}>
             {dateStr && (
                 <View style={styles.row}>
-                    <BloomText style={styles.label}>{t('Available From')}</BloomText>
+                    <BloomText style={styles.label}>{t('property.sections.availableFrom')}</BloomText>
                     <BloomText style={styles.value}>{dateStr}</BloomText>
                 </View>
             )}
             {leaseTerm && (
                 <View style={styles.row}>
-                    <BloomText style={styles.label}>{t('Lease Term')}</BloomText>
+                    <BloomText style={styles.label}>{t('property.sections.leaseTerm')}</BloomText>
                     <BloomText style={styles.value}>{leaseTerm}</BloomText>
                 </View>
             )}

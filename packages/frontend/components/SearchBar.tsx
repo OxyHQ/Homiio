@@ -44,8 +44,6 @@ type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 interface SegmentDef {
   id: string;
   labelKey: string;
-  fallbackLabel: string;
-  valueFallback: string;
   icon: IoniconName;
 }
 
@@ -53,22 +51,16 @@ const LONG_TERM_SEGMENTS: SegmentDef[] = [
   {
     id: 'where',
     labelKey: 'searchBar.long.where',
-    fallbackLabel: 'Where',
-    valueFallback: 'Any city',
     icon: 'location-outline',
   },
   {
     id: 'moveIn',
     labelKey: 'searchBar.long.moveIn',
-    fallbackLabel: 'Move-in',
-    valueFallback: 'Add date',
     icon: 'calendar-outline',
   },
   {
     id: 'propertyType',
     labelKey: 'searchBar.long.propertyType',
-    fallbackLabel: 'Property type',
-    valueFallback: 'Any type',
     icon: 'home-outline',
   },
 ];
@@ -77,22 +69,16 @@ const VACATION_SEGMENTS: SegmentDef[] = [
   {
     id: 'where',
     labelKey: 'searchBar.vacation.where',
-    fallbackLabel: 'Where',
-    valueFallback: 'Any destination',
     icon: 'location-outline',
   },
   {
     id: 'when',
     labelKey: 'searchBar.vacation.when',
-    fallbackLabel: 'When',
-    valueFallback: 'Add dates',
     icon: 'calendar-outline',
   },
   {
     id: 'who',
     labelKey: 'searchBar.vacation.who',
-    fallbackLabel: 'Who',
-    valueFallback: 'Add guests',
     icon: 'people-outline',
   },
 ];
@@ -216,24 +202,21 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     <View style={styles.root}>
       <View style={[styles.modeWrapper, isWeb ? styles.modeWrapperWeb : null]}>
         <SegmentedControl<RentalMode>
-          label={t('searchBar.mode.label', 'Rental mode')}
+          label={t('searchBar.mode.label')}
           type="tabs"
           size="small"
           value={mode}
           onChange={handleModeChange}
-          accessibilityHint={t(
-            'searchBar.mode.hint',
-            'Switch between long-term rentals and vacation stays',
-          )}
+          accessibilityHint={t('searchBar.mode.hint')}
         >
           <SegmentedControlItem value="long_term">
             <SegmentedControlItemText>
-              {t('searchBar.mode.longTerm', 'Long-term')}
+              {t('searchBar.mode.longTerm')}
             </SegmentedControlItemText>
           </SegmentedControlItem>
           <SegmentedControlItem value="vacation">
             <SegmentedControlItemText>
-              {t('searchBar.mode.vacation', 'Vacation')}
+              {t('searchBar.mode.vacation')}
             </SegmentedControlItemText>
           </SegmentedControlItem>
         </SegmentedControl>
@@ -245,12 +228,12 @@ export const SearchBar: React.FC<SearchBarProps> = ({
             <React.Fragment key={segment.id}>
               {index > 0 ? <View style={styles.pillDivider} /> : null}
               <PillSegment
-                label={t(segment.labelKey, segment.fallbackLabel) || segment.fallbackLabel}
-                value={t(`${segment.labelKey}.value`, segment.valueFallback) || segment.valueFallback}
+                label={t(segment.labelKey)}
+                value={t(`${segment.labelKey}.value`)}
                 isFirst={index === 0}
                 isLast={false}
                 onPress={openFilters}
-                accessibilityLabel={t(segment.labelKey, segment.fallbackLabel) || segment.fallbackLabel}
+                accessibilityLabel={t(segment.labelKey)}
               />
             </React.Fragment>
           ))}
@@ -259,7 +242,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
               style={styles.searchButton}
               onPress={submitSearch}
               accessibilityRole="button"
-              accessibilityLabel={t('searchBar.search', 'Search') || 'Search'}
+              accessibilityLabel={t('searchBar.search')}
             >
               <Ionicons name="search" size={20} color={colors.primaryForeground} />
             </Pressable>

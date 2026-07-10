@@ -118,14 +118,14 @@ export const DatesStep: React.FC<DatesStepProps> = ({ value, onChange, compact =
     <View style={styles.container}>
       {compact ? null : (
         <BloomText style={styles.heading}>
-          {t('search.step.dates.title', 'When?') || 'When?'}
+          {t('search.step.dates.title')}
         </BloomText>
       )}
 
       <View style={styles.weekdays}>
         {WEEKDAY_KEYS.map((key) => (
           <BloomText key={key} style={styles.weekday}>
-            {t(`search.step.dates.weekday.${key}`, key) || key}
+            {t(`search.step.dates.weekday.${key}`)}
           </BloomText>
         ))}
       </View>

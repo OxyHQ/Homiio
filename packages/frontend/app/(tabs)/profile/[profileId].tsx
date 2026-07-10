@@ -130,7 +130,7 @@ export default function PublicProfileScreen() {
     <View style={styles.container}>
       <Header
         options={{
-          title: t('profile.title', 'Profile'),
+          title: t('profile.title'),
           showBackButton: true,
           rightComponents: [
             profileId ? (
@@ -168,7 +168,7 @@ export default function PublicProfileScreen() {
               <Text style={styles.handleText}>@{String(profile._id).slice(-6)}</Text>
               {listingsTotal > 0 ? (
                 <Text style={styles.profileMeta}>
-                  {listingsTotal} {t('profile.listings', 'Listings')}
+                  {listingsTotal} {t('profile.listings')}
                 </Text>
               ) : null}
             </View>
@@ -187,14 +187,14 @@ export default function PublicProfileScreen() {
               ).map((tab) => {
                 const label =
                   tab === 'all'
-                    ? t('common.all', 'All')
+                    ? t('common.all')
                     : tab === PropertyType.APARTMENT
-                      ? t('properties.titles.types.apartment', 'Apartment')
+                      ? t('properties.titles.types.apartment')
                       : tab === PropertyType.HOUSE
-                        ? t('properties.titles.types.house', 'House')
+                        ? t('properties.titles.types.house')
                         : tab === PropertyType.STUDIO
-                          ? t('properties.titles.types.studio', 'Studio')
-                          : t('properties.titles.types.room', 'Room');
+                          ? t('properties.titles.types.studio')
+                          : t('properties.titles.types.room');
                 return (
                   <TouchableOpacity
                     key={String(tab)}
@@ -279,7 +279,7 @@ export default function PublicProfileScreen() {
               style={[styles.tabItem, activeTab === 'listings' && styles.tabItemActive]}
             >
               <Text style={[styles.tabText, activeTab === 'listings' && styles.tabTextActive]}>
-                {t('profile.tabs.listings', 'Listings')}
+                {t('profile.tabs.listings')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -287,7 +287,7 @@ export default function PublicProfileScreen() {
               style={[styles.tabItem, activeTab === 'about' && styles.tabItemActive]}
             >
               <Text style={[styles.tabText, activeTab === 'about' && styles.tabTextActive]}>
-                {t('profile.tabs.about', 'About')}
+                {t('profile.tabs.about')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -362,38 +362,38 @@ export default function PublicProfileScreen() {
           {/* About details by type */}
           {profile && profile.profileType === ProfileType.PERSONAL && (
             <View style={styles.aboutCard}>
-              <Text style={styles.aboutTitle}>{t('profile.about', 'About')}</Text>
+              <Text style={styles.aboutTitle}>{t('profile.about')}</Text>
               {profile.personalProfile?.personalInfo?.bio ? (
                 <Text style={styles.aboutItem}>{profile.personalProfile.personalInfo.bio}</Text>
               ) : null}
               {profile.personalProfile?.personalInfo?.occupation ? (
                 <Text style={styles.aboutItem}>
-                  {t('profile.occupation', 'Occupation')}:{' '}
+                  {t('profile.occupation')}:{' '}
                   {profile.personalProfile.personalInfo.occupation}
                 </Text>
               ) : null}
               {profile.personalProfile?.personalInfo?.employer ? (
                 <Text style={styles.aboutItem}>
-                  {t('profile.employer', 'Employer')}:{' '}
+                  {t('profile.employer')}:{' '}
                   {profile.personalProfile.personalInfo.employer}
                 </Text>
               ) : null}
               {typeof profile.personalProfile?.preferences?.maxRent === 'number' ? (
                 <Text style={styles.aboutItem}>
-                  {t('profile.budget', 'Budget')}: ${profile.personalProfile.preferences.maxRent}
+                  {t('profile.budget')}: ${profile.personalProfile.preferences.maxRent}
                 </Text>
               ) : null}
               {profile.personalProfile?.preferences?.minBedrooms ||
                 profile.personalProfile?.preferences?.minBathrooms ? (
                 <Text style={styles.aboutItem}>
-                  {t('profile.preferences', 'Preferences')}:{' '}
+                  {t('profile.preferences')}:{' '}
                   {profile.personalProfile?.preferences?.minBedrooms ?? 0} bd •{' '}
                   {profile.personalProfile?.preferences?.minBathrooms ?? 0} ba
                 </Text>
               ) : null}
               {profile.personalProfile?.trustScore?.score ? (
                 <Text style={styles.aboutItem}>
-                  {t('profile.trustScore', 'Trust score')}:{' '}
+                  {t('profile.trustScore')}:{' '}
                   {profile.personalProfile.trustScore.score}
                 </Text>
               ) : null}
@@ -404,7 +404,7 @@ export default function PublicProfileScreen() {
               profile.profileType === ProfileType.BUSINESS ||
               profile.profileType === ProfileType.COOPERATIVE) && (
               <View style={styles.aboutCard}>
-                <Text style={styles.aboutTitle}>{t('profile.about', 'About')}</Text>
+                <Text style={styles.aboutTitle}>{t('profile.about')}</Text>
                 {profile.agencyProfile?.description ? (
                   <Text style={styles.aboutItem}>{profile.agencyProfile.description}</Text>
                 ) : null}
@@ -414,13 +414,13 @@ export default function PublicProfileScreen() {
                 {/* Service areas / specialties if present */}
                 {profile.agencyProfile?.businessDetails?.specialties?.length ? (
                   <Text style={styles.aboutItem}>
-                    {t('profile.specialties', 'Specialties')}:{' '}
+                    {t('profile.specialties')}:{' '}
                     {profile.agencyProfile.businessDetails.specialties.join(', ')}
                   </Text>
                 ) : null}
                 {profile.agencyProfile?.businessDetails?.serviceAreas?.length ? (
                   <Text style={styles.aboutItem}>
-                    {t('profile.serviceAreas', 'Service areas')}:{' '}
+                    {t('profile.serviceAreas')}:{' '}
                     {profile.agencyProfile.businessDetails.serviceAreas
                       .map((s) => s.city)
                       .filter(Boolean)
@@ -429,7 +429,7 @@ export default function PublicProfileScreen() {
                 ) : null}
                 {profile.agencyProfile?.businessDetails?.yearEstablished ? (
                   <Text style={styles.aboutItem}>
-                    {t('profile.established', 'Established')}:{' '}
+                    {t('profile.established')}:{' '}
                     {profile.agencyProfile.businessDetails.yearEstablished}
                   </Text>
                 ) : null}

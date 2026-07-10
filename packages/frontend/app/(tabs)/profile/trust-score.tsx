@@ -30,7 +30,7 @@ export default function TrustScorePage() {
       <Header
         options={{
           showBackButton: true,
-          title: t('Trust Score'),
+          title: t('profile.trustScorePage.title'),
           titlePosition: 'center',
         }}
       />
@@ -38,7 +38,7 @@ export default function TrustScorePage() {
         <View style={styles.heroWrap}>
           <CardSurface padding={spacing['2xl']}>
             <View style={styles.heroHeader}>
-              <H1 style={styles.heroTitle}>{t('Trust Score')}</H1>
+              <H1 style={styles.heroTitle}>{t('profile.trustScorePage.title')}</H1>
               <Button
                 variant="secondary"
                 size="medium"
@@ -51,15 +51,12 @@ export default function TrustScorePage() {
                   />
                 }
               >
-                {t('profile.edit', 'Edit profile')}
+                {t('profile.actions.editProfile')}
               </Button>
             </View>
 
             <BloomText style={styles.subtitle}>
-              {t(
-                'profile.trustScoreSubtitle',
-                'Build trust with landlords and roommates through verification and positive interactions.',
-              )}
+              {t('profile.trustScoreSubtitle')}
             </BloomText>
 
             <View style={styles.hint}>
@@ -69,10 +66,7 @@ export default function TrustScorePage() {
                 color={colors.primaryColor}
               />
               <BloomText style={styles.hintText}>
-                {t(
-                  'profile.trustScoreHint',
-                  'Complete your profile information to improve your trust score.',
-                )}
+                {t('profile.trustScoreHint')}
               </BloomText>
             </View>
           </CardSurface>

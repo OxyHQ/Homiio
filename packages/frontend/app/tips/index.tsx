@@ -143,13 +143,10 @@ export default function TipsScreen() {
       />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.titleBlock}>
-          <SectionEyebrow>{t('home.tips.eyebrow', 'Renting smarter')}</SectionEyebrow>
-          <H2 style={styles.title}>{t('home.tips.title', 'Rental tips')}</H2>
+          <SectionEyebrow>{t('home.tips.eyebrow')}</SectionEyebrow>
+          <H2 style={styles.title}>{t('home.tips.title')}</H2>
           <BloomText style={styles.subtitle}>
-            {t(
-              'home.tips.subtitle',
-              'Practical guides from local tenants, legal experts, and the Homiio editorial team.',
-            )}
+            {t('home.tips.subtitle')}
           </BloomText>
         </View>
 
@@ -165,7 +162,7 @@ export default function TipsScreen() {
               color={activeTag === undefined ? 'primary' : 'default'}
               selected={activeTag === undefined}
             >
-              {t('tips.all', 'All')}
+              {t('tips.all')}
             </Chip>
             {allTags.map((tag) => {
               const isActive = activeTag === tag;
@@ -189,18 +186,15 @@ export default function TipsScreen() {
         ) : tipsQuery.isError ? (
           <ErrorState
             icon="cloud-offline-outline"
-            title={t('tips.loadError', "Couldn't load tips")}
-            description={tipsQuery.error?.message ?? t('tips.tryAgain', 'Please try again.')}
+            title={t('tips.loadError')}
+            description={tipsQuery.error?.message ?? t('tips.tryAgain')}
             onRetry={() => tipsQuery.refetch()}
           />
         ) : tips.length === 0 ? (
           <ErrorState
             icon="newspaper-outline"
-            title={t('tips.emptyTitle', 'No tips yet')}
-            description={t(
-              'tips.emptyDescription',
-              'Check back soon for new rental guides and advice.',
-            )}
+            title={t('tips.emptyTitle')}
+            description={t('tips.emptyDescription')}
           />
         ) : (
           <View style={styles.magazine}>

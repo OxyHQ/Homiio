@@ -166,7 +166,7 @@ export default function SavedPropertiesScreen() {
   const header = (
     <Header
       options={{
-        title: t('saved.header', 'Saved'),
+        title: t('saved.header'),
         titlePosition: 'left',
       }}
     />
@@ -179,12 +179,9 @@ export default function SavedPropertiesScreen() {
         <View style={styles.centerWrap}>
           <EmptyState
             icon="lock-closed"
-            title={t('profile.signInRequired', 'Sign in to view saved')}
-            description={t(
-              'profile.signInMessage',
-              'You need an account to save and revisit places.',
-            )}
-            actionText={t('common.signIn', 'Sign in')}
+            title={t('profile.signInRequired')}
+            description={t('profile.signInMessage')}
+            actionText={t('common.signIn')}
             actionIcon="log-in"
             onAction={() => showSignInModal()}
           />
@@ -209,26 +206,26 @@ export default function SavedPropertiesScreen() {
       <View style={styles.controls}>
         <SearchInput
           value={searchQuery}
-          label={t('saved.searchPlaceholder', 'Search saved properties')}
+          label={t('saved.searchPlaceholder')}
           onChangeText={setSearchQuery}
           onClearText={() => setSearchQuery('')}
         />
 
         <View style={styles.segmentedWrap}>
           <SegmentedControl<Tab>
-            label={t('saved.tabs.label', 'Saved view')}
+            label={t('saved.tabs.label')}
             type="tabs"
             value={tab}
             onChange={setTab}
           >
             <SegmentedControlItem value="folders">
               <SegmentedControlItemText>
-                {t('saved.tabs.folders', 'Folders')}
+                {t('saved.tabs.folders')}
               </SegmentedControlItemText>
             </SegmentedControlItem>
             <SegmentedControlItem value="recent">
               <SegmentedControlItemText>
-                {t('saved.tabs.recent', 'Recent')}
+                {t('saved.tabs.recent')}
               </SegmentedControlItemText>
             </SegmentedControlItem>
           </SegmentedControl>
@@ -262,13 +259,13 @@ export default function SavedPropertiesScreen() {
       ) : isError ? (
         <View style={styles.centerWrap}>
           <ErrorState
-            title={t('saved.loadFailed', "We couldn't load your saved items")}
+            title={t('saved.loadFailed')}
             description={
               savedQuery.error instanceof Error
                 ? savedQuery.error.message
-                : t('common.tryAgain', 'Please try again.')
+                : t('common.tryAgain')
             }
-            retryLabel={t('common.retry', 'Retry')}
+            retryLabel={t('common.retry')}
             onRetry={handleRefresh}
           />
         </View>
@@ -292,12 +289,9 @@ export default function SavedPropertiesScreen() {
             <View style={styles.emptyInner}>
               <EmptyState
                 icon="folder-open-outline"
-                title={t('saved.noFolders', 'No folders yet')}
-                description={t(
-                  'saved.noFoldersDescription',
-                  'Create folders to organise the places you like.',
-                )}
-                actionText={t('saved.createFolder', 'Create folder')}
+                title={t('saved.noFolders')}
+                description={t('saved.noFoldersDescription')}
+                actionText={t('saved.createFolder')}
                 actionIcon="add"
                 onAction={() => router.push('/saved')}
               />
@@ -323,21 +317,15 @@ export default function SavedPropertiesScreen() {
                 icon="bookmark-outline"
                 title={
                   searchQuery || recency !== 'all'
-                    ? t('saved.noResults', 'No matches')
-                    : t('saved.noProperties', 'No saved properties')
+                    ? t('saved.noResults')
+                    : t('saved.noProperties')
                 }
                 description={
                   searchQuery || recency !== 'all'
-                    ? t(
-                        'saved.adjustFilters',
-                        'Try a different filter or clear your search.',
-                      )
-                    : t(
-                        'saved.noPropertiesDescription',
-                        'Save properties to see them here.',
-                      )
+                    ? t('saved.adjustFilters')
+                    : t('saved.noPropertiesDescription')
                 }
-                actionText={t('saved.exploreCta', 'Explore properties')}
+                actionText={t('saved.exploreCta')}
                 actionIcon="search"
                 onAction={() => router.push('/explore')}
               />

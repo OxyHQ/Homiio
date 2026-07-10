@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from '@/lib/sonner';
+import i18next from 'i18next';
 import {
   UtilitiesIncluded,
   PropertyStatus,
@@ -274,7 +275,7 @@ export function useCreatePropertyWizard(id: string | undefined) {
       }
       if (isEditMode) {
         logger.info('Property update result', property);
-        toast.success('Property updated successfully');
+        toast.success(i18next.t('property.toast.updateSuccess'));
         if (redirectId) {
           router.push(`/properties/${redirectId}`);
         } else {
@@ -283,7 +284,7 @@ export function useCreatePropertyWizard(id: string | undefined) {
         return;
       }
       logger.info('Property creation result', property);
-      toast.success('Property created successfully');
+      toast.success(i18next.t('property.toast.createSuccess'));
       // The captured referral code has now been consumed by this listing —
       // clear it so a later, un-referred listing isn't mis-attributed.
       useReferralStore.getState().clearReferralCode();
@@ -295,7 +296,9 @@ export function useCreatePropertyWizard(id: string | undefined) {
     },
     onError: (error) => {
       const message =
-        error.message || (isEditMode ? 'Failed to update property' : 'Failed to create property');
+        error instanceof Error
+          ? error.message
+          : i18next.t(isEditMode ? 'property.toast.updateFailed' : 'property.toast.createFailed');
       setError(message);
       toast.error(message);
     },

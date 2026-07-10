@@ -16,6 +16,7 @@ import { Chip } from '@oxyhq/bloom/chip';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { H2 } from '@oxyhq/bloom/typography';
 import { useOxy, showSignInModal } from '@oxyhq/services';
+import { useTranslation } from 'react-i18next';
 import {
   Reservation,
   ReservationStatus,
@@ -34,13 +35,13 @@ import { colors } from '@/styles/colors';
 
 type StatusFilter = 'all' | ReservationStatus;
 
-const FILTERS: { id: StatusFilter; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: ReservationStatus.PENDING, label: 'Pending' },
-  { id: ReservationStatus.CONFIRMED, label: 'Confirmed' },
-  { id: ReservationStatus.DECLINED, label: 'Declined' },
-  { id: ReservationStatus.CANCELLED, label: 'Cancelled' },
-  { id: ReservationStatus.COMPLETED, label: 'Completed' },
+const FILTER_ENTRIES: { id: StatusFilter; labelKey: string }[] = [
+  { id: 'all', labelKey: 'host.reservations.filterAll' },
+  { id: ReservationStatus.PENDING, labelKey: 'host.reservations.filterPending' },
+  { id: ReservationStatus.CONFIRMED, labelKey: 'host.reservations.filterConfirmed' },
+  { id: ReservationStatus.DECLINED, labelKey: 'host.reservations.filterDeclined' },
+  { id: ReservationStatus.CANCELLED, labelKey: 'host.reservations.filterCancelled' },
+  { id: ReservationStatus.COMPLETED, labelKey: 'host.reservations.filterCompleted' },
 ];
 
 interface PendingActionsProps {
@@ -48,6 +49,7 @@ interface PendingActionsProps {
 }
 
 const PendingActions: React.FC<PendingActionsProps> = ({ reservation }) => {
+  const { t } = useTranslation();
   const router = useRouter();
   const mutation = useUpdateReservation(reservation.id);
   const [busyAction, setBusyAction] = useState<'confirm' | 'decline' | null>(
@@ -60,11 +62,11 @@ const PendingActions: React.FC<PendingActionsProps> = ({ reservation }) => {
       await mutation.mutateAsync({ status: target });
       toast.success(
         target === ReservationStatus.CONFIRMED
-          ? 'Reservation confirmed'
-          : 'Reservation declined',
+          ? t('host.reservations.toastConfirmed')
+          : t('host.reservations.toastDeclined'),
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Update failed';
+      const message = error instanceof Error ? error.message : t('host.reservations.toastUpdateFailed');
       toast.error(message);
     } finally {
       setBusyAction(null);
@@ -82,7 +84,7 @@ const PendingActions: React.FC<PendingActionsProps> = ({ reservation }) => {
         disabled={mutation.isPending}
         onPress={() => handle(ReservationStatus.CONFIRMED)}
       >
-        Approve
+        {t('host.reservations.approve')}
       </Button>
       <Button
         variant="secondary"
@@ -91,14 +93,14 @@ const PendingActions: React.FC<PendingActionsProps> = ({ reservation }) => {
         disabled={mutation.isPending}
         onPress={() => handle(ReservationStatus.DECLINED)}
       >
-        Decline
+        {t('host.reservations.decline')}
       </Button>
       <Button
         variant="ghost"
         size="small"
         onPress={() => router.push(`/reservations/${reservation.id}`)}
       >
-        View
+        {t('host.reservations.view')}
       </Button>
     </>
   );
@@ -120,6 +122,7 @@ const ReservationListSkeleton: React.FC = () => (
 );
 
 export default function HostReservationsScreen() {
+  const { t } = useTranslation();
   const { oxyServices, activeSessionId } = useOxy();
   const isAuthed = Boolean(oxyServices && activeSessionId);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -138,13 +141,18 @@ export default function HostReservationsScreen() {
     [reservationsQuery.data?.items],
   );
 
+  const filters = FILTER_ENTRIES.map((entry) => ({
+    id: entry.id,
+    label: t(entry.labelKey),
+  }));
+
   if (!isAuthed) {
     return (
       <View style={styles.root}>
         <Header
           options={{
             showBackButton: true,
-            title: 'Reservations',
+            title: t('host.reservations.title'),
             titlePosition: 'center',
           }}
         />
@@ -152,9 +160,9 @@ export default function HostReservationsScreen() {
           <View style={styles.emptyWrap}>
             <EmptyState
               icon="mail-unread-outline"
-              title="Sign in to manage reservations"
-              description="Approve or decline guest requests from one place."
-              actionText="Sign in"
+              title={t('host.reservations.signInTitle')}
+              description={t('host.reservations.signInDescription')}
+              actionText={t('host.reservations.signIn')}
               actionIcon="log-in-outline"
               onAction={() => showSignInModal()}
             />
@@ -166,15 +174,15 @@ export default function HostReservationsScreen() {
 
   const activeLabel =
     statusFilter === 'all'
-      ? 'All reservations'
-      : FILTERS.find((entry) => entry.id === statusFilter)?.label ?? 'Reservations';
+      ? t('host.reservations.allReservations')
+      : filters.find((entry) => entry.id === statusFilter)?.label ?? t('host.reservations.title');
 
   return (
     <View style={styles.root}>
       <Header
         options={{
           showBackButton: true,
-          title: 'Reservations',
+          title: t('host.reservations.title'),
           titlePosition: 'center',
         }}
       />
@@ -185,7 +193,7 @@ export default function HostReservationsScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.filterRow}
           >
-            {FILTERS.map((entry) => {
+            {filters.map((entry) => {
               const isActive = statusFilter === entry.id;
               return (
                 <Chip
@@ -206,9 +214,9 @@ export default function HostReservationsScreen() {
           {reservationsQuery.isError ? (
             <ErrorState
               icon="cloud-offline-outline"
-              title="Couldn't load reservations"
+              title={t('host.reservations.loadError')}
               description={
-                reservationsQuery.error?.message ?? 'Please try again.'
+                reservationsQuery.error?.message ?? t('host.reservations.tryAgain')
               }
               onRetry={() => reservationsQuery.refetch()}
             />
@@ -220,8 +228,8 @@ export default function HostReservationsScreen() {
             <View style={styles.emptyWrap}>
               <EmptyState
                 icon="mail-outline"
-                title="No reservations yet"
-                description="When guests book your places, requests will show up here."
+                title={t('host.reservations.emptyTitle')}
+                description={t('host.reservations.emptyDescription')}
               />
             </View>
           ) : null}
@@ -229,7 +237,7 @@ export default function HostReservationsScreen() {
           {items.length > 0 ? (
             <View style={styles.listWrap}>
               <View style={styles.sectionHeader}>
-                <SectionEyebrow>Reservations</SectionEyebrow>
+                <SectionEyebrow>{t('host.reservations.title')}</SectionEyebrow>
                 <H2 style={styles.sectionTitle}>{activeLabel}</H2>
               </View>
               {items.map((reservation) => (

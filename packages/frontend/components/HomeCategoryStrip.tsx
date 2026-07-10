@@ -42,29 +42,28 @@ import { tracker } from '@/constants/styles';
 interface CategoryDef {
   id: HomeCategory;
   labelKey: string;
-  fallback: string;
 }
 
 const LONG_TERM_CATEGORIES: CategoryDef[] = [
-  { id: 'studios', labelKey: 'home.category.studios', fallback: 'Studios' },
-  { id: 'apartments', labelKey: 'home.category.apartments', fallback: 'Apartments' },
-  { id: 'houses', labelKey: 'home.category.houses', fallback: 'Houses' },
-  { id: 'rooms', labelKey: 'home.category.rooms', fallback: 'Rooms' },
-  { id: 'coliving', labelKey: 'home.category.coliving', fallback: 'Co-living' },
-  { id: 'luxury', labelKey: 'home.category.luxury', fallback: 'Luxury' },
-  { id: 'new_listings', labelKey: 'home.category.newListings', fallback: 'New listings' },
-  { id: 'near_you', labelKey: 'home.category.nearYou', fallback: 'Near you' },
+  { id: 'studios', labelKey: 'home.category.studios' },
+  { id: 'apartments', labelKey: 'home.category.apartments' },
+  { id: 'houses', labelKey: 'home.category.houses' },
+  { id: 'rooms', labelKey: 'home.category.rooms' },
+  { id: 'coliving', labelKey: 'home.category.coliving' },
+  { id: 'luxury', labelKey: 'home.category.luxury' },
+  { id: 'new_listings', labelKey: 'home.category.newListings' },
+  { id: 'near_you', labelKey: 'home.category.nearYou' },
 ];
 
 const VACATION_CATEGORIES: CategoryDef[] = [
-  { id: 'beachfront', labelKey: 'home.category.beachfront', fallback: 'Beachfront' },
-  { id: 'cabins', labelKey: 'home.category.cabins', fallback: 'Cabins' },
-  { id: 'pools', labelKey: 'home.category.pools', fallback: 'Pools' },
-  { id: 'mountain', labelKey: 'home.category.mountain', fallback: 'Mountain' },
-  { id: 'city_breaks', labelKey: 'home.category.cityBreaks', fallback: 'City breaks' },
-  { id: 'countryside', labelKey: 'home.category.countryside', fallback: 'Countryside' },
-  { id: 'instant_book', labelKey: 'home.category.instantBook', fallback: 'Instant book' },
-  { id: 'pet_friendly', labelKey: 'home.category.petFriendly', fallback: 'Pet friendly' },
+  { id: 'beachfront', labelKey: 'home.category.beachfront' },
+  { id: 'cabins', labelKey: 'home.category.cabins' },
+  { id: 'pools', labelKey: 'home.category.pools' },
+  { id: 'mountain', labelKey: 'home.category.mountain' },
+  { id: 'city_breaks', labelKey: 'home.category.cityBreaks' },
+  { id: 'countryside', labelKey: 'home.category.countryside' },
+  { id: 'instant_book', labelKey: 'home.category.instantBook' },
+  { id: 'pet_friendly', labelKey: 'home.category.petFriendly' },
 ];
 
 /** Edge length of the isometric tile — compact so more categories fit on screen. */
@@ -211,7 +210,7 @@ export const HomeCategoryStrip: React.FC<HomeCategoryStripProps> = ({
           <CategoryItem
             key={item.id}
             active={category === item.id}
-            label={t(item.labelKey, item.fallback)}
+            label={t(item.labelKey)}
             image={resolveCategoryImage(item.id)}
             onPress={() => handlePress(item.id)}
           />

@@ -41,12 +41,12 @@ import { spacing } from '@/constants/styles';
 const MAX_DETAILS_LENGTH = 4000;
 const EMAIL_REGEX = /\S+@\S+\.\S+/;
 
-const REASON_OPTIONS: { value: ListingReportReason; labelKey: string; fallback: string }[] = [
-  { value: ListingReportReason.INACCURATE, labelKey: 'property.report.reason.inaccurate', fallback: 'Inaccurate information' },
-  { value: ListingReportReason.SCAM, labelKey: 'property.report.reason.scam', fallback: 'Suspected scam or fraud' },
-  { value: ListingReportReason.INAPPROPRIATE, labelKey: 'property.report.reason.inappropriate', fallback: 'Inappropriate content' },
-  { value: ListingReportReason.UNAVAILABLE, labelKey: 'property.report.reason.unavailable', fallback: 'Already rented or unavailable' },
-  { value: ListingReportReason.OTHER, labelKey: 'property.report.reason.other', fallback: 'Something else' },
+const REASON_OPTIONS: { value: ListingReportReason; labelKey: string }[] = [
+  { value: ListingReportReason.INACCURATE, labelKey: 'property.report.reason.inaccurate' },
+  { value: ListingReportReason.SCAM, labelKey: 'property.report.reason.scam' },
+  { value: ListingReportReason.INAPPROPRIATE, labelKey: 'property.report.reason.inappropriate' },
+  { value: ListingReportReason.UNAVAILABLE, labelKey: 'property.report.reason.unavailable' },
+  { value: ListingReportReason.OTHER, labelKey: 'property.report.reason.other' },
 ];
 
 /**
@@ -108,21 +108,21 @@ export default function ReportListingScreen() {
       const response = err.response as { error?: { code?: string }; code?: string } | undefined;
       const code = response?.error?.code || response?.code;
       if (code === 'INVALID_REASON') {
-        return t('property.report.error.invalidReason', 'Please choose a reason for your report.');
+        return t('property.report.error.invalidReason');
       }
       if (code === 'DETAILS_REQUIRED') {
-        return t('property.report.error.detailsRequired', 'Please add a few details about the problem.');
+        return t('property.report.error.detailsRequired');
       }
       if (code === 'AUTHENTICATION_REQUIRED') {
-        return t('property.report.error.auth', 'Please sign in to report a listing.');
+        return t('property.report.error.auth');
       }
       if (code === 'NOT_FOUND') {
-        return t('property.report.error.notFound', 'This listing no longer exists.');
+        return t('property.report.error.notFound');
       }
       return err.message;
     }
     if (err instanceof Error) return err.message;
-    return t('property.report.error.generic', 'Something went wrong. Please try again.');
+    return t('property.report.error.generic');
   };
 
   const handleSubmit = async () => {
@@ -131,7 +131,7 @@ export default function ReportListingScreen() {
       return;
     }
     if (!propertyId || !reason || !formIsValid) {
-      toast.error(t('property.report.error.invalidForm', 'Please choose a reason before submitting.'));
+      toast.error(t('property.report.error.invalidForm'));
       return;
     }
     const trimmedDetails = details.trim();
@@ -145,7 +145,7 @@ export default function ReportListingScreen() {
           contactEmail: trimmedEmail || undefined,
         },
       });
-      toast.success(t('property.report.success', 'Thanks — your report has been submitted.'));
+      toast.success(t('property.report.success'));
       router.back();
     } catch (err) {
       toast.error(extractError(err));
@@ -157,17 +157,14 @@ export default function ReportListingScreen() {
       <Header
         options={{
           showBackButton: true,
-          title: t('property.report.title', 'Report this listing'),
+          title: t('property.report.title'),
           titlePosition: 'center',
         }}
       />
       <SafeAreaView style={styles.scrollWrapper} edges={['bottom']}>
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <ThemedText style={styles.intro}>
-            {t(
-              'property.report.intro',
-              'Tell us what’s wrong with this listing. Reports are confidential and reviewed by our team — they are never shared with the host.',
-            )}
+            {t('property.report.intro')}
           </ThemedText>
 
           {property ? (
@@ -180,7 +177,7 @@ export default function ReportListingScreen() {
             </View>
           ) : null}
 
-          <Section title={t('property.report.section.reason', 'Why are you reporting this?')}>
+          <Section title={t('property.report.section.reason')}>
             <View style={styles.chipRow}>
               {REASON_OPTIONS.map((option) => (
                 <Chip
@@ -189,7 +186,7 @@ export default function ReportListingScreen() {
                   onPress={() => setReason(option.value)}
                   style={styles.chip}
                 >
-                  {t(option.labelKey, option.fallback)}
+                  {t(option.labelKey)}
                 </Chip>
               ))}
             </View>
@@ -198,22 +195,16 @@ export default function ReportListingScreen() {
           <Section
             title={
               detailsRequired
-                ? t('property.report.section.detailsRequired', 'Details')
-                : t('property.report.section.details', 'Details (optional)')
+                ? t('property.report.section.detailsRequired')
+                : t('property.report.section.details')
             }
-            description={t(
-              'property.report.section.detailsHelp',
-              'Add anything that helps us understand the problem.',
-            )}
+            description={t('property.report.section.detailsHelp')}
           >
             <TextInput
               style={[styles.input, styles.detailsInput]}
               value={details}
               onChangeText={setDetails}
-              placeholder={t(
-                'property.report.field.detailsPlaceholder',
-                'Describe what’s inaccurate, suspicious or inappropriate…',
-              )}
+              placeholder={t('property.report.field.detailsPlaceholder')}
               placeholderTextColor={colors.COLOR_BLACK_LIGHT_3}
               multiline
               numberOfLines={5}
@@ -223,11 +214,8 @@ export default function ReportListingScreen() {
           </Section>
 
           <Section
-            title={t('property.report.section.contact', 'Contact email (optional)')}
-            description={t(
-              'property.report.section.contactHelp',
-              'Share an email if you’re happy for us to follow up about this report.',
-            )}
+            title={t('property.report.section.contact')}
+            description={t('property.report.section.contactHelp')}
           >
             <TextInput
               style={styles.input}
@@ -249,10 +237,7 @@ export default function ReportListingScreen() {
               color={colors.COLOR_BLACK_LIGHT_3}
             />
             <ThemedText style={styles.noticeText}>
-              {t(
-                'property.report.notice',
-                'False or abusive reports may affect your account. Only report genuine problems.',
-              )}
+              {t('property.report.notice')}
             </ThemedText>
           </View>
 
@@ -264,7 +249,7 @@ export default function ReportListingScreen() {
             size="large"
             style={styles.submitButton}
           >
-            {t('property.report.actions.submit', 'Submit report')}
+            {t('property.report.actions.submit')}
           </Button>
         </ScrollView>
       </SafeAreaView>

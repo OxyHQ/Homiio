@@ -14,128 +14,96 @@
       "transportation": "Aparcamiento y transporte",
       "community": "Espacios comunes",
       "other": "Más"
-    }
+    },
+    "airConditioning": "Aire acondicionado",
+    "airPurifier": "Sistema de purificación de aire",
+    "balcony": "Balcón privado",
+    "bbqArea": "Zona de barbacoa",
+    "bikeStorage": "Almacenamiento seguro para bicicletas",
+    "builtInShelving": "Estanterías empotradas",
+    "cableTv": "Preparado para TV por cable",
+    "ceilingFans": "Ventiladores de techo",
+    "coatCloset": "Armario de entrada",
+    "communityRoom": "Sala comunitaria",
+    "conferenceRoom": "Sala de reuniones",
+    "coworkingSpace": "Espacio de coworking",
+    "daycare": "Guardería en el edificio",
+    "dimmerSwitches": "Interruptores reguladores",
+    "dishwasher": "Lavavajillas",
+    "dogPark": "Zona de ejercicio para mascotas",
+    "doubleVanity": "Doble lavabo",
+    "dryer": "Secadora en la vivienda",
+    "electricity": "Electricidad incluida",
+    "elevator": "Acceso con ascensor",
+    "energyEfficient": "Electrodomésticos eficientes",
+    "evCharging": "Carga para vehículo eléctrico",
+    "familyRoom": "Sala de actividades familiar",
+    "fiberInternet": "Internet de fibra",
+    "firePit": "Zona con fogata",
+    "fireSafety": "Sistema de seguridad contra incendios",
+    "garbageDisposal": "Triturador de basura",
+    "gardenAccess": "Acceso al jardín",
+    "gardenSpace": "Huerto comunitario",
+    "grabBars": "Barras de apoyo",
+    "graniteCounters": "Encimeras de granito",
+    "greenRoof": "Techo verde",
+    "gym": "Gimnasio",
+    "hardwoodFloors": "Suelo de madera",
+    "heatedFloors": "Suelo radiante",
+    "heating": "Calefacción adecuada",
+    "homeOffice": "Espacio de oficina en casa",
+    "hotTub": "Bañera de hidromasaje",
+    "humidifier": "Humidificador central",
+    "iceMaker": "Máquina de hielo",
+    "insulation": "Aislamiento adecuado",
+    "intercom": "Portero automático",
+    "jettedTub": "Bañera de hidromasaje",
+    "kitchen": "Cocina",
+    "laundryRoom": "Lavandería compartida",
+    "ledLighting": "Iluminación LED",
+    "linenCloset": "Armario de ropa blanca",
+    "mailRoom": "Sala de paquetería y correo",
+    "microwave": "Microondas",
+    "mobilityAssistance": "Accesibilidad y movilidad",
+    "naturalLight": "Luz natural abundante",
+    "oven": "Horno",
+    "pantry": "Despensa",
+    "parkingSpace": "Plaza de aparcamiento",
+    "pendantLighting": "Iluminación de diseño",
+    "petFriendly": "Se admiten mascotas",
+    "printingStation": "Centro de impresión y copias",
+    "publicTransitAccess": "Acceso al transporte público",
+    "rainwaterCollection": "Recogida de agua de lluvia",
+    "rampAccess": "Acceso con rampa",
+    "recyclingProgram": "Programa de reciclaje integral",
+    "refrigerator": "Frigorífico de tamaño completo",
+    "rooftopDeck": "Terraza en la azotea",
+    "secureEntry": "Acceso controlado",
+    "securityCameras": "Cámaras de seguridad",
+    "seniorServices": "Servicios de apoyo para mayores",
+    "smartDoorbell": "Timbre con vídeo",
+    "smartHome": "Hogar inteligente",
+    "solarPanels": "Energía solar",
+    "stainlessAppliances": "Electrodomésticos de acero inoxidable",
+    "storageUnit": "Espacio de almacenamiento",
+    "stove": "Cocina",
+    "studyRoom": "Espacio de estudio tranquilo",
+    "swimmingPool": "Piscina",
+    "teenRoom": "Sala de actividades para adolescentes",
+    "tileFloors": "Suelo de baldosas",
+    "trashPickup": "Recogida de residuos",
+    "usbOutlets": "Enchufes USB",
+    "walkInCloset": "Vestidor",
+    "walkInShower": "Ducha a ras de suelo",
+    "washingMachine": "Lavadora en la vivienda",
+    "water": "Agua y alcantarillado incluidos",
+    "waterFilter": "Sistema de filtrado de agua",
+    "wheelchairAccessible": "Accesible en silla de ruedas",
+    "wholeHouseFan": "Ventilador de toda la casa",
+    "wideDoorways": "Puertas anchas",
+    "wifi": "Internet de alta velocidad",
+    "wineFridge": "Nevera para vinos"
   },
-  "Home": "Inicio",
-  "Search": "Buscar",
-  "Notifications": "Notificaciones",
-  "Messages": "Mensajes",
-  "New Post": "Nueva Publicación",
-  "What's happening?": "¿Qué está pasando?",
-  "Post": "Publicar",
-  "Save": "Guardar",
-  "Settings": "Configuración",
-  "Language": "Idioma",
-  "Primary Color": "Color Principal",
-  "Apply Settings": "Aplicar Configuración",
-  "Welcome to Homiio! 👋": "¡Bienvenido a Homiio! 👋",
-  "Thanks for trying out our app. Start exploring now!": "Gracias por probar nuestra aplicación. ¡Comienza a explorar ahora!",
-  "This screen doesn't exist.": "Esta pantalla no existe.",
-  "Go to home screen!": "¡Ve a la pantalla de inicio!",
-  "Hey, how are you?": "¡Hola, cómo estás?",
-  "Let's catch up soon!": "¡Pongámonos al día pronto!",
-  "liked your Post": "le gustó tu publicación",
-  "reposted your Post": "republicó tu publicación",
-  "This is a sample post": "Esta es una publicación de ejemplo",
-  "Another example post": "Otra publicación de ejemplo",
-  "Customize your view": "Personaliza tu vista",
-  "These settings affect all the Mention accounts on this device.": "Esta configuración afecta a todas las cuentas de Homiio en este dispositivo.",
-  "Account": "Cuenta",
-  "Manage your account settings": "Gestiona la configuración de tu cuenta",
-  "Notification preferences": "Preferencias de notificaciones",
-  "Privacy and security settings": "Configuración de privacidad y seguridad",
-  "Appearance": "Apariencia",
-  "Theme, font size, colors": "Tema, tamaño de fuente, colores",
-  "Help & Support": "Ayuda y Soporte",
-  "Get help and support": "Obtén ayuda y soporte",
-  "About": "Acerca de",
-  "About this app": "Acerca de esta aplicación",
-  "Battery": "Batería",
-  "Loading...": "Cargando...",
-  "Trends for you": "Tendencias para ti",
-  "Show more": "Mostrar más",
-  "posts": "publicaciones",
-  "File Manager": "Administrador de Archivos",
-  "Filter files by name": "Filtrar archivos por nombre",
-  "Filter files by date (MM/DD/YYYY)": "Filtrar archivos por fecha (DD/MM/AAAA)",
-  "Filter files by type (e.g., image, video)": "Filtrar archivos por tipo (ej., imagen, video)",
-  "Who to follow": "A quién seguir",
-  "Search...": "Buscar...",
-  "No results found for": "No se encontraron resultados para",
-  "Follow": "Seguir",
-  "Following": "Siguiendo",
-  "Explore": "Explorar",
-  "Chat": "Chat",
-  "Bookmarks": "Marcadores",
-  "Feeds": "Fuentes",
-  "Lists": "Listas",
-  "Videos": "Videos",
-  "Sign Up": "Registrarse",
-  "Sign In": "Iniciar Sesión",
-  "Join the conversation": "Únete a la conversación",
-  "error.socket.not_connected": "No conectado al servidor de chat",
-  "error.message.send_timeout": "Tiempo de espera al enviar mensaje. Por favor, inténtalo de nuevo.",
-  "error.message.edit_timeout": "Tiempo de espera al editar. Por favor, inténtalo de nuevo.",
-  "error.message.delete_timeout": "Tiempo de espera al eliminar. Por favor, inténtalo de nuevo.",
-  "error.signup.missing_fields": "Por favor, completa todos los campos",
-  "error.signup.failed": "Error en el registro:",
-  "error.boundary.title": "Algo salió mal",
-  "error.boundary.message": "Un problema inesperado interrumpió lo que estabas haciendo. Puedes volver a intentarlo o enviarnos un informe rápido para que lo revisemos.",
-  "error.boundary.retry": "Reintentar",
-  "error.boundary.reportIssue": "Informar del problema",
-  "error.boundary.errorId": "ID de error",
-  "error.boundary.copyIdHint": "Toca para copiar el ID",
-  "error.boundary.copiedToClipboard": "Copiado al portapapeles",
-  "error.boundary.showDetails": "Mostrar detalles técnicos",
-  "error.boundary.hideDetails": "Ocultar detalles técnicos",
-  "error.boundary.technicalDetails": "Detalles técnicos",
-  "error.boundary.maxRetriesTitle": "Sigue sin funcionar",
-  "error.boundary.maxRetriesMessage": "Has alcanzado el límite de reintentos. Por favor, informa del problema para que podamos revisarlo.",
-  "error.boundary.forceRetry": "Forzar reintento",
-  "error.boundary.reportCopiedTitle": "Informe copiado",
-  "error.boundary.reportCopiedMessage": "El informe del error se ha copiado al portapapeles.",
-  "error.boundary.reportFailedTitle": "No se pudo copiar",
-  "error.boundary.reportFailedMessage": "No pudimos copiar el informe al portapapeles. Por favor, inténtalo de nuevo.",
-  "error.boundary.errorMessage": "Mensaje de error",
-  "error.boundary.errorType": "Tipo de error",
-  "error.boundary.stackTrace": "Traza de pila",
-  "error.boundary.componentStack": "Pila de componentes",
-  "error.boundary.deviceInformation": "Información del dispositivo",
-  "error.file_selection": "Error al procesar los archivos seleccionados. Por favor, inténtalo de nuevo.",
-  "error.login_required": "Por favor, inicia sesión para gestionar archivos",
-  "error.load_notifications": "Error al cargar notificaciones",
-  "error.fetch_trends": "Error al cargar tendencias",
-  "error.signup.password_mismatch": "Las contraseñas no coinciden",
-  "error.validation.token_expired": "El token ha expirado",
-  "error.validation.token_invalid": "El formato del token no es válido",
-  "error.validation.token_signature": "La firma del token no es válida",
-  "error.auth.invalid_token": "Token de autenticación inválido",
-  "error.chat.forward_failed": "No se pudo reenviar el mensaje",
-  "error.chat.delete_failed": "No se pudo eliminar el mensaje",
-  "error.chat.send_failed": "Error al enviar mensaje",
-  "error.chat.load_failed": "Error al cargar mensajes",
-  "error.data.fetch_failed": "Error al obtener datos: {{message}}",
-  "error.users.fetch_failed": "Error al obtener usuarios: {{message}}",
-  "inbox.title": "Buzón",
-  "notification.welcome.title": "¡Bienvenido a Homiio! 👋",
-  "notification.welcome.body": "Gracias por probar nuestra aplicación. ¡Comienza a explorar ahora!",
-  "success.signup": "Registro exitoso",
-  "action.retry": "Reintentar",
-  "status.loading": "Cargando...",
-  "state.loading": "Cargando...",
-  "state.no_results": "Sin resultados",
-  "state.empty_state": "Nada que mostrar",
-  "state.not_connected": "No conectado",
-  "state.session_expired": "Sesión expirada",
-  "state.no_session": "Por favor, inicia sesión",
-  "state.retrying": "Reintentando...",
-  "state.uploading": "Subiendo...",
-  "state.downloading": "Descargando...",
-  "state.processing": "Procesando...",
-  "state.please_wait": "Por favor, espera...",
-  "file.size_mb": "MB",
-  "profile.edit": "Editar perfil",
-  "profile.chat": "Chat",
   "home": {
     "insights": {
       "title": "Información de la Plataforma"
@@ -203,7 +171,8 @@
       "errorDescription": "Por favor, inténtalo de nuevo.",
       "retry": "Reintentar",
       "results": "Resultados",
-      "filtered": "filtrados"
+      "filtered": "filtrados",
+      "continue": "Continue browsing"
     },
     "saved": {
       "title": "Propiedades Guardadas",
@@ -216,7 +185,32 @@
       "noFolderItemsDescription": "Guarda propiedades en esta carpeta para verlas aquí"
     },
     "tips": {
-      "article": "Artículo"
+      "article": "Artículo",
+      "title": "Rental Tips & Guides",
+      "categories": {
+        "search": "Search",
+        "safety": "Safety",
+        "legal": "Legal",
+        "inspection": "Inspection"
+      },
+      "firstTimeRenting": {
+        "title": "First Time Renting? Here's Your Complete Guide",
+        "description": "Everything you need to know about finding, viewing, and securing your first rental property."
+      },
+      "avoidScams": {
+        "title": "How to Avoid Rental Scams: Red Flags to Watch For",
+        "description": "Learn to identify common rental scams and protect yourself from fraud when searching for a new home."
+      },
+      "rentalAgreement": {
+        "title": "Understanding Your Rental Agreement: Key Terms Explained",
+        "description": "Break down complex legal terms and understand what you're signing before committing to a rental."
+      },
+      "propertyInspection": {
+        "title": "Property Inspection Checklist: What to Look For",
+        "description": "A comprehensive guide to inspecting potential rental properties and identifying potential issues."
+      },
+      "subtitle": "Practical guides from local tenants, legal experts, and the Homiio editorial team.",
+      "eyebrow": "Renting smarter"
     },
     "faq": {
       "title": "Preguntas Frecuentes",
@@ -240,6 +234,43 @@
     "cityShowcase": {
       "title": "Explora {{place}}",
       "defaultPlace": "España"
+    },
+    "noProfilesTitle": "No Saved Profiles",
+    "noProfilesDescription": "Follow profiles to see them here",
+    "recommended": {
+      "title": "Recommended homes",
+      "eyebrow": "For you"
+    },
+    "hostCta": {
+      "cta": "Become a host",
+      "subtitle": "Reach verified renters across Spain — free to list, fair fees, real human support.",
+      "title": "List your space, find a great tenant"
+    },
+    "footerStrip": {
+      "support": "Real support, real people",
+      "fair": "Fair agreements",
+      "verified": "Verified listings"
+    },
+    "nearby": {
+      "title": "Homes in {{city}}"
+    },
+    "category": {
+      "studios": "Estudios",
+      "apartments": "Apartamentos",
+      "houses": "Casas",
+      "rooms": "Habitaciones",
+      "coliving": "Co-living",
+      "luxury": "Lujo",
+      "newListings": "Nuevos anuncios",
+      "nearYou": "Cerca de ti",
+      "beachfront": "Frente al mar",
+      "cabins": "Cabañas",
+      "pools": "Piscinas",
+      "mountain": "Montaña",
+      "cityBreaks": "Escapadas urbanas",
+      "countryside": "Campo",
+      "instantBook": "Reserva instantánea",
+      "petFriendly": "Admite mascotas"
     }
   },
   "agent": {
@@ -345,6 +376,9 @@
       "subtitle": "Convierte los hogares que te rodean en ingresos.",
       "cta": "Hazte agente",
       "trust": "Sin licencia. Trabaja desde tu móvil."
+    },
+    "join": {
+      "error": "Could not start earning right now. Please try again."
     }
   },
   "search": {
@@ -364,20 +398,57 @@
     "enableNotifications": "Habilitar Notificaciones",
     "notificationsDescription": "Recibe notificaciones cuando nuevas propiedades coincidan con esta búsqueda",
     "withFilters": "Con filtros",
-    "error": "Error",
+    "error": {
+      "title": "Could not load homes"
+    },
     "enterSearchQuery": "Por favor ingresa una consulta de búsqueda primero",
     "deleteSearch": "Eliminar Búsqueda",
     "deleteSearchConfirm": "¿Estás seguro de que quieres eliminar la búsqueda \"{{name}}\"?",
     "viewAllSaved": "Ver Todas Guardadas",
     "more": "más",
-    "Eco-friendly": "Ecológico",
-    "Co-living": "Convivencia",
-    "Furnished": "Amueblado",
-    "Pets Allowed": "Mascotas Permitidas",
-    "Verified": "Verificado",
-    "Search with": "Buscar con",
     "filters": {
-      "listingType": "Tipo de anuncio"
+      "listingType": "Tipo de anuncio",
+      "propertyType": "Tipo de propiedad",
+      "nightlyPrice": "Precio por noche",
+      "monthlyPrice": "Precio mensual",
+      "checkIn": "Entrada",
+      "checkOut": "Salida",
+      "addDate": "Añadir fecha",
+      "guests": "Huéspedes",
+      "instantBook": "Reserva instantánea",
+      "cancellationPolicy": "Política de cancelación",
+      "moveInDate": "Fecha de mudanza",
+      "leaseDuration": {
+        "3Months": "3 meses",
+        "6Months": "6 meses",
+        "12Months": "12 meses",
+        "flexible": "Flexible"
+      },
+      "maxDeposit": "Depósito máximo",
+      "amenities": "Comodidades",
+      "amenity": {
+        "wifi": "Wi-Fi",
+        "parking": "Aparcamiento",
+        "gym": "Gimnasio",
+        "pool": "Piscina",
+        "balcony": "Balcón",
+        "garden": "Jardín",
+        "elevator": "Ascensor",
+        "airConditioning": "Aire acondicionado",
+        "heating": "Calefacción",
+        "dishwasher": "Lavavajillas",
+        "washingMachine": "Lavadora"
+      },
+      "propertyTypeVacation": {
+        "wholeHouses": "Casas enteras",
+        "privateRooms": "Habitaciones privadas"
+      },
+      "cancellation": {
+        "flexible": "Flexible",
+        "moderate": "Moderada",
+        "strict": "Estricta",
+        "superStrict": "Muy estricta"
+      }
     },
     "mode": {
       "label": "Modo de búsqueda",
@@ -386,7 +457,6 @@
       "buy": "Comprar",
       "exchange": "Intercambio"
     },
-    "Advanced Filters": "Filtros Avanzados",
     "types": {
       "apartments": "Apartamentos",
       "houses": "Casas",
@@ -408,7 +478,16 @@
       "rooms": "Habitaciones",
       "studios": "Estudios",
       "coliving": "Convivencia",
-      "publicHousing": "Vivienda Pública"
+      "publicHousing": "Vivienda Pública",
+      "couchsurfing": "Couchsurfing",
+      "roommates": "Roommates",
+      "hostel": "Hostel",
+      "guesthouse": "Guesthouse",
+      "campsite": "Campsite",
+      "boat": "Boat",
+      "treehouse": "Treehouse",
+      "yurt": "Yurt",
+      "other": "Other"
     },
     "areas": {
       "downtown": "Centro",
@@ -493,7 +572,97 @@
       }
     },
     "editSearch": "Editar búsqueda",
-    "searchQueryPlaceholder": "Introduce tu consulta de búsqueda"
+    "searchQueryPlaceholder": "Introduce tu consulta de búsqueda",
+    "placeholder": {
+      "suggestion1": "Find your dream apartment in Barcelona...",
+      "suggestion2": "Looking for a pet-friendly home?",
+      "suggestion3": "Discover eco-friendly properties...",
+      "suggestion4": "Search for furnished studios near you..."
+    },
+    "disableNotifications": "Disable notifications",
+    "duplicateName": "A search with this name already exists",
+    "duplicateExact": "You already saved this exact search",
+    "tryDifferentName": "Please choose a different name",
+    "actions": {
+      "save": "Save",
+      "search": "Search",
+      "clearAll": "Clear all",
+      "searchArea": "Search this area",
+      "sort": "Sort",
+      "filters": "Filters",
+      "saved": "Saved"
+    },
+    "summary": {
+      "edit": "Edit search",
+      "anyPrice": "Any price",
+      "addDates": "Add dates",
+      "anyTime": "Any time",
+      "anyType": "Any type",
+      "anywhere": "Anywhere",
+      "mapArea": "Map area",
+      "typeCount": "{{count}} types"
+    },
+    "step": {
+      "dates": {
+        "title": "When?",
+        "weekday": {
+          "Mo": "Lu",
+          "Tu": "Ma",
+          "We": "Mi",
+          "Th": "Ju",
+          "Fr": "Vi",
+          "Sa": "Sá",
+          "Su": "Do"
+        }
+      },
+      "type": {
+        "title": "What type of place?"
+      },
+      "price": {
+        "max": "Maximum",
+        "any": "Any",
+        "min": "Minimum",
+        "title": "Price range",
+        "perMonth": "per month",
+        "perNight": "per night"
+      }
+    },
+    "header": {
+      "geocoding": "Looking up location...",
+      "noResults": "No homes match this search",
+      "loading": "Searching homes...",
+      "count": "{{count}} homes"
+    },
+    "recent": {
+      "title": "Recent searches"
+    },
+    "input": {
+      "placeholder": "Search cities, neighborhoods, or addresses"
+    },
+    "panel": {
+      "title": "Search"
+    },
+    "fab": {
+      "map": "Map",
+      "list": "List"
+    },
+    "empty": {
+      "action": "Edit search",
+      "description": "Try widening your area or relaxing your filters.",
+      "title": "No homes match this search"
+    },
+    "sort": {
+      "title": "Ordenar por",
+      "recommended": "Recomendado",
+      "priceAsc": "Precio: de menor a mayor",
+      "priceDesc": "Precio: de mayor a menor",
+      "newest": "Más recientes"
+    },
+    "save": {
+      "title": "Save this search",
+      "namePlaceholder": "Give your search a name",
+      "enableNotifications": "Enable notifications"
+    }
   },
   "profile": {
     "title": "Perfil",
@@ -522,12 +691,19 @@
       "properties": "Mis Propiedades",
       "contracts": "Mis Contratos",
       "trustScore": "Puntuación de Confianza",
-      "settings": "Configuración"
+      "settings": "Configuración",
+      "account": "Account",
+      "profile": "Profile",
+      "activity": "Activity"
     },
     "stats": {
       "propertiesCount": "Propiedades",
       "contractsCount": "Contratos",
-      "trustScore": "Puntuación de Confianza"
+      "trustScore": "Puntuación de Confianza",
+      "stays": "Stays",
+      "applications": "Applications",
+      "saved": "Saved",
+      "applicationsApproved": "{{count}} aprobadas"
     },
     "actions": {
       "manageProperties": "Gestionar Propiedades",
@@ -544,7 +720,323 @@
       "deleteFailed": "Error al eliminar perfil"
     },
     "exchanges": "Intercambios",
-    "exchangesDescription": "Tus intercambios de casa y solicitudes de alojamiento."
+    "exchangesDescription": "Tus intercambios de casa y solicitudes de alojamiento.",
+    "edit": {
+      "noProfile": "No se encontró un perfil para actualizar.",
+      "updateSuccess": "¡Perfil actualizado correctamente!",
+      "updateFailed": "No se pudo actualizar el perfil",
+      "sections": {
+        "agencyInformation": "Información de la agencia",
+        "agencyVerification": "Agency Verification",
+        "teamManagement": "Team Management",
+        "businessSettings": "Business Settings",
+        "businessInformation": "Información del negocio",
+        "businessVerification": "Business Verification",
+        "cooperativeInformation": "Información de la cooperativa",
+        "cooperativeSettings": "Cooperative Settings",
+        "personalInformation": "Información personal",
+        "propertyPreferences": "Preferencias de propiedad",
+        "references": "References",
+        "rentalHistory": "Rental History",
+        "trustScore": "Trust Score",
+        "settings": "Settings"
+      },
+      "labels": {
+        "businessType": "Tipo de negocio *",
+        "legalCompanyName": "Nombre legal de la empresa *",
+        "description": "Descripción",
+        "licenseNumber": "License Number",
+        "taxId": "Tax ID",
+        "yearEstablished": "Year Established",
+        "employeeCount": "Number of Employees",
+        "specialties": "Specialties",
+        "verificationStatus": "Verification Status",
+        "profileVisibility": "Profile Visibility",
+        "notifications": "Notifications",
+        "emailNotifications": "Email Notifications",
+        "pushNotifications": "Push Notifications",
+        "legalName": "Legal Name *",
+        "industry": "Industry",
+        "bio": "Biografía",
+        "occupation": "Occupation",
+        "employer": "Employer",
+        "annualIncome": "Annual Income ($)",
+        "employmentStatus": "Employment Status",
+        "moveInDate": "Move-in Date",
+        "leaseDuration": "Lease Duration",
+        "maxRent": "Maximum Rent ($)",
+        "rentPeriod": "Rent Period",
+        "minBedrooms": "Min Bedrooms",
+        "minBathrooms": "Min Bathrooms",
+        "propertyTypes": "Property Types",
+        "preferredAmenities": "Preferred Amenities",
+        "additionalPreferences": "Additional Preferences",
+        "name": "Name",
+        "relationship": "Relationship",
+        "phone": "Phone",
+        "email": "Email",
+        "address": "Address",
+        "startDate": "Start Date",
+        "endDate": "End Date",
+        "monthlyRent": "Monthly Rent ($)",
+        "reasonForLeaving": "Reason for Leaving",
+        "landlordContact": "Landlord Contact",
+        "privacy": "Privacy"
+      },
+      "subtitles": {
+        "agencyVerification": "Complete these verifications to build trust with clients",
+        "businessVerification": "Complete these verifications to build trust with clients",
+        "businessSettings": "Configure your business profile settings",
+        "cooperativeSettings": "Configure your cooperative profile settings"
+      },
+      "placeholders": {
+        "legalCompanyName": "Enter your legal company name",
+        "description": "Describe your business...",
+        "licenseNumber": "Enter license number",
+        "taxId": "Enter tax ID",
+        "yearEstablished": "e.g., 2020",
+        "industry": "Enter industry",
+        "cooperativeLegalName": "Enter cooperative legal name",
+        "cooperativeDescription": "Describe your cooperative...",
+        "bio": "Cuéntanos sobre ti...",
+        "occupation": "p. ej., Ingeniero de software",
+        "employer": "p. ej., Tech Corp",
+        "annualIncome": "p. ej., 75000",
+        "moveInDate": "AAAA-MM-DD",
+        "maxRent": "Introduce el alquiler máximo",
+        "fullName": "Nombre completo",
+        "phoneNumber": "Número de teléfono",
+        "emailAddress": "Correo electrónico",
+        "fullAddress": "Dirección completa",
+        "landlordName": "Nombre del arrendador",
+        "phone": "Teléfono",
+        "email": "Correo",
+        "endDateOptional": "AAAA-MM-DD (opcional)",
+        "monthlyRent": "p. ej., 1500"
+      },
+      "options": {
+        "agencyBusinessType": {
+          "real_estate_agency": "Agencia inmobiliaria",
+          "property_management": "Gestión de propiedades",
+          "brokerage": "Corretaje",
+          "developer": "Promotora",
+          "other": "Otro"
+        },
+        "agencySpecialty": {
+          "residential": "Residencial",
+          "commercial": "Comercial",
+          "luxury": "Lujo",
+          "student_housing": "Vivienda estudiantil",
+          "senior_housing": "Vivienda senior",
+          "vacation_rentals": "Alquiler vacacional"
+        },
+        "businessType": {
+          "small_business": "Pequeña empresa",
+          "startup": "Startup",
+          "freelancer": "Autónomo",
+          "consultant": "Consultor",
+          "other": "Otro"
+        },
+        "employmentStatus": {
+          "employed": "Empleado",
+          "self_employed": "Autónomo",
+          "student": "Estudiante",
+          "retired": "Jubilado",
+          "unemployed": "Desempleado",
+          "other": "Otro"
+        },
+        "leaseDuration": {
+          "monthly": "Mensual",
+          "3_months": "3 meses",
+          "6_months": "6 meses",
+          "yearly": "Anual",
+          "flexible": "Flexible"
+        },
+        "priceUnit": {
+          "day": "Día",
+          "night": "Noche",
+          "week": "Semana",
+          "month": "Mes",
+          "year": "Año"
+        },
+        "propertyType": {
+          "apartment": "Apartamento",
+          "house": "Casa",
+          "room": "Habitación",
+          "studio": "Estudio"
+        },
+        "amenity": {
+          "parking": "Aparcamiento",
+          "gym": "Gimnasio",
+          "pool": "Piscina",
+          "washer": "Lavadora",
+          "dishwasher": "Lavavajillas",
+          "balcony": "Balcón",
+          "elevator": "Ascensor",
+          "ac": "Aire acondicionado",
+          "heating": "Calefacción",
+          "internet": "Internet"
+        },
+        "referenceRelationship": {
+          "landlord": "Arrendador",
+          "employer": "Empleador",
+          "personal": "Personal",
+          "other": "Otro"
+        },
+        "reasonForLeaving": {
+          "lease_ended": "Fin de contrato",
+          "bought_home": "Compró vivienda",
+          "job_relocation": "Traslado laboral",
+          "family_reasons": "Motivos familiares",
+          "upgrade": "Mejora",
+          "other": "Otro"
+        },
+        "profileVisibility": {
+          "public": "Público",
+          "private": "Privado",
+          "contacts_only": "Solo contactos"
+        }
+      },
+      "verification": {
+        "businessLicenseTitle": "Licencia comercial",
+        "businessLicenseDescription": "Sube tu licencia comercial para verificación",
+        "insuranceTitle": "Seguro",
+        "insuranceDescription": "Aporta prueba del seguro comercial",
+        "bondingTitle": "Fianza",
+        "bondingDescription": "Aporta información de la fianza",
+        "backgroundCheckTitle": "Verificación de antecedentes",
+        "backgroundCheckDescription": "Completa la verificación de antecedentes de todo el equipo"
+      },
+      "toggles": {
+        "emailNotifications": "Notificaciones por correo",
+        "pushNotifications": "Notificaciones push",
+        "petFriendly": "Admite mascotas",
+        "smokingAllowed": "Fumar permitido",
+        "furnished": "Amueblado",
+        "parkingRequired": "Aparcamiento obligatorio",
+        "accessibilityFeatures": "Accesibilidad",
+        "showContactInfo": "Mostrar datos de contacto",
+        "showIncome": "Mostrar ingresos",
+        "showRentalHistory": "Mostrar historial de alquiler",
+        "showReferences": "Mostrar referencias"
+      },
+      "team": {
+        "subtitle": "Gestiona los miembros del equipo y sus roles",
+        "memberLabel": "Miembro {{index}}",
+        "addedLabel": "Añadido: {{date}}",
+        "emptyText": "Aún no hay miembros en el equipo.",
+        "addMember": "+ Añadir miembro del equipo"
+      },
+      "actions": {
+        "addReference": "+ Añadir referencia",
+        "addHistory": "+ Añadir historial",
+        "remove": "Eliminar",
+        "referenceLabel": "Referencia {{index}}",
+        "rentalLabel": "Alquiler {{index}}"
+      }
+    },
+    "create": {
+      "selectType": "Selecciona un tipo de perfil.",
+      "selectBusinessType": "Selecciona un tipo de negocio.",
+      "cooperativeLegalNameRequired": "Introduce el nombre legal de la cooperativa.",
+      "createdSuccess": "¡{{type}} creado correctamente!",
+      "headerTitle": "Create Profile",
+      "createButton": "Create",
+      "chooseType": "Choose Business Profile Type",
+      "types": {
+        "agency": {
+          "title": "Agency Profile",
+          "description": "For real estate agencies and property management"
+        },
+        "business": {
+          "title": "Business Profile",
+          "description": "For small businesses and freelancers"
+        },
+        "cooperative": {
+          "title": "Cooperative Profile",
+          "description": "For housing or member-owned cooperatives"
+        }
+      },
+      "sections": {
+        "agencyInfo": "Agency Information",
+        "businessInfo": "Business Information",
+        "cooperativeInfo": "Cooperative Information",
+        "whatsNext": "What's Next?",
+        "profileSetup": "Profile Setup"
+      },
+      "whatsNext": {
+        "description": "After creating your {{type}} profile, you can customize preferences, add verification documents, and build your trust score."
+      },
+      "placeholders": {
+        "agencyDescription": "Describe your agency...",
+        "businessDescription": "Describe your business...",
+        "licenseOptional": "Enter license number (if applicable)",
+        "cooperativeLegalName": "Cooperative Legal Name",
+        "cooperativeDescription": "Describe the cooperative"
+      },
+      "options": {
+        "agencySpecialty": {
+          "residential": "Residential",
+          "commercial": "Commercial",
+          "investment": "Investment",
+          "rental": "Rental",
+          "new_construction": "New Construction"
+        },
+        "businessSpecialty": {
+          "consulting": "Consulting",
+          "technology": "Technology",
+          "design": "Design",
+          "marketing": "Marketing",
+          "finance": "Finance",
+          "healthcare": "Healthcare",
+          "education": "Education",
+          "retail": "Retail",
+          "services": "Services"
+        }
+      }
+    },
+    "toast": {
+      "loadFailed": "No se pudieron cargar los perfiles",
+      "createSuccess": "Perfil creado correctamente",
+      "createFailed": "No se pudo crear el perfil",
+      "updateSuccess": "Perfil actualizado correctamente",
+      "updateFailed": "No se pudo actualizar el perfil",
+      "deleteSuccess": "Perfil eliminado correctamente",
+      "deleteFailed": "No se pudo eliminar el perfil",
+      "activateSuccess": "Perfil activado correctamente",
+      "activateFailed": "No se pudo activar el perfil"
+    },
+    "trustScoreHint": "Complete your profile information to improve your trust score.",
+    "trustScoreSubtitle": "Build trust with landlords and roommates through verification and positive interactions.",
+    "established": "Established",
+    "serviceAreas": "Service areas",
+    "specialties": "Specialties",
+    "about": "About",
+    "preferences": "Preferences",
+    "budget": "Budget",
+    "employer": "Employer",
+    "occupation": "Occupation",
+    "listings": "Listings",
+    "switchConfirm": "Switch",
+    "switchMessage": "Activate {{name}}?",
+    "switchTitle": "Switch profile?",
+    "subscriptionsDescription": "Manage Homiio Plus or buy one-time file analysis.",
+    "subscriptions": "Subscriptions",
+    "createNewDescription": "Add a business, agency, or cooperative profile.",
+    "createNew": "Create new profile",
+    "active": "Active",
+    "activeFooter": "Active: {{name}}",
+    "stays": "Stays",
+    "applications": "My applications",
+    "trustScoreCta": "View trust score",
+    "loadFailedHint": "Please try again later.",
+    "loadFailed": "Failed to load profile",
+    "switchFailed": "Failed to switch profile",
+    "switched": "Switched to {{name}}",
+    "invalidProfile": "Invalid profile data",
+    "trustScorePage": {
+      "title": "Trust Score"
+    }
   },
   "trust": {
     "loadingVerification": "Cargando estado de verificación...",
@@ -557,7 +1049,79 @@
     "verified": "Verificado",
     "completeVerification": "Completar verificación",
     "yourScoreIs": "Tu puntuación de confianza es",
-    "improveScore": "Mejorar puntuación"
+    "improveScore": "Mejorar puntuación",
+    "manager": {
+      "loading": "Cargando puntuación de confianza...",
+      "error": "Error al cargar la puntuación de confianza",
+      "noData": "No se encontraron datos de puntuación personal",
+      "title": "Puntuación de confianza",
+      "subtitle": "Genera confianza con arrendadores y compañeros de piso",
+      "scoreDescription": "Tu puntuación global es {{score}}/100",
+      "factorsTitle": "Factores de confianza",
+      "factorsSubtitle": "Mejora estos factores para aumentar tu puntuación",
+      "quickActionsTitle": "Acciones rápidas para mejorar",
+      "completeProfile": "Completar perfil",
+      "cancel": "Cancelar",
+      "editProfile": "Editar perfil",
+      "factorAlertBody": "{{description}}\n\nPuntuación actual: {{score}}/100\n\nPara mejorar: {{action}}",
+      "factors": {
+        "verification": {
+          "label": "Verificación de identidad",
+          "description": "Completa la verificación de identidad para generar confianza",
+          "action": "Añade información personal y datos de ingresos"
+        },
+        "reviews": {
+          "label": "Reseñas de usuarios",
+          "description": "Obtén reseñas positivas de arrendadores y compañeros",
+          "action": "Añade referencias de arrendadores anteriores"
+        },
+        "payment_history": {
+          "label": "Historial de pagos",
+          "description": "Mantén un buen historial de pagos",
+          "action": "Añade historial de alquiler con registros de pago"
+        },
+        "communication": {
+          "label": "Comunicación",
+          "description": "Responde con prontitud a mensajes y solicitudes",
+          "action": "Completa la biografía y la información de contacto"
+        },
+        "rental_history": {
+          "label": "Historial de alquiler",
+          "description": "Construye un historial de alquiler positivo",
+          "action": "Añade tus direcciones de alquiler anteriores"
+        },
+        "default": {
+          "description": "Mejora este factor para aumentar tu puntuación",
+          "action": "Completa tu perfil para mejorar este factor"
+        }
+      },
+      "actions": {
+        "personalInfo": {
+          "title": "Completar información personal",
+          "description": "Añade tu ocupación, ingresos y datos laborales para generar confianza."
+        },
+        "references": {
+          "title": "Añadir referencias",
+          "description": "Incluye referencias de arrendadores y empleadores anteriores."
+        },
+        "rentalHistory": {
+          "title": "Añadir historial de alquiler",
+          "description": "Documenta tu historial de alquiler para demostrar fiabilidad."
+        }
+      }
+    },
+    "score": {
+      "levels": {
+        "excellent": "Excelente",
+        "good": "Bueno",
+        "average": "Medio",
+        "fair": "Regular",
+        "needsImprovement": "Necesita mejorar"
+      },
+      "breakdown": "Desglose de la puntuación de confianza",
+      "recalculate": "Recalcular",
+      "recalculating": "Recalculando…"
+    }
   },
   "notifications": {
     "title": "Notificaciones",
@@ -598,9 +1162,6 @@
     "share": "Compartir",
     "contact": "Contactar",
     "bookViewing": "Reservar Visita",
-    "Housing Authority": "Autoridad de Vivienda",
-    "Apply on State Website": "Aplicar en el Sitio Web del Estado",
-    "Contact Housing Authority": "Contactar Autoridad de Vivienda",
     "my": {
       "title": "Mis Propiedades",
       "edit": "Editar",
@@ -612,7 +1173,15 @@
       "emptyDescription": "Aún no has creado ninguna propiedad. Comienza agregando tu primera lista de propiedad.",
       "createFirst": "Crear Tu Primera Propiedad",
       "errorTitle": "Error al Cargar Propiedades",
-      "errorDescription": "Hubo un error al cargar tus propiedades. Por favor, inténtalo de nuevo."
+      "errorDescription": "Hubo un error al cargar tus propiedades. Por favor, inténtalo de nuevo.",
+      "markRented": "Mark as rented",
+      "markSold": "Mark as sold",
+      "transactMessage": "This closes \"{{title}}\" and removes it from active listings. This cannot be undone.",
+      "markRentedTitle": "Mark as rented?",
+      "markSoldTitle": "Mark as sold?",
+      "transactError": "Could not close this listing",
+      "transactDone": "Listing marked as closed",
+      "transactCommission": "Deal closed — commission recorded"
     },
     "details": {
       "price": "Precio",
@@ -638,6 +1207,61 @@
         "duplex": "Dúplex",
         "penthouse": "Ático"
       }
+    },
+    "type": {
+      "title": "{{type}}",
+      "subtitle": "{{count}} {{type}} available",
+      "empty": "No {{type}} available at the moment",
+      "filters": {
+        "title": "Filters",
+        "price": "Price Range",
+        "bedrooms": "Bedrooms",
+        "bathrooms": "Bathrooms",
+        "amenities": "Amenities",
+        "sort": {
+          "title": "Sort By",
+          "newest": "Newest First",
+          "priceAsc": "Price: Low to High",
+          "priceDesc": "Price: High to Low"
+        },
+        "apply": "Apply Filters",
+        "clear": "Clear All"
+      }
+    },
+    "actions": {
+      "create": "Add property",
+      "recent": "Recently viewed"
+    },
+    "empty": {
+      "action": "Clear filters",
+      "description": "Try relaxing your filters.",
+      "title": "No homes available"
+    },
+    "error": {
+      "title": "Could not load homes"
+    },
+    "header": {
+      "empty": "No homes available",
+      "loading": "Loading homes…"
+    },
+    "city": {
+      "verifiedProperties": "Verified Properties",
+      "verifiedOnly": "Verified Only",
+      "ecoFriendly": "Eco-Friendly",
+      "ecoFriendlyOnly": "Eco-Friendly Only",
+      "loadingProperties": "Loading properties...",
+      "notFound": "City not found",
+      "properties": "Properties",
+      "population": "Population",
+      "availableProperties": "Available Properties",
+      "propertiesFound": "properties found",
+      "sortBy": "Sort By",
+      "sortNewest": "Newest First",
+      "sortPriceAsc": "Price: Low to High",
+      "sortPriceDesc": "Price: High to Low",
+      "noPropertiesFound": "No properties found",
+      "tryAdjustFilters": "Try adjusting your filters or check back later",
+      "clearFilters": "Clear Filters"
     }
   },
   "property": {
@@ -764,7 +1388,176 @@
       "listedDaysAgo_other": "Publicado hace {{count}} días",
       "saved_one": "{{count}} guardado",
       "saved_other": "{{count}} guardados"
-    }
+    },
+    "loading": "Loading property details...",
+    "error": "Error",
+    "notFound": "Property not found",
+    "bed": "Bed",
+    "bath": "Bath",
+    "pricingReviewNeeded": "Pricing Review Needed",
+    "bedrooms": "Number of Bedrooms",
+    "bathrooms": "Number of Bathrooms",
+    "customNumber": {
+      "title": "Enter Custom Number",
+      "placeholder": "Enter number",
+      "confirm": "Confirm",
+      "cancel": "Cancel"
+    },
+    "suggestedRent": "Suggested: ${{amount}}/month",
+    "maxEthicalRent": "Max Ethical: ${{amount}}/month",
+    "ethicalPricingWarning": "Your price exceeds the ethical maximum. Consider lowering it to make housing more accessible.",
+    "warningBullet": "• {{warning}}",
+    "ethicalPricing": "Ethical Pricing",
+    "toast": {
+      "createSuccess": "Propiedad creada correctamente",
+      "updateSuccess": "Propiedad actualizada correctamente",
+      "deleteSuccess": "Propiedad eliminada correctamente",
+      "createFailed": "No se pudo crear la propiedad",
+      "updateFailed": "No se pudo actualizar la propiedad",
+      "deleteFailed": "No se pudo eliminar la propiedad",
+      "shareCopied": "Detalles de la propiedad copiados al portapapeles",
+      "shareFailed": "No se pudo compartir la propiedad",
+      "shareTitle": "Compartir propiedad"
+    },
+    "drafts": {
+      "title": "Borradores",
+      "emptyTitle": "No hay borradores",
+      "emptyDescription": "Aún no tienes borradores guardados. Empieza a crear una propiedad para guardarlos automáticamente.",
+      "createFirst": "Crear nueva propiedad",
+      "deleteTitle": "Eliminar borrador",
+      "deleteMessage": "¿Seguro que quieres eliminar este borrador? Esta acción no se puede deshacer.",
+      "toastDeleted": "Borrador eliminado correctamente",
+      "toastDeleteFailed": "No se pudo eliminar el borrador",
+      "toastLoadFailed": "No se pudo cargar el borrador"
+    },
+    "description": {
+      "showMore": "Show more",
+      "showLess": "Show less"
+    },
+    "external": {
+      "contactTitle": "Contact on listing"
+    },
+    "location": {
+      "title": "Where you'll be"
+    },
+    "cta": {
+      "apply": "Apply",
+      "reserve": "Reserve"
+    },
+    "host": {
+      "verified": "Verified",
+      "responseRate": "Typically responds within an hour",
+      "hostingSince": "Hosting since",
+      "hostedBy": "Hosted by",
+      "openProfile": "Open host profile",
+      "publicSubtitle": "Government-managed affordable housing",
+      "publicAuthority": "Public Housing Authority",
+      "superHost": "Super host"
+    },
+    "report": {
+      "actions": {
+        "submit": "Enviar denuncia"
+      },
+      "notice": "Las denuncias falsas o abusivas pueden afectar tu cuenta. Denuncia solo problemas reales.",
+      "section": {
+        "contactHelp": "Comparte un correo si quieres que te contactemos sobre esta denuncia.",
+        "contact": "Correo de contacto (opcional)",
+        "detailsHelp": "Añade cualquier detalle que nos ayude a entender el problema.",
+        "details": "Detalles (opcional)",
+        "detailsRequired": "Detalles",
+        "reason": "¿Por qué denuncias este anuncio?"
+      },
+      "field": {
+        "detailsPlaceholder": "Describe qué es inexacto, sospechoso o inapropiado…"
+      },
+      "intro": "Cuéntanos qué falla en este anuncio. Las denuncias son confidenciales y las revisa nuestro equipo — nunca se comparten con el anfitrión.",
+      "title": "Denunciar este anuncio",
+      "success": "Gracias — tu denuncia se ha enviado.",
+      "error": {
+        "invalidForm": "Elige un motivo antes de enviar.",
+        "generic": "Algo salió mal. Inténtalo de nuevo.",
+        "notFound": "Este anuncio ya no existe.",
+        "auth": "Inicia sesión para denunciar un anuncio.",
+        "detailsRequired": "Añade algunos detalles sobre el problema.",
+        "invalidReason": "Elige un motivo para tu denuncia."
+      },
+      "reason": {
+        "inaccurate": "Información inexacta",
+        "scam": "Posible estafa o fraude",
+        "inappropriate": "Contenido inapropiado",
+        "unavailable": "Ya alquilado o no disponible",
+        "other": "Otro motivo"
+      }
+    },
+    "about": {
+      "title": "About this property"
+    },
+    "sleep": {
+      "title": "Where you'll sleep",
+      "oneBed": "1 bed",
+      "mainBedroom": "Main bedroom"
+    },
+    "reviews": {
+      "writeAction": "Write a review",
+      "emptyDescription": "Be the first to share what it was like to live here.",
+      "emptyTitle": "No reviews yet",
+      "errorTitle": "Could not load reviews",
+      "disclaimer": "Community-verified reviews about the building. Experiences may vary by unit.",
+      "title": "Reviews",
+      "evidence": "With evidence",
+      "verified": "Verified",
+      "recommend": "Recommend",
+      "count": "reviews",
+      "countWithNumber": "({{count}} reseñas)"
+    },
+    "notFoundHelp": "It may have been removed or the link is broken.",
+    "sections": {
+      "photoGallery": "Galería de fotos",
+      "viewAll": "Ver todo",
+      "features": "Características",
+      "furnished": "Amueblado",
+      "partiallyFurnished": "Parcialmente amueblado",
+      "unfurnished": "Sin amueblar",
+      "balcony": "Balcón",
+      "garden": "Jardín",
+      "elevator": "Ascensor",
+      "overview": "Resumen",
+      "bedrooms": "Dormitorios",
+      "bathrooms": "Baños",
+      "size": "Tamaño",
+      "floor": "Planta",
+      "details": "Detalles",
+      "notSpecified": "No especificado",
+      "yearBuilt": "Año de construcción",
+      "parkingSpaces": "Plazas de aparcamiento",
+      "pricingAndCosts": "Precio y costes",
+      "rent": "Alquiler",
+      "deposit": "Depósito",
+      "utilitiesIncluded": "Servicios incluidos",
+      "nightlyRent": "Alquiler por noche",
+      "monthlyRent": "Alquiler mensual",
+      "sourcedFrom": "Fuente",
+      "availability": "Disponibilidad",
+      "availableFrom": "Disponible desde",
+      "leaseTerm": "Duración del contrato",
+      "location": "Ubicación",
+      "nearbyAmenities": "Servicios cercanos",
+      "publicTransport": "Transporte público",
+      "schools": "Colegios",
+      "shopping": "Comercios"
+    },
+    "neighborhood": {
+      "title": "Neighborhood",
+      "listings": "Listings",
+      "avgRentPerMonth": "Avg. rent / mo",
+      "onParWithCity": "On par with the city average",
+      "listingCount": "{{count}} listings",
+      "avgAmountPerMonth": "Avg. {{amount}}/mo",
+      "pctVsCity": "{{pct}}% {{dir}} than the city average",
+      "cheaper": "cheaper",
+      "pricier": "pricier"
+    },
+    "fraudWarning": "Never pay or transfer funds outside the Homio platform"
   },
   "viewings": {
     "title": "Visitas",
@@ -784,7 +1577,8 @@
       "timeInPast": "La hora programada debe ser en el futuro.",
       "authRequired": "Por favor inicia sesión para solicitar una visita.",
       "notFound": "Solicitud de visita no encontrada.",
-      "cannotCancel": "No se puede cancelar esta solicitud de visita."
+      "cannotCancel": "No se puede cancelar esta solicitud de visita.",
+      "externalProperty": "Cannot book viewings for external properties"
     },
     "selectDate": "Seleccionar fecha",
     "availableTimeSlots": "Horarios disponibles",
@@ -807,6 +1601,10 @@
     },
     "cancel": {
       "confirmMessage": "¿Estás seguro de que quieres cancelar esta solicitud de visita?"
+    },
+    "banner": {
+      "viewDetails": "View details",
+      "hasViewing": "You have a viewing scheduled"
     }
   },
   "payments": {
@@ -842,6 +1640,116 @@
       "download": "Descargar",
       "sign": "Firmar",
       "renew": "Renovar"
+    },
+    "list": {
+      "title": "Contratos de alquiler",
+      "eyebrow": "Acuerdos",
+      "subtitle": "Haz seguimiento de cada contrato que firmes o emitas y consulta los términos clave al instante.",
+      "filterAll": "Todos",
+      "filterActive": "Activos",
+      "filterPending": "Pendientes",
+      "filterExpired": "Vencidos",
+      "filterDrafts": "Borradores",
+      "noRentalPropertiesTitle": "Sin contratos de alquiler",
+      "noRentalPropertiesDescription": "Aún no tienes propiedades en alquiler. Empieza explorando propiedades disponibles o publicando la tuya.",
+      "browseProperties": "Explorar propiedades",
+      "loadError": "No se pudieron cargar los contratos",
+      "tryAgain": "Inténtalo de nuevo.",
+      "emptyTitle": "No se encontraron contratos",
+      "emptyAllDescription": "Aún no tienes contratos de alquiler",
+      "emptyFilteredDescription": "No hay contratos {{filter}} que mostrar",
+      "newContract": "Nuevo contrato",
+      "createNew": "Crear nuevo contrato"
+    },
+    "card": {
+      "start": "Inicio",
+      "end": "Fin",
+      "landlord": "Arrendador",
+      "tenant": "Inquilino",
+      "perMonth": "/ mes",
+      "share": "Compartir",
+      "download": "Descargar",
+      "accessibility": "Contrato {{title}}"
+    },
+    "detail": {
+      "title": "Contrato",
+      "invalidIdTitle": "ID de contrato no válido",
+      "invalidIdDescription": "El enlace no incluye la referencia del contrato.",
+      "unavailableTitle": "Contrato no disponible",
+      "unavailableDescription": "No se pudo cargar este contrato.",
+      "term": "Plazo",
+      "rent": "Alquiler",
+      "start": "Inicio",
+      "end": "Fin",
+      "monthlyRent": "Alquiler mensual",
+      "securityDeposit": "Depósito de garantía",
+      "signatures": "Firmas",
+      "landlord": "Arrendador",
+      "tenant": "Inquilino",
+      "payments": "Calendario de pagos",
+      "documents": "Documentos",
+      "addDocument": "Añadir documento",
+      "sign": "Firmar contrato",
+      "terminate": "Rescindir contrato",
+      "deleteDraft": "Eliminar borrador",
+      "confirmSignTitle": "¿Firmar este contrato?",
+      "confirmSignBody": "Tu firma confirma que aceptas los términos del contrato.",
+      "confirmTerminateTitle": "¿Rescindir este contrato?",
+      "confirmTerminateBody": "Esto finaliza el contrato para todas las partes.",
+      "confirmDeleteTitle": "¿Eliminar este borrador?",
+      "confirmDeleteBody": "Este borrador se eliminará permanentemente.",
+      "toastSigned": "Contrato firmado",
+      "toastSignFailed": "No se pudo firmar el contrato",
+      "toastTerminated": "Contrato rescindido",
+      "toastTerminateFailed": "No se pudo rescindir el contrato",
+      "toastDeleted": "Borrador eliminado",
+      "toastDeleteFailed": "No se pudo eliminar el borrador",
+      "toastDocumentAdded": "Documento añadido",
+      "toastDocumentFailed": "No se pudo añadir el documento",
+      "toastOpenDocumentFailed": "No se pudo abrir el documento.",
+      "permissionRequired": "Se requiere permiso de la biblioteca multimedia para adjuntar un documento.",
+      "propertyFallback": "Propiedad",
+      "goBack": "Volver",
+      "dueDay": "Día {{day}} del mes",
+      "signed": "Firmado",
+      "signaturePending": "Pendiente",
+      "emptyDocuments": "No hay documentos adjuntos.",
+      "addShort": "Añadir",
+      "signLease": "Firmar contrato",
+      "confirmSignExtended": "Al firmar aceptas los términos del contrato. Cuando ambas partes firmen, el contrato quedará activo.",
+      "confirmSignAction": "Firmar",
+      "confirmTerminateShortTitle": "¿Terminar contrato?",
+      "confirmTerminateExtended": "Esto registra un aviso de terminación y finaliza el contrato. No se puede deshacer.",
+      "confirmDeleteExtended": "Esto elimina permanentemente el borrador del contrato.",
+      "confirmDeleteAction": "Eliminar",
+      "openDocument": "Abrir documento {{name}}",
+      "dueDayLabel": "Día de pago"
+    },
+    "new": {
+      "title": "Nuevo contrato",
+      "noApplicationTitle": "Empieza desde una solicitud",
+      "noApplicationDescription": "Los contratos se crean desde una solicitud de inquilino aprobada. Abre una solicitud aprobada y elige \"Crear contrato\".",
+      "viewApplications": "Ver solicitudes",
+      "applicationUnavailableTitle": "Solicitud no disponible",
+      "loadFailedDescription": "No se pudo cargar esta solicitud.",
+      "goBack": "Volver",
+      "subtitle": "Crea un borrador de contrato desde esta solicitud. Podrás editar los términos y firmarlo en la siguiente pantalla.",
+      "seededTerms": "Términos iniciales",
+      "moveIn": "Entrada",
+      "leaseTerm": "Duración del contrato",
+      "leaseTermMonths": "{{count}} meses",
+      "notApprovedWarning": "Esta solicitud aún no está aprobada. Apruébala primero para crear un contrato.",
+      "createButton": "Crear borrador de contrato",
+      "toastCreated": "Borrador de contrato creado",
+      "toastCreateFailed": "No se pudo crear el contrato",
+      "propertyFallback": "Propiedad"
+    },
+    "documentType": {
+      "lease_agreement": "Contrato de arrendamiento",
+      "addendum": "Anexo",
+      "inspection_report": "Informe de inspección",
+      "insurance": "Seguro",
+      "other": "Otro"
     }
   },
   "roommates": {
@@ -855,6 +1763,185 @@
       "message": "Mensaje",
       "connect": "Conectar",
       "viewProfile": "Ver Perfil"
+    },
+    "tabs": {
+      "discover": "Descubrir",
+      "requests": "Solicitudes",
+      "matches": "Coincidencias",
+      "rooms": "Habitaciones"
+    },
+    "alert": {
+      "requestSent": "¡Solicitud de compañero de piso enviada correctamente!",
+      "requestFailed": "No se pudo enviar la solicitud de compañero de piso",
+      "accepted": "¡Solicitud de compañero de piso aceptada!",
+      "acceptFailed": "No se pudo aceptar la solicitud de compañero de piso",
+      "declined": "Solicitud de compañero de piso rechazada",
+      "declineFailed": "No se pudo rechazar la solicitud de compañero de piso",
+      "relationshipEnded": "Relación de compañeros de piso finalizada",
+      "relationshipEndFailed": "No se pudo finalizar la relación de compañeros de piso",
+      "toggleFailed": "No se pudo cambiar la búsqueda de compañeros de piso",
+      "preferencesSaved": "Tus preferencias de compañero de piso se actualizaron.",
+      "preferencesFailed": "No se pudieron guardar las preferencias de compañero de piso. Inténtalo de nuevo.",
+      "successTitle": "Éxito",
+      "errorTitle": "Error"
+    },
+    "screen": {
+      "title": "Compañeros de piso",
+      "signInTitle": "Inicia sesión para encontrar compañeros",
+      "signInDescription": "Descubre compañeros compatibles y gestiona tus solicitudes.",
+      "signIn": "Iniciar sesión",
+      "loadError": "No se pudieron cargar los compañeros",
+      "tryAgain": "Inténtalo de nuevo.",
+      "emptyDiscoverTitle": "Aún no hay coincidencias",
+      "emptyDiscoverDescription": "Completa tu perfil de compañero para empezar a descubrir coincidencias.",
+      "emptyRequestsTitle": "No hay solicitudes",
+      "emptyRequestsDescription": "Las solicitudes entrantes y salientes aparecerán aquí.",
+      "emptyRelationshipsTitle": "Aún no hay coincidencias",
+      "emptyRelationshipsDescription": "Las solicitudes aceptadas se convierten en coincidencias aquí.",
+      "emptyRoomsTitle": "No hay habitaciones listadas",
+      "emptyRoomsDescription": "Los anuncios de habitaciones de tu red aparecerán aquí.",
+      "enableMatching": "Activar búsqueda de compañeros",
+      "editPreferences": "Editar preferencias",
+      "fallbackName": "Compañero",
+      "eyebrow": "Juntos",
+      "loadRequestsError": "No se pudieron cargar las solicitudes",
+      "loadRelationshipsError": "No se pudieron cargar las relaciones",
+      "personalProfileRequired": "Perfil personal requerido",
+      "personalProfileDescription": "La búsqueda de compañeros solo está disponible para perfiles personales. Cambia a tu perfil personal para usar esta función.",
+      "roomSearchPersonalOnly": "Room search is only available for personal profiles. Switch to your personal profile to use this feature.",
+      "switchToPersonal": "Cambiar a perfil personal",
+      "enableMatchingTitle": "Activar búsqueda de compañeros",
+      "enableMatchingDescription": "Activa la búsqueda de compañeros para descubrir coincidencias según tus preferencias.",
+      "enabling": "Activando…",
+      "discoverRoommates": "Descubrir compañeros",
+      "updatePreferences": "Actualizar preferencias",
+      "matchingEnabled": "Búsqueda de compañeros activada",
+      "matchingDisabled": "Búsqueda de compañeros desactivada"
+    },
+    "request": {
+      "accept": "Accept",
+      "decline": "Decline",
+      "viewProfile": "View profile",
+      "sent": "Sent",
+      "received": "Received",
+      "pending": "Pending",
+      "accepted": "Accepted",
+      "declined": "Declined",
+      "responsePlaceholder": "Add an optional message..."
+    },
+    "relationship": {
+      "endRelationship": "End relationship",
+      "confirmEndTitle": "End roommate relationship?",
+      "confirmEndBody": "You will no longer appear as roommates.",
+      "message": "Message",
+      "title": "Relación de compañeros",
+      "duration": "Duración: {{duration}}",
+      "started": "Inicio: {{date}}",
+      "endedOn": "Finalizó el {{date}}",
+      "statusActive": "Activa",
+      "statusInactive": "Inactiva",
+      "statusEnded": "Finalizada",
+      "statusUnknown": "Desconocida",
+      "durationDays": "{{count}} days",
+      "durationMonth": "{{count}} month",
+      "durationMonths": "{{count}} months",
+      "durationYear": "{{count}} year",
+      "durationYears": "{{count}} years",
+      "percentMatch": "{{score}}% de coincidencia",
+      "roommatesSection": "Compañeros",
+      "confirmEndAction": "Finalizar relación"
+    },
+    "match": {
+      "compatibility": "{{score}}% match",
+      "viewProfile": "View profile",
+      "connect": "Connect",
+      "excellent": "Excelente coincidencia",
+      "good": "Buena coincidencia",
+      "fair": "Coincidencia aceptable",
+      "preferences": "Preferencias",
+      "flexible": "Flexible",
+      "messageLabel": "Añade un mensaje (opcional):",
+      "messagePlaceholder": "¡Hola! Creo que seríamos buenos compañeros de piso...",
+      "sendRequest": "Enviar solicitud",
+      "fallbackName": "Roommate"
+    },
+    "profileDetail": {
+      "title": "Compañero",
+      "loadError": "No se pudo cargar el perfil",
+      "loadErrorDescription": "No pudimos cargar este perfil de compañero. Inténtalo de nuevo.",
+      "about": "Acerca de",
+      "preferencesTitle": "Preferencias de compañero",
+      "budget": "Presupuesto",
+      "moveIn": "Mudanza",
+      "leaseLength": "Duración del contrato",
+      "notSpecified": "No especificado",
+      "trust": "Confianza",
+      "verified": "Verificado",
+      "references": "Referencias",
+      "rentalHistory": "Historial de alquiler",
+      "sending": "Enviando…",
+      "sendRequest": "Enviar solicitud de compañero",
+      "requestSentTitle": "Solicitud enviada",
+      "requestSentBody": "Tu solicitud de compañero fue enviada.",
+      "requestFailedTitle": "No se pudo enviar la solicitud",
+      "requestFailedBody": "No pudimos enviar tu solicitud. Inténtalo de nuevo."
+    },
+    "preferencesPage": {
+      "title": "Preferencias de compañero",
+      "eyebrow": "Compartir piso",
+      "subtitle": "Permite que otros usuarios de Homiio te encuentren cuando vuestras preferencias coincidan.",
+      "enableTitle": "Activar búsqueda de compañeros",
+      "enableDescription": "Permite que otros usuarios descubran tu perfil para coincidencias.",
+      "budgetTimeline": "Presupuesto y plazos",
+      "monthlyBudget": "Presupuesto mensual (€)",
+      "min": "Mín",
+      "max": "Máx",
+      "moveInDate": "Fecha de mudanza",
+      "leaseLength": "Duración del contrato",
+      "roommateSection": "Compañero",
+      "preferredGender": "Género preferido",
+      "ageRange": "Rango de edad",
+      "lifestyle": "Estilo de vida",
+      "smoking": "Fumar",
+      "pets": "Mascotas",
+      "partying": "Fiestas",
+      "cleanliness": "Limpieza",
+      "schedule": "Horario",
+      "saving": "Guardando…",
+      "save": "Guardar preferencias",
+      "personalProfileRequired": "Personal profile required",
+      "personalProfileDescription": "Roommate preferences are only available for personal profiles. Please switch to your personal profile to manage your roommate settings.",
+      "switchToPersonal": "Switch to personal profile",
+      "options": {
+        "gender": {
+          "any": "Any",
+          "male": "Male",
+          "female": "Female"
+        },
+        "lifestyle": {
+          "yes": "Yes",
+          "no": "No",
+          "prefer_not": "No pref."
+        },
+        "cleanliness": {
+          "very_clean": "Very clean",
+          "clean": "Clean",
+          "average": "Average",
+          "relaxed": "Relaxed"
+        },
+        "schedule": {
+          "early_bird": "Early bird",
+          "night_owl": "Night owl",
+          "flexible": "Flexible"
+        },
+        "lease": {
+          "monthly": "Monthly",
+          "3_months": "3 months",
+          "6_months": "6 months",
+          "yearly": "Yearly",
+          "flexible": "Flexible"
+        }
+      }
     }
   },
   "safety": {
@@ -872,11 +1959,57 @@
     }
   },
   "horizon": {
-    "title": "Iniciativa Horizon",
+    "title": "Horizon Initiative",
     "description": "Iniciativa global para vivienda justa, atención médica y apoyo de viaje",
     "benefits": "Beneficios",
     "join": "Únete a Horizon",
-    "learnMore": "Saber Más"
+    "learnMore": "Saber Más",
+    "page": {
+      "benefits": {
+        "fairHousing": {
+          "title": "Vivienda justa",
+          "description": "Acceso a vivienda asequible en más de 120 ciudades con contratos éticos estandarizados"
+        },
+        "healthcare": {
+          "title": "Acceso a la salud",
+          "description": "Cobertura sanitaria universal con clínicas asociadas y telemedicina en cada ciudad Horizon"
+        },
+        "travel": {
+          "title": "Red de viajes",
+          "description": "Transporte y alojamiento con descuento al viajar entre ubicaciones Horizon"
+        },
+        "community": {
+          "title": "Apoyo comunitario",
+          "description": "Conecta con miembros locales para integración cultural, intercambio de idiomas y actividades sociales"
+        }
+      },
+      "heroTitle": "Iniciativa global de vivienda",
+      "heroSubtitle": "Creando un mundo de vivienda, salud y movilidad éticas",
+      "aboutTitle": "Sobre Horizon",
+      "aboutBody1": "Horizon es una iniciativa global diseñada para hacer la vivienda más accesible, asequible y ética para todos. Al unirte a una red de propiedades en más de 120 ciudades, los miembros acceden a vivienda justa, beneficios sanitarios y apoyo de viaje.",
+      "aboutBody2": "Nuestra misión es crear entornos de vida sostenibles que fomenten la comunidad y el bienestar, reduciendo el impacto ambiental de la vivienda.",
+      "benefitsTitle": "Beneficios para miembros",
+      "howItWorksTitle": "Cómo funciona",
+      "steps": {
+        "apply": {
+          "title": "Solicitar membresía",
+          "description": "Completa tu perfil y envía una solicitud con tus necesidades y preferencias de vivienda."
+        },
+        "verify": {
+          "title": "Verificación",
+          "description": "Nuestro equipo revisa tu solicitud y verifica tu identidad e información de antecedentes."
+        },
+        "access": {
+          "title": "Accede a la red",
+          "description": "Una vez aprobado, explora y reserva propiedades en nuestra red global con acceso prioritario."
+        }
+      },
+      "joinTitle": "¿Listo para unirte a Horizon?",
+      "joinSubtitle": "Solicítalo hoy y da el primer paso hacia una vivienda ética y accesible en todo el mundo.",
+      "storiesTitle": "Historias de miembros",
+      "story1": "Horizon facilitó mucho mi mudanza. Encontré un piso ético en Berlín en una semana y la cobertura sanitaria me ayudó cuando necesité atención urgente.",
+      "story2": "Como nómada digital, tener acceso a vivienda de calidad en varias ciudades ha cambiado mi vida. El aspecto comunitario es lo que hace especial a Horizon."
+    }
   },
   "settings": {
     "title": "Configuración",
@@ -889,7 +2022,8 @@
       "supportFeedback": "Soporte y Comentarios",
       "preferences": "Preferencias de la App",
       "quickActions": "Acciones Rápidas",
-      "data": "Gestión de Datos"
+      "data": "Gestión de Datos",
+      "notifications": "Notifications"
     },
     "aboutHomiio": {
       "appName": "Homiio",
@@ -945,8 +2079,27 @@
       "title": "Moneda",
       "selectCurrency": "Selecciona tu moneda preferida",
       "description": "Esto se usará para mostrar precios en toda la aplicación",
-      "currencyChanged": "Moneda cambiada exitosamente"
-    }
+      "currencyChanged": "Moneda cambiada exitosamente",
+      "errorChanging": "Failed to change currency. Please try again."
+    },
+    "language": {
+      "title": "Language",
+      "choose": "Elige un idioma",
+      "footer": "Cambiar el idioma actualiza las etiquetas de la app al instante.",
+      "emptyTitle": "No se encontraron idiomas",
+      "emptyDescription": "No hay opciones de idioma disponibles",
+      "subtitle": "Select your preferred language"
+    },
+    "notifications": {
+      "detailDesc": "Choose which alerts you receive",
+      "detail": "Notification categories"
+    },
+    "account": {
+      "filesDescription": "Manage uploaded documents",
+      "files": "Files"
+    },
+    "signOutFailed": "Failed to sign out",
+    "signOutSuccess": "Signed out"
   },
   "common": {
     "cancel": "Cancelar",
@@ -961,8 +2114,8 @@
     "loading": "Cargando...",
     "retry": "Reintentar",
     "save": "Guardar",
-    "saving": "Guardando...",
-    "name": "Nombre",
+    "saving": "Saving...",
+    "name": "Name",
     "emoji": "Emoji",
     "color": "Color",
     "delete": "Eliminar",
@@ -995,14 +2148,7 @@
     "view": "Ver",
     "details": "Detalles",
     "more": "Más",
-    "Sign in to save searches": "Inicia sesión para guardar búsquedas",
-    "Go to Search": "Ir a Buscar",
-    "No saved searches yet": "Aún no hay búsquedas guardadas",
-    "Create New Search": "Crear Nueva Búsqueda",
-    "View All": "Ver Todo",
-    "Sign in to create property alerts": "Inicia sesión para crear alertas de propiedades",
     "Creating...": "Creando...",
-    "Create Alert": "Crear Alerta",
     "less": "Menos",
     "all": "Todo",
     "none": "Ninguno",
@@ -1010,9 +2156,11 @@
     "noData": "No hay datos disponibles",
     "noResults": "No se encontraron resultados",
     "tryAgain": "Intentar de nuevo",
-    "goBack": "Volver",
+    "goBack": "Go Back",
     "goHome": "Ir al inicio",
-    "signIn": "Iniciar sesión"
+    "signIn": "Iniciar sesión",
+    "month": "month",
+    "reset": "Reset"
   },
   "sindi": {
     "name": "Sindi",
@@ -1134,7 +2282,9 @@
     },
     "errors": {
       "connection": "Error de Conexión",
-      "connectionMessage": "Por favor verifica tu conexión e inténtalo de nuevo."
+      "connectionMessage": "Por favor verifica tu conexión e inténtalo de nuevo.",
+      "uploadFailedTitle": "Error al subir",
+      "uploadAnalyzeFailed": "No se pudo analizar el archivo."
     },
     "shared": {
       "loading": "Cargando Conversación Compartida",
@@ -1176,6 +2326,18 @@
         "title": "Inicia Tu Conversación",
         "subtitle": "Pregúntale a Sindi sobre derechos de inquilinos, búsqueda de vivienda, o cualquier pregunta relacionada con vivienda. Estoy aquí para ayudarte a luchar por la justicia habitacional."
       }
+    },
+    "settings": {
+      "resetMessage": "This will reset all Sindi preferences to their defaults.",
+      "resetTitle": "Reset Sindi?",
+      "reset": "Reset Sindi to defaults",
+      "actions": "Actions",
+      "tipsDescription": "Surface inline guidance while you chat.",
+      "tips": "Show tips & hints",
+      "behaviorFooter": "Tune how Sindi behaves while you browse properties.",
+      "behavior": "Behavior",
+      "title": "Sindi preferences",
+      "resetDone": "Sindi preferences reset."
     }
   },
   "sidebar": {
@@ -1196,7 +2358,8 @@
       "tips": "Consejos",
       "hostCalendar": "Calendario de anfitrión",
       "hostReservations": "Reservas de anfitrión",
-      "landlordApplications": "Bandeja de solicitudes"
+      "landlordApplications": "Bandeja de solicitudes",
+      "insights": "Insights"
     },
     "actions": {
       "addProperty": "Agregar Propiedad",
@@ -1248,7 +2411,9 @@
       "noted": "Con notas",
       "quickSaves": "Guardados rápidos",
       "folders": "Carpetas",
-      "profiles": "Perfiles"
+      "profiles": "Perfiles",
+      "searches": "Saved Searches",
+      "label": "Saved view"
     },
     "view": {
       "list": "Lista",
@@ -1303,7 +2468,63 @@
       "newest": "Más Recientes Primero",
       "oldest": "Más Antiguos Primero",
       "alphabetical": "Alfabético"
-    }
+    },
+    "toast": {
+      "loadFoldersFailed": "No se pudieron cargar las carpetas",
+      "folderCreated": "Carpeta creada correctamente",
+      "folderCreateFailed": "No se pudo crear la carpeta",
+      "folderUpdated": "Carpeta actualizada correctamente",
+      "folderUpdateFailed": "No se pudo actualizar la carpeta",
+      "folderDeleted": "Carpeta eliminada correctamente",
+      "folderDeleteFailed": "No se pudo eliminar la carpeta",
+      "propertySaved": "Propiedad guardada correctamente",
+      "propertySaveFailed": "No se pudo guardar la propiedad",
+      "propertyRemoved": "Propiedad eliminada de guardados",
+      "propertyUnsaveFailed": "No se pudo quitar de guardados",
+      "propertySavedToFolder": "Propiedad guardada en la carpeta",
+      "saveToFolderFailed": "No se pudo guardar en la carpeta"
+    },
+    "folder": {
+      "title": "Guardar en carpeta",
+      "createNew": "Crear carpeta nueva",
+      "folderNamePlaceholder": "Nombre de la carpeta",
+      "chooseColor": "Elegir color",
+      "chooseEmoji": "Elegir emoji",
+      "creating": "Creando...",
+      "createAndSave": "Crear y guardar",
+      "propertyCount_one": "{{count}} propiedad",
+      "propertyCount_other": "{{count}} propiedades",
+      "alertFolderNameRequired": "Introduce un nombre para la carpeta",
+      "alertDefaultFolderRename": "La carpeta predeterminada no se puede renombrar."
+    },
+    "exploreCta": "Explore properties",
+    "loadFailed": "We couldn't load this folder",
+    "noPropertiesDescription": "Save properties to see them here.",
+    "noProperties": "No saved properties",
+    "noResults": "No matches",
+    "createFolder": "Create folder",
+    "noFoldersDescription": "Create folders to organise the places you like.",
+    "noFolders": "No folders yet"
+  },
+  "imageUpload": {
+    "permissionTitle": "Permiso requerido",
+    "permissionMessage": "Necesitamos permiso para acceder a la galería y subir imágenes.",
+    "maxImagesTitle": "Máximo de imágenes alcanzado",
+    "maxImagesMessage": "Puedes subir un máximo de {{max}} imágenes.",
+    "selectFailed": "No se pudieron seleccionar las imágenes. Inténtalo de nuevo.",
+    "photoFailed": "No se pudo tomar la foto. Inténtalo de nuevo.",
+    "uploadFailed": "No se pudieron subir algunas imágenes. Inténtalo de nuevo.",
+    "deleteTitle": "Eliminar imagen",
+    "deleteMessage": "¿Seguro que quieres eliminar esta imagen?",
+    "deleteFailed": "No se pudo eliminar la imagen. Inténtalo de nuevo.",
+    "choosePhotos": "Choose Photos",
+    "takePhoto": "Take Photo",
+    "uploading": "Uploading images...",
+    "imageCount": "{{current}} of {{max}} images uploaded",
+    "primary": "Primary",
+    "addMore": "Add More",
+    "helperText": "Upload high-quality images of your property. Include photos of all rooms, exterior, and any special features.",
+    "helperPrimaryNote": " The first image will be set as the primary image."
   },
   "donations": {
     "widget": {
@@ -1506,7 +2727,7 @@
       "forSale": "En venta",
       "exchange": "Intercambio",
       "verified": "Verificado",
-      "eco": "Eco",
+      "eco": "Ecológico",
       "instantBook": "Reserva inmediata"
     },
     "offering": {
@@ -1579,7 +2800,800 @@
       "loanAmount": "Importe del préstamo",
       "totalInterest": "Intereses totales",
       "totalPaid": "Total pagado"
+    },
+    "cta": {
+      "housingAuthority": "Vivienda pública",
+      "landlord": "Arrendador",
+      "applyOnStateWebsite": "Solicitar en la web oficial",
+      "viewOnSourceWebsite": "Ver en el portal de origen",
+      "callNow": "Llamar ahora",
+      "moreByOwner": "Más propiedades de este propietario"
     }
   },
-  "goBack": "Volver"
+  "goBack": "Volver",
+  "app": {
+    "welcome": {
+      "title": "Welcome to Homiio! 👋",
+      "subtitle": "Thanks for trying out our app. Start exploring now!"
+    },
+    "errors": {
+      "screenNotExist": "This screen doesn't exist.",
+      "goHome": "Go to home screen!",
+      "noResults": "No results found for"
+    },
+    "loading": "Loading...",
+    "battery": "Battery"
+  },
+  "tips": {
+    "article": "Article",
+    "all": "All",
+    "loadError": "Couldn't load tips",
+    "tryAgain": "Please try again.",
+    "emptyTitle": "No tips yet",
+    "emptyDescription": "Check back soon for new rental guides and advice.",
+    "unavailable": "Article unavailable",
+    "missingSlug": "This tip could not be loaded.",
+    "loadFailed": "This tip could not be loaded.",
+    "related": "Related tips"
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "message": "La página que buscas no existe.",
+    "goBack": "Volver"
+  },
+  "statusBadge": {
+    "draft": "Borrador",
+    "pending": "Pendiente",
+    "pendingSignatures": "Firmas pendientes",
+    "active": "Activo",
+    "expired": "Vencido",
+    "terminated": "Rescindido",
+    "cancelled": "Cancelado",
+    "processing": "Procesando",
+    "completed": "Completado",
+    "failed": "Fallido",
+    "refunded": "Reembolsado",
+    "success": "Éxito",
+    "warning": "Advertencia",
+    "error": "Error",
+    "info": "Información",
+    "investigating": "En investigación",
+    "resolved": "Resuelto",
+    "online": "En línea",
+    "offline": "Sin conexión",
+    "unknown": "Desconocido",
+    "application": {
+      "submitted": "Enviada",
+      "reviewing": "En revisión",
+      "approved": "Aprobada",
+      "rejected": "Rechazada",
+      "withdrawn": "Retirada"
+    },
+    "reservation": {
+      "pending": "Pendiente",
+      "confirmed": "Confirmada",
+      "declined": "Rechazada",
+      "cancelled": "Cancelada",
+      "completed": "Completada"
+    }
+  },
+  "applications": {
+    "list": {
+      "title": "Mis solicitudes",
+      "filterAll": "Todas",
+      "filterActive": "Activas",
+      "filterDecided": "Decididas",
+      "filterWithdrawn": "Retiradas",
+      "signInTitle": "Inicia sesión para ver tus solicitudes",
+      "signInDescription": "Haz seguimiento de las solicitudes de inquilino que has enviado a arrendadores.",
+      "signIn": "Iniciar sesión",
+      "loadError": "No se pudieron cargar tus solicitudes",
+      "tryAgain": "Inténtalo de nuevo.",
+      "retry": "Reintentar",
+      "emptyAllTitle": "Aún no hay solicitudes.",
+      "emptyFilteredTitle": "Nada en esta vista.",
+      "emptyAllDescription": "Explora anuncios y envía una solicitud para un alquiler a largo plazo.",
+      "emptyFilteredDescription": "Prueba otro filtro o envía una nueva solicitud.",
+      "exploreStays": "Explorar alojamientos",
+      "today": "Hoy",
+      "thisWeek": "Esta semana",
+      "earlier": "Anteriores"
+    },
+    "card": {
+      "propertyFallback": "Propiedad",
+      "applicantFallback": "Solicitante",
+      "monthLease": "Contrato de {{count}} meses",
+      "moveIn": "Entrada",
+      "submitted": "Enviada el {{date}}",
+      "perMonth": "/ mes",
+      "accessibility": "Solicitud {{id}}"
+    },
+    "toast": {
+      "openDocumentFailed": "No se pudo abrir el documento.",
+      "withdrawn": "Solicitud retirada",
+      "withdrawFailed": "No se pudo retirar la solicitud"
+    },
+    "documentType": {
+      "id": "Identificación",
+      "income": "Ingresos",
+      "reference": "Referencia",
+      "other": "Otro"
+    },
+    "landlord": {
+      "toastOpenDocumentFailed": "No se pudo abrir el documento.",
+      "review": {
+        "reviewing": {
+          "title": "¿Marcar como en revisión?",
+          "message": "El solicitante sabrá que tienes su solicitud abierta. Podrás aprobar o rechazar después.",
+          "confirm": "Marcar como en revisión",
+          "successToast": "Solicitud marcada como en revisión"
+        },
+        "approve": {
+          "title": "¿Aprobar solicitud?",
+          "message": "Se notificará al solicitante y podrá avanzar para firmar el contrato.",
+          "confirm": "Aprobar",
+          "successToast": "Solicitud aprobada"
+        },
+        "reject": {
+          "title": "¿Rechazar solicitud?",
+          "message": "Se notificará al solicitante. No se puede deshacer, pero puede enviar una nueva solicitud más adelante.",
+          "confirm": "Rechazar",
+          "successToast": "Solicitud rechazada"
+        }
+      },
+      "toastUpdateFailed": "No se pudo actualizar la solicitud"
+    },
+    "field": {
+      "moveInDate": "Move-in date",
+      "notesPlaceholder": "Anything else the landlord should know about you?",
+      "removeDocument": "Remove document",
+      "pickDocuments": "Add documents",
+      "addReference": "Add another reference",
+      "email": "Email",
+      "phone": "Phone number",
+      "relationship": "Relationship",
+      "namePlaceholder": "Jane Doe",
+      "name": "Full name",
+      "removeReference": "Remove reference",
+      "referenceIndex": "Reference {{index}}",
+      "employment": "Employment status",
+      "monthlyIncomePlaceholder": "e.g. 2400",
+      "monthlyIncome": "Gross monthly income",
+      "leaseTermCustomPlaceholder": "Number of months",
+      "leaseTermCustom": "Other",
+      "leaseTerm": "Lease term",
+      "moveInHelper": "Within the next 6 months.",
+      "leaseTermMonths": "{{count}} months"
+    },
+    "cta": {
+      "apply": "Apply to rent",
+      "subtitle": "Submit a quick application with your move-in date, income and references — the landlord reviews and replies inside Homiio.",
+      "title": "Interested in this place?",
+      "addMoveIn": "Add move-in date"
+    },
+    "detail": {
+      "viewStatus": "View status",
+      "alreadySubmittedBody": "You already have an application in review for this property.",
+      "alreadySubmitted": "Application submitted"
+    },
+    "actions": {
+      "submit": "Submit application"
+    },
+    "section": {
+      "notes": "Notes to landlord (optional)",
+      "documentsHelp": "Upload up to {{max}} PDFs or images (10 MB each). Pick a category per file.",
+      "documents": "Documents (optional)",
+      "referencesHelp": "Add 1 to 3 contacts the landlord can call to vouch for you.",
+      "references": "References",
+      "finances": "Income & employment",
+      "timing": "Move-in & lease term"
+    },
+    "apply": {
+      "title": "Apply to rent"
+    },
+    "success": {
+      "submitted": "Application submitted"
+    },
+    "error": {
+      "invalidForm": "Please complete every required field.",
+      "generic": "Something went wrong. Please try again.",
+      "auth": "Please sign in to apply.",
+      "notApplicable": "This property does not accept long-term applications.",
+      "external": "External listings cannot be applied to from Homiio.",
+      "alreadyApplied": "You already have an active application for this property."
+    },
+    "documents": {
+      "pickFailed": "Could not pick documents",
+      "tooLarge": "{{name}} supera los 10 MB y se omitió.",
+      "limit": "Puedes subir hasta {{max}} documentos por solicitud."
+    },
+    "employment": {
+      "employed": "Employed",
+      "selfEmployed": "Self-employed",
+      "student": "Student",
+      "retired": "Retired",
+      "unemployed": "Unemployed",
+      "other": "Other"
+    },
+    "relationship": {
+      "landlord": "Previous landlord",
+      "employer": "Employer",
+      "personal": "Personal",
+      "other": "Other"
+    },
+    "docType": {
+      "id": "ID",
+      "income": "Income proof",
+      "reference": "Reference letter",
+      "other": "Other"
+    }
+  },
+  "reservations": {
+    "card": {
+      "propertyFallback": "Propiedad",
+      "night": "noche",
+      "nights": "noches",
+      "guest": "huésped",
+      "guests": "huéspedes",
+      "hostGuestSuffix": "(huésped)",
+      "accessibility": "Reserva {{id}}"
+    },
+    "detail": {
+      "title": "Reserva",
+      "invalidId": "ID de reserva no válido",
+      "invalidIdDescription": "El enlace no incluye la referencia de la reserva.",
+      "unavailable": "Reserva no disponible",
+      "unavailableDescription": "No se pudo cargar esta reserva.",
+      "goBack": "Volver",
+      "tripDetails": "Detalles del viaje",
+      "checkIn": "Entrada",
+      "checkOut": "Salida",
+      "guests": "Huéspedes",
+      "nights": "Noches",
+      "price": "Precio",
+      "approve": "Aprobar",
+      "decline": "Rechazar",
+      "cancelReservation": "Cancelar reserva",
+      "cancelPolicyNote": "Cancellation is no longer possible under the {{policy}} policy. Contact your host if you need to make changes.",
+      "confirmCancelTitle": "Cancel reservation?",
+      "confirmCancelBody": "This will release the dates back to the host and end the booking.",
+      "confirmCancelAction": "Yes, cancel",
+      "confirmApproveTitle": "Approve reservation?",
+      "confirmApproveBody": "The guest will be notified and the dates will be marked confirmed on your calendar.",
+      "confirmDeclineTitle": "Decline reservation?",
+      "confirmDeclineBody": "The guest will be notified that this request was declined.",
+      "toastConfirmed": "Reserva confirmada",
+      "toastDeclined": "Reserva rechazada",
+      "toastCancelled": "Reserva cancelada",
+      "toastUpdateFailed": "No se pudo actualizar"
+    }
+  },
+  "reviews": {
+    "card": {
+      "anonymous": "Anónimo",
+      "verifiedResident": "Residente verificado",
+      "verified": "Verificado",
+      "confident": "{{score}}% de confianza",
+      "proof": "prueba",
+      "proofs": "pruebas",
+      "karma": "{{score}} karma",
+      "livedMonths": "Vivió {{count}} meses",
+      "perMonth": "{{price}} {{currency}}/mes",
+      "moreIssues": "+{{count}} más",
+      "positive": "Positivo:",
+      "negative": "Negativo:",
+      "helpful": "Útil ({{count}})",
+      "report": "Reportar",
+      "reply": "Responder",
+      "recommends": "✓ Recomienda",
+      "doesNotRecommend": "✗ No recomienda",
+      "underReview": "En revisión",
+      "alertThankYouTitle": "Gracias",
+      "alertThankYouBody": "Tu comentario ha sido registrado.",
+      "alertReportTitle": "Reportar reseña",
+      "alertReportBody": "¿Seguro que quieres reportar esta reseña por contenido inapropiado?",
+      "alertReportConfirm": "Reportar",
+      "alertReportedTitle": "Reportada",
+      "alertReportedBody": "Esta reseña ha sido reportada a nuestro equipo de moderación.",
+      "alertReplyTitle": "Responder a la reseña",
+      "alertReplyBody": "La función de respuesta permitirá a arrendadores y administradores de propiedades responder a las reseñas."
+    },
+    "write": {
+      "validationTitle": "Error de validación",
+      "streetRequired": "Introduce una dirección.",
+      "cityRequired": "Introduce una ciudad.",
+      "postalCodeRequired": "Introduce un código postal.",
+      "countryRequired": "Introduce un país.",
+      "opinionRequired": "Comparte tu opinión sobre esta dirección.",
+      "opinionMinLength": "Tu opinión debe tener al menos 10 caracteres.",
+      "priceRequired": "Introduce un precio válido.",
+      "datesRequired": "Introduce las fechas de inicio y fin.",
+      "recommendationRequired": "Indica si recomendarías esta dirección.",
+      "ratingRequired": "Asigna una valoración del 1 al 5.",
+      "submitSuccess": "¡Tu reseña se ha enviado correctamente!",
+      "submitFailed": "No se pudo enviar la reseña",
+      "submitFailedRetry": "No se pudo enviar la reseña. Inténtalo de nuevo.",
+      "loadAddressFailed": "Couldn't load address",
+      "title": "Write review"
+    }
+  },
+  "subscriptions": {
+    "title": "Suscripciones",
+    "alertError": "Error",
+    "alertSuccess": "Éxito",
+    "authRequired": "Autenticación requerida",
+    "checkoutFailed": "No se pudo iniciar el pago",
+    "portalFailed": "No se pudo abrir la gestión de suscripciones",
+    "syncSuccess": "Estado de suscripción sincronizado desde Stripe",
+    "syncFailed": "No se pudo sincronizar la suscripción",
+    "cancelImmediateSuccess": "Suscripción cancelada inmediatamente",
+    "cancelFailed": "No se pudo cancelar la suscripción",
+    "cancelEndOfPeriodSuccess": "La suscripción se cancelará al final del periodo actual",
+    "debugFailed": "No se pudo depurar la suscripción",
+    "plusActive": "Homiio Plus active",
+    "plusInactive": "Upgrade to Homiio Plus",
+    "manage": "Manage subscription",
+    "sync": "Sync from Stripe",
+    "cancel": "Cancel subscription",
+    "cancelImmediate": "Cancel immediately",
+    "cancelEndOfPeriod": "Cancel at period end",
+    "fileCredits": "{{count}} file credits",
+    "since": "Member since {{date}}",
+    "canceledOn": "Canceled on {{date}}",
+    "lastPayment": "Last payment {{date}}",
+    "products": {
+      "plus": "Homiio Plus",
+      "plusDescription": "Priority support and premium features",
+      "file": "File credits",
+      "fileDescription": "Extra document storage credits",
+      "founder": "Founder",
+      "founderDescription": "Support Homiio and unlock founder perks"
+    },
+    "subscribe": "Subscribe",
+    "buyCredits": "Buy credits",
+    "becomeFounder": "Become a founder",
+    "page": {
+      "headerTitle": "Homiio+",
+      "headerSubtitle": "Tu aliado de vivienda ética",
+      "introText": "Tu suscripción te da acceso a Sindi, el asistente legal que analiza tus contratos de alquiler y señala cláusulas abusivas. Sin anuncios, sin especulación, sin venta de datos.",
+      "payPerContract": {
+        "title": "Pago por contrato",
+        "price": "5 € por revisión de contrato",
+        "description": "Perfecto para un uso puntual.",
+        "reviewButton": "Revisar contrato"
+      },
+      "plus": {
+        "title": "Suscripción Homiio+",
+        "price": "9,99 €/mes",
+        "description": "Incluye hasta 10 contratos al mes gratis. A partir del 11.º contrato: 2,50 € cada uno.",
+        "activeBadge": "Suscripción activa",
+        "canceledBadge": "Cancelada el {{date}}",
+        "featureHistory": "Historial ilimitado de contratos",
+        "featureAlerts": "Alertas y notificaciones legales",
+        "featureSupport": "Soporte prioritario",
+        "manage": "Gestionar suscripción",
+        "resubscribe": "Volver a suscribirse",
+        "subscribeNow": "Suscribirse ahora"
+      },
+      "founder": {
+        "title": "Patrocinador fundador",
+        "price": "Aportación desde 10 €/mes",
+        "description": "Apoya la independencia de Homiio. Obtén reconocimiento en la app y acceso anticipado a funciones.",
+        "becomeSupporter": "Hazte patrocinador"
+      },
+      "footer": "Cada euro mantiene Homiio ético, independiente y orientado a la comunidad.",
+      "starting": "Iniciando…",
+      "back": "Volver",
+      "notAvailable": "N/D",
+      "cancelImmediateTitle": "Cancelar inmediatamente",
+      "cancelImmediateBody": "Esto cancelará tu suscripción de inmediato y perderás el acceso a las funciones de Homiio+. ¿Estás seguro?",
+      "no": "No",
+      "yesCancelNow": "Sí, cancelar ahora"
+    }
+  },
+  "recentlyViewed": {
+    "trackFailed": "No se pudo registrar la visita a la propiedad",
+    "clearSuccess": "Propiedades vistas recientemente borradas",
+    "clearFailed": "No se pudieron borrar las propiedades vistas recientemente"
+  },
+  "host": {
+    "calendar": {
+      "title": "Calendario de anfitrión",
+      "signInTitle": "Inicia sesión para gestionar tu calendario",
+      "signInDescription": "Bloquea fechas y haz seguimiento de reservas desde un solo lugar.",
+      "signIn": "Iniciar sesión",
+      "loadPropertiesError": "No se pudieron cargar tus propiedades",
+      "tryAgain": "Inténtalo de nuevo.",
+      "emptyTitle": "Añade tu primera propiedad",
+      "emptyDescription": "Publica un alojamiento para que los huéspedes puedan solicitar fechas aquí.",
+      "createListing": "Crear anuncio",
+      "chooseProperty": "Elegir propiedad",
+      "legendConfirmed": "Confirmada",
+      "legendPending": "Pendiente",
+      "legendBlocked": "Bloqueada",
+      "legendAvailable": "Disponible",
+      "availabilityError": "No se pudo cargar la disponibilidad",
+      "blockTitle": "Bloquear estas fechas",
+      "blockBodyRange": "Bloquear del {{start}} al {{end}}.",
+      "blockBodySingle": "Elige cuánto tiempo estarán indisponibles estas fechas.",
+      "blockConfirm": "Bloquear",
+      "blockReasonLabel": "Motivo (opcional)",
+      "blockReasonPlaceholder": "Mantenimiento, uso personal, ...",
+      "toastBlocked": "Fechas bloqueadas",
+      "toastBlockFailed": "No se pudo bloquear",
+      "propertyNotFound": "Propiedad no encontrada",
+      "property": "Propiedad"
+    },
+    "reservations": {
+      "title": "Reservas",
+      "allReservations": "Todas las reservas",
+      "signInTitle": "Inicia sesión para gestionar reservas",
+      "signInDescription": "Aprueba o rechaza solicitudes de huéspedes desde un solo lugar.",
+      "signIn": "Iniciar sesión",
+      "filterAll": "Todas",
+      "loadError": "No se pudieron cargar las reservas",
+      "tryAgain": "Inténtalo de nuevo.",
+      "emptyTitle": "Aún no hay reservas",
+      "emptyDescription": "Las solicitudes de huéspedes aparecerán aquí cuando alguien reserve.",
+      "toastConfirmed": "Reserva confirmada",
+      "toastDeclined": "Reserva rechazada",
+      "toastUpdateFailed": "No se pudo actualizar",
+      "confirm": "Confirmar",
+      "decline": "Rechazar",
+      "approve": "Aprobar",
+      "view": "Ver",
+      "filterPending": "Pendiente",
+      "filterConfirmed": "Confirmada",
+      "filterDeclined": "Rechazada",
+      "filterCancelled": "Cancelada",
+      "filterCompleted": "Completada"
+    }
+  },
+  "stays": {
+    "list": {
+      "title": "Estancias",
+      "filterAll": "Todas",
+      "filterUpcoming": "Próximas",
+      "filterPast": "Pasadas",
+      "filterCancelled": "Canceladas",
+      "groupUpcoming": "Próximas",
+      "groupPast": "Pasadas",
+      "groupCancelled": "Canceladas",
+      "signInTitle": "Inicia sesión para ver tus estancias",
+      "signInDescription": "Haz seguimiento de las reservas de corta estancia que hayas hecho.",
+      "signIn": "Iniciar sesión",
+      "loadError": "No se pudieron cargar las estancias",
+      "tryAgain": "Inténtalo de nuevo.",
+      "emptyAllTitle": "Aún no hay estancias",
+      "emptyFilteredTitle": "Nada en esta vista.",
+      "emptyAllDescription": "Cuando reserves un alojamiento aparecerá aquí.",
+      "emptyFilteredDescription": "Prueba otro filtro o explora nuevas estancias.",
+      "exploreStays": "Explorar estancias"
+    }
+  },
+  "addresses": {
+    "detail": {
+      "title": "Address",
+      "loadError": "No se pudo cargar esta dirección",
+      "tryAgain": "Inténtalo de nuevo.",
+      "propertiesSection": "Propiedades",
+      "reviewsSection": "Reseñas",
+      "emptyPropertiesTitle": "Aún no hay propiedades aquí",
+      "emptyPropertiesDescription": "Los anuncios en esta dirección aparecerán aquí.",
+      "emptyReviewsTitle": "Aún no hay reseñas",
+      "emptyReviewsDescription": "Sé el primero en compartir tu experiencia en esta dirección.",
+      "writeReview": "Escribir una reseña",
+      "switchLevel": "Cambiar nivel",
+      "buildingLevel": "Edificio",
+      "unitLevel": "Unidad",
+      "notFound": "Dirección no encontrada",
+      "notFoundDescription": "No encontramos detalles para esta dirección.",
+      "storiesTitle": "Historias de residentes",
+      "tabOverall": "General",
+      "tabApartments": "Apartamentos",
+      "tabCommunity": "Comunidad",
+      "tabArea": "Zona",
+      "tabProperties": "Propiedades ({{count}})",
+      "tabReviews": "Reseñas ({{count}})"
+    },
+    "display": {
+      "copySuccess": "Dirección copiada al portapapeles",
+      "copyFailed": "No se pudo copiar la dirección",
+      "mapsFailed": "No se pudo abrir mapas"
+    }
+  },
+  "propertyCreate": {
+    "location": {
+      "title": "Location",
+      "instructions": "📍 Address Details: Fill in the complete address information. Our system uses a hierarchical structure:\n• STREET level: Street name only\n• BUILDING level: Street + number + building details\n• UNIT level: Building + floor + unit/apartment details\nReviews and listings are organized by these levels for better organization.",
+      "country": "Country or Region",
+      "countryPickerTitle": "Country or Region",
+      "state": "State / Province / Region",
+      "statePickerTitle": "State / Province / Region",
+      "city": "City",
+      "street": "Street",
+      "number": "Number",
+      "postalCode": "Postal code",
+      "floor": "Floor",
+      "unit": "Unit / Apartment",
+      "showFloor": "Show floor field",
+      "hideFloor": "Hide floor field",
+      "selectCountry": "Select country or region",
+      "streetPlaceholder": "Street name",
+      "unitOptional": "Unit/Apartment Number (optional)",
+      "unitPlaceholder": "Apartment, suite, etc. (optional)",
+      "buildingNameOptional": "Nombre del edificio (opcional)",
+      "buildingNamePlaceholder": "p. ej., Torre Barcelona",
+      "blockOptional": "Bloque (opcional)",
+      "blockPlaceholder": "p. ej., Bloque A",
+      "entranceOptional": "Entrada/Puerta (opcional)",
+      "entrancePlaceholder": "p. ej., Puerta 1, Entrada B",
+      "subunitOptional": "Subunidad (opcional)",
+      "subunitPlaceholder": "p. ej., Habitación A",
+      "numberPlaceholder": "Introduce el número",
+      "floorPlaceholder": "Introduce la planta",
+      "floorPublic": "Público",
+      "floorPrivate": "Privado",
+      "floorPrivacyHint": "ℹ️ Se mostrará de forma aproximada por privacidad",
+      "neighborhoodOptional": "Barrio (opcional)",
+      "neighborhoodPlaceholder": "p. ej., Gràcia, Sant Andreu, Eixample",
+      "districtOptional": "Distrito (opcional)",
+      "districtPlaceholder": "p. ej., Distrito administrativo",
+      "poBoxOptional": "Apartado postal (opcional)",
+      "poBoxPlaceholder": "p. ej., Apartado 123",
+      "referenceOptional": "Referencia (opcional)",
+      "referencePlaceholder": "p. ej., Cerca del metro",
+      "cityDistrict": "Ciudad/Distrito",
+      "cityDistrictPlaceholder": "Ciudad o distrito",
+      "selectState": "Selecciona provincia/región",
+      "zipPostalCode": "Código postal",
+      "zipPlaceholder": "Código postal",
+      "availableFrom": "Disponible desde",
+      "availableFromPlaceholder": "Fecha de disponibilidad",
+      "leaseTerm": "Duración del contrato",
+      "leaseTermPlaceholder": "Duración del contrato"
+    },
+    "amenities": {
+      "title": "Amenities",
+      "subtitle": "Select the amenities available at this property.",
+      "rulesTitle": "Servicios y normas",
+      "houseRules": "House Rules",
+      "petsAllowed": "Pets Allowed",
+      "smokingAllowed": "Smoking Allowed",
+      "partiesAllowed": "Parties Allowed",
+      "guestsAllowed": "Invitados permitidos",
+      "maxGuests": "Número máximo de invitados",
+      "maxGuestsPlaceholder": "e.g., 2",
+      "yes": "Yes",
+      "no": "No"
+    }
+  },
+  "booking": {
+    "toast": {
+      "pickDates": "Selecciona primero las fechas de entrada y salida",
+      "minStay": "Estancia mínima de {{count}} {{unit}}",
+      "maxStay": "Estancia máxima de {{count}} {{unit}}",
+      "night": "noche",
+      "nights": "noches",
+      "failed": "Error en la reserva"
+    },
+    "accessibility": {
+      "selectDates": "Select dates",
+      "selectGuests": "Select guests",
+      "close": "Close"
+    }
+  },
+  "searchBar": {
+    "search": "Buscar",
+    "long": {
+      "propertyType": "Tipo de propiedad",
+      "moveIn": "Fecha de entrada",
+      "where": "Dónde",
+      "where.value": "Cualquier ciudad",
+      "moveIn.value": "Añadir fecha",
+      "propertyType.value": "Cualquier tipo"
+    },
+    "vacation": {
+      "where": "Dónde",
+      "when": "Cuándo",
+      "who": "Quién",
+      "where.value": "Cualquier destino",
+      "when.value": "Añadir fechas",
+      "who.value": "Añadir huéspedes"
+    },
+    "mode": {
+      "vacation": "Vacaciones",
+      "longTerm": "Largo plazo",
+      "hint": "Cambia entre alquileres a largo plazo y estancias vacacionales",
+      "label": "Modo de alquiler"
+    }
+  },
+  "error": {
+    "publicHousing": {
+      "openFailed": "No se pudo abrir el sitio web de vivienda"
+    },
+    "call": {
+      "failed": "No se pudo abrir el marcador telefónico",
+      "noPhone": "No hay número de teléfono disponible",
+      "notAllowed": "El propietario no acepta llamadas"
+    },
+    "profile": {
+      "notFound": "Perfil del propietario no encontrado"
+    },
+    "auth": {
+      "required": "Inicia sesión para llamar al propietario"
+    },
+    "contact": {
+      "noPhone": "No hay teléfono disponible para este anuncio",
+      "openFailed": "No se pudo abrir el enlace de contacto"
+    },
+    "source": {
+      "openFailed": "No se pudo abrir el sitio web de origen",
+      "noUrl": "URL del sitio de origen no disponible"
+    },
+    "boundary": {
+      "title": "Algo salió mal",
+      "message": "Un problema inesperado interrumpió lo que estabas haciendo. Puedes volver a intentarlo o enviarnos un informe rápido para que lo revisemos.",
+      "retry": "Reintentar",
+      "reportIssue": "Informar del problema",
+      "errorId": "ID de error",
+      "copyIdHint": "Toca para copiar el ID",
+      "copiedToClipboard": "Copiado al portapapeles",
+      "showDetails": "Mostrar detalles técnicos",
+      "hideDetails": "Ocultar detalles técnicos",
+      "technicalDetails": "Detalles técnicos",
+      "maxRetriesTitle": "Sigue sin funcionar",
+      "maxRetriesMessage": "Has alcanzado el límite de reintentos. Por favor, informa del problema para que podamos revisarlo.",
+      "forceRetry": "Forzar reintento",
+      "reportCopiedTitle": "Informe copiado",
+      "reportCopiedMessage": "El informe del error se ha copiado al portapapeles.",
+      "reportFailedTitle": "No se pudo copiar",
+      "reportFailedMessage": "No pudimos copiar el informe al portapapeles. Por favor, inténtalo de nuevo.",
+      "errorMessage": "Mensaje de error",
+      "errorType": "Tipo de error",
+      "stackTrace": "Traza de pila",
+      "componentStack": "Pila de componentes",
+      "deviceInformation": "Información del dispositivo"
+    },
+    "loadNotifications": "Error al cargar notificaciones"
+  },
+  "notification": {
+    "settings": {
+      "android": {
+        "openSettings": "Abrir ajustes del sistema",
+        "title": "Ajustes de Android",
+        "description": "Gestiona los canales de notificación en Ajustes > Apps > Homiio > Notificaciones."
+      },
+      "ios": {
+        "openSettings": "Abrir ajustes del sistema",
+        "title": "Ajustes de iOS",
+        "description": "Para un control más detallado, gestiona las notificaciones en Ajustes > Notificaciones > Homiio."
+      },
+      "test": {
+        "title": "Probar notificaciones",
+        "description": "Envía notificaciones de prueba para verificar que tus ajustes funcionan correctamente."
+      },
+      "property": {
+        "title": "Notificaciones de propiedades",
+        "description": "Nuevas propiedades, cambios de precio y recordatorios de visitas"
+      },
+      "message": {
+        "title": "Notificaciones de mensajes",
+        "description": "Nuevos mensajes de agentes, propietarios y otros usuarios"
+      },
+      "contract": {
+        "title": "Notificaciones de contratos",
+        "description": "Actualizaciones de contratos, firmas y plazos importantes"
+      },
+      "payment": {
+        "title": "Notificaciones de pagos",
+        "description": "Confirmaciones de pago, recordatorios y recibos"
+      },
+      "reminder": {
+        "title": "Notificaciones de recordatorios",
+        "description": "Recordatorios de visitas, plazos de solicitudes y seguimientos"
+      },
+      "system": {
+        "title": "Notificaciones del sistema",
+        "description": "Actualizaciones de la app, mantenimiento y anuncios importantes"
+      },
+      "marketing": {
+        "title": "Notificaciones de marketing",
+        "description": "Ofertas promocionales, boletines y descuentos especiales"
+      },
+      "sound": {
+        "title": "Sonido",
+        "description": "Reproducir sonido al recibir notificaciones"
+      },
+      "badge": {
+        "title": "Contador de insignia",
+        "description": "Mostrar el número de no leídas en el icono de la app"
+      },
+      "push": {
+        "title": "Notificaciones push",
+        "description": "Recibir notificaciones aunque la app esté cerrada"
+      },
+      "title": "Ajustes de notificaciones",
+      "categories": "Categorías de notificaciones",
+      "behavior": "Comportamiento de notificaciones",
+      "manage": "Gestionar notificaciones",
+      "clearAll": "Borrar todas las notificaciones",
+      "updated": "Ajustes actualizados",
+      "error": "No se pudieron actualizar los ajustes"
+    },
+    "test": {
+      "success": "Notificación de prueba enviada",
+      "property": "Probar propiedad",
+      "message": "Probar mensaje",
+      "reminder": "Probar recordatorio",
+      "repeating": "Probar repetición",
+      "error": "No se pudo enviar la notificación de prueba"
+    },
+    "empty": {
+      "filteredTitle": "Sin coincidencias",
+      "title": "Sin notificaciones",
+      "message": "¡Estás al día! Las nuevas notificaciones aparecerán aquí.",
+      "filtered": "Ninguna notificación coincide con el filtro actual"
+    },
+    "filter": {
+      "label": "Filtrar notificaciones",
+      "all": "Todas",
+      "unread": "No leídas"
+    },
+    "scheduled": {
+      "label": "Notificación programada",
+      "title": "Notificaciones programadas",
+      "clearAll": "Borrar todo"
+    },
+    "markAllRead": {
+      "action": "Marcar todo como leído",
+      "success": "Todas las notificaciones marcadas como leídas",
+      "error": "No se pudieron marcar todas como leídas"
+    },
+    "permissions": {
+      "enabled": {
+        "title": "Notificaciones activadas",
+        "description": "Recibirás notificaciones de las categorías activadas."
+      },
+      "disabled": {
+        "title": "Notificaciones desactivadas",
+        "description": "Activa las notificaciones para recibir novedades sobre propiedades, mensajes y más."
+      },
+      "title": "Activar notificaciones",
+      "message": "Recibe avisos sobre nuevas propiedades, mensajes y actualizaciones importantes.",
+      "enable": "Activar notificaciones",
+      "granted": "Permisos de notificación concedidos",
+      "denied": "Permisos de notificación denegados",
+      "error": "No se pudieron solicitar los permisos"
+    },
+    "welcome": {
+      "title": "¡Bienvenido a Homiio! 👋",
+      "body": "Gracias por probar nuestra aplicación. ¡Comienza a explorar ahora!"
+    },
+    "search": {
+      "placeholder": "Buscar notificaciones..."
+    },
+    "delete": {
+      "title": "Eliminar notificación",
+      "message": "¿Seguro que quieres eliminar esta notificación?",
+      "success": "Notificación eliminada",
+      "error": "No se pudo eliminar la notificación"
+    },
+    "clearAll": {
+      "title": "Borrar todas las notificaciones",
+      "message": "Se borrarán todas las notificaciones y se reiniciará el contador. Esta acción no se puede deshacer.",
+      "success": "Todas las notificaciones borradas",
+      "error": "No se pudieron borrar las notificaciones"
+    }
+  },
+  "address": {
+    "display": {
+      "mapPlaceholder": "Map view available",
+      "copy": "Copy",
+      "openInMaps": "Open in Maps"
+    }
+  },
+  "inbox": {
+    "title": "Buzón"
+  }
 }

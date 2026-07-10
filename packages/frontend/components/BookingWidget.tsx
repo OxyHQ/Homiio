@@ -3,6 +3,7 @@ import { Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import { toast } from '@/lib/sonner';
 import { Button } from '@oxyhq/bloom/button';
 import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
@@ -62,6 +63,7 @@ const isVacationCapable = (property: Property): boolean => {
 };
 
 export const BookingWidget: React.FC<BookingWidgetProps> = ({ property }) => {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { oxyServices, activeSessionId } = useOxy();
@@ -110,15 +112,25 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ property }) => {
       return;
     }
     if (!range || nights === 0) {
-      toast.error('Pick check-in and check-out dates first');
+      toast.error(t('booking.toast.pickDates'));
       return;
     }
     if (minStay && nights < minStay) {
-      toast.error(`Minimum stay is ${minStay} ${minStay === 1 ? 'night' : 'nights'}`);
+      toast.error(
+        t('booking.toast.minStay', {
+          count: minStay,
+          unit: t(minStay === 1 ? 'booking.toast.night' : 'booking.toast.nights'),
+        }),
+      );
       return;
     }
     if (maxStay && nights > maxStay) {
-      toast.error(`Maximum stay is ${maxStay} ${maxStay === 1 ? 'night' : 'nights'}`);
+      toast.error(
+        t('booking.toast.maxStay', {
+          count: maxStay,
+          unit: t(maxStay === 1 ? 'booking.toast.night' : 'booking.toast.nights'),
+        }),
+      );
       return;
     }
     try {
@@ -131,7 +143,7 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ property }) => {
       router.push(`/reservations/${reservation.id}`);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Booking failed';
+        error instanceof Error ? error.message : t('booking.toast.failed');
       toast.error(message);
     }
   }, [
@@ -145,6 +157,7 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ property }) => {
     propertyId,
     range,
     router,
+    t,
   ]);
 
   if (!isVacationCapable(property)) return null;
@@ -172,7 +185,7 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ property }) => {
           style={styles.triggerCell}
           onPress={handleOpenCalendar}
           accessibilityRole="button"
-          accessibilityLabel="Select dates"
+          accessibilityLabel={t('booking.accessibility.selectDates')}
         >
           <BloomText style={styles.triggerLabel}>Dates</BloomText>
           <BloomText style={styles.triggerValue} numberOfLines={1}>
@@ -184,7 +197,7 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ property }) => {
           style={styles.triggerCell}
           onPress={handleOpenGuests}
           accessibilityRole="button"
-          accessibilityLabel="Select guests"
+          accessibilityLabel={t('booking.accessibility.selectGuests')}
         >
           <BloomText style={styles.triggerLabel}>Guests</BloomText>
           <BloomText style={styles.triggerValue} numberOfLines={1}>
@@ -248,7 +261,7 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ property }) => {
                 variant="icon"
                 size="small"
                 onPress={closeSheet}
-                accessibilityLabel="Close"
+                accessibilityLabel={t('booking.accessibility.close')}
               >
                 {'×'}
               </Button>

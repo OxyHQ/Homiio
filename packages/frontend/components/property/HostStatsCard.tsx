@@ -120,13 +120,10 @@ export const HostStatsCard: React.FC<HostStatsCardProps> = ({
           <H3 style={styles.name}>
             {state
               ? `${state} Housing Authority`
-              : t('property.host.publicAuthority', 'Public Housing Authority')}
+              : t('property.host.publicAuthority')}
           </H3>
           <BloomText style={styles.subtitle}>
-            {t(
-              'property.host.publicSubtitle',
-              'Government-managed affordable housing',
-            )}
+            {t('property.host.publicSubtitle')}
           </BloomText>
           <View style={styles.badgeRow}>
             <Badge content="GOV" variant="solid" color="info" size="small" />
@@ -143,7 +140,7 @@ export const HostStatsCard: React.FC<HostStatsCardProps> = ({
       onPressOut={() => setPressed(false)}
       onPress={handleOpenProfile}
       accessibilityRole="button"
-      accessibilityLabel={t('property.host.openProfile', 'Open host profile') || 'Open host profile'}
+      accessibilityLabel={t('property.host.openProfile')}
     >
       <Avatar
         source={avatarSource}
@@ -154,24 +151,21 @@ export const HostStatsCard: React.FC<HostStatsCardProps> = ({
       />
       <View style={styles.body}>
         <H3 style={styles.name}>
-          {t('property.host.hostedBy', 'Hosted by')} {displayName}
+          {t('property.host.hostedBy')} {displayName}
         </H3>
         {hostingSince ? (
           <BloomText style={styles.subtitle}>
-            {t('property.host.hostingSince', 'Hosting since')} {hostingSince}
+            {t('property.host.hostingSince')} {hostingSince}
           </BloomText>
         ) : null}
         <BloomText style={styles.responseRate}>
           <Ionicons name="time-outline" size={13} color={colors.COLOR_BLACK_LIGHT_3} />{' '}
-          {t(
-            'property.host.responseRate',
-            'Typically responds within an hour',
-          )}
+          {t('property.host.responseRate')}
         </BloomText>
         {isVerified ? (
           <View style={styles.badgeRow}>
             <Badge
-              content={t('property.host.verified', 'Verified') || 'Verified'}
+              content={t('property.host.verified')}
               variant="solid"
               color="success"
               size="small"

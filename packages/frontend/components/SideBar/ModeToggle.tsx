@@ -26,15 +26,14 @@ interface ModeRow {
   mode: BrowseMode;
   icon: LucideIcon;
   labelKey: string;
-  labelFallback: string;
   shortcut: string;
 }
 
 const MODE_ROWS: readonly ModeRow[] = [
-  { mode: 'long_term', icon: Home, labelKey: 'sidebar.mode.longTerm', labelFallback: 'Long-term', shortcut: '1' },
-  { mode: 'vacation', icon: CalendarDays, labelKey: 'sidebar.mode.vacation', labelFallback: 'Vacation', shortcut: '2' },
-  { mode: 'buy', icon: Tag, labelKey: 'sidebar.mode.buy', labelFallback: 'Buy', shortcut: '3' },
-  { mode: 'exchange', icon: Repeat, labelKey: 'sidebar.mode.exchange', labelFallback: 'Exchange', shortcut: '4' },
+  { mode: 'long_term', icon: Home, labelKey: 'sidebar.mode.longTerm', shortcut: '1' },
+  { mode: 'vacation', icon: CalendarDays, labelKey: 'sidebar.mode.vacation', shortcut: '2' },
+  { mode: 'buy', icon: Tag, labelKey: 'sidebar.mode.buy', shortcut: '3' },
+  { mode: 'exchange', icon: Repeat, labelKey: 'sidebar.mode.exchange', shortcut: '4' },
 ] as const;
 
 interface ModeRowButtonProps {
@@ -56,7 +55,7 @@ const ModeRowButton = React.memo(function ModeRowButton({
 }: ModeRowButtonProps) {
   const { t } = useTranslation();
   const Icon = row.icon;
-  const label = t(row.labelKey, { defaultValue: row.labelFallback });
+  const label = t(row.labelKey);
   const color = active ? colors.primaryDark : colors.primaryDark_2;
   const handlePress = React.useCallback(() => onSelect(row.mode), [onSelect, row.mode]);
 

@@ -57,23 +57,23 @@ export default function EditFolderScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
-      toast.success('Folder updated successfully');
+      toast.success(t('saved.toast.folderUpdated'));
       router.back();
     },
     onError: (error: unknown) => {
       logger.error('Failed to update folder:', error);
-      toast.error('Failed to update folder');
+      toast.error(t('saved.toast.folderUpdateFailed'));
     },
   });
 
   const handleSave = async () => {
     if (!folder) return;
     if (folder.isDefault) {
-      Alert.alert('Not allowed', 'Default folder cannot be renamed.');
+      Alert.alert(t('common.error'), t('saved.folder.alertDefaultFolderRename'));
       return;
     }
     if (!name.trim()) {
-      Alert.alert('Validation', 'Folder name is required');
+      Alert.alert(t('common.error'), t('saved.folder.alertFolderNameRequired'));
       return;
     }
 
@@ -97,24 +97,24 @@ export default function EditFolderScreen() {
     <View style={styles.container}>
       <Header
         options={{
-          title: `${emoji} ${folder.isDefault ? t('saved.defaultFolder', 'Default Folder') : t('saved.editFolder', 'Edit Folder')}`,
+          title: `${emoji} ${folder.isDefault ? t('saved.defaultFolder') : t('saved.editFolder')}`,
           showBackButton: true,
         }}
       />
       <View style={styles.form}>
-        <Text style={styles.label}>{t('common.emoji', 'Emoji')}</Text>
+        <Text style={styles.label}>{t('common.emoji')}</Text>
         <TextInput value={emoji} onChangeText={setEmoji} style={styles.input} maxLength={2} />
 
-        <Text style={styles.label}>{t('common.name', 'Name')}</Text>
+        <Text style={styles.label}>{t('common.name')}</Text>
         <TextInput
           value={name}
           onChangeText={setName}
           style={[styles.input, folder.isDefault && { opacity: 0.6 }]}
-          placeholder={t('saved.folderNamePlaceholder', 'Folder name')}
+          placeholder={t('saved.folderNamePlaceholder')}
           editable={!folder.isDefault}
         />
 
-        <Text style={styles.label}>{t('common.color', 'Color')}</Text>
+        <Text style={styles.label}>{t('common.color')}</Text>
         <View style={styles.colorGrid}>
           {FOLDER_COLORS.map((c) => {
             const isSelected = c === color;

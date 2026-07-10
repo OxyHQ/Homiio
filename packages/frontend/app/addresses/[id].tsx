@@ -25,6 +25,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@oxyhq/bloom/button';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
+import { useTranslation } from 'react-i18next';
 import { AddressDisplay } from '@/components/AddressDisplay';
 import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
@@ -110,12 +111,20 @@ interface ReviewData {
 type ReviewTab = 'overall' | 'apartments' | 'community' | 'area';
 type ContentTab = 'properties' | 'reviews';
 
-const REVIEW_TABS: { id: ReviewTab; label: string }[] = [
-  { id: 'overall', label: 'Overall' },
-  { id: 'apartments', label: 'Apartments' },
-  { id: 'community', label: 'Community' },
-  { id: 'area', label: 'Area' },
-];
+const REVIEW_TAB_IDS: ReviewTab[] = ['overall', 'apartments', 'community', 'area'];
+
+const reviewTabKey = (tab: ReviewTab): string => {
+  switch (tab) {
+    case 'overall':
+      return 'addresses.detail.tabOverall';
+    case 'apartments':
+      return 'addresses.detail.tabApartments';
+    case 'community':
+      return 'addresses.detail.tabCommunity';
+    case 'area':
+      return 'addresses.detail.tabArea';
+  }
+};
 
 const Stars: React.FC<{ rating: number }> = ({ rating }) => {
   const fullStars = Math.floor(rating);
@@ -323,22 +332,27 @@ const ContentTabSwitcher: React.FC<ContentTabSwitcherProps> = ({
   propertyCount,
   reviewCount,
   onChange,
-}) => (
-  <View style={styles.tabSwitcher}>
-    {[
-      { id: 'properties' as const, label: `Properties (${propertyCount})`, icon: 'home-outline' as IoniconName },
-      { id: 'reviews' as const, label: `Reviews (${reviewCount})`, icon: 'chatbubbles-outline' as IoniconName },
-    ].map((tab) => (
-      <ContentTabButton
-        key={tab.id}
-        label={tab.label}
-        icon={tab.icon}
-        active={selected === tab.id}
-        onPress={() => onChange(tab.id)}
-      />
-    ))}
-  </View>
-);
+}) => {
+  const { t } = useTranslation();
+  return (
+    <View style={styles.tabSwitcher}>
+      {(
+        [
+          { id: 'properties' as const, label: t('addresses.detail.tabProperties', { count: propertyCount }), icon: 'home-outline' as IoniconName },
+          { id: 'reviews' as const, label: t('addresses.detail.tabReviews', { count: reviewCount }), icon: 'chatbubbles-outline' as IoniconName },
+        ] as const
+      ).map((tab) => (
+        <ContentTabButton
+          key={tab.id}
+          label={tab.label}
+          icon={tab.icon}
+          active={selected === tab.id}
+          onPress={() => onChange(tab.id)}
+        />
+      ))}
+    </View>
+  );
+};
 
 interface ReviewTabSwitcherProps {
   selected: ReviewTab;
@@ -348,33 +362,37 @@ interface ReviewTabSwitcherProps {
 const ReviewTabSwitcher: React.FC<ReviewTabSwitcherProps> = ({
   selected,
   onChange,
-}) => (
-  <View style={styles.reviewTabBar}>
-    {REVIEW_TABS.map((tab) => {
-      const active = selected === tab.id;
-      return (
-        <Pressable
-          key={tab.id}
-          onPress={() => onChange(tab.id)}
-          style={[styles.reviewTab, active && styles.reviewTabActive]}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: active }}
-        >
-          <BloomText
-            style={[
-              styles.reviewTabLabel,
-              active && styles.reviewTabLabelActive,
-            ]}
+}) => {
+  const { t } = useTranslation();
+  return (
+    <View style={styles.reviewTabBar}>
+      {REVIEW_TAB_IDS.map((tabId) => {
+        const active = selected === tabId;
+        return (
+          <Pressable
+            key={tabId}
+            onPress={() => onChange(tabId)}
+            style={[styles.reviewTab, active && styles.reviewTabActive]}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
           >
-            {tab.label}
-          </BloomText>
-        </Pressable>
-      );
-    })}
-  </View>
-);
+            <BloomText
+              style={[
+                styles.reviewTabLabel,
+                active && styles.reviewTabLabelActive,
+              ]}
+            >
+              {t(reviewTabKey(tabId))}
+            </BloomText>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+};
 
 export default function AddressDetailsPage() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
@@ -496,22 +514,22 @@ export default function AddressDetailsPage() {
   };
 
   const handleReviewHelpful = (_reviewId: string) => {
-    Alert.alert('Thank you', 'Your feedback has been recorded.');
+    Alert.alert(t('reviews.card.alertThankYouTitle'), t('reviews.card.alertThankYouBody'));
   };
 
   const handleReviewReport = (_reviewId: string) => {
     Alert.alert(
-      'Report Review',
-      'Are you sure you want to report this review for inappropriate content?',
+      t('reviews.card.alertReportTitle'),
+      t('reviews.card.alertReportBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Report',
+          text: t('reviews.card.alertReportConfirm'),
           style: 'destructive',
           onPress: () => {
             Alert.alert(
-              'Reported',
-              'This review has been reported to our moderation team.',
+              t('reviews.card.alertReportedTitle'),
+              t('reviews.card.alertReportedBody'),
             );
           },
         },
@@ -521,18 +539,18 @@ export default function AddressDetailsPage() {
 
   const handleReplyToReview = (_reviewId: string) => {
     Alert.alert(
-      'Reply to Review',
-      'Reply functionality will allow landlords and property managers to respond to reviews.',
-      [{ text: 'OK' }],
+      t('reviews.card.alertReplyTitle'),
+      t('reviews.card.alertReplyBody'),
+      [{ text: t('common.confirm') }],
     );
   };
 
   const getAddressTitle = () => {
-    if (!address) return 'Address';
+    if (!address) return t('addresses.detail.title');
     const parts = [address.street, address.cityName, address.regionName].filter(Boolean);
     if (parts.length > 0) return parts.join(', ');
     if (address.location) return address.location;
-    return 'Address';
+    return t('addresses.detail.title');
   };
 
   const headerTitle = (() => {
@@ -561,14 +579,14 @@ export default function AddressDetailsPage() {
     return (
       <View style={styles.root}>
         <Header
-          options={{ title: 'Address', showBackButton: true }}
+          options={{ title: t('addresses.detail.title'), showBackButton: true }}
         />
         <ErrorState
           icon="search-outline"
-          title="Address not found"
-          description="We couldn't find any details for this address."
+          title={t('addresses.detail.notFound')}
+          description={t('addresses.detail.notFoundDescription')}
           onRetry={() => router.back()}
-          retryLabel="Go back"
+          retryLabel={t('common.goBack')}
         />
       </View>
     );
@@ -664,12 +682,12 @@ export default function AddressDetailsPage() {
 
           {contentTab === 'properties' ? (
             <View style={styles.sectionCard}>
-              <H3 style={styles.cardHeading}>Properties at this address</H3>
+              <H3 style={styles.cardHeading}>{t('addresses.detail.propertiesSection')}</H3>
               {properties.length === 0 ? (
                 <EmptyState
                   icon="home-outline"
-                  title="No properties yet"
-                  description="There are currently no listings at this address."
+                  title={t('addresses.detail.emptyPropertiesTitle')}
+                  description={t('addresses.detail.emptyPropertiesDescription')}
                 />
               ) : (
                 <View style={styles.propertiesList}>
@@ -691,8 +709,8 @@ export default function AddressDetailsPage() {
             <View style={styles.sectionCard}>
               <View style={styles.reviewsHeader}>
                 <View style={styles.headerText}>
-                  <SectionEyebrow>Reviews</SectionEyebrow>
-                  <H2 style={styles.cardHeading}>Stories from residents</H2>
+                  <SectionEyebrow>{t('addresses.detail.reviewsSection')}</SectionEyebrow>
+                  <H2 style={styles.cardHeading}>{t('addresses.detail.storiesTitle')}</H2>
                 </View>
                 <Button
                   variant="primary"
@@ -706,7 +724,7 @@ export default function AddressDetailsPage() {
                     />
                   }
                 >
-                  Write review
+                  {t('addresses.detail.writeReview')}
                 </Button>
               </View>
 
@@ -720,14 +738,10 @@ export default function AddressDetailsPage() {
                   icon="chatbubble-outline"
                   title={
                     activeTab === 'overall'
-                      ? 'No reviews yet'
-                      : `No ${activeTab} reviews yet`
+                      ? t('addresses.detail.emptyReviewsTitle')
+                      : t('addresses.detail.emptyReviewsTitle')
                   }
-                  description={
-                    activeTab === 'overall'
-                      ? 'Be the first to review this address and help others choose with confidence.'
-                      : `Be the first to review the ${activeTab} at this address.`
-                  }
+                  description={t('addresses.detail.emptyReviewsDescription')}
                 />
               ) : (
                 <View style={styles.reviewsList}>

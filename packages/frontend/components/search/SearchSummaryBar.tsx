@@ -39,22 +39,22 @@ import { colors } from '@/styles/colors';
 import { cardShadow, hairline, radius, spacing, tracker } from '@/constants/styles';
 import type { SearchQuery, SearchStep } from './types';
 
-/** Human label for a single property type. */
-const TYPE_LABELS: Record<PropertyType, string> = {
-  [PropertyType.APARTMENT]: 'Apartment',
-  [PropertyType.HOUSE]: 'House',
-  [PropertyType.ROOM]: 'Room',
-  [PropertyType.STUDIO]: 'Studio',
-  [PropertyType.COUCHSURFING]: 'Couchsurfing',
-  [PropertyType.ROOMMATES]: 'Roommates',
-  [PropertyType.COLIVING]: 'Coliving',
-  [PropertyType.HOSTEL]: 'Hostel',
-  [PropertyType.GUESTHOUSE]: 'Guesthouse',
-  [PropertyType.CAMPSITE]: 'Campsite',
-  [PropertyType.BOAT]: 'Boat',
-  [PropertyType.TREEHOUSE]: 'Treehouse',
-  [PropertyType.YURT]: 'Yurt',
-  [PropertyType.OTHER]: 'Other',
+/** i18n key for a single property type label. */
+const TYPE_I18N_KEYS: Record<PropertyType, string> = {
+  [PropertyType.APARTMENT]: 'properties.titles.types.apartment',
+  [PropertyType.HOUSE]: 'properties.titles.types.house',
+  [PropertyType.ROOM]: 'properties.titles.types.room',
+  [PropertyType.STUDIO]: 'properties.titles.types.studio',
+  [PropertyType.COUCHSURFING]: 'search.propertyType.couchsurfing',
+  [PropertyType.ROOMMATES]: 'search.propertyType.roommates',
+  [PropertyType.COLIVING]: 'search.propertyType.coliving',
+  [PropertyType.HOSTEL]: 'search.propertyType.hostel',
+  [PropertyType.GUESTHOUSE]: 'search.propertyType.guesthouse',
+  [PropertyType.CAMPSITE]: 'search.propertyType.campsite',
+  [PropertyType.BOAT]: 'search.propertyType.boat',
+  [PropertyType.TREEHOUSE]: 'search.propertyType.treehouse',
+  [PropertyType.YURT]: 'search.propertyType.yurt',
+  [PropertyType.OTHER]: 'search.propertyType.other',
 };
 
 /**
@@ -269,23 +269,19 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
   const whereLabel = useMemo(
     () =>
       query.location?.shortLabel ||
-      (t('search.summary.anywhere', 'Anywhere') || 'Anywhere'),
+      (t('search.summary.anywhere')),
     [query.location?.shortLabel, t],
   );
 
   // Shared "Property type" label, reused by both layouts.
   const typeLabel = useMemo(() => {
     if (query.propertyTypes.length === 0) {
-      return t('search.summary.anyType', 'Any type') || 'Any type';
+      return t('search.summary.anyType');
     }
     if (query.propertyTypes.length === 1) {
-      const label = TYPE_LABELS[query.propertyTypes[0]];
-      return t(label, label) || label;
+      return t(TYPE_I18N_KEYS[query.propertyTypes[0]]);
     }
-    return (
-      t('search.summary.typeCount', `${query.propertyTypes.length} types`) ||
-      `${query.propertyTypes.length} types`
-    );
+    return t('search.summary.typeCount', { count: query.propertyTypes.length });
   }, [query.propertyTypes, t]);
 
   // Dates label for the wide pill's middle column.
@@ -296,9 +292,9 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
         : query.dates.start;
     }
     if (isVacation) {
-      return t('search.summary.anyTime', 'Any time') || 'Any time';
+      return t('search.summary.anyTime');
     }
-    return t('search.summary.addDates', 'Add dates') || 'Add dates';
+    return t('search.summary.addDates');
   }, [query.dates, isVacation, t]);
 
   // Single-line summary segments (compact mode, results top bar).
@@ -315,7 +311,7 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
     } else if (query.priceMin !== undefined) {
       price = `≥ €${query.priceMin}`;
     } else {
-      price = t('search.summary.anyPrice', 'Any price') || 'Any price';
+      price = t('search.summary.anyPrice');
     }
 
     return { where: whereLabel, type: typeLabel, price };
@@ -336,12 +332,12 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
     // three columns flex down and leave room for the full-size button.
     const isNarrow = !isWide;
     const whereColLabel =
-      t('searchBar.long.where', 'Where') || 'Where';
+      t('searchBar.long.where');
     const middleColLabel = isVacation
-      ? t('searchBar.vacation.when', 'When') || 'When'
-      : t('searchBar.long.moveIn', 'Move-in') || 'Move-in';
+      ? t('searchBar.vacation.when')
+      : t('searchBar.long.moveIn');
     const typeColLabel =
-      t('searchBar.long.propertyType', 'Property type') || 'Property type';
+      t('searchBar.long.propertyType');
 
     return (
       <View style={[styles.pill3col, cardShadow.md]}>
@@ -374,7 +370,7 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
           onPressIn={() => setSearchPressed(true)}
           onPressOut={() => setSearchPressed(false)}
           accessibilityRole="button"
-          accessibilityLabel={t('searchBar.search', 'Search') || 'Search'}
+          accessibilityLabel={t('searchBar.search')}
           style={[styles.searchButton, searchPressed && styles.searchButtonPressed]}
         >
           <Ionicons name="search" size={SEARCH_ICON_SIZE} color={colors.primaryForeground} />
@@ -398,7 +394,7 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
         onPressOut={() => setSummaryPressed(false)}
         accessibilityRole="button"
         accessibilityLabel={
-          t('search.summary.edit', 'Edit search') || 'Edit search'
+          t('search.summary.edit')
         }
         style={[styles.summaryTap, summaryPressed && styles.summaryTapPressed]}
       >
@@ -428,7 +424,7 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
             onPress={handleSavePress}
             accessibilityLabel={
               saveAccessibilityLabel ||
-              (t('search.actions.save', 'Save') || 'Save')
+              (t('search.actions.save'))
             }
           />
         </>

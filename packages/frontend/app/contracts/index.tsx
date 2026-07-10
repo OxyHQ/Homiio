@@ -65,12 +65,12 @@ const leasePropertyTitle = (property?: Lease['property']): string => {
 
 type FilterOption = 'all' | 'active' | 'pending_signatures' | 'expired' | 'draft';
 
-const FILTERS: { id: FilterOption; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'active', label: 'Active' },
-  { id: 'pending_signatures', label: 'Pending' },
-  { id: 'expired', label: 'Expired' },
-  { id: 'draft', label: 'Drafts' },
+const FILTERS: { id: FilterOption; i18nKey: string }[] = [
+  { id: 'all', i18nKey: 'contracts.list.filterAll' },
+  { id: 'active', i18nKey: 'contracts.list.filterActive' },
+  { id: 'pending_signatures', i18nKey: 'contracts.list.filterPending' },
+  { id: 'expired', i18nKey: 'contracts.list.filterExpired' },
+  { id: 'draft', i18nKey: 'contracts.list.filterDrafts' },
 ];
 
 const ContractsSkeleton: React.FC = () => (
@@ -141,18 +141,16 @@ export default function ContractsScreen() {
       <View style={styles.root}>
         <Header
           options={{
-            title: t('Rental Contracts'),
+            title: t('contracts.list.title'),
             titlePosition: 'center',
           }}
         />
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <EmptyState
             icon="document-text-outline"
-            title={t('No rental contracts')}
-            description={t(
-              "You don't have any rental properties yet. Start by browsing available properties or listing your own.",
-            )}
-            actionText={t('Browse properties')}
+            title={t('contracts.list.noRentalPropertiesTitle')}
+            description={t('contracts.list.noRentalPropertiesDescription')}
+            actionText={t('contracts.list.browseProperties')}
             actionIcon="home"
             onAction={() => router.push('/')}
           />
@@ -165,20 +163,16 @@ export default function ContractsScreen() {
     <View style={styles.root}>
       <Header
         options={{
-          title: t('Rental Contracts'),
+          title: t('contracts.list.title'),
           titlePosition: 'center',
         }}
       />
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.titleBlock}>
-            <SectionEyebrow>Agreements</SectionEyebrow>
-            <H2 style={styles.title}>{t('Rental Contracts')}</H2>
-            <BloomText style={styles.subtitle}>
-              {t(
-                'Track every lease you sign or issue and pull up key terms in seconds.',
-              )}
-            </BloomText>
+            <SectionEyebrow>{t('contracts.list.eyebrow')}</SectionEyebrow>
+            <H2 style={styles.title}>{t('contracts.list.title')}</H2>
+            <BloomText style={styles.subtitle}>{t('contracts.list.subtitle')}</BloomText>
           </View>
 
           <ScrollView
@@ -196,7 +190,7 @@ export default function ContractsScreen() {
                   color={isActive ? 'primary' : 'default'}
                   selected={isActive}
                 >
-                  {t(entry.label)}
+                  {t(entry.i18nKey)}
                 </Chip>
               );
             })}
@@ -207,8 +201,8 @@ export default function ContractsScreen() {
           {leasesError ? (
             <ErrorState
               icon="cloud-offline-outline"
-              title={t("Couldn't load contracts")}
-              description={leasesError?.message || t('Please try again.')}
+              title={t('contracts.list.loadError')}
+              description={leasesError?.message || t('contracts.list.tryAgain')}
               onRetry={() => refetchLeases()}
             />
           ) : null}
@@ -217,13 +211,17 @@ export default function ContractsScreen() {
             <View style={styles.emptyWrap}>
               <EmptyState
                 icon="document-text-outline"
-                title={t('No contracts found')}
+                title={t('contracts.list.emptyTitle')}
                 description={
                   filter === 'all'
-                    ? t("You don't have any rental contracts yet")
-                    : t(`No ${filter.replace('_', ' ')} contracts to show`)
+                    ? t('contracts.list.emptyAllDescription')
+                    : t('contracts.list.emptyFilteredDescription', {
+                        filter: t(
+                          `statusBadge.${filter === 'pending_signatures' ? 'pendingSignatures' : filter}`,
+                        ),
+                      })
                 }
-                actionText={t('Create new contract')}
+                actionText={t('contracts.list.createNew')}
                 actionIcon="add"
                 onAction={handleAddNewContract}
               />
@@ -251,7 +249,7 @@ export default function ContractsScreen() {
             icon={<Ionicons name="add" size={20} color={colors.primaryForeground} />}
             style={styles.footerButton}
           >
-            {t('New contract')}
+            {t('contracts.list.newContract')}
           </Button>
         </View>
       </SafeAreaView>

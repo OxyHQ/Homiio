@@ -167,8 +167,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         onClearText={handleClear}
         autoFocus
         label={
-          t('search.input.placeholder', 'Search cities, neighborhoods, or addresses') ||
-          'Search cities, neighborhoods, or addresses'
+          t('search.input.placeholder')
         }
       />
 
@@ -176,7 +175,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         recentSearches.length > 0 ? (
           <View style={styles.list}>
             <BloomText style={styles.sectionLabel}>
-              {t('search.recent.title', 'Recent searches') || 'Recent searches'}
+              {t('search.recent.title')}
             </BloomText>
             {recentSearches.map((recent) => (
               <SuggestionRow
@@ -194,8 +193,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         <View style={styles.list}>
           {loading && resolvedSuggestions.length === 0 ? (
             <BloomText style={styles.statusText}>
-              {t('search.header.geocoding', 'Looking up location...') ||
-                'Looking up location...'}
+              {t('search.header.geocoding')}
             </BloomText>
           ) : null}
           {resolvedSuggestions.map((location) => (

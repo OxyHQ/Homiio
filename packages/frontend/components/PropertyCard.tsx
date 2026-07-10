@@ -249,7 +249,7 @@ export function PropertyCard({
   const primaryOffering = resolvePrimaryOffering(
     property,
     browseMode,
-    t('listing.exchange.free', 'Free'),
+    t('listing.exchange.free'),
   );
 
   // The OTHER offerings this multi-offering listing carries (excluding the one
@@ -282,15 +282,15 @@ export function PropertyCard({
   // long-term → "month", short-term → "night"; sale/exchange have none.
   const priceUnitSuffix = propertyData.priceUnit
     ? propertyData.priceUnit === PriceUnit.NIGHT
-      ? t('listing.offering.perNightUnit', 'night')
-      : t('listing.offering.perMonthUnit', 'month')
+      ? t('listing.offering.perNightUnit')
+      : t('listing.offering.perMonthUnit')
     : '';
 
   // "Also available: By night · For sale" — joins the other offerings' labels.
   const alsoAvailableLabel =
     otherOfferings.length > 0
-      ? `${t('listing.offering.alsoAvailable', 'Also available')}: ${otherOfferings
-          .map((summary) => t(summary.i18nKey, summary.fallback))
+      ? `${t('listing.offering.alsoAvailable')}: ${otherOfferings
+          .map((summary) => t(summary.i18nKey))
           .join(' · ')}`
       : '';
 
@@ -302,10 +302,7 @@ export function PropertyCard({
   const typeMeta: { icon: IoniconName; label: string } | null = propertyData.type
     ? {
         icon: propertyData.type === 'house' ? 'home-outline' : 'business-outline',
-        label: t(
-          `properties.titles.types.${propertyData.type}`,
-          propertyData.type.charAt(0).toUpperCase() + propertyData.type.slice(1),
-        ),
+        label: t(`properties.titles.types.${propertyData.type}`),
       }
     : null;
 
@@ -396,7 +393,7 @@ export function PropertyCard({
             <MediaChip
               icon="flash"
               accent={colors.primarySubtleForeground}
-              label={t('listing.badge.instantBook', 'Instant book')}
+              label={t('listing.badge.instantBook')}
             />
           ) : null}
 

@@ -7,6 +7,7 @@ import {
   PropertyNearbyServices,
 } from '@homiio/shared-types';
 import { toast } from '@/lib/sonner';
+import i18next from 'i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 /** Area-scale lookups (price insights, nearby services) are comparatively
@@ -230,10 +231,11 @@ export const useCreateProperty = () => {
         // Use the propertyService instead of propertyApi
         const response = await propertyService.createProperty(data);
 
-        toast.success('Property created successfully');
+        toast.success(i18next.t('property.toast.createSuccess'));
         return response;
       } catch (error: any) {
-        const errorMessage = error.message || 'Failed to create property';
+        const errorMessage =
+          error instanceof Error ? error.message : i18next.t('property.toast.createFailed');
         setError(errorMessage);
         toast.error(errorMessage);
         throw error;
@@ -267,10 +269,11 @@ export const useUpdateProperty = () => {
           data,
         );
 
-        toast.success('Property updated successfully');
+        toast.success(i18next.t('property.toast.updateSuccess'));
         return response;
       } catch (error: any) {
-        const errorMessage = error.message || 'Failed to update property';
+        const errorMessage =
+          error instanceof Error ? error.message : i18next.t('property.toast.updateFailed');
         setError(errorMessage);
         toast.error(errorMessage);
         throw error;
@@ -301,9 +304,10 @@ export const useDeleteProperty = () => {
         // Use propertyService instead of propertyApi
         await propertyService.deleteProperty(id);
 
-        toast.success('Property deleted successfully');
+        toast.success(i18next.t('property.toast.deleteSuccess'));
       } catch (error: any) {
-        const errorMessage = error.message || 'Failed to delete property';
+        const errorMessage =
+          error instanceof Error ? error.message : i18next.t('property.toast.deleteFailed');
         setError(errorMessage);
         toast.error(errorMessage);
         throw error;

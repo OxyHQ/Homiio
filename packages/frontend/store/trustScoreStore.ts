@@ -6,10 +6,9 @@ interface TrustScoreState {
   score: number;
   factors: Array<{
     id: string;
-    name: string;
+    type: string;
     score: number;
     weight: number;
-    description: string;
   }>;
   history: Array<{
     date: string;

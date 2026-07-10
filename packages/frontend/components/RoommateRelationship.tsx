@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { shadowToken } from '@/styles/shadows';
 import type { RoommateRelationship, RoommateProfile } from '@/hooks/useRoommate';
 import { ActionButton } from '@/components/ui/ActionButton';
-
+import { getDateLocale } from '@/utils/dateLocale';
 
 interface RoommateRelationshipProps {
   relationship: RoommateRelationship;
@@ -18,26 +19,27 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
   onEndRelationship,
   onViewProfile,
 }) => {
+  const { t, i18n } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleEndRelationship = async () => {
     Alert.alert(
-      'End Relationship',
-      'Are you sure you want to end this roommate relationship? This action cannot be undone.',
+      t('roommates.relationship.confirmEndTitle'),
+      t('roommates.relationship.confirmEndBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'End Relationship',
+          text: t('roommates.relationship.confirmEndAction'),
           style: 'destructive',
           onPress: async () => {
             setIsLoading(true);
             try {
               const success = await onEndRelationship(relationship.id);
               if (success) {
-                Alert.alert('Success', 'Roommate relationship ended');
+                Alert.alert(t('roommates.alert.successTitle'), t('roommates.alert.relationshipEnded'));
               }
-            } catch (error) {
-              Alert.alert('Error', 'Failed to end roommate relationship');
+            } catch {
+              Alert.alert(t('roommates.alert.errorTitle'), t('roommates.alert.relationshipEndFailed'));
             } finally {
               setIsLoading(false);
             }
@@ -48,7 +50,7 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
   };
 
   const getDisplayName = (profile: RoommateProfile) =>
-    profile.displayName?.trim() || 'Roommate';
+    profile.displayName?.trim() || t('roommates.screen.fallbackName');
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -66,19 +68,19 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
   const getStatusText = (status: string) => {
     switch (status) {
       case 'active':
-        return 'Active';
+        return t('roommates.relationship.statusActive');
       case 'inactive':
-        return 'Inactive';
+        return t('roommates.relationship.statusInactive');
       case 'ended':
-        return 'Ended';
+        return t('roommates.relationship.statusEnded');
       default:
-        return 'Unknown';
+        return t('roommates.relationship.statusUnknown');
     }
   };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString();
+    return date.toLocaleDateString(getDateLocale(i18n.language));
   };
 
   const getDuration = () => {
@@ -88,24 +90,31 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays < 30) {
-      return `${diffDays} days`;
-    } else if (diffDays < 365) {
-      const months = Math.floor(diffDays / 30);
-      return `${months} month${months > 1 ? 's' : ''}`;
-    } else {
-      const years = Math.floor(diffDays / 365);
-      return `${years} year${years > 1 ? 's' : ''}`;
+      return t('roommates.relationship.durationDays', { count: diffDays });
     }
+    if (diffDays < 365) {
+      const months = Math.floor(diffDays / 30);
+      return months > 1
+        ? t('roommates.relationship.durationMonths', { count: months })
+        : t('roommates.relationship.durationMonth', { count: months });
+    }
+    const years = Math.floor(diffDays / 365);
+    return years > 1
+      ? t('roommates.relationship.durationYears', { count: years })
+      : t('roommates.relationship.durationYear', { count: years });
   };
 
   return (
     <View style={styles.container}>
-      {/* Header with relationship info */}
       <View style={styles.header}>
         <View style={styles.relationshipInfo}>
-          <Text style={styles.relationshipTitle}>Roommate Relationship</Text>
-          <Text style={styles.duration}>Duration: {getDuration()}</Text>
-          <Text style={styles.startDate}>Started: {formatDate(relationship.startDate)}</Text>
+          <Text style={styles.relationshipTitle}>{t('roommates.relationship.title')}</Text>
+          <Text style={styles.duration}>
+            {t('roommates.relationship.duration', { duration: getDuration() })}
+          </Text>
+          <Text style={styles.startDate}>
+            {t('roommates.relationship.started', { date: formatDate(relationship.startDate) })}
+          </Text>
         </View>
 
         <View
@@ -115,22 +124,21 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
         </View>
       </View>
 
-      {/* Match score */}
       <View style={styles.matchScoreSection}>
-        <Text style={styles.matchScoreText}>{relationship.matchScore}% Match</Text>
-        <Text style={styles.matchScoreLabel}>Compatibility Score</Text>
+        <Text style={styles.matchScoreText}>
+          {t('roommates.relationship.percentMatch', { score: relationship.matchScore })}
+        </Text>
+        <Text style={styles.matchScoreLabel}>{t('roommates.compatibility')}</Text>
       </View>
 
-      {/* Roommate profiles */}
       <View style={styles.profilesSection}>
-        <Text style={styles.sectionTitle}>Roommates</Text>
+        <Text style={styles.sectionTitle}>{t('roommates.relationship.roommatesSection')}</Text>
 
         <View style={styles.profileRow}>
           <TouchableOpacity
             style={styles.profileContainer}
             onPress={() => onViewProfile(relationship.profile1.id)}
           >
-            {/* Avatar placeholder since avatar is not in PersonalProfile type */}
             <View style={styles.avatarPlaceholder}>
               <Ionicons name="person" size={20} color={colors.COLOR_BLACK_LIGHT_5} />
             </View>
@@ -145,7 +153,6 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
             style={styles.profileContainer}
             onPress={() => onViewProfile(relationship.profile2.id)}
           >
-            {/* Avatar placeholder since avatar is not in PersonalProfile type */}
             <View style={styles.avatarPlaceholder}>
               <Ionicons name="person" size={20} color={colors.COLOR_BLACK_LIGHT_5} />
             </View>
@@ -154,12 +161,11 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
         </View>
       </View>
 
-      {/* Actions */}
       {relationship.status === 'active' && (
         <View style={styles.actions}>
           <ActionButton
             icon="close-circle"
-            text="End Relationship"
+            text={t('roommates.relationship.endRelationship')}
             onPress={handleEndRelationship}
             variant="secondary"
             loading={isLoading}
@@ -170,7 +176,9 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
 
       {relationship.status === 'ended' && relationship.endDate && (
         <View style={styles.endedInfo}>
-          <Text style={styles.endedText}>Ended on {formatDate(relationship.endDate)}</Text>
+          <Text style={styles.endedText}>
+            {t('roommates.relationship.endedOn', { date: formatDate(relationship.endDate) })}
+          </Text>
         </View>
       )}
     </View>
@@ -253,12 +261,6 @@ const styles = StyleSheet.create({
   profileContainer: {
     alignItems: 'center',
     flex: 1,
-  },
-  profileAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginBottom: 8,
   },
   avatarPlaceholder: {
     width: 50,

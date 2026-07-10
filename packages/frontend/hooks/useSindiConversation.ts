@@ -13,6 +13,7 @@ import { api } from '@/utils/api';
 import { getData, storeData } from '@/utils/storage';
 import { logger } from '@/utils/logger';
 import { API_URL } from '@/config';
+import i18next from 'i18next';
 
 /** Key under which we record that the file-upsell sheet has been shown once. */
 const FILE_UPSELL_KEY = 'sindi:fileUpsellShown';
@@ -382,8 +383,9 @@ export function useSindiConversation({
       setAttachedFile(null);
     } catch (e) {
       logger.error('File upload failed:', e);
-      const messageText = e instanceof Error ? e.message : 'Could not analyze the file.';
-      Alert.alert('Upload failed', messageText);
+      const messageText =
+        e instanceof Error ? e.message : i18next.t('sindi.errors.uploadAnalyzeFailed');
+      Alert.alert(i18next.t('sindi.errors.uploadFailedTitle'), messageText);
     } finally {
       setIsUploading(false);
     }

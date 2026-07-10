@@ -31,7 +31,6 @@ interface OfferingMeta {
   accent: string;
   icon: IoniconName;
   i18nKey: string;
-  fallback: string;
 }
 
 const OFFERING_META: Partial<Record<OfferingType, OfferingMeta>> = {
@@ -39,19 +38,16 @@ const OFFERING_META: Partial<Record<OfferingType, OfferingMeta>> = {
     accent: colors.primarySubtleForeground,
     icon: 'moon',
     i18nKey: 'listing.badge.byNight',
-    fallback: 'By night',
   },
   [OfferingType.SALE]: {
     accent: colors.saleAccent,
     icon: 'pricetag',
     i18nKey: 'listing.badge.forSale',
-    fallback: 'For sale',
   },
   [OfferingType.EXCHANGE]: {
     accent: colors.exchangeAccent,
     icon: 'swap-horizontal',
     i18nKey: 'listing.badge.exchange',
-    fallback: 'Exchange',
   },
 };
 
@@ -65,7 +61,7 @@ export const OfferingBadge: React.FC<OfferingBadgeProps> = ({ offering, size = '
     <MediaChip
       icon={meta.icon}
       accent={meta.accent}
-      label={t(meta.i18nKey, meta.fallback)}
+      label={t(meta.i18nKey)}
       size={size}
     />
   );

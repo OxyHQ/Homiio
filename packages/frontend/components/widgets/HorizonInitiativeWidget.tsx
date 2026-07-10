@@ -13,14 +13,11 @@ export function HorizonInitiativeWidget() {
 
   return (
     <BaseWidget
-      title={t('horizon.title', 'Horizon Initiative')}
+      title={t('horizon.title')}
       icon={<Ionicons name="star" size={22} color={colors.ratingStar} />}
     >
       <ThemedText style={styles.membershipText}>
-        {t(
-          'horizon.description',
-          'Horizon is a global initiative offering fair housing, healthcare, and travel support. Integrated with Homiio, it ensures affordable living within a connected, sustainable network.',
-        )}
+        {t('horizon.description')}
       </ThemedText>
       <Button
         style={styles.joinButton}
@@ -29,7 +26,7 @@ export function HorizonInitiativeWidget() {
           Linking.openURL('https://oxy.so/horizon').catch(() => undefined);
         }}
       >
-        {t('home.horizon.learnMore', 'Learn More')}
+        {t('home.horizon.learnMore')}
       </Button>
     </BaseWidget>
   );

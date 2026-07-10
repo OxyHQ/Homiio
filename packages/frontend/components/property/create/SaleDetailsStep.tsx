@@ -53,13 +53,13 @@ export function SaleDetailsStep({
   return (
     <View>
       <ThemedText type="subtitle">
-        {t('listing.sale.stepTitle', 'Sale details')}
+        {t('listing.sale.stepTitle')}
       </ThemedText>
 
       <View style={styles.formRow}>
         <View style={[styles.formGroup, styles.formGroupLeft]}>
           <ThemedText style={styles.label}>
-            {t('listing.sale.askingPrice', 'Asking price')}
+            {t('listing.sale.askingPrice')}
           </ThemedText>
           <TextInput
             style={[styles.input, validationErrors.salePrice && styles.inputError]}
@@ -74,7 +74,7 @@ export function SaleDetailsStep({
         </View>
 
         <View style={[styles.formGroup, styles.formGroupRight]}>
-          <ThemedText style={styles.label}>{t('listing.sale.currency', 'Currency')}</ThemedText>
+          <ThemedText style={styles.label}>{t('listing.sale.currency')}</ThemedText>
           <View style={styles.optionRow}>
             {CURRENCY_OPTIONS.map((option) => (
               <TouchableOpacity
@@ -101,7 +101,7 @@ export function SaleDetailsStep({
 
       <View style={styles.formGroup}>
         <ThemedText style={styles.label}>
-          {t('listing.sale.chainStatus.label', 'Chain status')}
+          {t('listing.sale.chainStatus.label')}
         </ThemedText>
         <View style={styles.optionRow}>
           {CHAIN_STATUS_OPTIONS.map((option) => (
@@ -119,7 +119,7 @@ export function SaleDetailsStep({
                   offering.chainStatus === option.value && styles.propertyTypeTextSelected,
                 ]}
               >
-                {t(option.i18nKey, option.fallback)}
+                {t(option.i18nKey)}
               </ThemedText>
             </TouchableOpacity>
           ))}
@@ -128,7 +128,7 @@ export function SaleDetailsStep({
 
       <View style={styles.toggleContainer}>
         <ThemedText style={styles.label}>
-          {t('listing.sale.priceReduced', 'Price reduced')}
+          {t('listing.sale.priceReduced')}
         </ThemedText>
         <TouchableOpacity
           style={[
@@ -148,8 +148,8 @@ export function SaleDetailsStep({
           />
           <ThemedText style={styles.toggleText}>
             {offering.isPriceReduced
-              ? t('common.yes', 'Yes')
-              : t('common.no', 'No')}
+              ? t('common.yes')
+              : t('common.no')}
           </ThemedText>
         </TouchableOpacity>
       </View>

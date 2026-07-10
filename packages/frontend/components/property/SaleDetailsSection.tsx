@@ -30,11 +30,11 @@ const PERCENT_MAX_FRACTION_DIGITS = 1;
 /** Chain-status → i18n key + fallback. */
 const CHAIN_STATUS_LABEL: Record<
   NonNullable<PropertySale['chainStatus']>,
-  { key: string; fallback: string }
+  { key: string }
 > = {
-  no_chain: { key: 'listing.sale.chainStatus.noChain', fallback: 'No chain' },
-  chain: { key: 'listing.sale.chainStatus.chain', fallback: 'In a chain' },
-  unknown: { key: 'listing.sale.chainStatus.unknown', fallback: 'Unknown' },
+  no_chain: { key: 'listing.sale.chainStatus.noChain' },
+  chain: { key: 'listing.sale.chainStatus.chain' },
+  unknown: { key: 'listing.sale.chainStatus.unknown' },
 };
 
 export const SaleDetailsSection: React.FC<Props> = ({ sale }) => {
@@ -43,7 +43,7 @@ export const SaleDetailsSection: React.FC<Props> = ({ sale }) => {
   const chain = sale.chainStatus ? CHAIN_STATUS_LABEL[sale.chainStatus] : undefined;
 
   return (
-    <Section title={t('listing.sale.sectionTitle', 'For sale')}>
+    <Section title={t('listing.sale.sectionTitle')}>
       <View style={styles.headline}>
         <CurrencyFormatter
           amount={sale.price}
@@ -55,7 +55,7 @@ export const SaleDetailsSection: React.FC<Props> = ({ sale }) => {
           <View style={styles.reducedChip}>
             <Ionicons name="trending-down" size={14} color={colors.success} />
             <BloomText style={styles.reducedText}>
-              {t('listing.sale.priceReduced', 'Price reduced')}
+              {t('listing.sale.priceReduced')}
             </BloomText>
           </View>
         ) : null}
@@ -66,7 +66,7 @@ export const SaleDetailsSection: React.FC<Props> = ({ sale }) => {
           <Divider />
           <View style={styles.row}>
             <BloomText style={styles.label}>
-              {t('listing.sale.pricePerSqm', 'Price per m²')}
+              {t('listing.sale.pricePerSqm')}
             </BloomText>
             <BloomText style={styles.value}>
               <CurrencyFormatter
@@ -85,7 +85,7 @@ export const SaleDetailsSection: React.FC<Props> = ({ sale }) => {
           <Divider />
           <View style={styles.row}>
             <BloomText style={styles.label}>
-              {t('listing.sale.estimatedYield', 'Estimated yield')}
+              {t('listing.sale.estimatedYield')}
             </BloomText>
             <BloomText style={styles.value}>
               {`${sale.estimatedYield.toLocaleString(undefined, {
@@ -101,9 +101,9 @@ export const SaleDetailsSection: React.FC<Props> = ({ sale }) => {
           <Divider />
           <View style={styles.row}>
             <BloomText style={styles.label}>
-              {t('listing.sale.chainStatus.label', 'Chain status')}
+              {t('listing.sale.chainStatus.label')}
             </BloomText>
-            <BloomText style={styles.value}>{t(chain.key, chain.fallback)}</BloomText>
+            <BloomText style={styles.value}>{t(chain.key)}</BloomText>
           </View>
         </>
       ) : null}

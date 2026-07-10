@@ -141,9 +141,7 @@ export const RecentPropertyItem = React.memo(function RecentPropertyItem({
               <View className="flex-row items-center gap-2 py-1 px-2">
                 <Trash2 size={14} color={colors.busy} />
                 <Text style={{ fontSize: 13, color: colors.busy }}>
-                  {t('sidebar.recent.remove', {
-                    defaultValue: 'Remove from recent',
-                  })}
+                  {t('sidebar.recent.remove')}
                 </Text>
               </View>
             </MenuOption>

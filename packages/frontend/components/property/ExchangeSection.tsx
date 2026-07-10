@@ -34,27 +34,18 @@ const ICON_SIZE = 18;
 const MAX_WINDOWS_SHOWN = 4;
 
 /** Exchange-mode → headline + helper copy. */
-const MODE_COPY: Record<
-  ExchangeMode,
-  { titleKey: string; titleFallback: string; helpKey: string; helpFallback: string }
-> = {
+const MODE_COPY: Record<ExchangeMode, { titleKey: string; helpKey: string }> = {
   [ExchangeMode.SWAP]: {
     titleKey: 'listing.exchange.mode.swap',
-    titleFallback: 'Home swap',
     helpKey: 'listing.exchange.mode.swapHelp',
-    helpFallback: 'Each party stays in the other’s home.',
   },
   [ExchangeMode.HOST]: {
     titleKey: 'listing.exchange.mode.host',
-    titleFallback: 'Free hosting',
     helpKey: 'listing.exchange.mode.hostHelp',
-    helpFallback: 'Welcome a guest with no stay in return.',
   },
   [ExchangeMode.BOTH]: {
     titleKey: 'listing.exchange.mode.both',
-    titleFallback: 'Either',
     helpKey: 'listing.exchange.mode.bothHelp',
-    helpFallback: 'Open to a swap or to hosting a guest.',
   },
 };
 
@@ -94,16 +85,16 @@ export const ExchangeSection: React.FC<Props> = ({ exchange, onRequestExchange }
   const stayLabel = useMemo(() => {
     const { minStay, maxStay } = exchange;
     if (minStay && maxStay) {
-      return t('listing.exchange.stayRange', '{{min}}–{{max}} nights', {
+      return t('listing.exchange.stayRange', {
         min: minStay,
         max: maxStay,
       });
     }
     if (minStay) {
-      return t('listing.exchange.minStay', 'Min {{count}} nights', { count: minStay });
+      return t('listing.exchange.minStay', { count: minStay });
     }
     if (maxStay) {
-      return t('listing.exchange.maxStay', 'Max {{count}} nights', { count: maxStay });
+      return t('listing.exchange.maxStay', { count: maxStay });
     }
     return undefined;
   }, [exchange, t]);
@@ -111,7 +102,7 @@ export const ExchangeSection: React.FC<Props> = ({ exchange, onRequestExchange }
   const languages = exchange.languages?.filter(Boolean) ?? [];
 
   return (
-    <Section title={t('listing.exchange.sectionTitle', 'Home exchange')}>
+    <Section title={t('listing.exchange.sectionTitle')}>
       {/* Mode */}
       <View style={styles.modeRow}>
         <View style={styles.modeBadge}>
@@ -119,10 +110,10 @@ export const ExchangeSection: React.FC<Props> = ({ exchange, onRequestExchange }
         </View>
         <View style={styles.modeText}>
           <BloomText style={styles.modeTitle}>
-            {t(mode.titleKey, mode.titleFallback)}
+            {t(mode.titleKey)}
           </BloomText>
           <BloomText style={styles.modeHelp}>
-            {t(mode.helpKey, mode.helpFallback)}
+            {t(mode.helpKey)}
           </BloomText>
         </View>
       </View>
@@ -141,7 +132,7 @@ export const ExchangeSection: React.FC<Props> = ({ exchange, onRequestExchange }
           <Divider />
           <View style={styles.block}>
             <BloomText style={styles.blockLabel}>
-              {t('listing.exchange.availabilityTitle', 'Availability')}
+              {t('listing.exchange.availabilityTitle')}
             </BloomText>
             {windows.map((window) => (
               <View key={`${window.start}_${window.end}`} style={styles.windowRow}>
@@ -157,7 +148,7 @@ export const ExchangeSection: React.FC<Props> = ({ exchange, onRequestExchange }
             ))}
             {extraWindows > 0 ? (
               <BloomText style={styles.moreWindows}>
-                {t('listing.exchange.moreWindows', '+{{count}} more', {
+                {t('listing.exchange.moreWindows', {
                   count: extraWindows,
                 })}
               </BloomText>
@@ -173,7 +164,7 @@ export const ExchangeSection: React.FC<Props> = ({ exchange, onRequestExchange }
         {languages.length > 0 ? (
           <FactRow
             icon="chatbubbles-outline"
-            label={t('listing.exchange.languagesValue', 'Speaks {{languages}}', {
+            label={t('listing.exchange.languagesValue', {
               languages: languages.join(', '),
             })}
           />
@@ -181,15 +172,15 @@ export const ExchangeSection: React.FC<Props> = ({ exchange, onRequestExchange }
         {exchange.mealsIncluded ? (
           <FactRow
             icon="restaurant-outline"
-            label={t('listing.exchange.mealsIncludedFact', 'Meals included')}
+            label={t('listing.exchange.mealsIncludedFact')}
           />
         ) : null}
         <FactRow
           icon={exchange.requiresReciprocity ? 'repeat-outline' : 'gift-outline'}
           label={
             exchange.requiresReciprocity
-              ? t('listing.exchange.reciprocityRequired', 'Return stay expected')
-              : t('listing.exchange.reciprocityOptional', 'No return stay required')
+              ? t('listing.exchange.reciprocityRequired')
+              : t('listing.exchange.reciprocityOptional')
           }
         />
       </View>
@@ -200,7 +191,7 @@ export const ExchangeSection: React.FC<Props> = ({ exchange, onRequestExchange }
         onPress={onRequestExchange}
         style={styles.cta}
       >
-        {t('listing.exchange.requestCta', 'Request exchange')}
+        {t('listing.exchange.requestCta')}
       </Button>
     </Section>
   );

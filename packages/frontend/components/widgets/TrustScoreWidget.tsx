@@ -11,6 +11,17 @@ import { useActiveProfile } from '@/hooks/useProfileQueries';
 import { ThemedText } from '../ThemedText';
 import { BaseWidget } from './BaseWidget';
 
+const TRUST_FACTOR_TYPES = new Set([
+  'verification',
+  'reviews',
+  'payment_history',
+  'communication',
+  'rental_history',
+]);
+
+const trustFactorLabel = (type: string, t: (key: string) => string): string =>
+  TRUST_FACTOR_TYPES.has(type) ? t(`trust.manager.factors.${type}.label`) : type;
+
 export const TrustScoreWidget = React.memo(function TrustScoreWidget() {
   const { t } = useTranslation();
   const { isAuthenticated } = useOxy();
@@ -63,8 +74,8 @@ export const TrustScoreWidget = React.memo(function TrustScoreWidget() {
       <Loading iconSize={16} showText={false} />
       <ThemedText style={styles.loadingText}>
         {profileType === 'agency'
-          ? t('trust.loadingVerification', 'Loading verification status...')
-          : t('trust.loadingScore', 'Loading trust score...')}
+          ? t('trust.loadingVerification')
+          : t('trust.loadingScore')}
       </ThemedText>
     </View>
   ), [profileType, t]);
@@ -74,12 +85,12 @@ export const TrustScoreWidget = React.memo(function TrustScoreWidget() {
     <View style={styles.errorContainer}>
       <ThemedText style={styles.errorText}>
         {profileType === 'agency'
-          ? t('trust.errorVerification', 'Unable to load verification status')
-          : t('trust.errorScore', 'Unable to load trust score')}
+          ? t('trust.errorVerification')
+          : t('trust.errorScore')}
       </ThemedText>
       <TouchableOpacity style={[styles.retryButton]} onPress={handlePress}>
         <ThemedText style={styles.retryButtonText}>
-          {t('trust.viewDetails', 'View Details')}
+          {t('trust.viewDetails')}
         </ThemedText>
       </TouchableOpacity>
     </View>
@@ -90,14 +101,14 @@ export const TrustScoreWidget = React.memo(function TrustScoreWidget() {
     <View style={styles.noProfileContainer}>
       <Text style={styles.noProfileText}>
         {profileType === 'agency'
-          ? t('trust.noVerification', 'No verification data')
-          : t('trust.noScore', 'No trust score data')}
+          ? t('trust.noVerification')
+          : t('trust.noScore')}
       </Text>
       <TouchableOpacity
         style={[styles.setupButton, { backgroundColor: colors.primaryColor }]}
         onPress={handlePress}
       >
-        <Text style={styles.setupButtonText}>{t('trust.viewDetails', 'View Details')}</Text>
+        <Text style={styles.setupButtonText}>{t('trust.viewDetails')}</Text>
       </TouchableOpacity>
     </View>
   ), [profileType, t, handlePress]);
@@ -115,18 +126,20 @@ export const TrustScoreWidget = React.memo(function TrustScoreWidget() {
               {Math.round(trustScoreData.score)}%
             </ThemedText>
             <ThemedText style={styles.verificationLabel}>
-              {t('trust.verified', 'Verified')}
+              {t('trust.verified')}
             </ThemedText>
           </View>
         </View>
         <View style={styles.rightCol}>
-          <ThemedText style={styles.rowTitle}>{trustScoreData.level}</ThemedText>
+          <ThemedText style={styles.rowTitle}>
+            {t(`trust.score.levels.${trustScoreData.levelKey}`)}
+          </ThemedText>
           <TouchableOpacity
             style={[styles.ctaButton, { backgroundColor: scoreColor }]}
             onPress={handlePress}
           >
             <ThemedText style={styles.ctaButtonText}>
-              {t('trust.completeVerification', 'Complete Verification')}
+              {t('trust.completeVerification')}
             </ThemedText>
           </TouchableOpacity>
         </View>
@@ -146,13 +159,13 @@ export const TrustScoreWidget = React.memo(function TrustScoreWidget() {
         </View>
         <View style={styles.rightCol}>
           <ThemedText style={styles.rowTitle}>
-            {t('trust.yourScoreIs', 'Your trust score is')} {trustScoreData.level}
+            {t('trust.yourScoreIs')} {t(`trust.score.levels.${trustScoreData.levelKey}`)}
           </ThemedText>
           <View style={styles.factorsRow}>
             {trustScoreData.factors.slice(0, 3).map((factor, index) => (
               <View key={index} style={styles.factorChip}>
                 <ThemedText style={styles.factorChipText}>
-                  {factor.type.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                  {trustFactorLabel(factor.type, t)}
                 </ThemedText>
                 <View style={styles.chipProgress}>
                   <View style={[styles.chipProgressFill, { width: `${factor.value}%`, backgroundColor: scoreColor }]} />
@@ -165,7 +178,7 @@ export const TrustScoreWidget = React.memo(function TrustScoreWidget() {
             onPress={handlePress}
           >
             <ThemedText style={styles.ctaButtonText}>
-              {t('trust.improveScore', 'Improve Score')}
+              {t('trust.improveScore')}
             </ThemedText>
           </TouchableOpacity>
         </View>

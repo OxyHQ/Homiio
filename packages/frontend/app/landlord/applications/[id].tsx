@@ -21,6 +21,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
+import i18next from 'i18next';
 import { toast } from '@/lib/sonner';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@oxyhq/bloom/button';
@@ -64,39 +66,31 @@ const REVIEW_TRANSITIONS: Record<ReviewAction, TenantApplicationStatus> = {
   reject: TenantApplicationStatus.REJECTED,
 };
 
-const REVIEW_LABELS: Record<ReviewAction, {
-  title: string;
-  message: string;
-  confirmLabel: string;
-  successToast: string;
-}> = {
+const getReviewLabels = (
+  t: (key: string) => string,
+): Record<
+  ReviewAction,
+  { title: string; message: string; confirmLabel: string; successToast: string }
+> => ({
   reviewing: {
-    title: 'Mark as reviewing?',
-    message:
-      'Lets the applicant know you have their application open. You can still approve or reject afterwards.',
-    confirmLabel: 'Mark as reviewing',
-    successToast: 'Application moved to reviewing',
+    title: t('applications.landlord.review.reviewing.title'),
+    message: t('applications.landlord.review.reviewing.message'),
+    confirmLabel: t('applications.landlord.review.reviewing.confirm'),
+    successToast: t('applications.landlord.review.reviewing.successToast'),
   },
   approve: {
-    title: 'Approve application?',
-    message:
-      'The applicant will be notified and can move forward to sign the lease.',
-    confirmLabel: 'Approve',
-    successToast: 'Application approved',
+    title: t('applications.landlord.review.approve.title'),
+    message: t('applications.landlord.review.approve.message'),
+    confirmLabel: t('applications.landlord.review.approve.confirm'),
+    successToast: t('applications.landlord.review.approve.successToast'),
   },
   reject: {
-    title: 'Reject application?',
-    message:
-      'The applicant will be notified. This cannot be undone — but they can submit a new application later.',
-    confirmLabel: 'Reject',
-    successToast: 'Application rejected',
+    title: t('applications.landlord.review.reject.title'),
+    message: t('applications.landlord.review.reject.message'),
+    confirmLabel: t('applications.landlord.review.reject.confirm'),
+    successToast: t('applications.landlord.review.reject.successToast'),
   },
-};
-
-const formatEmployment = (status: string): string =>
-  status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-
-const formatRelationship = formatEmployment;
+});
 
 const formatCurrency = (amount: number): string => {
   try {
@@ -136,7 +130,7 @@ const openDocument = (url: string) => {
     return;
   }
   Linking.openURL(url).catch(() => {
-    toast.error('Could not open the document.');
+    toast.error(i18next.t('applications.landlord.toastOpenDocumentFailed'));
   });
 };
 
@@ -193,7 +187,10 @@ interface DocumentRowProps {
   document: TenantApplicationDocument;
 }
 
-const DocumentRow: React.FC<DocumentRowProps> = ({ document }) => (
+const DocumentRow: React.FC<DocumentRowProps> = ({ document }) => {
+  const { t } = useTranslation();
+
+  return (
   <Pressable
     onPress={() => openDocument(document.url)}
     style={styles.documentRow}
@@ -212,7 +209,7 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ document }) => (
         {document.filename}
       </BloomText>
       <BloomText style={styles.documentType}>
-        {formatRelationship(document.type)}
+        {t(`applications.documentType.${document.type}`)}
       </BloomText>
     </View>
     <Ionicons
@@ -221,7 +218,8 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ document }) => (
       color={colors.COLOR_BLACK_LIGHT_3}
     />
   </Pressable>
-);
+  );
+};
 
 interface DetailRowProps {
   label: string;
@@ -255,6 +253,7 @@ const DetailSkeleton: React.FC = () => (
 );
 
 export default function LandlordApplicationDetailScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
   const id = typeof params.id === 'string' ? params.id : params.id?.[0];
@@ -286,6 +285,7 @@ export default function LandlordApplicationDetailScreen() {
 
   const [pendingAction, setPendingAction] = useState<ReviewAction | null>(null);
   const [actionNotes, setActionNotes] = useState('');
+  const reviewLabels = useMemo(() => getReviewLabels(t), [t]);
 
   const handleOpen = useCallback((action: ReviewAction) => {
     setActionNotes('');
@@ -310,15 +310,15 @@ export default function LandlordApplicationDetailScreen() {
           notes: trimmedNotes ? trimmedNotes : undefined,
         },
       });
-      toast.success(REVIEW_LABELS[pendingAction].successToast);
+      toast.success(reviewLabels[pendingAction].successToast);
       setPendingAction(null);
       setActionNotes('');
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Could not update application';
+        error instanceof Error ? error.message : t('applications.landlord.toastUpdateFailed');
       toast.error(message);
     }
-  }, [id, pendingAction, actionNotes, updateMutation]);
+  }, [id, pendingAction, actionNotes, updateMutation, reviewLabels, t]);
 
   if (!id) {
     return (
@@ -435,7 +435,7 @@ export default function LandlordApplicationDetailScreen() {
             <View style={styles.applicantHeaderText}>
               <H2 style={styles.applicantName}>{applicantName}</H2>
               <BloomText style={styles.subtitle}>
-                {formatEmployment(application.employmentStatus)} ·{' '}
+                {t(`profile.edit.options.employmentStatus.${application.employmentStatus}`)} ·{' '}
                 {formatCurrency(application.monthlyIncome)} / mo
               </BloomText>
             </View>
@@ -504,7 +504,7 @@ export default function LandlordApplicationDetailScreen() {
                       {reference.name}
                     </BloomText>
                     <BloomText style={styles.referenceMeta}>
-                      {formatRelationship(reference.relationship)} ·{' '}
+                      {t(`profile.edit.options.referenceRelationship.${reference.relationship}`)} ·{' '}
                       {reference.phone}
                     </BloomText>
                     <BloomText style={styles.referenceMeta}>
@@ -571,10 +571,10 @@ export default function LandlordApplicationDetailScreen() {
 
         <ConfirmDialog
           visible={pendingAction !== null}
-          title={pendingAction ? REVIEW_LABELS[pendingAction].title : ''}
-          message={pendingAction ? REVIEW_LABELS[pendingAction].message : ''}
+          title={pendingAction ? reviewLabels[pendingAction].title : ''}
+          message={pendingAction ? reviewLabels[pendingAction].message : ''}
           confirmLabel={
-            pendingAction ? REVIEW_LABELS[pendingAction].confirmLabel : ''
+            pendingAction ? reviewLabels[pendingAction].confirmLabel : ''
           }
           confirmDestructive={pendingAction === 'reject'}
           loading={updateMutation.isPending}

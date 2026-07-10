@@ -22,7 +22,6 @@ import type { SearchSortBy, SearchSortOrder } from './types';
 interface SortOption {
   key: string;
   labelKey: string;
-  fallback: string;
   sortBy: SearchSortBy;
   sortOrder: SearchSortOrder;
 }
@@ -31,28 +30,24 @@ const SORT_OPTIONS: readonly SortOption[] = [
   {
     key: 'relevance',
     labelKey: 'search.sort.recommended',
-    fallback: 'Recommended',
     sortBy: 'relevance',
     sortOrder: 'desc',
   },
   {
     key: 'price_asc',
     labelKey: 'search.sort.priceAsc',
-    fallback: 'Price: Low to high',
     sortBy: 'price',
     sortOrder: 'asc',
   },
   {
     key: 'price_desc',
     labelKey: 'search.sort.priceDesc',
-    fallback: 'Price: High to low',
     sortBy: 'price',
     sortOrder: 'desc',
   },
   {
     key: 'newest',
     labelKey: 'search.sort.newest',
-    fallback: 'Newest first',
     sortBy: 'createdAt',
     sortOrder: 'desc',
   },
@@ -76,11 +71,11 @@ export const DEFAULT_SORT_OPTION = SORT_OPTIONS[0];
 export function resolveSortLabel(
   sortBy: SearchSortBy,
   sortOrder: SearchSortOrder,
-  t: (key: string, fallback: string) => string,
+  t: (key: string) => string,
 ): { label: string; isDefault: boolean } {
   const option = matchOption(sortBy, sortOrder);
   return {
-    label: t(option.labelKey, option.fallback) || option.fallback,
+    label: t(option.labelKey),
     isDefault: option.key === DEFAULT_SORT_OPTION.key,
   };
 }
@@ -143,10 +138,10 @@ export const SortControl: React.FC<SortControlProps> = ({
 
   return (
     <View style={styles.container}>
-      <H3 style={styles.title}>{t('search.sort.title', 'Sort by')}</H3>
+      <H3 style={styles.title}>{t('search.sort.title')}</H3>
       {SORT_OPTIONS.map((option) => {
         const isSelected = option.key === activeKey;
-        const label = t(option.labelKey, option.fallback) || option.fallback;
+        const label = t(option.labelKey);
         return (
           <SortRow
             key={option.key}

@@ -297,19 +297,19 @@ export default function PropertyTypeScreen() {
           contentContainerStyle={styles.actions}
         >
           <SearchActionPill
-            label={t('search.actions.filters', 'Filters') || 'Filters'}
+            label={t('search.actions.filters')}
             icon="options-outline"
             active={activeFilterCount > 0}
             count={activeFilterCount}
             onPress={handleFiltersPress}
-            accessibilityLabel={t('search.actions.filters', 'Filters') || 'Filters'}
+            accessibilityLabel={t('search.actions.filters')}
           />
           <SearchActionPill
-            label={sort.isDefault ? t('search.actions.sort', 'Sort') || 'Sort' : sort.label}
+            label={sort.isDefault ? t('search.actions.sort') : sort.label}
             icon="swap-vertical"
             active={!sort.isDefault}
             onPress={handleSortPress}
-            accessibilityLabel={`${t('search.actions.sort', 'Sort') || 'Sort'}: ${sort.label}`}
+            accessibilityLabel={`${t('search.actions.sort')}: ${sort.label}`}
           />
         </ScrollView>
         {body}

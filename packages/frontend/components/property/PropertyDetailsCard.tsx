@@ -16,27 +16,27 @@ export const PropertyDetailsCard: React.FC<Props> = ({ property }) => {
     const yearBuilt = property?.yearBuilt;
     const parkingSpaces = property?.parkingSpaces;
     return (
-        <Section title={t('Property Details') || 'Property Details'}>
+        <Section title={t('property.sections.details')}>
             <View style={styles.grid}>
                 <View style={styles.item}>
-                    <BloomText style={styles.label}>{t('Property Type') || 'Property Type'}</BloomText>
-                    <BloomText style={styles.value}>{type ? type.charAt(0).toUpperCase() + type.slice(1) : t('Not specified') || 'Not specified'}</BloomText>
+                    <BloomText style={styles.label}>{t('property.sections.propertyType')}</BloomText>
+                    <BloomText style={styles.value}>{type ? type.charAt(0).toUpperCase() + type.slice(1) : t('property.sections.notSpecified')}</BloomText>
                 </View>
                 {floor !== undefined && (
                     <View style={styles.item}>
-                        <BloomText style={styles.label}>{t('Floor') || 'Floor'}</BloomText>
+                        <BloomText style={styles.label}>{t('property.sections.floor')}</BloomText>
                         <BloomText style={styles.value}>{floor}</BloomText>
                     </View>
                 )}
                 {yearBuilt && (
                     <View style={styles.item}>
-                        <BloomText style={styles.label}>{t('Year Built') || 'Year Built'}</BloomText>
+                        <BloomText style={styles.label}>{t('property.sections.yearBuilt')}</BloomText>
                         <BloomText style={styles.value}>{yearBuilt}</BloomText>
                     </View>
                 )}
                 {parkingSpaces !== undefined && (
                     <View style={styles.item}>
-                        <BloomText style={styles.label}>{t('Parking Spaces') || 'Parking Spaces'}</BloomText>
+                        <BloomText style={styles.label}>{t('property.sections.parkingSpaces')}</BloomText>
                         <BloomText style={styles.value}>{parkingSpaces}</BloomText>
                     </View>
                 )}

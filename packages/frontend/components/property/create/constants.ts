@@ -370,9 +370,7 @@ export const CURRENCY_OPTIONS: readonly CurrencyOption[] = [
 export interface OfferingOption {
   value: OfferingType;
   i18nKey: string;
-  fallback: string;
   descriptionKey: string;
-  descriptionFallback: string;
   icon: string;
 }
 
@@ -380,33 +378,25 @@ export const PRICING_OFFERING_OPTIONS: readonly OfferingOption[] = [
   {
     value: OfferingType.LONG_TERM_RENT,
     i18nKey: 'listing.offering.longTerm',
-    fallback: 'Rent monthly',
     descriptionKey: 'listing.offering.longTermHelp',
-    descriptionFallback: 'Traditional long-term lease, priced per month.',
     icon: 'home-outline',
   },
   {
     value: OfferingType.SHORT_TERM_RENT,
     i18nKey: 'listing.offering.nightly',
-    fallback: 'Rent by night',
     descriptionKey: 'listing.offering.nightlyHelp',
-    descriptionFallback: 'Vacation / short stays, priced per night.',
     icon: 'moon-outline',
   },
   {
     value: OfferingType.SALE,
     i18nKey: 'listing.offering.sell',
-    fallback: 'Sell',
     descriptionKey: 'listing.offering.sellHelp',
-    descriptionFallback: 'List the property for sale.',
     icon: 'pricetag-outline',
   },
   {
     value: OfferingType.EXCHANGE,
     i18nKey: 'listing.offering.exchange',
-    fallback: 'Exchange',
     descriptionKey: 'listing.offering.exchangeHelp',
-    descriptionFallback: 'Home swap or free hosting.',
     icon: 'swap-horizontal-outline',
   },
 ];
@@ -418,13 +408,12 @@ export const PRICING_OFFERING_OPTIONS: readonly OfferingOption[] = [
 export interface ChainStatusOption {
   value: NonNullable<import('@homiio/shared-types').PropertySale['chainStatus']>;
   i18nKey: string;
-  fallback: string;
 }
 
 export const CHAIN_STATUS_OPTIONS: readonly ChainStatusOption[] = [
-  { value: 'no_chain', i18nKey: 'listing.sale.chainStatus.noChain', fallback: 'No chain' },
-  { value: 'chain', i18nKey: 'listing.sale.chainStatus.chain', fallback: 'In a chain' },
-  { value: 'unknown', i18nKey: 'listing.sale.chainStatus.unknown', fallback: 'Unknown' },
+  { value: 'no_chain', i18nKey: 'listing.sale.chainStatus.noChain' },
+  { value: 'chain', i18nKey: 'listing.sale.chainStatus.chain' },
+  { value: 'unknown', i18nKey: 'listing.sale.chainStatus.unknown' },
 ];
 
 /**
@@ -435,32 +424,24 @@ export const CHAIN_STATUS_OPTIONS: readonly ChainStatusOption[] = [
 export interface ExchangeModeOption {
   value: ExchangeMode;
   i18nKey: string;
-  fallback: string;
   descriptionKey: string;
-  descriptionFallback: string;
 }
 
 export const EXCHANGE_MODE_OPTIONS: readonly ExchangeModeOption[] = [
   {
     value: ExchangeMode.SWAP,
     i18nKey: 'listing.exchange.mode.swap',
-    fallback: 'Home swap',
     descriptionKey: 'listing.exchange.mode.swapHelp',
-    descriptionFallback: 'Each party stays in the other’s home.',
   },
   {
     value: ExchangeMode.HOST,
     i18nKey: 'listing.exchange.mode.host',
-    fallback: 'Free hosting',
     descriptionKey: 'listing.exchange.mode.hostHelp',
-    descriptionFallback: 'Welcome a guest with no stay in return.',
   },
   {
     value: ExchangeMode.BOTH,
     i18nKey: 'listing.exchange.mode.both',
-    fallback: 'Either',
     descriptionKey: 'listing.exchange.mode.bothHelp',
-    descriptionFallback: 'Open to a swap or to hosting a guest.',
   },
 ];
 

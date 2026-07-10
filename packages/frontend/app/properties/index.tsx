@@ -226,12 +226,12 @@ export default function PropertiesScreen() {
 
   const resultsHeading = useMemo(() => {
     if (isLoading) {
-      return t('properties.header.loading', 'Loading homes…') || 'Loading homes…';
+      return t('properties.header.loading');
     }
     if (total === 0) {
-      return t('properties.header.empty', 'No homes available') || 'No homes available';
+      return t('properties.header.empty');
     }
-    return t('search.header.count', `${total} homes`) || `${total} homes`;
+    return t('search.header.count', { count: total });
   }, [t, isLoading, total]);
 
   const body = (() => {
@@ -246,9 +246,9 @@ export default function PropertiesScreen() {
     if (isError) {
       return (
         <ErrorState
-          title={t('properties.error.title', 'Could not load homes') || 'Could not load homes'}
+          title={t('properties.error.title')}
           description={error?.message}
-          retryLabel={t('common.tryAgain', 'Try again') || 'Try again'}
+          retryLabel={t('common.tryAgain')}
           onRetry={() => void refetch()}
         />
       );
@@ -257,12 +257,11 @@ export default function PropertiesScreen() {
       return (
         <EmptyState
           icon="home-outline"
-          title={t('properties.empty.title', 'No homes available') || 'No homes available'}
+          title={t('properties.empty.title')}
           description={
-            t('properties.empty.description', 'Try relaxing your filters.') ||
-            'Try relaxing your filters.'
+            t('properties.empty.description')
           }
-          actionText={t('properties.empty.action', 'Clear filters') || 'Clear filters'}
+          actionText={t('properties.empty.action')}
           actionIcon="options-outline"
           onAction={handleFiltersPress}
         />
@@ -295,30 +294,30 @@ export default function PropertiesScreen() {
           contentContainerStyle={styles.topBarActions}
         >
           <SearchActionPill
-            label={t('search.actions.filters', 'Filters') || 'Filters'}
+            label={t('search.actions.filters')}
             icon="options-outline"
             active={activeFilterCount > 0}
             count={activeFilterCount}
             onPress={handleFiltersPress}
             accessibilityLabel={
               activeFilterCount > 0
-                ? `${t('search.actions.filters', 'Filters') || 'Filters'}, ${activeFilterCount}`
-                : t('search.actions.filters', 'Filters') || 'Filters'
+                ? `${t('search.actions.filters')}, ${activeFilterCount}`
+                : t('search.actions.filters')
             }
           />
           <SearchActionPill
-            label={sort.isDefault ? t('search.actions.sort', 'Sort') || 'Sort' : sort.label}
+            label={sort.isDefault ? t('search.actions.sort') : sort.label}
             icon="swap-vertical"
             active={!sort.isDefault}
             onPress={handleSortPress}
-            accessibilityLabel={`${t('search.actions.sort', 'Sort') || 'Sort'}: ${sort.label}`}
+            accessibilityLabel={`${t('search.actions.sort')}: ${sort.label}`}
           />
           <SearchActionPill
-            label={t('properties.actions.recent', 'Recently viewed') || 'Recently viewed'}
+            label={t('properties.actions.recent')}
             icon="time-outline"
             onPress={() => router.push('/properties/recently-viewed')}
             accessibilityLabel={
-              t('properties.actions.recent', 'Recently viewed') || 'Recently viewed'
+              t('properties.actions.recent')
             }
           />
         </ScrollView>
@@ -358,7 +357,7 @@ export default function PropertiesScreen() {
           variant="primary"
           style={styles.fabButton}
           icon={<Ionicons name="add" size={24} color={colors.primaryForeground} />}
-          accessibilityLabel={t('properties.actions.create', 'Add property') || 'Add property'}
+          accessibilityLabel={t('properties.actions.create')}
         />
       </View>
     </View>

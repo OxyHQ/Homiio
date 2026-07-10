@@ -245,7 +245,7 @@ export default function ViewingsPage() {
         <Header
           options={{
             showBackButton: true,
-            title: t('viewings.title') || 'Viewings',
+            title: t('viewings.title'),
             titlePosition: 'center',
           }}
         />
@@ -270,7 +270,7 @@ export default function ViewingsPage() {
       <Header
         options={{
           showBackButton: true,
-          title: t('viewings.title') || 'Viewings',
+          title: t('viewings.title'),
           titlePosition: 'center',
         }}
       />

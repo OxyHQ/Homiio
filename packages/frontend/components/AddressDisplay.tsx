@@ -47,10 +47,10 @@ export function AddressDisplay({
   const handleCopyAddress = async () => {
     try {
       await Clipboard.setStringAsync(formattedAddress);
-      toast.success(t('Address copied to clipboard'));
+      toast.success(t('addresses.display.copySuccess'));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
-      toast.error(t('Failed to copy address'));
+      toast.error(t('addresses.display.copyFailed'));
     }
   };
 
@@ -70,7 +70,7 @@ export function AddressDisplay({
       }
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch (error) {
-      toast.error(t('Failed to open maps'));
+      toast.error(t('addresses.display.mapsFailed'));
     }
   };
 
@@ -126,7 +126,7 @@ export function AddressDisplay({
         {showMap && address.coordinates && (
           <View style={styles.mapPlaceholder}>
             <Ionicons name="map" size={24} color={colors.COLOR_BLACK_LIGHT_5} />
-            <ThemedText style={styles.mapPlaceholderText}>{t('Map view available')}</ThemedText>
+            <ThemedText style={styles.mapPlaceholderText}>{t('address.display.mapPlaceholder')}</ThemedText>
           </View>
         )}
       </View>
@@ -153,12 +153,12 @@ export function AddressDisplay({
         <View style={styles.detailedActions}>
           <TouchableOpacity style={styles.detailedActionButton} onPress={handleCopyAddress}>
             <Ionicons name="copy-outline" size={16} color={colors.primaryColor} />
-            <ThemedText style={styles.actionButtonText}>{t('Copy')}</ThemedText>
+            <ThemedText style={styles.actionButtonText}>{t('address.display.copy')}</ThemedText>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.detailedActionButton} onPress={handleOpenInMaps}>
             <Ionicons name="map-outline" size={16} color={colors.primaryColor} />
-            <ThemedText style={styles.actionButtonText}>{t('Open in Maps')}</ThemedText>
+            <ThemedText style={styles.actionButtonText}>{t('address.display.openInMaps')}</ThemedText>
           </TouchableOpacity>
         </View>
       )}

@@ -19,7 +19,7 @@ interface LandlordSectionProps {
     landlordProfile: Profile | null;
     ownerProperties: Property[];
     onApplyPublic: () => void;
-    t: (k: string, d?: string) => string | undefined;
+    t: (k: string) => string;
 }
 
 export const LandlordSection: React.FC<LandlordSectionProps> = ({
@@ -114,7 +114,7 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
     return (
         <Section
             fullBleed
-            title={isPublicHousing ? t('Housing Authority') || 'Housing Authority' : t('Landlord') || 'Landlord'}
+            title={isPublicHousing ? t('listing.cta.housingAuthority') : t('listing.cta.landlord')}
         >
             {isPublicHousing ? (
                 <View style={[styles.contentContainer, styles.gutter]}>
@@ -136,7 +136,7 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
                     </View>
                     <ActionButton
                         icon="globe"
-                        text={t('Apply on State Website') || 'Apply on State Website'}
+                        text={t('listing.cta.applyOnStateWebsite')}
                         onPress={onApplyPublic}
                         variant="primary"
                         size="medium"
@@ -170,7 +170,7 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
                     {landlordProfile && ownerProperties.length > 0 && (
                         <View style={styles.propertiesSection}>
                             <HomeCarouselSection
-                                title={t('More properties by this owner') || 'More properties by this owner'}
+                                title={t('listing.cta.moreByOwner')}
                                 items={ownerProperties}
                                 loading={false}
                                 renderItem={(prop) => (

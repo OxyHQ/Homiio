@@ -116,8 +116,8 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
 
   return (
     <Section
-      title={t('listing.mortgage.title', 'Mortgage calculator')}
-      subtitle={t('listing.mortgage.subtitle', 'An estimate — not a mortgage offer.')}
+      title={t('listing.mortgage.title')}
+      subtitle={t('listing.mortgage.subtitle')}
     >
       {/* Monthly payment headline */}
       <View style={styles.headline}>
@@ -128,7 +128,7 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
           style={styles.monthly}
         />
         <BloomText style={styles.monthlyUnit}>
-          {` / ${t('listing.mortgage.perMonth', 'mo')}`}
+          {` / ${t('listing.mortgage.perMonth')}`}
         </BloomText>
       </View>
 
@@ -136,7 +136,7 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
       <View style={styles.control}>
         <View style={styles.controlHeader}>
           <BloomText style={styles.controlLabel}>
-            {t('listing.mortgage.downPayment', 'Down payment')}
+            {t('listing.mortgage.downPayment')}
           </BloomText>
           <BloomText style={styles.controlValue}>
             {downPaymentPercentLabel}
@@ -156,7 +156,7 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
           step={DOWN_PAYMENT_DRAG_STEP}
           keyboardStep={DOWN_PAYMENT_KEYBOARD_STEP}
           onChange={setDownPaymentFraction}
-          accessibilityLabel={t('listing.mortgage.downPayment', 'Down payment')}
+          accessibilityLabel={t('listing.mortgage.downPayment')}
           accessibilityNow={fractionToPercent}
           accessibilityMin={fractionToPercent(MIN_DOWN_PAYMENT_FRACTION)}
           accessibilityMax={fractionToPercent(MAX_DOWN_PAYMENT_FRACTION)}
@@ -167,7 +167,7 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
       <View style={styles.control}>
         <View style={styles.controlHeader}>
           <BloomText style={styles.controlLabel}>
-            {t('listing.mortgage.interestRate', 'Interest rate')}
+            {t('listing.mortgage.interestRate')}
           </BloomText>
         </View>
         <View style={styles.rateInputRow}>
@@ -177,7 +177,7 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
             onChangeText={setAnnualRateText}
             keyboardType="decimal-pad"
             placeholder="0"
-            accessibilityLabel={t('listing.mortgage.interestRate', 'Interest rate')}
+            accessibilityLabel={t('listing.mortgage.interestRate')}
           />
           <BloomText style={styles.ratePercent}>%</BloomText>
         </View>
@@ -187,11 +187,11 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
       <View style={styles.control}>
         <View style={styles.controlHeader}>
           <BloomText style={styles.controlLabel}>
-            {t('listing.mortgage.term', 'Term')}
+            {t('listing.mortgage.term')}
           </BloomText>
         </View>
         <SegmentedControl
-          label={t('listing.mortgage.term', 'Term')}
+          label={t('listing.mortgage.term')}
           type="radio"
           value={String(termYears)}
           onChange={handleSetTerm}
@@ -199,7 +199,7 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
           {DEFAULT_MORTGAGE_CONFIG.termOptions.map((option) => (
             <SegmentedControlItem key={option} value={String(option)}>
               <SegmentedControlItemText>
-                {t('listing.mortgage.years', '{{count}} yr', { count: option })}
+                {t('listing.mortgage.years', { count: option })}
               </SegmentedControlItemText>
             </SegmentedControlItem>
           ))}
@@ -218,13 +218,13 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: colors.primaryColor }]} />
             <BloomText style={styles.legendLabel}>
-              {`${t('listing.mortgage.principal', 'Principal')} · ${principalPercent}%`}
+              {`${t('listing.mortgage.principal')} · ${principalPercent}%`}
             </BloomText>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: colors.warning }]} />
             <BloomText style={styles.legendLabel}>
-              {`${t('listing.mortgage.interest', 'Interest')} · ${interestPercent}%`}
+              {`${t('listing.mortgage.interest')} · ${interestPercent}%`}
             </BloomText>
           </View>
         </View>
@@ -234,7 +234,7 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
       <View style={styles.totals}>
         <View style={styles.totalRow}>
           <BloomText style={styles.totalLabel}>
-            {t('listing.mortgage.loanAmount', 'Loan amount')}
+            {t('listing.mortgage.loanAmount')}
           </BloomText>
           <CurrencyFormatter
             amount={Math.round(result.loanAmount)}
@@ -245,7 +245,7 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
         </View>
         <View style={styles.totalRow}>
           <BloomText style={styles.totalLabel}>
-            {t('listing.mortgage.totalInterest', 'Total interest')}
+            {t('listing.mortgage.totalInterest')}
           </BloomText>
           <CurrencyFormatter
             amount={Math.round(result.totalInterest)}
@@ -256,7 +256,7 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
         </View>
         <View style={[styles.totalRow, styles.totalRowEmphasis]}>
           <BloomText style={styles.totalLabelStrong}>
-            {t('listing.mortgage.totalPaid', 'Total paid')}
+            {t('listing.mortgage.totalPaid')}
           </BloomText>
           <CurrencyFormatter
             amount={Math.round(result.totalPaid)}

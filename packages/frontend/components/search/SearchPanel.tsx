@@ -68,12 +68,12 @@ const BROWSE_MODE_ORDER: readonly BrowseMode[] = [
   'exchange',
 ];
 
-/** i18n key + fallback label for each browse mode in the panel toggle. */
-const BROWSE_MODE_LABELS: Record<BrowseMode, { key: string; fallback: string }> = {
-  long_term: { key: 'search.mode.longTerm', fallback: 'Long-term' },
-  vacation: { key: 'search.mode.vacation', fallback: 'Vacation' },
-  buy: { key: 'search.mode.buy', fallback: 'Buy' },
-  exchange: { key: 'search.mode.exchange', fallback: 'Exchange' },
+/** i18n key for each browse mode in the panel toggle. */
+const BROWSE_MODE_LABELS: Record<BrowseMode, string> = {
+  long_term: 'search.mode.longTerm',
+  vacation: 'search.mode.vacation',
+  buy: 'search.mode.buy',
+  exchange: 'search.mode.exchange',
 };
 
 /** Ordered steps per rental mode. Long-term never includes `dates`. */
@@ -85,11 +85,11 @@ const VACATION_STEPS: readonly SearchStep[] = ['where', 'type', 'dates', 'price'
  * single tapped step (mirrors the collapsed pill's column labels). The narrow
  * sheet keeps its own generic "Search" title and per-step content headings.
  */
-const STEP_TITLE: Record<SearchStep, { key: string; fallback: string }> = {
-  where: { key: 'searchBar.long.where', fallback: 'Where' },
-  type: { key: 'searchBar.long.propertyType', fallback: 'Property type' },
-  dates: { key: 'searchBar.vacation.when', fallback: 'When' },
-  price: { key: 'search.step.price.title', fallback: 'Price range' },
+const STEP_TITLE: Record<SearchStep, string> = {
+  where: 'searchBar.long.where',
+  type: 'searchBar.long.propertyType',
+  dates: 'searchBar.vacation.when',
+  price: 'search.step.price.title',
 };
 
 /**
@@ -345,7 +345,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
       <Pressable
         onPress={onClose}
         accessibilityRole="button"
-        accessibilityLabel={t('common.close', 'Close') || 'Close'}
+        accessibilityLabel={t('common.close')}
         hitSlop={spacing.sm}
         style={styles.headerClose}
       >
@@ -353,7 +353,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
       </Pressable>
       <View style={styles.modeToggle}>
         <SegmentedControl<BrowseMode>
-          label={t('search.mode.label', 'Browse mode') || 'Browse mode'}
+          label={t('search.mode.label')}
           type="tabs"
           size="small"
           value={draftBrowseMode}
@@ -362,8 +362,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
           {BROWSE_MODE_ORDER.map((browseMode) => (
             <SegmentedControlItem key={browseMode} value={browseMode}>
               <SegmentedControlItemText>
-                {t(BROWSE_MODE_LABELS[browseMode].key, BROWSE_MODE_LABELS[browseMode].fallback) ||
-                  BROWSE_MODE_LABELS[browseMode].fallback}
+                {t(BROWSE_MODE_LABELS[browseMode])}
               </SegmentedControlItemText>
             </SegmentedControlItem>
           ))}
@@ -386,9 +385,9 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
         variant="text"
         size="small"
         onPress={handleClear}
-        accessibilityLabel={t('search.actions.clearAll', 'Clear all') || 'Clear all'}
+        accessibilityLabel={t('search.actions.clearAll')}
       >
-        {t('search.actions.clearAll', 'Clear all') || 'Clear all'}
+        {t('search.actions.clearAll')}
       </Button>
       <View style={styles.footerActions}>
         {stepIndex > 0 ? (
@@ -396,9 +395,9 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
             variant="secondary"
             size="medium"
             onPress={handleBack}
-            accessibilityLabel={t('common.back', 'Back') || 'Back'}
+            accessibilityLabel={t('common.back')}
           >
-            {t('common.back', 'Back') || 'Back'}
+            {t('common.back')}
           </Button>
         ) : null}
         {isLastStep ? (
@@ -408,18 +407,18 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
             onPress={handleSubmit}
             icon={<Ionicons name="search" size={16} color={colors.primaryForeground} />}
             iconPosition="left"
-            accessibilityLabel={t('search.actions.search', 'Search') || 'Search'}
+            accessibilityLabel={t('search.actions.search')}
           >
-            {t('search.actions.search', 'Search') || 'Search'}
+            {t('search.actions.search')}
           </Button>
         ) : (
           <Button
             variant="primary"
             size="medium"
             onPress={handleNext}
-            accessibilityLabel={t('common.next', 'Next') || 'Next'}
+            accessibilityLabel={t('common.next')}
           >
-            {t('common.next', 'Next') || 'Next'}
+            {t('common.next')}
           </Button>
         )}
       </View>
@@ -434,8 +433,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
   // the collapsed pill updates) and closes. No browse-mode toggle and no
   // Back/Next chrome: the pill's circular Search button runs the search.
   if (isWide) {
-    const stepTitle =
-      t(STEP_TITLE[step].key, STEP_TITLE[step].fallback) || STEP_TITLE[step].fallback;
+    const stepTitle = t(STEP_TITLE[step]);
     return (
       <Dialog
         placement="center"
@@ -451,9 +449,9 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
             variant="primary"
             size="medium"
             onPress={handleApply}
-            accessibilityLabel={t('common.done', 'Done') || 'Done'}
+            accessibilityLabel={t('common.done')}
           >
-            {t('common.done', 'Done') || 'Done'}
+            {t('common.done')}
           </Button>
         </View>
       </Dialog>
@@ -467,13 +465,13 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
         <Pressable
           style={styles.backdrop}
           accessibilityRole="button"
-          accessibilityLabel={t('common.close', 'Close') || 'Close'}
+          accessibilityLabel={t('common.close')}
           onPress={onClose}
         />
         <View style={styles.modalSheet}>
           <View style={styles.sheetHandleWrap}>
             <H3 style={styles.sheetTitle}>
-              {t('search.panel.title', 'Search') || 'Search'}
+              {t('search.panel.title')}
             </H3>
           </View>
           <View style={[styles.panel, styles.panelFull, cardShadow.lg]}>

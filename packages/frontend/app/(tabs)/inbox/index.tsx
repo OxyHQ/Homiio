@@ -159,33 +159,23 @@ export default function InboxScreen() {
   const handleDeleteNotification = useCallback(
     (notification: Notification) => {
       Alert.alert(
-        t('notification.delete.title', 'Delete Notification'),
-        t(
-          'notification.delete.message',
-          'Are you sure you want to delete this notification?',
-        ),
+        t('notification.delete.title'),
+        t('notification.delete.message'),
         [
-          { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: t('common.delete', 'Delete'),
+            text: t('common.delete'),
             style: 'destructive',
             onPress: async () => {
               try {
                 await deleteNotification(notification.id);
-                toast.success(
-                  t('notification.delete.success', 'Notification deleted'),
-                );
+                toast.success(t('notification.delete.success'));
               } catch (deleteError: unknown) {
                 logger.error(
                   'Failed to delete notification:',
                   deleteError,
                 );
-                toast.error(
-                  t(
-                    'notification.delete.error',
-                    'Failed to delete notification',
-                  ),
-                );
+                toast.error(t('notification.delete.error'));
               }
             },
           },
@@ -198,14 +188,10 @@ export default function InboxScreen() {
   const handleMarkAllAsRead = useCallback(async () => {
     try {
       await markAllAsRead();
-      toast.success(
-        t('notification.markAllRead.success', 'All notifications marked as read'),
-      );
+      toast.success(t('notification.markAllRead.success'));
     } catch (markError: unknown) {
       logger.error('Failed to mark all notifications as read:', markError);
-      toast.error(
-        t('notification.markAllRead.error', 'Failed to mark all as read'),
-      );
+      toast.error(t('notification.markAllRead.error'));
     }
   }, [markAllAsRead, t]);
 
@@ -213,22 +199,16 @@ export default function InboxScreen() {
     try {
       const granted = await requestPermissions();
       if (granted) {
-        toast.success(
-          t('notification.permissions.granted', 'Notification permissions granted'),
-        );
+        toast.success(t('notification.permissions.granted'));
       } else {
-        toast.error(
-          t('notification.permissions.denied', 'Notification permissions denied'),
-        );
+        toast.error(t('notification.permissions.denied'));
       }
     } catch (permissionError: unknown) {
       logger.error(
         'Failed to request notification permissions:',
         permissionError,
       );
-      toast.error(
-        t('notification.permissions.error', 'Failed to request permissions'),
-      );
+      toast.error(t('notification.permissions.error'));
     }
   }, [requestPermissions, t]);
 
@@ -250,7 +230,7 @@ export default function InboxScreen() {
   const header = (
     <Header
       options={{
-        title: t('inbox.title', 'Inbox'),
+        title: t('inbox.title'),
         titlePosition: 'left',
         rightComponents: [
           unreadCount > 0 ? (
@@ -258,10 +238,7 @@ export default function InboxScreen() {
               key="mark-all"
               icon="checkmark-done"
               color={colors.primaryColor}
-              accessibilityLabel={t(
-                'notification.markAllRead.action',
-                'Mark all as read',
-              )}
+              accessibilityLabel={t('notification.markAllRead.action')}
               onPress={handleMarkAllAsRead}
             />
           ) : null,
@@ -269,10 +246,7 @@ export default function InboxScreen() {
             key="settings"
             icon="settings-outline"
             color={colors.COLOR_BLACK_LIGHT_2}
-            accessibilityLabel={t(
-              'notification.settings.title',
-              'Notification Settings',
-            )}
+            accessibilityLabel={t('notification.settings.title')}
             onPress={() => router.push('/settings/notifications')}
           />,
         ],
@@ -297,13 +271,10 @@ export default function InboxScreen() {
           </View>
           <View style={styles.permissionText}>
             <BloomText style={styles.permissionTitle}>
-              {t('notification.permissions.title', 'Enable Notifications')}
+              {t('notification.permissions.title')}
             </BloomText>
             <BloomText style={styles.permissionMessage}>
-              {t(
-                'notification.permissions.message',
-                'Get notified about new properties, messages, and important updates.',
-              )}
+              {t('notification.permissions.message')}
             </BloomText>
           </View>
           <Ionicons
@@ -318,7 +289,7 @@ export default function InboxScreen() {
         <View style={styles.scheduledSection}>
           <View style={styles.sectionHeaderRow}>
             <H3 style={styles.sectionTitle}>
-              {t('notification.scheduled.title', 'Scheduled Notifications')}
+              {t('notification.scheduled.title')}
             </H3>
             <Pressable
               onPress={cancelAllLocalNotifications}
@@ -326,7 +297,7 @@ export default function InboxScreen() {
               hitSlop={8}
             >
               <BloomText style={styles.clearAllText}>
-                {t('notification.scheduled.clearAll', 'Clear All')}
+                {t('notification.scheduled.clearAll')}
               </BloomText>
             </Pressable>
           </View>
@@ -335,10 +306,7 @@ export default function InboxScreen() {
               key={item.identifier}
               request={item}
               onCancel={() => cancelLocalNotification(item.identifier)}
-              scheduledLabel={t(
-                'notification.scheduled.label',
-                'Scheduled notification',
-              )}
+              scheduledLabel={t('notification.scheduled.label')}
             />
           ))}
         </View>
@@ -353,27 +321,27 @@ export default function InboxScreen() {
       <View style={styles.controls}>
         <SearchInput
           value={searchQuery}
-          label={t('notification.search.placeholder', 'Search notifications')}
+          label={t('notification.search.placeholder')}
           onChangeText={setSearchQuery}
           onClearText={() => setSearchQuery('')}
         />
 
         <SegmentedControl<InboxFilter>
-          label={t('notification.filter.label', 'Filter notifications')}
+          label={t('notification.filter.label')}
           type="tabs"
           value={filter}
           onChange={setFilter}
         >
           <SegmentedControlItem value="all">
             <SegmentedControlItemText>
-              {t('notification.filter.all', 'All')}
+              {t('notification.filter.all')}
             </SegmentedControlItemText>
           </SegmentedControlItem>
           <SegmentedControlItem value="unread">
             <SegmentedControlItemText>
               {unreadCount > 0
-                ? `${t('notification.filter.unread', 'Unread')} · ${unreadCount}`
-                : t('notification.filter.unread', 'Unread')}
+                ? `${t('notification.filter.unread')} · ${unreadCount}`
+                : t('notification.filter.unread')}
             </SegmentedControlItemText>
           </SegmentedControlItem>
         </SegmentedControl>
@@ -386,13 +354,13 @@ export default function InboxScreen() {
       ) : error ? (
         <View style={styles.stateWrap}>
           <ErrorState
-            title={t('error.load_notifications', "We couldn't load your inbox")}
+            title={t('error.loadNotifications')}
             description={
               typeof error === 'string'
                 ? error
-                : t('common.tryAgain', 'Please try again.')
+                : t('common.tryAgain')
             }
-            retryLabel={t('common.retry', 'Retry')}
+            retryLabel={t('common.retry')}
             onRetry={handleRefresh}
           />
         </View>
@@ -416,11 +384,8 @@ export default function InboxScreen() {
               <View style={styles.emptyWrap}>
                 <EmptyState
                   icon="filter-outline"
-                  title={t('notification.empty.filteredTitle', 'No matches')}
-                  description={t(
-                    'notification.empty.filtered',
-                    'No notifications match your current filter',
-                  )}
+                  title={t('notification.empty.filteredTitle')}
+                  description={t('notification.empty.filtered')}
                 />
               </View>
             ) : (
@@ -432,13 +397,10 @@ export default function InboxScreen() {
                   accessibilityIgnoresInvertColors
                 />
                 <H3 style={styles.illustrationTitle}>
-                  {t('notification.empty.title', 'No notifications')}
+                  {t('notification.empty.title')}
                 </H3>
                 <BloomText style={styles.illustrationMessage}>
-                  {t(
-                    'notification.empty.message',
-                    "You're all caught up! New notifications will appear here.",
-                  )}
+                  {t('notification.empty.message')}
                 </BloomText>
               </View>
             )

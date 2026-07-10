@@ -120,7 +120,7 @@ export default function SavedFolderScreen() {
       <View style={styles.root}>
         <Header
           options={{
-            title: t('saved.title', 'Folder'),
+            title: t('saved.title'),
             showBackButton: true,
           }}
         />
@@ -136,14 +136,14 @@ export default function SavedFolderScreen() {
       <View style={styles.root}>
         <Header
           options={{
-            title: t('saved.title', 'Folder'),
+            title: t('saved.title'),
             showBackButton: true,
           }}
         />
         <View style={styles.centerWrap}>
           <ErrorState
-            title={t('saved.loadFailed', "We couldn't load this folder")}
-            retryLabel={t('common.retry', 'Retry')}
+            title={t('saved.loadFailed')}
+            retryLabel={t('common.retry')}
             onRetry={handleRefresh}
           />
         </View>
@@ -156,18 +156,15 @@ export default function SavedFolderScreen() {
       <View style={styles.root}>
         <Header
           options={{
-            title: t('saved.title', 'Folder'),
+            title: t('saved.title'),
             showBackButton: true,
           }}
         />
         <View style={styles.centerWrap}>
           <EmptyState
             icon="folder-open-outline"
-            title={t('saved.noFolder', 'Folder not found')}
-            description={t(
-              'saved.noFolderDescription',
-              'This folder might have been removed.',
-            )}
+            title={t('saved.noFolder')}
+            description={t('saved.noFolderDescription')}
           />
         </View>
       </View>
@@ -196,7 +193,7 @@ export default function SavedFolderScreen() {
                     />
                   }
                 >
-                  {t('common.edit', 'Edit')}
+                  {t('common.edit')}
                 </Button>,
               ],
         }}
@@ -218,12 +215,9 @@ export default function SavedFolderScreen() {
           <View style={styles.emptyInner}>
             <EmptyState
               icon="folder-outline"
-              title={t('saved.noFolderItems', 'This folder is empty')}
-              description={t(
-                'saved.noFolderItemsDescription',
-                'Save properties to add them to this folder.',
-              )}
-              actionText={t('saved.exploreCta', 'Explore properties')}
+              title={t('saved.noFolderItems')}
+              description={t('saved.noFolderItemsDescription')}
+              actionText={t('saved.exploreCta')}
               actionIcon="search"
               onAction={() => router.push('/explore')}
             />

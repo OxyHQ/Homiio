@@ -30,27 +30,27 @@ export const NeighborhoodInfo: React.FC<Props> = ({ property }) => {
   const currencyCode = currency ?? 'EUR';
 
   return (
-    <Section title={t('Neighborhood')}>
+    <Section title={t('property.neighborhood.title')}>
       <BloomText style={styles.name}>
         {city ? `${name}, ${city}` : name}
       </BloomText>
       <View style={styles.metricsRow}>
         <BloomText style={styles.metric}>
-          {t('{{count}} listings', { count: listingCount })}
+          {t('property.neighborhood.listingCount', { count: listingCount })}
         </BloomText>
         {averageRent !== null ? (
           <BloomText style={styles.metric}>
-            {t('Avg. {{amount}}/mo', { amount: formatCurrency(averageRent, currencyCode) })}
+            {t('property.neighborhood.avgAmountPerMonth', { amount: formatCurrency(averageRent, currencyCode) })}
           </BloomText>
         ) : null}
       </View>
       {vsCity ? (
         <BloomText style={styles.vsCity}>
           {vsCity.percentDiff === 0
-            ? t('On par with the city average')
-            : t('{{pct}}% {{dir}} than the city average', {
+            ? t('property.neighborhood.onParWithCity')
+            : t('property.neighborhood.pctVsCity', {
                 pct: Math.abs(vsCity.percentDiff),
-                dir: vsCity.percentDiff < 0 ? t('cheaper') : t('pricier'),
+                dir: vsCity.percentDiff < 0 ? t('property.neighborhood.cheaper') : t('property.neighborhood.pricier'),
               })}
         </BloomText>
       ) : null}

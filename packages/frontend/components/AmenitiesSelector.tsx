@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet, StyleProp, ViewStyle } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
 import { colors } from '@/styles/colors';
@@ -25,6 +26,8 @@ export function AmenitiesSelector({
   style,
   propertyType,
 }: AmenitiesSelectorProps) {
+  const { t } = useTranslation();
+
   // Get amenities based on property type, fallback to all amenities if no type specified
   const availableAmenities = propertyType
     ? getAmenitiesByPropertyType(propertyType)
@@ -54,7 +57,7 @@ export function AmenitiesSelector({
                 <ThemedText
                   style={[styles.pickerOptionText, isSelected && styles.pickerOptionTextSelected]}
                 >
-                  {amenity.name}
+                  {amenity.nameKey ? t(amenity.nameKey) : amenity.name}
                 </ThemedText>
               </View>
             </TouchableOpacity>

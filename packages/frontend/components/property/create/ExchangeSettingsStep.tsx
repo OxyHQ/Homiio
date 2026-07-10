@@ -142,19 +142,16 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
   return (
     <View>
       <ThemedText type="subtitle">
-        {t('listing.exchange.stepTitle', 'Exchange settings')}
+        {t('listing.exchange.stepTitle')}
       </ThemedText>
       <ThemedText style={styles.addressInstructions}>
-        {t(
-          'listing.exchange.stepHelp',
-          'Tell guests how your home swap or hosting works.',
-        )}
+        {t('listing.exchange.stepHelp')}
       </ThemedText>
 
       {/* Mode */}
       <View style={styles.formGroup}>
         <ThemedText style={styles.label}>
-          {t('listing.exchange.modeLabel', 'How do you want to exchange?')}
+          {t('listing.exchange.modeLabel')}
         </ThemedText>
         <View style={exchangeStyles.modeList}>
           {EXCHANGE_MODE_OPTIONS.map((option) => {
@@ -169,7 +166,7 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
                 onPress={() => handleSelectMode(option.value)}
                 accessibilityRole="radio"
                 accessibilityState={{ selected }}
-                accessibilityLabel={t(option.i18nKey, option.fallback)}
+                accessibilityLabel={t(option.i18nKey)}
               >
                 <Ionicons
                   name={selected ? 'radio-button-on' : 'radio-button-off'}
@@ -183,10 +180,10 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
                       selected && exchangeStyles.modeTitleSelected,
                     ]}
                   >
-                    {t(option.i18nKey, option.fallback)}
+                    {t(option.i18nKey)}
                   </ThemedText>
                   <ThemedText style={exchangeStyles.modeDescription}>
-                    {t(option.descriptionKey, option.descriptionFallback)}
+                    {t(option.descriptionKey)}
                   </ThemedText>
                 </View>
               </TouchableOpacity>
@@ -198,7 +195,7 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
       {/* Availability windows */}
       <View style={styles.formGroup}>
         <ThemedText style={styles.label}>
-          {t('listing.exchange.availabilityLabel', 'When are you available?')}
+          {t('listing.exchange.availabilityLabel')}
         </ThemedText>
         {windows.length > 0 ? (
           <View style={exchangeStyles.windowList}>
@@ -217,10 +214,7 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
                   <Pressable
                     onPress={() => handleRemoveWindow(key)}
                     accessibilityRole="button"
-                    accessibilityLabel={t(
-                      'listing.exchange.removeWindow',
-                      'Remove window',
-                    )}
+                    accessibilityLabel={t('listing.exchange.removeWindow')}
                     hitSlop={8}
                   >
                     <Ionicons
@@ -235,21 +229,18 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
           </View>
         ) : (
           <ThemedText style={exchangeStyles.emptyWindows}>
-            {t(
-              'listing.exchange.noWindows',
-              'No windows yet. Add the dates your home is free.',
-            )}
+            {t('listing.exchange.noWindows')}
           </ThemedText>
         )}
         <TouchableOpacity
           style={exchangeStyles.addWindowButton}
           onPress={() => setCalendarOpen(true)}
           accessibilityRole="button"
-          accessibilityLabel={t('listing.exchange.addWindow', 'Add availability')}
+          accessibilityLabel={t('listing.exchange.addWindow')}
         >
           <Ionicons name="add" size={ICON_SIZE} color={colors.primaryColor} />
           <ThemedText style={exchangeStyles.addWindowText}>
-            {t('listing.exchange.addWindow', 'Add availability')}
+            {t('listing.exchange.addWindow')}
           </ThemedText>
         </TouchableOpacity>
       </View>
@@ -257,16 +248,13 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
       {/* Welcome note */}
       <View style={styles.formGroup}>
         <ThemedText style={styles.label}>
-          {t('listing.exchange.welcomeNote', 'Welcome note')}
+          {t('listing.exchange.welcomeNote')}
         </ThemedText>
         <TextInput
           style={styles.textArea}
           value={offering.exchangeWelcomeNote ?? ''}
           onChangeText={handleWelcomeNote}
-          placeholder={t(
-            'listing.exchange.welcomeNotePlaceholder',
-            'Share what makes staying in your home special.',
-          )}
+          placeholder={t('listing.exchange.welcomeNotePlaceholder')}
           placeholderTextColor={colors.COLOR_BLACK_LIGHT_4}
           multiline
           textAlignVertical="top"
@@ -276,7 +264,7 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
       {/* Languages */}
       <View style={styles.formGroup}>
         <ThemedText style={styles.label}>
-          {t('listing.exchange.languages', 'Languages you speak')}
+          {t('listing.exchange.languages')}
         </ThemedText>
         <View style={styles.optionRow}>
           {EXCHANGE_LANGUAGE_OPTIONS.map((language) => {
@@ -309,7 +297,7 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
       {/* Meals included */}
       <View style={styles.toggleContainer}>
         <ThemedText style={styles.label}>
-          {t('listing.exchange.mealsIncluded', 'Meals included')}
+          {t('listing.exchange.mealsIncluded')}
         </ThemedText>
         <TouchableOpacity
           style={[
@@ -331,8 +319,8 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
           />
           <ThemedText style={styles.toggleText}>
             {offering.exchangeMealsIncluded
-              ? t('common.yes', 'Yes')
-              : t('common.no', 'No')}
+              ? t('common.yes')
+              : t('common.no')}
           </ThemedText>
         </TouchableOpacity>
       </View>
@@ -341,13 +329,10 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
       <View style={styles.toggleContainer}>
         <View style={exchangeStyles.reciprocityLabelWrap}>
           <ThemedText style={styles.label}>
-            {t('listing.exchange.requiresReciprocity', 'Requires a return stay')}
+            {t('listing.exchange.requiresReciprocity')}
           </ThemedText>
           <ThemedText style={exchangeStyles.reciprocityHelp}>
-            {t(
-              'listing.exchange.requiresReciprocityHelp',
-              'On means a true swap; off allows one-way hosting.',
-            )}
+            {t('listing.exchange.requiresReciprocityHelp')}
           </ThemedText>
         </View>
         <TouchableOpacity
@@ -374,8 +359,8 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
           />
           <ThemedText style={styles.toggleText}>
             {offering.exchangeRequiresReciprocity
-              ? t('common.yes', 'Yes')
-              : t('common.no', 'No')}
+              ? t('common.yes')
+              : t('common.no')}
           </ThemedText>
         </TouchableOpacity>
       </View>
@@ -397,13 +382,13 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
           >
             <View style={exchangeStyles.modalHeader}>
               <H3 style={exchangeStyles.modalTitle}>
-                {t('listing.exchange.addWindow', 'Add availability')}
+                {t('listing.exchange.addWindow')}
               </H3>
               <Button
                 variant="icon"
                 size="small"
                 onPress={() => setCalendarOpen(false)}
-                accessibilityLabel={t('common.close', 'Close')}
+                accessibilityLabel={t('common.close')}
               >
                 {'×'}
               </Button>

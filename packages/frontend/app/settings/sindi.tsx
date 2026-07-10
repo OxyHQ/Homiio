@@ -45,7 +45,7 @@ export default function SindiSettingsScreen() {
 
   const handleResetDefaults = useCallback((): void => {
     setShowTips(true);
-    toast.success(t('sindi.settings.resetDone', 'Sindi preferences reset.'));
+    toast.success(t('sindi.settings.resetDone'));
     setPendingDialog(null);
   }, [t]);
 
@@ -53,7 +53,7 @@ export default function SindiSettingsScreen() {
     <View style={styles.root}>
       <Header
         options={{
-          title: t('sindi.settings.title', 'Sindi preferences'),
+          title: t('sindi.settings.title'),
           showBackButton: true,
           titlePosition: 'center',
           leftComponents: [
@@ -65,29 +65,23 @@ export default function SindiSettingsScreen() {
       />
       <ScrollView contentContainerStyle={styles.scroll}>
         <SettingsListGroup
-          title={t('sindi.settings.behavior', 'Behavior')}
-          footer={t(
-            'sindi.settings.behaviorFooter',
-            'Tune how Sindi behaves while you browse properties.',
-          )}
+          title={t('sindi.settings.behavior')}
+          footer={t('sindi.settings.behaviorFooter')}
         >
           <SettingsListItem
             icon={<RowIcon name="information-circle-outline" />}
-            title={t('sindi.settings.tips', 'Show tips & hints')}
-            description={t(
-              'sindi.settings.tipsDescription',
-              'Surface inline guidance while you chat.',
-            )}
+            title={t('sindi.settings.tips')}
+            description={t('sindi.settings.tipsDescription')}
             rightElement={
               <Switch value={showTips} onValueChange={setShowTips} />
             }
           />
         </SettingsListGroup>
 
-        <SettingsListGroup title={t('sindi.settings.actions', 'Actions')}>
+        <SettingsListGroup title={t('sindi.settings.actions')}>
           <SettingsListItem
             icon={<RowIcon name="refresh-outline" />}
-            title={t('sindi.settings.reset', 'Reset Sindi to defaults')}
+            title={t('sindi.settings.reset')}
             onPress={() => setPendingDialog('reset')}
           />
         </SettingsListGroup>
@@ -95,12 +89,9 @@ export default function SindiSettingsScreen() {
 
       <ConfirmDialog
         visible={pendingDialog === 'reset'}
-        title={t('sindi.settings.resetTitle', 'Reset Sindi?')}
-        message={t(
-          'sindi.settings.resetMessage',
-          'This will reset all Sindi preferences to their defaults.',
-        )}
-        confirmLabel={t('common.reset', 'Reset')}
+        title={t('sindi.settings.resetTitle')}
+        message={t('sindi.settings.resetMessage')}
+        confirmLabel={t('common.reset')}
         confirmDestructive
         onConfirm={handleResetDefaults}
         onCancel={() => setPendingDialog(null)}

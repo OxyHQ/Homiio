@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, RefreshControl } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons as Icon } from '@expo/vector-icons';
@@ -8,11 +9,13 @@ import { useOxy } from '@oxyhq/services';
 import { useSubscriptionStore } from '@/store/subscriptionStore';
 import { api } from '@/utils/api';
 import { logger } from '@/utils/logger';
+import { getDateLocale } from '@/utils/dateLocale';
 
 const getErrorMessage = (error: unknown, fallback: string): string =>
     error instanceof Error ? error.message : fallback;
 
 export default function SubscriptionsScreen() {
+    const { t, i18n } = useTranslation();
     const router = useRouter();
     const { oxyServices, activeSessionId } = useOxy();
 
@@ -39,7 +42,7 @@ export default function SubscriptionsScreen() {
     // Show error alerts
     useEffect(() => {
         if (error) {
-            Alert.alert('Error', error);
+            Alert.alert(t('subscriptions.alertError'), error);
             resetError();
         }
     }, [error]);
@@ -58,7 +61,7 @@ export default function SubscriptionsScreen() {
 
     const handleStartCheckout = async (product: 'plus' | 'file' | 'founder') => {
         if (!oxyServices || !activeSessionId) {
-            Alert.alert('Error', 'Authentication required');
+            Alert.alert(t('subscriptions.alertError'), t('subscriptions.authRequired'));
             return;
         }
 
@@ -66,13 +69,13 @@ export default function SubscriptionsScreen() {
             await startCheckout(product, oxyServices, activeSessionId);
         } catch (error: unknown) {
             logger.error('Failed to start checkout:', error);
-            Alert.alert('Error', getErrorMessage(error, 'Failed to start checkout'));
+            Alert.alert(t('subscriptions.alertError'), getErrorMessage(error, t('subscriptions.checkoutFailed')));
         }
     };
 
     const handleManageSubscription = async () => {
         if (!oxyServices || !activeSessionId) {
-            Alert.alert('Error', 'Authentication required');
+            Alert.alert(t('subscriptions.alertError'), t('subscriptions.authRequired'));
             return;
         }
 
@@ -80,47 +83,47 @@ export default function SubscriptionsScreen() {
             await openCustomerPortal(oxyServices, activeSessionId);
         } catch (error: unknown) {
             logger.error('Failed to open subscription management:', error);
-            Alert.alert('Error', getErrorMessage(error, 'Failed to open subscription management'));
+            Alert.alert(t('subscriptions.alertError'), getErrorMessage(error, t('subscriptions.portalFailed')));
         }
     };
 
     const handleSyncSubscription = async () => {
         if (!oxyServices || !activeSessionId) {
-            Alert.alert('Error', 'Authentication required');
+            Alert.alert(t('subscriptions.alertError'), t('subscriptions.authRequired'));
             return;
         }
 
         try {
             await syncSubscription(oxyServices, activeSessionId);
-            Alert.alert('Success', 'Subscription status synced from Stripe');
+            Alert.alert(t('subscriptions.alertSuccess'), t('subscriptions.syncSuccess'));
         } catch (error: unknown) {
             logger.error('Failed to sync subscription:', error);
-            Alert.alert('Error', getErrorMessage(error, 'Failed to sync subscription'));
+            Alert.alert(t('subscriptions.alertError'), getErrorMessage(error, t('subscriptions.syncFailed')));
         }
     };
 
     const handleCancelSubscription = async (immediate: boolean) => {
         if (!oxyServices || !activeSessionId) {
-            Alert.alert('Error', 'Authentication required');
+            Alert.alert(t('subscriptions.alertError'), t('subscriptions.authRequired'));
             return;
         }
 
         if (immediate) {
             Alert.alert(
-                'Cancel Immediately',
-                'This will immediately cancel your subscription and you will lose access to Homiio+ features. Are you sure?',
+                t('subscriptions.page.cancelImmediateTitle'),
+                t('subscriptions.page.cancelImmediateBody'),
                 [
-                    { text: 'No', style: 'cancel' },
+                    { text: t('subscriptions.page.no'), style: 'cancel' },
                     {
-                        text: 'Yes, Cancel Now',
+                        text: t('subscriptions.page.yesCancelNow'),
                         style: 'destructive',
                         onPress: async () => {
                             try {
                                 await cancelSubscription(true, oxyServices, activeSessionId);
-                                Alert.alert('Success', 'Subscription canceled immediately');
+                                Alert.alert(t('subscriptions.alertSuccess'), t('subscriptions.cancelImmediateSuccess'));
                             } catch (error: unknown) {
                                 logger.error('Failed to cancel subscription immediately:', error);
-                                Alert.alert('Error', getErrorMessage(error, 'Failed to cancel subscription'));
+                                Alert.alert(t('subscriptions.alertError'), getErrorMessage(error, t('subscriptions.cancelFailed')));
                             }
                         }
                     }
@@ -129,17 +132,17 @@ export default function SubscriptionsScreen() {
         } else {
             try {
                 await cancelSubscription(false, oxyServices, activeSessionId);
-                Alert.alert('Success', 'Subscription will be canceled at the end of the current period');
+                Alert.alert(t('subscriptions.alertSuccess'), t('subscriptions.cancelEndOfPeriodSuccess'));
             } catch (error: unknown) {
                 logger.error('Failed to schedule subscription cancellation:', error);
-                Alert.alert('Error', getErrorMessage(error, 'Failed to cancel subscription'));
+                Alert.alert(t('subscriptions.alertError'), getErrorMessage(error, t('subscriptions.cancelFailed')));
             }
         }
     };
 
     const formatDate = (dateString?: string) => {
-        if (!dateString) return 'N/A';
-        return new Date(dateString).toLocaleDateString('en-US', {
+        if (!dateString) return t('subscriptions.page.notAvailable');
+        return new Date(dateString).toLocaleDateString(getDateLocale(i18n.language), {
             year: 'numeric',
             month: 'long',
             day: 'numeric'
@@ -159,10 +162,10 @@ export default function SubscriptionsScreen() {
                     <View style={styles.headerIcon}>
                         <Icon name="home" size={24} color={colors.primaryColor} />
                     </View>
-                    <Text style={styles.headerTitle}>Homiio+</Text>
-                    <Text style={styles.headerSubtitle}>Your ethical housing ally</Text>
+                    <Text style={styles.headerTitle}>{t('subscriptions.page.headerTitle')}</Text>
+                    <Text style={styles.headerSubtitle}>{t('subscriptions.page.headerSubtitle')}</Text>
                     <Text style={styles.introText}>
-                        Your subscription gives you access to Sindi, the legal assistant that scans your rental contracts and flags abusive clauses. No ads, no speculation, no data selling.
+                        {t('subscriptions.page.introText')}
                     </Text>
                 </View>
 
@@ -171,13 +174,13 @@ export default function SubscriptionsScreen() {
                     <View style={styles.cardHeader}>
                         <Icon name="document-text" size={24} color={colors.primaryColor} />
                         <View style={styles.cardTitleContainer}>
-                            <Text style={styles.cardTitle}>Pay per contract</Text>
-                            <Text style={styles.cardPrice}>5 € per contract review</Text>
+                            <Text style={styles.cardTitle}>{t('subscriptions.page.payPerContract.title')}</Text>
+                            <Text style={styles.cardPrice}>{t('subscriptions.page.payPerContract.price')}</Text>
                         </View>
                     </View>
 
                     <Text style={styles.cardDesc}>
-                        Perfect for one-time use.
+                        {t('subscriptions.page.payPerContract.description')}
                     </Text>
 
                     <TouchableOpacity
@@ -186,7 +189,7 @@ export default function SubscriptionsScreen() {
                         onPress={() => handleStartCheckout('file')}
                     >
                         <Text style={styles.secondaryBtnText}>
-                            {loadingStates.checkout ? 'Starting…' : 'Review Contract'}
+                            {loadingStates.checkout ? t('subscriptions.page.starting') : t('subscriptions.page.payPerContract.reviewButton')}
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -196,41 +199,41 @@ export default function SubscriptionsScreen() {
                     {plusActive && (
                         <View style={styles.activeBadge}>
                             <Icon name="checkmark-circle" size={16} color={colors.primaryForeground} />
-                            <Text style={styles.activeBadgeText}>Active subscription</Text>
+                            <Text style={styles.activeBadgeText}>{t('subscriptions.page.plus.activeBadge')}</Text>
                         </View>
                     )}
 
                     {plusCanceledAt && !plusActive && (
                         <View style={styles.canceledBadge}>
                             <Icon name="close-circle" size={16} color={colors.white} />
-                            <Text style={styles.canceledBadgeText}>Canceled on {formatDate(plusCanceledAt)}</Text>
+                            <Text style={styles.canceledBadgeText}>{t('subscriptions.page.plus.canceledBadge', { date: formatDate(plusCanceledAt) })}</Text>
                         </View>
                     )}
 
                     <View style={styles.cardHeader}>
                         <Icon name="star" size={24} color={colors.primaryColor} />
                         <View style={styles.cardTitleContainer}>
-                            <Text style={styles.cardTitle}>Homiio+ Subscription</Text>
-                            <Text style={styles.cardPrice}>9.99 €/month</Text>
+                            <Text style={styles.cardTitle}>{t('subscriptions.page.plus.title')}</Text>
+                            <Text style={styles.cardPrice}>{t('subscriptions.page.plus.price')}</Text>
                         </View>
                     </View>
 
                     <Text style={styles.cardDesc}>
-                        Includes up to 10 contracts per month free. From the 11th contract onwards: 2.50 € each.
+                        {t('subscriptions.page.plus.description')}
                     </Text>
 
                     <View style={styles.featuresList}>
                         <View style={styles.featureItem}>
                             <Icon name="checkmark-circle" size={16} color={colors.success} />
-                            <Text style={styles.featureText}>Unlimited contract history</Text>
+                            <Text style={styles.featureText}>{t('subscriptions.page.plus.featureHistory')}</Text>
                         </View>
                         <View style={styles.featureItem}>
                             <Icon name="checkmark-circle" size={16} color={colors.success} />
-                            <Text style={styles.featureText}>Legal alerts & notifications</Text>
+                            <Text style={styles.featureText}>{t('subscriptions.page.plus.featureAlerts')}</Text>
                         </View>
                         <View style={styles.featureItem}>
                             <Icon name="checkmark-circle" size={16} color={colors.success} />
-                            <Text style={styles.featureText}>Priority support</Text>
+                            <Text style={styles.featureText}>{t('subscriptions.page.plus.featureSupport')}</Text>
                         </View>
                     </View>
 
@@ -246,7 +249,13 @@ export default function SubscriptionsScreen() {
                         }}
                     >
                         <Text style={styles.primaryBtnText}>
-                            {plusActive ? 'Manage subscription' : plusCanceledAt ? 'Resubscribe' : loadingStates.checkout ? 'Starting…' : 'Subscribe now'}
+                            {plusActive
+                                ? t('subscriptions.page.plus.manage')
+                                : plusCanceledAt
+                                  ? t('subscriptions.page.plus.resubscribe')
+                                  : loadingStates.checkout
+                                    ? t('subscriptions.page.starting')
+                                    : t('subscriptions.page.plus.subscribeNow')}
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -256,13 +265,13 @@ export default function SubscriptionsScreen() {
                     <View style={styles.cardHeader}>
                         <Icon name="heart" size={24} color={colors.primaryColor} />
                         <View style={styles.cardTitleContainer}>
-                            <Text style={styles.cardTitle}>Founder supporter</Text>
-                            <Text style={styles.cardPrice}>Contribution from 10 €/month</Text>
+                            <Text style={styles.cardTitle}>{t('subscriptions.page.founder.title')}</Text>
+                            <Text style={styles.cardPrice}>{t('subscriptions.page.founder.price')}</Text>
                         </View>
                     </View>
 
                     <Text style={styles.cardDesc}>
-                        Support Homiio&apos;s independence. Get recognition in the app + early access to features.
+                        {t('subscriptions.page.founder.description')}
                     </Text>
 
                     <TouchableOpacity
@@ -271,7 +280,7 @@ export default function SubscriptionsScreen() {
                         onPress={() => handleStartCheckout('founder')}
                     >
                         <Text style={styles.secondaryBtnText}>
-                            {loadingStates.checkout ? 'Starting…' : 'Become a Supporter'}
+                            {loadingStates.checkout ? t('subscriptions.page.starting') : t('subscriptions.page.founder.becomeSupporter')}
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -279,7 +288,7 @@ export default function SubscriptionsScreen() {
                 {/* Footer */}
                 <View style={styles.footer}>
                     <Text style={styles.footerText}>
-                        Every euro keeps Homiio ethical, independent, and community-driven.
+                        {t('subscriptions.page.footer')}
                     </Text>
                 </View>
 
@@ -340,7 +349,7 @@ export default function SubscriptionsScreen() {
                                     }
                                 } catch (error: unknown) {
                                     logger.error('Failed to debug subscription:', error);
-                                    Alert.alert('Error', getErrorMessage(error, 'Failed to debug subscription'));
+                                    Alert.alert(t('subscriptions.alertError'), getErrorMessage(error, t('subscriptions.debugFailed')));
                                 }
                             }}
                         >
@@ -353,7 +362,7 @@ export default function SubscriptionsScreen() {
                 <View style={styles.navRow}>
                     <TouchableOpacity style={styles.linkBtn} onPress={() => router.back()}>
                         <Icon name="chevron-back" size={18} color={colors.text} />
-                        <Text style={styles.linkBtnText}>Back</Text>
+                        <Text style={styles.linkBtnText}>{t('subscriptions.page.back')}</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>

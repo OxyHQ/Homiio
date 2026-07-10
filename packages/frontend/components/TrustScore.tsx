@@ -1,14 +1,32 @@
 import React, { useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
 import { useProfile } from '@/hooks/useProfile';
+
+const TRUST_FACTOR_TYPES = new Set([
+  'verification',
+  'reviews',
+  'payment_history',
+  'communication',
+  'rental_history',
+]);
 
 type TrustFactor = {
   type: string;
   value: number;
   maxValue: number;
-  label: string;
 };
+
+type TrustLevelKey = 'excellent' | 'good' | 'average' | 'fair' | 'needsImprovement';
+
+function trustLevelKey(score: number): TrustLevelKey {
+  if (score >= 90) return 'excellent';
+  if (score >= 70) return 'good';
+  if (score >= 50) return 'average';
+  if (score >= 30) return 'fair';
+  return 'needsImprovement';
+}
 
 type TrustScoreProps = {
   score: number; // 0-100 score
@@ -27,25 +45,24 @@ export function TrustScore({
   showDetails = false,
   onRecalculate,
 }: TrustScoreProps) {
-  const { updateProfile, isLoading } = useProfile();
+  const { t } = useTranslation();
+  const { isLoading } = useProfile();
 
-  // Memoize expensive calculations
-  const { color, trustLevel, sizeStyle } = useMemo(() => {
-    // Calculate the appropriate color based on the score
-    const getColor = (score: number) => {
-      if (score >= 90) return colors.success; // Excellent
-      if (score >= 70) return colors.success; // Good
-      if (score >= 50) return colors.warning; // Average
-      if (score >= 30) return colors.warning; // Below Average
-      return colors.danger; // Poor
-    };
+  const factorLabel = useCallback(
+    (factorType: string) =>
+      TRUST_FACTOR_TYPES.has(factorType)
+        ? t(`trust.manager.factors.${factorType}.label`)
+        : factorType,
+    [t],
+  );
 
-    const getTrustLevel = (score: number) => {
-      if (score >= 90) return 'Excellent';
-      if (score >= 70) return 'Good';
-      if (score >= 50) return 'Average';
-      if (score >= 30) return 'Fair';
-      return 'Needs Improvement';
+  const { color, levelKey, sizeStyle } = useMemo(() => {
+    const getColor = (value: number) => {
+      if (value >= 90) return colors.success;
+      if (value >= 70) return colors.success;
+      if (value >= 50) return colors.warning;
+      if (value >= 30) return colors.warning;
+      return colors.danger;
     };
 
     const sizeStyles = {
@@ -71,12 +88,11 @@ export function TrustScore({
 
     return {
       color: getColor(score),
-      trustLevel: getTrustLevel(score),
+      levelKey: trustLevelKey(score),
       sizeStyle: sizeStyles[size],
     };
   }, [score, size]);
 
-  // Memoize factor color calculation
   const getFactorColor = useCallback((value: number, maxValue: number) => {
     const percentage = (value / maxValue) * 100;
     if (percentage >= 80) return colors.success;
@@ -86,23 +102,19 @@ export function TrustScore({
     return colors.danger;
   }, []);
 
-  // Memoize recalculate handler
   const handleRecalculate = useCallback(async () => {
     try {
-      // For now, we'll trigger a refetch of profiles which will recalculate trust scores
-      // In the future, we can add a specific recalculate action to Redux
       onRecalculate?.();
     } catch (error) {
       console.error('Failed to recalculate trust score:', error);
     }
   }, [onRecalculate]);
 
-  // Memoize factor items to prevent unnecessary re-renders
   const factorItems = useMemo(() => {
     return factors.map((factor, index) => (
       <View key={`${factor.type}-${index}`} style={styles.factorItem}>
         <View style={styles.factorHeader}>
-          <Text style={styles.factorLabel}>{factor.label}</Text>
+          <Text style={styles.factorLabel}>{factorLabel(factor.type)}</Text>
           <Text style={styles.factorScore}>
             {factor.value}/{factor.maxValue}
           </Text>
@@ -120,7 +132,7 @@ export function TrustScore({
         </View>
       </View>
     ));
-  }, [factors, getFactorColor]);
+  }, [factors, factorLabel, getFactorColor]);
 
   return (
     <View style={styles.wrapper}>
@@ -133,7 +145,7 @@ export function TrustScore({
         {showLabel && (
           <View style={styles.labelContainer}>
             <Text style={[styles.label, { fontSize: sizeStyle.labelSize, color }]}>
-              {trustLevel}
+              {t(`trust.score.levels.${levelKey}`)}
             </Text>
           </View>
         )}
@@ -142,14 +154,14 @@ export function TrustScore({
       {showDetails && factors.length > 0 && (
         <View style={styles.detailsContainer}>
           <View style={styles.detailsHeader}>
-            <Text style={styles.detailsTitle}>Trust Score Breakdown</Text>
+            <Text style={styles.detailsTitle}>{t('trust.score.breakdown')}</Text>
             <TouchableOpacity
               style={styles.recalculateButton}
               onPress={handleRecalculate}
               disabled={isLoading}
             >
               <Text style={styles.recalculateButtonText}>
-                {isLoading ? 'Recalculating...' : 'Recalculate'}
+                {isLoading ? t('trust.score.recalculating') : t('trust.score.recalculate')}
               </Text>
             </TouchableOpacity>
           </View>

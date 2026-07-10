@@ -26,6 +26,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
+import i18next from 'i18next';
 import { toast } from '@/lib/sonner';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -56,13 +58,6 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { radius, spacing, tracker } from '@/constants/styles';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
-const formatEmployment = (status: string): string =>
-  status
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-
-const formatRelationship = formatEmployment;
 
 const formatCurrency = (amount: number): string => {
   try {
@@ -102,7 +97,7 @@ const openDocument = (url: string): void => {
     return;
   }
   Linking.openURL(url).catch(() => {
-    toast.error('Could not open the document.');
+    toast.error(i18next.t('applications.toast.openDocumentFailed'));
   });
 };
 
@@ -110,7 +105,10 @@ interface DocumentRowProps {
   document: TenantApplicationDocument;
 }
 
-const DocumentRow: React.FC<DocumentRowProps> = ({ document }) => (
+const DocumentRow: React.FC<DocumentRowProps> = ({ document }) => {
+  const { t } = useTranslation();
+
+  return (
   <Pressable
     onPress={() => openDocument(document.url)}
     style={styles.documentRow}
@@ -127,7 +125,7 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ document }) => (
         {document.filename}
       </BloomText>
       <BloomText style={styles.documentType}>
-        {formatRelationship(document.type)}
+        {t(`applications.documentType.${document.type}`)}
       </BloomText>
     </View>
     <Ionicons
@@ -136,9 +134,11 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ document }) => (
       color={colors.muted}
     />
   </Pressable>
-);
+  );
+};
 
 export default function ApplicationDetailScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
   const id = typeof params.id === 'string' ? params.id : params.id?.[0];
@@ -183,14 +183,16 @@ export default function ApplicationDetailScreen() {
         id,
         input: { status: TenantApplicationStatus.WITHDRAWN },
       });
-      toast.success('Application withdrawn');
+      toast.success(t('applications.toast.withdrawn'));
       setConfirmWithdraw(false);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Could not withdraw application';
+        error instanceof Error
+          ? error.message
+          : t('applications.toast.withdrawFailed');
       toast.error(message);
     }
-  }, [id, application, updateMutation]);
+  }, [id, application, updateMutation, t]);
 
   const handleCreateLease = useCallback(() => {
     if (!id) return;
@@ -313,7 +315,7 @@ export default function ApplicationDetailScreen() {
             />
             <DetailRow
               label="Employment"
-              value={formatEmployment(application.employmentStatus)}
+              value={t(`profile.edit.options.employmentStatus.${application.employmentStatus}`)}
             />
           </CardSurface>
 
@@ -330,7 +332,7 @@ export default function ApplicationDetailScreen() {
                     {reference.name}
                   </BloomText>
                   <BloomText style={styles.referenceMeta}>
-                    {formatRelationship(reference.relationship)} ·{' '}
+                    {t(`profile.edit.options.referenceRelationship.${reference.relationship}`)} ·{' '}
                     {reference.phone}
                   </BloomText>
                   <BloomText style={styles.referenceMeta}>

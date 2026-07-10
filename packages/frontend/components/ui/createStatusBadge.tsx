@@ -8,10 +8,9 @@
  * rendering rule so each domain only declares its map.
  *
  * Each entry carries a Bloom `color` and a `label`. When an entry also supplies
- * an `i18nKey`, the badge renders `t(i18nKey, label)` (label as the fallback);
- * otherwise it renders the literal `label`. The returned component always calls
- * `useTranslation`, so an i18n map and a static map share one code path without
- * the caller opting in.
+ * an `i18nKey`, the badge renders `t(i18nKey)`; otherwise it renders the literal
+ * `label`. The returned component always calls `useTranslation`, so an i18n map
+ * and a static map share one code path without the caller opting in.
  */
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,9 +20,9 @@ import { Badge, type BadgeColor } from '@oxyhq/bloom/badge';
 export interface StatusBadgeEntry {
   /** Bloom semantic color for the badge. */
   color: BadgeColor;
-  /** Display label, or the i18n fallback when `i18nKey` is set. */
+  /** Display label when no `i18nKey` is set. */
   label: string;
-  /** When present, the label is resolved as `t(i18nKey, label)`. */
+  /** When present, the label is resolved as `t(i18nKey)`. */
   i18nKey?: string;
 }
 
@@ -43,7 +42,7 @@ export function createStatusBadge<T extends string>(
   const StatusBadge: React.FC<StatusBadgeProps<T>> = ({ status }) => {
     const { t } = useTranslation();
     const entry = map[status];
-    const content = entry.i18nKey ? t(entry.i18nKey, entry.label) : entry.label;
+    const content = entry.i18nKey ? t(entry.i18nKey) : entry.label;
     return <Badge content={content} variant="subtle" color={entry.color} size="small" />;
   };
   return StatusBadge;

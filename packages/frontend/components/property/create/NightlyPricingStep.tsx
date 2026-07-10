@@ -53,12 +53,12 @@ export function NightlyPricingStep({
   return (
     <View>
       <ThemedText type="subtitle">
-        {t('listing.offering.nightlyStepTitle', 'Nightly rate')}
+        {t('listing.offering.nightlyStepTitle')}
       </ThemedText>
 
       <View style={styles.formGroup}>
         <ThemedText style={styles.label}>
-          {t('listing.nightly.nightlyRate', 'Nightly rate')}
+          {t('listing.nightly.nightlyRate')}
         </ThemedText>
         <TextInput
           style={[styles.input, validationErrors.nightlyRate && styles.inputError]}
@@ -75,7 +75,7 @@ export function NightlyPricingStep({
       <View style={styles.formRow}>
         <View style={[styles.formGroup, styles.formGroupLeft]}>
           <ThemedText style={styles.label}>
-            {t('listing.nightly.cleaningFee', 'Cleaning fee')}
+            {t('listing.nightly.cleaningFee')}
           </ThemedText>
           <TextInput
             style={styles.input}
@@ -87,7 +87,7 @@ export function NightlyPricingStep({
         </View>
         <View style={[styles.formGroup, styles.formGroupRight]}>
           <ThemedText style={styles.label}>
-            {t('listing.nightly.serviceFee', 'Service fee')}
+            {t('listing.nightly.serviceFee')}
           </ThemedText>
           <TextInput
             style={styles.input}
@@ -101,7 +101,7 @@ export function NightlyPricingStep({
 
       <View style={styles.formGroup}>
         <ThemedText style={styles.label}>
-          {t('listing.nightly.taxesPercent', 'Taxes (%)')}
+          {t('listing.nightly.taxesPercent')}
         </ThemedText>
         <TextInput
           style={[styles.input, validationErrors.taxesPercent && styles.inputError]}
@@ -118,7 +118,7 @@ export function NightlyPricingStep({
       <View style={styles.formRow}>
         <View style={[styles.formGroup, styles.formGroupLeft]}>
           <ThemedText style={styles.label}>
-            {t('listing.nightly.minNights', 'Min nights')}
+            {t('listing.nightly.minNights')}
           </ThemedText>
           <TextInput
             style={[styles.input, validationErrors.minNights && styles.inputError]}
@@ -130,14 +130,14 @@ export function NightlyPricingStep({
         </View>
         <View style={[styles.formGroup, styles.formGroupRight]}>
           <ThemedText style={styles.label}>
-            {t('listing.nightly.maxNights', 'Max nights')}
+            {t('listing.nightly.maxNights')}
           </ThemedText>
           <TextInput
             style={styles.input}
             value={pricing.maxNights !== undefined ? pricing.maxNights.toString() : ''}
             onChangeText={handleNights('maxNights')}
             keyboardType="number-pad"
-            placeholder={t('listing.nightly.noMax', 'No max')}
+            placeholder={t('listing.nightly.noMax')}
           />
         </View>
       </View>
@@ -147,7 +147,7 @@ export function NightlyPricingStep({
 
       <View style={styles.toggleContainer}>
         <ThemedText style={styles.label}>
-          {t('listing.nightly.instantBook', 'Instant book')}
+          {t('listing.nightly.instantBook')}
         </ThemedText>
         <TouchableOpacity
           style={[styles.toggleButton, pricing.instantBook ? styles.toggleButtonActive : null]}
@@ -161,7 +161,7 @@ export function NightlyPricingStep({
             color={pricing.instantBook ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
           />
           <ThemedText style={styles.toggleText}>
-            {pricing.instantBook ? t('common.yes', 'Yes') : t('common.no', 'No')}
+            {pricing.instantBook ? t('common.yes') : t('common.no')}
           </ThemedText>
         </TouchableOpacity>
       </View>
@@ -171,7 +171,7 @@ export function NightlyPricingStep({
       {pricing.nightlyRate > 0 ? (
         <View style={nightlyPricingStyles.previewWrap}>
           <ThemedText style={styles.label}>
-            {t('listing.nightly.previewTitle', 'Example {{count}}-night total', {
+            {t('listing.nightly.previewTitle', {
               count: PREVIEW_NIGHTS,
             })}
           </ThemedText>

@@ -58,7 +58,7 @@ export const LocationDisplay: React.FC<LocationDisplayProps> = ({ property }) =>
 
   return (
     <View>
-      <SectionHeader title={t('property.location.title', "Where you'll be")} />
+      <SectionHeader title={t('property.location.title')} />
       <View style={styles.body}>
         {neighborhoodSummary ? (
           <BloomText style={styles.summary}>{neighborhoodSummary}</BloomText>

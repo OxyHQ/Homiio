@@ -29,14 +29,14 @@ export const LocationSection: React.FC<Props> = ({ property }) => {
         coordinates[1] >= -90 && coordinates[1] <= 90;     // Valid latitude
     const proximity = property?.proximity || {};
     const amenities: string[] = [];
-    if (proximity.proximityToTransport) amenities.push(t('Public Transport'));
-    if (proximity.proximityToSchools) amenities.push(t('Schools'));
-    if (proximity.proximityToShopping) amenities.push(t('Shopping'));
+    if (proximity.proximityToTransport) amenities.push(t('property.sections.publicTransport'));
+    if (proximity.proximityToSchools) amenities.push(t('property.sections.schools'));
+    if (proximity.proximityToShopping) amenities.push(t('property.sections.shopping'));
 
     if (!hasAddress && !hasMap) return null;
     return (
         <View style={styles.container}>
-            <ThemedText style={styles.sectionTitle}>{t('Location')}</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{t('property.sections.location')}</ThemedText>
             {hasAddress && (
                 <View style={styles.card}>
                     {address.street && <ThemedText style={styles.item}>{address.street}</ThemedText>}
@@ -57,7 +57,7 @@ export const LocationSection: React.FC<Props> = ({ property }) => {
             )}
             {amenities.length > 0 && (
                 <View style={styles.amenitiesCard}>
-                    <ThemedText style={styles.amenitiesTitle}>{t('Nearby Amenities')}</ThemedText>
+                    <ThemedText style={styles.amenitiesTitle}>{t('property.sections.nearbyAmenities')}</ThemedText>
                     {amenities.map(a => (
                         <ThemedText key={a} style={styles.amenityItem}>• {a}</ThemedText>
                     ))}

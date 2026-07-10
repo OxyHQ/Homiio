@@ -97,7 +97,7 @@ export const AgentHowItWorks: React.FC = () => {
     <View style={{ paddingHorizontal: horizontalPadding }}>
       <View style={styles.header}>
         <H1 style={[styles.title, { textAlign: isWide ? 'center' : 'left' }]}>
-          {t('agent.how.title', 'How it works')}
+          {t('agent.how.title')}
         </H1>
       </View>
       <View

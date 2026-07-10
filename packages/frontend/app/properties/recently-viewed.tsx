@@ -109,7 +109,7 @@ export default function RecentlyViewedScreen() {
               onPress={handleClear}
               accessibilityLabel={t('home.recentlyViewed.retry')}
             >
-              {t('common.clear', 'Clear')}
+              {t('common.clear')}
             </Button>
           ) : undefined
         }

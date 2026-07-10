@@ -7,6 +7,7 @@ import React, {
   ReactNode,
 } from 'react';
 import { toast } from '@/lib/sonner';
+import i18next from 'i18next';
 import { useOxy } from '@oxyhq/services';
 import savedPropertyFolderService, {
   SavedPropertyFolder,
@@ -135,7 +136,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to load folders';
       setError(message);
-      toast.error('Failed to load folders');
+      toast.error(i18next.t('saved.toast.loadFoldersFailed'));
     }
   }, [isAuthenticated, queryClient]);
 
@@ -159,12 +160,12 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         queryClient.setQueryData<SavedPropertyFoldersResponse>(SAVED_FOLDERS_KEY, (prev) => ({
           folders: [...(prev?.folders ?? []), newFolder],
         }));
-        toast.success('Folder created successfully');
+        toast.success(i18next.t('saved.toast.folderCreated'));
         return newFolder;
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Failed to create folder';
         setError(message);
-        toast.error('Failed to create folder');
+        toast.error(i18next.t('saved.toast.folderCreateFailed'));
         throw error;
       }
     },
@@ -188,12 +189,12 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
             folder._id === folderId ? updatedFolder : folder,
           ),
         }));
-        toast.success('Folder updated successfully');
+        toast.success(i18next.t('saved.toast.folderUpdated'));
         return updatedFolder;
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Failed to update folder';
         setError(message);
-        toast.error('Failed to update folder');
+        toast.error(i18next.t('saved.toast.folderUpdateFailed'));
         throw error;
       }
     },
@@ -209,11 +210,11 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         queryClient.setQueryData<SavedPropertyFoldersResponse>(SAVED_FOLDERS_KEY, (prev) => ({
           folders: (prev?.folders ?? []).filter((folder) => folder._id !== folderId),
         }));
-        toast.success('Folder deleted successfully');
+        toast.success(i18next.t('saved.toast.folderDeleted'));
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Failed to delete folder';
         setError(message);
-        toast.error('Failed to delete folder');
+        toast.error(i18next.t('saved.toast.folderDeleteFailed'));
         throw error;
       }
     },
@@ -266,7 +267,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
           newSet.delete(propertyId);
           return newSet;
         });
-        toast.success('Property saved successfully');
+        toast.success(i18next.t('saved.toast.propertySaved'));
         // Refresh folders to update counts immediately.
         await queryClient.invalidateQueries({ queryKey: SAVED_FOLDERS_KEY });
       } catch (error: unknown) {
@@ -282,7 +283,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
 
         const message = error instanceof Error ? error.message : 'Failed to save property';
         setError(message);
-        toast.error('Failed to save property');
+        toast.error(i18next.t('saved.toast.propertySaveFailed'));
         throw error;
       }
     },
@@ -316,7 +317,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
           newSet.delete(propertyId);
           return newSet;
         });
-        toast.success('Property removed from saved');
+        toast.success(i18next.t('saved.toast.propertyRemoved'));
 
         // Update folder counts locally.
         if (removed?.folderId) {
@@ -353,7 +354,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         });
 
         setError(message);
-        toast.error('Failed to unsave property');
+        toast.error(i18next.t('saved.toast.propertyUnsaveFailed'));
         throw error;
       }
     },

@@ -102,18 +102,18 @@ export default function ExchangeRequestDetailScreen() {
       try {
         await updateMutation.mutateAsync({ status });
         const toastKey: Record<string, string> = {
-          [ExchangeRequestStatus.CONFIRMED]: t('listing.exchange.toasts.confirmed', 'Exchange confirmed'),
-          [ExchangeRequestStatus.DECLINED]: t('listing.exchange.toasts.declined', 'Exchange declined'),
-          [ExchangeRequestStatus.CANCELLED]: t('listing.exchange.toasts.cancelled', 'Exchange cancelled'),
-          [ExchangeRequestStatus.COMPLETED]: t('listing.exchange.toasts.completed', 'Exchange completed'),
+          [ExchangeRequestStatus.CONFIRMED]: t('listing.exchange.toasts.confirmed'),
+          [ExchangeRequestStatus.DECLINED]: t('listing.exchange.toasts.declined'),
+          [ExchangeRequestStatus.CANCELLED]: t('listing.exchange.toasts.cancelled'),
+          [ExchangeRequestStatus.COMPLETED]: t('listing.exchange.toasts.completed'),
         };
-        toast.success(toastKey[status] ?? t('listing.exchange.toasts.updated', 'Exchange updated'));
+        toast.success(toastKey[status] ?? t('listing.exchange.toasts.updated'));
         setPendingAction(null);
       } catch (error) {
         const message =
           error instanceof Error
             ? error.message
-            : t('listing.exchange.errors.failed', 'Could not update request');
+            : t('listing.exchange.errors.failed');
         toast.error(message);
         setPendingAction(null);
       }
@@ -125,7 +125,7 @@ export default function ExchangeRequestDetailScreen() {
     <Header
       options={{
         showBackButton: true,
-        title: t('listing.exchange.detailTitle', 'Exchange'),
+        title: t('listing.exchange.detailTitle'),
         titlePosition: 'center',
       }}
     />
@@ -138,9 +138,9 @@ export default function ExchangeRequestDetailScreen() {
         <View style={styles.centerWrap}>
           <ErrorState
             icon="warning-outline"
-            title={t('listing.exchange.invalidId', 'Invalid exchange id')}
-            description={t('listing.exchange.invalidIdBody', 'The link is missing the exchange reference.')}
-            retryLabel={t('goBack', 'Go back')}
+            title={t('listing.exchange.invalidId')}
+            description={t('listing.exchange.invalidIdBody')}
+            retryLabel={t('goBack')}
             onRetry={() => router.back()}
           />
         </View>
@@ -165,9 +165,9 @@ export default function ExchangeRequestDetailScreen() {
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
-            title={t('listing.exchange.unavailable', 'Exchange unavailable')}
-            description={requestQuery.error?.message ?? t('listing.exchange.unavailableBody', 'This exchange could not be loaded.')}
-            retryLabel={t('goBack', 'Go back')}
+            title={t('listing.exchange.unavailable')}
+            description={requestQuery.error?.message ?? t('listing.exchange.unavailableBody')}
+            retryLabel={t('goBack')}
             onRetry={() => router.back()}
           />
         </View>
@@ -175,12 +175,12 @@ export default function ExchangeRequestDetailScreen() {
     );
   }
 
-  const propertyTitle = property ? getPropertyTitle(property) : t('listing.exchange.cardFallback', 'Home');
+  const propertyTitle = property ? getPropertyTitle(property) : t('listing.exchange.cardFallback');
   const imageSource = property ? getPropertyImageSource(property) : null;
   const isSwap = request.mode === ExchangeMode.SWAP;
   const modeLabel = isSwap
-    ? t('listing.exchange.mode.swap', 'Home swap')
-    : t('listing.exchange.mode.host', 'Free hosting');
+    ? t('listing.exchange.mode.swap')
+    : t('listing.exchange.mode.host');
 
   // Whether the requested stay window has already ended (gates "complete"),
   // compared against the `now` snapshot captured above so render stays pure.
@@ -228,22 +228,22 @@ export default function ExchangeRequestDetailScreen() {
 
           <CardSurface>
             <BloomText style={styles.sectionLabel}>
-              {t('listing.exchange.detailsLabel', 'Exchange details')}
+              {t('listing.exchange.detailsLabel')}
             </BloomText>
-            <DetailRow label={t('listing.exchange.modeLabelShort', 'Type')} value={modeLabel} />
+            <DetailRow label={t('listing.exchange.modeLabelShort')} value={modeLabel} />
             <DetailRow
-              label={t('listing.exchange.requestedStay', 'Requested stay')}
+              label={t('listing.exchange.requestedStay')}
               value={formatWindow(request.requestedWindow)}
             />
             {isSwap && request.offeredWindow ? (
               <DetailRow
-                label={t('listing.exchange.offeredStay', 'Offered stay')}
+                label={t('listing.exchange.offeredStay')}
                 value={formatWindow(request.offeredWindow)}
               />
             ) : null}
             {isSwap && offeredProperty ? (
               <DetailRow
-                label={t('listing.exchange.offeredHome', 'Offered home')}
+                label={t('listing.exchange.offeredHome')}
                 value={getPropertyTitle(offeredProperty)}
               />
             ) : null}
@@ -252,7 +252,7 @@ export default function ExchangeRequestDetailScreen() {
           {request.message ? (
             <CardSurface>
               <BloomText style={styles.sectionLabel}>
-                {t('listing.exchange.messageHeading', 'Message')}
+                {t('listing.exchange.messageHeading')}
               </BloomText>
               <BloomText style={styles.messageText}>{request.message}</BloomText>
             </CardSurface>
@@ -269,7 +269,7 @@ export default function ExchangeRequestDetailScreen() {
                     disabled={updateMutation.isPending}
                     style={styles.actionButton}
                   >
-                    {t('listing.exchange.actions.approve', 'Approve')}
+                    {t('listing.exchange.actions.approve')}
                   </Button>
                   <Button
                     variant="secondary"
@@ -278,7 +278,7 @@ export default function ExchangeRequestDetailScreen() {
                     disabled={updateMutation.isPending}
                     style={styles.actionButton}
                   >
-                    {t('listing.exchange.actions.decline', 'Decline')}
+                    {t('listing.exchange.actions.decline')}
                   </Button>
                 </>
               ) : null}
@@ -290,7 +290,7 @@ export default function ExchangeRequestDetailScreen() {
                   disabled={updateMutation.isPending}
                   style={styles.actionButton}
                 >
-                  {t('listing.exchange.actions.complete', 'Mark completed')}
+                  {t('listing.exchange.actions.complete')}
                 </Button>
               ) : null}
               {showRequesterCancel ? (
@@ -301,7 +301,7 @@ export default function ExchangeRequestDetailScreen() {
                   disabled={updateMutation.isPending}
                   style={styles.actionButton}
                 >
-                  {t('listing.exchange.actions.cancel', 'Cancel request')}
+                  {t('listing.exchange.actions.cancel')}
                 </Button>
               ) : null}
             </View>
@@ -318,25 +318,25 @@ export default function ExchangeRequestDetailScreen() {
 
           {request.status === ExchangeRequestStatus.COMPLETED && alreadyReviewed ? (
             <BloomText style={styles.note}>
-              {t('listing.exchange.review.alreadyLeft', 'You’ve already reviewed this exchange.')}
+              {t('listing.exchange.review.alreadyLeft')}
             </BloomText>
           ) : null}
         </ScrollView>
 
         <ConfirmDialog
           visible={pendingAction === 'confirm'}
-          title={t('listing.exchange.confirm.approveTitle', 'Approve exchange?')}
-          message={t('listing.exchange.confirm.approveBody', 'The requester will be notified and the dates will be marked confirmed.')}
-          confirmLabel={t('listing.exchange.actions.approve', 'Approve')}
+          title={t('listing.exchange.confirm.approveTitle')}
+          message={t('listing.exchange.confirm.approveBody')}
+          confirmLabel={t('listing.exchange.actions.approve')}
           loading={updateMutation.isPending}
           onConfirm={() => handleAction(ExchangeRequestStatus.CONFIRMED)}
           onCancel={() => setPendingAction(null)}
         />
         <ConfirmDialog
           visible={pendingAction === 'decline'}
-          title={t('listing.exchange.confirm.declineTitle', 'Decline exchange?')}
-          message={t('listing.exchange.confirm.declineBody', 'The requester will be notified that this request was declined.')}
-          confirmLabel={t('listing.exchange.actions.decline', 'Decline')}
+          title={t('listing.exchange.confirm.declineTitle')}
+          message={t('listing.exchange.confirm.declineBody')}
+          confirmLabel={t('listing.exchange.actions.decline')}
           confirmDestructive
           loading={updateMutation.isPending}
           onConfirm={() => handleAction(ExchangeRequestStatus.DECLINED)}
@@ -344,9 +344,9 @@ export default function ExchangeRequestDetailScreen() {
         />
         <ConfirmDialog
           visible={pendingAction === 'cancel'}
-          title={t('listing.exchange.confirm.cancelTitle', 'Cancel request?')}
-          message={t('listing.exchange.confirm.cancelBody', 'This will withdraw your exchange request.')}
-          confirmLabel={t('listing.exchange.confirm.cancelConfirm', 'Yes, cancel')}
+          title={t('listing.exchange.confirm.cancelTitle')}
+          message={t('listing.exchange.confirm.cancelBody')}
+          confirmLabel={t('listing.exchange.confirm.cancelConfirm')}
           confirmDestructive
           loading={updateMutation.isPending}
           onConfirm={() => handleAction(ExchangeRequestStatus.CANCELLED)}
@@ -354,9 +354,9 @@ export default function ExchangeRequestDetailScreen() {
         />
         <ConfirmDialog
           visible={pendingAction === 'complete'}
-          title={t('listing.exchange.confirm.completeTitle', 'Mark as completed?')}
-          message={t('listing.exchange.confirm.completeBody', 'Confirm the stay happened. You’ll then be able to leave a review.')}
-          confirmLabel={t('listing.exchange.actions.complete', 'Mark completed')}
+          title={t('listing.exchange.confirm.completeTitle')}
+          message={t('listing.exchange.confirm.completeBody')}
+          confirmLabel={t('listing.exchange.actions.complete')}
           loading={updateMutation.isPending}
           onConfirm={() => handleAction(ExchangeRequestStatus.COMPLETED)}
           onCancel={() => setPendingAction(null)}
