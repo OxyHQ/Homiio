@@ -10,7 +10,7 @@ import {
   warmBrowserPage,
   type SessionContext,
   type SessionPage,
-} from '@homiio/listing-providers';
+} from '@homiio/listing-providers/session';
 
 interface MockRequestCall {
   url: string;
@@ -113,8 +113,28 @@ describe('warmBrowserPage', () => {
       warmBrowserPage(page, {
         warmUrl: 'https://portal.example/',
         challengeWaitMs: 100,
+        postChallengeSettleMs: 0,
       }),
     ).rejects.toBeInstanceOf(BrowserSessionChallengeError);
+  });
+
+  it('reloads warmUrl after stalled challenge polls', async () => {
+    const challenge = '<html><script src="https://geo.captcha-delivery.com/x"></script></html>';
+    const ok = `<html><body>${'x'.repeat(5000)}<article class="item">listing</article></body></html>`;
+    const goto = jest.fn(async () => undefined);
+    const { page } = mockPage({
+      contentSequence: [challenge, challenge, challenge, ok],
+      goto,
+    });
+
+    await warmBrowserPage(page, {
+      warmUrl: 'https://portal.example/search/',
+      challengeWaitMs: 5_000,
+      reloadAfterPolls: 2,
+      postChallengeSettleMs: 0,
+    });
+
+    expect(goto.mock.calls.length).toBeGreaterThan(1);
   });
 });
 
@@ -153,6 +173,21 @@ describe('fetchJsonInPage', () => {
     const { page, requestCalls } = mockPage({});
     await fetchJsonInPage(page, 'https://portal.example/api', { timeoutMs: 12_000 });
     expect(requestCalls[0].timeout).toBe(12_000);
+  });
+
+  it('returns non-200 status without throwing', async () => {
+    const { page } = mockPage({ requestStatus: 403, requestBody: 'Forbidden' });
+    const result = await fetchJsonInPage(page, 'https://portal.example/api/blocked');
+    expect(result.status).toBe(403);
+    expect(result.body).toBe('Forbidden');
+  });
+
+  it('uses explicit referer override when provided', async () => {
+    const { page, requestCalls } = mockPage({ pageUrl: 'https://portal.example/search/' });
+    await fetchJsonInPage(page, 'https://portal.example/api', {
+      referer: 'https://portal.example/custom-referer/',
+    });
+    expect(requestCalls[0].headers?.Referer).toBe('https://portal.example/custom-referer/');
   });
 });
 
