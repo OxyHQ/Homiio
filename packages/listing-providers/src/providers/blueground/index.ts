@@ -122,7 +122,7 @@ export class BluegroundProvider implements ListingProvider {
 
     for (const city of cities) {
       if (yielded >= limit) return;
-      const { html } = await fetchListingViaLadder(this.runtime, bluegroundCitySearchUrl(city), {
+      const { html } = await fetchListingViaLadder(job.runtime ?? this.runtime, bluegroundCitySearchUrl(city), {
         provider: this.id,
         isChallenge: isBluegroundChallenge,
         metrics: this.metrics,

@@ -170,7 +170,7 @@ export class ApartmentsComProvider implements ListingProvider {
 
     for (const city of cities) {
       if (yielded >= limit) return;
-      const { html } = await fetchListingViaLadder(this.runtime, searchUrl(city), {
+      const { html } = await fetchListingViaLadder(job.runtime ?? this.runtime, searchUrl(city), {
         provider: this.id,
         isChallenge: isUsPortalChallenge,
         metrics: this.metrics,

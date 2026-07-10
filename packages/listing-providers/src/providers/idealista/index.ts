@@ -134,10 +134,11 @@ export class IdealistaProvider implements ListingProvider {
     for (const city of cities) {
       for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
         if (yielded >= limit) return;
-        const { html } = await fetchListingViaLadder(this.runtime, searchUrl(city, page), {
+        const { html } = await fetchListingViaLadder(job.runtime ?? this.runtime, searchUrl(city, page), {
           provider: this.id,
           isChallenge: isIdealistaChallenge,
           metrics: this.metrics,
+          init: { signal: job.signal },
         });
         const refs = parseIdealistaSearch(html);
         if (refs.length === 0) break;
