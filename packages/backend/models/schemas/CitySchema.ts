@@ -67,10 +67,8 @@ const citySchema = new mongoose.Schema({
     default: 'EUR'
   },
   /**
-   * The city's cover photo: the `_id` of an Image (`entityType: 'city'`,
-   * `entityId` = this city's `_id`). Set at seed time from the curated city
-   * image stored in our own object storage, so there is no live external image
-   * dependency at runtime.
+   * The city's cover photo: the `_id` of an existing Image document (typically
+   * a re-hosted listing photo linked by `cityCoverSyncService.ensureCover`).
    */
   coverImageId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -115,9 +113,12 @@ citySchema.virtual('neighborhoods', {
   foreignField: 'cityId'
 });
 
-// Static method to get popular cities
+// Static method to get popular cities (only those with a linked cover image).
 citySchema.statics.getPopularCities = function(limit = 10) {
-  return this.find({ isActive: true })
+  return this.find({
+    isActive: true,
+    coverImageId: { $exists: true, $ne: null },
+  })
     .sort({ propertiesCount: -1, name: 1 })
     .limit(limit);
 };

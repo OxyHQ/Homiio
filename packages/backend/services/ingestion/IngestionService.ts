@@ -26,6 +26,7 @@ import {
   validateNormalizedListing,
 } from '@homiio/listing-providers';
 import { Property, Address, type IProperty } from '../../models';
+import { ensureCover } from '../cityCoverSyncService';
 import type { AddressCanonicalInput } from '../../models/Address';
 import { validateOfferings } from '../../models/schemas/offeringValidation';
 import { forwardGeocode, reverseGeocode } from '../geocodingService';
@@ -102,6 +103,13 @@ export class IngestionService {
       property.set('images', refs);
       await property.save();
       imageCount = refs.length;
+    }
+
+    if (imageCount > 0) {
+      const address = await Address.findById(property.addressId).select('cityId').lean();
+      if (address?.cityId) {
+        void ensureCover(address.cityId);
+      }
     }
 
     const result: IngestResult = {

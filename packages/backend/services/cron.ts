@@ -3,6 +3,7 @@ import { Logger } from '../utils/logger';
 import { HealthService } from './healthService';
 import { CleanupService } from './cleanupService';
 import { MetricsService } from '../utils/metrics';
+import { syncMissingCovers } from './cityCoverSyncService';
 
 // Initialize services
 const logger = new Logger('CronService');
@@ -34,8 +35,9 @@ class CronJobManager {
   init(): void {
     this.setupHealthCheckJob();
     this.setupCleanupJob();
+    this.setupCityCoverSyncJob();
 
-    this.logger.info('Cron jobs initialized (health + cleanup; scrape loop retired)');
+    this.logger.info('Cron jobs initialized (health + cleanup + city covers; scrape loop retired)');
   }
 
   /**
@@ -68,6 +70,40 @@ class CronJobManager {
     this.jobs.set('cleanup', job);
     this.jobStatus.set('cleanup', { isRunning: true, lastRun: undefined, nextRun: undefined });
     job.start();
+  }
+
+  /**
+   * Setup city cover sync job - runs every hour
+   */
+  private setupCityCoverSyncJob(): void {
+    const job = cron.schedule('0 * * * *', async () => {
+      await this.runCityCoverSync();
+    }, {
+      timezone: 'UTC',
+      scheduled: false,
+    });
+
+    this.jobs.set('cityCovers', job);
+    this.jobStatus.set('cityCovers', { isRunning: true, lastRun: undefined, nextRun: undefined });
+    job.start();
+  }
+
+  /**
+   * Backfill city cover images from listing photos
+   */
+  private async runCityCoverSync(): Promise<void> {
+    const status = this.jobStatus.get('cityCovers');
+    if (status) {
+      status.lastRun = new Date();
+      status.isRunning = true;
+    }
+
+    try {
+      const processed = await syncMissingCovers({ limit: 50 });
+      this.logger.info('City cover sync completed', { processed });
+    } catch (error) {
+      this.logger.error('City cover sync failed', error);
+    }
   }
 
   /**
