@@ -186,11 +186,11 @@ describe('PlaywrightBrowserPool — residential proxy + asset blocking', () => {
     await pool.close();
   });
 
-  it('uses networkidle when asset blocking is off', async () => {
+  it('uses load when asset blocking is off', async () => {
     const { module, counters } = fakePlaywrightWithRoutes('<html/>');
     const pool = new PlaywrightBrowserPool(module, { blockAssets: false });
     await pool.fetch('https://portal.example/x');
-    expect(counters.gotos[0].waitUntil).toBe('networkidle');
+    expect(counters.gotos[0].waitUntil).toBe('load');
     await pool.close();
   });
 });
