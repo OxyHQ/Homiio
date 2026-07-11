@@ -102,7 +102,14 @@ export interface IngestionServiceOptions {
   /**
    * Recognise and skip re-listings of the same unit under a new `sourceId`
    * (see {@link areDuplicateListings}). Defaults to env `LISTING_DEDUP_ENABLED`
-   * (only the literal `false` disables it) so ops has a redeploy-free kill switch.
+   * and is OPT-IN (only the literal `true` enables it).
+   *
+   * Off by default because the description-Jaccard fingerprint has a known
+   * false-positive class: new-build developments (e.g. immobilienscout24 Neubau
+   * projects) list many DISTINCT units that share one developer brochure, so
+   * their descriptions are near-identical at the same price/m²/bedrooms even
+   * though they are different apartments. Until a development-safe signal exists,
+   * enabling dedup broadly risks skipping legitimate units, so it stays opt-in.
    */
   dedupeEnabled?: boolean;
 }
@@ -117,7 +124,7 @@ export class IngestionService {
     this.mediaIngest = options.mediaIngest ?? new ExternalMediaIngest();
     this.logger = options.logger ?? new Logger('IngestionService');
     this.defaultTtlDays = options.defaultTtlDays ?? DEFAULT_TTL_DAYS;
-    this.dedupeEnabled = options.dedupeEnabled ?? process.env.LISTING_DEDUP_ENABLED !== 'false';
+    this.dedupeEnabled = options.dedupeEnabled ?? process.env.LISTING_DEDUP_ENABLED === 'true';
   }
 
   /** Validate, upsert and re-host media for a single normalized listing. */
@@ -209,9 +216,10 @@ export class IngestionService {
       const listingAddress = await Address.findById(addressId).select('cityId').lean<{
         cityId?: Types.ObjectId;
       } | null>();
+      const cityId = listingAddress?.cityId;
       const incoming = toDedupComparable({
         type: listing.type,
-        cityId: listingAddress?.cityId ? String(listingAddress.cityId) : undefined,
+        cityId: cityId ? String(cityId) : undefined,
         bedrooms: listing.bedrooms,
         squareFootage: listing.squareFootage,
         description: listing.description,
@@ -219,11 +227,13 @@ export class IngestionService {
         shortTermRent: listing.shortTermRent,
         sale: listing.sale,
       });
-      if (!incoming) return null;
+      if (!incoming || !cityId) return null;
 
-      // Selective scalar prefilter (same type, bedrooms, m² and exact price)
-      // joined to the Address `cityId`. `$lookup` bypasses the Property post-find
-      // hook that renames/mangles `addressId` on lean reads, so `cityId` is clean.
+      // Selective scalar prefilter (same type, bedrooms, m² and price) joined to
+      // the Address `cityId`. The `$lookup` bypasses the Property post-find hook
+      // that renames/mangles `addressId` on lean reads, so `cityId` is clean. The
+      // same-city `$match` runs BEFORE `$limit` so a bounded candidate scan for a
+      // common config never drops the actually-matching (same-city) listing.
       const candidates = await Property.aggregate<DuplicateCandidateDoc>([
         {
           $match: {
@@ -235,8 +245,10 @@ export class IngestionService {
             ...this.buildPriceFilter(incoming),
           },
         },
-        { $limit: DEDUP_CANDIDATE_LIMIT },
         { $lookup: { from: 'addresses', localField: 'addressId', foreignField: '_id', as: 'addr' } },
+        { $addFields: { cityId: { $arrayElemAt: ['$addr.cityId', 0] } } },
+        { $match: { cityId } },
+        { $limit: DEDUP_CANDIDATE_LIMIT },
         {
           $project: {
             description: 1,
@@ -247,7 +259,7 @@ export class IngestionService {
             longTermRent: 1,
             shortTermRent: 1,
             sale: 1,
-            cityId: { $arrayElemAt: ['$addr.cityId', 0] },
+            cityId: 1,
           },
         },
       ]);
@@ -282,22 +294,30 @@ export class IngestionService {
     }
   }
 
-  /** Mongo filter matching the primary offering's exact price + currency. */
+  /**
+   * Mongo filter matching the primary offering's price + currency. `amount` is the
+   * rounded integer from the comparable, but stored prices may carry decimals, so
+   * the filter is a half-unit range `[amount - 0.5, amount + 0.5)` — every stored
+   * value that rounds to `amount` matches (the exact per-listing equality is then
+   * re-checked in {@link areDuplicateListings}). Exact equality here would miss a
+   * stored `850.4` for an incoming `850`.
+   */
   private buildPriceFilter(comparable: DedupComparable): Record<string, unknown> {
+    const range = { $gte: comparable.amount - 0.5, $lt: comparable.amount + 0.5 };
     switch (comparable.offering) {
       case OfferingType.LONG_TERM_RENT:
         return {
-          'longTermRent.monthlyAmount': comparable.amount,
+          'longTermRent.monthlyAmount': range,
           'longTermRent.currency': comparable.currency,
         };
       case OfferingType.SHORT_TERM_RENT:
         return {
-          'shortTermRent.nightlyRate': comparable.amount,
+          'shortTermRent.nightlyRate': range,
           'shortTermRent.currency': comparable.currency,
         };
       case OfferingType.SALE:
         return {
-          'sale.price': comparable.amount,
+          'sale.price': range,
           'sale.currency': comparable.currency,
         };
     }

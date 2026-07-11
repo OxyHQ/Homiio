@@ -55,13 +55,30 @@ describe('planDeduplication', () => {
     expect(group.keep.id).toBe('older');
   });
 
-  it('collapses a transitive 3-way component into one keeper + two archived', () => {
+  it('collapses a 3-way CLIQUE (all pairs duplicate) into one keeper + two archived', () => {
+    // a,b,c share 60 tokens + 1 unique each → every pair Jaccard 60/62 ≈ 0.968.
     const a = row({ id: 'a', imageCount: 9, listing: { description: words(60, ['one']) } });
     const b = row({ id: 'b', imageCount: 4, listing: { description: words(60, ['two']) } });
     const c = row({ id: 'c', imageCount: 2, listing: { description: words(60, ['three']) } });
     const [group] = planDeduplication([a, b, c]);
     expect(group.keep.id).toBe('a');
     expect(group.archive.map((r) => r.id).sort()).toEqual(['b', 'c']);
+  });
+
+  it('does NOT collapse a NON-clique transitive chain (A~B, B~C, A≁C keeps A and C)', () => {
+    // The single-linkage data-loss case: A~B and B~C both pass, but A~C is below
+    // the floor, so A and C are DISTINCT units. Only the middle B may be archived;
+    // union-find would wrongly archive two of three.
+    //   A = 60 common + 2 unique, C = 60 common + 2 (different) unique, B = 60 common
+    //   Jaccard(A,B)=Jaccard(B,C)=60/62≈0.968 (dup); Jaccard(A,C)=60/64=0.9375 (not)
+    const a = row({ id: 'aaa', imageCount: 5, listing: { description: words(60, ['extraaa', 'extrabb']) } });
+    const b = row({ id: 'bbb', imageCount: 5, listing: { description: words(60) } });
+    const c = row({ id: 'ccc', imageCount: 5, listing: { description: words(60, ['gammaaa', 'gammabb']) } });
+    const groups = planDeduplication([a, b, c]);
+    const archivedIds = groups.flatMap((g) => g.archive.map((r) => r.id));
+    // B is a duplicate of the keeper A; C is NOT and must survive.
+    expect(archivedIds).toEqual(['bbb']);
+    expect(archivedIds).not.toContain('ccc');
   });
 
   it('does not group templated different units below the Jaccard floor', () => {
