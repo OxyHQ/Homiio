@@ -30,7 +30,7 @@ import { useMyApplications } from '@/hooks/useApplicationQueries';
 import { useReservationsQuery } from '@/hooks/useReservationQueries';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { colors } from '@/styles/colors';
-import { spacing, tracker } from '@/constants/styles';
+import { contentClamp, spacing } from '@/constants/styles';
 import { logger } from '@/utils/logger';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -142,16 +142,18 @@ export default function ProfileScreen() {
       {header}
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.heroWrap}>
-          <CardSurface padding={spacing['2xl']}>
+          <View style={styles.heroContent}>
             <View style={styles.heroRow}>
               <Avatar size={88} shape="squircle" uri={avatarUri} name={displayName} />
               <View style={styles.heroBody}>
-                <H1 style={styles.heroName}>{displayName}</H1>
-                <BloomText style={styles.heroSubtitle}>
-                  {user?.username ? `@${user.username}` : ''}
-                </BloomText>
+                <H1 className="text-2xl font-bold text-foreground">{displayName}</H1>
+                {user?.username ? (
+                  <BloomText className="text-sm text-muted-foreground">
+                    {`@${user.username}`}
+                  </BloomText>
+                ) : null}
                 {bio ? (
-                  <BloomText style={styles.heroBio} numberOfLines={3}>
+                  <BloomText className="text-sm text-muted-foreground" numberOfLines={3}>
                     {bio}
                   </BloomText>
                 ) : null}
@@ -181,7 +183,7 @@ export default function ProfileScreen() {
                 {t('profile.actions.editProfile')}
               </Button>
             </View>
-          </CardSurface>
+          </View>
         </View>
 
         <View style={styles.statsWrap}>
@@ -346,38 +348,32 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   heroWrap: {
-    paddingHorizontal: spacing.lg,
     marginBottom: spacing.lg,
   },
+  // Mirrors `StickyPropertyHeader.content` so the flat hero lines up with the
+  // pinned header on wide web: ONE width clamp + ONE horizontal padding + ONE
+  // uniform vertical gap between the identity row, badges, and action.
+  heroContent: {
+    maxWidth: contentClamp.page,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: spacing.lg,
+    gap: spacing.lg,
+  },
+  // Top-align the name/handle/bio to the avatar's top edge (not its mid-height).
   heroRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing.lg,
-    marginBottom: spacing.md,
   },
   heroBody: {
     flex: 1,
     gap: spacing.xs,
   },
-  heroName: {
-    fontSize: 24,
-    fontWeight: '700',
-    letterSpacing: tracker.tight,
-  },
-  heroSubtitle: {
-    fontSize: 13,
-    color: colors.muted,
-  },
-  heroBio: {
-    fontSize: 14,
-    color: colors.muted,
-    lineHeight: 20,
-  },
   badgesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.xs,
-    marginBottom: spacing.md,
   },
   heroActions: {
     flexDirection: 'row',
