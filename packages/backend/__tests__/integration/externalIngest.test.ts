@@ -50,9 +50,9 @@ const fetchImage = jest.fn(
   async (_url: string): Promise<ImageBufferInput> => ({ buffer: ONE_BY_ONE_PNG, mimetype: 'image/png' }),
 );
 
-function buildIngestionService(): IngestionService {
+function buildIngestionService(dedupeEnabled = false): IngestionService {
   const mediaIngest = new ExternalMediaIngest({ fetchImage });
-  return new IngestionService({ mediaIngest });
+  return new IngestionService({ mediaIngest, dedupeEnabled });
 }
 
 async function normalizeAll(): Promise<NormalizedListing[]> {
@@ -264,7 +264,8 @@ describe('external listing ingest (fixture -> IngestionService)', () => {
   });
 
   it('skips a re-listing of the same unit under a new sourceId (dedup fingerprint)', async () => {
-    const ingestion = buildIngestionService();
+    // Dedup is opt-in (off by default); enable it explicitly for this test.
+    const ingestion = buildIngestionService(true);
     // A substantial, shared agency description (>= 40 tokens) so the listings are
     // dedup-eligible; the tail word differs so Jaccard is ~0.97 (> 0.95 floor).
     const shared = Array.from({ length: 60 }, (_, i) => `palabra${String(i).padStart(3, '0')}`).join(' ');

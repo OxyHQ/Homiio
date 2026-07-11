@@ -19,6 +19,7 @@ const COMPOUND_SUFFIXES = new Set([
   'com.ar',
   'com.br',
   'com.co',
+  'com.ec',
   'com.pe',
   'com.py',
   'co.nz',
