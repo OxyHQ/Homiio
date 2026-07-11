@@ -106,6 +106,18 @@ function normalizeAmenity(name: string, aliases: Readonly<Record<string, string>
   return aliases[key] ?? key.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 }
 
+/**
+ * Canonical ES amenity key for a free-form label (e.g. a portal property-JSON
+ * `features`/`extras` entry), or `undefined` when the label is not a recognized
+ * amenity. Reuses the shared ES alias table — never duplicate it per portal.
+ * `amueblado` resolves to `furnished`; callers hoist that into `furnishedStatus`.
+ * Unlike {@link normalizeAmenity} it does NOT fall back to a snake_case slug, so
+ * mixed "características" arrays (condition, orientation, …) don't leak as amenities.
+ */
+export function matchEsAmenityKey(label: string): string | undefined {
+  return ES_AMENITY_ALIASES[deaccent(label)];
+}
+
 function readTypes(value: unknown): string[] {
   if (typeof value === 'string') return [value];
   if (Array.isArray(value)) return value.filter((entry): entry is string => typeof entry === 'string');

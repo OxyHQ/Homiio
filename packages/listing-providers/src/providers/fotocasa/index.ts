@@ -603,7 +603,7 @@ export class FotocasaProvider implements ListingProvider {
   }
 
   normalize(raw: RawListing): NormalizedListing {
-    const { sourceId, url, listing } = asFotocasaRaw(raw.payload);
+    const { sourceId, url, listing, floor, contact } = asFotocasaRaw(raw.payload);
     if (listing.price === undefined) {
       throw new Error(`fotocasa: listing ${sourceId} has no resolvable price`);
     }
@@ -637,9 +637,11 @@ export class FotocasaProvider implements ListingProvider {
     if (listing.bedrooms !== undefined) result.bedrooms = listing.bedrooms;
     if (listing.bathrooms !== undefined) result.bathrooms = listing.bathrooms;
     if (listing.squareMeters !== undefined) result.squareFootage = listing.squareMeters;
+    if (floor !== undefined) result.floor = floor;
     if (listing.amenities.length > 0) result.amenities = listing.amenities;
     const furnished = resolveFurnished(listing.furnished);
     if (furnished !== 'not_specified') result.furnishedStatus = furnished;
+    if (contact) result.contact = contact;
 
     return result;
   }

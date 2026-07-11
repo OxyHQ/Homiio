@@ -6,8 +6,10 @@
  * parse JSON-LD from those bodies.
  */
 
-import type { EsSchemaListing } from '../../parse/jsonLd';
+import type { NormalizedListingContact } from '@homiio/shared-types';
+import { matchEsAmenityKey, type EsSchemaListing } from '../../parse/jsonLd';
 import { asCoordinate, asNumberEu, asString, isRecord } from '../../parse/guards';
+import { contactFromUnknown, mergeContact } from '../../parse/contact';
 import {
   collectNestedImages,
   eurListingFromNextDataCandidate,
@@ -55,6 +57,78 @@ function resolveOperation(record: Record<string, unknown>, url: string): 'rent' 
   return url.includes('/comprar') || url.includes('/venta') ? 'sale' : 'rent';
 }
 
+/** Feature/equipment arrays a Fotocasa property-JSON (`language=es`) record may carry. */
+const FOTOCASA_FEATURE_FIELDS = ['features', 'otherFeatures', 'equipment', 'extras'] as const;
+
+/**
+ * Extract canonical amenities + the furnished flag from a Fotocasa property-JSON
+ * record. Reads localized feature labels (the property API is called with
+ * `language=es`) from any of {@link FOTOCASA_FEATURE_FIELDS}, skipping entries the
+ * portal marks absent (`value: false`/`0`). Labels are normalized through the
+ * shared {@link matchEsAmenityKey} alias table, so unrecognized "características"
+ * (condition, orientation, …) are dropped rather than leaked as junk amenities.
+ */
+function readFotocasaAmenities(record: Record<string, unknown>): {
+  amenities: string[];
+  furnished?: boolean;
+} {
+  const amenities: string[] = [];
+  const seen = new Set<string>();
+  let furnished: boolean | undefined;
+
+  const consider = (label: unknown, present: unknown): void => {
+    if (present === false || present === 0) return;
+    const text = asString(label);
+    if (!text) return;
+    const key = matchEsAmenityKey(text);
+    if (!key) return;
+    if (key === 'furnished') {
+      furnished = true;
+      return;
+    }
+    if (!seen.has(key)) {
+      seen.add(key);
+      amenities.push(key);
+    }
+  };
+
+  for (const field of FOTOCASA_FEATURE_FIELDS) {
+    const value = record[field];
+    if (!Array.isArray(value)) continue;
+    for (const entry of value) {
+      if (typeof entry === 'string') {
+        consider(entry, true);
+      } else if (isRecord(entry)) {
+        const label =
+          asString(entry.name) ?? asString(entry.label) ?? asString(entry.key) ?? asString(entry.type);
+        consider(label, 'value' in entry ? entry.value : true);
+      }
+    }
+  }
+
+  return { amenities, furnished };
+}
+
+/** Floor number from a Fotocasa property-JSON record, when numerically resolvable. */
+function readFotocasaFloor(record: Record<string, unknown>): number | undefined {
+  return asNumberEu(record.floor) ?? asNumberEu(record.floorNumber) ?? asNumberEu(record.planta);
+}
+
+/**
+ * Advertiser contact from a Fotocasa property-JSON record (phone/email/agency).
+ * Probes the wrapper nodes Fotocasa uses and delegates parsing to the shared
+ * contact chokepoint — never invents a contact when the record omits one.
+ */
+function readFotocasaContact(record: Record<string, unknown>): NormalizedListingContact | undefined {
+  return mergeContact(
+    contactFromUnknown(record.contactInfo),
+    contactFromUnknown(record.advertiser),
+    contactFromUnknown(record.contact),
+    contactFromUnknown(record.agency),
+    contactFromUnknown(record.client),
+  );
+}
+
 function fotocasaRecordToListing(
   record: Record<string, unknown>,
   url: string,
@@ -85,6 +159,7 @@ function fotocasaRecordToListing(
     : url;
   const streetParts = [asString(record.street), asString(record.number)].filter(Boolean).join(' ').trim();
   const images = collectNestedImages(record);
+  const { amenities, furnished } = readFotocasaAmenities(record);
 
   return {
     types: [asString(record.buildingType) ?? 'Apartment'],
@@ -107,7 +182,8 @@ function fotocasaRecordToListing(
     price,
     priceCurrency: 'EUR',
     operation,
-    amenities: [],
+    amenities,
+    furnished,
   };
 }
 
@@ -161,11 +237,16 @@ export function parseFotocasaSearchCardRecord(
     throw new Error(`fotocasa: cannot derive a source id from searchads card at ${url}`);
   }
 
-  return {
+  const raw: FotocasaRaw = {
     sourceId,
     url: listing.url ?? url,
     listing,
   };
+  const floor = readFotocasaFloor(enriched);
+  if (floor !== undefined) raw.floor = floor;
+  const contact = readFotocasaContact(enriched);
+  if (contact) raw.contact = contact;
+  return raw;
 }
 
 /**
@@ -204,9 +285,14 @@ export function parseFotocasaPropertyJson(body: string, url: string): FotocasaRa
     throw new Error(`fotocasa: cannot derive a source id from property API at ${url}`);
   }
 
-  return {
+  const raw: FotocasaRaw = {
     sourceId,
     url: listing.url ?? url,
     listing,
   };
+  const floor = readFotocasaFloor(record);
+  if (floor !== undefined) raw.floor = floor;
+  const contact = readFotocasaContact(record);
+  if (contact) raw.contact = contact;
+  return raw;
 }
