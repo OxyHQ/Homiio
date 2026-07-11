@@ -202,7 +202,6 @@ export default function SavedPropertiesScreen() {
     <Header
       options={{
         title: t('saved.header'),
-        titlePosition: 'left',
       }}
     />
   );

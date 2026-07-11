@@ -3,7 +3,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Text,
-  TouchableOpacity,
   View,
   type ViewStyle,
 } from 'react-native';
@@ -15,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useOxy, showSignInModal } from '@oxyhq/services';
 import { Header } from '@/components/Header';
+import { IconButton } from '@/components/ui/IconButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ChatContent } from '@/components/sindi/ChatContent';
 import { sindiStyles } from '@/components/sindi/styles';
@@ -148,14 +148,13 @@ export default function ConversationDetail() {
           subtitle: t('sindi.conversation.subtitle'),
           showBackButton: true,
           rightComponents: [
-            <TouchableOpacity
+            <IconButton
               key="share"
+              icon="share-outline"
+              variant="ghost"
               onPress={handleShare}
-              accessibilityRole="button"
               accessibilityLabel={t('common.share')}
-            >
-              <Ionicons name="share-outline" size={24} color={colors.COLOR_BLACK} />
-            </TouchableOpacity>,
+            />,
           ],
         }}
       />

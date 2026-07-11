@@ -257,7 +257,6 @@ export default function NotificationSettingsScreen() {
         options={{
           title: t('notification.settings.title'),
           showBackButton: true,
-          titlePosition: 'center',
         }}
       />
       <ScrollView contentContainerStyle={styles.scroll}>

@@ -124,7 +124,6 @@ export default function StaysScreen() {
       options={{
         showBackButton: true,
         title: t('stays.list.title'),
-        titlePosition: 'center',
       }}
     />
   );

@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Button } from '@oxyhq/bloom/button';
 import { Header } from '@/components/Header';
 import { ProfileSkeleton } from '@/components/ui/skeletons/ProfileSkeleton';
 import { ProfileEditTabBar } from '@/components/profile/edit/ProfileEditTabBar';
@@ -36,11 +37,15 @@ export default function ProfileEditScreen() {
         options={{
           title,
           rightComponents: [
-            <TouchableOpacity key="save" onPress={form.handleSave} disabled={form.isSaving}>
-              <Text style={styles.saveButtonText}>
-                {form.isSaving ? 'Saving…' : 'Save'}
-              </Text>
-            </TouchableOpacity>,
+            <Button
+              key="save"
+              variant="ghost"
+              size="small"
+              onPress={form.handleSave}
+              disabled={form.isSaving}
+            >
+              {form.isSaving ? 'Saving…' : 'Save'}
+            </Button>,
           ],
         }}
       />

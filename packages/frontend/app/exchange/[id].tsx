@@ -126,7 +126,6 @@ export default function ExchangeRequestDetailScreen() {
       options={{
         showBackButton: true,
         title: t('listing.exchange.detailTitle'),
-        titlePosition: 'center',
       }}
     />
   );

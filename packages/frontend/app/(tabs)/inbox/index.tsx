@@ -46,6 +46,7 @@ import { H3, Text as BloomText } from '@oxyhq/bloom/typography';
 import { useNotifications } from '@/context/NotificationContext';
 import { NotificationItem } from '@/components/NotificationItem';
 import { Header } from '@/components/Header';
+import { IconButton } from '@/components/ui/IconButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
@@ -231,20 +232,21 @@ export default function InboxScreen() {
     <Header
       options={{
         title: t('inbox.title'),
-        titlePosition: 'left',
         rightComponents: [
           unreadCount > 0 ? (
-            <HeaderIconButton
+            <IconButton
               key="mark-all"
               icon="checkmark-done"
+              variant="ghost"
               color={colors.primaryColor}
               accessibilityLabel={t('notification.markAllRead.action')}
               onPress={handleMarkAllAsRead}
             />
           ) : null,
-          <HeaderIconButton
+          <IconButton
             key="settings"
             icon="settings-outline"
+            variant="ghost"
             color={colors.COLOR_BLACK_LIGHT_2}
             accessibilityLabel={t('notification.settings.title')}
             onPress={() => router.push('/settings/notifications')}
@@ -413,41 +415,6 @@ export default function InboxScreen() {
   );
 }
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
-interface HeaderIconButtonProps {
-  icon: IoniconName;
-  color: string;
-  accessibilityLabel: string;
-  onPress: () => void;
-}
-
-/**
- * Round, tappable header action. Owns its pressed state (NativeWind v4 can't
- * use the function-form `style`), giving a subtle tint on press.
- */
-const HeaderIconButton: React.FC<HeaderIconButtonProps> = ({
-  icon,
-  color,
-  accessibilityLabel,
-  onPress,
-}) => {
-  const [pressed, setPressed] = useState(false);
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      hitSlop={6}
-      style={[styles.headerButton, pressed && styles.headerButtonPressed]}
-    >
-      <Ionicons name={icon} size={22} color={color} />
-    </Pressable>
-  );
-};
-
 interface ScheduledRowProps {
   request: Notifications.NotificationRequest;
   onCancel: () => void;
@@ -503,16 +470,6 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerButtonPressed: {
-    backgroundColor: colors.mutedSubtle,
   },
   controls: {
     paddingHorizontal: spacing.lg,

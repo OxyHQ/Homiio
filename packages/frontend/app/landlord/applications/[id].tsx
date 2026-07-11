@@ -303,7 +303,6 @@ export default function LandlordApplicationDetailScreen() {
           options={{
             showBackButton: true,
             title: 'Applicant',
-            titlePosition: 'center',
           }}
         />
         <ErrorState
@@ -324,7 +323,6 @@ export default function LandlordApplicationDetailScreen() {
           options={{
             showBackButton: true,
             title: 'Applicant',
-            titlePosition: 'center',
           }}
         />
         <ScrollView contentContainerStyle={styles.content}>
@@ -341,7 +339,6 @@ export default function LandlordApplicationDetailScreen() {
           options={{
             showBackButton: true,
             title: 'Applicant',
-            titlePosition: 'center',
           }}
         />
         <ErrorState
@@ -364,7 +361,6 @@ export default function LandlordApplicationDetailScreen() {
           options={{
             showBackButton: true,
             title: 'Applicant',
-            titlePosition: 'center',
           }}
         />
         <ErrorState
@@ -396,7 +392,6 @@ export default function LandlordApplicationDetailScreen() {
         options={{
           showBackButton: true,
           title: 'Applicant',
-          titlePosition: 'center',
         }}
       />
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>

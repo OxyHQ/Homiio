@@ -48,7 +48,6 @@ export default function LanguageSettingsScreen() {
         options={{
           title: t('settings.language.title'),
           showBackButton: true,
-          titlePosition: 'center',
         }}
       />
       <ScrollView contentContainerStyle={styles.scroll}>

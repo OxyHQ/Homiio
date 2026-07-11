@@ -55,7 +55,6 @@ export default function SindiSettingsScreen() {
         options={{
           title: t('sindi.settings.title'),
           showBackButton: true,
-          titlePosition: 'center',
           leftComponents: [
             <View key="logo" style={styles.headerIcon}>
               <SindiIcon size={20} color={colors.sindiColor} />

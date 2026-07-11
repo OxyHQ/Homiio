@@ -134,7 +134,6 @@ export default function MyApplicationsScreen() {
       options={{
         showBackButton: true,
         title: t('applications.list.title'),
-        titlePosition: 'center',
       }}
     />
   );

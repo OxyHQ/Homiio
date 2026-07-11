@@ -129,7 +129,6 @@ export default function ReservationDetailScreen() {
       options={{
         showBackButton: true,
         title: t('reservations.detail.title'),
-        titlePosition: 'center',
       }}
     />
   );

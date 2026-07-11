@@ -33,7 +33,6 @@ const HEADER_SHADOW_MAX_OPACITY = 0.1;
 interface Props {
   options?: {
     title?: string;
-    titlePosition?: 'left' | 'center';
     subtitle?: string;
     showBackButton?: boolean;
     leftComponents?: ReactNode[];
@@ -62,7 +61,6 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
   // mask would clip it); it pins flush on narrow/full-bleed web.
   const framed = Platform.OS === 'web' && isScreenNotMobile;
 
-  const titlePosition = options?.titlePosition || 'left';
   const isTransparent = options?.transparent || false;
   const scrollThreshold = options?.scrollThreshold || 20;
 
@@ -127,25 +125,20 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
     }),
   } as ViewStyle;
 
-  // Title + optional subtitle, via Bloom `Text`. Shared by the left and center
-  // title positions; each line truncates so a long title never shoves the
-  // actions off-screen (the enclosing block is `flex:1, minWidth:0`).
+  // Title + optional subtitle, via Bloom `Text`, ALWAYS centered. The title is a
+  // CONSTANT size (`text-xl`) — it never shrinks when a subtitle is present (that
+  // caused the live resize bug); the subtitle is a separate smaller muted line
+  // BELOW it. Each line truncates (`text-center` + `numberOfLines={1}`) inside the
+  // centered `flex:1` middle slot so a long title never shoves the actions off.
   const titleNode = (
     <>
       {options?.title ? (
-        <BloomText
-          numberOfLines={1}
-          className={
-            options?.subtitle
-              ? 'text-sm font-extrabold text-foreground'
-              : 'text-xl font-extrabold text-foreground'
-          }
-        >
+        <BloomText numberOfLines={1} className="text-center text-xl font-extrabold text-foreground">
           {options.title}
         </BloomText>
       ) : null}
       {options?.subtitle ? (
-        <BloomText numberOfLines={1} className="text-sm font-normal text-muted-foreground">
+        <BloomText numberOfLines={1} className="text-center text-sm font-normal text-muted-foreground">
           {options.subtitle}
         </BloomText>
       ) : null}
@@ -182,7 +175,10 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
           {options?.showBackButton && canGoBack && (
             <IconButton
               icon="arrow-back"
-              variant="ghost"
+              // On a transparent (on-photo) header the bare dark chevron reads as
+              // unfinished — use the frosted-white overlay chip; a solid bar uses
+              // the flat ghost chrome.
+              variant={isTransparent ? 'overlay' : 'ghost'}
               size={barBackIconSize}
               onPress={() => router.back()}
               accessibilityLabel={t('goBack')}
@@ -191,13 +187,8 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
           {options?.leftComponents?.map((component, index) => (
             <React.Fragment key={index}>{component}</React.Fragment>
           ))}
-          {titlePosition === 'left' && (
-            <View style={styles.titleBlock}>{titleNode}</View>
-          )}
         </View>
-        {titlePosition === 'center' && (
-          <View style={styles.centerSlot}>{titleNode}</View>
-        )}
+        <View style={styles.centerSlot}>{titleNode}</View>
         <View style={styles.rightSlot}>
           {options?.rightComponents?.map((component, index) => (
             <React.Fragment key={index}>{component}</React.Fragment>
@@ -226,9 +217,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
+  // Centered middle title block. `minWidth:0` + stretched children (default
+  // alignItems) let the `text-center` title/subtitle truncate instead of pushing
+  // the side slots; sitting between two equal `flex:1` side slots keeps it
+  // centered in the bar regardless of how wide the left/right actions are.
   centerSlot: {
     flex: 1,
-    alignItems: 'center',
+    minWidth: 0,
+    justifyContent: 'center',
   },
   rightSlot: {
     flex: 1,
@@ -236,11 +232,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     gap: spacing.sm,
-  },
-  // Truncating title/subtitle block — `flex:1, minWidth:0` lets a long title
-  // ellipsize inside the row instead of pushing the actions off-screen.
-  titleBlock: {
-    flex: 1,
-    minWidth: 0,
   },
 });

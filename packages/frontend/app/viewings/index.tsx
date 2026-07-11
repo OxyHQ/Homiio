@@ -246,7 +246,6 @@ export default function ViewingsPage() {
           options={{
             showBackButton: true,
             title: t('viewings.title'),
-            titlePosition: 'center',
           }}
         />
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
@@ -271,7 +270,6 @@ export default function ViewingsPage() {
         options={{
           showBackButton: true,
           title: t('viewings.title'),
-          titlePosition: 'center',
         }}
       />
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>

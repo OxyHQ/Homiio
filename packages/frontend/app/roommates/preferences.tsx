@@ -256,7 +256,6 @@ export default function RoommatePreferencesPage() {
           options={{
             title: t('roommates.preferencesPage.title'),
             showBackButton: true,
-            titlePosition: 'center',
           }}
         />
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
@@ -281,7 +280,6 @@ export default function RoommatePreferencesPage() {
         options={{
           title: t('roommates.preferencesPage.title'),
           showBackButton: true,
-          titlePosition: 'center',
         }}
       />
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>

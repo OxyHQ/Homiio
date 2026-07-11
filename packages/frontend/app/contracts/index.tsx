@@ -132,7 +132,6 @@ export default function ContractsScreen() {
         <Header
           options={{
             title: t('contracts.list.title'),
-            titlePosition: 'center',
           }}
         />
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
@@ -154,7 +153,6 @@ export default function ContractsScreen() {
       <Header
         options={{
           title: t('contracts.list.title'),
-          titlePosition: 'center',
         }}
       />
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>

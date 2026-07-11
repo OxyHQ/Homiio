@@ -81,7 +81,6 @@ export default function NewContractScreen() {
       options={{
         showBackButton: true,
         title: t('contracts.new.title'),
-        titlePosition: 'center',
       }}
     />
   );
