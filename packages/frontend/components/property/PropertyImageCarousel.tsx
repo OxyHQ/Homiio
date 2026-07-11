@@ -34,9 +34,8 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-
 import { colors } from '@/styles/colors';
+import { IconButton } from '@/components/ui/IconButton';
 import { ZoomableImage } from '@/components/ui/ZoomableImage';
 import {
   type ImageDisplaySource,
@@ -170,55 +169,15 @@ const CarouselPage: React.FC<CarouselPageProps> = ({
       onLongPress={onLongPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      style={[
-        styles.page,
+      style={
         fillWhenUnmeasured && (width <= 0 || height <= 0)
           ? styles.pageFill
-          : { width, height },
-      ]}
+          : { width, height }
+      }
     >
-      <ZoomableImage active={Boolean(imageActive) || pressed} style={styles.pageZoom}>
+      <ZoomableImage active={Boolean(imageActive) || pressed} style={StyleSheet.absoluteFill}>
         <Image source={source} style={styles.image} resizeMode="cover" />
       </ZoomableImage>
-    </Pressable>
-  );
-};
-
-interface NavArrowProps {
-  direction: 'prev' | 'next';
-  onPress: () => void;
-  /** Accessibility label (e.g. "Previous photo"). */
-  accessibilityLabel: string;
-}
-
-/**
- * A single circular chevron button overlaying the photo (web only). Rendered as
- * a sibling of the `FlatList` so its press is its own target and never bubbles
- * to the page tap that opens the detail screen. Owns its own pressed state — a
- * StyleSheet array (not the NativeWind-incompatible function-form `style`)
- * drives the pressed tint, per the project's NativeWind v4 constraint.
- */
-const NavArrow: React.FC<NavArrowProps> = ({ direction, onPress, accessibilityLabel }) => {
-  const [pressed, setPressed] = useState(false);
-  const isPrev = direction === 'prev';
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      style={[
-        styles.navArrow,
-        isPrev ? styles.navArrowLeft : styles.navArrowRight,
-        pressed ? styles.navArrowPressed : null,
-      ]}
-    >
-      <Ionicons
-        name={isPrev ? 'chevron-back' : 'chevron-forward'}
-        size={NAV_ARROW_ICON_SIZE}
-        color={colors.COLOR_BLACK}
-      />
     </Pressable>
   );
 };
@@ -455,10 +414,24 @@ export const PropertyImageCarousel: React.FC<PropertyImageCarouselProps> = ({
           siblings of the FlatList so each is its own press target that never
           bubbles to the page tap that opens the detail. */}
       {showPrevArrow ? (
-        <NavArrow direction="prev" onPress={goPrev} accessibilityLabel="Previous photo" />
+        <IconButton
+          variant="overlay"
+          icon="chevron-back"
+          size={NAV_ARROW_ICON_SIZE}
+          onPress={goPrev}
+          accessibilityLabel="Previous photo"
+          style={[styles.navArrow, styles.navArrowLeft]}
+        />
       ) : null}
       {showNextArrow ? (
-        <NavArrow direction="next" onPress={goNext} accessibilityLabel="Next photo" />
+        <IconButton
+          variant="overlay"
+          icon="chevron-forward"
+          size={NAV_ARROW_ICON_SIZE}
+          onPress={goNext}
+          accessibilityLabel="Next photo"
+          style={[styles.navArrow, styles.navArrowRight]}
+        />
       ) : null}
     </View>
   );
@@ -473,23 +446,12 @@ const styles = StyleSheet.create({
   },
   // The page's size comes from the explicit `width`/`height` props (or the
   // `pageFill` fallback) — never `height: '100%'`, which collapses to 0 on web
-  // against the unsized RN-Web FlatList item wrapper. `overflow: hidden` clips
-  // the cover-resized image to the page bounds.
-  page: {
-    overflow: 'hidden',
-  },
+  // against the unsized RN-Web FlatList item wrapper. No `overflow: hidden`
+  // needed: the `ZoomableImage` mask + the rounded `container` already clip the
+  // cover-resized (and hover-zoomed) photo.
   pageFill: {
     width: '100%',
     height: '100%',
-  },
-  // The masked zoom wrapper fills the page so the photo scales inside the page
-  // bounds (and the carousel's rounded container) without moving the layout.
-  pageZoom: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
   },
   image: {
     width: '100%',
@@ -524,19 +486,20 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: colors.white,
   },
-  // Web hover navigation arrows. Vertically centred over the photo and inset
-  // from each edge, layered above the dots. White circle + subtle shadow +
-  // dark chevron, matching the Airbnb in-card affordance.
+  // Web hover navigation arrows — position + shadow only; the frosted-white
+  // circle, pressed/hover tint, and glyph come from `IconButton variant="overlay"`.
+  // Vertically centred over the photo, inset from each edge, layered above the
+  // dots. `padding: 0` overrides the variant's default padding so the button is
+  // exactly `NAV_ARROW_SIZE`.
   navArrow: {
     position: 'absolute',
     top: '50%',
     width: NAV_ARROW_SIZE,
     height: NAV_ARROW_SIZE,
-    borderRadius: NAV_ARROW_SIZE / 2,
     marginTop: -NAV_ARROW_SIZE / 2,
+    padding: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     zIndex: 2,
     ...(Platform.OS === 'web'
       ? { boxShadow: '0 1px 4px rgba(0,0,0,0.18)' }
@@ -547,10 +510,6 @@ const styles = StyleSheet.create({
   },
   navArrowRight: {
     right: NAV_ARROW_INSET,
-  },
-  navArrowPressed: {
-    backgroundColor: colors.white,
-    opacity: 0.9,
   },
 });
 

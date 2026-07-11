@@ -161,7 +161,7 @@ const getVariantStyles = (variant: PropertyCardVariant) => {
   return variants[variant] || variants.default;
 };
 
-export function PropertyCard({
+export const PropertyCard = React.memo(function PropertyCard({
   // Core data
   property,
 
@@ -233,9 +233,6 @@ export function PropertyCard({
     setPressed(true);
     handlePressIn();
   }, [handlePressIn]);
-  const handleImagePressOut = useCallback(() => {
-    setPressed(false);
-  }, []);
 
   // Web hover on the WHOLE card drives the image zoom (Airbnb-style): one
   // `onPointerEnter/Leave` on the outer container below (they fire on the card's
@@ -255,6 +252,309 @@ export function PropertyCard({
     const created = new Date(createdAt).getTime();
     return Number.isFinite(created) && Date.now() - created <= NEW_LISTING_WINDOW_MS;
   }, [property?.createdAt]);
+
+  // Heavy per-listing derivations, memoized so they don't recompute on every
+  // hover/press re-render (`hovered`/`pressed` flip but these don't depend on
+  // them) or when the infinite feed appends a page and re-renders the row. The
+  // memo guards on `property` so the hook order stays stable across the early
+  // returns below (rules of hooks). Resolves the active browse mode's priced
+  // block, the other offerings, and the flattened display fields.
+  const derived = useMemo(() => {
+    if (!property) return null;
+    // The single primary price/offering this card displays — the ACTIVE browse
+    // mode's priced block (unit fixed per block): a multi-offering listing shows
+    // €1,700/month in Long-term and €110/night in Vacation. Sale shows the asking
+    // price (no per-unit suffix); exchange shows "Free". When the listing doesn't
+    // carry the active offering, it falls back to the first present block.
+    const primaryOffering = resolvePrimaryOffering(
+      property,
+      browseMode,
+      t('listing.exchange.free', 'Free'),
+    );
+    // The OTHER offerings this listing carries (excluding the one shown above)
+    // drive both the floating badges and the subtle "Also available" line.
+    const otherOfferings = resolveOfferingSummaries(property, browseMode);
+    const propertyData = {
+      id: property._id || property.id,
+      title: getPropertyTitle(property),
+      location: getPropertyLocationLabel(property),
+      price: primaryOffering.amount,
+      currency: primaryOffering.currency,
+      priceUnit: primaryOffering.priceUnit,
+      offeringKind: primaryOffering.kind,
+      offeringLabel: primaryOffering.label,
+      type: property.type === 'room' ? 'apartment' : property.type === 'studio' ? 'apartment' : property.type,
+      imageSource: getPropertyImageSource(property, variant === 'compact' ? 'small' : 'medium'),
+      bedrooms: property.bedrooms || 0,
+      bathrooms: property.bathrooms || 0,
+      size: property.squareFootage || 0,
+      sizeUnit: 'm²',
+      isVerified: property.isVerified || false,
+      rating: undefined as number | undefined,
+      reviewCount: undefined as number | undefined,
+    };
+    return { primaryOffering, otherOfferings, propertyData };
+  }, [property, browseMode, variant, t]);
+
+  /**
+   * Badge chrome that floats over the photo (rating, eco/verified, instant book,
+   * plus any caller-supplied badge/overlay). Memoized JSX so it isn't rebuilt on
+   * every hover re-render. Shared verbatim by the carousel media (as `children`)
+   * and the static-image media so the overlays read identically. Every node here
+   * is a non-interactive `View`, so it never introduces a nested `<button>`.
+   */
+  const mediaBadges = useMemo(() => {
+    if (!property || !derived) return null;
+    const { otherOfferings, propertyData } = derived;
+    const isGrid = variant === 'grid';
+    const isCompact = variant === 'compact';
+    const isEco = Boolean(property.isEcoFriendly);
+    const isFairPrice = Boolean(property.priceEthics?.isFairPrice);
+    const finalShowRating = showRating && getVariantStyles(variant).showRating;
+    return (
+      <>
+        {/* Photo-overlay chip stack — ONE absolutely-positioned, flex-driven
+            container in the top-left. Every child is a `MediaChip` (or the
+            rating chip), so they share the same height, radius, padding and
+            frosted backdrop and align on a single row regardless of which are
+            present. Suppressed in the grid variant (photo-first); the grid
+            renders ONLY the freshness chip (rich chips gated on `!isGrid`). */}
+        {!isCompact && (isNew || !isGrid) && (
+          <View style={styles.mediaChipStack}>
+            {isNew ? (
+              <View style={styles.newChip}>
+                <BloomText style={styles.newChipText}>
+                  {t('listing.badge.new', 'New')}
+                </BloomText>
+              </View>
+            ) : null}
+
+            {!isGrid ? (
+              <>
+                {finalShowRating && propertyData.rating ? (
+                  <MediaChip
+                    icon="star"
+                    accent={colors.ratingStar}
+                    label={propertyData.rating.toFixed(1)}
+                  />
+                ) : null}
+
+                {/* Offering chips — "By night" / "For sale" / "Exchange" for each
+                    OTHER offering (the active one is the price). */}
+                {otherOfferings.map((summary) => (
+                  <OfferingBadge key={summary.offering} offering={summary.offering} size="md" />
+                ))}
+
+                {/* Fair price — Homiio ethical + market badge. */}
+                {isFairPrice ? (
+                  <MediaChip
+                    icon="pricetag"
+                    accent={colors.success}
+                    label={t('listing.badge.fairPrice', 'Fair price')}
+                  />
+                ) : null}
+
+                {/* Instant Book (vacation mode only). */}
+                {showInstantBook ? (
+                  <MediaChip
+                    icon="flash"
+                    accent={colors.primarySubtleForeground}
+                    label={t('listing.badge.instantBook', 'Instant book')}
+                  />
+                ) : null}
+
+                {/* Verified — icon-only shield, brand accent. */}
+                {showVerifiedBadge && propertyData.isVerified ? (
+                  <MediaChip icon="shield-checkmark" accent={colors.primarySubtleForeground} />
+                ) : null}
+
+                {/* Eco — icon-only leaf, green accent. */}
+                {isEco ? <MediaChip icon="leaf" accent={colors.success} /> : null}
+              </>
+            ) : null}
+          </View>
+        )}
+
+        {/* Custom Badge Content */}
+        {badgeContent && <View style={styles.customBadge}>{badgeContent as React.ReactNode}</View>}
+
+        {/* Overlay Content */}
+        {overlayContent && <View style={styles.overlay}>{overlayContent as React.ReactNode}</View>}
+      </>
+    );
+  }, [property, derived, variant, showRating, showVerifiedBadge, showInstantBook, isNew, badgeContent, overlayContent, t]);
+
+  /**
+   * The text block below the photo (title, location, features, price, "also
+   * available"). Memoized JSX so it isn't rebuilt on every hover re-render — it
+   * depends only on the listing data + display props, never the hover/press
+   * state.
+   */
+  const textContent = useMemo(() => {
+    if (!derived) return null;
+    const { otherOfferings, propertyData } = derived;
+    const variantStyles = getVariantStyles(variant);
+    const isGrid = variant === 'grid';
+    const isFeatured = variant === 'featured';
+    const finalShowFeatures = showFeatures && variantStyles.showFeatures;
+    const finalShowTypeIcon = showTypeIcon && variantStyles.showTypeIcon;
+    const finalShowPrice = showPrice && (variantStyles.showPrice !== false);
+    const finalTitleLines = titleLines !== undefined ? titleLines : variantStyles.titleLines;
+    const finalLocationLines = locationLines !== undefined ? locationLines : variantStyles.locationLines;
+    // Localized per-unit suffix for the headline (fixed per priced block):
+    // long-term → "month", short-term → "night"; sale/exchange have none.
+    const priceUnitSuffix = propertyData.priceUnit
+      ? propertyData.priceUnit === PriceUnit.NIGHT
+        ? t('listing.offering.perNightUnit', 'night')
+        : t('listing.offering.perMonthUnit', 'month')
+      : '';
+    // "Also available: By night · For sale" — joins the other offerings' labels.
+    const alsoAvailableLabel =
+      otherOfferings.length > 0
+        ? `${t('listing.offering.alsoAvailable', 'Also available')}: ${otherOfferings
+            .map((summary) => t(summary.i18nKey, summary.fallback))
+            .join(' · ')}`
+        : '';
+    // Property type surfaced in the META line below the photo. Icon follows the
+    // former on-photo logic (house → home glyph, else building); the label reuses
+    // the `properties.titles.types.*` vocabulary, falling back to the capitalised
+    // raw type for kinds without a dedicated key.
+    const typeMeta: { icon: IoniconName; label: string } | null = propertyData.type
+      ? {
+          icon: propertyData.type === 'house' ? 'home-outline' : 'business-outline',
+          label: t(
+            `properties.titles.types.${propertyData.type}`,
+            propertyData.type.charAt(0).toUpperCase() + propertyData.type.slice(1),
+          ),
+        }
+      : null;
+    return (
+      <View
+        style={[
+          styles.content,
+          orientation === 'horizontal' ? styles.horizontalContent : null,
+          isGrid ? styles.gridContent : null,
+        ]}
+      >
+        {/* Title */}
+        <ThemedText
+          style={[
+            styles.title,
+            isFeatured ? styles.featuredTitle : null,
+            isGrid ? styles.gridTitle : null,
+          ]}
+          numberOfLines={orientation === 'horizontal' ? undefined : finalTitleLines}
+        >
+          {propertyData.title}
+        </ThemedText>
+
+        {/* Location */}
+        {showLocation && propertyData.location && (
+          <ThemedText
+            style={[
+              styles.location,
+              isFeatured ? styles.featuredLocation : null,
+              orientation === 'horizontal' ? styles.horizontalLocation : null,
+              isGrid ? styles.gridLocation : null,
+            ]}
+            numberOfLines={finalLocationLines}
+          >
+            {propertyData.location}
+          </ThemedText>
+        )}
+
+        {/* Features — suppressed in grid variant to keep cards photo-first */}
+        {finalShowFeatures && !isGrid && (
+          <View style={styles.features}>
+            {/* Property type leads the meta line (moved off the photo). Shown for
+                the variants that previously surfaced the on-photo type icon; the
+                compact variant keeps its own trailing type text below. */}
+            {finalShowTypeIcon && typeMeta && variant !== 'compact' && (
+              <>
+                <View style={styles.typeMeta}>
+                  <Ionicons name={typeMeta.icon} size={13} color={colors.COLOR_BLACK_LIGHT_4} />
+                  <ThemedText style={styles.featureText}>{typeMeta.label}</ThemedText>
+                </View>
+                <ThemedText style={styles.featureSeparator}>•</ThemedText>
+              </>
+            )}
+            <View style={styles.feature}>
+              <ThemedText style={styles.featureText}>
+                {`${propertyData.bedrooms} bed${propertyData.bedrooms !== 1 ? 's' : ''}`}
+              </ThemedText>
+            </View>
+            <ThemedText style={styles.featureSeparator}>•</ThemedText>
+            <View style={styles.feature}>
+              <ThemedText style={styles.featureText}>
+                {`${propertyData.bathrooms} bath${propertyData.bathrooms !== 1 ? 's' : ''}`}
+              </ThemedText>
+            </View>
+            {propertyData.size && propertyData.size > 0 && (
+              <>
+                <ThemedText style={styles.featureSeparator}>•</ThemedText>
+                <View style={styles.feature}>
+                  <ThemedText style={styles.featureText}>
+                    {`${propertyData.size} ${propertyData.sizeUnit}`}
+                  </ThemedText>
+                </View>
+              </>
+            )}
+            {variant === 'compact' && typeMeta && (
+              <>
+                <ThemedText style={styles.featureSeparator}>•</ThemedText>
+                <ThemedText style={styles.featureText}>{typeMeta.label}</ThemedText>
+              </>
+            )}
+          </View>
+        )}
+
+        {/* Price — the ACTIVE browse mode's priced block. Exchange listings have
+            no money price, so they render the "Free" label instead of
+            CurrencyFormatter; sale shows the sale price with NO per-unit suffix;
+            long-term shows `/month` and short-term `/night` (fixed per block). */}
+        {finalShowPrice &&
+          (propertyData.offeringKind === 'exchange'
+            ? propertyData.offeringLabel.length > 0
+            : propertyData.price > 0) && (
+          <View style={[styles.priceContainer, isGrid ? styles.gridPriceContainer : null]}>
+            <BloomText
+              style={[
+                styles.price,
+                isFeatured ? styles.featuredPrice : null,
+                isGrid ? styles.gridPrice : null,
+              ]}
+            >
+              {propertyData.offeringKind === 'exchange' ? (
+                propertyData.offeringLabel
+              ) : (
+                <>
+                  <CurrencyFormatter
+                    amount={propertyData.price}
+                    originalCurrency={propertyData.currency}
+                    showConversion={false}
+                  />
+                  {priceUnitSuffix ? (
+                    <BloomText style={[styles.priceUnit, isGrid ? styles.gridPriceUnit : null]}>
+                      {' / '}{priceUnitSuffix}
+                    </BloomText>
+                  ) : null}
+                </>
+              )}
+            </BloomText>
+          </View>
+        )}
+
+        {/* "Also available: By night · For sale" — the OTHER offerings this
+            multi-offering listing carries. Hidden in the dense grid + compact
+            tiles to keep them photo-first. */}
+        {finalShowPrice && !isGrid && variant !== 'compact' && alsoAvailableLabel ? (
+          <BloomText style={styles.alsoAvailable} numberOfLines={1}>
+            {alsoAvailableLabel}
+          </BloomText>
+        ) : null}
+      </View>
+    );
+  }, [derived, orientation, variant, showLocation, showFeatures, showTypeIcon, showPrice, titleLines, locationLines, t]);
 
   // The horizontal (small single-cover thumbnail) variant is too tight for the
   // save heart — suppress it there by either path (skeleton + real render).
@@ -278,339 +578,41 @@ export function PropertyCard({
     );
   }
 
-  // Early return if property is null/undefined
-  if (!property) {
+  // Early return if property is null/undefined. `derived` is null on exactly the
+  // same condition (it guards on `property`); checking it here narrows it to
+  // non-null for the render below without a non-null assertion.
+  if (!property || !derived) {
     return null;
   }
 
-  // The single primary price/offering this card displays — the ACTIVE browse
-  // mode's priced block (the unit is fixed per block, never reinterpreted): a
-  // multi-offering listing shows €1,700/month in Long-term and €110/night in
-  // Vacation. A sale shows the asking price (no per-unit suffix); an exchange
-  // shows "Free". When the listing doesn't carry the active offering,
-  // `resolvePrimaryOffering` falls back to the first present block.
-  const primaryOffering = resolvePrimaryOffering(
-    property,
-    browseMode,
-    t('listing.exchange.free', 'Free'),
-  );
+  const { propertyData } = derived;
 
-  // The OTHER offerings this multi-offering listing carries (excluding the one
-  // shown above) drive both the floating badges and the subtle "Also available"
-  // line. Empty for single-offering listings.
-  const otherOfferings = resolveOfferingSummaries(property, browseMode);
-
-  // Extract data from property object
-  const propertyData = {
-    id: property._id || property.id,
-    title: getPropertyTitle(property),
-    location: getPropertyLocationLabel(property),
-    price: primaryOffering.amount,
-    currency: primaryOffering.currency,
-    priceUnit: primaryOffering.priceUnit,
-    offeringKind: primaryOffering.kind,
-    offeringLabel: primaryOffering.label,
-    type: property.type === 'room' ? 'apartment' : property.type === 'studio' ? 'apartment' : property.type,
-    imageSource: getPropertyImageSource(property, variant === 'compact' ? 'small' : 'medium'),
-    bedrooms: property.bedrooms || 0,
-    bathrooms: property.bathrooms || 0,
-    size: property.squareFootage || 0,
-    sizeUnit: 'm²',
-    isVerified: property.isVerified || false,
-    rating: undefined as number | undefined,
-    reviewCount: undefined as number | undefined,
-  };
-
-  // Localized per-unit suffix for the headline (fixed per priced block):
-  // long-term → "month", short-term → "night"; sale/exchange have none.
-  const priceUnitSuffix = propertyData.priceUnit
-    ? propertyData.priceUnit === PriceUnit.NIGHT
-      ? t('listing.offering.perNightUnit', 'night')
-      : t('listing.offering.perMonthUnit', 'month')
-    : '';
-
-  // "Also available: By night · For sale" — joins the other offerings' labels.
-  const alsoAvailableLabel =
-    otherOfferings.length > 0
-      ? `${t('listing.offering.alsoAvailable', 'Also available')}: ${otherOfferings
-          .map((summary) => t(summary.i18nKey, summary.fallback))
-          .join(' · ')}`
-      : '';
-
-  // Property type surfaced in the META line below the photo (declutters the
-  // photo — the type icon no longer floats over the image). Icon follows the
-  // former on-photo logic (house → home glyph, everything else → building);
-  // the label reuses the `properties.titles.types.*` vocabulary, falling back to
-  // the capitalised raw type for kinds without a dedicated key.
-  const typeMeta: { icon: IoniconName; label: string } | null = propertyData.type
-    ? {
-        icon: propertyData.type === 'house' ? 'home-outline' : 'business-outline',
-        label: t(
-          `properties.titles.types.${propertyData.type}`,
-          propertyData.type.charAt(0).toUpperCase() + propertyData.type.slice(1),
-        ),
-      }
-    : null;
-
-  const isEco = Boolean(property.isEcoFriendly);
-  const isFairPrice = Boolean(property.priceEthics?.isFairPrice);
-  const isFeatured = variant === 'featured';
   const isGrid = variant === 'grid';
-  const isCompact = variant === 'compact';
-  const propertyWithSavedHint = property as PropertyWithSavedHint;
   const isPropertySavedState = propertyData.id
     ? isInitialized
       ? isPropertySaved(propertyData.id)
-      : propertyWithSavedHint.isSaved ?? false
+      : (property as PropertyWithSavedHint).isSaved ?? false
     : false;
 
   /**
-   * Grid cards present a photo-first layout. Long-term flats look better
-   * square (more wall surface visible), vacation rentals breathe in 4:3
-   * so the landscape framing reads. Featured/default carousels keep
-   * their existing square aspect.
+   * Grid cards present a photo-first layout. Long-term flats look better square
+   * (more wall surface visible), vacation rentals breathe in 4:3 so the
+   * landscape framing reads. Featured/default carousels keep their existing
+   * square aspect.
    */
   const gridAspectRatio = mode === 'vacation' ? 4 / 3 : 1;
 
   /**
-   * The swipeable in-card carousel only makes sense for the full-bleed,
-   * vertical photo box. Horizontal rows show a small square thumbnail and the
-   * tiny `compact` tile is too small to page through, so both keep the single
-   * cover image. The carousel itself renders a static photo when the listing
-   * has 0–1 images, so this gate is purely about *where* a pager belongs.
+   * The swipeable in-card carousel only makes sense for the full-bleed, vertical
+   * photo box. Horizontal rows show a small square thumbnail and the tiny
+   * `compact` tile is too small to page through, so both keep the single cover
+   * image. The carousel renders a static photo for 0–1 images, so this gate is
+   * purely about *where* a pager belongs.
    */
   const useCarousel =
     enableImageCarousel && orientation === 'vertical' && variant !== 'compact';
   const mediaAspectRatio = isGrid ? gridAspectRatio : 1;
-
-  // Get variant-specific styles
-  const variantStyles = getVariantStyles(variant);
-
-  // Apply variant-specific overrides
-  const finalImageHeight = imageHeight || variantStyles.imageHeight;
-  const finalShowFeatures = showFeatures && variantStyles.showFeatures;
-  const finalShowTypeIcon = showTypeIcon && variantStyles.showTypeIcon;
-  const finalShowRating = showRating && variantStyles.showRating;
-  const finalShowPrice = showPrice && (variantStyles.showPrice !== false);
-  const finalTitleLines = titleLines !== undefined ? titleLines : variantStyles.titleLines;
-  const finalLocationLines = locationLines !== undefined ? locationLines : variantStyles.locationLines;
-
-  /**
-   * Badge chrome that floats over the photo (rating, eco/verified, instant
-   * book, type, external source, plus any caller-supplied badge/overlay).
-   * Shared verbatim by the carousel media (as `children`) and the static-image
-   * media so the overlays read identically regardless of which path renders.
-   * Every node here is a non-interactive `View`, so it never introduces a
-   * nested `<button>` on web.
-   */
-  const mediaBadges = (
-    <>
-      {/* Photo-overlay chip stack — ONE absolutely-positioned, flex-driven
-          container in the top-left. Every child is a `MediaChip` (or the
-          rating chip), so they share the same height, radius, padding and
-          frosted backdrop and align on a single row regardless of which are
-          present — absent chips leave no gap, present ones never collide, and
-          there are no per-badge magic offsets. Suppressed in the grid variant
-          to keep those cards photo-first. The stack lives in the top-LEFT, the
-          opposite corner from the save heart (top-right), so they never
-          overlap; the carousel dots sit bottom-centre, also clear.
-
-          Order (freshness leads, then offerings, then provenance/status): new →
-          rating → offerings → instant book → verified → eco. The compact
-          ("small") card is too small to host any of this — its photo shows only
-          the save heart — so the whole stack is suppressed on compact. The grid
-          variant stays photo-first, so it renders ONLY the freshness chip (the
-          rich chips are gated on `!isGrid`). */}
-      {!isCompact && (isNew || !isGrid) && (
-        <View style={styles.mediaChipStack}>
-          {isNew ? (
-            <View style={styles.newChip}>
-              <BloomText style={styles.newChipText}>
-                {t('listing.badge.new', 'New')}
-              </BloomText>
-            </View>
-          ) : null}
-
-          {!isGrid ? (
-            <>
-          {finalShowRating && propertyData.rating ? (
-            <MediaChip
-              icon="star"
-              accent={colors.ratingStar}
-              label={propertyData.rating.toFixed(1)}
-            />
-          ) : null}
-
-          {/* Offering chips — "By night" / "For sale" / "Exchange" for each
-              OTHER offering this listing carries (the active one is the price). */}
-          {otherOfferings.map((summary) => (
-            <OfferingBadge key={summary.offering} offering={summary.offering} size="md" />
-          ))}
-
-          {/* Fair price — Homiio ethical + market badge. */}
-          {isFairPrice ? (
-            <MediaChip
-              icon="pricetag"
-              accent={colors.success}
-              label={t('listing.badge.fairPrice', 'Fair price')}
-            />
-          ) : null}
-
-          {/* Instant Book (vacation mode only). */}
-          {showInstantBook ? (
-            <MediaChip
-              icon="flash"
-              accent={colors.primarySubtleForeground}
-              label={t('listing.badge.instantBook', 'Instant book')}
-            />
-          ) : null}
-
-          {/* Verified — icon-only shield, brand accent. */}
-          {showVerifiedBadge && propertyData.isVerified ? (
-            <MediaChip icon="shield-checkmark" accent={colors.primarySubtleForeground} />
-          ) : null}
-
-          {/* Eco — icon-only leaf, green accent. */}
-          {isEco ? <MediaChip icon="leaf" accent={colors.success} /> : null}
-            </>
-          ) : null}
-        </View>
-      )}
-
-      {/* Custom Badge Content */}
-      {badgeContent && <View style={styles.customBadge}>{badgeContent as React.ReactNode}</View>}
-
-      {/* Overlay Content */}
-      {overlayContent && <View style={styles.overlay}>{overlayContent as React.ReactNode}</View>}
-    </>
-  );
-
-  const textContent = (
-    <View
-      style={[
-        styles.content,
-        orientation === 'horizontal' ? styles.horizontalContent : null,
-        isGrid ? styles.gridContent : null,
-      ]}
-    >
-      {/* Title */}
-      <ThemedText
-        style={[
-          styles.title,
-          isFeatured ? styles.featuredTitle : null,
-          isGrid ? styles.gridTitle : null,
-        ]}
-        numberOfLines={orientation === 'horizontal' ? undefined : finalTitleLines}
-      >
-        {propertyData.title}
-      </ThemedText>
-
-      {/* Location */}
-      {showLocation && propertyData.location && (
-        <ThemedText
-          style={[
-            styles.location,
-            isFeatured ? styles.featuredLocation : null,
-            orientation === 'horizontal' ? styles.horizontalLocation : null,
-            isGrid ? styles.gridLocation : null,
-          ]}
-          numberOfLines={finalLocationLines}
-        >
-          {propertyData.location}
-        </ThemedText>
-      )}
-
-      {/* Features — suppressed in grid variant to keep cards photo-first */}
-      {finalShowFeatures && !isGrid && (
-        <View style={styles.features}>
-          {/* Property type leads the meta line (moved off the photo). Shown for
-              the variants that previously surfaced the on-photo type icon; the
-              compact variant keeps its own trailing type text below. */}
-          {finalShowTypeIcon && typeMeta && variant !== 'compact' && (
-            <>
-              <View style={styles.typeMeta}>
-                <Ionicons name={typeMeta.icon} size={13} color={colors.COLOR_BLACK_LIGHT_4} />
-                <ThemedText style={styles.featureText}>{typeMeta.label}</ThemedText>
-              </View>
-              <ThemedText style={styles.featureSeparator}>•</ThemedText>
-            </>
-          )}
-          <View style={styles.feature}>
-            <ThemedText style={styles.featureText}>
-              {`${propertyData.bedrooms} bed${propertyData.bedrooms !== 1 ? 's' : ''}`}
-            </ThemedText>
-          </View>
-          <ThemedText style={styles.featureSeparator}>•</ThemedText>
-          <View style={styles.feature}>
-            <ThemedText style={styles.featureText}>
-              {`${propertyData.bathrooms} bath${propertyData.bathrooms !== 1 ? 's' : ''}`}
-            </ThemedText>
-          </View>
-          {propertyData.size && propertyData.size > 0 && (
-            <>
-              <ThemedText style={styles.featureSeparator}>•</ThemedText>
-              <View style={styles.feature}>
-                <ThemedText style={styles.featureText}>
-                  {`${propertyData.size} ${propertyData.sizeUnit}`}
-                </ThemedText>
-              </View>
-            </>
-          )}
-          {variant === 'compact' && typeMeta && (
-            <>
-              <ThemedText style={styles.featureSeparator}>•</ThemedText>
-              <ThemedText style={styles.featureText}>{typeMeta.label}</ThemedText>
-            </>
-          )}
-        </View>
-      )}
-
-      {/* Price — the ACTIVE browse mode's priced block. Exchange listings have
-          no money price, so they render the "Free" label instead of
-          CurrencyFormatter; sale shows the sale price with NO per-unit suffix;
-          long-term shows `/month` and short-term `/night` (fixed per block). */}
-      {finalShowPrice &&
-        (propertyData.offeringKind === 'exchange'
-          ? propertyData.offeringLabel.length > 0
-          : propertyData.price > 0) && (
-        <View style={[styles.priceContainer, isGrid ? styles.gridPriceContainer : null]}>
-          <BloomText
-            style={[
-              styles.price,
-              isFeatured ? styles.featuredPrice : null,
-              isGrid ? styles.gridPrice : null,
-            ]}
-          >
-            {propertyData.offeringKind === 'exchange' ? (
-              propertyData.offeringLabel
-            ) : (
-              <>
-                <CurrencyFormatter
-                  amount={propertyData.price}
-                  originalCurrency={propertyData.currency}
-                  showConversion={false}
-                />
-                {priceUnitSuffix ? (
-                  <BloomText style={[styles.priceUnit, isGrid ? styles.gridPriceUnit : null]}>
-                    {' / '}{priceUnitSuffix}
-                  </BloomText>
-                ) : null}
-              </>
-            )}
-          </BloomText>
-        </View>
-      )}
-
-      {/* "Also available: By night · For sale" — the OTHER offerings this
-          multi-offering listing carries. Hidden in the dense grid + compact
-          tiles to keep them photo-first. */}
-      {finalShowPrice && !isGrid && variant !== 'compact' && alsoAvailableLabel ? (
-        <BloomText style={styles.alsoAvailable} numberOfLines={1}>
-          {alsoAvailableLabel}
-        </BloomText>
-      ) : null}
-    </View>
-  );
+  const finalImageHeight = imageHeight || getVariantStyles(variant).imageHeight;
 
   return (
     <View
@@ -665,7 +667,7 @@ export function PropertyCard({
           ]}
           onPress={onPress}
           onPressIn={handleImagePressIn}
-          onPressOut={handleImagePressOut}
+          onPressOut={() => setPressed(false)}
           onLongPress={onLongPress}
           accessibilityRole="button"
           accessibilityLabel={propertyData.title}
@@ -686,7 +688,7 @@ export function PropertyCard({
             {/* The photo zooms inside the rounded mask on hover (anywhere on the
                 card) / press; the card never moves. Badges are siblings of the
                 zoom so they stay put. */}
-            <ZoomableImage active={imageActive} style={styles.imageZoom}>
+            <ZoomableImage active={imageActive} style={StyleSheet.absoluteFill}>
               <Image source={propertyData.imageSource} style={styles.image} resizeMode="cover" />
             </ZoomableImage>
             {mediaBadges}
@@ -766,7 +768,7 @@ export function PropertyCard({
       {footerContent && <View style={styles.footer}>{footerContent as React.ReactNode}</View>}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   // ===== BASE STYLES (shared across all variants) =====
@@ -810,15 +812,6 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
-  },
-  // The masked zoom wrapper fills the image box so the photo scales inside the
-  // card's rounded corners without nudging the layout.
-  imageZoom: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
   },
   content: {
     flex: 1,
