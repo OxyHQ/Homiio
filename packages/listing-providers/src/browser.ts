@@ -19,6 +19,7 @@
  */
 
 import { BROWSER_USER_AGENT } from './http';
+import { isAllowedBrowserRequest, portalDomainFromUrl } from './requestFilter';
 import {
   BLOCKED_BROWSER_RESOURCE_TYPES,
   createProxySessionId,
@@ -60,6 +61,7 @@ interface PwGotoOptions {
 
 interface PwRouteRequest {
   resourceType(): string;
+  url(): string;
 }
 
 interface PwRoute {
@@ -253,9 +255,15 @@ export class PlaywrightBrowserPool implements UrlFetcher {
       context = await browser.newContext(contextOptions);
       const page = await context.newPage();
       if (this.blockAssets) {
+        const portalDomain = portalDomainFromUrl(url);
         await page.route('**/*', async (route) => {
           try {
-            if (BLOCKED_BROWSER_RESOURCE_TYPES.has(route.request().resourceType())) {
+            const request = route.request();
+            if (BLOCKED_BROWSER_RESOURCE_TYPES.has(request.resourceType())) {
+              await route.abort();
+              return;
+            }
+            if (portalDomain && !isAllowedBrowserRequest(request.url(), portalDomain)) {
               await route.abort();
               return;
             }
