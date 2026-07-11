@@ -67,6 +67,20 @@ export default function () {
   router.get('/reviews/address/:addressId', asyncHandler(reviewController.getReviewsByAddress));
   router.get('/reviews/address/:addressId/stats', asyncHandler(reviewController.getAddressReviewStats));
 
+  // Public review-explore aggregations (cities → neighborhoods → buildings).
+  // Coverage-only stats; no per-review reads here. Declared as distinct literal
+  // segments so they don't collide with `/reviews/address/...` above.
+  router.get('/reviews/explore', asyncHandler(reviewController.getExploreCities));
+  router.get('/reviews/explore/city/:cityId', asyncHandler(reviewController.getExploreCity));
+  router.get('/reviews/explore/neighborhood/:neighborhoodId', asyncHandler(reviewController.getExploreNeighborhood));
+
+  // Public agency profile reads. `/agencies/search` is declared BEFORE the
+  // `/agencies/:slug` catch so "search" is never captured as a slug.
+  router.get('/agencies/search', asyncHandler(reviewController.searchAgencies));
+  router.get('/agencies/:slug', asyncHandler(reviewController.getAgencyBySlug));
+  router.get('/agencies/:slug/reviews', asyncHandler(reviewController.getAgencyReviews));
+  router.get('/agencies/:slug/properties', asyncHandler(reviewController.getAgencyProperties));
+
   // Public self-hosted image store: serve a processed image's bytes by its
   // bucket-relative key (used when object storage is not configured). Images are
   // public assets — render-time photos must load without a token — so this lives

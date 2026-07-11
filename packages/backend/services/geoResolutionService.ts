@@ -122,6 +122,17 @@ function writeResolutionCache(key: string, value: ResolvedGeo): void {
   resolutionCache.set(key, value);
 }
 
+/**
+ * Drop every cached resolution. The cache short-circuits geo id resolution
+ * WITHOUT re-upserting the underlying Country/Region/City/Neighborhood docs, so
+ * a test that wipes those collections between cases must reset it — otherwise a
+ * later resolution returns an id for a now-deleted doc. Not used in production
+ * (geo docs are never deleted), so this is purely a test-support hook.
+ */
+export function clearResolutionCache(): void {
+  resolutionCache.clear();
+}
+
 /** A stable cache key for a resolution request. */
 function cacheKeyFor(input: ResolveGeoInput): string {
   const coordKey = input.coordinates

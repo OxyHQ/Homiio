@@ -160,6 +160,8 @@ export interface IProperty extends Document {
   sourcedByPartner?: Types.ObjectId;
   /** Audit copy of the referral code captured at create time (partners may rotate codes). */
   sourcedByReferralCode?: string;
+  /** Relational Agency link (resolved from portal contact agency name on external listings). */
+  agencyId?: Types.ObjectId;
   /** Server-computed ethical + market price score. */
   priceEthics?: Omit<PropertyPriceEthics, 'scoredAt'> & { scoredAt: Date };
   /** Populated runtime virtual added by the `toJSON`/`toObject` transform when `addressId` is populated. */

@@ -41,6 +41,8 @@ import type {
   IExchangeRequest,
   IExchangeReview,
   IListingReport,
+  IAgency,
+  IAgencyModel,
   IPartner,
   ICommission,
   IImage,
@@ -76,6 +78,7 @@ const NotificationModel = require('./schemas/NotificationSchema') as Model<INoti
 const ExchangeRequestModel = require('./schemas/ExchangeRequestSchema') as Model<IExchangeRequest>;
 const ExchangeReviewModel = require('./schemas/ExchangeReviewSchema') as Model<IExchangeReview>;
 const ListingReportModel = require('./schemas/ListingReportSchema') as Model<IListingReport>;
+const AgencyModel = require('./schemas/AgencySchema') as IAgencyModel;
 const PartnerModel = require('./schemas/PartnerSchema') as Model<IPartner>;
 const CommissionModel = require('./schemas/CommissionSchema') as Model<ICommission>;
 const ImageModel = require('./schemas/ImageSchema') as Model<IImage>;
@@ -109,6 +112,7 @@ export const Notification = NotificationModel;
 export const ExchangeRequest = ExchangeRequestModel;
 export const ExchangeReview = ExchangeReviewModel;
 export const ListingReport = ListingReportModel;
+export const Agency = AgencyModel;
 export const Partner = PartnerModel;
 export const Commission = CommissionModel;
 export const Image = ImageModel;
@@ -151,6 +155,8 @@ export type {
   IExchangeRequest,
   IExchangeReview,
   IListingReport,
+  IAgency,
+  IAgencyModel,
   IPartner,
   ICommission,
   IImage,
@@ -191,6 +197,7 @@ module.exports = {
   ExchangeRequest: ExchangeRequestModel,
   ExchangeReview: ExchangeReviewModel,
   ListingReport: ListingReportModel,
+  Agency: AgencyModel,
   Partner: PartnerModel,
   Commission: CommissionModel,
   Image: ImageModel,
