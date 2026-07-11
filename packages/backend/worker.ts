@@ -47,8 +47,13 @@ import {
 
 const logger = new Logger('ListingWorker');
 
-/** Fetch-worker concurrency (source portals are rate-sensitive; keep it small). */
-const FETCH_CONCURRENCY = parseInt(process.env.LISTING_FETCH_CONCURRENCY || '2', 10);
+/**
+ * Fetch-worker concurrency. The HTTP tier fetches through the residential proxy
+ * WITHOUT a sticky session (fetchHttp passes no sessionId), so Evomi rotates the
+ * exit IP per request — a higher fan-out no longer trips a single IP's rate
+ * limit. Tune via LISTING_FETCH_CONCURRENCY.
+ */
+const FETCH_CONCURRENCY = parseInt(process.env.LISTING_FETCH_CONCURRENCY || '6', 10);
 
 /**
  * Discover-worker concurrency. With ~15 providers and per-city scopes for the
@@ -159,19 +164,29 @@ function discoverCitiesForProvider(providerId: string): string[] | undefined {
 
 /** The discover scopes to enqueue on boot: one per (provider, market), or per-city for browser-heavy portals. */
 function bootDiscoverJobs(): DiscoverJobData[] {
-  return registry.all().flatMap((provider) =>
+  // One scope list per provider (per-city for browser-heavy portals, else market-wide).
+  const perProvider = registry.all().map((provider) =>
     provider.markets.flatMap((market) => {
       const perCity = discoverCitiesForProvider(provider.id);
       if (perCity) {
-        return perCity.map((city) => ({
-          provider: provider.id,
-          market,
-          city,
-        }));
+        return perCity.map((city) => ({ provider: provider.id, market, city }));
       }
       return [{ provider: provider.id, market }];
     }),
   );
+  // Round-robin interleave: scope[0] of every provider, then scope[1], … A single
+  // high-scope portal (fotocasa/habitaclia = ~68 cities each) can no longer
+  // monopolise the queue head — every provider gets a discover turn in the first
+  // round, and consecutive jobs hit different portals (gentler on each rate limit).
+  const interleaved: DiscoverJobData[] = [];
+  const maxLen = perProvider.reduce((max, list) => Math.max(max, list.length), 0);
+  for (let i = 0; i < maxLen; i += 1) {
+    for (const list of perProvider) {
+      const scope = list[i];
+      if (scope) interleaved.push(scope);
+    }
+  }
+  return interleaved;
 }
 
 /** Run the whole pipeline inline (no Redis): discover → fetch → ingest. */
