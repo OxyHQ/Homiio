@@ -14,6 +14,7 @@ import { IngestionService } from '../../services/ingestion/IngestionService';
 import { ExternalMediaIngest } from '../../services/ingestion/ExternalMediaIngest';
 import type { ImageBufferInput } from '../../services/imageUploadService';
 import { forwardGeocode, reverseGeocode } from '../../services/geocodingService';
+import { clearResolutionCache } from '../../services/geoResolutionService';
 
 jest.mock('../../services/geocodingService', () => ({
   forwardGeocode: jest.fn(),
@@ -54,6 +55,9 @@ function buildIngestionService(): IngestionService {
 beforeEach(() => {
   mockedForwardGeocode.mockReset();
   mockedReverseGeocode.mockReset();
+  // Collections are wiped after every test; drop the in-process geo resolution
+  // cache too so a resolution never returns an id for a now-deleted geo doc.
+  clearResolutionCache();
 });
 
 describe('IngestionService.resolveAddress geocode fallbacks', () => {
@@ -110,6 +114,77 @@ describe('IngestionService.resolveAddress geocode fallbacks', () => {
     const property = await Property.findById(result.propertyId);
     expect(property).not.toBeNull();
     expect(property.get('addressId')).toBeTruthy();
+  });
+
+  it('reuses a stored City centroid for a placeholder-street listing without a second geocode', async () => {
+    // A high-volume, real prod skip class: immobilienscout24 emits a placeholder
+    // street ("Die vollständige Adresse …") with a REAL city — the street geocode
+    // can never resolve, and under a Nominatim flood the city retry was rate-limited
+    // too, so the listing was dropped. Once the city is known to us, ingest must
+    // never hit Nominatim for it again.
+    mockedReverseGeocode.mockResolvedValue({ success: false, error: 'no address' });
+
+    const service = buildIngestionService();
+
+    // Seed the city from a listing that carries portal coordinates (no geocode).
+    await service.ingest({
+      ...baseListing,
+      sourceId: 'hh-seed',
+      address: {
+        street: 'Reeperbahn 1',
+        city: 'Hamburg',
+        state: 'Hamburg',
+        country: 'Germany',
+        countryCode: 'DE',
+        coordinates: { lat: 53.5503, lng: 9.9937 },
+      },
+    });
+    expect(mockedForwardGeocode).not.toHaveBeenCalled();
+
+    // Now a placeholder-street listing in the SAME city with no coordinates.
+    // The street geocode fails; the city centroid must come from the DB City doc.
+    mockedForwardGeocode.mockResolvedValue({ success: false, error: 'No coordinates found' });
+    const result = await service.ingest({
+      ...baseListing,
+      sourceId: 'hh-vague',
+      address: {
+        street: 'Die vollständige Adresse der Immobilie erhältst du vom Anbieter.',
+        city: 'Hamburg',
+        state: 'Hamburg',
+        country: 'Germany',
+        countryCode: 'DE',
+      },
+    });
+
+    expect(result.status).toBe('created');
+    // Only the (failing) street query hit the geocoder — the city centroid was
+    // read from the DB, so NO city-level forward geocode was issued.
+    expect(mockedForwardGeocode).toHaveBeenCalledTimes(1);
+    const cityGeocodes = mockedForwardGeocode.mock.calls.filter((call) =>
+      /^Hamburg,/.test(String(call[0])),
+    );
+    expect(cityGeocodes).toHaveLength(0);
+
+    const property = await Property.findById(result.propertyId);
+    const address = await Address.findById(property.get('addressId'));
+    expect(address?.coordinates?.coordinates).toEqual([9.9937, 53.5503]);
+  });
+
+  it('skips a listing only when the city cannot be resolved by any means', async () => {
+    // Street AND city geocode both fail, and the country name is unrecognised so
+    // no DB city can be found — the one remaining case where we still skip.
+    mockedForwardGeocode.mockResolvedValue({ success: false, error: 'No coordinates found' });
+    mockedReverseGeocode.mockResolvedValue({ success: false, error: 'No address found' });
+
+    const listing: NormalizedListing = {
+      ...baseListing,
+      sourceId: 'unresolvable-city',
+      address: { street: 'Some Street', city: 'Zzqxville', country: 'Nowherestan' },
+    };
+
+    await expect(buildIngestionService().ingest(listing)).rejects.toThrow(
+      /Could not resolve coordinates/,
+    );
   });
 
   it('persists with postal fallback when geocoders return none', async () => {

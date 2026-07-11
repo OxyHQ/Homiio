@@ -114,6 +114,15 @@ export interface Config {
     userAgent: string;
     /** Optional Referer header, also accepted by the OSM usage policy. */
     referer?: string;
+    /**
+     * Minimum milliseconds between Nominatim request *starts*. The OSM usage
+     * policy caps the public endpoint at ~1 req/sec, so every network call is
+     * serialized behind this interval — both to stay within policy AND to avoid
+     * self-inflicted 429s when a high-volume ingest floods the geocoder. Set to
+     * `0` (via `GEOCODING_MIN_INTERVAL_MS`) when pointing at a self-hosted
+     * Nominatim that has no such limit.
+     */
+    minIntervalMs: number;
   };
   overpass: {
     /**
@@ -293,6 +302,7 @@ const config: Config = {
     // OSM requires a descriptive, identifying User-Agent on every request.
     userAgent: process.env.GEOCODING_USER_AGENT || 'Homiio/1.0 (+https://homiio.com)',
     referer: process.env.GEOCODING_REFERER || 'https://homiio.com',
+    minIntervalMs: parseInt(process.env.GEOCODING_MIN_INTERVAL_MS || '1000', 10),
   },
 
   // Overpass Configuration (OpenStreetMap POI lookup — free, no API key)

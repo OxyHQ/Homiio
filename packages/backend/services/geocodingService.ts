@@ -116,6 +116,33 @@ const nominatimHeaders = (): Record<string, string> => {
   return headers;
 };
 
+/**
+ * Serialize Nominatim network requests so their *starts* are spaced by at least
+ * `config.geocoding.minIntervalMs`. Two goals: honour the OSM usage policy
+ * (~1 req/sec on the public endpoint) AND stop a high-volume ingest from
+ * self-inflicting 429s — the failure mode that silently dropped external
+ * listings whose address geocode raced a flood of concurrent lookups. Cache
+ * hits never reach this gate; only real network calls queue behind it. The
+ * chain swallows its own settle so one slot can never wedge the queue.
+ */
+let nominatimQueue: Promise<void> = Promise.resolve();
+let lastNominatimRequestAt = 0;
+
+function acquireNominatimSlot(): Promise<void> {
+  const slot = nominatimQueue.then(async () => {
+    const minInterval = config.geocoding.minIntervalMs;
+    if (minInterval > 0) {
+      const wait = lastNominatimRequestAt + minInterval - Date.now();
+      if (wait > 0) {
+        await new Promise((resolve) => setTimeout(resolve, wait));
+      }
+    }
+    lastNominatimRequestAt = Date.now();
+  });
+  nominatimQueue = slot.catch(() => undefined);
+  return slot;
+}
+
 /** Map a Nominatim place onto our flat AddressData DTO. */
 const toAddressData = (place: NominatimPlace): AddressData => {
   const address = place.address ?? {};
@@ -179,6 +206,7 @@ export async function reverseGeocode(longitude: number, latitude: number): Promi
     url.searchParams.set('lon', String(longitude));
     url.searchParams.set('addressdetails', '1');
 
+    await acquireNominatimSlot();
     const response = await fetch(url.toString(), { headers: nominatimHeaders() });
     if (!response.ok) {
       throw new Error(`Nominatim API error: ${response.status} ${response.statusText}`);
@@ -221,6 +249,7 @@ export async function forwardGeocode(address: string): Promise<GeocodingResult> 
     url.searchParams.set('addressdetails', '1');
     url.searchParams.set('limit', '1');
 
+    await acquireNominatimSlot();
     const response = await fetch(url.toString(), { headers: nominatimHeaders() });
     if (!response.ok) {
       throw new Error(`Nominatim API error: ${response.status} ${response.statusText}`);

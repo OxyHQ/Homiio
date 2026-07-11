@@ -298,4 +298,83 @@ export async function resolveGeo(input: ResolveGeoInput): Promise<ResolvedGeo> {
   return resolved;
 }
 
-export default { resolveGeo };
+/** Read a City doc's stored centroid as GeoJSON `[lng, lat]`, if valid. */
+function cityDocCentroid(doc: CityDoc | null): [number, number] | null {
+  const lat = doc?.coordinates?.lat;
+  const lng = doc?.coordinates?.lng;
+  if (typeof lat !== 'number' || typeof lng !== 'number') return null;
+  return sanitizeGeoJsonCoordinates([lng, lat]) ?? null;
+}
+
+/**
+ * Resolve APPROXIMATE coordinates for a place from its city, without a
+ * per-listing external geocode. Used as the ingest coordinate fallback so an
+ * external listing is NEVER dropped for want of a precise street geocode: the
+ * city is essentially always known (discovery is city-scoped), and a
+ * city-centroid point is an acceptable location for an aggregator listing.
+ *
+ * Resolution order (cheapest first):
+ *   1. An existing City doc's stored centroid — ZERO external calls. A burst of
+ *      same-city listings therefore triggers at most ONE city geocode: the first
+ *      persists the centroid via {@link resolveGeo}'s City upsert, the rest read
+ *      it straight back from the DB (surviving the geocoder's in-memory cache
+ *      eviction and process restarts).
+ *   2. A single forward geocode of the city query (throttled + cached in
+ *      {@link forwardGeocode}, so it is reused across every listing in the city).
+ *
+ * Returns GeoJSON `[lng, lat]`, or `null` when no city name is available or the
+ * city cannot be resolved by any means.
+ */
+export async function resolveCityCentroid(names: GeoNames): Promise<[number, number] | null> {
+  const cityName = names.city?.trim();
+  if (!cityName) return null;
+
+  // 1) DB-first: reuse a City centroid we already own (no external geocode).
+  //    Resolve the country code WITHOUT the throwing `resolveCountryCodeAndName`
+  //    helper — an unrecognised country name here is not exceptional, it just
+  //    means we skip the DB shortcut and fall through to the geocoder.
+  const explicitCode = names.countryCode?.trim().toUpperCase();
+  const countryCode =
+    explicitCode && /^[A-Z]{2}$/.test(explicitCode)
+      ? explicitCode
+      : names.country
+        ? countryNameToCode(names.country)
+        : undefined;
+  if (countryCode) {
+    const { Country, Region, City } = models();
+    const country = await Country.findOne({ code: countryCode }).select('_id').lean<{
+      _id: Types.ObjectId;
+    } | null>();
+    if (country) {
+      const stateName = names.state?.trim();
+      let cityDoc: CityDoc | null = null;
+      if (stateName) {
+        const region = await Region.findOne({ countryId: country._id, name: stateName })
+          .select('_id')
+          .lean<{ _id: Types.ObjectId } | null>();
+        if (region) {
+          cityDoc = await City.findOne({ regionId: region._id, name: cityName })
+            .select('coordinates')
+            .lean<CityDoc | null>();
+        }
+      }
+      if (!cityDoc) {
+        cityDoc = await City.findOne({ countryId: country._id, name: cityName })
+          .select('coordinates')
+          .lean<CityDoc | null>();
+      }
+      const centroid = cityDocCentroid(cityDoc);
+      if (centroid) return centroid;
+    }
+  }
+
+  // 2) One forward geocode of the city (cached, so reused across the whole city).
+  const query = [cityName, names.state, names.country].filter(Boolean).join(', ');
+  const geocoded = await forwardGeocode(query);
+  if (geocoded.success && geocoded.data?.coordinates) {
+    return sanitizeGeoJsonCoordinates(geocoded.data.coordinates) ?? null;
+  }
+  return null;
+}
+
+export default { resolveGeo, resolveCityCentroid };
