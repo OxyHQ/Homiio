@@ -28,6 +28,7 @@ export interface ImmowebRawListing {
   bathrooms?: number;
   squareMeters?: number;
   yearBuilt?: number;
+  amenities?: string[];
   hasElevator?: boolean;
   hasGarden?: boolean;
   hasBalcony?: boolean;
@@ -181,6 +182,57 @@ function featurePresent(flag: unknown, surface: unknown): boolean | undefined {
 }
 
 /**
+ * Immoweb detail JSON exposes ~30 boolean amenity flags on `property.has*`.
+ * Map the ones we recognize to the canonical amenity slugs the rest of the
+ * pipeline speaks (matching `parse/jsonLd.ts` aliases + ingest `deriveFeatures`
+ * keywords: `elevator`/`terrace`/`garden`/`pool`/`storage`/`air_conditioning`).
+ * The ingest promotes `elevator`→hasElevator, `terrace`→hasBalcony,
+ * `garden`→hasGarden from this array; other slugs surface as amenity tags.
+ */
+const IMMOWEB_AMENITY_FLAGS: Readonly<Record<string, string>> = {
+  hasLift: 'elevator',
+  hasTerrace: 'terrace',
+  hasGarden: 'garden',
+  hasBasement: 'storage',
+  hasLaundryRoom: 'laundry',
+  hasArmoredDoor: 'armored_door',
+  hasAttic: 'attic',
+  hasInternet: 'internet',
+  hasVisiophone: 'visiophone',
+  hasAirConditioning: 'air_conditioning',
+  hasSwimmingPool: 'pool',
+  hasFitnessRoom: 'gym',
+  hasSauna: 'sauna',
+  hasJacuzzi: 'jacuzzi',
+  hasDisabledAccess: 'disabled_access',
+  hasCableTV: 'cable_tv',
+};
+
+/**
+ * Build the canonical amenity slug list from Immoweb's `has*` boolean flags.
+ * Only `true` flags contribute; the array is deduped and stably ordered.
+ */
+function collectAmenities(property: Record<string, unknown>): string[] {
+  const out = new Set<string>();
+  for (const [flag, slug] of Object.entries(IMMOWEB_AMENITY_FLAGS)) {
+    if (property[flag] === true) out.add(slug);
+  }
+  return [...out];
+}
+
+/**
+ * Total bathroom count. Belgian listings split full bathrooms
+ * (`bathroomCount`) from separate shower rooms (`showerRoomCount`); the app's
+ * single `bathrooms` field is their sum. Returns undefined when neither is set.
+ */
+function bathroomsFromProperty(property: Record<string, unknown>): number | undefined {
+  const bathrooms = asNumber(property.bathroomCount);
+  const showers = asNumber(property.showerRoomCount);
+  if (bathrooms === undefined && showers === undefined) return undefined;
+  return (bathrooms ?? 0) + (showers ?? 0);
+}
+
+/**
  * Immoweb reports parking as separate indoor/outdoor counts. Sum them for the
  * total space count and classify the type: indoor spots imply a garage,
  * outdoor-only implies street parking, an explicit zero total implies none.
@@ -238,11 +290,16 @@ function parseClassified(classified: Record<string, unknown>): ImmowebRawListing
   if (bedrooms !== undefined) result.bedrooms = bedrooms;
   const squareMeters = property ? asNumber(property.netHabitableSurface) : undefined;
   if (squareMeters !== undefined) result.squareMeters = squareMeters;
-  const bathrooms = property ? asNumber(property.bathroomCount) : undefined;
-  if (bathrooms !== undefined) result.bathrooms = bathrooms;
-  if (property && typeof property.constructionYear === 'number' && Number.isFinite(property.constructionYear)) {
-    result.yearBuilt = property.constructionYear;
+  if (property) {
+    const bathrooms = bathroomsFromProperty(property);
+    if (bathrooms !== undefined) result.bathrooms = bathrooms;
   }
+  // Immoweb keeps the construction year on the shared `building`, not the unit;
+  // `property.constructionYear` is always null. Fall back to the unit-level
+  // field only if a future payload ever populates it.
+  const building = property && isRecord(property.building) ? property.building : undefined;
+  const yearBuilt = asNumber(building?.constructionYear) ?? asNumber(property?.constructionYear);
+  if (yearBuilt !== undefined && yearBuilt > 0) result.yearBuilt = yearBuilt;
   if (property && typeof property.hasLift === 'boolean') result.hasElevator = property.hasLift;
   if (property) {
     const hasGarden = featurePresent(property.hasGarden, property.gardenSurface);
@@ -255,6 +312,8 @@ function parseClassified(classified: Record<string, unknown>): ImmowebRawListing
       result.parkingType = parking.type;
     }
     if (typeof property.isFurnished === 'boolean') result.furnished = property.isFurnished;
+    const amenities = collectAmenities(property);
+    if (amenities.length > 0) result.amenities = amenities;
   }
   const lat = location ? asNumber(location.latitude) : undefined;
   const lng = location ? asNumber(location.longitude) : undefined;
