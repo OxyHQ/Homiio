@@ -1939,7 +1939,8 @@
       "hostCalendar": "Host calendar",
       "hostReservations": "Host reservations",
       "landlordApplications": "Applicant inbox",
-      "evictions": "Eviction watch"
+      "evictions": "Eviction watch",
+      "reviews": "Reviews"
     },
     "actions": {
       "addProperty": "Add Property",
@@ -2300,7 +2301,8 @@
       "verified": "Verified",
       "recommend": "Recommend",
       "count": "reviews",
-      "countWithNumber": "({{count}} reviews)"
+      "countWithNumber": "({{count}} reviews)",
+      "showAll": "Show all {{count}} reviews"
     },
     "notFoundHelp": "It may have been removed or the link is broken.",
     "sections": {
@@ -2956,7 +2958,30 @@
       "alertReportedTitle": "Reported",
       "alertReportedBody": "This review has been reported to our moderation team.",
       "alertReplyTitle": "Reply to Review",
-      "alertReplyBody": "Reply functionality will allow landlords and property managers to respond to reviews."
+      "alertReplyBody": "Reply functionality will allow landlords and property managers to respond to reviews.",
+      "pros": "What went well",
+      "cons": "What could be better",
+      "adviceToLandlord": "Advice to the landlord",
+      "adviceToAgency": "Advice to the agency",
+      "managedBy": "Managed by {{name}}",
+      "sections": {
+        "apartment": "Apartment",
+        "management": "Management",
+        "building": "Building",
+        "area": "Area"
+      },
+      "reportTitle": "Report this review",
+      "reportSubtitle": "Tell us what's wrong with this review.",
+      "reportDetails": "Details",
+      "reportDetailsPlaceholder": "Add any details that help us review this.",
+      "reportSubmit": "Submit report",
+      "reportReasons": {
+        "fake": "Fake or fraudulent",
+        "offensive": "Offensive or abusive",
+        "personal_data": "Contains personal data",
+        "spam": "Spam",
+        "other": "Other"
+      }
     },
     "write": {
       "validationTitle": "Validation Error",
@@ -2974,7 +2999,236 @@
       "submitFailed": "Failed to submit review",
       "submitFailedRetry": "Failed to submit review. Please try again.",
       "loadAddressFailed": "Couldn't load address",
-      "title": "Write review"
+      "title": "Write review",
+      "stepCounter": "Step {{current}} of {{total}}",
+      "submit": "Submit review",
+      "mapHint": "Tap the map to drop a pin and auto-fill the address.",
+      "listCount": "{{current}}/{{max}}",
+      "addItem": "Add",
+      "removeItem": "Remove",
+      "rateStar": "Rate {{star}} of 5",
+      "ratingValue": "{{rating}} of 5",
+      "ratingNone": "No rating yet",
+      "steps": {
+        "address": {
+          "title": "Where did you live?",
+          "subtitle": "Enter the address you're reviewing. Tap the map to auto-fill it."
+        },
+        "apartment": {
+          "title": "The apartment",
+          "subtitle": "Optional — how the home itself felt to live in."
+        },
+        "management": {
+          "title": "Landlord & agency",
+          "subtitle": "Optional — who managed the tenancy and how it went."
+        },
+        "building": {
+          "title": "The building",
+          "subtitle": "Optional — neighbours, shared spaces and services."
+        },
+        "area": {
+          "title": "The area",
+          "subtitle": "Optional — the neighbourhood around the building."
+        },
+        "priceDates": {
+          "title": "Rent & dates",
+          "subtitle": "What you paid and when you lived there."
+        },
+        "texts": {
+          "title": "Your review",
+          "subtitle": "A title, your honest opinion, and the highs and lows."
+        },
+        "photos": {
+          "title": "Photos & rating",
+          "subtitle": "Add photos, rate your stay, and submit."
+        }
+      },
+      "fields": {
+        "street": "Street address",
+        "number": "Building number",
+        "buildingName": "Building name",
+        "floor": "Floor",
+        "unit": "Unit / Apt",
+        "city": "City",
+        "state": "State / Province",
+        "postalCode": "Postal code",
+        "country": "Country",
+        "neighborhood": "Neighborhood",
+        "summerTemperature": "Summer temperature",
+        "winterTemperature": "Winter temperature",
+        "noise": "Noise",
+        "light": "Natural light",
+        "conditionAndMaintenance": "Condition & maintenance",
+        "agencyName": "Agency",
+        "landlordTreatment": "Landlord treatment",
+        "problemResponse": "Response to problems",
+        "depositReturned": "Deposit returned",
+        "adviceToAgency": "Advice to the agency",
+        "adviceToLandlord": "Advice to the landlord",
+        "staircaseNeighbors": "Staircase neighbours",
+        "touristApartments": "Tourist apartments in the building",
+        "neighborRelations": "Neighbour relations",
+        "cleaning": "Common-area cleaning",
+        "services": "Building services",
+        "areaTourists": "Tourists in the area",
+        "areaNoise": "Area noise",
+        "areaCleanliness": "Area cleanliness",
+        "areaSecurity": "Area safety",
+        "price": "Monthly rent",
+        "currency": "Currency",
+        "livedFrom": "Lived from",
+        "livedTo": "Lived to",
+        "reviewTitle": "Title",
+        "opinion": "Your opinion",
+        "pros": "What went well",
+        "cons": "What could be better",
+        "photos": "Photos",
+        "rating": "Overall rating",
+        "recommendation": "Would you recommend this address?"
+      },
+      "placeholders": {
+        "street": "e.g. 123 Main Street",
+        "number": "e.g. 123A",
+        "buildingName": "e.g. Sunset Apartments",
+        "floor": "e.g. 3",
+        "unit": "e.g. 3B",
+        "city": "e.g. Barcelona",
+        "state": "e.g. Catalonia",
+        "postalCode": "e.g. 08001",
+        "country": "e.g. Spain",
+        "neighborhood": "e.g. Eixample",
+        "agencyName": "Start typing the agency name",
+        "adviceToAgency": "What should the agency improve?",
+        "adviceToLandlord": "What should the landlord know?",
+        "price": "0.00",
+        "date": "YYYY-MM-DD",
+        "reviewTitle": "Sum up your experience",
+        "opinion": "Share your experience (10+ characters)",
+        "pros": "Add something you liked",
+        "cons": "Add something to improve"
+      },
+      "currencies": {
+        "EUR": "EUR (€)",
+        "USD": "USD ($)",
+        "GBP": "GBP (£)",
+        "CAD": "CAD ($)"
+      }
+    },
+    "explore": {
+      "title": "Reviews",
+      "heroTitle": "Explore honest home reviews",
+      "heroSubtitle": "Real reviews of real addresses, from the people who lived there.",
+      "writeCta": "Write a review",
+      "citiesTitle": "Cities with reviews",
+      "neighborhoodsTitle": "Neighborhoods",
+      "buildingsTitle": "Buildings",
+      "reviewCount": "{{count}} reviews",
+      "buildingMeta": "{{count}} reviews · {{recommend}}% recommend",
+      "errorTitle": "Couldn't load",
+      "errorDescription": "Please try again.",
+      "emptyCitiesTitle": "No reviews yet",
+      "emptyCitiesDescription": "Be the first to review an address in your city.",
+      "emptyNeighborhoodsTitle": "No neighborhoods yet",
+      "emptyNeighborhoodsDescription": "No reviewed neighborhoods in this city yet.",
+      "emptyBuildingsTitle": "No buildings yet",
+      "emptyBuildingsDescription": "No reviewed buildings in this neighborhood yet."
+    },
+    "enums": {
+      "temperature": {
+        "very_cold": "Very cold",
+        "cold": "Cold",
+        "moderate": "Moderate",
+        "warm": "Warm",
+        "very_warm": "Very warm"
+      },
+      "noise": {
+        "very_quiet": "Very quiet",
+        "quiet": "Quiet",
+        "moderate": "Moderate",
+        "noisy": "Noisy",
+        "very_noisy": "Very noisy"
+      },
+      "light": {
+        "very_dark": "Very dark",
+        "dark": "Dark",
+        "moderate": "Moderate",
+        "bright": "Bright",
+        "very_bright": "Very bright"
+      },
+      "condition": {
+        "poor": "Poor",
+        "fair": "Fair",
+        "good": "Good",
+        "very_good": "Very good",
+        "excellent": "Excellent"
+      },
+      "landlordTreatment": {
+        "very_poor": "Very poor",
+        "poor": "Poor",
+        "fair": "Fair",
+        "good": "Good",
+        "excellent": "Excellent"
+      },
+      "problemResponse": {
+        "never_responded": "Never responded",
+        "very_slow": "Very slow",
+        "slow": "Slow",
+        "reasonable": "Reasonable",
+        "fast": "Fast",
+        "very_fast": "Very fast"
+      },
+      "depositReturned": {
+        "full": "Returned in full",
+        "partial": "Partially returned",
+        "no": "Not returned"
+      },
+      "staircaseNeighbors": {
+        "very_unfriendly": "Very unfriendly",
+        "unfriendly": "Unfriendly",
+        "neutral": "Neutral",
+        "friendly": "Friendly",
+        "very_friendly": "Very friendly"
+      },
+      "neighborRelations": {
+        "very_poor": "Very poor",
+        "poor": "Poor",
+        "fair": "Fair",
+        "good": "Good",
+        "excellent": "Excellent"
+      },
+      "cleaning": {
+        "very_dirty": "Very dirty",
+        "dirty": "Dirty",
+        "acceptable": "Acceptable",
+        "clean": "Clean",
+        "very_clean": "Very clean"
+      },
+      "areaTourists": {
+        "none": "None",
+        "few": "Few",
+        "moderate": "Moderate",
+        "many": "Many",
+        "overwhelming": "Overwhelming"
+      },
+      "areaSecurity": {
+        "very_unsafe": "Very unsafe",
+        "unsafe": "Unsafe",
+        "neutral": "Neutral",
+        "safe": "Safe",
+        "very_safe": "Very safe"
+      },
+      "services": {
+        "internet": "Internet",
+        "cable_tv": "Cable TV",
+        "parking": "Parking",
+        "laundry": "Laundry",
+        "gym": "Gym",
+        "pool": "Pool",
+        "concierge": "Concierge",
+        "security": "Security",
+        "maintenance": "Maintenance",
+        "cleaning": "Cleaning"
+      }
     }
   },
   "subscriptions": {
@@ -3169,7 +3423,13 @@
       "tabCommunity": "Community",
       "tabArea": "Area",
       "tabProperties": "Properties ({{count}})",
-      "tabReviews": "Reviews ({{count}})"
+      "tabReviews": "Reviews ({{count}})",
+      "tabApartment": "Apartment",
+      "tabManagement": "Management",
+      "tabBuilding": "Building",
+      "metricRating": "Avg rating",
+      "metricReviews": "Reviews",
+      "metricRecommend": "Recommend"
     },
     "display": {
       "copySuccess": "Address copied to clipboard",
@@ -3608,5 +3868,26 @@
       "updateSuccess": "Changes saved",
       "submitError": "Couldn't save the case"
     }
+  },
+  "agency": {
+    "title": "Agency",
+    "viewAddress": "View address",
+    "notFound": "Agency not found",
+    "notFoundDescription": "We couldn't find this agency.",
+    "stats": {
+      "rating": "Rating",
+      "reviews": "Reviews",
+      "recommend": "Recommend",
+      "depositFull": "Deposit back",
+      "listings": "Listings"
+    },
+    "tabs": {
+      "reviews": "Reviews",
+      "listings": "Listings"
+    },
+    "emptyReviewsTitle": "No reviews yet",
+    "emptyReviewsDescription": "This agency has no reviews yet.",
+    "emptyListingsTitle": "No listings",
+    "emptyListingsDescription": "This agency has no active listings."
   }
 }

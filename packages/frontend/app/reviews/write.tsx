@@ -1,103 +1,59 @@
 /**
- * Write review — full review form (address + tenancy + ratings + opinion).
+ * Write review — the 8-step review wizard route + state owner.
  *
- * Stream Q polish:
- *   - Bloom TextField for every input (no raw TextInput / inline styles).
- *   - Bloom Button for submit + recommendation choice + retry.
- *   - Flat section cards with radius.lg + hairline borders.
- *   - Bloom Skeleton + shared EmptyState / ErrorState while loading.
- *   - Stars now use Bloom Typography for the count label, semantic
- *     ratingStar token instead of hex literals.
+ * This screen owns the single `ReviewWizardData` object, the step index, the
+ * `?addressId=` prefill (seeds the address step from an existing Homiio
+ * address), and the submit → `CreateReviewPayload`. Each step is a component
+ * under `components/reviews/write/`; `WizardProgress` is the bottom nav.
+ *
+ * Hard-required steps gate `Next`/`Submit` (address, price + dates, title +
+ * opinion, rating + recommendation); every dimension step is skippable. On
+ * submit the review is created and we `router.replace` to the reviewed
+ * address's page on its reviews tab. `livedForMonths` is NOT sent — the server
+ * derives it from the dates.
  */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
-import { Button } from '@oxyhq/bloom/button';
+
 import * as Skeleton from '@oxyhq/bloom/skeleton';
-import { TextFieldInput } from '@oxyhq/bloom/text-field';
-import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
+import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { useOxy } from '@oxyhq/services';
+
 import { Header } from '@/components/Header';
-import Map, { type MapApi } from '@/components/Map';
+import type { MapApi, AddressData } from '@/components/Map';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
-import reviewService from '@/services/reviewService';
+import { WizardProgress } from '@/components/reviews/WizardProgress';
+import { StepAddress } from '@/components/reviews/write/StepAddress';
+import { StepApartment } from '@/components/reviews/write/StepApartment';
+import { StepManagement } from '@/components/reviews/write/StepManagement';
+import { StepBuilding } from '@/components/reviews/write/StepBuilding';
+import { StepArea } from '@/components/reviews/write/StepArea';
+import { StepPriceDates } from '@/components/reviews/write/StepPriceDates';
+import { StepTexts } from '@/components/reviews/write/StepTexts';
+import { StepPhotosRecommend } from '@/components/reviews/write/StepPhotosRecommend';
+import {
+  INITIAL_WIZARD_DATA,
+  type ReviewWizardData,
+} from '@/components/reviews/write/types';
+import { reviewService } from '@/services/reviewService';
 import { api } from '@/utils/api';
+import type { CreateReviewPayload, CreateReviewAddressInput } from '@homiio/shared-types';
 import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
-interface ReviewFormData {
-  street: string;
-  city: string;
-  state: string;
-  postal_code: string;
-  country: string;
-  number?: string;
-  building_name?: string;
-  floor?: string;
-  unit?: string;
-  latitude?: number;
-  longitude?: number;
-  greenHouse: string;
-  price: string;
-  currency: string;
-  livedFrom: string;
-  livedTo: string;
-  recommendation: boolean | null;
-  opinion: string;
-  positiveComment: string;
-  negativeComment: string;
-  rating: number;
-}
-
-const INITIAL_FORM: ReviewFormData = {
-  street: '',
-  city: '',
-  state: '',
-  postal_code: '',
-  country: '',
-  number: '',
-  building_name: '',
-  floor: '',
-  unit: '',
-  latitude: undefined,
-  longitude: undefined,
-  greenHouse: '',
-  price: '',
-  currency: 'EUR',
-  livedFrom: '',
-  livedTo: '',
-  recommendation: null,
-  opinion: '',
-  positiveComment: '',
-  negativeComment: '',
-  rating: 0,
-};
-
-interface AddressLookupResult {
-  street?: string;
-  houseNumber?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  postalCode?: string;
-}
+const TOTAL_STEPS = 8;
+const LAST_STEP = TOTAL_STEPS - 1;
+const MIN_TITLE_LENGTH = 5;
+const MIN_OPINION_LENGTH = 10;
 
 const WriteReviewSkeleton: React.FC = () => (
   <View style={styles.content}>
     {Array.from({ length: 3 }).map((_, idx) => (
-      <View key={idx} style={styles.sectionCard}>
+      <View key={idx} style={styles.skeletonBlock}>
         <Skeleton.Text style={{ width: 200, lineHeight: 20 }} />
-        <Skeleton.Box width="100%" height={48} borderRadius={radius.md} />
         <Skeleton.Box width="100%" height={48} borderRadius={radius.md} />
         <Skeleton.Box width="100%" height={48} borderRadius={radius.md} />
       </View>
@@ -106,17 +62,28 @@ const WriteReviewSkeleton: React.FC = () => (
 );
 
 export default function WriteReviewPage() {
-  const { addressId } = useLocalSearchParams<{ addressId: string }>();
+  const { addressId } = useLocalSearchParams<{ addressId?: string }>();
   const router = useRouter();
   const { t } = useTranslation();
   const { oxyServices, activeSessionId } = useOxy();
   const mapRef = useRef<MapApi | null>(null);
+  const scrollRef = useRef<ScrollView | null>(null);
 
-  const [formData, setFormData] = useState<ReviewFormData>(INITIAL_FORM);
+  const [data, setData] = useState<ReviewWizardData>(INITIAL_WIZARD_DATA);
+  const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
+  const update = useCallback(
+    <K extends keyof ReviewWizardData>(field: K, value: ReviewWizardData[K]) => {
+      setData((prev) => ({ ...prev, [field]: value }));
+    },
+    [],
+  );
+
+  // Prefill the address step when arriving from an existing Homiio address.
   useEffect(() => {
     if (!addressId || !oxyServices || !activeSessionId) return;
     let cancelled = false;
@@ -126,11 +93,9 @@ export default function WriteReviewPage() {
         const response = await api.get(`/api/addresses/${addressId}`);
         if (cancelled) return;
         const address = response.data?.address || response.data;
-        setFormData((prev) => ({
+        setData((prev) => ({
           ...prev,
           street: address.street || '',
-          // Geo is relational: the address exposes resolved display NAMES; seed
-          // the form's resolution inputs from them (fall back to legacy strings).
           city: address.cityName || address.city || '',
           state: address.regionName || address.state || '',
           postal_code: address.postal_code || address.zipCode || '',
@@ -139,6 +104,7 @@ export default function WriteReviewPage() {
           building_name: address.building_name || '',
           floor: address.floor || '',
           unit: address.unit || '',
+          neighborhood: address.neighborhoodName || address.neighborhood || '',
           latitude: address.coordinates?.coordinates?.[1],
           longitude: address.coordinates?.coordinates?.[0],
         }));
@@ -147,20 +113,20 @@ export default function WriteReviewPage() {
           mapRef.current.navigateToLocation([lng, lat], 15);
         }
       } catch {
-        if (!cancelled) setError(t('reviews.write.loadAddressFailed'));
+        if (!cancelled) setLoadError(t('reviews.write.loadAddressFailed'));
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
-    load();
+    void load();
     return () => {
       cancelled = true;
     };
   }, [addressId, oxyServices, activeSessionId, t]);
 
   const handleAddressSelect = useCallback(
-    (address: AddressLookupResult, coordinates: [number, number]) => {
-      setFormData((prev) => ({
+    (address: AddressData, coordinates: [number, number]) => {
+      setData((prev) => ({
         ...prev,
         latitude: coordinates[1],
         longitude: coordinates[0],
@@ -171,146 +137,161 @@ export default function WriteReviewPage() {
         ...(address.country ? { country: address.country } : null),
         ...(address.postalCode ? { postal_code: address.postalCode } : null),
       }));
-      if (mapRef.current) {
-        mapRef.current.navigateToLocation(coordinates, 15);
-      }
+      mapRef.current?.navigateToLocation(coordinates, 15);
     },
     [],
   );
 
-  const updateFormData = <K extends keyof ReviewFormData>(
-    field: K,
-    value: ReviewFormData[K],
-  ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const validateForm = (): boolean => {
-    if (!formData.street.trim()) {
-      Alert.alert(t('reviews.write.validationTitle'), t('reviews.write.streetRequired'));
-      return false;
-    }
-    if (!formData.city.trim()) {
-      Alert.alert(t('reviews.write.validationTitle'), t('reviews.write.cityRequired'));
-      return false;
-    }
-    if (!formData.postal_code.trim()) {
-      Alert.alert(t('reviews.write.validationTitle'), t('reviews.write.postalCodeRequired'));
-      return false;
-    }
-    if (!formData.country.trim()) {
-      Alert.alert(t('reviews.write.validationTitle'), t('reviews.write.countryRequired'));
-      return false;
-    }
-    if (!formData.opinion.trim()) {
-      Alert.alert(
-        t('reviews.write.validationTitle'),
-        t('reviews.write.opinionRequired'),
-      );
-      return false;
-    }
-    if (formData.opinion.trim().length < 10) {
-      Alert.alert(
-        t('reviews.write.validationTitle'),
-        t('reviews.write.opinionMinLength'),
-      );
-      return false;
-    }
-    if (!formData.price || parseFloat(formData.price) <= 0) {
-      Alert.alert(t('reviews.write.validationTitle'), t('reviews.write.priceRequired'));
-      return false;
-    }
-    if (!formData.livedFrom || !formData.livedTo) {
-      Alert.alert(
-        t('reviews.write.validationTitle'),
-        t('reviews.write.datesRequired'),
-      );
-      return false;
-    }
-    if (formData.recommendation === null) {
-      Alert.alert(
-        t('reviews.write.validationTitle'),
-        t('reviews.write.recommendationRequired'),
-      );
-      return false;
-    }
-    if (formData.rating === 0) {
-      Alert.alert(
-        t('reviews.write.validationTitle'),
-        t('reviews.write.ratingRequired'),
-      );
-      return false;
-    }
-    return true;
-  };
-
-  const handleSubmit = async () => {
-    if (!validateForm()) return;
-    if (!oxyServices || !activeSessionId) return;
-
-    setSubmitting(true);
-    try {
-      const startDate = new Date(formData.livedFrom);
-      const endDate = new Date(formData.livedTo);
-      const diffMs = Math.abs(endDate.getTime() - startDate.getTime());
-      const livedForMonths = Math.ceil(diffMs / (1000 * 60 * 60 * 24 * 30.44));
-
-      const reviewData = {
-        address: {
-          street: formData.street.trim(),
-          city: formData.city.trim(),
-          state: formData.state.trim() || undefined,
-          postal_code: formData.postal_code.trim(),
-          country: formData.country.trim(),
-          number: formData.number?.trim() || undefined,
-          building_name: formData.building_name?.trim() || undefined,
-          floor: formData.floor?.trim() || undefined,
-          unit: formData.unit?.trim() || undefined,
-          ...(formData.latitude !== undefined && formData.longitude !== undefined
-            ? { latitude: formData.latitude, longitude: formData.longitude }
-            : null),
-        },
-        greenHouse: formData.greenHouse,
-        price: formData.price ? parseFloat(formData.price) : undefined,
-        currency: formData.currency,
-        livedFrom: formData.livedFrom ? new Date(formData.livedFrom) : undefined,
-        livedTo: formData.livedTo ? new Date(formData.livedTo) : undefined,
-        livedForMonths,
-        recommendation: formData.recommendation as boolean,
-        opinion: formData.opinion.trim(),
-        positiveComment: formData.positiveComment.trim() || undefined,
-        negativeComment: formData.negativeComment.trim() || undefined,
-        rating: formData.rating,
-      };
-
-      const result = await reviewService.createReview(
-        reviewData,
-        oxyServices,
-        activeSessionId,
-      );
-      if (result.success) {
-        Alert.alert(t('common.success'), t('reviews.write.submitSuccess'), [
-          { text: t('common.ok'), onPress: () => router.back() },
-        ]);
-      } else {
-        Alert.alert(
-          t('common.error'),
-          result.error || t('reviews.write.submitFailed'),
+  const canProceed = useMemo(() => {
+    switch (step) {
+      case 0:
+        return Boolean(
+          data.street.trim() &&
+            data.city.trim() &&
+            data.postal_code.trim() &&
+            data.country.trim(),
         );
-      }
-    } catch {
-      Alert.alert(t('common.error'), t('reviews.write.submitFailedRetry'));
+      case 5:
+        return Boolean(
+          Number(data.price) > 0 && data.livedFrom.trim() && data.livedTo.trim(),
+        );
+      case 6:
+        return (
+          data.title.trim().length >= MIN_TITLE_LENGTH &&
+          data.opinion.trim().length >= MIN_OPINION_LENGTH
+        );
+      case 7:
+        return data.rating > 0 && data.recommendation !== null;
+      default:
+        return true;
+    }
+  }, [step, data]);
+
+  const scrollToTop = useCallback(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }, []);
+
+  const goNext = useCallback(() => {
+    if (!canProceed) return;
+    setStep((prev) => Math.min(prev + 1, LAST_STEP));
+    scrollToTop();
+  }, [canProceed, scrollToTop]);
+
+  const goBack = useCallback(() => {
+    setStep((prev) => Math.max(prev - 1, 0));
+    scrollToTop();
+  }, [scrollToTop]);
+
+  const buildPayload = useCallback((): CreateReviewPayload => {
+    const address: CreateReviewAddressInput = {
+      street: data.street.trim(),
+      number: data.number.trim() || undefined,
+      building_name: data.building_name.trim() || undefined,
+      floor: data.floor.trim() || undefined,
+      unit: data.unit.trim() || undefined,
+      postal_code: data.postal_code.trim(),
+      city: data.city.trim(),
+      state: data.state.trim() || undefined,
+      country: data.country.trim(),
+      neighborhood: data.neighborhood.trim() || undefined,
+      ...(data.latitude !== undefined && data.longitude !== undefined
+        ? { latitude: data.latitude, longitude: data.longitude }
+        : null),
+    };
+    return {
+      address,
+      title: data.title.trim(),
+      opinion: data.opinion.trim(),
+      rating: data.rating,
+      recommendation: data.recommendation === true,
+      price: Number(data.price),
+      currency: data.currency,
+      livedFrom: new Date(data.livedFrom),
+      livedTo: new Date(data.livedTo),
+      prosItems: data.prosItems,
+      consItems: data.consItems,
+      // Store the display URL (reviews have no server-side image pipeline), so
+      // the card can render the photo directly via `resolveBackendImageUrl`.
+      images: data.images.map((image) => image.urls.medium || image.urls.original),
+      agencyName: data.agencyName.trim() || undefined,
+      adviceToAgency: data.adviceToAgency.trim() || undefined,
+      adviceToLandlord: data.adviceToLandlord.trim() || undefined,
+      summerTemperature: data.summerTemperature,
+      winterTemperature: data.winterTemperature,
+      noise: data.noise,
+      light: data.light,
+      conditionAndMaintenance: data.conditionAndMaintenance,
+      landlordTreatment: data.landlordTreatment,
+      problemResponse: data.problemResponse,
+      depositReturned: data.depositReturned,
+      staircaseNeighbors: data.staircaseNeighbors,
+      touristApartments: data.touristApartments,
+      neighborRelations: data.neighborRelations,
+      cleaning: data.cleaning,
+      services: data.services.length > 0 ? data.services : undefined,
+      areaTourists: data.areaTourists,
+      areaNoise: data.areaNoise,
+      areaCleanliness: data.areaCleanliness,
+      areaSecurity: data.areaSecurity,
+    };
+  }, [data]);
+
+  const isComplete =
+    Boolean(data.street.trim() && data.city.trim() && data.postal_code.trim() && data.country.trim()) &&
+    Number(data.price) > 0 &&
+    Boolean(data.livedFrom.trim() && data.livedTo.trim()) &&
+    data.title.trim().length >= MIN_TITLE_LENGTH &&
+    data.opinion.trim().length >= MIN_OPINION_LENGTH &&
+    data.rating > 0 &&
+    data.recommendation !== null;
+
+  const handleSubmit = useCallback(async () => {
+    if (!isComplete || submitting) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const review = await reviewService.createReview(buildPayload());
+      router.replace(`/addresses/${review.addressId}?tab=reviews`);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : t('reviews.write.submitFailed'));
     } finally {
       setSubmitting(false);
+    }
+  }, [isComplete, submitting, buildPayload, router, t]);
+
+  const renderStep = () => {
+    switch (step) {
+      case 0:
+        return (
+          <StepAddress
+            data={data}
+            update={update}
+            mapRef={mapRef}
+            onAddressSelect={handleAddressSelect}
+          />
+        );
+      case 1:
+        return <StepApartment data={data} update={update} />;
+      case 2:
+        return <StepManagement data={data} update={update} />;
+      case 3:
+        return <StepBuilding data={data} update={update} />;
+      case 4:
+        return <StepArea data={data} update={update} />;
+      case 5:
+        return <StepPriceDates data={data} update={update} />;
+      case 6:
+        return <StepTexts data={data} update={update} />;
+      case 7:
+      default:
+        return <StepPhotosRecommend data={data} update={update} />;
     }
   };
 
   if (loading) {
     return (
       <View style={styles.root}>
-        <Header
-          options={{ title: t('reviews.write.title'), showBackButton: true }}
-        />
+        <Header options={{ title: t('reviews.write.title'), showBackButton: true }} />
         <ScrollView>
           <WriteReviewSkeleton />
         </ScrollView>
@@ -318,16 +299,14 @@ export default function WriteReviewPage() {
     );
   }
 
-  if (error) {
+  if (loadError) {
     return (
       <View style={styles.root}>
-        <Header
-          options={{ title: t('reviews.write.title'), showBackButton: true }}
-        />
+        <Header options={{ title: t('reviews.write.title'), showBackButton: true }} />
         <ErrorState
           icon="cloud-offline-outline"
           title={t('reviews.write.loadAddressFailed')}
-          description={error}
+          description={loadError}
           retryLabel={t('common.goBack')}
           onRetry={() => router.back()}
         />
@@ -337,269 +316,29 @@ export default function WriteReviewPage() {
 
   return (
     <View style={styles.root}>
-      <Header
-        options={{ title: t('reviews.write.title'), showBackButton: true }}
-      />
+      <Header options={{ title: t('reviews.write.title'), showBackButton: true }} />
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.titleBlock}>
-            <SectionEyebrow>Tell others</SectionEyebrow>
-            <H2 style={styles.title}>Review this address</H2>
-            <BloomText style={styles.subtitle}>
-              Honest, anonymous reviews help future tenants choose with
-              confidence.
-            </BloomText>
-          </View>
-
-          <View style={styles.sectionCard}>
-            <H3 style={styles.sectionTitle}>Address</H3>
-            <TextFieldInput
-              label="Street address"
-              placeholder="e.g. 123 Main Street"
-              value={formData.street}
-              onChangeText={(text) => updateFormData('street', text)}
-            />
-            <TextFieldInput
-              label="Building number"
-              placeholder="e.g. 123A"
-              value={formData.number || ''}
-              onChangeText={(text) => updateFormData('number', text)}
-            />
-            <TextFieldInput
-              label="Building name"
-              placeholder="e.g. Sunset Apartments"
-              value={formData.building_name || ''}
-              onChangeText={(text) => updateFormData('building_name', text)}
-            />
-            <View style={styles.row}>
-              <View style={styles.rowField}>
-                <TextFieldInput
-                  label="Floor"
-                  placeholder="e.g. 3"
-                  value={formData.floor || ''}
-                  onChangeText={(text) => updateFormData('floor', text)}
-                />
-              </View>
-              <View style={styles.rowField}>
-                <TextFieldInput
-                  label="Unit / Apt"
-                  placeholder="e.g. 3B"
-                  value={formData.unit || ''}
-                  onChangeText={(text) => updateFormData('unit', text)}
-                />
-              </View>
-            </View>
-            <View style={styles.row}>
-              <View style={styles.rowField}>
-                <TextFieldInput
-                  label="City"
-                  placeholder="e.g. Barcelona"
-                  value={formData.city}
-                  onChangeText={(text) => updateFormData('city', text)}
-                />
-              </View>
-              <View style={styles.rowField}>
-                <TextFieldInput
-                  label="State / Province"
-                  placeholder="e.g. Catalonia"
-                  value={formData.state}
-                  onChangeText={(text) => updateFormData('state', text)}
-                />
-              </View>
-            </View>
-            <View style={styles.row}>
-              <View style={styles.rowField}>
-                <TextFieldInput
-                  label="Postal code"
-                  placeholder="e.g. 08001"
-                  value={formData.postal_code}
-                  onChangeText={(text) => updateFormData('postal_code', text)}
-                />
-              </View>
-              <View style={styles.rowField}>
-                <TextFieldInput
-                  label="Country"
-                  placeholder="e.g. Spain"
-                  value={formData.country}
-                  onChangeText={(text) => updateFormData('country', text)}
-                />
-              </View>
-            </View>
-
-            <View style={styles.mapWrapper}>
-              <Map
-                ref={mapRef}
-                style={styles.mapInner}
-                enableAddressLookup
-                showAddressInstructions
-                onAddressSelect={handleAddressSelect}
-                screenId="write-review"
-              />
-            </View>
-            <BloomText style={styles.mapHint}>
-              Tap on the map to drop a pin and auto-fill the address.
-            </BloomText>
-          </View>
-
-          <View style={styles.sectionCard}>
-            <H3 style={styles.sectionTitle}>Basics</H3>
-            <TextFieldInput
-              label="Monthly rent (€)"
-              placeholder="0.00"
-              value={formData.price}
-              onChangeText={(text) => updateFormData('price', text)}
-              keyboardType="numeric"
-            />
-            <TextFieldInput
-              label="Apartment description"
-              placeholder="e.g. 2nd floor, garden view"
-              value={formData.greenHouse}
-              onChangeText={(text) => updateFormData('greenHouse', text)}
-              multiline
-            />
-            <View style={styles.row}>
-              <View style={styles.rowField}>
-                <TextFieldInput
-                  label="Lived from"
-                  placeholder="YYYY-MM-DD"
-                  value={formData.livedFrom}
-                  onChangeText={(text) => updateFormData('livedFrom', text)}
-                />
-              </View>
-              <View style={styles.rowField}>
-                <TextFieldInput
-                  label="Lived to"
-                  placeholder="YYYY-MM-DD"
-                  value={formData.livedTo}
-                  onChangeText={(text) => updateFormData('livedTo', text)}
-                />
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.sectionCard}>
-            <H3 style={styles.sectionTitle}>Your verdict</H3>
-            <View style={styles.starsBlock}>
-              <BloomText style={styles.fieldLabel}>Overall rating</BloomText>
-              <View style={styles.starsRow}>
-                {[1, 2, 3, 4, 5].map((star) => {
-                  const active = star <= formData.rating;
-                  return (
-                    <Pressable
-                      key={star}
-                      onPress={() => updateFormData('rating', star)}
-                      style={styles.starButton}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Rate ${star} of 5`}
-                    >
-                      <Ionicons
-                        name={active ? 'star' : 'star-outline'}
-                        size={30}
-                        color={active ? colors.ratingStar : colors.muted}
-                      />
-                    </Pressable>
-                  );
-                })}
-              </View>
-              <BloomText style={styles.ratingLabel}>
-                {formData.rating > 0
-                  ? `${formData.rating} of 5`
-                  : 'No rating yet'}
-              </BloomText>
-            </View>
-
-            <View style={styles.recommendBlock}>
-              <BloomText style={styles.fieldLabel}>
-                Would you recommend this address?
-              </BloomText>
-              <View style={styles.recommendRow}>
-                <Button
-                  variant={formData.recommendation === true ? 'primary' : 'secondary'}
-                  size="medium"
-                  onPress={() => updateFormData('recommendation', true)}
-                  icon={
-                    <Ionicons
-                      name="thumbs-up"
-                      size={18}
-                      color={
-                        formData.recommendation === true
-                          ? colors.primaryForeground
-                          : colors.COLOR_BLACK
-                      }
-                    />
-                  }
-                  style={styles.recommendButton}
-                >
-                  Yes
-                </Button>
-                <Button
-                  variant={formData.recommendation === false ? 'primary' : 'secondary'}
-                  size="medium"
-                  onPress={() => updateFormData('recommendation', false)}
-                  icon={
-                    <Ionicons
-                      name="thumbs-down"
-                      size={18}
-                      color={
-                        formData.recommendation === false
-                          ? colors.primaryForeground
-                          : colors.COLOR_BLACK
-                      }
-                    />
-                  }
-                  style={styles.recommendButton}
-                >
-                  No
-                </Button>
-              </View>
-            </View>
-
-            <TextFieldInput
-              label="Your opinion"
-              placeholder="Share your experience (10+ characters)"
-              value={formData.opinion}
-              onChangeText={(text) => updateFormData('opinion', text)}
-              multiline
-            />
-            <TextFieldInput
-              label="What did you like?"
-              placeholder="Positive aspects of living here"
-              value={formData.positiveComment}
-              onChangeText={(text) => updateFormData('positiveComment', text)}
-              multiline
-            />
-            <TextFieldInput
-              label="What could be improved?"
-              placeholder="Areas for improvement"
-              value={formData.negativeComment}
-              onChangeText={(text) => updateFormData('negativeComment', text)}
-              multiline
-            />
-          </View>
-
-          <View style={styles.noteCard}>
-            <Ionicons
-              name="information-circle"
-              size={20}
-              color={colors.info}
-            />
-            <BloomText style={styles.noteText}>
-              Additional detailed ratings for the apartment, community, and
-              area are optional and can be added later.
-            </BloomText>
-          </View>
-
-          <Button
-            variant="primary"
-            size="large"
-            onPress={handleSubmit}
-            loading={submitting}
-            disabled={submitting}
-            style={styles.submitButton}
-          >
-            Submit review
-          </Button>
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          {renderStep()}
+          {submitError ? (
+            <BloomText style={styles.submitError}>{submitError}</BloomText>
+          ) : null}
         </ScrollView>
+        <WizardProgress
+          step={step}
+          totalSteps={TOTAL_STEPS}
+          onBack={goBack}
+          onNext={goNext}
+          onSubmit={handleSubmit}
+          isFirst={step === 0}
+          isLast={step === LAST_STEP}
+          nextDisabled={!canProceed}
+          submitting={submitting}
+        />
       </SafeAreaView>
     </View>
   );
@@ -618,92 +357,12 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
     paddingBottom: spacing['4xl'],
   },
-  titleBlock: {
-    gap: spacing.xs,
+  skeletonBlock: {
+    gap: spacing.md,
   },
-  title: {
-    letterSpacing: -0.5,
-  },
-  subtitle: {
+  submitError: {
     fontSize: 14,
-    color: colors.muted,
-  },
-  sectionCard: {
-    backgroundColor: colors.surfaceElevated,
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-    gap: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  sectionTitle: {
-    letterSpacing: -0.3,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  rowField: {
-    flex: 1,
-  },
-  mapWrapper: {
-    marginTop: spacing.sm,
-    borderRadius: radius.md,
-    overflow: 'hidden',
-    backgroundColor: colors.mutedSubtle,
-  },
-  mapInner: {
-    height: 280,
-  },
-  mapHint: {
-    fontSize: 12,
-    color: colors.muted,
+    color: colors.error,
     textAlign: 'center',
-  },
-  starsBlock: {
-    gap: spacing.sm,
-  },
-  fieldLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_2,
-  },
-  starsRow: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  starButton: {
-    padding: spacing.xs,
-  },
-  ratingLabel: {
-    fontSize: 13,
-    color: colors.muted,
-  },
-  recommendBlock: {
-    gap: spacing.sm,
-  },
-  recommendRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  recommendButton: {
-    flex: 1,
-  },
-  noteCard: {
-    backgroundColor: colors.infoSubtle,
-    padding: spacing.md,
-    borderRadius: radius.md,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-  },
-  noteText: {
-    flex: 1,
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_2,
-    lineHeight: 20,
-  },
-  submitButton: {
-    alignSelf: 'stretch',
   },
 });

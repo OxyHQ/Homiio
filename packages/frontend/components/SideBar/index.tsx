@@ -28,6 +28,7 @@ import {
   Users,
   CalendarClock,
   Bookmark,
+  Star,
   ChevronsLeft,
   ChevronsRight,
   ChevronRight,
@@ -316,6 +317,15 @@ export function SideBar() {
       iconActive: Megaphone,
       label: t('sidebar.navigation.evictions'),
       route: '/evictions',
+    });
+
+    // Reviews explore — public (address reputation, reviucasa-style).
+    entries.push({
+      key: 'reviews',
+      icon: Star,
+      iconActive: Star,
+      label: t('sidebar.navigation.reviews'),
+      route: '/reviews',
     });
 
     if (canAccessRoommates) {

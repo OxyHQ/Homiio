@@ -4,12 +4,11 @@
  * Layout:
  *  - Large rating number + summary line (e.g. "4.8 · 124 reviews").
  *  - 2-column grid of review cards on web, 1-column on mobile.
- *  - "Show all N reviews" Bloom Button when more than `maxVisible`
- *    exist.
+ *  - "Show all N reviews" Bloom Button when more than `maxVisible` exist.
  *
- * Migrated to Bloom Typography, Bloom Button, Bloom Skeleton for
- * the loading state. The actual review-card rendering still uses
- * the shared `ReviewCard` component.
+ * Reads the shared `['addressReviews', addressId]` cache via `useAddressReviews`
+ * and hydrates the authors ONCE (`useOxyAvatars`) so each `ReviewCard` renders a
+ * real avatar + display name.
  */
 import React, { useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
@@ -21,14 +20,15 @@ import { Button } from '@oxyhq/bloom/button';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
 
-import { ReviewCard, type ReviewData } from '@/components/ReviewCard';
+import { ReviewCard } from '@/components/ReviewCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionHeader, SECTION_GUTTER } from '@/components/property/Section';
 import { useAddressReviews } from '@/hooks/useAddressReviews';
+import { useOxyAvatars } from '@/hooks/useOxyAvatars';
 import { colors } from '@/styles/colors';
 import { hairline, radius, spacing } from '@/constants/styles';
-import type { Property } from '@homiio/shared-types';
+import type { Property, ReviewDTO } from '@homiio/shared-types';
 
 interface ReviewsSectionProps {
   property: Property;
@@ -40,38 +40,17 @@ interface AggregatedStats {
   totalReviews: number;
   recommendationPercentage: number;
   verifiedCount: number;
-  withEvidenceCount: number;
 }
 
-const normalizeReview = (raw: ReviewData): ReviewData => ({
-  ...raw,
-  positiveComment: raw.positiveComment ?? '',
-  negativeComment: raw.negativeComment ?? '',
-  images: raw.images ?? [],
-  services: raw.services ?? [],
-  isAnonymous: raw.isAnonymous ?? true,
-  confidenceScore: raw.confidenceScore ?? 75,
-  evidenceAttached: raw.evidenceAttached ?? false,
-  flaggedIssues: raw.flaggedIssues ?? [],
-  karmaScore: raw.karmaScore ?? 0,
-  replyAllowed: raw.replyAllowed ?? true,
-  moderationStatus: raw.moderationStatus ?? 'approved',
-  helpfulVotes: raw.helpfulVotes ?? 0,
-  unhelpfulVotes: raw.unhelpfulVotes ?? 0,
-  reportCount: raw.reportCount ?? 0,
-  evidenceCount: raw.evidenceCount ?? 0,
-});
-
-const computeStats = (reviews: ReviewData[]): AggregatedStats | null => {
+const computeStats = (reviews: ReviewDTO[]): AggregatedStats | null => {
   if (reviews.length === 0) return null;
   const avg = reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length;
-  const recommended = reviews.filter((r) => (r.rating || 0) >= 4).length;
+  const recommended = reviews.filter((r) => r.recommendation).length;
   return {
     averageRating: avg,
     totalReviews: reviews.length,
     recommendationPercentage: (recommended / reviews.length) * 100,
     verifiedCount: reviews.filter((r) => r.verified).length,
-    withEvidenceCount: reviews.filter((r) => r.evidenceAttached).length,
   };
 };
 
@@ -87,8 +66,7 @@ const RatingHeader: React.FC<RatingHeaderProps> = ({ stats }) => {
         <Ionicons name="star" size={28} color={colors.COLOR_BLACK} />
         <H1 style={styles.ratingNumber}>{stats.averageRating.toFixed(1)}</H1>
         <BloomText style={styles.ratingMeta}>
-          · {stats.totalReviews}{' '}
-          {t('property.reviews.count')}
+          · {stats.totalReviews} {t('property.reviews.count')}
         </BloomText>
       </View>
       <View style={styles.statsRow}>
@@ -96,23 +74,11 @@ const RatingHeader: React.FC<RatingHeaderProps> = ({ stats }) => {
           <BloomText style={styles.statValue}>
             {Math.round(stats.recommendationPercentage)}%
           </BloomText>
-          <BloomText style={styles.statLabel}>
-            {t('property.reviews.recommend')}
-          </BloomText>
+          <BloomText style={styles.statLabel}>{t('property.reviews.recommend')}</BloomText>
         </View>
         <View style={styles.statItem}>
           <BloomText style={styles.statValue}>{stats.verifiedCount}</BloomText>
-          <BloomText style={styles.statLabel}>
-            {t('property.reviews.verified')}
-          </BloomText>
-        </View>
-        <View style={styles.statItem}>
-          <BloomText style={styles.statValue}>
-            {stats.withEvidenceCount}
-          </BloomText>
-          <BloomText style={styles.statLabel}>
-            {t('property.reviews.evidence')}
-          </BloomText>
+          <BloomText style={styles.statLabel}>{t('property.reviews.verified')}</BloomText>
         </View>
       </View>
     </View>
@@ -129,17 +95,13 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
   const isPreview = variant === 'preview';
   const maxVisible = isPreview ? 6 : 10;
 
-  // Shared address-reviews source — the SAME `['addressReviews', addressId]`
-  // query the booking card reads, so the rating math comes from one cache key
-  // and no request is duplicated. Raw reviews are normalized here for the
-  // section's richer card + stats rendering.
   const {
     addressId,
-    reviews: rawReviews,
+    reviews,
     query: { isLoading: loading, error: queryError, refetch },
   } = useAddressReviews(property);
 
-  const reviews = useMemo(() => rawReviews.map(normalizeReview), [rawReviews]);
+  const { usersById } = useOxyAvatars(reviews.map((review) => review.oxyUserId));
 
   const error = queryError
     ? queryError instanceof Error
@@ -148,7 +110,6 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
     : null;
 
   const stats = useMemo(() => computeStats(reviews), [reviews]);
-
   const visibleReviews = useMemo(
     () => reviews.slice(0, maxVisible),
     [reviews, maxVisible],
@@ -168,123 +129,82 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
     <View>
       <SectionHeader title={t('property.reviews.title')} />
       <View style={styles.body}>
-      <BloomText style={styles.disclaimer}>
-        {t('property.reviews.disclaimer')}
-      </BloomText>
+        <BloomText style={styles.disclaimer}>{t('property.reviews.disclaimer')}</BloomText>
 
-      {loading ? (
-        <View style={styles.skeletonGrid}>
-          {Array.from({ length: 4 }).map((_, idx) => (
-            <View key={idx} style={styles.skeletonCard}>
-              <Skeleton.Box width="60%" height={14} borderRadius={4} />
-              <Skeleton.Box
-                width="100%"
-                height={12}
-                borderRadius={4}
-                style={styles.skeletonLine}
-              />
-              <Skeleton.Box
-                width="85%"
-                height={12}
-                borderRadius={4}
-                style={styles.skeletonLine}
-              />
-              <Skeleton.Box
-                width="70%"
-                height={12}
-                borderRadius={4}
-                style={styles.skeletonLine}
-              />
-            </View>
-          ))}
-        </View>
-      ) : null}
-
-      {error ? (
-        <ErrorState
-          icon="chatbubbles-outline"
-          title={
-            t('property.reviews.errorTitle')
-          }
-          description={error}
-          retryLabel={t('common.tryAgain')}
-          onRetry={() => {
-            refetch();
-          }}
-        />
-      ) : null}
-
-      {!loading && !error && reviews.length === 0 ? (
-        <EmptyState
-          icon="chatbubbles-outline"
-          title={
-            t('property.reviews.emptyTitle')
-          }
-          description={
-            t('property.reviews.emptyDescription')
-          }
-          actionText={
-            t('property.reviews.writeAction')
-          }
-          actionIcon="create-outline"
-          onAction={handleWriteReview}
-        />
-      ) : null}
-
-      {!loading && !error && reviews.length > 0 ? (
-        <>
-          {stats ? <RatingHeader stats={stats} /> : null}
-          <View style={styles.grid}>
-            {visibleReviews.map((review) => (
-              <View key={review._id} style={styles.gridCell}>
-                <ReviewCard
-                  review={review}
-                  variant={isPreview ? 'compact' : 'default'}
-                  showActions={!isPreview}
-                />
+        {loading ? (
+          <View style={styles.skeletonGrid}>
+            {Array.from({ length: 4 }).map((_, idx) => (
+              <View key={idx} style={styles.skeletonCard}>
+                <Skeleton.Box width="60%" height={14} borderRadius={4} />
+                <Skeleton.Box width="100%" height={12} borderRadius={4} style={styles.skeletonLine} />
+                <Skeleton.Box width="85%" height={12} borderRadius={4} style={styles.skeletonLine} />
+                <Skeleton.Box width="70%" height={12} borderRadius={4} style={styles.skeletonLine} />
               </View>
             ))}
           </View>
-          <View style={styles.actionsRow}>
-            {reviews.length > maxVisible ? (
+        ) : null}
+
+        {error ? (
+          <ErrorState
+            icon="chatbubbles-outline"
+            title={t('property.reviews.errorTitle')}
+            description={error}
+            retryLabel={t('common.tryAgain')}
+            onRetry={() => {
+              refetch();
+            }}
+          />
+        ) : null}
+
+        {!loading && !error && reviews.length === 0 ? (
+          <EmptyState
+            icon="chatbubbles-outline"
+            title={t('property.reviews.emptyTitle')}
+            description={t('property.reviews.emptyDescription')}
+            actionText={t('property.reviews.writeAction')}
+            actionIcon="create-outline"
+            onAction={handleWriteReview}
+          />
+        ) : null}
+
+        {!loading && !error && reviews.length > 0 ? (
+          <>
+            {stats ? <RatingHeader stats={stats} /> : null}
+            <View style={styles.grid}>
+              {visibleReviews.map((review) => (
+                <View key={review.id} style={styles.gridCell}>
+                  <ReviewCard
+                    review={review}
+                    author={usersById.get(review.oxyUserId)}
+                    onPressAgency={(slug) => router.push(`/agency/${slug}`)}
+                  />
+                </View>
+              ))}
+            </View>
+            <View style={styles.actionsRow}>
+              {reviews.length > maxVisible ? (
+                <Button
+                  onPress={handleViewAll}
+                  variant="secondary"
+                  size="medium"
+                  accessibilityLabel={t('property.reviews.showAll', { count: reviews.length })}
+                >
+                  {t('property.reviews.showAll', { count: reviews.length })}
+                </Button>
+              ) : null}
               <Button
-                onPress={handleViewAll}
-                variant="secondary"
+                onPress={handleWriteReview}
+                variant="ghost"
                 size="medium"
-                accessibilityLabel={
-                  t(
-                    'property.reviews.showAll',
-                    `Show all ${reviews.length} reviews`,
-                  ) || `Show all ${reviews.length} reviews`
-                }
+                icon={<Ionicons name="create-outline" size={16} color={colors.COLOR_BLACK} />}
+                iconPosition="left"
+                accessibilityLabel={t('property.reviews.writeAction')}
               >
-                {t(
-                  'property.reviews.showAll',
-                  `Show all ${reviews.length} reviews`,
-                ) || `Show all ${reviews.length} reviews`}
+                {t('property.reviews.writeAction')}
               </Button>
-            ) : null}
-            <Button
-              onPress={handleWriteReview}
-              variant="ghost"
-              size="medium"
-              icon={
-                <Ionicons
-                  name="create-outline"
-                  size={16}
-                  color={colors.COLOR_BLACK}
-                />
-              }
-              iconPosition="left"
-              accessibilityLabel={
-                t('property.reviews.writeAction')
-              }
-            >
-              {t('property.reviews.writeAction')}
-            </Button>
-          </View>
-        </>
-      ) : null}
+            </View>
+          </>
+        ) : null}
       </View>
     </View>
   );

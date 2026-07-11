@@ -1,27 +1,19 @@
 /**
- * CommunityNotesSection — the "Community Notes" block on the property
- * detail page (formerly "Reviews"). Community-sourced notes about the
- * building, rebranded at the presentation layer only; the underlying data
- * is still the Review model served from `/api/reviews/address/:id`.
+ * CommunityNotesSection — the "Community Notes" block on the property detail.
+ * Community-sourced notes about the building, served from
+ * `/api/reviews/address/:id` via the shared `useAddressReviews` hook (the same
+ * `['addressReviews', addressId]` cache the booking card + reviews block read).
  *
- * Airbnb-2026 flat aesthetic (matches the other property sections via the
- * `Section` primitive): no cards/shadows, content sits on the page, blocks
- * separated by hairlines and inset by `SECTION_GUTTER`.
+ * Airbnb-2026 flat aesthetic (matches the other property sections): no cards or
+ * shadows; blocks separated by hairlines and inset by `SECTION_GUTTER`.
  *
- * Composition:
- *  - Rating summary: large average score + star row + total count, plus a
- *    compact 5→1 star-distribution with proportional bars.
- *  - Sort control (Most recent / Highest rated / Most helpful) — the
- *    endpoint does not sort, so we sort the loaded set client-side.
- *  - A list of `CommunityNoteCard`s separated by hairline dividers,
- *    capped at `maxVisible` with a "Show more" toggle and a "View all"
- *    link to the address page for the full thread.
- *  - Loading (Skeleton), error (ErrorState) and empty (EmptyState) states
- *    consistent with the rest of the app.
+ * Composition: a rating summary (average + star distribution), a client-side
+ * sort control (the endpoint does not sort), and a list of read-only
+ * `CommunityNoteCard`s capped at `maxVisible` with a "Show all" toggle + a
+ * "View all" link to the address page.
  */
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,15 +22,15 @@ import { Button } from '@oxyhq/bloom/button';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
 
-import { CommunityNoteCard, type ReviewData } from '@/components/property/CommunityNoteCard';
+import { CommunityNoteCard } from '@/components/property/CommunityNoteCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Stars } from '@/components/ui/Stars';
 import { SectionHeader, SECTION_GUTTER } from '@/components/property/Section';
-import { api } from '@/utils/api';
+import { useAddressReviews } from '@/hooks/useAddressReviews';
 import { colors } from '@/styles/colors';
 import { hairline, radius, spacing } from '@/constants/styles';
-import type { Property } from '@homiio/shared-types';
+import type { Property, ReviewDTO } from '@homiio/shared-types';
 
 interface CommunityNotesSectionProps {
   property: Property;
@@ -56,28 +48,7 @@ interface AggregatedStats {
   distribution: Record<number, number>;
 }
 
-type ReviewsResponse = {
-  success?: boolean;
-  buildingReviews?: ReviewData[];
-  unitReviews?: ReviewData[];
-  data?: {
-    buildingReviews?: ReviewData[];
-    unitReviews?: ReviewData[];
-  };
-};
-
-const normalizeNote = (raw: ReviewData): ReviewData => ({
-  ...raw,
-  positiveComment: raw.positiveComment ?? '',
-  negativeComment: raw.negativeComment ?? '',
-  isAnonymous: raw.isAnonymous ?? true,
-  evidenceAttached: raw.evidenceAttached ?? false,
-  replyAllowed: raw.replyAllowed ?? true,
-  moderationStatus: raw.moderationStatus ?? 'approved',
-  helpfulVotes: raw.helpfulVotes ?? 0,
-});
-
-const computeStats = (notes: ReviewData[]): AggregatedStats | null => {
+const computeStats = (notes: ReviewDTO[]): AggregatedStats | null => {
   if (notes.length === 0) return null;
   const distribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   let ratingSum = 0;
@@ -94,13 +65,13 @@ const computeStats = (notes: ReviewData[]): AggregatedStats | null => {
   };
 };
 
-const sortNotes = (notes: ReviewData[], sort: SortKey): ReviewData[] => {
+const sortNotes = (notes: ReviewDTO[], sort: SortKey): ReviewDTO[] => {
   const copy = [...notes];
   switch (sort) {
     case 'highest':
       return copy.sort((a, b) => (b.rating || 0) - (a.rating || 0));
     case 'helpful':
-      return copy.sort((a, b) => (b.helpfulVotes ?? 0) - (a.helpfulVotes ?? 0));
+      return copy.sort((a, b) => (b.helpfulCount ?? 0) - (a.helpfulCount ?? 0));
     case 'recent':
     default:
       return copy.sort(
@@ -140,10 +111,7 @@ const RatingSummary: React.FC<RatingSummaryProps> = ({ stats }) => {
               <Ionicons name="star" size={11} color={colors.COLOR_BLACK_LIGHT_5} />
               <View style={styles.distributionTrack}>
                 <View
-                  style={[
-                    styles.distributionFill,
-                    { width: `${Math.round(ratio * 100)}%` },
-                  ]}
+                  style={[styles.distributionFill, { width: `${Math.round(ratio * 100)}%` }]}
                 />
               </View>
               <BloomText style={styles.distributionCount}>{count}</BloomText>
@@ -201,41 +169,11 @@ export const CommunityNotesSection: React.FC<CommunityNotesSectionProps> = ({
   const [sort, setSort] = useState<SortKey>('recent');
   const [expanded, setExpanded] = useState(false);
 
-  // Address id can arrive in a few shapes depending on whether the
-  // property was hydrated from the list vs the detail endpoint.
-  const addressId = useMemo<string | undefined>(() => {
-    const address = property?.address;
-    if (!address || typeof address !== 'object') return undefined;
-    if ('_id' in address) {
-      const id = (address as { _id?: unknown })._id;
-      if (typeof id === 'string') return id;
-    }
-    if ('id' in address) {
-      const id = (address as { id?: unknown }).id;
-      if (typeof id === 'string') return id;
-    }
-    return undefined;
-  }, [property?.address]);
-
   const {
-    data: notes = [],
-    isLoading: loading,
-    error: queryError,
-    refetch,
-  } = useQuery<ReviewData[]>({
-    queryKey: ['addressReviews', addressId],
-    enabled: Boolean(addressId),
-    queryFn: async () => {
-      const response = await api.get<ReviewsResponse>(
-        `/api/reviews/address/${addressId}`,
-      );
-      const payload = response.data;
-      const responseData = payload?.success ? payload : payload?.data ?? payload;
-      const buildingNotes = responseData?.buildingReviews ?? [];
-      const unitNotes = responseData?.unitReviews ?? [];
-      return [...buildingNotes, ...unitNotes].map(normalizeNote);
-    },
-  });
+    addressId,
+    reviews: notes,
+    query: { isLoading: loading, error: queryError, refetch },
+  } = useAddressReviews(property);
 
   const error = queryError
     ? queryError instanceof Error
@@ -286,26 +224,11 @@ export const CommunityNotesSection: React.FC<CommunityNotesSectionProps> = ({
                   <Skeleton.Box width={40} height={40} borderRadius={20} />
                   <View style={styles.skeletonHeaderText}>
                     <Skeleton.Box width="50%" height={13} borderRadius={4} />
-                    <Skeleton.Box
-                      width="35%"
-                      height={11}
-                      borderRadius={4}
-                      style={styles.skeletonLine}
-                    />
+                    <Skeleton.Box width="35%" height={11} borderRadius={4} style={styles.skeletonLine} />
                   </View>
                 </View>
-                <Skeleton.Box
-                  width="100%"
-                  height={12}
-                  borderRadius={4}
-                  style={styles.skeletonLine}
-                />
-                <Skeleton.Box
-                  width="80%"
-                  height={12}
-                  borderRadius={4}
-                  style={styles.skeletonLine}
-                />
+                <Skeleton.Box width="100%" height={12} borderRadius={4} style={styles.skeletonLine} />
+                <Skeleton.Box width="80%" height={12} borderRadius={4} style={styles.skeletonLine} />
               </View>
             ))}
           </View>
@@ -354,10 +277,10 @@ export const CommunityNotesSection: React.FC<CommunityNotesSectionProps> = ({
             <View style={styles.notesList}>
               {visibleNotes.map((note, index) => (
                 <View
-                  key={note._id}
+                  key={note.id}
                   style={[styles.noteRow, index > 0 && styles.noteRowDivider]}
                 >
-                  <CommunityNoteCard note={note} showActions={!isPreview} />
+                  <CommunityNoteCard note={note} />
                 </View>
               ))}
             </View>
@@ -368,9 +291,7 @@ export const CommunityNotesSection: React.FC<CommunityNotesSectionProps> = ({
                   onPress={() => setExpanded(true)}
                   variant="secondary"
                   size="medium"
-                  accessibilityLabel={t('property.communityNotes.showAll', {
-                    count: notes.length,
-                  })}
+                  accessibilityLabel={t('property.communityNotes.showAll', { count: notes.length })}
                 >
                   {t('property.communityNotes.showAll', { count: notes.length })}
                 </Button>
@@ -381,13 +302,7 @@ export const CommunityNotesSection: React.FC<CommunityNotesSectionProps> = ({
                   onPress={handleViewAll}
                   variant="ghost"
                   size="medium"
-                  icon={
-                    <Ionicons
-                      name="open-outline"
-                      size={16}
-                      color={colors.COLOR_BLACK}
-                    />
-                  }
+                  icon={<Ionicons name="open-outline" size={16} color={colors.COLOR_BLACK} />}
                   iconPosition="left"
                   accessibilityLabel={t('property.communityNotes.showMore')}
                 >
@@ -399,9 +314,7 @@ export const CommunityNotesSection: React.FC<CommunityNotesSectionProps> = ({
                 onPress={handleAddNote}
                 variant="ghost"
                 size="medium"
-                icon={
-                  <Ionicons name="create-outline" size={16} color={colors.COLOR_BLACK} />
-                }
+                icon={<Ionicons name="create-outline" size={16} color={colors.COLOR_BLACK} />}
                 iconPosition="left"
                 accessibilityLabel={t('property.communityNotes.addAction')}
               >
