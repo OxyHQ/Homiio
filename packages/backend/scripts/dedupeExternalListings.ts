@@ -87,34 +87,22 @@ function keepOrder(a: Row, b: Row): number {
   return a.id < b.id ? -1 : 1;
 }
 
-class UnionFind {
-  private readonly parent = new Map<string, string>();
-  find(x: string): string {
-    let root = this.parent.get(x) ?? x;
-    if (root === x) {
-      this.parent.set(x, x);
-      return x;
-    }
-    root = this.find(root);
-    this.parent.set(x, root);
-    return root;
-  }
-  union(a: string, b: string): void {
-    const ra = this.find(a);
-    const rb = this.find(b);
-    if (ra !== rb) this.parent.set(ra, rb);
-  }
-}
-
 function blockKey(c: DedupComparable): string {
   return [c.type, c.cityId, c.offering, c.amount, c.currency, c.bedrooms, c.squareFootage].join('|');
 }
 
 /**
- * Pure grouping: block rows by the scalar fingerprint, union within a block on
- * description similarity, then split each connected component into `keep` (the
- * richest listing) + `archive` (the rest). Groups are ordered largest-first.
- * Deterministic and DB-free — the unit-tested core of the backfill.
+ * Pure grouping: block rows by the scalar fingerprint, then within each block run
+ * a greedy CLIQUE cover. A member is archived ONLY when it is a mutual duplicate
+ * (`areDuplicateListings`) of the chosen keeper AND of every other member already
+ * archived into that group — i.e. the group is a clique.
+ *
+ * This deliberately avoids single-linkage (union-find) clustering:
+ * `areDuplicateListings` (description Jaccard >= 0.95) is NOT transitive, so
+ * A~B and B~C do not imply A~C. Single-linkage would chain A-B-C and archive two
+ * of three even when A and C are distinct units (the templated new-build case the
+ * fingerprint is meant to reject). Clique-only archiving guarantees no distinct
+ * unit is ever collapsed via a transitive chain. Deterministic and DB-free.
  */
 export function planDeduplication(rows: Row[]): DedupGroup[] {
   const blocks = new Map<string, Row[]>();
@@ -125,33 +113,36 @@ export function planDeduplication(rows: Row[]): DedupGroup[] {
     else blocks.set(key, [row]);
   }
 
-  const uf = new UnionFind();
-  const rowById = new Map<string, Row>();
+  const groups: DedupGroup[] = [];
   for (const bucket of blocks.values()) {
-    for (const row of bucket) rowById.set(row.id, row);
     if (bucket.length < 2) continue;
-    for (let i = 0; i < bucket.length; i += 1) {
-      for (let j = i + 1; j < bucket.length; j += 1) {
-        if (areDuplicateListings(bucket[i].comparable, bucket[j].comparable)) {
-          uf.union(bucket[i].id, bucket[j].id);
+    // Anchor on the richest listing; process the rest richest-first.
+    const remaining = [...bucket].sort(keepOrder);
+    while (remaining.length >= 2) {
+      const keep = remaining[0];
+      const clique: Row[] = [keep];
+      const archive: Row[] = [];
+      for (let i = 1; i < remaining.length; i += 1) {
+        const candidate = remaining[i];
+        const dupOfWholeClique = clique.every((member) =>
+          areDuplicateListings(member.comparable, candidate.comparable),
+        );
+        if (dupOfWholeClique) {
+          clique.push(candidate);
+          archive.push(candidate);
         }
       }
+      if (archive.length > 0) {
+        groups.push({ keep, archive });
+        const assigned = new Set([keep.id, ...archive.map((row) => row.id)]);
+        for (let i = remaining.length - 1; i >= 0; i -= 1) {
+          if (assigned.has(remaining[i].id)) remaining.splice(i, 1);
+        }
+      } else {
+        // Keeper has no clique-duplicate; keep it standalone and move on.
+        remaining.shift();
+      }
     }
-  }
-
-  const grouped = new Map<string, Row[]>();
-  for (const row of rowById.values()) {
-    const root = uf.find(row.id);
-    const members = grouped.get(root);
-    if (members) members.push(row);
-    else grouped.set(root, [row]);
-  }
-
-  const groups: DedupGroup[] = [];
-  for (const members of grouped.values()) {
-    if (members.length < 2) continue;
-    const [keep, ...archive] = [...members].sort(keepOrder);
-    groups.push({ keep, archive });
   }
   groups.sort((a, b) => b.archive.length - a.archive.length);
   return groups;
@@ -250,10 +241,14 @@ async function main(): Promise<void> {
   }
 
   if (toArchive.length > 0) {
-    const now = new Date();
+    // Soft-delete ONLY: set `deletedAt` (public feeds filter `deletedAt: null`)
+    // and `status: archived`. Do NOT touch `expiresAt` — it carries a TTL index
+    // (`expireAfterSeconds: 0`), so writing `expiresAt: now` would HARD-delete the
+    // document within ~60s, making the archive irreversible. Leaving `expiresAt`
+    // at its existing future value keeps the soft-delete reversible.
     const result = await Property.updateMany(
       { _id: { $in: toArchive }, isExternal: true, deletedAt: null },
-      { $set: { deletedAt: now, status: PropertyStatus.ARCHIVED, expiresAt: now } },
+      { $set: { deletedAt: new Date(), status: PropertyStatus.ARCHIVED } },
     );
     console.log(`\nArchived ${result.modifiedCount ?? toArchive.length} listing(s).`);
   } else {
