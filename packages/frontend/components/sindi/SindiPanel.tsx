@@ -466,9 +466,14 @@ export function SindiPanel() {
   // the sidebar so the sidebar itself stays interactive while the panel is open.
   return (
     <Portal>
+      {/* Wrapper is `pointerEvents:'none'` so the strip left of the scrim (the
+          sidebar column) passes touches through and stays interactive while the
+          panel is open — the RN-only `'box-none'` is invalid CSS that RN-Web
+          drops, which would leave the wrapper `auto` and block the sidebar. The
+          scrim + panel re-enable themselves with `'auto'`. */}
       <View
         className="flex-row"
-        style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}
+        style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
       >
         <AnimatedPressable
           entering={FadeIn.duration(SCRIM_FADE_DURATION)}
@@ -478,7 +483,7 @@ export function SindiPanel() {
           onPress={closeSindiPanel}
           style={[
             StyleSheet.absoluteFill,
-            { left: sidebarWidth, backgroundColor: PANEL_SCRIM },
+            { left: sidebarWidth, backgroundColor: PANEL_SCRIM, pointerEvents: 'auto' },
           ]}
         />
         <Animated.View
@@ -487,7 +492,7 @@ export function SindiPanel() {
           className="bg-background"
           style={[
             styles.panel,
-            { width: panelWidth },
+            { width: panelWidth, pointerEvents: 'auto' },
             panelBorders.railEdge,
             overlayPanelPinnedStyle(sidebarWidth),
           ]}
