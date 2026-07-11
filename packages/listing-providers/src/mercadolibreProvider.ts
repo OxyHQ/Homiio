@@ -214,31 +214,30 @@ export function createMercadolibreProvider(
           acceptLanguage: options.acceptLanguage,
         });
         const html = await session.content();
-        if (isMercadolibreChallenge(html)) {
+        if (!isMercadolibreChallenge(html)) {
+          const refs = parseMercadolibreSearch(options.site, html);
           metrics.record({
             provider: options.id,
             strategy: 'browser',
-            outcome: 'challenge',
+            outcome: refs.length > 0 ? 'success' : 'error',
+            status: 200,
             latencyMs: Date.now() - start,
             url: warmUrl,
           });
-          return [];
+          if (sticky) stickyStorageState = await session.exportStorageState();
+          return refs.map((ref) => ({
+            provider: options.id,
+            sourceId: ref.sourceId,
+            url: ref.url,
+          }));
         }
-        const refs = parseMercadolibreSearch(options.site, html);
         metrics.record({
           provider: options.id,
           strategy: 'browser',
-          outcome: refs.length > 0 ? 'success' : 'error',
-          status: 200,
+          outcome: 'challenge',
           latencyMs: Date.now() - start,
           url: warmUrl,
         });
-        if (sticky) stickyStorageState = await session.exportStorageState();
-        return refs.map((ref) => ({
-          provider: options.id,
-          sourceId: ref.sourceId,
-          url: ref.url,
-        }));
       } catch (error) {
         const detail =
           error instanceof BrowserSessionChallengeError
@@ -254,18 +253,33 @@ export function createMercadolibreProvider(
           url: warmUrl,
           detail,
         });
-        return [];
       } finally {
         await session?.close();
       }
+
+      // The browser session was challenged or failed (e.g. a degraded browser
+      // tier — broken proxy auth in prod). For sites where cold HTTP is a
+      // verified path (`requireBrowserSession: false`, AR/MX) fall through to
+      // the HTTP ladder instead of silently yielding zero refs; sites that
+      // truly need the browser stop here.
+      if (requireBrowser) return [];
+    } else if (requireBrowser) {
+      return [];
     }
 
-    if (requireBrowser) return [];
+    return discoverViaHttp(rt, warmUrl, signal);
+  }
 
+  async function discoverViaHttp(
+    rt: FetchRuntime,
+    warmUrl: string,
+    signal?: AbortSignal,
+  ): Promise<ExternalListingRef[]> {
     try {
       const { html } = await fetchListingViaLadder(rt, warmUrl, {
         provider: options.id,
         isChallenge: isMercadolibreChallenge,
+        init: { signal },
         metrics,
       });
       return parseMercadolibreSearch(options.site, html).map((ref) => ({
