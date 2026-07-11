@@ -153,7 +153,6 @@ export default function HostReservationsScreen() {
           options={{
             showBackButton: true,
             title: t('host.reservations.title'),
-            titlePosition: 'center',
           }}
         />
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
@@ -183,7 +182,6 @@ export default function HostReservationsScreen() {
         options={{
           showBackButton: true,
           title: t('host.reservations.title'),
-          titlePosition: 'center',
         }}
       />
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>

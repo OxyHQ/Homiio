@@ -46,7 +46,6 @@ export default function CurrencySettingsScreen() {
         options={{
           title: t('settings.currency.title'),
           showBackButton: true,
-          titlePosition: 'center',
         }}
       />
       <ScrollView contentContainerStyle={styles.scroll}>

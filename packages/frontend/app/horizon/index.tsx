@@ -43,7 +43,6 @@ export default function HorizonPage() {
         options={{
           showBackButton: true,
           title: t('horizon.title'),
-          titlePosition: 'center',
         }}
       />
 

@@ -212,7 +212,6 @@ export default function LandlordApplicationsScreen() {
           options={{
             showBackButton: true,
             title: 'Applicant inbox',
-            titlePosition: 'center',
           }}
         />
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
@@ -238,7 +237,6 @@ export default function LandlordApplicationsScreen() {
           options={{
             showBackButton: true,
             title: 'Applicant inbox',
-            titlePosition: 'center',
           }}
         />
         <ScrollView contentContainerStyle={styles.content}>
@@ -255,7 +253,6 @@ export default function LandlordApplicationsScreen() {
           options={{
             showBackButton: true,
             title: 'Applicant inbox',
-            titlePosition: 'center',
           }}
         />
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
@@ -277,7 +274,6 @@ export default function LandlordApplicationsScreen() {
         options={{
           showBackButton: true,
           title: 'Applicant inbox',
-          titlePosition: 'center',
         }}
       />
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>

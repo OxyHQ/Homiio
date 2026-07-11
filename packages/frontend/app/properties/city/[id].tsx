@@ -238,7 +238,6 @@ export default function CityPropertiesPage() {
             options={{
               showBackButton: true,
               title: t('app.loading'),
-              titlePosition: 'center',
             }}
           />
         </View>
@@ -263,7 +262,6 @@ export default function CityPropertiesPage() {
             options={{
               showBackButton: true,
               title: t('common.error'),
-              titlePosition: 'center',
             }}
           />
         </View>
@@ -328,7 +326,6 @@ export default function CityPropertiesPage() {
           options={{
             showBackButton: true,
             title: city?.name || '',
-            titlePosition: 'center',
           }}
         />
       </View>

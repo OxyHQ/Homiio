@@ -158,7 +158,6 @@ export default function ReportListingScreen() {
         options={{
           showBackButton: true,
           title: t('property.report.title'),
-          titlePosition: 'center',
         }}
       />
       <SafeAreaView style={styles.scrollWrapper} edges={['bottom']}>

@@ -207,7 +207,6 @@ export default function ApplicationDetailScreen() {
       options={{
         showBackButton: true,
         title: 'Application',
-        titlePosition: 'center',
       }}
     />
   );

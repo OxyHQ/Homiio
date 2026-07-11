@@ -263,7 +263,6 @@ export default function BookViewingPage() {
           options={{
             showBackButton: true,
             title: t('app.loading'),
-            titlePosition: 'center',
           }}
         />
         <View style={styles.loadingContainer}>
@@ -280,7 +279,6 @@ export default function BookViewingPage() {
         options={{
           showBackButton: true,
           title: isModifyMode ? t('viewings.actions.modify') : t('properties.bookViewing'),
-          titlePosition: 'center',
         }}
       />
 

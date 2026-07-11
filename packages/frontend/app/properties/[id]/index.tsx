@@ -549,7 +549,6 @@ export default function PropertyDetailPage() {
           options={{
             showBackButton: true,
             title: t('property.error', 'Error') || 'Error',
-            titlePosition: 'center',
           }}
         />
         <SafeAreaView style={styles.errorBody} edges={['bottom']}>
@@ -621,7 +620,6 @@ export default function PropertyDetailPage() {
           options={{
             showBackButton: true,
             title: '',
-            titlePosition: 'center',
             transparent: true,
             scrollThreshold: 100,
             // Once the sticky property bar takes over the top, it owns
@@ -634,7 +632,7 @@ export default function PropertyDetailPage() {
                     <IconButton
                       key="profile"
                       icon="person-circle-outline"
-                      variant="ghost"
+                      variant="overlay"
                       onPress={() => router.push(`/roommates/${landlordOxyUserId}`)}
                       accessibilityLabel="Open host profile"
                     />
@@ -642,14 +640,14 @@ export default function PropertyDetailPage() {
                   <IconButton
                     key="share"
                     icon="share-outline"
-                    variant="ghost"
+                    variant="overlay"
                     onPress={handleShare}
                     accessibilityLabel="Share property"
                   />,
                   <IconButton
                     key="viewings"
                     icon="calendar-outline"
-                    variant="ghost"
+                    variant="overlay"
                     onPress={() => router.push('/viewings')}
                     accessibilityLabel="View bookings"
                     badge={
@@ -664,7 +662,7 @@ export default function PropertyDetailPage() {
                     <SaveButton
                       property={apiProperty as Property}
                       variant="heart"
-                      chrome="ghost"
+                      chrome="overlay"
                       color={colors.COLOR_BLACK}
                       activeColor={colors.error}
                       showCount

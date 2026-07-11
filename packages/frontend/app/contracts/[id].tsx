@@ -187,7 +187,6 @@ export default function ContractDetailScreen() {
       options={{
         showBackButton: true,
         title: t('contracts.detail.title'),
-        titlePosition: 'center',
       }}
     />
   );

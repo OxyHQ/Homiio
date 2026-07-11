@@ -360,7 +360,6 @@ export default function ApplyToRentScreen() {
         options={{
           showBackButton: true,
           title: t('applications.apply.title'),
-          titlePosition: 'center',
         }}
       />
       <SafeAreaView style={styles.scrollWrapper} edges={['bottom']}>

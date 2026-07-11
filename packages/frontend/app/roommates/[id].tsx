@@ -169,7 +169,6 @@ export default function RoommateProfilePage() {
         options={{
           title: t('roommates.profileDetail.title'),
           showBackButton: true,
-          titlePosition: 'center',
         }}
       />
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>

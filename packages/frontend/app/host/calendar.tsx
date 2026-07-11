@@ -185,7 +185,6 @@ export default function HostCalendarScreen() {
           options={{
             showBackButton: true,
             title: t('host.calendar.title'),
-            titlePosition: 'center',
           }}
         />
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
@@ -211,7 +210,6 @@ export default function HostCalendarScreen() {
           options={{
             showBackButton: true,
             title: t('host.calendar.title'),
-            titlePosition: 'center',
           }}
         />
         <ScrollView contentContainerStyle={styles.content}>
@@ -236,7 +234,6 @@ export default function HostCalendarScreen() {
           options={{
             showBackButton: true,
             title: t('host.calendar.title'),
-            titlePosition: 'center',
           }}
         />
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
@@ -262,7 +259,6 @@ export default function HostCalendarScreen() {
           options={{
             showBackButton: true,
             title: t('host.calendar.title'),
-            titlePosition: 'center',
           }}
         />
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
@@ -287,7 +283,6 @@ export default function HostCalendarScreen() {
         options={{
           showBackButton: true,
           title: t('host.calendar.title'),
-          titlePosition: 'center',
         }}
       />
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
