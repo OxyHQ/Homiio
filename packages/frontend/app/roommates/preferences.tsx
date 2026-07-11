@@ -22,7 +22,7 @@ import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useProfile } from '@/context/ProfileContext';
 import { roommateService, type RoommateMatchingPreferences } from '@/services/roommateService';
 import { useProfileStore } from '@/store/profileStore';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
 type LifestyleChoice = 'yes' | 'no' | 'prefer_not';
@@ -459,7 +459,8 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderRadius: radius.lg,
     gap: spacing.md,
-    ...withShadow('sm'),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   cardTitle: {
     letterSpacing: -0.3,

@@ -2,7 +2,6 @@ import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { colors } from '@/styles/colors';
-import { shadowToken } from '@/styles/shadows';
 
 interface SectionCardProps {
     /**
@@ -31,12 +30,6 @@ interface SectionCardProps {
     titleStyle?: ViewStyle;
 
     /**
-     * Whether to show the card shadow/elevation. Defaults to `false`
-     * (Airbnb-flat) — the card's hairline border provides its separation.
-     */
-    showShadow?: boolean;
-
-    /**
      * Custom padding for the card content
      * @default 16
      */
@@ -61,7 +54,6 @@ export const SectionCard: React.FC<SectionCardProps> = ({
     containerStyle,
     cardStyle,
     titleStyle,
-    showShadow = false,
     padding = 16,
     borderRadius = 12,
     marginBottom = 20,
@@ -71,7 +63,6 @@ export const SectionCard: React.FC<SectionCardProps> = ({
         {
             padding,
             borderRadius,
-            ...(showShadow ? shadowStyles : {}),
         },
         cardStyle,
     ];
@@ -95,14 +86,6 @@ export const SectionCard: React.FC<SectionCardProps> = ({
         </View>
     );
 };
-
-const shadowStyles = shadowToken({
-    y: 1,
-    blur: 4,
-    color: colors.COLOR_BLACK,
-    opacity: 0.05,
-    elevation: 1,
-});
 
 const styles = StyleSheet.create({
     container: {

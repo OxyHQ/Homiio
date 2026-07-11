@@ -3,7 +3,7 @@
  *
  * Stream Q polish:
  *   - Bloom Typography (H2 / Text), Bloom Avatar, Bloom Button, Divider.
- *   - withShadow('sm') cards with radius.lg.
+ *   - Flat cards with radius.lg + hairline borders.
  *   - All Pressables replaced by Bloom Button.
  *   - Shared EmptyState / ErrorState components.
  */
@@ -53,7 +53,7 @@ import {
   getPropertyImageSource,
   getPropertyTitle,
 } from '@/utils/propertyUtils';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -614,7 +614,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     overflow: 'hidden',
     backgroundColor: colors.mutedSubtle,
-    ...withShadow('sm'),
   },
   thumb: {
     width: '100%',
@@ -628,7 +627,8 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderRadius: radius.lg,
     gap: spacing.sm,
-    ...withShadow('sm'),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   cardHeading: {
     letterSpacing: -0.3,

@@ -19,7 +19,7 @@ import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useRoommate } from '@/hooks/useRoommate';
 import profileService from '@/services/profileService';
 import { roommateService } from '@/services/roommateService';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
 export default function RoommateProfilePage() {
@@ -217,7 +217,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.xl,
     gap: spacing.xs,
-    ...withShadow('sm'),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   avatar: {
     width: 72,
@@ -264,7 +265,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
     gap: spacing.sm,
-    ...withShadow('sm'),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   cardTitle: {
     letterSpacing: -0.3,

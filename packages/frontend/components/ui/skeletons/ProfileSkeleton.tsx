@@ -3,7 +3,6 @@ import { View, ScrollView } from 'react-native';
 import { Skeleton } from '@oxyhq/bloom';
 import { TextLines } from './TextLines';
 import { colors } from '@/styles/colors';
-import { shadowToken } from '@/styles/shadows';
 
 interface ProfileSkeletonProps {
   showHeader?: boolean;
@@ -91,7 +90,8 @@ export function ProfileSkeleton({ showHeader = true, showActions = true }: Profi
                 padding: 16,
                 borderRadius: 8,
                 marginBottom: 12,
-                ...shadowToken({ y: 1, blur: 3, color: colors.COLOR_BLACK, opacity: 0.1, elevation: 2 }),
+                borderWidth: 1,
+                borderColor: colors.border,
               }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                 <Skeleton.Box width={40} height={40} borderRadius={20} />

@@ -3,7 +3,7 @@
  *
  * Stream Q polish:
  *   - Bloom Chip filter row, Bloom Button "New contract" CTA in the header.
- *   - withShadow('sm') ContractCard list with radius.lg.
+ *   - Flat ContractCard list with radius.lg + hairline borders.
  *   - Bloom Skeleton + shared EmptyState / ErrorState.
  *   - Bloom Typography (H2, Text) and SectionEyebrow for hierarchy.
  */
@@ -26,7 +26,7 @@ import { useUserLeases, useHasRentalProperties } from '@/hooks/useLeaseQueries';
 import type { Lease } from '@/services/leaseService';
 import type { Profile } from '@homiio/shared-types';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
 /**
@@ -287,7 +287,8 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderRadius: radius.lg,
     gap: spacing.sm,
-    ...withShadow('sm'),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   skeletonHeader: {
     flexDirection: 'row',
@@ -297,7 +298,8 @@ const styles = StyleSheet.create({
   footer: {
     padding: spacing.lg,
     backgroundColor: colors.surfaceElevated,
-    ...withShadow('sm'),
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
   footerButton: {
     alignSelf: 'stretch',

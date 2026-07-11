@@ -6,7 +6,7 @@
  *   - Bloom Typography (H1/H2/H3/Text) everywhere, no raw <Text>.
  *   - Bloom Button replaces every TouchableOpacity CTA.
  *   - Bloom SearchInput replaces hand-rolled search bar.
- *   - withShadow('sm') cards with radius.lg, no borders, semantic tokens.
+ *   - Flat cards with radius.lg + hairline borders, semantic tokens.
  *   - Skeleton.Box rows during load; EmptyState shared.
  */
 import React, {
@@ -43,7 +43,7 @@ import { useSindiAuthenticatedFetch } from '@/hooks/useSindiAuthenticatedFetch';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SindiExplanationBottomSheet } from '@/components/SindiExplanationBottomSheet';
 import { useConversationStore } from '@/store/conversationStore';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
 const SindiSkeleton: React.FC = () => (
@@ -296,7 +296,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     alignItems: 'center',
     gap: spacing.sm,
-    ...withShadow('sm'),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   heroIcon: {
     width: 88,
@@ -330,7 +331,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: 'center',
     gap: spacing.xs,
-    ...withShadow('sm'),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   featureLabel: {
     fontSize: 12,
@@ -357,7 +359,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
     padding: spacing.lg,
     borderRadius: radius.lg,
-    ...withShadow('sm'),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   skeletonBody: {
     flex: 1,

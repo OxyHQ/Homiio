@@ -11,7 +11,6 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/styles/colors';
-import { shadowToken } from '@/styles/shadows';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
@@ -423,7 +422,8 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     padding: 15,
     marginBottom: 20,
-    ...shadowToken({ y: 2, blur: 4, color: colors.shadow, opacity: 0.1, elevation: 2 }),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   propertyTitle: {
     fontSize: 18,
@@ -495,7 +495,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadowToken({ y: 1, blur: 2, color: colors.shadow, opacity: 0.1, elevation: 1 }),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   activeDateCard: {
     backgroundColor: colors.primaryColor,
@@ -531,7 +532,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    ...shadowToken({ y: 1, blur: 2, color: colors.shadow, opacity: 0.1, elevation: 1 }),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   selectedSlot: {
     backgroundColor: colors.primaryColor,

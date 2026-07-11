@@ -5,7 +5,7 @@
  *   - Bloom Typography (H2/H3/Text) everywhere, no raw <Text>.
  *   - Bloom Button replaces TouchableOpacity CTAs (Write review, Helpful,
  *     Report, Reply, Switch).
- *   - withShadow('sm') cards with radius.lg, no border accents.
+ *   - Flat cards with radius.lg + hairline borders.
  *   - Shared EmptyState / ErrorState / SectionEyebrow.
  *   - Skeleton via PropertyListSkeleton for properties, Skeleton.Box rows
  *     for reviews while loading.
@@ -36,7 +36,7 @@ import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { NeighborhoodRatingWidget } from '@/components/widgets/NeighborhoodRatingWidget';
 import { api } from '@/utils/api';
 import { Property } from '@homiio/shared-types';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -782,7 +782,8 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderRadius: radius.lg,
     gap: spacing.md,
-    ...withShadow('sm'),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   cardHeading: {
     letterSpacing: -0.3,
@@ -889,7 +890,8 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderRadius: radius.lg,
     gap: spacing.sm,
-    ...withShadow('sm'),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   reviewHeader: {
     flexDirection: 'row',

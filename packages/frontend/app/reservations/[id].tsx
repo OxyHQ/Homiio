@@ -2,7 +2,7 @@
  * Reservation detail (guest + host view).
  *
  * Stream P polish:
- * - Each section becomes a `CardSurface` with `withShadow('sm')`, no border.
+ * - Each section becomes a `CardSurface` (flat surface, no border).
  * - Bloom Loading + ErrorState replace the ad-hoc spinner/error views.
  * - Bloom Button for every CTA; the inline modal was replaced by the
  *   shared `ConfirmDialog` (Modal + Bloom Button).

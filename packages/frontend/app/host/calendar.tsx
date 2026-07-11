@@ -4,7 +4,7 @@
  * Stream Q polish (Airbnb-2026):
  *   - Bloom primitives only (Typography, Button, Chip, Menu, Skeleton, Loading).
  *   - Property picker uses Bloom Menu (dropdown) instead of a horizontal chip row.
- *   - Cards rendered on white surfaces with `withShadow('sm')`, `radius.lg`.
+ *   - Flat cards on white surfaces with hairline borders, `radius.lg`.
  *   - All copy lives in Bloom Typography, no raw RN <Text>.
  *   - Block-dates flow now reuses ConfirmDialog + Bloom TextField.
  */
@@ -52,7 +52,7 @@ import {
 import { useUserProperties } from '@/hooks/usePropertyQueries';
 import { propertyService } from '@/services/propertyService';
 import { getPropertyTitle } from '@/utils/propertyUtils';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
 interface BlockDialogState {
@@ -463,7 +463,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
     padding: spacing.lg,
     borderRadius: radius.lg,
-    ...withShadow('sm'),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   pickerButton: {
     justifyContent: 'space-between',
@@ -506,6 +507,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
     padding: spacing.lg,
     borderRadius: radius.lg,
-    ...withShadow('sm'),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
 });
