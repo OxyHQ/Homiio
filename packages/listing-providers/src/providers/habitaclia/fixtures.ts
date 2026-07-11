@@ -45,7 +45,12 @@ export interface HabitacliaRawListing {
   bedrooms?: number;
   bathrooms?: number;
   squareMeters?: number;
+  /** Floor level, from a "Planta N" detail characteristic. */
   floor?: number;
+  /** Construction year, from an "Año construcción: YYYY" detail characteristic. */
+  yearBuilt?: number;
+  /** Parking-space count, from an "N plazas de parking" detail characteristic. */
+  parkingSpaces?: number;
   furnished?: boolean;
   amenities?: string[];
   images: HabitacliaRawImage[];
@@ -101,7 +106,14 @@ export const HABITACLIA_FIXTURE_DETAIL_HTML = `<!doctype html>
 }
 </script>
 </head>
-<body><h1>Piso en alquiler en Carrer de Provença</h1></body>
+<body>
+<h1>Piso en alquiler en Carrer de Provença</h1>
+<ul class="feature-list">
+  <li>Planta 5ª</li>
+  <li>Año construcción 2005</li>
+  <li>1 plaza de parking</li>
+</ul>
+</body>
 </html>`;
 
 /**
@@ -138,7 +150,7 @@ export const HABITACLIA_FIXTURE_DETAIL_HTML_LIVE = `<!doctype html>
   </ul>
 </section>
 <p id="js-detail-description" class="detail-description">Luminoso piso reformado en Gràcia.</p>
-<ul><li>Ascensor </li><li>Terraza </li></ul>
+<ul class="feature-list"><li>Ascensor </li><li>Terraza </li><li>Planta 4ª</li><li>Año construcción 1998</li><li>2 plazas de garaje</li></ul>
 <img itemprop="image" src="//images.habimg.com/imgh/55551-4519/sample-g.jpg" />
 </body></html>`;
 

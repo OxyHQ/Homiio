@@ -55,6 +55,11 @@ describe('HabitacliaProvider', () => {
     expect(raw.squareMeters).toBe(95);
     expect(raw.furnished).toBe(true);
     expect(raw.amenities).toEqual(['elevator', 'air_conditioning']);
+    // Floor / construction year / parking count live in the detail markup, not
+    // the JSON-LD — the shared enrich step fills them on the JSON-LD path too.
+    expect(raw.floor).toBe(5);
+    expect(raw.yearBuilt).toBe(2005);
+    expect(raw.parkingSpaces).toBe(1);
     expect(raw.images).toHaveLength(2);
     expect(raw.images[0]?.isPrimary).toBe(true);
   });
@@ -74,7 +79,22 @@ describe('HabitacliaProvider', () => {
     expect(raw.bedrooms).toBe(3);
     expect(raw.bathrooms).toBe(2);
     expect(raw.squareMeters).toBe(95);
+    // "Planta 4ª" / "Año construcción 1998" / "2 plazas de garaje" become
+    // structured numerics — not junk amenity slugs.
+    expect(raw.floor).toBe(4);
+    expect(raw.yearBuilt).toBe(1998);
+    expect(raw.parkingSpaces).toBe(2);
     expect(raw.amenities).toEqual(['elevator', 'terrace']);
+  });
+
+  it('ignores fuzzy characteristics that carry no reliable number', () => {
+    const html = HABITACLIA_FIXTURE_DETAIL_HTML_LIVE.replace('Planta 4ª', 'Planta baja')
+      .replace('Año construcción 1998', 'Antigüedad: entre 30 y 50 años')
+      .replace('2 plazas de garaje', 'Plaza de garaje');
+    const raw = parseHabitacliaDetail(html, DETAIL_URL);
+    expect(raw.floor).toBeUndefined();
+    expect(raw.yearBuilt).toBeUndefined();
+    expect(raw.parkingSpaces).toBeUndefined();
   });
 
   it('extracts listainmuebles form fields and parses AJAX fragments', () => {
@@ -107,6 +127,9 @@ describe('HabitacliaProvider', () => {
     expect(listing.address.countryCode).toBe('ES');
     expect(listing.address.coordinates).toEqual({ lat: 41.3959, lng: 2.1631 });
     expect(listing.furnishedStatus).toBe('furnished');
+    expect(listing.floor).toBe(5);
+    expect(listing.yearBuilt).toBe(2005);
+    expect(listing.parkingSpaces).toBe(1);
     expect(listing.remoteImages).toHaveLength(2);
     expect(listing.remoteImages.filter((image) => image.isPrimary)).toHaveLength(1);
   });
