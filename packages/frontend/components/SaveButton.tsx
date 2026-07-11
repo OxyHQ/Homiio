@@ -37,6 +37,7 @@ import { TouchableOpacity, StyleSheet, ViewStyle, View, StyleProp } from 'react-
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { shadowToken } from '@/styles/shadows';
+import { barIconButton, barIconSize } from '@/constants/styles';
 import { Loading } from '@oxyhq/bloom/loading';
 import { SaveToFolderBottomSheet } from './SaveToFolderBottomSheet';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
@@ -63,6 +64,16 @@ interface SaveButtonProps {
   showCount?: boolean;
   countBadgeStyle?: StyleProp<ViewStyle>;
   countDisplayMode?: 'badge' | 'inline';
+  /**
+   * Chrome variant. `'default'` keeps the cream-filled, soft-shadowed pill used
+   * as a standalone control. `'bar'` renders the SAME flat, transparent circular
+   * chrome as `BarIconButton` (shared `barIconButton` token, heart at
+   * `barIconSize`, no background/shadow) so it sits inside a header/bar next to
+   * the other bar buttons. Save LOGIC is identical in both. NOTE: the on-card
+   * frosted-white overlay is a separate context — it overrides chrome via `style`
+   * and must NOT use `'bar'`.
+   */
+  chrome?: 'default' | 'bar';
 }
 
 export function SaveButton({
@@ -82,10 +93,14 @@ export function SaveButton({
   showCount = false,
   countBadgeStyle,
   countDisplayMode = 'badge',
+  chrome = 'default',
 }: SaveButtonProps) {
   const [isPressed, setIsPressed] = useState(false);
   const bottomSheetContext = useContext(BottomSheetContext);
-  const sizeAll = Math.max(10, size * 1);
+  // In `'bar'` chrome the heart matches the shared bar icon size; otherwise it
+  // scales with the caller's `size`.
+  const isBar = chrome === 'bar';
+  const sizeAll = isBar ? barIconSize : Math.max(10, size * 1);
 
   // Use SavedPropertiesContext for all state management
   const {
@@ -252,13 +267,17 @@ export function SaveButton({
       activeOpacity={0.7}
       disabled={isButtonDisabled}
       style={[
-        styles.saveButton,
+        isBar ? barIconButton : styles.saveButton,
         isButtonDisabled && styles.disabledButton,
         style,
-        {
-          paddingHorizontal: sizeAll / (countDisplayMode === 'inline' ? 6 : 3),
-          paddingVertical: sizeAll / (countDisplayMode === 'inline' ? 2 : 3),
-        },
+        // `'bar'` chrome uses the shared circular button's own padding; only the
+        // default cream pill takes the size-derived padding.
+        isBar
+          ? null
+          : {
+              paddingHorizontal: sizeAll / (countDisplayMode === 'inline' ? 6 : 3),
+              paddingVertical: sizeAll / (countDisplayMode === 'inline' ? 2 : 3),
+            },
       ]}
     >
       <View

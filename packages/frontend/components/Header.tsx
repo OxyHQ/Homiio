@@ -1,12 +1,12 @@
-import React, { useEffect, useState, ReactNode } from 'react';
-import { View, Platform, Pressable, StyleSheet, type ViewStyle } from 'react-native';
+import React, { useEffect, ReactNode } from 'react';
+import { View, Platform, StyleSheet, type ViewStyle } from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedStyle,
   useSharedValue,
   type SharedValue,
 } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@oxyhq/bloom/theme';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { colors } from '@/styles/colors';
@@ -14,7 +14,8 @@ import { colorChannels } from '@/styles/shadows';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PANEL_TOP_INSET } from '@oxyhq/bloom/content-panel';
-import { barBackIconSize, barContent, barIconButton, barIconButtonPressed, spacing } from '@/constants/styles';
+import { barBackIconSize, barContent, spacing } from '@/constants/styles';
+import { BarIconButton } from '@/components/ui/BarIconButton';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 
 /**
@@ -45,6 +46,7 @@ interface Props {
 
 export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) => {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colors: themeColors } = useTheme();
   // Derived directly from the router rather than synced via an effect — this is
   // a pure read of navigation state and avoids cascading renders.
@@ -53,7 +55,6 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
   const isScreenNotMobile = useIsScreenNotMobile();
   const internalScrollY = useSharedValue(0);
   const scrollY = externalScrollY ?? internalScrollY;
-  const [backPressed, setBackPressed] = useState(false);
 
   // On web the DOCUMENT is the scroll owner and the shell frames content in a
   // rounded `ContentPanel` at `PANEL_TOP_INSET` (8px) on wide screens, so a
@@ -179,15 +180,12 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
       >
         <View style={styles.leftSlot}>
           {options?.showBackButton && canGoBack && (
-            <Pressable
+            <BarIconButton
+              icon="arrow-back"
+              size={barBackIconSize}
               onPress={() => router.back()}
-              onPressIn={() => setBackPressed(true)}
-              onPressOut={() => setBackPressed(false)}
-              accessibilityRole="button"
-              style={[barIconButton, backPressed && barIconButtonPressed]}
-            >
-              <Ionicons name="arrow-back" size={barBackIconSize} color={colors.COLOR_BLACK} />
-            </Pressable>
+              accessibilityLabel={t('goBack')}
+            />
           )}
           {options?.leftComponents?.map((component, index) => (
             <React.Fragment key={index}>{component}</React.Fragment>
