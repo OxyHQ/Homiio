@@ -813,12 +813,16 @@ export function SideBar() {
     // app's `front` drawer overlays the entire screen. The Portal host stays
     // mounted while on mobile so Reanimated can play the exit (slide-out +
     // fade) when `mobileDrawerOpen` flips to false; only the scrim + panel
-    // mount/unmount. `box-none` lets touches pass through when closed.
+    // mount/unmount. The full-screen wrapper is `pointerEvents:'none'` so that
+    // WHEN CLOSED (no children) it passes every touch through to the app beneath
+    // (the RN-only `'box-none'` is invalid CSS — RN-Web drops it, leaving the
+    // wrapper `auto` and freezing the whole mobile-web screen). The scrim + drawer
+    // re-enable themselves with `'auto'` so they stay interactive when open.
     return (
       <Portal>
         <View
           className="flex-row"
-          style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}
+          style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
         >
           {mobileDrawerOpen && (
             <>
@@ -830,13 +834,13 @@ export function SideBar() {
                 onPress={closeMobileDrawer}
                 style={[
                   StyleSheet.absoluteFill,
-                  { backgroundColor: MOBILE_DRAWER_SCRIM },
+                  { backgroundColor: MOBILE_DRAWER_SCRIM, pointerEvents: 'auto' },
                 ]}
               />
               <Animated.View
                 entering={slideIn}
                 exiting={slideOut}
-                style={{ width: drawerWidth }}
+                style={{ width: drawerWidth, pointerEvents: 'auto' }}
                 className="h-full bg-background"
               >
                 <BaseSidebar header={header} footer={footer}>

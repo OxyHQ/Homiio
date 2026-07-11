@@ -47,8 +47,12 @@ export const MapMarkerPopover: React.FC<MapMarkerPopoverProps> = ({
   }, [onPress]);
 
   return (
-    <View style={[styles.container, style, { pointerEvents: 'box-none' }]}>
-      <View style={[styles.card, cardShadow.lg]}>
+    // `pointerEvents:'none'` (NOT the RN-only `'box-none'`, which is invalid CSS
+    // that RN-Web drops → the padded container stays `auto` and blocks the map
+    // under its side gutters). The card re-enables itself with `'auto'`, so only
+    // the popover is interactive and the gutters pass taps through to the map.
+    <View style={[styles.container, style, { pointerEvents: 'none' }]}>
+      <View style={[styles.card, cardShadow.lg, { pointerEvents: 'auto' }]}>
         <View style={styles.dismissAnchor}>
           <Button
             onPress={onDismiss}

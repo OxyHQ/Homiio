@@ -382,6 +382,14 @@ const [pressed, setPressed] = useState(false);
 - Canonical template: `packages/frontend/components/search/SearchSummaryBar.tsx`
 - Audit: `grep -rn "style={({" app components --include=*.tsx` must return ZERO.
 
+## `pointerEvents: 'box-none'` / `'box-only'` in a STYLE is BROKEN on web
+
+`box-none`/`box-only` are React Native-ONLY values — they are NOT valid CSS `pointer-events`. Put them in a `style` object (`style={{ pointerEvents: 'box-none' }}`) and RN-Web **silently drops** them, leaving the element at `pointer-events: auto` — so a transparent, full-size overlay (a save layer, a scrim wrapper, a padded popover) **swallows every tap/hover beneath it** with no error. This hid the property-card carousel arrows and would freeze the whole mobile-web screen behind the closed sidebar drawer (PR #202 / the box-none sweep).
+
+- **Fix / correct pattern:** split into a pass-through container `pointerEvents: 'none'` (valid CSS) + genuinely-interactive children that re-enable themselves with `pointerEvents: 'auto'` (valid CSS: a child `auto` inside a parent `none` IS hittable). That reproduces box-none semantics with values RN-Web actually applies.
+- The RN `pointerEvents` **PROP** (`<View pointerEvents="box-none">`) is fine — RN-Web maps it correctly. Only the STYLE form is broken. Prefer the none/auto split.
+- Audit: `grep -rn "pointerEvents: 'box-none'\|pointerEvents: 'box-only'" app components` should stay ZERO in style objects.
+
 ## Masked Image Zoom (ZoomableImage)
 
 Cards NEVER scale on hover/press ("cutrada"). The app-wide Airbnb-2026 move is the **image zooming inside the card's rounded mask** — the photo scales, the card stays put, corners stay clipped. There is **one** primitive: `components/ui/ZoomableImage.tsx`.
