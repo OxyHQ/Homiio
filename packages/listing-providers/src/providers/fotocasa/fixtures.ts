@@ -189,7 +189,12 @@ export const FOTOCASA_FIXTURE_LOCATION_SEGMENTS_JSON = JSON.stringify({
 export const FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE =
   '<!DOCTYPE html><html><body><div id="px-captcha">Verifica que eres una persona</div></body></html>';
 
-/** Property detail JSON from `web.gw.fotocasa.es/.../property`. */
+/**
+ * Property detail JSON from `web.gw.fotocasa.es/.../property` (called with
+ * `language=es`, so `features` labels are localized). Models the `features`
+ * equipment array, structured `floor`, and the advertiser `contactInfo` node the
+ * detail payload carries so the parser exercises amenity/floor/contact extraction.
+ */
 export const FOTOCASA_FIXTURE_PROPERTY_JSON = JSON.stringify({
   propertyId: '187654321',
   title: 'Piso en alquiler en Calle de Almagro',
@@ -199,6 +204,7 @@ export const FOTOCASA_FIXTURE_PROPERTY_JSON = JSON.stringify({
   rooms: 3,
   baths: 2,
   surface: 95,
+  floor: 3,
   street: 'Calle de Almagro',
   number: '30',
   address: {
@@ -208,6 +214,22 @@ export const FOTOCASA_FIXTURE_PROPERTY_JSON = JSON.stringify({
     province: 'Madrid',
   },
   location: { latitude: '40.4318', longitude: '-3.6931' },
+  features: [
+    { name: 'Ascensor', value: true },
+    { name: 'Aire acondicionado', value: true },
+    { name: 'Calefacción', value: true },
+    { name: 'Terraza', value: true },
+    { name: 'Amueblado', value: true },
+    { name: 'Parking', value: false },
+    { name: 'Buen estado', value: true },
+    'Piscina',
+  ],
+  contactInfo: {
+    phone: '911234567',
+    email: 'agente@example-inmobiliaria.es',
+    contactName: 'Agente Almagro',
+    agencyName: 'Inmobiliaria Almagro',
+  },
   multimedia: [
     { url: 'https://static.fotocasa.es/images/anuncios/187654321/1.jpg', type: 'image' },
     { url: 'https://static.fotocasa.es/images/anuncios/187654321/2.jpg', type: 'image' },

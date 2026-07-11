@@ -5,6 +5,7 @@
  * JSON-LD and Next hydration parsing delegate to shared `src/parse/*` modules.
  */
 
+import type { NormalizedListingContact } from '@homiio/shared-types';
 import { extractEurListingFromNextData } from '../../parse/nextData';
 import { extractEsSchemaListings, pickEsListing, type EsSchemaListing } from '../../parse/jsonLd';
 import { FOTOCASA_BASE_URL } from './fixtures';
@@ -15,6 +16,10 @@ export interface FotocasaRaw {
   sourceId: string;
   url: string;
   listing: EsSchemaListing;
+  /** Floor number when the property-JSON record exposes it (searchads cards rarely do). */
+  floor?: number;
+  /** Advertiser contact captured from the property-JSON record, when present. */
+  contact?: NormalizedListingContact;
 }
 
 /** Match Fotocasa detail links (`…/<id>/d`) and capture the numeric id. */

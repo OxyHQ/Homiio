@@ -86,7 +86,33 @@ describe('FotocasaProvider.normalize', () => {
     expect(listing.bedrooms).toBe(3);
     expect(listing.bathrooms).toBe(2);
     expect(listing.squareFootage).toBe(95);
+    expect(listing.floor).toBe(3);
     expect(listing.remoteImages).toHaveLength(2);
+  });
+
+  it('extracts amenities, furnished, and contact from the property-JSON features', () => {
+    const payload = parseFotocasaPropertyJson(
+      FOTOCASA_FIXTURE_PROPERTY_JSON,
+      'https://www.fotocasa.es/es/alquiler/vivienda/madrid-capital/x/187654321/d',
+    );
+    const ref: ExternalListingRef = { provider: 'fotocasa', sourceId: payload.sourceId, url: payload.url };
+    const listing = provider.normalize({ ref, payload });
+
+    // Recognized equipment labels normalize to the SAME canonical keys as JSON-LD.
+    expect(listing.amenities).toEqual(
+      expect.arrayContaining(['elevator', 'air_conditioning', 'heating', 'terrace', 'pool']),
+    );
+    // `value: false` and unrecognized "características" never leak as amenities.
+    expect(listing.amenities).not.toContain('parking');
+    expect(listing.amenities).toEqual(expect.not.arrayContaining(['buen_estado']));
+    // `amueblado` is hoisted into furnishedStatus, not left as a raw amenity.
+    expect(listing.amenities).not.toContain('furnished');
+    expect(listing.furnishedStatus).toBe('furnished');
+
+    expect(listing.contact?.phone).toBe('911234567');
+    expect(listing.contact?.email).toBe('agente@example-inmobiliaria.es');
+    expect(listing.contact?.agencyName).toBe('Inmobiliaria Almagro');
+    expect(listing.contact?.name).toBe('Agente Almagro');
   });
 
   it('parses RealEstateListing JSON-LD with a nested about node', () => {
@@ -599,7 +625,13 @@ describe('FotocasaProvider.fetch property JSON path', () => {
             rooms: 3,
             baths: 2,
             surface: 95,
+            floor: 2,
             address: { municipality: 'Madrid' },
+            features: [
+              { name: 'Ascensor', value: true },
+              { name: 'Parking', value: true },
+            ],
+            contactInfo: { phone: '911234567', agencyName: 'Inmobiliaria Almagro' },
           },
         },
       },
@@ -609,6 +641,10 @@ describe('FotocasaProvider.fetch property JSON path', () => {
     const listing = local.normalize(raw);
     expect(listing.sourceId).toBe('187654321');
     expect(listing.longTermRent?.monthlyAmount).toBe(1850);
+    expect(listing.floor).toBe(2);
+    expect(listing.amenities).toEqual(expect.arrayContaining(['elevator', 'parking']));
+    expect(listing.contact?.phone).toBe('911234567');
+    expect(listing.contact?.agencyName).toBe('Inmobiliaria Almagro');
   });
 
   it('throws ChallengeError when property JSON and detail HTML stay blocked', async () => {
