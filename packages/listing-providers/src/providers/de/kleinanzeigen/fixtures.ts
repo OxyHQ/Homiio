@@ -32,7 +32,7 @@ export const KLEINANZEIGEN_FIXTURE_DETAIL_HTML = `<!doctype html>
 <meta property="og:title" content="Helle 2-Zimmer-Wohnung in Mitte" />
 <meta property="og:description" content="Schöne Wohnung mit Balkon in Berlin-Mitte." />
 <meta property="og:url" content="https://www.kleinanzeigen.de/s-anzeige/helle-2-zimmer-wohnung-in-mitte/3367000001-203-3331" />
-<meta property="og:image" content="https://img.kleinanzeigen.de/api/v1/prod-ads/images/aa/bb/example-1.jpg" />
+<meta property="og:image" content="https://img.kleinanzeigen.de/api/v1/prod-ads/images/aa/example-1?rule=$_59.JPG" />
 <meta property="og:latitude" content="52.531" />
 <meta property="og:longitude" content="13.401" />
 <meta property="og:locality" content="Mitte" />
@@ -41,6 +41,11 @@ export const KLEINANZEIGEN_FIXTURE_DETAIL_HTML = `<!doctype html>
 <title>Helle 2-Zimmer-Wohnung in Mitte | Wohnung mieten</title>
 </head>
 <body>
+<div class="galleryimage-large">
+  <img id="viewad-image" class="galleryimage-element current" data-imgsrc="https://img.kleinanzeigen.de/api/v1/prod-ads/images/aa/example-1?rule=$_57.AUTO" />
+  <img id="viewad-image" class="galleryimage-element" data-imgsrc="https://img.kleinanzeigen.de/api/v1/prod-ads/images/bb/example-2?rule=$_57.AUTO" />
+  <img id="viewad-image" class="galleryimage-element" data-imgsrc="https://img.kleinanzeigen.de/api/v1/prod-ads/images/cc/example-3?rule=$_59.AUTO" />
+</div>
 <div class="boxedarticle--price" id="viewad-price">1.250 €</div>
 <ul>
   <li class="addetailslist--detail">Wohnfläche<span class="addetailslist--detail--value">65 m²</span></li>

@@ -85,7 +85,7 @@ export const IS24_FIXTURE_EXPOSE_JSON = `{
     {
       "type": "TOP_ATTRIBUTES",
       "attributes": [
-        { "label": "Kaltmiete", "text": "1.250 €", "type": "TEXT", "highlighted": true },
+        { "label": "Kaltmiete 19,23 €/m²", "text": "1.250 €", "type": "TEXT", "highlighted": true },
         { "label": "Zimmer", "text": "2", "type": "TEXT" },
         { "label": "Wohnfläche", "text": "65 m²", "type": "TEXT" },
         { "label": "Warmmiete", "text": "1.450 €", "type": "TEXT" }
@@ -100,7 +100,12 @@ export const IS24_FIXTURE_EXPOSE_JSON = `{
       "addressLine2": "10119 Mitte, Berlin"
     },
     {
-      "type": "DESCRIPTION",
+      "type": "TEXT_AREA",
+      "title": "Lage",
+      "text": "Zentrale Lage in Berlin-Mitte, nahe U-Bahn Rosenthaler Platz."
+    },
+    {
+      "type": "TEXT_AREA",
       "title": "Objektbeschreibung",
       "text": "Lichtdurchflutete Wohnung mit Balkon und Einbauküche in Berlin-Mitte."
     }

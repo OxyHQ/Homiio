@@ -44,6 +44,14 @@ describe('KleinanzeigenProvider housing filter', () => {
     expect(listing.address.countryCode).toBe('DE');
     expect(listing.contact?.phone).toMatch(/493098765432/);
     expect(listing.contact?.whatsapp).toMatch(/493098765432/);
+    // Full gallery is captured (not just og:image), deduped by base id,
+    // normalized to the largest `$_57.AUTO` variant, og:image primary.
+    expect(listing.remoteImages).toHaveLength(3);
+    expect(listing.remoteImages[0]?.url).toBe(
+      'https://img.kleinanzeigen.de/api/v1/prod-ads/images/aa/example-1?rule=$_57.AUTO',
+    );
+    expect(listing.remoteImages[0]?.isPrimary).toBe(true);
+    expect(listing.remoteImages.every((image) => image.url.endsWith('?rule=$_57.AUTO'))).toBe(true);
   });
 
   it('rejects non-housing detail HTML', () => {
@@ -58,5 +66,16 @@ describe('KleinanzeigenProvider housing filter', () => {
     expect(url).toContain('/c203');
     expect(url).toContain('wohnung-mieten');
     expect(() => kleinanzeigenHousingSearchUrl('berlin', 1, '216')).toThrow(/not a housing category/);
+  });
+
+  it('paginates with `seite:N` before the category code (keeps the category filter)', () => {
+    // Appending `/seite:N` AFTER the `c203l…` code drops the category filter and
+    // returns a site-wide page; the page segment must sit before the code.
+    expect(kleinanzeigenHousingSearchUrl('berlin', 2, '203')).toBe(
+      'https://www.kleinanzeigen.de/s-wohnung-mieten/berlin/seite:2/c203l3331',
+    );
+    expect(kleinanzeigenHousingSearchUrl('muenchen', 3, '205')).toBe(
+      'https://www.kleinanzeigen.de/s-haus-mieten/muenchen/seite:3/c205l6411',
+    );
   });
 });
