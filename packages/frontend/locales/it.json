@@ -745,17 +745,23 @@
       "searchArea": "Search this area",
       "sort": "Sort",
       "filters": "Filters",
-      "saved": "Saved"
+      "saved": "Saved",
+      "decreaseGuests": "Riduci ospiti",
+      "increaseGuests": "Aumenta ospiti"
     },
     "summary": {
-      "edit": "Edit search",
-      "anyPrice": "Any price",
-      "addDates": "Add dates",
-      "anyTime": "Any time",
-      "anyType": "Any type",
-      "anywhere": "Anywhere",
-      "mapArea": "Map area",
-      "typeCount": "{{count}} types"
+      "edit": "Modifica ricerca",
+      "anyPrice": "Qualsiasi prezzo",
+      "addDates": "Aggiungi date",
+      "anyTime": "Qualsiasi data",
+      "anyType": "Qualsiasi tipo",
+      "anywhere": "Ovunque",
+      "mapArea": "Area della mappa",
+      "typeCount": "{{count}} tipi",
+      "anyWeek": "Qualsiasi settimana",
+      "addGuests": "Aggiungi ospiti",
+      "guestCount_one": "{{count}} ospite",
+      "guestCount_other": "{{count}} ospiti"
     },
     "step": {
       "dates": {
@@ -769,6 +775,10 @@
           "Sa": "Sa",
           "Su": "Do"
         }
+      },
+      "guests": {
+        "title": "Quanti ospiti?",
+        "label": "Ospiti"
       },
       "type": {
         "title": "What type of place?"

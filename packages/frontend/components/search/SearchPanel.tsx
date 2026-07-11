@@ -50,6 +50,7 @@ import { WhereStep } from './steps/WhereStep';
 import { TypeStep } from './steps/TypeStep';
 import { PriceStep } from './steps/PriceStep';
 import { DatesStep } from './steps/DatesStep';
+import { GuestsStep } from './steps/GuestsStep';
 import {
   BROWSE_MODE_OFFERING,
   browseModeFromOffering,
@@ -76,9 +77,9 @@ const BROWSE_MODE_LABELS: Record<BrowseMode, string> = {
   exchange: 'search.mode.exchange',
 };
 
-/** Ordered steps per rental mode. Long-term never includes `dates`. */
+/** Ordered steps per rental mode. Long-term never includes `dates`/`guests`. */
 const LONG_TERM_STEPS: readonly SearchStep[] = ['where', 'type', 'price'];
-const VACATION_STEPS: readonly SearchStep[] = ['where', 'type', 'dates', 'price'];
+const VACATION_STEPS: readonly SearchStep[] = ['where', 'type', 'dates', 'guests', 'price'];
 
 /**
  * Contextual title for the compact wide dialog's header — the short label of the
@@ -89,6 +90,7 @@ const STEP_TITLE: Record<SearchStep, string> = {
   where: 'searchBar.long.where',
   type: 'searchBar.long.propertyType',
   dates: 'searchBar.vacation.when',
+  guests: 'searchBar.vacation.who',
   price: 'search.step.price.title',
 };
 
@@ -206,9 +208,12 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
       priceMax: undefined,
       ...(isShortTerm ? {} : { dates: undefined, guests: undefined }),
     }));
-    // Leaving the short-term experience while on the dates step would strand the
-    // user (the other offerings have no calendar step).
-    setStep((prev) => (!isShortTerm && prev === 'dates' ? 'price' : prev));
+    // Leaving the short-term experience while on the dates/guests step would
+    // strand the user (the other offerings have neither a calendar nor a guest
+    // step).
+    setStep((prev) =>
+      !isShortTerm && (prev === 'dates' || prev === 'guests') ? 'price' : prev,
+    );
   }, []);
 
   const handleSelectLocation = useCallback(
@@ -248,6 +253,10 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
 
   const handleDatesChange = useCallback((dates: SearchDateRange | undefined) => {
     setDraft((prev) => ({ ...prev, dates }));
+  }, []);
+
+  const handleGuestsChange = useCallback((guests: number | undefined) => {
+    setDraft((prev) => ({ ...prev, guests }));
   }, []);
 
   const handleNext = useCallback(() => {
@@ -313,6 +322,8 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
         );
       case 'dates':
         return <DatesStep value={draft.dates} onChange={handleDatesChange} compact={isWide} />;
+      case 'guests':
+        return <GuestsStep value={draft.guests} onChange={handleGuestsChange} compact={isWide} />;
       case 'price':
         return (
           <PriceStep
@@ -335,6 +346,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
     handleSelectRecent,
     handleToggleType,
     handleDatesChange,
+    handleGuestsChange,
     handlePriceChange,
   ]);
 

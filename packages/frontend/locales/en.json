@@ -601,7 +601,9 @@
       "searchArea": "Search this area",
       "sort": "Sort",
       "filters": "Filters",
-      "saved": "Saved"
+      "saved": "Saved",
+      "decreaseGuests": "Decrease guests",
+      "increaseGuests": "Increase guests"
     },
     "summary": {
       "edit": "Edit search",
@@ -611,7 +613,11 @@
       "anyType": "Any type",
       "anywhere": "Anywhere",
       "mapArea": "Map area",
-      "typeCount": "{{count}} types"
+      "typeCount": "{{count}} types",
+      "anyWeek": "Any week",
+      "addGuests": "Add guests",
+      "guestCount_one": "{{count}} guest",
+      "guestCount_other": "{{count}} guests"
     },
     "step": {
       "dates": {
@@ -625,6 +631,10 @@
           "Sa": "Sa",
           "Su": "Su"
         }
+      },
+      "guests": {
+        "title": "How many guests?",
+        "label": "Guests"
       },
       "type": {
         "title": "What type of place?"

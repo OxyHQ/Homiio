@@ -598,17 +598,23 @@
       "searchArea": "Search this area",
       "sort": "Sort",
       "filters": "Filters",
-      "saved": "Saved"
+      "saved": "Saved",
+      "decreaseGuests": "Redueix hostes",
+      "increaseGuests": "Augmenta hostes"
     },
     "summary": {
-      "edit": "Edit search",
-      "anyPrice": "Any price",
-      "addDates": "Add dates",
-      "anyTime": "Any time",
-      "anyType": "Any type",
-      "anywhere": "Anywhere",
-      "mapArea": "Map area",
-      "typeCount": "{{count}} types"
+      "edit": "Edita la cerca",
+      "anyPrice": "Qualsevol preu",
+      "addDates": "Afegeix dates",
+      "anyTime": "Qualsevol data",
+      "anyType": "Qualsevol tipus",
+      "anywhere": "Qualsevol lloc",
+      "mapArea": "Àrea del mapa",
+      "typeCount": "{{count}} tipus",
+      "anyWeek": "Qualsevol setmana",
+      "addGuests": "Afegeix hostes",
+      "guestCount_one": "{{count}} hoste",
+      "guestCount_other": "{{count}} hostes"
     },
     "step": {
       "dates": {
@@ -622,6 +628,10 @@
           "Sa": "Ds",
           "Su": "Dg"
         }
+      },
+      "guests": {
+        "title": "Quants hostes?",
+        "label": "Hostes"
       },
       "type": {
         "title": "What type of place?"
