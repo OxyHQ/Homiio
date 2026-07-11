@@ -154,5 +154,38 @@ export const HABITACLIA_FIXTURE_DETAIL_HTML_LIVE = `<!doctype html>
 <img itemprop="image" src="//images.habimg.com/imgh/55551-4519/sample-g.jpg" />
 </body></html>`;
 
+/**
+ * REAL captured markup (trimmed) from a Habitaclia detail page that re-lists a
+ * Spotahome unit with NO reported surface. Habitaclia paints a `1 m²` PLACEHOLDER
+ * in `#js-feature-container` (its own title reads "…de 1 metros…" and its
+ * datalayer emits `"superficie":"undefined"`), so the microdata parser would
+ * ingest `squareMeters: 1` — the bug behind the "1 m²" listings in production.
+ * The `1.250,00 €/m²` price-per-m² row is included verbatim to prove it is NOT
+ * mistaken for the surface. Source: alquiler-piso-barceloneta-barcelona-i55551000001220.
+ */
+export const HABITACLIA_FIXTURE_DETAIL_HTML_PLACEHOLDER_SURFACE = `<!doctype html>
+<html lang="es"><head>
+<title>Piso por 1.250 &#x20AC; de 1 metros apartamento de 2 dormitorios en alquiler en la barceloneta, barcelona en Barceloneta Barcelona - habitaclia</title>
+<meta property="og:url" content="https://www.habitaclia.com/alquiler-piso-barceloneta-barcelona-i55551000001220.htm" />
+<meta name="description" content="Descubre este acogedor apartamento de 2 habitaciones disponible para alquilar en La Barceloneta, Barcelona." />
+</head><body>
+<h1>Alquiler piso apartamento de 2 dormitorios en alquiler en la Barceloneta, en Barcelona</h1>
+<a id="js-ver-mapa-zona" class="jqVerMapaZonaTooltip link-map-location" title="Barceloneta">Ver Barceloneta</a>
+<span class="font-2" itemscope itemtype="http://schema.org/Offer" itemprop="price">1.250 &#x20AC;</span>
+<article id="js-feature-container">
+<h4 class="hidden">Caracter&#xED;sticas principales</h4>
+<ul class="feature-container">
+<li class="feature">
+<strong>1</strong> m<sup>2</sup>
+</li>
+<li class="feature"> <strong>2</strong> hab.</li>
+<li class="feature">
+<strong>1</strong> ba&#xF1;o
+</li>
+<li class="feature feature-surface"><strong>1.250,00</strong> €/m<sup>2</sup></li>
+</ul>
+</article>
+</body></html>`;
+
 /** The base host used to build absolute Habitaclia URLs during discovery. */
 export const HABITACLIA_BASE_URL = 'https://www.habitaclia.com';
