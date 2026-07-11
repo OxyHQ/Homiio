@@ -3,6 +3,7 @@
  */
 
 import { OfferingType, type NormalizedListing } from '@homiio/shared-types';
+import { canonicalizeAmenities } from './amenities';
 import { stripHtmlToPlainText } from './htmlText';
 import { validateOfferingPrices } from './price';
 
@@ -42,11 +43,21 @@ export function sanitizeNormalizedListingTextFields(listing: NormalizedListing):
   }
 
   if (listing.amenities) {
-    listing.amenities = listing.amenities
+    // Strip portal HTML, then collapse every provider's amenity dialect onto the
+    // fixed canonical vocabulary (the single guarantee point — a provider that
+    // forgets to canonicalize still ends up consistent + translatable). A
+    // `furnished` token is hoisted into `furnishedStatus` rather than stored.
+    const cleaned = listing.amenities
       .map((item) => stripHtmlToPlainText(item) ?? '')
       .filter((item) => item.length > 0);
-    if (listing.amenities.length === 0) {
+    const { amenities, furnished } = canonicalizeAmenities(cleaned);
+    if (amenities.length > 0) {
+      listing.amenities = amenities;
+    } else {
       delete listing.amenities;
+    }
+    if (furnished && listing.furnishedStatus === undefined) {
+      listing.furnishedStatus = 'furnished';
     }
   }
 

@@ -5,7 +5,8 @@
  * {@link SchemaOrgListing}. Portal markup changes are fixed here.
  */
 
-import { asCoordinate, asNumberEu, asNumberUs, asString, deaccent, isRecord } from './guards';
+import { canonicalAmenity, FURNISHED_TOKEN } from './amenities';
+import { asCoordinate, asNumberEu, asNumberUs, asString, isRecord } from './guards';
 
 const LD_JSON_TYPE = 'application/ld+json';
 
@@ -60,104 +61,32 @@ export interface EurSchemaListing {
 export type EsSchemaListing = EurSchemaListing;
 export type ItSchemaListing = EurSchemaListing;
 
-const ES_AMENITY_ALIASES: Readonly<Record<string, string>> = {
-  ascensor: 'elevator',
-  'aire acondicionado': 'air_conditioning',
-  climatizacion: 'air_conditioning',
-  calefaccion: 'heating',
-  terraza: 'terrace',
-  balcon: 'balcony',
-  parking: 'parking',
-  garaje: 'parking',
-  piscina: 'pool',
-  jardin: 'garden',
-  trastero: 'storage',
-  amueblado: 'furnished',
-};
-
-/**
- * Canonical amenity for a portal English feature-SLUG key (e.g. Fotocasa
- * `features[].key`: `air_conditioner`, `elevator`, `storage_room`, …). These
- * are internal snake_case keys, NOT the localized Spanish labels handled by
- * {@link ES_AMENITY_ALIASES} — but they resolve to the SAME canonical vocabulary
- * so external listings share one amenity slug set across parse paths. Keys that
- * are dimensions (`rooms`/`bathrooms`/`surface`/`floor`) or non-amenity metadata
- * (`conservationStatus`, `antiquity`, …) are intentionally absent → dropped.
- */
-const FEATURE_KEY_AMENITY_ALIASES: Readonly<Record<string, string>> = {
-  elevator: 'elevator',
-  lift: 'elevator',
-  air_conditioner: 'air_conditioning',
-  air_conditioning: 'air_conditioning',
-  air_conditioned: 'air_conditioning',
-  heating: 'heating',
-  terrace: 'terrace',
-  balcony: 'balcony',
-  parking: 'parking',
-  garage: 'parking',
-  storage_room: 'storage',
-  storage: 'storage',
-  pool: 'pool',
-  swimming_pool: 'pool',
-  community_pool: 'pool',
-  private_pool: 'pool',
-  garden: 'garden',
-  private_garden: 'garden',
-  communal_garden: 'garden',
-  furnished: 'furnished',
-};
-
-const IT_AMENITY_ALIASES: Readonly<Record<string, string>> = {
-  ascensore: 'elevator',
-  'aria condizionata': 'air_conditioning',
-  climatizzazione: 'air_conditioning',
-  riscaldamento: 'heating',
-  terrazzo: 'terrace',
-  terrazza: 'terrace',
-  balcone: 'balcony',
-  posto_auto: 'parking',
-  garage: 'parking',
-  parcheggio: 'parking',
-  piscina: 'pool',
-  giardino: 'garden',
-  cantina: 'storage',
-  arredato: 'furnished',
-  arredata: 'furnished',
-};
-
 interface EurJsonLdConfig {
   defaultCountryCode: string;
-  amenityAliases: Readonly<Record<string, string>>;
 }
 
-const ES_JSON_LD_CONFIG: EurJsonLdConfig = { defaultCountryCode: 'ES', amenityAliases: ES_AMENITY_ALIASES };
-const IT_JSON_LD_CONFIG: EurJsonLdConfig = { defaultCountryCode: 'IT', amenityAliases: IT_AMENITY_ALIASES };
-
-function normalizeAmenity(name: string, aliases: Readonly<Record<string, string>>): string {
-  const key = deaccent(name);
-  return aliases[key] ?? key.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-}
+const ES_JSON_LD_CONFIG: EurJsonLdConfig = { defaultCountryCode: 'ES' };
+const IT_JSON_LD_CONFIG: EurJsonLdConfig = { defaultCountryCode: 'IT' };
 
 /**
- * Canonical ES amenity key for a free-form label (e.g. a portal property-JSON
+ * Canonical amenity key for a free-form label (e.g. a portal property-JSON
  * `features`/`extras` entry), or `undefined` when the label is not a recognized
- * amenity. Reuses the shared ES alias table — never duplicate it per portal.
- * `amueblado` resolves to `furnished`; callers hoist that into `furnishedStatus`.
- * Unlike {@link normalizeAmenity} it does NOT fall back to a snake_case slug, so
- * mixed "características" arrays (condition, orientation, …) don't leak as amenities.
+ * amenity. Delegates to the shared {@link canonicalAmenity} vocabulary — never a
+ * per-portal alias table. `amueblado`/`arredato`/… resolve to `furnished`;
+ * callers hoist that into `furnishedStatus`. Non-amenity entries (condition,
+ * orientation, …) return `undefined` so they don't leak as amenities.
  */
 export function matchEsAmenityKey(label: string): string | undefined {
-  return ES_AMENITY_ALIASES[deaccent(label)];
+  return canonicalAmenity(label);
 }
 
 /**
  * Canonical amenity slug for a portal English feature-slug key (Fotocasa
  * `features[].key`, …), or `undefined` when the key is not a recognized amenity.
- * Reuses the shared canonical vocabulary — resolves to the same slugs as
- * {@link matchEsAmenityKey} without duplicating the Spanish alias table.
+ * Same shared {@link canonicalAmenity} vocabulary as {@link matchEsAmenityKey}.
  */
 export function matchFeatureKeyAmenity(key: string): string | undefined {
-  return FEATURE_KEY_AMENITY_ALIASES[key.trim().toLowerCase()];
+  return canonicalAmenity(key);
 }
 
 function readTypes(value: unknown): string[] {
@@ -238,11 +167,9 @@ function readEurOffer(value: unknown): { price?: number; currency?: string; oper
   return {};
 }
 
-function readAmenities(
-  value: unknown,
-  aliases: Readonly<Record<string, string>>,
-): { amenities: string[]; furnished?: boolean } {
+function readAmenities(value: unknown): { amenities: string[]; furnished?: boolean } {
   const amenities: string[] = [];
+  const seen = new Set<string>();
   let furnished: boolean | undefined;
   const entries = Array.isArray(value) ? value : value === undefined ? [] : [value];
   for (const entry of entries) {
@@ -250,12 +177,16 @@ function readAmenities(
     const name = asString(entry.name);
     if (!name) continue;
     if (entry.value === false) continue;
-    const key = normalizeAmenity(name, aliases);
-    if (key === 'furnished') {
+    const key = canonicalAmenity(name);
+    if (!key) continue;
+    if (key === FURNISHED_TOKEN) {
       furnished = true;
       continue;
     }
-    if (key) amenities.push(key);
+    if (!seen.has(key)) {
+      seen.add(key);
+      amenities.push(key);
+    }
   }
   return { amenities, furnished };
 }
@@ -269,10 +200,7 @@ function toEurListing(node: Record<string, unknown>, config: EurJsonLdConfig): E
   const subject = readSubject(node);
   const offer = readEurOffer(node.offers ?? subject.offers);
   const topLevelPrice = asNumberEu(node.price);
-  const { amenities, furnished } = readAmenities(
-    subject.amenityFeature ?? node.amenityFeature,
-    config.amenityAliases,
-  );
+  const { amenities, furnished } = readAmenities(subject.amenityFeature ?? node.amenityFeature);
   const types = [...readTypes(node['@type']), ...readTypes(subject['@type'])];
   return {
     types,

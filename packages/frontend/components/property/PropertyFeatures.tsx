@@ -14,6 +14,11 @@
  *   - Garden      shown only when `hasGarden`. Ionicons `leaf` (no PNG yet).
  *   - Elevator    shown only when `hasElevator`. PNG `elevator`, fallback
  *                 `arrow-up-circle`.
+ *   - Parking     shown when `parkingType` is set and not `none` (label varies
+ *                 by kind: garage / assigned / street). PNG `parking`, fallback `car`.
+ *   - Pets        shown when `petPolicy` is set (allowed / not_allowed / case_by_case).
+ *                 Ionicons `paw`.
+ * All labels come from the shared `parkingType.*` / `petPolicy.*` enum vocab.
  * No rows → renders nothing.
  */
 import React, { useMemo } from 'react';
@@ -30,6 +35,8 @@ import {
 import { getIconArt } from '@/constants/iconArt';
 
 type FurnishedStatus = 'furnished' | 'partially_furnished' | 'unfurnished';
+type ParkingType = 'none' | 'street' | 'assigned' | 'garage';
+type PetPolicy = 'allowed' | 'not_allowed' | 'case_by_case';
 
 interface Props {
     property?: {
@@ -37,6 +44,8 @@ interface Props {
         hasBalcony?: boolean;
         hasGarden?: boolean;
         hasElevator?: boolean;
+        parkingType?: ParkingType;
+        petPolicy?: PetPolicy;
     } | null;
 }
 
@@ -73,6 +82,8 @@ export const PropertyFeatures: React.FC<Props> = ({ property }) => {
     const hasBalcony = property?.hasBalcony;
     const hasGarden = property?.hasGarden;
     const hasElevator = property?.hasElevator;
+    const parkingType = property?.parkingType;
+    const petPolicy = property?.petPolicy;
 
     const rows = useMemo<FeatureRow[]>(() => {
         const next: FeatureRow[] = [];
@@ -100,9 +111,20 @@ export const PropertyFeatures: React.FC<Props> = ({ property }) => {
                 icon: 'arrow-up-circle',
             });
         }
+        if (parkingType !== undefined && parkingType !== 'none') {
+            next.push({
+                key: 'parking',
+                label: t(`parkingType.${parkingType}`),
+                imageId: 'parking',
+                icon: 'car',
+            });
+        }
+        if (petPolicy !== undefined) {
+            next.push({ key: 'petPolicy', label: t(`petPolicy.${petPolicy}`), icon: 'paw' });
+        }
 
         return next;
-    }, [furnishedStatus, hasBalcony, hasGarden, hasElevator, t]);
+    }, [furnishedStatus, hasBalcony, hasGarden, hasElevator, parkingType, petPolicy, t]);
 
     if (rows.length === 0) return null;
 

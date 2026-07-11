@@ -67,7 +67,6 @@ export const AMENITY_CATEGORIES: AmenityCategory[] = [
   {
     id: 'kitchen',
     name: 'Kitchen & dining',
-    nameKey: 'amenities.kitchen',
     nameKey: 'amenities.categories.kitchen',
     icon: 'restaurant',
     color: '#ea580c',
@@ -574,6 +573,17 @@ export const AMENITIES: Amenity[] = [
     environmental: 'neutral',
   },
   {
+    id: 'attic',
+    name: 'Attic',
+    nameKey: 'amenities.attic',
+    icon: 'cube',
+    category: 'storage',
+    description: 'Attic storage space',
+    maxFairValue: 15,
+    ethicalNotes: 'Extra storage should be priced fairly based on space provided',
+    environmental: 'neutral',
+  },
+  {
     id: 'walk_in_closet',
     name: 'Walk-in Closet',
     nameKey: 'amenities.walkInCloset',
@@ -675,6 +685,17 @@ export const AMENITIES: Amenity[] = [
     category: 'outdoor',
     description: 'Private outdoor balcony space',
     maxFairValue: 25, // Reasonable value for private outdoor space
+    ethicalNotes: 'Outdoor space improves mental health and quality of life',
+    environmental: 'positive',
+  },
+  {
+    id: 'terrace',
+    name: 'Terrace',
+    nameKey: 'amenities.terrace',
+    icon: 'sunny',
+    category: 'outdoor',
+    description: 'Private or shared terrace',
+    maxFairValue: 25,
     ethicalNotes: 'Outdoor space improves mental health and quality of life',
     environmental: 'positive',
   },
@@ -1128,6 +1149,17 @@ export const AMENITIES: Amenity[] = [
     ethicalNotes: 'Wellness amenity for relaxation and community',
     environmental: 'neutral',
   },
+  {
+    id: 'sauna',
+    name: 'Sauna',
+    nameKey: 'amenities.sauna',
+    icon: 'flame',
+    category: 'wellness',
+    description: 'Private or shared sauna',
+    maxFairValue: 25,
+    ethicalNotes: 'Wellness amenity for relaxation and community',
+    environmental: 'neutral',
+  },
 
   // Family & Children Amenities
   {
@@ -1235,9 +1267,37 @@ export const AMENITIES: Amenity[] = [
   },
 ];
 
+/**
+ * Ingest canonical amenity slug (from `@homiio/listing-providers`
+ * `parse/amenities.ts`) → catalog amenity id. External listings store the
+ * fixed canonical vocabulary (`pool`, `parking`, `garden`, …); a few of those
+ * keys differ from the catalog id used by internally-created listings
+ * (`swimming_pool`, `parking_space`, `garden_space`, …). Resolving through this
+ * map means external + internal listings share one icon + one translation.
+ * Canonical keys that already match a catalog id (`elevator`, `heating`,
+ * `air_conditioning`, `wifi`, `terrace`, `sauna`, `attic`, …) are absent here
+ * and pass through unchanged.
+ */
+export const CANONICAL_AMENITY_ALIASES: Readonly<Record<string, string>> = {
+  pool: 'swimming_pool',
+  parking: 'parking_space',
+  garden: 'garden_space',
+  storage: 'storage_unit',
+  laundry: 'laundry_room',
+  washer: 'washing_machine',
+  jacuzzi: 'hot_tub',
+  armored_door: 'secure_entry',
+  disabled_access: 'wheelchair_accessible',
+  intercom_system: 'intercom',
+};
+
+/** Resolve a stored amenity slug to its catalog id (identity when not aliased). */
+export const resolveAmenityId = (id: string): string => CANONICAL_AMENITY_ALIASES[id] ?? id;
+
 // Helper functions for ethical amenity management
 export const getAmenityById = (id: string): Amenity | undefined => {
-  return AMENITIES.find((amenity) => amenity.id === id);
+  const resolvedId = resolveAmenityId(id);
+  return AMENITIES.find((amenity) => amenity.id === resolvedId);
 };
 
 /**
@@ -1274,16 +1334,17 @@ export const groupAmenitiesByCategory = (ids: string[]): AmenityGroup[] => {
   const byCategory = new Map<string, ResolvedAmenity[]>();
 
   for (const id of ids) {
-    const amenity = getAmenityById(id);
+    const resolvedId = resolveAmenityId(id);
+    const amenity = getAmenityById(resolvedId);
     const categoryId =
       amenity && getCategoryById(amenity.category)
         ? amenity.category
         : UNCATEGORIZED_AMENITY_ID;
     const bucket = byCategory.get(categoryId);
     if (bucket) {
-      bucket.push({ id, amenity });
+      bucket.push({ id: resolvedId, amenity });
     } else {
-      byCategory.set(categoryId, [{ id, amenity }]);
+      byCategory.set(categoryId, [{ id: resolvedId, amenity }]);
     }
   }
 
