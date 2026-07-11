@@ -256,13 +256,19 @@ export function PropertyCard({
     return Number.isFinite(created) && Date.now() - created <= NEW_LISTING_WINDOW_MS;
   }, [property?.createdAt]);
 
+  // The horizontal (small single-cover thumbnail) variant is too tight for the
+  // save heart — suppress it there by either path (skeleton + real render).
+  // Vertical/grid/etc. keep it. Computed before the skeleton early-return so both
+  // branches share it.
+  const finalShowSaveButton = showSaveButton && orientation !== 'horizontal';
+
   // Show skeleton loading state
   if (isLoading) {
     return (
       <PropertyCardSkeleton
         variant={variant}
         orientation={orientation}
-        showSaveButton={showSaveButton}
+        showSaveButton={finalShowSaveButton}
         showRating={showRating}
         showPrice={showPrice}
         showFeatures={showFeatures}
@@ -696,14 +702,14 @@ export function PropertyCard({
           button (invalid HTML + hydration error on web). The overlay matches
           the image geometry per orientation so the heart stays pinned to the
           photo's top-right corner. */}
-      {showSaveButton && (
+      {finalShowSaveButton && (
+        // Only the vertical / grid geometry — `finalShowSaveButton` is false for
+        // the horizontal thumbnail, so the heart never renders there.
         <View
           style={[
             styles.mediaOverlay,
             { pointerEvents: 'box-none' },
-            orientation === 'horizontal'
-              ? { width: finalImageHeight, height: finalImageHeight }
-              : { left: 0, right: 0, aspectRatio: isGrid ? gridAspectRatio : 1 },
+            { left: 0, right: 0, aspectRatio: isGrid ? gridAspectRatio : 1 },
           ]}
         >
           <SaveButton
