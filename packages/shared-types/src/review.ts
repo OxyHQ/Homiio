@@ -1,12 +1,21 @@
 /**
  * Review-related types shared across Homiio frontend and backend.
  *
+ * This file is the single source of truth for the TARGET review model: the
+ * enums are copied verbatim from the runtime Mongoose model
+ * (`packages/backend/models/Review.ts`, which imports them back from here), and
+ * the interfaces mirror the current model plus the planned reviucasa-style
+ * fields (rich dimensions, agencies, moderation, helpful/report).
+ *
  * Ids are plain `string`s: shared-types MUST NOT depend on mongoose. The
  * backend Review model declares its own `IReview` with `ObjectId` fields and
  * Mongoose transparently casts these string ids to `ObjectId` at the DB layer.
  */
 
-// Rating enums
+// ---------------------------------------------------------------------------
+// Dimension enums — the backend model is the authority; values are verbatim.
+// ---------------------------------------------------------------------------
+
 export enum TemperatureRating {
   VERY_COLD = 'very_cold',
   COLD = 'cold',
@@ -32,10 +41,10 @@ export enum LightLevel {
 }
 
 export enum ConditionRating {
-  VERY_POOR = 'very_poor',
   POOR = 'poor',
   FAIR = 'fair',
   GOOD = 'good',
+  VERY_GOOD = 'very_good',
   EXCELLENT = 'excellent'
 }
 
@@ -109,198 +118,258 @@ export enum ServiceType {
   CLEANING = 'cleaning'
 }
 
-export enum SafetyRating {
-  VERY_UNSAFE = 'very_unsafe',
-  UNSAFE = 'unsafe',
-  NEUTRAL = 'neutral',
-  SAFE = 'safe',
-  VERY_SAFE = 'very_safe'
+// ---------------------------------------------------------------------------
+// Planned enums (deposit outcome, moderation lifecycle, report reasons).
+// ---------------------------------------------------------------------------
+
+export enum DepositReturn {
+  FULL = 'full',
+  PARTIAL = 'partial',
+  NO = 'no'
 }
 
-export enum AccessibilityRating {
-  VERY_POOR = 'very_poor',
-  POOR = 'poor',
-  FAIR = 'fair',
-  GOOD = 'good',
-  EXCELLENT = 'excellent'
+export enum ReviewModerationStatus {
+  ACTIVE = 'active',
+  UNDER_REVIEW = 'under_review',
+  REMOVED = 'removed'
 }
 
-export enum TransportRating {
-  VERY_POOR = 'very_poor',
-  POOR = 'poor',
-  FAIR = 'fair',
-  GOOD = 'good',
-  EXCELLENT = 'excellent'
+export enum ReviewReportReason {
+  FAKE = 'fake',
+  OFFENSIVE = 'offensive',
+  PERSONAL_DATA = 'personal_data',
+  SPAM = 'spam',
+  OTHER = 'other'
 }
 
-export enum ShoppingRating {
-  VERY_POOR = 'very_poor',
-  POOR = 'poor',
-  FAIR = 'fair',
-  GOOD = 'good',
-  EXCELLENT = 'excellent'
+// ---------------------------------------------------------------------------
+// Agencies — the entity a review can be attributed to (property manager /
+// landlord agency), reviucasa-style.
+// ---------------------------------------------------------------------------
+
+/** A property-management / landlord agency reviews can be attributed to. */
+export interface Agency {
+  id: string;
+  name: string;
+  slug: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-export enum EducationRating {
-  VERY_POOR = 'very_poor',
-  POOR = 'poor',
-  FAIR = 'fair',
-  GOOD = 'good',
-  EXCELLENT = 'excellent'
+/** Denormalized agency projection embedded on a {@link ReviewDTO}. */
+export interface AgencySummary {
+  id: string;
+  name: string;
+  slug: string;
 }
 
-export enum CommunityRating {
-  VERY_POOR = 'very_poor',
-  POOR = 'poor',
-  FAIR = 'fair',
-  GOOD = 'good',
-  EXCELLENT = 'excellent'
+/** Aggregated review statistics for an agency profile / explore page. */
+export interface AgencyStats {
+  averageRating: number;
+  totalReviews: number;
+  recommendationPercentage: number;
+  /** Percentage of reviews reporting a FULL deposit return (0-100). */
+  depositFullPct?: number;
+  /** Number of active Homiio listings currently attributed to the agency. */
+  listingsCount?: number;
 }
 
-export enum ChildrenRating {
-  VERY_POOR = 'very_poor',
-  POOR = 'poor',
-  FAIR = 'fair',
-  GOOD = 'good',
-  EXCELLENT = 'excellent'
-}
+// ---------------------------------------------------------------------------
+// Review — the TARGET model shared by frontend and backend.
+// ---------------------------------------------------------------------------
 
-export enum PetsRating {
-  VERY_POOR = 'very_poor',
-  POOR = 'poor',
-  FAIR = 'fair',
-  GOOD = 'good',
-  EXCELLENT = 'excellent'
-}
-
-// Core review interface
 export interface Review {
   // Address hierarchy
-  addressId: string; // Reference to the specific address level (building or unit)
-  addressLevel: 'BUILDING' | 'UNIT'; // Level at which review is attached
+  /** Reference to the specific address level the review is attached to. */
+  addressId: string;
+  /** Level at which the review is attached. */
+  addressLevel: 'BUILDING' | 'UNIT';
+  /** Reference to the street-level address (for aggregation). */
+  streetLevelId: string;
+  /** Reference to the building-level address (for aggregation). */
+  buildingLevelId: string;
+  /** Reference to the unit-level address (only for UNIT level reviews). */
+  unitLevelId?: string;
+  /** Denormalized city reference for explore aggregation. */
+  cityId?: string;
+  /** Denormalized neighborhood reference for explore aggregation. */
+  neighborhoodId?: string;
 
-  // Hierarchical address references for aggregation
-  streetLevelId: string; // Reference to street-level address
-  buildingLevelId: string; // Reference to building-level address
-  unitLevelId?: string; // Reference to unit-level address (only for UNIT level reviews)
-
-  // User reference
+  // Author
   oxyUserId: string;
-  
+
   // Basic information
-  greenHouse?: string;
-  price?: number;
-  currency?: string;
-  livedFrom?: Date;
-  livedTo?: Date;
-  recommendation?: boolean;
+  title: string;
+  price: number;
+  currency: string;
+  livedFrom: Date;
+  livedTo: Date;
+  livedForMonths: number;
+
+  // Overall opinion
+  rating: number; // 1-5 stars
+  recommendation: boolean;
   opinion: string;
+  prosItems: string[];
+  consItems: string[];
+  adviceToAgency?: string;
+  adviceToLandlord?: string;
+
+  /** Relational link to the {@link Agency} this tenancy was managed by. */
+  agencyId?: string;
+
+  // Dimension ratings (existing model fields; all optional)
+  summerTemperature?: TemperatureRating;
+  winterTemperature?: TemperatureRating;
+  noise?: NoiseLevel;
+  light?: LightLevel;
+  conditionAndMaintenance?: ConditionRating;
+  services?: ServiceType[];
+  landlordTreatment?: LandlordTreatment;
+  problemResponse?: ResponseRating;
+  staircaseNeighbors?: NeighborRating;
+  touristApartments?: boolean;
+  neighborRelations?: NeighborRelations;
+  cleaning?: CleaningRating;
+  areaTourists?: TouristLevel;
+  areaSecurity?: SecurityLevel;
+
+  // New dimension ratings
+  areaNoise?: NoiseLevel;
+  areaCleanliness?: CleaningRating;
+
+  /** Deposit outcome at the end of the tenancy. */
+  depositReturned?: DepositReturn;
+
+  // Media & trust
+  images: string[];
+  verified: boolean;
+  moderationStatus: ReviewModerationStatus;
+
+  // Legacy read-only fields (retained for older documents, not written by the
+  // new form). `positiveComment`/`negativeComment` superseded by
+  // `prosItems`/`consItems`; `greenHouse` was a free-text descriptor.
   positiveComment?: string;
   negativeComment?: string;
-  
-  // Apartment ratings (1-5 stars)
-  apartmentSize?: number;
-  apartmentKitchen?: number;
-  apartmentBathroom?: number;
-  apartmentBedroom?: number;
-  apartmentStorage?: number;
-  apartmentFurnishing?: number;
-  
-  // Apartment detailed ratings (enum values)
-  apartmentTemperature?: TemperatureRating;
-  apartmentNoise?: NoiseLevel;
-  apartmentLight?: LightLevel;
-  apartmentCondition?: ConditionRating;
-  apartmentInternet?: number;
-  apartmentCellReception?: number;
-  
-  // Community ratings (1-5 stars)
-  communityMaintenance?: number;
-  communityCleanliness?: number;
-  communityManagement?: number;
-  communityAmenities?: number;
-  communityParking?: number;
-  communitySafety?: number;
-  
-  // Landlord ratings (1-5 stars)
-  landlordCommunication?: number;
-  landlordFairness?: number;
-  landlordMaintenance?: number;
-  landlordTreatment?: LandlordTreatment;
-  landlordResponse?: ResponseRating;
-  
-  // Area ratings (1-5 stars)
-  areaSafety?: SafetyRating;
-  areaAccessibility?: AccessibilityRating;
-  areaTransport?: TransportRating;
-  areaShopping?: ShoppingRating;
-  areaEducation?: EducationRating;
-  areaCommunity?: CommunityRating;
-  areaChildren?: ChildrenRating;
-  areaPets?: PetsRating;
-  
-  // Ethical review features
-  isAnonymous?: boolean;
-  confidenceScore?: number;
-  evidenceUrls?: string[];
-  tags?: string[];
-  
-  // Moderation fields
-  flaggedCount?: number;
-  isVerified?: boolean;
-  moderatorNotes?: string;
-  
-  // Community interaction
-  helpfulVotes?: number;
-  unhelpfulVotes?: number;
-  replies?: string[];
+  greenHouse?: string;
 }
 
-export interface ReviewDocument extends Review {
-  _id: string;
+/**
+ * Serialized review returned by the API (`_id` → `id`, timestamps, derived
+ * helpful counters, and the optional populated agency + address projections).
+ */
+export interface ReviewDTO extends Review {
   id: string;
   createdAt: Date;
   updatedAt: Date;
+  /** Number of distinct users who marked this review helpful. */
+  helpfulCount: number;
+  /** Whether the requesting viewer has marked this review helpful. */
+  viewerHasVotedHelpful: boolean;
+  /** Denormalized agency projection (present when `agencyId` resolves). */
+  agency?: AgencySummary;
+  /** Populated address projection used by review lists / detail views. */
   populatedAddress?: {
     _id: string;
     street: string;
     city: string;
-    state?: string; // Made optional
-    postal_code: string; // Renamed from zipCode
+    state?: string;
+    postal_code: string;
     country: string;
-    countryCode: string; // Added country code
+    countryCode: string;
     fullAddress: string;
     location: string;
-    // Legacy field for backward compatibility
+    // Legacy field for backward compatibility.
     zipCode?: string;
   };
-  populatedProfile?: {
-    _id: string;
-    name: string;
-    isAnonymous?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Write payloads.
+// ---------------------------------------------------------------------------
+
+/**
+ * Nested address object the create endpoint accepts. The controller resolves
+ * it into the canonical street/building/unit id chain server-side, so callers
+ * supply human-readable place fields plus optional coordinates.
+ */
+export interface CreateReviewAddressInput {
+  street: string;
+  number?: string;
+  building_name?: string;
+  floor?: string;
+  unit?: string;
+  postal_code: string;
+  city: string;
+  state?: string;
+  country: string;
+  countryCode?: string;
+  neighborhood?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+/**
+ * The subset of {@link Review} a client may supply on create/update. Server-only
+ * fields (address hierarchy ids, author, computed duration, agency link,
+ * moderation, verification) are resolved by the backend and excluded here.
+ */
+export type CreatableReviewFields = Omit<
+  Review,
+  | 'addressId'
+  | 'addressLevel'
+  | 'streetLevelId'
+  | 'buildingLevelId'
+  | 'unitLevelId'
+  | 'cityId'
+  | 'neighborhoodId'
+  | 'oxyUserId'
+  | 'livedForMonths'
+  | 'agencyId'
+  | 'verified'
+  | 'moderationStatus'
+>;
+
+/**
+ * Create-review request body: the nested {@link CreateReviewAddressInput}, the
+ * required core fields, any optional creatable fields, and an optional
+ * `agencyName` the backend resolves/creates into an {@link Agency}.
+ */
+export type CreateReviewPayload = Partial<CreatableReviewFields> &
+  Pick<
+    CreatableReviewFields,
+    'price' | 'currency' | 'livedFrom' | 'livedTo' | 'rating' | 'recommendation' | 'opinion'
+  > & {
+    address: CreateReviewAddressInput;
+    agencyName?: string;
   };
+
+/** Update-review request body: any creatable field, no address re-resolution. */
+export type UpdateReviewPayload = Partial<CreatableReviewFields>;
+
+// ---------------------------------------------------------------------------
+// Explore DTOs (aggregated review coverage by geo level / building).
+// ---------------------------------------------------------------------------
+
+export interface ExploreCitySummary {
+  cityId: string;
+  name: string;
+  reviewCount: number;
+  averageRating: number;
 }
 
-export interface ReviewData extends Omit<Review, 'oxyUserId' | 'addressId'> {
-  oxyUserId?: string;
-  addressId?: string;
+export interface ExploreNeighborhoodSummary {
+  neighborhoodId: string;
+  name: string;
+  reviewCount: number;
+  averageRating: number;
 }
 
-export interface CreateReviewRequest extends Omit<Review, '_id' | 'createdAt' | 'updatedAt'> {
-  // All review fields are inherited from Review interface
-  // The addressId is required and will be used to determine hierarchical structure
-  addressId: string;
-}
-
-export interface UpdateReviewRequest {
-  reviewId: string;
-  review: Partial<ReviewData>;
-}
-
-export interface ReviewQuery {
-  addressId?: string;
-  oxyUserId?: string;
-  page?: number;
-  limit?: number;
-  sort?: 'newest' | 'oldest' | 'highest_rated' | 'lowest_rated';
+export interface ExploreBuildingSummary {
+  buildingLevelId: string;
+  street: string;
+  number?: string;
+  reviewCount: number;
+  averageRating: number;
+  recommendationPercentage: number;
 }

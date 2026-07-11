@@ -271,6 +271,12 @@ export interface Property {
   sourcedByPartner?: string;
   /** Referral code captured at create time (audit copy of the partner's code). */
   sourcedByReferralCode?: string;
+  /**
+   * Relational link to the {@link Agency} that manages this listing. Backing
+   * schema field lands in a follow-up PR; reviews attributed to the same agency
+   * surface it on the listing.
+   */
+  agencyId?: string;
   // Flags
   isVerified?: boolean;
   isEcoFriendly?: boolean;

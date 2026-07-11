@@ -4,109 +4,20 @@
  */
 
 import { Schema, model, Document, Types, Model } from 'mongoose';
-
-// Enums for multiple choice fields
-export enum TemperatureRating {
-  VERY_COLD = 'very_cold',
-  COLD = 'cold',
-  MODERATE = 'moderate',
-  WARM = 'warm',
-  VERY_WARM = 'very_warm'
-}
-
-export enum NoiseLevel {
-  VERY_QUIET = 'very_quiet',
-  QUIET = 'quiet',
-  MODERATE = 'moderate',
-  NOISY = 'noisy',
-  VERY_NOISY = 'very_noisy'
-}
-
-export enum LightLevel {
-  VERY_DARK = 'very_dark',
-  DARK = 'dark',
-  MODERATE = 'moderate',
-  BRIGHT = 'bright',
-  VERY_BRIGHT = 'very_bright'
-}
-
-export enum ConditionRating {
-  POOR = 'poor',
-  FAIR = 'fair',
-  GOOD = 'good',
-  VERY_GOOD = 'very_good',
-  EXCELLENT = 'excellent'
-}
-
-export enum LandlordTreatment {
-  VERY_POOR = 'very_poor',
-  POOR = 'poor',
-  FAIR = 'fair',
-  GOOD = 'good',
-  EXCELLENT = 'excellent'
-}
-
-export enum ResponseRating {
-  NEVER_RESPONDED = 'never_responded',
-  VERY_SLOW = 'very_slow',
-  SLOW = 'slow',
-  REASONABLE = 'reasonable',
-  FAST = 'fast',
-  VERY_FAST = 'very_fast'
-}
-
-export enum NeighborRating {
-  VERY_UNFRIENDLY = 'very_unfriendly',
-  UNFRIENDLY = 'unfriendly',
-  NEUTRAL = 'neutral',
-  FRIENDLY = 'friendly',
-  VERY_FRIENDLY = 'very_friendly'
-}
-
-export enum NeighborRelations {
-  VERY_POOR = 'very_poor',
-  POOR = 'poor',
-  FAIR = 'fair',
-  GOOD = 'good',
-  EXCELLENT = 'excellent'
-}
-
-export enum CleaningRating {
-  VERY_DIRTY = 'very_dirty',
-  DIRTY = 'dirty',
-  ACCEPTABLE = 'acceptable',
-  CLEAN = 'clean',
-  VERY_CLEAN = 'very_clean'
-}
-
-export enum TouristLevel {
-  NONE = 'none',
-  FEW = 'few',
-  MODERATE = 'moderate',
-  MANY = 'many',
-  OVERWHELMING = 'overwhelming'
-}
-
-export enum SecurityLevel {
-  VERY_UNSAFE = 'very_unsafe',
-  UNSAFE = 'unsafe',
-  NEUTRAL = 'neutral',
-  SAFE = 'safe',
-  VERY_SAFE = 'very_safe'
-}
-
-export enum ServiceType {
-  INTERNET = 'internet',
-  CABLE_TV = 'cable_tv',
-  PARKING = 'parking',
-  LAUNDRY = 'laundry',
-  GYM = 'gym',
-  POOL = 'pool',
-  CONCIERGE = 'concierge',
-  SECURITY = 'security',
-  MAINTENANCE = 'maintenance',
-  CLEANING = 'cleaning'
-}
+import {
+  TemperatureRating,
+  NoiseLevel,
+  LightLevel,
+  ConditionRating,
+  LandlordTreatment,
+  ResponseRating,
+  NeighborRating,
+  NeighborRelations,
+  CleaningRating,
+  TouristLevel,
+  SecurityLevel,
+  ServiceType,
+} from '@homiio/shared-types';
 
 // Define the Review interface
 export interface IReview extends Document {
