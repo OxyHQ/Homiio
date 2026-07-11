@@ -415,7 +415,7 @@
     "disableNotifications": "Disable notifications",
     "withFilters": "With filters",
     "error": {
-      "title": "Could not load homes"
+      "title": "Could not load properties"
     },
     "enterSearchQuery": "Please enter a search query first",
     "deleteSearch": "Delete Search",
@@ -650,9 +650,10 @@
     },
     "header": {
       "geocoding": "Looking up location...",
-      "noResults": "No homes match this search",
-      "loading": "Searching homes...",
-      "count": "{{count}} homes"
+      "noResults": "No properties match this search",
+      "loading": "Searching properties...",
+      "count_one": "{{count}} property",
+      "count_other": "{{count}} properties"
     },
     "recent": {
       "title": "Recent searches"
@@ -670,7 +671,7 @@
     "empty": {
       "action": "Edit search",
       "description": "Try widening your area or relaxing your filters.",
-      "title": "No homes match this search"
+      "title": "No properties match this search"
     },
     "sort": {
       "title": "Sort by",

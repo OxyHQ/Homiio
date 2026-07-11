@@ -399,15 +399,15 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
 
   const resultsHeading = useMemo(() => {
     if (isLoading) {
-      return t('search.header.loading', 'Searching homes...') || 'Searching homes...';
+      return t('search.header.loading', 'Searching properties...') || 'Searching properties...';
     }
     if (total === 0) {
-      return t('search.header.noResults', 'No homes match this search') ||
-        'No homes match this search';
+      return t('search.header.noResults', 'No properties match this search') ||
+        'No properties match this search';
     }
-    return (
-      t('search.header.count', `${total} homes`) || `${total} homes`
-    );
+    // Pass `count` as interpolation options so i18next selects the pluralized
+    // `search.header.count_one`/`_other` variant and fills `{{count}}`.
+    return t('search.header.count', { count: total }) || `${total} properties`;
   }, [t, isLoading, total]);
 
   // --- shared sub-renders ---
@@ -488,7 +488,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     if (isError) {
       return (
         <ErrorState
-          title={t('search.error.title', 'Could not load homes') || 'Could not load homes'}
+          title={t('search.error.title', 'Could not load properties') || 'Could not load properties'}
           description={error?.message}
           retryLabel={t('common.tryAgain', 'Try again') || 'Try again'}
           onRetry={() => void refetch()}
@@ -500,8 +500,8 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         <EmptyState
           icon="home-outline"
           title={
-            t('search.empty.title', 'No homes match this search') ||
-            'No homes match this search'
+            t('search.empty.title', 'No properties match this search') ||
+            'No properties match this search'
           }
           description={
             t('search.empty.description', 'Try widening your area or relaxing your filters.') ||

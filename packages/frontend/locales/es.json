@@ -384,7 +384,7 @@
     "notificationsDescription": "Recibe notificaciones cuando nuevas propiedades coincidan con esta búsqueda",
     "withFilters": "Con filtros",
     "error": {
-      "title": "Could not load homes"
+      "title": "No se pudieron cargar las propiedades"
     },
     "enterSearchQuery": "Por favor ingresa una consulta de búsqueda primero",
     "deleteSearch": "Eliminar Búsqueda",
@@ -626,9 +626,10 @@
     },
     "header": {
       "geocoding": "Looking up location...",
-      "noResults": "No homes match this search",
-      "loading": "Searching homes...",
-      "count": "{{count}} homes"
+      "noResults": "Ninguna propiedad coincide con esta búsqueda",
+      "loading": "Buscando propiedades...",
+      "count_one": "{{count}} propiedad",
+      "count_other": "{{count}} propiedades"
     },
     "recent": {
       "title": "Recent searches"
@@ -646,7 +647,7 @@
     "empty": {
       "action": "Edit search",
       "description": "Try widening your area or relaxing your filters.",
-      "title": "No homes match this search"
+      "title": "Ninguna propiedad coincide con esta búsqueda"
     },
     "sort": {
       "title": "Ordenar por",
