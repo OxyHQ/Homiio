@@ -259,12 +259,33 @@ describe('HabitacliaProvider.discover listainmuebles path', () => {
     expect(postPages).toBeGreaterThanOrEqual(0);
   });
 
-  it('falls back to HTML ladder when the listainmuebles session fails', async () => {
-    let htmlFetches = 0;
+  it('paginates the search over cold HTTP GET across pages without opening a browser', async () => {
+    // Regression for the prod `page.goto: net::ERR_TIMED_OUT at
+    // …/alquiler-<city>-<page>.htm` timeouts: deep search pages are the
+    // canonical `-<page>.htm` GET URLs and return listings cold, so discover must
+    // walk them over HTTP and never escalate a healthy city to the browser tier.
+    const page2 = HABITACLIA_FIXTURE_SEARCH_HTML.replace('i12345678900000', 'i22222222200000')
+      .replace('i98765432100000', 'i33333333300000');
+    // A real exhausted-pagination page is a full-size results page with search
+    // chrome but no listing cards — NOT a short challenge stub (which the
+    // >512-char challenge heuristic would otherwise flag and escalate).
+    const emptyPage = `<!doctype html><html lang="es"><head><title>Alquiler barcelona</title></head><body>
+<nav class="header">${'<a href="/">habitaclia</a>'.repeat(4)}</nav>
+<section class="search-filters"><form>${'<label>Filtro</label><input />'.repeat(8)}</form></section>
+<main><ul class="list-items"></ul><p class="no-results">No hemos encontrado más resultados para tu búsqueda.</p></main>
+<footer>${'<a href="/aviso-legal.htm">Aviso legal</a>'.repeat(6)}</footer>
+</body></html>`;
+    const fetchedUrls: string[] = [];
+    let sessionsOpened = 0;
     const runtime: FetchRuntime = {
-      fetchHttp: async () => {
-        htmlFetches += 1;
-        return { status: 200, body: HABITACLIA_FIXTURE_SEARCH_HTML };
+      fetchHttp: async (url) => {
+        fetchedUrls.push(url);
+        if (url.endsWith('/alquiler-barcelona.htm')) {
+          return { status: 200, body: HABITACLIA_FIXTURE_SEARCH_HTML };
+        }
+        if (url.endsWith('/alquiler-barcelona-2.htm')) return { status: 200, body: page2 };
+        // Page 3 onward: no more cards → pagination stops (city exhausted, not blocked).
+        return { status: 200, body: emptyPage };
       },
       fetchJson: async () => {
         throw new Error('unused');
@@ -276,7 +297,58 @@ describe('HabitacliaProvider.discover listainmuebles path', () => {
         throw new Error('unused');
       },
       openBrowserSession: async () => {
-        throw new Error('warm-up blocked');
+        sessionsOpened += 1;
+        throw new Error('browser should not be needed for a healthy city');
+      },
+    };
+
+    const local = new HabitacliaProvider({ runtime });
+    const refs: ExternalListingRef[] = [];
+    for await (const ref of local.discover({
+      provider: 'habitaclia',
+      market: 'ES',
+      city: 'barcelona',
+      limit: 50,
+      runtime,
+    })) {
+      refs.push(ref);
+    }
+
+    expect(sessionsOpened).toBe(0);
+    expect(refs.map((ref) => ref.sourceId).sort()).toEqual([
+      '12345678900000',
+      '22222222200000',
+      '33333333300000',
+      '98765432100000',
+    ]);
+    expect(fetchedUrls).toContain('https://www.habitaclia.com/alquiler-barcelona.htm');
+    expect(fetchedUrls).toContain('https://www.habitaclia.com/alquiler-barcelona-2.htm');
+  });
+
+  it('opens the warmed session only for a city cold HTTP challenges', async () => {
+    let sessionsOpened = 0;
+    const runtime: FetchRuntime = {
+      // Imperva challenges every cold HTTP page for this city.
+      fetchHttp: async () => ({ status: 403, body: 'Pardon Our Interruption' }),
+      fetchJson: async () => {
+        throw new Error('unused');
+      },
+      fetchText: async () => {
+        throw new Error('unused');
+      },
+      loadFixture: async () => {
+        throw new Error('unused');
+      },
+      openBrowserSession: async () => {
+        sessionsOpened += 1;
+        return {
+          request: async () => ({ status: 200, body: '<html></html>' }),
+          content: async () => HABITACLIA_FIXTURE_SEARCH_HTML,
+          pageUrl: () => 'https://www.habitaclia.com/alquiler-barcelona.htm',
+          warmNavigate: async () => undefined,
+          exportStorageState: async () => ({ cookies: [] }),
+          close: async () => undefined,
+        };
       },
     };
 
@@ -292,7 +364,52 @@ describe('HabitacliaProvider.discover listainmuebles path', () => {
       refs.push(ref);
     }
 
-    expect(htmlFetches).toBeGreaterThan(0);
+    expect(sessionsOpened).toBe(1);
+    expect(refs.map((ref) => ref.sourceId).sort()).toEqual(['12345678900000', '98765432100000']);
+  });
+
+  it('does not abort discover when a cold HTTP page throws — falls through to the session', async () => {
+    let sessionsOpened = 0;
+    const runtime: FetchRuntime = {
+      // Proxy timeout: fetchHttp rejects rather than returning a status.
+      fetchHttp: async () => {
+        throw new Error('net::ERR_TIMED_OUT');
+      },
+      fetchJson: async () => {
+        throw new Error('unused');
+      },
+      fetchText: async () => {
+        throw new Error('unused');
+      },
+      loadFixture: async () => {
+        throw new Error('unused');
+      },
+      openBrowserSession: async () => {
+        sessionsOpened += 1;
+        return {
+          request: async () => ({ status: 200, body: '<html></html>' }),
+          content: async () => HABITACLIA_FIXTURE_SEARCH_HTML,
+          pageUrl: () => 'https://www.habitaclia.com/alquiler-barcelona.htm',
+          warmNavigate: async () => undefined,
+          exportStorageState: async () => ({ cookies: [] }),
+          close: async () => undefined,
+        };
+      },
+    };
+
+    const local = new HabitacliaProvider({ runtime });
+    const refs: ExternalListingRef[] = [];
+    for await (const ref of local.discover({
+      provider: 'habitaclia',
+      market: 'ES',
+      city: 'barcelona',
+      limit: 5,
+      runtime,
+    })) {
+      refs.push(ref);
+    }
+
+    expect(sessionsOpened).toBe(1);
     expect(refs.map((ref) => ref.sourceId).sort()).toEqual(['12345678900000', '98765432100000']);
   });
 });

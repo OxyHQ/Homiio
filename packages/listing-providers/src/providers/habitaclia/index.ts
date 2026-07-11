@@ -1,9 +1,14 @@
 /**
- * Habitaclia provider (Spain).
+ * Habitaclia provider (Spain) — HTTP-first.
  *
- * Discover prefers warmed Playwright session → POST `/dotnet/listados/listainmuebles`
- * (HTML fragments with `data-href` cards); fetch uses the shared ladder for detail
- * HTML (JSON-LD when present, microdata/meta fallback). Registered OFF by default.
+ * Discover paginates the server-rendered search over plain HTTP GET
+ * (`/alquiler-<city>-<page>.htm`, `data-href` cards) through the residential
+ * proxy — the canonical paginated URLs return every page cold, so no browser is
+ * needed. A warmed Playwright session (`POST /dotnet/listados/listainmuebles`)
+ * is the per-city FALLBACK, opened only for cities Imperva challenges over cold
+ * HTTP. Fetch uses the shared ladder for detail HTML (JSON-LD when present,
+ * microdata/meta fallback), which escalates to the browser tier when the
+ * detail page is challenged. Registered OFF by default.
  */
 
 import {
@@ -23,7 +28,7 @@ import type {
   RawListing,
 } from '../../types';
 import { createFetchRuntime } from '../../runtime';
-import { fetchListingViaLadder, ChallengeError } from '../../strategy';
+import { fetchListingViaLadder, classifyOutcome } from '../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
 import { providerMaxSearchPages } from '../../discoverLimits';
 import { BrowserSessionChallengeError, type BrowserSession, type BrowserStorageState } from '../../browserSession';
@@ -131,35 +136,30 @@ export class HabitacliaProvider implements ListingProvider {
     const yielded = { count: 0 };
     const runtime = job.runtime ?? this.runtime;
 
+    // HTTP-first: the server-rendered `-<page>.htm` search paginates fully over
+    // plain HTTP GET, so cold HTTP covers every page without a browser. Cities
+    // Imperva challenges over cold HTTP fall through to the warmed session.
+    const browserFallbackCities: string[] = [];
     for (const city of cities) {
       if (yielded.count >= limit) return;
-      for await (const ref of this.discoverCityViaHttpListainmuebles(
-        runtime,
-        city,
-        job.signal,
-        seen,
-        limit,
-        yielded,
-      )) {
+      const http = { challenged: false };
+      for await (const ref of this.discoverCityViaHttp(runtime, city, job.signal, seen, limit, yielded, http)) {
         yield ref;
       }
+      // Escalate ONLY cities cold HTTP was actually blocked on — a city that
+      // simply has no (more) listings resolved fine over HTTP and must not open
+      // an expensive browser session.
+      if (http.challenged) browserFallbackCities.push(city);
     }
     if (yielded.count >= limit) return;
 
-    // Cold HTTP search HTML + listainmuebles POST pagination.
-    for (const city of cities) {
-      if (yielded.count >= limit) return;
-      for await (const ref of this.discoverCityViaHtml(runtime, city, job.signal, seen, limit, yielded)) {
-        yield ref;
-      }
-    }
-    if (yielded.count >= limit) return;
-
-    const beforeSession = yielded.count;
-    if (runtime.openBrowserSession) {
+    // Browser FALLBACK only for cities cold HTTP couldn't crack — a single
+    // warmed Playwright session with same-origin `listainmuebles` POST
+    // pagination, not a per-page `page.goto` (which times out via the proxy).
+    if (browserFallbackCities.length > 0 && runtime.openBrowserSession) {
       for await (const ref of this.discoverViaListainmueblesSession(
         runtime,
-        cities,
+        browserFallbackCities,
         job.signal,
         seen,
         limit,
@@ -167,51 +167,89 @@ export class HabitacliaProvider implements ListingProvider {
       )) {
         yield ref;
       }
-      if (yielded.count >= limit) return;
     }
-
-    if (yielded.count > beforeSession) return;
   }
 
   /**
-   * HTTP-first listainmuebles: proxied search page → POST pagination without
-   * Playwright when Imperva allows same-origin XHR on a sticky ES exit.
+   * HTTP-first search pagination: GET each `/alquiler-<city>-<page>.htm` server
+   * page through the residential proxy and parse its `data-href` cards. These
+   * canonical paginated URLs return real listings cold (no Playwright), so this
+   * replaces the old browser `page.goto` deep-page loop that timed out via the
+   * proxy. Stops on a challenge/error page, an empty page, or the first page
+   * that adds no new refs (portals clamp `-<page>.htm` to the last real page).
    */
-  private async *discoverCityViaHttpListainmuebles(
+  private async *discoverCityViaHttp(
     runtime: FetchRuntime,
     city: string,
     signal: AbortSignal | undefined,
     seen: Set<string>,
     limit: number,
     yielded: { count: number },
+    http: { challenged: boolean },
   ): AsyncIterable<ExternalListingRef> {
-    const referer = habitacliaWarmSearchUrl(city, 1);
-    const { status, body } = await runtime.fetchHttp(referer, {
-      signal,
-      proxyCountry: ES_PROXY_COUNTRY,
-      timeoutMs: HABITACLIA_HTTP_SEARCH_TIMEOUT_MS,
-      headers: {
-        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-      },
-    });
-    if (status >= 400 || isHabitacliaChallenge(body)) return;
+    for (let page = 1; page <= this.maxSearchPages; page += 1) {
+      if (yielded.count >= limit) return;
+      const url = habitacliaWarmSearchUrl(city, page);
+      const start = Date.now();
+      let status: number;
+      let body: string;
+      try {
+        ({ status, body } = await runtime.fetchHttp(url, {
+          signal,
+          proxyCountry: ES_PROXY_COUNTRY,
+          timeoutMs: HABITACLIA_HTTP_SEARCH_TIMEOUT_MS,
+          headers: {
+            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+          },
+        }));
+      } catch (error) {
+        // A proxy timeout / network error on one page must not abort discover;
+        // mark the city challenged so it falls through to the warmed session.
+        http.challenged = true;
+        this.metrics.record({
+          provider: this.id,
+          strategy: 'http',
+          outcome: 'error',
+          latencyMs: Date.now() - start,
+          url,
+          detail: error instanceof Error ? error.message : String(error),
+        });
+        break;
+      }
 
-    const pageRefs = parseHabitacliaSearch(body);
-    for (const ref of yieldRefs(pageRefs, seen, limit, yielded)) {
-      yield ref;
-    }
+      const outcome = classifyOutcome(status, body, isHabitacliaChallenge);
+      if (outcome !== 'success') {
+        // Blocked (challenge/forbidden/error) — record it (health) and escalate.
+        http.challenged = true;
+        this.metrics.record({
+          provider: this.id,
+          strategy: 'http',
+          outcome,
+          status,
+          latencyMs: Date.now() - start,
+          url,
+        });
+        break;
+      }
 
-    for (const ref of await this.discoverCityViaHttpAjax(
-      runtime,
-      city,
-      body,
-      signal,
-      seen,
-      limit,
-      yielded,
-    )) {
-      yield ref;
+      const pageRefs = parseHabitacliaSearch(body);
+      // A clean page with no cards means the city is exhausted, NOT blocked — do
+      // not escalate to a browser session.
+      if (pageRefs.length === 0) break;
+      const newRefs = yieldRefs(pageRefs, seen, limit, yielded);
+      this.metrics.record({
+        provider: this.id,
+        strategy: 'http',
+        outcome: 'success',
+        status,
+        latencyMs: Date.now() - start,
+        url,
+      });
+      for (const ref of newRefs) {
+        yield ref;
+      }
+      if (page > 1 && newRefs.length === 0) break;
     }
   }
 
@@ -354,89 +392,6 @@ export class HabitacliaProvider implements ListingProvider {
       });
     } finally {
       await session?.close();
-    }
-  }
-
-  private async discoverCityViaHttpAjax(
-    runtime: FetchRuntime,
-    city: string,
-    firstPageHtml: string,
-    signal: AbortSignal | undefined,
-    seen: Set<string>,
-    limit: number,
-    yielded: { count: number },
-  ): Promise<ExternalListingRef[]> {
-    const formFields = extractHabitacliaListadoFormFields(firstPageHtml);
-    if (Object.keys(formFields).length === 0) return [];
-
-    const collected: ExternalListingRef[] = [];
-    const referer = habitacliaWarmSearchUrl(city, 1);
-    for (let page = 2; page <= this.maxSearchPages; page += 1) {
-      if (yielded.count >= limit) break;
-      const { status, body } = await runtime.fetchHttp(HABITACLIA_LISTAINMUEBLES_URL, {
-        signal,
-        proxyCountry: ES_PROXY_COUNTRY,
-        method: 'POST',
-        body: buildHabitacliaListainmueblesBody(formFields, page),
-        headers: {
-          Accept: 'text/html, */*',
-          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-          Referer: referer,
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-      });
-      if (status >= 400 || isHabitacliaListainmueblesChallenge(body)) break;
-      const pageRefs = parseHabitacliaListainmuebles(body);
-      if (pageRefs.length === 0) break;
-      collected.push(...yieldRefs(pageRefs, seen, limit, yielded));
-    }
-    return collected;
-  }
-
-  private async *discoverCityViaHtml(
-    runtime: FetchRuntime,
-    city: string,
-    signal: AbortSignal | undefined,
-    seen: Set<string>,
-    limit: number,
-    yielded: { count: number },
-  ): AsyncIterable<ExternalListingRef> {
-    let firstPageHtml = '';
-    for (let page = 1; page <= this.maxSearchPages; page += 1) {
-      if (yielded.count >= limit) return;
-      if (page > 1 && !runtime.fetchViaBrowser) break;
-      try {
-        const { html } = await fetchListingViaLadder(runtime, habitacliaWarmSearchUrl(city, page), {
-          provider: this.id,
-          isChallenge: isHabitacliaChallenge,
-          metrics: this.metrics,
-          init: { signal, proxyCountry: ES_PROXY_COUNTRY },
-          tiers: page === 1 ? undefined : ['browser'],
-        });
-        if (page === 1) firstPageHtml = html;
-        const refs = parseHabitacliaSearch(html);
-        if (refs.length === 0) break;
-        for (const ref of yieldRefs(refs, seen, limit, yielded)) {
-          yield ref;
-        }
-      } catch (error) {
-        if (error instanceof ChallengeError) return;
-        throw error;
-      }
-    }
-
-    if (firstPageHtml.length > 0) {
-      for (const ref of await this.discoverCityViaHttpAjax(
-        runtime,
-        city,
-        firstPageHtml,
-        signal,
-        seen,
-        limit,
-        yielded,
-      )) {
-        yield ref;
-      }
     }
   }
 
