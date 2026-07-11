@@ -393,7 +393,7 @@ function extractHighlightedSpecs(html: string): {
 function extractGalleryImages(html: string): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
-  const re = /class="gallery-image__link"[^>]*>\s*<img[^>]*\bsrc="(https:\/\/[^"]+)"/g;
+  const re = /class="gallery-image__link"[^>]{0,400}>\s{0,20}<img[^>]{0,400}\bsrc="(https:\/\/[^"]{0,2000})"/g;
   for (const match of html.matchAll(re)) {
     const url = match[1];
     if (seen.has(url)) continue;
