@@ -416,7 +416,7 @@ export class PisosProvider implements ListingProvider {
   }
 
   normalize(raw: RawListing): NormalizedListing {
-    const { sourceId, url, listing, contact } = asPisosRaw(raw.payload);
+    const { sourceId, url, listing, contact, floor, yearBuilt, parkingSpaces } = asPisosRaw(raw.payload);
     if (listing.price === undefined) {
       throw new Error(`pisos: listing ${sourceId} has no resolvable price`);
     }
@@ -450,6 +450,9 @@ export class PisosProvider implements ListingProvider {
     if (listing.bedrooms !== undefined) result.bedrooms = listing.bedrooms;
     if (listing.bathrooms !== undefined) result.bathrooms = listing.bathrooms;
     if (listing.squareMeters !== undefined) result.squareFootage = listing.squareMeters;
+    if (floor !== undefined) result.floor = floor;
+    if (yearBuilt !== undefined) result.yearBuilt = yearBuilt;
+    if (parkingSpaces !== undefined) result.parkingSpaces = parkingSpaces;
     if (listing.amenities.length > 0) result.amenities = listing.amenities;
     if (contact && (contact.phone || contact.email || contact.whatsapp || contact.agencyName)) {
       result.contact = contact;

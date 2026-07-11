@@ -27,6 +27,13 @@ export interface ImmowebRawListing {
   bedrooms?: number;
   bathrooms?: number;
   squareMeters?: number;
+  yearBuilt?: number;
+  hasElevator?: boolean;
+  hasGarden?: boolean;
+  hasBalcony?: boolean;
+  parkingSpaces?: number;
+  parkingType?: 'none' | 'street' | 'assigned' | 'garage';
+  furnished?: boolean;
   propertyType?: string;
   address: {
     street?: string;
@@ -161,6 +168,38 @@ function parseResultNode(node: Record<string, unknown>): ImmowebRawListing | und
   return result;
 }
 
+/**
+ * Presence of a structured amenity (garden, terrace) from Immoweb's explicit
+ * boolean flag, or — when the flag is absent — a positive surface measurement.
+ * The boolean flag is authoritative when present (true or false).
+ */
+function featurePresent(flag: unknown, surface: unknown): boolean | undefined {
+  if (typeof flag === 'boolean') return flag;
+  const measured = asNumber(surface);
+  if (measured !== undefined && measured > 0) return true;
+  return undefined;
+}
+
+/**
+ * Immoweb reports parking as separate indoor/outdoor counts. Sum them for the
+ * total space count and classify the type: indoor spots imply a garage,
+ * outdoor-only implies street parking, an explicit zero total implies none.
+ */
+function parkingFromProperty(
+  property: Record<string, unknown>,
+): { spaces: number; type: 'none' | 'street' | 'garage' } | undefined {
+  const indoor = asNumber(property.parkingCountIndoor);
+  const outdoor = asNumber(property.parkingCountOutdoor);
+  if (indoor === undefined && outdoor === undefined) return undefined;
+  const spaces = (indoor ?? 0) + (outdoor ?? 0);
+  const type = indoor !== undefined && indoor > 0
+    ? 'garage'
+    : outdoor !== undefined && outdoor > 0
+      ? 'street'
+      : 'none';
+  return { spaces, type };
+}
+
 function parseClassified(classified: Record<string, unknown>): ImmowebRawListing | undefined {
   const sourceId =
     asString(classified.id) ?? (typeof classified.id === 'number' ? String(classified.id) : undefined);
@@ -199,6 +238,24 @@ function parseClassified(classified: Record<string, unknown>): ImmowebRawListing
   if (bedrooms !== undefined) result.bedrooms = bedrooms;
   const squareMeters = property ? asNumber(property.netHabitableSurface) : undefined;
   if (squareMeters !== undefined) result.squareMeters = squareMeters;
+  const bathrooms = property ? asNumber(property.bathroomCount) : undefined;
+  if (bathrooms !== undefined) result.bathrooms = bathrooms;
+  if (property && typeof property.constructionYear === 'number' && Number.isFinite(property.constructionYear)) {
+    result.yearBuilt = property.constructionYear;
+  }
+  if (property && typeof property.hasLift === 'boolean') result.hasElevator = property.hasLift;
+  if (property) {
+    const hasGarden = featurePresent(property.hasGarden, property.gardenSurface);
+    if (hasGarden !== undefined) result.hasGarden = hasGarden;
+    const hasBalcony = featurePresent(property.hasTerrace, property.terraceSurface);
+    if (hasBalcony !== undefined) result.hasBalcony = hasBalcony;
+    const parking = parkingFromProperty(property);
+    if (parking) {
+      result.parkingSpaces = parking.spaces;
+      result.parkingType = parking.type;
+    }
+    if (typeof property.isFurnished === 'boolean') result.furnished = property.isFurnished;
+  }
   const lat = location ? asNumber(location.latitude) : undefined;
   const lng = location ? asNumber(location.longitude) : undefined;
   if (lat !== undefined && lng !== undefined) result.coordinates = { lat, lng };

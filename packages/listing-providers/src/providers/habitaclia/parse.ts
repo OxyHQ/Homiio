@@ -175,10 +175,30 @@ function resolvePropertyType(node: Record<string, unknown>): string {
  */
 export function parseHabitacliaDetail(html: string, url: string): HabitacliaRawListing {
   const node = extractJsonLdNodes(html).find(isListingNode);
-  if (node) {
-    return parseHabitacliaDetailFromJsonLd(node, url);
+  const raw = node ? parseHabitacliaDetailFromJsonLd(node, url) : parseHabitacliaDetailHtml(html, url);
+  return applyDetailCharacteristics(raw, html);
+}
+
+/**
+ * Merge the numeric characteristics Habitaclia prints only in the detail markup
+ * — floor level, construction year and the parking-space count — onto the raw
+ * listing, regardless of whether the base fields came from JSON-LD or microdata
+ * (neither source carries these reliably). A value already set by the base
+ * parser always wins; the HTML characteristics only fill the gaps.
+ */
+function applyDetailCharacteristics(raw: HabitacliaRawListing, html: string): HabitacliaRawListing {
+  const floor = raw.floor ?? parseFloorLevel(html);
+  const yearBuilt = raw.yearBuilt ?? parseYearBuilt(html);
+  const parkingSpaces = raw.parkingSpaces ?? parseParkingSpaces(html);
+  if (floor === undefined && yearBuilt === undefined && parkingSpaces === undefined) {
+    return raw;
   }
-  return parseHabitacliaDetailHtml(html, url);
+  return {
+    ...raw,
+    ...(floor !== undefined ? { floor } : {}),
+    ...(yearBuilt !== undefined ? { yearBuilt } : {}),
+    ...(parkingSpaces !== undefined ? { parkingSpaces } : {}),
+  };
 }
 
 function parseHabitacliaDetailFromJsonLd(node: Record<string, unknown>, url: string): HabitacliaRawListing {
@@ -305,6 +325,42 @@ function firstMatch(html: string, re: RegExp): string | undefined {
   return match?.[1] ? decodeHtmlEntities(match[1].trim()) : undefined;
 }
 
+/**
+ * Floor level from a "Planta N" / "Planta Nª" characteristic. Returns `undefined`
+ * for the label-only forms Habitaclia also uses ("Planta baja", "Ático"), which
+ * carry no reliable number.
+ */
+function parseFloorLevel(html: string): number | undefined {
+  const floor = asNumber(firstMatch(html, /\bPlanta\s+(\d{1,2})\s*(?:[ªº°]|\b)/i));
+  return floor !== undefined && floor >= 0 && floor <= 60 ? floor : undefined;
+}
+
+/**
+ * Construction year from an "Año (de) construcción: YYYY" / "Construido en YYYY"
+ * characteristic. Habitaclia often states age as a fuzzy range instead
+ * ("Antigüedad: entre 30 y 50 años") — those carry no exact year and are ignored.
+ */
+function parseYearBuilt(html: string): number | undefined {
+  const year = asNumber(
+    firstMatch(html, /A[ñn]o\s+(?:de\s+)?construcci[óo]n[\s:]{1,3}(\d{4})/i) ??
+      firstMatch(html, /\bconstruid[oa]\s+en\s+(?:el\s+a[ñn]o\s+)?(\d{4})/i),
+  );
+  const maxYear = new Date().getFullYear() + 2;
+  return year !== undefined && year >= 1800 && year <= maxYear ? year : undefined;
+}
+
+/**
+ * Parking-space count from an "N plazas de parking/garaje/aparcamiento"
+ * characteristic. The label-only "Plaza de parking" boolean carries no count and
+ * is left to the amenity → parking-type derivation instead.
+ */
+function parseParkingSpaces(html: string): number | undefined {
+  const spaces = asNumber(
+    firstMatch(html, /(\d{1,2})\s*plazas?\s+de\s+(?:parking|garaje|aparcamiento)/i),
+  );
+  return spaces !== undefined && spaces >= 1 && spaces <= 20 ? spaces : undefined;
+}
+
 function collectItempropImages(html: string): HabitacliaRawImage[] {
   const urls: string[] = [];
   for (const match of html.matchAll(/itemprop=["']image["'][^>]*src=["']([^"']+)["']/gi)) {
@@ -370,7 +426,13 @@ export function parseHabitacliaDetailHtml(html: string, url: string): Habitaclia
   let furnished: boolean | undefined;
   for (const match of html.matchAll(/<li>([^<]{2,60})<\/li>/gi)) {
     const label = match[1]?.trim();
-    if (!label || /habitacion|baño|ba\u00F1o|m2|€\/m/i.test(label)) continue;
+    if (
+      !label ||
+      /habitacion|baño|ba\u00F1o|m2|€\/m|planta\s+\d|construcci|antig[üu]edad|\d{1,3}\s{0,3}plazas?\s+de\s+(?:parking|garaje|aparcamiento)/i.test(
+        label,
+      )
+    )
+      continue;
     const key = normalizeAmenity(label);
     if (key === 'furnished') {
       furnished = true;

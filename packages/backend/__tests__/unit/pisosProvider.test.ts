@@ -38,6 +38,9 @@ describe('PisosProvider.normalize', () => {
     expect(listing.bedrooms).toBe(2);
     expect(listing.bathrooms).toBe(2);
     expect(listing.squareFootage).toBe(107);
+    expect(listing.floor).toBe(3);
+    expect(listing.yearBuilt).toBe(1998);
+    expect(listing.parkingSpaces).toBe(1);
     expect(listing.contact?.phone).toBe('919376345');
     expect(listing.contact?.kind).toBe('agency');
     expect(listing.remoteImages.length).toBeGreaterThan(0);
@@ -69,6 +72,29 @@ describe('PisosProvider.normalize', () => {
     expect(madrid.address.coordinates).toEqual({ lat: 40.41593545782718, lng: -3.7083892232908435 });
     expect(valladolid.address.coordinates).toEqual({ lat: 41.6531628, lng: -4.7216201 });
     expect(madrid.address.coordinates).not.toEqual(valladolid.address.coordinates);
+    // Valladolid's trimmed `data-var` omits planta / año / plazas — stay undefined.
+    expect(valladolid.floor).toBeUndefined();
+    expect(valladolid.yearBuilt).toBeUndefined();
+    expect(valladolid.parkingSpaces).toBeUndefined();
+  });
+
+  it('rejects non-numeric floor and age-encoded antiguedad instead of fabricating values', () => {
+    const bogusHtml = PISOS_FIXTURE_DETAIL_HTML.replace(
+      '"planta":"3","anioConstruccion":"1998","nPlazasGaraje":"1"',
+      '"planta":"Bajo","anioConstruccion":"antigua","antiguedad":"30 años"',
+    );
+    const payload = parsePisosDetail(
+      bogusHtml,
+      'https://www.pisos.com/alquilar/piso-sol_barrio28012-20026385030_992099/',
+    );
+    const listing = provider.normalize({
+      ref: { provider: 'pisos', sourceId: payload.sourceId, url: payload.url },
+      payload,
+    });
+
+    expect(listing.floor).toBeUndefined();
+    expect(listing.yearBuilt).toBeUndefined();
+    expect(listing.parkingSpaces).toBeUndefined();
   });
 
   it('parses contact AJAX JSON', () => {

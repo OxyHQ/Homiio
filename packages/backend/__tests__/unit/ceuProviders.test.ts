@@ -79,6 +79,14 @@ describe('ImmowebProvider (BE)', () => {
     expect(listing.longTermRent?.monthlyAmount).toBe(1250);
     expect(listing.contact?.phone).toContain('3224505656');
     expect(listing.squareFootage).toBe(62);
+    expect(listing.bathrooms).toBe(1);
+    expect(listing.yearBuilt).toBe(1965);
+    expect(listing.hasElevator).toBe(true);
+    expect(listing.hasGarden).toBe(true);
+    expect(listing.hasBalcony).toBe(true);
+    expect(listing.parkingSpaces).toBe(1);
+    expect(listing.parkingType).toBe('garage');
+    expect(listing.furnishedStatus).toBe('furnished');
   });
 });
 

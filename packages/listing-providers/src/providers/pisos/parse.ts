@@ -18,6 +18,12 @@ export interface PisosRaw {
   url: string;
   listing: EsSchemaListing;
   contact?: NormalizedListingContact;
+  /** Floor number from the `data-var` `planta` field (numeric floors only). */
+  floor?: number;
+  /** Construction year from `data-var` `anioConstruccion` / `antiguedad`. */
+  yearBuilt?: number;
+  /** Garage spaces from the `data-var` `nPlazasGaraje` field. */
+  parkingSpaces?: number;
 }
 
 const DETAIL_PATH_RE = /\/(?:alquilar|comprar)\/[^"'?\s]*?-(\d+[._]\d+|\d+)\/?/i;
@@ -274,6 +280,38 @@ function amenityList(raw: unknown): string[] {
 }
 
 /**
+ * Floor number from the `data-var` `planta` field. Only numeric floors are
+ * kept (`asNumber` strips the ordinal suffix in `"3ª"`); textual floors such
+ * as "Bajo" / "Entreplanta" yield `undefined` rather than a fabricated number.
+ * A year accidentally landing in this field is rejected by the range guard.
+ */
+function readPisosFloor(dataVar: Record<string, unknown> | undefined): number | undefined {
+  const floor = asNumber(dataVar?.planta);
+  if (floor === undefined || !Number.isInteger(floor) || floor < 0 || floor > 200) return undefined;
+  return floor;
+}
+
+/**
+ * Construction year from the `data-var` `anioConstruccion` (preferred) or
+ * `antiguedad`. The plausible-year range guard rejects `antiguedad` values that
+ * encode an age in years ("30") or a bucket ("Menos de 5 años") rather than a
+ * real four-digit year, so only a genuine construction year is emitted.
+ */
+function readPisosYearBuilt(dataVar: Record<string, unknown> | undefined): number | undefined {
+  const year = asNumber(dataVar?.anioConstruccion) ?? asNumber(dataVar?.antiguedad);
+  const maxYear = new Date().getFullYear() + 2;
+  if (year === undefined || !Number.isInteger(year) || year < 1800 || year > maxYear) return undefined;
+  return year;
+}
+
+/** Garage spaces from the `data-var` `nPlazasGaraje` field (non-negative int). */
+function readPisosParkingSpaces(dataVar: Record<string, unknown> | undefined): number | undefined {
+  const spaces = asNumber(dataVar?.nPlazasGaraje);
+  if (spaces === undefined || !Number.isInteger(spaces) || spaces < 0 || spaces > 50) return undefined;
+  return spaces;
+}
+
+/**
  * Parse a detail page into {@link PisosRaw}. Prefers embedded JSON blobs;
  * falls back to JSON-LD / light HTML for title, images, description.
  */
@@ -354,7 +392,15 @@ export function parsePisosDetail(html: string, url: string): PisosRaw {
       }
     : undefined;
 
-  return { sourceId: resolvedId, url, listing, contact };
+  const raw: PisosRaw = { sourceId: resolvedId, url, listing, contact };
+  const floor = readPisosFloor(dataVar);
+  if (floor !== undefined) raw.floor = floor;
+  const yearBuilt = readPisosYearBuilt(dataVar);
+  if (yearBuilt !== undefined) raw.yearBuilt = yearBuilt;
+  const parkingSpaces = readPisosParkingSpaces(dataVar);
+  if (parkingSpaces !== undefined) raw.parkingSpaces = parkingSpaces;
+
+  return raw;
 }
 
 /** Merge best-effort contact AJAX phone into an existing raw payload. */

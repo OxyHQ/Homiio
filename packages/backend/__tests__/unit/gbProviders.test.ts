@@ -93,6 +93,12 @@ describe('RightmoveProvider', () => {
     expect(listing.address.coordinates).toEqual({ lat: 51.506931, lng: -0.10097 });
     expect(listing.contact?.phone).toContain('020');
     expect(listing.remoteImages.length).toBeGreaterThan(0);
+    // sizings[] → squareFootage in m² (prefers the native sqm entry).
+    expect(listing.squareFootage).toBe(79);
+    // keyFeatures[] → amenities (ingest derives hasGarden/hasBalcony/hasElevator/parking).
+    expect(listing.amenities).toEqual(['Garden', 'Off street parking', 'Balcony', 'Lift']);
+    // letting.furnishType → furnishedStatus.
+    expect(listing.furnishedStatus).toBe('furnished');
   });
 });
 
