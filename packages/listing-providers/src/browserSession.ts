@@ -15,6 +15,7 @@ import {
   toPlaywrightProxy,
 } from './proxy';
 import type { PlaywrightModule } from './browser';
+import { portalDomainFromUrl } from './requestFilter';
 import {
   BrowserSessionChallengeError,
   DEFAULT_SESSION_TIMEOUT_MS,
@@ -252,7 +253,11 @@ export class PlaywrightSessionPool {
       }
       context = await browser.newContext(contextOptions);
       const page = await context.newPage();
-      await setupAssetBlocking(page, this.blockAssets && options.blockAssets !== false);
+      await setupAssetBlocking(
+        page,
+        this.blockAssets && options.blockAssets !== false,
+        portalDomainFromUrl(options.warmUrl),
+      );
       const onAbort = (): void => {
         void context?.close().catch(() => undefined);
       };

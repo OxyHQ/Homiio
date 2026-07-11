@@ -12,6 +12,7 @@
 
 import { isDataDomeHtmlChallenge } from './parse/challenge';
 import { BLOCKED_BROWSER_RESOURCE_TYPES } from './proxy';
+import { isAllowedBrowserRequest, portalDomainFromUrl } from './requestFilter';
 
 /** Hard per-navigation timeout when a caller does not pass one (ms). */
 export const DEFAULT_SESSION_TIMEOUT_MS = 60_000;
@@ -120,6 +121,7 @@ export interface PwWaitForSelectorOptions {
 
 export interface PwRouteRequest {
   resourceType(): string;
+  url(): string;
 }
 
 export interface PwRoute {
@@ -230,14 +232,25 @@ async function fetchViaPageEvaluate(
 }
 
 /**
- * Abort image/CSS/font requests on a page (default ON in session pools — cheap
- * residential proxy GB). Safe to call when asset blocking is disabled (no-op).
+ * Trim what a page is allowed to fetch to keep residential-proxy GB down: abort
+ * image/CSS/font/media, and — when `portalDomain` is given — abort any request
+ * off the portal's own domain except the anti-bot vendors a warm session needs.
+ * Safe to call when disabled (no-op).
  */
-export async function setupAssetBlocking(page: SessionPage, enabled = true): Promise<void> {
+export async function setupAssetBlocking(
+  page: SessionPage,
+  enabled = true,
+  portalDomain?: string,
+): Promise<void> {
   if (!enabled) return;
   await page.route('**/*', async (route) => {
     try {
-      if (BLOCKED_BROWSER_RESOURCE_TYPES.has(route.request().resourceType())) {
+      const request = route.request();
+      if (BLOCKED_BROWSER_RESOURCE_TYPES.has(request.resourceType())) {
+        await route.abort();
+        return;
+      }
+      if (portalDomain && !isAllowedBrowserRequest(request.url(), portalDomain)) {
         await route.abort();
         return;
       }

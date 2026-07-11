@@ -12,6 +12,7 @@ export * from './types';
 export * from './runtime';
 export * from './browser';
 export * from './session';
+export * from './requestFilter';
 export {
   PlaywrightSessionPool,
   warmSession,
