@@ -31,6 +31,7 @@ import { ensureCover } from '../cityCoverSyncService';
 import type { AddressCanonicalInput } from '../../models/Address';
 import { validateOfferings } from '../../models/schemas/offeringValidation';
 import { forwardGeocode, reverseGeocode } from '../geocodingService';
+import { resolveCityCentroid } from '../geoResolutionService';
 import { sanitizeGeoJsonCoordinates } from '../../utils/geoCoordinates';
 import { deriveStructuredFeatures } from './deriveFeatures';
 import { classifyListingContent } from './classifyListingContent';
@@ -404,8 +405,21 @@ export class IngestionService {
   }
 
   /**
-   * Forward-geocode a listing address, falling back to the city centroid when
-   * the street-level query fails (common for partial portal addresses).
+   * Resolve coordinates for a listing that did NOT supply its own, WITHOUT ever
+   * dropping the listing when its city is known.
+   *
+   *   1. Street-level forward geocode (accurate) — used when it succeeds.
+   *   2. City centroid — {@link resolveCityCentroid} reuses a City doc we already
+   *      own (zero external calls) or does one cached, throttled city geocode.
+   *      This is the guaranteed fallback: an approximate city-centroid point is
+   *      an acceptable location for an aggregator listing; losing the listing is
+   *      not. It is also what makes ingest resilient to a Nominatim rate-limit
+   *      flood — the failure mode that previously dropped ~10 providers wholesale
+   *      because the per-listing street geocode AND its city retry both raced the
+   *      same overloaded public endpoint.
+   *
+   * Only throws when the city itself cannot be resolved by ANY means — which,
+   * since discovery is city-scoped, should be vanishingly rare.
    */
   private async resolveCoordinatesWithFallback(
     address: NormalizedListingAddress,
@@ -422,18 +436,24 @@ export class IngestionService {
       };
     }
 
-    const cityQuery = [address.city, address.state, address.country].filter(Boolean).join(', ');
-    const city = await forwardGeocode(cityQuery);
-    if (city.success && city.data?.coordinates) {
+    const centroid = await resolveCityCentroid({
+      city: address.city,
+      state: address.state,
+      country: address.country,
+      countryCode: address.countryCode,
+    });
+    if (centroid) {
       this.logger.warn('Using city-centroid coordinates for external listing (street geocode failed)', {
         street: address.street,
         city: address.city,
         fullQueryError: full.error,
       });
-      return {
-        coordinates: city.data.coordinates,
-        postalCode: city.data.postalCode?.trim() || undefined,
-      };
+      // Use the postal fallback directly rather than reverse-geocoding the
+      // centroid: the point is already the city center, so a reverse-geocoded
+      // postal would belong to the city center, not this listing — and, being a
+      // throttled, uncached-on-failure network call, it would re-introduce the
+      // very 1-listing/sec bottleneck this fallback exists to avoid.
+      return { coordinates: centroid, postalCode: EXTERNAL_POSTAL_FALLBACK };
     }
 
     throw new IngestionValidationError(
