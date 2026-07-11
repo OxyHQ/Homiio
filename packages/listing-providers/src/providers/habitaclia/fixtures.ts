@@ -187,5 +187,44 @@ export const HABITACLIA_FIXTURE_DETAIL_HTML_PLACEHOLDER_SURFACE = `<!doctype htm
 </article>
 </body></html>`;
 
+/**
+ * REAL captured markup (trimmed to 5 of 16 gallery photos) from a live Habitaclia
+ * detail page — `alquiler-piso-barceloneta-barcelona-i55551000001220`, fetched
+ * through the ES residential proxy. Habitaclia detail pages carry NO JSON-LD; the
+ * full photo gallery lives ONLY in microdata `<img … itemprop="image">` tags where
+ * `src` PRECEDES `itemprop` (`<img title=… src=… alt=… itemprop="image" />`). The
+ * previous `itemprop…src`-ordered regex matched NONE of them, so every listing
+ * ingested exactly ONE photo (the `og:image` hero) — the production bug this
+ * fixture pins. The `og:image` here is the `…XL.jpg` variant of gallery photo #1
+ * (uuid `e6714700…`), proving the full `…G.jpg` gallery supersedes it rather than
+ * appending a duplicate hero. URLs are verbatim from the live page (real
+ * `images.habimg.com/imgh/55551-1220/` CDN host); the ingest pipeline re-hosts
+ * those bytes once via Sharp/S3 and never serves the portal CDN URL at runtime.
+ */
+export const HABITACLIA_FIXTURE_DETAIL_HTML_GALLERY = `<!doctype html>
+<html lang="es"><head>
+<title>Piso por 1.250 &#x20AC; de 1 metros  apartamento de 2 dormitorios en alquiler en la barceloneta, barcelona  en  Barceloneta Barcelona - habitaclia</title>
+<meta property="og:url" content="https://www.habitaclia.com/alquiler-piso-barceloneta-barcelona-i55551000001220.htm" />
+<meta name="description" content="Descubre este acogedor apartamento de 2 habitaciones disponible para alquilar en La Barceloneta, Barcelona." />
+<meta property="og:image" content="//images.habimg.com/imgh/55551-1220/apartamento-de-2-dormitorios-en-alquiler-en-la-barceloneta-barcelona-alquiler-barcelona_e6714700-8ca8-4468-b916-147e2af4607aXL.jpg" />
+</head><body>
+<h1>Alquiler piso apartamento de 2 dormitorios en alquiler en la Barceloneta, en Barcelona</h1>
+<a id="js-ver-mapa-zona" class="jqVerMapaZonaTooltip link-map-location" title="Barceloneta">Ver Barceloneta</a>
+<span class="font-2" itemscope itemtype="http://schema.org/Offer" itemprop="price">1.250 &#x20AC;</span>
+<article id="js-feature-container">
+<ul class="feature-container">
+<li class="feature"> <strong>2</strong> hab.</li>
+<li class="feature"><strong>1</strong> ba&#xF1;o</li>
+</ul>
+</article>
+<div id="fotos" class="gallery padding-x padding-y">
+<img title="Foto e6714700-8ca8-4468-b916-147e2af4607a. Alquiler piso apartamento de 2 dormitorios en alquiler en la Barceloneta, en Barcelona" src="//images.habimg.com/imgh/55551-1220/apartamento-de-2-dormitorios-en-alquiler-en-la-barceloneta-barcelona-alquiler-barcelona_e6714700-8ca8-4468-b916-147e2af4607aG.jpg" alt="Foto e6714700-8ca8-4468-b916-147e2af4607a. Alquiler piso apartamento de 2 dormitorios en alquiler en la Barceloneta, en Barcelona" itemprop="image" />
+<img title="Foto 9f1e7aa9-ef2d-446c-8a9d-48f3348832e3. Alquiler piso apartamento de 2 dormitorios en alquiler en la Barceloneta, en Barcelona" src="//images.habimg.com/imgh/55551-1220/apartamento-de-2-dormitorios-en-alquiler-en-la-barceloneta-barcelona-alquiler-barcelona_9f1e7aa9-ef2d-446c-8a9d-48f3348832e3G.jpg" alt="Foto 9f1e7aa9-ef2d-446c-8a9d-48f3348832e3. Alquiler piso apartamento de 2 dormitorios en alquiler en la Barceloneta, en Barcelona" itemprop="image" />
+<img title="Foto 6911ea52-e4ca-4f96-bacb-f92b1775a4ad. Alquiler piso apartamento de 2 dormitorios en alquiler en la Barceloneta, en Barcelona" src="//images.habimg.com/imgh/55551-1220/apartamento-de-2-dormitorios-en-alquiler-en-la-barceloneta-barcelona-alquiler-barcelona_6911ea52-e4ca-4f96-bacb-f92b1775a4adG.jpg" alt="Foto 6911ea52-e4ca-4f96-bacb-f92b1775a4ad. Alquiler piso apartamento de 2 dormitorios en alquiler en la Barceloneta, en Barcelona" itemprop="image" />
+<img title="Foto bdc4f976-4fb1-48ec-b03b-e4b74a5678a1. Alquiler piso apartamento de 2 dormitorios en alquiler en la Barceloneta, en Barcelona" src="//images.habimg.com/imgh/55551-1220/apartamento-de-2-dormitorios-en-alquiler-en-la-barceloneta-barcelona-alquiler-barcelona_bdc4f976-4fb1-48ec-b03b-e4b74a5678a1G.jpg" alt="Foto bdc4f976-4fb1-48ec-b03b-e4b74a5678a1. Alquiler piso apartamento de 2 dormitorios en alquiler en la Barceloneta, en Barcelona" itemprop="image" />
+<img title="Foto bda338de-d5aa-4997-838e-68dfc00ab8f9. Alquiler piso apartamento de 2 dormitorios en alquiler en la Barceloneta, en Barcelona" src="//images.habimg.com/imgh/55551-1220/apartamento-de-2-dormitorios-en-alquiler-en-la-barceloneta-barcelona-alquiler-barcelona_bda338de-d5aa-4997-838e-68dfc00ab8f9G.jpg" alt="Foto bda338de-d5aa-4997-838e-68dfc00ab8f9. Alquiler piso apartamento de 2 dormitorios en alquiler en la Barceloneta, en Barcelona" itemprop="image" />
+</div>
+</body></html>`;
+
 /** The base host used to build absolute Habitaclia URLs during discovery. */
 export const HABITACLIA_BASE_URL = 'https://www.habitaclia.com';

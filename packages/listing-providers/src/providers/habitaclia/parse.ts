@@ -192,7 +192,27 @@ function resolvePropertyType(node: Record<string, unknown>): string {
 export function parseHabitacliaDetail(html: string, url: string): HabitacliaRawListing {
   const node = extractJsonLdNodes(html).find(isListingNode);
   const raw = node ? parseHabitacliaDetailFromJsonLd(node, url) : parseHabitacliaDetailHtml(html, url);
-  return applyDetailCharacteristics(raw, html);
+  const enriched = applyDetailCharacteristics(raw, html);
+  return { ...enriched, images: resolveDetailImages(enriched.images, html) };
+}
+
+/**
+ * Resolve the listing's photo set from the detail page. The full gallery lives in
+ * the microdata `<img itemprop="image" src="…habimg.com/imgh/…">` tags (dozens of
+ * shots); the JSON-LD `image[]` — when present at all — and the `og:image` meta
+ * only carry the hero. Prefer the microdata gallery whenever it is richer than the
+ * base parse produced (so BOTH the JSON-LD and microdata paths ingest every
+ * photo), keep the base images when the page has no microdata gallery, and fall
+ * back to the single `og:image` hero only when neither source provides one.
+ */
+function resolveDetailImages(baseImages: HabitacliaRawImage[], html: string): HabitacliaRawImage[] {
+  const gallery = collectItempropImages(html);
+  if (gallery.length > baseImages.length) return gallery;
+  if (baseImages.length > 0) return baseImages;
+  const ogImage = metaContent(html, 'og:image');
+  if (!ogImage) return [];
+  const absolute = ogImage.startsWith('//') ? `https:${ogImage}` : ogImage;
+  return [{ url: absolute, isPrimary: true }];
 }
 
 /**
@@ -377,10 +397,29 @@ function parseParkingSpaces(html: string): number | undefined {
   return spaces !== undefined && spaces >= 1 && spaces <= 20 ? spaces : undefined;
 }
 
+/** Every `<img …>` tag on the page (attributes never carry an unescaped `>`). */
+const IMG_TAG_RE = /<img\b[^>]*>/gi;
+/** Whether an `<img>` tag is a schema.org gallery photo, in any attribute order. */
+const IMG_ITEMPROP_IMAGE_RE = /\bitemprop=["']image["']/i;
+/** The `src` of an `<img>` tag, wherever it sits among the attributes. */
+const IMG_SRC_RE = /\bsrc=["']([^"']+)["']/i;
+
+/**
+ * Collect the detail gallery photos. Habitaclia marks every gallery `<img>` with
+ * `itemprop="image"`, but in the real markup `src` PRECEDES `itemprop`
+ * (`<img title=… src=… alt=… itemprop="image" />`), so the previous
+ * `itemprop…src`-ordered regex matched NONE of them — leaving only the single
+ * `og:image` hero, the root cause of every habitaclia listing showing exactly one
+ * photo. Match each `<img>` tag carrying `itemprop="image"` in ANY attribute order
+ * and read its `src`. Related-listing thumbnails are not marked `itemprop="image"`,
+ * so the result stays scoped to the current listing's gallery (order preserved,
+ * de-duplicated, first photo primary).
+ */
 function collectItempropImages(html: string): HabitacliaRawImage[] {
   const urls: string[] = [];
-  for (const match of html.matchAll(/itemprop=["']image["'][^>]*src=["']([^"']+)["']/gi)) {
-    const src = match[1];
+  for (const tag of html.match(IMG_TAG_RE) ?? []) {
+    if (!IMG_ITEMPROP_IMAGE_RE.test(tag)) continue;
+    const src = tag.match(IMG_SRC_RE)?.[1];
     if (src) urls.push(src.startsWith('//') ? `https:${src}` : src);
   }
   const unique = [...new Set(urls)];
@@ -459,15 +498,6 @@ export function parseHabitacliaDetailHtml(html: string, url: string): Habitaclia
     if (key) amenities.push(key);
   }
 
-  const images = collectItempropImages(html);
-  const ogImage = metaContent(html, 'og:image');
-  if (ogImage) {
-    const absolute = ogImage.startsWith('//') ? `https:${ogImage}` : ogImage;
-    if (!images.some((image) => image.url === absolute)) {
-      images.unshift({ url: absolute, isPrimary: true });
-    }
-  }
-
   return {
     id: sourceId,
     url: canonicalUrl,
@@ -488,6 +518,9 @@ export function parseHabitacliaDetailHtml(html: string, url: string): Habitaclia
     squareMeters,
     furnished,
     amenities: amenities.length > 0 ? amenities : undefined,
-    images,
+    // Photos are resolved centrally in `parseHabitacliaDetail` via
+    // `resolveDetailImages`, which prefers the full microdata gallery over the
+    // single `og:image` hero for both the JSON-LD and microdata paths.
+    images: [],
   };
 }
