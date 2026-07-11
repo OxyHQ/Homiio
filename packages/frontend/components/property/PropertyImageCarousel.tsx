@@ -442,20 +442,24 @@ export const PropertyImageCarousel: React.FC<PropertyImageCarouselProps> = ({
         />
       )}
 
+      {/* Caller chrome (heart, badges, price) — rendered UNDER the dots + arrows
+          so it can never paint over or intercept the nav arrows. Its own
+          absolutely-positioned bits sit in the corners, clear of the arrows. */}
+      {children}
+
       {isMultiPage ? (
         <PaginationDots count={sources.length} activeIndex={activeIndex} />
       ) : null}
 
-      {/* Web hover arrows — siblings of the FlatList, so each is its own press
-          target and never bubbles to the page tap that opens the detail. */}
+      {/* Web hover arrows — the TOPMOST interactive layer over the photo, and
+          siblings of the FlatList so each is its own press target that never
+          bubbles to the page tap that opens the detail. */}
       {showPrevArrow ? (
         <NavArrow direction="prev" onPress={goPrev} accessibilityLabel="Previous photo" />
       ) : null}
       {showNextArrow ? (
         <NavArrow direction="next" onPress={goNext} accessibilityLabel="Next photo" />
       ) : null}
-
-      {children}
     </View>
   );
 };
