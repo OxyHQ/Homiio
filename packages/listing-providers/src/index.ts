@@ -471,6 +471,7 @@ export {
   parsePisosDetail,
   parsePisosSearch,
   mergePisosContact,
+  readPisosImageUrls,
   readPisosLocationMapCoordinates,
   readPisosAscendingGeo,
   postalCodeFromPisosUrl,
@@ -480,6 +481,8 @@ export {
   PISOS_BASE_URL,
   PISOS_FIXTURE_DETAIL_HTML,
   PISOS_FIXTURE_DETAIL_VALLADOLID_HTML,
+  PISOS_FIXTURE_DETAIL_IMAGES_HTML,
+  PISOS_FIXTURE_DETAIL_IMAGES_EXPECTED,
   PISOS_FIXTURE_SEARCH_HTML,
   PISOS_FIXTURE_CONTACT_JSON,
 } from './providers/pisos/fixtures';

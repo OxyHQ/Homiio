@@ -9,8 +9,11 @@ import {
   parsePisosContactPhone,
   mergePisosContact,
   pisosSourceIdFromUrl,
+  readPisosImageUrls,
   PISOS_FIXTURE_DETAIL_HTML,
   PISOS_FIXTURE_DETAIL_VALLADOLID_HTML,
+  PISOS_FIXTURE_DETAIL_IMAGES_HTML,
+  PISOS_FIXTURE_DETAIL_IMAGES_EXPECTED,
   PISOS_FIXTURE_SEARCH_HTML,
   PISOS_FIXTURE_CONTACT_JSON,
 } from '@homiio/listing-providers';
@@ -95,6 +98,44 @@ describe('PisosProvider.normalize', () => {
     expect(listing.floor).toBeUndefined();
     expect(listing.yearBuilt).toBeUndefined();
     expect(listing.parkingSpaces).toBeUndefined();
+  });
+
+  it('drops the pisos.com-watermarked cover duplicate and agency logo, keeping one clean copy per photo', () => {
+    // Live listings serve each photo under several size prefixes: `xl-wp` /
+    // `fch-wp` covers and `appswm-wp` carry the burned-in pisos.com watermark,
+    // while `apps-wp` + `fchm-wp` are clean and `prof-wp/logos/…` is the agency
+    // logo. The parser must ingest only the clean, de-duplicated gallery.
+    const urls = readPisosImageUrls(PISOS_FIXTURE_DETAIL_IMAGES_HTML);
+
+    expect(urls).toEqual(PISOS_FIXTURE_DETAIL_IMAGES_EXPECTED);
+    // The clean `apps-wp` copy of the first photo leads (its watermarked
+    // `xl-wp` og:image twin, which appears first in the HTML, is discarded).
+    expect(urls[0]).toContain('/apps-wp/');
+    // No watermarked or logo rendition survives.
+    expect(urls.some((url) => /\/(?:xl-wp|fch-wp|appswm-wp)\//.test(url))).toBe(false);
+    expect(urls.some((url) => url.includes('/logos/'))).toBe(false);
+    // Each underlying photo appears exactly once (no size-variant duplicates).
+    const photoKeys = urls.map((url) => url.replace(/^https:\/\/[^/]+\/[^/]+\//, ''));
+    expect(new Set(photoKeys).size).toBe(photoKeys.length);
+  });
+
+  it('normalizes the images fixture into watermark-free remoteImages with a clean primary', () => {
+    const payload = parsePisosDetail(
+      PISOS_FIXTURE_DETAIL_IMAGES_HTML,
+      'https://www.pisos.com/alquilar/piso-alboraia_alboraya_centro_urbano-65023401382_106400/',
+    );
+    const listing = provider.normalize({
+      ref: { provider: 'pisos', sourceId: payload.sourceId, url: payload.url },
+      payload,
+    });
+
+    expect(listing.remoteImages).toHaveLength(PISOS_FIXTURE_DETAIL_IMAGES_EXPECTED.length);
+    expect(listing.remoteImages[0]?.isPrimary).toBe(true);
+    expect(listing.remoteImages[0]?.url).toContain('/apps-wp/');
+    expect(
+      listing.remoteImages.some((image) => /\/(?:xl-wp|fch-wp|appswm-wp)\//.test(image.url)),
+    ).toBe(false);
+    expect(listing.remoteImages.some((image) => image.url.includes('/logos/'))).toBe(false);
   });
 
   it('parses contact AJAX JSON', () => {

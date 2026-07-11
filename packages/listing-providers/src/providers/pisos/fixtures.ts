@@ -63,5 +63,55 @@ export const PISOS_FIXTURE_DETAIL_VALLADOLID_HTML = `<!doctype html>
 <p class="description">Loft con encanto en el casco histórico de valladolid.</p>
 </body></html>`;
 
+/**
+ * Recorded image block from a live Alboraya (Valencia) detail page. pisos serves
+ * every photo under several `fotos.imghs.net` size prefixes: the `xl-wp` /
+ * `fch-wp` cover renditions and the `appswm-wp` ("apps watermark") rendition
+ * carry the burned-in pisos.com watermark, while `apps-wp` and the gallery
+ * `fchm-wp` thumbnails are clean. `prof-wp/logos/…` is the agency logo, not a
+ * property photo. The URLs, ordering, and duplication mirror the real markup:
+ * the watermarked `xl-wp` cover appears first (it is also the `og:image`), the
+ * clean `apps-wp` copy of the same photo second, then the clean `fchm-wp`
+ * gallery, with watermarked `appswm-wp` duplicates and the agency logo mixed in.
+ */
+export const PISOS_FIXTURE_DETAIL_IMAGES_HTML = `<!doctype html>
+<html lang="es"><head><title>Piso en alquiler en Avinguda Mare Nostrum</title>
+<meta property="og:image" content="https://fotos.imghs.net/xl-wp/1064/3230323630363137/d1e479cd-09f2-4e87-b0ea-5a232c242428.jpg" />
+</head><body>
+<input id="hdnIdPiso" name="hdnIdPiso" type="hidden" value="65023401382.106400" />
+<h1>Piso en alquiler en Avinguda Mare Nostrum</h1>
+<div class="ascending-geo__row" data-zone="P00000000000046" data-ga-geoLevelName='provincia' property="itemListElement" typeof="ListItem">
+<a href="/alquiler/piso-valencia/" class="ascending-geo__result" property="item" typeof="WebPage"><span property="name">València</span></a>
+</div>
+<div class="ascending-geo__row" data-zone="M00000000046013" data-ga-geoLevelName='municipio' property="itemListElement" typeof="ListItem">
+<a href="/alquiler/piso-alboraya/" class="ascending-geo__result" property="item" typeof="WebPage"><span property="name">Alboraia - Alboraya</span></a>
+</div>
+<div data-var='{"telefono":"960365571","caracteristicasInmueble":"ascensor,balcon,terraza","nHabitaciones":"2","nBanios":"1","superficieInmueble":"80"}'></div>
+<div class="locationmap" data-params="latitude=39.4915&amp;longitude=-0.325534&amp;zoom=17&amp;showMarker=True"></div>
+<script>var precio = 1400;</script>
+<div class="gallery">
+<img src="https://fotos.imghs.net/xl-wp/1064/3230323630363137/d1e479cd-09f2-4e87-b0ea-5a232c242428.jpg" />
+<img src="https://fotos.imghs.net/apps-wp/1064/3230323630363137/d1e479cd-09f2-4e87-b0ea-5a232c242428.jpg" />
+<img src="https://fotos.imghs.net/fch-wp/1064/3230323630363137/d1e479cd-09f2-4e87-b0ea-5a232c242428.jpg" />
+<img src="https://fotos.imghs.net/fchm-wp/1064/3230323630363137/8cb66161-4444-4287-a7cc-efaa714ea86e.jpg" />
+<img src="https://fotos.imghs.net/fchm-wp/1064/3230323630363137/5ef76e58-1754-4ad6-9c48-ad35fcbcc5a2.jpg" />
+<img src="https://fotos.imghs.net/fchm-wp/1064/3230323630363137/634ed073-0c83-4d9f-8e6a-8c7c46102b06.jpg" />
+<img src="https://fotos.imghs.net/appswm-wp/1064/3230323630363137/d1e479cd-09f2-4e87-b0ea-5a232c242428.jpg" />
+<img src="https://fotos.imghs.net/appswm-wp/1064/3230323630363137/8cb66161-4444-4287-a7cc-efaa714ea86e.jpg" />
+<img src="https://fotos.imghs.net/prof-wp/logos/Logo_518562_20200728111844.jpg" />
+<img src="https://fotos.imghs.net/fchm-wp/1064/3230323630363137/8cb66161-4444-4287-a7cc-efaa714ea86e.jpg" />
+<img src="https://fotos.imghs.net/apps-wp/1064/3230323630363137/d1e479cd-09f2-4e87-b0ea-5a232c242428.jpg" />
+</div>
+<p class="description">Piso reformado con terraza y vistas al mar en Alboraya.</p>
+</body></html>`;
+
+/** Clean gallery the parser must keep from {@link PISOS_FIXTURE_DETAIL_IMAGES_HTML}. */
+export const PISOS_FIXTURE_DETAIL_IMAGES_EXPECTED = [
+  'https://fotos.imghs.net/apps-wp/1064/3230323630363137/d1e479cd-09f2-4e87-b0ea-5a232c242428.jpg',
+  'https://fotos.imghs.net/fchm-wp/1064/3230323630363137/8cb66161-4444-4287-a7cc-efaa714ea86e.jpg',
+  'https://fotos.imghs.net/fchm-wp/1064/3230323630363137/5ef76e58-1754-4ad6-9c48-ad35fcbcc5a2.jpg',
+  'https://fotos.imghs.net/fchm-wp/1064/3230323630363137/634ed073-0c83-4d9f-8e6a-8c7c46102b06.jpg',
+] as const;
+
 /** Recorded contact AJAX body from `/WebsiteUserInfo/GetNormalizedPhone`. */
 export const PISOS_FIXTURE_CONTACT_JSON = `{"phone":"919376345","normalizedPhone":"+34919376345"}`;

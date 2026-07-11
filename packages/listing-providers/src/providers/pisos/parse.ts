@@ -86,8 +86,63 @@ function readDescriptionText(html: string): string | undefined {
   return raw.length > 0 ? stripTags(raw) : undefined;
 }
 
-function readPisosImageUrls(html: string): string[] {
-  const urls: string[] = [];
+/**
+ * pisos serves every property photo under several `fotos.imghs.net` size
+ * prefixes (the first path segment). The large "cover"/hero renditions
+ * (`xl-wp`, `fch-wp`) and the explicit `appswm-wp` ("apps watermark") rendition
+ * have the **pisos.com watermark** — and sometimes a decorative frame — burned
+ * into the pixels; the `apps-wp` and gallery-thumbnail `fchm-wp` renditions are
+ * clean. `prof-wp/logos/…` is the agency logo, not a property photo. The pair
+ * `apps-wp` (clean) / `appswm-wp` (watermarked) proves `apps-wp` is the
+ * watermark-free copy of the same image. Verified against live listings.
+ */
+
+/** Size prefixes whose rendition has the pisos.com watermark burned in. */
+const PISOS_WATERMARK_VARIANTS = new Set(['xl', 'fch']);
+
+/**
+ * Clean renditions ranked largest-first so the best watermark-free copy of a
+ * photo wins. Unknown prefixes fall back to rank 0 — kept (never silently drop
+ * a real photo) but always superseded by a known clean rendition of the same
+ * image.
+ */
+const PISOS_CLEAN_VARIANT_RANK: Record<string, number> = {
+  apps: 2, // 640×480, no watermark — the clean cover
+  fchm: 1, // gallery thumbnail, no watermark
+};
+
+interface PisosImageRendition {
+  url: string;
+  /** Underlying photo identity: the path after the size/variant segment. */
+  photoKey: string;
+  rank: number;
+}
+
+/**
+ * Classify a `fotos.imghs.net` URL into its underlying photo + clean-rendition
+ * rank. Watermarked size prefixes (`xl-wp`, `fch-wp`, any `*wm` such as
+ * `appswm-wp`) and agency logos (`prof-wp/logos/…`) are rejected outright.
+ */
+function classifyPisosImage(url: string): PisosImageRendition | undefined {
+  const path = url.slice(PISOS_IMG_HOST.length);
+  const slash = path.indexOf('/');
+  if (slash < 0) return undefined;
+  const photoKey = path.slice(slash + 1);
+  if (photoKey.startsWith('logos/')) return undefined; // agency logo, not a property photo
+  const variant = path.slice(0, slash).replace(/-wp$/i, '').toLowerCase();
+  if (variant.endsWith('wm') || PISOS_WATERMARK_VARIANTS.has(variant)) return undefined; // watermarked
+  return { url, photoKey, rank: PISOS_CLEAN_VARIANT_RANK[variant] ?? 0 };
+}
+
+/**
+ * Extract the clean, de-duplicated gallery from a detail page, in first-seen
+ * order. Watermarked cover/hero renditions and the agency logo are dropped, and
+ * each underlying photo keeps only its highest-ranked clean rendition — so the
+ * portal-watermarked duplicate of the first photo is never ingested.
+ */
+export function readPisosImageUrls(html: string): string[] {
+  const bestByPhoto = new Map<string, PisosImageRendition>();
+  const order: string[] = [];
   let cursor = 0;
   while (cursor < html.length) {
     const idx = html.indexOf(PISOS_IMG_HOST, cursor);
@@ -102,10 +157,21 @@ function readPisosImageUrls(html: string): string[] {
       break;
     }
     const candidate = html.slice(idx, end);
-    if (/\.(?:jpg|jpeg|webp|png)$/i.test(candidate)) urls.push(candidate);
     cursor = end;
+    if (!/\.(?:jpg|jpeg|webp|png)$/i.test(candidate)) continue;
+    const rendition = classifyPisosImage(candidate);
+    if (!rendition) continue;
+    const existing = bestByPhoto.get(rendition.photoKey);
+    if (!existing) {
+      bestByPhoto.set(rendition.photoKey, rendition);
+      order.push(rendition.photoKey);
+    } else if (rendition.rank > existing.rank) {
+      bestByPhoto.set(rendition.photoKey, rendition);
+    }
   }
-  return urls;
+  return order
+    .map((key) => bestByPhoto.get(key)?.url)
+    .filter((url): url is string => url !== undefined);
 }
 
 function readHiddenPisoId(html: string): string | undefined {
@@ -344,7 +410,7 @@ export function parsePisosDetail(html: string, url: string): PisosRaw {
   const h1 = readFirstH1Text(html);
   const description = readDescriptionText(html) ?? h1;
 
-  const images = [...new Set(readPisosImageUrls(html))];
+  const images = readPisosImageUrls(html);
   const ld = extractEsSchemaListings(html)[0];
   const geo = readPisosAscendingGeo(html);
   const mapCoords = readPisosLocationMapCoordinates(html);
