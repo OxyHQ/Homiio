@@ -63,11 +63,21 @@ export function otodomSearchUrl(city: string, kind: 'rent' | 'sale', page = 1): 
   return page <= 1 ? base : `${base}?page=${page}`;
 }
 
+/**
+ * Build a canonical Otodom detail URL. Search results expose a clean `slug`
+ * plus an `href` template of the form `[lang]/ad/<slug>`; the canonical detail
+ * path is `/pl/oferta/<slug>` (the `[lang]/ad/` template path 404s). Reduce
+ * whatever we get to its slug and rebuild against the canonical path.
+ */
 function absoluteOfferUrl(hrefOrSlug: string): string {
-  const normalized = hrefOrSlug.replace('[lang]', 'pl');
-  if (normalized.startsWith('http')) return normalized.split('?')[0] ?? normalized;
-  const path = normalized.startsWith('/') ? normalized : `/pl/oferta/${normalized}`;
-  return `${OTODOM_BASE_URL}${path.split('?')[0]}`;
+  const value = hrefOrSlug.trim();
+  if (value.startsWith('http')) return value.split('?')[0] ?? value;
+  const slug = value
+    .split('?')[0]
+    .replace(/^\[lang\]/, '')
+    .replace(/^\/+/, '')
+    .replace(/^(?:pl\/)?(?:oferta|ad)\//, '');
+  return `${OTODOM_BASE_URL}/pl/oferta/${slug}`;
 }
 
 function operationFromTransaction(value: unknown): 'rent' | 'sale' {
@@ -145,6 +155,80 @@ function moneyFromItem(item: Record<string, unknown>): { value: number; currency
   return undefined;
 }
 
+/** Read a `{ value, currency }` Money node (Otodom unifiedAd nested price). */
+function moneyFromObject(value: unknown): { value: number; currency: string } | undefined {
+  if (!isRecord(value)) return undefined;
+  const amount = asNumber(value.value);
+  if (amount === undefined || amount <= 0) return undefined;
+  return { value: amount, currency: asString(value.currency) ?? 'PLN' };
+}
+
+/** Resolve rent/sale for a detail ad from category / price typename / offer type. */
+function detailOperation(
+  ad: Record<string, unknown> | undefined,
+  unified: Record<string, unknown> | undefined,
+): 'rent' | 'sale' {
+  const categoryType = ad && isRecord(ad.adCategory) ? asString(ad.adCategory.type) : undefined;
+  if (categoryType) {
+    if (/sell|sale/i.test(categoryType)) return 'sale';
+    if (/rent/i.test(categoryType)) return 'rent';
+  }
+  const priceType = unified && isRecord(unified.price) ? asString(unified.price.__typename) : undefined;
+  if (priceType) {
+    if (/sell|sale/i.test(priceType)) return 'sale';
+    if (/rent/i.test(priceType)) return 'rent';
+  }
+  const offerType = ad && isRecord(ad.target) ? asString(ad.target.OfferType) : undefined;
+  if (offerType) {
+    if (/sprzeda/i.test(offerType)) return 'sale';
+    if (/wynaj/i.test(offerType)) return 'rent';
+  }
+  return operationFromTransaction(ad?.transaction ?? unified?.transaction);
+}
+
+/** Headline price from `ad.characteristics` (`[{ key: 'price', value, currency }]`). */
+function characteristicPrice(
+  ad: Record<string, unknown> | undefined,
+): { value: number; currency: string } | undefined {
+  if (!ad || !Array.isArray(ad.characteristics)) return undefined;
+  for (const entry of ad.characteristics) {
+    if (!isRecord(entry) || asString(entry.key) !== 'price') continue;
+    const amount = asNumber(entry.value);
+    if (amount !== undefined && amount > 0) {
+      return { value: amount, currency: asString(entry.currency) ?? 'PLN' };
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Resolve the headline price + currency + operation from a detail ad/unifiedAd.
+ * Detail pages no longer carry `ad.price.value` / `ad.transaction`; the amount
+ * lives in `unifiedAd.price.{rentalPrice,sellingPrice,price}`, in
+ * `ad.characteristics`, or in `ad.target.Price`.
+ */
+function detailMoney(
+  ad: Record<string, unknown> | undefined,
+  unified: Record<string, unknown> | undefined,
+): { value: number; currency: string; operation: 'rent' | 'sale' } | undefined {
+  const operation = detailOperation(ad, unified);
+  const unifiedPrice = unified && isRecord(unified.price) ? unified.price : undefined;
+  const fromUnified =
+    moneyFromObject(unifiedPrice?.rentalPrice) ??
+    moneyFromObject(unifiedPrice?.sellingPrice) ??
+    moneyFromObject(unifiedPrice?.price) ??
+    moneyFromObject(unifiedPrice);
+  if (fromUnified) return { ...fromUnified, operation };
+  const fromCharacteristics = characteristicPrice(ad);
+  if (fromCharacteristics) return { ...fromCharacteristics, operation };
+  const fromTarget = ad && isRecord(ad.target) ? asNumber(ad.target.Price) : undefined;
+  if (fromTarget !== undefined && fromTarget > 0) return { value: fromTarget, currency: 'PLN', operation };
+  // Legacy markup: `ad.totalPrice` / `ad.price.value` (kept for older payloads).
+  const legacy = (ad ? moneyFromItem(ad) : undefined) ?? (unified ? moneyFromItem(unified) : undefined);
+  if (legacy) return legacy;
+  return undefined;
+}
+
 function parseContact(details: unknown): NormalizedListingContact | undefined {
   if (!isRecord(details)) return undefined;
   const name = asString(details.name);
@@ -205,7 +289,9 @@ export function parseOtodomSearch(htmlOrJson: string): OtodomSearchRef[] {
   for (const item of items) {
     if (!isRecord(item)) continue;
     const id = asString(item.id) ?? (typeof item.id === 'number' ? String(item.id) : undefined);
-    const href = asString(item.href) ?? asString(item.slug) ?? asString(item.url);
+    // Prefer the clean `slug`; `href` is a `[lang]/ad/<slug>` template whose
+    // path segment 404s — `absoluteOfferUrl` rebuilds the canonical URL either way.
+    const href = asString(item.slug) ?? asString(item.href) ?? asString(item.url);
     if (!id || !href) continue;
     const money = moneyFromItem(item);
     if (!money || money.value <= 0) continue;
@@ -239,15 +325,7 @@ export function parseOtodomDetail(html: string, url: string): OtodomRawListing {
     throw new Error('otodom: could not resolve sourceId');
   }
 
-  const priceInfo =
-    (ad ? moneyFromItem(ad) : undefined) ??
-    (unified
-      ? moneyFromItem({
-          ...unified,
-          transaction: unified.transaction ?? ad?.transaction,
-          totalPrice: unified.totalPrice ?? unified.price,
-        })
-      : undefined);
+  const priceInfo = detailMoney(ad, unified);
   if (!priceInfo) {
     throw new Error(`otodom: listing ${sourceId} has no resolvable price`);
   }
@@ -285,7 +363,15 @@ export function parseOtodomDetail(html: string, url: string): OtodomRawListing {
   const squareMeters = asNumber(attrs.m) ?? asNumber(ad?.areaInSquareMeters);
   if (squareMeters !== undefined) result.squareMeters = squareMeters;
   if (place.coordinates) result.coordinates = place.coordinates;
-  const estate = asString(ad?.estate) ?? asString(unified?.estate);
+  // `ad.estate` is gone from current markup; derive the dwelling kind from the
+  // OLX category name (`FLAT`/`HOUSE`) or the `building_type` attribute so houses
+  // are not all misclassified as apartments.
+  const adCategoryName = ad && isRecord(ad.adCategory) ? asString(ad.adCategory.name) : undefined;
+  const estate =
+    asString(ad?.estate) ??
+    asString(unified?.estate) ??
+    adCategoryName ??
+    asString(attrs.building_type);
   if (estate) result.estate = estate;
 
   const contact = parseContact(props.contactDetails);
