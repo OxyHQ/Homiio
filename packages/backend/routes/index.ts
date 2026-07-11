@@ -24,6 +24,7 @@ const reservations = require('./reservations').default;
 const applications = require('./applications').default;
 const exchanges = require('./exchanges').default;
 const partners = require('./partners').default;
+const evictions = require('./evictions').default;
 
 export default function() {
   const propertyRoutes = properties();
@@ -45,6 +46,7 @@ export default function() {
   const applicationRoutes = applications();
   const exchangeRoutes = exchanges();
   const partnerRoutes = partners();
+  const evictionRoutes = evictions();
 
   const router = express.Router();
 
@@ -63,6 +65,7 @@ export default function() {
   router.use('/applications', applicationRoutes);
   router.use('/exchanges', exchangeRoutes);
   router.use('/partners', partnerRoutes);
+  router.use('/evictions', evictionRoutes);
   router.use('/rooms', roomRoutes);
   router.use('/leases', leaseRoutes);
   router.use('/notifications', notificationRoutes);

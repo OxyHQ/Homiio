@@ -44,6 +44,9 @@ export * from './exchange';
 // Listing report types (trust & safety flagging)
 export * from './report';
 
+// Eviction solidarity board types (public upcoming-eviction notices + RSVP)
+export * from './eviction';
+
 // Partner (agent) referral-commission types
 export * from './partner';
 
