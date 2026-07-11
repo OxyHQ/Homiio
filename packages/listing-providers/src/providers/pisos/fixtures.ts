@@ -64,6 +64,43 @@ export const PISOS_FIXTURE_DETAIL_VALLADOLID_HTML = `<!doctype html>
 </body></html>`;
 
 /**
+ * Recorded Picanya (Valencia) detail — the LIVE current template that broke prod
+ * ingest. Faithful to captured markup: the tracking payload lives in the
+ * `id="vtmExtraVars"` `data-var` blob (`precioInmueble`/`precio`/`tipoOperacion`
+ * + rooms/m²), there is NO `window.__pisosTrack` and NO `var precio` line, and
+ * the ascending-geo breadcrumb carries only province + comarca — the municipality
+ * is a `descending-geo` picker with no `<span property="name">`. So both the
+ * price (from `vtmExtraVars`) and the city ("Picanya", from the `<title>`) come
+ * from the sources the old parser ignored → the "no resolvable price / city"
+ * drops. Coords/ids/names are the real captured values.
+ */
+export const PISOS_FIXTURE_DETAIL_VTMVARS_HTML = `<!doctype html>
+<html lang="es"><head>
+<title>Apartamento en alquiler en Carrer de la Senyera en Picanya por 1.200 €/mes</title>
+<meta property="og:title" content="Apartamento en alquiler en Carrer de la Senyera en Picanya por 1.200 €/mes" />
+</head><body>
+<input id="hdnIdPiso" name="hdnIdPiso" type="hidden" value="65071648575.100900" />
+<h1>Apartamento en alquiler en Carrer de la Senyera</h1>
+<nav class="ascending-geo">
+<div class="ascending-geo__row" data-zone="P00000000000046" data-ga-geoLevelName='provincia' property="itemListElement" typeof="ListItem">
+<a href="/alquiler/apartamentos-valencia/" class="ascending-geo__result" property="item" typeof="WebPage"><span property="name">València</span></a>
+</div>
+<div class="ascending-geo__row" data-zone="C00000000000184" data-ga-geoLevelName='comarca' property="itemListElement" typeof="ListItem">
+<a href="/alquiler/apartamentos-l_horta_oest/" class="ascending-geo__result" property="item" typeof="WebPage"><span property="name">L'Horta Oest</span></a>
+</div>
+<span id="levelTypeForAnalytics" data-ga-geoLevelName='municipio'></span>
+<div class="descending-geo__row" data-zone="M00000000046193" data-lastlevel=True data-ga-tag="">
+<span class="descending-geo__result-box descending-geo__result-box--not-link"><span class="descending-geo__result">Picanya</span></span>
+</div>
+</nav>
+<div id="vtmExtraVars" data-var='{"fechaModificacion":"11/07/2026","fechaPrimeraPublicacion":"01/06/2026","telefono":"961234567","caracteristicasInmueble":"ascensor,terraza,amueblado","nHabitaciones":"3","nBanios":"2","superficieInmueble":"90","tipoContenido":"detalle","tipoOperacion":"alquiler","provincia":"P00000000000046","municipio":"M00000000046193","distrito":"","precioInmueble":"1200","precio":"1200","tipoVendedor":"profesional","tipoInmueble":"casas-pisos","subTipoInmueble":"piso-apartamento"}'></div>
+<div id="vtmVars" data-var='{"tipoContenido":"detalle","tipoOperacion":"alquiler","precioInmueble":"1200","precio":"1200","subTipoInmueble":"piso-apartamento"}'></div>
+<div class="locationmap" data-params="latitude=39.43443131&amp;longitude=-0.432955807&amp;zoom=16&amp;showMarker=True"></div>
+<img src="https://fotos.imghs.net/apps-wp/1009/3635303731363438/photo-a.jpg" />
+<p class="description">Apartamento amueblado con terraza y ascensor en Picanya.</p>
+</body></html>`;
+
+/**
  * Recorded image block from a live Alboraya (Valencia) detail page. pisos serves
  * every photo under several `fotos.imghs.net` size prefixes: the `xl-wp` /
  * `fch-wp` cover renditions and the `appswm-wp` ("apps watermark") rendition
