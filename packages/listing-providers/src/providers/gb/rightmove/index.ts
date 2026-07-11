@@ -354,6 +354,9 @@ export class RightmoveProvider implements ListingProvider {
     if (description) result.description = description;
     if (listing.bedrooms !== undefined) result.bedrooms = listing.bedrooms;
     if (listing.bathrooms !== undefined) result.bathrooms = listing.bathrooms;
+    if (listing.squareMeters !== undefined) result.squareFootage = listing.squareMeters;
+    if (listing.amenities && listing.amenities.length > 0) result.amenities = listing.amenities;
+    if (listing.furnishedStatus) result.furnishedStatus = listing.furnishedStatus;
     if (listing.contact) result.contact = listing.contact;
     return result;
   }

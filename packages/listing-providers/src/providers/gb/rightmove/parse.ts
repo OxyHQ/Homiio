@@ -15,6 +15,11 @@ import { RIGHTMOVE_BASE_URL } from './fixtures';
 
 const PAGE_MODEL_RE = /window\.__PAGE_MODEL\s*=\s*(\{[\s\S]*?\})\s*;/;
 
+/** 1 sq ft in square metres — Rightmove exposes both units in `sizings[]`. */
+const SQFT_TO_SQM = 0.092903;
+
+export type RightmoveFurnishedStatus = 'furnished' | 'unfurnished' | 'partially_furnished';
+
 
 /** Flatten Rightmove's compressed `__PAGE_MODEL` integer-pointer graph. */
 export function resolvePageModelGraph(data: unknown[]): Record<string, unknown> | undefined {
@@ -65,6 +70,11 @@ export interface RightmoveListingJson {
   incode?: string;
   latitude?: number;
   longitude?: number;
+  /** Living area in square metres (converted from sqft when needed). */
+  squareMeters?: number;
+  /** Portal `keyFeatures` strings, passed to ingest as amenities for derivation. */
+  amenities?: string[];
+  furnishedStatus?: RightmoveFurnishedStatus;
   images: string[];
   contact?: NormalizedListingContact;
 }
@@ -220,6 +230,74 @@ function contactFromDetail(prop: Record<string, unknown>): NormalizedListingCont
   });
 }
 
+/**
+ * Living area in m² from `propertyData.sizings[]`. Prefers a native `sqm` entry;
+ * converts a `sqft` entry only when no metric one exists.
+ */
+function squareMetersFromSizings(prop: Record<string, unknown>): number | undefined {
+  if (!Array.isArray(prop.sizings)) return undefined;
+  let sqft: number | undefined;
+  for (const entry of prop.sizings) {
+    if (!isRecord(entry)) continue;
+    const size = asNumber(entry.minimumSize) ?? asNumber(entry.maximumSize);
+    if (size === undefined || size <= 0) continue;
+    const unit = asString(entry.unit)?.toLowerCase();
+    if (unit === 'sqm') return Math.round(size);
+    if (unit === 'sqft' && sqft === undefined) sqft = size;
+  }
+  return sqft === undefined ? undefined : Math.round(sqft * SQFT_TO_SQM);
+}
+
+/** Fallback living area in m² from a `displaySize` string (e.g. "850 sq. ft."). */
+function squareMetersFromDisplaySize(prop: Record<string, unknown>): number | undefined {
+  const display = asString(prop.displaySize);
+  if (!display) return undefined;
+  const match = display
+    .replace(/,/g, '')
+    .match(/(\d+(?:\.\d+)?)\s*(sq\.?\s*m|sqm|square\s*met|sq\.?\s*ft|sqft|square\s*f)/i);
+  if (!match?.[1] || !match[2]) return undefined;
+  const value = Number.parseFloat(match[1]);
+  if (!Number.isFinite(value) || value <= 0) return undefined;
+  const unit = match[2].toLowerCase();
+  return /f/.test(unit) ? Math.round(value * SQFT_TO_SQM) : Math.round(value);
+}
+
+function squareMetersFromDetail(prop: Record<string, unknown>): number | undefined {
+  return squareMetersFromSizings(prop) ?? squareMetersFromDisplaySize(prop);
+}
+
+/** Portal `keyFeatures[]` strings — passed to ingest as amenities for derivation. */
+function keyFeaturesFromDetail(prop: Record<string, unknown>): string[] {
+  if (!Array.isArray(prop.keyFeatures)) return [];
+  const out: string[] = [];
+  for (const feature of prop.keyFeatures) {
+    const value = asString(feature);
+    if (value) out.push(value);
+  }
+  return out;
+}
+
+/** Map `propertyData.letting.furnishType` to the normalized furnished status. */
+function furnishedStatusFromDetail(prop: Record<string, unknown>): RightmoveFurnishedStatus | undefined {
+  const letting = isRecord(prop.letting) ? prop.letting : undefined;
+  const furnish = letting ? asString(letting.furnishType) : undefined;
+  if (!furnish) return undefined;
+  const normalized = furnish.toLowerCase().replace(/\s+/g, ' ').trim();
+  switch (normalized) {
+    case 'furnished':
+      return 'furnished';
+    case 'unfurnished':
+      return 'unfurnished';
+    case 'part furnished':
+    case 'partly furnished':
+    case 'partially furnished':
+      return 'partially_furnished';
+    default:
+      // "Furnished or unfurnished" (ask agent) and unknown values stay unset.
+      return undefined;
+  }
+}
+
 /** Parse a detail page's `__PAGE_MODEL` into a listing JSON payload. */
 export function parseRightmoveDetail(html: string, url: string): RightmoveListingJson {
   const match = PAGE_MODEL_RE.exec(html);
@@ -291,6 +369,9 @@ export function parseRightmoveDetail(html: string, url: string): RightmoveListin
     incode,
     latitude: location ? asNumber(location.latitude) : undefined,
     longitude: location ? asNumber(location.longitude) : undefined,
+    squareMeters: squareMetersFromDetail(prop),
+    amenities: keyFeaturesFromDetail(prop),
+    furnishedStatus: furnishedStatusFromDetail(prop),
     images: imagesFromDetail(prop),
     contact: contactFromDetail(prop),
   };
