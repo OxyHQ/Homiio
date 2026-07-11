@@ -222,4 +222,49 @@ describe('external listing ingest (fixture -> IngestionService)', () => {
     expect(await Property.countDocuments({ source: 'blueground', sourceId: 'bcn-1549599p' })).toBe(0);
     expect(fetchImage).not.toHaveBeenCalled();
   });
+
+  it('skips a re-listing of the same unit under a new sourceId (dedup fingerprint)', async () => {
+    const ingestion = buildIngestionService();
+    // A substantial, shared agency description (>= 40 tokens) so the listings are
+    // dedup-eligible; the tail word differs so Jaccard is ~0.97 (> 0.95 floor).
+    const shared = Array.from({ length: 60 }, (_, i) => `palabra${String(i).padStart(3, '0')}`).join(' ');
+    const makeListing = (sourceId: string, tail: string): NormalizedListing => ({
+      source: 'pisos',
+      sourceId,
+      sourceUrl: `https://www.pisos.com/alquilar/piso-${sourceId}/`,
+      address: {
+        street: 'Carrer de Provença',
+        city: 'Barcelona',
+        countryCode: 'ES',
+        coordinates: { lat: 41.3925, lng: 2.1649 },
+      },
+      type: PropertyType.APARTMENT,
+      offerings: [OfferingType.LONG_TERM_RENT],
+      longTermRent: { monthlyAmount: 1750, currency: 'EUR' },
+      description: `${shared} ${tail}`,
+      bedrooms: 2,
+      bathrooms: 1,
+      squareFootage: 63,
+      remoteImages: [],
+      status: 'published',
+    });
+
+    const first = await ingestion.ingest(makeListing('relist-a', 'alpha'));
+    expect(first.status).toBe('created');
+
+    const second = await ingestion.ingest(makeListing('relist-b', 'beta'));
+    expect(second.status).toBe('skipped');
+    expect(second.duplicateOf).toBe(first.propertyId);
+
+    // The re-listing is NOT persisted; only the original survives.
+    expect(await Property.countDocuments({ source: 'pisos', sourceId: 'relist-b' })).toBe(0);
+    expect(await Property.countDocuments({ source: 'pisos', sourceId: 'relist-a' })).toBe(1);
+
+    // A genuinely different unit (different price) is still created normally.
+    const different = await ingestion.ingest({
+      ...makeListing('relist-c', 'gamma'),
+      longTermRent: { monthlyAmount: 2400, currency: 'EUR' },
+    });
+    expect(different.status).toBe('created');
+  });
 });
