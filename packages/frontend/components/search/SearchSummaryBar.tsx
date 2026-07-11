@@ -75,6 +75,16 @@ const SEARCH_BUTTON_SIZE = 40;
 const DIVIDER_HEIGHT = 24;
 const SEARCH_ICON_SIZE = 18;
 
+/**
+ * Max width of the full-mode pill so it reads as a CONTAINED rounded pill (like
+ * the Airbnb `w-96` reference) rather than stretching full-bleed across a wide
+ * hero. The pill keeps `width: '100%'` and centers via `alignSelf`, so it fills
+ * the available width on a phone (up to this cap) and sits centered-and-capped
+ * on desktop. Sized to hold all three single-line segments + the circular
+ * button comfortably (each segment ~200px at the cap) without cramping.
+ */
+const PILL_MAX_WIDTH = 640;
+
 /** One-line segment type size — identical on every width. */
 const SEGMENT_FONT = 14;
 
@@ -485,6 +495,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
+    // Contained, centered pill: cap the width and center it so a wide hero
+    // shows a rounded pill rather than a full-bleed bar; `width: '100%'` still
+    // fills a narrow phone up to the cap.
+    maxWidth: PILL_MAX_WIDTH,
+    alignSelf: 'center',
     height: PILL_HEIGHT,
     backgroundColor: colors.surfaceElevated,
     borderRadius: radius.pill,
