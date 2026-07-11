@@ -75,6 +75,38 @@ const ES_AMENITY_ALIASES: Readonly<Record<string, string>> = {
   amueblado: 'furnished',
 };
 
+/**
+ * Canonical amenity for a portal English feature-SLUG key (e.g. Fotocasa
+ * `features[].key`: `air_conditioner`, `elevator`, `storage_room`, …). These
+ * are internal snake_case keys, NOT the localized Spanish labels handled by
+ * {@link ES_AMENITY_ALIASES} — but they resolve to the SAME canonical vocabulary
+ * so external listings share one amenity slug set across parse paths. Keys that
+ * are dimensions (`rooms`/`bathrooms`/`surface`/`floor`) or non-amenity metadata
+ * (`conservationStatus`, `antiquity`, …) are intentionally absent → dropped.
+ */
+const FEATURE_KEY_AMENITY_ALIASES: Readonly<Record<string, string>> = {
+  elevator: 'elevator',
+  lift: 'elevator',
+  air_conditioner: 'air_conditioning',
+  air_conditioning: 'air_conditioning',
+  air_conditioned: 'air_conditioning',
+  heating: 'heating',
+  terrace: 'terrace',
+  balcony: 'balcony',
+  parking: 'parking',
+  garage: 'parking',
+  storage_room: 'storage',
+  storage: 'storage',
+  pool: 'pool',
+  swimming_pool: 'pool',
+  community_pool: 'pool',
+  private_pool: 'pool',
+  garden: 'garden',
+  private_garden: 'garden',
+  communal_garden: 'garden',
+  furnished: 'furnished',
+};
+
 const IT_AMENITY_ALIASES: Readonly<Record<string, string>> = {
   ascensore: 'elevator',
   'aria condizionata': 'air_conditioning',
@@ -116,6 +148,16 @@ function normalizeAmenity(name: string, aliases: Readonly<Record<string, string>
  */
 export function matchEsAmenityKey(label: string): string | undefined {
   return ES_AMENITY_ALIASES[deaccent(label)];
+}
+
+/**
+ * Canonical amenity slug for a portal English feature-slug key (Fotocasa
+ * `features[].key`, …), or `undefined` when the key is not a recognized amenity.
+ * Reuses the shared canonical vocabulary — resolves to the same slugs as
+ * {@link matchEsAmenityKey} without duplicating the Spanish alias table.
+ */
+export function matchFeatureKeyAmenity(key: string): string | undefined {
+  return FEATURE_KEY_AMENITY_ALIASES[key.trim().toLowerCase()];
 }
 
 function readTypes(value: unknown): string[] {

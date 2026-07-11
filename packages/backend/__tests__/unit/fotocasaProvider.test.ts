@@ -26,6 +26,7 @@ import {
   FOTOCASA_FIXTURE_SEARCHADS_JSON,
   FOTOCASA_FIXTURE_LOCATION_SEGMENTS_JSON,
   FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE,
+  FOTOCASA_FIXTURE_SEARCH_CARD,
   FOTOCASA_FIXTURE_PROPERTY_JSON,
   FOTOCASA_FIXTURE_SSR_SEARCH_HTML,
   fotocasaSearchadsPageFixture,
@@ -71,48 +72,59 @@ describe('FotocasaProvider.normalize', () => {
     expect(listing.remoteImages[0].isPrimary).toBe(true);
   });
 
-  it('maps property JSON into a published long-term-rent listing', () => {
+  it('maps a real searchads/property card into a published long-term-rent listing', () => {
+    // The property API returns the same record shape as a searchads card:
+    // dimensions in `features[]` {key,value}, price in `rawPrice`, the detail
+    // path under `detail["es-ES"]`. Regression guard for the prod bug that
+    // shipped bedrooms/bathrooms/m²/floor/coordinates empty (top-level reads).
     const payload = parseFotocasaPropertyJson(
       FOTOCASA_FIXTURE_PROPERTY_JSON,
-      'https://www.fotocasa.es/es/alquiler/vivienda/madrid-capital/x/187654321/d',
+      'https://www.fotocasa.es/es/alquiler/vivienda/barcelona-capital/x/186718824/d',
     );
     const ref: ExternalListingRef = { provider: 'fotocasa', sourceId: payload.sourceId, url: payload.url };
     const listing = provider.normalize({ ref, payload });
 
-    expect(listing.sourceId).toBe('187654321');
-    expect(listing.longTermRent?.monthlyAmount).toBe(1850);
-    expect(listing.address.city).toBe('Madrid');
-    expect(listing.address.neighborhood).toBe('Chamberí');
-    expect(listing.bedrooms).toBe(3);
-    expect(listing.bathrooms).toBe(2);
-    expect(listing.squareFootage).toBe(95);
-    expect(listing.floor).toBe(3);
-    expect(listing.remoteImages).toHaveLength(2);
+    expect(listing.sourceId).toBe('186718824');
+    expect(listing.sourceUrl).toContain('/186718824/d');
+    expect(listing.longTermRent?.monthlyAmount).toBe(3690);
+    expect(listing.address.city).toBe('Barcelona');
+    expect(listing.address.neighborhood).toBe('Les Tres Torres');
+    expect(listing.address.postalCode).toBe('08017');
+    expect(listing.address.coordinates?.lat).toBeCloseTo(41.3973956, 5);
+    expect(listing.address.coordinates?.lng).toBeCloseTo(2.1289727, 5);
+    // Dimensions come from features[] {key,value}, not top-level fields.
+    expect(listing.bedrooms).toBe(5);
+    expect(listing.bathrooms).toBe(4);
+    expect(listing.squareFootage).toBe(223);
+    expect(listing.floor).toBe(10);
+    expect(listing.remoteImages).toHaveLength(3);
   });
 
-  it('extracts amenities, furnished, and contact from the property-JSON features', () => {
+  it('extracts amenities, furnished, and contact from the real card features[]', () => {
     const payload = parseFotocasaPropertyJson(
       FOTOCASA_FIXTURE_PROPERTY_JSON,
-      'https://www.fotocasa.es/es/alquiler/vivienda/madrid-capital/x/187654321/d',
+      'https://www.fotocasa.es/es/alquiler/vivienda/barcelona-capital/x/186718824/d',
     );
     const ref: ExternalListingRef = { provider: 'fotocasa', sourceId: payload.sourceId, url: payload.url };
     const listing = provider.normalize({ ref, payload });
 
-    // Recognized equipment labels normalize to the SAME canonical keys as JSON-LD.
+    // English feature-slug keys normalize to the SAME canonical vocabulary as JSON-LD.
     expect(listing.amenities).toEqual(
-      expect.arrayContaining(['elevator', 'air_conditioning', 'heating', 'terrace', 'pool']),
+      expect.arrayContaining(['elevator', 'parking', 'terrace', 'heating', 'garden']),
     );
-    // `value: false` and unrecognized "características" never leak as amenities.
-    expect(listing.amenities).not.toContain('parking');
-    expect(listing.amenities).toEqual(expect.not.arrayContaining(['buen_estado']));
-    // `amueblado` is hoisted into furnishedStatus, not left as a raw amenity.
+    // Dimension keys and non-amenity metadata never leak as amenities.
+    expect(listing.amenities).toEqual(
+      expect.not.arrayContaining(['rooms', 'bathrooms', 'surface', 'floor', 'conservation_status', 'antiquity']),
+    );
+    // `not_furnished` is hoisted into furnishedStatus, not left as a raw amenity.
     expect(listing.amenities).not.toContain('furnished');
-    expect(listing.furnishedStatus).toBe('furnished');
+    expect(listing.amenities).not.toContain('not_furnished');
+    expect(listing.furnishedStatus).toBe('unfurnished');
 
-    expect(listing.contact?.phone).toBe('911234567');
-    expect(listing.contact?.email).toBe('agente@example-inmobiliaria.es');
-    expect(listing.contact?.agencyName).toBe('Inmobiliaria Almagro');
-    expect(listing.contact?.name).toBe('Agente Almagro');
+    // Contact is the TOP-LEVEL phone + clientAlias (agency), not a nested node.
+    expect(listing.contact?.phone).toBe('+34670501198');
+    expect(listing.contact?.agencyName).toBe('Nolkers Consulting');
+    expect(listing.contact?.kind).toBe('agency');
   });
 
   it('parses RealEstateListing JSON-LD with a nested about node', () => {
@@ -489,15 +501,15 @@ describe('FotocasaProvider.fetch property JSON path', () => {
     const local = new FotocasaProvider({ runtime });
     const ref: ExternalListingRef = {
       provider: 'fotocasa',
-      sourceId: '187654321',
-      url: 'https://www.fotocasa.es/es/alquiler/vivienda/madrid-capital/x/187654321/d',
+      sourceId: '186718824',
+      url: 'https://www.fotocasa.es/es/alquiler/vivienda/barcelona-capital/x/186718824/d',
     };
     const raw = await local.fetch(ref, { runtime, signal: new AbortController().signal });
     const listing = local.normalize(raw);
 
-    expect(warmUrl).toContain('/viviendas/madrid-capital/todas-las-zonas/l');
-    expect(listing.sourceId).toBe('187654321');
-    expect(listing.longTermRent?.monthlyAmount).toBe(1850);
+    expect(warmUrl).toContain('/viviendas/barcelona-capital/todas-las-zonas/l');
+    expect(listing.sourceId).toBe('186718824');
+    expect(listing.longTermRent?.monthlyAmount).toBe(3690);
   });
 
   it('reuses discover session hints instead of cold re-warm', async () => {
@@ -551,7 +563,7 @@ describe('FotocasaProvider.fetch property JSON path', () => {
     expect(sessionOptions?.warmUrl).toContain('/viviendas/madrid-capital/todas-las-zonas/l');
     expect(sessionOptions?.proxySessionId).toBe('discover-session-abc');
     expect(sessionOptions?.storageState?.cookies).toEqual(discoverCookies);
-    expect(local.normalize(raw).sourceId).toBe('187654321');
+    expect(local.normalize(raw).sourceId).toBe('186718824');
   });
 
   it('falls back to detail HTML when property JSON is challenged', async () => {
@@ -613,38 +625,25 @@ describe('FotocasaProvider.fetch property JSON path', () => {
     const local = new FotocasaProvider({ runtime });
     const ref: ExternalListingRef = {
       provider: 'fotocasa',
-      sourceId: '187654321',
-      url: 'https://www.fotocasa.es/es/alquiler/vivienda/madrid-capital/x/187654321/d',
+      sourceId: '186718824',
+      url: 'https://www.fotocasa.es/es/alquiler/vivienda/barcelona-capital/x/186718824/d',
       hints: {
-        fotocasaSearchCard: {
-          warmCity: 'madrid',
-          card: {
-            propertyId: '187654321',
-            detailUrl: '/es/alquiler/vivienda/madrid-capital/calefaccion-ascensor/187654321/d',
-            transaction: { type: 'RENT', price: 1850 },
-            rooms: 3,
-            baths: 2,
-            surface: 95,
-            floor: 2,
-            address: { municipality: 'Madrid' },
-            features: [
-              { name: 'Ascensor', value: true },
-              { name: 'Parking', value: true },
-            ],
-            contactInfo: { phone: '911234567', agencyName: 'Inmobiliaria Almagro' },
-          },
-        },
+        // The exact real searchads card discover snapshots into the fetch hint.
+        fotocasaSearchCard: { warmCity: 'barcelona', card: FOTOCASA_FIXTURE_SEARCH_CARD },
       },
     };
 
     const raw = await local.fetch(ref, { runtime, signal: new AbortController().signal });
     const listing = local.normalize(raw);
-    expect(listing.sourceId).toBe('187654321');
-    expect(listing.longTermRent?.monthlyAmount).toBe(1850);
-    expect(listing.floor).toBe(2);
-    expect(listing.amenities).toEqual(expect.arrayContaining(['elevator', 'parking']));
-    expect(listing.contact?.phone).toBe('911234567');
-    expect(listing.contact?.agencyName).toBe('Inmobiliaria Almagro');
+    expect(listing.sourceId).toBe('186718824');
+    expect(listing.longTermRent?.monthlyAmount).toBe(3690);
+    expect(listing.floor).toBe(10);
+    expect(listing.bedrooms).toBe(5);
+    expect(listing.bathrooms).toBe(4);
+    expect(listing.squareFootage).toBe(223);
+    expect(listing.amenities).toEqual(expect.arrayContaining(['elevator', 'parking', 'terrace', 'heating']));
+    expect(listing.contact?.phone).toBe('+34670501198');
+    expect(listing.contact?.agencyName).toBe('Nolkers Consulting');
   });
 
   it('throws ChallengeError when property JSON and detail HTML stay blocked', async () => {
