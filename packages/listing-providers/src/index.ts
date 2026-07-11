@@ -441,10 +441,17 @@ export {
   IMMOWELT_BASE_URL,
   IMMOWELT_FIXTURE_CARD_JSON,
   IMMOWELT_FIXTURE_SEARCH_HTML,
+  IMMOWELT_FIXTURE_DETAIL_HTML,
+  IMMOWELT_FIXTURE_DETAIL_HIDDEN_HTML,
+  IMMOWELT_FIXTURE_DETAIL_CLASSIFIED_JSON,
+  IMMOWELT_FIXTURE_DETAIL_HIDDEN_CLASSIFIED_JSON,
+  IMMOWELT_FIXTURE_DETAIL_URL,
 } from './providers/de/immowelt/fixtures';
 export {
   parseImmoweltCard,
   parseImmoweltSearchCards,
+  parseImmoweltDetailClassified,
+  parseImmoweltLifecycleClassified,
   isImmoweltChallenge,
   type ImmoweltRawListing,
 } from './providers/de/immowelt/parse';

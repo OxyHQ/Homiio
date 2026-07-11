@@ -8,8 +8,12 @@
  *      (structured JSON cards — preferred over link scraping).
  *   3. UUID `/expose/{uuid}` link scrape as last resort.
  *
- * Fetch prefers the card JSON (hints) or re-parses search/detail HTML JSON.
- * Contact (phone / email / agency) is taken from the card `provider` block.
+ * Fetch prefers the card JSON (hints); otherwise it parses the `/expose/{uuid}`
+ * detail page's SSR lifecycle blob (`window["__UFRN_LIFECYCLE_SERVERREQUEST__"]`
+ * → `app_cldp.data.classified`), which is where immowelt now serves the full
+ * listing (address, `tracking.av_items[].price`, gallery, Point coords, and the
+ * `contactSections` agency block). Detail pages no longer carry the SERP
+ * `classified-serp-init-data` blob.
  *
  * Registered OFF by default (`PROVIDER_IMMOWELT_ENABLED`).
  */
@@ -271,22 +275,18 @@ export class ImmoweltProvider implements ListingProvider {
       if (fromSession) return fromSession;
     }
 
+    // The ladder only returns HTML on a non-challenge outcome (DataDome pages
+    // raise `ChallengeError` upstream), so the body here is real detail markup:
+    // parse its SSR lifecycle blob. `parseImmoweltDetail` throws a precise
+    // reason if the structure is missing — the worker logs + requeues.
     const { html } = await fetchListingViaLadder(ctx.runtime, ref.url, {
       provider: this.id,
       isChallenge: isImmoweltChallenge,
       init: { signal: ctx.signal },
       metrics: this.metrics,
     });
-    // Detail pages may not embed SERP cards — try parsing; if fail, re-fetch city search is too heavy.
-    // Prefer hint-less: parseImmoweltDetail throws clearly.
-    try {
-      const payload = parseImmoweltDetail(html, ref.url);
-      return { ref, payload };
-    } catch {
-      // Fall back: discover-shaped HTML sometimes redirects; scrape UUID-only is insufficient.
-      // Re-fetch a Berlin search is wrong. Use minimal payload from URL only — reject.
-      throw new Error(`immowelt: no classified JSON on detail page ${ref.url}`);
-    }
+    const payload = parseImmoweltDetail(html, ref.url);
+    return { ref, payload };
   }
 
   private async fetchViaSession(
@@ -315,31 +315,8 @@ export class ImmoweltProvider implements ListingProvider {
         blockAssets: true,
       });
       const html = await session.content();
-      // Detail pages embed UFRN lifecycle JSON; also try SERP-shaped cards.
-      const cards = parseImmoweltSearchCards(html);
-      let payload: ImmoweltRawListing | undefined;
-      for (const card of cards) {
-        try {
-          const parsed = parseImmoweltCard(card);
-          if (parsed.sourceId === ref.sourceId) {
-            payload = parsed;
-            break;
-          }
-        } catch {
-          // skip malformed card
-        }
-      }
-      if (!payload && cards[0]) {
-        try {
-          payload = parseImmoweltCard(cards[0]);
-        } catch {
-          payload = undefined;
-        }
-      }
-      if (!payload) {
-        // Try parseImmoweltDetail on full HTML (may throw).
-        payload = parseImmoweltDetail(html, ref.url);
-      }
+      // Detail pages embed the UFRN lifecycle JSON (not a SERP card list).
+      const payload = parseImmoweltDetail(html, ref.url);
       this.metrics.record({
         provider: this.id,
         strategy: 'browser',
@@ -384,10 +361,12 @@ export class ImmoweltProvider implements ListingProvider {
       address: {
         street,
         city,
+        state: listing.address.state,
         country: 'Germany',
         countryCode: listing.address.countryCode ?? 'DE',
         postalCode: listing.address.postalCode,
         neighborhood: listing.address.neighborhood,
+        coordinates: listing.address.coordinates,
       },
       type: resolvePropertyType(listing.propertyType),
       offerings: isSale ? [OfferingType.SALE] : [OfferingType.LONG_TERM_RENT],
