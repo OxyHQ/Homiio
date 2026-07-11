@@ -35,7 +35,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { toast } from '@/lib/sonner';
 import { colors } from '@/styles/colors';
-import { contentClamp, radius, spacing, withShadow } from '@/constants/styles';
+import { contentClamp, radius, spacing } from '@/constants/styles';
 import { logger } from '@/utils/logger';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -143,7 +143,7 @@ function DraftCard({
   onDelete: () => void;
 }) {
   return (
-    <View style={[styles.draftCard, withShadow('sm')]}>
+    <View style={styles.draftCard}>
       <View style={styles.draftHeader}>
         <View style={styles.draftTypeContainer}>
           <Ionicons name={getPropertyTypeIcon(draft.type)} size={20} color={colors.primaryColor} />
@@ -361,6 +361,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: radius.lg,
     padding: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   draftHeader: {
     flexDirection: 'row',

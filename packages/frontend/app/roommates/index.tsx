@@ -8,7 +8,7 @@
  *   - Tab bar uses semantic tokens + Pressable + Bloom Text instead of
  *     raw TouchableOpacity.
  *   - Shared EmptyState + Loading (Bloom) component.
- *   - withShadow('sm') wrappers around list content.
+ *   - Flat wrappers (hairline border) around list content.
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -40,7 +40,7 @@ import { useRoommate } from '@/hooks/useRoommate';
 import { roommateService } from '@/services/roommateService';
 import { type PropertyFilters } from '@/services/propertyService';
 import { useProfileStore } from '@/store/profileStore';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -565,7 +565,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
     gap: spacing.md,
-    ...withShadow('sm'),
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   headerInner: {
     flexDirection: 'row',

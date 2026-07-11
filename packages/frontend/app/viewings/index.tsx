@@ -4,7 +4,7 @@
  * Stream Q polish:
  *   - Bloom Button for modify/cancel, Bloom Chip filter row, Bloom Skeleton
  *     while loading, Bloom Typography throughout.
- *   - withShadow('sm') cards with radius.lg, no borders.
+ *   - Flat cards with radius.lg + hairline borders.
  *   - Shared EmptyState / ErrorState components.
  *   - Confirm cancel via ConfirmDialog (Bloom Modal-based).
  */
@@ -28,7 +28,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { viewingService, ViewingRequest } from '@/services/viewingService';
 import { ApiError } from '@/utils/api';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -404,7 +404,8 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderRadius: radius.lg,
     gap: spacing.sm,
-    ...withShadow('sm'),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   headerRow: {
     flexDirection: 'row',
@@ -451,7 +452,8 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderRadius: radius.lg,
     gap: spacing.sm,
-    ...withShadow('sm'),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   skeletonHeader: {
     flexDirection: 'row',

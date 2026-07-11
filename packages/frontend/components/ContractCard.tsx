@@ -2,7 +2,7 @@
  * ContractCard — lease summary used by `/contracts` and shared list views.
  *
  * Stream Q polish:
- *   - CardSurface (surfaceElevated, withShadow('sm'), radius.lg) container.
+ *   - CardSurface (surfaceElevated, flat, radius.lg) container.
  *   - Bloom Typography for every label / value, no raw <Text>.
  *   - Inline Bloom Button actions for share / download (when provided), laid
  *     out by the shared CardActionsFooter.

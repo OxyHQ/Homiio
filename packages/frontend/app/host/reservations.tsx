@@ -30,7 +30,7 @@ import {
   useReservationsQuery,
   useUpdateReservation,
 } from '@/hooks/useReservationQueries';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
 type StatusFilter = 'all' | ReservationStatus;
@@ -292,7 +292,8 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderRadius: radius.lg,
     gap: spacing.sm,
-    ...withShadow('sm'),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   skeletonHeader: {
     flexDirection: 'row',

@@ -3,7 +3,6 @@ import { View, StyleSheet, ScrollView } from 'react-native';
 import { Skeleton } from '@oxyhq/bloom';
 import { TextLines } from './TextLines';
 import { colors } from '@/styles/colors';
-import { shadowToken } from '@/styles/shadows';
 
 export const PropertyDetailSkeleton: React.FC = () => {
   return (
@@ -181,7 +180,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: 12,
     padding: 16,
-    ...shadowToken({ y: 1, blur: 4, color: colors.COLOR_BLACK, opacity: 0.1, elevation: 2 }),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   cardTitle: {
     marginBottom: 16,

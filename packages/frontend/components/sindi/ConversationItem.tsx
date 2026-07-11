@@ -2,7 +2,7 @@ import React, { memo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 import type { Conversation } from '@/store/conversationStore';
 
@@ -135,6 +135,7 @@ export const conversationListStyles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
     borderRadius: radius.lg,
     overflow: 'hidden',
-    ...withShadow('sm'),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
 });

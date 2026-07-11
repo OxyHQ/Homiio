@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
-import { shadowToken } from '@/styles/shadows';
 import type { RoommateRelationship, RoommateProfile } from '@/hooks/useRoommate';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { getDateLocale } from '@/utils/dateLocale';
@@ -191,7 +190,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    ...shadowToken({ y: 2, blur: 4, color: colors.COLOR_BLACK, opacity: 0.1, elevation: 3 }),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   header: {
     flexDirection: 'row',

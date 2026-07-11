@@ -4,7 +4,7 @@
  * Stream Q polish:
  *   - Bloom TextField for every input (no raw TextInput / inline styles).
  *   - Bloom Button for submit + recommendation choice + retry.
- *   - withShadow('sm') section cards with radius.lg.
+ *   - Flat section cards with radius.lg + hairline borders.
  *   - Bloom Skeleton + shared EmptyState / ErrorState while loading.
  *   - Stars now use Bloom Typography for the count label, semantic
  *     ratingStar token instead of hex literals.
@@ -32,7 +32,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import reviewService from '@/services/reviewService';
 import { api } from '@/utils/api';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
 interface ReviewFormData {
@@ -633,7 +633,8 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderRadius: radius.lg,
     gap: spacing.md,
-    ...withShadow('sm'),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   sectionTitle: {
     letterSpacing: -0.3,

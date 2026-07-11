@@ -8,8 +8,8 @@
  *
  * Documents are linked via signed S3 URLs returned by the API.
  *
- * Stream P polish: each block is a `CardSurface` with `withShadow('sm')` and
- * no border. Status is rendered with the existing Bloom Badge wrapper.
+ * Stream P polish: each block is a flat `CardSurface` with no border. Status is
+ * rendered with the existing Bloom Badge wrapper.
  * Spinner and ad-hoc error text were replaced with Bloom Loading +
  * the shared ErrorState component.
  */

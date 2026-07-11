@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useTranslation } from 'react-i18next';
 import * as Linking from 'expo-linking';
 import { colors } from '@/styles/colors';
-import { shadowToken } from '@/styles/shadows';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
@@ -338,7 +337,8 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     padding: 20,
     marginBottom: 15,
-    ...shadowToken({ y: 2, blur: 4, color: colors.shadow, opacity: 0.1, elevation: 3 }),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   testimonialHeader: {
     flexDirection: 'row',

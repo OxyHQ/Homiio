@@ -12,7 +12,6 @@ import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/styles/colors';
-import { shadowToken } from '@/styles/shadows';
 import { spacing } from '@/constants/styles';
 
 import { Header } from '@/components/Header';
@@ -495,7 +494,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
-    ...shadowToken({ y: 2, blur: 8, color: colors.shadow, opacity: 0.08, elevation: 3 }),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   statNumber: {
     fontSize: 24,

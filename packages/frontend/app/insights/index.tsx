@@ -3,7 +3,6 @@ import { View, ScrollView, StyleSheet, Dimensions, LayoutChangeEvent } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
-import { shadowToken } from '@/styles/shadows';
 import { ThemedText } from '@/components/ThemedText';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Rect, Text as SvgText } from 'react-native-svg';
@@ -323,7 +322,8 @@ const styles = StyleSheet.create({
         minWidth: 160,
         borderRadius: 16,
         overflow: 'hidden',
-        ...shadowToken({ y: 1, blur: 8, color: colors.COLOR_BLACK, opacity: 0.08, elevation: 3 }),
+        borderWidth: 1,
+        borderColor: colors.border,
     },
     kpiInner: {
         padding: 16,
@@ -365,7 +365,8 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         paddingHorizontal: 16,
         paddingVertical: 12,
-        ...shadowToken({ y: 1, blur: 8, color: colors.COLOR_BLACK, opacity: 0.08, elevation: 3 }),
+        borderWidth: 1,
+        borderColor: colors.border,
     },
     cardTitle: {
         fontSize: 22,
@@ -388,7 +389,8 @@ const styles = StyleSheet.create({
         backgroundColor: colors.white,
         borderRadius: 16,
         padding: 12,
-        ...shadowToken({ y: 1, blur: 8, color: colors.COLOR_BLACK, opacity: 0.08, elevation: 3 }),
+        borderWidth: 1,
+        borderColor: colors.border,
     },
     chart: {
         borderRadius: 16,
@@ -408,7 +410,8 @@ const styles = StyleSheet.create({
         padding: 12,
         flexGrow: 1,
         minWidth: 160,
-        ...shadowToken({ y: 1, blur: 8, color: colors.COLOR_BLACK, opacity: 0.08, elevation: 3 }),
+        borderWidth: 1,
+        borderColor: colors.border,
     },
     cityHeaderRow: {
         flexDirection: 'row',

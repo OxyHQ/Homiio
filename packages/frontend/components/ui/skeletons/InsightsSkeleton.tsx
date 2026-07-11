@@ -3,7 +3,6 @@ import { View, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Skeleton } from '@oxyhq/bloom';
 import { colors } from '@/styles/colors';
-import { shadowToken } from '@/styles/shadows';
 
 export function InsightsSkeleton() {
   const insets = useSafeAreaInsets();
@@ -27,7 +26,8 @@ export function InsightsSkeleton() {
               backgroundColor: colors.white,
               padding: 16,
               borderRadius: 12,
-              ...shadowToken({ y: 2, blur: 4, color: colors.COLOR_BLACK, opacity: 0.1, elevation: 3 }),
+              borderWidth: 1,
+              borderColor: colors.border,
             }}>
             <Skeleton.Box width={40} height={40} borderRadius={20} style={{ marginBottom: 12 }} />
             <Skeleton.Box width={60} height={24} style={{ marginBottom: 8 }} />
@@ -43,7 +43,8 @@ export function InsightsSkeleton() {
             backgroundColor: colors.white,
             padding: 20,
             borderRadius: 12,
-            ...shadowToken({ y: 2, blur: 4, color: colors.COLOR_BLACK, opacity: 0.1, elevation: 3 }),
+            borderWidth: 1,
+            borderColor: colors.border,
           }}>
           <Skeleton.Box width={150} height={20} style={{ marginBottom: 16 }} />
           <Skeleton.Box width="100%" height={200} borderRadius={8} />
@@ -62,7 +63,8 @@ export function InsightsSkeleton() {
               borderRadius: 12,
               marginBottom: 12,
               overflow: 'hidden',
-              ...shadowToken({ y: 2, blur: 4, color: colors.COLOR_BLACK, opacity: 0.1, elevation: 3 }),
+              borderWidth: 1,
+              borderColor: colors.border,
             }}>
             <View style={{ flexDirection: 'row' }}>
               <Skeleton.Box width={100} height={80} borderRadius={0} />

@@ -32,7 +32,7 @@ import { useProperty } from '@/hooks';
 import { useOxyAvatars } from '@/hooks/useOxyAvatars';
 import profileService from '@/services/profileService';
 import { getPropertyTitle } from '@/utils/propertyUtils';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
 type StatusFilter = 'all' | TenantApplicationStatus;
@@ -408,7 +408,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
     padding: spacing.lg,
     borderRadius: radius.lg,
-    ...withShadow('sm'),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   skeletonBody: {
     flex: 1,

@@ -3,7 +3,6 @@ import { View, StyleSheet, TouchableOpacity, Platform, Linking, StyleProp, ViewS
 import { ThemedText } from './ThemedText';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
-import { shadowToken } from '@/styles/shadows';
 import { useTranslation } from 'react-i18next';
 import * as Clipboard from 'expo-clipboard';
 import { toast } from '@/lib/sonner';
@@ -186,7 +185,8 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     backgroundColor: colors.COLOR_BLACK_LIGHT_9,
-    ...shadowToken({ y: 2, blur: 4, color: colors.shadow, opacity: 0.1, elevation: 3 }),
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   cardHeader: {
     flexDirection: 'row',

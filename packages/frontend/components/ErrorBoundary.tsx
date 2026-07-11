@@ -27,7 +27,7 @@ import { H2, P, Text as BloomText } from '@oxyhq/bloom/typography';
 import { toast } from '@/lib/sonner';
 
 import { colors } from '@/styles/colors';
-import { radius, spacing, withShadow } from '@/constants/styles';
+import { radius, spacing } from '@/constants/styles';
 
 interface Props {
   children: ReactNode;
@@ -206,7 +206,7 @@ function ErrorFallback({
       keyboardShouldPersistTaps="handled">
       <View
         {...a11yAlertProps}
-        style={[styles.card, isWide && styles.cardWide, isWide && withShadow('lg')]}>
+        style={[styles.card, isWide && styles.cardWide]}>
         <Pressable
           onPress={handleBadgePress}
           onPressIn={() => setBadgePressed(true)}
@@ -429,6 +429,8 @@ const styles = StyleSheet.create({
     maxWidth: CARD_MAX_WIDTH,
     paddingHorizontal: spacing['3xl'],
     paddingVertical: spacing['5xl'],
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   iconBadge: {
     width: ICON_BADGE_SIZE,
