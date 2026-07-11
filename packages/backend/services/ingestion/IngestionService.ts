@@ -16,6 +16,7 @@
 
 import type { Types } from 'mongoose';
 import {
+  OfferingType,
   PropertyStatus,
   type NormalizedListing,
   type NormalizedListingAddress,
@@ -34,6 +35,11 @@ import { sanitizeGeoJsonCoordinates } from '../../utils/geoCoordinates';
 import { deriveStructuredFeatures } from './deriveFeatures';
 import { classifyListingContent } from './classifyListingContent';
 import { ExternalMediaIngest } from './ExternalMediaIngest';
+import {
+  areDuplicateListings,
+  toDedupComparable,
+  type DedupComparable,
+} from './dedupeFingerprint';
 import { schedulePriceEthicsScore } from '../priceEthicsService';
 import { Logger } from '../../utils/logger';
 
@@ -48,11 +54,19 @@ const EXTERNAL_POSTAL_FALLBACK = '00000';
 
 /** Outcome of ingesting one listing. */
 export interface IngestResult {
-  status: 'created' | 'updated';
+  /**
+   * `created`/`updated` follow the `(source, sourceId)` upsert. `skipped` means
+   * the listing matched an existing external Property by the dedup fingerprint
+   * (a re-listing of the same unit) and was NOT persisted — `propertyId` /
+   * `duplicateOf` point at the retained original.
+   */
+  status: 'created' | 'updated' | 'skipped';
   propertyId: string;
   source: string;
   sourceId: string;
   imageCount: number;
+  /** Set only on `skipped`: the id of the existing Property this duplicated. */
+  duplicateOf?: string;
 }
 
 /** Raised when a {@link NormalizedListing} is structurally invalid. */
@@ -63,22 +77,47 @@ export class IngestionValidationError extends Error {
   }
 }
 
+/** Max existing listings the dedup check inspects per incoming create. */
+const DEDUP_CANDIDATE_LIMIT = 50;
+
+/** Aggregation projection of an existing Property considered as a dedup candidate. */
+interface DuplicateCandidateDoc {
+  _id: Types.ObjectId;
+  cityId?: Types.ObjectId;
+  description?: string;
+  images?: unknown[];
+  type?: string;
+  bedrooms?: number;
+  squareFootage?: number;
+  longTermRent?: { monthlyAmount?: number; currency?: string } | null;
+  shortTermRent?: { nightlyRate?: number; currency?: string } | null;
+  sale?: { price?: number; currency?: string } | null;
+}
+
 export interface IngestionServiceOptions {
   mediaIngest?: ExternalMediaIngest;
   logger?: Logger;
   /** Fallback TTL (days) applied when a listing omits `ttlDays`. */
   defaultTtlDays?: number;
+  /**
+   * Recognise and skip re-listings of the same unit under a new `sourceId`
+   * (see {@link areDuplicateListings}). Defaults to env `LISTING_DEDUP_ENABLED`
+   * (only the literal `false` disables it) so ops has a redeploy-free kill switch.
+   */
+  dedupeEnabled?: boolean;
 }
 
 export class IngestionService {
   private readonly mediaIngest: ExternalMediaIngest;
   private readonly logger: Logger;
   private readonly defaultTtlDays: number;
+  private readonly dedupeEnabled: boolean;
 
   constructor(options: IngestionServiceOptions = {}) {
     this.mediaIngest = options.mediaIngest ?? new ExternalMediaIngest();
     this.logger = options.logger ?? new Logger('IngestionService');
     this.defaultTtlDays = options.defaultTtlDays ?? DEFAULT_TTL_DAYS;
+    this.dedupeEnabled = options.dedupeEnabled ?? process.env.LISTING_DEDUP_ENABLED !== 'false';
   }
 
   /** Validate, upsert and re-host media for a single normalized listing. */
@@ -97,6 +136,29 @@ export class IngestionService {
     }
 
     const existing = await Property.findOne({ source: listing.source, sourceId: listing.sourceId });
+
+    // Before minting a NEW Property, check whether this is the SAME unit
+    // re-advertised under a different `sourceId` (best-effort; a failed check
+    // never blocks ingest). The `(source, sourceId)` update path is untouched.
+    if (!existing && this.dedupeEnabled) {
+      const duplicate = await this.findDuplicate(listing, addressId);
+      if (duplicate) {
+        this.logger.info('Skipped duplicate external listing', {
+          source: listing.source,
+          sourceId: listing.sourceId,
+          duplicateOf: duplicate.propertyId,
+        });
+        return {
+          status: 'skipped',
+          propertyId: duplicate.propertyId,
+          duplicateOf: duplicate.propertyId,
+          source: listing.source,
+          sourceId: listing.sourceId,
+          imageCount: duplicate.imageCount,
+        };
+      }
+    }
+
     const property = existing ?? new Property();
     property.set(fields);
 
@@ -131,6 +193,114 @@ export class IngestionService {
     schedulePriceEthicsScore(result.propertyId);
     this.logger.info('Ingested external listing', result);
     return result;
+  }
+
+  /**
+   * Find an existing external Property that this listing duplicates (same unit,
+   * different `sourceId`). Returns the retained original (preferring the one with
+   * the most images) or `null`. Best-effort: any error is logged and treated as
+   * "no duplicate" so a dedup fault never blocks ingest.
+   */
+  private async findDuplicate(
+    listing: NormalizedListing,
+    addressId: Types.ObjectId,
+  ): Promise<{ propertyId: string; imageCount: number } | null> {
+    try {
+      const listingAddress = await Address.findById(addressId).select('cityId').lean<{
+        cityId?: Types.ObjectId;
+      } | null>();
+      const incoming = toDedupComparable({
+        type: listing.type,
+        cityId: listingAddress?.cityId ? String(listingAddress.cityId) : undefined,
+        bedrooms: listing.bedrooms,
+        squareFootage: listing.squareFootage,
+        description: listing.description,
+        longTermRent: listing.longTermRent,
+        shortTermRent: listing.shortTermRent,
+        sale: listing.sale,
+      });
+      if (!incoming) return null;
+
+      // Selective scalar prefilter (same type, bedrooms, m² and exact price)
+      // joined to the Address `cityId`. `$lookup` bypasses the Property post-find
+      // hook that renames/mangles `addressId` on lean reads, so `cityId` is clean.
+      const candidates = await Property.aggregate<DuplicateCandidateDoc>([
+        {
+          $match: {
+            isExternal: true,
+            deletedAt: null,
+            type: incoming.type,
+            bedrooms: incoming.bedrooms,
+            squareFootage: incoming.squareFootage,
+            ...this.buildPriceFilter(incoming),
+          },
+        },
+        { $limit: DEDUP_CANDIDATE_LIMIT },
+        { $lookup: { from: 'addresses', localField: 'addressId', foreignField: '_id', as: 'addr' } },
+        {
+          $project: {
+            description: 1,
+            images: 1,
+            type: 1,
+            bedrooms: 1,
+            squareFootage: 1,
+            longTermRent: 1,
+            shortTermRent: 1,
+            sale: 1,
+            cityId: { $arrayElemAt: ['$addr.cityId', 0] },
+          },
+        },
+      ]);
+      if (candidates.length === 0) return null;
+
+      let best: { propertyId: string; imageCount: number } | null = null;
+      for (const candidate of candidates) {
+        const comparable = toDedupComparable({
+          type: candidate.type,
+          cityId: candidate.cityId ? String(candidate.cityId) : undefined,
+          bedrooms: candidate.bedrooms,
+          squareFootage: candidate.squareFootage,
+          description: candidate.description,
+          longTermRent: candidate.longTermRent,
+          shortTermRent: candidate.shortTermRent,
+          sale: candidate.sale,
+        });
+        if (!comparable || !areDuplicateListings(incoming, comparable)) continue;
+        const imageCount = Array.isArray(candidate.images) ? candidate.images.length : 0;
+        if (!best || imageCount > best.imageCount) {
+          best = { propertyId: String(candidate._id), imageCount };
+        }
+      }
+      return best;
+    } catch (error) {
+      this.logger.warn('Duplicate check failed; proceeding with ingest', {
+        source: listing.source,
+        sourceId: listing.sourceId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }
+
+  /** Mongo filter matching the primary offering's exact price + currency. */
+  private buildPriceFilter(comparable: DedupComparable): Record<string, unknown> {
+    switch (comparable.offering) {
+      case OfferingType.LONG_TERM_RENT:
+        return {
+          'longTermRent.monthlyAmount': comparable.amount,
+          'longTermRent.currency': comparable.currency,
+        };
+      case OfferingType.SHORT_TERM_RENT:
+        return {
+          'shortTermRent.nightlyRate': comparable.amount,
+          'shortTermRent.currency': comparable.currency,
+        };
+      case OfferingType.SALE:
+        return {
+          'sale.price': comparable.amount,
+          'sale.currency': comparable.currency,
+        };
+    }
   }
 
   /** Structural validation before any DB work. */
