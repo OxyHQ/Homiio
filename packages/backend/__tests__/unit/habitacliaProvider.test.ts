@@ -12,6 +12,7 @@ import {
   HabitacliaProvider,
   HABITACLIA_FIXTURE_DETAIL_HTML,
   HABITACLIA_FIXTURE_DETAIL_HTML_LIVE,
+  HABITACLIA_FIXTURE_DETAIL_HTML_GALLERY,
   HABITACLIA_FIXTURE_DETAIL_HTML_PLACEHOLDER_SURFACE,
   HABITACLIA_FIXTURE_SEARCH_HTML,
   buildHabitacliaListainmueblesBody,
@@ -63,6 +64,39 @@ describe('HabitacliaProvider', () => {
     expect(raw.parkingSpaces).toBe(1);
     expect(raw.images).toHaveLength(2);
     expect(raw.images[0]?.isPrimary).toBe(true);
+  });
+
+  it('extracts the FULL microdata photo gallery (real captured markup)', () => {
+    // Real trimmed page (5 of 16 gallery photos). Habitaclia carries no JSON-LD;
+    // the gallery lives only in `<img … src=… itemprop="image">` tags where `src`
+    // precedes `itemprop`. The old regex captured NONE → every listing ingested a
+    // single photo (the og:image hero). This asserts the whole gallery is parsed.
+    const raw = parseHabitacliaDetail(
+      HABITACLIA_FIXTURE_DETAIL_HTML_GALLERY,
+      'https://www.habitaclia.com/alquiler-piso-barceloneta-barcelona-i55551000001220.htm',
+    );
+    expect(raw.id).toBe('55551000001220');
+    expect(raw.price).toBe(1250);
+    // Was 1 before the fix; now the full trimmed gallery of 5 real CDN photos.
+    expect(raw.images).toHaveLength(5);
+    expect(raw.images.filter((image) => image.isPrimary)).toHaveLength(1);
+    expect(raw.images[0]?.isPrimary).toBe(true);
+    for (const image of raw.images) {
+      expect(image.url).toMatch(/^https:\/\/images\.habimg\.com\/imgh\/55551-1220\/.+\.jpg$/);
+    }
+    // The gallery's `…G.jpg` first photo, not the `og:image` `…XL.jpg` variant of
+    // the same shot — the fuller gallery supersedes the hero (no duplicate).
+    expect(raw.images[0]?.url).toContain('_e6714700-8ca8-4468-b916-147e2af4607aG.jpg');
+    expect(raw.images.some((image) => image.url.includes('XL.jpg'))).toBe(false);
+
+    // The provider maps every gallery photo onto remoteImages (ingest applies the
+    // DEFAULT_MAX_REMOTE_IMAGES cap downstream — no per-provider cap needed).
+    const listing = provider.normalize({
+      ref: { provider: 'habitaclia', sourceId: raw.id, url: raw.url },
+      payload: raw,
+    });
+    expect(listing.remoteImages).toHaveLength(5);
+    expect(listing.remoteImages.filter((image) => image.isPrimary)).toHaveLength(1);
   });
 
   it('throws on a page with no parseable listing data', () => {
