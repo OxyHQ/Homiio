@@ -31,7 +31,7 @@ import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { SaveButton } from '@/components/SaveButton';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { colors } from '@/styles/colors';
-import { barContent, barIconButton, barIconButtonPressed, hairline, spacing } from '@/constants/styles';
+import { barBackIconSize, barContent, barIconButton, barIconButtonPressed, barIconSize, hairline, spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
 
 interface StickyPropertyHeaderProps {
@@ -94,7 +94,7 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
           accessibilityRole="button"
           accessibilityLabel={t('goBack')}
         >
-          <Ionicons name="arrow-back" size={22} color={colors.COLOR_BLACK} />
+          <Ionicons name="arrow-back" size={barBackIconSize} color={colors.COLOR_BLACK} />
         </Pressable>
         <View style={styles.titleBlock}>
           <BloomText style={styles.title} numberOfLines={1}>
@@ -113,7 +113,7 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
             accessibilityRole="button"
             accessibilityLabel={t('common.share')}
           >
-            <Ionicons name="share-outline" size={20} color={colors.COLOR_BLACK} />
+            <Ionicons name="share-outline" size={barIconSize} color={colors.COLOR_BLACK} />
           </Pressable>
           {property ? (
             <SaveButton

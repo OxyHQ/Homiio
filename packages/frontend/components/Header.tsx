@@ -14,7 +14,7 @@ import { colorChannels } from '@/styles/shadows';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PANEL_TOP_INSET } from '@oxyhq/bloom/content-panel';
-import { barContent, barIconButton, barIconButtonPressed, spacing } from '@/constants/styles';
+import { barBackIconSize, barContent, barIconButton, barIconButtonPressed, spacing } from '@/constants/styles';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 
 /**
@@ -186,7 +186,7 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
               accessibilityRole="button"
               style={[barIconButton, backPressed && barIconButtonPressed]}
             >
-              <Ionicons name="arrow-back" size={24} color={colors.COLOR_BLACK} />
+              <Ionicons name="arrow-back" size={barBackIconSize} color={colors.COLOR_BLACK} />
             </Pressable>
           )}
           {options?.leftComponents?.map((component, index) => (

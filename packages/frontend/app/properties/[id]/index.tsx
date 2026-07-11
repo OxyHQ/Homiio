@@ -97,7 +97,7 @@ import { BookingCard } from '@/components/property/BookingCard';
 
 import { resolveBookingMode } from '@/utils/bookingMode';
 import { colors } from '@/styles/colors';
-import { barIconButton, hairline, spacing } from '@/constants/styles';
+import { barIconButton, barIconSize, hairline, spacing } from '@/constants/styles';
 
 interface PropertyDetailViewModel {
   id: string;
@@ -637,7 +637,7 @@ export default function PropertyDetailPage() {
                       accessibilityRole="button"
                       accessibilityLabel="Open host profile"
                     >
-                      <Ionicons name="person-circle-outline" size={24} color={colors.COLOR_BLACK} />
+                      <Ionicons name="person-circle-outline" size={barIconSize} color={colors.COLOR_BLACK} />
                     </Pressable>
                   ) : null,
                   <Pressable
@@ -647,7 +647,7 @@ export default function PropertyDetailPage() {
                     accessibilityRole="button"
                     accessibilityLabel="Share property"
                   >
-                    <Ionicons name="share-outline" size={24} color={colors.COLOR_BLACK} />
+                    <Ionicons name="share-outline" size={barIconSize} color={colors.COLOR_BLACK} />
                   </Pressable>,
                   <Pressable
                     key="viewings"
@@ -659,7 +659,7 @@ export default function PropertyDetailPage() {
                     <View style={styles.viewingIconContainer}>
                       <Ionicons
                         name="calendar-outline"
-                        size={24}
+                        size={barIconSize}
                         color={colors.COLOR_BLACK}
                       />
                       {hasActiveViewing ? (
