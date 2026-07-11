@@ -72,6 +72,7 @@ export const BLUEGROUND_FIXTURES: readonly BluegroundRawListing[] = [
     monthlyRent: { amount: 3473, currency: 'EUR' },
     bedrooms: 1,
     bathrooms: 1,
+    floor: 2,
     furnished: true,
     amenities: ['air_conditioning', 'wifi', 'elevator', 'washer', 'heating'],
     address: {
@@ -105,6 +106,7 @@ export const BLUEGROUND_FIXTURES: readonly BluegroundRawListing[] = [
     monthlyRent: { amount: 4200, currency: 'USD' },
     bedrooms: 1,
     bathrooms: 1,
+    floor: 12,
     furnished: true,
     amenities: ['air_conditioning', 'wifi', 'doorman', 'washer', 'gym'],
     address: {

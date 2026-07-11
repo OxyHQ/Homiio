@@ -12,6 +12,8 @@
  */
 
 import type { ExternalListingRef } from '../../types';
+import { asRecord, asString } from '../../parse/guards';
+import { extractBalancedJsonAfter } from '../../parse/nextData';
 import type { BluegroundRawListing, BluegroundRawPhoto } from './fixtures';
 
 const BASE_HOST = 'https://www.theblueground.com';
@@ -125,6 +127,104 @@ function readPhotos(html: string): BluegroundRawPhoto[] {
   }));
 }
 
+/**
+ * Blueground exposes in-unit/building amenities as an object keyed by category
+ * (`apartment`, `building`, `blueground`, `important`, `main`, plus
+ * `struckthrough*`). Each entry carries a language-independent camelCase `key`
+ * (`airConditioning`, `elevatorInTheBuilding`, …) alongside an i18n `caption`.
+ * We normalize the stable `key` — never the localized caption — so extraction is
+ * market-agnostic.
+ *
+ * Only the handful of keys whose generic slug would diverge from the canonical
+ * vocabulary the ingest/search read (`elevator`, `parking`, `terrace`,
+ * `washer`, `air_conditioning`) are aliased; everything else is slugified
+ * generically. This is Blueground's OWN camelCase vocabulary, not a duplicate of
+ * the shared ES/IT free-text amenity table in `parse/jsonLd.ts`.
+ */
+const BLUEGROUND_AMENITY_ALIASES: Readonly<Record<string, string>> = {
+  airConditioning: 'air_conditioning',
+  elevatorInTheBuilding: 'elevator',
+  parkingSpace: 'parking',
+  terracePrivate: 'terrace',
+  laundryRoomUnit: 'washer',
+  washerUnit: 'washer',
+};
+
+/** Categories that list amenities the unit does NOT have (struck through in UI). */
+const BLUEGROUND_STRUCKTHROUGH_PREFIX = 'struckthrough';
+/** Category holding structured facts (bedrooms/bathrooms/lotSize/floor), not amenities. */
+const BLUEGROUND_FACTS_CATEGORY = 'main';
+const BLUEGROUND_FLOOR_KEY = 'floor';
+
+/** Canonicalize a Blueground amenity `key`; unknown keys → generic snake_case slug. */
+function bluegroundAmenitySlug(key: string): string {
+  const alias = BLUEGROUND_AMENITY_ALIASES[key];
+  if (alias) return alias;
+  return key
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+/** Read the `main.floor` structured value (string like `"2"` or a number). */
+function readBluegroundFloor(entries: readonly unknown[]): number | undefined {
+  for (const entry of entries) {
+    const record = asRecord(entry);
+    if (asString(record?.['key']) !== BLUEGROUND_FLOOR_KEY) continue;
+    const value = record?.['value'];
+    const numeric =
+      typeof value === 'number'
+        ? value
+        : typeof value === 'string'
+          ? Number.parseInt(value, 10)
+          : Number.NaN;
+    if (Number.isInteger(numeric)) return numeric;
+  }
+  return undefined;
+}
+
+/**
+ * Extract available in-unit/building amenities (as canonical slugs) plus the
+ * building floor from a detail page's embedded `"amenities":{…}` object.
+ * Struck-through (unavailable) amenities are excluded; the `main` facts block
+ * contributes only the floor. Missing/malformed data degrades to `{ amenities: [] }`.
+ */
+export function readBluegroundAmenities(html: string): { amenities: string[]; floor?: number } {
+  const body = extractBalancedJsonAfter(html, '"amenities":');
+  if (!body) return { amenities: [] };
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return { amenities: [] };
+  }
+
+  const categories = asRecord(parsed);
+  if (!categories) return { amenities: [] };
+
+  const amenities = new Set<string>();
+  let floor: number | undefined;
+
+  for (const [category, entries] of Object.entries(categories)) {
+    if (!Array.isArray(entries)) continue;
+    if (category.startsWith(BLUEGROUND_STRUCKTHROUGH_PREFIX)) continue;
+    if (category === BLUEGROUND_FACTS_CATEGORY) {
+      floor = floor ?? readBluegroundFloor(entries);
+      continue;
+    }
+    for (const entry of entries) {
+      const key = asString(asRecord(entry)?.['key']);
+      if (!key) continue;
+      const slug = bluegroundAmenitySlug(key);
+      if (slug) amenities.add(slug);
+    }
+  }
+
+  return { amenities: [...amenities], floor };
+}
+
 /** Derive a stable source id from a detail URL's final slug segment. */
 export function bluegroundSourceIdFromUrl(url: string): string {
   const pathname = new URL(url).pathname.replace(/\/+$/, '');
@@ -193,6 +293,7 @@ export function parseBluegroundDetail(html: string, ref: ExternalListingRef): Bl
   const bathrooms = readJsonField(html, 'bathrooms');
   const sizeSqm = readJsonField(html, 'sizeSqm');
   const description = readMeta(html, 'og:description') ?? readJsonField(html, 'description');
+  const { amenities, floor } = readBluegroundAmenities(html);
 
   const city = ogLocation.city ?? cityMeta?.city ?? '';
   const region =
@@ -211,8 +312,9 @@ export function parseBluegroundDetail(html: string, ref: ExternalListingRef): Bl
     bedrooms: bedrooms ? Number.parseInt(bedrooms, 10) : undefined,
     bathrooms: bathrooms ? Number.parseInt(bathrooms, 10) : undefined,
     sizeSqm: sizeSqm ? Number.parseInt(sizeSqm, 10) : undefined,
+    floor,
     furnished: true,
-    amenities: [],
+    amenities,
     address: {
       line1: ogLocation.street,
       neighborhood: ogLocation.neighborhood,

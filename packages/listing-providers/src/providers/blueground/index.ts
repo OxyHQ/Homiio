@@ -46,6 +46,7 @@ import {
 export {
   BluegroundPartnerListingError,
   isBluegroundPartnerListing,
+  readBluegroundAmenities,
   readBluegroundLowestRent,
   readBluegroundPartnerSignals,
 } from './parse';
