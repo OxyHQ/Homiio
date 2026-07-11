@@ -18,6 +18,9 @@ import { Queue, Worker, UnrecoverableError, type Job, type Queue as BullQueue } 
 import {
   createDefaultRegistry,
   createListingFetchRuntimeFromEnv,
+  marketProxyCountry,
+  proxyPerMarketGeoFromEnv,
+  withProxyCountry,
   BluegroundPartnerListingError,
   ListingValidationError,
   NonHousingListingError,
@@ -30,7 +33,7 @@ import {
   type ListingFetchRuntimeHandle,
   type ProviderRegistry,
 } from '@homiio/listing-providers';
-import { PropertyStatus, type ProviderId } from '@homiio/shared-types';
+import { PropertyStatus, type ListingMarket, type ProviderId } from '@homiio/shared-types';
 import config from './config';
 import database from './database/connection';
 import { Logger } from './utils/logger';
@@ -82,6 +85,24 @@ const ingestionService = new IngestionService();
 let runtimeHandle: ListingFetchRuntimeHandle;
 let runtime: FetchRuntime;
 
+/**
+ * Per-market residential-proxy geo (`LISTING_PROXY_PER_MARKET_GEO`), read once in
+ * {@link main}. When on, each job's fetch/discover traffic exits from its own
+ * market's country; when off (default), all traffic uses the global
+ * `LISTING_PROXY_GEO` exactly as before.
+ */
+let proxyPerMarketGeo = false;
+
+/**
+ * Scope the shared runtime to a market's residential-proxy exit country. A no-op
+ * (returns the shared runtime) when the flag is off or the market has no clean
+ * country mapping — the proxy then falls back to the global geo.
+ */
+function runtimeForMarket(market: ListingMarket | undefined): FetchRuntime {
+  if (!proxyPerMarketGeo) return runtime;
+  return withProxyCountry(runtime, marketProxyCountry(market));
+}
+
 /** Soft-remove a previously ingested external listing that must no longer publish. */
 async function expireExternalListing(source: string, sourceId: string, reason: string): Promise<void> {
   const result = await Property.updateOne(
@@ -94,7 +115,7 @@ async function expireExternalListing(source: string, sourceId: string, reason: s
 }
 
 /** Fetch + normalize a single listing ref and ingest the result. */
-async function processFetchRef(ref: ExternalListingRef): Promise<void> {
+async function processFetchRef(ref: ExternalListingRef, jobMarket?: ListingMarket): Promise<void> {
   if (!registry.has(ref.provider)) {
     // A queued job for a provider that is no longer registered (disabled via env,
     // renamed, or removed) can never succeed. Fail it permanently instead of
@@ -103,8 +124,11 @@ async function processFetchRef(ref: ExternalListingRef): Promise<void> {
     throw new UnrecoverableError(`No provider registered for id "${ref.provider}"`);
   }
   const provider = registry.get(ref.provider);
+  // Prefer the market the ref was discovered under; else a single-market
+  // provider implies its one market (multi-market → undefined → global geo).
+  const market = jobMarket ?? (provider.markets.length === 1 ? provider.markets[0] : undefined);
   try {
-    const raw = await provider.fetch(ref, { runtime });
+    const raw = await provider.fetch(ref, { runtime: runtimeForMarket(market) });
     const listing = provider.normalize(raw);
     await ingestionService.ingest(listing);
   } catch (error) {
@@ -158,7 +182,7 @@ async function collectDiscoverRefs(data: DiscoverJobData): Promise<ExternalListi
     city: data.city,
     bbox: data.bbox,
     limit: data.limit,
-    runtime,
+    runtime: runtimeForMarket(data.market),
   })) {
     refs.push(ref);
   }
@@ -222,7 +246,7 @@ async function runInlinePass(): Promise<void> {
     const refs = await collectDiscoverRefs(data);
     for (const ref of refs) {
       try {
-        await processFetchRef(ref);
+        await processFetchRef(ref, data.market);
       } catch (error) {
         logger.error('Inline ingest failed for ref', {
           ref,
@@ -387,7 +411,7 @@ async function startBullMq(): Promise<() => Promise<void>> {
             await existingFetch.remove();
           }
         }
-        await fetchQueue.add(QUEUE_NAMES.fetch, { ref }, {
+        await fetchQueue.add(QUEUE_NAMES.fetch, { ref, market: job.data.market }, {
           jobId,
           priority: fetchPriorityFor(ref.provider, rank),
           attempts: 3,
@@ -407,7 +431,7 @@ async function startBullMq(): Promise<() => Promise<void>> {
   const fetchWorker = new Worker<FetchJobData>(
     QUEUE_NAMES.fetch,
     async (job: Job<FetchJobData>) => {
-      await processFetchRef(job.data.ref);
+      await processFetchRef(job.data.ref, job.data.market);
     },
     { connection, prefix, concurrency: FETCH_CONCURRENCY },
   );
@@ -493,11 +517,13 @@ async function main(): Promise<void> {
     onLog: (message) => logger.warn(message),
   });
   runtime = runtimeHandle.runtime;
+  proxyPerMarketGeo = proxyPerMarketGeoFromEnv();
   logger.info('Listing worker connected to database', {
     providers: registry.ids(),
     redis: config.listingWorker.redisConfigured,
     browserTier: Boolean(runtime.fetchViaBrowser),
     managedTier: Boolean(runtime.fetchViaManaged),
+    perMarketProxyGeo: proxyPerMarketGeo,
   });
 
   let closer: (() => Promise<void>) | undefined;

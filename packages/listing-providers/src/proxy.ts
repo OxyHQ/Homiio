@@ -7,6 +7,7 @@
  */
 
 import { randomBytes } from 'node:crypto';
+import type { ListingMarket } from '@homiio/shared-types';
 
 /** Parsed residential proxy credentials (no userinfo in `server`). */
 export interface ResidentialProxyConfig {
@@ -112,6 +113,63 @@ export function proxyGeoCountryFromEnv(): string | undefined {
   const raw = process.env.LISTING_PROXY_GEO?.trim().toLowerCase();
   if (!raw || !/^[a-z]{2}$/.test(raw)) return undefined;
   return raw;
+}
+
+/**
+ * Residential-proxy exit country for each provider {@link ListingMarket}
+ * (lowercase ISO-3166-1 alpha-2). Markets are already ISO-ish, but the mapping
+ * is explicit and exhaustive (`satisfies`) so a reviewer can audit every exit
+ * country and adding a market forces a deliberate choice. `GB` (United Kingdom)
+ * is the correct ISO code — the residential proxies key geo on ISO alpha-2.
+ */
+const MARKET_PROXY_COUNTRY = {
+  ES: 'es',
+  US: 'us',
+  IT: 'it',
+  GB: 'gb',
+  DE: 'de',
+  RO: 'ro',
+  FR: 'fr',
+  AR: 'ar',
+  EC: 'ec',
+  MX: 'mx',
+  CO: 'co',
+  CL: 'cl',
+  PE: 'pe',
+  PT: 'pt',
+  CA: 'ca',
+  AU: 'au',
+  AE: 'ae',
+  IE: 'ie',
+  BE: 'be',
+  PL: 'pl',
+  NL: 'nl',
+} satisfies Record<ListingMarket, string>;
+
+/** Lookup keyed by string so an unknown/stale market resolves to `undefined`. */
+const MARKET_PROXY_COUNTRY_TABLE: ReadonlyMap<string, string> = new Map(
+  Object.entries(MARKET_PROXY_COUNTRY),
+);
+
+/**
+ * Map a provider market to its residential-proxy exit country (lowercase ISO
+ * alpha-2), or `undefined` when the market is absent or has no clean mapping —
+ * the caller then falls back to the global `LISTING_PROXY_GEO`.
+ */
+export function marketProxyCountry(market: string | undefined): string | undefined {
+  if (!market) return undefined;
+  return MARKET_PROXY_COUNTRY_TABLE.get(market.trim().toUpperCase());
+}
+
+/**
+ * Whether fetch + discover traffic exits from each provider's OWN market
+ * country (`LISTING_PROXY_PER_MARKET_GEO=true`) instead of the single global
+ * `LISTING_PROXY_GEO`. Defaults OFF: this alters a working shared fetch path, so
+ * it ships dark and is flipped after a canary. When off, behaviour is unchanged
+ * (all traffic exits from `LISTING_PROXY_GEO`).
+ */
+export function proxyPerMarketGeoFromEnv(): boolean {
+  return envBool('LISTING_PROXY_PER_MARKET_GEO', false);
 }
 
 /**

@@ -35,6 +35,13 @@ export interface DiscoverJobData {
 /** Payload of a `listing-fetch` job. */
 export interface FetchJobData {
   ref: ExternalListingRef;
+  /**
+   * Market the ref was discovered under, so the fetch exits from that market's
+   * residential-proxy country (per-market geo). Optional: absent on jobs
+   * enqueued before this field existed — the worker then derives the country
+   * from a single-market provider or falls back to the global geo.
+   */
+  market?: ListingMarket;
 }
 
 /** Hash an arbitrary key into colon-free sha256 hex for use as a BullMQ job id. */
