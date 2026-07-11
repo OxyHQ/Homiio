@@ -24,6 +24,7 @@ import {
   BedDouble,
   User,
   Lightbulb,
+  Megaphone,
   Users,
   CalendarClock,
   Bookmark,
@@ -307,6 +308,14 @@ export function SideBar() {
       iconActive: Lightbulb,
       label: t('sidebar.navigation.tips'),
       route: '/tips',
+    });
+
+    entries.push({
+      key: 'evictions',
+      icon: Megaphone,
+      iconActive: Megaphone,
+      label: t('sidebar.navigation.evictions'),
+      route: '/evictions',
     });
 
     if (canAccessRoommates) {

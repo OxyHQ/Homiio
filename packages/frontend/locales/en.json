@@ -1938,7 +1938,8 @@
       "tips": "Tips",
       "hostCalendar": "Host calendar",
       "hostReservations": "Host reservations",
-      "landlordApplications": "Applicant inbox"
+      "landlordApplications": "Applicant inbox",
+      "evictions": "Eviction watch"
     },
     "actions": {
       "addProperty": "Add Property",
@@ -3464,5 +3465,148 @@
     "allowed": "Pets Allowed",
     "not_allowed": "No Pets",
     "case_by_case": "Pets Case by Case"
+  },
+  "evictions": {
+    "title": "Eviction watch",
+    "subtitle": "Show up for your neighbours. Track upcoming evictions and stand together to stop them.",
+    "eyebrow": "Solidarity board",
+    "publishCta": "Post",
+    "showMap": "Map",
+    "showList": "List",
+    "loadError": "Couldn't load the eviction board",
+    "attend": "I'll show up",
+    "attending": "I'm going",
+    "attendeesCount_one": "{{count}} neighbour",
+    "attendeesCount_other": "{{count}} neighbours",
+    "filter": {
+      "upcoming": "Upcoming",
+      "stopped": "Stopped",
+      "postponed": "Postponed",
+      "executed": "Carried out"
+    },
+    "status": {
+      "upcoming": "Upcoming",
+      "stopped": "Stopped",
+      "postponed": "Postponed",
+      "executed": "Carried out",
+      "cancelled": "Cancelled"
+    },
+    "empty": {
+      "title": "No evictions here yet",
+      "subtitle": "When neighbours report an upcoming eviction, it shows up here so the community can organise."
+    },
+    "detail": {
+      "title": "Eviction",
+      "reportedBy": "Reported by",
+      "anonymous": "A neighbour",
+      "howToHelp": "How to help",
+      "where": "Where",
+      "timeline": "Updates",
+      "comments": "Comments",
+      "approximateNotice": "The exact address is hidden — this pin is approximate to protect the household.",
+      "share": "Share",
+      "shareCopied": "Link copied to clipboard",
+      "shareFailed": "Couldn't share this case",
+      "instructions": "Instructions",
+      "contactFailed": "Couldn't open that link",
+      "noContact": "No contact details were shared for this case.",
+      "contact": {
+        "phone": "Call",
+        "whatsapp": "WhatsApp",
+        "telegram": "Telegram",
+        "email": "Email"
+      }
+    },
+    "owner": {
+      "title": "Manage this case",
+      "edit": "Edit case",
+      "cancelCase": "Cancel case"
+    },
+    "update": {
+      "messageLabel": "Update",
+      "messagePlaceholder": "Share what's happening…",
+      "newDateLabel": "New date",
+      "newTimeLabel": "New time",
+      "newStatusLabel": "Change status",
+      "post": "Post update",
+      "success": "Update posted",
+      "error": "Couldn't post the update"
+    },
+    "cancel": {
+      "confirmTitle": "Cancel this case?",
+      "confirmMessage": "It will be marked as cancelled and attendees will be notified.",
+      "confirm": "Cancel case",
+      "success": "Case cancelled",
+      "error": "Couldn't cancel the case"
+    },
+    "comments": {
+      "empty": "No comments yet. Start the conversation.",
+      "placeholder": "Write a comment…",
+      "send": "Send",
+      "signInToComment": "Sign in to comment",
+      "postError": "Couldn't post your comment",
+      "deleteTitle": "Delete comment?",
+      "deleteMessage": "This can't be undone.",
+      "deleteError": "Couldn't delete the comment"
+    },
+    "report": {
+      "title": "Report this case",
+      "intro": "Flag a case that looks fake, abusive or inappropriate. Our team reviews every report.",
+      "reason": {
+        "inaccurate": "Inaccurate",
+        "scam": "Fake",
+        "inappropriate": "Inappropriate",
+        "other": "Other"
+      },
+      "details": "Details (optional)",
+      "detailsRequired": "Details (required)",
+      "detailsPlaceholder": "Tell us what's wrong…",
+      "submit": "Submit report",
+      "success": "Report submitted",
+      "error": "Couldn't submit the report"
+    },
+    "form": {
+      "title": "Post an eviction",
+      "editTitle": "Edit case",
+      "subtitle": "Give neighbours what they need to show up and help.",
+      "whatSection": "What's happening",
+      "titleLabel": "Title",
+      "titlePlaceholder": "e.g. Eviction at Carrer de Sants 20",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "What's going on, and what kind of support is needed?",
+      "whereSection": "Where",
+      "mapHint": "Tap the map to drop a pin and auto-fill the area.",
+      "labelLabel": "Location",
+      "labelPlaceholder": "Street or area (no unit number)",
+      "cityLabel": "City",
+      "cityPlaceholder": "e.g. Barcelona",
+      "approximateLabel": "Show only an approximate location",
+      "approximateHint": "Rounds the pin so the exact home is never pinpointed.",
+      "whenSection": "When",
+      "dateLabel": "Date",
+      "timeLabel": "Time",
+      "helpSection": "How to help",
+      "instructionsLabel": "Instructions",
+      "instructionsPlaceholder": "e.g. Gather at 7am, bring banners…",
+      "agencySection": "Agency or fund (optional)",
+      "agencyLabel": "Agency / landlord",
+      "agencyPlaceholder": "e.g. Blackstone, Cerberus…",
+      "photoSection": "Photo (optional)",
+      "photoAdd": "Add photo",
+      "photoChange": "Change photo",
+      "photoPermission": "Photo library permission is required",
+      "photoFailed": "Couldn't upload the photo",
+      "titleRequired": "Add a title",
+      "descriptionRequired": "Add a description",
+      "locationRequired": "Drop a pin on the map",
+      "labelRequired": "Add a location label",
+      "dateRequired": "Add a valid date and time",
+      "invalidDate": "That date isn't valid",
+      "publish": "Publish",
+      "saveChanges": "Save changes",
+      "createSuccess": "Case published",
+      "updateSuccess": "Changes saved",
+      "submitError": "Couldn't save the case"
+    }
   }
 }

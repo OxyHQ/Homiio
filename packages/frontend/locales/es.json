@@ -2267,7 +2267,8 @@
       "hostCalendar": "Calendario de anfitrión",
       "hostReservations": "Reservas de anfitrión",
       "landlordApplications": "Bandeja de solicitudes",
-      "insights": "Insights"
+      "insights": "Insights",
+      "evictions": "Desahucios"
     },
     "actions": {
       "addProperty": "Agregar Propiedad",
@@ -3508,5 +3509,148 @@
     "allowed": "Se admiten mascotas",
     "not_allowed": "No se admiten mascotas",
     "case_by_case": "Mascotas según el caso"
+  },
+  "evictions": {
+    "title": "Desahucios",
+    "subtitle": "Planta cara junto a tus vecinas. Sigue los desahucios y organízate para pararlos.",
+    "eyebrow": "Tablón de solidaridad",
+    "publishCta": "Publicar",
+    "showMap": "Mapa",
+    "showList": "Lista",
+    "loadError": "No se pudo cargar el tablón de desahucios",
+    "attend": "Iré",
+    "attending": "Asistiendo",
+    "attendeesCount_one": "{{count}} vecina",
+    "attendeesCount_other": "{{count}} vecinas",
+    "filter": {
+      "upcoming": "Próximos",
+      "stopped": "Parados",
+      "postponed": "Aplazados",
+      "executed": "Ejecutados"
+    },
+    "status": {
+      "upcoming": "Próximo",
+      "stopped": "¡Lo paramos!",
+      "postponed": "Aplazado",
+      "executed": "Ejecutado",
+      "cancelled": "Cancelado"
+    },
+    "empty": {
+      "title": "Aún no hay desahucios aquí",
+      "subtitle": "Cuando alguien avisa de un desahucio, aparece aquí para que el barrio pueda organizarse."
+    },
+    "detail": {
+      "title": "Desahucio",
+      "reportedBy": "Avisado por",
+      "anonymous": "Una vecina",
+      "howToHelp": "Cómo ayudar",
+      "where": "Dónde",
+      "timeline": "Novedades",
+      "comments": "Comentarios",
+      "approximateNotice": "La dirección exacta está oculta: este punto es aproximado para proteger a la familia.",
+      "share": "Compartir",
+      "shareCopied": "Enlace copiado al portapapeles",
+      "shareFailed": "No se pudo compartir",
+      "instructions": "Instrucciones",
+      "contactFailed": "No se pudo abrir el enlace",
+      "noContact": "No se han compartido datos de contacto para este caso.",
+      "contact": {
+        "phone": "Llamar",
+        "whatsapp": "WhatsApp",
+        "telegram": "Telegram",
+        "email": "Correo"
+      }
+    },
+    "owner": {
+      "title": "Gestionar el caso",
+      "edit": "Editar caso",
+      "cancelCase": "Cancelar caso"
+    },
+    "update": {
+      "messageLabel": "Novedad",
+      "messagePlaceholder": "Cuenta qué está pasando…",
+      "newDateLabel": "Nueva fecha",
+      "newTimeLabel": "Nueva hora",
+      "newStatusLabel": "Cambiar estado",
+      "post": "Publicar novedad",
+      "success": "Novedad publicada",
+      "error": "No se pudo publicar la novedad"
+    },
+    "cancel": {
+      "confirmTitle": "¿Cancelar este caso?",
+      "confirmMessage": "Se marcará como cancelado y se avisará a quienes iban a asistir.",
+      "confirm": "Cancelar caso",
+      "success": "Caso cancelado",
+      "error": "No se pudo cancelar el caso"
+    },
+    "comments": {
+      "empty": "Aún no hay comentarios. Abre la conversación.",
+      "placeholder": "Escribe un comentario…",
+      "send": "Enviar",
+      "signInToComment": "Inicia sesión para comentar",
+      "postError": "No se pudo publicar tu comentario",
+      "deleteTitle": "¿Eliminar comentario?",
+      "deleteMessage": "Esta acción no se puede deshacer.",
+      "deleteError": "No se pudo eliminar el comentario"
+    },
+    "report": {
+      "title": "Reportar este caso",
+      "intro": "Avisa si un caso parece falso, abusivo o inapropiado. Nuestro equipo revisa cada reporte.",
+      "reason": {
+        "inaccurate": "Información falsa",
+        "scam": "Es falso",
+        "inappropriate": "Inapropiado",
+        "other": "Otro"
+      },
+      "details": "Detalles (opcional)",
+      "detailsRequired": "Detalles (obligatorio)",
+      "detailsPlaceholder": "Cuéntanos qué pasa…",
+      "submit": "Enviar reporte",
+      "success": "Reporte enviado",
+      "error": "No se pudo enviar el reporte"
+    },
+    "form": {
+      "title": "Publicar un desahucio",
+      "editTitle": "Editar caso",
+      "subtitle": "Da a las vecinas lo que necesitan para presentarse y ayudar.",
+      "whatSection": "Qué pasa",
+      "titleLabel": "Título",
+      "titlePlaceholder": "p. ej. Desahucio en Carrer de Sants 20",
+      "descriptionLabel": "Descripción",
+      "descriptionPlaceholder": "¿Qué está pasando y qué apoyo hace falta?",
+      "whereSection": "Dónde",
+      "mapHint": "Toca el mapa para poner un punto y rellenar la zona.",
+      "labelLabel": "Ubicación",
+      "labelPlaceholder": "Calle o zona (sin número de piso)",
+      "cityLabel": "Ciudad",
+      "cityPlaceholder": "p. ej. Barcelona",
+      "approximateLabel": "Mostrar solo la ubicación aproximada",
+      "approximateHint": "Redondea el punto para no señalar la vivienda exacta.",
+      "whenSection": "Cuándo",
+      "dateLabel": "Fecha",
+      "timeLabel": "Hora",
+      "helpSection": "Cómo ayudar",
+      "instructionsLabel": "Instrucciones",
+      "instructionsPlaceholder": "p. ej. Concentración a las 7h, traer pancartas…",
+      "agencySection": "Agencia o fondo (opcional)",
+      "agencyLabel": "Agencia / propietario",
+      "agencyPlaceholder": "p. ej. Blackstone, Cerberus…",
+      "photoSection": "Foto (opcional)",
+      "photoAdd": "Añadir foto",
+      "photoChange": "Cambiar foto",
+      "photoPermission": "Se necesita permiso para la galería",
+      "photoFailed": "No se pudo subir la foto",
+      "titleRequired": "Añade un título",
+      "descriptionRequired": "Añade una descripción",
+      "locationRequired": "Pon un punto en el mapa",
+      "labelRequired": "Añade una etiqueta de ubicación",
+      "dateRequired": "Añade una fecha y hora válidas",
+      "invalidDate": "Esa fecha no es válida",
+      "publish": "Publicar",
+      "saveChanges": "Guardar cambios",
+      "createSuccess": "Caso publicado",
+      "updateSuccess": "Cambios guardados",
+      "submitError": "No se pudo guardar el caso"
+    }
   }
 }

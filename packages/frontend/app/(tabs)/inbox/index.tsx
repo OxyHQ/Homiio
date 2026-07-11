@@ -145,6 +145,8 @@ export default function InboxScreen() {
           notification.data?.propertyId
         ) {
           router.push(`/properties/${notification.data.propertyId}`);
+        } else if (notification.data?.evictionId) {
+          router.push(`/evictions/${notification.data.evictionId}`);
         } else if (notification.type === 'contract') {
           router.push('/contracts');
         } else if (notification.type === 'roommate') {
