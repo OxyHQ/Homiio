@@ -20,6 +20,7 @@ import {
   parseMercadolibreArDetail,
   parseMercadolibreArSearch,
   parseMercadolibreArSearchJson,
+  isMercadolibreArChallenge,
   isMercadolibreArHousingCategory,
   mercadolibreArHousingSearchUrl,
   MERCADOLIBRE_AR_FIXTURE_DETAIL_HTML,
@@ -118,7 +119,15 @@ describe('MercadolibreArProvider', () => {
     expect(isMercadolibreArHousingCategory(undefined, 'CARS_AND_VANS')).toBe(false);
   });
 
-  it('normalizes detail HTML with VIP city fields', () => {
+  it('does not flag a valid VIP detail page (invisible reCAPTCHA v3) as a challenge', () => {
+    // The contact form embeds reCAPTCHA; a bare `captcha` marker used to false-positive
+    // and make the cold-HTTP ladder discard a perfectly good listing.
+    expect(isMercadolibreArChallenge(MERCADOLIBRE_AR_FIXTURE_DETAIL_HTML)).toBe(false);
+    expect(isMercadolibreArChallenge('<html>datadome captcha-delivery</html>')).toBe(true);
+    expect(isMercadolibreArChallenge('go=account-verification suspicious-traffic')).toBe(true);
+  });
+
+  it('normalizes cold-HTTP detail HTML with specs, region and gallery', () => {
     const refs = parseMercadolibreArSearch(MERCADOLIBRE_AR_FIXTURE_SEARCH_HTML);
     expect(refs.length).toBeGreaterThanOrEqual(1);
     const payload = parseMercadolibreArDetail(
@@ -133,6 +142,14 @@ describe('MercadolibreArProvider', () => {
     expect(listing.address.city).toBe('Capital Federal');
     expect(listing.address.neighborhood).toBe('Belgrano');
     expect(listing.contact?.phone).toBeTruthy();
+    // Highlighted-specs block (`BED → "2 dorm."`, `BATHROOM → "1 baño"`, `SCALE_UP → "55 m² totales"`).
+    expect(listing.bedrooms).toBe(2);
+    expect(listing.bathrooms).toBe(1);
+    expect(listing.squareFootage).toBe(55);
+    // Region resolves to the address-adjacent state, not the UI `"state":"VISIBLE"` flag.
+    expect(listing.address.state).toBe('Capital Federal');
+    // Full server-rendered gallery, not the single JSON-LD image.
+    expect(listing.remoteImages.length).toBeGreaterThanOrEqual(2);
   });
 
   it('throws NonHousingListingError for car item JSON', () => {

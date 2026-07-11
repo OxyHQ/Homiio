@@ -66,8 +66,14 @@ export const MERCADOLIBRE_MX_FIXTURE_DETAIL_HTML = `<!DOCTYPE html><html><head>
 {"name":"Renta departamento 2 recámaras Roma","image":"https://http2.mlstatic.com/fixture-ml-mx-1.jpg","offers":{"price":28000,"availability":"https://schema.org/InStock","url":"https://departamento.mercadolibre.com.mx/MLM-3847653074-renta-departamento-2-recamaras-roma-_JM","@type":"Offer","priceCurrency":"MXN"},"sku":"MLM3847653074","@context":"https://schema.org","@type":"Product","productID":"MLM3847653074"}
 </script>
 </head><body>
-<script>var x={"domain_id":"MLM-APARTMENTS_FOR_RENT","city":"Ciudad de México","neighborhood":"Roma Norte","state":"Ciudad de México"};</script>
+<script>var seller={"id":"seller_profile","type":"seller_profile","state":"VISIBLE"};</script>
+<script>var vip={"domain_id":"MLM-APARTMENTS_FOR_RENT","description_type":"plain_text","city":"Benito Juárez","neighborhood":"Roma Norte","state":"Ciudad de México"};</script>
+<script>var specs={"attributes":[{"icon":{"id":"BED","color":"BLACK","size":"XXSMALL"},"label":{"text":"2 rec.","color":"BLACK"}},{"icon":{"id":"BATHROOM","color":"BLACK","size":"XXSMALL"},"label":{"text":"2 baños","color":"BLACK"}},{"icon":{"id":"SCALE_UP","color":"BLACK","size":"XXSMALL"},"label":{"text":"72 m² totales","color":"BLACK"}}]};</script>
 <a href="tel:+525555667788">Llamar</a>
+<div class="ui-pdp-gallery">
+<a class="gallery-image__link" href="#"><img src="https://http2.mlstatic.com/D_NQ_NP_620729-MLM112636094885_062026-F.webp"/></a>
+<a class="gallery-image__link" href="#"><img src="https://http2.mlstatic.com/D_NQ_NP_708821-MLM112636094891_062026-F.webp"/></a>
+</div>
 <h1>Renta departamento</h1>
 </body></html>`;
 

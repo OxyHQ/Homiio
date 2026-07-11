@@ -64,7 +64,7 @@ describe('MercadolibreCoProvider', () => {
     expect(provider.markets).toEqual(['CO']);
     const url = mercadolibreCoHousingSearchUrl('bogota-dc');
     expect(isHousingCategoryUrl(url, MERCADOLIBRE_CO_HOUSING_SLUGS)).toBe(true);
-    expect(url).toContain('/departamentos/alquiler/');
+    expect(url).toContain('/departamentos/arriendo/');
   });
 
   it('parses housing search JSON and rejects cars', () => {
@@ -218,7 +218,7 @@ describe('MercadolibreMxProvider', () => {
     expect(isMercadolibreMxHousingCategory(undefined, 'CARS_AND_VANS')).toBe(false);
   });
 
-  it('normalizes detail HTML with contact', () => {
+  it('normalizes cold-HTTP detail HTML with specs, region and gallery', () => {
     const refs = parseMercadolibreMxSearch(MERCADOLIBRE_MX_FIXTURE_SEARCH_HTML);
     expect(refs.length).toBeGreaterThanOrEqual(1);
     const payload = parseMercadolibreMxDetail(
@@ -232,5 +232,14 @@ describe('MercadolibreMxProvider', () => {
     expect(listing.longTermRent?.currency).toBe('MXN');
     expect(listing.address.countryCode).toBe('MX');
     expect(listing.contact?.phone).toBeTruthy();
+    // Highlighted-specs block (`BED → "2 rec."`, `BATHROOM → "2 baños"`, `SCALE_UP → "72 m² totales"`).
+    expect(listing.bedrooms).toBe(2);
+    expect(listing.bathrooms).toBe(2);
+    expect(listing.squareFootage).toBe(72);
+    // Region is the address-adjacent state, never the UI `"state":"VISIBLE"` flag.
+    expect(listing.address.state).toBe('Ciudad de México');
+    // Full gallery, not the single JSON-LD image.
+    expect(listing.remoteImages.length).toBeGreaterThanOrEqual(2);
+    expect(listing.remoteImages[0]?.url).toContain('http2.mlstatic.com');
   });
 });
