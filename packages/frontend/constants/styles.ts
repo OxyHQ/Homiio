@@ -365,6 +365,9 @@ export const BANNER_FILL_MIN_HEIGHT = 200;
  *   back button and every left/right icon action. Pair the two via a `pressed`
  *   `useState` + a static style array — never the NativeWind-incompatible
  *   function-form `style` (§NativeWind Pressable).
+ * - `barIconSize` / `barBackIconSize`: ONE compact glyph scale for bar icons —
+ *   actions `20`, the back chevron `22` — matching the property sticky bar (the
+ *   gold reference) so the top header buttons never read chunkier than it.
  */
 export const barContent: ViewStyle = {
   maxWidth: contentClamp.page,
@@ -380,3 +383,8 @@ export const barIconButton: ViewStyle = {
 export const barIconButtonPressed: ViewStyle = {
   backgroundColor: colors.mutedSubtle,
 };
+
+/** Glyph size for bar action icons (share, save, host, …). */
+export const barIconSize = 20;
+/** Glyph size for the bar back chevron — a touch larger than the actions. */
+export const barBackIconSize = 22;
