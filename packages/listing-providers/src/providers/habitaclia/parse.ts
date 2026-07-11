@@ -53,6 +53,22 @@ function asArray(value: unknown): unknown[] {
   return [value];
 }
 
+/**
+ * Minimum plausible living area in m². Habitaclia renders a "1 m²" placeholder in
+ * the detail feature list (and mirrors it into the JSON-LD `floorSize`) for
+ * partner listings — e.g. Spotahome imports — that report no surface; its own
+ * datalayer emits `"superficie":"undefined"` for these. A real dwelling is never
+ * smaller than this, so any value below the floor is dropped to `undefined`
+ * rather than ingested as a bogus 0/1 m² (the source of the "1 m²" listings seen
+ * in production).
+ */
+const MIN_LIVING_AREA_SQM = 8;
+
+/** Reject absurd living-area values (habitaclia's "1 m²" placeholder, stray 0). */
+function sanitizeLivingArea(value: number | undefined): number | undefined {
+  return value !== undefined && value >= MIN_LIVING_AREA_SQM ? value : undefined;
+}
+
 function htmlFragmentToText(html: string): string {
   let text = '';
   let inTag = false;
@@ -248,7 +264,7 @@ function parseHabitacliaDetailFromJsonLd(node: Record<string, unknown>, url: str
     },
     bedrooms: asNumber(node['numberOfRooms']),
     bathrooms: asNumber(node['numberOfBathroomsTotal']),
-    squareMeters: floorSize ? asNumber(floorSize['value']) : undefined,
+    squareMeters: sanitizeLivingArea(floorSize ? asNumber(floorSize['value']) : undefined),
     furnished,
     amenities: amenities.length > 0 ? amenities : undefined,
     images: toImages(node),
@@ -420,7 +436,9 @@ export function parseHabitacliaDetailHtml(html: string, url: string): Habitaclia
   const neighborhood = firstMatch(html, /id=["']js-ver-mapa-zona["'][^>]*title=["']([^"']+)/i);
   const bedrooms = asNumber(firstMatch(html, /<strong>(\d+)<\/strong>\s*hab\.?/i));
   const bathrooms = asNumber(firstMatch(html, /<strong>(\d+)<\/strong>\s*ba/i));
-  const squareMeters = asNumber(firstMatch(html, /<strong>(\d+)<\/strong>\s*m(?:<sup>2<\/sup>|²)/i));
+  const squareMeters = sanitizeLivingArea(
+    asNumber(firstMatch(html, /<strong>(\d+)<\/strong>\s*m(?:<sup>2<\/sup>|²)/i)),
+  );
 
   const amenities: string[] = [];
   let furnished: boolean | undefined;

@@ -12,6 +12,7 @@ import {
   HabitacliaProvider,
   HABITACLIA_FIXTURE_DETAIL_HTML,
   HABITACLIA_FIXTURE_DETAIL_HTML_LIVE,
+  HABITACLIA_FIXTURE_DETAIL_HTML_PLACEHOLDER_SURFACE,
   HABITACLIA_FIXTURE_SEARCH_HTML,
   buildHabitacliaListainmueblesBody,
   extractHabitacliaListadoFormFields,
@@ -95,6 +96,34 @@ describe('HabitacliaProvider', () => {
     expect(raw.floor).toBeUndefined();
     expect(raw.yearBuilt).toBeUndefined();
     expect(raw.parkingSpaces).toBeUndefined();
+  });
+
+  it('rejects habitaclia\'s "1 m²" placeholder surface (real captured markup)', () => {
+    // Real trimmed page: a Spotahome unit re-listed on habitaclia with no
+    // reported surface. The feature list paints `<strong>1</strong> m²` — an
+    // absurd placeholder — while price/bedrooms/bathrooms are genuine.
+    const raw = parseHabitacliaDetail(
+      HABITACLIA_FIXTURE_DETAIL_HTML_PLACEHOLDER_SURFACE,
+      'https://www.habitaclia.com/alquiler-piso-barceloneta-barcelona-i55551000001220.htm',
+    );
+    expect(raw.id).toBe('55551000001220');
+    expect(raw.price).toBe(1250);
+    expect(raw.bedrooms).toBe(2);
+    expect(raw.bathrooms).toBe(1);
+    // The bug: this used to ingest as 1 m². The guard drops it to undefined so it
+    // is never stored as a bogus "1 m²" listing (and the €/m² row is not the surface).
+    expect(raw.squareMeters).toBeUndefined();
+  });
+
+  it('rejects an absurd JSON-LD floorSize below the habitable floor', () => {
+    const html = HABITACLIA_FIXTURE_DETAIL_HTML.replace(
+      '"floorSize":{"@type":"QuantitativeValue","value":95,"unitCode":"MTK"}',
+      '"floorSize":{"@type":"QuantitativeValue","value":1,"unitCode":"MTK"}',
+    );
+    const raw = parseHabitacliaDetail(html, DETAIL_URL);
+    expect(raw.squareMeters).toBeUndefined();
+    // A plausible surface on the same path is preserved.
+    expect(parseHabitacliaDetail(HABITACLIA_FIXTURE_DETAIL_HTML, DETAIL_URL).squareMeters).toBe(95);
   });
 
   it('extracts listainmuebles form fields and parses AJAX fragments', () => {
