@@ -39,6 +39,35 @@ export interface IProperty extends Document {
     agencyName?: string;
     kind?: 'owner' | 'agency' | 'private' | 'unknown';
   };
+  /**
+   * Restriction/nuance flags derived from the listing's free text at ingest by
+   * `classifyListingContent` (external listings only). Portals bury these in
+   * prose instead of structured fields; only flags that fire are present.
+   */
+  listingFlags?: {
+    /** Rental restricted to students ("solo estudiantes", "students only"). */
+    studentsOnly?: boolean;
+    /** Advertised as a flat but the body rents a single room / a share. */
+    roomNotFullUnit?: boolean;
+    /** Seasonal / temporary lease ("temporada", "short let"), not a home. */
+    temporaryOnly?: boolean;
+    /** Restricted to one gender ("solo chicas", "women only"). */
+    genderRestricted?: boolean;
+    /** Requires proof of employment/income ("nómina", "working professionals only"). */
+    workersOnly?: boolean;
+    /** An agency fee is payable by the tenant/buyer ("honorarios de agencia"). */
+    agencyFeePayable?: boolean;
+    /** Pets not allowed ("no se admiten mascotas", "no pets"). */
+    noPets?: boolean;
+    /** Smoking not allowed ("no fumadores", "non-smoking"). */
+    noSmoking?: boolean;
+    /** No couples ("no parejas", "no couples"). */
+    noCouples?: boolean;
+    /** UK: no housing benefit ("no DSS"). */
+    noDSS?: boolean;
+    /** Best-effort detected description language (ISO 639-1). */
+    detectedLanguage?: 'es' | 'ca' | 'en' | 'fr' | 'nl' | 'de' | 'it';
+  };
   expiresAt?: Date;
   type: PropertyType;
   housingType?: HousingType;

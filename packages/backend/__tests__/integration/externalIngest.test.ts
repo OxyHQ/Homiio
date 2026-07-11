@@ -203,6 +203,46 @@ describe('external listing ingest (fixture -> IngestionService)', () => {
     });
   });
 
+  it('classifies and persists listingFlags from the description free text', async () => {
+    const ingestion = buildIngestionService();
+    const [first] = await normalizeAll();
+    const withFlags: NormalizedListing = {
+      ...first,
+      description:
+        'Se alquilan habitaciones en piso compartido, exclusivamente para estudiantes. ' +
+        'Solo chicas. No se admiten mascotas. Alquiler de temporada de septiembre a junio.',
+    };
+
+    await ingestion.ingest(withFlags);
+    const property = await Property.findOne({ source: 'fixture', sourceId: FIRST_SOURCE_ID }).lean();
+    expect(property?.listingFlags).toMatchObject({
+      roomNotFullUnit: true,
+      studentsOnly: true,
+      genderRestricted: true,
+      noPets: true,
+      temporaryOnly: true,
+    });
+    // Flags that did not fire stay absent (sparse).
+    expect(property?.listingFlags?.agencyFeePayable).toBeUndefined();
+    expect(property?.listingFlags?.noDSS).toBeUndefined();
+  });
+
+  it('omits listingFlags entirely when the description trips no rule', async () => {
+    const ingestion = buildIngestionService();
+    const [first] = await normalizeAll();
+    const plain: NormalizedListing = {
+      ...first,
+      description: 'Bright two-bedroom flat with a lift, a balcony and a modern kitchen.',
+    };
+
+    await ingestion.ingest(plain);
+    const property = await Property.findOne({ source: 'fixture', sourceId: FIRST_SOURCE_ID }).lean();
+    // No restriction flag fired; only a language may be detected (or nothing).
+    expect(property?.listingFlags?.roomNotFullUnit).toBeUndefined();
+    expect(property?.listingFlags?.studentsOnly).toBeUndefined();
+    expect(property?.listingFlags?.temporaryOnly).toBeUndefined();
+  });
+
   it('rejects partner-style absurd monthly rent at the ingest gate (11628 EUR)', async () => {
     const ingestion = buildIngestionService();
     const absurdListing: NormalizedListing = {
