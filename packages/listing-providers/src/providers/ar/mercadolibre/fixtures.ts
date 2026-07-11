@@ -82,3 +82,19 @@ export const MERCADOLIBRE_AR_FIXTURE_SEARCH_HTML = `<!DOCTYPE html><html><body>
 <script>window.__PRELOADED_STATE__ = ${MERCADOLIBRE_AR_FIXTURE_SEARCH_JSON};</script>
 <a href="https://departamento.mercadolibre.com.ar/MLA-3557653074-alquiler-departamento-2-ambientes-belgrano-_JM">Depto</a>
 </body></html>`;
+
+/**
+ * Real captured cold-HTTP SERP markup (inmuebles.mercadolibre.com.ar, 2026-07).
+ * Today's search page ships NO `__PRELOADED_STATE__` — listings are `poly-card`
+ * anchors with `&amp;`-encoded tracking fragments, so discover resolves refs via
+ * the shared `hrefRe` path (fragment stripped). Proves discover still yields refs
+ * against current markup through the HTTP tier.
+ */
+export const MERCADOLIBRE_AR_FIXTURE_LIVE_SERP_HTML = `<!DOCTYPE html><html><body>
+<ol class="ui-search-layout ui-search-layout--grid">
+<li class="ui-search-layout__item"><div class="poly-card"><a href="https://departamento.mercadolibre.com.ar/MLA-1877733073-alquiler-departamento-2-ambientes-belgrano-_JM#polycard_client=search-desktop&amp;position=1&amp;type=item&amp;tracking_id=7e131ad0-cfc5-419d-8a43-adfbd45ce24f&amp;sid=search" class="poly-component__title">Alquiler departamento 2 ambientes Belgrano</a></div></li>
+<li class="ui-search-layout__item"><div class="poly-card"><a href="https://departamento.mercadolibre.com.ar/MLA-1879142141-alquiler-departamento-3-amb-liniers-capital-federal-_JM#polycard_client=search-desktop&amp;position=2&amp;type=item&amp;sid=search" class="poly-component__title">Alquiler departamento 3 amb Liniers</a></div></li>
+<li class="ui-search-layout__item"><div class="poly-card"><a href="https://departamento.mercadolibre.com.ar/MLA-1877732195-alquiler-departamento-2-ambientes-y-medio-congreso-_JM#polycard_client=search-desktop&amp;position=3&amp;type=item&amp;sid=search" class="poly-component__title">Alquiler departamento 2 ambientes Congreso</a></div></li>
+<li class="ui-search-layout__item"><div class="poly-card"><a href="https://departamento.mercadolibre.com.ar/MLA-3578126424-departamento-2-ambientes-alquiler-almagro-balcon-_JM#polycard_client=search-desktop&amp;position=4&amp;type=item&amp;sid=search" class="poly-component__title">Departamento 2 ambientes alquiler Almagro</a></div></li>
+</ol>
+</body></html>`;

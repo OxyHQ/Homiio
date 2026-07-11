@@ -81,3 +81,19 @@ export const MERCADOLIBRE_MX_FIXTURE_SEARCH_HTML = `<!DOCTYPE html><html><body>
 <script>window.__PRELOADED_STATE__ = ${MERCADOLIBRE_MX_FIXTURE_SEARCH_JSON};</script>
 <a href="https://departamento.mercadolibre.com.mx/MLM-3847653074-renta-departamento-2-recamaras-roma-_JM">Depto</a>
 </body></html>`;
+
+/**
+ * Real captured cold-HTTP SERP markup (inmuebles.mercadolibre.com.mx, 2026-07).
+ * Like AR, today's search page ships NO `__PRELOADED_STATE__` — listings are
+ * `poly-card` anchors with `&amp;`-encoded tracking fragments, so discover
+ * resolves refs via the shared `hrefRe` path. Proves discover still yields refs
+ * against current markup through the HTTP tier.
+ */
+export const MERCADOLIBRE_MX_FIXTURE_LIVE_SERP_HTML = `<!DOCTYPE html><html><body>
+<ol class="ui-search-layout ui-search-layout--grid">
+<li class="ui-search-layout__item"><div class="poly-card"><a href="https://departamento.mercadolibre.com.mx/MLM-2976061593-679165-renta-departamento-en-louisiana-napoles-benito-juarez-cdmx-_JM#be_origin=backend&amp;position=1&amp;type=item&amp;tracking_id=4423282e-642b-4783-ba04-a3e602d1bbaa&amp;c_client=search" class="poly-component__title">Renta departamento Napoles Benito Juarez</a></div></li>
+<li class="ui-search-layout__item"><div class="poly-card"><a href="https://departamento.mercadolibre.com.mx/MLM-2976093621-679248-renta-departamento-en-carretera-mexico-toluca-el-yaqui-cuajimalpa-de-morelos-cdmx-_JM#be_origin=backend&amp;position=2&amp;type=item&amp;c_client=search" class="poly-component__title">Renta departamento Cuajimalpa</a></div></li>
+<li class="ui-search-layout__item"><div class="poly-card"><a href="https://departamento.mercadolibre.com.mx/MLM-3114811707-departamento-en-renta-en-col-noche-buena-_JM#polycard_client=search-desktop&amp;position=3&amp;type=item&amp;sid=search" class="poly-component__title">Departamento en renta Noche Buena</a></div></li>
+<li class="ui-search-layout__item"><div class="poly-card"><a href="https://departamento.mercadolibre.com.mx/MLM-5635923058-loft-en-renta-cerca-de-polanco-y-la-napoles-equipado-con-linea-blanca-_JM#polycard_client=search-desktop&amp;position=4&amp;type=item&amp;sid=search" class="poly-component__title">Loft en renta cerca de Polanco</a></div></li>
+</ol>
+</body></html>`;

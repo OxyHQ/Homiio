@@ -979,6 +979,7 @@ export {
   MERCADOLIBRE_MX_FIXTURE_NON_HOUSING_JSON,
   MERCADOLIBRE_MX_FIXTURE_SEARCH_HTML,
   MERCADOLIBRE_MX_FIXTURE_SEARCH_JSON,
+  MERCADOLIBRE_MX_FIXTURE_LIVE_SERP_HTML,
 } from './providers/mx/mercadolibre/fixtures';
 
 // Portugal — Idealista.pt (georeach AJAX + contact).
