@@ -47,6 +47,9 @@ import type {
   IPlacePoi,
   IRoommateRequest,
   IRoommateRelationship,
+  IEvictionCase,
+  IEvictionComment,
+  IEvictionReport,
 } from './documentTypes';
 
 // Schemas are CJS — `require` them and cast to typed Mongoose Models.
@@ -79,6 +82,9 @@ const ImageModel = require('./schemas/ImageSchema') as Model<IImage>;
 const PlacePoiModel = require('./schemas/PlacePoiSchema') as Model<IPlacePoi>;
 const RoommateRequestModel = require('./schemas/RoommateRequestSchema') as Model<IRoommateRequest>;
 const RoommateRelationshipModel = require('./schemas/RoommateRelationshipSchema') as Model<IRoommateRelationship>;
+const EvictionCaseModel = require('./schemas/EvictionCaseSchema') as Model<IEvictionCase>;
+const EvictionCommentModel = require('./schemas/EvictionCommentSchema') as Model<IEvictionComment>;
+const EvictionReportModel = require('./schemas/EvictionReportSchema') as Model<IEvictionReport>;
 
 // Named ES exports — preferred for new code.
 export const Property = PropertyModel;
@@ -109,6 +115,9 @@ export const Image = ImageModel;
 export const PlacePoi = PlacePoiModel;
 export const RoommateRequest = RoommateRequestModel;
 export const RoommateRelationship = RoommateRelationshipModel;
+export const EvictionCase = EvictionCaseModel;
+export const EvictionComment = EvictionCommentModel;
+export const EvictionReport = EvictionReportModel;
 
 // Re-export the document interfaces so callers can `import type { ILease } from '../models'`.
 export type {
@@ -148,6 +157,9 @@ export type {
   IPlacePoi,
   IRoommateRequest,
   IRoommateRelationship,
+  IEvictionCase,
+  IEvictionComment,
+  IEvictionReport,
 };
 
 // Legacy CJS callers (`const models = require('../../models')` — used by the
@@ -185,4 +197,7 @@ module.exports = {
   PlacePoi: PlacePoiModel,
   RoommateRequest: RoommateRequestModel,
   RoommateRelationship: RoommateRelationshipModel,
+  EvictionCase: EvictionCaseModel,
+  EvictionComment: EvictionCommentModel,
+  EvictionReport: EvictionReportModel,
 };

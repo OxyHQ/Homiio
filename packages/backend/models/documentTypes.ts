@@ -393,3 +393,72 @@ export type IRoommateRelationship = Document & {
   createdAt: Date;
   updatedAt: Date;
 } & Loose;
+
+// ---------- Eviction solidarity board ----------
+
+/** GeoJSON point kept on every eviction case's `location`. */
+export interface IEvictionPoint {
+  type: 'Point';
+  coordinates: [number, number];
+}
+
+export interface IEvictionLocation {
+  label: string;
+  coordinates: IEvictionPoint;
+  precision: 'exact' | 'approximate';
+  city?: string;
+  countryCode?: string;
+}
+
+/** A single RSVP row. Stored with `select: false`; never serialized publicly. */
+export interface IEvictionAttendee {
+  oxyUserId: string;
+  at?: Date;
+}
+
+/** An owner-authored timeline subdocument inside `EvictionCase.updates`. */
+export type IEvictionUpdateSubdoc = Document & {
+  _id: Id;
+  message: string;
+  newScheduledAt?: Date;
+  newStatus?: string;
+  createdAt: Date;
+} & Loose;
+
+export type IEvictionCase = Document & {
+  _id: Id;
+  oxyUserId: string;
+  title: string;
+  description: string;
+  location: IEvictionLocation;
+  scheduledAt: Date;
+  status: string;
+  agencyId?: Id;
+  contactInfo?: Loose;
+  coverImage?: { imageId?: Id; url?: string };
+  updates: Types.DocumentArray<IEvictionUpdateSubdoc>;
+  /** Selected only via `.select('+attendees')`; absent by default. */
+  attendees?: IEvictionAttendee[];
+  attendeeCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+} & Loose;
+
+export type IEvictionComment = Document & {
+  _id: Id;
+  caseId: Id;
+  oxyUserId: string;
+  body: string;
+  createdAt: Date;
+  updatedAt: Date;
+} & Loose;
+
+export type IEvictionReport = Document & {
+  _id: Id;
+  caseId: Id;
+  reporterOxyUserId: string;
+  reason: string;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+} & Loose;

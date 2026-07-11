@@ -85,6 +85,14 @@ export default function () {
   // Public neighborhood routes (metrics derived from Homiio listings)
   router.use('/neighborhoods', neighborhoodRoutes());
 
+  // Public eviction solidarity board reads (no auth; optionalAuth still runs
+  // before public routes so a signed-in viewer's `isAttending` is resolved).
+  // Writes + caller-scoped lists live on the authenticated `/evictions` router.
+  const evictionController = require('../controllers/eviction');
+  router.get('/evictions', asyncHandler(evictionController.listEvictions));
+  router.get('/evictions/:id/comments', asyncHandler(evictionController.listComments));
+  router.get('/evictions/:id', asyncHandler(evictionController.getEvictionById));
+
   // Public analytics/stats (no auth)
   router.get('/analytics/stats', asyncHandler(analyticsController.getAppStats));
 
