@@ -25,7 +25,7 @@ import {
   ListingValidationError,
   validateNormalizedListing,
 } from '@homiio/listing-providers';
-import { Property, Address, type IProperty } from '../../models';
+import { Property, Address, Agency, type IProperty } from '../../models';
 import { ensureCover } from '../cityCoverSyncService';
 import type { AddressCanonicalInput } from '../../models/Address';
 import { validateOfferings } from '../../models/schemas/offeringValidation';
@@ -86,6 +86,14 @@ export class IngestionService {
 
     const addressId = await this.resolveAddress(listing.address);
     const fields = this.buildPropertyFields(listing, addressId);
+
+    // Attribute the listing to a canonical Agency when the portal contact AJAX
+    // exposed an agency name. `findOrCreateByName` is the sole Agency write path
+    // and dedupes by normalized name — the raw string stays on `externalContact`.
+    if (listing.contact?.agencyName) {
+      const agency = await Agency.findOrCreateByName(listing.contact.agencyName);
+      if (agency) fields.agencyId = agency._id;
+    }
 
     const existing = await Property.findOne({ source: listing.source, sourceId: listing.sourceId });
     const property = existing ?? new Property();

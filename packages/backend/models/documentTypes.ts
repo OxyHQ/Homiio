@@ -317,6 +317,26 @@ export type IExchangeReview = Document & {
   updatedAt: Date;
 } & Loose;
 
+// ---------- Agency ----------
+
+export type IAgency = Document & {
+  _id: Id;
+  name: string;
+  normalizedName: string;
+  slug: string;
+  createdAt: Date;
+  updatedAt: Date;
+} & Loose;
+
+export interface IAgencyModel extends Model<IAgency> {
+  /**
+   * Resolve a raw agency name to a persisted Agency, creating it on first
+   * sight. The SOLE write path for the collection. `null` when the name is
+   * too short to identify an agency.
+   */
+  findOrCreateByName(rawName: unknown): Promise<IAgency | null>;
+}
+
 // ---------- Reports ----------
 
 export type IListingReport = Document & {

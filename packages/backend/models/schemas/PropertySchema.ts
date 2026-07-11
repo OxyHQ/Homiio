@@ -307,6 +307,14 @@ const propertySchema = new mongoose.Schema({
     trim: true,
     lowercase: true
   },
+  // Relational link to the managing Agency. Resolved server-side from portal
+  // contact AJAX (external listings) via `Agency.findOrCreateByName`; optional.
+  agencyId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Agency',
+    index: true,
+    sparse: true
+  },
   description: {
     type: String,
     trim: true,
