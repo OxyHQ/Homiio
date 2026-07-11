@@ -624,9 +624,11 @@ export {
   isSubitoHousingCategory,
 } from './providers/it/subito';
 export {
+  coerceSubitoRaw,
   parseSubitoDetail,
   parseSubitoSearch,
   parseSubitoSearchJson,
+  parseSubitoSearchListings,
   type SubitoRaw,
 } from './providers/it/subito/parse';
 export {
