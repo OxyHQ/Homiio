@@ -30,9 +30,11 @@ import {
   CASA_IT_FIXTURE_SEARCH_HTML,
   CASA_IT_FIXTURE_SEARCH_JSON,
   SubitoProvider,
+  coerceSubitoRaw,
   parseSubitoDetail,
   parseSubitoSearch,
   parseSubitoSearchJson,
+  parseSubitoSearchListings,
   isSubitoHousingCategory,
   SUBITO_FIXTURE_DETAIL_HTML,
   SUBITO_FIXTURE_NON_HOUSING_HTML,
@@ -200,7 +202,69 @@ describe('SubitoProvider (housing-only)', () => {
     expect(listing.sourceId).toBe('632623436');
     expect(listing.longTermRent?.monthlyAmount).toBe(1000);
     expect(listing.address.city).toBe('Milano');
+    expect(listing.bedrooms).toBe(2);
+    expect(listing.squareFootage).toBe(51);
+    expect(listing.furnishedStatus).toBe('furnished');
     expect(listing.contact?.phone).toBeTruthy();
+    expect(listing.contact?.agencyName).toContain('Tempocasa');
+    // Image CDN base gets the render `rule` query appended.
+    expect(listing.remoteImages[0]?.url).toContain('rule=');
+  });
+
+  it('parses full search-page ad objects (features dict) and carries them via hints', () => {
+    const listings = parseSubitoSearchListings(SUBITO_FIXTURE_SEARCH_HTML);
+    // The car ad is filtered; only the two housing ads survive, both priced.
+    expect(listings.map((l) => l.sourceId).sort()).toEqual(['632623436', '632623437']);
+    expect(listings.every((l) => typeof l.price === 'number')).toBe(true);
+    expect(listings.every((l) => isSubitoHousingCategory(l.categoryUri || l.url))).toBe(true);
+
+    // A hint survives BullMQ JSON serialization and re-coerces to a SubitoRaw.
+    const serialized = JSON.parse(JSON.stringify(listings[0])) as unknown;
+    const coerced = coerceSubitoRaw(serialized);
+    expect(coerced?.sourceId).toBe('632623436');
+    expect(coerced?.price).toBe(1000);
+    expect(coerceSubitoRaw({ sourceId: 'x' })).toBeUndefined();
+  });
+
+  it('discovers refs with hints and fetches without a detail request', async () => {
+    let detailRequested = false;
+    const runtime: FetchRuntime = {
+      fetchHttp: async () => ({ status: 500, body: '' }),
+      fetchJson: async () => {
+        throw new Error('unused');
+      },
+      fetchText: async () => {
+        throw new Error('unused');
+      },
+      loadFixture: async () => {
+        throw new Error('unused');
+      },
+      openBrowserSession: async ({ warmUrl }) => ({
+        request: async () => {
+          detailRequested = true;
+          return { status: 200, body: '' };
+        },
+        content: async () => SUBITO_FIXTURE_SEARCH_HTML,
+        pageUrl: () => warmUrl,
+        warmNavigate: async () => undefined,
+        exportStorageState: async () => ({ cookies: [] }),
+        close: async () => undefined,
+      }),
+    };
+    const local = new SubitoProvider({ runtime, cities: ['milano'] });
+    const refs: ExternalListingRef[] = [];
+    for await (const ref of local.discover({ provider: 'subito', market: 'IT', city: 'milano', limit: 5, runtime })) {
+      refs.push(ref);
+    }
+    expect(refs.map((r) => r.sourceId).sort()).toEqual(['632623436', '632623437']);
+    expect(refs[0]?.hints?.listing).toBeTruthy();
+
+    const raw = await local.fetch(refs[0], { runtime });
+    const listing = local.normalize(raw);
+    expect(listing.sourceId).toBe(refs[0]?.sourceId);
+    expect(listing.longTermRent?.monthlyAmount).toBeGreaterThan(0);
+    // The hint payload means fetch never had to hit the (dead) detail page.
+    expect(detailRequested).toBe(false);
   });
 
   it('rejects non-housing detail and filters cars from search JSON', () => {

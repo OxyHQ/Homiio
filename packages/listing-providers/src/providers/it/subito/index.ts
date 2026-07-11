@@ -29,15 +29,17 @@ import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
 import { SUBITO_BASE_URL } from './fixtures';
 import {
+  coerceSubitoRaw,
   isSubitoHousingCategory,
   parseSubitoDetail,
   parseSubitoSearch,
-  parseSubitoSearchJson,
-  subitoSearchApiUrl,
+  parseSubitoSearchListings,
   subitoSourceIdFromUrl,
   subitoWarmSearchUrl,
   type SubitoRaw,
 } from './parse';
+
+const CONTENT_SELECTOR = 'a[href*="/appartamenti/"], main, #__NEXT_DATA__';
 
 const PROVIDER_ID: ProviderId = 'subito';
 const DEFAULT_CITIES: readonly string[] = ['roma', 'milano', 'napoli', 'torino', 'firenze'];
@@ -80,6 +82,34 @@ function yieldRefs(
   return out;
 }
 
+/**
+ * Yield refs from full search-page ad objects, carrying the parsed listing in
+ * `hints.listing`. The detail page (Next App Router) exposes no usable JSON, so
+ * `fetch` normalizes from this hint instead of re-fetching the ad.
+ */
+function yieldListings(
+  listings: readonly SubitoRaw[],
+  seen: Set<string>,
+  limit: number,
+  yielded: { count: number },
+): ExternalListingRef[] {
+  const out: ExternalListingRef[] = [];
+  for (const listing of listings) {
+    if (yielded.count >= limit) break;
+    if (seen.has(listing.sourceId)) continue;
+    if (!isSubitoHousingCategory(listing.categoryUri || listing.url)) continue;
+    seen.add(listing.sourceId);
+    out.push({
+      provider: PROVIDER_ID,
+      sourceId: listing.sourceId,
+      url: listing.url,
+      hints: { listing },
+    });
+    yielded.count += 1;
+  }
+  return out;
+}
+
 export class SubitoProvider implements ListingProvider {
   readonly id: ProviderId = PROVIDER_ID;
   readonly markets = ['IT'] as const;
@@ -105,12 +135,12 @@ export class SubitoProvider implements ListingProvider {
 
     for (const city of cities) {
       if (yielded.count >= limit) return;
-      const viaAjax = runtime.openBrowserSession
-        ? await this.discoverCityViaAjax(runtime, city, job.signal, seen, limit, yielded)
+      const viaBrowser = runtime.openBrowserSession
+        ? await this.discoverCityViaBrowser(runtime, city, job.signal, seen, limit, yielded)
         : [];
-      for (const ref of viaAjax) yield ref;
+      for (const ref of viaBrowser) yield ref;
       if (yielded.count >= limit) return;
-      if (viaAjax.length === 0) {
+      if (viaBrowser.length === 0) {
         for await (const ref of this.discoverCityViaHtml(runtime, city, job.signal, seen, limit, yielded)) {
           yield ref;
         }
@@ -118,7 +148,12 @@ export class SubitoProvider implements ListingProvider {
     }
   }
 
-  private async discoverCityViaAjax(
+  /**
+   * Warm the Akamai-gated search page and parse the full ad objects embedded in
+   * `__NEXT_DATA__` (JSON-first — no HTML scraping). Pages 2+ reuse the warmed
+   * context via `warmNavigate` rather than re-opening a session per page.
+   */
+  private async discoverCityViaBrowser(
     runtime: FetchRuntime,
     city: string,
     signal: AbortSignal | undefined,
@@ -136,7 +171,7 @@ export class SubitoProvider implements ListingProvider {
       session = await runtime.openBrowserSession({
         warmUrl: subitoWarmSearchUrl(city, 1),
         signal,
-        contentSelector: 'a[href*="/appartamenti/"], main, #__NEXT_DATA__',
+        contentSelector: CONTENT_SELECTOR,
         isChallenge: isSubitoChallenge,
         challengeWaitMs: 45_000,
         stickyProxySession: sticky,
@@ -149,26 +184,27 @@ export class SubitoProvider implements ListingProvider {
       const collected: ExternalListingRef[] = [];
       for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
         if (yielded.count >= limit) break;
-        const ajaxUrl = subitoSearchApiUrl(city, page);
-        const { status, body } = await session.request(ajaxUrl, {
-          referer: session.pageUrl(),
-          timeoutMs: 30_000,
-        });
-        let pageRefs =
-          status < 400 && !isSubitoChallenge(body) ? parseSubitoSearchJson(body) : [];
-        if (pageRefs.length === 0 && page === 1) {
-          pageRefs = parseSubitoSearch(await session.content());
+        if (page > 1) {
+          await session.warmNavigate({
+            warmUrl: subitoWarmSearchUrl(city, page),
+            signal,
+            contentSelector: CONTENT_SELECTOR,
+            isChallenge: isSubitoChallenge,
+            challengeWaitMs: 45_000,
+          });
         }
-        if (pageRefs.length === 0) break;
+        const html = await session.content();
+        if (isSubitoChallenge(html)) break;
+        const listings = parseSubitoSearchListings(html);
+        if (listings.length === 0) break;
         this.metrics.record({
           provider: this.id,
           strategy: 'browser',
           outcome: 'success',
-          status,
           latencyMs: Date.now() - start,
-          url: ajaxUrl,
+          url: session.pageUrl(),
         });
-        collected.push(...yieldRefs(pageRefs, seen, limit, yielded));
+        collected.push(...yieldListings(listings, seen, limit, yielded));
       }
       if (sticky) this.stickyStorageState = await session.exportStorageState();
       return collected;
@@ -224,6 +260,10 @@ export class SubitoProvider implements ListingProvider {
     if (!isSubitoHousingCategory(ref.url)) {
       throw new Error(`subito: refusing to fetch non-housing URL ${ref.url}`);
     }
+    // Discover already parsed the full ad from the search page __NEXT_DATA__ and
+    // carried it via hints (the detail page exposes no usable JSON). Prefer it.
+    const hinted = coerceSubitoRaw(ref.hints?.listing);
+    if (hinted) return { ref, payload: hinted };
     if (ctx.runtime.openBrowserSession) {
       let session: BrowserSession | undefined;
       try {
