@@ -7,11 +7,14 @@
  * press `scale`: the photo zooms inside its rounded corners, the layout never
  * moves. Every photo tile drops this in so the interaction reads identically.
  *
- * Interaction state is owned internally (web hover via pointer enter/leave) and
- * can be augmented by an external `active` signal (a parent Pressable's press, or
- * a carousel's shared hover), OR-ed together. Static style arrays + `useState`,
- * per the NativeWind function-form-`style` constraint (AGENTS.md §NativeWind
- * Pressable); it's its own component, so there are never hooks inside a `.map`.
+ * Interaction is CONTROLLED-first: when the caller passes `active`, that drives
+ * the zoom (external wins), so a card can zoom its image on hover of the WHOLE
+ * card — the card owns one `onPointerEnter/Leave` on its container and feeds
+ * `active={hovered || pressed}` down. When `active` is omitted, ZoomableImage
+ * falls back to owning its own web hover (pointer enter/leave over the image),
+ * for standalone use. Static style arrays + `useState`, per the NativeWind
+ * function-form-`style` constraint (AGENTS.md §NativeWind Pressable); it's its own
+ * component, so there are never hooks inside a `.map`.
  */
 import React, { useState } from 'react';
 import {
@@ -56,8 +59,11 @@ interface ZoomableImageProps {
   /** Width / height ratio of the mask (e.g. `1` square, `4 / 3`). */
   aspectRatio?: number;
   /**
-   * External active signal OR-ed with the internal web hover — e.g. a parent
-   * Pressable's press state (native zoom) or a carousel's shared hover.
+   * Controlled active signal. When provided (defined), it drives the zoom and
+   * ZoomableImage does NOT attach its own hover listeners — the card owns hover
+   * on its whole container and feeds `active={hovered || pressed}` here, so the
+   * image zooms on hover ANYWHERE on the card. When omitted, ZoomableImage owns
+   * its own web hover over the image (standalone use).
    */
   active?: boolean;
   /** Extra style for the mask (e.g. fill the parent, background). */
@@ -68,19 +74,22 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
   children,
   borderRadius,
   aspectRatio,
-  active = false,
+  active,
   style,
 }) => {
+  const controlled = active !== undefined;
   const [hovered, setHovered] = useState(false);
-  const isActive = active || hovered;
+  const isActive = controlled ? active : hovered;
 
   return (
     <View
-      // Pointer enter/leave (not Pressable-only onHoverIn/Out) so a plain layout
-      // View hosts the hover state; they fire on the mask's own boundary and map
-      // to mouseenter/mouseleave on RN-Web. No-op on native — touch has no hover.
-      onPointerEnter={IS_WEB ? () => setHovered(true) : undefined}
-      onPointerLeave={IS_WEB ? () => setHovered(false) : undefined}
+      // Uncontrolled fallback only: pointer enter/leave (not Pressable-only
+      // onHoverIn/Out) so a plain layout View hosts the hover state; they fire on
+      // the mask's own boundary and map to mouseenter/mouseleave on RN-Web. When
+      // the caller controls `active`, the card owns hover instead, so these are
+      // omitted. No-op on native — touch has no hover.
+      onPointerEnter={!controlled && IS_WEB ? () => setHovered(true) : undefined}
+      onPointerLeave={!controlled && IS_WEB ? () => setHovered(false) : undefined}
       style={[
         styles.mask,
         borderRadius !== undefined ? { borderRadius } : null,

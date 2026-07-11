@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Image, StyleSheet, Pressable, TouchableOpacity, ViewStyle } from 'react-native';
+import { View, Image, StyleSheet, Pressable, TouchableOpacity, ViewStyle, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
@@ -236,6 +236,15 @@ export function PropertyCard({
   const handleImagePressOut = useCallback(() => {
     setPressed(false);
   }, []);
+
+  // Web hover on the WHOLE card drives the image zoom (Airbnb-style): one
+  // `onPointerEnter/Leave` on the outer container below (they fire on the card's
+  // own boundary and don't bubble between children on RN-Web), so hovering the
+  // text/body zooms the photo too. This ONLY feeds `ZoomableImage`'s `active` —
+  // the card itself never scales/lifts (that "cutrada" was removed). OR-ed with
+  // the touch press so native still gets a press-zoom.
+  const [hovered, setHovered] = useState(false);
+  const imageActive = hovered || pressed;
 
   // "New" freshness badge — pure frontend, no pagination risk. Memoized on
   // `createdAt` so `Date.now()` is captured once per listing (the 7-day boundary
@@ -614,6 +623,12 @@ export function PropertyCard({
 
   return (
     <View
+      // Web hover on the WHOLE card boundary feeds the image zoom (no card
+      // transform). `onPointerEnter/Leave` fire on this container's edge and
+      // don't re-fire moving between children on RN-Web, so hovering anywhere —
+      // photo OR text — zooms the photo. Native has no hover; press drives it.
+      onPointerEnter={Platform.OS === 'web' ? () => setHovered(true) : undefined}
+      onPointerLeave={Platform.OS === 'web' ? () => setHovered(false) : undefined}
       style={[
         styles.container,
         style as ViewStyle,
@@ -632,6 +647,7 @@ export function PropertyCard({
             coverIndex={property.coverImageIndex}
             aspectRatio={mediaAspectRatio}
             borderRadius={isGrid ? radius.photo : radius.lg}
+            imageActive={imageActive}
             onPress={onPress}
             onPressIn={handlePressIn}
             onLongPress={onLongPress}
@@ -676,9 +692,10 @@ export function PropertyCard({
                   : { width: '100%', aspectRatio: 1 },
             ]}
           >
-            {/* The photo zooms inside the rounded mask on hover/press; the card
-                never moves. Badges are siblings of the zoom so they stay put. */}
-            <ZoomableImage active={pressed} style={styles.imageZoom}>
+            {/* The photo zooms inside the rounded mask on hover (anywhere on the
+                card) / press; the card never moves. Badges are siblings of the
+                zoom so they stay put. */}
+            <ZoomableImage active={imageActive} style={styles.imageZoom}>
               <Image source={propertyData.imageSource} style={styles.image} resizeMode="cover" />
             </ZoomableImage>
             {mediaBadges}

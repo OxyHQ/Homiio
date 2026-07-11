@@ -34,12 +34,16 @@ interface TipCardProps {
 
 const TipCard: React.FC<TipCardProps> = ({ tip, onPress, featured = false }) => {
   const [pressed, setPressed] = useState(false);
+  // Hover anywhere on the card zooms its cover photo (web); press on native.
+  const [hovered, setHovered] = useState(false);
 
   return (
     <Pressable
       onPress={onPress}
       onPressIn={() => setPressed(true)}
       onPressOut={() => setPressed(false)}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
       style={[
         styles.tipCard,
         featured && styles.tipCardFeatured,
@@ -50,9 +54,10 @@ const TipCard: React.FC<TipCardProps> = ({ tip, onPress, featured = false }) => 
     >
       <View style={[styles.tipImageContainer, featured && styles.tipImageFeatured]}>
         {tip.coverImageUrl ? (
-          // The photo zooms inside its mask on hover/press; the category badge is
-          // a sibling above the zoom, so it stays put and unclipped.
-          <ZoomableImage active={pressed} style={styles.tipImageFill}>
+          // The photo zooms inside its mask on hover anywhere on the card / press;
+          // the category badge is a sibling above the zoom, so it stays put and
+          // unclipped.
+          <ZoomableImage active={hovered || pressed} style={styles.tipImageFill}>
             <Image
               source={{ uri: tip.coverImageUrl }}
               style={styles.tipImage}

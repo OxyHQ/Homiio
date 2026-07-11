@@ -8,8 +8,8 @@
  * Like `HostCtaBanner`, the banner itself is NOT pressable — only the Bloom
  * Button is the tap target — so web never renders a nested `<button>`.
  */
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useState } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useMediaQuery } from 'react-responsive';
@@ -70,18 +70,23 @@ export function AgentCtaBanner({
   const horizontalPadding = fill ? 0 : resolvePagePadding(isWide);
   // Flatter than classic 16:9 so stacked/full-width cards stay compact.
   const aspectRatio = isWide ? 2.6 : 2.1;
+  // Hover anywhere on the banner zooms its photo (web). No card transform.
+  const [hovered, setHovered] = useState(false);
 
   return (
     <View style={fill ? styles.fillWrap : { paddingHorizontal: horizontalPadding }}>
       <View
+        onPointerEnter={Platform.OS === 'web' ? () => setHovered(true) : undefined}
+        onPointerLeave={Platform.OS === 'web' ? () => setHovered(false) : undefined}
         style={[
           styles.banner,
           fill ? styles.bannerFill : { aspectRatio },
         ]}
       >
-        {/* The photo zooms inside the banner's rounded mask on hover; the banner
-            never moves. Scrim + copy are siblings, so they stay put. */}
-        <ZoomableImage style={styles.bannerMedia}>
+        {/* The photo zooms inside the banner's rounded mask on hover anywhere on
+            the banner; the banner never moves. Scrim + copy are siblings, so
+            they stay put. */}
+        <ZoomableImage active={hovered} style={styles.bannerMedia}>
           <Image
             source={{ uri: imageUrl }}
             style={styles.bannerImage}

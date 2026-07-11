@@ -153,6 +153,9 @@ interface CityCardProps {
 
 const CityCard: React.FC<CityCardProps> = ({ city, width, height, onPress }) => {
   const [pressed, setPressed] = useState(false);
+  // Hover anywhere on the card zooms its photo (web); press does it on native.
+  // `onHoverIn/Out` are Pressable-only + web-only (native ignores them).
+  const [hovered, setHovered] = useState(false);
   const imageSource = getCityImageSource(city, 'large');
   // Subtitle: the city's region (e.g. "Catalonia"), resolved from the populated
   // region ref. Falls back to a short property-count line when no region name.
@@ -167,13 +170,16 @@ const CityCard: React.FC<CityCardProps> = ({ city, width, height, onPress }) => 
       onPress={onPress}
       onPressIn={() => setPressed(true)}
       onPressOut={() => setPressed(false)}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
       accessibilityRole="button"
       accessibilityLabel={`Explore homes in ${city.name}`}
       style={[styles.card, { width, height }]}
     >
-      {/* The photo zooms inside the card's rounded mask on hover/press; the card
-          itself never moves. Scrim + copy are siblings, so they stay put. */}
-      <ZoomableImage active={pressed} style={styles.cardMedia}>
+      {/* The photo zooms inside the card's rounded mask on hover (anywhere on the
+          card) / press; the card itself never moves. Scrim + copy are siblings,
+          so they stay put. */}
+      <ZoomableImage active={hovered || pressed} style={styles.cardMedia}>
         {imageSource ? (
           <Image
             source={imageSource}
