@@ -31,7 +31,7 @@ import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { SaveButton } from '@/components/SaveButton';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { colors } from '@/styles/colors';
-import { contentClamp, hairline, spacing } from '@/constants/styles';
+import { barContent, barIconButton, barIconButtonPressed, hairline, spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
 
 interface StickyPropertyHeaderProps {
@@ -90,7 +90,7 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
           onPress={onBack}
           onPressIn={() => setBackPressed(true)}
           onPressOut={() => setBackPressed(false)}
-          style={[styles.iconButton, backPressed && styles.iconButtonPressed]}
+          style={[barIconButton, backPressed && barIconButtonPressed]}
           accessibilityRole="button"
           accessibilityLabel={t('goBack')}
         >
@@ -109,7 +109,7 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
             onPress={handleShare}
             onPressIn={() => setSharePressed(true)}
             onPressOut={() => setSharePressed(false)}
-            style={[styles.iconButton, sharePressed && styles.iconButtonPressed]}
+            style={[barIconButton, sharePressed && barIconButtonPressed]}
             accessibilityRole="button"
             accessibilityLabel={t('common.share')}
           >
@@ -153,9 +153,7 @@ const styles = StyleSheet.create({
     right: 0,
   },
   content: {
-    maxWidth: contentClamp.page,
-    width: '100%',
-    alignSelf: 'center',
+    ...barContent,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
@@ -180,13 +178,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-  },
-  iconButton: {
-    padding: spacing.sm,
-    borderRadius: 9999,
-  },
-  iconButtonPressed: {
-    backgroundColor: colors.mutedSubtle,
   },
 });
 

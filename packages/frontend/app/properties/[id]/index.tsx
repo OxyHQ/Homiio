@@ -97,7 +97,7 @@ import { BookingCard } from '@/components/property/BookingCard';
 
 import { resolveBookingMode } from '@/utils/bookingMode';
 import { colors } from '@/styles/colors';
-import { hairline, spacing } from '@/constants/styles';
+import { barIconButton, hairline, spacing } from '@/constants/styles';
 
 interface PropertyDetailViewModel {
   id: string;
@@ -632,7 +632,7 @@ export default function PropertyDetailPage() {
                   landlordOxyUserId ? (
                     <Pressable
                       key="profile"
-                      style={styles.headerButton}
+                      style={barIconButton}
                       onPress={() => router.push(`/roommates/${landlordOxyUserId}`)}
                       accessibilityRole="button"
                       accessibilityLabel="Open host profile"
@@ -642,7 +642,7 @@ export default function PropertyDetailPage() {
                   ) : null,
                   <Pressable
                     key="share"
-                    style={styles.headerButton}
+                    style={barIconButton}
                     onPress={handleShare}
                     accessibilityRole="button"
                     accessibilityLabel="Share property"
@@ -651,7 +651,7 @@ export default function PropertyDetailPage() {
                   </Pressable>,
                   <Pressable
                     key="viewings"
-                    style={styles.headerButton}
+                    style={barIconButton}
                     onPress={() => router.push('/viewings')}
                     accessibilityRole="button"
                     accessibilityLabel="View bookings"
@@ -964,7 +964,6 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: spacing['6xl'] },
   errorRoot: { flex: 1 },
   errorBody: { flex: 1 },
-  headerButton: { padding: spacing.sm },
   headerSaveWrap: {
     flexDirection: 'row',
     alignItems: 'center',

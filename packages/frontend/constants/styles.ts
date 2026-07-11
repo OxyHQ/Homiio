@@ -351,3 +351,32 @@ export const PAGE_GUTTER_CLASS = 'px-4 md:px-8';
  * Standalone full-width banners keep using `aspectRatio` and ignore this token.
  */
 export const BANNER_FILL_MIN_HEIGHT = 200;
+
+/**
+ * Shared header/bar chrome — the "gold recipe" from the property sticky bar,
+ * promoted app-wide so every bar (the shared `Header`, `StickyPropertyHeader`,
+ * and the property floating-header actions) reads identically. Consume these
+ * instead of re-hand-rolling a per-bar icon button or clamp.
+ *
+ * - `barContent`: clamp the inner content row to `contentClamp.page`, centered,
+ *   so titles/actions line up on wide web instead of running edge-to-edge (the
+ *   surrounding bar background still spans full width).
+ * - `barIconButton` (+ `barIconButtonPressed`): ONE circular icon button for the
+ *   back button and every left/right icon action. Pair the two via a `pressed`
+ *   `useState` + a static style array — never the NativeWind-incompatible
+ *   function-form `style` (§NativeWind Pressable).
+ */
+export const barContent: ViewStyle = {
+  maxWidth: contentClamp.page,
+  width: '100%',
+  alignSelf: 'center',
+};
+
+export const barIconButton: ViewStyle = {
+  padding: spacing.sm,
+  borderRadius: radius.pill,
+};
+
+export const barIconButtonPressed: ViewStyle = {
+  backgroundColor: colors.mutedSubtle,
+};
