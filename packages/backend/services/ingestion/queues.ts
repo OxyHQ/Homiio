@@ -115,6 +115,32 @@ export function fetchPriorityFor(provider: string, rank: number): number {
 }
 
 /**
+ * Round-robin priority for the `rank`-th discover scope of a provider in the
+ * interleaved boot list — `rank` is the scope's per-provider index (its city
+ * index for browser-heavy ES portals that discover one job per city, else 0 for
+ * a single market-wide scope).
+ *
+ * SINGLE tier by design — unlike {@link fetchPriorityFor}, discover does NOT sink
+ * the big-volume ES portals into a later tier. The requirement is that every
+ * provider's city-0 runs before ANY provider's city-1, so the ES portals share
+ * round 0 with the small providers and START producing fetch refs immediately;
+ * their remaining ~180 cities merely fill later rounds instead of monopolising
+ * the queue head (the observed bug: only pisos/fotocasa ever discovered while 11
+ * market-wide providers with 2-3 scopes each starved behind the ES city flood).
+ * A later ES tier would violate "city-0 before any city-1" and delay the largest
+ * inventory source, so round-robin rank alone carries the fairness here.
+ *
+ * `provider` is kept for signature parity with {@link fetchPriorityFor} and a
+ * possible future per-provider discover tier. The `+ 1` and {@link FETCH_RANK_CAP}
+ * clamp (shared bound; discover ranks sit far below it) work exactly as in fetch:
+ * priority stays ≥ 1 (out of BullMQ's unprioritised `wait` lane) and well under
+ * `PRIORITY_LIMIT`.
+ */
+export function discoverPriorityFor(provider: string, rank: number): number {
+  return Math.min(Math.max(Math.trunc(rank), 0), FETCH_RANK_CAP) + 1;
+}
+
+/**
  * Build a BullMQ Redis connection OPTIONS object from a `redis[s]://` URL. We
  * pass options (not an ioredis instance) so BullMQ owns the connection, and set
  * `maxRetriesPerRequest: null` as BullMQ requires for blocking commands.
