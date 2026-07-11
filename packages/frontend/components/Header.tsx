@@ -1,5 +1,5 @@
-import React, { useEffect, ReactNode } from 'react';
-import { View, Platform, Pressable, type ViewStyle } from 'react-native';
+import React, { useEffect, useState, ReactNode } from 'react';
+import { View, Platform, Pressable, StyleSheet, type ViewStyle } from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -8,12 +8,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@oxyhq/bloom/theme';
+import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { colors } from '@/styles/colors';
 import { colorChannels } from '@/styles/shadows';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PANEL_TOP_INSET } from '@oxyhq/bloom/content-panel';
-import { ThemedText } from './ThemedText';
+import { barContent, barIconButton, barIconButtonPressed, spacing } from '@/constants/styles';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 
 /**
@@ -52,6 +53,7 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
   const isScreenNotMobile = useIsScreenNotMobile();
   const internalScrollY = useSharedValue(0);
   const scrollY = externalScrollY ?? internalScrollY;
+  const [backPressed, setBackPressed] = useState(false);
 
   // On web the DOCUMENT is the scroll owner and the shell frames content in a
   // rounded `ContentPanel` at `PANEL_TOP_INSET` (8px) on wide screens, so a
@@ -124,6 +126,31 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
     }),
   } as ViewStyle;
 
+  // Title + optional subtitle, via Bloom `Text`. Shared by the left and center
+  // title positions; each line truncates so a long title never shoves the
+  // actions off-screen (the enclosing block is `flex:1, minWidth:0`).
+  const titleNode = (
+    <>
+      {options?.title ? (
+        <BloomText
+          numberOfLines={1}
+          className={
+            options?.subtitle
+              ? 'text-sm font-extrabold text-foreground'
+              : 'text-xl font-extrabold text-foreground'
+          }
+        >
+          {options.title}
+        </BloomText>
+      ) : null}
+      {options?.subtitle ? (
+        <BloomText numberOfLines={1} className="text-sm font-normal text-muted-foreground">
+          {options.subtitle}
+        </BloomText>
+      ) : null}
+    </>
+  );
+
   return (
     <View style={topRowStyle}>
       {/* Animated Background */}
@@ -141,18 +168,24 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
         ]}
       />
 
-      {/* Header Content - Always Visible */}
+      {/* Header Content — clamped + centered (the "gold" bar recipe). The
+          background above spans full width; this row aligns to
+          `contentClamp.page` so titles/actions line up on wide web. */}
       <View
-        className={
-          Platform.OS === 'web'
-            ? 'relative min-h-[60px] flex-1 flex-row items-center justify-between px-[15px] pb-[5px]'
-            : 'relative flex-1 flex-row items-center justify-between px-[15px] pb-1'
-        }
-        style={{ paddingTop: insets.top + (Platform.OS === 'web' ? 5 : 12) }}
+        style={[
+          styles.content,
+          { paddingTop: insets.top + (Platform.OS === 'web' ? spacing.xs : spacing.md) },
+        ]}
       >
-        <View className="flex-1 flex-row items-center gap-2.5">
+        <View style={styles.leftSlot}>
           {options?.showBackButton && canGoBack && (
-            <Pressable onPress={() => router.back()} className="mr-2.5">
+            <Pressable
+              onPress={() => router.back()}
+              onPressIn={() => setBackPressed(true)}
+              onPressOut={() => setBackPressed(false)}
+              accessibilityRole="button"
+              style={[barIconButton, backPressed && barIconButtonPressed]}
+            >
               <Ionicons name="arrow-back" size={24} color={colors.COLOR_BLACK} />
             </Pressable>
           )}
@@ -160,47 +193,13 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
             <React.Fragment key={index}>{component}</React.Fragment>
           ))}
           {titlePosition === 'left' && (
-            <View>
-              {options?.title ? (
-                <ThemedText
-                  className={
-                    options?.subtitle
-                      ? 'pl-px text-sm font-extrabold text-foreground'
-                      : 'pl-px text-xl font-extrabold text-foreground'
-                  }
-                >
-                  {options.title}
-                </ThemedText>
-              ) : null}
-              {options?.subtitle ? (
-                <ThemedText className="text-sm font-normal text-muted-foreground">
-                  {options.subtitle}
-                </ThemedText>
-              ) : null}
-            </View>
+            <View style={styles.titleBlock}>{titleNode}</View>
           )}
         </View>
         {titlePosition === 'center' && (
-          <View className="flex-1 items-center">
-            {options?.title ? (
-              <ThemedText
-                className={
-                  options?.subtitle
-                    ? 'pl-px text-sm font-extrabold text-foreground'
-                    : 'pl-px text-xl font-extrabold text-foreground'
-                }
-              >
-                {options.title}
-              </ThemedText>
-            ) : null}
-            {options?.subtitle ? (
-              <ThemedText className="text-sm font-normal text-muted-foreground">
-                {options.subtitle}
-              </ThemedText>
-            ) : null}
-          </View>
+          <View style={styles.centerSlot}>{titleNode}</View>
         )}
-        <View className="flex-1 flex-row items-center justify-end gap-2.5">
+        <View style={styles.rightSlot}>
           {options?.rightComponents?.map((component, index) => (
             <React.Fragment key={index}>{component}</React.Fragment>
           ))}
@@ -209,3 +208,40 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  // Clamped, centered content row — the shared bar layout. `minHeight` keeps the
+  // bar tall enough for the circular icon buttons.
+  content: {
+    ...barContent,
+    minHeight: 60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xs,
+  },
+  leftSlot: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  centerSlot: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  rightSlot: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+  },
+  // Truncating title/subtitle block — `flex:1, minWidth:0` lets a long title
+  // ellipsize inside the row instead of pushing the actions off-screen.
+  titleBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+});

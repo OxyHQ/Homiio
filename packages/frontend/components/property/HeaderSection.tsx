@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Image, Platform, StyleSheet } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
+import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { colors } from '@/styles/colors';
+import { barContent, spacing } from '@/constants/styles';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 import type { PropertyImage } from '@homiio/shared-types';
 
@@ -30,22 +31,14 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
                 resizeMode="cover"
             />
             <View style={styles.enhancedHeader}>
-                <ThemedText style={styles.headerTitle} numberOfLines={2}>
+                <BloomText className="text-2xl font-bold text-foreground" numberOfLines={2}>
                     {title}
-                </ThemedText>
-                <View style={styles.headerLocation}>
-                    <ThemedText style={styles.headerLocationText}>{location}</ThemedText>
-                </View>
+                </BloomText>
+                <BloomText className="text-base text-muted-foreground">{location}</BloomText>
                 <View style={styles.headerStats}>
-                    <View style={styles.headerStat}>
-                        <ThemedText style={styles.headerStatText}>{bedrooms} Bed</ThemedText>
-                    </View>
-                    <View style={styles.headerStat}>
-                        <ThemedText style={styles.headerStatText}>{bathrooms} Bath</ThemedText>
-                    </View>
-                    <View style={styles.headerStat}>
-                        <ThemedText style={styles.headerStatText}>{size}m²</ThemedText>
-                    </View>
+                    <BloomText className="text-sm text-foreground">{bedrooms} Bed</BloomText>
+                    <BloomText className="text-sm text-foreground">{bathrooms} Bath</BloomText>
+                    <BloomText className="text-sm text-foreground">{size}m²</BloomText>
                 </View>
             </View>
         </>
@@ -53,37 +46,18 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
 };
 
 const styles = StyleSheet.create({
+    // Hero identity block — adopts the shared bar clamp so it lines up with the
+    // sticky header, on one `spacing` gap rhythm (no per-line margins).
     enhancedHeader: {
+        ...barContent,
         backgroundColor: colors.primaryLight,
-        padding: 20,
-    },
-    headerTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 10,
-    },
-    headerLocation: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 10,
-    },
-    headerLocationText: {
-        marginLeft: 5,
-        fontSize: 16,
-        color: colors.COLOR_BLACK_LIGHT_3,
+        padding: spacing.xl,
+        gap: spacing.md,
     },
     headerStats: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-    },
-    headerStat: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    headerStatText: {
-        marginLeft: 5,
-        fontSize: 14,
+        gap: spacing.md,
     },
     mainImage: {
         width: '100%',
