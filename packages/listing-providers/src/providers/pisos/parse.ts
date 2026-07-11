@@ -2,7 +2,12 @@
  * pisos.com parsers — JSON-first (JSON-LD search cards + embedded detail JSON).
  *
  * Search: schema.org JSON-LD blocks → refs.
- * Detail: `data-var` JSON + tracking/`precio` JSON + optional contact AJAX.
+ * Detail: the `id="vtmExtraVars"` `data-var` blob (rooms/m²/phone AND
+ * price/operation/geo), the legacy `window.__pisosTrack` blob, the `var precio`
+ * line, then the SEO `<title>` — read in that order so a listing missing any
+ * one source still resolves a price. City comes from the ascending-geo
+ * breadcrumb, then the `<title>` municipality (the breadcrumb sometimes renders
+ * the municipality as a `descending-geo` picker with no named row).
  * HTML is only used for title/description/image fallbacks when JSON lacks them.
  */
 
@@ -11,7 +16,7 @@ import { ldJsonScriptBodies } from '../../html';
 import { canonicalizeAmenities } from '../../parse/amenities';
 import { extractEsSchemaListings, type EsSchemaListing } from '../../parse/jsonLd';
 import { PISOS_BASE_URL } from './fixtures';
-import { asCoordinate, asNumber } from '../../parse/guards';
+import { asCoordinate, asNumber, deaccent } from '../../parse/guards';
 
 /** Raw payload `fetch()` hands to `normalize()`. */
 export interface PisosRaw {
@@ -283,7 +288,62 @@ function decodeHtmlEntities(value: string): string {
   return value
     .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
-    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => String.fromCharCode(Number.parseInt(hex, 16)));
+    .replace(/&#x([0-9a-f]{1,6});/gi, (_, hex: string) => String.fromCharCode(Number.parseInt(hex, 16)))
+    .replace(/&#(\d{1,7});/g, (_, dec: string) => String.fromCharCode(Number.parseInt(dec, 10)));
+}
+
+/**
+ * The document `<title>` (falling back to `og:title`) is pisos' most reliable
+ * carrier of the municipality and display price: every detail page renders
+ * `"<type> en alquiler en <street> en <Municipality> por <price> €/mes"`. It
+ * recovers the city when the ascending-geo breadcrumb omits the municipality
+ * row, and the price when neither the `data-var` blob nor the legacy `var precio`
+ * line is present.
+ */
+function readPisosDocumentTitle(html: string): string | undefined {
+  const title = html.match(/<title[^>]{0,80}>([^<]{1,300})<\/title>/i)?.[1];
+  const og = html.match(
+    /<meta[^>]{0,160}?(?:property|name)=["']og:title["'][^>]{0,160}?content=["']([^"']{1,300})["']/i,
+  )?.[1];
+  const raw = title ?? og;
+  return raw ? decodeHtmlEntities(raw).trim() : undefined;
+}
+
+/** Operation words that follow " en " in a location-less title (`en alquiler`). */
+const PISOS_TITLE_NON_PLACE: ReadonlySet<string> = new Set([
+  'alquiler',
+  'venta',
+  'alquilar',
+  'comprar',
+  'traspaso',
+]);
+
+/**
+ * Municipality from a pisos title: the segment after the LAST `" en "` that
+ * precedes the `" por <price>"` price clause. `"…Carrer de la Senyera en Picanya
+ * por 1.200 €/mes"` → `"Picanya"`; the intra-name `"d'en"` in
+ * `"Canet d'en Berenguer"` is not a `" en "` boundary, so it survives intact. A
+ * location-less title (`"Piso en alquiler por 850 €/mes"`) would leave only the
+ * operation word after `" en "` — rejected rather than stored as a bogus city.
+ */
+function municipalityFromPisosTitle(title: string | undefined): string | undefined {
+  if (!title) return undefined;
+  const priceClause = title.match(/\spor\s{1,3}[\d.]{1,12}/i);
+  if (!priceClause || priceClause.index === undefined) return undefined;
+  const head = title.slice(0, priceClause.index);
+  const enIdx = head.toLowerCase().lastIndexOf(' en ');
+  if (enIdx < 0) return undefined;
+  const municipality = head.slice(enIdx + 4).trim();
+  if (municipality.length < 2 || municipality.length > 80) return undefined;
+  if (PISOS_TITLE_NON_PLACE.has(deaccent(municipality))) return undefined;
+  return municipality;
+}
+
+/** Display price from a pisos title (`… por 1.200 €/mes`) — last-resort fallback. */
+function priceFromPisosTitle(title: string | undefined): number | undefined {
+  if (!title) return undefined;
+  const match = title.match(/\bpor\s{1,3}([\d.]{1,12})\s{0,2}(?:€|euros?)/i);
+  return match?.[1] ? asNumber(match[1]) : undefined;
 }
 
 /** Detail pages embed map coords in `locationmap` data-params (JSON-LD is search-only). */
@@ -380,24 +440,40 @@ function readPisosParkingSpaces(dataVar: Record<string, unknown> | undefined): n
 export function parsePisosDetail(html: string, url: string): PisosRaw {
   const dataVar = readDataVar(html);
   const track = readTrack(html);
+  const title = readPisosDocumentTitle(html);
   const resolvedId = pisosSourceIdFromUrl(url) ?? readHiddenPisoId(html);
   if (!resolvedId) {
     throw new Error(`pisos: cannot derive a source id from ${url}`);
   }
 
+  // Live pisos moved the tracking payload out of `window.__pisosTrack` into the
+  // `id="vtmExtraVars"` `data-var` blob (`readDataVar`), so read price/operation
+  // from there first, then the legacy `__pisosTrack`, then the `var precio` line,
+  // then the SEO `<title>` — listings carrying only the new blob (and no
+  // `var precio`) otherwise resolved no price and were dropped.
+  const meta = (key: string): string => {
+    const fromData = dataVar?.[key];
+    if (typeof fromData === 'string') return fromData;
+    const fromTrack = track?.[key];
+    return typeof fromTrack === 'string' ? fromTrack : '';
+  };
+
   const price =
+    asNumber(dataVar?.precioInmueble) ??
+    asNumber(dataVar?.precio) ??
     asNumber(track?.precioInmueble) ??
     asNumber(track?.precio) ??
-    asNumber(html.match(PRECIO_VAR_RE)?.[1]);
+    asNumber(html.match(PRECIO_VAR_RE)?.[1]) ??
+    priceFromPisosTitle(title);
   if (price === undefined) {
     throw new Error(`pisos: listing ${resolvedId} has no resolvable price`);
   }
 
-  const operationRaw = typeof track?.tipoOperacion === 'string' ? track.tipoOperacion : '';
+  const operationRaw = meta('tipoOperacion');
   const operation: 'rent' | 'sale' =
     operationRaw.includes('venta') || url.includes('/comprar/') ? 'sale' : 'rent';
 
-  const subtype = typeof track?.subTipoInmueble === 'string' ? track.subTipoInmueble : '';
+  const subtype = meta('subTipoInmueble');
   const types = ['Residence'];
   if (subtype.includes('piso') || subtype.includes('apartamento')) types.push('Apartment');
   if (subtype.includes('chalet') || subtype.includes('casa')) types.push('House');
@@ -410,7 +486,11 @@ export function parsePisosDetail(html: string, url: string): PisosRaw {
   const ld = extractEsSchemaListings(html)[0];
   const geo = readPisosAscendingGeo(html);
   const mapCoords = readPisosLocationMapCoordinates(html);
-  const city = geo.municipality ?? ld?.address?.city ?? geo.province ?? '';
+  // The ascending-geo breadcrumb sometimes renders the municipality as a
+  // `descending-geo` picker with no named row (only province/comarca ascend), so
+  // fall back to the `<title>` municipality before the province.
+  const city =
+    geo.municipality ?? municipalityFromPisosTitle(title) ?? ld?.address?.city ?? geo.province ?? '';
   if (!city) {
     throw new Error(`pisos: listing ${resolvedId} has no resolvable city`);
   }
@@ -449,7 +529,7 @@ export function parsePisosDetail(html: string, url: string): PisosRaw {
     typeof dataVar?.telefono === 'string' && dataVar.telefono.trim()
       ? dataVar.telefono.trim()
       : undefined;
-  const seller = typeof track?.tipoVendedor === 'string' ? track.tipoVendedor : '';
+  const seller = meta('tipoVendedor');
   const contact: NormalizedListingContact | undefined = phone
     ? {
         phone,
