@@ -14,7 +14,7 @@
 
 require('dotenv').config();
 
-import { Queue, Worker, type Job, type Queue as BullQueue } from 'bullmq';
+import { Queue, Worker, UnrecoverableError, type Job, type Queue as BullQueue } from 'bullmq';
 import {
   createDefaultRegistry,
   createListingFetchRuntimeFromEnv,
@@ -40,6 +40,7 @@ import {
   QUEUE_NAMES,
   discoverJobId,
   fetchJobId,
+  fetchPriorityFor,
   parseRedisConnection,
   type DiscoverJobData,
   type FetchJobData,
@@ -64,19 +65,6 @@ const FETCH_CONCURRENCY = parseInt(process.env.LISTING_FETCH_CONCURRENCY || '6',
  * scopes serialise there while HTTP-first scopes proceed.
  */
 const DISCOVER_CONCURRENCY = parseInt(process.env.LISTING_DISCOVER_CONCURRENCY || '3', 10);
-
-/**
- * Per-city ES portals emit thousands of fetch jobs per pass. Give their fetch a
- * LOWER priority so the handful of jobs from a smaller provider (immobilienscout24,
- * mercadolibre, otodom, …) isn't stuck behind that backlog — every provider makes
- * progress instead of the big three starving the rest. BullMQ: lower number = higher
- * priority; both are >0 so neither falls into the unprioritised (top) lane.
- */
-const HIGH_VOLUME_PROVIDERS = new Set(['fotocasa', 'habitaclia', 'pisos', 'idealista']);
-const FETCH_PRIORITY_HIGH = 10;
-const FETCH_PRIORITY_LOW = 100;
-const fetchPriorityFor = (provider: string): number =>
-  HIGH_VOLUME_PROVIDERS.has(provider) ? FETCH_PRIORITY_LOW : FETCH_PRIORITY_HIGH;
 
 /** Discover jobs may hold a browser session across many cities — match worker lockDuration. */
 const DISCOVER_LOCK_MS = 600_000;
@@ -106,6 +94,13 @@ async function expireExternalListing(source: string, sourceId: string, reason: s
 
 /** Fetch + normalize a single listing ref and ingest the result. */
 async function processFetchRef(ref: ExternalListingRef): Promise<void> {
+  if (!registry.has(ref.provider)) {
+    // A queued job for a provider that is no longer registered (disabled via env,
+    // renamed, or removed) can never succeed. Fail it permanently instead of
+    // burning all 3 attempts + exponential backoff — that churn produced
+    // thousands of pointless "No provider registered" retries in prod.
+    throw new UnrecoverableError(`No provider registered for id "${ref.provider}"`);
+  }
   const provider = registry.get(ref.provider);
   try {
     const raw = await provider.fetch(ref, { runtime });
@@ -151,6 +146,9 @@ async function processFetchRef(ref: ExternalListingRef): Promise<void> {
 
 /** Enumerate a discover job's refs (BullMQ path enqueues; inline path ingests). */
 async function collectDiscoverRefs(data: DiscoverJobData): Promise<ExternalListingRef[]> {
+  if (!registry.has(data.provider)) {
+    throw new UnrecoverableError(`No provider registered for id "${data.provider}"`);
+  }
   const provider = registry.get(data.provider);
   const refs: ExternalListingRef[] = [];
   for await (const ref of provider.discover({
@@ -361,7 +359,11 @@ async function startBullMq(): Promise<() => Promise<void>> {
         city: job.data.city,
       });
       const refs = await collectDiscoverRefs(job.data);
-      for (const ref of refs) {
+      // `rank` is the ref's 0-based position in THIS discover batch. It restarts
+      // at 0 every pass, so every provider's rank-0 job shares the lowest
+      // priority in its tier and BullMQ interleaves providers round-robin rather
+      // than draining one provider's whole backlog first. See fetchPriorityFor.
+      for (const [rank, ref] of refs.entries()) {
         const jobId = fetchJobId(ref);
         const existingFetch = await fetchQueue.getJob(jobId);
         if (existingFetch) {
@@ -372,7 +374,7 @@ async function startBullMq(): Promise<() => Promise<void>> {
         }
         await fetchQueue.add(QUEUE_NAMES.fetch, { ref }, {
           jobId,
-          priority: fetchPriorityFor(ref.provider),
+          priority: fetchPriorityFor(ref.provider, rank),
           attempts: 3,
           backoff: { type: 'exponential', delay: 60_000 },
         });
