@@ -79,8 +79,15 @@ describe('ImmowebProvider (BE)', () => {
     expect(listing.longTermRent?.monthlyAmount).toBe(1250);
     expect(listing.contact?.phone).toContain('3224505656');
     expect(listing.squareFootage).toBe(62);
-    expect(listing.bathrooms).toBe(1);
+    // bathroomCount (1) + showerRoomCount (1)
+    expect(listing.bathrooms).toBe(2);
+    // constructionYear lives on property.building, not the unit
     expect(listing.yearBuilt).toBe(1965);
+    // amenities built from the true `has*` flags, mapped to canonical slugs
+    expect(listing.amenities).toBeDefined();
+    expect(listing.amenities).toEqual(
+      expect.arrayContaining(['elevator', 'terrace', 'garden', 'storage', 'laundry', 'internet']),
+    );
     expect(listing.hasElevator).toBe(true);
     expect(listing.hasGarden).toBe(true);
     expect(listing.hasBalcony).toBe(true);
