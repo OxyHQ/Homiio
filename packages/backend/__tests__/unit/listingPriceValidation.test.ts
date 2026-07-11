@@ -5,6 +5,7 @@ import {
   validateOfferingPrices,
   validateNormalizedListing,
   ListingValidationError,
+  DEFAULT_MAX_REMOTE_IMAGES,
 } from '@homiio/listing-providers';
 import { OfferingType, PropertyType } from '@homiio/shared-types';
 import type { NormalizedListing } from '@homiio/shared-types';
@@ -79,13 +80,15 @@ describe('validateNormalizedListing', () => {
   });
 
   it('truncates remoteImages to the cap instead of rejecting', () => {
-    const images = Array.from({ length: 13 }, (_, index) => ({
+    const images = Array.from({ length: DEFAULT_MAX_REMOTE_IMAGES + 1 }, (_, index) => ({
       url: `https://example.com/${index}.jpg`,
     }));
     const listing = { ...baseListing, remoteImages: images };
     expect(() => validateNormalizedListing(listing)).not.toThrow();
-    expect(listing.remoteImages).toHaveLength(12);
+    expect(listing.remoteImages).toHaveLength(DEFAULT_MAX_REMOTE_IMAGES);
     expect(listing.remoteImages[0]?.url).toBe('https://example.com/0.jpg');
-    expect(listing.remoteImages[11]?.url).toBe('https://example.com/11.jpg');
+    expect(listing.remoteImages[DEFAULT_MAX_REMOTE_IMAGES - 1]?.url).toBe(
+      `https://example.com/${DEFAULT_MAX_REMOTE_IMAGES - 1}.jpg`,
+    );
   });
 });
