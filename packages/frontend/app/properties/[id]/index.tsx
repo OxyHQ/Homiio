@@ -94,7 +94,7 @@ import { PropertyActionBar } from '@/components/property/PropertyActionBar';
 import { StickyPropertyHeader } from '@/components/property/StickyPropertyHeader';
 import { Section, SECTION_GUTTER } from '@/components/property/Section';
 import { BookingCard } from '@/components/property/BookingCard';
-import { BarIconButton } from '@/components/ui/BarIconButton';
+import { IconButton } from '@/components/ui/IconButton';
 
 import { resolveBookingMode } from '@/utils/bookingMode';
 import { colors } from '@/styles/colors';
@@ -631,22 +631,25 @@ export default function PropertyDetailPage() {
               ? []
               : [
                   landlordOxyUserId ? (
-                    <BarIconButton
+                    <IconButton
                       key="profile"
                       icon="person-circle-outline"
+                      variant="ghost"
                       onPress={() => router.push(`/roommates/${landlordOxyUserId}`)}
                       accessibilityLabel="Open host profile"
                     />
                   ) : null,
-                  <BarIconButton
+                  <IconButton
                     key="share"
                     icon="share-outline"
+                    variant="ghost"
                     onPress={handleShare}
                     accessibilityLabel="Share property"
                   />,
-                  <BarIconButton
+                  <IconButton
                     key="viewings"
                     icon="calendar-outline"
+                    variant="ghost"
                     onPress={() => router.push('/viewings')}
                     accessibilityLabel="View bookings"
                     badge={
@@ -661,7 +664,7 @@ export default function PropertyDetailPage() {
                     <SaveButton
                       property={apiProperty as Property}
                       variant="heart"
-                      chrome="bar"
+                      chrome="ghost"
                       color={colors.COLOR_BLACK}
                       activeColor={colors.error}
                       showCount

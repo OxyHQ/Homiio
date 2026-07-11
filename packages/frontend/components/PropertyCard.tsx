@@ -471,21 +471,6 @@ export function PropertyCard({
         </View>
       )}
 
-      {/* External Source Badge — provenance (the upstream provider), a different
-          category from the property's own attributes, so it keeps its own dark
-          pill pinned bottom-right (clear of the top-left stack and the dots). */}
-      {!isGrid &&
-        property.isExternal &&
-        property.source &&
-        property.source !== 'internal' &&
-        variant !== 'compact' && (
-          <View style={styles.sourceBadge}>
-            <ThemedText style={styles.sourceBadgeText}>
-              {property.source.charAt(0).toUpperCase() + property.source.slice(1)}
-            </ThemedText>
-          </View>
-        )}
-
       {/* Custom Badge Content */}
       {badgeContent && <View style={styles.customBadge}>{badgeContent as React.ReactNode}</View>}
 
@@ -725,6 +710,7 @@ export function PropertyCard({
             isSaved={isPropertySavedState}
             size={variant === 'compact' ? 5 : 24}
             variant="heart"
+            chrome="overlay"
             color={colors.COLOR_BLACK}
             activeColor={colors.busy}
             style={styles.saveButton}
@@ -897,14 +883,13 @@ const styles = StyleSheet.create({
     left: 0,
     zIndex: 2,
   },
+  // Positioning only — the frosted-white chrome comes from `SaveButton`'s
+  // `chrome="overlay"` variant.
   saveButton: {
     position: 'absolute',
     top: spacing.sm,
     right: spacing.sm,
     zIndex: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 20,
-    padding: spacing.sm,
   },
   /**
    * The single photo-overlay chip stack. Absolutely pinned to the top-left at a
@@ -950,22 +935,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-  },
-  sourceBadge: {
-    position: 'absolute',
-    bottom: spacing.sm,
-    right: spacing.sm,
-    zIndex: 2,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    borderRadius: 12,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  sourceBadgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.white,
-    textTransform: 'capitalize',
   },
 
   // Note styles (shared)

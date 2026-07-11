@@ -1,44 +1,24 @@
 /**
- * SaveButton Component
- * 
- * A button component for saving/unsaving properties with React Query integration.
- * 
- * Features:
- * - Save/unsave properties with optimistic updates
- * - React Query integration for data management
- * - Loading states with spinner
- * - Optional count display (badge or inline)
- * - Heart and bookmark variants
- * - Folder organization support
- * 
- * Usage:
- * ```tsx
- * // Basic usage
- * <SaveButton property={propertyObject} />
- * 
- * // With count badge (default)
- * <SaveButton property={propertyObject} showCount={true} />
- * 
- * // With inline count (count displayed on button)
- * <SaveButton property={propertyObject} showCount={true} countDisplayMode="inline" />
- * 
- * // Custom styling
- * <SaveButton 
- *   property={propertyObject} 
- *   showCount={true}
- *   countDisplayMode="badge"
- *   countBadgeStyle={{ backgroundColor: colors.danger }}
- * />
- * ```
+ * SaveButton — save/unsave a property, with optimistic React Query updates.
+ *
+ * This is a STATEFUL COMPOSITION of the shared `IconButton` primitive: it owns
+ * all save logic (mutation, optimistic toggle, saved count, long-press → folder
+ * sheet) and renders an `IconButton` heart/bookmark for the chrome. The `chrome`
+ * prop is a passthrough to `IconButton`'s `variant`, so every Save site inherits
+ * the one shared button look:
+ *  - `'ghost'`   (default) — flat transparent circle for headers/bars.
+ *  - `'overlay'` — frosted-white circle for the on-photo card heart.
+ *  - `'filled'`  — brand-fill circle.
+ *
+ * The saved count still renders (binary 0/1): a corner badge (`countDisplayMode:
+ * 'badge'`, default) or inline beside the heart (`'inline'`).
  */
-
 import React, { useState, useContext } from 'react';
-import { TouchableOpacity, StyleSheet, ViewStyle, View, StyleProp } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { StyleSheet, ViewStyle, View, StyleProp } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
-import { shadowToken } from '@/styles/shadows';
-import { barIconButton, barIconSize } from '@/constants/styles';
-import { Loading } from '@oxyhq/bloom/loading';
+import { barIconSize, spacing } from '@/constants/styles';
+import { IconButton, type IconButtonVariant } from '@/components/ui/IconButton';
 import { SaveToFolderBottomSheet } from './SaveToFolderBottomSheet';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { Property } from '@homiio/shared-types';
@@ -46,14 +26,14 @@ import { getPropertyTitle } from '@/utils/propertyUtils';
 import { ThemedText } from '@/components/ThemedText';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 
-
 interface SaveButtonProps {
   isSaved?: boolean; // Made optional since we'll determine this from React Query
   onPress?: () => void;
   onLongPress?: () => void;
   size?: number;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   disabled?: boolean;
+  /** Glyph shape. */
   variant?: 'heart' | 'bookmark';
   color?: string;
   activeColor?: string;
@@ -65,26 +45,23 @@ interface SaveButtonProps {
   countBadgeStyle?: StyleProp<ViewStyle>;
   countDisplayMode?: 'badge' | 'inline';
   /**
-   * Chrome variant. `'default'` keeps the cream-filled, soft-shadowed pill used
-   * as a standalone control. `'bar'` renders the SAME flat, transparent circular
-   * chrome as `BarIconButton` (shared `barIconButton` token, heart at
-   * `barIconSize`, no background/shadow) so it sits inside a header/bar next to
-   * the other bar buttons. Save LOGIC is identical in both. NOTE: the on-card
-   * frosted-white overlay is a separate context — it overrides chrome via `style`
-   * and must NOT use `'bar'`.
+   * Chrome variant — passthrough to the shared `IconButton`. `'ghost'` (default)
+   * for headers/bars, `'overlay'` for the on-photo card heart, `'filled'` for a
+   * brand-fill button. The old cream-filled/shadowed chrome is gone; the on-photo
+   * frosted-white look is `'overlay'`.
    */
-  chrome?: 'default' | 'bar';
+  chrome?: IconButtonVariant;
 }
 
 export function SaveButton({
   isSaved: propIsSaved,
   onPress,
   onLongPress,
-  size = 24,
+  size,
   style,
   disabled = false,
   variant = 'heart',
-  color = colors.border,
+  color = colors.COLOR_BLACK,
   activeColor = colors.error,
   showLoading = true,
   isLoading = false,
@@ -93,14 +70,15 @@ export function SaveButton({
   showCount = false,
   countBadgeStyle,
   countDisplayMode = 'badge',
-  chrome = 'default',
+  chrome = 'ghost',
 }: SaveButtonProps) {
+  const { t } = useTranslation();
   const [isPressed, setIsPressed] = useState(false);
   const bottomSheetContext = useContext(BottomSheetContext);
-  // In `'bar'` chrome the heart matches the shared bar icon size; otherwise it
-  // scales with the caller's `size`.
-  const isBar = chrome === 'bar';
-  const sizeAll = isBar ? barIconSize : Math.max(10, size * 1);
+  // Ghost (header/bar) hearts match the shared bar glyph size; other chromes
+  // scale with the caller's `size` (default 24 for the roomier card heart).
+  const effectiveSize = size ?? (chrome === 'ghost' ? barIconSize : 24);
+  const sizeAll = Math.max(10, effectiveSize);
 
   // Use SavedPropertiesContext for all state management
   const {
@@ -108,7 +86,7 @@ export function SaveButton({
     unsaveProperty,
     isPropertySaved,
     isPropertySaving,
-    isInitialized
+    isInitialized,
   } = useSavedPropertiesContext();
 
   // Determine property ID
@@ -127,53 +105,24 @@ export function SaveButton({
       : initialSavedState
     : initialSavedState;
 
-  // For individual property buttons, we should not display a global count of ALL saved properties
-  // Each button represents the save status of ONE property only
-  // The count (if shown) should represent this specific property's save status:
-  // - 0 if not saved by current user
-  // - 1 if saved by current user  
-  // - Or could represent total saves by all users for social features (not implemented)
-  // For now, we show simple binary status: saved (1) or not saved (0)
+  // Binary status: saved (1) or not saved (0). Kept for the optional count.
   const savedCount = isSaved ? 1 : 0;
-
-
 
   // Extract propertyTitle from property object
   const propertyTitle = property ? getPropertyTitle(property) : '';
 
-  const getIconName = () => {
-    if (variant === 'heart') {
-      return isSaved ? 'heart' : 'heart-outline';
-    } else {
-      return isSaved ? 'bookmark' : 'bookmark-outline';
-    }
-  };
+  const iconName =
+    variant === 'heart'
+      ? isSaved
+        ? 'heart'
+        : 'heart-outline'
+      : isSaved
+        ? 'bookmark'
+        : 'bookmark-outline';
 
-  const getIconColor = () => {
-    return isSaved ? activeColor : color;
-  };
-
-  const renderInlineCount = () => {
-    if (showCount && countDisplayMode === 'inline' && savedCount > 0) {
-      return (
-        <View>
-          <ThemedText
-            style={{
-              color: isSaved ? activeColor : color,
-              fontSize: sizeAll,
-              fontWeight: 'bold',
-              textAlign: 'center',
-            }}
-          >
-            {savedCount > 99 ? '99+' : savedCount}
-          </ThemedText>
-        </View>
-      );
-    }
-    return null;
-  };
-
-  const isButtonDisabled = disabled || isLoading || isPressed || Boolean(propertyId && isPropertySaving(propertyId));
+  const isSaving = Boolean(propertyId && isPropertySaving(propertyId));
+  const loading = showLoading && (isLoading || isSaving);
+  const isButtonDisabled = disabled || isLoading || isPressed || isSaving;
 
   const handleInternalSave = async () => {
     if (!propertyId) return;
@@ -222,24 +171,26 @@ export function SaveButton({
     if (propertyId && propertyTitle && bottomSheetContext) {
       // If property is not saved, save it first, then open folder selection
       if (!isSaved) {
-        handleInternalSave().then(() => {
-          setIsPressed(false);
-          bottomSheetContext.openBottomSheet(
-            <SaveToFolderBottomSheet
-              propertyId={propertyId}
-              propertyTitle={propertyTitle}
-              property={property}
-              onClose={() => {
-                bottomSheetContext?.closeBottomSheet();
-              }}
-              onSave={(_folderId: string | null) => {
-                // The bottom sheet will auto-close after saving
-              }}
-            />,
-          );
-        }).catch(() => {
-          setIsPressed(false);
-        });
+        handleInternalSave()
+          .then(() => {
+            setIsPressed(false);
+            bottomSheetContext.openBottomSheet(
+              <SaveToFolderBottomSheet
+                propertyId={propertyId}
+                propertyTitle={propertyTitle}
+                property={property}
+                onClose={() => {
+                  bottomSheetContext?.closeBottomSheet();
+                }}
+                onSave={(_folderId: string | null) => {
+                  // The bottom sheet will auto-close after saving
+                }}
+              />,
+            );
+          })
+          .catch(() => {
+            setIsPressed(false);
+          });
       } else {
         // Property is already saved, just open folder selection
         setIsPressed(false);
@@ -260,100 +211,84 @@ export function SaveButton({
     }
   };
 
-  return (
-    <TouchableOpacity
+  const accessibilityLabel = isSaved
+    ? t('saved.remove', 'Remove from saved')
+    : t('saved.add', 'Save');
+
+  // Corner-badge count (default display mode) — rendered in the button's badge
+  // slot as a small pill.
+  const badgeCount =
+    showCount && savedCount > 0 && countDisplayMode === 'badge' ? (
+      <View style={[styles.countBadge, { backgroundColor: activeColor }, countBadgeStyle]}>
+        <ThemedText style={styles.countBadgeText}>
+          {savedCount > 99 ? '99+' : savedCount}
+        </ThemedText>
+      </View>
+    ) : undefined;
+
+  const button = (
+    <IconButton
+      icon={iconName}
       onPress={handlePress}
       onLongPress={handleLongPress}
-      activeOpacity={0.7}
+      accessibilityLabel={accessibilityLabel}
       disabled={isButtonDisabled}
-      style={[
-        isBar ? barIconButton : styles.saveButton,
-        isButtonDisabled && styles.disabledButton,
-        style,
-        // `'bar'` chrome uses the shared circular button's own padding; only the
-        // default cream pill takes the size-derived padding.
-        isBar
-          ? null
-          : {
-              paddingHorizontal: sizeAll / (countDisplayMode === 'inline' ? 6 : 3),
-              paddingVertical: sizeAll / (countDisplayMode === 'inline' ? 2 : 3),
-            },
-      ]}
-    >
-      <View
-        style={{
-          width: sizeAll,
-          height: sizeAll,
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexDirection: showCount && countDisplayMode === 'inline' ? 'row' : 'column',
-          minWidth: showCount && countDisplayMode === 'inline' ? size + 20 : size,
-        }}
-      >
-        {showLoading && (isLoading || (propertyId && isPropertySaving(propertyId))) ? (
-          <Loading iconSize={sizeAll} color={getIconColor()} showText={false} />
-        ) : (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: sizeAll / 4 }}>
-            <Ionicons name={getIconName()} size={sizeAll} color={getIconColor()} />
-            {renderInlineCount()}
-          </View>
-        )}
-      </View>
-
-      {/* Saved Count Badge */}
-      {showCount && savedCount > 0 && countDisplayMode === 'badge' && (
-        <View
-          style={[
-            {
-              position: 'absolute',
-              top: -4,
-              right: -4,
-              backgroundColor: activeColor,
-              borderRadius: 10,
-              minWidth: 20,
-              height: 20,
-              alignItems: 'center',
-              justifyContent: 'center',
-              paddingHorizontal: 4,
-              borderWidth: 2,
-              borderColor: colors.primaryLight,
-            },
-            countBadgeStyle,
-          ]}
-        >
-          <ThemedText
-            style={{
-              color: colors.white,
-              fontSize: 10,
-              fontWeight: 'bold',
-              textAlign: 'center',
-            }}
-          >
-            {savedCount > 99 ? '99+' : savedCount}
-          </ThemedText>
-        </View>
-      )}
-    </TouchableOpacity>
+      variant={chrome}
+      size={sizeAll}
+      color={color}
+      active={isSaved}
+      activeColor={activeColor}
+      loading={loading}
+      badge={badgeCount}
+      // Inline mode positions the wrapper below; otherwise the caller's `style`
+      // (e.g. the card heart's absolute positioning) rides on the button itself.
+      style={countDisplayMode === 'inline' ? undefined : style}
+    />
   );
+
+  // Inline count — the number sits beside the button (the button keeps its own
+  // chrome; the wrapper takes the caller's positioning `style`).
+  if (showCount && savedCount > 0 && countDisplayMode === 'inline') {
+    return (
+      <View style={[styles.inlineWrap, style]}>
+        {button}
+        <ThemedText style={[styles.inlineCount, { fontSize: sizeAll, color: isSaved ? activeColor : color }]}>
+          {savedCount > 99 ? '99+' : savedCount}
+        </ThemedText>
+      </View>
+    );
+  }
+
+  return button;
 }
 
-const webShadow = shadowToken({
-  y: 2,
-  blur: 8,
-  color: colors.COLOR_BLACK,
-  opacity: 0.08,
-  elevation: 3,
-});
-
 const styles = StyleSheet.create({
-  saveButton: {
-    backgroundColor: colors.primaryLight,
-    borderRadius: 25,
-    ...webShadow,
+  countBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: colors.primaryLight,
   },
-  disabledButton: {
-    opacity: 0.6,
+  countBadgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  inlineWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  inlineCount: {
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
