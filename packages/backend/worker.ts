@@ -65,6 +65,19 @@ const FETCH_CONCURRENCY = parseInt(process.env.LISTING_FETCH_CONCURRENCY || '6',
  */
 const DISCOVER_CONCURRENCY = parseInt(process.env.LISTING_DISCOVER_CONCURRENCY || '3', 10);
 
+/**
+ * Per-city ES portals emit thousands of fetch jobs per pass. Give their fetch a
+ * LOWER priority so the handful of jobs from a smaller provider (immobilienscout24,
+ * mercadolibre, otodom, …) isn't stuck behind that backlog — every provider makes
+ * progress instead of the big three starving the rest. BullMQ: lower number = higher
+ * priority; both are >0 so neither falls into the unprioritised (top) lane.
+ */
+const HIGH_VOLUME_PROVIDERS = new Set(['fotocasa', 'habitaclia', 'pisos']);
+const FETCH_PRIORITY_HIGH = 10;
+const FETCH_PRIORITY_LOW = 100;
+const fetchPriorityFor = (provider: string): number =>
+  HIGH_VOLUME_PROVIDERS.has(provider) ? FETCH_PRIORITY_LOW : FETCH_PRIORITY_HIGH;
+
 /** Discover jobs may hold a browser session across many cities — match worker lockDuration. */
 const DISCOVER_LOCK_MS = 600_000;
 
@@ -359,6 +372,7 @@ async function startBullMq(): Promise<() => Promise<void>> {
         }
         await fetchQueue.add(QUEUE_NAMES.fetch, { ref }, {
           jobId,
+          priority: fetchPriorityFor(ref.provider),
           attempts: 3,
           backoff: { type: 'exponential', delay: 60_000 },
         });
