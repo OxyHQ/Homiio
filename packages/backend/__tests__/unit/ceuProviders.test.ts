@@ -18,6 +18,7 @@ import {
   parseOtodomDetail,
   parseOtodomSearch,
   OTODOM_FIXTURE_DETAIL_HTML,
+  OTODOM_FIXTURE_DETAIL_UNIFIED_HTML,
   OTODOM_FIXTURE_SEARCH_HTML,
   FundaProvider,
   parseFundaDetail,
@@ -104,6 +105,19 @@ describe('OtodomProvider (PL)', () => {
     expect(refs[0].sourceId).toBe('67155161');
   });
 
+  it('rebuilds canonical /pl/oferta/<slug> URLs from `[lang]/ad/` hrefs', () => {
+    const refs = parseOtodomSearch(OTODOM_FIXTURE_SEARCH_HTML);
+    // The portal `href` is a `[lang]/ad/<slug>` template whose path 404s; the
+    // discover ref must point at the canonical detail URL that actually resolves.
+    expect(refs[0].url).toBe(
+      'https://www.otodom.pl/pl/oferta/bez-prowizji-2-pokoje-ul-bunscha-ID4xM7L',
+    );
+    for (const ref of refs) {
+      expect(ref.url).toMatch(/^https:\/\/www\.otodom\.pl\/pl\/oferta\/[^/]+$/);
+      expect(ref.url).not.toContain('/ad/');
+    }
+  });
+
   it('normalizes detail with contact phones', () => {
     const payload = parseOtodomDetail(
       OTODOM_FIXTURE_DETAIL_HTML,
@@ -118,6 +132,27 @@ describe('OtodomProvider (PL)', () => {
     expect(listing.contact?.phone).toContain('48698089999');
     expect(listing.longTermRent?.monthlyAmount).toBe(2900);
     expect(listing.bedrooms).toBe(2);
+  });
+
+  it('resolves price from unifiedAd/characteristics (current markup, no ad.totalPrice)', () => {
+    const payload = parseOtodomDetail(
+      OTODOM_FIXTURE_DETAIL_UNIFIED_HTML,
+      'https://www.otodom.pl/pl/oferta/mieszkanie-2-pokojowe-skorosze-ID4CamF',
+    );
+    const listing = otodom.normalize({
+      ref: { provider: 'otodom', sourceId: payload.sourceId, url: payload.url },
+      payload,
+    });
+    expect(listing.source).toBe('otodom');
+    expect(listing.offerings).toContain(OfferingType.LONG_TERM_RENT);
+    expect(listing.longTermRent?.monthlyAmount).toBe(3650);
+    expect(listing.longTermRent?.currency).toBe('PLN');
+    expect(listing.bedrooms).toBe(2);
+    expect(listing.squareFootage).toBe(38);
+    expect(listing.address.city).toBe('Warszawa');
+    expect(listing.address.coordinates?.lat).toBeCloseTo(52.188404, 4);
+    expect(listing.remoteImages.length).toBe(2);
+    expect(listing.contact?.phone).toContain('48733806496');
   });
 });
 

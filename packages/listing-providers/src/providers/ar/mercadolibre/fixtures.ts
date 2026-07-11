@@ -66,8 +66,15 @@ export const MERCADOLIBRE_AR_FIXTURE_DETAIL_HTML = `<!DOCTYPE html><html><head>
 {"name":"Alquiler Departamento 2 Ambientes Belgrano","image":"https://http2.mlstatic.com/fixture-ml-ar-1.jpg","offers":{"price":650000,"availability":"https://schema.org/InStock","url":"https://departamento.mercadolibre.com.ar/MLA-3557653074-alquiler-departamento-2-ambientes-belgrano-_JM","@type":"Offer","priceCurrency":"ARS"},"sku":"MLA3557653074","@context":"https://schema.org","@type":"Product","productID":"MLA3557653074"}
 </script>
 </head><body>
-<script>var x={"domain_id":"MLA-APARTMENTS_FOR_RENT","city":"Capital Federal","neighborhood":"Belgrano","state":"Capital Federal","whatsapp_available":true};</script>
+<script>var seller={"id":"seller_profile","type":"seller_profile","state":"VISIBLE"};</script>
+<script>var vip={"domain_id":"MLA-APARTMENTS_FOR_RENT","description_type":"plain_text","city":"Capital Federal","neighborhood":"Belgrano","state":"Capital Federal","whatsapp_available":true};</script>
+<script>var specs={"attributes":[{"icon":{"id":"BED","color":"BLACK","size":"XXSMALL"},"label":{"text":"2 dorm.","color":"BLACK"}},{"icon":{"id":"BATHROOM","color":"BLACK","size":"XXSMALL"},"label":{"text":"1 baño","color":"BLACK"}},{"icon":{"id":"SCALE_UP","color":"BLACK","size":"XXSMALL"},"label":{"text":"55 m² totales","color":"BLACK"}}]};</script>
 <a href="tel:+5491155667788">Llamar</a>
+<div class="ui-pdp-gallery">
+<a class="gallery-image__link" href="#"><img src="https://http2.mlstatic.com/D_NQ_NP_621054-MLA109844438740_042026-F-null.webp"/></a>
+<a class="gallery-image__link" href="#"><img src="https://http2.mlstatic.com/D_NQ_NP_984582-MLA109844438786_042026-F-null.webp"/></a>
+<a class="gallery-image__link" href="#"><img src="https://http2.mlstatic.com/D_NQ_NP_919980-MLA109844438792_042026-F-null.webp"/></a>
+</div>
 <h1>Alquiler departamento</h1>
 </body></html>`;
 

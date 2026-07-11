@@ -144,10 +144,12 @@ export class ImmoweltProvider implements ListingProvider {
                 // skip
               }
             }
+            let newRefs = 0;
             for (const ref of refs) {
               if (yielded >= limit) return;
               if (seen.has(ref.sourceId)) continue;
               seen.add(ref.sourceId);
+              newRefs += 1;
               const card = byLegacy.get(ref.sourceId);
               yield {
                 provider: this.id,
@@ -157,7 +159,12 @@ export class ImmoweltProvider implements ListingProvider {
               };
               yielded += 1;
             }
-            if (refs.length === 0) break;
+            // The legacy `/liste/…?page=N` URL 301-redirects to a page-1
+            // snapshot that ignores the page param over plain HTTP, so a page
+            // that adds no new refs means pagination is exhausted — stop before
+            // re-fetching the same ~1 MB SERP. (Real pagination needs the
+            // DataDome-gated classified-search AJAX via a browser session.)
+            if (newRefs === 0) break;
             continue;
           } catch (error) {
             if (error instanceof ChallengeError) return;
@@ -166,13 +173,16 @@ export class ImmoweltProvider implements ListingProvider {
         }
 
         if (refs.length === 0) break;
+        let newRefs = 0;
         for (const ref of refs) {
           if (yielded >= limit) return;
           if (seen.has(ref.sourceId)) continue;
           seen.add(ref.sourceId);
+          newRefs += 1;
           yield { provider: this.id, sourceId: ref.sourceId, url: ref.url };
           yielded += 1;
         }
+        if (newRefs === 0) break;
       }
     }
   }

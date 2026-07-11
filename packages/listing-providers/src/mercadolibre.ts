@@ -93,7 +93,13 @@ function asNumber(value: unknown): number | undefined {
 
 export function isMercadolibreChallenge(body: string): boolean {
   if (body.trim().length < 128) return true;
-  return /suspicious-traffic|captcha|datadome|access denied|just a moment|PA_UNAUTHORIZED/i.test(
+  // Narrow, anti-bot-specific markers only. A bare `captcha` false-positives on
+  // every VALID VIP detail page — MercadoLibre embeds an invisible reCAPTCHA v3
+  // (`recaptchaSiteKey`, `ui-pdp-recaptcha-v3`) in the contact form — which would
+  // make the cold-HTTP ladder treat a perfectly good listing as a challenge.
+  // The real walls are DataDome (`datadome` / `captcha-delivery` / `px-captcha`)
+  // and MercadoLibre's own `account-verification` / `suspicious-traffic` gate.
+  return /suspicious-traffic|account-verification|captcha-delivery|px-captcha|datadome|access denied|just a moment|PA_UNAUTHORIZED/i.test(
     body,
   );
 }
@@ -306,18 +312,95 @@ export function parseMercadolibreSearch(
   return out;
 }
 
-/** Pull VIP-embedded city/neighborhood/domain from detail HTML. */
+/** Pull VIP-embedded city/neighborhood/state/domain from detail HTML. */
 function extractVipFields(html: string): {
   city?: string;
   neighborhood?: string;
   state?: string;
   domainId?: string;
 } {
-  const city = html.match(/"city"\s*:\s*"([^"]+)"/)?.[1];
-  const neighborhood = html.match(/"neighborhood"\s*:\s*"([^"]+)"/)?.[1];
-  const state = html.match(/"state"\s*:\s*"([^"]+)"/)?.[1];
+  // The VIP tracking block renders the location fields adjacently:
+  // `"city":"…","neighborhood":"…","state":"…"`. Anchoring `state` to that
+  // adjacency avoids the earlier `"state":"VISIBLE"` UI-component flag, which is
+  // the FIRST bare `"state"` on the page and previously polluted the region.
+  const loc = html.match(
+    /"city"\s*:\s*"([^"]+)"\s*,\s*"neighborhood"\s*:\s*"([^"]*)"\s*,\s*"state"\s*:\s*"([^"]+)"/,
+  );
+  const city = loc?.[1] ?? html.match(/"city"\s*:\s*"([^"]+)"/)?.[1];
+  const neighborhood = (loc?.[2]?.trim() || undefined) ?? html.match(/"neighborhood"\s*:\s*"([^"]+)"/)?.[1];
+  const state = loc?.[3];
   const domainId = html.match(/"domain_id"\s*:\s*"([^"]+)"/)?.[1];
   return { city, neighborhood, state, domainId };
+}
+
+/** First integer in a highlighted-specs label such as "2 dorm." / "1 baño". */
+function labelInt(text: string): number | undefined {
+  const match = text.match(/(\d+)/);
+  return match ? Number.parseInt(match[1], 10) : undefined;
+}
+
+/** First number in an area label such as "138 m² totales" / "30,5 m²". */
+function labelArea(text: string): number | undefined {
+  const match = text.match(/(\d+(?:[.,]\d+)?)/);
+  if (!match) return undefined;
+  const parsed = Number.parseFloat(match[1].replace(',', '.'));
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+/**
+ * Bedrooms / bathrooms / covered area from the VIP highlighted-specs block —
+ * the only reliable cold-HTTP source now that the public items API is
+ * OAuth-gated. It is the first `"attributes":[…]` array carrying a `BATHROOM`
+ * or `SCALE_UP` icon; each entry is an `{icon:{id},label:{text}}` pair
+ * (`BED → "2 dorm."/"2 rec."`, `BATHROOM → "1 baño"`, `SCALE_UP → "75 m² totales"`).
+ */
+function extractHighlightedSpecs(html: string): {
+  bedrooms?: number;
+  bathrooms?: number;
+  squareMeters?: number;
+} {
+  const marker = '"attributes":[';
+  let from = 0;
+  for (;;) {
+    const start = html.indexOf(marker, from);
+    if (start < 0) break;
+    const open = start + marker.length - 1;
+    const end = html.indexOf(']', open);
+    if (end < 0) break;
+    const block = html.slice(open, end + 1);
+    from = end + 1;
+    if (!/"id":"(?:BATHROOM|SCALE_UP|BED|BEDROOM)"/.test(block)) continue;
+
+    const result: { bedrooms?: number; bathrooms?: number; squareMeters?: number } = {};
+    const pairRe = /"id":"([A-Z_]+)"[^}]*\}\s*,\s*"label":\{"text":"([^"]+)"/g;
+    for (const match of block.matchAll(pairRe)) {
+      const icon = match[1];
+      const text = match[2];
+      if (/^BED(?:ROOM)?$/.test(icon) && result.bedrooms === undefined) {
+        result.bedrooms = labelInt(text);
+      } else if (icon === 'BATHROOM' && result.bathrooms === undefined) {
+        result.bathrooms = labelInt(text);
+      } else if (icon === 'SCALE_UP' && result.squareMeters === undefined) {
+        result.squareMeters = labelArea(text);
+      }
+    }
+    return result;
+  }
+  return {};
+}
+
+/** Main-gallery image URLs from the server-rendered `gallery-image__link` anchors. */
+function extractGalleryImages(html: string): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const re = /class="gallery-image__link"[^>]{0,400}>\s{0,20}<img[^>]{0,400}\bsrc="(https:\/\/[^"]{0,2000})"/g;
+  for (const match of html.matchAll(re)) {
+    const url = match[1];
+    if (seen.has(url)) continue;
+    seen.add(url);
+    out.push(url);
+  }
+  return out;
 }
 
 export function parseMercadolibreDetail(
@@ -373,23 +456,41 @@ export function parseMercadolibreDetail(
     throw new NonHousingListingError(config.provider, sourceId, `domain ${domainId}`);
   }
 
-  const images: string[] = [];
-  const imageVal = product.image;
-  if (typeof imageVal === 'string') images.push(imageVal);
-  else if (Array.isArray(imageVal)) {
-    for (const entry of imageVal) {
-      if (typeof entry === 'string') images.push(entry);
+  // Prefer the full server-rendered gallery; the JSON-LD `image` is a single URL.
+  const images: string[] = extractGalleryImages(html);
+  if (images.length === 0) {
+    const imageVal = product.image;
+    if (typeof imageVal === 'string') images.push(imageVal);
+    else if (Array.isArray(imageVal)) {
+      for (const entry of imageVal) {
+        if (typeof entry === 'string') images.push(entry);
+      }
     }
   }
+
+  // Operation from the domain id (`…_FOR_SALE` / `…_FOR_RENT`) when present, since
+  // the URL slug is not always decisive; fall back to the URL.
+  const operation: 'rent' | 'sale' = /FOR_SALE|_SALE\b|VENTA/i.test(domainId)
+    ? 'sale'
+    : /FOR_RENT|_RENT\b|ALQUILER|ARRIENDO|RENTA/i.test(domainId)
+      ? 'rent'
+      : /venta/i.test(url)
+        ? 'sale'
+        : 'rent';
+
+  const specs = extractHighlightedSpecs(html);
 
   const raw: MercadolibreRawListing = {
     sourceId,
     url: asString(product.url) ?? url,
     title: asString(product.name),
     description: asString(product.description),
-    operation: /venta/i.test(url) ? 'sale' : 'rent',
+    operation,
     price,
     currency: asString(offer?.priceCurrency) ?? config.defaultCurrency,
+    bedrooms: specs.bedrooms,
+    bathrooms: specs.bathrooms,
+    squareMeters: specs.squareMeters,
     address: {
       street: asString(address?.streetAddress),
       city,
@@ -406,6 +507,9 @@ export function parseMercadolibreDetail(
   assertHousingListing(config.provider, sourceId, {
     category: 'inmuebles',
     typology: domainId,
+    squareMeters: raw.squareMeters,
+    bedrooms: raw.bedrooms,
+    bathrooms: raw.bathrooms,
     hasAddressLike: true,
     hasPrice: true,
   });

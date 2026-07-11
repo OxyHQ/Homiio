@@ -44,6 +44,10 @@ describe('ImmobilienScout24Provider', () => {
     expect(listing.remoteImages.length).toBe(2);
     expect(listing.contact?.phone).toMatch(/493012345678/);
     expect(listing.contact?.agencyName).toMatch(/Mitte Homes/i);
+    // Description comes from the 'Objektbeschreibung' TEXT_AREA block (the real
+    // mobile expose shape), not the 'Lage' block that precedes it.
+    expect(listing.description).toMatch(/Balkon/i);
+    expect(listing.description).not.toMatch(/Rosenthaler Platz/i);
   });
 
   it('derives source id and public URL helpers', () => {

@@ -31,6 +31,8 @@ export const MERCADOLIBRE_CO_SITE: MercadolibreSiteConfig = {
   defaultCurrency: 'COP',
   inmueblesBaseUrl: MERCADOLIBRE_CO_BASE_URL,
   housingSlugs: MERCADOLIBRE_CO_HOUSING_SLUGS,
+  // Colombia rents are advertised as "arriendo" (not "alquiler").
+  rentSegment: 'arriendo',
   hrefRe:
     /href="(https:\/\/(?:departamento|casa|inmueble|ph|monoambiente)[^"]*mercadolibre\.com\.co\/MCO-?\d+[^"]*)"/i,
 };
