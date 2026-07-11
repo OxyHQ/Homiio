@@ -1073,6 +1073,7 @@ export {
 export {
   OTODOM_BASE_URL,
   OTODOM_FIXTURE_DETAIL_HTML,
+  OTODOM_FIXTURE_DETAIL_UNIFIED_HTML,
   OTODOM_FIXTURE_SEARCH_HTML,
 } from './providers/pl/otodom/fixtures';
 
