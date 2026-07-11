@@ -7,16 +7,16 @@ import { api } from '@/utils/api';
 import { API_URL } from '@/config';
 import { OxyServices } from '@oxyhq/core';
 import { ApiResponse } from '../types/api';
-import { 
-  ReviewDocument, 
-  CreateReviewRequest,
-  UpdateReviewRequest
+import {
+  ReviewDTO,
+  CreateReviewPayload,
+  UpdateReviewPayload
 } from '@homiio/shared-types';
 
 // Re-export shared types
-export type ReviewData = ReviewDocument;
-export type CreateReview = CreateReviewRequest;
-export type UpdateReview = UpdateReviewRequest;
+export type ReviewData = ReviewDTO;
+export type CreateReview = CreateReviewPayload;
+export type UpdateReview = UpdateReviewPayload;
 
 export interface ReviewStats {
   averageRating: number;
