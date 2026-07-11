@@ -85,8 +85,6 @@ const SEGMENT_FONT = 14;
  */
 const COLUMN_PAD_X_WIDE = spacing.lg;
 const COLUMN_PAD_X_NARROW = spacing.md;
-const COLUMN_FIRST_PAD_LEFT_WIDE = spacing.xl;
-const COLUMN_FIRST_PAD_LEFT_NARROW = spacing.lg;
 
 /** Single-line (compact) pill leading search-icon size. */
 const COMPACT_ICON_SIZE = 16;
@@ -186,7 +184,6 @@ const PillColumn: React.FC<PillColumnProps> = ({
         styles.column,
         isNarrow && styles.columnNarrow,
         isFirst && styles.columnFirst,
-        isFirst && isNarrow && styles.columnFirstNarrow,
         pressed && styles.columnPressed,
       ]}
     >
@@ -500,6 +497,11 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     height: '100%',
+    // Center the one-line segment vertically. The Text keeps the default
+    // cross-axis stretch (full segment width) so `textAlign: 'center'` centers
+    // it horizontally while `numberOfLines`/`ellipsizeMode` can still tail-
+    // truncate a long value — an `alignItems: 'center'` here would shrink the
+    // Text to content width and defeat that truncation.
     justifyContent: 'center',
     paddingHorizontal: COLUMN_PAD_X_WIDE,
   },
@@ -508,29 +510,30 @@ const styles = StyleSheet.create({
     // the full-size button on a phone. Height/type/divider are unchanged.
     paddingHorizontal: COLUMN_PAD_X_NARROW,
   },
+  // The first segment keeps the rounded-left corners but the SAME symmetric
+  // horizontal padding as the others (no extra left inset) so its centered text
+  // lines up with segments 2 and 3.
   columnFirst: {
-    paddingLeft: COLUMN_FIRST_PAD_LEFT_WIDE,
     borderTopLeftRadius: radius.pill,
     borderBottomLeftRadius: radius.pill,
-  },
-  columnFirstNarrow: {
-    paddingLeft: COLUMN_FIRST_PAD_LEFT_NARROW,
   },
   columnPressed: {
     backgroundColor: colors.COLOR_BLACK_LIGHT_8,
   },
-  // Filled segment: bold foreground value.
+  // Filled segment: bold foreground value, centered.
   columnValue: {
     fontSize: SEGMENT_FONT,
     fontWeight: '600',
     color: colors.COLOR_BLACK,
     letterSpacing: tracker.wide,
+    textAlign: 'center',
   },
-  // Empty segment: muted-gray placeholder (Airbnb's `text-gray-400`).
+  // Empty segment: muted-gray placeholder (Airbnb's `text-gray-400`), centered.
   columnPlaceholder: {
     fontSize: SEGMENT_FONT,
     fontWeight: '400',
     color: colors.COLOR_BLACK_LIGHT_4,
+    textAlign: 'center',
   },
   divider: {
     width: hairline.width,
