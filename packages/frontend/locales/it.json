@@ -723,7 +723,7 @@
     "disableNotifications": "Disable notifications",
     "withFilters": "With filters",
     "error": {
-      "title": "Could not load homes"
+      "title": "Impossibile caricare gli immobili"
     },
     "enterSearchQuery": "Please enter a search query first",
     "deleteSearch": "Delete Search",
@@ -794,9 +794,10 @@
     },
     "header": {
       "geocoding": "Looking up location...",
-      "noResults": "No homes match this search",
-      "loading": "Searching homes...",
-      "count": "{{count}} homes"
+      "noResults": "Nessun immobile corrisponde a questa ricerca",
+      "loading": "Ricerca immobili...",
+      "count_one": "{{count}} immobile",
+      "count_other": "{{count}} immobili"
     },
     "recent": {
       "title": "Recent searches"
@@ -814,7 +815,7 @@
     "empty": {
       "action": "Edit search",
       "description": "Try widening your area or relaxing your filters.",
-      "title": "No homes match this search"
+      "title": "Nessun immobile corrisponde a questa ricerca"
     },
     "sort": {
       "title": "Ordina per",

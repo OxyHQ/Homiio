@@ -405,7 +405,7 @@
     "notificationsDescription": "Rep notificacions quan noves propietats coincideixin amb aquesta cerca",
     "withFilters": "Amb filtres",
     "error": {
-      "title": "Could not load homes"
+      "title": "No s'han pogut carregar les propietats"
     },
     "enterSearchQuery": "Si us plau introdueix una consulta de cerca primer",
     "deleteSearch": "Eliminar Cerca",
@@ -647,9 +647,10 @@
     },
     "header": {
       "geocoding": "Looking up location...",
-      "noResults": "No homes match this search",
-      "loading": "Searching homes...",
-      "count": "{{count}} homes"
+      "noResults": "Cap propietat coincideix amb aquesta cerca",
+      "loading": "Cercant propietats...",
+      "count_one": "{{count}} propietat",
+      "count_other": "{{count}} propietats"
     },
     "recent": {
       "title": "Recent searches"
@@ -667,7 +668,7 @@
     "empty": {
       "action": "Edit search",
       "description": "Try widening your area or relaxing your filters.",
-      "title": "No homes match this search"
+      "title": "Cap propietat coincideix amb aquesta cerca"
     },
     "sort": {
       "title": "Ordenar per",
