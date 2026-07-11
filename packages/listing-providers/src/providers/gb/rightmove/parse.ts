@@ -254,7 +254,7 @@ function squareMetersFromDisplaySize(prop: Record<string, unknown>): number | un
   if (!display) return undefined;
   const match = display
     .replace(/,/g, '')
-    .match(/(\d+(?:\.\d+)?)\s*(sq\.?\s*m|sqm|square\s*met|sq\.?\s*ft|sqft|square\s*f)/i);
+    .match(/(\d{1,7}(?:\.\d{1,3})?)\s{0,3}(sq\.?\s*m|sqm|square\s*met|sq\.?\s*ft|sqft|square\s*f)/i);
   if (!match?.[1] || !match[2]) return undefined;
   const value = Number.parseFloat(match[1]);
   if (!Number.isFinite(value) || value <= 0) return undefined;

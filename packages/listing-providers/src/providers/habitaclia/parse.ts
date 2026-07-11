@@ -342,7 +342,7 @@ function parseFloorLevel(html: string): number | undefined {
  */
 function parseYearBuilt(html: string): number | undefined {
   const year = asNumber(
-    firstMatch(html, /A[ñn]o\s+(?:de\s+)?construcci[óo]n\s*[:\s]\s*(\d{4})/i) ??
+    firstMatch(html, /A[ñn]o\s+(?:de\s+)?construcci[óo]n[\s:]{1,3}(\d{4})/i) ??
       firstMatch(html, /\bconstruid[oa]\s+en\s+(?:el\s+a[ñn]o\s+)?(\d{4})/i),
   );
   const maxYear = new Date().getFullYear() + 2;
@@ -428,7 +428,7 @@ export function parseHabitacliaDetailHtml(html: string, url: string): Habitaclia
     const label = match[1]?.trim();
     if (
       !label ||
-      /habitacion|baño|ba\u00F1o|m2|€\/m|planta\s+\d|construcci|antig[üu]edad|\d+\s*plazas?\s+de\s+(?:parking|garaje|aparcamiento)/i.test(
+      /habitacion|baño|ba\u00F1o|m2|€\/m|planta\s+\d|construcci|antig[üu]edad|\d{1,3}\s{0,3}plazas?\s+de\s+(?:parking|garaje|aparcamiento)/i.test(
         label,
       )
     )
