@@ -72,7 +72,7 @@ const DISCOVER_CONCURRENCY = parseInt(process.env.LISTING_DISCOVER_CONCURRENCY |
  * progress instead of the big three starving the rest. BullMQ: lower number = higher
  * priority; both are >0 so neither falls into the unprioritised (top) lane.
  */
-const HIGH_VOLUME_PROVIDERS = new Set(['fotocasa', 'habitaclia', 'pisos']);
+const HIGH_VOLUME_PROVIDERS = new Set(['fotocasa', 'habitaclia', 'pisos', 'idealista']);
 const FETCH_PRIORITY_HIGH = 10;
 const FETCH_PRIORITY_LOW = 100;
 const fetchPriorityFor = (provider: string): number =>
