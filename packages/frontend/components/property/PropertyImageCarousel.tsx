@@ -82,6 +82,12 @@ interface PropertyImageCarouselProps {
   aspectRatio: number;
   /** Corner radius of the media box, so each page clips to the card. */
   borderRadius: number;
+  /**
+   * Controlled zoom signal from the enclosing card — when the whole card is
+   * hovered (or pressed), the visible photo zooms inside its mask. Threaded down
+   * to each page's `ZoomableImage`, OR-ed with the page's own touch press.
+   */
+  imageActive?: boolean;
   /** Tap (not swipe) handler — keeps the card tappable to open the detail. */
   onPress?: () => void;
   /** Fires immediately before the press settles, used to prefetch detail data. */
@@ -114,6 +120,8 @@ interface CarouselPageProps {
    * this off and gates its mount on `containerWidth > 0`.
    */
   fillWhenUnmeasured?: boolean;
+  /** Card-level hover/press signal, OR-ed with this page's own touch press. */
+  imageActive?: boolean;
   onPress?: () => void;
   onPressIn?: () => void;
   onLongPress?: () => void;
@@ -126,8 +134,9 @@ interface CarouselPageProps {
  * React Native's responder system hands the gesture to the scroll view once it
  * travels horizontally, so the press only fires on a genuine tap.
  *
- * The photo zooms inside the page's rounded mask on hover (web, owned by
- * `ZoomableImage`) / press (native) — the Airbnb move; the card never scales.
+ * The photo zooms inside the page's rounded mask when the whole card is hovered
+ * (web, via `imageActive`) or the page is pressed (native) — the Airbnb move; the
+ * card never scales.
  *
  * Uses React Native's `Image` (not `expo-image`): `expo-image` fails to paint
  * remote photos on web here, leaving the page blank while the chrome renders
@@ -140,13 +149,15 @@ const CarouselPage: React.FC<CarouselPageProps> = ({
   width,
   height,
   fillWhenUnmeasured = false,
+  imageActive,
   onPress,
   onPressIn,
   onLongPress,
   accessibilityLabel,
 }) => {
-  // Local press state drives the native press-zoom (`ZoomableImage` owns web
-  // hover itself). Static-array style + state, never function-form `style`.
+  // Local press state drives the native press-zoom; the card's hover is fed in
+  // via `imageActive` (web). Static-array style + state, never function-form
+  // `style`. `ZoomableImage` is controlled here (the card owns hover).
   const [pressed, setPressed] = useState(false);
   return (
     <Pressable
@@ -166,7 +177,7 @@ const CarouselPage: React.FC<CarouselPageProps> = ({
           : { width, height },
       ]}
     >
-      <ZoomableImage active={pressed} style={styles.pageZoom}>
+      <ZoomableImage active={Boolean(imageActive) || pressed} style={styles.pageZoom}>
         <Image source={source} style={styles.image} resizeMode="cover" />
       </ZoomableImage>
     </Pressable>
@@ -273,6 +284,7 @@ export const PropertyImageCarousel: React.FC<PropertyImageCarouselProps> = ({
   coverIndex,
   aspectRatio,
   borderRadius,
+  imageActive,
   onPress,
   onPressIn,
   onLongPress,
@@ -366,13 +378,14 @@ export const PropertyImageCarousel: React.FC<PropertyImageCarouselProps> = ({
         source={item}
         width={containerWidth}
         height={pageHeight}
+        imageActive={imageActive}
         onPress={onPress}
         onPressIn={onPressIn}
         onLongPress={onLongPress}
         accessibilityLabel={accessibilityLabel}
       />
     ),
-    [containerWidth, pageHeight, onPress, onPressIn, onLongPress, accessibilityLabel],
+    [containerWidth, pageHeight, imageActive, onPress, onPressIn, onLongPress, accessibilityLabel],
   );
 
   const isMultiPage = sources.length > 1;
@@ -421,6 +434,7 @@ export const PropertyImageCarousel: React.FC<PropertyImageCarouselProps> = ({
           width={containerWidth}
           height={pageHeight}
           fillWhenUnmeasured
+          imageActive={imageActive}
           onPress={onPress}
           onPressIn={onPressIn}
           onLongPress={onLongPress}

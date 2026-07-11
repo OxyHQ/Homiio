@@ -10,6 +10,7 @@ import {
     RefreshControl,
     ScrollView,
     TextInput,
+    Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -34,6 +35,8 @@ interface RoomCardProps {
 
 const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
     const router = useRouter();
+    // Hover anywhere on the card zooms its photo (web). No card transform.
+    const [hovered, setHovered] = useState(false);
 
     const handlePress = () => {
         router.push(`/properties/${property._id}/`);
@@ -51,6 +54,12 @@ const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
     const capacityText = `Up to ${maxOccupants} ${maxOccupants === 1 ? 'guest' : 'guests'}`;
 
     return (
+        // Plain View hosts the web hover (TouchableOpacity doesn't type pointer
+        // events); hovering anywhere on the card zooms the photo. No card scale.
+        <View
+            onPointerEnter={Platform.OS === 'web' ? () => setHovered(true) : undefined}
+            onPointerLeave={Platform.OS === 'web' ? () => setHovered(false) : undefined}
+        >
         <TouchableOpacity
             style={styles.roomCard}
             onPress={handlePress}
@@ -59,9 +68,10 @@ const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
             {/* Room Image */}
             <View style={styles.imageContainer}>
                 {primaryImage ? (
-                    // The photo zooms inside its mask on hover; the card never
-                    // moves. The match-score badge is a sibling above the zoom.
-                    <ZoomableImage style={styles.roomImageFill}>
+                    // The photo zooms inside its mask on hover anywhere on the
+                    // card; the card never moves. The match-score badge is a
+                    // sibling above the zoom.
+                    <ZoomableImage active={hovered} style={styles.roomImageFill}>
                         <Image
                             source={{ uri: primaryImage }}
                             style={styles.roomImage}
@@ -128,6 +138,7 @@ const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
                 </View>
             </View>
         </TouchableOpacity>
+        </View>
     );
 });
 RoomCard.displayName = 'RoomCard';
