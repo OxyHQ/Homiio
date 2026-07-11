@@ -706,9 +706,14 @@ export function PropertyCard({
         // Only the vertical / grid geometry — `finalShowSaveButton` is false for
         // the horizontal thumbnail, so the heart never renders there.
         <View
+          // `pointerEvents:'none'` (NOT the RN-only `'box-none'`, which is an
+          // INVALID CSS `pointer-events` value that RN-Web silently drops → the
+          // full-photo overlay stays `auto` and swallows every hover/tap on the
+          // carousel, hiding the nav arrows). The save heart re-enables itself
+          // with `pointerEvents:'auto'` (valid CSS) so only it stays interactive.
           style={[
             styles.mediaOverlay,
-            { pointerEvents: 'box-none' },
+            { pointerEvents: 'none' },
             { left: 0, right: 0, aspectRatio: isGrid ? gridAspectRatio : 1 },
           ]}
         >
@@ -890,12 +895,14 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   // Positioning only — the frosted-white chrome comes from `SaveButton`'s
-  // `chrome="overlay"` variant.
+  // `chrome="overlay"` variant. `pointerEvents:'auto'` re-enables just the heart
+  // inside the `pointerEvents:'none'` media overlay (valid-CSS box-none).
   saveButton: {
     position: 'absolute',
     top: spacing.sm,
     right: spacing.sm,
     zIndex: 2,
+    pointerEvents: 'auto',
   },
   /**
    * The single photo-overlay chip stack. Absolutely pinned to the top-left at a
