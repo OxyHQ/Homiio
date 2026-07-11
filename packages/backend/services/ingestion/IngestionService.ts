@@ -448,7 +448,12 @@ export class IngestionService {
         city: address.city,
         fullQueryError: full.error,
       });
-      return { coordinates: centroid };
+      // Use the postal fallback directly rather than reverse-geocoding the
+      // centroid: the point is already the city center, so a reverse-geocoded
+      // postal would belong to the city center, not this listing — and, being a
+      // throttled, uncached-on-failure network call, it would re-introduce the
+      // very 1-listing/sec bottleneck this fallback exists to avoid.
+      return { coordinates: centroid, postalCode: EXTERNAL_POSTAL_FALLBACK };
     }
 
     throw new IngestionValidationError(
