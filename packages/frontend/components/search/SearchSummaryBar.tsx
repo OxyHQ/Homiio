@@ -58,33 +58,34 @@ const TYPE_I18N_KEYS: Record<PropertyType, string> = {
 };
 
 /**
- * 3-column pill geometry. A SINGLE size set drives every width: the pill
+ * Slim 3-column pill geometry. A SINGLE size set drives every width: the pill
  * height, the circular Bloom-primary search button, the hairline dividers, the
- * search icon, and the label/value type are identical on web and on a narrow
- * phone. The only width-dependent value is the per-column horizontal padding
- * (see `COLUMN_PAD_*` below): on a phone the columns sit a little tighter so
- * the three roomy columns plus the full-size button still fit ~360dp without
- * wrapping or pushing the button off-screen. Columns flex and truncate, so the
- * native pill reads as a narrower version of the web pill — same structure,
- * same emphasis — not a shrunken one.
+ * search icon, and the one-line segment type are identical on web and on a
+ * narrow phone. Each segment shows a SINGLE line — the current value if set,
+ * else a muted placeholder — so the pill stays short (Airbnb-slim) instead of
+ * stacking a label above a value. The only width-dependent value is the
+ * per-column horizontal padding (see `COLUMN_PAD_*` below): on a phone the
+ * columns sit a little tighter so the three segments plus the full-size button
+ * still fit ~360dp without wrapping or pushing the button off-screen. Columns
+ * flex and truncate, so the native pill reads as a narrower version of the web
+ * pill — same structure, same emphasis — not a shrunken one.
  */
-const PILL_HEIGHT = 66;
-const SEARCH_BUTTON_SIZE = 48;
-const DIVIDER_HEIGHT = 28;
-const SEARCH_ICON_SIZE = 20;
+const PILL_HEIGHT = 52;
+const SEARCH_BUTTON_SIZE = 40;
+const DIVIDER_HEIGHT = 24;
+const SEARCH_ICON_SIZE = 18;
 
-/** Column label/value type sizes — identical on every width. */
-const COLUMN_LABEL_FONT = 12;
-const COLUMN_VALUE_FONT = 13;
+/** One-line segment type size — identical on every width. */
+const SEGMENT_FONT = 14;
 
 /**
  * Per-column horizontal padding. The button keeps its full
  * `SEARCH_BUTTON_SIZE`; only this padding tightens on a phone so the three
  * columns shrink to make room. Web/tablet keep the roomy Airbnb spacing.
  */
-const COLUMN_PAD_X_WIDE = spacing.xl;
+const COLUMN_PAD_X_WIDE = spacing.lg;
 const COLUMN_PAD_X_NARROW = spacing.md;
-const COLUMN_FIRST_PAD_LEFT_WIDE = spacing['2xl'];
+const COLUMN_FIRST_PAD_LEFT_WIDE = spacing.xl;
 const COLUMN_FIRST_PAD_LEFT_NARROW = spacing.lg;
 
 /** Single-line (compact) pill leading search-icon size. */
@@ -139,12 +140,14 @@ interface SearchSummaryBarProps {
 }
 
 interface PillColumnProps {
-  label: string;
+  /** The single line of text: the current value, or a placeholder when empty. */
   value: string;
+  /** When true, `value` is a muted placeholder (nothing selected for this segment). */
+  isPlaceholder: boolean;
   isFirst?: boolean;
   /**
    * Tighten only this column's horizontal padding for a narrow phone so the
-   * three columns shrink to make room for the full-size button. Type sizes,
+   * three columns shrink to make room for the full-size button. Type size,
    * height, and the divider are unaffected.
    */
   isNarrow?: boolean;
@@ -153,20 +156,21 @@ interface PillColumnProps {
 }
 
 /**
- * A single tappable column inside the 3-column pill. Both the label and value
- * truncate to one line so a long place name or type label can never push the
- * other columns or the search button out of the pill on a narrow phone.
+ * A single tappable segment inside the slim 3-column pill. It renders ONE line —
+ * the current value in bold foreground, or a muted-gray placeholder when nothing
+ * is selected yet — truncated with a tail ellipsis so a long place name can
+ * never push the other segments or the search button out of the pill.
  */
 const PillColumn: React.FC<PillColumnProps> = ({
-  label,
   value,
+  isPlaceholder,
   isFirst = false,
   isNarrow = false,
   onPress,
   accessibilityLabel,
 }) => {
   // NativeWind's css-interop rewrites the `style` prop and does not support
-  // React Native's function form (`style={({ pressed }) => …}`) — the function
+  // React Native's function form (a `pressed`-arg style callback) — the function
   // is swallowed and the element renders with no style. Use a STATIC style
   // array (which css-interop merges correctly) and drive the pressed tint with
   // onPressIn/onPressOut state instead.
@@ -186,10 +190,11 @@ const PillColumn: React.FC<PillColumnProps> = ({
         pressed && styles.columnPressed,
       ]}
     >
-      <BloomText style={styles.columnLabel} numberOfLines={1} ellipsizeMode="tail">
-        {label}
-      </BloomText>
-      <BloomText style={styles.columnValue} numberOfLines={1} ellipsizeMode="tail">
+      <BloomText
+        style={isPlaceholder ? styles.columnPlaceholder : styles.columnValue}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
         {value}
       </BloomText>
     </Pressable>
@@ -284,18 +289,26 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
     return t('search.summary.typeCount', { count: query.propertyTypes.length });
   }, [query.propertyTypes, t]);
 
-  // Dates label for the wide pill's middle column (vacation only).
+  // Dates label for the slim pill's middle segment (vacation only). Falls back
+  // to the "Any week" placeholder when no range is picked.
   const datesLabel = useMemo(() => {
     if (query.dates?.start) {
       return query.dates.end
         ? `${query.dates.start} – ${query.dates.end}`
         : query.dates.start;
     }
-    if (isVacation) {
-      return t('search.summary.anyTime');
-    }
-    return t('search.summary.addDates');
-  }, [query.dates, isVacation, t]);
+    return t('search.summary.anyWeek');
+  }, [query.dates, t]);
+
+  // Guests label for the slim pill's last segment (vacation only). Falls back to
+  // the "Add guests" placeholder when no guest count is set.
+  const guestsLabel = useMemo(
+    () =>
+      query.guests && query.guests > 0
+        ? t('search.summary.guestCount', { count: query.guests })
+        : t('search.summary.addGuests'),
+    [query.guests, t],
+  );
 
   // Price label for the wide pill's middle column (long-term / buy / exchange).
   const priceLabel = useMemo(() => {
@@ -339,46 +352,63 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
     t,
   ]);
 
-  // --- Full mode (every width): Airbnb-style 3-column pill ---
+  // --- Full mode (every width): slim Airbnb-style 3-column pill ---
   if (!compact) {
-    // The pill, dividers, button, and type are identical on every width. The
-    // only phone adjustment is tighter per-column horizontal padding so the
-    // three columns flex down and leave room for the full-size button.
+    // The pill, dividers, button, and segment type are identical on every
+    // width; only the per-column horizontal padding tightens on a phone so the
+    // three segments flex down and leave room for the full-size button. Each
+    // segment shows ONE line: the current value, or a muted placeholder.
     const isNarrow = !isWide;
-    const whereColLabel =
-      t('searchBar.long.where');
-    const middleColLabel = isVacation
+
+    // Segment 1 — where (both modes).
+    const whereFilled = Boolean(query.location?.shortLabel);
+    const whereColLabel = t('searchBar.long.where');
+
+    // Segment 2 — vacation: dates ("Any week"); long-term: price ("Any price").
+    const midStep: SearchStep = isVacation ? 'dates' : 'price';
+    const midValue = isVacation ? datesLabel : priceLabel;
+    const midFilled = isVacation
+      ? Boolean(query.dates?.start)
+      : query.priceMin !== undefined || query.priceMax !== undefined;
+    const midColLabel = isVacation
       ? t('searchBar.vacation.when')
       : t('search.step.price.title');
-    const middleColValue = isVacation ? datesLabel : priceLabel;
-    const typeColLabel =
-      t('searchBar.long.propertyType');
+
+    // Segment 3 — vacation: guests ("Add guests"); long-term: type ("Any type").
+    const lastStep: SearchStep = isVacation ? 'guests' : 'type';
+    const lastValue = isVacation ? guestsLabel : typeLabel;
+    const lastFilled = isVacation
+      ? Boolean(query.guests && query.guests > 0)
+      : query.propertyTypes.length > 0;
+    const lastColLabel = isVacation
+      ? t('searchBar.vacation.who')
+      : t('searchBar.long.propertyType');
 
     return (
       <View style={[styles.pill3col, cardShadow.md]}>
         <PillColumn
           isFirst
           isNarrow={isNarrow}
-          label={whereColLabel}
           value={whereLabel}
+          isPlaceholder={!whereFilled}
           onPress={() => openColumn('where')}
           accessibilityLabel={`${whereColLabel}: ${whereLabel}`}
         />
         <View style={styles.divider} />
         <PillColumn
           isNarrow={isNarrow}
-          label={middleColLabel}
-          value={middleColValue}
-          onPress={() => openColumn(isVacation ? 'dates' : 'price')}
-          accessibilityLabel={`${middleColLabel}: ${middleColValue}`}
+          value={midValue}
+          isPlaceholder={!midFilled}
+          onPress={() => openColumn(midStep)}
+          accessibilityLabel={`${midColLabel}: ${midValue}`}
         />
         <View style={styles.divider} />
         <PillColumn
           isNarrow={isNarrow}
-          label={typeColLabel}
-          value={typeLabel}
-          onPress={() => openColumn('type')}
-          accessibilityLabel={`${typeColLabel}: ${typeLabel}`}
+          value={lastValue}
+          isPlaceholder={!lastFilled}
+          onPress={() => openColumn(lastStep)}
+          accessibilityLabel={`${lastColLabel}: ${lastValue}`}
         />
         <Pressable
           onPress={handlePress}
@@ -386,9 +416,13 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
           onPressOut={() => setSearchPressed(false)}
           accessibilityRole="button"
           accessibilityLabel={t('searchBar.search')}
+          // Bloom owns the circle color through NativeWind: `bg-primary` (brand
+          // yellow) with a `text-primary-foreground` (black) glyph — never a
+          // hardcoded StyleSheet color. See AGENTS.md §NativeWind theming.
+          className="bg-primary"
           style={[styles.searchButton, searchPressed && styles.searchButtonPressed]}
         >
-          <Ionicons name="search" size={SEARCH_ICON_SIZE} color={colors.primaryForeground} />
+          <Ionicons name="search" size={SEARCH_ICON_SIZE} className="text-primary-foreground" />
         </Pressable>
       </View>
     );
@@ -468,8 +502,6 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     paddingHorizontal: COLUMN_PAD_X_WIDE,
-    paddingVertical: spacing.md,
-    gap: spacing.xs,
   },
   columnNarrow: {
     // Tighter horizontal padding so the three columns shrink to leave room for
@@ -487,15 +519,18 @@ const styles = StyleSheet.create({
   columnPressed: {
     backgroundColor: colors.COLOR_BLACK_LIGHT_8,
   },
-  columnLabel: {
-    fontSize: COLUMN_LABEL_FONT,
-    fontWeight: '700',
+  // Filled segment: bold foreground value.
+  columnValue: {
+    fontSize: SEGMENT_FONT,
+    fontWeight: '600',
     color: colors.COLOR_BLACK,
     letterSpacing: tracker.wide,
   },
-  columnValue: {
-    fontSize: COLUMN_VALUE_FONT,
-    color: colors.COLOR_BLACK_LIGHT_3,
+  // Empty segment: muted-gray placeholder (Airbnb's `text-gray-400`).
+  columnPlaceholder: {
+    fontSize: SEGMENT_FONT,
+    fontWeight: '400',
+    color: colors.COLOR_BLACK_LIGHT_4,
   },
   divider: {
     width: hairline.width,
@@ -504,12 +539,12 @@ const styles = StyleSheet.create({
   },
   searchButton: {
     // Reserve the button's full width — it never shrinks, so the flexing
-    // columns give up space first and the button stays on-screen.
+    // columns give up space first and the button stays on-screen. The fill
+    // color comes from the `bg-primary` className (Bloom theme), not here.
     flexShrink: 0,
     width: SEARCH_BUTTON_SIZE,
     height: SEARCH_BUTTON_SIZE,
     borderRadius: SEARCH_BUTTON_SIZE / 2,
-    backgroundColor: colors.primaryColor,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: spacing.sm,

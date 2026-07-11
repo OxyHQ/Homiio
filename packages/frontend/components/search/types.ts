@@ -109,8 +109,11 @@ export interface SearchQuery {
   exchangeMode?: ExchangeMode;
 }
 
-/** The ordered steps the panel walks through (Dates only in short-term mode). */
-export type SearchStep = 'where' | 'type' | 'dates' | 'price';
+/**
+ * The ordered steps the panel walks through. `dates` and `guests` exist only in
+ * short-term (vacation) mode; long-term never mounts them.
+ */
+export type SearchStep = 'where' | 'type' | 'dates' | 'guests' | 'price';
 
 /**
  * The single top-level "what am I browsing for" selection the global mode
