@@ -128,7 +128,14 @@ export class HttpFetchRuntime implements FetchRuntime {
 
   private async request(url: string, init: FetchRuntimeInit | undefined): Promise<Response> {
     const timeoutMs = init?.timeoutMs ?? this.defaultTimeoutMs;
-    const requestFetch = await this.resolveFetch();
+    // Honour a per-request proxy country (per-market geo) the same way
+    // fetchHttp does, so fetchJson/fetchText providers get the right exit IP
+    // instead of the cached env-geo fetch. Falls back to the env geo.
+    const proxyCountry = init?.proxyCountry ?? proxyGeoCountryFromEnv();
+    const requestFetch =
+      proxyCountry && this.proxy
+        ? await createProxiedFetch(this.proxy, undefined, proxyCountry)
+        : await this.resolveFetch();
     return withTimeout(timeoutMs, init?.signal, async (signal) => {
       const response = await requestFetch(url, {
         signal,
@@ -221,6 +228,47 @@ export function createListingFetchRuntime(
       await managed?.close?.();
     },
   };
+}
+
+/**
+ * Wrap a runtime so every fetch/discover call DEFAULTS its residential-proxy
+ * exit country to `country` (per-market geo). Used by the worker to make each
+ * provider's traffic exit from its own market's country instead of the single
+ * global `LISTING_PROXY_GEO`.
+ *
+ * A provider that sets an explicit `proxyCountry` on a request still WINS — this
+ * only fills the gap where a provider leaves it unset (which otherwise falls
+ * back to the global env geo). Returns the runtime UNCHANGED when `country` is
+ * absent, so the per-market flag being off / an unmapped market is a strict
+ * no-op that preserves today's behaviour.
+ */
+export function withProxyCountry(runtime: FetchRuntime, country: string | undefined): FetchRuntime {
+  if (!country) return runtime;
+  const withCountry = (init?: FetchRuntimeInit): FetchRuntimeInit => ({
+    ...init,
+    proxyCountry: init?.proxyCountry ?? country,
+  });
+  const scoped: FetchRuntime = {
+    fetchHttp: (url, init) => runtime.fetchHttp(url, withCountry(init)),
+    fetchJson: (url, init) => runtime.fetchJson(url, withCountry(init)),
+    fetchText: (url, init) => runtime.fetchText(url, withCountry(init)),
+    loadFixture: (key) => runtime.loadFixture(key),
+  };
+  const { fetchViaBrowser, fetchViaManaged, openBrowserSession } = runtime;
+  if (fetchViaBrowser) {
+    scoped.fetchViaBrowser = (url, init) => fetchViaBrowser.call(runtime, url, withCountry(init));
+  }
+  if (fetchViaManaged) {
+    scoped.fetchViaManaged = (url, init) => fetchViaManaged.call(runtime, url, withCountry(init));
+  }
+  if (openBrowserSession) {
+    scoped.openBrowserSession = (options) =>
+      openBrowserSession.call(runtime, {
+        ...options,
+        proxyCountry: options.proxyCountry ?? country,
+      });
+  }
+  return scoped;
 }
 
 /** Read a positive integer env var, falling back when unset/invalid. */
