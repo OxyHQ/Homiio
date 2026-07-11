@@ -39,6 +39,7 @@ import { IngestionService, IngestionValidationError } from './services/ingestion
 import {
   QUEUE_NAMES,
   discoverJobId,
+  discoverPriorityFor,
   fetchJobId,
   fetchPriorityFor,
   parseRedisConnection,
@@ -173,8 +174,19 @@ function discoverCitiesForProvider(providerId: string): string[] | undefined {
   return undefined;
 }
 
+/**
+ * A discover scope plus its round-robin `rank` — the scope's per-provider index
+ * (city index for browser-heavy ES portals, else 0). {@link discoverPriorityFor}
+ * turns rank into a priority so every provider's city-0 runs before any
+ * provider's city-1.
+ */
+interface BootDiscoverScope {
+  data: DiscoverJobData;
+  rank: number;
+}
+
 /** The discover scopes to enqueue on boot: one per (provider, market), or per-city for browser-heavy portals. */
-function bootDiscoverJobs(): DiscoverJobData[] {
+function bootDiscoverJobs(): BootDiscoverScope[] {
   // One scope list per provider (per-city for browser-heavy portals, else market-wide).
   const perProvider = registry.all().map((provider) =>
     provider.markets.flatMap((market) => {
@@ -189,12 +201,15 @@ function bootDiscoverJobs(): DiscoverJobData[] {
   // high-scope portal (fotocasa/habitaclia = ~68 cities each) can no longer
   // monopolise the queue head — every provider gets a discover turn in the first
   // round, and consecutive jobs hit different portals (gentler on each rate limit).
-  const interleaved: DiscoverJobData[] = [];
+  // `i` is each scope's per-provider rank, which discoverPriorityFor uses so the
+  // FIFO interleave is also enforced by BullMQ priority (survives jobId dedup and
+  // recurring re-enqueue, which a plain FIFO order does not).
+  const interleaved: BootDiscoverScope[] = [];
   const maxLen = perProvider.reduce((max, list) => Math.max(max, list.length), 0);
   for (let i = 0; i < maxLen; i += 1) {
     for (const list of perProvider) {
       const scope = list[i];
-      if (scope) interleaved.push(scope);
+      if (scope) interleaved.push({ data: scope, rank: i });
     }
   }
   return interleaved;
@@ -203,7 +218,7 @@ function bootDiscoverJobs(): DiscoverJobData[] {
 /** Run the whole pipeline inline (no Redis): discover → fetch → ingest. */
 async function runInlinePass(): Promise<void> {
   logger.info('Running inline discovery pass (no REDIS_URL configured)');
-  for (const data of bootDiscoverJobs()) {
+  for (const { data } of bootDiscoverJobs()) {
     const refs = await collectDiscoverRefs(data);
     for (const ref of refs) {
       try {
@@ -405,7 +420,7 @@ async function startBullMq(): Promise<() => Promise<void>> {
 
   async function enqueueBootDiscovery(): Promise<void> {
     await logQueueCounts(discoverQueue, fetchQueue);
-    for (const data of bootDiscoverJobs()) {
+    for (const { data, rank } of bootDiscoverJobs()) {
       const jobId = discoverJobId(data);
       // Boot uses deterministic ids for dedup. Remove only a prior completed/failed
       // job so a redeploy actually re-runs discover (otherwise BullMQ keeps the
@@ -424,7 +439,14 @@ async function startBullMq(): Promise<() => Promise<void>> {
           await existing.remove();
         }
       }
-      await discoverQueue.add(QUEUE_NAMES.discover, data, { jobId });
+      // Round-robin priority so every provider's city-0 outranks any provider's
+      // city-1 — the ES per-city flood no longer starves the market-wide
+      // providers' 2-3 scopes. (New enqueues only; the stale priority-0 backlog
+      // is purged post-deploy.)
+      await discoverQueue.add(QUEUE_NAMES.discover, data, {
+        jobId,
+        priority: discoverPriorityFor(data.provider, rank),
+      });
     }
     logger.info('Enqueued boot discovery jobs');
   }
@@ -442,8 +464,9 @@ async function startBullMq(): Promise<() => Promise<void>> {
     const intervalMs = discoverIntervalHours * 60 * 60 * 1000;
     const recurringScopes = bootDiscoverJobs();
     void (async () => {
-      for (const data of recurringScopes) {
+      for (const { data, rank } of recurringScopes) {
         await discoverQueue.add(QUEUE_NAMES.discover, data, {
+          priority: discoverPriorityFor(data.provider, rank),
           repeat: { key: `repeat-${discoverJobId(data)}`, every: intervalMs },
         });
       }

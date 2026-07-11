@@ -12,6 +12,7 @@ import {
   readPisosImageUrls,
   PISOS_FIXTURE_DETAIL_HTML,
   PISOS_FIXTURE_DETAIL_VALLADOLID_HTML,
+  PISOS_FIXTURE_DETAIL_VTMVARS_HTML,
   PISOS_FIXTURE_DETAIL_IMAGES_HTML,
   PISOS_FIXTURE_DETAIL_IMAGES_EXPECTED,
   PISOS_FIXTURE_SEARCH_HTML,
@@ -138,6 +139,84 @@ describe('PisosProvider.normalize', () => {
       listing.remoteImages.some((image) => /\/(?:xl-wp|fch-wp|appswm-wp)\//.test(image.url)),
     ).toBe(false);
     expect(listing.remoteImages.some((image) => image.url.includes('/logos/'))).toBe(false);
+  });
+
+  it('resolves price from the vtmExtraVars blob and city from the title (live template)', () => {
+    // Real captured template that dropped in prod: the tracking payload moved
+    // into the `id="vtmExtraVars"` data-var blob (no `window.__pisosTrack`, no
+    // `var precio`), and the municipality renders as a `descending-geo` picker
+    // with no ascending named row. Price (1200, from vtmExtraVars) and city
+    // ("Picanya", from the <title>) come from the sources the parser ignored.
+    const payload = parsePisosDetail(
+      PISOS_FIXTURE_DETAIL_VTMVARS_HTML,
+      'https://www.pisos.com/alquilar/apartamento-picanya_centro_urbano-65071648575_100900/',
+    );
+    const listing = provider.normalize({
+      ref: { provider: 'pisos', sourceId: payload.sourceId, url: payload.url },
+      payload,
+    });
+
+    expect(listing.sourceId).toBe('65071648575.100900');
+    expect(listing.offerings).toEqual([OfferingType.LONG_TERM_RENT]);
+    expect(listing.longTermRent?.monthlyAmount).toBe(1200);
+    expect(listing.address.city).toBe('Picanya');
+    expect(listing.address.state).toBe('València');
+    expect(listing.address.coordinates).toEqual({ lat: 39.43443131, lng: -0.432955807 });
+    expect(listing.type).toBe(PropertyType.APARTMENT);
+    expect(listing.bedrooms).toBe(3);
+    expect(listing.bathrooms).toBe(2);
+    expect(listing.squareFootage).toBe(90);
+    expect(listing.furnishedStatus).toBe('furnished');
+    expect(listing.contact?.phone).toBe('961234567');
+    expect(listing.contact?.kind).toBe('agency');
+  });
+
+  it('recovers the city from the title when the breadcrumb is entirely absent', () => {
+    // Hardest prod "no resolvable city" case: an agency template with NO
+    // ascending-geo breadcrumb at all — only the <title> carries the municipality.
+    const navStart = PISOS_FIXTURE_DETAIL_VTMVARS_HTML.indexOf('<nav class="ascending-geo">');
+    const navEnd = PISOS_FIXTURE_DETAIL_VTMVARS_HTML.indexOf('</nav>') + '</nav>'.length;
+    const noBreadcrumb =
+      PISOS_FIXTURE_DETAIL_VTMVARS_HTML.slice(0, navStart) +
+      PISOS_FIXTURE_DETAIL_VTMVARS_HTML.slice(navEnd);
+
+    const payload = parsePisosDetail(
+      noBreadcrumb,
+      'https://www.pisos.com/alquilar/apartamento-picanya_centro_urbano-65071648575_100900/',
+    );
+    expect(payload.listing.address.city).toBe('Picanya');
+    expect(payload.listing.price).toBe(1200);
+  });
+
+  it('recovers the price from the title when the data-var blob omits it', () => {
+    // "no resolvable price" case: no __pisosTrack, no `var precio`, and the
+    // vtmExtraVars blob has an empty price — only the "por 1.200 €/mes" title
+    // clause carries it.
+    const noBlobPrice = PISOS_FIXTURE_DETAIL_VTMVARS_HTML.replace(
+      '"precioInmueble":"1200","precio":"1200","tipoVendedor"',
+      '"precioInmueble":"","precio":"","tipoVendedor"',
+    );
+    const payload = parsePisosDetail(
+      noBlobPrice,
+      'https://www.pisos.com/alquilar/apartamento-picanya_centro_urbano-65071648575_100900/',
+    );
+    expect(payload.listing.price).toBe(1200);
+    expect(payload.listing.address.city).toBe('Picanya');
+  });
+
+  it('does not mistake the operation word for a city in a location-less title', () => {
+    // "Piso en alquiler por 850 €/mes" leaves only "alquiler" after the last
+    // " en " — it must be rejected so the province (València) wins, never stored
+    // as a city called "alquiler".
+    const locationlessTitle = PISOS_FIXTURE_DETAIL_VTMVARS_HTML.replace(
+      'Apartamento en alquiler en Carrer de la Senyera en Picanya por 1.200 €/mes',
+      'Piso en alquiler por 850 €/mes',
+    );
+    const payload = parsePisosDetail(
+      locationlessTitle,
+      'https://www.pisos.com/alquilar/apartamento-picanya_centro_urbano-65071648575_100900/',
+    );
+    expect(payload.listing.address.city).toBe('València');
   });
 
   it('parses contact AJAX JSON', () => {
