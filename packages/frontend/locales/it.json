@@ -2284,7 +2284,8 @@
       "hostCalendar": "Calendario host",
       "hostReservations": "Prenotazioni host",
       "landlordApplications": "Casella candidature",
-      "insights": "Insights"
+      "insights": "Insights",
+      "evictions": "Sfratti"
     },
     "actions": {
       "addProperty": "Aggiungi Proprietà",
@@ -3513,5 +3514,148 @@
     "allowed": "Animali ammessi",
     "not_allowed": "Animali non ammessi",
     "case_by_case": "Animali caso per caso"
+  },
+  "evictions": {
+    "title": "Sfratti",
+    "subtitle": "Ci siamo per il quartiere. Segui gli sfratti e organizzati per fermarli.",
+    "eyebrow": "Bacheca di solidarietà",
+    "publishCta": "Pubblica",
+    "showMap": "Mappa",
+    "showList": "Elenco",
+    "loadError": "Impossibile caricare la bacheca degli sfratti",
+    "attend": "Ci sarò",
+    "attending": "Partecipo",
+    "attendeesCount_one": "{{count}} persona",
+    "attendeesCount_other": "{{count}} persone",
+    "filter": {
+      "upcoming": "In arrivo",
+      "stopped": "Fermati",
+      "postponed": "Rinviati",
+      "executed": "Eseguiti"
+    },
+    "status": {
+      "upcoming": "In arrivo",
+      "stopped": "Fermato!",
+      "postponed": "Rinviato",
+      "executed": "Eseguito",
+      "cancelled": "Annullato"
+    },
+    "empty": {
+      "title": "Ancora nessuno sfratto qui",
+      "subtitle": "Quando qualcuno segnala uno sfratto, appare qui così il quartiere può organizzarsi."
+    },
+    "detail": {
+      "title": "Sfratto",
+      "reportedBy": "Segnalato da",
+      "anonymous": "Una persona del quartiere",
+      "howToHelp": "Come aiutare",
+      "where": "Dove",
+      "timeline": "Aggiornamenti",
+      "comments": "Commenti",
+      "approximateNotice": "L'indirizzo esatto è nascosto: questo punto è approssimativo per proteggere la famiglia.",
+      "share": "Condividi",
+      "shareCopied": "Link copiato negli appunti",
+      "shareFailed": "Impossibile condividere",
+      "instructions": "Istruzioni",
+      "contactFailed": "Impossibile aprire il link",
+      "noContact": "Nessun contatto è stato condiviso per questo caso.",
+      "contact": {
+        "phone": "Chiama",
+        "whatsapp": "WhatsApp",
+        "telegram": "Telegram",
+        "email": "Email"
+      }
+    },
+    "owner": {
+      "title": "Gestisci il caso",
+      "edit": "Modifica caso",
+      "cancelCase": "Annulla caso"
+    },
+    "update": {
+      "messageLabel": "Aggiornamento",
+      "messagePlaceholder": "Racconta cosa sta succedendo…",
+      "newDateLabel": "Nuova data",
+      "newTimeLabel": "Nuova ora",
+      "newStatusLabel": "Cambia stato",
+      "post": "Pubblica aggiornamento",
+      "success": "Aggiornamento pubblicato",
+      "error": "Impossibile pubblicare l'aggiornamento"
+    },
+    "cancel": {
+      "confirmTitle": "Annullare questo caso?",
+      "confirmMessage": "Sarà contrassegnato come annullato e i partecipanti verranno avvisati.",
+      "confirm": "Annulla caso",
+      "success": "Caso annullato",
+      "error": "Impossibile annullare il caso"
+    },
+    "comments": {
+      "empty": "Ancora nessun commento. Inizia la conversazione.",
+      "placeholder": "Scrivi un commento…",
+      "send": "Invia",
+      "signInToComment": "Accedi per commentare",
+      "postError": "Impossibile pubblicare il commento",
+      "deleteTitle": "Eliminare il commento?",
+      "deleteMessage": "Questa azione non può essere annullata.",
+      "deleteError": "Impossibile eliminare il commento"
+    },
+    "report": {
+      "title": "Segnala questo caso",
+      "intro": "Segnala un caso che sembra falso, offensivo o inappropriato. Il nostro team controlla ogni segnalazione.",
+      "reason": {
+        "inaccurate": "Informazioni false",
+        "scam": "È falso",
+        "inappropriate": "Inappropriato",
+        "other": "Altro"
+      },
+      "details": "Dettagli (facoltativo)",
+      "detailsRequired": "Dettagli (obbligatorio)",
+      "detailsPlaceholder": "Dicci cosa non va…",
+      "submit": "Invia segnalazione",
+      "success": "Segnalazione inviata",
+      "error": "Impossibile inviare la segnalazione"
+    },
+    "form": {
+      "title": "Pubblica uno sfratto",
+      "editTitle": "Modifica caso",
+      "subtitle": "Dai al quartiere ciò che serve per presentarsi e aiutare.",
+      "whatSection": "Cosa succede",
+      "titleLabel": "Titolo",
+      "titlePlaceholder": "es. Sfratto in Via Sants 20",
+      "descriptionLabel": "Descrizione",
+      "descriptionPlaceholder": "Cosa sta succedendo e che tipo di supporto serve?",
+      "whereSection": "Dove",
+      "mapHint": "Tocca la mappa per posizionare un punto e compilare la zona.",
+      "labelLabel": "Posizione",
+      "labelPlaceholder": "Via o zona (senza numero interno)",
+      "cityLabel": "Città",
+      "cityPlaceholder": "es. Barcellona",
+      "approximateLabel": "Mostra solo la posizione approssimativa",
+      "approximateHint": "Arrotonda il punto così l'abitazione esatta non viene individuata.",
+      "whenSection": "Quando",
+      "dateLabel": "Data",
+      "timeLabel": "Ora",
+      "helpSection": "Come aiutare",
+      "instructionsLabel": "Istruzioni",
+      "instructionsPlaceholder": "es. Ritrovo alle 7, portare striscioni…",
+      "agencySection": "Agenzia o fondo (facoltativo)",
+      "agencyLabel": "Agenzia / proprietario",
+      "agencyPlaceholder": "es. Blackstone, Cerberus…",
+      "photoSection": "Foto (facoltativa)",
+      "photoAdd": "Aggiungi foto",
+      "photoChange": "Cambia foto",
+      "photoPermission": "È richiesto il permesso per la galleria",
+      "photoFailed": "Impossibile caricare la foto",
+      "titleRequired": "Aggiungi un titolo",
+      "descriptionRequired": "Aggiungi una descrizione",
+      "locationRequired": "Posiziona un punto sulla mappa",
+      "labelRequired": "Aggiungi un'etichetta di posizione",
+      "dateRequired": "Aggiungi una data e un’ora valide",
+      "invalidDate": "Questa data non è valida",
+      "publish": "Pubblica",
+      "saveChanges": "Salva le modifiche",
+      "createSuccess": "Caso pubblicato",
+      "updateSuccess": "Modifiche salvate",
+      "submitError": "Impossibile salvare il caso"
+    }
   }
 }

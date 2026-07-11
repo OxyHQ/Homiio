@@ -2288,7 +2288,8 @@
       "hostCalendar": "Calendari d'amfitrió",
       "hostReservations": "Reserves d'amfitrió",
       "landlordApplications": "Safata de sol·licituds",
-      "insights": "Insights"
+      "insights": "Insights",
+      "evictions": "Desnonaments"
     },
     "actions": {
       "addProperty": "Afegir Propietat",
@@ -3529,5 +3530,148 @@
     "allowed": "S'admeten mascotes",
     "not_allowed": "No s'admeten mascotes",
     "case_by_case": "Mascotes segons el cas"
+  },
+  "evictions": {
+    "title": "Desnonaments",
+    "subtitle": "Fes costat a les teves veïnes. Segueix els desnonaments i organitza't per aturar-los.",
+    "eyebrow": "Tauler de solidaritat",
+    "publishCta": "Publicar",
+    "showMap": "Mapa",
+    "showList": "Llista",
+    "loadError": "No s'ha pogut carregar el tauler de desnonaments",
+    "attend": "Hi aniré",
+    "attending": "Hi assisteixo",
+    "attendeesCount_one": "{{count}} veïna",
+    "attendeesCount_other": "{{count}} veïnes",
+    "filter": {
+      "upcoming": "Propers",
+      "stopped": "Aturats",
+      "postponed": "Ajornats",
+      "executed": "Executats"
+    },
+    "status": {
+      "upcoming": "Proper",
+      "stopped": "Aturat!",
+      "postponed": "Ajornat",
+      "executed": "Executat",
+      "cancelled": "Cancel·lat"
+    },
+    "empty": {
+      "title": "Encara no hi ha desnonaments aquí",
+      "subtitle": "Quan algú avisa d'un desnonament, apareix aquí perquè el barri pugui organitzar-se."
+    },
+    "detail": {
+      "title": "Desnonament",
+      "reportedBy": "Avisat per",
+      "anonymous": "Una veïna",
+      "howToHelp": "Com ajudar",
+      "where": "On",
+      "timeline": "Novetats",
+      "comments": "Comentaris",
+      "approximateNotice": "L'adreça exacta està amagada: aquest punt és aproximat per protegir la família.",
+      "share": "Comparteix",
+      "shareCopied": "Enllaç copiat al porta-retalls",
+      "shareFailed": "No s'ha pogut compartir",
+      "instructions": "Instruccions",
+      "contactFailed": "No s'ha pogut obrir l'enllaç",
+      "noContact": "No s'han compartit dades de contacte per a aquest cas.",
+      "contact": {
+        "phone": "Trucar",
+        "whatsapp": "WhatsApp",
+        "telegram": "Telegram",
+        "email": "Correu"
+      }
+    },
+    "owner": {
+      "title": "Gestiona el cas",
+      "edit": "Edita el cas",
+      "cancelCase": "Cancel·la el cas"
+    },
+    "update": {
+      "messageLabel": "Novetat",
+      "messagePlaceholder": "Explica què està passant…",
+      "newDateLabel": "Nova data",
+      "newTimeLabel": "Nova hora",
+      "newStatusLabel": "Canvia l'estat",
+      "post": "Publica la novetat",
+      "success": "Novetat publicada",
+      "error": "No s'ha pogut publicar la novetat"
+    },
+    "cancel": {
+      "confirmTitle": "Vols cancel·lar aquest cas?",
+      "confirmMessage": "Es marcarà com a cancel·lat i s'avisarà qui hi havia d'assistir.",
+      "confirm": "Cancel·la el cas",
+      "success": "Cas cancel·lat",
+      "error": "No s'ha pogut cancel·lar el cas"
+    },
+    "comments": {
+      "empty": "Encara no hi ha comentaris. Obre la conversa.",
+      "placeholder": "Escriu un comentari…",
+      "send": "Envia",
+      "signInToComment": "Inicia la sessió per comentar",
+      "postError": "No s'ha pogut publicar el comentari",
+      "deleteTitle": "Vols eliminar el comentari?",
+      "deleteMessage": "Aquesta acció no es pot desfer.",
+      "deleteError": "No s'ha pogut eliminar el comentari"
+    },
+    "report": {
+      "title": "Denuncia aquest cas",
+      "intro": "Avisa'ns si un cas sembla fals, abusiu o inapropiat. El nostre equip revisa cada denúncia.",
+      "reason": {
+        "inaccurate": "Informació falsa",
+        "scam": "És fals",
+        "inappropriate": "Inapropiat",
+        "other": "Altres"
+      },
+      "details": "Detalls (opcional)",
+      "detailsRequired": "Detalls (obligatori)",
+      "detailsPlaceholder": "Explica'ns què passa…",
+      "submit": "Envia la denúncia",
+      "success": "Denúncia enviada",
+      "error": "No s'ha pogut enviar la denúncia"
+    },
+    "form": {
+      "title": "Publica un desnonament",
+      "editTitle": "Edita el cas",
+      "subtitle": "Dona a les veïnes el que necessiten per presentar-se i ajudar.",
+      "whatSection": "Què passa",
+      "titleLabel": "Títol",
+      "titlePlaceholder": "p. ex. Desnonament al Carrer de Sants 20",
+      "descriptionLabel": "Descripció",
+      "descriptionPlaceholder": "Què està passant i quin suport cal?",
+      "whereSection": "On",
+      "mapHint": "Toca el mapa per posar un punt i emplenar la zona.",
+      "labelLabel": "Ubicació",
+      "labelPlaceholder": "Carrer o zona (sense número de pis)",
+      "cityLabel": "Ciutat",
+      "cityPlaceholder": "p. ex. Barcelona",
+      "approximateLabel": "Mostra només la ubicació aproximada",
+      "approximateHint": "Arrodoneix el punt per no assenyalar l'habitatge exacte.",
+      "whenSection": "Quan",
+      "dateLabel": "Data",
+      "timeLabel": "Hora",
+      "helpSection": "Com ajudar",
+      "instructionsLabel": "Instruccions",
+      "instructionsPlaceholder": "p. ex. Concentració a les 7h, porteu pancartes…",
+      "agencySection": "Agència o fons (opcional)",
+      "agencyLabel": "Agència / propietari",
+      "agencyPlaceholder": "p. ex. Blackstone, Cerberus…",
+      "photoSection": "Foto (opcional)",
+      "photoAdd": "Afegeix foto",
+      "photoChange": "Canvia la foto",
+      "photoPermission": "Cal permís per a la galeria",
+      "photoFailed": "No s'ha pogut pujar la foto",
+      "titleRequired": "Afegeix un títol",
+      "descriptionRequired": "Afegeix una descripció",
+      "locationRequired": "Posa un punt al mapa",
+      "labelRequired": "Afegeix una etiqueta d'ubicació",
+      "dateRequired": "Afegeix una data i hora vàlides",
+      "invalidDate": "Aquesta data no és vàlida",
+      "publish": "Publica",
+      "saveChanges": "Desa els canvis",
+      "createSuccess": "Cas publicat",
+      "updateSuccess": "Canvis desats",
+      "submitError": "No s'ha pogut desar el cas"
+    }
   }
 }

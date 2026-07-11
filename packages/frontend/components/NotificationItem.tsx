@@ -65,6 +65,21 @@ const TYPE_VISUALS: Record<string, TypeVisual> = {
     color: colors.textSecondary,
     surface: colors.mutedSubtle,
   },
+  eviction_update: {
+    icon: 'megaphone',
+    color: colors.danger,
+    surface: colors.dangerSubtle,
+  },
+  eviction_comment: {
+    icon: 'chatbubbles',
+    color: colors.primaryColor,
+    surface: colors.infoSubtle,
+  },
+  eviction_rsvp: {
+    icon: 'people',
+    color: colors.success,
+    surface: colors.successSubtle,
+  },
 };
 
 const DEFAULT_VISUAL: TypeVisual = {
