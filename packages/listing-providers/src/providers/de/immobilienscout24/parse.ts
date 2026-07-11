@@ -176,8 +176,13 @@ export function parseIs24Expose(body: string, fallbackUrl?: string): Is24RawList
     const type = asString(record.type);
     if (type === 'TITLE') {
       title = asString(record.title) ?? title;
-    } else if (type === 'DESCRIPTION') {
-      description = asString(record.text) ?? asString(record.description) ?? description;
+    } else if (type === 'TEXT_AREA') {
+      // The mobile expose splits free text into titled TEXT_AREA blocks
+      // ('Objektbeschreibung', 'Lage', 'Sonstiges'). Only the object
+      // description is a real listing description; keep the first one.
+      if (description === undefined && asString(record.title)?.toLowerCase() === 'objektbeschreibung') {
+        description = asString(record.text);
+      }
     } else if (type === 'TOP_ATTRIBUTES' || type === 'ATTRIBUTES') {
       attrs = attrMap(record.attributes);
     } else if (type === 'MAP') {

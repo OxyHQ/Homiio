@@ -64,6 +64,15 @@ export function isKleinanzeigenHousingCategory(categoryId: string | undefined): 
   return !!categoryId && KLEINANZEIGEN_HOUSING_CATEGORY_IDS.has(categoryId);
 }
 
+/** Housing category id → Kleinanzeigen SEO path segment (e.g. `s-wohnung-mieten`). */
+const CATEGORY_SEGMENTS: Readonly<Record<string, string>> = {
+  '203': 's-wohnung-mieten',
+  '205': 's-haus-mieten',
+  '208': 's-wohnung-kaufen',
+  '207': 's-haus-kaufen',
+  '199': 's-wg-zimmer',
+};
+
 export function kleinanzeigenHousingSearchUrl(
   city: string,
   page = 1,
@@ -74,18 +83,12 @@ export function kleinanzeigenHousingSearchUrl(
   }
   const slug = citySlugDe(city);
   const locationId = CITY_LOCATION_IDS[slug] ?? '0';
-  const path =
-    categoryId === '203'
-      ? `/s-wohnung-mieten/${slug}/c203l${locationId}`
-      : categoryId === '205'
-        ? `/s-haus-mieten/${slug}/c205l${locationId}`
-        : categoryId === '208'
-          ? `/s-wohnung-kaufen/${slug}/c208l${locationId}`
-          : categoryId === '207'
-            ? `/s-haus-kaufen/${slug}/c207l${locationId}`
-            : `/s-wg-zimmer/${slug}/c199l${locationId}`;
-  const base = `${KLEINANZEIGEN_BASE_URL}${path}`;
-  return page <= 1 ? base : `${base}/seite:${page}`;
+  const segment = CATEGORY_SEGMENTS[categoryId] ?? 's-wg-zimmer';
+  // Kleinanzeigen paginates with `seite:N` BETWEEN the city slug and the
+  // category code — appending it after the code drops the category filter and
+  // returns a site-wide (non-housing) page.
+  const pageSegment = page > 1 ? `/seite:${page}` : '';
+  return `${KLEINANZEIGEN_BASE_URL}/${segment}/${slug}${pageSegment}/c${categoryId}l${locationId}`;
 }
 
 export function kleinanzeigenSourceIdFromUrl(url: string): string | undefined {
@@ -123,6 +126,33 @@ export function parseKleinanzeigenSearch(html: string): KleinanzeigenSearchRef[]
   return refs;
 }
 
+/**
+ * Kleinanzeigen serves each ad photo from `img.kleinanzeigen.de` with a `rule`
+ * size suffix; the detail gallery lists them via `data-imgsrc`. `$_57.AUTO`
+ * is the largest variant (1200x1600), so every URL is normalized to it and
+ * deduped by base image id, with the `og:image` kept as the primary.
+ */
+const GALLERY_IMG_RE = /data-imgsrc=["'](https:\/\/img\.kleinanzeigen\.de\/[^"']+)["']/gi;
+const IMAGE_RULE_RE = /\?rule=\$_\d+\.[A-Za-z]+$/i;
+
+function largestImageVariant(url: string): string {
+  return url.replace(IMAGE_RULE_RE, '') + '?rule=$_57.AUTO';
+}
+
+function extractGalleryImages(html: string, ogImage: string | undefined): string[] {
+  const byBase = new Map<string, string>();
+  const add = (raw: string): void => {
+    const normalized = largestImageVariant(raw);
+    const base = normalized.split('?')[0] ?? normalized;
+    if (!byBase.has(base)) byBase.set(base, normalized);
+  };
+  if (ogImage) add(ogImage);
+  for (const match of html.matchAll(GALLERY_IMG_RE)) {
+    if (match[1]) add(match[1]);
+  }
+  return [...byBase.values()];
+}
+
 function detailValue(html: string, label: string): string | undefined {
   const re = new RegExp(
     `addetailslist--detail[^>]*>\\s*${label}\\s*<span[^>]*class=["']addetailslist--detail--value["'][^>]*>\\s*([^<]+)`,
@@ -151,8 +181,7 @@ export function parseKleinanzeigenDetail(html: string, url: string): Kleinanzeig
   const neighborhood = meta.get('og:locality');
   const region = meta.get('og:region');
   const city = region ?? neighborhood ?? '';
-  const image = meta.get('og:image');
-  const images = image ? [image] : [];
+  const images = extractGalleryImages(html, meta.get('og:image'));
 
   return {
     sourceId,
