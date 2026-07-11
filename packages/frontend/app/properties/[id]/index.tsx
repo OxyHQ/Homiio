@@ -94,10 +94,11 @@ import { PropertyActionBar } from '@/components/property/PropertyActionBar';
 import { StickyPropertyHeader } from '@/components/property/StickyPropertyHeader';
 import { Section, SECTION_GUTTER } from '@/components/property/Section';
 import { BookingCard } from '@/components/property/BookingCard';
+import { BarIconButton } from '@/components/ui/BarIconButton';
 
 import { resolveBookingMode } from '@/utils/bookingMode';
 import { colors } from '@/styles/colors';
-import { barIconButton, barIconSize, hairline, spacing } from '@/constants/styles';
+import { hairline, spacing } from '@/constants/styles';
 
 interface PropertyDetailViewModel {
   id: string;
@@ -630,49 +631,37 @@ export default function PropertyDetailPage() {
               ? []
               : [
                   landlordOxyUserId ? (
-                    <Pressable
+                    <BarIconButton
                       key="profile"
-                      style={barIconButton}
+                      icon="person-circle-outline"
                       onPress={() => router.push(`/roommates/${landlordOxyUserId}`)}
-                      accessibilityRole="button"
                       accessibilityLabel="Open host profile"
-                    >
-                      <Ionicons name="person-circle-outline" size={barIconSize} color={colors.COLOR_BLACK} />
-                    </Pressable>
+                    />
                   ) : null,
-                  <Pressable
+                  <BarIconButton
                     key="share"
-                    style={barIconButton}
+                    icon="share-outline"
                     onPress={handleShare}
-                    accessibilityRole="button"
                     accessibilityLabel="Share property"
-                  >
-                    <Ionicons name="share-outline" size={barIconSize} color={colors.COLOR_BLACK} />
-                  </Pressable>,
-                  <Pressable
+                  />,
+                  <BarIconButton
                     key="viewings"
-                    style={barIconButton}
+                    icon="calendar-outline"
                     onPress={() => router.push('/viewings')}
-                    accessibilityRole="button"
                     accessibilityLabel="View bookings"
-                  >
-                    <View style={styles.viewingIconContainer}>
-                      <Ionicons
-                        name="calendar-outline"
-                        size={barIconSize}
-                        color={colors.COLOR_BLACK}
-                      />
-                      {hasActiveViewing ? (
+                    badge={
+                      hasActiveViewing ? (
                         <View style={styles.viewingBadge}>
                           <Ionicons name="checkmark" size={12} color={colors.primaryForeground} />
                         </View>
-                      ) : null}
-                    </View>
-                  </Pressable>,
+                      ) : undefined
+                    }
+                  />,
                   <View key="save" style={styles.headerSaveWrap}>
                     <SaveButton
                       property={apiProperty as Property}
                       variant="heart"
+                      chrome="bar"
                       color={colors.COLOR_BLACK}
                       activeColor={colors.error}
                       showCount
@@ -1017,7 +1006,6 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 1000,
   },
-  viewingIconContainer: { position: 'relative' },
   viewingBadge: {
     position: 'absolute',
     top: -4,

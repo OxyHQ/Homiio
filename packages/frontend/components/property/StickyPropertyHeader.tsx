@@ -12,26 +12,25 @@
  * device safe-area inset (`insets.top`). On framed web it pins at
  * `PANEL_TOP_INSET` so the ContentPanel bleed-mask does not clip it.
  */
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import {
   Platform,
-  Pressable,
   StyleSheet,
   View,
   type ViewStyle,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@oxyhq/bloom/button';
 import { PANEL_TOP_INSET } from '@oxyhq/bloom/content-panel';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { SaveButton } from '@/components/SaveButton';
+import { BarIconButton } from '@/components/ui/BarIconButton';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { colors } from '@/styles/colors';
-import { barBackIconSize, barContent, barIconButton, barIconButtonPressed, barIconSize, hairline, spacing } from '@/constants/styles';
+import { barBackIconSize, barContent, hairline, spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
 
 interface StickyPropertyHeaderProps {
@@ -59,9 +58,6 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const isScreenNotMobile = useIsScreenNotMobile();
-  const [backPressed, setBackPressed] = useState(false);
-  const [sharePressed, setSharePressed] = useState(false);
-
   const handleShare = useCallback(() => onShare(), [onShare]);
 
   if (!visible) return null;
@@ -86,16 +82,12 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
   return (
     <View style={[styles.bar, containerStyle, { paddingTop: insets.top }]}>
       <View style={styles.content}>
-        <Pressable
+        <BarIconButton
+          icon="arrow-back"
+          size={barBackIconSize}
           onPress={onBack}
-          onPressIn={() => setBackPressed(true)}
-          onPressOut={() => setBackPressed(false)}
-          style={[barIconButton, backPressed && barIconButtonPressed]}
-          accessibilityRole="button"
           accessibilityLabel={t('goBack')}
-        >
-          <Ionicons name="arrow-back" size={barBackIconSize} color={colors.COLOR_BLACK} />
-        </Pressable>
+        />
         <View style={styles.titleBlock}>
           <BloomText style={styles.title} numberOfLines={1}>
             {title}
@@ -105,20 +97,16 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
           </BloomText>
         </View>
         <View style={styles.actions}>
-          <Pressable
+          <BarIconButton
+            icon="share-outline"
             onPress={handleShare}
-            onPressIn={() => setSharePressed(true)}
-            onPressOut={() => setSharePressed(false)}
-            style={[barIconButton, sharePressed && barIconButtonPressed]}
-            accessibilityRole="button"
             accessibilityLabel={t('common.share')}
-          >
-            <Ionicons name="share-outline" size={barIconSize} color={colors.COLOR_BLACK} />
-          </Pressable>
+          />
           {property ? (
             <SaveButton
               property={property as Property & { _id: string }}
               variant="heart"
+              chrome="bar"
               color={colors.COLOR_BLACK}
               activeColor={colors.error}
             />
