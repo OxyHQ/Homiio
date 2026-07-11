@@ -50,6 +50,16 @@ const logger = new Logger('ListingWorker');
 /** Fetch-worker concurrency (source portals are rate-sensitive; keep it small). */
 const FETCH_CONCURRENCY = parseInt(process.env.LISTING_FETCH_CONCURRENCY || '2', 10);
 
+/**
+ * Discover-worker concurrency. With ~15 providers and per-city scopes for the
+ * browser-heavy ES portals, a single concurrent discover let a handful of
+ * per-city scopes (pisos/fotocasa/habitaclia) monopolise the queue for hours
+ * while market-wide providers (DE/ML/otodom/…) never got a turn. Run a few in
+ * parallel; the Playwright pool still caps its own concurrency, so browser
+ * scopes serialise there while HTTP-first scopes proceed.
+ */
+const DISCOVER_CONCURRENCY = parseInt(process.env.LISTING_DISCOVER_CONCURRENCY || '3', 10);
+
 /** Discover jobs may hold a browser session across many cities — match worker lockDuration. */
 const DISCOVER_LOCK_MS = 600_000;
 
@@ -199,8 +209,8 @@ async function logQueueCounts(
 
 /**
  * A redeployed ECS task can leave a discover job "active" in Valkey when the
- * prior worker died mid-pass. Discover concurrency is 1, so that ghost lock
- * blocks every boot job until stall recovery — clear it on boot.
+ * prior worker died mid-pass. Those ghost locks consume discover slots until
+ * stall recovery — clear them on boot.
  */
 async function removeDiscoverJobOrForceFail(
   job: Job<DiscoverJobData>,
@@ -345,7 +355,7 @@ async function startBullMq(): Promise<() => Promise<void>> {
         count: refs.length,
       });
     },
-    { connection, prefix, concurrency: 1, lockDuration: DISCOVER_LOCK_MS },
+    { connection, prefix, concurrency: DISCOVER_CONCURRENCY, lockDuration: DISCOVER_LOCK_MS },
   );
 
   const fetchWorker = new Worker<FetchJobData>(
