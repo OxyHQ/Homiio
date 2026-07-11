@@ -1425,7 +1425,8 @@
       "verified": "Verified",
       "recommend": "Recommend",
       "count": "reviews",
-      "countWithNumber": "({{count}} ressenyes)"
+      "countWithNumber": "({{count}} ressenyes)",
+      "showAll": "Mostra les {{count}} ressenyes"
     },
     "notFoundHelp": "It may have been removed or the link is broken.",
     "sections": {
@@ -2289,7 +2290,8 @@
       "hostReservations": "Reserves d'amfitrió",
       "landlordApplications": "Safata de sol·licituds",
       "insights": "Insights",
-      "evictions": "Desnonaments"
+      "evictions": "Desnonaments",
+      "reviews": "Ressenyes"
     },
     "actions": {
       "addProperty": "Afegir Propietat",
@@ -3021,7 +3023,30 @@
       "alertReportedTitle": "Reportada",
       "alertReportedBody": "Aquesta ressenya s'ha reportat al nostre equip de moderació.",
       "alertReplyTitle": "Respondre a la ressenya",
-      "alertReplyBody": "La funció de resposta permetrà a arrendadors i administradors de propietats respondre a les ressenyes."
+      "alertReplyBody": "La funció de resposta permetrà a arrendadors i administradors de propietats respondre a les ressenyes.",
+      "pros": "El millor",
+      "cons": "El que es pot millorar",
+      "adviceToLandlord": "Consell per al propietari",
+      "adviceToAgency": "Consell per a l'agència",
+      "managedBy": "Gestionat per {{name}}",
+      "sections": {
+        "apartment": "Habitatge",
+        "management": "Gestió",
+        "building": "Edifici",
+        "area": "Zona"
+      },
+      "reportTitle": "Denuncia aquesta ressenya",
+      "reportSubtitle": "Digues-nos què passa amb aquesta ressenya.",
+      "reportDetails": "Detalls",
+      "reportDetailsPlaceholder": "Afegeix detalls que ens ajudin a revisar-la.",
+      "reportSubmit": "Envia la denúncia",
+      "reportReasons": {
+        "fake": "Falsa o fraudulenta",
+        "offensive": "Ofensiva o abusiva",
+        "personal_data": "Conté dades personals",
+        "spam": "Correu brossa",
+        "other": "Altres"
+      }
     },
     "write": {
       "validationTitle": "Error de validació",
@@ -3039,7 +3064,236 @@
       "submitFailed": "No s'ha pogut enviar la ressenya",
       "submitFailedRetry": "No s'ha pogut enviar la ressenya. Torna-ho a provar.",
       "loadAddressFailed": "Couldn't load address",
-      "title": "Write review"
+      "title": "Write review",
+      "stepCounter": "Pas {{current}} de {{total}}",
+      "submit": "Envia la ressenya",
+      "mapHint": "Toca el mapa per posar un pin i emplenar l'adreça automàticament.",
+      "listCount": "{{current}}/{{max}}",
+      "addItem": "Afegeix",
+      "removeItem": "Treu",
+      "rateStar": "Puntua {{star}} de 5",
+      "ratingValue": "{{rating}} de 5",
+      "ratingNone": "Sense valoració",
+      "steps": {
+        "address": {
+          "title": "On vas viure?",
+          "subtitle": "Indica l'adreça que vols ressenyar. Toca el mapa per emplenar-la."
+        },
+        "apartment": {
+          "title": "L'habitatge",
+          "subtitle": "Opcional: com era viure a la casa."
+        },
+        "management": {
+          "title": "Propietari i agència",
+          "subtitle": "Opcional: qui va gestionar el lloguer i com va anar."
+        },
+        "building": {
+          "title": "L'edifici",
+          "subtitle": "Opcional: veïns, espais comuns i serveis."
+        },
+        "area": {
+          "title": "La zona",
+          "subtitle": "Opcional: el barri al voltant de l'edifici."
+        },
+        "priceDates": {
+          "title": "Lloguer i dates",
+          "subtitle": "Quant pagaves i quan hi vas viure."
+        },
+        "texts": {
+          "title": "La teva ressenya",
+          "subtitle": "Un títol, la teva opinió sincera i el millor i el pitjor."
+        },
+        "photos": {
+          "title": "Fotos i valoració",
+          "subtitle": "Afegeix fotos, valora l'estada i envia."
+        }
+      },
+      "fields": {
+        "street": "Carrer",
+        "number": "Número",
+        "buildingName": "Nom de l'edifici",
+        "floor": "Planta",
+        "unit": "Porta / Pis",
+        "city": "Ciutat",
+        "state": "Província",
+        "postalCode": "Codi postal",
+        "country": "País",
+        "neighborhood": "Barri",
+        "summerTemperature": "Temperatura a l'estiu",
+        "winterTemperature": "Temperatura a l'hivern",
+        "noise": "Soroll",
+        "light": "Llum natural",
+        "conditionAndMaintenance": "Estat i manteniment",
+        "agencyName": "Agència",
+        "landlordTreatment": "Tracte del propietari",
+        "problemResponse": "Resposta davant problemes",
+        "depositReturned": "Devolució de la fiança",
+        "adviceToAgency": "Consell per a l'agència",
+        "adviceToLandlord": "Consell per al propietari",
+        "staircaseNeighbors": "Veïns d'escala",
+        "touristApartments": "Pisos turístics a l'edifici",
+        "neighborRelations": "Relació amb els veïns",
+        "cleaning": "Neteja de zones comunes",
+        "services": "Serveis de l'edifici",
+        "areaTourists": "Turistes a la zona",
+        "areaNoise": "Soroll de la zona",
+        "areaCleanliness": "Neteja de la zona",
+        "areaSecurity": "Seguretat de la zona",
+        "price": "Lloguer mensual",
+        "currency": "Moneda",
+        "livedFrom": "Des de",
+        "livedTo": "Fins a",
+        "reviewTitle": "Títol",
+        "opinion": "La teva opinió",
+        "pros": "El millor",
+        "cons": "El que es pot millorar",
+        "photos": "Fotos",
+        "rating": "Valoració global",
+        "recommendation": "Recomanaries aquesta adreça?"
+      },
+      "placeholders": {
+        "street": "p. ex. Carrer Major 123",
+        "number": "p. ex. 123A",
+        "buildingName": "p. ex. Residencial Sol",
+        "floor": "p. ex. 3",
+        "unit": "p. ex. 3B",
+        "city": "p. ex. Barcelona",
+        "state": "p. ex. Catalunya",
+        "postalCode": "p. ex. 08001",
+        "country": "p. ex. Espanya",
+        "neighborhood": "p. ex. Eixample",
+        "agencyName": "Comença a escriure el nom de l'agència",
+        "adviceToAgency": "Què hauria de millorar l'agència?",
+        "adviceToLandlord": "Què hauria de saber el propietari?",
+        "price": "0,00",
+        "date": "AAAA-MM-DD",
+        "reviewTitle": "Resumeix la teva experiència",
+        "opinion": "Comparteix la teva experiència (més de 10 caràcters)",
+        "pros": "Afegeix una cosa que t'agradés",
+        "cons": "Afegeix una cosa a millorar"
+      },
+      "currencies": {
+        "EUR": "EUR (€)",
+        "USD": "USD ($)",
+        "GBP": "GBP (£)",
+        "CAD": "CAD ($)"
+      }
+    },
+    "explore": {
+      "title": "Ressenyes",
+      "heroTitle": "Explora ressenyes sinceres d'habitatges",
+      "heroSubtitle": "Ressenyes reals d'adreces reals, de qui hi va viure.",
+      "writeCta": "Escriu una ressenya",
+      "citiesTitle": "Ciutats amb ressenyes",
+      "neighborhoodsTitle": "Barris",
+      "buildingsTitle": "Edificis",
+      "reviewCount": "{{count}} ressenyes",
+      "buildingMeta": "{{count}} ressenyes · {{recommend}}% recomanen",
+      "errorTitle": "No s'ha pogut carregar",
+      "errorDescription": "Torna-ho a provar.",
+      "emptyCitiesTitle": "Encara no hi ha ressenyes",
+      "emptyCitiesDescription": "Sigues el primer a ressenyar una adreça de la teva ciutat.",
+      "emptyNeighborhoodsTitle": "Encara no hi ha barris",
+      "emptyNeighborhoodsDescription": "Encara no hi ha barris ressenyats en aquesta ciutat.",
+      "emptyBuildingsTitle": "Encara no hi ha edificis",
+      "emptyBuildingsDescription": "Encara no hi ha edificis ressenyats en aquest barri."
+    },
+    "enums": {
+      "temperature": {
+        "very_cold": "Molt freda",
+        "cold": "Freda",
+        "moderate": "Temperada",
+        "warm": "Càlida",
+        "very_warm": "Molt càlida"
+      },
+      "noise": {
+        "very_quiet": "Molt silenciós",
+        "quiet": "Silenciós",
+        "moderate": "Moderat",
+        "noisy": "Sorollós",
+        "very_noisy": "Molt sorollós"
+      },
+      "light": {
+        "very_dark": "Molt fosca",
+        "dark": "Fosca",
+        "moderate": "Moderada",
+        "bright": "Lluminosa",
+        "very_bright": "Molt lluminosa"
+      },
+      "condition": {
+        "poor": "Dolent",
+        "fair": "Regular",
+        "good": "Bo",
+        "very_good": "Molt bo",
+        "excellent": "Excel·lent"
+      },
+      "landlordTreatment": {
+        "very_poor": "Molt dolent",
+        "poor": "Dolent",
+        "fair": "Regular",
+        "good": "Bo",
+        "excellent": "Excel·lent"
+      },
+      "problemResponse": {
+        "never_responded": "Mai va respondre",
+        "very_slow": "Molt lenta",
+        "slow": "Lenta",
+        "reasonable": "Raonable",
+        "fast": "Ràpida",
+        "very_fast": "Molt ràpida"
+      },
+      "depositReturned": {
+        "full": "Tornada íntegra",
+        "partial": "Tornada en part",
+        "no": "No tornada"
+      },
+      "staircaseNeighbors": {
+        "very_unfriendly": "Molt antipàtics",
+        "unfriendly": "Antipàtics",
+        "neutral": "Neutrals",
+        "friendly": "Amables",
+        "very_friendly": "Molt amables"
+      },
+      "neighborRelations": {
+        "very_poor": "Molt dolentes",
+        "poor": "Dolentes",
+        "fair": "Regulars",
+        "good": "Bones",
+        "excellent": "Excel·lents"
+      },
+      "cleaning": {
+        "very_dirty": "Molt bruta",
+        "dirty": "Bruta",
+        "acceptable": "Acceptable",
+        "clean": "Neta",
+        "very_clean": "Molt neta"
+      },
+      "areaTourists": {
+        "none": "Cap",
+        "few": "Pocs",
+        "moderate": "Moderat",
+        "many": "Molts",
+        "overwhelming": "Excessiu"
+      },
+      "areaSecurity": {
+        "very_unsafe": "Molt insegura",
+        "unsafe": "Insegura",
+        "neutral": "Neutral",
+        "safe": "Segura",
+        "very_safe": "Molt segura"
+      },
+      "services": {
+        "internet": "Internet",
+        "cable_tv": "TV per cable",
+        "parking": "Pàrquing",
+        "laundry": "Bugaderia",
+        "gym": "Gimnàs",
+        "pool": "Piscina",
+        "concierge": "Consergeria",
+        "security": "Seguretat",
+        "maintenance": "Manteniment",
+        "cleaning": "Neteja"
+      }
     }
   },
   "subscriptions": {
@@ -3219,7 +3473,13 @@
       "tabCommunity": "Comunitat",
       "tabArea": "Zona",
       "tabProperties": "Propietats ({{count}})",
-      "tabReviews": "Ressenyes ({{count}})"
+      "tabReviews": "Ressenyes ({{count}})",
+      "tabApartment": "Habitatge",
+      "tabManagement": "Gestió",
+      "tabBuilding": "Edifici",
+      "metricRating": "Valoració mitjana",
+      "metricReviews": "Ressenyes",
+      "metricRecommend": "Recomanen"
     },
     "display": {
       "copySuccess": "Adreça copiada al porta-retalls",
@@ -3673,5 +3933,26 @@
       "updateSuccess": "Canvis desats",
       "submitError": "No s'ha pogut desar el cas"
     }
+  },
+  "agency": {
+    "title": "Agència",
+    "viewAddress": "Mostra l'adreça",
+    "notFound": "Agència no trobada",
+    "notFoundDescription": "No hem trobat aquesta agència.",
+    "stats": {
+      "rating": "Valoració",
+      "reviews": "Ressenyes",
+      "recommend": "Recomanen",
+      "depositFull": "Fiança tornada",
+      "listings": "Anuncis"
+    },
+    "tabs": {
+      "reviews": "Ressenyes",
+      "listings": "Anuncis"
+    },
+    "emptyReviewsTitle": "Encara no hi ha ressenyes",
+    "emptyReviewsDescription": "Aquesta agència encara no té ressenyes.",
+    "emptyListingsTitle": "Sense anuncis",
+    "emptyListingsDescription": "Aquesta agència no té anuncis actius."
   }
 }

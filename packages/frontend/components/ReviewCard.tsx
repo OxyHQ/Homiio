@@ -1,625 +1,568 @@
 /**
- * ReviewCard Component
- * Reusable component for displaying review data with ethical review system features
+ * ReviewCard — the canonical read view for a single reviucasa-style review.
+ *
+ * The PARENT hydrates the author (`useOxyAvatars(reviews.map(r => r.oxyUserId))`)
+ * and passes the resolved Oxy `User` as `author`; the card renders the Bloom
+ * `Avatar` (variant-aware resolver) + display name (falling back to the handle,
+ * then an anonymous label). Body: title, stars, recommendation line, opinion,
+ * pros/cons (falling back to the legacy `positiveComment`/`negativeComment`),
+ * dimension chips grouped by section (apartment / management / building / area,
+ * only the present ones), advice blocks, an agency link, and a photo row.
+ * Footer: a real Helpful toggle (disabled on your own review) + a Report action.
  */
-
-import React from 'react';
-import {
-    View,
-    StyleSheet,
-    TouchableOpacity,
-    Alert,
-} from 'react-native';
+import React, { useState } from 'react';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { ThemedText } from './ThemedText';
-import { colors } from '@/styles/colors';
-import { radius, spacing } from '@/constants/styles';
+
+import { Avatar } from '@oxyhq/bloom/avatar';
+import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { useOxy } from '@oxyhq/services';
+import type { User } from '@oxyhq/core';
+
+import {
+  ReviewModerationStatus,
+  type ReviewDTO,
+  type ReviewReportReason,
+} from '@homiio/shared-types';
+
+import { Stars } from '@/components/ui/Stars';
+import { ReportReviewSheet } from '@/components/reviews/ReportReviewSheet';
+import {
+  APARTMENT_DIMENSIONS,
+  MANAGEMENT_DIMENSIONS,
+  BUILDING_DIMENSIONS,
+  AREA_DIMENSIONS,
+  type DimensionDescriptor,
+} from '@/components/reviews/dimensions';
+import { useToggleHelpful, useReportReview } from '@/hooks/useReviewMutations';
+import { resolveBackendImageUrl } from '@/utils/imageUrl';
 import { formatLocalized } from '@/utils/dateLocale';
+import { colors } from '@/styles/colors';
+import { hairline, radius, spacing } from '@/constants/styles';
 
-export interface ReviewData {
-    _id: string;
-    addressId: string;
-    addressLevel: 'BUILDING' | 'UNIT';
-    streetLevelId: string;
-    buildingLevelId: string;
-    unitLevelId?: string;
-    greenHouse?: string;
-    price: number;
-    currency: string;
-    livedFrom: string;
-    livedTo: string;
-    livedForMonths: number;
-    recommendation: boolean;
-    opinion: string;
-    positiveComment?: string;
-    negativeComment?: string;
-    images: string[];
-    rating: number;
+const IS_WEB = Platform.OS === 'web';
 
-    // Apartment-specific ratings (optional)
-    summerTemperature?: string;
-    winterTemperature?: string;
-    noise?: string;
-    light?: string;
-    conditionAndMaintenance?: string;
-    services?: string[];
-
-    // Community-specific ratings (optional)
-    landlordTreatment?: string;
-    problemResponse?: string;
-    depositReturned?: boolean;
-    staircaseNeighbors?: string;
-    touristApartments?: boolean;
-    neighborRelations?: string;
-    cleaning?: string;
-
-    // Area-specific ratings (optional)
-    areaTourists?: string;
-    areaSecurity?: string;
-
-    // Profile and metadata
-    profileId: { id: string } | string;
-    createdAt: string;
-    updatedAt: string;
-    verified: boolean;
-
-    // Ethical review system features (optional, with defaults)
-    isAnonymous?: boolean;
-    confidenceScore?: number;
-    evidenceAttached?: boolean;
-    flaggedIssues?: string[];
-    karmaScore?: number;
-    replyAllowed?: boolean;
-    moderationStatus?: 'pending' | 'approved' | 'flagged' | 'removed';
-    takedownReason?: string;
-    helpfulVotes?: number;
-    unhelpfulVotes?: number;
-    reportCount?: number;
-
-    // Display fields
-    livedDurationText?: string;
-    evidenceCount?: number;
+interface DimensionChipData {
+  label: string;
+  value: string;
 }
 
-interface ReviewCardProps {
-    review: ReviewData;
-    onHelpful?: (reviewId: string) => void;
-    onReport?: (reviewId: string) => void;
-    onReply?: (reviewId: string) => void;
-    variant?: 'default' | 'compact';
-    showActions?: boolean;
+/** Collect the i18n key pairs for every dimension present on the review. */
+function collectEnumKeys(
+  review: ReviewDTO,
+  dimensions: DimensionDescriptor[],
+): { labelKey: string; valueKey: string }[] {
+  const chips: { labelKey: string; valueKey: string }[] = [];
+  for (const dimension of dimensions) {
+    const raw = review[dimension.field];
+    if (typeof raw === 'string' && raw.length > 0) {
+      chips.push({ labelKey: dimension.labelKey, valueKey: `${dimension.enumPrefix}.${raw}` });
+    }
+  }
+  return chips;
 }
 
-export const ReviewCard: React.FC<ReviewCardProps> = ({
-    review,
-    onHelpful,
-    onReport,
-    onReply,
-    variant = 'default',
-    showActions = true
-}) => {
-    const { t } = useTranslation();
+const DimensionChip: React.FC<DimensionChipData> = ({ label, value }) => (
+  <View style={styles.dimChip}>
+    <BloomText style={styles.dimChipLabel}>{label}</BloomText>
+    <BloomText style={styles.dimChipValue}>{value}</BloomText>
+  </View>
+);
 
-    const renderStars = (rating: number) => {
-        const fullStars = Math.floor(rating);
-        const halfStar = rating % 1 >= 0.5;
-        const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
+interface DimensionGroupProps {
+  title: string;
+  chips: DimensionChipData[];
+}
 
-        return (
-            <View style={styles.starsContainer}>
-                {[...Array(fullStars)].map((_, i) => (
-                    <Ionicons key={`full-${i}`} name="star" size={16} color={colors.ratingStar} />
-                ))}
-                {halfStar && <Ionicons name="star-half" size={16} color={colors.ratingStar} />}
-                {[...Array(emptyStars)].map((_, i) => (
-                    <Ionicons key={`empty-${i}`} name="star-outline" size={16} color={colors.ratingStar} />
-                ))}
-            </View>
-        );
-    };
+const DimensionGroup: React.FC<DimensionGroupProps> = ({ title, chips }) => {
+  if (chips.length === 0) return null;
+  return (
+    <View style={styles.dimGroup}>
+      <BloomText style={styles.dimGroupTitle}>{title}</BloomText>
+      <View style={styles.dimChips}>
+        {chips.map((chip) => (
+          <DimensionChip key={chip.label} label={chip.label} value={chip.value} />
+        ))}
+      </View>
+    </View>
+  );
+};
 
-    const handleHelpful = () => {
-        if (onHelpful) {
-            onHelpful(review._id);
-        } else {
-            Alert.alert(
-                t('reviews.card.alertThankYouTitle'),
-                t('reviews.card.alertThankYouBody'),
-            );
-        }
-    };
+interface FooterButtonProps {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
+  active?: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+}
 
-    const handleReport = () => {
-        if (onReport) {
-            onReport(review._id);
-        } else {
-            Alert.alert(
-                t('reviews.card.alertReportTitle'),
-                t('reviews.card.alertReportBody'),
-                [
-                    { text: t('common.cancel'), style: 'cancel' },
-                    {
-                        text: t('reviews.card.alertReportConfirm'),
-                        style: 'destructive',
-                        onPress: () => {
-                            Alert.alert(
-                                t('reviews.card.alertReportedTitle'),
-                                t('reviews.card.alertReportedBody'),
-                            );
-                        }
-                    }
-                ]
-            );
-        }
-    };
+/** Footer affordance (Helpful / Report) — owns its own pressed/hovered state. */
+const FooterButton: React.FC<FooterButtonProps> = ({ icon, label, active, disabled, onPress }) => {
+  const [pressed, setPressed] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const tint = active ? colors.success : colors.COLOR_BLACK_LIGHT_3;
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      onHoverIn={IS_WEB ? () => setHovered(true) : undefined}
+      onHoverOut={IS_WEB ? () => setHovered(false) : undefined}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: Boolean(disabled), selected: Boolean(active) }}
+      style={[
+        styles.footerButton,
+        !disabled && (pressed || hovered) && styles.footerButtonActive,
+        disabled && styles.footerButtonDisabled,
+      ]}
+    >
+      <Ionicons name={icon} size={16} color={tint} />
+      <BloomText style={[styles.footerButtonLabel, { color: tint }]}>{label}</BloomText>
+    </Pressable>
+  );
+};
 
-    const handleReply = () => {
-        if (onReply) {
-            onReply(review._id);
-        } else {
-            Alert.alert(
-                t('reviews.card.alertReplyTitle'),
-                t('reviews.card.alertReplyBody'),
-                [{ text: t('common.ok') }]
-            );
-        }
-    };
+export interface ReviewCardProps {
+  review: ReviewDTO;
+  /** Author resolved by the parent via `useOxyAvatars` (avatar file id + name). */
+  author?: User;
+  /** Fired with the agency slug when the "managed by" link is pressed. */
+  onPressAgency?: (slug: string) => void;
+}
 
-    const evidenceCount = review.evidenceCount || 1;
-    const isCompact = variant === 'compact';
+export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressAgency }) => {
+  const { t } = useTranslation();
+  const { user } = useOxy();
+  const toggleHelpful = useToggleHelpful();
+  const reportReview = useReportReview();
+  const [reportVisible, setReportVisible] = useState(false);
 
-    return (
-        <View style={[styles.reviewCard, isCompact && styles.compactCard]}>
-            <View style={styles.reviewHeader}>
-                <View style={styles.reviewerInfo}>
-                    <View style={styles.avatar}>
-                        <Ionicons name="person" size={24} color={colors.primaryColor} />
-                    </View>
-                    <View style={styles.reviewerDetails}>
-                        <View style={styles.reviewerNameRow}>
-                            <ThemedText style={styles.reviewerName}>
-                                {review.isAnonymous
-                                    ? t('reviews.card.anonymous')
-                                    : t('reviews.card.verifiedResident')}
-                            </ThemedText>
+  const isOwnReview = Boolean(user?.id && user.id === review.oxyUserId);
+  const displayName =
+    author?.name?.displayName?.trim() || author?.username || t('reviews.card.anonymous');
+  const isUnderReview = review.moderationStatus === ReviewModerationStatus.UNDER_REVIEW;
 
-                            <View style={styles.trustIndicators}>
-                                {review.verified && (
-                                    <View style={styles.verifiedBadge}>
-                                        <Ionicons name="checkmark-circle" size={14} color={colors.primaryColor} />
-                                        <ThemedText style={styles.verifiedText}>
-                                            {t('reviews.card.verified')}
-                                        </ThemedText>
-                                    </View>
-                                )}
+  const pros = review.prosItems?.length
+    ? review.prosItems
+    : review.positiveComment
+      ? [review.positiveComment]
+      : [];
+  const cons = review.consItems?.length
+    ? review.consItems
+    : review.negativeComment
+      ? [review.negativeComment]
+      : [];
 
-                                {!isCompact && (
-                                    <View style={[styles.confidenceBadge, {
-                                        backgroundColor: (review.confidenceScore || 0) >= 80 ? colors.success :
-                                            (review.confidenceScore || 0) >= 60 ? colors.warning : colors.danger
-                                    }]}>
-                                        <ThemedText style={styles.confidenceText}>
-                                            {t('reviews.card.confident', { score: review.confidenceScore || 0 })}
-                                        </ThemedText>
-                                    </View>
-                                )}
+  const translateChips = (keys: { labelKey: string; valueKey: string }[]): DimensionChipData[] =>
+    keys.map((entry) => ({ label: t(entry.labelKey), value: t(entry.valueKey) }));
 
-                                {review.evidenceAttached && (
-                                    <View style={styles.evidenceBadge}>
-                                        <Ionicons name="document-attach" size={12} color={colors.COLOR_BLACK_LIGHT_3} />
-                                        <ThemedText style={styles.evidenceText}>
-                                            {evidenceCount}{' '}
-                                            {evidenceCount > 1
-                                                ? t('reviews.card.proofs')
-                                                : t('reviews.card.proof')}
-                                        </ThemedText>
-                                    </View>
-                                )}
+  const apartmentChips = translateChips(collectEnumKeys(review, APARTMENT_DIMENSIONS));
+  const managementChips = translateChips(collectEnumKeys(review, MANAGEMENT_DIMENSIONS));
+  const buildingChips = translateChips(collectEnumKeys(review, BUILDING_DIMENSIONS));
+  if (typeof review.touristApartments === 'boolean') {
+    buildingChips.push({
+      label: t('reviews.write.fields.touristApartments'),
+      value: review.touristApartments ? t('common.yes') : t('common.no'),
+    });
+  }
+  if (review.services && review.services.length > 0) {
+    buildingChips.push({
+      label: t('reviews.write.fields.services'),
+      value: review.services.map((service) => t(`reviews.enums.services.${service}`)).join(', '),
+    });
+  }
+  const areaChips = translateChips(collectEnumKeys(review, AREA_DIMENSIONS));
 
-                                {!isCompact && (review.karmaScore || 0) > 0 && (
-                                    <View style={styles.karmaBadge}>
-                                        <Ionicons name="trending-up" size={12} color={colors.info} />
-                                        <ThemedText style={styles.karmaText}>
-                                            {t('reviews.card.karma', { score: review.karmaScore || 0 })}
-                                        </ThemedText>
-                                    </View>
-                                )}
-                            </View>
-                        </View>
+  const images = Array.isArray(review.images) ? review.images.filter((url) => Boolean(url)) : [];
 
-                        <View style={styles.reviewMetaRow}>
-                            <ThemedText style={styles.reviewDate}>
-                                {formatLocalized(new Date(review.createdAt), 'PP')}
-                            </ThemedText>
-                            <ThemedText style={styles.livedDuration}>
-                                {t('reviews.card.livedMonths', { count: review.livedForMonths })}
-                            </ThemedText>
-                            {review.price ? (
-                                <ThemedText style={styles.price}>
-                                    {t('reviews.card.perMonth', {
-                                        price: review.price,
-                                        currency: review.currency,
-                                    })}
-                                </ThemedText>
-                            ) : null}
-                        </View>
-
-                        {!isCompact && review.flaggedIssues && review.flaggedIssues.length > 0 && (
-                            <View style={styles.issueTagsContainer}>
-                                {review.flaggedIssues.slice(0, 3).map((issue, index) => (
-                                    <View key={index} style={styles.issueTag}>
-                                        <ThemedText style={styles.issueTagText}>⚠️ {issue}</ThemedText>
-                                    </View>
-                                ))}
-                                {review.flaggedIssues.length > 3 && (
-                                    <View style={styles.issueTag}>
-                                        <ThemedText style={styles.issueTagText}>
-                                            {t('reviews.card.moreIssues', {
-                                                count: review.flaggedIssues.length - 3,
-                                            })}
-                                        </ThemedText>
-                                    </View>
-                                )}
-                            </View>
-                        )}
-                    </View>
-                </View>
-                {renderStars(review.rating)}
-            </View>
-
-            <ThemedText style={[styles.reviewText, isCompact && styles.compactReviewText]} numberOfLines={isCompact ? 3 : undefined}>
-                {review.opinion}
-            </ThemedText>
-
-            {!isCompact && review.positiveComment && (
-                <View style={styles.commentSection}>
-                    <ThemedText style={styles.commentLabel}>{t('reviews.card.positive')}</ThemedText>
-                    <ThemedText style={styles.commentText}>{review.positiveComment}</ThemedText>
-                </View>
-            )}
-
-            {!isCompact && review.negativeComment && (
-                <View style={styles.commentSection}>
-                    <ThemedText style={styles.commentLabel}>{t('reviews.card.negative')}</ThemedText>
-                    <ThemedText style={styles.commentText}>{review.negativeComment}</ThemedText>
-                </View>
-            )}
-
-            {showActions && (
-                <View style={styles.reviewFooter}>
-                    <View style={styles.moderationSection}>
-                        <TouchableOpacity
-                            style={[styles.helpfulButton, {
-                                backgroundColor: (review.helpfulVotes || 0) > 0 ? colors.successSubtle : colors.surface,
-                                borderColor: (review.helpfulVotes || 0) > 0 ? colors.success : colors.border
-                            }]}
-                            onPress={handleHelpful}
-                        >
-                            <Ionicons
-                                name="thumbs-up"
-                                size={18}
-                                color={(review.helpfulVotes || 0) > 0 ? colors.success : colors.COLOR_BLACK_LIGHT_4}
-                            />
-                            <ThemedText style={[styles.helpfulText, {
-                                color: (review.helpfulVotes || 0) > 0 ? colors.success : colors.COLOR_BLACK_LIGHT_4
-                            }]}>
-                                {t('reviews.card.helpful', { count: review.helpfulVotes || 0 })}
-                            </ThemedText>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.helpfulButton, {
-                                backgroundColor: colors.surface,
-                                borderColor: colors.border
-                            }]}
-                            onPress={handleReport}
-                        >
-                            <Ionicons name="flag" size={18} color={colors.error} />
-                            <ThemedText style={[styles.helpfulText, { color: colors.error }]}>
-                                {t('reviews.card.report')}
-                            </ThemedText>
-                        </TouchableOpacity>
-
-                        {review.replyAllowed && (
-                            <TouchableOpacity
-                                style={[styles.helpfulButton, {
-                                    backgroundColor: colors.primaryLight_2,
-                                    borderColor: colors.primaryColor
-                                }]}
-                                onPress={handleReply}
-                            >
-                                <Ionicons name="chatbubble" size={18} color={colors.primaryColor} />
-                                <ThemedText style={[styles.helpfulText, { color: colors.primaryColor }]}>
-                                    {t('reviews.card.reply')}
-                                </ThemedText>
-                            </TouchableOpacity>
-                        )}
-                    </View>
-
-                    <View style={styles.recommendationSection}>
-                        <ThemedText style={styles.recommendationText}>
-                            {review.recommendation
-                                ? t('reviews.card.recommends')
-                                : t('reviews.card.doesNotRecommend')}
-                        </ThemedText>
-
-                        {review.moderationStatus === 'flagged' && (
-                            <View style={styles.flaggedIndicator}>
-                                <Ionicons name="warning" size={12} color={colors.warning} />
-                                <ThemedText style={styles.flaggedText}>
-                                    {t('reviews.card.underReview')}
-                                </ThemedText>
-                            </View>
-                        )}
-                    </View>
-                </View>
-            )}
-        </View>
+  const handleReportSubmit = (reason: ReviewReportReason, details?: string) => {
+    reportReview.mutate(
+      { reviewId: review.id, reason, details },
+      { onSuccess: () => setReportVisible(false) },
     );
+  };
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.header}>
+        <Avatar source={author?.avatar ?? undefined} variant="thumb" size={44} />
+        <View style={styles.headerText}>
+          <View style={styles.nameRow}>
+            <BloomText style={styles.authorName}>{displayName}</BloomText>
+            {review.verified ? (
+              <View style={styles.chip}>
+                <Ionicons name="checkmark-circle" size={13} color={colors.success} />
+                <BloomText style={[styles.chipText, { color: colors.success }]}>
+                  {t('reviews.card.verified')}
+                </BloomText>
+              </View>
+            ) : null}
+            {isUnderReview ? (
+              <View style={[styles.chip, styles.chipWarning]}>
+                <Ionicons name="warning-outline" size={12} color={colors.warning} />
+                <BloomText style={[styles.chipText, { color: colors.warning }]}>
+                  {t('reviews.card.underReview')}
+                </BloomText>
+              </View>
+            ) : null}
+          </View>
+          <View style={styles.metaRow}>
+            <BloomText style={styles.metaText}>
+              {formatLocalized(new Date(review.createdAt), 'PP')}
+            </BloomText>
+            {review.livedForMonths > 0 ? (
+              <>
+                <BloomText style={styles.metaDot}>·</BloomText>
+                <BloomText style={styles.metaText}>
+                  {t('reviews.card.livedMonths', { count: review.livedForMonths })}
+                </BloomText>
+              </>
+            ) : null}
+            {review.price ? (
+              <>
+                <BloomText style={styles.metaDot}>·</BloomText>
+                <BloomText style={styles.metaText}>
+                  {t('reviews.card.perMonth', { price: review.price, currency: review.currency })}
+                </BloomText>
+              </>
+            ) : null}
+          </View>
+        </View>
+      </View>
+
+      {review.title ? <BloomText style={styles.title}>{review.title}</BloomText> : null}
+
+      <View style={styles.ratingRow}>
+        <Stars rating={review.rating} size={16} />
+        <View style={styles.recommendRow}>
+          <Ionicons
+            name={review.recommendation ? 'thumbs-up' : 'thumbs-down'}
+            size={14}
+            color={review.recommendation ? colors.success : colors.COLOR_BLACK_LIGHT_3}
+          />
+          <BloomText
+            style={[
+              styles.recommendText,
+              { color: review.recommendation ? colors.success : colors.COLOR_BLACK_LIGHT_3 },
+            ]}
+          >
+            {review.recommendation
+              ? t('reviews.card.recommends')
+              : t('reviews.card.doesNotRecommend')}
+          </BloomText>
+        </View>
+      </View>
+
+      {review.opinion ? <BloomText style={styles.opinion}>{review.opinion}</BloomText> : null}
+
+      {pros.length > 0 ? (
+        <View style={styles.prosConsBlock}>
+          <BloomText style={[styles.prosConsLabel, { color: colors.success }]}>
+            {t('reviews.card.pros')}
+          </BloomText>
+          {pros.map((item, index) => (
+            <View key={`pro-${index}`} style={styles.prosConsRow}>
+              <Ionicons name="add-circle-outline" size={14} color={colors.success} />
+              <BloomText style={styles.prosConsText}>{item}</BloomText>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {cons.length > 0 ? (
+        <View style={styles.prosConsBlock}>
+          <BloomText style={[styles.prosConsLabel, { color: colors.error }]}>
+            {t('reviews.card.cons')}
+          </BloomText>
+          {cons.map((item, index) => (
+            <View key={`con-${index}`} style={styles.prosConsRow}>
+              <Ionicons name="remove-circle-outline" size={14} color={colors.error} />
+              <BloomText style={styles.prosConsText}>{item}</BloomText>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      <DimensionGroup title={t('reviews.card.sections.apartment')} chips={apartmentChips} />
+      <DimensionGroup title={t('reviews.card.sections.management')} chips={managementChips} />
+      <DimensionGroup title={t('reviews.card.sections.building')} chips={buildingChips} />
+      <DimensionGroup title={t('reviews.card.sections.area')} chips={areaChips} />
+
+      {review.adviceToLandlord ? (
+        <View style={styles.adviceBlock}>
+          <BloomText style={styles.adviceLabel}>{t('reviews.card.adviceToLandlord')}</BloomText>
+          <BloomText style={styles.adviceText}>{review.adviceToLandlord}</BloomText>
+        </View>
+      ) : null}
+      {review.adviceToAgency ? (
+        <View style={styles.adviceBlock}>
+          <BloomText style={styles.adviceLabel}>{t('reviews.card.adviceToAgency')}</BloomText>
+          <BloomText style={styles.adviceText}>{review.adviceToAgency}</BloomText>
+        </View>
+      ) : null}
+
+      {review.agency ? (
+        <Pressable
+          onPress={() => onPressAgency?.(review.agency?.slug ?? '')}
+          disabled={!onPressAgency}
+          accessibilityRole="link"
+          accessibilityLabel={t('reviews.card.managedBy', { name: review.agency.name })}
+          style={styles.agencyRow}
+        >
+          <Ionicons name="business-outline" size={15} color={colors.primaryColor} />
+          <BloomText style={styles.agencyText}>
+            {t('reviews.card.managedBy', { name: review.agency.name })}
+          </BloomText>
+          {onPressAgency ? (
+            <Ionicons name="chevron-forward" size={14} color={colors.primaryColor} />
+          ) : null}
+        </Pressable>
+      ) : null}
+
+      {images.length > 0 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.imagesRow}
+        >
+          {images.map((url, index) => (
+            <Image
+              key={`${url}-${index}`}
+              source={{ uri: resolveBackendImageUrl(url) }}
+              style={styles.reviewImage}
+            />
+          ))}
+        </ScrollView>
+      ) : null}
+
+      <View style={styles.footer}>
+        <FooterButton
+          icon={review.viewerHasVotedHelpful ? 'thumbs-up' : 'thumbs-up-outline'}
+          label={t('reviews.card.helpful', { count: review.helpfulCount })}
+          active={review.viewerHasVotedHelpful}
+          disabled={isOwnReview || toggleHelpful.isPending}
+          onPress={() => toggleHelpful.mutate(review.id)}
+        />
+        {isOwnReview ? null : (
+          <FooterButton
+            icon="flag-outline"
+            label={t('reviews.card.report')}
+            onPress={() => setReportVisible(true)}
+          />
+        )}
+      </View>
+
+      <ReportReviewSheet
+        visible={reportVisible}
+        onClose={() => setReportVisible(false)}
+        onSubmit={handleReportSubmit}
+        submitting={reportReview.isPending}
+      />
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
-    reviewCard: {
-        backgroundColor: colors.surfaceElevated,
-        borderRadius: radius.lg,
-        padding: spacing.xl,
-        marginBottom: spacing.lg,
-        borderWidth: 1,
-        borderColor: colors.border,
-    },
-    compactCard: {
-        padding: spacing.lg,
-        marginBottom: spacing.md,
-        borderRadius: radius.md,
-    },
-    reviewHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: 16,
-    },
-    reviewerInfo: {
-        flexDirection: 'row',
-        flex: 1,
-        marginRight: 12,
-    },
-    avatar: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: colors.primaryLight_2,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 16,
-        borderWidth: 2,
-        borderColor: colors.primaryColor,
-    },
-    reviewerDetails: {
-        flex: 1,
-    },
-    reviewerNameRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 6,
-    },
-    reviewerName: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: colors.primaryDark,
-    },
-    trustIndicators: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: 8,
-    },
-    verifiedBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: colors.successSubtle,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 12,
-        gap: 4,
-        borderWidth: 1,
-        borderColor: colors.success,
-    },
-    verifiedText: {
-        fontSize: 11,
-        color: colors.success,
-        fontWeight: '700',
-    },
-    confidenceBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 14,
-        alignItems: 'center',
-    },
-    confidenceText: {
-        fontSize: 11,
-        color: colors.white,
-        fontWeight: '700',
-    },
-    evidenceBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: colors.mutedSubtle,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 12,
-        gap: 4,
-        borderWidth: 1,
-        borderColor: colors.border,
-    },
-    evidenceText: {
-        fontSize: 11,
-        color: colors.muted,
-        fontWeight: '600',
-    },
-    karmaBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: colors.infoSubtle,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 12,
-        gap: 4,
-        borderWidth: 1,
-        borderColor: colors.info,
-    },
-    karmaText: {
-        fontSize: 11,
-        color: colors.info,
-        fontWeight: '600',
-    },
-    reviewMetaRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 16,
-        marginTop: 6,
-    },
-    reviewDate: {
-        fontSize: 13,
-        color: colors.COLOR_BLACK_LIGHT_4,
-        fontWeight: '500',
-    },
-    livedDuration: {
-        fontSize: 13,
-        color: colors.COLOR_BLACK_LIGHT_4,
-        fontWeight: '500',
-    },
-    price: {
-        fontSize: 13,
-        color: colors.primaryColor,
-        fontWeight: '700',
-        backgroundColor: colors.primaryLight_2,
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 8,
-    },
-    issueTagsContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-        marginTop: 12,
-    },
-    issueTag: {
-        backgroundColor: colors.warningSubtle,
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 14,
-        borderWidth: 1,
-        borderColor: colors.warning,
-    },
-    issueTagText: {
-        fontSize: 12,
-        color: colors.warning,
-        fontWeight: '600',
-    },
-    starsContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 3,
-        backgroundColor: colors.warningSubtle,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: colors.ratingStar,
-    },
-    reviewText: {
-        fontSize: 16,
-        lineHeight: 24,
-        color: colors.COLOR_BLACK_LIGHT_2,
-        marginBottom: 16,
-        fontWeight: '400',
-    },
-    compactReviewText: {
-        fontSize: 14,
-        lineHeight: 20,
-        marginBottom: 12,
-    },
-    commentSection: {
-        marginBottom: 12,
-        backgroundColor: colors.surface,
-        padding: 12,
-        borderRadius: 12,
-        borderLeftWidth: 4,
-        borderLeftColor: colors.primaryColor,
-    },
-    commentLabel: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: colors.primaryColor,
-        marginBottom: 6,
-        textTransform: 'uppercase',
-    },
-    commentText: {
-        fontSize: 14,
-        lineHeight: 20,
-        color: colors.COLOR_BLACK_LIGHT_2,
-    },
-    reviewFooter: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginTop: 16,
-        paddingTop: 16,
-        borderTopWidth: 1,
-        borderTopColor: colors.border,
-    },
-    moderationSection: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 16,
-        flex: 1,
-    },
-    helpfulButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: 'transparent',
-    },
-    helpfulText: {
-        fontSize: 13,
-        fontWeight: '600',
-    },
-    recommendationSection: {
-        alignItems: 'flex-end',
-    },
-    recommendationText: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: colors.primaryDark,
-        backgroundColor: colors.primaryLight_2,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 12,
-        overflow: 'hidden',
-    },
-    flaggedIndicator: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: colors.warningSubtle,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 10,
-        gap: 4,
-        marginTop: 6,
-        borderWidth: 1,
-        borderColor: colors.warning,
-    },
-    flaggedText: {
-        fontSize: 11,
-        color: colors.warning,
-        fontWeight: '600',
-    },
+  card: {
+    gap: spacing.md,
+    paddingVertical: spacing.lg,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  headerText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  authorName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.COLOR_BLACK,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+    backgroundColor: colors.successSubtle,
+  },
+  chipWarning: {
+    backgroundColor: colors.warningSubtle,
+  },
+  chipText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  metaText: {
+    fontSize: 13,
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  metaDot: {
+    fontSize: 13,
+    color: colors.COLOR_BLACK_LIGHT_5,
+  },
+  title: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.COLOR_BLACK,
+    letterSpacing: -0.3,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  recommendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  recommendText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  opinion: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.COLOR_BLACK_LIGHT_2,
+  },
+  prosConsBlock: {
+    gap: spacing.xs,
+  },
+  prosConsLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  prosConsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+  },
+  prosConsText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.COLOR_BLACK_LIGHT_2,
+  },
+  dimGroup: {
+    gap: spacing.xs,
+  },
+  dimGroupTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.COLOR_BLACK_LIGHT_3,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  dimChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  dimChip: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.md,
+    borderWidth: hairline.width,
+    borderColor: colors.COLOR_BLACK_LIGHT_6,
+    backgroundColor: colors.surfaceElevated,
+  },
+  dimChipLabel: {
+    fontSize: 12,
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  dimChipValue: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.COLOR_BLACK,
+  },
+  adviceBlock: {
+    gap: 2,
+    paddingLeft: spacing.md,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.COLOR_BLACK_LIGHT_6,
+  },
+  adviceLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.COLOR_BLACK_LIGHT_3,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  adviceText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.COLOR_BLACK_LIGHT_2,
+  },
+  agencyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    alignSelf: 'flex-start',
+  },
+  agencyText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primaryColor,
+  },
+  imagesRow: {
+    gap: spacing.sm,
+  },
+  reviewImage: {
+    width: 120,
+    height: 90,
+    borderRadius: radius.md,
+    backgroundColor: colors.mutedSubtle,
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  footerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.md,
+  },
+  footerButtonActive: {
+    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
+  },
+  footerButtonDisabled: {
+    opacity: 0.6,
+  },
+  footerButtonLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
 });
 
 export default ReviewCard;

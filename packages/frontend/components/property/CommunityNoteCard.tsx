@@ -1,28 +1,15 @@
 /**
- * CommunityNoteCard — a single community note (formerly "review") rendered
- * in the property detail's Community Notes section.
+ * CommunityNoteCard — a single community note (a `ReviewDTO`) rendered in the
+ * property detail's Community Notes preview. Flat Airbnb-2026 aesthetic (no card
+ * chrome); separation is owned by the parent's hairline divider.
  *
- * Flat Airbnb-2026 aesthetic: no card chrome (no shadow, no border, no
- * filled background) so notes sit directly on the page like the rest of the
- * property sections. Separation between notes is owned by the parent via a
- * hairline divider.
- *
- * Layout:
- *  - Header row: avatar + author (Anonymous / Verified Resident) + a
- *    small verified check, with the star rating pinned to the right.
- *  - Meta line: date · months lived · monthly price.
- *  - Body: the note opinion, clamped to `BODY_CLAMP_LINES` with an inline
- *    "Read more" / "Read less" toggle when it overflows.
- *  - Footer (optional, full variant): a "Helpful" affordance + report /
- *    reply, plus a recommends / does-not-recommend pill.
- *
- * The underlying data shape is the Review model (`ReviewData`) — only the
- * presentation is rebranded. Notes are anonymous by design, so there is no
- * real name/photo to show; the avatar is a neutral glyph.
+ * Read-only: the full interactive review card (real Helpful / Report) lives on
+ * the address page via `ReviewCard`. Here we surface the title, stars, opinion,
+ * pros/cons (falling back to the legacy `positiveComment`/`negativeComment`),
+ * the recommendation, a read-only helpful count, and an under-review flag.
  */
 import React, { useState } from 'react';
 import {
-  Alert,
   Pressable,
   StyleSheet,
   View,
@@ -34,186 +21,48 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
+import { ReviewModerationStatus, type ReviewDTO } from '@homiio/shared-types';
 import { Stars } from '@/components/ui/Stars';
 import { formatLocalized } from '@/utils/dateLocale';
 import { colors } from '@/styles/colors';
-import { radius, spacing } from '@/constants/styles';
-
-export interface ReviewData {
-  _id: string;
-  addressId: string;
-  addressLevel: 'BUILDING' | 'UNIT';
-  streetLevelId: string;
-  buildingLevelId: string;
-  unitLevelId?: string;
-  greenHouse?: string;
-  price: number;
-  currency: string;
-  livedFrom: string;
-  livedTo: string;
-  livedForMonths: number;
-  recommendation: boolean;
-  opinion: string;
-  positiveComment?: string;
-  negativeComment?: string;
-  images: string[];
-  rating: number;
-
-  // Apartment-specific ratings (optional)
-  summerTemperature?: string;
-  winterTemperature?: string;
-  noise?: string;
-  light?: string;
-  conditionAndMaintenance?: string;
-  services?: string[];
-
-  // Community-specific ratings (optional)
-  landlordTreatment?: string;
-  problemResponse?: string;
-  depositReturned?: boolean;
-  staircaseNeighbors?: string;
-  touristApartments?: boolean;
-  neighborRelations?: string;
-  cleaning?: string;
-
-  // Area-specific ratings (optional)
-  areaTourists?: string;
-  areaSecurity?: string;
-
-  // Profile and metadata
-  profileId: { id: string } | string;
-  createdAt: string;
-  updatedAt: string;
-  verified: boolean;
-
-  // Ethical review system features (optional, with defaults)
-  isAnonymous?: boolean;
-  confidenceScore?: number;
-  evidenceAttached?: boolean;
-  flaggedIssues?: string[];
-  karmaScore?: number;
-  replyAllowed?: boolean;
-  moderationStatus?: 'pending' | 'approved' | 'flagged' | 'removed';
-  takedownReason?: string;
-  helpfulVotes?: number;
-  unhelpfulVotes?: number;
-  reportCount?: number;
-
-  // Display fields
-  livedDurationText?: string;
-  evidenceCount?: number;
-}
+import { spacing } from '@/constants/styles';
 
 const BODY_CLAMP_LINES = 4;
 const AVATAR_SIZE = 40;
-
-interface FooterButtonProps {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  label: string;
-  tone?: 'default' | 'active';
-  onPress: () => void;
-}
-
-/** Footer affordance (Helpful / Report / Reply) — owns its own pressed state. */
-const FooterButton: React.FC<FooterButtonProps> = ({
-  icon,
-  label,
-  tone = 'default',
-  onPress,
-}) => {
-  const [pressed, setPressed] = useState(false);
-  const tint = tone === 'active' ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3;
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      style={[styles.footerButton, pressed && styles.footerButtonPressed]}
-    >
-      <Ionicons name={icon} size={16} color={tint} />
-      <BloomText style={[styles.footerButtonLabel, { color: tint }]}>{label}</BloomText>
-    </Pressable>
-  );
-};
+const MAX_PROS_CONS = 3;
 
 interface CommunityNoteCardProps {
-  note: ReviewData;
-  onHelpful?: (noteId: string) => void;
-  onReport?: (noteId: string) => void;
-  onReply?: (noteId: string) => void;
-  showActions?: boolean;
+  note: ReviewDTO;
 }
 
-export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({
-  note,
-  onHelpful,
-  onReport,
-  onReply,
-  showActions = true,
-}) => {
+export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({ note }) => {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [isTruncatable, setIsTruncatable] = useState(false);
 
-  const authorName = note.isAnonymous
-    ? t('property.communityNotes.anonymous')
-    : t('property.communityNotes.verifiedResident');
+  const authorName = note.verified
+    ? t('property.communityNotes.verifiedResident')
+    : t('property.communityNotes.anonymous');
 
   const formattedDate = formatLocalized(new Date(note.createdAt), 'MMMM yyyy');
 
-  // Measure once (collapsed) to decide whether "Read more" is needed; the
-  // measurement only matters before expansion, so it's a no-op afterwards.
+  const pros = (note.prosItems?.length
+    ? note.prosItems
+    : note.positiveComment
+      ? [note.positiveComment]
+      : []
+  ).slice(0, MAX_PROS_CONS);
+  const cons = (note.consItems?.length
+    ? note.consItems
+    : note.negativeComment
+      ? [note.negativeComment]
+      : []
+  ).slice(0, MAX_PROS_CONS);
+
   const handleTextLayout = (event: NativeSyntheticEvent<TextLayoutEventData>) => {
     if (!expanded && event.nativeEvent.lines.length > BODY_CLAMP_LINES) {
       setIsTruncatable(true);
     }
-  };
-
-  const handleHelpful = () => {
-    if (onHelpful) {
-      onHelpful(note._id);
-      return;
-    }
-    Alert.alert(
-      t('property.communityNotes.helpfulThanksTitle'),
-      t('property.communityNotes.helpfulThanksBody'),
-    );
-  };
-
-  const handleReport = () => {
-    if (onReport) {
-      onReport(note._id);
-      return;
-    }
-    Alert.alert(
-      t('property.communityNotes.reportTitle'),
-      t('property.communityNotes.reportBody'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('property.communityNotes.reportConfirm'),
-          style: 'destructive',
-          onPress: () =>
-            Alert.alert(
-              t('property.communityNotes.reportedTitle'),
-              t('property.communityNotes.reportedBody'),
-            ),
-        },
-      ],
-    );
-  };
-
-  const handleReply = () => {
-    if (onReply) {
-      onReply(note._id);
-      return;
-    }
-    Alert.alert(
-      t('property.communityNotes.replyTitle'),
-      t('property.communityNotes.replyBody'),
-    );
   };
 
   return (
@@ -257,6 +106,8 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({
         <Stars rating={note.rating} />
       </View>
 
+      {note.title ? <BloomText style={styles.title}>{note.title}</BloomText> : null}
+
       <BloomText
         style={styles.body}
         numberOfLines={expanded ? undefined : BODY_CLAMP_LINES}
@@ -279,81 +130,62 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({
         </Pressable>
       ) : null}
 
-      {note.positiveComment ? (
+      {pros.length > 0 ? (
         <View style={styles.commentBlock}>
-          <BloomText style={styles.commentLabel}>
-            {t('property.communityNotes.liked')}
-          </BloomText>
-          <BloomText style={styles.commentText}>{note.positiveComment}</BloomText>
+          <BloomText style={styles.commentLabel}>{t('property.communityNotes.liked')}</BloomText>
+          {pros.map((item, index) => (
+            <BloomText key={`pro-${index}`} style={styles.commentText}>
+              • {item}
+            </BloomText>
+          ))}
         </View>
       ) : null}
 
-      {note.negativeComment ? (
+      {cons.length > 0 ? (
         <View style={styles.commentBlock}>
-          <BloomText style={styles.commentLabel}>
-            {t('property.communityNotes.disliked')}
-          </BloomText>
-          <BloomText style={styles.commentText}>{note.negativeComment}</BloomText>
+          <BloomText style={styles.commentLabel}>{t('property.communityNotes.disliked')}</BloomText>
+          {cons.map((item, index) => (
+            <BloomText key={`con-${index}`} style={styles.commentText}>
+              • {item}
+            </BloomText>
+          ))}
         </View>
       ) : null}
 
-      {showActions ? (
-        <View style={styles.footer}>
-          <View style={styles.footerActions}>
-            <FooterButton
-              icon="thumbs-up-outline"
-              tone={(note.helpfulVotes ?? 0) > 0 ? 'active' : 'default'}
-              label={t('property.communityNotes.helpful', {
-                count: note.helpfulVotes ?? 0,
-              })}
-              onPress={handleHelpful}
-            />
-            <FooterButton
-              icon="flag-outline"
-              label={t('property.communityNotes.report')}
-              onPress={handleReport}
-            />
-            {note.replyAllowed ? (
-              <FooterButton
-                icon="chatbubble-outline"
-                label={t('property.communityNotes.reply')}
-                onPress={handleReply}
-              />
-            ) : null}
-          </View>
+      <View style={styles.footer}>
+        <View style={styles.recommendRow}>
+          <Ionicons
+            name={note.recommendation ? 'thumbs-up' : 'thumbs-down'}
+            size={13}
+            color={note.recommendation ? colors.success : colors.COLOR_BLACK_LIGHT_3}
+          />
+          <BloomText
+            style={[
+              styles.recommendText,
+              { color: note.recommendation ? colors.success : colors.COLOR_BLACK_LIGHT_3 },
+            ]}
+          >
+            {note.recommendation
+              ? t('property.communityNotes.recommends')
+              : t('property.communityNotes.doesNotRecommend')}
+          </BloomText>
+        </View>
 
-          <View style={styles.recommendRow}>
-            <Ionicons
-              name={note.recommendation ? 'thumbs-up' : 'thumbs-down'}
-              size={13}
-              color={note.recommendation ? colors.success : colors.COLOR_BLACK_LIGHT_3}
-            />
-            <BloomText
-              style={[
-                styles.recommendText,
-                {
-                  color: note.recommendation
-                    ? colors.success
-                    : colors.COLOR_BLACK_LIGHT_3,
-                },
-              ]}
-            >
-              {note.recommendation
-                ? t('property.communityNotes.recommends')
-                : t('property.communityNotes.doesNotRecommend')}
+        {note.helpfulCount > 0 ? (
+          <BloomText style={styles.helpfulCount}>
+            {t('property.communityNotes.helpful', { count: note.helpfulCount })}
+          </BloomText>
+        ) : null}
+
+        {note.moderationStatus === ReviewModerationStatus.UNDER_REVIEW ? (
+          <View style={styles.underReview}>
+            <Ionicons name="warning-outline" size={12} color={colors.warning} />
+            <BloomText style={styles.underReviewText}>
+              {t('property.communityNotes.underReview')}
             </BloomText>
           </View>
-
-          {note.moderationStatus === 'flagged' ? (
-            <View style={styles.underReview}>
-              <Ionicons name="warning-outline" size={12} color={colors.warning} />
-              <BloomText style={styles.underReviewText}>
-                {t('property.communityNotes.underReview')}
-              </BloomText>
-            </View>
-          ) : null}
-        </View>
-      ) : null}
+        ) : null}
+      </View>
     </View>
   );
 };
@@ -404,6 +236,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.COLOR_BLACK_LIGHT_5,
   },
+  title: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.COLOR_BLACK,
+  },
   body: {
     fontSize: 15,
     lineHeight: 22,
@@ -443,36 +280,18 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginTop: spacing.xs,
   },
-  footerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    flexShrink: 1,
-  },
-  footerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.md,
-  },
-  footerButtonPressed: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-  },
-  footerButtonLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
   recommendRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    marginLeft: 'auto',
   },
   recommendText: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  helpfulCount: {
+    fontSize: 13,
+    color: colors.COLOR_BLACK_LIGHT_3,
   },
   underReview: {
     flexDirection: 'row',
@@ -480,8 +299,9 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
-    borderRadius: radius.md,
+    borderRadius: 8,
     backgroundColor: colors.warningSubtle,
+    marginLeft: 'auto',
   },
   underReviewText: {
     fontSize: 11,

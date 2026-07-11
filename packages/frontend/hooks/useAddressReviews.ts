@@ -2,33 +2,20 @@
  * useAddressReviews — single source of truth for a property's
  * community/address reviews.
  *
- * Both `ReviewsSection` and `CommunityNotesSection` (and now the booking
- * card's rating badge) read the same `/api/reviews/address/:id` endpoint
- * under the `['addressReviews', addressId]` React Query key. Centralising
- * the address-id extraction + the fetch here keeps that ONE cache key the
- * shared source — so the booking card's rating, the reviews block, and the
- * community-notes block never fire duplicate requests, and the rating math
- * (`averageRating`, `totalReviews`) is computed once, the same way, for every
- * consumer.
+ * Both `ReviewsSection` and `CommunityNotesSection` (and the booking card's
+ * rating badge) read the same `/api/reviews/address/:id` endpoint under the
+ * `['addressReviews', addressId]` React Query key. Centralising the address-id
+ * extraction + the fetch here keeps that ONE cache key the shared source — so
+ * the booking card's rating, the reviews block, and the community-notes block
+ * never fire duplicate requests, and the rating math (`averageRating`,
+ * `totalReviews`) is computed once, the same way, for every consumer.
  */
 import { useMemo } from 'react';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
-import type { Property } from '@homiio/shared-types';
+import type { Property, ReviewDTO } from '@homiio/shared-types';
 
-import type { ReviewData } from '@/components/ReviewCard';
-import { api } from '@/utils/api';
-
-/** Shape of the `/api/reviews/address/:id` payload (success-flag or `data` envelope). */
-interface AddressReviewsResponse {
-  success?: boolean;
-  buildingReviews?: ReviewData[];
-  unitReviews?: ReviewData[];
-  data?: {
-    buildingReviews?: ReviewData[];
-    unitReviews?: ReviewData[];
-  };
-}
+import { reviewService } from '@/services/reviewService';
 
 /** Aggregated rating summary derived from a property's reviews. */
 export interface ReviewRatingSummary {
@@ -58,7 +45,7 @@ export function getReviewAddressId(property: Property | null | undefined): strin
 }
 
 /** Compute the rating summary for a loaded review list. */
-export function computeReviewRatingSummary(reviews: ReviewData[]): ReviewRatingSummary {
+export function computeReviewRatingSummary(reviews: ReviewDTO[]): ReviewRatingSummary {
   if (reviews.length === 0) {
     return { averageRating: 0, totalReviews: 0 };
   }
@@ -73,11 +60,11 @@ export interface UseAddressReviewsResult {
   /** The resolved address id (undefined when the property carries none). */
   addressId: string | undefined;
   /** Raw reviews (building + unit) for the address. */
-  reviews: ReviewData[];
+  reviews: ReviewDTO[];
   /** Aggregated rating summary (`averageRating`, `totalReviews`). */
   ratingSummary: ReviewRatingSummary;
   /** The underlying query, exposed for loading/error/refetch handling. */
-  query: UseQueryResult<ReviewData[], Error>;
+  query: UseQueryResult<ReviewDTO[], Error>;
 }
 
 /**
@@ -91,26 +78,20 @@ export function useAddressReviews(
 ): UseAddressReviewsResult {
   const addressId = useMemo(() => getReviewAddressId(property), [property]);
 
-  const query = useQuery<ReviewData[], Error>({
+  const query = useQuery<ReviewDTO[], Error>({
     queryKey: ['addressReviews', addressId],
     enabled: Boolean(addressId),
     queryFn: async () => {
-      const response = await api.get<AddressReviewsResponse>(
-        `/api/reviews/address/${addressId}`,
-      );
-      const payload = response.data;
-      const responseData = payload?.success ? payload : payload?.data ?? payload;
-      const buildingReviews = responseData?.buildingReviews ?? [];
-      const unitReviews = responseData?.unitReviews ?? [];
-      return [...buildingReviews, ...unitReviews];
+      if (!addressId) return [];
+      const result = await reviewService.getReviewsByAddress(addressId);
+      return result.reviews;
     },
   });
 
-  const reviews = query.data ?? [];
   const ratingSummary = useMemo(
-    () => computeReviewRatingSummary(reviews),
-    [reviews],
+    () => computeReviewRatingSummary(query.data ?? []),
+    [query.data],
   );
 
-  return { addressId, reviews, ratingSummary, query };
+  return { addressId, reviews: query.data ?? [], ratingSummary, query };
 }
