@@ -10,22 +10,14 @@
  * resolved SERVER-side so pagination stays correct — no client-side re-filtering
  * of already-loaded pages.
  */
-import {
-  useInfiniteQuery,
-  type InfiniteData,
-  type UseInfiniteQueryResult,
-} from '@tanstack/react-query';
+import { type InfiniteData, type UseInfiniteQueryResult } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
-import { api } from '@/utils/api';
 import type { Property } from '@homiio/shared-types';
-
-/** Per-page size (the city endpoint caps limit server-side). */
-const PAGE_SIZE = 24;
-/** Results stay fresh for a minute of paging before a refetch. */
-const STALE_TIME_MS = 1000 * 60;
-/** Cache retention after the query goes inactive. */
-const GC_TIME_MS = 1000 * 60 * 10;
+import {
+  PROPERTY_LIST_PAGE_SIZE,
+  useInfinitePropertyList,
+} from './useInfinitePropertyList';
 
 /** Sort options the city screen exposes, mapped to the backend `sort` param. */
 export type CitySortBy = 'newest' | 'priceAsc' | 'priceDesc';
@@ -66,7 +58,7 @@ function buildCityParams(
   filters: CityPropertyFilters,
 ): Record<string, string | number> {
   const params: Record<string, string | number> = {
-    limit: PAGE_SIZE,
+    limit: PROPERTY_LIST_PAGE_SIZE,
     sort: CITY_SORT_PARAM[sortBy],
   };
   if (filters.verified) params.verified = 'true';
@@ -99,40 +91,23 @@ export function useInfiniteCityProperties(
     () => buildCityParams(sortBy, filters),
     [sortBy, filters.verified, filters.eco, filters.minBedrooms, filters.minBathrooms],
   );
-  // `page`/`limit` are excluded from the key (the infinite query owns paging) so
-  // all pages of one city+sort+filter set share a cache entry.
-  const key = useMemo(
+  // `page` is excluded from the key (the infinite query owns paging) so all pages
+  // of one city+sort+filter set share a cache entry.
+  const queryKey = useMemo(
     () => ['cityProperties', cityId ?? '', baseParams] as const,
     [cityId, baseParams],
   );
 
-  const result = useInfiniteQuery({
-    queryKey: key,
-    initialPageParam: 1,
+  return useInfinitePropertyList<CityPropertiesResponseBody, CityPropertiesPage>({
+    queryKey,
+    endpoint: `/api/cities/${cityId}/properties`,
+    baseParams,
     enabled: Boolean(cityId),
-    staleTime: STALE_TIME_MS,
-    gcTime: GC_TIME_MS,
-    queryFn: async ({ pageParam }): Promise<CityPropertiesPage> => {
-      const { data } = await api.get<CityPropertiesResponseBody>(
-        `/api/cities/${cityId}/properties`,
-        { params: { ...baseParams, page: pageParam }, requireAuth: false },
-      );
-      return {
-        properties: data.properties ?? [],
-        page: data.pagination?.page ?? pageParam,
-        total: data.pagination?.total ?? (data.properties?.length ?? 0),
-        hasMore: data.hasMore ?? false,
-      };
-    },
-    getNextPageParam: (lastPage) =>
-      lastPage.hasMore ? lastPage.page + 1 : undefined,
+    mapResponse: (data, pageParam) => ({
+      properties: data.properties ?? [],
+      page: data.pagination?.page ?? pageParam,
+      total: data.pagination?.total ?? (data.properties?.length ?? 0),
+      hasMore: data.hasMore ?? false,
+    }),
   });
-
-  const properties = useMemo<Property[]>(
-    () => result.data?.pages.flatMap((p) => p.properties) ?? [],
-    [result.data],
-  );
-  const total = result.data?.pages[0]?.total ?? 0;
-
-  return { ...result, properties, total };
 }

@@ -18,24 +18,17 @@
  * nightly rate, sale → sale price). Each returned property exposes
  * `address.coordinates.coordinates` as `[lng, lat]` for map pins.
  */
-import {
-  useInfiniteQuery,
-  type InfiniteData,
-  type UseInfiniteQueryResult,
-} from '@tanstack/react-query';
+import { type InfiniteData, type UseInfiniteQueryResult } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { api } from '@/utils/api';
 import { OfferingType, type Property } from '@homiio/shared-types';
 import type { SearchBounds, SearchQuery } from '@/components/search/types';
+import {
+  PROPERTY_LIST_PAGE_SIZE,
+  useInfinitePropertyList,
+} from './useInfinitePropertyList';
 
-/** Hard cap matching the backend `MAX_LIMIT`. */
-const PAGE_SIZE = 24;
 /** Endpoint path for the public property search. */
 const SEARCH_ENDPOINT = '/api/properties/search';
-/** Stale window: results stay fresh for a minute of panning/paging. */
-const STALE_TIME_MS = 1000 * 60;
-/** Cache retention after the query goes inactive. */
-const GC_TIME_MS = 1000 * 60 * 10;
 
 /**
  * Raw search response envelope. The backend returns both the nested
@@ -83,7 +76,7 @@ export function buildSearchParams(query: SearchQuery): Record<string, string | n
   const isSale = query.offering === OfferingType.SALE;
   const params: Record<string, string | number> = {
     page: 1,
-    limit: PAGE_SIZE,
+    limit: PROPERTY_LIST_PAGE_SIZE,
     // The single offering axis the backend filters membership on AND resolves
     // the price-range field from (long-term → monthly, short-term → nightly,
     // sale → sale price).
@@ -189,36 +182,26 @@ export function usePropertySearch(
 ): PropertySearchResult {
   const { enabled = true } = options;
   const baseParams = useMemo(() => buildSearchParams(query), [query]);
-  const key = useMemo(() => searchQueryKey(query), [query]);
+  // Key excludes `page`/`limit` (the infinite query owns paging) so every page of
+  // one search shares a cache entry — the same shape `searchQueryKey` returns,
+  // but derived from the already-built `baseParams` so the params object is
+  // constructed once per query instead of a second time inside `searchQueryKey`.
+  const queryKey = useMemo(() => {
+    const { page: _page, limit: _limit, ...rest } = baseParams;
+    return ['propertySearch', rest] as const;
+  }, [baseParams]);
 
-  const result = useInfiniteQuery({
-    queryKey: key,
-    initialPageParam: 1,
+  return useInfinitePropertyList<SearchResponse, PropertySearchPage>({
+    queryKey,
+    endpoint: SEARCH_ENDPOINT,
+    baseParams,
     enabled,
-    staleTime: STALE_TIME_MS,
-    gcTime: GC_TIME_MS,
-    queryFn: async ({ pageParam }): Promise<PropertySearchPage> => {
-      const { data } = await api.get<SearchResponse>(SEARCH_ENDPOINT, {
-        params: { ...baseParams, page: pageParam },
-        requireAuth: false,
-      });
-      return {
-        properties: data.data ?? [],
-        page: data.page ?? pageParam,
-        totalPages: data.totalPages ?? 1,
-        total: data.total ?? (data.data?.length ?? 0),
-        hasMore: data.hasMore ?? false,
-      };
-    },
-    getNextPageParam: (lastPage) =>
-      lastPage.hasMore ? lastPage.page + 1 : undefined,
+    mapResponse: (data, pageParam) => ({
+      properties: data.data ?? [],
+      page: data.page ?? pageParam,
+      totalPages: data.totalPages ?? 1,
+      total: data.total ?? (data.data?.length ?? 0),
+      hasMore: data.hasMore ?? false,
+    }),
   });
-
-  const properties = useMemo<Property[]>(
-    () => result.data?.pages.flatMap((p) => p.properties) ?? [],
-    [result.data],
-  );
-  const total = result.data?.pages[0]?.total ?? 0;
-
-  return { ...result, properties, total };
 }

@@ -29,15 +29,35 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { OfferingType, PropertyType } from '@homiio/shared-types';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
+import { IconButton } from '@/components/ui/IconButton';
 import { colors } from '@/styles/colors';
 import { cardShadow, hairline, radius, spacing, tracker } from '@/constants/styles';
 import type { SearchQuery, SearchStep } from './types';
+
+/**
+ * Format the price-range segment shared by the wide pill's middle column and the
+ * compact summary line: an explicit min–max, a one-sided cap, or the "any price"
+ * placeholder. One helper so both call sites read identically.
+ */
+function formatPriceRange(query: SearchQuery, t: TFunction): string {
+  if (query.priceMin !== undefined && query.priceMax !== undefined) {
+    return `€${query.priceMin}–€${query.priceMax}`;
+  }
+  if (query.priceMax !== undefined) {
+    return `≤ €${query.priceMax}`;
+  }
+  if (query.priceMin !== undefined) {
+    return `≥ €${query.priceMin}`;
+  }
+  return t('search.summary.anyPrice');
+}
 
 /** i18n key for a single property type label. */
 const TYPE_I18N_KEYS: Record<PropertyType, string> = {
@@ -99,14 +119,6 @@ const COLUMN_PAD_X_NARROW = spacing.md;
 /** Single-line (compact) pill leading search-icon size. */
 const COMPACT_ICON_SIZE = 16;
 
-/**
- * Compact-pill trailing save affordance. The bookmark sits at the right end of
- * the results pill (Airbnb places the bookmark there). It is its own ~40dp tap
- * target, a SIBLING of the summary Pressable — never nested inside it — so web
- * never renders a `<button>` inside a `<button>`.
- */
-const SAVE_BUTTON_SIZE = 40;
-const SAVE_ICON_SIZE = 20;
 /** Height of the hairline divider that separates the summary from the bookmark. */
 const SAVE_DIVIDER_HEIGHT = 24;
 
@@ -208,46 +220,6 @@ const PillColumn: React.FC<PillColumnProps> = ({
   );
 };
 
-interface SaveBookmarkButtonProps {
-  isSaved: boolean;
-  onPress: () => void;
-  accessibilityLabel: string;
-}
-
-/**
- * Trailing bookmark in the compact pill. A SIBLING of the summary Pressable —
- * never nested — so web renders two independent buttons, not a `<button>` in a
- * `<button>`. Owns its own pressed/hovered state (a hook can't run in `.map()`,
- * and keeping the visual state local mirrors `PillColumn`/`SearchActionPill`).
- */
-const SaveBookmarkButton: React.FC<SaveBookmarkButtonProps> = ({
-  isSaved,
-  onPress,
-  accessibilityLabel,
-}) => {
-  const [pressed, setPressed] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      onHoverIn={() => setHovered(true)}
-      onHoverOut={() => setHovered(false)}
-      accessibilityRole="button"
-      accessibilityState={{ selected: isSaved }}
-      accessibilityLabel={accessibilityLabel}
-      style={[styles.saveButton, (pressed || hovered) && styles.saveButtonPressed]}
-    >
-      <Ionicons
-        name={isSaved ? 'bookmark' : 'bookmark-outline'}
-        size={SAVE_ICON_SIZE}
-        color={isSaved ? colors.primaryColor : colors.COLOR_BLACK}
-      />
-    </Pressable>
-  );
-};
-
 export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
   query,
   onPress,
@@ -318,46 +290,24 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
   );
 
   // Price label for the wide pill's middle column (long-term / buy / exchange).
-  const priceLabel = useMemo(() => {
-    if (query.priceMin !== undefined && query.priceMax !== undefined) {
-      return `€${query.priceMin}–€${query.priceMax}`;
-    }
-    if (query.priceMax !== undefined) {
-      return `≤ €${query.priceMax}`;
-    }
-    if (query.priceMin !== undefined) {
-      return `≥ €${query.priceMin}`;
-    }
-    return t('search.summary.anyPrice');
-  }, [query.priceMin, query.priceMax, t]);
+  const priceLabel = useMemo(
+    () => formatPriceRange(query, t),
+    [query, t],
+  );
 
-  // Single-line summary segments (compact mode, results top bar).
+  // Single-line summary segments (compact mode, results top bar). Vacation shows
+  // the picked date range in place of price; otherwise it reuses the shared
+  // price-range formatter.
   const segments = useMemo<SummarySegments>(() => {
-    let price: string;
-    if (isVacation && query.dates?.start) {
-      price = query.dates.end
-        ? `${query.dates.start} – ${query.dates.end}`
-        : query.dates.start;
-    } else if (query.priceMin !== undefined && query.priceMax !== undefined) {
-      price = `€${query.priceMin}–€${query.priceMax}`;
-    } else if (query.priceMax !== undefined) {
-      price = `≤ €${query.priceMax}`;
-    } else if (query.priceMin !== undefined) {
-      price = `≥ €${query.priceMin}`;
-    } else {
-      price = t('search.summary.anyPrice');
-    }
+    const price =
+      isVacation && query.dates?.start
+        ? query.dates.end
+          ? `${query.dates.start} – ${query.dates.end}`
+          : query.dates.start
+        : formatPriceRange(query, t);
 
     return { where: whereLabel, type: typeLabel, price };
-  }, [
-    isVacation,
-    query.dates,
-    query.priceMin,
-    query.priceMax,
-    whereLabel,
-    typeLabel,
-    t,
-  ]);
+  }, [isVacation, query, whereLabel, typeLabel, t]);
 
   // --- Full mode (every width): slim Airbnb-style 3-column pill ---
   if (!compact) {
@@ -475,13 +425,13 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
       {showSave ? (
         <>
           <View style={styles.saveDivider} />
-          <SaveBookmarkButton
-            isSaved={isSaved}
+          <IconButton
+            variant="ghost"
+            icon={isSaved ? 'bookmark' : 'bookmark-outline'}
+            active={isSaved}
+            activeColor={colors.primaryColor}
             onPress={handleSavePress}
-            accessibilityLabel={
-              saveAccessibilityLabel ||
-              (t('search.actions.save'))
-            }
+            accessibilityLabel={saveAccessibilityLabel || t('search.actions.save')}
           />
         </>
       ) : null}
@@ -605,18 +555,6 @@ const styles = StyleSheet.create({
     width: hairline.width,
     height: SAVE_DIVIDER_HEIGHT,
     backgroundColor: hairline.color,
-  },
-  saveButton: {
-    flexShrink: 0,
-    width: SAVE_BUTTON_SIZE,
-    height: SAVE_BUTTON_SIZE,
-    borderRadius: SAVE_BUTTON_SIZE / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: spacing.xs,
-  },
-  saveButtonPressed: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_8,
   },
   searchIcon: {
     alignItems: 'center',
