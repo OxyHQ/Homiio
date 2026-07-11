@@ -7,7 +7,7 @@ import { stripHtmlToPlainText } from './htmlText';
 import { validateOfferingPrices } from './price';
 
 /** Default cap aligned with {@link ExternalMediaIngest} in the backend worker. */
-export const DEFAULT_MAX_REMOTE_IMAGES = 12;
+export const DEFAULT_MAX_REMOTE_IMAGES = 30;
 
 /** Raised when a normalized listing fails ingest-time quality gates. */
 export class ListingValidationError extends Error {

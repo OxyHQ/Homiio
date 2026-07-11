@@ -154,9 +154,13 @@ function refFromRecord(record: Record<string, unknown>): { sourceId: string; url
   const sourceId = asString(rawId)?.replace(/\D/g, '');
   if (!sourceId || !/^\d{5,}$/.test(sourceId)) return undefined;
 
+  // Real searchads cards carry the detail path as a locale map (`detail["es-ES"]`).
+  const detailNode = isRecord(record.detail) ? record.detail : undefined;
   const detailUrl =
     asString(record.detailUrl) ??
     asString(record.url) ??
+    asString(detailNode?.['es-ES']) ??
+    (detailNode ? asString(Object.values(detailNode)[0]) : undefined) ??
     (Array.isArray(record.uris)
       ? asString((record.uris[0] as Record<string, unknown> | undefined)?.value)
       : undefined);

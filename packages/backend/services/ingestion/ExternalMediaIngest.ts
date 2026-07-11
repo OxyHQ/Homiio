@@ -38,7 +38,7 @@ const DEFAULT_IMAGE_MIME = 'image/jpeg';
 const FETCH_USER_AGENT = 'Homiio-Listings/1.0 (+https://homiio.com)';
 
 /** Safety cap on how many images are ingested per listing. */
-const DEFAULT_MAX_IMAGES = 12;
+const DEFAULT_MAX_IMAGES = 30;
 
 /** Fetches a remote image URL into a processable buffer + MIME type. */
 export type RemoteImageFetcher = (url: string) => Promise<ImageBufferInput>;

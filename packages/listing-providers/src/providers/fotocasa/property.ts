@@ -7,9 +7,9 @@
  */
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
-import { matchEsAmenityKey, type EsSchemaListing } from '../../parse/jsonLd';
+import { matchEsAmenityKey, matchFeatureKeyAmenity, type EsSchemaListing } from '../../parse/jsonLd';
 import { asCoordinate, asNumberEu, asString, isRecord } from '../../parse/guards';
-import { contactFromUnknown, mergeContact } from '../../parse/contact';
+import { buildContact, contactFromUnknown, mergeContact } from '../../parse/contact';
 import {
   collectNestedImages,
   eurListingFromNextDataCandidate,
@@ -30,7 +30,9 @@ export function isFotocasaPropertyChallenge(body: string): boolean {
 
 function readFotocasaPrice(record: Record<string, unknown>): number | undefined {
   const transaction = isRecord(record.transaction) ? record.transaction : undefined;
-  return asNumberEu(transaction?.price) ?? readNestedPrice(record);
+  // Searchads cards carry a clean numeric `rawPrice` (2193) plus a formatted
+  // `price` ("2.193 €"); prefer the raw number, then the formatted/nested string.
+  return asNumberEu(transaction?.price) ?? asNumberEu(record.rawPrice) ?? readNestedPrice(record);
 }
 
 function readFotocasaCity(record: Record<string, unknown>): string | undefined {
@@ -61,12 +63,21 @@ function resolveOperation(record: Record<string, unknown>, url: string): 'rent' 
 const FOTOCASA_FEATURE_FIELDS = ['features', 'otherFeatures', 'equipment', 'extras'] as const;
 
 /**
- * Extract canonical amenities + the furnished flag from a Fotocasa property-JSON
- * record. Reads localized feature labels (the property API is called with
- * `language=es`) from any of {@link FOTOCASA_FEATURE_FIELDS}, skipping entries the
- * portal marks absent (`value: false`/`0`). Labels are normalized through the
- * shared {@link matchEsAmenityKey} alias table, so unrecognized "características"
- * (condition, orientation, …) are dropped rather than leaked as junk amenities.
+ * Extract canonical amenities + the furnished flag from a Fotocasa record.
+ * Handles BOTH real shapes carried by `features[]` (or the other
+ * {@link FOTOCASA_FEATURE_FIELDS}):
+ *
+ *   - searchads cards / gateway JSON — English snake_case keys with an internal
+ *     id `value` (`{ key: "air_conditioner", value: 1 }`); presence in the array
+ *     means the amenity is present. Resolved via {@link matchFeatureKeyAmenity}.
+ *   - property JSON (`language=es`) — localized labels with a boolean/absent
+ *     `value` (`{ name: "Ascensor", value: true }`). Resolved via
+ *     {@link matchEsAmenityKey}; entries flagged `value: false` are skipped.
+ *
+ * Both resolve to the SAME canonical slug vocabulary; unrecognized keys
+ * (dimensions, `conservationStatus`, `antiquity`, …) are dropped, and
+ * `furnished`/`not_furnished` are hoisted into the furnished flag rather than
+ * leaked as amenities.
  */
 function readFotocasaAmenities(record: Record<string, unknown>): {
   amenities: string[];
@@ -76,20 +87,43 @@ function readFotocasaAmenities(record: Record<string, unknown>): {
   const seen = new Set<string>();
   let furnished: boolean | undefined;
 
-  const consider = (label: unknown, present: unknown): void => {
-    if (present === false || present === 0) return;
-    const text = asString(label);
-    if (!text) return;
-    const key = matchEsAmenityKey(text);
-    if (!key) return;
-    if (key === 'furnished') {
-      furnished = true;
-      return;
-    }
+  const add = (key: string): void => {
     if (!seen.has(key)) {
       seen.add(key);
       amenities.push(key);
     }
+  };
+
+  const consider = (rawKey: string | undefined, label: string | undefined, present: unknown): void => {
+    // Property-JSON marks an absent amenity with `value: false`; searchads cards
+    // never do (their `value` is a positive internal id), so this only prunes the
+    // localized shape.
+    if (present === false) return;
+
+    if (rawKey) {
+      const lowered = rawKey.trim().toLowerCase();
+      if (lowered === 'furnished') {
+        furnished = true;
+        return;
+      }
+      if (lowered === 'not_furnished' || lowered === 'unfurnished') {
+        furnished = false;
+        return;
+      }
+      const canonical = matchFeatureKeyAmenity(rawKey);
+      if (canonical) {
+        if (canonical === 'furnished') furnished = true;
+        else add(canonical);
+        return;
+      }
+    }
+
+    const text = label ?? rawKey;
+    if (!text) return;
+    const key = matchEsAmenityKey(text);
+    if (!key) return;
+    if (key === 'furnished') furnished = true;
+    else add(key);
   };
 
   for (const field of FOTOCASA_FEATURE_FIELDS) {
@@ -97,11 +131,10 @@ function readFotocasaAmenities(record: Record<string, unknown>): {
     if (!Array.isArray(value)) continue;
     for (const entry of value) {
       if (typeof entry === 'string') {
-        consider(entry, true);
+        consider(undefined, entry, true);
       } else if (isRecord(entry)) {
-        const label =
-          asString(entry.name) ?? asString(entry.label) ?? asString(entry.key) ?? asString(entry.type);
-        consider(label, 'value' in entry ? entry.value : true);
+        const label = asString(entry.name) ?? asString(entry.label) ?? asString(entry.type);
+        consider(asString(entry.key), label, 'value' in entry ? entry.value : true);
       }
     }
   }
@@ -109,18 +142,67 @@ function readFotocasaAmenities(record: Record<string, unknown>): {
   return { amenities, furnished };
 }
 
-/** Floor number from a Fotocasa property-JSON record, when numerically resolvable. */
-function readFotocasaFloor(record: Record<string, unknown>): number | undefined {
-  return asNumberEu(record.floor) ?? asNumberEu(record.floorNumber) ?? asNumberEu(record.planta);
+/**
+ * Read a numeric dimension the searchads card / gateway JSON stores inside
+ * `features[]` as `{ key, value }` (e.g. `{ key: "surface", value: 223 }`).
+ * Returns the first matching key's numeric value, or `undefined`.
+ */
+function fotocasaFeatureNumber(record: Record<string, unknown>, ...keys: readonly string[]): number | undefined {
+  const features = record.features;
+  if (!Array.isArray(features)) return undefined;
+  const wanted = new Set(keys);
+  for (const entry of features) {
+    if (!isRecord(entry)) continue;
+    const key = asString(entry.key);
+    if (key && wanted.has(key)) {
+      const num = asNumberEu(entry.value);
+      if (num !== undefined) return num;
+    }
+  }
+  return undefined;
 }
 
 /**
- * Advertiser contact from a Fotocasa property-JSON record (phone/email/agency).
- * Probes the wrapper nodes Fotocasa uses and delegates parsing to the shared
- * contact chokepoint — never invents a contact when the record omits one.
+ * Floor number from a Fotocasa record. Searchads cards carry it inside
+ * `features[]` as `{ key: "floor", value: 10 }`; property JSON may expose a
+ * top-level field. `floor: 0` (ground floor / bajo) is a valid value.
+ */
+function readFotocasaFloor(record: Record<string, unknown>): number | undefined {
+  return (
+    asNumberEu(record.floor) ??
+    asNumberEu(record.floorNumber) ??
+    asNumberEu(record.planta) ??
+    fotocasaFeatureNumber(record, 'floor')
+  );
+}
+
+/**
+ * Map a Fotocasa `clientType` (`professional` / `private`) to the contact kind.
+ */
+function fotocasaContactKind(record: Record<string, unknown>): NormalizedListingContact['kind'] | undefined {
+  const raw = asString(record.clientType)?.toLowerCase();
+  if (!raw) return undefined;
+  if (/professional|agency|agencia|inmobiliaria|pro/.test(raw)) return 'agency';
+  if (/private|particular|owner|individual/.test(raw)) return 'private';
+  return undefined;
+}
+
+/**
+ * Advertiser contact from a Fotocasa record (phone/email/agency).
+ *
+ * Searchads cards expose the advertiser as TOP-LEVEL scalars — `phone`,
+ * `clientAlias` (agency name), `clientType` — so build a contact from those
+ * first, then merge any wrapper nodes the property JSON uses. Delegates to the
+ * shared contact chokepoint; never invents a contact when the record omits one.
  */
 function readFotocasaContact(record: Record<string, unknown>): NormalizedListingContact | undefined {
+  const cardContact = buildContact({
+    phone: asString(record.phone),
+    agencyName: asString(record.clientAlias),
+    kind: fotocasaContactKind(record),
+  });
   return mergeContact(
+    cardContact,
     contactFromUnknown(record.contactInfo),
     contactFromUnknown(record.advertiser),
     contactFromUnknown(record.contact),
@@ -143,12 +225,22 @@ function fotocasaRecordToListing(
 
   const operation = resolveOperation(record, url);
   const addressNode = isRecord(record.address) ? record.address : undefined;
-  const location = isRecord(record.location) ? record.location : undefined;
-  const lat = asCoordinate(location?.latitude);
-  const lng = asCoordinate(location?.longitude);
+  // Searchads cards nest lat/lng under `coordinates` (their `location` field is a
+  // free-text neighborhood string); property JSON uses a `location` object.
+  const geoNode = isRecord(record.coordinates)
+    ? record.coordinates
+    : isRecord(record.location)
+      ? record.location
+      : undefined;
+  const lat = asCoordinate(geoNode?.latitude);
+  const lng = asCoordinate(geoNode?.longitude);
+  // Searchads cards carry the detail path as a locale map (`detail["es-ES"]`).
+  const detailNode = isRecord(record.detail) ? record.detail : undefined;
   const detailUrl =
     asString(record.detailUrl) ??
     asString(record.url) ??
+    asString(detailNode?.['es-ES']) ??
+    (detailNode ? asString(Object.values(detailNode)[0]) : undefined) ??
     (Array.isArray(record.uris)
       ? asString((record.uris[0] as Record<string, unknown> | undefined)?.value)
       : undefined);
@@ -170,15 +262,22 @@ function fotocasaRecordToListing(
       street: streetParts.length > 0 ? streetParts : undefined,
       city,
       region: asString(addressNode?.province) ?? asString(addressNode?.region),
-      neighborhood: asString(addressNode?.district) ?? asString(addressNode?.neighborhood),
+      postalCode: asString(addressNode?.postalCode) ?? asString(addressNode?.zipCode),
+      neighborhood: asString(addressNode?.neighborhood) ?? asString(addressNode?.district),
       country: asString(addressNode?.country),
       countryCode: 'ES',
     },
     coordinates: lat !== undefined && lng !== undefined ? { lat, lng } : undefined,
     images,
-    bedrooms: asNumberEu(record.rooms) ?? asNumberEu(record.numberOfRooms),
-    bathrooms: asNumberEu(record.baths) ?? asNumberEu(record.bathrooms),
-    squareMeters: asNumberEu(record.surface),
+    bedrooms:
+      asNumberEu(record.rooms) ??
+      asNumberEu(record.numberOfRooms) ??
+      fotocasaFeatureNumber(record, 'rooms', 'bedrooms'),
+    bathrooms:
+      asNumberEu(record.baths) ??
+      asNumberEu(record.bathrooms) ??
+      fotocasaFeatureNumber(record, 'bathrooms', 'baths'),
+    squareMeters: asNumberEu(record.surface) ?? fotocasaFeatureNumber(record, 'surface'),
     price,
     priceCurrency: 'EUR',
     operation,

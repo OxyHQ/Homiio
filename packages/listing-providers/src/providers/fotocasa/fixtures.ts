@@ -190,51 +190,90 @@ export const FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE =
   '<!DOCTYPE html><html><body><div id="px-captcha">Verifica que eres una persona</div></body></html>';
 
 /**
- * Property detail JSON from `web.gw.fotocasa.es/.../property` (called with
- * `language=es`, so `features` labels are localized). Models the `features`
- * equipment array, structured `floor`, and the advertiser `contactInfo` node the
- * detail payload carries so the parser exercises amenity/floor/contact extraction.
+ * A REAL Fotocasa searchads card (Barcelona long-term rental, id 186718824),
+ * captured 2026-07-11 via a warmed PerimeterX Playwright session through a
+ * residential ES proxy and trimmed to the fields the parser reads (multimedia
+ * cut to three images, description shortened). This is the exact shape the
+ * discover searchads path hands `fotocasaRecordToListing` in production, so it
+ * pins the bug that shipped `bedrooms/bathrooms/m²/amenities/contact` empty:
+ *
+ *   - dimensions live in `features[]` as `{ key, value }` (`rooms`/`bathrooms`/
+ *     `surface`/`floor`), NOT as top-level `rooms`/`baths`/`surface`;
+ *   - amenities are English snake_case `features[].key` values (`elevator`,
+ *     `parking`, `terrace`, …), NOT localized labels;
+ *   - the advertiser is the TOP-LEVEL `phone` + `clientAlias` (+ `clientType`),
+ *     NOT a nested `contactInfo` node;
+ *   - price is `rawPrice`, the detail path is `detail["es-ES"]`, coordinates are
+ *     under `coordinates`, and the postal code is `address.zipCode`.
  */
-export const FOTOCASA_FIXTURE_PROPERTY_JSON = JSON.stringify({
-  propertyId: '187654321',
-  title: 'Piso en alquiler en Calle de Almagro',
-  description: 'Piso reformado de tres habitaciones en Chamberí, con calefacción y ascensor.',
-  detailUrl: '/es/alquiler/vivienda/madrid-capital/calefaccion-ascensor/187654321/d',
-  transaction: { type: 'RENT', price: 1850 },
-  rooms: 3,
-  baths: 2,
-  surface: 95,
-  floor: 3,
-  street: 'Calle de Almagro',
-  number: '30',
+export const FOTOCASA_FIXTURE_SEARCH_CARD: Record<string, unknown> = {
+  id: 186718824,
+  buildingType: 'Flat',
+  buildingSubtype: 'Flat',
+  clientAlias: 'Nolkers Consulting',
+  clientId: 9202768176409,
+  clientType: 'professional',
+  clientTypeId: 3,
+  description:
+    'Ubicado en el exclusivo barrio de tres torres, se ubica este magnífico piso de 223 m2. Vivienda completamente exterior con entrada principal y servicio. Amplio salón comedor con salida a terraza.',
+  detail: {
+    'es-ES':
+      '/es/alquiler/vivienda/barcelona-capital/calefaccion-parking-jardin-terraza-ascensor-se-aceptan-mascotas-no-amueblado/186718824/d',
+  },
+  detailWithParams: {
+    'es-ES':
+      '/es/alquiler/vivienda/barcelona-capital/calefaccion-parking-jardin-terraza-ascensor-se-aceptan-mascotas-no-amueblado/186718824/d?from=list',
+  },
   address: {
     country: 'España',
-    district: 'Chamberí',
-    municipality: 'Madrid',
-    province: 'Madrid',
+    district: 'Sarrià - Sant Gervasi',
+    neighborhood: 'Les Tres Torres',
+    zipCode: '08017',
+    municipality: 'Barcelona',
+    province: 'Barcelona',
+    city: 'Barcelona',
+    regionLevel1: 'Cataluña',
   },
-  location: { latitude: '40.4318', longitude: '-3.6931' },
+  coordinates: { latitude: 41.39739562695459, longitude: 2.1289727231295443, accuracy: 0 },
+  location: 'Les Tres Torres',
   features: [
-    { name: 'Ascensor', value: true },
-    { name: 'Aire acondicionado', value: true },
-    { name: 'Calefacción', value: true },
-    { name: 'Terraza', value: true },
-    { name: 'Amueblado', value: true },
-    { name: 'Parking', value: false },
-    { name: 'Buen estado', value: true },
-    'Piscina',
+    { key: 'cabinets', value: 2, maxValue: 0, minValue: 0 },
+    { key: 'heating', value: 3, maxValue: 0, minValue: 0 },
+    { key: 'parking', value: 5, maxValue: 0, minValue: 0 },
+    { key: 'private_garden', value: 7, maxValue: 0, minValue: 0 },
+    { key: 'parquet', value: 9, maxValue: 0, minValue: 0 },
+    { key: 'terrace', value: 10, maxValue: 0, minValue: 0 },
+    { key: 'elevator', value: 13, maxValue: 0, minValue: 0 },
+    { key: 'household_appliances', value: 21, maxValue: 0, minValue: 0 },
+    { key: 'porter_service', value: 28, maxValue: 0, minValue: 0 },
+    { key: 'pets_allowed', value: 49, maxValue: 0, minValue: 0 },
+    { key: 'laundry', value: 109, maxValue: 0, minValue: 0 },
+    { key: 'not_furnished', value: 130, maxValue: 0, minValue: 0 },
+    { key: 'equiped_kitchen', value: 131, maxValue: 0, minValue: 0 },
+    { key: 'bathrooms', value: 4, maxValue: 0, minValue: 0 },
+    { key: 'conservationStatus', value: 3, maxValue: 0, minValue: 0 },
+    { key: 'floor', value: 10, maxValue: 0, minValue: 0 },
+    { key: 'rooms', value: 5, maxValue: 0, minValue: 0 },
+    { key: 'surface', value: 223, maxValue: 0, minValue: 0 },
   ],
-  contactInfo: {
-    phone: '911234567',
-    email: 'agente@example-inmobiliaria.es',
-    contactName: 'Agente Almagro',
-    agencyName: 'Inmobiliaria Almagro',
-  },
   multimedia: [
-    { url: 'https://static.fotocasa.es/images/anuncios/187654321/1.jpg', type: 'image' },
-    { url: 'https://static.fotocasa.es/images/anuncios/187654321/2.jpg', type: 'image' },
+    { type: 'image', src: 'https://static.fotocasa.es/images/ads/20f35295-0d38-4444-a929-e06b3888a72a?rule=original', roomType: null },
+    { type: 'image', src: 'https://static.fotocasa.es/images/ads/fc9a9543-b9b2-4f39-b9bf-aff5e102d2dc?rule=original', roomType: null },
+    { type: 'image', src: 'https://static.fotocasa.es/images/ads/bba58a62-8849-4274-9d0e-1a66179d7a8d?rule=original', roomType: null },
   ],
-});
+  phone: '+34670501198',
+  price: '3.690 €',
+  rawPrice: 3690,
+  periodicityId: 3,
+  transactionTypeId: 3,
+  typeId: 2,
+};
+
+/**
+ * The same real card served as a `/property` JSON body (the property API returns
+ * the same record shape). Exercises the `parseFotocasaPropertyJson` path.
+ */
+export const FOTOCASA_FIXTURE_PROPERTY_JSON = JSON.stringify(FOTOCASA_FIXTURE_SEARCH_CARD);
 
 /** SSR search HTML embedding a `realEstates` JSON array. */
 export const FOTOCASA_FIXTURE_SSR_SEARCH_HTML = `<!doctype html>
