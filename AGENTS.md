@@ -393,6 +393,14 @@ Cards NEVER scale on hover/press ("cutrada"). The app-wide Airbnb-2026 move is t
 - Web transition + Safari corner-clip fix are baked in (web-cast `transitionProperty`/`willChange`, the sanctioned `as unknown as ViewStyle` web-CSS pattern). NEVER add a per-component variant — reuse this one.
 - Wired in: `PropertyImageCarousel` + `PropertyCard` (both paths), `CityShowcaseSection`, `Host/AgentCtaBanner`, tips `TipCard`, `RoomList`. Card/banner/tile surfaces are otherwise **flat** — no `transform:[{scale}]` card interaction anywhere (audit: `grep -rnE "transform.*scale" components app` shows only `ZoomableImage`'s image-zoom + genuinely animated worklets).
 
+## Icon Button (IconButton)
+
+`components/ui/IconButton.tsx` is the ONE app-wide icon-button primitive — a circular button with pressed/hover state (static style arrays, no function-form `style`) and three chrome **variants**. Never hand-roll `<Pressable style={[barIconButton, pressed && barIconButtonPressed]}><Ionicons/></Pressable>` again.
+
+- Variants: `ghost` (flat transparent, `mutedSubtle` pressed tint — headers/bars, reuses the shared `barIconButton`/`barIconSize`/`barBackIconSize` tokens), `overlay` (frosted-white circle for on-photo use — the card save heart), `filled` (brand fill + `primaryForeground` glyph). Props: `icon`/`onPress`/`accessibilityLabel` + optional `variant`/`size`/`color`/`active`+`activeColor`/`onLongPress`/`disabled`/`loading`/`badge`/`style`.
+- **`SaveButton` is a stateful COMPOSITION of `IconButton`** — it owns save logic (mutation, optimistic toggle, count, long-press folder sheet) and passes `chrome` → `IconButton`'s `variant` (`ghost` in headers/bars, `overlay` on cards). There is no separate cream/shadow save chrome. Every SaveButton site inherits the shared button.
+- Wired in: `Header` back, `StickyPropertyHeader` back/share, property `[id]` floating host/share/viewings (checkmark via `badge`), and `SaveButton` everywhere. Future icon-button sites reuse `IconButton`.
+
 ## Infinite Scroll / Pagination Primitive
 
 Homiio has **one** reusable infinite-scroll primitive — never hand-roll `ScrollView.onScroll` distance math again. It respects the "one scroll owner per surface" rule above (web sentinel, native handler) rather than copying Mention's `FlatList.onEndReached`.

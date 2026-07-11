@@ -15,7 +15,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PANEL_TOP_INSET } from '@oxyhq/bloom/content-panel';
 import { barBackIconSize, barContent, spacing } from '@/constants/styles';
-import { BarIconButton } from '@/components/ui/BarIconButton';
+import { IconButton } from '@/components/ui/IconButton';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 
 /**
@@ -180,8 +180,9 @@ export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) =
       >
         <View style={styles.leftSlot}>
           {options?.showBackButton && canGoBack && (
-            <BarIconButton
+            <IconButton
               icon="arrow-back"
+              variant="ghost"
               size={barBackIconSize}
               onPress={() => router.back()}
               accessibilityLabel={t('goBack')}

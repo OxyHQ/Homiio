@@ -27,7 +27,7 @@ import { PANEL_TOP_INSET } from '@oxyhq/bloom/content-panel';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { SaveButton } from '@/components/SaveButton';
-import { BarIconButton } from '@/components/ui/BarIconButton';
+import { IconButton } from '@/components/ui/IconButton';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { colors } from '@/styles/colors';
 import { barBackIconSize, barContent, hairline, spacing } from '@/constants/styles';
@@ -82,8 +82,9 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
   return (
     <View style={[styles.bar, containerStyle, { paddingTop: insets.top }]}>
       <View style={styles.content}>
-        <BarIconButton
+        <IconButton
           icon="arrow-back"
+          variant="ghost"
           size={barBackIconSize}
           onPress={onBack}
           accessibilityLabel={t('goBack')}
@@ -97,8 +98,9 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
           </BloomText>
         </View>
         <View style={styles.actions}>
-          <BarIconButton
+          <IconButton
             icon="share-outline"
+            variant="ghost"
             onPress={handleShare}
             accessibilityLabel={t('common.share')}
           />
@@ -106,7 +108,7 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
             <SaveButton
               property={property as Property & { _id: string }}
               variant="heart"
-              chrome="bar"
+              chrome="ghost"
               color={colors.COLOR_BLACK}
               activeColor={colors.error}
             />
