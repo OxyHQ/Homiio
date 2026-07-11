@@ -2,8 +2,9 @@
  * MercadoLibre Mexico inmuebles — classifieds, HOUSING ONLY.
  *
  * Thin wrapper over shared {@link ../../../mercadolibre} + {@link ../../../mercadolibreProvider}.
- * Bot/suspicious-traffic gated; keep OFF until live Playwright + residential proxy probe.
- * Registered OFF by default (`PROVIDER_MERCADOLIBRE_MX_ENABLED`).
+ * Cold HTTP works for search + detail HTML (verified — no account-verification wall
+ * from datacenter IPs, unlike CO/CL/PE/EC); item API is OAuth-gated. Registered OFF
+ * by default (`PROVIDER_MERCADOLIBRE_MX_ENABLED`) — enable after live probe.
  */
 
 import type { ProviderId } from '@homiio/shared-types';
@@ -64,7 +65,7 @@ export class MercadolibreMxProvider implements ListingProvider {
       locale: 'es-MX',
       acceptLanguage: 'es-MX,es;q=0.9,en;q=0.8',
       countryName: 'Mexico',
-      requireBrowserSession: true,
+      requireBrowserSession: false,
       runtime: options.runtime,
       cities: options.cities,
       metrics: options.metrics,

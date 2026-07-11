@@ -31,6 +31,8 @@ export const MERCADOLIBRE_EC_SITE: MercadolibreSiteConfig = {
   defaultCurrency: 'USD',
   inmueblesBaseUrl: MERCADOLIBRE_EC_BASE_URL,
   housingSlugs: MERCADOLIBRE_EC_HOUSING_SLUGS,
+  // Ecuador rents are advertised as "arriendo" (not "alquiler").
+  rentSegment: 'arriendo',
   hrefRe:
     /href="(https:\/\/(?:departamento|casa|inmueble|ph|monoambiente)[^"]*mercadolibre\.com\.ec\/MEC-?\d+[^"]*)"/i,
 };
