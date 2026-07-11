@@ -95,8 +95,8 @@ describe('RightmoveProvider', () => {
     expect(listing.remoteImages.length).toBeGreaterThan(0);
     // sizings[] → squareFootage in m² (prefers the native sqm entry).
     expect(listing.squareFootage).toBe(79);
-    // keyFeatures[] → amenities (ingest derives hasGarden/hasBalcony/hasElevator/parking).
-    expect(listing.amenities).toEqual(['Garden', 'Off street parking', 'Balcony', 'Lift']);
+    // keyFeatures[] → canonical amenities (ingest derives hasGarden/hasBalcony/hasElevator/parking).
+    expect(listing.amenities).toEqual(['garden', 'parking', 'balcony', 'elevator']);
     // letting.furnishType → furnishedStatus.
     expect(listing.furnishedStatus).toBe('furnished');
   });

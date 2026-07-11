@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiltersBottomSheet, FilterSection, FilterValue } from '@/components/FiltersBar/FiltersBottomSheet';
 import { useRentalMode } from '@/context/RentalModeContext';
+import { getAmenityById } from '@/constants/amenities';
 import { CancellationPolicy } from '@homiio/shared-types';
 
 /**
@@ -235,11 +236,14 @@ export function SearchFiltersBottomSheet({
             id: 'amenities',
             title: t('Amenities'),
             type: 'chips',
-            options: AMENITIES.map((amenity) => ({
-                id: amenity,
-                label: t(amenity.replace('_', ' ')),
-                value: amenity,
-            })),
+            options: AMENITIES.map((amenity) => {
+                const nameKey = getAmenityById(amenity)?.nameKey;
+                return {
+                    id: amenity,
+                    label: nameKey ? t(nameKey) : amenity,
+                    value: amenity,
+                };
+            }),
             value: filters.amenities,
         });
 

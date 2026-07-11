@@ -7,6 +7,7 @@
  */
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
+import { canonicalizeAmenities } from '../../../parse/amenities';
 import { buildContact } from '../../../parse/contact';
 import { asNumberUs as asNumber, asString, isRecord } from '../../../parse/guards';
 import { parseNextData } from '../../../parse/nextData';
@@ -266,15 +267,21 @@ function squareMetersFromDetail(prop: Record<string, unknown>): number | undefin
   return squareMetersFromSizings(prop) ?? squareMetersFromDisplaySize(prop);
 }
 
-/** Portal `keyFeatures[]` strings — passed to ingest as amenities for derivation. */
+/**
+ * Portal `keyFeatures[]` are free-form marketing copy ("Off street parking",
+ * "Gas central heating", "Double glazing"). Collapse them onto the shared
+ * canonical amenity vocabulary so they match every other portal + render
+ * translated; unrecognized copy is dropped and `Furnished` is hoisted into
+ * `furnishedStatus` (letting.furnishType already sets it).
+ */
 function keyFeaturesFromDetail(prop: Record<string, unknown>): string[] {
   if (!Array.isArray(prop.keyFeatures)) return [];
-  const out: string[] = [];
+  const labels: string[] = [];
   for (const feature of prop.keyFeatures) {
     const value = asString(feature);
-    if (value) out.push(value);
+    if (value) labels.push(value);
   }
-  return out;
+  return canonicalizeAmenities(labels).amenities;
 }
 
 /** Map `propertyData.letting.furnishType` to the normalized furnished status. */

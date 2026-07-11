@@ -32,6 +32,7 @@ import { validateOfferings } from '../../models/schemas/offeringValidation';
 import { forwardGeocode, reverseGeocode } from '../geocodingService';
 import { sanitizeGeoJsonCoordinates } from '../../utils/geoCoordinates';
 import { deriveStructuredFeatures } from './deriveFeatures';
+import { classifyListingContent } from './classifyListingContent';
 import { ExternalMediaIngest } from './ExternalMediaIngest';
 import { schedulePriceEthicsScore } from '../priceEthicsService';
 import { Logger } from '../../utils/logger';
@@ -305,6 +306,13 @@ export class IngestionService {
     if (parkingType !== undefined) fields.parkingType = parkingType;
     const furnishedStatus = listing.furnishedStatus ?? derived.furnishedStatus;
     if (furnishedStatus !== undefined) fields.furnishedStatus = furnishedStatus;
+
+    // Classify the free-text description into restriction/nuance flags portals
+    // never expose structurally (students-only, room-not-full-unit, temporary,
+    // agency fee, …). Runs on the full pre-truncation description. Only stored
+    // when at least one flag or a detected language fires.
+    const listingFlags = classifyListingContent(listing.description);
+    if (Object.keys(listingFlags).length > 0) fields.listingFlags = listingFlags;
 
     if (listing.contact) {
       const externalContact: NonNullable<IProperty['externalContact']> = {};

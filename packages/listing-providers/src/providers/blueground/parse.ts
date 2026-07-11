@@ -12,6 +12,7 @@
  */
 
 import type { ExternalListingRef } from '../../types';
+import { canonicalAmenity, FURNISHED_TOKEN } from '../../parse/amenities';
 import { asRecord, asString } from '../../parse/guards';
 import { extractBalancedJsonAfter } from '../../parse/nextData';
 import type { BluegroundRawListing, BluegroundRawPhoto } from './fixtures';
@@ -135,37 +136,18 @@ function readPhotos(html: string): BluegroundRawPhoto[] {
  * We normalize the stable `key` — never the localized caption — so extraction is
  * market-agnostic.
  *
- * Only the handful of keys whose generic slug would diverge from the canonical
- * vocabulary the ingest/search read (`elevator`, `parking`, `terrace`,
- * `washer`, `air_conditioning`) are aliased; everything else is slugified
- * generically. This is Blueground's OWN camelCase vocabulary, not a duplicate of
- * the shared ES/IT free-text amenity table in `parse/jsonLd.ts`.
+ * The stable `key` is run through the shared {@link canonicalAmenity} vocabulary
+ * (which slugifies camelCase, so `elevatorInTheBuilding`→`elevator`,
+ * `parkingSpace`→`parking`, `washerUnit`→`washing_machine`); keys that don't map
+ * to the fixed canonical set (e.g. `coffeeMachine`) are dropped rather than
+ * stored as a bespoke slug. No per-portal alias table.
  */
-const BLUEGROUND_AMENITY_ALIASES: Readonly<Record<string, string>> = {
-  airConditioning: 'air_conditioning',
-  elevatorInTheBuilding: 'elevator',
-  parkingSpace: 'parking',
-  terracePrivate: 'terrace',
-  laundryRoomUnit: 'washer',
-  washerUnit: 'washer',
-};
 
 /** Categories that list amenities the unit does NOT have (struck through in UI). */
 const BLUEGROUND_STRUCKTHROUGH_PREFIX = 'struckthrough';
 /** Category holding structured facts (bedrooms/bathrooms/lotSize/floor), not amenities. */
 const BLUEGROUND_FACTS_CATEGORY = 'main';
 const BLUEGROUND_FLOOR_KEY = 'floor';
-
-/** Canonicalize a Blueground amenity `key`; unknown keys → generic snake_case slug. */
-function bluegroundAmenitySlug(key: string): string {
-  const alias = BLUEGROUND_AMENITY_ALIASES[key];
-  if (alias) return alias;
-  return key
-    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-}
 
 /** Read the `main.floor` structured value (string like `"2"` or a number). */
 function readBluegroundFloor(entries: readonly unknown[]): number | undefined {
@@ -217,8 +199,8 @@ export function readBluegroundAmenities(html: string): { amenities: string[]; fl
     for (const entry of entries) {
       const key = asString(asRecord(entry)?.['key']);
       if (!key) continue;
-      const slug = bluegroundAmenitySlug(key);
-      if (slug) amenities.add(slug);
+      const canonical = canonicalAmenity(key);
+      if (canonical && canonical !== FURNISHED_TOKEN) amenities.add(canonical);
     }
   }
 

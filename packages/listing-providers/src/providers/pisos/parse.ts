@@ -8,6 +8,7 @@
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
 import { ldJsonScriptBodies } from '../../html';
+import { canonicalizeAmenities } from '../../parse/amenities';
 import { extractEsSchemaListings, type EsSchemaListing } from '../../parse/jsonLd';
 import { PISOS_BASE_URL } from './fixtures';
 import { asCoordinate, asNumber } from '../../parse/guards';
@@ -329,20 +330,15 @@ export function postalCodeFromPisosUrl(url: string): string | undefined {
   return url.match(/(\d{5})-\d+[._]\d+/)?.[1];
 }
 
-function amenityList(raw: unknown): string[] {
-  if (typeof raw !== 'string' || raw.trim().length === 0) return [];
-  return raw
-    .split(',')
-    .map((part) =>
-      part
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]+/g, '_')
-        .replace(/^_+|_+$/g, ''),
-    )
-    .filter(Boolean);
+/**
+ * Pisos' `caracteristicasInmueble` is a comma-separated list of raw Spanish
+ * feature slugs (`ascensor,balcon,soleado,amueblado`). Collapse it onto the
+ * shared canonical amenity vocabulary \u2014 non-amenity words (`soleado`, \u2026) drop
+ * and `amueblado` is hoisted into the returned `furnished` flag.
+ */
+function amenityList(raw: unknown): { amenities: string[]; furnished?: boolean } {
+  if (typeof raw !== 'string' || raw.trim().length === 0) return { amenities: [] };
+  return canonicalizeAmenities(raw.split(','));
 }
 
 /**
@@ -421,6 +417,8 @@ export function parsePisosDetail(html: string, url: string): PisosRaw {
   const street = ld?.address?.street ?? h1 ?? city;
   const postalCode = ld?.address?.postalCode ?? postalCodeFromPisosUrl(url);
 
+  const { amenities, furnished } = amenityList(dataVar?.caracteristicasInmueble);
+
   const listing: EsSchemaListing = {
     types,
     name: h1 ?? ld?.name,
@@ -443,8 +441,9 @@ export function parsePisosDetail(html: string, url: string): PisosRaw {
     price,
     priceCurrency: 'EUR',
     operation,
-    amenities: amenityList(dataVar?.caracteristicasInmueble),
+    amenities,
   };
+  if (furnished) listing.furnished = true;
 
   const phone =
     typeof dataVar?.telefono === 'string' && dataVar.telefono.trim()

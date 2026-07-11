@@ -556,10 +556,10 @@ export function PropertyCard({
               </View>
             </>
           )}
-          {variant === 'compact' && propertyData.type && (
+          {variant === 'compact' && typeMeta && (
             <>
               <ThemedText style={styles.featureSeparator}>•</ThemedText>
-              <ThemedText style={styles.featureText}>{propertyData.type}</ThemedText>
+              <ThemedText style={styles.featureText}>{typeMeta.label}</ThemedText>
             </>
           )}
         </View>

@@ -183,22 +183,22 @@ function featurePresent(flag: unknown, surface: unknown): boolean | undefined {
 
 /**
  * Immoweb detail JSON exposes ~30 boolean amenity flags on `property.has*`.
- * Map the ones we recognize to the canonical amenity slugs the rest of the
- * pipeline speaks (matching `parse/jsonLd.ts` aliases + ingest `deriveFeatures`
- * keywords: `elevator`/`terrace`/`garden`/`pool`/`storage`/`air_conditioning`).
- * The ingest promotes `elevator`→hasElevator, `terrace`→hasBalcony,
- * `garden`→hasGarden from this array; other slugs surface as amenity tags.
+ * Map the ones we recognize directly to the shared canonical amenity vocabulary
+ * (`parse/amenities.ts`) — this is a portal-specific INPUT adapter (Immoweb's
+ * boolean flag names), and every target is a fixed canonical key, so the ingest
+ * promotes `elevator`→hasElevator, `terrace`→hasBalcony, `garden`→hasGarden and
+ * the app renders each translated.
  */
 const IMMOWEB_AMENITY_FLAGS: Readonly<Record<string, string>> = {
   hasLift: 'elevator',
   hasTerrace: 'terrace',
   hasGarden: 'garden',
   hasBasement: 'storage',
-  hasLaundryRoom: 'laundry',
+  hasLaundryRoom: 'laundry_room',
   hasArmoredDoor: 'armored_door',
   hasAttic: 'attic',
-  hasInternet: 'internet',
-  hasVisiophone: 'visiophone',
+  hasInternet: 'wifi',
+  hasVisiophone: 'intercom',
   hasAirConditioning: 'air_conditioning',
   hasSwimmingPool: 'pool',
   hasFitnessRoom: 'gym',

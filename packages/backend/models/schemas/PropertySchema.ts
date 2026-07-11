@@ -289,6 +289,27 @@ const propertySchema = new mongoose.Schema({
     }, { _id: false }),
     required: false,
   },
+  /**
+   * Restriction/nuance flags derived from the listing free text at ingest by
+   * `classifyListingContent` (external listings only). Sparse — only firing
+   * flags are stored. See `services/ingestion/classifyListingContent.ts`.
+   */
+  listingFlags: {
+    type: new mongoose.Schema({
+      studentsOnly: { type: Boolean },
+      roomNotFullUnit: { type: Boolean },
+      temporaryOnly: { type: Boolean },
+      genderRestricted: { type: Boolean },
+      workersOnly: { type: Boolean },
+      agencyFeePayable: { type: Boolean },
+      noPets: { type: Boolean },
+      noSmoking: { type: Boolean },
+      noCouples: { type: Boolean },
+      noDSS: { type: Boolean },
+      detectedLanguage: { type: String, enum: ['es', 'ca', 'en', 'fr', 'nl', 'de', 'it'] },
+    }, { _id: false }),
+    required: false,
+  },
   expiresAt: {
     type: Date,
     index: { expireAfterSeconds: 0 }, // TTL index; document auto-removed after this date

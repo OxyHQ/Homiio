@@ -115,7 +115,10 @@
     "wholeHouseFan": "Whole House Fan",
     "wideDoorways": "Wide Doorways",
     "wifi": "High-Speed Internet",
-    "wineFridge": "Wine Refrigerator"
+    "wineFridge": "Wine Refrigerator",
+    "terrace": "Terrace",
+    "sauna": "Sauna",
+    "attic": "Attic"
   },
   "home": {
     "insights": {
@@ -1132,7 +1135,17 @@
         "room": "Room",
         "studio": "Studio",
         "duplex": "Duplex",
-        "penthouse": "Penthouse"
+        "penthouse": "Penthouse",
+        "couchsurfing": "Couchsurfing",
+        "roommates": "Roommates",
+        "coliving": "Co-living",
+        "hostel": "Hostel",
+        "guesthouse": "Guesthouse",
+        "campsite": "Campsite",
+        "boat": "Boat",
+        "treehouse": "Treehouse",
+        "yurt": "Yurt",
+        "other": "Other"
       }
     },
     "actions": {
@@ -3441,5 +3454,15 @@
   },
   "inbox": {
     "title": "Inbox"
+  },
+  "parkingType": {
+    "street": "Street Parking",
+    "assigned": "Assigned Parking",
+    "garage": "Garage"
+  },
+  "petPolicy": {
+    "allowed": "Pets Allowed",
+    "not_allowed": "No Pets",
+    "case_by_case": "Pets Case by Case"
   }
 }

@@ -47,7 +47,9 @@ describe('PisosProvider.normalize', () => {
     expect(listing.contact?.phone).toBe('919376345');
     expect(listing.contact?.kind).toBe('agency');
     expect(listing.remoteImages.length).toBeGreaterThan(0);
-    expect(listing.amenities).toEqual(expect.arrayContaining(['ascensor', 'balcon', 'soleado']));
+    // Raw ES slugs canonicalized (`ascensor`→elevator, `balcon`→balcony); the
+    // non-amenity `soleado` is dropped.
+    expect(listing.amenities).toEqual(['elevator', 'balcony']);
     expect(listing.address.city).toBe('Madrid Capital');
     expect(listing.address.coordinates).toEqual({ lat: 40.41593545782718, lng: -3.7083892232908435 });
   });

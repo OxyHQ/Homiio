@@ -82,9 +82,11 @@ describe('Blueground parse', () => {
 
   it('extracts available amenities as canonical slugs, excluding struck-through ones', () => {
     const { amenities, floor } = readBluegroundAmenities(FIRST_PARTY_DETAIL_HTML);
-    // Available apartment/building amenities, canonicalized and deduped.
+    // Available apartment/building amenities, canonicalized onto the shared fixed
+    // vocabulary (`washerUnit`→washing_machine); non-canonical `coffeeMachine` is
+    // dropped rather than stored as a bespoke slug.
     expect(amenities.sort()).toEqual(
-      ['air_conditioning', 'balcony', 'coffee_machine', 'elevator', 'washer'].sort(),
+      ['air_conditioning', 'balcony', 'elevator', 'washing_machine'].sort(),
     );
     // Struck-through amenities (parking, doorman, bathtub) must NOT appear.
     expect(amenities).not.toContain('parking');
@@ -101,7 +103,7 @@ describe('Blueground parse', () => {
     const listing = parseBluegroundDetail(FIRST_PARTY_DETAIL_HTML, ref);
     expect(listing.floor).toBe(2);
     expect(listing.amenities).toContain('elevator');
-    expect(listing.amenities).toContain('washer');
+    expect(listing.amenities).toContain('washing_machine');
     expect(listing.amenities).not.toContain('parking');
   });
 
