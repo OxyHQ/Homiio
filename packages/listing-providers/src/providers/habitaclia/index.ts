@@ -487,6 +487,8 @@ export class HabitacliaProvider implements ListingProvider {
       bathrooms: listing.bathrooms,
       squareFootage: listing.squareMeters,
       floor: listing.floor,
+      yearBuilt: listing.yearBuilt,
+      parkingSpaces: listing.parkingSpaces,
       amenities: listing.amenities,
       furnishedStatus: resolveFurnished(listing.furnished),
       remoteImages: toRemoteImages(listing),
