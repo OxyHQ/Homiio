@@ -46,6 +46,8 @@ describe('BluegroundProvider', () => {
     expect(listing.address.countryCode).toBe('ES');
     expect(listing.address.neighborhood).toBe('Chueca Justicia');
     expect(listing.furnishedStatus).toBe('furnished');
+    expect(listing.floor).toBe(2);
+    expect(listing.amenities).toEqual(['air_conditioning', 'wifi', 'elevator', 'washer', 'heating']);
     expect(listing.remoteImages).toHaveLength(2);
     expect(listing.remoteImages.filter((image) => image.isPrimary)).toHaveLength(1);
   });
@@ -58,6 +60,7 @@ describe('BluegroundProvider', () => {
     expect(listing.address.city).toBe('New York');
     expect(listing.address.countryCode).toBe('US');
     expect(listing.furnishedStatus).toBe('furnished');
+    expect(listing.floor).toBe(12);
   });
 
   it('rejects partner-network payloads in normalize (no false monthly from lowestRent)', () => {

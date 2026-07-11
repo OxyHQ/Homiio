@@ -22,7 +22,13 @@ function extractScriptBodyById(html: string, scriptId: string): string | undefin
   return undefined;
 }
 
-function extractBalancedJsonAfter(html: string, marker: string): string | undefined {
+/**
+ * Slice the first brace-balanced JSON object that follows `marker` in `html`.
+ * Shared with providers that read an embedded object by key (e.g. Blueground's
+ * `"amenities":{…}`). Depth counting only — a malformed slice is caught by the
+ * caller's `JSON.parse`, so the failure mode is a safe `undefined`.
+ */
+export function extractBalancedJsonAfter(html: string, marker: string): string | undefined {
   const idx = html.indexOf(marker);
   if (idx < 0) return undefined;
   const braceStart = html.indexOf('{', idx + marker.length);
