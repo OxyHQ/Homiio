@@ -84,10 +84,11 @@ describe('ImmowebProvider (BE)', () => {
     expect(listing.bathrooms).toBe(2);
     // constructionYear lives on property.building, not the unit
     expect(listing.yearBuilt).toBe(1965);
-    // amenities built from the true `has*` flags, mapped to canonical slugs
+    // amenities built from the true `has*` flags, mapped to the shared canonical
+    // vocabulary (`laundry_room`, `wifi` — not bespoke `laundry`/`internet`).
     expect(listing.amenities).toBeDefined();
     expect(listing.amenities).toEqual(
-      expect.arrayContaining(['elevator', 'terrace', 'garden', 'storage', 'laundry', 'internet']),
+      expect.arrayContaining(['elevator', 'terrace', 'garden', 'storage', 'laundry_room', 'wifi']),
     );
     expect(listing.hasElevator).toBe(true);
     expect(listing.hasGarden).toBe(true);

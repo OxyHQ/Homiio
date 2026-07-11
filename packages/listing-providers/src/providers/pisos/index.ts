@@ -454,6 +454,7 @@ export class PisosProvider implements ListingProvider {
     if (yearBuilt !== undefined) result.yearBuilt = yearBuilt;
     if (parkingSpaces !== undefined) result.parkingSpaces = parkingSpaces;
     if (listing.amenities.length > 0) result.amenities = listing.amenities;
+    if (listing.furnished === true) result.furnishedStatus = 'furnished';
     if (contact && (contact.phone || contact.email || contact.whatsapp || contact.agencyName)) {
       result.contact = contact;
     }

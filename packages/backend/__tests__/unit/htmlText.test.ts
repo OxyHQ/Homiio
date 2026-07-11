@@ -68,7 +68,8 @@ describe('sanitizeNormalizedListingTextFields', () => {
     sanitizeNormalizedListingTextFields(listing);
 
     expect(listing.description).toBe('Council Tax Band: E\n\nGuidance only');
-    expect(listing.amenities).toEqual(['Garden', 'Parking']);
+    // HTML-stripped, then canonicalized onto the shared amenity vocabulary.
+    expect(listing.amenities).toEqual(['garden', 'parking']);
     expect(listing.contact?.name).toBe('Jane Doe');
     expect(listing.contact?.agencyName).toBe('Savills & Co');
     expect(listing.remoteImages[0]?.caption).toBe('Living room');

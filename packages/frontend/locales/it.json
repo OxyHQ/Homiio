@@ -102,7 +102,10 @@
     "wholeHouseFan": "Ventilatore per tutta la casa",
     "wideDoorways": "Porte larghe",
     "wifi": "Internet ad alta velocità",
-    "wineFridge": "Frigo per vini"
+    "wineFridge": "Frigo per vini",
+    "terrace": "Terrazza",
+    "sauna": "Sauna",
+    "attic": "Mansarda"
   },
   "settings": {
     "title": "Impostazioni",
@@ -1256,7 +1259,17 @@
         "room": "Stanza",
         "studio": "Monolocale",
         "duplex": "Duplex",
-        "penthouse": "Attico"
+        "penthouse": "Attico",
+        "couchsurfing": "Couchsurfing",
+        "roommates": "Coinquilini",
+        "coliving": "Coliving",
+        "hostel": "Ostello",
+        "guesthouse": "Pensione",
+        "campsite": "Campeggio",
+        "boat": "Barca",
+        "treehouse": "Casa sull'albero",
+        "yurt": "Yurta",
+        "other": "Altro"
       }
     },
     "type": {
@@ -3490,5 +3503,15 @@
   },
   "inbox": {
     "title": "Posta"
+  },
+  "parkingType": {
+    "street": "Parcheggio su strada",
+    "assigned": "Posto auto assegnato",
+    "garage": "Garage"
+  },
+  "petPolicy": {
+    "allowed": "Animali ammessi",
+    "not_allowed": "Animali non ammessi",
+    "case_by_case": "Animali caso per caso"
   }
 }

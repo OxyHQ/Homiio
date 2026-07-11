@@ -12,6 +12,7 @@
  */
 
 import { HABITACLIA_BASE_URL, type HabitacliaRawImage, type HabitacliaRawListing } from './fixtures';
+import { canonicalAmenity, FURNISHED_TOKEN } from '../../parse/amenities';
 import { asCoordinate, asNumber, asString } from '../../parse/guards';
 
 /** Match every `<script type="application/ld+json">…</script>` block. */
@@ -25,21 +26,6 @@ const DETAIL_DATA_HREF_RE =
   /data-href=["']([^"']*-i(\d+)\.htm(?:\?[^"']*)?)["']/gi;
 /** Fallback when anchors omit the `-i` prefix but keep the trailing id segment. */
 const DETAIL_LINK_FALLBACK_RE = /href=["']([^"']*\/alquiler-[^"']*-(\d{6,})\.htm)["']/gi;
-
-/** Spanish → canonical amenity keys; unknown names fall back to a slug. */
-const AMENITY_ALIASES: Readonly<Record<string, string>> = {
-  ascensor: 'elevator',
-  'aire acondicionado': 'air_conditioning',
-  calefaccion: 'heating',
-  terraza: 'terrace',
-  balcon: 'balcony',
-  parking: 'parking',
-  garaje: 'parking',
-  piscina: 'pool',
-  jardin: 'garden',
-  trastero: 'storage',
-  amueblado: 'furnished',
-};
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === 'object' && !Array.isArray(value)
@@ -91,16 +77,6 @@ function htmlFragmentToText(html: string): string {
   return text.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
-/** Strip accents and lowercase for alias lookup / slugging. */
-function deaccent(value: string): string {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-}
-
-function normalizeAmenity(name: string): string {
-  const key = deaccent(name);
-  return AMENITY_ALIASES[key] ?? key.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-}
-
 /** Parse every JSON-LD block in the page, ignoring malformed ones. */
 function extractJsonLdNodes(html: string): Record<string, unknown>[] {
   const nodes: Record<string, unknown>[] = [];
@@ -146,18 +122,23 @@ function toImages(node: Record<string, unknown>): HabitacliaRawImage[] {
 
 function toAmenities(node: Record<string, unknown>): { amenities: string[]; furnished?: boolean } {
   const amenities: string[] = [];
+  const seen = new Set<string>();
   let furnished: boolean | undefined;
   for (const entry of asArray(node['amenityFeature'])) {
     const record = asRecord(entry);
     const name = asString(record?.['name']);
     if (!name) continue;
     if (record?.['value'] === false) continue;
-    const key = normalizeAmenity(name);
-    if (key === 'furnished') {
+    const key = canonicalAmenity(name);
+    if (!key) continue;
+    if (key === FURNISHED_TOKEN) {
       furnished = true;
       continue;
     }
-    if (key) amenities.push(key);
+    if (!seen.has(key)) {
+      seen.add(key);
+      amenities.push(key);
+    }
   }
   return { amenities, furnished };
 }
@@ -480,6 +461,7 @@ export function parseHabitacliaDetailHtml(html: string, url: string): Habitaclia
   );
 
   const amenities: string[] = [];
+  const seen = new Set<string>();
   let furnished: boolean | undefined;
   for (const match of html.matchAll(/<li>([^<]{2,60})<\/li>/gi)) {
     const label = match[1]?.trim();
@@ -490,12 +472,16 @@ export function parseHabitacliaDetailHtml(html: string, url: string): Habitaclia
       )
     )
       continue;
-    const key = normalizeAmenity(label);
-    if (key === 'furnished') {
+    const key = canonicalAmenity(label);
+    if (!key) continue;
+    if (key === FURNISHED_TOKEN) {
       furnished = true;
       continue;
     }
-    if (key) amenities.push(key);
+    if (!seen.has(key)) {
+      seen.add(key);
+      amenities.push(key);
+    }
   }
 
   return {

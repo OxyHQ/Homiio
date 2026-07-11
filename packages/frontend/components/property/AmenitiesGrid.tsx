@@ -55,12 +55,21 @@ interface AmenitiesGridProps {
   maxVisible?: number;
 }
 
+/** Title-case a snake_case slug so an unmapped id never renders as a raw slug. */
+function humanizeAmenityId(id: string): string {
+  return id
+    .split('_')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
 /** Resolve the localized, human label for a resolved amenity. */
 function useAmenityLabel(): (entry: ResolvedAmenity) => string {
   const { t } = useTranslation();
   return useCallback(
     ({ id, amenity }: ResolvedAmenity): string => {
-      if (!amenity?.nameKey) return id;
+      if (!amenity?.nameKey) return humanizeAmenityId(id);
       return t(amenity.nameKey);
     },
     [t],

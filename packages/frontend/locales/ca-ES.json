@@ -102,7 +102,10 @@
     "wholeHouseFan": "Ventilador de tota la casa",
     "wideDoorways": "Portes amples",
     "wifi": "Internet d'alta velocitat",
-    "wineFridge": "Nevera per a vins"
+    "wineFridge": "Nevera per a vins",
+    "terrace": "Terrassa",
+    "sauna": "Sauna",
+    "attic": "Golfa"
   },
   "home": {
     "hero": {
@@ -1109,7 +1112,17 @@
         "room": "Habitació",
         "studio": "Estudi",
         "duplex": "Dúplex",
-        "penthouse": "Àtic"
+        "penthouse": "Àtic",
+        "couchsurfing": "Couchsurfing",
+        "roommates": "Companys de pis",
+        "coliving": "Coliving",
+        "hostel": "Alberg",
+        "guesthouse": "Casa d'hostes",
+        "campsite": "Càmping",
+        "boat": "Vaixell",
+        "treehouse": "Casa de l'arbre",
+        "yurt": "Iurta",
+        "other": "Altre"
       }
     },
     "type": {
@@ -3506,5 +3519,15 @@
   },
   "inbox": {
     "title": "Bústia"
+  },
+  "parkingType": {
+    "street": "Aparcament al carrer",
+    "assigned": "Plaça assignada",
+    "garage": "Garatge"
+  },
+  "petPolicy": {
+    "allowed": "S'admeten mascotes",
+    "not_allowed": "No s'admeten mascotes",
+    "case_by_case": "Mascotes segons el cas"
   }
 }

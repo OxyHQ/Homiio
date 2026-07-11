@@ -47,6 +47,16 @@ export {
 } from './parse/listing';
 export { stripHtmlToPlainText } from './parse/htmlText';
 export {
+  CANONICAL_AMENITIES,
+  FURNISHED_TOKEN,
+  slugifyAmenityToken,
+  canonicalAmenity,
+  isCanonicalAmenity,
+  canonicalizeAmenities,
+  type CanonicalAmenity,
+  type CanonicalizeAmenitiesResult,
+} from './parse/amenities';
+export {
   assertHousingListing,
   isHousingCategory,
   isHousingCategoryUrl,
