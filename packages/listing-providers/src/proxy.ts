@@ -100,6 +100,24 @@ export function browserBlockAssetsFromEnv(): boolean {
   return envBool('LISTING_BROWSER_BLOCK_ASSETS', true);
 }
 
+/**
+ * Whether the browser tier launches a HEADED Chromium (default OFF → headless).
+ *
+ * DataDome/Kasada fingerprint and block headless Chromium; a real headed browser
+ * running under a virtual display (Xvfb) on a residential IP clears those
+ * challenges where a headless launch is detected and blocked. When this is
+ * `true`, the worker process MUST run under an X server — a headed launch with no
+ * `DISPLAY` throws. The sanctioned command (see the backend Dockerfile header) is:
+ *
+ *   xvfb-run -a --server-args="-screen 0 1920x1080x24" node packages/backend/dist/worker.js
+ *
+ * Default `false` preserves the current headless behaviour, so this flag is inert
+ * until infra flips it together with the xvfb-run worker command.
+ */
+export function browserHeadedFromEnv(): boolean {
+  return envBool('LISTING_BROWSER_HEADED', false);
+}
+
 /** Whether plain HTTP listing fetches should use the residential proxy. */
 export function httpUseProxyFromEnv(): boolean {
   return process.env.LISTING_HTTP_USE_PROXY === 'true';
