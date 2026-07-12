@@ -14,7 +14,7 @@
  */
 
 import { ISODate } from './common';
-import { ListingReportReason } from './report';
+import { ListingReportReason, ListingReportStatus } from './report';
 
 /** Lifecycle of an eviction case. Defaults to `UPCOMING` at creation. */
 export enum EvictionCaseStatus {
@@ -140,3 +140,42 @@ export interface CreateEvictionReportInput {
   details?: string;
   contactEmail?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Admin moderation queue.
+// ---------------------------------------------------------------------------
+
+/**
+ * Serialized eviction report (`EvictionReport` document → DTO). Surfaced ONLY
+ * on the admin moderation queue — reports carry no public visibility.
+ */
+export interface EvictionReportDTO {
+  id: string;
+  caseId: string;
+  /** Oxy user id of the reporter. */
+  reporterOxyUserId: string;
+  reason: ListingReportReason;
+  details?: string;
+  contactEmail?: string;
+  status: ListingReportStatus;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
+/**
+ * One grouped entry in the admin eviction moderation queue: a reported case
+ * plus its open reports (`GET /api/admin/moderation/evictions`).
+ */
+export interface EvictionModerationItem {
+  case: EvictionCase;
+  reports: EvictionReportDTO[];
+}
+
+/**
+ * Actions an admin may take on a reported case. `remove` cancels the case
+ * (non-destructive — the owner DELETE remains the only hard delete) and marks
+ * its open reports resolved; `dismiss_reports` marks its open reports
+ * dismissed and leaves the case untouched.
+ */
+export const ADMIN_EVICTION_ACTIONS = ['remove', 'dismiss_reports'] as const;
+export type AdminEvictionModerationAction = (typeof ADMIN_EVICTION_ACTIONS)[number];
