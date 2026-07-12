@@ -147,7 +147,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
       >
         <Ionicons name="flag-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
         <BloomText style={styles.reportLabel}>
-          {t('property.report')}
+          {t('property.report.title')}
         </BloomText>
       </Pressable>
     </View>
