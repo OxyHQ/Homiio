@@ -82,6 +82,10 @@ Event-driven in-app notifications have **one write chokepoint**: `services/notif
 
 The frontend has **no realtime socket client** for notifications. Mailbox refresh is refetch-on-focus + React Query invalidation after writes (`NotificationContext`, `services/notificationService.ts`). See `packages/frontend/docs/NOTIFICATIONS.md`.
 
+## No Admin / Moderator Surfaces (CRITICAL)
+
+Never build admin panels, moderator queues, or privileged moderation actions on user content — the user vetoed this explicitly (the admin moderation queue, PR #229, was reverted in PR #231). The one exception is `/api/scraper/*`'s `requireAdmin` (infra tooling, not content moderation). Community-level machinery is the only moderation: per-user `reports[]` on reviews with automatic `moderationStatus: under_review` at ≥3 reports, `EvictionReport`s, and owners cancelling/deleting their own content. The `removed` moderation status is intentionally unreachable. If a future need arises, ask the user first.
+
 ## Roommates
 
 Accepted roommate requests materialize a `RoommateRelationship` document (`models/schemas/RoommateRelationshipSchema.ts`). Routes: `GET /api/roommates/relationships`, `DELETE /api/roommates/relationships/:relationshipId`. Ownership and participant resolution use `Profile.findByOxyUserId` — same rule as property/lease writes.
