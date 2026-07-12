@@ -63,10 +63,15 @@ describe('createListingFetchRuntime', () => {
 
 describe('fetchListingViaLadder — managed rung', () => {
   it('escalates past a blocked HTTP + browser to the managed tier', async () => {
-    // HTTP tier: bare 403 (forbidden). Browser tier: DataDome challenge body.
+    // HTTP tier: bare 403 (forbidden). Browser tier: DataDome challenge body
+    // (captcha host + interstitial text — what a real block page carries).
     (global as { fetch: unknown }).fetch = jest.fn(async () => ({ status: 403, text: async () => 'Forbidden' }));
     const runtime = createListingFetchRuntime({
-      browser: { fetch: async () => '<html>datadome captcha-delivery</html>' },
+      browser: {
+        fetch: async () =>
+          '<html><body>Please enable JS and disable any ad blocker' +
+          '<script src="https://ct.captcha-delivery.com/c.js"></script></body></html>',
+      },
       managed: { fetch: async () => BIG_OK_HTML },
     }).runtime;
     const metrics = new InMemoryProviderMetrics();

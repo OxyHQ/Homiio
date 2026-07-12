@@ -19,6 +19,25 @@ import type { FetchRuntime } from '@homiio/listing-providers';
 
 const BIG_OK_HTML = `<!doctype html><html><body>${'<p>ok</p>'.repeat(80)}</body></html>`;
 
+/** A DataDome block served with HTTP 200 (captcha host + interstitial text). */
+const DATADOME_200_WALL =
+  `<!doctype html><html><head><title></title></head><body>` +
+  `<h1>Please enable JS and disable any ad blocker to access this site</h1>` +
+  `<script src="https://ct.captcha-delivery.com/c.js"></script>` +
+  `</body></html>`;
+
+/**
+ * A good SERP that embeds a PASSIVE DataDome sensor + reCAPTCHA site key (exactly
+ * what a live Otodom results page carries) — must classify `success`, never a
+ * challenge, so the browser tier is never invoked.
+ */
+const GOOD_SERP_WITH_SENSOR =
+  `<!doctype html><html><body>` +
+  `<script>window.__cmp={"purposes":{"datadome":["C0001"]}};` +
+  `window.__CONFIG__={"googleReCaptchaApiKey":"6Ld4ejwhatever"};</script>` +
+  `${'<article data-cy="listing-item">flat</article>'.repeat(30)}` +
+  `</body></html>`;
+
 /** Minimal runtime; `fetchViaBrowser`/`fetchViaManaged` added per test. */
 function baseRuntime(extra: Partial<FetchRuntime> = {}): FetchRuntime {
   return {
@@ -94,7 +113,7 @@ describe('fetchListingViaLadder', () => {
     mockFetch(403, 'Forbidden');
     const metrics = new InMemoryProviderMetrics();
     // Browser tier returns a DataDome challenge body → classified as challenge.
-    const runtime = baseRuntime({ fetchViaBrowser: async () => '<html>datadome captcha-delivery</html>' });
+    const runtime = baseRuntime({ fetchViaBrowser: async () => DATADOME_200_WALL });
 
     await expect(
       fetchListingViaLadder(runtime, 'https://portal.example/z', {
@@ -108,6 +127,47 @@ describe('fetchListingViaLadder', () => {
     expect(snapshot?.forbidden).toBe(1);
     expect(snapshot?.challenge).toBe(1);
     expect(snapshot?.challengeRate).toBe(1);
+  });
+
+  it('escalates a DataDome 200 challenge (HTTP tier) to the browser tier', async () => {
+    // The wall is served with HTTP 200 — only the anti-bot markers reveal it, so
+    // the ladder must escalate to the (now-live) browser tier rather than ingest
+    // it as an empty page. This is the otodom/GB regression the fix targets.
+    mockFetch(200, DATADOME_200_WALL);
+    const metrics = new InMemoryProviderMetrics();
+    const browser = jest.fn(async () => BIG_OK_HTML);
+    const runtime = baseRuntime({ fetchViaBrowser: browser });
+
+    const result = await fetchListingViaLadder(runtime, 'https://otodom.pl/x', {
+      provider: 'otodom',
+      metrics,
+      ...noDelay,
+    });
+
+    expect(result.tier).toBe('browser');
+    expect(result.html).toBe(BIG_OK_HTML);
+    expect(browser).toHaveBeenCalledTimes(1);
+    const snapshot = metrics.snapshot('otodom');
+    expect(snapshot?.challenge).toBe(1); // HTTP 200 wall classified as challenge
+    expect(snapshot?.success).toBe(1); // browser tier cleared it
+  });
+
+  it('keeps a good SERP with a passive sensor + reCAPTCHA key on the HTTP tier', async () => {
+    // A real Otodom SERP embeds a `"datadome"` consent category and a
+    // `googleReCaptchaApiKey`; those must NOT be mistaken for a challenge, so the
+    // slow browser tier is never touched.
+    mockFetch(200, GOOD_SERP_WITH_SENSOR);
+    const browser = jest.fn(async () => BIG_OK_HTML);
+    const runtime = baseRuntime({ fetchViaBrowser: browser });
+
+    const result = await fetchListingViaLadder(runtime, 'https://otodom.pl/y', {
+      provider: 'otodom',
+      ...noDelay,
+    });
+
+    expect(result.tier).toBe('http');
+    expect(result.html).toBe(GOOD_SERP_WITH_SENSOR);
+    expect(browser).not.toHaveBeenCalled();
   });
 
   it('throws ChallengeError when only HTTP is available and it is blocked', async () => {

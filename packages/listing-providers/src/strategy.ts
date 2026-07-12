@@ -28,6 +28,7 @@ import {
   hostOf,
   sleep,
 } from './http';
+import { isAntiBotChallenge } from './parse/challenge';
 import {
   defaultProviderMetrics,
   type ProviderMetricsSink,
@@ -38,21 +39,6 @@ import type { FetchRuntime, FetchRuntimeInit } from './types';
 
 /** The ordered escalation tiers a listing fetch is attempted at. */
 const DEFAULT_TIERS: readonly StrategyName[] = ['http', 'browser', 'managed'];
-
-/** Body markers that indicate an anti-bot wall rather than real listing HTML. */
-const CHALLENGE_MARKERS: readonly RegExp[] = [
-  /datadome/i,
-  /px-captcha/i,
-  /captcha-delivery/i,
-  /g-recaptcha/i,
-  /hcaptcha/i,
-  /cf-browser-verification/i,
-  /Attention Required/i, // Cloudflare
-  /Pardon Our Interruption/i,
-  /unusual traffic/i,
-  /Access Denied/i,
-  /Request unsuccessful\. Incapsula/i,
-];
 
 /**
  * Raised when every AVAILABLE tier returned an anti-bot block (403 / CAPTCHA /
@@ -71,10 +57,14 @@ export class ChallengeError extends Error {
 }
 
 /**
- * Classify a tier result. 429/503 and challenge-marked bodies are `challenge`,
- * a bare 403 is `forbidden`, other 4xx/5xx are `error`, else `success`. A
- * provider-supplied `isChallenge` catches portal-specific interstitials served
- * with a 200.
+ * Classify a tier result. 429/503 and anti-bot-challenge bodies are `challenge`,
+ * a bare 403 is `forbidden`, other 4xx/5xx are `error`, else `success`.
+ * Anti-bot detection is the shared, precise {@link isAntiBotChallenge} — it keys
+ * on vendor CHALLENGE-ONLY artefacts (captcha hosts / interstitial text), so a
+ * challenge served with HTTP 200 escalates to the browser tier while a good SERP
+ * that merely embeds a passive DataDome sensor or a reCAPTCHA site key stays
+ * `success` and never wastes a browser hop. A provider-supplied `isChallenge`
+ * catches any portal-specific 200 interstitial the shared markers miss.
  */
 export function classifyOutcome(
   status: number,
@@ -82,7 +72,7 @@ export function classifyOutcome(
   isChallenge?: (html: string) => boolean,
 ): ProviderOutcome {
   if (status === 429 || status === 503) return 'challenge';
-  if (CHALLENGE_MARKERS.some((re) => re.test(body))) return 'challenge';
+  if (isAntiBotChallenge(body)) return 'challenge';
   if (isChallenge && isChallenge(body)) return 'challenge';
   if (status === 403) return 'forbidden';
   if (status >= 400) return 'error';
