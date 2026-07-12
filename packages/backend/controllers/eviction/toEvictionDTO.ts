@@ -17,7 +17,6 @@ import {
   type EvictionComment,
   type EvictionContactInfo,
   type EvictionLocation,
-  type EvictionReportDTO,
   type EvictionUpdate,
 } from '@homiio/shared-types';
 
@@ -213,26 +212,6 @@ export function toEvictionCommentDTO(commentDoc: unknown): EvictionComment {
     caseId: refToId(src.caseId) ?? '',
     oxyUserId: asString(src.oxyUserId),
     body: asString(src.body),
-    createdAt: toIso(src.createdAt) ?? '',
-    updatedAt: toIso(src.updatedAt) ?? '',
-  };
-}
-
-/**
- * Serialize an EvictionReport document/lean object into an
- * {@link EvictionReportDTO}. Admin moderation queue only — reports carry no
- * public visibility.
- */
-export function toEvictionReportDTO(reportDoc: unknown): EvictionReportDTO {
-  const src = toLoose(reportDoc);
-  return {
-    id: refToId(src._id ?? src.id) ?? '',
-    caseId: refToId(src.caseId) ?? '',
-    reporterOxyUserId: asString(src.reporterOxyUserId),
-    reason: asString(src.reason) as EvictionReportDTO['reason'],
-    details: asOptString(src.details),
-    contactEmail: asOptString(src.contactEmail),
-    status: asString(src.status) as EvictionReportDTO['status'],
     createdAt: toIso(src.createdAt) ?? '',
     updatedAt: toIso(src.updatedAt) ?? '',
   };
