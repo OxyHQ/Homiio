@@ -5,6 +5,7 @@ import { CleanupService } from './cleanupService';
 import { MetricsService } from '../utils/metrics';
 import { syncCovers } from './cityCoverSyncService';
 import { repairCorruptCityCoordinates } from './cityCoordinateRepairService';
+import { sendEvictionOutcomeReminders } from './evictionOutcomeReminderService';
 import { Property } from '../models';
 
 // Initialize services
@@ -38,11 +39,14 @@ class CronJobManager {
     this.setupHealthCheckJob();
     this.setupCleanupJob();
     this.setupCityCoverSyncJob();
+    this.setupEvictionOutcomeReminderJob();
     // Boot sweeps: repair mangled coords + start Wikimedia cover backfill
     // without waiting for the top of the hour.
     void this.runBootHousekeeping();
 
-    this.logger.info('Cron jobs initialized (health + cleanup + city covers; scrape loop retired)');
+    this.logger.info(
+      'Cron jobs initialized (health + cleanup + city covers + eviction reminders; scrape loop retired)',
+    );
   }
 
   private async runBootHousekeeping(): Promise<void> {
@@ -131,6 +135,44 @@ class CronJobManager {
     this.jobs.set('cityCovers', job);
     this.jobStatus.set('cityCovers', { isRunning: true, lastRun: undefined, nextRun: undefined });
     job.start();
+  }
+
+  /**
+   * Setup eviction outcome-reminder job — hourly. Nudges owners of `upcoming`
+   * cases whose date is >24h past to record the real outcome (we never auto-flip
+   * the status). Idempotent + best-effort (see evictionOutcomeReminderService).
+   */
+  private setupEvictionOutcomeReminderJob(): void {
+    const job = cron.schedule('0 * * * *', async () => {
+      await this.runEvictionOutcomeReminders();
+    }, {
+      timezone: 'UTC',
+      scheduled: false,
+    });
+
+    this.jobs.set('evictionOutcomeReminders', job);
+    this.jobStatus.set('evictionOutcomeReminders', { isRunning: true, lastRun: undefined, nextRun: undefined });
+    job.start();
+  }
+
+  /**
+   * Dispatch outcome reminders to owners of stale `upcoming` eviction cases.
+   */
+  private async runEvictionOutcomeReminders(): Promise<void> {
+    const status = this.jobStatus.get('evictionOutcomeReminders');
+    if (status) {
+      status.lastRun = new Date();
+      status.isRunning = true;
+    }
+
+    try {
+      const { processed } = await sendEvictionOutcomeReminders(100);
+      if (processed > 0) {
+        this.logger.info('Eviction outcome reminders dispatched', { processed });
+      }
+    } catch (error) {
+      this.logger.error('Eviction outcome reminders failed', error);
+    }
   }
 
   /**

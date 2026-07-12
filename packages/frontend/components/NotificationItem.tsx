@@ -80,6 +80,11 @@ const TYPE_VISUALS: Record<string, TypeVisual> = {
     color: colors.success,
     surface: colors.successSubtle,
   },
+  eviction_outcome_reminder: {
+    icon: 'help-circle',
+    color: colors.warning,
+    surface: colors.warningSubtle,
+  },
 };
 
 const DEFAULT_VISUAL: TypeVisual = {

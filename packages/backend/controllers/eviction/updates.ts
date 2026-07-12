@@ -72,7 +72,12 @@ export async function createUpdate(req: ControllerRequest, res: ControllerRespon
       data: { evictionId: String(id) },
     });
 
-    res.status(201).json(successResponse(toEvictionDTO(updated, { viewerOxyUserId: oxyUserId }), 'Update posted'));
+    res.status(201).json(
+      successResponse(
+        toEvictionDTO(updated, { viewerOxyUserId: oxyUserId, includeContact: true }),
+        'Update posted',
+      ),
+    );
   } catch (error) {
     next(error);
   }

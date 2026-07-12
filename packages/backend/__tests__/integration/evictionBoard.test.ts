@@ -10,6 +10,8 @@
 import express, { type Express } from 'express';
 import request from 'supertest';
 
+import { sendEvictionOutcomeReminders } from '../../services/evictionOutcomeReminderService';
+
 const eviction = require('../../controllers/eviction');
 const { EvictionCase, EvictionComment, EvictionReport, Notification } = require('../../models');
 const { errorHandler } = require('../../middlewares/errorHandler');
@@ -49,6 +51,10 @@ function buildApp(oxyUserId?: string): Express {
 
 function inDays(days: number): string {
   return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function inHours(hours: number): string {
+  return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
 }
 
 function caseBody(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -276,5 +282,118 @@ describe('public browse', () => {
     const anon = await request(buildApp()).get(`/evictions/${id}`);
     expect(anon.body.data.isAttending).toBeUndefined();
     expect(anon.body.data.attendees).toBeUndefined();
+  });
+
+  it('drops upcoming cases whose date is more than 24h past from the default feed', async () => {
+    await createCase('oxy-owner', { title: 'future', scheduledAt: inDays(3) });
+    await createCase('oxy-owner', { title: 'recent-past', scheduledAt: inHours(-6) });
+    await createCase('oxy-owner', { title: 'stale-past', scheduledAt: inDays(-2) });
+
+    const res = await request(buildApp()).get('/evictions');
+    expect(res.status).toBe(200);
+    const titles = res.body.data.evictions.map((row: { title: string }) => row.title);
+    // >24h-past drops off; <24h-past + future stay (soonest-first).
+    expect(titles).toContain('future');
+    expect(titles).toContain('recent-past');
+    expect(titles).not.toContain('stale-past');
+  });
+
+  it('keeps a >24h-past case reachable by direct link and in the owner list', async () => {
+    const id = await createCase('oxy-owner', { title: 'stale-direct', scheduledAt: inDays(-2) });
+
+    const direct = await request(buildApp()).get(`/evictions/${id}`);
+    expect(direct.status).toBe(200);
+    expect(direct.body.data.title).toBe('stale-direct');
+
+    const mine = await request(buildApp('oxy-owner')).get('/evictions/me/list');
+    const titles = mine.body.data.evictions.map((row: { title: string }) => row.title);
+    expect(titles).toContain('stale-direct');
+  });
+});
+
+describe('detail — RSVP-gated contact ("asiste para ver cómo ayudar")', () => {
+  const contact = { phone: '+34600000000', instructions: 'Nos vemos a las 7h' };
+
+  it('locks contact for an anonymous viewer', async () => {
+    const id = await createCase('oxy-owner', { contactInfo: contact });
+    const res = await request(buildApp()).get(`/evictions/${id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.contactInfo).toBeUndefined();
+    expect(res.body.data.contactLocked).toBe(true);
+  });
+
+  it('locks contact for a signed-in non-attendee', async () => {
+    const id = await createCase('oxy-owner', { contactInfo: contact });
+    const res = await request(buildApp('oxy-stranger')).get(`/evictions/${id}`);
+    expect(res.body.data.contactInfo).toBeUndefined();
+    expect(res.body.data.contactLocked).toBe(true);
+  });
+
+  it('unlocks contact once the viewer RSVPs', async () => {
+    const id = await createCase('oxy-owner', { contactInfo: contact });
+    await request(buildApp('oxy-attendee')).post(`/evictions/${id}/attend`);
+
+    const res = await request(buildApp('oxy-attendee')).get(`/evictions/${id}`);
+    expect(res.body.data.isAttending).toBe(true);
+    expect(res.body.data.contactLocked).toBeUndefined();
+    expect(res.body.data.contactInfo.phone).toBe(contact.phone);
+    expect(res.body.data.contactInfo.instructions).toBe(contact.instructions);
+  });
+
+  it('always shows contact to the owner', async () => {
+    const id = await createCase('oxy-owner', { contactInfo: contact });
+    const res = await request(buildApp('oxy-owner')).get(`/evictions/${id}`);
+    expect(res.body.data.contactLocked).toBeUndefined();
+    expect(res.body.data.contactInfo.phone).toBe(contact.phone);
+  });
+
+  it('never sets contactLocked when the case has no contact to reveal', async () => {
+    const id = await createCase('oxy-owner');
+    const res = await request(buildApp()).get(`/evictions/${id}`);
+    expect(res.body.data.contactInfo).toBeUndefined();
+    expect(res.body.data.contactLocked).toBeUndefined();
+  });
+
+  it('never leaks contact into list responses, even for the owner', async () => {
+    await createCase('oxy-owner', { contactInfo: contact });
+    const mine = await request(buildApp('oxy-owner')).get('/evictions/me/list');
+    expect(mine.status).toBe(200);
+    for (const row of mine.body.data.evictions) {
+      expect(row.contactInfo).toBeUndefined();
+      expect(row.contactLocked).toBeUndefined();
+    }
+  });
+});
+
+describe('sendEvictionOutcomeReminders — honest stale-case handling', () => {
+  it('reminds the owner of a stale upcoming case exactly once', async () => {
+    const id = await createCase('oxy-owner', { title: 'stale', scheduledAt: inDays(-2) });
+
+    const first = await sendEvictionOutcomeReminders();
+    expect(first.processed).toBe(1);
+
+    const notes = await Notification.find({ type: 'eviction_outcome_reminder' });
+    expect(notes).toHaveLength(1);
+    expect(notes[0].recipientOxyUserId).toBe('oxy-owner');
+    expect(String(notes[0].data.evictionId)).toBe(String(id));
+
+    const claimed = await EvictionCase.findById(id).select('outcomeReminderSentAt');
+    expect(claimed.outcomeReminderSentAt).toBeTruthy();
+
+    // A second run is a no-op — no duplicate reminder.
+    const second = await sendEvictionOutcomeReminders();
+    expect(second.processed).toBe(0);
+    expect(await Notification.countDocuments({ type: 'eviction_outcome_reminder' })).toBe(1);
+  });
+
+  it('never reminds future or already-resolved cases', async () => {
+    await createCase('oxy-owner', { title: 'future', scheduledAt: inDays(3) });
+    await createCase('oxy-owner', { title: 'recent', scheduledAt: inHours(-6) });
+    const stoppedId = await createCase('oxy-owner', { title: 'stopped', scheduledAt: inDays(-2) });
+    await request(buildApp('oxy-owner')).put(`/evictions/${stoppedId}`).send({ status: 'stopped' });
+
+    const result = await sendEvictionOutcomeReminders();
+    expect(result.processed).toBe(0);
+    expect(await Notification.countDocuments({ type: 'eviction_outcome_reminder' })).toBe(0);
   });
 });

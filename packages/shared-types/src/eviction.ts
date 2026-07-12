@@ -71,7 +71,19 @@ export interface EvictionCase {
   status: EvictionCaseStatus;
   /** Optional link to the agency/landlord entity driving the eviction. */
   agencyId?: string;
+  /**
+   * How to reach the organisers. Exposed on the DETAIL DTO only when the viewer
+   * is the owner or has RSVP'd ("asiste para ver cómo ayudar"). When the case
+   * has contact details the viewer isn't allowed to see yet, this is omitted and
+   * `contactLocked` is `true` instead. List DTOs never carry contact at all.
+   */
   contactInfo?: EvictionContactInfo;
+  /**
+   * `true` on the detail DTO when the case HAS organiser contact details but the
+   * viewer must RSVP first to unlock them. Never set on list responses, and
+   * never set when the case simply has no contact details.
+   */
+  contactLocked?: boolean;
   coverImage?: { imageId?: string; url?: string };
   updates: EvictionUpdate[];
   /** Aggregate count of people who RSVP'd — the individual attendees are never exposed. */

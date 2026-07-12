@@ -3814,6 +3814,7 @@
       "instructions": "Instrucciones",
       "contactFailed": "No se pudo abrir el enlace",
       "noContact": "No se han compartido datos de contacto para este caso.",
+      "contactLockedNotice": "Confirma tu asistencia para ver el punto de encuentro y el contacto del organizador.",
       "contact": {
         "phone": "Llamar",
         "whatsapp": "WhatsApp",

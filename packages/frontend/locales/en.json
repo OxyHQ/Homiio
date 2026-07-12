@@ -3770,6 +3770,7 @@
       "instructions": "Instructions",
       "contactFailed": "Couldn't open that link",
       "noContact": "No contact details were shared for this case.",
+      "contactLockedNotice": "Confirm your attendance to see the meeting point and the organiser's contact details.",
       "contact": {
         "phone": "Call",
         "whatsapp": "WhatsApp",

@@ -32,6 +32,13 @@ interface ToEvictionDTOOptions {
    * of a loaded `attendees` array (present only when explicitly selected).
    */
   isAttending?: boolean;
+  /**
+   * DETAIL contexts opt in to contact resolution. When `true`, organiser
+   * contact is included for an owner/attendee viewer, otherwise `contactLocked`
+   * is set (when the case actually has contact to reveal). LIST contexts leave
+   * this `false` so contact never appears in a feed, regardless of viewer.
+   */
+  includeContact?: boolean;
 }
 
 /** Convert a Mongoose document or lean object into a plain field bag. */
@@ -160,6 +167,23 @@ export function toEvictionDTO(caseDoc: unknown, options: ToEvictionDTOOptions = 
     );
   }
 
+  const isOwner = viewer ? asString(src.oxyUserId) === viewer : undefined;
+
+  // Contact gating — DETAIL only. Owners and confirmed attendees see the
+  // organiser contact; everyone else gets `contactLocked` (but only when there
+  // is contact to unlock — never tease a lock over an empty contact block).
+  let contactInfo: EvictionContactInfo | undefined;
+  let contactLocked: boolean | undefined;
+  if (options.includeContact) {
+    const contact = toContactInfo(src.contactInfo);
+    const unlocked = isOwner === true || isAttending === true;
+    if (unlocked) {
+      contactInfo = contact;
+    } else if (contact) {
+      contactLocked = true;
+    }
+  }
+
   return {
     id: refToId(src._id ?? src.id) ?? '',
     oxyUserId: asString(src.oxyUserId),
@@ -169,12 +193,13 @@ export function toEvictionDTO(caseDoc: unknown, options: ToEvictionDTOOptions = 
     scheduledAt: toIso(src.scheduledAt) ?? '',
     status: asStatus(src.status),
     agencyId: refToId(src.agencyId),
-    contactInfo: toContactInfo(src.contactInfo),
+    contactInfo,
+    contactLocked,
     coverImage: toCoverImage(src.coverImage),
     updates: toUpdates(src.updates),
     attendeeCount: typeof src.attendeeCount === 'number' ? src.attendeeCount : 0,
     isAttending,
-    isOwner: viewer ? asString(src.oxyUserId) === viewer : undefined,
+    isOwner,
     createdAt: toIso(src.createdAt) ?? '',
     updatedAt: toIso(src.updatedAt) ?? '',
   };
