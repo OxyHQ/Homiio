@@ -12,6 +12,8 @@
  * Mongoose transparently casts these string ids to `ObjectId` at the DB layer.
  */
 
+import { ISODate } from './common';
+
 // ---------------------------------------------------------------------------
 // Dimension enums — the backend model is the authority; values are verbatim.
 // ---------------------------------------------------------------------------
@@ -283,6 +285,43 @@ export interface ReviewDTO extends Review {
     zipCode?: string;
   };
 }
+
+// ---------------------------------------------------------------------------
+// Trust & safety / admin moderation.
+// ---------------------------------------------------------------------------
+
+/**
+ * A single trust & safety report embedded on a review. This is INTERNAL
+ * moderation data — the public {@link ReviewDTO} strips it (see
+ * `controllers/review/toReviewDTO.ts`). It is exposed ONLY on the admin
+ * moderation-queue projection {@link AdminReviewDTO}.
+ */
+export interface ReviewReport {
+  /** Oxy user id of the reporter. */
+  oxyUserId: string;
+  reason: ReviewReportReason;
+  /** Free-text context (present for `OTHER`, optional otherwise). */
+  details?: string;
+  createdAt: ISODate;
+}
+
+/**
+ * Admin moderation-queue projection: the full review DTO PLUS the raw
+ * `reports` array. Only ever returned by the admin moderation endpoints
+ * (`GET /api/admin/moderation/reviews`) — never by a public review read.
+ */
+export interface AdminReviewDTO extends ReviewDTO {
+  reports: ReviewReport[];
+}
+
+/**
+ * Actions an admin may take on a queued review. `remove` hides it everywhere,
+ * `restore` returns it to `active`, `dismiss_reports` clears the reports and
+ * returns it to `active`. Single source of truth for the request enum on both
+ * the backend allowlist and the frontend client.
+ */
+export const ADMIN_REVIEW_ACTIONS = ['remove', 'restore', 'dismiss_reports'] as const;
+export type AdminReviewModerationAction = (typeof ADMIN_REVIEW_ACTIONS)[number];
 
 // ---------------------------------------------------------------------------
 // Write payloads.

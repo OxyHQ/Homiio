@@ -3955,5 +3955,90 @@
     "emptyReviewsDescription": "Aquesta agència encara no té ressenyes.",
     "emptyListingsTitle": "Sense anuncis",
     "emptyListingsDescription": "Aquesta agència no té anuncis actius."
+  },
+  "admin": {
+    "moderation": {
+      "title": "Cua de moderació",
+      "subtitle": "Revisa el contingut denunciat i pren mesures.",
+      "tabs": {
+        "reviews": "Ressenyes",
+        "evictions": "Desnonaments"
+      },
+      "unauthorized": {
+        "title": "No autoritzat",
+        "message": "No tens accés a la cua de moderació. Aquesta àrea està restringida als administradors de la plataforma."
+      },
+      "reviews": {
+        "filters": {
+          "under_review": "En revisió",
+          "reported": "Denunciades",
+          "removed": "Eliminades"
+        },
+        "empty": "No hi ha res per moderar aquí.",
+        "loadError": "No s'ha pogut carregar la cua de ressenyes",
+        "author": "Autor: {{id}}",
+        "untitled": "Ressenya sense títol"
+      },
+      "reviewStatus": {
+        "active": "Activa",
+        "under_review": "En revisió",
+        "removed": "Eliminada"
+      },
+      "reports": {
+        "title": "Denúncies ({{count}})"
+      },
+      "reviewReason": {
+        "fake": "Falsa",
+        "offensive": "Ofensiva",
+        "personal_data": "Dades personals",
+        "spam": "Spam",
+        "other": "Altre"
+      },
+      "evictionReason": {
+        "inaccurate": "Inexacta",
+        "scam": "Falsa",
+        "inappropriate": "Inapropiada",
+        "unavailable": "No disponible",
+        "other": "Altre"
+      },
+      "evictions": {
+        "empty": "No hi ha casos denunciats.",
+        "loadError": "No s'ha pogut carregar la cua de desnonaments",
+        "viewCase": "Veure cas",
+        "untitled": "Cas sense títol"
+      },
+      "actions": {
+        "remove": "Eliminar",
+        "restore": "Restaurar",
+        "dismissReports": "Descartar denúncies",
+        "cancelCase": "Cancel·lar cas"
+      },
+      "confirm": {
+        "review": {
+          "remove": {
+            "title": "Vols eliminar la ressenya?",
+            "message": "Això amaga la ressenya per a tothom. La podràs restaurar més tard."
+          },
+          "restore": {
+            "title": "Vols restaurar la ressenya?",
+            "message": "Això torna a fer pública la ressenya."
+          },
+          "dismiss_reports": {
+            "title": "Vols descartar les denúncies?",
+            "message": "Això esborra les denúncies i manté la ressenya activa."
+          }
+        },
+        "eviction": {
+          "remove": {
+            "title": "Vols cancel·lar el cas?",
+            "message": "Això marca el cas com a cancel·lat i resol les seves denúncies. El cas no s'elimina."
+          },
+          "dismiss_reports": {
+            "title": "Vols descartar les denúncies?",
+            "message": "Això descarta les denúncies obertes i deixa el cas sense canvis."
+          }
+        }
+      }
+    }
   }
 }

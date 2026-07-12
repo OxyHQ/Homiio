@@ -116,4 +116,42 @@ export function toReviewDTO(reviewDoc: unknown, viewerOxyUserId?: string | null)
   return dto;
 }
 
+/** ISO-string a Date, or pass through an already-serialized value. */
+function toIso(value: unknown): string | undefined {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? undefined : value.toISOString();
+  }
+  if (typeof value === 'string' && value.length) return value;
+  return undefined;
+}
+
+/** Normalize the embedded `reports` array into the admin-facing report shape. */
+function normalizeReports(value: unknown): Loose[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry) => {
+    const report = plain(entry);
+    const normalized: Loose = {
+      oxyUserId: report.oxyUserId != null ? String(report.oxyUserId) : '',
+      reason: report.reason,
+      createdAt: toIso(report.createdAt) ?? '',
+    };
+    if (typeof report.details === 'string' && report.details.length) {
+      normalized.details = report.details;
+    }
+    return normalized;
+  });
+}
+
+/**
+ * Admin-only serializer variant. Reuses {@link toReviewDTO} for the full public
+ * projection, then re-attaches the `reports` array that the public DTO strips.
+ * Used exclusively by the admin moderation queue — do NOT call from a public
+ * read path.
+ */
+export function toAdminReviewDTO(reviewDoc: unknown, viewerOxyUserId?: string | null): Loose {
+  const dto = toReviewDTO(reviewDoc, viewerOxyUserId);
+  dto.reports = normalizeReports(plain(reviewDoc).reports);
+  return dto;
+}
+
 export default toReviewDTO;

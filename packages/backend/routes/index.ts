@@ -25,6 +25,7 @@ const applications = require('./applications').default;
 const exchanges = require('./exchanges').default;
 const partners = require('./partners').default;
 const evictions = require('./evictions').default;
+const admin = require('./admin').default;
 
 export default function() {
   const propertyRoutes = properties();
@@ -47,6 +48,7 @@ export default function() {
   const exchangeRoutes = exchanges();
   const partnerRoutes = partners();
   const evictionRoutes = evictions();
+  const adminRoutes = admin();
 
   const router = express.Router();
 
@@ -79,6 +81,7 @@ export default function() {
   router.use('/scraper', scraperRoutes);
   router.use('/reviews', reviewRoutes);
   router.use('/addresses', addressRoutes);
+  router.use('/admin', adminRoutes);
 
   // Admin-only city routes (authenticated)
   router.post('/cities', asyncHandler(require('../controllers').cityController.createCity));
