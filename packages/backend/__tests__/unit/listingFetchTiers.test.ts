@@ -11,6 +11,7 @@ import {
   createBrowserFetcher,
   ManagedFetcher,
   PlaywrightBrowserPool,
+  PlaywrightSessionPool,
   fetchListingViaLadder,
   HostRateLimiter,
   InMemoryProviderMetrics,
@@ -237,5 +238,114 @@ describe('createBrowserFetcher', () => {
     } else {
       expect(fetcher).toBeInstanceOf(PlaywrightBrowserPool);
     }
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Headed launch gating — the `headed` option flips Chromium's headless flag   */
+/* for BOTH the browser-fetch pool and the warmed-session pool. Default OFF →   */
+/* headless (current behaviour); true → headless:false (DataDome/Kasada tier).  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Structural view of the fake page the recording module hands back. Typed so the
+ * launch/context literals stay excess-property clean against browser.ts's narrow
+ * `PwPage`, while still carrying every method the session-pool warm path needs at
+ * runtime (`url`/`waitForTimeout`/`request`/`evaluate`).
+ */
+interface RecordingPage {
+  url(): string;
+  goto(url: string, options: { timeout: number; waitUntil: string }): Promise<unknown>;
+  content(): Promise<string>;
+  waitForSelector(selector: string, options?: { timeout?: number }): Promise<unknown>;
+  waitForTimeout(ms: number): Promise<void>;
+  route(pattern: string, handler: (route: unknown) => void | Promise<void>): Promise<void>;
+  request: {
+    get(url: string, opts?: unknown): Promise<{ status(): number; text(): Promise<string> }>;
+    post(url: string, opts?: unknown): Promise<{ status(): number; text(): Promise<string> }>;
+  };
+  evaluate(fn: unknown, arg: unknown): Promise<{ status: number; body: string }>;
+}
+
+// >512 bytes so warmBrowserPage does not treat it as an unresolved DataDome body,
+// and carries the default content selector so the warm poll resolves immediately.
+const WARM_HTML = `<html><body>${'x'.repeat(520)}<article class="item">ok</article></body></html>`;
+
+function makeRecordingPage(): RecordingPage {
+  const ok = async () => ({ status: () => 200, text: async () => '{"items":[]}' });
+  return {
+    url: () => 'https://portal.example/search/',
+    goto: async () => undefined,
+    content: async () => WARM_HTML,
+    waitForSelector: async () => undefined,
+    waitForTimeout: async () => undefined,
+    route: async () => undefined,
+    request: { get: ok, post: ok },
+    evaluate: async () => ({ status: 200, body: '{}' }),
+  };
+}
+
+/** A fake Playwright module that records the `headless` flag of every launch. */
+function recordingPlaywright(): { module: PlaywrightModule; launchedHeadless: boolean[] } {
+  const launchedHeadless: boolean[] = [];
+  const module: PlaywrightModule = {
+    chromium: {
+      launch: async (options) => {
+        launchedHeadless.push(options.headless);
+        return {
+          isConnected: () => true,
+          close: async () => undefined,
+          newContext: async () => ({
+            close: async () => undefined,
+            newPage: async () => makeRecordingPage(),
+          }),
+        };
+      },
+    },
+  };
+  return { module, launchedHeadless };
+}
+
+describe('PlaywrightBrowserPool — headed gating', () => {
+  it('launches headless:false when headed is true', async () => {
+    const { module, launchedHeadless } = recordingPlaywright();
+    const pool = new PlaywrightBrowserPool(module, { headed: true });
+    await pool.fetch('https://portal.example/a');
+    expect(launchedHeadless).toEqual([false]);
+    await pool.close();
+  });
+
+  it('launches headless:true when headed is false or unset', async () => {
+    const unset = recordingPlaywright();
+    const unsetPool = new PlaywrightBrowserPool(unset.module, {});
+    await unsetPool.fetch('https://portal.example/a');
+    expect(unset.launchedHeadless).toEqual([true]);
+    await unsetPool.close();
+
+    const explicit = recordingPlaywright();
+    const explicitPool = new PlaywrightBrowserPool(explicit.module, { headed: false });
+    await explicitPool.fetch('https://portal.example/a');
+    expect(explicit.launchedHeadless).toEqual([true]);
+    await explicitPool.close();
+  });
+});
+
+describe('PlaywrightSessionPool — headed gating', () => {
+  it('launches headless:false when headed is true', async () => {
+    const { module, launchedHeadless } = recordingPlaywright();
+    const pool = new PlaywrightSessionPool(module, { headed: true, challengeWaitMs: 1_000 });
+    const session = await pool.openSession({ warmUrl: 'https://portal.example/search/' });
+    expect(launchedHeadless).toEqual([false]);
+    await session.close();
+    await pool.close();
+  });
+
+  it('launches headless:true when headed is false or unset', async () => {
+    const { module, launchedHeadless } = recordingPlaywright();
+    const pool = new PlaywrightSessionPool(module, { challengeWaitMs: 1_000 });
+    const session = await pool.openSession({ warmUrl: 'https://portal.example/search/' });
+    expect(launchedHeadless).toEqual([true]);
+    await session.close();
+    await pool.close();
   });
 });

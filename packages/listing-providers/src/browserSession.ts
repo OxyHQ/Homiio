@@ -150,6 +150,13 @@ export interface PlaywrightSessionPoolOptions {
   proxy?: ResidentialProxyConfig;
   blockAssets?: boolean;
   stickyProxySession?: boolean;
+  /**
+   * When true, launch a HEADED Chromium (`headless: false`) instead of headless
+   * to clear DataDome/Kasada. Requires a live X display — the worker runs under
+   * `xvfb-run` when LISTING_BROWSER_HEADED=true (see backend Dockerfile header).
+   * Default false → current headless behaviour.
+   */
+  headed?: boolean;
 }
 
 /**
@@ -165,6 +172,7 @@ export class PlaywrightSessionPool {
   private readonly proxy?: ResidentialProxyConfig;
   private readonly blockAssets: boolean;
   private readonly stickyProxySession: boolean;
+  private readonly headed: boolean;
 
   private browser?: PwBrowser;
   private launching?: Promise<PwBrowser>;
@@ -184,14 +192,17 @@ export class PlaywrightSessionPool {
     this.proxy = options.proxy;
     this.blockAssets = options.blockAssets ?? true;
     this.stickyProxySession = options.stickyProxySession ?? false;
+    this.headed = options.headed ?? false;
   }
 
   private async ensureBrowser(): Promise<PwBrowser> {
     if (this.browser && this.browser.isConnected()) return this.browser;
     if (this.launching) return this.launching;
     const chromium = this.playwright.chromium as PwChromium;
+    // `headless: false` (this.headed) requires a live X display — the worker runs
+    // under `xvfb-run` when LISTING_BROWSER_HEADED=true (see Dockerfile header).
     this.launching = chromium
-      .launch({ headless: true, args: this.launchArgs })
+      .launch({ headless: !this.headed, args: this.launchArgs })
       .then((browser) => {
         this.browser = browser;
         this.launching = undefined;

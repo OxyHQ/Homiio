@@ -15,6 +15,18 @@
 ## worker task. Playwright Chromium is installed so LISTING_BROWSER_ENABLED
 ## can escalate anti-bot portals on the worker (the API never scrapes).
 ##
+## HEADED browser tier (LISTING_BROWSER_HEADED=true): DataDome/Kasada block
+## headless Chromium, so the worker can launch a real HEADED browser to clear
+## them. A headed launch needs an X display; this image bundles Xvfb (the
+## virtual framebuffer) for that. When the flag is on, the worker command MUST
+## wrap node in xvfb-run:
+##
+##   xvfb-run -a --server-args="-screen 0 1920x1080x24" \
+##     node packages/backend/dist/worker.js
+##
+## The flag defaults OFF (headless) and is set by infra alongside the xvfb-run
+## command — the image supports both modes; nothing here forces headed.
+##
 ## Listens on $PORT (default 4000). See packages/backend/.env.example for the
 ## full list of runtime environment variables.
 ##
@@ -83,8 +95,12 @@ FROM node:20-bookworm-slim
 
 # Runtime deps: tini as PID 1; Playwright OS libs installed via
 # `playwright install-deps` below (Chromium needs a full set of shared libs).
+# xvfb + xauth provide the virtual X display for the HEADED browser tier
+# (LISTING_BROWSER_HEADED=true → worker runs under `xvfb-run`, see header). The X
+# *client* libs Chromium links against come from `playwright install --with-deps`
+# below; we only add the virtual framebuffer + its auth cookie helper here.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      ca-certificates tini \
+      ca-certificates tini xvfb xauth \
     && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production \

@@ -18,6 +18,7 @@ import { createManagedFetcher, type ManagedFetcherConfig } from './managed';
 import { BROWSER_USER_AGENT } from './http';
 import {
   browserBlockAssetsFromEnv,
+  browserHeadedFromEnv,
   createProxiedFetch,
   envBool,
   httpUseProxyFromEnv,
@@ -317,7 +318,9 @@ export interface ListingFetchRuntimeFromEnvOptions {
  * Build the worker's fetch runtime from environment variables:
  *   - browser tier: enabled by `LISTING_BROWSER_ENABLED=true`, tuned by
  *     `LISTING_BROWSER_MAX_CONCURRENCY` / `LISTING_BROWSER_TIMEOUT_MS`. Skipped
- *     (with a log notice) when Playwright is not installed.
+ *     (with a log notice) when Playwright is not installed. `LISTING_BROWSER_HEADED=true`
+ *     launches a headed Chromium to clear DataDome/Kasada — the worker must then
+ *     run under `xvfb-run` (see the backend Dockerfile header).
  *   - residential proxy: `LISTING_RESIDENTIAL_PROXY_URL` (+ optional
  *     `LISTING_HTTP_USE_PROXY`, `LISTING_PROXY_STICKY`, `LISTING_BROWSER_BLOCK_ASSETS`).
  *   - managed tier: enabled by `LISTING_MANAGED_FETCH_URL` (+ optional key/param
@@ -340,6 +343,11 @@ export async function createListingFetchRuntimeFromEnv(
   const browserChallengeWaitMs = browserChallengeWaitMsFromEnv(browserTimeoutMs);
   const browserMaxConcurrency = envInt('LISTING_BROWSER_MAX_CONCURRENCY', 2);
   const blockAssets = browserBlockAssetsFromEnv();
+  // Headed Chromium (LISTING_BROWSER_HEADED=true) clears DataDome/Kasada where
+  // headless is fingerprinted and blocked. It requires a virtual display — the
+  // worker must run under `xvfb-run` (see the backend Dockerfile header). Default
+  // false, so this is inert until infra flips the flag and the xvfb-run command.
+  const headed = browserHeadedFromEnv();
   const playwright = browserEnabled ? await loadPlaywright() : undefined;
   const browser = await createBrowserFetcher({
     enabled: browserEnabled,
@@ -348,6 +356,7 @@ export async function createListingFetchRuntimeFromEnv(
     proxy,
     blockAssets,
     stickyProxySession,
+    headed,
     playwright,
     onLog: options.onLog,
   });
@@ -360,6 +369,7 @@ export async function createListingFetchRuntimeFromEnv(
           proxy,
           blockAssets,
           stickyProxySession,
+          headed,
         })
       : undefined;
   const managed = createManagedFetcher(managedConfigFromEnv());

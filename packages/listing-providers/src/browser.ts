@@ -150,6 +150,15 @@ export interface BrowserPoolOptions {
    * (DataImpulse-compatible sticky IP per context).
    */
   stickyProxySession?: boolean;
+  /**
+   * When true, launch a HEADED Chromium (`headless: false`) instead of headless.
+   * DataDome/Kasada fingerprint and block headless; a real headed browser under a
+   * virtual display clears those challenges. The worker MUST then run under an X
+   * server (no `DISPLAY` → headed launch throws), e.g.
+   * `xvfb-run -a --server-args="-screen 0 1920x1080x24" node packages/backend/dist/worker.js`.
+   * Default false → current headless behaviour.
+   */
+  headed?: boolean;
 }
 
 /** Chromium flags that keep the headless browser lean and container-friendly. */
@@ -174,6 +183,7 @@ export class PlaywrightBrowserPool implements UrlFetcher {
   private readonly proxy?: ResidentialProxyConfig;
   private readonly blockAssets: boolean;
   private readonly stickyProxySession: boolean;
+  private readonly headed: boolean;
 
   private browser?: PwBrowser;
   private launching?: Promise<PwBrowser>;
@@ -192,14 +202,17 @@ export class PlaywrightBrowserPool implements UrlFetcher {
     this.proxy = options.proxy;
     this.blockAssets = options.blockAssets ?? true;
     this.stickyProxySession = options.stickyProxySession ?? false;
+    this.headed = options.headed ?? false;
   }
 
   /** Lazily launch (or relaunch after a crash) the single shared browser. */
   private async ensureBrowser(): Promise<PwBrowser> {
     if (this.browser && this.browser.isConnected()) return this.browser;
     if (this.launching) return this.launching;
+    // `headless: false` (this.headed) requires a live X display — the worker runs
+    // under `xvfb-run` when LISTING_BROWSER_HEADED=true (see Dockerfile header).
     this.launching = this.playwright.chromium
-      .launch({ headless: true, args: this.launchArgs })
+      .launch({ headless: !this.headed, args: this.launchArgs })
       .then((browser) => {
         this.browser = browser;
         this.launching = undefined;
