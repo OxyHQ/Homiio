@@ -307,15 +307,45 @@ export default function EvictionDetailScreen() {
           <BloomText style={styles.description}>{eviction.description}</BloomText>
 
           <SectionCard title={t('evictions.detail.howToHelp')}>
-            <EvictionContactActions
-              contact={eviction.contactInfo}
-              labels={contactLabels}
-              instructionsLabel={t('evictions.detail.instructions')}
-              openFailedLabel={t('evictions.detail.contactFailed')}
-            />
-            {!eviction.contactInfo ? (
-              <BloomText style={styles.muted}>{t('evictions.detail.noContact')}</BloomText>
-            ) : null}
+            {eviction.contactLocked ? (
+              <View style={styles.lockedContact}>
+                <View style={styles.lockedIcon}>
+                  <Ionicons name="lock-closed" size={22} color={colors.textSecondary} />
+                </View>
+                <BloomText style={styles.lockedText}>
+                  {t('evictions.detail.contactLockedNotice')}
+                </BloomText>
+                <Button
+                  variant="primary"
+                  size="medium"
+                  onPress={handleRSVP}
+                  loading={toggleAttend.isPending}
+                  icon={
+                    <Ionicons
+                      name="megaphone-outline"
+                      size={18}
+                      color={colors.primaryForeground}
+                    />
+                  }
+                  iconPosition="left"
+                  style={styles.lockedCta}
+                >
+                  {t('evictions.attend')}
+                </Button>
+              </View>
+            ) : (
+              <>
+                <EvictionContactActions
+                  contact={eviction.contactInfo}
+                  labels={contactLabels}
+                  instructionsLabel={t('evictions.detail.instructions')}
+                  openFailedLabel={t('evictions.detail.contactFailed')}
+                />
+                {!eviction.contactInfo ? (
+                  <BloomText style={styles.muted}>{t('evictions.detail.noContact')}</BloomText>
+                ) : null}
+              </>
+            )}
           </SectionCard>
 
           {hasPin ? (
@@ -541,6 +571,29 @@ const styles = StyleSheet.create({
   muted: {
     fontSize: 14,
     color: colors.textSecondary,
+  },
+  lockedContact: {
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  lockedIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.mutedSubtle,
+  },
+  lockedText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    maxWidth: 320,
+  },
+  lockedCta: {
+    alignSelf: 'center',
   },
   mapWrap: {
     borderRadius: radius.md,

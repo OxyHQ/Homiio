@@ -159,7 +159,11 @@ const evictionCaseSchema = new mongoose.Schema({
   updates: { type: [evictionUpdateSchema], default: [] },
   // RSVP roster — never serialized to the public DTO.
   attendees: { type: [evictionAttendeeSchema], default: [], select: false },
-  attendeeCount: { type: Number, default: 0, min: 0 }
+  attendeeCount: { type: Number, default: 0, min: 0 },
+  // Server-only bookkeeping for the once-per-case outcome-reminder nudge (set by
+  // evictionOutcomeReminderService when a case's date is >24h past and still
+  // `upcoming`). Never client-settable — absent from CREATABLE/EDITABLE fields.
+  outcomeReminderSentAt: { type: Date }
 }, {
   timestamps: true,
   toJSON: {

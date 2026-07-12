@@ -214,6 +214,10 @@ export function useToggleAttend(
       }
     },
     onSettled: () => {
+      // Refetch the detail: the server gates organiser contact behind attendance
+      // ("asiste para ver cómo ayudar"), so a fresh RSVP flips `contactLocked`
+      // off and the contact block appears (and vice-versa on un-RSVP).
+      queryClient.invalidateQueries({ queryKey: evictionKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: [EVICTION_LIST_KEY] });
       queryClient.invalidateQueries({ queryKey: evictionKeys.attending() });
     },

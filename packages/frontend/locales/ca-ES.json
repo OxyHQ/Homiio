@@ -3835,6 +3835,7 @@
       "instructions": "Instruccions",
       "contactFailed": "No s'ha pogut obrir l'enllaç",
       "noContact": "No s'han compartit dades de contacte per a aquest cas.",
+      "contactLockedNotice": "Confirma la teva assistència per veure el punt de trobada i el contacte de l'organitzador.",
       "contact": {
         "phone": "Trucar",
         "whatsapp": "WhatsApp",

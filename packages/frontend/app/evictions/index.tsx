@@ -39,7 +39,7 @@ import { formatEvictionShortDate } from '@/components/evictions/evictionUtils';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 
-const EMPTY_ILLUSTRATION: ImageSourcePropType = require('@/assets/illustrations/empty-inbox.png');
+const EMPTY_ILLUSTRATION: ImageSourcePropType = require('@/assets/illustrations/empty-evictions.png');
 
 /** Board filters — one paginated server status per chip (no all-status feed). */
 const FILTERS: { status: EvictionCaseStatus; i18nKey: string }[] = [

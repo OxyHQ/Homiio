@@ -102,7 +102,7 @@ export async function createEviction(req: ControllerRequest, res: ControllerResp
     const created = await new EvictionCase(doc).save();
     res.status(201).json(
       successResponse(
-        toEvictionDTO(created, { viewerOxyUserId: oxyUserId, isAttending: false }),
+        toEvictionDTO(created, { viewerOxyUserId: oxyUserId, isAttending: false, includeContact: true }),
         'Eviction case created',
       ),
     );
@@ -209,7 +209,12 @@ export async function updateEviction(req: ControllerRequest, res: ControllerResp
       });
     }
 
-    res.json(successResponse(toEvictionDTO(updated, { viewerOxyUserId: oxyUserId }), 'Eviction case updated'));
+    res.json(
+      successResponse(
+        toEvictionDTO(updated, { viewerOxyUserId: oxyUserId, includeContact: true }),
+        'Eviction case updated',
+      ),
+    );
   } catch (error) {
     handleWriteError(error, next);
   }

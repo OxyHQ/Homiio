@@ -59,6 +59,13 @@ export async function listEvictions(req: ControllerRequest, res: ControllerRespo
     }
 
     const filter: Record<string, unknown> = { status };
+    // Hygiene: the public "upcoming" board hides cases whose date is >24h past —
+    // stale, unmaintained notices whose real outcome was never reported. They
+    // stay reachable by direct link and in the owner's "my cases" list; the
+    // owner also gets an outcome-reminder nudge (see evictionOutcomeReminderService).
+    if (status === EvictionCaseStatus.UPCOMING) {
+      filter.scheduledAt = { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) };
+    }
     if (typeof query.city === 'string' && query.city.trim()) {
       filter['location.city'] = new RegExp(`^${escapeRegExp(query.city.trim())}$`, 'i');
     }
@@ -125,7 +132,10 @@ export async function getEvictionById(req: ControllerRequest, res: ControllerRes
     }
 
     res.json(
-      successResponse(toEvictionDTO(evictionCase, { viewerOxyUserId: viewer, isAttending }), 'Eviction case'),
+      successResponse(
+        toEvictionDTO(evictionCase, { viewerOxyUserId: viewer, isAttending, includeContact: true }),
+        'Eviction case',
+      ),
     );
   } catch (error) {
     next(error);

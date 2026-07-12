@@ -3819,6 +3819,7 @@
       "instructions": "Istruzioni",
       "contactFailed": "Impossibile aprire il link",
       "noContact": "Nessun contatto è stato condiviso per questo caso.",
+      "contactLockedNotice": "Conferma la tua partecipazione per vedere il punto di ritrovo e i contatti dell'organizzatore.",
       "contact": {
         "phone": "Chiama",
         "whatsapp": "WhatsApp",
