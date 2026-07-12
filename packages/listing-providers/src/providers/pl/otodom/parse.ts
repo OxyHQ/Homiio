@@ -4,6 +4,7 @@
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
 import { buildContact } from '../../../contact';
+import { isAntiBotChallenge } from '../../../parse/challenge';
 import { parseNextData, nextDataPageProps } from '../../../nextData';
 import { asNumber, asString, isRecord } from '../../../parse/guards';
 import { citySlug } from '../../../slug';
@@ -380,7 +381,14 @@ export function parseOtodomDetail(html: string, url: string): OtodomRawListing {
   return result;
 }
 
+/**
+ * True when an Otodom SERP/detail response is a bot wall rather than portal HTML.
+ * A tiny body is always a wall; otherwise defer to the shared, precise anti-bot
+ * detector. Bare `captcha`/`datadome` are deliberately NOT used — a good Otodom
+ * SERP embeds a `googleReCaptchaApiKey` and a `"datadome"` cookie-consent
+ * category, so those substrings flag real 37-listing pages as challenges.
+ */
 export function isOtodomChallenge(html: string): boolean {
   if (html.trim().length < 512) return true;
-  return /captcha|datadome|access denied|cf-challenge/i.test(html);
+  return isAntiBotChallenge(html);
 }

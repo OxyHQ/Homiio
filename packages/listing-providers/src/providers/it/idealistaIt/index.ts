@@ -29,6 +29,7 @@ import type {
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
+import { isAntiBotChallenge } from '../../../parse/challenge';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
 import type { ItSchemaListing } from '../../../parse/jsonLd';
 import { IDEALISTA_IT_BASE_URL } from './fixtures';
@@ -60,7 +61,10 @@ const CONTENT_SELECTOR =
 
 export function isIdealistaItChallenge(html: string): boolean {
   if (html.trim().length < 512) return true;
-  return /accesso negato|verifica che sei un umano|datadome|captcha-delivery/i.test(html);
+  // Italian block-page phrases + the shared vendor markers; bare `datadome`
+  // dropped (passive sensor / consent name rides on good pages).
+  if (/accesso negato|verifica che sei un umano/i.test(html)) return true;
+  return isAntiBotChallenge(html);
 }
 
 export interface IdealistaItProviderOptions {

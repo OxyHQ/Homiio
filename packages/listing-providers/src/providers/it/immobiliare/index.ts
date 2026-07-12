@@ -26,6 +26,7 @@ import type {
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
+import { isAntiBotChallenge } from '../../../parse/challenge';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
 import { IMMOBILIARE_BASE_URL } from './fixtures';
 import {
@@ -45,7 +46,10 @@ const CONTENT_SELECTOR = 'a[href*="/annunci/"], main, #__NEXT_DATA__, [data-test
 
 export function isImmobiliareChallenge(html: string): boolean {
   if (html.trim().length < 512) return true;
-  return /datadome|captcha-delivery|accesso negato|verifica che sei/i.test(html);
+  // Italian block-page phrases + the shared vendor markers; bare `datadome`
+  // dropped (its passive sensor / consent name rides on good pages).
+  if (/accesso negato|verifica che sei/i.test(html)) return true;
+  return isAntiBotChallenge(html);
 }
 
 export interface ImmobiliareProviderOptions {

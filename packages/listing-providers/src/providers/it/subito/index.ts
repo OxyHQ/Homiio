@@ -26,6 +26,7 @@ import type {
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
+import { isAntiBotChallenge } from '../../../parse/challenge';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
 import { SUBITO_BASE_URL } from './fixtures';
 import {
@@ -47,7 +48,12 @@ const MAX_SEARCH_PAGES = 3;
 
 export function isSubitoChallenge(html: string): boolean {
   if (html.trim().length < 256) return true;
-  return /access denied|datadome|captcha|akamai|bot detection/i.test(html);
+  // `bot detection` is Subito's own interstitial phrase; the vendor markers
+  // (DataDome/Akamai/…) come from the shared detector. Bare `captcha`/`datadome`/
+  // `akamai` are dropped — Akamai is a CDN that also fronts good pages, and a
+  // reCAPTCHA site key lives in legit page config.
+  if (/bot detection/i.test(html)) return true;
+  return isAntiBotChallenge(html);
 }
 
 export interface SubitoProviderOptions {

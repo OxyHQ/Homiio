@@ -26,6 +26,8 @@ export * from './metrics';
 export * from './strategy';
 
 export {
+  ANTIBOT_CHALLENGE_MARKERS,
+  isAntiBotChallenge,
   isDataDomeAjaxChallenge,
   isDataDomeHtmlChallenge,
   isCloudflareChallenge,

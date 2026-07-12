@@ -23,6 +23,7 @@ import type {
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
+import { isAntiBotChallenge } from '../../../parse/challenge';
 import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
 import type { ItSchemaListing } from '../../../parse/jsonLd';
 import { CASA_IT_BASE_URL } from './fixtures';
@@ -42,7 +43,11 @@ const MAX_SEARCH_PAGES = 3;
 
 export function isCasaItChallenge(html: string): boolean {
   if (html.trim().length < 512) return true;
-  return /datadome|captcha-delivery|accesso negato|verifica/i.test(html);
+  // Italian block-page phrases + the shared vendor markers. Bare `verifica`
+  // dropped (matches listing copy like "verifica disponibilità"); bare `datadome`
+  // dropped (passive sensor / consent name rides on good pages).
+  if (/accesso negato|verifica che sei/i.test(html)) return true;
+  return isAntiBotChallenge(html);
 }
 
 export interface CasaItProviderOptions {
