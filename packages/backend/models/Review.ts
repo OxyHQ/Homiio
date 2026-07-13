@@ -20,6 +20,7 @@ import {
   DepositReturn,
   ReviewModerationStatus,
   ReviewReportReason,
+  PAYMENT_CURRENCIES,
 } from '@homiio/shared-types';
 import type {
   AgencyStats,
@@ -281,7 +282,7 @@ const ReviewSchema = new Schema<IReview, IReviewModel>({
   currency: {
     type: String,
     required: [true, 'Currency is required'],
-    enum: ['EUR', 'USD', 'GBP', 'CAD'],
+    enum: PAYMENT_CURRENCIES,
     default: 'EUR'
   },
   

@@ -8,8 +8,7 @@
  */
 
 const mongoose = require('mongoose');
-
-const CURRENCY_CODES = ['USD', 'EUR', 'GBP', 'CAD', 'FAIR'];
+const { LISTING_CURRENCIES } = require('@homiio/shared-types');
 
 const countrySchema = new mongoose.Schema({
   /** ISO-3166-1 alpha-2 code, uppercase (e.g. `ES`). Unique. */
@@ -36,7 +35,7 @@ const countrySchema = new mongoose.Schema({
   /** Default currency for the country. */
   currency: {
     type: String,
-    enum: CURRENCY_CODES,
+    enum: LISTING_CURRENCIES,
     default: 'EUR'
   },
   /** Optional emoji flag (e.g. `🇪🇸`). */

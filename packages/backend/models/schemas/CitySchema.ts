@@ -9,8 +9,7 @@
  */
 
 const mongoose = require('mongoose');
-
-const CURRENCY_CODES = ['USD', 'EUR', 'GBP', 'CAD', 'FAIR'];
+const { LISTING_CURRENCIES } = require('@homiio/shared-types');
 
 const citySchema = new mongoose.Schema({
   name: {
@@ -63,7 +62,7 @@ const citySchema = new mongoose.Schema({
   },
   currency: {
     type: String,
-    enum: CURRENCY_CODES,
+    enum: LISTING_CURRENCIES,
     default: 'EUR'
   },
   /**

@@ -21,9 +21,7 @@
 
 import { Coordinates } from './common';
 import { Image } from './media';
-
-/** ISO-4217-style currency code used across the geo + pricing layer. */
-export type CurrencyCode = 'USD' | 'EUR' | 'GBP' | 'CAD' | 'FAIR';
+import type { ListingCurrency } from './currency';
 
 /**
  * A geo entity's cover-image reference as serialized by the API: the bare Image
@@ -45,7 +43,7 @@ export interface Country {
   /** Canonical English display name (e.g. `Spain`). */
   name: string;
   /** Default ISO-4217 currency for the country (e.g. `EUR`). */
-  currency: CurrencyCode;
+  currency: ListingCurrency;
   /** Optional emoji flag (e.g. `🇪🇸`). */
   flag?: string;
   /** Optional BCP-47 default locale (e.g. `es-ES`). */
@@ -114,7 +112,7 @@ export interface City {
   population?: number;
   description?: string;
   averageRent?: number;
-  currency: CurrencyCode;
+  currency: ListingCurrency;
   /**
    * The city's cover photo: the `_id` of an {@link Image} with
    * `entityType: 'city'` and `entityId` equal to this city's `_id`. Set once at

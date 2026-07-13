@@ -5,10 +5,8 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
+import { LISTING_CURRENCIES, PAYMENT_CURRENCIES } from '@homiio/shared-types';
 import { logger } from './logging';
-
-/** Currency codes accepted on every priced block (rent / sale / exchange). */
-const CURRENCY_CODES = ['USD', 'EUR', 'GBP', 'CAD', 'FAIR'];
 
 /**
  * Handle validation errors
@@ -70,14 +68,14 @@ const validateProperty = [
   body('offerings.*').isIn(['long_term_rent', 'short_term_rent', 'sale', 'exchange']).withMessage('Invalid offering type'),
   // Long-term rent block
   body('longTermRent.monthlyAmount').optional().isFloat({ gt: 0 }).withMessage('monthlyAmount must be a positive number'),
-  body('longTermRent.currency').optional().isIn(CURRENCY_CODES).withMessage('Invalid currency'),
+  body('longTermRent.currency').optional().isIn(LISTING_CURRENCIES).withMessage('Invalid currency'),
   body('longTermRent.deposit').optional().isFloat({ min: 0 }).withMessage('deposit must be non-negative'),
   body('longTermRent.applicationFee').optional().isFloat({ min: 0 }).withMessage('applicationFee must be non-negative'),
   body('longTermRent.lateFee').optional().isFloat({ min: 0 }).withMessage('lateFee must be non-negative'),
   body('longTermRent.utilities').optional().isIn(['included', 'excluded', 'partial']).withMessage('Invalid utilities value'),
   // Short-term rent block
   body('shortTermRent.nightlyRate').optional().isFloat({ gt: 0 }).withMessage('nightlyRate must be a positive number'),
-  body('shortTermRent.currency').optional().isIn(CURRENCY_CODES).withMessage('Invalid currency'),
+  body('shortTermRent.currency').optional().isIn(LISTING_CURRENCIES).withMessage('Invalid currency'),
   body('shortTermRent.cleaningFee').optional().isFloat({ min: 0 }).withMessage('cleaningFee must be non-negative'),
   body('shortTermRent.serviceFee').optional().isFloat({ min: 0 }).withMessage('serviceFee must be non-negative'),
   body('shortTermRent.taxesPercent').optional().isFloat({ min: 0, max: 100 }).withMessage('taxesPercent must be between 0 and 100'),
@@ -94,7 +92,7 @@ const validateProperty = [
   body('shortTermRent.deposit').optional().isFloat({ min: 0 }).withMessage('deposit must be non-negative'),
   // Sale block
   body('sale.price').optional().isFloat({ gt: 0 }).withMessage('sale.price must be a positive number'),
-  body('sale.currency').optional().isIn(CURRENCY_CODES).withMessage('Invalid currency'),
+  body('sale.currency').optional().isIn(LISTING_CURRENCIES).withMessage('Invalid currency'),
   // Exchange block
   body('exchange.mode').optional().isIn(['swap', 'host', 'both']).withMessage('Invalid exchange mode'),
   // Short-term calendar + booking policy
@@ -359,9 +357,6 @@ export {
   validateExchangeReview,
 };
 
-/** Review currency codes accepted by the Review schema. */
-const REVIEW_CURRENCY_CODES = ['EUR', 'USD', 'GBP', 'CAD'];
-
 /**
  * Address review create validation rules (POST /api/reviews)
  *
@@ -380,7 +375,7 @@ const validateReviewCreate = [
   body('address.country').isString().trim().notEmpty().withMessage('address.country is required'),
   body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be an integer between 1 and 5'),
   body('price').optional().isFloat({ min: 0 }).withMessage('price must be a non-negative number'),
-  body('currency').optional().isIn(REVIEW_CURRENCY_CODES).withMessage('Invalid currency'),
+  body('currency').optional().isIn(PAYMENT_CURRENCIES).withMessage('Invalid currency'),
   body('opinion').isString().isLength({ min: 10, max: 2000 }).withMessage('opinion must be between 10 and 2000 characters'),
   body('positiveComment').optional().isString().isLength({ max: 1000 }).withMessage('positiveComment max length is 1000'),
   body('negativeComment').optional().isString().isLength({ max: 1000 }).withMessage('negativeComment max length is 1000'),
@@ -406,7 +401,7 @@ const validateReviewUpdate = [
   param('reviewId').isMongoId().withMessage('Invalid review ID'),
   body('rating').optional().isInt({ min: 1, max: 5 }).withMessage('Rating must be an integer between 1 and 5'),
   body('price').optional().isFloat({ min: 0 }).withMessage('price must be a non-negative number'),
-  body('currency').optional().isIn(REVIEW_CURRENCY_CODES).withMessage('Invalid currency'),
+  body('currency').optional().isIn(PAYMENT_CURRENCIES).withMessage('Invalid currency'),
   body('opinion').optional().isString().isLength({ min: 10, max: 2000 }).withMessage('opinion must be between 10 and 2000 characters'),
   body('positiveComment').optional().isString().isLength({ max: 1000 }).withMessage('positiveComment max length is 1000'),
   body('negativeComment').optional().isString().isLength({ max: 1000 }).withMessage('negativeComment max length is 1000'),

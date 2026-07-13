@@ -21,14 +21,13 @@ const {
   AvailabilityWindowStatus,
   CancellationPolicy,
   OfferingType,
-  ExchangeMode
+  ExchangeMode,
+  LISTING_CURRENCIES
 } = require('@homiio/shared-types');
 
-/** Currency codes accepted on every priced block (rent / sale / exchange). */
-const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'FAIR'];
-
-// Monthly-rent pricing block (offering: long_term_rent). 'FAIR' is 4 chars so
-// no length cap is applied — only the shared currency enum.
+// Monthly-rent pricing block (offering: long_term_rent). Currency uses the shared
+// LISTING_CURRENCIES set (covers every ingested market). 'FAIR' is 4 chars so no
+// length cap is applied — only the shared currency enum.
 const longTermRentSchema = new mongoose.Schema({
   monthlyAmount: {
     type: Number,
@@ -39,7 +38,7 @@ const longTermRentSchema = new mongoose.Schema({
     type: String,
     required: true,
     uppercase: true,
-    enum: SUPPORTED_CURRENCIES,
+    enum: LISTING_CURRENCIES,
     default: 'EUR'
   },
   deposit: {
@@ -71,7 +70,7 @@ const shortTermRentSchema = new mongoose.Schema({
     type: String,
     required: true,
     uppercase: true,
-    enum: SUPPORTED_CURRENCIES,
+    enum: LISTING_CURRENCIES,
     default: 'EUR'
   },
   cleaningFee: {
@@ -184,10 +183,10 @@ const saleSchema = new mongoose.Schema({
   currency: {
     type: String,
     uppercase: true,
-    // Shared 5-code currency set so rent/sale codes stay consistent. Note
-    // 'FAIR' is 4 chars, so no minlength/maxlength constraint (a length cap
-    // would wrongly reject 'FAIR').
-    enum: SUPPORTED_CURRENCIES
+    // Shared LISTING_CURRENCIES set so rent/sale codes stay consistent and cover
+    // every ingested market. Note 'FAIR' is 4 chars, so no minlength/maxlength
+    // constraint (a length cap would wrongly reject 'FAIR').
+    enum: LISTING_CURRENCIES
   },
   pricePerSqm: {
     type: Number,

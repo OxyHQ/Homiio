@@ -8,6 +8,9 @@
 // Common types and enums
 export * from './common';
 
+// Currency code sets (listing-price scope vs in-app payment scope)
+export * from './currency';
+
 // Geo hierarchy entities (Country / Region / City / Neighborhood)
 export * from './geo';
 

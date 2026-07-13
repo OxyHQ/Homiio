@@ -7,12 +7,12 @@
  * a best-effort 2-letter code derived from the name.
  */
 
-import type { CurrencyCode } from '@homiio/shared-types';
+import type { ListingCurrency } from '@homiio/shared-types';
 
 interface CountryEntry {
   code: string;
   name: string;
-  currency: CurrencyCode;
+  currency: ListingCurrency;
 }
 
 const COUNTRIES: readonly CountryEntry[] = [
@@ -34,7 +34,7 @@ const COUNTRIES: readonly CountryEntry[] = [
   { code: 'PE', name: 'Peru', currency: 'USD' },
 ];
 
-const DEFAULT_CURRENCY: CurrencyCode = 'EUR';
+const DEFAULT_CURRENCY: ListingCurrency = 'EUR';
 
 /** Common alternative spellings → canonical ISO-2 code. */
 const NAME_ALIASES: Readonly<Record<string, string>> = {
@@ -74,6 +74,6 @@ export function countryCodeToName(code: string): string | undefined {
 }
 
 /** Default currency for an ISO-2 code (EUR when unknown). */
-export function defaultCurrencyForCountry(code: string): CurrencyCode {
+export function defaultCurrencyForCountry(code: string): ListingCurrency {
   return byCode.get(code.trim().toUpperCase())?.currency ?? DEFAULT_CURRENCY;
 }

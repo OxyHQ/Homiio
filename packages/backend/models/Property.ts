@@ -16,11 +16,9 @@ import {
   OfferingType,
   ExchangeMode,
   PropertyPriceEthics,
+  LISTING_CURRENCIES,
 } from '@homiio/shared-types';
 import { validateOfferings } from './schemas/offeringValidation';
-
-/** Currency codes accepted on every priced block (rent / sale / exchange). */
-const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'FAIR'] as const;
 
 // Define the Property interface
 export interface IProperty extends Document {
@@ -223,8 +221,9 @@ export interface IPropertyModel extends Model<IProperty> {
   findInPolygon(coordinates: number[][]): PropertyQuery;
 }
 
-// Per-offering priced blocks. Each currency uses the shared 5-code set; 'FAIR'
-// is 4 chars so no length cap is applied (a 3-char cap would reject it).
+// Per-offering priced blocks. Each currency uses the shared listing-currency set
+// (LISTING_CURRENCIES, covers every ingested market); 'FAIR' is 4 chars so no
+// length cap is applied (a 3-char cap would reject it).
 const longTermRentSchema = new Schema({
   monthlyAmount: {
     type: Number,
@@ -235,7 +234,7 @@ const longTermRentSchema = new Schema({
     type: String,
     required: true,
     uppercase: true,
-    enum: SUPPORTED_CURRENCIES,
+    enum: LISTING_CURRENCIES,
     default: 'EUR'
   },
   deposit: { type: Number, min: [0, 'Deposit cannot be negative'] },
@@ -254,7 +253,7 @@ const shortTermRentSchema = new Schema({
     type: String,
     required: true,
     uppercase: true,
-    enum: SUPPORTED_CURRENCIES,
+    enum: LISTING_CURRENCIES,
     default: 'EUR'
   },
   cleaningFee: { type: Number, min: [0, 'Cleaning fee cannot be negative'] },
