@@ -4,6 +4,7 @@
  */
 
 import type { Types } from 'mongoose';
+import { PAYMENT_CURRENCIES } from '@homiio/shared-types';
 import type { ILease } from '../documentTypes';
 
 const mongoose = require('mongoose');
@@ -134,7 +135,7 @@ const leaseSchema = new mongoose.Schema({
     },
     currency: {
       type: String,
-      enum: ['USD', 'EUR', 'GBP', 'CAD'],
+      enum: PAYMENT_CURRENCIES,
       default: 'USD'
     },
     dueDate: {

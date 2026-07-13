@@ -13,6 +13,7 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
+import { PAYMENT_CURRENCIES } from '@homiio/shared-types';
 import { Property, TenantApplication, Lease } from '../models';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
@@ -27,7 +28,7 @@ const {
 } = require('@homiio/shared-types');
 
 /** Currency codes the Lease `rentDetails` block accepts (schema enum). */
-const LEASE_CURRENCIES = new Set(['USD', 'EUR', 'GBP', 'CAD']);
+const LEASE_CURRENCIES = new Set<string>(PAYMENT_CURRENCIES);
 const ACTIVE_LEASE_STATUSES = [LeaseStatus.DRAFT, LeaseStatus.PENDING_SIGNATURES, LeaseStatus.ACTIVE];
 
 const ALLOWED_DOCUMENT_TYPES = new Set(Object.values(TenantApplicationDocumentType));

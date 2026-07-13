@@ -8,7 +8,8 @@
  */
 
 import { Coordinates, Pagination } from './common';
-import { City, CurrencyCode } from './geo';
+import type { ListingCurrency } from './currency';
+import { City } from './geo';
 import { Property } from './property';
 
 export interface CityFilters {
@@ -68,7 +69,7 @@ export interface NeighborhoodMetrics {
    */
   averageRent: number | null;
   /** Currency the `averageRent` is denominated in (the owning city's currency). */
-  currency?: CurrencyCode;
+  currency?: ListingCurrency;
   /** Neighborhood-vs-city rent contrast, or `null` when it can't be computed. */
   vsCity: NeighborhoodVsCity | null;
 }

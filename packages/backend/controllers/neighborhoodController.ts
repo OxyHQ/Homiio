@@ -26,7 +26,7 @@ import { Types } from 'mongoose';
 import type {
   NeighborhoodMetrics,
   NeighborhoodVsCity,
-  CurrencyCode,
+  ListingCurrency,
 } from '@homiio/shared-types';
 import { Neighborhood, Address, Property, City } from '../models';
 import { AppError, successResponse } from '../middlewares/errorHandler';
@@ -193,7 +193,7 @@ async function buildMetrics(
     centroid,
     listingCount: stats.listingCount,
     averageRent: stats.rentAvg === null ? null : roundInt(stats.rentAvg),
-    currency: cityInfo.currency as CurrencyCode | undefined,
+    currency: cityInfo.currency as ListingCurrency | undefined,
     vsCity,
   };
 }
