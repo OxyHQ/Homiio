@@ -40,8 +40,17 @@ export interface ImmoweltRawListing {
   price?: number;
   currency: string;
   bedrooms?: number;
+  bathrooms?: number;
   squareMeters?: number;
   floor?: number;
+  /** Construction year from the detail `energy.features` (`yearOfConstruction`). */
+  yearBuilt?: number;
+  /** Free-form amenity labels from the detail `features` section. */
+  amenities?: string[];
+  hasElevator?: boolean;
+  hasBalcony?: boolean;
+  hasGarden?: boolean;
+  parkingType?: 'street' | 'assigned' | 'garage';
   address: {
     street?: string;
     city?: string;
@@ -147,6 +156,118 @@ function factValue(facts: unknown, type: string): string | undefined {
   return undefined;
 }
 
+/**
+ * De-duplicate `gallery.images[].url` (by stable image `key`, else URL) into an
+ * ordered list of real immowelt CDN URLs (`https://mms.immowelt.de/…`). Both the
+ * SERP card and the detail `sections.gallery` share this exact shape.
+ */
+function collectGalleryImages(gallery: Record<string, unknown> | undefined): string[] {
+  const images = gallery?.images;
+  if (!Array.isArray(images)) return [];
+  const seen = new Set<string>();
+  const urls: string[] = [];
+  for (const entry of images) {
+    const record = asRecord(entry);
+    const url = asString(record?.url);
+    if (!url || !/^https?:\/\//i.test(url)) continue;
+    const dedupeKey = asString(record?.key) ?? url;
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+    urls.push(url);
+  }
+  return urls;
+}
+
+/** Structured facts derived from the detail `features` section. */
+interface ImmoweltFeatureFacts {
+  amenities?: string[];
+  hasElevator?: boolean;
+  hasBalcony?: boolean;
+  hasGarden?: boolean;
+  parkingType?: 'street' | 'assigned' | 'garage';
+}
+
+/** Feature `icon`s that carry a hard fact (floor / availability), not an amenity. */
+const NON_AMENITY_FEATURE_ICONS = new Set(['availability', 'floors', 'plotspace', 'livingspace']);
+
+/** Flatten `features.preview` + `features.details.categories[].elements[]`. */
+function immoweltFeatureElements(
+  features: Record<string, unknown> | undefined,
+): Record<string, unknown>[] {
+  if (!features) return [];
+  const elements: Record<string, unknown>[] = [];
+  const collect = (list: unknown): void => {
+    if (!Array.isArray(list)) return;
+    for (const entry of list) {
+      const record = asRecord(entry);
+      if (record) elements.push(record);
+    }
+  };
+  collect(features.preview);
+  const categories = asRecord(features.details)?.categories;
+  if (Array.isArray(categories)) {
+    for (const category of categories) collect(asRecord(category)?.elements);
+  }
+  return elements;
+}
+
+/**
+ * Map immowelt `{ icon, value }` feature rows to amenity labels + structured
+ * feature flags. The `value`s are German (`Personenaufzug`, `Tiefgarage`), so the
+ * ingest's keyword derivation can't infer the flags — set them from the canonical
+ * English `icon` instead (a provider-set flag always wins over derivation).
+ */
+function parseImmoweltFeatures(
+  features: Record<string, unknown> | undefined,
+): ImmoweltFeatureFacts {
+  const elements = immoweltFeatureElements(features);
+  if (elements.length === 0) return {};
+  const amenities: string[] = [];
+  const seen = new Set<string>();
+  const facts: ImmoweltFeatureFacts = {};
+  for (const element of elements) {
+    const icon = asString(element.icon)?.toLowerCase();
+    const value = asString(element.value)?.trim();
+    if (icon === 'elevator') facts.hasElevator = true;
+    else if (icon === 'balcony' || icon === 'loggia') facts.hasBalcony = true;
+    else if (icon === 'garden') facts.hasGarden = true;
+    else if (icon === 'parking-lots') {
+      facts.parkingType = value && /garage|tiefgarage|carport/i.test(value) ? 'garage' : 'assigned';
+    }
+    if (!value || (icon && NON_AMENITY_FEATURE_ICONS.has(icon))) continue;
+    const key = value.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    amenities.push(value);
+  }
+  if (amenities.length > 0) facts.amenities = amenities;
+  return facts;
+}
+
+const MIN_YEAR_BUILT = 1200;
+
+/** First `yearOfConstructionBuilding` from an energy `certificates[]` entry. */
+function certificateYear(energy: Record<string, unknown> | undefined): string | undefined {
+  const certificates = energy?.certificates;
+  if (!Array.isArray(certificates)) return undefined;
+  for (const certificate of certificates) {
+    const value = factValue(asRecord(certificate)?.features, 'yearOfConstructionBuilding');
+    if (value) return value;
+  }
+  return undefined;
+}
+
+/** Construction year from `energy.features` (`yearOfConstruction`), sanity-bounded. */
+function parseImmoweltYearBuilt(energy: Record<string, unknown> | undefined): number | undefined {
+  const raw =
+    asNumber(factValue(energy?.features, 'yearOfConstruction')) ??
+    asNumber(certificateYear(energy));
+  if (raw === undefined) return undefined;
+  const year = Math.trunc(raw);
+  if (year < MIN_YEAR_BUILT || year > new Date().getUTCFullYear() + 5) return undefined;
+  return year;
+}
+
 export function parseImmoweltCard(card: Record<string, unknown>): ImmoweltRawListing {
   const meta = asRecord(card.metadata);
   const tracking = asRecord(card.tracking);
@@ -170,14 +291,7 @@ export function parseImmoweltCard(card: Record<string, unknown>): ImmoweltRawLis
   const operation: 'rent' | 'sale' =
     distribution === '2' || /kauf|sale|buy/i.test(asString(card.url) ?? '') ? 'sale' : 'rent';
 
-  const gallery = asRecord(card.gallery);
-  const images: string[] = [];
-  if (Array.isArray(gallery?.images)) {
-    for (const image of gallery.images) {
-      const url = asString(asRecord(image)?.url);
-      if (url) images.push(url);
-    }
-  }
+  const images = collectGalleryImages(asRecord(card.gallery));
 
   return {
     sourceId: legacyId,
@@ -298,10 +412,11 @@ export function parseImmoweltDetailClassified(
   const location = asRecord(sections?.location);
   const addressNode = asRecord(location?.address) ?? {};
   const hardFacts = asRecord(sections?.hardFacts) ?? {};
-  const gallery = asRecord(sections?.gallery);
   const priceBase = asRecord(asRecord(sections?.price)?.base);
   const priceMain = asRecord(asRecord(asRecord(priceBase?.main)?.value)?.main);
   const mainDescription = asRecord(sections?.mainDescription);
+  const features = parseImmoweltFeatures(asRecord(sections?.features));
+  const yearBuilt = parseImmoweltYearBuilt(asRecord(sections?.energy));
 
   const price =
     asNumber(item?.price) ??
@@ -315,13 +430,7 @@ export function parseImmoweltDetailClassified(
   const operation: 'rent' | 'sale' =
     distribution === '2' || priceType === 'SALE' ? 'sale' : 'rent';
 
-  const images: string[] = [];
-  if (Array.isArray(gallery?.images)) {
-    for (const image of gallery.images) {
-      const imageUrl = asString(asRecord(image)?.url);
-      if (imageUrl) images.push(imageUrl);
-    }
-  }
+  const images = collectGalleryImages(asRecord(sections?.gallery));
 
   const headline = asString(mainDescription?.headline) ?? asString(hardFacts.title);
 
@@ -336,8 +445,15 @@ export function parseImmoweltDetailClassified(
     price,
     currency: asString(item?.currency) ?? 'EUR',
     bedrooms: asNumber(factValue(hardFacts.facts, 'numberOfRooms')),
+    bathrooms: asNumber(factValue(hardFacts.facts, 'numberOfBathRooms')),
     squareMeters: asNumber(factValue(hardFacts.facts, 'livingSpace')),
     floor: asNumber(factValue(hardFacts.facts, 'numberOfFloors')),
+    yearBuilt,
+    amenities: features.amenities,
+    hasElevator: features.hasElevator,
+    hasBalcony: features.hasBalcony,
+    hasGarden: features.hasGarden,
+    parkingType: features.parkingType,
     address: {
       street: asString(addressNode.street),
       city: asString(addressNode.city) ?? asString(item?.city),

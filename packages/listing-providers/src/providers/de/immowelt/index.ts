@@ -380,8 +380,15 @@ export class ImmoweltProvider implements ListingProvider {
       result.description = listing.description ?? listing.title;
     }
     if (listing.bedrooms !== undefined) result.bedrooms = listing.bedrooms;
+    if (listing.bathrooms !== undefined) result.bathrooms = listing.bathrooms;
     if (listing.squareMeters !== undefined) result.squareFootage = listing.squareMeters;
     if (listing.floor !== undefined) result.floor = listing.floor;
+    if (listing.yearBuilt !== undefined) result.yearBuilt = listing.yearBuilt;
+    if (listing.amenities && listing.amenities.length > 0) result.amenities = listing.amenities;
+    if (listing.hasElevator !== undefined) result.hasElevator = listing.hasElevator;
+    if (listing.hasBalcony !== undefined) result.hasBalcony = listing.hasBalcony;
+    if (listing.hasGarden !== undefined) result.hasGarden = listing.hasGarden;
+    if (listing.parkingType !== undefined) result.parkingType = listing.parkingType;
     if (listing.contact) result.contact = listing.contact;
 
     return result;
