@@ -80,8 +80,8 @@ export type ILease = Document & {
   createdAt: Date;
   updatedAt: Date;
   generatePaymentSchedule?: () => void;
-  signAsLandlord(ipAddress: string | undefined, digitalSignature?: string): Promise<ILease>;
-  signAsTenant(ipAddress: string | undefined, digitalSignature?: string): Promise<ILease>;
+  signAsLandlord(digitalSignature?: string): Promise<ILease>;
+  signAsTenant(digitalSignature?: string): Promise<ILease>;
   recordPayment(paymentId: string, amount: number, paymentMethod: string, transactionId?: string): Promise<ILease>;
   scheduleInspection(inspectionData: Loose): Promise<ILease>;
 } & Loose;

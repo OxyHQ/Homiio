@@ -23,6 +23,7 @@
     "test:subscription-save": "node scripts/test-subscription-save.js",
     "check:subscriptions": "node scripts/check-subscription-db.js",
     "cleanup:external-profile-id": "ts-node --transpile-only scripts/cleanup-external-profileId.ts",
+    "purge:lease-ip": "ts-node --transpile-only scripts/purge-lease-ip.ts",
     "clean": "rm -rf dist",
     "lint": "eslint . --ext .ts",
     "backfill:price-ethics": "ts-node --transpile-only scripts/backfillPriceEthics.ts"
