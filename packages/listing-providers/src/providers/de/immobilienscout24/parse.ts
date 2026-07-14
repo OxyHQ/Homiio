@@ -5,6 +5,7 @@
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
 import { contactFromAdvertiser } from '../../../contact';
+import { canonicalizeAmenities } from '../../../parse/amenities';
 import { asNumber, asRecord, asString, citySlugDe, parseEuroAmount } from '../../../html';
 import { IMMOBILIENSCOUT24_BASE_URL, IMMOBILIENSCOUT24_MOBILE_API } from './fixtures';
 
@@ -28,6 +29,9 @@ export interface Is24RawListing {
   bathrooms?: number;
   squareMeters?: number;
   floor?: number;
+  yearBuilt?: number;
+  amenities?: string[];
+  furnished?: boolean;
   address: {
     street?: string;
     city?: string;
@@ -113,17 +117,71 @@ export function parseIs24Search(body: string): Is24SearchRef[] {
   return refs;
 }
 
-function attrMap(attributes: unknown): Map<string, string> {
-  const out = new Map<string, string>();
-  if (!Array.isArray(attributes)) return out;
+/** Accumulated attributes across every attribute section of an expose. */
+interface Is24Attributes {
+  /** `label(lowercased, colon-stripped) → text` for TEXT attributes (first wins). */
+  texts: Map<string, string>;
+  /** Labels of CHECK attributes — boolean feature flags that are present. */
+  checks: string[];
+}
+
+/**
+ * Merge one section's attributes into the accumulator. The mobile expose spreads
+ * fields across TOP_ATTRIBUTES + several ATTRIBUTE_LIST sections ('Hauptkriterien',
+ * 'Kosten', 'Bausubstanz & Energieausweis'); TEXT rows carry values (Etage,
+ * Badezimmer, Baujahr, …) while CHECK rows are amenity flags (Personenaufzug,
+ * Balkon/Terrasse, …) with no text.
+ */
+function collectAttributes(attributes: unknown, into: Is24Attributes): void {
+  if (!Array.isArray(attributes)) return;
   for (const entry of attributes) {
     const record = asRecord(entry);
     if (!record) continue;
-    const label = asString(record.label)?.toLowerCase();
+    const label = asString(record.label)?.replace(/:\s*$/, '').trim();
+    if (!label) continue;
+    if (asString(record.type) === 'CHECK') {
+      into.checks.push(label);
+      continue;
+    }
     const text = asString(record.text) ?? asString(record.value);
-    if (label && text) out.set(label, text);
+    const key = label.toLowerCase();
+    if (text && !into.texts.has(key)) into.texts.set(key, text);
   }
-  return out;
+}
+
+/** IS24 floor is a free-form string (`2 von 4`, `Erdgeschoss`, `EG`). */
+function is24Floor(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+  if (/erdgeschoss|^\s*eg\b/i.test(value)) return 0;
+  const match = /^\s*(-?\d{1,3})/.exec(value);
+  if (!match) return undefined;
+  const floor = Number(match[1]);
+  return Number.isFinite(floor) ? floor : undefined;
+}
+
+/** Construction year sanity window: reject non-year `Baujahr` values. */
+function is24YearBuilt(value: string | undefined): number | undefined {
+  const year = asNumber(value);
+  if (year === undefined) return undefined;
+  const maxYear = new Date().getFullYear() + 6;
+  return year >= 1500 && year <= maxYear ? year : undefined;
+}
+
+/**
+ * Build the canonical amenity list from CHECK feature flags (`Personenaufzug`,
+ * `Balkon/Terrasse`, `Einbauküche`, …) plus the `Heizungsart` value
+ * (`Zentralheizung` → heating). Combined labels (`Balkon/Terrasse`) are split so
+ * both features register. Runs through the shared canonicalizer, which also
+ * hoists `Möbliert` into the `furnished` flag.
+ */
+function collectIs24Amenities(attrs: Is24Attributes): {
+  amenities: string[];
+  furnished?: boolean;
+} {
+  const tokens = attrs.checks.flatMap((label) => label.split('/'));
+  const heizungsart = attrs.texts.get('heizungsart');
+  if (heizungsart) tokens.push(heizungsart);
+  return canonicalizeAmenities(tokens);
 }
 
 function parseAddressLines(line1: string | undefined, line2: string | undefined): Is24RawListing['address'] {
@@ -168,7 +226,7 @@ export function parseIs24Expose(body: string, fallbackUrl?: string): Is24RawList
   let description: string | undefined;
   let address: Is24RawListing['address'] = {};
   const images: string[] = [];
-  let attrs = new Map<string, string>();
+  const attrs: Is24Attributes = { texts: new Map<string, string>(), checks: [] };
 
   for (const section of sections) {
     const record = asRecord(section);
@@ -183,8 +241,10 @@ export function parseIs24Expose(body: string, fallbackUrl?: string): Is24RawList
       if (description === undefined && asString(record.title)?.toLowerCase() === 'objektbeschreibung') {
         description = asString(record.text);
       }
-    } else if (type === 'TOP_ATTRIBUTES' || type === 'ATTRIBUTES') {
-      attrs = attrMap(record.attributes);
+    } else if (type === 'TOP_ATTRIBUTES' || type === 'ATTRIBUTES' || type === 'ATTRIBUTE_LIST') {
+      // Real exposes carry structured rows + feature flags in ATTRIBUTE_LIST
+      // sections; the older TOP_ATTRIBUTES/ATTRIBUTES shapes are merged too.
+      collectAttributes(record.attributes, attrs);
     } else if (type === 'MAP') {
       const loc = asRecord(record.location);
       address = {
@@ -205,13 +265,19 @@ export function parseIs24Expose(body: string, fallbackUrl?: string): Is24RawList
     }
   }
 
+  const texts = attrs.texts;
   const price =
-    parseEuroAmount(attrs.get('kaltmiete')) ??
-    parseEuroAmount([...attrs.entries()].find(([key]) => key.includes('kaltmiete'))?.[1]) ??
-    parseEuroAmount(attrs.get('kaufpreis')) ??
-    parseEuroAmount([...attrs.values()].find((value) => value.includes('€')));
+    parseEuroAmount(texts.get('kaltmiete')) ??
+    parseEuroAmount([...texts.entries()].find(([key]) => key.includes('kaltmiete'))?.[1]) ??
+    parseEuroAmount(texts.get('kaufpreis')) ??
+    parseEuroAmount([...texts.values()].find((value) => value.includes('€')));
 
-  return {
+  const floorText =
+    texts.get('etage') ??
+    [...texts.entries()].find(([key]) => key.includes('etage') || key.includes('geschoss'))?.[1];
+  const { amenities, furnished } = collectIs24Amenities(attrs);
+
+  const listing: Is24RawListing = {
     sourceId,
     url: fallbackUrl ?? is24PublicUrl(sourceId),
     title,
@@ -220,13 +286,25 @@ export function parseIs24Expose(body: string, fallbackUrl?: string): Is24RawList
     operation,
     price,
     currency: 'EUR',
-    bedrooms: asNumber(attrs.get('zimmer')),
-    squareMeters: asNumber(attrs.get('wohnfläche')?.replace(/\s*m²/i, '') ?? attrs.get('wohnflaeche')),
-    floor: asNumber(
-      [...attrs.entries()].find(([key]) => key.includes('etage') || key.includes('geschoss'))?.[1],
+    bedrooms: asNumber(texts.get('zimmer')),
+    squareMeters: asNumber(
+      (texts.get('wohnfläche') ?? texts.get('wohnfläche ca.') ?? texts.get('wohnflaeche'))?.replace(
+        /\s*m²/i,
+        '',
+      ),
     ),
+    floor: is24Floor(floorText),
     address,
     images,
     contact: contactFromAdvertiser(root.contact),
   };
+
+  const bathrooms = asNumber(texts.get('badezimmer'));
+  if (bathrooms !== undefined) listing.bathrooms = bathrooms;
+  const yearBuilt = is24YearBuilt(texts.get('baujahr'));
+  if (yearBuilt !== undefined) listing.yearBuilt = yearBuilt;
+  if (amenities.length > 0) listing.amenities = amenities;
+  if (furnished) listing.furnished = true;
+
+  return listing;
 }

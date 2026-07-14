@@ -3,7 +3,8 @@
  */
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
-import { extractContactFromHtml, mergeListingContact } from '../../../contact';
+import { buildContact, extractContactFromHtml, mergeListingContact } from '../../../contact';
+import { canonicalizeAmenities } from '../../../parse/amenities';
 import {
   asNumber,
   citySlugDe,
@@ -32,8 +33,12 @@ export interface KleinanzeigenRawListing {
   price?: number;
   currency: string;
   bedrooms?: number;
+  bathrooms?: number;
   squareMeters?: number;
   floor?: number;
+  yearBuilt?: number;
+  amenities?: string[];
+  furnished?: boolean;
   address: {
     street?: string;
     city?: string;
@@ -161,6 +166,50 @@ function detailValue(html: string, label: string): string | undefined {
   return html.match(re)?.[1]?.trim();
 }
 
+/** Construction year sanity window (reject non-year `Baujahr` values). */
+function kleinanzeigenYearBuilt(value: string | undefined): number | undefined {
+  const year = asNumber(value);
+  if (year === undefined) return undefined;
+  const maxYear = new Date().getFullYear() + 6;
+  return year >= 1500 && year <= maxYear ? year : undefined;
+}
+
+/**
+ * Amenities are the visible "Ausstattung" feature tags rendered as
+ * `<li class="checktag">Balkon</li>` (Balkon, Einbauküche, Aufzug,
+ * Fußbodenheizung, Stufenloser Zugang, …). Collect the German labels and
+ * collapse onto the shared canonical vocabulary.
+ */
+const CHECKTAG_RE = /class=["']checktag["'][^>]*>\s*([^<]{2,60}?)\s*</gi;
+
+function collectKleinanzeigenAmenities(html: string): { amenities: string[]; furnished?: boolean } {
+  const tokens: string[] = [];
+  for (const match of html.matchAll(CHECKTAG_RE)) {
+    const label = match[1]?.trim();
+    if (label) tokens.push(label);
+  }
+  return canonicalizeAmenities(tokens);
+}
+
+/**
+ * The seller/store name for a listing. Commercial (`gewerblich`) posters render a
+ * pro `bizteaser` block; the display name lives in the `userprofile-vip` span.
+ * Kleinanzeigen gates the phone behind an AJAX reveal (empty in the HTML), so the
+ * name/agency is the best-effort contact we can capture cold.
+ */
+const POSTER_NAME_RE = /class=["'][^"']*userprofile-vip[^"']*["'][^>]*>\s*([^<]{2,80}?)\s*</i;
+
+function extractKleinanzeigenPoster(html: string): NormalizedListingContact | undefined {
+  const name = html.match(POSTER_NAME_RE)?.[1]?.trim();
+  if (!name) return undefined;
+  const isAgency = /class=["'][^"']*bizteaser/i.test(html) || /"Verkaeufer"\s*:\s*"gewerblich"/i.test(html);
+  return buildContact({
+    name,
+    agencyName: isAgency ? name : undefined,
+    kind: isAgency ? 'agency' : 'private',
+  });
+}
+
 export function parseKleinanzeigenDetail(html: string, url: string): KleinanzeigenRawListing {
   const categoryId = kleinanzeigenCategoryFromUrl(url);
   if (!isKleinanzeigenHousingCategory(categoryId)) {
@@ -182,8 +231,9 @@ export function parseKleinanzeigenDetail(html: string, url: string): Kleinanzeig
   const region = meta.get('og:region');
   const city = region ?? neighborhood ?? '';
   const images = extractGalleryImages(html, meta.get('og:image'));
+  const { amenities, furnished } = collectKleinanzeigenAmenities(html);
 
-  return {
+  const listing: KleinanzeigenRawListing = {
     sourceId,
     url: meta.get('og:url') ?? url,
     categoryId: categoryId as string,
@@ -204,6 +254,15 @@ export function parseKleinanzeigenDetail(html: string, url: string): Kleinanzeig
       lng: asNumber(meta.get('og:longitude')),
     },
     images,
-    contact: mergeListingContact(extractContactFromHtml(html)),
+    contact: mergeListingContact(extractContactFromHtml(html), extractKleinanzeigenPoster(html)),
   };
+
+  const bathrooms = asNumber(detailValue(html, 'Badezimmer'));
+  if (bathrooms !== undefined) listing.bathrooms = bathrooms;
+  const yearBuilt = kleinanzeigenYearBuilt(detailValue(html, 'Baujahr'));
+  if (yearBuilt !== undefined) listing.yearBuilt = yearBuilt;
+  if (amenities.length > 0) listing.amenities = amenities;
+  if (furnished) listing.furnished = true;
+
+  return listing;
 }

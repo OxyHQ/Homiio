@@ -73,6 +73,9 @@ export function slugifyAmenityToken(raw: string): string {
     .replace(/[̀-ͯ]/g, '')
     .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
     .toLowerCase()
+    // German ß has no NFD decomposition; transliterate so labels like
+    // `Fußbodenheizung` slug to `fussbodenheizung` (matched by the alias table).
+    .replace(/ß/g, 'ss')
     .trim()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '');
@@ -177,6 +180,44 @@ const AMENITY_ALIASES: Readonly<Record<string, CanonicalAmenity | typeof FURNISH
   meuble: FURNISHED_TOKEN,
   meublee: FURNISHED_TOKEN,
   furnished: FURNISHED_TOKEN,
+  // German (immobilienscout24 / kleinanzeigen feature labels)
+  aufzug: 'elevator',
+  personenaufzug: 'elevator',
+  fahrstuhl: 'elevator',
+  balkon: 'balcony',
+  terrasse: 'terrace',
+  garten: 'garden',
+  keller: 'storage',
+  abstellraum: 'storage',
+  stellplatz: 'parking',
+  tiefgarage: 'parking',
+  aussenstellplatz: 'parking',
+  carport: 'parking',
+  parkplatz: 'parking',
+  klimaanlage: 'air_conditioning',
+  klimatisiert: 'air_conditioning',
+  fussbodenheizung: 'heating',
+  zentralheizung: 'heating',
+  stufenloser_zugang: 'disabled_access',
+  barrierefrei: 'disabled_access',
+  rollstuhlgerecht: 'disabled_access',
+  waschmaschine: 'washing_machine',
+  geschirrspuler: 'dishwasher',
+  spulmaschine: 'dishwasher',
+  trockner: 'dryer',
+  mobliert: FURNISHED_TOKEN,
+  moebliert: FURNISHED_TOKEN,
+  // Polish (otodom additionalInformation extras/equipment/media/security tokens)
+  winda: 'elevator',
+  taras: 'terrace',
+  ogrod: 'garden',
+  piwnica: 'storage',
+  entryphone: 'intercom',
+  domofon: 'intercom',
+  cable_television: 'cable_tv',
+  anti_burglary_door: 'armored_door',
+  furniture: FURNISHED_TOKEN,
+  meble: FURNISHED_TOKEN,
 };
 
 /**

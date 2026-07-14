@@ -19,6 +19,7 @@ import {
   parseOtodomSearch,
   OTODOM_FIXTURE_DETAIL_HTML,
   OTODOM_FIXTURE_DETAIL_UNIFIED_HTML,
+  OTODOM_FIXTURE_DETAIL_ENRICHED_HTML,
   OTODOM_FIXTURE_SEARCH_HTML,
   FundaProvider,
   parseFundaDetail,
@@ -154,6 +155,38 @@ describe('OtodomProvider (PL)', () => {
     expect(listing.address.coordinates?.lat).toBeCloseTo(52.188404, 4);
     expect(listing.remoteImages.length).toBe(2);
     expect(listing.contact?.phone).toContain('48733806496');
+  });
+
+  it('extracts amenities + floor + yearBuilt from the full attributes bag', () => {
+    const payload = parseOtodomDetail(
+      OTODOM_FIXTURE_DETAIL_ENRICHED_HTML,
+      'https://www.otodom.pl/pl/oferta/nowe-2-pokoje-38-m-interent-w-cenie-ID4BbBH',
+    );
+    const listing = otodom.normalize({
+      ref: { provider: 'otodom', sourceId: payload.sourceId, url: payload.url },
+      payload,
+    });
+    // Structured fields the earlier parser dropped (floor_no / build_year).
+    expect(listing.floor).toBe(2);
+    expect(listing.yearBuilt).toBe(2026);
+    // Amenities canonicalized from the grouped attribute arrays; `furniture`
+    // hoists to furnishedStatus rather than an amenity tag.
+    expect((listing.amenities ?? []).length).toBeGreaterThan(0);
+    expect(listing.amenities).toEqual(
+      expect.arrayContaining([
+        'balcony',
+        'parking',
+        'elevator',
+        'washing_machine',
+        'dishwasher',
+        'wifi',
+        'intercom',
+        'heating',
+      ]),
+    );
+    expect(listing.furnishedStatus).toBe('furnished');
+    expect(listing.longTermRent?.monthlyAmount).toBe(3400);
+    expect(listing.contact?.phone).toContain('48787010420');
   });
 });
 

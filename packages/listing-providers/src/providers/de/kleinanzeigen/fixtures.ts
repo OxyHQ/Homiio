@@ -58,6 +58,56 @@ export const KLEINANZEIGEN_FIXTURE_DETAIL_HTML = `<!doctype html>
 </body>
 </html>`;
 
+/**
+ * Current kleinanzeigen immobilien detail markup (captured 2026-07): the
+ * "Ausstattung" feature tags render as `<li class="checktag">`, structured rows
+ * (`Badezimmer`, `Baujahr`) sit in the `addetailslist`, and a commercial poster
+ * exposes an agency name in the `userprofile-vip` span (phone stays AJAX-gated).
+ * Proves amenities + bathrooms + yearBuilt + agency-contact extraction.
+ */
+export const KLEINANZEIGEN_FIXTURE_DETAIL_ENRICHED_HTML = `<!doctype html>
+<html lang="de">
+<head>
+<meta property="og:title" content="Modernes Apartment im vielseitigen Stadtquartier" />
+<meta property="og:description" content="Neubau-Erstbezug mit Balkon und Einbauküche in Berlin-Spandau." />
+<meta property="og:url" content="https://www.kleinanzeigen.de/s-anzeige/modernes-apartment/3382686830-203-3436" />
+<meta property="og:image" content="https://img.kleinanzeigen.de/api/v1/prod-ads/images/aa/enriched-1?rule=$_59.JPG" />
+<meta property="og:latitude" content="52.535" />
+<meta property="og:longitude" content="13.200" />
+<meta property="og:locality" content="Spandau" />
+<meta property="og:region" content="Berlin" />
+<meta property="og:type" content="product" />
+<title>Modernes Apartment | Wohnung mieten</title>
+</head>
+<body>
+<div class="galleryimage-large">
+  <img id="viewad-image" data-imgsrc="https://img.kleinanzeigen.de/api/v1/prod-ads/images/aa/enriched-1?rule=$_57.AUTO" />
+  <img id="viewad-image" data-imgsrc="https://img.kleinanzeigen.de/api/v1/prod-ads/images/bb/enriched-2?rule=$_57.AUTO" />
+</div>
+<div class="boxedarticle--price" id="viewad-price">890 €</div>
+<ul class="addetailslist">
+  <li class="addetailslist--detail">Wohnfläche<span class="addetailslist--detail--value" >38,16 m²</span></li>
+  <li class="addetailslist--detail">Zimmer<span class="addetailslist--detail--value" >1</span></li>
+  <li class="addetailslist--detail">Schlafzimmer<span class="addetailslist--detail--value" >1</span></li>
+  <li class="addetailslist--detail">Badezimmer<span class="addetailslist--detail--value" >1</span></li>
+  <li class="addetailslist--detail">Etage<span class="addetailslist--detail--value" >1</span></li>
+  <li class="addetailslist--detail">Baujahr<span class="addetailslist--detail--value" >2019</span></li>
+  <li class="addetailslist--detail">Wohnungstyp<span class="addetailslist--detail--value" >Etagenwohnung</span></li>
+</ul>
+<ul class="checktaglist">
+  <li class="checktag">Balkon</li>
+  <li class="checktag">Einbauküche</li>
+  <li class="checktag">Stufenloser Zugang</li>
+  <li class="checktag">Fußbodenheizung</li>
+  <li class="checktag">Neubau</li>
+  <li class="checktag">Aufzug</li>
+</ul>
+<a class="bizteaser--logo" aria-label="Logo von Müller Merkle Immobilien GmbH" href="/pro/mueller-merkle-immobilien-gmbh"></a>
+<i class="iconlist-icon-big"><span class="badge user-profile-vip-badge">MM</span></i>
+<span class="text-body-regular-strong text-force-linebreak userprofile-vip">Müller Merkle Immobilien - Michelle Steiger</span>
+</body>
+</html>`;
+
 /** Non-housing detail (cars) — normalize must reject. */
 export const KLEINANZEIGEN_FIXTURE_NON_HOUSING_HTML = `<!doctype html>
 <html lang="de">

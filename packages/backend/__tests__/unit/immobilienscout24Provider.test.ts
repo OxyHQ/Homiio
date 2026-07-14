@@ -10,6 +10,7 @@ import {
   is24PublicUrl,
   IS24_FIXTURE_SEARCH_JSON,
   IS24_FIXTURE_EXPOSE_JSON,
+  IS24_FIXTURE_EXPOSE_REAL_JSON,
 } from '@homiio/listing-providers';
 import type { ExternalListingRef } from '@homiio/listing-providers';
 import { OfferingType, PropertyType } from '@homiio/shared-types';
@@ -52,5 +53,29 @@ describe('ImmobilienScout24Provider', () => {
 
   it('derives source id and public URL helpers', () => {
     expect(is24SourceIdFromUrl(is24PublicUrl('160012345'))).toBe('160012345');
+  });
+
+  it('extracts floor/bathrooms/yearBuilt + amenities from the real ATTRIBUTE_LIST + CHECK shape', () => {
+    const payload = parseIs24Expose(IS24_FIXTURE_EXPOSE_REAL_JSON);
+    const ref: ExternalListingRef = {
+      provider: 'immobilienscout24',
+      sourceId: payload.sourceId,
+      url: payload.url,
+    };
+    const listing = provider.normalize({ ref, payload });
+    expect(listing.sourceId).toBe('169270319');
+    expect(listing.longTermRent?.monthlyAmount).toBe(380);
+    expect(listing.bedrooms).toBe(1);
+    // Structured fields that were 0% before (Etage "2 von 4", Badezimmer, Baujahr).
+    expect(listing.floor).toBe(2);
+    expect(listing.bathrooms).toBe(1);
+    expect(listing.yearBuilt).toBe(2026);
+    // Amenities from CHECK feature flags + Heizungsart; combined `Balkon/Terrasse`
+    // splits into both features.
+    expect((listing.amenities ?? []).length).toBeGreaterThan(0);
+    expect(listing.amenities).toEqual(
+      expect.arrayContaining(['elevator', 'balcony', 'terrace', 'storage', 'garden', 'parking', 'heating']),
+    );
+    expect(listing.address.city).toMatch(/Berlin/i);
   });
 });
