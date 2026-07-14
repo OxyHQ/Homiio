@@ -243,13 +243,12 @@ class LeaseController {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
 
-      const ipAddress = req.ip;
       let counterpartyOxyUserId: string | undefined;
       if (isLandlord(lease, oxyUserId)) {
-        await lease.signAsLandlord(ipAddress, signature);
+        await lease.signAsLandlord(signature);
         counterpartyOxyUserId = refToId(lease.tenantOxyUserId);
       } else if (refToId(lease.tenantOxyUserId) === oxyUserId) {
-        await lease.signAsTenant(ipAddress, signature);
+        await lease.signAsTenant(signature);
         counterpartyOxyUserId = refToId(lease.landlordOxyUserId);
       } else {
         throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');

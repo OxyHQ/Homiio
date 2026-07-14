@@ -1,6 +1,7 @@
 // Load environment variables first
 require('dotenv').config();
 
+import crypto from 'crypto';
 import express from "express";
 import type { Request, Response, NextFunction } from 'express';
 import cors, { type CorsOptions } from 'cors';
@@ -77,8 +78,16 @@ const isRateLimitExempt = (req: Request): boolean => {
 };
 
 /**
- * Per-user (authenticated) or per-IP (anonymous) key. Using the user id avoids
- * the shared-IP collision behind the ALB; `ipKeyGenerator` handles IPv6 subnets.
+ * Per-user (authenticated) or per-anonymous-client key. Authenticated requests
+ * key on the user id, which avoids the shared-IP collision behind the ALB.
+ *
+ * Anonymous requests key on a salted, non-reversible HMAC of the normalized
+ * client IP — the raw IP is never held at rest in the rate-limit store (privacy
+ * mandate: no user IPs at rest). `ipKeyGenerator` buckets IPv6 to its /56 subnet
+ * so a single v6 host can't rotate through its allocation to mint fresh keys; the
+ * result is HMAC'd with `IP_HASH_SALT` and namespaced `rl|`. Mirrors the
+ * semantics of OxyHQServices' `packages/api/src/utils/ipKey.ts`. `req.ip` is read
+ * transiently here and discarded — it is never logged or persisted.
  */
 const rateLimitKey = (req: Request): string => {
   const userId = req.user?.id || req.user?._id;
@@ -86,7 +95,9 @@ const rateLimitKey = (req: Request): string => {
     return `user:${userId}`;
   }
   const ip = req.ip || req.socket.remoteAddress || 'unknown';
-  return ipKeyGenerator(ip);
+  const normalized = ipKeyGenerator(ip);
+  const salt = process.env.IP_HASH_SALT || '';
+  return crypto.createHmac('sha256', salt).update(`rl|${normalized}`).digest('hex').slice(0, 24);
 };
 
 // Initialize database connection

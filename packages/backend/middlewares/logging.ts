@@ -125,13 +125,11 @@ const log = (level: string, message: string, meta: Record<string, unknown> = {})
 const requestLogger = (req: Request, res: Response, next: NextFunction): void => {
   const start = Date.now();
   const userAgent = req.get('User-Agent') || '';
-  const ip = req.ip || req.socket.remoteAddress;
 
   // Log request start
   logger.info('Request started', {
     method: req.method,
     url: req.originalUrl,
-    ip: ip,
     userAgent: userAgent,
     userId: req.userId || (req.user ? req.user.id : null),
     requestId: req.id || null
@@ -166,7 +164,6 @@ const requestLogger = (req: Request, res: Response, next: NextFunction): void =>
       statusCode: res.statusCode,
       duration: duration,
       contentLength: contentLength,
-      ip: ip,
       userId: req.userId || (req.user ? req.user.id : null),
       requestId: req.id || null
     });
@@ -210,68 +207,6 @@ const errorLogger = (err: LoggedError, req: Request, res: Response, next: NextFu
 };
 
 /**
- * Security event logger
- */
-const securityLogger = {
-  loginAttempt: (email: string, success: boolean, ip: string, userAgent: string): void => {
-    logger.info('Login attempt', {
-      event: 'AUTH_LOGIN_ATTEMPT',
-      email: email,
-      success: success,
-      ip: ip,
-      userAgent: userAgent
-    });
-  },
-
-  loginSuccess: (userId: string, email: string, ip: string, userAgent: string): void => {
-    logger.info('Login successful', {
-      event: 'AUTH_LOGIN_SUCCESS',
-      userId: userId,
-      email: email,
-      ip: ip,
-      userAgent: userAgent
-    });
-  },
-
-  loginFailure: (email: string, reason: string, ip: string, userAgent: string): void => {
-    logger.warn('Login failed', {
-      event: 'AUTH_LOGIN_FAILURE',
-      email: email,
-      reason: reason,
-      ip: ip,
-      userAgent: userAgent
-    });
-  },
-
-  tokenRefresh: (userId: string, ip: string): void => {
-    logger.info('Token refreshed', {
-      event: 'AUTH_TOKEN_REFRESH',
-      userId: userId,
-      ip: ip
-    });
-  },
-
-  unauthorizedAccess: (url: string, method: string, ip: string, userAgent: string): void => {
-    logger.warn('Unauthorized access attempt', {
-      event: 'SECURITY_UNAUTHORIZED_ACCESS',
-      url: url,
-      method: method,
-      ip: ip,
-      userAgent: userAgent
-    });
-  },
-
-  suspiciousActivity: (userId: string, activity: string, details: Record<string, unknown>): void => {
-    logger.warn('Suspicious activity detected', {
-      event: 'SECURITY_SUSPICIOUS_ACTIVITY',
-      userId: userId,
-      activity: activity,
-      details: details
-    });
-  }
-};
-
-/**
  * Business event logger
  */
 const businessLogger = {
@@ -308,6 +243,5 @@ export {
   logger,
   requestLogger,
   errorLogger,
-  securityLogger,
   businessLogger
 };

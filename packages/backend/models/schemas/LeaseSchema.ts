@@ -23,8 +23,8 @@ interface LeaseDoc extends ILease {
     [key: string]: unknown;
   };
   signatures: {
-    landlord: { signed: boolean; signedDate?: Date; ipAddress?: string; digitalSignature?: string };
-    tenant: { signed: boolean; signedDate?: Date; ipAddress?: string; digitalSignature?: string };
+    landlord: { signed: boolean; signedDate?: Date; digitalSignature?: string };
+    tenant: { signed: boolean; signedDate?: Date; digitalSignature?: string };
   };
   inspections: Types.DocumentArray<import('mongoose').Document & Record<string, unknown>>;
   isFullySigned?: boolean;
@@ -247,7 +247,6 @@ const leaseSchema = new mongoose.Schema({
         default: false
       },
       signedDate: Date,
-      ipAddress: String,
       digitalSignature: String
     },
     tenant: {
@@ -256,7 +255,6 @@ const leaseSchema = new mongoose.Schema({
         default: false
       },
       signedDate: Date,
-      ipAddress: String,
       digitalSignature: String
     }
   },
@@ -496,11 +494,10 @@ leaseSchema.methods.generatePaymentSchedule = function(this: LeaseDoc) {
   return this.paymentSchedule;
 };
 
-leaseSchema.methods.signAsLandlord = function(this: LeaseDoc, ipAddress: string | undefined, digitalSignature?: string) {
+leaseSchema.methods.signAsLandlord = function(this: LeaseDoc, digitalSignature?: string) {
   this.signatures.landlord = {
     signed: true,
     signedDate: new Date(),
-    ipAddress: ipAddress,
     digitalSignature: digitalSignature
   };
 
@@ -513,11 +510,10 @@ leaseSchema.methods.signAsLandlord = function(this: LeaseDoc, ipAddress: string 
   return this.save();
 };
 
-leaseSchema.methods.signAsTenant = function(this: LeaseDoc, ipAddress: string | undefined, digitalSignature?: string) {
+leaseSchema.methods.signAsTenant = function(this: LeaseDoc, digitalSignature?: string) {
   this.signatures.tenant = {
     signed: true,
     signedDate: new Date(),
-    ipAddress: ipAddress,
     digitalSignature: digitalSignature
   };
 

@@ -47,7 +47,6 @@ export interface LeaseRentDetails {
 export interface LeaseSignature {
   signed: boolean;
   signedDate?: string;
-  ipAddress?: string;
   digitalSignature?: string;
 }
 
