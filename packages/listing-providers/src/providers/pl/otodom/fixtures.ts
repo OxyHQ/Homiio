@@ -179,3 +179,96 @@ export const OTODOM_FIXTURE_DETAIL_UNIFIED_HTML = `<!doctype html>
 </script>
 </body>
 </html>`;
+
+/**
+ * Current Otodom detail markup with the FULL `attributes` bag the live portal
+ * serves (captured 2026-07): grouped amenity arrays (`extras_types`,
+ * `equipment_types`, `media_types`, `security_types`), the `floor_no` / `build_year`
+ * structured fields, and `heating`. Proves amenities + floor + yearBuilt extraction.
+ */
+export const OTODOM_FIXTURE_DETAIL_ENRICHED_HTML = `<!doctype html>
+<html lang="pl">
+<head><title>NOWE 2 pokoje, 38 m² | Otodom.pl</title></head>
+<body>
+<script id="__NEXT_DATA__" type="application/json" crossorigin="anonymous">
+{
+  "props": {
+    "pageProps": {
+      "id": "67968101",
+      "contactDetails": {
+        "name": "Joanna",
+        "type": "private",
+        "phones": ["+48787010420"]
+      },
+      "ad": {
+        "id": 67968101,
+        "title": "NOWE 2 pokoje, 38 m² | Interent w cenie !",
+        "slug": "nowe-2-pokoje-38-m-interent-w-cenie-ID4BbBH",
+        "url": "https://www.otodom.pl/pl/oferta/nowe-2-pokoje-38-m-interent-w-cenie-ID4BbBH",
+        "advertiserType": "private",
+        "description": "Nowe mieszkanie na Gocławku, internet w cenie.",
+        "adCategory": { "id": 102, "name": "FLAT", "type": "RENT" },
+        "attributes": {
+          "rooms_num": "2",
+          "m": "38",
+          "floor_no": "floor_2",
+          "build_year": "2026",
+          "building_floors_num": "5",
+          "building_type": "block",
+          "construction_status": "ready_to_use",
+          "heating": "urban",
+          "extras_types": ["balcony", "garage", "lift"],
+          "equipment_types": ["furniture", "washing_machine", "dishwasher", "fridge", "stove", "oven"],
+          "media_types": ["internet"],
+          "security_types": ["entryphone", "monitoring", "alarm", "closed_area"]
+        },
+        "characteristics": [
+          { "key": "price", "value": "3400", "currency": "PLN", "localizedValue": "3400 zł" },
+          { "key": "m", "value": "38", "localizedValue": "38 m²", "currency": "" },
+          { "key": "floor_no", "value": "floor_2", "localizedValue": "", "currency": "" },
+          { "key": "build_year", "value": "2026", "localizedValue": "2026", "currency": "" },
+          { "key": "heating", "value": "urban", "localizedValue": "", "currency": "" },
+          { "key": "rooms_num", "value": "2", "localizedValue": "2", "currency": "" }
+        ],
+        "location": {
+          "address": { "street": { "name": "Ostrobramska 36B", "number": null } },
+          "reverseGeocoding": {
+            "locations": [
+              { "name": "mazowieckie", "locationLevel": "voivodeship" },
+              { "name": "Warszawa", "locationLevel": "city_or_village" },
+              { "name": "Praga-Południe", "locationLevel": "district" },
+              { "name": "Gocławek", "locationLevel": "residential" }
+            ]
+          },
+          "coordinates": { "latitude": 52.232906, "longitude": 21.11893 }
+        },
+        "images": [
+          { "large": "https://ireland.apollo.olxcdn.com/v1/files/enriched-67968101-1/image;s=2048x1536" },
+          { "large": "https://ireland.apollo.olxcdn.com/v1/files/enriched-67968101-2/image;s=2048x1536" }
+        ]
+      },
+      "unifiedAd": {
+        "id": 67968101,
+        "title": "NOWE 2 pokoje, 38 m² | Interent w cenie !",
+        "attributes": {
+          "rooms_num": "2",
+          "m": "38",
+          "floor_no": "floor_2",
+          "build_year": "2026",
+          "heating": "urban",
+          "extras_types": ["balcony", "garage", "lift"],
+          "equipment_types": ["furniture", "washing_machine", "dishwasher", "fridge", "stove", "oven"],
+          "media_types": ["internet"],
+          "security_types": ["entryphone", "monitoring", "alarm", "closed_area"]
+        },
+        "price": {
+          "__typename": "RentalPrice",
+          "rentalPrice": { "value": 3400, "currency": "PLN", "__typename": "Money" }
+        }
+      }
+    }
+  }
+}
+</script>
+</body>
+</html>`;

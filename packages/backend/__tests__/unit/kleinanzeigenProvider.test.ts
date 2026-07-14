@@ -11,6 +11,7 @@ import {
   NonHousingListingError,
   KLEINANZEIGEN_FIXTURE_SEARCH_HTML,
   KLEINANZEIGEN_FIXTURE_DETAIL_HTML,
+  KLEINANZEIGEN_FIXTURE_DETAIL_ENRICHED_HTML,
   KLEINANZEIGEN_FIXTURE_NON_HOUSING_HTML,
 } from '@homiio/listing-providers';
 import type { ExternalListingRef } from '@homiio/listing-providers';
@@ -52,6 +53,31 @@ describe('KleinanzeigenProvider housing filter', () => {
     );
     expect(listing.remoteImages[0]?.isPrimary).toBe(true);
     expect(listing.remoteImages.every((image) => image.url.endsWith('?rule=$_57.AUTO'))).toBe(true);
+  });
+
+  it('extracts amenities + bathrooms + yearBuilt + agency contact from real markup', () => {
+    const url =
+      'https://www.kleinanzeigen.de/s-anzeige/modernes-apartment/3382686830-203-3436';
+    const payload = parseKleinanzeigenDetail(KLEINANZEIGEN_FIXTURE_DETAIL_ENRICHED_HTML, url);
+    const ref: ExternalListingRef = {
+      provider: 'kleinanzeigen',
+      sourceId: payload.sourceId,
+      url: payload.url,
+    };
+    const listing = provider.normalize({ ref, payload });
+    // Structured fields the earlier parser dropped (Badezimmer / Baujahr).
+    expect(listing.bathrooms).toBe(1);
+    expect(listing.floor).toBe(1);
+    expect(listing.yearBuilt).toBe(2019);
+    // Amenities from the `checktag` Ausstattung tags; non-amenity tags
+    // (Einbauküche, Neubau) are dropped by the canonicalizer.
+    expect((listing.amenities ?? []).length).toBeGreaterThan(0);
+    expect(listing.amenities).toEqual(
+      expect.arrayContaining(['balcony', 'disabled_access', 'heating', 'elevator']),
+    );
+    // Commercial poster: agency name captured from the userprofile-vip span.
+    expect(listing.contact?.agencyName).toMatch(/Müller Merkle/);
+    expect(listing.contact?.kind).toBe('agency');
   });
 
   it('rejects non-housing detail HTML', () => {

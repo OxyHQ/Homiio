@@ -122,3 +122,109 @@ export const IS24_FIXTURE_EXPOSE_JSON = `{
     }
   }
 }`;
+
+/**
+ * Current mobile expose shape the live API serves (captured 2026-07): structured
+ * fields and amenity flags live in `ATTRIBUTE_LIST` sections ('Hauptkriterien',
+ * 'Bausubstanz & Energieausweis'), NOT the older TOP_ATTRIBUTES/ATTRIBUTES shape.
+ * TEXT rows carry `Etage` (`2 von 4`), `Badezimmer`, `Baujahr`, `Heizungsart`;
+ * CHECK rows are boolean feature flags (`Personenaufzug`, `Balkon/Terrasse`, …).
+ * Proves floor + bathrooms + yearBuilt + amenities extraction from real markup.
+ */
+export const IS24_FIXTURE_EXPOSE_REAL_JSON = `{
+  "header": {
+    "id": "169270319",
+    "title": "Erstbezug: 1-Zimmer-Wohnung in Berlin-Wittenau",
+    "realEstateType": "apartmentrent",
+    "publicationState": "ACTIVE"
+  },
+  "sections": [
+    {
+      "type": "MEDIA",
+      "media": [
+        {
+          "type": "PICTURE",
+          "fullImageUrl": "https://pictures.immobilienscout24.de/listings/cd/ef/169270319-1.jpg/ORIG/resize/%WIDTH%x%HEIGHT%/format/webp/quality/80"
+        },
+        {
+          "type": "PICTURE",
+          "fullImageUrl": "https://pictures.immobilienscout24.de/listings/cd/ef/169270319-2.jpg/ORIG/resize/%WIDTH%x%HEIGHT%/format/webp/quality/80"
+        }
+      ]
+    },
+    {
+      "type": "TOP_ATTRIBUTES",
+      "attributes": [
+        { "label": "Kaltmiete 18,65 €/m²", "text": "380 €", "type": "TEXT", "highlighted": true },
+        { "label": "Zimmer", "text": "1", "type": "TEXT" },
+        { "label": "Wohnfläche", "text": "20,38 m²", "type": "TEXT" },
+        { "label": "Warmmiete", "text": "451,33 €", "type": "TEXT" }
+      ]
+    },
+    { "type": "TITLE", "title": "Erstbezug: 1-Zimmer-Wohnung in Berlin-Wittenau" },
+    {
+      "type": "MAP",
+      "title": "Karte",
+      "location": { "lat": 52.588, "lng": 13.339 },
+      "addressLine1": "Roedernallee 118F",
+      "addressLine2": "13437 Wittenau, Berlin"
+    },
+    {
+      "type": "ATTRIBUTE_LIST",
+      "title": "Hauptkriterien",
+      "attributes": [
+        { "type": "TEXT", "label": "Wohnungstyp:", "text": "Etagenwohnung" },
+        { "type": "TEXT", "label": "Wohnfläche ca.:", "text": "20,38 m²" },
+        { "type": "TEXT", "label": "Etage:", "text": "2 von 4" },
+        { "type": "TEXT", "label": "Badezimmer:", "text": "1" },
+        { "type": "TEXT", "label": "Bezugsfrei ab:", "text": "16.08.2026" },
+        { "type": "CHECK", "label": "Personenaufzug:" },
+        { "type": "CHECK", "label": "Balkon/Terrasse:" },
+        { "type": "CHECK", "label": "Einbauküche:" },
+        { "type": "CHECK", "label": "Keller:" },
+        { "type": "CHECK", "label": "Garten:" },
+        { "type": "CHECK", "label": "Stellplatz:" },
+        { "type": "CHECK", "label": "Gäste-WC:" }
+      ]
+    },
+    {
+      "type": "ATTRIBUTE_LIST",
+      "title": "Kosten",
+      "attributes": [
+        { "type": "TEXT", "label": "Kaltmiete (zzgl. Nebenkosten):", "text": "380 €" },
+        { "type": "TEXT", "label": "Nebenkosten:", "text": "0 €" },
+        { "type": "TEXT", "label": "Gesamtmiete:", "text": "451,33 €" }
+      ]
+    },
+    {
+      "type": "ATTRIBUTE_LIST",
+      "title": "Bausubstanz & Energieausweis",
+      "attributes": [
+        { "type": "TEXT", "label": "Baujahr:", "text": "2026" },
+        { "type": "TEXT", "label": "Objektzustand:", "text": "Erstbezug" },
+        { "type": "TEXT", "label": "Heizungsart:", "text": "Zentralheizung" }
+      ]
+    },
+    {
+      "type": "TEXT_AREA",
+      "title": "Lage",
+      "text": "Ruhige Lage in Berlin-Wittenau, nahe S-Bahnhof."
+    },
+    {
+      "type": "TEXT_AREA",
+      "title": "Objektbeschreibung",
+      "text": "Erstbezug einer 1-Zimmer-Wohnung mit Balkon und Einbauküche."
+    }
+  ],
+  "contact": {
+    "type": "CONTACT",
+    "callButtonState": "active",
+    "phoneNumbers": [{ "phoneNumber": "+493098761234", "type": "MOBILE" }],
+    "contactData": {
+      "agent": {
+        "name": "Kurt Weber",
+        "company": "Wittenau Wohnen GmbH"
+      }
+    }
+  }
+}`;
