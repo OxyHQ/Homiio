@@ -85,7 +85,7 @@
         "@bitdrift/react-native": "^0.12.0",
         "@expo/vector-icons": "^15.1.1",
         "@homiio/shared-types": "workspace:*",
-        "@oxyhq/bloom": "^0.29.6",
+        "@oxyhq/bloom": "^0.34.0",
         "@oxyhq/core": "^9.0.0",
         "@oxyhq/expo-splash": "^0.1.0",
         "@oxyhq/services": "^19.0.0",
@@ -752,7 +752,7 @@
 
     "@opentelemetry/api": ["@opentelemetry/api@1.9.0", "", {}, "sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg=="],
 
-    "@oxyhq/bloom": ["@oxyhq/bloom@0.29.6", "", { "dependencies": { "@tanstack/react-virtual": "^3.14.3", "nanoid": "^5.1.5", "react-native-css": "3.0.7", "react-remove-scroll-bar": "^2.3.8" }, "peerDependencies": { "expo": "*", "expo-font": "*", "expo-haptics": "*", "expo-router": ">=3.0.0", "nativewind": ">=5.0.0", "react": ">=18.0.0", "react-dom": ">=18.0.0", "react-native": ">=0.73.0", "react-native-gesture-handler": ">=2.0.0", "react-native-reanimated": ">=3.0.0", "react-native-safe-area-context": ">=5.0.0", "react-native-svg": ">=13.0.0", "sonner": ">=2.0.0", "sonner-native": ">=0.17.0" }, "optionalPeers": ["expo", "expo-font", "expo-haptics", "expo-router", "nativewind", "react-dom", "react-native-svg", "sonner", "sonner-native"] }, "sha512-7wlVPsPXXzWKCQAZbjjhTQcWhNizKZKZkYovYApS6yEju7JKYFactgtYBkp9SDF5g9Pa0O2n+iPf+864y5b0zg=="],
+    "@oxyhq/bloom": ["@oxyhq/bloom@0.34.0", "", { "dependencies": { "@tanstack/react-virtual": "^3.14.3", "nanoid": "^5.1.5", "react-native-css": "3.0.7", "react-remove-scroll-bar": "^2.3.8" }, "peerDependencies": { "expo": "*", "expo-blur": "*", "expo-font": "*", "expo-haptics": "*", "expo-image": "*", "expo-router": ">=3.0.0", "nativewind": ">=5.0.0", "react": ">=18.0.0", "react-dom": ">=18.0.0", "react-native": ">=0.73.0", "react-native-gesture-handler": ">=2.0.0", "react-native-reanimated": ">=3.0.0", "react-native-safe-area-context": ">=5.0.0", "react-native-svg": ">=13.0.0", "sonner": ">=2.0.0", "sonner-native": ">=0.17.0" }, "optionalPeers": ["expo", "expo-font", "expo-haptics", "expo-router", "nativewind", "react-dom", "react-native-svg", "sonner", "sonner-native"] }, "sha512-OrL5KJgxjaZg81KbmPkg2c8OuC5sqUpnPqRj8MWyfEv/UYrLads9KvciD4Zw8eTRKq5Se290sOUnZYOekRLkmw=="],
 
     "@oxyhq/contracts": ["@oxyhq/contracts@0.13.0", "", { "dependencies": { "zod": "^3.25.64" } }, "sha512-RrG/hDl5WoOuDMv23GNAih9mPkVQUZ1ghD5aJE6Nd0ZNlr0P8lUqxYx/7riiKN/k5N7qpfz8Td2Q0aaQcVm/Ow=="],
 
