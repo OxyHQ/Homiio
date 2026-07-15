@@ -1,3 +1,4 @@
+import { Image as RNImage } from 'react-native';
 import { generatePropertyTitle, TitleFormat } from './propertyTitleGenerator';
 import {
   OfferingType,
@@ -7,6 +8,7 @@ import {
   PropertyImage,
   type ImageVariantName,
 } from '@homiio/shared-types';
+import type { GalleryImage } from '@oxyhq/bloom/zoomable-image-gallery';
 import type { BrowseMode } from '@/components/search/types';
 import propertyPlaceholder from '@/assets/images/property_placeholder.jpg';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
@@ -462,4 +464,30 @@ export function getPropertyImageSources(
     .map((uri): ImageDisplaySource => ({ uri }));
 
   return sources.length > 0 ? sources : [propertyPlaceholder];
+}
+
+/** The bundled placeholder resolved once to a plain URI, so a photo whose URL is
+ * missing still yields a valid, index-aligned gallery page. */
+const PLACEHOLDER_GALLERY_URI = RNImage.resolveAssetSource(propertyPlaceholder)?.uri ?? '';
+
+/**
+ * Build the `GalleryImage[]` for the fullscreen lightbox
+ * (`@oxyhq/bloom/zoomable-image-gallery`) from a property's photo list.
+ *
+ * Unlike {@link getPropertyImageSources}, this maps entries ONE-TO-ONE (no
+ * reorder, no drop): the tapped thumbnail's index must line up with the gallery
+ * page it opens. Each entry resolves to its `large` rendition; an unusable URL
+ * falls back to the bundled placeholder so alignment is preserved. A photo's
+ * `caption` becomes the viewer's accessibility/bottom-caption `alt`.
+ */
+export function getPropertyGalleryImages(
+  images: (string | PropertyImage)[] | undefined,
+): GalleryImage[] {
+  if (!images?.length) return [];
+  return images.map((entry) => {
+    const uri = imageEntryToUrl(entry, 'large') ?? PLACEHOLDER_GALLERY_URI;
+    const caption =
+      typeof entry === 'object' && entry.caption?.trim() ? entry.caption.trim() : undefined;
+    return caption ? { uri, alt: caption } : { uri };
+  });
 }

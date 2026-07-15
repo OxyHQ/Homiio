@@ -9,12 +9,13 @@
  *     component, so consumers can render this once and let it pick
  *     the right presentation.
  *
- * Tapping any tile opens the existing ImageGalleryModal at that index.
+ * Tapping any tile opens the Bloom `ZoomableImageGallery` at that index,
+ * flying in from the tapped tile's measured on-screen rect.
  * A "Show all photos" overlay button sits in the bottom-right of the
  * grid container — Bloom outline button, anchored over the trailing
  * tile so it reads as a peeking action like Airbnb's hero.
  */
-import React, { useCallback, useState } from 'react';
+import React from 'react';
 import {
   Platform,
   Pressable,
@@ -27,10 +28,11 @@ import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@oxyhq/bloom/button';
+import { ZoomableImageGallery } from '@oxyhq/bloom/zoomable-image-gallery';
 
-import { ImageGalleryModal } from './ImageGalleryModal';
 import { PhotoGallery } from './PhotoGallery';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
+import { usePropertyPhotoGallery } from '@/hooks/usePropertyPhotoGallery';
 import { colors } from '@/styles/colors';
 import { radius } from '@/constants/styles';
 import type { PropertyImage } from '@homiio/shared-types';
@@ -47,15 +49,7 @@ const MIN_GRID_PHOTOS = 5;
 export const PhotoGrid: React.FC<PhotoGridProps> = ({ images, t }) => {
   const { t: tLocal } = useTranslation();
   const { width } = useWindowDimensions();
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-
-  const openModalAt = useCallback((index: number) => {
-    setSelectedIndex(index);
-    setModalVisible(true);
-  }, []);
-
-  const closeModal = useCallback(() => setModalVisible(false), []);
+  const { galleryRef, measureThumb, registerThumbHost, open } = usePropertyPhotoGallery(images);
 
   if (!images?.length) return null;
 
@@ -77,8 +71,9 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({ images, t }) => {
       <View style={styles.outer}>
         <View style={styles.grid}>
           <Pressable
+            ref={registerThumbHost(0)}
             style={styles.heroTile}
-            onPress={() => openModalAt(0)}
+            onPress={() => open(0)}
             accessibilityRole="imagebutton"
             accessibilityLabel={tLocal('property.photos.hero', 'Open photo 1')}
           >
@@ -98,13 +93,14 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({ images, t }) => {
               return (
                 <Pressable
                   key={`side-${idx}`}
+                  ref={registerThumbHost(absoluteIndex)}
                   style={[
                     styles.sideTile,
                     isTopRight && styles.sideTileTopRight,
                     isBottomLeft && styles.sideTileBottomLeft,
                     isBottomRight && styles.sideTileBottomRight,
                   ]}
-                  onPress={() => openModalAt(absoluteIndex)}
+                  onPress={() => open(absoluteIndex)}
                   accessibilityRole="imagebutton"
                   accessibilityLabel={tLocal(
                     'property.photos.tile',
@@ -126,7 +122,7 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({ images, t }) => {
           <Button
             variant="secondary"
             size="small"
-            onPress={() => openModalAt(0)}
+            onPress={() => open(0)}
             icon={<Ionicons name="grid-outline" size={14} color={colors.COLOR_BLACK} />}
             iconPosition="left"
             accessibilityLabel={tLocal('property.photos.showAll', 'Show all photos')}
@@ -135,11 +131,10 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({ images, t }) => {
           </Button>
         </View>
       </View>
-      <ImageGalleryModal
-        visible={modalVisible}
-        images={images}
-        initialIndex={selectedIndex}
-        onClose={closeModal}
+      <ZoomableImageGallery
+        ref={galleryRef}
+        measureThumb={measureThumb}
+        indicatorVariant="thumbnails"
       />
     </>
   );

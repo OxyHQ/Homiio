@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useCallback } from 'react';
 import { View, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { ZoomableImageGallery } from '@oxyhq/bloom/zoomable-image-gallery';
 import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
+import { usePropertyPhotoGallery } from '@/hooks/usePropertyPhotoGallery';
 import { radius, spacing } from '@/constants/styles';
 import { SECTION_GUTTER } from './Section';
-import { ImageGalleryModal } from './ImageGalleryModal';
 import type { PropertyImage } from '@homiio/shared-types';
 
 interface PhotoGalleryProps {
@@ -19,14 +20,15 @@ const THUMB_SIZE = 100;
 const MAX_THUMBS = 5;
 
 export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, onOpen, t }) => {
-    const [modalVisible, setModalVisible] = useState(false);
-    const [selectedIndex, setSelectedIndex] = useState(0);
+    const { galleryRef, measureThumb, registerThumbHost, open } = usePropertyPhotoGallery(images);
 
-    const handleImagePress = (index: number) => {
-        setSelectedIndex(index);
-        setModalVisible(true);
-        onOpen?.(index);
-    };
+    const handleImagePress = useCallback(
+        (index: number) => {
+            onOpen?.(index);
+            open(index);
+        },
+        [onOpen, open],
+    );
 
     if (!images?.length) return null;
     return (
@@ -48,6 +50,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, onOpen, t })
                     {images.slice(0, MAX_THUMBS).map((image, index) => (
                         <TouchableOpacity
                             key={index}
+                            ref={registerThumbHost(index)}
                             style={styles.galleryImageContainer}
                             onPress={() => handleImagePress(index)}
                             activeOpacity={0.8}
@@ -63,11 +66,10 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, onOpen, t })
                 </ScrollView>
             </View>
 
-            <ImageGalleryModal
-                visible={modalVisible}
-                images={images}
-                initialIndex={selectedIndex}
-                onClose={() => setModalVisible(false)}
+            <ZoomableImageGallery
+                ref={galleryRef}
+                measureThumb={measureThumb}
+                indicatorVariant="thumbnails"
             />
         </>
     );
