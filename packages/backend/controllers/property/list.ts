@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import type { SortOrder } from 'mongoose';
-import { Property, Reservation } from '../../models';
+import { Property, RecentlyViewed, Reservation, Saved } from '../../models';
 import { paginationResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
 import {
@@ -139,7 +139,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       checkIn,
       checkOut,
       fairPrice,
-    } = req.query as any;
+    } = req.query;
 
     const pageNumber = Math.max(1, parseInt(String(page)) || 1);
     const limitNumber = Math.min(100, Math.max(1, parseInt(String(limit)) || 10));
@@ -423,7 +423,6 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     serializePropertyImages(properties);
 
     const mongoose = require('mongoose');
-    const { Saved } = require('../../models');
     const ids = properties.map(p => p._id).filter(Boolean).map((id: any) => new mongoose.Types.ObjectId(id));
     let savesMap: Record<string, number> = {};
     if (ids.length > 0) {
@@ -488,7 +487,6 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     if (req.user?.id || req.user?._id) {
       try {
         const oxyUserId = req.user.id || req.user._id;
-        const { RecentlyViewed, Saved } = require('../../models');
           const [recentlyViewed, savedProperties] = await Promise.all([
             RecentlyViewed.find({ oxyUserId })
               .sort({ viewedAt: -1 })
@@ -508,7 +506,12 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
             orderedMap.set(p._id.toString(), p);
           }
 
-          const preferenceWeights = { propertyTypes: {} as any, priceRanges: {} as any, locations: {} as any, amenities: {} as any };
+          const preferenceWeights: {
+            propertyTypes: Record<string, number>;
+            priceRanges: Record<string, number>;
+            locations: Record<string, number>;
+            amenities: Record<string, number>;
+          } = { propertyTypes: {}, priceRanges: {}, locations: {}, amenities: {} };
           const recentlyViewedIds = new Set<string>();
           for (const view of recentlyViewed) {
             const viewPropId = view.propertyId.toString();

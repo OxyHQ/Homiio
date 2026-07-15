@@ -8,7 +8,7 @@ import type { Types } from 'mongoose';
 import type { PopulatedProfileLike } from './roommate/serialize';
 import type { IProfile } from '../models/documentTypes';
 
-const { Profile, RoommateRequest, RoommateRelationship } = require('../models');
+const { Profile, RoommateRequest, RoommateRelationship } = require('../models') as typeof import('../models');
 const { logger } = require('../middlewares/logging');
 const { notificationDispatchService } = require('../services/notificationDispatchService');
 const { pickFields } = require('../utils/pickFields') as typeof import('../utils/pickFields');

@@ -43,6 +43,9 @@ function models(): {
   };
   Address: { countDocuments: (filter: Record<string, unknown>) => Promise<number>; updateMany: (filter: Record<string, unknown>, update: Record<string, unknown>) => Promise<unknown> };
 } {
+  // Untyped require by design: this helper narrows each model to a local
+  // structural shape in its return annotation, and requires lazily to keep the
+  // geo registry load-order flexible.
   const registry = require('../models');
   return {
     Country: registry.Country,

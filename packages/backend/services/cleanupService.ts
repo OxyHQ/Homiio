@@ -55,7 +55,7 @@ export class CleanupService {
   }> {
     this.logger.info('Starting old data cleanup');
 
-    const { RecentlyViewed, ViewingRequest } = require('../models');
+    const { RecentlyViewed, ViewingRequest } = require('../models') as typeof import('../models');
     const now = Date.now();
     const recentlyViewedCutoff = new Date(now - RECENTLY_VIEWED_RETENTION_DAYS * DAY_MS);
     const viewingRequestCutoff = new Date(now - VIEWING_REQUEST_RETENTION_DAYS * DAY_MS);

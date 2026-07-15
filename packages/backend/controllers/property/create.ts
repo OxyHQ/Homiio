@@ -1,7 +1,7 @@
 import { applyOfferingRulesForCreate, OfferingValidationError, type OfferingBearingPayload } from './offeringRules';
 import { CREATABLE_PROPERTY_FIELDS } from './editableFields';
 import { pickFields } from '../../utils/pickFields';
-import { Property } from '../../models';
+import { Address, Partner, Property } from '../../models';
 import { telegramService } from '../../services';
 import { schedulePriceEthicsScore } from '../../services/priceEthicsService';
 import { logger, businessLogger } from '../../middlewares/logging';
@@ -89,7 +89,6 @@ export async function createProperty(req: ControllerRequest, res: ControllerResp
     // whitelisted payload, so it is never persisted directly.
     const referralCode = typeof req.body.referralCode === 'string' ? req.body.referralCode.trim() : '';
     if (referralCode) {
-      const { Partner } = require('../../models');
       const partner = await Partner.findOne({ referralCode: referralCode.toLowerCase(), status: 'active' });
       if (partner) {
         propertyData.sourcedByPartner = partner._id;
@@ -107,8 +106,6 @@ export async function createProperty(req: ControllerRequest, res: ControllerResp
     // Handle address creation or reference
     let addressId;
     if (req.body.address) {
-      const { Address } = require('../../models');
-      
       // Extract address data from request
       let addressData = { ...req.body.address };
       

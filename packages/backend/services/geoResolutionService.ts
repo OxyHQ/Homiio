@@ -69,6 +69,9 @@ function models(): {
   // `require` here (not a top-level import) so the geo models are read from the
   // central registry AFTER `models/index.ts` has registered them, avoiding a
   // load-order cycle (Address → geoResolutionService → models/index → Address).
+  // Untyped require by design: this helper narrows each model to a local *Doc
+  // shape in its return annotation, and the require is lazy to avoid the
+  // Address → geoResolutionService → models/index → Address load-order cycle.
   const registry = require('../models');
   return {
     Country: registry.Country,

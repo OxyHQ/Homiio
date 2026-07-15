@@ -25,6 +25,8 @@ declare global {
       accessToken?: string;
       sessionId?: string | null;
       id?: string;
+      /** Raw request body captured for Stripe webhook signature verification. */
+      rawBody?: Buffer;
     }
   }
 }

@@ -2,7 +2,8 @@ import axios from 'axios';
 import { OfferingType } from '@homiio/shared-types';
 import { forwardGeocode } from './geocodingService';
 import { schedulePriceEthicsScore } from './priceEthicsService';
-import { Property } from '../models';
+import { Address, Property } from '../models';
+import type { AddressCanonicalInput } from '../models/Address';
 import { logger as appLogger } from '../middlewares/logging';
 
 function errorMessageOf(error: unknown): string {
@@ -173,7 +174,7 @@ function sanitizeData(raw: any): any {
  * and (b) the Property fields. Geo is relational, so the address is never
  * embedded on the Property; the upserter resolves it to an `addressId`.
  */
-function mapToProperty(raw: any): { property: Record<string, unknown>; addressInput: Record<string, unknown> } {
+function mapToProperty(raw: any): { property: Record<string, unknown>; addressInput: AddressCanonicalInput } {
   try {
     const addressInput = {
       street: raw.address?.street || '',
@@ -184,7 +185,10 @@ function mapToProperty(raw: any): { property: Record<string, unknown>; addressIn
       country: raw.address?.country || 'Spain',
       neighborhood: raw.address?.neighborhood || '',
       coordinates: raw.address?.coordinates
-        ? { type: 'Point', coordinates: [raw.address.coordinates.lng, raw.address.coordinates.lat] }
+        ? {
+            type: 'Point',
+            coordinates: [Number(raw.address.coordinates.lng), Number(raw.address.coordinates.lat)] as [number, number],
+          }
         : undefined,
     };
 
@@ -261,7 +265,6 @@ export async function upsertExternalListing(
         }
         addressInput.coordinates = { type: 'Point', coordinates: geocoded.data.coordinates };
       }
-      const { Address } = require('../models');
       const address = await Address.findOrCreateCanonical(addressInput);
 
       const update = {

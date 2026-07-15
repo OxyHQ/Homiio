@@ -53,7 +53,7 @@ class AnalyticsController {
       const period = PERIOD_DAYS[periodParam] ? periodParam : '30d';
       const since = new Date(Date.now() - periodDays * DAY_MS);
 
-      const { Profile, Property, RecentlyViewed, Saved, ViewingRequest } = require('../models');
+      const { Profile, Property, RecentlyViewed, Saved, ViewingRequest } = require('../models') as typeof import('../models');
 
       const activeProfile = await Profile.findByOxyUserId(oxyUserId);
       if (!activeProfile) {
@@ -173,7 +173,7 @@ class AnalyticsController {
    */
   async getAppStats(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
-      const { Property, City, Saved } = require('../models');
+      const { Property, City, Saved } = require('../models') as typeof import('../models');
 
       const [totalProperties, totalCities, totalSaves, uniqueSavers] = await Promise.all([
         Property.countDocuments({}),
