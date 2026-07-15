@@ -10,10 +10,7 @@ import { openai } from '@ai-sdk/openai';
 import { getOxyUserId } from '@oxyhq/core/server';
 import { getErrorMessage } from '../utils/errors';
 import { logger } from '../middlewares/logging';
-
-// CJS model exports (mantengo CJS si tus modelos están así)
-const Profile = require('../models/schemas/ProfileSchema');
-const Conversation = require('../models/schemas/ConversationSchema');
+import { Profile, Conversation } from '../models';
 
 // -------------------------------
 // Types
@@ -122,7 +119,7 @@ const sendEmptyStream = async (res: Response) => {
     system: 'Return an empty response. Do not output any characters.',
     messages: [{ role: 'user', content: '' }],
     maxTokens: 1,
-  } as any);
+  });
   (await result).pipeDataStreamToResponse(res);
 };
 
@@ -316,10 +313,10 @@ Focus on extracting clear location information from the user's query.`;
     const raw = JSON.parse(trimmed.slice(start, end + 1));
     const out: PropertyFilters = {};
 
-    const numberish = (v: any) => (v != null && !isNaN(Number(v)) ? Number(v) : undefined);
-    const put = (k: keyof PropertyFilters, v: any) => {
+    const numberish = (v: unknown) => (v != null && !isNaN(Number(v)) ? Number(v) : undefined);
+    const put = <K extends keyof PropertyFilters>(k: K, v: PropertyFilters[K] | undefined) => {
       const valid = Array.isArray(v) ? v.length > 0 : v !== undefined && v !== null && v !== '';
-      if (valid) (out as any)[k] = v;
+      if (valid) out[k] = v;
     };
 
     put('type', typeof raw.type === 'string' ? raw.type : undefined);
@@ -500,7 +497,7 @@ Return only the JSON array, no other text.`;
         system: 'You are a helpful AI that generates relevant chat suggestions for rental property conversations. Return valid JSON only.',
         messages: [{ role: 'user', content: contextPrompt }],
         maxTokens: 500,
-      } as any);
+      });
 
       let generatedText = '';
       for await (const chunk of result.textStream) {
@@ -673,7 +670,10 @@ Return only the JSON array, no other text.`;
         if (mediaType.startsWith('application/pdf')) {
           const CONTRACT_SYSTEM =
             'You are a tenant-friendly contract and lease reviewer. You identify risky clauses, illegal terms (jurisdiction-aware at a high level), fees, early termination, maintenance, deposits, and notice periods. Provide brief, actionable advice and suggest questions to ask a landlord. Be concise.';
-          const prior = (messages as ChatMessage[]).slice(0, -1).map(m => ({ role: m.role, content: m.content }));
+          const prior: CoreMessage[] = (messages as ChatMessage[])
+            .slice(0, -1)
+            .filter((m): m is ChatMessage & { role: 'system' | 'user' | 'assistant' } => m.role !== 'tool')
+            .map(m => ({ role: m.role, content: m.content }));
           const filename = 'upload.pdf';
           const userText = (cleanedLastContent || '').slice(0, 2000) || 'Please review this lease/contract and advise.';
           try {
@@ -684,10 +684,10 @@ Return only the JSON array, no other text.`;
                 { role: 'system', content: SINDI_SYSTEM_PROMPT },
                 { role: 'system', content: CONTRACT_SYSTEM },
                 ...prior,
-                { role: 'user', content: [{ type: 'text', text: userText }, { type: 'file', data: parsed!.buffer, mediaType: 'application/pdf', filename }] },
+                { role: 'user', content: [{ type: 'text', text: userText }, { type: 'file', data: parsed!.buffer, mimeType: 'application/pdf', filename }] },
               ],
               maxTokens: 700,
-            } as any);
+            });
           } catch {
             // Fallback to text extraction
             const pdfParse = require('pdf-parse');
@@ -698,7 +698,7 @@ Return only the JSON array, no other text.`;
               temperature: 0.2,
               messages: [{ role: 'system', content: SINDI_SYSTEM_PROMPT }, { role: 'system', content: CONTRACT_SYSTEM }, ...prior, { role: 'user', content: `${userText}\n\n${clipped}` }],
               maxTokens: 700,
-            } as any);
+            });
           }
         } else if (!mediaType.startsWith('image/')) {
           // Unsupported
@@ -710,7 +710,7 @@ Return only the JSON array, no other text.`;
               { role: 'user', content: `I uploaded a ${mediaType || 'file'}; please accept images (png/jpg/webp) or PDFs for analysis.` },
             ],
             maxTokens: 120,
-          } as any);
+          });
         } else if (bytes > IMAGE_MAX_INLINE_MB * 1024 * 1024) {
           result = streamText({
             model: openai('gpt-4o'),
@@ -720,10 +720,13 @@ Return only the JSON array, no other text.`;
               { role: 'user', content: 'The image appears very large (>20MB). Please compress or send a smaller photo. What should I capture for a clear assessment?' },
             ],
             maxTokens: 140,
-          } as any);
+          });
         } else {
           // Image analysis
-          const prior = (messages as ChatMessage[]).slice(0, -1).map(m => ({ role: m.role, content: m.content }));
+          const prior: CoreMessage[] = (messages as ChatMessage[])
+            .slice(0, -1)
+            .filter((m): m is ChatMessage & { role: 'system' | 'user' | 'assistant' } => m.role !== 'tool')
+            .map(m => ({ role: m.role, content: m.content }));
           const promptText =
             (cleanedLastContent || '').slice(0, 2000) ||
             'Describe what this image shows that is relevant to a housing issue (e.g., damages, mold, notices). Be concise and helpful to a tenant.';
@@ -740,7 +743,7 @@ Return only the JSON array, no other text.`;
               { role: 'user', content: [{ type: 'text', text: promptText }, { type: 'image', image: parsed!.buffer }] },
             ],
             maxTokens: 512,
-          } as any);
+          });
         }
       } else if (isAttachmentStub) {
         result = streamText({
@@ -749,7 +752,7 @@ Return only the JSON array, no other text.`;
           system: 'Return an empty response. Do not output any characters.',
           messages: [{ role: 'user', content: '' }],
           maxTokens: 1,
-        } as any);
+        });
       } else {
         // `enhanced` only ever holds system/user/assistant string messages
         // (built from the system prompt + the incoming chat turns). Map to the
@@ -841,11 +844,11 @@ Return only the JSON array, no other text.`;
             model: openai('gpt-4o-mini'),
             system: CONTRACT_SYSTEM,
             messages: [
-              { role: 'user', content: [{ type: 'text', text: userText || 'Please review this lease/contract and advise.' }, { type: 'file', data: buffer, mediaType: 'application/pdf', filename: file.originalname || 'upload.pdf' }] },
+              { role: 'user', content: [{ type: 'text', text: userText || 'Please review this lease/contract and advise.' }, { type: 'file', data: buffer, mimeType: 'application/pdf', filename: file.originalname || 'upload.pdf' }] },
             ],
             maxTokens: 700,
             temperature: 0.2,
-          } as any);
+          });
           let out = '';
           for await (const c of result.textStream) out += c;
           const trimmed = out.trim();
@@ -862,7 +865,7 @@ Return only the JSON array, no other text.`;
             messages: [{ role: 'user', content: `${userText || 'Please review this lease/contract and advise.'}\n\n${clipped}` }],
             maxTokens: 700,
             temperature: 0.2,
-          } as any);
+          });
           let out = '';
           for await (const c of result.textStream) out += c;
           const trimmed = out.trim();
@@ -882,7 +885,7 @@ Return only the JSON array, no other text.`;
           messages: [{ role: 'user', content: [{ type: 'text', text: promptText }, { type: 'image', image: buffer }] }],
           maxTokens: 512,
           temperature: 0.2,
-        } as any);
+        });
         let out = '';
         for await (const c of result.textStream) out += c;
         const trimmed = out.trim();
@@ -929,10 +932,10 @@ Return only the JSON array, no other text.`;
           result = await streamText({
             model: openai('gpt-4o-mini'),
             system: CONTRACT_SYSTEM,
-            messages: [{ role: 'user', content: [{ type: 'text', text: userText || 'Please review this lease/contract and advise.' }, { type: 'file', data: buffer, mediaType: 'application/pdf', filename: file.originalname || 'upload.pdf' }] }],
+            messages: [{ role: 'user', content: [{ type: 'text', text: userText || 'Please review this lease/contract and advise.' }, { type: 'file', data: buffer, mimeType: 'application/pdf', filename: file.originalname || 'upload.pdf' }] }],
             maxTokens: 700,
             temperature: 0.2,
-          } as any);
+          });
         } catch {
           const pdfParse = require('pdf-parse');
           const parsedText = await pdfParse(buffer).then((r: any) => String(r?.text || ''));
@@ -943,7 +946,7 @@ Return only the JSON array, no other text.`;
             messages: [{ role: 'user', content: `${userText || 'Please review this lease/contract and advise.'}\n\n${clipped}` }],
             maxTokens: 700,
             temperature: 0.2,
-          } as any);
+          });
         }
       } else if (mediaType.startsWith('image/')) {
         const promptText =
@@ -956,7 +959,7 @@ Return only the JSON array, no other text.`;
           messages: [{ role: 'user', content: [{ type: 'text', text: promptText }, { type: 'image', image: buffer }] }],
           maxTokens: 512,
           temperature: 0.2,
-        } as any);
+        });
       } else {
         return err(res, 415, 'Unsupported media type. Please upload an image (png/jpeg/webp) or a PDF.');
       }
@@ -1032,7 +1035,7 @@ Return only the JSON array, no other text.`;
   });
 
   // ---------- Conversation CRUD ----------
-  router.get('/conversations', (async (req: Request, res: Response) => {
+  router.get('/conversations', async (req: Request, res: Response) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
@@ -1056,9 +1059,9 @@ Return only the JSON array, no other text.`;
     });
 
     return ok(res, { success: true, conversations: transformed });
-  }) as any);
+  });
 
-  router.post('/conversations', (async (req: Request, res: Response) => {
+  router.post('/conversations', async (req: Request, res: Response) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
@@ -1109,9 +1112,9 @@ Return only the JSON array, no other text.`;
         status: saved.status,
       },
     });
-  }) as any);
+  });
 
-  router.get('/conversations/:id', (async (req: Request, res: Response) => {
+  router.get('/conversations/:id', async (req: Request, res: Response) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
@@ -1125,9 +1128,9 @@ Return only the JSON array, no other text.`;
     if (!conversation) return err(res, 404, 'Conversation not found');
 
     return ok(res, { success: true, conversation });
-  }) as any);
+  });
 
-  router.put('/conversations/:id', (async (req: Request, res: Response) => {
+  router.put('/conversations/:id', async (req: Request, res: Response) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
@@ -1146,9 +1149,9 @@ Return only the JSON array, no other text.`;
 
     const saved = await conversation.save();
     return ok(res, { success: true, conversation: saved });
-  }) as any);
+  });
 
-  router.post('/conversations/:id/messages', (async (req: Request, res: Response) => {
+  router.post('/conversations/:id/messages', async (req: Request, res: Response) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
@@ -1166,9 +1169,9 @@ Return only the JSON array, no other text.`;
     await conversation.save();
 
     return ok(res, { success: true, message: newMessage, conversation });
-  }) as any);
+  });
 
-  router.delete('/conversations/:id', (async (req: Request, res: Response) => {
+  router.delete('/conversations/:id', async (req: Request, res: Response) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
@@ -1179,9 +1182,9 @@ Return only the JSON array, no other text.`;
     if (!deleted) return err(res, 404, 'Conversation not found');
 
     return ok(res, { success: true, message: 'Conversation deleted' });
-  }) as any);
+  });
 
-  router.post('/conversations/:id/share', (async (req: Request, res: Response) => {
+  router.post('/conversations/:id/share', async (req: Request, res: Response) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
@@ -1192,10 +1195,10 @@ Return only the JSON array, no other text.`;
     if (!conversation) return err(res, 404, 'Conversation not found');
 
     await conversation.generateShareToken();
-    const token = conversation.sharing.shareToken;
+    const token = conversation.sharing?.shareToken;
 
     return ok(res, { success: true, shareToken: token, shareUrl: `/shared/${token}` });
-  }) as any);
+  });
 
   return router;
 }

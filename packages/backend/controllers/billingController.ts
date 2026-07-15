@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { getOxyUserId } from '@oxyhq/core/server';
 import config from '../config';
 import { Billing } from '../models';
 import { getErrorMessage } from '../utils/errors';
@@ -31,7 +32,7 @@ export async function createCheckoutSession(req: Request, res: Response) {
       return res.status(400).json({ success: false, error: { message: 'Invalid product', code: 'INVALID_PRODUCT' }});
     }
 
-    const oxyUserId = (req as any)?.user?.id || (req as any)?.user?._id;
+    const oxyUserId = getOxyUserId(req);
     if (!oxyUserId) {
       return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});
     }
@@ -98,7 +99,7 @@ export async function stripeWebhook(req: Request, res: Response) {
   if (!webhookSecret) return res.status(500).json({ success: false, error: { message: 'Webhook secret not configured' }});
 
   // Only use rawBody for signature verification — never fall back to parsed body
-  const rawBody = (req as any).rawBody;
+  const rawBody = req.rawBody;
   if (!rawBody) return res.status(400).json({ success: false, error: { message: 'Missing raw body for signature verification' }});
 
   let event;
@@ -283,8 +284,8 @@ export async function confirmCheckoutSession(req: Request, res: Response) {
       return res.status(409).json({ success: false, error: { message: 'Session not completed' }});
     }
 
-    const product = (session.metadata as any)?.product as 'plus' | 'file' | 'founder' | undefined;
-    const oxyUserId = (session.client_reference_id as string) || (session.metadata as any)?.oxyUserId;
+    const product = session.metadata?.product as 'plus' | 'file' | 'founder' | undefined;
+    const oxyUserId = (session.client_reference_id as string) || session.metadata?.oxyUserId;
     if (!product || !oxyUserId) return res.status(400).json({ success: false, error: { message: 'Missing product/oxyUserId in session' }});
 
     const sessionId = String(session.id);
@@ -400,7 +401,7 @@ export async function testWebhookConfig(req: Request, res: Response) {
 
 export async function debugBillingStatus(req: Request, res: Response) {
   try {
-    const oxyUserId = (req as any)?.user?.id || (req as any)?.user?._id;
+    const oxyUserId = getOxyUserId(req);
     if (!oxyUserId) {
       return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});
     }
@@ -540,7 +541,7 @@ export async function debugSubscriptionStatus(req: Request, res: Response) {
 
 export async function manuallyActivateSubscription(req: Request, res: Response) {
   try {
-    const oxyUserId = (req as any)?.user?.id || (req as any)?.user?._id;
+    const oxyUserId = getOxyUserId(req);
     if (!oxyUserId) {
       return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});
     }
@@ -615,7 +616,7 @@ export async function createCustomerPortalSession(req: Request, res: Response) {
         if (!stripe) return;
 
         const { subscriptionId } = req.body;
-        const oxyUserId = (req as any)?.user?.id || (req as any)?.user?._id;
+        const oxyUserId = getOxyUserId(req);
 
         if (!oxyUserId) {
             return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});
@@ -677,7 +678,7 @@ export async function createCustomerPortalSession(req: Request, res: Response) {
 
 export async function manuallyCancelSubscription(req: Request, res: Response) {
   try {
-    const oxyUserId = (req as any)?.user?.id || (req as any)?.user?._id;
+    const oxyUserId = getOxyUserId(req);
     if (!oxyUserId) {
       return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});
     }
@@ -715,7 +716,7 @@ export async function syncSubscriptionStatus(req: Request, res: Response) {
     const stripe = requireStripe(res);
     if (!stripe) return;
 
-    const oxyUserId = (req as any)?.user?.id || (req as any)?.user?._id;
+    const oxyUserId = getOxyUserId(req);
     if (!oxyUserId) {
       return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});
     }
@@ -805,7 +806,7 @@ export async function cancelSubscription(req: Request, res: Response) {
     if (!stripe) return;
 
     const { immediate = false } = req.body;
-    const oxyUserId = (req as any)?.user?.id || (req as any)?.user?._id;
+    const oxyUserId = getOxyUserId(req);
 
     if (!oxyUserId) {
       return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});
@@ -865,7 +866,7 @@ export async function reactivateSubscription(req: Request, res: Response) {
     const stripe = requireStripe(res);
     if (!stripe) return;
 
-    const oxyUserId = (req as any)?.user?.id || (req as any)?.user?._id;
+    const oxyUserId = getOxyUserId(req);
 
     if (!oxyUserId) {
       return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});

@@ -1,4 +1,4 @@
-import { Property, RecentlyViewed } from '../../models';
+import { Profile, Property, RecentlyViewed } from '../../models';
 import { AppError, successResponse, paginationResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
 import { serializePropertyAddresses, ADDRESS_GEO_POPULATE } from '../../services/propertyAddressSerializer';
@@ -26,10 +26,9 @@ export async function getPropertyById(req: ControllerRequest, res: ControllerRes
     serializePropertyAddresses(property);
     serializePropertyImages(property);
     await Property.findByIdAndUpdate(propertyId, { $inc: { views: 1 } });
-    if (req.userId && (req.user?.id || req.user?._id)) {
-      const oxyUserId = req.user.id || req.user._id;
+    const oxyUserId = req.user?.id || req.user?._id;
+    if (req.userId && oxyUserId) {
       try {
-        const { Profile } = require('../../models');
         const activeProfile = await Profile.findByOxyUserId(oxyUserId);
         if (activeProfile) {
           const profileId = activeProfile._id;
