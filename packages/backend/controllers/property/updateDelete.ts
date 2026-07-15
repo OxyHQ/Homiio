@@ -4,7 +4,7 @@ import { EDITABLE_PROPERTY_FIELDS } from './editableFields';
 import { pickFields } from '../../utils/pickFields';
 import { onPropertyTransacted } from '../../services/commissionService';
 import { schedulePriceEthicsScore } from '../../services/priceEthicsService';
-import { Property } from '../../models';
+import { Address, Property } from '../../models';
 import { AppError, successResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
 import { requireSessionOxyUserId } from '../../utils/sessionUser';
@@ -31,7 +31,10 @@ export async function updateProperty(req: ControllerRequest, res: ControllerResp
     });
 
     if (req.body.address) {
-      const { Address } = require('../../models');
+      // Address writes go through the canonical resolver, which whitelists the
+      // address fields into an explicit `docFields` set (never a raw spread) and
+      // server-resolves the geo id chain — so client `req.body.address` keys
+      // outside that allowlist never reach the Address document.
       const addressData = { ...req.body.address };
       if (req.body.location?.coordinates) {
         const coords = req.body.location.coordinates.map((coord: unknown) => Number(coord));
@@ -40,7 +43,7 @@ export async function updateProperty(req: ControllerRequest, res: ControllerResp
           coordinates: coords,
         };
       }
-      const address = await Address.findOrCreate(addressData);
+      const address = await Address.findOrCreateCanonical(addressData);
       updateData.addressId = address._id;
     }
 
