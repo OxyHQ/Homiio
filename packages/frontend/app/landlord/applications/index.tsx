@@ -15,7 +15,7 @@ import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
 import { Chip } from '@oxyhq/bloom/chip';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { SearchInput } from '@oxyhq/bloom/search-input';
-import { useOxy, showSignInModal } from '@oxyhq/services';
+import { useOxy, openAccountDialog } from '@oxyhq/services';
 import {
   Profile,
   TenantApplication,
@@ -222,7 +222,7 @@ export default function LandlordApplicationsScreen() {
               description="See who wants to rent your places, all in one place."
               actionText="Sign in"
               actionIcon="log-in-outline"
-              onAction={() => showSignInModal()}
+              onAction={() => openAccountDialog()}
             />
           </View>
         </SafeAreaView>

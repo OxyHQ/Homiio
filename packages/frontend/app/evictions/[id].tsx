@@ -20,7 +20,7 @@ import { Divider } from '@oxyhq/bloom/divider';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { TextFieldInput } from '@oxyhq/bloom/text-field';
 import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
-import { useOxy, showSignInModal } from '@oxyhq/services';
+import { useOxy, openAccountDialog } from '@oxyhq/services';
 
 import { Header } from '@/components/Header';
 import Map from '@/components/Map';
@@ -133,7 +133,7 @@ export default function EvictionDetailScreen() {
 
   const handleReport = useCallback(() => {
     if (!isAuthenticated) {
-      showSignInModal();
+      openAccountDialog();
       return;
     }
     bottomSheet.openBottomSheet(
@@ -143,7 +143,7 @@ export default function EvictionDetailScreen() {
 
   const handleRSVP = useCallback(() => {
     if (!isAuthenticated) {
-      showSignInModal();
+      openAccountDialog();
       return;
     }
     toggleAttend.mutate();
@@ -466,7 +466,7 @@ export default function EvictionDetailScreen() {
                 </Button>
               </View>
             ) : (
-              <Button variant="secondary" size="medium" onPress={() => showSignInModal()}>
+              <Button variant="secondary" size="medium" onPress={() => openAccountDialog()}>
                 {t('evictions.comments.signInToComment')}
               </Button>
             )}

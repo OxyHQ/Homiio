@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { showSignInModal } from '@oxyhq/services';
+import { openAccountDialog } from '@oxyhq/services';
 import { Button } from '@oxyhq/bloom/button';
 import { Switch } from '@oxyhq/bloom/switch';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
@@ -84,7 +84,7 @@ export function PropertyAlertWidget() {
 
   const handleCreateAlert = async () => {
     if (!isAuthenticated) {
-      showSignInModal();
+      openAccountDialog();
       return;
     }
 
@@ -146,7 +146,7 @@ export function PropertyAlertWidget() {
             <Ionicons name="notifications-outline" size={EMPTY_ICON_SIZE} color={colors.primaryColor} />
           </View>
           <BloomText style={styles.subtitle}>{t('search.widgets.alerts.signInPrompt')}</BloomText>
-          <Button variant="primary" size="medium" onPress={showSignInModal}>
+          <Button variant="primary" size="medium" onPress={() => openAccountDialog()}>
             {t('search.widgets.common.signIn')}
           </Button>
         </View>

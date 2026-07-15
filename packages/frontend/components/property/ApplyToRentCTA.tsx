@@ -24,7 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@oxyhq/bloom/button';
 import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
-import { showSignInModal, useOxy } from '@oxyhq/services';
+import { openAccountDialog, useOxy } from '@oxyhq/services';
 
 import {
   AvailabilityCalendar,
@@ -83,7 +83,7 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
 
   const handleApply = useCallback(() => {
     if (!isAuthenticated) {
-      showSignInModal();
+      openAccountDialog();
       return;
     }
     router.push({

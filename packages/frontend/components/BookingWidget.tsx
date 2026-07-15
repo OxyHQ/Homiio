@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from '@/lib/sonner';
 import { Button } from '@oxyhq/bloom/button';
 import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
-import { useOxy, showSignInModal } from '@oxyhq/services';
+import { useOxy, openAccountDialog } from '@oxyhq/services';
 import {
   Property,
   CancellationPolicy,
@@ -108,7 +108,7 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ property }) => {
 
   const handleReserve = useCallback(async () => {
     if (!oxyServices || !activeSessionId) {
-      showSignInModal();
+      openAccountDialog();
       return;
     }
     if (!range || nights === 0) {

@@ -23,7 +23,7 @@ import { Button } from '@oxyhq/bloom/button';
 import { Chip } from '@oxyhq/bloom/chip';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
-import { useOxy, showSignInModal } from '@oxyhq/services';
+import { useOxy, openAccountDialog } from '@oxyhq/services';
 
 import { EvictionCaseStatus } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
@@ -123,7 +123,7 @@ export default function EvictionsBoardScreen() {
 
   const handlePublish = useCallback(() => {
     if (!isAuthenticated) {
-      showSignInModal();
+      openAccountDialog();
       return;
     }
     router.push('/evictions/new');

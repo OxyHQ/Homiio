@@ -35,7 +35,7 @@ import {
 } from '@oxyhq/bloom/segmented-control';
 import { SearchInput } from '@oxyhq/bloom/search-input';
 import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
-import { useOxy, showSignInModal } from '@oxyhq/services';
+import { useOxy, openAccountDialog } from '@oxyhq/services';
 import type { Property, SavedProperty } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
@@ -217,7 +217,7 @@ export default function SavedPropertiesScreen() {
             description={t('profile.signInMessage')}
             actionText={t('common.signIn')}
             actionIcon="log-in"
-            onAction={() => showSignInModal()}
+            onAction={() => openAccountDialog()}
           />
         </View>
       </View>

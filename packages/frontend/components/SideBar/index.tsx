@@ -36,7 +36,7 @@ import {
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { Text } from '@oxyhq/bloom/typography';
-import { showSignInModal, useOxy, ProfileButton } from '@oxyhq/services';
+import { openAccountDialog, useOxy, ProfileButton } from '@oxyhq/services';
 
 import { colors } from '@/styles/colors';
 import { useRentalMode } from '@/context/RentalModeContext';
@@ -503,7 +503,7 @@ export function SideBar() {
     handleNavigate('/sindi');
   }, [isSidebarVisible, toggleSindiPanel, handleNavigate]);
 
-  const handleSignIn = React.useCallback(() => showSignInModal(), []);
+  const handleSignIn = React.useCallback(() => openAccountDialog(), []);
 
   const handleRemoveRecent = React.useCallback(
     (id: string) => {

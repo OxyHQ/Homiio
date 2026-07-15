@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 import type { Message } from '@ai-sdk/react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useOxy, showSignInModal } from '@oxyhq/services';
+import { useOxy, openAccountDialog } from '@oxyhq/services';
 import { Header } from '@/components/Header';
 import { IconButton } from '@/components/ui/IconButton';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -115,7 +115,7 @@ export default function ConversationDetail() {
           description={t('sindi.auth.message')}
           actionText="Sign In"
           actionIcon="log-in"
-          onAction={() => showSignInModal()}
+          onAction={() => openAccountDialog()}
           iconColor={colors.primaryColor}
         />
       </View>

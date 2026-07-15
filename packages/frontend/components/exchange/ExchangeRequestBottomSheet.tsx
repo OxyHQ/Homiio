@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@oxyhq/bloom/button';
 import { H3, Text as BloomText } from '@oxyhq/bloom/typography';
-import { useOxy, showSignInModal } from '@oxyhq/services';
+import { useOxy, openAccountDialog } from '@oxyhq/services';
 import {
   ExchangeMode,
   OfferingType,
@@ -131,7 +131,7 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
 
   const handleSubmit = useCallback(async () => {
     if (!oxyServices || !activeSessionId) {
-      showSignInModal();
+      openAccountDialog();
       return;
     }
     if (!requestedWindow) {

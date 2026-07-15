@@ -10,7 +10,7 @@
  * review queue.
  *
  * Mirrors the long-term apply form (`apply.tsx`): `Header` + `Section`s, Bloom
- * `Button`/`Chip`, the same auth gate (`showSignInModal`), `useMutation`, and
+ * `Button`/`Chip`, the same auth gate (`openAccountDialog`), `useMutation`, and
  * the shared toast + `ApiError` handling. No `useEffect` — form state is local,
  * the email prefill is derived from `useOxy`, and validity is `useMemo`.
  */
@@ -24,7 +24,7 @@ import { z } from 'zod';
 
 import { Button } from '@oxyhq/bloom/button';
 import { Chip } from '@oxyhq/bloom/chip';
-import { showSignInModal, useOxy } from '@oxyhq/services';
+import { openAccountDialog, useOxy } from '@oxyhq/services';
 
 import { ListingReportReason } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
@@ -127,7 +127,7 @@ export default function ReportListingScreen() {
 
   const handleSubmit = async () => {
     if (!isAuthenticated) {
-      showSignInModal();
+      openAccountDialog();
       return;
     }
     if (!propertyId || !reason || !formIsValid) {

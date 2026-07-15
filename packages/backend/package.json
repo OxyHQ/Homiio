@@ -34,7 +34,7 @@
     "@aws-sdk/s3-request-presigner": "^3.1055.0",
     "@homiio/listing-providers": "workspace:*",
     "@homiio/shared-types": "workspace:*",
-    "@oxyhq/core": "^9.0.0",
+    "@oxyhq/core": "^12.1.1",
     "ai": "^4.3.16",
     "axios": "^1.16.1",
     "bcryptjs": "^3.0.3",

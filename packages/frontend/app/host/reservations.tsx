@@ -15,7 +15,7 @@ import { Button } from '@oxyhq/bloom/button';
 import { Chip } from '@oxyhq/bloom/chip';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { H2 } from '@oxyhq/bloom/typography';
-import { useOxy, showSignInModal } from '@oxyhq/services';
+import { useOxy, openAccountDialog } from '@oxyhq/services';
 import { useTranslation } from 'react-i18next';
 import {
   Reservation,
@@ -163,7 +163,7 @@ export default function HostReservationsScreen() {
               description={t('host.reservations.signInDescription')}
               actionText={t('host.reservations.signIn')}
               actionIcon="log-in-outline"
-              onAction={() => showSignInModal()}
+              onAction={() => openAccountDialog()}
             />
           </View>
         </SafeAreaView>

@@ -19,7 +19,7 @@ import React, { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
-import { showSignInModal, useOxy } from '@oxyhq/services';
+import { openAccountDialog, useOxy } from '@oxyhq/services';
 
 import { Header } from '@/components/Header';
 import { PageScrollView } from '@/components/PageScrollView';
@@ -67,7 +67,7 @@ export default function AgentScreen() {
     if (!isAuthenticated) {
       // Logged-out visitor — prompt sign-in. After auth the "me" query enables
       // and the screen re-derives to the not-joined state.
-      showSignInModal();
+      openAccountDialog();
       return;
     }
     if (!isPartner) {

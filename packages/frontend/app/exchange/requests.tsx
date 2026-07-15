@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@oxyhq/bloom/button';
 import { Chip } from '@oxyhq/bloom/chip';
-import { useOxy, showSignInModal } from '@oxyhq/services';
+import { useOxy, openAccountDialog } from '@oxyhq/services';
 import {
   ExchangeRequest,
   ExchangeRequestStatus,
@@ -140,7 +140,7 @@ export default function ExchangeRequestsScreen() {
               description={t('listing.exchange.signInBody')}
               actionText={t('common.signIn')}
               actionIcon="log-in-outline"
-              onAction={() => showSignInModal()}
+              onAction={() => openAccountDialog()}
             />
           </View>
         </SafeAreaView>

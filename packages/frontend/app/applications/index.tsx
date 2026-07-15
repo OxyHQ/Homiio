@@ -18,7 +18,7 @@ import { isThisWeek, isToday } from 'date-fns';
 
 import { Chip } from '@oxyhq/bloom/chip';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
-import { useOxy, showSignInModal } from '@oxyhq/services';
+import { useOxy, openAccountDialog } from '@oxyhq/services';
 import {
   TenantApplication,
   TenantApplicationStatus,
@@ -150,7 +150,7 @@ export default function MyApplicationsScreen() {
               description={t('applications.list.signInDescription')}
               actionText={t('applications.list.signIn')}
               actionIcon="log-in-outline"
-              onAction={() => showSignInModal()}
+              onAction={() => openAccountDialog()}
             />
           </View>
         </SafeAreaView>

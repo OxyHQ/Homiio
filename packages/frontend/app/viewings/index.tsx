@@ -20,7 +20,7 @@ import { Button } from '@oxyhq/bloom/button';
 import { Chip } from '@oxyhq/bloom/chip';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { Text as BloomText, H2, H3 } from '@oxyhq/bloom/typography';
-import { useOxy, showSignInModal } from '@oxyhq/services';
+import { useOxy, openAccountDialog } from '@oxyhq/services';
 import { Header } from '@/components/Header';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -256,7 +256,7 @@ export default function ViewingsPage() {
               description="Schedule property visits and track host responses."
               actionText="Sign in"
               actionIcon="log-in-outline"
-              onAction={() => showSignInModal()}
+              onAction={() => openAccountDialog()}
             />
           </View>
         </SafeAreaView>

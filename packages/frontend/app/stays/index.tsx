@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Chip } from '@oxyhq/bloom/chip';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
-import { useOxy, showSignInModal } from '@oxyhq/services';
+import { useOxy, openAccountDialog } from '@oxyhq/services';
 import {
   Reservation,
   ReservationStatus,
@@ -140,7 +140,7 @@ export default function StaysScreen() {
               description={t('stays.list.signInDescription')}
               actionText={t('stays.list.signIn')}
               actionIcon="log-in-outline"
-              onAction={() => showSignInModal()}
+              onAction={() => openAccountDialog()}
             />
           </View>
         </SafeAreaView>

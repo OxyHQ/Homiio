@@ -39,7 +39,7 @@ import {
   ApplicationDocumentUpload,
   ApplicationReferenceInput,
 } from '@/services/applicationService';
-import { useOxy, showSignInModal } from '@oxyhq/services';
+import { useOxy, openAccountDialog } from '@oxyhq/services';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { PropertyType } from '@homiio/shared-types';
 import { ApiError } from '@/utils/api';
@@ -310,7 +310,7 @@ export default function ApplyToRentScreen() {
 
   const handleSubmit = async () => {
     if (!isAuthenticated) {
-      showSignInModal();
+      openAccountDialog();
       return;
     }
     if (!propertyId) return;

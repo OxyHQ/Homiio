@@ -29,7 +29,7 @@ import {
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { TextFieldInput } from '@oxyhq/bloom/text-field';
 import { Text as BloomText, H2 } from '@oxyhq/bloom/typography';
-import { useOxy, showSignInModal } from '@oxyhq/services';
+import { useOxy, openAccountDialog } from '@oxyhq/services';
 import { useTranslation } from 'react-i18next';
 import {
   AvailabilityWindow,
@@ -195,7 +195,7 @@ export default function HostCalendarScreen() {
               description={t('host.calendar.signInDescription')}
               actionText={t('host.calendar.signIn')}
               actionIcon="log-in-outline"
-              onAction={() => showSignInModal()}
+              onAction={() => openAccountDialog()}
             />
           </View>
         </SafeAreaView>

@@ -30,7 +30,7 @@ import { Button } from '@oxyhq/bloom/button';
 import { SearchInput } from '@oxyhq/bloom/search-input';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { H1, H3, Text as BloomText } from '@oxyhq/bloom/typography';
-import { useOxy, showSignInModal } from '@oxyhq/services';
+import { useOxy, openAccountDialog } from '@oxyhq/services';
 import { SindiIcon } from '@/assets/icons';
 import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -157,7 +157,7 @@ export default function Sindi() {
           description={t('sindi.auth.message')}
           actionText={t('common.signIn')}
           actionIcon="log-in"
-          onAction={() => showSignInModal()}
+          onAction={() => openAccountDialog()}
           iconColor={colors.primaryColor}
         />
       </View>
