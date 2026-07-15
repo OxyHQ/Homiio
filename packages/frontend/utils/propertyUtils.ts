@@ -1,4 +1,4 @@
-import { Image as RNImage } from 'react-native';
+import { Asset } from 'expo-asset';
 import { generatePropertyTitle, TitleFormat } from './propertyTitleGenerator';
 import {
   OfferingType,
@@ -467,8 +467,14 @@ export function getPropertyImageSources(
 }
 
 /** The bundled placeholder resolved once to a plain URI, so a photo whose URL is
- * missing still yields a valid, index-aligned gallery page. */
-const PLACEHOLDER_GALLERY_URI = RNImage.resolveAssetSource(propertyPlaceholder)?.uri ?? '';
+ * missing still yields a valid, index-aligned gallery page. `Asset.fromModule`
+ * (not RN core's `Image.resolveAssetSource`, which react-native-web doesn't
+ * implement) resolves synchronously and works on both native and web. A
+ * `require()`'d image is always the opaque numeric asset id `Asset.fromModule`
+ * expects (see `global.d.ts`) — `ImageSourcePropType` is only declared that
+ * broadly so it also satisfies `<Image source>` props elsewhere. */
+const PLACEHOLDER_GALLERY_URI =
+  typeof propertyPlaceholder === 'number' ? Asset.fromModule(propertyPlaceholder).uri : '';
 
 /**
  * Build the `GalleryImage[]` for the fullscreen lightbox
