@@ -26,6 +26,17 @@ const LOCAL_IMAGE_STORE_DIR = path.join(__dirname, '..', '.local-image-store');
 /** Backend route prefix the local image store is served under (no trailing slash). */
 export const LOCAL_IMAGE_ROUTE = '/api/images/file';
 
+/**
+ * Sharp decode tolerance for source images. Listing photos are ingested from
+ * arbitrary external portals whose encoders routinely emit benign libpng/libjpeg
+ * warnings (non-standard ancillary chunks, truncated ICC profiles). Sharp's
+ * default `failOn: 'warning'` — made stricter by the libpng bundled in newer
+ * libvips — escalates those warnings to hard decode errors, which would silently
+ * drop otherwise-viewable images from a listing. Decode everything we can; a
+ * genuinely unreadable buffer still throws.
+ */
+const SHARP_DECODE_OPTIONS = { failOn: 'none' } as const;
+
 export interface ImageVariant {
   name: ImageVariantName;
   width: number;
@@ -177,7 +188,7 @@ export class ImageUploadService {
     // Read source dimensions once, up front, so they can be persisted alongside
     // the variants. Sharp's reported format is preferred over the (client-set)
     // MIME type when available.
-    const sourceMetadata = await sharp(buffer).metadata();
+    const sourceMetadata = await sharp(buffer, SHARP_DECODE_OPTIONS).metadata();
 
     const keys: Partial<Record<ImageVariantName, string>> = {};
     let originalBytes = 0;
@@ -329,7 +340,7 @@ export class ImageUploadService {
   }
 
   private async processImage(buffer: Buffer, variant: ImageVariant): Promise<Buffer> {
-    let sharpInstance = sharp(buffer);
+    let sharpInstance = sharp(buffer, SHARP_DECODE_OPTIONS);
 
     // Resize if dimensions are specified
     if (variant.width > 0 && variant.height > 0) {
