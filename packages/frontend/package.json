@@ -25,7 +25,7 @@
     "@expo/vector-icons": "^15.1.1",
     "@homiio/shared-types": "workspace:*",
     "@oxyhq/bloom": "^0.34.3",
-    "@oxyhq/core": "^12.2.1",
+    "@oxyhq/core": "^12.4.1",
     "@oxyhq/expo-splash": "^0.1.0",
     "@oxyhq/services": "^22.2.0",
     "@react-native-async-storage/async-storage": "^2.2.0",

@@ -34,7 +34,7 @@
     "node": "22.x"
   },
   "overrides": {
-    "@oxyhq/core": "^12.2.1",
+    "@oxyhq/core": "^12.4.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -43,5 +43,8 @@
     "react-native-worklets": "0.8.3",
     "react-native-svg": "15.15.4"
   },
-  "cacheDirectories": []
+  "cacheDirectories": [],
+  "dependencies": {
+    "@oxyhq/core": "^12.4.1"
+  }
 }
