@@ -176,6 +176,12 @@ export function createMercadolibreProvider(
       if (listing.bedrooms !== undefined) result.bedrooms = listing.bedrooms;
       if (listing.bathrooms !== undefined) result.bathrooms = listing.bathrooms;
       if (listing.squareMeters !== undefined) result.squareFootage = listing.squareMeters;
+      if (listing.floor !== undefined) result.floor = listing.floor;
+      if (listing.yearBuilt !== undefined) result.yearBuilt = listing.yearBuilt;
+      if (listing.parkingType !== undefined) result.parkingType = listing.parkingType;
+      if (listing.parkingSpaces !== undefined) result.parkingSpaces = listing.parkingSpaces;
+      if (listing.amenities && listing.amenities.length > 0) result.amenities = listing.amenities;
+      if (listing.furnished) result.furnishedStatus = 'furnished';
       if (listing.contact) result.contact = listing.contact;
       return result;
     },

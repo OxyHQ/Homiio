@@ -199,6 +199,7 @@ export class OpenRentProvider implements ListingProvider {
     if (listing.title) result.description = listing.title;
     if (listing.bedrooms !== undefined) result.bedrooms = listing.bedrooms;
     if (listing.bathrooms !== undefined) result.bathrooms = listing.bathrooms;
+    if (listing.squareMeters !== undefined) result.squareFootage = listing.squareMeters;
     if (listing.contact) result.contact = listing.contact;
     return result;
   }

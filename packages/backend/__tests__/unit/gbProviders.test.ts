@@ -125,6 +125,51 @@ describe('OpenRentProvider', () => {
     expect(listing.address.countryCode).toBe('GB');
     expect(listing.address.postalCode).toBe('WC2N');
   });
+
+  // The detail page has no `og:image`, so the `lightbox_item` gallery is the only
+  // image source — and it appears TWICE: once for this property and again inside
+  // the "similar properties" rail. Scraping both would attach other listings'
+  // photos to this one.
+  it('takes the gallery from the property set only, excluding similar properties', () => {
+    const payload = parseOpenRentDetail(
+      OPENRENT_FIXTURE_DETAIL_HTML,
+      'https://www.openrent.co.uk/property-to-rent/london/1-bed-flat-london-wc2n/2865841',
+    );
+
+    expect(payload.images).toHaveLength(3);
+    // Every image belongs to this listing's own CDN set.
+    for (const url of payload.images) {
+      expect(url).toContain('/listings/2493409/');
+    }
+    // The similar-properties set must not leak in.
+    expect(payload.images.join(' ')).not.toContain('2434489');
+    // Source markup is protocol-relative (`//imagescdn…`); stored URLs must be
+    // absolute https or the media ingest cannot fetch them.
+    for (const url of payload.images) {
+      expect(url.startsWith('https://')).toBe(true);
+    }
+  });
+
+  // OpenRent states area only as free text in the description ("721sq ft"), and
+  // Homiio stores square METRES.
+  it('converts the free-text square-footage in the description to square metres', () => {
+    const payload = parseOpenRentDetail(
+      OPENRENT_FIXTURE_DETAIL_HTML,
+      'https://www.openrent.co.uk/property-to-rent/london/1-bed-flat-london-wc2n/2865841',
+    );
+    // 721 sq ft ≈ 66.98 m².
+    expect(payload.squareMeters).toBe(67);
+    // Bedrooms/bathrooms come from the `text-secondary-emphasis` summary strip.
+    expect(payload.bedrooms).toBe(1);
+    expect(payload.bathrooms).toBe(1);
+
+    const listing = provider.normalize({
+      ref: { provider: 'openrent', sourceId: payload.sourceId, url: payload.url },
+      payload,
+    });
+    // The converted area must survive normalize — it was dropped before.
+    expect(listing.squareFootage).toBe(67);
+  });
 });
 
 describe('ZooplaProvider', () => {

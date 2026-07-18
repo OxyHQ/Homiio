@@ -231,7 +231,10 @@ describe('MercadolibreMxProvider', () => {
     });
     expect(listing.longTermRent?.currency).toBe('MXN');
     expect(listing.address.countryCode).toBe('MX');
-    expect(listing.contact?.phone).toBeTruthy();
+    // ML VIP contact is form-gated — no `tel:` on the page, so the publisher is
+    // captured by name only rather than inventing a phone.
+    expect(listing.contact?.agencyName).toBe('Karla Ruiz');
+    expect(listing.contact?.phone).toBeUndefined();
     // Highlighted-specs block (`BED → "2 rec."`, `BATHROOM → "2 baños"`, `SCALE_UP → "72 m² totales"`).
     expect(listing.bedrooms).toBe(2);
     expect(listing.bathrooms).toBe(2);
@@ -241,5 +244,28 @@ describe('MercadolibreMxProvider', () => {
     // Full gallery, not the single JSON-LD image.
     expect(listing.remoteImages.length).toBeGreaterThanOrEqual(2);
     expect(listing.remoteImages[0]?.url).toContain('http2.mlstatic.com');
+  });
+
+  // MX exercises the other half of the spec-table logic from AR: an OLD building
+  // (large relative age) and the negative cases — a `0` count and a `No` flag
+  // must not produce an amenity.
+  it('derives structured fields from the striped-specs table (MX vocabulary)', () => {
+    const payload = parseMercadolibreMxDetail(
+      MERCADOLIBRE_MX_FIXTURE_DETAIL_HTML,
+      'https://departamento.mercadolibre.com.mx/MLM-3847653074-renta-departamento-2-recamaras-roma-_JM',
+    );
+
+    expect(payload.floor).toBe(6);
+    // `Antigüedad: 34 años` is relative to the current year — never hard-code.
+    expect(payload.yearBuilt).toBe(new Date().getFullYear() - 34);
+    // `Con lavandería: Sí` → laundry_room (es-MX alias added with this change).
+    expect(payload.amenities).toEqual(expect.arrayContaining(['laundry_room', 'elevator']));
+    // `Estacionamientos: 0` and `Bodegas: 0` are counts of zero, and
+    // `Alberca: No` / `Balcón: No` are negatives — none may become an amenity.
+    expect(payload.parkingType).toBe('none');
+    expect(payload.amenities).not.toContain('parking');
+    expect(payload.amenities).not.toContain('storage');
+    expect(payload.amenities).not.toContain('pool');
+    expect(payload.amenities).not.toContain('balcony');
   });
 });

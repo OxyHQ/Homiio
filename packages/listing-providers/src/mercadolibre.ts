@@ -17,6 +17,9 @@ import { buildContact, contactFromUnknown, extractContactFromHtml, mergeContact 
 import { collectJsonLdNodes, findJsonLdByType } from './jsonLd';
 import { parsePreloadedState } from './nextData';
 import { citySlug } from './slug';
+import { canonicalizeAmenities } from './parse/amenities';
+import { stripHtmlToPlainText } from './parse/htmlText';
+import { deaccent } from './parse/guards';
 
 export interface MercadolibreSiteConfig {
   /** Provider id for errors (`mercadolibre_ar`). */
@@ -59,6 +62,17 @@ export interface MercadolibreRawListing {
   bedrooms?: number;
   bathrooms?: number;
   squareMeters?: number;
+  /** Unit floor number (`Número de piso de la unidad` / `Nivel`). */
+  floor?: number;
+  /** Construction year, derived from `Antigüedad` (age → year, or a bare year). */
+  yearBuilt?: number;
+  /** Covered parking spaces (`Cocheras` / `Estacionamientos`). */
+  parkingSpaces?: number;
+  parkingType?: 'none' | 'street' | 'assigned' | 'garage';
+  /** Canonical amenity slugs derived from the VIP spec table / item attributes. */
+  amenities?: string[];
+  /** Whether the listing is furnished (`Amueblado: Sí`) — hoisted to furnishedStatus. */
+  furnished?: boolean;
   address: {
     street?: string;
     city: string;
@@ -199,6 +213,8 @@ function itemToRaw(
     }),
   );
 
+  const derived = derivedFromSpecTable(attributesToSpecMap(item.attributes));
+
   const raw: MercadolibreRawListing = {
     sourceId,
     url,
@@ -207,11 +223,21 @@ function itemToRaw(
     operation,
     price,
     currency: asString(item.currency_id) ?? asString(item.currency) ?? config.defaultCurrency,
-    bedrooms: attributeValue(item.attributes, 'BEDROOMS'),
+    bedrooms: attributeValue(item.attributes, 'BEDROOMS') ?? derived.bedrooms,
     bathrooms:
-      attributeValue(item.attributes, 'FULL_BATHROOMS') ?? attributeValue(item.attributes, 'BATHROOMS'),
+      attributeValue(item.attributes, 'FULL_BATHROOMS') ??
+      attributeValue(item.attributes, 'BATHROOMS') ??
+      derived.bathrooms,
     squareMeters:
-      attributeValue(item.attributes, 'COVERED_AREA') ?? attributeValue(item.attributes, 'TOTAL_AREA'),
+      attributeValue(item.attributes, 'COVERED_AREA') ??
+      attributeValue(item.attributes, 'TOTAL_AREA') ??
+      derived.squareMeters,
+    floor: derived.floor,
+    yearBuilt: derived.yearBuilt,
+    parkingSpaces: derived.parkingSpaces,
+    parkingType: derived.parkingType,
+    amenities: derived.amenities.length > 0 ? derived.amenities : undefined,
+    furnished: derived.furnished,
     address: { street, city, region, neighborhood, countryCode: config.countryCode },
     images,
     contact,
@@ -403,6 +429,159 @@ function extractGalleryImages(html: string): string[] {
   return out;
 }
 
+/**
+ * Full VIP description copy from the server-rendered `ui-pdp-description__content`
+ * paragraph. This is the only cold-HTTP source: the JSON-LD `Product` omits
+ * `description` and the item `/description` API is OAuth-gated.
+ */
+function extractMercadolibreDescription(html: string): string | undefined {
+  const match = html.match(/ui-pdp-description__content"[^>]{0,120}>([\s\S]{0,20000}?)<\/p>/);
+  if (!match) return undefined;
+  return stripHtmlToPlainText(match[1]);
+}
+
+/**
+ * Publisher (agency / seller) display name from the `#seller_profile` link
+ * MercadoLibre renders as `Publicado por <a href="#seller_profile">NAME</a>`.
+ * VIP contact is form-gated (no `tel:`), so this name is the only advertiser
+ * signal cold HTTP exposes — captured into {@link NormalizedListingContact.agencyName}.
+ */
+function extractMercadolibreSeller(html: string): string | undefined {
+  const anchor = html.match(/href="#seller_profile"[^>]{0,120}>([^<]{1,80})<\/a>/);
+  const name = stripHtmlToPlainText(anchor?.[1] ?? '');
+  if (!name || /^(?:ver|más|mas|perfil|mercadol)/i.test(name)) return undefined;
+  return name;
+}
+
+/**
+ * Key → value rows of the VIP "striped specs" table. Each row is
+ * `<th …><div class="andes-table__header__container">KEY</div></th>` followed by
+ * `<td …><span … class="andes-table__column--value" …>VALUE</span></td>`. Both
+ * AR (`Dormitorios`, `Cocheras`, `Antigüedad`) and MX (`Recámaras`,
+ * `Estacionamientos`) render the same structure with localized labels.
+ */
+function parseMercadolibreSpecTable(html: string): Map<string, string> {
+  const out = new Map<string, string>();
+  const rowRe =
+    /andes-table__header__container">([^<]{1,80})<\/div><\/th>[\s\S]{0,400}?andes-table__column--value[^>]{0,140}>([^<]{0,120})<\/span>/g;
+  for (const match of html.matchAll(rowRe)) {
+    const key = stripHtmlToPlainText(match[1]);
+    const value = stripHtmlToPlainText(match[2]);
+    if (key && value !== undefined && !out.has(key)) out.set(key, value);
+  }
+  return out;
+}
+
+/** Convert MercadoLibre item-API `attributes[]` into the same key→value spec map. */
+function attributesToSpecMap(attrs: unknown): Map<string, string> {
+  const out = new Map<string, string>();
+  if (!Array.isArray(attrs)) return out;
+  for (const entry of attrs) {
+    if (!isRecord(entry)) continue;
+    const name = asString(entry.name);
+    const value = asString(entry.value_name) ?? asString(entry.value_struct);
+    if (name && value && !out.has(name)) out.set(name, value);
+  }
+  return out;
+}
+
+function specInt(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+  const match = value.match(/\d+/);
+  return match ? Number.parseInt(match[0], 10) : undefined;
+}
+
+function isAffirmative(value: string): boolean {
+  const v = deaccent(value);
+  return v === 'si' || v === 'yes' || v === 'true';
+}
+
+/**
+ * Construction year from an `Antigüedad` value: a bare 4-digit year is used
+ * directly; an age in years (`34 años`) or a brand-new marker (`A estrenar`)
+ * resolves to `currentYear - age` / `currentYear`.
+ */
+function yearBuiltFromAntiquity(raw: string | undefined): number | undefined {
+  if (!raw) return undefined;
+  const now = new Date().getFullYear();
+  const yearMatch = raw.match(/\b(1[89]\d{2}|20\d{2})\b/);
+  if (yearMatch) {
+    const year = Number.parseInt(yearMatch[1], 10);
+    return year >= 1850 && year <= now ? year : undefined;
+  }
+  if (/estrenar|a estrear|nuevo|construccion/.test(deaccent(raw))) return now;
+  const age = specInt(raw);
+  if (age !== undefined && age >= 0 && age <= 200) return now - age;
+  return undefined;
+}
+
+interface MercadolibreSpecDerived {
+  bedrooms?: number;
+  bathrooms?: number;
+  squareMeters?: number;
+  floor?: number;
+  yearBuilt?: number;
+  parkingSpaces?: number;
+  parkingType?: 'none' | 'garage';
+  amenities: string[];
+  furnished?: boolean;
+}
+
+/**
+ * Derive structured fields + canonical amenities from the spec table (or item
+ * attributes). Every `Sí` boolean row feeds the shared {@link canonicalizeAmenities}
+ * (so `Ascensor`/`Aire acondicionado`/`Balcón`/… collapse onto the fixed
+ * vocabulary); counts drive parking/storage; numeric rows fill bedrooms /
+ * bathrooms / area / floor; `Antigüedad` yields `yearBuilt`.
+ */
+function derivedFromSpecTable(spec: Map<string, string>): MercadolibreSpecDerived {
+  const get = (...keys: readonly string[]): string | undefined => {
+    for (const [key, value] of spec) {
+      if (keys.includes(deaccent(key))) return value;
+    }
+    return undefined;
+  };
+
+  const affirmativeLabels: string[] = [];
+  for (const [key, value] of spec) {
+    if (isAffirmative(value)) affirmativeLabels.push(key);
+  }
+  const { amenities, furnished } = canonicalizeAmenities(affirmativeLabels);
+
+  const parkingSpaces = specInt(
+    get('cocheras', 'estacionamientos', 'cochera', 'estacionamiento', 'garages', 'garage'),
+  );
+  let parkingType: 'none' | 'garage' | undefined;
+  if (parkingSpaces !== undefined) {
+    parkingType = parkingSpaces > 0 ? 'garage' : 'none';
+    if (parkingSpaces > 0 && !amenities.includes('parking')) amenities.push('parking');
+  }
+  const storageCount = specInt(get('bauleras', 'bodegas', 'baulera', 'bodega'));
+  if (storageCount !== undefined && storageCount > 0 && !amenities.includes('storage')) {
+    amenities.push('storage');
+  }
+
+  const floorRaw = get('numero de piso de la unidad', 'numero de piso', 'nivel', 'piso');
+  let floor = specInt(floorRaw);
+  if (floor === undefined && floorRaw && /planta baja|ground|^pb$/.test(deaccent(floorRaw))) {
+    floor = 0;
+  }
+
+  return {
+    bedrooms: specInt(get('dormitorios', 'recamaras', 'habitaciones')),
+    bathrooms: specInt(get('banos', 'bano')),
+    squareMeters: labelArea(
+      get('superficie total', 'superficie cubierta', 'superficie construida', 'superficie util') ?? '',
+    ),
+    floor,
+    yearBuilt: yearBuiltFromAntiquity(get('antiguedad')),
+    parkingSpaces,
+    parkingType,
+    amenities,
+    furnished: furnished || undefined,
+  };
+}
+
 export function parseMercadolibreDetail(
   config: MercadolibreSiteConfig,
   html: string,
@@ -479,18 +658,26 @@ export function parseMercadolibreDetail(
         : 'rent';
 
   const specs = extractHighlightedSpecs(html);
+  const derived = derivedFromSpecTable(parseMercadolibreSpecTable(html));
+  const agencyName = extractMercadolibreSeller(html);
 
   const raw: MercadolibreRawListing = {
     sourceId,
     url: asString(product.url) ?? url,
     title: asString(product.name),
-    description: asString(product.description),
+    description: extractMercadolibreDescription(html) ?? asString(product.description),
     operation,
     price,
     currency: asString(offer?.priceCurrency) ?? config.defaultCurrency,
-    bedrooms: specs.bedrooms,
-    bathrooms: specs.bathrooms,
-    squareMeters: specs.squareMeters,
+    bedrooms: specs.bedrooms ?? derived.bedrooms,
+    bathrooms: specs.bathrooms ?? derived.bathrooms,
+    squareMeters: specs.squareMeters ?? derived.squareMeters,
+    floor: derived.floor,
+    yearBuilt: derived.yearBuilt,
+    parkingSpaces: derived.parkingSpaces,
+    parkingType: derived.parkingType,
+    amenities: derived.amenities.length > 0 ? derived.amenities : undefined,
+    furnished: derived.furnished,
     address: {
       street: asString(address?.streetAddress),
       city,
@@ -499,7 +686,11 @@ export function parseMercadolibreDetail(
       countryCode: config.countryCode,
     },
     images,
-    contact: mergeContact(contactFromUnknown(product.seller), extractContactFromHtml(html)),
+    contact: mergeContact(
+      contactFromUnknown(product.seller),
+      extractContactFromHtml(html),
+      buildContact({ agencyName }),
+    ),
     category: 'inmuebles',
     domainId,
   };
