@@ -170,6 +170,10 @@ export class OtodomProvider implements ListingProvider {
     if (listing.description) result.description = listing.description;
     if (listing.bedrooms !== undefined) result.bedrooms = listing.bedrooms;
     if (listing.squareMeters !== undefined) result.squareFootage = listing.squareMeters;
+    if (listing.floor !== undefined) result.floor = listing.floor;
+    if (listing.yearBuilt !== undefined) result.yearBuilt = listing.yearBuilt;
+    if (listing.amenities && listing.amenities.length > 0) result.amenities = listing.amenities;
+    if (listing.furnished === true) result.furnishedStatus = 'furnished';
     if (listing.contact) result.contact = listing.contact;
 
     return result;

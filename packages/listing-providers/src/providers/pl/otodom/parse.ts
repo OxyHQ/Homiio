@@ -4,6 +4,7 @@
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
 import { buildContact } from '../../../contact';
+import { canonicalizeAmenities } from '../../../parse/amenities';
 import { isAntiBotChallenge } from '../../../parse/challenge';
 import { parseNextData, nextDataPageProps } from '../../../nextData';
 import { asNumber, asString, isRecord } from '../../../parse/guards';
@@ -35,6 +36,10 @@ export interface OtodomRawListing {
   currency: string;
   bedrooms?: number;
   squareMeters?: number;
+  floor?: number;
+  yearBuilt?: number;
+  amenities?: string[];
+  furnished?: boolean;
   address: {
     street?: string;
     city: string;
@@ -230,6 +235,102 @@ function detailMoney(
   return undefined;
 }
 
+/**
+ * Otodom `ad.characteristics` is `[{ key, value, localizedValue }]`. Reduce it to
+ * a `key → value` map for the structured fields (`floor_no`, `build_year`, …).
+ */
+function characteristicsMap(ad: Record<string, unknown> | undefined): Map<string, string> {
+  const out = new Map<string, string>();
+  if (!ad || !Array.isArray(ad.characteristics)) return out;
+  for (const entry of ad.characteristics) {
+    if (!isRecord(entry)) continue;
+    const key = asString(entry.key);
+    const value = asString(entry.value);
+    if (key && value) out.set(key, value);
+  }
+  return out;
+}
+
+/**
+ * Otodom encodes the floor as `floor_no` = `ground_floor` | `floor_<n>`
+ * (`cellar`/`garret`/`floor_higher_10` are non-numeric and left unset).
+ */
+const OTODOM_FLOOR_RE = /^floor_(\d{1,2})$/;
+function otodomFloor(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+  if (value === 'ground_floor') return 0;
+  const match = OTODOM_FLOOR_RE.exec(value);
+  if (!match) return undefined;
+  const floor = Number(match[1]);
+  return Number.isFinite(floor) ? floor : undefined;
+}
+
+/** Construction year sanity window: reject typos / non-year values. */
+function otodomYearBuilt(value: string | undefined): number | undefined {
+  const year = asNumber(value);
+  if (year === undefined) return undefined;
+  const maxYear = new Date().getFullYear() + 6;
+  return year >= 1500 && year <= maxYear ? year : undefined;
+}
+
+/**
+ * Otodom keeps amenities in the `attributes` bag (present on both `ad` and
+ * `unifiedAd`): grouped feature arrays of bare tokens — `extras_types:
+ * ['balcony','garage','lift']`, `equipment_types: ['furniture','washing_machine',
+ * …]`, `media_types: ['internet']`, `security_types: ['entryphone', …]` — plus a
+ * `heating` presence string. Collect those tokens then collapse onto the shared
+ * canonical vocabulary; `equipment_types::furniture` hoists to `furnished` via
+ * {@link canonicalizeAmenities}.
+ *
+ * Older markup exposes the same data only as `ad.additionalInformation`, an
+ * array of `{ label, values: ['<group>::<token>'] }`; that is the fallback.
+ */
+const OTODOM_AMENITY_GROUPS = [
+  'extras_types',
+  'equipment_types',
+  'media_types',
+  'security_types',
+] as const;
+const OTODOM_AMENITY_LABELS: ReadonlySet<string> = new Set(OTODOM_AMENITY_GROUPS);
+
+function collectOtodomAmenities(
+  attrs: Record<string, unknown>,
+  ad: Record<string, unknown> | undefined,
+): { amenities: string[]; furnished?: boolean } {
+  const tokens: string[] = [];
+  for (const group of OTODOM_AMENITY_GROUPS) {
+    const values = attrs[group];
+    if (!Array.isArray(values)) continue;
+    for (const value of values) {
+      const token = asString(value);
+      if (token) tokens.push(token);
+    }
+  }
+  if (asString(attrs.heating)) tokens.push('heating');
+
+  if (tokens.length === 0 && Array.isArray(ad?.additionalInformation)) {
+    for (const entry of ad.additionalInformation) {
+      if (!isRecord(entry)) continue;
+      const label = asString(entry.label);
+      const values = Array.isArray(entry.values) ? entry.values : [];
+      if (label === 'heating' && values.length > 0) {
+        tokens.push('heating');
+        continue;
+      }
+      if (!label || !OTODOM_AMENITY_LABELS.has(label)) continue;
+      for (const value of values) {
+        const raw = asString(value);
+        if (!raw) continue;
+        const idx = raw.lastIndexOf('::');
+        const token = idx >= 0 ? raw.slice(idx + 2) : raw;
+        // `::y` / `::n` are boolean presence markers with no amenity token.
+        if (token && token !== 'y' && token !== 'n') tokens.push(token);
+      }
+    }
+  }
+  return canonicalizeAmenities(tokens);
+}
+
 function parseContact(details: unknown): NormalizedListingContact | undefined {
   if (!isRecord(details)) return undefined;
   const name = asString(details.name);
@@ -374,6 +475,16 @@ export function parseOtodomDetail(html: string, url: string): OtodomRawListing {
     adCategoryName ??
     asString(attrs.building_type);
   if (estate) result.estate = estate;
+
+  const chars = characteristicsMap(ad);
+  const floor = otodomFloor(asString(attrs.floor_no) ?? chars.get('floor_no'));
+  if (floor !== undefined) result.floor = floor;
+  const yearBuilt = otodomYearBuilt(asString(attrs.build_year) ?? chars.get('build_year'));
+  if (yearBuilt !== undefined) result.yearBuilt = yearBuilt;
+
+  const { amenities, furnished } = collectOtodomAmenities(attrs, ad);
+  if (amenities.length > 0) result.amenities = amenities;
+  if (furnished) result.furnished = true;
 
   const contact = parseContact(props.contactDetails);
   if (contact) result.contact = contact;

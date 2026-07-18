@@ -3,7 +3,8 @@
  */
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
-import { extractContactFromHtml, mergeListingContact } from '../../../contact';
+import { buildContact, extractContactFromHtml, mergeListingContact } from '../../../contact';
+import { canonicalizeAmenities } from '../../../parse/amenities';
 import {
   asNumber,
   citySlugDe,
@@ -32,8 +33,12 @@ export interface KleinanzeigenRawListing {
   price?: number;
   currency: string;
   bedrooms?: number;
+  bathrooms?: number;
   squareMeters?: number;
   floor?: number;
+  yearBuilt?: number;
+  amenities?: string[];
+  furnished?: boolean;
   address: {
     street?: string;
     city?: string;
@@ -161,6 +166,80 @@ function detailValue(html: string, label: string): string | undefined {
   return html.match(re)?.[1]?.trim();
 }
 
+/** Construction year sanity window (reject non-year `Baujahr` values). */
+function kleinanzeigenYearBuilt(value: string | undefined): number | undefined {
+  const year = asNumber(value);
+  if (year === undefined) return undefined;
+  const maxYear = new Date().getFullYear() + 6;
+  return year >= 1500 && year <= maxYear ? year : undefined;
+}
+
+/**
+ * Amenities are the visible "Ausstattung" feature tags rendered as
+ * `<li class="checktag">Balkon</li>` (Balkon, Einbauküche, Aufzug,
+ * Fußbodenheizung, Stufenloser Zugang, …). Collect the German labels and
+ * collapse onto the shared canonical vocabulary.
+ */
+// Two separate ReDoS hazards are avoided here, both reachable from untrusted
+// portal HTML:
+//   1. No `\s*` around the capture — `\s*` and `[^<]` match the same characters,
+//      and that ambiguity is polynomial. Capture to the unambiguous `[^<]`/`<`
+//      boundary and trim in JS instead.
+//   2. Every quantifier is BOUNDED. An unbounded `[^>]*` is re-scanned to end of
+//      input from each of many `class="checktag"` positions when no `>` follows,
+//      which is quadratic (measured 4.8s on a 20k-marker page); a bound makes
+//      each attempt constant work.
+const TAG_ATTR_SPAN = 300;
+const CHECKTAG_RE = new RegExp(
+  `class=["']checktag["'][^>]{0,${TAG_ATTR_SPAN}}>([^<]{0,80})<`,
+  'gi',
+);
+
+/** Trimmed label length accepted from a feature tag. */
+const MIN_AMENITY_LABEL = 2;
+const MAX_AMENITY_LABEL = 60;
+
+function collectKleinanzeigenAmenities(html: string): { amenities: string[]; furnished?: boolean } {
+  const tokens: string[] = [];
+  for (const match of html.matchAll(CHECKTAG_RE)) {
+    const label = match[1]?.trim();
+    if (!label || label.length < MIN_AMENITY_LABEL || label.length > MAX_AMENITY_LABEL) continue;
+    tokens.push(label);
+  }
+  return canonicalizeAmenities(tokens);
+}
+
+/**
+ * The seller/store name for a listing. Commercial (`gewerblich`) posters render a
+ * pro `bizteaser` block; the display name lives in the `userprofile-vip` span.
+ * Kleinanzeigen gates the phone behind an AJAX reveal (empty in the HTML), so the
+ * name/agency is the best-effort contact we can capture cold.
+ */
+// Anchored on the distinctive `userprofile-vip` class token rather than
+// `class="[^"']*userprofile-vip[^"']*"`: a literal between two unbounded stars is
+// polynomial when the token repeats. The trailing quantifiers are bounded for the
+// same reason as CHECKTAG_RE — unbounded, they re-scan to end of input from every
+// repeat of the token.
+const POSTER_NAME_RE = new RegExp(
+  `userprofile-vip[^"']{0,${TAG_ATTR_SPAN}}["'][^>]{0,${TAG_ATTR_SPAN}}>([^<]{0,100})<`,
+  'i',
+);
+
+/** Trimmed poster-name length accepted from the profile block. */
+const MIN_POSTER_NAME = 2;
+const MAX_POSTER_NAME = 80;
+
+function extractKleinanzeigenPoster(html: string): NormalizedListingContact | undefined {
+  const name = html.match(POSTER_NAME_RE)?.[1]?.trim();
+  if (!name || name.length < MIN_POSTER_NAME || name.length > MAX_POSTER_NAME) return undefined;
+  const isAgency = /class=["'][^"']*bizteaser/i.test(html) || /"Verkaeufer"\s*:\s*"gewerblich"/i.test(html);
+  return buildContact({
+    name,
+    agencyName: isAgency ? name : undefined,
+    kind: isAgency ? 'agency' : 'private',
+  });
+}
+
 export function parseKleinanzeigenDetail(html: string, url: string): KleinanzeigenRawListing {
   const categoryId = kleinanzeigenCategoryFromUrl(url);
   if (!isKleinanzeigenHousingCategory(categoryId)) {
@@ -182,8 +261,9 @@ export function parseKleinanzeigenDetail(html: string, url: string): Kleinanzeig
   const region = meta.get('og:region');
   const city = region ?? neighborhood ?? '';
   const images = extractGalleryImages(html, meta.get('og:image'));
+  const { amenities, furnished } = collectKleinanzeigenAmenities(html);
 
-  return {
+  const listing: KleinanzeigenRawListing = {
     sourceId,
     url: meta.get('og:url') ?? url,
     categoryId: categoryId as string,
@@ -204,6 +284,15 @@ export function parseKleinanzeigenDetail(html: string, url: string): Kleinanzeig
       lng: asNumber(meta.get('og:longitude')),
     },
     images,
-    contact: mergeListingContact(extractContactFromHtml(html)),
+    contact: mergeListingContact(extractContactFromHtml(html), extractKleinanzeigenPoster(html)),
   };
+
+  const bathrooms = asNumber(detailValue(html, 'Badezimmer'));
+  if (bathrooms !== undefined) listing.bathrooms = bathrooms;
+  const yearBuilt = kleinanzeigenYearBuilt(detailValue(html, 'Baujahr'));
+  if (yearBuilt !== undefined) listing.yearBuilt = yearBuilt;
+  if (amenities.length > 0) listing.amenities = amenities;
+  if (furnished) listing.furnished = true;
+
+  return listing;
 }
