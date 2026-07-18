@@ -95,22 +95,25 @@ describe('KleinanzeigenProvider housing filter', () => {
   });
 
   // Regression for the polynomial-ReDoS pair CodeQL flagged on the amenity and
-  // poster-name patterns. Portal HTML is untrusted, so a page that repeats the
-  // `checktag` / `userprofile-vip` markers must not blow up parse time. Both
-  // patterns were quadratic before; a 20k-repetition page took seconds and now
-  // completes in milliseconds. The bound is deliberately loose so this asserts
-  // "not quadratic" rather than a wall-clock figure.
+  // poster-name patterns. Portal HTML is untrusted, so a page repeating the
+  // `checktag` / `userprofile-vip` markers must not blow up parse time.
+  //
+  // The markers are appended with NO `>` after them, which is what actually
+  // triggers the quadratic path: the tag-attribute scan runs to end of input and
+  // FAILS from each of the many marker positions. (A flood containing `>`
+  // matches successfully, advances lastIndex, and stays fast — an earlier
+  // version of this test made that mistake and passed against the vulnerable
+  // regex.) Measured on the unbounded pattern: 5k markers 320ms, 20k markers
+  // 4780ms; bounded it is 3ms and 8ms. The threshold asserts "not quadratic",
+  // not a wall-clock figure.
   it('parses a hostile repetition-heavy detail page in linear time', () => {
     const url = 'https://www.kleinanzeigen.de/s-anzeige/wohnung/1111222333-203-3331';
-    const flood = 'class="checktag"'.repeat(20000) + 'class="userprofile-vip'.repeat(20000);
-    const hostile = KLEINANZEIGEN_FIXTURE_DETAIL_ENRICHED_HTML.replace(
-      '</body>',
-      `<div>${flood}</div></body>`,
-    );
+    const flood = 'class="checktag"'.repeat(20000) + 'userprofile-vip"'.repeat(20000);
+    const hostile = `${KLEINANZEIGEN_FIXTURE_DETAIL_ENRICHED_HTML}${flood}`;
 
     const started = Date.now();
     parseKleinanzeigenDetail(hostile, url);
-    expect(Date.now() - started).toBeLessThan(2000);
+    expect(Date.now() - started).toBeLessThan(1000);
   });
 
   it('paginates with `seite:N` before the category code (keeps the category filter)', () => {

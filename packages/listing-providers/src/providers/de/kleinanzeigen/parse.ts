@@ -180,11 +180,20 @@ function kleinanzeigenYearBuilt(value: string | undefined): number | undefined {
  * Fußbodenheizung, Stufenloser Zugang, …). Collect the German labels and
  * collapse onto the shared canonical vocabulary.
  */
-// The capture deliberately has no surrounding `\s*`: `\s*` and `[^<]` can match
-// the same characters, and that ambiguity makes the match polynomial on hostile
-// markup (portal HTML is untrusted input). Capture the raw run up to the closing
-// tag — the `[^<]`/`<` boundary is unambiguous — then trim and bound in JS.
-const CHECKTAG_RE = /class=["']checktag["'][^>]*>([^<]{0,80})</gi;
+// Two separate ReDoS hazards are avoided here, both reachable from untrusted
+// portal HTML:
+//   1. No `\s*` around the capture — `\s*` and `[^<]` match the same characters,
+//      and that ambiguity is polynomial. Capture to the unambiguous `[^<]`/`<`
+//      boundary and trim in JS instead.
+//   2. Every quantifier is BOUNDED. An unbounded `[^>]*` is re-scanned to end of
+//      input from each of many `class="checktag"` positions when no `>` follows,
+//      which is quadratic (measured 4.8s on a 20k-marker page); a bound makes
+//      each attempt constant work.
+const TAG_ATTR_SPAN = 300;
+const CHECKTAG_RE = new RegExp(
+  `class=["']checktag["'][^>]{0,${TAG_ATTR_SPAN}}>([^<]{0,80})<`,
+  'gi',
+);
 
 /** Trimmed label length accepted from a feature tag. */
 const MIN_AMENITY_LABEL = 2;
@@ -208,9 +217,13 @@ function collectKleinanzeigenAmenities(html: string): { amenities: string[]; fur
  */
 // Anchored on the distinctive `userprofile-vip` class token rather than
 // `class="[^"']*userprofile-vip[^"']*"`: a literal between two unbounded stars is
-// polynomial when the token repeats. Everything after the token is unambiguous
-// (`[^"']*` then a quote, `[^>]*` then `>`, `[^<]*` then `<`).
-const POSTER_NAME_RE = /userprofile-vip[^"']*["'][^>]*>([^<]{0,100})</i;
+// polynomial when the token repeats. The trailing quantifiers are bounded for the
+// same reason as CHECKTAG_RE — unbounded, they re-scan to end of input from every
+// repeat of the token.
+const POSTER_NAME_RE = new RegExp(
+  `userprofile-vip[^"']{0,${TAG_ATTR_SPAN}}["'][^>]{0,${TAG_ATTR_SPAN}}>([^<]{0,100})<`,
+  'i',
+);
 
 /** Trimmed poster-name length accepted from the profile block. */
 const MIN_POSTER_NAME = 2;
