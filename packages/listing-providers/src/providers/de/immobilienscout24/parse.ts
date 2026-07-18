@@ -288,10 +288,12 @@ export function parseIs24Expose(body: string, fallbackUrl?: string): Is24RawList
     currency: 'EUR',
     bedrooms: asNumber(texts.get('zimmer')),
     squareMeters: asNumber(
-      (texts.get('wohnfläche') ?? texts.get('wohnfläche ca.') ?? texts.get('wohnflaeche'))?.replace(
-        /\s*m²/i,
-        '',
-      ),
+      // Strip the bare unit literal and trim, rather than `/\s*m²/`: a leading
+      // unbounded `\s*` is retried at every offset, which is polynomial on a
+      // long hostile value. The trim yields the same result on real input.
+      (texts.get('wohnfläche') ?? texts.get('wohnfläche ca.') ?? texts.get('wohnflaeche'))
+        ?.replace(/m²/i, '')
+        .trim(),
     ),
     floor: is24Floor(floorText),
     address,

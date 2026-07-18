@@ -94,6 +94,25 @@ describe('KleinanzeigenProvider housing filter', () => {
     expect(() => kleinanzeigenHousingSearchUrl('berlin', 1, '216')).toThrow(/not a housing category/);
   });
 
+  // Regression for the polynomial-ReDoS pair CodeQL flagged on the amenity and
+  // poster-name patterns. Portal HTML is untrusted, so a page that repeats the
+  // `checktag` / `userprofile-vip` markers must not blow up parse time. Both
+  // patterns were quadratic before; a 20k-repetition page took seconds and now
+  // completes in milliseconds. The bound is deliberately loose so this asserts
+  // "not quadratic" rather than a wall-clock figure.
+  it('parses a hostile repetition-heavy detail page in linear time', () => {
+    const url = 'https://www.kleinanzeigen.de/s-anzeige/wohnung/1111222333-203-3331';
+    const flood = 'class="checktag"'.repeat(20000) + 'class="userprofile-vip'.repeat(20000);
+    const hostile = KLEINANZEIGEN_FIXTURE_DETAIL_ENRICHED_HTML.replace(
+      '</body>',
+      `<div>${flood}</div></body>`,
+    );
+
+    const started = Date.now();
+    parseKleinanzeigenDetail(hostile, url);
+    expect(Date.now() - started).toBeLessThan(2000);
+  });
+
   it('paginates with `seite:N` before the category code (keeps the category filter)', () => {
     // Appending `/seite:N` AFTER the `c203l…` code drops the category filter and
     // returns a site-wide page; the page segment must sit before the code.

@@ -180,13 +180,22 @@ function kleinanzeigenYearBuilt(value: string | undefined): number | undefined {
  * Fußbodenheizung, Stufenloser Zugang, …). Collect the German labels and
  * collapse onto the shared canonical vocabulary.
  */
-const CHECKTAG_RE = /class=["']checktag["'][^>]*>\s*([^<]{2,60}?)\s*</gi;
+// The capture deliberately has no surrounding `\s*`: `\s*` and `[^<]` can match
+// the same characters, and that ambiguity makes the match polynomial on hostile
+// markup (portal HTML is untrusted input). Capture the raw run up to the closing
+// tag — the `[^<]`/`<` boundary is unambiguous — then trim and bound in JS.
+const CHECKTAG_RE = /class=["']checktag["'][^>]*>([^<]{0,80})</gi;
+
+/** Trimmed label length accepted from a feature tag. */
+const MIN_AMENITY_LABEL = 2;
+const MAX_AMENITY_LABEL = 60;
 
 function collectKleinanzeigenAmenities(html: string): { amenities: string[]; furnished?: boolean } {
   const tokens: string[] = [];
   for (const match of html.matchAll(CHECKTAG_RE)) {
     const label = match[1]?.trim();
-    if (label) tokens.push(label);
+    if (!label || label.length < MIN_AMENITY_LABEL || label.length > MAX_AMENITY_LABEL) continue;
+    tokens.push(label);
   }
   return canonicalizeAmenities(tokens);
 }
@@ -197,11 +206,19 @@ function collectKleinanzeigenAmenities(html: string): { amenities: string[]; fur
  * Kleinanzeigen gates the phone behind an AJAX reveal (empty in the HTML), so the
  * name/agency is the best-effort contact we can capture cold.
  */
-const POSTER_NAME_RE = /class=["'][^"']*userprofile-vip[^"']*["'][^>]*>\s*([^<]{2,80}?)\s*</i;
+// Anchored on the distinctive `userprofile-vip` class token rather than
+// `class="[^"']*userprofile-vip[^"']*"`: a literal between two unbounded stars is
+// polynomial when the token repeats. Everything after the token is unambiguous
+// (`[^"']*` then a quote, `[^>]*` then `>`, `[^<]*` then `<`).
+const POSTER_NAME_RE = /userprofile-vip[^"']*["'][^>]*>([^<]{0,100})</i;
+
+/** Trimmed poster-name length accepted from the profile block. */
+const MIN_POSTER_NAME = 2;
+const MAX_POSTER_NAME = 80;
 
 function extractKleinanzeigenPoster(html: string): NormalizedListingContact | undefined {
   const name = html.match(POSTER_NAME_RE)?.[1]?.trim();
-  if (!name) return undefined;
+  if (!name || name.length < MIN_POSTER_NAME || name.length > MAX_POSTER_NAME) return undefined;
   const isAgency = /class=["'][^"']*bizteaser/i.test(html) || /"Verkaeufer"\s*:\s*"gewerblich"/i.test(html);
   return buildContact({
     name,
