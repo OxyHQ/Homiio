@@ -93,4 +93,23 @@ describe('canonicalizeAmenities', () => {
       amenities: ['pool', 'garden'],
     });
   });
+
+  // MercadoLibre AR/MX use es-419 vocabulary that differs from the peninsular
+  // Spanish already covered (`garaje`, `piscina`, `trastero`). Without these the
+  // LatAm spec tables canonicalized to nothing and the amenities were dropped.
+  it('canonicalizes es-419 (LatAm) vocabulary onto the same keys as es-ES', () => {
+    expect(canonicalizeAmenities(['Cocheras']).amenities).toEqual(['parking']);
+    expect(canonicalizeAmenities(['Estacionamientos']).amenities).toEqual(['parking']);
+    expect(canonicalizeAmenities(['Alberca']).amenities).toEqual(['pool']);
+    expect(canonicalizeAmenities(['Bauleras']).amenities).toEqual(['storage']);
+    expect(canonicalizeAmenities(['Bodegas']).amenities).toEqual(['storage']);
+    expect(canonicalizeAmenities(['Con lavandería']).amenities).toEqual(['laundry_room']);
+
+    // Regional synonyms must collapse onto ONE key, not duplicate it.
+    expect(canonicalizeAmenities(['cochera', 'estacionamiento', 'garaje']).amenities).toEqual([
+      'parking',
+    ]);
+    expect(canonicalizeAmenities(['alberca', 'piscina']).amenities).toEqual(['pool']);
+    expect(canonicalizeAmenities(['baulera', 'bodega', 'trastero']).amenities).toEqual(['storage']);
+  });
 });

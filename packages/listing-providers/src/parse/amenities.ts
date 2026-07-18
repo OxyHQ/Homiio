@@ -124,11 +124,16 @@ const AMENITY_ALIASES: Readonly<Record<string, CanonicalAmenity | typeof FURNISH
   plaza_de_garaje: 'parking',
   plaza_garaje: 'parking',
   off_street_parking: 'parking',
+  cochera: 'parking',
+  cocheras: 'parking',
+  estacionamiento: 'parking',
+  estacionamientos: 'parking',
   // pool
   piscina: 'pool',
   swimming_pool: 'pool',
   community_pool: 'pool',
   private_pool: 'pool',
+  alberca: 'pool',
   // garden
   jardin: 'garden',
   giardino: 'garden',
@@ -140,6 +145,10 @@ const AMENITY_ALIASES: Readonly<Record<string, CanonicalAmenity | typeof FURNISH
   cantina: 'storage',
   storage_room: 'storage',
   basement: 'storage',
+  baulera: 'storage',
+  bauleras: 'storage',
+  bodega: 'storage',
+  bodegas: 'storage',
   // washing machine / laundry
   lavadora: 'washing_machine',
   lavatrice: 'washing_machine',
@@ -147,6 +156,9 @@ const AMENITY_ALIASES: Readonly<Record<string, CanonicalAmenity | typeof FURNISH
   washer_unit: 'washing_machine',
   laundry_room_unit: 'washing_machine',
   laundry: 'laundry_room',
+  lavanderia: 'laundry_room',
+  lavadero: 'laundry_room',
+  con_lavanderia: 'laundry_room',
   // dryer / dishwasher
   secadora: 'dryer',
   tumble_dryer: 'dryer',
@@ -162,6 +174,7 @@ const AMENITY_ALIASES: Readonly<Record<string, CanonicalAmenity | typeof FURNISH
   internet: 'wifi',
   wi_fi: 'wifi',
   fiber: 'wifi',
+  acceso_a_internet: 'wifi',
   // intercom / security
   portero: 'intercom',
   portero_automatico: 'intercom',

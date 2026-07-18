@@ -61,6 +61,17 @@ export const MERCADOLIBRE_MX_FIXTURE_NON_HOUSING_JSON = JSON.stringify({
   ],
 });
 
+/**
+ * Recorded from a live MLM VIP, condensed the same way as the AR fixture: the MX
+ * striped-specs table uses MX-localized keys (`Recámaras`, `Estacionamientos`,
+ * `Bodegas`, `Con lavandería`, `Alberca`) so the shared parser must resolve both
+ * dialects. `Estacionamientos: 0` → `parkingType: 'none'`; `Antigüedad: 34 años`
+ * → `yearBuilt = currentYear - 34`; the seller here is a private person (`Karla
+ * Ruiz`) captured as the advertiser name.
+ */
+const MERCADOLIBRE_MX_STRIPED_ROW = (key: string, value: string): string =>
+  `<tr class="andes-table__row ui-vpp-striped-specs__row"><th class="andes-table__header andes-table__header--left ui-vpp-striped-specs__row__column ui-vpp-striped-specs__row__column--id" scope="row"><div class="andes-table__header__container">${key}</div></th><td class="andes-table__column andes-table__column--left ui-vpp-striped-specs__row__column"><span class="andes-table__column--value">${value}</span></td></tr>`;
+
 export const MERCADOLIBRE_MX_FIXTURE_DETAIL_HTML = `<!DOCTYPE html><html><head>
 <script type="application/ld+json">
 {"name":"Renta departamento 2 recámaras Roma","image":"https://http2.mlstatic.com/fixture-ml-mx-1.jpg","offers":{"price":28000,"availability":"https://schema.org/InStock","url":"https://departamento.mercadolibre.com.mx/MLM-3847653074-renta-departamento-2-recamaras-roma-_JM","@type":"Offer","priceCurrency":"MXN"},"sku":"MLM3847653074","@context":"https://schema.org","@type":"Product","productID":"MLM3847653074"}
@@ -69,7 +80,25 @@ export const MERCADOLIBRE_MX_FIXTURE_DETAIL_HTML = `<!DOCTYPE html><html><head>
 <script>var seller={"id":"seller_profile","type":"seller_profile","state":"VISIBLE"};</script>
 <script>var vip={"domain_id":"MLM-APARTMENTS_FOR_RENT","description_type":"plain_text","city":"Benito Juárez","neighborhood":"Roma Norte","state":"Ciudad de México"};</script>
 <script>var specs={"attributes":[{"icon":{"id":"BED","color":"BLACK","size":"XXSMALL"},"label":{"text":"2 rec.","color":"BLACK"}},{"icon":{"id":"BATHROOM","color":"BLACK","size":"XXSMALL"},"label":{"text":"2 baños","color":"BLACK"}},{"icon":{"id":"SCALE_UP","color":"BLACK","size":"XXSMALL"},"label":{"text":"72 m² totales","color":"BLACK"}}]};</script>
-<a href="tel:+525555667788">Llamar</a>
+<div class="ui-pdp-seller-good-attention__store-name"><p class="ui-pdp-color--BLACK ui-pdp-seller-validated__title"><span>Publicado por </span><a target="_self" href="#seller_profile">Karla Ruiz</a></p></div>
+<section class="ui-vpp-striped-specs"><table class="andes-table"><tbody class="andes-table__body">
+${MERCADOLIBRE_MX_STRIPED_ROW('Superficie total', '72 m²')}
+${MERCADOLIBRE_MX_STRIPED_ROW('Superficie construida', '72 m²')}
+${MERCADOLIBRE_MX_STRIPED_ROW('Recámaras', '2')}
+${MERCADOLIBRE_MX_STRIPED_ROW('Baños', '2')}
+${MERCADOLIBRE_MX_STRIPED_ROW('Estacionamientos', '0')}
+${MERCADOLIBRE_MX_STRIPED_ROW('Bodegas', '0')}
+${MERCADOLIBRE_MX_STRIPED_ROW('Número de piso de la unidad', '6')}
+${MERCADOLIBRE_MX_STRIPED_ROW('Antigüedad', '34 años')}
+${MERCADOLIBRE_MX_STRIPED_ROW('Ascensor', 'Sí')}
+${MERCADOLIBRE_MX_STRIPED_ROW('Con lavandería', 'Sí')}
+${MERCADOLIBRE_MX_STRIPED_ROW('Acceso a internet', 'Sí')}
+${MERCADOLIBRE_MX_STRIPED_ROW('Alberca', 'No')}
+${MERCADOLIBRE_MX_STRIPED_ROW('Balcón', 'No')}
+${MERCADOLIBRE_MX_STRIPED_ROW('Aire acondicionado', 'No')}
+${MERCADOLIBRE_MX_STRIPED_ROW('Amueblado', 'No')}
+</tbody></table></section>
+<h2 class="ui-pdp-description__title">Descripción</h2><p class="ui-pdp-description__content">Departamento en renta en la colonia Roma Norte. Dos recámaras, dos baños completos, edificio con elevador y área de lavandería. Excelente ubicación.</p>
 <div class="ui-pdp-gallery">
 <a class="gallery-image__link" href="#"><img src="https://http2.mlstatic.com/D_NQ_NP_620729-MLM112636094885_062026-F.webp"/></a>
 <a class="gallery-image__link" href="#"><img src="https://http2.mlstatic.com/D_NQ_NP_708821-MLM112636094891_062026-F.webp"/></a>

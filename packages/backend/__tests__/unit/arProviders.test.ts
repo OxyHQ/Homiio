@@ -141,7 +141,10 @@ describe('MercadolibreArProvider', () => {
     expect(listing.longTermRent?.currency).toBe('ARS');
     expect(listing.address.city).toBe('Capital Federal');
     expect(listing.address.neighborhood).toBe('Belgrano');
-    expect(listing.contact?.phone).toBeTruthy();
+    // A real ML VIP page gates contact behind a form and ships NO `tel:` link, so
+    // the advertiser is captured by name only. Never synthesise a phone.
+    expect(listing.contact?.agencyName).toBe('Inmobiliaria Belgrano SRL');
+    expect(listing.contact?.phone).toBeUndefined();
     // Highlighted-specs block (`BED → "2 dorm."`, `BATHROOM → "1 baño"`, `SCALE_UP → "55 m² totales"`).
     expect(listing.bedrooms).toBe(2);
     expect(listing.bathrooms).toBe(1);
@@ -150,6 +153,31 @@ describe('MercadolibreArProvider', () => {
     expect(listing.address.state).toBe('Capital Federal');
     // Full server-rendered gallery, not the single JSON-LD image.
     expect(listing.remoteImages.length).toBeGreaterThanOrEqual(2);
+  });
+
+  // The `andes-table` striped-specs table is the only place a VIP page states
+  // construction age, floor, parking and storage. Without it those fields were
+  // silently dropped, and the JSON-LD carries no description at all.
+  it('derives structured fields from the striped-specs table', () => {
+    const payload = parseMercadolibreArDetail(
+      MERCADOLIBRE_AR_FIXTURE_DETAIL_HTML,
+      'https://departamento.mercadolibre.com.ar/MLA-3557653074-alquiler-departamento-2-ambientes-belgrano-_JM',
+    );
+
+    expect(payload.floor).toBe(8);
+    // `Antigüedad: 1 años` is a RELATIVE age, not a year — it resolves against
+    // the current year, so this assertion must not hard-code a literal.
+    expect(payload.yearBuilt).toBe(new Date().getFullYear() - 1);
+    // `Cocheras: 1` → parking, `Bauleras: 1` → storage. Both are LatAm-Spanish
+    // terms the shared canonicalizer had no alias for before this change.
+    expect(payload.parkingType).toBe('garage');
+    expect(payload.amenities).toEqual(expect.arrayContaining(['parking', 'storage', 'elevator']));
+    // `Sí`/`No` must be read as booleans, not as presence-of-row: `Ascensor: Sí`
+    // and `Balcón: Sí` are amenities, `Terraza: No` must NOT become one.
+    expect(payload.amenities).toEqual(expect.arrayContaining(['balcony']));
+    expect(payload.amenities).not.toContain('terrace');
+    // JSON-LD ships no description; the copy comes from `ui-pdp-description__content`.
+    expect(payload.description).toMatch(/Belgrano/);
   });
 
   it('throws NonHousingListingError for car item JSON', () => {
