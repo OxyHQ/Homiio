@@ -214,6 +214,143 @@ export const IMMOWELT_FIXTURE_DETAIL_HIDDEN_CLASSIFIED_JSON = `{
 }`;
 
 /**
+ * Real detail `classified` payload captured from a live immowelt `/expose` page
+ * (Fürth apartment FOR RENT — published address, `Point` coords, agency contact).
+ * Source `https://www.immowelt.de/expose/00827e82-d512-4043-a489-249a44268293`,
+ * captured 2025-12. Every value under `sections`/`contactSections` is verbatim
+ * from the live SSR `__UFRN_LIFECYCLE_SERVERREQUEST__` → `app_cldp.data.classified`;
+ * the gallery is trimmed to the first four of the listing's 13 photos. This
+ * exercises the fields the old parser dropped: the real `sections.gallery.images`
+ * URLs, `sections.energy.features` (`yearOfConstruction`), and the
+ * `sections.features` amenity/flag rows.
+ */
+export const IMMOWELT_FIXTURE_DETAIL_RENTAL_CLASSIFIED_JSON = `{
+  "brand": "immowelt",
+  "id": "23WN8BJNR3PG",
+  "metadata": { "legacyId": "00827e82-d512-4043-a489-249a44268293" },
+  "tracking": {
+    "av_items": [
+      {
+        "id": "23WN8BJNR3PG",
+        "price": 930,
+        "estate_type": "av_2",
+        "distribution_type": "1",
+        "country": "Germany",
+        "city": "Fürth",
+        "region": "Bavaria",
+        "currency": "EUR",
+        "zip_code": "90766",
+        "legacy_id": "00827e82-d512-4043-a489-249a44268293"
+      }
+    ]
+  },
+  "sections": {
+    "location": {
+      "address": {
+        "country": "DEU",
+        "city": "Fürth",
+        "zipCode": "90766",
+        "street": "Würzburger Straße 25",
+        "district": "Weststadt"
+      },
+      "isAddressPublished": true,
+      "geometry": { "type": "Point", "coordinates": [10.97590160369873, 49.47981643676758] }
+    },
+    "price": {
+      "base": {
+        "type": "RENT",
+        "main": { "value": { "main": { "value": "930 €", "ariaLabel": "930 €" } } }
+      }
+    },
+    "hardFacts": {
+      "title": "Wohnung zur Miete",
+      "facts": [
+        { "type": "numberOfRooms", "value": "2 Zimmer", "splitValue": "2", "label": "Zimmer" },
+        { "type": "livingSpace", "value": "64,2 m²", "splitValue": "64,2", "label": "m²" },
+        { "type": "numberOfFloors", "value": "1. Geschoss", "splitValue": "1.", "label": "Geschoss" }
+      ],
+      "price": { "ariaLabel": "930 €" }
+    },
+    "energy": {
+      "features": [
+        { "type": "yearOfConstruction", "label": "Baujahr", "value": "2019" },
+        { "type": "state", "label": "Zustand der Immobilie", "value": "Neubau" },
+        { "type": "heatingSystem", "label": "Heizungsart", "value": "Zentralheizung: Fußbodenheizung" },
+        { "type": "energySource", "label": "Energieträger", "value": "Gas" }
+      ]
+    },
+    "gallery": {
+      "images": [
+        { "key": "5664600d-8ada-437d-8880-d78f63c1077a", "url": "https://mms.immowelt.de/5/6/6/4/5664600d-8ada-437d-8880-d78f63c1077a.jpg?ci_seal=66a168730412798957ffcd4d9772400c4580059f" },
+        { "key": "aad95f0d-6c7c-458a-9174-32d80d465dad", "url": "https://mms.immowelt.de/a/a/d/9/aad95f0d-6c7c-458a-9174-32d80d465dad.jpg?ci_seal=aee57f775534d372d06fa6b120169f0834bbdeb6" },
+        { "key": "70127c38-3493-46d7-b98a-36d3b60ac65e", "url": "https://mms.immowelt.de/7/0/1/2/70127c38-3493-46d7-b98a-36d3b60ac65e.png?ci_seal=f8c3d36e59d5abf952cf39b8a42f05bc1b3e26c9" },
+        { "key": "fd6cbc13-d959-4fb4-ab32-bba863b93034", "url": "https://mms.immowelt.de/f/d/6/c/fd6cbc13-d959-4fb4-ab32-bba863b93034.png?ci_seal=0cf7e4be5e4049756dbe9107d36219ba306dfe72" }
+      ]
+    },
+    "features": {
+      "preview": [
+        { "icon": "availability", "value": "Bezug: ab 01.02.2026 " },
+        { "icon": "floors", "value": "1. Geschoss" },
+        { "icon": "kitchen", "value": "Einbauküche, offene Küche" },
+        { "icon": "elevator", "value": "Personenaufzug" },
+        { "icon": "cellar", "value": "Kelleranteil" },
+        { "icon": "parking-lots", "value": "Tiefgarage" },
+        { "icon": "toilet-amenities", "value": "Gäste-WC" },
+        { "icon": "balcony", "value": "Balkon" }
+      ],
+      "details": {
+        "categories": [
+          {
+            "title": "Allgemeine Informationen",
+            "elements": [
+              { "icon": "availability", "value": "Bezug: ab 01.02.2026 " },
+              { "icon": "floors", "value": "1. Geschoss" }
+            ]
+          },
+          {
+            "title": "Barrierefreiheit",
+            "elements": [ { "icon": "elevator", "value": "Personenaufzug" } ]
+          },
+          {
+            "title": "Innenbereich",
+            "elements": [
+              { "icon": "kitchen", "value": "Einbauküche, offene Küche" },
+              { "icon": "bathroom-amenities", "value": "Badezimmer: Badewanne, Bad mit Dusche" },
+              { "icon": "toilet-amenities", "value": "Gäste-WC" },
+              { "icon": "cellar", "value": "Kelleranteil" },
+              { "icon": "floor-covering", "value": "Bodenbelag: Fliesen" }
+            ]
+          },
+          {
+            "title": "Außenbereich",
+            "elements": [
+              { "icon": "balcony", "value": "Balkon" },
+              { "icon": "parking-lots", "value": "Tiefgarage" }
+            ]
+          }
+        ]
+      }
+    },
+    "mainDescription": { "headline": "2-Zi.-Whg mit Einbauküche" }
+  },
+  "contactSections": {
+    "static": { "phoneNumbers": ["0911 93425 738"] },
+    "contactCard": {
+      "title": "Schultheiß Projektentwicklung AG",
+      "subtitle": "Herr Matteo Mölders",
+      "phoneNumbers": ["0911 93425 738"],
+      "isPrivateOwner": false
+    },
+    "provider": {
+      "intermediaryCard": { "title": "Schultheiß Projektentwicklung AG" },
+      "contactCard": { "title": "Herr Matteo Mölders" },
+      "isPrivateOwner": false,
+      "publisherType": "AGENCY"
+    }
+  }
+}`;
+
+/**
  * Wrap a captured `classified` payload in the exact on-page SSR form immowelt
  * serves detail data in: a `window["__UFRN_LIFECYCLE_SERVERREQUEST__"]=JSON.parse("…")`
  * script whose argument is the double-encoded blob (`JSON.stringify` twice — the
@@ -243,6 +380,15 @@ export const IMMOWELT_FIXTURE_DETAIL_HIDDEN_HTML = immoweltDetailFixtureHtml(
   IMMOWELT_FIXTURE_DETAIL_HIDDEN_CLASSIFIED_JSON,
 );
 
+/** Detail HTML for the Fürth rental (real gallery, amenities, `yearOfConstruction`). */
+export const IMMOWELT_FIXTURE_DETAIL_RENTAL_HTML = immoweltDetailFixtureHtml(
+  IMMOWELT_FIXTURE_DETAIL_RENTAL_CLASSIFIED_JSON,
+);
+
 /** Canonical `/expose/{uuid}` URL of the published-address detail fixture. */
 export const IMMOWELT_FIXTURE_DETAIL_URL =
   'https://www.immowelt.de/expose/00b915d7-1122-40d0-a68d-916854f75987';
+
+/** Canonical `/expose/{uuid}` URL of the Fürth rental detail fixture. */
+export const IMMOWELT_FIXTURE_DETAIL_RENTAL_URL =
+  'https://www.immowelt.de/expose/00827e82-d512-4043-a489-249a44268293';

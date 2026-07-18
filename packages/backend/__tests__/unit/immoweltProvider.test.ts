@@ -12,7 +12,9 @@ import {
   IMMOWELT_FIXTURE_SEARCH_HTML,
   IMMOWELT_FIXTURE_DETAIL_HTML,
   IMMOWELT_FIXTURE_DETAIL_HIDDEN_HTML,
+  IMMOWELT_FIXTURE_DETAIL_RENTAL_HTML,
   IMMOWELT_FIXTURE_DETAIL_URL,
+  IMMOWELT_FIXTURE_DETAIL_RENTAL_URL,
 } from '@homiio/listing-providers';
 import type { ExternalListingRef } from '@homiio/listing-providers';
 import { OfferingType, PropertyType } from '@homiio/shared-types';
@@ -128,6 +130,75 @@ describe('ImmoweltProvider', () => {
     expect(listing.address.city).toBe('Chamerau');
     expect(listing.address.street).toBe('Chamerau');
     expect(listing.address.coordinates).toBeUndefined();
+  });
+
+  // Regression for the PROD 0-image bug: the detail parser must recover the real
+  // `sections.gallery.images[].url` (immowelt CDN), plus the `sections.features`
+  // amenities and `sections.energy.features` (`yearOfConstruction`) the old parser
+  // dropped. Fixture is a real captured Fürth rental `/expose` page.
+  it('extracts real gallery images, amenities and yearBuilt from a rental detail page', () => {
+    const payload = parseImmoweltDetail(
+      IMMOWELT_FIXTURE_DETAIL_RENTAL_HTML,
+      IMMOWELT_FIXTURE_DETAIL_RENTAL_URL,
+    );
+    expect(payload.sourceId).toBe('00827e82-d512-4043-a489-249a44268293');
+    expect(payload.operation).toBe('rent');
+    expect(payload.price).toBe(930);
+    expect(payload.address.city).toBe('Fürth');
+    expect(payload.address.street).toBe('Würzburger Straße 25');
+    expect(payload.floor).toBe(1);
+    expect(payload.yearBuilt).toBe(2019);
+
+    // Every gallery URL is a real immowelt CDN asset (never a thumbnail/placeholder).
+    expect(payload.images.length).toBe(4);
+    for (const url of payload.images) {
+      expect(url).toMatch(/^https:\/\/mms\.immowelt\.de\/.+\?ci_seal=/);
+    }
+
+    // Amenities come from the `features` rows; floor/availability rows are excluded.
+    expect(payload.amenities).toBeDefined();
+    expect(payload.amenities).toContain('Personenaufzug');
+    expect(payload.amenities).toContain('Balkon');
+    expect(payload.amenities).toContain('Tiefgarage');
+    expect(payload.amenities).not.toContain('1. Geschoss');
+    expect(payload.hasElevator).toBe(true);
+    expect(payload.hasBalcony).toBe(true);
+    expect(payload.parkingType).toBe('garage');
+  });
+
+  it('re-hosts the rental gallery into remoteImages and keeps structured fields', () => {
+    const payload = parseImmoweltDetail(
+      IMMOWELT_FIXTURE_DETAIL_RENTAL_HTML,
+      IMMOWELT_FIXTURE_DETAIL_RENTAL_URL,
+    );
+    const ref: ExternalListingRef = {
+      provider: 'immowelt',
+      sourceId: payload.sourceId,
+      url: payload.url,
+    };
+    const listing = provider.normalize({ ref, payload });
+    expect(listing.offerings).toEqual([OfferingType.LONG_TERM_RENT]);
+    expect(listing.longTermRent?.monthlyAmount).toBe(930);
+    // The ingest pipeline downloads → Sharp → S3 from remoteImages; it must be non-empty.
+    expect(listing.remoteImages.length).toBe(4);
+    expect(listing.remoteImages[0]?.isPrimary).toBe(true);
+    expect(listing.remoteImages[0]?.url).toMatch(/^https:\/\/mms\.immowelt\.de\//);
+    expect(listing.yearBuilt).toBe(2019);
+    expect(listing.floor).toBe(1);
+    expect(listing.hasElevator).toBe(true);
+    expect(listing.parkingType).toBe('garage');
+    expect(listing.amenities?.length ?? 0).toBeGreaterThan(0);
+    expect(listing.contact?.agencyName).toMatch(/Schultheiß Projektentwicklung/);
+  });
+
+  it('de-duplicates repeated gallery images by stable key', () => {
+    const card = JSON.parse(IMMOWELT_FIXTURE_CARD_JSON) as Record<string, unknown>;
+    const gallery = card.gallery as { images: { url: string }[] };
+    // Inject an exact duplicate of the first image (same URL) — must collapse to one.
+    gallery.images = [gallery.images[0], gallery.images[0], gallery.images[1]];
+    const payload = parseImmoweltCard(card);
+    expect(payload.images.length).toBe(2);
+    expect(new Set(payload.images).size).toBe(2);
   });
 
   it('throws a precise reason when neither detail blob is present', () => {
