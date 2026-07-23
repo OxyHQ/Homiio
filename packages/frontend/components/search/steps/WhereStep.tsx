@@ -12,7 +12,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
-import { SearchInput } from '@oxyhq/bloom/search-input';
+import { Search } from '@oxyhq/bloom/search';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import {
@@ -161,7 +161,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
 
   return (
     <View style={compact ? styles.containerCompact : styles.container}>
-      <SearchInput
+      <Search
         value={value}
         onChangeText={handleChange}
         onClearText={handleClear}

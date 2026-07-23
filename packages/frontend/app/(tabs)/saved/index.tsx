@@ -2,7 +2,7 @@
  * Saved properties — folders + recent grid.
  *
  * Stream P polish: two-pane shell (Folders | Recent) driven by Bloom
- * SegmentedControl. SearchInput is the Bloom primitive. Category and
+ * SegmentedControl. Search is the Bloom primitive. Category and
  * recency filters use Bloom Chip. The hand-rolled "sort dropdown" plus
  * bulk-selection mode were retired in favour of a cleaner, single-purpose
  * grid view. Folder grid cards use CardSurface with a cover-photo tile
@@ -33,7 +33,7 @@ import {
   SegmentedControlItem,
   SegmentedControlItemText,
 } from '@oxyhq/bloom/segmented-control';
-import { SearchInput } from '@oxyhq/bloom/search-input';
+import { Search } from '@oxyhq/bloom/search';
 import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxyhq/services';
 import type { Property, SavedProperty } from '@homiio/shared-types';
@@ -238,7 +238,7 @@ export default function SavedPropertiesScreen() {
       {header}
 
       <View style={styles.controls}>
-        <SearchInput
+        <Search
           value={searchQuery}
           label={t('saved.searchPlaceholder')}
           onChangeText={setSearchQuery}

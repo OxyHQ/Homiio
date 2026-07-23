@@ -5,7 +5,7 @@
  * Stream Q polish:
  *   - Bloom Typography (H1/H2/H3/Text) everywhere, no raw <Text>.
  *   - Bloom Button replaces every TouchableOpacity CTA.
- *   - Bloom SearchInput replaces hand-rolled search bar.
+ *   - Bloom Search replaces hand-rolled search bar.
  *   - Flat cards with radius.lg + hairline borders, semantic tokens.
  *   - Skeleton.Box rows during load; EmptyState shared.
  */
@@ -27,7 +27,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@oxyhq/bloom/button';
-import { SearchInput } from '@oxyhq/bloom/search-input';
+import { Search } from '@oxyhq/bloom/search';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { H1, H3, Text as BloomText } from '@oxyhq/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxyhq/services';
@@ -240,7 +240,7 @@ export default function Sindi() {
 
         <View style={styles.historyBlock}>
           <H3 style={styles.historyTitle}>Chats</H3>
-          <SearchInput
+          <Search
             value={searchQuery}
             onChangeText={setSearchQuery}
             onClearText={() => setSearchQuery('')}

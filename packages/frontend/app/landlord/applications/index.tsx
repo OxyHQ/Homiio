@@ -2,7 +2,7 @@
  * Landlord applicant inbox.
  *
  * Stream Q polish:
- *   - Bloom Chip filter row + Bloom SearchInput.
+ *   - Bloom Chip filter row + Bloom Search.
  *   - Shared EmptyState / ErrorState components.
  *   - Loading uses Skeleton.Box rows.
  *   - All copy via Bloom Typography. Sections use SectionEyebrow + H3.
@@ -14,7 +14,7 @@ import { useQueries } from '@tanstack/react-query';
 import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
 import { Chip } from '@oxyhq/bloom/chip';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
-import { SearchInput } from '@oxyhq/bloom/search-input';
+import { Search } from '@oxyhq/bloom/search';
 import { useOxy, openAccountDialog } from '@oxyhq/services';
 import {
   Profile,
@@ -286,7 +286,7 @@ export default function LandlordApplicationsScreen() {
             </BloomText>
           </View>
 
-          <SearchInput
+          <Search
             value={searchQuery}
             onChangeText={setSearchQuery}
             onClearText={() => setSearchQuery('')}

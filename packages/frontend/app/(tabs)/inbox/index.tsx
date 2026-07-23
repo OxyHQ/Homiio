@@ -9,7 +9,7 @@
  *
  * Layout, top → bottom:
  *   Header (title + actions)
- *   SearchInput + All/Unread SegmentedControl   (flat controls strip)
+ *   Search + All/Unread SegmentedControl   (flat controls strip)
  *   [permission notice]   (only when notifications are disabled)
  *   [scheduled reminders] (only when present)
  *   Notification list  →  skeleton / error / empty / rows
@@ -40,7 +40,7 @@ import {
   SegmentedControlItem,
   SegmentedControlItemText,
 } from '@oxyhq/bloom/segmented-control';
-import { SearchInput } from '@oxyhq/bloom/search-input';
+import { Search } from '@oxyhq/bloom/search';
 import { H3, Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { useNotifications } from '@/context/NotificationContext';
@@ -323,7 +323,7 @@ export default function InboxScreen() {
       {header}
 
       <View style={styles.controls}>
-        <SearchInput
+        <Search
           value={searchQuery}
           label={t('notification.search.placeholder')}
           onChangeText={setSearchQuery}
