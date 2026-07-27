@@ -36,7 +36,7 @@ import { SearchModeProvider } from '@/context/SearchModeContext';
 import { RentalModeProvider } from '@/context/RentalModeContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { OxyProvider, useOxy } from '@oxyhq/services';
-import { BloomThemeProvider } from '@oxyhq/bloom';
+import { BloomProvider } from '@oxyhq/bloom/provider';
 import { ImageResolverProvider, type ImageResolver } from '@oxyhq/bloom/image-resolver';
 import {
   Provider as PortalProvider,
@@ -101,7 +101,7 @@ function MediaResolverProvider({ children }: { children: React.ReactNode }) {
 
 /**
  * The persistent visual shell (Mention shape): `SideBar · gutter · ContentPanel
- * · RightBar`. This lives BELOW `BloomThemeProvider` so it can read the unscoped
+ * · RightBar`. This lives BELOW `BloomProvider` so it can read the unscoped
  * app theme (`useTheme().colors.background`) for the panel's bleed-mask.
  *
  * There is exactly ONE scroll owner per surface and NO page-level `ScrollView`:
@@ -334,9 +334,13 @@ export default function RootLayout() {
             light-only palette, so following the OS produced a light-static /
             dark-Bloom mismatch. This provider is the single source of truth for
             theme tokens; `@oxyhq/services` 8.1.2 no longer wraps its children in
-            an internal BloomThemeProvider.
+            an internal BloomThemeProvider. `BloomProvider` mounts it for us,
+            together with the rest of Bloom's app-wide state (haptics, scroll
+            restoration, tab-bar minimize progress) so none of them can end up
+            at a different depth. `imageResolver` is not passed here: Homiio's
+            resolver needs `useOxy()`, so it stays its own provider below.
           */}
-          <BloomThemeProvider mode="light" colorPreset="yellow" fonts onFontsLoading={Platform.OS === 'web' ? <AppSplashScreen /> : null}>
+          <BloomProvider mode="light" colorPreset="yellow" fonts onFontsLoading={Platform.OS === 'web' ? <AppSplashScreen /> : null}>
           {!appIsReady ? (
             // WEB: the custom splash covers font-load + init and fades out; its
             // `onFadeComplete` gates `appIsReady`. NATIVE renders null here — the
@@ -389,7 +393,7 @@ export default function RootLayout() {
                 </RentalModeProvider>
               </QueryClientProvider>
           )}
-          </BloomThemeProvider>
+          </BloomProvider>
         </GestureHandlerRootView>
       </SafeAreaProvider>
     </View>
