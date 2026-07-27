@@ -32,7 +32,7 @@ import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useCreateEviction, useEvictionDetail, useUpdateEviction } from '@/hooks/useEvictionQueries';
 import { imageUploadService } from '@/services/imageUploadService';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 

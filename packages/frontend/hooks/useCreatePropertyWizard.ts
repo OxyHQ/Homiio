@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import i18next from 'i18next';
 import {
   UtilitiesIncluded,

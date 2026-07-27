@@ -9,7 +9,7 @@ import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { TextFieldInput } from '@oxyhq/bloom/text-field';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import { BaseWidget } from './BaseWidget';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
 import type { SavedSearchFilters } from '@/store/savedSearchesStore';

@@ -33,7 +33,7 @@ import { PropertyListHeader } from '@/components/ui/PropertyListHeader';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import { colors } from '@/styles/colors';
 import { contentClamp, radius, spacing } from '@/constants/styles';
 import { logger } from '@/utils/logger';

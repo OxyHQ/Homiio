@@ -28,7 +28,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import i18next from 'i18next';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@oxyhq/bloom/button';

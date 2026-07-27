@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@oxyhq/bloom/button';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import { shareReferralLink } from '@/utils/shareReferral';
 import { colors } from '@/styles/colors';
 import {

@@ -3,7 +3,7 @@ import { useOxy } from '@oxyhq/services';
 import { recentlyViewedService } from '@/services/recentlyViewedService';
 import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
 import { RecentlyViewedType, Property } from '@homiio/shared-types';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import i18next from 'i18next';
 
 /**

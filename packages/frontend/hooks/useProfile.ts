@@ -3,7 +3,7 @@ import i18next from 'i18next';
 import { useProfileStore } from '@/store/profileStore';
 import { Profile, UpdateProfileData } from '@/services/profileService';
 import { useOxy } from '@oxyhq/services';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import profileService from '@/services/profileService';
 
 export const useProfileActions = () => {

@@ -3,7 +3,7 @@ import {
   type SavedSearch,
   type SavedSearchFilters,
 } from '@/store/savedSearchesStore';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxyhq/services';

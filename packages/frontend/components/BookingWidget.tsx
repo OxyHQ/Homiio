@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import { Button } from '@oxyhq/bloom/button';
 import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxyhq/services';

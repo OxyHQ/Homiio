@@ -53,7 +53,7 @@ import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 import { formatRelativeTime } from '@/utils/dateLocale';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import type { Notification } from '@/services/notificationService';
 import { logger } from '@/utils/logger';
 

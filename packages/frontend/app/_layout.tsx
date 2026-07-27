@@ -13,7 +13,6 @@ import { SideBar } from '@/components/SideBar';
 import { RightBar } from '@/components/RightBar';
 import { ContentPanel } from '@oxyhq/bloom/content-panel';
 import { useTheme } from '@oxyhq/bloom/theme';
-import { Toaster } from '@/lib/sonner';
 import {
   setupNotifications,
   requestNotificationPermissions,
@@ -367,11 +366,6 @@ export default function RootLayout() {
                                     </SearchModeProvider>
                                   </MapStateProvider>
                                   <StatusBar style="auto" />
-                                  <Toaster
-                                    position="bottom-center"
-                                    swipeToDismissDirection="left"
-                                    offset={15}
-                                  />
                                 </ErrorBoundary>
                                 {/*
                                   Root overlay outlet. The mobile navigation

@@ -14,7 +14,7 @@ import { H3, Text as BloomText } from '@oxyhq/bloom/typography';
 import { ListingReportReason } from '@homiio/shared-types';
 
 import { useReportEviction } from '@/hooks/useEvictionQueries';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 

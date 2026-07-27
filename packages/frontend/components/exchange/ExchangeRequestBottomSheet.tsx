@@ -22,7 +22,7 @@ import {
   type CreateExchangeRequestData,
   type Property,
 } from '@homiio/shared-types';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import {
   AvailabilityCalendar,
   type AvailabilityCalendarRange,

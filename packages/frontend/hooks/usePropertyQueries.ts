@@ -6,7 +6,7 @@ import {
   PropertyAreaInsights,
   PropertyNearbyServices,
 } from '@homiio/shared-types';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import i18next from 'i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOxy } from '@oxyhq/services';

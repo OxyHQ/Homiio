@@ -52,7 +52,7 @@ import { shareContent } from '@/utils/share';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
 import { formatRelativeTime } from '@/utils/dateLocale';
 import { webAlert } from '@/utils/api';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 

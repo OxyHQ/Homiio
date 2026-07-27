@@ -24,7 +24,7 @@ import { useMediaQuery } from 'react-responsive';
 import { ErrorBoundary as BloomErrorBoundary } from '@oxyhq/bloom';
 import { Button } from '@oxyhq/bloom/button';
 import { H2, P, Text as BloomText } from '@oxyhq/bloom/typography';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
@@ -141,9 +141,9 @@ function ErrorFallback({
 
   const handleRetry = useCallback(() => {
     if (retryCount >= maxRetries) {
-      // Use sonner-native/sonner toasts instead of native Alert — the
-      // alert region is announced once on mount; toasts handle the "still
-      // not working" follow-up without yanking focus.
+      // Use a Bloom toast instead of a native Alert — the alert region is
+      // announced once on mount; toasts handle the "still not working"
+      // follow-up without yanking focus.
       toast(t('error.boundary.maxRetriesTitle'), {
         description: t('error.boundary.maxRetriesMessage'),
         action: {

@@ -6,7 +6,7 @@ import React, {
   useMemo,
   ReactNode,
 } from 'react';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import i18next from 'i18next';
 import { useOxy } from '@oxyhq/services';
 import savedPropertyFolderService, {

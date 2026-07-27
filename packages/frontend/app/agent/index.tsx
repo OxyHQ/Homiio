@@ -32,7 +32,7 @@ import { PartnerDashboard } from '@/components/agent/PartnerDashboard';
 import { AgentCtaBanner } from '@/components/agent/AgentCtaBanner';
 import { usePartnerMe, useJoinPartner, useReferrals, useEarnings } from '@/hooks/usePartner';
 import { shareReferralLink } from '@/utils/shareReferral';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 
 export default function AgentScreen() {
   const { t } = useTranslation();

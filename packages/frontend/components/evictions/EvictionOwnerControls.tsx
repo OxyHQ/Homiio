@@ -18,7 +18,7 @@ import { H3, Text as BloomText } from '@oxyhq/bloom/typography';
 import { EvictionCaseStatus } from '@homiio/shared-types';
 import { useCreateEvictionUpdate, useUpdateEviction } from '@/hooks/useEvictionQueries';
 import { webAlert } from '@/utils/api';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 import { EVICTION_STATUS_META } from './evictionUtils';

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import { api } from '@/utils/api';
 
 type UpdateNotesVars = { propertyId: string; notes: string };

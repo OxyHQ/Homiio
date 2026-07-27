@@ -34,7 +34,7 @@ import { useReportListingMutation } from '@/hooks/useReportMutation';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { PropertyType } from '@homiio/shared-types';
 import { ApiError } from '@/utils/api';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 

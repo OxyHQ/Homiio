@@ -23,7 +23,7 @@ import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import i18next from 'i18next';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@oxyhq/bloom/button';
 import * as Skeleton from '@oxyhq/bloom/skeleton';

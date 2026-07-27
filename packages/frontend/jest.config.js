@@ -15,8 +15,8 @@
  * so this list is a superset: it mirrors jest-expo's own defaults and then adds
  * the ESM-shipping packages this app depends on (the `@oxyhq/*` scope — whose
  * `react-native` export condition resolves to raw `.ts` source — plus
- * NativeWind, its css-interop runtime, the `sonner-native` ESM build, and the
- * `nanoid` ESM module pulled in transitively by Bloom).
+ * NativeWind, its css-interop runtime, and the `nanoid` ESM module pulled in
+ * transitively).
  */
 
 /** @type {import('jest').Config} */
@@ -47,7 +47,6 @@ module.exports = {
         '@oxyhq',
         'nativewind',
         'react-native-css-interop',
-        'sonner-native',
         // ESM-only transitive deps that surface through the above packages.
         'nanoid',
       ].join('|') +

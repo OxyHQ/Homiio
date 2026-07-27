@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxyhq/services';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 
 import { Switch } from '@oxyhq/bloom/switch';
 import {

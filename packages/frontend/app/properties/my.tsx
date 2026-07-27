@@ -33,7 +33,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useUserProperties, useDeleteProperty } from '@/hooks/usePropertyQueries';
 import { useMarkPropertyTransacted } from '@/hooks/usePartner';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import { colors } from '@/styles/colors';
 import { contentClamp, spacing } from '@/constants/styles';
 import { OfferingType, PropertyStatus, type Property } from '@homiio/shared-types';

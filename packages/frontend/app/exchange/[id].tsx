@@ -41,7 +41,7 @@ import { CardSurface } from '@/components/ui/CardSurface';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { formatLocalized } from '@/utils/dateLocale';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import { colors } from '@/styles/colors';
 import { radius, spacing, tracker } from '@/constants/styles';
 

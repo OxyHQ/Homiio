@@ -34,7 +34,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import * as Haptics from 'expo-haptics';
 import * as Linking from 'expo-linking';
 import { Ionicons } from '@expo/vector-icons';

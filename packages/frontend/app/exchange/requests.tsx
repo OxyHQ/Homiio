@@ -29,7 +29,7 @@ import {
   useMyExchangeRequests,
   useUpdateExchangeStatus,
 } from '@/hooks/useExchangeQueries';
-import { toast } from '@/lib/sonner';
+import { toast } from '@oxyhq/bloom/toast';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 
