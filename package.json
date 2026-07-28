@@ -35,7 +35,7 @@
   },
   "overrides": {
     "@oxyhq/core": "^12.10.4",
-    "@oxyhq/bloom": "^0.65.0",
+    "@oxyhq/bloom": "^0.66.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "@react-native-async-storage/async-storage": "2.2.0",
