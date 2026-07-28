@@ -13,6 +13,7 @@ import { SideBar } from '@/components/SideBar';
 import { RightBar } from '@/components/RightBar';
 import { ContentPanel } from '@oxyhq/bloom/content-panel';
 import { useTheme } from '@oxyhq/bloom/theme';
+import { ConnectionStatusToasts } from '@oxyhq/bloom/connection-status';
 import {
   setupNotifications,
   requestNotificationPermissions,
@@ -355,6 +356,14 @@ export default function RootLayout() {
               <QueryClientProvider client={queryClient}>
                 <RentalModeProvider>
                 <OxyProvider baseURL={OXY_BASE_URL} clientId={OXY_CLIENT_ID}>
+                  {/*
+                    Renders nothing itself — it just pushes to the toast store
+                    that `OxyProvider`'s own `<ToastOutlet />` renders. Mounted
+                    here (inside `BloomProvider` for theme, inside `OxyProvider`
+                    for the toast host) so a lost connection surfaces as a
+                    toast instead of a per-screen banner.
+                  */}
+                  <ConnectionStatusToasts />
                   <MediaResolverProvider>
                   <ProfileProvider>
                     <SavedPropertiesProvider>
