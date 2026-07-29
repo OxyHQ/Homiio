@@ -34,7 +34,7 @@
     "node": "22.x"
   },
   "overrides": {
-    "@oxyhq/core": "^12.10.4",
+    "@oxyhq/core": "^13.0.0",
     "@oxyhq/bloom": "^0.67.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -46,6 +46,6 @@
   },
   "cacheDirectories": [],
   "dependencies": {
-    "@oxyhq/core": "^12.10.4"
+    "@oxyhq/core": "^13.0.0"
   }
 }
