@@ -41,11 +41,18 @@ import { spacing } from '@/constants/styles';
 const MAX_DETAILS_LENGTH = 4000;
 const EMAIL_REGEX = /\S+@\S+\.\S+/;
 
+/**
+ * `OTHER` stays last so it reads as the fallback it is. `PRIVACY` and `UNSAFE`
+ * sit above it because both used to have nowhere to go but there, and a reason
+ * buried under "something else" is a reason nobody picks.
+ */
 const REASON_OPTIONS: { value: ListingReportReason; labelKey: string }[] = [
   { value: ListingReportReason.INACCURATE, labelKey: 'property.report.reason.inaccurate' },
   { value: ListingReportReason.SCAM, labelKey: 'property.report.reason.scam' },
   { value: ListingReportReason.INAPPROPRIATE, labelKey: 'property.report.reason.inappropriate' },
   { value: ListingReportReason.UNAVAILABLE, labelKey: 'property.report.reason.unavailable' },
+  { value: ListingReportReason.PRIVACY, labelKey: 'property.report.reason.privacy' },
+  { value: ListingReportReason.UNSAFE, labelKey: 'property.report.reason.unsafe' },
   { value: ListingReportReason.OTHER, labelKey: 'property.report.reason.other' },
 ];
 

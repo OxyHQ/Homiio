@@ -1382,6 +1382,8 @@
         "scam": "Posible estafa o fraude",
         "inappropriate": "Contenido inapropiado",
         "unavailable": "Ya alquilado o no disponible",
+        "privacy": "Expone la vivienda o los datos personales de alguien",
+        "unsafe": "Vivienda insegura o inhabitable",
         "other": "Otro motivo"
       }
     },

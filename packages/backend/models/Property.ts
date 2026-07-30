@@ -178,6 +178,15 @@ export interface IProperty extends Document {
   lastSaved?: Date;
   /** Soft-delete timestamp: set when the listing is archived via deleteProperty. */
   deletedAt?: Date | null;
+  /**
+   * Community-moderation state, written only by the CrowdSource enforcement
+   * service. Never present in any editable-fields allowlist — see the schema.
+   */
+  moderation?: {
+    restricted?: boolean;
+    restrictedAt?: Date;
+    restrictedByDecisionId?: string;
+  };
   parentPropertyId?: Types.ObjectId;
   rating?: {
     average: number;

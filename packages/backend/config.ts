@@ -1,3 +1,41 @@
+import type { ModerationEnforcementMode } from '@homiio/shared-types';
+
+/**
+ * A positive integer from the environment, clamped to a sane band.
+ *
+ * A batch size of zero drains nothing and a poll interval of zero spins a task
+ * at 100% CPU; both are typos rather than intentions, so they are corrected
+ * rather than obeyed.
+ */
+function boundedInteger(
+  raw: string | undefined,
+  fallback: number,
+  minimum: number,
+  maximum: number,
+): number {
+  const parsed = parseInt(raw || '', 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(Math.max(parsed, minimum), maximum);
+}
+
+const CROWDSOURCE_ENFORCEMENT_MODES: readonly ModerationEnforcementMode[] = [
+  'observe',
+  'manual',
+  'automatic',
+];
+
+/**
+ * The configured enforcement mode, or `observe`.
+ *
+ * An unrecognised value falls back to `observe` rather than throwing: a typo in
+ * a deploy variable must never be able to escalate what Homiio does to a
+ * listing, and the safest reading of a mode nobody recognises is "do nothing".
+ */
+function crowdSourceEnforcementMode(raw: string | undefined): ModerationEnforcementMode {
+  const candidate = (raw || '').trim();
+  return CROWDSOURCE_ENFORCEMENT_MODES.find((mode) => mode === candidate) || 'observe';
+}
+
 export interface Config {
   environment: string;
   port: number | string;
@@ -140,6 +178,43 @@ export interface Config {
      * same way.
      */
     userAgent: string;
+  };
+  /**
+   * CrowdSource participatory moderation — reports leave Homiio for a randomly
+   * drawn jury, and signed decisions come back.
+   *
+   * The variable names come from the PACKAGES, not from any plan document:
+   * `@oxyhq/crowdsource` reads `CROWDSOURCE_SERVICE_KEY` and
+   * `CROWDSOURCE_BASE_URL`, `@oxyhq/crowdsource-express` reads
+   * `CROWDSOURCE_WEBHOOK_SECRET` and `CROWDSOURCE_WEBHOOK_SECRET_PREVIOUS`.
+   *
+   * There is deliberately NO `CROWDSOURCE_APP_ID`. The `applicationId` is read
+   * off the service credential and no surface in the SDK can carry one, so a
+   * variable holding it could only ever disagree with the credential — and a
+   * request able to name its own tenant is the cross-tenant hole the whole
+   * credential model exists to close.
+   */
+  crowdSource: {
+    enabled: boolean;
+    /** `applicationId:credentialId:secret` as ONE opaque value. */
+    serviceKey?: string;
+    /** Optional; the SDK defaults to the single deployment. */
+    baseUrl?: string;
+    webhookSecret?: string;
+    /** Both secrets are accepted while one is being rotated. */
+    webhookPreviousSecret?: string;
+    outboxBatchSize: number;
+    outboxPollIntervalMs: number;
+    /**
+     * How much of a decision Homiio may act on.
+     *
+     * `observe` is the default and the first deployment: decisions are received,
+     * stored and PLANNED, every planned action is recorded as not applied, and
+     * no listing is ever taken down. The mode is auditable rather than a no-op
+     * precisely because the plan and the record are identical to production —
+     * you can read exactly what would have happened before allowing it to.
+     */
+    enforcementMode: ModerationEnforcementMode;
   };
 }
 
@@ -315,7 +390,52 @@ const config: Config = {
     apiUrl: process.env.OVERPASS_API_URL || 'https://overpass-api.de/api/interpreter',
     // OSM requires a descriptive, identifying User-Agent on every request.
     userAgent: process.env.OVERPASS_USER_AGENT || process.env.GEOCODING_USER_AGENT || 'Homiio/1.0 (+https://homiio.com)',
-  }
+  },
+
+  // CrowdSource participatory moderation. Off by default: an unconfigured
+  // deployment still STORES every report and still keeps its delivery events, so
+  // switching this on delivers the backlog rather than stranding it.
+  crowdSource: {
+    enabled: process.env.CROWDSOURCE_ENABLED === 'true',
+    serviceKey: process.env.CROWDSOURCE_SERVICE_KEY,
+    baseUrl: process.env.CROWDSOURCE_BASE_URL,
+    webhookSecret: process.env.CROWDSOURCE_WEBHOOK_SECRET,
+    webhookPreviousSecret: process.env.CROWDSOURCE_WEBHOOK_SECRET_PREVIOUS,
+    outboxBatchSize: boundedInteger(process.env.CROWDSOURCE_OUTBOX_BATCH_SIZE, 50, 1, 500),
+    outboxPollIntervalMs: boundedInteger(
+      process.env.CROWDSOURCE_OUTBOX_POLL_INTERVAL_MS,
+      5_000,
+      250,
+      300_000,
+    ),
+    enforcementMode: crowdSourceEnforcementMode(process.env.CROWDSOURCE_ENFORCEMENT_MODE),
+  },
 };
+
+/**
+ * A half-configured integration is worse than a disabled one.
+ *
+ * With a service key and no webhook secret, reports leave Homiio and no decision
+ * can ever be verified coming back; with a webhook secret and no service key,
+ * nothing ever leaves. Either way the gap is invisible until somebody wonders
+ * months later why a case never returned, so both directions are required
+ * together and the process refuses to boot without them.
+ *
+ * Thrown at module load rather than checked at the first delivery: a
+ * misconfiguration that surfaces on deploy is a rollback, and one that surfaces
+ * on the first report is lost moderation work.
+ */
+if (config.crowdSource.enabled) {
+  const missing = [
+    config.crowdSource.serviceKey ? null : 'CROWDSOURCE_SERVICE_KEY',
+    config.crowdSource.webhookSecret ? null : 'CROWDSOURCE_WEBHOOK_SECRET',
+  ].filter((name): name is string => name !== null);
+  if (missing.length > 0) {
+    throw new Error(
+      `CROWDSOURCE_ENABLED=true requires ${missing.join(' and ')}. Reports would leave ` +
+        'Homiio with no way for a decision to come back, or never leave at all.',
+    );
+  }
+}
 
 export default config;

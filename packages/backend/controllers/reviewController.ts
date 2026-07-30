@@ -24,7 +24,11 @@ import { Review, Agency, Property, Address } from '../models';
 import { forwardGeocode } from '../services/geocodingService';
 import { getErrorName, getValidationMessages } from '../utils/errors';
 import { getRequiredOxyUserId, getOxyUserId } from '@oxyhq/core/server';
-import { ReviewReportReason, ReviewModerationStatus } from '@homiio/shared-types';
+import {
+  ReviewReportReason,
+  ReviewModerationStatus,
+  ModerationReportedType,
+} from '@homiio/shared-types';
 import { pickFields } from '../utils/pickFields';
 import { CREATABLE_REVIEW_FIELDS, EDITABLE_REVIEW_FIELDS } from './review/editableFields';
 import { toReviewDTO } from './review/toReviewDTO';
@@ -33,6 +37,11 @@ import { normalizeAgencyName, escapeRegex } from '../utils/agencyName';
 import { logger } from '../middlewares/logging';
 import { serializePropertyAddresses, ADDRESS_GEO_POPULATE } from '../services/propertyAddressSerializer';
 import { serializePropertyImages } from '../services/imageSerializer';
+import {
+  createModerationReport,
+  DuplicateModerationReportError,
+  withReportIntakeSession,
+} from '../services/moderation/ReportIntakeService';
 
 const ok = (res: Response, data: Record<string, unknown>) => res.status(200).json({ success: true, ...data });
 const created = (res: Response, data: Record<string, unknown>) => res.status(201).json({ success: true, ...data });
@@ -644,11 +653,47 @@ export const reportReview = async (req: Request, res: Response) => {
     });
 
     // Escalate to moderation once enough distinct users have reported it.
+    // Homiio's own community counter, unchanged: it is a signal the reviewers
+    // raised, separate from anything a jury later decides.
     if (review.reports.length >= REPORTS_TO_UNDER_REVIEW && review.moderationStatus === ReviewModerationStatus.ACTIVE) {
       review.moderationStatus = ReviewModerationStatus.UNDER_REVIEW;
     }
 
-    await review.save();
+    /**
+     * The embedded report and the durable delivery record commit together.
+     *
+     * An embedded subdocument declared `{ _id: false }` cannot be an
+     * `externalReportId`, which is why the delivery record is a separate
+     * collection at all — and why the two must be written in one transaction.
+     * Split, a crash between them leaves either a report a jury will never see
+     * or a delivery record for a report that was rolled back, and neither
+     * surfaces as an error when it happens.
+     */
+    try {
+      await withReportIntakeSession(async (session) => {
+        await review.save({ session });
+        await createModerationReport(
+          {
+            reportedType: ModerationReportedType.REVIEW,
+            reportedId: reviewId,
+            reporter: oxyUserId,
+            reason,
+            details: trimmedDetails || undefined,
+          },
+          session,
+        );
+      });
+    } catch (error) {
+      /**
+       * The embedded array said this reporter had not reported it, but the
+       * delivery record disagrees — a report filed before the two were written
+       * together. Answered as the no-op it is, matching the branch above.
+       */
+      if (error instanceof DuplicateModerationReportError) {
+        return ok(res, { message: 'Report already submitted', moderationStatus: review.moderationStatus });
+      }
+      throw error;
+    }
 
     return created(res, { message: 'Report submitted', moderationStatus: review.moderationStatus });
   } catch (error) {
@@ -666,6 +711,21 @@ interface AgencyLike {
   name: string;
   slug: string;
 }
+
+/**
+ * A published, publicly-visible listing, as an agency page counts and lists one.
+ *
+ * Shared by the count and the page so the two can never disagree — a total that
+ * exceeded the listings actually shown would read as a pagination bug. The
+ * moderation clause is `$ne: true` rather than `false` for the reason given in
+ * `controllers/property/publicVisibility.ts`: listings written before the field
+ * existed carry no `moderation` subdocument at all.
+ */
+const PUBLIC_AGENCY_LISTING_FILTER = {
+  status: 'published',
+  deletedAt: null,
+  'moderation.restricted': { $ne: true },
+} as const;
 
 function toAgencySummary(agency: AgencyLike): { id: string; name: string; slug: string } {
   return { id: String(agency._id), name: agency.name, slug: agency.slug };
@@ -704,7 +764,7 @@ export const getAgencyBySlug = async (req: Request, res: Response) => {
 
     const [stats, listingsCount] = await Promise.all([
       Review.getAgencyStats(agency._id),
-      Property.countDocuments({ agencyId: agency._id, status: 'published', deletedAt: null }),
+      Property.countDocuments({ ...PUBLIC_AGENCY_LISTING_FILTER, agencyId: agency._id }),
     ]);
 
     return ok(res, {
@@ -764,7 +824,7 @@ export const getAgencyProperties = async (req: Request, res: Response) => {
       return notFound(res, { message: 'Agency not found' });
     }
 
-    const filter = { agencyId: agency._id, status: 'published', deletedAt: null };
+    const filter = { ...PUBLIC_AGENCY_LISTING_FILTER, agencyId: agency._id };
     const skip = (page - 1) * limit;
 
     const [properties, total] = await Promise.all([

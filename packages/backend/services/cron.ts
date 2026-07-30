@@ -6,6 +6,8 @@ import { MetricsService } from '../utils/metrics';
 import { syncCovers } from './cityCoverSyncService';
 import { repairCorruptCityCoordinates } from './cityCoordinateRepairService';
 import { sendEvictionOutcomeReminders } from './evictionOutcomeReminderService';
+import { reconcileModerationReports } from './moderation/ModerationReconciliation';
+import config from '../config';
 import { Property } from '../models';
 
 // Initialize services
@@ -40,12 +42,14 @@ class CronJobManager {
     this.setupCleanupJob();
     this.setupCityCoverSyncJob();
     this.setupEvictionOutcomeReminderJob();
+    this.setupModerationReconciliationJob();
     // Boot sweeps: repair mangled coords + start Wikimedia cover backfill
     // without waiting for the top of the hour.
     void this.runBootHousekeeping();
 
     this.logger.info(
-      'Cron jobs initialized (health + cleanup + city covers + eviction reminders; scrape loop retired)',
+      'Cron jobs initialized (health + cleanup + city covers + eviction reminders + ' +
+        'moderation reconciliation; scrape loop retired)',
     );
   }
 
@@ -153,6 +157,56 @@ class CronJobManager {
     this.jobs.set('evictionOutcomeReminders', job);
     this.jobStatus.set('evictionOutcomeReminders', { isRunning: true, lastRun: undefined, nextRun: undefined });
     job.start();
+  }
+
+  /**
+   * Setup the CrowdSource reconciliation sweep — every 15 minutes.
+   *
+   * The outbox DISPATCHER runs continuously on every task; this is the separate
+   * question of whether the outbox still agrees with the reports. It re-derives
+   * a delivery event for a report that lost one, and COUNTS the three
+   * divergences it must not act on: dead-lettered deliveries (re-queueing would
+   * spin), cases that have gone quiet, and reports stored with no route to
+   * review at all.
+   *
+   * Skipped entirely when the integration is off — with nothing delivering,
+   * every queued report would be counted as a divergence every quarter hour.
+   */
+  private setupModerationReconciliationJob(): void {
+    if (!config.crowdSource.enabled) return;
+
+    const job = cron.schedule('*/15 * * * *', async () => {
+      await this.runModerationReconciliation();
+    }, {
+      timezone: 'UTC',
+      scheduled: false,
+    });
+
+    this.jobs.set('moderationReconciliation', job);
+    this.jobStatus.set('moderationReconciliation', { isRunning: true, lastRun: undefined, nextRun: undefined });
+    job.start();
+  }
+
+  /**
+   * One reconciliation sweep. Bounded and idempotent, so a second task running
+   * it concurrently costs a duplicate scan and nothing else.
+   */
+  private async runModerationReconciliation(): Promise<void> {
+    const status = this.jobStatus.get('moderationReconciliation');
+    if (status) {
+      status.lastRun = new Date();
+      status.isRunning = true;
+    }
+
+    try {
+      await reconcileModerationReports();
+    } catch (error) {
+      // Logged, never rethrown: an unhandled rejection inside a cron tick takes
+      // the process down, and a failed sweep is recoverable by the next one.
+      this.logger.error('Moderation reconciliation sweep failed', error);
+    } finally {
+      if (status) status.isRunning = false;
+    }
   }
 
   /**

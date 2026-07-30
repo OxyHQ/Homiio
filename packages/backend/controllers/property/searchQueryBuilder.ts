@@ -14,6 +14,7 @@
 
 import { Types, type FilterQuery, type SortOrder } from 'mongoose';
 import { PropertyType, PropertyStatus, OfferingType, ExchangeMode } from '@homiio/shared-types';
+import { excludeModerationRestricted } from './publicVisibility';
 
 // ---- Per-offering price fields ----
 /** Mongo field path holding the price for each offering. */
@@ -379,9 +380,11 @@ export function buildSearchPlan(
 ): { filter: PropertyFilter; params: ParsedSearchParams } {
   const filter: PropertyFilter = {};
 
-  // Public search: never surface soft-deleted (archived) listings, regardless
-  // of any explicit `status` value the caller passes.
+  // Public search: never surface soft-deleted (archived) listings, nor ones a
+  // community jury has restricted — regardless of any explicit `status` value
+  // the caller passes.
   filter.deletedAt = null;
+  excludeModerationRestricted(filter);
 
   // --- Status / availability (also excludes drafts) ---
   applyStatusFilter(filter, asString(query.status));

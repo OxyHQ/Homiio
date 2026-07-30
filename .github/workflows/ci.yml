@@ -1,0 +1,90 @@
+# Backend CI — the first workflow in this repository that runs on a pull request.
+#
+# Until this existed, `deploy-aws.yml` and `deploy-frontends.yml` were the only
+# workflows and both are `push: [main]`, so the checks on a PR were CodeQL,
+# Socket and Cursor — and **nothing executed the test suite or the typechecker**.
+# Every guard in the backend was therefore a comment as far as the next pull
+# request was concerned.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A superseded run proves nothing about the commit that replaced it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    env:
+      # PINNED, because an unpinned harness silently changes what CI tests.
+      # mongodb-memory-server 11.2.0 defaults to this today; a patch release that
+      # moves its default would swap the server under the suite with no diff to
+      # show for it. This is also the version the suite was verified against, and
+      # the same major line as production (MongoDB 8).
+      MONGOMS_VERSION: 8.2.6
+      # Keep the download inside the workspace so the cache step below can see it.
+      MONGOMS_DOWNLOAD_DIR: ${{ github.workspace }}/.cache/mongodb-binaries
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          # Same bun as deploy-frontends.yml. A lockfile read by two different
+          # bun versions is how `lockfile had changes, but lockfile is frozen`
+          # arrives in a deploy that changed nothing.
+          bun-version: "1.3.14"
+
+      # ~200 MB, and every run needs it because the suite requires a replica set.
+      # Keyed on the pinned version, so changing the pin fetches once and then
+      # hits for every subsequent run.
+      - name: Cache mongod binary
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-${{ env.MONGOMS_VERSION }}
+
+      - name: Install
+        run: bun install
+
+      # `--frozen-lockfile` is NOT used, deliberately: it exits 0 on the desyncs
+      # that actually reach main (a widened range the lockfile can still satisfy,
+      # a workspace version bumped without regenerating). A plain install
+      # followed by asking git whether the lockfile moved is the check that
+      # catches a package.json change shipped without its lockfile.
+      - name: Lockfile is in sync
+        run: |
+          if ! git diff --quiet -- bun.lock; then
+            echo "::error::bun.lock changed during install — commit it alongside the package.json change."
+            git --no-pager diff --stat -- bun.lock
+            exit 1
+          fi
+
+      # `shared-types` is built by the root postinstall; `listing-providers` is
+      # not, and the backend typecheck resolves it through project references —
+      # without this, tsc reports TS6305 in files nobody touched, which reads
+      # exactly like somebody else's broken commit.
+      - name: Build listing-providers
+        run: bun run --filter @homiio/listing-providers build
+
+      # Pointed at the BACKEND project, never the root `tsconfig.json`: the root
+      # is composite and references the frontend, so a root typecheck would be
+      # permanently red and teach everyone to ignore a red job.
+      #
+      # Note this does NOT cover `__tests__` — the backend project excludes it so
+      # tests stay out of `dist`, and ts-jest transpiles with `isolatedModules`.
+      # `bun run --cwd packages/backend typecheck:tests` is the tool for that; it
+      # is not a gate yet because it reports 99 pre-existing errors in test files
+      # that have never been typechecked by anything.
+      - name: Typecheck backend
+        run: bun x tsc --noEmit -p packages/backend/tsconfig.json
+
+      - name: Test backend
+        run: bun run --cwd packages/backend test
