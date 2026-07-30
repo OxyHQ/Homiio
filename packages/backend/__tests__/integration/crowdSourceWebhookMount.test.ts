@@ -4,18 +4,34 @@
  * A CrowdSource webhook signature covers the raw request body. Once a JSON
  * parser has consumed the stream those bytes no longer exist, and a receiver
  * mounted behind one can only ever verify a signature over a re-serialisation —
- * which is not the same string, so every real delivery would be refused and
- * every decision would sit on a retry schedule until it expired.
+ * which is not the same string.
  *
  * `server.ts` mounts `/webhooks` before every body parser. Nothing about that
  * ordering is enforced by a type, a lint rule or a test framework, so it is
- * enforced here: the assertion is that by the time the route runs, NOTHING
- * upstream has touched `req.body`.
+ * enforced here.
  *
- * MUTATION GUARD — move `app.use('/webhooks', …)` in `server.ts` below the
- * `bodyParser.json` mount and the first test must fail. It does: `req.body`
- * becomes a parsed object rather than `undefined`, which is exactly the state
- * the middleware refuses to verify from.
+ * ## The assertion has to be "no parser ran", not "verification worked"
+ *
+ * Whether a late mount fails LOUDLY or SILENTLY is decided by middleware this
+ * integration does not own, and all three arrangements exist across the Oxy
+ * apps. `readRawBody` in `@oxyhq/crowdsource-express` prefers a Buffer on
+ * `req.rawBody`: an app using `express.json({ verify })` leaves one, so a late
+ * mount VERIFIES the parser's bytes, answers 200 and looks perfect — the guard
+ * could be deleted and nothing would break.
+ *
+ * **Homiio is the loud case, and that was checked rather than assumed.**
+ * `server.ts` builds its parsers as plain `bodyParser.json({ limit: '1mb' })`
+ * with no `verify` hook, and the only `req.rawBody` assignment in the file is
+ * inside the Stripe route, from `bodyParser.raw`, scoped to
+ * `/api/billing/webhook`. So nothing hands this route a Buffer and a late mount
+ * refuses every delivery. Confirmed behaviourally too: mounting the parser first
+ * in the app below fails five of these tests.
+ *
+ * That is a property of today's `server.ts`, not of the invariant — add a
+ * `verify` hook for some unrelated reason and Homiio becomes the silent case
+ * overnight. So the assertion below is `typeof req.body === 'undefined'`, which
+ * proves NO PARSER RAN. Asserting that verification failed would only be true in
+ * the arrangement Homiio happens to have today.
  */
 
 import express, { type Express, type Request } from 'express';
@@ -185,9 +201,33 @@ describe('crowdsource webhook mount', () => {
     ['an outright forged signature', { signature: `sha256=${'0'.repeat(64)}` }],
   ])('refuses %s and records nothing', async (_name, overrides) => {
     const observed: { body: unknown } = { body: 'never set' };
+    const event = envelope({
+      id: 'evt_bad',
+      type: 'case.created',
+      data: { caseId: 'case_bad' },
+    });
+
+    /**
+     * POSITIVE CONTROL, and it is the point of this test rather than decoration.
+     *
+     * A refusal assertion proves nothing unless the SAME request is otherwise
+     * accepted: a 400 from the envelope failing to parse looks identical to a
+     * 400 from the signature check, so a test built on a malformed event would
+     * report a working signature guard that had never run. This delivers the
+     * identical event, correctly signed, and requires it through.
+     */
+    const control = signWebhookDelivery({ secret: WEBHOOK_SECRET, event });
+    const accepted = await request(buildApp(observed))
+      .post('/webhooks/crowdsource')
+      .set({ ...control.headers })
+      .send(control.body);
+    expect(accepted.status).toBeLessThan(300);
+    expect(await ModerationEvent.countDocuments({})).toBe(1);
+    await ModerationEvent.deleteMany({});
+
     const signed = signWebhookDelivery({
       secret: overrides.wrongSecret ?? WEBHOOK_SECRET,
-      event: envelope({ id: 'evt_bad', type: 'case.created', data: { caseId: 'case_bad' } }),
+      event,
       ...(overrides.expired ? { timestampSeconds: Math.floor(Date.now() / 1000) - 3_600 } : {}),
       ...(overrides.tamperedBody ? { tamperedBody: overrides.tamperedBody } : {}),
       ...(overrides.signature ? { signature: overrides.signature } : {}),
