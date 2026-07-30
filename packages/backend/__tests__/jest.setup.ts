@@ -46,6 +46,14 @@ process.env.PUBLIC_API_URL = process.env.PUBLIC_API_URL || 'https://api.homiio.t
  */
 process.env.CROWDSOURCE_WEBHOOK_SECRET =
   process.env.CROWDSOURCE_WEBHOOK_SECRET || 'test-webhook-secret-at-least-16-chars';
+/**
+ * The rotation secret, set for the same reason: `config` captures it once at
+ * module load, so a test cannot introduce it later. Without this the route omits
+ * `previousSecret` entirely and the rotation path — the one that runs for the
+ * first time during a rotation somebody scheduled — would never be exercised.
+ */
+process.env.CROWDSOURCE_WEBHOOK_SECRET_PREVIOUS =
+  process.env.CROWDSOURCE_WEBHOOK_SECRET_PREVIOUS || 'test-previous-secret-at-least-16-chars';
 
 let mongoServer: MongoMemoryReplSet | undefined;
 
