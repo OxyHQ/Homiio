@@ -52,6 +52,7 @@ import { decisionApplyEventId } from '../../services/moderation/ModerationOutbox
 
 /** Must match what `__tests__/jest.setup.ts` puts in the environment. */
 const WEBHOOK_SECRET = 'test-webhook-secret-at-least-16-chars';
+const PREVIOUS_SECRET = 'test-previous-secret-at-least-16-chars';
 
 /**
  * The app in the SAME order `server.ts` uses: webhook first, parsers after.
@@ -364,6 +365,101 @@ describe('crowdsource webhook mount', () => {
     expect(stored).not.toBeNull();
     expect(stored?.state).toBe('ignored');
     expect(await ModerationOutbox.countDocuments({})).toBe(0);
+  });
+
+  /**
+   * Does HOMIIO pass its secret through, or do these tests only prove the SDK
+   * can verify a signature?
+   *
+   * `configuredSecrets` in `@oxyhq/crowdsource-express` is
+   * `options.secret ?? process.env.CROWDSOURCE_WEBHOOK_SECRET`, and
+   * `jest.setup.ts` sets that variable — so deleting `secret:` from the route
+   * leaves the SDK falling back to the identical value and **every other test in
+   * this file stays green.** Measured, not assumed: with the pass-through
+   * removed, all twelve passed.
+   *
+   * The discriminator is to make the two sources DISAGREE. `config` captured the
+   * real secret at module load; moving `process.env` afterwards means only a
+   * receiver reading its own configuration can still verify. A receiver leaning
+   * on the environment now holds a different string and refuses.
+   *
+   * This is not a contrived arrangement — it is the production one. The
+   * environment is where the secret comes FROM, config is the authority the
+   * route reads, and the two diverging is exactly what a redeploy-less rotation
+   * looks like.
+   */
+  it('verifies with the secret Homiio configured, not the SDK’s environment fallback', async () => {
+    const observed: { body: unknown } = { body: 'never set' };
+    const delivery = signedDelivery(
+      envelope({ id: 'evt_passthrough', type: 'case.created', data: { caseId: 'case_pt' } }),
+    );
+
+    const realEnv = process.env.CROWDSOURCE_WEBHOOK_SECRET;
+    process.env.CROWDSOURCE_WEBHOOK_SECRET = 'an-entirely-different-environment-secret';
+    try {
+      const res = await request(buildApp(observed))
+        .post('/webhooks/crowdsource')
+        .set(delivery.headers)
+        .send(delivery.body);
+
+      expect(res.status).toBeLessThan(300);
+      // The side effect, not the status: a 200 that wrote nothing would agree
+      // with a receiver that had verified nothing.
+      expect(await ModerationEvent.findById('evt_passthrough').lean()).not.toBeNull();
+    } finally {
+      process.env.CROWDSOURCE_WEBHOOK_SECRET = realEnv;
+    }
+  });
+
+  /**
+   * The rotation path, which otherwise runs for the first time in production
+   * during a rotation somebody scheduled.
+   *
+   * Both secrets are accepted while one is being retired. Same environment
+   * divergence as above, so this also proves `previousSecret` reaches the
+   * middleware from Homiio's config rather than from the SDK's own
+   * `CROWDSOURCE_WEBHOOK_SECRET_PREVIOUS` fallback.
+   */
+  it('accepts a delivery signed with the previous secret during a rotation', async () => {
+    const observed: { body: unknown } = { body: 'never set' };
+    const signed = signWebhookDelivery({
+      secret: PREVIOUS_SECRET,
+      event: envelope({ id: 'evt_rotating', type: 'case.created', data: { caseId: 'case_rot' } }),
+    });
+
+    const realEnv = process.env.CROWDSOURCE_WEBHOOK_SECRET_PREVIOUS;
+    process.env.CROWDSOURCE_WEBHOOK_SECRET_PREVIOUS = 'an-entirely-different-previous-secret';
+    try {
+      const res = await request(buildApp(observed))
+        .post('/webhooks/crowdsource')
+        .set({ ...signed.headers })
+        .send(signed.body);
+
+      expect(res.status).toBeLessThan(300);
+      expect(await ModerationEvent.findById('evt_rotating').lean()).not.toBeNull();
+    } finally {
+      process.env.CROWDSOURCE_WEBHOOK_SECRET_PREVIOUS = realEnv;
+    }
+  });
+
+  /**
+   * And a secret that was never configured at all is still refused — otherwise
+   * the two tests above would pass for a receiver that accepted anything.
+   */
+  it('refuses a delivery signed with a secret nobody configured', async () => {
+    const observed: { body: unknown } = { body: 'never set' };
+    const signed = signWebhookDelivery({
+      secret: 'a-secret-this-deployment-has-never-held',
+      event: envelope({ id: 'evt_stranger', type: 'case.created', data: { caseId: 'case_str' } }),
+    });
+
+    const res = await request(buildApp(observed))
+      .post('/webhooks/crowdsource')
+      .set({ ...signed.headers })
+      .send(signed.body);
+
+    expect((res.body as { rejection?: string }).rejection).toBe('signature_mismatch');
+    expect(await ModerationEvent.countDocuments({})).toBe(0);
   });
 
   it('deduplicates a redelivery of the same event', async () => {
