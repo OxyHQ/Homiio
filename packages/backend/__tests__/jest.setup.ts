@@ -30,6 +30,23 @@ import { MongoMemoryReplSet } from 'mongodb-memory-server';
 // validator during tests (a bare localhost host can trip `validator.isURL`).
 process.env.PUBLIC_API_URL = process.env.PUBLIC_API_URL || 'https://api.homiio.test';
 
+/**
+ * The CrowdSource webhook route refuses to mount without a secret — an
+ * unconfigured deployment 404s there, which is indistinguishable from not having
+ * the feature, which is what it is.
+ *
+ * `config` reads the environment ONCE at module load, so a test's own
+ * `beforeEach` sets this far too late: by then the route has already decided not
+ * to exist. Declaring it here is the only point early enough.
+ *
+ * `CROWDSOURCE_ENABLED` is deliberately left unset. Tests exercise intake,
+ * delivery and enforcement by calling them directly; the background dispatcher
+ * and the reconciliation sweep must stay switched off, or every suite would race
+ * a poller draining the collections it is asserting on.
+ */
+process.env.CROWDSOURCE_WEBHOOK_SECRET =
+  process.env.CROWDSOURCE_WEBHOOK_SECRET || 'test-webhook-secret-at-least-16-chars';
+
 let mongoServer: MongoMemoryReplSet | undefined;
 
 beforeAll(async () => {

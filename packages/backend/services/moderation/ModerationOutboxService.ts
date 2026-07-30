@@ -137,7 +137,23 @@ export async function enqueueModerationOutboxEvent(
         updatedAt: now,
       },
     },
-    { upsert: true, session },
+    /**
+     * `timestamps: false` is REQUIRED here, and it is not a preference.
+     *
+     * Mongoose's automatic timestamps add `$set: { updatedAt }` to an upsert
+     * alongside the `$setOnInsert: { updatedAt }` above, and MongoDB refuses a
+     * document that writes one path through two operators —
+     * "Updating the path 'updatedAt' would create a conflict at 'updatedAt'".
+     * The enqueue throws, the whole intake transaction aborts, and the reporter
+     * gets a 500 on every single report. It is caught here only because this
+     * runs against a real replica set; a mocked model would sail past it.
+     *
+     * Turning them off rather than deleting the explicit fields also keeps the
+     * property that makes this an upsert at all: a repeated enqueue for the same
+     * event id must be a complete no-op, and Mongoose's `$set: { updatedAt }`
+     * would touch a row that already exists.
+     */
+    { upsert: true, session, timestamps: false },
   );
   return input.eventId;
 }
