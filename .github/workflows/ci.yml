@@ -13,8 +13,9 @@
 #     for nobody, and a suite that runs zero tests exits 0, so every job that
 #     runs one carries a count floor.
 #   - A push to main still deployed to production ECS and to Cloudflare Pages
-#     regardless of this workflow. Both deploys now start from `workflow_run` on
-#     this workflow's success — see the header of each.
+#     regardless of this workflow. Both are gated on it now, by two DIFFERENT
+#     mechanisms and for a measured reason — see `deploy-backend` at the bottom
+#     of this file and the header of deploy-frontends.yml.
 name: CI
 
 on:
@@ -195,3 +196,42 @@ jobs:
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
           NODE_ENV: production
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # The backend deploy runs HERE, as a called workflow, rather than from its own
+  # `workflow_run` trigger like the frontend's.
+  #
+  # That asymmetry is not a preference, it is a measured failure. On e94bd65,
+  # deploy-aws.yml on `workflow_run` produced `conclusion: action_required` with
+  # ZERO jobs created, twice, `created_at == updated_at` — concluded before
+  # scheduling anything, including its own ubuntu-latest scope job, so it was not
+  # an `if:` declining. deploy-frontends.yml on the identical trigger, in the same
+  # repository and the same instant, ran to success. The full list of what that
+  # excludes is in deploy-aws.yml's header; the cause is NOT established.
+  #
+  # Calling the workflow removes the failing mechanism instead of working around
+  # it, and is a stronger gate besides: the deploy cannot start unless every job
+  # below passed in THIS run, with no window in which main moves on between CI
+  # concluding and the deploy resolving a SHA.
+  #
+  # The property that matters most, though, is that it fails LOUDLY. A blocked or
+  # failing deploy now appears as a job inside the CI run on main. The mechanism
+  # this replaces failed in a separate run that quietly said action_required and
+  # that nobody was watching — silence was the real defect, more than the block.
+  #
+  # deploy-frontends.yml is deliberately left on `workflow_run`: it demonstrably
+  # works, and rewiring a working production deploy for symmetry is risk taken for
+  # tidiness. If it ever shows the same conclusion, move it here too.
+  # ─────────────────────────────────────────────────────────────────────────
+  deploy-backend:
+    name: Deploy backend to AWS
+    needs: [backend, frontend, lockfile, frontend-bundle]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write
+      contents: read
+    # The deploy syncs GitHub secrets to SSM with `toJSON(secrets)`, so it needs
+    # the caller's secrets; without `inherit` that object is empty and the sync
+    # silently writes nothing while reporting success.
+    secrets: inherit
+    uses: ./.github/workflows/deploy-aws.yml

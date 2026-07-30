@@ -2,32 +2,42 @@
 # and substitute homiio (ecs service + ecr repo name) and packages/backend/Dockerfile (path).
 name: Deploy to AWS
 
-# UNGATED AGAIN, DELIBERATELY AND TEMPORARILY. #251 moved this to `workflow_run`
-# on CI so a push could not reach production ECS untested. In this repository
-# that trigger does not merely gate the deploy — it BLOCKS it: both
-# workflow_run-triggered runs concluded `action_required` with ZERO jobs created,
-# before the scope job or anything else was scheduled. deploy-frontends.yml on
-# the identical trigger ran to success in the same instant, so the mechanism
-# works here in general; something about this workflow specifically does not.
+# GATED ON CI, but CALLED rather than triggered. `ci.yml` invokes this with
+# `uses: ./.github/workflows/deploy-aws.yml` once every one of its jobs has
+# passed on a push to main.
 #
-# This file is therefore restored byte-for-byte to its last known-good state
-# (2aca446), because a deploy path that is dead AND SILENT is worse than an
-# ungated one — the failure appears in a separate run nobody watches. A gate that
-# does not block deploys is coming back in a follow-up, as a workflow CALLED from
-# ci.yml rather than triggered by it. Do not re-add `workflow_run` here without
-# first proving on main that it schedules jobs.
+# WHY NOT `workflow_run`, WHICH IS THE OBVIOUS ANSWER AND IS WHAT
+# deploy-frontends.yml USES: it was tried, on main, and it does not gate this
+# workflow — it BLOCKS it. Both runs concluded `action_required` with ZERO jobs
+# created and `created_at == updated_at`, before the scope job or anything else
+# was scheduled, while every push-triggered run of the same file succeeded and
+# deploy-frontends.yml on the identical trigger ran to success in the same
+# instant. Excluded by evidence: the YAML shape and `id-token: write`
+# (CrowdSource runs an equivalent file on `workflow_run` and schedules fine),
+# the ARM runner (this file's own push runs use it), rulesets, environment
+# protection rules and deployment branch policies (none in either repo), and
+# repo-level Actions settings (byte-identical between the two repos). The cause
+# is NOT established. Do not re-add `workflow_run` here on the strength of an
+# argument; the only acceptable evidence is a green scheduled run on main.
+#
+# `workflow_dispatch` is unchanged and remains the escape hatch: if CI itself
+# breaks, a deploy can still be forced by hand from any ref, and the scope filter
+# below does not apply to it. It is NOT a test of this wiring — being unfiltered
+# by design, it bypasses the whole chain.
 
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
+  workflow_call:
   workflow_dispatch:
 
 permissions:
   id-token: write
   contents: read
+
+# Serialize production rollouts. Cancelling after `update-service` would leave an
+# unmonitored deployment running in ECS, so in-progress runs are never cancelled.
+concurrency:
+  group: deploy-homiio-backend
+  cancel-in-progress: false
 
 env:
   AWS_REGION: us-west-2
@@ -35,12 +45,51 @@ env:
   APP: homiio
   CLUSTER: oxy-cluster
   DOCKERFILE: packages/backend/Dockerfile
+  # The commit CI judged. When called from ci.yml this IS that commit, because a
+  # called workflow runs inside the caller's run — there is no window in which
+  # main moves on underneath. Under workflow_dispatch it is the dispatched ref.
+  DEPLOY_SHA: ${{ github.sha }}
 
 jobs:
+  # `workflow_call` carries no path filters, and neither did `workflow_run`, so
+  # the `paths-ignore: ['**.md', 'docs/**']` this workflow used to declare lives
+  # here now. It fails OPEN: every uncertainty deploys, because a needless
+  # rollout costs a rollout while a skipped one leaves production on old code
+  # under a green tick.
+  #
+  # No conclusion/branch/fork guard: the only automatic caller is ci.yml's
+  # `deploy-backend`, which already requires every CI job to have passed on a
+  # push to refs/heads/main. A second copy of that condition here could only
+  # drift from the real one.
+  scope:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      deploy: ${{ steps.filter.outputs.deploy }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+          # The scope diff reads <sha>^1..<sha>, so the parent has to be present.
+          fetch-depth: 2
+      - name: Detect backend deployment scope
+        id: filter
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "deploy=true" >>"$GITHUB_OUTPUT"
+            echo "manual dispatch: deploying regardless of what changed"
+          else
+            bash .github/scripts/deployment-scope.sh backend
+          fi
+
   deploy:
+    needs: scope
+    if: needs.scope.outputs.deploy == 'true'
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
 
       - name: Configure AWS credentials (OIDC, no stored keys)
         uses: aws-actions/configure-aws-credentials@v4
