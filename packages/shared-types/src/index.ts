@@ -47,6 +47,9 @@ export * from './exchange';
 // Listing report types (trust & safety flagging)
 export * from './report';
 
+// Local moderation-integration state (CrowdSource reports, decisions, enforcement)
+export * from './moderation';
+
 // Eviction solidarity board types (public upcoming-eviction notices + RSVP)
 export * from './eviction';
 

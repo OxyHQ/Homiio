@@ -8,20 +8,32 @@
  * the memory server too. Collections are cleared after every test for isolation.
  *
  * Tests that are pure (no DB) are unaffected — they simply never touch a model.
+ *
+ * ## Why a REPLICA SET rather than a standalone `MongoMemoryServer`
+ *
+ * A standalone `mongod` refuses `session.withTransaction` outright, and the
+ * moderation intake's whole guarantee is that a report and its delivery event
+ * commit together — a test running against a standalone server could only ever
+ * assert the halves separately, which is precisely the bug that guarantee
+ * exists to prevent. Production is a replica set (`rs0`, `oxy-infra`
+ * `terraform-uswest2/mongo.tf`), so a single-node replica set here is also the
+ * closer match to what the code actually runs against.
+ *
+ * One node, not three: a transaction needs a replica set, not redundancy.
  */
 
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
 
 // Give config a real https public URL so self-hosted image URLs
 // (`${publicUrl}/api/images/file/...`) are accepted by the Property image-URL
 // validator during tests (a bare localhost host can trip `validator.isURL`).
 process.env.PUBLIC_API_URL = process.env.PUBLIC_API_URL || 'https://api.homiio.test';
 
-let mongoServer: MongoMemoryServer | undefined;
+let mongoServer: MongoMemoryReplSet | undefined;
 
 beforeAll(async () => {
-  mongoServer = await MongoMemoryServer.create();
+  mongoServer = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
   const uri = mongoServer.getUri();
   process.env.MONGODB_URI = uri;
   process.env.DATABASE_URL = uri;
