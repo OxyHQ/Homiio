@@ -32,6 +32,3 @@ export function pickFields<T extends object>(
   }
   return picked as Partial<T>;
 }
-
-// CI GATE PROOF (a): deliberate type error, never merged.
-export const ciGateProofTypeError: number = "not a number";
