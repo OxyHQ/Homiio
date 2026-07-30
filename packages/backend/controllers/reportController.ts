@@ -3,8 +3,16 @@
  *
  * Handles trust & safety reports filed against a property listing. A signed-in
  * user flags a problem (inaccurate info, suspected scam, inappropriate content,
- * an already-rented listing, …); the report lands in the internal review queue
- * with `status: 'open'`.
+ * an already-rented listing, an exposed address, an unsafe home, …).
+ *
+ * The report is written TWICE, in one transaction, and the two rows answer
+ * different questions. `ListingReport` is what it always was — the local record,
+ * with the reporter's optional reply-to address and its own `open` triage state.
+ * `ModerationReport` is the durable delivery record: it is what the outbox
+ * drains, what a case id is written back onto, and what a decision lands on.
+ * Neither can commit without the other, because a report answered 201 with no
+ * delivery event is one nobody will ever review and nothing would ever report
+ * that.
  *
  * Distinct from `Review` (public address rating).
  */
@@ -12,7 +20,16 @@
 import { Property, ListingReport } from '../models';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse } from '../middlewares/errorHandler';
-import { ListingReportReason, ListingReportStatus } from '@homiio/shared-types';
+import {
+  ListingReportReason,
+  ListingReportStatus,
+  ModerationReportedType,
+} from '@homiio/shared-types';
+import {
+  createModerationReport,
+  DuplicateModerationReportError,
+  withReportIntakeSession,
+} from '../services/moderation/ReportIntakeService';
 
 const ALLOWED_REASONS = new Set(Object.values(ListingReportReason));
 const MAX_DETAILS_LENGTH = 4000;
@@ -62,23 +79,72 @@ class ReportController {
         return res.status(200).json(successResponse(existingOpen.toJSON(), 'Report already submitted'));
       }
 
-      const report = await ListingReport.create({
-        propertyId,
-        reporterOxyUserId: oxyUserId,
-        reason,
-        details: trimmedDetails || undefined,
-        contactEmail: typeof contactEmail === 'string' && contactEmail.trim() ? contactEmail.trim() : undefined,
-        status: ListingReportStatus.OPEN
-      });
+      /**
+       * Both rows, or neither. `createModerationReport` writes the delivery
+       * record and its outbox event with THIS session, so a crash between the
+       * two is not a state the database can be left in — and a reporter who got
+       * a 201 can be told truthfully that their report will be reviewed.
+       */
+      let outcome;
+      try {
+        outcome = await withReportIntakeSession(async (session) => {
+          const [listingReport] = await ListingReport.create(
+            [
+              {
+                propertyId,
+                reporterOxyUserId: oxyUserId,
+                reason,
+                details: trimmedDetails || undefined,
+                contactEmail:
+                  typeof contactEmail === 'string' && contactEmail.trim()
+                    ? contactEmail.trim()
+                    : undefined,
+                status: ListingReportStatus.OPEN
+              }
+            ],
+            { session }
+          );
+
+          const moderation = await createModerationReport(
+            {
+              reportedType: ModerationReportedType.PROPERTY,
+              reportedId: String(propertyId),
+              reporter: oxyUserId,
+              reason,
+              details: trimmedDetails || undefined
+            },
+            session
+          );
+
+          return { listingReport, moderation };
+        });
+      } catch (error) {
+        /**
+         * The moderation record already knows this reporter reported this
+         * listing, but no OPEN `ListingReport` did — a re-file after an earlier
+         * one was resolved. The reporter is told the same thing either way,
+         * because from where they sit it is the same thing: the report is on
+         * record. Letting it through would mean a second case about material a
+         * jury has already answered on.
+         */
+        if (error instanceof DuplicateModerationReportError) {
+          return res
+            .status(200)
+            .json(successResponse({ id: String(error.existing._id) }, 'Report already submitted'));
+        }
+        throw error;
+      }
 
       logger.info('Listing report created', {
-        reportId: String(report._id),
+        reportId: String(outcome.listingReport._id),
+        moderationReportId: outcome.moderation.report.id,
         propertyId: String(propertyId),
         reporterOxyUserId: oxyUserId,
-        reason
+        reason,
+        queuedForReview: outcome.moderation.outboxEventId !== undefined
       });
 
-      res.status(201).json(successResponse(report.toJSON(), 'Report submitted'));
+      res.status(201).json(successResponse(outcome.listingReport.toJSON(), 'Report submitted'));
     } catch (error) {
       next(error);
     }

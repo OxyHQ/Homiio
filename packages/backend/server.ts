@@ -20,6 +20,8 @@ import { OxyServices } from '@oxyhq/core';
 import { createOptionalOxyAuth, createOxyAuthMiddleware } from '@oxyhq/core/server';
 import { stripeWebhook, confirmCheckoutSession } from './controllers/billingController';
 import { initCronJobs } from './services/cron';
+import { createCrowdSourceWebhookRoutes } from './routes/crowdSourceWebhook';
+import { moderationOutboxDispatcher } from './services/moderation/ModerationOutboxDispatcher';
 import { getErrorMessage } from './utils/errors';
 
 interface RawBodyRequest extends Request {
@@ -220,6 +222,24 @@ const apiLimiter = rateLimit({
 });
 app.use('/api', apiLimiter);
 
+/**
+ * CrowdSource webhook — mounted BEFORE every body parser, for the same reason
+ * the Stripe webhook below is.
+ *
+ * The HMAC covers the bytes that arrived, and a JSON parser destroys them.
+ * `@oxyhq/crowdsource-express` reads the raw body itself and refuses outright
+ * rather than verifying a signature over a re-serialisation, so a late mount
+ * fails every delivery loudly instead of silently trusting the wrong bytes.
+ * `__tests__/integration/crowdSourceWebhookMount.test.ts` asserts that nothing
+ * upstream has parsed the body by the time this route runs.
+ *
+ * Ahead of `apiLimiter` and outside `/api` deliberately: the signature IS the
+ * authentication, Homiio's limiter keys on an authenticated Oxy user a webhook
+ * will never have, and a 429 would put a real decision back on a retry schedule
+ * for no reason.
+ */
+app.use('/webhooks', createCrowdSourceWebhookRoutes());
+
 // Stripe webhook must be mounted BEFORE any body parser that consumes the body
 app.post('/api/billing/webhook', bodyParser.raw({ type: '*/*' }), (req: Request, res: Response) => {
   const rawRequest = req as RawBodyRequest;
@@ -321,8 +341,32 @@ async function startServer() {
       // Initialize cron jobs (only in non-serverless persistent environments)
       if (!process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
         initCronJobs();
+        /**
+         * Drain the moderation outbox from every task.
+         *
+         * NOT leader-gated: each event is claimed under a Mongo lease with an
+         * owner check, so the API and the worker share the queue and a task that
+         * dies mid-delivery has its lease reclaimed rather than stranding the
+         * work. No-ops when CROWDSOURCE_ENABLED=false, leaving the durable rows
+         * intact so switching the flag on delivers the backlog instead of
+         * losing it.
+         */
+        moderationOutboxDispatcher.start();
       }
     });
+
+    /**
+     * Let an event already in flight reach a durable state before the process
+     * goes away. `stop()` stops CLAIMING new work; it does not abandon a
+     * delivery mid-call, which is what would leave a report's outbox row
+     * `processing` until its lease expired.
+     */
+    const stopModerationDispatcher = (signal: string): void => {
+      logger.info('[CrowdSource] stopping outbox dispatcher', { signal });
+      void moderationOutboxDispatcher.stop();
+    };
+    process.once('SIGTERM', () => stopModerationDispatcher('SIGTERM'));
+    process.once('SIGINT', () => stopModerationDispatcher('SIGINT'));
 
     server.on('error', (err: NodeJS.ErrnoException) => {
       if (err.code === 'EADDRINUSE') {
