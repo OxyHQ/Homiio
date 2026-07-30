@@ -1,10 +1,20 @@
-# Backend CI — the first workflow in this repository that runs on a pull request.
+# CI — the workflow that runs on a pull request.
 #
 # Until this existed, `deploy-aws.yml` and `deploy-frontends.yml` were the only
 # workflows and both are `push: [main]`, so the checks on a PR were CodeQL,
 # Socket and Cursor — and **nothing executed the test suite or the typechecker**.
 # Every guard in the backend was therefore a comment as far as the next pull
 # request was concerned.
+#
+# Two things were still missing after the backend job below landed, and both are
+# now here:
+#
+#   - Only the backend was covered. The frontend's suite and its web bundle ran
+#     for nobody, and a suite that runs zero tests exits 0, so every job that
+#     runs one carries a count floor.
+#   - A push to main still deployed to production ECS and to Cloudflare Pages
+#     regardless of this workflow. Both deploys now start from `workflow_run` on
+#     this workflow's success — see the header of each.
 name: CI
 
 on:
@@ -19,6 +29,14 @@ concurrency:
 
 permissions:
   contents: read
+
+env:
+  # Same bun as deploy-frontends.yml. A lockfile read by two different bun
+  # versions is how `lockfile had changes, but lockfile is frozen` arrives in a
+  # deploy that changed nothing. `packages/backend/Dockerfile` is deliberately not
+  # a third pin to keep in step: it narrows `workspaces` and does not copy
+  # bun.lock at all, resolving fresh from the version ranges.
+  BUN_VERSION: '1.3.14'
 
 jobs:
   backend:
@@ -37,10 +55,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          # Same bun as deploy-frontends.yml. A lockfile read by two different
-          # bun versions is how `lockfile had changes, but lockfile is frozen`
-          # arrives in a deploy that changed nothing.
-          bun-version: "1.3.14"
+          bun-version: ${{ env.BUN_VERSION }}
 
       # ~200 MB, and every run needs it because the suite requires a replica set.
       # Keyed on the pinned version, so changing the pin fetches once and then
@@ -51,21 +66,13 @@ jobs:
           path: ${{ github.workspace }}/.cache/mongodb-binaries
           key: mongodb-binaries-${{ runner.os }}-${{ env.MONGOMS_VERSION }}
 
+      # `--frozen-lockfile` here, where it belongs: this job wants the exact
+      # graph the lockfile records. It is NOT a sync check and must never be
+      # mistaken for one — that is the `lockfile` job below, which needs a plain
+      # install and therefore cannot share this one. Scripts stay enabled so the
+      # root postinstall builds shared-types, which the steps below assume.
       - name: Install
-        run: bun install
-
-      # `--frozen-lockfile` is NOT used, deliberately: it exits 0 on the desyncs
-      # that actually reach main (a widened range the lockfile can still satisfy,
-      # a workspace version bumped without regenerating). A plain install
-      # followed by asking git whether the lockfile moved is the check that
-      # catches a package.json change shipped without its lockfile.
-      - name: Lockfile is in sync
-        run: |
-          if ! git diff --quiet -- bun.lock; then
-            echo "::error::bun.lock changed during install — commit it alongside the package.json change."
-            git --no-pager diff --stat -- bun.lock
-            exit 1
-          fi
+        run: bun install --frozen-lockfile
 
       # `shared-types` is built by the root postinstall; `listing-providers` is
       # not, and the backend typecheck resolves it through project references —
@@ -81,10 +88,110 @@ jobs:
       # Note this does NOT cover `__tests__` — the backend project excludes it so
       # tests stay out of `dist`, and ts-jest transpiles with `isolatedModules`.
       # `bun run --cwd packages/backend typecheck:tests` is the tool for that; it
-      # is not a gate yet because it reports 99 pre-existing errors in test files
+      # is not a gate yet because it reports pre-existing errors in test files
       # that have never been typechecked by anything.
       - name: Typecheck backend
         run: bun x tsc --noEmit -p packages/backend/tsconfig.json
 
       - name: Test backend
-        run: bun run --cwd packages/backend test
+        run: >-
+          bun run --cwd packages/backend test --
+          --json --outputFile="$RUNNER_TEMP/backend-tests.json"
+
+      # A suite that runs nothing exits 0. See the floor script's header; the
+      # short version is that a wrong working directory, a renamed script or a
+      # glob that stops matching all produce an empty green run, and that reads as
+      # coverage forever because nothing contradicts it.
+      - name: Assert the suite actually ran
+        if: always()
+        run: >-
+          bun .github/scripts/assert-test-floor.mjs
+          "$RUNNER_TEMP/backend-tests.json" packages/backend 850
+
+  frontend:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      # The root postinstall builds shared-types, which these tests import by
+      # package name and therefore resolve through its BUILT dist.
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Test frontend
+        run: >-
+          bun run --cwd packages/frontend test --
+          --json --outputFile="$RUNNER_TEMP/frontend-tests.json"
+
+      - name: Assert the suite actually ran
+        if: always()
+        run: >-
+          bun .github/scripts/assert-test-floor.mjs
+          "$RUNNER_TEMP/frontend-tests.json" packages/frontend 38
+
+  # Deliberately no job for shared-types or listing-providers. shared-types' `test`
+  # script is `echo "No tests specified" && exit 0` — there is no suite. And
+  # listing-providers' is `cd ../backend && bun run test -- --testPathPattern=...`:
+  # it re-runs a FILTERED SUBSET of the backend suite that the backend job above
+  # already runs in full, so a job for it would be duplicated minutes, not extra
+  # coverage. Give either package a suite of its own and it earns a job with a floor.
+
+  lockfile:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      # Its own job because it needs a PLAIN install, which no other job here
+      # wants. The script runs that install itself and hands the lockfile back
+      # unchanged.
+      #
+      # This REPLACES the inline `git diff --quiet -- bun.lock` that used to sit
+      # in the backend job. That check was right about `--frozen-lockfile` failing
+      # open, and it catches a widened range — but a plain `bun install` does NOT
+      # rewrite a stale recorded workspace `version`, so it is blind to the other
+      # desync shape that reaches main. The script keeps the install-and-ask-git
+      # layer and adds a direct comparison of what bun.lock records per workspace
+      # against the manifests.
+      - name: Verify bun.lock was committed with its manifest change
+        run: bun run check:lockfile
+
+      # Every gate in this repository carries a mutation test that breaks what it
+      # guards and fails if the guard still passes. Running them is what keeps a
+      # gate that has silently stopped discriminating from reading as coverage.
+      - name: Verify the CI and deploy gates can still fail
+        run: |
+          bash -n .github/scripts/*.sh
+          bun scripts/test-check-lockfile-sync.mjs
+          bun .github/scripts/test-assert-test-floor.mjs
+          bash .github/scripts/test-deployment-scope.sh
+
+  frontend-bundle:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      # The same export deploy-frontends.yml runs, with the same environment, so a
+      # broken web build fails on the pull request instead of after the merge that
+      # ships it. Expo compiles through Babel and therefore does NOT typecheck the
+      # frontend — this proves the bundle builds, nothing more.
+      - name: Export production web bundle
+        run: bun run --cwd packages/frontend build
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+          NODE_ENV: production
