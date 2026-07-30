@@ -1550,6 +1550,8 @@
         "scam": "Possibile truffa o frode",
         "inappropriate": "Contenuto inappropriato",
         "unavailable": "Già affittato o non disponibile",
+        "privacy": "Espone l'abitazione o i dati personali di qualcuno",
+        "unsafe": "Abitazione non sicura o inabitabile",
         "other": "Altro motivo"
       }
     },

@@ -1403,6 +1403,8 @@
         "scam": "Possible estafa o frau",
         "inappropriate": "Contingut inadequat",
         "unavailable": "Ja llogat o no disponible",
+        "privacy": "Exposa l'habitatge o les dades personals d'algú",
+        "unsafe": "Habitatge insegur o inhabitable",
         "other": "Un altre motiu"
       }
     },
