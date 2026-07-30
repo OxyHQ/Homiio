@@ -13,8 +13,9 @@
 #     for nobody, and a suite that runs zero tests exits 0, so every job that
 #     runs one carries a count floor.
 #   - A push to main still deployed to production ECS and to Cloudflare Pages
-#     regardless of this workflow. Both deploys now start from `workflow_run` on
-#     this workflow's success — see the header of each.
+#     regardless of this workflow. Both are gated on it now, by two different
+#     mechanisms and for a measured reason — see `deploy-backend` at the bottom
+#     of this file and the header of deploy-frontends.yml.
 name: CI
 
 on:
@@ -72,7 +73,7 @@ jobs:
       # install and therefore cannot share this one. Scripts stay enabled so the
       # root postinstall builds shared-types, which the steps below assume.
       - name: Install
-        run: bun install --frozen-lockfile
+        run: bash .github/scripts/bun-install.sh --frozen-lockfile
 
       # `shared-types` is built by the root postinstall; `listing-providers` is
       # not, and the backend typecheck resolves it through project references —
@@ -120,7 +121,7 @@ jobs:
       # The root postinstall builds shared-types, which these tests import by
       # package name and therefore resolve through its BUILT dist.
       - name: Install
-        run: bun install --frozen-lockfile
+        run: bash .github/scripts/bun-install.sh --frozen-lockfile
 
       - name: Test frontend
         run: >-
@@ -171,6 +172,7 @@ jobs:
           bash -n .github/scripts/*.sh
           bun scripts/test-check-lockfile-sync.mjs
           bun .github/scripts/test-assert-test-floor.mjs
+          bash .github/scripts/test-assert-install-clean.sh
           bash .github/scripts/test-deployment-scope.sh
 
   frontend-bundle:
@@ -184,7 +186,7 @@ jobs:
           bun-version: ${{ env.BUN_VERSION }}
 
       - name: Install
-        run: bun install --frozen-lockfile
+        run: bash .github/scripts/bun-install.sh --frozen-lockfile
 
       # The same export deploy-frontends.yml runs, with the same environment, so a
       # broken web build fails on the pull request instead of after the merge that
@@ -195,3 +197,114 @@ jobs:
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
           NODE_ENV: production
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # OFF BY DEFAULT. Both of these are RED on main today, and a job that is red
+  # on every pull request from the day it lands is not a gate — it is a thing
+  # the next person disables. They are written, and left switched off, so that
+  # turning each one on is a repository-variable change rather than a design
+  # exercise, and so the debt is visible in the place the gate will live.
+  #
+  # To turn one on: fix the errors it reports, then set the repository variable
+  # to `ready` (Settings → Secrets and variables → Actions → Variables).
+  # ─────────────────────────────────────────────────────────────────────────
+
+  lint:
+    # Set HOMIIO_LINT_GATE=ready once `bun run lint` exits 0.
+    #
+    # Today it does not: backend 344 errors, listing-providers 15, frontend 14;
+    # shared-types is clean. #249 removed the noise that made this unreadable
+    # (jest globals, 3555 false `no-undef`s), so what remains is real: 272
+    # `no-require-imports` in a package that is deliberately "type":"commonjs",
+    # 57 unused-vars, and 10 genuine `no-undef`s. listing-providers' 15 include 6
+    # `no-undef` on DOM/undici types (RequestInit), which is the case #249's fix
+    # does not cover — its config still needs typescript-eslint's
+    # `eslint-recommended` to stop the base rule reporting TypeScript types.
+    #
+    # NOTHING IS BUILT IN THIS JOB, ON PURPOSE. `eslint .` in the backend has no
+    # `ignores`, and eslint 9's flat config does not skip `dist/` by default, so
+    # a build step before this would lint generated `.d.ts` output and add 214
+    # phantom errors. That is why `bun run lint` gives 344 on a clean checkout
+    # and 558 after `bun run build` — measured, both ways, on the same commit.
+    if: vars.HOMIIO_LINT_GATE == 'ready'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      # Scripts stay ENABLED so the root postinstall builds shared-types. Not for
+      # types — eslint does not typecheck — but because the frontend's config
+      # carries eslint-plugin-import, which resolves modules for real and would
+      # report @homiio/shared-types as unresolved without its dist. Building
+      # shared-types is safe here; what must not happen is building the BACKEND,
+      # per the note above.
+      - name: Install
+        run: bash .github/scripts/bun-install.sh --frozen-lockfile
+      - name: Lint every package
+        run: bun run lint
+
+  frontend-typecheck:
+    # Set HOMIIO_FRONTEND_TYPECHECK_GATE=ready once this exits 0.
+    #
+    # Nothing typechecks the frontend today: `expo export` compiles through
+    # Babel, which strips types without checking them, so the frontend-bundle job
+    # proves the bundle builds and nothing more. `tsc --noEmit` reports 10 errors
+    # — 9 real (a missing required `t` prop in two screens, `OfferingSummary`
+    # lacking `fallback` in two more, a `t` signature mismatch, and a locale code
+    # widened to `string`) and one environmental: @oxyhq/bloom's web portal wants
+    # @types/react-dom, which the frontend does not depend on.
+    #
+    # The install runs postinstall so shared-types is built — this project
+    # resolves it through a path mapping to ../shared-types/src, but its
+    # references still expect the built project.
+    if: vars.HOMIIO_FRONTEND_TYPECHECK_GATE == 'ready'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - name: Install
+        run: bash .github/scripts/bun-install.sh --frozen-lockfile
+      - name: Typecheck frontend
+        run: bun run --cwd packages/frontend typecheck
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # The backend deploy runs HERE, as a called workflow, rather than from its own
+  # `workflow_run` trigger like the frontend's.
+  #
+  # That asymmetry is not a preference, it is a measured failure. On `e94bd65`,
+  # deploy-aws.yml on `workflow_run` produced `conclusion: action_required` with
+  # ZERO jobs created, twice, with created_at == updated_at — concluded before
+  # scheduling anything, including its own ubuntu-latest scope job. The same
+  # trigger on deploy-frontends.yml, in the same repository and the same instant,
+  # ran to success. Ruled out by evidence: the YAML shape and `id-token: write`
+  # (CrowdSource runs an identical deploy-aws.yml on `workflow_run` and schedules
+  # fine), the ARM runner (this file's own push-triggered runs used it minutes
+  # earlier), rulesets, and environment protection rules (none exist). What is
+  # left is org-level Actions policy, which is not readable without admin:org.
+  #
+  # Calling the workflow removes the failing mechanism entirely and is a stronger
+  # gate besides: the deploy cannot start unless every job below it passed in
+  # THIS run, with no window in which main moves on between CI concluding and the
+  # deploy resolving a SHA. It also fails LOUDLY — a blocked deploy shows up
+  # inside the CI run on main, rather than in a separate run that quietly says
+  # action_required and that nobody is watching.
+  #
+  # deploy-frontends.yml is deliberately left on `workflow_run`: it demonstrably
+  # works, and rewiring a working production deploy for symmetry is risk with no
+  # return. If it ever exhibits the same conclusion, move it here too.
+  # ─────────────────────────────────────────────────────────────────────────
+  deploy-backend:
+    name: Deploy backend to AWS
+    needs: [backend, frontend, lockfile, frontend-bundle]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write
+      contents: read
+    # The deploy syncs GitHub secrets to SSM with `toJSON(secrets)`, so it needs
+    # the caller's secrets; without `inherit` that object is empty and the sync
+    # silently writes nothing.
+    secrets: inherit
+    uses: ./.github/workflows/deploy-aws.yml

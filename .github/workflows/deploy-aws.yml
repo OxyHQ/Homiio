@@ -2,22 +2,25 @@
 # and substitute homiio (ecs service + ecr repo name) and packages/backend/Dockerfile (path).
 name: Deploy to AWS
 
-# GATED ON CI. This used to trigger directly on `push: main`, which meant a push
-# built an image and rolled it out to production ECS without the test suite ever
-# having run — nothing in this repository ran it. It now starts only after the CI
-# workflow concludes SUCCESSFULLY on main, so a red suite stops the rollout.
+# GATED ON CI, but CALLED rather than triggered. `ci.yml` invokes this with
+# `uses: ./.github/workflows/deploy-aws.yml` after every one of its jobs passes
+# on a push to main.
+#
+# It used to trigger on `push: main`, which rolled an image out to production ECS
+# without the test suite ever having run. The obvious replacement — `workflow_run`
+# on CI, which is what deploy-frontends.yml uses — was tried and DOES NOT WORK for
+# this workflow in this repository: it concluded `action_required` with zero jobs
+# created, twice, before scheduling anything. The full evidence and what it rules
+# out is in the `deploy-backend` comment in ci.yml. Do not "restore" the
+# workflow_run trigger without re-testing it on main; it fails silently, in a run
+# nobody looks at.
 #
 # `workflow_dispatch` is unchanged and remains the escape hatch: if CI itself
 # breaks, a deploy can still be forced by hand from any ref, and the scope filter
 # below does not apply to it.
-#
-# `workflow_run` supports no `paths-ignore`, so the old documentation-only filter
-# moved into the `scope` job. It fails open — see .github/scripts/deployment-scope.sh.
+
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
+  workflow_call:
   workflow_dispatch:
 
 permissions:
@@ -36,21 +39,17 @@ env:
   APP: homiio
   CLUSTER: oxy-cluster
   DOCKERFILE: packages/backend/Dockerfile
-  # The commit CI actually judged, not whatever main has drifted to since. Falls
-  # back to the dispatched ref for a manual run, where there is no CI run to read.
-  DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+  # The commit CI judged. When called from ci.yml this IS that commit, because a
+  # called workflow runs inside the caller's run — there is no window in which
+  # main moves on underneath. Under workflow_dispatch it is the dispatched ref.
+  DEPLOY_SHA: ${{ github.sha }}
 
 jobs:
   scope:
-    # A CI run that failed, that was triggered by a pull request rather than a
-    # push, that came from a fork, or that ran on a branch other than main must
-    # not deploy anything.
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_repository.full_name == github.repository &&
-      github.event.workflow_run.head_branch == 'main')
+    # No conclusion/branch/fork guard here any more, and none is needed: the only
+    # automatic caller is ci.yml's `deploy-backend`, which already requires every
+    # CI job to have passed on a push to refs/heads/main. Re-checking it here
+    # would be a second copy of a condition that can drift from the real one.
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
