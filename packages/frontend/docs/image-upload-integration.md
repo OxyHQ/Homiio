@@ -175,7 +175,7 @@ Add the following environment variables:
 
 ```env
 # API Configuration
-EXPO_PUBLIC_API_URL=http://localhost:4000
+EXPO_PUBLIC_API_URL=http://localhost:4130
 
 # For production
 EXPO_PUBLIC_API_URL=https://your-api-domain.com

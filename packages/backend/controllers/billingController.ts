@@ -388,9 +388,9 @@ export async function testWebhookConfig(req: Request, res: Response) {
       hasWebhookSecret: !!process.env.STRIPE_WEBHOOK_SECRET,
       hasPricePlus: !!process.env.STRIPE_PRICE_PLUS,
       hasPriceFile: !!process.env.STRIPE_PRICE_FILE,
-      webhookUrl: `${process.env.API_URL || 'http://localhost:3000'}/api/billing/webhook`,
-      successUrl: process.env.STRIPE_SUCCESS_URL || `${process.env.API_URL || 'http://localhost:3000'}/payments/success`,
-      cancelUrl: process.env.STRIPE_CANCEL_URL || `${process.env.API_URL || 'http://localhost:3000'}/profile/subscriptions`
+      webhookUrl: `${process.env.API_URL || 'http://localhost:4130'}/api/billing/webhook`,
+      successUrl: process.env.STRIPE_SUCCESS_URL || `${process.env.API_URL || 'http://localhost:4130'}/payments/success`,
+      cancelUrl: process.env.STRIPE_CANCEL_URL || `${process.env.API_URL || 'http://localhost:4130'}/profile/subscriptions`
     };
 
     return res.json({ success: true, config });
@@ -640,7 +640,7 @@ export async function createCustomerPortalSession(req: Request, res: Response) {
             // Create customer portal session
             const session = await stripe.billingPortal.sessions.create({
                 customer: customerId,
-                return_url: `${process.env.FRONTEND_URL || 'http://localhost:8081'}/profile/subscriptions`,
+                return_url: `${process.env.FRONTEND_URL || 'http://localhost:8130'}/profile/subscriptions`,
             });
 
             return res.json({ success: true, url: session.url });

@@ -3,8 +3,10 @@ import { Platform } from 'react-native';
 
 /**
  * Backend port used by the API and the realtime socket in development.
+ * 4130 is Homiio's slot in the per-app local dev port map, so several Oxy
+ * backends can run side by side on one machine.
  */
-const DEV_API_PORT = 4000;
+const DEV_API_PORT = 4130;
 
 /**
  * Hosts that resolve to "the device itself" and therefore can never reach a
@@ -32,10 +34,10 @@ function getMetroHostUri(): string | undefined {
 }
 
 /**
- * Resolves the host that should serve the dev backend on `:4000`.
+ * Resolves the host that should serve the dev backend on `:4130`.
  *
- * Metro reports a `host:port` URI such as `192.168.1.20:8081` or
- * `localhost:8081`. We keep only the host portion and reuse it for the backend:
+ * Metro reports a `host:port` URI such as `192.168.1.20:8130` or
+ * `localhost:8130`. We keep only the host portion and reuse it for the backend:
  * - A real LAN address (e.g. `192.168.1.20`) is reachable from physical devices
  *   on the same network, so we use it verbatim.
  * - A loopback host means Metro was reached over the device's own loopback
@@ -45,7 +47,7 @@ function getMetroHostUri(): string | undefined {
  */
 function resolveDevHost(): string {
   const hostUri = getMetroHostUri();
-  // `hostUri` looks like "192.168.1.20:8081" — strip the port. On web it is
+  // `hostUri` looks like "192.168.1.20:8130" — strip the port. On web it is
   // undefined, so we fall back to `localhost` (which is the user's own machine).
   const host = hostUri?.split(':')[0];
 
@@ -81,10 +83,14 @@ export const API_URL =
   process.env.EXPO_PUBLIC_API_URL ||
   (__DEV__ ? buildDevUrl('http') : 'https://api.homiio.com');
 
+// Oxy is ALWAYS the production identity provider — deliberately no dev branch.
+// Oxy owns the account, and a build pointing identity at a local port nothing is
+// listening on does not fail loudly: it renders a signed-out app. Override with
+// EXPO_PUBLIC_OXY_API_URL only when genuinely running an Oxy API yourself.
 export const OXY_BASE_URL =
   process.env.EXPO_PUBLIC_OXY_API_URL ||
   process.env.EXPO_PUBLIC_OXY_BASE_URL ||
-  (__DEV__ ? 'http://192.168.86.44:3001' : 'https://api.oxy.so');
+  'https://api.oxy.so';
 
 /**
  * Homiio's registered Oxy OAuth public client id. Required by `OxyProvider`

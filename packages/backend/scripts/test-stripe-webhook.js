@@ -12,7 +12,7 @@ const http = require('http');
 
 // Configuration
 const config = {
-  webhookUrl: process.env.STRIPE_WEBHOOK_URL || 'http://localhost:3000/api/billing/webhook',
+  webhookUrl: process.env.STRIPE_WEBHOOK_URL || 'http://localhost:4130/api/billing/webhook',
   webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || 'whsec_test_secret',
   testEvent: {
     id: 'evt_test_webhook',

@@ -146,13 +146,18 @@ export interface Config {
 const config: Config = {
   // Environment
   environment: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.PORT || '4000', 10),
+  // Local dev default only — ECS injects PORT explicitly (oxy-infra
+  // terraform-uswest2/app-services.tf sets it to 4000). 4130 is Homiio's slot
+  // in the per-app port map so several Oxy backends can run side by side.
+  port: parseInt(process.env.PORT || '4130', 10),
   
-  // Oxy Services Configuration
+  // Oxy Services Configuration.
+  // api.oxy.so is ALWAYS the default — deliberately no dev branch. Oxy owns the
+  // account, and pointing identity at a machine-specific LAN address that is not
+  // serving anything does not fail loudly, it just renders a signed-out app.
+  // Override with OXY_API_URL when genuinely running an Oxy API yourself.
   oxy: {
-    baseURL: process.env.NODE_ENV === 'production' 
-      ? process.env.OXY_API_URL || 'https://api.oxy.so'
-      : 'http://192.168.86.44:3001',
+    baseURL: process.env.OXY_API_URL || 'https://api.oxy.so',
   },
   
   // OpenAI Configuration
@@ -252,7 +257,7 @@ const config: Config = {
   publicUrl: process.env.PUBLIC_API_URL ||
     (process.env.NODE_ENV === 'production'
       ? 'https://api.homiio.com'
-      : `http://localhost:${process.env.PORT || '4000'}`),
+      : `http://localhost:${process.env.PORT || '4130'}`),
   
   // Rate Limiting. The global API limiter (server.ts) keys per authenticated
   // user with realistic media-app budgets (see AUTHENTICATED_RATE_LIMIT_MAX /
@@ -272,7 +277,7 @@ const config: Config = {
   // Web frontend base URL — single source for server-built deep links.
   web: {
     baseUrl: process.env.FRONTEND_URL ||
-      (process.env.NODE_ENV === 'production' ? 'https://homiio.com' : 'http://localhost:8081'),
+      (process.env.NODE_ENV === 'production' ? 'https://homiio.com' : 'http://localhost:8130'),
   },
 
   // Stripe Configuration (optional)
@@ -286,7 +291,7 @@ const config: Config = {
     // - In production: allow STRIPE_* overrides, else default to the web base URL
     ...((): { successUrl: string; cancelUrl: string } => {
       const isProd = process.env.NODE_ENV === 'production';
-      const defaultFrontend = process.env.FRONTEND_URL || (isProd ? 'https://homiio.com' : 'http://localhost:8081');
+      const defaultFrontend = process.env.FRONTEND_URL || (isProd ? 'https://homiio.com' : 'http://localhost:8130');
       const successDefault = `${defaultFrontend}/payments/success?session_id={CHECKOUT_SESSION_ID}`;
       const cancelDefault = `${defaultFrontend}/payments/cancelled`;
       return {

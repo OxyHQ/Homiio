@@ -37,11 +37,12 @@ There is no password storage, no session table, and no JWT minting on Homiio's s
 
 ```ts
 export const OXY_BASE_URL =
+  process.env.EXPO_PUBLIC_OXY_API_URL ||
   process.env.EXPO_PUBLIC_OXY_BASE_URL ||
-  (process.env.NODE_ENV === 'production' ? 'https://api.oxy.so' : 'http://192.168.86.44:3001');
+  'https://api.oxy.so';
 ```
 
-Set `EXPO_PUBLIC_OXY_BASE_URL` in your `.env` to point at the Oxy API you want — production uses `https://api.oxy.so`. The dev fallback assumes a LAN-bound `oxy-api` and should be overridden per developer machine.
+`https://api.oxy.so` is the default in every environment — there is deliberately no dev branch. Set `EXPO_PUBLIC_OXY_API_URL` only when you are genuinely running an Oxy API yourself.
 
 ## Consuming `useOxy()`
 

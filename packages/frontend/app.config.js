@@ -50,17 +50,13 @@ module.exports = function (config) {
                 scheme: 'https',
                 host: 'homiio.com',
               },
-              IS_DEV && {
-                scheme: 'http',
-                host: 'localhost:3001',
-              },
               {
                 scheme: 'https',
                 host: 'oxy.so',
               },
               IS_DEV && {
                 scheme: 'http',
-                host: 'localhost:3000',
+                host: 'localhost:4130',
               },
             ],
             category: ['BROWSABLE', 'DEFAULT'],
