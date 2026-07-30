@@ -667,6 +667,21 @@ interface AgencyLike {
   slug: string;
 }
 
+/**
+ * A published, publicly-visible listing, as an agency page counts and lists one.
+ *
+ * Shared by the count and the page so the two can never disagree — a total that
+ * exceeded the listings actually shown would read as a pagination bug. The
+ * moderation clause is `$ne: true` rather than `false` for the reason given in
+ * `controllers/property/publicVisibility.ts`: listings written before the field
+ * existed carry no `moderation` subdocument at all.
+ */
+const PUBLIC_AGENCY_LISTING_FILTER = {
+  status: 'published',
+  deletedAt: null,
+  'moderation.restricted': { $ne: true },
+} as const;
+
 function toAgencySummary(agency: AgencyLike): { id: string; name: string; slug: string } {
   return { id: String(agency._id), name: agency.name, slug: agency.slug };
 }
@@ -704,7 +719,7 @@ export const getAgencyBySlug = async (req: Request, res: Response) => {
 
     const [stats, listingsCount] = await Promise.all([
       Review.getAgencyStats(agency._id),
-      Property.countDocuments({ agencyId: agency._id, status: 'published', deletedAt: null }),
+      Property.countDocuments({ ...PUBLIC_AGENCY_LISTING_FILTER, agencyId: agency._id }),
     ]);
 
     return ok(res, {
@@ -764,7 +779,7 @@ export const getAgencyProperties = async (req: Request, res: Response) => {
       return notFound(res, { message: 'Agency not found' });
     }
 
-    const filter = { agencyId: agency._id, status: 'published', deletedAt: null };
+    const filter = { ...PUBLIC_AGENCY_LISTING_FILTER, agencyId: agency._id };
     const skip = (page - 1) * limit;
 
     const [properties, total] = await Promise.all([

@@ -16,6 +16,10 @@ import type { Model } from 'mongoose';
 import type { IProperty, IPropertyModel } from './Property';
 import type { IAddress, IAddressModel } from './Address';
 import type { IReview, IReviewModel } from './Review';
+import type { IModerationReport } from './ModerationReport';
+import type { IModerationOutbox } from './ModerationOutbox';
+import type { IModerationEvent } from './ModerationEvent';
+import type { IModerationEnforcement } from './ModerationEnforcement';
 import type {
   IBilling,
   IBillingModel,
@@ -89,6 +93,13 @@ const EvictionCaseModel = require('./schemas/EvictionCaseSchema') as Model<IEvic
 const EvictionCommentModel = require('./schemas/EvictionCommentSchema') as Model<IEvictionComment>;
 const EvictionReportModel = require('./schemas/EvictionReportSchema') as Model<IEvictionReport>;
 
+// CrowdSource moderation. TS-native models, required the same way as the rest so
+// they land on the aggregate `module.exports` below alongside them.
+const ModerationReportModel = (require('./ModerationReport').ModerationReport) as Model<IModerationReport>;
+const ModerationOutboxModel = (require('./ModerationOutbox').ModerationOutbox) as Model<IModerationOutbox>;
+const ModerationEventModel = (require('./ModerationEvent').ModerationEvent) as Model<IModerationEvent>;
+const ModerationEnforcementModel = (require('./ModerationEnforcement').ModerationEnforcement) as Model<IModerationEnforcement>;
+
 // Named ES exports — preferred for new code.
 export const Property = PropertyModel;
 export const Address = AddressModel;
@@ -122,6 +133,10 @@ export const RoommateRelationship = RoommateRelationshipModel;
 export const EvictionCase = EvictionCaseModel;
 export const EvictionComment = EvictionCommentModel;
 export const EvictionReport = EvictionReportModel;
+export const ModerationReport = ModerationReportModel;
+export const ModerationOutbox = ModerationOutboxModel;
+export const ModerationEvent = ModerationEventModel;
+export const ModerationEnforcement = ModerationEnforcementModel;
 
 // Re-export the document interfaces so callers can `import type { ILease } from '../models'`.
 export type {
@@ -166,6 +181,10 @@ export type {
   IEvictionCase,
   IEvictionComment,
   IEvictionReport,
+  IModerationReport,
+  IModerationOutbox,
+  IModerationEvent,
+  IModerationEnforcement,
 };
 
 // Legacy CJS callers (`const models = require('../../models')` — used by the
@@ -207,4 +226,8 @@ module.exports = {
   EvictionCase: EvictionCaseModel,
   EvictionComment: EvictionCommentModel,
   EvictionReport: EvictionReportModel,
+  ModerationReport: ModerationReportModel,
+  ModerationOutbox: ModerationOutboxModel,
+  ModerationEvent: ModerationEventModel,
+  ModerationEnforcement: ModerationEnforcementModel,
 };

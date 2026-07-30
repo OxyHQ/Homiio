@@ -18,23 +18,34 @@
 import { ISODate } from './common';
 
 /**
- * The Homiio objects that can be sent for community review.
+ * The Homiio objects a report can be filed against.
  *
- * Homiio files reports against more nouns than this — an eviction case
- * (`EvictionReport`) is the third — and that is deliberate rather than an
- * omission. Whether a report is DELIVERED is a property of the subject-provider
- * registry in the backend, not of this union: a noun with a provider is sent for
- * review, a noun without one is stored locally exactly as it was before
- * CrowdSource existed. Gating the report ROUTES on this union instead would make
- * adopting CrowdSource a breaking change for every report surface not yet wired
- * to it, which is the one property that has to hold for adoption to be
- * incremental at all.
+ * This is the API contract, and it is deliberately WIDER than the set of types
+ * that reach CrowdSource. Whether a report is DELIVERED is a property of the
+ * subject-provider registry in the backend, not of this union: a noun with a
+ * provider is sent for review, a noun without one is stored locally at
+ * `received` — exactly the behaviour that noun had before CrowdSource existed.
+ *
+ * Gating the report ROUTES on the registry instead was the obvious design and it
+ * is wrong: it makes adopting CrowdSource a breaking change for every report
+ * surface an application has not yet wired up, and incremental adoption one
+ * subject type at a time is the only reason this integration is copyable between
+ * Oxy apps at all.
+ *
+ * `EVICTION_CASE` is the value that keeps that distinction honest here. Homiio
+ * has a live "report this eviction notice" button backed by `EvictionReport`,
+ * and there is no subject provider for an eviction case — so those reports are
+ * stored, counted by reconciliation, and never delivered. That cost is real: a
+ * `received` report is a receipt for work nobody does. It is measured rather
+ * than hidden, which is the honest state while the noun has no provider.
  */
 export enum ModerationReportedType {
   /** A property listing, internal or aggregated from a portal. */
   PROPERTY = 'property',
   /** A public address review. */
   REVIEW = 'review',
+  /** A public eviction notice on the solidarity board. No provider yet. */
+  EVICTION_CASE = 'eviction_case',
 }
 
 /**

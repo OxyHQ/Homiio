@@ -696,6 +696,28 @@ const propertySchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  /**
+   * Community-moderation state. SERVER-ONLY: absent from
+   * `CREATABLE_PROPERTY_FIELDS` and `EDITABLE_PROPERTY_FIELDS`, so no request
+   * body can ever set or clear it.
+   *
+   * That exclusion is the entire reason this is a separate field rather than a
+   * `status` value. `status` is user-editable and Homiio's public list defaults
+   * to `status: { $ne: 'draft' }` while honouring a client-supplied `status`, so
+   * a "restricted" status would both stay visible in listings AND be clearable
+   * by the very owner whose listing a jury restricted.
+   *
+   * Every public read excludes `moderation.restricted` alongside the
+   * `deletedAt: null` it already applies. The two are separate on purpose: an
+   * owner archiving their own listing and a jury restricting it are different
+   * facts, and a restore has to put back the one that was actually true.
+   */
+  moderation: {
+    restricted: { type: Boolean, default: false },
+    restrictedAt: { type: Date },
+    /** The decision revision that restricted it. Audit only. */
+    restrictedByDecisionId: { type: String }
+  },
   // Server-computed ethical + market price score (see priceEthicsService).
   // Written atomically on score — no subfield defaults (avoids partial subdocs on save).
   priceEthics: {

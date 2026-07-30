@@ -4,6 +4,7 @@ import { logger } from '../../middlewares/logging';
 import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
 import { getQueryInteger, getQueryNumber } from '../queryParams';
 import { FIELD_HAS_IMAGES } from './searchQueryBuilder';
+import { excludeModerationRestricted } from './publicVisibility';
 
 export async function findNearbyProperties(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
   try {
@@ -73,8 +74,10 @@ export async function findNearbyProperties(req: ControllerRequest, res: Controll
 
     // Apply additional filters
     const filters: any = {};
-    // Public geo feed: never surface soft-deleted (archived) listings.
+    // Public geo feed: never surface soft-deleted (archived) listings,
+    // nor ones a community jury has restricted.
     filters.deletedAt = null;
+    excludeModerationRestricted(filters);
     
     // Handle status parameter (preferred) or legacy available parameter
     if (status !== undefined) {
@@ -300,8 +303,10 @@ export async function findPropertiesInRadius(req: ControllerRequest, res: Contro
 
     // Apply additional filters
     const filters: any = {};
-    // Public geo feed: never surface soft-deleted (archived) listings.
+    // Public geo feed: never surface soft-deleted (archived) listings,
+    // nor ones a community jury has restricted.
     filters.deletedAt = null;
+    excludeModerationRestricted(filters);
     
     // Handle status parameter (preferred) or legacy available parameter
     if (status !== undefined) {

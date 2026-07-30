@@ -12,8 +12,11 @@ export async function getPropertyById(req: ControllerRequest, res: ControllerRes
     const { propertyId } = req.params;
     const property = await Property.findById(propertyId).populate(ADDRESS_GEO_POPULATE).lean();
     if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
-    // Soft-deleted listings are invisible to everyone except their owner.
-    if (property.deletedAt) {
+    // Soft-deleted listings, and ones a community jury has restricted, are
+    // invisible to everyone except their owner. The owner keeps their own view
+    // deliberately: a listing that silently vanished from its owner's account
+    // with no explanation is worse than one they can still see and appeal.
+    if (property.deletedAt || property.moderation?.restricted) {
       let isOwner = false;
       const oxyUserId = req.user?.id || req.user?._id;
       if (oxyUserId) {

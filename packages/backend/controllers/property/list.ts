@@ -3,6 +3,7 @@ import type { SortOrder } from 'mongoose';
 import { Property, RecentlyViewed, Reservation, Saved } from '../../models';
 import { paginationResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
+import { excludeModerationRestricted } from './publicVisibility';
 import {
   priceFieldForOffering,
   DEFAULT_PRICE_FIELD,
@@ -147,6 +148,9 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     const filters: any = {};
     // Public feed: never surface soft-deleted (archived) listings.
     filters.deletedAt = null;
+    // …nor ones a community jury has restricted. Applied even under an owner
+    // filter: `ownerOxyUserId` is a query parameter, not the session.
+    excludeModerationRestricted(filters);
     if (ownerOxyUserId) filters.oxyUserId = String(ownerOxyUserId);
     if (type) filters.type = type;
     
