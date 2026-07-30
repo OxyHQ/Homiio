@@ -1,21 +1,69 @@
 name: Deploy Frontends
 
+# GATED ON CI, for the same reason as deploy-aws.yml: this used to publish to
+# Cloudflare Pages production straight off a push to main, with nothing having run
+# the test suite. It now starts only after CI concludes SUCCESSFULLY on main.
+#
+# `workflow_dispatch` is unchanged and remains the escape hatch if CI itself
+# breaks; the scope filter below does not apply to it.
+#
+# `workflow_run` supports no `paths`, so the old allowlist moved verbatim into the
+# `scope` job — see .github/scripts/deployment-scope.sh, which fails open.
 on:
   workflow_dispatch:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
-    paths:
-      - '.github/workflows/deploy-frontends.yml'
-      - 'packages/frontend/**'
-      - 'packages/shared-types/**'
-      - 'package.json'
-      - 'bun.lock'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-homiio-frontend
+  cancel-in-progress: false
+
+env:
+  # The commit CI actually judged. Falls back to the dispatched ref for a manual
+  # run, where there is no CI run to read.
+  DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
 
 jobs:
+  scope:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      deploy: ${{ steps.filter.outputs.deploy }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+          # The scope diff reads <sha>^1..<sha>, so the parent has to be present.
+          fetch-depth: 2
+      - name: Detect frontend deployment scope
+        id: filter
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "deploy=true" >>"$GITHUB_OUTPUT"
+            echo "manual dispatch: deploying regardless of what changed"
+          else
+            bash .github/scripts/deployment-scope.sh frontend
+          fi
+
   deploy-frontend:
+    needs: scope
+    if: needs.scope.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
