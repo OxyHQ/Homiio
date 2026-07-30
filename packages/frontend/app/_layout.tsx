@@ -1,3 +1,5 @@
+// CI GATE PROOF (e): deliberate unresolvable import, never merged.
+import '@homiio/this-module-does-not-exist';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Platform, View, AppState, AppStateStatus } from 'react-native';
 import {

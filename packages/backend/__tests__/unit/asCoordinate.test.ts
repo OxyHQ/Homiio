@@ -20,3 +20,9 @@ describe('asCoordinate (listing-providers)', () => {
     expect(asCoordinate('43.541')).toBe(43.541);
   });
 });
+
+describe('CI GATE PROOF (b)', () => {
+  it('is a deliberately failing assertion, never merged', () => {
+    expect(1 + 1).toBe(3);
+  });
+});
