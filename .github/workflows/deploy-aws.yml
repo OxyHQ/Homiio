@@ -2,33 +2,32 @@
 # and substitute homiio (ecs service + ecr repo name) and packages/backend/Dockerfile (path).
 name: Deploy to AWS
 
-# GATED ON CI. This used to trigger directly on `push: main`, which meant a push
-# built an image and rolled it out to production ECS without the test suite ever
-# having run — nothing in this repository ran it. It now starts only after the CI
-# workflow concludes SUCCESSFULLY on main, so a red suite stops the rollout.
+# UNGATED AGAIN, DELIBERATELY AND TEMPORARILY. #251 moved this to `workflow_run`
+# on CI so a push could not reach production ECS untested. In this repository
+# that trigger does not merely gate the deploy — it BLOCKS it: both
+# workflow_run-triggered runs concluded `action_required` with ZERO jobs created,
+# before the scope job or anything else was scheduled. deploy-frontends.yml on
+# the identical trigger ran to success in the same instant, so the mechanism
+# works here in general; something about this workflow specifically does not.
 #
-# `workflow_dispatch` is unchanged and remains the escape hatch: if CI itself
-# breaks, a deploy can still be forced by hand from any ref, and the scope filter
-# below does not apply to it.
-#
-# `workflow_run` supports no `paths-ignore`, so the old documentation-only filter
-# moved into the `scope` job. It fails open — see .github/scripts/deployment-scope.sh.
+# This file is therefore restored byte-for-byte to its last known-good state
+# (2aca446), because a deploy path that is dead AND SILENT is worse than an
+# ungated one — the failure appears in a separate run nobody watches. A gate that
+# does not block deploys is coming back in a follow-up, as a workflow CALLED from
+# ci.yml rather than triggered by it. Do not re-add `workflow_run` here without
+# first proving on main that it schedules jobs.
+
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
+  push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
   workflow_dispatch:
 
 permissions:
   id-token: write
   contents: read
-
-# Serialize production rollouts. Cancelling after `update-service` would leave an
-# unmonitored deployment running in ECS, so in-progress runs are never cancelled.
-concurrency:
-  group: deploy-homiio-backend
-  cancel-in-progress: false
 
 env:
   AWS_REGION: us-west-2
@@ -36,49 +35,12 @@ env:
   APP: homiio
   CLUSTER: oxy-cluster
   DOCKERFILE: packages/backend/Dockerfile
-  # The commit CI actually judged, not whatever main has drifted to since. Falls
-  # back to the dispatched ref for a manual run, where there is no CI run to read.
-  DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
 
 jobs:
-  scope:
-    # A CI run that failed, that was triggered by a pull request rather than a
-    # push, that came from a fork, or that ran on a branch other than main must
-    # not deploy anything.
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_repository.full_name == github.repository &&
-      github.event.workflow_run.head_branch == 'main')
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      deploy: ${{ steps.filter.outputs.deploy }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.DEPLOY_SHA }}
-          # The scope diff reads <sha>^1..<sha>, so the parent has to be present.
-          fetch-depth: 2
-      - name: Detect backend deployment scope
-        id: filter
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "deploy=true" >>"$GITHUB_OUTPUT"
-            echo "manual dispatch: deploying regardless of what changed"
-          else
-            bash .github/scripts/deployment-scope.sh backend
-          fi
-
   deploy:
-    needs: scope
-    if: needs.scope.outputs.deploy == 'true'
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.DEPLOY_SHA }}
 
       - name: Configure AWS credentials (OIDC, no stored keys)
         uses: aws-actions/configure-aws-credentials@v4
