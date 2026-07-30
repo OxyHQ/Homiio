@@ -124,11 +124,11 @@ app.use(helmet());
 // CORS configuration — O(1) Set lookup instead of Array.includes per request
 const allowedOriginsSet = new Set([
   'https://homiio.com',
-  'http://localhost:3000',
-  'http://localhost:8081',
+  'http://localhost:4130',
+  'http://localhost:8130',
   'http://localhost:19006',
-  'http://127.0.0.1:3000',
-  'http://127.0.0.1:8081',
+  'http://127.0.0.1:4130',
+  'http://127.0.0.1:8130',
   'http://127.0.0.1:19006'
 ]);
 // Extra production web origins (e.g. Cloudflare Pages), comma-separated

@@ -46,8 +46,8 @@ STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRICE_PLUS=price_...
 STRIPE_PRICE_FILE=price_...
-STRIPE_SUCCESS_URL=http://localhost:8081/success
-STRIPE_CANCEL_URL=http://localhost:8081/profile/subscriptions
+STRIPE_SUCCESS_URL=http://localhost:8130/success
+STRIPE_CANCEL_URL=http://localhost:8130/profile/subscriptions
 
 # OpenAI — required for the Sindi assistant
 OPENAI_API_KEY=sk-...
@@ -64,14 +64,14 @@ AWS_S3_BUCKET=oxy-homiio-media-usw2-237343248947
 
 ```env
 EXPO_PUBLIC_OXY_BASE_URL=https://api.oxy.so
-API_URL=http://localhost:4000
+API_URL=http://localhost:4130
 
 # Optional Stripe Payment Link fallbacks for when Checkout API is unavailable
 EXPO_PUBLIC_STRIPE_LINK_PLUS=https://buy.stripe.com/...
 EXPO_PUBLIC_STRIPE_LINK_FILE=https://buy.stripe.com/...
 ```
 
-In production, `EXPO_PUBLIC_OXY_BASE_URL` should point at the Oxy production API (`https://api.oxy.so`). In local dev, the frontend defaults to `http://192.168.86.44:3001` if you do not override — replace that with whatever LAN address actually serves Oxy locally.
+`EXPO_PUBLIC_OXY_BASE_URL` defaults to the Oxy production API (`https://api.oxy.so`) in every environment — there is no dev fallback. Override it only when you are genuinely running an Oxy API yourself.
 
 ## Run the dev servers
 
@@ -80,7 +80,7 @@ In production, `EXPO_PUBLIC_OXY_BASE_URL` should point at the Oxy production API
 bun run dev
 
 # Or run them in separate terminals
-bun run dev:backend     # nodemon + ts-node, http://localhost:4000
+bun run dev:backend     # nodemon + ts-node, http://localhost:4130
 bun run dev:frontend    # Expo with --tunnel, opens the dev menu
 ```
 
@@ -94,7 +94,7 @@ Inside the Expo CLI:
 The backend exposes `GET /health` (unauthenticated) — hit it from a second terminal to confirm Mongo is connected:
 
 ```sh
-curl http://localhost:4000/health | jq
+curl http://localhost:4130/health | jq
 ```
 
 If `database.status` is anything other than `"connected"`, check the `MONGODB_URI` value and that `mongod` is running.

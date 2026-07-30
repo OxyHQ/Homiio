@@ -410,13 +410,13 @@ GET /api/properties/search?lat=40.730610&lng=-73.935242&radius=1000&type=room&ma
 ### Example Test Queries
 ```bash
 # Test nearby search
-curl "http://localhost:3001/api/properties/nearby?longitude=-73.9855&latitude=40.7580&maxDistance=2000"
+curl "http://localhost:4130/api/properties/nearby?longitude=-73.9855&latitude=40.7580&maxDistance=2000"
 
 # Test radius search
-curl "http://localhost:3001/api/properties/radius?longitude=-73.9855&latitude=40.7580&radius=1500"
+curl "http://localhost:4130/api/properties/radius?longitude=-73.9855&latitude=40.7580&radius=1500"
 
 # Test enhanced search with location
-curl "http://localhost:3001/api/properties/search?lat=40.7580&lng=-73.9855&radius=1000&type=apartment"
+curl "http://localhost:4130/api/properties/search?lat=40.7580&lng=-73.9855&radius=1000&type=apartment"
 ```
 
 ## Future Enhancements

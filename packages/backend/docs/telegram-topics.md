@@ -134,13 +134,13 @@ Test the endpoints using curl or any HTTP client:
 
 ```bash
 # Check if New York, US is supported
-curl "http://localhost:4000/api/telegram/check-location-support?city=New York&country=US"
+curl "http://localhost:4130/api/telegram/check-location-support?city=New York&country=US"
 
 # Test location support functionality
-curl -X POST "http://localhost:4000/api/telegram/test-location-support"
+curl -X POST "http://localhost:4130/api/telegram/test-location-support"
 
 # Send a test message to topic 4
-curl -X POST "http://localhost:4000/api/telegram/test-message" \
+curl -X POST "http://localhost:4130/api/telegram/test-message" \
   -H "Content-Type: application/json" \
   -d '{"groupId": "-1002750613848", "message": "Test message", "topicId": 4}'
 ```
