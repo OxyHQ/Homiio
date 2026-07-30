@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!--
+    Default placement on API 31+, expressed directly in launcher cells rather than through
+    the `70 × cells − 30` dp conversion the older attributes need. The pair matches
+    `homiio_listings_widget_min_width` / `_min_height` in dimens.xml.
+  -->
+  <integer name="homiio_listings_widget_target_cell_width">4</integer>
+  <integer name="homiio_listings_widget_target_cell_height">3</integer>
+
+  <!--
+    How long the card waits before turning to the next listing on its own.
+
+    Thirty seconds: long enough that a redraw — which re-serialises this widget's decoded
+    photograph to the launcher, see `ListingsBitmaps.kt` — is not paid twelve times a
+    minute, and short enough that the rotation visibly moves while someone is looking at
+    it. It is a resource so the pace can be tuned without touching the scheduler.
+
+    NOT expressible as periodic work: WorkManager floors that at fifteen minutes, which is
+    why `ListingsAutoAdvanceWorker` chains one-time requests instead.
+  -->
+  <integer name="homiio_listings_widget_auto_advance_seconds">30</integer>
+</resources>

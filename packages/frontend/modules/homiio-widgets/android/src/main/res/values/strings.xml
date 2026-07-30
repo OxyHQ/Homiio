@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Every word the listings widget can draw.
+
+  All of them are resources, and all of them are translated into the four languages the
+  app itself ships (en, es, it, ca) — a widget is drawn by the SYSTEM in the device's
+  locale, so an untranslated string here is a card that speaks English on a Spanish
+  phone's home screen while the app beside it does not.
+
+  The wording follows the app's own vocabulary rather than inventing a second one: the
+  label is `home.category.newListings` from `locales/*.json`, and the price suffix is the
+  same abbreviation `agent.calculator.perMonth` uses.
+-->
+<resources>
+  <!-- What the launcher's widget picker shows. -->
+  <string name="homiio_listings_widget_label">New listings</string>
+  <string name="homiio_listings_widget_description">One newly listed home to rent at a time, from Homiio.</string>
+
+  <!--
+    The quiet line above the listing, saying what it is. All caps in the string itself:
+    Glance's `TextStyle` has no text-transform, and uppercasing per locale in code is not
+    something a widget can do correctly.
+  -->
+  <string name="homiio_listings_widget_eyebrow">NEW TO RENT</string>
+
+  <!-- Shown only before the first successful fetch; never replaces content. -->
+  <string name="homiio_listings_widget_empty">No listings yet</string>
+  <string name="homiio_widget_open_app">Open Homiio</string>
+
+  <!--
+    The price line. `%1$s` is the amount already formatted as currency in the device's
+    locale (see `formatMonthlyPrice`), so this string carries only the period suffix — the
+    part that is genuinely a translation rather than a number format.
+  -->
+  <string name="homiio_listings_widget_price_monthly">%1$s/mo</string>
+
+  <!-- The spec line: bedrooms, bathrooms and floor area, joined by `spec_separator`. -->
+  <plurals name="homiio_listings_widget_beds">
+    <item quantity="one">%1$d bed</item>
+    <item quantity="other">%1$d beds</item>
+  </plurals>
+  <plurals name="homiio_listings_widget_baths">
+    <item quantity="one">%1$d bath</item>
+    <item quantity="other">%1$d baths</item>
+  </plurals>
+  <string name="homiio_listings_widget_area">%1$d m²</string>
+  <!--
+    Punctuation rather than words, so it is the same in every language and marked
+    untranslatable — a translator asked to localise " · " has nothing to do but break it.
+  -->
+  <string name="homiio_listings_widget_spec_separator" translatable="false">" · "</string>
+
+  <!--
+    Where the listing came from. Homiio aggregates public portals as first-party data, and
+    the app shows that provenance on every external listing — the widget says the same
+    thing rather than presenting a portal's listing as if Homiio had it alone.
+  -->
+  <string name="homiio_listings_widget_source">via %1$s</string>
+</resources>

@@ -17,8 +17,18 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
-android/
-ios/
+# Anchored with a leading slash on purpose: an unanchored `android/` matches at
+# EVERY depth, which silently swallows the source of local Expo modules under
+# `modules/*/android/`. That source is checked in — it is the widget, not build
+# output — while `/android` and `/ios` at the app root stay ignored because CNG
+# regenerates them at every prebuild.
+/android/
+/ios/
+
+# Gradle output from the local Expo modules, whose source above is tracked.
+modules/*/android/build/
+modules/*/android/.gradle/
+modules/*/android/.cxx/
 
 # Metro
 .metro-health-check*

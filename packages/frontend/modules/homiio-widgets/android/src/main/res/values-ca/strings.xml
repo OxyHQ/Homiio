@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Catalan. See `values/strings.xml` for what each string is and where it is drawn.
+
+  The qualifier is `values-ca` rather than `values-ca-rES`, even though the app ships its
+  own catalogue as `ca-ES.json`: Android would match a region-qualified folder only on a
+  device set to Catalan (Spain), so a phone set to plain `ca` — or to Catalan (Andorra) —
+  would fall back to English. There is nothing region-specific in these strings, so the
+  broader qualifier is simply more reachable.
+-->
+<resources>
+  <string name="homiio_listings_widget_label">Nous anuncis</string>
+  <string name="homiio_listings_widget_description">Un habitatge de lloguer acabat de publicar cada vegada, des de Homiio.</string>
+
+  <string name="homiio_listings_widget_eyebrow">NOU EN LLOGUER</string>
+
+  <string name="homiio_listings_widget_empty">Encara no hi ha anuncis</string>
+  <string name="homiio_widget_open_app">Obre Homiio</string>
+
+  <string name="homiio_listings_widget_price_monthly">%1$s/mes</string>
+
+  <plurals name="homiio_listings_widget_beds">
+    <item quantity="one">%1$d hab.</item>
+    <item quantity="other">%1$d hab.</item>
+    <item quantity="many">%1$d hab.</item>
+  </plurals>
+  <plurals name="homiio_listings_widget_baths">
+    <item quantity="one">%1$d bany</item>
+    <item quantity="other">%1$d banys</item>
+    <item quantity="many">%1$d banys</item>
+  </plurals>
+  <string name="homiio_listings_widget_area">%1$d m²</string>
+
+  <string name="homiio_listings_widget_source">via %1$s</string>
+</resources>

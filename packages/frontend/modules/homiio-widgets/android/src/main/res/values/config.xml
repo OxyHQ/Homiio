@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The two origins the widget talks to.
+
+  WHY THESE ARE RESOURCES. A widget runs outside the JS runtime — in a `BroadcastReceiver`
+  and a WorkManager job, potentially before the app has ever been opened — so it cannot
+  read `config.ts`, and it cannot go through the app's linked client. Its endpoints are
+  Android string resources instead, with production defaults here.
+
+  `homiio_widget_api_base_url` is where the listing search is fetched from AND the widget's
+  entire image-download allowlist: Homiio serves its listing photographs from its own API
+  (`/api/images/file/property/…`), never from a portal CDN — the ingest pipeline re-hosts
+  every picture precisely so no portal URL is ever handed to a client (see the repository's
+  `AGENTS.md`, "no portal CDN hotlinks ever"). So one origin covers both, and any URL
+  outside it is refused by `ListingsImageCache`.
+
+  `homiio_widget_web_base_url` is where a tap goes. It opens the property inside the app
+  via the `https://homiio.com` app link the manifest already verifies, so the widget never
+  needs to know the app's own scheme, and a device where the link is not verified falls
+  back to the website showing the same listing.
+
+  Overriding either for a development build needs no edit here — an app-module string of
+  the same name wins over a library dependency's at merge time, which is the mechanism
+  `app.plugin.js` uses.
+-->
+<resources>
+  <string name="homiio_widget_api_base_url" translatable="false">https://api.homiio.com</string>
+  <string name="homiio_widget_web_base_url" translatable="false">https://homiio.com</string>
+</resources>

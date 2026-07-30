@@ -1,0 +1,81 @@
+buildscript {
+  repositories {
+    mavenCentral()
+  }
+  dependencies {
+    // Glance widgets are `@Composable`, so this module needs the Kotlin Compose
+    // compiler plugin. `kotlinVersion` is the root-project extra that
+    // `expo-root-project` sets from the Expo version catalog, so the plugin is
+    // always the exact match for the Kotlin the rest of the build uses. Same
+    // shape as `expo-modules-core`'s own build.gradle.
+    classpath("org.jetbrains.kotlin.plugin.compose:org.jetbrains.kotlin.plugin.compose.gradle.plugin:${kotlinVersion}")
+  }
+}
+
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+group = 'com.homiio.widgets'
+version = '1.0.0'
+
+android {
+  namespace "com.homiio.widgets"
+  defaultConfig {
+    versionCode 1
+    versionName "1.0.0"
+  }
+
+  buildFeatures {
+    compose true
+  }
+}
+
+dependencies {
+  // Jetpack Glance — the widget UI and the dynamic-colour `GlanceTheme`. 1.1.1
+  // is the newest STABLE release (1.2.0 never left rc, 1.3.0 is alpha).
+  implementation "androidx.glance:glance-appwidget:1.1.1"
+
+  // Glance depends on `androidx.compose.runtime` only at RUNTIME scope (and at a
+  // 2022-era version), so the compile classpath needs it declared here. Pinned
+  // rather than floating: this is the newest Compose generation that pairs with
+  // the Kotlin `expo-root-project` selects for Expo 56 (2.1.20). Lint will
+  // suggest 1.11.x — taking it means checking the Kotlin pairing first, not
+  // bumping the line.
+  implementation "androidx.compose.runtime:runtime:1.9.0"
+
+  // The periodic refresh and the rotation chain. Glance pulls work-runtime
+  // transitively for its own session worker, but again only at runtime scope.
+  implementation "androidx.work:work-runtime-ktx:2.10.5"
+
+  // `getSystemService<PowerManager>()`, `createBitmap`, `String.toUri`. Declared
+  // rather than leaned on as a transitive of work-runtime-ktx: this module calls
+  // it at COMPILE time, and a dependency that arrives by accident disappears the
+  // same way.
+  implementation "androidx.core:core-ktx:1.17.0"
+
+  // Backing store for the last-fetched rotation. Same story as the two above: it
+  // is already in the app as a runtime-scope transitive of Glance, so declaring
+  // it adds no artifact — it only puts it on this module's compile classpath.
+  implementation "androidx.datastore:datastore-preferences:1.2.1"
+
+  // There is deliberately NO dependency on `@oxyhq/services` here, unlike
+  // Mention's widget module. This widget is ANONYMOUS: it reads the same public
+  // listing search an unauthenticated visitor gets, so it needs no session, no
+  // token mint and no background credential. Adding one would mean adding the
+  // whole account-correctness contract with it — see `ListingsStore.kt`.
+
+  // The widget's arithmetic — the card's block budget, the response parsing, the
+  // price formatting — is written to be pure, so it is tested on a plain JVM
+  // rather than on a device. Nothing in `src/test` touches Glance, a Canvas or a
+  // launcher; those need the real thing.
+  testImplementation "junit:junit:4.13.2"
+
+  // `org.json` in `android.jar` is a THROWING stub for unit tests, and the
+  // listings parser is built on it. This is the real implementation; AGP puts
+  // the mockable android.jar last on the unit-test classpath, so this one wins.
+  testImplementation "org.json:json:20250517"
+}

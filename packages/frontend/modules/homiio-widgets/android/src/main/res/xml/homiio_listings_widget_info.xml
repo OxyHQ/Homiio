@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Provider metadata for the listings widget.
+
+  `initialLayout` is Glance's own loading layout, which is what the launcher shows for the
+  moment between the widget being placed and the first composition arriving.
+
+  `resizeMode` is `horizontal|vertical` because the card is designed to lose lines rather
+  than to squeeze them (see `visibleBlocks`), so every size inside the range declared in
+  `dimens.xml` renders something honest.
+
+  `previewLayout` is deliberately NOT set. A static preview would have to hard-code a
+  price, a place and a photograph, and the launcher's picker would then advertise a
+  listing that does not exist; without one the picker falls back to `initialLayout`, which
+  is the same neutral loading card the widget itself shows for its first instant.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:description="@string/homiio_listings_widget_description"
+    android:minWidth="@dimen/homiio_listings_widget_min_width"
+    android:minHeight="@dimen/homiio_listings_widget_min_height"
+    android:minResizeWidth="@dimen/homiio_listings_widget_min_resize_width"
+    android:minResizeHeight="@dimen/homiio_listings_widget_min_resize_height"
+    android:maxResizeWidth="@dimen/homiio_listings_widget_max_resize_width"
+    android:maxResizeHeight="@dimen/homiio_listings_widget_max_resize_height"
+    android:targetCellWidth="@integer/homiio_listings_widget_target_cell_width"
+    android:targetCellHeight="@integer/homiio_listings_widget_target_cell_height"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen" />

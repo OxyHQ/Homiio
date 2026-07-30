@@ -164,6 +164,12 @@ module.exports = function (config) {
         // @oxyhq/services): request the signature permission + <queries> so
         // cold boot can silently read the Commons-hosted shared identity.
         '@oxyhq/services/plugins/withSharedIdentityReader',
+        // Points the Android home-screen widget (`modules/homiio-widgets`) at a
+        // backend. The native module itself is autolinked from `modules/` — this
+        // plugin only writes the two origin string resources, and only when a
+        // build passes them. Production passes nothing and the module's own
+        // `res/values/config.xml` defaults stand.
+        './modules/homiio-widgets/app.plugin',
       ],
       extra: {
         eas: {

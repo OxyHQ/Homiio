@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Home-screen sizes for the listings widget, in the launcher's own grid units.
+
+  Every value is `70 × cells − 30` dp, the conversion the App Widget sizing guide gives for
+  turning a cell count into the `minWidth` / `minHeight` a provider must declare
+  (developer.android.com/develop/ui/views/appwidgets § "Determine widget sizing"):
+
+      2 cells → 110dp    3 cells → 180dp    4 cells → 250dp    5 cells → 320dp
+
+  The card composes at its REAL size rather than at a declared bucket (`SizeMode.Exact`,
+  see `ListingsWidget.kt`), so these are the range the user may drag inside, not a set of
+  sizes the layout is drawn for. Which BLOCKS a given height can afford is derived at
+  composition time by `visibleBlocks` rather than declared here.
+-->
+<resources>
+  <!--
+    Default placement: 4 cells wide by 3 tall — the size at which the card shows
+    everything it has to say (price, place, specs and the eyebrow), which is the one worth
+    meeting the widget as.
+  -->
+  <dimen name="homiio_listings_widget_min_width">250dp</dimen>
+  <dimen name="homiio_listings_widget_min_height">180dp</dimen>
+
+  <!--
+    How small the user may drag it: 2 cells by 2.
+
+    Everything on this card is SHORT — a price, a place, a spec line — so a small card is
+    not one that cannot do its job, it is one that shows fewer of those lines.
+    `visibleBlocks` drops them in priority order and never promises one that does not fit,
+    so the degradation is honest at any size in this range.
+
+    The VERTICAL floor is derived from where that degradation stops being honest. A single
+    cell of height (72dp) leaves room for the price and nothing else — replayed against
+    `visibleBlocks`: 72dp less the 8dp the host keeps, less 24dp of padding, less a 24dp
+    price line, leaves 16dp against the 21.6dp a place line and its gap need. And a rent
+    with no location attached to it is not a listing, it is a number: a reader glancing at
+    "€1,200/mo" learns nothing they can act on. So the floor is the next cell up, 110dp,
+    where the price, the place AND the spec line all fit.
+
+    `ListingsCardStyleTest` READS this value out of this file and asserts exactly that, so
+    lowering it without re-deriving fails the build rather than shipping a card that shows
+    a price over an unnamed home.
+
+    Horizontally 110dp is fine: the place line ellipsizes against a width the `TextView`
+    measures, so a narrow card shortens it rather than losing it.
+  -->
+  <dimen name="homiio_listings_widget_min_resize_width">110dp</dimen>
+  <dimen name="homiio_listings_widget_min_resize_height">110dp</dimen>
+
+  <!--
+    The ceiling is where the card runs out of content to reveal. Price, place, specs and
+    provenance is everything one listing has to say at a glance, and the photograph is the
+    BACKGROUND — a taller or wider placement re-crops the same picture rather than showing
+    more of the listing, and at a fixed pixel budget (`BACKGROUND_MAX_PIXELS`) a larger
+    card only spreads those pixels thinner.
+  -->
+  <dimen name="homiio_listings_widget_max_resize_width">320dp</dimen>
+  <dimen name="homiio_listings_widget_max_resize_height">320dp</dimen>
+</resources>

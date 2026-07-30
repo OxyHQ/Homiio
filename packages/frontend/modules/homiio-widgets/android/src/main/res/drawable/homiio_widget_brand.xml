@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Homiio's mark, as the app draws it.
+
+  The path is the one in `assets/logo.tsx` (`LogoIcon`), viewBox and all, so the widget's
+  brand mark and the app's are the same geometry rather than two drawings that drift. A
+  vector rather than a raster set: the mark is one path, it is tinted at draw time to
+  whatever colour the card's background calls for (`ColorFilter.tint`), and a vector needs
+  no density buckets to stay sharp.
+
+  The intrinsic size keeps the source aspect (388.03 : 512 ≈ 0.758), so a caller that sets
+  only one axis still gets an undistorted mark — but the card sets both anyway, from
+  `ListingsCardStyle`, because Glance measures an `Image` by its modifier rather than by
+  the drawable.
+
+  `fillColor` is white only as a base for the tint; nothing draws it untinted.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="15dp"
+    android:height="20dp"
+    android:viewportWidth="388.03"
+    android:viewportHeight="512">
+  <path
+      android:fillColor="#FFFFFFFF"
+      android:pathData="M388.03 512H170.88L168.64 509.76V364.25H85.07V509.76L82.83 512H0V105.31L276.91 0L281.41 1.51L388.03 109.79V512Z" />
+</vector>

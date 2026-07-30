@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Italian. See `values/strings.xml` for what each string is and where it is drawn. -->
+<resources>
+  <string name="homiio_listings_widget_label">Nuovi annunci</string>
+  <string name="homiio_listings_widget_description">Una casa in affitto appena pubblicata alla volta, da Homiio.</string>
+
+  <string name="homiio_listings_widget_eyebrow">NUOVO IN AFFITTO</string>
+
+  <string name="homiio_listings_widget_empty">Ancora nessun annuncio</string>
+  <string name="homiio_widget_open_app">Apri Homiio</string>
+
+  <string name="homiio_listings_widget_price_monthly">%1$s/mese</string>
+
+  <plurals name="homiio_listings_widget_beds">
+    <item quantity="one">%1$d camera</item>
+    <item quantity="other">%1$d camere</item>
+    <item quantity="many">%1$d camere</item>
+  </plurals>
+  <plurals name="homiio_listings_widget_baths">
+    <item quantity="one">%1$d bagno</item>
+    <item quantity="other">%1$d bagni</item>
+    <item quantity="many">%1$d bagni</item>
+  </plurals>
+  <string name="homiio_listings_widget_area">%1$d m²</string>
+
+  <string name="homiio_listings_widget_source">via %1$s</string>
+</resources>
