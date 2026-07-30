@@ -33,4 +33,20 @@ export default [
       '@typescript-eslint/no-explicit-any': 'warn',
     },
   },
+  {
+    /**
+     * Jest's globals, in the only place they exist.
+     *
+     * Without this every `describe`, `it`, `expect` and `jest` in the suite is a
+     * `no-undef` error — hundreds of them, all false, drowning the real findings
+     * in the same output. The rule is right and the config was simply never told
+     * where the tests are.
+     */
+    files: ['**/__tests__/**/*.ts', '**/*.test.ts'],
+    languageOptions: {
+      globals: {
+        ...globals.jest,
+      },
+    },
+  },
 ];
