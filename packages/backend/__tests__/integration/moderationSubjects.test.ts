@@ -161,15 +161,24 @@ function requireResource<T extends string>(
   return resource as Extract<ModerationResource | ModerationContextResource, { type: T }>;
 }
 
-/** The subject's own location context, or a failure naming what was there. */
-function requireLocation(
-  snapshot: ModerationSubjectSnapshot | null | undefined,
-): Extract<ModerationContextResource, { type: 'location' }> {
+/**
+ * The subject's own location context, or a failure naming what was there.
+ *
+ * Returns just the `data`. `Extract<…, { type: 'location' }>` over the context
+ * union and over the resource union are two structurally identical but distinct
+ * `Omit<>` instantiations that TypeScript will not unify, and every assertion
+ * here is about the data anyway.
+ */
+function requireLocation(snapshot: ModerationSubjectSnapshot | null | undefined): {
+  label?: string;
+  latitude?: number;
+  longitude?: number;
+} {
   const context = requireSnapshot(snapshot).context;
   if (!context || context.length === 0) {
     throw new Error('expected a location context resource, got none');
   }
-  return requireResource(context[0], 'location', 'the first context resource');
+  return requireResource(context[0], 'location', 'the first context resource').data;
 }
 
 describe('moderation subject registry', () => {
@@ -223,10 +232,10 @@ describe('property subject provider', () => {
     );
 
     const location = requireLocation(snapshot);
-    expect(location.data.longitude).toBe(2.16);
-    expect(location.data.latitude).toBe(41.4);
-    expect(location.data.longitude).not.toBe(PRECISE_LONGITUDE);
-    expect(location.data.latitude).not.toBe(PRECISE_LATITUDE);
+    expect(location.longitude).toBe(2.16);
+    expect(location.latitude).toBe(41.4);
+    expect(location.longitude).not.toBe(PRECISE_LONGITUDE);
+    expect(location.latitude).not.toBe(PRECISE_LATITUDE);
   });
 
   it('publishes the building number only when the advert does', async () => {
@@ -240,11 +249,11 @@ describe('property subject provider', () => {
     const shownLocation = requireLocation(shownSnapshot);
     const hiddenLocation = requireLocation(hiddenSnapshot);
 
-    expect(shownLocation.data.label).toContain('Carrer de Verdi 42');
+    expect(shownLocation.label).toContain('Carrer de Verdi 42');
     // The advert hid it, so the snapshot has not exposed one. Anything else
     // would put Homiio's database in front of a jury as if it were the advert.
-    expect(hiddenLocation.data.label).toContain('Carrer de Torrijos');
-    expect(hiddenLocation.data.label).not.toContain('42');
+    expect(hiddenLocation.label).toContain('Carrer de Torrijos');
+    expect(hiddenLocation.label).not.toContain('42');
   });
 
   /**
@@ -343,9 +352,9 @@ describe('review subject provider', () => {
     );
 
     const location = requireLocation(snapshot);
-    expect(location.data.label).toBe('Gràcia, Barcelona');
-    expect(location.data.label).not.toContain('Verdi');
-    expect(location.data.longitude).toBe(2.16);
+    expect(location.label).toBe('Gràcia, Barcelona');
+    expect(location.label).not.toContain('Verdi');
+    expect(location.longitude).toBe(2.16);
   });
 
   /**

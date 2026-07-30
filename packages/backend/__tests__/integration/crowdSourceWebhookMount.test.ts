@@ -34,12 +34,16 @@
  * the arrangement Homiio happens to have today.
  */
 
-import express, { type Express, type Request } from 'express';
+import express, { Router, type Express, type Request } from 'express';
 import bodyParser from 'body-parser';
 import request from 'supertest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { caseDecidedEventFixture, signWebhookDelivery } from '@oxyhq/crowdsource-testing';
+import {
+  caseDecidedEventFixture,
+  decisionFixture,
+  signWebhookDelivery,
+} from '@oxyhq/crowdsource-testing';
 
 import { createCrowdSourceWebhookRoutes } from '../../routes/crowdSourceWebhook';
 import ModerationEvent from '../../models/ModerationEvent';
@@ -58,13 +62,30 @@ const WEBHOOK_SECRET = 'test-webhook-secret-at-least-16-chars';
  * the ordering is reproduced rather than executed, and the assertion below is
  * about the ordering rather than about this file.
  */
-function buildApp(observed: { body: unknown }): Express {
-  const app = express();
-  app.use('/webhooks', (req: Request, _res, next) => {
+/**
+ * The receiver, with the probe registered ON THE ROUTER rather than on the app.
+ *
+ * That distinction is the whole reliability of this file. A probe added to the
+ * app after the router is mounted sits wherever it was added — so if the mount
+ * later moved behind a parser, the probe would stay in front of it and keep
+ * reporting an unparsed body in a configuration that is actually broken. Making
+ * it the router's first handler means the probe travels WITH the mount: move the
+ * router behind a parser and the probe moves behind it too, and observes exactly
+ * what the real handler is about to be handed.
+ */
+function probedWebhookRouter(observed: { body: unknown }): Router {
+  const router = Router();
+  router.use((req: Request, _res, next) => {
     observed.body = req.body;
     next();
   });
-  app.use('/webhooks', createCrowdSourceWebhookRoutes());
+  router.use(createCrowdSourceWebhookRoutes());
+  return router;
+}
+
+function buildApp(observed: { body: unknown }): Express {
+  const app = express();
+  app.use('/webhooks', probedWebhookRouter(observed));
   app.use(bodyParser.json({ limit: '1mb' }));
   return app;
 }
@@ -102,6 +123,14 @@ function envelope(overrides: {
     unknown
   >;
   return { ...fixture, type: overrides.type, data: overrides.data };
+}
+
+/** How one delivery is made wrong. Every field optional; a row sets exactly one. */
+interface RefusalOverrides {
+  readonly wrongSecret?: string;
+  readonly expired?: boolean;
+  readonly tamperedBody?: string;
+  readonly signature?: string;
 }
 
 describe('crowdsource webhook mount', () => {
@@ -194,12 +223,22 @@ describe('crowdsource webhook mount', () => {
    * would let anyone who can reach the endpoint mint audit entries, and a
    * claimed event id can never be delivered again.
    */
-  it.each([
-    ['a signature from the wrong secret', { wrongSecret: 'a-different-secret-entirely' }],
-    ['a timestamp outside the freshness window', { expired: true }],
-    ['a body that does not match what was signed', { tamperedBody: '{"id":"evt_swapped"}' }],
-    ['an outright forged signature', { signature: `sha256=${'0'.repeat(64)}` }],
-  ])('refuses %s and records nothing', async (_name, overrides) => {
+  it.each<[string, RefusalOverrides, string]>([
+    ['a signature from the wrong secret', { wrongSecret: 'a-different-secret-entirely' }, 'signature_mismatch'],
+    ['a timestamp outside the freshness window', { expired: true }, 'timestamp_out_of_window'],
+    ['a body that does not match what was signed', { tamperedBody: '{"id":"evt_swapped"}' }, 'signature_mismatch'],
+    /**
+     * Two distinct forgeries, because they exercise different code.
+     *
+     * A well-formed digest that is simply wrong reaches the constant-time
+     * COMPARISON; a header in the wrong shape is refused while PARSING and never
+     * gets there. The second was originally written as the only forgery case
+     * (`sha256=` + zeroes) and answered `malformed_signature` — so it had never
+     * tested the comparison at all, and would have survived deleting it.
+     */
+    ['a well-formed signature that is simply wrong', { signature: `v1=${'0'.repeat(64)}` }, 'signature_mismatch'],
+    ['a signature header in the wrong shape', { signature: `sha256=${'0'.repeat(64)}` }, 'malformed_signature'],
+  ])('refuses %s and records nothing', async (_name, overrides, expectedRejection) => {
     const observed: { body: unknown } = { body: 'never set' };
     const event = envelope({
       id: 'evt_bad',
@@ -239,6 +278,14 @@ describe('crowdsource webhook mount', () => {
       .send(signed.body);
 
     expect(res.status).toBeGreaterThanOrEqual(400);
+    /**
+     * The REASON, not just the refusal. A delivery can be refused long before
+     * the signature is ever compared — a missing event-id header answers
+     * `missing_event_id`, an envelope the contract rejects answers
+     * `malformed_event` — and a test asserting only "4xx" would survive deleting
+     * the signature check entirely.
+     */
+    expect((res.body as { rejection?: string }).rejection).toBe(expectedRejection);
     expect(await ModerationEvent.countDocuments({})).toBe(0);
     expect(await ModerationOutbox.countDocuments({})).toBe(0);
   });
@@ -252,8 +299,14 @@ describe('crowdsource webhook mount', () => {
    */
   it('queues a decision instead of applying it inline', async () => {
     const observed: { body: unknown } = { body: 'never set' };
-    const event = caseDecidedEventFixture({ id: 'evt_decided', caseId: 'case_decided' });
-    const delivery = signedDelivery(event);
+    // The decision is built separately and handed to the fixture, so the
+    // assertion below compares against a value of a known type rather than
+    // reaching into `event.data` — which is a union across event types and does
+    // not carry `decision` on every member.
+    const decision = decisionFixture({ caseId: 'case_decided' });
+    const delivery = signedDelivery(
+      caseDecidedEventFixture({ id: 'evt_decided', caseId: 'case_decided', decision }),
+    );
 
     const res = await request(buildApp(observed))
       .post('/webhooks/crowdsource')
@@ -277,9 +330,7 @@ describe('crowdsource webhook mount', () => {
      * drop whatever it added — including a finding field the enforcement mapping
      * may later need.
      */
-    expect(outboxEvent?.payload?.decision).toEqual(
-      JSON.parse(JSON.stringify(event.data.decision)),
-    );
+    expect(outboxEvent?.payload?.decision).toEqual(JSON.parse(JSON.stringify(decision)));
   });
 
   /**

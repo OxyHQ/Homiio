@@ -12,6 +12,8 @@
     "worker": "ts-node --transpile-only worker.ts",
     "dev:worker": "nodemon --watch \"**/*.ts\" --exec ts-node --transpile-only worker.ts",
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "typecheck:tests": "tsc --noEmit -p tsconfig.test.json",
     "migrate:billing": "node scripts/migrate-billing-field.js",
     "migrate:city-geo": "ts-node --transpile-only scripts/migrate-city-geo.ts",
     "seed:geo": "ts-node --transpile-only scripts/seedGeo.ts",

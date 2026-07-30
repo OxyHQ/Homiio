@@ -1,0 +1,31 @@
+{
+  // Typechecking for the test suite, which nothing else does.
+  //
+  // `tsconfig.json` EXCLUDES `__tests__` (correctly — tests must not land in
+  // `dist`), and `jest.config.js` runs ts-jest with `isolatedModules: true`,
+  // which transpiles without typechecking. Between the two, no tool in this
+  // repository has ever typechecked a test file: a deliberate
+  // `const x: number = 'string'` in a test produces zero errors from both.
+  //
+  // That is worth closing on its own, and it is worth closing especially for
+  // mutation testing: "the mutant still typechecks" is the check that separates
+  // a behavioural failure from a compile error, and against an unchecked file it
+  // was answering a question about a different file.
+  //
+  // `noEmit` and no `composite`: this config exists to be READ, never built.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    // The base config pins `rootDir` to this package so `dist` mirrors it. Here
+    // that constraint is not merely unnecessary — it is fatal: `paths` resolves
+    // `@homiio/shared-types` and `@homiio/listing-providers` to sibling packages'
+    // `src`, and every one of those files is outside this `rootDir`, producing
+    // hundreds of TS6059s that say nothing about the tests. Nothing is emitted
+    // from this config, so widening it to the workspace costs nothing.
+    "rootDir": "../..",
+    "types": ["jest", "node"]
+  },
+  "include": ["__tests__/**/*.ts"],
+  "exclude": ["dist"]
+}
