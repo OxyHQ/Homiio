@@ -99,6 +99,19 @@ interface SnapshotProperty {
   images?: unknown[];
   listingFlags?: Record<string, unknown>;
   createdAt?: Date | string;
+  /**
+   * The POPULATED address, under the name every Property read sees it by.
+   *
+   * `PropertySchema` carries a `post(['find','findOne'])` hook that renames a
+   * populated `addressId` to `address` and deletes the original key — and it
+   * runs on `.lean()` queries too, which is exactly where a `.lean()` reader
+   * would expect it not to. Reading `addressId` here returns `undefined` for
+   * every listing, which does not throw: the snapshot simply loses its title's
+   * location and its entire location resource, and delivery succeeds. Caught
+   * only because the tests assert on the coordinates.
+   */
+  address?: SnapshotAddress;
+  /** Still a bare id when the populate did not run, so the hook left it alone. */
   addressId?: SnapshotAddress | mongoose.Types.ObjectId | null;
 }
 
@@ -115,8 +128,15 @@ function geoName(ref: GeoRef): string | undefined {
   return undefined;
 }
 
-/** The address, only when it was actually populated. */
+/**
+ * The address, only when it was actually populated.
+ *
+ * `address` first, because the schema's post-find hook has already moved it
+ * there — see {@link SnapshotProperty}. The `addressId` branch covers the case
+ * where the populate did not run at all, which the hook leaves untouched.
+ */
 function populatedAddress(property: SnapshotProperty): SnapshotAddress | null {
+  if (property.address) return property.address;
   const address = property.addressId;
   if (!address || address instanceof mongoose.Types.ObjectId) return null;
   return address;
