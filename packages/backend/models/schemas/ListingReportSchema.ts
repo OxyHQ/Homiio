@@ -8,12 +8,10 @@
  * `Review` (public address rating).
  */
 
-const mongoose = require('mongoose');
-const validator = require('validator');
-const {
-  ListingReportReason,
-  ListingReportStatus
-} = require('@homiio/shared-types');
+import mongoose from 'mongoose';
+import type { IListingReport } from '../documentTypes';
+import validator from 'validator';
+import { ListingReportReason, ListingReportStatus } from '@homiio/shared-types';
 
 const MAX_DETAILS_LENGTH = 4000;
 
@@ -81,4 +79,4 @@ listingReportSchema.index(
   }
 );
 
-module.exports = mongoose.model('ListingReport', listingReportSchema);
+export default mongoose.model<IListingReport>('ListingReport', listingReportSchema);

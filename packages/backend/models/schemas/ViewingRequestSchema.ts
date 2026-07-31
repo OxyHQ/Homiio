@@ -1,4 +1,5 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import type { IViewingRequest } from '../documentTypes';
 
 const viewingRequestSchema = new mongoose.Schema({
   propertyId: {
@@ -45,6 +46,6 @@ const viewingRequestSchema = new mongoose.Schema({
 viewingRequestSchema.index({ propertyId: 1, scheduledAt: 1, status: 1 });
 viewingRequestSchema.index({ ownerOxyUserId: 1, scheduledAt: 1, status: 1 });
 
-module.exports = mongoose.model('ViewingRequest', viewingRequestSchema);
+export default mongoose.model<IViewingRequest>('ViewingRequest', viewingRequestSchema);
 
 

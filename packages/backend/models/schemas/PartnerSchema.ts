@@ -10,7 +10,8 @@
  * it (never stored) so the frontend and backend can never disagree.
  */
 
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import type { IPartner } from '../documentTypes';
 
 const PARTNER_STATUSES: ReadonlyArray<string> = ['active', 'inactive'];
 
@@ -58,4 +59,4 @@ const partnerSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-module.exports = mongoose.model('Partner', partnerSchema);
+export default mongoose.model<IPartner>('Partner', partnerSchema);

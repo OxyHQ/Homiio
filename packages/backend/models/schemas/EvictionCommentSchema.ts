@@ -6,7 +6,8 @@
  * cascade-deleted when their parent `EvictionCase` is removed.
  */
 
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import type { IEvictionComment } from '../documentTypes';
 
 const MAX_BODY_LENGTH = 2000;
 
@@ -43,4 +44,4 @@ const evictionCommentSchema = new mongoose.Schema({
 // Newest-first thread pagination per case.
 evictionCommentSchema.index({ caseId: 1, createdAt: -1 });
 
-module.exports = mongoose.model('EvictionComment', evictionCommentSchema);
+export default mongoose.model<IEvictionComment>('EvictionComment', evictionCommentSchema);

@@ -1,4 +1,5 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import type { IRecentlyViewed } from '../documentTypes';
 
 const recentlyViewedSchema = new mongoose.Schema({
   oxyUserId: {
@@ -25,4 +26,4 @@ recentlyViewedSchema.index({ oxyUserId: 1, propertyId: 1 }, { unique: true });
 // Index for efficient queries by oxyUserId and viewedAt
 recentlyViewedSchema.index({ oxyUserId: 1, viewedAt: -1 });
 
-module.exports = mongoose.model('RecentlyViewed', recentlyViewedSchema); 
+export default mongoose.model<IRecentlyViewed>('RecentlyViewed', recentlyViewedSchema); 
