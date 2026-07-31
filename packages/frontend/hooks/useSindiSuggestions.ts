@@ -27,18 +27,27 @@ const DEFAULT_SUGGESTIONS: SindiSuggestion[] = [
 ];
 
 export function useSindiSuggestions({ property, conversationContext }: UseSindiSuggestionsProps = {}) {
-    const [suggestions, setSuggestions] = useState<SindiSuggestion[]>(DEFAULT_SUGGESTIONS);
+    // Keyed by the property it was fetched for, so the fallback below is DERIVED
+    // rather than reset by an effect. The effect used to call
+    // `setSuggestions(DEFAULT_SUGGESTIONS)` synchronously whenever it could not
+    // fetch — a cascading render, and on the very first pass a no-op, since that
+    // is already the initial value. Keying also fixes a real bug: suggestions
+    // fetched for one property stayed on screen while the next one loaded.
+    const [fetched, setFetched] = useState<{ propertyId: string; items: SindiSuggestion[] } | null>(
+        null,
+    );
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const { oxyServices, activeSessionId } = useOxy();
 
+    const propertyId = property?._id || property?.id;
+    const suggestions =
+        fetched && fetched.propertyId === propertyId ? fetched.items : DEFAULT_SUGGESTIONS;
+
     useEffect(() => {
-        if (!property || !oxyServices || !activeSessionId) {
-            setSuggestions(DEFAULT_SUGGESTIONS);
+        if (!property || !propertyId || !oxyServices || !activeSessionId) {
             return;
         }
-
-        const propertyId = property._id || property.id;
         
         const fetchSuggestions = async () => {
             setLoading(true);
@@ -65,32 +74,24 @@ export function useSindiSuggestions({ property, conversationContext }: UseSindiS
 
                 const data = response.data;
 
-                if (data.success && data.suggestions?.length > 0) {
-                    setSuggestions(data.suggestions);
-                } else {
-                    setSuggestions(DEFAULT_SUGGESTIONS);
-                }
+                setFetched({
+                    propertyId,
+                    items:
+                        data.success && data.suggestions?.length > 0
+                            ? data.suggestions
+                            : DEFAULT_SUGGESTIONS,
+                });
 
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Failed to load suggestions');
-                setSuggestions(DEFAULT_SUGGESTIONS);
+                setFetched({ propertyId, items: DEFAULT_SUGGESTIONS });
             } finally {
                 setLoading(false);
             }
         };
 
         fetchSuggestions();
-    }, [property, conversationContext, oxyServices, activeSessionId]);
+    }, [property, propertyId, conversationContext, oxyServices, activeSessionId]);
 
-    return {
-        suggestions,
-        loading,
-        error,
-        refetch: () => {
-            if (property && oxyServices && activeSessionId) {
-                // Trigger re-fetch by updating a dependency
-                setSuggestions(DEFAULT_SUGGESTIONS);
-            }
-        },
-    };
+    return { suggestions, loading, error };
 }
