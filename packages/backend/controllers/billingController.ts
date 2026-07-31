@@ -137,7 +137,7 @@ export async function stripeWebhook(req: Request, res: Response) {
             await billing.save();
           }
 
-          const result = await Billing.updateOne(
+          await Billing.updateOne(
             { oxyUserId, 'processedSessions': { $ne: sessionId } },
             {
               $set: {
@@ -170,7 +170,7 @@ export async function stripeWebhook(req: Request, res: Response) {
             setUpdate['plusStripeSubscriptionId'] = String(session.subscription);
           }
 
-          const result = await Billing.updateOne(
+          await Billing.updateOne(
             { oxyUserId, 'processedSessions': { $ne: sessionId } },
             {
               $set: setUpdate,
@@ -178,8 +178,6 @@ export async function stripeWebhook(req: Request, res: Response) {
             }
           );
 
-          // Verify the update worked
-          const updatedProfile = await Billing.findOne({ oxyUserId }).lean();
 
         } else if (product === 'founder') {
           // Ensure billing record exists
@@ -194,7 +192,7 @@ export async function stripeWebhook(req: Request, res: Response) {
             await billing.save();
           }
 
-          const result = await Billing.updateOne(
+          await Billing.updateOne(
             { oxyUserId, 'processedSessions': { $ne: sessionId } },
             {
               $set: {
@@ -222,7 +220,7 @@ export async function stripeWebhook(req: Request, res: Response) {
           }
 
           if (Object.keys(updateData).length > 0) {
-            const result = await Billing.updateMany(
+            await Billing.updateMany(
               { 'plusStripeSubscriptionId': subId },
               { $set: updateData }
             );
@@ -236,7 +234,7 @@ export async function stripeWebhook(req: Request, res: Response) {
 
         if (subId) {
           // Update last payment date for active subscriptions
-          const result = await Billing.updateMany(
+          await Billing.updateMany(
             { 'plusStripeSubscriptionId': subId, 'plusActive': true },
             { $set: { 'lastPaymentAt': new Date() } }
           );
@@ -249,7 +247,7 @@ export async function stripeWebhook(req: Request, res: Response) {
         const subId = sub.id || sub.subscription;
 
         if (subId) {
-          const result = await Billing.updateMany(
+          await Billing.updateMany(
             { 'plusStripeSubscriptionId': subId },
             {
               $set: {
@@ -265,7 +263,7 @@ export async function stripeWebhook(req: Request, res: Response) {
         break;
     }
     return res.json({ received: true });
-  } catch (err: any) {
+  } catch {
     return res.status(500).json({ error: 'Webhook handler failure' });
   }
 }
@@ -303,7 +301,7 @@ export async function confirmCheckoutSession(req: Request, res: Response) {
     }
 
     if (product === 'file') {
-      const result = await Billing.updateOne(
+      await Billing.updateOne(
         { oxyUserId, 'processedSessions': { $ne: sessionId } },
         {
           $set: { 'lastPaymentAt': new Date() },
@@ -349,7 +347,7 @@ export async function confirmCheckoutSession(req: Request, res: Response) {
         }
       });
     } else if (product === 'founder') {
-      const result = await Billing.updateOne(
+      await Billing.updateOne(
         { oxyUserId, 'processedSessions': { $ne: sessionId } },
         {
           $set: {
@@ -665,7 +663,7 @@ export async function createCustomerPortalSession(req: Request, res: Response) {
                 }
             });
         }
-    } catch (error: any) {
+    } catch {
         return res.status(500).json({
             success: false,
             error: {
@@ -700,7 +698,7 @@ export async function manuallyCancelSubscription(req: Request, res: Response) {
     // Return updated entitlements
     const updated = await Billing.findOne({ oxyUserId }).lean();
     return res.json({ success: true, entitlements: updated });
-  } catch (error: any) {
+  } catch {
     return res.status(500).json({
       success: false,
       error: {
@@ -770,7 +768,7 @@ export async function syncSubscriptionStatus(req: Request, res: Response) {
     }
 
     if (Object.keys(updateData).length > 0) {
-      const result = await Billing.updateOne(
+      await Billing.updateOne(
         { oxyUserId },
         { $set: updateData }
       );
@@ -842,7 +840,7 @@ export async function cancelSubscription(req: Request, res: Response) {
       updateData.plusCanceledAt = new Date(canceledSubscription.canceled_at * 1000);
     }
 
-    const result = await Billing.updateOne(
+    await Billing.updateOne(
       { oxyUserId },
       { $set: updateData }
     );
@@ -879,12 +877,12 @@ export async function reactivateSubscription(req: Request, res: Response) {
     }
 
     // Reactivate the subscription in Stripe
-    const reactivatedSubscription = await stripe.subscriptions.update(billing.plusStripeSubscriptionId, {
+    await stripe.subscriptions.update(billing.plusStripeSubscriptionId, {
       cancel_at_period_end: false
     });
 
     // Update the database to reflect the reactivation
-    const result = await Billing.updateOne(
+    await Billing.updateOne(
       { oxyUserId },
       {
         $set: {
@@ -917,7 +915,7 @@ export async function testWebhookEndpoint(req: Request, res: Response) {
       headers: req.headers,
       body: req.body
     });
-  } catch (error: any) {
+  } catch {
     return res.status(500).json({
       success: false,
       error: {

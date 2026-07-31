@@ -105,13 +105,9 @@ class Database {
    * Disconnect from database
    */
   async disconnect() {
-    try {
-      if (!this.isConnected) return;
-      await mongoose.connection.close();
-      this.isConnected = false;
-    } catch (error) {
-      throw error;
-    }
+    if (!this.isConnected) return;
+    await mongoose.connection.close();
+    this.isConnected = false;
   }
 
   /**
@@ -138,13 +134,9 @@ class Database {
    * Force reconnect to database
    */
   async forceReconnect() {
-    try {
-      this.isConnected = false;
-      await mongoose.connection.close();
-      return await this.connect();
-    } catch (error) {
-      throw error;
-    }
+    this.isConnected = false;
+    await mongoose.connection.close();
+    return await this.connect();
   }
 
   /**

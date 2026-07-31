@@ -241,7 +241,7 @@ export function selogerSearchUrl(city: string, page = 1): string {
     .trim()
     .replace(/[^a-z0-9]+/g, '-');
   // projects=2 → location (rent); types=1,2 → appartement/maison
-  const base = `${SELOGER_BASE_URL}/list.htm?projects=2&types=1,2&enterprise=0&qsVersion=1.0&places=[{"divison\":null,\"type\":2,\"label\":\"${city}\"}]`;
+  const base = `${SELOGER_BASE_URL}/list.htm?projects=2&types=1,2&enterprise=0&qsVersion=1.0&places=[{"divison":null,"type":2,"label":"${city}"}]`;
   void slug;
   return page <= 1 ? base : `${base}&LISTING-LISTpg=${page}`;
 }

@@ -125,14 +125,13 @@ class TelegramService {
   }
 
   /**
-   * Get the appropriate Telegram group for notifications
-   * For now, returns the default group for all cities
-   * @param {string} city - The city name (for future expansion)
+   * The Telegram group notifications are posted to.
+   *
+   * Every notification goes to the one default group. This used to take a city
+   * and ignore it, which read as per-city routing that has never existed.
    * @returns {Object} - Group configuration with id and language
    */
-  getGroupForCity(_city: string | null | undefined): GroupConfig | undefined {
-    // For now, all notifications go to the default Spanish group
-    // In the future, this can be expanded to route based on city/region
+  getDefaultGroup(): GroupConfig | undefined {
     return config.telegram.defaultGroup;
   }
 
@@ -243,7 +242,6 @@ class TelegramService {
       description,
       amenities,
       availability,
-      _id
     } = property;
 
     // Get translations for the language
@@ -367,7 +365,7 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
       const topicId = this.getTopicIdForLocation(city, country);
 
       // Get the group configuration
-      const groupConfig = this.getGroupForCity(city);
+      const groupConfig = this.getDefaultGroup();
 
       if (!groupConfig || !groupConfig.id) {
         logger.warn('No Telegram group configured. Skipping notification.', {
@@ -635,11 +633,10 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
   }
 
   /**
-   * Test property image functionality
-   * @param {Object} testProperty - Test property object
+   * Test property image functionality against hardcoded fixtures.
    * @returns {Object} - Test results
    */
-  testPropertyImageFunctionality(_testProperty: PropertyLike | null = null): {
+  testPropertyImageFunctionality(): {
     success: boolean;
     totalTests: number;
     passedTests: number;

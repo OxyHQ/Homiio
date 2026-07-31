@@ -1,5 +1,4 @@
 import {
-  Profile,
   Saved,
   SavedPropertyFolder,
   successResponse,

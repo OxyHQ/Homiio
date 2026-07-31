@@ -494,7 +494,6 @@ export async function getScraperHealth(): Promise<{
   };
 }> {
   try {
-    const externalProperties = await Property.find({ isExternal: true }).sort({ updatedAt: -1 }).limit(1);
     const externalPropertyCount = await Property.countDocuments({ isExternal: true });
     const oldestProperty = await Property.findOne({ isExternal: true }).sort({ updatedAt: 1 });
     
@@ -514,7 +513,7 @@ export async function getScraperHealth(): Promise<{
         oldestExternalProperty: oldestProperty?.updatedAt || null,
       }
     };
-  } catch (error) {
+  } catch {
     return {
       status: 'unhealthy',
       details: {

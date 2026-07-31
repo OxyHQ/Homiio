@@ -47,7 +47,7 @@ const baseListing: NormalizedListing = {
 
 function buildIngestionService(): IngestionService {
   const fetchImage = jest.fn(
-    async (_url: string): Promise<ImageBufferInput> => ({ buffer: ONE_BY_ONE_PNG, mimetype: 'image/png' }),
+    async (): Promise<ImageBufferInput> => ({ buffer: ONE_BY_ONE_PNG, mimetype: 'image/png' }),
   );
   return new IngestionService({ mediaIngest: new ExternalMediaIngest({ fetchImage }) });
 }

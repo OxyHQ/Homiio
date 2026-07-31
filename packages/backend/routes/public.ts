@@ -112,7 +112,7 @@ export default function () {
 
   // Ethical pricing calculation endpoint (public - no authentication required)
   router.post('/properties/calculate-ethical-pricing', asyncHandler(async (req, res) => {
-    const { localMedianIncome, areaAverageRent, propertyType, bedrooms, bathrooms, squareFootage } = req.body;
+    const { localMedianIncome, areaAverageRent, propertyType } = req.body;
 
     // Validate required fields
     if (!localMedianIncome || !areaAverageRent) {
@@ -261,7 +261,7 @@ export default function () {
       };
 
       res.json({ success: true, conversation: sharedConversation });
-    } catch (error) {
+    } catch {
       res.status(500).json({ error: 'Failed to get shared conversation' });
     }
   }));

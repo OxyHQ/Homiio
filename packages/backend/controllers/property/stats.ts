@@ -9,7 +9,7 @@ export async function getPropertyStats(req: ControllerRequest, res: ControllerRe
     if (!mongoose.Types.ObjectId.isValid(propertyId)) return next(new AppError('Invalid property ID', 400, 'INVALID_ID'));
     const exists = await Property.exists({ _id: propertyId });
     if (!exists) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
-    let savesCount = await Saved.countDocuments({ targetType: 'property', targetId: new mongoose.Types.ObjectId(propertyId) }).catch(()=>0);
+    const savesCount = await Saved.countDocuments({ targetType: 'property', targetId: new mongoose.Types.ObjectId(propertyId) }).catch(()=>0);
     const now = new Date();
     const objId = new mongoose.Types.ObjectId(propertyId);
     

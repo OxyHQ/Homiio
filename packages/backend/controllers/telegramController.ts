@@ -203,7 +203,7 @@ class TelegramController {
     try {
       const { city } = req.params;
       
-      const groupConfig = telegramService.getGroupForCity(city);
+      const groupConfig = telegramService.getDefaultGroup();
       const groupsSummary = telegramService.getGroupsSummary();
 
       res.json(successResponse({

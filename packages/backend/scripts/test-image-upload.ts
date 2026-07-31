@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import imageUploadService from '../services/imageUploadService';
 
 // Mock file for testing

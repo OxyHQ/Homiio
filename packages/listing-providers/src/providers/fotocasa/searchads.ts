@@ -278,15 +278,6 @@ function extractJsonArrayFromOpenBracket(html: string, openBracket: number): str
   return undefined;
 }
 
-/** Bracket-match a top-level JSON array value after `"key":`. */
-function extractJsonArrayAfterKey(html: string, key: string): string | undefined {
-  const marker = `"${key}":[`;
-  const keyIndex = html.indexOf(marker);
-  if (keyIndex < 0) return undefined;
-  const openBracket = keyIndex + `"${key}":`.length;
-  return extractJsonArrayFromOpenBracket(html, openBracket);
-}
-
 /** Extract searchads listing cards keyed by source id (for discover → fetch handoff). */
 export function extractFotocasaSearchCards(body: string): Map<string, Record<string, unknown>> {
   const trimmed = body.trim();

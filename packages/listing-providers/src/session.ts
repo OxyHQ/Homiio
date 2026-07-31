@@ -12,7 +12,7 @@
 
 import { isDataDomeHtmlChallenge } from './parse/challenge';
 import { BLOCKED_BROWSER_RESOURCE_TYPES } from './proxy';
-import { isAllowedBrowserRequest, portalDomainFromUrl } from './requestFilter';
+import { isAllowedBrowserRequest } from './requestFilter';
 
 /** Hard per-navigation timeout when a caller does not pass one (ms). */
 export const DEFAULT_SESSION_TIMEOUT_MS = 60_000;

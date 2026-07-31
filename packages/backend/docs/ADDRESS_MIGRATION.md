@@ -66,17 +66,18 @@ This document describes the refactoring of address handling in the Homiio applic
 
 ### 1. Run Migration Script
 
-```bash
-# Check current migration status
-node scripts/migrate-addresses.js status
+**The migration is complete and the scripts are gone.** `scripts/migrate-addresses.js`
+and `scripts/migrate-address-schema.js` both `require('../models/schemas/AddressSchema')`,
+a path that has not existed since the address model became TS-native at
+`models/Address.ts`, and `PropertySchema` no longer declares an embedded
+`address` field for them to migrate — so neither could run, and neither would
+have had anything to do if it had. They were removed rather than repaired.
 
-# Run the migration
-node scripts/migrate-addresses.js migrate
-```
+The rest of this document is kept as the record of what changed and why.
 
 ### 2. Migration Steps
 
-The migration script:
+The migration script did this:
 1. Creates the new Address collection
 2. Extracts unique addresses from existing properties
 3. Creates Address documents with proper deduplication
@@ -87,7 +88,7 @@ The migration script:
 
 ### 1. Schema Changes
 
-- **New**: `AddressSchema.ts` - Standalone address model
+- **New**: `models/Address.ts` - Standalone address model
 - **Updated**: `PropertySchema.ts` - Uses `addressId` reference instead of embedded `address`
 
 ### 2. Controller Updates

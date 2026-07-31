@@ -171,9 +171,6 @@ conversationSchema.pre('save', function(this: ConversationDoc, next: (err?: Erro
   next();
 });
 
-conversationSchema.post('save', function(_doc: unknown): void {
-});
-
 conversationSchema.pre('validate', function(next: (err?: Error) => void): void {
   next();
 });

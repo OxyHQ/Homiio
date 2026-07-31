@@ -1,5 +1,4 @@
 import {
-  Profile,
   Saved,
   SavedPropertyFolder,
   Property,
@@ -106,9 +105,6 @@ export async function saveProperty(req: any, res: any, next: any) {
       }
     }
 
-    // Check if property is already saved
-    const existingSaved = await Saved.findOne({ oxyUserId, targetType: 'property', targetId: propertyId });
-
     // Upsert in unified Saved collection
     await Saved.updateOne(
       { oxyUserId, targetType: 'property', targetId: propertyId },
@@ -199,7 +195,7 @@ export async function updateSavedPropertyNotes(req: any, res: any, next: any) {
           await folder.save();
         }
       }
-    } catch (e) {
+    } catch {
       // Non-fatal: failed to mirror notes to SavedPropertyFolder
     }
     res.json(successResponse(updated, "Property notes updated successfully"));
