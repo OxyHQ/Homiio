@@ -16,7 +16,8 @@
  * names (consistent with the API contract).
  */
 
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import type { IPlacePoi } from '../documentTypes';
 
 /** Stable nearby-service category keys (mirrors `NearbyServiceKey` in shared-types). */
 const NEARBY_SERVICE_KEYS = [
@@ -124,4 +125,4 @@ placePoiSchema.index({ cellKey: 1 }, { unique: true });
 // means "expire exactly at the stored date").
 placePoiSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-module.exports = mongoose.model('PlacePoi', placePoiSchema);
+export default mongoose.model<IPlacePoi>('PlacePoi', placePoiSchema);

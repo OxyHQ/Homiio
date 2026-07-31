@@ -7,23 +7,12 @@
 import type { IProperty } from '../Property';
 import type { Query, UpdateQuery } from 'mongoose';
 
-const mongoose = require('mongoose');
-const validator = require('validator');
-const { transformAddressFields } = require('../../utils/helpers');
-const { validateOfferings } = require('./offeringValidation');
-const {
-  PropertyType,
-  PropertyStatus,
-  HousingType,
-  LayoutType,
-  UtilitiesIncluded,
-  LeaseDuration,
-  AvailabilityWindowStatus,
-  CancellationPolicy,
-  OfferingType,
-  ExchangeMode,
-  LISTING_CURRENCIES
-} = require('@homiio/shared-types');
+import mongoose from 'mongoose';
+import type { IPropertyModel } from '../Property';
+import validator from 'validator';
+import { transformAddressFields } from '../../utils/helpers';
+import { validateOfferings } from './offeringValidation';
+import { PropertyType, PropertyStatus, HousingType, LayoutType, UtilitiesIncluded, LeaseDuration, AvailabilityWindowStatus, CancellationPolicy, OfferingType, ExchangeMode, LISTING_CURRENCIES } from '@homiio/shared-types';
 
 // Monthly-rent pricing block (offering: long_term_rent). Currency uses the shared
 // LISTING_CURRENCIES set (covers every ingested market). 'FAIR' is 4 chars so no
@@ -38,7 +27,7 @@ const longTermRentSchema = new mongoose.Schema({
     type: String,
     required: true,
     uppercase: true,
-    enum: LISTING_CURRENCIES,
+    enum: [...LISTING_CURRENCIES],
     default: 'EUR'
   },
   deposit: {
@@ -70,7 +59,7 @@ const shortTermRentSchema = new mongoose.Schema({
     type: String,
     required: true,
     uppercase: true,
-    enum: LISTING_CURRENCIES,
+    enum: [...LISTING_CURRENCIES],
     default: 'EUR'
   },
   cleaningFee: {
@@ -186,7 +175,7 @@ const saleSchema = new mongoose.Schema({
     // Shared LISTING_CURRENCIES set so rent/sale codes stay consistent and cover
     // every ingested market. Note 'FAIR' is 4 chars, so no minlength/maxlength
     // constraint (a length cap would wrongly reject 'FAIR').
-    enum: LISTING_CURRENCIES
+    enum: [...LISTING_CURRENCIES]
   },
   pricePerSqm: {
     type: Number,
@@ -264,7 +253,7 @@ const propertySchema = new mongoose.Schema({
   sourceUrl: {
     type: String,
     validate: {
-      validator: validator.isURL,
+      validator: (value: string) => validator.isURL(value),
       message: 'Invalid source URL'
     }
   },
@@ -530,7 +519,7 @@ const propertySchema = new mongoose.Schema({
     url: {
       type: String,
       validate: {
-        validator: validator.isURL,
+        validator: (value: string) => validator.isURL(value),
         message: 'Invalid image URL'
       }
     },
@@ -582,7 +571,7 @@ const propertySchema = new mongoose.Schema({
       type: String,
       required: true,
       validate: {
-        validator: validator.isURL,
+        validator: (value: string) => validator.isURL(value),
         message: 'Invalid document URL'
       }
     },
@@ -801,14 +790,23 @@ propertySchema.index({ hasImages: -1, createdAt: -1 });
  * the schema and the controllers. Attached to `offerings` so it runs on save
  * and on `findOneAndUpdate` with `runValidators`.
  */
+/**
+ * A mongoose validator's `this` is the document on save and a Query on
+ * `findOneAndUpdate`, so it cannot be declared as `IProperty` up front —
+ * `isModified` is what tells the two apart.
+ */
+function isPropertyDocument(value: unknown): value is IProperty {
+  return typeof (value as { isModified?: unknown } | null)?.isModified === 'function';
+}
+
 propertySchema.path('offerings').validate({
-  validator: function(this: IProperty): boolean {
+  validator: function(this: unknown): boolean {
     // Only the document context exposes every block as `this.*`. Update
     // validators (findOneAndUpdate + runValidators) run with a Query `this`
     // where sibling blocks are not visible, which would wrongly reject a
     // partial edit — the update controller's `applyOfferingRulesForUpdate`
     // already enforces full coherence there, so skip when not a document.
-    if (typeof (this as { isModified?: unknown }).isModified !== 'function') {
+    if (!isPropertyDocument(this)) {
       return true;
     }
     return validateOfferings(this) === null;
@@ -1206,4 +1204,4 @@ propertySchema.methods.getCoordinates = function(this: IProperty): { longitude: 
   return null;
 };
 
-module.exports = mongoose.model('Property', propertySchema);
+export default mongoose.model<IProperty, IPropertyModel>('Property', propertySchema);

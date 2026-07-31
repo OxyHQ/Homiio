@@ -1,4 +1,5 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import type { IRoommateRequest } from '../documentTypes';
 
 const roommateRequestSchema = new mongoose.Schema({
   fromOxyUserId: {
@@ -32,4 +33,4 @@ roommateRequestSchema.index(
   { unique: true, partialFilterExpression: { status: 'pending' } }
 );
 
-module.exports = mongoose.model('RoommateRequest', roommateRequestSchema);
+export default mongoose.model<IRoommateRequest>('RoommateRequest', roommateRequestSchema);

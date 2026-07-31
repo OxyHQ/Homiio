@@ -8,8 +8,10 @@
  * filtered by `cityId` (no free-text `popularNeighborhoods` array).
  */
 
-const mongoose = require('mongoose');
-const { LISTING_CURRENCIES } = require('@homiio/shared-types');
+import mongoose from 'mongoose';
+import type { ICityModel } from '../documentTypes';
+import type { ICity } from '../documentTypes';
+import { LISTING_CURRENCIES } from '@homiio/shared-types';
 
 const citySchema = new mongoose.Schema({
   name: {
@@ -62,7 +64,7 @@ const citySchema = new mongoose.Schema({
   },
   currency: {
     type: String,
-    enum: LISTING_CURRENCIES,
+    enum: [...LISTING_CURRENCIES],
     default: 'EUR'
   },
   /**
@@ -143,4 +145,4 @@ citySchema.methods.updatePropertiesCount = async function() {
   return this.save();
 };
 
-module.exports = mongoose.model('City', citySchema);
+export default mongoose.model<ICity, ICityModel>('City', citySchema);

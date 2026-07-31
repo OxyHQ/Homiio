@@ -8,7 +8,8 @@
  * free-text array).
  */
 
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import type { INeighborhood } from '../documentTypes';
 
 const neighborhoodSchema = new mongoose.Schema({
   /** Owning city's `_id`. */
@@ -60,4 +61,4 @@ const neighborhoodSchema = new mongoose.Schema({
 neighborhoodSchema.index({ cityId: 1, name: 1 }, { unique: true });
 neighborhoodSchema.index({ cityId: 1 });
 
-module.exports = mongoose.model('Neighborhood', neighborhoodSchema);
+export default mongoose.model<INeighborhood>('Neighborhood', neighborhoodSchema);

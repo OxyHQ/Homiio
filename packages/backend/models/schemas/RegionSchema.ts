@@ -7,7 +7,8 @@
  * reference a Region by `_id`.
  */
 
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import type { IRegion } from '../documentTypes';
 
 const regionSchema = new mongoose.Schema({
   /** Owning country's `_id`. */
@@ -62,4 +63,4 @@ regionSchema.index({ countryId: 1, name: 1 }, { unique: true });
 regionSchema.index({ countryId: 1 });
 regionSchema.index({ name: 'text' });
 
-module.exports = mongoose.model('Region', regionSchema);
+export default mongoose.model<IRegion>('Region', regionSchema);

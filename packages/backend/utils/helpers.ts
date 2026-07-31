@@ -34,6 +34,6 @@ const transformAddressFields = <T extends AddressTransformable>(obj: T): T => {
   return obj;
 };
 
-module.exports = {
+export {
   transformAddressFields
 };
