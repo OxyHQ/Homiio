@@ -24,7 +24,7 @@ import {
   ListingValidationError,
   createFetchRuntime,
 } from '@homiio/listing-providers';
-import type { FetchContext } from '@homiio/listing-providers';
+import type { FetchContext, ListingProvider } from '@homiio/listing-providers';
 import { OfferingType, PropertyType, type NormalizedListing } from '@homiio/shared-types';
 
 import { IngestionService } from '../../services/ingestion/IngestionService';
@@ -43,7 +43,9 @@ const LOCAL_IMAGE_STORE_DIR = path.join(__dirname, '..', '..', '.local-image-sto
 const FIRST_SOURCE_ID = 'fixture-bcn-0001';
 const FIRST_SOURCE_URL = 'https://fixtures.homiio.com/es/barcelona/fixture-bcn-0001';
 
-const provider = new FixtureProvider();
+// The CONTRACT, not the class — `FixtureProvider.fetch` omits the `ctx`
+// parameter `ListingProvider` declares, and ingest calls it with one.
+const provider: ListingProvider = new FixtureProvider();
 const ctx: FetchContext = { runtime: createFetchRuntime() };
 
 const fetchImage = jest.fn(

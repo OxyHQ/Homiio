@@ -29,16 +29,14 @@ const PROXY_URL = 'http://mylogin:mypass@gw.dataimpulse.com:823';
 const originalFetch = global.fetch;
 const originalEnv = { ...process.env };
 
-function mockFetchResponse(body: string, extra?: { proxy?: string }) {
-  return {
-    ok: true,
-    status: 200,
-    text: async () => body,
-    json: async () => JSON.parse(body.startsWith('{') ? body : '{}'),
-    headers: { get: () => null },
-    arrayBuffer: async () => new TextEncoder().encode(body).buffer,
-    ...extra,
-  };
+/**
+ * A REAL `Response`, not a hand-rolled look-alike. `createProxiedFetch` is typed
+ * to return one, and the stand-in that used to live here diverged from it in
+ * ways nothing could catch — an unused `extra.proxy` field, `headers.get()`
+ * always null, and no `body`/`url`/`clone` at all.
+ */
+function mockFetchResponse(body: string, init?: ResponseInit): Response {
+  return new Response(body, init);
 }
 
 afterEach(() => {
@@ -186,10 +184,22 @@ describe('toPlaywrightProxy — password dialect', () => {
 /* PlaywrightBrowserPool — asset blocking + proxy context                     */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * `action` starts at `unhandled` on purpose. The pool's route handler wraps its
+ * body in `try {} catch {}` to survive a page closing mid-intercept, which also
+ * swallows a TypeError from an incomplete mock — this fake was missing
+ * `request().url()`, which the handler calls for every non-blocked type, so the
+ * handler threw and the "document/script continue" assertions below were
+ * passing on a crashed handler rather than on a decision. A third state makes
+ * that visible instead of indistinguishable from a real `continue`.
+ */
 interface FakeRouteCall {
   resourceType: string;
-  action: 'abort' | 'continue';
+  action: 'abort' | 'continue' | 'unhandled';
 }
+
+/** Same-origin as the URL the pool is asked to fetch, so `isAllowedBrowserRequest` passes it. */
+const FAKE_ASSET_URL = 'https://portal.example/static/asset';
 
 interface FakeCounters {
   launches: number;
@@ -222,14 +232,14 @@ function fakePlaywrightWithRoutes(html: string): { module: PlaywrightModule; cou
               },
               newPage: async () => ({
                 route: async (_pattern: string, handler: (route: {
-                  request: () => { resourceType: () => string };
+                  request: () => { resourceType: () => string; url: () => string };
                   abort: () => Promise<void>;
                   continue: () => Promise<void>;
                 }) => void | Promise<void>) => {
                   for (const type of ['document', 'image', 'stylesheet', 'script', 'font']) {
-                    let action: 'abort' | 'continue' = 'continue';
+                    let action: FakeRouteCall['action'] = 'unhandled';
                     await handler({
-                      request: () => ({ resourceType: () => type }),
+                      request: () => ({ resourceType: () => type, url: () => FAKE_ASSET_URL }),
                       abort: async () => {
                         action = 'abort';
                       },
@@ -325,7 +335,7 @@ describe('createListingFetchRuntimeFromEnv — HTTP proxy gating', () => {
     const directFetch = jest.fn();
     (global as { fetch: typeof originalFetch }).fetch = directFetch;
     const proxiedCalls: string[] = [];
-    const proxiedFetch = jest.fn(async (url: string) => {
+    const proxiedFetch = jest.fn(async (url: RequestInfo | URL) => {
       proxiedCalls.push(String(url));
       return mockFetchResponse('html');
     });
@@ -394,20 +404,16 @@ describe('ExternalMediaIngest — media proxy policy', () => {
     let directAttempts = 0;
     (global as { fetch: unknown }).fetch = jest.fn(async () => {
       directAttempts += 1;
-      return {
-        ok: false,
-        status: 403,
-        headers: { get: () => null },
-        arrayBuffer: async () => new ArrayBuffer(0),
-      };
+      return new Response(null, { status: 403 });
     });
 
-    const proxiedFetch = jest.fn(async () => ({
-      ok: true,
-      status: 200,
-      headers: { get: () => 'image/jpeg' },
-      arrayBuffer: async () => new Uint8Array([9]).buffer,
-    }));
+    const proxiedFetch = jest.fn(
+      async () =>
+        new Response(new Uint8Array([9]), {
+          status: 200,
+          headers: { 'content-type': 'image/jpeg' },
+        }),
+    );
     jest.spyOn(proxyModule, 'createProxiedFetch').mockResolvedValue(proxiedFetch);
 
     const result = await fetchRemoteImageWithProxyFallback('https://cdn.portal.example/p.jpg', config);

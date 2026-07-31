@@ -106,6 +106,7 @@ describe('IdealistaItProvider', () => {
         request: async () => ({ status: 200, body: IDEALISTA_IT_FIXTURE_GEOREACH_JSON }),
         content: async () => IDEALISTA_IT_FIXTURE_SEARCH_HTML,
         pageUrl: () => 'https://www.idealista.it/affitto-case/roma/',
+        warmNavigate: async () => undefined,
         exportStorageState: async () => ({ cookies: [] }),
         close: async () => undefined,
       }),

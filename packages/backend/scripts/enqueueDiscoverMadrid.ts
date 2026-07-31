@@ -8,6 +8,7 @@
  */
 
 import { Queue } from 'bullmq';
+import { PROVIDER_IDS, type ProviderId } from '@homiio/shared-types';
 import {
   QUEUE_NAMES,
   discoverJobId,
@@ -17,16 +18,27 @@ import {
 
 const DISCOVER_LOCK_MS = 600_000;
 const MADRID = 'madrid';
-const DEFAULT_PROVIDERS = ['habitaclia', 'fotocasa', 'idealista'] as const;
+const DEFAULT_PROVIDERS: ProviderId[] = ['habitaclia', 'fotocasa', 'idealista'];
 
-function parseProvidersArg(argv: string[]): string[] {
+function isProviderId(value: string): value is ProviderId {
+  return (PROVIDER_IDS as readonly string[]).includes(value);
+}
+
+function parseProvidersArg(argv: string[]): ProviderId[] {
   const flag = argv.find((entry) => entry.startsWith('--providers='));
   if (!flag) return [...DEFAULT_PROVIDERS];
-  return flag
+  const requested = flag
     .slice('--providers='.length)
     .split(',')
     .map((entry) => entry.trim())
     .filter(Boolean);
+  // A typo here used to enqueue a job under a provider id no worker resolves,
+  // which then sits in the queue looking like a stuck discover run.
+  const unknown = requested.filter((entry) => !isProviderId(entry));
+  if (unknown.length > 0) {
+    throw new Error(`Unknown provider id(s): ${unknown.join(', ')}`);
+  }
+  return requested.filter(isProviderId);
 }
 
 async function removeJob(
@@ -73,7 +85,7 @@ async function releaseStaleActive(queue: Queue<DiscoverJobData>): Promise<number
 
 async function purgeLegacyMarketWide(
   queue: Queue<DiscoverJobData>,
-  provider: string,
+  provider: ProviderId,
 ): Promise<void> {
   const legacyScope: DiscoverJobData = { provider, market: 'ES' };
   const legacyId = discoverJobId(legacyScope);

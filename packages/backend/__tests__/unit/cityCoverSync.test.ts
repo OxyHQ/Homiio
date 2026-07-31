@@ -9,7 +9,7 @@ import { OfferingType, PropertyType, PropertyStatus } from '@homiio/shared-types
 
 import imageUploadService from '../../services/imageUploadService';
 import { ensureCover, syncCovers, syncMissingCovers } from '../../services/cityCoverSyncService';
-import cityRoutes from '../../routes/cities';
+import publicRoutes from '../../routes/public';
 
 const { Country, Region, City, Address, Property, Image } = require('../../models');
 const { errorHandler } = require('../../middlewares/errorHandler');
@@ -34,7 +34,10 @@ const mockedIsStorageConfigured = imageUploadService.isStorageConfigured as jest
 function buildApp(): Express {
   const app = express();
   app.use(express.json());
-  app.use('/api/cities', cityRoutes());
+  // The router production actually serves these paths on: `publicRoutes()` is
+  // mounted at `/api` in server.ts, so `/cities/:id` here is the real wiring,
+  // route-declaration order included.
+  app.use('/api', publicRoutes());
   app.use(errorHandler);
   return app;
 }
@@ -53,41 +56,38 @@ function sampleVariantStrings(): {
   };
 }
 
+/**
+ * Real `Response` objects rather than look-alikes. The stand-ins this replaced
+ * needed an `as typeof fetch` cast to be installed as the global at all, and a
+ * cast is exactly what stops a mock drifting from `fetch` being noticed.
+ */
 function mockWikimediaFetch(): void {
   (global as { fetch: typeof originalFetch }).fetch = jest.fn(async (input: RequestInfo | URL) => {
     const url = String(input);
     if (url.includes('commons.wikimedia.org/w/api.php')) {
-      return {
-        ok: true,
-        status: 200,
-        headers: { get: () => 'application/json' },
-        json: async () => ({
-          query: {
-            pages: {
-              '12345': {
-                imageinfo: [
-                  {
-                    url: WIKIMEDIA_IMAGE_URL,
-                    thumburl: WIKIMEDIA_IMAGE_URL,
-                    mime: 'image/jpeg',
-                  },
-                ],
-              },
+      return Response.json({
+        query: {
+          pages: {
+            '12345': {
+              imageinfo: [
+                {
+                  url: WIKIMEDIA_IMAGE_URL,
+                  thumburl: WIKIMEDIA_IMAGE_URL,
+                  mime: 'image/jpeg',
+                },
+              ],
             },
           },
-        }),
-      };
+        },
+      });
     }
     if (url === WIKIMEDIA_IMAGE_URL) {
-      return {
-        ok: true,
-        status: 200,
-        headers: { get: () => 'image/jpeg' },
-        arrayBuffer: async () => Uint8Array.from([0xff, 0xd8, 0xff, 0xd9]).buffer,
-      };
+      return new Response(Uint8Array.from([0xff, 0xd8, 0xff, 0xd9]), {
+        headers: { 'content-type': 'image/jpeg' },
+      });
     }
     throw new Error(`Unexpected fetch URL in test: ${url}`);
-  }) as typeof fetch;
+  });
 }
 
 async function createImage(entityId: Types.ObjectId, entityType = 'property', isPrimary = true): Promise<{ _id: Types.ObjectId }> {

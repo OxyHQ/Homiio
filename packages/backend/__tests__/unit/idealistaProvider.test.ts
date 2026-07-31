@@ -363,6 +363,7 @@ describe('IdealistaProvider.fetch via warmed session', () => {
         },
         content: async () => IDEALISTA_FIXTURE_DETAIL_HTML,
         pageUrl: () => 'https://www.idealista.com/inmueble/98765432/',
+        warmNavigate: async () => undefined,
         exportStorageState: async () => ({ cookies: [] }),
         close: async () => undefined,
       }),
@@ -401,10 +402,14 @@ describe('IdealistaProvider.fetch via warmed session', () => {
         request: async () => ({ status: 403, body: IDEALISTA_FIXTURE_GEOREACH_CHALLENGE }),
         content: async () => IDEALISTA_DATADOME_HTML,
         pageUrl: () => 'https://www.idealista.com/inmueble/98765432/',
+        warmNavigate: async () => undefined,
         exportStorageState: async () => ({ cookies: [] }),
         close: async () => undefined,
       }),
-      fetchViaBrowser: async () => ({ status: 200, body: IDEALISTA_FIXTURE_DETAIL_HTML }),
+      // Returns the HTML BODY: the ladder wraps it as `{ status: 200, body }`
+      // itself, so handing it an object put a stringified object through the
+      // detail parser and the assertion below passed on the URL fallback alone.
+      fetchViaBrowser: async () => IDEALISTA_FIXTURE_DETAIL_HTML,
     };
 
     const local = new IdealistaProvider({ runtime });
@@ -453,6 +458,9 @@ describe('Idealista DataDome challenge helpers', () => {
       request: {
         get: jest.fn(async () => ({ status: () => 200, text: async () => '{}' })),
         post: jest.fn(async () => ({ status: () => 200, text: async () => '{}' })),
+      },
+      evaluate: async () => {
+        throw new Error('warmBrowserPage reads content(), it does not evaluate in page');
       },
     };
 

@@ -86,11 +86,12 @@ jobs:
       # is composite and references the frontend, so a root typecheck would be
       # permanently red and teach everyone to ignore a red job.
       #
-      # Note this does NOT cover `__tests__` — the backend project excludes it so
-      # tests stay out of `dist`, and ts-jest transpiles with `isolatedModules`.
-      # `bun run --cwd packages/backend typecheck:tests` is the tool for that; it
-      # is not a gate yet because it reports pre-existing errors in test files
-      # that have never been typechecked by anything.
+      # This DOES cover `__tests__` and `scripts`. It did not until the exclusion
+      # came out of that project — between it and ts-jest's `isolatedModules`,
+      # nothing in this repository had ever typechecked a test file, so a
+      # deliberate `const x: number = 'string'` in one produced no errors at all.
+      # Keeping tests out of `dist` is a question about EMIT, and it is answered
+      # by `tsconfig.build.json`, which is what `build` runs.
       - name: Typecheck backend
         run: bun x tsc --noEmit -p packages/backend/tsconfig.json
 

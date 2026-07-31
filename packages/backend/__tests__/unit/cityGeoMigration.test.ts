@@ -5,8 +5,9 @@
 import type { Types } from 'mongoose';
 import { resolveGeo } from '../../services/geoResolutionService';
 import { ensureCityGeoIndexes } from '../../services/cityGeoMigration';
-
-const { City, Country, Region } = require('../../models');
+// Named ES imports, not `require('../../models')` — the require form resolves to
+// `any` and takes the index assertions below down with it.
+import { City, Country, Region } from '../../models';
 
 const MADRID_COORDS: [number, number] = [-3.7038, 40.4168];
 

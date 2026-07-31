@@ -12,7 +12,7 @@ import request from 'supertest';
 import { Types } from 'mongoose';
 import { OfferingType, PropertyType, PropertyStatus } from '@homiio/shared-types';
 
-import cityRoutes from '../../routes/cities';
+import publicRoutes from '../../routes/public';
 
 const { Country, Region, City, Address, Property } = require('../../models');
 const { errorHandler } = require('../../middlewares/errorHandler');
@@ -20,7 +20,10 @@ const { errorHandler } = require('../../middlewares/errorHandler');
 function buildApp(): Express {
   const app = express();
   app.use(express.json());
-  app.use('/api/cities', cityRoutes());
+  // The router production actually serves these paths on: `publicRoutes()` is
+  // mounted at `/api` in server.ts, so `/cities/:id` here is the real wiring,
+  // route-declaration order included.
+  app.use('/api', publicRoutes());
   app.use(errorHandler);
   return app;
 }

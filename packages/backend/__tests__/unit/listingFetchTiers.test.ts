@@ -16,6 +16,7 @@ import {
   HostRateLimiter,
   InMemoryProviderMetrics,
   type PlaywrightModule,
+  type PwRoute,
   type UrlFetcher,
 } from '@homiio/listing-providers';
 
@@ -264,7 +265,7 @@ interface RecordingPage {
   content(): Promise<string>;
   waitForSelector(selector: string, options?: { timeout?: number }): Promise<unknown>;
   waitForTimeout(ms: number): Promise<void>;
-  route(pattern: string, handler: (route: unknown) => void | Promise<void>): Promise<void>;
+  route(pattern: string, handler: (route: PwRoute) => void | Promise<void>): Promise<void>;
   request: {
     get(url: string, opts?: unknown): Promise<{ status(): number; text(): Promise<string> }>;
     post(url: string, opts?: unknown): Promise<{ status(): number; text(): Promise<string> }>;

@@ -48,62 +48,66 @@ export type ListingMarket =
  * plugins land; `fixture` is the Phase-0 local-JSON provider used to exercise
  * the ingest path end to end without touching a real portal.
  */
-export type ProviderId =
-  | 'fixture'
-  | 'idealista'
-  | 'fotocasa'
-  | 'habitaclia'
-  | 'blueground'
-  | 'apartments_com'
-  | 'zillow'
-  | 'realtor_com'
-  | 'hotpads'
-  | 'redfin'
-  | 'pisos'
-  | 'milanuncios'
-  | 'yaencontre'
-  | 'indomio'
-  | 'idealista_it'
-  | 'immobiliare'
-  | 'casa_it'
-  | 'subito'
-  | 'rightmove'
-  | 'zoopla'
-  | 'onthemarket'
-  | 'openrent'
-  | 'immobilienscout24'
-  | 'immowelt'
-  | 'kleinanzeigen'
-  | 'storia'
-  | 'imobiliare_ro'
-  | 'olx_ro'
-  | 'bienici'
-  | 'leboncoin'
-  | 'seloger'
-  | 'properati_ec'
-  | 'zonaprop'
-  | 'argenprop'
-  | 'mercadolibre_ar'
-  | 'properati'
-  | 'plusvalia'
-  | 'mercadolibre_ec'
-  | 'propiedades'
-  | 'vivanuncios'
-  | 'lamudi'
-  | 'inmuebles24'
-  | 'mercadolibre_co'
-  | 'mercadolibre_cl'
-  | 'mercadolibre_pe'
-  | 'mercadolibre_mx'
-  | 'idealista_pt'
-  | 'metrocuadrado'
-  | 'realestate_com_au'
-  | 'realtor_ca'
-  | 'bayut'
-  | 'daft'
-  | 'immoweb'
-  | 'otodom'
-  | 'funda';
+export const PROVIDER_IDS = [
+  'fixture',
+  'idealista',
+  'fotocasa',
+  'habitaclia',
+  'blueground',
+  'apartments_com',
+  'zillow',
+  'realtor_com',
+  'hotpads',
+  'redfin',
+  'pisos',
+  'milanuncios',
+  'yaencontre',
+  'indomio',
+  'idealista_it',
+  'immobiliare',
+  'casa_it',
+  'subito',
+  'rightmove',
+  'zoopla',
+  'onthemarket',
+  'openrent',
+  'immobilienscout24',
+  'immowelt',
+  'kleinanzeigen',
+  'storia',
+  'imobiliare_ro',
+  'olx_ro',
+  'bienici',
+  'leboncoin',
+  'seloger',
+  'properati_ec',
+  'zonaprop',
+  'argenprop',
+  'mercadolibre_ar',
+  'properati',
+  'plusvalia',
+  'mercadolibre_ec',
+  'propiedades',
+  'vivanuncios',
+  'lamudi',
+  'inmuebles24',
+  'mercadolibre_co',
+  'mercadolibre_cl',
+  'mercadolibre_pe',
+  'mercadolibre_mx',
+  'idealista_pt',
+  'metrocuadrado',
+  'realestate_com_au',
+  'realtor_ca',
+  'bayut',
+  'daft',
+  'immoweb',
+  'otodom',
+  'funda',
+] as const;
+
+/** The union of {@link PROVIDER_IDS}, which is the runtime list to validate against. */
+export type ProviderId = (typeof PROVIDER_IDS)[number];
 
 /**
  * Best-effort owner/agent contact captured from a portal when an endpoint

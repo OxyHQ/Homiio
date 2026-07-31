@@ -27,10 +27,10 @@ function hotpadsRuntime(pages: Map<string, string>): FetchRuntime {
       if (body === undefined) throw new Error(`hotpadsRuntime has no page for ${url}`);
       return body;
     },
-    async fetchJson(): Promise<unknown> {
+    async fetchJson() {
       throw new Error('not used');
     },
-    async loadFixture(): Promise<unknown> {
+    async loadFixture() {
       throw new Error('not used');
     },
   };

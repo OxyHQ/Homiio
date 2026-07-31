@@ -35,7 +35,11 @@ import {
   FOTOCASA_BROWSER_SESSION_HINT,
   ChallengeError,
 } from '@homiio/listing-providers';
-import type { ExternalListingRef, FetchRuntime } from '@homiio/listing-providers';
+import type {
+  BrowserSessionOptions,
+  ExternalListingRef,
+  FetchRuntime,
+} from '@homiio/listing-providers';
 import { OfferingType, PropertyType } from '@homiio/shared-types';
 
 const provider = new FotocasaProvider();
@@ -263,6 +267,7 @@ describe('FotocasaProvider.discover searchads path', () => {
         },
         content: async () => '<html><main class="re-Searchresult"><h1>Alquiler Madrid</h1></main></html>',
         pageUrl: () => 'https://www.fotocasa.es/es/alquiler/viviendas/madrid-capital/todas-las-zonas/l',
+        warmNavigate: async () => undefined,
         exportStorageState: async () => ({ cookies: [] }),
         close: async () => undefined,
       }),
@@ -307,6 +312,7 @@ describe('FotocasaProvider.discover searchads path', () => {
         request: async () => ({ status: 403, body: FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE }),
         content: async () => FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE,
         pageUrl: () => 'https://www.fotocasa.es/es/alquiler/viviendas/madrid-capital/todas-las-zonas/l',
+        warmNavigate: async () => undefined,
         exportStorageState: async () => ({ cookies: [] }),
         close: async () => undefined,
       }),
@@ -356,6 +362,7 @@ describe('FotocasaProvider.discover searchads path', () => {
         },
         content: async () => '<html><main class="re-Searchresult"><h1>Alquiler Madrid</h1></main></html>',
         pageUrl: () => 'https://www.fotocasa.es/es/alquiler/viviendas/madrid-capital/todas-las-zonas/l',
+        warmNavigate: async () => undefined,
         exportStorageState: async () => ({ cookies: [] }),
         close: async () => undefined,
       }),
@@ -421,6 +428,7 @@ describe('FotocasaProvider.discover searchads path', () => {
           },
           content: async () => '<html><main class="re-Searchresult"><h1>Search</h1></main></html>',
           pageUrl: () => options.warmUrl,
+          warmNavigate: async () => undefined,
           exportStorageState: async () => ({ cookies: [] }),
           close: async () => undefined,
         };
@@ -492,6 +500,7 @@ describe('FotocasaProvider.fetch property JSON path', () => {
           },
           content: async () => FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE,
           pageUrl: () => 'https://www.fotocasa.es/es/alquiler/viviendas/madrid-capital/todas-las-zonas/l',
+          warmNavigate: async () => undefined,
           exportStorageState: async () => ({ cookies: [] }),
           close: async () => undefined,
         };
@@ -513,7 +522,7 @@ describe('FotocasaProvider.fetch property JSON path', () => {
   });
 
   it('reuses discover session hints instead of cold re-warm', async () => {
-    let sessionOptions: { warmUrl: string; storageState?: { cookies: unknown[] }; proxySessionId?: string } | undefined;
+    let sessionOptions: BrowserSessionOptions | undefined;
     const discoverCookies = [{ name: '_px3', value: 'cleared', domain: '.fotocasa.es', path: '/' }];
     const runtime: FetchRuntime = {
       fetchHttp: async () => {
@@ -539,6 +548,7 @@ describe('FotocasaProvider.fetch property JSON path', () => {
           },
           content: async () => FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE,
           pageUrl: () => 'https://www.fotocasa.es/es/alquiler/viviendas/madrid-capital/todas-las-zonas/l',
+          warmNavigate: async () => undefined,
           exportStorageState: async () => ({ cookies: discoverCookies }),
           close: async () => undefined,
         };

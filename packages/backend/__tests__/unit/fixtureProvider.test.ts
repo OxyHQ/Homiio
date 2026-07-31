@@ -9,10 +9,18 @@
  */
 
 import { FixtureProvider, FIXTURE_LISTINGS, createFetchRuntime } from '@homiio/listing-providers';
-import type { ExternalListingRef, FetchContext, RawListing } from '@homiio/listing-providers';
+import type {
+  ExternalListingRef,
+  FetchContext,
+  ListingProvider,
+  RawListing,
+} from '@homiio/listing-providers';
 import { OfferingType, PropertyType, type NormalizedListing } from '@homiio/shared-types';
 
-const provider = new FixtureProvider();
+// Typed as the CONTRACT, not the class: this file's job is the ListingProvider
+// interface, and `FixtureProvider.fetch` happens to omit the `ctx` parameter
+// the interface declares.
+const provider: ListingProvider = new FixtureProvider();
 const ctx: FetchContext = { runtime: createFetchRuntime() };
 
 async function discoverRefs(limit?: number): Promise<ExternalListingRef[]> {
