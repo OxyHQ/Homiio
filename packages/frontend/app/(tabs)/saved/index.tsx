@@ -194,6 +194,14 @@ export default function SavedPropertiesScreen() {
     ]);
   }, [queryClient]);
 
+  // Above the `!isAuthed` early return below. Declared after it, this hook was
+  // skipped entirely while signed out, so signing in changed the hook count
+  // between renders — which React refuses to render through.
+  const handlePropertyPress = useCallback((property: Property) => {
+    const id = (property._id || property.id) as string;
+    if (id) router.push(`/properties/${id}`);
+  }, []);
+
   const isLoading = savedQuery.isPending || foldersQuery.isPending;
   const isError = savedQuery.isError || foldersQuery.isError;
   const isRefreshing = savedQuery.isFetching || foldersQuery.isFetching;
@@ -227,11 +235,6 @@ export default function SavedPropertiesScreen() {
   const renderFolder: ListRenderItem<SavedPropertyFolder> = ({ item }) => (
     <FolderTile folder={item} />
   );
-
-  const handlePropertyPress = useCallback((property: Property) => {
-    const id = (property._id || property.id) as string;
-    if (id) router.push(`/properties/${id}`);
-  }, []);
 
   return (
     <View style={styles.root}>

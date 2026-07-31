@@ -25,8 +25,12 @@ const SENTINEL_STYLE = { height: 1 } as const;
 export function LoadMoreSentinel({ onLoadMore, enabled, rootMargin = '600px' }: LoadMoreSentinelProps) {
   const viewRef = useRef<View>(null);
   // Keep the latest callback without re-subscribing the observer every render.
+  // Assigned in an effect, not during render: the observer only ever reads it
+  // from its own callback, which is well after commit.
   const onLoadMoreRef = useRef(onLoadMore);
-  onLoadMoreRef.current = onLoadMore;
+  useEffect(() => {
+    onLoadMoreRef.current = onLoadMore;
+  }, [onLoadMore]);
 
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined' || !('IntersectionObserver' in window)) {

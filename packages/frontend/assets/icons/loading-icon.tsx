@@ -13,7 +13,11 @@ export const Loading = ({
   size?: number;
   style?: ViewStyle;
 }) => {
-  const rotateAnim = React.useRef(new Animated.Value(0)).current;
+  // `useState` with a lazy initialiser, not `useRef(...).current`: reading a
+  // ref during render is what the compiler objects to, and the value is only
+  // ever created once either way. `interpolate` below has to run during
+  // render to build the style, so the ref form could not stay.
+  const [rotateAnim] = React.useState(() => new Animated.Value(0));
 
   React.useEffect(() => {
     const animation = Animated.loop(
