@@ -19,7 +19,8 @@ import { IngestionService } from '../../services/ingestion/IngestionService';
 import { ExternalMediaIngest } from '../../services/ingestion/ExternalMediaIngest';
 import type { ImageBufferInput } from '../../services/imageUploadService';
 
-const { Property, Image } = require('../../models');
+import { Property, Image } from '../../models';
+import { assertFound } from '../helpers/assertFound';
 
 const ONE_BY_ONE_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
@@ -64,17 +65,18 @@ describe('GB listing ingest mapping', () => {
     expect(result.sourceId).toBe('90551949');
 
     const property = await Property.findOne({ source: 'rightmove', sourceId: '90551949' }).lean();
+    assertFound(property, 'property');
     expect(property?.isExternal).toBe(true);
     expect(property?.status).toBe('published');
-    expect(property?.profileId).toBeFalsy();
+    expect(property?.oxyUserId).toBeFalsy();
     expect(property?.offerings).toEqual([OfferingType.LONG_TERM_RENT]);
-    expect(property?.longTermRent.monthlyAmount).toBe(3400);
+    expect(property?.longTermRent?.monthlyAmount).toBe(3400);
     expect(property?.type).toBe(PropertyType.APARTMENT);
     expect(property?.externalContact?.phone).toContain('020');
     expect(property?.images?.length).toBeGreaterThan(0);
 
     const imageDocs = await Image.find({ entityType: 'property', entityId: property._id });
-    expect(imageDocs.length).toBe(property.images.length);
+    expect(imageDocs.length).toBe(property.images?.length);
   });
 
   it('strips HTML from description before persisting', async () => {
@@ -120,8 +122,9 @@ describe('GB listing ingest mapping', () => {
     expect(result.source).toBe('openrent');
 
     const property = await Property.findOne({ source: 'openrent', sourceId: payload.sourceId }).lean();
+    assertFound(property, 'property');
     expect(property?.isExternal).toBe(true);
-    expect(property?.longTermRent.monthlyAmount).toBe(2750);
+    expect(property?.longTermRent?.monthlyAmount).toBe(2750);
     expect(property?.externalContact?.email).toBe('landlord@example.com');
   });
 });

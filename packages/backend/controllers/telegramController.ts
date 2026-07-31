@@ -10,6 +10,8 @@ import { AppError, successResponse } from '../middlewares/errorHandler';
 import { Property } from '../models';
 import type { IProperty } from '../models/Property';
 import config from '../config';
+import { resolveAddressDisplay } from '../services/geoDisplayService';
+import { resolveGeoFilterAddressIds } from '../services/geoQueryService';
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -127,7 +129,6 @@ class TelegramController {
         return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));
       }
 
-      const { resolveAddressDisplay } = require('../services/geoDisplayService');
       const geo = await resolveAddressDisplay(property.address);
       const success = await telegramService.sendPropertyNotification(property);
 
@@ -161,7 +162,6 @@ class TelegramController {
         
         // Handle city filter via RELATIONAL geo resolution (name/id → cityId).
         if (filters.city) {
-          const { resolveGeoFilterAddressIds } = require('../services/geoQueryService');
           const addressIds = await resolveGeoFilterAddressIds({ city: String(filters.city) });
           if (addressIds === null || addressIds.length === 0) {
             return res.json(successResponse(
@@ -290,7 +290,6 @@ class TelegramController {
 
       const results = await telegramService.sendBulkNotifications(recentProperties);
 
-      const { resolveAddressDisplay } = require('../services/geoDisplayService');
       const properties = await Promise.all(recentProperties.map(async (p: IProperty) => ({
         id: p._id,
         city: (await resolveAddressDisplay(p.address)).city,
@@ -321,4 +320,4 @@ class TelegramController {
   }
 }
 
-module.exports = new TelegramController();
+export default new TelegramController();

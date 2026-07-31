@@ -32,6 +32,7 @@ import type {
 } from '@homiio/shared-types';
 import config from '../config';
 import { Logger } from '../utils/logger';
+import { PlacePoi } from '../models';
 
 const logger = new Logger('NearbyServicesService');
 
@@ -146,13 +147,8 @@ const coordinateCell = (longitude: number, latitude: number): CoordinateCell => 
 const cacheKey = (cell: CoordinateCell, radiusM: number): string =>
   `${cell.lat.toFixed(CACHE_COORD_DECIMALS)},${cell.lng.toFixed(CACHE_COORD_DECIMALS)}@${radiusM}`;
 
-/**
- * Lazily resolve the PlacePoi model. Resolved on demand (not at import) so the
- * service can be imported in contexts where models register slightly later, and
- * to reuse the single registration in `models/index`.
- */
-const placePoiModel = (): Model<PlacePoiDocument> =>
-  require('../models').PlacePoi as Model<PlacePoiDocument>;
+/** The single PlacePoi registration from `models/index`. */
+const placePoiModel = (): Model<PlacePoiDocument> => PlacePoi as unknown as Model<PlacePoiDocument>;
 
 /**
  * Read a fresh persisted cell from the DB. Returns its categories on a hit,

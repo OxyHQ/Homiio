@@ -31,16 +31,9 @@ const Property: Model<IProperty> = models.Property;
 const Address: Model<IAddress> = models.Address;
 import { paginationResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
-const {
-  resolveGeoFilterAddressIds,
-  resolveCityId,
-  resolveRegionId,
-} = require('../../services/geoQueryService');
-const {
-  serializePropertyAddresses,
-  ADDRESS_GEO_POPULATE,
-} = require('../../services/propertyAddressSerializer');
-const { serializePropertyImages } = require('../../services/imageSerializer');
+import { resolveGeoFilterAddressIds, resolveCityId, resolveRegionId } from '../../services/geoQueryService';
+import { serializePropertyAddresses, ADDRESS_GEO_POPULATE } from '../../services/propertyAddressSerializer';
+import { serializePropertyImages } from '../../services/imageSerializer';
 
 /** Address subset selected for id-resolution lookups. */
 type AddressIdLean = { _id: Types.ObjectId };

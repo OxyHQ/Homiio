@@ -22,7 +22,8 @@
  *   ts-node --transpile-only scripts/seedProperties.ts
  */
 
-require('dotenv').config();
+import 'dotenv/config';
+import { Types } from 'mongoose';
 import {
   PropertyType,
   PropertyStatus,
@@ -54,7 +55,7 @@ const FurnishedStatus = {
   NOT_SPECIFIED: 'not_specified'
 } as const;
 
-const { Property, Address, Profile, Country, Region, City, Neighborhood, Image } = require('../models');
+import { Property, Address, Profile, Country, Region, City, Neighborhood, Image } from '../models';
 
 const SEED_SOURCE = 'seed';
 const SEED_OWNER_OXY_USER_ID = 'seed-demo-host';
@@ -857,7 +858,10 @@ async function upsertProperty(seed: SeedProperty, profileId: string): Promise<'i
   // already consumes, now backed by Image docs). `coverImageIndex` stays 0 — the
   // first/primary photo leads.
   const imageRefs = await seedPropertyImages(property._id, withUnsplashParams(seed.imageUrls));
-  property.images = imageRefs;
+  property.images = imageRefs.map((ref) => ({
+    ...ref,
+    imageId: new Types.ObjectId(ref.imageId),
+  }));
   await property.save();
 
   return 'inserted';

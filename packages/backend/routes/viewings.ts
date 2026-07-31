@@ -1,10 +1,9 @@
 import express from "express";
 import { asyncHandler } from "../middlewares";
+import viewingController from '../controllers/viewingController';
 
 export default function () {
   const router = express.Router();
-
-  const viewingController = require("../controllers/viewingController");
 
   // Current user's viewing requests
   router.get(

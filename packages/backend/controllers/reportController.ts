@@ -151,4 +151,4 @@ class ReportController {
   }
 }
 
-module.exports = new ReportController();
+export default new ReportController();

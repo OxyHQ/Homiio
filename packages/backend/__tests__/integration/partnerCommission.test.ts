@@ -27,9 +27,10 @@ import { createProperty } from '../../controllers/property/create';
 import { markPropertyTransacted } from '../../controllers/property/transact';
 import { createAddress, models } from '../helpers/factories';
 
-const partnerController = require('../../controllers/partnerController');
-const roomController = require('../../controllers/roomController');
-const { errorHandler } = require('../../middlewares/errorHandler');
+import partnerController from '../../controllers/partnerController';
+import roomController from '../../controllers/roomController';
+import { errorHandler } from '../../middlewares/errorHandler';
+import { assertFound } from '../helpers/assertFound';
 const { Partner, Commission, Property } = models;
 
 /** Fake-auth app that injects `req.user.id` / `req.userId` for one Oxy user. */
@@ -83,7 +84,9 @@ describe('partner earn close-deal loop', () => {
 
     // The listing is attributed to the sourcing partner.
     const partner = await Partner.findOne({ referralCode });
+    assertFound(partner, 'partner');
     const sourced = await Property.findById(propertyId);
+    assertFound(sourced, 'sourced');
     expect(String(sourced.sourcedByPartner)).toBe(String(partner._id));
     expect(sourced.sourcedByReferralCode).toBe(referralCode);
 
@@ -107,6 +110,7 @@ describe('partner earn close-deal loop', () => {
 
     // Points: the flat per-deal base (a €36 payout earns no per-1,000 bonus).
     const reloadedPartner = await Partner.findById(partner._id);
+    assertFound(reloadedPartner, 'reloadedPartner');
     expect(reloadedPartner.points).toBe(POINTS_CONFIG.perClosedDeal);
   });
 
@@ -140,6 +144,7 @@ describe('partner earn close-deal loop', () => {
     expect(commissions).toHaveLength(1);
 
     const partner = await Partner.findOne({ referralCode });
+    assertFound(partner, 'partner');
     expect(partner.points).toBe(POINTS_CONFIG.perClosedDeal);
   });
 
@@ -169,6 +174,7 @@ describe('partner earn close-deal loop', () => {
     const joinRes = await request(partnerApp).post('/partners/join');
     const referralCode: string = joinRes.body.data.partner.referralCode;
     const partner = await Partner.findOne({ referralCode });
+    assertFound(partner, 'partner');
 
     const address = await createAddress();
     const parent = await Property.create({

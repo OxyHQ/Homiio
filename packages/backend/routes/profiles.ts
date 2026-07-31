@@ -4,10 +4,14 @@
  */
 
 import express from 'express';
-const profileController = require('../controllers/profileController');
-const exchangeReviewController = require('../controllers/exchangeReviewController');
+// The real owner. `controllers/profileController` was an empty class with these
+// handlers copied onto it at runtime and typed `unknown`, so every call below
+// was untyped; it is gone.
+import * as profileController from '../controllers/profile';
+import exchangeReviewController from '../controllers/exchangeReviewController';
 import { asyncHandler } from '../middlewares';
 import performanceMonitor from '../middlewares/performance';
+import { Billing } from '../models';
 
 export default function () {
   const router = express.Router();
@@ -33,7 +37,6 @@ export default function () {
       || (req as { user?: { id?: string; _id?: string } }).user?._id;
     if (!oxyUserId) return res.status(401).json({ success: false, error: { message: 'Authentication required' }});
 
-    const { Billing } = require('../models') as typeof import('../models');
     const billing = await Billing.findOne({ oxyUserId }).lean();
 
     const entitlements = billing || {
@@ -50,7 +53,6 @@ export default function () {
     const oxyUserId = (req as { user?: { id?: string; _id?: string } }).user?.id
       || (req as { user?: { id?: string; _id?: string } }).user?._id;
     if (!oxyUserId) return res.status(401).json({ success: false, error: { message: 'Authentication required' }});
-    const { Billing } = require('../models') as typeof import('../models');
 
     let billing = await Billing.findOne({ oxyUserId });
     if (!billing) {

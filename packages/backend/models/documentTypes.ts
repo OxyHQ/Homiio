@@ -11,6 +11,11 @@
  */
 
 import type { Document, Model, Types } from 'mongoose';
+import type {
+  ImageEntityType,
+  ImageVariantKeys,
+  ImageVariantUrls,
+} from '@homiio/shared-types';
 
 type Id = Types.ObjectId;
 type Loose = Record<string, unknown>;
@@ -77,6 +82,15 @@ export type ILease = Document & {
   paymentSchedule: Types.DocumentArray<ILeaseSubdoc>;
   documents: Types.DocumentArray<ILeaseSubdoc>;
   status: string;
+  /**
+   * Declared rather than left to `Loose`. The lease schema carries this shape
+   * and `LeaseSchema.ts` describes it accurately in its own local interface;
+   * omitting it here made every `lease.signatures.*` read `unknown`.
+   */
+  signatures: {
+    landlord: { signed: boolean; signedDate?: Date; digitalSignature?: string };
+    tenant: { signed: boolean; signedDate?: Date; digitalSignature?: string };
+  };
   createdAt: Date;
   updatedAt: Date;
   generatePaymentSchedule?: () => void;
@@ -110,7 +124,24 @@ export interface IProfileChatMessage {
 export type IProfile = Document & {
   _id: Id;
   oxyUserId: string;
-  personalProfile?: Loose;
+  /**
+   * Mostly `Loose` still, but the roommate settings path is declared because
+   * tests and controllers read into it. Left as `Loose` it bottomed out in
+   * `unknown` a level down, so every read through it was unchecked.
+   */
+  personalProfile?: {
+    settings?: {
+      roommate?: {
+        enabled?: boolean;
+        preferences?: {
+          ageRange?: { min?: number; max?: number };
+          budget?: { min?: number; max?: number };
+          gender?: string;
+          moveInDate?: Date;
+        } & Loose;
+      } & Loose;
+    } & Loose;
+  } & Loose;
   chatHistory?: IProfileChatMessage[];
   createdAt: Date;
   updatedAt: Date;
@@ -263,6 +294,9 @@ export type ICity = Document & {
   countryId: Id;
   regionId?: Id;
   name: string;
+  /** Cover art resolved by `cityCoverSyncService`; both are on the schema. */
+  coverImageId?: Id;
+  imageIds?: Id[];
   /** Recomputes and persists this city's `propertiesCount`. */
   updatePropertiesCount(): Promise<ICity>;
 } & Loose;
@@ -373,9 +407,22 @@ export type ICommission = Document & {
 
 export type IImage = Document & {
   _id: Id;
-  entityType: string;
+  entityType: ImageEntityType;
   entityId: Id;
   url: string;
+  /**
+   * The processed-variant fields. `imageUploadService.ImageDocument` has always
+   * described these accurately; leaving them off here meant a document read back
+   * from the `Image` model was not assignable to the shape the service returns.
+   */
+  keys: ImageVariantKeys;
+  urls: ImageVariantUrls;
+  format: string;
+  bytes: number;
+  width?: number;
+  height?: number;
+  caption?: string;
+  isPrimary?: boolean;
   order: number;
   createdAt: Date;
   updatedAt: Date;

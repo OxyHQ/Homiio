@@ -1,4 +1,7 @@
-/**
+
+import { habitacliaCitiesFromEnv } from '@homiio/listing-providers';
+import { pisosCitiesFromEnv } from '@homiio/listing-providers';
+import { idealistaCitiesFromEnv } from '@homiio/listing-providers';/**
  * City list parsing and discover pagination cap tests.
  */
 
@@ -83,14 +86,12 @@ describe('fotocasaCitiesFromEnv', () => {
 describe('habitacliaCitiesFromEnv', () => {
   it('uses LISTING_HABITACLIA_CITIES when set', () => {
     process.env.LISTING_HABITACLIA_CITIES = 'madrid, barcelona';
-    const { habitacliaCitiesFromEnv } = require('@homiio/listing-providers');
     expect(habitacliaCitiesFromEnv()).toEqual(['madrid', 'barcelona']);
   });
 
   it('falls back to the ES market list', () => {
     delete process.env.LISTING_HABITACLIA_CITIES;
     delete process.env.LISTING_ES_CITIES;
-    const { habitacliaCitiesFromEnv } = require('@homiio/listing-providers');
     expect(habitacliaCitiesFromEnv()).toEqual([...DEFAULT_MARKET_CITIES.ES]);
   });
 });
@@ -98,14 +99,12 @@ describe('habitacliaCitiesFromEnv', () => {
 describe('pisosCitiesFromEnv', () => {
   it('uses LISTING_PISOS_CITIES when set', () => {
     process.env.LISTING_PISOS_CITIES = 'madrid, barcelona';
-    const { pisosCitiesFromEnv } = require('@homiio/listing-providers');
     expect(pisosCitiesFromEnv()).toEqual(['madrid', 'barcelona']);
   });
 
   it('falls back to the ES market list', () => {
     delete process.env.LISTING_PISOS_CITIES;
     delete process.env.LISTING_ES_CITIES;
-    const { pisosCitiesFromEnv } = require('@homiio/listing-providers');
     expect(pisosCitiesFromEnv()).toEqual([...DEFAULT_MARKET_CITIES.ES]);
     expect(pisosCitiesFromEnv().length).toBeGreaterThan(10);
   });
@@ -114,14 +113,12 @@ describe('pisosCitiesFromEnv', () => {
 describe('idealistaCitiesFromEnv', () => {
   it('uses LISTING_IDEALISTA_CITIES when set', () => {
     process.env.LISTING_IDEALISTA_CITIES = 'madrid';
-    const { idealistaCitiesFromEnv } = require('@homiio/listing-providers');
     expect(idealistaCitiesFromEnv()).toEqual(['madrid']);
   });
 
   it('falls back to the ES market list', () => {
     delete process.env.LISTING_IDEALISTA_CITIES;
     delete process.env.LISTING_ES_CITIES;
-    const { idealistaCitiesFromEnv } = require('@homiio/listing-providers');
     expect(idealistaCitiesFromEnv()).toEqual([...DEFAULT_MARKET_CITIES.ES]);
   });
 });

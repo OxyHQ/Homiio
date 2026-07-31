@@ -16,7 +16,7 @@
 import { LISTING_CURRENCIES } from '@homiio/shared-types';
 // The active Property model is registered by models/schemas/PropertySchema.ts
 // and re-exported from models/index.ts.
-const { Property } = require('../../models');
+import { Property } from '../../models';
 
 /** Validation error (if any) at a nested currency path, else undefined. */
 function currencyError(

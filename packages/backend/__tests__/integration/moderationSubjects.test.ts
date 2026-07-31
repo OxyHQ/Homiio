@@ -25,6 +25,7 @@ import {
 } from '../../services/moderation/EvidenceSnapshotService';
 import { allegationForReport } from '../../services/moderation/reportTaxonomy';
 import { models } from '../helpers/factories';
+import { assertFound } from '../helpers/assertFound';
 import type {
   ModerationContextResource,
   ModerationResource,
@@ -52,16 +53,19 @@ async function geoChain(): Promise<{
     { $setOnInsert: { code: 'ES', name: 'Spain' } },
     upsert,
   );
+  assertFound(country, 'country');
   const region = await Region.findOneAndUpdate(
     { countryId: country._id, name: 'Catalonia' },
     { $setOnInsert: { countryId: country._id, name: 'Catalonia' } },
     upsert,
   );
+  assertFound(region, 'region');
   const city = await City.findOneAndUpdate(
     { regionId: region._id, name: 'Barcelona' },
     { $setOnInsert: { countryId: country._id, regionId: region._id, name: 'Barcelona' } },
     upsert,
   );
+  assertFound(city, 'city');
   const neighborhood = await Neighborhood.findOneAndUpdate(
     { cityId: city._id, name: 'Gràcia' },
     {
@@ -74,6 +78,7 @@ async function geoChain(): Promise<{
     },
     upsert,
   );
+  assertFound(neighborhood, 'neighborhood');
   return {
     countryId: country._id,
     regionId: region._id,

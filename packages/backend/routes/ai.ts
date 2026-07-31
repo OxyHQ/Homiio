@@ -11,6 +11,8 @@ import { getOxyUserId } from '@oxyhq/core/server';
 import { getErrorMessage } from '../utils/errors';
 import { logger } from '../middlewares/logging';
 import { Profile, Conversation } from '../models';
+import { resolveAddressDisplay } from '../services/geoDisplayService';
+import pdfParse from 'pdf-parse';
 
 // -------------------------------
 // Types
@@ -622,7 +624,6 @@ Return only the JSON array, no other text.`;
 
         // Geo is relational: resolve city/neighborhood NAMES from the canonical
         // geo docs (the address carries ids, not free-text names).
-        const { resolveAddressDisplay } = require('../services/geoDisplayService');
         const contexts = await Promise.all(
           deduped.map(async (p: any) => {
             const geo = await resolveAddressDisplay(p.address);
@@ -690,7 +691,6 @@ Return only the JSON array, no other text.`;
             });
           } catch {
             // Fallback to text extraction
-            const pdfParse = require('pdf-parse');
             const parsedText = await pdfParse(parsed!.buffer).then((r: any) => String(r?.text || ''));
             const clipped = parsedText.slice(0, 120000);
             result = streamText({
@@ -856,7 +856,6 @@ Return only the JSON array, no other text.`;
           return ok(res, { output: trimmed || fallback, filename: file.originalname, mediaType });
         } catch {
           // Fallback with pdf-parse
-          const pdfParse = require('pdf-parse');
           const parsedText = await pdfParse(buffer).then((r: any) => String(r?.text || ''));
           const clipped = parsedText.slice(0, 120000);
           const result = await streamText({
@@ -937,7 +936,6 @@ Return only the JSON array, no other text.`;
             temperature: 0.2,
           });
         } catch {
-          const pdfParse = require('pdf-parse');
           const parsedText = await pdfParse(buffer).then((r: any) => String(r?.text || ''));
           const clipped = parsedText.slice(0, 120000);
           result = await streamText({

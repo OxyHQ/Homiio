@@ -10,7 +10,7 @@
  *   - `isAttending` / `isOwner` derived for a signed-in viewer.
  */
 
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 import {
   EvictionCaseStatus,
   type EvictionCase,

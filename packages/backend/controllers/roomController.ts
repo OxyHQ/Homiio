@@ -22,6 +22,7 @@ import {
 } from './property/editableFields';
 import { pickFields } from '../utils/pickFields';
 import { onPropertyTransacted } from '../services/commissionService';
+import { resolveGeoFilterAddressIds } from '../services/geoQueryService';
 
 const ROOM_TYPE = PropertyType.ROOM;
 
@@ -82,7 +83,6 @@ class RoomController {
       // Resolve city/state to address ids via RELATIONAL geo, matching the
       // property list handler (no free-text city/state matching on the Address).
       if (city || state) {
-        const { resolveGeoFilterAddressIds } = require('../services/geoQueryService');
         const addressIds = await resolveGeoFilterAddressIds({
           city: city ? String(city) : undefined,
           state: state ? String(state) : undefined,
@@ -268,4 +268,4 @@ interface AppErrorWithDetails extends Error {
   details?: unknown;
 }
 
-module.exports = new RoomController();
+export default new RoomController();

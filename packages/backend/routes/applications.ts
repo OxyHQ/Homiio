@@ -9,6 +9,8 @@ import express from 'express';
 import multer from 'multer';
 import { asyncHandler } from '../middlewares';
 import handleUploadError from '../middlewares/uploadMiddleware';
+import applicationController from '../controllers/applicationController';
+import * as validation from '../middlewares/validation';
 
 const ALLOWED_DOCUMENT_MIME_TYPES = new Set([
   'application/pdf',
@@ -40,8 +42,6 @@ const documentUpload = multer({
 export default function () {
   const router = express.Router();
 
-  const applicationController = require('../controllers/applicationController');
-  const validation = require('../middlewares/validation');
 
   // POST /api/applications — applicant submits long-term application
   // Accepts either application/json or multipart/form-data with `documents[]` files.

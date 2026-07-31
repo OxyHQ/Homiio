@@ -31,7 +31,8 @@ import { IngestionService } from '../../services/ingestion/IngestionService';
 import { ExternalMediaIngest } from '../../services/ingestion/ExternalMediaIngest';
 import type { ImageBufferInput } from '../../services/imageUploadService';
 
-const { Property, Image } = require('../../models');
+import { Property, Image } from '../../models';
+import { assertFound } from '../helpers/assertFound';
 
 // A 1x1 transparent PNG — a real, Sharp-decodable image with no network fetch.
 const ONE_BY_ONE_PNG = Buffer.from(
@@ -90,20 +91,22 @@ describe('external listing ingest (fixture -> IngestionService)', () => {
     expect(externalCount).toBe(listings.length);
 
     const property = await Property.findOne({ source: 'fixture', sourceId: FIRST_SOURCE_ID });
-    expect(property).toBeTruthy();
+    assertFound(property, 'property');
     expect(property.status).toBe('published');
     expect(property.isExternal).toBe(true);
     expect(property.sourceUrl).toBe(FIRST_SOURCE_URL);
-    // Aggregator listings are ownerless — no profileId is ever written.
-    expect(property.profileId).toBeFalsy();
+    // Aggregator listings are ownerless. Asserted on `oxyUserId`, the field the
+    // model actually has — the old `profileId` read is on neither `IProperty`
+    // nor the live schema, so it passed no matter what ingest wrote.
+    expect(property.oxyUserId).toBeFalsy();
     expect(property.offerings).toEqual(['long_term_rent']);
-    expect(property.longTermRent.monthlyAmount).toBe(1450);
+    expect(property.longTermRent?.monthlyAmount).toBe(1450);
     expect(property.expiresAt).toBeTruthy();
 
     // Two source images for the first fixture, each re-hosted.
     expect(property.images).toHaveLength(2);
-    expect(property.images.filter((image: { isPrimary?: boolean }) => image.isPrimary)).toHaveLength(1);
-    for (const image of property.images) {
+    expect(property.images?.filter((image: { isPrimary?: boolean }) => image.isPrimary)).toHaveLength(1);
+    for (const image of property.images ?? []) {
       expect(image.imageId).toBeTruthy();
       expect(typeof image.url).toBe('string');
       // Runtime URL points at OUR host, never the foreign portal CDN.
@@ -136,6 +139,7 @@ describe('external listing ingest (fixture -> IngestionService)', () => {
     expect(fetchImage).toHaveBeenCalledTimes(2);
 
     const property = await Property.findOne({ source: 'fixture', sourceId: FIRST_SOURCE_ID });
+    assertFound(property, 'property');
     expect(property.images).toHaveLength(2);
     const imageDocs = await Image.find({ entityType: 'property', entityId: property._id });
     expect(imageDocs).toHaveLength(2);

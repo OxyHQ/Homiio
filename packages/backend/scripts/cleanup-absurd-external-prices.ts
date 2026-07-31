@@ -7,13 +7,15 @@
  *   bun run packages/backend/scripts/cleanup-absurd-external-prices.ts --apply
  */
 
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+import path from 'path';
+import dotenv from 'dotenv';
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 import { PropertyStatus } from '@homiio/shared-types';
 import { validateMonthlyRentAmount } from '@homiio/listing-providers';
 import database from '../database/connection';
 
-const { Property } = require('../models');
+import { Property } from '../models';
 
 const APPLY = process.argv.includes('--apply');
 
