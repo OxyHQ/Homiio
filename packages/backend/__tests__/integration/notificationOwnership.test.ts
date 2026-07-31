@@ -11,9 +11,9 @@
 import express, { type Express } from 'express';
 import request from 'supertest';
 
-const notificationController = require('../../controllers/notificationController');
-const { Notification } = require('../../models');
-const { errorHandler } = require('../../middlewares/errorHandler');
+import notificationController from '../../controllers/notificationController';
+import { Notification } from '../../models';
+import { errorHandler } from '../../middlewares/errorHandler';
 
 function buildApp(oxyUserId: string): Express {
   const app = express();

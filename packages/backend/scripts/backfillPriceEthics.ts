@@ -9,7 +9,9 @@
  *   bun run packages/backend/scripts/backfillPriceEthics.ts --apply --batch-size=25
  */
 
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+import path from 'path';
+import dotenv from 'dotenv';
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 import { PropertyStatus } from '@homiio/shared-types';
 import database from '../database/connection';
@@ -19,7 +21,7 @@ import {
   readyBatchAfterAppend,
 } from './backfillPriceEthicsBatching';
 
-const { Property } = require('../models');
+import { Property } from '../models';
 
 const APPLY = process.argv.includes('--apply');
 

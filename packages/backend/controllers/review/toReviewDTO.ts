@@ -18,7 +18,7 @@
  * Mongoose schema as the single authority.
  */
 
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 type Loose = Record<string, unknown>;
 

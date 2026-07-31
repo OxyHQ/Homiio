@@ -2,6 +2,7 @@ import type { IConversation, IConversationMessage } from '../documentTypes';
 
 import mongoose from 'mongoose';
 import type { IConversationModel } from '../documentTypes';
+import crypto from 'crypto';
 
 interface ConversationDoc extends IConversation {
   analytics: { messageCount: number; lastActivity: Date; totalTokens: number };
@@ -238,7 +239,6 @@ conversationSchema.methods.addMessage = function(
 };
 
 conversationSchema.methods.generateShareToken = function(this: ConversationDoc, expiresInHours: number = 24) {
-  const crypto = require('crypto');
   this.sharing.shareToken = crypto.randomBytes(32).toString('hex');
   this.sharing.isShared = true;
   this.sharing.sharedAt = new Date();

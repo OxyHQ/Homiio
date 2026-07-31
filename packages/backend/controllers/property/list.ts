@@ -17,12 +17,14 @@ import {
   type SortField,
 } from './searchQueryBuilder';
 import { OfferingType } from '@homiio/shared-types';
-const {
+import {
   AvailabilityWindowStatus,
-  ReservationStatus
-} = require('@homiio/shared-types');
+  ReservationStatus,
+} from '@homiio/shared-types';
 import { serializePropertyAddresses, ADDRESS_GEO_POPULATE } from '../../services/propertyAddressSerializer';
 import { serializePropertyImages } from '../../services/imageSerializer';
+import mongoose from 'mongoose';
+import { resolveGeoFilterAddressIds } from '../../services/geoQueryService';
 
 const OFFERING_VALUES: ReadonlySet<string> = new Set(Object.values(OfferingType));
 
@@ -156,7 +158,6 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     
     // Handle direct addressId filter
     if (addressId) {
-      const mongoose = require('mongoose');
       if (mongoose.Types.ObjectId.isValid(String(addressId))) {
         filters.addressId = new mongoose.Types.ObjectId(String(addressId));
       } else {
@@ -168,7 +169,6 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     // name (or id) is translated to a canonical City/Region id and the matching
     // Address ids — there is no free-text city/state matching on the Address.
     if (city || state) {
-      const { resolveGeoFilterAddressIds } = require('../../services/geoQueryService');
       const addressIds = await resolveGeoFilterAddressIds({
         city: city ? String(city) : undefined,
         state: state ? String(state) : undefined,
@@ -301,7 +301,6 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
 
     if (excludeIds) {
       try {
-        const mongoose = require('mongoose');
         const list = String(excludeIds)
           .split(',')
           .map((s: string) => s.trim())
@@ -426,7 +425,6 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     serializePropertyAddresses(properties);
     serializePropertyImages(properties);
 
-    const mongoose = require('mongoose');
     const ids = properties.map(p => p._id).filter(Boolean).map((id: any) => new mongoose.Types.ObjectId(id));
     let savesMap: Record<string, number> = {};
     if (ids.length > 0) {

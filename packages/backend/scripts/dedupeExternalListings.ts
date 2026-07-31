@@ -18,7 +18,9 @@
  *   node dedupeExternalListings.js --apply --limit-groups=50
  */
 
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+import path from 'path';
+import dotenv from 'dotenv';
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 import type { Types } from 'mongoose';
 import { PropertyStatus } from '@homiio/shared-types';
@@ -29,7 +31,7 @@ import {
   type DedupComparable,
 } from '../services/ingestion/dedupeFingerprint';
 
-const { Property } = require('../models');
+import { Property } from '../models';
 
 // `--apply` (CLI) or `DEDUP_APPLY=1` (env, for the argv-less ECS `node -e` boot).
 const APPLY = process.argv.includes('--apply') || process.env.DEDUP_APPLY === '1';

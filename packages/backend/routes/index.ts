@@ -4,27 +4,29 @@
  */
 
 import express from 'express';
-const properties = require('./properties').default;
-const rooms = require('./rooms');
-const leases = require('./leases');
-const notifications = require('./notifications');
-const analytics = require('./analytics');
-const profiles = require('./profiles').default;
-const ai = require('./ai').default;
-const roommates = require('./roommates').default;
-const viewings = require('./viewings').default;
-const telegram = require('./telegram');
-const images = require('./images');
-const { asyncHandler } = require('../middlewares');
-const billing = require('./billing').default;
-const scraper = require('./scraper').default;
-const reviews = require('./reviews').default;
-const addresses = require('./addresses').default;
-const reservations = require('./reservations').default;
-const applications = require('./applications').default;
-const exchanges = require('./exchanges').default;
-const partners = require('./partners').default;
-const evictions = require('./evictions').default;
+import properties from './properties';
+import rooms from './rooms';
+import leases from './leases';
+import notifications from './notifications';
+import analytics from './analytics';
+import profiles from './profiles';
+import ai from './ai';
+import roommates from './roommates';
+import viewings from './viewings';
+import telegram from './telegram';
+import images from './images';
+import { asyncHandler } from '../middlewares';
+import billing from './billing';
+import scraper from './scraper';
+import reviews from './reviews';
+import addresses from './addresses';
+import reservations from './reservations';
+import applications from './applications';
+import exchanges from './exchanges';
+import partners from './partners';
+import evictions from './evictions';
+import reservationController from '../controllers/reservationController';
+import cityController from '../controllers/cityController';
 
 export default function() {
   const propertyRoutes = properties();
@@ -52,7 +54,6 @@ export default function() {
 
   // Property availability (auth still required since mounted under oxy.auth() in server.ts).
   // Returns host availability windows + booked ranges (vacation flow).
-  const reservationController = require('../controllers/reservationController');
   router.get(
     '/properties/:id/availability',
     asyncHandler(reservationController.getPropertyAvailability)
@@ -81,8 +82,8 @@ export default function() {
   router.use('/addresses', addressRoutes);
 
   // Admin-only city routes (authenticated)
-  router.post('/cities', asyncHandler(require('../controllers').cityController.createCity));
-  router.put('/cities/:id/update-count', asyncHandler(require('../controllers').cityController.updateCityPropertiesCount));
+  router.post('/cities', asyncHandler(cityController.createCity));
+  router.put('/cities/:id/update-count', asyncHandler(cityController.updateCityPropertiesCount));
 
   // Health check route
   router.get('/health', (req, res) => {

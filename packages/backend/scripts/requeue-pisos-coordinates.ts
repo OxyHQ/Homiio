@@ -11,7 +11,9 @@
  * Requires REDIS_URL (Valkey) for --apply. Mongo via standard backend .env.
  */
 
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+import path from 'path';
+import dotenv from 'dotenv';
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 import { Queue } from 'bullmq';
 import { Types } from 'mongoose';
@@ -25,7 +27,7 @@ import {
 } from '../services/ingestion/queues';
 import database from '../database/connection';
 
-const { Property, Address } = require('../models');
+import { Property, Address } from '../models';
 
 const APPLY = process.argv.includes('--apply');
 
@@ -42,10 +44,7 @@ function isMadridCentroid(lng: number, lat: number): boolean {
 }
 
 /** Legacy external listings store the Address ref under `address`, not `addressId`. */
-function resolveAddressRef(doc: {
-  addressId?: unknown;
-  address?: unknown;
-}): Types.ObjectId | null {
+function resolveAddressRef(doc: Record<string, unknown>): Types.ObjectId | null {
   if (doc.addressId instanceof Types.ObjectId) return doc.addressId;
   if (typeof doc.addressId === 'string' && Types.ObjectId.isValid(doc.addressId)) {
     return new Types.ObjectId(doc.addressId);

@@ -14,46 +14,14 @@
  *   4. `syncIndexes()` so `{ regionId, name }` is the sole uniqueness guard
  */
 
-import type { Collection, Types } from 'mongoose';
+import type { Types } from 'mongoose';
 import { logger } from '../middlewares/logging';
 import { countryNameToCode, countryCodeToName, defaultCurrencyForCountry } from '../utils/countryData';
+import { Address, City, Country, Region } from '../models';
 
 const LEGACY_CITY_TEXT_FIELDS = ['state', 'country', 'popularNeighborhoods'] as const;
 
-interface LegacyCityRow {
-  _id: Types.ObjectId;
-  name?: string;
-  state?: string | null;
-  country?: string | null;
-  countryId?: Types.ObjectId;
-  regionId?: Types.ObjectId;
-}
 
-function models(): {
-  Country: { findOneAndUpdate: (...args: unknown[]) => Promise<{ _id: Types.ObjectId }> };
-  Region: { findOneAndUpdate: (...args: unknown[]) => Promise<{ _id: Types.ObjectId }> };
-  City: {
-    collection: Collection;
-    syncIndexes: () => Promise<void>;
-    find: (filter: Record<string, unknown>) => { lean: () => Promise<LegacyCityRow[]> };
-    findById: (id: Types.ObjectId) => { lean: () => Promise<LegacyCityRow | null> };
-    deleteOne: (filter: Record<string, unknown>) => Promise<unknown>;
-    updateOne: (filter: Record<string, unknown>, update: Record<string, unknown>) => Promise<unknown>;
-    updateMany: (filter: Record<string, unknown>, update: Record<string, unknown>) => Promise<unknown>;
-  };
-  Address: { countDocuments: (filter: Record<string, unknown>) => Promise<number>; updateMany: (filter: Record<string, unknown>, update: Record<string, unknown>) => Promise<unknown> };
-} {
-  // Untyped require by design: this helper narrows each model to a local
-  // structural shape in its return annotation, and requires lazily to keep the
-  // geo registry load-order flexible.
-  const registry = require('../models');
-  return {
-    Country: registry.Country,
-    Region: registry.Region,
-    City: registry.City,
-    Address: registry.Address,
-  };
-}
 
 function indexUsesLegacyGeoFields(key: Record<string, unknown>): boolean {
   return Object.prototype.hasOwnProperty.call(key, 'state')
@@ -61,7 +29,6 @@ function indexUsesLegacyGeoFields(key: Record<string, unknown>): boolean {
 }
 
 async function dropLegacyCityIndexes(): Promise<string[]> {
-  const { City } = models();
   const dropped: string[] = [];
   const indexes = await City.collection.indexes();
   for (const index of indexes) {
@@ -74,7 +41,6 @@ async function dropLegacyCityIndexes(): Promise<string[]> {
 }
 
 async function upsertCountryId(code: string, name: string): Promise<Types.ObjectId> {
-  const { Country } = models();
   const doc = await Country.findOneAndUpdate(
     { code },
     { $setOnInsert: { code, name, currency: defaultCurrencyForCountry(code), isActive: true } },
@@ -84,7 +50,6 @@ async function upsertCountryId(code: string, name: string): Promise<Types.Object
 }
 
 async function upsertRegionId(countryId: Types.ObjectId, name: string): Promise<Types.ObjectId> {
-  const { Region } = models();
   const doc = await Region.findOneAndUpdate(
     { countryId, name },
     { $setOnInsert: { countryId, name, isActive: true } },
@@ -108,17 +73,14 @@ function resolveCountryFromLegacyText(countryText: string | null | undefined): {
 }
 
 async function countAddressRefs(cityId: Types.ObjectId): Promise<number> {
-  const { Address } = models();
   return Address.countDocuments({ cityId });
 }
 
 async function reassignAddressCityRefs(fromId: Types.ObjectId, toId: Types.ObjectId): Promise<void> {
-  const { Address } = models();
   await Address.updateMany({ cityId: fromId }, { $set: { cityId: toId } });
 }
 
 async function deleteCityIfUnused(cityId: Types.ObjectId): Promise<boolean> {
-  const { City } = models();
   const refs = await countAddressRefs(cityId);
   if (refs > 0) return false;
   await City.deleteOne({ _id: cityId });
@@ -129,7 +91,6 @@ async function deleteCityIfUnused(cityId: Types.ObjectId): Promise<boolean> {
  * Backfill relational ids on cities that still only have legacy text geo fields.
  */
 async function migrateOrphanCities(): Promise<{ patched: number; deleted: number; merged: number }> {
-  const { City } = models();
   const orphans = await City.find({
     $or: [
       { countryId: { $exists: false } },
@@ -150,8 +111,12 @@ async function migrateOrphanCities(): Promise<{ patched: number; deleted: number
       continue;
     }
 
-    const countryResolved = resolveCountryFromLegacyText(orphan.country);
-    const regionName = orphan.state?.trim();
+    // `country` and `state` are the pre-migration text fields this function
+    // exists to retire — they are not on `ICity`, so they arrive as `unknown`.
+    // Reading them as strings-or-nothing is the honest shape.
+    const legacyCountry = typeof orphan.country === 'string' ? orphan.country : undefined;
+    const countryResolved = resolveCountryFromLegacyText(legacyCountry);
+    const regionName = typeof orphan.state === 'string' ? orphan.state.trim() : undefined;
 
     if (countryResolved && regionName) {
       const countryId = await upsertCountryId(countryResolved.code, countryResolved.name);
@@ -193,7 +158,6 @@ async function migrateOrphanCities(): Promise<{ patched: number; deleted: number
 }
 
 async function unsetLegacyCityTextFields(): Promise<number> {
-  const { City } = models();
   const result = await City.collection.updateMany(
     {
       $or: LEGACY_CITY_TEXT_FIELDS.map((field) => ({ [field]: { $exists: true } })),
@@ -208,7 +172,6 @@ async function unsetLegacyCityTextFields(): Promise<number> {
  * indexes. Idempotent — no-ops once production is clean.
  */
 export async function ensureCityGeoIndexes(): Promise<void> {
-  const { City } = models();
 
   const dropped = await dropLegacyCityIndexes();
   const orphanStats = await migrateOrphanCities();

@@ -21,10 +21,11 @@
  * caches), keeping us well within the OSM usage policy.
  */
 
-import type { Model, Types } from 'mongoose';
+import type { Types } from 'mongoose';
 import { reverseGeocode, forwardGeocode, type AddressData } from './geocodingService';
 import { countryNameToCode, countryCodeToName, defaultCurrencyForCountry } from '../utils/countryData';
 import { sanitizeGeoJsonCoordinates } from '../utils/geoCoordinates';
+import { City, Country, Neighborhood, Region } from '../models';
 
 /** Resolved geo id chain returned to callers (Address stores these). */
 export interface ResolvedGeo {
@@ -59,50 +60,13 @@ export class GeoResolutionError extends Error {
   }
 }
 
-// ---- Models (resolved lazily so this module loads before model registration) ----
-function models(): {
-  Country: Model<CountryDoc>;
-  Region: Model<RegionDoc>;
-  City: Model<CityDoc>;
-  Neighborhood: Model<NeighborhoodDoc>;
-} {
-  // `require` here (not a top-level import) so the geo models are read from the
-  // central registry AFTER `models/index.ts` has registered them, avoiding a
-  // load-order cycle (Address → geoResolutionService → models/index → Address).
-  // Untyped require by design: this helper narrows each model to a local *Doc
-  // shape in its return annotation, and the require is lazy to avoid the
-  // Address → geoResolutionService → models/index → Address load-order cycle.
-  const registry = require('../models');
-  return {
-    Country: registry.Country,
-    Region: registry.Region,
-    City: registry.City,
-    Neighborhood: registry.Neighborhood,
-  };
-}
 
-interface CountryDoc {
-  _id: Types.ObjectId;
-  code: string;
-  name: string;
-  currency: string;
-}
-interface RegionDoc {
-  _id: Types.ObjectId;
-  countryId: Types.ObjectId;
-  name: string;
-}
 interface CityDoc {
   _id: Types.ObjectId;
   regionId: Types.ObjectId;
   countryId: Types.ObjectId;
   name: string;
   coordinates?: { lat?: number; lng?: number };
-}
-interface NeighborhoodDoc {
-  _id: Types.ObjectId;
-  cityId: Types.ObjectId;
-  name: string;
 }
 
 /** Placeholder name for a missing administrative level, kept stable so the
@@ -182,7 +146,6 @@ function resolveCountryCodeAndName(names: GeoNames): { code: string; name: strin
 // ---- Idempotent upserts (each returns the canonical doc id) ----
 
 async function upsertCountry(code: string, name: string): Promise<Types.ObjectId> {
-  const { Country } = models();
   const currency = defaultCurrencyForCountry(code);
   const doc = await Country.findOneAndUpdate(
     { code },
@@ -193,7 +156,6 @@ async function upsertCountry(code: string, name: string): Promise<Types.ObjectId
 }
 
 async function upsertRegion(countryId: Types.ObjectId, name: string): Promise<Types.ObjectId> {
-  const { Region } = models();
   const doc = await Region.findOneAndUpdate(
     { countryId, name },
     { $setOnInsert: { countryId, name, isActive: true } },
@@ -209,7 +171,6 @@ async function upsertCity(
   countryCode: string,
   coordinates?: [number, number]
 ): Promise<Types.ObjectId> {
-  const { City } = models();
   const setOnInsert: Record<string, unknown> = {
     regionId,
     countryId,
@@ -236,7 +197,6 @@ async function upsertNeighborhood(
   name: string,
   centroid?: [number, number]
 ): Promise<Types.ObjectId> {
-  const { Neighborhood } = models();
   const setOnInsert: Record<string, unknown> = { cityId, name, isActive: true };
   if (centroid) {
     setOnInsert.centroid = { lng: centroid[0], lat: centroid[1] };
@@ -344,7 +304,6 @@ export async function resolveCityCentroid(names: GeoNames): Promise<[number, num
         ? countryNameToCode(names.country)
         : undefined;
   if (countryCode) {
-    const { Country, Region, City } = models();
     const country = await Country.findOne({ code: countryCode }).select('_id').lean<{
       _id: Types.ObjectId;
     } | null>();

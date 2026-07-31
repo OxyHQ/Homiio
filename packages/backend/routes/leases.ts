@@ -8,13 +8,13 @@
  * `/active` or `/pending-signature` convenience routes.
  */
 
-const controllers = require('../controllers');
+import * as controllers from '../controllers';
 import express from 'express';
 import { asyncHandler } from '../middlewares';
-const validation = require('../middlewares/validation');
+import * as validation from '../middlewares/validation';
 const { leaseController } = controllers;
 
-module.exports = function() {
+export default function() {
   const router = express.Router();
 
   router.get('/', validation.validateLeaseListQuery, asyncHandler(leaseController.getLeases));

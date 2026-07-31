@@ -1,4 +1,5 @@
 import imageUploadService from '../services/imageUploadService';
+import config from '../config';
 
 // Mock file for testing
 const createMockFile = (): any => {
@@ -31,7 +32,6 @@ async function testImageUpload() {
   try {
     // Test 1: Check if S3 configuration is set
     console.log('1. Checking S3 configuration...');
-    const config = require('../config').default;
     
     if (!config.s3.accessKeyId || !config.s3.secretAccessKey) {
       console.log('❌ S3 credentials not configured. Please set S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY environment variables.');

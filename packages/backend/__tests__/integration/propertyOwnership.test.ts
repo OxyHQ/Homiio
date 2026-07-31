@@ -10,7 +10,8 @@ import { updateProperty, deleteProperty } from '../../controllers/property/updat
 import { createProperty } from '../../controllers/property/create';
 import { createRentProperty, createAddress, models } from '../helpers/factories';
 
-const { errorHandler } = require('../../middlewares/errorHandler');
+import { errorHandler } from '../../middlewares/errorHandler';
+import { assertFound } from '../helpers/assertFound';
 const { Property } = models;
 
 function buildApp(oxyUserId: string): Express {
@@ -52,6 +53,7 @@ describe('property update/delete ownership', () => {
     const res = await request(buildApp('oxy-owner')).delete(`/properties/${property._id}`);
     expect(res.status).toBe(200);
     const archived = await Property.findById(property._id);
+    assertFound(archived, 'archived');
     expect(archived.status).toBe(PropertyStatus.ARCHIVED);
   });
 });
@@ -73,6 +75,7 @@ describe('property create ownership', () => {
     const res = await request(buildApp('oxy-owner')).post('/properties').send(await validCreateBody());
     expect(res.status).toBe(201);
     const persisted = await Property.findById(res.body.data.id ?? res.body.data._id);
+    assertFound(persisted, 'persisted');
     expect(persisted.oxyUserId).toBe('oxy-owner');
   });
 });

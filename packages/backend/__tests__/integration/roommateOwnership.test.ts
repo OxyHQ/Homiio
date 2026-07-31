@@ -6,10 +6,10 @@
 import express, { type Express } from 'express';
 import request from 'supertest';
 
-const roommateController = require('../../controllers/roommateController');
-const { asyncHandler } = require('../../middlewares');
-const { errorHandler } = require('../../middlewares/errorHandler');
-const { Profile, RoommateRequest, RoommateRelationship } = require('../../models');
+import roommateController from '../../controllers/roommateController';
+import { asyncHandler } from '../../middlewares';
+import { errorHandler } from '../../middlewares/errorHandler';
+import { Profile, RoommateRequest, RoommateRelationship } from '../../models';
 
 beforeAll(() => {
   (global as unknown as { fetch: jest.Mock }).fetch = jest.fn(async () => ({

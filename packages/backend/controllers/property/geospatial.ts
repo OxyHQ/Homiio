@@ -5,6 +5,7 @@ import type { ControllerNext, ControllerRequest, ControllerResponse } from '../c
 import { getQueryInteger, getQueryNumber } from '../queryParams';
 import { FIELD_HAS_IMAGES } from './searchQueryBuilder';
 import { excludeModerationRestricted } from './publicVisibility';
+import mongoose from 'mongoose';
 
 export async function findNearbyProperties(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
   try {
@@ -198,7 +199,6 @@ export async function findNearbyProperties(req: ControllerRequest, res: Controll
 
     if (excludeIds) {
       try {
-        const mongoose = require('mongoose');
         const list = String(excludeIds)
           .split(',')
           .map(s => s.trim())
@@ -427,7 +427,6 @@ export async function findPropertiesInRadius(req: ControllerRequest, res: Contro
 
     if (excludeIds) {
       try {
-        const mongoose = require('mongoose');
         const list = String(excludeIds)
           .split(',')
           .map(s => s.trim())

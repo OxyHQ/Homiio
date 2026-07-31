@@ -21,7 +21,8 @@ import request from 'supertest';
 
 import { stripeWebhook } from '../../controllers/billingController';
 
-const models = require('../../models');
+import * as models from '../../models';
+import { assertFound } from '../helpers/assertFound';
 const { Billing } = models;
 
 function buildApp(): Express {
@@ -81,7 +82,7 @@ describe('stripeWebhook signature verification', () => {
     expect(res.body).toEqual({ received: true });
 
     const billing = await Billing.findOne({ oxyUserId: 'oxy-user-1' });
-    expect(billing).not.toBeNull();
+    assertFound(billing, 'billing');
     expect(billing.plusActive).toBe(true);
     expect(billing.plusStripeSubscriptionId).toBe('sub_123');
     expect(billing.processedSessions).toContain('cs_test_123');
@@ -106,6 +107,7 @@ describe('stripeWebhook signature verification', () => {
 
     expect(res.status).toBe(200);
     const billing = await Billing.findOne({ oxyUserId: 'oxy-user-2' });
+    assertFound(billing, 'billing');
     expect(billing.fileCredits).toBe(1);
   });
 

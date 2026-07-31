@@ -13,6 +13,7 @@ import validator from 'validator';
 import { transformAddressFields } from '../../utils/helpers';
 import { validateOfferings } from './offeringValidation';
 import { PropertyType, PropertyStatus, HousingType, LayoutType, UtilitiesIncluded, LeaseDuration, AvailabilityWindowStatus, CancellationPolicy, OfferingType, ExchangeMode, LISTING_CURRENCIES } from '@homiio/shared-types';
+import { resolveGeoFilterAddressIds } from '../../services/geoQueryService';
 
 // Monthly-rent pricing block (offering: long_term_rent). Currency uses the shared
 // LISTING_CURRENCIES set (covers every ingested market). 'FAIR' is 4 chars so no
@@ -1048,7 +1049,6 @@ propertySchema.statics.search = async function(searchParams: PropertySearchParam
   // (City/Region collections) and constrain by the matching Address ids. Geo is
   // relational, so there is no free-text city/state matching on the Address.
   if (city || state) {
-    const { resolveGeoFilterAddressIds } = require('../../services/geoQueryService');
     const addressIds = await resolveGeoFilterAddressIds({ city, state });
     if (addressIds === null || addressIds.length === 0) {
       return []; // No matching city/region, or no addresses there

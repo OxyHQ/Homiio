@@ -8,8 +8,9 @@ import { PropertyType, PropertyStatus, OfferingType } from '@homiio/shared-types
 
 import { createRentProperty, models } from '../helpers/factories';
 
-const roomController = require('../../controllers/roomController');
-const { errorHandler } = require('../../middlewares/errorHandler');
+import roomController from '../../controllers/roomController';
+import { errorHandler } from '../../middlewares/errorHandler';
+import { assertFound } from '../helpers/assertFound';
 const { Property } = models;
 
 function buildApp(oxyUserId: string): Express {
@@ -37,6 +38,7 @@ async function validRoomBody(parentPropertyId: unknown) {
 
 async function seedRoom(oxyUserId: string, parentPropertyId: unknown) {
   const parent = await Property.findById(parentPropertyId);
+  assertFound(parent, 'parent');
   return Property.create({
     oxyUserId,
     addressId: parent.addressId,
@@ -54,6 +56,7 @@ describe('roomController.createRoom', () => {
     const res = await request(buildApp('oxy-owner')).post('/rooms').send(await validRoomBody(parent._id));
     expect(res.status).toBe(201);
     const persisted = await Property.findById(res.body.data.id ?? res.body.data._id);
+    assertFound(persisted, 'persisted');
     expect(persisted.oxyUserId).toBe('oxy-owner');
     expect(persisted.type).toBe(PropertyType.ROOM);
   });

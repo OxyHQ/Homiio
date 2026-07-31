@@ -3,25 +3,19 @@
  * Central export for all controller components
  */
 
-function resolveExport<T>(mod: T | { default: T }): T {
-  if (mod && typeof mod === 'object' && 'default' in mod && (mod as { default: T }).default) {
-    return (mod as { default: T }).default;
-  }
-  return mod as T;
-}
 
-const propertyController = require('./propertyController');
-const roomController = require('./roomController');
-const analyticsController = require('./analyticsController');
-const notificationController = require('./notificationController');
-const leaseController = require('./leaseController');
-const profileController = require('./profileController');
-const telegramController = require('./telegramController');
-const cityController = resolveExport(require('./cityController'));
-const imageController = resolveExport(require('./imageController'));
-const billingController = require('./billingController');
+import * as propertyController from './property';
+import roomController from './roomController';
+import analyticsController from './analyticsController';
+import notificationController from './notificationController';
+import leaseController from './leaseController';
+import * as profileController from './profile';
+import cityController from './cityController';
+import imageController from './imageController';
+import telegramController from './telegramController';
+import billingController from './billingController';
 
-module.exports = {
+export {
   propertyController,
   roomController,
   analyticsController,

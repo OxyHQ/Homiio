@@ -8,13 +8,15 @@ import neighborhoodRoutes from './neighborhoods';
 import cityController from '../controllers/cityController';
 import imageController from '../controllers/imageController';
 import geocodingController from '../controllers/geocodingController';
-const propertyController = require('../controllers/propertyController');
-const telegramController = require('../controllers/telegramController');
-const analyticsController = require('../controllers/analyticsController');
-const reviewController = require('../controllers/reviewController');
+import * as propertyController from '../controllers/property';
+import telegramController from '../controllers/telegramController';
+import analyticsController from '../controllers/analyticsController';
+import * as reviewController from '../controllers/reviewController';
 import { asyncHandler } from '../middlewares';
 import performanceMonitor from '../middlewares/performance';
 import { Conversation } from '../models';
+import * as profileController from '../controllers/profile';
+import * as evictionController from '../controllers/eviction';
 
 const PROPERTY_ADJUSTMENTS = {
   studio: 0.8,
@@ -102,7 +104,6 @@ export default function () {
   // Public eviction solidarity board reads (no auth; optionalAuth still runs
   // before public routes so a signed-in viewer's `isAttending` is resolved).
   // Writes + caller-scoped lists live on the authenticated `/evictions` router.
-  const evictionController = require('../controllers/eviction');
   router.get('/evictions', asyncHandler(evictionController.listEvictions));
   router.get('/evictions/:id/comments', asyncHandler(evictionController.listComments));
   router.get('/evictions/:id', asyncHandler(evictionController.getEvictionById));
@@ -236,8 +237,10 @@ export default function () {
   router.get('/telegram/webhook', asyncHandler(telegramController.getWebhookInfo));
   router.post('/telegram/test', asyncHandler(telegramController.sendTestMessage));
 
-  // Public profile route (read-only)
-  const profileController = require('../controllers/profileController');
+  // Public profile route (read-only). The handlers come from the top-level
+  // `profileController` namespace import; the local `require` this replaced was
+  // still pointing at a module that has been deleted, and no typechecker could
+  // see that because `require()` is opaque to one.
   router.get('/public/profiles/by-user/:oxyUserId', asyncHandler(profileController.getPublicProfileByOxyUserId));
   router.get('/public/profiles/oxy/:oxyUserId', asyncHandler(profileController.getProfileByOxyUserId));
 

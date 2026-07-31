@@ -21,7 +21,8 @@ jest.mock('../../services/geocodingService', () => ({
   reverseGeocode: jest.fn(),
 }));
 
-const { Property, Address } = require('../../models');
+import { Property, Address } from '../../models';
+import { assertFound } from '../helpers/assertFound';
 
 const mockedForwardGeocode = forwardGeocode as jest.MockedFunction<typeof forwardGeocode>;
 const mockedReverseGeocode = reverseGeocode as jest.MockedFunction<typeof reverseGeocode>;
@@ -80,7 +81,7 @@ describe('IngestionService.resolveAddress geocode fallbacks', () => {
     expect(mockedReverseGeocode).toHaveBeenCalledWith(-0.1276, 51.5034);
 
     const property = await Property.findById(result.propertyId);
-    expect(property).not.toBeNull();
+    assertFound(property, 'property');
     expect(property.get('addressId')).toBeTruthy();
   });
 
@@ -112,7 +113,7 @@ describe('IngestionService.resolveAddress geocode fallbacks', () => {
     expect(mockedForwardGeocode.mock.calls[1]?.[0]).toBe('London, United Kingdom');
 
     const property = await Property.findById(result.propertyId);
-    expect(property).not.toBeNull();
+    assertFound(property, 'property');
     expect(property.get('addressId')).toBeTruthy();
   });
 
@@ -166,6 +167,7 @@ describe('IngestionService.resolveAddress geocode fallbacks', () => {
     expect(cityGeocodes).toHaveLength(0);
 
     const property = await Property.findById(result.propertyId);
+    assertFound(property, 'property');
     const address = await Address.findById(property.get('addressId'));
     expect(address?.coordinates?.coordinates).toEqual([9.9937, 53.5503]);
   });
@@ -208,7 +210,7 @@ describe('IngestionService.resolveAddress geocode fallbacks', () => {
 
     expect(result.status).toBe('created');
     const property = await Property.findById(result.propertyId);
-    expect(property).not.toBeNull();
+    assertFound(property, 'property');
 
     const address = await Address.findById(property.get('addressId'));
     expect(address?.postal_code).toBe(EXTERNAL_POSTAL_FALLBACK);
