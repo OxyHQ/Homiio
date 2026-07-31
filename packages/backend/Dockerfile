@@ -32,7 +32,12 @@
 ##
 
 # ── Build stage ───────────────────────────────────────────────────
-FROM node:20-bookworm-slim AS builder
+# Kept in step with `BUN_VERSION` in .github/workflows/ci.yml by
+# .github/scripts/check-version-pins.sh, which fails CI if the two drift.
+ARG BUN_VERSION=1.3.14
+
+FROM node:22-bookworm-slim AS builder
+ARG BUN_VERSION
 
 # Toolchain for any node-gyp fallback (sharp ships arm64 glibc prebuilds, but
 # keep the compiler available so a source build never fails the image).
@@ -46,7 +51,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PUPPETEER_SKIP_DOWNLOAD=true \
     PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
-RUN npm install -g bun
+# Pinned, and pinned to the SAME version as CI and deploy-frontends.
+#
+# The usual argument for pinning bun — one lockfile read by two versions — does
+# NOT apply here: this stage narrows `workspaces` and deliberately never copies
+# bun.lock. That makes the pin MORE load-bearing, not less. With no lockfile,
+# the bun version is the only thing deciding how the version ranges below
+# resolve, so an unpinned `npm install -g bun` means the image built today and
+# the image built next month can install different dependency graphs from an
+# identical commit.
+RUN npm install -g bun@${BUN_VERSION}
 
 WORKDIR /app
 
@@ -91,7 +105,8 @@ RUN bun run --filter @homiio/backend build
 RUN cp -r packages/backend/locales packages/backend/dist/locales
 
 # ── Production stage ──────────────────────────────────────────────
-FROM node:20-bookworm-slim
+FROM node:22-bookworm-slim
+ARG BUN_VERSION
 
 # Runtime deps: tini as PID 1; Playwright OS libs installed via
 # `playwright install-deps` below (Chromium needs a full set of shared libs).
@@ -111,7 +126,7 @@ ENV NODE_ENV=production \
     # Playwright browsers land under this path (owned by root, readable by node).
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-RUN npm install -g bun
+RUN npm install -g bun@${BUN_VERSION}
 
 WORKDIR /app
 
