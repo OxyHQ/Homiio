@@ -1,4 +1,5 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import type { ISaved } from '../documentTypes';
 
 const savedSchema = new mongoose.Schema({
   oxyUserId: { type: String, required: true, index: true },
@@ -11,4 +12,4 @@ const savedSchema = new mongoose.Schema({
 
 savedSchema.index({ oxyUserId: 1, targetType: 1, targetId: 1 }, { unique: true });
 
-module.exports = mongoose.models.Saved || mongoose.model('Saved', savedSchema);
+export default mongoose.models.Saved || mongoose.model<ISaved>('Saved', savedSchema);

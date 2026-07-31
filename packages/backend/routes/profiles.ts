@@ -4,8 +4,8 @@
  */
 
 import express from 'express';
-const profileController = require('../controllers/profileController');
-const exchangeReviewController = require('../controllers/exchangeReviewController');
+import profileController from '../controllers/profileController';
+import exchangeReviewController from '../controllers/exchangeReviewController';
 import { asyncHandler } from '../middlewares';
 import performanceMonitor from '../middlewares/performance';
 

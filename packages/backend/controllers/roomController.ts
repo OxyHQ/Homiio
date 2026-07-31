@@ -268,4 +268,4 @@ interface AppErrorWithDetails extends Error {
   details?: unknown;
 }
 
-module.exports = new RoomController();
+export default new RoomController();

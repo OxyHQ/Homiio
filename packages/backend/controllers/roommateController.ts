@@ -9,15 +9,11 @@ import type { PopulatedProfileLike } from './roommate/serialize';
 import type { IProfile } from '../models/documentTypes';
 
 const { Profile, RoommateRequest, RoommateRelationship } = require('../models') as typeof import('../models');
-const { logger } = require('../middlewares/logging');
-const { notificationDispatchService } = require('../services/notificationDispatchService');
+import { logger } from '../middlewares/logging';
+import { notificationDispatchService } from '../services/notificationDispatchService';
 const { pickFields } = require('../utils/pickFields') as typeof import('../utils/pickFields');
-const { EDITABLE_ROOMMATE_PREFERENCE_FIELDS } = require('./roommate/editableFields');
-const {
-  ROOMMATE_PROFILE_FIELDS,
-  hydrateDisplayNames,
-  serializeRoommateProfile,
-} = require('./roommate/serialize');
+import { EDITABLE_ROOMMATE_PREFERENCE_FIELDS } from './roommate/editableFields';
+import { ROOMMATE_PROFILE_FIELDS, hydrateDisplayNames, serializeRoommateProfile } from './roommate/serialize';
 
 const { Types: MongooseTypes } = require('mongoose') as typeof import('mongoose');
 
@@ -831,7 +827,7 @@ const getCurrentUserRoommateStatus = async (req: Request, res: Response): Promis
   }
 };
 
-module.exports = {
+export default {
   getRoommateProfiles,
   getMyRoommatePreferences,
   updateRoommatePreferences,

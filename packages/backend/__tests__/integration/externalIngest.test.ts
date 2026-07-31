@@ -31,7 +31,7 @@ import { IngestionService } from '../../services/ingestion/IngestionService';
 import { ExternalMediaIngest } from '../../services/ingestion/ExternalMediaIngest';
 import type { ImageBufferInput } from '../../services/imageUploadService';
 
-const { Property, Image } = require('../../models');
+import { Property, Image } from '../../models';
 
 // A 1x1 transparent PNG — a real, Sharp-decodable image with no network fetch.
 const ONE_BY_ONE_PNG = Buffer.from(

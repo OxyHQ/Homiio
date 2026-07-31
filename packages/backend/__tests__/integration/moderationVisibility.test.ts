@@ -28,7 +28,7 @@ import {
 } from '../../controllers/property/editableFields';
 import { createAddress, models } from '../helpers/factories';
 
-const { errorHandler } = require('../../middlewares/errorHandler');
+import { errorHandler } from '../../middlewares/errorHandler';
 const { Property } = models;
 
 function buildApp(oxyUserId?: string): Express {

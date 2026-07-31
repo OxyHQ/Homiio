@@ -19,11 +19,11 @@
  * `bun run seed:properties` produces a fully-resolved dataset.
  */
 
-require('dotenv').config();
+import 'dotenv/config';
 import type { Types } from 'mongoose';
 import database from '../database/connection';
 
-const { Country, Region, City, Neighborhood } = require('../models');
+import { Country, Region, City, Neighborhood } from '../models';
 
 const SPAIN = { code: 'ES', name: 'Spain', currency: 'EUR', flag: '🇪🇸', defaultLocale: 'es-ES' } as const;
 

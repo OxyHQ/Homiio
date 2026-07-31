@@ -1,6 +1,7 @@
 import type { IConversation, IConversationMessage } from '../documentTypes';
 
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import type { IConversationModel } from '../documentTypes';
 
 interface ConversationDoc extends IConversation {
   analytics: { messageCount: number; lastActivity: Date; totalTokens: number };
@@ -279,4 +280,4 @@ conversationSchema.set('toJSON', {
   virtuals: true, // Include virtual fields
 });
 
-module.exports = mongoose.model("Conversation", conversationSchema);
+export default mongoose.model<IConversation, IConversationModel>("Conversation", conversationSchema);

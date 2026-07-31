@@ -457,4 +457,4 @@ class ApplicationController {
   }
 }
 
-module.exports = new ApplicationController();
+export default new ApplicationController();

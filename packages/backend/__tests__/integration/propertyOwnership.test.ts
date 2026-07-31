@@ -10,7 +10,7 @@ import { updateProperty, deleteProperty } from '../../controllers/property/updat
 import { createProperty } from '../../controllers/property/create';
 import { createRentProperty, createAddress, models } from '../helpers/factories';
 
-const { errorHandler } = require('../../middlewares/errorHandler');
+import { errorHandler } from '../../middlewares/errorHandler';
 const { Property } = models;
 
 function buildApp(oxyUserId: string): Express {

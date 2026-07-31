@@ -1,8 +1,14 @@
 import type { Document, Model } from 'mongoose';
 
-const mongoose: typeof import('mongoose') = require('mongoose');
+import mongoose from 'mongoose';
 
-interface ISavedSearch extends Document {
+/**
+ * Exported because `models/index.ts` re-exports the model, and a declaration
+ * emit cannot name a type it cannot import. Note this is NOT the same shape as
+ * `documentTypes.ISavedSearch`, which omits `query`/`filters`/`notificationsEnabled`
+ * — the two should be unified.
+ */
+export interface ISavedSearch extends Document {
   oxyUserId: string;
   name: string;
   query: string;
@@ -12,7 +18,7 @@ interface ISavedSearch extends Document {
   updatedAt: Date;
 }
 
-type SavedSearchModel = Model<ISavedSearch>;
+export type SavedSearchModel = Model<ISavedSearch>;
 
 const savedSearchSchema = new mongoose.Schema<ISavedSearch, SavedSearchModel>({
   oxyUserId: {
@@ -66,4 +72,4 @@ savedSearchSchema.pre('save', function(this: ISavedSearch) {
   this.updatedAt = new Date();
 });
 
-module.exports = mongoose.model<ISavedSearch, SavedSearchModel>('SavedSearch', savedSearchSchema); 
+export default mongoose.model<ISavedSearch, SavedSearchModel>('SavedSearch', savedSearchSchema); 

@@ -19,7 +19,7 @@ import { IngestionService } from '../../services/ingestion/IngestionService';
 import { ExternalMediaIngest } from '../../services/ingestion/ExternalMediaIngest';
 import type { ImageBufferInput } from '../../services/imageUploadService';
 
-const { Property, Image } = require('../../models');
+import { Property, Image } from '../../models';
 
 const ONE_BY_ONE_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',

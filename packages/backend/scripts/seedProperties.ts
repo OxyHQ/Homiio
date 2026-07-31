@@ -22,7 +22,7 @@
  *   ts-node --transpile-only scripts/seedProperties.ts
  */
 
-require('dotenv').config();
+import 'dotenv/config';
 import {
   PropertyType,
   PropertyStatus,
@@ -54,7 +54,7 @@ const FurnishedStatus = {
   NOT_SPECIFIED: 'not_specified'
 } as const;
 
-const { Property, Address, Profile, Country, Region, City, Neighborhood, Image } = require('../models');
+import { Property, Address, Profile, Country, Region, City, Neighborhood, Image } from '../models';
 
 const SEED_SOURCE = 'seed';
 const SEED_OWNER_OXY_USER_ID = 'seed-demo-host';

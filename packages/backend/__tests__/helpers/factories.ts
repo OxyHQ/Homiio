@@ -4,7 +4,7 @@
 
 import { OfferingType, PropertyType, PropertyStatus } from '@homiio/shared-types';
 
-const models = require('../../models');
+import * as models from '../../models';
 const { Property, Address, Country, Region, City, Lease } = models;
 
 /**

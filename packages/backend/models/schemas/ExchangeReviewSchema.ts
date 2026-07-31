@@ -6,7 +6,8 @@
  * stops a participant from reviewing the same exchange twice.
  */
 
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import type { IExchangeReview } from '../documentTypes';
 
 // Minimum / maximum allowed star rating (1-5).
 const MIN_RATING = 1;
@@ -67,4 +68,4 @@ exchangeReviewSchema.index({ subjectOxyUserId: 1, createdAt: -1 });
 // One review per reviewer per exchange.
 exchangeReviewSchema.index({ exchangeRequestId: 1, reviewerOxyUserId: 1 }, { unique: true });
 
-module.exports = mongoose.model('ExchangeReview', exchangeReviewSchema);
+export default mongoose.model<IExchangeReview>('ExchangeReview', exchangeReviewSchema);

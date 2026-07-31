@@ -321,4 +321,4 @@ class TelegramController {
   }
 }
 
-module.exports = new TelegramController();
+export default new TelegramController();

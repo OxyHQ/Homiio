@@ -528,4 +528,4 @@ class LeaseController {
   }
 }
 
-module.exports = new LeaseController();
+export default new LeaseController();

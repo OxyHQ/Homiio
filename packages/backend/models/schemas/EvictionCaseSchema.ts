@@ -12,9 +12,10 @@
  * `updates` is an owner-authored timeline (reschedules, status changes, notes).
  */
 
-const mongoose = require('mongoose');
-const validator = require('validator');
-const { EvictionCaseStatus } = require('@homiio/shared-types');
+import mongoose from 'mongoose';
+import type { IEvictionCase } from '../documentTypes';
+import validator from 'validator';
+import { EvictionCaseStatus } from '@homiio/shared-types';
 
 const MAX_TITLE_LENGTH = 140;
 const MAX_DESCRIPTION_LENGTH = 8000;
@@ -183,4 +184,4 @@ evictionCaseSchema.index({ 'location.coordinates': '2dsphere' });
 // "My cases" lookups.
 evictionCaseSchema.index({ oxyUserId: 1, createdAt: -1 });
 
-module.exports = mongoose.model('EvictionCase', evictionCaseSchema);
+export default mongoose.model<IEvictionCase>('EvictionCase', evictionCaseSchema);

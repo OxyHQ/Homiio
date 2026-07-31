@@ -10,18 +10,18 @@ function resolveExport<T>(mod: T | { default: T }): T {
   return mod as T;
 }
 
-const propertyController = require('./propertyController');
-const roomController = require('./roomController');
-const analyticsController = require('./analyticsController');
-const notificationController = require('./notificationController');
-const leaseController = require('./leaseController');
-const profileController = require('./profileController');
-const telegramController = require('./telegramController');
+import propertyController from './propertyController';
+import roomController from './roomController';
+import analyticsController from './analyticsController';
+import notificationController from './notificationController';
+import leaseController from './leaseController';
+import profileController from './profileController';
+import telegramController from './telegramController';
 const cityController = resolveExport(require('./cityController'));
 const imageController = resolveExport(require('./imageController'));
-const billingController = require('./billingController');
+import billingController from './billingController';
 
-module.exports = {
+export {
   propertyController,
   roomController,
   analyticsController,

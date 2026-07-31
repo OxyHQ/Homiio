@@ -7,8 +7,9 @@
  * `countryCode` for fast filtering.
  */
 
-const mongoose = require('mongoose');
-const { LISTING_CURRENCIES } = require('@homiio/shared-types');
+import mongoose from 'mongoose';
+import type { ICountry } from '../documentTypes';
+import { LISTING_CURRENCIES } from '@homiio/shared-types';
 
 const countrySchema = new mongoose.Schema({
   /** ISO-3166-1 alpha-2 code, uppercase (e.g. `ES`). Unique. */
@@ -35,7 +36,7 @@ const countrySchema = new mongoose.Schema({
   /** Default currency for the country. */
   currency: {
     type: String,
-    enum: LISTING_CURRENCIES,
+    enum: [...LISTING_CURRENCIES],
     default: 'EUR'
   },
   /** Optional emoji flag (e.g. `🇪🇸`). */
@@ -62,4 +63,4 @@ const countrySchema = new mongoose.Schema({
 
 countrySchema.index({ name: 'text' });
 
-module.exports = mongoose.model('Country', countrySchema);
+export default mongoose.model<ICountry>('Country', countrySchema);

@@ -21,7 +21,7 @@ import request from 'supertest';
 
 import { stripeWebhook } from '../../controllers/billingController';
 
-const models = require('../../models');
+import * as models from '../../models';
 const { Billing } = models;
 
 function buildApp(): Express {

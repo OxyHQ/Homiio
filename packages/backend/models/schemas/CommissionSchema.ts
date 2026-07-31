@@ -14,7 +14,8 @@
  * deal has closed.
  */
 
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import type { ICommission } from '../documentTypes';
 
 const COMMISSION_STATUSES: ReadonlyArray<string> = ['pending', 'approved', 'paid', 'cancelled'];
 const COMMISSION_OFFERINGS: ReadonlyArray<string> = ['rent', 'sale', 'exchange'];
@@ -107,4 +108,4 @@ commissionSchema.index({ propertyId: 1 }, { unique: true });
 // Partner earnings-ledger lookups (newest first).
 commissionSchema.index({ partnerId: 1, createdAt: -1 });
 
-module.exports = mongoose.model('Commission', commissionSchema);
+export default mongoose.model<ICommission>('Commission', commissionSchema);

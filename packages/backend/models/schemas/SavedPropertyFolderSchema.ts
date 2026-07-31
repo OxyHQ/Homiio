@@ -1,7 +1,7 @@
 import type { Types } from 'mongoose';
 import type { ISavedPropertyFolder, ISavedFolderEntry } from '../documentTypes';
 
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 type ObjectIdLike = string | Types.ObjectId;
 type FolderEntry = ISavedFolderEntry & { notes?: string; savedAt?: Date };
@@ -151,4 +151,4 @@ savedPropertyFolderSchema.methods.updatePropertyNotes = async function(
   return false;
 };
 
-module.exports = mongoose.model('SavedPropertyFolder', savedPropertyFolderSchema); 
+export default mongoose.model<ISavedPropertyFolder>('SavedPropertyFolder', savedPropertyFolderSchema); 

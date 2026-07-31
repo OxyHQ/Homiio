@@ -7,8 +7,9 @@
  * tour) and Lease (long-term contract). Mirrors ReservationSchema's structure.
  */
 
-const mongoose = require('mongoose');
-const { ExchangeMode, ExchangeRequestStatus } = require('@homiio/shared-types');
+import mongoose from 'mongoose';
+import type { IExchangeRequest } from '../documentTypes';
+import { ExchangeMode, ExchangeRequestStatus } from '@homiio/shared-types';
 
 // Half-open date range [start, end) for an exchange stay.
 const exchangeWindowSchema = new mongoose.Schema({
@@ -103,4 +104,4 @@ exchangeRequestSchema.pre('save', function(this: any, next: any) {
   next();
 });
 
-module.exports = mongoose.model('ExchangeRequest', exchangeRequestSchema);
+export default mongoose.model<IExchangeRequest>('ExchangeRequest', exchangeRequestSchema);

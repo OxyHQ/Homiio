@@ -15,7 +15,7 @@ import { OfferingType, PropertyType, PropertyStatus } from '@homiio/shared-types
 import neighborhoodRoutes from '../../routes/neighborhoods';
 import { models } from '../helpers/factories';
 
-const { errorHandler } = require('../../middlewares/errorHandler');
+import { errorHandler } from '../../middlewares/errorHandler';
 const { Country, Region, City, Neighborhood, Address, Property, Profile } = models;
 
 function buildApp(): Express {

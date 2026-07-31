@@ -7,7 +7,8 @@ import type { Types } from 'mongoose';
 import { PAYMENT_CURRENCIES } from '@homiio/shared-types';
 import type { ILease } from '../documentTypes';
 
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import type { ILeaseModel } from '../documentTypes';
 
 interface LeaseDoc extends ILease {
   leaseTerms: {
@@ -557,4 +558,4 @@ leaseSchema.methods.scheduleInspection = function(this: LeaseDoc, inspectionData
   return this.save();
 };
 
-module.exports = mongoose.model('Lease', leaseSchema);
+export default mongoose.model<ILease, ILeaseModel>('Lease', leaseSchema);

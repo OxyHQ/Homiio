@@ -9,7 +9,7 @@
  *   bun run migrate:city-geo
  */
 
-require('dotenv').config();
+import 'dotenv/config';
 
 import database from '../database/connection';
 import { ensureCityGeoIndexes } from '../services/cityGeoMigration';

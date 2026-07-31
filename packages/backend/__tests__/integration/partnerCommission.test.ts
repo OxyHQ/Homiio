@@ -27,9 +27,9 @@ import { createProperty } from '../../controllers/property/create';
 import { markPropertyTransacted } from '../../controllers/property/transact';
 import { createAddress, models } from '../helpers/factories';
 
-const partnerController = require('../../controllers/partnerController');
-const roomController = require('../../controllers/roomController');
-const { errorHandler } = require('../../middlewares/errorHandler');
+import partnerController from '../../controllers/partnerController';
+import roomController from '../../controllers/roomController';
+import { errorHandler } from '../../middlewares/errorHandler';
 const { Partner, Commission, Property } = models;
 
 /** Fake-auth app that injects `req.user.id` / `req.userId` for one Oxy user. */

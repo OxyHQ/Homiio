@@ -7,9 +7,9 @@ import request from 'supertest';
 
 import { createRentProperty, createLease } from '../helpers/factories';
 
-const leaseController = require('../../controllers/leaseController');
-const { Lease } = require('../../models');
-const { errorHandler } = require('../../middlewares/errorHandler');
+import leaseController from '../../controllers/leaseController';
+import { Lease } from '../../models';
+import { errorHandler } from '../../middlewares/errorHandler';
 
 function buildApp(oxyUserId: string): Express {
   const app = express();

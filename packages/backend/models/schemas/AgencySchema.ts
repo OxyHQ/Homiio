@@ -13,8 +13,10 @@
  * agency is addressed publicly by a URL-safe, collision-suffixed `slug`.
  */
 
-const mongoose = require('mongoose');
-const { normalizeAgencyName, slugifyAgencyName } = require('../../utils/agencyName');
+import mongoose from 'mongoose';
+import type { IAgencyModel } from '../documentTypes';
+import type { IAgency } from '../documentTypes';
+import { normalizeAgencyName, slugifyAgencyName } from '../../utils/agencyName';
 
 const MIN_NAME_LENGTH = 2;
 const MAX_NAME_LENGTH = 120;
@@ -99,4 +101,4 @@ agencySchema.statics.findOrCreateByName = async function findOrCreateByName(
   return this.create({ name, normalizedName, slug: `${baseSlug}-${Date.now()}` });
 };
 
-module.exports = mongoose.model('Agency', agencySchema);
+export default mongoose.model<IAgency, IAgencyModel>('Agency', agencySchema);

@@ -1,4 +1,5 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import type { INotification } from '../documentTypes';
 
 /**
  * Notification Schema
@@ -84,5 +85,5 @@ notificationSchema.index({ recipientOxyUserId: 1, read: 1, createdAt: -1 });
 // Type-filtered listing (mailbox filter chips).
 notificationSchema.index({ recipientOxyUserId: 1, type: 1, createdAt: -1 });
 
-module.exports =
-  mongoose.models.Notification || mongoose.model('Notification', notificationSchema);
+export default
+  mongoose.models.Notification || mongoose.model<INotification>('Notification', notificationSchema);

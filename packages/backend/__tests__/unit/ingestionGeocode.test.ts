@@ -21,7 +21,7 @@ jest.mock('../../services/geocodingService', () => ({
   reverseGeocode: jest.fn(),
 }));
 
-const { Property, Address } = require('../../models');
+import { Property, Address } from '../../models';
 
 const mockedForwardGeocode = forwardGeocode as jest.MockedFunction<typeof forwardGeocode>;
 const mockedReverseGeocode = reverseGeocode as jest.MockedFunction<typeof reverseGeocode>;

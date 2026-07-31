@@ -270,4 +270,4 @@ class AnalyticsController {
   }
 }
 
-module.exports = new AnalyticsController();
+export default new AnalyticsController();

@@ -1,9 +1,9 @@
 // Script to remove profileId from existing external properties
 // Usage: ts-node --transpile-only scripts/cleanup-external-profileId.ts
 
-require('dotenv').config();
+import 'dotenv/config';
 import database from '../database/connection';
-const Property = require('../models/schemas/PropertySchema');
+import Property from '../models/schemas/PropertySchema';
 
 (async () => {
   try {

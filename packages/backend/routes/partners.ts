@@ -4,9 +4,9 @@
  * (authentication is applied globally where this router is mounted).
  */
 
-const express = require('express');
-const partnerController = require('../controllers/partnerController');
-const { asyncHandler } = require('../middlewares/errorHandler');
+import express from 'express';
+import partnerController from '../controllers/partnerController';
+import { asyncHandler } from '../middlewares/errorHandler';
 
 const router = express.Router();
 

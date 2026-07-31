@@ -1,9 +1,9 @@
-const controllers = require('../controllers');
+import * as controllers from '../controllers';
 import express from 'express';
 import { asyncHandler } from '../middlewares';
 const { analyticsController } = controllers;
 
-module.exports = function() {
+export default function() {
   const router = express.Router();
 
   router.get('/', asyncHandler(analyticsController.getAnalytics));

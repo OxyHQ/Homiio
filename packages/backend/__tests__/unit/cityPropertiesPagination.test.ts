@@ -14,8 +14,8 @@ import { OfferingType, PropertyType, PropertyStatus } from '@homiio/shared-types
 
 import publicRoutes from '../../routes/public';
 
-const { Country, Region, City, Address, Property } = require('../../models');
-const { errorHandler } = require('../../middlewares/errorHandler');
+import { Country, Region, City, Address, Property } from '../../models';
+import { errorHandler } from '../../middlewares/errorHandler';
 
 function buildApp(): Express {
   const app = express();

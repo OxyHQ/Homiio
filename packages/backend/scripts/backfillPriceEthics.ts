@@ -19,7 +19,7 @@ import {
   readyBatchAfterAppend,
 } from './backfillPriceEthicsBatching';
 
-const { Property } = require('../models');
+import { Property } from '../models';
 
 const APPLY = process.argv.includes('--apply');
 

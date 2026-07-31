@@ -5,8 +5,9 @@
  * Distinct from ViewingRequest (in-person tour) and Lease (long-term contract).
  */
 
-const mongoose = require('mongoose');
-const { ReservationStatus, CancellationPolicy } = require('@homiio/shared-types');
+import mongoose from 'mongoose';
+import type { IReservation } from '../documentTypes';
+import { ReservationStatus, CancellationPolicy } from '@homiio/shared-types';
 
 const reservationSchema = new mongoose.Schema({
   propertyId: {
@@ -138,4 +139,4 @@ reservationSchema.pre('save', function(this: any, next: any) {
   next();
 });
 
-module.exports = mongoose.model('Reservation', reservationSchema);
+export default mongoose.model<IReservation>('Reservation', reservationSchema);

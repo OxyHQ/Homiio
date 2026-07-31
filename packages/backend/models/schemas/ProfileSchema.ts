@@ -1,4 +1,6 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import type { IProfileModel } from '../documentTypes';
+import type { IProfile } from '../documentTypes';
 const {
   EmploymentStatus,
   LeaseDuration,
@@ -402,4 +404,4 @@ profileSchema.set('toJSON', {
   }
 });
 
-module.exports = mongoose.model('Profile', profileSchema);
+export default mongoose.model<IProfile, IProfileModel>('Profile', profileSchema);

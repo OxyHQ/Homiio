@@ -37,4 +37,4 @@ handlerNames.forEach((name) => {
   }
 });
 
-module.exports = controller;
+export default controller;

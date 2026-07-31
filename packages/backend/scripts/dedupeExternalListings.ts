@@ -29,7 +29,7 @@ import {
   type DedupComparable,
 } from '../services/ingestion/dedupeFingerprint';
 
-const { Property } = require('../models');
+import { Property } from '../models';
 
 // `--apply` (CLI) or `DEDUP_APPLY=1` (env, for the argv-less ECS `node -e` boot).
 const APPLY = process.argv.includes('--apply') || process.env.DEDUP_APPLY === '1';

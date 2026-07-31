@@ -1,4 +1,5 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import type { IRoommateRelationship } from '../documentTypes';
 
 /**
  * A confirmed roommate relationship between two personal profiles.
@@ -46,4 +47,4 @@ roommateRelationshipSchema.index(
   { unique: true, partialFilterExpression: { status: 'active' } }
 );
 
-module.exports = mongoose.model('RoommateRelationship', roommateRelationshipSchema);
+export default mongoose.model<IRoommateRelationship>('RoommateRelationship', roommateRelationshipSchema);

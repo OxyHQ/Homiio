@@ -7,12 +7,10 @@
  * internal review queue and carry no public visibility.
  */
 
-const mongoose = require('mongoose');
-const validator = require('validator');
-const {
-  ListingReportReason,
-  ListingReportStatus
-} = require('@homiio/shared-types');
+import mongoose from 'mongoose';
+import type { IEvictionReport } from '../documentTypes';
+import validator from 'validator';
+import { ListingReportReason, ListingReportStatus } from '@homiio/shared-types';
 
 const MAX_DETAILS_LENGTH = 4000;
 
@@ -80,4 +78,4 @@ evictionReportSchema.index(
   }
 );
 
-module.exports = mongoose.model('EvictionReport', evictionReportSchema);
+export default mongoose.model<IEvictionReport>('EvictionReport', evictionReportSchema);

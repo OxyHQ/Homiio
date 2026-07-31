@@ -13,9 +13,9 @@ import request from 'supertest';
 
 import { createRentProperty } from '../helpers/factories';
 
-const reviewController = require('../../controllers/reviewController');
-const { Review, Agency, Address, Property } = require('../../models');
-const { clearResolutionCache } = require('../../services/geoResolutionService');
+import * as reviewController from '../../controllers/reviewController';
+import { Review, Agency, Address, Property } from '../../models';
+import { clearResolutionCache } from '../../services/geoResolutionService';
 
 // The geo-resolution cache is process-level and short-circuits geo id
 // resolution WITHOUT re-upserting the Country/Region/City/Neighborhood docs.

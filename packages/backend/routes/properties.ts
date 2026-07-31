@@ -1,10 +1,10 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const propertyController = require('../controllers/propertyController');
-const profileController = require('../controllers/profileController');
-const reportController = require('../controllers/reportController');
-const validation = require('../middlewares/validation');
-const { asyncHandler } = require('../middlewares/errorHandler');
+import propertyController from '../controllers/propertyController';
+import profileController from '../controllers/profileController';
+import reportController from '../controllers/reportController';
+import * as validation from '../middlewares/validation';
+import { asyncHandler } from '../middlewares/errorHandler';
 
 // Property creation (requires authentication)
 router.post("/", validation.validateProperty, asyncHandler(propertyController.createProperty));

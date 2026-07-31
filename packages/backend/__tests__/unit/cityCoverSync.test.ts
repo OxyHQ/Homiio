@@ -11,8 +11,8 @@ import imageUploadService from '../../services/imageUploadService';
 import { ensureCover, syncCovers, syncMissingCovers } from '../../services/cityCoverSyncService';
 import publicRoutes from '../../routes/public';
 
-const { Country, Region, City, Address, Property, Image } = require('../../models');
-const { errorHandler } = require('../../middlewares/errorHandler');
+import { Country, Region, City, Address, Property, Image } from '../../models';
+import { errorHandler } from '../../middlewares/errorHandler';
 
 jest.mock('../../services/imageUploadService', () => ({
   __esModule: true,

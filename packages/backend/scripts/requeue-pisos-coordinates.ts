@@ -25,7 +25,7 @@ import {
 } from '../services/ingestion/queues';
 import database from '../database/connection';
 
-const { Property, Address } = require('../models');
+import { Property, Address } from '../models';
 
 const APPLY = process.argv.includes('--apply');
 

@@ -199,4 +199,4 @@ class ExchangeReviewController {
   }
 }
 
-module.exports = new ExchangeReviewController();
+export default new ExchangeReviewController();

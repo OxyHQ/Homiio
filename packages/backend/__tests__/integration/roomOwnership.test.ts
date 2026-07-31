@@ -8,8 +8,8 @@ import { PropertyType, PropertyStatus, OfferingType } from '@homiio/shared-types
 
 import { createRentProperty, models } from '../helpers/factories';
 
-const roomController = require('../../controllers/roomController');
-const { errorHandler } = require('../../middlewares/errorHandler');
+import roomController from '../../controllers/roomController';
+import { errorHandler } from '../../middlewares/errorHandler';
 const { Property } = models;
 
 function buildApp(oxyUserId: string): Express {

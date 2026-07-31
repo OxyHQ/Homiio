@@ -13,7 +13,7 @@ import { PropertyStatus } from '@homiio/shared-types';
 import { validateMonthlyRentAmount } from '@homiio/listing-providers';
 import database from '../database/connection';
 
-const { Property } = require('../models');
+import { Property } from '../models';
 
 const APPLY = process.argv.includes('--apply');
 

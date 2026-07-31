@@ -67,4 +67,4 @@ router.get('/test', (req, res) => {
   res.json({ message: 'Images route is working', timestamp: new Date().toISOString() });
 });
 
-module.exports = router;
+export default router;

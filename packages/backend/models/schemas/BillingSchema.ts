@@ -1,7 +1,8 @@
 import type { Model } from 'mongoose';
 import type { IBilling } from '../documentTypes';
 
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import type { IBillingModel } from '../documentTypes';
 
 const billingSchema = new mongoose.Schema({
   oxyUserId: {
@@ -122,4 +123,4 @@ billingSchema.pre('save', async function(this: IBilling, next: (err?: Error) => 
   next();
 });
 
-module.exports = mongoose.model('Billing', billingSchema);
+export default mongoose.model<IBilling, IBillingModel>('Billing', billingSchema);

@@ -12,9 +12,9 @@ import request from 'supertest';
 
 import { sendEvictionOutcomeReminders } from '../../services/evictionOutcomeReminderService';
 
-const eviction = require('../../controllers/eviction');
-const { EvictionCase, EvictionComment, EvictionReport, Notification } = require('../../models');
-const { errorHandler } = require('../../middlewares/errorHandler');
+import * as eviction from '../../controllers/eviction';
+import { EvictionCase, EvictionComment, EvictionReport, Notification } from '../../models';
+import { errorHandler } from '../../middlewares/errorHandler';
 
 function buildApp(oxyUserId?: string): Express {
   const app = express();

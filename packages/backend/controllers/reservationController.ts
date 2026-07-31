@@ -411,4 +411,4 @@ class ReservationController {
   }
 }
 
-module.exports = new ReservationController();
+export default new ReservationController();

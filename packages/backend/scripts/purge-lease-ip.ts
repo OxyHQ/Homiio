@@ -14,7 +14,7 @@
 //   ts-node --transpile-only scripts/purge-lease-ip.ts          # perform the purge
 //   DRY_RUN=1 ts-node --transpile-only scripts/purge-lease-ip.ts  # count only, no writes
 
-require('dotenv').config();
+import 'dotenv/config';
 import database from '../database/connection';
 import { Lease } from '../models';
 

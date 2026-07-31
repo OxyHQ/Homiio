@@ -19,7 +19,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 import { DepositReturn } from '@homiio/shared-types';
 import database from '../database/connection';
 
-const { Review } = require('../models');
+import { Review } from '../models';
 
 const APPLY = process.argv.includes('--apply');
 

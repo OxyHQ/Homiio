@@ -18,7 +18,8 @@
  * shape) — this collection remains the source of truth for variants and keys.
  */
 
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import type { IImage } from '../documentTypes';
 
 /** Entity kinds an image can belong to (mirrors `ImageEntityType` in shared-types). */
 const IMAGE_ENTITY_TYPES = ['property', 'city', 'region', 'country', 'profile'];
@@ -114,4 +115,4 @@ const imageSchema = new mongoose.Schema({
 // Primary access pattern: an entity's ordered photo list.
 imageSchema.index({ entityType: 1, entityId: 1, order: 1 });
 
-module.exports = mongoose.model('Image', imageSchema);
+export default mongoose.model<IImage>('Image', imageSchema);

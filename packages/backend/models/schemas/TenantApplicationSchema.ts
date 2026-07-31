@@ -7,14 +7,10 @@
  * booking) and ViewingRequest (in-person tour).
  */
 
-const mongoose = require('mongoose');
-const validator = require('validator');
-const {
-  TenantApplicationStatus,
-  TenantApplicationDocumentType,
-  EmploymentStatus,
-  ReferenceRelationship
-} = require('@homiio/shared-types');
+import mongoose from 'mongoose';
+import type { ITenantApplication } from '../documentTypes';
+import validator from 'validator';
+import { TenantApplicationStatus, TenantApplicationDocumentType, EmploymentStatus, ReferenceRelationship } from '@homiio/shared-types';
 
 const referenceContactSchema = new mongoose.Schema({
   name: {
@@ -163,4 +159,4 @@ tenantApplicationSchema.pre('save', function(this: any, next: any) {
   next();
 });
 
-module.exports = mongoose.model('TenantApplication', tenantApplicationSchema);
+export default mongoose.model<ITenantApplication>('TenantApplication', tenantApplicationSchema);

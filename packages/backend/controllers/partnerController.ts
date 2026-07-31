@@ -263,4 +263,4 @@ class PartnerController {
   }
 }
 
-module.exports = new PartnerController();
+export default new PartnerController();
