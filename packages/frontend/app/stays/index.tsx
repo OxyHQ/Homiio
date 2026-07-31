@@ -185,7 +185,7 @@ export default function StaysScreen() {
       {header}
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
-          <FilterRow value={filter} onChange={setFilter} />
+          <FilterRow value={filter} onChange={setFilter} t={t} />
 
           {filteredGroups.length === 0 ? (
             <View style={styles.emptyWrap}>

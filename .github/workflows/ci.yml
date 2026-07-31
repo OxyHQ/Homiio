@@ -200,14 +200,17 @@ jobs:
           NODE_ENV: production
 
   # ─────────────────────────────────────────────────────────────────────────
-  # OFF BY DEFAULT. Both of these are RED on main today, and a job that is red
-  # on every pull request from the day it lands is not a gate — it is a thing
-  # the next person disables. They are written, and left switched off, so that
-  # turning each one on is a repository-variable change rather than a design
-  # exercise, and so the debt is visible in the place the gate will live.
+  # `lint` is still OFF BY DEFAULT. A job that is red on every pull request from
+  # the day it lands is not a gate — it is a thing the next person disables — so
+  # it stays behind a repository variable until `bun run lint` exits 0, and the
+  # debt stays visible in the place the gate will live.
   #
-  # To turn one on: fix the errors it reports, then set the repository variable
-  # to `ready` (Settings → Secrets and variables → Actions → Variables).
+  # `frontend-typecheck` was the other one and is now ARMED, below: it exits 0,
+  # so its switch was removed rather than left set to `ready`. A switch that
+  # nobody needs is a switch someone can flip the wrong way.
+  #
+  # To turn `lint` on: fix the errors it reports, then delete its `if:` — not
+  # set the variable. Same reasoning.
   # ─────────────────────────────────────────────────────────────────────────
 
   lint:
@@ -246,20 +249,23 @@ jobs:
         run: bun run lint
 
   frontend-typecheck:
-    # Set HOMIIO_FRONTEND_TYPECHECK_GATE=ready once this exits 0.
+    # ARMED. Nothing else typechecks the frontend: `expo export` compiles
+    # through Babel, which strips types without checking them, so the
+    # frontend-bundle job proves the bundle builds and nothing more.
     #
-    # Nothing typechecks the frontend today: `expo export` compiles through
-    # Babel, which strips types without checking them, so the frontend-bundle job
-    # proves the bundle builds and nothing more. `tsc --noEmit` reports 10 errors
-    # — 9 real (a missing required `t` prop in two screens, `OfferingSummary`
-    # lacking `fallback` in two more, a `t` signature mismatch, and a locale code
-    # widened to `string`) and one environmental: @oxyhq/bloom's web portal wants
-    # @types/react-dom, which the frontend does not depend on.
+    # It is armed unconditionally rather than behind a repository variable. A
+    # variable is the right shape for a job that is red on arrival and needs a
+    # human to decide when to switch it on; this one exits 0, and leaving the
+    # switch in place would only mean the next person to make it red can turn it
+    # off instead of fixing it.
+    #
+    # The ten errors it used to report were not stylistic. Two screens omitted a
+    # REQUIRED `t` prop, so `t(key)` was calling `undefined` — a crash on
+    # /applications and /stays that no test covers.
     #
     # The install runs postinstall so shared-types is built — this project
     # resolves it through a path mapping to ../shared-types/src, but its
     # references still expect the built project.
-    if: vars.HOMIIO_FRONTEND_TYPECHECK_GATE == 'ready'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -299,7 +305,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────────────────
   deploy-backend:
     name: Deploy backend to AWS
-    needs: [backend, frontend, lockfile, frontend-bundle]
+    needs: [backend, frontend, frontend-typecheck, lockfile, frontend-bundle]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       id-token: write

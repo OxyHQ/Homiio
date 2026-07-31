@@ -894,7 +894,10 @@ export default function PropertyDetailPage() {
                 landlordProfile={landlordProfile}
                 ownerProperties={ownerProperties}
                 onApplyPublic={handlePublicHousingApply}
-                t={(k, d) => t(k, d ?? '') || (d ?? k)}
+                // LandlordSection only ever calls `t(key)`, so the second
+                // parameter was dead — with `d` always undefined this is the
+                // same expression it evaluated to.
+                t={(k: string) => t(k, '') || k}
               />
             </View>
           ) : null}

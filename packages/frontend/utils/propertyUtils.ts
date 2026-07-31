@@ -182,13 +182,20 @@ export function resolvePrimaryOffering(
 export interface OfferingSummary {
   offering: OfferingType;
   i18nKey: string;
+  /**
+   * English default for `t(i18nKey, fallback)`. Both consumers already passed
+   * this; without it here they were passing `undefined`, so a missing
+   * translation rendered the raw key instead of readable text — the same
+   * fallback every neighbouring `t()` call in those files supplies.
+   */
+  fallback: string;
 }
 
-const OFFERING_SUMMARY_META: Record<OfferingType, { i18nKey: string }> = {
-  [OfferingType.LONG_TERM_RENT]: { i18nKey: 'listing.offering.summary.longTerm' },
-  [OfferingType.SHORT_TERM_RENT]: { i18nKey: 'listing.offering.summary.nightly' },
-  [OfferingType.SALE]: { i18nKey: 'listing.offering.summary.sale' },
-  [OfferingType.EXCHANGE]: { i18nKey: 'listing.offering.summary.exchange' },
+const OFFERING_SUMMARY_META: Record<OfferingType, { i18nKey: string; fallback: string }> = {
+  [OfferingType.LONG_TERM_RENT]: { i18nKey: 'listing.offering.summary.longTerm', fallback: 'Monthly' },
+  [OfferingType.SHORT_TERM_RENT]: { i18nKey: 'listing.offering.summary.nightly', fallback: 'By night' },
+  [OfferingType.SALE]: { i18nKey: 'listing.offering.summary.sale', fallback: 'For sale' },
+  [OfferingType.EXCHANGE]: { i18nKey: 'listing.offering.summary.exchange', fallback: 'Exchange' },
 };
 
 /** Stable display order for the "Also available" summaries. */
@@ -216,6 +223,7 @@ export function resolveOfferingSummaries(
   ).map((offering) => ({
     offering,
     i18nKey: OFFERING_SUMMARY_META[offering].i18nKey,
+    fallback: OFFERING_SUMMARY_META[offering].fallback,
   }));
 }
 
