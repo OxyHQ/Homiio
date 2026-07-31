@@ -327,6 +327,76 @@ The worker reads these at startup; disabled providers are not registered.
 
 `packages/backend/worker.ts` is the worker entrypoint — same Docker image as the API, different start command. Run with a separate ECS task definition. Separate container only if Playwright memory becomes a concern.
 
+## Cold-Start Check (the only thing that sees a white screen)
+
+```bash
+bun run --cwd packages/frontend build          # produces dist/
+bun run --cwd packages/frontend check:cold-start / /properties
+bun run --cwd packages/frontend check:cold-start:test   # mutation-tests the check
+```
+
+`packages/frontend/scripts/check-cold-start.mjs` loads the exported web app in a
+REAL headed browser with a fresh profile and asserts it actually **rendered**.
+
+**Run it after touching anything in the boot path** — `app/_layout.tsx`, the
+providers under `context/`, the readiness/splash gate — and after any change the
+React Compiler lint rules prompt in those files.
+
+Why it exists: nothing else here can see a white-screen boot. `tsc` passes,
+`jest` passes, `expo export` succeeds, and the app still mounts nothing. A
+boot-mounted component calling a suspenseful hook deadlocks the render, so the
+init effect never runs and the promise never resolves — a blank page with ZERO
+console output. Provider ordering fails the same silent way (see `~/Oxy/AGENTS.md`,
+the `useTheme`/`BloomThemeProvider` rule).
+
+Three properties worth keeping if you edit it:
+
+- It asserts `document.visibilityState === 'visible'` **before** any verdict and
+  exits INCONCLUSIVE (3) otherwise. A backgrounded tab pauses
+  `requestAnimationFrame`, which presents exactly as "blank" — a false reading
+  that has cost this ecosystem a debugging session.
+- It asserts rendered CONTENT, not merely that nothing threw. "Nothing threw" is
+  not the property.
+- It carries a mutation test that breaks the entry bundle and requires the check
+  to notice, so it can tell "ran and found nothing" from "did not run".
+
+**Standing rule when reading its output, or any check's:** print the full output
+and the exit code. Do not ask a grep whether it matched — an empty match reads
+identically to a pass, and that mistake was made three separate times while
+building this.
+
+## Known react-hooks findings (frontend)
+
+`eslint-plugin-react-hooks` v7 runs the React Compiler's rules statically. **This
+app does not enable the compiler** (no `experiments.reactCompiler` in
+`app.config.js`), so separate the two kinds before "fixing" anything:
+`set-state-in-effect` and `rules-of-hooks` are genuine either way;
+`immutability`, `refs` and `preserve-manual-memoization` reason about a
+transformation that does not run here.
+
+`react-hooks/immutability` is switched off for
+`components/SindiExplanationBottomSheet.tsx` in `eslint.config.js`, with the
+premise and a revisit condition written there and beside `experiments` in
+`app.config.js`. Do not widen it.
+
+**Open, deliberately deferred — `context/NotificationContext.tsx` (2 findings).**
+`loadNotifications` opens with a synchronous
+`setState({ isLoading: true, error: null })` before its first `await`, called
+from an effect: a real cascading render on mount. Unlike `ProfileContext` (fixed
+by deleting dead API) this state is LIVE — `app/(tabs)/inbox/index.tsx` consumes
+`isLoading` and `error` — so the fix is to move the notifications list to React
+Query, which is already the design this file's own section describes
+(refetch-on-focus + invalidation); the hand-rolled `useState` is the drift.
+`notifications`/`unreadCount`/`isLoading`/`error` become query state;
+`preferences`/`hasPermission`/`badgeCount`/`scheduledNotifications` are device
+state and stay.
+
+**It was not done because it cannot be verified without an authenticated
+session** — unauthenticated, `loadNotifications` returns at its guard and the
+path never executes, so the cold-start check above cannot reach it. Get a session
+first; do not ship it on reasoning alone. The same applies to
+`SindiExplanationBottomSheet:136`.
+
 ## Layout Shell & Design Tokens (CRITICAL)
 
 ### ContentPanel (Bloom, Mention-shaped)
