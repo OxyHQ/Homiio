@@ -144,17 +144,24 @@ export default function TipArticleScreen() {
     enabled: Boolean(slug) && tipQuery.isSuccess,
   });
 
+  // Hoisted to locals so the dependency expressions are plain identifiers. The
+  // array said `allTipsQuery.data?.data` while the body read
+  // `allTipsQuery.data.data` — the same value, but two different expressions,
+  // which is what "inferred different dependency than source" was reporting.
+  const allTips = allTipsQuery.data?.data;
+  const currentTipTags = tipQuery.data?.tags;
+
   const relatedTips = useMemo(() => {
-    if (!slug || !allTipsQuery.data?.data) return [];
-    const current = allTipsQuery.data.data.filter((entry) => entry.slug !== slug);
-    const currentTags = new Set(tipQuery.data?.tags ?? []);
+    if (!slug || !allTips) return [];
+    const current = allTips.filter((entry) => entry.slug !== slug);
+    const currentTags = new Set(currentTipTags ?? []);
     const scored = current.map((entry) => {
       const overlap = entry.tags.filter((tag) => currentTags.has(tag)).length;
       return { entry, overlap };
     });
     scored.sort((a, b) => b.overlap - a.overlap);
     return scored.map((item) => item.entry).slice(0, 3);
-  }, [allTipsQuery.data?.data, slug, tipQuery.data?.tags]);
+  }, [allTips, slug, currentTipTags]);
 
   if (!slug) {
     return (
