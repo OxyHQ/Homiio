@@ -31,12 +31,18 @@ interface LanguageOption {
   flag: string;
 }
 
-const LANGUAGES: LanguageOption[] = [
+// Annotated on the LITERAL, not on the result of `.filter`. Annotating the
+// result let each `code` widen to `string`, which both defeated the point of
+// `SupportedLanguageCode` — a typo here would have compiled — and made the
+// `includes` call below an error, since it takes the narrow union.
+const ALL_LANGUAGES: LanguageOption[] = [
   { code: 'en-US', label: 'English', description: 'English (United States)', flag: '🇺🇸' },
   { code: 'es-ES', label: 'Español', description: 'Español (España)', flag: '🇪🇸' },
   { code: 'ca-ES', label: 'Català', description: 'Català (Espanya)', flag: '🇪🇸' },
   { code: 'it-IT', label: 'Italiano', description: 'Italiano (Italia)', flag: '🇮🇹' },
-].filter((lang) => SUPPORTED_LANGUAGE_CODES.includes(lang.code));
+];
+
+const LANGUAGES = ALL_LANGUAGES.filter((lang) => SUPPORTED_LANGUAGE_CODES.includes(lang.code));
 
 export default function LanguageSettingsScreen() {
   const { t, i18n } = useTranslation();

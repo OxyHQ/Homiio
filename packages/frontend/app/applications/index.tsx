@@ -197,7 +197,7 @@ export default function MyApplicationsScreen() {
       {header}
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
-          <FilterRow value={filter} onChange={setFilter} />
+          <FilterRow value={filter} onChange={setFilter} t={t} />
 
           {filtered.length === 0 ? (
             <View style={styles.emptyWrap}>
