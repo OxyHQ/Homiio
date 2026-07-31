@@ -16,24 +16,30 @@ export const useCurrency = () => {
   const { currentCurrency, isLoading, error, setCurrentCurrency, setLoading, setError } =
     useCurrencyStore();
 
-  // Load saved currency on app start
+  // Load the saved currency once on mount. Inlined into the effect: it was a
+  // `const` arrow declared BELOW this effect and called from inside it, so the
+  // effect closed over whichever instance the first render happened to make.
+  // It is used nowhere else and is not returned from the hook, so there is
+  // nothing for it to be a named function for.
   useEffect(() => {
-    loadSavedCurrency();
-  }, []);
-
-  const loadSavedCurrency = async () => {
-    try {
-      setLoading(true);
-      const savedCurrencyCode = await AsyncStorage.getItem(CURRENCY_STORAGE_KEY);
-      if (savedCurrencyCode) {
-        setCurrentCurrency(savedCurrencyCode);
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const savedCurrencyCode = await AsyncStorage.getItem(CURRENCY_STORAGE_KEY);
+        if (!cancelled && savedCurrencyCode) {
+          setCurrentCurrency(savedCurrencyCode);
+        }
+      } catch {
+        if (!cancelled) setError('Failed to load saved currency');
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    } catch (error) {
-      setError('Failed to load saved currency');
-    } finally {
-      setLoading(false);
-    }
-  };
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [setCurrentCurrency, setError, setLoading]);
 
   const changeCurrency = async (currencyCode: string) => {
     try {
