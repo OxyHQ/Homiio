@@ -218,7 +218,7 @@ function AppShell() {
 
 
 export default function RootLayout() {
-  const [appIsReady, setAppIsReady] = useState(false);
+
   // `startFade` is fully derived from initialization completing — there is no
   // other trigger — so we keep a single source of truth and derive the fade
   // flag instead of syncing it in an effect (which caused cascading renders).
@@ -247,28 +247,27 @@ export default function RootLayout() {
     setFadeComplete(true);
   }, []);
 
-  // NATIVE ONLY: once ready, hide the held OS splash. The shared helper is a
-  // no-op on web (the OS splash was never held; the custom overlay handles the
-  // transition there).
-  useHideNativeSplashWhenReady(appIsReady);
-
-  // Readiness gate.
+  // Readiness gate — DERIVED, for the same reason `startFade` above is.
   // - WEB keeps the fade-gated flow: the custom <AppSplashScreen> renders, fades
   //   out when init completes, and its `onFadeComplete` sets `fadeComplete`, so
   //   web readiness = init complete AND the custom splash finished fading.
   // - NATIVE renders NO custom splash (the held OS splash covers the screen), so
   //   `onFadeComplete` never fires; native readiness = init complete ONLY, else
   //   the OS splash would hang forever.
-  useEffect(() => {
-    if (appIsReady) return;
-    const ready =
-      Platform.OS === 'web'
-        ? initializationComplete && fadeComplete
-        : initializationComplete;
-    if (ready) {
-      setAppIsReady(true);
-    }
-  }, [initializationComplete, fadeComplete, appIsReady]);
+  //
+  // This was a `useState` latched by an effect. The latch could never differ
+  // from the expression: `setInitializationComplete` and `setFadeComplete` are
+  // each only ever called with `true` and neither is ever reset, so once the
+  // condition holds it holds forever. Deriving it drops a render — the splash
+  // used to persist for one extra commit while the effect caught up.
+  const appIsReady =
+    Platform.OS === 'web' ? initializationComplete && fadeComplete : initializationComplete;
+
+  // NATIVE ONLY: once ready, hide the held OS splash. The shared helper is a
+  // no-op on web (the OS splash was never held; the custom overlay handles the
+  // transition there).
+  useHideNativeSplashWhenReady(appIsReady);
+
 
   useEffect(() => {
     // React Query online manager using NetInfo
