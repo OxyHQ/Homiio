@@ -5,11 +5,11 @@ interface CurrencyState {
   // Data
   currentCurrency: string;
   exchangeRates: Record<string, number>;
-  currencies: Array<{
+  currencies: {
     code: string;
     name: string;
     symbol: string;
-  }>;
+  }[];
 
   // Loading states
   isLoading: boolean;

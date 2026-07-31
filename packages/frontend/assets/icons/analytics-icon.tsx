@@ -1,5 +1,5 @@
 import React from 'react';
-import Svg, { Path, Line, Polygon, Rect } from 'react-native-svg';
+import Svg, { Rect } from 'react-native-svg';
 import { ViewStyle } from 'react-native';
 import { colors } from '@/styles/colors';
 

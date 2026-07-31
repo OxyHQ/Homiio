@@ -26,7 +26,6 @@ import {
     getNotificationsModule,
     NotificationData,
     NotificationContent,
-    NotificationCategory,
 } from '@/utils/notifications';
 import { notificationService, Notification } from '@/services/notificationService';
 import { useOxy } from '@oxyhq/services';

@@ -2,18 +2,16 @@ import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { Section, SECTION_GUTTER } from '@/components/property/Section';
-import ProfileAvatar from '@/components/ProfileAvatar';
 import { Avatar } from '@oxyhq/bloom/avatar';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { hairline, spacing } from '@/constants/styles';
 import { ActionButton } from '@/components/ui/ActionButton';
-import { FollowButton } from '@oxyhq/services';
+import { FollowButton, useOxy } from '@oxyhq/services';
 import type { Profile, Property } from '@homiio/shared-types';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
 import { PropertyCard } from '@/components/PropertyCard';
 import { useRouter } from 'expo-router';
-import { useOxy } from '@oxyhq/services';
 import { useOxyAvatars } from '@/hooks/useOxyAvatars';
 
 interface LandlordSectionProps {

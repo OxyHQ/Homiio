@@ -13,11 +13,11 @@ interface LocationState {
     zipCode: string;
   } | null;
   searchResults: any[];
-  searchHistory: Array<{
+  searchHistory: {
     query: string;
     timestamp: string;
     results: any[];
-  }>;
+  }[];
 
   // Loading states
   isLoading: boolean;

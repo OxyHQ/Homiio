@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
 import i18next from 'i18next';
 import type { Profile, UpdateProfileData } from '@/services/profileService';

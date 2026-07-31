@@ -16,7 +16,7 @@ const API_CONFIG = {
 // params). This adoption changes only the TRANSPORT (now the linked client),
 // not the consumer-facing types. eslint-disable kept narrow to these public
 // generics — no `any` is used in the request logic itself.
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 export interface ApiResponse<T = any> {
   success: boolean;
   message?: string;
@@ -219,7 +219,7 @@ export const api = {
     }
   },
 };
-/* eslint-enable @typescript-eslint/no-explicit-any */
+ 
 
 // Web-compatible alert function
 export function webAlert(

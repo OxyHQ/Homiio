@@ -8,7 +8,7 @@
  * a tap that opens nothing.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+ 
 const { assertBaseUrl } = require('../modules/homiio-widgets/app.plugin');
 
 describe('withHomiioWidgets origin validation', () => {

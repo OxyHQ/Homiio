@@ -184,7 +184,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
 
   // The 4-up summary grid. Counts render as-is; the two money figures are shown
   // in the ledger's own currency (no FX) via `formatCurrency`.
-  const summaryCells: ReadonlyArray<{ key: string; label: string; value: string }> = [
+  const summaryCells: readonly { key: string; label: string; value: string }[] = [
     {
       key: 'referrals',
       label: t('agent.dashboard.referrals'),

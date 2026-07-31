@@ -4,7 +4,6 @@ import {
   formatCurrency,
   formatCurrencyWithCode,
   convertCurrency,
-  formatAmountInCurrency,
   getExchangeRateDisplay,
   Currency,
 } from '@/utils/currency';

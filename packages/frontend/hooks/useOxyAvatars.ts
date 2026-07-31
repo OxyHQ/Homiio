@@ -19,7 +19,7 @@ import type { User } from '@oxyhq/core';
  * the root layout): the resolver turns the file id into the canonical Oxy
  * media URL via `getFileDownloadUrl`, the single media chokepoint.
  */
-export function useOxyAvatars(oxyUserIds: ReadonlyArray<string | undefined | null>) {
+export function useOxyAvatars(oxyUserIds: readonly (string | undefined | null)[]) {
   const { oxyServices } = useOxy();
 
   // Stable, deduped list of non-empty ids; sorted so the query key is

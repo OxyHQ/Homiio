@@ -1,6 +1,6 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { usePropertyStore, usePropertySelectors } from '@/store/propertyStore';
-import { Property, PropertyFilters, propertyService } from '@/services/propertyService';
+import { PropertyFilters, propertyService } from '@/services/propertyService';
 import {
   CreatePropertyData,
   PropertyAreaInsights,

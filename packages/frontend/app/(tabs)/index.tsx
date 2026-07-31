@@ -51,7 +51,7 @@ import {
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { getCategoryFilters } from '@/store/getCategoryFilters';
 import type { HomeCategory } from '@/store/homeCategoryStore';
-import { DEFAULT_SEARCH_QUERY } from '@/store/searchQueryStore';
+import { DEFAULT_SEARCH_QUERY, useSearchQueryStore } from '@/store/searchQueryStore';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
 import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
@@ -71,7 +71,6 @@ import { NearbyCityCarousel } from '@/components/NearbyCityCarousel';
 import { SearchSummaryBar } from '@/components/search/SearchSummaryBar';
 import { SearchPanel } from '@/components/search/SearchPanel';
 import type { SearchQuery, SearchStep } from '@/components/search/types';
-import { useSearchQueryStore } from '@/store/searchQueryStore';
 import { CityShowcaseSection } from '@/components/CityShowcaseSection';
 import { FeaturedGridSection } from '@/components/FeaturedGridSection';
 import { HostCtaBanner } from '@/components/HostCtaBanner';
@@ -117,7 +116,7 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): nu
 function resolveExplorePlace(
   userLocation: { latitude: number; longitude: number } | null | undefined,
   cities: City[],
-  citiesByDistance: Array<{ city: City; distance: number }>,
+  citiesByDistance: { city: City; distance: number }[],
   queryPlace: string | undefined,
   defaultPlace: string,
 ): string {
