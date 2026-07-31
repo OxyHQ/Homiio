@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { useOxy } from '@oxyhq/services';
 import { useProfileStore } from '@/store/profileStore';
 import type { Profile } from '@/services/profileService';
@@ -6,64 +6,40 @@ import { logger } from '@/utils/logger';
 
 interface ProfileContextType {
   profile: Profile | null;
-  isLoading: boolean;
-  error: string | null;
   hasProfile: boolean;
-  refetch: () => void;
   canAccessRoommates: boolean;
-  refresh: () => Promise<void>;
-  isInitialized: boolean;
 }
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const { oxyServices, activeSessionId, isAuthenticated } = useOxy();
-  const {
-    profile,
-    isLoading,
-    error,
-    setProfile,
-    setError,
-    fetchProfile,
-  } = useProfileStore();
-
-  const [isInitialized, setIsInitialized] = React.useState(false);
-
-  const loadProfile = useCallback(async () => {
-    try {
-      await fetchProfile();
-      setIsInitialized(true);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load profile';
-      setError(message);
-      setIsInitialized(true);
-    }
-  }, [fetchProfile, setError]);
-
-  const refresh = useCallback(async () => {
-    setIsInitialized(false);
-    await loadProfile();
-  }, [loadProfile]);
+  // SELECTORS, not `useProfileStore()`. Subscribing to the whole store re-renders
+  // this provider on every `set()` — including the `set({ isLoading: true })`
+  // that `fetchProfile` issues synchronously, which is the cascading render the
+  // effect below was reported for. Nothing here reads `isLoading`, so selecting
+  // only what is used removes the re-render rather than hiding it.
+  const profile = useProfileStore((s) => s.profile);
+  const setProfile = useProfileStore((s) => s.setProfile);
+  const fetchProfile = useProfileStore((s) => s.fetchProfile);
 
   useEffect(() => {
     let mounted = true;
 
     if (isAuthenticated && oxyServices && activeSessionId) {
-      loadProfile().catch((loadError) => {
+      fetchProfile().catch((loadError) => {
         if (mounted) {
-          logger.error('ProfileContext: loadProfile failed', loadError);
+          logger.error('ProfileContext: fetchProfile failed', loadError);
         }
       });
     } else if (!isAuthenticated) {
       setProfile(null);
-      setIsInitialized(false);
     }
 
     return () => {
       mounted = false;
     };
-  }, [isAuthenticated, oxyServices, activeSessionId, loadProfile, setProfile]);
+  }, [isAuthenticated, oxyServices, activeSessionId, fetchProfile, setProfile]);
 
   const hasProfile = profile !== null;
 
@@ -72,24 +48,9 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     [profile?.personalProfile?.settings?.roommate?.enabled],
   );
 
-  const refetch = useCallback(() => {
-    if (isAuthenticated && oxyServices && activeSessionId) {
-      loadProfile().catch(() => {});
-    }
-  }, [isAuthenticated, oxyServices, activeSessionId, loadProfile]);
-
   const contextValue = useMemo(
-    () => ({
-      profile,
-      isLoading,
-      error,
-      hasProfile,
-      refetch,
-      canAccessRoommates,
-      refresh,
-      isInitialized,
-    }),
-    [profile, isLoading, error, hasProfile, refetch, canAccessRoommates, refresh, isInitialized],
+    () => ({ profile, hasProfile, canAccessRoommates }),
+    [profile, hasProfile, canAccessRoommates],
   );
 
   return (
