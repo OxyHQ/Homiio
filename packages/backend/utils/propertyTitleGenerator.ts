@@ -10,7 +10,6 @@ import {
   buildLargeTitleLocation,
   buildTitleDetails,
   composeTitle,
-  removePropertyNumber,
   resolveShortTitleLocation,
   SHORT_TITLE_MAX_LENGTH,
   LARGE_TITLE_MAX_LENGTH,

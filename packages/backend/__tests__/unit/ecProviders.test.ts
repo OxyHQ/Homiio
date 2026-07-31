@@ -17,12 +17,11 @@ import {
   parseProperatiEcDetail,
   PROPERATI_EC_FIXTURE_SEARCH_JSON,
   PROPERATI_EC_FIXTURE_DETAIL_HTML,
-  NonHousingListingError,
   parseNaventSearchJson,
   parseNaventDetail,
   type NaventSiteConfig,
 } from '@homiio/listing-providers';
-import { OfferingType, PropertyType } from '@homiio/shared-types';
+import { OfferingType } from '@homiio/shared-types';
 
 const PLUSVALIA_SITE: NaventSiteConfig = {
   provider: 'plusvalia',

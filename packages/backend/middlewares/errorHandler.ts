@@ -37,6 +37,17 @@ const notFound = (req: Request, res: Response, next: NextFunction): void => {
  * Global error handler
  */
 const errorHandler = (err: any, req: Request, res: Response, next: NextFunction): void => {
+  // Express only treats a middleware as an error handler when it takes four
+  // parameters, so `next` has to be here whether or not it is called — and it
+  // was never called, which left a real hole: once a handler has begun writing
+  // the response, the `res.status().json()` below throws ERR_HTTP_HEADERS_SENT
+  // on top of the original error. Delegating to Express's default handler is
+  // what closes the socket correctly in that case.
+  if (res.headersSent) {
+    next(err);
+    return;
+  }
+
   let error = { ...err };
   error.message = err.message;
 

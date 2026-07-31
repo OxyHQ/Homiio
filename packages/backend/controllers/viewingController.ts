@@ -5,7 +5,7 @@
 
 import type { Request, Response, NextFunction } from 'express';
 
-import { Property, ViewingRequest, Profile } from '../models';
+import { Property, ViewingRequest } from '../models';
 import { PropertyStatus } from '@homiio/shared-types';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';

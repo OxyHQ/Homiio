@@ -975,8 +975,6 @@ propertySchema.pre(['findOneAndUpdate', 'updateOne', 'updateMany'], function (
 });
 
 // Static methods
-type ObjectIdLike = string | { toString(): string };
-
 propertySchema.statics.findByOxyUser = function(
   oxyUserId: string,
   options: Record<string, unknown> = {}

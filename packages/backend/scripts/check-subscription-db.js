@@ -148,7 +148,7 @@ async function main() {
   const command = args[0];
   
   switch (command) {
-    case 'user':
+    case 'user': {
       const userId = args[1];
       if (!userId) {
         console.log('❌ Please provide a user ID: node check-subscription-db.js user <userId>');
@@ -156,6 +156,7 @@ async function main() {
       }
       await checkUserBilling(userId);
       break;
+    }
       
     case 'recent':
       await checkRecentBillingUpdates();

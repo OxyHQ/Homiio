@@ -36,11 +36,6 @@ function errorName(error: unknown): string | undefined {
   return undefined;
 }
 
-function errorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error);
-}
-
 function errorValidationErrors(error: unknown): Record<string, { message?: string }> {
   if (error && typeof error === 'object' && 'errors' in error) {
     const errs = (error as { errors?: unknown }).errors;

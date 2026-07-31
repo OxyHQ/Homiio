@@ -39,8 +39,8 @@ export function sanitizeLatLngPair(
   lat: number,
   lng: number,
 ): { lat: number; lng: number } | undefined {
-  let repairedLat = tryRepairCoordinate(lat, 'lat');
-  let repairedLng = tryRepairCoordinate(lng, 'lng');
+  const repairedLat = tryRepairCoordinate(lat, 'lat');
+  const repairedLng = tryRepairCoordinate(lng, 'lng');
 
   if (repairedLat === undefined || repairedLng === undefined) {
     return undefined;

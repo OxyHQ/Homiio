@@ -1,5 +1,3 @@
-import type { IProfile } from '../documentTypes';
-
 const mongoose = require('mongoose');
 const {
   EmploymentStatus,

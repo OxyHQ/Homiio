@@ -12,7 +12,7 @@
  * and confirmed -> cancelled | completed.
  */
 
-import { Property, Reservation, Profile } from '../models';
+import { Property, Reservation } from '../models';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
 import { ReservationStatus, PropertyStatus, CancellationPolicy, OfferingType, AvailabilityWindowStatus } from '@homiio/shared-types';

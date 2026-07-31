@@ -29,7 +29,7 @@ const ONE_BY_ONE_PNG = Buffer.from(
 const LOCAL_IMAGE_STORE_DIR = path.join(__dirname, '..', '..', '.local-image-store-gb');
 
 const fetchImage = jest.fn(
-  async (_url: string): Promise<ImageBufferInput> => ({ buffer: ONE_BY_ONE_PNG, mimetype: 'image/png' }),
+  async (): Promise<ImageBufferInput> => ({ buffer: ONE_BY_ONE_PNG, mimetype: 'image/png' }),
 );
 
 function buildIngestionService(): IngestionService {

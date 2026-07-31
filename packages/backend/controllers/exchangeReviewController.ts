@@ -13,7 +13,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import type { ExchangeReviewCategories } from '@homiio/shared-types';
 
-import { ExchangeRequest, ExchangeReview, Profile } from '../models';
+import { ExchangeRequest, ExchangeReview } from '../models';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
 import { ExchangeRequestStatus } from '@homiio/shared-types';

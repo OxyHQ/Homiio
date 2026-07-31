@@ -186,7 +186,7 @@ const ensureDatabaseConnection = async (_req: Request, res: Response, next: Next
       }
     }
     next();
-  } catch (error) {
+  } catch {
     res.status(500).json({
       success: false,
       error: {

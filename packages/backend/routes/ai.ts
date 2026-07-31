@@ -263,7 +263,7 @@ async function generateAITitle(userMessage: string) {
     title = title.trim().replace(/^["']|["']$/g, '');
     if (title.length > 50) title = `${title.slice(0, 47)}...`;
     return title && title !== 'New Conversation' ? title : null;
-  } catch (e) {
+  } catch {
     return null;
   }
 }
@@ -360,7 +360,7 @@ Focus on extracting clear location information from the user's query.`;
     put('availableFromAfter', typeof raw.availableFromAfter === 'string' ? raw.availableFromAfter : undefined);
 
     return out;
-  } catch (e) {
+  } catch {
     return {};
   }
 }
@@ -414,7 +414,7 @@ async function performAppPropertySearch(query: string, priorMessages: ChatMessag
     const search = Array.isArray(searchData?.data) ? searchData.data : Array.isArray(searchData) ? searchData : [];
 
     return { nearby: nearby.slice(0, RESULTS_RETURN_MAX), search: search.slice(0, RESULTS_RETURN_MAX) };
-  } catch (e) {
+  } catch {
     return { nearby: [], search: [] };
   }
 }
@@ -457,7 +457,7 @@ export default function aiRouter() {
       const activeProfile = await Profile.findByOxyUserId(userId);
       if (!activeProfile) return err(res, 404, 'No active profile found');
 
-      const { propertyId, propertyContext, userHistory, conversationContext } = req.body || {};
+      const { propertyContext, conversationContext } = req.body || {};
       
       // Build context for AI suggestion generation
       let contextPrompt = 'Generate 5-6 relevant, actionable chat suggestions for a rental property chat assistant. ';
@@ -522,7 +522,7 @@ Return only the JSON array, no other text.`;
         // Limit to 8 suggestions max
         suggestions = suggestions.slice(0, 8);
         
-      } catch (parseError) {
+      } catch {
         // Fallback to default suggestions
         suggestions = [
           { text: 'How much should I budget?' },

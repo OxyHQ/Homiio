@@ -29,15 +29,6 @@ const upload = multer({
   },
 });
 
-// Alternative simpler upload configuration for debugging
-const simpleUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024,
-    files: 10,
-  },
-});
-
 // Test multer configuration
 const testUpload = multer({
   storage: multer.memoryStorage(),

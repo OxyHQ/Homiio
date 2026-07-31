@@ -82,7 +82,7 @@ export async function fetchRemoteImageWithProxyFallback(
 ): Promise<ImageBufferInput> {
   try {
     return await fetchRemoteImage(url);
-  } catch (directError) {
+  } catch {
     const proxiedFetch = await createProxiedFetch(proxy);
     return fetchRemoteImageVia(url, proxiedFetch);
   }

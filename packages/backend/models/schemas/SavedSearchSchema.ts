@@ -1,4 +1,4 @@
-import type { Document, Model, Types } from 'mongoose';
+import type { Document, Model } from 'mongoose';
 
 const mongoose: typeof import('mongoose') = require('mongoose');
 

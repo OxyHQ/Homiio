@@ -107,7 +107,7 @@ export async function createProperty(req: ControllerRequest, res: ControllerResp
     let addressId;
     if (req.body.address) {
       // Extract address data from request
-      let addressData = { ...req.body.address };
+      const addressData = { ...req.body.address };
       
       // Handle coordinates from location field if provided
       if (req.body.location?.coordinates) {

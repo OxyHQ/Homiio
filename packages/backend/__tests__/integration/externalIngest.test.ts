@@ -49,7 +49,7 @@ const provider: ListingProvider = new FixtureProvider();
 const ctx: FetchContext = { runtime: createFetchRuntime() };
 
 const fetchImage = jest.fn(
-  async (_url: string): Promise<ImageBufferInput> => ({ buffer: ONE_BY_ONE_PNG, mimetype: 'image/png' }),
+  async (): Promise<ImageBufferInput> => ({ buffer: ONE_BY_ONE_PNG, mimetype: 'image/png' }),
 );
 
 function buildIngestionService(dedupeEnabled = false): IngestionService {
