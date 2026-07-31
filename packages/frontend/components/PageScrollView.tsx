@@ -74,8 +74,12 @@ export function PageScrollView({
   const value = scrollY ?? fallbackScrollY;
 
   // Keep the latest `onEndReached` without regenerating the worklet handler.
+  // Assigned in an effect, not during render: the worklet reads it via
+  // `runOnJS` during a scroll, which is well after commit.
   const onEndReachedRef = useRef(onEndReached);
-  onEndReachedRef.current = onEndReached;
+  useEffect(() => {
+    onEndReachedRef.current = onEndReached;
+  }, [onEndReached]);
   const fireEndReached = useCallback(() => {
     onEndReachedRef.current?.();
   }, []);
