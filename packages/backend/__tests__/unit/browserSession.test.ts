@@ -13,6 +13,8 @@ import {
   exportStorageState,
   fetchJsonInPage,
   warmBrowserPage,
+  type SessionContext,
+  type SessionPage,
 } from '../../../listing-providers/dist/session';
 
 const PAD = 'x'.repeat(520);
@@ -21,14 +23,30 @@ function listingHtml(markup: string): string {
   return `<html><body>${PAD}${markup}</body></html>`;
 }
 
-type MockPage = {
-  url: () => string;
+/**
+ * The jest handles the assertions below reach for. Intersected with the real
+ * `SessionPage` rather than replacing it, so a mock that stops matching the
+ * contract — a method added to the interface, a signature changed — fails to
+ * compile here instead of passing against a shape the production code would
+ * never receive.
+ */
+type MockPage = SessionPage & {
   goto: jest.Mock;
   content: jest.Mock;
   waitForSelector: jest.Mock;
   waitForTimeout: jest.Mock;
   route: jest.Mock;
-  request: { get: jest.Mock };
+  request: { get: jest.Mock; post: jest.Mock };
+};
+
+/**
+ * Every path exercised here goes through `page.request`, never `page.evaluate`
+ * — whose real implementation runs `fetch` inside the browser. Throwing keeps
+ * that true: a test that starts routing through it fails loudly instead of
+ * silently receiving a canned 200 (or reaching the network for real).
+ */
+const unstubbedEvaluate: SessionPage['evaluate'] = async () => {
+  throw new Error('page.evaluate is not stubbed in this suite');
 };
 
 function buildPage(overrides: Partial<MockPage> & { contents?: string[] } = {}): MockPage {
@@ -43,13 +61,16 @@ function buildPage(overrides: Partial<MockPage> & { contents?: string[] } = {}):
     waitForSelector: overrides.waitForSelector ?? jest.fn(async () => undefined),
     waitForTimeout: overrides.waitForTimeout ?? jest.fn(async () => undefined),
     route: overrides.route ?? jest.fn(async () => undefined),
-    request: overrides.request ?? {
-      get: jest.fn(async () => ({
-        status: () => 200,
-        text: async () => '{"items":[]}',
-      })),
-    },
+    evaluate: overrides.evaluate ?? unstubbedEvaluate,
+    request: overrides.request ?? buildRequestContext(),
   };
+}
+
+/** A `PwAPIRequestContext` stand-in; `post` is unused here but part of the contract. */
+function buildRequestContext(
+  get: jest.Mock = jest.fn(async () => ({ status: () => 200, text: async () => '{"items":[]}' })),
+): { get: jest.Mock; post: jest.Mock } {
+  return { get, post: jest.fn(async () => ({ status: () => 200, text: async () => '' })) };
 }
 
 describe('warmBrowserPage', () => {
@@ -139,7 +160,7 @@ describe('fetchJsonInPage', () => {
     }));
     const page = buildPage({
       url: () => 'https://portal.example/alquiler/madrid/',
-      request: { get },
+      request: buildRequestContext(get),
     });
 
     const result = await fetchJsonInPage(page, 'https://portal.example/es/ajax/listing/georeach/madrid-madrid');
@@ -159,12 +180,9 @@ describe('fetchJsonInPage', () => {
 
   it('returns non-200 status without throwing', async () => {
     const page = buildPage({
-      request: {
-        get: jest.fn(async () => ({
-          status: () => 403,
-          text: async () => 'Forbidden',
-        })),
-      },
+      request: buildRequestContext(
+        jest.fn(async () => ({ status: () => 403, text: async () => 'Forbidden' })),
+      ),
     });
     const result = await fetchJsonInPage(page, 'https://portal.example/api/blocked');
     expect(result.status).toBe(403);
@@ -175,9 +193,9 @@ describe('fetchJsonInPage', () => {
 describe('exportStorageState', () => {
   it('delegates to context.storageState()', async () => {
     const cookies = [{ name: 'datadome', value: 'abc', domain: '.idealista.com', path: '/' }];
-    const context = {
+    const context: SessionContext & { storageState: jest.Mock } = {
       storageState: jest.fn(async () => ({ cookies })),
-      request: { get: jest.fn() },
+      request: buildRequestContext(),
     };
     await expect(exportStorageState(context)).resolves.toEqual({ cookies });
     expect(context.storageState).toHaveBeenCalledTimes(1);

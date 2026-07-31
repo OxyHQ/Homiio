@@ -32,10 +32,10 @@ function graphqlRuntime(responses: Map<string, string>): FetchRuntime {
     async fetchText(): Promise<string> {
       throw new Error('not used');
     },
-    async fetchJson(): Promise<unknown> {
+    async fetchJson() {
       throw new Error('not used');
     },
-    async loadFixture(): Promise<unknown> {
+    async loadFixture() {
       throw new Error('not used');
     },
   };

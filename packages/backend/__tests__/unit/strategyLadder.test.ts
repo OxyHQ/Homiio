@@ -49,9 +49,16 @@ function baseRuntime(extra: Partial<FetchRuntime> = {}): FetchRuntime {
       });
       return { status: response.status, body: await response.text() };
     },
-    fetchJson: async () => ({}),
+    // The ladder under test escalates through `fetchHttp` / `fetchViaBrowser` /
+    // `fetchViaManaged` only. Throwing keeps that claim honest and, unlike a
+    // canned `{}`, satisfies the generic return without a cast.
+    fetchJson: async () => {
+      throw new Error('strategyLadder tests do not route through fetchJson');
+    },
     fetchText: async () => '',
-    loadFixture: async () => ({}) as never,
+    loadFixture: async () => {
+      throw new Error('strategyLadder tests do not route through loadFixture');
+    },
     ...extra,
   };
 }

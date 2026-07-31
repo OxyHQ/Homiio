@@ -1,0 +1,35 @@
+{
+  // The config that EMITS `dist`, and the only one that does.
+  //
+  // `tsconfig.json` is the project every typechecker and editor reads, so it
+  // covers everything this package contains — `__tests__` and `scripts`
+  // included. That is the point: excluding them from `tsconfig.json` is what
+  // left the test suite typechecked by nothing at all, since ts-jest transpiles
+  // with `isolatedModules` and never checks either.
+  //
+  // Compiling them is a different question from checking them. `dist` is copied
+  // straight into the production image (`packages/backend/Dockerfile`), so the
+  // build reads THIS project instead and drops both directories on the way out.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false
+  },
+  "exclude": [
+    "dist",
+    "__tests__",
+    "scripts"
+  ],
+  // `extends` does NOT inherit `references`, and without them tsc stops
+  // redirecting `@homiio/*` path mappings to the sibling projects' declaration
+  // output and pulls their `src` into this program instead — every one of those
+  // files is outside `rootDir`, so the build dies in TS6059 rather than in
+  // anything to do with the backend.
+  "references": [
+    {
+      "path": "../shared-types"
+    },
+    {
+      "path": "../listing-providers"
+    }
+  ]
+}

@@ -91,15 +91,19 @@ describe('RedfinProvider', () => {
       async fetchText(): Promise<string> {
         throw new Error('not used');
       },
-      async fetchJson(): Promise<unknown> {
+      async fetchJson() {
         throw new Error('not used');
       },
-      async loadFixture(): Promise<unknown> {
+      async loadFixture() {
         throw new Error('not used');
       },
       openBrowserSession: async () => ({
         pageUrl: () => 'https://www.redfin.com/city/30749/TX/Austin',
         request: async () => ({ status: 200, body: gisBody }),
+        content: async () => {
+          throw new Error('redfin discover reads the GIS response, not page HTML');
+        },
+        warmNavigate: async () => undefined,
         exportStorageState: async () => ({ cookies: [] }),
         close: async () => undefined,
       }),

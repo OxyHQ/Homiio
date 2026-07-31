@@ -5,12 +5,27 @@
     "moduleResolution": "node16",
     "rootDir": "./",
     "outDir": "dist",
+    // This project exists to be CHECKED, not built — it deliberately covers
+    // `__tests__` and `scripts`, which must never reach `dist`. `tsconfig.build.json`
+    // is the one config that emits, and it turns this back off.
+    "noEmit": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "strict": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "composite": true,
+    // TypeScript 6 no longer pulls in every `@types` package it can find on
+    // disk — only the ones something imports. `@types/jest` has no importable
+    // entry point (it is globals only), so without naming it here `describe` /
+    // `it` / `expect` are undeclared and the test files below report thousands
+    // of TS2593/TS2304. `node` is listed for the same reason: it currently
+    // arrives transitively through `@types/express`, which is an accident of
+    // that package's dependencies rather than something this project states.
+    "types": [
+      "node",
+      "jest"
+    ],
     "paths": {
       "@homiio/shared-types": [
         "../shared-types/src"
@@ -31,9 +46,7 @@
     "package.json"
   ],
   "exclude": [
-    "dist",
-    "__tests__",
-    "scripts"
+    "dist"
   ],
   "references": [
     {

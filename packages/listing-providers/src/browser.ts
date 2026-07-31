@@ -28,6 +28,11 @@ import {
   toPlaywrightProxy,
 } from './proxy';
 import type { FetchRuntimeInit, UrlFetcher } from './types';
+// `session.ts` already declares and EXPORTS this same structural view of the
+// Playwright surface. Declaring a second private copy here meant a consumer
+// (a test's fake module) had no name for the shape it must satisfy and had to
+// restate it by hand — which is how one ended up missing `request().url()`.
+import type { PwGotoOptions, PwRoute } from './session';
 
 /** Hard per-navigation timeout when a caller does not pass one (ms). */
 const DEFAULT_BROWSER_TIMEOUT_MS = 45_000;
@@ -52,22 +57,6 @@ interface PwContextOptions {
   extraHTTPHeaders?: Record<string, string>;
   javaScriptEnabled: boolean;
   proxy?: PlaywrightProxyOptions;
-}
-
-interface PwGotoOptions {
-  timeout: number;
-  waitUntil: 'domcontentloaded' | 'load' | 'networkidle' | 'commit';
-}
-
-interface PwRouteRequest {
-  resourceType(): string;
-  url(): string;
-}
-
-interface PwRoute {
-  request(): PwRouteRequest;
-  abort(): Promise<void>;
-  continue(): Promise<void>;
 }
 
 interface PwPage {
