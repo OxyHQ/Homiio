@@ -29,6 +29,18 @@ module.exports = function (config) {
       userInterfaceStyle: 'automatic',
       newArchEnabled: true,
       jsEngine: 'hermes',
+      // NOTE — `experiments.reactCompiler` is deliberately absent: the React
+      // Compiler does not run in this app. Two things depend on that being true,
+      // so read them before enabling it:
+      //
+      //  1. `eslint.config.js` switches `react-hooks/immutability` off for
+      //     `components/SindiExplanationBottomSheet.tsx`, on the grounds that the
+      //     rule guards a transformation that does not happen here. Enabling the
+      //     compiler flips that premise and the exemption must be re-argued.
+      //  2. `~/AGENTS.md` §"React Compiler + external mutable state" — with the
+      //     compiler on, READING external mutable state from a memoized position
+      //     freezes the first value forever. This app reads Reanimated shared
+      //     values and zustand stores in plenty of places.
       ios: {
         supportsTablet: true,
         bundleIdentifier: 'com.homiio.android',
