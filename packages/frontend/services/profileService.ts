@@ -1,4 +1,4 @@
-import { api, ApiError } from '@/utils/api';
+import { api } from '@/utils/api';
 import {
   Profile,
   PersonalProfile,

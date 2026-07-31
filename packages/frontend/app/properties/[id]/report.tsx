@@ -26,13 +26,12 @@ import { Button } from '@oxyhq/bloom/button';
 import { Chip } from '@oxyhq/bloom/chip';
 import { openAccountDialog, useOxy } from '@oxyhq/services';
 
-import { ListingReportReason } from '@homiio/shared-types';
+import { ListingReportReason, PropertyType } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
 import { ThemedText } from '@/components/ThemedText';
 import { useProperty } from '@/hooks';
 import { useReportListingMutation } from '@/hooks/useReportMutation';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
-import { PropertyType } from '@homiio/shared-types';
 import { ApiError } from '@/utils/api';
 import { toast } from '@oxyhq/bloom/toast';
 import { colors } from '@/styles/colors';

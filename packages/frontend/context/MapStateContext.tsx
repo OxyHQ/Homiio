@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useRef, useCallback } from 'react';
 
 export interface MapState {
   center: [number, number];
@@ -9,11 +9,11 @@ export interface MapState {
     east: number;
     north: number;
   };
-  markers?: Array<{
+  markers?: {
     id: string;
     coordinates: [number, number];
     priceLabel: string;
-  }>;
+  }[];
   highlightedMarkerId?: string | null;
   filters?: {
     minPrice?: number;

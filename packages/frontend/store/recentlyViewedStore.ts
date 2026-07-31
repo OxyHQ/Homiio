@@ -4,12 +4,12 @@ import { Property, RecentlyViewedType } from '@homiio/shared-types';
 // Recently Viewed State Interface
 interface RecentlyViewedState {
   // Data
-  items: Array<{
+  items: {
     id: string;
     type: RecentlyViewedType;
     data: any;
     viewedAt: string;
-  }>;
+  }[];
 
   // Loading states
   isLoading: boolean;

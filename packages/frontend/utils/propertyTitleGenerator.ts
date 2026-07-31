@@ -182,13 +182,13 @@ export function previewPropertyTitle(propertyData: PropertyData, format: TitleFo
  */
 export function testPropertyTitleGeneration(language = 'en-US'): {
   success: boolean;
-  tests: Array<{
+  tests: {
     name: string;
     input: PropertyData;
     expected: string;
     actual: string;
     passed: boolean;
-  }>;
+  }[];
 } {
   const originalLanguage = i18next.language;
 
@@ -196,11 +196,11 @@ export function testPropertyTitleGeneration(language = 'en-US'): {
     // Set language for testing
     i18next.changeLanguage(language);
 
-    const testCases: Array<{
+    const testCases: {
       name: string;
       input: PropertyData;
       expected: string;
-    }> = [
+    }[] = [
       {
         name: 'Basic apartment with address',
         input: {

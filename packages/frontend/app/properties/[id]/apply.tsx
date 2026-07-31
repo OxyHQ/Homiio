@@ -29,7 +29,7 @@ import {
   EmploymentStatus,
   ReferenceRelationship,
   TenantApplicationDocumentType,
-} from '@homiio/shared-types';
+ PropertyType } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
 import { ThemedText } from '@/components/ThemedText';
 import { colors } from '@/styles/colors';
@@ -41,7 +41,6 @@ import {
 } from '@/services/applicationService';
 import { useOxy, openAccountDialog } from '@oxyhq/services';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
-import { PropertyType } from '@homiio/shared-types';
 import { ApiError } from '@/utils/api';
 
 const MAX_DOCUMENTS = 10;
