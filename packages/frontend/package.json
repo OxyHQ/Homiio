@@ -18,6 +18,8 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "check:i18n": "bun scripts/check-locale-parity.ts",
+    "check:cold-start": "node scripts/check-cold-start.mjs",
+    "check:cold-start:test": "node scripts/test-check-cold-start.mjs",
     "clean": "rm -rf dist .expo"
   },
   "dependencies": {
