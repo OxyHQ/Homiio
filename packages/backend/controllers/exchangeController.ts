@@ -465,4 +465,4 @@ class ExchangeController {
   }
 }
 
-module.exports = new ExchangeController();
+export default new ExchangeController();

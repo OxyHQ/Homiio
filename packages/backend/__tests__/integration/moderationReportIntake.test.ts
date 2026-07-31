@@ -29,8 +29,8 @@ import ModerationOutbox from '../../models/ModerationOutbox';
 import ModerationReport from '../../models/ModerationReport';
 import { createRentProperty, models } from '../helpers/factories';
 
-const reportController = require('../../controllers/reportController');
-const { errorHandler } = require('../../middlewares/errorHandler');
+import reportController from '../../controllers/reportController';
+import { errorHandler } from '../../middlewares/errorHandler';
 const { ListingReport } = models;
 
 function buildApp(oxyUserId: string | null): Express {

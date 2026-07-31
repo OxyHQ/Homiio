@@ -12,9 +12,10 @@ import request from 'supertest';
 
 import { sendEvictionOutcomeReminders } from '../../services/evictionOutcomeReminderService';
 
-const eviction = require('../../controllers/eviction');
-const { EvictionCase, EvictionComment, EvictionReport, Notification } = require('../../models');
-const { errorHandler } = require('../../middlewares/errorHandler');
+import * as eviction from '../../controllers/eviction';
+import { EvictionCase, EvictionComment, EvictionReport, Notification } from '../../models';
+import { errorHandler } from '../../middlewares/errorHandler';
+import { assertFound } from '../helpers/assertFound';
 
 function buildApp(oxyUserId?: string): Express {
   const app = express();
@@ -94,6 +95,7 @@ describe('createEviction — mass-assignment / ownership', () => {
     expect(res.status).toBe(201);
 
     const persisted = await EvictionCase.findById(res.body.data.id).select('+attendees');
+    assertFound(persisted, 'persisted');
     expect(persisted.oxyUserId).toBe('oxy-owner');
     expect(persisted.attendeeCount).toBe(0);
     expect(persisted.status).toBe('upcoming');
@@ -378,6 +380,7 @@ describe('sendEvictionOutcomeReminders — honest stale-case handling', () => {
     expect(String(notes[0].data.evictionId)).toBe(String(id));
 
     const claimed = await EvictionCase.findById(id).select('outcomeReminderSentAt');
+    assertFound(claimed, 'claimed');
     expect(claimed.outcomeReminderSentAt).toBeTruthy();
 
     // A second run is a no-op — no duplicate reminder.

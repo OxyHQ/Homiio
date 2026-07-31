@@ -8,13 +8,13 @@
 
 import express from 'express';
 import { asyncHandler } from '../middlewares';
+import exchangeController from '../controllers/exchangeController';
+import exchangeReviewController from '../controllers/exchangeReviewController';
+import * as validation from '../middlewares/validation';
 
 export default function () {
   const router = express.Router();
 
-  const exchangeController = require('../controllers/exchangeController');
-  const exchangeReviewController = require('../controllers/exchangeReviewController');
-  const validation = require('../middlewares/validation');
 
   // POST /api/exchanges — requester proposes a swap or hosting stay
   router.post(

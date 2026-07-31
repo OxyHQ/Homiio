@@ -372,6 +372,6 @@ const ownerOxyUserId = property.oxyUserId;
   }
 }
 
-module.exports = new ViewingController();
+export default new ViewingController();
 
 

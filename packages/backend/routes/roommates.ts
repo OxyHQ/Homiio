@@ -5,7 +5,7 @@
 
 import express from 'express';
 import { asyncHandler } from '../middlewares';
-const roommateController = require('../controllers/roommateController');
+import roommateController from '../controllers/roommateController';
 
   const router = express.Router();
 

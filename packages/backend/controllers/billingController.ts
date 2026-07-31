@@ -3,13 +3,13 @@ import { getOxyUserId } from '@oxyhq/core/server';
 import config from '../config';
 import { Billing } from '../models';
 import { getErrorMessage } from '../utils/errors';
+import Stripe from 'stripe';
 
 // Lazy require Stripe to avoid hard crash if not configured
 function getStripe() {
   const key = config.stripe?.secretKey;
   if (!key) return null;
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const Stripe = require('stripe');
   return new Stripe(key, { apiVersion: '2024-06-20' });
 }
 
@@ -317,7 +317,13 @@ export async function confirmCheckoutSession(req: Request, res: Response) {
       };
 
       if (session.subscription) {
-        setUpdate['plusStripeSubscriptionId'] = String(session.subscription['id'] || session.subscription);
+        // Stripe gives either the id or the expanded object depending on the
+        // request; `subscription['id']` on the string form is an index into a
+        // string, which is why this needed narrowing rather than a cast.
+        setUpdate['plusStripeSubscriptionId'] =
+          typeof session.subscription === 'string'
+            ? session.subscription
+            : session.subscription.id;
       }
 
       const result = await Billing.updateOne(
@@ -832,12 +838,19 @@ export async function cancelSubscription(req: Request, res: Response) {
     // Update the database to reflect the cancellation
     const updateData: any = {};
 
+    // `canceled_at` is nullable on Stripe's type, and `null * 1000` is 0 — so
+    // the previous arithmetic recorded 1 January 1970 as the cancellation date
+    // whenever Stripe returned null. Fall back to now instead.
+    const canceledAt = canceledSubscription.canceled_at
+      ? new Date(canceledSubscription.canceled_at * 1000)
+      : new Date();
+
     if (immediate) {
       updateData.plusActive = false;
-      updateData.plusCanceledAt = new Date(canceledSubscription.canceled_at * 1000);
+      updateData.plusCanceledAt = canceledAt;
     } else {
       // For cancel at period end, we keep plusActive true but set canceledAt
-      updateData.plusCanceledAt = new Date(canceledSubscription.canceled_at * 1000);
+      updateData.plusCanceledAt = canceledAt;
     }
 
     await Billing.updateOne(

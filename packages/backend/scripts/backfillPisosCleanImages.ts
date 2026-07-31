@@ -42,7 +42,9 @@
  *   ... --apply --limit=25 --concurrency=2 --min-width=700
  */
 
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+import path from 'path';
+import dotenv from 'dotenv';
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 import { Types } from 'mongoose';
 import {

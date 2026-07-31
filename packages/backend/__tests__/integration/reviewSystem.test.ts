@@ -13,9 +13,10 @@ import request from 'supertest';
 
 import { createRentProperty } from '../helpers/factories';
 
-const reviewController = require('../../controllers/reviewController');
-const { Review, Agency, Address, Property } = require('../../models');
-const { clearResolutionCache } = require('../../services/geoResolutionService');
+import * as reviewController from '../../controllers/reviewController';
+import { Review, Agency, Address, Property } from '../../models';
+import { clearResolutionCache } from '../../services/geoResolutionService';
+import { assertFound } from '../helpers/assertFound';
 
 // The geo-resolution cache is process-level and short-circuits geo id
 // resolution WITHOUT re-upserting the Country/Region/City/Neighborhood docs.
@@ -147,10 +148,11 @@ describe('createReview (allowlist + agency + geo)', () => {
     expect(res.status).toBe(201);
 
     const agency = await Agency.findOne({ normalizedName: 'fincas garcia' });
-    expect(agency).toBeTruthy();
+    assertFound(agency, 'agency');
     expect(agency.slug).toBe('fincas-garcia');
 
     const review = await Review.findOne({ title: 'Great flat overall' });
+    assertFound(review, 'review');
     expect(review.oxyUserId).toBe('oxy-reviewer');
     expect(review.verified).toBe(false);
     expect(review.moderationStatus).toBe('active');
@@ -194,6 +196,7 @@ describe('updateReview (mass-assignment guard + ownership)', () => {
 
     expect(res.status).toBe(200);
     const persisted = await Review.findById(review._id);
+    assertFound(persisted, 'persisted');
     expect(persisted.title).toBe('An edited review title');
     expect(persisted.oxyUserId).toBe('oxy-owner');
     expect(persisted.verified).toBe(false);
@@ -260,6 +263,7 @@ describe('reportReview', () => {
     expect(second.status).toBe(200);
 
     const persisted = await Review.findById(review._id);
+    assertFound(persisted, 'persisted');
     expect(persisted.reports).toHaveLength(1);
   });
 
@@ -276,12 +280,14 @@ describe('reportReview', () => {
       expect(res.status).toBe(201);
     }
     const persisted = await Review.findById(review._id);
+    assertFound(persisted, 'persisted');
     expect(persisted.reports).toHaveLength(3);
     expect(persisted.moderationStatus).toBe('under_review');
   });
 
   it('keeps under_review reviews visible in agency reads but hides removed ones', async () => {
     const agency = await Agency.findOrCreateByName('Visible Agency');
+    assertFound(agency, 'agency');
     await seedReview('oxy-a', { review: { agencyId: agency._id, moderationStatus: 'under_review' } });
     await seedReview('oxy-b', { address: { number: '11' }, review: { agencyId: agency._id, moderationStatus: 'removed' } });
 
@@ -294,6 +300,7 @@ describe('reportReview', () => {
 describe('agency reads', () => {
   it('returns agency stats + listings count', async () => {
     const agency = await Agency.findOrCreateByName('Stats Agency');
+    assertFound(agency, 'agency');
 
     // Create the property FIRST: the factory's `ensureGeo` uses `Country.create`
     // (not upsert), so it must run before `resolveGeo` upserts the ES country.
@@ -315,6 +322,7 @@ describe('agency reads', () => {
 
   it('lists agency properties with flat pagination aliases', async () => {
     const agency = await Agency.findOrCreateByName('Props Agency');
+    assertFound(agency, 'agency');
     const property = await createRentProperty({ oxyUserId: 'oxy-owner' });
     await Property.updateOne({ _id: property._id }, { $set: { agencyId: agency._id } });
 

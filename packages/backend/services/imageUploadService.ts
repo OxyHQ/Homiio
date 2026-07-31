@@ -3,7 +3,7 @@ import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import { promises as fs, realpathSync } from 'fs';
-import type { Document, Model, Types } from 'mongoose';
+import type { Document, Types } from 'mongoose';
 import type {
   ImageEntityType,
   ImageVariantKeys,
@@ -12,6 +12,7 @@ import type {
 } from '@homiio/shared-types';
 import config from '../config';
 import { validateImageStoreKey } from '../utils/imageStoreKey';
+import { Image as ImageModel } from '../models';
 
 /**
  * Filesystem root of the self-hosted LOCAL image store. Used only when object
@@ -268,7 +269,6 @@ export class ImageUploadService {
 
     // Resolve the model lazily to avoid a module-load cycle (models/index pulls
     // in schemas which may import services), and to reuse the single registration.
-    const ImageModel = require('../models').Image as Model<ImageDocument>;
 
     const created = await ImageModel.create({
       entityType,

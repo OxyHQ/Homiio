@@ -1,5 +1,5 @@
 // Load environment variables first
-require('dotenv').config();
+import 'dotenv/config';
 
 import crypto from 'crypto';
 import express from "express";
@@ -383,7 +383,7 @@ async function startServer() {
 }
 
 // Export for serverless environments (Vercel)
-module.exports = app;
+export default app;
 
 // For local development, start the server
 if (process.env.NODE_ENV !== 'production' || process.env.VERCEL !== '1') {

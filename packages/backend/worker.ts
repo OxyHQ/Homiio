@@ -12,7 +12,7 @@
  * environment) so the pipeline is still exercisable.
  */
 
-require('dotenv').config();
+import 'dotenv/config';
 
 import { Queue, Worker, UnrecoverableError, type Job, type Queue as BullQueue } from 'bullmq';
 import {

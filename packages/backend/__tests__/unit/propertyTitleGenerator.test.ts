@@ -1,9 +1,9 @@
-const {
+import {
   generatePropertyTitle,
   generateShortPropertyTitle,
   generateLargePropertyTitle,
   generateDetailedPropertyTitle,
-} = require('../../utils/propertyTitleGenerator');
+} from '../../utils/propertyTitleGenerator';
 
 describe('generateShortPropertyTitle', () => {
   it('uses the resolved geo neighborhood when available', () => {

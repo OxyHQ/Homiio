@@ -20,18 +20,18 @@ import { AppError, successResponse, paginationResponse } from '../middlewares/er
 import imageUploadService from '../services/imageUploadService';
 import { toLeaseDTO } from './lease/toLeaseDTO';
 import { requireSessionOxyUserId } from '../utils/sessionUser';
-const {
+import {
   TenantApplicationStatus,
   TenantApplicationDocumentType,
   OfferingType,
-  LeaseStatus
-} = require('@homiio/shared-types');
+  LeaseStatus,
+} from '@homiio/shared-types';
 
 /** Currency codes the Lease `rentDetails` block accepts (schema enum). */
 const LEASE_CURRENCIES = new Set<string>(PAYMENT_CURRENCIES);
 const ACTIVE_LEASE_STATUSES = [LeaseStatus.DRAFT, LeaseStatus.PENDING_SIGNATURES, LeaseStatus.ACTIVE];
 
-const ALLOWED_DOCUMENT_TYPES = new Set(Object.values(TenantApplicationDocumentType));
+const ALLOWED_DOCUMENT_TYPES = new Set<string>(Object.values(TenantApplicationDocumentType));
 const APPLICATION_DOCUMENTS_FOLDER = 'applications/documents';
 
 interface ParsedReferenceContact {
@@ -457,4 +457,4 @@ class ApplicationController {
   }
 }
 
-module.exports = new ApplicationController();
+export default new ApplicationController();

@@ -7,12 +7,12 @@
 
 import express from 'express';
 import { asyncHandler } from '../middlewares';
+import reservationController from '../controllers/reservationController';
+import * as validation from '../middlewares/validation';
 
 export default function () {
   const router = express.Router();
 
-  const reservationController = require('../controllers/reservationController');
-  const validation = require('../middlewares/validation');
 
   // POST /api/reservations — guest creates a reservation
   router.post(

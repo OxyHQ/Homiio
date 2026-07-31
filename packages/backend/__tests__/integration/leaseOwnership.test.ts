@@ -7,9 +7,10 @@ import request from 'supertest';
 
 import { createRentProperty, createLease } from '../helpers/factories';
 
-const leaseController = require('../../controllers/leaseController');
-const { Lease } = require('../../models');
-const { errorHandler } = require('../../middlewares/errorHandler');
+import leaseController from '../../controllers/leaseController';
+import { Lease } from '../../models';
+import { errorHandler } from '../../middlewares/errorHandler';
+import { assertFound } from '../helpers/assertFound';
 
 function buildApp(oxyUserId: string): Express {
   const app = express();
@@ -86,6 +87,7 @@ describe('leaseController.createLease', () => {
     });
     expect(res.status).toBe(201);
     const persisted = await Lease.findById(res.body.data.id ?? res.body.data._id);
+    assertFound(persisted, 'persisted');
     expect(persisted.landlordOxyUserId).toBe('oxy-landlord');
     expect(persisted.status).toBe('draft');
   });
@@ -112,6 +114,7 @@ describe('leaseController.signLease', () => {
       .send({ acceptTerms: true });
     expect(res.status).toBe(200);
     const persisted = await Lease.findById(lease._id);
+    assertFound(persisted, 'persisted');
     expect(persisted.signatures.tenant.signed).toBe(true);
   });
 });

@@ -9,6 +9,8 @@ import { Types } from 'mongoose';
 import { Address } from '../models';
 import { getErrorName, getValidationMessages } from '../utils/errors';
 import { logger as appLogger } from '../middlewares/logging';
+import { attachAddressGeoNames } from '../services/propertyAddressSerializer';
+import { resolveGeoFilterAddressIds } from '../services/geoQueryService';
 
 /**
  * Response helpers
@@ -60,7 +62,6 @@ export const getAddressById = async (req: Request, res: Response) => {
       return notFound(res, { message: 'Address not found' });
     }
 
-    const { attachAddressGeoNames } = require('../services/propertyAddressSerializer');
     attachAddressGeoNames(address);
 
     return ok(res, { address });
@@ -88,7 +89,6 @@ export const searchAddresses = async (req: Request, res: Response) => {
     // Geo is relational: match the building-level `street` directly, and resolve
     // the term against the canonical City/Region/Neighborhood collections to
     // include addresses in any matching place (no free-text city on the Address).
-    const { resolveGeoFilterAddressIds } = require('../services/geoQueryService');
     const [byCity, byRegion, byNeighborhood] = await Promise.all([
       resolveGeoFilterAddressIds({ city: String(query) }),
       resolveGeoFilterAddressIds({ state: String(query) }),

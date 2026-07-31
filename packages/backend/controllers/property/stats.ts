@@ -1,11 +1,11 @@
 import { Lease, Property, Saved } from '../../models';
 import { AppError, successResponse } from '../../middlewares/errorHandler';
 import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
+import mongoose from 'mongoose';
 
 export async function getPropertyStats(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
   try {
     const { propertyId } = req.params;
-    const mongoose = require('mongoose');
     if (!mongoose.Types.ObjectId.isValid(propertyId)) return next(new AppError('Invalid property ID', 400, 'INVALID_ID'));
     const exists = await Property.exists({ _id: propertyId });
     if (!exists) return next(new AppError('Property not found', 404, 'NOT_FOUND'));

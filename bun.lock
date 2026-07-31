@@ -67,6 +67,7 @@
         "@types/node": "^22.20.1",
         "@types/node-cron": "^3.0.11",
         "@types/node-telegram-bot-api": "^0.64.15",
+        "@types/pdf-parse": "^1.1.5",
         "@types/supertest": "^7.2.1",
         "@types/uuid": "^11.0.0",
         "@types/validator": "^13.15.10",
@@ -1050,6 +1051,8 @@
     "@types/node-telegram-bot-api": ["@types/node-telegram-bot-api@0.64.15", "", { "dependencies": { "@types/node": "*", "@types/request": "*" } }, "sha512-Ac1ZgSSHcO6P++7dsLSm3tjzInDLE0WrDTXHoUPKn/sUfDyR3f+IDtIUaSp/kLu+gn/jplGgGDY5CD95BEVk+g=="],
 
     "@types/pbf": ["@types/pbf@3.0.5", "", {}, "sha512-j3pOPiEcWZ34R6a6mN07mUkM4o4Lwf6hPNt8eilOeZhTFbxFXmKhvXl9Y28jotFPaI1bpPDJsbCprUoNke6OrA=="],
+
+    "@types/pdf-parse": ["@types/pdf-parse@1.1.5", "", { "dependencies": { "@types/node": "*" } }, "sha512-kBfrSXsloMnUJOKi25s3+hRmkycHfLK6A09eRGqF/N8BkQoPUmaCr+q8Cli5FnfohEz/rsv82zAiPz/LXtOGhA=="],
 
     "@types/qs": ["@types/qs@6.15.1", "", {}, "sha512-GZHUBZR9hckSUhrxmp1nG6NwdpM9fCunJwyThLW1X3AyHgd9IlHb6VANpQQqDr2o/qQp6McZ3y/IA2rVzKzSbw=="],
 

@@ -14,12 +14,14 @@
  *   bun run packages/backend/scripts/migrateReviewDepositReturned.ts --apply  # write
  */
 
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+import path from 'path';
+import dotenv from 'dotenv';
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 import { DepositReturn } from '@homiio/shared-types';
 import database from '../database/connection';
 
-const { Review } = require('../models');
+import { Review } from '../models';
 
 const APPLY = process.argv.includes('--apply');
 

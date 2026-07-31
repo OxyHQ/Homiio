@@ -11,11 +11,8 @@ import { Types } from 'mongoose';
 import { City, Country, Region, Property, Address } from '../models';
 import { isPlausibleCityName } from '../utils/plausibleCityName';
 import { FIELD_HAS_IMAGES } from './property/searchQueryBuilder';
-const {
-  serializePropertyAddresses,
-  ADDRESS_GEO_POPULATE,
-} = require('../services/propertyAddressSerializer');
-const { serializePropertyImages } = require('../services/imageSerializer');
+import { serializePropertyAddresses, ADDRESS_GEO_POPULATE } from '../services/propertyAddressSerializer';
+import { serializePropertyImages } from '../services/imageSerializer';
 
 const DEFAULT_CITY_LIMIT = 50;
 const DEFAULT_POPULAR_LIMIT = 10;

@@ -4,7 +4,8 @@
 
 import { OfferingType, PropertyType, PropertyStatus } from '@homiio/shared-types';
 
-const models = require('../../models');
+import * as models from '../../models';
+import { assertFound } from './assertFound';
 const { Property, Address, Country, Region, City, Lease } = models;
 
 /**
@@ -34,16 +35,19 @@ async function ensureGeo(): Promise<{ countryId: unknown; regionId: unknown; cit
     { $setOnInsert: { code: 'ES', name: 'Spain' } },
     UPSERT,
   );
+  assertFound(country, 'country');
   const region = await Region.findOneAndUpdate(
     { countryId: country._id, name: 'Catalonia' },
     { $setOnInsert: { countryId: country._id, name: 'Catalonia' } },
     UPSERT,
   );
+  assertFound(region, 'region');
   const city = await City.findOneAndUpdate(
     { regionId: region._id, name: 'Barcelona' },
     { $setOnInsert: { countryId: country._id, regionId: region._id, name: 'Barcelona' } },
     UPSERT,
   );
+  assertFound(city, 'city');
   return { countryId: country._id, regionId: region._id, cityId: city._id };
 }
 
@@ -73,9 +77,11 @@ export interface CreatePropertyOptions {
   monthlyAmount?: number;
 }
 
-export async function createRentProperty(
-  options: CreatePropertyOptions,
-): Promise<{ _id: unknown; oxyUserId: string; status: string; toJSON(): unknown }> {
+// Return type inferred from the model rather than hand-written. The hand-written
+// one (`{ _id: unknown; oxyUserId: string; status: string; toJSON(): unknown }`)
+// was a guess that nothing checked while `Property` came from a `require`, and it
+// gave every caller less than the document actually has.
+export async function createRentProperty(options: CreatePropertyOptions) {
   const address = await createAddress();
   return Property.create({
     oxyUserId: options.oxyUserId,

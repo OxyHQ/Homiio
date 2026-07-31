@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import type { IProfileModel } from '../documentTypes';
 import type { IProfile } from '../documentTypes';
-const {
+import {
   EmploymentStatus,
   LeaseDuration,
   PriceUnit,
@@ -9,8 +9,8 @@ const {
   ReferenceRelationship,
   ReasonForLeaving,
   ProfileVisibility,
-  GenderPreference
-} = require('@homiio/shared-types');
+  GenderPreference,
+} from '@homiio/shared-types';
 
 const personalProfileSchema = new mongoose.Schema({
   personalInfo: {

@@ -14,10 +14,10 @@
 
 import express from 'express';
 import { asyncHandler } from '../middlewares';
+import * as eviction from '../controllers/eviction';
 
 export default function () {
   const router = express.Router();
-  const eviction = require('../controllers/eviction');
 
   // Open a case.
   router.post('/', asyncHandler(eviction.createEviction));

@@ -8,6 +8,7 @@ import type { Request, Response, NextFunction } from 'express';
 
 import { AppError, successResponse } from '../middlewares/errorHandler';
 import { logger } from '../middlewares/logging';
+import { City, Profile, Property, RecentlyViewed, Saved, ViewingRequest } from '../models';
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -53,7 +54,6 @@ class AnalyticsController {
       const period = PERIOD_DAYS[periodParam] ? periodParam : '30d';
       const since = new Date(Date.now() - periodDays * DAY_MS);
 
-      const { Profile, Property, RecentlyViewed, Saved, ViewingRequest } = require('../models') as typeof import('../models');
 
       const activeProfile = await Profile.findByOxyUserId(oxyUserId);
       if (!activeProfile) {
@@ -173,7 +173,6 @@ class AnalyticsController {
    */
   async getAppStats(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
-      const { Property, City, Saved } = require('../models') as typeof import('../models');
 
       const [totalProperties, totalCities, totalSaves, uniqueSavers] = await Promise.all([
         Property.countDocuments({}),
@@ -270,4 +269,4 @@ class AnalyticsController {
   }
 }
 
-module.exports = new AnalyticsController();
+export default new AnalyticsController();

@@ -1,10 +1,13 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const propertyController = require('../controllers/propertyController');
-const profileController = require('../controllers/profileController');
-const reportController = require('../controllers/reportController');
-const validation = require('../middlewares/validation');
-const { asyncHandler } = require('../middlewares/errorHandler');
+// `controllers/propertyController` called itself a "thin compatibility
+// wrapper": an empty class with these handlers copied onto it at runtime and
+// typed `unknown`, so every route below was registering an untyped value.
+import * as propertyController from '../controllers/property';
+import * as profileController from '../controllers/profile';
+import reportController from '../controllers/reportController';
+import * as validation from '../middlewares/validation';
+import { asyncHandler } from '../middlewares/errorHandler';
 
 // Property creation (requires authentication)
 router.post("/", validation.validateProperty, asyncHandler(propertyController.createProperty));
