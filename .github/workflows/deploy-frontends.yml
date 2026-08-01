@@ -87,10 +87,10 @@ jobs:
           # committed id when this is unset, so a local build runs with no
           # configuration — which is exactly why it must be injected here:
           # without it the deployed bundle authenticates against the wrong Oxy
-          # application, with nothing empty and nothing erroring. Public by
-          # design (it travels inside the bundle); it lives in a secret only so
-          # environments can differ, not because it is confidential.
-          EXPO_PUBLIC_OXY_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_OXY_CLIENT_ID }}
+          # application, with nothing empty and nothing erroring. A repo
+          # VARIABLE, not a secret: the id ships inside the bundle, so it is
+          # public by construction and a secret would only hide it from the UI.
+          EXPO_PUBLIC_OXY_CLIENT_ID: ${{ vars.EXPO_PUBLIC_OXY_CLIENT_ID }}
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
