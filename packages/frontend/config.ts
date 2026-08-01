@@ -94,8 +94,11 @@ export const OXY_BASE_URL =
 
 /**
  * Homiio's registered Oxy OAuth public client id. Required by `OxyProvider`
- * for device sign-in. Overridable via `EXPO_PUBLIC_OXY_CLIENT_ID`; the fallback
- * is the real registered public client id for Homiio.
+ * for device sign-in. The deploy workflow injects the PRODUCTION id from the
+ * `EXPO_PUBLIC_OXY_CLIENT_ID` secret; the value below is only a fallback so a
+ * local build runs unconfigured, and is deliberately NOT the production id — a
+ * fallback that is correct in production hides the case where the env var stops
+ * being injected, because nothing changes when it does.
  */
 export const OXY_CLIENT_ID =
   process.env.EXPO_PUBLIC_OXY_CLIENT_ID ||
