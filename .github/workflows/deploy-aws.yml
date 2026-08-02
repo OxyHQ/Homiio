@@ -108,37 +108,88 @@ jobs:
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build and push (linux/arm64)
+        id: build
+        env:
+          COMMIT_TAG: ${{ github.sha }}
         run: |
           IMG=$ECR_REGISTRY/oxy/$APP
-          docker build -f "$DOCKERFILE" -t "$IMG:${{ github.sha }}" -t "$IMG:latest" .
-          docker push "$IMG:${{ github.sha }}"
-          docker push "$IMG:latest"
+          # The digest comes out of the build itself, via --metadata-file.
+          # Resolving it afterwards with `aws ecr describe-images` is not an
+          # option here: oxy-github-deploy has no ecr:DescribeImages, confirmed
+          # with `aws iam simulate-principal-policy` (implicitDeny), so that
+          # call fails at deploy time behind a green build.
+          docker buildx build \
+            --platform linux/arm64 \
+            -f "$DOCKERFILE" \
+            -t "$IMG:$COMMIT_TAG" \
+            -t "$IMG:latest" \
+            --metadata-file "$RUNNER_TEMP/build-metadata.json" \
+            --push \
+            .
 
-      - name: Deploy to ECS (API + listing worker; rolling)
-        run: |
-          deploy_one() {
-            local svc="$1"
-            local STATUS
-            STATUS=$(aws ecs describe-services --cluster "$CLUSTER" --services "$svc" --query 'services[0].status' --output text 2>/dev/null || echo NONE)
-            if [ "$STATUS" = "ACTIVE" ]; then
-              aws ecs update-service --cluster "$CLUSTER" --service "$svc" --force-new-deployment >/dev/null
-              echo "redeploying $svc"
-            else
-              echo "ECS service $svc not created yet — image is in ECR, skipping $svc"
-            fi
-          }
-          deploy_one "$APP"
-          deploy_one "${APP}-worker"
-          # Wait on whichever services exist so CI fails if a rollout breaks.
-          WAIT=()
-          for svc in "$APP" "${APP}-worker"; do
-            STATUS=$(aws ecs describe-services --cluster "$CLUSTER" --services "$svc" --query 'services[0].status' --output text 2>/dev/null || echo NONE)
-            if [ "$STATUS" = "ACTIVE" ]; then
-              WAIT+=("$svc")
-            fi
-          done
-          if [ "${#WAIT[@]}" -gt 0 ]; then
-            aws ecs wait services-stable --cluster "$CLUSTER" --services "${WAIT[@]}"
-            echo "deployed: ${WAIT[*]}"
+          # :latest is still moved, but nothing that deploys reads it. It exists
+          # so a from-scratch `terraform apply` -- whose app-service module
+          # declares `<repo>:latest` as the task definition's bootstrap image --
+          # creates the service on a current build rather than an ancient one.
+          DIGEST=$(jq -r '.["containerimage.digest"] // empty' "$RUNNER_TEMP/build-metadata.json")
+          if [[ ! "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::buildx produced no usable image digest (got: ${DIGEST:-<empty>})"
+            exit 1
           fi
+          echo "digest=$DIGEST" >>"$GITHUB_OUTPUT"
+          echo "Built $COMMIT_TAG -> $DIGEST"
+
+      # Two ECS services, one image. They are separate task-definition families
+      # with different container names (`homiio` / `homiio-worker`), so each gets
+      # its own register-and-roll pass; only the ECR repository is shared, which
+      # is why IMAGE_URI is built from the workflow's APP and the per-service
+      # name is overridden instead.
+      #
+      # Rolling them in sequence rather than in parallel is a change in kind from
+      # the previous step, which fired both `update-service` calls and then
+      # waited on both: the worker now only starts once the API has reached a
+      # healthy steady state, and a failed API rollout stops the worker from
+      # moving at all. That ordering is the point -- the two run the same image,
+      # so an image the API cannot stay up on is not one to hand the worker.
+      - name: Register immutable task definition and deploy (API)
+        env:
+          IMAGE_URI: ${{ env.ECR_REGISTRY }}/oxy/${{ env.APP }}@${{ steps.build.outputs.digest }}
+          # Cleared deliberately. The script treats a non-empty DEPLOY_SHA as a
+          # request to re-verify that the candidate is still the exact head of
+          # origin/main before mutating production, via require-current-main.sh,
+          # which this repository does not ship. Adopting that guard would make a
+          # deploy FAIL rather than ship a slightly-stale commit whenever main
+          # moves during CI -- a policy change, and a separate one from pinning
+          # the image. DEPLOY_SHA keeps its meaning for checkout and the scope
+          # filter above.
+          DEPLOY_SHA: ''
+        run: |
+          STATUS=$(aws ecs describe-services --cluster "$CLUSTER" --services "$APP" --query 'services[0].status' --output text 2>/dev/null || echo NONE)
+          if [ "$STATUS" != "ACTIVE" ]; then
+            echo "ECS service $APP not created yet - image is in ECR, skipping deploy"
+            exit 0
+          fi
+          bash .github/scripts/deploy-ecs-image.sh
+
+      - name: Register immutable task definition and deploy (listing worker)
+        env:
+          # Still oxy/homiio: APP names the ECS SERVICE, and the worker shares
+          # the API's image. Derived in the shell below rather than in this map,
+          # so there is no question of whether `env.APP` here means the
+          # workflow's value or one a sibling key just set.
+          IMAGE_URI: ${{ env.ECR_REGISTRY }}/oxy/${{ env.APP }}@${{ steps.build.outputs.digest }}
+          DEPLOY_SHA: ''
+        run: |
+          export APP="${APP}-worker"
+          # CONTAINER_NAME is left to default to APP, which is what the
+          # oxy-homiio-worker family actually calls its container.
+          STATUS=$(aws ecs describe-services --cluster "$CLUSTER" --services "$APP" --query 'services[0].status' --output text 2>/dev/null || echo NONE)
+          if [ "$STATUS" != "ACTIVE" ]; then
+            echo "ECS service $APP not created yet - image is in ECR, skipping $APP"
+            exit 0
+          fi
+          bash .github/scripts/deploy-ecs-image.sh
