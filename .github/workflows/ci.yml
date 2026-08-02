@@ -188,6 +188,7 @@ jobs:
           bash .github/scripts/test-assert-install-clean.sh
           bash .github/scripts/test-deployment-scope.sh
           bash .github/scripts/test-check-version-pins.sh
+          bash .github/scripts/test-deploy-ecs-image.sh
 
   frontend-bundle:
     runs-on: ubuntu-24.04
