@@ -1,173 +1,172 @@
-# Homiio Monorepo
+<p align="center">
+  <b>Homiio</b> is a real estate platform by <a href="https://oxy.so">Oxy</a>.<br>
+  Find a home, sign the lease, and live in it, without a portal standing between the two people involved.
+</p>
 
-A monorepo containing the Homiio frontend and backend applications.
+<p align="center">
+  <a href="https://homiio.com">homiio.com</a>
+</p>
 
-## 🏗️ Project Structure
+<p align="center">
+  <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/license-MIT-440151?style=flat-square"></a>
+  <img alt="Expo SDK 56" src="https://img.shields.io/badge/Expo-SDK%2056-440151?style=flat-square&logo=expo&logoColor=white">
+  <img alt="React Native 0.85" src="https://img.shields.io/badge/React%20Native-0.85-440151?style=flat-square&logo=react&logoColor=white">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-440151?style=flat-square&logo=typescript&logoColor=white">
+  <img alt="Bun" src="https://img.shields.io/badge/bun-1.3-440151?style=flat-square&logo=bun&logoColor=white">
+  <img alt="Node 22" src="https://img.shields.io/badge/node-22.x-440151?style=flat-square&logo=nodedotjs&logoColor=white">
+  <img alt="MongoDB" src="https://img.shields.io/badge/MongoDB-Mongoose-440151?style=flat-square&logo=mongodb&logoColor=white">
+</p>
 
-```
-homiio-monorepo/
-├── packages/
-│   ├── frontend/          # React Native/Expo frontend application
-│   ├── backend/           # Node.js/Express backend API
-│   └── shared-types/      # Shared TypeScript types
-├── package.json           # Root package.json with workspace configuration
-└── README.md             # This file
-```
+---
 
-## 🚀 Getting Started
+<table>
+<tr>
+<td valign="top" width="50%">
 
-### Prerequisites
+### 🏠 The whole tenancy, not just the search
 
-- Node.js >= 18.0.0
-- npm >= 8.0.0
-- Expo CLI (for frontend development)
+Most of this repo is what happens after the listing. Applications become leases, leases are first class documents that get signed, renewed and terminated, payments and documents hang off them, and roommate requests materialize into real relationships.
 
-### Installation
+Viewings, reviews, evictions and partner commissions are all modelled, so a tenancy has a record rather than a chat log.
 
-1. Clone the repository:
+</td>
+<td valign="top" width="50%">
+
+### 🔑 Identity comes from Oxy
+
+There is no Homiio account. Sign in is the device first Oxy session, handled end to end by [`@oxyhq/services`](https://www.npmjs.com/package/@oxyhq/services) on the client and [`@oxyhq/core`](https://www.npmjs.com/package/@oxyhq/core) on the server.
+
+Ownership follows from it: every property, room and lease write resolves the owner from the session and never from the request body. See the [Oxy platform repo](https://github.com/OxyHQ/oxy) for how the session works.
+
+</td>
+</tr>
+</table>
+
+## Packages
+
+| Package | Path | What it is |
+|---|---|---|
+| `@homiio/frontend` | [`packages/frontend/`](packages/frontend/) | Expo app for web, iOS and Android, with expo-router, NativeWind and i18next |
+| `@homiio/backend` | [`packages/backend/`](packages/backend/) | Express API and a separate worker process: Mongoose, Stripe, Sharp, BullMQ |
+| `@homiio/listing-providers` | [`packages/listing-providers/`](packages/listing-providers/) | Provider plugin contract, shared fetch runtime, and the portal plugins |
+| `@homiio/shared-types` | [`packages/shared-types/`](packages/shared-types/) | Address, city, lease, profile, property and review DTOs |
+
+The UI is [`@oxyhq/bloom`](https://www.npmjs.com/package/@oxyhq/bloom) primitives with NativeWind on top. The production image builds in dependency order: shared types, then listing providers, then the backend.
+
+## Quick start
+
 ```bash
-git clone <repository-url>
-cd homiio-monorepo
-```
-
-2. Install all dependencies:
-```bash
-bun run install:all
-```
-
-### Development
-
-#### Start all services in development mode:
-```bash
-bun run dev
-```
-
-#### Start individual services:
-
-**Frontend (React Native/Expo):**
-```bash
-bun run dev:frontend
-# or
-bun run start:frontend
-```
-
-**Backend (Node.js/Express):**
-```bash
+bun install
+cp packages/backend/.env.example packages/backend/.env
 bun run dev:backend
-# or
-bun run start:backend
+bun run dev:frontend
 ```
 
-### Building
+Bun 1.3.14 and Node 22. Use `bun` and `bunx`, never npm, yarn or npx.
 
-#### Build all packages:
+<details>
+<summary><b>All the commands</b></summary>
+
+<br>
+
 ```bash
-bun run build
+bun run dev              # every workspace at once
+bun run dev:frontend     # Expo app
+bun run dev:backend      # API
+bun run build            # every workspace
+bun run test             # every workspace
+bun run lint             # every workspace
+bun run check:lockfile   # bun.lock really matches the manifests
+bun run clean            # build artifacts and node_modules
+
+bun run --filter @homiio/backend worker       # the BullMQ worker
+bun run --filter @homiio/frontend typecheck   # tsc --noEmit
+bun run --filter @homiio/frontend check:i18n  # translation keys
 ```
 
-#### Build individual packages:
+</details>
+
+<details>
+<summary><b>Cold start check: the only thing that sees a white screen</b></summary>
+
+<br>
+
 ```bash
-bun run build:frontend
-bun run build:backend
+bun run --cwd packages/frontend build
+bun run --cwd packages/frontend check:cold-start / /properties
+bun run --cwd packages/frontend check:cold-start:test
 ```
 
-### Testing
+Run it after touching anything in the boot path, meaning `app/_layout.tsx`, the providers under `context/`, or the splash gate.
 
-Run tests for all packages:
-```bash
-bun run test
-```
+It exists because nothing else here can catch a blank boot. TypeScript passes, Jest passes, `expo export` succeeds, and the app still mounts nothing: a boot mounted component calling a suspenseful hook deadlocks the render, so the init effect never runs and the promise never resolves, with zero console output.
 
-### Linting
+The check loads the exported build in a real headed browser and asserts rendered content, not merely that nothing threw. It refuses to give a verdict when the tab is not visible, because a backgrounded tab pauses `requestAnimationFrame` and presents exactly like a blank page. It also carries a mutation test, so it can tell "ran and found nothing" from "did not run".
 
-Run linting for all packages:
-```bash
-bun run lint
-```
+</details>
 
-### Cleaning
+<details>
+<summary><b>Market listings are ingested, never hotlinked</b></summary>
 
-Clean all build artifacts and node_modules:
-```bash
-bun run clean
-```
+<br>
 
-## 🚀 Deployment
+Homiio aggregates listings from external portals as first party data. Nothing is proxied live and no portal image URL is ever served at runtime: a listing is fetched, normalized to a `NormalizedListing`, upserted with `isExternal: true` and a mandatory source URL, and its photos are downloaded, processed with Sharp and stored by Homiio.
 
-The backend deploys to AWS ECS Fargate via `.github/workflows/deploy-aws.yml` on push to `main`. The frontend web build deploys to Cloudflare Pages via `.github/workflows/deploy-frontends.yml`.
+External listings are visibly marked and cannot be applied to or booked through Homiio. They link back to the portal, plus direct contact details when the portal itself exposed them.
 
-For detailed deployment instructions, see [docs/deployment](./docs/deployment.mdx).
+Each portal is a plugin implementing `discover`, `fetch`, `normalize` and `health`, registered in the provider registry and off by default behind its own environment flag. Rate limiting, retries, the circuit breaker, the browser pool and the escalation ladder live once in the shared fetch runtime rather than in every plugin, and parsing helpers for schema.org, `__NEXT_DATA__`, contact details and city lists are shared modules that plugins must import instead of reimplementing.
 
-## 📦 Packages
+General classifieds sites are never crawled site wide. Their plugins allow only housing categories and reject non housing listings at normalize time, pinned by fixtures on both sides.
 
-### Frontend (`packages/frontend`)
-- React Native application built with Expo
-- Uses TypeScript, Tailwind CSS, and NativeWind
-- Includes mobile and web platforms
+</details>
 
-### Backend (`packages/backend`)
-- Node.js/Express API server
-- TypeScript backend with MongoDB
+<details>
+<summary><b>No admin or moderator surfaces</b></summary>
 
-### Shared Types (`packages/shared-types`)
-- Common TypeScript interfaces and types
+<br>
 
-## 🔐 Authentication & Profile Management
+This is a product decision, not a gap. Homiio has no admin panel, no moderator queue and no privileged action over user content. Moderation is community level: reports accumulate on a review until it enters review automatically, eviction reports are user submitted, and owners cancel or delete their own content.
 
-### Automatic Profile Creation
-When a user signs in or signs up with Oxy, the system automatically creates a personal profile for them if one doesn't already exist. This happens transparently in the background:
+The one privileged surface is the scraper route, which is infrastructure tooling and not content moderation.
 
-1. **Frontend**: The `ProfileProvider` component automatically loads profiles when a user authenticates
-2. **Backend**: The `getOrCreateActiveProfile` endpoint automatically creates a default personal profile if none exists
-3. **Default Profile**: Includes basic settings, trust score initialization, and privacy preferences
+</details>
 
-### Profile Types
-- **Personal**: Default profile type for individual users
-- **Agency**: For property management agencies
-- **Business**: For business entities
-- **Cooperative**: For housing cooperatives
+<details>
+<summary><b>Deploy</b></summary>
 
-### Trust Score System
-Each personal profile includes an automatic trust score calculation based on:
-- Profile completion
-- Verification status
-- Rental history
-- References
-- Common TypeScript interfaces and types
-- Shared between frontend and backend
-- Ensures type consistency across the application
-- **Status**: ✅ **IMPLEMENTED** - 50+ shared types covering Property, Profile, City, Lease, and Address domains
-- **Documentation**: See [SHARED_TYPES_IMPLEMENTATION.md](./SHARED_TYPES_IMPLEMENTATION.md) for detailed information
+<br>
 
-## 🔧 Workspace Scripts
+| Workflow | Target |
+|---|---|
+| [`ci.yml`](.github/workflows/ci.yml) | Lint, tests and builds on every push and pull request |
+| [`deploy-aws.yml`](.github/workflows/deploy-aws.yml) | API and worker to AWS ECS Fargate on `linux/arm64` |
+| [`deploy-frontends.yml`](.github/workflows/deploy-frontends.yml) | Web build to Cloudflare Pages |
 
-The root `package.json` includes several workspace scripts for managing the monorepo:
+The API and the worker are the same image with different start commands. Full instructions are in [`docs/deployment.mdx`](docs/deployment.mdx).
 
-- `dev`: Start all packages in development mode
-- `build`: Build all packages
-- `test`: Run tests for all packages
-- `lint`: Run linting for all packages
-- `clean`: Clean all build artifacts
-- `install:all`: Install dependencies for all packages
+</details>
 
-## 🛠️ Development Workflow
+## Documentation
 
-1. **Adding new packages**: Create a new directory in `packages/` and add a `package.json`
-2. **Shared dependencies**: Add common dependencies to the root `package.json`
-3. **Package-specific dependencies**: Add to individual package `package.json` files
-4. **Type sharing**: Use the `shared-types` package for common interfaces
+| Page | About |
+|---|---|
+| [`docs/getting-started.mdx`](docs/getting-started.mdx) | Running it locally |
+| [`docs/architecture.mdx`](docs/architecture.mdx) | How the pieces fit |
+| [`docs/auth.mdx`](docs/auth.mdx) | Sessions, ownership and profiles |
+| [`docs/listings.mdx`](docs/listings.mdx) | Properties and external ingest |
+| [`docs/payments.mdx`](docs/payments.mdx) | Stripe billing and subscriptions |
+| [`docs/analytics.mdx`](docs/analytics.mdx) | What is measured |
+| [`docs/deployment.mdx`](docs/deployment.mdx) | Shipping it |
+| [`docs/contributing.mdx`](docs/contributing.mdx) | Working on it |
 
-## 📝 Environment Variables
+The full working agreement, including the layout and styling rules the app is held to, is in [`AGENTS.md`](AGENTS.md).
 
-Each package may have its own environment variables. Check the individual package READMEs for specific configuration requirements.
+## License
 
-## 🤝 Contributing
+MIT. See [`LICENSE`](LICENSE).
 
-1. Make changes in the appropriate package
-2. Test your changes locally
-3. Ensure all packages build successfully
-4. Submit a pull request
+<br>
 
-## 📄 License
-
-This project is private and proprietary. 
+<div align="center">
+<sub>Part of the <a href="https://github.com/OxyHQ">Oxy</a> ecosystem</sub>
+</div>
