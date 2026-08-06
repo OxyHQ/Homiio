@@ -20,6 +20,7 @@
     "seed:properties": "ts-node --transpile-only scripts/seedProperties.ts",
     "test": "cd ../listing-providers && bun run build && cd ../backend && NODE_OPTIONS='--max-old-space-size=6144' jest",
     "test:watch": "jest --watch",
+    "test:constraints:mutate": "node scripts/mutation-test-property-constraints.mjs",
     "test:images": "ts-node --transpile-only scripts/test-image-upload.ts",
     "test:webhook": "node scripts/test-stripe-webhook.js",
     "test:subscription-save": "node scripts/test-subscription-save.js",

@@ -15,6 +15,13 @@
       "when": 1785993737616,
       "tag": "0001_geo_lookup_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785995560870,
+      "tag": "0002_property",
+      "breakpoints": true
     }
   ]
 }

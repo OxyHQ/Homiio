@@ -178,8 +178,15 @@ path. **A table ported without an entry grows FOREVER — no error, no failing
 test, no symptom until disk**, and it is invisible in review because the thing
 doing the work was never in Homiio's code to be missed.
 
-No table in migration 0000 had a TTL index, so the registry is legitimately
-empty. Check every TTL for INTENT before replicating it — `Conversation
+No table in migration 0000 had a TTL index. Migration 0001 brings the first
+entry and the largest one this migration will produce: `properties.expires_at`
+is populated on **100% of production rows**, so the entire external-listing
+inventory is under an active scythe today and stops being reaped the moment the
+cutover lands. Registering it is only half the port — `services/cron.ts` still
+has to CALL the sweep, and the registry makes that omission visible rather than
+closing it.
+
+Check every TTL for INTENT before replicating it — `Conversation
 .sharing.expiresAt` deletes the whole conversation and must NOT be ported as a
 delete.
 
@@ -215,9 +222,21 @@ a VALUE, so it collides for real, converting a non-problem into a live bug.
   an all-or-none CHECK. `[2.1, 41.3, 2.2, 41.4]` and `[41.3, 2.1, 41.4, 2.2]` are
   both valid arrays and only one is Barcelona; `bbox_west = 41.3` is obviously
   wrong to anyone who reads it.
-- **`jsonb` is for genuinely shape-less data only.** There is exactly one in this
-  migration: `addresses.extras`, declared `Mixed` in Mongo precisely because its
-  shape is whatever a portal sent. Shapelessness is its purpose.
+- **`jsonb` is for genuinely shape-less data only.** There is exactly one in the
+  whole schema: `addresses.extras`, declared `Mixed` in Mongo precisely because
+  its shape is whatever a portal sent. Shapelessness is its purpose. `properties`
+  flattens TWELVE subdocuments into columns and adds none.
+- **Flattening an OPTIONAL subdocument makes every one of its columns NULLABLE**,
+  including the ones whose sub-schema declares a default. Column nullness is the
+  only representation of block ABSENCE once the block is gone, so
+  `properties.long_term_rent_currency` (Mongo default `'EUR'`) is nullable while
+  `properties.rules_pets` (Mongo default `false`, on a sub-schema declared
+  `default: {}`) is `NOT NULL DEFAULT false`. Which of the two a subdocument is
+  was MEASURED against this repository's mongoose, not assumed: `default:
+  undefined` never materializes; `default: {}` and a NESTED PATH carrying at
+  least one default both do, arrays included. That nullability is not a
+  compromise — it is what makes the four offering CHECKs on `properties`
+  expressible at all.
 
 ## Generated columns
 
@@ -227,13 +246,20 @@ the schema — not because it is tidier, but because a hook is bypassable and a
 backfill, `psql`) can produce a row whose derived value disagrees with its
 source: an attempt fails with SQLSTATE `428C9`.
 
-Two in this migration, both on `addresses`:
+Three so far, two on `addresses` and one on `properties`:
 
-- **`geo`** — see PostGIS below.
-- **`address_level`** — was `getAddressLevel()`, a METHOD, which every one of
-  this package's 153 `.lean()` reads skips. The whole street → building → unit
-  review hierarchy depends on it, and mis-deriving it mis-files a review
+- **`addresses.geo`** — see PostGIS below.
+- **`addresses.address_level`** — was `getAddressLevel()`, a METHOD, which every
+  one of this package's 153 `.lean()` reads skips. The whole street → building →
+  unit review hierarchy depends on it, and mis-deriving it mis-files a review
   permanently.
+- **`properties.search_vector`** — the port of Mongo's text index. It covers
+  `description` ALONE: `title` is not declared in `PropertySchema`, so mongoose
+  strict mode drops it from every write and it exists on ZERO of the 17,644
+  production rows, while Mongo spends 43.51 MiB — 89% of that collection's whole
+  index footprint — indexing it. Weighting a field with no data would copy the
+  phantom index into Postgres. Add `setweight` when `title` starts carrying
+  data, not before.
 
 **The trap: the expression must be IMMUTABLE, and the obvious spellings are not.**
 
@@ -337,4 +363,19 @@ Postgres through the application's own pool.
 | Deferred FK becomes mandatory when its parent lands; every id-shaped column classified; every FK declares an explicit `ON DELETE` | `__tests__/db/foreignKeys.test.ts` |
 | `geo` is generated, SRID 4326, POINT, built as `(longitude, latitude)`, GiST-indexed, unwritable, and measures a real distance; `address_level` reproduces the source truthiness; out-of-range coordinates refused | `__tests__/db/postgis.test.ts` |
 | `homiio_simple` exists in a FRESHLY CREATED database and matches `malaga` against `Málaga` | `__tests__/db/textSearch.test.ts` |
-| Protected-column registry agrees with its reasons, and the type-level exclusion still excludes | `__tests__/db/protectedColumns.test.ts` |
+| Protected-column registry agrees with its reasons, and the type-level exclusion still excludes — including `properties.accommodation_details_wifi_password`, which is UNREACHABLE on the public row TYPE | `__tests__/db/protectedColumns.test.ts` |
+| `offerings` equals exactly the set of present priced blocks, in BOTH directions, each violation naming its own offering | `__tests__/db/propertyOfferings.test.ts` |
+| At most one `is_primary` photo per listing, on INSERT and on UPDATE; `image_id` is mandatory; a property delete CASCADES and an image delete is REFUSED; `has_images` derives, detects its own drift and repairs it | `__tests__/db/propertyImages.test.ts` |
+| The five portal-writable vocabularies (`type`, `status`, `furnished_status`, `*_currency`, `source`) refuse an undeclared value and accept the declared-but-never-observed ones; `amenities` stays unconstrained | `__tests__/db/propertyVocabularies.test.ts` |
+| The calendar's `tstzrange` GiST index serves an overlap query — asserted on the PLAN and on the exact result set — with `[)` bounds so adjacent windows do not collide | `__tests__/db/propertyCalendar.test.ts` |
+| `search_vector` matches through `unaccent` in both directions, covers `description` and not `title`, and cannot be written on INSERT or UPDATE | `__tests__/db/propertySearch.test.ts` |
+| Every registered expiry column has a leading btree, and the registry is not empty | `__tests__/db/expiry.test.ts` |
+| Every unmapped column names a real property and keeps its declared shape | `__tests__/db/unmappedColumns.test.ts` |
+
+And one gate that is NOT a test, because a test of this shape cannot check
+itself: `scripts/mutation-test-property-constraints.mjs`
+(`bun run test:constraints:mutate`) breaks each of the ten constraints above in
+the migration SQL one at a time and requires the suite to go red AND to NAME the
+constraint. It takes a green BASELINE first, restores IN PLACE and verifies the
+restore by md5. It found a real hole on its first run — `properties_type_check`
+survived, because no test covered it — which is why the vocabulary suite exists.

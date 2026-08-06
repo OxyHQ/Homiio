@@ -15,16 +15,18 @@
  * `.lean()` call sites**, and a `.lean()` read returns the whole document already;
  * their ported form is a bare `select()` that returns the whole ROW.
  *
- * The registry is empty because migration 0000 carries `countries`, `regions`,
- * `cities`, `neighborhoods`, `images` and `addresses`, and not one column in
- * those six is a secret. That is the correct state, not an omission — and the
- * module exists now so the mechanism is in the repository BEFORE the first
- * secret arrives, rather than being invented while porting the table that needs
- * it. The columns already known to belong here, from the tracking issue:
+ * Migration 0000 carried `countries`, `regions`, `cities`, `neighborhoods`,
+ * `images` and `addresses`, and not one column in those six is a secret — so
+ * the registry was legitimately empty, and the module existed so the mechanism
+ * was in the repository BEFORE the first secret arrived rather than being
+ * invented while porting the table that needed it.
+ *
+ * Migration 0001 brings the first one. The columns known to belong here, from
+ * the tracking issue:
  *
  * | Column | Batch | Why |
  * |---|---|---|
- * | `properties.accommodation_wifi_password` | 3 | A credential for a real network |
+ * | `properties.accommodation_details_wifi_password` | 3 | A credential for a real network — **landed** |
  * | `profiles.annual_income` | 5 | `privacy.showIncome` defaults to FALSE |
  * | `leases.*_digital_signature` | 7 | Signature material |
  * | `eviction_cases.contact_*` (5 columns) | 8 | Organizer PII on a PUBLIC board |
@@ -61,6 +63,7 @@ import {
   publicColumns as excludeProtectedColumns,
 } from '@oxyhq/db/assert';
 import type { PgTable } from 'drizzle-orm/pg-core';
+import { properties } from './properties';
 
 /**
  * Table SQL name → the TypeScript property names of its protected columns.
@@ -73,10 +76,13 @@ import type { PgTable } from 'drizzle-orm/pg-core';
  * gives the literal type AND the shape check; a plain type annotation gives only
  * the second and breaks the first.
  *
- * EMPTY as of migration 0000. See the module docblock for the four groups of
- * columns that land here in batches 3, 5, 7 and 8.
+ * Keyed by the SQL TABLE name and valued by TypeScript PROPERTY names — the two
+ * sides genuinely differ, and mixing them up produces an `Omit` over a key that
+ * does not exist, which is a silent no-op rather than an error.
  */
-export const PROTECTED_COLUMNS_BY_TABLE = {} as const satisfies ProtectedColumnRegistry;
+export const PROTECTED_COLUMNS_BY_TABLE = {
+  properties: ['accommodationDetailsWifiPassword'],
+} as const satisfies ProtectedColumnRegistry;
 
 /** One protected column, with the reason it is protected. */
 export interface ProtectedColumn {
@@ -95,7 +101,20 @@ export interface ProtectedColumn {
  * `__tests__/db/protectedColumns.test.ts` asserts they name the same set, so
  * they cannot drift.
  */
-export const PROTECTED_COLUMNS: readonly ProtectedColumn[] = [];
+export const PROTECTED_COLUMNS: readonly ProtectedColumn[] = [
+  {
+    table: properties,
+    property: 'accommodationDetailsWifiPassword',
+    reason:
+      'A credential for a real network, stored in plaintext on the most-read ' +
+      'table in the product. Mongoose hid it BY ACCIDENT, not by design — it ' +
+      'is not `select: false`; it simply never appeared in any DTO\'s field ' +
+      'list, so every one of this package\'s `.lean()` reads carried it and ' +
+      'nothing shipped it only because no serializer happened to look. Under ' +
+      'drizzle the equivalent read is a bare `select()`, which returns every ' +
+      'column, so the accident stops protecting it the day someone writes one.',
+  },
+];
 
 /**
  * The columns of `table` that are safe to hand to a client, as a drizzle

@@ -35,7 +35,15 @@ there was none, and nothing references a review report by construction.
 
 ## `isValidObjectId` guards are DELETED, not widened
 
-There are 499 references. Post-cutover, `mongoose.isValidObjectId(uuidv7())` is
+There are **48 guard sites** — see `db/ids.ts`, which carries the measurement.
+(This file said "499" until batch 3. That figure counted committed `dist/` build
+output and the `models/` tree, i.e. the same code twice; `d0aaf50` corrected
+`db/ids.ts` and left this copy behind, so the two contradicted each other in the
+same repository. The number matters beyond pedantry: 499 makes the sweep sound
+like a mechanical mass-edit, and 48 makes it sound like what it is — a small,
+reviewable set where a handful genuinely branch.)
+
+Post-cutover, `mongoose.isValidObjectId(uuidv7())` is
 `false` for every row created from that day forward, so a guard left in place
 does not merely reject — **several Homiio sites BRANCH on the answer**, and those
 turn into silent wrong answers rather than errors:
@@ -196,6 +204,106 @@ makes that a decision rather than an accident.
 
 `Region.imageIds[]` costs nothing: **0 elements across all 211 regions**, and no
 `entityType: 'region'` image exists anywhere in the collection.
+
+## Batch 3 scope (migration 0002, `properties`), and the decisions it fixes
+
+`properties` (135 columns), `property_images`, `property_documents` and
+`property_availability_windows`. SCHEMA ONLY — no controller or service is
+ported. Six decisions here are contract-level, because a later batch that
+reverses one of them silently changes what the copy means:
+
+- **`offerings` equals exactly the set of present priced blocks**, as four
+  per-offering CHECKs. This is the largest correctness win in the Property port:
+  today the rule has TWO enforcement paths for one invariant, and the one that
+  writes all 17,644 external listings (`scraperService.ts:285`, `updateOne`)
+  enforces nothing. The POSITIVITY half of `validateOfferings` is deliberately
+  NOT expressed — `> 0` is a range constraint over unmeasured data, which
+  `CONVENTIONS.md` defers to a `post`-phase migration.
+- **`hasImages` is kept**, against the rule that Mongo's join-less workarounds do
+  not travel, because it is the primary sort key of every discovery feed and a
+  correlated `EXISTS` in an `ORDER BY` is no more indexable in Postgres than in
+  Mongo. It pays for that with an obligation: ONE writer (`db/hasImages.ts`),
+  never settable from a request body, DERIVED by the backfill rather than
+  copied, and a reconciliation check that is asserted.
+- **Both copies of every duplicated field pair are carried.** `available_from`
+  vs `availability_available_from` DISAGREE on 1,630 of 17,644 rows and are read
+  by different filter paths, so collapsing them changes what a filter matches.
+  The five `rules.*` pairs agree on every row — but only because every row is at
+  the default in both copies, so the DATA cannot elect an authority either.
+- **`coverImageIndex` is deleted** (`-1` on all 17,644 rows; the meaning moves to
+  `property_images.is_primary`), and **`views` and `title` are declared with no
+  Mongo source** — see `schema/unmappedColumns.ts`. `views` starting to count
+  and `title` becoming searchable after the cutover are EXPECTED conditions.
+- **`properties.source` gets a CHECK derived from the registered-provider union
+  plus `internal` and `fixture`**, never from the fifteen values production
+  happens to hold. `fixture` is test data really sitting in production; and
+  `internal` is the Mongoose default that every user-created listing will carry,
+  observed zero times only because production holds zero user-created listings.
+- **`accommodation_details_wifi_password` is a PROTECTED COLUMN.** Mongoose hid
+  it by accident — it is not `select: false`, it just never appeared in a DTO's
+  field list — and a bare drizzle `select()` returns it. The exclusion is at the
+  TYPE level so a serializer reading it fails `tsc`.
+
+### Named resolutions the Property backfill owes
+
+Measured against production on 2026-08-06. Each is a rule the copy AND the
+verifier must both apply — a resolution the verifier does not know about is
+reported as a fidelity failure on every row it touched.
+
+| Rule | Applies to | Measured | Action |
+|---|---|---|---|
+| `MODERATION_ABSENT` | the `moderation` sub-object missing entirely | **17,642 of 17,644** (99.99 %) | `moderation_restricted` written **`false`**. Count frozen at **17,642**. |
+| `PRICE_ETHICS_ABSENT` | `priceEthics` missing | **133 of 17,644** | All eight columns NULL. No default. |
+| `LISTING_FLAGS_ABSENT` | `listingFlags` missing | **9,594 of 17,644** | All eleven columns NULL — see below, this is a THREE-state field. |
+| `EXTERNAL_CONTACT_ABSENT` | `externalContact` missing | **5,174 of 17,644** | All six columns NULL. |
+| `HAS_IMAGES_DERIVED` | `hasImages` | 1 row disagrees with its own array | DERIVED from `images[]`, never copied. |
+
+**`moderation` is not a legacy cohort and the dates prove it.** The field was
+added to `PropertySchema` on 2026-07-30 (`0bbc574`, PR #248); the newest
+`createdAt` in the whole collection is 2026-07-25, so every row predates the
+schema change. And the rows WITHOUT it have a max `updatedAt` four minutes LATER
+than the two that have it — **re-ingesting does not add it**, across all twelve
+providers. The only two rows carrying it are the two `fixture` rows. So this is
+a stable steady state, not a backlog that will drain on its own, and
+`moderation_restricted NOT NULL` without a DEFAULT would fail `23502` on 99.99 %
+of the table mid-window.
+
+`false` is the right value and not merely a convenient one: `moderation
+.restricted` is written ONLY by `ModerationEnforcementService`, CrowdSource is
+switched off in production entirely, and the schema's own default is `false`.
+Absent here unambiguously means "no jury has restricted this listing".
+
+**Do not generalise that to `listingFlags`.** Those booleans are THREE-state —
+`true` (the text says students only), `false` (the classifier looked and said
+no), NULL (the classifier never ran) — so a `false` default there would
+manufacture a claim about 9,594 listings that nobody made. They stay nullable,
+which is why the four objects above get three different answers rather than one
+rule applied four times.
+
+### Two constraints that a table of external listings would have got WRONG
+
+Both are the same trap, and it is worth naming because it will recur in every
+later batch: **production contains ONLY external aggregator listings**
+(`oxy_user_id` absent on all 17,644), so any constraint derived from "what the
+data holds" encodes the external path and breaks the internal one the first time
+a user uses it.
+
+- **`properties.source` must accept `internal`**, the Mongoose default every
+  user-created listing will carry. Observed zero times.
+- **`properties.source_url` must NOT be `NOT NULL`**, even though it is present
+  and non-empty on 17,644 of 17,644 rows. It has exactly one writer
+  (`scraperService.ts:276`, plus `IngestionService`), and it is absent from BOTH
+  `CREATABLE_PROPERTY_FIELDS` and `EDITABLE_PROPERTY_FIELDS` — so no user-created
+  listing can ever have one, and a blanket `NOT NULL` turns `POST /api/properties`
+  into a guaranteed `23502`. The measurement is real; the population is biased.
+  What the measurement DOES support is the conditional the product actually
+  states: **external listings must carry a `sourceUrl`**, which is a CHECK
+  (`properties_external_source_url_check`) that holds on every production row and
+  leaves the internal path alone. `source_url` also takes NO `UNIQUE`: two
+  habitaclia rows (`52795000011615`, `39875000001003`) share
+  `https://www.habitaclia.com/alquiler-madrid.htm` — the Madrid search-results
+  page, from a parser falling back to the results `href` — while their
+  `(source, source_id)` stays unique, so the real key is unaffected.
 
 ## Two live hazards found in adjacent code — NOT batch 0, do not fix here
 
