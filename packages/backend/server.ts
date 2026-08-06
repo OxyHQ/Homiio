@@ -15,6 +15,7 @@ import routes from './routes';
 import { logger, requestLogger, errorLogger } from './middlewares/logging';
 import { notFound, errorHandler } from './middlewares/errorHandler';
 import database from './database/connection';
+import { connectPostgres } from './db/postgres';
 import publicRoutes from './routes/public';
 import { OxyServices } from '@oxyhq/core';
 import { createOptionalOxyAuth, createOxyAuthMiddleware } from '@oxyhq/core/server';
@@ -102,10 +103,19 @@ const rateLimitKey = (req: Request): string => {
   return crypto.createHmac('sha256', salt).update(`rl|${normalized}`).digest('hex').slice(0, 24);
 };
 
-// Initialize database connection
+/**
+ * Open both stores before serving traffic.
+ *
+ * Postgres is no longer optional here: the geo, address, city and neighborhood
+ * request paths read it, and `getDb()` throws when no pool has been published.
+ * A process that boots without it would answer its first city request with a
+ * 500 instead of failing at startup, so this exits non-zero the same way a
+ * missing Mongo connection always has.
+ */
 async function initializeDatabase() {
   try {
     await database.connect();
+    await connectPostgres();
   } catch (error) {
     logger.error('Database initialization failed', { error: getErrorMessage(error) });
     process.exit(1);

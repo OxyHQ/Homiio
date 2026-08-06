@@ -7,7 +7,6 @@ import mongoose from 'mongoose';
 import config from '../config';
 import { getErrorMessage } from '../utils/errors';
 import { logger } from '../middlewares/logging';
-import { ensureCityGeoIndexes } from '../services/cityGeoMigration';
 
 class Database {
   private connection: any;
@@ -63,9 +62,12 @@ class Database {
 
       this.isConnected = true;
 
-      // Retire legacy City `(name, state, country)` indexes before ingest/geo
-      // upserts run — idempotent, fast once production is clean.
-      await ensureCityGeoIndexes();
+      // Nothing runs a schema heal here any more. `services/cityGeoMigration.ts`
+      // used to drop the legacy City `(name, state, country)` indexes, backfill
+      // orphan rows and `syncIndexes()` on EVERY boot; migration 0000 creates
+      // the correct unique index by construction, so the heal has nothing left
+      // to fix and the legacy-field `$unset` it also did is a backfill concern,
+      // not a boot one.
 
       // Handle connection events
       mongoose.connection.on('error', (error) => {

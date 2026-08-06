@@ -115,9 +115,14 @@ async function resolveGeoAddressIdsForText(text: string): Promise<Types.ObjectId
     resolveGeoFilterAddressIds({ city: text }),
     resolveGeoFilterAddressIds({ state: text }),
   ]);
+  // `resolveGeoFilterAddressIds` now reads Postgres and returns id STRINGS,
+  // while the rest of this file is still Mongo (batch 4 owns the property read
+  // path and deletes this whole indirection). Converting at the boundary keeps
+  // the seam visible, and makes an id Mongo cannot represent throw here rather
+  // than silently narrowing a search to nothing.
   const ids = new Map<string, Types.ObjectId>();
-  for (const id of byCity ?? []) ids.set(id.toString(), id);
-  for (const id of byRegion ?? []) ids.set(id.toString(), id);
+  for (const id of byCity ?? []) ids.set(id, new Types.ObjectId(id));
+  for (const id of byRegion ?? []) ids.set(id, new Types.ObjectId(id));
   return Array.from(ids.values());
 }
 

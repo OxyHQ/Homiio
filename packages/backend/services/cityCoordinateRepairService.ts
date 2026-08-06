@@ -1,47 +1,50 @@
 /**
- * One-shot / boot repair for City rows whose lat/lng were mangled by EU
+ * One-shot / boot repair for city rows whose lat/lng were mangled by EU
  * thousands-separator parsing (e.g. Barreiros lat 43541 → 43.541).
+ *
+ * `cities.latitude` / `cities.longitude` deliberately carry NO range CHECK — the
+ * corrupt values this repairs are already stored, and a CHECK would have made
+ * the migration that created the table reject them mid-copy. (`addresses` is the
+ * opposite case and does carry one; see `db/schema/CONVENTIONS.md`.)
  */
 
-import { City } from '../models';
+import { eq, or, sql } from 'drizzle-orm';
+
+import { getDb } from '../db/postgres';
+import { cities } from '../db/schema';
 import { sanitizeLatLngPair } from '../utils/geoCoordinates';
 import { Logger } from '../utils/logger';
 
 const logger = new Logger('CityCoordinateRepair');
-
-type CityCoordsLean = {
-  _id: unknown;
-  name: string;
-  coordinates?: { lat?: number; lng?: number };
-};
 
 /**
  * Find cities with out-of-range coordinates and repair when /1000 recovers a
  * valid pair. Returns the number of cities updated.
  */
 export async function repairCorruptCityCoordinates(limit = 200): Promise<number> {
-  const corrupt = await City.find({
-    $or: [
-      { 'coordinates.lat': { $gt: 90 } },
-      { 'coordinates.lat': { $lt: -90 } },
-      { 'coordinates.lng': { $gt: 180 } },
-      { 'coordinates.lng': { $lt: -180 } },
-    ],
-  })
-    .select('_id name coordinates')
-    .limit(limit)
-    .lean<CityCoordsLean[]>();
+  const corrupt = await getDb()
+    .select({ id: cities.id, name: cities.name, latitude: cities.latitude, longitude: cities.longitude })
+    .from(cities)
+    .where(
+      or(
+        sql`${cities.latitude} > 90`,
+        sql`${cities.latitude} < -90`,
+        sql`${cities.longitude} > 180`,
+        sql`${cities.longitude} < -180`,
+      ),
+    )
+    .limit(limit);
 
   let repaired = 0;
   for (const city of corrupt) {
-    const lat = city.coordinates?.lat;
-    const lng = city.coordinates?.lng;
+    const lat = city.latitude;
+    const lng = city.longitude;
     if (typeof lat !== 'number' || typeof lng !== 'number') continue;
 
     const pair = sanitizeLatLngPair(lat, lng);
     if (!pair) {
       logger.warn('Could not repair city coordinates', {
-        cityId: String(city._id),
+        cityId: city.id,
         name: city.name,
         lat,
         lng,
@@ -51,13 +54,10 @@ export async function repairCorruptCityCoordinates(limit = 200): Promise<number>
 
     if (pair.lat === lat && pair.lng === lng) continue;
 
-    await City.updateOne(
-      { _id: city._id },
-      { $set: { 'coordinates.lat': pair.lat, 'coordinates.lng': pair.lng } },
-    );
+    await getDb().update(cities).set({ latitude: pair.lat, longitude: pair.lng }).where(eq(cities.id, city.id));
     repaired += 1;
     logger.info('Repaired city coordinates', {
-      cityId: String(city._id),
+      cityId: city.id,
       name: city.name,
       from: { lat, lng },
       to: pair,

@@ -206,6 +206,14 @@ export const addresses = pgTable(
     index('addresses_neighborhood_id_idx').on(table.neighborhoodId),
     index('addresses_postal_code_country_idx').on(table.postalCode, table.countryCode),
 
+    // `addressController.searchAddresses` matches the building-level street with
+    // an UNANCHORED, case-insensitive term (`{ $regex: q, $options: 'i' }` in
+    // Mongo, `ILIKE '%q%'` here). Mongo had no index for it at all — an
+    // unanchored `/i` regex is a collection scan — and `ILIKE '%…%'` only uses
+    // an index with `gin_trgm_ops`. Without this, every keystroke of the address
+    // typeahead sequentially scans every address in the product.
+    index('addresses_street_trgm_idx').using('gin', sql`${table.street} gin_trgm_ops`),
+
     check(
       'addresses_address_level_check',
       sql`${table.addressLevel} in (${sql.raw(inList(ADDRESS_LEVELS))})`,

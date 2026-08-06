@@ -1,5 +1,18 @@
 /**
- * City cover sync + popular cities filter.
+ * City cover sync, and the city→properties read.
+ *
+ * ## Both are still Mongo, and `cityCoverSyncService` is the one batch-1 module
+ * that could not move
+ *
+ * Every other city read went to Postgres in batch 1. This service did not,
+ * because it does not only WRITE a city — it creates the IMAGE first, through
+ * `imageUploadService.createImageForEntity`, which is batch 2's to port. And
+ * `cities.cover_image_id` is a real foreign key to `images.id`: porting the city
+ * half alone would make every cover write a guaranteed `23503`. So it stays
+ * whole, on Mongo, until images land beside it.
+ *
+ * `GET /api/cities/:id/properties` stays for the other reason — it pages
+ * PROPERTIES, which land in batch 3.
  */
 
 import express, { type Express } from 'express';
@@ -462,32 +475,14 @@ describe('GET /api/cities/:id/properties', () => {
   });
 });
 
-describe('GET /api/cities/popular', () => {
-  const app = buildApp();
-
-  it('excludes cities without a cover or with implausible names', async () => {
-    const withCover = await seedGeo('Madrid');
-    const coverImage = await createImage(withCover.city._id, 'city');
-    await City.findByIdAndUpdate(withCover.city._id, { coverImageId: coverImage._id });
-
-    await seedGeo('Penn Street');
-    await seedGeo('Girona');
-
-    const res = await request(app).get('/api/cities/popular?limit=10').expect(200);
-
-    expect(res.body.success).toBe(true);
-    expect(res.body.data).toHaveLength(1);
-    expect(res.body.data[0].name).toBe('Madrid');
-    expect(res.body.data[0].coverImageId.urls).toBeDefined();
-  });
-
-  it('excludes cities whose cover image failed to populate', async () => {
-    const geo = await seedGeo('Barcelona', {
-      coverImageId: new Types.ObjectId(),
-    });
-
-    const res = await request(app).get('/api/cities/popular?limit=10').expect(200);
-
-    expect(res.body.data.find((city: { name: string }) => city.name === geo.city.name)).toBeUndefined();
-  });
-});
+/**
+ * `GET /api/cities/popular` used to be asserted here, seeded through the Mongo
+ * City model. It reads Postgres now (batch 1), so those cases moved to
+ * `__tests__/integration/cityEndpoints.test.ts`, where the fixtures are seeded
+ * in the store the endpoint actually queries. They cover strictly more than
+ * they did: the plausible-name filter, the missing-cover filter, AND a cover
+ * whose image row has been deleted.
+ *
+ * `cityCoverSyncService` itself is still Mongo and is still asserted above —
+ * see the file's own note on why it cannot move before batch 2.
+ */

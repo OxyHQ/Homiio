@@ -96,6 +96,14 @@ export const regions = pgTable(
     // Mongo's standalone `{ countryId: 1 }` is NOT ported: it is the leading
     // prefix of the unique index above, and a btree serves any leading prefix.
     index('regions_name_lower_idx').on(sql`lower(${table.name})`),
+    // The SCOPED case-insensitive lookup, and it is a different query from the
+    // one above rather than a duplicate of it. `cityController.getCityByLocation`
+    // and `resolveRegionRef` both resolve a region name WITHIN a country, and
+    // region names genuinely collide across countries — "Valencia" is a province
+    // in Spain and a state in Venezuela, which is why the unique index is scoped
+    // that way in the first place. The unique `(country_id, name)` index cannot
+    // serve it: that one is case-SENSITIVE.
+    index('regions_country_name_lower_idx').on(table.countryId, sql`lower(${table.name})`),
   ],
 );
 
@@ -172,6 +180,11 @@ export const cities = pgTable(
       .on(sql`${table.propertiesCount} desc`, table.name)
       .where(sql`${table.isActive}`),
     index('cities_name_lower_idx').on(sql`lower(${table.name})`),
+    // The region-scoped case-insensitive lookup — `getCityByLocation` with a
+    // `state`. Same reasoning as `regions_country_name_lower_idx`: city names
+    // collide across regions far more often than region names collide across
+    // countries, and the unique `(region_id, name)` index is case-SENSITIVE.
+    index('cities_region_name_lower_idx').on(table.regionId, sql`lower(${table.name})`),
     // `searchCities` is `{ $regex: q, $options: 'i' }` with NO anchor — an
     // unanchored substring match. Its Postgres form is `ILIKE '%q%'`, which only
     // uses an index with `gin_trgm_ops`. Without this, every keystroke of the
@@ -221,6 +234,13 @@ export const neighborhoods = pgTable(
     // Mongo's standalone `{ cityId: 1 }` is the leading prefix of the unique
     // index above and is not ported.
     index('neighborhoods_name_lower_idx').on(sql`lower(${table.name})`),
+    // The city-scoped case-insensitive lookup — `getNeighborhoodByName` with a
+    // `city`, and the neighborhood branch of `resolveGeoFilterAddressIds`. This
+    // is the one of the three scoped indexes that earns its keep on selectivity
+    // alone: neighborhood names repeat constantly across cities ("Centro", "El
+    // Carmen", "Downtown"), so the unscoped `lower(name)` index would return a
+    // long list to filter.
+    index('neighborhoods_city_name_lower_idx').on(table.cityId, sql`lower(${table.name})`),
     // `neighborhoodController` runs the same unanchored `/q/i` typeahead as
     // `cityController.searchCities`; see the trigram index on `cities`.
     index('neighborhoods_name_trgm_idx').using('gin', sql`${table.name} gin_trgm_ops`),

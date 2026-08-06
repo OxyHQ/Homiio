@@ -164,19 +164,46 @@ Deliberately deferred, with the reason:
   `addresses` is the one exception and `CONVENTIONS.md` explains why.
 - **`Region.imageIds[]` / `City.imageIds[]`** are not ported. The relation already
   exists as `images.(entity_type, entity_id)`, so the array was a second,
-  disagreeable copy of it. **The backfill must BLOCK if any element has no
-  `images` row** — that is the check that turns "we dropped a column" into "we
-  proved we lost nothing".
+  disagreeable copy of it. The resolution rule this used to state as "the
+  backfill BLOCKS if any element has no `images` row" is now measured and
+  named — see the section below.
 - **Enum CHECKs are written from the CODE** and are subject to the production
   `distinct()` audit that Phase 0 of the tracking issue blocks on.
+
+## Named resolutions — `City.imageIds[]` and `cities.cover_image_id`
+
+The census measured production on 2026-08-06 and turned an open question into
+two rules. **A blocking check was the right default before the numbers existed
+and is the wrong one now**: it would stop the copy on rows whose only content is
+a broken pointer, i.e. it would refuse to migrate BECAUSE of the bug it is
+supposed to be dropping.
+
+Both rules apply to the copy AND to the verifier. A resolution the verifier does
+not know about is reported as a fidelity failure on every row it touched.
+
+| Rule | Applies to | Measured | Action |
+|---|---|---|---|
+| `IMAGE_IDS_WITHOUT_IMAGE` | `City.imageIds[]` elements with no matching `images` row | **22 of 1,235** (1.8 %) — 21 name no `Image` at all (Telde, Ingenio, Santa Brígida, Las Palmas, Barakaldo, Bilbao, Erandio, …) | Dropped with the column. Count frozen at **22**. |
+| `CITY_COVER_DANGLING` | `cities.cover_image_id` naming no `images` row | **17 of 1,230** (1.4 %) | Written **NULL**. Count frozen at **17**. The FK is real (`ON DELETE SET NULL`), so copying the id verbatim would be a `23503` mid-copy. |
+
+One of the 22 deserves naming rather than counting, because it is a different
+defect: **Agüimes → `6a5142339b66c268ba10214d`** points at an `Image` that
+EXISTS but whose `entityType` is `property`. A city carrying a listing's photo is
+wrong by construction — it is the bug `cityCoverSyncService`'s
+`forceReplaceListingCovers` path exists to undo — so that element is dropped as a
+defect being deleted, not as a link being lost. Recording the id here is what
+makes that a decision rather than an accident.
+
+`Region.imageIds[]` costs nothing: **0 elements across all 211 regions**, and no
+`entityType: 'region'` image exists anywhere in the collection.
 
 ## Two live hazards found in adjacent code — NOT batch 0, do not fix here
 
 Recorded so they are not lost. Both are silent under Postgres:
 
-- **`utils/helpers.ts:19-22`** detects a populated address by the PRESENCE of
-  `_id`. Once rows come back with `id`, the guard returns without setting
-  `obj.address` and every property card loses its location label, with no error
-  anywhere. Batch 1.
+- ~~**`utils/helpers.ts`** detects a populated address by the PRESENCE of
+  `_id`.~~ **FIXED in batch 1.** The guard now asks whether the value carries
+  `street` — the address's own mandatory field in both stores — instead of
+  asking how Mongo spells an id.
 - **`.toHexString()`** on ids in `services/moderation/subjects/propertySubject.ts:321`
   and `reviewSubject.ts:243` throws on a plain string. Batch 2.

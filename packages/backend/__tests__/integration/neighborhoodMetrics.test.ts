@@ -1,11 +1,21 @@
 /**
  * Neighborhood metrics endpoints (public reads).
  *
- * Mounts the real neighborhood router on the in-memory Mongo and asserts that
- * every metric is DERIVED FROM SEEDED LISTINGS — listing count, average rent and
- * the neighborhood-vs-city contrast — with NO invented walkability/score fields.
+ * Mounts the real neighborhood router and asserts that every metric is DERIVED
+ * FROM SEEDED LISTINGS — listing count, average rent and the
+ * neighborhood-vs-city contrast — with NO invented walkability/score fields.
  * Also covers the "no neighborhood → 404 / hidden" and unknown-city → empty
  * paths, plus popular-by-listing-count ranking and nearest-by-location lookup.
+ *
+ * ## The fixtures straddle both stores, because the controller does
+ *
+ * Geo and addresses are Postgres; `properties` lands in batch 3, so the listings
+ * are still Mongo documents whose `addressId` names a Postgres address row. That
+ * is not a testing convenience — it is exactly the state the branch is in, and
+ * it works for the same reason the cutover works: ids are preserved verbatim, so
+ * an address id is the SAME string in both stores. `seedAddress` mints 24-char
+ * ObjectId hex for that reason (a uuid v7 cannot live in a Mongoose `ObjectId`
+ * path), which is also what every backfilled row will carry.
  */
 
 import express, { type Express } from 'express';
@@ -14,9 +24,16 @@ import { OfferingType, PropertyType, PropertyStatus } from '@homiio/shared-types
 
 import neighborhoodRoutes from '../../routes/neighborhoods';
 import { models } from '../helpers/factories';
-
 import { errorHandler } from '../../middlewares/errorHandler';
-const { Country, Region, City, Neighborhood, Address, Property, Profile } = models;
+import {
+  resetGeoTables,
+  seedAddress,
+  seedGeoChain,
+  seedNeighborhood,
+  type GeoChain,
+} from '../helpers/postgresGeoFixtures';
+
+const { Property, Profile } = models;
 
 function buildApp(): Express {
   const app = express();
@@ -26,63 +43,30 @@ function buildApp(): Express {
   return app;
 }
 
-interface Geo {
-  country: { _id: unknown };
-  region: { _id: unknown };
-  city: { _id: unknown };
-}
-
-async function seedCity(name = 'Barcelona'): Promise<Geo> {
-  const country = await Country.create({ code: 'ES', name: 'Spain', currency: 'EUR' });
-  const region = await Region.create({ countryId: country._id, name: 'Catalonia' });
-  const city = await City.create({
-    countryId: country._id,
-    regionId: region._id,
-    name,
-    currency: 'EUR',
-  });
-  return { country, region, city };
-}
-
-async function seedNeighborhood(
-  geo: Geo,
-  name: string,
-  centroid?: { lat: number; lng: number },
-): Promise<{ _id: unknown; name: string }> {
-  return Neighborhood.create({ cityId: geo.city._id, name, centroid });
-}
-
 let addressSeq = 0;
-async function seedAddress(
-  geo: Geo,
-  neighborhoodId: unknown | undefined,
+async function seedStreet(
+  chain: GeoChain,
+  neighborhoodId?: string,
   coordinates: [number, number] = [2.17, 41.39],
-): Promise<{ _id: unknown }> {
+): Promise<string> {
   addressSeq += 1;
-  return Address.create({
-    countryId: geo.country._id,
-    regionId: geo.region._id,
-    cityId: geo.city._id,
+  return seedAddress({
+    chain,
     neighborhoodId,
-    countryCode: 'ES',
     street: `Carrer de Test ${addressSeq}`,
-    postal_code: '08001',
-    coordinates: { type: 'Point', coordinates: coordinates },
+    longitude: coordinates[0],
+    latitude: coordinates[1],
   });
 }
 
-async function seedProfile(): Promise<{ _id: unknown; oxyUserId: string }> {
+async function seedProfile(): Promise<{ oxyUserId: string }> {
   const oxyUserId = `oxy-${Math.random().toString(36).slice(2)}`;
-  const profile = await Profile.create({
-    oxyUserId,
-    personalProfile: {},
-  });
-  return profile;
+  return Profile.create({ oxyUserId, personalProfile: {} });
 }
 
 async function seedListing(
   oxyUserId: string,
-  addressId: unknown,
+  addressId: string,
   monthlyAmount: number,
 ): Promise<{ _id: unknown }> {
   return Property.create({
@@ -97,23 +81,28 @@ async function seedListing(
   });
 }
 
+beforeEach(async () => {
+  await resetGeoTables();
+});
+
+
 describe('GET /api/neighborhoods/by-property/:propertyId', () => {
   it('returns real, listing-derived metrics for the property neighborhood', async () => {
-    const geo = await seedCity();
-    const gracia = await seedNeighborhood(geo, 'Gracia');
+    const chain = await seedGeoChain({ cityName: 'Barcelona' });
+    const gracia = await seedNeighborhood({ cityId: chain.cityId, name: 'Gracia' });
     const profile = await seedProfile();
-    const address = await seedAddress(geo, gracia._id);
-    const listing = await seedListing(String(profile.oxyUserId), address._id, 1000);
+    const addressId = await seedStreet(chain, gracia);
+    const listing = await seedListing(profile.oxyUserId, addressId, 1000);
 
     const res = await request(buildApp()).get(`/api/neighborhoods/by-property/${listing._id}`);
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data).toMatchObject({
-      id: String(gracia._id),
+      id: gracia,
       name: 'Gracia',
       city: 'Barcelona',
-      cityId: String(geo.city._id),
+      cityId: chain.cityId,
       listingCount: 1,
       averageRent: 1000,
     });
@@ -124,10 +113,10 @@ describe('GET /api/neighborhoods/by-property/:propertyId', () => {
   });
 
   it('404s when the property has no resolved neighborhood', async () => {
-    const geo = await seedCity();
+    const chain = await seedGeoChain({ cityName: 'Barcelona' });
     const profile = await seedProfile();
-    const address = await seedAddress(geo, undefined);
-    const listing = await seedListing(profile.oxyUserId, address._id, 1000);
+    const addressId = await seedStreet(chain, undefined);
+    const listing = await seedListing(profile.oxyUserId, addressId, 1000);
 
     const res = await request(buildApp()).get(`/api/neighborhoods/by-property/${listing._id}`);
 
@@ -144,14 +133,14 @@ describe('GET /api/neighborhoods/by-property/:propertyId', () => {
 
 describe('GET /api/neighborhoods/by-name', () => {
   it('resolves by name and computes the neighborhood-vs-city rent contrast', async () => {
-    const geo = await seedCity();
-    const gracia = await seedNeighborhood(geo, 'Gracia');
-    const eixample = await seedNeighborhood(geo, 'Eixample');
+    const chain = await seedGeoChain({ cityName: 'Barcelona' });
+    const gracia = await seedNeighborhood({ cityId: chain.cityId, name: 'Gracia' });
+    const eixample = await seedNeighborhood({ cityId: chain.cityId, name: 'Eixample' });
     const profile = await seedProfile();
 
     // Gracia: one 800€ listing. Eixample: one 2000€ listing. City avg = 1400€.
-    await seedListing(profile.oxyUserId, (await seedAddress(geo, gracia._id))._id, 800);
-    await seedListing(profile.oxyUserId, (await seedAddress(geo, eixample._id))._id, 2000);
+    await seedListing(profile.oxyUserId, await seedStreet(chain, gracia), 800);
+    await seedListing(profile.oxyUserId, await seedStreet(chain, eixample), 2000);
 
     const res = await request(buildApp())
       .get('/api/neighborhoods/by-name')
@@ -168,7 +157,7 @@ describe('GET /api/neighborhoods/by-name', () => {
   });
 
   it('404s for an unknown neighborhood name', async () => {
-    await seedCity();
+    await seedGeoChain({ cityName: 'Barcelona' });
     const res = await request(buildApp())
       .get('/api/neighborhoods/by-name')
       .query({ name: 'Nowhere' });
@@ -178,15 +167,15 @@ describe('GET /api/neighborhoods/by-name', () => {
 
 describe('GET /api/neighborhoods/popular', () => {
   it('ranks a city neighborhoods by real listing count', async () => {
-    const geo = await seedCity();
-    const gracia = await seedNeighborhood(geo, 'Gracia');
-    const eixample = await seedNeighborhood(geo, 'Eixample');
+    const chain = await seedGeoChain({ cityName: 'Barcelona' });
+    const gracia = await seedNeighborhood({ cityId: chain.cityId, name: 'Gracia' });
+    const eixample = await seedNeighborhood({ cityId: chain.cityId, name: 'Eixample' });
     const profile = await seedProfile();
 
     // Gracia: 2 listings, Eixample: 1 listing.
-    await seedListing(profile.oxyUserId, (await seedAddress(geo, gracia._id))._id, 900);
-    await seedListing(profile.oxyUserId, (await seedAddress(geo, gracia._id))._id, 1100);
-    await seedListing(profile.oxyUserId, (await seedAddress(geo, eixample._id))._id, 2000);
+    await seedListing(profile.oxyUserId, await seedStreet(chain, gracia), 900);
+    await seedListing(profile.oxyUserId, await seedStreet(chain, gracia), 1100);
+    await seedListing(profile.oxyUserId, await seedStreet(chain, eixample), 2000);
 
     const res = await request(buildApp())
       .get('/api/neighborhoods/popular')
@@ -197,9 +186,31 @@ describe('GET /api/neighborhoods/popular', () => {
     expect(res.body.data).toHaveLength(2);
     expect(res.body.data[0].name).toBe('Gracia');
     expect(res.body.data[0].listingCount).toBe(2);
+    // The average is over LISTINGS (900 + 1100) / 2, not over the two addresses'
+    // own averages — which happen to agree here only because each address holds
+    // one listing.
     expect(res.body.data[0].averageRent).toBe(1000);
     expect(res.body.data[1].name).toBe('Eixample');
     expect(res.body.data[1].listingCount).toBe(1);
+  });
+
+  it('averages over listings, not over addresses', async () => {
+    const chain = await seedGeoChain({ cityName: 'Barcelona' });
+    const gracia = await seedNeighborhood({ cityId: chain.cityId, name: 'Gracia' });
+    const profile = await seedProfile();
+    // Two listings at one address, one at another: an average of per-address
+    // averages would give (1000 + 4000) / 2 = 2500 rather than the true 2000.
+    const busy = await seedStreet(chain, gracia);
+    await seedListing(profile.oxyUserId, busy, 500);
+    await seedListing(profile.oxyUserId, busy, 1500);
+    await seedListing(profile.oxyUserId, await seedStreet(chain, gracia), 4000);
+
+    const res = await request(buildApp())
+      .get('/api/neighborhoods/popular')
+      .query({ city: 'Barcelona' });
+
+    expect(res.body.data[0].listingCount).toBe(3);
+    expect(res.body.data[0].averageRent).toBe(2000);
   });
 
   it('returns an empty list for an unknown city', async () => {
@@ -218,11 +229,11 @@ describe('GET /api/neighborhoods/popular', () => {
 
 describe('GET /api/neighborhoods/search', () => {
   it('lists neighborhoods scoped to a city with metrics', async () => {
-    const geo = await seedCity();
-    const gracia = await seedNeighborhood(geo, 'Gracia');
-    await seedNeighborhood(geo, 'Eixample');
+    const chain = await seedGeoChain({ cityName: 'Barcelona' });
+    const gracia = await seedNeighborhood({ cityId: chain.cityId, name: 'Gracia' });
+    await seedNeighborhood({ cityId: chain.cityId, name: 'Eixample' });
     const profile = await seedProfile();
-    await seedListing(profile.oxyUserId, (await seedAddress(geo, gracia._id))._id, 1000);
+    await seedListing(profile.oxyUserId, await seedStreet(chain, gracia), 1000);
 
     const res = await request(buildApp())
       .get('/api/neighborhoods/search')
@@ -235,9 +246,9 @@ describe('GET /api/neighborhoods/search', () => {
   });
 
   it('filters by name query', async () => {
-    const geo = await seedCity();
-    await seedNeighborhood(geo, 'Gracia');
-    await seedNeighborhood(geo, 'Eixample');
+    const chain = await seedGeoChain({ cityName: 'Barcelona' });
+    await seedNeighborhood({ cityId: chain.cityId, name: 'Gracia' });
+    await seedNeighborhood({ cityId: chain.cityId, name: 'Eixample' });
 
     const res = await request(buildApp())
       .get('/api/neighborhoods/search')
@@ -246,6 +257,17 @@ describe('GET /api/neighborhoods/search', () => {
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(1);
     expect(res.body.data[0].name).toBe('Gracia');
+  });
+
+  it('treats a typed % in the name query as a literal', async () => {
+    const chain = await seedGeoChain({ cityName: 'Barcelona' });
+    await seedNeighborhood({ cityId: chain.cityId, name: 'Gracia' });
+
+    const res = await request(buildApp())
+      .get('/api/neighborhoods/search')
+      .query({ city: 'Barcelona', query: '%' });
+
+    expect(res.body.data).toEqual([]);
   });
 
   it('returns an empty list for an unknown city', async () => {
@@ -258,17 +280,17 @@ describe('GET /api/neighborhoods/search', () => {
 });
 
 describe('GET /api/neighborhoods/by-location', () => {
-  beforeAll(async () => {
-    // The $near lookup needs the Address 2dsphere index to exist.
-    await Address.createIndexes();
-  });
-
   it('resolves the nearest neighborhood-bearing address', async () => {
-    const geo = await seedCity();
-    const gracia = await seedNeighborhood(geo, 'Gracia');
+    const chain = await seedGeoChain({ cityName: 'Barcelona' });
+    const gracia = await seedNeighborhood({ cityId: chain.cityId, name: 'Gracia' });
+    const eixample = await seedNeighborhood({ cityId: chain.cityId, name: 'Eixample' });
     const profile = await seedProfile();
-    const address = await seedAddress(geo, gracia._id, [2.17, 41.39]);
-    await seedListing(profile.oxyUserId, address._id, 1000);
+    const near = await seedStreet(chain, gracia, [2.17, 41.39]);
+    // ~1.6 km east: inside the 5 km radius, so it is only excluded by being
+    // FARTHER — which is what makes this an ordering assertion rather than a
+    // "something came back" one.
+    await seedStreet(chain, eixample, [2.189, 41.39]);
+    await seedListing(profile.oxyUserId, near, 1000);
 
     const res = await request(buildApp())
       .get('/api/neighborhoods/by-location')
@@ -279,7 +301,25 @@ describe('GET /api/neighborhoods/by-location', () => {
     expect(res.body.data.listingCount).toBe(1);
   });
 
+  it('ignores an address with no neighborhood even when it is nearer', async () => {
+    const chain = await seedGeoChain({ cityName: 'Barcelona' });
+    const gracia = await seedNeighborhood({ cityId: chain.cityId, name: 'Gracia' });
+    await seedStreet(chain, undefined, [2.17, 41.39]);
+    await seedStreet(chain, gracia, [2.189, 41.39]);
+
+    const res = await request(buildApp())
+      .get('/api/neighborhoods/by-location')
+      .query({ latitude: 41.39, longitude: 2.17 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.name).toBe('Gracia');
+  });
+
   it('404s when no neighborhood is near the coordinate', async () => {
+    const chain = await seedGeoChain({ cityName: 'Barcelona' });
+    const gracia = await seedNeighborhood({ cityId: chain.cityId, name: 'Gracia' });
+    await seedStreet(chain, gracia, [2.17, 41.39]);
+
     const res = await request(buildApp())
       .get('/api/neighborhoods/by-location')
       .query({ latitude: 0, longitude: 0 });

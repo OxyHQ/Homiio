@@ -8,6 +8,13 @@
       "when": 1785990957179,
       "tag": "0000_geo_images_addresses",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785993737616,
+      "tag": "0001_geo_lookup_indexes",
+      "breakpoints": true
     }
   ]
 }
