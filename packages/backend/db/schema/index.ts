@@ -28,3 +28,9 @@
 export { addresses } from './addresses';
 export { cities, countries, neighborhoods, regions } from './geo';
 export { images } from './images';
+export {
+  properties,
+  propertyAvailabilityWindows,
+  propertyDocuments,
+  propertyImages,
+} from './properties';

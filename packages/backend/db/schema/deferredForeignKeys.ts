@@ -38,6 +38,7 @@ import { getTableColumns, getTableName } from 'drizzle-orm';
 import type { PgColumn, PgTable, UpdateDeleteAction } from 'drizzle-orm/pg-core';
 import { sqlColumnName } from '../casing';
 import { images } from './images';
+import { properties } from './properties';
 
 /** A foreign key that is decided but not yet expressible. */
 export interface DeferredForeignKey {
@@ -61,19 +62,43 @@ export interface IdColumnWithoutForeignKey {
 }
 
 /**
- * Empty as of migration 0000.
+ * Two entries as of migration 0001, both on `properties`.
  *
- * Not because nothing is deferred in principle, but because the six tables in
- * 0000 form a CLOSED sub-graph: `countries` → `regions` → `cities` →
- * `neighborhoods`, `images`, and `addresses` referencing three of them. Every
- * relation among them is expressible today, so every one of them is a real
- * constraint.
+ * Migration 0000's six tables formed a CLOSED sub-graph, so nothing was
+ * deferred. `properties` is the first table to reach OUTSIDE its own batch: its
+ * `address_id` and `parent_property_id` are real constraints today, but
+ * `agencies` and `partners` do not exist yet.
  *
- * Batch 3 is where this list first fills up — `properties` will reference
- * `addresses` (which exists) but also `agencies` and `partners` (which will
- * not, if properties lands first).
+ * `foreignKeys.test.ts` turns each entry into a gate that goes red the moment
+ * its parent appears in the barrel. An empty ledger is the finish line.
  */
-export const DEFERRED_FOREIGN_KEYS: readonly DeferredForeignKey[] = [];
+export const DEFERRED_FOREIGN_KEYS: readonly DeferredForeignKey[] = [
+  {
+    table: properties,
+    column: properties.agencyId,
+    parentTable: 'agencies',
+    parentColumn: 'id',
+    onDelete: 'set null',
+    reason:
+      'Deleting an agency must not delete the 8,374 listings that name it — ' +
+      'the listing survives its agency going away. NULL already means "no ' +
+      'agency resolved" on this column (9,270 rows carry it), so SET NULL ' +
+      'introduces no second meaning, which is the test CONVENTIONS.md sets.',
+  },
+  {
+    table: properties,
+    column: properties.sourcedByPartnerId,
+    parentTable: 'partners',
+    parentColumn: 'id',
+    onDelete: 'set null',
+    reason:
+      'Referral attribution, not ownership: a listing sourced through a ' +
+      'partner who later leaves is still a listing. NULL already means "no ' +
+      'partner referral", and `sourced_by_referral_code` keeps the audit copy ' +
+      'of the code independently, so nothing about the historical fact is ' +
+      'lost when the reference is cleared.',
+  },
+];
 
 /**
  * The SQL names of columns holding an OXY ACCOUNT id.
@@ -152,6 +177,28 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
       'already scoped by the `(entity_type, entity_id)` PAIR rather than by the ' +
       'id alone — which is the index this table carries and the reason a ' +
       'dangling id costs nothing beyond returning no rows.',
+  },
+  {
+    table: properties,
+    column: properties.sourceId,
+    reason:
+      'Not an id INTO anything — it is the PORTAL\'s own identifier for the ' +
+      'ad (Idealista\'s listing number, Otodom\'s slug id), and the only ' +
+      'reason it ends in `_id` is that Mongo named it `sourceId`. It is half ' +
+      'of the `(source, source_id)` dedup key and references no table here or ' +
+      'anywhere else. Listed rather than renamed because the name is what ' +
+      'every provider plugin and the whole ingest path already call it.',
+  },
+  {
+    table: properties,
+    column: properties.moderationRestrictedByDecisionId,
+    reason:
+      'A CrowdSource decision-revision id — a foreign SERVICE\'s primary key, ' +
+      'the same class as `oxy_user_id` but from a different service, so the ' +
+      '`isOxyAccountColumn` predicate does not (and must not) cover it. ' +
+      'Audit-only: nothing joins on it, and CrowdSource is switched off in ' +
+      'production entirely (`CROWDSOURCE_ENABLED` is absent from both SSM and ' +
+      'the live task definition), so every row holds NULL today.',
   },
 ];
 

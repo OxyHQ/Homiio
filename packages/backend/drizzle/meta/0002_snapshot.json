@@ -1,0 +1,3053 @@
+{
+  "id": "ecaf014d-70f0-40f5-949e-53e4b7ff708b",
+  "prevId": "d3aa329e-abb3-4b0c-8692-956d7d17c3d5",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.addresses": {
+      "name": "addresses",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "country_id": {
+          "name": "country_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "region_id": {
+          "name": "region_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "city_id": {
+          "name": "city_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "neighborhood_id": {
+          "name": "neighborhood_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "country_code": {
+          "name": "country_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "street": {
+          "name": "street",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "postal_code": {
+          "name": "postal_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "number": {
+          "name": "number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "building_name": {
+          "name": "building_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "block": {
+          "name": "block",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "entrance": {
+          "name": "entrance",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "floor": {
+          "name": "floor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unit": {
+          "name": "unit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "subunit": {
+          "name": "subunit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "district": {
+          "name": "district",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "address_lines": {
+          "name": "address_lines",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
+        "po_box": {
+          "name": "po_box",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reference": {
+          "name": "reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "land_plot_block": {
+          "name": "land_plot_block",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "land_plot_lot": {
+          "name": "land_plot_lot",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "land_plot_parcel": {
+          "name": "land_plot_parcel",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "extras": {
+          "name": "extras",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "longitude": {
+          "name": "longitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "latitude": {
+          "name": "latitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "geo": {
+          "name": "geo",
+          "type": "geography",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "ST_MakePoint(longitude, latitude)::geography",
+            "type": "stored"
+          }
+        },
+        "address_level": {
+          "name": "address_level",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "\n      case\n        when coalesce(floor, '') <> '' or coalesce(unit, '') <> ''\n          or coalesce(subunit, '') <> '' then 'UNIT'\n        when coalesce(number, '') <> '' or coalesce(building_name, '') <> ''\n          or coalesce(block, '') <> '' or coalesce(entrance, '') <> '' then 'BUILDING'\n        else 'STREET'\n      end\n    ",
+            "type": "stored"
+          }
+        },
+        "normalized_key": {
+          "name": "normalized_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        }
+      },
+      "indexes": {
+        "addresses_normalized_key_key": {
+          "name": "addresses_normalized_key_key",
+          "columns": [
+            {
+              "expression": "normalized_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"addresses\".\"normalized_key\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "addresses_geo_gist": {
+          "name": "addresses_geo_gist",
+          "columns": [
+            {
+              "expression": "geo",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gist",
+          "with": {}
+        },
+        "addresses_city_id_idx": {
+          "name": "addresses_city_id_idx",
+          "columns": [
+            {
+              "expression": "city_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "addresses_region_id_idx": {
+          "name": "addresses_region_id_idx",
+          "columns": [
+            {
+              "expression": "region_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "addresses_country_id_idx": {
+          "name": "addresses_country_id_idx",
+          "columns": [
+            {
+              "expression": "country_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "addresses_neighborhood_id_idx": {
+          "name": "addresses_neighborhood_id_idx",
+          "columns": [
+            {
+              "expression": "neighborhood_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "addresses_postal_code_country_idx": {
+          "name": "addresses_postal_code_country_idx",
+          "columns": [
+            {
+              "expression": "postal_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "country_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "addresses_street_trgm_idx": {
+          "name": "addresses_street_trgm_idx",
+          "columns": [
+            {
+              "expression": "\"street\" gin_trgm_ops",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "addresses_country_id_countries_id_fk": {
+          "name": "addresses_country_id_countries_id_fk",
+          "tableFrom": "addresses",
+          "tableTo": "countries",
+          "columnsFrom": [
+            "country_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "addresses_region_id_regions_id_fk": {
+          "name": "addresses_region_id_regions_id_fk",
+          "tableFrom": "addresses",
+          "tableTo": "regions",
+          "columnsFrom": [
+            "region_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "addresses_city_id_cities_id_fk": {
+          "name": "addresses_city_id_cities_id_fk",
+          "tableFrom": "addresses",
+          "tableTo": "cities",
+          "columnsFrom": [
+            "city_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "addresses_neighborhood_id_neighborhoods_id_fk": {
+          "name": "addresses_neighborhood_id_neighborhoods_id_fk",
+          "tableFrom": "addresses",
+          "tableTo": "neighborhoods",
+          "columnsFrom": [
+            "neighborhood_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "addresses_address_level_check": {
+          "name": "addresses_address_level_check",
+          "value": "\"addresses\".\"address_level\" in ('STREET', 'BUILDING', 'UNIT')"
+        },
+        "addresses_coordinates_range_check": {
+          "name": "addresses_coordinates_range_check",
+          "value": "\"addresses\".\"longitude\" between -180 and 180 and \"addresses\".\"latitude\" between -90 and 90"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.cities": {
+      "name": "cities",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "country_id": {
+          "name": "country_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "region_id": {
+          "name": "region_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "latitude": {
+          "name": "latitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "longitude": {
+          "name": "longitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "population": {
+          "name": "population",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "average_rent": {
+          "name": "average_rent",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'EUR'"
+        },
+        "cover_image_id": {
+          "name": "cover_image_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "properties_count": {
+          "name": "properties_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "last_updated": {
+          "name": "last_updated",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        }
+      },
+      "indexes": {
+        "cities_region_name_key": {
+          "name": "cities_region_name_key",
+          "columns": [
+            {
+              "expression": "region_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "cities_country_id_idx": {
+          "name": "cities_country_id_idx",
+          "columns": [
+            {
+              "expression": "country_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "cities_active_popularity_idx": {
+          "name": "cities_active_popularity_idx",
+          "columns": [
+            {
+              "expression": "\"properties_count\" desc",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"cities\".\"is_active\"",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "cities_name_lower_idx": {
+          "name": "cities_name_lower_idx",
+          "columns": [
+            {
+              "expression": "lower(\"name\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "cities_region_name_lower_idx": {
+          "name": "cities_region_name_lower_idx",
+          "columns": [
+            {
+              "expression": "region_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lower(\"name\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "cities_name_trgm_idx": {
+          "name": "cities_name_trgm_idx",
+          "columns": [
+            {
+              "expression": "\"name\" gin_trgm_ops",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "cities_country_id_countries_id_fk": {
+          "name": "cities_country_id_countries_id_fk",
+          "tableFrom": "cities",
+          "tableTo": "countries",
+          "columnsFrom": [
+            "country_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "cities_region_id_regions_id_fk": {
+          "name": "cities_region_id_regions_id_fk",
+          "tableFrom": "cities",
+          "tableTo": "regions",
+          "columnsFrom": [
+            "region_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "cities_cover_image_id_images_id_fk": {
+          "name": "cities_cover_image_id_images_id_fk",
+          "tableFrom": "cities",
+          "tableTo": "images",
+          "columnsFrom": [
+            "cover_image_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "cities_currency_check": {
+          "name": "cities_currency_check",
+          "value": "\"cities\".\"currency\" in ('USD', 'EUR', 'GBP', 'CAD', 'PLN', 'MXN', 'ARS', 'RON', 'COP', 'CLP', 'PEN', 'BRL', 'AUD', 'AED', 'FAIR')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.countries": {
+      "name": "countries",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'EUR'"
+        },
+        "flag": {
+          "name": "flag",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "default_locale": {
+          "name": "default_locale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        }
+      },
+      "indexes": {
+        "countries_code_key": {
+          "name": "countries_code_key",
+          "columns": [
+            {
+              "expression": "code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "countries_name_lower_idx": {
+          "name": "countries_name_lower_idx",
+          "columns": [
+            {
+              "expression": "lower(\"name\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "countries_currency_check": {
+          "name": "countries_currency_check",
+          "value": "\"countries\".\"currency\" in ('USD', 'EUR', 'GBP', 'CAD', 'PLN', 'MXN', 'ARS', 'RON', 'COP', 'CLP', 'PEN', 'BRL', 'AUD', 'AED', 'FAIR')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.images": {
+      "name": "images",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "entity_type": {
+          "name": "entity_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "keys_original": {
+          "name": "keys_original",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "keys_small": {
+          "name": "keys_small",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "keys_medium": {
+          "name": "keys_medium",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "keys_large": {
+          "name": "keys_large",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "urls_original": {
+          "name": "urls_original",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "urls_small": {
+          "name": "urls_small",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "urls_medium": {
+          "name": "urls_medium",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "urls_large": {
+          "name": "urls_large",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "width": {
+          "name": "width",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "height": {
+          "name": "height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "format": {
+          "name": "format",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bytes": {
+          "name": "bytes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "caption": {
+          "name": "caption",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_primary": {
+          "name": "is_primary",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "order": {
+          "name": "order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        }
+      },
+      "indexes": {
+        "images_entity_order_idx": {
+          "name": "images_entity_order_idx",
+          "columns": [
+            {
+              "expression": "entity_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "images_entity_type_check": {
+          "name": "images_entity_type_check",
+          "value": "\"images\".\"entity_type\" in ('property', 'city', 'region', 'country', 'profile')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.neighborhoods": {
+      "name": "neighborhoods",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "city_id": {
+          "name": "city_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "latitude": {
+          "name": "latitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "longitude": {
+          "name": "longitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bbox_west": {
+          "name": "bbox_west",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bbox_south": {
+          "name": "bbox_south",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bbox_east": {
+          "name": "bbox_east",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bbox_north": {
+          "name": "bbox_north",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        }
+      },
+      "indexes": {
+        "neighborhoods_city_name_key": {
+          "name": "neighborhoods_city_name_key",
+          "columns": [
+            {
+              "expression": "city_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "neighborhoods_name_lower_idx": {
+          "name": "neighborhoods_name_lower_idx",
+          "columns": [
+            {
+              "expression": "lower(\"name\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "neighborhoods_city_name_lower_idx": {
+          "name": "neighborhoods_city_name_lower_idx",
+          "columns": [
+            {
+              "expression": "city_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lower(\"name\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "neighborhoods_name_trgm_idx": {
+          "name": "neighborhoods_name_trgm_idx",
+          "columns": [
+            {
+              "expression": "\"name\" gin_trgm_ops",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "neighborhoods_city_id_cities_id_fk": {
+          "name": "neighborhoods_city_id_cities_id_fk",
+          "tableFrom": "neighborhoods",
+          "tableTo": "cities",
+          "columnsFrom": [
+            "city_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "neighborhoods_bbox_complete_check": {
+          "name": "neighborhoods_bbox_complete_check",
+          "value": "(\n        \"neighborhoods\".\"bbox_west\" is null and \"neighborhoods\".\"bbox_south\" is null\n        and \"neighborhoods\".\"bbox_east\" is null and \"neighborhoods\".\"bbox_north\" is null\n      ) or (\n        \"neighborhoods\".\"bbox_west\" is not null and \"neighborhoods\".\"bbox_south\" is not null\n        and \"neighborhoods\".\"bbox_east\" is not null and \"neighborhoods\".\"bbox_north\" is not null\n      )"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.properties": {
+      "name": "properties",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "oxy_user_id": {
+          "name": "oxy_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'internal'"
+        },
+        "source_id": {
+          "name": "source_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_external": {
+          "name": "is_external",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sourced_by_partner_id": {
+          "name": "sourced_by_partner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sourced_by_referral_code": {
+          "name": "sourced_by_referral_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "agency_id": {
+          "name": "agency_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "external_contact_phone": {
+          "name": "external_contact_phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "external_contact_email": {
+          "name": "external_contact_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "external_contact_whatsapp": {
+          "name": "external_contact_whatsapp",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "external_contact_name": {
+          "name": "external_contact_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "external_contact_agency_name": {
+          "name": "external_contact_agency_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "external_contact_kind": {
+          "name": "external_contact_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "listing_flags_students_only": {
+          "name": "listing_flags_students_only",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "listing_flags_room_not_full_unit": {
+          "name": "listing_flags_room_not_full_unit",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "listing_flags_temporary_only": {
+          "name": "listing_flags_temporary_only",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "listing_flags_gender_restricted": {
+          "name": "listing_flags_gender_restricted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "listing_flags_workers_only": {
+          "name": "listing_flags_workers_only",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "listing_flags_agency_fee_payable": {
+          "name": "listing_flags_agency_fee_payable",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "listing_flags_no_pets": {
+          "name": "listing_flags_no_pets",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "listing_flags_no_smoking": {
+          "name": "listing_flags_no_smoking",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "listing_flags_no_couples": {
+          "name": "listing_flags_no_couples",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "listing_flags_no_dss": {
+          "name": "listing_flags_no_dss",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "listing_flags_detected_language": {
+          "name": "listing_flags_detected_language",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "search_vector": {
+          "name": "search_vector",
+          "type": "tsvector",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "to_tsvector('homiio_simple', coalesce(description, ''))",
+            "type": "stored"
+          }
+        },
+        "address_id": {
+          "name": "address_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "show_address_number": {
+          "name": "show_address_number",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'apartment'"
+        },
+        "housing_type": {
+          "name": "housing_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'private'"
+        },
+        "layout_type": {
+          "name": "layout_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'traditional'"
+        },
+        "bedrooms": {
+          "name": "bedrooms",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "bathrooms": {
+          "name": "bathrooms",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "square_footage": {
+          "name": "square_footage",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "floor": {
+          "name": "floor",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "year_built": {
+          "name": "year_built",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "has_elevator": {
+          "name": "has_elevator",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "has_balcony": {
+          "name": "has_balcony",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "has_garden": {
+          "name": "has_garden",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "utilities_included": {
+          "name": "utilities_included",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "pet_friendly": {
+          "name": "pet_friendly",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "proximity_to_transport": {
+          "name": "proximity_to_transport",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "proximity_to_schools": {
+          "name": "proximity_to_schools",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "proximity_to_shopping": {
+          "name": "proximity_to_shopping",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "is_verified": {
+          "name": "is_verified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "is_eco_friendly": {
+          "name": "is_eco_friendly",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "offerings": {
+          "name": "offerings",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
+        "amenities": {
+          "name": "amenities",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
+        "furnished_status": {
+          "name": "furnished_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'not_specified'"
+        },
+        "pet_policy": {
+          "name": "pet_policy",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'not_specified'"
+        },
+        "pet_fee": {
+          "name": "pet_fee",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "parking_type": {
+          "name": "parking_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'none'"
+        },
+        "parking_spaces": {
+          "name": "parking_spaces",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "lease_term": {
+          "name": "lease_term",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'monthly'"
+        },
+        "cancellation_policy": {
+          "name": "cancellation_policy",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "available_from": {
+          "name": "available_from",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        },
+        "smoking_allowed": {
+          "name": "smoking_allowed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "parties_allowed": {
+          "name": "parties_allowed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "guests_allowed": {
+          "name": "guests_allowed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "max_guests": {
+          "name": "max_guests",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "long_term_rent_monthly_amount": {
+          "name": "long_term_rent_monthly_amount",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "long_term_rent_currency": {
+          "name": "long_term_rent_currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "long_term_rent_deposit": {
+          "name": "long_term_rent_deposit",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "long_term_rent_application_fee": {
+          "name": "long_term_rent_application_fee",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "long_term_rent_late_fee": {
+          "name": "long_term_rent_late_fee",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "long_term_rent_utilities": {
+          "name": "long_term_rent_utilities",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "short_term_rent_nightly_rate": {
+          "name": "short_term_rent_nightly_rate",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "short_term_rent_currency": {
+          "name": "short_term_rent_currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "short_term_rent_cleaning_fee": {
+          "name": "short_term_rent_cleaning_fee",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "short_term_rent_service_fee": {
+          "name": "short_term_rent_service_fee",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "short_term_rent_taxes_percent": {
+          "name": "short_term_rent_taxes_percent",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "short_term_rent_min_nights": {
+          "name": "short_term_rent_min_nights",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "short_term_rent_max_nights": {
+          "name": "short_term_rent_max_nights",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "short_term_rent_instant_book": {
+          "name": "short_term_rent_instant_book",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "short_term_rent_deposit": {
+          "name": "short_term_rent_deposit",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sale_price": {
+          "name": "sale_price",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sale_currency": {
+          "name": "sale_currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sale_price_per_sqm": {
+          "name": "sale_price_per_sqm",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sale_estimated_yield": {
+          "name": "sale_estimated_yield",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sale_is_price_reduced": {
+          "name": "sale_is_price_reduced",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sale_chain_status": {
+          "name": "sale_chain_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "exchange_mode": {
+          "name": "exchange_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "exchange_min_stay": {
+          "name": "exchange_min_stay",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "exchange_max_stay": {
+          "name": "exchange_max_stay",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "exchange_welcome_note": {
+          "name": "exchange_welcome_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "exchange_languages": {
+          "name": "exchange_languages",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "exchange_meals_included": {
+          "name": "exchange_meals_included",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "exchange_requires_reciprocity": {
+          "name": "exchange_requires_reciprocity",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "accommodation_details_sleeping_arrangement": {
+          "name": "accommodation_details_sleeping_arrangement",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "accommodation_details_hostel_room_type": {
+          "name": "accommodation_details_hostel_room_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "accommodation_details_campsite_type": {
+          "name": "accommodation_details_campsite_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "accommodation_details_max_stay": {
+          "name": "accommodation_details_max_stay",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "accommodation_details_min_age": {
+          "name": "accommodation_details_min_age",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "accommodation_details_max_age": {
+          "name": "accommodation_details_max_age",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "accommodation_details_cultural_exchange": {
+          "name": "accommodation_details_cultural_exchange",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "accommodation_details_meals_included": {
+          "name": "accommodation_details_meals_included",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "accommodation_details_wifi_password": {
+          "name": "accommodation_details_wifi_password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "accommodation_details_roommate_preferences": {
+          "name": "accommodation_details_roommate_preferences",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
+        "accommodation_details_coliving_features": {
+          "name": "accommodation_details_coliving_features",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
+        "accommodation_details_languages": {
+          "name": "accommodation_details_languages",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
+        "accommodation_details_house_rules": {
+          "name": "accommodation_details_house_rules",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
+        "availability_is_available": {
+          "name": "availability_is_available",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "availability_available_from": {
+          "name": "availability_available_from",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        },
+        "availability_minimum_stay": {
+          "name": "availability_minimum_stay",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "availability_maximum_stay": {
+          "name": "availability_maximum_stay",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 12
+        },
+        "rules_pets": {
+          "name": "rules_pets",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "rules_smoking": {
+          "name": "rules_smoking",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "rules_parties": {
+          "name": "rules_parties",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "rules_guests": {
+          "name": "rules_guests",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "rules_max_occupancy": {
+          "name": "rules_max_occupancy",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "moderation_restricted": {
+          "name": "moderation_restricted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "moderation_restricted_at": {
+          "name": "moderation_restricted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "moderation_restricted_by_decision_id": {
+          "name": "moderation_restricted_by_decision_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "price_ethics_ethical_suggested": {
+          "name": "price_ethics_ethical_suggested",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "price_ethics_ethical_max": {
+          "name": "price_ethics_ethical_max",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "price_ethics_within_ethical": {
+          "name": "price_ethics_within_ethical",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "price_ethics_market_verdict": {
+          "name": "price_ethics_market_verdict",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "price_ethics_percent_diff_from_avg": {
+          "name": "price_ethics_percent_diff_from_avg",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "price_ethics_is_fair_price": {
+          "name": "price_ethics_is_fair_price",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "price_ethics_fairness_score": {
+          "name": "price_ethics_fairness_score",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "price_ethics_scored_at": {
+          "name": "price_ethics_scored_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rating_average": {
+          "name": "rating_average",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "rating_count": {
+          "name": "rating_count",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "views": {
+          "name": "views",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "has_images": {
+          "name": "has_images",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "last_saved": {
+          "name": "last_saved",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        },
+        "parent_property_id": {
+          "name": "parent_property_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        }
+      },
+      "indexes": {
+        "properties_source_source_id_key": {
+          "name": "properties_source_source_id_key",
+          "columns": [
+            {
+              "expression": "source",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "source_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"properties\".\"source_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "properties_has_images_created_at_idx": {
+          "name": "properties_has_images_created_at_idx",
+          "columns": [
+            {
+              "expression": "\"has_images\" desc",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "\"created_at\" desc",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "properties_created_at_idx": {
+          "name": "properties_created_at_idx",
+          "columns": [
+            {
+              "expression": "\"created_at\" desc",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "properties_search_vector_gin": {
+          "name": "properties_search_vector_gin",
+          "columns": [
+            {
+              "expression": "search_vector",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        },
+        "properties_oxy_user_id_status_idx": {
+          "name": "properties_oxy_user_id_status_idx",
+          "columns": [
+            {
+              "expression": "oxy_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "properties_oxy_user_id_created_at_idx": {
+          "name": "properties_oxy_user_id_created_at_idx",
+          "columns": [
+            {
+              "expression": "oxy_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "\"created_at\" desc",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "properties_address_id_idx": {
+          "name": "properties_address_id_idx",
+          "columns": [
+            {
+              "expression": "address_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "properties_type_available_idx": {
+          "name": "properties_type_available_idx",
+          "columns": [
+            {
+              "expression": "type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "availability_is_available",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "properties_status_available_idx": {
+          "name": "properties_status_available_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "availability_is_available",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "properties_bedrooms_bathrooms_idx": {
+          "name": "properties_bedrooms_bathrooms_idx",
+          "columns": [
+            {
+              "expression": "bedrooms",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "bathrooms",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "properties_amenities_gin": {
+          "name": "properties_amenities_gin",
+          "columns": [
+            {
+              "expression": "amenities",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        },
+        "properties_offerings_gin": {
+          "name": "properties_offerings_gin",
+          "columns": [
+            {
+              "expression": "offerings",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        },
+        "properties_long_term_rent_amount_idx": {
+          "name": "properties_long_term_rent_amount_idx",
+          "columns": [
+            {
+              "expression": "long_term_rent_monthly_amount",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "properties_short_term_rent_rate_idx": {
+          "name": "properties_short_term_rent_rate_idx",
+          "columns": [
+            {
+              "expression": "short_term_rent_nightly_rate",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "properties_sale_price_idx": {
+          "name": "properties_sale_price_idx",
+          "columns": [
+            {
+              "expression": "sale_price",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "properties_price_ethics_is_fair_idx": {
+          "name": "properties_price_ethics_is_fair_idx",
+          "columns": [
+            {
+              "expression": "price_ethics_is_fair_price",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "properties_price_ethics_score_idx": {
+          "name": "properties_price_ethics_score_idx",
+          "columns": [
+            {
+              "expression": "\"price_ethics_fairness_score\" desc",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "properties_agency_id_idx": {
+          "name": "properties_agency_id_idx",
+          "columns": [
+            {
+              "expression": "agency_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"properties\".\"agency_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "properties_sourced_by_partner_id_idx": {
+          "name": "properties_sourced_by_partner_id_idx",
+          "columns": [
+            {
+              "expression": "sourced_by_partner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"properties\".\"sourced_by_partner_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "properties_parent_property_id_idx": {
+          "name": "properties_parent_property_id_idx",
+          "columns": [
+            {
+              "expression": "parent_property_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"properties\".\"parent_property_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "properties_expires_at_idx": {
+          "name": "properties_expires_at_idx",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"properties\".\"expires_at\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "properties_address_id_addresses_id_fk": {
+          "name": "properties_address_id_addresses_id_fk",
+          "tableFrom": "properties",
+          "tableTo": "addresses",
+          "columnsFrom": [
+            "address_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "properties_parent_property_id_properties_id_fk": {
+          "name": "properties_parent_property_id_properties_id_fk",
+          "tableFrom": "properties",
+          "tableTo": "properties",
+          "columnsFrom": [
+            "parent_property_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "properties_source_check": {
+          "name": "properties_source_check",
+          "value": "\"properties\".\"source\" in ('internal', 'fixture', 'idealista', 'fotocasa', 'habitaclia', 'blueground', 'apartments_com', 'zillow', 'realtor_com', 'hotpads', 'redfin', 'pisos', 'milanuncios', 'yaencontre', 'indomio', 'idealista_it', 'immobiliare', 'casa_it', 'subito', 'rightmove', 'zoopla', 'onthemarket', 'openrent', 'immobilienscout24', 'immowelt', 'kleinanzeigen', 'storia', 'imobiliare_ro', 'olx_ro', 'bienici', 'leboncoin', 'seloger', 'properati_ec', 'zonaprop', 'argenprop', 'mercadolibre_ar', 'properati', 'plusvalia', 'mercadolibre_ec', 'propiedades', 'vivanuncios', 'lamudi', 'inmuebles24', 'mercadolibre_co', 'mercadolibre_cl', 'mercadolibre_pe', 'mercadolibre_mx', 'idealista_pt', 'metrocuadrado', 'realestate_com_au', 'realtor_ca', 'bayut', 'daft', 'immoweb', 'otodom', 'funda')"
+        },
+        "properties_type_check": {
+          "name": "properties_type_check",
+          "value": "\"properties\".\"type\" in ('apartment', 'house', 'room', 'studio', 'couchsurfing', 'roommates', 'coliving', 'hostel', 'guesthouse', 'campsite', 'boat', 'treehouse', 'yurt', 'other')"
+        },
+        "properties_status_check": {
+          "name": "properties_status_check",
+          "value": "\"properties\".\"status\" in ('draft', 'published', 'reserved', 'rented', 'sold', 'inactive', 'archived')"
+        },
+        "properties_housing_type_check": {
+          "name": "properties_housing_type_check",
+          "value": "\"properties\".\"housing_type\" in ('private', 'public')"
+        },
+        "properties_layout_type_check": {
+          "name": "properties_layout_type_check",
+          "value": "\"properties\".\"layout_type\" in ('open', 'shared', 'partitioned', 'traditional', 'studio', 'other')"
+        },
+        "properties_furnished_status_check": {
+          "name": "properties_furnished_status_check",
+          "value": "\"properties\".\"furnished_status\" in ('furnished', 'unfurnished', 'partially_furnished', 'not_specified')"
+        },
+        "properties_pet_policy_check": {
+          "name": "properties_pet_policy_check",
+          "value": "\"properties\".\"pet_policy\" in ('allowed', 'not_allowed', 'case_by_case', 'not_specified')"
+        },
+        "properties_parking_type_check": {
+          "name": "properties_parking_type_check",
+          "value": "\"properties\".\"parking_type\" in ('none', 'street', 'assigned', 'garage')"
+        },
+        "properties_lease_term_check": {
+          "name": "properties_lease_term_check",
+          "value": "\"properties\".\"lease_term\" in ('monthly', '3_months', '6_months', 'yearly', 'flexible')"
+        },
+        "properties_cancellation_policy_check": {
+          "name": "properties_cancellation_policy_check",
+          "value": "\"properties\".\"cancellation_policy\" in ('flexible', 'moderate', 'strict', 'super_strict')"
+        },
+        "properties_external_contact_kind_check": {
+          "name": "properties_external_contact_kind_check",
+          "value": "\"properties\".\"external_contact_kind\" in ('owner', 'agency', 'private', 'unknown')"
+        },
+        "properties_detected_language_check": {
+          "name": "properties_detected_language_check",
+          "value": "\"properties\".\"listing_flags_detected_language\" in ('es', 'ca', 'en', 'fr', 'nl', 'de', 'it')"
+        },
+        "properties_long_term_rent_currency_check": {
+          "name": "properties_long_term_rent_currency_check",
+          "value": "\"properties\".\"long_term_rent_currency\" in ('USD', 'EUR', 'GBP', 'CAD', 'PLN', 'MXN', 'ARS', 'RON', 'COP', 'CLP', 'PEN', 'BRL', 'AUD', 'AED', 'FAIR')"
+        },
+        "properties_long_term_rent_utilities_check": {
+          "name": "properties_long_term_rent_utilities_check",
+          "value": "\"properties\".\"long_term_rent_utilities\" in ('included', 'excluded', 'partial')"
+        },
+        "properties_short_term_rent_currency_check": {
+          "name": "properties_short_term_rent_currency_check",
+          "value": "\"properties\".\"short_term_rent_currency\" in ('USD', 'EUR', 'GBP', 'CAD', 'PLN', 'MXN', 'ARS', 'RON', 'COP', 'CLP', 'PEN', 'BRL', 'AUD', 'AED', 'FAIR')"
+        },
+        "properties_sale_currency_check": {
+          "name": "properties_sale_currency_check",
+          "value": "\"properties\".\"sale_currency\" in ('USD', 'EUR', 'GBP', 'CAD', 'PLN', 'MXN', 'ARS', 'RON', 'COP', 'CLP', 'PEN', 'BRL', 'AUD', 'AED', 'FAIR')"
+        },
+        "properties_sale_chain_status_check": {
+          "name": "properties_sale_chain_status_check",
+          "value": "\"properties\".\"sale_chain_status\" in ('no_chain', 'chain', 'unknown')"
+        },
+        "properties_exchange_mode_check": {
+          "name": "properties_exchange_mode_check",
+          "value": "\"properties\".\"exchange_mode\" in ('swap', 'host', 'both')"
+        },
+        "properties_market_verdict_check": {
+          "name": "properties_market_verdict_check",
+          "value": "\"properties\".\"price_ethics_market_verdict\" in ('good_deal', 'below_average', 'average', 'above_average')"
+        },
+        "properties_sleeping_arrangement_check": {
+          "name": "properties_sleeping_arrangement_check",
+          "value": "\"properties\".\"accommodation_details_sleeping_arrangement\" in ('couch', 'air_mattress', 'floor', 'tent', 'hammock')"
+        },
+        "properties_hostel_room_type_check": {
+          "name": "properties_hostel_room_type_check",
+          "value": "\"properties\".\"accommodation_details_hostel_room_type\" in ('dormitory', 'private_room', 'mixed_dorm', 'female_dorm', 'male_dorm')"
+        },
+        "properties_campsite_type_check": {
+          "name": "properties_campsite_type_check",
+          "value": "\"properties\".\"accommodation_details_campsite_type\" in ('tent_site', 'rv_site', 'cabin', 'glamping', 'backcountry')"
+        },
+        "properties_offerings_check": {
+          "name": "properties_offerings_check",
+          "value": "\"properties\".\"offerings\" <@ array['long_term_rent', 'short_term_rent', 'sale', 'exchange']::text[]"
+        },
+        "properties_offering_long_term_rent_check": {
+          "name": "properties_offering_long_term_rent_check",
+          "value": "('long_term_rent' = any(\"properties\".\"offerings\")) = (\"properties\".\"long_term_rent_monthly_amount\" is not null)"
+        },
+        "properties_offering_short_term_rent_check": {
+          "name": "properties_offering_short_term_rent_check",
+          "value": "('short_term_rent' = any(\"properties\".\"offerings\")) = (\"properties\".\"short_term_rent_nightly_rate\" is not null)"
+        },
+        "properties_offering_sale_check": {
+          "name": "properties_offering_sale_check",
+          "value": "('sale' = any(\"properties\".\"offerings\")) = (\"properties\".\"sale_price\" is not null)"
+        },
+        "properties_offering_exchange_check": {
+          "name": "properties_offering_exchange_check",
+          "value": "('exchange' = any(\"properties\".\"offerings\")) = (\"properties\".\"exchange_mode\" is not null)"
+        },
+        "properties_long_term_rent_block_check": {
+          "name": "properties_long_term_rent_block_check",
+          "value": "\"properties\".\"long_term_rent_monthly_amount\" is not null or (\n        \"properties\".\"long_term_rent_currency\" is null and \"properties\".\"long_term_rent_deposit\" is null\n        and \"properties\".\"long_term_rent_application_fee\" is null and \"properties\".\"long_term_rent_late_fee\" is null\n        and \"properties\".\"long_term_rent_utilities\" is null\n      )"
+        },
+        "properties_short_term_rent_block_check": {
+          "name": "properties_short_term_rent_block_check",
+          "value": "\"properties\".\"short_term_rent_nightly_rate\" is not null or (\n        \"properties\".\"short_term_rent_currency\" is null and \"properties\".\"short_term_rent_cleaning_fee\" is null\n        and \"properties\".\"short_term_rent_service_fee\" is null and \"properties\".\"short_term_rent_taxes_percent\" is null\n        and \"properties\".\"short_term_rent_min_nights\" is null and \"properties\".\"short_term_rent_max_nights\" is null\n        and \"properties\".\"short_term_rent_instant_book\" is null and \"properties\".\"short_term_rent_deposit\" is null\n      )"
+        },
+        "properties_sale_block_check": {
+          "name": "properties_sale_block_check",
+          "value": "\"properties\".\"sale_price\" is not null or (\n        \"properties\".\"sale_currency\" is null and \"properties\".\"sale_price_per_sqm\" is null\n        and \"properties\".\"sale_estimated_yield\" is null and \"properties\".\"sale_is_price_reduced\" is null\n        and \"properties\".\"sale_chain_status\" is null\n      )"
+        },
+        "properties_exchange_block_check": {
+          "name": "properties_exchange_block_check",
+          "value": "\"properties\".\"exchange_mode\" is not null or (\n        \"properties\".\"exchange_min_stay\" is null and \"properties\".\"exchange_max_stay\" is null\n        and \"properties\".\"exchange_welcome_note\" is null and \"properties\".\"exchange_languages\" is null\n        and \"properties\".\"exchange_meals_included\" is null and \"properties\".\"exchange_requires_reciprocity\" is null\n      )"
+        },
+        "properties_external_source_url_check": {
+          "name": "properties_external_source_url_check",
+          "value": "not \"properties\".\"is_external\" or \"properties\".\"source_url\" is not null"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.property_availability_windows": {
+      "name": "property_availability_windows",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "property_id": {
+          "name": "property_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "starts_at": {
+          "name": "starts_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ends_at": {
+          "name": "ends_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'available'"
+        }
+      },
+      "indexes": {
+        "property_availability_windows_range_gist": {
+          "name": "property_availability_windows_range_gist",
+          "columns": [
+            {
+              "expression": "tstzrange(\"starts_at\", \"ends_at\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gist",
+          "with": {}
+        },
+        "property_availability_windows_property_scope_idx": {
+          "name": "property_availability_windows_property_scope_idx",
+          "columns": [
+            {
+              "expression": "property_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "scope",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "property_availability_windows_property_id_properties_id_fk": {
+          "name": "property_availability_windows_property_id_properties_id_fk",
+          "tableFrom": "property_availability_windows",
+          "tableTo": "properties",
+          "columnsFrom": [
+            "property_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "property_availability_windows_scope_check": {
+          "name": "property_availability_windows_scope_check",
+          "value": "\"property_availability_windows\".\"scope\" in ('listing', 'exchange')"
+        },
+        "property_availability_windows_status_check": {
+          "name": "property_availability_windows_status_check",
+          "value": "\"property_availability_windows\".\"status\" in ('available', 'blocked', 'booked')"
+        },
+        "property_availability_windows_order_check": {
+          "name": "property_availability_windows_order_check",
+          "value": "\"property_availability_windows\".\"ends_at\" > \"property_availability_windows\".\"starts_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.property_documents": {
+      "name": "property_documents",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "property_id": {
+          "name": "property_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'other'"
+        }
+      },
+      "indexes": {
+        "property_documents_property_id_idx": {
+          "name": "property_documents_property_id_idx",
+          "columns": [
+            {
+              "expression": "property_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "property_documents_property_id_properties_id_fk": {
+          "name": "property_documents_property_id_properties_id_fk",
+          "tableFrom": "property_documents",
+          "tableTo": "properties",
+          "columnsFrom": [
+            "property_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "property_documents_type_check": {
+          "name": "property_documents_type_check",
+          "value": "\"property_documents\".\"type\" in ('lease', 'inspection', 'insurance', 'other')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.property_images": {
+      "name": "property_images",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "property_id": {
+          "name": "property_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "image_id": {
+          "name": "image_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "caption": {
+          "name": "caption",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_primary": {
+          "name": "is_primary",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "order": {
+          "name": "order",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "urls_original": {
+          "name": "urls_original",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "urls_small": {
+          "name": "urls_small",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "urls_medium": {
+          "name": "urls_medium",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "urls_large": {
+          "name": "urls_large",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "property_images_property_order_idx": {
+          "name": "property_images_property_order_idx",
+          "columns": [
+            {
+              "expression": "property_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "property_images_one_primary_key": {
+          "name": "property_images_one_primary_key",
+          "columns": [
+            {
+              "expression": "property_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"property_images\".\"is_primary\"",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "property_images_image_id_idx": {
+          "name": "property_images_image_id_idx",
+          "columns": [
+            {
+              "expression": "image_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "property_images_property_id_properties_id_fk": {
+          "name": "property_images_property_id_properties_id_fk",
+          "tableFrom": "property_images",
+          "tableTo": "properties",
+          "columnsFrom": [
+            "property_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "property_images_image_id_images_id_fk": {
+          "name": "property_images_image_id_images_id_fk",
+          "tableFrom": "property_images",
+          "tableTo": "images",
+          "columnsFrom": [
+            "image_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.regions": {
+      "name": "regions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "country_id": {
+          "name": "country_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cover_image_id": {
+          "name": "cover_image_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        }
+      },
+      "indexes": {
+        "regions_country_name_key": {
+          "name": "regions_country_name_key",
+          "columns": [
+            {
+              "expression": "country_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "regions_name_lower_idx": {
+          "name": "regions_name_lower_idx",
+          "columns": [
+            {
+              "expression": "lower(\"name\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "regions_country_name_lower_idx": {
+          "name": "regions_country_name_lower_idx",
+          "columns": [
+            {
+              "expression": "country_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lower(\"name\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "regions_country_id_countries_id_fk": {
+          "name": "regions_country_id_countries_id_fk",
+          "tableFrom": "regions",
+          "tableTo": "countries",
+          "columnsFrom": [
+            "country_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "regions_cover_image_id_images_id_fk": {
+          "name": "regions_cover_image_id_images_id_fk",
+          "tableFrom": "regions",
+          "tableTo": "images",
+          "columnsFrom": [
+            "cover_image_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

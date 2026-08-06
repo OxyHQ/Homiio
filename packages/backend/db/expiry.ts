@@ -47,16 +47,18 @@
  * depending on a swept row already being GONE. Adding a read that relies on
  * absence turns the sweep interval into a correctness window.
  *
- * ## Why this file exists while the registry is empty
+ * ## The registry was empty through migration 0000, and is not any more
  *
- * Migration 0000 carries `countries`, `regions`, `cities`, `neighborhoods`,
- * `images` and `addresses`, and not one of them has a TTL index — so an empty
- * registry is the CORRECT state, not an omission. It exists now so the rule
- * above is in the repository before the first table that needs it arrives, and
- * so `__tests__/db/` can already assert the shape of an entry.
+ * None of `countries`, `regions`, `cities`, `neighborhoods`, `images` or
+ * `addresses` carried a TTL index, so an empty registry was the CORRECT state.
+ * `properties` is the first table that needs one, and it needs it more than any
+ * other table in this migration will: `expires_at` is populated on **100% of
+ * production rows**, so the entire listing inventory is under an active scythe
+ * today and would stop being reaped the moment the cutover lands.
  */
 
 import type { ExpirySweepTarget } from '@oxyhq/db/expiry';
+import { properties } from './schema/properties';
 
 export {
   type ExpirySweepOptions,
@@ -69,13 +71,34 @@ export {
 /**
  * Every table whose rows expire, with the retention Mongo's TTL index used.
  *
- * EMPTY, and correct: no table in migration 0000 carried a TTL index. Entries
- * arrive with the tables that need them — `properties.expires_at` (external
- * listing reaping) is the first one due.
- *
  * Every registered column MUST have a supporting btree index: the sweep's
  * predicate is a range scan, and Mongo's TTL index carried the same obligation
  * implicitly. `@oxyhq/db/assert`'s `findUnsupportedExpiryColumns` checks it
  * against the real database.
+ *
+ * **Registering a target is only half of the port.** This list is data; nothing
+ * runs it. `services/cron.ts` must call `sweepAllExpiredRows` with it, and until
+ * that lands the table still grows forever — the registry makes the omission
+ * VISIBLE, it does not close it.
  */
-export const EXPIRY_SWEEP_TARGETS: readonly ExpirySweepTarget[] = [];
+export const EXPIRY_SWEEP_TARGETS: readonly ExpirySweepTarget[] = [
+  {
+    table: properties,
+    column: properties.expiresAt,
+    // Mongo declared `index: { expireAfterSeconds: 0 }`, i.e. the column IS the
+    // deadline rather than a birth date to measure from.
+    retentionSeconds: 0,
+    reason:
+      'Reaps external aggregator listings once the portal ad is assumed stale ' +
+      '(the `pre(\'save\')` hook sets the deadline to now + ' +
+      '`EXTERNAL_PROPERTY_TTL_DAYS`, default 30). INTENT CHECKED, and it is ' +
+      'genuine housekeeping rather than a destructive TTL wearing a ' +
+      'housekeeping name: the row it deletes is a cached copy of somebody ' +
+      'else\'s advertisement, re-created by the next discover pass if the ad ' +
+      'is still up. Deleting it cascades to `property_images`, ' +
+      '`property_documents` and `property_availability_windows` — all of them ' +
+      'copies of the same ad — but NOT to the `images` rows behind those ' +
+      'photos, which is the pre-existing leak the census counted as 948 ' +
+      'orphaned Image documents and which belongs to the image batch, not here.',
+  },
+];

@@ -1,11 +1,18 @@
 /**
  * The protected-column registry.
  *
- * Both halves of it are empty in migration 0000, and that is the correct state —
- * `countries`, `regions`, `cities`, `neighborhoods`, `images` and `addresses`
- * hold no secret. So this file's job today is narrow but real: prove the
- * MECHANISM works before the first secret arrives, rather than discovering it
- * does not while porting `profiles.annual_income`.
+ * Both halves of it were empty in migration 0000 and that was the correct state
+ * — `countries`, `regions`, `cities`, `neighborhoods`, `images` and `addresses`
+ * hold no secret — so this file proved the MECHANISM worked before the first
+ * secret arrived, rather than discovering it did not while porting
+ * `profiles.annual_income`.
+ *
+ * Migration 0001 brings the first real entry,
+ * `properties.accommodation_details_wifi_password`, and with it the assertion
+ * that actually matters: **the exclusion is at the TYPE level.** A runtime
+ * filter would only withhold the columns somebody remembered to filter; the
+ * `describe` block at the bottom of this file fails `tsc` — not jest — if the
+ * password becomes reachable from `publicColumns(properties)`.
  *
  * The two registries are written separately on purpose — one carries reasons for
  * a human, the other is the literal the TYPE SYSTEM reads — so the assertion
@@ -13,12 +20,13 @@
  */
 
 import { getTableColumns, getTableName } from 'drizzle-orm';
+import type { SelectedRow } from '@oxyhq/db';
 import {
   PROTECTED_COLUMNS,
   PROTECTED_COLUMNS_BY_TABLE,
   publicColumns,
 } from '../../db/schema/protectedColumns';
-import { addresses, images } from '../../db/schema';
+import { addresses, images, properties } from '../../db/schema';
 
 describe('protected column registry', () => {
   it('agrees with the type-level registry about what is protected', () => {
@@ -48,6 +56,64 @@ describe('protected column registry', () => {
       .filter((entry) => !(entry.property in getTableColumns(entry.table)))
       .map((entry) => `${getTableName(entry.table)}.${entry.property}`);
     expect(missing).toEqual([]);
+  });
+});
+
+/**
+ * The row shape a serializer sees when it reads a listing the sanctioned way.
+ *
+ * This is the type, not a value: `SelectedRow` turns a drizzle selection object
+ * into the row it produces, honouring nullability. Everything below is checked
+ * by `tsc`, and jest only reports what `tsc` already accepted.
+ */
+const PUBLIC_PROPERTY_COLUMNS = publicColumns(properties);
+type PublicPropertyRow = SelectedRow<typeof PUBLIC_PROPERTY_COLUMNS>;
+
+/**
+ * **A COMPILE-TIME assertion.** If `accommodationDetailsWifiPassword` is
+ * reachable on the public row type, the conditional resolves to `never`,
+ * `= true` is not assignable to it, and `bun run typecheck` fails with the
+ * property named. A serializer that reads the password therefore cannot
+ * compile — which is the whole point of doing this at the type level rather
+ * than filtering at runtime, where it would only stop the columns somebody
+ * remembered.
+ */
+const wifiPasswordIsUnreachable: 'accommodationDetailsWifiPassword' extends keyof PublicPropertyRow
+  ? never
+  : true = true;
+
+/**
+ * The vacuity floor for the assertion above, and it is not theoretical:
+ * `@oxyhq/db`'s own documentation records that widening the registry from a
+ * literal to `ProtectedColumnRegistry` collapses `PublicColumns` to `{}` — at
+ * which point EVERY column becomes type-inaccessible and the check above passes
+ * while protecting nothing. This pins the other side.
+ */
+const descriptionIsStillReachable: 'description' extends keyof PublicPropertyRow ? true : never =
+  true;
+
+describe('the wifi password is excluded at the TYPE level', () => {
+  it('is unreachable on the public row type', () => {
+    // `tsc` has already decided this. The runtime assertion exists so the
+    // constants above are not dead code a linter would remove, taking the
+    // compile-time check with them.
+    expect(wifiPasswordIsUnreachable).toBe(true);
+    expect(descriptionIsStillReachable).toBe(true);
+  });
+
+  it('is absent from the selection at runtime too', () => {
+    const keys = Object.keys(PUBLIC_PROPERTY_COLUMNS);
+    expect(keys).not.toContain('accommodationDetailsWifiPassword');
+    // Vacuity floor: `properties` has 135 columns, so a selection this size is
+    // evidence the exclusion removed one column rather than all of them.
+    expect(keys.length).toBeGreaterThan(120);
+  });
+
+  it('is still a real column on the table, reachable when named explicitly', () => {
+    // Opting in is deliberately unhelped, not impossible: a path that
+    // legitimately needs the password names it, which reads differently from an
+    // ordinary select and stays greppable.
+    expect('accommodationDetailsWifiPassword' in getTableColumns(properties)).toBe(true);
   });
 });
 
