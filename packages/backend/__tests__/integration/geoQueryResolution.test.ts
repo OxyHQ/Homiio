@@ -15,7 +15,12 @@
 
 import { getDb } from '../../db/postgres';
 import { cities, regions } from '../../db/schema';
-import { resolveCityId, resolveRegionId, resolveGeoFilterAddressIds } from '../../services/geoQueryService';
+import {
+  resolveCityId,
+  resolveGeoFilterAddressIds,
+  resolveNeighborhoodId,
+  resolveRegionId,
+} from '../../services/geoQueryService';
 import { resetGeoTables, seedAddress, seedGeoChain, seedNeighborhood } from '../helpers/postgresGeoFixtures';
 
 /** A real uuid v7, the shape `generatedId()` mints for every post-cutover row. */
@@ -85,6 +90,38 @@ describe('resolveRegionId', () => {
     const chain = await seedGeoChain({ regionName: 'Catalonia' });
     await getDb().insert(regions).values({ id: UUID_V7, countryId: chain.countryId, name: 'Aragon' });
     expect(await resolveRegionId(UUID_V7)).toBe(UUID_V7);
+  });
+});
+
+describe('resolveNeighborhoodId', () => {
+  it('resolves by id and by case-insensitive name', async () => {
+    const chain = await seedGeoChain({ cityName: 'Barcelona' });
+    const gracia = await seedNeighborhood({ cityId: chain.cityId, name: 'Gràcia' });
+
+    expect(await resolveNeighborhoodId(gracia)).toBe(gracia);
+    expect(await resolveNeighborhoodId('GRÀCIA')).toBe(gracia);
+    expect(await resolveNeighborhoodId('Nowhere')).toBeNull();
+  });
+
+  it('scopes a NAME to the given city, and never scopes an id', async () => {
+    const barcelona = await seedGeoChain({ cityName: 'Barcelona' });
+    const lisbon = await seedGeoChain({
+      countryCode: 'PT',
+      countryName: 'Portugal',
+      regionName: 'Lisbon',
+      cityName: 'Lisbon',
+    });
+    // The same neighborhood name in two cities — the ordinary case, not a
+    // contrivance: "Centro" exists in most Spanish-speaking cities on earth.
+    const inBarcelona = await seedNeighborhood({ cityId: barcelona.cityId, name: 'Centro' });
+    const inLisbon = await seedNeighborhood({ cityId: lisbon.cityId, name: 'Centro' });
+
+    expect(await resolveNeighborhoodId('centro', { cityId: lisbon.cityId })).toBe(inLisbon);
+    expect(await resolveNeighborhoodId('centro', { cityId: barcelona.cityId })).toBe(inBarcelona);
+
+    // An id already names exactly one row, so the city scope must not apply to
+    // it — scoping could only turn a correct answer into no answer.
+    expect(await resolveNeighborhoodId(inLisbon, { cityId: barcelona.cityId })).toBe(inLisbon);
   });
 });
 

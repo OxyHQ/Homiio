@@ -130,6 +130,51 @@ describe('GET /api/addresses/search', () => {
     expect(res.body.addresses.map((a: { _id: string }) => a._id)).toEqual([inCity]);
   });
 
+  it('matches on the REGION name and on the NEIGHBORHOOD name', async () => {
+    const chain = await seedGeoChain({ cityName: 'Barcelona', regionName: 'Catalonia' });
+    const gracia = await seedNeighborhood({ cityId: chain.cityId, name: 'Gràcia' });
+    const elsewhere = await seedGeoChain({
+      countryCode: 'PT',
+      countryName: 'Portugal',
+      regionName: 'Lisbon',
+      cityName: 'Lisbon',
+    });
+    const inCatalonia = await seedAddress({ chain, street: 'Avinguda Diagonal' });
+    const inGracia = await seedAddress({ chain, street: 'Carrer Gran', neighborhoodId: gracia });
+    await seedAddress({ chain: elsewhere, street: 'Rua Augusta' });
+
+    const byRegion = await request(app).get('/api/addresses/search?query=catalonia').expect(200);
+    expect(byRegion.body.addresses.map((a: { _id: string }) => a._id).sort()).toEqual(
+      [inCatalonia, inGracia].sort(),
+    );
+
+    const byNeighborhood = await request(app).get('/api/addresses/search?query=gràcia').expect(200);
+    expect(byNeighborhood.body.addresses.map((a: { _id: string }) => a._id)).toEqual([inGracia]);
+  });
+
+  it('ORs the street and geo matches — a street-only hit is never dropped', async () => {
+    // The row that matches ONLY on `street`, in a city the term does not name.
+    const elsewhere = await seedGeoChain({
+      countryCode: 'PT',
+      countryName: 'Portugal',
+      regionName: 'Lisbon',
+      cityName: 'Lisbon',
+    });
+    const streetOnly = await seedAddress({ chain: elsewhere, street: 'Travessa de Barcelona' });
+    // The row that matches ONLY on geo, whose street says nothing about the term.
+    const chain = await seedGeoChain({ cityName: 'Barcelona' });
+    const geoOnly = await seedAddress({ chain, street: 'Avinguda Diagonal' });
+
+    const res = await request(app).get('/api/addresses/search?query=Barcelona').expect(200);
+
+    // Both, or the OR has quietly become an AND — or a join, which drops the
+    // street-only row for exactly the same reason.
+    expect(res.body.addresses.map((a: { _id: string }) => a._id).sort()).toEqual(
+      [streetOnly, geoOnly].sort(),
+    );
+    expect(res.body.pagination.totalItems).toBe(2);
+  });
+
   it('400s without a query', async () => {
     await request(app).get('/api/addresses/search').expect(400);
   });

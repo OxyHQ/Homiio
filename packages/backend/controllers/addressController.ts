@@ -15,7 +15,7 @@
  */
 
 import { Request, Response } from 'express';
-import { count, desc, eq, ilike, inArray, or, type SQL } from 'drizzle-orm';
+import { count, desc, eq, ilike, or, type SQL } from 'drizzle-orm';
 
 import { getDb } from '../db/postgres';
 import { escapeLikePattern } from '../db/likePattern';
@@ -31,7 +31,7 @@ import {
 import { getErrorName, getValidationMessages } from '../utils/errors';
 import { logger as appLogger } from '../middlewares/logging';
 import { attachAddressGeoNames, type SerializableAddress } from '../services/propertyAddressSerializer';
-import { resolveGeoFilterAddressIds } from '../services/geoQueryService';
+import { resolveCityId, resolveNeighborhoodId, resolveRegionId } from '../services/geoQueryService';
 
 /**
  * Response helpers
@@ -159,25 +159,33 @@ export const searchAddresses = async (req: Request, res: Response) => {
     const skip = (Number(page) - 1) * Number(limit);
     const term = String(query);
 
-    // Geo is relational: match the building-level `street` directly, and resolve
-    // the term against the canonical city/region/neighborhood rows to include
-    // addresses in any matching place (no free-text city on the address).
-    const [byCity, byRegion, byNeighborhood] = await Promise.all([
-      resolveGeoFilterAddressIds({ city: term }),
-      resolveGeoFilterAddressIds({ state: term }),
-      resolveGeoFilterAddressIds({ neighborhood: term }),
+    // Geo is relational, so the term is resolved against the canonical
+    // city/region/neighborhood rows — but the SCOPE it produces is three foreign
+    // keys ON `addresses`, which is the table being searched. So this resolves
+    // three ids and ORs three ordinary predicates; it deliberately does NOT go
+    // through `resolveGeoFilterAddressIds`, which exists to hand an address-id
+    // list to a Mongo PROPERTY query. Materialising an entire city's addresses
+    // only to match them against their own table buys nothing and costs a scan.
+    const [cityId, regionId, neighborhoodId] = await Promise.all([
+      resolveCityId(term),
+      resolveRegionId(term),
+      resolveNeighborhoodId(term),
     ]);
-    const geoAddressIds = [...new Set([...(byCity ?? []), ...(byRegion ?? []), ...(byNeighborhood ?? [])])];
 
     // `{ street: { $regex: query, $options: 'i' } }` is an unanchored substring
     // match; `ILIKE '%…%'` is its port, and the term is escaped because `%` and
     // `_` are LIKE metacharacters. Without the escape a user typing `100%` would
     // silently match every street.
     const streetMatch = ilike(addresses.street, `%${escapeLikePattern(term)}%`);
-    const where: SQL =
-      geoAddressIds.length > 0
-        ? or(streetMatch, inArray(addresses.id, geoAddressIds)) ?? streetMatch
-        : streetMatch;
+
+    // An OR, and that is load-bearing: a row that matched only on `street` must
+    // survive. Nothing here may become a join for the same reason — an inner
+    // join to `cities` would silently drop every street-only match.
+    const geoMatches: SQL[] = [];
+    if (cityId) geoMatches.push(eq(addresses.cityId, cityId));
+    if (regionId) geoMatches.push(eq(addresses.regionId, regionId));
+    if (neighborhoodId) geoMatches.push(eq(addresses.neighborhoodId, neighborhoodId));
+    const where: SQL = or(streetMatch, ...geoMatches) ?? streetMatch;
 
     const [rows, totals] = await Promise.all([
       selectAddressWithGeoNames({

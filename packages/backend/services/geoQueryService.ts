@@ -99,6 +99,37 @@ export async function resolveRegionId(state: string): Promise<string | null> {
 }
 
 /**
+ * Resolve a neighborhood query (id or name) to a single neighborhood id, or null
+ * if unknown.
+ *
+ * `cityId` scopes the NAME side only, never the id side — matching the Mongo
+ * filter this replaces, where an explicitly supplied neighborhood id was looked
+ * up unscoped. That asymmetry is deliberate: an id already names exactly one
+ * row, so scoping it could only ever turn a correct answer into no answer.
+ */
+export async function resolveNeighborhoodId(
+  neighborhood: string,
+  options: { cityId?: string | null } = {},
+): Promise<string | null> {
+  const value = asTrimmed(neighborhood);
+  if (!value) return null;
+  const cityId = options.cityId ?? null;
+  const rows = await getDb()
+    .select({ id: neighborhoods.id })
+    .from(neighborhoods)
+    .where(sql`(
+      ${neighborhoods.id} = ${value}
+      or (
+        lower(${neighborhoods.name}) = lower(${value})
+        ${cityId ? sql`and ${neighborhoods.cityId} = ${cityId}` : sql``}
+      )
+    )`)
+    .orderBy(sql`(${neighborhoods.id} = ${value}) desc`, neighborhoods.id)
+    .limit(1);
+  return rows[0]?.id ?? null;
+}
+
+/**
  * Resolve a city/state/neighborhood/countryCode filter to the set of address
  * ids that satisfy ALL provided constraints.
  *
@@ -114,8 +145,15 @@ export async function resolveRegionId(state: string): Promise<string | null> {
  * **This function is scheduled for DELETION, not further work** (batch 4): it
  * loads an entire city's addresses into one `$in`, which the property read path
  * replaces with a real join. It is ported rather than left behind only because
- * `addresses` now lives in Postgres and its five remaining callers still read
- * Mongo properties keyed by these ids.
+ * `addresses` now lives in Postgres and its remaining callers still read Mongo
+ * properties keyed by these ids.
+ *
+ * **Its one non-Property caller is gone.** `addressController.searchAddresses`
+ * used it to turn a search term into an address-id list and then match
+ * `_id IN (…)` against the very table it was searching. There is no Property in
+ * that query, so the id list was never buying anything: the geo scope is three
+ * foreign keys ON `addresses`, and it is now three ordinary `OR` predicates
+ * there. What is left here is the Property-filter shape, and only that.
  */
 export async function resolveGeoFilterAddressIds(input: GeoFilterInput): Promise<string[] | null> {
   const conditions: SQL[] = [];
@@ -142,25 +180,10 @@ export async function resolveGeoFilterAddressIds(input: GeoFilterInput): Promise
 
   const neighborhoodValue = asTrimmed(input.neighborhood);
   if (neighborhoodValue) {
-    // Neighborhood is scoped to the resolved city when one was given. Same
-    // id-or-name resolution as the city/region resolvers above, for the same
-    // reason — with the city scope applied only to the NAME side, matching the
-    // Mongo filter this replaces (an explicit neighborhood id was never scoped).
-    const neighborhoodMatch = sql`(
-      ${neighborhoods.id} = ${neighborhoodValue}
-      or (
-        lower(${neighborhoods.name}) = lower(${neighborhoodValue})
-        ${resolvedCityId ? sql`and ${neighborhoods.cityId} = ${resolvedCityId}` : sql``}
-      )
-    )`;
-    const rows = await getDb()
-      .select({ id: neighborhoods.id })
-      .from(neighborhoods)
-      .where(neighborhoodMatch)
-      .orderBy(sql`(${neighborhoods.id} = ${neighborhoodValue}) desc`, neighborhoods.id)
-      .limit(1);
-    if (!rows[0]) return null;
-    conditions.push(eq(addresses.neighborhoodId, rows[0].id));
+    // Scoped to the resolved city when one was given.
+    const neighborhoodId = await resolveNeighborhoodId(neighborhoodValue, { cityId: resolvedCityId });
+    if (!neighborhoodId) return null;
+    conditions.push(eq(addresses.neighborhoodId, neighborhoodId));
   }
 
   if (conditions.length === 0) return null;
