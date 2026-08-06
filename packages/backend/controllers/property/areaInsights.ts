@@ -34,7 +34,7 @@ import type {
   AreaPricePerSqm,
   AreaNeighborhoodVsCity,
 } from '@homiio/shared-types';
-import type { IProperty } from '../../models/Property';
+import type { IProperty } from '../../models/documentTypes';
 import type { IAddress } from '../../models/Address';
 
 import * as models from '../../models';

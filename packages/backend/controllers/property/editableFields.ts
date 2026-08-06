@@ -10,7 +10,7 @@
  * system-managed (`views`, `rating`, timestamps), or simply rejected.
  *
  * Keep this list in sync with the user-facing fields of the Property schema in
- * `models/Property.ts`. Owner/system fields are intentionally absent.
+ * `models/schemas/PropertySchema.ts`. Owner/system fields are intentionally absent.
  */
 
 /**

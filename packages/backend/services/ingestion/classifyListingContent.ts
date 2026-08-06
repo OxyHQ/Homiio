@@ -25,7 +25,7 @@
  */
 
 import { deaccent } from '@homiio/listing-providers';
-import type { IProperty } from '../../models/Property';
+import type { IProperty } from '../../models/documentTypes';
 
 /** Classifier output — the schema authority is `IProperty['listingFlags']`. */
 export type ListingFlags = NonNullable<IProperty['listingFlags']>;

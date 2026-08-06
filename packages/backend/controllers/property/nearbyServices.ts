@@ -23,7 +23,7 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import { Types, type Model } from 'mongoose';
-import type { IProperty } from '../../models/Property';
+import type { IProperty } from '../../models/documentTypes';
 import type { IAddress } from '../../models/Address';
 import {
   getNearbyServices,

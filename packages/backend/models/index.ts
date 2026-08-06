@@ -6,13 +6,12 @@
  * `mongoose.model()` cannot infer from a schema literal.
  *
  * Document interfaces live in `./documentTypes` (lightweight) or beside the
- * TS-native model files (`./Property`, `./Address`, `./Review`).
+ * TS-native model files (`./Address`, `./Review`).
  *
  * The `module.exports` aggregate at the bottom is a bridge for the ~30 files
  * that still do `require('../models')`; it goes when they do.
  */
 
-import type { IProperty, IPropertyModel } from './Property';
 import type { IAddress, IAddressModel } from './Address';
 import type { IReview, IReviewModel } from './Review';
 import type { IModerationReport } from './ModerationReport';
@@ -20,6 +19,8 @@ import type { IModerationOutbox } from './ModerationOutbox';
 import type { IModerationEvent } from './ModerationEvent';
 import type { IModerationEnforcement } from './ModerationEnforcement';
 import type {
+  IProperty,
+  IPropertyModel,
   IBilling,
   IBillingModel,
   ILease,

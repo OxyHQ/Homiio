@@ -8,7 +8,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { telegramService } from '../services';
 import { AppError, successResponse } from '../middlewares/errorHandler';
 import { Property } from '../models';
-import type { IProperty } from '../models/Property';
+import type { IProperty } from '../models/documentTypes';
 import config from '../config';
 import { resolveAddressDisplay } from '../services/geoDisplayService';
 import { resolveGeoFilterAddressIds } from '../services/geoQueryService';

@@ -60,8 +60,12 @@ let mongoServer: MongoMemoryReplSet | undefined;
 beforeAll(async () => {
   mongoServer = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
   const uri = mongoServer.getUri();
+  // `MONGODB_URI` ONLY. `DATABASE_URL` used to be set here too, back when
+  // `config.database.url` fell back to it — it now names the POSTGRES database
+  // (`jest.setupWorkerDatabase.cjs` points it at this worker's throwaway one),
+  // so writing a `mongodb://` URI over it would make every Postgres suite
+  // connect to the memory server and fail on a protocol mismatch.
   process.env.MONGODB_URI = uri;
-  process.env.DATABASE_URL = uri;
   await mongoose.connect(uri);
 });
 

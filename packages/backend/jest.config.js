@@ -1,3 +1,11 @@
+const { computeMaxWorkers } = require('./jest.workerCount.cjs');
+
+// Global setup provisions exactly one throwaway Postgres database per worker, so
+// this number and the one it computes must come from the same place — a worker
+// jest forks past the end of the manifest would fail on a database that was
+// never created. See jest.workerCount.cjs.
+const MAX_WORKERS = computeMaxWorkers();
+
 /** @type {import('ts-jest').JestConfigWithTsJest} */
 module.exports = {
   preset: 'ts-jest',
@@ -7,8 +15,14 @@ module.exports = {
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
   modulePathIgnorePatterns: ['<rootDir>/dist/'],
   testTimeout: 30000,
-  maxWorkers: 2,
+  maxWorkers: MAX_WORKERS,
   workerIdleMemoryLimit: '512MB',
+  // Provisions one throwaway, fully-migrated Postgres database per worker, then
+  // drops them all. A reachable Postgres is a HARD prerequisite of this suite —
+  // see jest.globalSetup.ts for why skipping is not an option.
+  globalSetup: '<rootDir>/jest.globalSetup.ts',
+  globalTeardown: '<rootDir>/jest.globalTeardown.ts',
+  setupFiles: ['<rootDir>/jest.setupWorkerDatabase.cjs'],
   setupFilesAfterEnv: ['<rootDir>/__tests__/jest.setup.ts'],
   moduleNameMapper: {
     '^@homiio/shared-types$': '<rootDir>/../shared-types/src',

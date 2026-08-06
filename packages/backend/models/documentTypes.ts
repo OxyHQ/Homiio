@@ -10,11 +10,21 @@
  * any of these is a non-breaking change.
  */
 
-import type { Document, Model, Types } from 'mongoose';
+import type { Document, Model, Query, Types } from 'mongoose';
 import type {
+  AvailabilityWindowStatus,
+  CancellationPolicy,
+  ExchangeMode,
+  HousingType,
   ImageEntityType,
   ImageVariantKeys,
   ImageVariantUrls,
+  LayoutType,
+  OfferingType,
+  PropertyPriceEthics,
+  PropertyStatus,
+  PropertyType,
+  UtilitiesIncluded,
 } from '@homiio/shared-types';
 
 type Id = Types.ObjectId;
@@ -29,6 +39,227 @@ type Loose = Record<string, unknown>;
  */
 export interface Nested {
   [key: string]: Nested | undefined;
+}
+
+// ---------- Property ----------
+//
+// The runtime model lives in `models/schemas/PropertySchema.ts`; these are the
+// types callers annotate against. They used to sit in a `models/Property.ts`
+// that ALSO called `model('Property', …)` a second time — a duplicate
+// registration that never fired only because every one of its importers used
+// `import type`, so TypeScript erased the module entirely. That is a live
+// `OverwriteModelError` waiting for the first value import, and it meant the
+// authoritative schema was typed against an interface declared next to a rival
+// schema nobody ran. The types moved here, where the rest of this package's
+// document interfaces already live, and that file is gone.
+
+export interface IProperty extends Document {
+  _id: Id;
+  oxyUserId?: string;
+  addressId: Id;
+  source?: string;
+  sourceId?: string;
+  sourceUrl?: string;
+  isExternal?: boolean;
+  externalContact?: {
+    phone?: string;
+    email?: string;
+    whatsapp?: string;
+    name?: string;
+    agencyName?: string;
+    kind?: 'owner' | 'agency' | 'private' | 'unknown';
+  };
+  /**
+   * Restriction/nuance flags derived from the listing's free text at ingest by
+   * `classifyListingContent` (external listings only). Portals bury these in
+   * prose instead of structured fields; only flags that fire are present.
+   */
+  listingFlags?: {
+    /** Rental restricted to students ("solo estudiantes", "students only"). */
+    studentsOnly?: boolean;
+    /** Advertised as a flat but the body rents a single room / a share. */
+    roomNotFullUnit?: boolean;
+    /** Seasonal / temporary lease ("temporada", "short let"), not a home. */
+    temporaryOnly?: boolean;
+    /** Restricted to one gender ("solo chicas", "women only"). */
+    genderRestricted?: boolean;
+    /** Requires proof of employment/income ("nómina", "working professionals only"). */
+    workersOnly?: boolean;
+    /** An agency fee is payable by the tenant/buyer ("honorarios de agencia"). */
+    agencyFeePayable?: boolean;
+    /** Pets not allowed ("no se admiten mascotas", "no pets"). */
+    noPets?: boolean;
+    /** Smoking not allowed ("no fumadores", "non-smoking"). */
+    noSmoking?: boolean;
+    /** No couples ("no parejas", "no couples"). */
+    noCouples?: boolean;
+    /** UK: no housing benefit ("no DSS"). */
+    noDSS?: boolean;
+    /** Best-effort detected description language (ISO 639-1). */
+    detectedLanguage?: 'es' | 'ca' | 'en' | 'fr' | 'nl' | 'de' | 'it';
+  };
+  expiresAt?: Date;
+  type: PropertyType;
+  housingType?: HousingType;
+  layoutType?: LayoutType;
+  description?: string;
+  squareFootage?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  /** The single source of truth for how this listing is offered. */
+  offerings: OfferingType[];
+  /** Monthly-rent pricing, present iff `offerings` includes `LONG_TERM_RENT`. */
+  longTermRent?: {
+    monthlyAmount: number;
+    currency: string;
+    deposit?: number;
+    applicationFee?: number;
+    lateFee?: number;
+    utilities?: UtilitiesIncluded;
+  };
+  /** Per-night pricing, present iff `offerings` includes `SHORT_TERM_RENT`. */
+  shortTermRent?: {
+    nightlyRate: number;
+    currency: string;
+    cleaningFee?: number;
+    serviceFee?: number;
+    taxesPercent?: number;
+    minNights?: number;
+    maxNights?: number;
+    instantBook?: boolean;
+    deposit?: number;
+  };
+  amenities?: string[];
+  images?: Array<{
+    /** Reference to the canonical Image document (entityType 'property'). */
+    imageId?: Id;
+    /** Ready-to-render URL — the stored medium variant. Preserves the legacy shape. */
+    url: string;
+    caption?: string;
+    isPrimary?: boolean;
+    order?: number;
+    /** All processed variant URLs, for callers that want a specific rendition. */
+    urls?: {
+      original?: string;
+      small?: string;
+      medium?: string;
+      large?: string;
+    };
+  }>;
+  /**
+   * Denormalized flag: true when `images` holds at least one entry. Kept in
+   * lock-step with `images` by the schema pre-save / pre-update hooks so
+   * discovery feeds can rank image-bearing listings first with an index-backed
+   * sort. Always derived from `images` — never written directly.
+   */
+  hasImages?: boolean;
+  status: PropertyStatus;
+  floor?: number;
+  hasElevator?: boolean;
+  parkingSpaces?: number;
+  yearBuilt?: number;
+  furnishedStatus?: 'furnished' | 'unfurnished' | 'partially_furnished' | 'not_specified';
+  utilitiesIncluded?: boolean;
+  petFriendly?: boolean;
+  petPolicy?: 'allowed' | 'not_allowed' | 'case_by_case' | 'not_specified';
+  petFee?: number;
+  parkingType?: 'none' | 'street' | 'assigned' | 'garage';
+  hasBalcony?: boolean;
+  hasGarden?: boolean;
+  proximityToTransport?: boolean;
+  proximityToSchools?: boolean;
+  proximityToShopping?: boolean;
+  availableFrom?: Date;
+  leaseTerm?: string;
+  maxGuests?: number;
+  smokingAllowed?: boolean;
+  partiesAllowed?: boolean;
+  guestsAllowed?: boolean;
+  // Short-term (vacation) calendar
+  availabilityWindows?: Array<{
+    start: Date;
+    end: Date;
+    status: AvailabilityWindowStatus;
+  }>;
+  cancellationPolicy?: CancellationPolicy;
+  sale?: {
+    price: number;
+    currency: string;
+    pricePerSqm?: number;
+    estimatedYield?: number;
+    isPriceReduced?: boolean;
+    chainStatus?: 'no_chain' | 'chain' | 'unknown';
+  };
+  exchange?: {
+    mode: ExchangeMode;
+    availabilityWindows: Array<{
+      start: Date;
+      end: Date;
+      status: AvailabilityWindowStatus;
+    }>;
+    minStay?: number;
+    maxStay?: number;
+    welcomeNote?: string;
+    languages?: string[];
+    mealsIncluded?: boolean;
+    requiresReciprocity?: boolean;
+  };
+  isVerified?: boolean;
+  isEcoFriendly?: boolean;
+  views?: number;
+  lastSaved?: Date;
+  /** Soft-delete timestamp: set when the listing is archived via deleteProperty. */
+  deletedAt?: Date | null;
+  /**
+   * Community-moderation state, written only by the CrowdSource enforcement
+   * service. Never present in any editable-fields allowlist — see the schema.
+   */
+  moderation?: {
+    restricted?: boolean;
+    restrictedAt?: Date;
+    restrictedByDecisionId?: string;
+  };
+  parentPropertyId?: Id;
+  rating?: {
+    average: number;
+    count: number;
+  };
+  /** Partner attribution: set on create when the listing originated from a partner referral link. */
+  sourcedByPartner?: Id;
+  /** Audit copy of the referral code captured at create time (partners may rotate codes). */
+  sourcedByReferralCode?: string;
+  /** Relational Agency link (resolved from portal contact agency name on external listings). */
+  agencyId?: Id;
+  /** Server-computed ethical + market price score. */
+  priceEthics?: Omit<PropertyPriceEthics, 'scoredAt'> & { scoredAt: Date };
+  /** Populated runtime virtual added by the `toJSON`/`toObject` transform when `addressId` is populated. */
+  address?: Record<string, unknown>;
+  /** Auto-managed by `timestamps: true`. */
+  createdAt: Date;
+  /** Auto-managed by `timestamps: true`. */
+  updatedAt: Date;
+}
+
+/**
+ * Mongoose `Query` shape that the geospatial statics return. `findNearby` /
+ * `findWithinRadius` are written as `async function` over an early-return
+ * empty array, but their non-empty path returns a `Property.find(...).populate(...)`
+ * Query. Call sites chain `.find()`, `.skip()`, `.limit()`, `.clone()`,
+ * `.countDocuments()` on the result — so we expose the Query type, which is a
+ * thenable that callers can also `await`.
+ */
+export type PropertyQuery = Query<IProperty[], IProperty>;
+
+/** Custom statics defined on the runtime Property schema. */
+export interface IPropertyModel extends Model<IProperty> {
+  findByOxyUser(oxyUserId: string, options?: Record<string, unknown>): PropertyQuery;
+  findAvailable(filters?: Record<string, unknown>): PropertyQuery;
+  search(searchParams: Record<string, unknown>): Promise<IProperty[]>;
+  /** Returns a chainable Query (or an empty array when no addresses match). */
+  findNearby(longitude: number, latitude: number, maxDistance?: number): PropertyQuery;
+  /** Returns a chainable Query (or an empty array when no addresses match). */
+  findWithinRadius(longitude: number, latitude: number, radiusInMeters: number): PropertyQuery;
+  findInPolygon(coordinates: number[][]): PropertyQuery;
 }
 
 // ---------- Billing ----------

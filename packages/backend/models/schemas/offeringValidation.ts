@@ -1,9 +1,8 @@
 /**
- * Per-offering pricing validation — the single source of truth shared by both
- * Property schema files (`models/Property.ts` runtime type + this CommonJS
- * runtime schema) and the create/update controllers, so the "offerings must
- * equal the present priced blocks, each with a positive price" rule can never
- * drift between layers.
+ * Per-offering pricing validation — the single source of truth shared by the
+ * Property schema (`models/schemas/PropertySchema.ts`) and the create/update
+ * controllers, so the "offerings must equal the present priced blocks, each
+ * with a positive price" rule can never drift between layers.
  *
  * Pure & dependency-free apart from the `OfferingType`/`ExchangeMode` enums.
  */

@@ -12,7 +12,7 @@ import {
   type EthicalPricingCharacteristics,
 } from '@homiio/shared-types';
 import { Property } from '../models';
-import type { IProperty } from '../models/Property';
+import type { IProperty } from '../models/documentTypes';
 import { logger } from '../middlewares/logging';
 import { getErrorMessage } from '../utils/errors';
 import {
