@@ -21,6 +21,135 @@ AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-}"
 AWS_PARTITION="${AWS_PARTITION:-aws}"
 POST_DEPLOY_SMOKE_SCRIPT="${POST_DEPLOY_SMOKE_SCRIPT:-}"
 POST_DEPLOY_TASK_COMMAND_JSON="${POST_DEPLOY_TASK_COMMAND_JSON:-}"
+# Deploy a service that is deliberately scaled to ZERO — and say which one.
+#
+# Every ordinary deploy must refuse a zero-count service: it means capacity was
+# lost, and rolling a new image onto nothing produces a green deploy and an
+# outage. That guard stays, and this does not weaken it.
+#
+# The exception it exists for is the Mongo->Postgres cutover (issue #281). Both
+# Homiio services are stopped at desiredCount 0 for the whole window ON PURPOSE,
+# because the running image is Mongo-backed: bringing either up after the copy
+# has finished would let real user writes land in the store being abandoned, and
+# the copy is not incremental, so nothing recovers them. The worker is the one
+# that WRITES, which is why it is stopped first and why an authorisation for one
+# service must not silently cover the other. Downtime is acceptable there;
+# losing writes is not.
+#
+# It names the SERVICE rather than being a boolean because a bare `true` left in
+# a workflow file or pasted out of a runbook authorises a zero-count deploy of
+# ANYTHING, and the value that would be wrong is exactly the value that is
+# easiest to copy. Homiio has TWO services (`homiio`, `homiio-worker`), so that
+# distinction is load-bearing here in a way it was not for a single-service repo.
+ALLOW_ZERO_DESIRED_COUNT="${ALLOW_ZERO_DESIRED_COUNT:-}"
+
+# Whether THIS run may proceed against a zero-count service.
+#
+# The value is `<service>:<YYYY-MM-DD>` and BOTH halves must hold: the service
+# must be this one, and the date must not have passed. Every other shape refuses.
+#
+# The expiry is what keeps this from being a permanent reduction in protection.
+# Without it, a variable set for one window and never removed silently disarms
+# the zero-count guard forever, and the failure only shows up the day somebody
+# scales to zero for an unrelated reason and a deploy reports green onto no
+# capacity. With it, a forgotten variable disarms ITSELF the day after.
+#
+# It fails toward REFUSING, which is the direction that matters: if the window
+# slips past the expiry the deploy refuses loudly, mid-window, and is fixed in
+# thirty seconds by updating the variable. It can never fail toward permitting.
+zero_desired_count_allowed=false
+zero_optin_expiry=""
+if [[ -n "$ALLOW_ZERO_DESIRED_COUNT" ]]; then
+  if [[ ! "$ALLOW_ZERO_DESIRED_COUNT" =~ ^[A-Za-z0-9_-]+:[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+    echo "::error::ALLOW_ZERO_DESIRED_COUNT is set but malformed: expected <service>:<YYYY-MM-DD>, e.g. $APP:$(date -u -d '+2 days' +%F). Refusing to treat an unparseable authorisation as permission."
+    exit 1
+  fi
+  zero_optin_service="${ALLOW_ZERO_DESIRED_COUNT%%:*}"
+  zero_optin_expiry="${ALLOW_ZERO_DESIRED_COUNT#*:}"
+  # A regex-valid but NONEXISTENT date (2026-13-45) would sort after every real
+  # date and therefore never expire — fail-open, the one direction this must not
+  # have. Round-tripping it through `date` rejects that.
+  if ! zero_optin_parsed="$(date -u -d "$zero_optin_expiry" +%F 2>/dev/null)" ||
+     [[ "$zero_optin_parsed" != "$zero_optin_expiry" ]]; then
+    echo "::error::ALLOW_ZERO_DESIRED_COUNT carries an invalid date: $zero_optin_expiry. Refusing."
+    exit 1
+  fi
+  zero_optin_today="$(date -u +%F)"
+  # ISO dates compare correctly as strings; the expiry day itself is still valid.
+  if [[ "$zero_optin_expiry" < "$zero_optin_today" ]]; then
+    echo "::error::ALLOW_ZERO_DESIRED_COUNT expired on $zero_optin_expiry (today is $zero_optin_today). If this window is still running, update the variable; do not delete the expiry."
+    exit 1
+  fi
+  if [[ "$zero_optin_service" == "$APP" ]]; then
+    zero_desired_count_allowed=true
+  fi
+fi
+
+# Which ECS service's deploy lane runs the one-shot migrations.
+#
+# Homiio's two services share ONE image, and `deploy-aws.yml` rolls the API and
+# then the worker through this same script. Left unset, `RUN_MIGRATIONS=true`
+# would therefore run the migrator TWICE per release — wasted at best, and at
+# worst a race: `db/migrate.ts` takes no cross-process advisory lock, and neither
+# does drizzle (recorded as a precondition carried out of Lote 0). Nothing can
+# run two migrators concurrently today; the deploy is the first thing that could.
+#
+# Naming the owning SERVICE, rather than trusting each lane to set the flag
+# correctly, is what makes a job-level `RUN_MIGRATIONS: true` safe: the worker
+# lane sees the same flag and still declines. Unset keeps the historical
+# behaviour for any single-service caller.
+MIGRATION_SERVICE="${MIGRATION_SERVICE:-}"
+
+# What `RUN_MIGRATIONS=true` runs, in order, each as its own one-shot task on the
+# image being rolled out. A non-zero exit from any of them stops the release
+# before `update-service`.
+#
+# ORDER IS LOAD-BEARING, AND THE MIGRATION RUNS BEFORE `update-service`.
+#
+# A task that boots against a database the migrations never reached connects,
+# answers the `/health` check, is handed traffic by the target group, and only
+# THEN fails every query — the damage lands after the point of no return rather
+# than before it. Run first, a failure costs nothing, because nothing has been
+# routed yet.
+#
+# `node`, NOT `bun`: the production image runs `CMD ["node",
+# "packages/backend/dist/server.js"]` and its runtime stage installs production
+# dependencies only, so there is no bun in it. The path is `dist/db/migrate.js`
+# because `tsconfig.build.json` EXCLUDES `scripts/` from the emit, which is why
+# the migrator lives at `packages/backend/db/migrate.ts` in the first place.
+#
+# This replaces a hardcoded `["bun","packages/backend/dist/scripts/migrate.js"]`
+# that was wrong on both counts and named a file that has never existed in this
+# repository — `RUN_MIGRATIONS=true` has therefore never once worked here.
+#
+# `--phase=pre` is the side of the cutover this runs on; the `post` phase runs
+# AFTER the rollout, as a separate invocation, and is not part of this table.
+#
+# THE POPULATION FLOOR IS THE ENTRY THAT IS NOT HERE YET. `db/assertPostgresPopulated.ts`
+# ships in this batch but is deliberately NOT wired in, because it asserts that
+# Postgres is AUTHORITATIVE — false before the cutover, and false again the
+# moment we exercise the planned rollback to Mongo. Landing it live now would
+# block every deploy from here to the window, and landing it live and forgetting
+# it would block every deploy after a rollback, for a reason nothing about that
+# rollback would lead anyone to look for. It has no env flag on purpose: a flag
+# is a second thing to remember, and the guard's lifetime should equal the
+# lifetime of the claim it makes. The cutover commit (Lote 13) appends this entry
+# verbatim, and reverting that commit removes it again:
+#
+#   ,
+#   {
+#     "label": "Postgres population floor",
+#     "command": ["node", "packages/backend/dist/db/assertPostgresPopulated.js"]
+#   }
+#
+# It goes LAST because it counts rows, so the schema has to exist before there is
+# anything to count.
+MIGRATION_TASK_COMMANDS_JSON='[
+  {
+    "label": "Postgres migration",
+    "command": ["node", "packages/backend/dist/db/migrate.js", "--target-database=homiio", "--phase=pre"]
+  }
+]'
 # Exit code a smoke script uses to say "this failed, and rolling back cannot fix
 # it" — a check that crosses a boundary this deploy does not own (a CDN in front
 # of the origin, another service the route consults). Reverting the image for one
@@ -44,6 +173,23 @@ fi
 if [[ "$RUN_MIGRATIONS" != "true" && "$RUN_MIGRATIONS" != "false" ]]; then
   echo "::error::RUN_MIGRATIONS must be either 'true' or 'false'."
   exit 1
+fi
+
+# Does THIS lane own the migration one-shots?
+#
+# SKIP rather than refuse, and the direction is deliberate. The API lane rolls
+# first and has already applied the schema by the time the worker lane starts, so
+# skipping here is never wrong. Refusing would exit 1 on the worker, stranding it
+# on the old image with the API already migrated — the exact class of failure
+# this whole batch exists to prevent, reintroduced by the guard meant to prevent
+# it. It is announced rather than silent, because a check nobody can see ran is
+# indistinguishable from one that did not.
+migrations_run_in_this_lane="$RUN_MIGRATIONS"
+if [[ "$RUN_MIGRATIONS" == "true" &&
+      -n "$MIGRATION_SERVICE" &&
+      "$MIGRATION_SERVICE" != "$APP" ]]; then
+  migrations_run_in_this_lane=false
+  echo "::notice::Skipping migrations for $APP: MIGRATION_SERVICE=$MIGRATION_SERVICE owns them, and both services share one image. The migrator holds no cross-process lock, so it runs exactly once per release."
 fi
 if [[ -n "$POST_DEPLOY_SMOKE_SCRIPT" && ! -f "$POST_DEPLOY_SMOKE_SCRIPT" ]]; then
   echo "::error::POST_DEPLOY_SMOKE_SCRIPT does not exist: $POST_DEPLOY_SMOKE_SCRIPT"
@@ -102,10 +248,20 @@ if [[ -z "$current_task_definition" ]]; then
 fi
 
 service_desired_count="$(jq -r '.services[0].desiredCount // empty' <<<"$service_json")"
-if ! [[ "$service_desired_count" =~ ^[0-9]+$ ]] ||
-   (( service_desired_count < 1 )); then
-  echo "::error::ECS service $APP must have a positive desiredCount before deployment (current: ${service_desired_count:-missing}). Scale the service up explicitly before retrying."
+# Split from the zero-count check below on purpose. A non-numeric or missing
+# desiredCount is ECS telling us it does not know the answer, and NO
+# authorisation covers that — the exemption is for a count deliberately set to
+# zero, not for an unreadable one.
+if ! [[ "$service_desired_count" =~ ^[0-9]+$ ]]; then
+  echo "::error::ECS service $APP reported a non-numeric desiredCount (${service_desired_count:-missing}); refusing to deploy."
   exit 1
+fi
+if (( service_desired_count < 1 )) && [[ "$zero_desired_count_allowed" != true ]]; then
+  echo "::error::ECS service $APP must have a positive desiredCount before deployment (current: ${service_desired_count:-missing}). Scale the service up explicitly before retrying, or set ALLOW_ZERO_DESIRED_COUNT=$APP:<YYYY-MM-DD> if this is a deliberate zero-capacity deploy."
+  exit 1
+fi
+if (( service_desired_count < 1 )); then
+  echo "::warning::Deploying $APP at desiredCount=0, authorised by ALLOW_ZERO_DESIRED_COUNT=$ALLOW_ZERO_DESIRED_COUNT (expires $zero_optin_expiry). The rollout will complete with zero running tasks and the service will serve NOTHING until it is scaled up."
 fi
 
 task_definition_file="$(mktemp)"
@@ -197,13 +353,22 @@ wait_for_service_rollout() {
               "$desired" =~ ^[0-9]+$ &&
               "$service_desired" =~ ^[0-9]+$ ]]; then
         echo "::warning::ECS returned non-numeric task counts for the $label rollout; retrying."
-      elif (( service_desired < 1 )); then
+      elif (( service_desired < 1 )) && [[ "$zero_desired_count_allowed" != true ]]; then
         echo "::error::ECS service $APP reached desiredCount=0 during the $label rollout."
         return 1
       elif [[ "$rollout_state" == "COMPLETED" ]]; then
-        if (( desired < 1 )); then
+        # All THREE zero-checks need the same exemption. Under an authorised
+        # zero-count deploy the steady state genuinely IS zero tasks, so a bypass
+        # applied only to the pre-check would let the release start and then kill
+        # it mid-rollout — later, and harder to read, than refusing up front, and
+        # with the cutover window already burning.
+        if (( desired < 1 )) && [[ "$zero_desired_count_allowed" != true ]]; then
           echo "::error::ECS $label rollout for $APP completed at desiredCount=0; refusing to accept a zero-task steady state."
           return 1
+        fi
+        if (( desired < 1 )); then
+          echo "$label rollout for $APP completed at desiredCount=0, as authorised."
+          return 0
         fi
         if [[ "$running" == "$desired" ]]; then
           return 0
@@ -452,7 +617,7 @@ new_task_definition="$(aws ecs register-task-definition \
   --output text)"
 
 one_shot_run_task_args=()
-if [[ "$RUN_MIGRATIONS" == "true" || -n "$POST_DEPLOY_TASK_COMMAND_JSON" ]]; then
+if [[ "$migrations_run_in_this_lane" == "true" || -n "$POST_DEPLOY_TASK_COMMAND_JSON" ]]; then
   network_configuration="$(jq -c '.services[0].networkConfiguration' <<<"$service_json")"
   if [[ -z "$network_configuration" || "$network_configuration" == "null" ]]; then
     echo "::error::ECS service $APP has no network configuration for the migration task."
@@ -480,12 +645,27 @@ if [[ "$RUN_MIGRATIONS" == "true" || -n "$POST_DEPLOY_TASK_COMMAND_JSON" ]]; the
   fi
 fi
 
-if [[ "$RUN_MIGRATIONS" == "true" ]]; then
-  if ! run_one_shot_command \
-    "Migration" \
-    '["bun","packages/backend/dist/scripts/migrate.js"]'; then
-    exit 1
-  fi
+if [[ "$migrations_run_in_this_lane" == "true" ]]; then
+  # PROCESS SUBSTITUTION, NOT A PIPE, and the reason is not the obvious one.
+  #
+  # `set -e` catches the failing pipeline either way, so both forms do stop the
+  # release before `update-service` — so do not "simplify" this on the theory
+  # that the pipe is equivalent. What a pipe loses is the loop body's WRITES: it
+  # runs in a subshell, so `run_one_shot_command`'s `active_one_shot_task_arn` /
+  # `_label` / `_stopped` never reach the parent, and the EXIT trap reads their
+  # initial values. The warning that a migration task may STILL BE RUNNING
+  # against the database after the deploy gave up — the one thing telling an
+  # operator the schema may be moving under them, and unrecoverable because the
+  # deploy role cannot call `ecs:StopTask` — silently stops being emitted. The
+  # `migration-task-never-stops` case in test-deploy-ecs-image.sh is what
+  # notices.
+  while IFS= read -r migration_entry; do
+    if ! run_one_shot_command \
+      "$(jq -r '.label' <<<"$migration_entry")" \
+      "$(jq -c '.command' <<<"$migration_entry")"; then
+      exit 1
+    fi
+  done < <(jq -c '.[]' <<<"$MIGRATION_TASK_COMMANDS_JSON")
 fi
 
 if [[ -n "${DEPLOY_SHA:-}" ]]; then
