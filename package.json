@@ -1,6 +1,7 @@
 {
   "name": "homiio-monorepo",
   "version": "2.0.0",
+  "license": "SEE LICENSE IN LICENSE",
   "description": "Homiio Monorepo - Frontend and Backend",
   "private": true,
   "workspaces": [
