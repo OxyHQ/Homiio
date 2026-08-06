@@ -1,8 +1,8 @@
 {
   "name": "@homiio/backend",
   "version": "1.0.0",
+  "private": true,
   "description": "Enhanced Homiio Backend with Device-Based Authentication",
-  "license": "ISC",
   "author": "",
   "type": "commonjs",
   "main": "server.ts",

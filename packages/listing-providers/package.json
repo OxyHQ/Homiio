@@ -1,6 +1,7 @@
 {
   "name": "@homiio/listing-providers",
   "version": "1.0.0",
+  "private": true,
   "type": "commonjs",
   "description": "Plugin-based listing providers for the Homiio market aggregator (contract + runtime + provider plugins)",
   "main": "dist/index.js",
@@ -19,7 +20,6 @@
     "ingestion"
   ],
   "author": "Homiio Team",
-  "license": "UNLICENSED",
   "dependencies": {
     "@homiio/shared-types": "workspace:*",
     "lz-string": "^1.5.0",
