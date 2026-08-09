@@ -36,7 +36,7 @@
  */
 
 import { getTableColumns } from 'drizzle-orm';
-import type { PgTable } from 'drizzle-orm/pg-core';
+import type { PgColumn, PgTable } from 'drizzle-orm/pg-core';
 
 /**
  * A candidate row, before it is known to fit its target.
@@ -123,20 +123,66 @@ class ViolationCollector {
 }
 
 /**
+ * What {@link refusalReason} needs from a column.
+ *
+ * A structural shape rather than drizzle's `PgColumn`, because the array case
+ * recurses into `baseColumn` — a real `PgColumn` — while the object the caller
+ * assembles is not one. Naming the fields lets the recursion type-check without
+ * either side pretending to be the other.
+ */
+interface AuditableColumn {
+  readonly notNull: boolean;
+  readonly hasDefault: boolean;
+  readonly dataType: string;
+  readonly columnType: string;
+  readonly enumValues?: readonly string[] | undefined;
+  readonly baseColumn?: AuditableColumn | undefined;
+}
+
+/**
+ * A drizzle column as the audit reads it.
+ *
+ * `enumValues` and `baseColumn` are declared on some column classes and not
+ * others, so both are read with an `in` test rather than assumed present — the
+ * alternative is `undefined.includes` firing at the moment the audit is supposed
+ * to be explaining a data defect.
+ */
+function auditableColumn(column: PgColumn): AuditableColumn {
+  const base = 'baseColumn' in column ? column.baseColumn : undefined;
+  return {
+    notNull: column.notNull,
+    hasDefault: column.hasDefault,
+    dataType: column.dataType,
+    columnType: column.columnType,
+    enumValues: 'enumValues' in column ? column.enumValues : undefined,
+    baseColumn: isPgColumn(base) ? auditableColumn(base) : undefined,
+  };
+}
+
+/**
+ * Whether a value is a drizzle column.
+ *
+ * `PgArray.baseColumn` is typed loosely enough that TypeScript will not accept
+ * it as a `PgColumn` on its own, and a structural test is the honest way to say
+ * "this is a column if it declares what a column declares" — the alternative is
+ * asserting a type the compiler has already said it cannot verify.
+ */
+function isPgColumn(value: unknown): value is PgColumn {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'dataType' in value &&
+    'columnType' in value &&
+    'notNull' in value
+  );
+}
+
+/**
  * Check one value against one column's declared type.
  *
  * @returns The reason it would be refused, or `null` when it fits.
  */
-function refusalReason(
-  value: unknown,
-  column: {
-    notNull: boolean;
-    hasDefault: boolean;
-    dataType: string;
-    columnType: string;
-    enumValues?: readonly string[] | undefined;
-  },
-): string | null {
+function refusalReason(value: unknown, column: AuditableColumn): string | null {
   // `undefined` means the row omits the key, so the column's DEFAULT applies.
   // That is only legal where one exists; without a default an omitted NOT NULL
   // column is the same `23502` a null would be.
@@ -166,6 +212,13 @@ function refusalReason(
         if (!Number.isInteger(value)) return 'expected an integer, got a fraction';
         if (value < INT32_MIN || value > INT32_MAX) return 'outside the `integer` range (22003)';
       }
+      // `bigint({ mode: 'number' })` hands JavaScript a `number`, so its real
+      // ceiling is `Number.MAX_SAFE_INTEGER` rather than the column's 64 bits —
+      // past that the VALUE is already wrong before Postgres ever sees it.
+      if (column.columnType === 'PgBigInt53') {
+        if (!Number.isInteger(value)) return 'expected an integer, got a fraction';
+        if (!Number.isSafeInteger(value)) return 'outside the safe-integer range';
+      }
       return null;
     }
     case 'boolean':
@@ -173,6 +226,32 @@ function refusalReason(
     case 'date':
       if (!(value instanceof Date)) return `expected a Date, got ${typeName(value)}`;
       return Number.isNaN(value.getTime()) ? 'an Invalid Date' : null;
+    case 'array': {
+      // No geo table has an array column, so this arm was unreachable until the
+      // second batch — and an unaudited column kind is one whose bad values
+      // reach the insert, which is what this module exists to prevent. The
+      // ELEMENTS are checked against the base column, which carries any element
+      // vocabulary: a `text({ enum }).array()` generates its CHECK from the same
+      // tuple, so recursing here IS that CHECK rather than a restatement.
+      if (!Array.isArray(value)) return `expected an array, got ${typeName(value)}`;
+      const base = column.baseColumn;
+      if (base === undefined) return null;
+      for (const [index, element] of value.entries()) {
+        const reason = refusalReason(element, base);
+        if (reason !== null) return `element ${index}: ${reason}`;
+      }
+      return null;
+    }
+    case 'json': {
+      // `jsonb` takes anything JSON can carry, which is nearly everything — so
+      // the only refusal worth making is the one that would SUCCEED and be
+      // wrong. A `Date` serialises to an ISO string, so it stores fine and reads
+      // back as text, silently changing the value's type.
+      if (value instanceof Date) {
+        return 'a Date in a jsonb column — it would store as a string and read back as one';
+      }
+      return null;
+    }
     default:
       // A dataType this module has not been taught about. Reported rather than
       // waved through: a column kind nobody checked is a column kind whose bad
@@ -188,6 +267,128 @@ function typeName(value: unknown): string {
   if (Array.isArray(value)) return 'an array';
   if (value instanceof Date) return 'a Date';
   return `a ${typeof value}`;
+}
+
+/**
+ * An audit that accumulates across many calls.
+ *
+ * {@link auditRows} loads a whole table's rows before checking any of them,
+ * which is right for the geo copy (under eight thousand documents) and
+ * impossible for the rest: 171,976 images and 17,644 properties with their
+ * embedded arrays do not fit in memory at once, so `data.ts` STREAMS and audits
+ * batch by batch.
+ *
+ * Auditing per batch with the one-shot function would produce one grouped report
+ * PER BATCH — three hundred of them, each saying "1 row" — and the grouping is
+ * what makes a report readable. So the collector has to outlive the batch.
+ */
+export class RowAuditor {
+  private readonly collector = new ViolationCollector();
+  private readonly columns: ReturnType<typeof getTableColumns>;
+  private readonly known: ReadonlySet<string>;
+  private rowsSeen = 0;
+
+  constructor(
+    table: PgTable,
+    private readonly rules: readonly RowRule[] = [],
+  ) {
+    this.columns = getTableColumns(table);
+    this.known = new Set(Object.keys(this.columns));
+  }
+
+  /** Audit one batch. */
+  add(rows: readonly CandidateRow[]): void {
+    for (const row of rows) {
+      this.rowsSeen += 1;
+
+      // A key the target has no column for is a mapper bug. drizzle would throw
+      // on the insert — but only after the audit had reported green, which is
+      // precisely the shape this module exists to rule out.
+      for (const key of Object.keys(row)) {
+        if (!this.known.has(key)) {
+          this.collector.record(key, 'no such column on the target table', row.id, row[key]);
+        }
+      }
+
+      for (const [name, column] of Object.entries(this.columns)) {
+        const reason = refusalReason(row[name], auditableColumn(column));
+        if (reason !== null) this.collector.record(name, reason, row.id, row[name]);
+      }
+
+      for (const rule of this.rules) {
+        if (!rule.holds(row)) {
+          this.collector.record(rule.name, rule.reason, row.id, rule.offendingValue?.(row));
+        }
+      }
+    }
+  }
+
+  /**
+   * How many rows have been audited.
+   *
+   * The VACUITY FLOOR. "No violations" and "nothing was checked" are the same
+   * report, and a streaming audit produces the second for a dozen boring reasons
+   * — a collection name that matches nothing, a filter that excludes everything,
+   * a cursor that closed early. A caller acting on an empty report without
+   * reading this is trusting a check it never ran.
+   */
+  get audited(): number {
+    return this.rowsSeen;
+  }
+
+  /** Every violation so far, grouped by column and reason. */
+  drain(): AuditViolation[] {
+    return this.collector.drain();
+  }
+}
+
+/**
+ * Rows colliding on a unique index — a defect `ON CONFLICT DO NOTHING` ABSORBS.
+ *
+ * Not the same check as a foreign key or a CHECK, and the one the copy's own
+ * idempotence creates. Every insert is `ON CONFLICT DO NOTHING` with NO conflict
+ * target, which covers the primary key AND every unique index: two source rows
+ * carrying one `agencies.normalized_name` do not raise `23505`, they become one
+ * row. Silently. The 8,374 listings pointing at the loser then fail their own
+ * foreign key later, in a different table, with nothing connecting the two
+ * facts.
+ *
+ * `key` composes the value the index sees and returns `null` for a row the index
+ * does not cover — a PARTIAL unique index (`where normalized_key is not null`)
+ * genuinely does not constrain those rows, and treating them as colliding would
+ * report thousands of findings on a healthy collection.
+ */
+export class UniqueKeyAuditor {
+  private readonly seen = new Map<string, unknown>();
+  private readonly collector = new ViolationCollector();
+
+  constructor(
+    private readonly constraint: string,
+    private readonly key: (row: CandidateRow) => string | null,
+  ) {}
+
+  add(rows: readonly CandidateRow[]): void {
+    for (const row of rows) {
+      const value = this.key(row);
+      if (value === null) continue;
+      const owner = this.seen.get(value);
+      if (owner === undefined) {
+        this.seen.set(value, row.id);
+        continue;
+      }
+      this.collector.record(
+        this.constraint,
+        'two rows share one unique key — ON CONFLICT DO NOTHING would drop one ' +
+        'of them without raising (23505 never fires)',
+        row.id,
+        `${value} (already held by ${String(owner)})`,
+      );
+    }
+  }
+
+  drain(): AuditViolation[] {
+    return this.collector.drain();
+  }
 }
 
 /**
@@ -207,42 +408,9 @@ export function auditRows(
   rows: readonly CandidateRow[],
   rules: readonly RowRule[] = [],
 ): AuditViolation[] {
-  const columns = getTableColumns(table);
-  const collector = new ViolationCollector();
-
-  // A key the target has no column for is a mapper bug, and it is checked once
-  // rather than per row: drizzle would throw on the insert, but only after the
-  // audit had reported green — which is precisely the shape this module exists
-  // to rule out.
-  const known = new Set(Object.keys(columns));
-  for (const row of rows) {
-    for (const key of Object.keys(row)) {
-      if (!known.has(key)) {
-        collector.record(key, 'no such column on the target table', row.id, row[key]);
-      }
-    }
-  }
-
-  for (const row of rows) {
-    for (const [name, column] of Object.entries(columns)) {
-      const reason = refusalReason(row[name], {
-        notNull: column.notNull,
-        hasDefault: column.hasDefault,
-        dataType: column.dataType,
-        columnType: column.columnType,
-        enumValues: 'enumValues' in column ? column.enumValues : undefined,
-      });
-      if (reason !== null) collector.record(name, reason, row.id, row[name]);
-    }
-
-    for (const rule of rules) {
-      if (!rule.holds(row)) {
-        collector.record(rule.name, rule.reason, row.id, rule.offendingValue?.(row));
-      }
-    }
-  }
-
-  return collector.drain();
+  const auditor = new RowAuditor(table, rules);
+  auditor.add(rows);
+  return auditor.drain();
 }
 
 /** Render violations as the lines an operator reads in a task log. */

@@ -120,7 +120,7 @@ const INSERT_BATCH_ROWS = 500;
 const LOOKUP_BATCH_IDS = 1000;
 
 /** Rows per table compared field by field, unless `--sample=` says otherwise. */
-const DEFAULT_SAMPLE_ROWS = 200;
+export const DEFAULT_SAMPLE_ROWS = 200;
 
 /** Ids listed in a report when something is missing. Enough to grep for. */
 const MAX_REPORTED_IDS = 5;
@@ -273,6 +273,7 @@ export function readSampleSize(argv: readonly string[]): number {
 export async function assertMigrationSource(
   database: MongoDatabase,
   expected: string,
+  required: readonly string[] = Object.values(GEO_SOURCE_COLLECTIONS),
 ): Promise<void> {
   const actual = database.databaseName;
   if (actual !== expected) {
@@ -285,7 +286,7 @@ export async function assertMigrationSource(
   }
 
   const present = new Set((await database.listCollections().toArray()).map((entry) => entry.name));
-  const missing = Object.values(GEO_SOURCE_COLLECTIONS).filter((name) => !present.has(name));
+  const missing = required.filter((name) => !present.has(name));
   if (missing.length > 0) {
     throw new Error(
       `Refusing to copy: ${JSON.stringify(actual)} has no ${missing.join(', ')} ` +
@@ -594,7 +595,7 @@ async function reconcilePlan(
 // ── verifying ──────────────────────────────────────────────────────
 
 /** Which of `ids` the target already holds. */
-async function presentIds(
+export async function presentIds(
   database: Database,
   table: PgTable,
   ids: readonly string[],
@@ -612,11 +613,22 @@ async function presentIds(
 /**
  * Whether a stored value equals the value the mapper produced.
  *
- * `Date` by instant rather than by identity — postgres.js hands back a new
- * `Date` for every read, so `===` would report every timestamp as a mismatch and
- * the comparison would be worthless in exactly the way that looks thorough.
+ * Not `===`, and every exception below is a real storage property rather than a
+ * loosening. Each would otherwise report a mismatch on a PERFECT copy — the way
+ * a comparison fails that looks most thorough, until somebody stops believing
+ * the verifier:
+ *
+ *  - **`Date`.** postgres.js hands back a NEW `Date` object for every read, so
+ *    identity always differs; only the instant is the fact.
+ *  - **Arrays.** Same — a new array per read, so a `text[]` column has to be
+ *    compared element by element. No geo table has one; `properties.offerings`,
+ *    `amenities` and `addresses.address_lines` all do.
+ *  - **`jsonb`.** Postgres REORDERS object keys on the way in (it stores a
+ *    parsed representation, not the text), so `{a:1,b:2}` reads back as
+ *    `{b:2,a:1}`. Any comparison that respects key order is wrong about
+ *    `addresses.extras` on every row carrying more than one key.
  */
-function sameValue(expected: unknown, actual: unknown): boolean {
+export function sameValue(expected: unknown, actual: unknown): boolean {
   if (expected instanceof Date || actual instanceof Date) {
     return (
       expected instanceof Date &&
@@ -624,7 +636,39 @@ function sameValue(expected: unknown, actual: unknown): boolean {
       expected.getTime() === actual.getTime()
     );
   }
+  if (Array.isArray(expected) || Array.isArray(actual)) {
+    return (
+      Array.isArray(expected) &&
+      Array.isArray(actual) &&
+      expected.length === actual.length &&
+      expected.every((element, index) => sameValue(element, actual[index]))
+    );
+  }
+  if (isPlainObject(expected) || isPlainObject(actual)) {
+    return canonicalJson(expected) === canonicalJson(actual);
+  }
   return expected === actual;
+}
+
+/** JSON with object keys SORTED, so `jsonb`'s own ordering cannot matter. */
+export function canonicalJson(value: unknown): string {
+  if (value === null || value === undefined) return 'null';
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value instanceof Date) return JSON.stringify(value.toISOString());
+  if (typeof value !== 'object') return JSON.stringify(value) ?? 'null';
+  const entries = Object.entries(value).sort(([left], [right]) =>
+    left < right ? -1 : left > right ? 1 : 0,
+  );
+  return `{${entries.map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`).join(',')}}`;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    !(value instanceof Date)
+  );
 }
 
 /**
