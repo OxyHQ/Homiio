@@ -33,12 +33,12 @@ import {
   type ListingFetchRuntimeHandle,
   type ProviderRegistry,
 } from '@homiio/listing-providers';
-import { PropertyStatus, type ListingMarket, type ProviderId } from '@homiio/shared-types';
+import type { ListingMarket, ProviderId } from '@homiio/shared-types';
 import config from './config';
 import database from './database/connection';
 import { connectPostgres, closePostgres } from './db/postgres';
 import { Logger } from './utils/logger';
-import { Property } from './models';
+import { expireExternalProperty } from './db/properties/propertyWrites';
 import { IngestionService, IngestionValidationError } from './services/ingestion/IngestionService';
 import {
   QUEUE_NAMES,
@@ -106,12 +106,9 @@ function runtimeForMarket(market: ListingMarket | undefined): FetchRuntime {
 
 /** Soft-remove a previously ingested external listing that must no longer publish. */
 async function expireExternalListing(source: string, sourceId: string, reason: string): Promise<void> {
-  const result = await Property.updateOne(
-    { source, sourceId, isExternal: true },
-    { $set: { status: PropertyStatus.ARCHIVED, expiresAt: new Date() } },
-  );
-  if (result.modifiedCount > 0 || result.matchedCount > 0) {
-    logger.info('Expired external listing after skip', { source, sourceId, reason, matched: result.matchedCount });
+  const expired = await expireExternalProperty(source, sourceId);
+  if (expired) {
+    logger.info('Expired external listing after skip', { source, sourceId, reason });
   }
 }
 

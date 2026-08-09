@@ -1,7 +1,13 @@
+import { and, eq } from 'drizzle-orm';
+
 import { applyOfferingRulesForCreate, OfferingValidationError, type OfferingBearingPayload } from './offeringRules';
 import { CREATABLE_PROPERTY_FIELDS } from './editableFields';
 import { pickFields } from '../../utils/pickFields';
-import { Address, Partner, Property } from '../../models';
+import { getDb } from '../../db/postgres';
+import { partners } from '../../db/schema';
+import { insertProperty } from '../../db/properties/propertyWrites';
+import { serializeProperty } from '../../db/properties/propertySerializer';
+import { findOrCreateCanonicalAddress } from '../../services/addressService';
 import { telegramService } from '../../services';
 import { schedulePriceEthicsScore } from '../../services/priceEthicsService';
 import { logger, businessLogger } from '../../middlewares/logging';
@@ -89,9 +95,19 @@ export async function createProperty(req: ControllerRequest, res: ControllerResp
     // whitelisted payload, so it is never persisted directly.
     const referralCode = typeof req.body.referralCode === 'string' ? req.body.referralCode.trim() : '';
     if (referralCode) {
-      const partner = await Partner.findOne({ referralCode: referralCode.toLowerCase(), status: 'active' });
+      // Resolved against the POSTGRES `partners` table, which is the table
+      // `properties.sourced_by_partner_id` actually references — reading the
+      // Mongo collection here would stamp an id no foreign key can resolve and
+      // fail every referred listing with a `23503`.
+      const [partner] = await getDb()
+        .select({ id: partners.id, referralCode: partners.referralCode })
+        .from(partners)
+        .where(
+          and(eq(partners.referralCode, referralCode.toLowerCase()), eq(partners.status, 'active')),
+        )
+        .limit(1);
       if (partner) {
-        propertyData.sourcedByPartner = partner._id;
+        propertyData.sourcedByPartnerId = partner.id;
         propertyData.sourcedByReferralCode = partner.referralCode;
       } else {
         logger.info('Property create: referral code did not match an active partner', { referralCode });
@@ -134,8 +150,8 @@ export async function createProperty(req: ControllerRequest, res: ControllerResp
       }
       
       // Find or create address using new canonical method
-      const address = await Address.findOrCreateCanonical(addressData);
-      addressId = address._id;
+      const address = await findOrCreateCanonicalAddress(addressData);
+      addressId = address.id;
     } else if (req.body.addressId) {
       // Address ID directly provided
       addressId = req.body.addressId;
@@ -148,26 +164,28 @@ export async function createProperty(req: ControllerRequest, res: ControllerResp
     propertyData.addressId = addressId;
 
     logger.info('Creating property with data', { propertyData });
-    const property = new Property(propertyData);
-    const savedProperty = await property.save();
-    
-    // Populate address for response
-    await savedProperty.populate('addressId');
-    
-    const savedOwnerId = savedProperty.oxyUserId;
+    // One transaction writes the listing and its children, then the row is read
+    // back through the SAME repository the catalogue endpoints read through —
+    // so a listing created here is visible to `GET /properties` in the next
+    // request, and the 201 body is byte-identical to what a later fetch returns.
+    const created = await insertProperty(propertyData);
+    const savedProperty = serializeProperty(created);
+    const propertyId = created.property.id;
+
+    const savedOwnerId = created.property.oxyUserId;
     if (savedOwnerId) {
-      businessLogger.propertyCreated(savedProperty._id.toString(), savedOwnerId);
+      businessLogger.propertyCreated(propertyId, savedOwnerId);
     } else {
-      logger.warn('Created property without oxyUserId', { propertyId: savedProperty._id.toString() });
+      logger.warn('Created property without oxyUserId', { propertyId });
     }
     telegramService.sendPropertyNotification(savedProperty).catch(error => {
       logger.error('Failed to send Telegram notification for new property', {
-        propertyId: savedProperty._id.toString(),
+        propertyId,
         error: getErrorMessage(error),
       });
     });
-    schedulePriceEthicsScore(savedProperty._id.toString());
-    res.status(201).json(successResponse(savedProperty.toJSON(), 'Property created successfully'));
+    schedulePriceEthicsScore(propertyId);
+    res.status(201).json(successResponse(savedProperty, 'Property created successfully'));
   } catch (error) {
     if (error instanceof OfferingValidationError) {
       return next(new AppError(error.message, 400, error.code));

@@ -2,24 +2,22 @@
  * Assigns city cover photos from Wikimedia Commons — fetched once, stored as
  * first-party `entityType: 'city'` images. Never links listing/property photos.
  *
- * ## STILL MONGO, and this is the one batch-1 module that could not move
+ * ## It moved WITH `imageUploadService`, because it had to
  *
- * Every other city read went to Postgres in batch 1. This one did not, and the
- * reason is a foreign key rather than a preference: it does not merely WRITE a
- * city, it creates the image first, through
- * `imageUploadService.createImageForEntity` — which runs the Sharp/S3 pipeline
- * and then persists a Mongo `Image`, and which is batch 2's to port.
- * `cities.cover_image_id` REFERENCES `images.id` for real, so porting the city
- * half alone would make every cover write a guaranteed `23503`.
- *
- * The consequence while it waits, stated so nobody debugs it as a defect: this
- * service writes Mongo cities that the ported `cityController` no longer reads,
- * so on this branch it is effectively a no-op writer. It becomes coherent again
- * the moment batch 2 ports `imageUploadService` and brings this with it.
+ * This was the one city module that could not go to Postgres in batch 1: it
+ * does not merely write a city, it creates the image FIRST, and
+ * `cities.cover_image_id` REFERENCES `images.id` for real — so porting the city
+ * half while the image half still minted Mongo `_id`s would have made every
+ * cover write a guaranteed `23503`. Now that `createImageForEntity` writes the
+ * `images` table, both halves are on the same side of the foreign key and the
+ * `imageIds[]` array is gone with the Mongo document: the relation it
+ * denormalized already exists as `images.(entity_type, entity_id)`.
  */
 
-import { Types } from 'mongoose';
-import { City, Country, Image } from '../models';
+import { and, eq, gt, isNull, ne, or } from 'drizzle-orm';
+
+import { getDb } from '../db/postgres';
+import { cities, countries, images } from '../db/schema';
 import imageUploadService, { type ImageBufferInput } from './imageUploadService';
 import { isPlausibleCityName } from '../utils/plausibleCityName';
 import { Logger } from '../utils/logger';
@@ -35,11 +33,10 @@ const BATCH_DELAY_MS = 300;
 const ACCEPTED_IMAGE_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 type CityCoverFields = {
-  _id: Types.ObjectId;
+  id: string;
   name: string;
-  countryId: Types.ObjectId;
-  coverImageId?: Types.ObjectId | null;
-  imageIds?: Types.ObjectId[];
+  countryId: string;
+  coverImageId: string | null;
 };
 
 type EnsureCoverOptions = {
@@ -163,31 +160,43 @@ async function fetchImageBuffer(url: string): Promise<ImageBufferInput> {
   }
 }
 
-async function resolveCountryName(countryId: Types.ObjectId): Promise<string | null> {
-  const country = await Country.findById(countryId).select('name').lean<{ name?: string }>();
+async function resolveCountryName(countryId: string): Promise<string | null> {
+  const [country] = await getDb()
+    .select({ name: countries.name })
+    .from(countries)
+    .where(eq(countries.id, countryId))
+    .limit(1);
   return country?.name?.trim() || null;
 }
 
-async function shouldSkipExistingCover(
-  coverImageId: Types.ObjectId,
-  force: boolean,
-): Promise<boolean> {
+async function shouldSkipExistingCover(coverImageId: string, force: boolean): Promise<boolean> {
   if (force) {
     return false;
   }
-  const coverImage = await Image.findById(coverImageId).select('entityType').lean<{ entityType?: string }>();
+  const [coverImage] = await getDb()
+    .select({ entityType: images.entityType })
+    .from(images)
+    .where(eq(images.id, coverImageId))
+    .limit(1);
   return coverImage?.entityType === 'city';
 }
 
 /** Fetch a Wikimedia cityscape and store it as this city's cover image. */
 export async function ensureCover(
-  cityId: Types.ObjectId | string,
+  cityId: string,
   options: EnsureCoverOptions = {},
 ): Promise<void> {
   try {
-    const city = await City.findById(cityId)
-      .select('name countryId coverImageId imageIds')
-      .lean<CityCoverFields>();
+    const [city]: CityCoverFields[] = await getDb()
+      .select({
+        id: cities.id,
+        name: cities.name,
+        countryId: cities.countryId,
+        coverImageId: cities.coverImageId,
+      })
+      .from(cities)
+      .where(eq(cities.id, cityId))
+      .limit(1);
     if (!city) {
       return;
     }
@@ -205,8 +214,8 @@ export async function ensureCover(
     const countryName = await resolveCountryName(city.countryId);
     if (!countryName) {
       logger.warn('Skipping city cover sync — country not found', {
-        cityId: String(city._id),
-        countryId: String(city.countryId),
+        cityId: city.id,
+        countryId: city.countryId,
       });
       return;
     }
@@ -214,7 +223,7 @@ export async function ensureCover(
     const imageUrl = await fetchWikimediaImageUrl(city.name, countryName);
     if (!imageUrl) {
       logger.info('No Wikimedia cover found for city', {
-        cityId: String(city._id),
+        cityId: city.id,
         cityName: city.name,
         countryName,
       });
@@ -223,23 +232,24 @@ export async function ensureCover(
 
     const input = await fetchImageBuffer(imageUrl);
     const allowUnconfiguredStorage = !imageUploadService.isStorageConfigured();
-    const image = await imageUploadService.createImageForEntity('city', city._id, input, {
+    const image = await imageUploadService.createImageForEntity('city', city.id, input, {
       isPrimary: true,
       order: 0,
       caption: `${city.name}, ${countryName}`,
       allowUnconfiguredStorage,
     });
 
-    const update: Record<string, unknown> = { coverImageId: image._id };
-    const existingImageIds = city.imageIds?.map(String) ?? [];
-    if (!existingImageIds.includes(String(image._id))) {
-      update.imageIds = [...(city.imageIds ?? []), image._id];
-    }
-
-    await City.updateOne({ _id: city._id }, { $set: update });
+    // Only the cover pointer is written. The `imageIds[]` array the Mongo
+    // document carried alongside it is gone: `createImageForEntity` already
+    // stamped `entity_type='city'`/`entity_id=<city>` on the row, so the
+    // membership it denormalized is a query, not a second list to keep in sync.
+    await getDb()
+      .update(cities)
+      .set({ coverImageId: image.id })
+      .where(eq(cities.id, city.id));
     logger.info('Stored city cover from Wikimedia', {
-      cityId: String(city._id),
-      imageId: String(image._id),
+      cityId: city.id,
+      imageId: image.id,
       sourceUrl: imageUrl,
     });
   } catch (error) {
@@ -250,57 +260,44 @@ export async function ensureCover(
 async function findCitiesNeedingCoverSync(
   limit: number,
   forceReplaceListingCovers: boolean,
-): Promise<Array<{ _id: Types.ObjectId }>> {
+): Promise<Array<{ id: string }>> {
+  const active = and(eq(cities.isActive, true), gt(cities.propertiesCount, 0));
+
   if (!forceReplaceListingCovers) {
-    return City.find({
-      isActive: true,
-      propertiesCount: { $gt: 0 },
-      $or: [{ coverImageId: { $exists: false } }, { coverImageId: null }],
-    })
-      .select('_id')
-      .limit(limit)
-      .lean();
+    return getDb()
+      .select({ id: cities.id })
+      .from(cities)
+      .where(and(active, isNull(cities.coverImageId)))
+      .limit(limit);
   }
 
-  return City.aggregate([
-    { $match: { isActive: true, propertiesCount: { $gt: 0 } } },
-    {
-      $lookup: {
-        from: 'images',
-        localField: 'coverImageId',
-        foreignField: '_id',
-        as: 'coverImage',
-      },
-    },
-    {
-      $match: {
-        $or: [
-          { coverImageId: { $exists: false } },
-          { coverImageId: null },
-          { coverImage: { $size: 0 } },
-          { 'coverImage.0.entityType': { $ne: 'city' } },
-        ],
-      },
-    },
-    { $project: { _id: 1 } },
-    { $limit: limit },
-  ]);
+  // The `$lookup` + second `$match` this replaces existed only to reach the
+  // cover image's `entityType`. A LEFT JOIN says the same thing directly, and
+  // the three Mongo branches collapse to two: a missing reference and a
+  // dangling one are both `images.id IS NULL` here, because the foreign key
+  // makes "points at a row that is not there" unrepresentable.
+  return getDb()
+    .select({ id: cities.id })
+    .from(cities)
+    .leftJoin(images, eq(cities.coverImageId, images.id))
+    .where(and(active, or(isNull(images.id), ne(images.entityType, 'city'))))
+    .limit(limit);
 }
 
 /** Backfill missing covers and optionally replace listing-linked covers. */
 export async function syncCovers(options: SyncCoversOptions = {}): Promise<number> {
   const limit = options.limit ?? 50;
   const forceReplaceListingCovers = options.forceReplaceListingCovers === true;
-  const cities = await findCitiesNeedingCoverSync(limit, forceReplaceListingCovers);
+  const citiesToSync = await findCitiesNeedingCoverSync(limit, forceReplaceListingCovers);
 
-  for (let index = 0; index < cities.length; index += 1) {
-    await ensureCover(cities[index]._id);
-    if (index < cities.length - 1) {
+  for (let index = 0; index < citiesToSync.length; index += 1) {
+    await ensureCover(citiesToSync[index].id);
+    if (index < citiesToSync.length - 1) {
       await sleep(BATCH_DELAY_MS);
     }
   }
 
-  return cities.length;
+  return citiesToSync.length;
 }
 
 /** Backward-compatible alias for cron callers that still import syncMissingCovers. */

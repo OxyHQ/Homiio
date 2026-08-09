@@ -22,16 +22,17 @@ import path from 'path';
 import dotenv from 'dotenv';
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
-import type { Types } from 'mongoose';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+
 import { PropertyStatus } from '@homiio/shared-types';
-import database from '../database/connection';
+import { closePostgres, connectPostgres, getDb } from '../db/postgres';
+import { addresses, properties, propertyImages } from '../db/schema';
 import {
   areDuplicateListings,
   toDedupComparable,
   type DedupComparable,
 } from '../services/ingestion/dedupeFingerprint';
 
-import { Property } from '../models';
 
 // `--apply` (CLI) or `DEDUP_APPLY=1` (env, for the argv-less ECS `node -e` boot).
 const APPLY = process.argv.includes('--apply') || process.env.DEDUP_APPLY === '1';
@@ -47,20 +48,23 @@ function readIntFlag(name: string, fallback: number): number {
 const LIMIT_GROUPS = readIntFlag('limit-groups', Number.MAX_SAFE_INTEGER);
 
 interface PropertyDoc {
-  _id: Types.ObjectId;
-  cityId?: Types.ObjectId;
-  description?: string;
-  images?: unknown[];
-  type?: string;
-  bedrooms?: number;
-  squareFootage?: number;
-  longTermRent?: { monthlyAmount?: number; currency?: string } | null;
-  shortTermRent?: { nightlyRate?: number; currency?: string } | null;
-  sale?: { price?: number; currency?: string } | null;
-  source?: string;
-  sourceId?: string;
-  sourceUrl?: string;
-  createdAt?: Date;
+  id: string;
+  cityId: string | null;
+  description: string | null;
+  imageCount: number;
+  type: string;
+  bedrooms: number | null;
+  squareFootage: number | null;
+  longTermRentMonthlyAmount: number | null;
+  longTermRentCurrency: string | null;
+  shortTermRentNightlyRate: number | null;
+  shortTermRentCurrency: string | null;
+  salePrice: number | null;
+  saleCurrency: string | null;
+  source: string;
+  sourceId: string | null;
+  sourceUrl: string | null;
+  createdAt: Date;
 }
 
 export interface Row {
@@ -151,32 +155,47 @@ export function planDeduplication(rows: Row[]): DedupGroup[] {
 }
 
 async function main(): Promise<void> {
-  await database.connect();
+  await connectPostgres();
 
-  // Join Address→cityId via aggregation. `$lookup` bypasses the Property
-  // post-find hook that renames/mangles `addressId` on lean reads, so `cityId`
-  // arrives clean and directly usable.
-  const docs: PropertyDoc[] = await Property.aggregate([
-    { $match: { isExternal: true, deletedAt: null, status: PropertyStatus.PUBLISHED } },
-    { $lookup: { from: 'addresses', localField: 'addressId', foreignField: '_id', as: 'addr' } },
-    {
-      $project: {
-        description: 1,
-        images: 1,
-        type: 1,
-        bedrooms: 1,
-        squareFootage: 1,
-        longTermRent: 1,
-        shortTermRent: 1,
-        sale: 1,
-        source: 1,
-        sourceId: 1,
-        sourceUrl: 1,
-        createdAt: 1,
-        cityId: { $arrayElemAt: ['$addr.cityId', 0] },
-      },
-    },
-  ]);
+  // An ordinary join. The `$lookup` + `$arrayElemAt` this replaces existed only
+  // because Mongo had no join and its post-find hook mangled `addressId` on
+  // lean reads — neither problem exists here.
+  const docs: PropertyDoc[] = await getDb()
+    .select({
+      id: properties.id,
+      cityId: addresses.cityId,
+      description: properties.description,
+      // Counted over a LEFT JOIN + GROUP BY, never a correlated subquery in the
+      // projection: drizzle renders a column UNQUALIFIED inside a `sql`
+      // template there, so the correlation binds to the wrong table and every
+      // count comes back 0. `count(<column>)` rather than `count(*)` because
+      // the LEFT JOIN gives a photoless listing one NULL row.
+      imageCount: sql<number>`count(${propertyImages.id})::int`,
+      type: properties.type,
+      bedrooms: properties.bedrooms,
+      squareFootage: properties.squareFootage,
+      longTermRentMonthlyAmount: properties.longTermRentMonthlyAmount,
+      longTermRentCurrency: properties.longTermRentCurrency,
+      shortTermRentNightlyRate: properties.shortTermRentNightlyRate,
+      shortTermRentCurrency: properties.shortTermRentCurrency,
+      salePrice: properties.salePrice,
+      saleCurrency: properties.saleCurrency,
+      source: properties.source,
+      sourceId: properties.sourceId,
+      sourceUrl: properties.sourceUrl,
+      createdAt: properties.createdAt,
+    })
+    .from(properties)
+    .innerJoin(addresses, eq(properties.addressId, addresses.id))
+    .leftJoin(propertyImages, eq(propertyImages.propertyId, properties.id))
+    .where(
+      and(
+        eq(properties.isExternal, true),
+        isNull(properties.deletedAt),
+        eq(properties.status, PropertyStatus.PUBLISHED),
+      ),
+    )
+    .groupBy(properties.id, addresses.cityId);
 
   console.log(`Scanned ${docs.length} published external listings`);
 
@@ -185,22 +204,37 @@ async function main(): Promise<void> {
   for (const doc of docs) {
     const comparable = toDedupComparable({
       type: doc.type,
-      cityId: doc.cityId ? String(doc.cityId) : undefined,
-      bedrooms: doc.bedrooms,
-      squareFootage: doc.squareFootage,
-      description: doc.description,
-      longTermRent: doc.longTermRent,
-      shortTermRent: doc.shortTermRent,
-      sale: doc.sale,
+      cityId: doc.cityId ?? undefined,
+      bedrooms: doc.bedrooms ?? undefined,
+      squareFootage: doc.squareFootage ?? undefined,
+      description: doc.description ?? undefined,
+      longTermRent:
+        doc.longTermRentMonthlyAmount === null
+          ? null
+          : {
+              monthlyAmount: doc.longTermRentMonthlyAmount,
+              currency: doc.longTermRentCurrency ?? undefined,
+            },
+      shortTermRent:
+        doc.shortTermRentNightlyRate === null
+          ? null
+          : {
+              nightlyRate: doc.shortTermRentNightlyRate,
+              currency: doc.shortTermRentCurrency ?? undefined,
+            },
+      sale:
+        doc.salePrice === null
+          ? null
+          : { price: doc.salePrice, currency: doc.saleCurrency ?? undefined },
     });
     if (!comparable) continue;
     rows.push({
-      id: String(doc._id),
-      source: doc.source ?? '',
+      id: doc.id,
+      source: doc.source,
       sourceId: doc.sourceId ?? '',
       sourceUrl: doc.sourceUrl ?? '',
-      imageCount: Array.isArray(doc.images) ? doc.images.length : 0,
-      createdAt: doc.createdAt ? new Date(doc.createdAt).getTime() : 0,
+      imageCount: doc.imageCount,
+      createdAt: doc.createdAt.getTime(),
       comparable,
     });
   }
@@ -237,27 +271,34 @@ async function main(): Promise<void> {
   }
 
   if (!APPLY) {
-    console.log('\nDRY-RUN only — no documents modified. Re-run with --apply to archive.');
-    await database.disconnect?.();
+    console.log('\nDRY-RUN only — nothing modified. Re-run with --apply to archive.');
+    await closePostgres();
     return;
   }
 
   if (toArchive.length > 0) {
-    // Soft-delete ONLY: set `deletedAt` (public feeds filter `deletedAt: null`)
-    // and `status: archived`. Do NOT touch `expiresAt` — it carries a TTL index
-    // (`expireAfterSeconds: 0`), so writing `expiresAt: now` would HARD-delete the
-    // document within ~60s, making the archive irreversible. Leaving `expiresAt`
-    // at its existing future value keeps the soft-delete reversible.
-    const result = await Property.updateMany(
-      { _id: { $in: toArchive }, isExternal: true, deletedAt: null },
-      { $set: { deletedAt: new Date(), status: PropertyStatus.ARCHIVED } },
-    );
-    console.log(`\nArchived ${result.modifiedCount ?? toArchive.length} listing(s).`);
+    // Soft-delete ONLY: `deleted_at` (every catalogue read filters it) plus
+    // `status = archived`. Do NOT touch `expires_at` — `db/expiry.ts`'s sweep
+    // reaps on it, so stamping it now would make the archive irreversible
+    // within one sweep. Leaving it at its existing future value keeps this
+    // recoverable, which is the same reasoning the Mongo TTL index forced.
+    const archived = await getDb()
+      .update(properties)
+      .set({ deletedAt: new Date(), status: PropertyStatus.ARCHIVED, updatedAt: new Date() })
+      .where(
+        and(
+          inArray(properties.id, toArchive),
+          eq(properties.isExternal, true),
+          isNull(properties.deletedAt),
+        ),
+      )
+      .returning({ id: properties.id });
+    console.log(`\nArchived ${archived.length} listing(s).`);
   } else {
     console.log('\nNothing to archive.');
   }
 
-  await database.disconnect?.();
+  await closePostgres();
 }
 
 // Auto-run only when executed directly (`node dedupeExternalListings.js`), so the

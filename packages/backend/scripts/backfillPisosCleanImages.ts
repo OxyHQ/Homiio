@@ -36,7 +36,7 @@
  * is deleted, so a crash never leaves a property imageless, and a property is only
  * ever touched when a good clean replacement was produced.
  *
- * Usage (inside the VPC / ECS one-off; needs Mongo + the pisos proxy/browser env):
+ * Usage (inside the VPC / ECS one-off; needs DATABASE_URL + the pisos proxy/browser env):
  *   bun run packages/backend/scripts/backfillPisosCleanImages.ts            # dry-run
  *   bun run packages/backend/scripts/backfillPisosCleanImages.ts --apply
  *   ... --apply --limit=25 --concurrency=2 --min-width=700
@@ -46,7 +46,6 @@ import path from 'path';
 import dotenv from 'dotenv';
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
-import { Types } from 'mongoose';
 import {
   createDefaultRegistry,
   createListingFetchRuntimeFromEnv,
@@ -55,8 +54,12 @@ import {
   type ListingFetchRuntimeHandle,
   type ListingProvider,
 } from '@homiio/listing-providers';
-import database from '../database/connection';
-import { Property, Image } from '../models';
+import { eq } from 'drizzle-orm';
+
+import { connectPostgres, closePostgres, getDb } from '../db/postgres';
+import { images, properties, propertyImages } from '../db/schema';
+import { deleteImagesByIds, findImagesForEntity } from '../db/images/imageWrites';
+import { replacePropertyImages } from '../db/properties/propertyWrites';
 import { ExternalMediaIngest } from '../services/ingestion/ExternalMediaIngest';
 import imageUploadService from '../services/imageUploadService';
 
@@ -66,30 +69,12 @@ const DEFAULT_WATERMARK_MIN_WIDTH = 700;
 /** Abort budget (ms) for re-fetching one listing's detail page. */
 const FETCH_TIMEOUT_MS = 90_000;
 
-/** How many properties' referenced images to resolve widths for per DB round-trip. */
-const WIDTH_LOOKUP_BATCH = 500;
-
 /** Default parallel re-fetch/replace workers (tune down if DataDome throttles). */
 const DEFAULT_CONCURRENCY = 3;
 
-/** Minimal pisos Property projection the scan needs. */
-interface LeanPisosProperty {
-  _id: Types.ObjectId;
-  sourceId?: string;
-  sourceUrl?: string;
-  images?: Array<{ imageId?: string | Types.ObjectId }>;
-}
-
-/** Minimal Image projection: identity, source width, storage keys to delete. */
-interface LeanImageWidth {
-  _id: Types.ObjectId;
-  width?: number;
-  keys?: { original?: string; small?: string; medium?: string; large?: string };
-}
-
 /** A property flagged for backfill plus the counts the summary reports. */
 interface Candidate {
-  id: Types.ObjectId;
+  id: string;
   sourceId: string;
   sourceUrl: string;
   currentImageCount: number;
@@ -142,35 +127,15 @@ function parseCli(argv: string[]): CliOptions {
 }
 
 /** All variant storage keys present on an Image doc (for S3 deletion). */
-function storageKeysOf(image: LeanImageWidth): string[] {
-  const keys = image.keys;
-  if (!keys) return [];
-  return [keys.original, keys.small, keys.medium, keys.large].filter(
+function storageKeysOf(image: {
+  keysOriginal: string;
+  keysSmall: string;
+  keysMedium: string;
+  keysLarge: string;
+}): string[] {
+  return [image.keysOriginal, image.keysSmall, image.keysMedium, image.keysLarge].filter(
     (key): key is string => typeof key === 'string' && key.length > 0,
   );
-}
-
-/** Resolve the width of every referenced image, batched, into an id→width map. */
-async function loadReferencedWidths(
-  properties: readonly LeanPisosProperty[],
-): Promise<Map<string, number | undefined>> {
-  const widthById = new Map<string, number | undefined>();
-  const allIds: Types.ObjectId[] = [];
-  for (const property of properties) {
-    for (const ref of property.images ?? []) {
-      if (ref.imageId && Types.ObjectId.isValid(String(ref.imageId))) {
-        allIds.push(new Types.ObjectId(String(ref.imageId)));
-      }
-    }
-  }
-  for (let i = 0; i < allIds.length; i += WIDTH_LOOKUP_BATCH) {
-    const batch = allIds.slice(i, i + WIDTH_LOOKUP_BATCH);
-    const docs = await Image.find({ _id: { $in: batch } }, { width: 1 }).lean<LeanImageWidth[]>();
-    for (const doc of docs) {
-      widthById.set(String(doc._id), doc.width);
-    }
-  }
-  return widthById;
 }
 
 interface ScanResult {
@@ -182,28 +147,62 @@ interface ScanResult {
   widthDistribution: Map<string, number>;
 }
 
-/** Classify every pisos property as watermarked (candidate), clean, or imageless. */
+/**
+ * Classify every pisos property as watermarked (candidate), clean, or imageless.
+ *
+ * ONE statement, where Mongo needed three phases (load every pisos listing,
+ * collect its embedded image ids, then batch `Image.find` them 500 at a time).
+ * `property_images` is a real table joined to `images`, so the width of each
+ * referenced photo is just another column — which is why `WIDTH_LOOKUP_BATCH`
+ * and `loadReferencedWidths` are gone rather than ported: they existed to work
+ * around the absence of a join, not to bound memory.
+ *
+ * A listing with no photos produces one row with NULLs from the LEFT JOIN
+ * rather than being absent, so the imageless count stays observable.
+ */
 async function scan(minWidth: number): Promise<ScanResult> {
-  const properties = await Property.find(
-    { source: 'pisos' },
-    { sourceId: 1, sourceUrl: 1, 'images.imageId': 1 },
-  ).lean<LeanPisosProperty[]>();
+  const rows = await getDb()
+    .select({
+      id: properties.id,
+      sourceId: properties.sourceId,
+      sourceUrl: properties.sourceUrl,
+      imageId: propertyImages.imageId,
+      width: images.width,
+    })
+    .from(properties)
+    .leftJoin(propertyImages, eq(propertyImages.propertyId, properties.id))
+    .leftJoin(images, eq(images.id, propertyImages.imageId))
+    .where(eq(properties.source, 'pisos'));
 
-  const widthById = await loadReferencedWidths(properties);
   const widthDistribution = new Map<string, number>();
   const candidates: Candidate[] = [];
   let cleanProperties = 0;
   let imagelessProperties = 0;
 
-  for (const property of properties) {
-    const refs = property.images ?? [];
-    if (refs.length === 0) {
+  // Regroup the joined rows by listing. The grouping is done here rather than in
+  // SQL because the width DISTRIBUTION the report prints needs every individual
+  // photo, not an aggregate per listing.
+  const byProperty = new Map<
+    string,
+    { sourceId: string | null; sourceUrl: string | null; widths: (number | null)[] }
+  >();
+  for (const row of rows) {
+    const entry = byProperty.get(row.id) ?? {
+      sourceId: row.sourceId,
+      sourceUrl: row.sourceUrl,
+      widths: [],
+    };
+    if (row.imageId !== null) entry.widths.push(row.width);
+    byProperty.set(row.id, entry);
+  }
+
+  for (const [id, property] of byProperty) {
+    if (property.widths.length === 0) {
       imagelessProperties += 1;
       continue;
     }
     let watermarkedCount = 0;
-    for (const ref of refs) {
-      const width = ref.imageId ? widthById.get(String(ref.imageId)) : undefined;
+    for (const width of property.widths) {
       const bucket = typeof width === 'number' ? String(width) : 'unknown';
       widthDistribution.set(bucket, (widthDistribution.get(bucket) ?? 0) + 1);
       if (typeof width === 'number' && width >= minWidth) watermarkedCount += 1;
@@ -212,23 +211,21 @@ async function scan(minWidth: number): Promise<ScanResult> {
       cleanProperties += 1;
       continue;
     }
-    const sourceId = typeof property.sourceId === 'string' ? property.sourceId : '';
-    const sourceUrl = typeof property.sourceUrl === 'string' ? property.sourceUrl : '';
-    if (!sourceId || !sourceUrl) {
+    if (!property.sourceId || !property.sourceUrl) {
       // Cannot re-fetch without a stable id + URL; report but do not touch.
       continue;
     }
     candidates.push({
-      id: property._id,
-      sourceId,
-      sourceUrl,
-      currentImageCount: refs.length,
+      id,
+      sourceId: property.sourceId,
+      sourceUrl: property.sourceUrl,
+      currentImageCount: property.widths.length,
       watermarkedCount,
     });
   }
 
   return {
-    scanned: properties.length,
+    scanned: byProperty.size,
     candidates,
     cleanProperties,
     imagelessProperties,
@@ -294,22 +291,25 @@ async function replaceOne(
   }
 
   // Point the property at the clean gallery before deleting anything.
-  const doc = await Property.findById(candidate.id);
-  if (!doc) {
+  const [stillThere] = await getDb()
+    .select({ id: properties.id })
+    .from(properties)
+    .where(eq(properties.id, candidate.id))
+    .limit(1);
+  if (!stillThere) {
     return { status: 'gone', newImageCount: newRefs.length, deletedImageDocs: 0, deletedBlobs: 0 };
   }
-  doc.set('images', newRefs);
-  await doc.save();
+  await replacePropertyImages(candidate.id, newRefs);
 
-  // Sweep every Image doc for this property that the new gallery does NOT
+  // Sweep every `images` row for this property that the new gallery does NOT
   // reference (the stale watermarked set + any orphan from a prior interrupted
-  // run) and delete its S3 blobs, then the docs.
-  const keepIds = new Set(newRefs.map((newRef) => String(newRef.imageId)));
-  const allImages = await Image.find(
-    { entityType: 'property', entityId: candidate.id },
-    { keys: 1 },
-  ).lean<LeanImageWidth[]>();
-  const stale = allImages.filter((image) => !keepIds.has(String(image._id)));
+  // run) and delete its S3 blobs, then the rows. The order matters and is
+  // unchanged: `property_images.image_id` is an ON DELETE RESTRICT reference, so
+  // the gallery has to stop pointing at a photo before the photo can go — which
+  // is now enforced by the database rather than by this function's ordering.
+  const keepIds = new Set(newRefs.map((newRef) => newRef.imageId));
+  const allImages = await findImagesForEntity('property', candidate.id);
+  const stale = allImages.filter((image) => !keepIds.has(image.id));
   const staleKeys = stale.flatMap(storageKeysOf);
 
   let deletedBlobs = 0;
@@ -319,14 +319,14 @@ async function replaceOne(
       deletedBlobs = staleKeys.length;
     } catch (error) {
       console.warn(
-        `  ! S3 blob delete failed for ${candidate.id.toString()} (${staleKeys.length} keys): ${
+        `  ! S3 blob delete failed for ${candidate.id} (${staleKeys.length} keys): ${
           error instanceof Error ? error.message : String(error)
         }`,
       );
     }
   }
   if (stale.length > 0) {
-    await Image.deleteMany({ _id: { $in: stale.map((image) => image._id) } });
+    await deleteImagesByIds(stale.map((image) => image.id));
   }
 
   return {
@@ -375,7 +375,7 @@ async function main(): Promise<void> {
       `shard=${options.shardIndex}/${options.shardTotal}`,
   );
 
-  await database.connect();
+  await connectPostgres();
 
   const result = await scan(options.minWidth);
   console.log('--- scan ---');
@@ -389,14 +389,14 @@ async function main(): Promise<void> {
   console.log('sample candidates:');
   for (const candidate of result.candidates.slice(0, 10)) {
     console.log(
-      `  - ${candidate.id.toString()} imgs=${candidate.currentImageCount} ` +
+      `  - ${candidate.id} imgs=${candidate.currentImageCount} ` +
         `wm=${candidate.watermarkedCount} ${candidate.sourceUrl}`,
     );
   }
 
   if (!options.apply) {
     console.log('\nDry-run only — no writes, no S3 deletions. Re-run with --apply to replace.');
-    await database.disconnect?.();
+    await closePostgres();
     return;
   }
 
@@ -482,7 +482,7 @@ async function main(): Promise<void> {
   console.log(`stale Image docs deleted : ${deletedImageDocs}`);
   console.log(`stale S3 blobs deleted   : ${deletedBlobs}`);
 
-  await database.disconnect?.();
+  await closePostgres();
 }
 
 main().catch((error) => {

@@ -11,13 +11,15 @@ import {
   validateEthicalPricing,
   type EthicalPricingCharacteristics,
 } from '@homiio/shared-types';
-import { Property } from '../models';
-import type { IProperty } from '../models/documentTypes';
+import { findPropertyById } from '../db/properties/propertyReads';
+import { serializeProperty } from '../db/properties/propertySerializer';
+import { setPropertyPriceEthics } from '../db/properties/propertyWrites';
 import { logger } from '../middlewares/logging';
 import { getErrorMessage } from '../utils/errors';
 import {
   computeMarketVerdictForProperty,
   resolvePriceBasis,
+  type ComparableProperty,
   type PopulatedGeoAddress,
 } from './areaPriceComparison';
 
@@ -80,20 +82,52 @@ function computeIsFairPrice(
   return withinEthical === true;
 }
 
-function buildEthicalPricingInput(property: IProperty): EthicalPricingCharacteristics | null {
+/**
+ * A listing as this scorer reads it — the serialized wire shape, extending the
+ * comparable shape with the characteristics the ethical-pricing model uses.
+ * Structural on purpose: nothing here needs a column the wire omits, and typing
+ * it against a Mongoose document was what tied this module to the old store.
+ */
+export interface ScorableProperty extends ComparableProperty {
+  offerings?: string[];
+  isExternal?: boolean;
+  type?: string;
+  housingType?: string;
+  bathrooms?: number;
+  amenities?: string[];
+  floor?: number;
+  hasElevator?: boolean;
+  parkingSpaces?: number;
+  yearBuilt?: number;
+  furnishedStatus?: string;
+  utilitiesIncluded?: boolean;
+  petFriendly?: boolean;
+  hasBalcony?: boolean;
+  hasGarden?: boolean;
+  proximityToTransport?: boolean;
+  proximityToSchools?: boolean;
+  proximityToShopping?: boolean;
+  status?: string;
+}
+
+function buildEthicalPricingInput(
+  property: ScorableProperty,
+): EthicalPricingCharacteristics | null {
   const monthly = property.longTermRent?.monthlyAmount;
   if (typeof monthly !== 'number' || monthly <= 0) return null;
   if (!property.offerings?.includes(OfferingType.LONG_TERM_RENT)) return null;
 
-  const populated = property as unknown as { address?: PopulatedGeoAddress; addressId?: PopulatedGeoAddress };
-  const address = populated.address ?? populated.addressId;
+  // The address is nested under `address` on the wire and carries its geo NAMES
+  // from the read's own LEFT JOINs — there is no `addressId` alternative left,
+  // which is what the populate-or-reference union used to cover.
+  const address: PopulatedGeoAddress | undefined = property.address;
 
   return {
-    type: property.type,
-    housingType: property.housingType,
-    bedrooms: property.bedrooms ?? 0,
-    bathrooms: property.bathrooms ?? 1,
-    squareFootage: property.squareFootage ?? 0,
+    type: property.type as EthicalPricingCharacteristics['type'],
+    housingType: property.housingType as EthicalPricingCharacteristics['housingType'],
+    bedrooms: typeof property.bedrooms === 'number' ? property.bedrooms : 0,
+    bathrooms: typeof property.bathrooms === 'number' ? property.bathrooms : 1,
+    squareFootage: typeof property.squareFootage === 'number' ? property.squareFootage : 0,
     amenities: property.amenities ?? [],
     location: {
       city: address?.cityName ?? '',
@@ -104,7 +138,9 @@ function buildEthicalPricingInput(property: IProperty): EthicalPricingCharacteri
     parkingSpaces: property.parkingSpaces,
     yearBuilt: property.yearBuilt,
     furnishedStatus:
-      property.furnishedStatus === 'not_specified' ? undefined : property.furnishedStatus,
+      property.furnishedStatus === 'not_specified'
+        ? undefined
+        : (property.furnishedStatus as EthicalPricingCharacteristics['furnishedStatus']),
     utilitiesIncluded: property.utilitiesIncluded,
     petFriendly: property.petFriendly,
     hasBalcony: property.hasBalcony,
@@ -115,7 +151,9 @@ function buildEthicalPricingInput(property: IProperty): EthicalPricingCharacteri
   };
 }
 
-export async function computePriceEthics(property: IProperty): Promise<PropertyPriceEthics | null> {
+export async function computePriceEthics(
+  property: ScorableProperty,
+): Promise<PropertyPriceEthics | null> {
   if (!resolvePriceBasis(property)) return null;
 
   const isExternal = property.isExternal === true;
@@ -155,27 +193,23 @@ export async function computePriceEthics(property: IProperty): Promise<PropertyP
 }
 
 export async function scoreAndPersistProperty(propertyId: string): Promise<void> {
-  const property = await Property.findById(propertyId)
-    .populate({
-      path: 'addressId',
-      populate: [
-        { path: 'cityId', select: 'name' },
-        { path: 'neighborhoodId', select: 'name' },
-      ],
-    });
-
-  if (!property) {
+  // Read through the SAME repository the catalogue reads through: the geo names
+  // this scorer needs (`cityName`, `neighborhoodName`) come from the four LEFT
+  // JOINs `propertyReads` already makes, so the two-level `populate` chain this
+  // replaces has no counterpart to build.
+  const hydrated = await findPropertyById(propertyId);
+  if (!hydrated) {
     logger.warn('Price ethics scoring skipped — property not found', { propertyId });
     return;
   }
 
-  const priceEthics = await computePriceEthics(property);
+  const priceEthics = await computePriceEthics(serializeProperty(hydrated) as ScorableProperty);
   if (!priceEthics) {
     logger.warn('Price ethics scoring produced no result', { propertyId });
     return;
   }
 
-  await Property.updateOne({ _id: propertyId }, { $set: { priceEthics } });
+  await setPropertyPriceEthics(propertyId, priceEthics as unknown as Record<string, unknown>);
 }
 
 /** Fire-and-forget hook for write paths — never throws to callers. */

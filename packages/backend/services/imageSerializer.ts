@@ -40,7 +40,7 @@ export function toPropertyImageRef(image: ImageDocument): PropertyImageRef {
   ) as PropertyImageRef['urls'];
 
   return {
-    imageId: String(image._id),
+    imageId: image.id,
     url: imageUploadService.resolveStoredImageUrl(image.urls[DEFAULT_DISPLAY_VARIANT]),
     caption: image.caption,
     isPrimary: image.isPrimary ?? false,

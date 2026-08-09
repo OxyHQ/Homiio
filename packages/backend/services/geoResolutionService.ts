@@ -42,6 +42,10 @@ import type { Types } from 'mongoose';
 import { reverseGeocode, forwardGeocode, type AddressData } from './geocodingService';
 import { countryNameToCode, countryCodeToName, defaultCurrencyForCountry } from '../utils/countryData';
 import { sanitizeGeoJsonCoordinates } from '../utils/geoCoordinates';
+import { and, eq, sql } from 'drizzle-orm';
+
+import { getDb } from '../db/postgres';
+import { cities, countries, regions } from '../db/schema';
 import { City, Country, Neighborhood, Region } from '../models';
 
 /** Resolved geo id chain returned to callers (Address stores these). */
@@ -77,14 +81,6 @@ export class GeoResolutionError extends Error {
   }
 }
 
-
-interface CityDoc {
-  _id: Types.ObjectId;
-  regionId: Types.ObjectId;
-  countryId: Types.ObjectId;
-  name: string;
-  coordinates?: { lat?: number; lng?: number };
-}
 
 /** Placeholder name for a missing administrative level, kept stable so the
  *  fallback row is reused rather than duplicated. */
@@ -278,14 +274,6 @@ export async function resolveGeo(input: ResolveGeoInput): Promise<ResolvedGeo> {
   return resolved;
 }
 
-/** Read a City doc's stored centroid as GeoJSON `[lng, lat]`, if valid. */
-function cityDocCentroid(doc: CityDoc | null): [number, number] | null {
-  const lat = doc?.coordinates?.lat;
-  const lng = doc?.coordinates?.lng;
-  if (typeof lat !== 'number' || typeof lng !== 'number') return null;
-  return sanitizeGeoJsonCoordinates([lng, lat]) ?? null;
-}
-
 /**
  * Resolve APPROXIMATE coordinates for a place from its city, without a
  * per-listing external geocode. Used as the ingest coordinate fallback so an
@@ -321,28 +309,35 @@ export async function resolveCityCentroid(names: GeoNames): Promise<[number, num
         ? countryNameToCode(names.country)
         : undefined;
   if (countryCode) {
-    const country = await Country.findOne({ code: countryCode }).select('_id').lean<{
-      _id: Types.ObjectId;
-    } | null>();
-    if (country) {
-      const stateName = names.state?.trim();
-      let cityDoc: CityDoc | null = null;
-      if (stateName) {
-        const region = await Region.findOne({ countryId: country._id, name: stateName })
-          .select('_id')
-          .lean<{ _id: Types.ObjectId } | null>();
-        if (region) {
-          cityDoc = await City.findOne({ regionId: region._id, name: cityName })
-            .select('coordinates')
-            .lean<CityDoc | null>();
-        }
-      }
-      if (!cityDoc) {
-        cityDoc = await City.findOne({ countryId: country._id, name: cityName })
-          .select('coordinates')
-          .lean<CityDoc | null>();
-      }
-      const centroid = cityDocCentroid(cityDoc);
+    // POSTGRES, because that is where the city was created. `addressService`'s
+    // `resolveGeoChain` owns the geo upsert now, so the centroid this reads
+    // back is the one the previous listing's ingest just persisted — reading
+    // Mongo here would find nothing and send every placeholder-street listing
+    // to the geocoder, which is the exact flood this shortcut exists to avoid.
+    //
+    // ONE statement with two LEFT JOINs, not four sequential lookups: the state
+    // name narrows the match when it is given and is simply absent from the
+    // predicate when it is not, so the "by region, else by country" fallback is
+    // an ORDER BY rather than a second round trip.
+    const stateName = names.state?.trim();
+    const rows = await getDb()
+      .select({ longitude: cities.longitude, latitude: cities.latitude })
+      .from(cities)
+      .innerJoin(countries, eq(cities.countryId, countries.id))
+      .leftJoin(regions, eq(cities.regionId, regions.id))
+      .where(and(eq(countries.code, countryCode), eq(cities.name, cityName)))
+      // A city matching the named region ranks above one matched on country
+      // alone — the same preference the two sequential Mongo lookups encoded.
+      .orderBy(
+        stateName === undefined
+          ? sql`1`
+          : sql`case when ${regions.name} = ${stateName} then 0 else 1 end`,
+      )
+      .limit(1);
+
+    const row = rows[0];
+    if (typeof row?.longitude === 'number' && typeof row?.latitude === 'number') {
+      const centroid = sanitizeGeoJsonCoordinates([row.longitude, row.latitude]);
       if (centroid) return centroid;
     }
   }

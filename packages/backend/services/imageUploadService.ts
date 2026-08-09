@@ -3,7 +3,6 @@ import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import { promises as fs, realpathSync } from 'fs';
-import type { Document, Types } from 'mongoose';
 import type {
   ImageEntityType,
   ImageVariantKeys,
@@ -12,7 +11,7 @@ import type {
 } from '@homiio/shared-types';
 import config from '../config';
 import { validateImageStoreKey } from '../utils/imageStoreKey';
-import { Image as ImageModel } from '../models';
+import { insertImage, type ImageRow } from '../db/images/imageWrites';
 
 /**
  * Filesystem root of the self-hosted LOCAL image store. Used only when object
@@ -87,11 +86,22 @@ export interface CreateImageOptions {
   allowUnconfiguredStorage?: boolean;
 }
 
-/** The persisted Image document shape (mirrors `Image` in shared-types). */
-export interface ImageDocument extends Document {
-  _id: Types.ObjectId;
+/**
+ * The persisted image, as this service hands it back.
+ *
+ * Postgres stores the four variants as eight flat columns (`keys_medium`,
+ * `urls_medium`, …); this shape re-nests them into the `keys` / `urls` maps
+ * every consumer already reads, for the same reason
+ * `db/properties/propertySerializer` re-nests the twelve property subdocuments:
+ * the wire contract did not change when the storage did.
+ *
+ * `id`, not `_id` — the wire contract is `id` (#287), and an id that only some
+ * modules rename is an id two modules can disagree about.
+ */
+export interface ImageDocument {
+  id: string;
   entityType: ImageEntityType;
-  entityId: Types.ObjectId;
+  entityId: string;
   keys: ImageVariantKeys;
   urls: ImageVariantUrls;
   width?: number;
@@ -103,6 +113,36 @@ export interface ImageDocument extends Document {
   order?: number;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/** Re-nest an `images` row into the shape consumers read. */
+function toImageDocument(row: ImageRow): ImageDocument {
+  return {
+    id: row.id,
+    entityType: row.entityType,
+    entityId: row.entityId,
+    keys: {
+      original: row.keysOriginal,
+      small: row.keysSmall,
+      medium: row.keysMedium,
+      large: row.keysLarge,
+    },
+    urls: {
+      original: row.urlsOriginal,
+      small: row.urlsSmall,
+      medium: row.urlsMedium,
+      large: row.urlsLarge,
+    },
+    width: row.width ?? undefined,
+    height: row.height ?? undefined,
+    format: row.format,
+    bytes: row.bytes,
+    caption: row.caption ?? undefined,
+    isPrimary: row.isPrimary,
+    order: row.order,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
 }
 
 /** The four processed variant names, in storage order. */
@@ -256,7 +296,7 @@ export class ImageUploadService {
    */
   async createImageForEntity(
     entityType: ImageEntityType,
-    entityId: Types.ObjectId | string,
+    entityId: string,
     input: ImageFileInput | ImageBufferInput,
     options: CreateImageOptions = {}
   ): Promise<ImageDocument> {
@@ -267,10 +307,7 @@ export class ImageUploadService {
     const skipUpload = options.allowUnconfiguredStorage === true && !this.isStorageConfigured();
     const processed = await this.processAndUpload(input.buffer, input.mimetype, folder, skipUpload);
 
-    // Resolve the model lazily to avoid a module-load cycle (models/index pulls
-    // in schemas which may import services), and to reuse the single registration.
-
-    const created = await ImageModel.create({
+    const created = await insertImage({
       entityType,
       entityId,
       keys: processed.keys,
@@ -284,7 +321,7 @@ export class ImageUploadService {
       order: options.order ?? 0,
     });
 
-    return created;
+    return toImageDocument(created);
   }
 
   /** Public-URL map for a complete set of variant keys. */

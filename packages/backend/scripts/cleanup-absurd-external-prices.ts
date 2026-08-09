@@ -11,36 +11,46 @@ import path from 'path';
 import dotenv from 'dotenv';
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
-import { PropertyStatus } from '@homiio/shared-types';
-import { validateMonthlyRentAmount } from '@homiio/listing-providers';
-import database from '../database/connection';
+import { and, eq, isNotNull, sql } from 'drizzle-orm';
 
-import { Property } from '../models';
+import { validateMonthlyRentAmount } from '@homiio/listing-providers';
+import { closePostgres, connectPostgres, getDb } from '../db/postgres';
+import { properties } from '../db/schema';
+import { expireExternalProperty } from '../db/properties/propertyWrites';
 
 const APPLY = process.argv.includes('--apply');
 
 const KNOWN_BAD_SOURCE_IDS = new Set(['bcn-1549599p']);
 
 async function main(): Promise<void> {
-  await database.connect();
+  await connectPostgres();
 
-  const externals = await Property.find({
-    isExternal: true,
-    status: PropertyStatus.PUBLISHED,
-    offerings: 'long_term_rent',
-    'longTermRent.monthlyAmount': { $exists: true },
-  })
-    .select({ source: 1, sourceId: 1, longTermRent: 1, bedrooms: 1 })
-    .lean();
+  const externals = await getDb()
+    .select({
+      source: properties.source,
+      sourceId: properties.sourceId,
+      monthlyAmount: properties.longTermRentMonthlyAmount,
+      currency: properties.longTermRentCurrency,
+      bedrooms: properties.bedrooms,
+    })
+    .from(properties)
+    .where(
+      and(
+        eq(properties.isExternal, true),
+        eq(properties.status, 'published'),
+        sql`${properties.offerings} @> array['long_term_rent']::text[]`,
+        isNotNull(properties.longTermRentMonthlyAmount),
+      ),
+    );
 
   const toArchive: Array<{ source: string; sourceId: string; reason: string }> = [];
 
   for (const doc of externals) {
-    const source = typeof doc.source === 'string' ? doc.source : '';
-    const sourceId = typeof doc.sourceId === 'string' ? doc.sourceId : '';
-    const monthlyAmount = doc.longTermRent?.monthlyAmount;
-    const currency = doc.longTermRent?.currency;
-    const bedrooms = typeof doc.bedrooms === 'number' ? doc.bedrooms : undefined;
+    const source = doc.source;
+    const sourceId = doc.sourceId ?? '';
+    const monthlyAmount = doc.monthlyAmount ?? undefined;
+    const currency = doc.currency ?? undefined;
+    const bedrooms = doc.bedrooms ?? undefined;
 
     if (KNOWN_BAD_SOURCE_IDS.has(sourceId)) {
       toArchive.push({ source, sourceId, reason: 'known bad Blueground partner listing' });
@@ -59,16 +69,15 @@ async function main(): Promise<void> {
   }
 
   if (APPLY && toArchive.length > 0) {
-    const now = new Date();
+    // The same archive path the worker uses when a portal stops publishing a
+    // listing, rather than a second spelling of it here: archived AND stamped
+    // with a deadline, so `db/expiry.ts`'s sweep can eventually reap it.
     for (const row of toArchive) {
-      await Property.updateOne(
-        { source: row.source, sourceId: row.sourceId, isExternal: true },
-        { $set: { status: PropertyStatus.ARCHIVED, expiresAt: now } },
-      );
+      await expireExternalProperty(row.source, row.sourceId);
     }
   }
 
-  await database.disconnect?.();
+  await closePostgres();
 }
 
 main().catch((error) => {

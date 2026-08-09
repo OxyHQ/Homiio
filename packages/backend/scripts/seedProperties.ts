@@ -23,7 +23,6 @@
  */
 
 import 'dotenv/config';
-import { Types } from 'mongoose';
 import {
   PropertyType,
   PropertyStatus,
@@ -55,9 +54,39 @@ const FurnishedStatus = {
   NOT_SPECIFIED: 'not_specified'
 } as const;
 
-import { Property, Address, Profile, Country, Region, City, Neighborhood, Image } from '../models';
+import { eq, sql } from 'drizzle-orm';
 
-const SEED_SOURCE = 'seed';
+import { connectPostgres, getDb } from '../db/postgres';
+// `properties` is aliased because this module's own seed DATA is called
+// `properties` — the table and the fixture list would otherwise shadow.
+import {
+  addresses,
+  cities,
+  images,
+  properties as propertiesTable,
+  propertyImages,
+} from '../db/schema';
+import {
+  insertProperty,
+  replacePropertyImages,
+  type PropertyWriteInput,
+} from '../db/properties/propertyWrites';
+import { findOrCreateCanonicalAddress } from '../services/addressService';
+
+/**
+ * The `source` a seeded listing carries.
+ *
+ * `internal`, not the `'seed'` this script used against Mongo: `source` is now
+ * `text` under `properties_source_check`, whose value set is
+ * `['internal', ...PROVIDER_IDS]` — `'seed'` is not in it and the write would be
+ * rejected outright. `internal` is also the honest answer, since these are
+ * first-party owner-held demo listings (`isExternal: false`), not a portal's.
+ *
+ * "Which rows are seed data" is therefore answered by the OWNER
+ * ({@link SEED_OWNER_OXY_USER_ID}) rather than by the source — a stronger key,
+ * because a real internal listing could share the source but never the owner.
+ */
+const SEED_SOURCE = 'internal';
 const SEED_OWNER_OXY_USER_ID = 'seed-demo-host';
 const CURRENCY = 'EUR';
 
@@ -746,22 +775,8 @@ function resolveOfferings(seed: SeedProperty): OfferingType[] {
   return offerings;
 }
 
-async function ensureSeedOwner(): Promise<string> {
-  const owner = await Profile.findOneAndUpdate(
-    { oxyUserId: SEED_OWNER_OXY_USER_ID },
-    {
-      $setOnInsert: {
-        oxyUserId: SEED_OWNER_OXY_USER_ID,
-        personalProfile: {}
-      }
-    },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
-  );
-  return String(owner._id);
-}
-
-async function upsertProperty(seed: SeedProperty, profileId: string): Promise<'inserted' | 'updated'> {
-  const address = await Address.findOrCreateCanonical({
+async function upsertProperty(seed: SeedProperty): Promise<'inserted' | 'updated'> {
+  const address = await findOrCreateCanonicalAddress({
     street: seed.address.street,
     number: seed.address.number,
     neighborhood: seed.address.neighborhood,
@@ -792,12 +807,17 @@ async function upsertProperty(seed: SeedProperty, profileId: string): Promise<'i
     ? { ...seed.exchange, availabilityWindows: openShortTermWindow() }
     : undefined;
 
-  const doc: Record<string, unknown> = {
-    profileId,
+  const doc: PropertyWriteInput = {
+    // `oxy_user_id`, not `profileId`: the column is the Oxy user's own id and
+    // the `profiles` sidecar the Mongo document pointed at is a different
+    // domain's row. There is no foreign key here (Oxy owns identity), which is
+    // why the seed owner does not need a profile to exist at all — the
+    // `ensureSeedOwner` upsert this replaces was creating one for nothing.
+    oxyUserId: SEED_OWNER_OXY_USER_ID,
     isExternal: false,
     source: SEED_SOURCE,
     description: seed.description,
-    addressId: address._id,
+    addressId: address.id,
     type: seed.type,
     bedrooms: seed.bedrooms,
     bathrooms: seed.bathrooms,
@@ -818,13 +838,15 @@ async function upsertProperty(seed: SeedProperty, profileId: string): Promise<'i
     sale,
     exchange,
     amenities: seed.amenities,
-    // Photos are attached AFTER the property is saved: each seed photo URL is
-    // fetched once and persisted as a canonical Image doc keyed by the new
-    // property's `_id`, then the resolved `PropertyImageRef[]` is embedded here
-    // (see `seedPropertyImages`). Start empty so the property has an `_id` to
-    // own its images.
+    // Photos are attached AFTER the listing is inserted: each seed photo URL is
+    // fetched once and persisted as an `images` row keyed by the new listing's
+    // id, then the resolved refs become `property_images` rows (see
+    // `seedPropertyImages`). Start empty so the listing has an id to own them.
+    //
+    // `coverImageIndex` is gone with the Mongo document — it was `-1` on all
+    // 17,644 production rows and its meaning moved to
+    // `property_images.is_primary`, which `toPropertyImages` already sets.
     images: [],
-    coverImageIndex: 0,
     leaseTerm: isLongTermCapable ? LeaseDuration.YEARLY : LeaseDuration.FLEXIBLE,
     maxGuests: seed.maxGuests ?? Math.max(1, seed.bedrooms * 2 || 1),
     availabilityWindows: isShortTermCapable ? openShortTermWindow() : [],
@@ -846,23 +868,23 @@ async function upsertProperty(seed: SeedProperty, profileId: string): Promise<'i
     }
   }
 
-  // Create a fresh document (the collection is wiped first in `run`). Using
-  // `new Property(...).save()` runs the full document-level validators — the
-  // cross-field `offerings`↔blocks check needs the whole document as `this`,
-  // which Mongoose's update-validators (on findOneAndUpdate) do not provide.
+  // Insert fresh (the table is wiped first in `run`). The cross-field
+  // `offerings`↔blocks rule that needed a whole Mongoose document as `this` is
+  // now four CHECK constraints on the table
+  // (`properties_offering_{long_term_rent,short_term_rent,sale,exchange}_check`),
+  // so it holds for every writer rather than only for `.save()`.
   doc.sourceId = seed.sourceId;
-  const property = await new Property(doc).save();
+  const property = await insertProperty(doc);
 
-  // Backfill the canonical Image collection for this property, then embed the
-  // resolved `{ url, caption, isPrimary, urls }` refs (the shape the frontend
-  // already consumes, now backed by Image docs). `coverImageIndex` stays 0 — the
-  // first/primary photo leads.
-  const imageRefs = await seedPropertyImages(property._id, withUnsplashParams(seed.imageUrls));
-  property.images = imageRefs.map((ref) => ({
-    ...ref,
-    imageId: new Types.ObjectId(ref.imageId),
-  }));
-  await property.save();
+  // Create the canonical `images` rows for this listing, then point
+  // `property_images` at them. Exactly one row may claim `is_primary` — the
+  // partial unique `property_images_one_primary_key` enforces what the Mongo
+  // `coverImageIndex` merely described.
+  const imageRefs = await seedPropertyImages(
+    property.property.id,
+    withUnsplashParams(seed.imageUrls),
+  );
+  await replacePropertyImages(property.property.id, imageRefs);
 
   return 'inserted';
 }
@@ -874,20 +896,22 @@ async function upsertProperty(seed: SeedProperty, profileId: string): Promise<'i
  * after geo is seeded so the City rows (and their `_id`s) exist.
  */
 async function seedCityCoverImages(): Promise<void> {
-  const cities = await City.find({}).select('_id name');
-  for (const city of cities) {
+  const cityRows = await getDb().select({ id: cities.id, name: cities.name }).from(cities);
+  for (const city of cityRows) {
     const url = CITY_COVER_IMAGE_URLS[city.name as keyof typeof CITY_COVER_IMAGE_URLS];
     if (!url) {
       console.warn(`[seed-properties] No curated cover image for city "${city.name}" — skipping`);
       continue;
     }
     try {
-      const imageId = await seedEntityCoverImage('city', city._id, url, `${city.name} cityscape`);
+      const imageId = await seedEntityCoverImage('city', city.id, url, `${city.name} cityscape`);
       if (imageId) {
-        city.coverImageId = imageId;
-        city.imageIds = [imageId];
-        await city.save();
-        console.log(`[seed-properties] city image  ${city.name} -> ${String(imageId)}`);
+        // Only the cover pointer. The `imageIds[]` array the Mongo document
+        // carried was dropped in the port: the membership it denormalized is
+        // already `images.(entity_type, entity_id)`, which
+        // `seedEntityCoverImage` has just written.
+        await getDb().update(cities).set({ coverImageId: imageId }).where(eq(cities.id, city.id));
+        console.log(`[seed-properties] city image  ${city.name} -> ${imageId}`);
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -899,21 +923,28 @@ async function seedCityCoverImages(): Promise<void> {
 
 async function run(): Promise<void> {
   console.log('[seed-properties] Connecting to database...');
-  await database.connect();
+  await connectPostgres();
 
-  // Fresh reseed (no migration): wipe properties, addresses, the geo hierarchy
-  // AND every Image doc (property + geo photos), then re-seed geo so addresses
-  // resolve against canonical rows.
-  console.log('[seed-properties] Wiping properties, addresses, geo collections and images...');
-  await Promise.all([
-    Property.deleteMany({ source: SEED_SOURCE }),
-    Address.deleteMany({}),
-    Country.deleteMany({}),
-    Region.deleteMany({}),
-    City.deleteMany({}),
-    Neighborhood.deleteMany({}),
-    Image.deleteMany({}),
-  ]);
+  // Fresh reseed (no migration): wipe listings, addresses, the geo hierarchy AND
+  // every image row, then re-seed geo so addresses resolve against canonical
+  // rows.
+  //
+  // ONE `TRUNCATE ... CASCADE`, where the Mongo version fired seven parallel
+  // `deleteMany`s. It has to be one statement: these tables reference each other
+  // (`properties.address_id` is ON DELETE RESTRICT, `property_images.image_id`
+  // likewise), so any independent order fails on the first table something still
+  // points at. The parallel version only appeared to work because Mongo has no
+  // foreign keys — it was leaving dangling references, not avoiding them.
+  //
+  // Note this is a FULL wipe of `properties`, not just `source = 'seed'`: a
+  // truncate cannot be filtered, and the geo truncate below would cascade into
+  // every remaining listing anyway. That matches what the script already
+  // documents itself as — a development reseed, never something to point at a
+  // database holding real listings.
+  console.log('[seed-properties] Wiping listings, addresses, geo tables and images...');
+  await getDb().execute(
+    sql`truncate table ${propertiesTable}, ${propertyImages}, ${addresses}, ${images}, ${cities} cascade`,
+  );
 
   logStorageMode();
 
@@ -927,16 +958,12 @@ async function run(): Promise<void> {
   console.log('[seed-properties] Seeding city cover images (fetch-once-then-store)...');
   await seedCityCoverImages();
 
-  console.log('[seed-properties] Ensuring seed owner profile...');
-  const profileId = await ensureSeedOwner();
-  console.log(`[seed-properties] Seed owner profileId=${profileId}`);
-
   let inserted = 0;
   let updated = 0;
 
   for (const seed of properties) {
     try {
-      const result = await upsertProperty(seed, profileId);
+      const result = await upsertProperty(seed);
       if (result === 'inserted') {
         inserted += 1;
       } else {
@@ -951,17 +978,38 @@ async function run(): Promise<void> {
   }
 
   // Refresh each city's cached propertiesCount from its resolved addresses.
+  //
+  // ONE correlated update, where `CitySchema.updatePropertiesCount` was a
+  // per-city method that loaded every address id in the city into an uncapped
+  // `$in` and then counted against it. The relational form needs neither the
+  // round trip nor the id list.
   console.log('[seed-properties] Refreshing city property counts...');
-  const cities = await City.find({}).select('_id name');
-  for (const city of cities) {
-    await city.updatePropertiesCount();
-  }
+  await getDb().execute(sql`
+    update ${cities} set
+      properties_count = (
+        select count(*) from ${propertiesTable}
+        join ${addresses} on ${addresses.id} = ${propertiesTable.addressId}
+        where ${addresses.cityId} = ${cities.id}
+      ),
+      last_updated = now()
+  `);
 
-  const totalSeed = await Property.countDocuments({ source: SEED_SOURCE });
-  const longTermCount = await Property.countDocuments({ source: SEED_SOURCE, offerings: OfferingType.LONG_TERM_RENT });
-  const shortTermCount = await Property.countDocuments({ source: SEED_SOURCE, offerings: OfferingType.SHORT_TERM_RENT });
-  const saleCount = await Property.countDocuments({ source: SEED_SOURCE, offerings: OfferingType.SALE });
-  const exchangeCount = await Property.countDocuments({ source: SEED_SOURCE, offerings: OfferingType.EXCHANGE });
+  const countSeed = async (offering?: OfferingType): Promise<number> => {
+    const [row] = await getDb()
+      .select({ total: sql<number>`count(*)::int` })
+      .from(propertiesTable)
+      .where(
+        offering === undefined
+          ? eq(propertiesTable.oxyUserId, SEED_OWNER_OXY_USER_ID)
+          : sql`${propertiesTable.oxyUserId} = ${SEED_OWNER_OXY_USER_ID} and ${propertiesTable.offerings} @> array[${offering}]::text[]`,
+      );
+    return row?.total ?? 0;
+  };
+  const totalSeed = await countSeed();
+  const longTermCount = await countSeed(OfferingType.LONG_TERM_RENT);
+  const shortTermCount = await countSeed(OfferingType.SHORT_TERM_RENT);
+  const saleCount = await countSeed(OfferingType.SALE);
+  const exchangeCount = await countSeed(OfferingType.EXCHANGE);
 
   console.log('[seed-properties] ----------------------------------------');
   console.log(`[seed-properties] Inserted: ${inserted}  Updated: ${updated}`);

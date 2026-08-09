@@ -2,8 +2,16 @@ import axios from 'axios';
 import { OfferingType } from '@homiio/shared-types';
 import { forwardGeocode } from './geocodingService';
 import { schedulePriceEthicsScore } from './priceEthicsService';
-import { Address, Property } from '../models';
-import type { AddressCanonicalInput } from '../models/Address';
+import {
+  countExpiredExternalProperties,
+  countExternalProperties,
+  deleteExpiredExternalProperties,
+  findOldestExternalPropertyUpdate,
+  findPropertyBySource,
+  insertProperty,
+  updateProperty,
+} from '../db/properties/propertyWrites';
+import { findOrCreateCanonicalAddress, type AddressCanonicalInput } from './addressService';
 import { logger as appLogger } from '../middlewares/logging';
 
 function errorMessageOf(error: unknown): string {
@@ -265,11 +273,11 @@ export async function upsertExternalListing(
         }
         addressInput.coordinates = { type: 'Point', coordinates: geocoded.data.coordinates };
       }
-      const address = await Address.findOrCreateCanonical(addressInput);
+      const address = await findOrCreateCanonicalAddress(addressInput);
 
       const update = {
         ...mapped,
-        addressId: address._id,
+        addressId: address.id,
         source,
         sourceId: raw.id,
         // Always record the canonical source URL (the aggregator CTA target).
@@ -279,17 +287,17 @@ export async function upsertExternalListing(
         expiresAt: new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000)
       };
 
-      const existing = await Property.findOne({ source, sourceId: raw.id });
-      
+      const existing = await findPropertyBySource(source, raw.id);
+
       if (existing) {
-        await Property.updateOne({ _id: existing._id }, { $set: update });
+        await updateProperty(existing.id, update);
         logger.debug(`Updated existing property: ${raw.id}`);
-        schedulePriceEthicsScore(String(existing._id));
+        schedulePriceEthicsScore(existing.id);
         return { status: 'updated' };
       } else {
-        const created = await Property.create(update);
+        const created = await insertProperty(update);
         logger.debug(`Created new property: ${raw.id}`);
-        schedulePriceEthicsScore(String(created._id));
+        schedulePriceEthicsScore(created.property.id);
         return { status: 'created' };
       }
     } catch (error) {
@@ -494,14 +502,17 @@ export async function getScraperHealth(): Promise<{
   };
 }> {
   try {
-    const externalPropertyCount = await Property.countDocuments({ isExternal: true });
-    const oldestProperty = await Property.findOne({ isExternal: true }).sort({ updatedAt: 1 });
-    
+    const externalPropertyCount = await countExternalProperties();
+    const oldestExternalProperty = await findOldestExternalPropertyUpdate();
+
     // Simple health assessment
     let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
     if (externalPropertyCount === 0) {
       status = 'unhealthy';
-    } else if (oldestProperty && new Date(oldestProperty.updatedAt) < new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)) {
+    } else if (
+      oldestExternalProperty &&
+      oldestExternalProperty < new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    ) {
       status = 'degraded'; // No updates in 7 days
     }
 
@@ -510,7 +521,7 @@ export async function getScraperHealth(): Promise<{
       details: {
         externalPropertyCount,
         lastScrapeErrors: 0, // Could be implemented with error tracking
-        oldestExternalProperty: oldestProperty?.updatedAt || null,
+        oldestExternalProperty,
       }
     };
   } catch {
@@ -533,19 +544,16 @@ export async function cleanupExpiredProperties(dryRun: boolean = true): Promise<
   const logger = new ScraperLogger('cleanup');
   
   try {
-    const expiredQuery = {
-      isExternal: true,
-      expiresAt: { $lt: new Date() }
-    };
+    const now = new Date();
 
     if (dryRun) {
-      const count = await Property.countDocuments(expiredQuery);
+      const count = await countExpiredExternalProperties(now);
       logger.info(`Would delete ${count} expired external properties`);
       return { deleted: count, errors: 0 };
     } else {
-      const result = await Property.deleteMany(expiredQuery);
-      logger.info(`Deleted ${result.deletedCount} expired external properties`);
-      return { deleted: result.deletedCount, errors: 0 };
+      const deleted = await deleteExpiredExternalProperties(now);
+      logger.info(`Deleted ${deleted} expired external properties`);
+      return { deleted, errors: 0 };
     }
   } catch (error) {
     logger.error('Failed to cleanup expired properties:', error);

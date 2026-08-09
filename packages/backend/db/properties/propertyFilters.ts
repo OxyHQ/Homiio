@@ -183,6 +183,21 @@ export function hasPhotos(): SQL {
   return eq(properties.hasImages, true);
 }
 
+/** Listings furnished to the given degree — the room feed's own filter. */
+export function furnishedStatusIs(furnishedStatus: string): SQL {
+  return eq(properties.furnishedStatus, furnishedStatus as 'furnished');
+}
+
+/**
+ * The rooms (or sub-listings) belonging to one parent listing.
+ *
+ * `parent_property_id` is a SELF reference, so this is the predicate behind
+ * both the room feed and the parent listing's own room statistics.
+ */
+export function childrenOf(parentPropertyId: string): SQL {
+  return eq(properties.parentPropertyId, parentPropertyId);
+}
+
 // ── Address-scoped predicates ──
 //
 // These reference `addresses`, which every read in `propertyReads` inner-joins.

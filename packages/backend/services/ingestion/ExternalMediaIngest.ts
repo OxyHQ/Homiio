@@ -13,7 +13,6 @@
  * User-Agent (mirroring the seed helper).
  */
 
-import type { Types } from 'mongoose';
 import type { NormalizedRemoteImage, PropertyImageRef } from '@homiio/shared-types';
 import {
   createProxiedFetch,
@@ -135,7 +134,7 @@ export class ExternalMediaIngest {
    * persisted to the self-hosted local store (opt-in, like the seed path).
    */
   async ingestForProperty(
-    propertyId: Types.ObjectId | string,
+    propertyId: string,
     remoteImages: readonly NormalizedRemoteImage[],
   ): Promise<PropertyImageRef[]> {
     const allowUnconfiguredStorage = !this.imageService.isStorageConfigured();

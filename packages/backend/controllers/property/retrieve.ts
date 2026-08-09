@@ -1,22 +1,23 @@
 /**
  * Single-listing and own-listings reads.
  *
- * Both read Postgres. The two Mongo writes that remain here — the view counter
- * and the recently-viewed upsert — are deliberately untouched: WRITES stay on
- * Mongo for the whole dual-run, because the backfill is a point-in-time copy and
- * the ingest worker keeps writing to Mongo. A read that moved is refreshed by
- * the next copy; a WRITE that moved would be lost by it.
+ * Both read Postgres, and the view counter now WRITES Postgres — the dual-run
+ * is over and Postgres is the single authority for properties.
  *
- * `views` in particular must NOT be ported here even though the column exists.
- * `views` is absent from `PropertySchema`, so mongoose strict mode has always
- * stripped it from this `$inc` — every increment this product ever issued was an
- * empty update, and the column starts at zero for every listing
- * (`db/schema/unmappedColumns.ts`). Writing it to Postgres now would make this
- * request path the ONLY writer of a Postgres value, which is exactly the shape
- * the dual-run forbids. It is restored with the write batch.
+ * **The counter starts working here for the first time.** `views` is absent
+ * from `PropertySchema`, so mongoose strict mode stripped it from this `$inc`
+ * and every increment this product ever issued was an empty update; the column
+ * starts at zero for every listing (`db/schema/unmappedColumns.ts`) and climbs
+ * from now on. Recorded because somebody comparing view counts across the
+ * cutover will see them reset, and the honest explanation is that they were
+ * never being counted, not that the port lost them.
+ *
+ * The recently-viewed upsert is still Mongo, and deliberately so: it belongs to
+ * the saved-items batch (`Saved`, `SavedPropertyFolder`, `RecentlyViewed`),
+ * which moves as one piece.
  */
 
-import { Profile, Property, RecentlyViewed } from '../../models';
+import { Profile, RecentlyViewed } from '../../models';
 import { AppError, successResponse, paginationResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
 import {
@@ -27,6 +28,7 @@ import {
   NEWEST_FIRST,
 } from '../../db/properties/propertyReads';
 import { ownedBy, statusIsNot } from '../../db/properties/propertyFilters';
+import { incrementPropertyViews } from '../../db/properties/propertyWrites';
 import { serializeProperty } from '../../db/properties/propertySerializer';
 import { getErrorName } from '../../utils/errors';
 import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
@@ -53,7 +55,10 @@ export async function getPropertyById(req: ControllerRequest, res: ControllerRes
       if (!isOwner) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
     }
 
-    await Property.findByIdAndUpdate(propertyId, { $inc: { views: 1 } });
+    // Best-effort: a failed counter must never fail the read that triggered it.
+    void incrementPropertyViews(propertyId).catch((error: unknown) => {
+      logger.warn('Failed to increment property view count', { propertyId, error });
+    });
 
     const oxyUserId = req.user?.id || req.user?._id;
     if (req.userId && oxyUserId) {
