@@ -144,6 +144,29 @@ const PROGRESS_INTERVAL = 25_000;
 /** Ids listed in a report when something is missing. Enough to grep for. */
 const MAX_REPORTED_IDS = 5;
 
+/** Coordinate outliers listed individually, with their ids and classification. */
+const MAX_REPORTED_OUTLIERS = 20;
+
+/**
+ * A stored coordinate pair that is `(0, 0)` — the classic "no geocode" sentinel.
+ *
+ * Reported, never rewritten. It will place that listing in the Gulf of Guinea
+ * for every radius search, which is a real product problem and Homiio's to
+ * decide; a copy that silently repaired it would be a synchroniser rather than a
+ * copy.
+ */
+export const SOURCE_COORDINATES_NULL_ISLAND = 'SOURCE_COORDINATES_NULL_ISLAND';
+
+/**
+ * A stored coordinate pair that sits far from the city the address names.
+ *
+ * Measured in production on two rows, both faithful copies of what Mongo holds:
+ * `6a51a9e63b4cc38a9d6053f1` on `León Capital` is at (-66.99, 10.53), which is
+ * Caracas. A defect that predates the port, and one the copy must report rather
+ * than fail on.
+ */
+export const SOURCE_COORDINATES_FAR_FROM_CITY = 'SOURCE_COORDINATES_FAR_FROM_CITY';
+
 /**
  * How far an address may sit from its own city's centroid before it is
  * reported.
@@ -189,9 +212,28 @@ const CITY_PAIR_TOLERANCE = 0.25;
  * transposition check has to answer.
  */
 const CITY_PAIRS = [
-  { from: 'Barcelona', to: 'Madrid', metres: 505_000 },
-  { from: 'Barcelona', to: 'Paris', metres: 830_000 },
+  { from: 'Madrid', to: 'Berlin', metres: 1_868_000 },
+  { from: 'Berlin', to: 'Warszawa', metres: 517_000 },
+  { from: 'Hamburg', to: 'Köln', metres: 356_000 },
 ] as const;
+
+/**
+ * How many named pairs must actually MEASURE for the anchor to mean anything.
+ *
+ * The first version named Barcelona→Madrid and Barcelona→Paris. Paris returned
+ * `null` on every run and always would: production is a Spanish/German/Polish
+ * portal and holds no Paris address at all. A probe that silently answers `null`
+ * is the vacuous shape — it cannot tell "correct" from "nothing to measure
+ * against" — so the pairs are now chosen from cities that DO carry addresses
+ * (Madrid 973, Warszawa 754, Hamburg 646, Köln 400, Berlin 301, measured
+ * 2026-08-09) and a pair that cannot be measured is reported as
+ * `notMeasured` with its reason rather than as a quiet `null`.
+ *
+ * Two of three, not all three: a city can legitimately empty out as listings
+ * expire, and a check that fails on that is a check somebody switches off. Two
+ * independent real-world distances is enough to anchor a coordinate system.
+ */
+const MINIMUM_MEASURED_PAIRS = 2;
 
 /** Per-collection outcome of the copy. */
 export interface CopyReport {
@@ -222,6 +264,15 @@ export interface GeometryReport {
     readonly expectedMetres: number;
     readonly measuredMetres: number | null;
     readonly withinTolerance: boolean | null;
+    /** Why a pair produced no distance. `null` when it did. */
+    readonly notMeasured: string | null;
+  }[];
+  /** The outliers themselves, classified — never a bare count. */
+  readonly outliers: readonly {
+    readonly addressId: string;
+    readonly city: string;
+    readonly metres: number;
+    readonly resolution: string;
   }[];
 }
 
@@ -866,31 +917,80 @@ export async function checkGeometry(database: Database): Promise<GeometryReport>
     ) measured
   `);
 
+  // The outliers THEMSELVES, classified — never a bare count. A number that
+  // somebody has to go and look up is a number nobody looks up, and these two
+  // rows are source defects an operator may want to act on independently of
+  // whether the run passes.
+  const outlierRows = await database.execute<{
+    id: string;
+    city: string;
+    metres: number;
+    longitude: number;
+    latitude: number;
+  }>(sql`
+    select a.id, c.name as city, a.longitude, a.latitude,
+           ST_Distance(a.geo, ST_MakePoint(c.longitude, c.latitude)::geography) as metres
+    from addresses a
+    join cities c on c.id = a.city_id
+    where c.longitude is not null and c.latitude is not null
+      and ST_Distance(a.geo, ST_MakePoint(c.longitude, c.latitude)::geography)
+          > ${CITY_CENTROID_LIMIT_METRES}
+    order by metres desc
+    limit ${MAX_REPORTED_OUTLIERS}
+  `);
+
+  const outliers = outlierRows.map((row) => ({
+    addressId: row.id,
+    city: row.city,
+    metres: row.metres,
+    // `(0, 0)` is the classic "no geocode" sentinel, not a position in the Gulf
+    // of Guinea, and it is worth telling apart from a listing that simply sits
+    // in the wrong country: the remedies differ. NEITHER is rewritten here — a
+    // backfill that silently repaired source data would be a synchroniser, and
+    // whether to null it is Homiio's call, not the copy's.
+    resolution:
+      row.longitude === 0 && row.latitude === 0
+        ? SOURCE_COORDINATES_NULL_ISLAND
+        : SOURCE_COORDINATES_FAR_FROM_CITY,
+  }));
+
   const pairs: GeometryReport['pairs'][number][] = [];
   for (const pair of CITY_PAIRS) {
-    const [row] = await database.execute<{ metres: number | null }>(sql`
-      select ST_Distance(
-        (select a.geo from addresses a join cities c on c.id = a.city_id
-          where lower(c.name) = lower(${pair.from}) limit 1),
-        (select a.geo from addresses a join cities c on c.id = a.city_id
-          where lower(c.name) = lower(${pair.to}) limit 1)
-      ) as metres
+    const [row] = await database.execute<{
+      metres: number | null;
+      from_addresses: string;
+      to_addresses: string;
+    }>(sql`
+      select
+        ST_Distance(
+          (select a.geo from addresses a join cities c on c.id = a.city_id
+            where lower(c.name) = lower(${pair.from}) limit 1),
+          (select a.geo from addresses a join cities c on c.id = a.city_id
+            where lower(c.name) = lower(${pair.to}) limit 1)
+        ) as metres,
+        (select count(*)::text from addresses a join cities c on c.id = a.city_id
+          where lower(c.name) = lower(${pair.from})) as from_addresses,
+        (select count(*)::text from addresses a join cities c on c.id = a.city_id
+          where lower(c.name) = lower(${pair.to})) as to_addresses
     `);
     const measuredMetres = row?.metres ?? null;
+    // A `null` distance is NAMED rather than left to be interpreted. The old
+    // shape returned a bare `null` for "no address in Paris", which reads
+    // identically to a failed measurement and to a passed one.
+    const notMeasured =
+      measuredMetres !== null
+        ? null
+        : `no address in ${Number(row?.from_addresses ?? 0) === 0 ? pair.from : pair.to}`;
     pairs.push({
       from: pair.from,
       to: pair.to,
       expectedMetres: pair.metres,
       measuredMetres,
-      // `null` rather than `false` when a city has no address: "nothing in
-      // Paris" is not a failed distance check, and reporting it as one would
-      // make an honest gap indistinguishable from a transposition. The CALLER
-      // decides what to do with it — and treats it as not-passed, so an absent
-      // city can never be read as a pass either.
       withinTolerance:
         measuredMetres === null
           ? null
           : Math.abs(measuredMetres - pair.metres) <= pair.metres * CITY_PAIR_TOLERANCE,
+      notMeasured,
     });
   }
 
@@ -899,6 +999,7 @@ export async function checkGeometry(database: Database): Promise<GeometryReport>
     centroidMaxMetres: centroid?.max_metres ?? null,
     centroidOverLimit: Number(centroid?.over_limit ?? 0),
     pairs,
+    outliers,
   };
 }
 
@@ -1085,6 +1186,14 @@ export async function runDataBackfill(options: {
       // Reported either way; the RATE decides whether the run is refused. See
       // CITY_CENTROID_OUTLIER_LIMIT — a transposition moves every address, a bad
       // geocode in the source moves one.
+      for (const outlier of geometry.outliers) {
+        logger.warn(
+          `geometry: ${outlier.resolution} ${outlier.addressId} in ${outlier.city}, ` +
+          `${Math.round(outlier.metres / 1000)} km from its city centroid. Reported, ` +
+          'not rewritten — the copy is faithful and repairing source data is a ' +
+          'separate decision.',
+        );
+      }
       if (share > CITY_CENTROID_OUTLIER_LIMIT) {
         failures.push(`geometry: ${line} — the shape a transposed pair makes`);
       } else {
@@ -1096,16 +1205,25 @@ export async function runDataBackfill(options: {
         );
       }
     }
-    // A pair with no address in one of its cities was NOT MEASURED, which is not
-    // the same as measured-and-wrong: reporting it as a failure would make an
-    // honest gap indistinguishable from a transposition. What must not happen is
-    // every pair going unmeasured and the check reporting a pass — so the
-    // vacuity floor is that at least one real-world distance was obtained.
+    // A pair with no address in one of its cities was NOT MEASURED, which is
+    // not the same as measured-and-wrong: reporting it as a failure would make
+    // an honest gap indistinguishable from a transposition. What must not happen
+    // is too FEW pairs measuring and the check reporting a pass anyway — a
+    // single anchor is one coincidence away from meaning nothing.
     const measured = geometry.pairs.filter((pair) => pair.measuredMetres !== null);
-    if (measured.length === 0) {
+    for (const pair of geometry.pairs) {
+      if (pair.notMeasured === null) continue;
+      logger.warn(
+        `geometry: ${pair.from}→${pair.to} was NOT measured — ${pair.notMeasured}. ` +
+        'Not a failure and not a pass; it contributes nothing either way.',
+      );
+    }
+    if (measured.length < MINIMUM_MEASURED_PAIRS) {
       failures.push(
-        'geometry: not one named city pair could be measured, so nothing anchored ' +
-        `the coordinates to a real-world distance (tried ${geometry.pairs.map((pair) => `${pair.from}→${pair.to}`).join(', ')})`,
+        `geometry: only ${measured.length} of ${geometry.pairs.length} named city ` +
+        `pairs could be measured, below the ${MINIMUM_MEASURED_PAIRS} needed to ` +
+        'anchor the coordinates to real-world distances at all ' +
+        `(${geometry.pairs.map((pair) => `${pair.from}→${pair.to}: ${pair.notMeasured ?? 'measured'}`).join('; ')})`,
       );
     }
     for (const pair of measured) {

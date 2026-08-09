@@ -39,7 +39,7 @@
  * | `Region.imageIds[]` / `City.imageIds[]` | Dropped with the column: the relation already exists as `images.(entity_type, entity_id)`. |
  */
 
-import { uuidv7 } from '@oxyhq/db';
+import { createHash } from 'node:crypto';
 import type { PgTable } from 'drizzle-orm/pg-core';
 import {
   addresses,
@@ -848,8 +848,9 @@ export function toPropertyImageRows(
   log: ResolutionLog,
 ): readonly CandidateRow[] {
   const propertyId = idValue(document._id);
-  return subdocuments(document, 'images').map((child) => ({
-    id: mintedSubdocumentId(child, log),
+  const createdAt = createdAtValue(document, log);
+  return subdocuments(document, 'images').map((child, index) => ({
+    id: mintedSubdocumentId(child, propertyId, 'images', index, createdAt, log),
     propertyId,
     imageId: idValue(readPath(child, 'imageId')),
     url: optional(child, 'url'),
@@ -871,8 +872,9 @@ export function toPropertyDocumentRows(
   log: ResolutionLog,
 ): readonly CandidateRow[] {
   const propertyId = idValue(document._id);
-  return subdocuments(document, 'documents').map((child) => ({
-    id: mintedSubdocumentId(child, log),
+  const createdAt = createdAtValue(document, log);
+  return subdocuments(document, 'documents').map((child, index) => ({
+    id: mintedSubdocumentId(child, propertyId, 'documents', index, createdAt, log),
     propertyId,
     name: optional(child, 'name'),
     url: optional(child, 'url'),
@@ -897,9 +899,13 @@ export function toPropertyWindowRows(
   log: ResolutionLog,
 ): readonly CandidateRow[] {
   const propertyId = idValue(document._id);
+  const createdAt = createdAtValue(document, log);
+  // The path is part of the natural key, so the two calendars cannot collide
+  // even at the same index — `availabilityWindows[0]` and
+  // `exchange.availabilityWindows[0]` are different rows of the same table.
   const windows = (path: string, scope: 'listing' | 'exchange') =>
-    subdocuments(document, path).map((child) => ({
-      id: mintedSubdocumentId(child, log),
+    subdocuments(document, path).map((child, index) => ({
+      id: mintedSubdocumentId(child, propertyId, path, index, createdAt, log),
       propertyId,
       scope,
       // Mongo's `start` / `end`. Renamed because `end` is a reserved word and
@@ -1061,8 +1067,9 @@ export function toProfileReferenceRows(
   log: ResolutionLog,
 ): readonly CandidateRow[] {
   const profileId = idValue(document._id);
-  return subdocuments(document, 'personalProfile.references').map((child) => ({
-    id: mintedSubdocumentId(child, log),
+  const createdAt = createdAtValue(document, log);
+  return subdocuments(document, 'personalProfile.references').map((child, index) => ({
+    id: mintedSubdocumentId(child, profileId, 'personalProfile.references', index, createdAt, log),
     profileId,
     name: optional(child, 'name'),
     relationship: optional(child, 'relationship'),
@@ -1078,8 +1085,9 @@ export function toProfileRentalHistoryRows(
   log: ResolutionLog,
 ): readonly CandidateRow[] {
   const profileId = idValue(document._id);
-  return subdocuments(document, 'personalProfile.rentalHistory').map((child) => ({
-    id: mintedSubdocumentId(child, log),
+  const createdAt = createdAtValue(document, log);
+  return subdocuments(document, 'personalProfile.rentalHistory').map((child, index) => ({
+    id: mintedSubdocumentId(child, profileId, 'personalProfile.rentalHistory', index, createdAt, log),
     profileId,
     address: optional(child, 'address'),
     startDate: optional(child, 'startDate'),
@@ -1105,8 +1113,9 @@ export function toProfilePreferredLocationRows(
   log: ResolutionLog,
 ): readonly CandidateRow[] {
   const profileId = idValue(document._id);
-  return subdocuments(document, 'personalProfile.preferences.preferredLocations').map((child) => ({
-    id: mintedSubdocumentId(child, log),
+  const createdAt = createdAtValue(document, log);
+  return subdocuments(document, 'personalProfile.preferences.preferredLocations').map((child, index) => ({
+    id: mintedSubdocumentId(child, profileId, 'personalProfile.preferences.preferredLocations', index, createdAt, log),
     profileId,
     city: optional(child, 'city'),
     state: optional(child, 'state'),
@@ -1120,8 +1129,9 @@ export function toProfileRoommateHistoryRows(
   log: ResolutionLog,
 ): readonly CandidateRow[] {
   const profileId = idValue(document._id);
-  return subdocuments(document, 'personalProfile.settings.roommate.history').map((child) => ({
-    id: mintedSubdocumentId(child, log),
+  const createdAt = createdAtValue(document, log);
+  return subdocuments(document, 'personalProfile.settings.roommate.history').map((child, index) => ({
+    id: mintedSubdocumentId(child, profileId, 'personalProfile.settings.roommate.history', index, createdAt, log),
     profileId,
     startDate: optional(child, 'startDate'),
     endDate: optional(child, 'endDate'),
@@ -1143,12 +1153,13 @@ export function toProfileChatMessageRows(
   log: ResolutionLog,
 ): readonly CandidateRow[] {
   const profileId = idValue(document._id);
+  const createdAt = createdAtValue(document, log);
   return subdocuments(document, 'personalProfile.chatHistory').map((child, position) => ({
-    id: mintedSubdocumentId(child, log),
+    id: mintedSubdocumentId(child, profileId, 'personalProfile.chatHistory', position, createdAt, log),
     profileId,
     role: optional(child, 'role'),
     content: optional(child, 'content'),
-    timestamp: withSchemaDefault(child, 'timestamp', createdAtValue(document, log), log),
+    timestamp: withSchemaDefault(child, 'timestamp', createdAt, log),
     position,
   }));
 }
@@ -1264,20 +1275,86 @@ function subdocuments(document: SourceDocument, path: string): readonly SourceDo
 }
 
 /**
- * A subdocument's id, counting the mint.
+ * A subdocument's id: its own `_id` when it has one, else a DETERMINISTIC uuid
+ * v7 derived from where it sits.
  *
- * `uuidv7` comes from `@oxyhq/db`, which is where `generatedId()`'s own default
- * comes from — so a minted row id and an application-created one are the same
- * shape by construction rather than by two implementations agreeing.
+ * The DOCUMENT is asked rather than a hand-written list of which arrays declare
+ * `{ _id: false }` — that is one word in a schema file, and
+ * `availabilityWindowSchema` carries it while `MIGRATION-CONTRACT.md`'s table
+ * (now corrected) did not list it.
+ *
+ * ## Why the minted id may not be random
+ *
+ * A random primary key and `ON CONFLICT DO NOTHING` cannot both hold. Every
+ * insert here is `ON CONFLICT DO NOTHING` precisely so a run that died half way
+ * is a POSITION rather than a mess — and a freshly-random key never conflicts,
+ * so a second run would not skip those rows, it would DUPLICATE every one of
+ * them. That is the resumed-partial-run case the idempotence rule exists for,
+ * so the two rules met head-on and the random mint lost.
+ *
+ * Deterministic from the position the row occupies — parent, path, index — so
+ * the same source document produces the same id on every run. Same reasoning
+ * that already makes `moderation_outbox.id` deterministic: where the id IS the
+ * deduplication mechanism, minting a fresh one deletes it.
+ *
+ * Latent rather than active when written: production holds ZERO availability
+ * windows, so no row has ever taken this path. It would have fired the first
+ * time a listing grew a calendar and the copy was re-run — which is the shape of
+ * bug that ships because nothing exercises it.
  */
-function mintedSubdocumentId(child: SourceDocument, log: ResolutionLog): unknown {
+function mintedSubdocumentId(
+  child: SourceDocument,
+  parentId: unknown,
+  path: string,
+  index: number,
+  parentCreatedAt: unknown,
+  log: ResolutionLog,
+): unknown {
   const stored = child._id;
   if (stored !== undefined && stored !== null) return idValue(stored);
-  // Not a remap: there was no id to preserve, and nothing references these rows.
-  // The DOCUMENT is asked rather than a hand-written list of which arrays
-  // declare `{ _id: false }` — that is one word in a schema file, and
-  // `availabilityWindowSchema` carries it while `MIGRATION-CONTRACT.md`'s table
-  // does not list it.
   log.applied(DATA_RESOLUTIONS.SUBDOCUMENT_ID_MINTED);
-  return uuidv7();
+  return deterministicUuidV7(parentCreatedAt, `${String(parentId)}|${path}|${index}`);
 }
+
+/**
+ * A uuid v7 that is a pure function of its inputs.
+ *
+ * The 74 random bits become the leading bytes of `sha256(naturalKey)`; the
+ * 48-bit timestamp prefix is the PARENT's own `created_at`, so the ids stay
+ * k-sortable and the primary-key btree stays append-mostly instead of scattering
+ * inserts across the keyspace. The version and variant nibbles are pinned
+ * exactly as `@oxyhq/db`'s `uuidv7` pins them, which is what keeps
+ * `isLiveEntityId` accepting the result.
+ *
+ * **The fallback for an unusable timestamp is the Unix epoch, never
+ * `Date.now()`.** `Date.now()` there would silently reintroduce the entire bug
+ * for exactly the rows whose timestamps are broken — their ids would differ
+ * between two runs and duplicate on a re-run — and it is the hardest version to
+ * notice, because it only affects rows already known to be odd.
+ *
+ * Derived from the implementation `homiio-backfill-2` wrote and verified
+ * against the real `isLiveEntityId`.
+ */
+export function deterministicUuidV7(timestamp: unknown, naturalKey: string): string {
+  const digest = createHash('sha256').update(naturalKey).digest();
+  const bytes = new Uint8Array(UUID_BYTES);
+  bytes.set(digest.subarray(0, UUID_BYTES));
+
+  const instant =
+    timestamp instanceof Date && !Number.isNaN(timestamp.getTime()) ? timestamp.getTime() : 0;
+  let milliseconds = Math.max(0, Math.floor(instant));
+  for (let index = UUID_V7_TIMESTAMP_BYTES - 1; index >= 0; index -= 1) {
+    bytes[index] = milliseconds & 0xff;
+    milliseconds = Math.floor(milliseconds / 256);
+  }
+
+  bytes[6] = (bytes[6] & 0x0f) | 0x70;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+  const hex = Buffer.from(bytes).toString('hex');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+/** Bytes in a UUID, and how many of them the v7 timestamp occupies. */
+const UUID_BYTES = 16;
+const UUID_V7_TIMESTAMP_BYTES = 6;

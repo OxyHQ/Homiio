@@ -46,11 +46,39 @@ other tables and not find one. The complete set:
 | `TenantApplication.documents[]` | `tenant_application_documents` |
 | `EvictionCase.attendees[]` | `eviction_case_attendees` |
 | `PlacePoi.categories[]` | `place_poi_categories` |
+| `Property.availabilityWindows[]` and `Property.exchange.availabilityWindows[]` | `property_availability_windows` |
 
 Every OTHER embedded array in this migration is an implicit or explicit
 `{ _id: true }` subdocument and keeps its id verbatim — including
 `Lease.paymentSchedule[]`, whose ids `recordPayment` already looks rows up by,
 and `Conversation.messages[]`.
+
+**The last row was missing until the data backfill was written, and its absence
+was not harmless.** `availabilityWindowSchema` (`models/schemas/PropertySchema.ts`)
+declares `{ _id: false }` and backs BOTH property calendars, so this table has no
+id to preserve — while the sentence above asserted that it does. A reader
+trusting the table would look for a stored id and not find one.
+
+## A minted id must be DETERMINISTIC, or idempotence is a false claim
+
+The rule above and "every insert is `ON CONFLICT DO NOTHING`, so a re-run
+converges" cannot both hold if the mint is random: a freshly-random primary key
+never conflicts, so a second run does not skip those rows, it DUPLICATES every
+one of them — in precisely the resumed-partial-run case the idempotence rule
+exists for.
+
+So a minted id is a pure function of the position the row occupies:
+`sha256(parentId|path|index)` supplies the 74 random bits and the PARENT's own
+`created_at` supplies the 48-bit timestamp prefix, with the version and variant
+nibbles pinned exactly as `@oxyhq/db`'s `uuidv7` pins them so `isLiveEntityId`
+still accepts it. `db/backfill/dataPlan.ts`'s `deterministicUuidV7` is the
+implementation. Same reasoning that already makes `moderation_outbox.id`
+deterministic: where the id IS the deduplication mechanism, minting a fresh one
+deletes it.
+
+The fallback for an unusable `created_at` is the Unix epoch and NEVER
+`Date.now()`. `Date.now()` reintroduces the whole defect for exactly the rows
+whose timestamps are broken, which is the version hardest to notice.
 
 **Two tables take an id that is neither an ObjectId nor a minted uuid.**
 `moderation_outbox.id` is DETERMINISTIC (`moderation:report.submit:<reportId>`)
