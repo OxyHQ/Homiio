@@ -160,7 +160,7 @@ jobs:
         if: always()
         run: >-
           bun .github/scripts/assert-test-floor.mjs
-          "$RUNNER_TEMP/backend-tests.json" packages/backend 880
+          "$RUNNER_TEMP/backend-tests.json" packages/backend 1100
 
   frontend:
     runs-on: ubuntu-24.04
