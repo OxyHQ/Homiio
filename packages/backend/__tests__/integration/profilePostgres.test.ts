@@ -31,7 +31,7 @@ import * as profileController from '../../controllers/profile';
 import { getDb } from '../../db/postgres';
 import { profileChatMessages, profiles } from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
-import { PROFILE_CHAT_HISTORY_LIMIT } from '../../db/profiles/profileRepository';
+import { PROFILE_CHAT_HISTORY_LIMIT, ensureProfile } from '../../db/profiles/profileRepository';
 
 function buildApp(oxyUserId: string | null): Express {
   const app = express();
@@ -89,6 +89,50 @@ describe('GET /profiles/me — get or create', () => {
   it('refuses an unauthenticated caller', async () => {
     const res = await request(buildApp(null)).get('/profiles/me');
     expect(res.status).toBe(401);
+  });
+
+  it('converges when two first requests race, INSIDE a caller transaction', async () => {
+    // The hazard: `ensureProfile` runs inside a transaction its CALLER opened
+    // (`updateMyProfile`, and all three `/ai/history` handlers). A caught
+    // `23505` would abort that transaction, so the recovery SELECT would answer
+    // `25P02 current transaction is aborted` and the race the unique index
+    // exists to absorb would surface as a 500 — only under concurrency, which
+    // is exactly where nobody would see it. `ON CONFLICT DO NOTHING` never
+    // fails, so no statement can abort anything.
+    const oxyUserId = owner();
+    const db = getDb();
+
+    const results = await Promise.all([
+      db.transaction((tx) => ensureProfile(tx, oxyUserId, 'owner')),
+      db.transaction((tx) => ensureProfile(tx, oxyUserId, 'owner')),
+      db.transaction((tx) => ensureProfile(tx, oxyUserId, 'owner')),
+    ]);
+
+    const ids = new Set(results.map((r) => r.profile.id));
+    expect(ids.size).toBe(1);
+    expect(await getDb().select().from(profiles).where(eq(profiles.oxyUserId, oxyUserId))).toHaveLength(1);
+  });
+
+  it('converges when the row is created between the read and the insert', async () => {
+    // The narrow window the `ON CONFLICT` branch exists for, forced rather than
+    // waited for: the row appears after `ensureProfile` has already looked and
+    // found nothing, so the insert is the statement that meets the conflict.
+    const oxyUserId = owner();
+    const db = getDb();
+
+    await db.transaction(async (tx) => {
+      const before = await tx.select().from(profiles).where(eq(profiles.oxyUserId, oxyUserId));
+      expect(before).toHaveLength(0);
+      // A committed row from "another request", inserted on the ROOT handle so
+      // it is visible to the transaction's next statement.
+      await getDb().insert(profiles).values({ oxyUserId });
+
+      const converged = await ensureProfile(tx, oxyUserId, 'owner');
+      expect(converged.profile.oxyUserId).toBe(oxyUserId);
+      // The transaction is still usable afterwards, which is the whole point.
+      const after = await tx.select().from(profiles).where(eq(profiles.oxyUserId, oxyUserId));
+      expect(after).toHaveLength(1);
+    });
   });
 });
 
@@ -285,21 +329,66 @@ describe('the public read — what a stranger gets', () => {
       });
   }
 
-  it('never carries the annual income, in any scope', async () => {
+  it('never carries the annual income to a STRANGER', async () => {
     const oxyUserId = owner();
     await seed(oxyUserId, { showIncome: true, showContactInfo: true, showRentalHistory: true });
 
-    // `profiles.personal_info_annual_income` is a PROTECTED COLUMN, excluded at
-    // the TYPE level by `publicColumns(profiles)` — so the serializer could not
-    // emit it even for the owner. The privacy FLAG is a separate decision the
-    // application would have to make explicitly.
+    // `profiles.personal_info_annual_income` is a PROTECTED COLUMN: excluded at
+    // the TYPE level by `publicColumns(profiles)`, so the public path has no
+    // field to leak by accident — not even with `showIncome` deliberately on,
+    // which is a per-viewer decision the application has not been built to make.
     const stored = await getDb().select().from(profiles).where(eq(profiles.oxyUserId, oxyUserId));
     expect(stored[0].personalInfoAnnualIncome).toBe(48000);
 
-    const ownerRead = await request(buildApp(oxyUserId)).get('/profiles/me');
     const publicRead = await request(buildApp(null)).get(`/public/profiles/oxy/${oxyUserId}`);
-    expect(JSON.stringify(ownerRead.body)).not.toContain('48000');
     expect(JSON.stringify(publicRead.body)).not.toContain('48000');
+    expect(publicRead.body.data.personalProfile.personalInfo).not.toHaveProperty('annualIncome');
+  });
+
+  it('DOES return the income to its owner, or the next save would erase it', async () => {
+    // The owner read names the protected column explicitly — the escape hatch
+    // `protectedColumns.ts` sanctions. Withholding it from the owner is not a
+    // privacy win: the edit form round-trips the whole `personalInfo` block, and
+    // a block that comes back without a key it never received writes NULL over
+    // the stored value. Excluding it here would silently delete people's income.
+    const oxyUserId = owner();
+    await seed(oxyUserId, { showContactInfo: true });
+
+    const ownerRead = await request(buildApp(oxyUserId)).get('/profiles/me');
+    expect(ownerRead.body.data.personalProfile.personalInfo.annualIncome).toBe(48000);
+  });
+
+  it('survives the edit form round trip rather than being blanked', async () => {
+    // The regression this exists to catch, end to end: read the profile, send
+    // the `personalInfo` block straight back the way the edit form does, and
+    // assert the income is still there.
+    const oxyUserId = owner();
+    const app = buildApp(oxyUserId);
+    await seed(oxyUserId, { showContactInfo: true });
+
+    const read = await request(app).get('/profiles/me');
+    const personalInfo = read.body.data.personalProfile.personalInfo;
+    await request(app).put('/profiles/me').send({ personalProfile: { personalInfo } });
+
+    const after = await request(app).get('/profiles/me');
+    expect(after.body.data.personalProfile.personalInfo.annualIncome).toBe(48000);
+    const stored = await getDb().select().from(profiles).where(eq(profiles.oxyUserId, oxyUserId));
+    expect(stored[0].personalInfoAnnualIncome).toBe(48000);
+  });
+
+  it('still lets the owner clear their income deliberately', async () => {
+    // The other direction: an explicit null must not be ignored, or "remove my
+    // income" becomes impossible.
+    const oxyUserId = owner();
+    const app = buildApp(oxyUserId);
+    await seed(oxyUserId, { showContactInfo: true });
+
+    await request(app)
+      .put('/profiles/me')
+      .send({ personalProfile: { personalInfo: { bio: 'kept', annualIncome: null } } });
+
+    const stored = await getDb().select().from(profiles).where(eq(profiles.oxyUserId, oxyUserId));
+    expect(stored[0].personalInfoAnnualIncome).toBeNull();
   });
 
   it('withholds references and the tenancy from a stranger by default', async () => {

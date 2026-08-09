@@ -151,6 +151,42 @@ describe('POST /ai/conversations — the write path that never worked', () => {
   });
 });
 
+describe('/ai/stream — creation has exactly ONE owner', () => {
+  it('creates NOTHING when the caller supplies no conversationId', async () => {
+    // `useSindiConversation` sends `conversationId: undefined` for a chat it has
+    // not persisted yet, and `conversationStore.saveConversation` separately
+    // POSTs `/ai/conversations` with the whole transcript. If `/stream` also
+    // created one, every new Sindi chat would appear TWICE in the user's list,
+    // one copy of which they could not recognise or clean up.
+    //
+    // The stream itself needs a live model, so this asserts the SIDE EFFECT
+    // rather than the response: after the request, the user still owns nothing.
+    const oxyUserId = owner();
+    await request(buildApp(oxyUserId))
+      .post('/ai/stream')
+      .send({ messages: [{ role: 'user', content: 'hello' }] });
+
+    const rows = await getDb()
+      .select()
+      .from(conversations)
+      .where(eq(conversations.oxyUserId, oxyUserId));
+    expect(rows).toHaveLength(0);
+  });
+
+  it('does not adopt or write into somebody else\'s conversation', async () => {
+    const victim = owner();
+    const id = await createFor(victim, { initialMessage: 'private' });
+
+    await request(buildApp(owner()))
+      .post('/ai/stream')
+      .send({ conversationId: id, messages: [{ role: 'user', content: 'injected' }] });
+
+    // The lookup is scoped to the caller, so a stranger's id resolves to
+    // nothing and the turn is dropped rather than appended.
+    expect(await messagesOf(id)).toHaveLength(1);
+  });
+});
+
 describe('GET /ai/conversations — the list, and the two derived figures', () => {
   it('returns only the caller\'s own conversations', async () => {
     const a = owner();

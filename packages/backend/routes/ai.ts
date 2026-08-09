@@ -734,12 +734,29 @@ Return only the JSON array, no other text.`;
       // A client placeholder id (`conv_…`), or none at all, means CREATE. A real
       // id means look it up, scoped to the caller — the ownership is in the
       // predicate, never a second statement.
+      // **The CLIENT owns creation, and this handler must not race it.**
+      //
+      // `useSindiConversation` sends `conversationId: undefined` for a chat it
+      // has not persisted yet, and `conversationStore.saveConversation`
+      // separately POSTs `/ai/conversations` with the whole transcript. So
+      // treating "no id" as CREATE — which the Mongo handler did — produces TWO
+      // rows for one chat, one of which the user cannot recognise. That never
+      // showed up before only because every Mongo write failed validation; the
+      // moment the write path works, the duplicate is real and visible in
+      // `GET /ai/conversations`.
+      //
+      // Nothing on the client reads `X-Conversation-ID` either (the AI SDK's
+      // `useChat` does not surface response headers), so announcing the id
+      // cannot reconcile the two. Hence: no id means PERSIST NOTHING and let the
+      // client's own POST be the single writer. An explicit `conv_…` placeholder
+      // still means create — a caller that sends one is asking for a row, and it
+      // gets the header back.
       const db = getDb();
       let conversation: ConversationRow | undefined;
       let conversationIsNew = false;
       if (conversationId && !isClientPlaceholderId(conversationId)) {
         conversation = (await findConversationForOwner(db, conversationId, userId))?.conversation;
-      } else {
+      } else if (conversationId) {
         conversation = (
           await db.transaction((tx) =>
             createConversation(tx, {
