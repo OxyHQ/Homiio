@@ -13,31 +13,28 @@
 import type { Request, Response, NextFunction } from 'express';
 import type { ExchangeReviewCategories } from '@homiio/shared-types';
 
-import { ExchangeRequest, ExchangeReview } from '../models';
+import { getDb } from '../db/postgres';
+import { findExchangeRequestById } from '../db/exchanges/exchangeReads';
+import {
+  createExchangeReview,
+  ExchangeAlreadyReviewedError,
+  listReviewsForExchange,
+  listReviewsForSubject,
+  serializeExchangeReview,
+} from '../db/exchanges/exchangeReviewReads';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
 import { ExchangeRequestStatus } from '@homiio/shared-types';
-import { Types } from 'mongoose';
 
 // ---- Tunable constants (no magic numbers inline) ----
 /** Default page size for the profile-reviews list. */
 const DEFAULT_PAGE_SIZE = 10;
 /** Hard cap on page size to protect the database. */
 const MAX_PAGE_SIZE = 100;
-/** MongoDB duplicate-key error code. */
-const DUPLICATE_KEY_CODE = 11000;
-/** Decimal places kept on the aggregate average rating. */
-const RATING_DECIMALS = 2;
 
 function resolveOxyUserId(req: Request): string | undefined {
   const user = (req as Request & { user?: { id?: string; _id?: string }; userId?: string });
   return user.user?.id || user.user?._id || user.userId;
-}
-
-/** Round to `RATING_DECIMALS` decimal places. */
-function roundRating(value: number): number {
-  const factor = 10 ** RATING_DECIMALS;
-  return Math.round(value * factor) / factor;
 }
 
 class ExchangeReviewController {
@@ -58,15 +55,14 @@ class ExchangeReviewController {
       const oxyUserId = resolveOxyUserId(req);
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      if (!Types.ObjectId.isValid(id)) {
-        return next(new AppError('Invalid exchange request ID', 400, 'INVALID_ID'));
-      }
-
-      const exchangeRequest = await ExchangeRequest.findById(id).lean();
+      // The `ObjectId.isValid` guard is deleted rather than widened
+      // (`db/ids.ts`) — the lookup already 404s for an id naming nothing.
+      const db = getDb();
+      const exchangeRequest = await findExchangeRequestById(db, id);
       if (!exchangeRequest) return next(new AppError('Exchange request not found', 404, 'NOT_FOUND'));
 
-      const isRequester = String(exchangeRequest.requesterOxyUserId) === String(oxyUserId);
-      const isHost = String(exchangeRequest.hostOxyUserId) === String(oxyUserId);
+      const isRequester = exchangeRequest.requesterOxyUserId === oxyUserId;
+      const isHost = exchangeRequest.hostOxyUserId === oxyUserId;
       if (!isRequester && !isHost) {
         return next(new AppError('Not authorized to review this exchange', 403, 'FORBIDDEN'));
       }
@@ -75,47 +71,44 @@ class ExchangeReviewController {
         return next(new AppError('You can only review a completed exchange', 400, 'EXCHANGE_NOT_COMPLETED'));
       }
 
-      // The reviewer reviews the other party.
+      if (typeof rating !== 'number' || !Number.isFinite(rating)) {
+        return next(new AppError('A rating is required', 400, 'INVALID_RATING'));
+      }
+
+      // The reviewer reviews the other party. Resolved server-side, which is
+      // also what makes `exchange_reviews_distinct_parties_check` unreachable
+      // through this path — it rejects only a bug.
       const subjectOxyUserId = isRequester
         ? exchangeRequest.hostOxyUserId
         : exchangeRequest.requesterOxyUserId;
 
-      // Defensive pre-check: one review per reviewer per exchange. The unique
-      // compound index is the race-safe backstop (handled below); this gives a
-      // clean 409 immediately and stays correct even before the index finishes
-      // building on a freshly-created collection.
-      const existingReview = await ExchangeReview.findOne({
-        exchangeRequestId: exchangeRequest._id,
-        reviewerOxyUserId: oxyUserId,
-      })
-        .select('_id')
-        .lean();
-      if (existingReview) {
-        return next(new AppError('You have already reviewed this exchange', 409, 'ALREADY_REVIEWED'));
-      }
-
+      // No "already reviewed?" pre-read: `exchange_reviews_request_reviewer_key`
+      // is a real UNIQUE, so the INSERT is the check and the 409 comes from its
+      // own violation. The Mongoose version did both, which left a redundant
+      // round trip in front of a constraint that already decides it.
+      let review;
       try {
-        const review = await ExchangeReview.create({
-          exchangeRequestId: exchangeRequest._id,
+        review = await createExchangeReview(db, {
+          exchangeRequestId: exchangeRequest.id,
           reviewerOxyUserId: oxyUserId,
           subjectOxyUserId,
           rating,
           comment,
           categories,
         });
-
-        logger.info('Exchange review created', {
-          exchangeReviewId: String(review._id),
-          exchangeRequestId: String(exchangeRequest._id),
-        });
-
-        res.status(201).json(successResponse(review.toJSON(), 'Exchange review created'));
       } catch (error) {
-        if ((error as { code?: number }).code === DUPLICATE_KEY_CODE) {
+        if (error instanceof ExchangeAlreadyReviewedError) {
           return next(new AppError('You have already reviewed this exchange', 409, 'ALREADY_REVIEWED'));
         }
         throw error;
       }
+
+      logger.info('Exchange review created', {
+        exchangeReviewId: review.id,
+        exchangeRequestId: exchangeRequest.id,
+      });
+
+      res.status(201).json(successResponse(serializeExchangeReview(review), 'Exchange review created'));
     } catch (error) {
       next(error);
     }
@@ -131,24 +124,19 @@ class ExchangeReviewController {
       const oxyUserId = resolveOxyUserId(req);
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      if (!Types.ObjectId.isValid(id)) {
-        return next(new AppError('Invalid exchange request ID', 400, 'INVALID_ID'));
-      }
-
-      const exchangeRequest = await ExchangeRequest.findById(id).lean();
+      const db = getDb();
+      const exchangeRequest = await findExchangeRequestById(db, id);
       if (!exchangeRequest) return next(new AppError('Exchange request not found', 404, 'NOT_FOUND'));
 
-      const isRequester = String(exchangeRequest.requesterOxyUserId) === String(oxyUserId);
-      const isHost = String(exchangeRequest.hostOxyUserId) === String(oxyUserId);
+      const isRequester = exchangeRequest.requesterOxyUserId === oxyUserId;
+      const isHost = exchangeRequest.hostOxyUserId === oxyUserId;
       if (!isRequester && !isHost) {
         return next(new AppError('Not authorized to view these reviews', 403, 'FORBIDDEN'));
       }
 
-      const reviews = await ExchangeReview.find({ exchangeRequestId: exchangeRequest._id })
-        .sort({ createdAt: -1 })
-        .lean();
+      const reviews = await listReviewsForExchange(db, exchangeRequest.id);
 
-      res.json(successResponse(reviews, 'Exchange reviews retrieved'));
+      res.json(successResponse(reviews.map(serializeExchangeReview), 'Exchange reviews retrieved'));
     } catch (error) {
       next(error);
     }
@@ -172,26 +160,20 @@ class ExchangeReviewController {
       const limitNumber = Math.min(MAX_PAGE_SIZE, Math.max(1, parseInt(String(limit), 10) || DEFAULT_PAGE_SIZE));
       const skip = (pageNumber - 1) * limitNumber;
 
-      const [items, total, aggregate] = await Promise.all([
-        ExchangeReview.find({ subjectOxyUserId: oxyUserId })
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limitNumber)
-          .lean(),
-        ExchangeReview.countDocuments({ subjectOxyUserId: oxyUserId }),
-        ExchangeReview.aggregate([
-          { $match: { subjectOxyUserId: oxyUserId } },
-          { $group: { _id: null, averageRating: { $avg: '$rating' }, count: { $sum: 1 } } },
-        ]),
-      ]);
-
-      const averageRating = aggregate.length > 0 ? roundRating(aggregate[0].averageRating) : 0;
+      const result = await listReviewsForSubject(getDb(), oxyUserId, {
+        limit: limitNumber,
+        offset: skip,
+      });
 
       res.json(
-        paginationResponse(items, pageNumber, limitNumber, total, 'Profile exchange reviews retrieved', {
-          averageRating,
-          reviewCount: total,
-        }),
+        paginationResponse(
+          result.rows.map(serializeExchangeReview),
+          pageNumber,
+          limitNumber,
+          result.total,
+          'Profile exchange reviews retrieved',
+          { averageRating: result.averageRating, reviewCount: result.total },
+        ),
       );
     } catch (error) {
       next(error);
