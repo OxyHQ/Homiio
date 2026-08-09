@@ -55,6 +55,15 @@ export interface PropertyBookingBasis {
    * than a hint.
    */
   readonly offerings: readonly string[];
+  /**
+   * Which exchange the listing accepts (`swap` | `host` | `both`), or NULL.
+   *
+   * Nullable because `exchange` is an OPTIONAL priced block — a listing not
+   * open to home exchange simply has none, which is why
+   * `exchangeController` treats a missing mode as a refusal rather than a
+   * default.
+   */
+  readonly exchangeMode: string | null;
 }
 
 /** The booking-relevant columns of one listing, or `undefined`. */
@@ -69,6 +78,7 @@ export async function findPropertyBookingBasis(
       isExternal: properties.isExternal,
       oxyUserId: properties.oxyUserId,
       offerings: properties.offerings,
+      exchangeMode: properties.exchangeMode,
     })
     .from(properties)
     .where(eq(properties.id, propertyId))
