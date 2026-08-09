@@ -8,7 +8,15 @@ import type { Request, Response, NextFunction } from 'express';
 
 import { AppError, successResponse } from '../middlewares/errorHandler';
 import { logger } from '../middlewares/logging';
-import { City, Profile, Property, RecentlyViewed, Saved, ViewingRequest } from '../models';
+import { City, Profile, Property } from '../models';
+import { getDb } from '../db/postgres';
+import {
+  countAppWideSaves,
+  countSavesOfProperties,
+  countViewsOfProperties,
+  listOwnedPropertyIds,
+} from '../db/analytics/ownerAnalytics';
+import { countViewingsByStatusForOwner } from '../db/bookings/viewingReads';
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -73,55 +81,29 @@ class AnalyticsController {
         );
       }
 
-      const propertyIds = await Property.distinct('_id', {
-        profileId: activeProfile._id,
-        status: { $ne: 'archived' },
-      });
+      // The owner key is `oxy_user_id`. The Mongo original filtered on
+      // `profileId`, which `PropertySchema` does not declare — so it matched no
+      // document, `propertyIds` was always empty, and the two guarded
+      // aggregates below never ran. Every number this endpoint reported has
+      // been 0 since it was written; see `db/analytics/ownerAnalytics.ts`.
+      const db = getDb();
+      const propertyIds = await listOwnedPropertyIds(db, oxyUserId);
 
-      const [viewsAgg, savesAgg, viewingAgg] = await Promise.all([
-        propertyIds.length
-          ? RecentlyViewed.aggregate([
-              { $match: { propertyId: { $in: propertyIds }, viewedAt: { $gte: since } } },
-              {
-                $group: {
-                  _id: null,
-                  total: { $sum: 1 },
-                  uniqueViewers: { $addToSet: '$profileId' },
-                },
-              },
-              { $project: { _id: 0, total: 1, uniqueViewers: { $size: '$uniqueViewers' } } },
-            ])
-          : Promise.resolve([]),
-        propertyIds.length
-          ? Saved.aggregate([
-              {
-                $match: {
-                  targetType: 'property',
-                  targetId: { $in: propertyIds },
-                  createdAt: { $gte: since },
-                },
-              },
-              { $group: { _id: null, total: { $sum: 1 } } },
-            ])
-          : Promise.resolve([]),
-        ViewingRequest.aggregate([
-          { $match: { ownerOxyUserId: activeProfile._id, createdAt: { $gte: since } } },
-          { $group: { _id: '$status', count: { $sum: 1 } } },
-        ]),
+      const [views, savesTotal, viewingBuckets] = await Promise.all([
+        countViewsOfProperties(db, propertyIds, since),
+        countSavesOfProperties(db, propertyIds, since),
+        countViewingsByStatusForOwner(db, oxyUserId, since),
       ]);
 
-      const views = {
-        total: viewsAgg[0]?.total || 0,
-        uniqueViewers: viewsAgg[0]?.uniqueViewers || 0,
-      };
-      const saves = { total: savesAgg[0]?.total || 0 };
+      const saves = { total: savesTotal };
 
       const viewingByStatus: Record<string, number> = {};
       let viewingReceived = 0;
-      for (const bucket of viewingAgg) {
-        viewingByStatus[bucket._id] = bucket.count;
+      for (const bucket of viewingBuckets) {
+        viewingByStatus[bucket.status] = bucket.count;
         viewingReceived += bucket.count;
       }
+
       const viewingRequests = {
         received: viewingReceived,
         pending: viewingByStatus.pending || 0,
@@ -174,12 +156,21 @@ class AnalyticsController {
   async getAppStats(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
 
-      const [totalProperties, totalCities, totalSaves, uniqueSavers] = await Promise.all([
+      // `Property` and `City` stay on Mongo here: the catalogue aggregates
+      // below are the property batch's to move, and these two counts join
+      // nothing to the saved figures, so a mixed read produces two independent
+      // correct numbers rather than an inconsistency.
+      //
+      // The saved pair moves, because `saved_items` is on Postgres — and
+      // `uniqueSavers` was another `distinct('profileId')` against a schema
+      // whose column is `oxyUserId`, so it has always been 0.
+      const [totalProperties, totalCities, appSaves] = await Promise.all([
         Property.countDocuments({}),
         City.countDocuments({}),
-        Saved.countDocuments({ targetType: 'property' }),
-        Saved.distinct('profileId', { targetType: 'property' }).then((arr: unknown[]) => arr.length),
+        countAppWideSaves(getDb()),
       ]);
+      const totalSaves = appSaves.total;
+      const uniqueSavers = appSaves.uniqueSavers;
 
       // Pricing aggregates
       const pricingAgg = await Property.aggregate([

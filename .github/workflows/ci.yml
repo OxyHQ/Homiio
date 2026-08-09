@@ -187,7 +187,9 @@ jobs:
       # glob that stops matching all produce an empty green run, and that reads as
       # coverage forever because nothing contradicts it.
       #
-      # RAISED FROM 1380 TO 1415 by the reservations port — the last tenancy
+      # RAISED FROM 1415 TO 1450 by the ViewingRequest stragglers (the
+      # retention sweep and the owner analytics). Before that it went
+      # 1380 -> 1415 for the reservations port — the last tenancy
       # table — which added `reservations.test.ts`. Before that it went
       # 1345 -> 1380 for the exchanges port, which added
       # `exchangeRequests.test.ts` — measured 1398 -> 1424. Before that it went
@@ -212,7 +214,7 @@ jobs:
         if: always()
         run: >-
           bun .github/scripts/assert-test-floor.mjs
-          "$RUNNER_TEMP/backend-tests.json" packages/backend 1415
+          "$RUNNER_TEMP/backend-tests.json" packages/backend 1450
 
   frontend:
     runs-on: ubuntu-24.04

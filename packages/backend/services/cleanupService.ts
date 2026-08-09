@@ -1,8 +1,8 @@
 import { Logger } from '../utils/logger';
 import { cleanupExpiredProperties } from './scraperService';
-import { ViewingRequest } from '../models';
 import { getDb } from '../db/postgres';
 import { pruneRecentlyViewedBefore } from '../db/saved/recentlyViewedRepository';
+import { pruneClosedViewingsBefore } from '../db/bookings/viewingReads';
 
 /**
  * The ONLY bound on `recently_viewed`, which is the one table in the saved-items
@@ -85,12 +85,9 @@ export class CleanupService {
     }
 
     try {
-      const result = await ViewingRequest.deleteMany({
-        status: { $in: ['declined', 'cancelled'] },
-        updatedAt: { $lt: viewingRequestCutoff },
-      });
-      deleted += result.deletedCount || 0;
-      this.logger.info(`Deleted ${result.deletedCount || 0} declined/cancelled viewing requests older than ${VIEWING_REQUEST_RETENTION_DAYS} days`);
+      const removed = await pruneClosedViewingsBefore(getDb(), viewingRequestCutoff);
+      deleted += removed;
+      this.logger.info(`Deleted ${removed} declined/cancelled viewing requests older than ${VIEWING_REQUEST_RETENTION_DAYS} days`);
     } catch (error) {
       errors += 1;
       this.logger.error('ViewingRequest cleanup failed', error);
