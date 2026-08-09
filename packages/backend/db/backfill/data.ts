@@ -81,6 +81,16 @@ import {
 } from './dataPlan';
 import { columnNames, foreignKeyRule } from './geoPlan';
 import {
+  ABSOLUTE_SURPLUS_FLOOR,
+  countTable,
+  deletionAllowance,
+  findSurplusIds,
+  mayDelete,
+  MAX_SOURCE_SHRINK,
+  reconcileTable,
+  type ReconcileTableReport,
+} from './reconcile';
+import {
   describeViolations,
   RowAuditor,
   UniqueKeyAuditor,
@@ -286,6 +296,9 @@ export interface CoverReport {
   readonly notAGeoImage: number;
 }
 
+/** Source documents whose rows are reconciled per round trip. */
+const RECONCILE_CHUNK_DOCUMENTS = 500;
+
 /** What one run did, whichever mode it ran in. */
 export interface DataBackfillReport {
   readonly mode: Mode;
@@ -297,6 +310,8 @@ export interface DataBackfillReport {
   readonly verified: readonly VerifyReport[];
   readonly geometry: GeometryReport | null;
   readonly hasImagesDisagreements: number | null;
+  /** Per-table outcome of `--reconcile`, empty in every other mode. */
+  readonly reconciled: readonly ReconcileTableReport[];
 }
 
 // ── the streaming pass ─────────────────────────────────────────────
@@ -1003,6 +1018,159 @@ export async function checkGeometry(database: Database): Promise<GeometryReport>
   };
 }
 
+/**
+ * Reconcile one collection: upsert what changed, then remove what is gone.
+ *
+ * Two phases with different scopes, and the split is the whole safety argument.
+ *
+ * **Upserts are CHUNKED**, so the run never holds a collection in memory — the
+ * same reason the copy streams. Within a chunk, deletion is scoped to the child
+ * rows of the parents that chunk actually looked at: a `property_images` row
+ * whose listing is not in this chunk is not absent, it is out of view, and
+ * deleting it would empty the table one chunk at a time.
+ *
+ * **Parent deletion runs ONCE, at the end**, against the complete set of source
+ * ids gathered while streaming — the only point at which "the source no longer
+ * has this id" is a statement about the source rather than about a chunk.
+ */
+async function reconcileCollection(
+  database: Database,
+  mongo: MongoDatabase,
+  plan: DataCollectionPlan,
+  log: ResolutionLog,
+): Promise<ReconcileTableReport[]> {
+  const reports: ReconcileTableReport[] = [];
+  const parentTable = plan.tables[0];
+  const sourceIds: string[] = [];
+
+  let chunk: SourceDocument[] = [];
+  const flushChunk = async (): Promise<void> => {
+    if (chunk.length === 0) return;
+    const parentIds = chunk.map((document) => String(document._id));
+    const mapped = chunk.map((document) => plan.map(document, log));
+
+    for (const table of plan.tables) {
+      const produced = mapped.flatMap((rows) => rows[table] ?? []);
+      const isParent = table === parentTable;
+      // A child's parent column comes from the plan's own reference rules, so a
+      // table whose parent link changes cannot leave this scoping behind.
+      const parentColumn = plan.references.find(
+        (spec) => spec.table === table && spec.parentTable === parentTable,
+      )?.column;
+      if (!isParent && parentColumn === undefined) continue;
+
+      reports.push(
+        await reconcileTable({
+          database,
+          table: requireTable(table),
+          tableName: table,
+          produced,
+          // The parent is compared against the ids this chunk produced, so its
+          // surplus set is empty by construction — parent deletion is the
+          // separate, guarded phase below.
+          scopedTo: isParent ? null : { column: parentColumn as string, parentIds },
+          allowDeletes: !isParent,
+        }),
+      );
+    }
+    chunk = [];
+  };
+
+  for await (const document of streamCollection(mongo, plan.sourceCollection)) {
+    sourceIds.push(String(document._id));
+    chunk.push(document);
+    if (chunk.length >= RECONCILE_CHUNK_DOCUMENTS) await flushChunk();
+  }
+  await flushChunk();
+
+  reports.push(await deleteSurplusParents(database, plan, parentTable, sourceIds));
+  return mergeReports(reports);
+}
+
+/**
+ * Remove the collection's parent rows whose source document is gone.
+ *
+ * The guard is the point of this function. An under-counting source stream and a
+ * genuine mass deletion look IDENTICAL from here, so the surplus is measured
+ * against the target's own current count — which is the previous run's result,
+ * so no state has to be carried — and refused above {@link deletionAllowance}. A
+ * TOTAL wipe is refused at any size.
+ *
+ * It fails toward KEEPING rows: a refused run leaves ghosts for another hour, a
+ * wrong delete destroys rows whose source is already gone.
+ */
+async function deleteSurplusParents(
+  database: Database,
+  plan: DataCollectionPlan,
+  parentTable: string,
+  sourceIds: readonly string[],
+): Promise<ReconcileTableReport> {
+  const table = requireTable(parentTable);
+  const surplus = await findSurplusIds(database, table, sourceIds);
+  const stored = await countTable(database, table);
+  const empty: ReconcileTableReport = {
+    table: parentTable,
+    inserted: 0,
+    updated: 0,
+    deleted: 0,
+    unchanged: 0,
+    columns: {},
+    deletionRefused: null,
+  };
+  if (surplus.length === 0) return empty;
+
+  if (!mayDelete(surplus.length, stored)) {
+    const refused =
+      `${surplus.length} of ${stored} row(s) are absent from ${plan.sourceCollection}, ` +
+      `above the allowance of ${deletionAllowance(stored)} (the greater of ` +
+      `${MAX_SOURCE_SHRINK * 100}% and ${ABSOLUTE_SURPLUS_FLOOR}); a TOTAL wipe is ` +
+      'refused at any size. A source stream returning too few ids and a genuine ' +
+      'mass deletion look identical from here, so NOTHING was removed.';
+    logger.error(`${parentTable}: ${refused}`);
+    return { ...empty, deletionRefused: refused };
+  }
+
+  // Logged BEFORE the delete, so the record survives a run that then fails.
+  logger.warn(`${parentTable}: removing ${surplus.length} row(s) absent from the source`, {
+    ids: surplus.slice(0, MAX_REPORTED_IDS),
+    truncated: Math.max(0, surplus.length - MAX_REPORTED_IDS),
+  });
+  const idColumn = getTableColumns(table).id;
+  let deleted = 0;
+  for (let start = 0; start < surplus.length; start += MONGO_LOOKUP_BATCH) {
+    const batch = surplus.slice(start, start + MONGO_LOOKUP_BATCH);
+    await database.delete(table).where(inArray(idColumn, batch));
+    deleted += batch.length;
+  }
+  return { ...empty, deleted };
+}
+
+/** One line per table, however many chunks contributed to it. */
+function mergeReports(reports: readonly ReconcileTableReport[]): ReconcileTableReport[] {
+  const merged = new Map<string, ReconcileTableReport>();
+  for (const report of reports) {
+    const current = merged.get(report.table);
+    if (current === undefined) {
+      merged.set(report.table, report);
+      continue;
+    }
+    const columns = { ...current.columns };
+    for (const [column, count] of Object.entries(report.columns)) {
+      columns[column] = (columns[column] ?? 0) + count;
+    }
+    merged.set(report.table, {
+      table: report.table,
+      inserted: current.inserted + report.inserted,
+      updated: current.updated + report.updated,
+      deleted: current.deleted + report.deleted,
+      unchanged: current.unchanged + report.unchanged,
+      columns,
+      deletionRefused: current.deletionRefused ?? report.deletionRefused,
+    });
+  }
+  return [...merged.values()];
+}
+
 // ── the run ────────────────────────────────────────────────────────
 
 /**
@@ -1049,6 +1217,10 @@ export async function runDataBackfill(options: {
   const auditLog = new ResolutionLog();
   const copyLog = new ResolutionLog();
   const audited: Record<string, number> = {};
+  // A refused deletion is a FAILURE of the run, not a warning: the ghosts it
+  // declined to remove are still being served, and an exit code of 0 would say
+  // otherwise.
+  const failuresFromReconcile: string[] = [];
 
   // ── the audit pass ──
   //
@@ -1101,7 +1273,31 @@ export async function runDataBackfill(options: {
       verified: [],
       geometry: null,
       hasImagesDisagreements: null,
+      reconciled: [],
     };
+  }
+
+  // ── the reconcile pass ──
+  //
+  // A BRIDGE, not a second authority: it runs only until the property write path
+  // lands, after which there is nothing to reconcile and this becomes the
+  // verification path. See `reconcile.ts`.
+  //
+  // Upserts run parent-first within each collection; parent DELETIONS run in the
+  // REVERSE collection order, because a property must go before the `addresses`
+  // row it references and before the `images` its `property_images` rows
+  // reference — both `RESTRICT`. The child tables of a property need no ordering
+  // of their own: all three are `ON DELETE CASCADE`.
+  const reconciled: ReconcileTableReport[] = [];
+  if (mode === 'reconcile') {
+    for (const plan of [...plans].reverse()) {
+      reconciled.push(...(await reconcileCollection(database, mongo, plan, copyLog)));
+    }
+    for (const report of reconciled) {
+      if (report.deletionRefused !== null) {
+        failuresFromReconcile.push(`${report.table}: ${report.deletionRefused}`);
+      }
+    }
   }
 
   // ── the copy pass ──
@@ -1128,11 +1324,12 @@ export async function runDataBackfill(options: {
   // them as unresolvable.
   let hasImagesRederived: number | null = null;
   let covers: CoverReport[] = [];
-  if (mode === 'copy' && !partial) {
+  const wrote = mode === 'copy' || mode === 'reconcile';
+  if (wrote && !partial) {
     hasImagesRederived = await syncAllHasImages(database);
     logger.info('properties.has_images re-derived from property_images', { hasImagesRederived });
     covers = await linkCoverImages(database, mongo);
-  } else if (mode === 'copy') {
+  } else if (wrote) {
     logger.warn(
       'Scoped run (--only): has_images derivation and geo cover linking were SKIPPED. ' +
       'Both read tables this run may not have populated.',
@@ -1154,7 +1351,7 @@ export async function runDataBackfill(options: {
     resolutions: copyLog.toRecord(),
   });
 
-  const failures: string[] = [];
+  const failures: string[] = [...failuresFromReconcile];
   for (const report of verified) {
     if (report.missing > 0) {
       failures.push(`${report.table}: ${report.missing} source row(s) missing from the target`);
@@ -1258,6 +1455,7 @@ export async function runDataBackfill(options: {
     verified,
     geometry,
     hasImagesDisagreements,
+    reconciled,
   };
 }
 

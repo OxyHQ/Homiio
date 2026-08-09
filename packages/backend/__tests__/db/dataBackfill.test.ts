@@ -542,6 +542,141 @@ describe('data backfill — minted subdocument ids are deterministic', () => {
   }, 120_000);
 });
 
+describe('data backfill — --reconcile', () => {
+  /** A copied source, then whatever the caller does to Mongo behind its back. */
+  async function copyThenDrift(
+    mutate: (database: ReturnType<typeof mongoDatabase>, ids: {
+      readonly address: mongoose.Types.ObjectId;
+      readonly properties: readonly mongoose.Types.ObjectId[];
+    }) => Promise<void>,
+  ) {
+    const geo = await seedAndCopyGeo();
+    const database = mongoDatabase();
+    const address = addressDocument(geo, 'Barcelona', BARCELONA);
+    await database.collection('addresses').insertOne(address);
+    await seedMeasurableAddresses(geo);
+
+    const listings = Array.from({ length: 10 }, () =>
+      propertyDocument(address._id as mongoose.Types.ObjectId),
+    );
+    await database.collection('properties').insertMany(listings);
+    await runDataBackfill({ mongo: database, database: getDb(), mode: 'copy', sampleSize: 5 });
+
+    await mutate(database, {
+      address: address._id as mongoose.Types.ObjectId,
+      properties: listings.map((listing) => listing._id as mongoose.Types.ObjectId),
+    });
+
+    return runDataBackfill({ mongo: database, database: getDb(), mode: 'reconcile', sampleSize: 5 });
+  }
+
+  const forTable = (report: Awaited<ReturnType<typeof copyThenDrift>>, table: string) =>
+    report.reconciled.find((entry) => entry.table === table);
+
+  it('removes a row the source deleted — the ghost listing the copy cannot fix', async () => {
+    // Measured in production: 54 properties deleted from Mongo and still served
+    // from Postgres, because `ON CONFLICT DO NOTHING` propagates neither an
+    // update nor a deletion. A re-run of the copy is a no-op on both.
+    const report = await copyThenDrift(async (database, ids) => {
+      await database.collection('properties').deleteOne({ _id: ids.properties[0] });
+    });
+
+    expect(forTable(report, 'properties')?.deleted).toBe(1);
+    const [row] = await getDb().select({ total: sql<number>`count(*)::int` }).from(properties);
+    expect(row.total).toBe(9);
+  }, 120_000);
+
+  it('propagates an UPDATE the copy would have skipped', async () => {
+    const report = await copyThenDrift(async (database, ids) => {
+      await database
+        .collection('properties')
+        .updateOne({ _id: ids.properties[0] }, { $set: { description: 'reconciled' } });
+    });
+
+    const properties_ = forTable(report, 'properties');
+    expect(properties_?.updated).toBe(1);
+    expect(properties_?.unchanged).toBe(9);
+    expect(properties_?.columns.description).toBe(1);
+  }, 120_000);
+
+  it('REFUSES a total wipe, keeps every row, and FAILS the run', async () => {
+    // An under-counting source query and a genuine mass deletion are
+    // indistinguishable from inside the process, so the guard fails toward
+    // KEEPING rows: ghosts for another hour beat destroying rows whose source is
+    // gone. And it fails the RUN — the ghosts it declined to remove are still
+    // being served, so an exit code of 0 would say otherwise.
+    await expect(
+      copyThenDrift(async (database) => {
+        await database.collection('properties').deleteMany({});
+      }),
+    ).rejects.toThrow(/TOTAL wipe is\s+refused/);
+
+    const [row] = await getDb().select({ total: sql<number>`count(*)::int` }).from(properties);
+    expect(row.total).toBe(10);
+  }, 120_000);
+
+  it('removes a CHILD row without touching children of parents it never looked at', async () => {
+    // Child deletion is scoped to the parents in the chunk. Unscoped, it would
+    // empty the table one chunk at a time.
+    const geo = await seedAndCopyGeo();
+    const database = mongoDatabase();
+    const address = addressDocument(geo, 'Barcelona', BARCELONA);
+    await database.collection('addresses').insertOne(address);
+    await seedMeasurableAddresses(geo);
+
+    const photos = [imageDocument(), imageDocument(), imageDocument()];
+    await database.collection('images').insertMany(photos);
+    const listing = propertyDocument(address._id as mongoose.Types.ObjectId, {
+      images: photos.map((photo, index) => ({
+        _id: oid(),
+        imageId: photo._id,
+        url: 'u/m',
+        isPrimary: index === 0,
+        order: index,
+      })),
+    });
+    const listingId = listing._id as mongoose.Types.ObjectId;
+    await database.collection('properties').insertOne(listing);
+    await runDataBackfill({ mongo: database, database: getDb(), mode: 'copy', sampleSize: 5 });
+
+    await database.collection('properties').updateOne({ _id: listingId }, { $pop: { images: 1 } });
+
+    const report = await runDataBackfill({
+      mongo: database,
+      database: getDb(),
+      mode: 'reconcile',
+      sampleSize: 5,
+    });
+
+    expect(forTable(report, 'property_images')?.deleted).toBe(1);
+    const [row] = await getDb()
+      .select({ total: sql<number>`count(*)::int` })
+      .from(propertyImages);
+    expect(row.total).toBe(2);
+  }, 120_000);
+
+  it('converges: a second reconcile changes nothing and reports it as unchanged', async () => {
+    // A reconciliation that only reports what it CHANGED cannot tell a converged
+    // run from one that examined nothing.
+    const report = await copyThenDrift(async (database, ids) => {
+      await database.collection('properties').deleteOne({ _id: ids.properties[0] });
+    });
+    expect(forTable(report, 'properties')?.deleted).toBe(1);
+
+    const second = await runDataBackfill({
+      mongo: mongoDatabase(),
+      database: getDb(),
+      mode: 'reconcile',
+      sampleSize: 5,
+    });
+    const properties_ = second.reconciled.find((entry) => entry.table === 'properties');
+    expect(properties_?.deleted).toBe(0);
+    expect(properties_?.updated).toBe(0);
+    expect(properties_?.inserted).toBe(0);
+    expect(properties_?.unchanged).toBe(9);
+  }, 150_000);
+});
+
 // ── the audit ──────────────────────────────────────────────────────
 
 describe('data backfill — the audit', () => {
