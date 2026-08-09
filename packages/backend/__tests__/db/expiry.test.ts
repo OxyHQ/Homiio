@@ -25,6 +25,7 @@ import { getTableName, sql } from 'drizzle-orm';
 import { findUnsupportedExpiryColumns } from '@oxyhq/db/assert';
 import { sqlColumnName } from '../../db/casing';
 import { EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE, EXPIRY_SWEEP_TARGETS } from '../../db/expiry';
+import { getCronStatus, initCronJobs, runExpirySweepNow, stopCronJobs } from '../../services/cron';
 import { closePostgres, connectPostgres, type Database } from '../../db/postgres';
 
 let db: Database;
@@ -36,6 +37,51 @@ beforeAll(async () => {
 afterAll(async () => {
   await closePostgres();
 });
+
+/**
+ * A listing with a deadline, and the geo chain a listing cannot exist without.
+ *
+ * Written out rather than pulled from a factory because the point of the sweep
+ * test is the FK cascade: deleting the property must take its `property_images`
+ * with it, and a fixture that skips the parents would test a table in isolation
+ * that never exists in isolation.
+ */
+async function seedProperty(db: Database, expiresAt: Date): Promise<string> {
+  // The deadline goes in as an ISO string with an explicit cast: `db.execute`
+  // is raw SQL, so none of drizzle's column mappers run and postgres.js has no
+  // type to bind a JS `Date` to.
+  const suffix = Math.random().toString(36).slice(2, 10);
+  const countryId = `c-${suffix}`;
+  const regionId = `r-${suffix}`;
+  const cityId = `y-${suffix}`;
+  const addressId = `a-${suffix}`;
+  const propertyId = `p-${suffix}`;
+
+  // One statement per `execute`: a parameterised query cannot carry multiple
+  // commands, and batching them reads as a schema fault rather than as the
+  // protocol limit it is.
+  await db.execute(sql`insert into countries (id, code, name)
+    values (${countryId}, ${suffix.slice(0, 2).toUpperCase()}, ${`Country ${suffix}`})`);
+  await db.execute(sql`insert into regions (id, country_id, name)
+    values (${regionId}, ${countryId}, ${`Region ${suffix}`})`);
+  await db.execute(sql`insert into cities (id, name, country_id, region_id)
+    values (${cityId}, ${`City ${suffix}`}, ${countryId}, ${regionId})`);
+  await db.execute(sql`insert into addresses
+      (id, country_id, region_id, city_id, country_code, street, postal_code, longitude, latitude)
+    values (${addressId}, ${countryId}, ${regionId}, ${cityId}, 'ES', 'Carrer Test', '08001', 2.1686, 41.3985)`);
+  await db.execute(sql`insert into properties
+      (id, address_id, source_url, expires_at, offerings, long_term_rent_monthly_amount)
+    values (${propertyId}, ${addressId}, 'https://example.test/ad',
+            ${expiresAt.toISOString()}::timestamptz, '{long_term_rent}', 1000)`);
+  return propertyId;
+}
+
+async function propertyExists(db: Database, id: string): Promise<boolean> {
+  const rows = await db.execute<{ found: number }>(
+    sql`select count(*)::int as found from properties where id = ${id}`,
+  );
+  return (rows[0]?.found ?? 0) > 0;
+}
 
 describe('expiry sweep registry', () => {
   it('backs every registered column with a leading btree index', async () => {
@@ -109,6 +155,39 @@ describe('expiry sweep registry', () => {
 
     const negative = EXPIRY_SWEEP_TARGETS.filter((target) => target.retentionSeconds < 0);
     expect(negative).toEqual([]);
+  });
+
+  it('is SCHEDULED — the call this registry says nothing makes', () => {
+    // The gap this closes, stated as a test rather than as a comment. The
+    // registry was complete and correct for weeks and nothing ran it, so every
+    // registered table grew forever — no error, no failing test, no symptom of
+    // any kind until disk. Measured in production hours after the property
+    // cutover: 124 listings past their deadline, 121 already reaped from Mongo,
+    // all still being served.
+    //
+    // A registry entry cannot detect its own absence from the scheduler. This
+    // can.
+    initCronJobs();
+    try {
+      expect(Object.keys(getCronStatus())).toContain('expirySweep');
+    } finally {
+      stopCronJobs();
+    }
+  });
+
+  it('reaps a row through the REGISTRY the cron job actually passes', async () => {
+    // Through the CRON's own sweep, not `sweepAllExpiredRows` directly. "The
+    // mechanism works" and "the mechanism is pointed at the right tables" are
+    // different claims, and only the second was ever in doubt — a job wired to
+    // an empty target list satisfies the first perfectly. Calling the registry
+    // here instead let exactly that mutation survive.
+    const expired = await seedProperty(db, new Date(Date.now() - 86_400_000));
+    const live = await seedProperty(db, new Date(Date.now() + 86_400_000));
+
+    await runExpirySweepNow();
+
+    expect(await propertyExists(db, expired)).toBe(false);
+    expect(await propertyExists(db, live)).toBe(true);
   });
 
   it('sweeps a deadline that has passed and spares one that has not', async () => {

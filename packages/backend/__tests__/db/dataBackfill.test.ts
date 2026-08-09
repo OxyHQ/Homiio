@@ -699,6 +699,25 @@ describe('data backfill — --reconcile', () => {
     expect(stored).toBeUndefined();
   }, 120_000);
 
+  it('a DRY RUN reports pending drift instead of failing on it', async () => {
+    // Left as a failure, the exit code depended on whether the 200-row fidelity
+    // sample happened to land on a drifted row — the production dry run exited 0
+    // with three updates pending, purely because it missed them. An exit code
+    // that means different things on two runs of the same command means nothing.
+    const report = await copyThenDrift(
+      async (database, ids) => {
+        for (const id of ids.properties) {
+          await database.collection('properties').updateOne({ _id: id }, { $set: { description: 'pending' } });
+        }
+      },
+      { dryRun: true },
+    );
+
+    expect(forTable(report, 'properties')?.updated).toBe(10);
+    // Reported, and the run stands.
+    expect(report.verified.some((entry) => entry.mismatches.length > 0)).toBe(true);
+  }, 120_000);
+
   it('NEVER deletes a row created in Postgres, whatever the source says', async () => {
     // The bug that would destroy live data. After the write path lands, "absent
     // from Mongo" means either "deleted before the cutover" (a ghost) or

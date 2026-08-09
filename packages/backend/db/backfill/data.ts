@@ -1479,8 +1479,26 @@ export async function runDataBackfill(options: {
   }
 
   if (failures.length > 0) {
-    for (const failure of failures) logger.error(failure);
-    throw new Error(`Verification failed:\n  ${failures.join('\n  ')}`);
+    // A DRY RUN reports; it does not assert. Its whole contract is "tell me what
+    // would change", so a field-by-field difference is the ANSWER rather than a
+    // defect — the run deliberately did not apply the update that would have
+    // closed it.
+    //
+    // This is not a softening. Left as a failure, the exit code depended on
+    // whether the 200-row sample happened to land on one of the drifted rows:
+    // the production dry run exited 0 with three updates pending, purely
+    // because it missed them. An exit code that means different things on two
+    // runs of the same command means nothing.
+    if (dryRun) {
+      logger.warn(
+        'Dry run: the checks below describe what a real run would change, not ' +
+        'defects in the target',
+        { pending: failures },
+      );
+    } else {
+      for (const failure of failures) logger.error(failure);
+      throw new Error(`Verification failed:\n  ${failures.join('\n  ')}`);
+    }
   }
 
   return {
