@@ -82,6 +82,7 @@ import {
 import { columnNames, foreignKeyRule } from './geoPlan';
 import {
   ABSOLUTE_SURPLUS_FLOOR,
+  couldHaveComeFromMongo,
   countTable,
   deletionAllowance,
   findSurplusIds,
@@ -153,6 +154,15 @@ const PROGRESS_INTERVAL = 25_000;
 
 /** Ids listed in a report when something is missing. Enough to grep for. */
 const MAX_REPORTED_IDS = 5;
+
+/**
+ * Ids printed when a deletion is proposed.
+ *
+ * Far larger than {@link MAX_REPORTED_IDS}, because under `--dry-run` this list
+ * IS the deliverable — the point is that an operator eyeballs 86 rather than
+ * discovers 8,600.
+ */
+const MAX_DRY_RUN_IDS = 500;
 
 /** Coordinate outliers listed individually, with their ids and classification. */
 const MAX_REPORTED_OUTLIERS = 20;
@@ -1038,6 +1048,7 @@ async function reconcileCollection(
   mongo: MongoDatabase,
   plan: DataCollectionPlan,
   log: ResolutionLog,
+  dryRun: boolean,
 ): Promise<ReconcileTableReport[]> {
   const reports: ReconcileTableReport[] = [];
   const parentTable = plan.tables[0];
@@ -1070,6 +1081,7 @@ async function reconcileCollection(
           // separate, guarded phase below.
           scopedTo: isParent ? null : { column: parentColumn as string, parentIds },
           allowDeletes: !isParent,
+          dryRun,
         }),
       );
     }
@@ -1083,7 +1095,7 @@ async function reconcileCollection(
   }
   await flushChunk();
 
-  reports.push(await deleteSurplusParents(database, plan, parentTable, sourceIds));
+  reports.push(await deleteSurplusParents(database, plan, parentTable, sourceIds, dryRun));
   return mergeReports(reports);
 }
 
@@ -1104,9 +1116,15 @@ async function deleteSurplusParents(
   plan: DataCollectionPlan,
   parentTable: string,
   sourceIds: readonly string[],
+  dryRun: boolean,
 ): Promise<ReconcileTableReport> {
   const table = requireTable(parentTable);
-  const surplus = await findSurplusIds(database, table, sourceIds);
+  const absent = await findSurplusIds(database, table, sourceIds);
+  // A row created in Postgres was never in Mongo, so its absence says nothing
+  // about it. Removing one would destroy live data in the authoritative store,
+  // with no source left to re-copy it from. See `couldHaveComeFromMongo`.
+  const surplus = absent.filter((id) => couldHaveComeFromMongo(id));
+  const retainedPostCutover = absent.length - surplus.length;
   const stored = await countTable(database, table);
   const empty: ReconcileTableReport = {
     table: parentTable,
@@ -1116,7 +1134,15 @@ async function deleteSurplusParents(
     unchanged: 0,
     columns: {},
     deletionRefused: null,
+    retainedPostCutover,
+    deletions: [],
   };
+  if (retainedPostCutover > 0) {
+    logger.info(
+      `${parentTable}: ${retainedPostCutover} row(s) absent from ${plan.sourceCollection} ` +
+      'were RETAINED — their id shape says they were created in Postgres, not copied',
+    );
+  }
   if (surplus.length === 0) return empty;
 
   if (!mayDelete(surplus.length, stored)) {
@@ -1130,19 +1156,22 @@ async function deleteSurplusParents(
     return { ...empty, deletionRefused: refused };
   }
 
-  // Logged BEFORE the delete, so the record survives a run that then fails.
-  logger.warn(`${parentTable}: removing ${surplus.length} row(s) absent from the source`, {
-    ids: surplus.slice(0, MAX_REPORTED_IDS),
-    truncated: Math.max(0, surplus.length - MAX_REPORTED_IDS),
-  });
+  // Logged BEFORE the delete, so the record survives a run that then fails —
+  // and under `--dry-run` this IS the output, so the whole list is printed
+  // rather than a sample.
+  logger.warn(
+    `${parentTable}: ${dryRun ? 'WOULD remove' : 'removing'} ${surplus.length} row(s) ` +
+    `absent from ${plan.sourceCollection}`,
+    { ids: surplus.slice(0, MAX_DRY_RUN_IDS), truncated: Math.max(0, surplus.length - MAX_DRY_RUN_IDS) },
+  );
   const idColumn = getTableColumns(table).id;
   let deleted = 0;
   for (let start = 0; start < surplus.length; start += MONGO_LOOKUP_BATCH) {
     const batch = surplus.slice(start, start + MONGO_LOOKUP_BATCH);
-    await database.delete(table).where(inArray(idColumn, batch));
+    if (!dryRun) await database.delete(table).where(inArray(idColumn, batch));
     deleted += batch.length;
   }
-  return { ...empty, deleted };
+  return { ...empty, deleted, deletions: surplus };
 }
 
 /** One line per table, however many chunks contributed to it. */
@@ -1166,6 +1195,8 @@ function mergeReports(reports: readonly ReconcileTableReport[]): ReconcileTableR
       unchanged: current.unchanged + report.unchanged,
       columns,
       deletionRefused: current.deletionRefused ?? report.deletionRefused,
+      retainedPostCutover: current.retainedPostCutover + report.retainedPostCutover,
+      deletions: [...current.deletions, ...report.deletions],
     });
   }
   return [...merged.values()];
@@ -1194,9 +1225,19 @@ export async function runDataBackfill(options: {
   readonly mode: Mode;
   readonly sampleSize?: number;
   readonly only?: readonly DataCollectionName[];
+  /**
+   * Decide and report everything, write nothing.
+   *
+   * Only meaningful with `--reconcile`, and the reason it exists is that
+   * reconciliation is the one mode that DELETES. A dry run turns "trust the
+   * guard" into "read the 86 ids it proposes to remove", which is the difference
+   * between eyeballing 86 and discovering 8,600.
+   */
+  readonly dryRun?: boolean;
 }): Promise<DataBackfillReport> {
   const { mongo, database, mode } = options;
   const sampleSize = options.sampleSize ?? DEFAULT_SAMPLE_ROWS;
+  const dryRun = options.dryRun ?? false;
   const selected = options.only ?? DATA_COPY_ORDER;
   const plans = DATA_COPY_ORDER.filter((name) => selected.includes(name)).map(
     (name) => DATA_PLANS[name],
@@ -1291,7 +1332,7 @@ export async function runDataBackfill(options: {
   const reconciled: ReconcileTableReport[] = [];
   if (mode === 'reconcile') {
     for (const plan of [...plans].reverse()) {
-      reconciled.push(...(await reconcileCollection(database, mongo, plan, copyLog)));
+      reconciled.push(...(await reconcileCollection(database, mongo, plan, copyLog, dryRun)));
     }
     for (const report of reconciled) {
       if (report.deletionRefused !== null) {
@@ -1324,7 +1365,7 @@ export async function runDataBackfill(options: {
   // them as unresolvable.
   let hasImagesRederived: number | null = null;
   let covers: CoverReport[] = [];
-  const wrote = mode === 'copy' || mode === 'reconcile';
+  const wrote = (mode === 'copy' || mode === 'reconcile') && !dryRun;
   if (wrote && !partial) {
     hasImagesRederived = await syncAllHasImages(database);
     logger.info('properties.has_images re-derived from property_images', { hasImagesRederived });
@@ -1509,13 +1550,22 @@ async function main(): Promise<void> {
   const mode = readMode(argv);
   const sampleSize = readSampleSize(argv);
   const only = readOnly(argv);
+  const dryRun = argv.includes('--dry-run');
+  if (dryRun && mode !== 'reconcile') {
+    // Refused rather than ignored. `--dry-run` on a copy would read as "this
+    // showed me what the copy would do", and it would not have.
+    throw new Error(
+      '--dry-run is only meaningful with --reconcile. `--audit-only` is the ' +
+      'read-only form of a copy, and `--verify-only` of a verification.',
+    );
+  }
 
   const mongoUrl = process.env.MONGODB_URI;
   if (!mongoUrl) throw new Error('MONGODB_URI is not set; there is nothing to copy from.');
   const postgresUrl = process.env.DATABASE_URL;
   if (!postgresUrl) throw new Error('DATABASE_URL is not set; there is nowhere to copy to.');
 
-  logger.info('Data backfill starting', { source, target, mode, sampleSize, only });
+  logger.info('Data backfill starting', { source, target, mode, sampleSize, only, dryRun });
 
   await mongoose.connect(mongoUrl);
   const client = postgres(postgresUrl, { max: 1 });
@@ -1532,7 +1582,7 @@ async function main(): Promise<void> {
     await assertMigrationTarget(client, target);
 
     const database = drizzle(client, { schema, casing: DATABASE_CASING });
-    const report = await runDataBackfill({ mongo, database, mode, sampleSize, only });
+    const report = await runDataBackfill({ mongo, database, mode, sampleSize, only, dryRun });
     logger.info('Data backfill complete', {
       source,
       target,
