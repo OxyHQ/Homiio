@@ -116,9 +116,10 @@ export function applyOfferingRulesForUpdate(
 
   // Overlay the body onto the stored state: a key present in the body wins
   // (including an explicit `null`, which clears a block); otherwise the stored
-  // value stands. This mirrors the `$set` Mongo will perform. `validateOfferings`
-  // inspects each block structurally (object-presence + numeric price), so the
-  // raw whitelisted values flow through unchanged.
+  // value stands — the same merge the partial update itself performs, so the
+  // rules are validated against exactly the row the write will produce.
+  // `validateOfferings` inspects each block structurally (object-presence +
+  // numeric price), so the raw whitelisted values flow through unchanged.
   const pick = (key: keyof OfferingBearing): unknown =>
     (Object.prototype.hasOwnProperty.call(data, key) ? data[key] : current[key]);
 
