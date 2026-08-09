@@ -70,7 +70,7 @@ export const LocationDisplay: React.FC<LocationDisplayProps> = ({ property }) =>
               initialCoordinates={coordinates}
               initialZoom={15}
               startFromCurrentLocation={false}
-              screenId={`property-location-${property?._id ?? property?.id ?? 'unknown'}`}
+              screenId={`property-location-${property?.id ?? 'unknown'}`}
             />
           </View>
         ) : null}

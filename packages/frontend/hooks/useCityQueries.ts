@@ -50,10 +50,10 @@ export function usePopularCities(limit = 8, filters: CityFilters = {}) {
       if (!countryId && !regionId) return cities;
       return cities.filter((city) => {
         const cityCountryId = typeof city.countryId === 'object'
-          ? (city.countryId as { _id?: string })._id
+          ? (city.countryId as { id?: string }).id
           : city.countryId;
         const cityRegionId = typeof city.regionId === 'object'
-          ? (city.regionId as { _id?: string })._id
+          ? (city.regionId as { id?: string }).id
           : city.regionId;
         if (regionId && cityRegionId !== regionId) return false;
         if (countryId && cityCountryId !== countryId) return false;

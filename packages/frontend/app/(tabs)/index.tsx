@@ -298,7 +298,7 @@ export default function HomePage() {
         refetchCities(),
         ...nearbyCities.map((city) =>
           queryClient.invalidateQueries({
-            queryKey: cityQueryKeys.properties(city._id, 8),
+            queryKey: cityQueryKeys.properties(city.id, 8),
           }),
         ),
         loadSavedProperties(),
@@ -454,7 +454,7 @@ export default function HomePage() {
                 property={property}
                 variant="featured"
                 enableImageCarousel={false}
-                onPress={() => router.push(`/properties/${property._id || property.id}`)}
+                onPress={() => router.push(`/properties/${property.id}`)}
               />
             )}
           />
@@ -464,7 +464,7 @@ export default function HomePage() {
               <CityShowcaseSection
                 title={t('home.cityShowcase.title', { place: explorePlace })}
                 items={cities}
-                onPressCity={(city) => router.push(`/properties/city/${city._id}`)}
+                onPressCity={(city) => router.push(`/properties/city/${city.id}`)}
               />
             </Animated.View>
           ) : null}
@@ -475,7 +475,7 @@ export default function HomePage() {
                 title={featuredGridTitle}
                 items={gridProperties}
                 onPropertyPress={(property) =>
-                  router.push(`/properties/${property._id || property.id}`)
+                  router.push(`/properties/${property.id}`)
                 }
               />
             </Animated.View>
@@ -491,7 +491,7 @@ export default function HomePage() {
                   property={property}
                   variant="featured"
                   enableImageCarousel={false}
-                  onPress={() => router.push(`/properties/${property._id || property.id}`)}
+                  onPress={() => router.push(`/properties/${property.id}`)}
                 />
               )}
             />
@@ -507,14 +507,14 @@ export default function HomePage() {
                   property={property}
                   variant="featured"
                   enableImageCarousel={false}
-                  onPress={() => router.push(`/properties/${property._id || property.id}`)}
+                  onPress={() => router.push(`/properties/${property.id}`)}
                 />
               )}
             />
           ) : null}
 
           {nearbyCities.map((city) => (
-            <NearbyCityCarousel key={city._id} city={city} />
+            <NearbyCityCarousel key={city.id} city={city} />
           ))}
 
           {isWide ? (
@@ -582,7 +582,7 @@ export default function HomePage() {
                 <PropertyResultsGrid
                   properties={exploreProperties}
                   onPropertyPress={(property) =>
-                    router.push(`/properties/${property._id || property.id}`)
+                    router.push(`/properties/${property.id}`)
                   }
                 />
                 {exploreFeed.isFetchingNextPage ? (

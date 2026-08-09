@@ -229,7 +229,7 @@ export default function ViewingsPage() {
   const handleModify = (viewing: ViewingRequest) => {
     router.push({
       pathname: `/properties/${viewing.propertyId}/book-viewing`,
-      params: { modifyViewingId: viewing._id },
+      params: { modifyViewingId: viewing.id },
     });
   };
 
@@ -331,11 +331,11 @@ export default function ViewingsPage() {
             <View style={styles.listWrap}>
               {filteredViewings.map((viewing) => (
                 <ViewingCard
-                  key={viewing._id}
+                  key={viewing.id}
                   viewing={viewing}
                   cancelling={
                     cancelMutation.isPending &&
-                    cancelTarget?._id === viewing._id
+                    cancelTarget?.id === viewing.id
                   }
                   onCancel={() => setCancelTarget(viewing)}
                   onModify={() => handleModify(viewing)}
@@ -355,7 +355,7 @@ export default function ViewingsPage() {
           loading={cancelMutation.isPending}
           onCancel={() => setCancelTarget(null)}
           onConfirm={() => {
-            if (cancelTarget) cancelMutation.mutate(cancelTarget._id);
+            if (cancelTarget) cancelMutation.mutate(cancelTarget.id);
           }}
         />
       </SafeAreaView>

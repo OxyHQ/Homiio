@@ -13,6 +13,7 @@ import telegramController from '../controllers/telegramController';
 import analyticsController from '../controllers/analyticsController';
 import * as reviewController from '../controllers/reviewController';
 import { asyncHandler } from '../middlewares';
+import { serializeWireIds } from '../middlewares/wireIds';
 import performanceMonitor from '../middlewares/performance';
 import { Conversation } from '../models';
 import * as profileController from '../controllers/profile';
@@ -42,6 +43,9 @@ function getPropertyAdjustmentFactor(propertyType: unknown): number {
 
 export default function () {
   const router = express.Router();
+
+  // FIRST, so every body below leaves as `id` and never `_id`. See wireIds.ts.
+  router.use(serializeWireIds);
 
   // Performance monitoring for all routes
   router.use(performanceMonitor);
@@ -255,7 +259,7 @@ export default function () {
 
       // Return conversation without sensitive user data, including status field
       const sharedConversation = {
-        _id: conversation._id,
+        id: conversation._id,
         title: conversation.title,
         messages: conversation.messages,
         createdAt: conversation.createdAt,

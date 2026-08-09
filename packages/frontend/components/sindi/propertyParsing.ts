@@ -217,7 +217,6 @@ function toPropertyType(raw: string): PropertyType {
 function buildSyntheticProperty({ id, type, price, city }: SyntheticPropertyInput): Property {
   const now = new Date().toISOString();
   return {
-    _id: id,
     id,
     type: toPropertyType(type),
     // Synthetic search-line listings are long-term rentals — the only price the

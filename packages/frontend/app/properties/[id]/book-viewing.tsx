@@ -140,7 +140,7 @@ export default function BookViewingPage() {
     });
 
     return {
-      id: apiProperty._id || apiProperty.id || '',
+      id: apiProperty.id || '',
       title: generatedTitle,
       location: `${apiProperty.address?.cityName || ''}, ${apiProperty.address?.regionName || ''}`,
       landlordName: 'Property Owner',
@@ -162,7 +162,7 @@ export default function BookViewingPage() {
         );
 
         const viewings = Array.isArray(response?.data) ? response.data : [];
-        const viewing = viewings.find(v => v._id === modifyViewingIdString);
+        const viewing = viewings.find(v => v.id === modifyViewingIdString);
 
         if (viewing) {
           setExistingViewing(viewing);

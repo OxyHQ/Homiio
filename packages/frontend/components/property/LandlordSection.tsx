@@ -159,7 +159,7 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
                                     <PropertyCard
                                         property={prop}
                                         variant="compact"
-                                        onPress={() => router.push(`/properties/${prop._id || prop.id}`)}
+                                        onPress={() => router.push(`/properties/${prop.id}`)}
                                         showSaveButton={false}
                                         showVerifiedBadge={false}
                                         showRating={false}

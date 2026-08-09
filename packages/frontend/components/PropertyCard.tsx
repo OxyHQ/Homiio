@@ -210,7 +210,7 @@ export const PropertyCard = React.memo(function PropertyCard({
   // Define the callback function (using property parameter directly)
   const handlePressIn = useCallback(() => {
     if (!property) return;
-    const idToPrefetch = property._id || property.id;
+    const idToPrefetch = property.id;
     if (idToPrefetch) {
       prefetchProperty(queryClient, idToPrefetch as string);
       prefetchPropertyStats(queryClient, idToPrefetch as string);
@@ -275,7 +275,7 @@ export const PropertyCard = React.memo(function PropertyCard({
     // drive both the floating badges and the subtle "Also available" line.
     const otherOfferings = resolveOfferingSummaries(property, browseMode);
     const propertyData = {
-      id: property._id || property.id,
+      id: property.id,
       title: getPropertyTitle(property),
       location: getPropertyLocationLabel(property),
       price: primaryOffering.amount,

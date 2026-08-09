@@ -21,7 +21,7 @@ interface Props {
  */
 export const NeighborhoodInfo: React.FC<Props> = ({ property }) => {
   const { t } = useTranslation();
-  const propertyId = property?._id;
+  const propertyId = property?.id;
   const { data: neighborhood } = useNeighborhood({ propertyId });
 
   if (!neighborhood) return null;

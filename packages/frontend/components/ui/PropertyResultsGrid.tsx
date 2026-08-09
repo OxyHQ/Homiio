@@ -79,7 +79,7 @@ interface PropertyResultsGridProps {
   onPropertyPress: (property: Property) => void;
   highlightedPropertyId?: string | null;
   /**
-   * Web-only — fired when a pointer enters a card, with the card's `_id`. The
+   * Web-only — fired when a pointer enters a card, with the card's `id`. The
    * explore split view uses it to highlight the matching map price chip. Paired
    * with {@link onPropertyHoverOut}. Both are wired only on web (the list and
    * map are a toggle on native and never co-visible, so hover is moot there).
@@ -169,10 +169,10 @@ export const PropertyResultsGrid: React.FC<PropertyResultsGridProps> = ({
         onLayout={IS_WEB ? undefined : handleLayout}
       >
         {properties.map((property) => {
-          const isHighlighted = property._id === highlightedPropertyId;
+          const isHighlighted = property.id === highlightedPropertyId;
           return (
             <View
-              key={property._id}
+              key={property.id}
               style={[
                 styles.cell,
                 // WEB: CSS Grid sizes the track — no width style. NATIVE: explicit
@@ -192,10 +192,10 @@ export const PropertyResultsGrid: React.FC<PropertyResultsGridProps> = ({
               // on this View's own boundary: leave does NOT misfire when the
               // pointer moves over inner children, so it clears only when the
               // pointer truly exits the card. Gated to web (native shows list/map
-              // as a toggle, never together) and keyed on `_id` (the marker id).
+              // as a toggle, never together) and keyed on `id` (the marker id).
               onPointerEnter={
                 IS_WEB && onPropertyHoverIn
-                  ? () => onPropertyHoverIn(property._id)
+                  ? () => onPropertyHoverIn(property.id)
                   : undefined
               }
               onPointerLeave={

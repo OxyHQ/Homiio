@@ -39,7 +39,7 @@ const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
     const [hovered, setHovered] = useState(false);
 
     const handlePress = () => {
-        router.push(`/properties/${property._id}/`);
+        router.push(`/properties/${property.id}/`);
     };
 
     const isAvailable = propertyService.isPropertyAvailable(property);
@@ -318,7 +318,7 @@ export function RoomList({ filters, onFilterChange }: RoomListProps) {
             <FlatList
                 data={rooms}
                 renderItem={({ item }) => <RoomCard property={item} />}
-                keyExtractor={item => item._id}
+                keyExtractor={item => item.id}
                 contentContainerStyle={styles.listContainer}
                 showsVerticalScrollIndicator={false}
                 onEndReached={handleLoadMore}

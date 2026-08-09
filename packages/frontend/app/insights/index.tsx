@@ -273,7 +273,7 @@ export default function InsightsScreen() {
                             // Horizontal carousel row — keep one cover photo so the
                             // in-card pager doesn't fight the row swipe.
                             enableImageCarousel={false}
-                            onPress={() => router.push(`/properties/${property._id || property.id}`)}
+                            onPress={() => router.push(`/properties/${property.id}`)}
                         />
                     )}
                 />

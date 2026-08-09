@@ -6,8 +6,8 @@
  * the geo chain to resolve the display names in the SAME statement rather than
  * populating four refs.
  *
- * The wire format is unchanged (batch 10 owns the `_id` → `id` cut): each
- * address still serializes with BOTH ids, its `coordinates` still leave as a
+ * Each address serializes with ONE id, `id` — these responses used to carry
+ * `_id` beside it and no longer do. Its `coordinates` still leave as a
  * GeoJSON `{ type: 'Point', coordinates: [lng, lat] }` pair even though the table
  * stores named `longitude` / `latitude` columns, and the Mongo field spellings
  * (`postal_code`, `building_name`, `address_lines`, `po_box`, `land_plot`) are
@@ -117,7 +117,7 @@ function serializeAddress(row: AddressRow | AddressWithGeoNames): Record<string,
   // `attachAddressGeoNames` derives the `location` label from the names above;
   // it is the one place that rule lives, shared with the property read path.
   attachAddressGeoNames(serialized);
-  return { _id: row.id, id: row.id, ...serialized };
+  return { id: row.id, ...serialized };
 }
 
 /**

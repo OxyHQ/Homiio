@@ -255,7 +255,7 @@ export function PropertyPreviewWidget() {
       .join(', ');
 
     return {
-      _id: 'preview',
+      id: 'preview',
       address: {
         street: location.address ?? '',
         postal_code: location.postal_code ?? '',

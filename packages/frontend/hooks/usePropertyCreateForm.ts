@@ -137,8 +137,8 @@ export function usePropertyCreateForm(id: string | undefined) {
   const hydratedPropertyIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (!isEditMode || !property) return;
-    if (hydratedPropertyIdRef.current === property._id) return;
-    hydratedPropertyIdRef.current = property._id;
+    if (hydratedPropertyIdRef.current === property.id) return;
+    hydratedPropertyIdRef.current = property.id;
 
     setFormData('basicInfo', {
       propertyType: property.type || 'apartment',

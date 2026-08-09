@@ -67,7 +67,7 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ property }) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { oxyServices, activeSessionId } = useOxy();
-  const propertyId = property._id || property.id || '';
+  const propertyId = property.id || '';
   const [sheet, setSheet] = useState<SheetVariant>(null);
   const [range, setRange] = useState<AvailabilityCalendarRange | null>(null);
   const [guests, setGuests] = useState<GuestCounts>(DEFAULT_GUESTS);

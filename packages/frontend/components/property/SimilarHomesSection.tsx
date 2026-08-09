@@ -50,7 +50,7 @@ export const SimilarHomesSection: React.FC<SimilarHomesSectionProps> = ({
           enableImageCarousel={false}
           showSaveButton={false}
           showRating={false}
-          onPress={() => router.push(`/properties/${item._id || item.id}`)}
+          onPress={() => router.push(`/properties/${item.id}`)}
         />
       )}
     />

@@ -7,7 +7,7 @@ import { API_URL } from '@/config';
 import { ApiResponse } from '../types/api';
 
 export interface AddressData {
-  _id: string;
+  id: string;
   street: string;
   city: string;
   state: string;

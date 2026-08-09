@@ -262,7 +262,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
           emptyText={t('agent.dashboard.noReferrals')}
         >
           {recentReferrals.map((property) => (
-            <View key={String(property._id ?? property.id)} style={styles.row}>
+            <View key={String(property.id)} style={styles.row}>
               <Ionicons
                 name="home-outline"
                 size={ICON_SIZES.md}

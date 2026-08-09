@@ -23,7 +23,7 @@ export function useSavedNotesMutation() {
         const next = {
           ...previous,
           properties: previous.properties.map((p: any) => {
-            const id = p._id || p.id;
+            const id = p.id;
             if (id === propertyId) {
               return { ...p, notes };
             }

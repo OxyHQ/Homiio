@@ -212,7 +212,7 @@ export default function PropertyDetailPage() {
   // Property view-model derived from the API payload.
   const property = useMemo<PropertyDetailViewModel | null>(() => {
     if (!apiProperty) return null;
-    const propertyId = apiProperty._id || apiProperty.id || '';
+    const propertyId = apiProperty.id || '';
 
     // Offering-aware headline price + location subtitle for the sticky header
     // and the right-column booking card. Centralised in `resolveHeadlinePrice`
@@ -259,7 +259,7 @@ export default function PropertyDetailPage() {
   // Track property view once per page load.
   useEffect(() => {
     if (apiProperty && !hasViewedRef.current) {
-      const propertyId = apiProperty._id || apiProperty.id;
+      const propertyId = apiProperty.id;
       const currentId = typeof id === 'string' ? id : undefined;
       if (propertyId && currentId && propertyId === currentId) {
         hasViewedRef.current = true;
@@ -356,7 +356,7 @@ export default function PropertyDetailPage() {
     // Homiio has no in-app messaging product, so "contact the owner" resolves to
     // the real enquiry surface: a viewing request for short-stay listings and a
     // tenant application otherwise. Never route to a non-existent chat screen.
-    const targetId = apiProperty?._id ?? apiProperty?.id ?? property?.id;
+    const targetId = apiProperty?.id ?? property?.id;
     if (!targetId) return;
     if (rentalMode === 'vacation') {
       router.push(`/properties/${targetId}/book-viewing`);
@@ -498,14 +498,14 @@ export default function PropertyDetailPage() {
       handleContact();
       return;
     }
-    if (apiProperty?._id || apiProperty?.id) {
-      router.push(`/properties/${apiProperty._id ?? apiProperty.id}/apply`);
+    if (apiProperty?.id) {
+      router.push(`/properties/${apiProperty.id}/apply`);
     }
   }, [apiProperty, rentalMode, router, handleContact, handlePublicHousingApply]);
 
   // Sale-listing primary CTA: open the existing viewing-request flow.
   const handleRequestViewing = useCallback(() => {
-    const targetId = apiProperty?._id ?? apiProperty?.id;
+    const targetId = apiProperty?.id;
     if (targetId) {
       router.push(`/properties/${targetId}/book-viewing`);
     }

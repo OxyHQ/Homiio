@@ -1044,7 +1044,6 @@ Return only the JSON array, no other text.`;
     const transformed = conversations.map((c: any) => {
       const o = c.toObject({ virtuals: true });
       return {
-        _id: o._id,
         id: o._id,
         title: o.title,
         status: o.status,
@@ -1102,7 +1101,7 @@ Return only the JSON array, no other text.`;
     return ok(res, {
       success: true,
       conversation: {
-        _id: saved._id,
+        id: saved._id,
         title: saved.title,
         messages: saved.messages,
         createdAt: saved.createdAt,

@@ -46,36 +46,23 @@ export interface ListReservationsParams {
   limit?: number;
 }
 
-interface BackendReservation extends Omit<Reservation, 'id'> {
-  _id?: string;
-  id?: string;
-}
-
-const normalizeReservation = (raw: BackendReservation): Reservation => {
-  const id = raw.id ?? raw._id ?? '';
-  return {
-    ...raw,
-    id,
-  } as Reservation;
-};
-
 export const reservationService = {
   async createReservation(payload: CreateReservationData): Promise<Reservation> {
-    const response = await api.post<ApiResponse<BackendReservation>>(
+    const response = await api.post<ApiResponse<Reservation>>(
       '/api/reservations',
       payload,
     );
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Reservation creation failed');
     }
-    return normalizeReservation(response.data.data);
+    return response.data.data;
   },
 
   async listReservations(
     params: ListReservationsParams = {},
   ): Promise<ReservationListResponse> {
     const response = await api.get<{
-      data?: BackendReservation[];
+      data?: Reservation[];
       pagination?: ReservationListResponse['pagination'];
     }>('/api/reservations', {
       params: {
@@ -85,7 +72,7 @@ export const reservationService = {
         limit: params.limit,
       },
     });
-    const items = (response.data.data ?? []).map(normalizeReservation);
+    const items = response.data.data ?? [];
     const pagination = response.data.pagination ?? {
       page: 1,
       limit: items.length,
@@ -96,27 +83,27 @@ export const reservationService = {
   },
 
   async getReservationById(id: string): Promise<Reservation> {
-    const response = await api.get<ApiResponse<BackendReservation>>(
+    const response = await api.get<ApiResponse<Reservation>>(
       `/api/reservations/${id}`,
     );
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Reservation not found');
     }
-    return normalizeReservation(response.data.data);
+    return response.data.data;
   },
 
   async updateReservation(
     id: string,
     payload: UpdateReservationData,
   ): Promise<Reservation> {
-    const response = await api.patch<ApiResponse<BackendReservation>>(
+    const response = await api.patch<ApiResponse<Reservation>>(
       `/api/reservations/${id}`,
       payload,
     );
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Reservation update failed');
     }
-    return normalizeReservation(response.data.data);
+    return response.data.data;
   },
 
   async getPropertyAvailability(

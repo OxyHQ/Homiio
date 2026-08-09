@@ -106,7 +106,7 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
           />
           {property ? (
             <SaveButton
-              property={property as Property & { _id: string }}
+              property={property}
               variant="heart"
               chrome="ghost"
               color={colors.COLOR_BLACK}

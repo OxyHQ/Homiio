@@ -72,8 +72,8 @@ interface SavedPropertiesProviderProps {
   children: ReactNode;
 }
 
-const propertyKey = (property: Pick<SavedProperty, '_id' | 'id'>): string | undefined =>
-  property._id || property.id;
+const propertyKey = (property: Pick<SavedProperty, 'id' | 'id'>): string | undefined =>
+  property.id;
 
 export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = ({ children }) => {
   const queryClient = useQueryClient();
@@ -186,7 +186,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         );
         queryClient.setQueryData<SavedPropertyFoldersResponse>(SAVED_FOLDERS_KEY, (prev) => ({
           folders: (prev?.folders ?? []).map((folder) =>
-            folder._id === folderId ? updatedFolder : folder,
+            folder.id === folderId ? updatedFolder : folder,
           ),
         }));
         toast.success(i18next.t('saved.toast.folderUpdated'));
@@ -208,7 +208,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
 
         await savedPropertyFolderService.deleteSavedPropertyFolder(folderId);
         queryClient.setQueryData<SavedPropertyFoldersResponse>(SAVED_FOLDERS_KEY, (prev) => ({
-          folders: (prev?.folders ?? []).filter((folder) => folder._id !== folderId),
+          folders: (prev?.folders ?? []).filter((folder) => folder.id !== folderId),
         }));
         toast.success(i18next.t('saved.toast.folderDeleted'));
       } catch (error: unknown) {
@@ -231,7 +231,6 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         // Optimistic update to the query cache (drives `savedProperties` +
         // `savedPropertyIds` via the memos above).
         const optimistic: SavedProperty = {
-          _id: propertyId,
           id: propertyId,
           savedAt: new Date().toISOString(),
           folderId: folderId || undefined,
@@ -323,7 +322,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         if (removed?.folderId) {
           queryClient.setQueryData<SavedPropertyFoldersResponse>(SAVED_FOLDERS_KEY, (prev) => ({
             folders: (prev?.folders ?? []).map((folder) =>
-              folder._id === removed.folderId
+              folder.id === removed.folderId
                 ? { ...folder, propertyCount: Math.max(0, (folder.propertyCount || 0) - 1) }
                 : folder,
             ),
@@ -367,7 +366,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
 
   const getFolderById = useCallback(
     (folderId: string) => {
-      return folders.find((folder) => folder._id === folderId);
+      return folders.find((folder) => folder.id === folderId);
     },
     [folders],
   );

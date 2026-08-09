@@ -8,7 +8,7 @@
  * Image document is the canonical record of those variants, their storage keys
  * and the source metadata.
  *
- * Consumers reference an Image by `_id` and read a ready-to-render `urls` map.
+ * Consumers reference an Image by `id` and read a ready-to-render `urls` map.
  * The legacy property `images[{ url, caption, isPrimary }]` shape is preserved
  * on the Property as a denormalized projection of these documents (its `url` is
  * the stored medium variant), so existing readers never break while the canonical
@@ -36,10 +36,10 @@ export type ImageVariantUrls = Record<ImageVariantName, string>;
  * it belongs to via `{ entityType, entityId }`.
  */
 export interface Image {
-  _id: string;
+  id: string;
   /** Which kind of entity this image belongs to. */
   entityType: ImageEntityType;
-  /** The owning entity's `_id` (Property / City / Region / Country / Profile). */
+  /** The owning entity's `id` (Property / City / Region / Country / Profile). */
   entityId: string;
   /** Object-storage keys (bucket-relative) for each processed variant. */
   keys: ImageVariantKeys;

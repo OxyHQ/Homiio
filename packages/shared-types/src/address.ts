@@ -57,7 +57,6 @@ export interface Address {
 }
 
 export interface AddressDocument extends Address {
-  _id: string;
   id: string;
   normalizedKey: string;
   /** Populated when the country ref is expanded. */
@@ -103,10 +102,9 @@ export interface AddressGeoNames {
  * the populated `addressId` to `address`). It carries the building-level fields
  * and relational geo ids of an {@link Address}, plus the server-resolved geo
  * display names ({@link AddressGeoNames}) so consumers read location NAMES
- * directly. `_id`/`id` are present because the address is a persisted document.
+ * directly. `id` is present because the address is a persisted document.
  */
 export interface PropertyAddress extends Address, AddressGeoNames {
-  _id?: string;
   id?: string;
 }
 

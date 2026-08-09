@@ -61,25 +61,15 @@ export interface UploadLeaseDocumentInput {
   type?: LeaseDocumentType;
 }
 
-interface BackendLease extends Omit<Lease, 'id'> {
-  _id?: string;
-  id?: string;
-}
-
-const normalizeLease = (raw: BackendLease): Lease => ({
-  ...(raw as Lease),
-  id: raw.id ?? raw._id ?? '',
-});
-
 const LEASE_BASE = '/api/leases';
 
 class LeaseService {
   async getLeases(filters?: LeaseFilters): Promise<LeaseListResponse> {
     const response = await api.get<{
-      data?: BackendLease[];
+      data?: Lease[];
       pagination?: { total: number; page: number; totalPages: number };
     }>(LEASE_BASE, { params: filters });
-    const leases = (response.data.data ?? []).map(normalizeLease);
+    const leases = response.data.data ?? [];
     const pagination = response.data.pagination;
     return {
       leases,
@@ -90,19 +80,19 @@ class LeaseService {
   }
 
   async getLease(leaseId: string): Promise<Lease> {
-    const response = await api.get<ApiResponse<BackendLease>>(`${LEASE_BASE}/${leaseId}`);
+    const response = await api.get<ApiResponse<Lease>>(`${LEASE_BASE}/${leaseId}`);
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Lease not found');
     }
-    return normalizeLease(response.data.data);
+    return response.data.data;
   }
 
   async createLease(data: CreateLeaseData): Promise<Lease> {
-    const response = await api.post<ApiResponse<BackendLease>>(LEASE_BASE, data);
+    const response = await api.post<ApiResponse<Lease>>(LEASE_BASE, data);
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Lease creation failed');
     }
-    return normalizeLease(response.data.data);
+    return response.data.data;
   }
 
   /**
@@ -110,21 +100,21 @@ class LeaseService {
    * The backend resolves all owner ids and lifecycle fields server-side.
    */
   async createLeaseFromApplication(applicationId: string): Promise<Lease> {
-    const response = await api.post<ApiResponse<BackendLease>>(
+    const response = await api.post<ApiResponse<Lease>>(
       `/api/applications/${applicationId}/create-lease`,
     );
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Could not create lease from application');
     }
-    return normalizeLease(response.data.data);
+    return response.data.data;
   }
 
   async updateLease(leaseId: string, data: UpdateLeaseData): Promise<Lease> {
-    const response = await api.put<ApiResponse<BackendLease>>(`${LEASE_BASE}/${leaseId}`, data);
+    const response = await api.put<ApiResponse<Lease>>(`${LEASE_BASE}/${leaseId}`, data);
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Lease update failed');
     }
-    return normalizeLease(response.data.data);
+    return response.data.data;
   }
 
   async deleteLease(leaseId: string): Promise<void> {
@@ -132,36 +122,36 @@ class LeaseService {
   }
 
   async signLease(leaseId: string, signature: string, acceptTerms: boolean): Promise<Lease> {
-    const response = await api.post<ApiResponse<BackendLease>>(`${LEASE_BASE}/${leaseId}/sign`, {
+    const response = await api.post<ApiResponse<Lease>>(`${LEASE_BASE}/${leaseId}/sign`, {
       signature,
       acceptTerms,
     });
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Lease signing failed');
     }
-    return normalizeLease(response.data.data);
+    return response.data.data;
   }
 
   async terminateLease(leaseId: string, data: TerminateLeaseData): Promise<Lease> {
-    const response = await api.post<ApiResponse<BackendLease>>(
+    const response = await api.post<ApiResponse<Lease>>(
       `${LEASE_BASE}/${leaseId}/terminate`,
       data,
     );
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Lease termination failed');
     }
-    return normalizeLease(response.data.data);
+    return response.data.data;
   }
 
   async renewLease(leaseId: string, data: RenewLeaseData): Promise<Lease> {
-    const response = await api.post<ApiResponse<BackendLease>>(
+    const response = await api.post<ApiResponse<Lease>>(
       `${LEASE_BASE}/${leaseId}/renew`,
       data,
     );
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Lease renewal failed');
     }
-    return normalizeLease(response.data.data);
+    return response.data.data;
   }
 
   async getLeasePayments(

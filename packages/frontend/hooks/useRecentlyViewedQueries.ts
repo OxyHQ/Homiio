@@ -33,7 +33,7 @@ export const useRecentlyViewedProperties = () => {
           // each property with a `viewedAt` timestamp that is not part of the
           // base Property type.
           const items = (response.data || []).map((property: Property & { viewedAt?: string }) => ({
-            id: property._id || property.id || '',
+            id: property.id || '',
             type: RecentlyViewedType.PROPERTY,
             data: property,
             viewedAt: property.viewedAt || new Date().toISOString(),

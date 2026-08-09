@@ -255,7 +255,7 @@ export interface Review {
 }
 
 /**
- * Serialized review returned by the API (`_id` → `id`, timestamps, derived
+ * Serialized review returned by the API (`id`, timestamps, derived
  * helpful counters, and the optional populated agency + address projections).
  */
 export interface ReviewDTO extends Review {
@@ -270,7 +270,7 @@ export interface ReviewDTO extends Review {
   agency?: AgencySummary;
   /** Populated address projection used by review lists / detail views. */
   populatedAddress?: {
-    _id: string;
+    id: string;
     street: string;
     city: string;
     state?: string;

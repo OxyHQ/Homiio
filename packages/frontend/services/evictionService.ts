@@ -14,13 +14,8 @@ import {
  *
  * Mirrors `exchangeService`: a thin class over `@/utils/api` (the Oxy-linked
  * client + `normalizeEnvelope` bridge) that reads the `{ success, data, … }`
- * envelope and normalises the persisted `_id` to `id`. Public reads
- * (`list`/`getById`/`listComments`) degrade to unauthenticated requests; every
- * write is auth-gated server-side.
- *
- * The backend already serialises `_id → id` in `toEvictionDTO`, so the local
- * `normalizeCase`/`normalizeComment` steps are defensive (never trust a raw
- * `_id` leak) rather than load-bearing.
+ * envelope. Public reads (`list`/`getById`/`listComments`) degrade to
+ * unauthenticated requests; every write is auth-gated server-side.
  */
 
 /** Public board filters. Omitting `status` lets the backend default to `upcoming`. */
@@ -56,32 +51,18 @@ export interface EvictionAttendResult {
   attendeeCount: number;
 }
 
-/** Backend records may carry `_id`; the frontend works with `id`. */
-type BackendEvictionCase = Omit<EvictionCase, 'id'> & { _id?: string; id?: string };
-type BackendEvictionComment = Omit<EvictionComment, 'id'> & { _id?: string; id?: string };
-
 /** Raw list envelope: the backend nests `pagination` and exposes flat aliases. */
 interface BackendEvictionListEnvelope {
-  evictions?: BackendEvictionCase[];
+  evictions?: EvictionCase[];
   pagination?: EvictionPagination;
   hasMore?: boolean;
 }
 
 interface BackendCommentListEnvelope {
-  comments?: BackendEvictionComment[];
+  comments?: EvictionComment[];
   pagination?: EvictionPagination;
   hasMore?: boolean;
 }
-
-const normalizeCase = (raw: BackendEvictionCase): EvictionCase => {
-  const id = raw.id ?? raw._id ?? '';
-  return { ...raw, id } as EvictionCase;
-};
-
-const normalizeComment = (raw: BackendEvictionComment): EvictionComment => {
-  const id = raw.id ?? raw._id ?? '';
-  return { ...raw, id } as EvictionComment;
-};
 
 const emptyPagination = (page: number, count: number): EvictionPagination => ({
   page,
@@ -104,42 +85,42 @@ class EvictionService {
       },
       requireAuth: false,
     });
-    const items = (response.data.evictions ?? []).map(normalizeCase);
+    const items = response.data.evictions ?? [];
     const pagination = response.data.pagination ?? emptyPagination(params.page ?? 1, items.length);
     return { items, pagination, hasMore: response.data.hasMore ?? false };
   }
 
   /** Public case detail. `isAttending`/`isOwner` are populated for a signed viewer. */
   async getById(id: string): Promise<EvictionCase> {
-    const response = await api.get<ApiResponse<BackendEvictionCase>>(
+    const response = await api.get<ApiResponse<EvictionCase>>(
       `${this.baseUrl}/${id}`,
       { requireAuth: false },
     );
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Eviction case not found');
     }
-    return normalizeCase(response.data.data);
+    return response.data.data;
   }
 
   /** Open a new case (authed). */
   async create(payload: CreateEvictionCaseData): Promise<EvictionCase> {
-    const response = await api.post<ApiResponse<BackendEvictionCase>>(this.baseUrl, payload);
+    const response = await api.post<ApiResponse<EvictionCase>>(this.baseUrl, payload);
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Could not create the eviction case');
     }
-    return normalizeCase(response.data.data);
+    return response.data.data;
   }
 
   /** Edit an owned case (authed, owner-only server-side). */
   async update(id: string, payload: UpdateEvictionCaseData): Promise<EvictionCase> {
-    const response = await api.put<ApiResponse<BackendEvictionCase>>(
+    const response = await api.put<ApiResponse<EvictionCase>>(
       `${this.baseUrl}/${id}`,
       payload,
     );
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Could not update the eviction case');
     }
-    return normalizeCase(response.data.data);
+    return response.data.data;
   }
 
   /** Delete an owned case (authed, owner-only server-side). */
@@ -160,14 +141,14 @@ class EvictionService {
 
   /** Owner-only: append a timeline update (reschedule / status change / note). */
   async createUpdate(id: string, payload: CreateEvictionUpdateData): Promise<EvictionCase> {
-    const response = await api.post<ApiResponse<BackendEvictionCase>>(
+    const response = await api.post<ApiResponse<EvictionCase>>(
       `${this.baseUrl}/${id}/updates`,
       payload,
     );
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Could not post the update');
     }
-    return normalizeCase(response.data.data);
+    return response.data.data;
   }
 
   /** Public coordination thread, newest-first, paginated. */
@@ -176,21 +157,21 @@ class EvictionService {
       `${this.baseUrl}/${id}/comments`,
       { params: { page, limit }, requireAuth: false },
     );
-    const items = (response.data.comments ?? []).map(normalizeComment);
+    const items = response.data.comments ?? [];
     const pagination = response.data.pagination ?? emptyPagination(page, items.length);
     return { items, pagination, hasMore: response.data.hasMore ?? false };
   }
 
   /** Post a comment on a case (authed). */
   async createComment(id: string, body: string): Promise<EvictionComment> {
-    const response = await api.post<ApiResponse<BackendEvictionComment>>(
+    const response = await api.post<ApiResponse<EvictionComment>>(
       `${this.baseUrl}/${id}/comments`,
       { body },
     );
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Could not post your comment');
     }
-    return normalizeComment(response.data.data);
+    return response.data.data;
   }
 
   /** Delete a comment (author or case owner, authed). */
@@ -208,7 +189,7 @@ class EvictionService {
     const response = await api.get<BackendEvictionListEnvelope>(`${this.baseUrl}/me/list`, {
       params: { page, limit },
     });
-    const items = (response.data.evictions ?? []).map(normalizeCase);
+    const items = response.data.evictions ?? [];
     const pagination = response.data.pagination ?? emptyPagination(page, items.length);
     return { items, pagination, hasMore: response.data.hasMore ?? false };
   }
@@ -218,7 +199,7 @@ class EvictionService {
     const response = await api.get<BackendEvictionListEnvelope>(`${this.baseUrl}/me/attending`, {
       params: { page, limit },
     });
-    const items = (response.data.evictions ?? []).map(normalizeCase);
+    const items = response.data.evictions ?? [];
     const pagination = response.data.pagination ?? emptyPagination(page, items.length);
     return { items, pagination, hasMore: response.data.hasMore ?? false };
   }

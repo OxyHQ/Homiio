@@ -98,7 +98,7 @@ function toMarkers(
           ? `€${Math.round(primary.amount).toLocaleString()}`
           : primary.label;
       return {
-        id: p._id,
+        id: p.id,
         coordinates: [coords[0], coords[1]] as [number, number],
         priceLabel,
       };
@@ -210,7 +210,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   );
 
   const selectedProperty = useMemo(
-    () => (highlightedId ? properties.find((p) => p._id === highlightedId) ?? null : null),
+    () => (highlightedId ? properties.find((p) => p.id === highlightedId) ?? null : null),
     [highlightedId, properties],
   );
 

@@ -32,7 +32,7 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
 
   // Memoize saved property IDs for performance
   const savedPropertyIds = useMemo(() =>
-    savedProperties.map((property: any) => property._id || property.id).filter(Boolean),
+    savedProperties.map((property: any) => property.id).filter(Boolean),
     [savedProperties]
   );
 

@@ -46,7 +46,7 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
         if (isInitialized.current || !oxyServices || !activeSessionId) return;
 
         // Validate required property data
-        if (!property._id && !property.id) {
+        if (!property.id) {
             logger.error('Property ID is required for Sindi chat');
             return;
         }
@@ -76,7 +76,7 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
 
                     if (initialMessage) {
                         // Use the provided initial message (e.g., from suggestion chips)
-                        const propertyId = property._id || property.id;
+                        const propertyId = property.id;
                         messageToSend = `${initialMessage}
 
 <PROPERTIES_JSON>["${propertyId}"]</PROPERTIES_JSON>`;
@@ -92,7 +92,7 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
                         const rent = longTerm?.monthlyAmount ?? shortTerm?.nightlyRate ?? 'unspecified';
                         const currency = longTerm?.currency || shortTerm?.currency || '';
                         const priceUnit = longTerm ? 'month' : shortTerm ? 'night' : 'month';
-                        const propertyId = property._id || property.id;
+                        const propertyId = property.id;
 
                         messageToSend = `I'm interested in this property: ${type} with ${bedrooms} bedrooms and ${bathrooms} bathrooms in ${location}. The rent is ${rent} ${currency}/${priceUnit}. Can you help me understand more about this property and my rental rights?
 

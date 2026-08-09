@@ -25,7 +25,7 @@ import type { ListingCurrency } from './currency';
 
 /**
  * A geo entity's cover-image reference as serialized by the API: the bare Image
- * `_id` (string) when un-populated, or the populated {@link Image} document when
+ * `id` (string) when un-populated, or the populated {@link Image} document when
  * the endpoint expands it (the `/api/cities*` routes populate
  * `coverImageId` → `{ urls, caption, width, height }`). Same Mongoose field,
  * either form — consumers read `urls` off the populated shape.
@@ -37,7 +37,7 @@ export type CoverImageRef = string | Image;
  * Keyed by its ISO-3166-1 alpha-2 code (e.g. `ES`, `US`, `GB`).
  */
 export interface Country {
-  _id: string;
+  id: string;
   /** ISO-3166-1 alpha-2 code, uppercase (e.g. `ES`). Unique. */
   code: string;
   /** Canonical English display name (e.g. `Spain`). */
@@ -59,8 +59,8 @@ export interface Country {
  * of the region's display name; references its country by id.
  */
 export interface Region {
-  _id: string;
-  /** The owning country's `_id`. */
+  id: string;
+  /** The owning country's `id`. */
   countryId: string;
   /**
    * Region code where one is well-defined (e.g. ISO-3166-2 subdivision code
@@ -70,8 +70,8 @@ export interface Region {
   /** Canonical display name (e.g. `Catalonia`). */
   name: string;
   /**
-   * The region's cover photo: the `_id` of an {@link Image} with
-   * `entityType: 'region'` and `entityId` equal to this region's `_id`.
+   * The region's cover photo: the `id` of an {@link Image} with
+   * `entityType: 'region'` and `entityId` equal to this region's `id`.
    * Populated to the {@link Image} document when an endpoint expands it. See
    * {@link CoverImageRef}.
    */
@@ -95,16 +95,16 @@ export interface Region {
  * because "which one is the cover" is a fact the relation does not carry.
  */
 export interface City {
-  _id: string;
+  id: string;
   name: string;
   /**
-   * The owning country's `_id`, or the populated {@link Country} document when an
+   * The owning country's `id`, or the populated {@link Country} document when an
    * endpoint expands it (the `/api/cities*` routes populate `countryId` →
    * `{ name, code, currency, flag }`).
    */
   countryId: string | Country;
   /**
-   * The owning region's `_id`, or the populated {@link Region} document when an
+   * The owning region's `id`, or the populated {@link Region} document when an
    * endpoint expands it (the `/api/cities*` routes populate `regionId` →
    * `{ name, code }`).
    */
@@ -116,8 +116,8 @@ export interface City {
   averageRent?: number;
   currency: ListingCurrency;
   /**
-   * The city's cover photo: the `_id` of an {@link Image} with
-   * `entityType: 'city'` and `entityId` equal to this city's `_id`. Set once at
+   * The city's cover photo: the `id` of an {@link Image} with
+   * `entityType: 'city'` and `entityId` equal to this city's `id`. Set once at
    * seed time (the curated city image is fetched, processed and stored in our own
    * object storage), so there is no live external image dependency at runtime.
    * Serialized as the populated {@link Image} (with `urls`) by the `/api/cities*`
@@ -142,8 +142,8 @@ export interface City {
  * Optional bounding box / centroid support map framing and reverse lookups.
  */
 export interface Neighborhood {
-  _id: string;
-  /** The owning city's `_id`. */
+  id: string;
+  /** The owning city's `id`. */
   cityId: string;
   name: string;
   /** Optional centroid for map framing. */
