@@ -1,4 +1,8 @@
-import { Profile, Saved, SavedPropertyFolder, RecentlyViewed, Property } from '../../models';
+// `Saved`, `SavedPropertyFolder`, `RecentlyViewed` and `Property` were re-exported
+// here for the saved / folder / recently-viewed controllers. All four now read
+// Postgres through `db/saved/*` and `db/properties/*`, so the Mongoose models are
+// no longer reachable from this package.
+import { Profile } from '../../models';
 import { successResponse } from '../../middlewares/errorHandler';
 
 const errorResponse = (message = 'Error occurred', code = 'ERROR') => ({
@@ -81,10 +85,6 @@ function clearCachedProfile(oxyUserId: string) {
 
 export {
   Profile,
-  Saved,
-  SavedPropertyFolder,
-  RecentlyViewed,
-  Property,
   successResponse,
   errorResponse,
   profileCache,
