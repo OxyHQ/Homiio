@@ -144,6 +144,13 @@ describe('a production rollout is never cancelled', () => {
     // cancel on main skips the frontend silently. If it ever stops depending on
     // CI's conclusion, the comment in ci.yml saying so becomes false.
     expect(deployFrontends).toContain("github.event.workflow_run.conclusion == 'success'");
+
+    // The sibling invariant, pinned while this file is the one thinking about
+    // it: the frontend deploy gets its OWN run (it is `workflow_run`-triggered,
+    // not called), so nothing upstream can cancel it — but it must not cancel
+    // ITSELF either. A `wrangler deploy` interrupted partway is a half-uploaded
+    // set of static assets served from the custom domain.
+    expect(topLevelConcurrency(deployFrontends)).toContain('cancel-in-progress: false');
   });
 
   it('states the cross-file coupling in both files, pointing at the other one', () => {
