@@ -33,6 +33,7 @@ import {
   cities,
   countries,
   images,
+  leases,
   neighborhoods,
   properties,
   propertyAvailabilityWindows,
@@ -52,7 +53,15 @@ export function objectIdHex(): string {
  */
 export async function resetGeoTables(): Promise<void> {
   const db = getDb();
-  // Listings first: `properties.address_id` is ON DELETE RESTRICT, so an
+  // Leases before listings: `leases.property_id` is ON DELETE **RESTRICT** — a
+  // signed tenancy contract is not a copy of an advertisement, so deleting the
+  // listing under one RAISES. Same class as the `address_id` note below, and it
+  // has to come first because a lease is what holds the listing down. The six
+  // lease child tables need no line of their own: every one of them CASCADEs
+  // from `leases`, so this single statement takes the co-tenants, the payment
+  // schedule, the documents, the inspections and their findings with it.
+  await db.delete(leases);
+  // Listings next: `properties.address_id` is ON DELETE RESTRICT, so an
   // address delete with a listing still on it RAISES rather than cascading —
   // which is the constraint working, and would read here as a mysterious
   // teardown failure. The three property child tables go first in turn, because
