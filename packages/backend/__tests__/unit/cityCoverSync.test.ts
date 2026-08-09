@@ -26,6 +26,12 @@ import publicRoutes from '../../routes/public';
 
 import { Country, Region, City, Address, Property, Image } from '../../models';
 import { errorHandler } from '../../middlewares/errorHandler';
+import {
+  resetGeoTables,
+  seedAddress,
+  seedGeoChain,
+  seedProperty,
+} from '../helpers/postgresGeoFixtures';
 
 jest.mock('../../services/imageUploadService', () => ({
   __esModule: true,
@@ -423,53 +429,64 @@ describe('cityCoverSyncService.syncCovers', () => {
   });
 });
 
+/**
+ * The city feed reads POSTGRES — city, addresses and listings alike — so these
+ * two seed there.
+ *
+ * The rest of this file stays on Mongoose, and that split is the point rather
+ * than an inconsistency: `cityCoverSyncService` WRITES `City.coverImageId`, and
+ * writes have not moved. A file that exercises both a ported read and an
+ * unported write legitimately seeds both stores.
+ */
 describe('GET /api/cities/:id/properties', () => {
   const app = buildApp();
 
-  it('returns published properties for a city without populating profileId', async () => {
-    const geo = await seedGeo('London');
-    const address = await Address.create({
-      countryId: geo.country._id,
-      regionId: geo.region._id,
-      cityId: geo.city._id,
-      countryCode: 'ES',
+  beforeEach(async () => {
+    await resetGeoTables();
+  });
+
+  it('returns published properties for a city', async () => {
+    const chain = await seedGeoChain({ cityName: 'London', countryCode: 'GB-cover' });
+    const addressId = await seedAddress({
+      chain,
       street: 'Test Street 1',
-      postal_code: 'SW1A 1AA',
-      coordinates: { type: 'Point', coordinates: [-0.12, 51.5] },
+      postalCode: 'SW1A 1AA',
+      longitude: -0.12,
+      latitude: 51.5,
     });
-    const property = await Property.create({
-      addressId: address._id,
-      type: PropertyType.APARTMENT,
-      bedrooms: 2,
-      offerings: [OfferingType.LONG_TERM_RENT],
-      longTermRent: { monthlyAmount: 1800, currency: 'EUR' },
-      status: PropertyStatus.PUBLISHED,
-      isExternal: true,
-      source: 'fixture',
-      sourceId: 'london-city-props-1',
-      sourceUrl: 'https://fixtures.homiio.com/london',
-      images: [],
+    const propertyId = await seedProperty({
+      addressId,
+      overrides: {
+        type: PropertyType.APARTMENT,
+        bedrooms: 2,
+        offerings: [OfferingType.LONG_TERM_RENT],
+        longTermRentMonthlyAmount: 1800,
+        longTermRentCurrency: 'EUR',
+        status: PropertyStatus.PUBLISHED,
+        isExternal: true,
+        source: 'fixture',
+        sourceId: 'london-city-props-1',
+        sourceUrl: 'https://fixtures.homiio.com/london',
+      },
     });
 
     const res = await request(app)
-      .get(`/api/cities/${geo.city._id}/properties?limit=8`)
+      .get(`/api/cities/${chain.cityId}/properties?limit=8`)
       .expect(200);
 
     expect(res.body.success).toBe(true);
     expect(res.body.data.city.name).toBe('London');
     expect(res.body.data.properties).toHaveLength(1);
-    // Response side reads `id`; `property._id` is the Mongoose document the
-    // fixture created, which still has an `_id` because Mongo still stores one.
-    expect(String(res.body.data.properties[0].id)).toBe(String(property._id));
+    expect(String(res.body.data.properties[0].id)).toBe(propertyId);
     expect(res.body.data.properties[0]).not.toHaveProperty('_id');
     expect(res.body.data.pagination.total).toBe(1);
   });
 
   it('returns an empty list when the city has no addresses', async () => {
-    const geo = await seedGeo('Emptyville');
+    const chain = await seedGeoChain({ cityName: 'Emptyville', countryCode: 'XX-cover' });
 
     const res = await request(app)
-      .get(`/api/cities/${geo.city._id}/properties?limit=8`)
+      .get(`/api/cities/${chain.cityId}/properties?limit=8`)
       .expect(200);
 
     expect(res.body.success).toBe(true);

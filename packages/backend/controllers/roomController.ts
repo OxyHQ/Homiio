@@ -13,7 +13,6 @@ import type { Request, Response, NextFunction } from 'express';
 import { Property, Address } from '../models';
 import { PropertyType, PropertyStatus } from '@homiio/shared-types';
 import { logger } from '../middlewares/logging';
-import { FIELD_HAS_IMAGES } from './property/searchQueryBuilder';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
 import { requireSessionOxyUserId } from '../utils/sessionUser';
 import {
@@ -115,7 +114,12 @@ class RoomController {
       }
 
       // Image-bearing listings first (product rule), then the requested order.
-      const sortOptions: Record<string, 1 | -1> = { [FIELD_HAS_IMAGES]: -1 };
+      //
+      // The field PATH, not a column: the room feed is still a Mongoose read
+      // (the property read path moved to Postgres without it, because a room is
+      // created and updated through this controller and the WRITE path stays on
+      // Mongo for the dual-run). It moves with the room endpoints.
+      const sortOptions: Record<string, 1 | -1> = { hasImages: -1 };
       sortOptions[String(sortBy)] = sortOrder === 'desc' ? -1 : 1;
 
       const [rooms, total] = await Promise.all([

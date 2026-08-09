@@ -25,12 +25,14 @@ import {
   nearestAddressesQuery,
   selectAddressWithGeoNames,
   type AddressCanonicalInput,
+} from '../services/addressService';
+import {
+  serializeAddressRow,
   type AddressRow,
   type AddressWithGeoNames,
-} from '../services/addressService';
+} from '../db/addresses/addressSerializer';
 import { getErrorName, getValidationMessages } from '../utils/errors';
 import { logger as appLogger } from '../middlewares/logging';
-import { attachAddressGeoNames, type SerializableAddress } from '../services/propertyAddressSerializer';
 import { resolveCityId, resolveNeighborhoodId, resolveRegionId } from '../services/geoQueryService';
 
 /**
@@ -55,69 +57,25 @@ const logger = {
     appLogger.error(message, detail === undefined ? {} : { detail }),
 };
 
-/** Drop keys whose value is null/undefined, matching Mongoose's omission of unset paths. */
-function withoutAbsent(record: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(record)) {
-    if (value !== null && value !== undefined) out[key] = value;
-  }
-  return out;
-}
-
 /**
  * Serialize one address row onto the wire.
  *
- * The Mongo FIELD SPELLINGS are preserved deliberately: the schema declares them
- * camelCase in TypeScript and drizzle derives the identical snake_case SQL name
- * (`postalCode` → `postal_code`), so the column and the wire agree and nothing
- * in the frontend has to change with this batch. `land_plot` is re-nested from
- * its three flattened columns for the same reason, and is omitted entirely when
- * all three are absent — as Mongoose omitted an empty subdocument.
+ * The shape itself lives in `db/addresses/addressSerializer`, shared with the
+ * property read path — both endpoints show the same address and there is no
+ * second place for that shape to drift. This adapter only supplies the null
+ * geo names for the one caller that has an `AddressRow` with no join
+ * (`createAddress`, which returns the row it just inserted).
  */
 function serializeAddress(row: AddressRow | AddressWithGeoNames): Record<string, unknown> {
   const geo = row as Partial<AddressWithGeoNames>;
-  const landPlot = withoutAbsent({
-    block: row.landPlotBlock,
-    lot: row.landPlotLot,
-    parcel: row.landPlotParcel,
+  return serializeAddressRow({
+    ...row,
+    cityName: geo.cityName ?? null,
+    regionName: geo.regionName ?? null,
+    countryName: geo.countryName ?? null,
+    countryCodeName: geo.countryCodeName ?? null,
+    neighborhoodName: geo.neighborhoodName ?? null,
   });
-
-  const serialized = withoutAbsent({
-    countryId: row.countryId,
-    regionId: row.regionId,
-    cityId: row.cityId,
-    neighborhoodId: row.neighborhoodId,
-    countryCode: row.countryCode,
-    street: row.street,
-    postal_code: row.postalCode,
-    number: row.number,
-    building_name: row.buildingName,
-    block: row.block,
-    entrance: row.entrance,
-    floor: row.floor,
-    unit: row.unit,
-    subunit: row.subunit,
-    district: row.district,
-    address_lines: row.addressLines,
-    po_box: row.poBox,
-    reference: row.reference,
-    land_plot: Object.keys(landPlot).length > 0 ? landPlot : undefined,
-    extras: row.extras,
-    coordinates: { type: 'Point', coordinates: [row.longitude, row.latitude] },
-    addressLevel: row.addressLevel,
-    normalizedKey: row.normalizedKey,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-    cityName: geo.cityName,
-    regionName: geo.regionName,
-    countryName: geo.countryName,
-    neighborhoodName: geo.neighborhoodName,
-  }) as SerializableAddress & Record<string, unknown>;
-
-  // `attachAddressGeoNames` derives the `location` label from the names above;
-  // it is the one place that rule lives, shared with the property read path.
-  attachAddressGeoNames(serialized);
-  return { id: row.id, ...serialized };
 }
 
 /**

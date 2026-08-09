@@ -486,6 +486,84 @@ Under Postgres both sides are `text` and the comparison simply works. A save
 count that starts being non-zero after the cutover is correct behaviour arriving,
 the same class of finding as `properties.views` starting to increment.
 
+## Batch 4 — the catalogue READ paths, and the read/write split it creates
+
+The property, address and image READS are served from Postgres.
+**Every write is still Mongoose**, deliberately: the backfill is a point-in-time
+copy and the ingest worker keeps writing to Mongo, so a read that moved is
+refreshed by the next copy while a write that moved would be lost by it. Nothing
+in this batch may become the only writer of a Postgres row.
+
+There is exactly ONE exception, and it is not a listing write:
+`cityController.getPropertiesByCity` refreshes `cities.properties_count` from the
+count it just computed. That column was copied verbatim by the geo backfill
+*because properties did not exist in Postgres yet*, and no endpoint reads the
+Mongo `City` document any more, so it is a cache of a number this statement
+already has rather than a fact only Mongo holds.
+
+### What the collapse actually removed
+
+Every geo-scoped property read ran in two phases —
+`Address.find({...}).select('_id')` with **no `.limit()`**, then
+`Property.find({ addressId: { $in: [...] } })`. Barcelona is tens of thousands of
+ids, materialized in the application and shipped back as a query document, on a
+request path behind no feature flag. It appeared SIX times:
+`geoQueryService.resolveGeoFilterAddressIds`, `Property.findNearby`,
+`Property.findWithinRadius`, `search.ts`'s `resolveAddressIds` /
+`resolveTextAddressIds` / `resolveGeoAddressIdsForText` (the last calling the
+first twice per request), plus `cityController` and `City.updatePropertiesCount`
+open-coding it. All of them are one join now, with the spatial predicate on
+`addresses.geo` and the `LIMIT` reaching the planner.
+
+### Deliberate behaviour changes, each stated rather than discovered
+
+| Change | Why |
+|---|---|
+| Free text is `websearch_to_tsquery` (AND) rather than `$text` (OR) | "apartment barcelona" returned every apartment anywhere |
+| Price sorts are `NULLS LAST` in BOTH directions | Mongo sorted a MISSING price first ascending, so "cheapest first" led with unpriced listings |
+| An unknown `sortBy` falls back to recency | Mongo passed any string through as a field path (a silent no-op); the SQL equivalent would be building a column name from user input |
+| `savesCount` reports real numbers | See below — this one was forced |
+| A bounding box uses `ST_MakeEnvelope` (straight edges in lat/lon) rather than a GeoJSON polygon (great-circle edges) | The box is a map VIEWPORT; the two share all four corners and differ only inside a very large one |
+
+**The saves count could not be left alone, and the reason is worth recording
+because the first decision was the opposite one.** `Saved.targetId` is declared
+`String` while the `$match` compared it against `ObjectId`s, and `aggregate`
+does not cast — the identical defect this file already names in `stats.ts`. The
+plan was to preserve it verbatim and let it move with `Saved`. The integration
+suite then showed what the cast DOES: `new ObjectId('019fd591-…')` throws
+SYNCHRONOUSLY, outside the `.catch()`, so the first listing carrying a uuid v7
+id turns the whole home feed into a 500 — and every listing created after the
+cutover carries one. Preserving a comparison that can never match, at the price
+of a guaranteed outage, is not preservation.
+
+### Pre-existing defects carried across VERBATIM, and pinned
+
+Each is a test, not a comment, so fixing it is a deliberate change to what an
+endpoint returns rather than a side effect of a store migration:
+
+- **`/api/properties/by-ids` and `/api/properties/owner/:id` filter
+  `status: 'active'`**, which is not a member of `PropertyStatus` — so both have
+  been returning empty pages for as long as the vocabulary has been settled, and
+  `properties_status_check` would now refuse to store the value at all.
+- **`sortBy=salePrice` is unreachable.** `buildSearchPlan` lower-cases the
+  requested sort and tests it against a camelCase set, so `salePrice` becomes
+  `saleprice` and falls back to recency. `createdAt` has the same defect and is
+  harmless because its fallback IS recency.
+- **`list.ts` and `geospatial.ts` disagree about `?available=true`** — the first
+  yields "available, not a draft", the second "available, published" — and about
+  which price column a bare `minRent` applies to. `controllers/property/commonFilters.ts`
+  shares only the clauses that genuinely agree, so the difference stays visible.
+
+### One trap this port hit, which will recur in every later batch
+
+**An array interpolated into a drizzle `sql` template renders as a ROW
+CONSTRUCTOR, not an array parameter.** `sql` + "`${values}::text[]`" emits
+`($1, $2)::text[]`, which Postgres rejects outright — a RUNTIME error that
+`tsc` cannot see and that four predicates shipped with (`typeIn`,
+`exchangeModeIn`, `hasAnyAmenity`, `hasAllAmenities`). `sql.param(values)` binds
+the whole array as ONE parameter. It was caught by the real-database suite and
+by nothing else, which is the argument for that suite.
+
 ## Model BEHAVIOUR the repository layer still has to absorb
 
 Deliberately NOT ported in these batches, and listed so the next one has the

@@ -9,6 +9,15 @@
  * `url` resolves to the stored MEDIUM variant — a sensible default for card and
  * list rendering — while the full `urls` map is carried alongside so callers
  * can opt into a specific rendition (e.g. `large` on a detail hero).
+ *
+ * ## This is now a WRITE-path module only
+ *
+ * `serializePropertyImages` / `rewritePropertyImageRef` lived here to rewrite
+ * legacy direct-S3 URLs on the way OUT of a Mongo read. Property reads come from
+ * Postgres now and `db/properties/propertySerializer` applies the same rewrite to
+ * `property_images` rows, so those two had no callers left. What remains builds
+ * the embedded array at INGEST time (`ExternalMediaIngest`, `scripts/seedImages`),
+ * which is still Mongo.
  */
 
 import type { ImageVariantName, PropertyImageRef } from '@homiio/shared-types';
@@ -38,48 +47,6 @@ export function toPropertyImageRef(image: ImageDocument): PropertyImageRef {
     order: image.order ?? 0,
     urls,
   };
-}
-
-/** Rewrite legacy S3 image URLs on a persisted property `images[]` entry. */
-export function rewritePropertyImageRef(ref: StoredPropertyImage): StoredPropertyImage {
-  const urls = ref.urls
-    ? Object.fromEntries(
-        Object.entries(ref.urls).map(([variant, url]) => [
-          variant,
-          url ? imageUploadService.resolveStoredImageUrl(url) : url,
-        ]),
-      )
-    : undefined;
-
-  return {
-    ...ref,
-    url: imageUploadService.resolveStoredImageUrl(ref.url),
-    urls,
-  };
-}
-
-/** Minimal image shape stored on Property documents (Mongoose lean() is wider than PropertyImageRef). */
-type StoredPropertyImage = {
-  url: string;
-  urls?: Partial<Record<string, string>>;
-  imageId?: string | { toString(): string };
-  caption?: string;
-  isPrimary?: boolean;
-  order?: number;
-};
-
-/**
- * Rewrite legacy direct-S3 URLs on every embedded property image before an API
- * response is sent. Safe to call on Mongoose docs or plain objects.
- */
-export function serializePropertyImages<T extends { images?: StoredPropertyImage[] }>(
-  target: T | T[],
-): void {
-  const items = Array.isArray(target) ? target : [target];
-  for (const item of items) {
-    if (!item.images || item.images.length === 0) continue;
-    item.images = item.images.map(rewritePropertyImageRef);
-  }
 }
 
 /**

@@ -24,8 +24,16 @@ import mongoose from 'mongoose';
 import publicRoutes from '../../routes/public';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { renameWireIds } from '../../middlewares/wireIds';
-import { Address, City, Country, Property, Region } from '../../models';
-import { resetGeoTables, seedGeoChain } from '../helpers/postgresGeoFixtures';
+// The one Mongoose model this file still needs: the `toJSON` reduction case
+// below is ABOUT a Mongoose document, which is one of the two shapes
+// `renameWireIds` has to handle and cannot be exercised with a plain object.
+import { Country } from '../../models';
+import {
+  resetGeoTables,
+  seedAddress,
+  seedGeoChain,
+  seedProperty,
+} from '../helpers/postgresGeoFixtures';
 import { OfferingType, PropertyStatus, PropertyType } from '@homiio/shared-types';
 
 function buildApp(): Express {
@@ -100,43 +108,47 @@ describe('the wire contract, over a real request', () => {
     await resetGeoTables();
   });
 
-  /** Seed a published property in a city, and return the ids Mongo assigned. */
+  /**
+   * Seed a published property in a city — in POSTGRES, which is where every
+   * endpoint in the sweep below now reads it from.
+   *
+   * The country CODE is distinct from the one the sweep's own
+   * `seedGeoChain` uses, because `countries_code_key` is UNIQUE and this
+   * function runs alongside it in the same test.
+   */
   async function seedCityProperty(): Promise<{ cityId: string; propertyId: string }> {
-    const country = await Country.create({ code: 'ES', name: 'Spain', currency: 'EUR' });
-    const region = await Region.create({ countryId: country._id, name: 'Catalonia' });
-    const city = await City.create({
-      countryId: country._id,
-      regionId: region._id,
-      name: 'Barcelona',
-      currency: 'EUR',
+    const chain = await seedGeoChain({
+      cityName: 'Barcelona',
+      countryCode: 'ES-wire',
+      regionName: 'Catalonia',
     });
-    const address = await Address.create({
-      countryId: country._id,
-      regionId: region._id,
-      cityId: city._id,
-      countryCode: 'ES',
+    const addressId = await seedAddress({
+      chain,
       street: 'Carrer de Mallorca',
-      postal_code: '08013',
-      coordinates: { type: 'Point', coordinates: [2.1734, 41.3851] },
+      postalCode: '08013',
+      longitude: 2.1734,
+      latitude: 41.3851,
     });
-    const property = await Property.create({
-      addressId: address._id,
-      type: PropertyType.APARTMENT,
-      bedrooms: 2,
-      offerings: [OfferingType.LONG_TERM_RENT],
-      longTermRent: { monthlyAmount: 1800, currency: 'EUR' },
-      status: PropertyStatus.PUBLISHED,
-      isExternal: true,
-      source: 'fixture',
-      sourceId: 'wire-id-contract-1',
-      sourceUrl: 'https://fixtures.homiio.com/wire-id-contract',
-      images: [],
+    const propertyId = await seedProperty({
+      addressId,
+      overrides: {
+        type: PropertyType.APARTMENT,
+        bedrooms: 2,
+        offerings: [OfferingType.LONG_TERM_RENT],
+        longTermRentMonthlyAmount: 1800,
+        longTermRentCurrency: 'EUR',
+        status: PropertyStatus.PUBLISHED,
+        isExternal: true,
+        source: 'fixture',
+        sourceId: 'wire-id-contract-1',
+        sourceUrl: 'https://fixtures.homiio.com/wire-id-contract',
+      },
     });
 
-    return { cityId: city._id.toString(), propertyId: property._id.toString() };
+    return { cityId: chain.cityId, propertyId };
   }
 
-  it('serializes a `.lean()` read as `id`, never `_id`, including nested documents', async () => {
+  it('serializes a joined read as `id`, never `_id`, including nested documents', async () => {
     const { cityId, propertyId } = await seedCityProperty();
 
     const res = await request(app).get(`/api/cities/${cityId}/properties?limit=8`).expect(200);
@@ -144,12 +156,12 @@ describe('the wire contract, over a real request', () => {
     const [property] = res.body.data.properties;
     expect(property.id).toBe(propertyId);
     expect(property).not.toHaveProperty('_id');
-    // The nested address arrives from `.populate()` inside the same lean result;
-    // a serializer that only renamed the top level would leave this one behind.
+    // The nested address arrives from the JOIN inside the same row; a
+    // serializer that only renamed the top level would leave this one behind.
     expect(property.address).toBeDefined();
     expect(property.address).not.toHaveProperty('_id');
-    // And the city on the same body, which is a Mongoose DOCUMENT rather than a
-    // lean object — the other of the two paths that reach `res.json`.
+    // And the city on the same body, built by `serializeCity` from its own
+    // joined row — a second, independently-constructed object in one response.
     expect(res.body.data.city.id).toBe(cityId);
     expect(res.body.data.city).not.toHaveProperty('_id');
   });

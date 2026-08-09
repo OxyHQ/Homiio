@@ -5,17 +5,28 @@
  * (added for parity with `/properties/search`) and the server-side `minBathrooms`
  * filter, so the city grid can paginate + filter without breaking under offset
  * pagination.
+ *
+ * Seeded in POSTGRES: the city feed reads the city, its addresses and its
+ * listings there, in ONE join. The `Address.find({cityId}).select('_id')` step
+ * this endpoint used to run before it could count anything is gone, which is
+ * also why the last test below no longer describes "no matching addresses" as a
+ * distinct branch — an empty page is now the ordinary result of a join that
+ * matched nothing, not an early return the handler took on its own.
  */
 
 import express, { type Express } from 'express';
 import request from 'supertest';
-import { Types } from 'mongoose';
 import { OfferingType, PropertyType, PropertyStatus } from '@homiio/shared-types';
 
 import publicRoutes from '../../routes/public';
-
-import { Country, Region, City, Address, Property } from '../../models';
 import { errorHandler } from '../../middlewares/errorHandler';
+import {
+  resetGeoTables,
+  seedAddress,
+  seedGeoChain,
+  seedProperty,
+  type GeoChain,
+} from '../helpers/postgresGeoFixtures';
 
 function buildApp(): Express {
   const app = express();
@@ -28,69 +39,59 @@ function buildApp(): Express {
   return app;
 }
 
-async function seedSpainCity(name: string): Promise<{ cityId: Types.ObjectId; countryId: Types.ObjectId; regionId: Types.ObjectId }> {
-  const country = await Country.findOneAndUpdate(
-    { code: 'ES' },
-    { $setOnInsert: { code: 'ES', name: 'Spain', currency: 'EUR' } },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
-  );
-  const region = await Region.findOneAndUpdate(
-    { countryId: country._id, name: 'Catalonia' },
-    { $setOnInsert: { countryId: country._id, name: 'Catalonia' } },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
-  );
-  const city = await City.create({
-    countryId: country._id,
-    regionId: region._id,
-    name,
-    currency: 'EUR',
-    propertiesCount: 0,
-  });
-  return { cityId: city._id, countryId: country._id, regionId: region._id };
+/**
+ * A city in its own country.
+ *
+ * The country CODE is unique per city rather than a shared `'ES'`:
+ * `countries_code_key` is a real unique index here, and three tests in one file
+ * would collide on it.
+ */
+async function seedSpainCity(name: string): Promise<GeoChain> {
+  return seedGeoChain({ cityName: name, countryCode: `ES-${name}` });
 }
 
 /** Seed one published external listing resolvable to the given city. */
-async function seedProperty(
-  geo: { cityId: Types.ObjectId; countryId: Types.ObjectId; regionId: Types.ObjectId },
-  index: number,
-  bathrooms: number,
-): Promise<void> {
-  const address = await Address.create({
-    countryId: geo.countryId,
-    regionId: geo.regionId,
-    cityId: geo.cityId,
-    countryCode: 'ES',
+async function seedCityListing(chain: GeoChain, index: number, bathrooms: number): Promise<void> {
+  const addressId = await seedAddress({
+    chain,
     street: `Carrer Test ${index}`,
-    postal_code: '08001',
-    coordinates: { type: 'Point', coordinates: [2.17 + index * 0.001, 41.38] },
+    postalCode: '08001',
+    longitude: 2.17 + index * 0.001,
+    latitude: 41.38,
   });
-  await Property.create({
-    addressId: address._id,
-    type: PropertyType.APARTMENT,
-    bedrooms: 2,
-    bathrooms,
-    offerings: [OfferingType.LONG_TERM_RENT],
-    longTermRent: { monthlyAmount: 900 + index, currency: 'EUR' },
-    status: PropertyStatus.PUBLISHED,
-    isExternal: true,
-    source: 'fixture',
-    sourceId: `city-pagination-${index}`,
-    sourceUrl: `https://fixtures.homiio.com/city-${index}`,
-    images: [],
+  await seedProperty({
+    addressId,
+    overrides: {
+      type: PropertyType.APARTMENT,
+      bedrooms: 2,
+      bathrooms,
+      offerings: [OfferingType.LONG_TERM_RENT],
+      longTermRentMonthlyAmount: 900 + index,
+      longTermRentCurrency: 'EUR',
+      status: PropertyStatus.PUBLISHED,
+      isExternal: true,
+      source: 'fixture',
+      sourceId: `city-pagination-${index}`,
+      sourceUrl: `https://fixtures.homiio.com/city-${index}`,
+    },
   });
 }
 
 describe('GET /api/cities/:id/properties pagination aliases', () => {
+  beforeEach(async () => {
+    await resetGeoTables();
+  });
+
   it('returns flat hasMore/totalPages and paginates by page', async () => {
     const app = buildApp();
-    const geo = await seedSpainCity('Barcelona');
+    const chain = await seedSpainCity('Barcelona');
     // 5 listings, 2 per page → 3 pages.
     for (let i = 0; i < 5; i += 1) {
-      await seedProperty(geo, i, 1);
+      await seedCityListing(chain, i, 1);
     }
 
     const page1 = await request(app)
-      .get(`/api/cities/${geo.cityId}/properties`)
+      .get(`/api/cities/${chain.cityId}/properties`)
       .query({ limit: 2, page: 1 });
 
     expect(page1.status).toBe(200);
@@ -102,7 +103,7 @@ describe('GET /api/cities/:id/properties pagination aliases', () => {
     expect(page1.body.data.hasMore).toBe(true);
 
     const page3 = await request(app)
-      .get(`/api/cities/${geo.cityId}/properties`)
+      .get(`/api/cities/${chain.cityId}/properties`)
       .query({ limit: 2, page: 3 });
 
     expect(page3.body.data.properties).toHaveLength(1);
@@ -113,16 +114,18 @@ describe('GET /api/cities/:id/properties pagination aliases', () => {
 
   it('applies the server-side minBathrooms filter', async () => {
     const app = buildApp();
-    const geo = await seedSpainCity('Girona');
-    await seedProperty(geo, 0, 1);
-    await seedProperty(geo, 1, 2);
-    await seedProperty(geo, 2, 3);
+    const chain = await seedSpainCity('Girona');
+    await seedCityListing(chain, 0, 1);
+    await seedCityListing(chain, 1, 2);
+    await seedCityListing(chain, 2, 3);
 
     const res = await request(app)
-      .get(`/api/cities/${geo.cityId}/properties`)
+      .get(`/api/cities/${chain.cityId}/properties`)
       .query({ minBathrooms: 2 });
 
     expect(res.status).toBe(200);
+    // Two of three — a filter that did nothing would report 3, and one that
+    // matched nothing would report 0.
     expect(res.body.data.pagination.total).toBe(2);
     expect(res.body.data.hasMore).toBe(false);
     for (const property of res.body.data.properties) {
@@ -130,11 +133,11 @@ describe('GET /api/cities/:id/properties pagination aliases', () => {
     }
   });
 
-  it('returns hasMore=false with no matching addresses', async () => {
+  it('returns hasMore=false for a city with no listings', async () => {
     const app = buildApp();
-    const geo = await seedSpainCity('Sitges');
+    const chain = await seedSpainCity('Sitges');
 
-    const res = await request(app).get(`/api/cities/${geo.cityId}/properties`);
+    const res = await request(app).get(`/api/cities/${chain.cityId}/properties`);
 
     expect(res.status).toBe(200);
     expect(res.body.data.properties).toHaveLength(0);

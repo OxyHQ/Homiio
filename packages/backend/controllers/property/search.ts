@@ -5,125 +5,103 @@
  * visitors can browse. Supports free-text/city queries, a geo bounding box (or
  * center+radius), structured filters, sorting and pagination.
  *
- * Geo model: coordinates live on the referenced Address (GeoJSON Point with a
- * `2dsphere` index), so geo filtering resolves matching Address ids first and
- * then constrains properties by `addressId`. Each returned property is
- * populated with its address, exposing `address.coordinates.coordinates`
- * ([lng, lat]) so the frontend can place map pins.
+ * ## The address-id round trip is gone — three times over
+ *
+ * A property has no coordinates of its own, so this endpoint used to resolve
+ * matching Address ids FIRST and constrain properties by `addressId: { $in: … }`.
+ * It did that in three places: `resolveAddressIds` for the geo/city constraint,
+ * `resolveTextAddressIds` for a street match, and `resolveGeoAddressIdsForText`
+ * for a place-name match — the last one calling `resolveGeoFilterAddressIds`
+ * TWICE per request, each of which loads every address id in a city into memory
+ * with no `.limit()`. A search for "Barcelona" therefore materialized Barcelona
+ * twice before it looked at a single property.
+ *
+ * All three are now predicates in the property statement itself, against the
+ * `addresses` row the read already joins:
+ *
+ *  - the box / radius → `ST_Intersects` / `ST_DWithin` on `addresses.geo`
+ *    (`db/properties/propertyGeo.ts`);
+ *  - an explicit `city`/`state` → `addresses.city_id` / `region_id`, resolved to
+ *    ONE canonical id by `geoQueryService` before the query is built;
+ *  - the free-text place match → the same two id comparisons, ORed with the
+ *    listing's `search_vector` and an `ILIKE` on `addresses.street`.
+ *
+ * ## `$text` became `websearch_to_tsquery`, which is narrower
+ *
+ * Mongo's `$text` ORs its terms, so "apartment barcelona" matched every
+ * apartment anywhere. `websearch_to_tsquery` ANDs them and understands quoted
+ * phrases and an explicit `or`. Stated because it is a deliberate change of what
+ * this endpoint returns, not a mechanical translation — see
+ * `db/properties/propertyFilters`.
  */
 
 import type { Request, Response, NextFunction } from 'express';
-import { Types, type Model } from 'mongoose';
-import type { IProperty } from '../../models/documentTypes';
-import type { IAddress } from '../../models/Address';
+import type { SQL } from 'drizzle-orm';
+
 import {
   buildSearchPlan,
   buildSort,
-  boundingBoxToAddressQuery,
-  centerRadiusToAddressQuery,
-  escapeRegExp,
   GeoParamError,
-  type PropertyFilter,
+  type ParsedSearchParams,
 } from './searchQueryBuilder';
-
-import * as models from '../../models';
-const Property: Model<IProperty> = models.Property;
-const Address: Model<IAddress> = models.Address;
 import { paginationResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
-import { resolveGeoFilterAddressIds, resolveCityId, resolveRegionId } from '../../services/geoQueryService';
-import { serializePropertyAddresses, ADDRESS_GEO_POPULATE } from '../../services/propertyAddressSerializer';
-import { serializePropertyImages } from '../../services/imageSerializer';
-
-/** Address subset selected for id-resolution lookups. */
-type AddressIdLean = { _id: Types.ObjectId };
+import { resolveCityId, resolveRegionId } from '../../services/geoQueryService';
+import {
+  allOf,
+  countProperties,
+  findProperties,
+  propertyOrderBy,
+} from '../../db/properties/propertyReads';
+import { withinBoundingBox, withinCircle } from '../../db/properties/propertyGeo';
+import { inCity, inRegion, matchesText } from '../../db/properties/propertyFilters';
+import { serializeProperty } from '../../db/properties/propertySerializer';
 
 /**
- * Resolve the set of Address ids that satisfy the geo and text/city
- * constraints. Returns:
- *  - `null` when no address-scoped constraint is active (no narrowing needed)
- *  - an array of ObjectIds otherwise (possibly empty => no matches)
+ * The place constraints, resolved.
  *
- * When several address-scoped constraints are present (e.g. a bounding box AND
- * a city), they are intersected so all conditions hold.
+ * `unresolved` is the "a location was asked for and it does not exist" answer —
+ * distinct from "no location constraint", which is an empty condition list. The
+ * caller answers the first with an empty page and applies the second.
  */
-async function resolveAddressIds(
-  params: ReturnType<typeof buildSearchPlan>['params']
-): Promise<Types.ObjectId[] | null> {
-  const addressConditions: Record<string, unknown>[] = [];
+interface ResolvedPlace {
+  conditions: SQL[];
+  unresolved: boolean;
+}
+
+/**
+ * Turn the geo and city/state intent into predicates on the joined address.
+ *
+ * A bounding box and a centre+radius are mutually exclusive, exactly as before —
+ * the box wins when both are present. Several constraints stack with AND, so a
+ * box AND a city means "in this city, inside this rectangle", which is what the
+ * old id-set INTERSECTION computed by hand.
+ */
+async function resolvePlaceConditions(params: ParsedSearchParams): Promise<ResolvedPlace> {
+  const conditions: SQL[] = [];
 
   if (params.boundingBox) {
-    addressConditions.push(boundingBoxToAddressQuery(params.boundingBox));
+    conditions.push(withinBoundingBox(params.boundingBox));
   } else if (params.centerRadius) {
-    addressConditions.push(centerRadiusToAddressQuery(params.centerRadius));
+    conditions.push(withinCircle({
+      longitude: params.centerRadius.lng,
+      latitude: params.centerRadius.lat,
+      radiusMeters: params.centerRadius.radiusMeters,
+    }));
   }
 
-  // Explicit city/state filters narrow by RELATIONAL geo: resolve the name (or
-  // id) to a canonical City/Region id and match the Address ref. An unresolved
-  // city/region name means "no matches", so short-circuit to an empty set.
   if (params.city) {
     const cityId = await resolveCityId(params.city);
-    if (!cityId) return [];
-    addressConditions.push({ cityId });
+    if (!cityId) return { conditions: [], unresolved: true };
+    conditions.push(inCity(cityId));
   }
   if (params.state) {
     const regionId = await resolveRegionId(params.state);
-    if (!regionId) return [];
-    addressConditions.push({ regionId });
+    if (!regionId) return { conditions: [], unresolved: true };
+    conditions.push(inRegion(regionId));
   }
 
-  if (addressConditions.length === 0) {
-    return null;
-  }
-
-  const addressFilter = addressConditions.length === 1 ? addressConditions[0] : { $and: addressConditions };
-  const matches = await Address.find(addressFilter).select('_id').lean<AddressIdLean[]>();
-  return matches.map((a) => a._id);
-}
-
-/**
- * Find Address ids that match a free-text query. Used as a fallback so a search
- * like "Barcelona" also matches by location even when the property
- * title/description text index does not. Geo is relational, so the location
- * branch resolves the term against the canonical City/Region collections (via
- * `resolveGeoFilterAddressIds`); the building-level `street` is still matched
- * directly on the Address.
- */
-async function resolveTextAddressIds(text: string): Promise<Types.ObjectId[]> {
-  const [geoIds, streetMatches] = await Promise.all([
-    // Treat the term as both a possible city and a possible region name; the
-    // resolver returns the union's address ids (null when neither resolves).
-    resolveGeoAddressIdsForText(text),
-    Address.find({ street: new RegExp(escapeRegExp(text), 'i') })
-      .select('_id')
-      .lean<AddressIdLean[]>(),
-  ]);
-
-  const ids = new Map<string, Types.ObjectId>();
-  for (const id of geoIds) ids.set(id.toString(), id);
-  for (const a of streetMatches) ids.set(a._id.toString(), a._id);
-  return Array.from(ids.values());
-}
-
-/**
- * Resolve a free-text term to Address ids by matching it against canonical city
- * AND region names (union). Returns the combined address-id set (empty when the
- * term resolves to no city or region).
- */
-async function resolveGeoAddressIdsForText(text: string): Promise<Types.ObjectId[]> {
-  const [byCity, byRegion] = await Promise.all([
-    resolveGeoFilterAddressIds({ city: text }),
-    resolveGeoFilterAddressIds({ state: text }),
-  ]);
-  // `resolveGeoFilterAddressIds` now reads Postgres and returns id STRINGS,
-  // while the rest of this file is still Mongo (batch 4 owns the property read
-  // path and deletes this whole indirection). Converting at the boundary keeps
-  // the seam visible, and makes an id Mongo cannot represent throw here rather
-  // than silently narrowing a search to nothing.
-  const ids = new Map<string, Types.ObjectId>();
-  for (const id of byCity ?? []) ids.set(id, new Types.ObjectId(id));
-  for (const id of byRegion ?? []) ids.set(id, new Types.ObjectId(id));
-  return Array.from(ids.values());
+  return { conditions, unresolved: false };
 }
 
 /**
@@ -151,28 +129,13 @@ function buildSearchResponse(
   };
 }
 
-/** Merge a resolved address-id set into the property filter under `addressId`. */
-function constrainByAddressIds(filter: PropertyFilter, ids: Types.ObjectId[]): void {
-  const existing = filter.addressId;
-  if (existing && typeof existing === 'object' && '$in' in existing && Array.isArray(existing.$in)) {
-    // Intersect with any previously-applied address constraint.
-    const previous = new Set(existing.$in.map((id: Types.ObjectId) => id.toString()));
-    filter.addressId = { $in: ids.filter((id) => previous.has(id.toString())) };
-  } else {
-    filter.addressId = { $in: ids };
-  }
-}
-
 export async function searchProperties(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     // Parse + validate the request. Geo parsing can reject malformed params
     // with a GeoParamError, which maps to a clean 400 rather than a 500.
     let plan: ReturnType<typeof buildSearchPlan>;
-    let addressIds: Types.ObjectId[] | null;
     try {
       plan = buildSearchPlan(req.query as Record<string, string | string[] | undefined>);
-      // --- Resolve geo + city/state address constraints ---
-      addressIds = await resolveAddressIds(plan.params);
     } catch (error) {
       if (error instanceof GeoParamError) {
         res.status(400).json({ success: false, message: error.message, error: 'INVALID_GEO_PARAMS' });
@@ -180,60 +143,43 @@ export async function searchProperties(req: Request, res: Response, next: NextFu
       }
       throw error;
     }
-    const { filter, params } = plan;
+    const { conditions, params } = plan;
 
-    if (addressIds !== null) {
-      if (addressIds.length === 0) {
-        // A location constraint was given but matched no addresses.
-        res.json(buildSearchResponse([], params.page, params.limit, 0, 'No properties found for the specified location'));
-        return;
-      }
-      constrainByAddressIds(filter, addressIds);
+    const place = await resolvePlaceConditions(params);
+    if (place.unresolved) {
+      res.json(buildSearchResponse([], params.page, params.limit, 0, 'No properties found for the specified location'));
+      return;
     }
+    conditions.push(...place.conditions);
 
-    // --- Free-text query: prefer the title/description text index, fall back
-    //     to address (city/street) matches so location words still work. ---
-    let useTextScore = false;
+    // --- Free-text query ---
+    // Matches the listing's own text OR the place it is in, so a location word
+    // still works when the description does not carry it. The two place ids are
+    // resolved here rather than expanded into an address-id set.
     if (params.text) {
-      const textIds = await resolveTextAddressIds(params.text);
-      const textOr: PropertyFilter[] = [{ $text: { $search: params.text } }];
-      if (textIds.length > 0) {
-        textOr.push({ addressId: { $in: textIds } });
-      }
-      // Combine the text OR-branch with the structured filter. When a geo/city
-      // address constraint is already present we must keep both: the address
-      // text match is restricted to that constraint via the base filter's
-      // own addressId clause already merged above.
-      if (Array.isArray(filter.$and)) {
-        filter.$and.push({ $or: textOr });
-      } else {
-        filter.$and = [{ $or: textOr }];
-      }
-      useTextScore = true;
+      const [textCityId, textRegionId] = await Promise.all([
+        resolveCityId(params.text),
+        resolveRegionId(params.text),
+      ]);
+      conditions.push(matchesText(params.text, { cityId: textCityId, regionId: textRegionId }));
     }
 
-    const sort = buildSort(params, useTextScore);
+    const where = allOf(conditions);
+    const orderBy = propertyOrderBy(...buildSort(params, params.text));
     const skip = (params.page - 1) * params.limit;
 
-    const projection = useTextScore ? { score: { $meta: 'textScore' } } : undefined;
-
-    const [properties, total] = await Promise.all([
-      Property.find(filter, projection)
-        .populate(ADDRESS_GEO_POPULATE)
-        .sort(sort)
-        .skip(skip)
-        .limit(params.limit)
-        .lean(),
-      Property.countDocuments(filter),
+    const [hydrated, total] = await Promise.all([
+      findProperties({ where, orderBy, limit: params.limit, offset: skip }),
+      countProperties(where),
     ]);
 
-    // Resolve each address's city/region/country NAMES from the deep-populated
-    // geo refs, then flatten the refs back to ids, so result cards/map pins
-    // render a location label without an N+1 lookup.
-    serializePropertyAddresses(properties);
-    serializePropertyImages(properties);
-
-    res.json(buildSearchResponse(properties, params.page, params.limit, total, 'Search completed successfully'));
+    res.json(buildSearchResponse(
+      hydrated.map(serializeProperty),
+      params.page,
+      params.limit,
+      total,
+      'Search completed successfully',
+    ));
   } catch (error) {
     logger.error('Property search failed', {
       message: error instanceof Error ? error.message : String(error),

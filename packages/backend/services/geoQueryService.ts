@@ -142,11 +142,22 @@ export async function resolveNeighborhoodId(
  * Callers that pass no constraint at all should not call this (they have no
  * narrowing to do); when every provided field is blank this returns `null`.
  *
- * **This function is scheduled for DELETION, not further work** (batch 4): it
- * loads an entire city's addresses into one `$in`, which the property read path
- * replaces with a real join. It is ported rather than left behind only because
- * `addresses` now lives in Postgres and its remaining callers still read Mongo
- * properties keyed by these ids.
+ * **Every catalogue read has stopped calling this, and the two that remain are
+ * named.** The property list, search, geo and city feeds used to load an entire
+ * city's addresses into one uncapped `$in`; they now compare
+ * `addresses.city_id` on the row the property read already joins
+ * (`db/properties/propertyGeo.ts`). What still calls it reads MONGO properties
+ * and therefore cannot use a Postgres join:
+ *
+ *  - `controllers/roomController.getRooms` — rooms are `properties` rows, but
+ *    this controller also CREATES and UPDATES them, and writes stay on Mongo for
+ *    the dual-run.
+ *  - `models/schemas/PropertySchema.statics.search` — part of the Mongoose model
+ *    itself.
+ *
+ * Both move with the property WRITE path, and this function goes with them. Do
+ * not add a caller: for anything reading Postgres properties, the predicates in
+ * `db/properties/propertyFilters` are the replacement.
  *
  * **Its one non-Property caller is gone.** `addressController.searchAddresses`
  * used it to turn a search term into an address-id list and then match
