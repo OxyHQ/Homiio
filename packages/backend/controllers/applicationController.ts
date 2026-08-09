@@ -14,8 +14,21 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import { PAYMENT_CURRENCIES } from '@homiio/shared-types';
-import { Property, TenantApplication } from '../models';
 import { getDb } from '../db/postgres';
+import {
+  ACTIVE_APPLICATION_STATUSES,
+  createApplication,
+  decideApplication,
+  findActiveApplicationForApplicant,
+  findApplicationById,
+  isApplicationStatus,
+  listApplications,
+  serializeApplication,
+  type TenantApplicationStatusValue,
+} from '../db/applications/applicationReads';
+import { findPropertyBookingBasis } from '../db/properties/propertyBookingBasis';
+import { TENANT_APPLICATION_DOCUMENT_TYPES } from '../db/schema/applications';
+import { REFERENCE_RELATIONSHIPS } from '../db/schema/profiles';
 import {
   createLease,
   findLeaseForTenant,
@@ -29,7 +42,6 @@ import imageUploadService from '../services/imageUploadService';
 import { requireSessionOxyUserId } from '../utils/sessionUser';
 import {
   TenantApplicationStatus,
-  TenantApplicationDocumentType,
   OfferingType,
   LeaseStatus,
 } from '@homiio/shared-types';
@@ -42,20 +54,36 @@ const ACTIVE_LEASE_STATUSES: readonly LeaseStatusValue[] = [
   LeaseStatus.ACTIVE,
 ];
 
-const ALLOWED_DOCUMENT_TYPES = new Set<string>(Object.values(TenantApplicationDocumentType));
 const APPLICATION_DOCUMENTS_FOLDER = 'applications/documents';
 
 interface ParsedReferenceContact {
   name: string;
-  relationship: string;
+  relationship: (typeof REFERENCE_RELATIONSHIPS)[number];
   phone: string;
   email: string;
 }
 
 interface ParsedDocument {
-  type: string;
+  type: (typeof TENANT_APPLICATION_DOCUMENT_TYPES)[number];
   url: string;
   filename: string;
+}
+
+/** Whether `value` is one of the four declared referee relationships. */
+function isReferenceRelationship(
+  value: unknown,
+): value is (typeof REFERENCE_RELATIONSHIPS)[number] {
+  return typeof value === 'string' && (REFERENCE_RELATIONSHIPS as readonly string[]).includes(value);
+}
+
+/** Whether `value` is one of the four declared document types. */
+function isApplicationDocumentType(
+  value: unknown,
+): value is (typeof TENANT_APPLICATION_DOCUMENT_TYPES)[number] {
+  return (
+    typeof value === 'string' &&
+    (TENANT_APPLICATION_DOCUMENT_TYPES as readonly string[]).includes(value)
+  );
 }
 
 /**
@@ -81,9 +109,20 @@ function parseReferenceContacts(raw: unknown): ParsedReferenceContact[] {
     if (!ref?.name || !ref?.relationship || !ref?.phone || !ref?.email) {
       throw new AppError(`referenceContacts[${index}] is missing required fields`, 400, 'INVALID_REFERENCES');
     }
+    // Narrowed HERE rather than left to `tenant_application_references_
+    // relationship_check`: Mongoose validated this enum on `create`, and an
+    // undeclared value arriving as a `23514` would be a 500 where the caller
+    // earned a 400 naming the field.
+    if (!isReferenceRelationship(ref.relationship)) {
+      throw new AppError(
+        `referenceContacts[${index}] has invalid relationship "${String(ref.relationship)}"`,
+        400,
+        'INVALID_REFERENCES',
+      );
+    }
     return {
       name: String(ref.name).trim(),
-      relationship: String(ref.relationship),
+      relationship: ref.relationship,
       phone: String(ref.phone).trim(),
       email: String(ref.email).trim().toLowerCase()
     };
@@ -113,8 +152,8 @@ function parseDocumentsFromBody(raw: unknown): ParsedDocument[] {
     if (!doc?.type || !doc?.url || !doc?.filename) {
       throw new AppError(`documents[${index}] is missing required fields`, 400, 'INVALID_DOCUMENTS');
     }
-    if (!ALLOWED_DOCUMENT_TYPES.has(doc.type)) {
-      throw new AppError(`documents[${index}] has invalid type "${doc.type}"`, 400, 'INVALID_DOCUMENT_TYPE');
+    if (!isApplicationDocumentType(doc.type)) {
+      throw new AppError(`documents[${index}] has invalid type "${String(doc.type)}"`, 400, 'INVALID_DOCUMENT_TYPE');
     }
     return {
       type: doc.type,
@@ -128,7 +167,10 @@ function parseDocumentsFromBody(raw: unknown): ParsedDocument[] {
  * Parse a parallel `documentTypes[]` field (multipart shape) — one string per
  * uploaded file (e.g. ["id", "income", "reference"]).
  */
-function parseDocumentTypes(raw: unknown, count: number): string[] {
+function parseDocumentTypes(
+  raw: unknown,
+  count: number,
+): (typeof TENANT_APPLICATION_DOCUMENT_TYPES)[number][] {
   if (!raw && count === 0) return [];
   let value: unknown = raw;
   if (typeof value === 'string') {
@@ -151,7 +193,7 @@ function parseDocumentTypes(raw: unknown, count: number): string[] {
     );
   }
   return value.map((type, index) => {
-    if (typeof type !== 'string' || !ALLOWED_DOCUMENT_TYPES.has(type)) {
+    if (!isApplicationDocumentType(type)) {
       throw new AppError(`documentTypes[${index}] is not a valid document type`, 400, 'INVALID_DOCUMENT_TYPE');
     }
     return type;
@@ -161,7 +203,10 @@ function parseDocumentTypes(raw: unknown, count: number): string[] {
 /**
  * Upload each multer file to S3 and return parsed document entries.
  */
-async function uploadDocumentFiles(files: any[], types: string[]): Promise<ParsedDocument[]> {
+async function uploadDocumentFiles(
+  files: any[],
+  types: readonly (typeof TENANT_APPLICATION_DOCUMENT_TYPES)[number][],
+): Promise<ParsedDocument[]> {
   const uploaded: ParsedDocument[] = [];
   for (let i = 0; i < files.length; i += 1) {
     const file = files[i];
@@ -208,11 +253,11 @@ class ApplicationController {
         documentTypes
       } = req.body || {};
 
-      const property = await Property.findById(propertyId).lean();
+      const db = getDb();
+      const property = await findPropertyBookingBasis(db, String(propertyId));
       if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
       if (property.isExternal) return next(new AppError('Cannot apply to external listings', 400, 'EXTERNAL_PROPERTY'));
-      const propertyOfferings = Array.isArray(property.offerings) ? property.offerings : [];
-      if (!propertyOfferings.includes(OfferingType.LONG_TERM_RENT)) {
+      if (!property.offerings.includes(OfferingType.LONG_TERM_RENT)) {
         return next(new AppError('This property is not offered for long-term rent and does not accept applications', 400, 'NOT_APPLICABLE'));
       }
 
@@ -222,12 +267,14 @@ class ApplicationController {
         return next(new AppError('You cannot apply to your own property', 403, 'FORBIDDEN'));
       }
 
-      // Prevent duplicate active applications by the same applicant.
-      const existingActive = await TenantApplication.findOne({
-        propertyId,
-        applicantOxyUserId: oxyUserId,
-        status: { $in: [TenantApplicationStatus.SUBMITTED, TenantApplicationStatus.REVIEWING] }
-      }).lean();
+      // Prevent duplicate active applications by the same applicant. A read
+      // rather than an index: "active" is a status SET, and a partial unique
+      // index over one would also forbid re-applying after a rejection.
+      const existingActive = await findActiveApplicationForApplicant(
+        db,
+        String(propertyId),
+        oxyUserId,
+      );
       if (existingActive) {
         return next(new AppError('You already have an active application for this property', 409, 'ALREADY_APPLIED'));
       }
@@ -249,28 +296,34 @@ class ApplicationController {
 
       const allDocuments = [...parsedDocumentsFromBody, ...uploadedDocs];
 
-      const application = await TenantApplication.create({
-        propertyId,
-        applicantOxyUserId: oxyUserId,
-        landlordOxyUserId,
-        moveInDate: moveInDateParsed,
-        leaseTermMonths: Number(leaseTermMonths),
-        monthlyIncome: Number(monthlyIncome),
-        employmentStatus,
-        referenceContacts: parsedReferences,
-        documents: allDocuments,
-        notes,
-        status: TenantApplicationStatus.SUBMITTED,
-        submittedAt: new Date()
-      });
+      // One transaction: an application that committed without its references
+      // is one a landlord judges on incomplete information.
+      const hydrated = await db.transaction((tx) =>
+        createApplication(tx, {
+          columns: {
+            propertyId: String(propertyId),
+            applicantOxyUserId: oxyUserId,
+            landlordOxyUserId,
+            moveInDate: moveInDateParsed,
+            leaseTermMonths: Number(leaseTermMonths),
+            monthlyIncome: Number(monthlyIncome),
+            employmentStatus,
+            notes,
+            status: TenantApplicationStatus.SUBMITTED,
+            submittedAt: new Date(),
+          },
+          references: parsedReferences,
+          documents: allDocuments,
+        }),
+      );
 
       logger.info('Tenant application created', {
-        applicationId: String(application._id),
+        applicationId: hydrated.application.id,
         propertyId: String(propertyId),
         applicantOxyUserId: oxyUserId
       });
 
-      res.status(201).json(successResponse(application.toJSON(), 'Application submitted'));
+      res.status(201).json(successResponse(serializeApplication(hydrated), 'Application submitted'));
     } catch (error) {
       next(error);
     }
@@ -285,28 +338,22 @@ class ApplicationController {
       const { page = 1, limit = 10, status, asLandlord } = req.query;
       const oxyUserId = requireSessionOxyUserId(req);
 
-      const query: Record<string, unknown> = {};
-      if (String(asLandlord) === 'true') {
-        query.landlordOxyUserId = oxyUserId;
-      } else {
-        query.applicantOxyUserId = oxyUserId;
-      }
-      if (status) query.status = status;
-
       const pageNumber = Math.max(1, parseInt(String(page)) || 1);
       const limitNumber = Math.min(100, Math.max(1, parseInt(String(limit)) || 10));
       const skip = (pageNumber - 1) * limitNumber;
 
-      const [items, total] = await Promise.all([
-        TenantApplication.find(query)
-          .sort({ submittedAt: -1 })
-          .skip(skip)
-          .limit(limitNumber)
-          .lean(),
-        TenantApplication.countDocuments(query)
-      ]);
+      const asLandlordView = String(asLandlord) === 'true';
+      const result = await listApplications(
+        getDb(),
+        {
+          applicantOxyUserId: asLandlordView ? undefined : oxyUserId,
+          landlordOxyUserId: asLandlordView ? oxyUserId : undefined,
+          status: isApplicationStatus(status) ? status : undefined,
+        },
+        { limit: limitNumber, offset: skip },
+      );
 
-      res.json(paginationResponse(items, pageNumber, limitNumber, total, 'Applications retrieved'));
+      res.json(paginationResponse(result.applications.map(serializeApplication), pageNumber, limitNumber, result.total, 'Applications retrieved'));
     } catch (error) {
       next(error);
     }
@@ -320,16 +367,16 @@ class ApplicationController {
       const { id } = req.params;
       const oxyUserId = requireSessionOxyUserId(req);
 
-      const application = await TenantApplication.findById(id).lean();
-      if (!application) return next(new AppError('Application not found', 404, 'NOT_FOUND'));
+      const hydrated = await findApplicationById(getDb(), id);
+      if (!hydrated) return next(new AppError('Application not found', 404, 'NOT_FOUND'));
 
-      const isApplicant = application.applicantOxyUserId === oxyUserId;
-      const isLandlord = application.landlordOxyUserId === oxyUserId;
+      const isApplicant = hydrated.application.applicantOxyUserId === oxyUserId;
+      const isLandlord = hydrated.application.landlordOxyUserId === oxyUserId;
       if (!isApplicant && !isLandlord) {
         return next(new AppError('Not authorized to view this application', 403, 'FORBIDDEN'));
       }
 
-      res.json(successResponse(application, 'Application retrieved'));
+      res.json(successResponse(serializeApplication(hydrated), 'Application retrieved'));
     } catch (error) {
       next(error);
     }
@@ -347,16 +394,21 @@ class ApplicationController {
 
       const oxyUserId = requireSessionOxyUserId(req);
 
-      const application = await TenantApplication.findById(id);
-      if (!application) return next(new AppError('Application not found', 404, 'NOT_FOUND'));
+      const db = getDb();
+      const existing = await findApplicationById(db, id);
+      if (!existing) return next(new AppError('Application not found', 404, 'NOT_FOUND'));
 
-      const isApplicant = application.applicantOxyUserId === oxyUserId;
-      const isLandlord = application.landlordOxyUserId === oxyUserId;
+      const isApplicant = existing.application.applicantOxyUserId === oxyUserId;
+      const isLandlord = existing.application.landlordOxyUserId === oxyUserId;
       if (!isApplicant && !isLandlord) {
         return next(new AppError('Not authorized to update this application', 403, 'FORBIDDEN'));
       }
 
-      const landlordTransitions = new Set([
+      if (!isApplicationStatus(nextStatus)) {
+        return next(new AppError('Unsupported status transition', 400, 'INVALID_STATE'));
+      }
+
+      const landlordTransitions = new Set<TenantApplicationStatusValue>([
         TenantApplicationStatus.REVIEWING,
         TenantApplicationStatus.APPROVED,
         TenantApplicationStatus.REJECTED
@@ -364,37 +416,45 @@ class ApplicationController {
 
       if (landlordTransitions.has(nextStatus)) {
         if (!isLandlord) return next(new AppError('Only the landlord can perform this transition', 403, 'FORBIDDEN'));
-        if (
-          application.status !== TenantApplicationStatus.SUBMITTED &&
-          application.status !== TenantApplicationStatus.REVIEWING
-        ) {
+        if (!ACTIVE_APPLICATION_STATUSES.includes(existing.application.status)) {
           return next(new AppError('Application is no longer pending review', 400, 'INVALID_STATE'));
         }
       } else if (nextStatus === TenantApplicationStatus.WITHDRAWN) {
         if (!isApplicant) return next(new AppError('Only the applicant can withdraw the application', 403, 'FORBIDDEN'));
-        if (
-          application.status !== TenantApplicationStatus.SUBMITTED &&
-          application.status !== TenantApplicationStatus.REVIEWING
-        ) {
+        if (!ACTIVE_APPLICATION_STATUSES.includes(existing.application.status)) {
           return next(new AppError('Application can no longer be withdrawn', 400, 'INVALID_STATE'));
         }
       } else {
         return next(new AppError('Unsupported status transition', 400, 'INVALID_STATE'));
       }
 
-      application.status = nextStatus;
-      if (typeof notes === 'string') application.notes = notes;
-      // decidedAt is stamped automatically by the pre-save hook in the schema.
-      await application.save();
+      // `decided_at` is stamped by the repository iff `nextStatus` is terminal —
+      // the `pre('save')` hook that used to do it was bypassed by every
+      // `findOneAndUpdate`, and `tenant_applications_decided_at_check` now makes
+      // the pair an equivalence the write cannot get wrong.
+      //
+      // The permitted FROM statuses are in the `UPDATE`'s own predicate, so two
+      // landlords deciding at once cannot both succeed; the read above chose the
+      // error message, this chooses whether the write happens.
+      const hydrated = await decideApplication(
+        db,
+        id,
+        nextStatus,
+        ACTIVE_APPLICATION_STATUSES,
+        { notes: typeof notes === 'string' ? notes : undefined },
+      );
+      if (!hydrated) {
+        return next(new AppError('Application is no longer pending review', 400, 'INVALID_STATE'));
+      }
 
       logger.info('Tenant application status updated', {
-        applicationId: String(application._id),
+        applicationId: hydrated.application.id,
         nextStatus,
         byLandlord: isLandlord,
         byApplicant: isApplicant
       });
 
-      res.json(successResponse(application.toJSON(), 'Application updated'));
+      res.json(successResponse(serializeApplication(hydrated), 'Application updated'));
     } catch (error) {
       next(error);
     }
@@ -414,8 +474,9 @@ class ApplicationController {
       const { id } = req.params;
       const oxyUserId = requireSessionOxyUserId(req);
 
-      const application = await TenantApplication.findById(id);
-      if (!application) return next(new AppError('Application not found', 404, 'NOT_FOUND'));
+      const hydratedApplication = await findApplicationById(getDb(), id);
+      if (!hydratedApplication) return next(new AppError('Application not found', 404, 'NOT_FOUND'));
+      const application = hydratedApplication.application;
 
       if (application.landlordOxyUserId !== oxyUserId) {
         return next(new AppError('Only the landlord can create a lease from this application', 403, 'FORBIDDEN'));
@@ -424,21 +485,20 @@ class ApplicationController {
         return next(new AppError('Application must be approved before creating a lease', 400, 'INVALID_STATE'));
       }
 
-      // The application is still a Mongo document and the LEASE is Postgres.
-      // Nothing here needs the two to commit together — the application is only
-      // READ, and the lease is a single write — so the split costs no atomicity.
-      // When applications move, only these two reads change.
+      // Both the application and the lease are Postgres now. The application is
+      // only READ here — the lease is the single write — so this needs no
+      // transaction spanning the two.
       const db = getDb();
       const property = await findPropertyLeaseBasis(db, String(application.propertyId));
       if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
 
-      const existing = await findLeaseForTenant(
+      const existingLease = await findLeaseForTenant(
         db,
         String(application.propertyId),
         String(application.applicantOxyUserId),
         ACTIVE_LEASE_STATUSES,
       );
-      if (existing) {
+      if (existingLease) {
         return next(new AppError('A lease already exists for this tenant and property', 409, 'LEASE_ALREADY_EXISTS'));
       }
 
@@ -478,7 +538,7 @@ class ApplicationController {
       );
 
       logger.info('Lease draft created from application', {
-        applicationId: String(application._id),
+        applicationId: application.id,
         leaseId: hydrated.lease.id,
         landlordOxyUserId: oxyUserId
       });
