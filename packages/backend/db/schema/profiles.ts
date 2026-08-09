@@ -42,11 +42,22 @@
  *
  * ## Arrays
  *
- * Two scalar arrays stay native `text[]` (`preferences.propertyTypes`,
- * `preferences.preferredAmenities`) — both are read whole and neither is ever
- * queried by element. The five arrays that carry STRUCTURE become child tables,
- * because a native array of a composite type is not queryable, not constrainable
- * and not indexable in any useful way.
+ * Three scalar arrays stay native `text[]` (`preferences.propertyTypes`,
+ * `preferences.preferredAmenities` and the roommate `interests` this migration
+ * ADDS) — each is read whole and none is ever queried by element. The five
+ * arrays that carry STRUCTURE become child tables, because a native array of a
+ * composite type is not queryable, not constrainable and not indexable in any
+ * useful way.
+ *
+ * ## Two columns here have NO Mongo source, deliberately
+ *
+ * `settings_roommate_preferences_location` and
+ * `settings_roommate_preferences_interests` are not ports of stored fields —
+ * they are the fix for a field that was accepted, sent, and silently discarded.
+ * Each carries its own reason where it is declared. They are the profile
+ * counterpart of `schema/unmappedColumns.ts`'s `properties.views` /
+ * `properties.title`: a column starting to hold data after the cutover is the
+ * EXPECTED condition, not a copy failure.
  */
 
 import { boolean, check, doublePrecision, index, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
@@ -237,6 +248,42 @@ export const profiles = pgTable(
     settingsRoommatePreferencesBudgetMax: doublePrecision(),
     settingsRoommatePreferencesMoveInDate: timestamptz(),
     settingsRoommatePreferencesLeaseDuration: text({ enum: LEASE_DURATIONS }),
+    /**
+     * Where the person wants to share a home — free text, the way the roommate
+     * filter has always collected it ("Barcelona", "Gràcia").
+     *
+     * **This column has no Mongo counterpart, and that is the defect it exists
+     * to close rather than an omission being carried forward.**
+     * `EDITABLE_ROOMMATE_PREFERENCE_FIELDS` accepts `location`,
+     * `RoommateFilters` sends it, and `updateRoommatePreferences` wrote it to
+     * `personalProfile.settings.roommate.preferences.location` — a path
+     * `personalProfileSchema` never declared, so mongoose strict mode (ON for
+     * writes, always) dropped it from every update. Nothing errored and nothing
+     * was ever stored, which is why the discover filter that reads it has never
+     * returned a row.
+     *
+     * Filtered with `ILIKE` over `escapeLikePattern` (`db/likePattern.ts`) —
+     * the port of the `{ $regex, $options: 'i' }` the Mongo filter used. No
+     * index: the table holds five rows, and `CONVENTIONS.md` forbids a
+     * speculative one.
+     */
+    settingsRoommatePreferencesLocation: text(),
+    /**
+     * The person's own interests, as free-text tags.
+     *
+     * Same defect as {@link settingsRoommatePreferencesLocation} — accepted by
+     * the write allow-list, sent by the client, and silently dropped by strict
+     * mode — with a second consequence that is invisible from the write side:
+     * `calculateMatchPercentage`'s interests branch is worth 20 of the 100
+     * compatibility points and is guarded by `prefs1.interests &&
+     * prefs2.interests`, so with the field unstorable it could NEVER fire. The
+     * scorer has been running on 80 points for its whole life.
+     *
+     * A native `text[]`, matching `preferences_preferred_amenities`: it is read
+     * whole to intersect two people's tags and is never queried by element, so a
+     * child table would be the over-normalization `CONVENTIONS.md` forbids.
+     */
+    settingsRoommatePreferencesInterests: text().array(),
 
     // ── personalProfile.settings (locale) ──
     settingsLanguage: text(),

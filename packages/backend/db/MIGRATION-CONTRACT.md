@@ -70,6 +70,39 @@ at all; a viewing rollup comparing `ownerOxyUserId` against a PROFILE id; and an
 while leaving the selectors alone would have been the worst available outcome —
 three queries ported, still answering 0, and looking done.
 
+### `strictQuery: false` turns a mis-declared FILTER into a silent empty page
+
+The `analyticsController` defects above are the WRITE-side version of mongoose
+strict mode (a path the schema does not declare is dropped from the update).
+The roommate port found the READ-side version, and the two produce opposite
+symptoms from the same misspelling, so it is worth naming which one this
+package is exposed to.
+
+`database/connection.ts:39` sets `mongoose.set('strictQuery', false)`. With
+`strictQuery: true` an undeclared path is stripped from the FILTER, which makes
+the query too BROAD — it returns rows the caller meant to exclude. With `false`
+it is passed through to MongoDB, where a path no document has matches
+**nothing**. `getRoommateProfiles` filtered on `personalProfile.gender`,
+`personalProfile.location` and `personalProfile.dateOfBirth`;
+`personalProfileSchema` declares none of the three, so `?gender=`, `?location=`
+and `?ageRange=` returned an empty page for the whole life of the feature.
+
+The rule this yields for the rest of the migration: **a Mongo selector naming a
+path the schema does not declare is not a bug to port, and porting it faithfully
+is the worst available outcome** — it answers zero just as reliably in Postgres
+and looks finished. Re-point it at the fact the product really stores, or delete
+it, and say which in the PR. Where the stored fact does not exist at all (the
+roommate `location` filter, and the `interests` the compatibility score reads),
+the field is usually already ACCEPTED by a write allow-list and discarded by
+strict mode on the way in — so the fix is an additive column, registered in
+`schema/unmappedColumns.ts` with the other columns that have no Mongo source.
+
+`?ageRange=` is the case where no honest column exists: there is no date of
+birth in either store and there must not be one (Oxy owns identity). It is
+re-expressed as an OVERLAP against the candidate's own stated preferred age
+range — a different question with the same intent, recorded here because it is
+the kind of semantic change a later reader would otherwise take for a bug.
+
 ## A fixture has to sit on the side of the distinction the test exists to make
 
 The tidiest fixture is often the one that makes a check vacuous, and a green run

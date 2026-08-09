@@ -44,15 +44,24 @@ describe('unmapped column registry', () => {
     expect(unexplained).toEqual([]);
   });
 
-  it('holds the two columns the census proved have no source', () => {
+  it('holds the four columns the census proved have no source', () => {
     // A floor, not a target. Written as an exact set rather than a count so
     // that REMOVING an entry is as visible as adding one — a column quietly
     // dropped from this list is a column the coverage check will start
     // reporting as under-populated, and the reason will be gone.
+    //
+    // The two `profiles` entries are the same mongoose-strict-mode discard as
+    // the two `properties` ones, on a field the write allow-list ACCEPTS: see
+    // `db/schema/profiles.ts` for what each one broke.
     const named = UNMAPPED_COLUMNS
       .map((entry) => `${getTableName(entry.table)}.${entry.property}`)
       .sort();
-    expect(named).toEqual(['properties.title', 'properties.views']);
+    expect(named).toEqual([
+      'profiles.settingsRoommatePreferencesInterests',
+      'profiles.settingsRoommatePreferencesLocation',
+      'properties.title',
+      'properties.views',
+    ]);
   });
 });
 

@@ -1412,3 +1412,97 @@ describe('data backfill — end to end', () => {
     expect(windows.map((row) => row.scope).sort()).toEqual(['exchange', 'listing']);
   }, 60_000);
 });
+
+describe('a column with NO Mongo source that the application really writes', () => {
+  /**
+   * `schema/unmappedColumns.ts` was documentation until the roommate port, and
+   * the two escapes that covered its first two entries do not cover its second
+   * two.
+   *
+   * `properties.views` is skipped because it has a DEFAULT ("the schema decided
+   * this"); `properties.title` is skipped because nothing writes it, so an
+   * omitted key and a stored NULL agree. `settings_roommate_preferences_location`
+   * is nullable, has no default, AND is written by
+   * `PUT /api/roommates/preferences` — so during the dual-run window a perfectly
+   * correct row carries a value the mapper cannot produce.
+   *
+   * Without the registry the verifier reads that as `expected NULL, stored
+   * "Barcelona"` and FAILS the run (`data.ts` turns any mismatch into a
+   * failure), and `--reconcile` reports the row as differing on every pass.
+   * Both are asserted, because they are different code paths with different
+   * consequences.
+   */
+  async function copyProfileThenWriteTheUnmappedColumn(): Promise<string> {
+    const database = mongoDatabase();
+    const updatedAt = new Date('2026-08-01T10:00:00.000Z');
+    const document = {
+      _id: oid(),
+      oxyUserId: 'oxy-roommate-seeker',
+      personalProfile: { personalInfo: { bio: 'Looking to share' } },
+      createdAt: new Date('2026-07-01T10:00:00.000Z'),
+      updatedAt,
+    };
+    await database.collection('profiles').insertOne(document);
+    await runDataBackfill({
+      mongo: database,
+      database: getDb(),
+      mode: 'copy',
+      sampleSize: 5,
+      only: ['profiles'],
+    });
+
+    // `updated_at` is written EXPLICITLY, which is what isolates the question
+    // this file is asking. `$onUpdate` fires on any `db.update()` that does not
+    // name it (`CONVENTIONS.md`), so a write that let it drift would differ from
+    // Mongo on `updated_at` too — a real and separately documented consequence
+    // of Mongo staying authoritative during the window, and one that would make
+    // this case pass or fail for a reason that has nothing to do with the
+    // registry.
+    await getDb()
+      .update(profiles)
+      .set({
+        settingsRoommatePreferencesLocation: 'Barcelona',
+        settingsRoommatePreferencesInterests: ['climbing'],
+        updatedAt,
+      })
+      .where(eq(profiles.id, String(document._id)));
+    return String(document._id);
+  }
+
+  it('does not report a fidelity mismatch for it', async () => {
+    await copyProfileThenWriteTheUnmappedColumn();
+
+    const report = await runDataBackfill({
+      mongo: mongoDatabase(),
+      database: getDb(),
+      mode: 'copy',
+      sampleSize: 5,
+      only: ['profiles'],
+    });
+
+    const verified = report.verified.find((entry) => entry.table === 'profiles');
+    expect(verified?.compared).toBeGreaterThan(0);
+    expect(verified?.mismatches).toEqual([]);
+  }, 60_000);
+
+  it('does not let --reconcile report or rewrite it', async () => {
+    const profileId = await copyProfileThenWriteTheUnmappedColumn();
+
+    const report = await runDataBackfill({
+      mongo: mongoDatabase(),
+      database: getDb(),
+      mode: 'reconcile',
+      sampleSize: 5,
+      only: ['profiles'],
+    });
+
+    const reconciled = report.reconciled.find((entry) => entry.table === 'profiles');
+    expect(reconciled?.updated).toBe(0);
+    expect(reconciled?.unchanged).toBe(1);
+
+    // And the value survives, which is the fact a report line cannot express.
+    const [stored] = await getDb().select().from(profiles).where(eq(profiles.id, profileId));
+    expect(stored.settingsRoommatePreferencesLocation).toBe('Barcelona');
+    expect(stored.settingsRoommatePreferencesInterests).toEqual(['climbing']);
+  }, 60_000);
+});

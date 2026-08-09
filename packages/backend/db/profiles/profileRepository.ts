@@ -43,10 +43,24 @@
  * session. A profile is a sidecar to an Oxy account, so the account id IS the
  * key — and a lookup by row id authorised in a second statement is an IDOR the
  * moment somebody forgets the second statement.
+ *
+ * {@link searchRoommateCandidates} is the one read that is not keyed by an
+ * account id, and it takes the caller's as an EXCLUSION rather than a lookup:
+ * it answers "who else is looking", so the session id is what keeps a person
+ * out of their own results.
+ *
+ * ## This module owns every read of `profiles`
+ *
+ * Including the roommate discover feed, which filters that table and no other.
+ * Putting the filter in `db/roommates/` would give one table two repositories,
+ * and the two would drift on the question this one has just had to answer
+ * carefully: what a NULL column means (see `roommateCandidateFilter`).
  */
 
-import { asc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, ilike, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import type { DatabaseOrTransaction } from '../postgres';
+import { escapeLikePattern } from '../likePattern';
 import {
   profileChatMessages,
   profilePreferredLocations,
@@ -55,6 +69,9 @@ import {
   profileRoommateHistory,
   profiles,
 } from '../schema';
+// `db/schema/index.ts` is TABLES ONLY, so the vocabulary comes from the module
+// that declares it beside the column it constrains.
+import type { GENDER_PREFERENCES } from '../schema/profiles';
 import { type HydratedProfile, type ProfileRow, profileSelection } from './profileSerializer';
 
 /**
@@ -125,12 +142,17 @@ export async function findProfileByOxyUserId(
 }
 
 /**
- * Every child collection for one profile.
+ * Every child collection for a SET of profiles, grouped by profile id.
  *
  * Five statements in parallel rather than one join: the collections are
  * independent of each other, so a join would multiply their rows together and
  * the reader would have to undo five cartesian products to recover what five
  * plain reads already return.
+ *
+ * Five statements for ONE page rather than five per profile, which is the
+ * reason this takes a list. The roommate discover feed hydrates up to a page of
+ * candidates at a time, and the per-profile version issued underneath it would
+ * be 5 × N round trips for a browse screen.
  *
  * **Every ordering here names a real sort column and uses the id only to break a
  * tie.** A `text` primary key holds a 24-char ObjectId hex for a pre-cutover row
@@ -139,34 +161,75 @@ export async function findProfileByOxyUserId(
  * this year begins `6…`, so a lexicographic sort puts every new row FIRST. See
  * `db/conversations/conversationRepository.ts`, which carries the measurement.
  */
-async function loadChildren(
+async function loadChildrenByProfileId(
   db: DatabaseOrTransaction,
-  profileId: string,
-): Promise<Omit<HydratedProfile, 'profile'>> {
+  profileIds: readonly string[],
+): Promise<Map<string, Omit<HydratedProfile, 'profile'>>> {
+  const grouped = new Map<string, Omit<HydratedProfile, 'profile'>>();
+  if (profileIds.length === 0) return grouped;
+
+  const ids = [...profileIds];
   const [references, rentalHistory, preferredLocations, roommateHistory, chatHistory] =
     await Promise.all([
-      db.select().from(profileReferences).where(eq(profileReferences.profileId, profileId)),
+      db.select().from(profileReferences).where(inArray(profileReferences.profileId, ids)),
       db
         .select()
         .from(profileRentalHistory)
-        .where(eq(profileRentalHistory.profileId, profileId))
+        .where(inArray(profileRentalHistory.profileId, ids))
         .orderBy(asc(profileRentalHistory.startDate), asc(profileRentalHistory.id)),
       db
         .select()
         .from(profilePreferredLocations)
-        .where(eq(profilePreferredLocations.profileId, profileId)),
+        .where(inArray(profilePreferredLocations.profileId, ids)),
       db
         .select()
         .from(profileRoommateHistory)
-        .where(eq(profileRoommateHistory.profileId, profileId))
+        .where(inArray(profileRoommateHistory.profileId, ids))
         .orderBy(asc(profileRoommateHistory.startDate), asc(profileRoommateHistory.id)),
       db
         .select()
         .from(profileChatMessages)
-        .where(eq(profileChatMessages.profileId, profileId))
+        .where(inArray(profileChatMessages.profileId, ids))
         .orderBy(asc(profileChatMessages.position), asc(profileChatMessages.timestamp)),
     ]);
-  return { references, rentalHistory, preferredLocations, roommateHistory, chatHistory };
+
+  // Bucketing preserves the statement's own `ORDER BY` inside each group, since
+  // rows arrive sorted and are appended in arrival order.
+  const byProfile = <T extends { profileId: string }>(rows: readonly T[]): Map<string, T[]> => {
+    const map = new Map<string, T[]>();
+    for (const row of rows) {
+      const existing = map.get(row.profileId);
+      if (existing) existing.push(row);
+      else map.set(row.profileId, [row]);
+    }
+    return map;
+  };
+
+  const referencesByProfile = byProfile(references);
+  const rentalHistoryByProfile = byProfile(rentalHistory);
+  const preferredLocationsByProfile = byProfile(preferredLocations);
+  const roommateHistoryByProfile = byProfile(roommateHistory);
+  const chatHistoryByProfile = byProfile(chatHistory);
+
+  for (const profileId of ids) {
+    grouped.set(profileId, {
+      references: referencesByProfile.get(profileId) ?? [],
+      rentalHistory: rentalHistoryByProfile.get(profileId) ?? [],
+      preferredLocations: preferredLocationsByProfile.get(profileId) ?? [],
+      roommateHistory: roommateHistoryByProfile.get(profileId) ?? [],
+      chatHistory: chatHistoryByProfile.get(profileId) ?? [],
+    });
+  }
+  return grouped;
+}
+
+/** Every child collection for one profile. */
+async function loadChildren(
+  db: DatabaseOrTransaction,
+  profileId: string,
+): Promise<Omit<HydratedProfile, 'profile'>> {
+  const grouped = await loadChildrenByProfileId(db, [profileId]);
+  return grouped.get(profileId) ?? emptyChildren();
 }
 
 /**
@@ -196,6 +259,224 @@ export async function findHydratedProfile(
     .where(eq(profiles.id, profile.id))
     .limit(1);
   return { profile, ...children, ownerOnly: { annualIncome: income?.annualIncome ?? null } };
+}
+
+/**
+ * Several profiles, hydrated, keyed by their Oxy account id.
+ *
+ * The batched form of {@link findHydratedProfile}, for the two roommate lists
+ * that hold a set of participant ids and need a profile for each. There is no
+ * `scope` parameter and there will not be one: a batch is by construction a set
+ * of OTHER people, so the owner view has no meaning here and the protected
+ * income column stays unreachable — `profileSelection()` excludes it at the
+ * type level.
+ *
+ * Absent ids are simply absent from the map. A participant with no profile row
+ * is a real state (the roommate tables carry no foreign key to `profiles`,
+ * because their columns hold Oxy account ids), and the caller renders `null`
+ * for them exactly as it did when the Mongo `$in` returned fewer documents than
+ * it was given ids.
+ */
+export async function findHydratedProfilesByOxyUserIds(
+  db: DatabaseOrTransaction,
+  oxyUserIds: readonly string[],
+): Promise<Map<string, HydratedProfile>> {
+  const hydrated = new Map<string, HydratedProfile>();
+  if (oxyUserIds.length === 0) return hydrated;
+
+  const rows = await db
+    .select(profileSelection())
+    .from(profiles)
+    .where(inArray(profiles.oxyUserId, [...oxyUserIds]));
+  const children = await loadChildrenByProfileId(db, rows.map((row) => row.id));
+  for (const row of rows) {
+    hydrated.set(row.oxyUserId, { profile: row, ...(children.get(row.id) ?? emptyChildren()) });
+  }
+  return hydrated;
+}
+
+/**
+ * What `GET /api/roommates` filters candidates on.
+ *
+ * Every field here is a property of the CANDIDATE's own row, which is what
+ * makes them expressible as a `WHERE` clause; the caller-relative filter
+ * (`minMatchPercentage`) is not, and stays in the controller.
+ */
+export interface RoommateCandidateQuery {
+  /** The caller. Excluded from their own results. */
+  readonly excludeOxyUserId: string;
+  readonly gender?: (typeof GENDER_PREFERENCES)[number];
+  readonly location?: string;
+  readonly ageRange?: { readonly min: number; readonly max: number };
+  readonly maxBudget?: number;
+  readonly withPets?: boolean;
+  readonly nonSmoking?: boolean;
+  readonly limit: number;
+  readonly offset: number;
+}
+
+export interface RoommateCandidatePage {
+  readonly candidates: readonly HydratedProfile[];
+  /** Rows matching the filters, before the page was cut. */
+  readonly total: number;
+}
+
+/**
+ * The predicate behind {@link searchRoommateCandidates}, split out so the count
+ * and the page cannot disagree about what they are counting.
+ *
+ * ## Three of these filters used to match NOTHING, and they are REPAIRED here
+ *
+ * The Mongo query filtered `personalProfile.gender`, `personalProfile.location`
+ * and `personalProfile.dateOfBirth`. `personalProfileSchema` declares none of
+ * the three, and `database/connection.ts` sets `strictQuery: false` — so rather
+ * than being stripped from the filter, all three were passed through to
+ * MongoDB, where they matched no document. Setting any of `?gender=`,
+ * `?location=` or `?ageRange=` returned an empty page, always. Porting the
+ * selectors verbatim would have moved that to Postgres, where they would answer
+ * zero just as reliably and look finished; so each is re-pointed at the fact
+ * this product actually stores:
+ *
+ *  - **`gender`** → `settings_roommate_preferences_gender`, the CHECK-constrained
+ *    column whose vocabulary (`male | female | any`) is the same one
+ *    `RoommateFilters.gender` is typed with. It means "candidates who said they
+ *    want to live with X", which is the only stored fact the filter can mean.
+ *  - **`ageRange`** → an OVERLAP against
+ *    `settings_roommate_preferences_age_range_{min,max}`. There is no date of
+ *    birth in either store and there must not be one: Oxy owns identity and
+ *    Homiio does not mirror it. So "people aged 25-30" becomes "people whose
+ *    stated preferred age range overlaps 25-30", which is a different question
+ *    with the same intent.
+ *  - **`location`** → `settings_roommate_preferences_location`, a column added
+ *    by migration 0008 because the write allow-list accepted the field while
+ *    mongoose strict mode discarded it. `ILIKE` over `escapeLikePattern` is the
+ *    port of `{ $regex, $options: 'i' }`; escaping matters because `%` and `_`
+ *    are LIKE metacharacters that mean nothing to a regex, so an unescaped
+ *    `100%` would silently stop filtering.
+ *
+ * ## An unknown answer ADMITS the candidate, everywhere
+ *
+ * `maxBudget` in the Mongo controller read `if (typeof profileMax !== 'number')
+ * return true` — a candidate who stated no budget was kept. Every predicate
+ * here follows that rule (`is null or …`), including both halves of the age
+ * overlap, so a filter narrows the field by what people SAID and never hides
+ * the ones who have not answered yet.
+ *
+ * ## …and they run in SQL rather than over the page
+ *
+ * `maxBudget`, `withPets` and `nonSmoking` were applied in JavaScript AFTER
+ * `skip`/`limit` had already cut the page, so they returned short pages beside
+ * a `total` that counted rows the page had just dropped. Their per-candidate
+ * meaning is unchanged; only the pagination arithmetic is now correct.
+ */
+function roommateCandidateFilter(query: RoommateCandidateQuery): SQL | undefined {
+  // `SQL | undefined`, the repository-wide idiom (`db/properties/propertyFilters.ts`):
+  // `and(...)` drops the absent ones, so an inapplicable filter contributes
+  // nothing instead of needing a branch around the push.
+  const conditions: (SQL | undefined)[] = [
+    eq(profiles.settingsRoommateEnabled, true),
+    ne(profiles.oxyUserId, query.excludeOxyUserId),
+  ];
+
+  if (query.gender) {
+    conditions.push(eq(profiles.settingsRoommatePreferencesGender, query.gender));
+  }
+
+  if (query.location) {
+    conditions.push(
+      ilike(
+        profiles.settingsRoommatePreferencesLocation,
+        `%${escapeLikePattern(query.location)}%`,
+      ),
+    );
+  }
+
+  if (query.ageRange) {
+    // Closed-interval overlap: `[a, b]` meets `[c, d]` iff `a <= d and b >= c`.
+    // Written with an explicit `is null` on each side rather than a `coalesce`
+    // to ±infinity, because a NULL bound means "did not say" and the two halves
+    // are answered independently — somebody who gave only a minimum is still
+    // comparable on that minimum.
+    const { min, max } = query.ageRange;
+    conditions.push(
+      or(
+        isNull(profiles.settingsRoommatePreferencesAgeRangeMin),
+        lte(profiles.settingsRoommatePreferencesAgeRangeMin, max),
+      ),
+      or(
+        isNull(profiles.settingsRoommatePreferencesAgeRangeMax),
+        gte(profiles.settingsRoommatePreferencesAgeRangeMax, min),
+      ),
+    );
+  }
+
+  if (typeof query.maxBudget === 'number') {
+    conditions.push(
+      or(
+        isNull(profiles.settingsRoommatePreferencesBudgetMax),
+        gte(profiles.settingsRoommatePreferencesBudgetMax, query.maxBudget),
+      ),
+    );
+  }
+
+  if (query.withPets) {
+    conditions.push(
+      or(
+        isNull(profiles.settingsRoommatePreferencesLifestylePets),
+        eq(profiles.settingsRoommatePreferencesLifestylePets, 'yes'),
+      ),
+    );
+  }
+
+  if (query.nonSmoking) {
+    conditions.push(
+      or(
+        isNull(profiles.settingsRoommatePreferencesLifestyleSmoking),
+        eq(profiles.settingsRoommatePreferencesLifestyleSmoking, 'no'),
+      ),
+    );
+  }
+
+  return and(...conditions);
+}
+
+/**
+ * One page of roommate candidates, hydrated, plus how many there are in total.
+ *
+ * Ordered by `updated_at` descending like the Mongo query, with the id as a
+ * TIEBREAK so two rows saved in the same millisecond cannot swap places between
+ * the page that shows them and the page that should. The id is never the sort
+ * key itself: a `text` primary key mixes ObjectId hex with uuid v7 and the two
+ * shapes do not interleave in creation order.
+ */
+export async function searchRoommateCandidates(
+  db: DatabaseOrTransaction,
+  query: RoommateCandidateQuery,
+): Promise<RoommateCandidatePage> {
+  const filter = roommateCandidateFilter(query);
+
+  const [rows, [counted]] = await Promise.all([
+    db
+      .select(profileSelection())
+      .from(profiles)
+      .where(filter)
+      .orderBy(desc(profiles.updatedAt), asc(profiles.id))
+      .limit(query.limit)
+      .offset(query.offset),
+    db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(profiles)
+      .where(filter),
+  ]);
+
+  const children = await loadChildrenByProfileId(db, rows.map((row) => row.id));
+  return {
+    candidates: rows.map((row) => ({
+      profile: row,
+      ...(children.get(row.id) ?? emptyChildren()),
+    })),
+    total: counted.total,
+  };
 }
 
 /**

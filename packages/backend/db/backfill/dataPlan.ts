@@ -36,6 +36,7 @@
  * | `properties.hasImages` | DERIVED after the copy by `db/hasImages.ts`, the column's one writer. Production holds a row whose stored flag disagrees with its own array, so copying it would import a known-wrong answer into the primary sort key of every discovery feed. |
  * | `properties.coverImageIndex` | `-1` on all 17,644 rows; the meaning moved to `property_images.is_primary`. |
  * | `properties.title` / `views` | Absent from `PropertySchema`, so mongoose strict mode has been dropping them from every write. There is nothing to copy — see `schema/unmappedColumns.ts`. |
+ * | `profiles.settings_roommate_preferences_location` / `_interests` | The same discard one schema over: `personalProfileSchema` declares neither, so `updateRoommatePreferences` has never been able to store what its own allow-list accepts. Nothing to copy — see `schema/unmappedColumns.ts`. |
  * | `Region.imageIds[]` / `City.imageIds[]` | Dropped with the column: the relation already exists as `images.(entity_type, entity_id)`. |
  */
 

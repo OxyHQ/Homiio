@@ -1,15 +1,16 @@
 /**
  * Roommate controller — profile resolution, preferences mass-assignment (IDOR),
- * the request handshake, relationship lifecycle, and relationship ownership.
+ * the request handshake, relationship lifecycle, relationship ownership, and
+ * the wire shape all of it is served in.
  *
- * ## This suite spans BOTH stores on purpose
+ * ## Both stores are gone from this suite, and that is the point
  *
- * `roommate_requests` and `roommate_relationships` are on Postgres; `profiles`
- * is still the Mongo model, because it belongs to another batch. The two need no
- * transaction between them — a request row and a profile READ are independent,
- * and nothing here writes both — so the split is a real intermediate state of
- * the migration rather than a lost guarantee. When profiles move, only the
- * `Profile.` calls in the controller change.
+ * `roommate_requests` and `roommate_relationships` moved first; the PROFILE
+ * reads beside them moved with this change, so the file no longer touches
+ * mongoose at all. While the two were split, a profile written by
+ * `PUT /api/profiles/me` (Postgres) was invisible to every roommate endpoint
+ * (Mongo) — the fixtures below are Postgres rows for the same reason the
+ * controller now reads them.
  *
  * ## What makes these tests non-vacuous
  *
@@ -26,11 +27,10 @@ import { and, eq } from 'drizzle-orm';
 
 import roommateController from '../../controllers/roommateController';
 import { getDb } from '../../db/postgres';
-import { roommateRelationships, roommateRequests } from '../../db/schema';
+import { profiles, roommateRelationships, roommateRequests } from '../../db/schema';
 import { sortPair } from '../../db/roommates/roommateRepository';
 import { asyncHandler } from '../../middlewares';
 import { errorHandler } from '../../middlewares/errorHandler';
-import { Profile } from '../../models';
 
 beforeAll(() => {
   (global as unknown as { fetch: jest.Mock }).fetch = jest.fn(async () => ({
@@ -44,6 +44,7 @@ beforeEach(async () => {
   // Relationships first: `request_id` references `roommate_requests`.
   await getDb().delete(roommateRelationships);
   await getDb().delete(roommateRequests);
+  await getDb().delete(profiles);
 });
 
 function buildApp(oxyUserId: string): Express {
@@ -55,7 +56,10 @@ function buildApp(oxyUserId: string): Express {
     next();
   });
   app.get('/roommates', asyncHandler(roommateController.getRoommateProfiles));
+  app.get('/roommates/preferences', asyncHandler(roommateController.getMyRoommatePreferences));
   app.put('/roommates/preferences', asyncHandler(roommateController.updateRoommatePreferences));
+  app.patch('/roommates/toggle', asyncHandler(roommateController.toggleRoommateMatching));
+  app.get('/roommates/status', asyncHandler(roommateController.getCurrentUserRoommateStatus));
   app.get('/roommates/requests', asyncHandler(roommateController.getRoommateRequests));
   app.get('/roommates/relationships', asyncHandler(roommateController.getRoommateRelationships));
   app.delete('/roommates/relationships/:relationshipId', asyncHandler(roommateController.endRoommateRelationship));
@@ -66,25 +70,27 @@ function buildApp(oxyUserId: string): Express {
   return app;
 }
 
+/**
+ * A profile with roommate matching on, carrying the same preferences the
+ * Mongo-era fixture did (budget 500-1200, non-smoker, pets welcome).
+ */
 async function createRoommateProfile(
   oxyUserId: string,
-  overrides: Record<string, unknown> = {},
+  overrides: Partial<typeof profiles.$inferInsert> = {},
 ) {
-  return Profile.create({
-    oxyUserId,
-    personalProfile: {
-      settings: {
-        roommate: {
-          enabled: true,
-          preferences: {
-            budget: { min: 500, max: 1200 },
-            lifestyle: { smoking: 'no', pets: 'yes' },
-          },
-        },
-      },
-    },
-    ...overrides,
-  });
+  const [row] = await getDb()
+    .insert(profiles)
+    .values({
+      oxyUserId,
+      settingsRoommateEnabled: true,
+      settingsRoommatePreferencesBudgetMin: 500,
+      settingsRoommatePreferencesBudgetMax: 1200,
+      settingsRoommatePreferencesLifestyleSmoking: 'no',
+      settingsRoommatePreferencesLifestylePets: 'yes',
+      ...overrides,
+    })
+    .returning();
+  return row;
 }
 
 /** Insert a pending request directly, for cases that start from one. */
@@ -112,6 +118,11 @@ async function activeRelationshipBetween(a: string, b: string) {
   return row;
 }
 
+async function storedProfile(oxyUserId: string) {
+  const [row] = await getDb().select().from(profiles).where(eq(profiles.oxyUserId, oxyUserId));
+  return row;
+}
+
 describe('roommateController.getRoommateProfiles — profile resolution', () => {
   it('requires an authenticated user', async () => {
     const app = express();
@@ -134,6 +145,172 @@ describe('roommateController.getRoommateProfiles — profile resolution', () => 
     expect(ids).toContain('oxy-other');
     expect(ids).not.toContain('oxy-me');
   });
+
+  it('omits a candidate who has not enabled matching', async () => {
+    await createRoommateProfile('oxy-me');
+    await createRoommateProfile('oxy-hidden', { settingsRoommateEnabled: false });
+    await createRoommateProfile('oxy-never-asked', { settingsRoommateEnabled: null });
+
+    const res = await request(buildApp('oxy-me')).get('/roommates');
+    expect((res.body.profiles as Array<{ oxyUserId: string }>).map((p) => p.oxyUserId)).toEqual([]);
+    expect(res.body.total).toBe(0);
+  });
+});
+
+describe('the discover filters that used to match nothing', () => {
+  /**
+   * Each of these was written against a path `personalProfileSchema` never
+   * declared (`personalProfile.gender` / `.location` / `.dateOfBirth`). With
+   * `strictQuery: false` mongoose passed them through to MongoDB rather than
+   * stripping them, so they matched NO document and the endpoint answered an
+   * empty page for every value. The cases below are the wiring — that a query
+   * parameter reaches the column the filter now means; the predicates
+   * themselves, with the fixtures that can tell them apart, are pinned in
+   * `__tests__/db/roommateDiscovery.test.ts`.
+   */
+  beforeEach(async () => {
+    await createRoommateProfile('oxy-me');
+  });
+
+  it('filters on the stated roommate GENDER preference', async () => {
+    await createRoommateProfile('oxy-wants-female', {
+      settingsRoommatePreferencesGender: 'female',
+    });
+    await createRoommateProfile('oxy-wants-male', { settingsRoommatePreferencesGender: 'male' });
+
+    const res = await request(buildApp('oxy-me')).get('/roommates').query({ gender: 'female' });
+    expect(res.status).toBe(200);
+    expect((res.body.profiles as Array<{ oxyUserId: string }>).map((p) => p.oxyUserId)).toEqual([
+      'oxy-wants-female',
+    ]);
+    expect(res.body.total).toBe(1);
+  });
+
+  it('treats gender=any as no filter at all', async () => {
+    await createRoommateProfile('oxy-wants-female', {
+      settingsRoommatePreferencesGender: 'female',
+    });
+    await createRoommateProfile('oxy-wants-male', { settingsRoommatePreferencesGender: 'male' });
+
+    const res = await request(buildApp('oxy-me')).get('/roommates').query({ gender: 'any' });
+    expect(res.body.total).toBe(2);
+  });
+
+  it('refuses a gender outside the stored vocabulary rather than ignoring it', async () => {
+    // Ignoring it would answer an UNFILTERED page, which looks like a result.
+    const res = await request(buildApp('oxy-me')).get('/roommates').query({ gender: 'unicorn' });
+    expect(res.status).toBe(400);
+    expect(String(res.body.error)).toContain('gender');
+  });
+
+  it('filters on the stated LOCATION, case-insensitively', async () => {
+    await createRoommateProfile('oxy-bcn', {
+      settingsRoommatePreferencesLocation: 'Barcelona, Gràcia',
+    });
+    await createRoommateProfile('oxy-mad', { settingsRoommatePreferencesLocation: 'Madrid' });
+
+    const res = await request(buildApp('oxy-me')).get('/roommates').query({ location: 'barcelona' });
+    expect((res.body.profiles as Array<{ oxyUserId: string }>).map((p) => p.oxyUserId)).toEqual([
+      'oxy-bcn',
+    ]);
+  });
+
+  it('overlaps the requested AGE RANGE against the stated one', async () => {
+    await createRoommateProfile('oxy-young', {
+      settingsRoommatePreferencesAgeRangeMin: 18,
+      settingsRoommatePreferencesAgeRangeMax: 24,
+    });
+    await createRoommateProfile('oxy-overlapping', {
+      settingsRoommatePreferencesAgeRangeMin: 24,
+      settingsRoommatePreferencesAgeRangeMax: 35,
+    });
+
+    const res = await request(buildApp('oxy-me'))
+      .get('/roommates')
+      .query({ ageRange: JSON.stringify({ min: 30, max: 40 }) });
+    expect((res.body.profiles as Array<{ oxyUserId: string }>).map((p) => p.oxyUserId)).toEqual([
+      'oxy-overlapping',
+    ]);
+  });
+
+  it('answers 400 for a malformed ageRange rather than 500', async () => {
+    // `JSON.parse(String(ageRange))` threw straight into the catch-all.
+    const res = await request(buildApp('oxy-me')).get('/roommates').query({ ageRange: 'nonsense' });
+    expect(res.status).toBe(400);
+  });
+
+  it('answers 400 for a non-numeric maxBudget rather than an empty page', async () => {
+    // `parseInt('abc')` is NaN and `1200 >= NaN` is false, so a typo silently
+    // dropped every candidate.
+    const res = await request(buildApp('oxy-me')).get('/roommates').query({ maxBudget: 'abc' });
+    expect(res.status).toBe(400);
+  });
+
+  it('counts what the page contains — the SQL filters run before the cut', async () => {
+    // The three preference filters used to run in JavaScript AFTER `skip`/
+    // `limit`, so `total` counted rows the page had just dropped.
+    await createRoommateProfile('oxy-smoker', {
+      settingsRoommatePreferencesLifestyleSmoking: 'yes',
+    });
+    await createRoommateProfile('oxy-clean-air', {
+      settingsRoommatePreferencesLifestyleSmoking: 'no',
+    });
+
+    const res = await request(buildApp('oxy-me')).get('/roommates').query({ nonSmoking: 'true' });
+    expect(res.body.total).toBe(1);
+    expect(res.body.profiles).toHaveLength(1);
+    expect(res.body.totalPages).toBe(1);
+  });
+});
+
+describe('the wire shape the roommate endpoints serve', () => {
+  /**
+   * `ProfileSchema`'s `toJSON` transform renamed `_id` → `id` and stripped
+   * `__v`; these endpoints never went through it (they projected by hand), so
+   * the rename is applied by the serializer instead. A regression here is the
+   * class of bug that took Homiio's frontend down once already.
+   */
+  it('carries id, never _id or __v, on every roommate payload', async () => {
+    await createRoommateProfile('oxy-a');
+    await createRoommateProfile('oxy-b');
+    const pending = await seedPendingRequest('oxy-a', 'oxy-b');
+    await request(buildApp('oxy-b')).post(`/roommates/requests/${pending.id}/accept`);
+
+    const discover = await request(buildApp('oxy-a')).get('/roommates');
+    const requests = await request(buildApp('oxy-a')).get('/roommates/requests');
+    const relationships = await request(buildApp('oxy-a')).get('/roommates/relationships');
+    const status = await request(buildApp('oxy-a')).get('/roommates/status');
+
+    for (const res of [discover, requests, relationships, status]) {
+      expect(res.status).toBe(200);
+      expect(JSON.stringify(res.body)).not.toContain('"_id"');
+      expect(JSON.stringify(res.body)).not.toContain('"__v"');
+    }
+
+    expect(discover.body.profiles[0].id).toEqual(expect.any(String));
+    expect(requests.body.data.sent[0].sender.id).toEqual(expect.any(String));
+    expect(relationships.body.data[0].profile1.id).toEqual(expect.any(String));
+    expect(status.body.profile.id).toEqual(expect.any(String));
+  });
+
+  it('never carries another person\'s annual income or transcript', async () => {
+    // The Mongo version attached `personalProfile` verbatim to every candidate
+    // and every request participant. `personal_info_annual_income` is a
+    // PROTECTED COLUMN and the participant DTO is built at PUBLIC visibility.
+    await createRoommateProfile('oxy-me');
+    await createRoommateProfile('oxy-rich', { personalInfoAnnualIncome: 48000 });
+    await seedPendingRequest('oxy-rich', 'oxy-me');
+
+    const discover = await request(buildApp('oxy-me')).get('/roommates');
+    const requests = await request(buildApp('oxy-me')).get('/roommates/requests');
+
+    expect(JSON.stringify(discover.body)).not.toContain('48000');
+    expect(JSON.stringify(requests.body)).not.toContain('48000');
+    expect(discover.body.profiles[0].personalProfile.personalInfo).not.toHaveProperty(
+      'annualIncome',
+    );
+    expect(requests.body.data.received[0].sender.personalProfile.chatHistory).toEqual([]);
+  });
 });
 
 describe('roommateController.updateRoommatePreferences — mass-assignment guard', () => {
@@ -148,11 +325,146 @@ describe('roommateController.updateRoommatePreferences — mass-assignment guard
       });
 
     expect(res.status).toBe(200);
-    const reloaded = await Profile.findByOxyUserId('oxy-me');
-    expect(reloaded?.oxyUserId).toBe('oxy-me');
-    const prefs = reloaded?.personalProfile?.settings?.roommate?.preferences;
-    expect(prefs?.budget?.min).toBe(600);
-    expect(prefs?.budget?.max).toBe(1300);
+    const reloaded = await storedProfile('oxy-me');
+    expect(reloaded.oxyUserId).toBe('oxy-me');
+    expect(reloaded.settingsRoommatePreferencesBudgetMin).toBe(600);
+    expect(reloaded.settingsRoommatePreferencesBudgetMax).toBe(1300);
+    // The attacker's account gained nothing.
+    expect(await storedProfile('evil-inject')).toBeUndefined();
+  });
+
+  it('replaces only the fields the body names', async () => {
+    // The Mongo version `$set` one path per field, so a body naming `budget`
+    // alone left `lifestyle` alone. That is the difference from
+    // `PUT /api/profiles/me`, which sends the block and replaces it.
+    await createRoommateProfile('oxy-me');
+
+    await request(buildApp('oxy-me')).put('/roommates/preferences').send({ gender: 'female' });
+
+    const reloaded = await storedProfile('oxy-me');
+    expect(reloaded.settingsRoommatePreferencesGender).toBe('female');
+    expect(reloaded.settingsRoommatePreferencesBudgetMax).toBe(1200);
+    expect(reloaded.settingsRoommatePreferencesLifestylePets).toBe('yes');
+  });
+
+  it('round-trips location and interests, which strict mode used to discard', async () => {
+    // The whole reason migration 0008 exists. `EDITABLE_ROOMMATE_PREFERENCE_FIELDS`
+    // has always accepted both, and both were written to paths
+    // `personalProfileSchema` does not declare — so mongoose dropped them from
+    // every update and the endpoint answered 200 having stored nothing.
+    await createRoommateProfile('oxy-me');
+    const app = buildApp('oxy-me');
+
+    const put = await request(app)
+      .put('/roommates/preferences')
+      .send({ location: '  Barcelona, Gràcia  ', interests: ['Climbing', ' cooking ', ''] });
+
+    expect(put.status).toBe(200);
+    expect(put.body.data.location).toBe('Barcelona, Gràcia');
+    expect(put.body.data.interests).toEqual(['Climbing', 'cooking']);
+
+    const stored = await storedProfile('oxy-me');
+    expect(stored.settingsRoommatePreferencesLocation).toBe('Barcelona, Gràcia');
+    expect(stored.settingsRoommatePreferencesInterests).toEqual(['Climbing', 'cooking']);
+
+    const read = await request(app).get('/roommates/preferences');
+    expect(read.body.data.location).toBe('Barcelona, Gràcia');
+    expect(read.body.data.interests).toEqual(['Climbing', 'cooking']);
+  });
+
+  it('answers data: null for somebody who has stated nothing', async () => {
+    // A row full of NULLs is not the same fact as an object full of nulls:
+    // mongoose never materialised `personalProfile`, so "never answered" was
+    // `undefined` and has to stay expressible.
+    await getDb().insert(profiles).values({ oxyUserId: 'oxy-blank' });
+    const res = await request(buildApp('oxy-blank')).get('/roommates/preferences');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toBeNull();
+  });
+});
+
+describe('toggleRoommateMatching', () => {
+  it('writes the flag and reports what was stored', async () => {
+    await createRoommateProfile('oxy-me', { settingsRoommateEnabled: false });
+
+    const res = await request(buildApp('oxy-me')).patch('/roommates/toggle').send({ enabled: true });
+    expect(res.status).toBe(200);
+    expect(res.body.enabled).toBe(true);
+    expect((await storedProfile('oxy-me')).settingsRoommateEnabled).toBe(true);
+  });
+
+  it('refuses a non-boolean rather than guessing', async () => {
+    await createRoommateProfile('oxy-me', { settingsRoommateEnabled: false });
+    const res = await request(buildApp('oxy-me')).patch('/roommates/toggle').send({ enabled: 'yes' });
+    expect(res.status).toBe(400);
+    expect((await storedProfile('oxy-me')).settingsRoommateEnabled).toBe(false);
+  });
+});
+
+describe('the compatibility score', () => {
+  /**
+   * The interests branch is worth 20 of the 100 points and has NEVER been able
+   * to fire: `prefs1.interests && prefs2.interests` guarded a field mongoose
+   * strict mode discarded on every write, so the scorer has been running on 80
+   * points for its whole life.
+   */
+  const lifestyle = {
+    settingsRoommatePreferencesLifestyleSmoking: 'no',
+    settingsRoommatePreferencesLifestylePets: 'yes',
+    settingsRoommatePreferencesLifestyleCleanliness: 'clean',
+    settingsRoommatePreferencesLifestyleSchedule: 'flexible',
+  } as const;
+
+  it('counts SHARED interests, and only the shared ones', async () => {
+    await createRoommateProfile('oxy-me', {
+      ...lifestyle,
+      settingsRoommatePreferencesInterests: ['climbing', 'cooking', 'music'],
+    });
+    // Two of three in common — a partial overlap, so a scorer that ignored the
+    // branch (100) and one that awarded it wholesale (100) are both visible as
+    // wrong.
+    await createRoommateProfile('oxy-partial', {
+      ...lifestyle,
+      settingsRoommatePreferencesInterests: ['climbing', 'chess', 'music'],
+    });
+    // No interests at all: the branch does not fire and the pair is scored out
+    // of the 80 points they did answer.
+    await createRoommateProfile('oxy-silent', lifestyle);
+
+    await seedPendingRequest('oxy-me', 'oxy-partial');
+    await seedPendingRequest('oxy-me', 'oxy-silent');
+
+    const res = await request(buildApp('oxy-me')).get('/roommates/requests');
+    const scoreFor = (oxyUserId: string) =>
+      (res.body.data.sent as Array<{ receiverOxyUserId: string; matchScore: number }>).find(
+        (entry) => entry.receiverOxyUserId === oxyUserId,
+      )?.matchScore;
+
+    // (20 budget + 60 lifestyle + 20 × 2/3 interests) / 100.
+    expect(scoreFor('oxy-partial')).toBe(93);
+    // (20 + 60) / 80.
+    expect(scoreFor('oxy-silent')).toBe(100);
+  });
+
+  it('scores a person who has stated nothing at 0 rather than perfectly', async () => {
+    // Two all-NULL rows agree on every `===` the scorer performs, so the naive
+    // flattening of `personalProfile` — where "did not answer" stops being
+    // representable — reads them as a 100% match. Mongo got the distinction for
+    // free (`personalProfile` was `undefined` until somebody filled the form
+    // in); here it is rebuilt by two guards in `toMatchInputs`.
+    //
+    // Mutation-tested, and the result is worth stating because it bounds what
+    // this assertion can see: the two guards are INDEPENDENTLY sufficient.
+    // Removing `hasStatedRoommatePreferences` alone leaves the suite green (the
+    // per-block presence checks still produce no factors), and making the
+    // lifestyle block unconditional alone leaves it green too (the early return
+    // fires first). Removing BOTH scores this pair 100 and turns this case red.
+    await getDb().insert(profiles).values({ oxyUserId: 'oxy-blank-a' });
+    await getDb().insert(profiles).values({ oxyUserId: 'oxy-blank-b' });
+    await seedPendingRequest('oxy-blank-a', 'oxy-blank-b');
+
+    const res = await request(buildApp('oxy-blank-a')).get('/roommates/requests');
+    expect(res.body.data.sent[0].matchScore).toBe(0);
   });
 });
 
@@ -170,6 +482,15 @@ describe('sendRoommateRequest — the pending-pair rule', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].fromOxyUserId).toBe('oxy-a');
     expect(rows[0].message).toBe('hola');
+  });
+
+  it('refuses a target who has not enabled matching', async () => {
+    await createRoommateProfile('oxy-a');
+    await createRoommateProfile('oxy-b', { settingsRoommateEnabled: false });
+
+    const res = await request(buildApp('oxy-a')).post('/roommates/oxy-b/request');
+    expect(res.status).toBe(400);
+    expect(await getDb().select().from(roommateRequests)).toHaveLength(0);
   });
 
   it('refuses a second pending request in the SAME direction with 409', async () => {
@@ -247,6 +568,8 @@ describe('respondToRoommateRequest — only the recipient, only once', () => {
     expect(relationship?.oxyUser1Id).toBe('oxy-a');
     expect(relationship?.oxyUser2Id).toBe('oxy-b');
     expect(relationship?.requestId).toBe(pending.id);
+    // Scored from the two profiles' preferences, which are identical here.
+    expect(relationship?.matchScore).toBe(100);
   });
 
   it('is idempotent — a second accept of the same request 404s and creates nothing', async () => {
@@ -317,6 +640,9 @@ describe('getRoommateRequests', () => {
     expect(res.body.data.received).toHaveLength(1);
     expect(res.body.data.sent[0].receiverOxyUserId).toBe('oxy-x');
     expect(res.body.data.received[0].senderOxyUserId).toBe('oxy-y');
+    // A participant with no profile row is a real state — the roommate tables
+    // carry Oxy account ids and no foreign key into `profiles`.
+    expect(res.body.data.sent[0].receiver).toBeNull();
   });
 });
 

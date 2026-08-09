@@ -70,6 +70,7 @@ import { findHasImagesDisagreements, syncAllHasImages } from '../hasImages';
 import type { Database } from '../postgres';
 import * as schema from '../schema';
 import { cities, images, regions } from '../schema';
+import { unmappedColumnNames } from '../schema/unmappedColumns';
 import { GEO_IMAGE_ENTITY_TYPES, ResolutionLog, type SourceDocument } from './geoPlan';
 import {
   DATA_COPY_ORDER,
@@ -808,6 +809,12 @@ async function compareSample(
         continue;
       }
 
+      // A column with NO Mongo source is not the copy's to reproduce, and after
+      // the cutover the application may already have written one — so a stored
+      // value where the mapper omitted the key is correct rather than a
+      // fidelity failure. See `schema/unmappedColumns.ts`, which explains why
+      // the `hasDefault` escape below cannot cover this case.
+      const unmapped = unmappedColumnNames(target);
       const rowIds = rows.map((row) => String(row.id));
       const stored = await database
         .select()
@@ -848,6 +855,7 @@ async function compareSample(
           // and it is checked.
           if (want === undefined) {
             if (columns[column]?.hasDefault) continue;
+            if (unmapped.has(column)) continue;
             if (actual[column] === null) continue;
             mismatches.push(
               `${table}/${String(expected.id)}.${column}: expected NULL, stored ${JSON.stringify(actual[column])}`,

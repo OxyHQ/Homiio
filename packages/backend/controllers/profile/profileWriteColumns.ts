@@ -62,6 +62,10 @@ import type {
   ProfileUpdate,
   ProfileWriteColumns,
 } from '../../db/profiles/profileRepository';
+import {
+  EDITABLE_ROOMMATE_PREFERENCE_FIELDS,
+  type EditableRoommatePreferenceField,
+} from '../roommate/editableFields';
 
 type Loose = Record<string, unknown>;
 
@@ -134,6 +138,24 @@ function asLowercasedArray(value: unknown): string[] | null {
   return value
     .filter((entry): entry is string => typeof entry === 'string')
     .map((entry) => entry.trim().toLowerCase())
+    .filter((entry) => entry !== '');
+}
+
+/**
+ * A free-text array, trimmed but NOT lowercased — the roommate `interests` tags.
+ *
+ * `preferredAmenities` is lowercased because Mongo declared `lowercase: true`
+ * on it and the amenity vocabulary is machine-matched. Interests are typed by
+ * people and shown back to them, and the only thing that compares them is
+ * `calculateMatchPercentage`'s exact-string intersection, which two users type
+ * consistently or not regardless of case. Folding them would be inventing a
+ * normalization the source never had.
+ */
+function asTrimmedArray(value: unknown): string[] | null {
+  if (!Array.isArray(value)) return null;
+  return value
+    .filter((entry): entry is string => typeof entry === 'string')
+    .map((entry) => entry.trim())
     .filter((entry) => entry !== '');
 }
 
@@ -214,6 +236,103 @@ function toRoommateHistory(value: unknown): ProfileRoommateHistoryInput | undefi
 function mapEntries<T>(value: unknown, map: (entry: unknown) => T | undefined): T[] | undefined {
   if (!Array.isArray(value)) return undefined;
   return value.map(map).filter((entry): entry is T => entry !== undefined);
+}
+
+/**
+ * The columns for a set of roommate preference FIELDS, as the wire spells them.
+ *
+ * Two endpoints write these columns and they must coerce identically, or the
+ * same input would be stored differently depending on which one a client used:
+ * `PUT /api/profiles/me` sends the whole `settings.roommate` block (and so
+ * passes every field, replacing the lot), while
+ * `PUT /api/roommates/preferences` sends a flat, PARTIAL set and passes only
+ * the fields its allow-list picked. That difference is the `fields` argument
+ * and nothing else.
+ *
+ * The `switch` is exhaustive over {@link EditableRoommatePreferenceField}, so a
+ * field added to the allow-list without a column here fails to compile. The
+ * alternative — a lookup object, or a spread — is what let `interests` and
+ * `location` sit on the allow-list for their whole life while being written
+ * nowhere.
+ */
+export function roommatePreferenceColumns(
+  preferences: Record<string, unknown>,
+  fields: readonly EditableRoommatePreferenceField[],
+): ProfileWriteColumns {
+  const columns: ProfileWriteColumns = {};
+  for (const field of fields) {
+    switch (field) {
+      case 'ageRange': {
+        const ageRange = subtree(preferences.ageRange);
+        columns.settingsRoommatePreferencesAgeRangeMin = asNumber(ageRange.min);
+        columns.settingsRoommatePreferencesAgeRangeMax = asNumber(ageRange.max);
+        break;
+      }
+      case 'gender':
+        columns.settingsRoommatePreferencesGender = asMember(
+          preferences.gender,
+          GENDER_PREFERENCES,
+        );
+        break;
+      case 'lifestyle': {
+        const lifestyle = subtree(preferences.lifestyle);
+        columns.settingsRoommatePreferencesLifestyleSmoking = asMember(
+          lifestyle.smoking,
+          ROOMMATE_LIFESTYLE_ANSWERS,
+        );
+        columns.settingsRoommatePreferencesLifestylePets = asMember(
+          lifestyle.pets,
+          ROOMMATE_LIFESTYLE_ANSWERS,
+        );
+        columns.settingsRoommatePreferencesLifestylePartying = asMember(
+          lifestyle.partying,
+          ROOMMATE_LIFESTYLE_ANSWERS,
+        );
+        columns.settingsRoommatePreferencesLifestyleCleanliness = asMember(
+          lifestyle.cleanliness,
+          ROOMMATE_CLEANLINESS_LEVELS,
+        );
+        columns.settingsRoommatePreferencesLifestyleSchedule = asMember(
+          lifestyle.schedule,
+          ROOMMATE_SCHEDULES,
+        );
+        break;
+      }
+      case 'budget': {
+        const budget = subtree(preferences.budget);
+        columns.settingsRoommatePreferencesBudgetMin = asNumber(budget.min);
+        columns.settingsRoommatePreferencesBudgetMax = asNumber(budget.max);
+        break;
+      }
+      case 'moveInDate':
+        columns.settingsRoommatePreferencesMoveInDate = asDate(preferences.moveInDate);
+        break;
+      case 'leaseDuration':
+        columns.settingsRoommatePreferencesLeaseDuration = asMember(
+          preferences.leaseDuration,
+          LEASE_DURATIONS,
+        );
+        break;
+      // Added by migration 0008 — see `db/schema/profiles.ts` for what each one
+      // was silently discarding before the column existed.
+      case 'interests':
+        columns.settingsRoommatePreferencesInterests = asTrimmedArray(preferences.interests);
+        break;
+      case 'location':
+        columns.settingsRoommatePreferencesLocation = asTrimmed(preferences.location);
+        break;
+      default: {
+        // The exhaustiveness check that makes the paragraph above TRUE rather
+        // than aspirational: a `switch` missing a case is not an error to
+        // TypeScript on its own, so without this a field added to the allow-list
+        // would compile, be picked off the body, and be written nowhere — the
+        // exact shape of the bug `interests` and `location` were.
+        const unmapped: never = field;
+        throw new Error(`No column mapping for roommate preference field ${String(unmapped)}`);
+      }
+    }
+  }
+  return columns;
 }
 
 /**
@@ -302,42 +421,16 @@ export function toProfileUpdate(body: unknown): ProfileUpdate {
     const roommate = block(settings.roommate);
     if (roommate) {
       columns.settingsRoommateEnabled = asBoolean(roommate.enabled);
-      const roommatePreferences = subtree(roommate.preferences);
-      const ageRange = subtree(roommatePreferences.ageRange);
-      const lifestyle = subtree(roommatePreferences.lifestyle);
-      const budget = subtree(roommatePreferences.budget);
-      columns.settingsRoommatePreferencesAgeRangeMin = asNumber(ageRange.min);
-      columns.settingsRoommatePreferencesAgeRangeMax = asNumber(ageRange.max);
-      columns.settingsRoommatePreferencesGender = asMember(
-        roommatePreferences.gender,
-        GENDER_PREFERENCES,
-      );
-      columns.settingsRoommatePreferencesLifestyleSmoking = asMember(
-        lifestyle.smoking,
-        ROOMMATE_LIFESTYLE_ANSWERS,
-      );
-      columns.settingsRoommatePreferencesLifestylePets = asMember(
-        lifestyle.pets,
-        ROOMMATE_LIFESTYLE_ANSWERS,
-      );
-      columns.settingsRoommatePreferencesLifestylePartying = asMember(
-        lifestyle.partying,
-        ROOMMATE_LIFESTYLE_ANSWERS,
-      );
-      columns.settingsRoommatePreferencesLifestyleCleanliness = asMember(
-        lifestyle.cleanliness,
-        ROOMMATE_CLEANLINESS_LEVELS,
-      );
-      columns.settingsRoommatePreferencesLifestyleSchedule = asMember(
-        lifestyle.schedule,
-        ROOMMATE_SCHEDULES,
-      );
-      columns.settingsRoommatePreferencesBudgetMin = asNumber(budget.min);
-      columns.settingsRoommatePreferencesBudgetMax = asNumber(budget.max);
-      columns.settingsRoommatePreferencesMoveInDate = asDate(roommatePreferences.moveInDate);
-      columns.settingsRoommatePreferencesLeaseDuration = asMember(
-        roommatePreferences.leaseDuration,
-        LEASE_DURATIONS,
+      // EVERY field, because this is the block-replacement path: a block the
+      // body carries contributes all of its columns, including the ones the
+      // client omitted, which are written NULL. Passing a subset here would
+      // make "clear my roommate budget" inexpressible.
+      Object.assign(
+        columns,
+        roommatePreferenceColumns(
+          subtree(roommate.preferences),
+          EDITABLE_ROOMMATE_PREFERENCE_FIELDS,
+        ),
       );
       update.roommateHistory = mapEntries(roommate.history, toRoommateHistory) ?? [];
     }

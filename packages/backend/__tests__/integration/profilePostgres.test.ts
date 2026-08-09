@@ -298,6 +298,56 @@ describe('PUT /profiles/me — the allow-listed write', () => {
     expect(res.body.data.personalProfile.rentalHistory[0].address).toBe('Fine');
   });
 
+  it('round-trips the roommate location and interests rather than blanking them', async () => {
+    // The two columns migration 0008 added are written by a DIFFERENT endpoint
+    // (`PUT /api/roommates/preferences`) and read back through this one, so the
+    // seam between them is where they would be lost: this handler replaces the
+    // whole `settings.roommate` block, and a key the serializer did not emit
+    // would come back absent from the edit form and be written NULL on the next
+    // save. Exactly the failure the annual-income round trip above exists for,
+    // one block over.
+    const oxyUserId = owner();
+    const app = buildApp(oxyUserId);
+    await getDb()
+      .insert(profiles)
+      .values({
+        oxyUserId,
+        settingsRoommateEnabled: true,
+        settingsRoommatePreferencesLocation: 'Barcelona',
+        settingsRoommatePreferencesInterests: ['climbing', 'cooking'],
+      });
+
+    const read = await request(app).get('/profiles/me');
+    const roommate = read.body.data.personalProfile.settings.roommate;
+    expect(roommate.preferences.location).toBe('Barcelona');
+    expect(roommate.preferences.interests).toEqual(['climbing', 'cooking']);
+
+    await request(app).put('/profiles/me').send({ personalProfile: { settings: { roommate } } });
+
+    const [stored] = await getDb().select().from(profiles).where(eq(profiles.oxyUserId, oxyUserId));
+    expect(stored.settingsRoommatePreferencesLocation).toBe('Barcelona');
+    expect(stored.settingsRoommatePreferencesInterests).toEqual(['climbing', 'cooking']);
+  });
+
+  it('still clears a roommate field the block deliberately omits', async () => {
+    // The other direction, and the reason the case above is not simply "never
+    // write NULL": block-at-a-time replacement is what makes "remove my
+    // location" expressible at all.
+    const oxyUserId = owner();
+    const app = buildApp(oxyUserId);
+    await getDb()
+      .insert(profiles)
+      .values({ oxyUserId, settingsRoommatePreferencesLocation: 'Barcelona' });
+
+    await request(app)
+      .put('/profiles/me')
+      .send({ personalProfile: { settings: { roommate: { preferences: { gender: 'any' } } } } });
+
+    const [stored] = await getDb().select().from(profiles).where(eq(profiles.oxyUserId, oxyUserId));
+    expect(stored.settingsRoommatePreferencesLocation).toBeNull();
+    expect(stored.settingsRoommatePreferencesGender).toBe('any');
+  });
+
   it('creates the row when the first request is a PUT', async () => {
     const oxyUserId = owner();
     const res = await request(buildApp(oxyUserId))

@@ -23,23 +23,56 @@
  * protects nothing and reports nothing, the same failure mode
  * `protectedColumns.ts` guards against.
  *
- * ## Both entries are the same bug, seen from the database
+ * ## The registry is READ by the backfill, and the two roommate entries are why
  *
- * `views` and `title` are not new features. They are fields the PRODUCT already
- * believes in — `retrieve.ts:31` and `roomController.ts:203` both issue
- * `$inc: { views: 1 }`, and a 43.51 MiB Mongo text index has been indexing
- * `title` — and that mongoose STRICT MODE has been silently discarding, because
- * neither is declared in `PropertySchema`. The census measured both as absent
- * on all 17,644 rows.
+ * It was documentation until the roommate port. The copy's verifier and
+ * `--reconcile` both handled `views` and `title` by a HEURISTIC —
+ * `views` is `NOT NULL DEFAULT 0` so an omitted key is skipped as
+ * "the schema decided this", and `title` is nullable with nothing writing it,
+ * so an omitted key and a stored NULL agree. Neither escape works for a column
+ * that has no default AND that the application really writes: the verifier
+ * reads a value where it expected NULL and reports a fidelity MISMATCH, which
+ * fails the run (`data.ts:1400`), and `--reconcile` reports the row as
+ * differing on every pass.
+ *
+ * `settings_roommate_preferences_location` is exactly that shape — nullable, no
+ * default, and written by `PUT /api/roommates/preferences` from the day the
+ * roommate port ships, while Mongo has nothing to compare it against. So
+ * {@link unmappedColumnNames} exists and both readers consult it, which is what
+ * turns the paragraph above from a claim into a mechanism.
+ *
+ * It covers `compareSample` and `reconcileTable`, and NOT `compareMintedRows` —
+ * that path serves tables whose ids are minted, and neither table named here is
+ * one (`mintsIds` is empty for both plans). Add the check there too if a minted
+ * table ever gains an entry.
+ *
+ * ## Every entry is the same bug, seen from the database
+ *
+ * None of these is a new feature. They are fields the PRODUCT already believes
+ * in — `retrieve.ts:31` and `roomController.ts:203` both issue
+ * `$inc: { views: 1 }`, a 43.51 MiB Mongo text index has been indexing `title`,
+ * and `EDITABLE_ROOMMATE_PREFERENCE_FIELDS` accepts `location` and `interests`
+ * while `RoommateFilters` sends both — and that mongoose STRICT MODE has been
+ * silently discarding, because none of them is declared in its schema. The
+ * census measured `views` and `title` as absent on all 17,644 property rows;
+ * the two roommate fields are absent on all five profiles for the same reason.
  *
  * Declaring them here rather than leaving them out is a deliberate choice, and
  * it is the cheaper one: adding a column to `properties` later is a migration
- * against the largest table in the schema, while the two facts that make them
- * safe to declare now — that they have no data and that the code which will
- * fill them already exists — are measured rather than hoped for.
+ * against the largest table in the schema, while the facts that make them safe
+ * to declare now — that they have no data and that the code which will fill
+ * them already exists — are measured rather than hoped for.
+ *
+ * The two `profiles` entries go one step further than the two `properties`
+ * ones: their readers were REPAIRED in the same change that added them (the
+ * discover `location` filter and `calculateMatchPercentage`'s interests
+ * branch), so they start being written the moment the roommate port ships
+ * rather than waiting for a later batch.
  */
 
+import { getTableName } from 'drizzle-orm';
 import type { PgTable } from 'drizzle-orm/pg-core';
+import { profiles } from './profiles';
 import { properties } from './properties';
 
 /** A column the backfill deliberately never writes. */
@@ -83,4 +116,47 @@ export const UNMAPPED_COLUMNS: readonly UnmappedColumn[] = [
       'Postgres. Nullable rather than defaulted, because "no headline" is a ' +
       'real state a listing can be in.',
   },
+  {
+    table: profiles,
+    property: 'settingsRoommatePreferencesLocation',
+    reason:
+      'ABSENT on all five production profiles, and unstorable rather than ' +
+      'unused: `personalProfileSchema` declares no ' +
+      '`settings.roommate.preferences.location`, so mongoose strict mode drops ' +
+      'it out of the `$set` `updateRoommatePreferences` builds from its own ' +
+      'allow-list — which DOES list it, as does the client\'s ' +
+      '`RoommateFilters`. The consequence is a discover filter that has ' +
+      'matched nothing for its whole life. There is nothing to copy; the ' +
+      'column starts empty and the roommate port is what begins writing it.',
+  },
+  {
+    table: profiles,
+    property: 'settingsRoommatePreferencesInterests',
+    reason:
+      'ABSENT on all five production profiles, discarded by the same strict ' +
+      'mode as `settings.roommate.preferences.location` above. Its second ' +
+      'consequence is invisible from the write side: ' +
+      '`calculateMatchPercentage`\'s interests branch is worth 20 of 100 ' +
+      'points and is guarded by `prefs1.interests && prefs2.interests`, so no ' +
+      'roommate score has ever been able to include it. Nullable rather than ' +
+      'defaulted to `{}`, because "never listed any" and "listed none" are ' +
+      'different answers and only the second is an empty array.',
+  },
 ];
+
+/**
+ * The TypeScript property names registered for one table.
+ *
+ * Compared by table NAME rather than by object identity: the backfill reaches
+ * its targets through `requireTable(...)`, and an identity comparison would
+ * silently match nothing if that ever handed back a different instance of the
+ * same table — the vacuous-check failure this whole file exists to avoid.
+ */
+export function unmappedColumnNames(table: PgTable): ReadonlySet<string> {
+  const name = getTableName(table);
+  return new Set(
+    UNMAPPED_COLUMNS.filter((entry) => getTableName(entry.table) === name).map(
+      (entry) => entry.property,
+    ),
+  );
+}

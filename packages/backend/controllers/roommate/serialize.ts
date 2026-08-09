@@ -3,6 +3,7 @@
  */
 
 import config from '../../config';
+import { type HydratedProfile, toProfileDTO } from '../../db/profiles/profileSerializer';
 import { logger } from '../../middlewares/logging';
 
 /**
@@ -11,9 +12,9 @@ import { logger } from '../../middlewares/logging';
  * The `_id` here is deliberate and must NOT be renamed by a sweep of Homiio's
  * own `_id` → `id` cut. This is a foreign service's response shape, not Homiio's
  * wire: Oxy decides what it sends, and editing this declaration would only make
- * Homiio stop reading a field Oxy still emits. It is also never re-served — the
- * payload is projected into {@link SerializedRoommateProfile} below and the raw
- * object never reaches `res.json`.
+ * Homiio stop reading a field Oxy still emits. It is also never re-served —
+ * {@link hydrateDisplayNames} keeps the display name and nothing else, so the
+ * raw object never reaches `res.json`.
  */
 interface OxyPublicUser {
   id?: string;
@@ -21,21 +22,6 @@ interface OxyPublicUser {
   username?: string;
   name?: { displayName?: string };
 }
-
-export interface SerializedRoommateProfile {
-  id: string;
-  oxyUserId?: string;
-  displayName?: string;
-  personalProfile?: unknown;
-}
-
-export interface PopulatedProfileLike {
-  _id: unknown;
-  oxyUserId?: string;
-  personalProfile?: unknown;
-}
-
-export const ROOMMATE_PROFILE_FIELDS = 'oxyUserId personalProfile';
 
 const USERS_BY_IDS_CAP = 100;
 
@@ -90,18 +76,39 @@ export async function hydrateDisplayNames(
   return result;
 }
 
+/**
+ * One participant of a request or a relationship, as the roommate screens read
+ * them.
+ *
+ * ## The whole DTO comes from `toProfileDTO`, at PUBLIC visibility
+ *
+ * Two things follow from that, and both are changes:
+ *
+ *  - **`id` is the profile row id and there is no `_id`.** The Mongoose
+ *    `toJSON` transform renamed `_id` → `id` and stripped `__v`; these
+ *    endpoints bypassed it (they `.lean()`-ed and re-projected by hand), so the
+ *    rename is applied here rather than lost with the transform. `__v` has no
+ *    Postgres counterpart to leak.
+ *  - **A stranger no longer receives the whole profile document.** The Mongo
+ *    version attached `personalProfile` verbatim — annual income, references,
+ *    landlord phone numbers and the Sindi transcript included — to everybody
+ *    who had ever sent or received a request. `toProfileDTO(…, 'public')`
+ *    applies the same privacy flags `/api/public/profiles/*` does, and the
+ *    income column is unreachable at the TYPE level.
+ *
+ * `displayName` is hydrated from Oxy and is not part of the stored profile,
+ * which is why it is spread on here rather than being a column.
+ */
 export function serializeRoommateProfile(
-  profile: PopulatedProfileLike | null | undefined,
+  hydrated: HydratedProfile | null | undefined,
   displayNames: Map<string, string>,
-): SerializedRoommateProfile | null {
-  if (!profile) {
+): Record<string, unknown> | null {
+  if (!hydrated) {
     return null;
   }
-  const oxyUserId = profile.oxyUserId ? String(profile.oxyUserId) : undefined;
+  const { oxyUserId } = hydrated.profile;
   return {
-    id: String(profile._id),
-    oxyUserId,
-    displayName: oxyUserId ? displayNames.get(oxyUserId) : undefined,
-    personalProfile: profile.personalProfile,
+    ...toProfileDTO(hydrated, 'public'),
+    displayName: displayNames.get(oxyUserId),
   };
 }
