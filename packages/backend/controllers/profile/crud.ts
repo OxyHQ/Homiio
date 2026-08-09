@@ -1,131 +1,125 @@
+/**
+ * The RE sidecar profile — one per Oxy account, served from Postgres.
+ *
+ * `db/profiles/profileRepository.ts` carries the measurement this port rests on
+ * (five rows in Mongo, the same five in Postgres) and the reason the table is
+ * that small. This file is the HTTP edge: it resolves the caller, decides who is
+ * looking, and hands the repository an allow-listed write.
+ *
+ * ## The five-minute in-process cache is GONE, deliberately
+ *
+ * `shared.ts` kept a `Map` of profiles for 300 seconds, cleared on the owner's
+ * own `PUT`. It existed because a Mongo profile read loaded a whole document
+ * with an unbounded `chatHistory` array inside it; the Postgres read is one
+ * lookup on a unique index over a five-row table plus five small child reads.
+ *
+ * It was also WRONG, and would have stayed wrong: Homiio runs several ECS tasks,
+ * so a `PUT` served by one task cleared that task's copy and left every other
+ * task serving the pre-edit profile for up to five minutes. A cache with one
+ * invalidation path per process is a cache that can only be correct in a single
+ * process. Removing it is a behaviour change and this is where it is stated.
+ */
+
+import { getDb } from '../../db/postgres';
 import {
-  Profile,
-  successResponse,
-  errorResponse,
-  _getOxyUserId,
-  _createDefaultProfile,
-  getCachedProfile,
-  setCachedProfile,
-  clearCachedProfile,
-} from './shared';
-import type { IProfile } from '../../models';
+  ensureProfile,
+  findHydratedProfile,
+  updateProfile,
+} from '../../db/profiles/profileRepository';
+import { toProfileDTO } from '../../db/profiles/profileSerializer';
+import { errorResponse, successResponse, _getOxyUserId } from './shared';
+import { toProfileUpdate } from './profileWriteColumns';
+import type { NextFunction, Request, Response } from 'express';
 
 /**
- * Get or create the user's RE sidecar profile.
+ * The caller's own profile, created empty if this is their first request.
+ *
+ * `?minimal=true` used to skip a second full document load; there is no second
+ * load to skip now, so the parameter is accepted and ignored rather than
+ * removed — a shipped client still sends it, and a 400 for a parameter that used
+ * to be free would be a wire break.
  */
-export async function getOrCreateProfile(req: any, res: any, next: any) {
+export async function getOrCreateProfile(req: Request, res: Response, next: NextFunction) {
   try {
     const oxyUserId = _getOxyUserId(req);
-
     if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'),
-      );
+      return res
+        .status(401)
+        .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
-    let profile = getCachedProfile<IProfile>(oxyUserId);
-
-    if (!profile) {
-      profile = await Profile.findByOxyUserId(oxyUserId);
-
-      if (!profile) {
-        profile = await _createDefaultProfile(oxyUserId);
-        clearCachedProfile(oxyUserId);
-      } else if (req.query.minimal !== 'true') {
-        profile = await Profile.findById(profile._id);
-      }
-
-      setCachedProfile(oxyUserId, profile);
-    }
-
-    res.json(successResponse(profile, 'Profile retrieved successfully'));
+    const hydrated = await ensureProfile(getDb(), oxyUserId);
+    res.json(successResponse(toProfileDTO(hydrated, 'owner'), 'Profile retrieved successfully'));
   } catch (error) {
     next(error);
   }
 }
 
 /**
- * Get the active public profile for an Oxy user id (read-only).
+ * Somebody else's profile, read-only, with the private blocks withheld.
+ *
+ * The `public` scope is what makes the withholding happen — see
+ * `db/profiles/profileSerializer.ts`, which states which flag gates which block
+ * and why the landlord contact is gated separately from the tenancy it sits on.
+ *
+ * This handler is mounted both behind auth (`/api/profiles/oxy/:oxyUserId`) and
+ * WITHOUT it (`/api/public/profiles/*`), so it treats every caller as a stranger
+ * rather than trying to work out whether the request happened to carry a
+ * session. A person reading their own profile through the public route gets the
+ * public view, which is the honest answer for a route named `public`.
  */
-export async function getPublicProfileByOxyUserId(req: any, res: any, next: any) {
+export async function getPublicProfileByOxyUserId(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   try {
     const { oxyUserId } = req.params;
     if (!oxyUserId) {
-      return res.status(400).json(
-        errorResponse('Oxy user id is required', 'OXY_USER_ID_REQUIRED'),
-      );
+      return res.status(400).json(errorResponse('Oxy user id is required', 'OXY_USER_ID_REQUIRED'));
     }
 
-    const profile = await Profile.findByOxyUserId(oxyUserId);
-    if (!profile) {
-      return res.status(404).json(
-        errorResponse('Profile not found', 'PROFILE_NOT_FOUND'),
-      );
+    const hydrated = await findHydratedProfile(getDb(), oxyUserId);
+    if (!hydrated) {
+      return res.status(404).json(errorResponse('Profile not found', 'PROFILE_NOT_FOUND'));
     }
 
-    res.json(successResponse(profile, 'Profile retrieved successfully'));
+    res.json(successResponse(toProfileDTO(hydrated, 'public'), 'Profile retrieved successfully'));
   } catch (error) {
     next(error);
   }
 }
 
-/**
- * Get profile by Oxy user id (public read).
- */
-export async function getProfileByOxyUserId(req: any, res: any, next: any) {
+/** `GET /api/profiles/oxy/:oxyUserId` — the same public read, under its own route. */
+export async function getProfileByOxyUserId(req: Request, res: Response, next: NextFunction) {
   return getPublicProfileByOxyUserId(req, res, next);
 }
 
 /**
- * Update the authenticated user's profile.
+ * Update the caller's own profile.
+ *
+ * The owner comes from the session and never from the body, and the body is
+ * mapped through `profileWriteColumns.ts`'s allow-list before it reaches a
+ * column — `AGENTS.md`'s write-safety rule, and the reason no `oxyUserId`,
+ * `id`, `createdAt` or `updatedAt` from a request can land on the row.
+ *
+ * ONE transaction: `updateProfile` may create the row, rewrite scalar columns
+ * and replace up to four child collections, and a partial application of that
+ * would leave a person's references belonging to a state that was never saved.
  */
-export async function updateMyProfile(req: any, res: any, next: any) {
+export async function updateMyProfile(req: Request, res: Response, next: NextFunction) {
   try {
     const oxyUserId = _getOxyUserId(req);
-    const updateData = req.body;
-
     if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'),
-      );
+      return res
+        .status(401)
+        .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
-    let profile = await Profile.findByOxyUserId(oxyUserId);
+    const update = toProfileUpdate(req.body);
+    const hydrated = await getDb().transaction((tx) => updateProfile(tx, oxyUserId, update));
 
-    if (!profile) {
-      profile = await _createDefaultProfile(oxyUserId);
-    }
-
-    if (updateData.personalProfile) {
-      profile.personalProfile = {
-        ...profile.personalProfile,
-        ...updateData.personalProfile,
-      };
-    }
-
-    await profile.save();
-    clearCachedProfile(oxyUserId);
-
-    res.json(successResponse(profile, 'Profile updated successfully'));
-  } catch (error) {
-    next(error);
-  }
-}
-
-/**
- * Test endpoint to check if the controller is working.
- */
-export async function test(req: any, res: any, next: any) {
-  try {
-    const oxyUserId = req.user?.id || req.user?._id;
-
-    res.json({
-      success: true,
-      message: 'Profile controller is working',
-      oxyUserId,
-      hasUser: !!req.user,
-      timestamp: new Date().toISOString(),
-    });
+    res.json(successResponse(toProfileDTO(hydrated, 'owner'), 'Profile updated successfully'));
   } catch (error) {
     next(error);
   }
