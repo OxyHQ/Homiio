@@ -22,30 +22,27 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
-import { Types, type Model } from 'mongoose';
-import type { IProperty } from '../../models/documentTypes';
-import type { IAddress } from '../../models/Address';
 import {
   getNearbyServices,
   emptyNearbyServices,
   RADIUS_M,
 } from '../../services/nearbyServicesService';
 
-import * as models from '../../models';
-const Property: Model<IProperty> = models.Property;
 import { AppError, successResponse } from '../../middlewares/errorHandler';
+import { findPropertyById } from '../../db/properties/propertyReads';
+import { serializeProperty } from '../../db/properties/propertySerializer';
 
 /**
  * Resolve a property's `[longitude, latitude]` from its populated address.
  *
- * After `.populate('addressId').lean()` the schema's post-find hook renames the
- * populated `addressId` to `address` (see `transformAddressFields`); read
- * `address` first, then fall back to the raw `addressId`. Returns null when no
- * usable numeric coordinate pair is present.
+ * The address is nested under `address` on the wire and carries the historical
+ * GeoJSON `[lng, lat]` pair, so that is what this reads. The
+ * populate-or-raw-`addressId` fallback it replaces existed because Mongoose's
+ * post-find hook renamed the populated reference; a join has no such ambiguity.
+ * Returns null when no usable numeric coordinate pair is present.
  */
-function resolveCoordinates(property: IProperty): [number, number] | null {
-  const populated = property as unknown as { address?: IAddress; addressId?: IAddress };
-  const address = populated.address ?? populated.addressId ?? null;
+function resolveCoordinates(property: Record<string, unknown>): [number, number] | null {
+  const address = property.address as { coordinates?: { coordinates?: unknown } } | undefined;
   const coords = address?.coordinates?.coordinates;
   if (!Array.isArray(coords) || coords.length !== 2) return null;
   const [longitude, latitude] = coords;
@@ -70,18 +67,14 @@ export async function getPropertyNearbyServices(
 ): Promise<void> {
   try {
     const { propertyId } = req.params;
-    if (!Types.ObjectId.isValid(propertyId)) {
-      return next(new AppError('Invalid property ID', 400, 'INVALID_ID'));
-    }
-
-    const property = await Property.findById(propertyId)
-      .populate('addressId')
-      .lean<IProperty | null>();
-    if (!property) {
+    // No id-SHAPE guard — `Types.ObjectId.isValid` rejects every uuid v7 id
+    // minted after the cutover. See `db/ids.ts`.
+    const hydrated = await findPropertyById(propertyId);
+    if (!hydrated) {
       return next(new AppError('Property not found', 404, 'NOT_FOUND'));
     }
 
-    const coordinates = resolveCoordinates(property);
+    const coordinates = resolveCoordinates(serializeProperty(hydrated));
     if (!coordinates) {
       // No usable coordinates — return a graceful degraded snapshot so the
       // frontend can simply hide the section rather than handle an error.

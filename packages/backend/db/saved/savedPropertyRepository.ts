@@ -136,6 +136,37 @@ export async function listSavedProperties(
 }
 
 /**
+ * How many people have saved each of these listings.
+ *
+ * A POPULARITY signal across all users, so it is deliberately NOT scoped to one
+ * `oxy_user_id` the way every other read in this module is — the feed uses it to
+ * rank, not to show anybody their own saves.
+ *
+ * @returns A count per listing id. A listing nobody has saved is ABSENT from the
+ *   map rather than present as `0`, matching `countSavedPropertiesByFolder`; the
+ *   caller's `?? 0` supplies the empty case.
+ */
+export async function countSavesByPropertyIds(
+  db: DatabaseOrTransaction,
+  propertyIds: readonly string[],
+): Promise<Map<string, number>> {
+  if (propertyIds.length === 0) return new Map();
+
+  const rows = await db
+    .select({ propertyId: savedItems.targetId, total: count() })
+    .from(savedItems)
+    .where(
+      and(
+        eq(savedItems.targetType, 'property'),
+        inArray(savedItems.targetId, [...propertyIds]),
+      ),
+    )
+    .groupBy(savedItems.targetId);
+
+  return new Map(rows.map((row) => [row.propertyId, Number(row.total)]));
+}
+
+/**
  * Remove one save. `false` when this person had not saved that listing.
  *
  * Scoped by owner inside the `DELETE` rather than checked before it — an

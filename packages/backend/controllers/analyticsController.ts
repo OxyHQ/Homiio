@@ -8,10 +8,14 @@ import type { Request, Response, NextFunction } from 'express';
 
 import { AppError, successResponse } from '../middlewares/errorHandler';
 import { logger } from '../middlewares/logging';
-import { City, Profile, Property } from '../models';
+import { Profile } from '../models';
 import { getDb } from '../db/postgres';
 import {
+  countAppWideCatalogue,
   countAppWideSaves,
+  countListingsByPriceBucket,
+  findTopCitiesByListings,
+  summarizeCatalogueRent,
   countSavesOfProperties,
   countViewsOfProperties,
   listOwnedPropertyIds,
@@ -23,21 +27,42 @@ function errorMessage(error: unknown): string {
   return String(error);
 }
 
-interface TopCityRow {
-  _id: unknown;
-  city?: { name?: string };
-  region?: { name?: string };
-  properties: number;
-  averageRent: number;
-}
-
-interface PriceBucketRow {
-  _id: string | number;
-  count: number;
-}
 
 const PERIOD_DAYS: Record<string, number> = { '7d': 7, '30d': 30, '90d': 90 };
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** How many cities the "most listed" table shows. */
+const TOP_CITIES_LIMIT = 6;
+
+/**
+ * The monthly-rent bands the public stats endpoint reports, verbatim from the
+ * Mongo `$bucket` boundaries this replaces.
+ */
+const PRICE_BUCKET_BOUNDARIES = [0, 500, 1000, 1500, 2000, 3000, 5000, 10000] as const;
+
+/**
+ * Label each band and drop the empty ones.
+ *
+ * `width_bucket` numbers bands from 1, and returns `boundaries.length` for
+ * anything at or above the last boundary — which is the `default: '10000+'`
+ * overflow the Mongo version declared. A band nobody's listing falls in is
+ * ABSENT from the map, and stays absent from the response, exactly as `$bucket`
+ * omitted it.
+ */
+function priceBucketLabels(
+  counts: ReadonlyMap<number, number>,
+): { bucket: string; count: number }[] {
+  const labels: { bucket: string; count: number }[] = [];
+  for (const [bucket, count] of [...counts.entries()].sort((a, b) => a[0] - b[0])) {
+    if (bucket >= PRICE_BUCKET_BOUNDARIES.length) {
+      labels.push({ bucket: `${PRICE_BUCKET_BOUNDARIES[PRICE_BUCKET_BOUNDARIES.length - 1]}+`, count });
+      continue;
+    }
+    const low = PRICE_BUCKET_BOUNDARIES[bucket - 1];
+    labels.push({ bucket: `${low}-${low + 499}`, count });
+  }
+  return labels;
+}
 
 class AnalyticsController {
   /**
@@ -164,91 +189,36 @@ class AnalyticsController {
       // The saved pair moves, because `saved_items` is on Postgres — and
       // `uniqueSavers` was another `distinct('profileId')` against a schema
       // whose column is `oxyUserId`, so it has always been 0.
-      const [totalProperties, totalCities, appSaves] = await Promise.all([
-        Property.countDocuments({}),
-        City.countDocuments({}),
+      const [catalogue, appSaves, pricing, topCities, priceBuckets] = await Promise.all([
+        countAppWideCatalogue(getDb()),
         countAppWideSaves(getDb()),
-      ]);
-      const totalSaves = appSaves.total;
-      const uniqueSavers = appSaves.uniqueSavers;
-
-      // Pricing aggregates
-      const pricingAgg = await Property.aggregate([
-        { $match: { 'longTermRent.monthlyAmount': { $gt: 0 } } },
-        {
-          $group: {
-            _id: null,
-            averageRent: { $avg: '$longTermRent.monthlyAmount' },
-            minRent: { $min: '$longTermRent.monthlyAmount' },
-            maxRent: { $max: '$longTermRent.monthlyAmount' },
-          },
-        },
-      ]);
-
-      const pricing = pricingAgg[0] || { averageRent: 0, minRent: 0, maxRent: 0 };
-
-      // Top cities by property count with avg rent. Geo is relational, so this
-      // joins Property → Address → City (and Region for the label) and groups by
-      // the canonical cityId rather than a free-text city string.
-      const topCities = await Property.aggregate([
-        { $match: { addressId: { $exists: true, $ne: null } } },
-        { $lookup: { from: 'addresses', localField: 'addressId', foreignField: '_id', as: 'address' } },
-        { $unwind: '$address' },
-        { $match: { 'address.cityId': { $exists: true, $ne: null } } },
-        {
-          $group: {
-            _id: '$address.cityId',
-            regionId: { $first: '$address.regionId' },
-            properties: { $sum: 1 },
-            averageRent: { $avg: '$longTermRent.monthlyAmount' },
-          },
-        },
-        { $sort: { properties: -1 } },
-        { $limit: 6 },
-        { $lookup: { from: 'cities', localField: '_id', foreignField: '_id', as: 'city' } },
-        { $unwind: { path: '$city', preserveNullAndEmptyArrays: true } },
-        { $lookup: { from: 'regions', localField: 'regionId', foreignField: '_id', as: 'region' } },
-        { $unwind: { path: '$region', preserveNullAndEmptyArrays: true } },
-      ]);
-
-      // Price buckets (preset boundaries)
-      const priceBuckets = await Property.aggregate([
-        { $match: { 'longTermRent.monthlyAmount': { $gte: 0 } } },
-        {
-          $bucket: {
-            groupBy: '$longTermRent.monthlyAmount',
-            boundaries: [0, 500, 1000, 1500, 2000, 3000, 5000, 10000],
-            default: '10000+',
-            output: { count: { $sum: 1 } },
-          },
-        },
+        summarizeCatalogueRent(getDb()),
+        findTopCitiesByListings(getDb(), TOP_CITIES_LIMIT),
+        countListingsByPriceBucket(getDb(), PRICE_BUCKET_BOUNDARIES),
       ]);
 
       return res.json(
         successResponse(
           {
             totals: {
-              properties: totalProperties,
-              cities: totalCities,
-              saves: totalSaves,
-              uniqueSavers: uniqueSavers,
+              properties: catalogue.properties,
+              cities: catalogue.cities,
+              saves: appSaves.total,
+              uniqueSavers: appSaves.uniqueSavers,
             },
             pricing: {
-              averageRent: Math.round(pricing.averageRent || 0),
-              minRent: pricing.minRent || 0,
-              maxRent: pricing.maxRent || 0,
+              averageRent: Math.round(pricing.averageRent),
+              minRent: pricing.minRent,
+              maxRent: pricing.maxRent,
             },
-            topCities: (topCities as TopCityRow[]).map((c) => ({
-              cityId: c._id,
-              city: c.city?.name ?? null,
-              state: c.region?.name ?? null,
-              properties: c.properties,
-              averageRent: Math.round(c.averageRent || 0),
+            topCities: topCities.map((city) => ({
+              cityId: city.cityId,
+              city: city.city,
+              state: city.state,
+              properties: city.properties,
+              averageRent: Math.round(city.averageRent),
             })),
-            priceBuckets: (priceBuckets as PriceBucketRow[]).map((b) => ({
-              bucket: typeof b._id === 'string' ? b._id : `${b._id}-${Number(b._id) + 499}`,
-              count: b.count,
-            })),
+            priceBuckets: priceBucketLabels(priceBuckets),
           },
           'App stats retrieved successfully',
         ),

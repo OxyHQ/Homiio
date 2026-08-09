@@ -20,24 +20,22 @@
  * Public (no auth), mirroring `area-insights` / `cities` reads: the handlers
  * read only `req.params`/`req.query` and never touch `req.user`.
  *
- * ## This file straddles both stores on purpose, and the seam is explicit
+ * ## The two-store seam is gone, and so is what it cost
  *
- * Neighborhoods, cities and addresses are Postgres. The RENT STATISTICS are
- * counts and averages over PROPERTIES, and `properties` lands in batch 3 — so
- * every aggregation here is still a Mongoose pipeline, keyed by the address ids
- * Postgres supplies. Ids are preserved verbatim across the migration, which is
- * what makes that join work at all.
+ * This file used to straddle both stores: neighbourhoods, cities and addresses
+ * in Postgres, the rent STATISTICS as Mongoose pipelines keyed by address ids
+ * Postgres supplied. Every scope therefore materialised an uncapped array of
+ * address ids just to hand it to an `$in`, and each id had to be converted to an
+ * `ObjectId` by hand because an aggregation `$match` does not apply Mongoose's
+ * casting — a string list matched nothing and returned an empty result with no
+ * error, the silent-zero shape the migration contract warns about.
  *
- * The seam has ONE sharp edge, {@link toMongoAddressIds}: an aggregation `$match`
- * does NOT apply Mongoose's schema casting, so handing it id STRINGS matches
- * nothing and returns an empty result with no error — the exact silent-zero
- * shape the migration contract warns about. The conversion is therefore
- * explicit, and it THROWS on an id Mongo cannot represent rather than dropping
- * it.
+ * Listings are in the same database as addresses now, so every one of those is
+ * an ordinary join: no id arrays, no conversion, and no way for the two halves
+ * to disagree about what an id is.
  */
 
 import type { Request, Response, NextFunction } from 'express';
-import { Types } from 'mongoose';
 import { and, asc, eq, ilike, sql, inArray, type SQL } from 'drizzle-orm';
 import type {
   NeighborhoodMetrics,
@@ -45,10 +43,9 @@ import type {
   ListingCurrency,
 } from '@homiio/shared-types';
 
-import { Property } from '../models';
 import { getDb } from '../db/postgres';
 import { escapeLikePattern } from '../db/likePattern';
-import { addresses, cities, neighborhoods } from '../db/schema';
+import { addresses, cities, neighborhoods, properties } from '../db/schema';
 import { nearestAddressesQuery } from '../services/addressService';
 import { AppError, successResponse } from '../middlewares/errorHandler';
 import { resolveCityId } from '../services/geoQueryService';
@@ -90,11 +87,6 @@ interface RentStats {
   rentAvg: number | null;
 }
 
-/** Aggregation row shape for the rent-stats `$group`. */
-interface RentStatsRow {
-  listingCount: number;
-  rentAvg: number | null;
-}
 
 /** The neighborhood columns every response reads. */
 const NEIGHBORHOOD_COLUMNS = {
@@ -106,71 +98,38 @@ const NEIGHBORHOOD_COLUMNS = {
 } as const;
 
 /**
- * Convert Postgres address ids into the `ObjectId`s a Mongo AGGREGATION needs.
+ * Listing count + average long-term monthly rent over a set of addresses,
+ * restricted to published + available listings.
  *
- * `Model.find({ addressId: { $in: [...] } })` casts strings through the schema;
- * `Model.aggregate([{ $match: … }])` does NOT, so a raw string list silently
- * matches zero documents. Converting explicitly makes the boundary visible, and
- * makes an id Mongo cannot represent (a post-cutover uuid v7) throw here rather
- * than read as "this neighborhood has no listings".
+ * Takes a PREDICATE on `addresses`, not a list of address ids. The Mongo
+ * version could only take ids — it read every address in the neighbourhood (or
+ * the whole city) into an uncapped array, converted each to an `ObjectId`
+ * because `aggregate` does not cast, and `$in`-ed the result. Listings live in
+ * the same database as addresses now, so it is one join, and `toMongoAddressIds`
+ * plus the two id-list helpers are gone rather than ported.
  *
- * Deleted in batch 4, when the properties these ids point at are in Postgres too
- * and the whole indirection becomes a join.
+ * `rentAvg` averages only listings with a positive monthly amount — `avg()`
+ * ignores NULLs, so `nullif(..., 0)` does what the `$$REMOVE` branch did — and
+ * is `null` when none qualify.
  */
-function toMongoAddressIds(addressIds: readonly string[]): Types.ObjectId[] {
-  return addressIds.map((id) => new Types.ObjectId(id));
-}
-
-/**
- * Compute listing count + average long-term monthly rent over a set of address
- * ids, restricted to published + available listings. `rentAvg` averages only
- * listings with a positive `longTermRent.monthlyAmount` (others are mapped to
- * `$$REMOVE`, so `$avg` ignores them) and is `null` when none qualify.
- */
-async function rentStatsForAddressIds(addressIds: readonly string[]): Promise<RentStats> {
-  if (addressIds.length === 0) return { listingCount: 0, rentAvg: null };
-  const rows = await Property.aggregate<RentStatsRow>([
-    {
-      $match: {
-        addressId: { $in: toMongoAddressIds(addressIds) },
-        status: 'published',
-        'availability.isAvailable': true,
-      },
-    },
-    {
-      $group: {
-        _id: null,
-        listingCount: { $sum: 1 },
-        rentAvg: {
-          $avg: {
-            $cond: [
-              { $gt: ['$longTermRent.monthlyAmount', 0] },
-              '$longTermRent.monthlyAmount',
-              '$$REMOVE',
-            ],
-          },
-        },
-      },
-    },
-  ]);
-  const row = rows[0];
+async function rentStatsForAddresses(addressScope: SQL): Promise<RentStats> {
+  const [row] = await getDb()
+    .select({
+      listingCount: sql<number>`count(*)::int`,
+      rentAvg: sql<number | null>`avg(nullif(${properties.longTermRentMonthlyAmount}, 0))`,
+    })
+    .from(properties)
+    .innerJoin(addresses, eq(properties.addressId, addresses.id))
+    .where(
+      and(
+        addressScope,
+        eq(properties.status, 'published'),
+        eq(properties.availabilityIsAvailable, true),
+      ),
+    );
   if (!row) return { listingCount: 0, rentAvg: null };
-  return { listingCount: row.listingCount, rentAvg: row.rentAvg ?? null };
-}
-
-/** Address ids whose `neighborhood_id` matches. */
-async function addressIdsForNeighborhood(neighborhoodId: string): Promise<string[]> {
-  const rows = await getDb()
-    .select({ id: addresses.id })
-    .from(addresses)
-    .where(eq(addresses.neighborhoodId, neighborhoodId));
-  return rows.map((row) => row.id);
-}
-
-/** Address ids whose `city_id` matches. */
-async function addressIdsForCity(cityId: string): Promise<string[]> {
-  const rows = await getDb().select({ id: addresses.id }).from(addresses).where(eq(addresses.cityId, cityId));
-  return rows.map((row) => row.id);
+  // postgres.js returns `numeric` aggregates as strings.
+  return { listingCount: row.listingCount, rentAvg: row.rentAvg === null ? null : Number(row.rentAvg) };
 }
 
 /** Resolve a city's display name + currency (once per city, via the caches). */
@@ -213,13 +172,13 @@ async function buildMetrics(
     cityInfoCache.set(cityKey, cityInfo);
   }
 
-  const stats = presetStats ?? (await rentStatsForAddressIds(await addressIdsForNeighborhood(n.id)));
+  const stats = presetStats ?? (await rentStatsForAddresses(eq(addresses.neighborhoodId, n.id)));
 
   let vsCity: NeighborhoodVsCity | null = null;
   if (stats.rentAvg !== null) {
     let cityStats = cityStatsCache.get(cityKey);
     if (!cityStats) {
-      cityStats = await rentStatsForAddressIds(await addressIdsForCity(n.cityId));
+      cityStats = await rentStatsForAddresses(eq(addresses.cityId, n.cityId));
       cityStatsCache.set(cityKey, cityStats);
     }
     vsCity = buildVsCity(stats.rentAvg, cityStats.rentAvg);
@@ -339,27 +298,25 @@ export async function getNeighborhoodByName(req: Request, res: Response, next: N
 export async function getNeighborhoodByProperty(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { propertyId } = req.params;
-    if (!Types.ObjectId.isValid(propertyId)) {
-      return next(new AppError('Invalid property ID', 400, 'INVALID_ID'));
-    }
+    // No id-SHAPE guard — `Types.ObjectId.isValid` rejects every uuid v7 id
+    // minted after the cutover. See `db/ids.ts`.
 
-    const property = await Property.findById(propertyId)
-      .select('addressId')
-      .lean<{ addressId?: Types.ObjectId } | null>();
-    if (!property) {
-      return next(new AppError('Property not found', 404, 'NOT_FOUND'));
-    }
-    if (!property.addressId) {
-      return next(new AppError('Property has no resolved neighborhood', 404, 'NOT_FOUND'));
-    }
-
+    // ONE statement, listings → addresses → neighbourhoods. The Mongo hop this
+    // replaces read `properties.addressId` from a different store first, which
+    // is what made `addressId` nullable-looking here; the column is `NOT NULL`
+    // with a RESTRICT reference, so a listing always has an address and the
+    // only real absence is a neighbourhood the address never resolved.
     const rows = await getDb()
       .select(NEIGHBORHOOD_COLUMNS)
-      .from(addresses)
+      .from(properties)
+      .innerJoin(addresses, eq(properties.addressId, addresses.id))
       .innerJoin(neighborhoods, eq(addresses.neighborhoodId, neighborhoods.id))
-      .where(eq(addresses.id, String(property.addressId)))
+      .where(eq(properties.id, propertyId))
       .limit(1);
     if (!rows[0]) {
+      // Deliberately one message for both "no such listing" and "no
+      // neighbourhood resolved": the endpoint answers a neighbourhood or it does
+      // not, and distinguishing them would confirm a listing exists.
       return next(new AppError('Property has no resolved neighborhood', 404, 'NOT_FOUND'));
     }
 
@@ -421,20 +378,6 @@ export async function searchNeighborhoods(req: Request, res: Response, next: Nex
   }
 }
 
-/**
- * One `$group` row of the popular-neighborhoods ranking: the listings at a
- * single address.
- *
- * The rent total and its count are carried SEPARATELY rather than pre-averaged,
- * because the groups are folded up to their neighborhood afterwards and an
- * average of per-address averages is not the average over listings.
- */
-interface PopularAddressGroup {
-  _id: Types.ObjectId;
-  listingCount: number;
-  rentSum: number;
-  rentCount: number;
-}
 
 /**
  * GET /api/neighborhoods/popular?city=&limit=
@@ -458,62 +401,35 @@ export async function getPopularNeighborhoods(req: Request, res: Response, next:
 
     const limit = parseLimit(req.query.limit, DEFAULT_POPULAR_LIMIT);
 
-    // The `$lookup` into `addresses` is gone: addresses live in Postgres now, so
-    // the city's neighborhood-bearing addresses are read here and the Mongo
-    // aggregation groups by the neighborhood id carried alongside them. Batch 4
-    // collapses the whole two-store shape into one join.
-    const cityAddresses = await getDb()
-      .select({ id: addresses.id, neighborhoodId: addresses.neighborhoodId })
-      .from(addresses)
-      .where(and(eq(addresses.cityId, cityId), sql`${addresses.neighborhoodId} is not null`));
-    if (cityAddresses.length === 0) {
-      res.json(successResponse([], 'Popular neighborhoods retrieved successfully'));
-      return;
-    }
+    // ONE grouped join, where this used to be: read every neighbourhood-bearing
+    // address in the city into an array, `$in` it against a Mongo aggregation,
+    // then fold the per-address groups up to their neighbourhood in JS. The
+    // grouping is the query's now, and nothing intermediate is materialised.
+    const grouped = await getDb()
+      .select({
+        neighborhoodId: addresses.neighborhoodId,
+        listingCount: sql<number>`count(*)::int`,
+        rentAvg: sql<number | null>`avg(nullif(${properties.longTermRentMonthlyAmount}, 0))`,
+      })
+      .from(properties)
+      .innerJoin(addresses, eq(properties.addressId, addresses.id))
+      .where(
+        and(
+          eq(addresses.cityId, cityId),
+          sql`${addresses.neighborhoodId} is not null`,
+          eq(properties.status, 'published'),
+          eq(properties.availabilityIsAvailable, true),
+        ),
+      )
+      .groupBy(addresses.neighborhoodId);
 
-    const neighborhoodByAddressId = new Map(cityAddresses.map((a) => [a.id, a.neighborhoodId as string]));
-    const rows = await Property.aggregate<PopularAddressGroup>([
-      {
-        $match: {
-          addressId: { $in: toMongoAddressIds(cityAddresses.map((a) => a.id)) },
-          status: 'published',
-          'availability.isAvailable': true,
-        },
-      },
-      {
-        $group: {
-          _id: '$addressId',
-          listingCount: { $sum: 1 },
-          rentSum: {
-            $sum: {
-              $cond: [{ $gt: ['$longTermRent.monthlyAmount', 0] }, '$longTermRent.monthlyAmount', 0],
-            },
-          },
-          rentCount: {
-            $sum: { $cond: [{ $gt: ['$longTermRent.monthlyAmount', 0] }, 1, 0] },
-          },
-        },
-      },
-    ]);
-
-    // Fold the per-address groups up to their neighborhood.
-    const totals = new Map<string, { listingCount: number; rentSum: number; rentCount: number }>();
-    for (const row of rows) {
-      const neighborhoodId = neighborhoodByAddressId.get(String(row._id));
-      if (!neighborhoodId) continue;
-      const acc = totals.get(neighborhoodId) ?? { listingCount: 0, rentSum: 0, rentCount: 0 };
-      acc.listingCount += row.listingCount;
-      acc.rentSum += row.rentSum;
-      acc.rentCount += row.rentCount;
-      totals.set(neighborhoodId, acc);
-    }
-
-    const ranked = [...totals.entries()]
-      .map(([neighborhoodId, acc]) => ({
-        neighborhoodId,
+    const ranked = grouped
+      .map((row) => ({
+        neighborhoodId: String(row.neighborhoodId),
         stats: {
-          listingCount: acc.listingCount,
-          rentAvg: acc.rentCount > 0 ? acc.rentSum / acc.rentCount : null,
+          listingCount: row.listingCount,
+          // postgres.js returns `numeric` aggregates as strings.
+          rentAvg: row.rentAvg === null ? null : Number(row.rentAvg),
         } satisfies RentStats,
       }))
       .sort((a, b) => b.stats.listingCount - a.stats.listingCount)

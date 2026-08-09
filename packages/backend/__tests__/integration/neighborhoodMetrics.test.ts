@@ -30,10 +30,11 @@ import {
   seedAddress,
   seedGeoChain,
   seedNeighborhood,
+  seedProperty,
   type GeoChain,
 } from '../helpers/postgresGeoFixtures';
 
-const { Property, Profile } = models;
+const { Profile } = models;
 
 function buildApp(): Express {
   const app = express();
@@ -64,20 +65,32 @@ async function seedProfile(): Promise<{ oxyUserId: string }> {
   return Profile.create({ oxyUserId, personalProfile: {} });
 }
 
+/**
+ * A published listing at a given address.
+ *
+ * POSTGRES, because that is the store the metrics now read: this endpoint used
+ * to hop through Mongo for the listing half, and a fixture seeded there would
+ * make the test assert against rows the handler cannot see.
+ */
 async function seedListing(
   oxyUserId: string,
   addressId: string,
   monthlyAmount: number,
-): Promise<{ _id: unknown }> {
-  return Property.create({
-    oxyUserId,
+): Promise<string> {
+  return seedProperty({
     addressId,
-    type: PropertyType.APARTMENT,
-    bedrooms: 2,
-    bathrooms: 1,
-    offerings: [OfferingType.LONG_TERM_RENT],
-    longTermRent: { monthlyAmount, currency: 'EUR' },
-    status: PropertyStatus.PUBLISHED,
+    idShape: 'generated',
+    overrides: {
+      oxyUserId,
+      type: PropertyType.APARTMENT,
+      bedrooms: 2,
+      bathrooms: 1,
+      offerings: [OfferingType.LONG_TERM_RENT],
+      longTermRentMonthlyAmount: monthlyAmount,
+      longTermRentCurrency: 'EUR',
+      status: PropertyStatus.PUBLISHED,
+      availabilityIsAvailable: true,
+    },
   });
 }
 
@@ -92,9 +105,9 @@ describe('GET /api/neighborhoods/by-property/:propertyId', () => {
     const gracia = await seedNeighborhood({ cityId: chain.cityId, name: 'Gracia' });
     const profile = await seedProfile();
     const addressId = await seedStreet(chain, gracia);
-    const listing = await seedListing(profile.oxyUserId, addressId, 1000);
+    const listingId = await seedListing(profile.oxyUserId, addressId, 1000);
 
-    const res = await request(buildApp()).get(`/api/neighborhoods/by-property/${listing._id}`);
+    const res = await request(buildApp()).get(`/api/neighborhoods/by-property/${listingId}`);
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -116,9 +129,9 @@ describe('GET /api/neighborhoods/by-property/:propertyId', () => {
     const chain = await seedGeoChain({ cityName: 'Barcelona' });
     const profile = await seedProfile();
     const addressId = await seedStreet(chain, undefined);
-    const listing = await seedListing(profile.oxyUserId, addressId, 1000);
+    const listingId = await seedListing(profile.oxyUserId, addressId, 1000);
 
-    const res = await request(buildApp()).get(`/api/neighborhoods/by-property/${listing._id}`);
+    const res = await request(buildApp()).get(`/api/neighborhoods/by-property/${listingId}`);
 
     expect(res.status).toBe(404);
   });

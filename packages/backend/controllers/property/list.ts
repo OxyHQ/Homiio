@@ -1,40 +1,38 @@
 /**
  * The home/browse feed.
  *
- * Reads Postgres for the listings, their addresses and their photos. Three
- * collections it decorates the page with — `Saved`, `RecentlyViewed` and
- * `Reservation` — are still Mongo and stay that way: they are not part of the
- * catalogue, and ids are preserved verbatim across the copy, so a listing id
- * from Postgres matches the same id in Mongo with nothing to translate.
+ * Everything it reads is Postgres now — the listings, their addresses and
+ * photos, and the three things it decorates the page with (`saved_items`,
+ * `recently_viewed`, `reservations`). This file used to carry a note saying
+ * those three "stay Mongo"; they were ported in #308 and #311, and the readers
+ * here were the stragglers left behind.
  *
- * ## Two things carried across VERBATIM that a reader will want to query
+ * ## The straggler that mattered: an availability check that APPROVED
  *
- *  - **The saves count now matches on STRINGS, and that is a fix this port could
- *    not defer.** `Saved.targetId` is declared `String`; the pipeline compared it
- *    against `ObjectId`s and `aggregate` does not cast, so it has always matched
- *    nothing and `savesCount` has always been `0` —
- *    `db/MIGRATION-CONTRACT.md` names the identical defect in `stats.ts` and
- *    says a count that starts being non-zero after the cutover is correct
- *    behaviour arriving.
+ * The reservation conflict half read Mongo into an id list and applied it only
+ * `if (ids.length > 0)`. Once `reservations` moved, that read returned nothing,
+ * the guard skipped the exclusion, and every booked listing was reported free.
+ * Nothing errored — an availability check with no bookings in front of it
+ * approves, so the wrong answer was the successful-looking one and the symptom
+ * would have been a double booking. It is now a `NOT EXISTS` beside the
+ * calendar half, in the same statement, with no id list to be empty.
  *
- *    Leaving it alone was the plan until the integration suite showed what the
- *    cast actually does: `new ObjectId('019fd591-…')` THROWS, synchronously,
- *    outside the `.catch()` — so the first listing carrying a uuid v7 id turns
- *    this whole feed into a 500. Every listing created after the cutover carries
- *    one. Preserving a comparison that can never match, at the price of a
- *    guaranteed outage, is not preservation. The consequence is stated plainly:
- *    `savesCount` starts reporting real numbers, and the geo-ranked branch
- *    orders by it.
- *  - **An unknown `sortBy` now falls back to recency** instead of being passed
+ * ## Two behaviours that changed with the port, both deliberate
+ *
+ *  - **`savesCount` reports real numbers.** The Mongo pipeline compared
+ *    `Saved.targetId` (declared `String`) against `ObjectId`s, and `aggregate`
+ *    does not cast, so it matched nothing and the count was always `0`. The
+ *    same defect is recorded for `stats.ts` in `db/MIGRATION-CONTRACT.md`: a
+ *    count that starts being non-zero after the cutover is correct behaviour
+ *    arriving, not a regression. The geo-ranked branch orders by it.
+ *  - **An unknown `sortBy` falls back to recency** instead of being passed
  *    through as a field name. Mongo accepted any string and sorted by a path
- *    that did not exist, which is a silent no-op; the SQL equivalent would be
- *    building a column name out of user input, which is not a thing to do. The
- *    five real sort fields are unchanged.
+ *    that did not exist — a silent no-op; the SQL equivalent would be building
+ *    a column name out of user input. The five real sort fields are unchanged.
  */
 
 import { Request, Response, NextFunction } from 'express';
 import type { SQL } from 'drizzle-orm';
-import { RecentlyViewed, Reservation, Saved } from '../../models';
 import { paginationResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
 import {
@@ -46,7 +44,6 @@ import {
 } from './searchQueryBuilder';
 import { buildCommonPropertyFilters } from './commonFilters';
 import { OfferingType } from '@homiio/shared-types';
-import { ReservationStatus } from '@homiio/shared-types';
 import { properties } from '../../db/schema';
 import {
   allOf,
@@ -58,8 +55,8 @@ import {
   addressIs,
   booleanIs,
   calendarIsFree,
+  noConfirmedReservationOverlaps,
   hasOffering,
-  idNotIn,
   inCity,
   inRange,
   inRegion,
@@ -69,6 +66,12 @@ import {
   statusIsNot,
 } from '../../db/properties/propertyFilters';
 import { serializeProperty } from '../../db/properties/propertySerializer';
+import { getDb } from '../../db/postgres';
+import { listRecentlyViewed } from '../../db/saved/recentlyViewedRepository';
+import {
+  countSavesByPropertyIds,
+  listSavedProperties,
+} from '../../db/saved/savedPropertyRepository';
 import { resolveCityId, resolveRegionId } from '../../services/geoQueryService';
 
 const OFFERING_VALUES: ReadonlySet<string> = new Set(Object.values(OfferingType));
@@ -88,6 +91,15 @@ const PRICE_BUCKET_MEDIUM_MAX = 2000;
 
 /** Default radius (metres) for the "inside my area" half of the geo ranking. */
 const DEFAULT_PREFERRED_RADIUS_METERS = 45000;
+
+/**
+ * How far back the personalisation signal looks.
+ *
+ * Ten, carried over from the Mongo `.limit(10)` it replaces. It bounds the
+ * INPUT to the preference weighting, not the table — `recently_viewed` has its
+ * own retention sweep.
+ */
+const RECENT_VIEWS_FOR_PERSONALISATION = 10;
 
 /**
  * A representative monthly-scale price for recommendation bucketing: the
@@ -264,29 +276,22 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
 
     // ---- Date-range availability ----
     // Excludes listings whose host calendar blocks the range, AND listings with
-    // a confirmed Reservation overlapping it. The calendar half is a single
-    // `NOT EXISTS` over the GiST-indexed range; the reservation half is still a
-    // Mongo read, because `Reservation` is not part of this port.
+    // a confirmed reservation overlapping it. BOTH halves are now `NOT EXISTS`
+    // predicates in the same statement.
+    //
+    // The reservation half used to read Mongo into an id list and apply it only
+    // `if (ids.length > 0)`. Once `reservations` moved to Postgres that read
+    // returned nothing, the guard skipped the exclusion, and every booked
+    // listing was reported free — an availability check that sees no bookings
+    // APPROVES rather than fails, so the symptom was a double booking and not
+    // an error anywhere.
     const checkInDate = parseDateParam(checkIn);
     const checkOutDate = parseDateParam(checkOut);
     const hasStay = checkInDate !== null && checkOutDate !== null && checkOutDate.getTime() > checkInDate.getTime();
 
     if (hasStay && checkInDate && checkOutDate) {
       conditions.push(calendarIsFree(checkInDate, checkOutDate));
-
-      const conflictingReservations = await Reservation.find({
-        status: ReservationStatus.CONFIRMED,
-        checkIn: { $lt: checkOutDate },
-        checkOut: { $gt: checkInDate },
-      })
-        .select('propertyId')
-        .lean();
-      const conflictingPropertyIds = conflictingReservations
-        .map((reservation: { propertyId?: unknown }) => String(reservation.propertyId ?? ''))
-        .filter(Boolean);
-      if (conflictingPropertyIds.length > 0) {
-        conditions.push(idNotIn(conflictingPropertyIds));
-      }
+      conditions.push(noConfirmedReservationOverlaps(checkInDate, checkOutDate));
     }
 
     const where = allOf(conditions);
@@ -329,19 +334,13 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     const ids = serialized
       .map((property) => property.id)
       .filter((id): id is string => typeof id === 'string');
-    let savesMap: Record<string, number> = {};
-    if (ids.length > 0) {
-      // STRING ids, matching what `Saved.targetId` is declared as — see the
-      // module doc for why this stopped being deferrable.
-      const savesAgg = await Saved.aggregate([
-        { $match: { targetType: 'property', targetId: { $in: ids } } },
-        { $group: { _id: '$targetId', count: { $sum: 1 } } }
-      ]).catch(() => []);
-      savesMap = Array.isArray(savesAgg) ? savesAgg.reduce((acc: Record<string, number>, doc: { _id?: unknown; count?: number }) => {
-        acc[String(doc._id)] = doc.count || 0;
-        return acc;
-      }, {}) : {};
-    }
+    // Popularity, for the geo ranking below. A listing nobody saved is absent
+    // from the map, so the `?? 0` at each read supplies the empty case.
+    //
+    // The `.catch(() => [])` this replaces is gone with it: it turned a failed
+    // aggregate into "nobody has saved anything", which ranks every listing as
+    // unpopular and looks exactly like a quiet feed.
+    const savesMap = await countSavesByPropertyIds(getDb(), ids);
 
     const preferredRadiusMeters = radius ? parseFloat(String(radius)) : DEFAULT_PREFERRED_RADIUS_METERS;
     let ordered: ListingForScoring[];
@@ -349,7 +348,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     if (wantsDistance) {
       const decorated = serialized.map((property, index) => {
         const distance = typeof property.distance === 'number' ? property.distance : Number.POSITIVE_INFINITY;
-        const savesCount = savesMap[String(property.id)] || 0;
+        const savesCount = savesMap.get(String(property.id)) ?? 0;
         return {
           index,
           distance,
@@ -369,24 +368,21 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       });
       ordered = decorated.map((entry) => ({ ...entry.prop, savesCount: entry.savesCount, distance: entry.distance }));
     } else {
-      ordered = serialized.map((property) => ({ ...property, savesCount: savesMap[String(property.id)] || 0, isSaved: false }));
+      ordered = serialized.map((property) => ({ ...property, savesCount: savesMap.get(String(property.id)) ?? 0, isSaved: false }));
     }
 
-    if (req.user?.id || req.user?._id) {
+    // Narrowed to a `string` in ONE place rather than re-derived: the Mongo
+    // reads took `unknown` filters and never had to, and the repositories are
+    // typed, so the union has to collapse before it reaches them.
+    const oxyUserId = req.user?.id ?? req.user?._id;
+    if (typeof oxyUserId === 'string' && oxyUserId.length > 0) {
       try {
-        const oxyUserId = req.user.id || req.user._id;
         const [recentlyViewed, savedProperties] = await Promise.all([
-          RecentlyViewed.find({ oxyUserId })
-            .sort({ viewedAt: -1 })
-            .limit(10)
-            .select('propertyId')
-            .lean(),
-          Saved.find({ oxyUserId, targetType: 'property' })
-            .select('targetId')
-            .lean()
+          listRecentlyViewed(getDb(), oxyUserId, RECENT_VIEWS_FOR_PERSONALISATION),
+          listSavedProperties(getDb(), oxyUserId),
         ]);
 
-        const savedIds = new Set(savedProperties.map((saved) => String((saved as { targetId?: unknown }).targetId)));
+        const savedIds = new Set(savedProperties.map((saved) => saved.targetId));
 
         // Build O(1) lookup map instead of O(n) .find() per view item
         const orderedMap = new Map<string, ListingForScoring>();
@@ -400,7 +396,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
         } = { propertyTypes: {}, priceRanges: {}, locations: {}, amenities: {} };
         const recentlyViewedIds = new Set<string>();
         for (const view of recentlyViewed) {
-          const viewPropId = String((view as { propertyId?: unknown }).propertyId);
+          const viewPropId = view.propertyId;
           recentlyViewedIds.add(viewPropId);
           const property = orderedMap.get(viewPropId);
           if (property) {
