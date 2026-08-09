@@ -90,7 +90,6 @@ const BACKFILL_PREFIX = 'db/backfill/';
  * silent tolerance.
  */
 const PENDING_MONGO_FILES: ReadonlyMap<string, string> = new Map([
-  ['controllers/billingController.ts', 'homiio-billing — task #40, ~30 Billing call sites'],
   ['scripts/seedImages.ts', 'unassigned — decide port vs delete like the other one-offs'],
 ]);
 

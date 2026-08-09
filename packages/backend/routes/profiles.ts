@@ -14,8 +14,7 @@ import performanceMonitor from '../middlewares/performance';
 import {
   consumeFileCredit,
   ensureBilling,
-  findBillingByOxyUserId,
-  listProcessedSessions,
+  readEntitlements,
 } from '../db/billing/billingRepository';
 
 export default function () {
@@ -51,15 +50,12 @@ export default function () {
     // zeroed shape below is what the client reads. Deliberately NOT created on
     // read: an entitlements GET that mints a billing row would put a write on
     // every page load.
-    const record = await findBillingByOxyUserId(oxyUserId);
-    const entitlements = record
-      ? { ...record, processedSessions: await listProcessedSessions(record.id) }
-      : {
-          plusActive: false,
-          fileCredits: 0,
-          founderSupporter: false,
-          processedSessions: [],
-        };
+    const entitlements = (await readEntitlements(oxyUserId)) ?? {
+      plusActive: false,
+      fileCredits: 0,
+      founderSupporter: false,
+      processedSessions: [],
+    };
 
     return res.json({ success: true, entitlements });
   }));
