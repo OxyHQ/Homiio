@@ -23,10 +23,47 @@ on:
   push:
     branches: [main]
 
-# A superseded run proves nothing about the commit that replaced it.
+# A superseded run proves nothing about the commit that replaced it — on a pull
+# request. On main it proves something that cannot be re-derived: whether the
+# ROLLOUT it started finished.
+#
+# `deploy-backend` at the bottom of this file CALLS deploy-aws.yml, and a called
+# workflow runs inside the caller's run. So cancelling a run on main cancels the
+# deploy job with it, in the middle of whatever it was doing —
+# `docker buildx --push`, `aws ecs update-service`, or the wait that watches the
+# rollout reach a steady state. deploy-aws.yml declares `cancel-in-progress:
+# false` on its own group precisely to prevent that, and it could not: an inner
+# group cannot save a job whose parent run was cancelled.
+#
+# It happened twice on 2026-08-09, minutes apart, while main was busy: runs
+# `31300943279` and `31301131928` both had their deploy job cancelled by the next
+# merge. The first survived by timing alone — its API rollout had already reached
+# `rolloutState: COMPLETED` seconds earlier; its worker lane had not started. A
+# cancel landing between `update-service` and the wait is the exact case
+# deploy-aws.yml's comment describes, and nothing prevented it.
+#
+# The backend is only the loud half. deploy-frontends.yml triggers on
+# `workflow_run` with `conclusion == 'success'`, and a CANCELLED run is not a
+# successful one — so every cancelled run on main also silently skips the
+# frontend deploy, leaving the two halves of a wire contract on different
+# commits. That failure has already been paid for once in this repository (see
+# the `_id` -> `id` incident), and it produces no red job anywhere.
+#
+# So cancellation is now scoped to the refs that do not deploy. Pull requests
+# keep the fast-cancel behaviour; pushes to main QUEUE behind each other, which
+# is what "serialize production rollouts" has meant in deploy-aws.yml all along.
+# The cost is real and deliberate: on a busy morning main's deploys run one after
+# another instead of the newest winning. That is the trade the rollout guarantee
+# is worth.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # An EXPRESSION, and a mistyped one degrades silently to falsy — which would
+  # stop pull-request CI cancelling and queue it instead, slower but green, so
+  # nothing would report it. Verified on real runs, not by reading this line:
+  # `packages/backend/__tests__/unit/deployRolloutConcurrency.test.ts` pins the
+  # two-file invariant, and the PR that introduced it pushed twice in quick
+  # succession to confirm the earlier run still concludes `cancelled`.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read

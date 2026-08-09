@@ -29,6 +29,22 @@ permissions:
 
 # Serialize production rollouts. Cancelling after `update-service` would leave an
 # unmonitored deployment running in ECS, so in-progress runs are never cancelled.
+#
+# **This group alone does NOT deliver that guarantee, and cannot.** This workflow
+# is CALLED, and a called workflow runs inside the CALLER's run: cancel the
+# caller and this job dies with it, whatever its own group says. So the guarantee
+# is a property of TWO files, and the other one is `.github/workflows/ci.yml` —
+# its `concurrency.cancel-in-progress` must stay false for `refs/heads/main`, the
+# only ref that reaches this workflow automatically. It reads
+# `${{ github.ref != 'refs/heads/main' }}` for exactly that reason; flipping it
+# back to a bare `true` re-breaks this comment silently, in a different file,
+# with nothing here to show for it.
+#
+# That is not a theoretical coupling: on 2026-08-09 runs `31300943279` and
+# `31301131928` each had this job cancelled mid-deploy by the next merge to main,
+# while this file said in-progress runs are never cancelled.
+# `packages/backend/__tests__/unit/deployRolloutConcurrency.test.ts` fails the
+# build if either half moves.
 concurrency:
   group: deploy-homiio-backend
   cancel-in-progress: false
