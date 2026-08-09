@@ -41,7 +41,7 @@ import {
   findOrCreateCanonicalAddress,
   type AddressCanonicalInput,
 } from '../addressService';
-import { validateOfferings } from '../../models/schemas/offeringValidation';
+import { validateOfferings } from '../offeringValidation';
 import { forwardGeocode, reverseGeocode } from '../geocodingService';
 import { resolveCityCentroid } from '../geoResolutionService';
 import { sanitizeGeoJsonCoordinates } from '../../utils/geoCoordinates';

@@ -19,7 +19,7 @@ import {
   parseOfferings,
   presentOfferings,
   type OfferingBearing,
-} from '../../models/schemas/offeringValidation';
+} from '../../services/offeringValidation';
 
 /**
  * Server-side property write payload as seen by these rules.

@@ -25,10 +25,55 @@
  */
 
 import { deaccent } from '@homiio/listing-providers';
-import type { IProperty } from '../../models/documentTypes';
+import type { DETECTED_LANGUAGES } from '../../db/schema/properties';
 
-/** Classifier output — the schema authority is `IProperty['listingFlags']`. */
-export type ListingFlags = NonNullable<IProperty['listingFlags']>;
+/**
+ * Classifier output.
+ *
+ * Declared HERE, by the module that produces it, rather than derived from a
+ * document type in `models/`. The storage authority is the eleven
+ * `listing_flags_*` columns on `properties`, and this is the vocabulary the
+ * classifier emits into them.
+ *
+ * Every member is optional and that is the point: the classifier stores only
+ * the flags that FIRE, so the columns are three-state — `true` (the text says
+ * so), `false` (it looked and said no), and NULL (it never ran). Making these
+ * required would collapse "not examined" into "examined and negative", a claim
+ * about a listing that nobody made.
+ *
+ * `noDSS` keeps its Mongo spelling on the wire; the column is
+ * `listing_flags_no_dss`, and `db/properties/propertyWrites` maps between them.
+ */
+export interface ListingFlags {
+  /** Rental restricted to students ("solo estudiantes", "students only"). */
+  studentsOnly?: boolean;
+  /** Advertised as a flat but the body rents a single room / a share. */
+  roomNotFullUnit?: boolean;
+  /** Seasonal / temporary lease ("temporada", "short let"), not a home. */
+  temporaryOnly?: boolean;
+  /** Restricted to one gender ("solo chicas", "women only"). */
+  genderRestricted?: boolean;
+  /** Requires proof of employment/income ("nómina", "working professionals only"). */
+  workersOnly?: boolean;
+  /** An agency fee is payable by the tenant/buyer ("honorarios de agencia"). */
+  agencyFeePayable?: boolean;
+  /** Pets not allowed ("no se admiten mascotas", "no pets"). */
+  noPets?: boolean;
+  /** Smoking not allowed ("no fumadores", "non-smoking"). */
+  noSmoking?: boolean;
+  /** No couples ("no parejas", "no couples"). */
+  noCouples?: boolean;
+  /** UK: no housing benefit ("no DSS"). */
+  noDSS?: boolean;
+  /**
+   * Best-effort detected description language (ISO 639-1).
+   *
+   * Typed off the schema's own tuple, so a language added to the column's CHECK
+   * cannot be missing here — and one removed from it fails to compile rather
+   * than being written and rejected at runtime.
+   */
+  detectedLanguage?: (typeof DETECTED_LANGUAGES)[number];
+}
 
 /** Languages the deterministic detector can distinguish (ISO 639-1). */
 type DetectedLanguage = NonNullable<ListingFlags['detectedLanguage']>;

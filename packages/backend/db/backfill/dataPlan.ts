@@ -543,7 +543,7 @@ function blockRule(
  *
  * ## The offering CHECKs are the largest correctness win in this port
  *
- * `models/schemas/offeringValidation.ts` states one invariant — `offerings`
+ * `services/offeringValidation.ts` states one invariant — `offerings`
  * equals exactly the set of present priced blocks — and Mongo has TWO
  * enforcement paths for it that do not agree: the path validator runs on
  * `save()`, and EXPLICITLY SKIPS ITSELF on `findOneAndUpdate` (a Query `this`

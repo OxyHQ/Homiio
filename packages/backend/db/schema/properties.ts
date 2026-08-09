@@ -3,7 +3,7 @@
  * in the migration.
  *
  * Ported from `models/schemas/PropertySchema.ts` (1,207 lines) and
- * `models/schemas/offeringValidation.ts`. A property has no coordinates of its
+ * `services/offeringValidation.ts`. A property has no coordinates of its
  * own: it reaches its place through `address_id`, which is why `addresses` had
  * to land first.
  *
@@ -1040,7 +1040,7 @@ export const properties = pgTable(
      * the reason the priced blocks are flattened into nullable columns rather
      * than pushed into child tables.
      *
-     * `models/schemas/offeringValidation.ts` states one invariant: `offerings`
+     * `services/offeringValidation.ts` states one invariant: `offerings`
      * must equal EXACTLY the set of priced blocks present on the document. In
      * Mongo that rule has TWO enforcement paths for one invariant, and they do
      * not agree:
