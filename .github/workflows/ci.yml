@@ -347,11 +347,23 @@ jobs:
   # ZERO jobs created, twice, with created_at == updated_at — concluded before
   # scheduling anything, including its own ubuntu-latest scope job. The same
   # trigger on deploy-frontends.yml, in the same repository and the same instant,
-  # ran to success. Ruled out by evidence: the YAML shape and `id-token: write`
-  # (CrowdSource runs an identical deploy-aws.yml on `workflow_run` and schedules
-  # fine), the ARM runner (this file's own push-triggered runs used it minutes
-  # earlier), rulesets, and environment protection rules (none exist). What is
-  # left is org-level Actions policy, which is not readable without admin:org.
+  # ran to success. Ruled out by evidence: the ARM runner (this file's own
+  # push-triggered runs used it minutes earlier), rulesets, and environment
+  # protection rules (none exist).
+  #
+  # The cause was in the YAML shape after all, and the two observations taken to
+  # rule that out did not: deploy-aws.yml expanded the whole `secrets` context
+  # with `toJSON(secrets)` and walked it into a shell loop, which GitHub's abuse
+  # detection reads as an exfiltration payload and holds pending a human click.
+  # deploy-frontends.yml has no such step, and the "identical" CrowdSource
+  # deploy-aws.yml is not identical — it syncs from an explicit
+  # `SSM_SECRET_ALLOWLIST` and never builds the blob. Both "controls" differ from
+  # this file in precisely that line. It is not org-level Actions policy.
+  #
+  # deploy-aws.yml no longer builds that blob, so the `workflow_run` trigger is
+  # very likely usable again. It is deliberately NOT restored here: being called
+  # is the stronger gate for the reasons below, and re-testing a production
+  # deploy trigger is a separate change from removing the pattern.
   #
   # Calling the workflow removes the failing mechanism entirely and is a stronger
   # gate besides: the deploy cannot start unless every job below it passed in
@@ -371,8 +383,9 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    # The deploy syncs GitHub secrets to SSM with `toJSON(secrets)`, so it needs
-    # the caller's secrets; without `inherit` that object is empty and the sync
-    # silently writes nothing.
+    # The deploy syncs named GitHub secrets to SSM, so it needs the caller's
+    # secrets; without `inherit` every one of them reads as empty and the sync
+    # silently writes nothing. Still required now that the step enumerates them
+    # by name rather than expanding the whole context.
     secrets: inherit
     uses: ./.github/workflows/deploy-aws.yml

@@ -1,6 +1,7 @@
 {
     "name": "@homiio/shared-types",
     "version": "1.0.0",
+    "private": true,
     "type": "commonjs",
     "description": "Shared TypeScript types for Homiio frontend and backend",
     "main": "dist/index.js",
@@ -20,7 +21,6 @@
         "homiio"
     ],
     "author": "Homiio Team",
-    "license": "UNLICENSED",
     "devDependencies": {
         "typescript": "^6.0.3",
         "@eslint/js": "^9.39.5",
