@@ -9,13 +9,37 @@
 
 import express, { type Express } from 'express';
 import request from 'supertest';
+import { eq } from 'drizzle-orm';
 
 import { sendEvictionOutcomeReminders } from '../../services/evictionOutcomeReminderService';
 
 import * as eviction from '../../controllers/eviction';
-import { EvictionCase, EvictionComment, EvictionReport, Notification } from '../../models';
+import { EvictionCase, EvictionComment, EvictionReport } from '../../models';
+import { getDb } from '../../db/postgres';
+import { notifications } from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { assertFound } from '../helpers/assertFound';
+
+/**
+ * The eviction domain is still Mongo; its NOTIFICATIONS are not.
+ *
+ * `notificationDispatchService` — the single chokepoint every domain event goes
+ * through — writes `notifications` in Postgres from this batch on, so the
+ * fan-out assertions below read that table. The Postgres side of the harness has
+ * no per-test cleanup (`__tests__/jest.setup.ts` clears the Mongo collections
+ * and deliberately leaves Postgres alone), so this file empties the rows it
+ * causes.
+ */
+async function notificationsOfType(type: string) {
+  return getDb()
+    .select()
+    .from(notifications)
+    .where(eq(notifications.type, type));
+}
+
+beforeEach(async () => {
+  await getDb().delete(notifications);
+});
 
 function buildApp(oxyUserId?: string): Express {
   const app = express();
@@ -181,8 +205,8 @@ describe('updateEviction — ownership', () => {
     expect(res.body.data.updates).toHaveLength(1);
     expect(res.body.data.updates[0].newScheduledAt).toBe(rescheduled);
 
-    const notes = await Notification.find({ type: 'eviction_update' });
-    const recipients = notes.map((n: { recipientOxyUserId: string }) => n.recipientOxyUserId).sort();
+    const notes = await notificationsOfType('eviction_update');
+    const recipients = notes.map((n) => n.recipientOxyUserId).sort();
     // Fan-out reaches every attendee EXCEPT the owner.
     expect(recipients).toEqual(['oxy-a', 'oxy-b']);
   });
@@ -203,7 +227,7 @@ describe('comments', () => {
     const res = await request(buildApp('oxy-commenter')).post(`/evictions/${id}/comments`).send({ body: 'Me apunto' });
     expect(res.status).toBe(201);
 
-    const notes = await Notification.find({ type: 'eviction_comment' });
+    const notes = await notificationsOfType('eviction_comment');
     expect(notes).toHaveLength(1);
     expect(notes[0].recipientOxyUserId).toBe('oxy-owner');
   });
@@ -374,10 +398,10 @@ describe('sendEvictionOutcomeReminders — honest stale-case handling', () => {
     const first = await sendEvictionOutcomeReminders();
     expect(first.processed).toBe(1);
 
-    const notes = await Notification.find({ type: 'eviction_outcome_reminder' });
+    const notes = await notificationsOfType('eviction_outcome_reminder');
     expect(notes).toHaveLength(1);
     expect(notes[0].recipientOxyUserId).toBe('oxy-owner');
-    expect(String(notes[0].data.evictionId)).toBe(String(id));
+    expect(String((notes[0].data as { evictionId?: unknown }).evictionId)).toBe(String(id));
 
     const claimed = await EvictionCase.findById(id).select('outcomeReminderSentAt');
     assertFound(claimed, 'claimed');
@@ -386,7 +410,7 @@ describe('sendEvictionOutcomeReminders — honest stale-case handling', () => {
     // A second run is a no-op — no duplicate reminder.
     const second = await sendEvictionOutcomeReminders();
     expect(second.processed).toBe(0);
-    expect(await Notification.countDocuments({ type: 'eviction_outcome_reminder' })).toBe(1);
+    expect(await notificationsOfType('eviction_outcome_reminder')).toHaveLength(1);
   });
 
   it('never reminds future or already-resolved cases', async () => {
@@ -397,6 +421,6 @@ describe('sendEvictionOutcomeReminders — honest stale-case handling', () => {
 
     const result = await sendEvictionOutcomeReminders();
     expect(result.processed).toBe(0);
-    expect(await Notification.countDocuments({ type: 'eviction_outcome_reminder' })).toBe(0);
+    expect(await notificationsOfType('eviction_outcome_reminder')).toHaveLength(0);
   });
 });

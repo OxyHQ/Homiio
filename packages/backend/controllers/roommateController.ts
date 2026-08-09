@@ -4,37 +4,29 @@
  */
 
 import type { Request, Response } from 'express';
-import type { Types } from 'mongoose';
 import type { PopulatedProfileLike } from './roommate/serialize';
 import type { IProfile } from '../models/documentTypes';
 
-import { Profile, RoommateRequest, RoommateRelationship } from '../models';
+import { Profile } from '../models';
+import { getDb } from '../db/postgres';
+import {
+  createRoommateRequest,
+  endRoommateRelationship as endRelationshipRow,
+  ensureActiveRelationship,
+  clampMatchScore,
+  listRoommateRelationships,
+  listRoommateRequests,
+  PendingRoommateRequestExistsError,
+  respondToRoommateRequest as respondToRequestRow,
+  toRoommateRequestDTO,
+  type RoommateRelationshipRow,
+  type RoommateRequestRow,
+} from '../db/roommates/roommateRepository';
 import { logger } from '../middlewares/logging';
 import { notificationDispatchService } from '../services/notificationDispatchService';
 import { pickFields } from '../utils/pickFields';
 import { EDITABLE_ROOMMATE_PREFERENCE_FIELDS } from './roommate/editableFields';
 import { ROOMMATE_PROFILE_FIELDS, hydrateDisplayNames, serializeRoommateProfile } from './roommate/serialize';
-
-import { Types as MongooseTypes } from 'mongoose';
-
-interface RoommateRequestLean {
-  _id: unknown;
-  fromOxyUserId: unknown;
-  toOxyUserId: unknown;
-  status: unknown;
-  message?: unknown;
-  createdAt: unknown;
-}
-
-interface RoommateRelationshipLean {
-  _id: unknown;
-  oxyUser1Id: unknown;
-  oxyUser2Id: unknown;
-  status: unknown;
-  matchScore?: unknown;
-  startDate?: unknown;
-  endDate?: unknown;
-}
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -327,16 +319,9 @@ const toggleRoommateMatching = async (req: Request, res: Response): Promise<Resp
   }
 };
 
-/** Serialize a single request document with hydrated display names + score. */
+/** Serialize a single request row with hydrated display names + score. */
 const serializeRequest = (
-  request: {
-    _id: unknown;
-    fromOxyUserId: string;
-    toOxyUserId: string;
-    status: string;
-    message?: string;
-    createdAt: Date;
-  },
+  request: RoommateRequestRow,
   profileByOxyUserId: Map<string, PopulatedProfileLike>,
   displayNames: Map<string, string>,
 ) => {
@@ -347,7 +332,7 @@ const serializeRequest = (
     prefsOf(profileByOxyUserId.get(request.toOxyUserId)),
   );
   return {
-    id: String(request._id),
+    id: request.id,
     senderOxyUserId: request.fromOxyUserId,
     receiverOxyUserId: request.toOxyUserId,
     sender,
@@ -373,17 +358,11 @@ const getRoommateRequests = async (req: Request, res: Response): Promise<Respons
       return res.status(404).json({ error: 'Profile not found' });
     }
 
-    const [sent, received] = await Promise.all([
-      RoommateRequest.find({ fromOxyUserId: oxyUserId }).sort({ createdAt: -1 }).lean(),
-      RoommateRequest.find({ toOxyUserId: oxyUserId }).sort({ createdAt: -1 }).lean(),
-    ]);
+    const { sent, received } = await listRoommateRequests(getDb(), oxyUserId);
 
     const participantOxyUserIds = Array.from(
       new Set(
-        [...sent, ...received].flatMap((request) => [
-          String(request.fromOxyUserId),
-          String(request.toOxyUserId),
-        ]),
+        [...sent, ...received].flatMap((request) => [request.fromOxyUserId, request.toOxyUserId]),
       ),
     );
     const profiles = await Profile.find({ oxyUserId: { $in: participantOxyUserIds } })
@@ -396,22 +375,8 @@ const getRoommateRequests = async (req: Request, res: Response): Promise<Respons
 
     res.json({
       data: {
-        sent: sent.map((r: RoommateRequestLean) => serializeRequest({
-          _id: r._id,
-          fromOxyUserId: String(r.fromOxyUserId),
-          toOxyUserId: String(r.toOxyUserId),
-          status: String(r.status),
-          message: typeof r.message === 'string' ? r.message : undefined,
-          createdAt: r.createdAt instanceof Date ? r.createdAt : new Date(String(r.createdAt)),
-        }, profileByOxyUserId, displayNames)),
-        received: received.map((r: RoommateRequestLean) => serializeRequest({
-          _id: r._id,
-          fromOxyUserId: String(r.fromOxyUserId),
-          toOxyUserId: String(r.toOxyUserId),
-          status: String(r.status),
-          message: typeof r.message === 'string' ? r.message : undefined,
-          createdAt: r.createdAt instanceof Date ? r.createdAt : new Date(String(r.createdAt)),
-        }, profileByOxyUserId, displayNames)),
+        sent: sent.map((request) => serializeRequest(request, profileByOxyUserId, displayNames)),
+        received: received.map((request) => serializeRequest(request, profileByOxyUserId, displayNames)),
       },
     });
   } catch (error) {
@@ -453,82 +418,63 @@ const sendRoommateRequest = async (req: Request, res: Response): Promise<Respons
       return res.status(400).json({ error: 'Target user does not have roommate matching enabled' });
     }
 
-    const existingRequest = await RoommateRequest.findOne({
-      status: 'pending',
-      $or: [
-        { fromOxyUserId: oxyUserId, toOxyUserId: targetOxyUserId },
-        { fromOxyUserId: targetOxyUserId, toOxyUserId: oxyUserId },
-      ],
-    });
-
-    if (existingRequest) {
-      return res.status(409).json({ error: 'A pending roommate request already exists between these users' });
+    // The "already pending?" read is GONE in the forward direction: it was a
+    // read-then-write with a window, and `roommate_requests_pending_pair_key`
+    // is a real partial unique index. The repository raises the same 409 from
+    // the index's own `23505`, and still reads for the REVERSE direction, which
+    // no single-column index can express.
+    let request;
+    try {
+      request = await createRoommateRequest(getDb(), {
+        fromOxyUserId: oxyUserId,
+        toOxyUserId: targetOxyUserId,
+        message: typeof message === 'string' ? message : undefined,
+      });
+    } catch (error) {
+      if (error instanceof PendingRoommateRequestExistsError) {
+        return res.status(409).json({ error: 'A pending roommate request already exists between these users' });
+      }
+      throw error;
     }
-
-    const request = await RoommateRequest.create({
-      fromOxyUserId: oxyUserId,
-      toOxyUserId: targetOxyUserId,
-      message: typeof message === 'string' ? message : undefined,
-    });
 
     await notificationDispatchService.createForUser(targetOxyUserId, {
       type: 'roommate',
       title: 'New roommate request',
       message: 'Someone sent you a roommate request.',
       priority: 'high',
-      data: { requestId: request._id.toString(), screen: '/roommates' },
+      data: { requestId: request.id, screen: '/roommates' },
     });
 
     res.status(201).json({
       message: 'Roommate request sent successfully',
-      data: request,
+      data: toRoommateRequestDTO(request),
     });
   } catch (error) {
-    if (error && typeof error === 'object' && (error as { code?: number }).code === 11000) {
-      return res.status(409).json({ error: 'A pending roommate request already exists between these users' });
-    }
     logger.error('Failed to send roommate request', { error: errorMessage(error) });
     res.status(500).json({ error: 'Failed to send roommate request' });
   }
 };
 
 /**
- * Deterministically sort two profile ids so a pair maps to one canonical
- * relationship row (`oxyUser1Id` < `oxyUser2Id` by string).
- */
-const sortPair = (a: string, b: string): [string, string] =>
-  a < b ? [a, b] : [b, a];
-
-/**
  * Create (idempotently) the roommate relationship for an accepted request.
- * Returns the relationship document.
+ *
+ * The pair is sorted by the repository and the sort is enforced by
+ * `roommate_relationships_sorted_pair_check`, so a writer that skipped it fails
+ * loudly instead of producing a second, invisible row for the same two people.
  */
-const createRelationshipForAcceptedRequest = async (request: {
-  _id: Types.ObjectId;
-  fromOxyUserId: string;
-  toOxyUserId: string;
-}) => {
+const createRelationshipForAcceptedRequest = async (request: RoommateRequestRow) => {
   const [fromProfile, toProfile] = await Promise.all([
     Profile.findOne({ oxyUserId: request.fromOxyUserId }).select('personalProfile'),
     Profile.findOne({ oxyUserId: request.toOxyUserId }).select('personalProfile'),
   ]);
   const matchScore = calculateMatchPercentage(prefsOf(fromProfile), prefsOf(toProfile));
-  const [oxyUser1Id, oxyUser2Id] = sortPair(request.fromOxyUserId, request.toOxyUserId);
 
-  return RoommateRelationship.findOneAndUpdate(
-    { oxyUser1Id, oxyUser2Id, status: 'active' },
-    {
-      $setOnInsert: {
-        oxyUser1Id,
-        oxyUser2Id,
-        requestId: request._id,
-        matchScore,
-        status: 'active',
-        startDate: new Date(),
-      },
-    },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
-  );
+  return ensureActiveRelationship(getDb(), {
+    requestId: request.id,
+    fromOxyUserId: request.fromOxyUserId,
+    toOxyUserId: request.toOxyUserId,
+    matchScore: clampMatchScore(matchScore),
+  });
 };
 
 // Respond to a roommate request (accept/decline) - only the recipient may respond
@@ -542,34 +488,23 @@ const respondToRoommateRequest = async (req: Request, res: Response, status: 'ac
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    if (!MongooseTypes.ObjectId.isValid(requestId)) {
-      return res.status(404).json({ error: 'Roommate request not found' });
-    }
-
-    const request = await RoommateRequest.findOne({
-      _id: requestId,
-      toOxyUserId: oxyUserId,
-      status: 'pending'
-    });
+    // The `ObjectId.isValid` guard is DELETED rather than widened (`db/ids.ts`):
+    // post-cutover every request id is a uuid v7, which that guard rejects. The
+    // `UPDATE` below already answers "no such pending request of yours" for a
+    // malformed id, an unknown one and somebody else's alike.
+    const request = await respondToRequestRow(getDb(), requestId, oxyUserId, status);
 
     if (!request) {
       return res.status(404).json({ error: 'Roommate request not found' });
     }
 
-    request.status = status;
-    await request.save();
-
-    // On accept, materialize the confirmed relationship (idempotent upsert).
+    // On accept, materialize the confirmed relationship (idempotent insert).
     if (status === 'accepted') {
-      await createRelationshipForAcceptedRequest({
-        _id: request._id as Types.ObjectId,
-        fromOxyUserId: String(request.fromOxyUserId),
-        toOxyUserId: String(request.toOxyUserId),
-      });
+      await createRelationshipForAcceptedRequest(request);
     }
 
     // Notify the original sender of the accept/decline decision.
-    await notificationDispatchService.createForUser(request.fromOxyUserId.toString(), {
+    await notificationDispatchService.createForUser(request.fromOxyUserId, {
       type: 'roommate',
       title: status === 'accepted' ? 'Roommate request accepted' : 'Roommate request declined',
       message:
@@ -577,12 +512,12 @@ const respondToRoommateRequest = async (req: Request, res: Response, status: 'ac
           ? 'Your roommate request was accepted.'
           : 'Your roommate request was declined.',
       priority: 'medium',
-      data: { requestId: request._id.toString(), screen: '/roommates' },
+      data: { requestId: request.id, screen: '/roommates' },
     });
 
     res.json({
       message: `Roommate request ${status} successfully`,
-      data: request
+      data: toRoommateRequestDTO(request),
     });
   } catch (error) {
     logger.error(`Failed to ${action} roommate request`, { error: errorMessage(error) });
@@ -600,30 +535,22 @@ const declineRoommateRequest = async (req: Request, res: Response): Promise<Resp
   return respondToRoommateRequest(req, res, 'declined');
 };
 
-/** Serialize a relationship document with hydrated display names. */
+/** Serialize a relationship row with hydrated display names. */
 const serializeRelationship = (
-  relationship: {
-    _id: unknown;
-    oxyUser1Id: string;
-    oxyUser2Id: string;
-    status: string;
-    matchScore?: number;
-    startDate?: Date;
-    endDate?: Date;
-  },
+  relationship: RoommateRelationshipRow,
   profileByOxyUserId: Map<string, PopulatedProfileLike>,
   displayNames: Map<string, string>,
 ) => {
   const profile1 = serializeRoommateProfile(profileByOxyUserId.get(relationship.oxyUser1Id), displayNames);
   const profile2 = serializeRoommateProfile(profileByOxyUserId.get(relationship.oxyUser2Id), displayNames);
   return {
-    id: String(relationship._id),
+    id: relationship.id,
     oxyUser1Id: relationship.oxyUser1Id,
     oxyUser2Id: relationship.oxyUser2Id,
     profile1,
     profile2,
     status: relationship.status,
-    matchScore: relationship.matchScore ?? 0,
+    matchScore: relationship.matchScore,
     startDate: relationship.startDate,
     endDate: relationship.endDate,
   };
@@ -644,43 +571,24 @@ const getRoommateRelationships = async (req: Request, res: Response): Promise<Re
       return res.status(404).json({ error: 'Profile not found' });
     }
 
-    const relationships = await RoommateRelationship.find({
-      $or: [{ oxyUser1Id: oxyUserId }, { oxyUser2Id: oxyUserId }],
-    })
-      .sort({ createdAt: -1 })
-      .lean();
+    const relationships = await listRoommateRelationships(getDb(), oxyUserId);
 
     const participantOxyUserIds = Array.from(
       new Set(
-        relationships.flatMap((relationship: Record<string, unknown>) => [
-          String(relationship.oxyUser1Id),
-          String(relationship.oxyUser2Id),
-        ]),
+        relationships.flatMap((relationship) => [relationship.oxyUser1Id, relationship.oxyUser2Id]),
       ),
     );
     const profiles = await Profile.find({ oxyUserId: { $in: participantOxyUserIds } })
       .select(ROOMMATE_PROFILE_FIELDS)
       .lean();
     const profileByOxyUserId = new Map<string, PopulatedProfileLike>(
-      profiles.map((profile: PopulatedProfileLike & { oxyUserId: string }) => [String(profile.oxyUserId), profile as PopulatedProfileLike]),
+      profiles.map((entry: PopulatedProfileLike & { oxyUserId: string }) => [String(entry.oxyUserId), entry as PopulatedProfileLike]),
     );
     const displayNames = await hydrateDisplayNames(participantOxyUserIds);
 
     res.json({
-      data: relationships.map((r: RoommateRelationshipLean) =>
-        serializeRelationship(
-          {
-            _id: r._id,
-            oxyUser1Id: String(r.oxyUser1Id),
-            oxyUser2Id: String(r.oxyUser2Id),
-            status: String(r.status),
-            matchScore: typeof r.matchScore === 'number' ? r.matchScore : undefined,
-            startDate: r.startDate instanceof Date ? r.startDate : undefined,
-            endDate: r.endDate instanceof Date ? r.endDate : undefined,
-          },
-          profileByOxyUserId,
-          displayNames,
-        ),
+      data: relationships.map((relationship) =>
+        serializeRelationship(relationship, profileByOxyUserId, displayNames),
       ),
     });
   } catch (error) {
@@ -699,10 +607,6 @@ const endRoommateRelationship = async (req: Request, res: Response): Promise<Res
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    if (!MongooseTypes.ObjectId.isValid(relationshipId)) {
-      return res.status(404).json({ error: 'Roommate relationship not found' });
-    }
-
     const profile = await Profile.findByOxyUserId(oxyUserId);
 
     if (!profile) {
@@ -710,37 +614,30 @@ const endRoommateRelationship = async (req: Request, res: Response): Promise<Res
     }
 
     // The caller must be one of the two participants; a non-participant sees the
-    // same 404 as a missing relationship (no existence leak).
-    const relationship = await RoommateRelationship.findOne({
-      _id: relationshipId,
-      status: 'active',
-      $or: [{ oxyUser1Id: oxyUserId }, { oxyUser2Id: oxyUserId }],
-    });
+    // same 404 as a missing relationship (no existence leak). Both facts are in
+    // the `UPDATE`'s predicate, so there is no window between the check and the
+    // write — and the `ObjectId.isValid` guard is deleted rather than widened,
+    // for the reason `db/ids.ts` gives.
+    const relationship = await endRelationshipRow(getDb(), relationshipId, oxyUserId);
 
     if (!relationship) {
       return res.status(404).json({ error: 'Roommate relationship not found' });
     }
 
-    relationship.status = 'ended';
-    relationship.endDate = new Date();
-    await relationship.save();
-
     const otherOxyUserId =
-      String(relationship.oxyUser1Id) === oxyUserId
-        ? String(relationship.oxyUser2Id)
-        : String(relationship.oxyUser1Id);
+      relationship.oxyUser1Id === oxyUserId ? relationship.oxyUser2Id : relationship.oxyUser1Id;
 
-    await notificationDispatchService.createForUser(String(otherOxyUserId), {
+    await notificationDispatchService.createForUser(otherOxyUserId, {
       type: 'roommate',
       title: 'Roommate relationship ended',
       message: 'A roommate relationship was ended.',
       priority: 'medium',
-      data: { relationshipId: relationship._id.toString(), screen: '/roommates' },
+      data: { relationshipId: relationship.id, screen: '/roommates' },
     });
 
     res.json({
       message: 'Roommate relationship ended successfully',
-      data: { id: relationship._id.toString(), status: relationship.status },
+      data: { id: relationship.id, status: relationship.status },
     });
   } catch (error) {
     logger.error('Failed to end roommate relationship', { error: errorMessage(error) });
