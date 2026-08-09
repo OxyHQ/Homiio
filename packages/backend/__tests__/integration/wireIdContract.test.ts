@@ -25,6 +25,7 @@ import publicRoutes from '../../routes/public';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { renameWireIds } from '../../middlewares/wireIds';
 import { Address, City, Country, Property, Region } from '../../models';
+import { resetGeoTables, seedGeoChain } from '../helpers/postgresGeoFixtures';
 import { OfferingType, PropertyStatus, PropertyType } from '@homiio/shared-types';
 
 function buildApp(): Express {
@@ -95,6 +96,10 @@ describe('renameWireIds', () => {
 describe('the wire contract, over a real request', () => {
   const app = buildApp();
 
+  beforeEach(async () => {
+    await resetGeoTables();
+  });
+
   /** Seed a published property in a city, and return the ids Mongo assigned. */
   async function seedCityProperty(): Promise<{ cityId: string; propertyId: string }> {
     const country = await Country.create({ code: 'ES', name: 'Spain', currency: 'EUR' });
@@ -158,5 +163,143 @@ describe('the wire contract, over a real request', () => {
     // that nothing gets past it, and a per-field assertion only covers the
     // fields somebody remembered.
     expect(JSON.stringify(res.body)).not.toContain('"_id"');
+  });
+
+  /**
+   * The sweep, and the reason it carries a vacuity floor.
+   *
+   * One endpoint proving the serializer works says nothing about the one added
+   * next week, and the claim this middleware rests on is about the WHOLE router:
+   * "nothing this API returns is legitimately named `_id`". That is checkable,
+   * so it is checked.
+   *
+   * A scan for `"_id"` over a body that came back `[]` or `500` passes for the
+   * wrong reason, and the first draft of this test did exactly that — 10 of its
+   * 16 paths returned an empty list, a 404, or an error, so it would have gone
+   * green with the serializer removed from most of them. Hence the split below:
+   * a path is only counted as COVERAGE once its body is asserted to contain
+   * real entity data, and the assertion names the path that failed.
+   *
+   * The city endpoints need Postgres seeded as well as Mongo — they were ported
+   * in an earlier batch and no longer read the Mongo `City` model — which is the
+   * concrete way that first draft was silently empty.
+   *
+   * ## What this deliberately does NOT catch, so nobody reads it as a hole
+   *
+   * Putting `_id` back into a CONTROLLER's own response literal fails nothing
+   * here — verified by mutation, not assumed. That is the chokepoint working:
+   * `middlewares/wireIds.ts` strips it downstream, so the wire is still correct
+   * and there is no regression to report. What these cases do catch is a hole in
+   * the serializer itself (mutated to skip property-shaped objects: three cases
+   * red, naming `/api/properties` and the city-properties path) and the
+   * serializer being unmounted altogether. The subject under test is the WIRE,
+   * not which layer happens to produce it.
+   */
+  it('emits no `_id` from any public endpoint that returns entities', async () => {
+    const { cityId } = await seedCityProperty();
+    const chain = await seedGeoChain({ cityName: 'Barcelona', propertiesCount: 3 });
+
+    const entityPaths = [
+      '/api/cities',
+      '/api/cities/search?q=Barc',
+      '/api/cities/lookup?name=Barcelona',
+      `/api/cities/${chain.cityId}`,
+      `/api/cities/${cityId}/properties?limit=8`,
+      '/api/properties',
+    ];
+    // Two public GETs are deliberately absent, and neither absence is laziness:
+    //   - `/api/analytics/stats` returns aggregates, not entities, so it has no
+    //     `id` to floor on. It has its own case below.
+    //   - `/api/properties/by-ids` filters `status: 'active'`, which is not a
+    //     value in `PropertyStatus` (draft/published/reserved/rented/sold/
+    //     inactive/archived), so it cannot return a row for any fixture. That is
+    //     a pre-existing bug in `controllers/property/batch.ts`, unrelated to
+    //     this contract; listing it here would only buy a permanently empty body
+    //     that passes the `_id` scan for the wrong reason.
+
+    const leaked: string[] = [];
+    const empty: string[] = [];
+    for (const path of entityPaths) {
+      const res = await request(app).get(path);
+      const body = JSON.stringify(res.body ?? null);
+      if (body.includes('"_id"')) leaked.push(`${path} (HTTP ${res.status})`);
+      // The floor. A body with no `"id":` in it exercised nothing, so treating it
+      // as a pass would be the bug this whole test exists to catch.
+      if (res.status !== 200 || !body.includes('"id":')) {
+        empty.push(`${path} (HTTP ${res.status}, ${body.slice(0, 60)})`);
+      }
+    }
+
+    // Naming the offending path is the difference between a gate that tells you
+    // where to look and one that tells you only that something is wrong.
+    expect(leaked).toEqual([]);
+    expect(empty).toEqual([]);
+  });
+
+  /**
+   * Failure bodies go through the transform too — `errorHandler` runs on a
+   * response whose `res.json` this middleware already replaced. They carry no
+   * `_id`, but they DO pass through, and the envelope has to survive the rebuild.
+   */
+  it('passes error bodies through intact and without `_id`', async () => {
+    const errorPaths = [
+      '/api/cities/000000000000000000000000',
+      '/api/cities/lookup?name=Atlantis&country=Nowhere',
+    ];
+
+    for (const path of errorPaths) {
+      const res = await request(app).get(path);
+      expect(res.status).toBe(404);
+      expect(JSON.stringify(res.body)).not.toContain('"_id"');
+      expect(res.body.success).toBe(false);
+      expect(typeof res.body.message).toBe('string');
+    }
+  });
+
+  it('leaves the envelope, the pagination block and a non-entity `id` intact', async () => {
+    const { cityId } = await seedCityProperty();
+
+    const res = await request(app).get(`/api/cities/${cityId}/properties?limit=8`).expect(200);
+
+    // The transform rebuilds every object it walks, so the envelope keys have to
+    // survive that rebuild — a serializer that dropped `pagination` would still
+    // pass every `_id` assertion in this file.
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.pagination).toEqual(
+      expect.objectContaining({ page: 1, limit: 8, total: 1, pages: 1 }),
+    );
+    expect(res.body.data.city.name).toBe('Barcelona');
+
+    // A NUMERIC `id` is what an Overpass/OSM element carries, and the one shape a
+    // "stringify the id" transform would quietly corrupt if it ever stopped
+    // deferring to an `id` already present.
+    expect(renameWireIds({ id: 42, tags: { amenity: 'cafe' } })).toEqual({
+      id: 42,
+      tags: { amenity: 'cafe' },
+    });
+  });
+
+  /**
+   * `analyticsController` is the one endpoint whose underlying data really does
+   * have an `_id` that is NOT an entity id — a `$group` key. It maps that into
+   * `cityId` and `bucket` BEFORE responding, which is the reason a whole-body
+   * strip is safe on this router at all. Pinning it here means the day someone
+   * returns a raw aggregation, this fails rather than the meaning of a field
+   * silently changing.
+   */
+  it('keeps aggregation group keys mapped to named fields, never `_id`', async () => {
+    await seedCityProperty();
+
+    const res = await request(app).get('/api/analytics/stats').expect(200);
+
+    expect(JSON.stringify(res.body)).not.toContain('"_id"');
+    for (const row of res.body.data.topCities ?? []) {
+      expect(row).toHaveProperty('cityId');
+      expect(row).not.toHaveProperty('id');
+    }
+    for (const row of res.body.data.priceBuckets ?? []) {
+      expect(row).toHaveProperty('bucket');
+      expect(row).not.toHaveProperty('id');
+    }
   });
 });

@@ -31,16 +31,52 @@
  * Mongoose document, and a serializer that edits its argument would corrupt the
  * first and try to `delete` a schema path on the second.
  *
+ * ## Exactly what it touches, and what it leaves alone
+ *
+ * The walk is RECURSIVE and reaches every object and array element in the body,
+ * at any depth. That breadth is the point — a nested populated document is
+ * precisely where a top-level-only rename leaves `_id` behind — but it is also
+ * the whole risk surface, so what it does to each kind of payload is stated
+ * rather than left to be discovered:
+ *
+ *   - **Entity documents, nested or not.** `_id` → `id`. This is the job.
+ *   - **Envelopes.** `successResponse` and `paginationResponse` wrap data in
+ *     `{ success, message, data, meta }` / `{ … pagination }`. Those keys carry
+ *     no `_id`, so the envelope is rebuilt field-for-field and reaches the client
+ *     unchanged; only the entities inside `data` are rewritten.
+ *   - **Error bodies.** `errorHandler` runs after these routers, on a response
+ *     whose `res.json` this middleware has already replaced, so error payloads
+ *     pass through it too. They carry no `_id` and are unaffected — but they DO
+ *     pass through, which is worth knowing before adding a field to one.
+ *   - **A non-entity `id`.** Never touched. Only `_id` is removed, and an `id`
+ *     already present always wins, whatever its type.
+ *   - **`Date` and `Buffer`.** Returned as-is rather than walked, so they still
+ *     serialize the way `res.json` would render them.
+ *
  * ## Why a whole-body walk is safe HERE and would not be in general
  *
- * Nothing this API returns is legitimately named `_id`. The one shape that could
- * be — a raw `$group` result, whose `_id` is the grouping key and not an entity
- * id — never reaches a client: every aggregation behind these routers maps its
- * `_id` into a named field first (`analyticsController` emits `cityId` and
- * `bucket`; `partnerController` folds it into a status total). If a future
- * endpoint ever needs to pass a third-party payload through verbatim, it must
- * not gain that property by accident — give it a route that serializes
- * explicitly instead of widening this.
+ * Nothing this API returns is legitimately named `_id` — checked, not assumed,
+ * and pinned by `__tests__/integration/wireIdContract.test.ts`, which sweeps the
+ * public endpoints and fails on `"_id"` anywhere in any body.
+ *
+ * The two shapes that could have been a problem are both absent:
+ *
+ *   - **A raw `$group` result**, whose `_id` is the grouping key and not an
+ *     entity id, never reaches a client. Every aggregation behind these routers
+ *     maps it into a named field first — `analyticsController` emits `cityId`
+ *     and `bucket`, `partnerController` folds it into a status total.
+ *   - **A third-party payload relayed verbatim.** There is none. The only
+ *     upstream bodies this service parses are Nominatim (`lat`/`lon`/
+ *     `display_name`), Overpass (`id`/`lat`/`lon`/`tags`) and Wikimedia
+ *     (`pageid`) — none of which uses `_id` — plus `routes/ai.ts` calling
+ *     Homiio's OWN `/api/properties*` endpoints, whose bodies this middleware
+ *     already serialized once, and on which a second pass is a no-op. Oxy's
+ *     `/users/by-ids` is read in `controllers/roommate/serialize.ts` but its
+ *     payload is projected into Homiio's own shape and never reaches `res.json`.
+ *
+ * If a future endpoint DOES need to relay a third-party payload verbatim, it
+ * must not acquire this behaviour by accident: give it a route that serializes
+ * explicitly, rather than widening this.
  *
  * ## Where it is mounted, and why not in `server.ts`
  *

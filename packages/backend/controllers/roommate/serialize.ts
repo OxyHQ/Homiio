@@ -5,6 +5,16 @@
 import config from '../../config';
 import { logger } from '../../middlewares/logging';
 
+/**
+ * A user as the OXY API returns it from `POST /users/by-ids`.
+ *
+ * The `_id` here is deliberate and must NOT be renamed by a sweep of Homiio's
+ * own `_id` → `id` cut. This is a foreign service's response shape, not Homiio's
+ * wire: Oxy decides what it sends, and editing this declaration would only make
+ * Homiio stop reading a field Oxy still emits. It is also never re-served — the
+ * payload is projected into {@link SerializedRoommateProfile} below and the raw
+ * object never reaches `res.json`.
+ */
 interface OxyPublicUser {
   id?: string;
   _id?: string;
