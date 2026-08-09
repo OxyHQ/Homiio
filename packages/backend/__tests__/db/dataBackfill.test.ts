@@ -764,6 +764,64 @@ describe('data backfill — --reconcile', () => {
     expect(kept?.id).toBe(nativeId);
   }, 120_000);
 
+  it('NEVER rolls back a row the target wrote more recently', async () => {
+    // The window this mode was written in has closed. It assumed Mongo was the
+    // only writer, so "the source differs" meant "the target is stale" — and
+    // once the write path moved, the target can be AHEAD. Measured the hour that
+    // landed: of three differing properties, TWO were newer in Postgres (the
+    // ingest worker refreshing `expires_at` against the new authority), and a
+    // blind apply would have moved both deadlines backwards by about an hour,
+    // into the path of the expiry sweep.
+    const geo = await seedAndCopyGeo();
+    const database = mongoDatabase();
+    const address = addressDocument(geo, 'Barcelona', BARCELONA);
+    await database.collection('addresses').insertOne(address);
+    await seedMeasurableAddresses(geo);
+    const listing = propertyDocument(address._id as mongoose.Types.ObjectId, {
+      description: 'from mongo',
+      updatedAt: new Date('2026-08-09T10:00:00.000Z'),
+    });
+    await database.collection('properties').insertOne(listing);
+    await runDataBackfill({ mongo: database, database: getDb(), mode: 'copy', sampleSize: 5 });
+
+    // Postgres moves ahead — a live write by the authoritative store.
+    await getDb()
+      .update(properties)
+      .set({ description: 'written in postgres', updatedAt: new Date('2026-08-09T12:00:00.000Z') })
+      .where(eq(properties.id, String(listing._id)));
+
+    const report = await runDataBackfill({
+      mongo: database,
+      database: getDb(),
+      mode: 'reconcile',
+      sampleSize: 5,
+    });
+
+    const properties_ = forTable(report, 'properties');
+    expect(properties_?.updated).toBe(0);
+    expect(properties_?.skippedTargetNewer).toBe(1);
+
+    const [kept] = await getDb()
+      .select({ description: properties.description })
+      .from(properties)
+      .where(eq(properties.id, String(listing._id)));
+    expect(kept.description).toBe('written in postgres');
+  }, 120_000);
+
+  it('still carries a STALE target forward — the guard is directional, not symmetric', async () => {
+    // The other half. "Never roll back" must not become "never update".
+    const report = await copyThenDrift(async (database, ids) => {
+      await database.collection('properties').updateOne(
+        { _id: ids.properties[0] },
+        { $set: { description: 'newer in mongo', updatedAt: new Date(Date.now() + 3_600_000) } },
+      );
+    });
+
+    const properties_ = forTable(report, 'properties');
+    expect(properties_?.updated).toBe(1);
+    expect(properties_?.skippedTargetNewer).toBe(0);
+  }, 120_000);
+
   it('converges: a second reconcile changes nothing and reports it as unchanged', async () => {
     // A reconciliation that only reports what it CHANGED cannot tell a converged
     // run from one that examined nothing.
