@@ -1,6 +1,24 @@
+/**
+ * `computePriceEthics` scoring.
+ *
+ * ## The fixture is typed as what the function TAKES
+ *
+ * These cases used to build a `Partial<IProperty>` — a MONGOOSE document type —
+ * and hand it over with `as IProperty`. `computePriceEthics` has taken
+ * `ScorableProperty` since it was moved off the old store: the serialized WIRE
+ * shape, which is what `serializeProperty` produces from a Postgres row.
+ *
+ * The two happen to agree on the fields used here, so the cast compiled and the
+ * suite passed — which is the problem with it. An `as` on a fixture suppresses
+ * exactly the check that says whether the object still resembles what the
+ * function is called with in production, and this one additionally kept a unit
+ * test importing the Mongoose model barrel long after the module under test had
+ * stopped. Typed directly, with no cast, a drift on either side is a compile
+ * error.
+ */
+
 import { OfferingType, PropertyType } from '@homiio/shared-types';
-import type { IProperty } from '../../models/documentTypes';
-import { computePriceEthics } from '../../services/priceEthicsService';
+import { computePriceEthics, type ScorableProperty } from '../../services/priceEthicsService';
 import {
   computeMarketVerdictForProperty,
   type MarketVerdictResult,
@@ -18,7 +36,7 @@ const mockMarketVerdict = computeMarketVerdictForProperty as jest.MockedFunction
   typeof computeMarketVerdictForProperty
 >;
 
-function baseProperty(overrides: Partial<IProperty> = {}): IProperty {
+function baseProperty(overrides: Partial<ScorableProperty> = {}): ScorableProperty {
   return {
     offerings: [OfferingType.LONG_TERM_RENT],
     type: PropertyType.APARTMENT,
@@ -29,7 +47,7 @@ function baseProperty(overrides: Partial<IProperty> = {}): IProperty {
     amenities: [],
     isExternal: false,
     ...overrides,
-  } as IProperty;
+  };
 }
 
 function marketResult(
