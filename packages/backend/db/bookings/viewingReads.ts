@@ -27,7 +27,7 @@
  * cardinality of the predicate, not a preference.
  */
 
-import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, lt, ne, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import type { DatabaseOrTransaction } from '../postgres';
 import { viewingRequests } from '../schema';
@@ -267,6 +267,69 @@ export async function rescheduleViewing(
     )
     .returning();
   return row;
+}
+
+/**
+ * Delete declined and cancelled requests last touched before `cutoff`.
+ *
+ * The Postgres half of `cleanupService`'s retention sweep. `VIEWING_REQUEST_
+ * RETENTION_DAYS` stays in `cleanupService`, beside the RecentlyViewed window it
+ * sits next to, so the two retention policies are read in one place.
+ *
+ * ## Why this one mattered more than the other stale readers
+ *
+ * When the table moved to Postgres this sweep kept issuing its `deleteMany`
+ * against Mongo, so it reaped NOTHING — and unlike a read that returns an empty
+ * list, a sweep that deletes nothing produces no output a caller can notice. Its
+ * only symptom is disk, months later, by which time nobody connects it to a
+ * migration. `db/expiry.ts` records the same hazard from the schema side: a
+ * table ported without its sweep grows forever, with no error and no failing
+ * test.
+ *
+ * `updated_at` is the retention key, exactly as in Mongo — it carries drizzle's
+ * `$onUpdate`, so it moves when the request is declined or cancelled, which is
+ * the instant the clock should start from.
+ *
+ * @param cutoff Rows with `updated_at` strictly before this are removed.
+ * @returns How many rows went.
+ */
+export async function pruneClosedViewingsBefore(
+  db: DatabaseOrTransaction,
+  cutoff: Date,
+): Promise<number> {
+  const rows = await db
+    .delete(viewingRequests)
+    .where(
+      and(
+        inArray(viewingRequests.status, ['declined', 'cancelled']),
+        lt(viewingRequests.updatedAt, cutoff),
+      ),
+    )
+    .returning({ id: viewingRequests.id });
+  return rows.length;
+}
+
+/**
+ * Viewing requests received by a listing owner since `since`, grouped by status.
+ *
+ * The analytics rollup. A `group by` in SQL where Mongo used a `$group`
+ * pipeline, so the five buckets come from one statement rather than five.
+ */
+export async function countViewingsByStatusForOwner(
+  db: DatabaseOrTransaction,
+  ownerOxyUserId: string,
+  since: Date,
+): Promise<readonly { status: string; count: number }[]> {
+  return db
+    .select({ status: viewingRequests.status, count: sql<number>`count(*)::int` })
+    .from(viewingRequests)
+    .where(
+      and(
+        eq(viewingRequests.ownerOxyUserId, ownerOxyUserId),
+        sql`${viewingRequests.createdAt} >= ${since.toISOString()}::timestamptz`,
+      ),
+    )
+    .groupBy(viewingRequests.status);
 }
 
 /**
