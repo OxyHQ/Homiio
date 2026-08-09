@@ -150,11 +150,11 @@ jobs:
       # glob that stops matching all produce an empty green run, and that reads as
       # coverage forever because nothing contradicts it.
       #
-      # RAISED FROM 1100 TO 1150 by the remaining-schema batch (#281), which
-      # added 54 tests across 4 files under `__tests__/db/` (the geography,
-      # partial-unique, coherence-CHECK and range-bound suites) on top of the
-      # floors it raised inside the existing ones. The measured count went
-      # 1123 -> 1177, so this keeps roughly the same headroom the previous
+      # RAISED FROM 1150 TO 1190 by the geo backfill, which added 36 tests in
+      # `__tests__/db/geoBackfill.test.ts` (measured 1190 -> 1226). Before that
+      # it went 1100 -> 1150 for the remaining-schema batch (#281), which added
+      # 54 tests across 4 files under `__tests__/db/` and took the measured
+      # count 1123 -> 1177. Each step keeps roughly the headroom the previous
       # figure carried rather than pinning the exact total. The floor is a
       # MINIMUM: raise it as suites grow, and lower it only deliberately, in the
       # same change that removes the tests.
@@ -162,7 +162,7 @@ jobs:
         if: always()
         run: >-
           bun .github/scripts/assert-test-floor.mjs
-          "$RUNNER_TEMP/backend-tests.json" packages/backend 1150
+          "$RUNNER_TEMP/backend-tests.json" packages/backend 1190
 
   frontend:
     runs-on: ubuntu-24.04

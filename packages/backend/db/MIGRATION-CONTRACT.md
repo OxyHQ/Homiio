@@ -230,6 +230,76 @@ makes that a decision rather than an accident.
 `Region.imageIds[]` costs nothing: **0 elements across all 211 regions**, and no
 `entityType: 'region'` image exists anywhere in the collection.
 
+## The geo copy — `db/backfill/geo.ts`
+
+The first backfill to run against production, and the shape every later batch
+should follow. It lives in `db/`, not `scripts/`, because
+`tsconfig.build.json` EXCLUDES `scripts` from `dist` on purpose and the runtime
+image has no ts-node — `dist/db/migrate.js` is the precedent, and
+`dist/db/backfill/geo.js` is the second entry point of that kind.
+
+```
+node packages/backend/dist/db/backfill/geo.js \
+  --source-database=homiio-production --target-database=homiio [--audit-only|--verify-only]
+```
+
+**Both database names are required, and they fail differently.**
+`--target-database` reuses the migrator's `assertMigrationTarget`, issued as the
+first statement on the Postgres connection. `--source-database` is its mirror:
+Mongo has no server-side `current_database()` — the database is chosen by the
+CLIENT from the connection string — so the check compares the driver's resolved
+`databaseName` AND asserts every source collection exists. That second half is
+the one that matters, because a collection that is not there reads as "0
+documents copied", which is success-shaped.
+
+**The audit runs over the WHOLE plan before the first insert.** It reads each
+target table's own column metadata (`notNull`, `hasDefault`, `dataType`,
+`enumValues`) rather than restating the rules, so it cannot drift from
+`db/schema/`; the table-level CHECKs and the foreign keys are passed in as named
+rules because no column carries them. It reports every violation in one pass,
+grouped with counts and example ids — a copy that discovered these by inserting
+would stop half way with a driver error naming one row.
+
+**Only the geo hierarchy's own images travel** (`city` / `region` / `country`).
+A cover naming an image outside that set is REFUSED rather than nulled: nulling
+would lose a live relational link, which prime directive 1 forbids. A cover
+naming no image at all is the `CITY_COVER_DANGLING` rule above and is written
+NULL.
+
+### What the 2026-08-09 census measured, against a live `homiio-production`
+
+Run before the copy, from a one-shot on the live task definition. It CONFIRMS
+the two frozen counts above and adds the figures the copy depends on:
+
+| Measured | Value |
+|---|--:|
+| countries / regions / cities / neighborhoods | 7 / 211 / 1,660 / 4,521 |
+| images, total | 171,976 |
+| images by `entityType` | `property` 170,679 · `city` 1,297 — and **nothing else** |
+| cities carrying a `coverImageId` | 1,230 |
+| …that resolve to an `images` row | 1,213, **every one of them `entityType: 'city'`** |
+| …that resolve to nothing (`CITY_COVER_DANGLING`) | **17** — unchanged from 2026-08-06 |
+| regions carrying a `coverImageId` | **0** |
+| `distinct(currency)` on countries and on cities | `EUR`, `GBP`, `USD` — all inside `LISTING_CURRENCIES` |
+| `distinct(entityType)` on images | `city`, `property` — both inside `IMAGE_ENTITY_TYPES` |
+| required fields absent, any of the five collections | **0** |
+| foreign-key orphans (`region→country`, `city→country/region`, `neighborhood→city`) | **0** |
+| `bbox` lengths across all 4,521 neighborhoods | **length 0 on every row** — nothing has ever had a bounding box |
+| duplicates against the target's unique indexes | **0** |
+| non-numeric / out-of-`integer`-range / non-string values | **0** |
+
+So the `distinct()` audit `db/schema/CONVENTIONS.md` blocks the copy on is
+DISCHARGED for these five tables: production holds no value the CHECKs refuse.
+That is a fact about this data on this date, not a general one — the audit still
+runs on every invocation, because the collections stay writable until the
+cutover.
+
+**`properties_count` is copied, not recomputed.** Properties do not exist in
+Postgres yet, so recomputing would write zero to every row and flatten the sort
+key `GET /api/cities`, `/popular` and `/search` all order by. The stored value is
+the last count Mongo computed, which is exactly what the Mongo-backed endpoint
+was serving.
+
 ## Batch 3 scope (migration 0002, `properties`), and the decisions it fixes
 
 `properties` (135 columns), `property_images`, `property_documents` and
