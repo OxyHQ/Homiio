@@ -22,7 +22,7 @@
  * could reject rows the census has not measured.
  */
 
-import { eq, sql } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { CHECK_VIOLATION, constraintNameOf, sqlStateOf, uuidv7 } from '@oxyhq/db';
 import { closePostgres, connectPostgres, type Database } from '../../db/postgres';
 import {
@@ -689,13 +689,20 @@ describe('the remaining single-table coherence rules', () => {
     );
     expect(buildingWithUnit.constraint).toBe('reviews_unit_level_check');
 
-    const author = oxy();
+    // Both coherent shapes, by TWO authors rather than one.
+    // `reviews_author_address_key` (migration 0008) allows one review per person
+    // per address, so a single author writing both of these at
+    // `scaffold.addressId` is refused by that key before this CHECK is reached —
+    // which would make the "accepts both coherent shapes" half assert nothing
+    // about `reviews_unit_level_check`.
+    const buildingAuthor = oxy();
+    const unitAuthor = oxy();
     await expect(
       db.insert(reviews).values([
-        { ...review, oxyUserId: author, addressLevel: 'BUILDING' },
-        { ...review, oxyUserId: author, addressLevel: 'UNIT', unitLevelId: scaffold.addressId },
+        { ...review, oxyUserId: buildingAuthor, addressLevel: 'BUILDING' },
+        { ...review, oxyUserId: unitAuthor, addressLevel: 'UNIT', unitLevelId: scaffold.addressId },
       ]),
     ).resolves.toBeDefined();
-    await db.delete(reviews).where(eq(reviews.oxyUserId, author));
+    await db.delete(reviews).where(inArray(reviews.oxyUserId, [buildingAuthor, unitAuthor]));
   });
 });

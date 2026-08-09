@@ -357,6 +357,28 @@ export const reviews = pgTable(
       .on(table.moderationStatus, sql`${table.createdAt} desc`)
       .where(sql`${table.moderationStatus} <> 'active'`),
 
+    /**
+     * One review per person per address.
+     *
+     * `reviewController.createReview` stated this rule as
+     * `Review.findOne({ oxyUserId, addressId })` followed by an insert — a
+     * read-then-write with a window two concurrent submissions both pass, which
+     * is the shape `db/MIGRATION-CONTRACT.md` says becomes a unique KEY. It is
+     * added on an EMPTY table, so it rejects nothing that exists.
+     *
+     * It is NOT partial. Every one of the seven scoped indexes above excludes
+     * `removed`, and this one deliberately does not: a review a jury removed
+     * still occupies its author's one slot at that address, so making the key
+     * partial would let a removal be undone by re-submitting. Nothing in this
+     * package deletes a review except its own author, which is the ONE way that
+     * slot is meant to be freed.
+     *
+     * The preceding read survives in the controller as an ANSWER path — it
+     * produces the friendly 400 without a write — exactly as `hasReportedReview`
+     * does beside `review_reports_review_user_key`.
+     */
+    uniqueIndex('reviews_author_address_key').on(table.oxyUserId, table.addressId),
+
     check(
       'reviews_address_level_check',
       sql`${table.addressLevel} in (${sql.raw(inList(REVIEW_ADDRESS_LEVELS))})`,

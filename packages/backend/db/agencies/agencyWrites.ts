@@ -24,11 +24,29 @@
  * means a DIFFERENT agency wanted the same URL and the suffix advances. Matching
  * on `23505` alone would treat the second as the first and return somebody
  * else's agency, which is why `isUniqueViolation` takes a constraint name.
+ *
+ * ## Every attempt runs in a SAVEPOINT, and that is not defensive tidiness
+ *
+ * Catch-`23505`-then-continue works on the ROOT connection, where each statement
+ * is its own implicit transaction, and is BROKEN inside one: in Postgres a
+ * failed statement aborts the whole transaction, so the `select` in the
+ * `normalized_name` branch and the retrying `insert` in the `slug` branch both
+ * die with `25P02 current_transaction_is_aborted`.
+ *
+ * This function has taken a transaction handle since it was written — the
+ * parameter's own comment says it is there "so the review create path can use
+ * it" — and the review create path is the FIRST caller to actually pass one.
+ * Without the savepoint that call site turns a slug collision (two different
+ * agencies whose names slugify the same, an ordinary event) into a 500 on
+ * `POST /api/reviews`, and it does so only under a transaction, which is why no
+ * existing test saw it. `inSavepoint` issues a real `SAVEPOINT` /
+ * `ROLLBACK TO SAVEPOINT` on a transaction handle and a plain `BEGIN`/`COMMIT`
+ * on the root connection, so ONE spelling serves both callers.
  */
 
 import { eq } from 'drizzle-orm';
 
-import { getDb } from '../postgres';
+import { getDb, inSavepoint } from '../postgres';
 import { agencies } from '../schema';
 import { isUniqueViolation } from '../uniqueViolation';
 import { normalizeAgencyName, slugifyAgencyName } from '../../utils/agencyName';
@@ -82,10 +100,9 @@ export async function findOrCreateAgencyByName(
   for (let attempt = 0; attempt < MAX_SLUG_ATTEMPTS; attempt += 1) {
     const slug = attempt === 0 ? baseSlug : `${baseSlug}-${attempt + 1}`;
     try {
-      const [created] = await db
-        .insert(agencies)
-        .values({ name, normalizedName, slug })
-        .returning();
+      const [created] = await inSavepoint(db, (tx) =>
+        tx.insert(agencies).values({ name, normalizedName, slug }).returning(),
+      );
       return created;
     } catch (error) {
       // A concurrent writer created the SAME agency — reuse the winner. This is
@@ -107,9 +124,11 @@ export async function findOrCreateAgencyByName(
   }
 
   // Deterministic suffixes exhausted (pathological): last-resort unique slug.
-  const [created] = await db
-    .insert(agencies)
-    .values({ name, normalizedName, slug: `${baseSlug}-${Date.now()}` })
-    .returning();
+  const [created] = await inSavepoint(db, (tx) =>
+    tx
+      .insert(agencies)
+      .values({ name, normalizedName, slug: `${baseSlug}-${Date.now()}` })
+      .returning(),
+  );
   return created;
 }

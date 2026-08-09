@@ -670,27 +670,31 @@ inventory rather than rediscovering it. Every item is a Mongoose hook, static,
 method or virtual that has no Postgres counterpart:
 
 - **Derivations now enforced by the DATABASE, so the hook is deleted rather than
-  ported:** `Review.pre('validate')`'s `livedForMonths` and
-  `Reservation.pre('save')`'s `nights` still have to be COMPUTED by a writer, but
-  the CHECKs beside them (`livedTo > livedFrom`, `nights >= 1`) mean a wrong one
-  fails loudly. `TenantApplication.pre('save')`'s `decidedAt` stamp and
+  ported:** ~~`Review.pre('validate')`'s `livedForMonths`~~ (DONE —
+  `db/reviews/reviewWrites.deriveLivedForMonths`) and `Reservation.pre('save')`'s
+  `nights` still have to be COMPUTED by a writer, but the CHECKs beside them
+  (`livedTo > livedFrom`, `nights >= 1`) mean a wrong one fails loudly. `TenantApplication.pre('save')`'s `decidedAt` stamp and
   `ViewingRequest`'s `cancelledBy` are now equivalences the database enforces.
 - **Idempotency that MOVED into an index and must not be re-implemented as a
-  read:** `Agency.findOrCreateByName` (unique `normalized_name`),
-  `Billing.pre('save')`'s duplicate check, `reviewController`'s `alreadyVoted`
-  and `alreadyReported`, `evictionController`'s RSVP check, and
+  read:** ~~`Agency.findOrCreateByName`~~ (DONE), `Billing.pre('save')`'s
+  duplicate check, ~~`reviewController`'s `alreadyVoted` and `alreadyReported`~~
+  (DONE — and the duplicate-REVIEW check joined them as
+  `reviews_author_address_key`), `evictionController`'s RSVP check, and
   `SavedPropertyFolder.addProperty`. Each was a read-then-write with a window;
-  each is now a unique key. The ported code should INSERT and handle `23505`.
-- **Aggregations to rewrite as SQL:** `Review`'s six explore/agency pipelines
-  (`getUnitViewData`, `getBuildingViewData`, `getStreetViewData`,
-  `getAgencyStats`, `getCitiesWithReviews`, `getNeighborhoodSummaries`,
-  `getBuildingSummaries`). All of them `$match` on
-  `moderationStatus != 'removed'` first, which is why the seven scoped `reviews`
-  indexes are PARTIAL on exactly that predicate — a rewrite that drops the
-  predicate from the SQL loses the index.
+  each is now a unique key. The ported code should INSERT and handle `23505` —
+  **inside `inSavepoint` if it can run in a caller's transaction**, which is what
+  `findOrCreateAgencyByName` had to learn the moment it got one.
+- ~~**Aggregations to rewrite as SQL:** `Review`'s six explore/agency
+  pipelines.~~ **DONE** — `db/reviews/reviewAggregates.ts`, all seven of them
+  (the list undercounted: `findByUnitLevel` is a finder the UNIT view needs, and
+  `getStreetViewData` is two queries, not one). Every one carries
+  `visibleModeration()`, spelled as a LITERAL so the seven partial indexes stay
+  reachable under a generic plan.
 - **Virtuals a DTO has to compute:** `Lease.isFullySigned`, `leaseDuration`,
   `formattedRent`, `daysUntilExpiration`; `Conversation.messageCount` and
-  `lastMessage`; `Review.livedDurationText`; `SavedPropertyFolder.propertyCount`.
+  `lastMessage`; ~~`Review.livedDurationText`~~ (DONE —
+  `db/reviews/reviewSerializer.livedDurationText`, and it now appears on EVERY
+  review rather than only on the non-lean reads); `SavedPropertyFolder.propertyCount`.
 - **Methods with real logic to port:** `Lease.generatePaymentSchedule`,
   `recordPayment`, `signAsLandlord`/`signAsTenant`; `Billing.consumeFileCredit`
   (`UPDATE … SET file_credits = file_credits - 1`, which has no guard unless the
@@ -786,9 +790,80 @@ vote for removal cast twice by one person.
 nothing, so no `ORDER BY` has to survive a correlated aggregate. The RSVP
 toggle's read-then-write went with it.
 
-**`reviewController` is otherwise still Mongoose.** Only `reportReview` moved,
-because it is one of the three moderation intake surfaces; the other fifteen
-handlers (review CRUD, helpful votes, agency pages, explore) still read Mongo,
-so a review CREATED today is not visible to the report path. That is invisible
-in production — reviews are zero rows in both stores — and it is the reviews
-domain's own port to close, not this one's.
+~~**`reviewController` is otherwise still Mongoose.**~~ **CLOSED by the reviews
+batch below.** Only `reportReview` had moved with the moderation pipeline, which
+left the seam it named: a review created through this controller was not visible
+to the report path. All sixteen handlers are on Postgres now.
+
+## The reviews domain — `reviewController`, and the two defects it surfaced
+
+`db/reviews/` (reads, writes, aggregates, serializer), `db/agencies/agencyReads.ts`,
+`controllers/review/reviewInput.ts` and `resolveAddressHierarchy` in
+`services/addressService.ts`. Zero Mongoose call sites remain in
+`controllers/reviewController.ts`, and `git grep '\bReview\.\|\bAgency\.'` over
+`controllers/ services/ routes/ utils/ db/` returns no live call site anywhere —
+both models are now dead, and are left in `models/` with the rest rather than
+deleted piecemeal.
+
+### Two pre-existing defects, fixed rather than ported
+
+- **The street/building hierarchy resolved onto the review's OWN address.**
+  `Address.findOne(address.createBuildingLevel())` matched the unit row itself,
+  because a Mongo filter constrains only the fields it names and the building
+  projection is a strict SUBSET of a unit address's fields. MEASURED against the
+  real model, not inferred: for a UNIT address, both that call and the street one
+  returned the same document, so every UNIT review stored
+  `streetLevelId === buildingLevelId === addressId`. Two flats in one building
+  therefore never rolled up together — `getBuildingSummaries` groups by
+  `building_level_id`, so the neighbourhood explore page showed one card per FLAT
+  and `getBuildingViewData` for a real building address found nothing.
+  `resolveAddressHierarchy` projects onto explicit COLUMN VALUES and dedupes on
+  `normalized_key`, which has no subset semantics.
+- **`findOrCreateAgencyByName` could not run inside a transaction**, which is the
+  only way the review create path calls it. Its slug-collision branch is an
+  insert, a caught `23505` and a RETRY on the same handle — the idiom that works
+  on the root connection and dies with `25P02` inside a transaction. It has taken
+  a transaction parameter since it was written; this batch is the first caller to
+  pass one. Both attempts now run in `inSavepoint`.
+
+Two smaller ones went with them: `getUserReviews` hid a `removed` review from its
+own AUTHOR, contradicting both `getReviewById` and the docblock on
+`reviews_oxy_user_created_idx` (the one scoped index that is deliberately NOT
+partial, so that listing can serve exactly that row); and four UNWIRED review
+validators in `middlewares/validation.ts` carried two `isMongoId()` calls — the
+express-validator guise of the guard sweep, INVISIBLE to `db/ids.ts`'s census,
+which greps `isValidObjectId` / `ObjectId.isValid` — plus a boolean
+`depositReturned` and a client-suppliable `livedForMonths`. Deleted; validation
+lives in `controllers/review/reviewInput.ts`, derived from the same tuples the
+CHECKs are.
+
+### Decisions a later batch must not reverse
+
+- **`reviews_author_address_key` (migration 0008, `pre`)** replaces
+  `Review.findOne({ oxyUserId, addressId })`. It is NOT partial on
+  `moderation_status <> 'removed'`, unlike the seven scoped indexes: a removal
+  still occupies its author's slot, or a jury's decision is undone by pressing
+  submit again. The preceding read survives as the ANSWER path, exactly as
+  `hasReportedReview` does beside `review_reports_review_user_key`.
+- **`visibleModeration()` spells `'removed'` INLINE**, not as a bound parameter.
+  Measured: under a CUSTOM plan both forms keep the partial index, and under a
+  GENERIC one the parameter form falls onto a different index with the predicate
+  demoted to a Filter. `__tests__/db/reviewAggregates.test.ts` forces
+  `plan_cache_mode` to make the two distinguishable at all.
+- **`livedForMonths` is derived at ONE chokepoint** (`deriveLivedForMonths`) and
+  called by both write paths — the create AND the edit, because the
+  `pre('validate')` hook ran on every `save()`. `updateOwnReview` re-reads the
+  stored dates `FOR UPDATE` so an edit that moves one side of the tenancy
+  recomputes against the other.
+- **`livedDurationText` is now computed for EVERY review.** It was a Mongoose
+  virtual, and virtuals do not survive `.lean()` — five of the six read paths
+  were lean, so it reached the wire from the hierarchical address reads and
+  nowhere else. Stated as a behaviour change rather than discovered as one.
+- **`populatedAddress` is `serializeAddressRow`**, the single address wire shape,
+  where Mongo emitted a bespoke `cityId: { _id, name }` projection nothing else
+  in the product produces. `_id` and the `_id: null` that Mongo's `$group` leaked
+  into every summary object are gone with the store.
+- **`scripts/migrateReviewDepositReturned.ts` is DELETED as spent.** It converted
+  a legacy BOOLEAN `depositReturned` into the enum; `reviews_deposit_returned_check`
+  cannot store a boolean, the collection is empty, and there is no target left
+  for it to run against.

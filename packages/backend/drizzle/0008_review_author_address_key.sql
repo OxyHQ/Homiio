@@ -1,0 +1,14 @@
+-- oxy:deploy-phase=pre
+--
+-- One review per person per address.
+--
+-- ADDITIVE, and safe to apply ahead of the rollout on both counts: `reviews` is
+-- EMPTY in production (measured 2026-08-09), so the index rejects no existing
+-- row, and the image currently serving traffic writes reviews to MONGO — it
+-- cannot produce a duplicate this index would refuse.
+--
+-- It replaces `reviewController.createReview`'s
+-- `Review.findOne({ oxyUserId, addressId })` read-then-write, which two
+-- concurrent submissions both pass. The read stays as the ANSWER path (the
+-- friendly 400 with no write); this is what makes the rule true.
+CREATE UNIQUE INDEX "reviews_author_address_key" ON "reviews" USING btree ("oxy_user_id","address_id");

@@ -5,7 +5,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
-import { LISTING_CURRENCIES, PAYMENT_CURRENCIES } from '@homiio/shared-types';
+import { LISTING_CURRENCIES } from '@homiio/shared-types';
 import { isLiveEntityId } from '../db/ids';
 import { logger } from './logging';
 
@@ -391,86 +391,31 @@ export {
   validateExchangeReview,
 };
 
-/**
- * Address review create validation rules (POST /api/reviews)
- *
- * The body carries a nested `address` block plus flat review fields. The Review
- * schema + controller own the required-field, enum and hierarchy rules; this
- * layer closes injection / bad-input gaps by enforcing the SHAPE of the
- * high-risk fields (rating range, bounded free text, numeric price, valid
- * currency, ISO dates, image URLs). All review fields are optional here so the
- * partial payloads the frontend sends are not rejected.
- */
-const validateReviewCreate = [
-  body('address').isObject().withMessage('address must be an object'),
-  body('address.street').isString().trim().notEmpty().withMessage('address.street is required'),
-  body('address.city').isString().trim().notEmpty().withMessage('address.city is required'),
-  body('address.postal_code').isString().trim().notEmpty().withMessage('address.postal_code is required'),
-  body('address.country').isString().trim().notEmpty().withMessage('address.country is required'),
-  body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be an integer between 1 and 5'),
-  body('price').optional().isFloat({ min: 0 }).withMessage('price must be a non-negative number'),
-  body('currency').optional().isIn(PAYMENT_CURRENCIES).withMessage('Invalid currency'),
-  body('opinion').isString().isLength({ min: 10, max: 2000 }).withMessage('opinion must be between 10 and 2000 characters'),
-  body('positiveComment').optional().isString().isLength({ max: 1000 }).withMessage('positiveComment max length is 1000'),
-  body('negativeComment').optional().isString().isLength({ max: 1000 }).withMessage('negativeComment max length is 1000'),
-  body('greenHouse').optional().isString().isLength({ max: 200 }).withMessage('greenHouse max length is 200'),
-  body('recommendation').optional().isBoolean().withMessage('recommendation must be a boolean'),
-  body('depositReturned').optional().isBoolean().withMessage('depositReturned must be a boolean'),
-  body('touristApartments').optional().isBoolean().withMessage('touristApartments must be a boolean'),
-  body('livedForMonths').optional().isInt({ min: 0 }).withMessage('livedForMonths must be a non-negative integer'),
-  body('livedFrom').optional().isISO8601().withMessage('livedFrom must be a valid date'),
-  body('livedTo').optional().isISO8601().withMessage('livedTo must be a valid date'),
-  body('images').optional().isArray().withMessage('images must be an array'),
-  body('images.*').optional().isString().isLength({ max: 2048 }).withMessage('Each image must be a string URL'),
-  handleValidationErrors
-];
-
-/**
- * Address review update validation rules (PUT /api/reviews/:reviewId)
- *
- * Updates are partial (the controller merges the body into the existing review)
- * so every field is optional; only their type/range is enforced.
- */
-const validateReviewUpdate = [
-  param('reviewId').isMongoId().withMessage('Invalid review ID'),
-  body('rating').optional().isInt({ min: 1, max: 5 }).withMessage('Rating must be an integer between 1 and 5'),
-  body('price').optional().isFloat({ min: 0 }).withMessage('price must be a non-negative number'),
-  body('currency').optional().isIn(PAYMENT_CURRENCIES).withMessage('Invalid currency'),
-  body('opinion').optional().isString().isLength({ min: 10, max: 2000 }).withMessage('opinion must be between 10 and 2000 characters'),
-  body('positiveComment').optional().isString().isLength({ max: 1000 }).withMessage('positiveComment max length is 1000'),
-  body('negativeComment').optional().isString().isLength({ max: 1000 }).withMessage('negativeComment max length is 1000'),
-  body('greenHouse').optional().isString().isLength({ max: 200 }).withMessage('greenHouse max length is 200'),
-  body('recommendation').optional().isBoolean().withMessage('recommendation must be a boolean'),
-  body('depositReturned').optional().isBoolean().withMessage('depositReturned must be a boolean'),
-  body('touristApartments').optional().isBoolean().withMessage('touristApartments must be a boolean'),
-  body('livedForMonths').optional().isInt({ min: 0 }).withMessage('livedForMonths must be a non-negative integer'),
-  body('livedFrom').optional().isISO8601().withMessage('livedFrom must be a valid date'),
-  body('livedTo').optional().isISO8601().withMessage('livedTo must be a valid date'),
-  body('images').optional().isArray().withMessage('images must be an array'),
-  body('images.*').optional().isString().isLength({ max: 2048 }).withMessage('Each image must be a string URL'),
-  handleValidationErrors
-];
-
-/** Review ID parameter validation (GET/DELETE /api/reviews/:reviewId). */
-const validateReviewId = [
-  param('reviewId').isMongoId().withMessage('Invalid review ID'),
-  handleValidationErrors
-];
-
-/** Oxy user id parameter + pagination for user-scoped review reads. */
-const validateUserReviewsQuery = [
-  param('oxyUserId').isString().trim().notEmpty().withMessage('Invalid user ID'),
-  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1-100'),
-  handleValidationErrors
-];
-
-export {
-  validateReviewCreate,
-  validateReviewUpdate,
-  validateReviewId,
-  validateUserReviewsQuery,
-};
+// ── The four review validators are DELETED, and their absence is the fix ──
+//
+// `validateReviewCreate`, `validateReviewUpdate`, `validateReviewId` and
+// `validateUserReviewsQuery` were exported from here and imported by NOTHING —
+// `routes/reviews.ts` and `routes/public.ts` mount the review handlers bare. So
+// they enforced nothing, while accumulating three rules that are now wrong:
+//
+//  - `param('reviewId').isMongoId()`, on two of them. That is the
+//    express-validator guise of the guard sweep `db/ids.ts` documents, and it is
+//    INVISIBLE to that file's census, which greps `isValidObjectId` /
+//    `ObjectId.isValid`. Every review created after the cutover carries a uuid
+//    v7, so wiring either one would 400 every new review before its handler ran.
+//  - `body('depositReturned').optional().isBoolean()`. `depositReturned` became
+//    the `DepositReturn` enum (`full` / `partial` / `no`); the one-shot script
+//    that converted the legacy booleans is gone with this port. This rule would
+//    refuse every valid value.
+//  - `body('livedForMonths').optional().isInt()`. That column is DERIVED from
+//    the tenancy dates by `db/reviews/reviewWrites.deriveLivedForMonths` and is
+//    absent from `CREATABLE_REVIEW_FIELDS`; a validator that accepts one from a
+//    client describes a field the write path throws away.
+//
+// What they were for now lives in `controllers/review/reviewInput.ts`, which
+// derives every vocabulary from the SAME `const` tuples the CHECK constraints
+// are built from — so it cannot drift from the database the way a hand-copied
+// list here already had.
 
 /** Lifestyle / gender enum values mirrored from the RoommatePreferences type. */
 const ROOMMATE_GENDERS = ['male', 'female', 'any'];
