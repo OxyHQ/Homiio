@@ -55,6 +55,29 @@ export function profileSelection() {
 /** A profile row as this module receives it — no annual income. */
 export type ProfileRow = Omit<InferSelectModel<typeof profiles>, 'personalInfoAnnualIncome'>;
 
+/**
+ * The owner's own annual income, read EXPLICITLY.
+ *
+ * `protectedColumns.ts` states the escape hatch this uses: "A path that
+ * genuinely needs the column names it … There is deliberately no helper for
+ * that — the whole point is that it reads differently from an ordinary select."
+ * This is that path, and it is the only one in this package.
+ *
+ * It exists because the alternative is silent DATA LOSS rather than privacy. The
+ * edit form round-trips the whole `personalInfo` block, and
+ * `profileWriteColumns.ts` replaces a present block column-for-column — so a
+ * figure the owner cannot READ comes back absent on their next save and is
+ * written NULL. Excluding it from the owner's own view does not protect them
+ * from anybody; it deletes their answer.
+ *
+ * The PUBLIC scope still cannot reach it: `toProfileDTO` only consults this when
+ * the caller passed `'owner'`, and the value is carried beside the row rather
+ * than on it so the public path has no field to leak by accident.
+ */
+export interface OwnerOnlyProfileFields {
+  readonly annualIncome: number | null;
+}
+
 export type ProfileReferenceRow = InferSelectModel<typeof profileReferences>;
 export type ProfileRentalHistoryRow = InferSelectModel<typeof profileRentalHistory>;
 export type ProfilePreferredLocationRow = InferSelectModel<typeof profilePreferredLocations>;
@@ -69,6 +92,12 @@ export interface HydratedProfile {
   readonly preferredLocations: readonly ProfilePreferredLocationRow[];
   readonly roommateHistory: readonly ProfileRoommateHistoryRow[];
   readonly chatHistory: readonly ProfileChatMessageRow[];
+  /**
+   * Present ONLY when the repository was asked for the owner's own view.
+   * `undefined` on every public read, which is what keeps the protected column
+   * unreachable there — see {@link OwnerOnlyProfileFields}.
+   */
+  readonly ownerOnly?: OwnerOnlyProfileFields;
 }
 
 /**
@@ -200,6 +229,11 @@ function toPersonalProfile(
       bio: profile.personalInfoBio,
       occupation: profile.personalInfoOccupation,
       employer: profile.personalInfoEmployer,
+      // Owner only, and ABSENT rather than null for anybody else — a `null`
+      // here would be indistinguishable from "never recorded" and would come
+      // back as a deliberate clear on the next save. See
+      // `OwnerOnlyProfileFields`.
+      ...(owner ? { annualIncome: hydrated.ownerOnly?.annualIncome ?? null } : {}),
       employmentStatus: profile.personalInfoEmploymentStatus,
       moveInDate: profile.personalInfoMoveInDate,
       leaseDuration: profile.personalInfoLeaseDuration,

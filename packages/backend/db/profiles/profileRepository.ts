@@ -31,9 +31,11 @@
  *
  * Mongoose declared `unique: true` on `oxyUserId` and the controller wrapped a
  * read-then-create around it, which is a window two concurrent first requests
- * both pass. {@link ensureProfile} INSERTs and converges on `23505` from
+ * both pass. {@link ensureProfile} INSERTs `ON CONFLICT DO NOTHING` against
  * `profiles_oxy_user_id_key` instead — `db/MIGRATION-CONTRACT.md`'s rule that
  * idempotency which moved into an index must not be re-implemented as a read.
+ * Why `ON CONFLICT` rather than a caught `23505` is the load-bearing part, and
+ * it is explained on the function.
  *
  * ## Nothing here takes a profile id from a caller
  *
@@ -53,7 +55,6 @@ import {
   profileRoommateHistory,
   profiles,
 } from '../schema';
-import { isUniqueViolation } from '../uniqueViolation';
 import { type HydratedProfile, type ProfileRow, profileSelection } from './profileSerializer';
 
 /**
@@ -168,14 +169,33 @@ async function loadChildren(
   return { references, rentalHistory, preferredLocations, roommateHistory, chatHistory };
 }
 
-/** One profile with every child collection loaded, or `undefined`. */
+/**
+ * One profile with every child collection loaded, or `undefined`.
+ *
+ * `scope: 'owner'` additionally reads the PROTECTED `personal_info_annual_income`
+ * column, in a statement that names it explicitly — the escape hatch
+ * `db/schema/protectedColumns.ts` sanctions, and the only use of it in this
+ * package. Without it the owner's own edit form round-trips a block it cannot
+ * see and writes NULL over their income on the next save; see
+ * {@link OwnerOnlyProfileFields}. The default is `'public'`, so a caller who
+ * does not think about it gets the protected view.
+ */
 export async function findHydratedProfile(
   db: DatabaseOrTransaction,
   oxyUserId: string,
+  scope: 'owner' | 'public' = 'public',
 ): Promise<HydratedProfile | undefined> {
   const profile = await findProfileByOxyUserId(db, oxyUserId);
   if (!profile) return undefined;
-  return { profile, ...(await loadChildren(db, profile.id)) };
+  const children = await loadChildren(db, profile.id);
+  if (scope !== 'owner') return { profile, ...children };
+
+  const [income] = await db
+    .select({ annualIncome: profiles.personalInfoAnnualIncome })
+    .from(profiles)
+    .where(eq(profiles.id, profile.id))
+    .limit(1);
+  return { profile, ...children, ownerOnly: { annualIncome: income?.annualIncome ?? null } };
 }
 
 /**
@@ -198,28 +218,61 @@ export async function findHydratedProfile(
  * actually contain.
  *
  * Idempotent by the unique index rather than by a preceding read.
+ *
+ * ## Convergence is `ON CONFLICT DO NOTHING`, NOT a caught `23505`
+ *
+ * The obvious spelling — insert, catch the unique violation, re-read — is wrong
+ * HERE even though it is right in `db/roommates/roommateRepository.ts`, and the
+ * difference is the caller. Every call site of this function runs inside a
+ * transaction the CALLER opened (`updateMyProfile`, and the three `/ai/history`
+ * handlers). In Postgres a failed statement aborts the enclosing transaction, so
+ * the recovery `SELECT` would answer `25P02 current transaction is aborted`
+ * rather than the row — turning the race the unique index exists to absorb into
+ * a 500, and only under concurrency, which is where it would never be noticed.
+ *
+ * `ON CONFLICT DO NOTHING` never fails, so no statement can abort anything: an
+ * empty `RETURNING` set IS the "somebody else got there first" answer, and the
+ * read that follows runs in a healthy transaction. Same mechanism, and the same
+ * reasoning, as `enqueueModerationOutboxEvent`'s claim.
+ *
+ * `appendMessages` in the conversation repository solves the same hazard the
+ * other way — by opening its own transaction per attempt — because it genuinely
+ * needs to RETRY with a recomputed value. Nothing here needs recomputing.
  */
 export async function ensureProfile(
   db: DatabaseOrTransaction,
   oxyUserId: string,
+  scope: 'owner' | 'public' = 'public',
 ): Promise<HydratedProfile> {
-  const existing = await findHydratedProfile(db, oxyUserId);
+  const existing = await findHydratedProfile(db, oxyUserId, scope);
   if (existing) return existing;
 
-  try {
-    const [profile] = await db.insert(profiles).values({ oxyUserId }).returning(profileSelection());
-    return { profile, ...emptyChildren() };
-  } catch (error) {
-    if (!isUniqueViolation(error, 'profiles_oxy_user_id_key')) throw error;
-    const raced = await findHydratedProfile(db, oxyUserId);
-    if (!raced) {
-      // The index refused the insert, so a row satisfying it existed at that
-      // instant. Not finding it now means it was deleted in between — a real
-      // state, and one the caller must not be handed a fabricated row for.
-      throw error;
-    }
-    return raced;
+  const [created] = await db
+    .insert(profiles)
+    .values({ oxyUserId })
+    // Targeted rather than bare: this is the one conflict we are prepared to
+    // treat as an idempotent repeat. A future second unique index on this table
+    // must not be silently absorbed by the same clause.
+    .onConflictDoNothing({ target: profiles.oxyUserId })
+    .returning(profileSelection());
+  if (created) {
+    // A row this statement just created holds NULL in every column, income
+    // included, so the owner view needs no second read here.
+    return {
+      profile: created,
+      ...emptyChildren(),
+      ...(scope === 'owner' ? { ownerOnly: { annualIncome: null } } : {}),
+    };
   }
+
+  const raced = await findHydratedProfile(db, oxyUserId, scope);
+  if (!raced) {
+    // The index refused the insert, so a row satisfying it existed at that
+    // instant. Not finding it now means it was deleted in between — a real
+    // state, and one the caller must not be handed a fabricated row for.
+    throw new Error(`Profile for ${oxyUserId} was created and removed concurrently.`);
+  }
+  return raced;
 }
 
 /**
@@ -239,8 +292,9 @@ export async function updateProfile(
   db: DatabaseOrTransaction,
   oxyUserId: string,
   update: ProfileUpdate,
+  scope: 'owner' | 'public' = 'public',
 ): Promise<HydratedProfile> {
-  const existing = await ensureProfile(db, oxyUserId);
+  const existing = await ensureProfile(db, oxyUserId, scope);
   const profileId = existing.profile.id;
 
   if (Object.keys(update.columns).length > 0) {
@@ -288,7 +342,7 @@ export async function updateProfile(
     }
   }
 
-  const updated = await findHydratedProfile(db, oxyUserId);
+  const updated = await findHydratedProfile(db, oxyUserId, scope);
   if (!updated) {
     // Unreachable through this function, which created the row above inside the
     // caller's transaction. Thrown rather than returned as `undefined` so no

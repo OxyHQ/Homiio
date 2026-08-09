@@ -48,7 +48,7 @@ export async function getOrCreateProfile(req: Request, res: Response, next: Next
         .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
-    const hydrated = await ensureProfile(getDb(), oxyUserId);
+    const hydrated = await ensureProfile(getDb(), oxyUserId, 'owner');
     res.json(successResponse(toProfileDTO(hydrated, 'owner'), 'Profile retrieved successfully'));
   } catch (error) {
     next(error);
@@ -117,7 +117,9 @@ export async function updateMyProfile(req: Request, res: Response, next: NextFun
     }
 
     const update = toProfileUpdate(req.body);
-    const hydrated = await getDb().transaction((tx) => updateProfile(tx, oxyUserId, update));
+    const hydrated = await getDb().transaction((tx) =>
+      updateProfile(tx, oxyUserId, update, 'owner'),
+    );
 
     res.json(successResponse(toProfileDTO(hydrated, 'owner'), 'Profile updated successfully'));
   } catch (error) {
