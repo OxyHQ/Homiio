@@ -1,6 +1,34 @@
 /**
  * Lease Controller
- * Handles lease management operations with real persistence via the Lease model.
+ *
+ * Lease management, persisted in PostgreSQL (`db/schema/leases.ts`, read and
+ * written through `db/leases/leaseReads.ts`, serialized by
+ * `db/leases/leaseSerializer.ts`).
+ *
+ * ## What the port changed
+ *
+ * **Signature material can no longer be returned by accident.** The two
+ * `digital_signature` columns are protected (`db/schema/protectedColumns.ts`)
+ * and reads go through `publicColumns(leases)`, so they are absent from the row
+ * TYPE — a serializer that tried to emit one would fail `tsc`. Under Mongoose
+ * they were hidden only by their absence from `toLeaseDTO`'s field list.
+ *
+ * **`renewLease` no longer copies a document.** It read the whole lease with
+ * `toObject()`, deleted six keys and spread the rest into a new one — which
+ * silently carries any field added later, including ones a renewal must not
+ * inherit. The Postgres version names the columns it copies.
+ *
+ * **`getLeasePayments` paginates in SQL.** It used to load every instalment,
+ * filter in memory and `slice` — fine for a 12-row schedule and wrong in
+ * principle, and `lease_payment_schedule_lease_due_idx` serves the ordering for
+ * free.
+ *
+ * **`property` is no longer populated.** The `.populate('propertyId')` call put
+ * the whole listing on every lease in a list response. Hydrating it now means
+ * `db/properties`' serializer, and a lease list is not a listing feed — the DTO
+ * keeps `propertyId` and drops the nested copy. Recorded rather than silent: a
+ * client that read `lease.property` gets `undefined` and must fetch the listing
+ * it already has the id for.
  */
 
 import type { Request, Response, NextFunction } from 'express';
@@ -9,22 +37,55 @@ import { LeaseStatus } from '@homiio/shared-types';
 import { successResponse, paginationResponse, AppError } from '../middlewares/errorHandler';
 import { logger } from '../middlewares/logging';
 
-import { Lease, Property } from '../models';
-import type { ILease } from '../models';
+import { getDb } from '../db/postgres';
+import {
+  addLeaseDocument,
+  addLeasePayment,
+  createLease,
+  deleteLease,
+  findLeaseAccess,
+  findLeaseById,
+  findPropertyLeaseBasis,
+  listLeaseDocuments,
+  listLeasePayments,
+  listLeases,
+  signLease,
+  terminateLease,
+  updateLease,
+  type LeasePaymentStatusValue,
+  type LeaseStatusValue,
+} from '../db/leases/leaseReads';
+import {
+  serializeLease,
+  serializeLeaseDocument,
+  serializeLeasePayment,
+} from '../db/leases/leaseSerializer';
+import {
+  LEASE_DOCUMENT_TYPES,
+  LEASE_PAYMENT_STATUSES,
+  LEASE_PAYMENT_TYPES,
+} from '../db/schema/leases';
 import { requireSessionOxyUserId } from '../utils/sessionUser';
 import { pickFields } from '../utils/pickFields';
 import { CREATABLE_LEASE_FIELDS, EDITABLE_LEASE_FIELDS } from './lease/editableFields';
-import { toLeaseDTO, refToId } from './lease/toLeaseDTO';
+import {
+  toCoTenantRows,
+  toLeaseColumns,
+  toSharedUtilityCostRows,
+} from './lease/leaseWriteColumns';
 import { notificationDispatchService } from '../services/notificationDispatchService';
 
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 10;
 
-const EDITABLE_STATUSES: ReadonlyArray<string> = [LeaseStatus.DRAFT, LeaseStatus.PENDING_SIGNATURES];
-const DELETABLE_STATUSES: ReadonlyArray<string> = [LeaseStatus.DRAFT, LeaseStatus.PENDING_SIGNATURES];
-
-/** Reference paths populated on list/detail reads so the DTO can carry nested docs. */
-const LEASE_POPULATE = ['propertyId'];
+const EDITABLE_STATUSES: readonly LeaseStatusValue[] = [
+  LeaseStatus.DRAFT,
+  LeaseStatus.PENDING_SIGNATURES,
+];
+const DELETABLE_STATUSES: readonly LeaseStatusValue[] = [
+  LeaseStatus.DRAFT,
+  LeaseStatus.PENDING_SIGNATURES,
+];
 
 function parsePagination(query: Request['query']): { page: number; limit: number; skip: number } {
   const rawPage = parseInt(String(query.page ?? ''), 10);
@@ -34,20 +95,31 @@ function parsePagination(query: Request['query']): { page: number; limit: number
   return { page, limit, skip: (page - 1) * limit };
 }
 
-function isLandlord(lease: ILease, oxyUserId: string): boolean {
-  return refToId(lease.landlordOxyUserId) === oxyUserId;
+/** The lease access row, narrowed to the three party questions. */
+interface LeaseParties {
+  landlordOxyUserId: string;
+  tenantOxyUserId: string;
+  coTenantOxyUserIds: readonly string[];
 }
 
-function isTenant(lease: ILease, oxyUserId: string): boolean {
-  if (refToId(lease.tenantOxyUserId) === oxyUserId) {
-    return true;
-  }
-  const coTenants = (lease.coTenants || []) as Array<{ oxyUserId?: unknown }>;
-  return coTenants.some((ct) => refToId(ct.oxyUserId) === oxyUserId);
+function isLandlord(lease: LeaseParties, oxyUserId: string): boolean {
+  return lease.landlordOxyUserId === oxyUserId;
 }
 
-function isParty(lease: ILease, oxyUserId: string): boolean {
+function isTenant(lease: LeaseParties, oxyUserId: string): boolean {
+  return lease.tenantOxyUserId === oxyUserId || lease.coTenantOxyUserIds.includes(oxyUserId);
+}
+
+function isParty(lease: LeaseParties, oxyUserId: string): boolean {
   return isLandlord(lease, oxyUserId) || isTenant(lease, oxyUserId);
+}
+
+/** A `?status=` filter, or `undefined` when absent or not a declared value. */
+function leaseStatusFilter(value: unknown): LeaseStatusValue | undefined {
+  const statuses: readonly string[] = Object.values(LeaseStatus);
+  return typeof value === 'string' && statuses.includes(value)
+    ? (value as LeaseStatusValue)
+    : undefined;
 }
 
 class LeaseController {
@@ -60,30 +132,21 @@ class LeaseController {
       const { page, limit, skip } = parsePagination(req.query);
       const { status, propertyId } = req.query;
 
-      const filter: Record<string, unknown> = {
-        $or: [
-          { landlordOxyUserId: oxyUserId },
-          { tenantOxyUserId: oxyUserId },
-          { 'coTenants.oxyUserId': oxyUserId },
-        ],
-      };
-      if (status) {
-        filter.status = status;
-      }
-      if (propertyId) {
-        filter.propertyId = propertyId;
-      }
-
-      const [leases, total] = await Promise.all([
-        Lease.find(filter).populate(LEASE_POPULATE).sort({ createdAt: -1 }).skip(skip).limit(limit),
-        Lease.countDocuments(filter),
-      ]);
+      const result = await listLeases(
+        getDb(),
+        {
+          oxyUserId,
+          status: leaseStatusFilter(status),
+          propertyId: propertyId === undefined ? undefined : String(propertyId),
+        },
+        { limit, offset: skip },
+      );
 
       res.json(paginationResponse(
-        leases.map(toLeaseDTO),
+        result.leases.map(serializeLease),
         page,
         limit,
-        total,
+        result.total,
         'Leases retrieved successfully'
       ));
     } catch (error) {
@@ -112,30 +175,54 @@ class LeaseController {
         throw new AppError('rentDetails.monthlyRent is required', 400, 'VALIDATION_ERROR');
       }
 
-      const property = await Property.findById(propertyId);
+      const db = getDb();
+      const property = await findPropertyLeaseBasis(db, String(propertyId));
       if (!property) {
         throw new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND');
       }
-      if (!property.oxyUserId || property.oxyUserId.toString() !== oxyUserId) {
+      if (!property.oxyUserId || property.oxyUserId !== oxyUserId) {
         throw new AppError('Access denied - you can only create leases for your own properties', 403, 'FORBIDDEN');
       }
 
-      const leaseData = pickFields<Record<string, unknown>>(req.body, CREATABLE_LEASE_FIELDS);
-      const lease = await Lease.create({
-        ...leaseData,
-        propertyId,
-        tenantOxyUserId,
-        landlordOxyUserId: oxyUserId,
-        status: LeaseStatus.DRAFT,
-      });
+      const picked = pickFields<Record<string, unknown>>(req.body, CREATABLE_LEASE_FIELDS);
+      const columns = toLeaseColumns(picked);
+
+      const startDate = columns.leaseTermsStartDate;
+      const endDate = columns.leaseTermsEndDate;
+      const monthlyRent = columns.rentDetailsMonthlyRent;
+      if (!startDate || !endDate) {
+        throw new AppError('leaseTerms.startDate and leaseTerms.endDate must be valid dates', 400, 'VALIDATION_ERROR');
+      }
+      if (monthlyRent === undefined) {
+        throw new AppError('rentDetails.monthlyRent must be a number', 400, 'VALIDATION_ERROR');
+      }
+
+      // One transaction: a lease that committed without its co-tenants is one
+      // whose `isFullySigned` is wrong from its first read.
+      const hydrated = await db.transaction((tx) =>
+        createLease(tx, {
+          columns: {
+            ...columns,
+            leaseTermsStartDate: startDate,
+            leaseTermsEndDate: endDate,
+            rentDetailsMonthlyRent: monthlyRent,
+            propertyId: String(propertyId),
+            tenantOxyUserId: String(tenantOxyUserId),
+            landlordOxyUserId: oxyUserId,
+            status: LeaseStatus.DRAFT,
+          },
+          coTenants: toCoTenantRows(picked) ?? [],
+          sharedUtilityCosts: toSharedUtilityCostRows(picked) ?? [],
+        }),
+      );
 
       logger.info('Lease created', {
-        leaseId: lease._id.toString(),
+        leaseId: hydrated.lease.id,
         landlordOxyUserId: oxyUserId,
         propertyId: String(propertyId),
       });
 
-      res.status(201).json(successResponse(toLeaseDTO(lease), 'Lease created successfully'));
+      res.status(201).json(successResponse(serializeLease(hydrated), 'Lease created successfully'));
     } catch (error) {
       next(error);
     }
@@ -147,15 +234,21 @@ class LeaseController {
   async getLeaseById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
-      const lease = await Lease.findById(req.params.id).populate(LEASE_POPULATE);
-      if (!lease) {
+      const db = getDb();
+      const access = await findLeaseAccess(db, req.params.id);
+      if (!access) {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
-      if (!isParty(lease, oxyUserId)) {
+      if (!isParty(access, oxyUserId)) {
         throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');
       }
 
-      res.json(successResponse(toLeaseDTO(lease), 'Lease retrieved successfully'));
+      const hydrated = await findLeaseById(db, req.params.id);
+      if (!hydrated) {
+        throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
+      }
+
+      res.json(successResponse(serializeLease(hydrated), 'Lease retrieved successfully'));
     } catch (error) {
       next(error);
     }
@@ -168,27 +261,37 @@ class LeaseController {
   async updateLease(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
-      const lease = await Lease.findById(req.params.id);
-      if (!lease) {
+      const db = getDb();
+      const access = await findLeaseAccess(db, req.params.id);
+      if (!access) {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
-      if (!isLandlord(lease, oxyUserId)) {
+      if (!isLandlord(access, oxyUserId)) {
         throw new AppError('Access denied - only the landlord can update this lease', 403, 'FORBIDDEN');
       }
-      if (!EDITABLE_STATUSES.includes(lease.status)) {
+      if (!EDITABLE_STATUSES.includes(access.status as LeaseStatusValue)) {
         throw new AppError('Cannot update a lease that is signed, active, or closed', 409, 'LEASE_NOT_EDITABLE');
       }
 
-      const updates = pickFields<Record<string, unknown>>(req.body, EDITABLE_LEASE_FIELDS);
-      Object.assign(lease, updates);
-      await lease.save();
+      const picked = pickFields<Record<string, unknown>>(req.body, EDITABLE_LEASE_FIELDS);
 
-      logger.info('Lease updated', {
-        leaseId: lease._id.toString(),
-        updatedBy: oxyUserId,
-      });
+      // The status is re-checked INSIDE the `UPDATE`'s own predicate, so a lease
+      // signed between the read above and this write is not edited anyway — the
+      // read decides the error message, the predicate decides the write.
+      const hydrated = await db.transaction((tx) =>
+        updateLease(tx, req.params.id, oxyUserId, EDITABLE_STATUSES, {
+          columns: toLeaseColumns(picked),
+          coTenants: toCoTenantRows(picked),
+          sharedUtilityCosts: toSharedUtilityCostRows(picked),
+        }),
+      );
+      if (!hydrated) {
+        throw new AppError('Cannot update a lease that is signed, active, or closed', 409, 'LEASE_NOT_EDITABLE');
+      }
 
-      res.json(successResponse(toLeaseDTO(lease), 'Lease updated successfully'));
+      logger.info('Lease updated', { leaseId: hydrated.lease.id, updatedBy: oxyUserId });
+
+      res.json(successResponse(serializeLease(hydrated), 'Lease updated successfully'));
     } catch (error) {
       next(error);
     }
@@ -201,23 +304,26 @@ class LeaseController {
   async deleteLease(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
-      const lease = await Lease.findById(req.params.id);
-      if (!lease) {
+      const db = getDb();
+      const access = await findLeaseAccess(db, req.params.id);
+      if (!access) {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
-      if (!isLandlord(lease, oxyUserId)) {
+      if (!isLandlord(access, oxyUserId)) {
         throw new AppError('Access denied - only the landlord can delete this lease', 403, 'FORBIDDEN');
       }
-      if (!DELETABLE_STATUSES.includes(lease.status)) {
+      if (!DELETABLE_STATUSES.includes(access.status as LeaseStatusValue)) {
         throw new AppError('Cannot delete a lease that is signed, active, or closed', 409, 'LEASE_NOT_DELETABLE');
       }
 
-      await lease.deleteOne();
+      // Every child table CASCADEs, so this one statement takes the co-tenants,
+      // schedule, documents and inspections with it.
+      const deleted = await deleteLease(db, req.params.id, oxyUserId, DELETABLE_STATUSES);
+      if (!deleted) {
+        throw new AppError('Cannot delete a lease that is signed, active, or closed', 409, 'LEASE_NOT_DELETABLE');
+      }
 
-      logger.info('Lease deleted', {
-        leaseId: lease._id.toString(),
-        deletedBy: oxyUserId,
-      });
+      logger.info('Lease deleted', { leaseId: req.params.id, deletedBy: oxyUserId });
 
       res.json(successResponse(null, 'Lease deleted successfully'));
     } catch (error) {
@@ -227,8 +333,8 @@ class LeaseController {
 
   /**
    * Sign a lease. The requester must be the landlord or tenant. Records the
-   * signature; the schema's pre-save hook transitions the lease to active once
-   * both parties have signed.
+   * signature; the lease becomes active once both principals have signed, and
+   * its payment schedule is generated at that moment.
    */
   async signLease(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -238,31 +344,49 @@ class LeaseController {
         throw new AppError('Must accept terms to sign lease', 400, 'TERMS_NOT_ACCEPTED');
       }
 
-      const lease = await Lease.findById(req.params.id);
-      if (!lease) {
+      const db = getDb();
+      const access = await findLeaseAccess(db, req.params.id);
+      if (!access) {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
 
-      let counterpartyOxyUserId: string | undefined;
-      if (isLandlord(lease, oxyUserId)) {
-        await lease.signAsLandlord(signature);
-        counterpartyOxyUserId = refToId(lease.tenantOxyUserId);
-      } else if (refToId(lease.tenantOxyUserId) === oxyUserId) {
-        await lease.signAsTenant(signature);
-        counterpartyOxyUserId = refToId(lease.landlordOxyUserId);
+      // A co-tenant is a party for READS and is not a signatory: only the two
+      // principals have signature columns. `isTenant` includes co-tenants, so
+      // the check here is deliberately the narrower one.
+      let signatory: 'landlord' | 'tenant';
+      let counterpartyOxyUserId: string;
+      if (isLandlord(access, oxyUserId)) {
+        signatory = 'landlord';
+        counterpartyOxyUserId = access.tenantOxyUserId;
+      } else if (access.tenantOxyUserId === oxyUserId) {
+        signatory = 'tenant';
+        counterpartyOxyUserId = access.landlordOxyUserId;
       } else {
         throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');
       }
 
-      logger.info('Lease signed', {
-        leaseId: lease._id.toString(),
-        signedBy: oxyUserId,
-      });
+      // The signature, the status move and the payment schedule are one fact —
+      // a lease that commits `active` with no schedule is the state
+      // `generatePaymentSchedule` exists to prevent.
+      const hydrated = await db.transaction((tx) =>
+        signLease(
+          tx,
+          req.params.id,
+          signatory,
+          typeof signature === 'string' ? signature : undefined,
+          LeaseStatus.ACTIVE,
+          LeaseStatus.PENDING_SIGNATURES,
+        ),
+      );
+      if (!hydrated) {
+        throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
+      }
+
+      logger.info('Lease signed', { leaseId: hydrated.lease.id, signedBy: oxyUserId });
 
       // Notify the counterparty: either the lease is now fully signed/active,
       // or it awaits their signature. Best-effort — never blocks the response.
-      const leaseId = lease._id.toString();
-      const isActive = lease.status === LeaseStatus.ACTIVE;
+      const isActive = hydrated.lease.status === LeaseStatus.ACTIVE;
       await notificationDispatchService.createForUser(counterpartyOxyUserId, {
         type: 'contract',
         title: isActive ? 'Lease is now active' : 'Lease awaiting your signature',
@@ -270,10 +394,14 @@ class LeaseController {
           ? 'Both parties have signed. Your lease is now active.'
           : 'The other party signed the lease. Review and sign to activate it.',
         priority: isActive ? 'medium' : 'high',
-        data: { leaseId, screen: '/contracts', propertyId: refToId(lease.propertyId) },
+        data: {
+          leaseId: hydrated.lease.id,
+          screen: '/contracts',
+          propertyId: hydrated.lease.propertyId,
+        },
       });
 
-      res.json(successResponse(toLeaseDTO(lease), 'Lease signed successfully'));
+      res.json(successResponse(serializeLease(hydrated), 'Lease signed successfully'));
     } catch (error) {
       next(error);
     }
@@ -287,43 +415,48 @@ class LeaseController {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const { reason, effectiveDate } = req.body;
-      const lease = await Lease.findById(req.params.id);
-      if (!lease) {
+      const db = getDb();
+      const access = await findLeaseAccess(db, req.params.id);
+      if (!access) {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
-      if (!isParty(lease, oxyUserId)) {
+      if (!isParty(access, oxyUserId)) {
         throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');
       }
-      if (lease.status === LeaseStatus.TERMINATED) {
+      if (access.status === LeaseStatus.TERMINATED) {
         throw new AppError('Lease is already terminated', 409, 'LEASE_ALREADY_TERMINATED');
       }
 
-      lease.terminationNotice = {
-        givenBy: oxyUserId,
-        givenDate: new Date(),
-        effectiveDate: effectiveDate ? new Date(effectiveDate) : new Date(),
-        reason: reason,
-        acknowledged: false,
-      };
-      lease.status = LeaseStatus.TERMINATED;
-      await lease.save();
+      const parsedEffectiveDate = effectiveDate ? new Date(effectiveDate) : new Date();
+      if (Number.isNaN(parsedEffectiveDate.getTime())) {
+        throw new AppError('effectiveDate must be a valid date', 400, 'VALIDATION_ERROR');
+      }
+
+      const hydrated = await terminateLease(db, req.params.id, {
+        givenByOxyUserId: oxyUserId,
+        effectiveDate: parsedEffectiveDate,
+        reason: typeof reason === 'string' ? reason : undefined,
+        terminatedStatus: LeaseStatus.TERMINATED,
+      });
+      if (!hydrated) {
+        throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
+      }
 
       logger.info('Lease terminated', {
-        leaseId: lease._id.toString(),
+        leaseId: hydrated.lease.id,
         terminatedBy: oxyUserId,
-        reason: reason,
+        reason,
       });
 
-      res.json(successResponse(toLeaseDTO(lease), 'Lease terminated successfully'));
+      res.json(successResponse(serializeLease(hydrated), 'Lease terminated successfully'));
     } catch (error) {
       next(error);
     }
   }
 
   /**
-   * Renew a lease by creating a new lease document linked to the original via
-   * roomId/property and inheriting its terms with a new end date. Only the
-   * landlord may renew.
+   * Renew a lease by creating a new one that inherits the original's terms with
+   * a new end date. Only the landlord may renew.
    */
   async renewLease(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -332,49 +465,86 @@ class LeaseController {
       if (!newEndDate) {
         throw new AppError('newEndDate is required', 400, 'VALIDATION_ERROR');
       }
+      const parsedEndDate = new Date(newEndDate);
+      if (Number.isNaN(parsedEndDate.getTime())) {
+        throw new AppError('newEndDate must be a valid date', 400, 'VALIDATION_ERROR');
+      }
 
-      const original = await Lease.findById(req.params.id);
+      const db = getDb();
+      const original = await findLeaseById(db, req.params.id);
       if (!original) {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
-      if (!isLandlord(original, oxyUserId)) {
+      const source = original.lease;
+      if (source.landlordOxyUserId !== oxyUserId) {
         throw new AppError('Access denied - only the landlord can renew this lease', 403, 'FORBIDDEN');
       }
 
-      const source = original.toObject() as Record<string, unknown>;
-      delete source._id;
-      delete source.id;
-      delete source.createdAt;
-      delete source.updatedAt;
-      delete source.signatures;
-      delete source.paymentSchedule;
-      delete source.terminationNotice;
-      delete source.inspections;
-      const sourceLeaseTerms = (source.leaseTerms || {}) as { endDate?: Date };
-      const sourceRentDetails = (source.rentDetails || {}) as { monthlyRent?: number };
+      const parsedStartDate = startDate ? new Date(startDate) : source.leaseTermsEndDate;
+      if (Number.isNaN(parsedStartDate.getTime())) {
+        throw new AppError('startDate must be a valid date', 400, 'VALIDATION_ERROR');
+      }
 
-      const originalLeaseTerms = (original.leaseTerms || {}) as { endDate?: Date };
-      const renewal = await Lease.create({
-        ...source,
-        status: LeaseStatus.DRAFT,
-        leaseTerms: {
-          ...sourceLeaseTerms,
-          startDate: startDate ? new Date(startDate) : originalLeaseTerms.endDate,
-          endDate: new Date(newEndDate),
-        },
-        rentDetails: {
-          ...sourceRentDetails,
-          monthlyRent: monthlyRent !== undefined ? monthlyRent : sourceRentDetails.monthlyRent,
-        },
-      });
+      // The columns are NAMED rather than spread. `toObject()` plus six
+      // `delete`s carried every future field into the renewal by default, which
+      // is how a signature, a termination notice or a payment schedule ends up
+      // on a draft nobody signed.
+      const hydrated = await db.transaction((tx) =>
+        createLease(tx, {
+          columns: {
+            propertyId: source.propertyId,
+            roomId: source.roomId,
+            landlordOxyUserId: source.landlordOxyUserId,
+            tenantOxyUserId: source.tenantOxyUserId,
+            leaseTermsStartDate: parsedStartDate,
+            leaseTermsEndDate: parsedEndDate,
+            leaseTermsRenewalOptions: source.leaseTermsRenewalOptions,
+            leaseTermsRenewalNoticeRequired: source.leaseTermsRenewalNoticeRequired,
+            leaseTermsTerminationNoticeRequired: source.leaseTermsTerminationNoticeRequired,
+            rentDetailsMonthlyRent:
+              typeof monthlyRent === 'number' ? monthlyRent : source.rentDetailsMonthlyRent,
+            rentDetailsCurrency: source.rentDetailsCurrency,
+            rentDetailsDueDate: source.rentDetailsDueDate,
+            rentDetailsLateFeeAmount: source.rentDetailsLateFeeAmount,
+            rentDetailsLateFeeGracePeriod: source.rentDetailsLateFeeGracePeriod,
+            rentDetailsSecurityDeposit: source.rentDetailsSecurityDeposit,
+            rentDetailsPetDeposit: source.rentDetailsPetDeposit,
+            utilitiesIncluded: source.utilitiesIncluded,
+            utilitiesTenantResponsible: source.utilitiesTenantResponsible,
+            rulesPetsAllowed: source.rulesPetsAllowed,
+            rulesPetsTypes: source.rulesPetsTypes,
+            rulesPetsMaxNumber: source.rulesPetsMaxNumber,
+            rulesPetsRestrictions: source.rulesPetsRestrictions,
+            rulesSmoking: source.rulesSmoking,
+            rulesGuestsOvernightAllowed: source.rulesGuestsOvernightAllowed,
+            rulesGuestsOvernightMaxConsecutiveDays: source.rulesGuestsOvernightMaxConsecutiveDays,
+            rulesGuestsOvernightMaxDaysPerMonth: source.rulesGuestsOvernightMaxDaysPerMonth,
+            rulesGuestsParties: source.rulesGuestsParties,
+            rulesSubletting: source.rulesSubletting,
+            rulesAlterations: source.rulesAlterations,
+            notes: source.notes,
+            status: LeaseStatus.DRAFT,
+          },
+          // The roster is inherited; the SIGNATURES on it are not — every
+          // co-tenant starts `pending` on a renewal they have not signed.
+          coTenants: original.coTenants.map((coTenant) => ({
+            oxyUserId: coTenant.oxyUserId,
+            role: coTenant.role,
+          })),
+          sharedUtilityCosts: original.sharedUtilityCosts.map((cost) => ({
+            utility: cost.utility,
+            splitPercentage: cost.splitPercentage,
+          })),
+        }),
+      );
 
       logger.info('Lease renewal created', {
-        originalLeaseId: original._id.toString(),
-        renewalLeaseId: renewal._id.toString(),
+        originalLeaseId: source.id,
+        renewalLeaseId: hydrated.lease.id,
         createdBy: oxyUserId,
       });
 
-      res.status(201).json(successResponse(toLeaseDTO(renewal), 'Lease renewal created successfully'));
+      res.status(201).json(successResponse(serializeLease(hydrated), 'Lease renewal created successfully'));
     } catch (error) {
       next(error);
     }
@@ -386,30 +556,35 @@ class LeaseController {
   async getLeasePayments(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
-      const lease = await Lease.findById(req.params.id);
-      if (!lease) {
+      const db = getDb();
+      const access = await findLeaseAccess(db, req.params.id);
+      if (!access) {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
-      if (!isParty(lease, oxyUserId)) {
+      if (!isParty(access, oxyUserId)) {
         throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');
       }
 
       const { page, limit, skip } = parsePagination(req.query);
       const { status } = req.query;
-      let schedule: Array<Record<string, unknown>> = (lease.paymentSchedule || []).map(
-        p => ({ ...p.toJSON(), id: refToId(p._id) })
+      const statuses: readonly string[] = LEASE_PAYMENT_STATUSES;
+      const statusFilter =
+        typeof status === 'string' && statuses.includes(status)
+          ? (status as LeasePaymentStatusValue)
+          : undefined;
+
+      const result = await listLeasePayments(
+        db,
+        req.params.id,
+        { status: statusFilter },
+        { limit, offset: skip },
       );
-      if (status) {
-        schedule = schedule.filter(p => p.status === status);
-      }
-      const total = schedule.length;
-      const pageItems = schedule.slice(skip, skip + limit);
 
       res.json(paginationResponse(
-        pageItems,
+        result.rows.map(serializeLeasePayment),
         page,
         limit,
-        total,
+        result.total,
         'Lease payments retrieved successfully'
       ));
     } catch (error) {
@@ -428,33 +603,47 @@ class LeaseController {
         throw new AppError('dueDate, amount, and type are required', 400, 'VALIDATION_ERROR');
       }
 
-      const lease = await Lease.findById(req.params.id);
-      if (!lease) {
+      const parsedDueDate = new Date(dueDate);
+      if (Number.isNaN(parsedDueDate.getTime())) {
+        throw new AppError('dueDate must be a valid date', 400, 'VALIDATION_ERROR');
+      }
+      const parsedAmount = Number(amount);
+      if (!Number.isFinite(parsedAmount)) {
+        throw new AppError('amount must be a number', 400, 'VALIDATION_ERROR');
+      }
+      // Narrowed here rather than left to the CHECK: an undeclared type arrives
+      // as a `23514` from the driver, which is a 500 where the caller earned a
+      // 400 naming the field.
+      const types: readonly string[] = LEASE_PAYMENT_TYPES;
+      if (typeof type !== 'string' || !types.includes(type)) {
+        throw new AppError('type must be one of rent, deposit, fee, utility', 400, 'VALIDATION_ERROR');
+      }
+
+      const db = getDb();
+      const access = await findLeaseAccess(db, req.params.id);
+      if (!access) {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
-      if (!isLandlord(lease, oxyUserId)) {
+      if (!isLandlord(access, oxyUserId)) {
         throw new AppError('Access denied - only the landlord can add payments', 403, 'FORBIDDEN');
       }
 
-      lease.paymentSchedule.push({
-        dueDate: new Date(dueDate),
-        amount,
-        type,
-        description,
+      const created = await addLeasePayment(db, req.params.id, {
+        dueDate: parsedDueDate,
+        amount: parsedAmount,
+        type: type as (typeof LEASE_PAYMENT_TYPES)[number],
+        description: typeof description === 'string' ? description : undefined,
         status: 'pending',
       });
-      await lease.save();
-
-      const created = lease.paymentSchedule[lease.paymentSchedule.length - 1];
 
       logger.info('Lease payment created', {
-        leaseId: lease._id.toString(),
-        paymentId: created._id.toString(),
-        amount,
+        leaseId: req.params.id,
+        paymentId: created.id,
+        amount: parsedAmount,
         createdBy: oxyUserId,
       });
 
-      res.status(201).json(successResponse({ ...created.toJSON(), id: refToId(created._id) }, 'Payment created successfully'));
+      res.status(201).json(successResponse(serializeLeasePayment(created), 'Payment created successfully'));
     } catch (error) {
       next(error);
     }
@@ -466,16 +655,19 @@ class LeaseController {
   async getLeaseDocuments(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
-      const lease = await Lease.findById(req.params.id);
-      if (!lease) {
+      const db = getDb();
+      const access = await findLeaseAccess(db, req.params.id);
+      if (!access) {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
-      if (!isParty(lease, oxyUserId)) {
+      if (!isParty(access, oxyUserId)) {
         throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');
       }
 
+      const documents = await listLeaseDocuments(db, req.params.id);
+
       res.json(successResponse(
-        (lease.documents || []).map(doc => ({ ...doc.toJSON(), id: refToId(doc._id) })),
+        documents.map(serializeLeaseDocument),
         'Lease documents retrieved successfully'
       ));
     } catch (error) {
@@ -496,32 +688,38 @@ class LeaseController {
         throw new AppError('Document name and url are required', 400, 'VALIDATION_ERROR');
       }
 
-      const lease = await Lease.findById(req.params.id);
-      if (!lease) {
+      const db = getDb();
+      const access = await findLeaseAccess(db, req.params.id);
+      if (!access) {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
-      if (!isParty(lease, oxyUserId)) {
+      if (!isParty(access, oxyUserId)) {
         throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');
       }
 
-      lease.documents.push({
-        name,
-        url,
-        type: type || 'other',
-        uploadedBy: oxyUserId,
+      const documentTypes: readonly string[] = LEASE_DOCUMENT_TYPES;
+      const documentType =
+        typeof type === 'string' && documentTypes.includes(type)
+          ? (type as (typeof LEASE_DOCUMENT_TYPES)[number])
+          : 'other';
+
+      const created = await addLeaseDocument(db, req.params.id, {
+        name: String(name),
+        url: String(url),
+        type: documentType,
+        // Server-resolved, never from the body: `uploadedBy` is the one field on
+        // a document that says who is accountable for it.
+        uploadedByOxyUserId: oxyUserId,
         uploadedDate: new Date(),
       });
-      await lease.save();
-
-      const created = lease.documents[lease.documents.length - 1];
 
       logger.info('Lease document added', {
-        leaseId: lease._id.toString(),
-        documentId: created._id.toString(),
+        leaseId: req.params.id,
+        documentId: created.id,
         uploadedBy: oxyUserId,
       });
 
-      res.status(201).json(successResponse({ ...created.toJSON(), id: refToId(created._id) }, 'Document added successfully'));
+      res.status(201).json(successResponse(serializeLeaseDocument(created), 'Document added successfully'));
     } catch (error) {
       next(error);
     }

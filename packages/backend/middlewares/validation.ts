@@ -6,7 +6,41 @@
 import { Request, Response, NextFunction } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import { LISTING_CURRENCIES, PAYMENT_CURRENCIES } from '@homiio/shared-types';
+import { isLiveEntityId } from '../db/ids';
 import { logger } from './logging';
+
+/**
+ * Reject a value that is not one of the two id shapes this schema stores.
+ *
+ * ## `isMongoId()` had to go, and leaving it would have been a live 400
+ *
+ * `express-validator`'s `isMongoId()` accepts a 24-character ObjectId hex and
+ * NOTHING else. Every row created after the cutover carries a **uuid v7**
+ * (`generatedId()` in `db/schema`), so a validator still spelling `isMongoId()`
+ * on a ported domain rejects the ids that domain now mints — 400 on a perfectly
+ * valid lease, before the handler runs, with a message blaming the caller. That
+ * is the express-validator guise of the guard sweep `db/ids.ts` documents, and
+ * it fails in the LOUD direction rather than the silent one, which is the only
+ * reason it is easy to find.
+ *
+ * `isLiveEntityId` accepts both shapes and nothing else, which keeps the reason
+ * the check exists in the first place: a bare `.isString()` would admit an
+ * OPERATOR OBJECT (`{$ne: null}`) from a JSON body, and while a `text` column
+ * cannot be injected the way a Mongo query could, a query built from one still
+ * has no business being issued.
+ *
+ * Used with `.custom()` rather than as a standalone rule so the existing
+ * `.optional()` / `.withMessage()` chains keep working unchanged.
+ *
+ * @throws {Error} When `value` is neither an ObjectId hex nor a uuid v7 —
+ *   express-validator turns a throw into the field's validation failure.
+ */
+function requireEntityId(value: unknown): true {
+  if (!isLiveEntityId(value)) {
+    throw new Error('must be a valid id');
+  }
+  return true;
+}
 
 /**
  * Handle validation errors
@@ -524,16 +558,16 @@ export {
  *
  * Matches the actual shape consumed by leaseController.createLease
  * (propertyId, tenantOxyUserId, leaseTerms.startDate/endDate,
- * rentDetails.monthlyRent). ObjectId fields are validated to block NoSQL
- * operator injection into Property.findById / Lease.create. The controller
+ * rentDetails.monthlyRent). Id fields are validated to block an OPERATOR OBJECT
+ * reaching a query — see {@link requireEntityId}. The controller
  * still owns the required-field 400s and ownership checks; this layer is kept
  * permissive (fields optional) so it never rejects a payload the controller
  * would otherwise accept, while enforcing type/format when present.
  */
 const validateLeaseCreate = [
-  body('propertyId').isMongoId().withMessage('Valid propertyId is required'),
-  body('tenantOxyUserId').optional().isMongoId().withMessage('tenantOxyUserId must be a valid id'),
-  body('tenantId').optional().isMongoId().withMessage('tenantId must be a valid id'),
+  body('propertyId').custom(requireEntityId).withMessage('Valid propertyId is required'),
+  body('tenantOxyUserId').optional().custom(requireEntityId).withMessage('tenantOxyUserId must be a valid id'),
+  body('tenantId').optional().custom(requireEntityId).withMessage('tenantId must be a valid id'),
   body('leaseTerms.startDate').optional().isISO8601().withMessage('leaseTerms.startDate must be a valid date'),
   body('leaseTerms.endDate').optional().isISO8601().withMessage('leaseTerms.endDate must be a valid date'),
   body('leaseTerms.endDate').optional().custom((value, { req }) => {
@@ -556,7 +590,7 @@ const validateLeaseCreate = [
  * supplied mutable fields are validated here.
  */
 const validateLeaseUpdate = [
-  param('id').isMongoId().withMessage('Invalid lease ID'),
+  param('id').custom(requireEntityId).withMessage('Invalid lease ID'),
   body('leaseTerms.startDate').optional().isISO8601().withMessage('leaseTerms.startDate must be a valid date'),
   body('leaseTerms.endDate').optional().isISO8601().withMessage('leaseTerms.endDate must be a valid date'),
   body('leaseTerms.endDate').optional().custom((value, { req }) => {
@@ -573,7 +607,7 @@ const validateLeaseUpdate = [
 
 /** Lease id parameter validation (GET/DELETE /api/leases/:id). */
 const validateLeaseId = [
-  param('id').isMongoId().withMessage('Invalid lease ID'),
+  param('id').custom(requireEntityId).withMessage('Invalid lease ID'),
   handleValidationErrors
 ];
 
@@ -582,7 +616,7 @@ const validateLeaseListQuery = [
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1-100'),
   query('status').optional().isString().isLength({ max: 50 }).withMessage('status must be a string'),
-  query('propertyId').optional().isMongoId().withMessage('propertyId must be a valid id'),
+  query('propertyId').optional().custom(requireEntityId).withMessage('propertyId must be a valid id'),
   handleValidationErrors
 ];
 

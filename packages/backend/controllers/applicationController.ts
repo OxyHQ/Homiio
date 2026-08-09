@@ -14,11 +14,18 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import { PAYMENT_CURRENCIES } from '@homiio/shared-types';
-import { Property, TenantApplication, Lease } from '../models';
+import { Property, TenantApplication } from '../models';
+import { getDb } from '../db/postgres';
+import {
+  createLease,
+  findLeaseForTenant,
+  findPropertyLeaseBasis,
+  type LeaseStatusValue,
+} from '../db/leases/leaseReads';
+import { serializeLease } from '../db/leases/leaseSerializer';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
 import imageUploadService from '../services/imageUploadService';
-import { toLeaseDTO } from './lease/toLeaseDTO';
 import { requireSessionOxyUserId } from '../utils/sessionUser';
 import {
   TenantApplicationStatus,
@@ -29,7 +36,11 @@ import {
 
 /** Currency codes the Lease `rentDetails` block accepts (schema enum). */
 const LEASE_CURRENCIES = new Set<string>(PAYMENT_CURRENCIES);
-const ACTIVE_LEASE_STATUSES = [LeaseStatus.DRAFT, LeaseStatus.PENDING_SIGNATURES, LeaseStatus.ACTIVE];
+const ACTIVE_LEASE_STATUSES: readonly LeaseStatusValue[] = [
+  LeaseStatus.DRAFT,
+  LeaseStatus.PENDING_SIGNATURES,
+  LeaseStatus.ACTIVE,
+];
 
 const ALLOWED_DOCUMENT_TYPES = new Set<string>(Object.values(TenantApplicationDocumentType));
 const APPLICATION_DOCUMENTS_FOLDER = 'applications/documents';
@@ -413,14 +424,20 @@ class ApplicationController {
         return next(new AppError('Application must be approved before creating a lease', 400, 'INVALID_STATE'));
       }
 
-      const property = await Property.findById(application.propertyId);
+      // The application is still a Mongo document and the LEASE is Postgres.
+      // Nothing here needs the two to commit together — the application is only
+      // READ, and the lease is a single write — so the split costs no atomicity.
+      // When applications move, only these two reads change.
+      const db = getDb();
+      const property = await findPropertyLeaseBasis(db, String(application.propertyId));
       if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
 
-      const existing = await Lease.findOne({
-        propertyId: application.propertyId,
-        tenantOxyUserId: application.applicantOxyUserId,
-        status: { $in: ACTIVE_LEASE_STATUSES }
-      });
+      const existing = await findLeaseForTenant(
+        db,
+        String(application.propertyId),
+        String(application.applicantOxyUserId),
+        ACTIVE_LEASE_STATUSES,
+      );
       if (existing) {
         return next(new AppError('A lease already exists for this tenant and property', 409, 'LEASE_ALREADY_EXISTS'));
       }
@@ -429,28 +446,44 @@ class ApplicationController {
       const endDate = new Date(startDate);
       endDate.setMonth(endDate.getMonth() + Number(application.leaseTermMonths || 0));
 
-      const rentBlock = (property.longTermRent || {}) as { monthlyAmount?: number; currency?: string };
-      if (rentBlock.monthlyAmount === undefined || rentBlock.monthlyAmount === null) {
+      // Narrowed into a local so the insert below sees `number` rather than
+      // `number | null`. The column is nullable because `long_term_rent` is an
+      // OPTIONAL block and nullness is the only representation of its absence
+      // (`db/schema/CONVENTIONS.md`), so a listing with no long-term price is an
+      // ordinary state rather than a defect.
+      const monthlyRent = property.longTermRentMonthlyAmount;
+      if (monthlyRent === null) {
         return next(new AppError('Property has no long-term rent price to base the lease on', 400, 'INVALID_PROPERTY'));
       }
-      const currency = rentBlock.currency && LEASE_CURRENCIES.has(rentBlock.currency) ? rentBlock.currency : 'USD';
+      const currency =
+        property.longTermRentCurrency && LEASE_CURRENCIES.has(property.longTermRentCurrency)
+          ? property.longTermRentCurrency
+          : 'USD';
 
-      const lease = await Lease.create({
-        propertyId: application.propertyId,
-        landlordOxyUserId: oxyUserId,
-        tenantOxyUserId: application.applicantOxyUserId,
-        status: LeaseStatus.DRAFT,
-        leaseTerms: { startDate, endDate },
-        rentDetails: { monthlyRent: rentBlock.monthlyAmount, currency }
-      });
+      const hydrated = await db.transaction((tx) =>
+        createLease(tx, {
+          columns: {
+            propertyId: String(application.propertyId),
+            landlordOxyUserId: oxyUserId,
+            tenantOxyUserId: String(application.applicantOxyUserId),
+            status: LeaseStatus.DRAFT,
+            leaseTermsStartDate: startDate,
+            leaseTermsEndDate: endDate,
+            rentDetailsMonthlyRent: monthlyRent,
+            rentDetailsCurrency: currency as (typeof PAYMENT_CURRENCIES)[number],
+          },
+          coTenants: [],
+          sharedUtilityCosts: [],
+        }),
+      );
 
       logger.info('Lease draft created from application', {
         applicationId: String(application._id),
-        leaseId: String(lease._id),
+        leaseId: hydrated.lease.id,
         landlordOxyUserId: oxyUserId
       });
 
-      res.status(201).json(successResponse(toLeaseDTO(lease), 'Lease draft created from application'));
+      res.status(201).json(successResponse(serializeLease(hydrated), 'Lease draft created from application'));
     } catch (error) {
       next(error);
     }
