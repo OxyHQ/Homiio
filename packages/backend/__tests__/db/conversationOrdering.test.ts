@@ -30,7 +30,6 @@
 
 import { asc, eq } from 'drizzle-orm';
 import { uuidv7 } from '@oxyhq/db';
-import { Types } from 'mongoose';
 import { closePostgres, connectPostgres, type Database } from '../../db/postgres';
 import {
   appendMessages,
@@ -38,9 +37,18 @@ import {
   listMessages,
 } from '../../db/conversations/conversationRepository';
 import { conversationMessages, conversations } from '../../db/schema';
+import { objectIdHex } from '../helpers/postgresGeoFixtures';
 
-/** A 24-char ObjectId hex, exactly as every pre-cutover row carries. */
-const legacyId = (): string => new Types.ObjectId().toHexString();
+/**
+ * A 24-char ObjectId hex, exactly as every pre-cutover row carries.
+ *
+ * The shared minter rather than a second local one: this file used
+ * `new Types.ObjectId().toHexString()`, which was the last reason it imported
+ * mongoose at all — it seeds nothing in Mongo. The property the cases below
+ * actually rest on (a fresh ObjectId hex sorts AFTER a fresh uuid v7) is not
+ * assumed either way; the first `describe` measures it.
+ */
+const legacyId = objectIdHex;
 
 let db: Database;
 

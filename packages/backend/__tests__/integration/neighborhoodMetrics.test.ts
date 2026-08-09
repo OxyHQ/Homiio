@@ -7,15 +7,23 @@
  * Also covers the "no neighborhood → 404 / hidden" and unknown-city → empty
  * paths, plus popular-by-listing-count ranking and nearest-by-location lookup.
  *
- * ## The fixtures straddle both stores, because the controller does
+ * ## The fixtures are Postgres-only, and no longer straddle two stores
  *
- * Geo and addresses are Postgres; `properties` lands in batch 3, so the listings
- * are still Mongo documents whose `addressId` names a Postgres address row. That
- * is not a testing convenience — it is exactly the state the branch is in, and
- * it works for the same reason the cutover works: ids are preserved verbatim, so
- * an address id is the SAME string in both stores. `seedAddress` mints 24-char
- * ObjectId hex for that reason (a uuid v7 cannot live in a Mongoose `ObjectId`
- * path), which is also what every backfilled row will carry.
+ * Geo, addresses and listings are all Postgres, so every row this file seeds
+ * goes there. It used to also create a Mongo `Profile` per test, purely to
+ * obtain an `oxyUserId` to own the listings with — the neighborhood router
+ * never read it, in either store. Measured: with the in-memory Mongo switched
+ * off, exactly the seven tests that called that fixture failed, and they failed
+ * inside the fixture rather than at an assertion.
+ *
+ * That is worth naming rather than quietly deleting, because a seed against a
+ * store the code under test does not read is worse than a redundant one: it
+ * passes while proving nothing about the store production uses, and it keeps
+ * `mongoose` in this file's module graph, which is what stops it leaving
+ * `package.json`.
+ *
+ * An owner id is just a string here — Oxy owns identity and these columns carry
+ * no foreign key — so {@link nextOwnerId} mints one directly.
  */
 
 import express, { type Express } from 'express';
@@ -23,7 +31,6 @@ import request from 'supertest';
 import { OfferingType, PropertyType, PropertyStatus } from '@homiio/shared-types';
 
 import neighborhoodRoutes from '../../routes/neighborhoods';
-import { models } from '../helpers/factories';
 import { errorHandler } from '../../middlewares/errorHandler';
 import {
   resetGeoTables,
@@ -33,8 +40,6 @@ import {
   seedProperty,
   type GeoChain,
 } from '../helpers/postgresGeoFixtures';
-
-const { Profile } = models;
 
 function buildApp(): Express {
   const app = express();
@@ -60,9 +65,18 @@ async function seedStreet(
   });
 }
 
-async function seedProfile(): Promise<{ oxyUserId: string }> {
-  const oxyUserId = `oxy-${Math.random().toString(36).slice(2)}`;
-  return Profile.create({ oxyUserId, personalProfile: {} });
+/**
+ * A fresh owner id per test — the same cardinality the Mongo `Profile` fixture
+ * this replaced produced, so no case gains or loses an owner boundary.
+ *
+ * A counter rather than the previous `Math.random()`, because a failure naming
+ * `oxy-neighborhood-owner-3` says which case seeded the row and a random suffix
+ * does not.
+ */
+let ownerSeq = 0;
+function nextOwnerId(): string {
+  ownerSeq += 1;
+  return `oxy-neighborhood-owner-${ownerSeq}`;
 }
 
 /**
@@ -103,9 +117,9 @@ describe('GET /api/neighborhoods/by-property/:propertyId', () => {
   it('returns real, listing-derived metrics for the property neighborhood', async () => {
     const chain = await seedGeoChain({ cityName: 'Barcelona' });
     const gracia = await seedNeighborhood({ cityId: chain.cityId, name: 'Gracia' });
-    const profile = await seedProfile();
+    const ownerId = nextOwnerId();
     const addressId = await seedStreet(chain, gracia);
-    const listingId = await seedListing(profile.oxyUserId, addressId, 1000);
+    const listingId = await seedListing(ownerId, addressId, 1000);
 
     const res = await request(buildApp()).get(`/api/neighborhoods/by-property/${listingId}`);
 
@@ -127,9 +141,9 @@ describe('GET /api/neighborhoods/by-property/:propertyId', () => {
 
   it('404s when the property has no resolved neighborhood', async () => {
     const chain = await seedGeoChain({ cityName: 'Barcelona' });
-    const profile = await seedProfile();
+    const ownerId = nextOwnerId();
     const addressId = await seedStreet(chain, undefined);
-    const listingId = await seedListing(profile.oxyUserId, addressId, 1000);
+    const listingId = await seedListing(ownerId, addressId, 1000);
 
     const res = await request(buildApp()).get(`/api/neighborhoods/by-property/${listingId}`);
 
@@ -149,11 +163,11 @@ describe('GET /api/neighborhoods/by-name', () => {
     const chain = await seedGeoChain({ cityName: 'Barcelona' });
     const gracia = await seedNeighborhood({ cityId: chain.cityId, name: 'Gracia' });
     const eixample = await seedNeighborhood({ cityId: chain.cityId, name: 'Eixample' });
-    const profile = await seedProfile();
+    const ownerId = nextOwnerId();
 
     // Gracia: one 800€ listing. Eixample: one 2000€ listing. City avg = 1400€.
-    await seedListing(profile.oxyUserId, await seedStreet(chain, gracia), 800);
-    await seedListing(profile.oxyUserId, await seedStreet(chain, eixample), 2000);
+    await seedListing(ownerId, await seedStreet(chain, gracia), 800);
+    await seedListing(ownerId, await seedStreet(chain, eixample), 2000);
 
     const res = await request(buildApp())
       .get('/api/neighborhoods/by-name')
@@ -183,12 +197,12 @@ describe('GET /api/neighborhoods/popular', () => {
     const chain = await seedGeoChain({ cityName: 'Barcelona' });
     const gracia = await seedNeighborhood({ cityId: chain.cityId, name: 'Gracia' });
     const eixample = await seedNeighborhood({ cityId: chain.cityId, name: 'Eixample' });
-    const profile = await seedProfile();
+    const ownerId = nextOwnerId();
 
     // Gracia: 2 listings, Eixample: 1 listing.
-    await seedListing(profile.oxyUserId, await seedStreet(chain, gracia), 900);
-    await seedListing(profile.oxyUserId, await seedStreet(chain, gracia), 1100);
-    await seedListing(profile.oxyUserId, await seedStreet(chain, eixample), 2000);
+    await seedListing(ownerId, await seedStreet(chain, gracia), 900);
+    await seedListing(ownerId, await seedStreet(chain, gracia), 1100);
+    await seedListing(ownerId, await seedStreet(chain, eixample), 2000);
 
     const res = await request(buildApp())
       .get('/api/neighborhoods/popular')
@@ -210,13 +224,13 @@ describe('GET /api/neighborhoods/popular', () => {
   it('averages over listings, not over addresses', async () => {
     const chain = await seedGeoChain({ cityName: 'Barcelona' });
     const gracia = await seedNeighborhood({ cityId: chain.cityId, name: 'Gracia' });
-    const profile = await seedProfile();
+    const ownerId = nextOwnerId();
     // Two listings at one address, one at another: an average of per-address
     // averages would give (1000 + 4000) / 2 = 2500 rather than the true 2000.
     const busy = await seedStreet(chain, gracia);
-    await seedListing(profile.oxyUserId, busy, 500);
-    await seedListing(profile.oxyUserId, busy, 1500);
-    await seedListing(profile.oxyUserId, await seedStreet(chain, gracia), 4000);
+    await seedListing(ownerId, busy, 500);
+    await seedListing(ownerId, busy, 1500);
+    await seedListing(ownerId, await seedStreet(chain, gracia), 4000);
 
     const res = await request(buildApp())
       .get('/api/neighborhoods/popular')
@@ -245,8 +259,8 @@ describe('GET /api/neighborhoods/search', () => {
     const chain = await seedGeoChain({ cityName: 'Barcelona' });
     const gracia = await seedNeighborhood({ cityId: chain.cityId, name: 'Gracia' });
     await seedNeighborhood({ cityId: chain.cityId, name: 'Eixample' });
-    const profile = await seedProfile();
-    await seedListing(profile.oxyUserId, await seedStreet(chain, gracia), 1000);
+    const ownerId = nextOwnerId();
+    await seedListing(ownerId, await seedStreet(chain, gracia), 1000);
 
     const res = await request(buildApp())
       .get('/api/neighborhoods/search')
@@ -297,13 +311,13 @@ describe('GET /api/neighborhoods/by-location', () => {
     const chain = await seedGeoChain({ cityName: 'Barcelona' });
     const gracia = await seedNeighborhood({ cityId: chain.cityId, name: 'Gracia' });
     const eixample = await seedNeighborhood({ cityId: chain.cityId, name: 'Eixample' });
-    const profile = await seedProfile();
+    const ownerId = nextOwnerId();
     const near = await seedStreet(chain, gracia, [2.17, 41.39]);
     // ~1.6 km east: inside the 5 km radius, so it is only excluded by being
     // FARTHER — which is what makes this an ordering assertion rather than a
     // "something came back" one.
     await seedStreet(chain, eixample, [2.189, 41.39]);
-    await seedListing(profile.oxyUserId, near, 1000);
+    await seedListing(ownerId, near, 1000);
 
     const res = await request(buildApp())
       .get('/api/neighborhoods/by-location')
