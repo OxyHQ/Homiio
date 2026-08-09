@@ -12,10 +12,29 @@
  * and confirmed -> cancelled | completed.
  */
 
-import { Property, Reservation } from '../models';
+import { getDb } from '../db/postgres';
+import {
+  computeNights,
+  createReservation,
+  findBlockingWindow,
+  findOverlappingReservation,
+  findReservationById,
+  isReservationStatus,
+  listAvailabilityWindows,
+  listConfirmedStays,
+  listReservations,
+  serializeReservation,
+  transitionReservation,
+  type ReservationRow,
+} from '../db/bookings/reservationReads';
+import {
+  findPropertyBookingBasis,
+  type PropertyBookingBasis,
+} from '../db/properties/propertyBookingBasis';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
 import { ReservationStatus, PropertyStatus, CancellationPolicy, OfferingType, AvailabilityWindowStatus } from '@homiio/shared-types';
+import { RESERVATION_CANCELLATION_POLICIES } from '../db/schema/bookings';
 
 /** Default currency used when a short-term block somehow lacks one. */
 const DEFAULT_CURRENCY = 'EUR';
@@ -25,55 +44,8 @@ const PERCENT = 100;
 const CURRENCY_ROUNDING = 100;
 
 /** A property carries the short-term-rent offering (vacation-bookable). */
-function isVacationBookable(property: { offerings?: unknown }): boolean {
-  return Array.isArray(property.offerings) && property.offerings.includes(OfferingType.SHORT_TERM_RENT);
-}
-import { hasConflict } from '../utils/availabilityUtils';
-import type { DateWindow } from '../utils/availabilityUtils';
-
-const ACTIVE_RESERVATION_STATUSES = [ReservationStatus.PENDING, ReservationStatus.CONFIRMED];
-
-/** Number of milliseconds in one day, used to derive nights from a date range. */
-const MS_PER_DAY = 1000 * 60 * 60 * 24;
-
-/**
- * Raw shape of a stored availability window. At rest the dates are ISO strings,
- * but a hydrated Mongoose document exposes them as `Date`, so both are accepted.
- */
-interface RawAvailabilityWindow {
-  start?: Date | string;
-  end?: Date | string;
-  status?: string;
-}
-
-/**
- * Compute nights between two dates (half-open: checkOut exclusive).
- */
-function computeNights(checkIn: Date, checkOut: Date): number {
-  const ms = checkOut.getTime() - checkIn.getTime();
-  return Math.round(ms / MS_PER_DAY);
-}
-
-/**
- * Determine whether a property's availability windows BLOCK the requested
- * range. A request is blocked if any window with status `blocked` or `booked`
- * overlaps it.
- *
- * Available windows and windows with malformed dates are dropped before the
- * shared half-open overlap check (`hasConflict`) is applied, so they can never
- * block a valid request.
- */
-function isBlockedByWindows(windows: RawAvailabilityWindow[], checkIn: Date, checkOut: Date): boolean {
-  if (!Array.isArray(windows) || windows.length === 0) return false;
-  const blocking: DateWindow[] = [];
-  for (const window of windows) {
-    if (window?.status === AvailabilityWindowStatus.AVAILABLE) continue;
-    const wStart = window?.start instanceof Date ? window.start : new Date(String(window?.start));
-    const wEnd = window?.end instanceof Date ? window.end : new Date(String(window?.end));
-    if (Number.isNaN(wStart.getTime()) || Number.isNaN(wEnd.getTime())) continue;
-    blocking.push({ start: wStart, end: wEnd });
-  }
-  return hasConflict({ start: checkIn, end: checkOut }, blocking);
+function isVacationBookable(property: PropertyBookingBasis): boolean {
+  return property.offerings.includes(OfferingType.SHORT_TERM_RENT);
 }
 
 /**
@@ -88,11 +60,10 @@ function isBlockedByWindows(windows: RawAvailabilityWindow[], checkIn: Date, che
  * For already-pending reservations (not yet confirmed by host) the guest
  * can always cancel.
  */
-function canGuestCancel(reservation: any, now: Date): boolean {
+function canGuestCancel(reservation: ReservationRow, now: Date): boolean {
   if (reservation.status === ReservationStatus.PENDING) return true;
   if (reservation.status !== ReservationStatus.CONFIRMED) return false;
-  const checkIn: Date = reservation.checkIn instanceof Date ? reservation.checkIn : new Date(reservation.checkIn);
-  const hoursUntil = (checkIn.getTime() - now.getTime()) / (1000 * 60 * 60);
+  const hoursUntil = (reservation.checkIn.getTime() - now.getTime()) / (1000 * 60 * 60);
   switch (reservation.cancellationPolicy) {
     case CancellationPolicy.FLEXIBLE:
       return hoursUntil > 0;
@@ -119,7 +90,8 @@ class ReservationController {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const property = await Property.findById(propertyId).lean();
+      const db = getDb();
+      const property = await findPropertyBookingBasis(db, String(propertyId));
       if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
       if (property.status !== PropertyStatus.PUBLISHED) {
         return next(new AppError('Property is not available for booking', 400, 'PROPERTY_NOT_BOOKABLE'));
@@ -130,8 +102,12 @@ class ReservationController {
       if (!isVacationBookable(property)) {
         return next(new AppError('This property is not offered for short-term booking', 400, 'NOT_VACATION_BOOKABLE'));
       }
-      const shortTerm = property.shortTermRent;
-      if (!shortTerm) {
+      // `properties_offerings_short_term_rent_check` makes the offering exactly
+      // the presence of `nightly_rate`, so this narrowing is unreachable through
+      // a valid listing — it stays because it is also what turns
+      // `number | null` into `number` for the pricing below.
+      const nightlyRate = property.shortTermRentNightlyRate;
+      if (nightlyRate === null) {
         return next(new AppError('This property has no short-term pricing', 400, 'NOT_VACATION_BOOKABLE'));
       }
 
@@ -156,11 +132,11 @@ class ReservationController {
       if (nights < 1) return next(new AppError('Reservation must be at least 1 night', 400, 'INVALID_RANGE'));
 
       // Enforce min/max stay (from the short-term block)
-      if (shortTerm.minNights && nights < shortTerm.minNights) {
-        return next(new AppError(`Minimum stay is ${shortTerm.minNights} night(s)`, 400, 'BELOW_MIN_STAY'));
+      if (property.shortTermRentMinNights && nights < property.shortTermRentMinNights) {
+        return next(new AppError(`Minimum stay is ${property.shortTermRentMinNights} night(s)`, 400, 'BELOW_MIN_STAY'));
       }
-      if (shortTerm.maxNights && nights > shortTerm.maxNights) {
-        return next(new AppError(`Maximum stay is ${shortTerm.maxNights} night(s)`, 400, 'ABOVE_MAX_STAY'));
+      if (property.shortTermRentMaxNights && nights > property.shortTermRentMaxNights) {
+        return next(new AppError(`Maximum stay is ${property.shortTermRentMaxNights} night(s)`, 400, 'ABOVE_MAX_STAY'));
       }
 
       // Guest capacity
@@ -169,44 +145,42 @@ class ReservationController {
         return next(new AppError(`Property accepts at most ${cappedMaxGuests} guest(s)`, 400, 'TOO_MANY_GUESTS'));
       }
 
-      // Conflict: existing active reservations on overlapping range
-      const overlappingReservation = await Reservation.findOne({
-        propertyId,
-        status: { $in: ACTIVE_RESERVATION_STATUSES },
-        checkIn: { $lt: checkOutDate },
-        checkOut: { $gt: checkInDate }
-      }).lean();
+      const stay = { checkIn: checkInDate, checkOut: checkOutDate };
+
+      // Conflict: an existing active reservation overlaps. A range overlap now,
+      // half-open — see `db/bookings/reservationReads.ts`.
+      const overlappingReservation = await findOverlappingReservation(db, String(propertyId), stay);
       if (overlappingReservation) {
         return next(new AppError('Selected dates conflict with an existing reservation', 409, 'DATE_CONFLICT'));
       }
 
-      // Conflict: property availability windows
-      if (isBlockedByWindows(property.availabilityWindows ?? [], checkInDate, checkOutDate)) {
+      // Conflict: a host calendar window blocks it. Also a range overlap, where
+      // it used to load every window and overlap in JavaScript.
+      if (await findBlockingWindow(db, String(propertyId), stay)) {
         return next(new AppError('Selected dates are blocked by the host calendar', 409, 'BLOCKED_BY_HOST'));
       }
 
       // Pricing — all from the short-term block (NOT a monthly figure).
-      const nightlyRate = Number(shortTerm.nightlyRate) || 0;
       if (nightlyRate <= 0) return next(new AppError('Property has no valid nightly rate', 400, 'NO_RATE'));
       const subtotal = nightlyRate * nights;
-      const cleaningFee = Number(shortTerm.cleaningFee) || 0;
-      const serviceFee = Number(shortTerm.serviceFee) || 0;
-      const taxesPercent = Number(shortTerm.taxesPercent) || 0;
+      const cleaningFee = property.shortTermRentCleaningFee ?? 0;
+      const serviceFee = property.shortTermRentServiceFee ?? 0;
+      const taxesPercent = property.shortTermRentTaxesPercent ?? 0;
       const taxes = Math.round((subtotal + cleaningFee + serviceFee) * (taxesPercent / PERCENT) * CURRENCY_ROUNDING) / CURRENCY_ROUNDING;
       const total = Math.round((subtotal + cleaningFee + serviceFee + taxes) * CURRENCY_ROUNDING) / CURRENCY_ROUNDING;
-      const currency = (shortTerm.currency || DEFAULT_CURRENCY).toUpperCase();
+      const currency = (property.shortTermRentCurrency || DEFAULT_CURRENCY).toUpperCase();
 
       const cancellationPolicy = property.cancellationPolicy || CancellationPolicy.MODERATE;
-      const instantBooked = shortTerm.instantBook === true;
+      const instantBooked = property.shortTermRentInstantBook === true;
       const status = instantBooked ? ReservationStatus.CONFIRMED : ReservationStatus.PENDING;
 
-      const reservation = await Reservation.create({
-        propertyId,
+      const reservation = await createReservation(db, {
+        propertyId: String(propertyId),
         guestOxyUserId: oxyUserId,
         hostOxyUserId,
         checkIn: checkInDate,
         checkOut: checkOutDate,
-        guestCount,
+        guestCount: Number(guestCount),
         nights,
         nightlyRate,
         subtotal,
@@ -217,18 +191,18 @@ class ReservationController {
         currency,
         status,
         instantBooked,
-        cancellationPolicy,
-        specialRequests
+        cancellationPolicy: cancellationPolicy as (typeof RESERVATION_CANCELLATION_POLICIES)[number],
+        specialRequests: typeof specialRequests === 'string' ? specialRequests : undefined,
       });
 
       logger.info('Reservation created', {
-        reservationId: String(reservation._id),
+        reservationId: reservation.id,
         propertyId: String(propertyId),
         status,
         instantBooked
       });
 
-      res.status(201).json(successResponse(reservation.toJSON(), 'Reservation created'));
+      res.status(201).json(successResponse(serializeReservation(reservation), 'Reservation created'));
     } catch (error) {
       next(error);
     }
@@ -244,28 +218,22 @@ class ReservationController {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const query: Record<string, unknown> = {};
-      if (String(asHost) === 'true') {
-        query.hostOxyUserId = oxyUserId;
-      } else {
-        query.guestOxyUserId = oxyUserId;
-      }
-      if (status) query.status = status;
-
       const pageNumber = Math.max(1, parseInt(String(page)) || 1);
       const limitNumber = Math.min(100, Math.max(1, parseInt(String(limit)) || 10));
       const skip = (pageNumber - 1) * limitNumber;
 
-      const [items, total] = await Promise.all([
-        Reservation.find(query)
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limitNumber)
-          .lean(),
-        Reservation.countDocuments(query)
-      ]);
+      const asHostView = String(asHost) === 'true';
+      const result = await listReservations(
+        getDb(),
+        {
+          guestOxyUserId: asHostView ? undefined : oxyUserId,
+          hostOxyUserId: asHostView ? oxyUserId : undefined,
+          status: isReservationStatus(status) ? status : undefined,
+        },
+        { limit: limitNumber, offset: skip },
+      );
 
-      res.json(paginationResponse(items, pageNumber, limitNumber, total, 'Reservations retrieved'));
+      res.json(paginationResponse(result.rows.map(serializeReservation), pageNumber, limitNumber, result.total, 'Reservations retrieved'));
     } catch (error) {
       next(error);
     }
@@ -280,14 +248,14 @@ class ReservationController {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const reservation = await Reservation.findById(id).lean();
+      const reservation = await findReservationById(getDb(), id);
       if (!reservation) return next(new AppError('Reservation not found', 404, 'NOT_FOUND'));
 
-      const isGuest = String(reservation.guestOxyUserId) === String(oxyUserId);
-      const isHost = String(reservation.hostOxyUserId) === String(oxyUserId);
+      const isGuest = reservation.guestOxyUserId === oxyUserId;
+      const isHost = reservation.hostOxyUserId === oxyUserId;
       if (!isGuest && !isHost) return next(new AppError('Not authorized to view this reservation', 403, 'FORBIDDEN'));
 
-      res.json(successResponse(reservation, 'Reservation retrieved'));
+      res.json(successResponse(serializeReservation(reservation), 'Reservation retrieved'));
     } catch (error) {
       next(error);
     }
@@ -306,14 +274,18 @@ class ReservationController {
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const reservation = await Reservation.findById(id);
+      const db = getDb();
+      const reservation = await findReservationById(db, id);
       if (!reservation) return next(new AppError('Reservation not found', 404, 'NOT_FOUND'));
 
-      const isGuest = String(reservation.guestOxyUserId) === String(oxyUserId);
-      const isHost = String(reservation.hostOxyUserId) === String(oxyUserId);
+      const isGuest = reservation.guestOxyUserId === oxyUserId;
+      const isHost = reservation.hostOxyUserId === oxyUserId;
       if (!isGuest && !isHost) return next(new AppError('Not authorized to update this reservation', 403, 'FORBIDDEN'));
 
       const now = new Date();
+      // Every transition carries its permitted FROM set into the `UPDATE`'s own
+      // predicate, so two hosts confirming at once cannot both succeed.
+      let updated: ReservationRow | undefined;
 
       if (nextStatus === ReservationStatus.CONFIRMED || nextStatus === ReservationStatus.DECLINED) {
         if (!isHost) return next(new AppError('Only the host can approve or decline', 403, 'FORBIDDEN'));
@@ -321,23 +293,25 @@ class ReservationController {
           return next(new AppError('Only pending reservations can be approved or declined', 400, 'INVALID_STATE'));
         }
         if (nextStatus === ReservationStatus.CONFIRMED) {
-          // Re-check conflicts before confirming.
-          const overlapping = await Reservation.findOne({
-            _id: { $ne: reservation._id },
-            propertyId: reservation.propertyId,
-            status: ReservationStatus.CONFIRMED,
-            checkIn: { $lt: reservation.checkOut },
-            checkOut: { $gt: reservation.checkIn }
-          }).lean();
+          // Re-check conflicts before committing, against CONFIRMED stays only
+          // and excluding this one so it never collides with itself.
+          const overlapping = await findOverlappingReservation(
+            db,
+            reservation.propertyId,
+            { checkIn: reservation.checkIn, checkOut: reservation.checkOut },
+            { statuses: [ReservationStatus.CONFIRMED], excludeId: reservation.id },
+          );
           if (overlapping) {
             return next(new AppError('Another confirmed reservation now conflicts with this one', 409, 'DATE_CONFLICT'));
           }
         }
-        reservation.status = nextStatus;
+        updated = await transitionReservation(db, id, nextStatus, [ReservationStatus.PENDING]);
+        if (!updated) {
+          return next(new AppError('Only pending reservations can be approved or declined', 400, 'INVALID_STATE'));
+        }
       } else if (nextStatus === ReservationStatus.CANCELLED) {
-        if (!isGuest && !isHost) return next(new AppError('Not authorized to cancel', 403, 'FORBIDDEN'));
         if (reservation.status === ReservationStatus.CANCELLED) {
-          return res.json(successResponse(reservation.toJSON(), 'Reservation already cancelled'));
+          return res.json(successResponse(serializeReservation(reservation), 'Reservation already cancelled'));
         }
         if (reservation.status === ReservationStatus.COMPLETED) {
           return next(new AppError('Completed reservations cannot be cancelled', 400, 'INVALID_STATE'));
@@ -346,20 +320,26 @@ class ReservationController {
         if (isGuest && !isHost && !canGuestCancel(reservation, now)) {
           return next(new AppError('Cancellation policy does not permit cancellation at this time', 403, 'POLICY_FORBIDS_CANCEL'));
         }
-        reservation.status = ReservationStatus.CANCELLED;
+        updated = await transitionReservation(db, id, ReservationStatus.CANCELLED, [
+          ReservationStatus.PENDING,
+          ReservationStatus.CONFIRMED,
+          ReservationStatus.DECLINED,
+        ]);
+        if (!updated) {
+          return next(new AppError('Completed reservations cannot be cancelled', 400, 'INVALID_STATE'));
+        }
       } else {
         return next(new AppError('Unsupported status transition', 400, 'INVALID_STATE'));
       }
 
-      await reservation.save();
       logger.info('Reservation status updated', {
-        reservationId: String(reservation._id),
-        nextStatus: reservation.status,
+        reservationId: updated.id,
+        nextStatus: updated.status,
         byHost: isHost,
         byGuest: isGuest
       });
 
-      res.json(successResponse(reservation.toJSON(), 'Reservation updated'));
+      res.json(successResponse(serializeReservation(updated), 'Reservation updated'));
     } catch (error) {
       next(error);
     }
@@ -373,35 +353,36 @@ class ReservationController {
   async getPropertyAvailability(req: any, res: any, next: any) {
     try {
       const { id } = req.params;
-      const property = await Property.findById(id)
-        .select('availabilityWindows maxGuests offerings shortTermRent cancellationPolicy')
-        .lean();
+      const db = getDb();
+      const property = await findPropertyBookingBasis(db, id);
       if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
 
-      const bookedReservations = await Reservation.find({
-        propertyId: id,
-        status: ReservationStatus.CONFIRMED
-      })
-        .select('checkIn checkOut')
-        .sort({ checkIn: 1 })
-        .lean();
-
-      const bookedRanges = bookedReservations.map((reservation: any) => ({
-        start: reservation.checkIn,
-        end: reservation.checkOut,
-        status: AvailabilityWindowStatus.BOOKED
-      }));
+      const [windows, bookedStays] = await Promise.all([
+        listAvailabilityWindows(db, id),
+        listConfirmedStays(db, id),
+      ]);
 
       const data = {
         propertyId: id,
         offerings: property.offerings,
-        instantBook: property.shortTermRent?.instantBook ?? false,
+        instantBook: property.shortTermRentInstantBook ?? false,
         cancellationPolicy: property.cancellationPolicy,
-        minNights: property.shortTermRent?.minNights,
-        maxNights: property.shortTermRent?.maxNights,
+        minNights: property.shortTermRentMinNights,
+        maxNights: property.shortTermRentMaxNights,
         maxGuests: property.maxGuests,
-        windows: property.availabilityWindows || [],
-        booked: bookedRanges
+        // Re-nested to the wire shape: `start`/`end` where the columns are
+        // `starts_at`/`ends_at` (renamed because `end` is a reserved word).
+        windows: windows.map((row) => ({
+          id: row.id,
+          start: row.startsAt,
+          end: row.endsAt,
+          status: row.status,
+        })),
+        booked: bookedStays.map((stay) => ({
+          start: stay.checkIn,
+          end: stay.checkOut,
+          status: AvailabilityWindowStatus.BOOKED,
+        })),
       };
 
       res.json(successResponse(data, 'Availability retrieved'));

@@ -64,6 +64,24 @@ export interface PropertyBookingBasis {
    * default.
    */
   readonly exchangeMode: string | null;
+
+  // ── the short-term block, for `reservationController` ──
+  //
+  // Every column is nullable because `short_term_rent` is an OPTIONAL priced
+  // block: `properties_offerings_short_term_rent_check` makes the offering
+  // exactly the presence of `nightly_rate`, so a listing not offered for short
+  // stays has the whole block NULL rather than zeroed. A caller must treat the
+  // null as "not bookable", never as a free stay.
+  readonly maxGuests: number;
+  readonly cancellationPolicy: string | null;
+  readonly shortTermRentNightlyRate: number | null;
+  readonly shortTermRentCurrency: string | null;
+  readonly shortTermRentCleaningFee: number | null;
+  readonly shortTermRentServiceFee: number | null;
+  readonly shortTermRentTaxesPercent: number | null;
+  readonly shortTermRentMinNights: number | null;
+  readonly shortTermRentMaxNights: number | null;
+  readonly shortTermRentInstantBook: boolean | null;
 }
 
 /** The booking-relevant columns of one listing, or `undefined`. */
@@ -79,6 +97,16 @@ export async function findPropertyBookingBasis(
       oxyUserId: properties.oxyUserId,
       offerings: properties.offerings,
       exchangeMode: properties.exchangeMode,
+      maxGuests: properties.maxGuests,
+      cancellationPolicy: properties.cancellationPolicy,
+      shortTermRentNightlyRate: properties.shortTermRentNightlyRate,
+      shortTermRentCurrency: properties.shortTermRentCurrency,
+      shortTermRentCleaningFee: properties.shortTermRentCleaningFee,
+      shortTermRentServiceFee: properties.shortTermRentServiceFee,
+      shortTermRentTaxesPercent: properties.shortTermRentTaxesPercent,
+      shortTermRentMinNights: properties.shortTermRentMinNights,
+      shortTermRentMaxNights: properties.shortTermRentMaxNights,
+      shortTermRentInstantBook: properties.shortTermRentInstantBook,
     })
     .from(properties)
     .where(eq(properties.id, propertyId))
