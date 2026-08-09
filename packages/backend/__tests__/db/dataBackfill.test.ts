@@ -39,6 +39,7 @@ import {
   DATA_COPY_ORDER,
   DATA_PLANS,
   DATA_RESOLUTIONS,
+  deterministicUuidV7,
   toAddressRow,
   toAgencyRow,
   toProfileChatMessageRows,
@@ -48,6 +49,7 @@ import {
   toPropertyWindowRows,
 } from '../../db/backfill/dataPlan';
 import { RowAuditor, UniqueKeyAuditor, type CandidateRow } from '../../db/backfill/rowAudit';
+import { isLiveEntityId } from '@oxyhq/db';
 import { ResolutionLog } from '../../db/backfill/geoPlan';
 
 /** The property rules, reached through the PLAN so the test cannot drift from it. */
@@ -70,7 +72,8 @@ function mongoDatabase() {
 
 const BARCELONA = { lng: 2.1686, lat: 41.3985 };
 const MADRID = { lng: -3.7038, lat: 40.4168 };
-const PARIS = { lng: 2.3522, lat: 48.8566 };
+const BERLIN = { lng: 13.4050, lat: 52.5200 };
+const WARSZAWA = { lng: 21.0122, lat: 52.2297 };
 
 interface GeoFixture {
   readonly countryId: mongoose.Types.ObjectId;
@@ -86,7 +89,8 @@ async function seedGeo(): Promise<GeoFixture> {
   const cityIds: Record<string, mongoose.Types.ObjectId> = {
     Barcelona: oid(),
     Madrid: oid(),
-    Paris: oid(),
+    Berlin: oid(),
+    Warszawa: oid(),
   };
 
   await database.collection('countries').insertOne({
@@ -107,7 +111,11 @@ async function seedGeo(): Promise<GeoFixture> {
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
   });
   for (const [name, id] of Object.entries(cityIds)) {
-    const point = name === 'Barcelona' ? BARCELONA : name === 'Madrid' ? MADRID : PARIS;
+    const point =
+      name === 'Barcelona' ? BARCELONA
+      : name === 'Madrid' ? MADRID
+      : name === 'Berlin' ? BERLIN
+      : WARSZAWA;
     await database.collection('cities').insertOne({
       _id: id,
       name,
@@ -204,6 +212,22 @@ function propertyDocument(
     updatedAt: new Date('2026-03-11T00:00:00.000Z'),
     ...overrides,
   };
+}
+
+/**
+ * Addresses in the cities the named distance pairs use.
+ *
+ * Verification requires at least two measurable real-world distances, so a
+ * fixture with addresses in one city anchors nothing — and a pair that cannot be
+ * measured is reported as such rather than counted as a pass. Madrid, Berlin and
+ * Warszawa give Madrid→Berlin and Berlin→Warszawa.
+ */
+async function seedMeasurableAddresses(geo: GeoFixture): Promise<void> {
+  await mongoDatabase().collection('addresses').insertMany([
+    addressDocument(geo, 'Madrid', MADRID, { street: 'Gran Vía', postal_code: '28013' }),
+    addressDocument(geo, 'Berlin', BERLIN, { street: 'Unter den Linden', postal_code: '10117', countryCode: 'DE' }),
+    addressDocument(geo, 'Warszawa', WARSZAWA, { street: 'Nowy Świat', postal_code: '00-001', countryCode: 'PL' }),
+  ]);
 }
 
 /** Seed a coherent source and copy the geo half, as production did. */
@@ -436,6 +460,88 @@ describe('data backfill — the mappers', () => {
   });
 });
 
+describe('data backfill — minted subdocument ids are deterministic', () => {
+  const log = () => new ResolutionLog();
+
+  // `availabilityWindowSchema` declares `{ _id: false }`, so a calendar window
+  // has no id to preserve. A RANDOM mint and `ON CONFLICT DO NOTHING` cannot
+  // both hold: a fresh random key never conflicts, so a re-run would DUPLICATE
+  // every window rather than skip it — in exactly the resumed-partial-run case
+  // the idempotence rule exists for.
+  const withWindows = (propertyId: mongoose.Types.ObjectId) =>
+    propertyDocument(propertyId, {
+      createdAt: new Date('2026-07-25T10:11:12.345Z'),
+      availabilityWindows: [
+        { start: new Date('2026-05-01'), end: new Date('2026-05-08'), status: 'available' },
+        { start: new Date('2026-06-01'), end: new Date('2026-06-08'), status: 'blocked' },
+      ],
+    });
+
+  it('produces the SAME id from the same document on every run', () => {
+    const document = withWindows(oid());
+    const first = toPropertyWindowRows(document, log()).map((row) => row.id);
+    const second = toPropertyWindowRows(document, log()).map((row) => row.id);
+    expect(first).toEqual(second);
+    expect(new Set(first).size).toBe(2);
+  });
+
+  it('separates the two calendars, which share a table and an index', () => {
+    // `availabilityWindows[0]` and `exchange.availabilityWindows[0]` are
+    // different rows; the PATH is in the natural key so they cannot collide.
+    const document = propertyDocument(oid(), {
+      offerings: ['long_term_rent', 'exchange'],
+      availabilityWindows: [{ start: new Date('2026-05-01'), end: new Date('2026-05-08') }],
+      exchange: {
+        mode: 'swap',
+        availabilityWindows: [{ start: new Date('2026-05-01'), end: new Date('2026-05-08') }],
+      },
+    });
+    const ids = toPropertyWindowRows(document, log()).map((row) => row.id);
+    expect(new Set(ids).size).toBe(2);
+  });
+
+  it('mints an id the application would accept, checked against the REAL guard', () => {
+    const ids = toPropertyWindowRows(withWindows(oid()), log()).map((row) => String(row.id));
+    for (const id of ids) expect(isLiveEntityId(id)).toBe(true);
+  });
+
+  it("carries the parent's created_at in the timestamp prefix, so ids stay k-sortable", () => {
+    const created = new Date('2026-07-25T10:11:12.345Z');
+    const id = deterministicUuidV7(created, 'anything');
+    const prefix = Number.parseInt(id.replace(/-/g, '').slice(0, 12), 16);
+    expect(prefix).toBe(created.getTime());
+  });
+
+  it('falls back to the Unix epoch, NEVER to now, when the timestamp is unusable', () => {
+    // `Date.now()` here would reintroduce the whole defect for exactly the rows
+    // whose timestamps are broken — their ids would differ between two runs.
+    const first = deterministicUuidV7(undefined, 'k');
+    const second = deterministicUuidV7(new Date('nonsense'), 'k');
+    expect(first).toBe(second);
+    expect(Number.parseInt(first.replace(/-/g, '').slice(0, 12), 16)).toBe(0);
+  });
+
+  it('converges on a re-run rather than duplicating every window', async () => {
+    const geo = await seedAndCopyGeo();
+    const database = mongoDatabase();
+    const address = addressDocument(geo, 'Barcelona', BARCELONA);
+    await database.collection('addresses').insertOne(address);
+    await seedMeasurableAddresses(geo);
+    await database.collection('properties').insertOne(
+      withWindows(address._id as mongoose.Types.ObjectId),
+    );
+
+    await runDataBackfill({ mongo: database, database: getDb(), mode: 'copy', sampleSize: 5 });
+    await runDataBackfill({ mongo: database, database: getDb(), mode: 'copy', sampleSize: 5 });
+
+    const [row] = await getDb()
+      .select({ total: sql<number>`count(*)::int` })
+      .from(propertyAvailabilityWindows);
+    // Two windows, copied twice. A random mint gives four.
+    expect(row.total).toBe(2);
+  }, 120_000);
+});
+
 // ── the audit ──────────────────────────────────────────────────────
 
 describe('data backfill — the audit', () => {
@@ -559,8 +665,9 @@ describe('data backfill — end to end', () => {
 
     const barcelona = addressDocument(geo, 'Barcelona', BARCELONA);
     const madrid = addressDocument(geo, 'Madrid', MADRID, { street: 'Gran Vía', postal_code: '28013' });
-    const paris = addressDocument(geo, 'Paris', PARIS, { street: 'Rue de Rivoli', postal_code: '75001', countryCode: 'FR' });
-    await database.collection('addresses').insertMany([barcelona, madrid, paris]);
+    await database.collection('addresses').insertMany([barcelona, madrid]);
+    await seedMeasurableAddresses(geo);
+    const berlin = madrid;
 
     const agency = { _id: oid(), name: 'Finques Verdi', normalizedName: 'finques verdi', slug: 'finques-verdi', createdAt: new Date(), updatedAt: new Date() };
     await database.collection('agencies').insertOne(agency);
@@ -577,8 +684,8 @@ describe('data backfill — end to end', () => {
       hasImages: false,
     });
     const withoutPhoto = propertyDocument(madrid._id as mongoose.Types.ObjectId, { hasImages: true });
-    const parisian = propertyDocument(paris._id as mongoose.Types.ObjectId);
-    await database.collection('properties').insertMany([withPhoto, withoutPhoto, parisian]);
+    const berliner = propertyDocument(berlin._id as mongoose.Types.ObjectId);
+    await database.collection('properties').insertMany([withPhoto, withoutPhoto, berliner]);
 
     await database.collection('profiles').insertOne({
       _id: oid(),
@@ -648,11 +755,8 @@ describe('data backfill — end to end', () => {
   it('measures a REAL distance, so a transposed coordinate pair cannot pass', async () => {
     const geo = await seedAndCopyGeo();
     const database = mongoDatabase();
-    await database.collection('addresses').insertMany([
-      addressDocument(geo, 'Barcelona', BARCELONA),
-      addressDocument(geo, 'Madrid', MADRID, { street: 'Gran Vía' }),
-      addressDocument(geo, 'Paris', PARIS, { street: 'Rue de Rivoli', countryCode: 'FR' }),
-    ]);
+    await database.collection('addresses').insertOne(addressDocument(geo, 'Barcelona', BARCELONA));
+    await seedMeasurableAddresses(geo);
 
     await runDataBackfill({
       mongo: database,
@@ -663,15 +767,42 @@ describe('data backfill — end to end', () => {
     });
 
     const geometry = await checkGeometry(getDb());
-    expect(geometry.centroidSamples).toBe(3);
+    expect(geometry.centroidSamples).toBe(4);
     expect(geometry.centroidOverLimit).toBe(0);
 
-    const [toMadrid, toParis] = geometry.pairs;
-    expect(toMadrid.withinTolerance).toBe(true);
-    expect(toMadrid.measuredMetres).toBeGreaterThan(400_000);
-    expect(toMadrid.measuredMetres).toBeLessThan(600_000);
-    expect(toParis.withinTolerance).toBe(true);
-    expect(toParis.measuredMetres).toBeGreaterThan(700_000);
+    // Pairs chosen from cities that actually carry addresses. A pair that cannot
+    // be measured names its reason rather than answering a bare `null`.
+    const measured = geometry.pairs.filter((pair) => pair.measuredMetres !== null);
+    expect(measured.length).toBeGreaterThanOrEqual(2);
+    expect(measured.every((pair) => pair.withinTolerance === true)).toBe(true);
+    for (const pair of geometry.pairs) {
+      if (pair.measuredMetres === null) expect(pair.notMeasured).toMatch(/no address in/);
+      else expect(pair.notMeasured).toBeNull();
+    }
+  }, 60_000);
+
+  it('refuses when too FEW named pairs could be measured to anchor anything', async () => {
+    // The vacuity floor on the anchor itself. The first version of this check
+    // named Barcelona→Paris, which returned a bare `null` on every run because
+    // production holds no Paris address — a probe that answers `null` cannot
+    // tell "correct" from "nothing to measure against", and one surviving
+    // measurement is a coincidence away from meaning nothing.
+    const geo = await seedAndCopyGeo();
+    const database = mongoDatabase();
+    // Madrid only: no pair has both endpoints.
+    await database.collection('addresses').insertOne(
+      addressDocument(geo, 'Madrid', MADRID, { street: 'Gran Vía' }),
+    );
+
+    await expect(
+      runDataBackfill({
+        mongo: database,
+        database: getDb(),
+        mode: 'copy',
+        sampleSize: 5,
+        only: ['images', 'addresses'],
+      }),
+    ).rejects.toThrow(/named city\s+pairs could be measured/);
   }, 60_000);
 
   it('a TRANSPOSED pair lands thousands of kilometres from its own city', async () => {
@@ -712,11 +843,8 @@ describe('data backfill — end to end', () => {
     const geo = await seedAndCopyGeo();
     const database = mongoDatabase();
     const address = addressDocument(geo, 'Barcelona', BARCELONA);
-    await database.collection('addresses').insertMany([
-      address,
-      addressDocument(geo, 'Madrid', MADRID, { street: 'Gran Vía' }),
-      addressDocument(geo, 'Paris', PARIS, { street: 'Rue de Rivoli', countryCode: 'FR' }),
-    ]);
+    await database.collection('addresses').insertOne(address);
+    await seedMeasurableAddresses(geo);
     await database.collection('properties').insertMany([
       propertyDocument(address._id as mongoose.Types.ObjectId),
       propertyDocument(address._id as mongoose.Types.ObjectId),
@@ -745,10 +873,9 @@ describe('data backfill — end to end', () => {
     const good = Array.from({ length: 300 }, () =>
       addressDocument(geo, 'Barcelona', BARCELONA),
     );
+    await seedMeasurableAddresses(geo);
     await database.collection('addresses').insertMany([
       ...good,
-      addressDocument(geo, 'Madrid', MADRID, { street: 'Gran Vía' }),
-      addressDocument(geo, 'Paris', PARIS, { street: 'Rue de Rivoli', countryCode: 'FR' }),
       // One bad geocode: Caracas, filed under a Spanish city. 1 in 303 is well
       // under the 1% threshold.
       addressDocument(geo, 'Barcelona', { lng: -66.9858849, lat: 10.5251816 }),
@@ -764,7 +891,12 @@ describe('data backfill — end to end', () => {
 
     // Reported, not swallowed — and the run stands.
     expect(report.geometry?.centroidOverLimit).toBe(1);
-    expect(report.geometry?.centroidSamples).toBe(303);
+    expect(report.geometry?.centroidSamples).toBe(304);
+    // Classified and named, not folded into a count somebody has to go and look
+    // up. `(0,0)` is told apart from "wrong country" because the remedies differ.
+    expect(report.geometry?.outliers).toEqual([
+      expect.objectContaining({ resolution: 'SOURCE_COORDINATES_FAR_FROM_CITY' }),
+    ]);
   }, 120_000);
 
   it('refuses to write anything when the audit finds a violation', async () => {
@@ -806,11 +938,8 @@ describe('data backfill — end to end', () => {
     const address = addressDocument(geo, 'Barcelona', BARCELONA);
     // Madrid and Paris too: full verification demands at least one measurable
     // real-world distance, and one city cannot supply one.
-    await database.collection('addresses').insertMany([
-      address,
-      addressDocument(geo, 'Madrid', MADRID, { street: 'Gran Vía' }),
-      addressDocument(geo, 'Paris', PARIS, { street: 'Rue de Rivoli', countryCode: 'FR' }),
-    ]);
+    await database.collection('addresses').insertOne(address);
+    await seedMeasurableAddresses(geo);
     await database.collection('properties').insertOne(
       propertyDocument(address._id as mongoose.Types.ObjectId),
     );
@@ -820,13 +949,13 @@ describe('data backfill — end to end', () => {
 
     const inserted = (report: typeof first, collection: string) =>
       report.copied.find((entry) => entry.collection === collection)?.inserted ?? {};
-    expect(inserted(first, 'addresses').addresses).toBe(3);
+    expect(inserted(first, 'addresses').addresses).toBe(4);
     // `ON CONFLICT DO NOTHING` still reports the batch it SENT; what proves
     // convergence is that verification passes and the table did not grow.
     expect(second.verified.every((entry) => entry.missing === 0)).toBe(true);
 
     const [row] = await getDb().select({ total: sql<number>`count(*)::int` }).from(addresses);
-    expect(row.total).toBe(3);
+    expect(row.total).toBe(4);
   }, 90_000);
 
   it('links a geo cover image once images exist, and never restamps updated_at', async () => {
@@ -916,11 +1045,8 @@ describe('data backfill — end to end', () => {
     const geo = await seedAndCopyGeo();
     const database = mongoDatabase();
     const address = addressDocument(geo, 'Barcelona', BARCELONA);
-    await database.collection('addresses').insertMany([
-      address,
-      addressDocument(geo, 'Madrid', MADRID, { street: 'Gran Vía' }),
-      addressDocument(geo, 'Paris', PARIS, { street: 'Rue de Rivoli', countryCode: 'FR' }),
-    ]);
+    await database.collection('addresses').insertOne(address);
+    await seedMeasurableAddresses(geo);
 
     const photos = Array.from({ length: 55 * 11 }, () => imageDocument());
     await database.collection('images').insertMany(photos);
@@ -959,11 +1085,8 @@ describe('data backfill — end to end', () => {
     const geo = await seedAndCopyGeo();
     const database = mongoDatabase();
     const address = addressDocument(geo, 'Barcelona', BARCELONA);
-    await database.collection('addresses').insertMany([
-      address,
-      addressDocument(geo, 'Madrid', MADRID, { street: 'Gran Vía' }),
-      addressDocument(geo, 'Paris', PARIS, { street: 'Rue de Rivoli', countryCode: 'FR' }),
-    ]);
+    await database.collection('addresses').insertOne(address);
+    await seedMeasurableAddresses(geo);
     await database.collection('properties').insertOne(
       propertyDocument(address._id as mongoose.Types.ObjectId, {
         offerings: ['long_term_rent', 'exchange'],
