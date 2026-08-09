@@ -165,11 +165,29 @@ export async function findHasImagesDisagreements(
 export async function syncAllHasImages(db: DatabaseOrTransaction): Promise<number> {
   const rows = await db
     .update(properties)
-    .set({ hasImages: hasPhotoRow() })
-    // Touch only the rows that are actually wrong: `updated_at` carries
-    // `$onUpdate`, so an unconditional rewrite would restamp every listing in
-    // the table with the migration's own clock and destroy the ordering the
-    // historical value carries.
+    .set({
+      hasImages: hasPhotoRow(),
+      // `updated_at` ASSIGNED FROM ITSELF, and it is load-bearing rather than
+      // decorative — the trap `CONVENTIONS.md` §Timestamps was corrected to name.
+      // drizzle applies `$onUpdate` to any column NOT in `.set()`, so the obvious
+      // spelling stamps every row this touches with the caller's clock. The
+      // callers here are a backfill and a drift repair; neither is a change to
+      // the listing, and narrowing the `where` bounds how many rows are damaged
+      // without making any of them right.
+      //
+      // On a first copy that is not a rounding error: the column defaults to
+      // `false` on insert, so this fires on every image-bearing listing (16,585
+      // of 17,644 at the census) and would replace their real `updated_at`
+      // wholesale. In an `UPDATE … SET` the right-hand side reads the OLD row,
+      // so this is an explicit no-op that displaces the automatic one.
+      //
+      // {@link syncHasImages} deliberately does NOT do this: it is called from a
+      // photo write, where the listing really did change.
+      updatedAt: sql`${properties.updatedAt}`,
+    })
+    // Touch only the rows that are actually wrong — fewer rows rewritten, and a
+    // returned count that means "how many were repaired" rather than "how many
+    // exist".
     .where(ne(properties.hasImages, hasPhotoRow()))
     .returning({ id: properties.id });
 

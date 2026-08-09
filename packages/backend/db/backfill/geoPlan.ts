@@ -167,11 +167,18 @@ export const GEO_RESOLUTIONS = {
 
 export type GeoResolution = (typeof GEO_RESOLUTIONS)[keyof typeof GEO_RESOLUTIONS];
 
-/** Counts of each named resolution actually applied, for the run report. */
+/**
+ * Counts of each named resolution actually applied, for the run report.
+ *
+ * Keyed by plain `string` rather than by one copy's resolution union: the geo
+ * copy and the data copy name different resolutions, and a log that accepts only
+ * one set forces the other to invent a second counter — which is how two halves
+ * of one migration end up reporting in two formats.
+ */
 export class ResolutionLog {
-  private readonly counts = new Map<GeoResolution, number>();
+  private readonly counts = new Map<string, number>();
 
-  applied(resolution: GeoResolution): void {
+  applied(resolution: string): void {
     this.counts.set(resolution, (this.counts.get(resolution) ?? 0) + 1);
   }
 
@@ -193,6 +200,13 @@ export interface CoverContext {
 }
 
 // ── reading a Mongo value without changing it ──────────────────────
+//
+// EXPORTED, and shared with `dataPlan.ts`. They started private here and stayed
+// here when the second batch of collections needed them: two copies of "how do
+// we read a stored value" is two answers to the question this backfill's whole
+// audit is built on. Nothing about them is geo-specific except the file they
+// happen to live in, which is a move somebody can make later without changing a
+// line of behaviour.
 
 /**
  * Whether a value is an ObjectId, decided by DUCK TYPING rather than
@@ -240,13 +254,13 @@ export function toObjectIdHex(value: unknown): string | null {
  * where the real fault is a shape nobody expected, and would quietly erase a
  * foreign key on a nullable column.
  */
-function idValue(value: unknown): unknown {
+export function idValue(value: unknown): unknown {
   if (value === undefined || value === null) return null;
   return isObjectId(value) ? value.toHexString() : value;
 }
 
 /** A dotted path (`coordinates.lat`), or `undefined` where any level is absent. */
-function readPath(document: SourceDocument, path: string): unknown {
+export function readPath(document: SourceDocument, path: string): unknown {
   let current: unknown = document;
   for (const segment of path.split('.')) {
     if (typeof current !== 'object' || current === null) return undefined;
@@ -256,7 +270,7 @@ function readPath(document: SourceDocument, path: string): unknown {
 }
 
 /** A value that may legitimately be absent, normalised to an explicit `null`. */
-function optional(document: SourceDocument, path: string): unknown {
+export function optional(document: SourceDocument, path: string): unknown {
   const value = readPath(document, path);
   return value === undefined ? null : value;
 }
@@ -269,7 +283,7 @@ function optional(document: SourceDocument, path: string): unknown {
  * in the target, so a stored `null` is the same "the document does not say" a
  * missing key is — and Mongoose would hydrate both to the default.
  */
-function withSchemaDefault(
+export function withSchemaDefault(
   document: SourceDocument,
   path: string,
   fallback: unknown,
@@ -282,7 +296,7 @@ function withSchemaDefault(
 }
 
 /** `created_at` — the stored value, or the id's own embedded creation instant. */
-function createdAtValue(document: SourceDocument, log: ResolutionLog): unknown {
+export function createdAtValue(document: SourceDocument, log: ResolutionLog): unknown {
   const stored = readPath(document, 'createdAt');
   if (stored !== undefined && stored !== null) return stored;
   const id = document._id;
@@ -296,7 +310,7 @@ function createdAtValue(document: SourceDocument, log: ResolutionLog): unknown {
 }
 
 /** `updated_at` — the stored value, else whatever `created_at` resolved to. */
-function updatedAtValue(document: SourceDocument, createdAt: unknown, log: ResolutionLog): unknown {
+export function updatedAtValue(document: SourceDocument, createdAt: unknown, log: ResolutionLog): unknown {
   const stored = readPath(document, 'updatedAt');
   if (stored !== undefined && stored !== null) return stored;
   log.applied(GEO_RESOLUTIONS.TIMESTAMP_FROM_OBJECT_ID);
