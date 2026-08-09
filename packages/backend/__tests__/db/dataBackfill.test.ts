@@ -834,6 +834,63 @@ describe('data backfill — end to end', () => {
     expect(row.coverImageId).toBeNull();
   }, 60_000);
 
+  it('writes a child batch only after its parents, however the batch sizes fall', async () => {
+    // THE PRODUCTION FAILURE, as a fixture.
+    //
+    // The first copy against production died here: `images`, `addresses` and
+    // `agencies` were in, and the first `property_images` batch hit 23503
+    // because the `properties` rows it referenced were still buffered. Batch
+    // size is derived from column count, so `properties` (135 columns) fills at
+    // 370 rows while `property_images` (11) fills at 500 — and at roughly ten
+    // photos per listing the CHILD fills after about fifty documents, with the
+    // parent four fifths empty.
+    //
+    // Fifty properties × eleven photos = 550 child rows and 50 parent rows,
+    // which crosses the child's threshold and nowhere near the parent's. Every
+    // earlier fixture in this file has one or two properties, which is why none
+    // of them could ever have caught it.
+    const geo = await seedAndCopyGeo();
+    const database = mongoDatabase();
+    const address = addressDocument(geo, 'Barcelona', BARCELONA);
+    await database.collection('addresses').insertMany([
+      address,
+      addressDocument(geo, 'Madrid', MADRID, { street: 'Gran Vía' }),
+      addressDocument(geo, 'Paris', PARIS, { street: 'Rue de Rivoli', countryCode: 'FR' }),
+    ]);
+
+    const photos = Array.from({ length: 55 * 11 }, () => imageDocument());
+    await database.collection('images').insertMany(photos);
+
+    const listings = Array.from({ length: 55 }, (_, listing) =>
+      propertyDocument(address._id as mongoose.Types.ObjectId, {
+        images: photos.slice(listing * 11, listing * 11 + 11).map((photo, index) => ({
+          _id: oid(),
+          imageId: photo._id,
+          url: 'u/m',
+          isPrimary: index === 0,
+          order: index,
+        })),
+      }),
+    );
+    await database.collection('properties').insertMany(listings);
+
+    const report = await runDataBackfill({
+      mongo: database,
+      database: getDb(),
+      mode: 'copy',
+      sampleSize: 5,
+    });
+
+    expect(report.verified.every((entry) => entry.missing === 0)).toBe(true);
+
+    const [parents] = await getDb().select({ total: sql<number>`count(*)::int` }).from(properties);
+    const [children] = await getDb()
+      .select({ total: sql<number>`count(*)::int` })
+      .from(propertyImages);
+    expect(parents.total).toBe(55);
+    expect(children.total).toBe(55 * 11);
+  }, 120_000);
+
   it('writes both calendars into one table, under their own scopes', async () => {
     const geo = await seedAndCopyGeo();
     const database = mongoDatabase();
