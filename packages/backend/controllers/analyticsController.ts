@@ -8,7 +8,6 @@ import type { Request, Response, NextFunction } from 'express';
 
 import { AppError, successResponse } from '../middlewares/errorHandler';
 import { logger } from '../middlewares/logging';
-import { Profile } from '../models';
 import { getDb } from '../db/postgres';
 import {
   countAppWideCatalogue,
@@ -20,6 +19,7 @@ import {
   countViewsOfProperties,
   listOwnedPropertyIds,
 } from '../db/analytics/ownerAnalytics';
+import { findProfileByOxyUserId } from '../db/profiles/profileRepository';
 import { countViewingsByStatusForOwner } from '../db/bookings/viewingReads';
 
 function errorMessage(error: unknown): string {
@@ -88,7 +88,17 @@ class AnalyticsController {
       const since = new Date(Date.now() - periodDays * DAY_MS);
 
 
-      const activeProfile = await Profile.findByOxyUserId(oxyUserId);
+      // A GATE, not a lookup: nothing below reads this row — every figure is
+      // keyed by `oxyUserId` — so its only job is "does this person have a
+      // Homiio profile at all". It is the last Mongo read in this file's own
+      // handler and it was SOUND, unlike the three defects the rest of this
+      // endpoint carried: `Profile.findByOxyUserId` is a plain
+      // `findOne({ oxyUserId })` on a declared, indexed path. It moves anyway,
+      // because profiles are WRITTEN to Postgres now — leaving it on Mongo
+      // would answer zeros forever for anyone whose profile was created after
+      // that port landed.
+      const db = getDb();
+      const activeProfile = await findProfileByOxyUserId(db, oxyUserId);
       if (!activeProfile) {
         return res.json(
           successResponse(
@@ -111,7 +121,6 @@ class AnalyticsController {
       // document, `propertyIds` was always empty, and the two guarded
       // aggregates below never ran. Every number this endpoint reported has
       // been 0 since it was written; see `db/analytics/ownerAnalytics.ts`.
-      const db = getDb();
       const propertyIds = await listOwnedPropertyIds(db, oxyUserId);
 
       const [views, savesTotal, viewingBuckets] = await Promise.all([

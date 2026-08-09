@@ -47,6 +47,7 @@ import { eq, getTableColumns, inArray, sql } from 'drizzle-orm';
 import type { PgTable } from 'drizzle-orm/pg-core';
 import { Logger } from '../../utils/logger';
 import type { Database } from '../postgres';
+import { unmappedColumnNames } from '../schema/unmappedColumns';
 import { sameValue } from './geo';
 import { columnNames } from './geoPlan';
 import type { CandidateRow } from './rowAudit';
@@ -218,6 +219,7 @@ export async function reconcileTable(options: {
   const { database, table, tableName, produced, scopedTo, allowDeletes, dryRun } = options;
   const columns = getTableColumns(table);
   const idColumn = columns.id;
+  const unmapped = unmappedColumnNames(table);
   const writable: string[] = columnNames(table).filter(
     (column: string) => column !== 'id' && columns[column]?.generated === undefined,
   );
@@ -280,9 +282,16 @@ export async function reconcileTable(options: {
     //
     // Where the column has NO default, `undefined` does mean NULL and IS
     // compared: that is the difference between "the schema filled this in" and
-    // "the copy lost it".
+    // "the copy lost it". The one exception is a column REGISTERED as having no
+    // Mongo source, which the application may legitimately have written since
+    // the copy — `profiles.settings_roommate_preferences_location` is nullable,
+    // has no default, and is written by `PUT /api/roommates/preferences`, so
+    // without the registry every profile carrying one would be reported as
+    // differing on every pass, forever.
     const comparable = writable.filter(
-      (column: string) => row[column] !== undefined || columns[column]?.hasDefault !== true,
+      (column: string) =>
+        row[column] !== undefined ||
+        (columns[column]?.hasDefault !== true && !unmapped.has(column)),
     );
     // `?? null` on BOTH sides. For a nullable column with no default an omitted
     // key stores NULL, so `undefined` and `null` are the same fact here — and

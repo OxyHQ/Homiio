@@ -193,6 +193,81 @@ function toChatMessageDTO(row: ProfileChatMessageRow): Record<string, unknown> {
 }
 
 /**
+ * Whether the person has stated ANY roommate preference.
+ *
+ * The flattened columns cost one distinction that Mongo got for free:
+ * `personalProfile` was declared with no `default`, so mongoose never
+ * materialised it and `settings.roommate.preferences` was genuinely
+ * `undefined` for anybody who had not filled the form in. Every column here is
+ * nullable precisely to keep that fact, and this is the predicate that reads
+ * it back — `GET /api/roommates/preferences` answers `data: null` on it, and
+ * `controllers/roommate/matching.ts` decides whether a person can be scored at
+ * all on the same question.
+ *
+ * `enabled` is NOT consulted: it says whether they want to appear in the feed,
+ * not what they are looking for.
+ */
+export function hasStatedRoommatePreferences(profile: ProfileRow): boolean {
+  return [
+    profile.settingsRoommatePreferencesAgeRangeMin,
+    profile.settingsRoommatePreferencesAgeRangeMax,
+    profile.settingsRoommatePreferencesGender,
+    profile.settingsRoommatePreferencesLifestyleSmoking,
+    profile.settingsRoommatePreferencesLifestylePets,
+    profile.settingsRoommatePreferencesLifestylePartying,
+    profile.settingsRoommatePreferencesLifestyleCleanliness,
+    profile.settingsRoommatePreferencesLifestyleSchedule,
+    profile.settingsRoommatePreferencesBudgetMin,
+    profile.settingsRoommatePreferencesBudgetMax,
+    profile.settingsRoommatePreferencesMoveInDate,
+    profile.settingsRoommatePreferencesLeaseDuration,
+    profile.settingsRoommatePreferencesLocation,
+    profile.settingsRoommatePreferencesInterests,
+  ].some((value) => value !== null && value !== undefined);
+}
+
+/**
+ * `settings.roommate.preferences`, as the roommate screens and the profile edit
+ * form both read it.
+ *
+ * Exported because `controllers/roommateController.ts` answers
+ * `GET /api/roommates/preferences` and `PUT /api/roommates/preferences` with
+ * exactly this object, and TWO definitions of one wire shape can disagree — the
+ * roommate endpoint would then serve a subtree the profile endpoint does not,
+ * and the edit form round-trips whichever one it last read. {@link
+ * toPersonalProfile} calls this rather than inlining it, so there is one
+ * definition and both routes are served by it.
+ *
+ * `interests` and `location` are here for the first time: their columns were
+ * added by migration 0008 because mongoose strict mode had made them
+ * unstorable — see `db/schema/profiles.ts`.
+ */
+export function toRoommatePreferencesDTO(profile: ProfileRow): Record<string, unknown> {
+  return {
+    ageRange: {
+      min: profile.settingsRoommatePreferencesAgeRangeMin,
+      max: profile.settingsRoommatePreferencesAgeRangeMax,
+    },
+    gender: profile.settingsRoommatePreferencesGender,
+    lifestyle: {
+      smoking: profile.settingsRoommatePreferencesLifestyleSmoking,
+      pets: profile.settingsRoommatePreferencesLifestylePets,
+      partying: profile.settingsRoommatePreferencesLifestylePartying,
+      cleanliness: profile.settingsRoommatePreferencesLifestyleCleanliness,
+      schedule: profile.settingsRoommatePreferencesLifestyleSchedule,
+    },
+    budget: {
+      min: profile.settingsRoommatePreferencesBudgetMin,
+      max: profile.settingsRoommatePreferencesBudgetMax,
+    },
+    moveInDate: profile.settingsRoommatePreferencesMoveInDate,
+    leaseDuration: profile.settingsRoommatePreferencesLeaseDuration,
+    interests: profile.settingsRoommatePreferencesInterests,
+    location: profile.settingsRoommatePreferencesLocation,
+  };
+}
+
+/**
  * The `personalProfile` subtree, rebuilt from the flattened columns and the
  * child rows.
  *
@@ -284,26 +359,7 @@ function toPersonalProfile(
       },
       roommate: {
         enabled: profile.settingsRoommateEnabled,
-        preferences: {
-          ageRange: {
-            min: profile.settingsRoommatePreferencesAgeRangeMin,
-            max: profile.settingsRoommatePreferencesAgeRangeMax,
-          },
-          gender: profile.settingsRoommatePreferencesGender,
-          lifestyle: {
-            smoking: profile.settingsRoommatePreferencesLifestyleSmoking,
-            pets: profile.settingsRoommatePreferencesLifestylePets,
-            partying: profile.settingsRoommatePreferencesLifestylePartying,
-            cleanliness: profile.settingsRoommatePreferencesLifestyleCleanliness,
-            schedule: profile.settingsRoommatePreferencesLifestyleSchedule,
-          },
-          budget: {
-            min: profile.settingsRoommatePreferencesBudgetMin,
-            max: profile.settingsRoommatePreferencesBudgetMax,
-          },
-          moveInDate: profile.settingsRoommatePreferencesMoveInDate,
-          leaseDuration: profile.settingsRoommatePreferencesLeaseDuration,
-        },
+        preferences: toRoommatePreferencesDTO(profile),
         history: hydrated.roommateHistory.map(toRoommateHistoryDTO),
       },
       language: profile.settingsLanguage,

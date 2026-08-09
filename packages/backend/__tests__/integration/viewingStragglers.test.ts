@@ -30,9 +30,8 @@ import { eq } from 'drizzle-orm';
 import analyticsController from '../../controllers/analyticsController';
 import { getDb } from '../../db/postgres';
 import { pruneClosedViewingsBefore } from '../../db/bookings/viewingReads';
-import { recentlyViewed, savedItems, viewingRequests } from '../../db/schema';
+import { profiles, recentlyViewed, savedItems, viewingRequests } from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
-import { Profile } from '../../models';
 import { resetGeoTables, seedListingWithGeo } from '../helpers/postgresGeoFixtures';
 
 function buildApp(oxyUserId: string): Express {
@@ -97,6 +96,7 @@ beforeEach(async () => {
   await getDb().delete(viewingRequests);
   await getDb().delete(recentlyViewed);
   await getDb().delete(savedItems);
+  await getDb().delete(profiles);
   await resetGeoTables();
 });
 
@@ -106,6 +106,7 @@ afterAll(async () => {
   await getDb().delete(viewingRequests);
   await getDb().delete(recentlyViewed);
   await getDb().delete(savedItems);
+  await getDb().delete(profiles);
   await resetGeoTables();
 });
 
@@ -148,13 +149,20 @@ describe('pruneClosedViewingsBefore — the sweep that was reaping nothing', () 
 
 describe('owner analytics — the endpoint that always returned zeros', () => {
   /**
-   * The controller still resolves a Profile before it will answer, so the test
+   * The controller still resolves a profile before it will answer, so the test
    * seeds one. That guard is untouched by this change: unlike the saved-search
    * and exchange cases, this endpoint's early return is a documented response
    * shape rather than a vestigial ownership check.
+   *
+   * It is a POSTGRES row now. The gate itself was always sound — a plain
+   * `findOne({ oxyUserId })` on a declared, indexed path — but profiles are
+   * WRITTEN to Postgres, so a Mongo read of them would answer zeros forever for
+   * anyone whose profile was created after that port landed. A fixture left on
+   * `Profile.create` would go on passing against the Mongo version and fail
+   * here, which is what it did.
    */
   async function seedProfile(oxyUserId: string) {
-    return Profile.create({ oxyUserId, personalProfile: {} });
+    return getDb().insert(profiles).values({ oxyUserId });
   }
 
   it('reports REAL numbers for views, saves and viewing requests', async () => {

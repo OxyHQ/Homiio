@@ -107,6 +107,19 @@ export interface RoommatePreferences {
     };
     moveInDate?: string;
     leaseDuration?: LeaseDuration;
+    /**
+     * Free-text tags the compatibility score intersects, worth 20 of its 100
+     * points, and free text the discover feed filters on with `ILIKE`.
+     *
+     * Both were already accepted by the backend's write allow-list
+     * (`EDITABLE_ROOMMATE_PREFERENCE_FIELDS`) and already sent by
+     * `RoommateFilters`, while being declared NOWHERE — neither here nor in
+     * `personalProfileSchema`, which is why mongoose strict mode discarded
+     * every write of them. Declaring them is the type catching up with the
+     * contract two other places already state.
+     */
+    interests?: string[];
+    location?: string;
   };
   history?: Array<{
     startDate: string;
