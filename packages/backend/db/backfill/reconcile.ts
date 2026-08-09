@@ -96,6 +96,24 @@ export function deletionAllowance(stored: number): number {
   return Math.max(Math.floor(stored * MAX_SOURCE_SHRINK), ABSOLUTE_SURPLUS_FLOOR);
 }
 
+/**
+ * Whether the stored row is newer than the one the mappers produced.
+ *
+ * Compared on `updatedAt`, which both sides carry and which the copy preserves
+ * verbatim — so the question is "which store wrote this row last", answered by
+ * the value each store recorded rather than by a clock this process reads.
+ *
+ * A row with no usable timestamp on either side is NOT treated as newer: the
+ * comparison cannot be made, and refusing to update on an unanswerable question
+ * would silently stop reconciling those rows forever.
+ */
+export function isTargetNewer(source: CandidateRow, target: CandidateRow): boolean {
+  const sourceAt = source.updatedAt;
+  const targetAt = target.updatedAt;
+  if (!(sourceAt instanceof Date) || !(targetAt instanceof Date)) return false;
+  return targetAt.getTime() > sourceAt.getTime();
+}
+
 /** Whether removing `surplus` of `stored` rows is permitted. */
 export function mayDelete(surplus: number, stored: number): boolean {
   if (stored > 0 && surplus >= stored) return false;
@@ -165,6 +183,11 @@ export interface ReconcileTableReport {
   readonly retainedPostCutover: number;
   /** Ids this run removed, or WOULD remove under `--dry-run`. */
   readonly deletions: readonly string[];
+  /**
+   * Rows left alone because the TARGET's `updated_at` is NEWER than the
+   * source's — a live write this must not roll back.
+   */
+  readonly skippedTargetNewer: number;
 }
 
 /**
@@ -228,6 +251,7 @@ export async function reconcileTable(options: {
   let inserted = 0;
   let updated = 0;
   let unchanged = 0;
+  let skippedTargetNewer = 0;
   const differing: Record<string, number> = {};
 
   for (const row of rows) {
@@ -270,6 +294,26 @@ export async function reconcileTable(options: {
     );
     if (changed.length === 0) {
       unchanged += 1;
+      continue;
+    }
+
+    // NEVER roll a live write back.
+    //
+    // This mode was written while Mongo was the only writer, so "the source
+    // differs" meant "the target is stale". Once the write path moved, that
+    // stopped being true in one direction: the target can now be AHEAD, and
+    // applying the source over it undoes work the authoritative store just did.
+    //
+    // Measured the hour the write path landed: of three differing properties,
+    // TWO were newer in Postgres — the ingest worker refreshing `expires_at`
+    // against the new authority — and a blind apply would have moved both
+    // deadlines backwards by about an hour, into the path of the expiry sweep.
+    //
+    // So the rule is directional rather than symmetric: reconciliation may only
+    // ever carry a STALE target forward. A target that is ahead is not drift, it
+    // is the future, and it is skipped and counted.
+    if (isTargetNewer(row, current)) {
+      skippedTargetNewer += 1;
       continue;
     }
     for (const column of changed) differing[column] = (differing[column] ?? 0) + 1;
@@ -347,6 +391,7 @@ export async function reconcileTable(options: {
     deletionRefused,
     retainedPostCutover,
     deletions: deletionRefused === null ? surplus : [],
+    skippedTargetNewer,
   };
   logger.info(`Reconciled ${tableName}`, report);
   return report;

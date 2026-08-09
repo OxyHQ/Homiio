@@ -84,6 +84,7 @@ import {
   ABSOLUTE_SURPLUS_FLOOR,
   couldHaveComeFromMongo,
   countTable,
+  isTargetNewer,
   deletionAllowance,
   findSurplusIds,
   mayDelete,
@@ -791,6 +792,7 @@ async function compareSample(
   const log = new ResolutionLog();
   const mismatches: string[] = [];
   let compared = 0;
+  let aheadOfSource = 0;
 
   for (const document of documents) {
     const mapped = plan.map(document, log);
@@ -822,6 +824,17 @@ async function compareSample(
           mismatches.push(`${table}/${String(expected.id)}: absent from the target`);
           continue;
         }
+        // A row the TARGET has written since the copy is not the copy's to be
+        // faithful about. The verifier's claim is "what was copied is what is
+        // stored", and once Postgres became the authority it can legitimately be
+        // AHEAD — reporting that as a fidelity failure would make the check fail
+        // permanently on live data, which is how a check stops being believed.
+        // The same directional rule the reconcile applies: stale is a finding,
+        // ahead is not.
+        if (isTargetNewer(expected, actual)) {
+          aheadOfSource += 1;
+          continue;
+        }
         for (const column of columnNames(target)) {
           // GENERATED ALWAYS columns are not the copy's to produce — `geo`,
           // `address_level` and `search_vector` are derived by the DATABASE from
@@ -851,6 +864,13 @@ async function compareSample(
     }
   }
 
+  if (aheadOfSource > 0) {
+    logger.info(
+      `${plan.name}: ${aheadOfSource} sampled row(s) are AHEAD of the source and were ` +
+      'not compared — the target has written them since the copy, which is ' +
+      'expected once Postgres is the authority',
+    );
+  }
   return { compared, mismatches };
 }
 
@@ -1136,6 +1156,7 @@ async function deleteSurplusParents(
     deletionRefused: null,
     retainedPostCutover,
     deletions: [],
+    skippedTargetNewer: 0,
   };
   if (retainedPostCutover > 0) {
     logger.info(
@@ -1197,6 +1218,7 @@ function mergeReports(reports: readonly ReconcileTableReport[]): ReconcileTableR
       deletionRefused: current.deletionRefused ?? report.deletionRefused,
       retainedPostCutover: current.retainedPostCutover + report.retainedPostCutover,
       deletions: [...current.deletions, ...report.deletions],
+      skippedTargetNewer: current.skippedTargetNewer + report.skippedTargetNewer,
     });
   }
   return [...merged.values()];
