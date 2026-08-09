@@ -1,0 +1,60 @@
+##
+## Docker Compose — local PostgreSQL for the Mongo→Postgres migration.
+##
+## Holds only the database a developer needs running next to
+## `bun run dev:backend` and `bun run --cwd packages/backend test`. The suite
+## treats a reachable Postgres as a HARD prerequisite (see
+## `packages/backend/jest.globalSetup.ts`), so this is not optional tooling —
+## without it the backend tests refuse to start rather than skipping silently.
+##
+## Usage:
+##   docker compose -f docker-compose.postgres.yml up -d postgres
+##   docker compose -f docker-compose.postgres.yml logs -f postgres
+##   docker compose -f docker-compose.postgres.yml down -v   # wipe (data is disposable)
+##
+## Then in packages/backend/.env:
+##   DATABASE_URL=postgres://homiio:homiio@127.0.0.1:5434/homiio_dev
+##
+
+services:
+  postgres:
+    # PostGIS, not plain Postgres: `addresses.geo` is a GENERATED `geography`
+    # column with a GiST index (the port of the Mongo `2dsphere` index that
+    # every `$near`/`$geoWithin` property search uses), so `CREATE EXTENSION
+    # postgis` has to succeed before the migration that names the type.
+    #
+    # `postgis/postgis` is the PostGIS project's own image and is pinned on BOTH
+    # versions — Postgres 17 (matching what RDS runs) and PostGIS 3.5 — because a
+    # floating PostGIS minor is a floating set of function volatilities, and this
+    # schema depends on `ST_MakePoint` and the `geometry → geography` cast being
+    # IMMUTABLE (a generated column requires it).
+    #
+    # `.github/workflows/ci.yml` pins the SAME image, so a developer's database
+    # and CI's cannot disagree about what is installed.
+    image: postgis/postgis:17-3.5
+    container_name: homiio-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: homiio
+      POSTGRES_PASSWORD: homiio
+      # `homiio_dev` rather than `homiio-development`: an unquoted Postgres
+      # identifier cannot hold a hyphen, and `--target-database=homiio_dev` in
+      # the migrate command has to name it literally.
+      POSTGRES_DB: homiio_dev
+    ports:
+      # 5434, not 5432 or 5433: oxy-api's `docker-compose.dev.yml` already binds
+      # 5432 and Mention's `docker-compose.postgres.yml` binds 5433, and all
+      # three repositories are routinely open on the same machine at once.
+      # Loopback-only — this database is never exposed off the host.
+      - "127.0.0.1:5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U homiio -d homiio_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    volumes:
+      - homiio-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  homiio-postgres-data:

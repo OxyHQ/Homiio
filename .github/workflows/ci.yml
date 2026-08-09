@@ -57,6 +57,38 @@ jobs:
       MONGOMS_VERSION: 8.2.6
       # Keep the download inside the workspace so the cache step below can see it.
       MONGOMS_DOWNLOAD_DIR: ${{ github.workspace }}/.cache/mongodb-binaries
+      # The Postgres server `jest.globalSetup.ts` creates one throwaway,
+      # fully-migrated database per worker on. Separate from DATABASE_URL so the
+      # harness never has to guess which server it may create databases on.
+      TEST_DATABASE_URL: postgres://homiio:homiio@127.0.0.1:5434/postgres
+    # BOTH stores run here, because both are live during the dual-run: Mongo via
+    # the in-memory replica set the mongod cache below feeds, and Postgres via
+    # this service container.
+    services:
+      postgres:
+        # The SAME pin as docker-compose.postgres.yml, on BOTH versions. A
+        # floating PostGIS minor is a floating set of function volatilities, and
+        # this schema depends on `ST_MakePoint` and the geometry→geography cast
+        # being IMMUTABLE (a generated column requires it), so a developer's
+        # database and CI's must not be able to disagree about what is installed.
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_USER: homiio
+          POSTGRES_PASSWORD: homiio
+          POSTGRES_DB: homiio_dev
+        ports:
+          # 5434 on the host, matching the compose file, so TEST_DATABASE_URL is
+          # the same string a developer uses.
+          - 5434:5432
+        # Without these the job races the server's first boot: the container is
+        # "started" long before Postgres accepts a connection, and global setup
+        # would fail on the first CREATE DATABASE rather than waiting.
+        options: >-
+          --health-cmd "pg_isready -U homiio -d homiio_dev"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 10s
     steps:
       - uses: actions/checkout@v4
 
@@ -101,6 +133,13 @@ jobs:
       - name: Typecheck backend
         run: bun x tsc --noEmit -p packages/backend/tsconfig.json
 
+      # Before the suite, because it needs no database and it is the cheapest
+      # possible failure. A migration with no `-- oxy:deploy-phase=` marker is
+      # refused at migration TIME too, so without this gate the first thing to
+      # notice would be a production deploy.
+      - name: Verify every migration declares a deploy phase
+        run: bun .github/scripts/check-migration-phases.mjs packages/backend/drizzle
+
       - name: Test backend
         run: >-
           bun run --cwd packages/backend test --
@@ -110,11 +149,18 @@ jobs:
       # short version is that a wrong working directory, a renamed script or a
       # glob that stops matching all produce an empty green run, and that reads as
       # coverage forever because nothing contradicts it.
+      #
+      # RAISED FROM 850 TO 880 by the Postgres foundation batch (#281), which
+      # added 32 tests across 5 files under `__tests__/db/`. The measured count
+      # went 925 -> 957, so this keeps the same ~75-test headroom the previous
+      # figure carried rather than pinning the exact total. The floor is a
+      # MINIMUM: raise it as suites grow, and lower it only deliberately, in the
+      # same change that removes the tests.
       - name: Assert the suite actually ran
         if: always()
         run: >-
           bun .github/scripts/assert-test-floor.mjs
-          "$RUNNER_TEMP/backend-tests.json" packages/backend 850
+          "$RUNNER_TEMP/backend-tests.json" packages/backend 1100
 
   frontend:
     runs-on: ubuntu-24.04
@@ -185,6 +231,7 @@ jobs:
           bash -n .github/scripts/*.sh
           bun scripts/test-check-lockfile-sync.mjs
           bun .github/scripts/test-assert-test-floor.mjs
+          bun .github/scripts/test-check-migration-phases.mjs
           bash .github/scripts/test-assert-install-clean.sh
           bash .github/scripts/test-deployment-scope.sh
           bash .github/scripts/test-check-version-pins.sh

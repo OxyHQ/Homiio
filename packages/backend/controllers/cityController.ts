@@ -2,13 +2,42 @@
  * City Controller
  *
  * City endpoints over the DB-owned relational geo layer. Cities reference a
- * Country and a Region by id; their canonical names are read via populate.
- * Properties are resolved by `Address.cityId` (no free-text city matching).
+ * country and a region by id; their canonical names come from a JOIN, not a
+ * populate.
+ *
+ * ## What is still Mongo in this file, and why
+ *
+ * `getPropertiesByCity` and `updateCityPropertiesCount` both COUNT PROPERTIES,
+ * and `properties` does not exist in Postgres yet (batch 3). They are left
+ * exactly as they were — Mongoose city read included — rather than half-ported,
+ * because a city read from one store and a property read from the other cannot
+ * be joined by anything. They move with the property read path in batch 4.
+ *
+ * ## The wire format is unchanged
+ *
+ * Batch 10 owns the `_id` → `id` cut, so every response here still carries BOTH
+ * (class B), still nests the country / region / cover image as objects with
+ * their own `_id` + `id`, and still reports the city centre as
+ * `coordinates: { lat, lng }` even though the table stores named `latitude` /
+ * `longitude` columns. {@link serializeCity} is the single place that shape is
+ * built, and it OMITS absent values rather than emitting `null`, because
+ * Mongoose omitted an unset path and `res.json` ships an explicit `null`.
+ *
+ * The one field that is genuinely gone is `imageIds` — a denormalized second
+ * copy of the `images.(entity_type, entity_id)` relation that could disagree
+ * with it, deleted by `db/schema/CONVENTIONS.md` §"Arrays and objects" and read
+ * by nothing in the frontend.
  */
 
 import { Request, Response } from 'express';
 import { Types } from 'mongoose';
-import { City, Country, Region, Property, Address } from '../models';
+import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
+
+import { City, Property, Address } from '../models';
+import { getDb } from '../db/postgres';
+import { escapeLikePattern } from '../db/likePattern';
+import { cities, countries, images, regions } from '../db/schema';
 import { isPlausibleCityName } from '../utils/plausibleCityName';
 import { FIELD_HAS_IMAGES } from './property/searchQueryBuilder';
 import { serializePropertyAddresses, ADDRESS_GEO_POPULATE } from '../services/propertyAddressSerializer';
@@ -18,18 +47,6 @@ const DEFAULT_CITY_LIMIT = 50;
 const DEFAULT_POPULAR_LIMIT = 10;
 const DEFAULT_PROPERTIES_LIMIT = 20;
 const DEFAULT_SEARCH_LIMIT = 10;
-
-/**
- * Common populate spec so every city response carries its country + region and
- * resolves its cover image (the stored Image doc's variant `urls`/`caption`),
- * so the frontend renders the city photo from our own object storage with no
- * live external image dependency.
- */
-const GEO_POPULATE = [
-  { path: 'countryId', select: 'name code currency flag' },
-  { path: 'regionId', select: 'name code' },
-  { path: 'coverImageId', select: 'urls caption width height entityType' },
-];
 
 interface CityFilters {
   search?: string;
@@ -52,6 +69,113 @@ interface PropertyFilters {
   minPrice?: string;
 }
 
+/**
+ * The columns every city response reads, joined to the country / region / cover
+ * image the old `GEO_POPULATE` spec expanded.
+ *
+ * `leftJoin` on the cover image because it is genuinely optional
+ * (`ON DELETE SET NULL`); the country and region are NOT NULL with RESTRICT
+ * foreign keys, so their join kind cannot change the row count — the same kind
+ * is used for all three so no reader has to work out which is which.
+ */
+function cityQuery() {
+  return getDb()
+    .select({
+      city: cities,
+      country: {
+        id: countries.id,
+        name: countries.name,
+        code: countries.code,
+        currency: countries.currency,
+        flag: countries.flag,
+      },
+      region: { id: regions.id, name: regions.name, code: regions.code },
+      coverImage: {
+        id: images.id,
+        urlsOriginal: images.urlsOriginal,
+        urlsSmall: images.urlsSmall,
+        urlsMedium: images.urlsMedium,
+        urlsLarge: images.urlsLarge,
+        caption: images.caption,
+        width: images.width,
+        height: images.height,
+        entityType: images.entityType,
+      },
+    })
+    .from(cities)
+    .leftJoin(countries, eq(cities.countryId, countries.id))
+    .leftJoin(regions, eq(cities.regionId, regions.id))
+    .leftJoin(images, eq(cities.coverImageId, images.id));
+}
+
+type CityQueryRow = Awaited<ReturnType<typeof cityQuery>>[number];
+
+/** Drop keys whose value is null/undefined, matching Mongoose's omission of unset paths. */
+function withoutAbsent(record: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(record)) {
+    if (value !== null && value !== undefined) out[key] = value;
+  }
+  return out;
+}
+
+/** Both id spellings, as every geo response has emitted since before the port. */
+function withIds(id: string, rest: Record<string, unknown>): Record<string, unknown> {
+  return { _id: id, id, ...withoutAbsent(rest) };
+}
+
+/** Build the city response object, including its expanded refs. */
+function serializeCity(row: CityQueryRow): Record<string, unknown> {
+  const { city, country, region, coverImage } = row;
+  const coordinates =
+    typeof city.latitude === 'number' && typeof city.longitude === 'number'
+      ? { lat: city.latitude, lng: city.longitude }
+      : undefined;
+
+  return withIds(city.id, {
+    name: city.name,
+    countryId: country ? withIds(country.id, { name: country.name, code: country.code, currency: country.currency, flag: country.flag }) : city.countryId,
+    regionId: region ? withIds(region.id, { name: region.name, code: region.code }) : city.regionId,
+    coordinates,
+    timezone: city.timezone,
+    population: city.population,
+    description: city.description,
+    averageRent: city.averageRent,
+    currency: city.currency,
+    coverImageId: coverImage
+      ? withIds(coverImage.id, {
+          urls: {
+            original: coverImage.urlsOriginal,
+            small: coverImage.urlsSmall,
+            medium: coverImage.urlsMedium,
+            large: coverImage.urlsLarge,
+          },
+          caption: coverImage.caption,
+          width: coverImage.width,
+          height: coverImage.height,
+          entityType: coverImage.entityType,
+        })
+      : city.coverImageId,
+    isActive: city.isActive,
+    propertiesCount: city.propertiesCount,
+    lastUpdated: city.lastUpdated,
+    createdAt: city.createdAt,
+    updatedAt: city.updatedAt,
+  });
+}
+
+/**
+ * `lower(name) = lower($1)` — the port of `{ $regex: '^name$', $options: 'i' }`.
+ *
+ * That regex is a case-insensitive EQUALITY, not a search, which is why it
+ * becomes `=` rather than `ILIKE`: `ILIKE` would additionally treat a `%` or `_`
+ * in the term as a wildcard. The `lower(name)` functional btree indexes make it
+ * an index lookup rather than the collection scan the anchored `/i` regex was.
+ */
+function nameEquals(column: AnyPgColumn, value: string): SQL {
+  return sql`lower(${column}) = lower(${value})`;
+}
+
 class CityController {
   /**
    * Get all cities with optional filtering.
@@ -68,40 +192,54 @@ class CityController {
         page = 1,
       }: CityFilters = req.query;
 
-      const query: Record<string, unknown> = { isActive: true };
       const numericLimit = Number(limit);
       const numericPage = Number(page);
       const skip = (numericPage - 1) * numericLimit;
 
+      const conditions: SQL[] = [eq(cities.isActive, true)];
+
       if (search) {
-        query.name = { $regex: search, $options: 'i' };
+        // Unanchored `{ $regex: search, $options: 'i' }` — a substring match.
+        // `ILIKE '%…%'` is its port and uses the `gin_trgm_ops` index on `name`;
+        // the term is escaped because `%` and `_` are LIKE metacharacters and a
+        // user typing either would otherwise silently stop filtering.
+        conditions.push(ilike(cities.name, `%${escapeLikePattern(String(search))}%`));
       }
-      if (countryId && Types.ObjectId.isValid(String(countryId))) {
-        query.countryId = new Types.ObjectId(String(countryId));
+      if (countryId) {
+        conditions.push(eq(cities.countryId, String(countryId)));
       } else if (countryCode) {
-        const country = await Country.findOne({ code: String(countryCode).toUpperCase() }).select('_id').lean();
-        if (!country) {
+        const country = await getDb()
+          .select({ id: countries.id })
+          .from(countries)
+          .where(eq(countries.code, String(countryCode).toUpperCase()))
+          .limit(1);
+        if (!country[0]) {
           return res.json({ success: true, data: [], pagination: { page: numericPage, limit: numericLimit, total: 0, pages: 0 } });
         }
-        query.countryId = country._id;
+        conditions.push(eq(cities.countryId, country[0].id));
       }
-      if (regionId && Types.ObjectId.isValid(String(regionId))) {
-        query.regionId = new Types.ObjectId(String(regionId));
+      if (regionId) {
+        conditions.push(eq(cities.regionId, String(regionId)));
       }
 
-      const [cities, total] = await Promise.all([
-        City.find(query)
-          .populate(GEO_POPULATE)
-          .sort({ propertiesCount: -1, name: 1 })
-          .skip(skip)
+      const where = and(...conditions);
+      const [rows, totals] = await Promise.all([
+        cityQuery()
+          .where(where)
+          // `properties_count` and `name` are both NOT NULL, so Mongo's
+          // "missing sorts first" and Postgres' "NULLs last" cannot differ here.
+          .orderBy(desc(cities.propertiesCount), asc(cities.name))
           .limit(numericLimit)
-          .select('-__v'),
-        City.countDocuments(query),
+          .offset(skip),
+        // `count()` carries drizzle's Number mapper; postgres.js returns bigint
+        // as a STRING, and an unmapped one would ship `"7"` on the wire.
+        getDb().select({ total: count() }).from(cities).where(where),
       ]);
+      const total = totals[0]?.total ?? 0;
 
       res.json({
         success: true,
-        data: cities,
+        data: rows.map(serializeCity),
         pagination: {
           page: numericPage,
           limit: numericLimit,
@@ -122,12 +260,22 @@ class CityController {
     try {
       const { limit = DEFAULT_POPULAR_LIMIT } = req.query;
       const numericLimit = Number(limit);
+      // Over-fetch, because the plausible-name filter below runs in the
+      // application and can discard an arbitrary share of the page.
       const fetchLimit = Math.max(numericLimit * 2, numericLimit);
-      const cities = await City.getPopularCities(fetchLimit).populate(GEO_POPULATE);
 
-      const filtered = cities
-        .filter((city) => isPlausibleCityName(city.name) && hasPopulatedCoverImage(city.coverImageId))
-        .slice(0, numericLimit);
+      const rows = await cityQuery()
+        .where(and(eq(cities.isActive, true), sql`${cities.coverImageId} is not null`))
+        .orderBy(desc(cities.propertiesCount), asc(cities.name))
+        .limit(fetchLimit);
+
+      const filtered = rows
+        // `coverImage` is null when `cover_image_id` names a row that no longer
+        // exists — the same "cover failed to resolve" case the populate-based
+        // check covered, now answered by the join.
+        .filter((row) => isPlausibleCityName(row.city.name) && row.coverImage !== null)
+        .slice(0, numericLimit)
+        .map(serializeCity);
 
       res.json({ success: true, data: filtered });
     } catch (error) {
@@ -142,11 +290,11 @@ class CityController {
   async getCityById(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const city = await City.findById(id).populate(GEO_POPULATE).select('-__v');
-      if (!city) {
+      const rows = await cityQuery().where(eq(cities.id, id)).limit(1);
+      if (!rows[0]) {
         return res.status(404).json({ success: false, message: 'City not found' });
       }
-      res.json({ success: true, data: city });
+      res.json({ success: true, data: serializeCity(rows[0]) });
     } catch (error) {
       res.status(500).json({ success: false, message: 'Failed to fetch city', error: (error as Error).message });
     }
@@ -163,40 +311,43 @@ class CityController {
         return res.status(400).json({ success: false, message: 'City name is required' });
       }
 
-      const query: Record<string, unknown> = {
-        name: { $regex: `^${escapeRegExp(String(name))}$`, $options: 'i' },
-        isActive: true,
-      };
+      const conditions: SQL[] = [nameEquals(cities.name, String(name)), eq(cities.isActive, true)];
 
       // Narrow by region/country NAME by resolving to their canonical ids.
+      let resolvedCountryId: string | undefined;
       if (country) {
-        const countryDoc = await Country.findOne({
-          $or: [
-            { code: String(country).toUpperCase() },
-            { name: { $regex: `^${escapeRegExp(String(country))}$`, $options: 'i' } },
-          ],
-        }).select('_id').lean();
-        if (!countryDoc) {
+        const countryRows = await getDb()
+          .select({ id: countries.id })
+          .from(countries)
+          .where(or(eq(countries.code, String(country).toUpperCase()), nameEquals(countries.name, String(country))))
+          .limit(1);
+        if (!countryRows[0]) {
           return res.status(404).json({ success: false, message: 'City not found' });
         }
-        query.countryId = countryDoc._id;
+        resolvedCountryId = countryRows[0].id;
+        conditions.push(eq(cities.countryId, resolvedCountryId));
       }
       if (state) {
-        const regionDoc = await Region.findOne({
-          name: { $regex: `^${escapeRegExp(String(state))}$`, $options: 'i' },
-          ...(query.countryId ? { countryId: query.countryId } : {}),
-        }).select('_id').lean();
-        if (!regionDoc) {
+        const regionRows = await getDb()
+          .select({ id: regions.id })
+          .from(regions)
+          .where(
+            resolvedCountryId
+              ? and(nameEquals(regions.name, String(state)), eq(regions.countryId, resolvedCountryId))
+              : nameEquals(regions.name, String(state)),
+          )
+          .limit(1);
+        if (!regionRows[0]) {
           return res.status(404).json({ success: false, message: 'City not found' });
         }
-        query.regionId = regionDoc._id;
+        conditions.push(eq(cities.regionId, regionRows[0].id));
       }
 
-      const city = await City.findOne(query).populate(GEO_POPULATE).select('-__v');
-      if (!city) {
+      const rows = await cityQuery().where(and(...conditions)).limit(1);
+      if (!rows[0]) {
         return res.status(404).json({ success: false, message: 'City not found' });
       }
-      res.json({ success: true, data: city });
+      res.json({ success: true, data: serializeCity(rows[0]) });
     } catch (error) {
       res.status(500).json({ success: false, message: 'Failed to fetch city', error: (error as Error).message });
     }
@@ -205,6 +356,11 @@ class CityController {
   /**
    * Get properties in a city, resolved relationally by `Address.cityId`.
    * GET /api/cities/:id/properties
+   *
+   * STILL MONGO, deliberately: this handler counts and pages PROPERTIES, and
+   * `properties` lands in batch 3. Porting the city half alone would leave a
+   * Postgres city and a Mongo property with nothing to join them by. Moves with
+   * the property read path in batch 4.
    */
   async getPropertiesByCity(req: Request, res: Response) {
     try {
@@ -221,7 +377,11 @@ class CityController {
         minPrice,
       }: PropertyFilters = req.query;
 
-      const city = await City.findById(id).populate(GEO_POPULATE);
+      const city = await City.findById(id).populate([
+        { path: 'countryId', select: 'name code currency flag' },
+        { path: 'regionId', select: 'name code' },
+        { path: 'coverImageId', select: 'urls caption width height entityType' },
+      ]);
       if (!city) {
         return res.status(404).json({ success: false, message: 'City not found' });
       }
@@ -321,7 +481,7 @@ class CityController {
 
   /**
    * Create a city. Accepts country/region by id or name; resolves both to the
-   * canonical Country/Region ids before persisting.
+   * canonical country/region ids before persisting.
    * POST /api/cities
    */
   async createCity(req: Request, res: Response) {
@@ -340,11 +500,28 @@ class CityController {
         return res.status(400).json({ success: false, message: 'A valid region/state (id or name) is required' });
       }
 
-      const city = new City({ ...rest, name, countryId: resolvedCountryId, regionId: resolvedRegionId });
-      await city.save();
-      await city.populate(GEO_POPULATE);
+      // The city centre arrives as `{ lat, lng }` on the wire and is stored in
+      // NAMED columns, so the pair cannot be transposed on the way in.
+      const coordinates = rest.coordinates as { lat?: number; lng?: number } | undefined;
+      const [created] = await getDb()
+        .insert(cities)
+        .values({
+          name: String(name),
+          countryId: resolvedCountryId,
+          regionId: resolvedRegionId,
+          latitude: typeof coordinates?.lat === 'number' ? coordinates.lat : null,
+          longitude: typeof coordinates?.lng === 'number' ? coordinates.lng : null,
+          timezone: typeof rest.timezone === 'string' ? rest.timezone : null,
+          population: typeof rest.population === 'number' ? rest.population : null,
+          description: typeof rest.description === 'string' ? rest.description : null,
+          averageRent: typeof rest.averageRent === 'number' ? rest.averageRent : null,
+          ...(typeof rest.currency === 'string' ? { currency: rest.currency as typeof cities.$inferInsert.currency } : {}),
+          ...(typeof rest.isActive === 'boolean' ? { isActive: rest.isActive } : {}),
+        })
+        .returning({ id: cities.id });
 
-      res.status(201).json({ success: true, data: city });
+      const rows = await cityQuery().where(eq(cities.id, created.id)).limit(1);
+      res.status(201).json({ success: true, data: serializeCity(rows[0]) });
     } catch (error) {
       res.status(400).json({ success: false, message: 'Failed to create city', error: (error as Error).message });
     }
@@ -353,6 +530,9 @@ class CityController {
   /**
    * Recompute a city's properties count from its addresses.
    * PUT /api/cities/:id/update-count
+   *
+   * STILL MONGO — see {@link getPropertiesByCity}; the count it recomputes is a
+   * count of properties.
    */
   async updateCityPropertiesCount(req: Request, res: Response) {
     try {
@@ -362,7 +542,11 @@ class CityController {
         return res.status(404).json({ success: false, message: 'City not found' });
       }
       await city.updatePropertiesCount();
-      await city.populate(GEO_POPULATE);
+      await city.populate([
+        { path: 'countryId', select: 'name code currency flag' },
+        { path: 'regionId', select: 'name code' },
+        { path: 'coverImageId', select: 'urls caption width height entityType' },
+      ]);
       res.json({ success: true, data: city });
     } catch (error) {
       res.status(500).json({ success: false, message: 'Failed to update city properties count', error: (error as Error).message });
@@ -370,7 +554,7 @@ class CityController {
   }
 
   /**
-   * Search cities by name (text/regex), country + region populated.
+   * Search cities by name, country + region expanded.
    * GET /api/cities/search
    */
   async searchCities(req: Request, res: Response) {
@@ -379,62 +563,49 @@ class CityController {
       if (!q) {
         return res.status(400).json({ success: false, message: 'Search query is required' });
       }
-      const cities = await City.find({ name: { $regex: String(q), $options: 'i' }, isActive: true })
-        .sort({ propertiesCount: -1, name: 1 })
-        .limit(Number(limit))
-        .populate(GEO_POPULATE)
-        .select('-__v');
-      res.json({ success: true, data: cities });
+      const rows = await cityQuery()
+        .where(and(ilike(cities.name, `%${escapeLikePattern(String(q))}%`), eq(cities.isActive, true)))
+        .orderBy(desc(cities.propertiesCount), asc(cities.name))
+        .limit(Number(limit));
+      res.json({ success: true, data: rows.map(serializeCity) });
     } catch (error) {
       res.status(500).json({ success: false, message: 'Failed to search cities', error: (error as Error).message });
     }
   }
 }
 
-/** Escape a user string for safe use inside a RegExp. */
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-/** True when populate resolved coverImageId to an Image doc with variant urls. */
-function hasPopulatedCoverImage(coverImageId: unknown): boolean {
-  if (coverImageId == null || typeof coverImageId !== 'object') {
-    return false;
-  }
-  const urls = (coverImageId as { urls?: unknown }).urls;
-  return urls != null && typeof urls === 'object';
-}
-
-/** Resolve a country ref (id or name/code) to a Country `_id`, or null. */
-async function resolveCountryRef(input: { countryId?: string; country?: string }): Promise<Types.ObjectId | null> {
-  if (input.countryId && Types.ObjectId.isValid(input.countryId)) {
-    const byId = await Country.findById(input.countryId).select('_id').lean();
-    if (byId) return byId._id;
+/** Resolve a country ref (id or name/code) to a country id, or null. */
+async function resolveCountryRef(input: { countryId?: string; country?: string }): Promise<string | null> {
+  const db = getDb();
+  if (input.countryId) {
+    const byId = await db.select({ id: countries.id }).from(countries).where(eq(countries.id, input.countryId)).limit(1);
+    if (byId[0]) return byId[0].id;
   }
   if (input.country) {
-    const doc = await Country.findOne({
-      $or: [
-        { code: String(input.country).toUpperCase() },
-        { name: { $regex: `^${escapeRegExp(String(input.country))}$`, $options: 'i' } },
-      ],
-    }).select('_id').lean();
-    if (doc) return doc._id;
+    const byName = await db
+      .select({ id: countries.id })
+      .from(countries)
+      .where(or(eq(countries.code, String(input.country).toUpperCase()), nameEquals(countries.name, String(input.country))))
+      .limit(1);
+    if (byName[0]) return byName[0].id;
   }
   return null;
 }
 
-/** Resolve a region ref (id or name within a country) to a Region `_id`, or null. */
-async function resolveRegionRef(input: { regionId?: string; state?: string; countryId: Types.ObjectId }): Promise<Types.ObjectId | null> {
-  if (input.regionId && Types.ObjectId.isValid(input.regionId)) {
-    const byId = await Region.findById(input.regionId).select('_id').lean();
-    if (byId) return byId._id;
+/** Resolve a region ref (id or name within a country) to a region id, or null. */
+async function resolveRegionRef(input: { regionId?: string; state?: string; countryId: string }): Promise<string | null> {
+  const db = getDb();
+  if (input.regionId) {
+    const byId = await db.select({ id: regions.id }).from(regions).where(eq(regions.id, input.regionId)).limit(1);
+    if (byId[0]) return byId[0].id;
   }
   if (input.state) {
-    const doc = await Region.findOne({
-      name: { $regex: `^${escapeRegExp(String(input.state))}$`, $options: 'i' },
-      countryId: input.countryId,
-    }).select('_id').lean();
-    if (doc) return doc._id;
+    const byName = await db
+      .select({ id: regions.id })
+      .from(regions)
+      .where(and(nameEquals(regions.name, String(input.state)), eq(regions.countryId, input.countryId)))
+      .limit(1);
+    if (byName[0]) return byName[0].id;
   }
   return null;
 }

@@ -76,11 +76,6 @@ export interface Region {
    * {@link CoverImageRef}.
    */
   coverImageId?: CoverImageRef;
-  /**
-   * All of the region's photos, by `_id`, referencing {@link Image} documents
-   * (`entityType: 'region'`, `entityId` = this region's `_id`).
-   */
-  imageIds?: string[];
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -88,9 +83,16 @@ export interface Region {
 
 /**
  * A city. References its country and region by id. Canonical country/region
- * NAMES live on the Country/Region docs (resolved via populate), NOT here.
- * `popularNeighborhoods` is derived from the Neighborhood collection, not a
+ * NAMES live on the Country/Region rows (resolved by a join), NOT here.
+ * `popularNeighborhoods` is derived from the neighborhood table, not a
  * free-text array.
+ *
+ * There is deliberately no `imageIds`. A city's photos are
+ * `images WHERE (entity_type, entity_id) = ('city', <id>)`, and the array was a
+ * denormalized second copy of that relation which could — and did — disagree
+ * with it: 22 of its 1,235 stored elements named no image row at all, and one
+ * named a PROPERTY's photo (measured 2026-08-06). `coverImageId` remains,
+ * because "which one is the cover" is a fact the relation does not carry.
  */
 export interface City {
   _id: string;
@@ -122,11 +124,6 @@ export interface City {
    * routes; a bare id otherwise. See {@link CoverImageRef}.
    */
   coverImageId?: CoverImageRef;
-  /**
-   * All of the city's photos, by `_id`, referencing {@link Image} documents
-   * (`entityType: 'city'`, `entityId` = this city's `_id`).
-   */
-  imageIds?: string[];
   isActive: boolean;
   /** Maintained from the count of published properties whose Address.cityId matches. */
   propertiesCount: number;

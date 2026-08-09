@@ -68,6 +68,28 @@ export interface Config {
       bufferCommands?: boolean;
     };
   };
+  /**
+   * PostgreSQL, the store Homiio is migrating TO. Separate from `database`
+   * above, which stays Mongo-only for the whole dual-run — the two are different
+   * engines with different connection strings and must never share a key.
+   *
+   * `url` is optional while Mongo is still authoritative: an image deployed
+   * before `DATABASE_URL` lands on the task definition must boot, not crash.
+   * `connectPostgres()` is what fails loudly, and only when something asks for
+   * a connection.
+   */
+  postgres: {
+    /** `DATABASE_URL`, or undefined where Postgres is not provisioned yet. */
+    url: string | undefined;
+    /** Connections one process's pool may open. */
+    maxPoolSize: number;
+    /** Seconds an idle pooled connection is kept before being closed. */
+    idleTimeoutSeconds: number;
+    /** Seconds to wait for a new connection before giving up. */
+    connectTimeoutSeconds: number;
+    /** Seconds a connection may live before the pool recycles it. */
+    maxLifetimeSeconds: number;
+  };
   redis: {
     url: string;
     ttl: number;
@@ -266,7 +288,17 @@ const config: Config = {
   
   // Database Configuration
   database: {
-    url: process.env.MONGODB_URI || process.env.DATABASE_URL || 'mongodb://localhost:27017/homiio',
+    // MONGODB_URI ONLY — never `|| process.env.DATABASE_URL`.
+    //
+    // `DATABASE_URL` now names the POSTGRES database (see `postgres` below), so
+    // the old fallback would hand mongoose a `postgres://…` string the moment
+    // Postgres is provisioned on the task definition. It would not fail on the
+    // image that expects Postgres; it would fail on the ROLLBACK image, whose
+    // whole job is to serve Mongo after a cutover is abandoned — i.e. at the one
+    // moment nobody can afford to debug a connection string. Removing the term
+    // is therefore a PRECONDITION of the migration, weeks ahead of it, not a
+    // step in the cutover.
+    url: process.env.MONGODB_URI || 'mongodb://localhost:27017/homiio',
     options: {
       dbName: `homiio-${process.env.NODE_ENV || 'development'}`,
       // Optimized for serverless environments
@@ -277,7 +309,23 @@ const config: Config = {
       bufferCommands: false, // Disable buffering for serverless
     }
   },
-  
+
+  // PostgreSQL Configuration — the store Homiio is migrating to.
+  postgres: {
+    // No fallback URL. A default like `postgres://localhost/homiio` would make
+    // an unprovisioned deployment connect to nothing in particular and report a
+    // connection error rather than the configuration error it is; `undefined`
+    // lets `connectPostgres()` say exactly what is missing.
+    url: process.env.DATABASE_URL,
+    // 20 is sized for a long-lived API process. The jest harness overrides it
+    // to 8 (`jest.globalSetup.ts`), which is a FLOOR rather than a preference —
+    // see the constant there.
+    maxPoolSize: boundedInteger(process.env.PG_MAX_POOL_SIZE, 20, 1, 200),
+    idleTimeoutSeconds: 30,
+    connectTimeoutSeconds: 10,
+    maxLifetimeSeconds: 1800,
+  },
+
   // Redis Configuration (for caching and sessions)
   redis: {
     url: process.env.REDIS_URL || 'redis://localhost:6379',

@@ -36,6 +36,7 @@ import {
 import { PropertyStatus, type ListingMarket, type ProviderId } from '@homiio/shared-types';
 import config from './config';
 import database from './database/connection';
+import { connectPostgres, closePostgres } from './db/postgres';
 import { Logger } from './utils/logger';
 import { Property } from './models';
 import { IngestionService, IngestionValidationError } from './services/ingestion/IngestionService';
@@ -513,6 +514,9 @@ async function startBullMq(): Promise<() => Promise<void>> {
 
 async function main(): Promise<void> {
   await database.connect();
+  // The ingest path resolves geo and addresses through Postgres now, so the
+  // worker needs a pool for the same reason the API does — see `server.ts`.
+  await connectPostgres();
   runtimeHandle = await createListingFetchRuntimeFromEnv({
     onLog: (message) => logger.warn(message),
   });
@@ -536,6 +540,7 @@ async function main(): Promise<void> {
     logger.info('Inline pass complete; no Redis configured, exiting');
     await runtimeHandle.shutdown();
     await database.disconnect?.();
+    await closePostgres();
     return;
   } else {
     logger.warn('No REDIS_URL and discoverOnBoot=false — worker idle. Set REDIS_URL to enable queues.');
@@ -546,6 +551,7 @@ async function main(): Promise<void> {
     if (closer) await closer();
     await runtimeHandle.shutdown();
     await database.disconnect?.();
+    await closePostgres();
     process.exit(0);
   };
   process.on('SIGTERM', () => void shutdown('SIGTERM'));

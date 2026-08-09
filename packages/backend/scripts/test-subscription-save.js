@@ -12,7 +12,7 @@ const mongoose = require('mongoose');
 // Connect to database
 async function connectDB() {
   try {
-    await mongoose.connect(process.env.DATABASE_URL || 'mongodb://localhost:27017/homiio');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/homiio');
     console.log('✅ Connected to database');
   } catch (error) {
     console.error('❌ Database connection failed:', error.message);

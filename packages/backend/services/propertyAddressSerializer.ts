@@ -1,37 +1,44 @@
 /**
  * Property address serializer.
  *
- * A serialized Property exposes its building Address under `address` (the
- * populated `addressId`, renamed). Geo is relational, so the address only holds
- * `countryId` / `regionId` / `cityId` / `neighborhoodId` references — the
- * human-readable city/region/country NAMES live once on the geo docs.
+ * A serialized address exposes ids plus resolved geo NAMES: geo is relational,
+ * so the address itself only holds `countryId` / `regionId` / `cityId` /
+ * `neighborhoodId` references, and the human-readable city/region/country names
+ * live once on the geo rows. This module derives the display fields
+ * (`cityName` / `regionName` / `countryName` / `neighborhoodName` / `location`)
+ * and guarantees each `*Id` serializes as a bare id string.
  *
- * To let list/detail/search cards render a location label WITHOUT an N+1 lookup
- * per card, the property read controllers DEEP-populate those refs (selecting
- * only `name` / `code`). This serializer reads the populated names off the
- * `address`, attaches the derived display fields (`cityName` / `regionName` /
- * `countryName` / `neighborhoodName` / `location`), and FLATTENS each populated
- * geo ref back to its bare id — so the serialized contract stays exactly
- * "ids + resolved names" and a populated `{ _id, name }` never leaks as the
- * value of `cityId`.
+ * ## It has to serve TWO input shapes right now, and that is temporary
  *
- * Idempotent and tolerant: an un-populated (bare-id) ref simply yields no name,
- * and re-running on an already-flattened address is a no-op.
+ * - **Joined (Postgres).** `addressService.selectAddressWithGeoNames` returns
+ *   `city_id` and `cities.name` as two separate, already-flat values, so the
+ *   names arrive pre-set on `cityName` / `regionName` / … and there is nothing
+ *   to flatten. This is what the address endpoints now produce.
+ * - **Populated (Mongo).** `properties` does not exist in Postgres (batch 3), so
+ *   every property read is still a Mongoose query using
+ *   {@link ADDRESS_GEO_POPULATE}, where `cityId` holds either an id or a
+ *   `{ _id, name }` sub-document.
+ *
+ * Both are handled by ONE rule — "take the name off the ref when the ref carries
+ * one, otherwise keep the name already on the address" — rather than by
+ * branching on which store the row came from. When batch 4 moves the property
+ * read to a join, the ref-reading half and {@link ADDRESS_GEO_POPULATE} go with
+ * it and only the joined shape remains.
  */
 
 import { Types } from 'mongoose';
 import type { AddressGeoNames } from '@homiio/shared-types';
 
-/** A geo ref as found on a lean address: a bare id, a populated doc, or absent. */
+/** A geo ref as found on an address: a bare id, a populated doc, or absent. */
 type GeoRef =
   | Types.ObjectId
   | string
-  | { _id?: unknown; name?: unknown }
+  | { _id?: unknown; id?: unknown; name?: unknown }
   | null
   | undefined;
 
 /** The geo-bearing subset of a serialized address this serializer reads/writes. */
-interface SerializableAddress extends AddressGeoNames {
+export interface SerializableAddress extends AddressGeoNames {
   cityId?: GeoRef;
   regionId?: GeoRef;
   countryId?: GeoRef;
@@ -51,29 +58,38 @@ function nameFromRef(ref: GeoRef): string | null {
   return null;
 }
 
-/** Reduce a ref to its bare id string (id form or populated `{ _id }`), or undefined. */
+/**
+ * Reduce a ref to its bare id string, or undefined.
+ *
+ * Reads `id` before `_id` so a joined row and a populated Mongoose sub-document
+ * both flatten, and neither spelling is assumed to be the only one.
+ */
 function idFromRef(ref: GeoRef): string | undefined {
   if (!ref) return undefined;
   if (ref instanceof Types.ObjectId) return ref.toString();
   if (typeof ref === 'string') return ref;
-  if (typeof ref === 'object' && (ref as { _id?: unknown })._id !== undefined) {
-    return String((ref as { _id: unknown })._id);
+  if (typeof ref === 'object') {
+    const record = ref as { _id?: unknown; id?: unknown };
+    if (record.id !== undefined) return String(record.id);
+    if (record._id !== undefined) return String(record._id);
   }
   return undefined;
 }
 
 /**
- * Attach resolved geo display names to an address in place, then flatten its
+ * Attach resolved geo display names to an address in place, then flatten any
  * populated geo refs back to bare ids. Safe to call on any address-like object
- * (bare-id or deep-populated); returns the same reference for chaining.
+ * (joined, bare-id or deep-populated); returns the same reference for chaining.
  */
 export function attachAddressGeoNames<T extends SerializableAddress>(address: T | null | undefined): T | null | undefined {
   if (!address || typeof address !== 'object') return address;
 
-  const cityName = nameFromRef(address.cityId);
-  const regionName = nameFromRef(address.regionId);
-  const countryName = nameFromRef(address.countryId);
-  const neighborhoodName = nameFromRef(address.neighborhoodId);
+  // A populated ref wins over a pre-set name because it is the fresher of the
+  // two; a joined row has no ref name at all, so its pre-set names stand.
+  const cityName = nameFromRef(address.cityId) ?? address.cityName ?? null;
+  const regionName = nameFromRef(address.regionId) ?? address.regionName ?? null;
+  const countryName = nameFromRef(address.countryId) ?? address.countryName ?? null;
+  const neighborhoodName = nameFromRef(address.neighborhoodId) ?? address.neighborhoodName ?? null;
 
   if (cityName) address.cityName = cityName;
   if (regionName) address.regionName = regionName;
@@ -126,9 +142,13 @@ export function serializePropertyAddresses<T extends { address?: unknown }>(
 
 /**
  * The Mongoose populate spec that deep-populates an address's geo refs with just
- * the names/codes this serializer needs. Used wherever a property is read for
- * DISPLAY (list / detail / search / city-properties), so location names resolve
- * in the same query with no N+1.
+ * the names/codes this serializer needs.
+ *
+ * **Still Mongo, and still load-bearing.** Every property read is still a
+ * Mongoose query, so removing this would strip the location label off every
+ * property card. It dies with the property READ path in batch 4, replaced by the
+ * join `addressService.selectAddressWithGeoNames` already performs for the
+ * address endpoints.
  */
 import type { PopulateOptions } from 'mongoose';
 

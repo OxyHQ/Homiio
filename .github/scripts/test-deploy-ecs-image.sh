@@ -27,6 +27,16 @@ export DEPLOY_TEST_TASK_EXIT_CODE=0
 export DEPLOY_TEST_EXPECT_TASK_SECRET_ARN=false
 export DEPLOY_TEST_SERVICE_DESIRED_COUNT=1
 export DEPLOY_TEST_ROLLOUT_SCENARIO=healthy
+# `lastStatus` the mocked describe-tasks reports. Only the never-stops case moves
+# it, and it is what reaches the EXIT trap's unfinished-task warning.
+export DEPLOY_TEST_TASK_LAST_STATUS=STOPPED
+
+# Vacuity floor. Without it this suite's only output on success is one line, so a
+# traversal that silently stopped after two cases is indistinguishable from a
+# full green run -- and every guarantee below would read as verified while never
+# having executed. Incremented by run_release, checked at the very end.
+cases_run=0
+MINIMUM_CASES=22
 
 aws() {
   local service_json='{
@@ -223,24 +233,46 @@ aws() {
       printf '{}\n'
       ;;
     "ecs run-task")
-      printf 'reconcile\n' >>"$DEPLOY_TEST_LOG"
+      # Log the command this one-shot was actually given, not a fixed token. The
+      # release runs several one-shots (each migration, then the reconciliation
+      # task) through the SAME call, so a mock that logged a constant could not
+      # tell them apart -- it recorded a migration task as "reconcile" and was
+      # blind to their ORDER, which is the one property worth asserting here.
+      local overrides="" take_next=false argument
+      for argument in "$@"; do
+        if [[ "$take_next" == "true" ]]; then
+          overrides="$argument"
+          take_next=false
+          continue
+        fi
+        if [[ "$argument" == "--overrides" ]]; then
+          take_next=true
+        fi
+      done
+      if [[ -z "$overrides" ]]; then
+        echo "Mocked run-task received no --overrides." >&2
+        return 1
+      fi
+      printf 'task:%s\n' \
+        "$(jq -r '.containerOverrides[0].command | join(" ")' <<<"$overrides")" \
+        >>"$DEPLOY_TEST_LOG"
       printf '%s\n' '{
         "failures": [],
-        "tasks": [{"taskArn": "arn:aws:ecs:test:task/deploy-test-reconcile"}]
+        "tasks": [{"taskArn": "arn:aws:ecs:test:task/deploy-test-one-shot"}]
       }'
       ;;
     "ecs describe-tasks")
       printf '{
         "failures": [],
         "tasks": [{
-          "lastStatus": "STOPPED",
+          "lastStatus": "%s",
           "stoppedReason": "Essential container exited",
           "containers": [{
             "name": "deploy-test",
             "exitCode": %s
           }]
         }]
-      }\n' "$DEPLOY_TEST_TASK_EXIT_CODE"
+      }\n' "$DEPLOY_TEST_TASK_LAST_STATUS" "$DEPLOY_TEST_TASK_EXIT_CODE"
       ;;
     "logs get-log-events")
       printf 'tasklogs\n' >>"$DEPLOY_TEST_LOG"
@@ -272,6 +304,7 @@ run_release() {
   local output_file="$case_directory/output.log"
   local smoke_script="$case_directory/smoke.sh"
 
+  cases_run=$((cases_run + 1))
   mkdir -p "$case_directory"
   DEPLOY_TEST_LOG="$case_directory/aws.log"
   DEPLOY_TEST_EXPECT_METRICS_ARN="$inject_internal_metrics"
@@ -284,6 +317,7 @@ run_release() {
   export DEPLOY_TEST_EXPECT_TASK_SECRET_ARN
   export DEPLOY_TEST_SERVICE_DESIRED_COUNT
   export DEPLOY_TEST_ROLLOUT_SCENARIO
+  export DEPLOY_TEST_TASK_LAST_STATUS
 
   # The generated smoke fixture expands DEPLOY_TEST_LOG when it runs; its exit
   # code is the entire interface deploy-ecs-image.sh reads, so each case picks
@@ -299,8 +333,13 @@ run_release() {
     AWS_REGION=test
     AWS_ACCOUNT_ID=123456789012
     CLUSTER=deploy-test
-    APP=deploy-test
+    # APP names the ECS SERVICE. It is overridable because the worker-lane case
+    # turns on APP differing from MIGRATION_SERVICE, while CONTAINER_NAME stays
+    # `deploy-test` to keep matching the container in the mocked task definition.
+    APP="${DEPLOY_TEST_APP:-deploy-test}"
     CONTAINER_NAME=deploy-test
+    ALLOW_ZERO_DESIRED_COUNT="${DEPLOY_TEST_ALLOW_ZERO_DESIRED_COUNT:-}"
+    MIGRATION_SERVICE="${DEPLOY_TEST_MIGRATION_SERVICE:-}"
     IMAGE_URI="example.invalid/deploy-test@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     MAX_WAIT_SECS=5
     POLL_INTERVAL=1
@@ -333,12 +372,103 @@ run_release() {
   fi
 }
 
+# Assert a case's captured output contains a fixed string, and NAME the case, the
+# string, and the actual output when it does not.
+#
+# A bare `grep -F needle file` under `set -e` fails this suite with ZERO output
+# on either stream: the exit status is the entire signal, so an empty match is
+# indistinguishable from a pass to anyone reading the log, and from a crash to
+# anyone reading the exit code. Measured while mutation-testing this file — a
+# mutation was correctly caught and printed nothing whatsoever, naming neither
+# the case nor the guarantee it broke. Every output assertion goes through here
+# so that a red run says what it wanted and what it got.
+assert_output_contains() {
+  local case_name="$1" needle="$2"
+  if ! grep -qF -- "$needle" "$test_directory/$case_name/output.log"; then
+    {
+      echo "ASSERTION FAILED in case '$case_name'"
+      echo "  expected the deploy output to CONTAIN:"
+      echo "    $needle"
+      echo "  ---- actual output ----"
+      sed -n '1,80p' "$test_directory/$case_name/output.log"
+      echo "  ---- end ----"
+    } >&2
+    return 1
+  fi
+}
+
+# The negative form. Same reasoning: say which case, and which string must not
+# have appeared.
+assert_output_lacks() {
+  local case_name="$1" needle="$2" why="$3"
+  if grep -qF -- "$needle" "$test_directory/$case_name/output.log"; then
+    {
+      echo "ASSERTION FAILED in case '$case_name'"
+      echo "  the deploy output must NOT contain:"
+      echo "    $needle"
+      echo "  why: $why"
+    } >&2
+    return 1
+  fi
+}
+
+# The recorded AWS calls must not mention a string. Used to prove a refusal
+# happened BEFORE anything mutating, and that a lane ran no migrator.
+assert_aws_log_lacks() {
+  local case_name="$1" needle="$2" why="$3"
+  if grep -qF -- "$needle" "$test_directory/$case_name/aws.log"; then
+    {
+      echo "ASSERTION FAILED in case '$case_name'"
+      echo "  the recorded AWS calls must NOT contain: $needle"
+      echo "  why: $why"
+      echo "  ---- recorded AWS calls ----"
+      cat "$test_directory/$case_name/aws.log"
+      echo "  ---- end ----"
+    } >&2
+    return 1
+  fi
+}
+
+# The anchored-pattern form of the above. Separate from the fixed-string helper
+# because the anchor is the assertion in these cases: `^service:` must mean a
+# recorded update-service line, not the substring appearing inside a command.
+assert_aws_log_lacks_pattern() {
+  local case_name="$1" pattern="$2" why="$3"
+  if grep -qE -- "$pattern" "$test_directory/$case_name/aws.log"; then
+    {
+      echo "ASSERTION FAILED in case '$case_name'"
+      echo "  the recorded AWS calls must NOT match: $pattern"
+      echo "  why: $why"
+      echo "  ---- recorded AWS calls ----"
+      cat "$test_directory/$case_name/aws.log"
+      echo "  ---- end ----"
+    } >&2
+    return 1
+  fi
+}
+
+# No mutating AWS call may have been made at all.
+assert_no_aws_calls() {
+  local case_name="$1" why="$2"
+  if [[ -s "$test_directory/$case_name/aws.log" ]]; then
+    {
+      echo "ASSERTION FAILED in case '$case_name'"
+      echo "  expected NO mutating AWS call; the refusal must land first."
+      echo "  why: $why"
+      echo "  ---- recorded AWS calls ----"
+      cat "$test_directory/$case_name/aws.log"
+      echo "  ---- end ----"
+    } >&2
+    return 1
+  fi
+}
+
 run_release success true false true
 printf '%s\n' \
   metrics:arn \
   'service:arn:aws:ecs:test:task-definition/deploy-test:2:desired=1' \
   smoke \
-  reconcile \
+  task:reconcile \
   >"$test_directory/success/expected.log"
 diff -u \
   "$test_directory/success/expected.log" \
@@ -361,7 +491,7 @@ printf '%s\n' \
   metrics:arn \
   'service:arn:aws:ecs:test:task-definition/deploy-test:2:desired=1' \
   smoke \
-  reconcile \
+  task:reconcile \
   >"$test_directory/hyphenated-metrics-parameter/expected.log"
 diff -u \
   "$test_directory/hyphenated-metrics-parameter/expected.log" \
@@ -372,7 +502,7 @@ printf '%s\n' \
   task-secret:arn \
   'service:arn:aws:ecs:test:task-definition/deploy-test:2:desired=1' \
   smoke \
-  reconcile \
+  task:reconcile \
   >"$test_directory/explicit-task-secret/expected.log"
 diff -u \
   "$test_directory/explicit-task-secret/expected.log" \
@@ -382,7 +512,7 @@ run_release reconciliation-failure false false false 1
 printf '%s\n' \
   'service:arn:aws:ecs:test:task-definition/deploy-test:2:desired=1' \
   smoke \
-  reconcile \
+  task:reconcile \
   tasklogs \
   'service:arn:aws:ecs:test:task-definition/deploy-test:1:desired=1' \
   >"$test_directory/reconciliation-failure/expected.log"
@@ -390,46 +520,131 @@ diff -u \
   "$test_directory/reconciliation-failure/expected.log" \
   "$test_directory/reconciliation-failure/aws.log"
 
+# A migration one-shot that exits non-zero stops the release. The task run is the
+# Postgres migrator -- previously this case expected a bare "reconcile" here,
+# because the mock could not tell a migration task from the reconciliation task
+# and so recorded the wrong one by name.
 run_release migration-failure false true false 1
 printf '%s\n' \
-  reconcile \
+  'task:node packages/backend/dist/db/migrate.js --target-database=homiio --phase=pre' \
   tasklogs \
   >"$test_directory/migration-failure/expected.log"
 diff -u \
   "$test_directory/migration-failure/expected.log" \
   "$test_directory/migration-failure/aws.log"
-grep -F \
-  "[migration] fixture failure" \
-  "$test_directory/migration-failure/output.log" \
-  >/dev/null
-if grep -q '^service:' "$test_directory/migration-failure/aws.log"; then
-  echo "Failed migration reached update-service." >&2
+assert_output_contains migration-failure "[migration] fixture failure"
+assert_aws_log_lacks_pattern migration-failure '^service:' "Failed migration reached update-service."
+# The path this replaced -- `bun packages/backend/dist/scripts/migrate.js` -- was
+# wrong three ways at once, and the last one is why nothing noticed: `bun` is not
+# in the runtime image (it runs `node`), `tsconfig.build.json` EXCLUDES
+# `scripts/` from the emit, and no `scripts/migrate.ts` has ever existed here. So
+# `RUN_MIGRATIONS=true` had never once worked in this repository. Asserting the
+# absence of the old path keeps a future edit from reintroducing either half.
+assert_aws_log_lacks migration-failure "dist/scripts/migrate.js" "The migration one-shot ran the nonexistent scripts/migrate.js path."
+assert_aws_log_lacks_pattern migration-failure '^task:bun ' "The migration one-shot invoked bun; the runtime image only has node."
+
+# ORDER IS THE ASSERTION: the migration one-shot runs BEFORE `update-service`.
+#
+# A task that boots against an unmigrated database answers the health check, is
+# handed traffic, and only then fails every query -- the damage lands after the
+# point of no return. A whole-log `diff` is what notices a reordering; grepping
+# for both entries would pass either way round.
+run_release migration-order true true false 0
+printf '%s\n' \
+  'task:node packages/backend/dist/db/migrate.js --target-database=homiio --phase=pre' \
+  'service:arn:aws:ecs:test:task-definition/deploy-test:2:desired=1' \
+  smoke \
+  task:reconcile \
+  >"$test_directory/migration-order/expected.log"
+diff -u \
+  "$test_directory/migration-order/expected.log" \
+  "$test_directory/migration-order/aws.log"
+
+# THE WORKER LANE GETS NO MIGRATION ONE-SHOT.
+#
+# Both Homiio services roll the SAME image through this script, and
+# `db/migrate.ts` takes no cross-process advisory lock (neither does drizzle), so
+# the migrator must run exactly once per release. `MIGRATION_SERVICE` names the
+# lane that owns it; the worker lane sees the same `RUN_MIGRATIONS=true` and must
+# still decline.
+#
+# It SKIPS rather than refuses, and that is asserted too: the API lane rolls
+# first, so by the time the worker starts the schema is already applied. Exiting
+# 1 here would strand the worker on the old image with the API migrated -- the
+# exact stranding this batch exists to prevent.
+DEPLOY_TEST_APP=deploy-test-worker \
+DEPLOY_TEST_MIGRATION_SERVICE=deploy-test \
+  run_release worker-lane-skips-migration true true false 0
+printf '%s\n' \
+  'service:arn:aws:ecs:test:task-definition/deploy-test:2:desired=1' \
+  smoke \
+  task:reconcile \
+  >"$test_directory/worker-lane-skips-migration/expected.log"
+diff -u \
+  "$test_directory/worker-lane-skips-migration/expected.log" \
+  "$test_directory/worker-lane-skips-migration/aws.log"
+assert_aws_log_lacks worker-lane-skips-migration "migrate.js" "The worker lane ran the migrator; it shares one image with the API."
+assert_output_contains worker-lane-skips-migration "Skipping migrations for deploy-test-worker"
+
+# The SAME flag on the lane that DOES own migrations still runs them. Without
+# this pair, a `MIGRATION_SERVICE` guard that skipped unconditionally would pass
+# the case above and silently migrate nothing, ever.
+DEPLOY_TEST_APP=deploy-test \
+DEPLOY_TEST_MIGRATION_SERVICE=deploy-test \
+  run_release owning-lane-runs-migration true true false 0
+printf '%s\n' \
+  'task:node packages/backend/dist/db/migrate.js --target-database=homiio --phase=pre' \
+  'service:arn:aws:ecs:test:task-definition/deploy-test:2:desired=1' \
+  smoke \
+  task:reconcile \
+  >"$test_directory/owning-lane-runs-migration/expected.log"
+diff -u \
+  "$test_directory/owning-lane-runs-migration/expected.log" \
+  "$test_directory/owning-lane-runs-migration/aws.log"
+
+# A migration one-shot that never STOPS is the case that reaches the EXIT trap's
+# unfinished-task warning -- the only signal that a migration may still be
+# mutating the database after the deploy gave up, and unrecoverable because the
+# deploy role cannot call ecs:StopTask.
+#
+# This case exists to protect the migration loop's PROCESS SUBSTITUTION. Piping
+# into the loop instead puts its body in a subshell, so run_one_shot_command's
+# active_one_shot_* writes never reach the parent and the trap reads their
+# initial values -- the warning silently stops being emitted. `set -e` catches
+# the failing pipeline either way, so nothing else here can tell the two forms
+# apart: the release stops before update-service under both.
+DEPLOY_TEST_TASK_LAST_STATUS=RUNNING
+run_release migration-task-never-stops false true false 0
+DEPLOY_TEST_TASK_LAST_STATUS=STOPPED
+printf '%s\n' \
+  'task:node packages/backend/dist/db/migrate.js --target-database=homiio --phase=pre' \
+  >"$test_directory/migration-task-never-stops/expected.log"
+diff -u \
+  "$test_directory/migration-task-never-stops/expected.log" \
+  "$test_directory/migration-task-never-stops/aws.log"
+if ! grep -qF \
+  "Unfinished Postgres migration task arn:aws:ecs:test:task/deploy-test-one-shot may still be running" \
+  "$test_directory/migration-task-never-stops/output.log"; then
+  echo "The EXIT trap did not warn that a migration task may still be running." >&2
+  echo "The migration loop is probably a pipe: its body runs in a subshell, so" >&2
+  echo "active_one_shot_task_arn never reaches the parent and the trap sees ''." >&2
   exit 1
 fi
 
 run_release zero-desired-count false false false 0 false 0
-grep -F \
-  "must have a positive desiredCount before deployment (current: 0)" \
-  "$test_directory/zero-desired-count/output.log" \
-  >/dev/null
-if [[ -s "$test_directory/zero-desired-count/aws.log" ]]; then
-  echo "Zero-capacity service reached a mutating AWS call." >&2
-  exit 1
-fi
+assert_output_contains zero-desired-count "must have a positive desiredCount before deployment (current: 0)"
+assert_no_aws_calls zero-desired-count "Zero-capacity service reached a mutating AWS call."
 
 run_release transient-zero-deployment true false false 0 false 1 transient-zero-deployment
 printf '%s\n' \
   'service:arn:aws:ecs:test:task-definition/deploy-test:2:desired=1' \
   smoke \
-  reconcile \
+  task:reconcile \
   >"$test_directory/transient-zero-deployment/expected.log"
 diff -u \
   "$test_directory/transient-zero-deployment/expected.log" \
   "$test_directory/transient-zero-deployment/aws.log"
-grep -F \
-  "has not assigned desired tasks" \
-  "$test_directory/transient-zero-deployment/output.log" \
-  >/dev/null
+assert_output_contains transient-zero-deployment "has not assigned desired tasks"
 
 run_release zero-service-during-deploy false false false 0 false 1 zero-service-during-deploy
 printf '%s\n' \
@@ -439,10 +654,7 @@ printf '%s\n' \
 diff -u \
   "$test_directory/zero-service-during-deploy/expected.log" \
   "$test_directory/zero-service-during-deploy/aws.log"
-grep -F \
-  "service deploy-test reached desiredCount=0 during the deployment rollout" \
-  "$test_directory/zero-service-during-deploy/output.log" \
-  >/dev/null
+assert_output_contains zero-service-during-deploy "service deploy-test reached desiredCount=0 during the deployment rollout"
 
 run_release completed-zero-deployment false false false 0 false 1 completed-zero-deployment
 printf '%s\n' \
@@ -452,10 +664,7 @@ printf '%s\n' \
 diff -u \
   "$test_directory/completed-zero-deployment/expected.log" \
   "$test_directory/completed-zero-deployment/aws.log"
-grep -F \
-  "completed at desiredCount=0; refusing to accept a zero-task steady state" \
-  "$test_directory/completed-zero-deployment/output.log" \
-  >/dev/null
+assert_output_contains completed-zero-deployment "completed at desiredCount=0; refusing to accept a zero-task steady state"
 
 # A smoke failure the smoke script attributes to the new image rolls the service
 # back, and stops the release before the reconciliation task runs.
@@ -468,10 +677,7 @@ printf '%s\n' \
 diff -u \
   "$test_directory/smoke-hermetic-failure/expected.log" \
   "$test_directory/smoke-hermetic-failure/aws.log"
-grep -F \
-  "Post-deploy smoke checks failed." \
-  "$test_directory/smoke-hermetic-failure/output.log" \
-  >/dev/null
+assert_output_contains smoke-hermetic-failure "Post-deploy smoke checks failed."
 
 # A smoke failure the smoke script attributes to something outside the new image
 # (exit 75) must NOT roll back: the service stays on the new task definition, the
@@ -481,24 +687,104 @@ run_release smoke-no-rollback-failure false false false 0 false 1 healthy 75
 printf '%s\n' \
   'service:arn:aws:ecs:test:task-definition/deploy-test:2:desired=1' \
   smoke \
-  reconcile \
+  task:reconcile \
   >"$test_directory/smoke-no-rollback-failure/expected.log"
 diff -u \
   "$test_directory/smoke-no-rollback-failure/expected.log" \
   "$test_directory/smoke-no-rollback-failure/aws.log"
-if grep -qF \
-  'service:arn:aws:ecs:test:task-definition/deploy-test:1:' \
-  "$test_directory/smoke-no-rollback-failure/aws.log"; then
-  echo "A smoke failure that cannot be repaired by a rollback rolled back anyway." >&2
+assert_aws_log_lacks smoke-no-rollback-failure 'service:arn:aws:ecs:test:task-definition/deploy-test:1:' "A smoke failure that cannot be repaired by a rollback rolled back anyway."
+assert_output_contains smoke-no-rollback-failure "stays on arn:aws:ecs:test:task-definition/deploy-test:2"
+assert_output_contains smoke-no-rollback-failure "Nothing was rolled back; this release needs a human."
+
+# ALLOW_ZERO_DESIRED_COUNT, in the five states that matter.
+#
+# The cutover (issue #281) deploys `homiio` and `homiio-worker` while both are
+# deliberately scaled to zero, because the running image is Mongo-backed and
+# bringing either up after the copy would let real writes land in the store being
+# abandoned. Every OTHER deploy must still refuse a zero-count service, and the
+# exemption must not outlive the window.
+#
+# The value is `<service>:<YYYY-MM-DD>`. Two cases carry the design:
+#   - WRONG SERVICE proves the value is compared against APP rather than read as
+#     a boolean. A boolean passes every other case here. Homiio has TWO services,
+#     so an authorisation for one really must not cover the other.
+#   - EXPIRED proves a forgotten variable disarms itself. Without it the
+#     exemption is a permanent reduction in protection bought for one window.
+
+zero_optin_future="$(date -u -d '+2 days' +%F)"
+zero_optin_past="$(date -u -d '-1 day' +%F)"
+
+# 1. Absent -> refuses. (This is `zero-desired-count` above, restated against the
+#    opt-in so the group reads as a set.)
+DEPLOY_TEST_ALLOW_ZERO_DESIRED_COUNT="" \
+  run_release zero-count-optin-absent false false false 0 false 0
+assert_output_contains zero-count-optin-absent "must have a positive desiredCount before deployment (current: 0)"
+assert_no_aws_calls zero-count-optin-absent "Zero-count deploy with no opt-in reached a mutating AWS call."
+
+# 2. MALFORMED (no expiry at all -- the shape somebody reaches for first) ->
+#    refuses. An unparseable authorisation is not permission.
+DEPLOY_TEST_ALLOW_ZERO_DESIRED_COUNT="true" \
+  run_release zero-count-optin-malformed false false false 0 false 0
+assert_output_contains zero-count-optin-malformed "ALLOW_ZERO_DESIRED_COUNT is set but malformed"
+assert_no_aws_calls zero-count-optin-malformed "A malformed zero-count opt-in reached a mutating AWS call."
+
+# 3. WRONG service, valid date -> refuses. A boolean cannot tell this from case 6.
+#    Spelled as the sibling service, which is the value that would really be
+#    pasted: authorising `homiio` must not authorise `homiio-worker`.
+DEPLOY_TEST_ALLOW_ZERO_DESIRED_COUNT="deploy-test-worker:$zero_optin_future" \
+  run_release zero-count-optin-wrong-service false false false 0 false 0
+assert_output_contains zero-count-optin-wrong-service "must have a positive desiredCount before deployment (current: 0)"
+assert_no_aws_calls zero-count-optin-wrong-service "Zero-count deploy authorised by the WRONG service name reached a mutating AWS call. The opt-in is being read as a boolean rather than compared against APP."
+
+# 4. Right service, EXPIRED -> refuses, and says so by name rather than falling
+#    through to the generic desiredCount message.
+DEPLOY_TEST_ALLOW_ZERO_DESIRED_COUNT="deploy-test:$zero_optin_past" \
+  run_release zero-count-optin-expired false false false 0 false 0
+assert_output_contains zero-count-optin-expired "ALLOW_ZERO_DESIRED_COUNT expired on $zero_optin_past"
+assert_no_aws_calls zero-count-optin-expired "An EXPIRED zero-count opt-in reached a mutating AWS call."
+
+# 5. A regex-valid but nonexistent date must refuse rather than sort after every
+#    real date and never expire -- the one fail-OPEN this could have had.
+DEPLOY_TEST_ALLOW_ZERO_DESIRED_COUNT="deploy-test:2026-13-45" \
+  run_release zero-count-optin-impossible-date false false false 0 false 0
+assert_output_contains zero-count-optin-impossible-date "carries an invalid date: 2026-13-45"
+
+# 6. Right service, valid date -> proceeds, and SAYS what it costs.
+#
+#    ONE case covers all THREE refusals, and that is a measured claim rather than
+#    a hopeful one: it runs with the service at desiredCount 0 against the
+#    `completed-zero-deployment` scenario, so it traverses the pre-deploy gate,
+#    then the mid-rollout `service_desired < 1` gate on the first poll, then the
+#    COMPLETED steady-state gate — and mutating any ONE of the three in isolation
+#    turns this case red. A fourth case driving `zero-service-during-deploy` was
+#    written and removed: it reproduces the identical state, so it could never
+#    fail independently, and a case that cannot fail alone reads to the next
+#    person as coverage that is not there.
+#
+#    The three assertions below map one-to-one onto the three gates: the
+#    authorisation warning (gate 1), the absence of the mid-rollout refusal
+#    (gate 2), and the "as authorised" steady state (gate 3).
+DEPLOY_TEST_ALLOW_ZERO_DESIRED_COUNT="deploy-test:$zero_optin_future" \
+  run_release zero-count-optin-correct true false false 0 false 0 completed-zero-deployment
+assert_output_contains zero-count-optin-correct "authorised by ALLOW_ZERO_DESIRED_COUNT=deploy-test:$zero_optin_future (expires $zero_optin_future)"
+assert_output_contains zero-count-optin-correct "serve NOTHING until it is scaled up"
+assert_output_contains zero-count-optin-correct "completed at desiredCount=0, as authorised"
+assert_output_lacks zero-count-optin-correct "reached desiredCount=0 during the deployment rollout" "An authorised zero-count deploy was killed by the MID-ROLLOUT guard (gate 2). All three zero-count refusals must honour ALLOW_ZERO_DESIRED_COUNT."
+assert_output_lacks zero-count-optin-correct "refusing to accept a zero-task steady state" "An authorised zero-count deploy was killed by the STEADY-STATE guard (gate 3). The exemption was applied to the pre-check only; all three zero-checks need it."
+
+# A non-numeric desiredCount is NOT covered by any authorisation: it is ECS
+# saying it does not know the answer, which no date and no service name can make
+# safe. Without this, folding the numeric check into the zero check would let a
+# valid opt-in wave through a service whose count could not be read at all.
+DEPLOY_TEST_ALLOW_ZERO_DESIRED_COUNT="deploy-test:$zero_optin_future" \
+  run_release non-numeric-desired-count false false false 0 false '"unknown"'
+assert_output_contains non-numeric-desired-count "reported a non-numeric desiredCount"
+assert_no_aws_calls non-numeric-desired-count "A service with an unreadable desiredCount reached a mutating AWS call."
+
+if (( cases_run < MINIMUM_CASES )); then
+  echo "ASSERTION FAILED: only $cases_run release cases ran, expected at least $MINIMUM_CASES." >&2
+  echo "The suite exited green without executing everything it claims to check." >&2
   exit 1
 fi
-grep -F \
-  "stays on arn:aws:ecs:test:task-definition/deploy-test:2" \
-  "$test_directory/smoke-no-rollback-failure/output.log" \
-  >/dev/null
-grep -F \
-  "Nothing was rolled back; this release needs a human." \
-  "$test_directory/smoke-no-rollback-failure/output.log" \
-  >/dev/null
 
-echo "Deployment script transaction tests passed."
+echo "Deployment script transaction tests passed ($cases_run release cases)."

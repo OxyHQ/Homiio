@@ -2,7 +2,7 @@
  * Room Controller
  *
  * Rooms are not a distinct collection: a "room" is a Property whose `type` is
- * PropertyType.ROOM (see @homiio/shared-types and models/Property). This
+ * PropertyType.ROOM (see @homiio/shared-types and models/schemas/PropertySchema). This
  * controller exposes the flat `/rooms` route contract
  * (GET /, POST /, GET /:id, PUT /:id, DELETE /:id) on top of the Property model,
  * scoping every query to room-type properties.

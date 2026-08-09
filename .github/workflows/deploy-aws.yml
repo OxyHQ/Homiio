@@ -39,6 +39,17 @@ env:
   APP: homiio
   CLUSTER: oxy-cluster
   DOCKERFILE: packages/backend/Dockerfile
+  # Which of the two lanes below owns the one-shot migrations. Both roll the SAME
+  # image through deploy-ecs-image.sh, and the migrator holds no cross-process
+  # advisory lock, so it must run exactly once per release. Naming the service
+  # here rather than setting RUN_MIGRATIONS per step means a future job-level
+  # `RUN_MIGRATIONS: true` still cannot reach the worker: the worker lane sets
+  # APP to `homiio-worker`, which does not match, and it declines with a notice.
+  #
+  # RUN_MIGRATIONS itself stays at its default of `false` until the cutover
+  # (issue #281, Lote 13). Turning it on before `/oxy/homiio/DATABASE_URL` exists
+  # in SSM would fail the one-shot and therefore the whole release.
+  MIGRATION_SERVICE: homiio
   # The commit CI judged. When called from ci.yml this IS that commit, because a
   # called workflow runs inside the caller's run — there is no window in which
   # main moves on underneath. Under workflow_dispatch it is the dispatched ref.

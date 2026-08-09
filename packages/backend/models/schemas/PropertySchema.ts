@@ -4,11 +4,10 @@
  * Uses shared types from @homiio/shared-types
  */
 
-import type { IProperty } from '../Property';
+import type { IProperty, IPropertyModel } from '../documentTypes';
 import type { Query, UpdateQuery } from 'mongoose';
 
 import mongoose from 'mongoose';
-import type { IPropertyModel } from '../Property';
 import validator from 'validator';
 import { transformAddressFields } from '../../utils/helpers';
 import { validateOfferings } from './offeringValidation';

@@ -1,6 +1,21 @@
 /**
  * Assigns city cover photos from Wikimedia Commons — fetched once, stored as
  * first-party `entityType: 'city'` images. Never links listing/property photos.
+ *
+ * ## STILL MONGO, and this is the one batch-1 module that could not move
+ *
+ * Every other city read went to Postgres in batch 1. This one did not, and the
+ * reason is a foreign key rather than a preference: it does not merely WRITE a
+ * city, it creates the image first, through
+ * `imageUploadService.createImageForEntity` — which runs the Sharp/S3 pipeline
+ * and then persists a Mongo `Image`, and which is batch 2's to port.
+ * `cities.cover_image_id` REFERENCES `images.id` for real, so porting the city
+ * half alone would make every cover write a guaranteed `23503`.
+ *
+ * The consequence while it waits, stated so nobody debugs it as a defect: this
+ * service writes Mongo cities that the ported `cityController` no longer reads,
+ * so on this branch it is effectively a no-op writer. It becomes coherent again
+ * the moment batch 2 ports `imageUploadService` and brings this with it.
  */
 
 import { Types } from 'mongoose';

@@ -19,6 +19,23 @@
  * A small in-memory cache short-circuits repeated resolutions of the same
  * coordinate/name within the process lifetime (the underlying geocoder also
  * caches), keeping us well within the OSM usage policy.
+ *
+ * ## STILL MONGO, and it cannot move before `properties` does
+ *
+ * The Postgres port of this chain exists — `addressService.resolveGeoChain`,
+ * over the `countries` / `regions` / `cities` / `neighborhoods` tables — and it
+ * is what `POST /api/addresses` writes through. This implementation stays alive
+ * because its ONLY caller is `models/Address.ts`'s `findOrCreateCanonical`,
+ * whose six remaining callers (`property/create`, `property/updateDelete`,
+ * `roomController`, `reviewController`, `scraperService`, `IngestionService`)
+ * each write a Mongo document in the same breath.
+ *
+ * The blocker is one column: a `cities.id` minted by Postgres is a **uuid v7**,
+ * and `AddressSchema.cityId` is a Mongoose `ObjectId` path. Pointing this
+ * function at Postgres therefore does not degrade the ingest, it stops it dead
+ * with `Cast to ObjectId failed for value "019fd591-…"` — measured, not
+ * predicted. Both halves move together with `properties` in batch 3, and this
+ * file is deleted there.
  */
 
 import type { Types } from 'mongoose';

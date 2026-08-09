@@ -60,9 +60,35 @@ let mongoServer: MongoMemoryReplSet | undefined;
 beforeAll(async () => {
   mongoServer = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
   const uri = mongoServer.getUri();
+  // `MONGODB_URI` ONLY. `DATABASE_URL` used to be set here too, back when
+  // `config.database.url` fell back to it — it now names the POSTGRES database
+  // (`jest.setupWorkerDatabase.cjs` points it at this worker's throwaway one),
+  // so writing a `mongodb://` URI over it would make every Postgres suite
+  // connect to the memory server and fail on a protocol mismatch.
   process.env.MONGODB_URI = uri;
-  process.env.DATABASE_URL = uri;
   await mongoose.connect(uri);
+
+  // Postgres too, for every suite rather than only the `__tests__/db` ones:
+  // from batch 1 on, request-path code (geo, addresses, cities, neighborhoods)
+  // reads it through `getDb()`, which THROWS when no pool has been published. A
+  // suite that forgot to connect would fail with "PostgreSQL is not connected"
+  // rather than with whatever it was actually asserting.
+  //
+  // Idempotent — `connectPostgres()` returns the existing handle — so the
+  // `__tests__/db` files that connect for themselves are unaffected.
+  // `jest.setupWorkerDatabase.cjs` has already pointed `DATABASE_URL` at this
+  // worker's own throwaway database.
+  //
+  // **Imported HERE, not at the top of the file.** `db/postgres` imports
+  // `config`, and `config` reads `process.env` ONCE at module load — so a
+  // top-level import would evaluate it BEFORE the assignments above and freeze
+  // an environment without `PUBLIC_API_URL` or the CrowdSource secrets. The
+  // symptom is not a Postgres failure at all: the webhook route decides it is
+  // unconfigured and 404s, and the image-URL validator rejects every ingested
+  // listing. Measured — a top-level import turned 8 unrelated suites red.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { connectPostgres } = require('../db/postgres') as typeof import('../db/postgres');
+  await connectPostgres();
 });
 
 afterEach(async () => {
@@ -77,4 +103,10 @@ afterAll(async () => {
   if (mongoServer) {
     await mongoServer.stop();
   }
+  // The Postgres pool is deliberately NOT closed here. A root `afterAll`
+  // declared in a setup file runs BEFORE the test file's own, so closing it
+  // would pull the pool out from under any suite that cleans its fixtures up in
+  // an `afterAll` — which the `__tests__/db` files do. Those files close it
+  // themselves; the pool is per worker process and dies with it, and
+  // `jest.globalTeardown.ts` drops the databases either way.
 });

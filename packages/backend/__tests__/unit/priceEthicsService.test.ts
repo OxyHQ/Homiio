@@ -1,5 +1,5 @@
 import { OfferingType, PropertyType } from '@homiio/shared-types';
-import type { IProperty } from '../../models/Property';
+import type { IProperty } from '../../models/documentTypes';
 import { computePriceEthics } from '../../services/priceEthicsService';
 import {
   computeMarketVerdictForProperty,

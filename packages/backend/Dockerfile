@@ -159,6 +159,19 @@ COPY --from=builder /app/packages/shared-types/dist packages/shared-types/dist
 COPY --from=builder /app/packages/listing-providers/dist packages/listing-providers/dist
 COPY --from=builder /app/packages/backend/dist packages/backend/dist
 
+# The Postgres migrations, which are NOT compiled output — they are `.sql` files
+# plus `meta/_journal.json`, and tsc has no reason to touch them. Without this
+# line the compiled migrator (`dist/db/migrate.js`) ships with no journal to
+# read, and that failure is SUCCESS-SHAPED: drizzle applies nothing, prints no
+# error and exits 0, which is byte-for-byte what an already-up-to-date database
+# looks like.
+#
+# `db/migrate.ts` walks up from `__dirname` to find this folder, so it resolves
+# to `/app/packages/backend/drizzle` from `dist/db/` here exactly as it resolves
+# to `packages/backend/drizzle` from `db/` under ts-node — and it THROWS rather
+# than guessing when the folder is absent, which is the other half of the guard.
+COPY --from=builder /app/packages/backend/drizzle packages/backend/drizzle
+
 # Drop privileges — node:bookworm-slim ships a `node` user (uid 1000).
 USER node
 
