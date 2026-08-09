@@ -14,13 +14,13 @@ import config from './config';
 import routes from './routes';
 import { logger, requestLogger, errorLogger } from './middlewares/logging';
 import { notFound, errorHandler } from './middlewares/errorHandler';
-import database from './database/connection';
 import { connectPostgres } from './db/postgres';
 import publicRoutes from './routes/public';
 import { OxyServices } from '@oxyhq/core';
 import { createOptionalOxyAuth, createOxyAuthMiddleware } from '@oxyhq/core/server';
 import { stripeWebhook, confirmCheckoutSession } from './controllers/billingController';
 import { initCronJobs } from './services/cron';
+import { HealthService } from './services/healthService';
 import { createCrowdSourceWebhookRoutes } from './routes/crowdSourceWebhook';
 import { moderationOutboxDispatcher } from './services/moderation/ModerationOutboxDispatcher';
 import { getErrorMessage } from './utils/errors';
@@ -30,6 +30,8 @@ interface RawBodyRequest extends Request {
 }
 
 const oxy = new OxyServices({ baseURL: config.oxy.baseURL });
+
+const healthService = new HealthService();
 
 const isDev = config.environment === 'development';
 
@@ -104,17 +106,16 @@ const rateLimitKey = (req: Request): string => {
 };
 
 /**
- * Open both stores before serving traffic.
+ * Open the store before serving traffic.
  *
- * Postgres is no longer optional here: the geo, address, city and neighborhood
- * request paths read it, and `getDb()` throws when no pool has been published.
- * A process that boots without it would answer its first city request with a
- * 500 instead of failing at startup, so this exits non-zero the same way a
- * missing Mongo connection always has.
+ * Postgres is the only one now, and it is not optional: every request path
+ * reads it, and `getDb()` throws when no pool has been published. A process
+ * that boots without it would answer its first request with a 500 instead of
+ * failing at startup, so this exits non-zero — the same contract the Mongo
+ * connection carried before it was removed.
  */
 async function initializeDatabase() {
   try {
-    await database.connect();
     await connectPostgres();
   } catch (error) {
     logger.error('Database initialization failed', { error: getErrorMessage(error) });
@@ -181,31 +182,6 @@ const corsOptions: CorsOptions = {
   ],
   exposedHeaders: ['Content-Length'],
   maxAge: 86400
-};
-
-// Database connection middleware for serverless environments
-const ensureDatabaseConnection = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const status = database.getStatus();
-    if (!status.isConnected || status.readyState !== 1) {
-      try {
-        await database.connect();
-      } catch (connectError) {
-        logger.warn('Database reconnect required', { error: getErrorMessage(connectError) });
-        await database.forceReconnect();
-      }
-    }
-    next();
-  } catch {
-    res.status(500).json({
-      success: false,
-      error: {
-        message: 'Database connection failed',
-        code: 'DATABASE_ERROR',
-        statusCode: 500
-      }
-    });
-  }
 };
 
 // Middleware
@@ -292,11 +268,6 @@ app.use((req, res, next) => {
 });
 app.use(requestLogger);
 
-// Apply database middleware in serverless environments (before routes)
-if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-  app.use(ensureDatabaseConnection);
-}
-
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
@@ -311,10 +282,17 @@ app.get('/', (req, res) => {
   });
 });
 
-// Health check endpoint (unauthenticated)
+/**
+ * Health check endpoint (unauthenticated) — the ALB target-group check.
+ *
+ * Answers 200 whatever the database says, and reports the store's state in the
+ * BODY. That split is the contract: the status code means "this task is
+ * serving", and a Postgres outage is something every task shares, so failing
+ * the check would drain them all and replace them with tasks that cannot boot
+ * either (`initializeDatabase` exits non-zero without a pool). The probe it
+ * calls is bounded and never throws, for the same reason.
+ */
 app.get('/health', async (req, res) => {
-  const dbHealth = await database.healthCheck();
-
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -322,8 +300,7 @@ app.get('/health', async (req, res) => {
     environment: config.environment,
     features: ['property-management', 'room-management'],
     database: {
-      status: dbHealth.status,
-      message: dbHealth.message
+      status: await healthService.getDatabaseHealth()
     }
   });
 });
@@ -354,8 +331,8 @@ async function startServer() {
         /**
          * Drain the moderation outbox from every task.
          *
-         * NOT leader-gated: each event is claimed under a Mongo lease with an
-         * owner check, so the API and the worker share the queue and a task that
+         * NOT leader-gated: each event is claimed with `FOR UPDATE SKIP LOCKED`
+         * and an owner check, so the API and the worker share the queue and a task that
          * dies mid-delivery has its lease reclaimed rather than stranding the
          * work. No-ops when CROWDSOURCE_ENABLED=false, leaving the durable rows
          * intact so switching the flag on delivers the backlog instead of

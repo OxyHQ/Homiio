@@ -25,7 +25,6 @@ import {
   parseRedisConnection,
   type FetchJobData,
 } from '../services/ingestion/queues';
-
 import { closePostgres, connectPostgres, getDb } from '../db/postgres';
 import { addresses, properties } from '../db/schema';
 

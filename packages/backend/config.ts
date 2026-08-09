@@ -57,29 +57,18 @@ export interface Config {
     };
     groups: Record<string, { language: string; name: string }>;
   };
-  database: {
-    url: string;
-    options: {
-      dbName: string;
-      maxPoolSize: number;
-      serverSelectionTimeoutMS: number;
-      socketTimeoutMS: number;
-      connectTimeoutMS?: number;
-      bufferCommands?: boolean;
-    };
-  };
   /**
-   * PostgreSQL, the store Homiio is migrating TO. Separate from `database`
-   * above, which stays Mongo-only for the whole dual-run — the two are different
-   * engines with different connection strings and must never share a key.
+   * PostgreSQL — the only database this service opens. There is no longer a
+   * `database` key beside it: the Mongo connection is gone, so a second
+   * connection-string key would describe a store nothing can reach.
    *
-   * `url` is optional while Mongo is still authoritative: an image deployed
-   * before `DATABASE_URL` lands on the task definition must boot, not crash.
-   * `connectPostgres()` is what fails loudly, and only when something asks for
-   * a connection.
+   * `url` stays optional in the TYPE because `connectPostgres()` is what fails,
+   * loudly and with a message naming the missing variable. Making it required
+   * here would move that failure to module load, where the only thing anyone
+   * sees is a config file throwing.
    */
   postgres: {
-    /** `DATABASE_URL`, or undefined where Postgres is not provisioned yet. */
+    /** `DATABASE_URL`. Undefined only in an environment that never provisioned it. */
     url: string | undefined;
     /** Connections one process's pool may open. */
     maxPoolSize: number;
@@ -286,31 +275,14 @@ const config: Config = {
     }
   },
   
-  // Database Configuration
-  database: {
-    // MONGODB_URI ONLY — never `|| process.env.DATABASE_URL`.
-    //
-    // `DATABASE_URL` now names the POSTGRES database (see `postgres` below), so
-    // the old fallback would hand mongoose a `postgres://…` string the moment
-    // Postgres is provisioned on the task definition. It would not fail on the
-    // image that expects Postgres; it would fail on the ROLLBACK image, whose
-    // whole job is to serve Mongo after a cutover is abandoned — i.e. at the one
-    // moment nobody can afford to debug a connection string. Removing the term
-    // is therefore a PRECONDITION of the migration, weeks ahead of it, not a
-    // step in the cutover.
-    url: process.env.MONGODB_URI || 'mongodb://localhost:27017/homiio',
-    options: {
-      dbName: `homiio-${process.env.NODE_ENV || 'development'}`,
-      // Optimized for serverless environments
-      maxPoolSize: process.env.VERCEL ? 1 : 10, // Smaller pool for serverless
-      serverSelectionTimeoutMS: process.env.VERCEL ? 30000 : 5000, // Longer timeout for serverless
-      socketTimeoutMS: process.env.VERCEL ? 60000 : 45000, // Longer socket timeout for serverless
-      connectTimeoutMS: process.env.VERCEL ? 30000 : 10000, // Connection timeout
-      bufferCommands: false, // Disable buffering for serverless
-    }
-  },
-
-  // PostgreSQL Configuration — the store Homiio is migrating to.
+  // PostgreSQL Configuration — the only database this service opens.
+  //
+  // `MONGODB_URI` is no longer read here, and its `|| 'mongodb://localhost:27017/homiio'`
+  // fallback went with it rather than surviving as a term nothing consumes. A
+  // fallback outlives the code that used it silently: it turns a missing secret
+  // into a connection attempt against a host that is not there, which fails
+  // slowly and describes the wrong problem. The variable stops being read in
+  // the same change that stops the connection being opened.
   postgres: {
     // No fallback URL. A default like `postgres://localhost/homiio` would make
     // an unprovisioned deployment connect to nothing in particular and report a

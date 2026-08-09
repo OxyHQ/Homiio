@@ -33,7 +33,6 @@ import {
   CancellationPolicy,
   ExchangeMode,
 } from '@homiio/shared-types';
-import database from '../database/connection';
 import { seedGeo } from './seedGeo';
 import {
   seedPropertyImages,
@@ -1027,12 +1026,6 @@ run()
     console.error('[seed-properties] FAILED:', message);
     process.exitCode = 1;
   })
-  .finally(async () => {
-    try {
-      await database.disconnect();
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.warn('[seed-properties] disconnect error:', message);
-    }
+  .finally(() => {
     process.exit(process.exitCode ?? 0);
   });

@@ -23,11 +23,12 @@ Infra (ECS task definitions, ALB, ECR, SSM, the S3 bucket) lives in
   in the ECS env.
 - Worker: the same ECR image, a separate ECS service (`app-homiio-worker.tf`),
   entrypoint `packages/backend/worker.ts`.
-- Both the API and worker task definitions carry two database secrets,
-  `MONGODB_URI` and `DATABASE_URL` — see "Data storage" below for what each
-  serves. A secret added to either task definition must be added to
-  `deploy-aws.yml`'s explicit sync allowlist in the SAME change, or it is
-  silently never synced to SSM.
+- Both the API and worker task definitions still carry `MONGODB_URI` beside
+  `DATABASE_URL`, but nothing reads it any more — see "Data storage" below. It
+  comes off the task definition and SSM once `homiio-production` is archived. A
+  secret added to either task definition must be added to `deploy-aws.yml`'s
+  explicit sync allowlist in the SAME change, or it is silently never synced to
+  SSM.
 
 ## Commands
 
@@ -54,7 +55,7 @@ bikeshed or docs-only ones unless trivial.
 ```
 packages/
   frontend/           @homiio/frontend          Expo / RN / NativeWind
-  backend/            @homiio/backend           Express / Mongoose + PostgreSQL (dual-run) / Stripe / Sharp
+  backend/            @homiio/backend           Express / PostgreSQL (drizzle) / Stripe / Sharp
   shared-types/       @homiio/shared-types      address, city, lease, profile, property, review
   listing-providers/  @homiio/listing-providers Plugin contract, FetchRuntime, provider plugins
 ```
@@ -66,16 +67,26 @@ start command.
 
 ## Data storage: Mongo→Postgres migration (CRITICAL — read before touching any domain below)
 
-Homiio is mid-migration from MongoDB/Mongoose to PostgreSQL. **Both stores are
-live at once** ("the dual-run") and neither connector knows about the other —
-`config.ts` keeps `MONGODB_URI` and `DATABASE_URL` in separate keys on purpose,
-so a Postgres connection string can never reach mongoose. Database `homiio` on
-the shared RDS instance `oxy-postgres`, with **PostGIS** installed once by a
-privileged role (it is not a trusted extension — the app role that owns the
-database cannot install it itself). `MONGODB_URI` is required at boot;
-`DATABASE_URL` is optional at boot (an image deployed before it lands on the
-task definition must still start) but required the moment any code calls
-`connectPostgres()`.
+Homiio is finishing a migration from MongoDB/Mongoose to PostgreSQL. Database
+`homiio` on the shared RDS instance `oxy-postgres`, with **PostGIS** installed
+once by a privileged role (it is not a trusted extension — the app role that
+owns the database cannot install it itself).
+
+**The dual-run is over: the runtime no longer opens a Mongo connection.**
+`database/connection.ts` is deleted and neither entrypoint connects to Mongo, so
+`DATABASE_URL` is the only database secret either process needs —
+`initializeDatabase()` exits non-zero without it. `config.ts` no longer reads
+`MONGODB_URI` at all, and there is no `config.database` key: a second
+connection-string key would name a store nothing can reach.
+
+A handful of files still IMPORT Mongoose models, so `mongoose` and `models/`
+remain on disk — but an import is not a connection, and those queries would
+simply buffer and fail. `__tests__/unit/mongoUnreachable.test.ts` is the
+authority on which files those are and is enforced in CI; its
+`PENDING_MONGO_FILES` list emptying is the signal that `models/` and the
+dependency can go. `db/backfill/` is exempt: reading the old database by
+`MONGODB_URI` is its whole job, and it retires with the source, not with the
+gate.
 
 **The porting rules — id preservation, the census-before-porting discipline,
 schema-fixture pitfalls already found and fixed once — live in

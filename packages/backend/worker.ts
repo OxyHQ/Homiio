@@ -35,7 +35,6 @@ import {
 } from '@homiio/listing-providers';
 import type { ListingMarket, ProviderId } from '@homiio/shared-types';
 import config from './config';
-import database from './database/connection';
 import { connectPostgres, closePostgres } from './db/postgres';
 import { Logger } from './utils/logger';
 import { expireExternalProperty } from './db/properties/propertyWrites';
@@ -510,9 +509,8 @@ async function startBullMq(): Promise<() => Promise<void>> {
 }
 
 async function main(): Promise<void> {
-  await database.connect();
-  // The ingest path resolves geo and addresses through Postgres now, so the
-  // worker needs a pool for the same reason the API does — see `server.ts`.
+  // The ingest path resolves geo and addresses through Postgres, so the worker
+  // needs a pool for the same reason the API does — see `server.ts`.
   await connectPostgres();
   runtimeHandle = await createListingFetchRuntimeFromEnv({
     onLog: (message) => logger.warn(message),
@@ -536,7 +534,6 @@ async function main(): Promise<void> {
     await runInlinePass();
     logger.info('Inline pass complete; no Redis configured, exiting');
     await runtimeHandle.shutdown();
-    await database.disconnect?.();
     await closePostgres();
     return;
   } else {
@@ -547,7 +544,6 @@ async function main(): Promise<void> {
     logger.info(`Received ${signal}, shutting down listing worker`);
     if (closer) await closer();
     await runtimeHandle.shutdown();
-    await database.disconnect?.();
     await closePostgres();
     process.exit(0);
   };
