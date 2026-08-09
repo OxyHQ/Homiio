@@ -5,13 +5,40 @@
  *
  * `generatedId()` mints a uuid v7 for a row created by the application, and the
  * backfill copies each Mongo `_id` VERBATIM — so after the cutover both shapes
- * are live in the same column. During the migration there is a third fact these
- * fixtures have to respect: the property WRITE path is still Mongoose, and a
- * Mongo `ObjectId` path cannot hold a uuid. Seeding 24-hex ids is therefore not
- * a convenience, it is the only shape that reproduces what production will
- * actually contain when a Postgres address id meets a Mongo `Property.addressId`
- * — and it is what lets a suite seed a listing HERE and still address it by the
- * same id through a Mongo-side write.
+ * are live in the same column, permanently. Seeding 24-hex ids is therefore not
+ * a convenience: it is the shape the overwhelming majority of production rows
+ * carry, and the one an `isLiveEntityId` guard, a `.toHexString()` call or an
+ * id-versus-name branch behaves differently on. A fixture that seeded only uuids
+ * would exercise the post-cutover half of every such site and none of the other.
+ * Suites that want the uuid half ask for it explicitly — see `seedProperty`'s
+ * `idShape`.
+ *
+ * ## The minter is LOCAL, and does not go through mongoose
+ *
+ * {@link objectIdHex} composes the BSON ObjectId layout itself (4-byte
+ * big-endian seconds, 5 random bytes fixed per process, a 3-byte counter)
+ * instead of calling `new mongoose.Types.ObjectId()`. The point is that these
+ * fixtures seed POSTGRES: reaching mongoose for a *string format* pulled the
+ * driver — and, through the root setup, the in-memory replica set — into 26 test
+ * files that do not otherwise touch Mongo at all, which is what kept `mongoose`
+ * un-removable from `package.json` long after the domains under test had moved.
+ *
+ * ### Two things measured about the layout, so neither is re-derived
+ *
+ *  - **Nothing in the suite currently depends on the timestamp prefix.**
+ *    Mutating this function to a bare `randomBytes(12).toString('hex')` — which
+ *    destroys the property that two ids minted in order sort in that order —
+ *    leaves all 125 suites and all 1,625 tests green. So the layout is kept
+ *    because it is what a real backfilled id looks like (a suite that orders by
+ *    id, the way Mongo code routinely used `_id` as a creation proxy, would then
+ *    behave here as it does in production), NOT because a test catches it today.
+ *    Do not read the structure as protected — if you come to rely on that
+ *    ordering, pin it.
+ *  - **The uniqueness IS load-bearing, and widely.** Mutating this function to a
+ *    constant turns 21 suites and 113 tests red. That is also the anti-vacuity
+ *    check on the paragraph above: the two mutations run against the same tree,
+ *    so "M1 changed nothing" is a fact about what is asserted, not about whether
+ *    this function is reached.
  *
  * ## Truncation, not per-file uniqueness
  *
@@ -23,7 +50,7 @@
  * globally in `jest.setup.ts`.
  */
 
-import { Types } from 'mongoose';
+import { randomBytes } from 'node:crypto';
 
 import { getDb } from '../../db/postgres';
 import { syncHasImages } from '../../db/hasImages';
@@ -46,9 +73,32 @@ import {
   reviews,
 } from '../../db/schema';
 
-/** A fresh 24-char ObjectId hex — the id shape every pre-cutover row carries. */
+/**
+ * Five bytes identifying this process, per the ObjectId layout.
+ *
+ * Per PROCESS, not per call: jest forks a worker per database and two workers
+ * minting ids in the same second must not collide. Re-rolling it per call would
+ * still be unique, but would put randomness ABOVE the counter in the string and
+ * so destroy the ordering the layout otherwise gives.
+ */
+const PROCESS_RANDOM = randomBytes(5);
+
+/** Seeded randomly, per the spec, so two processes do not start in step. */
+let objectIdCounter = randomBytes(3).readUIntBE(0, 3);
+
+/**
+ * A fresh 24-char ObjectId hex — the id shape every pre-cutover row carries.
+ *
+ * Composed here rather than obtained from mongoose; see the module comment for
+ * why, and for what is and is not asserted about the byte layout.
+ */
 export function objectIdHex(): string {
-  return new Types.ObjectId().toHexString();
+  const buffer = Buffer.alloc(12);
+  buffer.writeUInt32BE(Math.floor(Date.now() / 1000), 0);
+  PROCESS_RANDOM.copy(buffer, 4);
+  objectIdCounter = (objectIdCounter + 1) % 0x1000000;
+  buffer.writeUIntBE(objectIdCounter, 9, 3);
+  return buffer.toString('hex');
 }
 
 /**
@@ -255,10 +305,11 @@ export async function seedNeighborhood(options: {
 
 // ── Listings ──
 //
-// The catalogue read path reads Postgres, so a suite that asserts what an
-// endpoint RETURNS has to seed here. Suites that assert what a WRITE does still
-// seed Mongo, because writes have not moved — several files legitimately do
-// both, against the same id.
+// Both halves of the listing path — the catalogue read AND the write behind
+// `controllers/property/` — are Postgres, so this is the only store a listing
+// fixture has. It was not always: suites used to seed a listing on BOTH sides
+// against one id, and a fixture doing that today would be writing a document
+// nothing reads.
 
 /**
  * Insert a listing on an address and return its id.
