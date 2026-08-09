@@ -49,7 +49,7 @@ import {
   toPropertyWindowRows,
 } from '../../db/backfill/dataPlan';
 import { RowAuditor, UniqueKeyAuditor, type CandidateRow } from '../../db/backfill/rowAudit';
-import { isLiveEntityId } from '@oxyhq/db';
+import { isLiveEntityId, uuidv7 } from '@oxyhq/db';
 import { ResolutionLog } from '../../db/backfill/geoPlan';
 
 /** The property rules, reached through the PLAN so the test cannot drift from it. */
@@ -549,6 +549,7 @@ describe('data backfill — --reconcile', () => {
       readonly address: mongoose.Types.ObjectId;
       readonly properties: readonly mongoose.Types.ObjectId[];
     }) => Promise<void>,
+    options: { readonly dryRun?: boolean } = {},
   ) {
     const geo = await seedAndCopyGeo();
     const database = mongoDatabase();
@@ -567,7 +568,13 @@ describe('data backfill — --reconcile', () => {
       properties: listings.map((listing) => listing._id as mongoose.Types.ObjectId),
     });
 
-    return runDataBackfill({ mongo: database, database: getDb(), mode: 'reconcile', sampleSize: 5 });
+    return runDataBackfill({
+      mongo: database,
+      database: getDb(),
+      mode: 'reconcile',
+      sampleSize: 5,
+      dryRun: options.dryRun,
+    });
   }
 
   const forTable = (report: Awaited<ReturnType<typeof copyThenDrift>>, table: string) =>
@@ -653,6 +660,89 @@ describe('data backfill — --reconcile', () => {
       .select({ total: sql<number>`count(*)::int` })
       .from(propertyImages);
     expect(row.total).toBe(2);
+  }, 120_000);
+
+  it('DRY RUN names every row it would remove, and removes none of them', async () => {
+    // The point of the mode: an operator eyeballs 86 ids rather than discovering
+    // 8,600 after the fact.
+    const report = await copyThenDrift(
+      async (database, ids) => {
+        await database.collection('properties').deleteOne({ _id: ids.properties[0] });
+      },
+      { dryRun: true },
+    );
+
+    const properties_ = forTable(report, 'properties');
+    expect(properties_?.deleted).toBe(1);
+    expect(properties_?.deletions).toHaveLength(1);
+
+    // Reported as removable, still present.
+    const [row] = await getDb().select({ total: sql<number>`count(*)::int` }).from(properties);
+    expect(row.total).toBe(10);
+  }, 120_000);
+
+  it('DRY RUN writes no UPDATE either, not just no delete', async () => {
+    const report = await copyThenDrift(
+      async (database, ids) => {
+        await database
+          .collection('properties')
+          .updateOne({ _id: ids.properties[0] }, { $set: { description: 'dry' } });
+      },
+      { dryRun: true },
+    );
+    expect(forTable(report, 'properties')?.updated).toBe(1);
+
+    const [stored] = await getDb()
+      .select({ description: properties.description })
+      .from(properties)
+      .where(eq(properties.description, 'dry'));
+    expect(stored).toBeUndefined();
+  }, 120_000);
+
+  it('NEVER deletes a row created in Postgres, whatever the source says', async () => {
+    // The bug that would destroy live data. After the write path lands, "absent
+    // from Mongo" means either "deleted before the cutover" (a ghost) or
+    // "created in Postgres" (real data that was never in Mongo). Absence alone
+    // cannot tell them apart; the id SHAPE can — a copied row carries a 24-char
+    // ObjectId hex, a created one a uuid v7.
+    const geo = await seedAndCopyGeo();
+    const database = mongoDatabase();
+    const address = addressDocument(geo, 'Barcelona', BARCELONA);
+    await database.collection('addresses').insertOne(address);
+    await seedMeasurableAddresses(geo);
+    const listing = propertyDocument(address._id as mongoose.Types.ObjectId);
+    await database.collection('properties').insertOne(listing);
+    await runDataBackfill({ mongo: database, database: getDb(), mode: 'copy', sampleSize: 5 });
+
+    // A listing created in Postgres AFTER the cutover — a uuid v7 id, no Mongo
+    // document, and never one.
+    const nativeId = uuidv7();
+    await getDb()
+      .insert(properties)
+      .values({
+        id: nativeId,
+        addressId: String(address._id),
+        sourceUrl: 'https://example.test/native',
+        offerings: ['long_term_rent'],
+        longTermRentMonthlyAmount: 900,
+      });
+
+    const report = await runDataBackfill({
+      mongo: database,
+      database: getDb(),
+      mode: 'reconcile',
+      sampleSize: 5,
+    });
+
+    const properties_ = forTable(report, 'properties');
+    expect(properties_?.deleted).toBe(0);
+    expect(properties_?.retainedPostCutover).toBe(1);
+
+    const [kept] = await getDb()
+      .select({ id: properties.id })
+      .from(properties)
+      .where(eq(properties.id, nativeId));
+    expect(kept?.id).toBe(nativeId);
   }, 120_000);
 
   it('converges: a second reconcile changes nothing and reports it as unchanged', async () => {

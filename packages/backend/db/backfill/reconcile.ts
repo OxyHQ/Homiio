@@ -102,6 +102,48 @@ export function mayDelete(surplus: number, stored: number): boolean {
   return surplus <= deletionAllowance(stored);
 }
 
+/**
+ * A row that could have come from Mongo, decided by the SHAPE of its id.
+ *
+ * ## The bug this exists to make impossible
+ *
+ * "Absent from the source" means two completely different things after the write
+ * path lands, and only one of them is a ghost:
+ *
+ *  - a row copied from Mongo whose document has since been DELETED — a ghost,
+ *    and the thing this mode removes;
+ *  - a row CREATED in Postgres, which was never in Mongo and never will be.
+ *
+ * Deleting the second is destroying live data in the authoritative store, with
+ * no source left to re-copy it from. The two are indistinguishable by absence
+ * alone, so they have to be told apart some other way.
+ *
+ * ## Why the id SHAPE and not `created_at`
+ *
+ * `db/ids.ts` states the invariant this rests on: every primary key is `text`
+ * holding a 24-char ObjectId hex for rows that existed before the cutover, and a
+ * uuid v7 for every row created after it. `generatedId()` mints the uuid; no
+ * write path can produce an ObjectId hex for a new row, and no copied row can
+ * carry anything else, because the backfill copies `_id` verbatim.
+ *
+ * That makes the test STRUCTURAL — it depends on how the id was made, not on a
+ * clock. A `created_at` filter would depend on the copy's own timestamps being
+ * trustworthy and on picking a cutover instant, and both of those are exactly
+ * the kind of thing that is off by an hour at 3am. This one cannot be off by an
+ * hour.
+ *
+ * It is also permanent rather than a property of this week: it stays correct
+ * long after the current window (in which Postgres has created nothing at all,
+ * so the ambiguity is empty) has closed.
+ */
+const MONGO_ID_SHAPE = /^[0-9a-f]{24}$/i;
+
+/** Whether this id could have come from Mongo, and so may be considered for
+ *  deletion. See {@link MONGO_ID_SHAPE}. */
+export function couldHaveComeFromMongo(id: string): boolean {
+  return MONGO_ID_SHAPE.test(id);
+}
+
 /** What one table's reconciliation did. */
 export interface ReconcileTableReport {
   readonly table: string;
@@ -113,6 +155,16 @@ export interface ReconcileTableReport {
   readonly columns: Readonly<Record<string, number>>;
   /** Set when deletion was refused, saying why. */
   readonly deletionRefused: string | null;
+  /**
+   * Rows absent from the source that were NOT considered for deletion, because
+   * their id shape says they were created in Postgres.
+   *
+   * Reported rather than silently skipped: an exclusion nobody can see is
+   * indistinguishable from a filter that never ran.
+   */
+  readonly retainedPostCutover: number;
+  /** Ids this run removed, or WOULD remove under `--dry-run`. */
+  readonly deletions: readonly string[];
 }
 
 /**
@@ -137,8 +189,10 @@ export async function reconcileTable(options: {
   readonly scopedTo: { readonly column: string; readonly parentIds: readonly string[] } | null;
   /** Whether this run may delete at all. */
   readonly allowDeletes: boolean;
+  /** Decide and report everything, write nothing. */
+  readonly dryRun: boolean;
 }): Promise<ReconcileTableReport> {
-  const { database, table, tableName, produced, scopedTo, allowDeletes } = options;
+  const { database, table, tableName, produced, scopedTo, allowDeletes, dryRun } = options;
   const columns = getTableColumns(table);
   const idColumn = columns.id;
   const writable: string[] = columnNames(table).filter(
@@ -179,10 +233,16 @@ export async function reconcileTable(options: {
   for (const row of rows) {
     const current = stored.get(row.id);
     if (current === undefined) {
-      await database
-        .insert(table)
-        .values(row as PgTable['$inferInsert'])
-        .onConflictDoNothing();
+      // `onConflictDoNothing` is only meaningful because every id here is either
+      // copied verbatim from Mongo or DETERMINISTICALLY minted (#318) — a random
+      // mint would make the conflict clause unreachable, so a re-run would insert
+      // duplicates while reporting convergence.
+      if (!dryRun) {
+        await database
+          .insert(table)
+          .values(row as PgTable['$inferInsert'])
+          .onConflictDoNothing();
+      }
       inserted += 1;
       continue;
     }
@@ -219,15 +279,27 @@ export async function reconcileTable(options: {
     // with this process's clock and destroys the historical value the migration
     // exists to preserve — the trap `CONVENTIONS.md` was corrected to name, and
     // the reason `geo.ts`'s reconcile writes whole rows too.
-    await database
-      .update(table)
-      .set(Object.fromEntries(comparable.map((column: string) => [column, row[column]])))
-      .where(eq(idColumn, row.id));
+    if (!dryRun) {
+      await database
+        .update(table)
+        .set(Object.fromEntries(comparable.map((column: string) => [column, row[column]])))
+        .where(eq(idColumn, row.id));
+    }
     updated += 1;
   }
 
   // ── deletion ──
-  const surplus = [...stored.keys()].filter((id) => !byId.has(id));
+  const absent = [...stored.keys()].filter((id) => !byId.has(id));
+  // A row created in Postgres was never in Mongo, so its absence says nothing.
+  // Removing it would destroy live data in the authoritative store.
+  const surplus = absent.filter((id) => couldHaveComeFromMongo(id));
+  const retainedPostCutover = absent.length - surplus.length;
+  if (retainedPostCutover > 0) {
+    logger.info(
+      `${tableName}: ${retainedPostCutover} row(s) absent from the source were RETAINED — ` +
+      'their id shape says they were created in Postgres, not copied from Mongo',
+    );
+  }
   let deleted = 0;
   let deletionRefused: string | null = null;
 
@@ -248,13 +320,17 @@ export async function reconcileTable(options: {
         logger.error(`${tableName}: ${deletionRefused}`);
       } else {
         // Logged BEFORE the delete, so the record survives a run that then fails.
-        logger.warn(`${tableName}: removing ${surplus.length} row(s) absent from the source`, {
-          ids: surplus.slice(0, MAX_LOGGED_DELETIONS),
-          truncated: Math.max(0, surplus.length - MAX_LOGGED_DELETIONS),
-        });
+        logger.warn(
+          `${tableName}: ${dryRun ? 'WOULD remove' : 'removing'} ${surplus.length} row(s) ` +
+          'absent from the source',
+          {
+            ids: surplus.slice(0, MAX_LOGGED_DELETIONS),
+            truncated: Math.max(0, surplus.length - MAX_LOGGED_DELETIONS),
+          },
+        );
         for (let start = 0; start < surplus.length; start += BATCH_IDS) {
           const batch = surplus.slice(start, start + BATCH_IDS);
-          await database.delete(table).where(inArray(idColumn, batch));
+          if (!dryRun) await database.delete(table).where(inArray(idColumn, batch));
           deleted += batch.length;
         }
       }
@@ -269,6 +345,8 @@ export async function reconcileTable(options: {
     unchanged,
     columns: differing,
     deletionRefused,
+    retainedPostCutover,
+    deletions: deletionRefused === null ? surplus : [],
   };
   logger.info(`Reconciled ${tableName}`, report);
   return report;
