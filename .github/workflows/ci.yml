@@ -86,21 +86,12 @@ jobs:
   backend:
     runs-on: ubuntu-24.04
     env:
-      # PINNED, because an unpinned harness silently changes what CI tests.
-      # mongodb-memory-server 11.2.0 defaults to this today; a patch release that
-      # moves its default would swap the server under the suite with no diff to
-      # show for it. This is also the version the suite was verified against, and
-      # the same major line as production (MongoDB 8).
-      MONGOMS_VERSION: 8.2.6
-      # Keep the download inside the workspace so the cache step below can see it.
-      MONGOMS_DOWNLOAD_DIR: ${{ github.workspace }}/.cache/mongodb-binaries
       # The Postgres server `jest.globalSetup.ts` creates one throwaway,
       # fully-migrated database per worker on. Separate from DATABASE_URL so the
       # harness never has to guess which server it may create databases on.
       TEST_DATABASE_URL: postgres://homiio:homiio@127.0.0.1:5434/postgres
-    # BOTH stores run here, because both are live during the dual-run: Mongo via
-    # the in-memory replica set the mongod cache below feeds, and Postgres via
-    # this service container.
+    # Postgres is the only store the suite needs; the Mongo replica set this job
+    # used to boot went with `mongodb-memory-server`.
     services:
       postgres:
         # The SAME pin as docker-compose.postgres.yml, on BOTH versions. A
@@ -132,15 +123,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
-
-      # ~200 MB, and every run needs it because the suite requires a replica set.
-      # Keyed on the pinned version, so changing the pin fetches once and then
-      # hits for every subsequent run.
-      - name: Cache mongod binary
-        uses: actions/cache@v4
-        with:
-          path: ${{ github.workspace }}/.cache/mongodb-binaries
-          key: mongodb-binaries-${{ runner.os }}-${{ env.MONGOMS_VERSION }}
 
       # `--frozen-lockfile` here, where it belongs: this job wants the exact
       # graph the lockfile records. It is NOT a sync check and must never be

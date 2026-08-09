@@ -6,13 +6,13 @@ order: 1
 
 # Getting started
 
-Homiio is a Bun workspaces monorepo with three packages: `@homiio/frontend` (Expo / React Native), `@homiio/backend` (Express + Mongoose), and `@homiio/shared-types` (pure TypeScript). This guide takes you from a clean checkout to a running dev environment.
+Homiio is a Bun workspaces monorepo with three packages: `@homiio/frontend` (Expo / React Native), `@homiio/backend` (Express + drizzle / PostgreSQL), and `@homiio/shared-types` (pure TypeScript). This guide takes you from a clean checkout to a running dev environment.
 
 ## Prerequisites
 
 - **Node.js 22.x** — pinned in the root `engines` field. Use `nvm` / `fnm` / `mise` to switch.
 - **Bun 1.0+** — the only supported package manager. `npm` and `yarn` are not maintained.
-- **MongoDB** — local instance (`brew install mongodb-community` on macOS, or run `mongod` in Docker). Hosted Atlas works equally well.
+- **PostgreSQL with PostGIS** — start one with `docker compose -f docker-compose.postgres.yml up -d postgres` (it pins `postgis/postgis:17-3.5`, the same image CI uses).
 - **iOS development**: macOS + Xcode 16 with the iOS 17 simulator.
 - **Android development**: Android Studio with at least one configured AVD.
 - **Web only**: nothing extra — `bun run dev:frontend` then press `w`.
@@ -36,7 +36,7 @@ Two env files, one per backed service.
 `packages/backend/.env`:
 
 ```env
-MONGODB_URI=mongodb://localhost:27017/homiio
+DATABASE_URL=postgres://homiio:homiio@127.0.0.1:5434/homiio_dev
 OXY_API_URL=https://api.oxy.so
 PORT=4000
 NODE_ENV=development
@@ -91,13 +91,13 @@ Inside the Expo CLI:
 - Press `a` for the Android emulator.
 - Press `r` to reload, `j` to open the JS debugger.
 
-The backend exposes `GET /health` (unauthenticated) — hit it from a second terminal to confirm Mongo is connected:
+The backend exposes `GET /health` (unauthenticated) — hit it from a second terminal to confirm PostgreSQL is connected:
 
 ```sh
 curl http://localhost:4130/health | jq
 ```
 
-If `database.status` is anything other than `"connected"`, check the `MONGODB_URI` value and that `mongod` is running.
+If `database.status` is anything other than `"connected"`, check the `DATABASE_URL` value and that Postgres is running (`docker compose -f docker-compose.postgres.yml up -d postgres`).
 
 ## Build for production
 

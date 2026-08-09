@@ -20,7 +20,7 @@ interface Property {
   sourceId?: string;
   sourceUrl?: string;
   isExternal?: boolean;
-  expiresAt?: string;          // TTL for external properties (Mongo index)
+  expiresAt?: string;          // expiry for external properties (swept, see below)
 
   address: Address;
   location?: GeoJSONPoint;     // 2dsphere indexed for nearby queries
@@ -114,7 +114,7 @@ Anonymous browsing is wired via `routes/public.ts` — no auth required:
 | `GET /api/properties` | Paginated list with `PropertyFilters` query params. |
 | `GET /api/properties/search` | Full-text + filter search. |
 | `GET /api/properties/by-ids` | Batched lookup; used by Sindi to hydrate the `<PROPERTIES_JSON>` block. |
-| `GET /api/properties/nearby` | `lat`, `lng`, `radius` (km) — uses MongoDB 2dsphere. |
+| `GET /api/properties/nearby` | `lat`, `lng`, `radius` (km) — uses PostGIS `ST_DWithin` on a `geography` column with a GiST index. |
 | `GET /api/properties/radius` | Bounding-box variant. |
 | `GET /api/properties/:propertyId` | Single property detail. |
 | `GET /api/properties/:propertyId/stats` | Public stats — view count, save count. |
@@ -182,7 +182,7 @@ Scraped properties (e.g. from Fotocasa) carry:
 - `sourceId: '<their id>'`
 - `sourceUrl: 'https://www.fotocasa.es/...'`
 - `isExternal: true`
-- `expiresAt`: TTL — Mongo's `expireAfterSeconds: 0` index on this field auto-removes stale external listings.
+- `expiresAt`: expiry — the scheduled expiry sweep removes stale external listings whose `expiresAt` has passed (Postgres has no TTL index; the sweep is the replacement).
 
 Scraped properties don't require a `profileId`, so they coexist with internally-listed properties without a phantom owner. The scraper service lives at `services/scraperService.ts` and is exposed via the admin-only `routes/scraper.ts`.
 

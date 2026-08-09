@@ -19,7 +19,7 @@ Homiio is a Bun-workspaces monorepo (root `package.json` is `homiio-monorepo@2.0
 ```
 packages/
   frontend/       @homiio/frontend       Expo 56 / React Native 0.85 / React 19
-  backend/        @homiio/backend        Express 4.21 / Mongoose 8.18 / Stripe 16.11
+  backend/        @homiio/backend        Express 4 / drizzle-orm (PostgreSQL) / Stripe 16
   shared-types/   @homiio/shared-types   Pure TS types — built first via postinstall
 ```
 
@@ -71,7 +71,7 @@ The root `_layout.tsx` wires (top-down):
 | Layer | Library |
 |-------|---------|
 | Runtime | Node 22, Express 4.21 |
-| ORM | Mongoose 8.18 against MongoDB |
+| ORM | drizzle-orm against PostgreSQL (PostGIS) |
 | Identity | `@oxyhq/core` — `oxy.auth()` middleware gates `/api/*` |
 | Billing | `stripe@16.11` — Checkout, webhooks, customer portal |
 | Image pipeline | `sharp` 0.34 + `@aws-sdk/client-s3` |
@@ -115,7 +115,7 @@ Both `@homiio/frontend` and `@homiio/backend` import directly: `import type { Pr
 
 ## Data model
 
-The Mongoose schemas live under `packages/backend/models/schemas/`. Roughly grouped:
+The drizzle table definitions live under `packages/backend/db/schema/`, one file per domain. Roughly grouped:
 
 - **Marketplace**: `PropertySchema`, `AddressSchema`, `CitySchema`, `RecentlyViewedSchema`, `SavedSchema`, `SavedPropertyFolderSchema`, `SavedSearchSchema`.
 - **Identity (Homiio-side)**: `ProfileSchema` (Personal / Agency / Business / Cooperative). Linked to the Oxy user via `oxyUserId`.
@@ -142,7 +142,7 @@ oxy.auth()  ───── 401 ── no/invalid token
 Route handler (controllers/)
    │
    ▼
-Mongoose model  →  MongoDB
+drizzle schema  →  PostgreSQL
    │
    ▼
 errorHandler.successResponse(data)  →  { success, message, data, meta }

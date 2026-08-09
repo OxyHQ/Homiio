@@ -14,12 +14,10 @@
  *
  *   docker compose -f docker-compose.postgres.yml up -d postgres
  *
- * The Mongo side is untouched. `__tests__/jest.setup.ts` still starts an
- * in-memory replica set per worker and connects mongoose to it; both stores are
- * live for the whole dual-run, and the two harnesses share nothing but the
- * process. Note that setup file sets `MONGODB_URI` ONLY — it used to also write
- * `DATABASE_URL`, which would now overwrite this worker's Postgres URL with a
- * `mongodb://` string.
+ * Postgres is the only store this harness prepares. `__tests__/jest.setup.ts`
+ * used to boot an in-memory Mongo replica set per worker; that went with
+ * `mongoose` and `mongodb-memory-server`, so there is no second harness left to
+ * coordinate with.
  */
 
 import { writeFileSync } from 'node:fs';

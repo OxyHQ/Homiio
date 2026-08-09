@@ -23,12 +23,10 @@ Infra (ECS task definitions, ALB, ECR, SSM, the S3 bucket) lives in
   in the ECS env.
 - Worker: the same ECR image, a separate ECS service (`app-homiio-worker.tf`),
   entrypoint `packages/backend/worker.ts`.
-- Both the API and worker task definitions still carry `MONGODB_URI` beside
-  `DATABASE_URL`, but nothing reads it any more — see "Data storage" below. It
-  comes off the task definition and SSM once `homiio-production` is archived. A
-  secret added to either task definition must be added to `deploy-aws.yml`'s
-  explicit sync allowlist in the SAME change, or it is silently never synced to
-  SSM.
+- `DATABASE_URL` is the only database secret either task definition carries;
+  `MONGODB_URI` is off both and deleted from SSM. A secret added to either task
+  definition must be added to `deploy-aws.yml`'s explicit sync allowlist in the
+  SAME change, or it is silently never synced to SSM.
 
 ## Commands
 
@@ -65,28 +63,26 @@ The production Dockerfile builds in dependency order: `shared-types`, then
 `@homiio/listing-providers`, and the worker uses the same image with a different
 start command.
 
-## Data storage: Mongo→Postgres migration (CRITICAL — read before touching any domain below)
+## Data storage: PostgreSQL, and nothing else
 
-Homiio is finishing a migration from MongoDB/Mongoose to PostgreSQL. Database
-`homiio` on the shared RDS instance `oxy-postgres`, with **PostGIS** installed
-once by a privileged role (it is not a trusted extension — the app role that
-owns the database cannot install it itself).
+PostgreSQL is the only store. Database `homiio` on the shared RDS instance
+`oxy-postgres`, with **PostGIS** installed once by a privileged role (it is not a
+trusted extension — the app role that owns the database cannot install it
+itself). `DATABASE_URL` is the only database secret either process needs, and
+`initializeDatabase()` exits non-zero without it.
 
-**The dual-run is over: the runtime no longer opens a Mongo connection.**
-`database/connection.ts` is deleted and neither entrypoint connects to Mongo, so
-`DATABASE_URL` is the only database secret either process needs —
-`initializeDatabase()` exits non-zero without it. `config.ts` no longer reads
-`MONGODB_URI` at all, and there is no `config.database` key: a second
-connection-string key would name a store nothing can reach.
+**The Mongo→Postgres migration is finished.** `database/connection.ts`,
+`models/`, `db/backfill/`, `mongoose` and `mongodb-memory-server` are all
+deleted, `config.ts` reads no `MONGODB_URI` and has no `config.database` key,
+and `homiio-production` is archived. There is no rollback target: the only copy
+of the old data is an offline dump.
 
-A handful of files still IMPORT Mongoose models, so `mongoose` and `models/`
-remain on disk — but an import is not a connection, and those queries would
-simply buffer and fail. `__tests__/unit/mongoUnreachable.test.ts` is the
-authority on which files those are and is enforced in CI; its
-`PENDING_MONGO_FILES` list emptying is the signal that `models/` and the
-dependency can go. `db/backfill/` is exempt: reading the old database by
-`MONGODB_URI` is its whole job, and it retires with the source, not with the
-gate.
+`__tests__/unit/mongoUnreachable.test.ts` stays, and is now a REINTRODUCTION
+GATE rather than a progress tracker — its `PENDING_MONGO_FILES` map is empty, so
+any module that imports mongoose or opens a Mongo connection fails the build. It
+scans COMMENT-STRIPPED source on purpose, because several modules here document
+what they no longer do in exactly that vocabulary. Bringing Mongo back is
+allowed, but it has to be a decision somebody makes on purpose and writes down.
 
 **The porting rules — id preservation, the census-before-porting discipline,
 schema-fixture pitfalls already found and fixed once — live in

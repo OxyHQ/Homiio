@@ -108,19 +108,24 @@ if (!rawBody) {
 const event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
 ```
 
-Idempotency is enforced at the MongoDB layer via `$addToSet` plus a `$ne` guard on the `processedSessions` array:
+Idempotency is enforced by the database. `billing_processed_sessions` is a child table carrying `UNIQUE(billing_id, session_id)`, so a session can be credited at most once — the second attempt fails on the INSERT rather than on a guard someone has to remember to write:
 
 ```ts
-await Billing.updateOne(
-  { oxyUserId, processedSessions: { $ne: sessionId } },
-  {
-    $set: { lastPaymentAt: new Date(), plusActive: true, plusSince: new Date() },
-    $addToSet: { processedSessions: sessionId }
-  }
-);
+return db.transaction(async (tx) => {
+  const record = await ensureBilling(input.oxyUserId, tx);
+  if (!(await claimStripeSession(record.id, input.sessionId, tx))) return false;
+  // …apply the entitlement the session bought…
+});
 ```
 
-If the same `checkout.session.completed` event is delivered twice, the second update matches zero documents and no extra credit or activation occurs.
+The claim and the entitlement it buys commit TOGETHER, so a delivery that dies
+between them credits nothing rather than crediting without recording that it
+did. If the same `checkout.session.completed` event is delivered twice, the
+second call's claim loses and `creditCheckoutSession` returns `false`, so no
+extra credit or activation occurs. Every caller — the Stripe webhook, the
+post-redirect confirm endpoint and the manual-activation fallback — routes
+through the same function, which makes "Stripe delivered this twice" and "the
+user pressed the button twice" the same question with the same answer.
 
 ### Events handled
 
