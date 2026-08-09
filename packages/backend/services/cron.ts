@@ -11,6 +11,7 @@ import { expireShareLinks } from '../db/conversations/conversationRepository';
 import { getDb } from '../db/postgres';
 import config from '../config';
 import { syncAllHasImages } from '../db/hasImages';
+import { EXPIRY_SWEEP_TARGETS, sweepAllExpiredRows } from '../db/expiry';
 
 // Initialize services
 const logger = new Logger('CronService');
@@ -46,6 +47,7 @@ class CronJobManager {
     this.setupShareLinkExpiryJob();
     this.setupEvictionOutcomeReminderJob();
     this.setupModerationReconciliationJob();
+    this.setupExpirySweepJob();
     // Boot sweeps: repair mangled coords + start Wikimedia cover backfill
     // without waiting for the top of the hour.
     void this.runBootHousekeeping();
@@ -204,6 +206,103 @@ class CronJobManager {
     this.jobs.set('evictionOutcomeReminders', job);
     this.jobStatus.set('evictionOutcomeReminders', { isRunning: true, lastRun: undefined, nextRun: undefined });
     job.start();
+  }
+
+  /**
+   * Setup the expiry sweep — every five minutes.
+   *
+   * **This is the call `db/expiry.ts` says the registry does not make.** The
+   * registry is data; nothing ran it, and a table registered there still grew
+   * forever until this landed. Mongo reaped those rows with a TTL index — a
+   * behaviour of the SOURCE that no code search can find, because it was never
+   * in Homiio's code to be missed — and Postgres does not.
+   *
+   * The gap was not theoretical. Measured 2026-08-09, hours after the property
+   * cutover: 124 listings in Postgres were past their deadline, 121 of them had
+   * already been reaped from Mongo, and every one was still being served. The
+   * intersection was exact — nothing was absent for any other reason — which is
+   * what identifies the TTL index as the whole cause rather than one of several.
+   *
+   * ## Five minutes, not daily
+   *
+   * Mongo's TTL monitor runs every 60 seconds, so that is the cadence the read
+   * paths were written against. `db/expiry.ts` warns that a read depending on a
+   * swept row already being GONE turns the sweep interval into a correctness
+   * window; five minutes keeps that window close to what the application has
+   * always had, and the sweep is cheap — a range scan on an index that exists
+   * precisely to support it.
+   *
+   * Every task runs this, and that is safe rather than tolerated: the delete is
+   * idempotent, so two tasks sweeping concurrently costs a duplicate scan and
+   * nothing else. It is the same argument the moderation reconciliation makes.
+   */
+  private setupExpirySweepJob(): void {
+    const job = cron.schedule('*/5 * * * *', async () => {
+      await this.runExpirySweep();
+    }, {
+      timezone: 'UTC',
+      scheduled: false,
+    });
+
+    this.jobs.set('expirySweep', job);
+    this.jobStatus.set('expirySweep', { isRunning: true, lastRun: undefined, nextRun: undefined });
+    job.start();
+  }
+
+  /**
+   * One sweep across every registered target.
+   *
+   * ## A sweep that reaped nothing is DISTINGUISHABLE from one that never ran
+   *
+   * That is the whole logging decision here, and it is the failure mode
+   * `MIGRATION-CONTRACT.md` names for this class: an unwired sweep has no
+   * symptom until disk. If the job only logged when it deleted something, a
+   * silent log would mean either "nothing was due" or "the job is not
+   * scheduled", and the second is invisible for months.
+   *
+   * So EVERY run logs, at `debug` when it reaped nothing and at `info` when it
+   * did. `tablesSwept` is on both lines: a run that examined zero TABLES is a
+   * broken registry, and it must not read like a quiet, healthy one.
+   *
+   * `truncated` is surfaced because the sweep stops at a ceiling per call. A run
+   * that keeps reporting it is one that cannot keep up, which is a capacity
+   * signal rather than an error — and it is the only way to tell "nothing left
+   * to do" from "still working through a backlog".
+   */
+  /** The scheduled sweep, reachable on demand. See `runExpirySweepNow`. */
+  async runExpirySweepNow(): Promise<void> {
+    await this.runExpirySweep();
+  }
+
+  private async runExpirySweep(): Promise<void> {
+    this.jobStatus.set('expirySweep', { isRunning: true, lastRun: new Date() });
+    try {
+      const results = await sweepAllExpiredRows(getDb(), EXPIRY_SWEEP_TARGETS);
+      const deleted = results.reduce((total, result) => total + result.deleted, 0);
+      const truncated = results.filter((result) => result.truncated).map((result) => result.table);
+      const detail = {
+        tablesSwept: results.length,
+        deleted,
+        perTable: Object.fromEntries(results.map((result) => [result.table, result.deleted])),
+        truncated,
+      };
+
+      if (deleted > 0) this.logger.info('Expiry sweep reaped expired rows', detail);
+      // Logged even at zero — see the doc comment. Silence would make an
+      // unscheduled job look like a healthy one.
+      else this.logger.debug('Expiry sweep found nothing due', detail);
+
+      if (truncated.length > 0) {
+        this.logger.warn(
+          'Expiry sweep hit its batch ceiling; rows remain for the next run',
+          { truncated },
+        );
+      }
+    } catch (error) {
+      this.logger.error('Expiry sweep failed', error);
+    } finally {
+      this.jobStatus.set('expirySweep', { isRunning: false, lastRun: new Date() });
+    }
   }
 
   /**
@@ -411,6 +510,22 @@ export function initCronJobs(): void {
 export function stopCronJobs(): void {
   cronManager.stop();
   logger.info('Cron jobs stopped');
+}
+
+/**
+ * Run the expiry sweep once, now.
+ *
+ * Exists so the scheduled path is REACHABLE without waiting five minutes — by a
+ * test that needs to assert the cron passes the real registry, and by an
+ * operator clearing a backlog after an incident.
+ *
+ * Without it the only testable claims are "a job named `expirySweep` is
+ * scheduled" and "the registry works when called directly", and neither
+ * connects the two: a job wired to an empty target list satisfies both. This is
+ * the seam that makes the connection assertable.
+ */
+export async function runExpirySweepNow(): Promise<void> {
+  await cronManager.runExpirySweepNow();
 }
 
 /**
