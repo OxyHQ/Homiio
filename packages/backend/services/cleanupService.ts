@@ -1,7 +1,19 @@
 import { Logger } from '../utils/logger';
 import { cleanupExpiredProperties } from './scraperService';
-import { RecentlyViewed, ViewingRequest } from '../models';
+import { ViewingRequest } from '../models';
+import { getDb } from '../db/postgres';
+import { pruneRecentlyViewedBefore } from '../db/saved/recentlyViewedRepository';
 
+/**
+ * The ONLY bound on `recently_viewed`, which is the one table in the saved-items
+ * domain that grows on reads rather than on deliberate user action.
+ *
+ * Ported unchanged from the Mongo sweep. There is deliberately no per-user row
+ * cap beside it — Mongo had none, and the `?limit=` on the read bounds the
+ * RESPONSE, not the table. The unique key does the rest: one row per person per
+ * listing, so a user's footprint is the number of DISTINCT listings they opened
+ * in the window, however often they opened them.
+ */
 const RECENTLY_VIEWED_RETENTION_DAYS = 90;
 const VIEWING_REQUEST_RETENTION_DAYS = 180;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -64,9 +76,9 @@ export class CleanupService {
     let errors = 0;
 
     try {
-      const result = await RecentlyViewed.deleteMany({ viewedAt: { $lt: recentlyViewedCutoff } });
-      deleted += result.deletedCount || 0;
-      this.logger.info(`Deleted ${result.deletedCount || 0} recently-viewed entries older than ${RECENTLY_VIEWED_RETENTION_DAYS} days`);
+      const removed = await pruneRecentlyViewedBefore(getDb(), recentlyViewedCutoff);
+      deleted += removed;
+      this.logger.info(`Deleted ${removed} recently-viewed entries older than ${RECENTLY_VIEWED_RETENTION_DAYS} days`);
     } catch (error) {
       errors += 1;
       this.logger.error('RecentlyViewed cleanup failed', error);

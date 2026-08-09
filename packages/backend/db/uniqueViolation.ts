@@ -66,6 +66,9 @@
 /** The SQLSTATE for `unique_violation`. */
 const UNIQUE_VIOLATION = '23505';
 
+/** The SQLSTATE for `foreign_key_violation`. */
+const FOREIGN_KEY_VIOLATION = '23503';
+
 /**
  * How far down a `cause` chain to look.
  *
@@ -90,14 +93,45 @@ interface PostgresErrorLike {
  *   keeps propagating.
  */
 export function isUniqueViolation(error: unknown, constraintName: string): boolean {
+  return hasConstraintViolation(error, UNIQUE_VIOLATION, constraintName);
+}
+
+/**
+ * Whether `error`, or anything in its `cause` chain, is a `23503` raised by the
+ * NAMED foreign key.
+ *
+ * The same reasoning as {@link isUniqueViolation}, one SQLSTATE over. It exists
+ * because Mongo let a reference point at nothing and Postgres does not: writes
+ * that accept an id from the CLIENT — saving a listing, recording that one was
+ * viewed — used to store a dangling pointer silently and now raise `23503`. That
+ * is a 404 the caller earned, not the 500 an unhandled driver error would be.
+ *
+ * Naming the constraint matters as much here as it does above: a statement can
+ * touch several foreign keys, and treating any `23503` as "that listing is gone"
+ * would report an unrelated integrity failure as a missing property.
+ */
+export function isForeignKeyViolation(error: unknown, constraintName: string): boolean {
+  return hasConstraintViolation(error, FOREIGN_KEY_VIOLATION, constraintName);
+}
+
+/**
+ * Walk the `cause` chain for a violation of `constraintName` carrying
+ * `sqlState`.
+ *
+ * The walk is the part worth having once: drizzle WRAPS the driver's error (see
+ * the header), so the check has to look past the outermost object, and it is
+ * depth-bounded so a cyclic `cause` cannot spin.
+ */
+function hasConstraintViolation(
+  error: unknown,
+  sqlState: string,
+  constraintName: string,
+): boolean {
   let current = error;
   for (let depth = 0; depth < MAX_CAUSE_DEPTH; depth += 1) {
     if (!current || typeof current !== 'object') return false;
     const candidate = current as PostgresErrorLike;
-    if (
-      candidate.code === UNIQUE_VIOLATION &&
-      candidate.constraint_name === constraintName
-    ) {
+    if (candidate.code === sqlState && candidate.constraint_name === constraintName) {
       return true;
     }
     current = candidate.cause;

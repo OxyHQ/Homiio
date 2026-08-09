@@ -22,7 +22,12 @@ export default function () {
   router.get('/me', asyncHandler(profileController.getOrCreateProfile));
   router.put('/me', asyncHandler(profileController.updateMyProfile));
   router.get('/me/recent-properties', asyncHandler(profileController.getRecentProperties));
-  router.get('/me/recent-properties/debug', asyncHandler(profileController.debugRecentProperties));
+  // The recently-viewed WRITE. It used to live only at
+  // `POST /api/properties/:propertyId/track-view`, which no client called, while
+  // `services/recentlyViewedService` posted here — to a route no router served.
+  // Both spellings are now mounted on the same handler; the upsert is idempotent
+  // per (owner, listing), so which one a client uses cannot matter.
+  router.post('/me/recent-properties/:propertyId', asyncHandler(profileController.trackPropertyView));
   router.delete('/me/recent-properties', asyncHandler(profileController.clearRecentProperties));
   router.get('/me/saved-properties', asyncHandler(profileController.getSavedProperties));
   router.post('/me/save-property', asyncHandler(profileController.saveProperty));
