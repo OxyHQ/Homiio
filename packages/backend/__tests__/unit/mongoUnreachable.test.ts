@@ -55,8 +55,17 @@ const SCANNED_ROOTS = [
   'scripts',
 ] as const;
 
-/** Top-level files that are equally load-bearing and would otherwise be missed. */
-const SCANNED_FILES = ['server.ts', 'worker.ts', 'config.ts', 'database/connection.ts'] as const;
+/**
+ * Top-level files that are equally load-bearing and would otherwise be missed.
+ *
+ * `database/connection.ts` is deliberately absent: the module is gone, and this
+ * list asserts each entry EXISTS, so naming a deleted file here would fail the
+ * scan rather than guard anything. What stops it coming back is the
+ * `database/connection` pattern in {@link MONGO_PATTERNS} — a re-created module
+ * would be imported by something under a scanned root, and that import is what
+ * fails the gate.
+ */
+const SCANNED_FILES = ['server.ts', 'worker.ts', 'config.ts'] as const;
 
 /**
  * The backfill, exempt because reading Mongo is its purpose.
@@ -84,17 +93,6 @@ const PENDING_MONGO_FILES: ReadonlyMap<string, string> = new Map([
   ['controllers/billingController.ts', 'homiio-billing — task #40, ~30 Billing call sites'],
   ['services/geoResolutionService.ts', 'homiio-property-writes — geo services'],
   ['scripts/seedImages.ts', 'unassigned — decide port vs delete like the other one-offs'],
-  ['services/healthService.ts', 'reports Mongo connectivity; retires with the connection itself'],
-  ['database/connection.ts', 'the Mongo connection module; deleted last, with models/'],
-  // The two ENTRYPOINTS, and the reason the secret is still load-bearing:
-  // each imports `database/connection` and calls `database.connect()` at boot
-  // (server.ts:117 and :192, worker.ts:513). No model import — which is why a
-  // census that greps only for `models/` misses them entirely. These are the
-  // last two lines to delete, and deleting them is what makes the runtime
-  // genuinely unable to open a connection.
-  ['server.ts', 'calls database.connect() at boot — remove with database/connection.ts'],
-  ['worker.ts', 'calls database.connect() at boot — remove with database/connection.ts'],
-  ['scripts/seedProperties.ts', 'unassigned — decide port vs delete like the other one-offs'],
 ]);
 
 /**
@@ -223,21 +221,21 @@ describe('the runtime cannot reach Mongo', () => {
 
 describe('boot does not require Mongo', () => {
   /**
-   * `MONGODB_URI` read at startup is what makes the secret still load-bearing.
-   * This does not fail today — `config.ts` still reads it — so it names the
-   * location instead, and becomes an equality the day that line goes.
+   * `MONGODB_URI` read at startup is what made the secret load-bearing. Nothing
+   * reads it any more, so this is now the equality it was always going to
+   * become: the variable can be removed from the task definition and from SSM
+   * without changing how this service boots.
    *
    * Split from the import gate deliberately: a file can import nothing from
    * Mongo and still demand the variable, and the two are removed by different
-   * changes.
+   * changes. `db/backfill/` is exempt because reading the OLD database by URL
+   * is the whole of its job — it retires with the source, not with this gate.
    */
   it('names every production module reading MONGODB_URI', () => {
     const readers = trackedFiles()
       .filter((file) => !file.includes('__tests__') && !file.startsWith(BACKFILL_PREFIX))
       .filter((file) => stripComments(readFileSync(path.join(BACKEND_ROOT, file), 'utf8')).includes('MONGODB_URI'));
 
-    // Exactly one, and it is the config reader. When this becomes `[]`, the
-    // variable can be removed from the environment as well as the code.
-    expect(readers).toEqual(['config.ts']);
+    expect(readers).toEqual([]);
   });
 });

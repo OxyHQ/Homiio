@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
 import { Logger } from '../utils/logger';
+import { checkPostgresHealth, isPostgresConnected } from '../db/postgres';
 import { getScraperHealth } from './scraperService';
 
 const DB_PING_TIMEOUT_MS = 2000;
@@ -43,36 +43,36 @@ export class HealthService {
   }
 
   /**
-   * Get database health status.
+   * Get database health status — PostgreSQL, the only store this service opens.
    *
-   * Reports `unhealthy` when the mongoose connection is not in the connected
-   * state (readyState !== 1), `degraded` when the connection reports connected
-   * but the admin ping fails or times out, and `healthy` when the ping succeeds.
+   * Reports `unhealthy` when no pool has been published (nothing ever
+   * connected), `degraded` when a pool exists but a trivial query does not come
+   * back, and `healthy` when it does. Same three states the Mongo probe
+   * reported, so `/health`'s body keeps its meaning across the migration.
+   *
+   * The query is BOUNDED. `checkPostgresHealth` never throws, but postgres.js
+   * queues a query when every connection in the pool is busy, so an unbounded
+   * probe turns a saturated task into one that stops answering `/health` — and
+   * the ALB reads silence as death and drains it, which is precisely the wrong
+   * response to load. A timeout reports `degraded` and keeps the endpoint fast.
    */
   async getDatabaseHealth(): Promise<'healthy' | 'degraded' | 'unhealthy'> {
-    const { readyState } = mongoose.connection;
-    if (readyState !== 1) {
-      this.logger.warn('Database connection not ready', { readyState });
+    if (!isPostgresConnected()) {
+      this.logger.warn('Database pool not published');
       return 'unhealthy';
     }
 
-    const db = mongoose.connection.db;
-    if (!db) {
-      this.logger.warn('Database handle unavailable despite connected state');
-      return 'degraded';
-    }
-
+    let timer: NodeJS.Timeout | undefined;
     try {
-      await Promise.race([
-        db.admin().ping(),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Database ping timed out')), DB_PING_TIMEOUT_MS),
-        ),
+      const answered = await Promise.race([
+        checkPostgresHealth(),
+        new Promise<false>((resolve) => {
+          timer = setTimeout(() => resolve(false), DB_PING_TIMEOUT_MS);
+        }),
       ]);
-      return 'healthy';
-    } catch (error) {
-      this.logger.error('Database ping failed', error);
-      return 'degraded';
+      return answered ? 'healthy' : 'degraded';
+    } finally {
+      if (timer) clearTimeout(timer);
     }
   }
 
