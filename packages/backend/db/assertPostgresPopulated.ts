@@ -75,12 +75,12 @@ export interface PopulationFloor {
 }
 
 /**
- * Four tables, not one, and not all of them.
+ * Five tables, not one, and not all of them.
  *
  * One is not enough: the copy walks collections in dependency order, so it can
  * write `countries` and `cities` and die before `properties`, and a single-table
- * floor would report a partial copy as a healthy one. The four below are written
- * at four DIFFERENT points of that order, which is what makes the SET able to
+ * floor would report a partial copy as a healthy one. The five below are written
+ * at five DIFFERENT points of that order, which is what makes the SET able to
  * tell a partial copy from an empty one — a property no individual entry has.
  *
  * Every floor is well below its measured production count and well above any
@@ -99,6 +99,13 @@ export interface PopulationFloor {
  * so it reads identical before and after the copy and cannot discriminate
  * anything. A floor that passes in the failure case is worse than no floor,
  * because it makes the set look more thorough than it is.
+ *
+ * DELIBERATELY NOT A FLOOR — `profiles` (5 rows), and the same reasoning in a
+ * different guise. Five is indistinguishable from fixture residue, so any floor
+ * low enough to be safe is low enough to pass on a database that holds nothing
+ * real. The remaining ~45 tables the schema now carries are EMPTY in production
+ * (live census, 2026-08-06), so none of them can carry a floor at all: the
+ * correct reading for every one of them after a perfect copy is zero rows.
  */
 export const POPULATION_FLOORS: readonly PopulationFloor[] = [
   {
@@ -141,6 +148,20 @@ export const POPULATION_FLOORS: readonly PopulationFloor[] = [
       'immediately — the case the later floors would report as an empty ' +
       'database rather than a broken run. ~3.3x below the real count. Unlike ' +
       '`countries` it is far too large to be reproduced by a seed.',
+  },
+  {
+    table: 'agencies',
+    minimum: 800,
+    why:
+      'The source holds 2,627 agencies, and this is the ONLY table outside the ' +
+      'geo/listing chain with production data to lose — every other collection ' +
+      'the remaining schema adds is at zero, and `profiles` (5) is too small to ' +
+      'discriminate. It fails on a copy that finished the listing chain and ' +
+      'stopped, which the four floors above would all report as healthy: ' +
+      'agencies are written from the review and portal-contact paths, a ' +
+      'different stage of the copy from anything else here. ~3.3x below the ' +
+      'real count, and not seeded, so it cannot pass on an empty database the ' +
+      'way `countries` would.',
   },
 ];
 
