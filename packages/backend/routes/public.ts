@@ -15,7 +15,9 @@ import * as reviewController from '../controllers/reviewController';
 import { asyncHandler } from '../middlewares';
 import { serializeWireIds } from '../middlewares/wireIds';
 import performanceMonitor from '../middlewares/performance';
-import { Conversation } from '../models';
+import { findConversationByShareToken } from '../db/conversations/conversationRepository';
+import { toSharedConversationDTO } from '../db/conversations/conversationSerializer';
+import { getDb } from '../db/postgres';
 import * as profileController from '../controllers/profile';
 import * as evictionController from '../controllers/eviction';
 
@@ -248,29 +250,24 @@ export default function () {
   router.get('/public/profiles/by-user/:oxyUserId', asyncHandler(profileController.getPublicProfileByOxyUserId));
   router.get('/public/profiles/oxy/:oxyUserId', asyncHandler(profileController.getProfileByOxyUserId));
 
-  // Public shared conversation endpoint (no authentication required)
+  // Public shared conversation endpoint (no authentication required).
+  //
+  // The freshness check is in the QUERY (`findConversationByShareToken` requires
+  // `is_shared`, a non-null token and a deadline in the future), so an expired
+  // link is 404 whether or not the share-link sweep has run since. That is what
+  // keeps the sweep pure housekeeping rather than a correctness dependency —
+  // and it is why Mongo's TTL index, which deleted the whole conversation 24
+  // hours after anybody shared it, was never needed for this route to be right.
+  //
+  // The `try/catch` that used to swallow every failure into a 500 is gone:
+  // `asyncHandler` forwards to `errorHandler`, which is the one place that
+  // decides what a caller sees.
   router.get('/ai/shared/:token', asyncHandler(async (req, res) => {
-    try {
-      const conversation = await Conversation.findByShareToken(req.params.token);
-      
-      if (!conversation) {
-        return res.status(404).json({ error: 'Shared conversation not found or expired' });
-      }
-
-      // Return conversation without sensitive user data, including status field
-      const sharedConversation = {
-        id: conversation._id,
-        title: conversation.title,
-        messages: conversation.messages,
-        createdAt: conversation.createdAt,
-        updatedAt: conversation.updatedAt,
-        status: conversation.status || 'active'
-      };
-
-      res.json({ success: true, conversation: sharedConversation });
-    } catch {
-      res.status(500).json({ error: 'Failed to get shared conversation' });
+    const hydrated = await findConversationByShareToken(getDb(), String(req.params.token || ''));
+    if (!hydrated) {
+      return res.status(404).json({ error: 'Shared conversation not found or expired' });
     }
+    res.json({ success: true, conversation: toSharedConversationDTO(hydrated) });
   }));
 
   return router;

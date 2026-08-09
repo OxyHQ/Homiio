@@ -7,6 +7,8 @@ import { syncCovers } from './cityCoverSyncService';
 import { repairCorruptCityCoordinates } from './cityCoordinateRepairService';
 import { sendEvictionOutcomeReminders } from './evictionOutcomeReminderService';
 import { reconcileModerationReports } from './moderation/ModerationReconciliation';
+import { expireShareLinks } from '../db/conversations/conversationRepository';
+import { getDb } from '../db/postgres';
 import config from '../config';
 import { Property } from '../models';
 
@@ -41,6 +43,7 @@ class CronJobManager {
     this.setupHealthCheckJob();
     this.setupCleanupJob();
     this.setupCityCoverSyncJob();
+    this.setupShareLinkExpiryJob();
     this.setupEvictionOutcomeReminderJob();
     this.setupModerationReconciliationJob();
     // Boot sweeps: repair mangled coords + start Wikimedia cover backfill
@@ -122,6 +125,49 @@ class CronJobManager {
     this.jobs.set('cleanup', job);
     this.jobStatus.set('cleanup', { isRunning: true, lastRun: undefined, nextRun: undefined });
     job.start();
+  }
+
+  /**
+   * Setup the share-link expiry sweep — hourly.
+   *
+   * **This is the port of Mongo's TTL index on `Conversation.sharing.expiresAt`,
+   * and it CLEARS four columns where Mongo deleted the whole row.** That index
+   * destroyed the conversation and every message in it 24 hours after anybody
+   * pressed Share, so replicating it would be replicating data loss;
+   * `db/expiry.ts` names the column in `EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE` and
+   * `__tests__/db/expiry.test.ts` fails the build if it is ever registered as a
+   * sweep target, which is why this job is here and not in `EXPIRY_SWEEP_TARGETS`.
+   *
+   * Nothing depends on it having run: `findConversationByShareToken` refuses an
+   * expired token in its own predicate. The sweep exists so a token that is no
+   * longer usable stops being STORED, and so the partial unique index stays the
+   * size of the live set.
+   */
+  private setupShareLinkExpiryJob(): void {
+    const job = cron.schedule('7 * * * *', async () => {
+      await this.runShareLinkExpiry();
+    }, {
+      timezone: 'UTC',
+      scheduled: false,
+    });
+
+    this.jobs.set('shareLinks', job);
+    this.jobStatus.set('shareLinks', { isRunning: true, lastRun: undefined, nextRun: undefined });
+    job.start();
+  }
+
+  private async runShareLinkExpiry(): Promise<void> {
+    this.jobStatus.set('shareLinks', { isRunning: true, lastRun: new Date() });
+    try {
+      const cleared = await expireShareLinks(getDb());
+      if (cleared > 0) {
+        this.logger.info('Cleared expired conversation share links', { cleared });
+      }
+    } catch (error) {
+      this.logger.error('Share link expiry sweep failed', error);
+    } finally {
+      this.jobStatus.set('shareLinks', { isRunning: false, lastRun: new Date() });
+    }
   }
 
   /**

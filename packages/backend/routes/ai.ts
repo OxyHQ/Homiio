@@ -1,16 +1,62 @@
 /**
- * AI Routes — streaming, search, conversations (refactor)
+ * AI Routes — streaming, search, conversations.
+ *
+ * ## The conversation surface here was BROKEN, and the port is the fix
+ *
+ * `2d1376a` renamed `Conversation.profileId` to `oxyUserId` and updated the
+ * handlers that then lived in `controllers/ai/`. `eeb4845` deleted that
+ * directory; this file — the one `routes/index.ts` actually mounts at `/api/ai`
+ * — kept the old spelling. mongoose strict mode drops a path the schema does not
+ * declare, so every `new Conversation({ profileId })` lost the field and then
+ * failed `required: true` on `oxyUserId`, and every `find({ profileId })`
+ * matched nothing. Production holds ZERO conversations as a result.
+ *
+ * The ported handlers key on the session's Oxy account id directly. There is no
+ * `Profile` lookup in front of them any more: `conversations.oxy_user_id` IS the
+ * owner, so resolving a profile first only added a 404 for a person who has
+ * never opened the profile screen.
+ *
+ * `/history` had the same defect one level up — it read and wrote
+ * `profile.chatHistory`, while `ProfileSchema` declares the array at
+ * `personalProfile.chatHistory`. Strict mode dropped it on write and returned
+ * `undefined` on read, so `GET` always answered `[]`, `POST` stored nothing and
+ * `DELETE` was a no-op. All five production profiles have an empty transcript.
  */
 
 import express, { Request, Response } from 'express';
-import mongoose from 'mongoose';
 import multer from 'multer';
 import { streamText, type CoreMessage } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { getOxyUserId } from '@oxyhq/core/server';
 import { getErrorMessage } from '../utils/errors';
 import { logger } from '../middlewares/logging';
-import { Profile, Conversation } from '../models';
+import { getDb } from '../db/postgres';
+import {
+  PLACEHOLDER_CONVERSATION_TITLE,
+  appendMessages,
+  createConversation,
+  deleteConversation,
+  findConversationForOwner,
+  listConversations,
+  renameConversation,
+  replaceMessages,
+  setConversationStatus,
+  shareConversation,
+  titleFromFirstUserMessage,
+  type ConversationRow,
+  type MessageInput,
+} from '../db/conversations/conversationRepository';
+import {
+  toConversationDTO,
+  toConversationSummaryDTO,
+  toMessageDTO,
+} from '../db/conversations/conversationSerializer';
+import {
+  appendProfileChatTurn,
+  clearProfileChatHistory,
+  ensureProfile,
+  listProfileChatHistory,
+} from '../db/profiles/profileRepository';
 import { resolveAddressDisplay } from '../services/geoDisplayService';
 import pdfParse from 'pdf-parse';
 
@@ -102,10 +148,128 @@ Avoid repetition:
 // -------------------------------
 /** Utilities */
 // -------------------------------
-const isObjectId = (id: string) => mongoose.Types.ObjectId.isValid(id);
 // Resolve the authenticated Oxy user id (or null) from a request whose session
 // was already populated by `@oxyhq/core/server` auth middleware in server.ts.
 const getUserId = (req: Request): string | null => getOxyUserId(req);
+
+/**
+ * The client's own placeholder id for a chat it has not saved yet.
+ *
+ * `store/conversationStore.ts` mints `conv_<timestamp>` locally so a new chat
+ * renders before the server has heard of it, and sends it back on the first
+ * `/stream`. It is a request to CREATE, not a lookup key, and it is the reason
+ * this file cannot simply treat every `conversationId` as an id.
+ */
+const CLIENT_PLACEHOLDER_PREFIX = 'conv_';
+const isClientPlaceholderId = (id: string): boolean => id.startsWith(CLIENT_PLACEHOLDER_PREFIX);
+
+/**
+ * Tell the client which stored conversation its turn landed in.
+ *
+ * Sent whenever `/stream` CREATED one, which is wider than the Mongo handler:
+ * that only set the header when the client had supplied a `conv_…` placeholder,
+ * so a request carrying no `conversationId` at all created a conversation and
+ * never told anybody its id — an orphan on every such call. Widening it is
+ * safe in the only direction that matters, since a client that ignores the
+ * header is unaffected.
+ */
+function announceConversationId(
+  res: Response,
+  conversation: ConversationRow | undefined,
+  isNew: boolean,
+): void {
+  if (isNew && conversation) res.setHeader('X-Conversation-ID', conversation.id);
+}
+
+/**
+ * Narrow an untrusted role to one `conversation_messages_role_check` accepts.
+ *
+ * The CHECK would refuse anything else with a `23514`, which reaches the client
+ * as a 500 for input it should have been told about with a 400.
+ */
+const MESSAGE_ROLES = ['user', 'assistant', 'system'] as const;
+function isMessageRole(value: unknown): value is MessageInput['role'] {
+  return typeof value === 'string' && (MESSAGE_ROLES as readonly string[]).includes(value);
+}
+
+const CONVERSATION_STATUS_VALUES = ['active', 'archived', 'deleted'] as const;
+function isConversationStatus(value: unknown): value is ConversationRow['status'] {
+  return (
+    typeof value === 'string' && (CONVERSATION_STATUS_VALUES as readonly string[]).includes(value)
+  );
+}
+
+const ATTACHMENT_TYPES = ['file', 'image', 'document'] as const;
+
+/** The attachments off a request body, dropping anything that is not an object. */
+function readAttachmentInputs(value: unknown): MessageInput['attachments'] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
+    const attachment = entry as Record<string, unknown>;
+    const type = attachment.type;
+    const size = attachment.size;
+    return [
+      {
+        type:
+          typeof type === 'string' && (ATTACHMENT_TYPES as readonly string[]).includes(type)
+            ? (type as (typeof ATTACHMENT_TYPES)[number])
+            : undefined,
+        name: typeof attachment.name === 'string' ? attachment.name : undefined,
+        url: typeof attachment.url === 'string' ? attachment.url : undefined,
+        size: typeof size === 'number' && Number.isFinite(size) ? size : undefined,
+      },
+    ];
+  });
+}
+
+/**
+ * The opening transcript off a request body.
+ *
+ * `messages` wins over `initialMessage`, matching the Mongo handler's
+ * `if (Array.isArray(messages)) … else if (initialMessage) …`. A turn with no
+ * usable role or content is DROPPED rather than defaulted to `user` with an
+ * empty string: `content` is `NOT NULL` and an empty assistant turn in a
+ * transcript is worse than a missing one.
+ */
+function readMessageInputs(messages: unknown, initialMessage: unknown): MessageInput[] {
+  if (Array.isArray(messages)) {
+    return messages.flatMap((entry) => {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
+      const message = entry as Record<string, unknown>;
+      if (!isMessageRole(message.role)) return [];
+      if (typeof message.content !== 'string' || message.content === '') return [];
+      const timestamp =
+        typeof message.timestamp === 'string' || typeof message.timestamp === 'number'
+          ? new Date(message.timestamp)
+          : undefined;
+      return [
+        {
+          role: message.role,
+          content: message.content,
+          timestamp: timestamp && !Number.isNaN(timestamp.getTime()) ? timestamp : undefined,
+          attachments: readAttachmentInputs(message.attachments),
+        },
+      ];
+    });
+  }
+  if (typeof initialMessage === 'string' && initialMessage !== '') {
+    return [{ role: 'user', content: initialMessage }];
+  }
+  return [];
+}
+
+/**
+ * The two `mongoose.Types.ObjectId.isValid` guards that used to live here are
+ * DELETED rather than widened.
+ *
+ * `db/ids.ts` names this file specifically: the guard was reached through a
+ * local `isObjectId` wrapper, so a grep for the literal saw one site where there
+ * were three. Post-cutover it answers `false` for every uuid v7, so keeping it
+ * would 400 every conversation created from the cutover onward. A `text` column
+ * takes any string and a lookup for a nonsense id returns no rows, which is the
+ * 404 the handler already produces — so the guard has nothing left to do.
+ */
 const getBaseUrl = () => {
   const baseUrl = process.env.INTERNAL_API_BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
   return baseUrl;
@@ -456,8 +620,11 @@ export default function aiRouter() {
       const userId = getUserId(req);
       if (!userId) return err(res, 401, 'Unauthorized');
 
-      const activeProfile = await Profile.findByOxyUserId(userId);
-      if (!activeProfile) return err(res, 404, 'No active profile found');
+      // The `Profile.findByOxyUserId` gate that stood here is GONE. It bound
+      // `activeProfile` and never read it: the profile row scoped nothing, so
+      // the only thing it did was 404 an authenticated caller who had never
+      // opened the profile screen. Same removal, same reason, as in `/stream`
+      // and `/history` — and the same reason `getUserId` above is the real gate.
 
       const { propertyContext, conversationContext } = req.body || {};
       
@@ -560,23 +727,28 @@ Return only the JSON array, no other text.`;
       const userId = getUserId(req);
       if (!userId) return err(res, 401, 'Unauthorized');
 
-      const activeProfile = await Profile.findByOxyUserId(userId);
-      if (!activeProfile) return err(res, 404, 'No active profile found');
-
-      // Ensure conversation
-      let conversation: any;
-      if (conversationId) {
-        if (conversationId.startsWith('conv_')) {
-          conversation = new Conversation({ profileId: activeProfile._id.toString(), title: 'New Conversation', messages: [], status: 'active' });
-          await conversation.save();
-        } else if (isObjectId(conversationId)) {
-          conversation = await Conversation.findOne({ _id: conversationId, profileId: activeProfile._id.toString() });
-        } else {
-          return err(res, 400, 'Invalid conversation ID format');
-        }
+      // No `Profile` lookup: `conversations.oxy_user_id` is the owner, so the
+      // "No active profile found" 404 was refusing a chat to anyone who had
+      // never opened the profile screen, for no benefit.
+      //
+      // A client placeholder id (`conv_…`), or none at all, means CREATE. A real
+      // id means look it up, scoped to the caller — the ownership is in the
+      // predicate, never a second statement.
+      const db = getDb();
+      let conversation: ConversationRow | undefined;
+      let conversationIsNew = false;
+      if (conversationId && !isClientPlaceholderId(conversationId)) {
+        conversation = (await findConversationForOwner(db, conversationId, userId))?.conversation;
       } else {
-        conversation = new Conversation({ profileId: activeProfile._id.toString(), title: 'New Conversation', messages: [], status: 'active' });
-        await conversation.save();
+        conversation = (
+          await db.transaction((tx) =>
+            createConversation(tx, {
+              oxyUserId: userId,
+              title: PLACEHOLDER_CONVERSATION_TITLE,
+            }),
+          )
+        ).conversation;
+        conversationIsNew = true;
       }
 
       const last = messages[messages.length - 1];
@@ -590,9 +762,7 @@ Return only the JSON array, no other text.`;
 
       // If last message is not user, return empty stream for clean client resolution
       if (!isLastTurnUser) {
-        if (conversationId && conversationId.startsWith('conv_') && conversation?._id) {
-          res.setHeader('X-Conversation-ID', conversation._id.toString());
-        }
+        announceConversationId(res, conversation, conversationIsNew);
         await sendEmptyStream(res);
         return;
       }
@@ -766,10 +936,15 @@ Return only the JSON array, no other text.`;
 
       // Save last user message (strip inline base64)
       const lastUser = messages[messages.length - 1];
-      if (conversation && lastUser?.role === 'user' && lastUser?.content) {
+      const savedUserContent =
+        conversation && lastUser?.role === 'user' && lastUser?.content
+          ? hasInlineFile
+            ? cleanedLastContent || 'Sent a file'
+            : String(lastUser.content)
+          : undefined;
+      if (conversation && savedUserContent) {
         try {
-          const toSave = hasInlineFile ? cleanedLastContent || 'Sent a file' : lastUser.content;
-          await conversation.addMessage('user', toSave);
+          await appendMessages(db, conversation.id, [{ role: 'user', content: savedUserContent }]);
         } catch (error: unknown) {
           logger.warn('Failed to persist user message to conversation', { error: getErrorMessage(error) });
         }
@@ -777,20 +952,32 @@ Return only the JSON array, no other text.`;
 
     // Capture AI stream for persistence
       let aiResponse = '';
+      const persisted = conversation;
       (async () => {
         try {
           for await (const chunk of (await result).textStream) aiResponse += chunk;
       // Always save assistant reply if we have one and the last turn was a user message
-      if (isLastTurnUser && conversation && aiResponse.trim()) {
-            await conversation.addMessage('assistant', aiResponse.trim());
+      if (isLastTurnUser && persisted && aiResponse.trim()) {
+            await appendMessages(db, persisted.id, [
+              { role: 'assistant', content: aiResponse.trim() },
+            ]);
 
-            if (conversation.title === 'New Conversation') {
-              const firstUser = conversation.messages.find((m: any) => m.role === 'user')?.content;
-              if (firstUser) {
-                const title = await generateAITitle(firstUser);
-                conversation.title = title || (firstUser.length > 50 ? `${firstUser.slice(0, 47)}...` : firstUser);
-                await conversation.save();
-              }
+            // Name the conversation from its first user turn, which is what
+            // Mongo's `pre('save')` hook did. The title is re-read from the
+            // ROW rather than from the local copy: `persisted` was loaded
+            // before the stream started and another turn may have renamed it
+            // since, and the rename is scoped to the owner either way.
+            const current = await findConversationForOwner(db, persisted.id, persisted.oxyUserId);
+            const firstUser = current?.messages.find((m) => m.message.role === 'user')?.message
+              .content;
+            if (current?.conversation.title === PLACEHOLDER_CONVERSATION_TITLE && firstUser) {
+              const generated = await generateAITitle(firstUser);
+              await renameConversation(
+                db,
+                persisted.id,
+                persisted.oxyUserId,
+                generated || titleFromFirstUserMessage(firstUser),
+              );
             }
           }
         } catch (error: unknown) {
@@ -798,9 +985,7 @@ Return only the JSON array, no other text.`;
         }
       })();
 
-      if (conversationId && conversationId.startsWith('conv_') && conversation?._id) {
-        res.setHeader('X-Conversation-ID', conversation._id.toString());
-      }
+      announceConversationId(res, conversation, conversationIsNew);
 
       onGracefulClose(req, res);
       (await result).pipeDataStreamToResponse(res);
@@ -825,8 +1010,11 @@ Return only the JSON array, no other text.`;
       const userId = getUserId(req);
       if (!userId) return err(res, 401, 'Unauthorized');
 
-      const activeProfile = await Profile.findByOxyUserId(userId);
-      if (!activeProfile) return err(res, 404, 'No active profile found');
+      // The `Profile.findByOxyUserId` gate that stood here is GONE. It bound
+      // `activeProfile` and never read it: the profile row scoped nothing, so
+      // the only thing it did was 404 an authenticated caller who had never
+      // opened the profile screen. Same removal, same reason, as in `/stream`
+      // and `/history` — and the same reason `getUserId` above is the real gate.
 
   const file = req.file;
       if (!file?.buffer) return err(res, 400, 'file is required (multipart/form-data, key: file)');
@@ -911,8 +1099,11 @@ Return only the JSON array, no other text.`;
       const userId = getUserId(req);
       if (!userId) return err(res, 401, 'Unauthorized');
 
-      const activeProfile = await Profile.findByOxyUserId(userId);
-      if (!activeProfile) return err(res, 404, 'No active profile found');
+      // The `Profile.findByOxyUserId` gate that stood here is GONE. It bound
+      // `activeProfile` and never read it: the profile row scoped nothing, so
+      // the only thing it did was 404 an authenticated caller who had never
+      // opened the profile screen. Same removal, same reason, as in `/stream`
+      // and `/history` — and the same reason `getUserId` above is the real gate.
 
   const file = req.file;
       if (!file?.buffer) return err(res, 400, 'file is required (multipart/form-data, key: file)');
@@ -988,15 +1179,28 @@ Return only the JSON array, no other text.`;
     }),
   );
 
-  // ---------- Legacy simple history on user ----------
+  // ---------- Legacy simple history on the profile ----------
+  //
+  // All three of these wrote `profile.chatHistory`, a path `ProfileSchema` does
+  // not declare (the array lives at `personalProfile.chatHistory`), so strict
+  // mode dropped it on every write and returned `undefined` on every read. The
+  // ported versions use `profile_chat_messages` — see the file header.
+  //
+  // The 404 for a person with no profile row is gone with the same reasoning as
+  // in `/stream`: the transcript belongs to an Oxy account, and creating the
+  // empty sidecar row is cheaper than refusing the request.
   router.get('/history', async (req: Request, res: Response) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const profile = await Profile.findByOxyUserId(userId);
-    if (!profile) return err(res, 404, 'Profile not found');
-
-    const history = Array.isArray(profile.chatHistory) ? [...profile.chatHistory].reverse() : [];
+    const db = getDb();
+    const profile = await db.transaction((tx) => ensureProfile(tx, userId));
+    const rows = await listProfileChatHistory(db, profile.profile.id);
+    // Newest first, matching the Mongo handler's `[...].reverse()` on an
+    // oldest-first array.
+    const history = [...rows]
+      .reverse()
+      .map((row) => ({ id: row.id, role: row.role, content: row.content, timestamp: row.timestamp }));
     return ok(res, { success: true, history });
   });
 
@@ -1004,111 +1208,84 @@ Return only the JSON array, no other text.`;
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const profile = await Profile.findByOxyUserId(userId);
-    if (!profile) return err(res, 404, 'Profile not found');
-
-    profile.chatHistory = [];
-    await profile.save();
-    return ok(res, { success: true });
+    const db = getDb();
+    const profile = await db.transaction((tx) => ensureProfile(tx, userId));
+    const cleared = await clearProfileChatHistory(db, profile.profile.id);
+    return ok(res, { success: true, cleared });
   });
 
   router.post('/history', async (req: Request, res: Response) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const profile = await Profile.findByOxyUserId(userId);
-    if (!profile) return err(res, 404, 'Profile not found');
+    const { userMessage, assistantMessage } = (req.body ?? {}) as {
+      userMessage?: unknown;
+      assistantMessage?: unknown;
+    };
+    if (typeof userMessage !== 'string' || typeof assistantMessage !== 'string') {
+      return err(res, 400, 'Missing userMessage or assistantMessage');
+    }
 
-    const { userMessage, assistantMessage } = req.body || {};
-    if (!userMessage || !assistantMessage) return err(res, 400, 'Missing userMessage or assistantMessage');
-
-    profile.chatHistory = profile.chatHistory || [];
-    const now = new Date();
-    profile.chatHistory.push({ role: 'user', content: userMessage, timestamp: now });
-    profile.chatHistory.push({ role: 'assistant', content: assistantMessage, timestamp: now });
-    if (profile.chatHistory.length > 100) profile.chatHistory = profile.chatHistory.slice(-100);
-    await profile.save();
+    // One transaction: the append locks the profile row, inserts both turns and
+    // trims to the cap, and a partial application would leave the transcript
+    // holding a question with no answer.
+    await getDb().transaction(async (tx) => {
+      const profile = await ensureProfile(tx, userId);
+      await appendProfileChatTurn(tx, profile.profile.id, { userMessage, assistantMessage });
+    });
 
     return ok(res, { success: true });
   });
 
   // ---------- Conversation CRUD ----------
+  //
+  // Every handler below is scoped by `oxy_user_id` IN THE PREDICATE, so a
+  // conversation belonging to somebody else is indistinguishable from one that
+  // does not exist — a 404 either way, and no second authorisation statement to
+  // forget.
   router.get('/conversations', async (req: Request, res: Response) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const activeProfile = await Profile.findByOxyUserId(userId);
-    if (!activeProfile) return err(res, 404, 'No active profile found');
-
-    const conversations = await Conversation.find({ profileId: activeProfile._id.toString() }).sort({ updatedAt: -1 });
-    const transformed = conversations.map((c: any) => {
-      const o = c.toObject({ virtuals: true });
-      return {
-        id: o._id,
-        title: o.title,
-        status: o.status,
-        createdAt: o.createdAt,
-        updatedAt: o.updatedAt,
-        messageCount: o.messages?.length || 0,
-        lastMessage: o.messages?.[o.messages.length - 1] || null,
-        messages: o.messages || [],
-      };
-    });
-
-    return ok(res, { success: true, conversations: transformed });
+    const summaries = await listConversations(getDb(), userId);
+    return ok(res, { success: true, conversations: summaries.map(toConversationSummaryDTO) });
   });
 
   router.post('/conversations', async (req: Request, res: Response) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const activeProfile = await Profile.findByOxyUserId(userId);
-    if (!activeProfile) return err(res, 404, 'No active profile found');
+    const { title, initialMessage, messages } = (req.body ?? {}) as {
+      title?: unknown;
+      initialMessage?: unknown;
+      messages?: unknown;
+    };
 
-    const { title, initialMessage, messages } = req.body || {};
+    const opening = readMessageInputs(messages, initialMessage);
+    const db = getDb();
+    let hydrated = await db.transaction((tx) =>
+      createConversation(tx, {
+        oxyUserId: userId,
+        title: typeof title === 'string' ? title : undefined,
+        initialMessage: typeof initialMessage === 'string' ? initialMessage : undefined,
+        messages: opening,
+      }),
+    );
 
-    let conversationMessages: ChatMessage[] = [];
-    if (Array.isArray(messages)) {
-      conversationMessages = messages.map((m: any) => ({
-        role: m.role,
-        content: m.content,
-        timestamp: new Date(m.timestamp || Date.now()),
-      }));
-    } else if (initialMessage) {
-      conversationMessages = [{ role: 'user', content: initialMessage, timestamp: new Date() }];
-    }
-
-    const conversation = new Conversation({
-      profileId: activeProfile._id.toString(),
-      title: title || 'New Conversation',
-      messages: conversationMessages.map(m => ({ role: m.role || 'user', content: m.content || '', timestamp: m.timestamp || new Date() })),
-      status: 'active',
-    });
-
-    const saved = await conversation.save();
-
-    if (saved.messages.length && saved.title === 'New Conversation') {
-      const firstUser = saved.messages.find((m: any) => m.role === 'user')?.content;
-      if (firstUser) {
-        const aiTitle = await generateAITitle(firstUser);
-        if (aiTitle) {
-          saved.title = aiTitle;
-          await saved.save();
-        }
+    // Name it from the first user turn, as the Mongo handler did. The AI call
+    // is deliberately OUTSIDE the transaction: it is a network round trip to a
+    // third party, and holding a Postgres transaction open across one is how a
+    // slow provider turns into a connection-pool outage.
+    const firstUser = hydrated.messages.find((m) => m.message.role === 'user')?.message.content;
+    if (firstUser && hydrated.conversation.title === PLACEHOLDER_CONVERSATION_TITLE) {
+      const generated = await generateAITitle(firstUser);
+      if (generated) {
+        const renamed = await renameConversation(db, hydrated.conversation.id, userId, generated);
+        if (renamed) hydrated = { conversation: renamed, messages: hydrated.messages };
       }
     }
 
-    return ok(res, {
-      success: true,
-      conversation: {
-        id: saved._id,
-        title: saved.title,
-        messages: saved.messages,
-        createdAt: saved.createdAt,
-        updatedAt: saved.updatedAt,
-        status: saved.status,
-      },
-    });
+    return ok(res, { success: true, conversation: toConversationDTO(hydrated) });
   });
 
   router.get('/conversations/:id', async (req: Request, res: Response) => {
@@ -1116,66 +1293,87 @@ Return only the JSON array, no other text.`;
     if (!userId) return err(res, 401, 'Unauthorized');
 
     const conversationId = String(req.params.id || '');
-    if (!conversationId || !isObjectId(conversationId)) return err(res, 400, 'Invalid conversation ID');
+    if (!conversationId) return err(res, 400, 'Invalid conversation ID');
 
-    const activeProfile = await Profile.findByOxyUserId(userId);
-    if (!activeProfile) return err(res, 404, 'No active profile found');
+    const hydrated = await findConversationForOwner(getDb(), conversationId, userId);
+    if (!hydrated) return err(res, 404, 'Conversation not found');
 
-    const conversation = await Conversation.findOne({ _id: conversationId, profileId: activeProfile._id.toString() });
-    if (!conversation) return err(res, 404, 'Conversation not found');
-
-    return ok(res, { success: true, conversation });
+    return ok(res, { success: true, conversation: toConversationDTO(hydrated) });
   });
 
   router.put('/conversations/:id', async (req: Request, res: Response) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const activeProfile = await Profile.findByOxyUserId(userId);
-    if (!activeProfile) return err(res, 404, 'No active profile found');
+    const conversationId = String(req.params.id || '');
+    const { title, messages, status } = (req.body ?? {}) as {
+      title?: unknown;
+      messages?: unknown;
+      status?: unknown;
+    };
 
-    const { title, messages, status } = req.body || {};
-    const conversation = await Conversation.findOne({ _id: req.params.id, profileId: activeProfile._id.toString() });
-    if (!conversation) return err(res, 404, 'Conversation not found');
+    const db = getDb();
+    const hydrated = await db.transaction(async (tx) => {
+      const existing = await findConversationForOwner(tx, conversationId, userId);
+      if (!existing) return undefined;
 
-    if (typeof title === 'string') conversation.title = title;
-    if (Array.isArray(messages)) {
-      conversation.messages = messages.map((m: any) => ({ role: m.role, content: m.content, timestamp: new Date(m.timestamp || Date.now()) }));
-    }
-    if (typeof status === 'string') conversation.status = status;
+      if (typeof title === 'string') {
+        await renameConversation(tx, conversationId, userId, title);
+      }
+      if (isConversationStatus(status)) {
+        await setConversationStatus(tx, conversationId, userId, status);
+      }
+      if (Array.isArray(messages)) {
+        await replaceMessages(tx, conversationId, readMessageInputs(messages, undefined));
+      }
+      return findConversationForOwner(tx, conversationId, userId);
+    });
 
-    const saved = await conversation.save();
-    return ok(res, { success: true, conversation: saved });
+    if (!hydrated) return err(res, 404, 'Conversation not found');
+    return ok(res, { success: true, conversation: toConversationDTO(hydrated) });
   });
 
   router.post('/conversations/:id/messages', async (req: Request, res: Response) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const activeProfile = await Profile.findByOxyUserId(userId);
-    if (!activeProfile) return err(res, 404, 'No active profile found');
+    const conversationId = String(req.params.id || '');
+    const { role, content, attachments } = (req.body ?? {}) as {
+      role?: unknown;
+      content?: unknown;
+      attachments?: unknown;
+    };
+    if (!isMessageRole(role) || typeof content !== 'string' || content === '') {
+      return err(res, 400, 'Role and content are required');
+    }
 
-    const { role, content, attachments } = req.body || {};
-    if (!role || !content) return err(res, 400, 'Role and content are required');
+    const db = getDb();
+    // Ownership is checked BEFORE the append rather than folded into it:
+    // `appendMessages` works on a conversation id, and a stranger appending to
+    // somebody else's transcript must not be able to write the row first and be
+    // refused afterwards.
+    const owned = await findConversationForOwner(db, conversationId, userId);
+    if (!owned) return err(res, 404, 'Conversation not found');
 
-    const conversation = await Conversation.findOne({ _id: req.params.id, profileId: activeProfile._id.toString() });
-    if (!conversation) return err(res, 404, 'Conversation not found');
+    const [appended] = await appendMessages(db, conversationId, [
+      { role, content, attachments: readAttachmentInputs(attachments) },
+    ]);
+    const hydrated = await findConversationForOwner(db, conversationId, userId);
+    if (!hydrated) return err(res, 404, 'Conversation not found');
 
-    const newMessage = { role, content, timestamp: new Date(), attachments: attachments || [] };
-    conversation.messages.push(newMessage);
-    await conversation.save();
-
-    return ok(res, { success: true, message: newMessage, conversation });
+    const message = hydrated.messages.find((m) => m.message.id === appended.id);
+    return ok(res, {
+      success: true,
+      message: message ? toMessageDTO(message) : null,
+      conversation: toConversationDTO(hydrated),
+    });
   });
 
   router.delete('/conversations/:id', async (req: Request, res: Response) => {
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const activeProfile = await Profile.findByOxyUserId(userId);
-    if (!activeProfile) return err(res, 404, 'No active profile found');
-
-    const deleted = await Conversation.findOneAndDelete({ _id: req.params.id, profileId: activeProfile._id.toString() });
+    const deleted = await deleteConversation(getDb(), String(req.params.id || ''), userId);
     if (!deleted) return err(res, 404, 'Conversation not found');
 
     return ok(res, { success: true, message: 'Conversation deleted' });
@@ -1185,16 +1383,14 @@ Return only the JSON array, no other text.`;
     const userId = getUserId(req);
     if (!userId) return err(res, 401, 'Unauthorized');
 
-    const activeProfile = await Profile.findByOxyUserId(userId);
-    if (!activeProfile) return err(res, 404, 'No active profile found');
+    const shared = await shareConversation(getDb(), String(req.params.id || ''), userId);
+    if (!shared) return err(res, 404, 'Conversation not found');
 
-    const conversation = await Conversation.findOne({ _id: req.params.id, profileId: activeProfile._id.toString() });
-    if (!conversation) return err(res, 404, 'Conversation not found');
-
-    await conversation.generateShareToken();
-    const token = conversation.sharing?.shareToken;
-
-    return ok(res, { success: true, shareToken: token, shareUrl: `/shared/${token}` });
+    return ok(res, {
+      success: true,
+      shareToken: shared.token,
+      shareUrl: `/shared/${shared.token}`,
+    });
   });
 
   return router;
