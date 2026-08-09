@@ -99,6 +99,13 @@ const BACKFILL_PREFIX = 'db/backfill/';
  * pending entry" for that window. That is the gate working exactly as its
  * header describes: a finished port shows up here as a line to DELETE, not as a
  * silent tolerance.
+ *
+ * `scripts/seedProperties.ts` came off with the seed port, and what it cost is
+ * worth recording because the list made it look larger than it was: the
+ * seeder's write path had already moved in #281, so all that still reached
+ * Mongo was a `database/connection` import used for a single
+ * `database.disconnect()` in its CLI teardown. This list's LENGTH was never a
+ * measure of the remaining work — the same is true of the two entries above it.
  */
 const PENDING_MONGO_FILES: ReadonlyMap<string, string> = new Map([]);
 

@@ -1,28 +1,32 @@
 /**
  * Seed Images helper
  *
- * Turns the demo dataset's image URLs into rows of the canonical Image
- * collection, then links them back to their owning entity. Two flows:
+ * Turns the demo dataset's image URLs into rows of the canonical `images`
+ * table, then links them back to their owning entity. Two flows:
  *
  *   - Property photos: each property's seed photo URLs are fetched once, run
- *     through the Sharp pipeline and persisted as `Image` docs
- *     (`entityType: 'property'`). The resolved `PropertyImageRef[]` (the
+ *     through the Sharp pipeline and persisted as `images` rows
+ *     (`entity_type: 'property'`). The resolved `PropertyImageRef[]` (the
  *     `{ url, caption, isPrimary }` shape the frontend already consumes, `url` =
  *     stored medium variant, plus the full variant `urls`) is returned so the
- *     seeder can embed it on the property — preserving the historical read shape
- *     while backing it with the Image collection.
+ *     seeder can point `property_images` at them.
  *
  *   - City covers (local demo seed only): the six curated city images (the SAME
  *     URLs the frontend `CITY_SHOWCASE` array hardcodes) are fetched ONCE,
- *     processed and stored as `Image` docs (`entityType: 'city'`). Production
+ *     processed and stored as `images` rows (`entity_type: 'city'`). Production
  *     covers use `cityCoverSyncService` (Wikimedia Commons), not this seed path.
  *
- * Storage caveat: when object storage is not configured (no S3 credentials —
- * e.g. this local seed environment), the Image documents are still created with
- * REAL Sharp-derived dimensions/format/byte sizes and the variant keys/urls
- * where the bytes WOULD live; only the upload of the processed bytes is skipped
- * (via `allowUnconfiguredStorage`). Nothing is faked — the structure and linkage
- * are correct, and a credentialed environment uploads the bytes unchanged.
+ * Storage: when object storage is not configured (no S3 credentials — e.g. this
+ * local seed environment) the processed bytes are persisted to the SELF-HOSTED
+ * local store and served by the backend at `/api/images/file/*`; a credentialed
+ * environment uploads the same bytes to S3 instead. Either way the `images` row
+ * carries REAL Sharp-derived dimensions/format/byte sizes and resolves to real
+ * bytes — nothing is faked.
+ *
+ * `allowUnconfiguredStorage` no longer skips the upload — `processAndUpload`
+ * reads `void skipUpload` and persists either way — so the flag now only means
+ * "this caller accepts the local store". Stated because the obvious reading of
+ * the name is the opposite one.
  */
 
 import type { ImageEntityType, PropertyImageRef } from '@homiio/shared-types';
@@ -73,8 +77,18 @@ export const CITY_COVER_IMAGE_URLS: Readonly<Record<string, string>> = {
     'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Bilbao_-_Museo_Guggenheim_01.jpg/1280px-Bilbao_-_Museo_Guggenheim_01.jpg',
 };
 
+/**
+ * How the seed obtains an image's bytes.
+ *
+ * Injectable for the same reason `ExternalMediaIngest` takes a `fetchImage`:
+ * the property under test is what the seed WRITES on a repeat, and a test that
+ * had to reach Unsplash to observe it would be measuring the network. The
+ * default is the real fetch, so the CLI is unchanged.
+ */
+export type SeedImageFetcher = (url: string) => Promise<ImageBufferInput>;
+
 /** Fetch one image URL into a buffer + its resolved MIME type. Throws on failure. */
-async function fetchImageBuffer(url: string): Promise<ImageBufferInput> {
+export async function fetchImageBuffer(url: string): Promise<ImageBufferInput> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
@@ -109,13 +123,14 @@ function shouldAllowUnconfiguredStorage(): boolean {
  */
 export async function seedPropertyImages(
   propertyId: string,
-  imageUrls: readonly string[]
+  imageUrls: readonly string[],
+  fetchImage: SeedImageFetcher = fetchImageBuffer
 ): Promise<PropertyImageRef[]> {
   const allowUnconfiguredStorage = shouldAllowUnconfiguredStorage();
   const created = [];
 
   for (let index = 0; index < imageUrls.length; index += 1) {
-    const input = await fetchImageBuffer(imageUrls[index]);
+    const input = await fetchImage(imageUrls[index]);
     const image = await imageUploadService.createImageForEntity('property', propertyId, input, {
       isPrimary: index === 0,
       order: index,
@@ -136,11 +151,12 @@ export async function seedEntityCoverImage(
   entityType: ImageEntityType,
   entityId: string,
   url: string | undefined,
-  caption: string
+  caption: string,
+  fetchImage: SeedImageFetcher = fetchImageBuffer
 ): Promise<string | null> {
   if (!url) return null;
   const allowUnconfiguredStorage = shouldAllowUnconfiguredStorage();
-  const input = await fetchImageBuffer(url);
+  const input = await fetchImage(url);
   const image = await imageUploadService.createImageForEntity(
     entityType,
     entityId,

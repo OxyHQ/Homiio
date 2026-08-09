@@ -139,6 +139,18 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
+  // Reset on the way OUT as well as in. `beforeEach` above keeps THIS file
+  // consistent, but it leaves the last test's ingested listing — a property
+  // carrying a PRIMARY photo — in the worker's database for whatever file runs
+  // next, and jest reuses one database per worker for the whole run.
+  //
+  // That is not hypothetical: it is what intermittently reddened
+  // `db/propertyImages.test.ts`, whose "lets TWO DIFFERENT listings each have
+  // their own primary" case asserts over EVERY primary row in the table and so
+  // counted this file's leftover as a third. The failure lands two files away
+  // from its cause and moves around as the file-to-worker distribution shifts,
+  // which is why adding an unrelated test file appeared to break it.
+  await resetGeoTables();
   await fs.rm(LOCAL_IMAGE_STORE_DIR, { recursive: true, force: true });
 });
 
