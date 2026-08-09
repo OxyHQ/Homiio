@@ -14,7 +14,7 @@
  * (`profileId` never set, `status` fixed to published, `isExternal` fixed true).
  */
 
-import type { Types } from 'mongoose';
+import { and, eq, gte, isNull, lt, sql, type SQL } from 'drizzle-orm';
 import {
   OfferingType,
   PropertyStatus,
@@ -26,9 +26,21 @@ import {
   ListingValidationError,
   validateNormalizedListing,
 } from '@homiio/listing-providers';
-import { Property, Address, Agency, type IProperty } from '../../models';
+import { getDb } from '../../db/postgres';
+import { addresses, properties, propertyImages } from '../../db/schema';
+import {
+  findPropertyBySource,
+  insertProperty,
+  replacePropertyImages,
+  updateProperty,
+  type PropertyWriteInput,
+} from '../../db/properties/propertyWrites';
+import { findOrCreateAgencyByName } from '../../db/agencies/agencyWrites';
 import { ensureCover } from '../cityCoverSyncService';
-import type { AddressCanonicalInput } from '../../models/Address';
+import {
+  findOrCreateCanonicalAddress,
+  type AddressCanonicalInput,
+} from '../addressService';
 import { validateOfferings } from '../../models/schemas/offeringValidation';
 import { forwardGeocode, reverseGeocode } from '../geocodingService';
 import { resolveCityCentroid } from '../geoResolutionService';
@@ -81,18 +93,21 @@ export class IngestionValidationError extends Error {
 /** Max existing listings the dedup check inspects per incoming create. */
 const DEDUP_CANDIDATE_LIMIT = 50;
 
-/** Aggregation projection of an existing Property considered as a dedup candidate. */
-interface DuplicateCandidateDoc {
-  _id: Types.ObjectId;
-  cityId?: Types.ObjectId;
-  description?: string;
-  images?: unknown[];
-  type?: string;
-  bedrooms?: number;
-  squareFootage?: number;
-  longTermRent?: { monthlyAmount?: number; currency?: string } | null;
-  shortTermRent?: { nightlyRate?: number; currency?: string } | null;
-  sale?: { price?: number; currency?: string } | null;
+/** Projection of an existing listing considered as a dedup candidate. */
+interface DuplicateCandidateRow {
+  id: string;
+  cityId: string | null;
+  description: string | null;
+  imageCount: number;
+  type: string;
+  bedrooms: number | null;
+  squareFootage: number | null;
+  longTermRentMonthlyAmount: number | null;
+  longTermRentCurrency: string | null;
+  shortTermRentNightlyRate: number | null;
+  shortTermRentCurrency: string | null;
+  salePrice: number | null;
+  saleCurrency: string | null;
 }
 
 export interface IngestionServiceOptions {
@@ -139,11 +154,11 @@ export class IngestionService {
     // exposed an agency name. `findOrCreateByName` is the sole Agency write path
     // and dedupes by normalized name — the raw string stays on `externalContact`.
     if (listing.contact?.agencyName) {
-      const agency = await Agency.findOrCreateByName(listing.contact.agencyName);
-      if (agency) fields.agencyId = agency._id;
+      const agency = await findOrCreateAgencyByName(listing.contact.agencyName);
+      if (agency) fields.agencyId = agency.id;
     }
 
-    const existing = await Property.findOne({ source: listing.source, sourceId: listing.sourceId });
+    const existing = await findPropertyBySource(listing.source, listing.sourceId);
 
     // Before minting a NEW Property, check whether this is the SAME unit
     // re-advertised under a different `sourceId` (best-effort; a failed check
@@ -167,33 +182,36 @@ export class IngestionService {
       }
     }
 
-    const property = existing ?? new Property();
-    property.set(fields);
-
     // New listings and listings that still have no images get their media
     // ingested; already-populated externals keep their re-hosted images on a
     // re-sync (a richer add/remove diff lands in a later phase).
-    const needsMedia = !existing || !property.images || property.images.length === 0;
+    const needsMedia = !existing || existing.imageCount === 0;
 
-    // Persist scalar fields first so the property has an `_id` for the Image docs.
-    await property.save();
+    // Persist scalar fields first so the listing has an id for the `images`
+    // rows, whose `entity_id` names it.
+    const propertyId = existing
+      ? ((await updateProperty(existing.id, fields))?.property.id ?? existing.id)
+      : (await insertProperty(fields)).property.id;
 
-    let imageCount = property.images?.length ?? 0;
+    let imageCount = existing?.imageCount ?? 0;
     if (needsMedia && listing.remoteImages.length > 0) {
-      const refs = await this.mediaIngest.ingestForProperty(property._id, listing.remoteImages);
-      property.set('images', refs);
-      await property.save();
+      const refs = await this.mediaIngest.ingestForProperty(propertyId, listing.remoteImages);
+      await replacePropertyImages(propertyId, refs);
       imageCount = refs.length;
     }
 
-    const address = await Address.findById(property.addressId).select('cityId').lean();
+    const [address] = await getDb()
+      .select({ cityId: addresses.cityId })
+      .from(addresses)
+      .where(eq(addresses.id, addressId))
+      .limit(1);
     if (address?.cityId) {
       void ensureCover(address.cityId);
     }
 
     const result: IngestResult = {
       status: existing ? 'updated' : 'created',
-      propertyId: String(property._id),
+      propertyId,
       source: listing.source,
       sourceId: listing.sourceId,
       imageCount,
@@ -211,12 +229,14 @@ export class IngestionService {
    */
   private async findDuplicate(
     listing: NormalizedListing,
-    addressId: Types.ObjectId,
+    addressId: string,
   ): Promise<{ propertyId: string; imageCount: number } | null> {
     try {
-      const listingAddress = await Address.findById(addressId).select('cityId').lean<{
-        cityId?: Types.ObjectId;
-      } | null>();
+      const [listingAddress] = await getDb()
+        .select({ cityId: addresses.cityId })
+        .from(addresses)
+        .where(eq(addresses.id, addressId))
+        .limit(1);
       const cityId = listingAddress?.cityId;
       const incoming = toDedupComparable({
         type: listing.type,
@@ -231,57 +251,77 @@ export class IngestionService {
       if (!incoming || !cityId) return null;
 
       // Selective scalar prefilter (same type, bedrooms, m² and price) joined to
-      // the Address `cityId`. The `$lookup` bypasses the Property post-find hook
-      // that renames/mangles `addressId` on lean reads, so `cityId` is clean. The
-      // same-city `$match` runs BEFORE `$limit` so a bounded candidate scan for a
-      // common config never drops the actually-matching (same-city) listing.
-      const candidates = await Property.aggregate<DuplicateCandidateDoc>([
-        {
-          $match: {
-            isExternal: true,
-            deletedAt: null,
-            type: incoming.type,
-            bedrooms: incoming.bedrooms,
-            squareFootage: incoming.squareFootage,
-            ...this.buildPriceFilter(incoming),
-          },
-        },
-        { $lookup: { from: 'addresses', localField: 'addressId', foreignField: '_id', as: 'addr' } },
-        { $addFields: { cityId: { $arrayElemAt: ['$addr.cityId', 0] } } },
-        { $match: { cityId } },
-        { $limit: DEDUP_CANDIDATE_LIMIT },
-        {
-          $project: {
-            description: 1,
-            images: 1,
-            type: 1,
-            bedrooms: 1,
-            squareFootage: 1,
-            longTermRent: 1,
-            shortTermRent: 1,
-            sale: 1,
-            cityId: 1,
-          },
-        },
-      ]);
+      // the address's `city_id`. The `$lookup` + `$addFields` + second `$match`
+      // this replaces existed only because Mongo could not express a join in a
+      // filter; here the city predicate is an ordinary join condition, so the
+      // "same-city match must run BEFORE the limit" hazard the Mongo pipeline
+      // had to be careful about cannot arise — the LIMIT applies to the joined,
+      // fully-filtered result by construction.
+      const candidates: DuplicateCandidateRow[] = await getDb()
+        .select({
+          id: properties.id,
+          cityId: addresses.cityId,
+          description: properties.description,
+          imageCount: sql<number>`(
+            select count(*)::int from ${propertyImages}
+            where ${propertyImages.propertyId} = ${properties.id}
+          )`,
+          type: properties.type,
+          bedrooms: properties.bedrooms,
+          squareFootage: properties.squareFootage,
+          longTermRentMonthlyAmount: properties.longTermRentMonthlyAmount,
+          longTermRentCurrency: properties.longTermRentCurrency,
+          shortTermRentNightlyRate: properties.shortTermRentNightlyRate,
+          shortTermRentCurrency: properties.shortTermRentCurrency,
+          salePrice: properties.salePrice,
+          saleCurrency: properties.saleCurrency,
+        })
+        .from(properties)
+        .innerJoin(addresses, eq(properties.addressId, addresses.id))
+        .where(
+          and(
+            eq(properties.isExternal, true),
+            isNull(properties.deletedAt),
+            eq(properties.type, incoming.type as 'apartment'),
+            eq(properties.bedrooms, incoming.bedrooms),
+            eq(properties.squareFootage, incoming.squareFootage),
+            eq(addresses.cityId, cityId),
+            this.buildPriceFilter(incoming),
+          ),
+        )
+        .limit(DEDUP_CANDIDATE_LIMIT);
       if (candidates.length === 0) return null;
 
       let best: { propertyId: string; imageCount: number } | null = null;
       for (const candidate of candidates) {
         const comparable = toDedupComparable({
           type: candidate.type,
-          cityId: candidate.cityId ? String(candidate.cityId) : undefined,
-          bedrooms: candidate.bedrooms,
-          squareFootage: candidate.squareFootage,
-          description: candidate.description,
-          longTermRent: candidate.longTermRent,
-          shortTermRent: candidate.shortTermRent,
-          sale: candidate.sale,
+          cityId: candidate.cityId ?? undefined,
+          bedrooms: candidate.bedrooms ?? undefined,
+          squareFootage: candidate.squareFootage ?? undefined,
+          description: candidate.description ?? undefined,
+          longTermRent:
+            candidate.longTermRentMonthlyAmount === null
+              ? null
+              : {
+                  monthlyAmount: candidate.longTermRentMonthlyAmount,
+                  currency: candidate.longTermRentCurrency ?? undefined,
+                },
+          shortTermRent:
+            candidate.shortTermRentNightlyRate === null
+              ? null
+              : {
+                  nightlyRate: candidate.shortTermRentNightlyRate,
+                  currency: candidate.shortTermRentCurrency ?? undefined,
+                },
+          sale:
+            candidate.salePrice === null
+              ? null
+              : { price: candidate.salePrice, currency: candidate.saleCurrency ?? undefined },
         });
         if (!comparable || !areDuplicateListings(incoming, comparable)) continue;
-        const imageCount = Array.isArray(candidate.images) ? candidate.images.length : 0;
-        if (!best || imageCount > best.imageCount) {
-          best = { propertyId: String(candidate._id), imageCount };
+        if (!best || candidate.imageCount > best.imageCount) {
+          best = { propertyId: candidate.id, imageCount: candidate.imageCount };
         }
       }
       return best;
@@ -303,24 +343,28 @@ export class IngestionService {
    * re-checked in {@link areDuplicateListings}). Exact equality here would miss a
    * stored `850.4` for an incoming `850`.
    */
-  private buildPriceFilter(comparable: DedupComparable): Record<string, unknown> {
-    const range = { $gte: comparable.amount - 0.5, $lt: comparable.amount + 0.5 };
+  private buildPriceFilter(comparable: DedupComparable): SQL {
+    const low = comparable.amount - 0.5;
+    const high = comparable.amount + 0.5;
     switch (comparable.offering) {
       case OfferingType.LONG_TERM_RENT:
-        return {
-          'longTermRent.monthlyAmount': range,
-          'longTermRent.currency': comparable.currency,
-        };
+        return and(
+          gte(properties.longTermRentMonthlyAmount, low),
+          lt(properties.longTermRentMonthlyAmount, high),
+          eq(properties.longTermRentCurrency, comparable.currency as 'EUR'),
+        ) as SQL;
       case OfferingType.SHORT_TERM_RENT:
-        return {
-          'shortTermRent.nightlyRate': range,
-          'shortTermRent.currency': comparable.currency,
-        };
+        return and(
+          gte(properties.shortTermRentNightlyRate, low),
+          lt(properties.shortTermRentNightlyRate, high),
+          eq(properties.shortTermRentCurrency, comparable.currency as 'EUR'),
+        ) as SQL;
       case OfferingType.SALE:
-        return {
-          'sale.price': range,
-          'sale.currency': comparable.currency,
-        };
+        return and(
+          gte(properties.salePrice, low),
+          lt(properties.salePrice, high),
+          eq(properties.saleCurrency, comparable.currency as 'EUR'),
+        ) as SQL;
     }
   }
 
@@ -352,7 +396,7 @@ export class IngestionService {
   }
 
   /** Resolve the canonical building Address, geocoding coordinates if absent. */
-  private async resolveAddress(address: NormalizedListingAddress): Promise<Types.ObjectId> {
+  private async resolveAddress(address: NormalizedListingAddress): Promise<string> {
     let postalCode = address.postalCode?.trim() ?? '';
     let coordinates: [number, number];
 
@@ -400,8 +444,8 @@ export class IngestionService {
       coordinates: { type: 'Point', coordinates },
     };
 
-    const resolved = await Address.findOrCreateCanonical(addressInput);
-    return resolved._id;
+    const resolved = await findOrCreateCanonicalAddress(addressInput);
+    return resolved.id;
   }
 
   /**
@@ -468,12 +512,12 @@ export class IngestionService {
    */
   private buildPropertyFields(
     listing: NormalizedListing,
-    addressId: Types.ObjectId,
-  ): Partial<IProperty> {
+    addressId: string,
+  ): PropertyWriteInput {
     const ttlDays = listing.ttlDays ?? this.defaultTtlDays;
     const expiresAt = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000);
 
-    const fields: Record<string, unknown> = {
+    const fields: PropertyWriteInput = {
       addressId,
       source: listing.source,
       sourceId: listing.sourceId,
@@ -525,7 +569,7 @@ export class IngestionService {
     if (Object.keys(listingFlags).length > 0) fields.listingFlags = listingFlags;
 
     if (listing.contact) {
-      const externalContact: NonNullable<IProperty['externalContact']> = {};
+      const externalContact: Record<string, unknown> = {};
       if (listing.contact.phone) externalContact.phone = listing.contact.phone;
       if (listing.contact.email) externalContact.email = listing.contact.email;
       if (listing.contact.whatsapp) externalContact.whatsapp = listing.contact.whatsapp;
@@ -544,6 +588,6 @@ export class IngestionService {
       }
     }
 
-    return fields as Partial<IProperty>;
+    return fields;
   }
 }

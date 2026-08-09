@@ -1,16 +1,20 @@
 /**
  * Room Controller
  *
- * Rooms are not a distinct collection: a "room" is a Property whose `type` is
- * PropertyType.ROOM (see @homiio/shared-types and models/schemas/PropertySchema). This
- * controller exposes the flat `/rooms` route contract
- * (GET /, POST /, GET /:id, PUT /:id, DELETE /:id) on top of the Property model,
- * scoping every query to room-type properties.
+ * Rooms are not a distinct collection: a "room" is a property whose `type` is
+ * `PropertyType.ROOM`. This controller exposes the flat `/rooms` route contract
+ * (GET /, POST /, GET /:id, PUT /:id, DELETE /:id) on top of the property
+ * tables, scoping every query to room-type listings.
+ *
+ * Reads go through `db/properties/propertyReads`, writes through
+ * `db/properties/propertyWrites` — the same two modules the `/properties`
+ * endpoints use. That is the point of a room not being its own collection: a
+ * second read path for the same rows would be a second place for the
+ * `has_images` sort, the address join and the wire shape to drift.
  */
 
 import type { Request, Response, NextFunction } from 'express';
 
-import { Property, Address } from '../models';
 import { PropertyType, PropertyStatus } from '@homiio/shared-types';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
@@ -21,38 +25,67 @@ import {
 } from './property/editableFields';
 import { pickFields } from '../utils/pickFields';
 import { onPropertyTransacted } from '../services/commissionService';
-import { resolveGeoFilterAddressIds } from '../services/geoQueryService';
+import { resolveCityId, resolveRegionId } from '../services/geoQueryService';
+import { findOrCreateCanonicalAddress } from '../services/addressService';
+import {
+  allOf,
+  countProperties,
+  findProperties,
+  findPropertyById,
+  nullsLast,
+  propertyOrderBy,
+} from '../db/properties/propertyReads';
+import {
+  furnishedStatusIs,
+  hasAnyAmenity,
+  inCity,
+  inRange,
+  inRegion,
+  ownedBy,
+  statusIs,
+  statusIsNot,
+  typeIn,
+} from '../db/properties/propertyFilters';
+import { serializeProperty } from '../db/properties/propertySerializer';
+import {
+  incrementPropertyViews,
+  insertProperty,
+  softDeleteProperty,
+  updateProperty,
+  type PropertyWriteInput,
+} from '../db/properties/propertyWrites';
+import { properties } from '../db/schema';
 
 const ROOM_TYPE = PropertyType.ROOM;
 
 /** Statuses that close a deal and (for sourced rooms) earn a commission. */
 const TERMINAL_STATUSES: ReadonlyArray<string> = [PropertyStatus.RENTED, PropertyStatus.SOLD];
 
-function errorName(error: unknown): string | undefined {
-  if (error && typeof error === 'object' && 'name' in error) {
-    const name = (error as { name: unknown }).name;
-    return typeof name === 'string' ? name : undefined;
-  }
-  return undefined;
-}
-
-function errorValidationErrors(error: unknown): Record<string, { message?: string }> {
-  if (error && typeof error === 'object' && 'errors' in error) {
-    const errs = (error as { errors?: unknown }).errors;
-    if (errs && typeof errs === 'object') {
-      return errs as Record<string, { message?: string }>;
-    }
-  }
-  return {};
-}
+/**
+ * The sortable columns the room feed accepts.
+ *
+ * An ALLOW-LIST, not a lookup with a fallback: `sortBy` comes straight off the
+ * query string, and the Mongo version interpolated it into a sort document,
+ * where an unknown field sorted by nothing. Against SQL a column name has to be
+ * resolved to a real column, so an unknown one is answered with the default
+ * rather than reaching the statement.
+ */
+const ROOM_SORT_COLUMNS = {
+  createdAt: properties.createdAt,
+  updatedAt: properties.updatedAt,
+  'longTermRent.monthlyAmount': properties.longTermRentMonthlyAmount,
+  squareFootage: properties.squareFootage,
+  bedrooms: properties.bedrooms,
+  bathrooms: properties.bathrooms,
+} as const;
 
 class RoomController {
   /**
    * List rooms (room-type properties) with filtering and pagination.
    *
    * Public-facing listing: excludes draft rooms by default and supports the
-   * common property filters (rent range, address/city, amenities, furnished,
-   * availability) plus owner scoping via `profileId`.
+   * common property filters (rent range, city/state, amenities, furnished,
+   * status) plus owner scoping via `oxyUserId`.
    */
   async getRooms(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
@@ -75,66 +108,75 @@ class RoomController {
       const limitNumber = Math.min(100, Math.max(1, parseInt(String(limit), 10) || 10));
       const skip = (pageNumber - 1) * limitNumber;
 
-      const filters: Record<string, unknown> = { type: ROOM_TYPE };
+      const conditions = [typeIn([ROOM_TYPE])];
 
-      if (ownerOxyUserId) filters.oxyUserId = String(ownerOxyUserId);
+      if (ownerOxyUserId) conditions.push(ownedBy(String(ownerOxyUserId)));
 
-      // Resolve city/state to address ids via RELATIONAL geo, matching the
-      // property list handler (no free-text city/state matching on the Address).
-      if (city || state) {
-        const addressIds = await resolveGeoFilterAddressIds({
-          city: city ? String(city) : undefined,
-          state: state ? String(state) : undefined,
-        });
-        if (addressIds === null || addressIds.length === 0) {
+      // City and state filter via RELATIONAL geo — the same resolution the
+      // property feed uses. It replaces `resolveGeoFilterAddressIds`, which
+      // loaded every address id in the city into an uncapped `$in`.
+      if (city) {
+        const cityId = await resolveCityId(String(city));
+        if (!cityId) {
           return res.json(paginationResponse([], pageNumber, limitNumber, 0, 'No rooms found'));
         }
-        filters.addressId = { $in: addressIds };
+        conditions.push(inCity(cityId));
+      }
+      if (state) {
+        const regionId = await resolveRegionId(String(state));
+        if (!regionId) {
+          return res.json(paginationResponse([], pageNumber, limitNumber, 0, 'No rooms found'));
+        }
+        conditions.push(inRegion(regionId));
       }
 
       if (minRent !== undefined || maxRent !== undefined) {
-        const rentFilter: Record<string, number> = {};
-        if (minRent !== undefined) rentFilter.$gte = parseFloat(String(minRent));
-        if (maxRent !== undefined) rentFilter.$lte = parseFloat(String(maxRent));
-        filters['longTermRent.monthlyAmount'] = rentFilter;
+        conditions.push(
+          inRange(
+            properties.longTermRentMonthlyAmount,
+            minRent === undefined ? undefined : parseFloat(String(minRent)),
+            maxRent === undefined ? undefined : parseFloat(String(maxRent)),
+          ),
+        );
       }
 
-      if (furnishedStatus) filters.furnishedStatus = String(furnishedStatus);
+      if (furnishedStatus) conditions.push(furnishedStatusIs(String(furnishedStatus)));
 
       if (amenities) {
         const amenityList = String(amenities).split(',').map((a) => a.trim().toLowerCase()).filter(Boolean);
-        if (amenityList.length > 0) filters.amenities = { $in: amenityList };
+        conditions.push(hasAnyAmenity(amenityList));
       }
 
-      if (status) {
-        filters.status = String(status);
-      } else {
-        // Exclude drafts from public listings unless explicitly requested.
-        filters.status = { $ne: 'draft' };
-      }
+      // Exclude drafts from public listings unless explicitly requested.
+      conditions.push(status ? statusIs(String(status)) : statusIsNot('draft'));
 
-      // Image-bearing listings first (product rule), then the requested order.
-      //
-      // The field PATH, not a column: the room feed is still a Mongoose read
-      // (the property read path moved to Postgres without it, because a room is
-      // created and updated through this controller and the WRITE path stays on
-      // Mongo for the dual-run). It moves with the room endpoints.
-      const sortOptions: Record<string, 1 | -1> = { hasImages: -1 };
-      sortOptions[String(sortBy)] = sortOrder === 'desc' ? -1 : 1;
+      const where = allOf(conditions);
+
+      // Image-bearing listings first (the product rule `propertyOrderBy`
+      // carries), then the requested order. NULLs sort last in both directions
+      // for the same reason the property feed states: a room with no price must
+      // not lead "cheapest first".
+      const direction = sortOrder === 'desc' ? 'desc' : 'asc';
+      const sortColumn =
+        ROOM_SORT_COLUMNS[String(sortBy) as keyof typeof ROOM_SORT_COLUMNS] ?? properties.createdAt;
+      const orderBy = propertyOrderBy(nullsLast(sortColumn, direction));
 
       const [rooms, total] = await Promise.all([
-        Property.find(filters)
-          .populate('addressId')
-          .sort(sortOptions)
-          .skip(skip)
-          .limit(limitNumber)
-          .lean(),
-        Property.countDocuments(filters),
+        findProperties({ where, orderBy, limit: limitNumber, offset: skip }),
+        countProperties(where),
       ]);
 
       logger.info('Rooms retrieved', { total, page: pageNumber, limit: limitNumber });
 
-      res.json(paginationResponse(rooms, pageNumber, limitNumber, total, 'Rooms retrieved successfully'));
+      res.json(
+        paginationResponse(
+          rooms.map(serializeProperty),
+          pageNumber,
+          limitNumber,
+          total,
+          'Rooms retrieved successfully',
+        ),
+      );
     } catch (error) {
       next(error);
     }
@@ -150,40 +192,38 @@ class RoomController {
       if (!parentPropertyId) {
         return next(new AppError('parentPropertyId is required to create a room', 400, 'VALIDATION_ERROR'));
       }
-      const parent = await Property.findOne({ _id: parentPropertyId, oxyUserId });
-      if (!parent) {
+      const parent = await findPropertyById(String(parentPropertyId));
+      if (!parent || parent.property.oxyUserId !== oxyUserId) {
         return next(new AppError('Parent property not found', 404, 'PARENT_PROPERTY_NOT_FOUND'));
       }
-      let addressId;
+      let addressId: string;
       if (req.body.address) {
-        const address = await Address.findOrCreateCanonical(req.body.address);
-        addressId = address._id;
+        const address = await findOrCreateCanonicalAddress(req.body.address);
+        addressId = address.id;
       } else if (req.body.addressId) {
-        addressId = req.body.addressId;
-      } else if (parent.addressId) {
-        addressId = parent.addressId;
+        addressId = String(req.body.addressId);
       } else {
-        return next(new AppError('Address information is required', 400, 'MISSING_ADDRESS'));
+        // A room with no address of its own is in its parent's building, which
+        // is why this fallback exists and why the parent's `address_id` is
+        // `NOT NULL` — there is always one to inherit.
+        addressId = parent.property.addressId;
       }
-      const roomData = pickFields(req.body, CREATABLE_PROPERTY_FIELDS);
-      const room = new Property({
+      const roomData = pickFields<PropertyWriteInput>(req.body, CREATABLE_PROPERTY_FIELDS);
+      const created = await insertProperty({
         ...roomData,
         oxyUserId,
         addressId,
-        parentPropertyId: parent._id,
+        parentPropertyId: parent.property.id,
         type: ROOM_TYPE,
       });
-      const savedRoom = await room.save();
-      await savedRoom.populate('addressId');
-      logger.info('Room created', { roomId: savedRoom._id, oxyUserId, monthlyAmount: savedRoom.longTermRent?.monthlyAmount });
-      res.status(201).json(successResponse(savedRoom.toJSON(), 'Room created successfully'));
+      const savedRoom = serializeProperty(created);
+      logger.info('Room created', {
+        roomId: created.property.id,
+        oxyUserId,
+        monthlyAmount: created.property.longTermRentMonthlyAmount,
+      });
+      res.status(201).json(successResponse(savedRoom, 'Room created successfully'));
     } catch (error) {
-      if (errorName(error) === 'ValidationError') {
-        const validationErrors = Object.values(errorValidationErrors(error)).map((err) => err.message);
-        const validationError: AppErrorWithDetails = new AppError('Room validation failed', 400, 'VALIDATION_ERROR');
-        validationError.details = validationErrors;
-        return next(validationError);
-      }
       next(error);
     }
   }
@@ -195,24 +235,18 @@ class RoomController {
     try {
       const { id } = req.params;
 
-      const room = await Property.findOne({ _id: id, type: ROOM_TYPE })
-        .populate('addressId')
-        .lean();
-
-      if (!room) {
+      const hydrated = await findPropertyById(id);
+      if (!hydrated || hydrated.property.type !== ROOM_TYPE) {
         return next(new AppError('Room not found', 404, 'NOT_FOUND'));
       }
 
       // Best-effort view counter, consistent with property retrieval.
-      Property.findByIdAndUpdate(id, { $inc: { views: 1 } }).catch((error: Error) => {
-        logger.warn('Failed to increment room view count', { roomId: id, error: error.message });
+      void incrementPropertyViews(id).catch((error: unknown) => {
+        logger.warn('Failed to increment room view count', { roomId: id, error });
       });
 
-      res.json(successResponse({ ...room }, 'Room retrieved successfully'));
+      res.json(successResponse(serializeProperty(hydrated), 'Room retrieved successfully'));
     } catch (error) {
-      if (errorName(error) === 'CastError') {
-        return next(new AppError('Invalid room ID', 400, 'INVALID_ID'));
-      }
       next(error);
     }
   }
@@ -220,56 +254,73 @@ class RoomController {
   /**
    * Update a room owned by the authenticated user.
    */
-    async updateRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async updateRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const { id } = req.params;
-      const room = await Property.findOne({ _id: id, type: ROOM_TYPE, oxyUserId });
-      if (!room) {
+      const existing = await findPropertyById(id);
+      if (
+        !existing ||
+        existing.property.type !== ROOM_TYPE ||
+        existing.property.oxyUserId !== oxyUserId
+      ) {
         return next(new AppError('Room not found', 404, 'NOT_FOUND'));
       }
-      const updateData = pickFields(req.body, EDITABLE_PROPERTY_FIELDS);
-      const previousStatus = room.status;
-      Object.assign(room, updateData);
-      const updatedRoom = await room.save();
-      await updatedRoom.populate('addressId');
-      const transitionedToTerminal = previousStatus !== updatedRoom.status && TERMINAL_STATUSES.includes(updatedRoom.status);
-      if (transitionedToTerminal && updatedRoom.sourcedByPartner) {
-        try { await onPropertyTransacted(updatedRoom); } catch (commissionError) {
-          logger.error('Failed to process commission on room close', { roomId: id, error: commissionError instanceof Error ? commissionError.message : String(commissionError) });
+      const updateData = pickFields<PropertyWriteInput>(req.body, EDITABLE_PROPERTY_FIELDS);
+      const previousStatus = existing.property.status;
+      const updated = await updateProperty(id, updateData, { ownedBy: oxyUserId });
+      if (!updated) return next(new AppError('Room not found', 404, 'NOT_FOUND'));
+      const updatedRoom = serializeProperty(updated);
+
+      const transitionedToTerminal =
+        previousStatus !== updated.property.status &&
+        TERMINAL_STATUSES.includes(updated.property.status);
+      if (transitionedToTerminal && updated.property.sourcedByPartnerId) {
+        try {
+          await onPropertyTransacted({
+            ...updatedRoom,
+            _id: updated.property.id,
+            sourcedByPartner: updated.property.sourcedByPartnerId,
+          });
+        } catch (commissionError) {
+          logger.error('Failed to process commission on room close', {
+            roomId: id,
+            error: commissionError instanceof Error ? commissionError.message : String(commissionError),
+          });
         }
       }
       logger.info('Room updated', { roomId: id, oxyUserId, updatedFields: Object.keys(updateData) });
-      res.json(successResponse(updatedRoom.toJSON(), 'Room updated successfully'));
+      res.json(successResponse(updatedRoom, 'Room updated successfully'));
     } catch (error) {
-      if (errorName(error) === 'ValidationError') return next(new AppError('Room validation failed', 400, 'VALIDATION_ERROR'));
-      if (errorName(error) === 'CastError') return next(new AppError('Invalid room ID', 400, 'INVALID_ID'));
       next(error);
     }
   }
 
   /**
    * Delete (archive) a room owned by the authenticated user.
+   *
+   * Archives AND stamps `deleted_at`, where the Mongo version set only the
+   * status. That is a deliberate correction, not a drift: every catalogue read
+   * filters on `deleted_at IS NULL`, so a room archived without the stamp stays
+   * visible to any read that does not also exclude archived rows — and the
+   * property delete endpoint next door has always set both.
    */
-    async deleteRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async deleteRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const { id } = req.params;
-      const room = await Property.findOne({ _id: id, type: ROOM_TYPE, oxyUserId });
-      if (!room) return next(new AppError('Room not found', 404, 'NOT_FOUND'));
-      room.status = PropertyStatus.ARCHIVED;
-      await room.save();
+      const existing = await findPropertyById(id);
+      if (!existing || existing.property.type !== ROOM_TYPE) {
+        return next(new AppError('Room not found', 404, 'NOT_FOUND'));
+      }
+      const deleted = await softDeleteProperty(id, { ownedBy: oxyUserId });
+      if (!deleted) return next(new AppError('Room not found', 404, 'NOT_FOUND'));
       logger.info('Room deleted', { roomId: id, oxyUserId });
       res.json(successResponse(null, 'Room deleted successfully'));
     } catch (error) {
-      if (errorName(error) === 'CastError') return next(new AppError('Invalid room ID', 400, 'INVALID_ID'));
       next(error);
     }
   }
-}
-
-interface AppErrorWithDetails extends Error {
-  details?: unknown;
 }
 
 export default new RoomController();

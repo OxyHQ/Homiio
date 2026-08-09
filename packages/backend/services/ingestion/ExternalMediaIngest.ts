@@ -135,7 +135,7 @@ export class ExternalMediaIngest {
    * persisted to the self-hosted local store (opt-in, like the seed path).
    */
   async ingestForProperty(
-    propertyId: Types.ObjectId | string,
+    propertyId: string,
     remoteImages: readonly NormalizedRemoteImage[],
   ): Promise<PropertyImageRef[]> {
     const allowUnconfiguredStorage = !this.imageService.isStorageConfigured();

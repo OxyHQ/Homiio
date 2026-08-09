@@ -117,7 +117,7 @@ export async function seedPropertyImages(
 
   for (let index = 0; index < imageUrls.length; index += 1) {
     const input = await fetchImageBuffer(imageUrls[index]);
-    const image = await imageUploadService.createImageForEntity('property', propertyId, input, {
+    const image = await imageUploadService.createImageForEntity('property', String(propertyId), input, {
       isPrimary: index === 0,
       order: index,
       allowUnconfiguredStorage,
@@ -138,17 +138,22 @@ export async function seedEntityCoverImage(
   entityId: Types.ObjectId | string,
   url: string | undefined,
   caption: string
-): Promise<Types.ObjectId | null> {
+): Promise<string | null> {
   if (!url) return null;
   const allowUnconfiguredStorage = shouldAllowUnconfiguredStorage();
   const input = await fetchImageBuffer(url);
-  const image = await imageUploadService.createImageForEntity(entityType, entityId, input, {
-    isPrimary: true,
-    order: 0,
-    caption,
-    allowUnconfiguredStorage,
-  });
-  return image._id;
+  const image = await imageUploadService.createImageForEntity(
+    entityType,
+    String(entityId),
+    input,
+    {
+      isPrimary: true,
+      order: 0,
+      caption,
+      allowUnconfiguredStorage,
+    },
+  );
+  return image.id;
 }
 
 /** Log the storage mode once at the start of an image-seeding run. */

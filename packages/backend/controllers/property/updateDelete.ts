@@ -4,7 +4,10 @@ import { EDITABLE_PROPERTY_FIELDS } from './editableFields';
 import { pickFields } from '../../utils/pickFields';
 import { onPropertyTransacted } from '../../services/commissionService';
 import { schedulePriceEthicsScore } from '../../services/priceEthicsService';
-import { Address, Property } from '../../models';
+import { findOrCreateCanonicalAddress } from '../../services/addressService';
+import { findPropertyById } from '../../db/properties/propertyReads';
+import { serializeProperty } from '../../db/properties/propertySerializer';
+import { softDeleteProperty, updateProperty as updatePropertyRow } from '../../db/properties/propertyWrites';
 import { AppError, successResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
 import { requireSessionOxyUserId } from '../../utils/sessionUser';
@@ -19,15 +22,23 @@ export async function updateProperty(req: ControllerRequest, res: ControllerResp
     const updateData = pickFields<OfferingBearingPayload>(req.body, EDITABLE_PROPERTY_FIELDS);
 
     const oxyUserId = requireSessionOxyUserId(req);
-    const property = await Property.findOne({ _id: propertyId, oxyUserId });
-    if (!property) return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));
+    // Read the CURRENT listing first: the offering rules are evaluated against
+    // the merge of stored and incoming state, so a partial update that mentions
+    // only `sale` is still judged against the offerings the listing already
+    // declares. The ownership predicate is repeated on the UPDATE itself, so
+    // this read is not the authorization — it is the rules' input.
+    const existing = await findPropertyById(propertyId);
+    if (!existing || existing.property.oxyUserId !== oxyUserId) {
+      return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));
+    }
+    const current = serializeProperty(existing);
 
     applyOfferingRulesForUpdate(updateData, {
-      offerings: property.offerings,
-      longTermRent: property.longTermRent,
-      shortTermRent: property.shortTermRent,
-      sale: property.sale,
-      exchange: property.exchange,
+      offerings: current.offerings,
+      longTermRent: current.longTermRent as { monthlyAmount?: unknown } | undefined,
+      shortTermRent: current.shortTermRent as { nightlyRate?: unknown } | undefined,
+      sale: current.sale as { price?: unknown } | undefined,
+      exchange: current.exchange as { mode?: unknown } | undefined,
     });
 
     if (req.body.address) {
@@ -43,23 +54,26 @@ export async function updateProperty(req: ControllerRequest, res: ControllerResp
           coordinates: coords,
         };
       }
-      const address = await Address.findOrCreateCanonical(addressData);
-      updateData.addressId = address._id;
+      const address = await findOrCreateCanonicalAddress(addressData);
+      updateData.addressId = address.id;
     }
 
-    const updatedProperty = await Property.findByIdAndUpdate(
-      propertyId,
-      { ...updateData, updatedAt: new Date() },
-      { new: true, runValidators: true }
-    ).populate('addressId');
-
-    if (!updatedProperty) return next(new AppError('Failed to update property', 500, 'UPDATE_FAILED'));
+    // The ownership predicate rides on the UPDATE, so the check and the write
+    // are one statement and a change of owner cannot interleave between them.
+    const updated = await updatePropertyRow(propertyId, updateData, { ownedBy: oxyUserId });
+    if (!updated) return next(new AppError('Failed to update property', 500, 'UPDATE_FAILED'));
+    const updatedProperty = serializeProperty(updated);
 
     const transitionedToTerminal =
-      property.status !== updatedProperty.status && TERMINAL_STATUSES.includes(updatedProperty.status);
-    if (transitionedToTerminal && updatedProperty.sourcedByPartner) {
+      existing.property.status !== updated.property.status &&
+      TERMINAL_STATUSES.includes(updated.property.status);
+    if (transitionedToTerminal && updated.property.sourcedByPartnerId) {
       try {
-        await onPropertyTransacted(updatedProperty);
+        await onPropertyTransacted({
+          ...updatedProperty,
+          _id: updated.property.id,
+          sourcedByPartner: updated.property.sourcedByPartnerId,
+        });
       } catch (commissionError) {
         logger.error('Failed to process commission on property close', {
           propertyId: String(propertyId),
@@ -70,7 +84,7 @@ export async function updateProperty(req: ControllerRequest, res: ControllerResp
 
     schedulePriceEthicsScore(String(propertyId));
 
-    res.json(successResponse(updatedProperty.toJSON(), 'Property updated successfully'));
+    res.json(successResponse(updatedProperty, 'Property updated successfully'));
   } catch (error) {
     if (error instanceof OfferingValidationError) {
       return next(new AppError(error.message, 400, error.code));
@@ -83,12 +97,11 @@ export async function deleteProperty(req: ControllerRequest, res: ControllerResp
   try {
     const { propertyId } = req.params;
     const oxyUserId = requireSessionOxyUserId(req);
-    const property = await Property.findOne({ _id: propertyId, oxyUserId });
-    if (!property) return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));
-
-    property.status = PropertyStatus.ARCHIVED;
-    property.deletedAt = new Date();
-    await property.save();
+    // One statement: no row matched means either no such listing or not this
+    // caller's, deliberately indistinguishable so a 404 does not confirm a
+    // listing exists.
+    const deleted = await softDeleteProperty(propertyId, { ownedBy: oxyUserId });
+    if (!deleted) return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));
 
     logger.info('Property soft-deleted', { propertyId: String(propertyId), oxyUserId });
     res.json(successResponse(null, 'Property deleted successfully'));

@@ -10,7 +10,8 @@ import { reconcileModerationReports } from './moderation/ModerationReconciliatio
 import { expireShareLinks } from '../db/conversations/conversationRepository';
 import { getDb } from '../db/postgres';
 import config from '../config';
-import { Property } from '../models';
+import { getDb } from '../db/postgres';
+import { syncAllHasImages } from '../db/hasImages';
 
 // Initialize services
 const logger = new Logger('CronService');
@@ -77,21 +78,22 @@ class CronJobManager {
   }
 
   /**
-   * One-time, idempotent backfill of the denormalized `hasImages` flag for
-   * legacy properties that predate the field. A pipeline update derives it from
-   * the ground-truth `images` array server-side in a single pass; the schema
-   * pre-save / pre-update hooks maintain it on every write thereafter. The
-   * `{ hasImages: { $exists: false } }` filter means it only ever touches
-   * un-migrated docs and becomes a no-op on subsequent boots.
+   * Idempotent reconciliation of the denormalized `has_images` flag.
+   *
+   * `db/hasImages.ts` is the ONE writer of that column and `syncAllHasImages`
+   * re-derives it from `property_images` for the whole table in a single
+   * statement, updating only the rows that actually disagree — so a boot where
+   * nothing has drifted writes nothing.
+   *
+   * The Mongo version this replaces filtered on `hasImages: { $exists: false }`,
+   * i.e. it only ever touched documents predating the field and could not
+   * notice a row whose stored flag had gone WRONG. Production already holds one
+   * of those, which is why the port reconciles rather than backfills.
    */
   private async backfillPropertyHasImages(): Promise<void> {
-    const result = await Property.updateMany(
-      { hasImages: { $exists: false } },
-      [{ $set: { hasImages: { $gt: [{ $size: { $ifNull: ['$images', []] } }, 0] } } }]
-    );
-    const modified = (result as { modifiedCount?: number }).modifiedCount ?? 0;
+    const modified = await syncAllHasImages(getDb());
     if (modified > 0) {
-      this.logger.info('Backfilled hasImages on legacy properties', { modified });
+      this.logger.info('Reconciled hasImages on properties', { modified });
     }
   }
 

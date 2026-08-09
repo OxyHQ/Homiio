@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
-import { Types } from 'mongoose';
 import type { ImageEntityType } from '@homiio/shared-types';
 import imageUploadService, {
   UploadedImage,
   ImageDocument,
 } from '../services/imageUploadService';
 import { validateImageStoreKey } from '../utils/imageStoreKey';
+import { isLiveEntityId } from '../db/ids';
 
 // Minimal shape for an uploaded file to avoid relying on Express.Multer types
 type UploadedFile = {
@@ -35,7 +35,7 @@ const IMAGE_ENTITY_TYPES: readonly ImageEntityType[] = [
 type EntityTarget =
   | { kind: 'none' }
   | { kind: 'invalid'; message: string }
-  | { kind: 'resolved'; entityType: ImageEntityType; entityId: Types.ObjectId };
+  | { kind: 'resolved'; entityType: ImageEntityType; entityId: string };
 
 /**
  * Resolve the optional `entityType` + `entityId` an upload should be attached to
@@ -56,13 +56,18 @@ function resolveEntityTarget(body: Record<string, unknown>): EntityTarget {
       message: `entityType must be one of: ${IMAGE_ENTITY_TYPES.join(', ')}`,
     };
   }
-  if (typeof rawId !== 'string' || !Types.ObjectId.isValid(rawId)) {
+  // `isLiveEntityId`, not `ObjectId.isValid`: both id shapes are live
+  // permanently (24-char hex for rows copied by the backfill, uuid v7 for rows
+  // minted since), so the ObjectId test this replaces rejected every entity
+  // created after the cutover — a documented API boundary is the one place a
+  // shape guard belongs, and it has to know both shapes. See `db/ids.ts`.
+  if (typeof rawId !== 'string' || !isLiveEntityId(rawId)) {
     return { kind: 'invalid', message: 'entityId must be a valid id' };
   }
   return {
     kind: 'resolved',
     entityType: rawType as ImageEntityType,
-    entityId: new Types.ObjectId(rawId),
+    entityId: rawId,
   };
 }
 
@@ -139,7 +144,7 @@ export class ImageController {
         message: 'Image uploaded successfully',
         data: {
           imageId: uploadedImage.original.split('/').pop()?.split('-')[0],
-          imageDocId: persisted ? String(persisted._id) : undefined,
+          imageDocId: persisted ? persisted.id : undefined,
           urls: imageUrls,
           metadata: uploadedImage.metadata,
           keys: {
@@ -220,7 +225,7 @@ export class ImageController {
           uploadedImages.push({
             originalName: file.originalname,
             imageId: uploadedImage.original.split('/').pop()?.split('-')[0],
-            imageDocId: persisted ? String(persisted._id) : undefined,
+            imageDocId: persisted ? persisted.id : undefined,
             urls: imageUrls,
             metadata: uploadedImage.metadata,
             keys: { original: uploadedImage.original, variants: uploadedImage.variants },
