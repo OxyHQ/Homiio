@@ -80,7 +80,18 @@ const BACKFILL_PREFIX = 'db/backfill/';
  * it. DELETE a line when its port lands; an empty list is the signal that
  * `MONGODB_URI` can come off the task definition.
  *
- * Measured at origin/main 4d697bea.
+ * **It is now EMPTY, and that is the signal.** Nothing this gate scans reaches
+ * Mongo any more: `controllers/billingController.ts` came off with the billing
+ * port, and `scripts/seedImages.ts` — whose only reach was `import type
+ * { Types } from 'mongoose'`, erased at compile time and used purely to spell
+ * two parameters `Types.ObjectId | string` — takes plain `string` ids now, which
+ * is what every Postgres primary key is. The list emptying is what the
+ * `MONGODB_URI` removal from the task definition and SSM waits on.
+ *
+ * Keep the map and the gate rather than deleting them with the last entry: they
+ * are what stops a Mongo import coming BACK, and "no unaccounted Mongo reader"
+ * against an empty allowlist is a stronger assertion than it has ever been. The
+ * vacuity floor below is what keeps that from being a check on nothing.
  *
  * `controllers/analyticsController.ts` and `controllers/roommateController.ts`
  * were on this list at 55e1ec4a and came off in #326, which landed between this
@@ -89,10 +100,7 @@ const BACKFILL_PREFIX = 'db/backfill/';
  * header describes: a finished port shows up here as a line to DELETE, not as a
  * silent tolerance.
  */
-const PENDING_MONGO_FILES: ReadonlyMap<string, string> = new Map([
-  ['controllers/billingController.ts', 'homiio-billing — task #40, ~30 Billing call sites'],
-  ['scripts/seedImages.ts', 'unassigned — decide port vs delete like the other one-offs'],
-]);
+const PENDING_MONGO_FILES: ReadonlyMap<string, string> = new Map([]);
 
 /**
  * A file "reaches Mongo" if it imports mongoose or the Mongoose model barrel,

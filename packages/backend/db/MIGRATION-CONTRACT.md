@@ -709,8 +709,9 @@ method or virtual that has no Postgres counterpart:
   (`livedTo > livedFrom`, `nights >= 1`) mean a wrong one fails loudly. `TenantApplication.pre('save')`'s `decidedAt` stamp and
   `ViewingRequest`'s `cancelledBy` are now equivalences the database enforces.
 - **Idempotency that MOVED into an index and must not be re-implemented as a
-  read:** ~~`Agency.findOrCreateByName`~~ (DONE), `Billing.pre('save')`'s
-  duplicate check, ~~`reviewController`'s `alreadyVoted` and `alreadyReported`~~
+  read:** ~~`Agency.findOrCreateByName`~~ (DONE), ~~`Billing.pre('save')`'s
+  duplicate check~~ (DONE — `db/billing/billingRepository.ensureBilling`),
+  ~~`reviewController`'s `alreadyVoted` and `alreadyReported`~~
   (DONE — and the duplicate-REVIEW check joined them as
   `reviews_author_address_key`), `evictionController`'s RSVP check, and
   `SavedPropertyFolder.addProperty`. Each was a read-then-write with a window;
@@ -729,9 +730,10 @@ method or virtual that has no Postgres counterpart:
   `db/reviews/reviewSerializer.livedDurationText`, and it now appears on EVERY
   review rather than only on the non-lean reads); `SavedPropertyFolder.propertyCount`.
 - **Methods with real logic to port:** `Lease.generatePaymentSchedule`,
-  `recordPayment`, `signAsLandlord`/`signAsTenant`; `Billing.consumeFileCredit`
-  (`UPDATE … SET file_credits = file_credits - 1`, which has no guard unless the
-  `billing_file_credits_non_negative_check` carries it);
+  `recordPayment`, `signAsLandlord`/`signAsTenant`;
+  ~~`Billing.consumeFileCredit`~~ (DONE — one conditional `UPDATE … SET
+  file_credits = file_credits - 1 WHERE … AND file_credits > 0`, so
+  `billing_file_credits_non_negative_check` is a backstop rather than the guard);
   `Conversation.generateShareToken`/`revokeSharing` (the four `sharing_*` columns
   now move together by CHECK).
 - **The `conversations.sharing_expires_at` sweep**, which must CLEAR those four
@@ -900,3 +902,109 @@ CHECKs are.
   a legacy BOOLEAN `depositReturned` into the enum; `reviews_deposit_returned_check`
   cannot store a boolean, the collection is empty, and there is no target left
   for it to run against.
+
+## The billing domain — `billingController`, the half the repository was built for
+
+The repository and `routes/profiles.ts` landed first (#331); this closes the
+domain with `controllers/billingController.ts`. The census that scoped it was
+verb-agnostic and comment-stripped over `git ls-files`, with the count of files
+importing the model barrel as its positive control: scoping to Mongoose verbs
+misses custom statics, and counting raw lines counts docblocks as call sites. It
+found **39** live `Billing` expressions — 36 in the controller and 3 in
+`routes/profiles.ts` — against the "~33" a verb-scoped estimate had produced.
+`models/schemas/BillingSchema.ts` is now dead and is left in `models/` with the
+rest rather than deleted piecemeal.
+
+### `ensureBilling` needed a SAVEPOINT the moment it got a transactional caller
+
+The most important line in this batch, and it is a fix to code that was already
+merged and already green. `ensureBilling` INSERTs and handles `23505` by reading
+the row back — correct, and correct only on the ROOT connection, where each
+statement is its own implicit transaction. In Postgres a failed statement aborts
+the WHOLE transaction, so inside one that recovery read dies with `25P02
+current_transaction_is_aborted`.
+
+`creditCheckoutSession` is the caller that made it real: the session claim and
+the payment it authorises must commit together, so it opens a transaction and
+calls `ensureBilling` inside it. That path runs on **every payment after an
+account's first** — the row exists, so the insert always conflicts — which means
+without `inSavepoint` the second purchase by any existing subscriber 500s. The
+identical lesson `findOrCreateAgencyByName` learned when the review create path
+became its first transactional caller, and it is worth stating as a rule: a
+repository function that catches a constraint violation and then READS is not
+transaction-safe until its write is wrapped, and nothing about it looks wrong
+until somebody wraps a transaction around it.
+
+`__tests__/db/billingCheckout.test.ts` asserts the caller's transaction is still
+USABLE afterwards, not merely that the function returned — the weaker assertion
+passes against the broken version.
+
+### Decisions a later batch must not reverse
+
+- **The session claim and the credit commit TOGETHER.** `creditCheckoutSession`
+  is the single entry point for all three callers — the webhook, the confirm
+  redirect and the manual-activation fallback — which is what makes "Stripe
+  delivered this twice" and "the user pressed the button twice" the same question
+  with the same answer. Under Mongo they were three independently written copies
+  of one guard, and the confirm redirect races the webhook by design.
+- **`deactivateSubscriptionByStripeId` must NOT clear the subscription id**, so
+  it is deliberately not `setPlusActive(…, {active: false})`, which does.
+  `syncSubscriptionStatus` and `reactivateSubscription` both look the
+  subscription up by that id afterwards, so erasing it strands a cancelled
+  subscriber with no way back.
+- **`recordSubscriptionPayment` carries its `plus_active` scope IN the
+  statement.** An invoice paid against a subscription Homiio believes is
+  cancelled must not silently revive it, and a preceding read would let the check
+  and the write interleave.
+- **`listProcessedSessions` is ORDERED.** Without an `ORDER BY` Postgres may
+  return the rows however it likes, which turns a cached client response into a
+  spurious diff. Pinning it needs a fixture whose PHYSICAL order differs from the
+  sorted one — three rows written directly with explicit reversed timestamps —
+  because rows credited in sequence are read back in insertion order anyway, so
+  the obvious fixture agrees with an unordered read and the check is vacuous.
+  (Measured: with the obvious fixture, both an unordered and a `DESC` mutant
+  survived.)
+
+### Two Mongoose no-ops fixed rather than ported
+
+Both are the same defect and porting the SPELLING would have carried it across
+invisibly — **drizzle omits an `undefined` from a SET clause exactly as Mongoose
+strips it from a `$set`**, so the code keeps looking as though it clears a column
+while clearing nothing.
+
+`reactivateSubscription` and `syncSubscriptionStatus`'s active branch both wrote
+`plusCanceledAt: undefined` meaning "clear the cancellation". They never did, and
+`syncSubscriptionStatus`'s own guard reads `|| billing.plusCanceledAt`, so it
+then re-fired on every later call and reported `statusChanged: true` forever for
+anyone who had cancelled and come back. Both write `null` now, and the test
+asserts the SECOND sync reports no change — pinning the defect, not just the fix.
+
+One smaller change is stated rather than discovered:
+`manuallyActivateSubscription` validates the product BEFORE claiming the session,
+where Mongo checked `processedSessions` first. Exactly one case answers
+differently — an invalid product naming an already-spent session, `200 "already
+activated"` before and `400` now.
+
+### `processedSessions` stays on the wire
+
+It is a TABLE now and nothing renders the field, but
+`packages/frontend/store/subscriptionStore.ts` declares it REQUIRED on
+`Entitlements`. Removing it is a two-sided change and this was a port; shipping
+the halves separately is the failure `~/Oxy/AGENTS.md` records against Homiio's
+own `_id` → `id`.
+
+### Three legacy scripts DELETED as spent, and why they were a footgun
+
+`scripts/migrate-billing-field.js`, `check-subscription-db.js` and
+`test-subscription-save.js`, with their `package.json` entries. All three read or
+wrote `Profile.billing.*` — an EMBEDDED shape `ProfileSchema` no longer declares,
+which the standalone `Billing` collection replaced — so each was doubly spent:
+its source field is gone AND its target store is being retired. This file already
+named all three once, for the `DATABASE_URL`-fallback correction.
+
+The migration one was not merely dead weight. It WRITES to Mongo, so an operator
+running `bun run migrate:billing` after this batch would populate a collection
+nothing reads and come away believing billing had been migrated — the "rank a
+SWEEP above a read" hazard in its writing form. They could not have run either:
+each calls `mongoose.model('Profile')` without requiring a schema, so a plain
+`node` invocation raises `MissingSchemaError`.

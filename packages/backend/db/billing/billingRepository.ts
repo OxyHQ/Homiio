@@ -38,7 +38,7 @@
 
 import { and, eq, gt, sql } from 'drizzle-orm';
 
-import { getDb } from '../postgres';
+import { getDb, inSavepoint } from '../postgres';
 import { billing, billingProcessedSessions } from '../schema';
 import { isUniqueViolation } from '../uniqueViolation';
 import type { DatabaseOrTransaction } from '../postgres';
@@ -87,7 +87,20 @@ export async function ensureBilling(
   db: DatabaseOrTransaction = getDb(),
 ): Promise<BillingRow> {
   try {
-    const [created] = await db.insert(billing).values({ oxyUserId }).returning();
+    // The insert runs in a SAVEPOINT, and that is not defensive tidiness. In
+    // Postgres a failed statement aborts the WHOLE transaction, so catching
+    // `23505` and reading the row back works on the root connection — where each
+    // statement is its own implicit transaction — and dies with `25P02
+    // current_transaction_is_aborted` inside one. {@link creditCheckoutSession}
+    // is the caller that made that real: it must claim the session and apply the
+    // payment atomically, so it opens a transaction and this runs inside it.
+    // `inSavepoint` issues a real SAVEPOINT / ROLLBACK TO SAVEPOINT on a
+    // transaction handle and a plain BEGIN/COMMIT on the root connection, so ONE
+    // spelling serves both callers — the same lesson `findOrCreateAgencyByName`
+    // learned the moment it got a transactional caller.
+    const [created] = await inSavepoint(db, (tx) =>
+      tx.insert(billing).values({ oxyUserId }).returning(),
+    );
     return created;
   } catch (error) {
     if (!isUniqueViolation(error, 'billing_oxy_user_id_key')) throw error;
@@ -237,7 +250,13 @@ export async function isStripeSessionProcessed(
   return rows.length > 0;
 }
 
-/** Every session id applied to a record, for the entitlements projection. */
+/**
+ * Every session id applied to a record, for the entitlements projection.
+ *
+ * Ordered oldest first, so the field is stable between two reads of an unchanged
+ * record: without an `ORDER BY` Postgres may return the rows in any order it
+ * likes, which turns a cached client response into a spurious diff.
+ */
 export async function listProcessedSessions(
   billingId: string,
   db: DatabaseOrTransaction = getDb(),
@@ -245,8 +264,152 @@ export async function listProcessedSessions(
   const rows = await db
     .select({ sessionId: billingProcessedSessions.sessionId })
     .from(billingProcessedSessions)
-    .where(eq(billingProcessedSessions.billingId, billingId));
+    .where(eq(billingProcessedSessions.billingId, billingId))
+    .orderBy(billingProcessedSessions.processedAt, billingProcessedSessions.sessionId);
   return rows.map((row) => row.sessionId);
+}
+
+/**
+ * Mark a subscription cancelled, found by STRIPE's id.
+ *
+ * The webhook knows the subscription and not the account, and
+ * `billing_plus_stripe_subscription_id_key` is unique so this matches at most
+ * one row — written as a plain predicate rather than a single-row update, so the
+ * statement does not depend on that being true.
+ *
+ * Deliberately NOT {@link setPlusActive}`(…, {active: false})`, which also
+ * CLEARS `plus_stripe_subscription_id`: `syncSubscriptionStatus` and
+ * `reactivateSubscription` both look the subscription up by that id afterwards,
+ * so erasing it here would strand a cancelled subscriber with no way back.
+ *
+ * @returns How many records were affected, so a handler can tell "no such
+ *   subscription here" from "done".
+ */
+export async function deactivateSubscriptionByStripeId(
+  subscriptionId: string,
+  canceledAt: Date,
+  db: DatabaseOrTransaction = getDb(),
+): Promise<number> {
+  const rows = await db
+    .update(billing)
+    .set({ plusActive: false, plusCanceledAt: canceledAt })
+    .where(eq(billing.plusStripeSubscriptionId, subscriptionId))
+    .returning({ id: billing.id });
+  return rows.length;
+}
+
+/**
+ * Stamp a successful renewal, found by Stripe's id.
+ *
+ * Scoped to ACTIVE records verbatim from the Mongo handler: an invoice paid
+ * against a subscription Homiio already believes is cancelled must not silently
+ * revive it, and reconciling that disagreement is `syncSubscriptionStatus`'s
+ * job, which reads Stripe rather than inferring from one event.
+ *
+ * The scope is IN the statement rather than a preceding read, so the check and
+ * the write cannot interleave.
+ */
+export async function recordSubscriptionPayment(
+  subscriptionId: string,
+  paidAt: Date,
+  db: DatabaseOrTransaction = getDb(),
+): Promise<number> {
+  const rows = await db
+    .update(billing)
+    .set({ lastPaymentAt: paidAt })
+    .where(
+      and(eq(billing.plusStripeSubscriptionId, subscriptionId), eq(billing.plusActive, true)),
+    )
+    .returning({ id: billing.id });
+  return rows.length;
+}
+
+/** A billing record plus the sessions applied to it — the `entitlements` payload. */
+export type BillingEntitlements = BillingRow & { processedSessions: string[] };
+
+/**
+ * The `entitlements` object every billing surface answers with.
+ *
+ * ONE projection, because there are nine handlers that return it — the profile
+ * router, the confirm redirect, manual activate and cancel, sync, the Stripe
+ * cancel and reactivate, and the debug endpoint. Under Mongo each assembled its
+ * own (`toObject()`, a `.lean()` document, or a literal), which is how they
+ * drifted apart.
+ *
+ * `null` when the account has never paid. A read never CREATES the row: the
+ * record is minted by a payment, so answering a page view by writing one would
+ * put a write on every load and make "has this account ever paid?" unanswerable.
+ */
+export async function readEntitlements(
+  oxyUserId: string,
+  db: DatabaseOrTransaction = getDb(),
+): Promise<BillingEntitlements | null> {
+  const record = await findBillingByOxyUserId(oxyUserId, db);
+  if (!record) return null;
+  return { ...record, processedSessions: await listProcessedSessions(record.id, db) };
+}
+
+/** The three things a Homiio Checkout session can buy. */
+export type CheckoutProduct = 'plus' | 'file' | 'founder';
+
+/**
+ * Apply one paid Checkout session, exactly once.
+ *
+ * The claim and the entitlement it buys commit TOGETHER, so a delivery that dies
+ * between them credits nothing rather than crediting without recording that it
+ * did. Every caller — the Stripe webhook, the post-redirect confirm endpoint and
+ * the manual-activation fallback — routes through here, which is what makes
+ * "Stripe delivered this twice" and "the user pressed the button twice" the same
+ * question with the same answer. Under Mongo those were three independently
+ * written copies of one guard.
+ *
+ * @param stripeSubscriptionId Passed through to {@link setPlusActive}, which
+ *   leaves the stored id alone when this is absent — so the manual fallback,
+ *   which has no Stripe evidence to carry, cannot erase what a real delivery
+ *   recorded.
+ * @returns `true` when this call applied the payment, `false` when the session
+ *   had already been spent.
+ */
+export async function creditCheckoutSession(
+  input: {
+    oxyUserId: string;
+    sessionId: string;
+    product: CheckoutProduct;
+    stripeSubscriptionId?: string;
+  },
+  db: DatabaseOrTransaction = getDb(),
+): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const record = await ensureBilling(input.oxyUserId, tx);
+    if (!(await claimStripeSession(record.id, input.sessionId, tx))) return false;
+
+    switch (input.product) {
+      case 'file':
+        await addFileCredits(input.oxyUserId, 1, tx);
+        return true;
+      case 'plus':
+        await setPlusActive(
+          input.oxyUserId,
+          {
+            active: true,
+            ...(input.stripeSubscriptionId === undefined
+              ? {}
+              : { stripeSubscriptionId: input.stripeSubscriptionId }),
+          },
+          tx,
+        );
+        return true;
+      case 'founder': {
+        const now = new Date();
+        await updateBilling(
+          input.oxyUserId,
+          { founderSupporter: true, founderSince: now, lastPaymentAt: now },
+          tx,
+        );
+        return true;
+      }
+    }
+  });
 }
 
 /**
