@@ -23,10 +23,11 @@
  *    `update`, and an accessor pair would be Mongo baggage wearing a helper's
  *    clothes.
  *
- * `createStreetLevel()` / `createBuildingLevel()` / `createUnitLevel()` have a
- * single consumer — `reviewController`, which builds the street/building/unit
- * hierarchy — and `reviews` does not exist in Postgres yet. They land with that
- * table (batch 6) rather than as an unused API here.
+ * `createStreetLevel()` / `createBuildingLevel()` / `createUnitLevel()` HAVE
+ * landed, as {@link resolveAddressHierarchy} — see its docblock, which records
+ * the defect the Mongo trio carried and what replaced it. `createUnitLevel()`
+ * has no counterpart at all: it projected an address onto itself, and the review
+ * path used its own `_id` for the unit level rather than calling it.
  *
  * ## `models/Address.ts` and `geoResolutionService.ts` are deliberately still alive
  *
@@ -524,6 +525,162 @@ export async function findOrCreateCanonicalAddress(input: AddressCanonicalInput)
     throw new Error(`Address ${normalizedKey} could not be resolved after an insert conflict`);
   }
   return raced[0];
+}
+
+// ── The street → building → unit hierarchy ──
+
+/** The levels an address can be PROJECTED onto: the two above a unit. */
+type ParentAddressLevel = 'STREET' | 'BUILDING';
+
+/**
+ * The columns a projected parent row carries, per level.
+ *
+ * STREET keeps the street, the postcode, the district and the whole geo chain;
+ * BUILDING adds the building identifiers. Neither carries `floor` / `unit` /
+ * `subunit`, which is what makes `addresses.address_level` — a GENERATED
+ * column — derive the level we asked for rather than one we asserted.
+ *
+ * `land_plot`, `extras` and `address_lines` are deliberately NOT copied, exactly
+ * as `createStreetLevel()` did not project them: they describe the specific
+ * dwelling a portal or a tenant described, not the building it sits in.
+ */
+function projectToLevel(child: AddressRow, level: ParentAddressLevel): typeof addresses.$inferInsert {
+  const street = {
+    countryId: child.countryId,
+    regionId: child.regionId,
+    cityId: child.cityId,
+    neighborhoodId: child.neighborhoodId,
+    countryCode: child.countryCode,
+    street: child.street,
+    postalCode: child.postalCode,
+    district: child.district,
+    longitude: child.longitude,
+    latitude: child.latitude,
+  };
+  if (level === 'STREET') return street;
+  return {
+    ...street,
+    number: child.number,
+    buildingName: child.buildingName,
+    block: child.block,
+    entrance: child.entrance,
+    poBox: child.poBox,
+    reference: child.reference,
+  };
+}
+
+/**
+ * Find or create the address row one level up from `child`.
+ *
+ * Deduped on `normalized_key` — the SAME key every other address is deduped on,
+ * so a building this returns is the identical row `findOrCreateCanonicalAddress`
+ * would hand a property ingest for the same building. Keying it any other way
+ * would create a second copy of a building that already exists.
+ */
+async function findOrCreateProjectedLevel(
+  child: AddressRow,
+  level: ParentAddressLevel,
+): Promise<AddressRow> {
+  const projected = projectToLevel(child, level);
+  const normalizedKey = computeAddressNormalizedKey({
+    street: projected.street,
+    number: projected.number ?? undefined,
+    // No projected level carries a unit — that is what makes it a parent.
+    unit: undefined,
+    buildingName: projected.buildingName ?? undefined,
+    block: projected.block ?? undefined,
+    postalCode: projected.postalCode,
+    cityId: projected.cityId,
+    countryCode: projected.countryCode,
+  });
+
+  const db = getDb();
+  const existing = await db
+    .select()
+    .from(addresses)
+    .where(eq(addresses.normalizedKey, normalizedKey))
+    .limit(1);
+  if (existing[0]) return existing[0];
+
+  const inserted = await db
+    .insert(addresses)
+    .values({ ...projected, normalizedKey })
+    // The index PREDICATE, not a row filter — `addresses_normalized_key_key` is
+    // partial, and Postgres refuses to infer a partial index from its columns
+    // alone. Same requirement, same spelling, as the create path above.
+    .onConflictDoNothing({
+      target: addresses.normalizedKey,
+      where: sql`${addresses.normalizedKey} is not null`,
+    })
+    .returning();
+  if (inserted[0]) return inserted[0];
+
+  const raced = await db
+    .select()
+    .from(addresses)
+    .where(eq(addresses.normalizedKey, normalizedKey))
+    .limit(1);
+  if (!raced[0]) {
+    throw new Error(`Address ${normalizedKey} could not be resolved after an insert conflict`);
+  }
+  return raced[0];
+}
+
+/** The three ids a review stores so an aggregation can roll up without walking the tree. */
+export interface AddressHierarchy {
+  readonly streetLevelId: string;
+  readonly buildingLevelId: string;
+  /** Set for a UNIT review, NULL for a BUILDING one — `reviews_unit_level_check`. */
+  readonly unitLevelId: string | null;
+}
+
+/**
+ * Resolve the street / building / unit ids for an address a review is attached
+ * to, creating the parent rows on first sight.
+ *
+ * ## This fixes the Mongo trio rather than porting it
+ *
+ * `Address.findOne(address.createBuildingLevel())` looked correct and was not.
+ * A Mongo filter constrains only the fields it NAMES, and the building-level
+ * projection of a unit address is a strict SUBSET of that unit address's own
+ * fields — so the filter matched the unit row itself.
+ *
+ * MEASURED against the real Mongoose model on the in-memory replica set, not
+ * inferred: for a canonical `Carrer Probe 42, 1a` at UNIT level, both
+ * `findOne(createBuildingLevel())` and `findOne(createStreetLevel())` returned
+ * that same unit document, so a UNIT review stored
+ * `streetLevelId === buildingLevelId === addressId`.
+ *
+ * The visible consequence is that two flats in one building never rolled up
+ * together: `getBuildingSummaries` groups by `building_level_id`, so the
+ * neighbourhood explore page showed one card per FLAT rather than one per
+ * building, and `getBuildingViewData` for a real building address found nothing
+ * at all.
+ *
+ * Projecting onto explicit COLUMN VALUES and deduping on `normalized_key` has no
+ * such subset semantics: the parent row is found or created, and it is the same
+ * row a property ingest for that building resolves to.
+ *
+ * ## The one case where a parent legitimately IS the child
+ *
+ * `computeAddressNormalizedKey` hashes `unit` but not `floor`, `entrance` or
+ * `subunit` — so a flat identified only by its floor ("Carrer X 42, 3º") already
+ * shares one canonical row with every other floor-only flat at that number, and
+ * with the building itself. In that case this returns the child, and
+ * `buildingLevelId === addressId` is the honest answer rather than a duplicate
+ * row: those reviews really are filed against one address. The key is copied
+ * VERBATIM by the backfill and must not change (see
+ * {@link computeAddressNormalizedKey}), so this is a property of the data, not
+ * something to fix here.
+ */
+export async function resolveAddressHierarchy(child: AddressRow): Promise<AddressHierarchy> {
+  if (child.addressLevel === 'UNIT') {
+    const building = await findOrCreateProjectedLevel(child, 'BUILDING');
+    const street = await findOrCreateProjectedLevel(child, 'STREET');
+    return { streetLevelId: street.id, buildingLevelId: building.id, unitLevelId: child.id };
+  }
+  const street = await findOrCreateProjectedLevel(child, 'STREET');
+  return { streetLevelId: street.id, buildingLevelId: child.id, unitLevelId: null };
 }
 
 /**

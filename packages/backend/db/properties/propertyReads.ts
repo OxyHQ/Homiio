@@ -39,7 +39,19 @@
  * may become the only writer of a Postgres row.
  */
 
-import { and, asc, count, desc, eq, inArray, sql, type SQL, type SQLWrapper } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  ne,
+  sql,
+  type SQL,
+  type SQLWrapper,
+} from 'drizzle-orm';
 
 import { getDb } from '../postgres';
 import {
@@ -207,6 +219,40 @@ export async function countProperties(where?: SQL): Promise<number> {
 export async function findPropertyById(id: string): Promise<HydratedProperty | null> {
   const [found] = await findProperties({ where: eq(properties.id, id), limit: 1 });
   return found ?? null;
+}
+
+/**
+ * The distinct Oxy accounts that advertise a listing at any of these addresses.
+ *
+ * The port of `Property.distinct('oxyUserId', { addressId: { $in: … },
+ * oxyUserId: { $nin: [null, ''] } })`, which the review-created notification
+ * fan-out uses to find who to tell. `selectDistinct` answers it in the server
+ * where Mongo's `distinct` materialised the whole list in the driver.
+ *
+ * Both halves of the `$nin` are carried across and BOTH are load-bearing:
+ * `oxy_user_id` is genuinely nullable (`PropertySchema`'s `pre('save')` strips it
+ * from every external listing), and an empty string is a VALUE that would be
+ * dispatched to as though it named somebody.
+ *
+ * `inArray` rather than a `sql` template: an array interpolated into a template
+ * renders as a ROW CONSTRUCTOR, which Postgres rejects outright — the trap
+ * `db/MIGRATION-CONTRACT.md` records four predicates shipping with.
+ */
+export async function findOwnerOxyUserIdsAtAddresses(addressIds: readonly string[]): Promise<string[]> {
+  if (addressIds.length === 0) return [];
+  const rows = await getDb()
+    .selectDistinct({ oxyUserId: properties.oxyUserId })
+    .from(properties)
+    .where(
+      and(
+        inArray(properties.addressId, [...addressIds]),
+        isNotNull(properties.oxyUserId),
+        ne(properties.oxyUserId, ''),
+      ),
+    );
+  return rows
+    .map((row) => row.oxyUserId)
+    .filter((oxyUserId): oxyUserId is string => oxyUserId !== null);
 }
 
 /**

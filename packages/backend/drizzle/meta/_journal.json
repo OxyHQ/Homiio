@@ -57,6 +57,13 @@
       "when": 1786243165303,
       "tag": "0007_crowdsource_moderation",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786276987466,
+      "tag": "0008_review_author_address_key",
+      "breakpoints": true
     }
   ]
 }

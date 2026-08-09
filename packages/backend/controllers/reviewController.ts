@@ -6,23 +6,40 @@
  * & safety reports, and the review-explore aggregations (cities → neighborhoods
  * → buildings).
  *
+ * Postgres throughout. The repositories are `db/reviews/` (reads, writes,
+ * aggregates, serialization), `db/agencies/` (the agency lookup and the
+ * find-or-create), and `services/addressService.ts` (the canonical address and
+ * the street/building hierarchy above it).
+ *
  * Security invariants (see AGENTS.md):
  *   - WRITES never trust the client: `createReview`/`updateReview` pick an
  *     explicit allowlist (`CREATABLE_REVIEW_FIELDS` / `EDITABLE_REVIEW_FIELDS`)
  *     — never `...req.body`. `oxyUserId`, the address hierarchy, `cityId`,
- *     `neighborhoodId`, `agencyId`, moderation and verification are all resolved
- *     server-side.
- *   - Update/delete resolve ownership with `Review.findOne({ _id, oxyUserId })`
- *     → a non-owner gets a 404 (never a leaky 400).
- *   - Every read serializes through `toReviewDTO`, which strips `helpfulVoters`
- *     and `reports` and hides `moderationStatus === 'removed'` reviews.
+ *     `neighborhoodId`, `agencyId`, `livedForMonths`, moderation and
+ *     verification are all resolved server-side.
+ *   - Update/delete carry `and(id, oxyUserId)` in the STATEMENT
+ *     (`db/reviews/reviewWrites.ts`) → a non-owner gets a 404, never a leaky 400.
+ *   - Every read serializes through `serializeReview`, which names the columns it
+ *     publishes rather than spreading the row. The helpful voters and the report
+ *     queue are separate TABLES that no read here selects from, so there is no
+ *     key to forget to strip.
+ *   - A `removed` review is visible to its author and to nobody else. That rule
+ *     is applied in three places and only three: `getReviewById`,
+ *     `getUserReviews`, and the `visibleModeration()` predicate every public list
+ *     and aggregate carries.
+ *
+ * ## No `isValidObjectId` guard survives in this file
+ *
+ * There were eight, and every one of them BRANCHED: post-cutover every review,
+ * address, city and neighborhood id is a uuid v7, for which the guard is false,
+ * so each would have answered "invalid ID" about a row sitting there intact.
+ * `db/ids.ts` carries the rule and the measurement. What replaces one is a bare
+ * non-empty-string check, with the lookup itself answering "no such row" for
+ * every id shape — a `text` primary key takes any string.
  */
 
 import { Request, Response } from 'express';
-import { Types } from 'mongoose';
-import { Review, Agency, Property, Address } from '../models';
 import { forwardGeocode } from '../services/geocodingService';
-import { getErrorName, getValidationMessages } from '../utils/errors';
 import { getRequiredOxyUserId, getOxyUserId } from '@oxyhq/core/server';
 import {
   ReviewReportReason,
@@ -31,14 +48,14 @@ import {
 } from '@homiio/shared-types';
 import { pickFields } from '../utils/pickFields';
 import { CREATABLE_REVIEW_FIELDS, EDITABLE_REVIEW_FIELDS } from './review/editableFields';
-import { toReviewDTO } from './review/toReviewDTO';
 import { notificationDispatchService } from '../services/notificationDispatchService';
-import { normalizeAgencyName, escapeRegex } from '../utils/agencyName';
+import { normalizeAgencyName } from '../utils/agencyName';
 import { logger } from '../middlewares/logging';
-import type { SQL } from 'drizzle-orm';
+import { eq, type SQL } from 'drizzle-orm';
 import {
   allOf,
   countProperties,
+  findOwnerOxyUserIdsAtAddresses,
   findProperties,
   propertyOrderBy,
   NEWEST_FIRST,
@@ -46,7 +63,7 @@ import {
 import {
   notDeleted,
   notModerationRestricted,
-  ofAgency,
+  ofAgency as listingsOfAgency,
   statusIs,
 } from '../db/properties/propertyFilters';
 import { serializeProperty } from '../db/properties/propertySerializer';
@@ -61,6 +78,52 @@ import {
   hasReportedReview,
   insertReviewReportAndEscalate,
 } from '../db/moderation/reviewReportRepository';
+import { getDb } from '../db/postgres';
+import { addresses } from '../db/schema';
+import { findAgenciesByNamePrefix, findAgencyBySlug } from '../db/agencies/agencyReads';
+import { findOrCreateAgencyByName, type AgencyRow } from '../db/agencies/agencyWrites';
+import {
+  findOrCreateCanonicalAddress,
+  resolveAddressHierarchy,
+  selectAddressWithGeoNames,
+} from '../services/addressService';
+import { normalizeReviewCreateInput, normalizeReviewEditInput } from './review/reviewInput';
+import {
+  allOfReviews,
+  atAddress,
+  atBuildingLevel,
+  atUnitLevel,
+  byAuthor,
+  countReviews,
+  findReviewById,
+  findReviews,
+  levelIs,
+  NEWEST_REVIEWS_FIRST,
+  ofAgency,
+  visibleModeration,
+} from '../db/reviews/reviewReads';
+import { serializeReview, type HydratedReview } from '../db/reviews/reviewSerializer';
+import {
+  countBuildingsOnStreet,
+  getAgencyStats,
+  getBuildingSummaries,
+  getCitiesWithReviews,
+  getNeighborhoodSummaries,
+  summarizeBuilding,
+  summarizeBuildingOfUnit,
+  summarizeStreet,
+  summarizeUnit,
+  type ReviewSummaryStats,
+} from '../db/reviews/reviewAggregates';
+import {
+  deleteOwnReview,
+  DuplicateReviewError,
+  findReviewAuthor,
+  insertReview,
+  toggleHelpfulVote,
+  updateOwnReview,
+  type ReviewPatch,
+} from '../db/reviews/reviewWrites';
 
 const ok = (res: Response, data: Record<string, unknown>) => res.status(200).json({ success: true, ...data });
 const created = (res: Response, data: Record<string, unknown>) => res.status(201).json({ success: true, ...data });
@@ -98,96 +161,200 @@ function parsePageLimit(req: Request): { page: number; limit: number } {
   return { page, limit };
 }
 
-/** Address populate used for review lists that surface an address label. */
-const REVIEW_ADDRESS_POPULATE = {
-  path: 'addressId',
-  select: 'street number postal_code countryCode cityId regionId countryId neighborhoodId coordinates',
-  populate: [
-    { path: 'cityId', select: 'name' },
-    { path: 'regionId', select: 'name' },
-    { path: 'countryId', select: 'name code' },
-    { path: 'neighborhoodId', select: 'name' },
-  ],
-};
+/**
+ * A route parameter that could name a row.
+ *
+ * This is what replaced the eight `Types.ObjectId.isValid` guards, and it is
+ * deliberately the weakest possible check: it rejects a missing or empty
+ * segment, and everything else goes to the query, which answers "no such row"
+ * for a nonsense id without help. Using `isLiveEntityId` here instead would
+ * re-introduce the fail-open bug in a new costume — `db/ids.ts` says so
+ * explicitly.
+ */
+function isPossibleId(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
+/** Serialize a page of reviews. */
+function serializeReviews(hydrated: readonly HydratedReview[]): Record<string, unknown>[] {
+  return hydrated.map(serializeReview);
+}
 
 // ---------------------------------------------------------------------------
 // Hierarchical address reads (public, community-visible).
 // ---------------------------------------------------------------------------
 
+/**
+ * Page a list in the APPLICATION, as the hierarchical reads have always done.
+ *
+ * Carried across verbatim rather than pushed into SQL, because these endpoints
+ * publish `totalReviews` over the WHOLE set beside a page of it and the Mongo
+ * implementation derived both from one array. Pushing the slice into the query
+ * would need a second count and would change what `totalReviews` means for a
+ * BUILDING read, where it counts building AND unit reviews while the page slices
+ * only the unit ones.
+ */
+function pageOf<T>(items: readonly T[], page: number, limit: number): T[] {
+  return items.slice((page - 1) * limit, page * limit);
+}
+
+/**
+ * Everything both hierarchy endpoints need, per level.
+ *
+ * A discriminated union rather than two copies of the same switch: the READ
+ * endpoint publishes review lists and the STATS endpoint publishes only numbers,
+ * but they must agree about what those numbers are, and the surest way to make
+ * two endpoints agree is for them to read one function.
+ */
+type HierarchyData =
+  | {
+      readonly level: 'UNIT';
+      readonly unitReviews: HydratedReview[];
+      readonly unitStats: ReviewSummaryStats;
+      readonly buildingSummary: ReviewSummaryStats;
+    }
+  | {
+      readonly level: 'BUILDING';
+      readonly buildingReviews: HydratedReview[];
+      readonly unitReviews: HydratedReview[];
+      readonly aggregatedStats: ReviewSummaryStats;
+    }
+  | {
+      readonly level: 'STREET';
+      readonly aggregatedStats: ReviewSummaryStats;
+      readonly buildingCount: number;
+    };
+
+/**
+ * Load the review view for one address, at whatever level the address IS.
+ *
+ * `addresses.address_level` is a GENERATED column, so the level is read off the
+ * row rather than re-derived. `AddressSchema.methods.getAddressLevel()` was a
+ * METHOD that every `.lean()` read in this package skipped, which is exactly why
+ * the derivation moved into the schema — a lean read and a hydrated document
+ * cannot disagree about what level an address is.
+ */
+async function loadHierarchy(
+  address: HierarchyAddress,
+  viewer: string | null,
+): Promise<HierarchyData> {
+  if (address.addressLevel === 'UNIT') {
+    const [unitReviews, unitStats] = await Promise.all([
+      findReviews({
+        where: allOfReviews([atUnitLevel(address.id), visibleModeration()]),
+        orderBy: [NEWEST_REVIEWS_FIRST],
+        viewer,
+      }),
+      summarizeUnit(address.id),
+    ]);
+    // The building this unit belongs to comes off the unit's own reviews, which
+    // are already in hand — Mongo issued a separate `findOne` for a "sample
+    // review" purely to read that one column off it.
+    const buildingSummary = await summarizeBuildingOfUnit(unitReviews[0]?.review.buildingLevelId);
+    return { level: 'UNIT', unitReviews, unitStats, buildingSummary };
+  }
+
+  if (address.addressLevel === 'BUILDING') {
+    const [buildingReviews, unitReviews, aggregatedStats] = await Promise.all([
+      findReviews({
+        where: allOfReviews([atBuildingLevel(address.id), levelIs('BUILDING'), visibleModeration()]),
+        orderBy: [NEWEST_REVIEWS_FIRST],
+        viewer,
+      }),
+      findReviews({
+        where: allOfReviews([atBuildingLevel(address.id), levelIs('UNIT'), visibleModeration()]),
+        orderBy: [NEWEST_REVIEWS_FIRST],
+        viewer,
+      }),
+      summarizeBuilding(address.id),
+    ]);
+    return { level: 'BUILDING', buildingReviews, unitReviews, aggregatedStats };
+  }
+
+  const [aggregatedStats, buildingCount] = await Promise.all([
+    summarizeStreet(address.id),
+    countBuildingsOnStreet(address.id),
+  ]);
+  return { level: 'STREET', aggregatedStats, buildingCount };
+}
+
+/** An address, reduced to what a hierarchy read needs of it. */
+interface HierarchyAddress {
+  readonly id: string;
+  readonly addressLevel: 'STREET' | 'BUILDING' | 'UNIT';
+}
+
+/**
+ * The address a hierarchy endpoint was asked about.
+ *
+ * `undefined` means no such address; `null` means one whose `address_level` is
+ * not a level this endpoint knows — a case the CHECK on that column makes
+ * unreachable, and which the caller nevertheless answers rather than ignores,
+ * because drizzle types every GENERATED column as nullable and a narrowing
+ * silently widened to `string` is how a level ends up mis-filed.
+ */
+async function findHierarchyAddress(addressId: string): Promise<HierarchyAddress | null | undefined> {
+  const [address] = await selectAddressWithGeoNames({ where: eq(addresses.id, addressId), limit: 1 });
+  if (!address) return undefined;
+  const addressLevel = address.addressLevel;
+  if (addressLevel !== 'STREET' && addressLevel !== 'BUILDING' && addressLevel !== 'UNIT') {
+    return null;
+  }
+  return { id: address.id, addressLevel };
+}
+
 export const getReviewsByAddress = async (req: Request, res: Response) => {
   try {
     const { addressId } = req.params;
-    const { page = 1, limit = 10 } = req.query;
     const viewer = getOxyUserId(req);
+    const { page, limit } = parsePageLimit(req);
 
-    if (!Types.ObjectId.isValid(addressId)) {
+    if (!isPossibleId(addressId)) {
       return badRequest(res, { message: 'Invalid address ID' });
     }
 
-    const address = await Address.findById(addressId);
-    if (!address) {
+    const address = await findHierarchyAddress(addressId);
+    if (address === undefined) {
       return notFound(res, { message: 'Address not found' });
     }
-
-    const addressLevel = address.getAddressLevel();
-    const pageNumber = parseInt(page as string, 10);
-    const limitNumber = parseInt(limit as string, 10);
-    const toDto = (review: unknown) => toReviewDTO(review, viewer);
-
-    let responseData: Record<string, unknown> = {};
-
-    switch (addressLevel) {
-      case 'UNIT': {
-        const unitData = await Review.getUnitViewData(addressId);
-        responseData = {
-          level: 'UNIT',
-          unitReviews: unitData.unitReviews
-            .slice((pageNumber - 1) * limitNumber, pageNumber * limitNumber)
-            .map(toDto),
-          buildingSummary: unitData.buildingSummary,
-          totalReviews: unitData.unitReviews.length,
-          pagination: {
-            currentPage: pageNumber,
-            totalPages: Math.ceil(unitData.unitReviews.length / limitNumber),
-            limit: limitNumber,
-          },
-        };
-        break;
-      }
-      case 'BUILDING': {
-        const buildingData = await Review.getBuildingViewData(addressId);
-        const allReviews = [...buildingData.buildingReviews, ...buildingData.unitReviews];
-        responseData = {
-          level: 'BUILDING',
-          buildingReviews: buildingData.buildingReviews.map(toDto),
-          unitReviews: buildingData.unitReviews
-            .slice((pageNumber - 1) * limitNumber, pageNumber * limitNumber)
-            .map(toDto),
-          aggregatedStats: buildingData.aggregatedStats,
-          totalReviews: allReviews.length,
-          pagination: {
-            currentPage: pageNumber,
-            totalPages: Math.ceil(allReviews.length / limitNumber),
-            limit: limitNumber,
-          },
-        };
-        break;
-      }
-      case 'STREET': {
-        const streetData = await Review.getStreetViewData(addressId);
-        responseData = {
-          level: 'STREET',
-          aggregatedStats: streetData.aggregatedStats,
-          buildingCount: streetData.buildingCount,
-          totalReviews: streetData.aggregatedStats.totalReviews,
-        };
-        break;
-      }
-      default:
-        return badRequest(res, { message: 'Invalid address level for reviews' });
+    if (address === null) {
+      return badRequest(res, { message: 'Invalid address level for reviews' });
     }
 
-    return ok(res, responseData);
+    const data = await loadHierarchy(address, viewer);
+
+    if (data.level === 'UNIT') {
+      const total = data.unitReviews.length;
+      return ok(res, {
+        level: 'UNIT',
+        unitReviews: serializeReviews(pageOf(data.unitReviews, page, limit)),
+        buildingSummary: data.buildingSummary,
+        totalReviews: total,
+        pagination: { currentPage: page, totalPages: Math.ceil(total / limit), limit },
+      });
+    }
+
+    if (data.level === 'BUILDING') {
+      // `totalReviews` counts BOTH lists while the page slices only the unit
+      // one — the source's behaviour, preserved rather than tidied, because the
+      // building's own reviews are rendered above the paginated flat list.
+      const total = data.buildingReviews.length + data.unitReviews.length;
+      return ok(res, {
+        level: 'BUILDING',
+        buildingReviews: serializeReviews(data.buildingReviews),
+        unitReviews: serializeReviews(pageOf(data.unitReviews, page, limit)),
+        aggregatedStats: data.aggregatedStats,
+        totalReviews: total,
+        pagination: { currentPage: page, totalPages: Math.ceil(total / limit), limit },
+      });
+    }
+
+    return ok(res, {
+      level: 'STREET',
+      aggregatedStats: data.aggregatedStats,
+      buildingCount: data.buildingCount,
+      totalReviews: data.aggregatedStats.totalReviews,
+    });
   } catch (error) {
     logger.error('Error fetching hierarchical reviews', { error: error instanceof Error ? error.message : String(error) });
     return serverError(res, { message: 'Failed to fetch reviews' });
@@ -198,60 +365,48 @@ export const getAddressReviewStats = async (req: Request, res: Response) => {
   try {
     const { addressId } = req.params;
 
-    if (!Types.ObjectId.isValid(addressId)) {
+    if (!isPossibleId(addressId)) {
       return badRequest(res, { message: 'Invalid address ID' });
     }
 
-    const address = await Address.findById(addressId);
-    if (!address) {
+    const address = await findHierarchyAddress(addressId);
+    if (address === undefined) {
       return notFound(res, { message: 'Address not found' });
     }
-
-    const addressLevel = address.getAddressLevel();
-    let statsData: Record<string, unknown> = {};
-
-    switch (addressLevel) {
-      case 'UNIT': {
-        const unitData = await Review.getUnitViewData(addressId);
-        statsData = {
-          level: 'UNIT',
-          unitStats: {
-            averageRating: unitData.unitReviews.length > 0
-              ? unitData.unitReviews.reduce((sum, r) => sum + r.rating, 0) / unitData.unitReviews.length
-              : 0,
-            totalReviews: unitData.unitReviews.length,
-            recommendationPercentage: unitData.unitReviews.length > 0
-              ? (unitData.unitReviews.filter((r) => r.recommendation).length / unitData.unitReviews.length) * 100
-              : 0,
-          },
-          buildingSummary: unitData.buildingSummary,
-        };
-        break;
-      }
-      case 'BUILDING': {
-        const buildingData = await Review.getBuildingViewData(addressId);
-        statsData = {
-          level: 'BUILDING',
-          aggregatedStats: buildingData.aggregatedStats,
-          buildingReviewCount: buildingData.buildingReviews.length,
-          unitReviewCount: buildingData.unitReviews.length,
-        };
-        break;
-      }
-      case 'STREET': {
-        const streetData = await Review.getStreetViewData(addressId);
-        statsData = {
-          level: 'STREET',
-          aggregatedStats: streetData.aggregatedStats,
-          buildingCount: streetData.buildingCount,
-        };
-        break;
-      }
-      default:
-        return badRequest(res, { message: 'Invalid address level for review stats' });
+    if (address === null) {
+      return badRequest(res, { message: 'Invalid address level for review stats' });
     }
 
-    return ok(res, { stats: statsData });
+    const data = await loadHierarchy(address, null);
+
+    if (data.level === 'UNIT') {
+      return ok(res, {
+        stats: {
+          level: 'UNIT',
+          unitStats: data.unitStats,
+          buildingSummary: data.buildingSummary,
+        },
+      });
+    }
+
+    if (data.level === 'BUILDING') {
+      return ok(res, {
+        stats: {
+          level: 'BUILDING',
+          aggregatedStats: data.aggregatedStats,
+          buildingReviewCount: data.buildingReviews.length,
+          unitReviewCount: data.unitReviews.length,
+        },
+      });
+    }
+
+    return ok(res, {
+      stats: {
+        level: 'STREET',
+        aggregatedStats: data.aggregatedStats,
+        buildingCount: data.buildingCount,
+      },
+    });
   } catch (error) {
     logger.error('Error fetching hierarchical review stats', { error: error instanceof Error ? error.message : String(error) });
     return serverError(res, { message: 'Failed to fetch review statistics' });
@@ -269,22 +424,18 @@ export const getAddressReviewStats = async (req: Request, res: Response) => {
  */
 async function notifyAddressOwners(params: {
   reviewerOxyUserId: string;
-  addressId: Types.ObjectId;
-  buildingLevelId?: Types.ObjectId;
-  reviewId: Types.ObjectId;
+  addressId: string;
+  buildingLevelId: string;
+  reviewId: string;
 }): Promise<void> {
   try {
-    const addressIds = [params.addressId];
-    if (params.buildingLevelId && String(params.buildingLevelId) !== String(params.addressId)) {
-      addressIds.push(params.buildingLevelId);
-    }
+    const addressIds =
+      params.buildingLevelId === params.addressId
+        ? [params.addressId]
+        : [params.addressId, params.buildingLevelId];
 
-    const owners: string[] = await Property.distinct('oxyUserId', {
-      addressId: { $in: addressIds },
-      oxyUserId: { $nin: [null, ''] },
-    });
-
-    const recipients = Array.from(new Set(owners.filter((id) => id && id !== params.reviewerOxyUserId)));
+    const owners = await findOwnerOxyUserIdsAtAddresses(addressIds);
+    const recipients = owners.filter((id) => id !== params.reviewerOxyUserId);
 
     await Promise.all(
       recipients.map((recipientOxyUserId) =>
@@ -294,8 +445,8 @@ async function notifyAddressOwners(params: {
           message: 'Someone posted a review at an address where you have a listing.',
           priority: 'low',
           data: {
-            addressId: String(params.addressId),
-            reviewId: String(params.reviewId),
+            addressId: params.addressId,
+            reviewId: params.reviewId,
           },
         }),
       ),
@@ -327,6 +478,17 @@ export const createReview = async (req: Request, res: Response) => {
       return badRequest(res, { message: `Opinion must be at least ${MIN_OPINION_LENGTH} characters long` });
     }
 
+    // The submitted agency NAME is a write-only input: it is resolved into a
+    // canonical agency and only the id is persisted, so it is removed before the
+    // body is normalized into column values.
+    const agencyName = typeof picked.agencyName === 'string' ? picked.agencyName : undefined;
+    delete picked.agencyName;
+
+    const normalized = normalizeReviewCreateInput(picked);
+    if (!normalized.ok) {
+      return badRequest(res, { message: 'Validation error', errors: normalized.errors });
+    }
+
     let coordinates = addressData.latitude && addressData.longitude
       ? { type: 'Point' as const, coordinates: [parseFloat(addressData.longitude), parseFloat(addressData.latitude)] as [number, number] }
       : undefined;
@@ -342,7 +504,7 @@ export const createReview = async (req: Request, res: Response) => {
       coordinates = { type: 'Point', coordinates: geocoded.data.coordinates };
     }
 
-    const address = await Address.findOrCreateCanonical({
+    const address = await findOrCreateCanonicalAddress({
       street: addressData.street.trim(),
       number: addressData.number?.trim() || undefined,
       building_name: addressData.building_name?.trim() || undefined,
@@ -357,97 +519,72 @@ export const createReview = async (req: Request, res: Response) => {
       coordinates,
     });
 
-    const addressLevel = address.getAddressLevel();
-
-    if (!['BUILDING', 'UNIT'].includes(addressLevel)) {
+    // Captured into a local rather than read off the row twice: the narrowing
+    // has to survive into the transaction callback below, and TypeScript drops a
+    // narrowing on a PROPERTY at every function boundary.
+    const addressLevel = address.addressLevel;
+    if (addressLevel !== 'BUILDING' && addressLevel !== 'UNIT') {
       return badRequest(res, { message: 'Reviews can only be created at BUILDING or UNIT level addresses' });
     }
 
-    const existingReview = await Review.findOne({ oxyUserId, addressId: address._id });
-    if (existingReview) {
+    const hierarchy = await resolveAddressHierarchy(address);
+
+    // The ANSWER path, not the check. `reviews_author_address_key` is what makes
+    // "one review per person per address" true — two concurrent submissions both
+    // pass this read — and `insertReview` turns its violation into the same 400.
+    // This read exists so the ordinary case answers without a failed write.
+    const alreadyReviewed = await countReviews(
+      allOfReviews([byAuthor(oxyUserId), atAddress(address.id)]),
+    );
+    if (alreadyReviewed > 0) {
       return badRequest(res, { message: 'You have already reviewed this address' });
     }
 
-    const hierarchicalData: {
-      addressLevel: string;
-      addressId: Types.ObjectId;
-      unitLevelId?: Types.ObjectId;
-      buildingLevelId?: Types.ObjectId;
-      streetLevelId?: Types.ObjectId;
-    } = {
-      addressLevel,
-      addressId: address._id,
-    };
+    let review;
+    try {
+      review = await getDb().transaction(async (tx) => {
+        // Inside the transaction so an agency created for a review that never
+        // lands rolls back with it. `findOrCreateAgencyByName` takes the handle
+        // for exactly this call site.
+        const agency = agencyName?.trim() ? await findOrCreateAgencyByName(agencyName, tx) : null;
 
-    if (addressLevel === 'UNIT') {
-      const buildingLevelData = address.createBuildingLevel();
-      let buildingLevel = await Address.findOne(buildingLevelData);
-      if (!buildingLevel) {
-        buildingLevel = await Address.create(buildingLevelData);
+        return insertReview(tx, {
+          ...normalized.values,
+          // Every field below is resolved SERVER-side and is absent from
+          // `CREATABLE_REVIEW_FIELDS`, so nothing a client sent can reach any of
+          // them — the spread above cannot overwrite them because it comes first.
+          addressId: address.id,
+          addressLevel,
+          streetLevelId: hierarchy.streetLevelId,
+          buildingLevelId: hierarchy.buildingLevelId,
+          unitLevelId: hierarchy.unitLevelId,
+          cityId: address.cityId,
+          neighborhoodId: address.neighborhoodId,
+          agencyId: agency?.id ?? null,
+          oxyUserId,
+        });
+      });
+    } catch (error) {
+      if (error instanceof DuplicateReviewError) {
+        return badRequest(res, { message: 'You have already reviewed this address' });
       }
-
-      const streetLevelData = address.createStreetLevel();
-      let streetLevel = await Address.findOne(streetLevelData);
-      if (!streetLevel) {
-        streetLevel = await Address.create(streetLevelData);
-      }
-
-      hierarchicalData.unitLevelId = address._id;
-      hierarchicalData.buildingLevelId = buildingLevel._id;
-      hierarchicalData.streetLevelId = streetLevel._id;
-    } else if (addressLevel === 'BUILDING') {
-      const streetLevelData = address.createStreetLevel();
-      let streetLevel = await Address.findOne(streetLevelData);
-      if (!streetLevel) {
-        streetLevel = await Address.create(streetLevelData);
-      }
-
-      hierarchicalData.buildingLevelId = address._id;
-      hierarchicalData.streetLevelId = streetLevel._id;
+      throw error;
     }
-
-    // Resolve the submitted agency name into a canonical Agency (write-only
-    // input); the raw name is never persisted on the review.
-    const agencyName = typeof picked.agencyName === 'string' ? picked.agencyName : undefined;
-    delete picked.agencyName;
-    let agencyId: Types.ObjectId | undefined;
-    if (agencyName && agencyName.trim()) {
-      const agency = await Agency.findOrCreateByName(agencyName);
-      if (agency) agencyId = agency._id;
-    }
-
-    const review = new Review({
-      ...picked,
-      ...hierarchicalData,
-      oxyUserId,
-      cityId: address.cityId,
-      neighborhoodId: address.neighborhoodId,
-      agencyId,
-    });
-
-    await review.save();
 
     await notifyAddressOwners({
       reviewerOxyUserId: oxyUserId,
-      addressId: address._id,
-      buildingLevelId: hierarchicalData.buildingLevelId,
-      reviewId: review._id,
+      addressId: address.id,
+      buildingLevelId: hierarchy.buildingLevelId,
+      reviewId: review.id,
     });
 
-    const populatedReview = await Review.findById(review._id)
-      .populate(REVIEW_ADDRESS_POPULATE)
-      .populate({ path: 'agencyId', select: 'name slug' })
-      .lean();
-
-    return created(res, { review: toReviewDTO(populatedReview, oxyUserId) });
+    const hydrated = await findReviewById(review.id, oxyUserId);
+    if (!hydrated) {
+      return serverError(res, { message: 'Failed to create review' });
+    }
+    return created(res, { review: serializeReview(hydrated) });
   } catch (error) {
     logger.error('Error creating review', { error: error instanceof Error ? error.message : String(error) });
-    if (getErrorName(error) === 'ValidationError') {
-      return badRequest(res, {
-        message: 'Validation error',
-        errors: getValidationMessages(error),
-      });
-    }
     return serverError(res, { message: 'Failed to create review' });
   }
 };
@@ -461,25 +598,24 @@ export const getReviewById = async (req: Request, res: Response) => {
     const { reviewId } = req.params;
     const viewer = getOxyUserId(req);
 
-    if (!Types.ObjectId.isValid(reviewId)) {
+    if (!isPossibleId(reviewId)) {
       return badRequest(res, { message: 'Invalid review ID' });
     }
 
-    const review = await Review.findById(reviewId)
-      .populate(REVIEW_ADDRESS_POPULATE)
-      .populate({ path: 'agencyId', select: 'name slug' })
-      .lean();
-
-    if (!review) {
+    const hydrated = await findReviewById(reviewId, viewer);
+    if (!hydrated) {
       return notFound(res, { message: 'Review not found' });
     }
 
     // Hide removed reviews from everyone but their author.
-    if (review.moderationStatus === ReviewModerationStatus.REMOVED && (!viewer || String(review.oxyUserId) !== viewer)) {
+    if (
+      hydrated.review.moderationStatus === ReviewModerationStatus.REMOVED &&
+      (!viewer || hydrated.review.oxyUserId !== viewer)
+    ) {
       return notFound(res, { message: 'Review not found' });
     }
 
-    return ok(res, { review: toReviewDTO(review, viewer) });
+    return ok(res, { review: serializeReview(hydrated) });
   } catch (error) {
     logger.error('Error fetching review', { error: error instanceof Error ? error.message : String(error) });
     return serverError(res, { message: 'Failed to fetch review' });
@@ -491,46 +627,45 @@ export const updateReview = async (req: Request, res: Response) => {
     const { reviewId } = req.params;
     const oxyUserId = getRequiredOxyUserId(req);
 
-    if (!Types.ObjectId.isValid(reviewId)) {
+    if (!isPossibleId(reviewId)) {
       return badRequest(res, { message: 'Invalid review ID' });
-    }
-
-    // Ownership + existence in one query: a non-owner (or missing) review is a
-    // 404, never a leaky 400 that reveals the review exists.
-    const review = await Review.findOne({ _id: reviewId, oxyUserId });
-    if (!review) {
-      return notFound(res, { message: 'Review not found' });
     }
 
     const picked = pickFields<Record<string, unknown>>(req.body, EDITABLE_REVIEW_FIELDS);
 
-    // Re-resolve agency attribution when an agency name is (re)supplied.
-    if (Object.prototype.hasOwnProperty.call(picked, 'agencyName')) {
-      const agencyName = typeof picked.agencyName === 'string' ? picked.agencyName.trim() : '';
-      delete picked.agencyName;
-      if (agencyName) {
-        const agency = await Agency.findOrCreateByName(agencyName);
-        if (agency) review.agencyId = agency._id;
-      }
+    // Write-only input, removed before normalization for the same reason as on
+    // the create path. An EMPTY name is not a clear: Mongo ignored it, and
+    // treating it as "detach" would let a stray empty field silently unlink a
+    // review from the agency its author named.
+    const agencyName = typeof picked.agencyName === 'string' ? picked.agencyName.trim() : '';
+    const agencySupplied = Object.prototype.hasOwnProperty.call(picked, 'agencyName');
+    delete picked.agencyName;
+
+    const normalized = normalizeReviewEditInput(picked);
+    if (!normalized.ok) {
+      return badRequest(res, { message: 'Validation error', errors: normalized.errors });
+    }
+    const patch: ReviewPatch = { ...normalized.values };
+
+    if (agencySupplied && agencyName) {
+      const agency = await findOrCreateAgencyByName(agencyName);
+      if (agency) patch.agencyId = agency.id;
     }
 
-    review.set(picked);
-    await review.save();
+    // Ownership + existence in ONE statement: a non-owner (or missing) review is
+    // a 404, never a leaky 400 that reveals the review exists.
+    const updated = await updateOwnReview({ reviewId, oxyUserId, patch });
+    if (!updated) {
+      return notFound(res, { message: 'Review not found' });
+    }
 
-    const populatedReview = await Review.findById(review._id)
-      .populate(REVIEW_ADDRESS_POPULATE)
-      .populate({ path: 'agencyId', select: 'name slug' })
-      .lean();
-
-    return ok(res, { review: toReviewDTO(populatedReview, oxyUserId) });
+    const hydrated = await findReviewById(updated.id, oxyUserId);
+    if (!hydrated) {
+      return notFound(res, { message: 'Review not found' });
+    }
+    return ok(res, { review: serializeReview(hydrated) });
   } catch (error) {
     logger.error('Error updating review', { error: error instanceof Error ? error.message : String(error) });
-    if (getErrorName(error) === 'ValidationError') {
-      return badRequest(res, {
-        message: 'Validation error',
-        errors: getValidationMessages(error),
-      });
-    }
     return serverError(res, { message: 'Failed to update review' });
   }
 };
@@ -540,12 +675,11 @@ export const deleteReview = async (req: Request, res: Response) => {
     const { reviewId } = req.params;
     const oxyUserId = getRequiredOxyUserId(req);
 
-    if (!Types.ObjectId.isValid(reviewId)) {
+    if (!isPossibleId(reviewId)) {
       return badRequest(res, { message: 'Invalid review ID' });
     }
 
-    const review = await Review.findOneAndDelete({ _id: reviewId, oxyUserId });
-    if (!review) {
+    if (!(await deleteOwnReview({ reviewId, oxyUserId }))) {
       return notFound(res, { message: 'Review not found' });
     }
 
@@ -562,27 +696,39 @@ export const getUserReviews = async (req: Request, res: Response) => {
     const viewer = getOxyUserId(req);
     const { page, limit } = parsePageLimit(req);
 
-    if (!oxyUserId) {
+    if (!isPossibleId(oxyUserId)) {
       return badRequest(res, { message: 'Oxy user id is required' });
     }
 
-    const filter = { oxyUserId, moderationStatus: { $ne: ReviewModerationStatus.REMOVED } };
-    const skip = (page - 1) * limit;
+    /**
+     * The author sees their OWN removed reviews here; nobody else does.
+     *
+     * A deliberate change, and the schema had already committed to it:
+     * `reviews_oxy_user_created_idx` is the one scoped index that is NOT partial
+     * on `moderation_status <> 'removed'`, and its docblock says why — hiding a
+     * removal from its author makes it indistinguishable from a lost submission.
+     * The Mongo filter applied `$ne: 'removed'` to everyone including the
+     * author, which contradicted both that index and `getReviewById`, where the
+     * author-visibility rule was already implemented. This is the same rule in
+     * both places now.
+     *
+     * Nothing is exposed to a third party: the branch is on the viewer BEING the
+     * author, so the public shape of this endpoint is unchanged.
+     */
+    const where = allOfReviews([
+      byAuthor(oxyUserId),
+      viewer === oxyUserId ? undefined : visibleModeration(),
+    ]);
+    const offset = (page - 1) * limit;
 
-    const [reviews, totalReviews] = await Promise.all([
-      Review.find(filter)
-        .populate(REVIEW_ADDRESS_POPULATE)
-        .populate({ path: 'agencyId', select: 'name slug' })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      Review.countDocuments(filter),
+    const [hydrated, totalReviews] = await Promise.all([
+      findReviews({ where, orderBy: [NEWEST_REVIEWS_FIRST], limit, offset, viewer }),
+      countReviews(where),
     ]);
 
     const totalPages = Math.ceil(totalReviews / limit);
     return ok(res, {
-      reviews: reviews.map((review) => toReviewDTO(review, viewer)),
+      reviews: serializeReviews(hydrated),
       pagination: { currentPage: page, totalPages, totalReviews, limit },
       hasMore: page < totalPages,
       totalPages,
@@ -602,37 +748,30 @@ export const toggleHelpful = async (req: Request, res: Response) => {
     const { reviewId } = req.params;
     const oxyUserId = getRequiredOxyUserId(req);
 
-    if (!Types.ObjectId.isValid(reviewId)) {
+    if (!isPossibleId(reviewId)) {
       return badRequest(res, { message: 'Invalid review ID' });
     }
 
-    const review = await Review.findById(reviewId);
+    const review = await findReviewAuthor(reviewId);
     if (!review) {
       return notFound(res, { message: 'Review not found' });
     }
 
-    if (String(review.oxyUserId) === oxyUserId) {
+    if (review.oxyUserId === oxyUserId) {
       return badRequest(res, { message: 'You cannot mark your own review as helpful' });
     }
 
-    const alreadyVoted = (review.helpfulVoters || []).map(String).includes(oxyUserId);
-    const update = alreadyVoted
-      ? { $pull: { helpfulVoters: oxyUserId } }
-      : { $addToSet: { helpfulVoters: oxyUserId } };
-
-    const updated = await Review.findByIdAndUpdate(reviewId, update, { new: true });
-    const helpfulCount = updated?.helpfulVoters?.length ?? 0;
-    const viewerHasVotedHelpful = !alreadyVoted;
+    const { helpfulCount, viewerHasVotedHelpful } = await toggleHelpfulVote({ reviewId, oxyUserId });
 
     // Notify the author on a NEW helpful vote only (never on un-vote, never for
     // one's own review — already rejected above). Best-effort.
-    if (!alreadyVoted) {
-      await notificationDispatchService.createForUser(String(review.oxyUserId), {
+    if (viewerHasVotedHelpful) {
+      await notificationDispatchService.createForUser(review.oxyUserId, {
         type: 'review_helpful',
         title: 'Your review was marked helpful',
         message: 'Someone found your address review helpful.',
         priority: 'low',
-        data: { reviewId: String(review._id) },
+        data: { reviewId: review.id },
       });
     }
 
@@ -653,7 +792,7 @@ export const reportReview = async (req: Request, res: Response) => {
     // review created after the cutover carries a uuid v7, for which it is false.
     // Keeping it would answer "invalid review ID" for every new review. The
     // lookup below already answers "no such review", for every id shape.
-    if (typeof reviewId !== 'string' || reviewId.length === 0) {
+    if (!isPossibleId(reviewId)) {
       return badRequest(res, { message: 'Invalid review ID' });
     }
 
@@ -746,27 +885,12 @@ export const reportReview = async (req: Request, res: Response) => {
 // Agencies (public reads).
 // ---------------------------------------------------------------------------
 
-interface AgencyLike {
-  _id: unknown;
-  name: string;
-  slug: string;
-}
-
-/**
- * A published, publicly-visible listing, as an agency page counts and lists one.
- *
- * Shared by the count and the page so the two can never disagree — a total that
- * exceeded the listings actually shown would read as a pagination bug. The
- * moderation clause is `$ne: true` rather than `false` for the reason given in
- * `controllers/property/publicVisibility.ts`: listings written before the field
- * existed carry no `moderation` subdocument at all.
- */
 /**
  * What the public may see of an agency's catalogue: published, not archived,
  * not restricted by a jury.
  *
  * A drizzle predicate rather than a Mongo filter object — the agency listing
- * count and the agency listing page both read Postgres now. It is a FUNCTION
+ * count and the agency listing page both read Postgres. It is a FUNCTION
  * because a `SQL` fragment carries its own bound parameters and must not be
  * shared between two statements as a constant.
  */
@@ -775,12 +899,12 @@ function publicAgencyListings(agencyId: string): SQL | undefined {
     statusIs('published'),
     notDeleted(),
     notModerationRestricted(),
-    ofAgency(agencyId),
+    listingsOfAgency(agencyId),
   ]);
 }
 
-function toAgencySummary(agency: AgencyLike): { id: string; name: string; slug: string } {
-  return { id: String(agency._id), name: agency.name, slug: agency.slug };
+function toAgencySummary(agency: AgencyRow): { id: string; name: string; slug: string } {
+  return { id: agency.id, name: agency.name, slug: agency.slug };
 }
 
 export const searchAgencies = async (req: Request, res: Response) => {
@@ -795,12 +919,8 @@ export const searchAgencies = async (req: Request, res: Response) => {
       return ok(res, { agencies: [] });
     }
 
-    const agencies = await Agency.find({ normalizedName: { $regex: `^${escapeRegex(normalized)}` } })
-      .sort({ normalizedName: 1 })
-      .limit(10)
-      .lean();
-
-    return ok(res, { agencies: agencies.map((agency) => toAgencySummary(agency as unknown as AgencyLike)) });
+    const agencies = await findAgenciesByNamePrefix(normalized);
+    return ok(res, { agencies: agencies.map(toAgencySummary) });
   } catch (error) {
     logger.error('Error searching agencies', { error: error instanceof Error ? error.message : String(error) });
     return serverError(res, { message: 'Failed to search agencies' });
@@ -809,18 +929,18 @@ export const searchAgencies = async (req: Request, res: Response) => {
 
 export const getAgencyBySlug = async (req: Request, res: Response) => {
   try {
-    const agency = await Agency.findOne({ slug: req.params.slug }).lean();
+    const agency = await findAgencyBySlug(req.params.slug);
     if (!agency) {
       return notFound(res, { message: 'Agency not found' });
     }
 
     const [stats, listingsCount] = await Promise.all([
-      Review.getAgencyStats(agency._id),
-      countProperties(publicAgencyListings(String(agency._id))),
+      getAgencyStats(agency.id),
+      countProperties(publicAgencyListings(agency.id)),
     ]);
 
     return ok(res, {
-      agency: toAgencySummary(agency as unknown as AgencyLike),
+      agency: toAgencySummary(agency),
       stats: { ...stats, listingsCount },
     });
   } catch (error) {
@@ -834,29 +954,23 @@ export const getAgencyReviews = async (req: Request, res: Response) => {
     const viewer = getOxyUserId(req);
     const { page, limit } = parsePageLimit(req);
 
-    const agency = await Agency.findOne({ slug: req.params.slug }).lean();
+    const agency = await findAgencyBySlug(req.params.slug);
     if (!agency) {
       return notFound(res, { message: 'Agency not found' });
     }
 
-    const filter = { agencyId: agency._id, moderationStatus: { $ne: ReviewModerationStatus.REMOVED } };
-    const skip = (page - 1) * limit;
+    const where = allOfReviews([ofAgency(agency.id), visibleModeration()]);
+    const offset = (page - 1) * limit;
 
-    const [reviews, totalReviews] = await Promise.all([
-      Review.find(filter)
-        .populate(REVIEW_ADDRESS_POPULATE)
-        .populate({ path: 'agencyId', select: 'name slug' })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      Review.countDocuments(filter),
+    const [hydrated, totalReviews] = await Promise.all([
+      findReviews({ where, orderBy: [NEWEST_REVIEWS_FIRST], limit, offset, viewer }),
+      countReviews(where),
     ]);
 
     const totalPages = Math.ceil(totalReviews / limit);
     return ok(res, {
-      agency: toAgencySummary(agency as unknown as AgencyLike),
-      reviews: reviews.map((review) => toReviewDTO(review, viewer)),
+      agency: toAgencySummary(agency),
+      reviews: serializeReviews(hydrated),
       pagination: { currentPage: page, totalPages, totalReviews, limit },
       hasMore: page < totalPages,
       totalPages,
@@ -871,12 +985,12 @@ export const getAgencyProperties = async (req: Request, res: Response) => {
   try {
     const { page, limit } = parsePageLimit(req);
 
-    const agency = await Agency.findOne({ slug: req.params.slug }).lean();
+    const agency = await findAgencyBySlug(req.params.slug);
     if (!agency) {
       return notFound(res, { message: 'Agency not found' });
     }
 
-    const where = publicAgencyListings(String(agency._id));
+    const where = publicAgencyListings(agency.id);
     const skip = (page - 1) * limit;
 
     const [hydrated, total] = await Promise.all([
@@ -908,7 +1022,7 @@ export const getAgencyProperties = async (req: Request, res: Response) => {
 
 export const getExploreCities = async (_req: Request, res: Response) => {
   try {
-    const cities = await Review.getCitiesWithReviews();
+    const cities = await getCitiesWithReviews();
     return ok(res, { cities });
   } catch (error) {
     logger.error('Error fetching explore cities', { error: error instanceof Error ? error.message : String(error) });
@@ -919,10 +1033,10 @@ export const getExploreCities = async (_req: Request, res: Response) => {
 export const getExploreCity = async (req: Request, res: Response) => {
   try {
     const { cityId } = req.params;
-    if (!Types.ObjectId.isValid(cityId)) {
+    if (!isPossibleId(cityId)) {
       return badRequest(res, { message: 'Invalid city ID' });
     }
-    const neighborhoods = await Review.getNeighborhoodSummaries(cityId);
+    const neighborhoods = await getNeighborhoodSummaries(cityId);
     return ok(res, { neighborhoods });
   } catch (error) {
     logger.error('Error fetching explore city', { error: error instanceof Error ? error.message : String(error) });
@@ -935,11 +1049,11 @@ export const getExploreNeighborhood = async (req: Request, res: Response) => {
     const { neighborhoodId } = req.params;
     const { page, limit } = parsePageLimit(req);
 
-    if (!Types.ObjectId.isValid(neighborhoodId)) {
+    if (!isPossibleId(neighborhoodId)) {
       return badRequest(res, { message: 'Invalid neighborhood ID' });
     }
 
-    const { buildings, total } = await Review.getBuildingSummaries(neighborhoodId, page, limit);
+    const { buildings, total } = await getBuildingSummaries({ neighborhoodId, page, limit });
     const totalPages = Math.max(1, Math.ceil(total / limit));
 
     return ok(res, {
