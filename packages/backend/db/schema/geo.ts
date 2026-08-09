@@ -132,9 +132,34 @@ export const cities = pgTable(
      * speculative index CONVENTIONS.md forbids — it would cost every write and
      * serve no read.
      *
-     * Named columns rather than a `{ lat, lng }` object for the same reason
-     * `addresses` uses them: an ORDERED PAIR is transposable and a named pair is
-     * not.
+     * **Re-examined 2026-08-09 against the instruction "para el geo habría que
+     * usar PostGIS", and kept — because every proximity query really does
+     * resolve through `addresses`.** The claim above was an argument; this is
+     * the measurement. Every site in the package that does distance or
+     * containment:
+     *
+     * | Site | Operator | Resolves against |
+     * |---|---|---|
+     * | `neighborhoodController` (the only ported PostGIS caller) | `ST_DWithin` + `ST_Distance` KNN | `.from(addresses).innerJoin(neighborhoods, …)` |
+     * | `controllers/property/areaInsights` | `$near` | `Address.find` |
+     * | `services/areaPriceComparison` | `$near` | `Address.find` |
+     * | `controllers/property/searchQueryBuilder` | `$geoWithin` / `$centerSphere` | Address → Property |
+     * | `controllers/eviction/browse` | `$geoWithin` | `eviction_cases.location`, which has its OWN geography column |
+     * | `services/nearbyServicesService` | haversine in JS | Overpass POIs, an external API — not a Homiio table |
+     *
+     * So `cities.latitude/longitude` and `neighborhoods.latitude/longitude` are
+     * read for map framing and nothing else, and the owner's instruction is
+     * satisfied by `addresses.geo` (plus `eviction_cases`). Adding a generated
+     * `geography` here later is a one-line, additive `pre` migration, so nothing
+     * is foreclosed if a city-proximity feature ever arrives — and the honest
+     * trigger for it is a query, not a resemblance.
+     *
+     * What DOES need guarding either way is a lat/lon transposition, which is
+     * silent: the swapped pair is a valid point in the wrong hemisphere. Named
+     * columns rather than a `{ lat, lng }` object make it unrepresentable in the
+     * schema, and `__tests__/db/geoBackfill.test.ts` asks PostGIS for the real
+     * Barcelona-to-Madrid distance after a copy, because a non-null coordinate
+     * proves nothing.
      */
     latitude: doublePrecision(),
     longitude: doublePrecision(),

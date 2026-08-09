@@ -294,6 +294,28 @@ That is a fact about this data on this date, not a general one — the audit sti
 runs on every invocation, because the collections stay writable until the
 cutover.
 
+### `--reconcile`, and why the plain copy could not close the incident
+
+`ON CONFLICT DO NOTHING` cannot repair a row, which is correct for a copy and a
+gap the moment the target holds rows this script did not write. Both ways that
+happens are real and both happened here:
+
+- **Somebody else populated the tables.** A hand copy had already loaded the four
+  geo tables with every `cover_image_id` NULL — it had no `images` rows to point
+  at, so copying them would have been a `23503`. Every row was present, the copy
+  skipped all 1,660, and `/api/cities/popular` — whose whole filter is
+  `cover_image_id is not null` — kept answering `[]`. The verifier is what found
+  it; the copy alone reported five clean `skippedExisting` lines.
+- **Mongo is still live.** It stays authoritative until the cutover, so a row
+  copied an hour ago can be edited now and the target is stale by definition.
+  Measured: four rows had a newer `updated_at` in Mongo than in Postgres within
+  half an hour of the first copy.
+
+`--reconcile` is explicit, never the default, and writes EVERY column of a
+differing row rather than only the wrong one — `updated_at` carries drizzle's
+`$onUpdate`, so an `UPDATE` that does not name it stamps the row with the moment
+of the repair, replacing the historical value this migration exists to preserve.
+
 **`properties_count` is copied, not recomputed.** Properties do not exist in
 Postgres yet, so recomputing would write zero to every row and flatten the sort
 key `GET /api/cities`, `/popular` and `/search` all order by. The stored value is
