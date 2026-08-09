@@ -23,6 +23,11 @@ Infra (ECS task definitions, ALB, ECR, SSM, the S3 bucket) lives in
   in the ECS env.
 - Worker: the same ECR image, a separate ECS service (`app-homiio-worker.tf`),
   entrypoint `packages/backend/worker.ts`.
+- Both the API and worker task definitions carry two database secrets,
+  `MONGODB_URI` and `DATABASE_URL` — see "Data storage" below for what each
+  serves. A secret added to either task definition must be added to
+  `deploy-aws.yml`'s explicit sync allowlist in the SAME change, or it is
+  silently never synced to SSM.
 
 ## Commands
 
@@ -49,7 +54,7 @@ bikeshed or docs-only ones unless trivial.
 ```
 packages/
   frontend/           @homiio/frontend          Expo / RN / NativeWind
-  backend/            @homiio/backend           Express / Mongoose / Stripe / Sharp
+  backend/            @homiio/backend           Express / Mongoose + PostgreSQL (dual-run) / Stripe / Sharp
   shared-types/       @homiio/shared-types      address, city, lease, profile, property, review
   listing-providers/  @homiio/listing-providers Plugin contract, FetchRuntime, provider plugins
 ```
@@ -58,6 +63,70 @@ The production Dockerfile builds in dependency order: `shared-types`, then
 `listing-providers`, then `backend`. The API image includes
 `@homiio/listing-providers`, and the worker uses the same image with a different
 start command.
+
+## Data storage: Mongo→Postgres migration (CRITICAL — read before touching any domain below)
+
+Homiio is mid-migration from MongoDB/Mongoose to PostgreSQL. **Both stores are
+live at once** ("the dual-run") and neither connector knows about the other —
+`config.ts` keeps `MONGODB_URI` and `DATABASE_URL` in separate keys on purpose,
+so a Postgres connection string can never reach mongoose. Database `homiio` on
+the shared RDS instance `oxy-postgres`, with **PostGIS** installed once by a
+privileged role (it is not a trusted extension — the app role that owns the
+database cannot install it itself). `MONGODB_URI` is required at boot;
+`DATABASE_URL` is optional at boot (an image deployed before it lands on the
+task definition must still start) but required the moment any code calls
+`connectPostgres()`.
+
+**The porting rules — id preservation, the census-before-porting discipline,
+schema-fixture pitfalls already found and fixed once — live in
+`packages/backend/db/MIGRATION-CONTRACT.md`, and the table-by-table schema
+decisions in `packages/backend/db/schema/CONVENTIONS.md`. Read those before
+porting or touching any table; this section is only the current state.**
+
+- **Ported to Postgres** (repository code under `packages/backend/db/<domain>/`,
+  controllers call the repository, not a Mongoose model): the property
+  catalogue's READS, addresses and geo reference data, images, tenancy (leases,
+  applications, viewings, reservations, home exchanges), saved
+  properties/folders/recently-viewed, conversations and the profile sidecar,
+  notifications and saved searches, the roommate handshake, the CrowdSource
+  moderation pipeline, and evictions.
+- **Still Mongoose**, around three dozen backend files as of this writing
+  (controllers, services, scripts, `worker.ts`) — this number moves, so
+  re-count it rather than trusting a figure here; `MIGRATION-CONTRACT.md`'s
+  "census who else reads it" recipe is the right shape (grep the model name
+  across `controllers/`, `services/`, `routes/`, `utils/`, `middlewares/`, not
+  just a file list). Includes property/room/review create-update-delete,
+  partner commissions, analytics, billing, telegram, the neighborhood and
+  area-price services, and the whole listing-ingestion pipeline
+  (`scraperService`, `IngestionService`, `ExternalMediaIngest`).
+- **Property WRITES are the significant gap, and it inverts which store is
+  fresher.** The catalogue's read repository (`db/properties/propertyReads.ts`)
+  serves every property/search/list endpoint from Postgres, but
+  `controllers/property/create.ts`, `updateDelete.ts` and `transact.ts` — and
+  the ingestion worker — still write ONLY to Mongo. Postgres holds a
+  point-in-time copy from the backfill; Mongo keeps moving. **This is latent
+  risk, not yet realized damage**, only because so little writes to properties
+  right now — but it means Postgres reads are silently drifting stale for any
+  property created or edited since the backfill, and the exposure gets worse,
+  not better, the longer the write-path port is deferred. Do not add a NEW
+  Postgres-only read against `properties`/`addresses`/`images` without checking
+  whether the write path feeding it is still Mongo-only.
+- **Profiles are the same shape, narrower.** A profile write lands in Postgres
+  (`db/profiles/profileRepository.ts`), but multiple controllers (roommates
+  among them) still resolve a profile by reading the Mongoose `Profile` model
+  directly — census before adding a new profile reader.
+- **Migrations:** `bun run db:migrate` (`db/migrate.ts --phase=all` for a
+  developer database), applied in production as a one-shot ECS task running the
+  compiled `dist/db/migrate.js` — same `pre`/`post` deploy-phase convention as
+  the rest of Oxy. Never `drizzle-kit migrate`.
+- **Tests:** `docker-compose.postgres.yml` runs `postgis/postgis:17-3.5` on
+  `127.0.0.1:5434` (5432 and 5433 are already taken by oxy-api's and Mention's
+  own compose files on the same machine). `bun run --cwd packages/backend test`
+  treats a reachable Postgres as a **hard prerequisite** — the suite refuses to
+  start without it, it does not skip silently. `db/testDatabase.ts` gives each
+  jest worker its own throwaway, fully-migrated database
+  (`@oxyhq/db/testing`, prefix `oxydb_test_`), migrated by calling the real
+  `db/migrate.ts` entrypoint rather than a second, divergent migrator.
 
 ## Key features
 
@@ -79,9 +148,11 @@ telegram, tips, viewings.
 
 Property, room and **lease** create and update take the session `oxyUserId` from
 `@oxyhq/core/server` (`requireSessionOxyUserId`), never an owner id from the
-client. Updates and deletes go through `Model.findOne({ _id, oxyUserId })`, so a
-non-owner gets a 404. Profile is an optional real-estate sidecar keyed by
-`oxyUserId`, not an ownership authority.
+client. Property and room (still Mongoose) go through
+`Model.findOne({ _id, oxyUserId })`, so a non-owner gets a 404; lease (on
+Postgres) enforces the same rule by filtering on `landlordOxyUserId` /
+`tenantOxyUserId` in the repository query instead. Profile is an optional
+real-estate sidecar keyed by `oxyUserId`, not an ownership authority.
 
 - Shared guard: `packages/backend/utils/pickFields.ts`, one implementation for
   every write controller.
@@ -92,9 +163,12 @@ non-owner gets a 404. Profile is an optional real-estate sidecar keyed by
 
 ## Leases and contracts
 
-Leases are first-class Mongoose documents. The schema is the authority and
-`controllers/lease/toLeaseDTO.ts` serializes `_id` to `id` plus optional
-populated `property`, `landlord` and `tenant` for the frontend.
+Leases are on **Postgres** (`leases` and six child tables — `db/leases/`, see
+"Data storage" above), and empty in production at cutover, so the port carried
+no backfill. `controllers/leaseController.ts` calls the `db/leases/` repository
+rather than a model; `leaseSerializer.ts` is the DTO boundary (id, and optional
+hydrated `property`/`landlord`/`tenant`, for the frontend) in place of the old
+Mongoose virtuals.
 
 - **Backend routes:** `/api/leases`, with list (`?status=`, `?propertyId=`),
   CRUD, sub-resources (`/:id/payments`, `/:id/documents`) and lifecycle
@@ -113,10 +187,12 @@ populated `property`, `landlord` and `tenant` for the frontend.
 ## Notifications (CRITICAL)
 
 Event-driven in-app notifications have **one write chokepoint**:
-`services/notificationDispatchService.ts`. Controllers call `createForUser` for
-domain events (lease signed, viewing approved, roommate request) and never
-`Notification.create` directly. Dispatch is best effort, swallowing and logging,
-because the domain action must succeed even if the mailbox write fails.
+`services/notificationDispatchService.ts`, backed by
+`db/notifications/notificationRepository.ts` on **Postgres** (see "Data
+storage" above). Controllers call `createForUser` for domain events (lease
+signed, viewing approved, roommate request) and never write the repository
+directly. Dispatch is best effort, swallowing and logging, because the domain
+action must succeed even if the mailbox write fails.
 
 The frontend has **no realtime socket client** for notifications. Mailbox refresh
 is refetch-on-focus plus React Query invalidation after writes
@@ -138,12 +214,12 @@ arises, ask the user first.
 
 ## Roommates
 
-Accepted roommate requests materialize a `RoommateRelationship` document
-(`models/schemas/RoommateRelationshipSchema.ts`). Routes:
-`GET /api/roommates/relationships` and
-`DELETE /api/roommates/relationships/:relationshipId`. Ownership and participant
-resolution use `Profile.findByOxyUserId`, the same rule as property and lease
-writes.
+The roommate handshake (requests and accepted relationships) is on **Postgres**
+(`roommate_requests` / `roommate_relationships`, `db/roommates/roommateRepository.ts`
+— see "Data storage" above). Routes: `GET /api/roommates/relationships` and
+`DELETE /api/roommates/relationships/:relationshipId`. Participant resolution
+still reads the profile from Mongoose in places — part of the profile
+divided-authority gap noted above, not yet closed here.
 
 ## Partner commissions (mark-transacted)
 
