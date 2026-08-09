@@ -210,6 +210,29 @@ Mongoose. Deliberately not a trigger: a trigger is invisible in the schema file,
 and it would fire during backfill and overwrite the historical value the
 migration exists to preserve.
 
+> **That last sentence is the trap, not the reassurance it reads as.** Rejecting
+> the trigger did not remove the hazard — it moved it from "always" to "unless
+> you name the column". `$onUpdate` fires on **every `db.update()` that does not
+> set `updated_at` explicitly**, so a repair touching one wrong column restamps
+> the row with the migration's clock and destroys exactly the value the trigger
+> was rejected for destroying. Any backfill, reconcile or one-shot repair must
+> either write the source's `updated_at` explicitly or write the whole row.
+>
+> Not hypothetical, and not one person's slip: during the geo backfill
+> (2026-08-09) two independent repairs of the SAME 1,213 city covers each met it
+> from a different direction and each had to defend against it by hand. A hazard
+> two people meet independently belongs to the column helper, not to the task —
+> which is why it is recorded here beside the helper rather than in either
+> script.
+>
+> Writing the whole row is the more robust of the two defences, because it does
+> not depend on remembering. A test that pins it needs a fixture where
+> `updated_at` is ALREADY correct and some other column is wrong: with both
+> wrong, "write the columns that differ" and "write every column" produce the
+> same result and the weaker one passes. Reference:
+> `__tests__/db/geoBackfill.test.ts`, "repairs a row whose ONLY wrong column is
+> the cover, without stamping updated_at".
+
 Where Mongo kept a SECOND, application-written timestamp beside
 `timestamps: true` — `cities.last_updated` — both are ported. They are two
 different facts: one moves on any write, the other only when the count is
