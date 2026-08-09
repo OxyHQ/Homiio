@@ -25,7 +25,6 @@
  * are correct, and a credentialed environment uploads the bytes unchanged.
  */
 
-import type { Types } from 'mongoose';
 import type { ImageEntityType, PropertyImageRef } from '@homiio/shared-types';
 import imageUploadService, { type ImageBufferInput } from '../services/imageUploadService';
 import { toPropertyImages } from '../services/imageSerializer';
@@ -109,7 +108,7 @@ function shouldAllowUnconfiguredStorage(): boolean {
  * primary). The first URL becomes the primary/cover image.
  */
 export async function seedPropertyImages(
-  propertyId: Types.ObjectId | string,
+  propertyId: string,
   imageUrls: readonly string[]
 ): Promise<PropertyImageRef[]> {
   const allowUnconfiguredStorage = shouldAllowUnconfiguredStorage();
@@ -117,7 +116,7 @@ export async function seedPropertyImages(
 
   for (let index = 0; index < imageUrls.length; index += 1) {
     const input = await fetchImageBuffer(imageUrls[index]);
-    const image = await imageUploadService.createImageForEntity('property', String(propertyId), input, {
+    const image = await imageUploadService.createImageForEntity('property', propertyId, input, {
       isPrimary: index === 0,
       order: index,
       allowUnconfiguredStorage,
@@ -135,7 +134,7 @@ export async function seedPropertyImages(
  */
 export async function seedEntityCoverImage(
   entityType: ImageEntityType,
-  entityId: Types.ObjectId | string,
+  entityId: string,
   url: string | undefined,
   caption: string
 ): Promise<string | null> {
@@ -144,7 +143,7 @@ export async function seedEntityCoverImage(
   const input = await fetchImageBuffer(url);
   const image = await imageUploadService.createImageForEntity(
     entityType,
-    String(entityId),
+    entityId,
     input,
     {
       isPrimary: true,
