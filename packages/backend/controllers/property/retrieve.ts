@@ -12,12 +12,21 @@
  * cutover will see them reset, and the honest explanation is that they were
  * never being counted, not that the port lost them.
  *
- * The recently-viewed upsert is still Mongo, and deliberately so: it belongs to
- * the saved-items batch (`Saved`, `SavedPropertyFolder`, `RecentlyViewed`),
- * which moves as one piece.
+ * ## The recently-viewed upsert moved too, and it had drifted further than a
+ * ## store
+ *
+ * It wrote Mongo keyed by a `profileId` while #308 moved the READ of that table
+ * to Postgres keyed by `oxy_user_id` — so the write and the read were in
+ * different stores AND on different keys, and neither would ever have found the
+ * other's rows. It is `trackPropertyView` now, which takes the Oxy user id
+ * directly.
+ *
+ * That removes the `Profile.findByOxyUserId` lookup entirely rather than
+ * porting it: it existed only to turn an Oxy user id into the profile id this
+ * table used to be keyed by, and the table is not keyed that way any more. A
+ * listing view no longer depends on the viewer having a profile row at all.
  */
 
-import { Profile, RecentlyViewed } from '../../models';
 import { AppError, successResponse, paginationResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
 import {
@@ -28,6 +37,8 @@ import {
   NEWEST_FIRST,
 } from '../../db/properties/propertyReads';
 import { ownedBy, statusIsNot } from '../../db/properties/propertyFilters';
+import { getDb } from '../../db/postgres';
+import { trackPropertyView } from '../../db/saved/recentlyViewedRepository';
 import { incrementPropertyViews } from '../../db/properties/propertyWrites';
 import { serializeProperty } from '../../db/properties/propertySerializer';
 import { getErrorName } from '../../utils/errors';
@@ -60,23 +71,13 @@ export async function getPropertyById(req: ControllerRequest, res: ControllerRes
       logger.warn('Failed to increment property view count', { propertyId, error });
     });
 
-    const oxyUserId = req.user?.id || req.user?._id;
-    if (req.userId && oxyUserId) {
-      try {
-        const activeProfile = await Profile.findByOxyUserId(oxyUserId);
-        if (activeProfile) {
-          const profileId = activeProfile._id;
-          RecentlyViewed.findOneAndUpdate(
-            { profileId, propertyId },
-            { profileId, propertyId, viewedAt: new Date() },
-            { upsert: true, new: true }
-          ).catch((error: unknown) => {
-            logger.warn('Failed to update recently viewed property', { propertyId, error });
-          });
-        }
-      } catch (error) {
-        logger.warn('Failed to resolve profile for recently viewed property', { propertyId, error });
-      }
+    const oxyUserId = req.user?.id ?? req.user?._id;
+    if (typeof oxyUserId === 'string' && oxyUserId.length > 0) {
+      // Best-effort, like the counter above: a reading history is not worth
+      // failing the read it records.
+      void trackPropertyView(getDb(), oxyUserId, propertyId).catch((error: unknown) => {
+        logger.warn('Failed to update recently viewed property', { propertyId, error });
+      });
     }
     res.json(successResponse(serializeProperty(hydrated), 'Property retrieved successfully'));
   } catch (error) {

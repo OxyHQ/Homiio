@@ -7,11 +7,28 @@ import type { Request, Response, NextFunction } from 'express';
 
 import { telegramService } from '../services';
 import { AppError, successResponse } from '../middlewares/errorHandler';
-import { Property } from '../models';
-import type { IProperty } from '../models/documentTypes';
+import type { SQL } from 'drizzle-orm';
+
 import config from '../config';
-import { resolveAddressDisplay } from '../services/geoDisplayService';
-import { resolveGeoFilterAddressIds } from '../services/geoQueryService';
+import { properties } from '../db/schema';
+import {
+  allOf,
+  findProperties,
+  findPropertyById,
+  NEWEST_FIRST,
+} from '../db/properties/propertyReads';
+import { idIn, inCity, inDateRange, statusIs, typeIn } from '../db/properties/propertyFilters';
+import { serializeProperty } from '../db/properties/propertySerializer';
+import { resolveAddressDisplay, type AddressGeoLike } from '../services/geoDisplayService';
+import { resolveCityId } from '../services/geoQueryService';
+
+/**
+ * How many listings one bulk-notification request may fan out to.
+ *
+ * Carried over from the Mongo `.limit(50)`, whose comment read "prevent abuse" —
+ * this endpoint sends real messages, so the bound is the point.
+ */
+const BULK_NOTIFICATION_LIMIT = 50;
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -123,13 +140,16 @@ class TelegramController {
     try {
       const { propertyId } = req.params;
 
-      // Populate the address so the notifier can resolve the relational geo.
-      const property = await Property.findById(propertyId).populate('addressId');
-      if (!property) {
+      const hydrated = await findPropertyById(propertyId);
+      if (!hydrated) {
         return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));
       }
+      // The serialized listing nests its address and carries the resolved geo
+      // NAMES on it, which is what the notifier reads — the `.populate()` this
+      // replaces existed only to produce that shape.
+      const property = serializeProperty(hydrated);
 
-      const geo = await resolveAddressDisplay(property.address);
+      const geo = await resolveAddressDisplay(property.address as AddressGeoLike);
       const success = await telegramService.sendPropertyNotification(property);
 
       res.status(success ? 200 : 500).json(successResponse(
@@ -151,44 +171,51 @@ class TelegramController {
     try {
       const { propertyIds, filters } = req.body;
 
-      let properties: IProperty[] = [];
+      let notifiable: Record<string, unknown>[] = [];
 
       if (propertyIds && propertyIds.length > 0) {
         // Send notifications for specific properties
-        properties = await Property.find({ _id: { $in: propertyIds } }).populate('addressId');
+        const ids = (propertyIds as unknown[]).map(String);
+        notifiable = (await findProperties({ where: idIn(ids) })).map(serializeProperty);
       } else if (filters) {
-        // Send notifications based on filters
-        const query: Record<string, unknown> = {};
-        
-        // Handle city filter via RELATIONAL geo resolution (name/id → cityId).
+        const conditions: (SQL | undefined)[] = [];
+
+        // City filter via RELATIONAL geo: the city NAME (or id) resolves to a
+        // canonical `cities.id` and the address join compares against it. The
+        // `resolveGeoFilterAddressIds` call this replaces loaded every address
+        // id in the city into an uncapped `$in`.
         if (filters.city) {
-          const addressIds = await resolveGeoFilterAddressIds({ city: String(filters.city) });
-          if (addressIds === null || addressIds.length === 0) {
+          const cityId = await resolveCityId(String(filters.city));
+          if (!cityId) {
             return res.json(successResponse(
               { total: 0, successful: 0, failed: 0 },
               'No properties found in specified city'
             ));
           }
-          query.addressId = { $in: addressIds };
+          conditions.push(inCity(cityId));
         }
-        
-        if (filters.type) query.type = filters.type;
-        if (filters.createdAfter) query.createdAt = { $gte: new Date(filters.createdAfter) };
-        if (filters.status) query.status = filters.status;
 
-        properties = await Property.find(query).populate('addressId').limit(50); // Limit to prevent abuse
+        if (filters.type) conditions.push(typeIn([String(filters.type)]));
+        if (filters.createdAfter) {
+          conditions.push(inDateRange(properties.createdAt, new Date(String(filters.createdAfter)), undefined));
+        }
+        if (filters.status) conditions.push(statusIs(String(filters.status)));
+
+        notifiable = (
+          await findProperties({ where: allOf(conditions), limit: BULK_NOTIFICATION_LIMIT })
+        ).map(serializeProperty);
       } else {
         return next(new AppError('Either propertyIds or filters must be provided', 400, 'MISSING_PARAMETERS'));
       }
 
-      if (properties.length === 0) {
+      if (notifiable.length === 0) {
         return res.json(successResponse(
           { total: 0, successful: 0, failed: 0 },
           'No properties found matching criteria'
         ));
       }
 
-      const results = await telegramService.sendBulkNotifications(properties);
+      const results = await telegramService.sendBulkNotifications(notifiable);
 
       res.json(successResponse(results, 'Bulk notifications processed'));
     } catch (error) {
@@ -269,13 +296,13 @@ class TelegramController {
 
       // Get recent properties
       const sinceDate = new Date(Date.now() - hoursNum * 60 * 60 * 1000);
-      const recentProperties = await Property.find({
-        createdAt: { $gte: sinceDate },
-        status: 'active'
-      })
-      .populate('addressId')
-      .limit(limitNum)
-      .sort({ createdAt: -1 });
+      const recentProperties = (
+        await findProperties({
+          where: allOf([inDateRange(properties.createdAt, sinceDate, undefined), statusIs('active')]),
+          orderBy: [NEWEST_FIRST],
+          limit: limitNum,
+        })
+      ).map(serializeProperty);
 
       if (recentProperties.length === 0) {
         return res.json(successResponse(
@@ -290,17 +317,17 @@ class TelegramController {
 
       const results = await telegramService.sendBulkNotifications(recentProperties);
 
-      const properties = await Promise.all(recentProperties.map(async (p: IProperty) => ({
-        id: p._id,
-        city: (await resolveAddressDisplay(p.address)).city,
-        type: p.type,
-        createdAt: p.createdAt
+      const summaries = await Promise.all(recentProperties.map(async (listing) => ({
+        id: listing.id,
+        city: (await resolveAddressDisplay(listing.address as AddressGeoLike)).city,
+        type: listing.type,
+        createdAt: listing.createdAt,
       })));
 
       res.json(successResponse({
         ...results,
         timeframe: `${hoursNum} hours`,
-        properties
+        properties: summaries,
       }, 'Test notifications sent for recent properties'));
     } catch (error) {
       next(error);

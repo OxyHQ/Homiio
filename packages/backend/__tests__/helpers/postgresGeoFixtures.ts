@@ -39,6 +39,7 @@ import {
   neighborhoods,
   properties,
   propertyAvailabilityWindows,
+  reservations,
   propertyDocuments,
   propertyImages,
   regions,
@@ -64,6 +65,12 @@ export async function resetGeoTables(): Promise<void> {
   // from `leases`, so this single statement takes the co-tenants, the payment
   // schedule, the documents, the inspections and their findings with it.
   await db.delete(leases);
+  // Reservations are the same shape as leases above and RESTRICT for the same
+  // reason: a booking is a commitment against a listing, not a copy of it, so
+  // deleting the listing under one RAISES. Any suite that seeds a reservation
+  // would otherwise fail here rather than in its own fixture, which reads as a
+  // mysterious teardown error two files away from the cause.
+  await db.delete(reservations);
   // Listings next: `properties.address_id` is ON DELETE RESTRICT, so an
   // address delete with a listing still on it RAISES rather than cascading —
   // which is the constraint working, and would read here as a mysterious

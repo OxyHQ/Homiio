@@ -35,7 +35,7 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { qualified } from '../casing';
 import { escapeLikePattern } from '../likePattern';
 import { TEXT_SEARCH_CONFIGURATION } from '../extensions';
-import { addresses, properties, propertyAvailabilityWindows } from '../schema';
+import { addresses, properties, propertyAvailabilityWindows, reservations } from '../schema';
 
 /** Never surface a soft-deleted (archived) listing. */
 export function notDeleted(): SQL {
@@ -286,7 +286,55 @@ export function textRank(term: string): SQL<number> {
  * subquery's own `FROM`, so `${properties.id}` would emit `"id"` and resolve
  * against `property_availability_windows` — comparing two of its own columns,
  * matching nothing, and raising no error at all.
+ *
+ * **`.toISOString()` on the bounds is load-bearing, and the cast alone is not
+ * enough.** A `Date` interpolated into a `sql` template inside `tstzrange()`
+ * never reaches Postgres: postgres.js has no column to infer the type from,
+ * falls back to serializing the value as text, and throws
+ * `The "string" argument must be of type string ... Received an instance of
+ * Date` in Node. That made EVERY dated availability request a 500 — measured
+ * against a real server, and adding `::timestamptz` did NOT fix it, because the
+ * failure happens in the driver before any cast is parsed. No test covered the
+ * dated path, so nothing reported it. An explicit ISO string plus the cast is
+ * what makes the bound unambiguous on both sides.
  */
+/**
+ * Listings with no CONFIRMED reservation overlapping the stay.
+ *
+ * The other half of availability, and the half that fails DANGEROUSLY. The
+ * Mongo version this replaces read `Reservation.find({...}).select('propertyId')`
+ * into an id list and pushed `idNotIn(...)` — but only `if (ids.length > 0)`.
+ * Once `reservations` moved to Postgres that read returned nothing, the guard
+ * skipped the exclusion entirely, and every booked listing was reported free.
+ * An availability check that sees no bookings does not error, it APPROVES: the
+ * wrong answer is the successful-looking one, and a double booking is the
+ * result.
+ *
+ * A `NOT EXISTS` rather than an id list, matching {@link calendarIsFree}. The
+ * id-list form also loaded EVERY confirmed reservation in the system into an
+ * uncapped `$in` to answer a question about one page of listings.
+ *
+ * `[)` bounds via `tstzrange`, so a checkout and the next checkin on the same
+ * day do not collide — the same `checkIn < checkOut AND checkOut > checkIn`
+ * test Mongo spelled out, and the same convention the calendar half uses.
+ *
+ * `qualified` on the correlated reference is not optional, for the reason
+ * {@link calendarIsFree} records: a drizzle column interpolated into a subquery
+ * renders BARE when its table is not in the subquery's own `FROM`, so
+ * `${properties.id}` would emit `"id"`, resolve against `reservations`, compare
+ * that table's own id to itself, match every row, and exclude every listing —
+ * silently and with no error.
+ */
+export function noConfirmedReservationOverlaps(checkIn: Date, checkOut: Date): SQL {
+  return sql`not exists (
+    select 1 from ${reservations}
+    where ${reservations.propertyId} = ${qualified(properties.id)}
+      and ${reservations.status} = 'confirmed'
+      and tstzrange(${reservations.checkIn}, ${reservations.checkOut})
+          && tstzrange(${checkIn.toISOString()}::timestamptz, ${checkOut.toISOString()}::timestamptz)
+  )`;
+}
+
 export function calendarIsFree(checkIn: Date, checkOut: Date): SQL {
   return sql`not exists (
     select 1 from ${propertyAvailabilityWindows}
@@ -294,6 +342,6 @@ export function calendarIsFree(checkIn: Date, checkOut: Date): SQL {
       and ${propertyAvailabilityWindows.scope} = 'listing'
       and ${propertyAvailabilityWindows.status} <> 'available'
       and tstzrange(${propertyAvailabilityWindows.startsAt}, ${propertyAvailabilityWindows.endsAt})
-          && tstzrange(${checkIn}, ${checkOut})
+          && tstzrange(${checkIn.toISOString()}::timestamptz, ${checkOut.toISOString()}::timestamptz)
   )`;
 }
