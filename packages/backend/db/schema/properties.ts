@@ -120,7 +120,15 @@ import {
 } from '@homiio/shared-types';
 import { TEXT_SEARCH_CONFIGURATION } from '../extensions';
 import { addresses } from './addresses';
+import { agencies } from './agencies';
 import { images } from './images';
+// CIRCULAR, and deliberately so: `commissions` (in the same module) references
+// `properties`, and `properties.sourced_by_partner_id` references `partners`.
+// Both `.references()` arguments are CALLBACKS, so neither is evaluated during
+// module initialization and the cycle never resolves a half-built module. A
+// junction table to break it would invent a many-to-many relation where the
+// schema has two one-to-many ones.
+import { partners } from './partners';
 
 /**
  * ## How every vocabulary below was derived
@@ -427,12 +435,26 @@ export const properties = pgTable(
      * classifies every id-shaped column in this schema. A column no gate can
      * see is a column that can ship unconstrained. Free of data risk: the
      * census found the field ABSENT on all 17,644 rows.
+     *
+     * SET NULL, promoted from `DEFERRED_FOREIGN_KEYS` when `partners` landed:
+     * referral attribution is not ownership, so a listing sourced through a
+     * partner who later leaves is still a listing. NULL already means "no
+     * partner referral" on this column, and `sourced_by_referral_code` keeps the
+     * audit copy of the code independently, so nothing about the historical fact
+     * is lost when the reference is cleared.
      */
-    sourcedByPartnerId: text(),
+    sourcedByPartnerId: text().references(() => partners.id, { onDelete: 'set null' }),
     /** Audit copy of the referral code at create time (a partner may rotate codes). */
     sourcedByReferralCode: text(),
-    /** The managing agency, resolved server-side from portal contact AJAX. */
-    agencyId: text(),
+    /**
+     * The managing agency, resolved server-side from portal contact AJAX.
+     *
+     * SET NULL, promoted from `DEFERRED_FOREIGN_KEYS` when `agencies` landed:
+     * deleting an agency must not delete the 8,374 listings that name it. NULL
+     * already means "no agency resolved" (9,270 rows carry it), so the action
+     * introduces no second meaning.
+     */
+    agencyId: text().references(() => agencies.id, { onDelete: 'set null' }),
 
     // ── Advertiser contact, captured from portal AJAX ──
     //

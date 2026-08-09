@@ -37,7 +37,15 @@
 import { getTableColumns, getTableName } from 'drizzle-orm';
 import type { PgColumn, PgTable, UpdateDeleteAction } from 'drizzle-orm/pg-core';
 import { sqlColumnName } from '../casing';
+import { billing, billingProcessedSessions } from './billing';
 import { images } from './images';
+import { leasePaymentSchedule } from './leases';
+import {
+  moderationEnforcements,
+  moderationEvents,
+  moderationOutbox,
+  moderationReports,
+} from './moderation';
 import { properties } from './properties';
 
 /** A foreign key that is decided but not yet expressible. */
@@ -62,43 +70,22 @@ export interface IdColumnWithoutForeignKey {
 }
 
 /**
- * Two entries as of migration 0001, both on `properties`.
+ * EMPTY — the finish line, reached in migration 0003.
  *
  * Migration 0000's six tables formed a CLOSED sub-graph, so nothing was
- * deferred. `properties` is the first table to reach OUTSIDE its own batch: its
- * `address_id` and `parent_property_id` are real constraints today, but
- * `agencies` and `partners` do not exist yet.
+ * deferred. Migration 0001 opened the ledger with two entries, both on
+ * `properties`: `agency_id` and `sourced_by_partner_id` were DECIDED but not
+ * expressible, because `agencies` and `partners` did not exist yet. Migration
+ * 0003 brought both parents and turned both entries into real `.references(…)`
+ * constraints with the `ON DELETE SET NULL` recorded here — which is exactly
+ * what `foreignKeys.test.ts`'s overdue check exists to force.
  *
- * `foreignKeys.test.ts` turns each entry into a gate that goes red the moment
- * its parent appears in the barrel. An empty ledger is the finish line.
+ * It is empty rather than deleted because the mechanism outlives this migration:
+ * the next table that lands ahead of its parent belongs here, and a reader
+ * needs to find the shape rather than reinvent it. An entry whose parent HAS
+ * landed fails the gate by name.
  */
-export const DEFERRED_FOREIGN_KEYS: readonly DeferredForeignKey[] = [
-  {
-    table: properties,
-    column: properties.agencyId,
-    parentTable: 'agencies',
-    parentColumn: 'id',
-    onDelete: 'set null',
-    reason:
-      'Deleting an agency must not delete the 8,374 listings that name it — ' +
-      'the listing survives its agency going away. NULL already means "no ' +
-      'agency resolved" on this column (9,270 rows carry it), so SET NULL ' +
-      'introduces no second meaning, which is the test CONVENTIONS.md sets.',
-  },
-  {
-    table: properties,
-    column: properties.sourcedByPartnerId,
-    parentTable: 'partners',
-    parentColumn: 'id',
-    onDelete: 'set null',
-    reason:
-      'Referral attribution, not ownership: a listing sourced through a ' +
-      'partner who later leaves is still a listing. NULL already means "no ' +
-      'partner referral", and `sourced_by_referral_code` keeps the audit copy ' +
-      'of the code independently, so nothing about the historical fact is ' +
-      'lost when the reference is cleared.',
-  },
-];
+export const DEFERRED_FOREIGN_KEYS: readonly DeferredForeignKey[] = [];
 
 /**
  * The SQL names of columns holding an OXY ACCOUNT id.
@@ -109,40 +96,66 @@ export const DEFERRED_FOREIGN_KEYS: readonly DeferredForeignKey[] = [
  * one of them, and repeating it would bury the entries that have a reason of
  * their own.
  *
- * NONE of these names appears in migration 0000 — the geo tables and `images`
- * have no owner. The set is populated in advance because the alternative is
- * adding it under time pressure while porting `properties`, and because
- * `__tests__/db/foreignKeys.test.ts` asserts the predicate against a probe
- * column so it cannot be silently broken before the first real user of it
- * arrives.
+ * Through migration 0002 this set was populated IN ADVANCE, from the Mongoose
+ * schemas the columns were expected to come from — none of those names existed
+ * yet, because the geo tables and `images` have no owner. Migrations 0003-0007
+ * land every remaining table, so it is now a MEASURED set rather than a
+ * predicted one, and six predicted names turned out never to exist:
  *
- * Every name is the SQL spelling, drawn from the Mongoose schemas it will come
- * from.
+ * | Predicted | What the schema actually has |
+ * |---|---|
+ * | `sender_oxy_user_id` | `RoommateRequest` names `from`/`to`, not sender/recipient |
+ * | `user_oxy_user_id` | nothing; `Notification` uses `recipient_oxy_user_id` |
+ * | `participant_oxy_user_id` | `Conversation` has ONE owner and no participants array |
+ * | `organizer_oxy_user_id` | `EvictionCase` names its organizer `oxy_user_id` |
+ * | `author_oxy_user_id` | `EvictionComment` names its author `oxy_user_id` |
+ * | `partner_oxy_user_id` | `partners` names its own account `oxy_user_id` |
+ *
+ * They are REMOVED rather than left in place. A name in an allow-list that
+ * matches nothing is indistinguishable from one that matches something, so a
+ * stale entry makes the set impossible to review — and this set is the only
+ * thing standing between an account column and shipping unclassified.
+ *
+ * `__tests__/db/foreignKeys.test.ts` asserts the predicate against a probe
+ * column, so it cannot be silently broken by a change to the matching itself.
+ *
+ * Every name is the SQL spelling.
  */
 export const OXY_ACCOUNT_COLUMN_NAMES: ReadonlySet<string> = new Set([
-  // The owner of a property, room, lease, review, saved item, profile … — the
+  // The owner of a property, lease co-tenancy, review, saved item, profile,
+  // conversation, eviction case or comment, partner, billing record … — the
   // single most common column in the schema, and the one `AGENTS.md` forbids
   // accepting from a client.
   'oxy_user_id',
-  // `RoommateRequest` / `RoommateRelationship` / `ExchangeRequest` name their
-  // two sides rather than using one `oxy_user_id`.
+  // `RoommateRelationship` stores its pair SORTED, so neither side has a role
+  // to be named after. Listed individually because the names do not end in
+  // `oxy_user_id` and no pattern would catch them.
+  'oxy_user1_id',
+  'oxy_user2_id',
+  // `RoommateRequest`'s two sides.
+  'from_oxy_user_id',
+  'to_oxy_user_id',
+  // `ViewingRequest` and `ExchangeRequest` name their two sides.
   'requester_oxy_user_id',
+  'owner_oxy_user_id',
+  'host_oxy_user_id',
+  // `Reservation`'s guest half; its host is `host_oxy_user_id` above.
+  'guest_oxy_user_id',
+  // `Notification`'s recipient.
   'recipient_oxy_user_id',
-  'sender_oxy_user_id',
-  // `Review.reports[]`, `ListingReport`, `EvictionReport`.
+  // `ListingReport`, `EvictionReport`, `ModerationReport`.
   'reporter_oxy_user_id',
-  // `Lease` names both parties; `TenantApplication` and `ViewingRequest` name
-  // the applicant. All Oxy accounts.
+  // `Lease` names both parties; `TenantApplication` names the applicant and the
+  // landlord.
   'landlord_oxy_user_id',
   'tenant_oxy_user_id',
   'applicant_oxy_user_id',
-  // `Notification` recipients and `Conversation` participants.
-  'user_oxy_user_id',
-  'participant_oxy_user_id',
-  // `EvictionCase.organizer`, `EvictionComment` author, `Partner` account.
-  'organizer_oxy_user_id',
-  'author_oxy_user_id',
-  'partner_oxy_user_id',
+  // `ExchangeReview`'s two sides.
+  'reviewer_oxy_user_id',
+  'subject_oxy_user_id',
+  // `Lease.documents[].uploadedBy` and `Lease.terminationNotice.givenBy`.
+  'uploaded_by_oxy_user_id',
+  'termination_notice_given_by_oxy_user_id',
 ]);
 
 /**
@@ -199,6 +212,124 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
       'Audit-only: nothing joins on it, and CrowdSource is switched off in ' +
       'production entirely (`CROWDSOURCE_ENABLED` is absent from both SSM and ' +
       'the live task definition), so every row holds NULL today.',
+  },
+  {
+    table: moderationReports,
+    column: moderationReports.reportedId,
+    reason:
+      'Polymorphic by `reported_type` across three nouns — a `properties.id`, ' +
+      '`reviews.id` or `eviction_cases.id` — so a single column cannot ' +
+      'reference it, the same permanent case as `images.entity_id`. A SECOND ' +
+      'reason makes it permanent even if the polymorphism went away: this row ' +
+      'must OUTLIVE the object it names. `listing_reports` and ' +
+      '`eviction_reports` both CASCADE away with their subject, and this is the ' +
+      'table that keeps what was delivered to CrowdSource and decided about a ' +
+      'listing after the expiry sweep reaped the ad.',
+  },
+  {
+    table: moderationReports,
+    column: moderationReports.crowdSourceReportId,
+    reason:
+      'CrowdSource\'s own id for the report it accepted — a foreign SERVICE\'s ' +
+      'primary key, the same class as `oxy_user_id` but from a different ' +
+      'service, which is why `isOxyAccountColumn` does not (and must not) ' +
+      'cover it.',
+  },
+  {
+    table: moderationReports,
+    column: moderationReports.crowdSourceCaseId,
+    reason:
+      'The CrowdSource case this report was filed into or merged with. A ' +
+      'foreign service\'s key, and one Homiio does not control: CrowdSource ' +
+      'decides when two reports become one case.',
+  },
+  {
+    table: moderationReports,
+    column: moderationReports.decisionId,
+    reason:
+      'A CACHE of a published CrowdSource decision, overwritten by a later ' +
+      'revision and never edited in place. A foreign service\'s key, and ' +
+      'deliberately not a reference to `moderation_enforcements` either — that ' +
+      'table records what HOMIIO did, which is a different fact with a ' +
+      'different lifecycle.',
+  },
+  {
+    table: moderationOutbox,
+    column: moderationOutbox.eventId,
+    reason:
+      'The inbound webhook event, and the ONE id-shaped column in this schema ' +
+      'left unconstrained by REFUSAL rather than by impossibility. ' +
+      '`moderation_events` is under its own expiry sweep with the same 90-day ' +
+      'retention as this table, and two independent sweeps have no ordering ' +
+      'between them: CASCADE would let the event sweep delete unprocessed ' +
+      'decision work, RESTRICT would make the event sweep fail on its first ' +
+      'batch. Either way one table\'s housekeeping would decide the other\'s ' +
+      'correctness. The pairing survives without a constraint because ' +
+      '`decisionApplyEventId` derives this row\'s own primary key from it.',
+  },
+  {
+    table: moderationOutbox,
+    column: moderationOutbox.caseId,
+    reason: 'The CrowdSource case a decision belongs to — a foreign service\'s key.',
+  },
+  {
+    table: moderationEvents,
+    column: moderationEvents.caseId,
+    reason:
+      'The CrowdSource case, as the delivered event names it. A foreign ' +
+      'service\'s key, and this table is a DEDUPE store plus an audit trail — ' +
+      'it deliberately records what ARRIVED rather than what Homiio could ' +
+      'resolve.',
+  },
+  {
+    table: moderationEnforcements,
+    column: moderationEnforcements.decisionId,
+    reason:
+      'The CrowdSource decision this action answered. A foreign service\'s key, ' +
+      'and two thirds of the idempotency key `UNIQUE(decision_id, ' +
+      'decision_revision, action)` — which is why it must not become a Homiio ' +
+      'primary key either: an id from a service whose key space Homiio does not ' +
+      'own cannot be one.',
+  },
+  {
+    table: moderationEnforcements,
+    column: moderationEnforcements.caseId,
+    reason: 'The CrowdSource case — a foreign service\'s key.',
+  },
+  {
+    table: moderationEnforcements,
+    column: moderationEnforcements.subjectId,
+    reason:
+      'Polymorphic by `subject_type` across Homiio\'s own nouns (`property`, ' +
+      '`review`), so one column cannot reference it — and, like ' +
+      '`moderation_reports.reported_id`, the row is the durable record of what ' +
+      'was done and must outlive the object it names.',
+  },
+  {
+    table: billing,
+    column: billing.plusStripeSubscriptionId,
+    reason:
+      'Stripe\'s subscription id. A foreign service\'s key, and one whose key ' +
+      'SPACE differs between test and live mode — which is why it is a plain ' +
+      'indexed column and must never become part of a Homiio key.',
+  },
+  {
+    table: billingProcessedSessions,
+    column: billingProcessedSessions.sessionId,
+    reason:
+      'Stripe\'s Checkout session id — a foreign service\'s key, same class as ' +
+      '`billing.plus_stripe_subscription_id`. It is half of this table\'s ' +
+      'unique key rather than a reference into anything: the row exists to ' +
+      'record that a session was already credited, so its value is meaningful ' +
+      'even after Stripe has forgotten the session.',
+  },
+  {
+    table: leasePaymentSchedule,
+    column: leasePaymentSchedule.transactionId,
+    reason:
+      'The payment processor\'s own reference for a recorded rent payment. A ' +
+      'foreign service\'s key, written by `recordPayment` from whatever the ' +
+      'processor returned, and never resolved against anything in this schema.',
   },
 ];
 

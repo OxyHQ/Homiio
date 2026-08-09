@@ -55,9 +55,25 @@
  * other table in this migration will: `expires_at` is populated on **100% of
  * production rows**, so the entire listing inventory is under an active scythe
  * today and would stop being reaped the moment the cutover lands.
+ *
+ * ## The complete census: FIVE TTL indexes, not six
+ *
+ * `grep -rn expireAfterSeconds models/` returns five, on `PropertySchema`,
+ * `ConversationSchema`, `PlacePoiSchema`, `ModerationEvent` and
+ * `ModerationOutbox`. Recorded because a wrong count is worse than no count: a
+ * sixth nobody can find reads as an outstanding risk forever, and the whole
+ * value of this registry is being able to say the set is CLOSED.
+ *
+ * Four of the five are ordinary housekeeping and are registered below. The
+ * fifth is not, and it is the reason {@link EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE}
+ * exists as data rather than as a warning in a comment.
  */
 
+import type { PgColumn, PgTable } from 'drizzle-orm/pg-core';
 import type { ExpirySweepTarget } from '@oxyhq/db/expiry';
+import { conversations } from './schema/conversations';
+import { moderationEvents, moderationOutbox } from './schema/moderation';
+import { placePois } from './schema/placePois';
 import { properties } from './schema/properties';
 
 export {
@@ -100,5 +116,84 @@ export const EXPIRY_SWEEP_TARGETS: readonly ExpirySweepTarget[] = [
       'copies of the same ad — but NOT to the `images` rows behind those ' +
       'photos, which is the pre-existing leak the census counted as 948 ' +
       'orphaned Image documents and which belongs to the image batch, not here.',
+  },
+  {
+    table: placePois,
+    column: placePois.expiresAt,
+    retentionSeconds: 0,
+    reason:
+      'Reaps the nearby-services cache once a cell snapshot goes stale. INTENT ' +
+      'CHECKED and genuine housekeeping: the row is an aggregate copy of ' +
+      'OpenStreetMap data that `nearbyServicesService` re-fetches from Overpass ' +
+      'on the next miss, it holds no user content and no place NAMES by design, ' +
+      'and the service already treats a row past this instant as a miss — so ' +
+      'nothing depends on the row being gone and nothing is lost when it is. ' +
+      'The delete cascades to `place_poi_categories`, which is the same ' +
+      'snapshot.',
+  },
+  {
+    table: moderationOutbox,
+    column: moderationOutbox.expiresAt,
+    retentionSeconds: 0,
+    reason:
+      'The 90-day retention ceiling that stops a stalled dispatcher turning the ' +
+      'moderation outbox into an unbounded table. INTENT CHECKED, and it is the ' +
+      'one entry here whose safety depends on something OUTSIDE the database: a ' +
+      'row may still be `pending` or `dead_letter` when its deadline passes, and ' +
+      'sweeping it discards moderation work nobody did. Ninety days is chosen so ' +
+      'that any operational alert fires long before it, which makes the alert a ' +
+      'prerequisite of this entry rather than a nicety — the model states it and ' +
+      'this repeats it because the sweep is where it stops being advice.',
+  },
+  {
+    table: moderationEvents,
+    column: moderationEvents.expiresAt,
+    retentionSeconds: 0,
+    reason:
+      'The 90-day retention on the webhook dedupe store. INTENT CHECKED: a ' +
+      'sender\'s retry schedule ends within a day, so the DEDUPE half only has ' +
+      'to outlive that; the long tail is the AUDIT half — what a third party ' +
+      'told this deployment to do — and 90 days is the answer the model already ' +
+      'chose. Note `moderation_outbox.event_id` deliberately carries no foreign ' +
+      'key into this table, precisely so this sweep and that one cannot decide ' +
+      'each other\'s outcome.',
+  },
+];
+
+/** A column whose Mongo TTL index must NOT become a delete. */
+export interface NonDeletingExpiryColumn {
+  readonly table: PgTable;
+  readonly column: PgColumn;
+  /** What the deadline actually means, and what the correct port is. */
+  readonly reason: string;
+}
+
+/**
+ * TTL columns that must NEVER appear in {@link EXPIRY_SWEEP_TARGETS}.
+ *
+ * The registry above answers "which tables need a sweep". This one answers the
+ * question that is easier to get wrong: which TTL index in the source is not
+ * housekeeping at all. `__tests__/db/expiry.test.ts` fails if any column named
+ * here is ever registered as a sweep target, so "check every TTL for INTENT"
+ * stops being advice the moment somebody tidies up the registry.
+ *
+ * Without this list, a later reader comparing `grep expireAfterSeconds` against
+ * the registry finds one short and closes the gap — which is the exact change
+ * that would start deleting people's conversations.
+ */
+export const EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE: readonly NonDeletingExpiryColumn[] = [
+  {
+    table: conversations,
+    column: conversations.sharingExpiresAt,
+    reason:
+      'This deadline belongs to a SHARE LINK, not to the row. Mongo\'s TTL index ' +
+      'on `sharing.expiresAt` deletes the whole conversation and every message ' +
+      'in it, and `generateShareToken` sets the deadline to +24h — so every ' +
+      'conversation anyone has ever shared has been destroyed a day later, with ' +
+      'the transcript the user was sharing. A near-zero row count is evidence of ' +
+      'that DAMAGE, not of safety. The correct port clears the four `sharing_*` ' +
+      'columns, which is exactly what `revokeSharing` already does; the read ' +
+      'side needs nothing, because `findByShareToken` already refuses an expired ' +
+      'token.',
   },
 ];

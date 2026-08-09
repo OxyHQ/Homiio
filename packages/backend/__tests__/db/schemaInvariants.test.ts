@@ -22,14 +22,17 @@ import { REQUIRED_EXTENSIONS } from '../../db/extensions';
 import * as schema from '../../db/schema';
 
 /**
- * Traversal floors. Migrations 0000 and 0001 create ten tables between them
- * (`properties` alone carries 135 columns); a run that finds fewer than this has
- * a broken catalogue query, not a clean schema.
+ * Traversal floors. Migrations 0000-0007 create SIXTY-ONE tables and 868
+ * columns between them (`properties` alone carries 135); a run that finds fewer
+ * than this has a broken catalogue query, not a clean schema.
  *
- * Raise them as batches land. They are a MINIMUM, never a target.
+ * Raise them as batches land. They are a MINIMUM, never a target — the column
+ * figure sits a little under the measured 868 so that dropping one column is a
+ * deliberate edit here rather than a silent pass, while adding one needs no edit
+ * at all.
  */
-const MINIMUM_TABLES = 10;
-const MINIMUM_COLUMNS = 245;
+const MINIMUM_TABLES = 61;
+const MINIMUM_COLUMNS = 860;
 
 /**
  * Every table the barrel exports, so a new one is covered without an edit here.

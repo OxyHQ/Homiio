@@ -24,7 +24,7 @@
 import { getTableName, sql } from 'drizzle-orm';
 import { findUnsupportedExpiryColumns } from '@oxyhq/db/assert';
 import { sqlColumnName } from '../../db/casing';
-import { EXPIRY_SWEEP_TARGETS } from '../../db/expiry';
+import { EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE, EXPIRY_SWEEP_TARGETS } from '../../db/expiry';
 import { closePostgres, connectPostgres, type Database } from '../../db/postgres';
 
 let db: Database;
@@ -47,15 +47,54 @@ describe('expiry sweep registry', () => {
     expect(violations).toEqual([]);
   });
 
-  it('registers properties.expires_at', async () => {
+  it('registers exactly the four TTL columns that mean "delete this row"', async () => {
     // A vacuity floor with teeth: `findUnsupportedExpiryColumns` over an EMPTY
     // registry returns `[]` and passes the assertion above while checking
-    // nothing at all. Naming the entry is what makes that assertion mean
+    // nothing at all. Naming the entries is what makes that assertion mean
     // something.
+    //
+    // The set is CLOSED and this is the whole census: `grep -rn
+    // expireAfterSeconds models/` returns FIVE TTL indexes, and the fifth —
+    // `conversations.sharing_expires_at` — is the one that must never be swept.
+    // Asserting the exact list in both directions is what makes "five in the
+    // source, four here, one refused" a checked statement rather than an
+    // arithmetic claim in a comment.
     const registered = EXPIRY_SWEEP_TARGETS.map(
       (target) => `${getTableName(target.table)}.${sqlColumnName(target.column)}`,
     ).sort();
-    expect(registered).toEqual(['properties.expires_at']);
+    expect(registered).toEqual([
+      'moderation_events.expires_at',
+      'moderation_outbox.expires_at',
+      'place_pois.expires_at',
+      'properties.expires_at',
+    ]);
+  });
+
+  it('never sweeps a TTL column whose deletion would destroy user content', () => {
+    // The rule `db/expiry.ts` states as data. Without this check, a later reader
+    // comparing the source's five TTL indexes against the four registered above
+    // finds the registry one short and closes the gap — which is precisely the
+    // change that would start deleting people's conversations, because
+    // `Conversation.sharing.expiresAt` is a SHARE LINK's deadline and its TTL
+    // takes the whole transcript with it.
+    const registered = new Set(
+      EXPIRY_SWEEP_TARGETS.map(
+        (target) => `${getTableName(target.table)}.${sqlColumnName(target.column)}`,
+      ),
+    );
+    const forbidden = EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE.map(
+      (entry) => `${getTableName(entry.table)}.${sqlColumnName(entry.column)}`,
+    );
+
+    // Vacuity floor: an empty forbidden list would make the filter below pass
+    // over nothing, which is indistinguishable from a registry that respects it.
+    expect(forbidden).toEqual(['conversations.sharing_expires_at']);
+    expect(forbidden.filter((label) => registered.has(label))).toEqual([]);
+
+    const unexplained = EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE.filter(
+      (entry) => entry.reason.trim().length < 40,
+    ).map((entry) => getTableName(entry.table));
+    expect(unexplained).toEqual([]);
   });
 
   it('gives every target a retention and a reason', () => {

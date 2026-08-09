@@ -150,9 +150,11 @@ jobs:
       # glob that stops matching all produce an empty green run, and that reads as
       # coverage forever because nothing contradicts it.
       #
-      # RAISED FROM 850 TO 880 by the Postgres foundation batch (#281), which
-      # added 32 tests across 5 files under `__tests__/db/`. The measured count
-      # went 925 -> 957, so this keeps the same ~75-test headroom the previous
+      # RAISED FROM 1100 TO 1150 by the remaining-schema batch (#281), which
+      # added 54 tests across 4 files under `__tests__/db/` (the geography,
+      # partial-unique, coherence-CHECK and range-bound suites) on top of the
+      # floors it raised inside the existing ones. The measured count went
+      # 1123 -> 1177, so this keeps roughly the same headroom the previous
       # figure carried rather than pinning the exact total. The floor is a
       # MINIMUM: raise it as suites grow, and lower it only deliberately, in the
       # same change that removes the tests.
@@ -160,7 +162,7 @@ jobs:
         if: always()
         run: >-
           bun .github/scripts/assert-test-floor.mjs
-          "$RUNNER_TEMP/backend-tests.json" packages/backend 1100
+          "$RUNNER_TEMP/backend-tests.json" packages/backend 1150
 
   frontend:
     runs-on: ubuntu-24.04
