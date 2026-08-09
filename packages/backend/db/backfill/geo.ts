@@ -311,6 +311,14 @@ export interface SourceData {
  * cover the WHOLE plan — every table, every foreign key — before the first
  * insert. The volume makes that free: 7 countries, 211 regions, 1,660 cities,
  * 4,521 neighborhoods and 1,297 geo images is under eight thousand documents.
+ *
+ * **That shape is bounded by THIS batch and does not generalise — do not copy it
+ * into a larger one.** The task this runs on is 512 CPU / 1024 MB, and the rest
+ * of the migration is two orders of magnitude bigger: 170,679 property images
+ * and 17,644 properties each carrying an embedded `images[]`. Loading those
+ * before mapping is an OOM, not a slow run. A large batch has to stream with a
+ * cursor and keep only the parent-id SETS the foreign-key rules need, in two
+ * passes, so that "audit the whole plan before the first insert" still holds.
  */
 export async function loadSource(database: MongoDatabase): Promise<SourceData> {
   const read = async (collection: string, filter: Record<string, unknown> = {}) =>

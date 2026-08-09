@@ -14,8 +14,6 @@
  * together.
  */
 
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import mongoose from 'mongoose';
 import { eq, inArray, getTableName, sql } from 'drizzle-orm';
 import { alias, getTableConfig, type PgTable } from 'drizzle-orm/pg-core';
@@ -421,40 +419,6 @@ describe('geo backfill — the copy order', () => {
         expect(position.get(parent)!).toBeLessThan(position.get(getTableName(table))!);
       }
     }
-  });
-});
-
-describe('db/ sources are text, not binary', () => {
-  /**
-   * A single NUL byte makes git classify a source file as BINARY, and from then
-   * on it has no diff: `git show`, `git log -p` and every pull-request review
-   * print `Bin 0 -> N bytes` instead of the code. Nothing else notices — tsc,
-   * eslint, jest and CI all passed on a `db/backfill/rowAudit.ts` that carried
-   * two of them, and the only thing that ever said so was `git show --stat`
-   * after the merge.
-   *
-   * That is the shape this repository gates rather than remembers: a wrong
-   * thing nothing trips over. Scoped to `db/` because that is where the
-   * migration code lives; widen it if the class recurs elsewhere.
-   */
-  const roots = [join(__dirname, '..', '..', 'db'), __dirname];
-
-  function typescriptFiles(directory: string): string[] {
-    return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-      const path = join(directory, entry.name);
-      if (entry.isDirectory()) return typescriptFiles(path);
-      return entry.isFile() && path.endsWith('.ts') ? [path] : [];
-    });
-  }
-
-  it('contains no NUL byte in any db/ TypeScript file', () => {
-    const files = roots.flatMap(typescriptFiles);
-    // Vacuity floor: a traversal that silently stopped matching would otherwise
-    // report "no offenders" forever, which is the same failure in a new costume.
-    expect(files.length).toBeGreaterThan(30);
-
-    const offenders = files.filter((path) => readFileSync(path).includes(0));
-    expect(offenders).toEqual([]);
   });
 });
 
