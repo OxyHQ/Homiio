@@ -50,8 +50,38 @@ const { computeMaxWorkers, HOMIIO_JEST_DATABASE_MANIFEST } = require('./jest.wor
  */
 const TEST_MAX_POOL_SIZE = '8';
 
+/**
+ * Seconds an unused connection may sit open before postgres.js reaps it.
+ *
+ * The runtime default is 30, which is right for a long-lived API process and
+ * catastrophic here, because **jest abandons a connection pool per test FILE**.
+ * Each file gets a fresh module registry AND a fresh VM context, so
+ * `db/postgres.ts`'s handles start out null again and `connectPostgres()` opens
+ * a NEW pool; the previous file's pool is unreachable from the new context and
+ * only the ~22 suites that call `closePostgres()` themselves ever end one.
+ * Nothing can share a pool across files — not a module-level `let`, and not
+ * `globalThis`, which jest also replaces (both were tried).
+ *
+ * So abandoned pools are inherent, and the only question is how long their
+ * sockets linger. At 30s they outlive the entire run and accumulate: measured
+ * 34 connections climbing to 104 against a `max_connections` of 100 within six
+ * seconds, then 708 failures — reported as `sorry, too many clients already` in
+ * whichever suite happened to ask while the server was saturated, never in the
+ * one at fault. At 1s they are reclaimed continuously and the run stays flat.
+ *
+ * This was latent long before it fired. The suite stayed under the ceiling only
+ * because two slow Mongo-booting suites ran first and throttled the early
+ * phase; deleting them removed that accidental throttling.
+ *
+ * It changes nothing a test MEASURES — a reaped connection is reopened on
+ * demand, and `PG_MAX_POOL_SIZE` still governs concurrency, which is the knob
+ * that would alter behaviour.
+ */
+const TEST_IDLE_TIMEOUT_SECONDS = '1';
+
 export default async function globalSetup(): Promise<void> {
   process.env.PG_MAX_POOL_SIZE ??= TEST_MAX_POOL_SIZE;
+  process.env.PG_IDLE_TIMEOUT_SECONDS ??= TEST_IDLE_TIMEOUT_SECONDS;
 
   const workerCount = computeMaxWorkers();
   const urls = await createTestDatabases(workerCount);

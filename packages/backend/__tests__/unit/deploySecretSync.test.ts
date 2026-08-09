@@ -50,15 +50,22 @@ const workflow = readFileSync(WORKFLOW_PATH, 'utf8');
 
 /**
  * Every parameter the two live task definitions read as a `secret`, as of
- * `oxy-homiio:23` and `oxy-homiio-worker:31` (2026-08-09).
+ * `oxy-homiio:48` and `oxy-homiio-worker:55` (2026-08-09).
  *
  * `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `REDIS_URL` live under
  * `/oxy/_shared/`; the rest under `/oxy/homiio/`. The split is what the
  * `SHARED_` and `APP_` prefixes encode, and it matters because a shared value
  * written to the app namespace syncs successfully and reaches nothing.
+ *
+ * `MONGODB_URI` is GONE from this list, and the order of operations is the
+ * point: it was deleted from SSM first and CAME BACK, because this sync
+ * recreated it on the next deploy. Removing a value does not remove the thing
+ * that produces it. Neither task definition carries it any more, so a sync
+ * would now write a parameter nothing reads — and this list is what stops it
+ * being re-added without somebody noticing.
  */
 const EXPECTED_SYNCED_SECRETS = {
-  APP: ['DATABASE_URL', 'JWT_REFRESH_SECRET', 'JWT_SECRET', 'LISTING_RESIDENTIAL_PROXY_URL', 'MONGODB_URI'],
+  APP: ['DATABASE_URL', 'JWT_REFRESH_SECRET', 'JWT_SECRET', 'LISTING_RESIDENTIAL_PROXY_URL'],
   SHARED: ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'REDIS_URL'],
 };
 
@@ -88,10 +95,15 @@ describe('the deploy workflow syncs an explicit allowlist', () => {
     // step or a regex that stopped matching would make them all trivially true,
     // which is exactly how a gate stops gating without anyone noticing.
     // An empty string here means the step was renamed or removed.
+    //
+    // LOWERED FROM 8 TO 7 by the `MONGODB_URI` removal — deliberately, in the
+    // same change that removes the secret, which is the only way a floor should
+    // ever come down. It is a MINIMUM, so a secret ADDED to the task definitions
+    // without being synced still has to raise it.
     expect(syncStep).not.toBe('');
     expect(syncStep).toContain('aws ssm put-parameter');
-    expect(envBindings.length).toBeGreaterThanOrEqual(8);
-    expect(syncCalls.length).toBeGreaterThanOrEqual(8);
+    expect(envBindings.length).toBeGreaterThanOrEqual(7);
+    expect(syncCalls.length).toBeGreaterThanOrEqual(7);
   });
 
   it('never enumerates the whole secrets context', () => {
