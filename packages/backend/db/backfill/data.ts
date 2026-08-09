@@ -232,10 +232,15 @@ export interface DataBackfillReport {
 /** A buffered, batched, `ON CONFLICT DO NOTHING` writer for one table. */
 interface TableWriter {
   push(row: CandidateRow): void;
-  /** Write the buffer if it has reached the table's batch size. */
-  flushIfFull(): Promise<void>;
   /** Write whatever is buffered. */
   flush(): Promise<void>;
+  /**
+   * Whether this table's buffer has reached its own batch size.
+   *
+   * ASKED rather than acted on, because the flush decision belongs to the plan:
+   * one full child means every table flushes, parent first. See the call site.
+   */
+  readonly isFull: boolean;
   readonly inserted: number;
 }
 
@@ -275,11 +280,11 @@ function createWriter(database: Database, table: PgTable, write: boolean): Table
     push(row) {
       buffer.push(row);
     },
-    async flushIfFull() {
-      if (buffer.length >= limit) await flush();
-    },
     async flush() {
       await flush();
+    },
+    get isFull() {
+      return buffer.length >= limit;
     },
     get inserted() {
       return inserted;
@@ -367,9 +372,24 @@ async function streamCollectionPass(
       if (writer) for (const row of rows) writer.push(row);
     }
 
-    // Parent table first — `property_images.property_id` is NOT NULL, so a
-    // child batch may never reach the server ahead of the row it references.
-    for (const table of plan.tables) await writers.get(table)?.flushIfFull();
+    // ALL OR NONE, parent first — never "each table when its own buffer fills".
+    //
+    // A child's foreign key is `NOT NULL`, so a `property_images` batch that
+    // reaches the server before the `properties` rows it references is a
+    // `23503`. Per-table thresholds guarantee exactly that: `properties` is 135
+    // columns wide and fills at 370 rows, `property_images` is 11 columns wide
+    // and fills at 500 — and each property carries about ten photos, so the
+    // CHILD fills after roughly fifty documents while the parent is still four
+    // fifths empty.
+    //
+    // Measured, not reasoned: the first production copy died here, on the first
+    // `property_images` batch, with `images`, `addresses` and `agencies` already
+    // written. No test caught it because no fixture had ever crossed a batch
+    // boundary — 50 properties is enough, and `writes a child batch only after
+    // its parents` is now that fixture.
+    if (plan.tables.some((table) => writers.get(table)?.isFull === true)) {
+      for (const table of plan.tables) await writers.get(table)?.flush();
+    }
 
     documents += 1;
     if (documents % PROGRESS_INTERVAL === 0) {
