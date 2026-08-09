@@ -14,7 +14,6 @@ import { IngestionService } from '../../services/ingestion/IngestionService';
 import { ExternalMediaIngest } from '../../services/ingestion/ExternalMediaIngest';
 import type { ImageBufferInput } from '../../services/imageUploadService';
 import { forwardGeocode, reverseGeocode } from '../../services/geocodingService';
-import { clearResolutionCache } from '../../services/geoResolutionService';
 
 jest.mock('../../services/geocodingService', () => ({
   forwardGeocode: jest.fn(),
@@ -103,9 +102,6 @@ beforeEach(async () => {
   // and issue one geocode where it asserts two. Wiping them is what keeps each
   // case's geocode count a property of that case.
   await resetGeoTables();
-  // Drop the in-process resolution cache too, so a resolution never returns an
-  // id for a row the wipe has just deleted.
-  clearResolutionCache();
 });
 
 describe('IngestionService.resolveAddress geocode fallbacks', () => {
