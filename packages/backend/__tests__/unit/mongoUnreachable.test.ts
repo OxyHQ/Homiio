@@ -71,13 +71,17 @@ const BACKFILL_PREFIX = 'db/backfill/';
  * it. DELETE a line when its port lands; an empty list is the signal that
  * `MONGODB_URI` can come off the task definition.
  *
- * Measured at origin/main 55e1ec4a.
+ * Measured at origin/main 4d697bea.
+ *
+ * A list measured at one revision and merged at a later one arrives stale, which
+ * is what happened to this one: it was written against 55e1ec4a and merged at
+ * 7ad466b, by which point the analytics and roommate ports had already landed
+ * (6799317a, bb309d41). Re-measure against the tip you are merging to, not the
+ * tip you branched from.
  */
 const PENDING_MONGO_FILES: ReadonlyMap<string, string> = new Map([
   ['controllers/billingController.ts', 'homiio-billing — task #40, ~30 Billing call sites'],
   ['routes/profiles.ts', 'homiio-billing — 3 Billing sites incl. a `new Billing({...})` write'],
-  ['controllers/analyticsController.ts', 'analytics port in flight'],
-  ['controllers/roommateController.ts', 'homiio-reviews-roommates — roommates + profiles'],
   ['services/geoResolutionService.ts', 'homiio-property-writes — geo services'],
   ['scripts/requeue-pisos-coordinates.ts', 'homiio-property-writes — live tooling, needs a real port'],
   ['scripts/seedImages.ts', 'unassigned — decide port vs delete like the other one-offs'],
