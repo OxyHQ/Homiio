@@ -23,26 +23,25 @@ import path from 'path';
  * secret can be removed. A file that reaches Mongo and is not on the list fails
  * the build.
  *
- * ## An empty allowlist retires the SECRET, not the npm dependency
+ * ## Both halves are now empty, and the dependency is GONE
  *
- * Worth stating because the two are easy to conflate, are cleared by different
- * people, and this list is now EMPTY — so the distinction is live rather than
- * hypothetical. {@link SCANNED_ROOTS} covers production only; `__tests__` is
- * deliberately not scanned, since a suite may legitimately need a Mongo the
- * runtime never opens. An empty list therefore means `MONGODB_URI` can come off
- * the task definition and SSM, which is exactly what it claims — and says
- * nothing about `mongoose` and `mongodb-memory-server`, which stay in
- * `package.json` while any suite boots an in-memory replica set.
+ * This gate's allowlist and the test-side enumeration were two separate lists,
+ * cleared by different people, and the distinction mattered while either held
+ * an entry: this one retired the `MONGODB_URI` SECRET, and the other retired
+ * the npm DEPENDENCY. Both are empty now.
  *
- * The test-side half has its own enumeration, by construction rather than by
- * measurement:
+ *     grep -rl '^useMongoMemoryServer();' __tests__     # 0 — helper deleted
  *
- *     grep -rl '^useMongoMemoryServer();' __tests__
+ * `mongoose` and `mongodb-memory-server` are out of `package.json`, so the
+ * strongest statement available is no longer "nothing imports Mongo" but
+ * "Mongo is not installed": a reintroduced import fails to RESOLVE. This gate is
+ * kept anyway, because a failed resolution is a confusing error at an arbitrary
+ * call site, while this names the file and says why — and because somebody
+ * re-adding the dependency should have to walk past a test that says not to.
  *
- * documented in `__tests__/helpers/mongoMemory.ts`, which also explains why the
- * `^` is load-bearing. Both lists must be empty before the dependency goes; at
- * the time of writing that one holds the two `db/backfill/` suites and this one
- * holds none.
+ * `__tests__` is still deliberately unscanned. That is now a statement about
+ * scope rather than a concession: no suite can boot a Mongo that is not
+ * installed, and the enumeration above is what proves none tries.
  *
  * ## Why an affirmative scan
  *
@@ -71,10 +70,13 @@ const BACKEND_ROOT = path.join(__dirname, '..', '..');
 /**
  * The roots that must be Mongo-free. Affirmative on purpose — see the header.
  *
- * `db/` is scanned EXCEPT `db/backfill/`, which is exempted structurally rather
- * than by name: the backfill's entire job is reading Mongo and copying it into
- * Postgres, so it is the one place a Mongo client is correct. It retires with
- * the source database, not with this gate.
+ * `db/` is scanned WHOLE. It used to carry one exemption, `db/backfill/`, whose
+ * job was reading Mongo and copying it into Postgres — the one place a Mongo
+ * client was correct. That exemption is DELETED rather than left inert: the
+ * `homiio-production` database was dropped, so the backfill read a source that
+ * no longer exists and could never be run again. An exemption nothing needs is
+ * indistinguishable from an exemption something is hiding behind, and a reader
+ * a year from now cannot tell those apart.
  */
 const SCANNED_ROOTS = [
   'controllers',
@@ -99,14 +101,6 @@ const SCANNED_ROOTS = [
  * fails the gate.
  */
 const SCANNED_FILES = ['server.ts', 'worker.ts', 'config.ts'] as const;
-
-/**
- * The backfill, exempt because reading Mongo is its purpose.
- *
- * A prefix rather than a filename, so a new backfill module does not have to be
- * remembered — and narrow enough that nothing outside `db/backfill/` inherits it.
- */
-const BACKFILL_PREFIX = 'db/backfill/';
 
 /**
  * Files that still reach Mongo, each with the agent or reason that will remove
@@ -197,7 +191,6 @@ function stripComments(source: string): string {
 
 function isScanned(file: string): boolean {
   if (file.includes('__tests__')) return false;
-  if (file.startsWith(BACKFILL_PREFIX)) return false;
   if ((SCANNED_FILES as readonly string[]).includes(file)) return true;
   return SCANNED_ROOTS.some((root) => file.startsWith(`${root}/`));
 }
@@ -317,18 +310,22 @@ describe('the runtime cannot reach Mongo', () => {
 describe('boot does not require Mongo', () => {
   /**
    * `MONGODB_URI` read at startup is what made the secret load-bearing. Nothing
-   * reads it any more, so this is now the equality it was always going to
-   * become: the variable can be removed from the task definition and from SSM
-   * without changing how this service boots.
+   * reads it, the variable is off the task definition, and
+   * `/oxy/homiio/MONGODB_URI` is deleted from SSM.
    *
    * Split from the import gate deliberately: a file can import nothing from
-   * Mongo and still demand the variable, and the two are removed by different
-   * changes. `db/backfill/` is exempt because reading the OLD database by URL
-   * is the whole of its job — it retires with the source, not with this gate.
+   * Mongo and still demand the variable, and the two were removed by different
+   * changes. The `db/backfill/` exemption that used to sit on this filter is
+   * gone with the backfill itself — reading the OLD database by URL was the
+   * whole of its job, and that database no longer exists.
+   *
+   * Scans EVERY tracked source file, not only the scanned roots: a stray
+   * `process.env.MONGODB_URI` anywhere is a demand for a secret nobody can
+   * supply, and there is no longer any directory where that is legitimate.
    */
   it('names every production module reading MONGODB_URI', () => {
     const readers = trackedFiles()
-      .filter((file) => !file.includes('__tests__') && !file.startsWith(BACKFILL_PREFIX))
+      .filter((file) => !file.includes('__tests__'))
       .filter((file) => stripComments(readFileSync(path.join(BACKEND_ROOT, file), 'utf8')).includes('MONGODB_URI'));
 
     expect(readers).toEqual([]);
