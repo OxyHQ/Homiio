@@ -1,9 +1,13 @@
 /**
  * Test data factories.
  *
- * The property and address factories write POSTGRES — the store the controllers
- * and services under test actually read and write. The Mongoose models are
- * still re-exported below for the domains that have not moved yet.
+ * Every factory here writes POSTGRES — the store the controllers and services
+ * under test actually read and write. Nothing in this file reaches a Mongoose
+ * model any more, and nothing should: a suite that genuinely needs a Mongo
+ * document (the backfill suites, and the handful of tests still pinned to a
+ * domain that has not moved) imports the model it wants directly, where the
+ * dependency is visible in that file rather than acquired by anyone who imports
+ * a factory.
  *
  * Ids are returned as `id`, never `_id`: that is the wire contract (#287) and
  * the column name, and a factory that spelled it the old way would keep every
@@ -13,11 +17,8 @@
 import { eq } from 'drizzle-orm';
 import { OfferingType, PropertyType, PropertyStatus } from '@homiio/shared-types';
 
-import * as models from '../../models';
 import { getDb } from '../../db/postgres';
 import { addresses, cities, countries, properties, regions } from '../../db/schema';
-import { assertFound } from './assertFound';
-const { Lease } = models;
 
 /**
  * The shared geo hierarchy, created once per test and reused within it.
@@ -89,53 +90,6 @@ export async function createAddress(): Promise<{ id: string }> {
   return created;
 }
 
-/**
- * A MONGO address, for the fixtures of domains that have not moved yet.
- *
- * `Review.addressId` / `streetLevelId` / `buildingLevelId` are still Mongoose
- * `ObjectId` paths pointing at the Mongo `Address` collection, and
- * `reviewController` still writes through `Address.findOrCreateCanonical` — so
- * a review fixture handed a Postgres address id fails validation with a
- * `BSONError`. That is a property of where REVIEWS live, not of the address
- * port: production is self-consistent on both sides today.
- *
- * This goes when reviews move, and it is deliberately a SECOND function rather
- * than a flag on {@link createAddress}, so no caller can pick the wrong store
- * without saying which one it means.
- */
-export async function createMongoAddress(): Promise<{ _id: unknown }> {
-  const country = await models.Country.findOneAndUpdate(
-    { code: 'ES' },
-    { $setOnInsert: { code: 'ES', name: 'Spain' } },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
-  );
-  assertFound(country, 'country');
-  const region = await models.Region.findOneAndUpdate(
-    { countryId: country._id, name: 'Catalonia' },
-    { $setOnInsert: { countryId: country._id, name: 'Catalonia' } },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
-  );
-  assertFound(region, 'region');
-  const city = await models.City.findOneAndUpdate(
-    { regionId: region._id, name: 'Barcelona' },
-    { $setOnInsert: { countryId: country._id, regionId: region._id, name: 'Barcelona' } },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
-  );
-  assertFound(city, 'city');
-
-  const existing = await models.Address.findOne({ street: 'Carrer de Mallorca 100' });
-  if (existing) return existing;
-  return models.Address.create({
-    countryId: country._id,
-    regionId: region._id,
-    cityId: city._id,
-    countryCode: 'ES',
-    street: 'Carrer de Mallorca 100',
-    postal_code: '08013',
-    coordinates: { type: 'Point', coordinates: [2.17, 41.39] },
-  });
-}
-
 export interface CreatePropertyOptions {
   oxyUserId: string;
   status?: string;
@@ -174,26 +128,3 @@ export async function createRentProperty(
   return { id: created.id, oxyUserId: created.oxyUserId ?? options.oxyUserId, status: created.status };
 }
 
-export interface CreateLeaseOptions {
-  propertyId: unknown;
-  landlordOxyUserId: string;
-  tenantOxyUserId: string;
-  status?: string;
-}
-
-export async function createLease(
-  options: CreateLeaseOptions,
-): Promise<{ _id: unknown; status: string }> {
-  const now = new Date();
-  const end = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
-  return Lease.create({
-    propertyId: options.propertyId,
-    landlordOxyUserId: options.landlordOxyUserId,
-    tenantOxyUserId: options.tenantOxyUserId,
-    status: options.status ?? 'draft',
-    leaseTerms: { startDate: now, endDate: end },
-    rentDetails: { monthlyRent: 1200, currency: 'EUR', dueDay: 1 },
-  });
-}
-
-export { models };
