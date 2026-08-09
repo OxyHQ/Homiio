@@ -32,6 +32,13 @@ import { findOrCreateAgencyByName } from '../../db/agencies/agencyWrites';
 import { findOwnerOxyUserIdsAtAddresses } from '../../db/properties/propertyReads';
 import { Review } from '../../models';
 import { agencies, reviewReports, reviews as reviewsTable } from '../../db/schema';
+import { useMongoMemoryServer } from '../helpers/mongoMemory';
+
+// ONE case here needs a live Mongo: `leaves no review rows behind in Mongo`,
+// which proves the ported controller writes nothing to the old store. It is a
+// NEGATIVE assertion, so it is unwritable once `models/` is deleted — this
+// call and that case retire together. See `helpers/mongoMemory.ts`.
+useMongoMemoryServer();
 
 /** One city per RUN, so a rerun against the worker's database cannot meet its own rows. */
 const SUITE = uuidv7().slice(-8);

@@ -23,6 +23,26 @@ import path from 'path';
  * secret can be removed. A file that reaches Mongo and is not on the list fails
  * the build.
  *
+ * ## An empty allowlist retires the SECRET, not the npm dependency
+ *
+ * Worth stating because the two are easy to conflate, are cleared by different
+ * people, and this list is now EMPTY — so the distinction is live rather than
+ * hypothetical. {@link SCANNED_ROOTS} covers production only; `__tests__` is
+ * deliberately not scanned, since a suite may legitimately need a Mongo the
+ * runtime never opens. An empty list therefore means `MONGODB_URI` can come off
+ * the task definition and SSM, which is exactly what it claims — and says
+ * nothing about `mongoose` and `mongodb-memory-server`, which stay in
+ * `package.json` while any suite boots an in-memory replica set.
+ *
+ * The test-side half has its own enumeration, by construction rather than by
+ * measurement:
+ *
+ *     grep -rl '^useMongoMemoryServer();' __tests__
+ *
+ * documented in `__tests__/helpers/mongoMemory.ts`, which also explains why the
+ * `^` is load-bearing. Both lists must be empty before the dependency goes; at
+ * the time of writing that one holds four suites and this one holds none.
+ *
  * ## Why an affirmative scan
  *
  * Enumeration is `git ls-files`, never a directory walk, so the scan cannot

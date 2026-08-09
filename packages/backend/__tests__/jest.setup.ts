@@ -1,29 +1,24 @@
 /**
  * Global Jest setup for the backend test suite.
  *
- * Spins up an in-memory MongoDB once per test process and connects Mongoose to
- * it BEFORE any model module is required (the model files call
- * `mongoose.model(...)` at import time and read the active connection). The DB
- * URI is set on `process.env` so anything reading `config.database.url` lands on
- * the memory server too. Collections are cleared after every test for isolation.
+ * Publishes the environment `config` captures at module load, and opens the
+ * Postgres pool — the store every suite here reads.
  *
- * Tests that are pure (no DB) are unaffected — they simply never touch a model.
+ * ## Mongo is NOT booted from this file any more
  *
- * ## Why a REPLICA SET rather than a standalone `MongoMemoryServer`
+ * It used to spin up an in-memory replica set for every one of the 130 suites.
+ * Five need one, measured by switching it off and running the whole suite
+ * serially: 77 tests of 1,751 turn red, all inside `dataBackfill`,
+ * `geoBackfill`, `reviewSystem`, `stripeWebhook` and `wireIdContract`. Those
+ * five now call `useMongoMemoryServer()` from
+ * `__tests__/helpers/mongoMemory.ts`, which is also where the reasoning about
+ * replica sets and `MONGODB_URI` moved.
  *
- * A standalone `mongod` refuses `session.withTransaction` outright, and the
- * moderation intake's whole guarantee is that a report and its delivery event
- * commit together — a test running against a standalone server could only ever
- * assert the halves separately, which is precisely the bug that guarantee
- * exists to prevent. Production is a replica set (`rs0`, `oxy-infra`
- * `terraform-uswest2/mongo.tf`), so a single-node replica set here is also the
- * closer match to what the code actually runs against.
- *
- * One node, not three: a transaction needs a replica set, not redundancy.
+ * The point is enumerability rather than speed: `mongoose` and
+ * `mongodb-memory-server` are leaving `package.json`, and a `grep -rl
+ * useMongoMemoryServer __tests__` now answers "what is still in the way"
+ * from the repository instead of from a measurement somebody has to redo.
  */
-
-import mongoose from 'mongoose';
-import { MongoMemoryReplSet } from 'mongodb-memory-server';
 
 // Give config a real https public URL so self-hosted image URLs
 // (`${publicUrl}/api/images/file/...`) are accepted by the Property image-URL
@@ -55,20 +50,8 @@ process.env.CROWDSOURCE_WEBHOOK_SECRET =
 process.env.CROWDSOURCE_WEBHOOK_SECRET_PREVIOUS =
   process.env.CROWDSOURCE_WEBHOOK_SECRET_PREVIOUS || 'test-previous-secret-at-least-16-chars';
 
-let mongoServer: MongoMemoryReplSet | undefined;
-
 beforeAll(async () => {
-  mongoServer = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
-  const uri = mongoServer.getUri();
-  // `MONGODB_URI` ONLY. `DATABASE_URL` used to be set here too, back when
-  // `config.database.url` fell back to it — it now names the POSTGRES database
-  // (`jest.setupWorkerDatabase.cjs` points it at this worker's throwaway one),
-  // so writing a `mongodb://` URI over it would make every Postgres suite
-  // connect to the memory server and fail on a protocol mismatch.
-  process.env.MONGODB_URI = uri;
-  await mongoose.connect(uri);
-
-  // Postgres too, for every suite rather than only the `__tests__/db` ones:
+  // Postgres, for every suite rather than only the `__tests__/db` ones:
   // from batch 1 on, request-path code (geo, addresses, cities, neighborhoods)
   // reads it through `getDb()`, which THROWS when no pool has been published. A
   // suite that forgot to connect would fail with "PostgreSQL is not connected"
@@ -91,22 +74,14 @@ beforeAll(async () => {
   await connectPostgres();
 });
 
-afterEach(async () => {
-  const { collections } = mongoose.connection;
-  await Promise.all(
-    Object.values(collections).map((collection) => collection.deleteMany({})),
-  );
-});
-
-afterAll(async () => {
-  await mongoose.disconnect();
-  if (mongoServer) {
-    await mongoServer.stop();
-  }
-  // The Postgres pool is deliberately NOT closed here. A root `afterAll`
-  // declared in a setup file runs BEFORE the test file's own, so closing it
-  // would pull the pool out from under any suite that cleans its fixtures up in
-  // an `afterAll` — which the `__tests__/db` files do. Those files close it
-  // themselves; the pool is per worker process and dies with it, and
-  // `jest.globalTeardown.ts` drops the databases either way.
-});
+// There is deliberately no root `afterAll` here.
+//
+// The Postgres pool must NOT be closed from one: a root `afterAll` declared in a
+// setup file runs BEFORE the test file's own, so closing it would pull the pool
+// out from under any suite that cleans its fixtures up in an `afterAll` — which
+// the `__tests__/db` files do. Those files close it themselves; the pool is per
+// worker process and dies with it, and `jest.globalTeardown.ts` drops the
+// databases either way.
+//
+// The Mongo half of the old teardown moved to `helpers/mongoMemory.ts`, where it
+// belongs to the suites that actually opened a connection.
