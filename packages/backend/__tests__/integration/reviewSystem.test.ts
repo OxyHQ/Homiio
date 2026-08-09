@@ -30,15 +30,7 @@ import { seedAddress, seedGeoChain, seedProperty } from '../helpers/postgresGeoF
 import { getDb } from '../../db/postgres';
 import { findOrCreateAgencyByName } from '../../db/agencies/agencyWrites';
 import { findOwnerOxyUserIdsAtAddresses } from '../../db/properties/propertyReads';
-import { Review } from '../../models';
 import { agencies, reviewReports, reviews as reviewsTable } from '../../db/schema';
-import { useMongoMemoryServer } from '../helpers/mongoMemory';
-
-// ONE case here needs a live Mongo: `leaves no review rows behind in Mongo`,
-// which proves the ported controller writes nothing to the old store. It is a
-// NEGATIVE assertion, so it is unwritable once `models/` is deleted — this
-// call and that case retire together. See `helpers/mongoMemory.ts`.
-useMongoMemoryServer();
 
 /** One city per RUN, so a rerun against the worker's database cannot meet its own rows. */
 const SUITE = uuidv7().slice(-8);
@@ -720,13 +712,13 @@ describe('nothing in this controller reaches Mongo', () => {
   });
 
   /**
-   * The Mongoose model still exists and nothing in the request path reads it.
-   *
-   * This is the guard that says so: every review in this file was created
-   * through the real controller, so a single stray Mongo write anywhere in the
-   * create path would show up here as a non-zero count.
+   * `leaves no review rows behind in Mongo` stood here and is DELETED, not
+   * moved: it counted documents through the `Review` Mongoose model, and that
+   * model no longer exists. The assertion it made — the create path writes
+   * nothing to the old store — is now structural rather than measured, because
+   * there is no longer a model through which this controller could write. What
+   * still guards it is the source scan above plus
+   * `__tests__/unit/mongoUnreachable.test.ts`, which fails the build if any
+   * module under a scanned root reacquires a Mongo import.
    */
-  it('leaves no review rows behind in Mongo', async () => {
-    expect(await Review.countDocuments({})).toBe(0);
-  });
 });

@@ -41,7 +41,8 @@ import path from 'path';
  *
  * documented in `__tests__/helpers/mongoMemory.ts`, which also explains why the
  * `^` is load-bearing. Both lists must be empty before the dependency goes; at
- * the time of writing that one holds four suites and this one holds none.
+ * the time of writing that one holds the two `db/backfill/` suites and this one
+ * holds none.
  *
  * ## Why an affirmative scan
  *
@@ -51,6 +52,18 @@ import path from 'path';
  * AFFIRMATIVE list of what must be Mongo-free, rather than "everything minus
  * known binaries" — a new directory cannot silently widen the exemption; it is
  * simply not scanned until somebody adds it here on purpose.
+ *
+ * ## Why the extension filter is a list and not `.ts`
+ *
+ * It was `.ts` only, and that was a real hole rather than a theoretical one:
+ * `scripts/seedCities.js` sat under a SCANNED root, did
+ * `require('mongoose')` AND `require('../dist/models/index')`, and this gate
+ * reported a clean tree the whole time. A TypeScript-shaped search for
+ * importers cannot see it either — it imports the COMPILED barrel, so the
+ * source path `models/` never appears in it. It is deleted now, along with
+ * `scripts/seedCitiesSimple.js`, but the filter is widened so the next one
+ * cannot repeat the trick: a Mongo reader does not stop counting because it was
+ * written in JavaScript.
  */
 
 const BACKEND_ROOT = path.join(__dirname, '..', '..');
@@ -137,21 +150,44 @@ const PENDING_MONGO_FILES: ReadonlyMap<string, string> = new Map([]);
  * repository document what they no longer do in exactly this vocabulary — a
  * raw-text scan matches their own explanation and fails on correct code. That
  * is not hypothetical: it happened while writing a sibling gate today.
+ *
+ * **`import` and `require` are BOTH covered for the barrel, not only for
+ * mongoose**, and the asymmetry that used to sit here was load-bearing:
+ * `scripts/seedCities.js` reached the models through
+ * `require('../dist/models/index')` — the COMPILED barrel, under `dist/`, so
+ * neither an `import`-shaped pattern nor a grep for the source path `models/`
+ * could see it. `dist` is matched by the same `[^'"]*` that matches a relative
+ * prefix, so the compiled spelling is covered without naming it.
  */
 const MONGO_PATTERNS: readonly RegExp[] = [
   /\bfrom\s+['"]mongoose['"]/,
   /\brequire\(\s*['"]mongoose['"]\s*\)/,
   /\bfrom\s+['"][^'"]*\/models['"]/,
   /\bfrom\s+['"][^'"]*\/models\/[^'"]*['"]/,
+  /\brequire\(\s*['"][^'"]*\/models['"]\s*\)/,
+  /\brequire\(\s*['"][^'"]*\/models\/[^'"]*['"]\s*\)/,
   /\bfrom\s+['"][^'"]*database\/connection['"]/,
+  /\brequire\(\s*['"][^'"]*database\/connection['"]\s*\)/,
 ];
+
+/**
+ * Executable source, whatever it is written in. See the header — a `.ts`-only
+ * filter let a `require('mongoose')` under `scripts/` pass unseen.
+ *
+ * `.d.ts` is excluded because a declaration file cannot open a connection, and
+ * including it would only add noise; every other shape here can.
+ */
+const SOURCE_EXTENSIONS = ['.ts', '.js', '.cjs', '.mjs'] as const;
 
 function trackedFiles(): string[] {
   const output = execFileSync('git', ['ls-files', '--', '.'], {
     cwd: BACKEND_ROOT,
     encoding: 'utf8',
   });
-  return output.split('\n').filter((line) => line.endsWith('.ts'));
+  return output
+    .split('\n')
+    .filter((line) => !line.endsWith('.d.ts'))
+    .filter((line) => SOURCE_EXTENSIONS.some((extension) => line.endsWith(extension)));
 }
 
 /** Strip line and block comments. Crude by design — it only has to remove prose. */
@@ -190,6 +226,20 @@ describe('the runtime cannot reach Mongo', () => {
     for (const file of SCANNED_FILES) {
       expect(scanned).toContain(file);
     }
+  });
+
+  /**
+   * The widening past `.ts` is not vacuous.
+   *
+   * Reverting {@link SOURCE_EXTENSIONS} to `['.ts']` leaves every other
+   * assertion in this file green — the tree is clean either way — so nothing
+   * else would notice a Mongo reader written in JavaScript becoming invisible
+   * again. That is exactly how `scripts/seedCities.js` went unseen. This case
+   * fails on the revert, which is the whole point of it.
+   */
+  it('scans JavaScript sources too, not only TypeScript', () => {
+    const javascript = scanned.filter((file) => /\.(js|cjs|mjs)$/.test(file));
+    expect(javascript.length).toBeGreaterThan(0);
   });
 
   /**
@@ -234,6 +284,11 @@ describe('the runtime cannot reach Mongo', () => {
       "import { Billing } from '../models';",
       "import { Property } from '../../models/schemas/PropertySchema';",
       "import database from '../database/connection';",
+      // The COMPILED barrel, reached by `require` — the exact line
+      // `scripts/seedCities.js` carried while this gate reported a clean tree.
+      "const { City } = require('../dist/models/index');",
+      "const { Billing } = require('../models');",
+      "const database = require('../database/connection');",
     ];
     for (const source of positives) {
       expect([source, MONGO_PATTERNS.some((p) => p.test(source))]).toEqual([source, true]);
@@ -245,6 +300,12 @@ describe('the runtime cannot reach Mongo', () => {
       "// import mongoose from 'mongoose';",
       "/* this module no longer imports from '../models' */",
       "import { modelsAreGone } from './modelsAreGone';",
+      // The `require` half needs its own negatives, or a pattern widened to
+      // match every `require(...)` would pass the positives above and be caught
+      // by nothing.
+      "const { db } = require('../db');",
+      "const schema = require('../db/schema');",
+      "const { modelsAreGone } = require('./modelsAreGone');",
     ];
     for (const source of negatives) {
       const stripped = stripComments(source);

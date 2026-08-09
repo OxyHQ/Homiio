@@ -2,14 +2,20 @@
  * The `_id` → `id` wire contract, asserted on the real router.
  *
  * `@homiio/shared-types` names a document's identity `id` and nothing else, so
- * every consumer now reads `id`. Mongo still stores `_id`, and
- * `middlewares/wireIds.ts` is the one place that difference is resolved.
+ * every consumer reads `id`. `middlewares/wireIds.ts` is the one place any other
+ * spelling is resolved.
+ *
+ * Mongo is GONE — every row this API serves comes from Postgres, where the
+ * column is already `id` — so the middleware no longer has a producer of `_id`
+ * to correct. It is kept, and kept tested, as the boundary that makes "nothing
+ * this API returns is named `_id`" a checked property of the WIRE rather than a
+ * claim about the ~100 call sites behind it. The sweep below is the part that
+ * still earns its keep; the unit cases pin the branches it relies on.
  *
  * This file exists because a typecheck cannot see any of it. The frontend
- * compiles against the DTOs; the backend hands `res.json` a Mongoose document or
- * a `.lean()` object, neither of which is typed as a DTO, so `tsc` is green
- * whether the body carries `id`, `_id`, or both. Only a real request can tell
- * those three apart.
+ * compiles against the DTOs; the backend hands `res.json` a serializer's plain
+ * object, which is not typed as a DTO, so `tsc` is green whether the body
+ * carries `id`, `_id`, or both. Only a real request can tell those apart.
  *
  * The NEGATIVE half of every assertion is the load-bearing one. Checking that
  * `id` is present passes just as happily on the old dual-spelling body that also
@@ -19,15 +25,10 @@
 
 import express, { type Express } from 'express';
 import request from 'supertest';
-import mongoose from 'mongoose';
 
 import publicRoutes from '../../routes/public';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { renameWireIds } from '../../middlewares/wireIds';
-// The one Mongoose model this file still needs: the `toJSON` reduction case
-// below is ABOUT a Mongoose document, which is one of the two shapes
-// `renameWireIds` has to handle and cannot be exercised with a plain object.
-import { Country } from '../../models';
 import {
   resetGeoTables,
   seedAddress,
@@ -35,11 +36,6 @@ import {
   seedProperty,
 } from '../helpers/postgresGeoFixtures';
 import { OfferingType, PropertyStatus, PropertyType } from '@homiio/shared-types';
-import { useMongoMemoryServer } from '../helpers/mongoMemory';
-
-// ONE case here needs a live Mongo: the `toJSON` reduction, which is ABOUT a
-// real Mongoose document. See `helpers/mongoMemory.ts`.
-useMongoMemoryServer();
 
 function buildApp(): Express {
   const app = express();
@@ -74,11 +70,23 @@ describe('renameWireIds', () => {
     expect(renameWireIds({ _id: 'raw', id: 'chosen' })).toEqual({ id: 'chosen' });
   });
 
-  it('stringifies an ObjectId rather than emitting it as an object', () => {
-    const oid = new mongoose.Types.ObjectId();
-    const out = renameWireIds({ _id: oid }) as { id: unknown };
+  /**
+   * A NON-STRING `_id` is stringified rather than emitted as an object.
+   *
+   * The fixture used to be a real `mongoose.Types.ObjectId`, which is what this
+   * branch was written for. Nothing produces one any more — the models are gone
+   * and every id in Postgres is already `text` — so the fixture is now the
+   * SHAPE the branch actually handles: a value whose string form comes from its
+   * own `toString`. That is precisely what `String(raw)` consumes, so the
+   * substitution loses no coverage; asserting a real ObjectId here would only
+   * pin a type this service can no longer construct.
+   */
+  it('stringifies a non-string `_id` rather than emitting it as an object', () => {
+    const hex = '507f1f77bcf86cd799439011';
+    const objectIdLike = { toString: () => hex };
+    const out = renameWireIds({ _id: objectIdLike }) as { id: unknown };
 
-    expect(out.id).toBe(oid.toString());
+    expect(out.id).toBe(hex);
     expect(typeof out.id).toBe('string');
   });
 
@@ -87,16 +95,33 @@ describe('renameWireIds', () => {
     expect((renameWireIds({ createdAt: when }) as { createdAt: Date }).createdAt).toEqual(when);
   });
 
-  it('reduces a Mongoose document through its own toJSON first', async () => {
-    const country = await Country.create({ code: 'PT', name: 'Portugal', currency: 'EUR' });
-    const out = renameWireIds(country) as Record<string, unknown>;
+  /**
+   * `toPlain` runs `toJSON` BEFORE the walk, so the rename applies to the
+   * REDUCED shape rather than to the wrapper's own enumerable properties.
+   *
+   * This case was written against a real Mongoose document created through the
+   * `Country` model — the one thing in the codebase that defined `toJSON` and
+   * carried `_id`. Both are gone, so the fixture is now stated directly: an
+   * object whose `toJSON` yields `_id`, with a decoy enumerable property that
+   * `toJSON` does NOT expose. The decoy is what keeps this honest — a
+   * `renameWireIds` that skipped `toPlain` and walked the wrapper would emit
+   * `notOnTheWire` and no `id`, so it fails rather than passing on a shape that
+   * happens to look similar.
+   */
+  it('reduces a value through its own toJSON before renaming', () => {
+    const document = {
+      notOnTheWire: 'wrapper internals',
+      toJSON: () => ({ _id: 'pt-1', name: 'Portugal' }),
+    };
+    const out = renameWireIds(document) as Record<string, unknown>;
 
     expect(out).not.toHaveProperty('_id');
-    expect(out.id).toBe(country._id.toString());
+    expect(out).not.toHaveProperty('notOnTheWire');
+    expect(out.id).toBe('pt-1');
     expect(out.name).toBe('Portugal');
-    // The document itself is untouched — it is not this function's to edit, and
-    // the same object may be a cache entry or be saved after the response.
-    expect(country._id).toBeDefined();
+    // The input is untouched — it is not this function's to edit, and the same
+    // object may be a cache entry or be reused after the response.
+    expect(document.notOnTheWire).toBe('wrapper internals');
   });
 
   it('passes primitives and null through', () => {
@@ -197,9 +222,9 @@ describe('the wire contract, over a real request', () => {
    * a path is only counted as COVERAGE once its body is asserted to contain
    * real entity data, and the assertion names the path that failed.
    *
-   * The city endpoints need Postgres seeded as well as Mongo — they were ported
-   * in an earlier batch and no longer read the Mongo `City` model — which is the
-   * concrete way that first draft was silently empty.
+   * The city endpoints read Postgres, so they need the Postgres fixtures seeded
+   * — they were ported in an earlier batch and stopped reading the Mongo `City`
+   * model, which is the concrete way that first draft was silently empty.
    *
    * ## What this deliberately does NOT catch, so nobody reads it as a hole
    *
