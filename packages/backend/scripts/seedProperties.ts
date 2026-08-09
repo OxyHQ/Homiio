@@ -12,12 +12,23 @@
  * A listing may carry several offerings at once (e.g. monthly rent AND a nightly
  * rate, with DIFFERENT numbers), each in its own priced block.
  *
- * Idempotent: each listing has a stable (source, sourceId) key. Re-running
- * upserts in place instead of creating duplicates. Addresses are deduplicated
- * by their normalizedKey via Address.findOrCreateCanonical.
+ * Idempotent: each listing has a stable `(source, sourceId)` key, backed by the
+ * partial unique `properties_source_source_id_key`. A re-run probes that key and
+ * skips a listing it already wrote — so a second run inserts nothing, fetches no
+ * photos, and leaves every id it minted on the first run intact. Addresses are
+ * deduplicated by their `normalized_key` via `findOrCreateCanonicalAddress`, and
+ * the geo hierarchy by `seedGeo`'s own `ON CONFLICT DO UPDATE`.
+ *
+ * That property is pinned by `__tests__/db/seedProperties.test.ts`, which runs
+ * the seeder TWICE against a real Postgres and compares the ID SETS of
+ * `properties`, `addresses`, `images` and `property_images` — not merely their
+ * counts, which a truncate-and-reinsert satisfies just as well. A single run
+ * cannot tell idempotent from not, and a count cannot tell a no-op from a
+ * rewrite.
  *
  * Usage:
- *   bun run seed:properties
+ *   bun run seed:properties            # converge: create what is missing
+ *   bun run seed:properties -- --fresh # wipe the five seeded tables first
  *   # or
  *   ts-node --transpile-only scripts/seedProperties.ts
  */
@@ -39,6 +50,8 @@ import {
   seedEntityCoverImage,
   CITY_COVER_IMAGE_URLS,
   logStorageMode,
+  fetchImageBuffer,
+  type SeedImageFetcher,
 } from './seedImages';
 
 /**
@@ -55,7 +68,7 @@ const FurnishedStatus = {
 
 import { eq, sql } from 'drizzle-orm';
 
-import { connectPostgres, getDb } from '../db/postgres';
+import { closePostgres, connectPostgres, getDb } from '../db/postgres';
 // `properties` is aliased because this module's own seed DATA is called
 // `properties` — the table and the fixture list would otherwise shadow.
 import {
@@ -66,6 +79,7 @@ import {
   propertyImages,
 } from '../db/schema';
 import {
+  findPropertyBySource,
   insertProperty,
   replacePropertyImages,
   type PropertyWriteInput,
@@ -86,7 +100,8 @@ import { findOrCreateCanonicalAddress } from '../services/addressService';
  * because a real internal listing could share the source but never the owner.
  */
 const SEED_SOURCE = 'internal';
-const SEED_OWNER_OXY_USER_ID = 'seed-demo-host';
+/** Exported so a test can scope its assertions to rows this seeder owns. */
+export const SEED_OWNER_OXY_USER_ID = 'seed-demo-host';
 const CURRENCY = 'EUR';
 
 // Short-term availability runs from today for the next ~90 days.
@@ -774,7 +789,38 @@ function resolveOfferings(seed: SeedProperty): OfferingType[] {
   return offerings;
 }
 
-async function upsertProperty(seed: SeedProperty): Promise<'inserted' | 'updated'> {
+async function upsertProperty(
+  seed: SeedProperty,
+  fetchImage: SeedImageFetcher,
+): Promise<'created' | 'unchanged'> {
+  // The natural key IS the idempotency mechanism. `properties_source_source_id_key`
+  // is unique on `(source, source_id) WHERE source_id IS NOT NULL`, so a seeded
+  // listing is identified by `('internal', sourceId)` and nothing else — not by a
+  // minted id, which is the whole point: a fresh uuid v7 per run would never
+  // conflict and would duplicate all 21 listings on every invocation while the
+  // summary happily reported convergence.
+  //
+  // Probing BEFORE the insert (rather than inserting and catching `23505`) is
+  // what makes a repeat a genuine no-op instead of a rewrite: it also skips the
+  // photo fetch, so a second run performs zero network requests and writes zero
+  // `images` rows. `findPropertyBySource` returns the photo count for exactly
+  // this decision.
+  const existing = await findPropertyBySource(SEED_SOURCE, seed.sourceId);
+  if (existing) {
+    // Attach photos only if a previous run died between the listing insert and
+    // its images — a resumed partial run, the case the idempotence rule exists
+    // for. A listing that already has photos is left completely alone.
+    if (existing.imageCount === 0) {
+      const refs = await seedPropertyImages(
+        existing.id,
+        withUnsplashParams(seed.imageUrls),
+        fetchImage,
+      );
+      await replacePropertyImages(existing.id, refs);
+    }
+    return 'unchanged';
+  }
+
   const address = await findOrCreateCanonicalAddress({
     street: seed.address.street,
     number: seed.address.number,
@@ -855,7 +901,20 @@ async function upsertProperty(seed: SeedProperty): Promise<'inserted' | 'updated
     status: PropertyStatus.PUBLISHED,
     availability: {
       isAvailable: true,
-      availableFrom: today
+      availableFrom: today,
+      // Stated explicitly, and NOT cosmetically: `toPropertyColumns` maps this
+      // block through `member()`, which turns an absent key into an explicit
+      // NULL — and `availability_minimum_stay` / `_maximum_stay` are
+      // `notNull().default(1)` / `.default(12)`. An explicit NULL does not fall
+      // back to a column default, so omitting them fails `23502` on the FIRST
+      // listing. (Their sibling keys in the same block coalesce —
+      // `member(block,'isAvailable') ?? true` — these two do not; that gap is
+      // `db/properties/propertyWrites.ts`'s to close, and it breaks any caller
+      // sending a partial `availability` block, not just this seeder.)
+      // The values here are the column defaults, so the row is what the schema
+      // would have written on its own.
+      minimumStay: 1,
+      maximumStay: 12
     },
     availableFrom: today
   };
@@ -867,9 +926,8 @@ async function upsertProperty(seed: SeedProperty): Promise<'inserted' | 'updated
     }
   }
 
-  // Insert fresh (the table is wiped first in `run`). The cross-field
-  // `offerings`↔blocks rule that needed a whole Mongoose document as `this` is
-  // now four CHECK constraints on the table
+  // The cross-field `offerings`↔blocks rule that needed a whole Mongoose
+  // document as `this` is now four CHECK constraints on the table
   // (`properties_offering_{long_term_rent,short_term_rent,sale,exchange}_check`),
   // so it holds for every writer rather than only for `.save()`.
   doc.sourceId = seed.sourceId;
@@ -882,10 +940,11 @@ async function upsertProperty(seed: SeedProperty): Promise<'inserted' | 'updated
   const imageRefs = await seedPropertyImages(
     property.property.id,
     withUnsplashParams(seed.imageUrls),
+    fetchImage,
   );
   await replacePropertyImages(property.property.id, imageRefs);
 
-  return 'inserted';
+  return 'created';
 }
 
 /**
@@ -894,16 +953,31 @@ async function upsertProperty(seed: SeedProperty): Promise<'inserted' | 'updated
  * `entityId = city._id`) and set the city's `coverImageId` + `imageIds`. Runs
  * after geo is seeded so the City rows (and their `_id`s) exist.
  */
-async function seedCityCoverImages(): Promise<void> {
-  const cityRows = await getDb().select({ id: cities.id, name: cities.name }).from(cities);
+async function seedCityCoverImages(fetchImage: SeedImageFetcher): Promise<void> {
+  const cityRows = await getDb()
+    .select({ id: cities.id, name: cities.name, coverImageId: cities.coverImageId })
+    .from(cities);
   for (const city of cityRows) {
     const url = CITY_COVER_IMAGE_URLS[city.name as keyof typeof CITY_COVER_IMAGE_URLS];
     if (!url) {
       console.warn(`[seed-properties] No curated cover image for city "${city.name}" — skipping`);
       continue;
     }
+    // Already covered — leave it alone. `images` has no natural key to conflict
+    // on (its id is minted per upload), so without this probe every re-run would
+    // fetch six photos again and leave six ORPHANED `images` rows behind, with
+    // only the newest reachable through `cities.cover_image_id`. That is the
+    // duplicate-on-repeat failure the property-level probe above avoids, one
+    // table over.
+    if (city.coverImageId) continue;
     try {
-      const imageId = await seedEntityCoverImage('city', city.id, url, `${city.name} cityscape`);
+      const imageId = await seedEntityCoverImage(
+        'city',
+        city.id,
+        url,
+        `${city.name} cityscape`,
+        fetchImage,
+      );
       if (imageId) {
         // Only the cover pointer. The `imageIds[]` array the Mongo document
         // carried was dropped in the port: the membership it denormalized is
@@ -920,30 +994,51 @@ async function seedCityCoverImages(): Promise<void> {
   }
 }
 
-async function run(): Promise<void> {
-  console.log('[seed-properties] Connecting to database...');
-  await connectPostgres();
+/** Options for {@link seedProperties}. */
+export interface SeedPropertiesOptions {
+  /**
+   * Wipe listings, addresses, images and the geo hierarchy before seeding.
+   *
+   * OFF by default, which is the change that makes this script idempotent
+   * rather than merely convergent. A truncate does keep the row COUNT stable
+   * across runs, so it passes a naive "run it twice" check — but every run
+   * mints new ids for all 21 listings, their addresses and their photos, so
+   * anything holding a seeded id (a saved item, an open tab, a fixture) breaks,
+   * and it destroys any real local data in five shared tables on the way past.
+   * That is a rewrite, not a no-op.
+   */
+  fresh?: boolean;
+  /** Injected by the test so the repeat-is-a-no-op property is observable offline. */
+  fetchImage?: SeedImageFetcher;
+}
 
-  // Fresh reseed (no migration): wipe listings, addresses, the geo hierarchy AND
-  // every image row, then re-seed geo so addresses resolve against canonical
-  // rows.
-  //
-  // ONE `TRUNCATE ... CASCADE`, where the Mongo version fired seven parallel
-  // `deleteMany`s. It has to be one statement: these tables reference each other
-  // (`properties.address_id` is ON DELETE RESTRICT, `property_images.image_id`
-  // likewise), so any independent order fails on the first table something still
-  // points at. The parallel version only appeared to work because Mongo has no
-  // foreign keys — it was leaving dangling references, not avoiding them.
-  //
-  // Note this is a FULL wipe of `properties`, not just `source = 'seed'`: a
-  // truncate cannot be filtered, and the geo truncate below would cascade into
-  // every remaining listing anyway. That matches what the script already
-  // documents itself as — a development reseed, never something to point at a
-  // database holding real listings.
-  console.log('[seed-properties] Wiping listings, addresses, geo tables and images...');
-  await getDb().execute(
-    sql`truncate table ${propertiesTable}, ${propertyImages}, ${addresses}, ${images}, ${cities} cascade`,
-  );
+/** What one seeding pass did, per listing. */
+export interface SeedPropertiesSummary {
+  created: number;
+  unchanged: number;
+}
+
+export async function seedProperties(
+  options: SeedPropertiesOptions = {},
+): Promise<SeedPropertiesSummary> {
+  const fetchImage = options.fetchImage ?? fetchImageBuffer;
+
+  if (options.fresh) {
+    // ONE `TRUNCATE ... CASCADE`, where the Mongo version fired seven parallel
+    // `deleteMany`s. It has to be one statement: these tables reference each
+    // other (`properties.address_id` is ON DELETE RESTRICT,
+    // `property_images.image_id` likewise), so any independent order fails on
+    // the first table something still points at. The parallel version only
+    // appeared to work because Mongo has no foreign keys — it was leaving
+    // dangling references, not avoiding them.
+    //
+    // A truncate cannot be filtered to `oxy_user_id = 'seed-demo-host'`, so this
+    // is a FULL wipe of five shared tables. That is why it is opt-in.
+    console.log('[seed-properties] --fresh: wiping listings, addresses, geo tables and images...');
+    await getDb().execute(
+      sql`truncate table ${propertiesTable}, ${propertyImages}, ${addresses}, ${images}, ${cities} cascade`,
+    );
+  }
 
   logStorageMode();
 
@@ -952,23 +1047,23 @@ async function run(): Promise<void> {
   console.log(`[seed-properties] Geo seeded: ${geoSummary.countries} country, ${geoSummary.regions} regions, ${geoSummary.cities} cities, ${geoSummary.neighborhoods} neighborhoods`);
 
   // Seed each city's cover image: fetch the curated photo ONCE, store it as an
-  // Image doc (entityType 'city') in our own object storage, and link it via
-  // `coverImageId` — so the runtime never depends on an external image host.
+  // `images` row (entity_type 'city') in our own object storage, and link it via
+  // `cover_image_id` — so the runtime never depends on an external image host.
   console.log('[seed-properties] Seeding city cover images (fetch-once-then-store)...');
-  await seedCityCoverImages();
+  await seedCityCoverImages(fetchImage);
 
-  let inserted = 0;
-  let updated = 0;
+  let created = 0;
+  let unchanged = 0;
 
   for (const seed of properties) {
     try {
-      const result = await upsertProperty(seed);
-      if (result === 'inserted') {
-        inserted += 1;
+      const result = await upsertProperty(seed, fetchImage);
+      if (result === 'created') {
+        created += 1;
       } else {
-        updated += 1;
+        unchanged += 1;
       }
-      console.log(`[seed-properties] ${result.padEnd(8)} ${seed.sourceId} (${resolveOfferings(seed).join('+')})`);
+      console.log(`[seed-properties] ${result.padEnd(9)} ${seed.sourceId} (${resolveOfferings(seed).join('+')})`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error(`[seed-properties] FAILED ${seed.sourceId}: ${message}`);
@@ -1011,21 +1106,46 @@ async function run(): Promise<void> {
   const exchangeCount = await countSeed(OfferingType.EXCHANGE);
 
   console.log('[seed-properties] ----------------------------------------');
-  console.log(`[seed-properties] Inserted: ${inserted}  Updated: ${updated}`);
+  console.log(`[seed-properties] Created: ${created}  Unchanged: ${unchanged}`);
   console.log(`[seed-properties] Total seed properties:    ${totalSeed}`);
   console.log(`[seed-properties] Long-term-rent listings:  ${longTermCount}`);
   console.log(`[seed-properties] Short-term-rent listings: ${shortTermCount}`);
   console.log(`[seed-properties] Sale listings:            ${saleCount}`);
   console.log(`[seed-properties] Exchange listings:        ${exchangeCount}`);
   console.log('[seed-properties] Done.');
+
+  return { created, unchanged };
 }
 
-run()
-  .catch((err: unknown) => {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error('[seed-properties] FAILED:', message);
-    process.exitCode = 1;
-  })
-  .finally(() => {
-    process.exit(process.exitCode ?? 0);
-  });
+/** CLI entrypoint: connect, seed, close. `--fresh` wipes first. */
+async function run(): Promise<void> {
+  console.log('[seed-properties] Connecting to database...');
+  await connectPostgres();
+  await seedProperties({ fresh: process.argv.includes('--fresh') });
+}
+
+// Only auto-run when invoked directly, so the suite can import `seedProperties`
+// without the module seeding a database on require. `seedGeo` sets the
+// precedent; this file previously ran on import, which is why the two-run
+// idempotence property had no way to be observed by a test.
+if (require.main === module) {
+  run()
+    .catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('[seed-properties] FAILED:', message);
+      process.exitCode = 1;
+    })
+    .finally(async () => {
+      try {
+        // Close the pool this script actually opened. The teardown here used to
+        // be the Mongo `database.disconnect()` — a database the seeder had not
+        // opened since the write path moved — which left the Postgres pool for
+        // `process.exit` to reap.
+        await closePostgres();
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn('[seed-properties] disconnect error:', message);
+      }
+      process.exit(process.exitCode ?? 0);
+    });
+}
