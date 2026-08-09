@@ -2,29 +2,36 @@
  * The in-memory Mongo replica set — OPT IN, per suite.
  *
  * This used to live in `__tests__/jest.setup.ts`, which meant every one of the
- * 132 backend suites booted a `mongod` it did not use. FOUR need it, and the
+ * 132 backend suites booted a `mongod` it did not use. TWO need it, and the
  * count is measured rather than assumed: switching the replica set off and
  * running the whole suite serially turns exactly these files red —
  *
  *     db/dataBackfill.test.ts             57 of 57 tests
  *     db/geoBackfill.test.ts              16 of 41
- *     integration/reviewSystem.test.ts     1 of 33
- *     integration/wireIdContract.test.ts   1 of 13
  *
- * — 75 tests of 1,789, and nothing else moves. Measured at 5eb1bc51; re-derive
- * it the same way rather than trusting this list, because it shrinks with every
- * port. `integration/stripeWebhook.test.ts` was on it until the billing port
- * landed and was taken off in the same change that added this file.
+ * — and nothing else moves. Re-derive it the same way rather than trusting this
+ * list. It shrank twice already: `integration/stripeWebhook.test.ts` came off
+ * with the billing port, and `integration/reviewSystem.test.ts` and
+ * `integration/wireIdContract.test.ts` came off when `models/` was deleted —
+ * each held exactly ONE Mongo-needing case, and both were assertions ABOUT the
+ * Mongoose models, so they retired with them rather than being ported.
+ *
+ * ## What is left is the backfill, and it retires with the source database
+ *
+ * Both remaining callers test `db/backfill/`, whose entire job is reading the
+ * old Mongo and copying it into Postgres. They are not an unfinished port: they
+ * are the migration's own reconcile-and-verify tooling, and they go when
+ * `homiio-production` is dropped, not before. Until then `mongoose` (a
+ * production dependency, because `db/backfill/*.ts` compiles into `dist/` and
+ * ships in the image) and `mongodb-memory-server` (a devDependency, for these
+ * two suites) both stay in `package.json`.
  *
  * ## Why opt-in is worth a helper rather than being left global
  *
- * The dependency this file names is on its way OUT. `mongoose` and
- * `mongodb-memory-server` cannot leave `package.json` while anything boots
- * Mongo, so what matters is that the remaining users are ENUMERABLE — the list
- * now lives in the repository instead of in whoever last ran the measurement
- * above:
+ * What matters is that the remaining users are ENUMERABLE — the list lives in
+ * the repository instead of in whoever last ran the measurement above:
  *
- *     grep -rl '^useMongoMemoryServer();' __tests__     # 4 files
+ *     grep -rl '^useMongoMemoryServer();' __tests__     # 2 files
  *
  * The `^` anchor is load-bearing and was arrived at by running the alternatives:
  * the call is always at column 0 (see the ordering note below), while every
@@ -34,10 +41,10 @@
  * name answers 7, so an unanchored form would overstate the remaining work and
  * never reach zero.
  *
- * Retiring the last caller is then a deletion of this file and four call sites,
+ * Retiring the last caller is then a deletion of this file and two call sites,
  * not a rewrite of the global setup.
  *
- * The two other effects are real but secondary: 128 suites stop paying a
+ * The two other effects are real but secondary: 130 suites stop paying a
  * replica-set boot, and they stop holding a `mongod` process each while the
  * whole suite shares one Postgres server.
  *
