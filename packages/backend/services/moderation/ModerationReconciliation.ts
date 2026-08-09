@@ -31,24 +31,22 @@
  * so a report that did have an event is untouched rather than delivered twice.
  */
 
-import mongoose from 'mongoose';
-import ModerationOutbox from '../../models/ModerationOutbox';
-import ModerationReport from '../../models/ModerationReport';
-import { logger } from '../../middlewares/logging';
+import {
+  countLocalOnlyReports,
+  countReportsAwaitingDecision,
+  listReportsAwaitingDelivery,
+} from '../../db/moderation/moderationReportRepository';
 import {
   enqueueModerationOutboxEvent,
-  reportSubmitEventId,
-} from './ModerationOutboxService';
+  findModerationOutboxStatus,
+} from '../../db/moderation/moderationOutboxRepository';
+import { getDb } from '../../db/postgres';
+import { logger } from '../../middlewares/logging';
+import { reportSubmitEventId } from './ModerationOutboxService';
 
 const DEFAULT_BATCH_SIZE = 200;
 /** How long a `submitted` report may wait for a decision before it is counted. */
 const STALE_SUBMITTED_HOURS = 72;
-
-const TRANSACTION_OPTIONS = {
-  readPreference: 'primary' as const,
-  readConcern: { level: 'snapshot' as const },
-  writeConcern: { w: 'majority' as const },
-};
 
 export interface ModerationReconciliationResult {
   /** Reports that had no delivery event and now have one. */
@@ -85,55 +83,42 @@ export async function reconcileModerationReports(
    * the omission is the safety property, not an oversight: those reports have no
    * subject provider, so an event re-derived for one would fail as
    * `ModerationSubjectUnsupportedError` on its first attempt and dead-letter.
-   * They are counted below instead.
+   * They are counted below instead. The repository owns that status list so the
+   * exclusion cannot be widened here by accident.
    */
-  const pending = await ModerationReport.find({
-    localStatus: { $in: ['queued', 'delivery_failed'] },
-  })
-    .select('_id')
-    .sort({ createdAt: 1 })
-    .limit(batchSize)
-    .lean<{ _id: mongoose.Types.ObjectId }[]>();
+  const pending = await listReportsAwaitingDelivery(batchSize);
 
-  for (const report of pending) {
-    const reportId = String(report._id);
+  const db = getDb();
+  for (const reportId of pending) {
     const eventId = reportSubmitEventId(reportId);
-    const event = await ModerationOutbox.findById(eventId)
-      .select('status')
-      .lean<{ status: string } | null>();
+    const status = await findModerationOutboxStatus(eventId);
 
-    if (event?.status === 'dead_letter') {
+    if (status === 'dead_letter') {
       result.deadLettered += 1;
       continue;
     }
-    if (event) continue;
+    if (status !== undefined) continue;
 
     /**
-     * A transaction for a single upsert, for consistency with intake rather than
+     * A transaction for a single insert, for consistency with intake rather than
      * for atomicity: `enqueueModerationOutboxEvent` requires an OPEN transaction
      * precisely so no path in this codebase can write an outbox event outside
-     * one. A signature that made the session optional would be the crack the
-     * next caller slips through.
+     * one. A signature that made the handle optional would be the crack the next
+     * caller slips through.
      */
-    const session = await mongoose.startSession();
-    try {
-      await session.withTransaction(async () => {
-        await enqueueModerationOutboxEvent(
-          { eventId, kind: 'report.submit', payload: { reportId } },
-          session,
-        );
-      }, TRANSACTION_OPTIONS);
-      result.requeued += 1;
-    } finally {
-      await session.endSession();
-    }
+    await db.transaction(async (tx) => {
+      await enqueueModerationOutboxEvent(
+        { eventId, kind: 'report.submit', payload: { reportId } },
+        tx,
+      );
+    });
+    result.requeued += 1;
   }
 
-  result.awaitingDecision = await ModerationReport.countDocuments({
-    localStatus: 'submitted',
-    submittedAt: { $lt: new Date(now.getTime() - STALE_SUBMITTED_HOURS * 60 * 60 * 1_000) },
-  });
-  result.localOnly = await ModerationReport.countDocuments({ localStatus: 'received' });
+  result.awaitingDecision = await countReportsAwaitingDecision(
+    new Date(now.getTime() - STALE_SUBMITTED_HOURS * 60 * 60 * 1_000),
+  );
+  result.localOnly = await countLocalOnlyReports();
 
   if (result.requeued > 0 || result.deadLettered > 0) {
     logger.warn('[CrowdSource] reconciliation found divergence', { ...result });

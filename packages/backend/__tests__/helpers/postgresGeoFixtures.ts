@@ -40,6 +40,7 @@ import {
   propertyDocuments,
   propertyImages,
   regions,
+  reviews,
 } from '../../db/schema';
 
 /** A fresh 24-char ObjectId hex — the id shape every pre-cutover row carries. */
@@ -70,6 +71,19 @@ export async function resetGeoTables(): Promise<void> {
   await db.delete(propertyDocuments);
   await db.delete(propertyAvailabilityWindows);
   await db.delete(properties);
+  // Reviews before agencies AND before addresses. `reviews.address_id` is ON
+  // DELETE RESTRICT too — the same class as `properties.address_id` above — and
+  // a review is now a real row in several suites rather than a Mongo document,
+  // so an address delete under one RAISES. Its two child tables
+  // (`review_reports`, `review_helpful_votes`) both CASCADE from `reviews`, so
+  // this single statement takes them with it.
+  //
+  // The failure this prevents is worth naming, because it does NOT look like a
+  // missing delete: it surfaces in whichever OTHER file happens to share the
+  // worker database and call `resetGeoTables` next, as a foreign-key error on a
+  // table that file never touched. It is also invisible at high worker counts
+  // and appears in CI at low ones, purely by how jest distributes files.
+  await db.delete(reviews);
   await db.delete(agencies);
   await db.delete(addresses);
   await db.delete(neighborhoods);

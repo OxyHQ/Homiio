@@ -8,6 +8,7 @@
  * geocoder.
  */
 
+import { eq } from 'drizzle-orm';
 import express, { type Express } from 'express';
 import request from 'supertest';
 
@@ -23,6 +24,8 @@ import {
   seedGeoChain,
   seedProperty,
 } from '../helpers/postgresGeoFixtures';
+import { getDb } from '../../db/postgres';
+import { reviewReports, reviews as reviewsTable } from '../../db/schema';
 
 // The geo-resolution cache is process-level and short-circuits geo id
 // resolution WITHOUT re-upserting the Country/Region/City/Neighborhood docs.
@@ -257,38 +260,104 @@ describe('toggleHelpful', () => {
   });
 });
 
+
+/**
+ * Mirror a Mongo-seeded review into Postgres, under the SAME id.
+ *
+ * `reportReview` is the one handler in this controller that has moved — it is a
+ * moderation INTAKE surface, so it was ported with the rest of the moderation
+ * pipeline while review CRUD, votes and the agency pages still read Mongo. The
+ * two stores therefore have to meet for these tests, exactly as
+ * `seedAgencyListing` below already makes them meet on an agency id.
+ *
+ * That seam is real and is recorded in `db/MIGRATION-CONTRACT.md`: a review
+ * CREATED through this controller today is not visible to the report path. It
+ * is invisible in production because reviews are zero rows in both stores, and
+ * closing it belongs to the reviews domain's own port, not to the moderation
+ * one.
+ */
+async function mirrorReviewToPostgres(reviewId: string, oxyUserId: string): Promise<void> {
+  const chain = await seedGeoChain({
+    cityName: `Reviewville ${reviewId}`,
+    countryCode: `R-${reviewId.slice(-4)}`,
+  });
+  const addressId = await seedAddress({ chain, street: `Carrer Review ${reviewId}` });
+  await getDb()
+    .insert(reviewsTable)
+    .values({
+      id: reviewId,
+      addressId,
+      addressLevel: 'BUILDING',
+      streetLevelId: addressId,
+      buildingLevelId: addressId,
+      cityId: chain.cityId,
+      oxyUserId,
+      title: 'A perfectly reasonable title',
+      price: 1000,
+      currency: 'EUR',
+      livedFrom: new Date('2020-01-01'),
+      livedTo: new Date('2021-01-01'),
+      livedForMonths: 12,
+      rating: 4,
+      recommendation: true,
+      opinion: 'Lived here a while — a reasonable opinion string.',
+    });
+}
+
+/** The report rows Postgres holds for one review. */
+async function reportsForReview(reviewId: string) {
+  return getDb().select().from(reviewReports).where(eq(reviewReports.reviewId, reviewId));
+}
+
+/** The moderation status Postgres holds for one review. */
+async function moderationStatusOf(reviewId: string): Promise<string | undefined> {
+  const [row] = await getDb()
+    .select({ moderationStatus: reviewsTable.moderationStatus })
+    .from(reviewsTable)
+    .where(eq(reviewsTable.id, reviewId));
+  return row?.moderationStatus;
+}
+
 describe('reportReview', () => {
   it('dedupes repeat reports from the same reporter', async () => {
     const { review } = await seedReview('oxy-author');
+    const reviewId = String(review._id);
+    await mirrorReviewToPostgres(reviewId, 'oxy-author');
     const app = buildApp('oxy-reporter');
 
-    const first = await request(app).post(`/reviews/${review._id}/report`).send({ reason: 'spam' });
+    const first = await request(app).post(`/reviews/${reviewId}/report`).send({ reason: 'spam' });
     expect(first.status).toBe(201);
 
-    const second = await request(app).post(`/reviews/${review._id}/report`).send({ reason: 'spam' });
+    const second = await request(app).post(`/reviews/${reviewId}/report`).send({ reason: 'spam' });
     expect(second.status).toBe(200);
 
-    const persisted = await Review.findById(review._id);
-    assertFound(persisted, 'persisted');
-    expect(persisted.reports).toHaveLength(1);
+    // One ROW, not one subdocument — and the count matters beyond tidiness: it
+    // is what the escalation below compares against three, so a duplicate is a
+    // vote for removal cast twice by one person.
+    expect(await reportsForReview(reviewId)).toHaveLength(1);
   });
 
   it('requires details when the reason is "other"', async () => {
     const { review } = await seedReview('oxy-author');
+    // No Postgres mirror on purpose: the refusal is a 400 from validation, and
+    // it must land BEFORE the review is ever looked up.
     const res = await request(buildApp('oxy-reporter')).post(`/reviews/${review._id}/report`).send({ reason: 'other' });
     expect(res.status).toBe(400);
   });
 
   it('escalates to under_review after 3 distinct reporters', async () => {
     const { review } = await seedReview('oxy-author');
+    const reviewId = String(review._id);
+    await mirrorReviewToPostgres(reviewId, 'oxy-author');
+
+    expect(await moderationStatusOf(reviewId)).toBe('active');
     for (const reporter of ['r1', 'r2', 'r3']) {
-      const res = await request(buildApp(reporter)).post(`/reviews/${review._id}/report`).send({ reason: 'fake' });
+      const res = await request(buildApp(reporter)).post(`/reviews/${reviewId}/report`).send({ reason: 'fake' });
       expect(res.status).toBe(201);
     }
-    const persisted = await Review.findById(review._id);
-    assertFound(persisted, 'persisted');
-    expect(persisted.reports).toHaveLength(3);
-    expect(persisted.moderationStatus).toBe('under_review');
+
+    expect(await reportsForReview(reviewId)).toHaveLength(3);
+    expect(await moderationStatusOf(reviewId)).toBe('under_review');
   });
 
   it('keeps under_review reviews visible in agency reads but hides removed ones', async () => {

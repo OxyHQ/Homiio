@@ -1,18 +1,32 @@
 /**
  * Eviction RSVP toggle.
  *
- * "I'll show up" is a per-user toggle implemented as an atomic two-step so the
- * `attendeeCount` never drifts under concurrency and a user can never be
- * double-counted:
- *   1. try to $push the attendee guarded by `$not $elemMatch` (add if absent),
- *   2. if nothing was added the user was already attending → $pull (remove).
- * Each step also $inc's the denormalized `attendeeCount`.
+ * "I'll show up" is a per-user toggle, and it is now ONE repository call.
  *
- * When a fresh RSVP crosses an exact milestone (5/10/25/50/100) the owner gets
- * a "people are showing up" notification (never for the owner's own RSVP).
+ * ## The read-then-write is gone, and that is the point of the port
+ *
+ * Mongo could not express "one RSVP per person per case", so this handler asked
+ * whether the user was already attending and then wrote — two concurrent taps
+ * from one phone could both pass the guard, and each `$inc`'d a denormalized
+ * `attendeeCount` that was a second representation of the roster. Both drifts
+ * landed on the number the public board shows as TURNOUT, which is the whole
+ * reason anybody reads this page.
+ *
+ * `toggleAttendance` inverts that: the insert IS the check
+ * (`eviction_case_attendees_case_user_key` answers "already attending?" as a
+ * `23505`), and the count that comes back is `count(*)` over the roster rather
+ * than a counter that has to be kept true. Re-implementing an "are they on the
+ * list?" read here would put the race back.
+ *
+ * When a fresh RSVP crosses an exact milestone (5/10/25/50/100) the owner gets a
+ * "people are showing up" notification — never for the owner's own RSVP, and
+ * never on the way back down.
  */
 
-import { EvictionCase } from '../../models';
+import {
+  findEvictionCase,
+  toggleAttendance,
+} from '../../db/evictions/evictionRepository';
 import { ATTENDEE_MILESTONES } from './shared';
 import { notificationDispatchService } from '../../services/notificationDispatchService';
 import { AppError, successResponse } from '../../middlewares/errorHandler';
@@ -24,42 +38,21 @@ export async function toggleAttend(req: ControllerRequest, res: ControllerRespon
     const { id } = req.params;
     const oxyUserId = requireSessionOxyUserId(req);
 
-    const evictionCase = await EvictionCase.findById(id).select('oxyUserId title');
+    // Read the case first so a RSVP against a case that does not exist is a 404
+    // rather than a foreign-key violation surfacing as a 500. The owner and the
+    // title come from the same read, for the milestone notification below.
+    const evictionCase = await findEvictionCase(id);
     if (!evictionCase) return next(new AppError('Eviction case not found', 404, 'EVICTION_NOT_FOUND'));
 
-    // Step 1: add the attendee only if not already present.
-    const added = await EvictionCase.updateOne(
-      { _id: id, attendees: { $not: { $elemMatch: { oxyUserId } } } },
-      { $push: { attendees: { oxyUserId, at: new Date() } }, $inc: { attendeeCount: 1 } },
-    );
+    const { attending, attendeeCount } = await toggleAttendance(id, oxyUserId);
 
-    let attending: boolean;
-    if (added.modifiedCount === 1) {
-      attending = true;
-    } else {
-      // Step 2: they were already attending → remove them.
-      await EvictionCase.updateOne(
-        { _id: id, attendees: { $elemMatch: { oxyUserId } } },
-        { $pull: { attendees: { oxyUserId } }, $inc: { attendeeCount: -1 } },
-      );
-      attending = false;
-    }
-
-    const refreshed = await EvictionCase.findById(id).select('attendeeCount');
-    const attendeeCount = refreshed?.attendeeCount ?? 0;
-
-    // Milestone notification to the owner on a fresh RSVP crossing a threshold.
-    if (
-      attending &&
-      ATTENDEE_MILESTONES.has(attendeeCount) &&
-      evictionCase.oxyUserId &&
-      evictionCase.oxyUserId !== oxyUserId
-    ) {
+    // Milestone notification to the owner on a FRESH RSVP crossing a threshold.
+    if (attending && ATTENDEE_MILESTONES.has(attendeeCount) && evictionCase.oxyUserId !== oxyUserId) {
       await notificationDispatchService.createForUser(evictionCase.oxyUserId, {
         type: 'eviction_rsvp',
         title: 'People are showing up',
         message: `${attendeeCount} people have said they'll show up to "${evictionCase.title}"`,
-        data: { evictionId: String(id), attendeeCount },
+        data: { evictionId: id, attendeeCount },
       });
     }
 

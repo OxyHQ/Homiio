@@ -681,5 +681,86 @@ Recorded so they are not lost. Both are silent under Postgres:
   `_id`.~~ **FIXED in batch 1.** The guard now asks whether the value carries
   `street` — the address's own mandatory field in both stores — instead of
   asking how Mongo spells an id.
-- **`.toHexString()`** on ids in `services/moderation/subjects/propertySubject.ts:321`
-  and `reviewSubject.ts:243` throws on a plain string. Batch 2.
+- ~~**`.toHexString()`** on ids in `services/moderation/subjects/propertySubject.ts:321`
+  and `reviewSubject.ts:243` throws on a plain string.~~ **FIXED with the
+  moderation batch below.** Both providers read drizzle rows now, whose ids are
+  already plain strings, so the coercion had nothing left to convert and was
+  deleted along with the `GeoRef` union that existed only to tell a populated ref
+  from a bare `ObjectId`.
+
+## The moderation pipeline and the eviction board
+
+Both domains were **empty in production** — measured 2026-08-09 against a live
+`homiio-production` by a one-shot ECS task on `oxy-homiio:25`:
+`evictioncases`, `evictioncomments`, `evictionreports`, `moderation_reports`,
+`moderation_outbox`, `moderation_events` and `moderation_enforcements` all
+**zero**, in the same scan that returned `properties = 17,644` and
+`images = 171,976`. The non-zero figures are the positive control: a broken scan
+and an empty domain look identical without one. So there is no backfill and no
+consistency window for either domain — but the guarantees below are what the
+FIRST real report will depend on, and none of them survives being re-derived
+later.
+
+### Three `isValidObjectId` guards deleted, and why these three mattered most
+
+Consistent with the rule above, and listed because all three BRANCH rather than
+merely reject: `ModerationEnforcementService.applyToProperty` /
+`applyToReview`, and `reviewController.reportReview`. Left in place, a listing
+or review created after the cutover would carry a uuid v7, fail the guard, and
+be reported back as `changed: false` — *"the reported listing no longer
+exists"* — while sitting there perfectly intact. A jury could vote to restrict
+it and nothing would happen, with an enforcement row claiming the action was
+handled. `__tests__/db/moderationWrites.test.ts` pins both id shapes.
+
+### What is enforced by the DATABASE rather than by its single writer
+
+`listing_reports`, `review_reports` and `eviction_reports` each have exactly ONE
+writer (their intake controller). That single writer legitimately owns the SHAPE
+of a row — the reason allowlist, the details ceiling, the reporter coming from
+the session and never from a body. It does **not** own the duplicate rules, and
+single-writer is the wrong reason to think it could: one writer means one code
+PATH, not one at a time, and that path runs concurrently with itself on every
+ECS task. So the partial unique indexes carry them
+(`listing_reports_open_reporter_key`, `review_reports_review_user_key`,
+`eviction_reports_open_reporter_key`), the intake INSERTS and converges on
+`23505`, and the preceding read survives only to ANSWER with the existing row.
+`review_reports` is the sharpest case: the COUNT of those rows crossing three is
+what flips a review to `under_review`, so a duplicate that slipped through is a
+vote for removal cast twice by one person.
+
+### Carried across unchanged, because nothing else would catch their loss
+
+- **A 201 means STORED, never "CrowdSource accepted it."** The report row and its
+  outbox row commit in ONE transaction, with no outbound request in the handler.
+  `db/moderation/transactionGuard.ts` refuses the ROOT connection at runtime,
+  because `DatabaseOrTransaction` is satisfied by it — so a caller that forgets
+  to thread the handle through compiles, commits the report alone, and passes any
+  test that only asserts the row exists.
+- **A repeated enqueue is a genuine no-op.** `ON CONFLICT DO NOTHING` writes no
+  tuple version at all; `DO UPDATE` would move `updated_at` even writing the same
+  values back (drizzle applies `$onUpdate` to a conflict branch's `set`) and
+  contend with a live dispatcher lease. Asserted on `updated_at` AND `xmin`.
+- **`UNIQUE(decision_id, revision, action)` with `revision` IN the key**, so a
+  correction's `restore` is a different action from the `restrict` it supersedes
+  and an upheld appeal can still relist a listing.
+- **The webhook route stays mounted BEFORE `express.json()`**, and the dedupe
+  claim is `INSERT … ON CONFLICT DO NOTHING … RETURNING` in Postgres — Homiio
+  runs more than one task, so an in-process store would only dedupe the task that
+  received both copies. The empty vs one-row `RETURNING` set IS the answer; a
+  caught `23505` would let a dropped connection read as a duplicate.
+- **The LOOP is gated, never the durable record.** Reports taken while
+  `CROWDSOURCE_ENABLED` is off still get their delivery event.
+
+### Uncarried, and one seam left open
+
+`EvictionCase.attendeeCount` is **deleted** — `count(*)` over
+`eviction_case_attendees` answers it, and unlike `properties.has_images` it sorts
+nothing, so no `ORDER BY` has to survive a correlated aggregate. The RSVP
+toggle's read-then-write went with it.
+
+**`reviewController` is otherwise still Mongoose.** Only `reportReview` moved,
+because it is one of the three moderation intake surfaces; the other fifteen
+handlers (review CRUD, helpful votes, agency pages, explore) still read Mongo,
+so a review CREATED today is not visible to the report path. That is invisible
+in production — reviews are zero rows in both stores — and it is the reviews
+domain's own port to close, not this one's.

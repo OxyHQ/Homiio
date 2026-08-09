@@ -37,7 +37,7 @@ import {
   recordDecisionEvent,
   recordIgnoredEvent,
 } from '../services/moderation/ModerationInboundService';
-import { mongoProcessedEventStore } from '../services/moderation/moderationEventStore';
+import { postgresProcessedEventStore } from '../services/moderation/moderationEventStore';
 import { logger } from '../middlewares/logging';
 
 /**
@@ -86,7 +86,7 @@ export function createCrowdSourceWebhookRoutes(): Router {
       // Shared across tasks: the in-process default would deduplicate only the
       // instance that happened to receive both copies of a redelivery, and
       // Homiio runs an API task and a worker task against one database.
-      store: mongoProcessedEventStore(),
+      store: postgresProcessedEventStore(),
       on: {
         /**
          * A decision, provisional or final. Both are queued: a provisional

@@ -24,19 +24,20 @@
  * quiet one.
  */
 
-import { EvictionCase, EvictionReport } from '../../models';
+import {
+  DuplicateEvictionReportError,
+  findEvictionCase,
+  findOpenEvictionReport,
+  insertEvictionReport,
+} from '../../db/evictions/evictionRepository';
+import { DuplicateModerationReportError } from '../../db/moderation/moderationReportRepository';
 import { logger } from '../../middlewares/logging';
 import { AppError, successResponse } from '../../middlewares/errorHandler';
 import { requireSessionOxyUserId } from '../../utils/sessionUser';
-import {
-  ListingReportReason,
-  ListingReportStatus,
-  ModerationReportedType,
-} from '@homiio/shared-types';
+import { ListingReportReason, ModerationReportedType } from '@homiio/shared-types';
 import {
   createModerationReport,
-  DuplicateModerationReportError,
-  withReportIntakeSession,
+  withReportIntakeTransaction,
 } from '../../services/moderation/ReportIntakeService';
 import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
 
@@ -61,71 +62,68 @@ export async function createEvictionReport(req: ControllerRequest, res: Controll
       return next(new AppError('Details are required when the reason is "other"', 400, 'DETAILS_REQUIRED'));
     }
 
-    const evictionCase = await EvictionCase.findById(id).select('_id').lean();
+    const evictionCase = await findEvictionCase(id);
     if (!evictionCase) return next(new AppError('Eviction case not found', 404, 'EVICTION_NOT_FOUND'));
 
-    const existingOpen = await EvictionReport.findOne({
-      caseId: id,
-      reporterOxyUserId: oxyUserId,
-      status: ListingReportStatus.OPEN,
-    });
+    const existingOpen = await findOpenEvictionReport(id, oxyUserId);
     if (existingOpen) {
-      return res.status(200).json(successResponse(existingOpen.toJSON(), 'Report already submitted'));
+      return res.status(200).json(successResponse(existingOpen, 'Report already submitted'));
     }
 
     let report;
     try {
-      report = await withReportIntakeSession(async (session) => {
-        const [created] = await EvictionReport.create(
-          [
-            {
-              caseId: id,
-              reporterOxyUserId: oxyUserId,
-              reason,
-              details: trimmedDetails || undefined,
-              contactEmail:
-                typeof contactEmail === 'string' && contactEmail.trim()
-                  ? contactEmail.trim()
-                  : undefined,
-              status: ListingReportStatus.OPEN,
-            },
-          ],
-          { session },
-        );
+      report = await withReportIntakeTransaction(async (tx) => {
+        const created = await insertEvictionReport(tx, {
+          caseId: id,
+          reporterOxyUserId: oxyUserId,
+          reason,
+          details: trimmedDetails || undefined,
+          contactEmail:
+            typeof contactEmail === 'string' && contactEmail.trim()
+              ? contactEmail.trim()
+              : undefined,
+          status: 'open',
+        });
 
         await createModerationReport(
           {
             reportedType: ModerationReportedType.EVICTION_CASE,
-            reportedId: String(id),
+            reportedId: id,
             reporter: oxyUserId,
             reason,
             details: trimmedDetails || undefined,
           },
-          session,
+          tx,
         );
 
         return created;
       });
     } catch (error) {
-      // Already on record from an earlier report of the same case by the same
-      // reporter, even though no OPEN EvictionReport remained. Same answer as
-      // the branch above — from the reporter's side it is the same fact.
+      // Two ways to already be on record, and the reporter is told the same
+      // thing by both because from their side it is the same fact. The partial
+      // unique index caught an open report that raced the read above; or the
+      // moderation record already knows this reporter reported this case even
+      // though no OPEN eviction report remained (a re-file after an earlier one
+      // was resolved).
+      if (error instanceof DuplicateEvictionReportError) {
+        return res.status(200).json(successResponse(error.existing, 'Report already submitted'));
+      }
       if (error instanceof DuplicateModerationReportError) {
         return res
           .status(200)
-          .json(successResponse({ id: String(error.existing._id) }, 'Report already submitted'));
+          .json(successResponse({ id: error.existing.id }, 'Report already submitted'));
       }
       throw error;
     }
 
     logger.info('Eviction report created', {
-      reportId: String(report._id),
-      caseId: String(id),
+      reportId: report.id,
+      caseId: id,
       reporterOxyUserId: oxyUserId,
       reason,
     });
 
-    res.status(201).json(successResponse(report.toJSON(), 'Report submitted'));
+    res.status(201).json(successResponse(report, 'Report submitted'));
   } catch (error) {
     next(error);
   }

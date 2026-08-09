@@ -52,9 +52,15 @@ import {
 import { serializeProperty } from '../db/properties/propertySerializer';
 import {
   createModerationReport,
-  DuplicateModerationReportError,
-  withReportIntakeSession,
+  withReportIntakeTransaction,
 } from '../services/moderation/ReportIntakeService';
+import { DuplicateModerationReportError } from '../db/moderation/moderationReportRepository';
+import {
+  DuplicateReviewReportError,
+  findReviewForReport,
+  hasReportedReview,
+  insertReviewReportAndEscalate,
+} from '../db/moderation/reviewReportRepository';
 
 const ok = (res: Response, data: Record<string, unknown>) => res.status(200).json({ success: true, ...data });
 const created = (res: Response, data: Record<string, unknown>) => res.status(201).json({ success: true, ...data });
@@ -65,12 +71,24 @@ const serverError = (res: Response, data: Record<string, unknown>) => res.status
 const MIN_TITLE_LENGTH = 5;
 const MIN_OPINION_LENGTH = 10;
 const MAX_REPORT_DETAILS_LENGTH = 500;
-/** A review flips to 'under_review' once this many distinct users report it. */
-const REPORTS_TO_UNDER_REVIEW = 3;
+// The escalation threshold moved to `db/moderation/reviewReportRepository.ts`,
+// beside the count it is compared against — a copy here could disagree with the
+// one the transaction actually applies.
 const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 50;
 
 const ALLOWED_REPORT_REASONS = new Set<string>(Object.values(ReviewReportReason));
+
+/**
+ * Narrow a request-supplied reason to the stored vocabulary.
+ *
+ * A predicate rather than a cast: `review_reports.reason` carries a CHECK
+ * derived from the same tuple, so a cast would let a value the database refuses
+ * reach the insert and surface as a 500 instead of the 400 it is.
+ */
+function isReviewReportReason(value: string): value is ReviewReportReason {
+  return ALLOWED_REPORT_REASONS.has(value);
+}
 
 /** Parse `?page`/`?limit` with sane clamps. */
 function parsePageLimit(req: Request): { page: number; limit: number } {
@@ -631,11 +649,15 @@ export const reportReview = async (req: Request, res: Response) => {
     const oxyUserId = getRequiredOxyUserId(req);
     const { reason, details } = req.body || {};
 
-    if (!Types.ObjectId.isValid(reviewId)) {
+    // No `Types.ObjectId.isValid` guard: `db/ids.ts` states the rule, and every
+    // review created after the cutover carries a uuid v7, for which it is false.
+    // Keeping it would answer "invalid review ID" for every new review. The
+    // lookup below already answers "no such review", for every id shape.
+    if (typeof reviewId !== 'string' || reviewId.length === 0) {
       return badRequest(res, { message: 'Invalid review ID' });
     }
 
-    if (!reason || !ALLOWED_REPORT_REASONS.has(reason)) {
+    if (typeof reason !== 'string' || !isReviewReportReason(reason)) {
       return badRequest(res, { message: 'A valid report reason is required' });
     }
 
@@ -647,44 +669,43 @@ export const reportReview = async (req: Request, res: Response) => {
       return badRequest(res, { message: 'Details are required when the reason is "other"' });
     }
 
-    const review = await Review.findById(reviewId);
+    const review = await findReviewForReport(reviewId);
     if (!review) {
       return notFound(res, { message: 'Review not found' });
     }
 
-    // Dedup: one report per reporter. Re-filing is a no-op (200).
-    const alreadyReported = (review.reports || []).some((report) => String(report.oxyUserId) === oxyUserId);
-    if (alreadyReported) {
+    // An ANSWER path, not the check: re-filing is a no-op (200), and the read
+    // below tells the reporter so without a write. What actually stops a
+    // duplicate being COUNTED is `review_reports_review_user_key`, because the
+    // count of these rows crossing three is what flips the review to
+    // `under_review` — see `db/moderation/reviewReportRepository.ts`.
+    if (await hasReportedReview(reviewId, oxyUserId)) {
       return ok(res, { message: 'Report already submitted', moderationStatus: review.moderationStatus });
     }
 
-    review.reports.push({
-      oxyUserId,
-      reason,
-      details: trimmedDetails || undefined,
-      createdAt: new Date(),
-    });
-
-    // Escalate to moderation once enough distinct users have reported it.
-    // Homiio's own community counter, unchanged: it is a signal the reviewers
-    // raised, separate from anything a jury later decides.
-    if (review.reports.length >= REPORTS_TO_UNDER_REVIEW && review.moderationStatus === ReviewModerationStatus.ACTIVE) {
-      review.moderationStatus = ReviewModerationStatus.UNDER_REVIEW;
-    }
-
     /**
-     * The embedded report and the durable delivery record commit together.
+     * The report row, the escalation it may trigger, and the durable delivery
+     * record all commit together.
      *
-     * An embedded subdocument declared `{ _id: false }` cannot be an
-     * `externalReportId`, which is why the delivery record is a separate
-     * collection at all — and why the two must be written in one transaction.
-     * Split, a crash between them leaves either a report a jury will never see
-     * or a delivery record for a report that was rolled back, and neither
-     * surfaces as an error when it happens.
+     * Split, a crash between them leaves either a report a jury will never see,
+     * a delivery record for a report that was rolled back, or — the one the
+     * table's own docstring warns about — a review escalated on a count that
+     * does not match its rows. None surfaces as an error when it happens.
      */
+    let outcome;
     try {
-      await withReportIntakeSession(async (session) => {
-        await review.save({ session });
+      outcome = await withReportIntakeTransaction(async (tx) => {
+        const result = await insertReviewReportAndEscalate(
+          tx,
+          {
+            reviewId,
+            oxyUserId,
+            reason,
+            details: trimmedDetails || undefined,
+          },
+          review.moderationStatus,
+        );
+
         await createModerationReport(
           {
             reportedType: ModerationReportedType.REVIEW,
@@ -693,22 +714,28 @@ export const reportReview = async (req: Request, res: Response) => {
             reason,
             details: trimmedDetails || undefined,
           },
-          session,
+          tx,
         );
+
+        return result;
       });
     } catch (error) {
       /**
-       * The embedded array said this reporter had not reported it, but the
-       * delivery record disagrees — a report filed before the two were written
-       * together. Answered as the no-op it is, matching the branch above.
+       * Two ways to already be on record, answered identically because from the
+       * reporter's side they are the same fact: the unique index caught a report
+       * that raced the read above, or the delivery record knows about a report
+       * filed before the two were written together.
        */
-      if (error instanceof DuplicateModerationReportError) {
+      if (
+        error instanceof DuplicateReviewReportError ||
+        error instanceof DuplicateModerationReportError
+      ) {
         return ok(res, { message: 'Report already submitted', moderationStatus: review.moderationStatus });
       }
       throw error;
     }
 
-    return created(res, { message: 'Report submitted', moderationStatus: review.moderationStatus });
+    return created(res, { message: 'Report submitted', moderationStatus: outcome.moderationStatus });
   } catch (error) {
     logger.error('Error reporting review', { error: error instanceof Error ? error.message : String(error) });
     return serverError(res, { message: 'Failed to report review' });

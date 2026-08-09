@@ -30,10 +30,38 @@
  * carried as metadata rather than as material: a five-star review whose text is
  * abusive, or a one-star review with no substance, is a fact about the shape of
  * the thing being judged.
+ *
+ * ## The read lives HERE, and states what it selects
+ *
+ * There is no `db/reviews/` repository — this is the only reader of the table
+ * outside the review controllers' own Mongo path, and a repository built for one
+ * caller would be a shared module nothing shares. The join is the same address +
+ * geo-name shape every other reader uses, through `ADDRESS_GEO_JOINS` and
+ * `ADDRESS_GEO_NAME_COLUMNS`, so a snapshot cannot spell the geo chain its own
+ * way.
+ *
+ * The selection is explicit and short, which is the port of the old
+ * `SNAPSHOT_PROJECTION`: a moderation snapshot must not read thirty rating
+ * columns it has already decided not to send.
+ *
+ * `reviews.address_id` is `NOT NULL` with an `ON DELETE RESTRICT` foreign key
+ * and `addresses.longitude` / `latitude` are `NOT NULL` with a range CHECK, so
+ * the permalink and the location context always travel. Under Mongoose both
+ * depended on whether the `addressId` ref happened to have been populated, and
+ * reading only one of the two branches was how a permalink stopped being emitted
+ * for every review at once.
  */
 
-import mongoose from 'mongoose';
-import { Review } from '../../../models';
+import { eq } from 'drizzle-orm';
+
+import { getDb } from '../../../db/postgres';
+import { addresses, reviews } from '../../../db/schema';
+import {
+  ADDRESS_GEO_JOINS,
+  ADDRESS_GEO_NAME_COLUMNS,
+  toAddressWithGeoNames,
+  type AddressWithGeoNames,
+} from '../../../db/addresses/addressSerializer';
 import config from '../../../config';
 import type {
   ModerationContextResource,
@@ -47,63 +75,60 @@ const MAX_TEXT_LENGTH = 4_000;
 /** The contract refuses anything finer. Roughly a kilometre. */
 const COARSE_COORDINATE_DECIMALS = 2;
 
-type GeoRef = mongoose.Types.ObjectId | string | { name?: unknown } | null | undefined;
-
-interface SnapshotAddress {
-  _id?: mongoose.Types.ObjectId;
-  cityId?: GeoRef;
-  neighborhoodId?: GeoRef;
-  coordinates?: { coordinates?: number[] };
-}
+/** Exactly the columns a snapshot sends or decides on. */
+const REVIEW_SNAPSHOT_COLUMNS = {
+  id: reviews.id,
+  oxyUserId: reviews.oxyUserId,
+  title: reviews.title,
+  opinion: reviews.opinion,
+  prosItems: reviews.prosItems,
+  consItems: reviews.consItems,
+  adviceToAgency: reviews.adviceToAgency,
+  adviceToLandlord: reviews.adviceToLandlord,
+  positiveComment: reviews.positiveComment,
+  negativeComment: reviews.negativeComment,
+  rating: reviews.rating,
+  recommendation: reviews.recommendation,
+  images: reviews.images,
+  createdAt: reviews.createdAt,
+} as const;
 
 interface SnapshotReview {
-  _id: mongoose.Types.ObjectId;
-  oxyUserId?: string;
-  title?: string;
-  opinion?: string;
-  prosItems?: string[];
-  consItems?: string[];
-  adviceToAgency?: string;
-  adviceToLandlord?: string;
-  positiveComment?: string;
-  negativeComment?: string;
-  rating?: number;
-  recommendation?: boolean;
-  images?: string[];
-  createdAt?: Date | string;
-  addressId?: SnapshotAddress | mongoose.Types.ObjectId | null;
+  id: string;
+  oxyUserId: string;
+  title: string | null;
+  opinion: string;
+  prosItems: string[];
+  consItems: string[];
+  adviceToAgency: string | null;
+  adviceToLandlord: string | null;
+  positiveComment: string | null;
+  negativeComment: string | null;
+  rating: number;
+  recommendation: boolean;
+  images: string[];
+  createdAt: Date;
 }
 
-const SNAPSHOT_PROJECTION =
-  'oxyUserId title opinion prosItems consItems adviceToAgency adviceToLandlord ' +
-  'positiveComment negativeComment rating recommendation images createdAt addressId';
+/** One review with the address it is about, or `null`. */
+async function findReviewForSnapshot(
+  reviewId: string,
+): Promise<{ review: SnapshotReview; address: AddressWithGeoNames } | null> {
+  const query = getDb()
+    .select({
+      review: REVIEW_SNAPSHOT_COLUMNS,
+      address: addresses,
+      ...ADDRESS_GEO_NAME_COLUMNS,
+    })
+    .from(reviews)
+    .innerJoin(addresses, eq(reviews.addressId, addresses.id))
+    .$dynamic();
 
-function geoName(ref: GeoRef): string | undefined {
-  if (ref && typeof ref === 'object' && !(ref instanceof mongoose.Types.ObjectId)) {
-    const name: unknown = (ref as { name?: unknown }).name;
-    if (typeof name === 'string' && name.trim()) return name.trim();
-  }
-  return undefined;
-}
+  for (const join of ADDRESS_GEO_JOINS) query.leftJoin(join.table, join.on);
 
-function populatedAddress(review: SnapshotReview): SnapshotAddress | null {
-  const address = review.addressId;
-  if (!address || address instanceof mongoose.Types.ObjectId) return null;
-  return address;
-}
-
-/**
- * The address id, whether the ref was populated or left bare.
- *
- * The query above populates it, so the populated branch is the live one — but a
- * populated ref still carries `_id`, and reading only the bare-ObjectId branch
- * is how a permalink silently stops being emitted for every review at once.
- */
-function addressIdOf(review: SnapshotReview): string | undefined {
-  const address = review.addressId;
-  if (!address) return undefined;
-  if (address instanceof mongoose.Types.ObjectId) return address.toHexString();
-  return address._id === undefined ? undefined : address._id.toHexString();
+  const [row] = await query.where(eq(reviews.id, reviewId)).limit(1);
+  if (!row) return null;
+  return { review: row.review, address: toAddressWithGeoNames(row) };
 }
 
 function roundCoarse(value: number): number {
@@ -111,7 +136,7 @@ function roundCoarse(value: number): number {
   return Math.round(value * factor) / factor;
 }
 
-function trimmed(value: string | undefined): string | undefined {
+function trimmed(value: string | null): string | undefined {
   const text = value?.trim();
   return text && text.length > 0 ? text : undefined;
 }
@@ -120,7 +145,7 @@ function trimmed(value: string | undefined): string | undefined {
  * The review as a reader sees it.
  *
  * Assembled from the fields the current form writes, falling back to the legacy
- * free-text ones for rows written before `prosItems`/`consItems` existed — a
+ * free-text ones for rows written before `pros_items`/`cons_items` existed — a
  * review from 2025 must not arrive at a jury as an empty body.
  *
  * The section labels are Homiio's, not the reviewer's, and they are here for the
@@ -137,12 +162,12 @@ function reviewText(review: SnapshotReview): string | null {
   const opinion = trimmed(review.opinion);
   if (opinion) sections.push(opinion);
 
-  const pros = (review.prosItems ?? []).map(trimmed).filter((item): item is string => !!item);
+  const pros = review.prosItems.map(trimmed).filter((item): item is string => !!item);
   const legacyPositive = trimmed(review.positiveComment);
   if (pros.length > 0) sections.push(`Pros: ${pros.join('; ')}`);
   else if (legacyPositive) sections.push(`Pros: ${legacyPositive}`);
 
-  const cons = (review.consItems ?? []).map(trimmed).filter((item): item is string => !!item);
+  const cons = review.consItems.map(trimmed).filter((item): item is string => !!item);
   const legacyNegative = trimmed(review.negativeComment);
   if (cons.length > 0) sections.push(`Cons: ${cons.join('; ')}`);
   else if (legacyNegative) sections.push(`Cons: ${legacyNegative}`);
@@ -158,30 +183,66 @@ function reviewText(review: SnapshotReview): string | null {
 }
 
 /** City and neighbourhood only — see the module comment. */
-function locationContext(review: SnapshotReview): ModerationContextResource | null {
-  const address = populatedAddress(review);
-  if (!address) return null;
-
-  const label = [geoName(address.neighborhoodId), geoName(address.cityId)]
-    .filter((part): part is string => Boolean(part))
+function locationContext(address: AddressWithGeoNames): ModerationContextResource {
+  const label = [address.neighborhoodName, address.cityName]
+    .map((name) => name?.trim())
+    .filter((name): name is string => Boolean(name && name.length > 0))
     .join(', ');
-  const point = address.coordinates?.coordinates;
-  const hasPoint =
-    Array.isArray(point) &&
-    point.length === 2 &&
-    Number.isFinite(point[0]) &&
-    Number.isFinite(point[1]);
-
-  if (label.length === 0 && !hasPoint) return null;
 
   return {
     role: 'context',
     type: 'location',
     data: {
       ...(label.length > 0 ? { label } : {}),
-      ...(hasPoint
-        ? { longitude: roundCoarse(point[0]), latitude: roundCoarse(point[1]) }
-        : {}),
+      longitude: roundCoarse(address.longitude),
+      latitude: roundCoarse(address.latitude),
+    },
+  };
+}
+
+function describe(input: {
+  review: SnapshotReview;
+  address: AddressWithGeoNames;
+}): ModerationSubjectSnapshot {
+  const { review, address } = input;
+  const text = reviewText(review);
+  const photoCount = review.images.length;
+
+  /**
+   * A review with no words at all still has to be describable — the ratings
+   * exist and somebody reported it. A `metadata` resource says what it consisted
+   * of without pretending to carry text that was never written; the contract
+   * refuses an empty text resource, and rightly so.
+   */
+  const content: ModerationResource =
+    text === null
+      ? {
+          type: 'metadata',
+          data: { body: 'absent', reviewPhotos: photoCount, stars: review.rating },
+        }
+      : {
+          type: 'text',
+          data: { text },
+          createdAt: review.createdAt,
+        };
+
+  return {
+    subject: {
+      externalId: review.id,
+      type: 'commerce.review',
+      /**
+       * Homiio has no per-review page: a review is read on the page of the
+       * address it is about, which is where a Homiio user would go to see it.
+       */
+      permalink: `${config.web.baseUrl}/addresses/${address.id}`,
+      author: { oxyUserId: review.oxyUserId },
+    },
+    content,
+    context: [locationContext(address)],
+    metadata: {
+      reviewPhotos: photoCount,
+      reviewStars: review.rating,
+      reviewRecommends: review.recommendation,
     },
   };
 }
@@ -193,78 +254,18 @@ export function createReviewSubjectProvider(input: {
     reportedType: input.reportedType,
     subjectType: 'commerce.review',
 
+    /**
+     * No id-shape guard precedes this read, and that is deliberate — see
+     * `db/ids.ts`. Post-cutover every review created carries a uuid v7, for
+     * which `isValidObjectId` is FALSE, so the guard that used to stand here
+     * would have made every new review silently un-reportable while a valid
+     * report was answered "the object is gone". The query answers "no such row"
+     * for every id shape, including a malformed one, because `reviews.id` is a
+     * `text` column that takes any string.
+     */
     async snapshot(reportedId: string): Promise<ModerationSubjectSnapshot | null> {
-      if (!mongoose.isValidObjectId(reportedId)) return null;
-      const review = await Review.findById(reportedId)
-        .select(SNAPSHOT_PROJECTION)
-        .populate({
-          path: 'addressId',
-          select: '_id cityId neighborhoodId coordinates',
-          populate: [
-            { path: 'cityId', select: 'name' },
-            { path: 'neighborhoodId', select: 'name' },
-          ],
-        })
-        .lean<SnapshotReview | null>();
-      if (!review) return null;
-
-      const text = reviewText(review);
-      const location = locationContext(review);
-      const photoCount = Array.isArray(review.images) ? review.images.length : 0;
-
-      /**
-       * A review with no words at all still has to be describable — the ratings
-       * exist and somebody reported it. A `metadata` resource says what it
-       * consisted of without pretending to carry text that was never written;
-       * the contract refuses an empty text resource, and rightly so.
-       */
-      const content: ModerationResource =
-        text === null
-          ? {
-              type: 'metadata',
-              data: {
-                body: 'absent',
-                reviewPhotos: photoCount,
-                ...(review.rating === undefined ? {} : { stars: review.rating }),
-              },
-            }
-          : {
-              type: 'text',
-              data: { text },
-              ...(review.createdAt === undefined
-                ? {}
-                : { createdAt: new Date(review.createdAt) }),
-            };
-
-      const addressIdString = addressIdOf(review);
-
-      return {
-        subject: {
-          externalId: review._id.toHexString(),
-          type: 'commerce.review',
-          /**
-           * Homiio has no per-review page: a review is read on the page of the
-           * address it is about, which is where a Homiio user would go to see
-           * it. Omitted entirely when the address ref was populated away, rather
-           * than pointing at a URL that would not resolve.
-           */
-          ...(addressIdString === undefined
-            ? {}
-            : { permalink: `${config.web.baseUrl}/addresses/${addressIdString}` }),
-          ...(review.oxyUserId === undefined
-            ? {}
-            : { author: { oxyUserId: review.oxyUserId } }),
-        },
-        content,
-        ...(location === null ? {} : { context: [location] }),
-        metadata: {
-          reviewPhotos: photoCount,
-          ...(review.rating === undefined ? {} : { reviewStars: review.rating }),
-          ...(review.recommendation === undefined
-            ? {}
-            : { reviewRecommends: review.recommendation }),
-        },
-      };
+      const found = await findReviewForSnapshot(reportedId);
+      return found === null ? null : describe(found);
     },
   };
 }
