@@ -1,30 +1,75 @@
+/**
+ * The home/browse feed.
+ *
+ * Reads Postgres for the listings, their addresses and their photos. Three
+ * collections it decorates the page with — `Saved`, `RecentlyViewed` and
+ * `Reservation` — are still Mongo and stay that way: they are not part of the
+ * catalogue, and ids are preserved verbatim across the copy, so a listing id
+ * from Postgres matches the same id in Mongo with nothing to translate.
+ *
+ * ## Two things carried across VERBATIM that a reader will want to query
+ *
+ *  - **The saves count now matches on STRINGS, and that is a fix this port could
+ *    not defer.** `Saved.targetId` is declared `String`; the pipeline compared it
+ *    against `ObjectId`s and `aggregate` does not cast, so it has always matched
+ *    nothing and `savesCount` has always been `0` —
+ *    `db/MIGRATION-CONTRACT.md` names the identical defect in `stats.ts` and
+ *    says a count that starts being non-zero after the cutover is correct
+ *    behaviour arriving.
+ *
+ *    Leaving it alone was the plan until the integration suite showed what the
+ *    cast actually does: `new ObjectId('019fd591-…')` THROWS, synchronously,
+ *    outside the `.catch()` — so the first listing carrying a uuid v7 id turns
+ *    this whole feed into a 500. Every listing created after the cutover carries
+ *    one. Preserving a comparison that can never match, at the price of a
+ *    guaranteed outage, is not preservation. The consequence is stated plainly:
+ *    `savesCount` starts reporting real numbers, and the geo-ranked branch
+ *    orders by it.
+ *  - **An unknown `sortBy` now falls back to recency** instead of being passed
+ *    through as a field name. Mongo accepted any string and sorted by a path
+ *    that did not exist, which is a silent no-op; the SQL equivalent would be
+ *    building a column name out of user input, which is not a thing to do. The
+ *    five real sort fields are unchanged.
+ */
+
 import { Request, Response, NextFunction } from 'express';
-import type { SortOrder } from 'mongoose';
-import { Property, RecentlyViewed, Reservation, Saved } from '../../models';
+import type { SQL } from 'drizzle-orm';
+import { RecentlyViewed, Reservation, Saved } from '../../models';
 import { paginationResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
-import { excludeModerationRestricted } from './publicVisibility';
 import {
-  priceFieldForOffering,
-  DEFAULT_PRICE_FIELD,
-  FIELD_SHORT_TERM_INSTANT_BOOK,
-  PRICE_FIELD_SALE,
-  FIELD_PRICE_ETHICS_IS_FAIR_PRICE,
-  FIELD_HAS_IMAGES,
   buildSort,
-  SORT_ASC,
-  SORT_DESC,
+  priceColumnForOffering,
+  DEFAULT_PRICE_COLUMN,
+  type ParsedSearchParams,
   type SortField,
 } from './searchQueryBuilder';
+import { buildCommonPropertyFilters } from './commonFilters';
 import { OfferingType } from '@homiio/shared-types';
+import { ReservationStatus } from '@homiio/shared-types';
+import { properties } from '../../db/schema';
 import {
-  AvailabilityWindowStatus,
-  ReservationStatus,
-} from '@homiio/shared-types';
-import { serializePropertyAddresses, ADDRESS_GEO_POPULATE } from '../../services/propertyAddressSerializer';
-import { serializePropertyImages } from '../../services/imageSerializer';
-import mongoose from 'mongoose';
-import { resolveGeoFilterAddressIds } from '../../services/geoQueryService';
+  allOf,
+  countProperties,
+  findProperties,
+  propertyOrderBy,
+} from '../../db/properties/propertyReads';
+import {
+  addressIs,
+  booleanIs,
+  calendarIsFree,
+  hasOffering,
+  idNotIn,
+  inCity,
+  inRange,
+  inRegion,
+  isAvailable,
+  ownedBy,
+  statusIs,
+  statusIsNot,
+} from '../../db/properties/propertyFilters';
+import { serializeProperty } from '../../db/properties/propertySerializer';
+import { resolveCityId, resolveRegionId } from '../../services/geoQueryService';
 
 const OFFERING_VALUES: ReadonlySet<string> = new Set(Object.values(OfferingType));
 
@@ -40,6 +85,9 @@ const LIST_SORT_FIELDS: ReadonlySet<string> = new Set([
 // recommendation scorer to weight listings near a viewer's typical budget.
 const PRICE_BUCKET_LOW_MAX = 1000;
 const PRICE_BUCKET_MEDIUM_MAX = 2000;
+
+/** Default radius (metres) for the "inside my area" half of the geo ranking. */
+const DEFAULT_PREFERRED_RADIUS_METERS = 45000;
 
 /**
  * A representative monthly-scale price for recommendation bucketing: the
@@ -58,7 +106,7 @@ function representativePrice(property: {
  * personalization). Read from the actual `images` array rather than the stored
  * `hasImages` flag so the in-memory ordering can never contradict the data even
  * if the denormalized flag is momentarily stale. The DB sort still uses the
- * indexed `hasImages` field to decide page membership.
+ * indexed `has_images` column to decide page membership.
  */
 function listingHasImages(property: { images?: unknown[] }): boolean {
   return Array.isArray(property.images) && property.images.length > 0;
@@ -72,19 +120,23 @@ function priceBucket(price: number): 'low' | 'medium' | 'high' {
 }
 
 /**
- * Stable city key for location-based personalization. Geo is relational, so we
- * key on the Address `cityId` (the post-find transform renames the populated
- * `addressId` to `address`; the ref is a bare id under a shallow populate, or a
- * `{ _id }` doc under a deep one). Returns null when no city ref is present.
+ * Stable city key for location-based personalization.
+ *
+ * Geo is relational, so this keys on the address's `cityId`. Under the join it
+ * is always a bare id string — the "is the ref populated or not?" branch the
+ * Mongo version needed has no counterpart, because a join has no unpopulated
+ * state.
  */
-function cityIdKey(property: { address?: { cityId?: unknown }; addressId?: { cityId?: unknown } }): string | null {
-  const ref = property.address?.cityId ?? property.addressId?.cityId;
-  if (!ref) return null;
-  if (typeof ref === 'object' && '_id' in (ref as Record<string, unknown>)) {
-    const id = (ref as { _id?: unknown })._id;
-    return id ? String(id) : null;
-  }
-  return String(ref);
+function cityIdKey(property: { address?: { cityId?: unknown } }): string | null {
+  const ref = property.address?.cityId;
+  return ref ? String(ref) : null;
+}
+
+/** A `Date` from a query param, or null when absent or unparseable. */
+function parseDateParam(value: unknown): Date | null {
+  if (value === undefined || value === null) return null;
+  const parsed = new Date(String(value));
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 export const getProperties = async (req: Request, res: Response, next: NextFunction) => {
@@ -92,41 +144,12 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     const {
       page = 1,
       limit = 10,
-      type,
       minRent,
       maxRent,
       city,
       state,
-      bedrooms,
-      bathrooms,
-      minBedrooms,
-      maxBedrooms,
-      minBathrooms,
-      maxBathrooms,
-      minSquareFootage,
-      maxSquareFootage,
-      minYearBuilt,
-      maxYearBuilt,
-      amenities,
       available,
       status,
-      hasPhotos,
-      verified,
-      eco,
-      housingType,
-      layoutType,
-      furnishedStatus,
-      petFriendly,
-      utilitiesIncluded,
-      parkingType,
-      petPolicy,
-      leaseTerm,
-      proximityToTransport,
-      proximityToSchools,
-      proximityToShopping,
-      availableFromBefore,
-      availableFromAfter,
-      excludeIds,
       sortBy = 'createdAt',
       sortOrder = 'desc',
       oxyUserId: ownerOxyUserId,
@@ -141,442 +164,299 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       minGuests,
       checkIn,
       checkOut,
-      fairPrice,
     } = req.query;
 
     const pageNumber = Math.max(1, parseInt(String(page)) || 1);
     const limitNumber = Math.min(100, Math.max(1, parseInt(String(limit)) || 10));
 
-    const filters: any = {};
-    // Public feed: never surface soft-deleted (archived) listings.
-    filters.deletedAt = null;
-    // …nor ones a community jury has restricted. Applied even under an owner
-    // filter: `ownerOxyUserId` is a query parameter, not the session.
-    excludeModerationRestricted(filters);
-    if (ownerOxyUserId) filters.oxyUserId = String(ownerOxyUserId);
-    if (type) filters.type = type;
-    
-    // Handle direct addressId filter
-    if (addressId) {
-      if (mongoose.Types.ObjectId.isValid(String(addressId))) {
-        filters.addressId = new mongoose.Types.ObjectId(String(addressId));
-      } else {
-        return res.json(paginationResponse([], pageNumber, limitNumber, 0));
-      }
-    }
-    
-    // Handle city and state filters via RELATIONAL geo resolution. The location
-    // name (or id) is translated to a canonical City/Region id and the matching
-    // Address ids — there is no free-text city/state matching on the Address.
-    if (city || state) {
-      const addressIds = await resolveGeoFilterAddressIds({
-        city: city ? String(city) : undefined,
-        state: state ? String(state) : undefined,
-      });
-      if (addressIds === null || addressIds.length === 0) {
-        // Unknown city/region, or no addresses there — return empty result.
-        return res.json(paginationResponse([], pageNumber, limitNumber, 0));
-      }
-      filters.addressId = { $in: addressIds };
+    // The clauses this feed shares with the two proximity feeds — visibility,
+    // type, the numeric ranges, the boolean flags, the enum filters,
+    // `availableFrom` and `excludeIds`.
+    const conditions: (SQL | undefined)[] = [...buildCommonPropertyFilters(req.query)];
+
+    if (ownerOxyUserId) {
+      // A query PARAMETER, not the session — which is why the moderation filter
+      // in the common block applies here too. Scoping a feed to somebody else's
+      // id must not reveal what a jury withheld.
+      conditions.push(ownedBy(String(ownerOxyUserId)));
     }
 
-    if (minBedrooms || maxBedrooms) {
-      const br: any = {};
-      if (minBedrooms) br.$gte = parseInt(String(minBedrooms));
-      if (maxBedrooms) br.$lte = parseInt(String(maxBedrooms));
-      filters.bedrooms = br;
-    } else if (bedrooms) {
-      filters.bedrooms = parseInt(String(bedrooms));
+    // Handle a direct addressId filter. No id-SHAPE guard: an id that matches no
+    // address simply returns an empty page, which is what the old
+    // `ObjectId.isValid` early return produced by hand.
+    if (addressId) conditions.push(addressIs(String(addressId)));
+
+    // City and state filter via RELATIONAL geo: the location name (or id) is
+    // translated to a canonical City/Region id and the join's own address column
+    // is compared against it. This replaces `resolveGeoFilterAddressIds`, which
+    // loaded EVERY address id in the city into an uncapped `$in`.
+    if (city) {
+      const cityId = await resolveCityId(String(city));
+      if (!cityId) return res.json(paginationResponse([], pageNumber, limitNumber, 0));
+      conditions.push(inCity(cityId));
     }
-    if (minBathrooms || maxBathrooms) {
-      const ba: any = {};
-      if (minBathrooms) ba.$gte = parseInt(String(minBathrooms));
-      if (maxBathrooms) ba.$lte = parseInt(String(maxBathrooms));
-      filters.bathrooms = ba;
-    } else if (bathrooms) {
-      filters.bathrooms = parseInt(String(bathrooms));
+    if (state) {
+      const regionId = await resolveRegionId(String(state));
+      if (!regionId) return res.json(paginationResponse([], pageNumber, limitNumber, 0));
+      conditions.push(inRegion(regionId));
     }
-    if (minSquareFootage || maxSquareFootage) {
-      const sf: any = {};
-      if (minSquareFootage) sf.$gte = parseInt(String(minSquareFootage));
-      if (maxSquareFootage) sf.$lte = parseInt(String(maxSquareFootage));
-      filters.squareFootage = sf;
-    }
-    if (minYearBuilt || maxYearBuilt) {
-      const yb: any = {};
-      if (minYearBuilt) yb.$gte = parseInt(String(minYearBuilt));
-      if (maxYearBuilt) yb.$lte = parseInt(String(maxYearBuilt));
-      filters.yearBuilt = yb;
-    }
+
+    // ---- Status / availability ----
+    // Carried across exactly, including the ordering quirk: an explicit
+    // `available` sets `published`, and the draft default then REPLACES that
+    // status whenever no `status` parameter was given.
     if (available !== undefined) {
-      filters['availability.isAvailable'] = available === 'true';
-      filters.status = 'published'; // Use published instead of active for available properties
+      conditions.push(isAvailable(String(available) === 'true'), statusIs('published'));
     }
-    
-    // Handle status parameter (preferred approach)
     if (status) {
       const statusValue = String(status).toLowerCase();
       if (statusValue === 'available') {
-        filters['availability.isAvailable'] = true;
-        filters.status = 'published'; // Published and available for rent
-      } else if (statusValue === 'rented') {
-        filters.status = 'rented';
-      } else if (statusValue === 'reserved') {
-        filters.status = 'reserved';
-      } else if (statusValue === 'sold') {
-        filters.status = 'sold';
-      } else if (statusValue === 'inactive') {
-        filters.status = 'inactive';
-      } else if (statusValue === 'draft') {
-        filters.status = 'draft';
-      } else if (statusValue === 'published') {
-        filters.status = 'published';
+        conditions.push(isAvailable(true), statusIs('published'));
       } else {
-        // Direct status mapping for other values
-        filters.status = statusValue;
+        conditions.push(statusIs(statusValue));
       }
+    } else if (!req.query.includeDrafts) {
+      conditions.push(statusIsNot('draft'));
     }
-    if (amenities) {
-      const amenityList = String(amenities).split(',');
-      filters.amenities = { $in: amenityList };
-    }
-    if (hasPhotos === 'true') filters['images.url'] = { $exists: true, $nin: [null, ''] };
-    if (verified === 'true') filters.isVerified = true;
-    if (eco === 'true') filters.isEcoFriendly = true;
-    if (fairPrice === 'true') filters[FIELD_PRICE_ETHICS_IS_FAIR_PRICE] = true;
-    if (housingType) filters.housingType = String(housingType);
-    if (layoutType) filters.layoutType = String(layoutType);
-    if (furnishedStatus) filters.furnishedStatus = String(furnishedStatus);
-    if (petPolicy) filters.petPolicy = String(petPolicy);
-    if (leaseTerm) filters.leaseTerm = String(leaseTerm);
-    if (parkingType) filters.parkingType = String(parkingType);
-    if (petFriendly !== undefined) filters.petFriendly = String(petFriendly) === 'true';
-    if (utilitiesIncluded !== undefined) filters.utilitiesIncluded = String(utilitiesIncluded) === 'true';
-    if (proximityToTransport !== undefined) filters.proximityToTransport = String(proximityToTransport) === 'true';
-    if (proximityToSchools !== undefined) filters.proximityToSchools = String(proximityToSchools) === 'true';
-    if (proximityToShopping !== undefined) filters.proximityToShopping = String(proximityToShopping) === 'true';
-    if (availableFromBefore || availableFromAfter) {
-      const af: any = {};
-      if (availableFromAfter) {
-        const d = new Date(String(availableFromAfter));
-        if (!isNaN(d.getTime())) af.$gte = d;
-      }
-      if (availableFromBefore) {
-        const d = new Date(String(availableFromBefore));
-        if (!isNaN(d.getTime())) af.$lte = d;
-      }
-      if (Object.keys(af).length) filters.availableFrom = af;
-    }
-    // ---- Offering (long_term_rent / short_term_rent / sale / exchange) ----
-    // Resolved early because the price-range field below depends on it.
-    // `offerings` is an array, so equality matches membership.
+
+    // ---- Offering ----
+    // Resolved early because the price-range column below depends on it.
     let resolvedOffering: OfferingType | undefined;
     if (offering) {
       const offeringValue = String(offering).toLowerCase();
       if (OFFERING_VALUES.has(offeringValue)) {
         resolvedOffering = offeringValue as OfferingType;
-        filters.offerings = offeringValue;
+        conditions.push(hasOffering(offeringValue));
       }
     }
 
     // ---- Price range (priceMin/priceMax aliased as minRent/maxRent) ----
-    // Applies to the requested offering's price field (long_term→monthlyAmount,
-    // short_term→nightlyRate; defaults to long-term). SALE uses minSalePrice /
-    // maxSalePrice below, so a bare range is not applied to a sale query.
+    // Applies to the requested offering's price column. SALE uses
+    // minSalePrice/maxSalePrice below, so a bare range is not applied to a sale
+    // query.
     if ((minRent !== undefined || maxRent !== undefined) && resolvedOffering !== OfferingType.SALE) {
-      const priceField = priceFieldForOffering(resolvedOffering) ?? DEFAULT_PRICE_FIELD;
-      const priceRange: { $gte?: number; $lte?: number } = {};
-      if (minRent !== undefined) priceRange.$gte = parseFloat(String(minRent));
-      if (maxRent !== undefined) priceRange.$lte = parseFloat(String(maxRent));
-      filters[priceField] = priceRange;
+      conditions.push(inRange(
+        priceColumnForOffering(resolvedOffering) ?? DEFAULT_PRICE_COLUMN,
+        minRent === undefined ? undefined : parseFloat(String(minRent)),
+        maxRent === undefined ? undefined : parseFloat(String(maxRent)),
+      ));
     }
 
     // ---- Sale price range (ONLY for an explicit sale query) ----
     if ((minSalePrice !== undefined || maxSalePrice !== undefined) && resolvedOffering === OfferingType.SALE) {
-      const saleRange: { $gte?: number; $lte?: number } = {};
-      if (minSalePrice !== undefined) saleRange.$gte = parseFloat(String(minSalePrice));
-      if (maxSalePrice !== undefined) saleRange.$lte = parseFloat(String(maxSalePrice));
-      filters[PRICE_FIELD_SALE] = saleRange;
+      conditions.push(inRange(
+        properties.salePrice,
+        minSalePrice === undefined ? undefined : parseFloat(String(minSalePrice)),
+        maxSalePrice === undefined ? undefined : parseFloat(String(maxSalePrice)),
+      ));
     }
-
-    if (excludeIds) {
-      try {
-        const list = String(excludeIds)
-          .split(',')
-          .map((s: string) => s.trim())
-          .filter(Boolean)
-          .filter((id: string) => mongoose.Types.ObjectId.isValid(id))
-          .map((id: string) => new mongoose.Types.ObjectId(id));
-        if (list.length) filters._id = { $nin: list };
-      } catch (error) {
-        // Best-effort exclude filter: a malformed excludeIds param must not fail
-        // the listing, but we record it rather than swallowing it silently.
-        logger.warn('Failed to parse excludeIds filter; ignoring it', {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-
-    // Exclude draft properties by default unless explicitly requested.
-    // When a `status` param is provided it has already been mapped to the
-    // canonical PropertyStatus enum above (e.g. `available` -> `published`),
-    // so we must NOT overwrite that mapping with the raw query value here.
-    if (!req.query.includeDrafts && !req.query.status) {
-      filters.status = { $ne: 'draft' };
-    }
-
-    // (Offering membership is applied above, alongside the price-range field it
-    // selects, so the home/list feed and the search endpoint scope identically.)
 
     if (instantBook !== undefined) {
-      filters[FIELD_SHORT_TERM_INSTANT_BOOK] = String(instantBook) === 'true';
+      conditions.push(booleanIs(properties.shortTermRentInstantBook, String(instantBook) === 'true'));
     }
 
     if (minGuests !== undefined) {
-      const n = parseInt(String(minGuests), 10);
-      if (!Number.isNaN(n) && n > 0) {
-        filters.maxGuests = { ...(filters.maxGuests || {}), $gte: n };
+      const guests = parseInt(String(minGuests), 10);
+      if (!Number.isNaN(guests) && guests > 0) {
+        conditions.push(inRange(properties.maxGuests, guests, undefined));
       }
     }
 
-    // Date-range availability filter — exclude properties whose
-    // availabilityWindows have a blocked/booked overlap OR which have a
-    // confirmed Reservation overlapping the requested range.
-    let checkInDate: Date | null = null;
-    let checkOutDate: Date | null = null;
-    if (checkIn && checkOut) {
-      const parsedCheckIn = new Date(String(checkIn));
-      const parsedCheckOut = new Date(String(checkOut));
-      if (
-        !Number.isNaN(parsedCheckIn.getTime()) &&
-        !Number.isNaN(parsedCheckOut.getTime()) &&
-        parsedCheckOut.getTime() > parsedCheckIn.getTime()
-      ) {
-        checkInDate = parsedCheckIn;
-        checkOutDate = parsedCheckOut;
-      }
-    }
+    // ---- Date-range availability ----
+    // Excludes listings whose host calendar blocks the range, AND listings with
+    // a confirmed Reservation overlapping it. The calendar half is a single
+    // `NOT EXISTS` over the GiST-indexed range; the reservation half is still a
+    // Mongo read, because `Reservation` is not part of this port.
+    const checkInDate = parseDateParam(checkIn);
+    const checkOutDate = parseDateParam(checkOut);
+    const hasStay = checkInDate !== null && checkOutDate !== null && checkOutDate.getTime() > checkInDate.getTime();
 
-    if (checkInDate && checkOutDate) {
-      // Block by host calendar windows (non-AVAILABLE windows that overlap).
-      // A window overlaps if window.start < checkOut AND window.end > checkIn.
-      filters.$nor = [
-        {
-          availabilityWindows: {
-            $elemMatch: {
-              status: { $ne: AvailabilityWindowStatus.AVAILABLE },
-              start: { $lt: checkOutDate },
-              end: { $gt: checkInDate }
-            }
-          }
-        }
-      ];
+    if (hasStay && checkInDate && checkOutDate) {
+      conditions.push(calendarIsFree(checkInDate, checkOutDate));
 
-      // Exclude properties with confirmed reservations overlapping the range.
       const conflictingReservations = await Reservation.find({
         status: ReservationStatus.CONFIRMED,
         checkIn: { $lt: checkOutDate },
-        checkOut: { $gt: checkInDate }
+        checkOut: { $gt: checkInDate },
       })
         .select('propertyId')
         .lean();
-      const conflictingPropertyIds = conflictingReservations.map((r: any) => r.propertyId);
+      const conflictingPropertyIds = conflictingReservations
+        .map((reservation: { propertyId?: unknown }) => String(reservation.propertyId ?? ''))
+        .filter(Boolean);
       if (conflictingPropertyIds.length > 0) {
-        const existingNin = (filters._id && filters._id.$nin) || [];
-        filters._id = {
-          ...(filters._id || {}),
-          $nin: [...existingNin, ...conflictingPropertyIds]
-        };
+        conditions.push(idNotIn(conflictingPropertyIds));
       }
     }
 
+    const where = allOf(conditions);
+
     const sortByValue = String(sortBy);
-    // `hasImages: -1` is the primary key for EVERY branch so image-bearing
-    // listings always rank first (product rule). `buildSort` already prepends it
-    // for the known sort fields; the arbitrary-field fallback prepends it here.
-    const sortOptions: Record<string, SortOrder | { $meta: 'textScore' }> = LIST_SORT_FIELDS.has(sortByValue)
-      ? buildSort(
-          {
-            page: pageNumber,
-            limit: limitNumber,
-            sortField: sortByValue as SortField,
-            sortDirection: sortOrder === SORT_ASC ? SORT_ASC : SORT_DESC,
-            offering: resolvedOffering,
-          },
-          false,
-        )
-      : { [FIELD_HAS_IMAGES]: -1, [sortByValue]: (sortOrder === 'desc' ? -1 : 1) as SortOrder };
+    const sortParams: ParsedSearchParams = {
+      page: pageNumber,
+      limit: limitNumber,
+      sortField: (LIST_SORT_FIELDS.has(sortByValue) ? sortByValue : 'createdAt') as SortField,
+      sortDirection: sortOrder === 'asc' ? 'asc' : 'desc',
+      offering: resolvedOffering,
+    };
+    // `has_images DESC` leads every branch so image-bearing listings always rank
+    // first (product rule); `propertyOrderBy` prepends it once for every feed.
+    const orderBy = propertyOrderBy(...buildSort(sortParams));
     const skip = (pageNumber - 1) * limitNumber;
 
-    const [properties, total] = await Promise.all([
-      Property.find(filters)
-        .populate(ADDRESS_GEO_POPULATE)
-        .sort(sortOptions)
-        .skip(skip)
-        .limit(limitNumber)
-        .lean(),
-      Property.countDocuments(filters)
+    const hasCoords = lat !== undefined && lng !== undefined && lat !== null && lng !== null;
+    const latitude = hasCoords ? parseFloat(String(lat)) : Number.NaN;
+    const longitude = hasCoords ? parseFloat(String(lng)) : Number.NaN;
+    const wantsDistance = hasCoords && Number.isFinite(latitude) && Number.isFinite(longitude);
+
+    const [hydrated, total] = await Promise.all([
+      findProperties({
+        where,
+        orderBy,
+        limit: limitNumber,
+        offset: skip,
+        // Measured by PostGIS on the spheroid, not by a haversine in JavaScript
+        // — the JS version this replaces read `address.coordinates.coordinates`
+        // and returned Infinity whenever the pair was missing, which then sorted
+        // the listing last for a reason nobody could see.
+        distanceFrom: wantsDistance ? { longitude, latitude } : undefined,
+      }),
+      countProperties(where),
     ]);
 
-    // Resolve each address's city/region/country NAMES from the deep-populated
-    // geo refs (relational geo), then flatten the refs back to ids. Done once,
-    // in-place, before the personalization/ordering spreads (which preserve the
-    // `address` reference), so cards render a location label with no N+1.
-    serializePropertyAddresses(properties);
-    serializePropertyImages(properties);
+    const serialized = hydrated.map(serializeProperty);
 
-    const ids = properties.map(p => p._id).filter(Boolean).map((id: any) => new mongoose.Types.ObjectId(id));
+    const ids = serialized
+      .map((property) => property.id)
+      .filter((id): id is string => typeof id === 'string');
     let savesMap: Record<string, number> = {};
     if (ids.length > 0) {
+      // STRING ids, matching what `Saved.targetId` is declared as — see the
+      // module doc for why this stopped being deferrable.
       const savesAgg = await Saved.aggregate([
         { $match: { targetType: 'property', targetId: { $in: ids } } },
         { $group: { _id: '$targetId', count: { $sum: 1 } } }
       ]).catch(() => []);
-      savesMap = Array.isArray(savesAgg) ? savesAgg.reduce((acc: Record<string, number>, doc: any) => {
+      savesMap = Array.isArray(savesAgg) ? savesAgg.reduce((acc: Record<string, number>, doc: { _id?: unknown; count?: number }) => {
         acc[String(doc._id)] = doc.count || 0;
         return acc;
       }, {}) : {};
     }
 
-    const hasCoords = lat !== undefined && lng !== undefined && lat !== null && lng !== null;
-    const preferredRadiusMeters = radius ? parseFloat(String(radius)) : 45000;
-    let ordered: any[] = properties;
+    const preferredRadiusMeters = radius ? parseFloat(String(radius)) : DEFAULT_PREFERRED_RADIUS_METERS;
+    let ordered: ListingForScoring[];
 
-    if (hasCoords) {
-      const latitude = parseFloat(String(lat));
-      const longitude = parseFloat(String(lng));
-      try {
-        const R = 6371000;
-        const toRadians = (deg: number) => deg * Math.PI / 180;
-        const computeDistance = (prop: any): number => {
-          const coords = prop?.address?.coordinates?.coordinates;
-          if (!Array.isArray(coords) || coords.length !== 2) return Number.POSITIVE_INFINITY;
-          const [propLng, propLat] = coords;
-          const dLat = toRadians(latitude - propLat);
-          const dLng = toRadians(longitude - propLng);
-          const a = Math.sin(dLat/2) ** 2 + Math.cos(toRadians(propLat)) * Math.cos(toRadians(latitude)) * Math.sin(dLng/2) ** 2;
-          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-          return R * c;
+    if (wantsDistance) {
+      const decorated = serialized.map((property, index) => {
+        const distance = typeof property.distance === 'number' ? property.distance : Number.POSITIVE_INFINITY;
+        const savesCount = savesMap[String(property.id)] || 0;
+        return {
+          index,
+          distance,
+          savesCount,
+          hasImages: listingHasImages(property),
+          inside: Number.isFinite(distance) && distance <= preferredRadiusMeters,
+          prop: { ...property, isSaved: false },
         };
-        const decorated = properties.map((p: any, index: number) => {
-          const distance = computeDistance(p);
-          const savesCount = savesMap[String(p._id)] || 0;
-          return {
-            index,
-            distance,
-            savesCount,
-            hasImages: listingHasImages(p),
-            inside: Number.isFinite(distance) && distance <= preferredRadiusMeters,
-            prop: { ...p, isSaved: false }
-          };
-        });
-        decorated.sort((a, b) => {
-          // Image-bearing listings first (product rule), then the geo ranking.
-          if (a.hasImages !== b.hasImages) return a.hasImages ? -1 : 1;
-          if (a.inside !== b.inside) return a.inside ? -1 : 1;
-          if (b.savesCount !== a.savesCount) return b.savesCount - a.savesCount;
-          if (a.distance !== b.distance) return a.distance - b.distance;
-          return a.index - b.index;
-        });
-        ordered = decorated.map(d => ({ ...d.prop, savesCount: d.savesCount, distance: d.distance }));
-      } catch {
-        ordered = properties.map((p: any) => ({ ...p, savesCount: savesMap[String(p._id)] || 0, isSaved: false }));
-      }
+      });
+      decorated.sort((a, b) => {
+        // Image-bearing listings first (product rule), then the geo ranking.
+        if (a.hasImages !== b.hasImages) return a.hasImages ? -1 : 1;
+        if (a.inside !== b.inside) return a.inside ? -1 : 1;
+        if (b.savesCount !== a.savesCount) return b.savesCount - a.savesCount;
+        if (a.distance !== b.distance) return a.distance - b.distance;
+        return a.index - b.index;
+      });
+      ordered = decorated.map((entry) => ({ ...entry.prop, savesCount: entry.savesCount, distance: entry.distance }));
     } else {
-      ordered = properties.map((p: any) => ({ ...p, savesCount: savesMap[String(p._id)] || 0, isSaved: false }));
+      ordered = serialized.map((property) => ({ ...property, savesCount: savesMap[String(property.id)] || 0, isSaved: false }));
     }
 
     if (req.user?.id || req.user?._id) {
       try {
         const oxyUserId = req.user.id || req.user._id;
-          const [recentlyViewed, savedProperties] = await Promise.all([
-            RecentlyViewed.find({ oxyUserId })
-              .sort({ viewedAt: -1 })
-              .limit(10)
-              .select('propertyId')
-              .lean(),
-            Saved.find({ oxyUserId, targetType: 'property' })
-              .select('targetId')
-              .lean()
-          ]);
+        const [recentlyViewed, savedProperties] = await Promise.all([
+          RecentlyViewed.find({ oxyUserId })
+            .sort({ viewedAt: -1 })
+            .limit(10)
+            .select('propertyId')
+            .lean(),
+          Saved.find({ oxyUserId, targetType: 'property' })
+            .select('targetId')
+            .lean()
+        ]);
 
-          const savedIds = new Set(savedProperties.map((s: any) => s.targetId.toString()));
+        const savedIds = new Set(savedProperties.map((saved) => String((saved as { targetId?: unknown }).targetId)));
 
-          // Build O(1) lookup map instead of O(n) .find() per view item
-          const orderedMap = new Map<string, any>();
-          for (const p of ordered) {
-            orderedMap.set(p._id.toString(), p);
-          }
+        // Build O(1) lookup map instead of O(n) .find() per view item
+        const orderedMap = new Map<string, ListingForScoring>();
+        for (const property of ordered) orderedMap.set(String(property.id), property);
 
-          const preferenceWeights: {
-            propertyTypes: Record<string, number>;
-            priceRanges: Record<string, number>;
-            locations: Record<string, number>;
-            amenities: Record<string, number>;
-          } = { propertyTypes: {}, priceRanges: {}, locations: {}, amenities: {} };
-          const recentlyViewedIds = new Set<string>();
-          for (const view of recentlyViewed) {
-            const viewPropId = view.propertyId.toString();
-            recentlyViewedIds.add(viewPropId);
-            const property = orderedMap.get(viewPropId); // O(1) instead of O(n)
-            if (property) {
-              preferenceWeights.propertyTypes[property.type] = (preferenceWeights.propertyTypes[property.type] || 0) + 1;
-              const price = representativePrice(property);
-              if (price > 0) {
-                const priceRange = priceBucket(price);
-                preferenceWeights.priceRanges[priceRange] = (preferenceWeights.priceRanges[priceRange] || 0) + 1;
-              }
-              const viewCityId = cityIdKey(property);
-              if (viewCityId) {
-                preferenceWeights.locations[viewCityId] = (preferenceWeights.locations[viewCityId] || 0) + 1;
-              }
-              if (property.amenities) {
-                for (const amenity of property.amenities) {
-                  preferenceWeights.amenities[amenity] = (preferenceWeights.amenities[amenity] || 0) + 1;
-                }
-              }
-            }
-          }
-
-          const personalized = ordered.map(property => {
-            const propertyId = property._id.toString();
-            const isSaved = savedIds.has(propertyId);
-            let personalizedScore = (property.savesCount || 0) * 10;
-            personalizedScore += (preferenceWeights.propertyTypes[property.type] || 0) * 15;
+        const preferenceWeights: {
+          propertyTypes: Record<string, number>;
+          priceRanges: Record<string, number>;
+          locations: Record<string, number>;
+          amenities: Record<string, number>;
+        } = { propertyTypes: {}, priceRanges: {}, locations: {}, amenities: {} };
+        const recentlyViewedIds = new Set<string>();
+        for (const view of recentlyViewed) {
+          const viewPropId = String((view as { propertyId?: unknown }).propertyId);
+          recentlyViewedIds.add(viewPropId);
+          const property = orderedMap.get(viewPropId);
+          if (property) {
+            preferenceWeights.propertyTypes[String(property.type)] = (preferenceWeights.propertyTypes[String(property.type)] || 0) + 1;
             const price = representativePrice(property);
             if (price > 0) {
               const priceRange = priceBucket(price);
-              personalizedScore += (preferenceWeights.priceRanges[priceRange] || 0) * 12;
+              preferenceWeights.priceRanges[priceRange] = (preferenceWeights.priceRanges[priceRange] || 0) + 1;
             }
-            const scoreCityId = cityIdKey(property);
-            if (scoreCityId) personalizedScore += (preferenceWeights.locations[scoreCityId] || 0) * 20;
-            if (property.amenities) {
-              for (const amenity of property.amenities) {
-                personalizedScore += (preferenceWeights.amenities[amenity] || 0) * 5;
-              }
+            const viewCityId = cityIdKey(property);
+            if (viewCityId) {
+              preferenceWeights.locations[viewCityId] = (preferenceWeights.locations[viewCityId] || 0) + 1;
             }
-            if (property.isVerified) personalizedScore += 25;
-            if (property.isEcoFriendly) personalizedScore += 15;
-            const priceEthics = property.priceEthics;
-            if (priceEthics?.isFairPrice) personalizedScore += 30;
-            if (
-              priceEthics?.withinEthical === false ||
-              priceEthics?.marketVerdict === 'above_average'
-            ) {
-              personalizedScore -= 20;
+            for (const amenity of property.amenities ?? []) {
+              preferenceWeights.amenities[amenity] = (preferenceWeights.amenities[amenity] || 0) + 1;
             }
-            if (recentlyViewedIds.has(propertyId)) personalizedScore -= 30; // O(1) instead of O(n) .some()
-            if (isSaved) personalizedScore -= 20;
-            return { ...property, personalizedScore, isSaved };
-          });
-          personalized.sort((a, b) => {
-            // Image-bearing listings first (product rule), then personalization.
-            const aHasImages = listingHasImages(a);
-            const bHasImages = listingHasImages(b);
-            if (aHasImages !== bHasImages) return aHasImages ? -1 : 1;
-            return (b.personalizedScore || 0) - (a.personalizedScore || 0);
-          });
-          ordered = personalized;
+          }
+        }
+
+        const personalized: ListingForScoring[] = ordered.map((property) => {
+          const propertyId = String(property.id);
+          const isSaved = savedIds.has(propertyId);
+          let personalizedScore = (property.savesCount || 0) * 10;
+          personalizedScore += (preferenceWeights.propertyTypes[String(property.type)] || 0) * 15;
+          const price = representativePrice(property);
+          if (price > 0) {
+            const priceRange = priceBucket(price);
+            personalizedScore += (preferenceWeights.priceRanges[priceRange] || 0) * 12;
+          }
+          const scoreCityId = cityIdKey(property);
+          if (scoreCityId) personalizedScore += (preferenceWeights.locations[scoreCityId] || 0) * 20;
+          for (const amenity of property.amenities ?? []) {
+            personalizedScore += (preferenceWeights.amenities[amenity] || 0) * 5;
+          }
+          if (property.isVerified) personalizedScore += 25;
+          if (property.isEcoFriendly) personalizedScore += 15;
+          const priceEthics = property.priceEthics;
+          if (priceEthics?.isFairPrice) personalizedScore += 30;
+          if (
+            priceEthics?.withinEthical === false ||
+            priceEthics?.marketVerdict === 'above_average'
+          ) {
+            personalizedScore -= 20;
+          }
+          if (recentlyViewedIds.has(propertyId)) personalizedScore -= 30;
+          if (isSaved) personalizedScore -= 20;
+          return { ...property, personalizedScore, isSaved };
+        });
+        personalized.sort((a, b) => {
+          // Image-bearing listings first (product rule), then personalization.
+          const aHasImages = listingHasImages(a);
+          const bHasImages = listingHasImages(b);
+          if (aHasImages !== bHasImages) return aHasImages ? -1 : 1;
+          return (Number(b.personalizedScore) || 0) - (Number(a.personalizedScore) || 0);
+        });
+        ordered = personalized;
       } catch (error) {
         // Personalization is a best-effort enhancement: if it fails we fall back
         // to the default ordering instead of failing the request, but we log it.
@@ -597,3 +477,18 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     next(error);
   }
 };
+
+/** The subset of a serialized listing the in-memory re-ranking reads. */
+interface ListingForScoring extends Record<string, unknown> {
+  id?: string;
+  type?: string;
+  amenities?: string[];
+  images?: unknown[];
+  isVerified?: boolean;
+  isEcoFriendly?: boolean;
+  savesCount?: number;
+  address?: { cityId?: unknown };
+  longTermRent?: { monthlyAmount?: number };
+  shortTermRent?: { nightlyRate?: number };
+  priceEthics?: { isFairPrice?: boolean; withinEthical?: boolean; marketVerdict?: string };
+}

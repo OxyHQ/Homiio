@@ -11,12 +11,18 @@
 import express, { type Express } from 'express';
 import request from 'supertest';
 
-import { createRentProperty } from '../helpers/factories';
 
 import * as reviewController from '../../controllers/reviewController';
-import { Review, Agency, Address, Property } from '../../models';
+import { Review, Agency, Address } from '../../models';
 import { clearResolutionCache } from '../../services/geoResolutionService';
 import { assertFound } from '../helpers/assertFound';
+import { OfferingType, PropertyStatus, PropertyType } from '@homiio/shared-types';
+import {
+  seedAddress,
+  seedAgency,
+  seedGeoChain,
+  seedProperty,
+} from '../helpers/postgresGeoFixtures';
 
 // The geo-resolution cache is process-level and short-circuits geo id
 // resolution WITHOUT re-upserting the Country/Region/City/Neighborhood docs.
@@ -297,15 +303,46 @@ describe('reportReview', () => {
   });
 });
 
+/**
+ * A published Postgres listing managed by a Mongo-created agency.
+ *
+ * The two stores meet on the agency id: `properties.agency_id` is a real
+ * foreign key here, so the agency has to exist in Postgres too, and it is
+ * inserted under the id `Agency.findOrCreateByName` already minted rather than a
+ * new one.
+ */
+async function seedAgencyListing(
+  agency: { _id: unknown; name: string; slug: string },
+  label: string,
+): Promise<string> {
+  await seedAgency({ id: String(agency._id), name: agency.name, slug: agency.slug });
+  const chain = await seedGeoChain({ cityName: `Barcelona ${label}`, countryCode: `ES-${label}` });
+  const addressId = await seedAddress({ chain });
+  return seedProperty({
+    addressId,
+    overrides: {
+      oxyUserId: 'oxy-owner',
+      agencyId: String(agency._id),
+      type: PropertyType.APARTMENT,
+      bedrooms: 2,
+      bathrooms: 1,
+      offerings: [OfferingType.LONG_TERM_RENT],
+      longTermRentMonthlyAmount: 1200,
+      longTermRentCurrency: 'EUR',
+      status: PropertyStatus.PUBLISHED,
+    },
+  });
+}
+
 describe('agency reads', () => {
   it('returns agency stats + listings count', async () => {
     const agency = await Agency.findOrCreateByName('Stats Agency');
     assertFound(agency, 'agency');
 
-    // Create the property FIRST: the factory's `ensureGeo` uses `Country.create`
-    // (not upsert), so it must run before `resolveGeo` upserts the ES country.
-    const property = await createRentProperty({ oxyUserId: 'oxy-owner' });
-    await Property.updateOne({ _id: property._id }, { $set: { agencyId: agency._id } });
+    // The listings COUNT reads Postgres now, so the listing is seeded there —
+    // under the SAME agency id, which is what the verbatim-id rule makes
+    // possible. The agency itself is still a Mongo write.
+    await seedAgencyListing(agency, 'stats');
 
     await seedReview('oxy-a', { review: { agencyId: agency._id, rating: 5, recommendation: true, depositReturned: 'full' } });
     await seedReview('oxy-b', { address: { number: '12' }, review: { agencyId: agency._id, rating: 3, recommendation: false, depositReturned: 'no' } });
@@ -323,12 +360,12 @@ describe('agency reads', () => {
   it('lists agency properties with flat pagination aliases', async () => {
     const agency = await Agency.findOrCreateByName('Props Agency');
     assertFound(agency, 'agency');
-    const property = await createRentProperty({ oxyUserId: 'oxy-owner' });
-    await Property.updateOne({ _id: property._id }, { $set: { agencyId: agency._id } });
+    const propertyId = await seedAgencyListing(agency, 'props');
 
     const res = await request(buildApp()).get(`/agencies/${agency.slug}/properties`);
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].id).toBe(propertyId);
     expect(res.body.hasMore).toBe(false);
     expect(res.body.totalPages).toBe(1);
     expect(res.body.total).toBe(1);

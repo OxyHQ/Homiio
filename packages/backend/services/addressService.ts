@@ -54,6 +54,12 @@ import { and, eq, sql, type SQL } from 'drizzle-orm';
 
 import { getDb } from '../db/postgres';
 import { addresses, cities, countries, neighborhoods, regions } from '../db/schema';
+import {
+  ADDRESS_GEO_NAME_COLUMNS,
+  toAddressWithGeoNames,
+  type AddressRow,
+  type AddressWithGeoNames,
+} from '../db/addresses/addressSerializer';
 import { countryCodeToName, countryNameToCode, defaultCurrencyForCountry } from '../utils/countryData';
 import { sanitizeGeoJsonCoordinates } from '../utils/geoCoordinates';
 import { forwardGeocode, reverseGeocode, type AddressData } from './geocodingService';
@@ -393,7 +399,10 @@ export function computeAddressNormalizedKey(fields: NormalizedKeyFields): string
 }
 
 /** The `addresses` row shape every read in this module returns. */
-export type AddressRow = typeof addresses.$inferSelect;
+// `AddressRow` and `AddressWithGeoNames` are defined in
+// `db/addresses/addressSerializer` — the module that also owns the geo-name
+// join columns and the wire shape — so the query, the row type and the
+// serialization cannot drift apart. Imported at the top of this file.
 
 /**
  * Find or create a canonical building-level address. Resolves the geo id chain
@@ -517,15 +526,6 @@ export async function findOrCreateCanonicalAddress(input: AddressCanonicalInput)
   return raced[0];
 }
 
-/** An address plus the display names of its geo chain. */
-export interface AddressWithGeoNames extends AddressRow {
-  cityName: string | null;
-  regionName: string | null;
-  countryName: string | null;
-  countryCodeName: string | null;
-  neighborhoodName: string | null;
-}
-
 /**
  * Read addresses with their geo display names resolved in the SAME statement.
  *
@@ -545,14 +545,7 @@ export async function selectAddressWithGeoNames(options: {
   orderBy?: SQL;
 }): Promise<AddressWithGeoNames[]> {
   const base = getDb()
-    .select({
-      address: addresses,
-      cityName: cities.name,
-      regionName: regions.name,
-      countryName: countries.name,
-      countryCodeName: countries.code,
-      neighborhoodName: neighborhoods.name,
-    })
+    .select({ address: addresses, ...ADDRESS_GEO_NAME_COLUMNS })
     .from(addresses)
     .leftJoin(cities, eq(addresses.cityId, cities.id))
     .leftJoin(regions, eq(addresses.regionId, regions.id))
@@ -566,14 +559,7 @@ export async function selectAddressWithGeoNames(options: {
   if (options.offset !== undefined) base.offset(options.offset);
 
   const rows = await base;
-  return rows.map((row) => ({
-    ...row.address,
-    cityName: row.cityName,
-    regionName: row.regionName,
-    countryName: row.countryName,
-    countryCodeName: row.countryCodeName,
-    neighborhoodName: row.neighborhoodName,
-  }));
+  return rows.map(toAddressWithGeoNames);
 }
 
 /**

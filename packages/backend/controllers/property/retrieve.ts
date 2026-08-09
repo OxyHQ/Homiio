@@ -1,8 +1,33 @@
+/**
+ * Single-listing and own-listings reads.
+ *
+ * Both read Postgres. The two Mongo writes that remain here — the view counter
+ * and the recently-viewed upsert — are deliberately untouched: WRITES stay on
+ * Mongo for the whole dual-run, because the backfill is a point-in-time copy and
+ * the ingest worker keeps writing to Mongo. A read that moved is refreshed by
+ * the next copy; a WRITE that moved would be lost by it.
+ *
+ * `views` in particular must NOT be ported here even though the column exists.
+ * `views` is absent from `PropertySchema`, so mongoose strict mode has always
+ * stripped it from this `$inc` — every increment this product ever issued was an
+ * empty update, and the column starts at zero for every listing
+ * (`db/schema/unmappedColumns.ts`). Writing it to Postgres now would make this
+ * request path the ONLY writer of a Postgres value, which is exactly the shape
+ * the dual-run forbids. It is restored with the write batch.
+ */
+
 import { Profile, Property, RecentlyViewed } from '../../models';
 import { AppError, successResponse, paginationResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
-import { serializePropertyAddresses, ADDRESS_GEO_POPULATE } from '../../services/propertyAddressSerializer';
-import { serializePropertyImages } from '../../services/imageSerializer';
+import {
+  allOf,
+  countProperties,
+  findProperties,
+  findPropertyById,
+  NEWEST_FIRST,
+} from '../../db/properties/propertyReads';
+import { ownedBy, statusIsNot } from '../../db/properties/propertyFilters';
+import { serializeProperty } from '../../db/properties/propertySerializer';
 import { getErrorName } from '../../utils/errors';
 import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
 import { getQueryInteger } from '../queryParams';
@@ -10,25 +35,26 @@ import { getQueryInteger } from '../queryParams';
 export async function getPropertyById(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
   try {
     const { propertyId } = req.params;
-    const property = await Property.findById(propertyId).populate(ADDRESS_GEO_POPULATE).lean();
-    if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
+    // No id-SHAPE guard: a `text` primary key takes any string, so a nonsense id
+    // simply matches no row and 404s (`db/MIGRATION-CONTRACT.md`).
+    const hydrated = await findPropertyById(propertyId);
+    if (!hydrated) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
+
     // Soft-deleted listings, and ones a community jury has restricted, are
     // invisible to everyone except their owner. The owner keeps their own view
     // deliberately: a listing that silently vanished from its owner's account
     // with no explanation is worse than one they can still see and appeal.
-    if (property.deletedAt || property.moderation?.restricted) {
-      let isOwner = false;
+    //
+    // The check reads the ROW, not the serialized body — `moderation` is only
+    // put on the wire when a jury really did restrict the listing.
+    if (hydrated.property.deletedAt || hydrated.property.moderationRestricted) {
       const oxyUserId = req.user?.id || req.user?._id;
-      if (oxyUserId) {
-        isOwner = property.oxyUserId === oxyUserId;
-      }
+      const isOwner = Boolean(oxyUserId) && hydrated.property.oxyUserId === oxyUserId;
       if (!isOwner) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
     }
-    // Resolve the address's city/region/country NAMES from the deep-populated
-    // geo refs (geo is relational), then flatten the refs back to ids.
-    serializePropertyAddresses(property);
-    serializePropertyImages(property);
+
     await Property.findByIdAndUpdate(propertyId, { $inc: { views: 1 } });
+
     const oxyUserId = req.user?.id || req.user?._id;
     if (req.userId && oxyUserId) {
       try {
@@ -47,7 +73,7 @@ export async function getPropertyById(req: ControllerRequest, res: ControllerRes
         logger.warn('Failed to resolve profile for recently viewed property', { propertyId, error });
       }
     }
-    res.json(successResponse({ ...property }, 'Property retrieved successfully'));
+    res.json(successResponse(serializeProperty(hydrated), 'Property retrieved successfully'));
   } catch (error) {
     if (getErrorName(error) === 'CastError') return next(new AppError('Invalid property ID', 400, 'INVALID_ID'));
     next(error);
@@ -62,18 +88,18 @@ export async function getMyProperties(req: ControllerRequest, res: ControllerRes
     if (!oxyUserId) {
       return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
     }
+    // Deliberately WITHOUT the moderation filter every public feed applies: an
+    // owner whose listing a jury restricted must still be able to see it.
+    const where = allOf([ownedBy(oxyUserId), statusIsNot('archived')]);
     const skip = (page - 1) * limit;
-    const [properties, total] = await Promise.all([
-      Property.find({ oxyUserId, status: { $ne: 'archived' } })
-        .populate(ADDRESS_GEO_POPULATE)
-        .skip(skip)
-        .limit(limit)
-        .sort({ createdAt: -1 })
-        .lean(),
-      Property.countDocuments({ oxyUserId, status: { $ne: 'archived' } })
+    const [hydrated, total] = await Promise.all([
+      // Newest first, and deliberately WITHOUT the `has_images DESC` key every
+      // public feed leads with: this is the owner's own list, where a listing
+      // they just created must appear at the top whether or not they have
+      // uploaded a photo yet.
+      findProperties({ where, orderBy: [NEWEST_FIRST], limit, offset: skip }),
+      countProperties(where),
     ]);
-    serializePropertyAddresses(properties);
-    serializePropertyImages(properties);
-    res.json(paginationResponse(properties, page, limit, total, 'Your properties retrieved successfully'));
+    res.json(paginationResponse(hydrated.map(serializeProperty), page, limit, total, 'Your properties retrieved successfully'));
   } catch (error) { next(error); }
 }

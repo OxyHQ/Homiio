@@ -5,13 +5,14 @@
  * country and a region by id; their canonical names come from a JOIN, not a
  * populate.
  *
- * ## What is still Mongo in this file, and why
+ * ## Nothing in this file is Mongo any more
  *
- * `getPropertiesByCity` and `updateCityPropertiesCount` both COUNT PROPERTIES,
- * and `properties` does not exist in Postgres yet (batch 3). They are left
- * exactly as they were — Mongoose city read included — rather than half-ported,
- * because a city read from one store and a property read from the other cannot
- * be joined by anything. They move with the property read path in batch 4.
+ * `getPropertiesByCity` and `updateCityPropertiesCount` were the two holdouts,
+ * because both COUNT PROPERTIES and `properties` did not exist in Postgres yet.
+ * They now read it through `db/properties/propertyReads` — and in doing so lose
+ * the uncapped `Address.find({cityId}).select('_id')` both ran to get an id list
+ * for an `$in`, which for a large city was tens of thousands of ids
+ * materialized before a single property was looked at.
  *
  * ## The wire format
  *
@@ -30,18 +31,23 @@
  */
 
 import { Request, Response } from 'express';
-import { Types } from 'mongoose';
 import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
-import { City, Property, Address } from '../models';
 import { getDb } from '../db/postgres';
 import { escapeLikePattern } from '../db/likePattern';
-import { cities, countries, images, regions } from '../db/schema';
+import { cities, countries, images, properties as propertiesTable, regions } from '../db/schema';
 import { isPlausibleCityName } from '../utils/plausibleCityName';
-import { FIELD_HAS_IMAGES } from './property/searchQueryBuilder';
-import { serializePropertyAddresses, ADDRESS_GEO_POPULATE } from '../services/propertyAddressSerializer';
-import { serializePropertyImages } from '../services/imageSerializer';
+import {
+  allOf,
+  countProperties,
+  findProperties,
+  nullsLast,
+  propertyOrderBy,
+  NEWEST_FIRST,
+} from '../db/properties/propertyReads';
+import { booleanIs, inCity, inRange, statusIs } from '../db/properties/propertyFilters';
+import { serializeProperty } from '../db/properties/propertySerializer';
 
 const DEFAULT_CITY_LIMIT = 50;
 const DEFAULT_POPULAR_LIMIT = 10;
@@ -357,10 +363,11 @@ class CityController {
    * Get properties in a city, resolved relationally by `Address.cityId`.
    * GET /api/cities/:id/properties
    *
-   * STILL MONGO, deliberately: this handler counts and pages PROPERTIES, and
-   * `properties` lands in batch 3. Porting the city half alone would leave a
-   * Postgres city and a Mongo property with nothing to join them by. Moves with
-   * the property read path in batch 4.
+   * ONE statement, where there used to be three round trips: the city, then
+   * every address id in it (`Address.find({cityId}).select('_id')`, uncapped —
+   * Barcelona is tens of thousands of ids), then the properties under an `$in`
+   * of that list. `addresses.city_id` is a column on the row the property read
+   * already joins, so the whole middle step is a predicate now.
    */
   async getPropertiesByCity(req: Request, res: Response) {
     try {
@@ -377,88 +384,63 @@ class CityController {
         minPrice,
       }: PropertyFilters = req.query;
 
-      const city = await City.findById(id).populate([
-        { path: 'countryId', select: 'name code currency flag' },
-        { path: 'regionId', select: 'name code' },
-        { path: 'coverImageId', select: 'urls caption width height entityType' },
-      ]);
-      if (!city) {
+      const cityRows = await cityQuery().where(eq(cities.id, id)).limit(1);
+      if (!cityRows[0]) {
         return res.status(404).json({ success: false, message: 'City not found' });
       }
+      const city = serializeCity(cityRows[0]);
 
       const numericLimit = Number(limit);
       const numericPage = Number(page);
       const skip = (numericPage - 1) * numericLimit;
 
-      // Relational: all addresses whose canonical cityId is this city.
-      const cityAddresses = await Address.find({ cityId: city._id }).select('_id').lean();
-      const addressIds = cityAddresses.map((addr: { _id: Types.ObjectId }) => addr._id);
-
-      if (addressIds.length === 0) {
-        return res.json({
-          success: true,
-          message: 'Properties retrieved successfully',
-          // Flat `hasMore`/`totalPages` aliases mirror `/properties/search` so
-          // the infinite city hook reads paging metadata the same way; the
-          // `pagination` key is kept so `normalizeEnvelope` preserves the envelope.
-          data: {
-            city,
-            properties: [],
-            pagination: { page: numericPage, limit: numericLimit, total: 0, pages: 0 },
-            hasMore: false,
-            totalPages: 0,
-          },
-        });
-      }
-
-      const query: Record<string, unknown> = {
-        addressId: { $in: addressIds },
-        status: 'published',
-      };
-
-      if (verified === 'true') query.isVerified = true;
-      if (eco === 'true') query.isEcoFriendly = true;
-      if (minBedrooms) query.bedrooms = { $gte: Number(minBedrooms) };
-      if (minBathrooms) query.bathrooms = { $gte: Number(minBathrooms) };
-      if (minPrice || maxPrice) {
-        const priceRange: { $gte?: number; $lte?: number } = {};
-        if (minPrice) priceRange.$gte = Number(minPrice);
-        if (maxPrice) priceRange.$lte = Number(maxPrice);
-        query['longTermRent.monthlyAmount'] = priceRange;
-      }
-
-      // Image-bearing listings first (product rule), then the requested order.
-      const sortObj: Record<string, 1 | -1> = { [FIELD_HAS_IMAGES]: -1 };
-      switch (sort) {
-        case 'price_asc': sortObj['longTermRent.monthlyAmount'] = 1; break;
-        case 'price_desc': sortObj['longTermRent.monthlyAmount'] = -1; break;
-        case 'updatedAt': sortObj.updatedAt = -1; break;
-        default: sortObj.createdAt = -1;
-      }
-
-      const [properties, total] = await Promise.all([
-        Property.find(query)
-          .sort(sortObj)
-          .skip(skip)
-          .limit(numericLimit)
-          .populate(ADDRESS_GEO_POPULATE)
-          .select('-__v')
-          .lean(),
-        Property.countDocuments(query),
+      const where = allOf([
+        inCity(id),
+        statusIs('published'),
+        verified === 'true' ? booleanIs(propertiesTable.isVerified, true) : undefined,
+        eco === 'true' ? booleanIs(propertiesTable.isEcoFriendly, true) : undefined,
+        minBedrooms ? inRange(propertiesTable.bedrooms, Number(minBedrooms), undefined) : undefined,
+        minBathrooms ? inRange(propertiesTable.bathrooms, Number(minBathrooms), undefined) : undefined,
+        inRange(
+          propertiesTable.longTermRentMonthlyAmount,
+          minPrice ? Number(minPrice) : undefined,
+          maxPrice ? Number(maxPrice) : undefined,
+        ),
       ]);
 
-      // The lean post-find hook renames the populated `addressId` to `address`;
-      // resolve each address's city/region/country NAMES from the deep-populated
-      // geo refs, then flatten the refs back to ids, so cards in the city view
-      // render a location label without an N+1 lookup.
-      serializePropertyAddresses(properties);
-      serializePropertyImages(properties);
+      // Image-bearing listings first (product rule), then the requested order.
+      const withinImages: SQL[] = (() => {
+        switch (sort) {
+          case 'price_asc': return [nullsLast(propertiesTable.longTermRentMonthlyAmount, 'asc')];
+          case 'price_desc': return [nullsLast(propertiesTable.longTermRentMonthlyAmount, 'desc')];
+          case 'updatedAt': return [desc(propertiesTable.updatedAt)];
+          default: return [NEWEST_FIRST];
+        }
+      })();
+
+      const [hydrated, total] = await Promise.all([
+        findProperties({
+          where,
+          orderBy: propertyOrderBy(...withinImages),
+          limit: numericLimit,
+          offset: skip,
+        }),
+        countProperties(where),
+      ]);
 
       // Keep the cached count fresh (cheap, single field write when it drifts).
-      if (city.propertiesCount !== total) {
-        city.propertiesCount = total;
-        city.lastUpdated = new Date();
-        await city.save();
+      //
+      // This is the ONE write in the ported read paths, and it is safe to make
+      // here: `cities.properties_count` was copied verbatim by the geo backfill
+      // precisely because properties did not exist in Postgres yet, and the
+      // Mongo `City` document is no longer read by any endpoint on this route.
+      // It is a cache of a count this statement just computed, not a fact only
+      // Mongo holds.
+      if (cityRows[0].city.propertiesCount !== total) {
+        await getDb()
+          .update(cities)
+          .set({ propertiesCount: total, lastUpdated: new Date() })
+          .where(eq(cities.id, id));
       }
 
       const pages = Math.ceil(total / numericLimit);
@@ -466,11 +448,11 @@ class CityController {
         success: true,
         data: {
           city,
-          properties,
+          properties: hydrated.map(serializeProperty),
           pagination: { page: numericPage, limit: numericLimit, total, pages },
           // Flat aliases for parity with `/properties/search` — the infinite city
           // hook reads `hasMore` in `getNextPageParam` and `totalPages` for display.
-          hasMore: skip + properties.length < total,
+          hasMore: skip + hydrated.length < total,
           totalPages: pages,
         },
       });
@@ -531,23 +513,31 @@ class CityController {
    * Recompute a city's properties count from its addresses.
    * PUT /api/cities/:id/update-count
    *
-   * STILL MONGO — see {@link getPropertiesByCity}; the count it recomputes is a
-   * count of properties.
+   * The Mongoose method this replaces (`City.updatePropertiesCount`) ran the
+   * same uncapped two-phase query as the city feed did — every address id in the
+   * city, then a `countDocuments` under an `$in` of them. Here it is one join.
+   *
+   * It counts EVERY property at an address in the city, with no status or
+   * visibility filter, exactly as the method did — which is why the number it
+   * writes can legitimately differ from the total the city feed reports, and why
+   * that difference is preserved rather than quietly reconciled.
    */
   async updateCityPropertiesCount(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const city = await City.findById(id);
-      if (!city) {
+      const existing = await getDb().select({ id: cities.id }).from(cities).where(eq(cities.id, id)).limit(1);
+      if (!existing[0]) {
         return res.status(404).json({ success: false, message: 'City not found' });
       }
-      await city.updatePropertiesCount();
-      await city.populate([
-        { path: 'countryId', select: 'name code currency flag' },
-        { path: 'regionId', select: 'name code' },
-        { path: 'coverImageId', select: 'urls caption width height entityType' },
-      ]);
-      res.json({ success: true, data: city });
+
+      const total = await countProperties(inCity(id));
+      await getDb()
+        .update(cities)
+        .set({ propertiesCount: total, lastUpdated: new Date() })
+        .where(eq(cities.id, id));
+
+      const rows = await cityQuery().where(eq(cities.id, id)).limit(1);
+      res.json({ success: true, data: serializeCity(rows[0]) });
     } catch (error) {
       res.status(500).json({ success: false, message: 'Failed to update city properties count', error: (error as Error).message });
     }

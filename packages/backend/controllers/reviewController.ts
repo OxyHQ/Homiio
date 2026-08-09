@@ -35,8 +35,21 @@ import { toReviewDTO } from './review/toReviewDTO';
 import { notificationDispatchService } from '../services/notificationDispatchService';
 import { normalizeAgencyName, escapeRegex } from '../utils/agencyName';
 import { logger } from '../middlewares/logging';
-import { serializePropertyAddresses, ADDRESS_GEO_POPULATE } from '../services/propertyAddressSerializer';
-import { serializePropertyImages } from '../services/imageSerializer';
+import type { SQL } from 'drizzle-orm';
+import {
+  allOf,
+  countProperties,
+  findProperties,
+  propertyOrderBy,
+  NEWEST_FIRST,
+} from '../db/properties/propertyReads';
+import {
+  notDeleted,
+  notModerationRestricted,
+  ofAgency,
+  statusIs,
+} from '../db/properties/propertyFilters';
+import { serializeProperty } from '../db/properties/propertySerializer';
 import {
   createModerationReport,
   DuplicateModerationReportError,
@@ -721,11 +734,23 @@ interface AgencyLike {
  * `controllers/property/publicVisibility.ts`: listings written before the field
  * existed carry no `moderation` subdocument at all.
  */
-const PUBLIC_AGENCY_LISTING_FILTER = {
-  status: 'published',
-  deletedAt: null,
-  'moderation.restricted': { $ne: true },
-} as const;
+/**
+ * What the public may see of an agency's catalogue: published, not archived,
+ * not restricted by a jury.
+ *
+ * A drizzle predicate rather than a Mongo filter object — the agency listing
+ * count and the agency listing page both read Postgres now. It is a FUNCTION
+ * because a `SQL` fragment carries its own bound parameters and must not be
+ * shared between two statements as a constant.
+ */
+function publicAgencyListings(agencyId: string): SQL | undefined {
+  return allOf([
+    statusIs('published'),
+    notDeleted(),
+    notModerationRestricted(),
+    ofAgency(agencyId),
+  ]);
+}
 
 function toAgencySummary(agency: AgencyLike): { id: string; name: string; slug: string } {
   return { id: String(agency._id), name: agency.name, slug: agency.slug };
@@ -764,7 +789,7 @@ export const getAgencyBySlug = async (req: Request, res: Response) => {
 
     const [stats, listingsCount] = await Promise.all([
       Review.getAgencyStats(agency._id),
-      Property.countDocuments({ ...PUBLIC_AGENCY_LISTING_FILTER, agencyId: agency._id }),
+      countProperties(publicAgencyListings(String(agency._id))),
     ]);
 
     return ok(res, {
@@ -824,32 +849,25 @@ export const getAgencyProperties = async (req: Request, res: Response) => {
       return notFound(res, { message: 'Agency not found' });
     }
 
-    const filter = { ...PUBLIC_AGENCY_LISTING_FILTER, agencyId: agency._id };
+    const where = publicAgencyListings(String(agency._id));
     const skip = (page - 1) * limit;
 
-    const [properties, total] = await Promise.all([
-      Property.find(filter)
-        .populate(ADDRESS_GEO_POPULATE)
-        .sort({ hasImages: -1, createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      Property.countDocuments(filter),
+    const [hydrated, total] = await Promise.all([
+      // Image-bearing listings first (product rule), then newest.
+      findProperties({ where, orderBy: propertyOrderBy(NEWEST_FIRST), limit, offset: skip }),
+      countProperties(where),
     ]);
-
-    serializePropertyAddresses(properties);
-    serializePropertyImages(properties);
 
     const totalPages = Math.max(1, Math.ceil(total / limit));
     return res.json({
       success: true,
-      data: properties,
+      data: hydrated.map(serializeProperty),
       pagination: { page, limit, total, totalPages },
       total,
       page,
       limit,
       totalPages,
-      hasMore: (page - 1) * limit + properties.length < total,
+      hasMore: (page - 1) * limit + hydrated.length < total,
     });
   } catch (error) {
     logger.error('Error fetching agency properties', { error: error instanceof Error ? error.message : String(error) });

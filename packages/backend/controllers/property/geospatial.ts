@@ -1,464 +1,152 @@
-import { Property } from '../../models';
+/**
+ * The two proximity feeds: `nearby` (a default 10 km radius) and `radius` (an
+ * explicit one).
+ *
+ * ## This file was 464 lines of two near-identical handlers
+ *
+ * They differed in three things — the parameter name for the radius, whether it
+ * was required, and the response message — and shared ~200 lines of copy-pasted
+ * filter parsing between them, including two of the four copies of the
+ * `excludeIds` bug (`db/ids.ts`). The duplication is gone: one filter parser,
+ * one reader, two thin handlers that supply the radius and the message.
+ *
+ * ## The two-phase query is gone with it
+ *
+ * Both handlers went through `Property.findNearby` / `Property.findWithinRadius`,
+ * Mongoose statics that ran `Address.find({ coordinates: { $near: … } })
+ * .select('_id')` — **uncapped** — and then fed every id in the radius back as
+ * an `$in`. Here the spatial predicate is `ST_DWithin` against `addresses.geo`
+ * in the same statement as the property read; nothing is materialized in the
+ * application and the `LIMIT` reaches the planner. See
+ * `db/properties/propertyGeo.ts`.
+ *
+ * Those two statics are now unreferenced. They are left on the Mongoose model
+ * with the rest of it, because the model is still the WRITE path and deleting
+ * half of it is the write batch's job, not this one's.
+ */
+
+import type { SQL } from 'drizzle-orm';
+
 import { paginationResponse } from '../../middlewares/errorHandler';
-import { logger } from '../../middlewares/logging';
 import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
-import { getQueryInteger, getQueryNumber } from '../queryParams';
-import { FIELD_HAS_IMAGES } from './searchQueryBuilder';
-import { excludeModerationRestricted } from './publicVisibility';
-import mongoose from 'mongoose';
+import { getQueryInteger, getQueryNumber, getQueryString } from '../queryParams';
+import {
+  allOf,
+  countProperties,
+  findProperties,
+  propertyOrderBy,
+  NEWEST_FIRST,
+} from '../../db/properties/propertyReads';
+import { withinCircle } from '../../db/properties/propertyGeo';
+import { serializeProperty } from '../../db/properties/propertySerializer';
+import { buildCommonPropertyFilters } from './commonFilters';
+import { MAX_LATITUDE, MAX_LONGITUDE, MIN_LATITUDE, MIN_LONGITUDE } from './searchQueryBuilder';
 
-export async function findNearbyProperties(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
+/** The default radius when `nearby` is called without one. */
+const DEFAULT_NEARBY_DISTANCE_METERS = 10_000;
+
+interface ProximityFeed {
+  /** Which query parameter carries the radius. */
+  radiusParam: 'maxDistance' | 'radius';
+  /** Whether a missing radius is a 400 rather than a default. */
+  radiusRequired: boolean;
+  successMessage: string;
+  missingMessage: string;
+  missingError: string;
+}
+
+/**
+ * Read one page of a proximity feed.
+ *
+ * Shared by both handlers because the ONLY differences between them are in
+ * {@link ProximityFeed} — and when they were two functions, a fix to one
+ * (twice, historically) did not reach the other.
+ */
+async function serveProximityFeed(
+  req: ControllerRequest,
+  res: ControllerResponse,
+  next: ControllerNext,
+  feed: ProximityFeed,
+): Promise<unknown> {
   try {
-    const { 
-      longitude, 
-      latitude, 
-      maxDistance = 10000, 
-      minRent, 
-      maxRent, 
-      type, 
-      bedrooms, 
-      bathrooms, 
-      minBedrooms, 
-      maxBedrooms, 
-      minBathrooms, 
-      maxBathrooms, 
-      minSquareFootage, 
-      maxSquareFootage, 
-      minYearBuilt, 
-      maxYearBuilt, 
-      amenities, 
-      available, 
-      status,
-      hasPhotos, 
-      verified, 
-      eco, 
-      housingType, 
-      layoutType, 
-      furnishedStatus, 
-      petFriendly, 
-      utilitiesIncluded, 
-      parkingType, 
-      petPolicy, 
-      leaseTerm, 
-      proximityToTransport, 
-      proximityToSchools, 
-      proximityToShopping, 
-      availableFromBefore, 
-      availableFromAfter, 
-      excludeIds, 
-      page = 1, 
-      limit = 10 
-    } = req.query;
+    const longitude = getQueryString(req.query.longitude);
+    const latitude = getQueryString(req.query.latitude);
+    const rawRadius = getQueryString(req.query[feed.radiusParam]);
 
-    if (!longitude || !latitude) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Longitude and latitude are required', 
-        error: 'MISSING_COORDINATES'
+    if (!longitude || !latitude || (feed.radiusRequired && !rawRadius)) {
+      return res.status(400).json({
+        success: false,
+        message: feed.missingMessage,
+        error: feed.missingError,
       });
     }
 
     const lng = getQueryNumber(longitude, Number.NaN);
     const lat = getQueryNumber(latitude, Number.NaN);
-    const distance = getQueryNumber(maxDistance, 10000);
+    const radiusMeters = getQueryNumber(rawRadius, DEFAULT_NEARBY_DISTANCE_METERS);
 
-    if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid coordinates provided', 
-        error: 'INVALID_COORDINATES'
+    if (
+      !Number.isFinite(lat) || !Number.isFinite(lng) ||
+      lat < MIN_LATITUDE || lat > MAX_LATITUDE ||
+      lng < MIN_LONGITUDE || lng > MAX_LONGITUDE
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid coordinates provided',
+        error: 'INVALID_COORDINATES',
       });
     }
 
-    // Use the updated findNearby method which works with Address references
-    let nearbyQuery = Property.findNearby(lng, lat, distance);
+    const conditions: (SQL | undefined)[] = [
+      withinCircle({ longitude: lng, latitude: lat, radiusMeters }),
+      ...buildCommonPropertyFilters(req.query),
+    ];
+    const where = allOf(conditions);
 
-    // Apply additional filters
-    const filters: any = {};
-    // Public geo feed: never surface soft-deleted (archived) listings,
-    // nor ones a community jury has restricted.
-    filters.deletedAt = null;
-    excludeModerationRestricted(filters);
-    
-    // Handle status parameter (preferred) or legacy available parameter
-    if (status !== undefined) {
-      switch (status) {
-        case 'available':
-          filters['availability.isAvailable'] = true;
-          filters.status = 'published'; // Published and available for rent
-          break;
-        case 'rented':
-          filters.status = 'rented';
-          break;
-        case 'reserved':
-          filters.status = 'reserved';
-          break;
-        case 'sold':
-          filters.status = 'sold';
-          break;
-        case 'inactive':
-          filters.status = 'inactive';
-          break;
-        case 'draft':
-          filters.status = 'draft';
-          break;
-        case 'published':
-          filters.status = 'published';
-          break;
-      }
-    } else if (available !== undefined) {
-      // Legacy support for available parameter
-      filters['availability.isAvailable'] = available === 'true';
-      filters.status = 'published'; // Use published instead of active
-    }
+    const page = getQueryInteger(req.query.page, 1);
+    const limit = getQueryInteger(req.query.limit, 10);
+    const skip = (page - 1) * limit;
 
-    // Exclude draft properties by default unless explicitly requested
-    if (!req.query.includeDrafts && (!status || status !== 'draft')) {
-      if (filters.status) {
-        // Status is already set, but ensure we exclude drafts
-        if (filters.status === 'published' || filters.status === 'inactive' || filters.status === 'rented' || filters.status === 'reserved' || filters.status === 'sold') {
-          // Keep the existing status (it's already not draft)
-        }
-      } else {
-        filters.status = { $ne: 'draft' };
-      }
-    }
-
-    if (type) filters.type = type;
-    
-    if (minRent || maxRent) {
-      filters['longTermRent.monthlyAmount'] = {};
-      if (minRent) filters['longTermRent.monthlyAmount'].$gte = parseInt(String(minRent));
-      if (maxRent) filters['longTermRent.monthlyAmount'].$lte = parseInt(String(maxRent));
-    }
-
-    if (minBedrooms || maxBedrooms) {
-      const br: any = {};
-      if (minBedrooms) br.$gte = parseInt(String(minBedrooms));
-      if (maxBedrooms) br.$lte = parseInt(String(maxBedrooms));
-      filters.bedrooms = br;
-    } else if (bedrooms) {
-      filters.bedrooms = parseInt(String(bedrooms));
-    }
-
-    if (minBathrooms || maxBathrooms) {
-      const ba: any = {};
-      if (minBathrooms) ba.$gte = parseInt(String(minBathrooms));
-      if (maxBathrooms) ba.$lte = parseInt(String(maxBathrooms));
-      filters.bathrooms = ba;
-    } else if (bathrooms) {
-      filters.bathrooms = parseInt(String(bathrooms));
-    }
-
-    if (minSquareFootage || maxSquareFootage) {
-      const sf: any = {};
-      if (minSquareFootage) sf.$gte = parseInt(String(minSquareFootage));
-      if (maxSquareFootage) sf.$lte = parseInt(String(maxSquareFootage));
-      filters.squareFootage = sf;
-    }
-
-    if (minYearBuilt || maxYearBuilt) {
-      const yb: any = {};
-      if (minYearBuilt) yb.$gte = parseInt(String(minYearBuilt));
-      if (maxYearBuilt) yb.$lte = parseInt(String(maxYearBuilt));
-      filters.yearBuilt = yb;
-    }
-
-    if (amenities) {
-      const list = String(amenities).split(',').map(a => a.trim()).filter(Boolean);
-      if (list.length) filters.amenities = { $in: list };
-    }
-
-    if (hasPhotos === 'true') filters['images.url'] = { $exists: true, $nin: [null, ''] };
-    if (verified === 'true') filters.isVerified = true;
-    if (eco === 'true') filters.isEcoFriendly = true;
-    if (housingType) filters.housingType = String(housingType);
-    if (layoutType) filters.layoutType = String(layoutType);
-    if (furnishedStatus) filters.furnishedStatus = String(furnishedStatus);
-    if (petPolicy) filters.petPolicy = String(petPolicy);
-    if (leaseTerm) filters.leaseTerm = String(leaseTerm);
-    if (parkingType) filters.parkingType = String(parkingType);
-    if (petFriendly !== undefined) filters.petFriendly = String(petFriendly) === 'true';
-    if (utilitiesIncluded !== undefined) filters.utilitiesIncluded = String(utilitiesIncluded) === 'true';
-    if (proximityToTransport !== undefined) filters.proximityToTransport = String(proximityToTransport) === 'true';
-    if (proximityToSchools !== undefined) filters.proximityToSchools = String(proximityToSchools) === 'true';
-    if (proximityToShopping !== undefined) filters.proximityToShopping = String(proximityToShopping) === 'true';
-
-    if (availableFromBefore || availableFromAfter) {
-      const af: any = {};
-      if (availableFromAfter) {
-        const d = new Date(String(availableFromAfter));
-        if (!isNaN(d.getTime())) af.$gte = d;
-      }
-      if (availableFromBefore) {
-        const d = new Date(String(availableFromBefore));
-        if (!isNaN(d.getTime())) af.$lte = d;
-      }
-      if (Object.keys(af).length) filters.availableFrom = af;
-    }
-
-    if (excludeIds) {
-      try {
-        const list = String(excludeIds)
-          .split(',')
-          .map(s => s.trim())
-          .filter(Boolean)
-          .filter(id => mongoose.Types.ObjectId.isValid(id))
-          .map(id => new mongoose.Types.ObjectId(id));
-        if (list.length) filters._id = { $nin: list };
-      } catch (error) {
-        // Best-effort exclude filter: a malformed excludeIds param must not fail
-        // the geo query, but we record it rather than swallowing it silently.
-        logger.warn('Failed to parse excludeIds filter; ignoring it', {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-
-    // Apply additional filters to the nearby query
-    if (Object.keys(filters).length > 0) {
-      nearbyQuery = nearbyQuery.find(filters);
-    }
-
-    const pageNumber = getQueryInteger(page, 1);
-    const limitNumber = getQueryInteger(limit, 10);
-    const skip = (pageNumber - 1) * limitNumber;
-    // Image-bearing listings first (product rule), then newest.
-    const [properties, total] = await Promise.all([
-      nearbyQuery.sort({ [FIELD_HAS_IMAGES]: -1, createdAt: -1 }).skip(skip).limit(limitNumber).lean(),
-      nearbyQuery.clone().countDocuments()
+    const [hydrated, total] = await Promise.all([
+      // Image-bearing listings first (product rule), then newest.
+      findProperties({
+        where,
+        orderBy: propertyOrderBy(NEWEST_FIRST),
+        limit,
+        offset: skip,
+        distanceFrom: { longitude: lng, latitude: lat },
+      }),
+      countProperties(where),
     ]);
 
-    res.json(paginationResponse(properties, pageNumber, limitNumber, total, 'Nearby properties found successfully'));
+    return res.json(paginationResponse(
+      hydrated.map(serializeProperty),
+      page,
+      limit,
+      total,
+      feed.successMessage,
+    ));
   } catch (error) {
-    next(error);
+    return next(error);
   }
 }
 
-export async function findPropertiesInRadius(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
-  try {
-    const { 
-      longitude, 
-      latitude, 
-      radius, 
-      minRent, 
-      maxRent, 
-      type, 
-      bedrooms, 
-      bathrooms, 
-      minBedrooms, 
-      maxBedrooms, 
-      minBathrooms, 
-      maxBathrooms, 
-      minSquareFootage, 
-      maxSquareFootage, 
-      minYearBuilt, 
-      maxYearBuilt, 
-      amenities, 
-      available, 
-      status,
-      hasPhotos, 
-      verified, 
-      eco, 
-      housingType, 
-      layoutType, 
-      furnishedStatus, 
-      petFriendly, 
-      utilitiesIncluded, 
-      parkingType, 
-      petPolicy, 
-      leaseTerm, 
-      proximityToTransport, 
-      proximityToSchools, 
-      proximityToShopping, 
-      availableFromBefore, 
-      availableFromAfter, 
-      excludeIds, 
-      page = 1, 
-      limit = 10 
-    } = req.query;
+export function findNearbyProperties(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
+  return serveProximityFeed(req, res, next, {
+    radiusParam: 'maxDistance',
+    radiusRequired: false,
+    successMessage: 'Nearby properties found successfully',
+    missingMessage: 'Longitude and latitude are required',
+    missingError: 'MISSING_COORDINATES',
+  });
+}
 
-    if (!longitude || !latitude || !radius) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Longitude, latitude, and radius are required', 
-        error: 'MISSING_PARAMETERS'
-      });
-    }
-
-    const lng = getQueryNumber(longitude, Number.NaN);
-    const lat = getQueryNumber(latitude, Number.NaN);
-    const radiusInMeters = getQueryNumber(radius, Number.NaN);
-
-    if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid coordinates provided', 
-        error: 'INVALID_COORDINATES'
-      });
-    }
-
-    // Use the updated findWithinRadius method which works with Address references
-    let radiusQuery = Property.findWithinRadius(lng, lat, radiusInMeters);
-
-    // Apply additional filters
-    const filters: any = {};
-    // Public geo feed: never surface soft-deleted (archived) listings,
-    // nor ones a community jury has restricted.
-    filters.deletedAt = null;
-    excludeModerationRestricted(filters);
-    
-    // Handle status parameter (preferred) or legacy available parameter
-    if (status !== undefined) {
-      switch (status) {
-        case 'available':
-          filters['availability.isAvailable'] = true;
-          filters.status = 'published'; // Published and available for rent
-          break;
-        case 'rented':
-          filters.status = 'rented';
-          break;
-        case 'reserved':
-          filters.status = 'reserved';
-          break;
-        case 'sold':
-          filters.status = 'sold';
-          break;
-        case 'inactive':
-          filters.status = 'inactive';
-          break;
-        case 'draft':
-          filters.status = 'draft';
-          break;
-        case 'published':
-          filters.status = 'published';
-          break;
-      }
-    } else if (available !== undefined) {
-      // Legacy support for available parameter
-      filters['availability.isAvailable'] = available === 'true';
-      filters.status = 'published'; // Use published instead of active
-    }
-
-    // Exclude draft properties by default unless explicitly requested
-    if (!req.query.includeDrafts && (!status || status !== 'draft')) {
-      if (filters.status) {
-        // Status is already set, but ensure we exclude drafts
-        if (filters.status === 'published' || filters.status === 'inactive' || filters.status === 'rented' || filters.status === 'reserved' || filters.status === 'sold') {
-          // Keep the existing status (it's already not draft)
-        }
-      } else {
-        filters.status = { $ne: 'draft' };
-      }
-    }
-
-    if (type) filters.type = type;
-    
-    if (minRent || maxRent) {
-      filters['longTermRent.monthlyAmount'] = {};
-      if (minRent) filters['longTermRent.monthlyAmount'].$gte = parseInt(String(minRent));
-      if (maxRent) filters['longTermRent.monthlyAmount'].$lte = parseInt(String(maxRent));
-    }
-
-    if (minBedrooms || maxBedrooms) {
-      const br: any = {};
-      if (minBedrooms) br.$gte = parseInt(String(minBedrooms));
-      if (maxBedrooms) br.$lte = parseInt(String(maxBedrooms));
-      filters.bedrooms = br;
-    } else if (bedrooms) {
-      filters.bedrooms = parseInt(String(bedrooms));
-    }
-
-    if (minBathrooms || maxBathrooms) {
-      const ba: any = {};
-      if (minBathrooms) ba.$gte = parseInt(String(minBathrooms));
-      if (maxBathrooms) ba.$lte = parseInt(String(maxBathrooms));
-      filters.bathrooms = ba;
-    } else if (bathrooms) {
-      filters.bathrooms = parseInt(String(bathrooms));
-    }
-
-    if (minSquareFootage || maxSquareFootage) {
-      const sf: any = {};
-      if (minSquareFootage) sf.$gte = parseInt(String(minSquareFootage));
-      if (maxSquareFootage) sf.$lte = parseInt(String(maxSquareFootage));
-      filters.squareFootage = sf;
-    }
-
-    if (minYearBuilt || maxYearBuilt) {
-      const yb: any = {};
-      if (minYearBuilt) yb.$gte = parseInt(String(minYearBuilt));
-      if (maxYearBuilt) yb.$lte = parseInt(String(maxYearBuilt));
-      filters.yearBuilt = yb;
-    }
-
-    if (amenities) {
-      const list = String(amenities).split(',').map(a => a.trim()).filter(Boolean);
-      if (list.length) filters.amenities = { $in: list };
-    }
-
-    if (hasPhotos === 'true') filters['images.url'] = { $exists: true, $nin: [null, ''] };
-    if (verified === 'true') filters.isVerified = true;
-    if (eco === 'true') filters.isEcoFriendly = true;
-    if (housingType) filters.housingType = String(housingType);
-    if (layoutType) filters.layoutType = String(layoutType);
-    if (furnishedStatus) filters.furnishedStatus = String(furnishedStatus);
-    if (petPolicy) filters.petPolicy = String(petPolicy);
-    if (leaseTerm) filters.leaseTerm = String(leaseTerm);
-    if (parkingType) filters.parkingType = String(parkingType);
-    if (petFriendly !== undefined) filters.petFriendly = String(petFriendly) === 'true';
-    if (utilitiesIncluded !== undefined) filters.utilitiesIncluded = String(utilitiesIncluded) === 'true';
-    if (proximityToTransport !== undefined) filters.proximityToTransport = String(proximityToTransport) === 'true';
-    if (proximityToSchools !== undefined) filters.proximityToSchools = String(proximityToSchools) === 'true';
-    if (proximityToShopping !== undefined) filters.proximityToShopping = String(proximityToShopping) === 'true';
-
-    if (availableFromBefore || availableFromAfter) {
-      const af: any = {};
-      if (availableFromAfter) {
-        const d = new Date(String(availableFromAfter));
-        if (!isNaN(d.getTime())) af.$gte = d;
-      }
-      if (availableFromBefore) {
-        const d = new Date(String(availableFromBefore));
-        if (!isNaN(d.getTime())) af.$lte = d;
-      }
-      if (Object.keys(af).length) filters.availableFrom = af;
-    }
-
-    if (excludeIds) {
-      try {
-        const list = String(excludeIds)
-          .split(',')
-          .map(s => s.trim())
-          .filter(Boolean)
-          .filter(id => mongoose.Types.ObjectId.isValid(id))
-          .map(id => new mongoose.Types.ObjectId(id));
-        if (list.length) filters._id = { $nin: list };
-      } catch (error) {
-        // Best-effort exclude filter: a malformed excludeIds param must not fail
-        // the geo query, but we record it rather than swallowing it silently.
-        logger.warn('Failed to parse excludeIds filter; ignoring it', {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-
-    // Apply additional filters to the radius query
-    if (Object.keys(filters).length > 0) {
-      radiusQuery = radiusQuery.find(filters);
-    }
-
-    const pageNumber = getQueryInteger(page, 1);
-    const limitNumber = getQueryInteger(limit, 10);
-    const skip = (pageNumber - 1) * limitNumber;
-    // Image-bearing listings first (product rule), then newest.
-    const [properties, total] = await Promise.all([
-      radiusQuery.sort({ [FIELD_HAS_IMAGES]: -1, createdAt: -1 }).skip(skip).limit(limitNumber).lean(),
-      radiusQuery.clone().countDocuments()
-    ]);
-
-    res.json(paginationResponse(properties, pageNumber, limitNumber, total, 'Properties in radius found successfully'));
-  } catch (error) {
-    next(error);
-  }
+export function findPropertiesInRadius(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
+  return serveProximityFeed(req, res, next, {
+    radiusParam: 'radius',
+    radiusRequired: true,
+    successMessage: 'Properties in radius found successfully',
+    missingMessage: 'Longitude, latitude, and radius are required',
+    missingError: 'MISSING_PARAMETERS',
+  });
 }

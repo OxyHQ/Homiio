@@ -1,54 +1,87 @@
 /**
  * Property search query builder
  *
- * Pure, typed helpers that translate validated HTTP query parameters into
- * Mongoose filter/sort objects for the public property search endpoint.
+ * Pure, typed helpers that translate validated HTTP query parameters into the
+ * SQL predicates and ordering the public property search endpoint runs.
  *
- * Geo model note: a Property does NOT store coordinates directly. Geo data
- * lives on the referenced Address document (a GeoJSON `Point` with a
- * `2dsphere` index). Geo filtering therefore resolves matching Address ids
- * first, then constrains properties by `addressId: { $in: [...] }`. Bounding
- * boxes use a GeoJSON Polygon (`$geoWithin`/`$geometry`) so the `2dsphere`
- * index is used; center+radius uses `$centerSphere`.
+ * ## What changed with the Postgres port, and why it is a rewrite
+ *
+ * This module used to emit Mongoose filter objects, and half of it existed to
+ * work around a store that could not join. A property has no coordinates of its
+ * own — geo lives on the referenced address — so every geo-scoped read resolved
+ * matching Address ids FIRST and then constrained properties by
+ * `addressId: { $in: [...] }`, with `boundingBoxToAddressQuery` and
+ * `centerRadiusToAddressQuery` building the first half of that pair. Both are
+ * gone: `db/properties/propertyGeo.ts` applies the spatial predicate to
+ * `addresses.geo` in the same statement as the property read, so there is no
+ * intermediate id set to build, cap or ship.
+ *
+ * Three other exports went with them, each because its reason for existing did:
+ *
+ *  - **`EARTH_RADIUS_METERS`** converted a radius to radians for
+ *    `$centerSphere`. `ST_DWithin` on `geography` takes METRES.
+ *  - **`escapeRegExp`** escaped a term for a Mongo `$regex`. The Postgres form
+ *    is `ILIKE`, whose metacharacter set is completely different —
+ *    `db/likePattern.ts` carries that escape and the table of how the two
+ *    disagree.
+ *  - **The Mongo field-path constants** (`'longTermRent.monthlyAmount'` and
+ *    friends) are now real columns, so {@link priceColumnForOffering} returns
+ *    something the compiler checks instead of a string nothing did.
+ *
+ * The parsing half — pagination, sort fields, bounding-box and centre+radius
+ * VALIDATION — is unchanged and still pure, which is what keeps it unit
+ * testable without a database.
  */
 
-import { Types, type FilterQuery, type SortOrder } from 'mongoose';
+import { asc, desc, type SQL } from 'drizzle-orm';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { PropertyType, PropertyStatus, OfferingType, ExchangeMode } from '@homiio/shared-types';
-import { excludeModerationRestricted } from './publicVisibility';
 
-// ---- Per-offering price fields ----
-/** Mongo field path holding the price for each offering. */
-export const PRICE_FIELD_LONG_TERM = 'longTermRent.monthlyAmount';
-export const PRICE_FIELD_SHORT_TERM = 'shortTermRent.nightlyRate';
-export const PRICE_FIELD_SALE = 'sale.price';
-/** Mongo field path for the short-term instant-book flag. */
-export const FIELD_SHORT_TERM_INSTANT_BOOK = 'shortTermRent.instantBook';
+import { properties } from '../../db/schema';
+import {
+  booleanIs,
+  exchangeModeIn,
+  hasAllAmenities,
+  hasOffering,
+  hasPhotos,
+  idNotIn,
+  inRange,
+  isAvailable,
+  notDeleted,
+  notModerationRestricted,
+  statusIs,
+  textRank,
+  typeIn,
+} from '../../db/properties/propertyFilters';
+import { nullsLast } from '../../db/properties/propertyReads';
+
+// ---- Per-offering price columns ----
 
 /**
- * Resolve the Mongo price-field path that `priceMin`/`priceMax` apply to for a
- * given offering. `EXCHANGE` (and an absent offering) has no monetary price
- * range, so it returns null. Exported so the search endpoint and the home/list
- * feed resolve the SAME field and can't drift.
+ * Resolve the price column that `priceMin`/`priceMax` apply to for a given
+ * offering. `EXCHANGE` (and an absent offering) has no monetary price range, so
+ * it returns null. Exported so the search endpoint and the home/list feed
+ * resolve the SAME column and can't drift.
  */
-export function priceFieldForOffering(offering: OfferingType | undefined): string | null {
+export function priceColumnForOffering(offering: OfferingType | undefined): AnyPgColumn | null {
   switch (offering) {
     case OfferingType.LONG_TERM_RENT:
-      return PRICE_FIELD_LONG_TERM;
+      return properties.longTermRentMonthlyAmount;
     case OfferingType.SHORT_TERM_RENT:
-      return PRICE_FIELD_SHORT_TERM;
+      return properties.shortTermRentNightlyRate;
     case OfferingType.SALE:
-      return PRICE_FIELD_SALE;
+      return properties.salePrice;
     default:
       return null;
   }
 }
 
 /**
- * The default price-field used when no explicit offering is requested. The
+ * The default price column used when no explicit offering is requested. The
  * platform defaults to the long-term feed, so a bare `priceMin/priceMax`
  * filters monthly rent (preserving the historical `minRent/maxRent` behaviour).
  */
-export const DEFAULT_PRICE_FIELD = PRICE_FIELD_LONG_TERM;
+export const DEFAULT_PRICE_COLUMN: AnyPgColumn = properties.longTermRentMonthlyAmount;
 
 // ---- Pagination / limit constants ----
 export const DEFAULT_PAGE = 1;
@@ -62,11 +95,9 @@ export const MAX_LATITUDE = 90;
 /** Longitude bounds for a valid WGS84 coordinate. */
 export const MIN_LONGITUDE = -180;
 export const MAX_LONGITUDE = 180;
-/** Mean Earth radius in metres, used to convert a radius to radians for $centerSphere. */
-export const EARTH_RADIUS_METERS = 6_371_000;
 /** Default radius (metres) when a center is given without an explicit radius. */
 export const DEFAULT_RADIUS_METERS = 25_000;
-/** Hard cap on radius (metres) to keep $centerSphere scans bounded. */
+/** Hard cap on radius (metres) to keep spatial scans bounded. */
 export const MAX_RADIUS_METERS = 200_000;
 
 // ---- Sort constants ----
@@ -88,17 +119,6 @@ const SORT_FIELDS: ReadonlySet<string> = new Set([
   SORT_RELEVANCE,
   SORT_FAIRNESS,
 ]);
-/** Mongo path for the persisted price-ethics fairness score. */
-export const FIELD_PRICE_ETHICS_FAIRNESS_SCORE = 'priceEthics.fairnessScore';
-/** Mongo path for the fair-price badge/filter flag. */
-export const FIELD_PRICE_ETHICS_IS_FAIR_PRICE = 'priceEthics.isFairPrice';
-/**
- * Denormalized boolean set true when a listing has ≥1 image (maintained by the
- * Property schema hooks). Used as the PRIMARY sort key across every discovery
- * feed so image-bearing listings always rank ahead of image-less ones, with the
- * previous ordering preserved within each group. `-1` puts `true` first.
- */
-export const FIELD_HAS_IMAGES = 'hasImages';
 
 export const SORT_ASC = 'asc';
 export const SORT_DESC = 'desc';
@@ -109,32 +129,6 @@ const OFFERING_VALUES: ReadonlySet<string> = new Set(Object.values(OfferingType)
 
 /** All valid exchange modes (used to validate the `exchangeMode` filter). */
 const EXCHANGE_MODE_VALUES: ReadonlySet<string> = new Set(Object.values(ExchangeMode));
-
-/** Property document fields, keyed for type-safe filter construction. */
-interface PropertyDoc {
-  _id: Types.ObjectId;
-  addressId: Types.ObjectId;
-  oxyUserId: string;
-  type: string;
-  status: string;
-  deletedAt: Date | null;
-  bedrooms: number;
-  bathrooms: number;
-  amenities: string[];
-  isVerified: boolean;
-  isEcoFriendly: boolean;
-  maxGuests: number;
-  createdAt: Date;
-  availability: { isAvailable: boolean };
-  // Per-offering (long_term_rent / short_term_rent / sale / exchange)
-  offerings: OfferingType[];
-  longTermRent: { monthlyAmount: number };
-  shortTermRent: { nightlyRate: number; instantBook: boolean };
-  sale: { price: number };
-  exchange: { mode: ExchangeMode };
-}
-
-export type PropertyFilter = FilterQuery<PropertyDoc>;
 
 /** Express query values can be string | string[] | ParsedQs | undefined. */
 type RawQueryValue = string | string[] | undefined | null | Record<string, unknown>;
@@ -188,11 +182,6 @@ export function resolveLimit(value: RawQueryValue): number {
   const parsed = parseIntParam(value);
   if (parsed === undefined || parsed < 1) return DEFAULT_LIMIT;
   return Math.min(parsed, MAX_LIMIT);
-}
-
-/** Escape a user string for safe use inside a RegExp. */
-export function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function isLatitude(value: number): boolean {
@@ -313,42 +302,24 @@ const PROPERTY_STATUS_VALUES: ReadonlySet<string> = new Set(Object.values(Proper
  * Map a public `status` query value to a canonical {@link PropertyStatus}.
  * The Airbnb-style `available` alias maps to `published` + isAvailable.
  */
-function applyStatusFilter(filter: PropertyFilter, statusRaw: string | undefined): void {
+function statusConditions(statusRaw: string | undefined): SQL[] {
+  const publishedAndAvailable = [statusIs(PropertyStatus.PUBLISHED), isAvailable(true)];
   if (statusRaw === undefined) {
     // Default browsing view: only published & available, never drafts.
-    filter.status = PropertyStatus.PUBLISHED;
-    filter['availability.isAvailable'] = true;
-    return;
+    return publishedAndAvailable;
   }
 
   const status = statusRaw.toLowerCase();
-  if (status === 'available') {
-    filter.status = PropertyStatus.PUBLISHED;
-    filter['availability.isAvailable'] = true;
-    return;
-  }
-  if (PROPERTY_STATUS_VALUES.has(status)) {
-    filter.status = status;
-    return;
-  }
+  if (status === 'available') return publishedAndAvailable;
+  if (PROPERTY_STATUS_VALUES.has(status)) return [statusIs(status)];
   // Unknown status value: fall back to the safe default rather than leaking drafts.
-  filter.status = PropertyStatus.PUBLISHED;
-  filter['availability.isAvailable'] = true;
-}
-
-/**
- * Constrain the filter to listings carrying a given offering. `offerings` is an
- * array, so equality matches membership — clean single-axis filter, no
- * back-compat fallbacks.
- */
-function applyOfferingFilter(filter: PropertyFilter, offering: OfferingType): void {
-  filter.offerings = offering;
+  return publishedAndAvailable;
 }
 
 export interface ParsedSearchParams {
   page: number;
   limit: number;
-  /** Free-text query (matches title/description via index, address via lookup). */
+  /** Free-text query (matches description via the tsvector, plus street/place). */
   text?: string;
   /** Explicit city filter (case-insensitive). */
   city?: string;
@@ -357,107 +328,101 @@ export interface ParsedSearchParams {
   centerRadius?: CenterRadius;
   sortField: SortField;
   sortDirection: SortDirection;
-  // Per-offering filters (mirror the `filter` clauses for downstream visibility).
+  // Per-offering filters (mirror the conditions for downstream visibility).
   /** Offering the query was scoped to, when valid. */
   offering?: OfferingType;
-  /** Minimum sale price applied to `sale.price`, when present. */
+  /** Minimum sale price applied to `sale_price`, when present. */
   minSalePrice?: number;
-  /** Maximum sale price applied to `sale.price`, when present. */
+  /** Maximum sale price applied to `sale_price`, when present. */
   maxSalePrice?: number;
   /** Exchange mode the query was scoped to, when valid. */
   exchangeMode?: ExchangeMode;
-  /** When true, only listings with `priceEthics.isFairPrice`. */
+  /** When true, only listings with `price_ethics_is_fair_price`. */
   fairPrice?: boolean;
 }
 
 /**
- * Build the non-geo portion of the Mongoose filter and parse pagination,
- * sorting and geo intent from the request query. Geo id-resolution is done
- * by the controller (it needs an async Address lookup).
+ * Build the non-geo predicates and parse pagination, sorting and geo intent from
+ * the request query.
+ *
+ * The GEO and place constraints are deliberately left to the controller: both
+ * need an async lookup (a place name resolved to a canonical id) and this
+ * function stays pure so it can be unit tested with no database at all.
  */
 export function buildSearchPlan(
   query: Record<string, RawQueryValue>
-): { filter: PropertyFilter; params: ParsedSearchParams } {
-  const filter: PropertyFilter = {};
+): { conditions: SQL[]; params: ParsedSearchParams } {
+  const conditions: SQL[] = [];
 
   // Public search: never surface soft-deleted (archived) listings, nor ones a
   // community jury has restricted — regardless of any explicit `status` value
   // the caller passes.
-  filter.deletedAt = null;
-  excludeModerationRestricted(filter);
+  conditions.push(notDeleted(), notModerationRestricted());
 
   // --- Status / availability (also excludes drafts) ---
-  applyStatusFilter(filter, asString(query.status));
+  conditions.push(...statusConditions(asString(query.status)));
 
   // --- Property type (one or many) ---
-  const typeList = parseList(query.propertyType ?? query.type).filter((t) => PROPERTY_TYPE_VALUES.has(t));
-  if (typeList.length === 1) {
-    filter.type = typeList[0];
-  } else if (typeList.length > 1) {
-    filter.type = { $in: typeList };
-  }
+  const typeCondition = typeIn(parseList(query.propertyType ?? query.type).filter((t) => PROPERTY_TYPE_VALUES.has(t)));
+  if (typeCondition) conditions.push(typeCondition);
 
   // --- Offering (long_term_rent / short_term_rent / sale / exchange). Parsed
-  //     early because the price-range field below is resolved from it. ---
+  //     early because the price-range column below is resolved from it. ---
   const offeringRaw = asString(query.offering)?.toLowerCase();
   const offering = offeringRaw && OFFERING_VALUES.has(offeringRaw)
     ? (offeringRaw as OfferingType)
     : undefined;
   if (offering !== undefined) {
-    applyOfferingFilter(filter, offering);
+    conditions.push(hasOffering(offering));
   }
 
   // --- Price range (accept Airbnb-style priceMin/priceMax and legacy minRent/maxRent) ---
-  // The range applies to the price field of the REQUESTED offering
-  // (long_term→monthlyAmount, short_term→nightlyRate, sale→sale.price), so a
+  // The range applies to the price column of the REQUESTED offering, so a
   // monthly price is never compared against a nightly one. When no offering is
-  // requested it defaults to the long-term field. SALE uses its dedicated
+  // requested it defaults to the long-term column. SALE uses its dedicated
   // minSalePrice/maxSalePrice params below, so a bare price range is not
   // applied to a sale query here.
   const priceMin = parseFloatParam(query.priceMin) ?? parseFloatParam(query.minRent);
   const priceMax = parseFloatParam(query.priceMax) ?? parseFloatParam(query.maxRent);
-  if ((priceMin !== undefined || priceMax !== undefined) && offering !== OfferingType.SALE) {
-    const priceField = priceFieldForOffering(offering) ?? DEFAULT_PRICE_FIELD;
-    const priceRange: { $gte?: number; $lte?: number } = {};
-    if (priceMin !== undefined) priceRange.$gte = priceMin;
-    if (priceMax !== undefined) priceRange.$lte = priceMax;
-    filter[priceField] = priceRange;
+  if (offering !== OfferingType.SALE) {
+    const priceRange = inRange(priceColumnForOffering(offering) ?? DEFAULT_PRICE_COLUMN, priceMin, priceMax);
+    if (priceRange) conditions.push(priceRange);
   }
 
   // --- Bedrooms (minimum) / bathrooms (minimum) ---
   const bedrooms = parseIntParam(query.bedrooms) ?? parseIntParam(query.minBedrooms);
   if (bedrooms !== undefined && bedrooms > 0) {
-    filter.bedrooms = { $gte: bedrooms };
+    const condition = inRange(properties.bedrooms, bedrooms, undefined);
+    if (condition) conditions.push(condition);
   }
   const bathrooms = parseIntParam(query.bathrooms) ?? parseIntParam(query.minBathrooms);
   if (bathrooms !== undefined && bathrooms > 0) {
-    filter.bathrooms = { $gte: bathrooms };
+    const condition = inRange(properties.bathrooms, bathrooms, undefined);
+    if (condition) conditions.push(condition);
   }
 
   // --- Amenities (must include all requested) ---
-  const amenities = parseList(query.amenities).map((a) => a.toLowerCase());
-  if (amenities.length > 0) {
-    filter.amenities = { $all: amenities };
-  }
+  const amenities = hasAllAmenities(parseList(query.amenities).map((a) => a.toLowerCase()));
+  if (amenities) conditions.push(amenities);
 
   // --- Boolean feature flags ---
   const verified = parseBoolParam(query.verified);
-  if (verified !== undefined) filter.isVerified = verified;
+  if (verified !== undefined) conditions.push(booleanIs(properties.isVerified, verified));
   const eco = parseBoolParam(query.eco);
-  if (eco !== undefined) filter.isEcoFriendly = eco;
+  if (eco !== undefined) conditions.push(booleanIs(properties.isEcoFriendly, eco));
   const instantBook = parseBoolParam(query.instantBook);
-  if (instantBook !== undefined) filter[FIELD_SHORT_TERM_INSTANT_BOOK] = instantBook;
+  if (instantBook !== undefined) conditions.push(booleanIs(properties.shortTermRentInstantBook, instantBook));
   const petFriendly = parseBoolParam(query.petFriendly);
-  if (petFriendly !== undefined) filter.petFriendly = petFriendly;
-  const hasPhotos = parseBoolParam(query.hasPhotos);
-  if (hasPhotos === true) filter['images.url'] = { $exists: true, $nin: [null, ''] };
+  if (petFriendly !== undefined) conditions.push(booleanIs(properties.petFriendly, petFriendly));
+  if (parseBoolParam(query.hasPhotos) === true) conditions.push(hasPhotos());
   const fairPrice = parseBoolParam(query.fairPrice);
-  if (fairPrice === true) filter[FIELD_PRICE_ETHICS_IS_FAIR_PRICE] = true;
+  if (fairPrice === true) conditions.push(booleanIs(properties.priceEthicsIsFairPrice, true));
 
   // --- Minimum guests (short-term) ---
   const minGuests = parseIntParam(query.minGuests ?? query.guests);
   if (minGuests !== undefined && minGuests > 0) {
-    filter.maxGuests = { $gte: minGuests };
+    const condition = inRange(properties.maxGuests, minGuests, undefined);
+    if (condition) conditions.push(condition);
   }
 
   // --- Sale price range (ONLY applied for an explicit SALE query) ---
@@ -465,33 +430,27 @@ export function buildSearchPlan(
   // a non-sale query. The values are still echoed in `params` regardless.
   const minSalePrice = parseFloatParam(query.minSalePrice);
   const maxSalePrice = parseFloatParam(query.maxSalePrice);
-  if ((minSalePrice !== undefined || maxSalePrice !== undefined) && offering === OfferingType.SALE) {
-    const saleFilter: { $gte?: number; $lte?: number } = {};
-    if (minSalePrice !== undefined) saleFilter.$gte = minSalePrice;
-    if (maxSalePrice !== undefined) saleFilter.$lte = maxSalePrice;
-    filter[PRICE_FIELD_SALE] = saleFilter;
+  if (offering === OfferingType.SALE) {
+    const saleRange = inRange(properties.salePrice, minSalePrice, maxSalePrice);
+    if (saleRange) conditions.push(saleRange);
   }
 
   // --- Exchange mode (ONLY applied for an explicit EXCHANGE query) ---
-  // `applyOfferingFilter` already constrains the query to exchange listings; the
-  // mode filter is gated on `offering === EXCHANGE`. A `both` listing matches a
-  // swap or host request.
+  // The offering condition already constrains the query to exchange listings;
+  // the mode filter is gated on `offering === EXCHANGE`. A `both` listing
+  // matches a swap or a host request.
   const exchangeMode = asString(query.exchangeMode)?.toLowerCase();
   if (exchangeMode && EXCHANGE_MODE_VALUES.has(exchangeMode) && offering === OfferingType.EXCHANGE) {
-    if (exchangeMode === ExchangeMode.BOTH) {
-      filter['exchange.mode'] = ExchangeMode.BOTH;
-    } else {
-      filter['exchange.mode'] = { $in: [exchangeMode, ExchangeMode.BOTH] };
-    }
+    const condition = exchangeMode === ExchangeMode.BOTH
+      ? exchangeModeIn([ExchangeMode.BOTH])
+      : exchangeModeIn([exchangeMode, ExchangeMode.BOTH]);
+    if (condition) conditions.push(condition);
   }
 
   // --- Exclude ids ---
-  const excludeIds = parseList(query.excludeIds)
-    .filter((id) => Types.ObjectId.isValid(id))
-    .map((id) => new Types.ObjectId(id));
-  if (excludeIds.length > 0) {
-    filter._id = { $nin: excludeIds };
-  }
+  // No id-SHAPE filter: see `db/properties/propertyFilters.idNotIn`.
+  const excludeIds = idNotIn(parseList(query.excludeIds));
+  if (excludeIds) conditions.push(excludeIds);
 
   // --- Pagination ---
   const page = resolvePage(query.page);
@@ -509,7 +468,7 @@ export function buildSearchPlan(
     : undefined;
 
   return {
-    filter,
+    conditions,
     params: {
       page,
       limit,
@@ -530,71 +489,32 @@ export function buildSearchPlan(
 }
 
 /**
- * Build a Mongoose sort spec. `relevance` only carries a text score when a
- * text search is active; otherwise it falls back to recency.
+ * Build the ORDER BY. `relevance` only carries a text rank when a text search is
+ * active; otherwise it falls back to recency.
  *
- * The `price` sort resolves to the requested offering's price field
- * (long_term→monthlyAmount, short_term→nightlyRate, sale→sale.price; defaults
- * to long-term when no offering is set) so the feed never sorts a monthly price
- * against a nightly one. `salePrice` always sorts on `sale.price`.
+ * The `price` sort resolves to the requested offering's price column so the feed
+ * never sorts a monthly price against a nightly one. `salePrice` always sorts on
+ * `sale_price`.
+ *
+ * `has_images DESC` is NOT prepended here — `propertyOrderBy` in
+ * `db/properties/propertyReads` does it for every feed, so a caller cannot
+ * forget it. In the Mongo original that prepending was duplicated at four call
+ * sites.
  */
-export function buildSort(
-  params: ParsedSearchParams,
-  hasTextScore: boolean
-): Record<string, SortOrder | { $meta: 'textScore' }> {
-  const direction: SortOrder = params.sortDirection === SORT_ASC ? 1 : -1;
+export function buildSort(params: ParsedSearchParams, textTerm?: string): SQL[] {
+  const direction = params.sortDirection === SORT_ASC ? SORT_ASC : SORT_DESC;
 
-  // `hasImages: -1` is prepended to EVERY sort so listings that have images
-  // always rank ahead of image-less ones (product rule), with the requested
-  // ordering (price / relevance / fairness / recency) applied within each
-  // group. Index-backed via the `{ hasImages: -1, createdAt: -1 }` index; the
-  // primary key is set at the DB layer so pagination stays correct.
   if (params.sortField === SORT_PRICE) {
-    const priceField = priceFieldForOffering(params.offering) ?? DEFAULT_PRICE_FIELD;
-    return { [FIELD_HAS_IMAGES]: -1, [priceField]: direction };
+    return [nullsLast(priceColumnForOffering(params.offering) ?? DEFAULT_PRICE_COLUMN, direction)];
   }
   if (params.sortField === SORT_SALE_PRICE) {
-    return { [FIELD_HAS_IMAGES]: -1, [PRICE_FIELD_SALE]: direction };
+    return [nullsLast(properties.salePrice, direction)];
   }
-  if (params.sortField === SORT_RELEVANCE && hasTextScore) {
-    return { [FIELD_HAS_IMAGES]: -1, score: { $meta: 'textScore' }, createdAt: -1 };
+  if (params.sortField === SORT_RELEVANCE && textTerm) {
+    return [desc(textRank(textTerm)), desc(properties.createdAt)];
   }
   if (params.sortField === SORT_FAIRNESS) {
-    return { [FIELD_HAS_IMAGES]: -1, [FIELD_PRICE_ETHICS_FAIRNESS_SCORE]: direction, createdAt: -1 };
+    return [nullsLast(properties.priceEthicsFairnessScore, direction), desc(properties.createdAt)];
   }
-  return { [FIELD_HAS_IMAGES]: -1, createdAt: direction };
-}
-
-/**
- * Build the $geoWithin clause for an Address query from a bounding box.
- *
- * Uses a GeoJSON Polygon rectangle (lng/lat order, closed CCW ring) rather
- * than the legacy `$box` operator: `$box` is only served by a flat `2d` index
- * and forces a COLLSCAN against our `2dsphere` index, whereas `$geoWithin` with
- * a `$geometry` polygon is index-backed (IXSCAN) and returns identical results.
- */
-export function boundingBoxToAddressQuery(box: BoundingBox): FilterQuery<{ coordinates: unknown }> {
-  const ring: [number, number][] = [
-    [box.swLng, box.swLat],
-    [box.neLng, box.swLat],
-    [box.neLng, box.neLat],
-    [box.swLng, box.neLat],
-    [box.swLng, box.swLat],
-  ];
-  return {
-    coordinates: {
-      $geoWithin: { $geometry: { type: 'Polygon', coordinates: [ring] } },
-    },
-  };
-}
-
-/** Build the $geoWithin/$centerSphere clause for an Address query from a center+radius. */
-export function centerRadiusToAddressQuery(center: CenterRadius): FilterQuery<{ coordinates: unknown }> {
-  return {
-    coordinates: {
-      $geoWithin: {
-        $centerSphere: [[center.lng, center.lat], center.radiusMeters / EARTH_RADIUS_METERS],
-      },
-    },
-  };
+  return [direction === SORT_ASC ? asc(properties.createdAt) : desc(properties.createdAt)];
 }
