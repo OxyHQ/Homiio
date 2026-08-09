@@ -150,9 +150,13 @@ jobs:
       # glob that stops matching all produce an empty green run, and that reads as
       # coverage forever because nothing contradicts it.
       #
-      # RAISED FROM 1150 TO 1190 by the geo backfill, which added 36 tests in
-      # `__tests__/db/geoBackfill.test.ts` (measured 1190 -> 1226). Before that
-      # it went 1100 -> 1150 for the remaining-schema batch (#281), which added
+      # RAISED FROM 1190 TO 1225 by the first zero-row domain port
+      # (notifications, saved searches, roommate requests/relationships), which
+      # added `savedSearches.test.ts` and rewrote two Mongo-seeded suites
+      # against the real Postgres — measured 1233 -> 1264. Before that it went
+      # 1150 -> 1190 for the geo backfill, which added 36 tests in
+      # `__tests__/db/geoBackfill.test.ts` (measured 1190 -> 1226); and
+      # 1100 -> 1150 for the remaining-schema batch (#281), which added
       # 54 tests across 4 files under `__tests__/db/` and took the measured
       # count 1123 -> 1177. Each step keeps roughly the headroom the previous
       # figure carried rather than pinning the exact total. The floor is a
@@ -162,7 +166,7 @@ jobs:
         if: always()
         run: >-
           bun .github/scripts/assert-test-floor.mjs
-          "$RUNNER_TEMP/backend-tests.json" packages/backend 1190
+          "$RUNNER_TEMP/backend-tests.json" packages/backend 1225
 
   frontend:
     runs-on: ubuntu-24.04

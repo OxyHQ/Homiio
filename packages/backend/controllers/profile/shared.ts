@@ -1,4 +1,4 @@
-import { Profile, Saved, SavedPropertyFolder, SavedSearch, RecentlyViewed, Property } from '../../models';
+import { Profile, Saved, SavedPropertyFolder, RecentlyViewed, Property } from '../../models';
 import { successResponse } from '../../middlewares/errorHandler';
 
 const errorResponse = (message = 'Error occurred', code = 'ERROR') => ({
@@ -83,7 +83,6 @@ export {
   Profile,
   Saved,
   SavedPropertyFolder,
-  SavedSearch,
   RecentlyViewed,
   Property,
   successResponse,
