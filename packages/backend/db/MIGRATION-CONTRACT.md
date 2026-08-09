@@ -28,10 +28,35 @@ remapping table and no id translation anywhere in the copy, which is precisely
 how every foreign key survives by construction: if the id does not change, a
 reference to it cannot break.
 
-The one exception in the whole migration is `Review.reports[]`, whose
-subdocuments are declared `_id: false` and therefore have no id to preserve. The
-backfill MINTS a uuid v7 for those rows. That is not a remap — it is an id where
-there was none, and nothing references a review report by construction.
+**The exceptions are the `_id: false` embedded arrays**, whose subdocuments have
+no id to preserve; the backfill MINTS a uuid v7 for each of those rows. That is
+not a remap — it is an id where there was none, and nothing references any of
+them by construction.
+
+This file said "the one exception … is `Review.reports[]`" until batch 4. That
+was true of the batches that had landed and is not true of the migration, and the
+difference matters: a reader who trusted it would look for a preserved id on four
+other tables and not find one. The complete set:
+
+| Source array | Target table |
+|---|---|
+| `Review.reports[]` | `review_reports` |
+| `Review.helpfulVoters[]` (a `[String]`, so not even a subdocument) | `review_helpful_votes` |
+| `TenantApplication.referenceContacts[]` | `tenant_application_references` |
+| `TenantApplication.documents[]` | `tenant_application_documents` |
+| `EvictionCase.attendees[]` | `eviction_case_attendees` |
+| `PlacePoi.categories[]` | `place_poi_categories` |
+
+Every OTHER embedded array in this migration is an implicit or explicit
+`{ _id: true }` subdocument and keeps its id verbatim — including
+`Lease.paymentSchedule[]`, whose ids `recordPayment` already looks rows up by,
+and `Conversation.messages[]`.
+
+**Two tables take an id that is neither an ObjectId nor a minted uuid.**
+`moderation_outbox.id` is DETERMINISTIC (`moderation:report.submit:<reportId>`)
+and `moderation_events.id` IS the CrowdSource event id. Both are declared with no
+default, because in both cases the id is the deduplication mechanism and minting
+one would delete it. Neither table has a production row to copy.
 
 ## `isValidObjectId` guards are DELETED, not widened
 
@@ -304,6 +329,108 @@ a user uses it.
   `https://www.habitaclia.com/alquiler-madrid.htm` — the Madrid search-results
   page, from a parser falling back to the results `href` — while their
   `(source, source_id)` stays unique, so the real key is unaffected.
+
+## Batches 4-8 scope (migrations 0003-0007) — the remaining 51 tables
+
+SCHEMA ONLY. No controller, service or repository is ported; the Mongo path is
+untouched and still serves production. With these, **every Mongoose model in
+`models/` has a table** and `DEFERRED_FOREIGN_KEYS` is empty.
+
+| Migration | Tables | What |
+|---|--:|---|
+| `0003_identity_partners_billing` | 11 | `profiles` (+5 children), `agencies`, `partners`, `commissions`, `billing` (+1) |
+| `0004_tenancy_leases_bookings` | 14 | `leases` (+6), `tenant_applications` (+2), `reservations`, `viewing_requests`, `exchange_requests`, `exchange_reviews` |
+| `0005_community_reviews_evictions` | 11 | `reviews` (+2), `listing_reports`, `eviction_cases` (+2), `eviction_comments`, `eviction_reports`, `roommate_requests`, `roommate_relationships` |
+| `0006_engagement_saved_cache` | 11 | `conversations` (+2), `notifications`, `saved_items`, `saved_searches`, `saved_property_folders` (+1), `recently_viewed`, `place_pois` (+1) |
+| `0007_crowdsource_moderation` | 4 | `moderation_reports`, `moderation_outbox`, `moderation_events`, `moderation_enforcements` |
+
+**Only two of these tables have data to copy.** The live census (2026-08-06)
+measured `agencies` at 2,627 rows and `profiles` at 5; every other collection in
+these five migrations is at ZERO. That is what makes their constraints
+expressible — see `CONVENTIONS.md` on the line between a deferred format
+validator and an expressed range or coherence rule.
+
+### Decisions here that a later batch must not silently reverse
+
+- **`properties.agency_id` and `properties.sourced_by_partner_id` become REAL
+  foreign keys** in 0003, closing the ledger 0001 opened. Both are `SET NULL`.
+- **Three references were RENAMED**, each because the old name hid what the
+  column holds from `isOxyAccountColumn` or from `idShapedColumns`:
+  `Partner.userId` → `partners.oxy_user_id`, `ModerationReport.reporter` →
+  `moderation_reports.reporter_oxy_user_id`, and
+  `Lease.documents[].uploadedBy` → `lease_documents.uploaded_by_oxy_user_id`.
+  All three tables are empty, so each costs the backfill one mapping entry.
+- **`OXY_ACCOUNT_COLUMN_NAMES` is now a MEASURED set**, not a predicted one. Six
+  names that were pre-registered in 0000 turned out never to exist
+  (`sender_`, `user_`, `participant_`, `organizer_`, `author_`, `partner_`) and
+  were removed; ten real ones were added. A name in that allow-list matching
+  nothing is indistinguishable from one matching something, which makes the set
+  unreviewable — and it is the only thing standing between an account column and
+  shipping unclassified.
+- **`Lease.roomId` declared `ref: 'Room'`, and no `Room` model exists.**
+  `roomController.createRoom` creates a **Property** with `type: 'room'` and a
+  `parentPropertyId`; nothing populates the path, which is why
+  `MissingSchemaError` never fired. It is a real foreign key into `properties`
+  here. The link was already half lost; this restores it rather than inventing
+  one.
+
+### Uncarried fields (a SOURCE field with no target column)
+
+The mirror of `schema/unmappedColumns.ts`. `properties.coverImageIndex` was the
+first; these two are the rest, and both are DERIVED COUNTS with exactly one
+source of truth once their array becomes a table:
+
+| Field | Replaced by | Why not carried |
+|---|---|---|
+| `EvictionCase.attendeeCount` | `count(*)` over `eviction_case_attendees` | It existed because `attendees` was `select: false` and counting it meant loading it. Unlike `properties.has_images` — which is kept against the same rule — it is not a SORT key of any feed, so no `ORDER BY` has to survive an aggregate |
+| `Conversation.analytics.messageCount` | `count(*)` over `conversation_messages` | Same shape, same reason. Its two siblings ARE carried: `lastActivity` moves on any save (not only on an append) and `totalTokens` comes from the provider's response, so neither is derivable from the messages |
+
+### A behaviour change the backfill must EXPECT, not diagnose
+
+`controllers/property/stats.ts` counts saves with
+`targetId: new mongoose.Types.ObjectId(propertyId)` against a field Mongo
+declares `String` — a BSON type mismatch, so the count has always been **0**.
+Under Postgres both sides are `text` and the comparison simply works. A save
+count that starts being non-zero after the cutover is correct behaviour arriving,
+the same class of finding as `properties.views` starting to increment.
+
+## Model BEHAVIOUR the repository layer still has to absorb
+
+Deliberately NOT ported in these batches, and listed so the next one has the
+inventory rather than rediscovering it. Every item is a Mongoose hook, static,
+method or virtual that has no Postgres counterpart:
+
+- **Derivations now enforced by the DATABASE, so the hook is deleted rather than
+  ported:** `Review.pre('validate')`'s `livedForMonths` and
+  `Reservation.pre('save')`'s `nights` still have to be COMPUTED by a writer, but
+  the CHECKs beside them (`livedTo > livedFrom`, `nights >= 1`) mean a wrong one
+  fails loudly. `TenantApplication.pre('save')`'s `decidedAt` stamp and
+  `ViewingRequest`'s `cancelledBy` are now equivalences the database enforces.
+- **Idempotency that MOVED into an index and must not be re-implemented as a
+  read:** `Agency.findOrCreateByName` (unique `normalized_name`),
+  `Billing.pre('save')`'s duplicate check, `reviewController`'s `alreadyVoted`
+  and `alreadyReported`, `evictionController`'s RSVP check, and
+  `SavedPropertyFolder.addProperty`. Each was a read-then-write with a window;
+  each is now a unique key. The ported code should INSERT and handle `23505`.
+- **Aggregations to rewrite as SQL:** `Review`'s six explore/agency pipelines
+  (`getUnitViewData`, `getBuildingViewData`, `getStreetViewData`,
+  `getAgencyStats`, `getCitiesWithReviews`, `getNeighborhoodSummaries`,
+  `getBuildingSummaries`). All of them `$match` on
+  `moderationStatus != 'removed'` first, which is why the seven scoped `reviews`
+  indexes are PARTIAL on exactly that predicate — a rewrite that drops the
+  predicate from the SQL loses the index.
+- **Virtuals a DTO has to compute:** `Lease.isFullySigned`, `leaseDuration`,
+  `formattedRent`, `daysUntilExpiration`; `Conversation.messageCount` and
+  `lastMessage`; `Review.livedDurationText`; `SavedPropertyFolder.propertyCount`.
+- **Methods with real logic to port:** `Lease.generatePaymentSchedule`,
+  `recordPayment`, `signAsLandlord`/`signAsTenant`; `Billing.consumeFileCredit`
+  (`UPDATE … SET file_credits = file_credits - 1`, which has no guard unless the
+  `billing_file_credits_non_negative_check` carries it);
+  `Conversation.generateShareToken`/`revokeSharing` (the four `sharing_*` columns
+  now move together by CHECK).
+- **The `conversations.sharing_expires_at` sweep**, which must CLEAR those four
+  columns and must never delete the row. `services/cron.ts` owes this alongside
+  the `sweepAllExpiredRows` call the expiry registry already made visible.
 
 ## Two live hazards found in adjacent code — NOT batch 0, do not fix here
 

@@ -21,15 +21,21 @@
  * was in the repository BEFORE the first secret arrived rather than being
  * invented while porting the table that needed it.
  *
- * Migration 0001 brings the first one. The columns known to belong here, from
- * the tracking issue:
+ * Migration 0001 brings the first one; migrations 0003-0007 bring the rest, so
+ * the list the tracking issue predicted is now complete:
  *
- * | Column | Batch | Why |
- * |---|---|---|
- * | `properties.accommodation_details_wifi_password` | 3 | A credential for a real network — **landed** |
- * | `profiles.annual_income` | 5 | `privacy.showIncome` defaults to FALSE |
- * | `leases.*_digital_signature` | 7 | Signature material |
- * | `eviction_cases.contact_*` (5 columns) | 8 | Organizer PII on a PUBLIC board |
+ * | Column | Why |
+ * |---|---|
+ * | `properties.accommodation_details_wifi_password` | A credential for a real network |
+ * | `profiles.personal_info_annual_income` | `settings.privacy.showIncome` defaults to FALSE |
+ * | `leases.signatures_*_digital_signature` (2) | Signature material |
+ * | `eviction_cases.contact_*` (5) | Organizer PII on a PUBLIC board |
+ *
+ * The tracking issue named `profiles.annual_income`; the column is
+ * `personal_info_annual_income`, because `profiles.ts` keeps the Mongo path
+ * minus the `personalProfile` wrapper. Recorded rather than silently corrected —
+ * an entry naming a column that does not exist protects nothing, which is the
+ * failure `__tests__/db/protectedColumns.test.ts` is built to catch.
  *
  * ## The mechanism, and why part 3 is the part a convention could not give you
  *
@@ -63,6 +69,9 @@ import {
   publicColumns as excludeProtectedColumns,
 } from '@oxyhq/db/assert';
 import type { PgTable } from 'drizzle-orm/pg-core';
+import { evictionCases } from './evictions';
+import { leases } from './leases';
+import { profiles } from './profiles';
 import { properties } from './properties';
 
 /**
@@ -81,6 +90,15 @@ import { properties } from './properties';
  * does not exist, which is a silent no-op rather than an error.
  */
 export const PROTECTED_COLUMNS_BY_TABLE = {
+  eviction_cases: [
+    'contactPhone',
+    'contactEmail',
+    'contactTelegram',
+    'contactWhatsapp',
+    'contactInstructions',
+  ],
+  leases: ['signaturesLandlordDigitalSignature', 'signaturesTenantDigitalSignature'],
+  profiles: ['personalInfoAnnualIncome'],
   properties: ['accommodationDetailsWifiPassword'],
 } as const satisfies ProtectedColumnRegistry;
 
@@ -113,6 +131,71 @@ export const PROTECTED_COLUMNS: readonly ProtectedColumn[] = [
       'nothing shipped it only because no serializer happened to look. Under ' +
       'drizzle the equivalent read is a bare `select()`, which returns every ' +
       'column, so the accident stops protecting it the day someone writes one.',
+  },
+  {
+    table: profiles,
+    property: 'personalInfoAnnualIncome',
+    reason:
+      'A person\'s income, and the profile schema itself says it is private: ' +
+      '`settings.privacy.showIncome` defaults to FALSE, so the product\'s own ' +
+      'default is that nobody sees it. Mongoose did not mark it `select: false` ' +
+      '— it stayed out of responses only because the profile serializer reads a ' +
+      'field list — so the ported read, a bare `select()`, returns it. The ' +
+      'privacy FLAG is a per-viewer decision the application still has to make; ' +
+      'this registry only makes forgetting to ask a compile error rather than a ' +
+      'disclosure.',
+  },
+  {
+    table: leases,
+    property: 'signaturesLandlordDigitalSignature',
+    reason:
+      'Signature material on a tenancy contract. It exists to prove who agreed ' +
+      'to what, so a read path that hands it out hands out the proof — and ' +
+      '`toLeaseDTO` omits it today only by not listing it. A path that ' +
+      'genuinely needs it (rendering the signed PDF) names the column ' +
+      'explicitly, which is greppable in a way a whole-row read is not.',
+  },
+  {
+    table: leases,
+    property: 'signaturesTenantDigitalSignature',
+    reason:
+      'The tenant half of the same fact, protected for the same reason. Listed ' +
+      'separately rather than as a wildcard because the registry is what the ' +
+      'TYPE-level exclusion is computed from, and a pattern cannot be.',
+  },
+  {
+    table: evictionCases,
+    property: 'contactPhone',
+    reason:
+      'The organizer\'s phone number on a PUBLIC board, and the one place in ' +
+      'this schema where a leak is a physical-safety problem rather than a ' +
+      'privacy one: an eviction notice names a time and a place where a ' +
+      'confrontation is expected, and the organizer is the person a landlord\'s ' +
+      'agent would most like to reach. The whole `contactInfo` block is served ' +
+      'only to a viewer the controller decides may have it.',
+  },
+  {
+    table: evictionCases,
+    property: 'contactEmail',
+    reason: 'Organizer PII on a public board — see `contact_phone`.',
+  },
+  {
+    table: evictionCases,
+    property: 'contactTelegram',
+    reason: 'Organizer PII on a public board — see `contact_phone`.',
+  },
+  {
+    table: evictionCases,
+    property: 'contactWhatsapp',
+    reason: 'Organizer PII on a public board — see `contact_phone`.',
+  },
+  {
+    table: evictionCases,
+    property: 'contactInstructions',
+    reason:
+      'Free text the organizer writes for people who are coming — routinely a ' +
+      'meeting point, a door code or a name. Protected with the four contact ' +
+      'handles because it is the same disclosure by a different route.',
   },
 ];
 

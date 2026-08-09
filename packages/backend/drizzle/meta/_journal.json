@@ -22,6 +22,41 @@
       "when": 1785995560870,
       "tag": "0002_property",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786243160889,
+      "tag": "0003_identity_partners_billing",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786243161966,
+      "tag": "0004_tenancy_leases_bookings",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786243162981,
+      "tag": "0005_community_reviews_evictions",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786243164207,
+      "tag": "0006_engagement_saved_cache",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786243165303,
+      "tag": "0007_crowdsource_moderation",
+      "breakpoints": true
     }
   ]
 }

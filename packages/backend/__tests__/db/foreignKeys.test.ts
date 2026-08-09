@@ -72,6 +72,15 @@ afterAll(async () => {
 });
 
 describe('deferred foreign keys', () => {
+  it('is empty, because every batch has landed', () => {
+    // The ledger opened with two entries in migration 0001 and closed in 0003
+    // when `agencies` and `partners` arrived. An empty ledger is the finish
+    // line, and asserting it directly is what turns "we converted them" into a
+    // fact — the overdue check below passes over an empty list either way, so on
+    // its own it cannot tell "all converted" from "the ledger was deleted".
+    expect(DEFERRED_FOREIGN_KEYS).toEqual([]);
+  });
+
   it('names a parent table that does not yet exist, for every entry', () => {
     // A non-empty ledger is legitimate WHILE a table is landing ahead of its
     // parent — Homiio's schema arrives in batches, so that will be the normal
@@ -102,7 +111,7 @@ describe('id-shaped column classification', () => {
       (count, table) => count + idShapedColumns(table).length,
       0,
     );
-    expect(total).toBeGreaterThanOrEqual(10);
+    expect(total).toBeGreaterThanOrEqual(75);
   });
 
   it('recognises an Oxy account column by its SQL name, not its property name', () => {
@@ -185,8 +194,8 @@ describe('ON DELETE is decided per relation', () => {
       order by 1
     `);
 
-    // Vacuity floor: migration 0000 declares ten foreign keys.
-    expect(rows.length).toBeGreaterThanOrEqual(10);
+    // Vacuity floor: migrations 0000-0007 declare 68 foreign keys.
+    expect(rows.length).toBeGreaterThanOrEqual(65);
     // `a` = NO ACTION (the default nobody chose). `c` = CASCADE, `n` = SET NULL,
     // `r` = RESTRICT, `d` = SET DEFAULT.
     const undecided = rows

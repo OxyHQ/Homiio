@@ -32,9 +32,30 @@ nobody decided about fail the build.
 **Tables: explicit snake_case, plural.** Never Mongoose's derived collection
 name — that is a `pluralize()` artifact, not a design, and nothing reads it.
 
+**Plural where the row is a COUNTABLE noun.** Three tables are not, and they
+read as themselves rather than being forced: `billing` (a mass noun — one
+billing record per account, and `billings` is not a word anybody uses),
+`moderation_outbox` (ONE queue; `moderation_outboxes` would suggest several) and
+`recently_viewed` (an adjectival name — Mongo's own `recentlyvieweds` is the
+`pluralize()` artifact this rule exists to reject, not a target to reproduce).
+Three named exceptions, each stated where the table is declared.
+
 **Columns: camelCase in TypeScript, snake_case in SQL**, derived by drizzle. Do
 not pass an explicit column name unless the SQL name genuinely differs from the
 property.
+
+**A flattened path may not exceed 63 BYTES, and Postgres truncates SILENTLY.**
+Flattening keeps the Mongo path (`longTermRent.monthlyAmount` →
+`long_term_rent_monthly_amount`) so the backfill's column-coverage check maps
+source to target mechanically. That rule has a hard ceiling: an identifier
+longer than 63 bytes is cut with no error and no warning, and two paths that
+differ only past byte 63 collide into one column. `profiles` is where it bites —
+`personalProfile.settings.roommate.preferences.lifestyle.cleanliness` spells out
+to 68 bytes — so that table drops the `personalProfile.` wrapper, which is 1:1
+with the row and carries no information. Measure before flattening a path more
+than four levels deep; drop the outermost segment that carries no meaning, and
+say so in the table's docblock so the backfill gains ONE mapping rule rather
+than a table of exceptions.
 
 Several Mongo fields are ALREADY snake_case (`postal_code`, `building_name`,
 `address_lines`, `land_plot`, `po_box`). Declare them camelCase in TypeScript
@@ -76,6 +97,17 @@ identifier it emits. Hand-written SQL must quote it too.
 because that is how every foreign key survives the copy by construction — there
 is no remapping table, so there is nothing to get wrong.
 
+**Two tables deviate, and the deviation IS the mechanism.**
+`moderation_outbox.id` and `moderation_events.id` are `text().primaryKey()` with
+NO default, because their ids are not Homiio's to mint: the outbox id is
+DETERMINISTIC (`moderation:report.submit:<reportId>`), so two concurrent
+submissions converge on one row instead of delivering the same report twice, and
+the event id IS the CrowdSource event id, so the primary key is the webhook
+dedupe. Minting a uuid in either place would silently delete the property the
+table exists for. No default means a caller who forgets fails on the insert;
+`__tests__/db/coherenceChecks.test.ts` asserts both columns really have none.
+Deviate here only where an id carries a MEANING a generated one cannot.
+
 **v7 is generated in the application**, not by a database `DEFAULT`: Postgres 17
 has no native `uuidv7()`. Rows inserted by raw SQL get no id — intended, since
 the backfill supplies `_id` verbatim.
@@ -112,9 +144,36 @@ is drawn explicitly rather than case by case.
 | `default: <v>` | `NOT NULL DEFAULT <v>` | Mongoose applies a default at document CONSTRUCTION and persists it, so the stored BSON already carries it |
 | `enum: [...]` | `text` + CHECK | Subject to the `distinct()` audit above |
 | a range the data cannot violate meaningfully | CHECK | e.g. coordinate bounds — see below |
-| `validate:` on a FORMAT (`^[A-Z]{2}$`) | **nothing yet** | A CHECK rejects existing production rows mid-copy. Deferred to a `post`-phase migration AFTER the census measures the real values |
-| `min` / `max` / `maxlength` | **nothing yet** | Same class as the row above, same reason |
+| `validate:` on a FORMAT (`^[A-Z]{2}$`, `isEmail`, `isURL`, a hex colour) | **nothing, ever, in this migration** | A CHECK rejects existing production rows mid-copy. Deferred to a `post`-phase migration AFTER the census measures the real values |
+| `min` / `max` / `maxlength` on a table with PRODUCTION ROWS | **nothing yet** | Same class as the row above, same reason |
+| `min` / `max`, an ORDERING rule, or a two-column coherence rule on an EMPTY table | CHECK | Nothing to reject, and the rule is usually one a `pre('save')` hook already states and cannot enforce |
 | `trim` / `lowercase` | **nothing** | Application behaviour with no Postgres counterpart — re-apply at the CALL SITE. Deliberately not a CHECK, which would reject existing rows and convert a silent normalization into a 500 |
+
+**The line between rows three and four is the one to get right, and it is drawn
+on the DATA rather than on the rule.** Only two of the tables in this migration
+hold production rows (`agencies`, 2,627; `profiles`, 5) beyond the six that
+landed in 0000-0002; everything migrations 0004-0007 create is EMPTY. A
+constraint on an empty table cannot reject anything that exists, so the reason
+for deferring it is simply absent — and the rules in question are ones the
+application already believes (`Reservation.checkOut > checkIn`, a `paid`
+instalment carrying its payment, a `cancelled` viewing naming who cancelled)
+and states in a `pre('save')` hook that `findOneAndUpdate` does not run.
+
+FORMAT validators stay deferred even on an empty table, and that asymmetry is
+deliberate: a range or an ordering is a fact about the domain, while a regex is a
+statement about SPELLING that the product changes more often than it thinks
+(`countries.code` has no format CHECK, so `eviction_cases.location_country_code`
+has none either — the same rule enforced in one place and not the other is worse
+than the rule being absent).
+
+> **Trap: a CHECK passes on NULL.** Only an explicit `false` rejects a row, so a
+> constraint written `(a is null and b is null) or (b > a)` admits exactly the
+> half-a-pair it exists to refuse: with one side set the first branch is `false`,
+> the comparison is NULL, and `false or NULL` is NULL. Spell out `is not null` on
+> every column in the positive branch. This shipped in the first draft of
+> `exchange_requests_offered_window_check` and was caught only because
+> `coherenceChecks.test.ts` asserts the REFUSAL as well as the two coherent
+> shapes — a test that only inserts valid rows cannot see it.
 
 **The coordinate-range CHECK on `addresses` is the exception that proves the
 rule, and it is there because the obvious assumption is false.** `geography` does
@@ -166,9 +225,41 @@ Every relation gets a real constraint with an **explicitly decided `ON DELETE`**
 | `regions/cities/addresses` → parent geo | RESTRICT | An address whose city vanished is not an address with a missing city, it is silent data loss that takes every property at that address with it. Refusing is the answer; nothing deletes a city today, and anything that ever does must reassign first |
 | `addresses.neighborhood_id` | SET NULL | The one genuinely OPTIONAL geo reference — NULL already means "none resolved", so the action introduces no second meaning |
 | `regions/cities.cover_image_id` | SET NULL | Deleting an image must not delete a region. NULL already means "no cover" |
+| `properties.agency_id`, `properties.sourced_by_partner_id`, `reviews.agency_id`, `eviction_cases.agency_id`, `eviction_cases.cover_image_id`, `saved_items.folder_id`, `roommate_relationships.request_id` | SET NULL | An attribution, not an ownership. NULL already means "none resolved" on every one of them |
+| `leases`, `reservations`, `tenant_applications`, `viewing_requests`, `exchange_requests`, `commissions` → `properties` | RESTRICT | A record of a human transaction, not a copy of an advertisement |
+| `listing_reports` → `properties` | **CASCADE** | The one exception, and the reason is the expiry sweep — see below |
+| child tables → their parent (`lease_*`, `profile_*`, `eviction_case_*`, `conversation_*`, `review_*`, `tenant_application_*`, `saved_property_folder_items`, `place_poi_categories`, `billing_processed_sessions`, `moderation_outbox.report_id`) | CASCADE | mongoose deleted these with the parent document by construction, and none has meaning without it |
 
-**`ON DELETE SET NULL` needs care where NULL already means something.** Both uses
-above were checked against that test; check it for every new relation.
+**The `properties` group is where the two prime directives nearly collided, and
+the resolution is worth stating because it will recur.** `properties` is
+hard-deleted continuously by the expiry sweep, so a RESTRICT from a table that
+can reference an EXTERNAL listing would abort a sweep batch — silently, on a
+schedule, growing the table the sweep exists to reap. A CASCADE from a table
+holding a human transaction would delete a signed lease along with an
+advertisement. Both are unacceptable, and the schema escapes because the two sets
+are DISJOINT BY CONSTRUCTION rather than by luck: `expires_at` is set only by
+`PropertySchema`'s `pre('save')` hook for `isExternal` listings, and that same
+hook strips `oxy_user_id` from them — while every transactional path requires an
+owner (`markPropertyTransacted` refuses a listing the caller does not own, and
+external listings have no in-app apply, viewing or booking). So a property that
+can carry a lease never carries a deadline. `listing_reports` is the one table
+that can reference either, because reporting an external ad is exactly what the
+form is for, so it CASCADEs — and the durable trace survives in
+`moderation_reports`, whose `reported_id` deliberately carries no foreign key.
+
+**`ON DELETE SET NULL` needs care where NULL already means something.** Every use
+above was checked against that test; check it for every new relation.
+
+**An `ON DELETE` may not be decided from the parent alone.** `moderation_outbox`
+holds two references and they get opposite answers: `report_id` CASCADEs (a
+submission job for a report that no longer exists is work with no subject, and
+`moderation_reports` carries no expiry), while `event_id` gets NO constraint at
+all — `moderation_events` is under its own expiry sweep with the same retention,
+and two independent sweeps have no ordering between them, so CASCADE would let
+one delete the other's unprocessed work and RESTRICT would make one fail. That is
+the one place in this schema where a foreign key is refused rather than
+impossible, and it is recorded in `ID_COLUMNS_WITHOUT_FOREIGN_KEY` with that
+reason so it does not read as an oversight.
 
 ## Expiry — the Mongo TTL replacement
 
@@ -186,9 +277,24 @@ cutover lands. Registering it is only half the port — `services/cron.ts` still
 has to CALL the sweep, and the registry makes that omission visible rather than
 closing it.
 
-Check every TTL for INTENT before replicating it — `Conversation
-.sharing.expiresAt` deletes the whole conversation and must NOT be ported as a
-delete.
+**The census is CLOSED: five TTL indexes, four registered, one refused.**
+`grep -rn expireAfterSeconds models/` returns exactly five — on `PropertySchema`,
+`ConversationSchema`, `PlacePoiSchema`, `ModerationEvent` and `ModerationOutbox`.
+The count is recorded because a wrong one is worse than none: a sixth nobody can
+find reads as an outstanding risk forever, and the whole value of the registry is
+being able to say the set is complete.
+
+**Check every TTL for INTENT before replicating it.**
+`Conversation.sharing.expiresAt` deletes the whole conversation — messages
+included — 24 hours after anybody shares it, so a near-zero row count is evidence
+of the DAMAGE rather than of safety. That column is named in
+`EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE`, and `__tests__/db/expiry.test.ts` fails if
+it ever appears in `EXPIRY_SWEEP_TARGETS`. That list is data rather than a
+warning in a comment for one specific reason: a later reader comparing the
+source's five TTL indexes against the four registered targets finds the registry
+one short and closes the gap, and closing it is exactly the change that would
+start deleting people's transcripts. Mutation-tested — adding that entry turns
+the suite red and names the column.
 
 ## Unique constraints
 
@@ -202,6 +308,22 @@ real set and states the rule at the constraint.
 
 **A sparse-unique column must be written NULL, never `''`** — an empty string is
 a VALUE, so it collides for real, converting a non-problem into a live bug.
+`__tests__/db/partialUniques.test.ts` demonstrates both halves against a real
+server rather than describing them.
+
+**A partial unique index has to be tested on what it PERMITS, not only on what
+it refuses.** A plain unique index passes every "rejects a duplicate"
+assertion — the ones that fail are the permits, and those are the rows a total
+index eats silently, months later: a re-filed listing report after the first was
+dismissed, a roommate request after the first was declined, two people who lived
+together, parted, and moved back in. Nine partial unique indexes exist across the
+schema and the test names all nine, so a new one is added there deliberately.
+
+**A case-insensitive Mongo unique index becomes a FUNCTIONAL unique index on
+`lower(column)`.** Mongo spelled it `collation: { locale: 'en', strength: 2 }`
+(`saved_property_folders`); Postgres has no per-index collation strength, and a
+plain `UNIQUE(owner, name)` passes every test that only inserts
+differently-spelled names.
 
 ## Arrays and objects
 
@@ -222,10 +344,28 @@ a VALUE, so it collides for real, converting a non-problem into a live bug.
   an all-or-none CHECK. `[2.1, 41.3, 2.2, 41.4]` and `[41.3, 2.1, 41.4, 2.2]` are
   both valid arrays and only one is Barcelona; `bbox_west = 41.3` is obviously
   wrong to anyone who reads it.
-- **`jsonb` is for genuinely shape-less data only.** There is exactly one in the
-  whole schema: `addresses.extras`, declared `Mixed` in Mongo precisely because
-  its shape is whatever a portal sent. Shapelessness is its purpose. `properties`
-  flattens TWELVE subdocuments into columns and adds none.
+- **`jsonb` is for genuinely shape-less data only.** There are FIVE in the whole
+  schema and every one is declared `Schema.Types.Mixed` in Mongo — which is the
+  test, since `Mixed` is what a Mongoose author writes when the shape is not
+  theirs to decide. `addresses.extras` (whatever a portal sent),
+  `notifications.data` (a deep-link payload each notifier writes and each client
+  reads the keys it recognises), `saved_searches.filters` (whatever the search UI
+  supported the day it was saved — flattening it would make every filter addition
+  a migration and every removal a data loss), and
+  `moderation_outbox.decision` / `moderation_events.payload` (a decision document
+  validated against the published contract when it is READ, so a newer
+  CrowdSource does not break an older client). `properties` flattens TWELVE
+  subdocuments into columns and adds none; `profiles` flattens a 54-column
+  subdocument and adds none. Note the moderation pair flattens the KNOWN half of
+  its payload (`report_id`, `event_id`, `case_id`) into columns and leaves only
+  the opaque half in `jsonb`.
+- **An object array read whole is still a CHILD TABLE, not `jsonb`.**
+  `place_pois.categories[]` is the case that looks like an exception and is not:
+  twelve fixed keys, always all present, read whole with the row. `jsonb` is
+  wrong because the shape is CLOSED and known; 36 flattened columns are wrong
+  because a new category would be a migration on a cache. The table also buys a
+  constraint the array could not express — `UNIQUE(place_poi_id, key)` — which is
+  the tiebreaker whenever the other two arguments are close.
 - **Flattening an OPTIONAL subdocument makes every one of its columns NULLABLE**,
   including the ones whose sub-schema declares a default. Column nullness is the
   only representation of block ABSENCE once the block is gone, so
@@ -246,8 +386,15 @@ the schema — not because it is tidier, but because a hook is bypassable and a
 backfill, `psql`) can produce a row whose derived value disagrees with its
 source: an attempt fails with SQLSTATE `428C9`.
 
-Three so far, two on `addresses` and one on `properties`:
+Four in total: two on `addresses`, one on `properties`, one on `eviction_cases`:
 
+- **`eviction_cases.location_geo`** — the second and last PostGIS column, and the
+  same shape as `addresses.geo` for the same reason. It has its OWN test file
+  (`__tests__/db/evictionGeography.test.ts`) rather than a line in
+  `postgis.test.ts`, because a shape being right once says nothing about the
+  second time somebody writes it — the whole hazard is that
+  `ST_MakePoint(latitude, longitude)` compiles, runs, produces a valid point and
+  is wrong. Mutation-tested: transposing the arguments turns that file red.
 - **`addresses.geo`** — see PostGIS below.
 - **`addresses.address_level`** — was `getAddressLevel()`, a METHOD, which every
   one of this package's 153 `.lean()` reads skips. The whole street → building →
@@ -369,8 +516,22 @@ Postgres through the application's own pool.
 | The five portal-writable vocabularies (`type`, `status`, `furnished_status`, `*_currency`, `source`) refuse an undeclared value and accept the declared-but-never-observed ones; `amenities` stays unconstrained | `__tests__/db/propertyVocabularies.test.ts` |
 | The calendar's `tstzrange` GiST index serves an overlap query — asserted on the PLAN and on the exact result set — with `[)` bounds so adjacent windows do not collide | `__tests__/db/propertyCalendar.test.ts` |
 | `search_vector` matches through `unaccent` in both directions, covers `description` and not `title`, and cannot be written on INSERT or UPDATE | `__tests__/db/propertySearch.test.ts` |
-| Every registered expiry column has a leading btree, and the registry is not empty | `__tests__/db/expiry.test.ts` |
+| Every registered expiry column has a leading btree; the registry is exactly the four TTLs that mean "delete this row"; and no column in `EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE` is ever registered | `__tests__/db/expiry.test.ts` |
 | Every unmapped column names a real property and keeps its declared shape | `__tests__/db/unmappedColumns.test.ts` |
+| `eviction_cases.location_geo` is generated, SRID 4326, POINT, built as `(longitude, latitude)`, GiST-indexed, unwritable, and measures a real distance; out-of-range latitude AND longitude both refused | `__tests__/db/evictionGeography.test.ts` |
+| Every partial unique index refuses a duplicate **and permits the row it exists to permit**; `''` collides where NULL does not; the case-insensitive folder key is scoped to one person; and the catalogue names all nine partial uniques | `__tests__/db/partialUniques.test.ts` |
+| Eleven two-column coherence CHECKs refuse BOTH incoherent shapes and accept both coherent ones; `place_pois` cascades to its categories; the two moderation dedupe tables really have no id default | `__tests__/db/coherenceChecks.test.ts` |
+| `leases` uses CLOSED range bounds and `reservations`/`exchange_requests` half-open — asserted at the boundary instant, through the expression read out of `pg_get_indexdef` rather than restated in the test | `__tests__/db/tenancyRanges.test.ts` |
+
+Four of these were mutation-tested when they landed: making
+`listing_reports_open_reporter_key` total, dropping `'[]'` from
+`leases_term_range_gist` (and adding it to `reservations_stay_range_gist`),
+transposing `ST_MakePoint`'s arguments on `eviction_cases`, and registering
+`conversations.sharing_expires_at` as a sweep target. Each turns its suite red
+and names the offending object. The range file's BEHAVIOURAL half only became
+able to do that after the mutation exposed it reading a string written in the
+test rather than the index — which is the failure mode `~/Oxy/AGENTS.md` calls a
+check that cannot distinguish success from failure, found the only way it can be.
 
 And one gate that is NOT a test, because a test of this shape cannot check
 itself: `scripts/mutation-test-property-constraints.mjs`
