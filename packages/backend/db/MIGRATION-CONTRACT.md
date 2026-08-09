@@ -20,6 +20,77 @@ places Homiio's code will break in ways nothing reports.
 Where they conflict, **STOP and escalate**. Do not resolve it silently in a
 schema file — record it as an open decision.
 
+## Before porting a table, census who ELSE reads it
+
+A table is not finished when its own controller stops importing the Mongoose
+model. It is finished when NOTHING reads it from Mongo — and the readers that
+get left behind are, by construction, the ones in files the porting batch does
+not own.
+
+They fail **silently**, because a Mongo query against a collection whose rows
+now live in Postgres is not an error: it is an empty result. And they are
+INVISIBLE while the table is empty, which is the same condition that makes a
+domain look cheap to port in the first place.
+
+Run this before the first schema line, not after the merge:
+
+```
+grep -rn "\bModelName\b" controllers/ services/ routes/ utils/ middlewares/
+```
+
+**Census every table already on Postgres, not only the ones this batch moves.**
+That correction is the whole rule, and it was paid for. The first census taken
+for the tenancy stragglers grepped only the models that batch had moved and
+reported **4 files**; re-run across every table already on Postgres it reported
+**5 files carrying 10 stale model reads**. The miss was exactly the tables the
+author had not personally touched — `Saved` and `RecentlyViewed`, moved by a
+sibling batch, read from three `controllers/property/*` files, one of which
+(`retrieve.ts`) the first census never named at all.
+
+Scoping a census by AUTHORSHIP is the failure mode; scoping it by what is on
+Postgres is the fix. Note the shape: an inventory whose job is to answer "is
+anything still using this?" **cannot tell "found less" from "there is less"**,
+so give it a positive control — the count of files importing the model barrel at
+all — and be suspicious of any run that returns zero everywhere.
+
+**Rank a SWEEP above a read.** A stale read returns zero to a caller who can at
+least see an empty result. A stale sweep — `cleanupService`'s retention
+`deleteMany`, an expiry job — produces no output at all: it reaps nothing, and
+the only symptom is disk, months later, by which time nobody connects it to a
+migration. `db/expiry.ts` records the same hazard from the schema side.
+
+**A stale reader is worth opening**, because a query written against the old
+store often turns out to have been broken independently of it. Porting
+`analyticsController` surfaced three defects that predated the migration and
+made the endpoint return zeros for its whole life: a `distinct` filtered on
+`profileId`, which `PropertySchema` never declared, so the selector matched
+nothing and the two aggregates guarded by `propertyIds.length ? … : …` never ran
+at all; a viewing rollup comparing `ownerOxyUserId` against a PROFILE id; and an
+`$addToSet` on a column that does not exist. Moving those reads to Postgres
+while leaving the selectors alone would have been the worst available outcome —
+three queries ported, still answering 0, and looking done.
+
+## A fixture has to sit on the side of the distinction the test exists to make
+
+The tidiest fixture is often the one that makes a check vacuous, and a green run
+does not distinguish the two. Before trusting a passing test on any check that
+tells two things apart, ask what input shape would make the two DISAGREE, and
+confirm a fixture has that shape.
+
+Measured here, three times, each caught only by mutation testing:
+
+| check | the too-tidy fixture | why it could not fail |
+|---|---|---|
+| half-open `[)` range overlap | two "adjacent" windows built from two separate `Date.now()` calls | they land milliseconds apart, so they are disjoint under `[)` AND `[]` — three closed-bound mutations survived a test whose comment claimed to pin exactly that boundary |
+| `count_distinct` vs `count` | 2 views by 2 people | the two figures agree; swapping one for the other passes. One viewer across two listings plus a second viewer (3 views, 2 people) is the shape that discriminates |
+| a renewal not inheriting signatures | a co-tenant who never signed the original | inheriting `status` verbatim still reads `pending`, so the assertion holds either way |
+
+The general form: **a boundary test built from two independent `Date.now()`
+calls tests nothing about the boundary.** Same family as the checks
+`~/Oxy/AGENTS.md` calls "a check that cannot distinguish success from failure" —
+here the failure is in the FIXTURE rather than the assertion, which is why
+reading the test does not reveal it and mutating the code does.
+
 ## Ids are preserved verbatim, and that is not a convenience
 
 Every primary key is `text`. A row that existed before the cutover keeps its
