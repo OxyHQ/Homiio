@@ -150,7 +150,9 @@ jobs:
       # glob that stops matching all produce an empty green run, and that reads as
       # coverage forever because nothing contradicts it.
       #
-      # RAISED FROM 1225 TO 1310 by the lease port, which added
+      # RAISED FROM 1310 TO 1345 by the viewings + applications port, which
+      # added two real-database suites — measured 1352 -> 1389. Before that it
+      # went 1225 -> 1310 for the lease port, which added
       # `leasePaymentSchedule.test.ts` and rewrote `leaseOwnership.test.ts`
       # against the real Postgres — measured 1320 -> 1351. Before that it went
       # 1190 -> 1225 for the first zero-row domain port
@@ -169,7 +171,7 @@ jobs:
         if: always()
         run: >-
           bun .github/scripts/assert-test-floor.mjs
-          "$RUNNER_TEMP/backend-tests.json" packages/backend 1310
+          "$RUNNER_TEMP/backend-tests.json" packages/backend 1345
 
   frontend:
     runs-on: ubuntu-24.04

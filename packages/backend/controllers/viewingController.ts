@@ -1,15 +1,75 @@
 /**
  * Viewing Controller
- * Handles viewing request lifecycle (create, list, approve, decline, cancel)
+ * Handles viewing request lifecycle (create, list, approve, decline, cancel).
+ *
+ * Persisted in PostgreSQL (`db/schema/bookings.ts`, read and written through
+ * `db/bookings/viewingReads.ts`).
+ *
+ * ## What the port changed
+ *
+ * **`cancelledBy` and `status` move in one statement.**
+ * `viewing_requests_cancelled_by_status_check` makes them an equivalence, so a
+ * cancellation that failed to record WHO cancelled is now a `23514` rather than
+ * a row nobody can attribute. The repository is the only writer of either.
+ *
+ * **Every transition carries its precondition in the `UPDATE`'s predicate.**
+ * The Mongoose version read the document, checked `status === 'pending'` in JS,
+ * assigned and saved — a window in which two owners could both approve. The
+ * read is still there, because it is what decides WHICH error the caller sees
+ * (404 vs 403 vs 400), but the write no longer trusts it.
+ *
+ * **The property read is a narrow projection**
+ * (`db/properties/propertyBookingBasis.ts`): the questions are "is this
+ * bookable?" and "who owns it?", and a viewing request is not a listing page.
  */
 
 import type { Request, Response, NextFunction } from 'express';
 
-import { Property, ViewingRequest } from '../models';
 import { PropertyStatus } from '@homiio/shared-types';
+import { getDb } from '../db/postgres';
+import {
+  cancelViewing,
+  createViewing,
+  decideViewing,
+  findActiveViewingForRequester,
+  findViewingAtInstant,
+  findViewingById,
+  isViewingStatus,
+  listViewings,
+  rescheduleViewing,
+  serializeViewing,
+} from '../db/bookings/viewingReads';
+import { findPropertyBookingBasis } from '../db/properties/propertyBookingBasis';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
 import { notificationDispatchService } from '../services/notificationDispatchService';
+
+/** Resolve the caller from the session, in the shape the auth layer sets. */
+function callerOf(req: Request): string | undefined {
+  return req.user?.id || req.user?._id || req.userId || undefined;
+}
+
+function parsePagination(query: Request['query']): { page: number; limit: number; skip: number } {
+  const page = parseInt(String(query.page ?? ''), 10) || 1;
+  const limit = parseInt(String(query.limit ?? ''), 10) || 10;
+  return { page, limit, skip: (page - 1) * limit };
+}
+
+/**
+ * Build the scheduled instant from a `YYYY-MM-DD` date and an `HH:mm` time.
+ *
+ * `new Date('2026-01-01T10:00')` — no zone suffix — is parsed in the SERVER's
+ * local zone. That is what the Mongoose handler did and it is preserved, which
+ * is the opposite call to the lease payment schedule and deliberately so: there,
+ * the zone silently changed a COMPUTED series of instalments; here it fixes one
+ * instant a human picked, nothing is derived from it, and re-anchoring it to UTC
+ * would move every appointment by the server's offset.
+ */
+function toScheduledAt(date: unknown, time: unknown): Date | undefined {
+  if (typeof date !== 'string' || typeof time !== 'string') return undefined;
+  const parsed = new Date(`${date}T${time}`);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
 
 class ViewingController {
   /**
@@ -20,70 +80,59 @@ class ViewingController {
       const { propertyId } = req.params;
       const { date, time, message } = req.body;
 
-      const oxyUserId = req.user?.id || req.user?._id || req.userId;
+      const oxyUserId = callerOf(req);
       if (!oxyUserId) {
         return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
       }
 
-      const property = await Property.findById(propertyId).lean();
+      const db = getDb();
+      const property = await findPropertyBookingBasis(db, propertyId);
       if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
       if (property.status !== PropertyStatus.PUBLISHED) return next(new AppError('Property is not active', 400, 'PROPERTY_INACTIVE'));
       if (property.isExternal) return next(new AppError('Cannot book viewings for external properties', 400, 'EXTERNAL_PROPERTY'));
+
       const requesterOxyUserId = oxyUserId;
-const ownerOxyUserId = property.oxyUserId;
+      const ownerOxyUserId = property.oxyUserId;
       if (!ownerOxyUserId) return next(new AppError('Property has no owner', 400, 'INVALID_PROPERTY'));
 
       // Prevent booking own property
       if (ownerOxyUserId === oxyUserId) {
         return next(new AppError('You cannot book a viewing for your own property', 403, 'FORBIDDEN'));
       }
-// Build scheduledAt from date (YYYY-MM-DD) and time (HH:mm)
-      // Create date in local timezone first
-      const localDate = new Date(`${date}T${time}`);
-      // Convert to UTC ISO string
-      const scheduledAtString = localDate.toISOString();
-      const scheduledAt = new Date(scheduledAtString);
-      if (Number.isNaN(scheduledAt.getTime())) {
+
+      const scheduledAt = toScheduledAt(date, time);
+      if (!scheduledAt) {
         return next(new AppError('Invalid date or time', 400, 'INVALID_DATETIME'));
       }
-
-      const now = new Date();
-      if (scheduledAt.getTime() <= now.getTime()) {
+      if (scheduledAt.getTime() <= Date.now()) {
         return next(new AppError('Scheduled time must be in the future', 400, 'TIME_IN_PAST'));
       }
 
-      // Prevent multiple active (pending/approved) viewing requests for the same property by the same profile
-      const existingActiveForProfile = await ViewingRequest.findOne({
+      // One active request per person per property.
+      const existingActiveForProfile = await findActiveViewingForRequester(
+        db,
         propertyId,
         requesterOxyUserId,
-        status: { $in: ['pending', 'approved'] },
-      }).lean();
-
+      );
       if (existingActiveForProfile) {
         return next(new AppError('You already have an active viewing request for this property', 409, 'ALREADY_REQUESTED'));
       }
 
-      // Check for conflicts for the same property/time with non-cancelled/declined status
-      const conflict = await ViewingRequest.findOne({
-        propertyId,
-        scheduledAt,
-        status: { $in: ['pending', 'approved'] },
-      }).lean();
-
+      // One active request per property per instant.
+      const conflict = await findViewingAtInstant(db, propertyId, scheduledAt);
       if (conflict) {
         return next(new AppError('Time slot is no longer available', 409, 'TIME_CONFLICT'));
       }
 
-      const viewing = await ViewingRequest.create({
+      const viewing = await createViewing(db, {
         propertyId,
         requesterOxyUserId,
         ownerOxyUserId,
         scheduledAt,
-        message,
-        status: 'pending',
+        message: typeof message === 'string' ? message : undefined,
       });
 
-      logger.info('Viewing request created', { viewingId: viewing._id, propertyId, requesterOxyUserId, ownerOxyUserId });
+      logger.info('Viewing request created', { viewingId: viewing.id, propertyId, requesterOxyUserId, ownerOxyUserId });
 
       // Notify the property owner that someone requested a viewing.
       await notificationDispatchService.createForUser(ownerOxyUserId, {
@@ -91,10 +140,10 @@ const ownerOxyUserId = property.oxyUserId;
         title: 'New viewing request',
         message: 'Someone requested a viewing for your property.',
         priority: 'high',
-        data: { viewingId: viewing._id.toString(), propertyId: String(propertyId), screen: '/viewings' },
+        data: { viewingId: viewing.id, propertyId, screen: '/viewings' },
       });
 
-      res.status(201).json(successResponse(viewing.toJSON(), 'Viewing request created'));
+      res.status(201).json(successResponse(serializeViewing(viewing), 'Viewing request created'));
     } catch (error) {
       next(error);
     }
@@ -105,27 +154,22 @@ const ownerOxyUserId = property.oxyUserId;
    */
   async listMyViewingRequests(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
-      const { page = 1, limit = 10, status } = req.query;
-      const oxyUserId = req.user?.id || req.user?._id || req.userId;
+      const oxyUserId = callerOf(req);
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const query: Record<string, unknown> = { requesterOxyUserId: oxyUserId };
-      if (status) query.status = status;
+      const { status } = req.query;
+      const { page, limit, skip } = parsePagination(req.query);
 
-      const pageNumber = parseInt(String(page), 10) || 1;
-      const limitNumber = parseInt(String(limit), 10) || 10;
-      const skip = (pageNumber - 1) * limitNumber;
+      const result = await listViewings(
+        getDb(),
+        {
+          requesterOxyUserId: oxyUserId,
+          status: isViewingStatus(status) ? status : undefined,
+        },
+        { limit, offset: skip },
+      );
 
-      const [items, total] = await Promise.all([
-        ViewingRequest.find(query)
-          .sort({ scheduledAt: 1 })
-          .skip(skip)
-          .limit(limitNumber)
-          .lean(),
-        ViewingRequest.countDocuments(query),
-      ]);
-
-      res.json(paginationResponse(items, pageNumber, limitNumber, total, 'Viewing requests retrieved'));
+      res.json(paginationResponse(result.rows.map(serializeViewing), page, limit, result.total, 'Viewing requests retrieved'));
     } catch (error) {
       next(error);
     }
@@ -139,35 +183,31 @@ const ownerOxyUserId = property.oxyUserId;
   async listPropertyViewingRequests(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
       const { propertyId } = req.params;
-      const { page = 1, limit = 10, status } = req.query;
-      const oxyUserId = req.user?.id || req.user?._id || req.userId;
+      const oxyUserId = callerOf(req);
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const property = await Property.findById(propertyId).lean();
+      const db = getDb();
+      const property = await findPropertyBookingBasis(db, propertyId);
       if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
 
       const isOwner = property.oxyUserId === oxyUserId;
+      const { status } = req.query;
+      const { page, limit, skip } = parsePagination(req.query);
 
-      const query: Record<string, unknown> = { propertyId };
-      if (!isOwner) {
-        query.requesterOxyUserId = oxyUserId;
-      }
-      if (status) query.status = status;
+      const result = await listViewings(
+        db,
+        {
+          propertyId,
+          // A non-owner sees only their own requests — the scope IS the
+          // authorisation, so it belongs in the predicate rather than in a
+          // filter applied to the results.
+          requesterOxyUserId: isOwner ? undefined : oxyUserId,
+          status: isViewingStatus(status) ? status : undefined,
+        },
+        { limit, offset: skip },
+      );
 
-      const pageNumber = parseInt(String(page), 10) || 1;
-      const limitNumber = parseInt(String(limit), 10) || 10;
-      const skip = (pageNumber - 1) * limitNumber;
-
-      const [items, total] = await Promise.all([
-        ViewingRequest.find(query)
-          .sort({ scheduledAt: 1 })
-          .skip(skip)
-          .limit(limitNumber)
-          .lean(),
-        ViewingRequest.countDocuments(query),
-      ]);
-
-      res.json(paginationResponse(items, pageNumber, limitNumber, total, 'Viewing requests retrieved'));
+      res.json(paginationResponse(result.rows.map(serializeViewing), page, limit, result.total, 'Viewing requests retrieved'));
     } catch (error) {
       next(error);
     }
@@ -177,45 +217,44 @@ const ownerOxyUserId = property.oxyUserId;
   async approveViewingRequest(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
       const { viewingId } = req.params;
-      const oxyUserId = req.user?.id || req.user?._id || req.userId;
+      const oxyUserId = callerOf(req);
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const viewing = await ViewingRequest.findById(viewingId);
+      const db = getDb();
+      const viewing = await findViewingById(db, viewingId);
       if (!viewing) return next(new AppError('Viewing request not found', 404, 'NOT_FOUND'));
 
-      if (String(viewing.ownerOxyUserId) !== String(oxyUserId)) {
+      if (viewing.ownerOxyUserId !== oxyUserId) {
         return next(new AppError('Only the property owner can approve', 403, 'FORBIDDEN'));
       }
       if (viewing.status !== 'pending') {
         return next(new AppError('Only pending requests can be approved', 400, 'INVALID_STATE'));
       }
 
-      // Ensure no other approved request exists for same property/time
-      const conflict = await ViewingRequest.findOne({
-        _id: { $ne: viewing._id },
-        propertyId: viewing.propertyId,
-        scheduledAt: viewing.scheduledAt,
-        status: 'approved',
-      }).lean();
+      // No OTHER approved request may already hold this instant.
+      const conflict = await findViewingAtInstant(db, viewing.propertyId, viewing.scheduledAt, {
+        excludeId: viewing.id,
+        statuses: ['approved'],
+      });
       if (conflict) return next(new AppError('Time slot already approved for another request', 409, 'TIME_CONFLICT'));
 
-      viewing.status = 'approved';
-      await viewing.save();
+      const approved = await decideViewing(db, viewingId, oxyUserId, 'approved');
+      if (!approved) return next(new AppError('Only pending requests can be approved', 400, 'INVALID_STATE'));
 
       // Notify the requester that their viewing was approved.
-      await notificationDispatchService.createForUser(String(viewing.requesterOxyUserId), {
+      await notificationDispatchService.createForUser(approved.requesterOxyUserId, {
         type: 'property',
         title: 'Viewing approved',
         message: 'Your viewing request was approved.',
         priority: 'high',
         data: {
-          viewingId: viewing._id.toString(),
-          propertyId: String(viewing.propertyId),
+          viewingId: approved.id,
+          propertyId: approved.propertyId,
           screen: '/viewings',
         },
       });
 
-      res.json(successResponse(viewing.toJSON(), 'Viewing request approved'));
+      res.json(successResponse(serializeViewing(approved), 'Viewing request approved'));
     } catch (error) {
       next(error);
     }
@@ -225,36 +264,37 @@ const ownerOxyUserId = property.oxyUserId;
   async declineViewingRequest(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
       const { viewingId } = req.params;
-      const oxyUserId = req.user?.id || req.user?._id || req.userId;
+      const oxyUserId = callerOf(req);
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const viewing = await ViewingRequest.findById(viewingId);
+      const db = getDb();
+      const viewing = await findViewingById(db, viewingId);
       if (!viewing) return next(new AppError('Viewing request not found', 404, 'NOT_FOUND'));
 
-      if (String(viewing.ownerOxyUserId) !== String(oxyUserId)) {
+      if (viewing.ownerOxyUserId !== oxyUserId) {
         return next(new AppError('Only the property owner can decline', 403, 'FORBIDDEN'));
       }
       if (viewing.status !== 'pending') {
         return next(new AppError('Only pending requests can be declined', 400, 'INVALID_STATE'));
       }
 
-      viewing.status = 'declined';
-      await viewing.save();
+      const declined = await decideViewing(db, viewingId, oxyUserId, 'declined');
+      if (!declined) return next(new AppError('Only pending requests can be declined', 400, 'INVALID_STATE'));
 
       // Notify the requester that their viewing was declined.
-      await notificationDispatchService.createForUser(String(viewing.requesterOxyUserId), {
+      await notificationDispatchService.createForUser(declined.requesterOxyUserId, {
         type: 'property',
         title: 'Viewing declined',
         message: 'Your viewing request was declined.',
         priority: 'medium',
         data: {
-          viewingId: viewing._id.toString(),
-          propertyId: String(viewing.propertyId),
+          viewingId: declined.id,
+          propertyId: declined.propertyId,
           screen: '/viewings',
         },
       });
 
-      res.json(successResponse(viewing.toJSON(), 'Viewing request declined'));
+      res.json(successResponse(serializeViewing(declined), 'Viewing request declined'));
     } catch (error) {
       next(error);
     }
@@ -264,29 +304,36 @@ const ownerOxyUserId = property.oxyUserId;
   async cancelViewingRequest(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
       const { viewingId } = req.params;
-      const oxyUserId = req.user?.id || req.user?._id || req.userId;
+      const oxyUserId = callerOf(req);
       if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const viewing = await ViewingRequest.findById(viewingId);
+      const db = getDb();
+      const viewing = await findViewingById(db, viewingId);
       if (!viewing) return next(new AppError('Viewing request not found', 404, 'NOT_FOUND'));
 
-      const isRequester = String(viewing.requesterOxyUserId) === String(oxyUserId);
-      const isOwner = String(viewing.ownerOxyUserId) === String(oxyUserId);
+      const isRequester = viewing.requesterOxyUserId === oxyUserId;
+      const isOwner = viewing.ownerOxyUserId === oxyUserId;
       if (!isRequester && !isOwner) return next(new AppError('Not authorized to cancel this request', 403, 'FORBIDDEN'));
 
       if (viewing.status === 'cancelled') {
-        return res.json(successResponse(viewing.toJSON(), 'Viewing request already cancelled'));
+        return res.json(successResponse(serializeViewing(viewing), 'Viewing request already cancelled'));
       }
 
-      viewing.status = 'cancelled';
-      viewing.cancelledBy = isOwner ? 'owner' : 'requester';
-      await viewing.save();
+      // Both columns in one statement — the CHECK is an equivalence.
+      const cancelled = await cancelViewing(db, viewingId, isOwner ? 'owner' : 'requester');
+      if (!cancelled) {
+        // Somebody else cancelled between the read and the write; the outcome
+        // the caller asked for already holds, so this is not an error.
+        const current = await findViewingById(db, viewingId);
+        if (!current) return next(new AppError('Viewing request not found', 404, 'NOT_FOUND'));
+        return res.json(successResponse(serializeViewing(current), 'Viewing request already cancelled'));
+      }
 
       // Notify the counterparty that the viewing was cancelled.
-      const cancelRecipientProfileId = isOwner
-        ? String(viewing.requesterOxyUserId)
-        : String(viewing.ownerOxyUserId);
-      await notificationDispatchService.createForUser(cancelRecipientProfileId, {
+      const cancelRecipientOxyUserId = isOwner
+        ? cancelled.requesterOxyUserId
+        : cancelled.ownerOxyUserId;
+      await notificationDispatchService.createForUser(cancelRecipientOxyUserId, {
         type: 'property',
         title: 'Viewing cancelled',
         message: isOwner
@@ -294,13 +341,13 @@ const ownerOxyUserId = property.oxyUserId;
           : 'A viewing request for your property was cancelled.',
         priority: 'medium',
         data: {
-          viewingId: viewing._id.toString(),
-          propertyId: String(viewing.propertyId),
+          viewingId: cancelled.id,
+          propertyId: cancelled.propertyId,
           screen: '/viewings',
         },
       });
 
-      res.json(successResponse(viewing.toJSON(), 'Viewing request cancelled'));
+      res.json(successResponse(serializeViewing(cancelled), 'Viewing request cancelled'));
     } catch (error) {
       next(error);
     }
@@ -311,13 +358,14 @@ const ownerOxyUserId = property.oxyUserId;
     try {
       const { viewingId } = req.params;
       const { date, time, message } = req.body;
-      const oxyUserId = req.user?.id || req.user?._id || req.userId;
-      
+      const oxyUserId = callerOf(req);
+
       if (!oxyUserId) {
         return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
       }
 
-      const viewing = await ViewingRequest.findById(viewingId);
+      const db = getDb();
+      const viewing = await findViewingById(db, viewingId);
       if (!viewing) return next(new AppError('Viewing request not found', 404, 'NOT_FOUND'));
 
       // Only allow updating pending requests
@@ -325,47 +373,34 @@ const ownerOxyUserId = property.oxyUserId;
         return next(new AppError('Can only modify pending viewing requests', 400, 'CANNOT_MODIFY'));
       }
 
-      // Get active profile for requester
       // Only allow requester to modify
-      const isRequester = String(viewing.requesterOxyUserId) === String(oxyUserId);
-      if (!isRequester) {
+      if (viewing.requesterOxyUserId !== oxyUserId) {
         return next(new AppError('Not authorized to modify this viewing request', 403, 'FORBIDDEN'));
       }
 
-      // Build scheduledAt from date (YYYY-MM-DD) and time (HH:mm)
-      // Create date in local timezone first
-      const localDate = new Date(`${date}T${time}`);
-      // Convert to UTC ISO string
-      const scheduledAtString = localDate.toISOString();
-      const scheduledAt = new Date(scheduledAtString);
-      if (Number.isNaN(scheduledAt.getTime())) {
+      const scheduledAt = toScheduledAt(date, time);
+      if (!scheduledAt) {
         return next(new AppError('Invalid date or time', 400, 'INVALID_DATETIME'));
       }
-
-      const now = new Date();
-      if (scheduledAt.getTime() <= now.getTime()) {
+      if (scheduledAt.getTime() <= Date.now()) {
         return next(new AppError('Scheduled time must be in the future', 400, 'TIME_IN_PAST'));
       }
 
-      // Check for conflicts for the same property/time with non-cancelled/declined status, excluding this request
-      const conflict = await ViewingRequest.findOne({
-        _id: { $ne: viewingId }, // Exclude this request
-        propertyId: viewing.propertyId,
-        scheduledAt,
-        status: { $in: ['pending', 'approved'] },
-      }).lean();
-
+      const conflict = await findViewingAtInstant(db, viewing.propertyId, scheduledAt, {
+        excludeId: viewingId,
+      });
       if (conflict) {
         return next(new AppError('Time slot is no longer available', 409, 'TIME_CONFLICT'));
       }
 
-      // Update the viewing request
-      viewing.scheduledAt = scheduledAt;
-      if (message !== undefined) viewing.message = message;
-      await viewing.save();
+      const updated = await rescheduleViewing(db, viewingId, oxyUserId, {
+        scheduledAt,
+        message: typeof message === 'string' ? message : undefined,
+      });
+      if (!updated) return next(new AppError('Can only modify pending viewing requests', 400, 'CANNOT_MODIFY'));
 
       logger.info('Viewing request updated', { viewingId, scheduledAt });
-      res.json(successResponse(viewing.toJSON(), 'Viewing request updated'));
+      res.json(successResponse(serializeViewing(updated), 'Viewing request updated'));
     } catch (error) {
       next(error);
     }
@@ -373,5 +408,3 @@ const ownerOxyUserId = property.oxyUserId;
 }
 
 export default new ViewingController();
-
-
