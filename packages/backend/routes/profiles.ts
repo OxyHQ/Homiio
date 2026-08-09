@@ -11,7 +11,12 @@ import * as profileController from '../controllers/profile';
 import exchangeReviewController from '../controllers/exchangeReviewController';
 import { asyncHandler } from '../middlewares';
 import performanceMonitor from '../middlewares/performance';
-import { Billing } from '../models';
+import {
+  consumeFileCredit,
+  ensureBilling,
+  findBillingByOxyUserId,
+  listProcessedSessions,
+} from '../db/billing/billingRepository';
 
 export default function () {
   const router = express.Router();
@@ -42,14 +47,19 @@ export default function () {
       || (req as { user?: { id?: string; _id?: string } }).user?._id;
     if (!oxyUserId) return res.status(401).json({ success: false, error: { message: 'Authentication required' }});
 
-    const billing = await Billing.findOne({ oxyUserId }).lean();
-
-    const entitlements = billing || {
-      plusActive: false,
-      fileCredits: 0,
-      founderSupporter: false,
-      processedSessions: [],
-    };
+    // A person who has never paid has no row, and that is not an error — the
+    // zeroed shape below is what the client reads. Deliberately NOT created on
+    // read: an entitlements GET that mints a billing row would put a write on
+    // every page load.
+    const record = await findBillingByOxyUserId(oxyUserId);
+    const entitlements = record
+      ? { ...record, processedSessions: await listProcessedSessions(record.id) }
+      : {
+          plusActive: false,
+          fileCredits: 0,
+          founderSupporter: false,
+          processedSessions: [],
+        };
 
     return res.json({ success: true, entitlements });
   }));
@@ -59,25 +69,20 @@ export default function () {
       || (req as { user?: { id?: string; _id?: string } }).user?._id;
     if (!oxyUserId) return res.status(401).json({ success: false, error: { message: 'Authentication required' }});
 
-    let billing = await Billing.findOne({ oxyUserId });
-    if (!billing) {
-      billing = new Billing({
-        oxyUserId,
-        plusActive: false,
-        fileCredits: 0,
-        processedSessions: [],
-      });
-      await billing.save();
-    }
+    // Created on first spend rather than on read: this endpoint is a write
+    // either way, so it is the honest place for the row to appear.
+    await ensureBilling(oxyUserId);
 
-    const hasPlus = !!billing.plusActive;
-    if (hasPlus) return res.json({ success: true, remaining: 'unlimited', consumed: false });
-
-    if ((billing.fileCredits || 0) <= 0) {
+    // ONE guarded statement decides all three outcomes. The Mongo version read
+    // the record, checked `fileCredits > 0`, and then decremented — so two
+    // concurrent requests could each see 1 and each spend it. `consumeFileCredit`
+    // carries the predicate into the UPDATE, so the guard and the write cannot
+    // interleave, and "no row updated" IS the out-of-credits answer.
+    const result = await consumeFileCredit(oxyUserId);
+    if (!result.consumed && result.remaining !== 'unlimited') {
       return res.status(402).json({ success: false, error: { message: 'No file credits', code: 'NO_CREDITS' }});
     }
 
-    const result = await billing.consumeFileCredit();
     return res.json({
       success: true,
       remaining: result.remaining,
