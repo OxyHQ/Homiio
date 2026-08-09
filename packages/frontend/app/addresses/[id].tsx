@@ -40,7 +40,7 @@ import { colors } from '@/styles/colors';
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 interface AddressData {
-  _id: string;
+  id: string;
   street: string;
   postal_code?: string;
   cityName?: string;
@@ -311,9 +311,9 @@ export default function AddressDetailsPage() {
                 <View style={styles.propertiesList}>
                   {properties.map((property) => (
                     <PropertyCard
-                      key={property._id}
+                      key={property.id}
                       property={property}
-                      onPress={() => router.push(`/properties/${property._id}`)}
+                      onPress={() => router.push(`/properties/${property.id}`)}
                       variant="compact"
                       orientation="horizontal"
                     />

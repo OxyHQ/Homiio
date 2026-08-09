@@ -10,12 +10,18 @@ import { createRentProperty, models } from '../helpers/factories';
 
 import roomController from '../../controllers/roomController';
 import { errorHandler } from '../../middlewares/errorHandler';
+import { serializeWireIds } from '../../middlewares/wireIds';
 import { assertFound } from '../helpers/assertFound';
 const { Property } = models;
 
 function buildApp(oxyUserId: string): Express {
   const app = express();
   app.use(express.json());
+  // Production mounts every one of these handlers behind `routes()`, whose
+  // first middleware is the wire-id serializer. Without it here the suite
+  // would assert a body shape the API no longer serves.
+  app.use(serializeWireIds);
+
   app.use((req, _res, next) => {
     const authed = req as unknown as { user: { id: string }; userId: string };
     authed.user = { id: oxyUserId };
@@ -55,7 +61,7 @@ describe('roomController.createRoom', () => {
     const parent = await createRentProperty({ oxyUserId: 'oxy-owner' });
     const res = await request(buildApp('oxy-owner')).post('/rooms').send(await validRoomBody(parent._id));
     expect(res.status).toBe(201);
-    const persisted = await Property.findById(res.body.data.id ?? res.body.data._id);
+    const persisted = await Property.findById(res.body.data.id);
     assertFound(persisted, 'persisted');
     expect(persisted.oxyUserId).toBe('oxy-owner');
     expect(persisted.type).toBe(PropertyType.ROOM);

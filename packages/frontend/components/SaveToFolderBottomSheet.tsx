@@ -125,7 +125,7 @@ export function SaveToFolderBottomSheet({
 
       // Save property to the new folder
       if (newFolder) {
-        await handleSaveToFolder(newFolder._id);
+        await handleSaveToFolder(newFolder.id);
       }
     } catch (error) {
       console.error('Failed to create folder:', error);
@@ -134,9 +134,9 @@ export function SaveToFolderBottomSheet({
 
   const renderFolderItem = (folder: SavedPropertyFolder) => (
     <TouchableOpacity
-      key={folder._id}
+      key={folder.id}
       style={styles.folderItem}
-      onPress={() => handleSaveToFolder(folder._id)}
+      onPress={() => handleSaveToFolder(folder.id)}
       disabled={isLoading || saveToFolderMutation.isPending}
     >
       <View style={[styles.folderIcon, { backgroundColor: folder.color }]}>

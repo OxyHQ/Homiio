@@ -647,7 +647,7 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
       {
         name: 'Property with no images',
         property: {
-          _id: 'test-no-images',
+          id: 'test-no-images',
           type: 'apartment',
           address: { city: 'Barcelona', state: 'Catalunya' },
           rent: { amount: 1200, currency: 'EUR', paymentFrequency: 'monthly' },
@@ -659,7 +659,7 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
       {
         name: 'Property with primary image',
         property: {
-          _id: 'test-primary-image',
+          id: 'test-primary-image',
           type: 'house',
           address: { city: 'Madrid', state: 'Madrid' },
           rent: { amount: 1500, currency: 'EUR', paymentFrequency: 'monthly' },
@@ -676,7 +676,7 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
       {
         name: 'Property with images but no primary',
         property: {
-          _id: 'test-no-primary',
+          id: 'test-no-primary',
           type: 'studio',
           address: { city: 'Valencia', state: 'Valencia' },
           rent: { amount: 800, currency: 'EUR', paymentFrequency: 'monthly' },
@@ -692,7 +692,7 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
       {
         name: 'Property with invalid image URLs',
         property: {
-          _id: 'test-invalid-urls',
+          id: 'test-invalid-urls',
           type: 'room',
           address: { city: 'Seville', state: 'Andalucia' },
           rent: { amount: 600, currency: 'EUR', paymentFrequency: 'monthly' },

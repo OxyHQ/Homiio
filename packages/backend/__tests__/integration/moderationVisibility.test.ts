@@ -29,11 +29,17 @@ import {
 import { createAddress, models } from '../helpers/factories';
 
 import { errorHandler } from '../../middlewares/errorHandler';
+import { serializeWireIds } from '../../middlewares/wireIds';
 const { Property } = models;
 
 function buildApp(oxyUserId?: string): Express {
   const app = express();
   app.use(express.json());
+  // Production mounts every one of these handlers behind `routes()`, whose
+  // first middleware is the wire-id serializer. Without it here the suite
+  // would assert a body shape the API no longer serves.
+  app.use(serializeWireIds);
+
   app.use((req, _res, next) => {
     if (oxyUserId) {
       const authed = req as unknown as { user: { id: string }; userId: string };
@@ -71,7 +77,7 @@ describe('restricted listings and public reads', () => {
     const res = await request(buildApp()).get('/properties');
 
     expect(res.status).toBe(200);
-    const ids = (res.body.data as { _id: string }[]).map((item) => String(item._id));
+    const ids = (res.body.data as { id: string }[]).map((item) => String(item.id));
     expect(ids).toEqual([String(visible._id)]);
   });
 
@@ -89,7 +95,7 @@ describe('restricted listings and public reads', () => {
     expect((await Property.findById(legacy._id).lean())?.moderation).toBeUndefined();
 
     const res = await request(buildApp()).get('/properties');
-    expect((res.body.data as { _id: string }[]).map((item) => String(item._id))).toEqual([
+    expect((res.body.data as { id: string }[]).map((item) => String(item.id))).toEqual([
       String(legacy._id),
     ]);
   });

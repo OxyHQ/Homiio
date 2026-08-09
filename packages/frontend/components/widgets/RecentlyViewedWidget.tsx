@@ -68,7 +68,7 @@ export function RecentlyViewedWidget() {
 
 
   const navigateToProperty = (property: Property) => {
-    router.push(`/properties/${property._id || property.id}`);
+    router.push(`/properties/${property.id}`);
   };
 
   // Hide widget completely if not authenticated
@@ -137,7 +137,7 @@ export function RecentlyViewedWidget() {
             </View>
           ) : (
             recentProperties.map((property) => (
-              <View key={property._id || property.id} style={styles.propertyCard}>
+              <View key={property.id} style={styles.propertyCard}>
                 <PropertyCard
                   property={property}
                   variant="featured"

@@ -63,7 +63,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
   const [reportPressed, setReportPressed] = useState(false);
 
   const bookingMode = resolveBookingMode(property, rentalMode);
-  const propertyId = String(property._id ?? property.id ?? '');
+  const propertyId = String(property.id ?? '');
 
   // Rating from the same source the Reviews block reads (shared cache key).
   const { ratingSummary } = useAddressReviews(property);

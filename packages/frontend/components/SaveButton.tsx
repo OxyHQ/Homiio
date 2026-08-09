@@ -90,7 +90,7 @@ export function SaveButton({
   } = useSavedPropertiesContext();
 
   // Determine property ID
-  const propertyId = property?._id || property?.id;
+  const propertyId = property?.id;
 
   // Determine initial saved state from prop or property object
   const initialSavedState =

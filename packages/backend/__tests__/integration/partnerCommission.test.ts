@@ -30,6 +30,7 @@ import { createAddress, models } from '../helpers/factories';
 import partnerController from '../../controllers/partnerController';
 import roomController from '../../controllers/roomController';
 import { errorHandler } from '../../middlewares/errorHandler';
+import { serializeWireIds } from '../../middlewares/wireIds';
 import { assertFound } from '../helpers/assertFound';
 const { Partner, Commission, Property } = models;
 
@@ -37,6 +38,11 @@ const { Partner, Commission, Property } = models;
 function buildApp(oxyUserId: string): Express {
   const app = express();
   app.use(express.json());
+  // Production mounts every one of these handlers behind `routes()`, whose
+  // first middleware is the wire-id serializer. Without it here the suite
+  // would assert a body shape the API no longer serves.
+  app.use(serializeWireIds);
+
   app.use((req, _res, next) => {
     const authed = req as unknown as { user: { id: string }; userId: string };
     authed.user = { id: oxyUserId };
@@ -80,7 +86,7 @@ describe('partner earn close-deal loop', () => {
       .post('/properties')
       .send(await rentCreateBody(referralCode));
     expect(createRes.status).toBe(201);
-    const propertyId: string = createRes.body.data.id ?? createRes.body.data._id;
+    const propertyId: string = createRes.body.data.id;
 
     // The listing is attributed to the sourcing partner.
     const partner = await Partner.findOne({ referralCode });
@@ -123,13 +129,13 @@ describe('partner earn close-deal loop', () => {
     const createRes = await request(ownerApp)
       .post('/properties')
       .send(await rentCreateBody(referralCode));
-    const propertyId: string = createRes.body.data.id ?? createRes.body.data._id;
+    const propertyId: string = createRes.body.data.id;
 
     const first = await request(ownerApp)
       .post(`/properties/${propertyId}/mark-transacted`)
       .send({});
     expect(first.status).toBe(200);
-    const firstCommissionId = first.body.data.commission.id ?? first.body.data.commission._id;
+    const firstCommissionId = first.body.data.commission.id;
 
     // Close it a second time — must return the SAME commission, no new doc, no
     // extra points.
@@ -137,7 +143,7 @@ describe('partner earn close-deal loop', () => {
       .post(`/properties/${propertyId}/mark-transacted`)
       .send({});
     expect(second.status).toBe(200);
-    const secondCommissionId = second.body.data.commission.id ?? second.body.data.commission._id;
+    const secondCommissionId = second.body.data.commission.id;
     expect(String(secondCommissionId)).toBe(String(firstCommissionId));
 
     const commissions = await Commission.find({ propertyId });
@@ -153,7 +159,7 @@ describe('partner earn close-deal loop', () => {
     const createRes = await request(ownerApp)
       .post('/properties')
       .send(await rentCreateBody());
-    const propertyId: string = createRes.body.data.id ?? createRes.body.data._id;
+    const propertyId: string = createRes.body.data.id;
 
     const markRes = await request(ownerApp)
       .post(`/properties/${propertyId}/mark-transacted`)
@@ -223,7 +229,7 @@ describe('partner earn close-deal loop', () => {
     const createRes = await request(ownerApp)
       .post('/properties')
       .send(await rentCreateBody(referralCode));
-    const propertyId: string = createRes.body.data.id ?? createRes.body.data._id;
+    const propertyId: string = createRes.body.data.id;
 
     // A different, unrelated user cannot close the owner's deal.
     const intruderApp = buildApp('oxy-intruder');

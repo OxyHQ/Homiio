@@ -7,9 +7,9 @@ import { PropertyCard } from '@/components/PropertyCard';
 import { propertyService } from '@/services/propertyService';
 import { sindiStyles } from './styles';
 
-/** Resolve the routable ID for a property (DB `_id` or external `id`). */
+/** Resolve the routable ID for a property (DB `id` or external `id`). */
 function propertyKey(property: Property): string | undefined {
-  return property._id || property.id;
+  return property.id;
 }
 
 export interface PropertiesFromIdsProps {

@@ -219,9 +219,9 @@ export default function CityPropertiesPage() {
 
   const handlePropertyPress = useCallback(
     (property: Property) => {
-      // The city-properties endpoint returns lean docs (only `_id`, no `id`
-      // virtual), so prefer `_id` for navigation.
-      const propertyId = property._id || property.id;
+      // The city-properties endpoint returns lean docs (only `id`, no `id`
+      // virtual), so prefer `id` for navigation.
+      const propertyId = property.id;
       if (propertyId) router.push(`/properties/${propertyId}`);
     },
     [router],

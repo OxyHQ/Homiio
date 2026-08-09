@@ -198,7 +198,7 @@ export default function SavedPropertiesScreen() {
   // skipped entirely while signed out, so signing in changed the hook count
   // between renders — which React refuses to render through.
   const handlePropertyPress = useCallback((property: Property) => {
-    const id = (property._id || property.id) as string;
+    const id = property.id as string;
     if (id) router.push(`/properties/${id}`);
   }, []);
 
@@ -309,7 +309,7 @@ export default function SavedPropertiesScreen() {
       ) : tab === 'folders' ? (
         <FlatList
           data={filteredFolders}
-          keyExtractor={(folder) => folder._id}
+          keyExtractor={(folder) => folder.id}
           numColumns={2}
           columnWrapperStyle={styles.gridRow}
           contentContainerStyle={styles.gridContent}
@@ -393,8 +393,8 @@ interface FolderTileProps {
 
 const FolderTile: React.FC<FolderTileProps> = ({ folder }) => {
   const handlePress = useCallback(() => {
-    router.push(`/saved/${folder._id}`);
-  }, [folder._id]);
+    router.push(`/saved/${folder.id}`);
+  }, [folder.id]);
 
   return (
     <Pressable

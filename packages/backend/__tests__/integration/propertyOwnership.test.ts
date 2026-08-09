@@ -11,12 +11,18 @@ import { createProperty } from '../../controllers/property/create';
 import { createRentProperty, createAddress, models } from '../helpers/factories';
 
 import { errorHandler } from '../../middlewares/errorHandler';
+import { serializeWireIds } from '../../middlewares/wireIds';
 import { assertFound } from '../helpers/assertFound';
 const { Property } = models;
 
 function buildApp(oxyUserId: string): Express {
   const app = express();
   app.use(express.json());
+  // Production mounts every one of these handlers behind `routes()`, whose
+  // first middleware is the wire-id serializer. Without it here the suite
+  // would assert a body shape the API no longer serves.
+  app.use(serializeWireIds);
+
   app.use((req, _res, next) => {
     const authed = req as unknown as { user: { id: string }; userId: string };
     authed.user = { id: oxyUserId };
@@ -74,7 +80,7 @@ describe('property create ownership', () => {
   it('creates a listing owned by the authenticated user', async () => {
     const res = await request(buildApp('oxy-owner')).post('/properties').send(await validCreateBody());
     expect(res.status).toBe(201);
-    const persisted = await Property.findById(res.body.data.id ?? res.body.data._id);
+    const persisted = await Property.findById(res.body.data.id);
     assertFound(persisted, 'persisted');
     expect(persisted.oxyUserId).toBe('oxy-owner');
   });

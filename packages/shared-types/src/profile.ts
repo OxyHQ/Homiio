@@ -137,7 +137,6 @@ export interface PersonalProfile {
 
 export interface Profile {
   id: string;
-  _id?: string;
   oxyUserId: string;
   avatar?: string;
   personalProfile?: PersonalProfile;

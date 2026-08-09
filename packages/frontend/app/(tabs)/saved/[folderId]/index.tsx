@@ -62,7 +62,7 @@ export default function SavedFolderScreen() {
   const folders = foldersQuery.data?.folders ?? [];
 
   const folder = useMemo(
-    () => folders.find((f) => f._id === folderId),
+    () => folders.find((f) => f.id === folderId),
     [folders, folderId],
   );
   const propertiesInFolder = useMemo(
@@ -86,7 +86,7 @@ export default function SavedFolderScreen() {
   const notesById = useMemo(() => {
     const map = new Map<string, string>();
     propertiesInFolder.forEach((property) => {
-      const id = (property._id || property.id) as string | undefined;
+      const id = property.id as string | undefined;
       const note = property.notes?.trim();
       if (id && note) map.set(id, note);
     });
@@ -94,13 +94,13 @@ export default function SavedFolderScreen() {
   }, [propertiesInFolder]);
 
   const handlePropertyPress = useCallback((property: Property) => {
-    const id = (property._id || property.id) as string;
+    const id = property.id as string;
     if (id) router.push(`/properties/${id}`);
   }, []);
 
   const renderNoteFooter = useCallback(
     (property: Property) => {
-      const note = notesById.get((property._id || property.id) as string);
+      const note = notesById.get(property.id as string);
       if (!note) return undefined;
       return (
         <BloomText style={styles.noteText} numberOfLines={2}>

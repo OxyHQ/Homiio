@@ -96,7 +96,7 @@ function FeaturedProperties({ properties }: { properties: FeaturedProperty[] }) 
     <>
       {limited.map((property) => (
         <PropertyCard
-          key={property._id || property.id}
+          key={property.id}
           property={property}
           variant="compact"
           orientation="horizontal"
@@ -110,7 +110,7 @@ function FeaturedProperties({ properties }: { properties: FeaturedProperty[] }) 
           showSaveCount={true}
           saveCountDisplayMode="inline"
           style={styles.propertyCard}
-          onPress={() => router.push(`/properties/${property._id || property.id}`)}
+          onPress={() => router.push(`/properties/${property.id}`)}
         />
       ))}
       <Button

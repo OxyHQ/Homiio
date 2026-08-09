@@ -1,7 +1,7 @@
 import { api } from '@/utils/api';
 
 export interface SavedPropertyFolder {
-  _id: string;
+  id: string;
   profileId: string;
   name: string;
   description: string;

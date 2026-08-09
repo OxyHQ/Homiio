@@ -21,13 +21,12 @@ const EMPTY_SEARCHES: SavedSearch[] = [];
 
 /**
  * A saved search as it can arrive from the backend. The API has historically
- * used a few different field names (e.g. `title` vs `name`, `_id` vs `id`,
+ * used a few different field names (e.g. `title` vs `name`,
  * `notificationsEnabled` vs `notifications`), so every field is optional here
  * and normalised into a canonical {@link SavedSearch} before use.
  */
 interface RawSavedSearch {
   id?: string;
-  _id?: string;
   name?: string;
   title?: string;
   query?: string;
@@ -102,7 +101,7 @@ const extractSearchList = (payload: SavedSearchPayload): RawSavedSearch[] => {
 };
 
 const normalizeSearch = (raw: RawSavedSearch, defaults: Partial<SavedSearch> = {}): SavedSearch => ({
-  id: raw.id ?? raw._id ?? defaults.id ?? '',
+  id: raw.id ?? defaults.id ?? '',
   name: raw.name ?? raw.title ?? defaults.name ?? '',
   query: raw.query ?? raw.search ?? defaults.query ?? '',
   filters: raw.filters ?? raw.criteria ?? defaults.filters,

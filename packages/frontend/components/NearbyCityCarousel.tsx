@@ -15,7 +15,7 @@ interface NearbyCityCarouselProps {
 export function NearbyCityCarousel({ city }: NearbyCityCarouselProps) {
   const { t } = useTranslation();
   const router = useRouter();
-  const { data } = usePropertiesByCity(city._id, { limit: 8 });
+  const { data } = usePropertiesByCity(city.id, { limit: 8 });
   const cityProperties = (data?.properties as Property[] | undefined) ?? [];
 
   if (cityProperties.length === 0) return null;
@@ -30,7 +30,7 @@ export function NearbyCityCarousel({ city }: NearbyCityCarouselProps) {
           property={property}
           variant="featured"
           enableImageCarousel={false}
-          onPress={() => router.push(`/properties/${property._id || property.id}`)}
+          onPress={() => router.push(`/properties/${property.id}`)}
         />
       )}
     />

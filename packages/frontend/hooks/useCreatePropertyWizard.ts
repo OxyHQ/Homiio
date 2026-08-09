@@ -262,7 +262,7 @@ export function useCreatePropertyWizard(id: string | undefined) {
         : payload;
 
       const property = await propertyService.createProperty(createPayload);
-      return { property, redirectId: property?._id ?? null };
+      return { property, redirectId: property?.id ?? null };
     },
     onMutate: () => {
       setLoading(true);

@@ -41,7 +41,7 @@ const SearchResultCards: React.FC<{ content: string }> = ({ content }) => {
   return (
     <View style={sindiStyles.propertyCardsContainer}>
       {properties.map((property) => {
-        const key = property._id || property.id;
+        const key = property.id;
         return (
           <PropertyCard
             key={key}

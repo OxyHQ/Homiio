@@ -6,7 +6,9 @@
  * (and back to `postal_code` in SQL), `land_plot` became three flat columns, and
  * the GeoJSON `coordinates` pair became two named scalars. None of that may
  * reach the frontend, so the shape assertions below are as load-bearing as the
- * query ones.
+ * query ones. An address serializes its identity as `id` only — the `_id` that
+ * used to ship beside it is gone, and the detail test asserts its ABSENCE, which
+ * is the only half that can catch it coming back.
  */
 
 import express, { type Express } from 'express';
@@ -74,8 +76,8 @@ describe('GET /api/addresses/:id', () => {
     const res = await request(app).get(`/api/addresses/${addressId}`).expect(200);
     const { address } = res.body;
 
-    expect(address._id).toBe(addressId);
     expect(address.id).toBe(addressId);
+    expect(address).not.toHaveProperty('_id');
     expect(address.postal_code).toBe('08013');
     expect(address).not.toHaveProperty('postalCode');
     // `[lng, lat]`, GeoJSON order — transposing this pins a Barcelona listing
@@ -108,7 +110,7 @@ describe('GET /api/addresses/search', () => {
 
     const res = await request(app).get('/api/addresses/search?query=mallor').expect(200);
 
-    expect(res.body.addresses.map((a: { _id: string }) => a._id)).toEqual([target]);
+    expect(res.body.addresses.map((a: { id: string }) => a.id)).toEqual([target]);
     expect(res.body.pagination.totalItems).toBe(1);
     expect(typeof res.body.pagination.totalItems).toBe('number');
   });
@@ -127,7 +129,7 @@ describe('GET /api/addresses/search', () => {
     const inCity = await seedAddress({ chain, street: 'Avinguda Diagonal' });
 
     const res = await request(app).get('/api/addresses/search?query=Barcelona').expect(200);
-    expect(res.body.addresses.map((a: { _id: string }) => a._id)).toEqual([inCity]);
+    expect(res.body.addresses.map((a: { id: string }) => a.id)).toEqual([inCity]);
   });
 
   it('matches on the REGION name and on the NEIGHBORHOOD name', async () => {
@@ -144,12 +146,12 @@ describe('GET /api/addresses/search', () => {
     await seedAddress({ chain: elsewhere, street: 'Rua Augusta' });
 
     const byRegion = await request(app).get('/api/addresses/search?query=catalonia').expect(200);
-    expect(byRegion.body.addresses.map((a: { _id: string }) => a._id).sort()).toEqual(
+    expect(byRegion.body.addresses.map((a: { id: string }) => a.id).sort()).toEqual(
       [inCatalonia, inGracia].sort(),
     );
 
     const byNeighborhood = await request(app).get('/api/addresses/search?query=gràcia').expect(200);
-    expect(byNeighborhood.body.addresses.map((a: { _id: string }) => a._id)).toEqual([inGracia]);
+    expect(byNeighborhood.body.addresses.map((a: { id: string }) => a.id)).toEqual([inGracia]);
   });
 
   it('ORs the street and geo matches — a street-only hit is never dropped', async () => {
@@ -169,7 +171,7 @@ describe('GET /api/addresses/search', () => {
 
     // Both, or the OR has quietly become an AND — or a join, which drops the
     // street-only row for exactly the same reason.
-    expect(res.body.addresses.map((a: { _id: string }) => a._id).sort()).toEqual(
+    expect(res.body.addresses.map((a: { id: string }) => a.id).sort()).toEqual(
       [streetOnly, geoOnly].sort(),
     );
     expect(res.body.pagination.totalItems).toBe(2);
@@ -196,7 +198,7 @@ describe('POST /api/addresses', () => {
     const first = await request(app).post('/api/addresses').send(BODY).expect(201);
     const second = await request(app).post('/api/addresses').send(BODY).expect(201);
 
-    expect(second.body.address._id).toBe(first.body.address._id);
+    expect(second.body.address.id).toBe(first.body.address.id);
     const rows = await getDb().select({ id: addresses.id }).from(addresses);
     expect(rows).toHaveLength(1);
   });
@@ -289,8 +291,8 @@ describe('GET /api/addresses/nearby', () => {
 
     // The far one is outside the radius; the two inside come back in distance
     // order, which is the assertion a "some rows came back" check would miss.
-    expect(res.body.addresses.map((a: { _id: string }) => a._id)).toEqual([near, mid]);
-    expect(res.body.addresses.map((a: { _id: string }) => a._id)).not.toContain(far);
+    expect(res.body.addresses.map((a: { id: string }) => a.id)).toEqual([near, mid]);
+    expect(res.body.addresses.map((a: { id: string }) => a.id)).not.toContain(far);
   });
 
   it('400s without coordinates', async () => {

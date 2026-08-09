@@ -231,7 +231,7 @@ export default function AgencyProfileScreen() {
             <View>
               <PropertyResultsGrid
                 properties={properties}
-                onPropertyPress={(property) => router.push(`/properties/${property._id}`)}
+                onPropertyPress={(property) => router.push(`/properties/${property.id}`)}
               />
               <LoadMoreSentinel
                 onLoadMore={loadMoreProperties}

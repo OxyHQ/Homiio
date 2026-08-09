@@ -26,17 +26,13 @@ export interface ReviewRatingSummary {
 }
 
 /**
- * Pull a stable address id off a property. The id can land in a few shapes
- * depending on whether the property was hydrated from the list vs the detail
- * endpoint, so this mirrors the extraction both review sections already use.
+ * Pull a stable address id off a property. The list and detail endpoints both
+ * serialize the address id as `id`, but it is absent when the address ref was
+ * never expanded, so this still probes rather than reading it directly.
  */
 export function getReviewAddressId(property: Property | null | undefined): string | undefined {
   const address = property?.address;
   if (!address || typeof address !== 'object') return undefined;
-  if ('_id' in address) {
-    const id = (address as { _id?: unknown })._id;
-    if (typeof id === 'string') return id;
-  }
   if ('id' in address) {
     const id = (address as { id?: unknown }).id;
     if (typeof id === 'string') return id;

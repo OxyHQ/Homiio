@@ -20,7 +20,7 @@ interface ConversationMessage {
 }
 
 interface SharedConversation {
-  _id: string;
+  id: string;
   title: string;
   messages: ConversationMessage[];
   createdAt: Date;

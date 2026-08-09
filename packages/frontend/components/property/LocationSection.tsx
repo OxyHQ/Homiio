@@ -51,7 +51,7 @@ export const LocationSection: React.FC<Props> = ({ property }) => {
                         style={{ height: 200 }}
                         initialCoordinates={coordinates as [number, number]}
                         initialZoom={property?.address?.coordinates?.type === 'Point' ? 15 : 12}
-                        screenId={`property-location-${property?._id || property?.id || 'unknown'}`}
+                        screenId={`property-location-${property?.id || 'unknown'}`}
                     />
                 </View>
             )}

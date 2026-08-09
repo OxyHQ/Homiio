@@ -54,7 +54,7 @@ export default function NotesScreen() {
       bathrooms?: number;
     }[] = [];
     savedProperties.forEach((p) => {
-      const pid = (p._id || p.id) as string;
+      const pid = p.id as string;
       const notesArr = parseNotesString(p.notes);
       const title = getPropertyTitle(p) || p.address?.cityName || 'Property';
       const image = getPropertyImageSource(p);
@@ -95,10 +95,10 @@ export default function NotesScreen() {
     const targetPropId =
       propertyId ||
       selectedPropertyId ||
-      ((savedProperties[0]?._id || savedProperties[0]?.id) as string | undefined);
+      (savedProperties[0]?.id as string | undefined);
     if (!targetPropId) return;
     try {
-      const prop = savedProperties.find((p) => (p._id || p.id) === targetPropId);
+      const prop = savedProperties.find((p) => p.id === targetPropId);
       if (!prop) return;
       const currentNotes = parseNotesString(prop.notes);
       const updatedNotes = upsertNote(currentNotes, { id: note?.id, text });
@@ -117,7 +117,7 @@ export default function NotesScreen() {
   const handleDeleteNote = useCallback(
     async (propertyId: string, noteId: string) => {
       try {
-        const prop = savedProperties.find((p) => (p._id || p.id) === propertyId);
+        const prop = savedProperties.find((p) => p.id === propertyId);
         if (!prop) return;
         const updatedNotes = deleteNote(parseNotesString(prop.notes), noteId);
         const payload = serializeNotesArray(updatedNotes);
@@ -134,7 +134,7 @@ export default function NotesScreen() {
 
   const persistNotes = useCallback(
     async (propertyId: string, mutator: (arr: PropertyNote[]) => PropertyNote[]) => {
-      const prop = savedProperties.find((p) => (p._id || p.id) === propertyId);
+      const prop = savedProperties.find((p) => p.id === propertyId);
       if (!prop) return;
       const updated = mutator(parseNotesString(prop.notes));
       await updateNotesMutate({ propertyId, notes: serializeNotesArray(updated) });
@@ -289,7 +289,7 @@ export default function NotesScreen() {
                   <Text style={styles.pickerLabel}>{t('common.select')}</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     {savedProperties.map((p) => {
-                      const pid = (p._id || p.id) as string;
+                      const pid = p.id as string;
                       const isSel = selectedPropertyId === pid;
                       return (
                         <TouchableOpacity

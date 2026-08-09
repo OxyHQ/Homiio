@@ -139,7 +139,7 @@ export default function PropertyTypeScreen() {
 
   const handlePropertyPress = useCallback(
     (property: Property) => {
-      router.push(`/properties/${property._id || property.id}`);
+      router.push(`/properties/${property.id}`);
     },
     [router],
   );

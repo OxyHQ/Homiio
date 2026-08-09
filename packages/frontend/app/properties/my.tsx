@@ -98,7 +98,7 @@ export default function MyPropertiesScreen() {
 
   const handlePropertyPress = useCallback(
     (property: Property) => {
-      router.push(`/properties/${property._id || property.id}`);
+      router.push(`/properties/${property.id}`);
     },
     [router],
   );
@@ -147,7 +147,7 @@ export default function MyPropertiesScreen() {
 
   const renderFooter = useCallback(
     (property: Property) => {
-      const propertyId = (property._id || property.id) as string;
+      const propertyId = property.id as string;
       const title = generatePropertyTitle({
         type: property.type,
         address: property.address,

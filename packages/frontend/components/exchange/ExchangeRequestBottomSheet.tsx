@@ -51,7 +51,7 @@ const formatRange = (range: AvailabilityCalendarRange | null): string =>
     ? `${formatLocalized(range.checkIn, 'MMM d')} → ${formatLocalized(range.checkOut, 'MMM d')}`
     : '';
 
-const propertyId = (property: Property): string => property._id || property.id || '';
+const propertyId = (property: Property): string => property.id || '';
 
 const isExchangeEnabled = (property: Property): boolean =>
   hasOffering(property, OfferingType.EXCHANGE);

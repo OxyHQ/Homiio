@@ -3,7 +3,7 @@ import { api, ApiResponse } from '@/utils/api';
 export type ViewingStatus = 'pending' | 'approved' | 'declined' | 'cancelled';
 
 export interface ViewingRequest {
-  _id: string;
+  id: string;
   propertyId: string;
   requesterOxyUserId: string;
   ownerOxyUserId: string;

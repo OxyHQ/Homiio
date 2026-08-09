@@ -32,7 +32,7 @@ export function useRecentlyViewed() {
 
   // Add property to recently viewed
   const addProperty = useCallback(async (property: Property) => {
-    const propertyId = property._id || property.id;
+    const propertyId = property.id;
 
     if (!propertyId) return;
 

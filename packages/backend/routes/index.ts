@@ -16,6 +16,7 @@ import viewings from './viewings';
 import telegram from './telegram';
 import images from './images';
 import { asyncHandler } from '../middlewares';
+import { serializeWireIds } from '../middlewares/wireIds';
 import billing from './billing';
 import scraper from './scraper';
 import reviews from './reviews';
@@ -51,6 +52,11 @@ export default function() {
   const evictionRoutes = evictions();
 
   const router = express.Router();
+
+  // FIRST, so every body below leaves as `id` and never `_id`. See wireIds.ts:
+  // `.lean()` reads never pass through a schema `toJSON`, so a per-model
+  // transform cannot cover this router.
+  router.use(serializeWireIds);
 
   // Property availability (auth still required since mounted under oxy.auth() in server.ts).
   // Returns host availability windows + booked ranges (vacation flow).

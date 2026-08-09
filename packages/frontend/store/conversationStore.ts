@@ -79,7 +79,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         const data = await response.json();
         if (data.success && data.conversations) {
           const formattedConversations: Conversation[] = data.conversations.map((conv: any) => ({
-            id: conv._id,
+            id: conv.id,
             title: conv.title,
             messages: conv.messages || [],
             createdAt: new Date(conv.createdAt),
@@ -136,10 +136,10 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
           const apiConversation = data.conversation;
 
           const formattedConversation: Conversation = {
-            id: apiConversation._id || apiConversation.id,
+            id: apiConversation.id,
             title: apiConversation.title || 'Untitled Conversation',
             messages: (apiConversation.messages || []).map((msg: any) => ({
-              id: msg._id || msg.id || `msg_${Date.now()}_${Math.random()}`,
+              id: msg.id || `msg_${Date.now()}_${Math.random()}`,
               role: msg.role,
               content: msg.content || '',
               timestamp: new Date(msg.timestamp || Date.now()),
@@ -227,7 +227,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
           if (data.success && data.conversation) {
             const newConversation: Conversation = {
               ...conversation,
-              id: data.conversation._id,
+              id: data.conversation.id,
             };
             set({ currentConversation: newConversation });
 
@@ -313,9 +313,9 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         if (response.ok) {
           const data = await response.json();
 
-          if (data.success && data.conversation && data.conversation._id) {
+          if (data.success && data.conversation && data.conversation.id) {
             const newConversation: Conversation = {
-              id: data.conversation._id,
+              id: data.conversation.id,
               title: data.conversation.title || title,
               messages: data.conversation.messages || [],
               createdAt: new Date(data.conversation.createdAt),

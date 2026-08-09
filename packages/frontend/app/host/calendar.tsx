@@ -84,14 +84,14 @@ export default function HostCalendarScreen() {
     if (selectedPropertyId) return selectedPropertyId;
     const first = properties[0];
     if (!first) return null;
-    return first._id ?? first.id ?? null;
+    return first.id ?? null;
   }, [properties, selectedPropertyId]);
 
   const selectedProperty = useMemo<Property | null>(() => {
     if (!effectivePropertyId) return null;
     return (
       properties.find(
-        (item) => (item._id ?? item.id) === effectivePropertyId,
+        (item) => item.id === effectivePropertyId,
       ) ?? null
     );
   }, [effectivePropertyId, properties]);
@@ -317,7 +317,7 @@ export default function HostCalendarScreen() {
               <MenuContent>
                 <MenuGroup>
                   {properties.map((property) => {
-                    const id = property._id ?? property.id ?? '';
+                    const id = property.id ?? '';
                     return (
                       <MenuItem
                         key={id}

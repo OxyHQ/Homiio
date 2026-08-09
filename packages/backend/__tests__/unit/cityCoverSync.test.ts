@@ -458,7 +458,10 @@ describe('GET /api/cities/:id/properties', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.city.name).toBe('London');
     expect(res.body.data.properties).toHaveLength(1);
-    expect(String(res.body.data.properties[0]._id)).toBe(String(property._id));
+    // Response side reads `id`; `property._id` is the Mongoose document the
+    // fixture created, which still has an `_id` because Mongo still stores one.
+    expect(String(res.body.data.properties[0].id)).toBe(String(property._id));
+    expect(res.body.data.properties[0]).not.toHaveProperty('_id');
     expect(res.body.data.pagination.total).toBe(1);
   });
 

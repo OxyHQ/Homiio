@@ -13,11 +13,11 @@
  * because a city read from one store and a property read from the other cannot
  * be joined by anything. They move with the property read path in batch 4.
  *
- * ## The wire format is unchanged
+ * ## The wire format
  *
- * Batch 10 owns the `_id` → `id` cut, so every response here still carries BOTH
- * (class B), still nests the country / region / cover image as objects with
- * their own `_id` + `id`, and still reports the city centre as
+ * A city serializes with ONE id, `id` — these responses used to carry `_id`
+ * beside it and no longer do. It still nests the country / region / cover image
+ * as objects with their own `id`, and still reports the city centre as
  * `coordinates: { lat, lng }` even though the table stores named `latitude` /
  * `longitude` columns. {@link serializeCity} is the single place that shape is
  * built, and it OMITS absent values rather than emitting `null`, because
@@ -119,9 +119,9 @@ function withoutAbsent(record: Record<string, unknown>): Record<string, unknown>
   return out;
 }
 
-/** Both id spellings, as every geo response has emitted since before the port. */
+/** An entity's id, ahead of its own fields, as every geo response emits it. */
 function withIds(id: string, rest: Record<string, unknown>): Record<string, unknown> {
-  return { _id: id, id, ...withoutAbsent(rest) };
+  return { id, ...withoutAbsent(rest) };
 }
 
 /** Build the city response object, including its expanded refs. */

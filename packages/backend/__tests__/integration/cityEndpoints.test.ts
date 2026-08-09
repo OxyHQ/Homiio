@@ -2,12 +2,13 @@
  * The ported `/api/cities*` endpoints, over real Postgres and the real router.
  *
  * Two things are asserted together on purpose: that the query answers correctly,
- * and that the RESPONSE SHAPE did not drift. Batch 10 owns the `_id` → `id` cut,
- * so every city body here must still carry both spellings, still nest its
- * country / region / cover image as objects with their own ids, and still report
- * the centre as `coordinates: { lat, lng }` even though the table holds named
- * scalar columns. A port that answers correctly and reshapes the body is a
- * broken frontend.
+ * and that the RESPONSE SHAPE did not drift. The `_id` → `id` cut landed, so
+ * every city body here carries `id` and NO `_id` — asserted in both directions,
+ * since only the negative half can catch the old spelling being reintroduced.
+ * It still nests its country / region / cover image as objects with their own
+ * ids, and still reports the centre as `coordinates: { lat, lng }` even though
+ * the table holds named scalar columns. A port that answers correctly and
+ * reshapes the body is a broken frontend.
  */
 
 import express, { type Express } from 'express';
@@ -69,20 +70,25 @@ describe('GET /api/cities', () => {
     expect(res.body.pagination.pages).toBe(1);
   });
 
-  it('keeps emitting BOTH id spellings, on the city and on its expanded refs', async () => {
+  it('emits `id` and never `_id`, on the city and on its expanded refs', async () => {
     const chain = await seedGeoChain({ cityName: 'Barcelona' });
 
     const res = await request(app).get('/api/cities').expect(200);
     const [city] = res.body.data;
 
-    expect(city._id).toBe(chain.cityId);
     expect(city.id).toBe(chain.cityId);
     expect(city.countryId).toEqual(
-      expect.objectContaining({ _id: chain.countryId, id: chain.countryId, name: 'Spain', code: 'ES' }),
+      expect.objectContaining({ id: chain.countryId, name: 'Spain', code: 'ES' }),
     );
     expect(city.regionId).toEqual(
-      expect.objectContaining({ _id: chain.regionId, id: chain.regionId, name: 'Catalonia' }),
+      expect.objectContaining({ id: chain.regionId, name: 'Catalonia' }),
     );
+    // The negative half. `objectContaining` above passes just as happily with an
+    // `_id` sitting beside the `id`, so without these the old dual-spelling
+    // shape would still satisfy every assertion in this test.
+    expect(city).not.toHaveProperty('_id');
+    expect(city.countryId).not.toHaveProperty('_id');
+    expect(city.regionId).not.toHaveProperty('_id');
   });
 
   it('reports the city centre as coordinates { lat, lng }', async () => {
@@ -156,7 +162,8 @@ describe('GET /api/cities/popular', () => {
     expect(res.body.data).toHaveLength(1);
     expect(res.body.data[0].name).toBe('Madrid');
     expect(res.body.data[0].coverImageId.urls.medium).toContain('medium.webp');
-    expect(res.body.data[0].coverImageId._id).toBe(coverId);
+    expect(res.body.data[0].coverImageId.id).toBe(coverId);
+    expect(res.body.data[0].coverImageId).not.toHaveProperty('_id');
   });
 
   it('excludes a city whose cover image has been deleted', async () => {
@@ -207,7 +214,7 @@ describe('GET /api/cities/lookup', () => {
     await seedGeoChain({ countryCode: 'VE', countryName: 'Venezuela', regionName: 'Valencia', cityName: 'Valencia' });
 
     const res = await request(app).get('/api/cities/lookup?name=Valencia&country=Spain&state=catalonia').expect(200);
-    expect(res.body.data._id).toBe(es.cityId);
+    expect(res.body.data.id).toBe(es.cityId);
   });
 
   it('404s when the narrowing country or region is unknown', async () => {

@@ -42,7 +42,7 @@ export default function EditFolderScreen() {
 
   const folders = foldersData?.folders || [];
 
-  const folder = useMemo(() => folders.find((f) => f._id === folderId), [folders, folderId]);
+  const folder = useMemo(() => folders.find((f) => f.id === folderId), [folders, folderId]);
   const [name, setName] = useState(folder?.name || '');
   const [emoji, setEmoji] = useState(folder?.icon || '📁');
   const [color, setColor] = useState(folder?.color || colors.primaryColor);

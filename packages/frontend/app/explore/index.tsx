@@ -241,7 +241,7 @@ export default function SearchScreen() {
 
   const handlePropertyPress = useCallback(
     (property: Property) => {
-      router.push(`/properties/${property._id || property.id}`);
+      router.push(`/properties/${property.id}`);
     },
     [router],
   );

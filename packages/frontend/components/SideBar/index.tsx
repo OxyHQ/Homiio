@@ -362,7 +362,7 @@ export function SideBar() {
       .filter((folder) => !folder.isDefault && (folder.propertyCount ?? 0) > 0)
       .map((folder) => {
         const folderProperties = safeProps.filter(
-          (property) => property.folderId === folder._id,
+          (property) => property.folderId === folder.id,
         );
         const latestImages = [...folderProperties]
           .sort((a, b) => {
@@ -393,7 +393,7 @@ export function SideBar() {
           .filter((url): url is string => Boolean(url));
 
         return {
-          id: folder._id,
+          id: folder.id,
           name: folder.name,
           color: folder.color ?? colors.primaryColor,
           icon: folder.icon ?? 'folder',
@@ -411,7 +411,7 @@ export function SideBar() {
     const result: RecentEntry[] = [];
     for (const property of recentProperties ?? []) {
       if (!property) continue;
-      const id = property._id ?? property.id;
+      const id = property.id;
       if (!id) continue;
 
       const firstImage = Array.isArray(property.images)

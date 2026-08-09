@@ -40,7 +40,7 @@ export function useSindiSuggestions({ property, conversationContext }: UseSindiS
     const [error, setError] = useState<string | null>(null);
     const { oxyServices, activeSessionId } = useOxy();
 
-    const propertyId = property?._id || property?.id;
+    const propertyId = property?.id;
     const suggestions =
         fetched && fetched.propertyId === propertyId ? fetched.items : DEFAULT_SUGGESTIONS;
 

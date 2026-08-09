@@ -62,7 +62,7 @@ export interface CreateReviewRequest {
 }
 
 export interface Review extends CreateReviewRequest {
-  _id: string;
+  id: string;
   userId: string;
   livedForMonths: number;
   humanDuration: string;

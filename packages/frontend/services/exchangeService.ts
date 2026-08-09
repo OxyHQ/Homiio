@@ -12,9 +12,9 @@ import {
  * Home-exchange API client (swap + free hosting).
  *
  * Mirrors `reservationService`: a thin class over `@/utils/api` that unwraps the
- * backend's `{ data, pagination, meta }` envelope and normalises the persisted
- * `_id` to `id`. Distinct from reservations (paid vacation bookings) and viewing
- * requests (long-term-rent tours). Every endpoint is auth-gated server-side.
+ * backend's `{ data, pagination, meta }` envelope. Distinct from reservations
+ * (paid vacation bookings) and viewing requests (long-term-rent tours). Every
+ * endpoint is auth-gated server-side.
  */
 
 export interface ListExchangeRequestsParams {
@@ -54,27 +54,6 @@ export interface CreateExchangeReviewBody {
   categories?: ExchangeReviewCategories;
 }
 
-/** Backend records carry `_id`; the frontend works with `id`. */
-type BackendExchangeRequest = Omit<ExchangeRequest, 'id'> & {
-  _id?: string;
-  id?: string;
-};
-
-type BackendExchangeReview = Omit<ExchangeReview, 'id'> & {
-  _id?: string;
-  id?: string;
-};
-
-const normalizeRequest = (raw: BackendExchangeRequest): ExchangeRequest => {
-  const id = raw.id ?? raw._id ?? '';
-  return { ...raw, id } as ExchangeRequest;
-};
-
-const normalizeReview = (raw: BackendExchangeReview): ExchangeReview => {
-  const id = raw.id ?? raw._id ?? '';
-  return { ...raw, id } as ExchangeReview;
-};
-
 const emptyPagination = (count: number): ExchangePagination => ({
   page: 1,
   limit: count,
@@ -87,14 +66,14 @@ class ExchangeService {
 
   /** Propose a swap or hosting stay against an EXCHANGE listing. */
   async createRequest(payload: CreateExchangeRequestData): Promise<ExchangeRequest> {
-    const response = await api.post<ApiResponse<BackendExchangeRequest>>(
+    const response = await api.post<ApiResponse<ExchangeRequest>>(
       this.baseUrl,
       payload,
     );
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Exchange request failed');
     }
-    return normalizeRequest(response.data.data);
+    return response.data.data;
   }
 
   /**
@@ -105,7 +84,7 @@ class ExchangeService {
     params: ListExchangeRequestsParams = {},
   ): Promise<ExchangeRequestListResponse> {
     const response = await api.get<{
-      data?: BackendExchangeRequest[];
+      data?: ExchangeRequest[];
       pagination?: ExchangePagination;
     }>(this.baseUrl, {
       params: {
@@ -115,19 +94,19 @@ class ExchangeService {
         limit: params.limit,
       },
     });
-    const items = (response.data.data ?? []).map(normalizeRequest);
+    const items = response.data.data ?? [];
     const pagination = response.data.pagination ?? emptyPagination(items.length);
     return { items, pagination };
   }
 
   async getRequest(id: string): Promise<ExchangeRequest> {
-    const response = await api.get<ApiResponse<BackendExchangeRequest>>(
+    const response = await api.get<ApiResponse<ExchangeRequest>>(
       `${this.baseUrl}/${id}`,
     );
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Exchange request not found');
     }
-    return normalizeRequest(response.data.data);
+    return response.data.data;
   }
 
   /**
@@ -139,14 +118,14 @@ class ExchangeService {
     id: string,
     payload: UpdateExchangeRequestData,
   ): Promise<ExchangeRequest> {
-    const response = await api.patch<ApiResponse<BackendExchangeRequest>>(
+    const response = await api.patch<ApiResponse<ExchangeRequest>>(
       `${this.baseUrl}/${id}`,
       payload,
     );
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Exchange request update failed');
     }
-    return normalizeRequest(response.data.data);
+    return response.data.data;
   }
 
   /** Review the other party of a COMPLETED exchange (one review per reviewer). */
@@ -154,22 +133,22 @@ class ExchangeService {
     id: string,
     body: CreateExchangeReviewBody,
   ): Promise<ExchangeReview> {
-    const response = await api.post<ApiResponse<BackendExchangeReview>>(
+    const response = await api.post<ApiResponse<ExchangeReview>>(
       `${this.baseUrl}/${id}/reviews`,
       body,
     );
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Exchange review failed');
     }
-    return normalizeReview(response.data.data);
+    return response.data.data;
   }
 
   /** Both reviews tied to a single exchange (requester + host). */
   async getRequestReviews(id: string): Promise<ExchangeReview[]> {
-    const response = await api.get<ApiResponse<BackendExchangeReview[]>>(
+    const response = await api.get<ApiResponse<ExchangeReview[]>>(
       `${this.baseUrl}/${id}/reviews`,
     );
-    return (response.data.data ?? []).map(normalizeReview);
+    return response.data.data ?? [];
   }
 
   /**
@@ -181,13 +160,13 @@ class ExchangeService {
     params: { page?: number; limit?: number } = {},
   ): Promise<ProfileExchangeReviewsResponse> {
     const response = await api.get<{
-      data?: BackendExchangeReview[];
+      data?: ExchangeReview[];
       pagination?: ExchangePagination;
       meta?: Partial<ProfileExchangeReviewsMeta>;
     }>(`/api/profiles/oxy/${encodeURIComponent(oxyUserId)}/exchange-reviews`, {
       params: { page: params.page, limit: params.limit },
     });
-    const items = (response.data.data ?? []).map(normalizeReview);
+    const items = response.data.data ?? [];
     const pagination = response.data.pagination ?? emptyPagination(items.length);
     const meta: ProfileExchangeReviewsMeta = {
       averageRating: response.data.meta?.averageRating ?? 0,

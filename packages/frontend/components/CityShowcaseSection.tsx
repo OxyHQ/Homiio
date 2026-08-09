@@ -130,7 +130,7 @@ export function CityShowcaseSection({ title, items, onPressCity }: CityShowcaseS
           <View className="flex-row gap-4">
             {items.map((city) => (
               <CityCard
-                key={city._id}
+                key={city.id}
                 city={city}
                 width={cardWidth}
                 height={cardHeight}

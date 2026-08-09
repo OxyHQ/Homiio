@@ -49,7 +49,7 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
   const insets = useSafeAreaInsets();
   const { isAuthenticated } = useOxy();
 
-  const propertyId = String(property._id ?? property.id ?? '');
+  const propertyId = String(property.id ?? '');
 
   const activeApplicationQuery = useActiveApplicationForProperty(
     isAuthenticated ? propertyId : undefined,
