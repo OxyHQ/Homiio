@@ -11,8 +11,9 @@
  *   node packages/backend/dist/db/backfill/geo.js \
  *     --source-database=homiio-production --target-database=homiio
  *
- *   …--audit-only     measure, refuse nothing to the database, write nothing
+ *   …--audit-only     measure, write nothing at all
  *   …--verify-only    compare an already-copied target against the source
+ *   …--reconcile      copy, then bring rows already present back into line
  *   …--sample=<n>     rows per table in the field-by-field comparison (default 200)
  *
  * ## Why this exists
@@ -71,7 +72,7 @@
 import mongoose from 'mongoose';
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
-import { count, getTableColumns, inArray } from 'drizzle-orm';
+import { count, eq, getTableColumns, inArray } from 'drizzle-orm';
 import type { PgTable } from 'drizzle-orm/pg-core';
 import { assertMigrationTarget, readTargetDatabase } from '@oxyhq/db/migrate';
 
@@ -128,7 +129,7 @@ const MAX_REPORTED_IDS = 5;
 export type MongoDatabase = NonNullable<typeof mongoose.connection.db>;
 
 /** What one run was asked to do. */
-export type Mode = 'copy' | 'audit-only' | 'verify-only';
+export type Mode = 'copy' | 'reconcile' | 'audit-only' | 'verify-only';
 
 /** Per-table outcome of the copy. */
 export interface CopyReport {
@@ -136,6 +137,17 @@ export interface CopyReport {
   readonly read: number;
   readonly inserted: number;
   readonly skippedExisting: number;
+}
+
+/** Per-table outcome of a reconcile pass. */
+export interface ReconcileReport {
+  readonly table: GeoTableName;
+  /** Rows present in both stores and compared column by column. */
+  readonly compared: number;
+  /** Rows that differed and were brought back into line with the source. */
+  readonly updated: number;
+  /** How many rows each column differed on — what was actually repaired. */
+  readonly columns: Readonly<Record<string, number>>;
 }
 
 /** Per-table outcome of the verification. */
@@ -146,6 +158,14 @@ export interface VerifyReport {
   readonly missing: number;
   readonly missingIds: readonly string[];
   readonly compared: number;
+  /**
+   * How many mismatches the sample found IN TOTAL.
+   *
+   * Reported beside the truncated list below, because a list capped at five
+   * reads identically whether five rows drifted or every row did — and the
+   * scale is the first thing an operator needs.
+   */
+  readonly mismatchCount: number;
   readonly mismatches: readonly string[];
 }
 
@@ -155,6 +175,7 @@ export interface GeoBackfillReport {
   readonly read: Readonly<Record<GeoTableName, number>>;
   readonly resolutions: Readonly<Record<string, number>>;
   readonly copied: readonly CopyReport[];
+  readonly reconciled: readonly ReconcileReport[];
   readonly verified: readonly VerifyReport[];
 }
 
@@ -187,20 +208,31 @@ export function readSourceDatabase(argv: readonly string[]): string {
 }
 
 /**
- * Which of the three things this run does.
+ * Which of the four things this run does.
  *
- * @throws {Error} When both `--audit-only` and `--verify-only` are given — they
- *   ask for different runs and picking one would obey half the command line.
+ * The default is `copy`, which only ever INSERTS. `--reconcile` is the mode that
+ * may overwrite a row already in the target, and it is explicit for that reason:
+ * a tool that silently rewrites rows it did not write is a synchroniser, not a
+ * copy, and the two want different amounts of trust.
+ *
+ * @throws {Error} When more than one is given — they ask for different runs, and
+ *   picking one would obey half the command line.
  */
 export function readMode(argv: readonly string[]): Mode {
-  const audit = argv.includes('--audit-only');
-  const verify = argv.includes('--verify-only');
-  if (audit && verify) {
-    throw new Error('--audit-only and --verify-only are mutually exclusive.');
+  const requested = (
+    [
+      ['--audit-only', 'audit-only'],
+      ['--verify-only', 'verify-only'],
+      ['--reconcile', 'reconcile'],
+    ] as const
+  ).filter(([flag]) => argv.includes(flag));
+
+  if (requested.length > 1) {
+    throw new Error(
+      `${requested.map(([flag]) => flag).join(' and ')} are mutually exclusive.`,
+    );
   }
-  if (audit) return 'audit-only';
-  if (verify) return 'verify-only';
-  return 'copy';
+  return requested[0]?.[1] ?? 'copy';
 }
 
 /**
@@ -468,6 +500,89 @@ async function copyPlan(database: Database, planned: PlannedRows): Promise<CopyR
   return reports;
 }
 
+// ── reconciling ────────────────────────────────────────────────────
+
+/**
+ * Bring rows that are ALREADY in the target back into line with the source.
+ *
+ * `copyPlan` is `ON CONFLICT DO NOTHING` and therefore cannot repair anything;
+ * that is the right default, and it is also a gap the moment a target holds rows
+ * this script did not write. Two ways that happens, and both are real:
+ *
+ *  - **Somebody else populated the table.** During the incident this script was
+ *    written for, an earlier hand copy had already loaded the four geo tables
+ *    with every `cover_image_id` NULL (it had no `images` rows to point at, so
+ *    copying them would have been a `23503`). Every row was present, so
+ *    `DO NOTHING` skipped all 1,660 — and `/api/cities/popular`, whose whole
+ *    filter is `cover_image_id is not null`, kept answering `[]`.
+ *  - **Mongo is still live.** It stays authoritative until the cutover, so a row
+ *    copied yesterday can be edited today and the target is stale by definition.
+ *
+ * **Every column is written, not only the ones that differ.** Partly because
+ * convergence is the point, and partly for a specific trap: `updated_at` carries
+ * drizzle's `$onUpdate`, so an `UPDATE` that does not name it explicitly stamps
+ * the row with the moment of the repair — replacing the historical value this
+ * whole migration exists to preserve. Writing the full row makes that
+ * impossible rather than remembered.
+ *
+ * Never runs unless `--reconcile` asked for it, and never on a row the audit did
+ * not approve.
+ */
+async function reconcilePlan(
+  database: Database,
+  planned: PlannedRows,
+): Promise<ReconcileReport[]> {
+  const reports: ReconcileReport[] = [];
+
+  for (const table of GEO_COPY_ORDER) {
+    const target = GEO_TABLES[table];
+    const idColumn = getTableColumns(target).id;
+    const columns = columnNames(target);
+    const rows = planned.rows[table].filter(
+      (row): row is CandidateRow & { id: string } => typeof row.id === 'string',
+    );
+
+    // Read the stored rows first, so the comparison is against what is really
+    // there rather than against what a previous step believes it wrote.
+    const stored = new Map<string, CandidateRow>();
+    for (let start = 0; start < rows.length; start += LOOKUP_BATCH_IDS) {
+      const batch = rows.slice(start, start + LOOKUP_BATCH_IDS).map((row) => row.id);
+      const found = await database.select().from(target).where(inArray(idColumn, batch));
+      for (const row of found) stored.set(String((row as CandidateRow).id), row as CandidateRow);
+    }
+
+    const differing: Record<string, number> = {};
+    let updated = 0;
+    for (const row of rows) {
+      const current = stored.get(row.id);
+      if (current === undefined) continue;
+
+      const changed = columns.filter((column) => !sameValue(row[column], current[column]));
+      if (changed.length === 0) continue;
+      for (const column of changed) differing[column] = (differing[column] ?? 0) + 1;
+
+      const values = Object.fromEntries(
+        columns.filter((column) => column !== 'id').map((column) => [column, row[column]]),
+      );
+      await database
+        .update(target)
+        .set(values as Partial<PgTable['$inferInsert']>)
+        .where(eq(idColumn, row.id));
+      updated += 1;
+    }
+
+    const report: ReconcileReport = {
+      table,
+      compared: stored.size,
+      updated,
+      columns: differing,
+    };
+    logger.info(`Reconciled ${table}`, report);
+    reports.push(report);
+  }
+  return reports;
+}
+
 // ── verifying ──────────────────────────────────────────────────────
 
 /** Which of `ids` the target already holds. */
@@ -581,6 +696,7 @@ async function verifyPlan(
       missing: missingIds.length,
       missingIds: missingIds.slice(0, MAX_REPORTED_IDS),
       compared,
+      mismatchCount: mismatches.length,
       mismatches: mismatches.slice(0, MAX_REPORTED_IDS),
     };
     logger.info(`Verified ${table}`, report);
@@ -635,23 +751,33 @@ export async function runGeoBackfill(options: {
 
   if (mode === 'audit-only') {
     logger.info('Audit-only run complete; nothing was written');
-    return { mode, read, resolutions: planned.resolutions, copied: [], verified: [] };
+    return {
+      mode,
+      read,
+      resolutions: planned.resolutions,
+      copied: [],
+      reconciled: [],
+      verified: [],
+    };
   }
 
-  const copied = mode === 'copy' ? await copyPlan(database, planned) : [];
+  const writes = mode === 'copy' || mode === 'reconcile';
+  const copied = writes ? await copyPlan(database, planned) : [];
+  const reconciled = mode === 'reconcile' ? await reconcilePlan(database, planned) : [];
 
   const verified = await verifyPlan(database, planned, sampleSize);
-  const failures = verified.filter((report) => report.missing > 0 || report.mismatches.length > 0);
+  const failures = verified.filter((report) => report.missing > 0 || report.mismatchCount > 0);
   if (failures.length > 0) {
     throw new Error(
       `Verification failed for ${failures.map((report) => report.table).join(', ')}. ` +
       'See the per-table reports above: `missing` counts source rows with no ' +
-      'target row, `mismatches` names columns whose stored value differs from ' +
-      'what the mappers produced.',
+      'target row, `mismatchCount` counts columns whose stored value differs ' +
+      'from what the mappers produced. `--reconcile` brings existing rows back ' +
+      'into line; the plain copy only ever inserts.',
     );
   }
 
-  return { mode, read, resolutions: planned.resolutions, copied, verified };
+  return { mode, read, resolutions: planned.resolutions, copied, reconciled, verified };
 }
 
 // ── entrypoint ─────────────────────────────────────────────────────

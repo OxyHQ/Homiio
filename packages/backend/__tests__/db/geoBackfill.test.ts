@@ -14,9 +14,11 @@
  * together.
  */
 
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import mongoose from 'mongoose';
-import { eq, inArray, getTableName } from 'drizzle-orm';
-import { getTableConfig, type PgTable } from 'drizzle-orm/pg-core';
+import { eq, inArray, getTableName, sql } from 'drizzle-orm';
+import { alias, getTableConfig, type PgTable } from 'drizzle-orm/pg-core';
 
 import { getDb } from '../../db/postgres';
 import { cities, countries, neighborhoods, regions } from '../../db/schema/geo';
@@ -94,7 +96,10 @@ describe('geo backfill — argument guards', () => {
     expect(readMode([])).toBe('copy');
     expect(readMode(['--audit-only'])).toBe('audit-only');
     expect(readMode(['--verify-only'])).toBe('verify-only');
+    expect(readMode(['--reconcile'])).toBe('reconcile');
     expect(() => readMode(['--audit-only', '--verify-only'])).toThrow(/mutually exclusive/);
+    expect(() => readMode(['--reconcile', '--audit-only'])).toThrow(/mutually exclusive/);
+    expect(() => readMode(['--reconcile', '--verify-only'])).toThrow(/mutually exclusive/);
   });
 
   it('refuses a --sample that would silently compare nothing', () => {
@@ -419,10 +424,45 @@ describe('geo backfill — the copy order', () => {
   });
 });
 
+describe('db/ sources are text, not binary', () => {
+  /**
+   * A single NUL byte makes git classify a source file as BINARY, and from then
+   * on it has no diff: `git show`, `git log -p` and every pull-request review
+   * print `Bin 0 -> N bytes` instead of the code. Nothing else notices — tsc,
+   * eslint, jest and CI all passed on a `db/backfill/rowAudit.ts` that carried
+   * two of them, and the only thing that ever said so was `git show --stat`
+   * after the merge.
+   *
+   * That is the shape this repository gates rather than remembers: a wrong
+   * thing nothing trips over. Scoped to `db/` because that is where the
+   * migration code lives; widen it if the class recurs elsewhere.
+   */
+  const roots = [join(__dirname, '..', '..', 'db'), __dirname];
+
+  function typescriptFiles(directory: string): string[] {
+    return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) return typescriptFiles(path);
+      return entry.isFile() && path.endsWith('.ts') ? [path] : [];
+    });
+  }
+
+  it('contains no NUL byte in any db/ TypeScript file', () => {
+    const files = roots.flatMap(typescriptFiles);
+    // Vacuity floor: a traversal that silently stopped matching would otherwise
+    // report "no offenders" forever, which is the same failure in a new costume.
+    expect(files.length).toBeGreaterThan(30);
+
+    const offenders = files.filter((path) => readFileSync(path).includes(0));
+    expect(offenders).toEqual([]);
+  });
+});
+
 describe('geo backfill — end to end, real Mongo to real Postgres', () => {
   const countryId = oid();
   const regionId = oid();
   const barcelonaId = oid();
+  const madridId = oid();
   const teldeId = oid();
   const neighborhoodId = oid();
   const cityImageId = oid();
@@ -474,6 +514,20 @@ describe('geo backfill — end to end, real Mongo to real Postgres', () => {
         updatedAt: new Date('2025-01-03T00:00:00.000Z'),
       },
       {
+        // Real coordinates, for the PostGIS distance assertion below.
+        _id: madridId,
+        name: 'Madrid',
+        countryId,
+        regionId,
+        coordinates: { lat: 40.4168, lng: -3.7038 },
+        currency: 'EUR',
+        isActive: true,
+        propertiesCount: 12,
+        lastUpdated: new Date('2025-06-01T00:00:00.000Z'),
+        createdAt: new Date('2025-01-06T00:00:00.000Z'),
+        updatedAt: new Date('2025-01-06T00:00:00.000Z'),
+      },
+      {
         // The frozen `COVER_DANGLING` shape: a cover naming no image at all.
         _id: teldeId,
         name: 'Telde',
@@ -512,7 +566,7 @@ describe('geo backfill — end to end, real Mongo to real Postgres', () => {
     await db.delete(neighborhoods).where(eq(neighborhoods.id, neighborhoodId.toHexString()));
     await db
       .delete(cities)
-      .where(inArray(cities.id, [barcelonaId.toHexString(), teldeId.toHexString()]));
+      .where(inArray(cities.id, [barcelonaId.toHexString(), madridId.toHexString(), teldeId.toHexString()]));
     await db.delete(regions).where(eq(regions.id, regionId.toHexString()));
     await db.delete(countries).where(eq(countries.id, countryId.toHexString()));
     await db
@@ -532,14 +586,14 @@ describe('geo backfill — end to end, real Mongo to real Postgres', () => {
       images: 1,
       countries: 1,
       regions: 1,
-      cities: 2,
+      cities: 3,
       neighborhoods: 1,
     });
     expect(report.copied.map((entry) => [entry.table, entry.inserted])).toEqual([
       ['images', 1],
       ['countries', 1],
       ['regions', 1],
-      ['cities', 2],
+      ['cities', 3],
       ['neighborhoods', 1],
     ]);
     expect(report.resolutions[GEO_RESOLUTIONS.COVER_DANGLING]).toBe(1);
@@ -574,7 +628,7 @@ describe('geo backfill — end to end, real Mongo to real Postgres', () => {
       ['images', 0, 1],
       ['countries', 0, 1],
       ['regions', 0, 1],
-      ['cities', 0, 2],
+      ['cities', 0, 3],
       ['neighborhoods', 0, 1],
     ]);
     expect(second.verified.every((entry) => entry.missing === 0)).toBe(true);
@@ -584,8 +638,8 @@ describe('geo backfill — end to end, real Mongo to real Postgres', () => {
     const rows = await db
       .select({ id: cities.id })
       .from(cities)
-      .where(inArray(cities.id, [barcelonaId.toHexString(), teldeId.toHexString()]));
-    expect(rows).toHaveLength(2);
+      .where(inArray(cities.id, [barcelonaId.toHexString(), madridId.toHexString(), teldeId.toHexString()]));
+    expect(rows).toHaveLength(3);
   });
 
   it('an audit-only run writes nothing', async () => {
@@ -602,7 +656,7 @@ describe('geo backfill — end to end, real Mongo to real Postgres', () => {
     const rows = await db
       .select({ id: cities.id })
       .from(cities)
-      .where(inArray(cities.id, [barcelonaId.toHexString(), teldeId.toHexString()]));
+      .where(inArray(cities.id, [barcelonaId.toHexString(), madridId.toHexString(), teldeId.toHexString()]));
     expect(rows).toEqual([]);
   });
 
@@ -681,6 +735,168 @@ describe('geo backfill — end to end, real Mongo to real Postgres', () => {
     await expect(
       runGeoBackfill({ mongo: mongoDatabase(), database: getDb(), mode: 'verify-only' }),
     ).rejects.toThrow(/Verification failed for cities/);
+  });
+
+  it('lands coordinates PostGIS agrees are the real places, not their transposition', async () => {
+    // A non-null pair of coordinates proves nothing: swapping `lat` and `lng`
+    // yields a perfectly valid point in the wrong hemisphere and no error
+    // anywhere. Only a real-world DISTANCE can tell the two apart, so this asks
+    // PostGIS — the same `geography` type and the same `ST_MakePoint(lng, lat)`
+    // argument order `addresses.geo` is generated with — for the Barcelona to
+    // Madrid distance, which is about 505 km.
+    await seed();
+    await runGeoBackfill({ mongo: mongoDatabase(), database: getDb(), mode: 'copy' });
+
+    const madrid = alias(cities, 'madrid');
+    const [measured] = await getDb()
+      .select({
+        // `ST_MakePoint(longitude, latitude)` — X then Y, the same argument
+        // order `addresses.geo` is generated with.
+        correct: sql<number>`ST_Distance(
+          ST_MakePoint(${cities.longitude}, ${cities.latitude})::geography,
+          ST_MakePoint(${madrid.longitude}, ${madrid.latitude})::geography
+        )`,
+        // The SAME query with the arguments swapped — the mistake this test
+        // exists to catch — computed here rather than assumed, so the tolerance
+        // below is known to be able to tell them apart. Without it a wide
+        // enough band would pass either way and the check would be decoration.
+        transposed: sql<number>`ST_Distance(
+          ST_MakePoint(${cities.latitude}, ${cities.longitude})::geography,
+          ST_MakePoint(${madrid.latitude}, ${madrid.longitude})::geography
+        )`,
+      })
+      .from(cities)
+      .innerJoin(madrid, eq(madrid.id, madridId.toHexString()))
+      .where(eq(cities.id, barcelonaId.toHexString()));
+
+    // Barcelona (41.39 N, 2.17 E) to Madrid (40.42 N, 3.70 W) is about 505 km.
+    const minimumMetres = 490_000;
+    const maximumMetres = 520_000;
+    expect(Number(measured.correct)).toBeGreaterThan(minimumMetres);
+    expect(Number(measured.correct)).toBeLessThan(maximumMetres);
+
+    // Transposed, the two land in the Horn of Africa — Barcelona at 2.17 N
+    // 41.39 E and Madrid at 3.70 S 40.42 E — which measures about 658 km.
+    // Nowhere near as far apart as it sounds, and that is the point of
+    // measuring it rather than assuming: the gap is 150 km, so a tolerance
+    // band any wider than the one above would admit both and this test would
+    // be decoration. Asserted as "outside the accepted band" rather than
+    // against a second magic number, because the band IS the discriminator.
+    expect(Number(measured.transposed)).toBeGreaterThan(maximumMetres);
+  });
+
+  it('a plain copy leaves a row somebody else wrote WRONG alone', async () => {
+    // The incident this mode was added for, in miniature: a previous copy loaded
+    // the cities with no cover (it had no `images` rows to point at), so every
+    // row is present, `ON CONFLICT DO NOTHING` skips all of them, and
+    // `/api/cities/popular` — whose whole filter is `cover_image_id is not
+    // null` — keeps answering empty.
+    await seed();
+    await runGeoBackfill({ mongo: mongoDatabase(), database: getDb(), mode: 'copy' });
+    await getDb()
+      .update(cities)
+      .set({ coverImageId: null })
+      .where(eq(cities.id, barcelonaId.toHexString()));
+
+    await expect(
+      runGeoBackfill({ mongo: mongoDatabase(), database: getDb(), mode: 'copy' }),
+    ).rejects.toThrow(/Verification failed for cities/);
+
+    const [barcelona] = await getDb()
+      .select()
+      .from(cities)
+      .where(eq(cities.id, barcelonaId.toHexString()));
+    expect(barcelona.coverImageId).toBeNull();
+  });
+
+  it('--reconcile repairs it, and restores the historical updated_at rather than stamping now', async () => {
+    await seed();
+    await runGeoBackfill({ mongo: mongoDatabase(), database: getDb(), mode: 'copy' });
+    // `set()` also fires drizzle's `$onUpdate`, so this moves `updated_at` to
+    // now — which is exactly the second thing the repair has to undo, and the
+    // reason `reconcilePlan` writes every column rather than only the wrong one.
+    await getDb()
+      .update(cities)
+      .set({ coverImageId: null, propertiesCount: 0 })
+      .where(eq(cities.id, barcelonaId.toHexString()));
+
+    const report = await runGeoBackfill({
+      mongo: mongoDatabase(),
+      database: getDb(),
+      mode: 'reconcile',
+    });
+
+    const citiesReport = report.reconciled.find((entry) => entry.table === 'cities');
+    expect(citiesReport).toMatchObject({ compared: 3, updated: 1 });
+    expect(citiesReport?.columns).toEqual({
+      coverImageId: 1,
+      propertiesCount: 1,
+      updatedAt: 1,
+    });
+    // Untouched tables are reported, and report no repair — so "it updated
+    // something" cannot be confused with "it rewrote everything".
+    expect(report.reconciled.find((entry) => entry.table === 'countries')).toMatchObject({
+      compared: 1,
+      updated: 0,
+    });
+
+    const [barcelona] = await getDb()
+      .select()
+      .from(cities)
+      .where(eq(cities.id, barcelonaId.toHexString()));
+    expect(barcelona.coverImageId).toBe(cityImageId.toHexString());
+    expect(barcelona.propertiesCount).toBe(137);
+    expect(barcelona.updatedAt).toEqual(new Date('2025-01-03T00:00:00.000Z'));
+  });
+
+  it('repairs a row whose ONLY wrong column is the cover, without stamping updated_at', async () => {
+    // The discriminating fixture. In the case above `updated_at` had ALSO
+    // drifted, so writing "only the columns that differ" would have written it
+    // anyway and the two rules are indistinguishable. Here `updated_at` is put
+    // back to the source value, so `cover_image_id` is the single difference —
+    // and an UPDATE that names only it lets drizzle's `$onUpdate` stamp
+    // `updated_at` with the moment of the repair, replacing the historical value
+    // the migration exists to preserve.
+    await seed();
+    await runGeoBackfill({ mongo: mongoDatabase(), database: getDb(), mode: 'copy' });
+    const sourceUpdatedAt = new Date('2025-01-03T00:00:00.000Z');
+    await getDb()
+      .update(cities)
+      .set({ coverImageId: null, updatedAt: sourceUpdatedAt })
+      .where(eq(cities.id, barcelonaId.toHexString()));
+
+    const report = await runGeoBackfill({
+      mongo: mongoDatabase(),
+      database: getDb(),
+      mode: 'reconcile',
+    });
+    expect(report.reconciled.find((entry) => entry.table === 'cities')?.columns).toEqual({
+      coverImageId: 1,
+    });
+
+    const [barcelona] = await getDb()
+      .select()
+      .from(cities)
+      .where(eq(cities.id, barcelonaId.toHexString()));
+    expect(barcelona.coverImageId).toBe(cityImageId.toHexString());
+    expect(barcelona.updatedAt).toEqual(sourceUpdatedAt);
+  });
+
+  it('--reconcile inserts what is missing as well as repairing what is wrong', async () => {
+    await seed();
+    const report = await runGeoBackfill({
+      mongo: mongoDatabase(),
+      database: getDb(),
+      mode: 'reconcile',
+    });
+    expect(report.copied.map((entry) => [entry.table, entry.inserted])).toEqual([
+      ['images', 1],
+      ['countries', 1],
+      ['regions', 1],
+      ['cities', 3],
+      ['neighborhoods', 1],
+    ]);
+    expect(report.reconciled.every((entry) => entry.updated === 0)).toBe(true);
   });
 
   it('loadSource takes only the geo images, and resolves only referenced covers', async () => {
