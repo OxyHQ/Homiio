@@ -152,12 +152,22 @@ export async function resolveNeighborhoodId(
  *  - `controllers/roomController.getRooms` — rooms are `properties` rows, but
  *    this controller also CREATES and UPDATES them, and writes stay on Mongo for
  *    the dual-run.
+ *  - `controllers/telegramController.sendBulkNotifications` — resolves a city
+ *    filter to `Property.find({ addressId: { $in: … } })` for a broadcast.
  *  - `models/schemas/PropertySchema.statics.search` — part of the Mongoose model
  *    itself.
  *
- * Both move with the property WRITE path, and this function goes with them. Do
- * not add a caller: for anything reading Postgres properties, the predicates in
- * `db/properties/propertyFilters` are the replacement.
+ * All three move with the property WRITE path, and this function goes with them.
+ * Do not add a caller: for anything reading Postgres properties, the predicates
+ * in `db/properties/propertyFilters` are the replacement.
+ *
+ * **The list above is load-bearing and was wrong once already.** It shipped in
+ * #298 naming two of the three — `telegramController` was missed — and an
+ * inventory that under-counts is worse than none, because the whole point of it
+ * is to tell the next reader when the function is finally safe to delete. If
+ * you change this list, `git grep -n resolveGeoFilterAddressIds` is the check;
+ * ignore the two doc-comment mentions in `controllers/property/{list,search}.ts`
+ * and `db/schema/geo.ts`, which name it only to say it is no longer used there.
  *
  * **Its one non-Property caller is gone.** `addressController.searchAddresses`
  * used it to turn a search term into an address-id list and then match
