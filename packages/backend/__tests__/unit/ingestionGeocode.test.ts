@@ -21,8 +21,47 @@ jest.mock('../../services/geocodingService', () => ({
   reverseGeocode: jest.fn(),
 }));
 
-import { Property, Address } from '../../models';
+import { eq } from 'drizzle-orm';
+
+import { getDb } from '../../db/postgres';
+import { addresses, properties } from '../../db/schema';
 import { assertFound } from '../helpers/assertFound';
+import { resetGeoTables } from '../helpers/postgresGeoFixtures';
+
+/** The listing's own row — this suite only ever asserts on scalars. */
+async function propertyRow(id: string) {
+  const [row] = await getDb()
+    .select({
+      addressId: properties.addressId,
+      description: properties.description,
+    })
+    .from(properties)
+    .where(eq(properties.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * The resolved address, with its coordinates as the NAMED columns.
+ *
+ * The Mongo assertions read `address.coordinates.coordinates` — a positional
+ * `[lng, lat]` array whose order nothing enforced. The table has named
+ * `longitude` / `latitude` columns and GENERATES its PostGIS point from them,
+ * so a transposition is unrepresentable rather than merely unlikely; the
+ * assertions below compare the two numbers by name for that reason.
+ */
+async function addressRow(id: string) {
+  const [row] = await getDb()
+    .select({
+      longitude: addresses.longitude,
+      latitude: addresses.latitude,
+      postalCode: addresses.postalCode,
+    })
+    .from(addresses)
+    .where(eq(addresses.id, id))
+    .limit(1);
+  return row ?? null;
+}
 
 const mockedForwardGeocode = forwardGeocode as jest.MockedFunction<typeof forwardGeocode>;
 const mockedReverseGeocode = reverseGeocode as jest.MockedFunction<typeof reverseGeocode>;
@@ -53,11 +92,19 @@ function buildIngestionService(): IngestionService {
   return new IngestionService({ mediaIngest: new ExternalMediaIngest({ fetchImage }) });
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   mockedForwardGeocode.mockReset();
   mockedReverseGeocode.mockReset();
-  // Collections are wiped after every test; drop the in-process geo resolution
-  // cache too so a resolution never returns an id for a now-deleted geo doc.
+  // Postgres persists for the whole jest WORKER, where the in-memory Mongo this
+  // suite ran against was wiped after every test. That difference is not
+  // cosmetic here: the geo tables ARE the shortcut under test —
+  // `resolveCityCentroid` reads a city back rather than geocoding it — so a
+  // city left behind by the previous case makes the NEXT one take the DB path
+  // and issue one geocode where it asserts two. Wiping them is what keeps each
+  // case's geocode count a property of that case.
+  await resetGeoTables();
+  // Drop the in-process resolution cache too, so a resolution never returns an
+  // id for a row the wipe has just deleted.
   clearResolutionCache();
 });
 
@@ -80,9 +127,9 @@ describe('IngestionService.resolveAddress geocode fallbacks', () => {
     expect(mockedForwardGeocode).not.toHaveBeenCalled();
     expect(mockedReverseGeocode).toHaveBeenCalledWith(-0.1276, 51.5034);
 
-    const property = await Property.findById(result.propertyId);
+    const property = await propertyRow(result.propertyId);
     assertFound(property, 'property');
-    expect(property.get('addressId')).toBeTruthy();
+    expect(property.addressId).toBeTruthy();
   });
 
   it('falls back to city-centroid coordinates when street geocode fails', async () => {
@@ -112,9 +159,9 @@ describe('IngestionService.resolveAddress geocode fallbacks', () => {
     expect(mockedForwardGeocode.mock.calls[0]?.[0]).toContain('Unknown Street');
     expect(mockedForwardGeocode.mock.calls[1]?.[0]).toBe('London, United Kingdom');
 
-    const property = await Property.findById(result.propertyId);
+    const property = await propertyRow(result.propertyId);
     assertFound(property, 'property');
-    expect(property.get('addressId')).toBeTruthy();
+    expect(property.addressId).toBeTruthy();
   });
 
   it('reuses a stored City centroid for a placeholder-street listing without a second geocode', async () => {
@@ -166,10 +213,11 @@ describe('IngestionService.resolveAddress geocode fallbacks', () => {
     );
     expect(cityGeocodes).toHaveLength(0);
 
-    const property = await Property.findById(result.propertyId);
+    const property = await propertyRow(result.propertyId);
     assertFound(property, 'property');
-    const address = await Address.findById(property.get('addressId'));
-    expect(address?.coordinates?.coordinates).toEqual([9.9937, 53.5503]);
+    const address = await addressRow(property.addressId);
+    expect(address?.longitude).toBe(9.9937);
+    expect(address?.latitude).toBe(53.5503);
   });
 
   it('skips a listing only when the city cannot be resolved by any means', async () => {
@@ -209,11 +257,11 @@ describe('IngestionService.resolveAddress geocode fallbacks', () => {
     const result = await buildIngestionService().ingest(listing);
 
     expect(result.status).toBe('created');
-    const property = await Property.findById(result.propertyId);
+    const property = await propertyRow(result.propertyId);
     assertFound(property, 'property');
 
-    const address = await Address.findById(property.get('addressId'));
-    expect(address?.postal_code).toBe(EXTERNAL_POSTAL_FALLBACK);
+    const address = await addressRow(property.addressId);
+    expect(address?.postalCode).toBe(EXTERNAL_POSTAL_FALLBACK);
   });
 
   it('ingests two pisos listings with distinct portal coordinates into different geo points', async () => {
@@ -243,16 +291,18 @@ describe('IngestionService.resolveAddress geocode fallbacks', () => {
 
     expect(mockedForwardGeocode).not.toHaveBeenCalled();
 
-    const madridProperty = await Property.findById(madridResult.propertyId);
-    const valladolidProperty = await Property.findById(valladolidResult.propertyId);
-    expect(madridProperty?.addressId).toBeTruthy();
-    expect(valladolidProperty?.addressId).toBeTruthy();
-    expect(String(madridProperty?.addressId)).not.toBe(String(valladolidProperty?.addressId));
+    const madridProperty = await propertyRow(madridResult.propertyId);
+    const valladolidProperty = await propertyRow(valladolidResult.propertyId);
+    assertFound(madridProperty, 'madridProperty');
+    assertFound(valladolidProperty, 'valladolidProperty');
+    expect(madridProperty.addressId).not.toBe(valladolidProperty.addressId);
 
-    const madridAddress = await Address.findById(madridProperty?.addressId);
-    const valladolidAddress = await Address.findById(valladolidProperty?.addressId);
-    expect(madridAddress?.coordinates?.coordinates).toEqual([-3.7083892232908435, 40.41593545782718]);
-    expect(valladolidAddress?.coordinates?.coordinates).toEqual([-4.7216201, 41.6531628]);
+    const madridAddress = await addressRow(madridProperty.addressId);
+    const valladolidAddress = await addressRow(valladolidProperty.addressId);
+    expect(madridAddress?.longitude).toBe(-3.7083892232908435);
+    expect(madridAddress?.latitude).toBe(40.41593545782718);
+    expect(valladolidAddress?.longitude).toBe(-4.7216201);
+    expect(valladolidAddress?.latitude).toBe(41.6531628);
   });
 });
 
@@ -277,7 +327,7 @@ describe('IngestionService external description truncation', () => {
     };
 
     const result = await buildIngestionService().ingest(listing);
-    const property = await Property.findById(result.propertyId);
+    const property = await propertyRow(result.propertyId);
     expect(property?.description).toHaveLength(2000);
     expect(property?.description).toBe('x'.repeat(2000));
   });

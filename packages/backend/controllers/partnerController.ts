@@ -16,14 +16,19 @@
 import {
   COMMISSION_CONFIG,
   PropertyStatus,
-  type Commission as ApiCommission,
+  type Partner as ApiPartner,
   type PartnerMeResponse,
   type PartnerStats,
 } from '@homiio/shared-types';
-import { generateReferralCode } from '../services/commissionService';
+import { generateReferralCode, toCommissionDocument } from '../services/commissionService';
 import config from '../config';
 
-import { Partner, Property, Commission } from '../models';
+import { desc, eq, inArray, sql } from 'drizzle-orm';
+
+import { getDb } from '../db/postgres';
+import { commissions, partners, properties } from '../db/schema';
+import { allOf, findProperties, NEWEST_FIRST, propertyOrderBy } from '../db/properties/propertyReads';
+import { serializeProperty } from '../db/properties/propertySerializer';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse } from '../middlewares/errorHandler';
 
@@ -35,21 +40,37 @@ const ACTIVE_LISTING_STATUSES: ReadonlyArray<string> = [
 /** Commission statuses whose amounts roll up into "pending" earnings. */
 const PENDING_COMMISSION_STATUSES: ReadonlyArray<string> = ['pending', 'approved'];
 
-/**
- * A lean Commission row: the persisted fields plus Mongoose's `_id`/`__v`. The
- * model's `toJSON` only adds an `id` alias (no field is stripped or reshaped), so
- * `{ ...doc, id }` reproduces the exact same response shape without hydrating a
- * full document — see {@link toApiCommission}.
- */
-type LeanCommissionDoc = Omit<ApiCommission, 'id'> & { _id: unknown };
+type PartnerRow = typeof partners.$inferSelect;
 
 /**
- * Map a lean Commission row to the API shape, mirroring the model's `toJSON`
- * transform (`ret.id = ret._id`) so the `.lean()` ledger response is byte-for-
- * byte identical to the hydrated `.toJSON()` one.
+ * Map a `partners` row to the API shape.
+ *
+ * `oxy_user_id` is emitted as `userId`, which the `Partner` contract declares
+ * and the frontend reads. The COLUMN was renamed in the port (every foreign
+ * service's primary key on this schema is spelled `oxy_user_id`, and a column
+ * no gate can see is one that ships unconstrained); the WIRE was not, because a
+ * shipped client cannot be recalled.
  */
-function toApiCommission(doc: LeanCommissionDoc): ApiCommission {
-  return { ...doc, id: String(doc._id) };
+function toApiPartner(row: PartnerRow): ApiPartner {
+  return {
+    id: row.id,
+    userId: row.oxyUserId,
+    referralCode: row.referralCode,
+    status: row.status,
+    points: row.points,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+/** The caller's partner row, or null when they have not joined. */
+async function findPartnerByOxyUserId(oxyUserId: string): Promise<PartnerRow | null> {
+  const [row] = await getDb()
+    .select()
+    .from(partners)
+    .where(eq(partners.oxyUserId, oxyUserId))
+    .limit(1);
+  return row ?? null;
 }
 
 /** Extract the authenticated Oxy user id from a request, or null. */
@@ -88,31 +109,40 @@ function emptyStats(): PartnerStats {
 }
 
 /** Compute live dashboard stats for a partner from their properties + commissions. */
-async function computeStats(partnerId: unknown): Promise<PartnerStats> {
-  const [referredCount, activeListings, commissionAgg] = await Promise.all([
-    Property.countDocuments({ sourcedByPartner: partnerId }),
-    Property.countDocuments({
-      sourcedByPartner: partnerId,
-      status: { $in: ACTIVE_LISTING_STATUSES },
-    }),
-    Commission.aggregate([
-      { $match: { partnerId } },
-      {
-        $group: {
-          _id: '$status',
-          total: { $sum: '$amount' },
-        },
-      },
-    ]),
+async function computeStats(partnerId: string): Promise<PartnerStats> {
+  const db = getDb();
+  const [listingCounts, commissionTotals] = await Promise.all([
+    // Both listing counts in ONE pass. The Mongo version issued two
+    // `countDocuments` over the same index; a filtered aggregate reads the rows
+    // once and cannot report an `activeListings` from a different instant than
+    // its own `referredCount`.
+    db
+      .select({
+        referredCount: sql<number>`count(*)::int`,
+        activeListings: sql<number>`count(*) filter (
+          where ${inArray(properties.status, [...ACTIVE_LISTING_STATUSES] as 'published'[])}
+        )::int`,
+      })
+      .from(properties)
+      .where(eq(properties.sourcedByPartnerId, partnerId)),
+    db
+      .select({ status: commissions.status, total: sql<number>`sum(${commissions.amount})` })
+      .from(commissions)
+      .where(eq(commissions.partnerId, partnerId))
+      .groupBy(commissions.status),
   ]);
+
+  const referredCount = listingCounts[0]?.referredCount ?? 0;
+  const activeListings = listingCounts[0]?.activeListings ?? 0;
 
   let pendingEarnings = 0;
   let paidEarnings = 0;
-  for (const row of commissionAgg as Array<{ _id: string; total: number }>) {
-    if (PENDING_COMMISSION_STATUSES.includes(row._id)) {
-      pendingEarnings += row.total;
-    } else if (row._id === 'paid') {
-      paidEarnings += row.total;
+  for (const row of commissionTotals) {
+    const total = Number(row.total ?? 0);
+    if (PENDING_COMMISSION_STATUSES.includes(row.status)) {
+      pendingEarnings += total;
+    } else if (row.status === 'paid') {
+      paidEarnings += total;
     }
   }
 
@@ -125,15 +155,15 @@ async function computeStats(partnerId: unknown): Promise<PartnerStats> {
   };
 }
 
-/** Assemble the full `PartnerMeResponse` for a (possibly absent) partner doc. */
-async function buildMeResponse(partnerDoc: any): Promise<PartnerMeResponse> {
-  if (!partnerDoc) {
+/** Assemble the full `PartnerMeResponse` for a (possibly absent) partner row. */
+async function buildMeResponse(partner: PartnerRow | null): Promise<PartnerMeResponse> {
+  if (!partner) {
     return { partner: null, link: null, stats: emptyStats() };
   }
-  const stats = await computeStats(partnerDoc._id);
+  const stats = await computeStats(partner.id);
   return {
-    partner: partnerDoc.toJSON(),
-    link: buildReferralLink(partnerDoc.referralCode),
+    partner: toApiPartner(partner),
+    link: buildReferralLink(partner.referralCode),
     stats,
   };
 }
@@ -154,27 +184,31 @@ class PartnerController {
         return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
       }
 
-      let partner = await Partner.findOne({ userId: oxyUserId });
-      if (partner) {
+      const existing = await findPartnerByOxyUserId(oxyUserId);
+      if (existing) {
         // Re-activate a dormant partner; otherwise this is a pure no-op.
-        if (partner.status !== 'active') {
-          partner.status = 'active';
-          await partner.save();
-        }
+        const partner =
+          existing.status === 'active'
+            ? existing
+            : ((
+                await getDb()
+                  .update(partners)
+                  .set({ status: 'active' })
+                  .where(eq(partners.id, existing.id))
+                  .returning()
+              )[0] ?? existing);
         const payload = await buildMeResponse(partner);
         return res.status(200).json(successResponse(payload, 'Already a partner'));
       }
 
       const referralCode = await generateReferralCode(getDisplayName(req));
-      partner = await Partner.create({
-        userId: oxyUserId,
-        referralCode,
-        status: 'active',
-        points: 0,
-      });
+      const [partner] = await getDb()
+        .insert(partners)
+        .values({ oxyUserId, referralCode, status: 'active', points: 0 })
+        .returning();
 
       logger.info('Partner joined', {
-        partnerId: String(partner._id),
+        partnerId: partner.id,
         userId: oxyUserId,
         referralCode,
       });
@@ -198,7 +232,7 @@ class PartnerController {
       if (!oxyUserId) {
         return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
       }
-      const partner = await Partner.findOne({ userId: oxyUserId });
+      const partner = await findPartnerByOxyUserId(oxyUserId);
       const payload = await buildMeResponse(partner);
       return res.json(successResponse(payload, 'Partner profile'));
     } catch (error) {
@@ -218,16 +252,19 @@ class PartnerController {
       if (!oxyUserId) {
         return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
       }
-      const partner = await Partner.findOne({ userId: oxyUserId });
+      const partner = await findPartnerByOxyUserId(oxyUserId);
       if (!partner) {
         return res.json(successResponse({ properties: [] }, 'No referrals'));
       }
-      const properties = await Property.find({ sourcedByPartner: partner._id })
-        .populate('addressId')
-        .sort({ createdAt: -1 });
-      const payload = {
-        properties: properties.map((property: any) => property.toJSON()),
-      };
+      // Through the shared read repository, so a partner's referral list is the
+      // same listing shape (address join, photos, calendar) every other feed
+      // serves — the Mongo version's `.populate('addressId')` produced a
+      // different body from `GET /properties`.
+      const sourced = await findProperties({
+        where: allOf([eq(properties.sourcedByPartnerId, partner.id)]),
+        orderBy: propertyOrderBy(NEWEST_FIRST),
+      });
+      const payload = { properties: sourced.map(serializeProperty) };
       return res.json(successResponse(payload, 'Partner referrals'));
     } catch (error) {
       next(error);
@@ -246,16 +283,16 @@ class PartnerController {
       if (!oxyUserId) {
         return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
       }
-      const partner = await Partner.findOne({ userId: oxyUserId });
+      const partner = await findPartnerByOxyUserId(oxyUserId);
       if (!partner) {
         return res.json(successResponse({ commissions: [] }, 'No earnings'));
       }
-      // Lean read: the Commission model's `toJSON` only aliases `_id`→`id`, so we
-      // reproduce that shape from plain rows (no full-document hydration).
-      const rows = await Commission.find({ partnerId: partner._id })
-        .sort({ createdAt: -1 })
-        .lean<LeanCommissionDoc[]>();
-      const payload = { commissions: rows.map(toApiCommission) };
+      const rows = await getDb()
+        .select()
+        .from(commissions)
+        .where(eq(commissions.partnerId, partner.id))
+        .orderBy(desc(commissions.createdAt));
+      const payload = { commissions: rows.map(toCommissionDocument) };
       return res.json(successResponse(payload, 'Partner earnings'));
     } catch (error) {
       next(error);

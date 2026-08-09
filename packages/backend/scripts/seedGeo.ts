@@ -11,19 +11,22 @@
  * address whose coordinates land in a seeded city reuses the seeded row rather
  * than creating a duplicate).
  *
- * Idempotent: upserts by canonical key (Country.code, Region (countryId,name),
- * City (regionId,name), Neighborhood (cityId,name)). Re-running creates no
- * duplicates and returns the same ids.
+ * Idempotent, and now by CONSTRUCTION rather than by convention: each upsert is
+ * an `INSERT ... ON CONFLICT DO UPDATE` on the table's own unique index
+ * (`countries_code_key`, `regions_country_name_key`, `cities_region_name_key`,
+ * `neighborhoods_city_name_key`). Where Mongo's `findOneAndUpdate({upsert:true})`
+ * could interleave two racers into a duplicate, the index cannot.
  *
  * Exported `seedGeo()` is also called by `seedProperties.ts` so a single
  * `bun run seed:properties` produces a fully-resolved dataset.
  */
 
 import 'dotenv/config';
-import type { Types } from 'mongoose';
-import database from '../database/connection';
+import { sql } from 'drizzle-orm';
 
-import { Country, Region, City, Neighborhood } from '../models';
+import { closePostgres, connectPostgres, getDb } from '../db/postgres';
+import { cities, countries, neighborhoods, regions } from '../db/schema';
+
 
 const SPAIN = { code: 'ES', name: 'Spain', currency: 'EUR', flag: '🇪🇸', defaultLocale: 'es-ES' } as const;
 
@@ -120,60 +123,93 @@ const CITIES: CitySeed[] = [
   },
 ];
 
-async function upsertCountry(): Promise<Types.ObjectId> {
-  const doc = await Country.findOneAndUpdate(
-    { code: SPAIN.code },
-    { $set: { name: SPAIN.name, currency: SPAIN.currency, flag: SPAIN.flag, defaultLocale: SPAIN.defaultLocale, isActive: true } },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
-  );
-  return doc._id;
+async function upsertCountry(): Promise<string> {
+  const [row] = await getDb()
+    .insert(countries)
+    .values({
+      code: SPAIN.code,
+      name: SPAIN.name,
+      currency: SPAIN.currency,
+      flag: SPAIN.flag,
+      defaultLocale: SPAIN.defaultLocale,
+      isActive: true,
+    })
+    .onConflictDoUpdate({
+      target: countries.code,
+      set: {
+        name: SPAIN.name,
+        currency: SPAIN.currency,
+        flag: SPAIN.flag,
+        defaultLocale: SPAIN.defaultLocale,
+        isActive: true,
+      },
+    })
+    .returning({ id: countries.id });
+  return row.id;
 }
 
-async function upsertRegions(countryId: Types.ObjectId): Promise<Map<string, Types.ObjectId>> {
-  const map = new Map<string, Types.ObjectId>();
+async function upsertRegions(countryId: string): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
   for (const region of REGIONS) {
-    const doc = await Region.findOneAndUpdate(
-      { countryId, name: region.name },
-      { $set: { code: region.code, isActive: true } },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
-    map.set(region.name, doc._id);
+    const [row] = await getDb()
+      .insert(regions)
+      .values({ countryId, name: region.name, code: region.code, isActive: true })
+      .onConflictDoUpdate({
+        target: [regions.countryId, regions.name],
+        set: { code: region.code, isActive: true },
+      })
+      .returning({ id: regions.id });
+    map.set(region.name, row.id);
   }
   return map;
 }
 
-async function upsertCities(
-  countryId: Types.ObjectId,
-  regionIds: Map<string, Types.ObjectId>
-): Promise<number> {
+async function upsertCities(countryId: string, regionIds: Map<string, string>): Promise<number> {
   let neighborhoodCount = 0;
   for (const city of CITIES) {
     const regionId = regionIds.get(city.regionName);
     if (!regionId) {
       throw new Error(`Region "${city.regionName}" not seeded for city "${city.name}"`);
     }
-    const cityDoc = await City.findOneAndUpdate(
-      { regionId, name: city.name },
-      {
-        $set: {
+    // Mongo stored a `{lng, lat}` object; the table has NAMED columns, which is
+    // what makes a transposed pair unrepresentable rather than merely unlikely.
+    const [cityRow] = await getDb()
+      .insert(cities)
+      .values({
+        countryId,
+        regionId,
+        name: city.name,
+        longitude: city.coordinates[0],
+        latitude: city.coordinates[1],
+        population: city.population,
+        description: city.description,
+        timezone: city.timezone,
+        currency: SPAIN.currency,
+        isActive: true,
+      })
+      .onConflictDoUpdate({
+        target: [cities.regionId, cities.name],
+        set: {
           countryId,
-          coordinates: { lng: city.coordinates[0], lat: city.coordinates[1] },
+          longitude: city.coordinates[0],
+          latitude: city.coordinates[1],
           population: city.population,
           description: city.description,
           timezone: city.timezone,
           currency: SPAIN.currency,
           isActive: true,
         },
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
+      })
+      .returning({ id: cities.id });
 
     for (const name of city.neighborhoods) {
-      await Neighborhood.findOneAndUpdate(
-        { cityId: cityDoc._id, name },
-        { $set: { isActive: true } },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
+      await getDb()
+        .insert(neighborhoods)
+        .values({ cityId: cityRow.id, name, isActive: true })
+        .onConflictDoUpdate({
+          target: [neighborhoods.cityId, neighborhoods.name],
+          set: { isActive: true },
+        });
       neighborhoodCount += 1;
     }
   }
@@ -194,15 +230,17 @@ export async function seedGeo(): Promise<{ countries: number; regions: number; c
 /** CLI entrypoint: wipe + reseed the geo hierarchy standalone. */
 async function run(): Promise<void> {
   console.log('[seed-geo] Connecting to database...');
-  await database.connect();
+  await connectPostgres();
 
-  console.log('[seed-geo] Wiping existing geo collections...');
-  await Promise.all([
-    Country.deleteMany({}),
-    Region.deleteMany({}),
-    City.deleteMany({}),
-    Neighborhood.deleteMany({}),
-  ]);
+  // ONE statement, and it has to be: `addresses`, `properties` and `images` all
+  // reference this hierarchy, so four independent `DELETE`s would fail on the
+  // first table that something still points at. `CASCADE` is what the Mongo
+  // version was silently assuming when it deleted four collections in parallel
+  // and left every address pointing at a city that no longer existed.
+  console.log('[seed-geo] Wiping existing geo tables...');
+  await getDb().execute(
+    sql`truncate table ${countries}, ${regions}, ${cities}, ${neighborhoods} cascade`,
+  );
 
   const summary = await seedGeo();
   console.log('[seed-geo] ----------------------------------------');
@@ -223,7 +261,7 @@ if (require.main === module) {
     })
     .finally(async () => {
       try {
-        await database.disconnect();
+        await closePostgres();
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         console.warn('[seed-geo] disconnect error:', message);

@@ -13,7 +13,6 @@
  * User-Agent (mirroring the seed helper).
  */
 
-import type { Types } from 'mongoose';
 import type { NormalizedRemoteImage, PropertyImageRef } from '@homiio/shared-types';
 import {
   createProxiedFetch,

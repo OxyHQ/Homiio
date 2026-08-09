@@ -10,7 +10,6 @@ import { reconcileModerationReports } from './moderation/ModerationReconciliatio
 import { expireShareLinks } from '../db/conversations/conversationRepository';
 import { getDb } from '../db/postgres';
 import config from '../config';
-import { getDb } from '../db/postgres';
 import { syncAllHasImages } from '../db/hasImages';
 
 // Initialize services

@@ -609,17 +609,42 @@ export async function findPropertyBySource(
   sourceId: string,
   db: DatabaseOrTransaction = getDb(),
 ): Promise<{ id: string; addressId: string; imageCount: number } | null> {
+  // A LEFT JOIN + aggregate, NOT a correlated subquery in the projection.
+  //
+  // That is not a style preference — the subquery form is silently WRONG here,
+  // and the reason is narrow enough to be worth stating exactly. **Inside a
+  // `.select({...})` PROJECTION, drizzle renders an interpolated column with no
+  // table qualification** (the outer statement has one FROM table, so it does
+  // not need it). Carried into a subquery that names a second table, that
+  // stripping is fatal:
+  //
+  //   sql`(select count(*) from ${propertyImages}
+  //        where ${propertyImages.propertyId} = ${properties.id})`
+  //
+  // emits `where "property_id" = "id"`, and inside the subquery `"id"` resolves
+  // to `property_images.id` — the correlation binds to the WRONG table, the
+  // predicate is never true, and the count is 0 for every row. Valid SQL,
+  // nothing raised, a plausible number returned. Measured: a listing with two
+  // photo rows reported `imageCount: 0`, which made the ingest re-download and
+  // re-host media it already had on every re-sync.
+  //
+  // A standalone `sql` passed to `.execute()` does NOT have this problem —
+  // measured on the same driver, it renders `"addresses"."city_id" =
+  // "cities"."id"` fully qualified. So the rule is about the projection
+  // context, not about `sql` templates in general.
   const rows = await db
     .select({
       id: properties.id,
       addressId: properties.addressId,
-      imageCount: sql<number>`(
-        select count(*)::int from ${propertyImages}
-        where ${propertyImages.propertyId} = ${properties.id}
-      )`,
+      // `count(<column>)` rather than `count(*)`: the LEFT JOIN produces one row
+      // with a NULL photo for a listing that has none, and `count(*)` would
+      // report that as 1.
+      imageCount: sql<number>`count(${propertyImages.id})::int`,
     })
     .from(properties)
+    .leftJoin(propertyImages, eq(propertyImages.propertyId, properties.id))
     .where(and(eq(properties.source, source as 'internal'), eq(properties.sourceId, sourceId)))
+    .groupBy(properties.id, properties.addressId)
     .limit(1);
   return rows[0] ?? null;
 }
@@ -653,44 +678,30 @@ export async function expireExternalProperty(
 }
 
 /**
- * Record a moderation restriction, or lift one.
+ * Persist a price-ethics verdict. Fire-and-forget by its caller's contract.
  *
- * The three columns move together because they are one fact: a listing is
- * restricted BY a decision AT a time, and a restriction with no decision id is
- * an enforcement nobody can trace back to a jury. Lifting clears all three.
+ * `scoredAt` is coerced here because this IS the boundary: the domain value is
+ * an ISO STRING (`PropertyPriceEthics.scoredAt`, which is what the wire
+ * declares and what `computePriceEthics` produces) and the column is
+ * `timestamptz`, which drizzle sends a `Date` to. Passing the string through
+ * fails at runtime with `value.toISOString is not a function` — inside a
+ * fire-and-forget scorer, so it surfaces only as a log line while every
+ * listing silently keeps whatever verdict it had.
  */
-export async function setPropertyModerationRestriction(
-  propertyId: string,
-  restriction: { restricted: true; decisionId: string } | { restricted: false },
-): Promise<boolean> {
-  const columns = restriction.restricted
-    ? {
-        moderationRestricted: true,
-        moderationRestrictedAt: new Date(),
-        moderationRestrictedByDecisionId: restriction.decisionId,
-      }
-    : {
-        moderationRestricted: false,
-        moderationRestrictedAt: null,
-        moderationRestrictedByDecisionId: null,
-      };
-
-  const updated = await getDb()
-    .update(properties)
-    .set({ ...columns, updatedAt: new Date() })
-    .where(eq(properties.id, propertyId))
-    .returning({ id: properties.id });
-  return updated.length > 0;
-}
-
-/** Persist a price-ethics verdict. Fire-and-forget by its caller's contract. */
 export async function setPropertyPriceEthics(
   propertyId: string,
   priceEthics: Record<string, unknown>,
 ): Promise<void> {
+  const scoredAt = priceEthics.scoredAt;
+  const columns = toPropertyColumns({
+    priceEthics: {
+      ...priceEthics,
+      scoredAt: typeof scoredAt === 'string' ? new Date(scoredAt) : scoredAt,
+    },
+  });
   await getDb()
     .update(properties)
-    .set({ ...toPropertyColumns({ priceEthics }), updatedAt: new Date() })
+    .set({ ...columns, updatedAt: new Date() })
     .where(eq(properties.id, propertyId));
 }
 

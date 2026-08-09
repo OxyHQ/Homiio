@@ -14,7 +14,7 @@
  * denormalized already exists as `images.(entity_type, entity_id)`.
  */
 
-import { and, eq, gt, isNull, ne, or, sql } from 'drizzle-orm';
+import { and, eq, gt, isNull, ne, or } from 'drizzle-orm';
 
 import { getDb } from '../db/postgres';
 import { cities, countries, images } from '../db/schema';

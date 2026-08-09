@@ -262,10 +262,13 @@ export class IngestionService {
           id: properties.id,
           cityId: addresses.cityId,
           description: properties.description,
-          imageCount: sql<number>`(
-            select count(*)::int from ${propertyImages}
-            where ${propertyImages.propertyId} = ${properties.id}
-          )`,
+          // Aggregated over a LEFT JOIN, never a correlated subquery in the
+          // projection: drizzle renders a column UNQUALIFIED inside a `sql`
+          // template, so the correlation silently binds to the subquery's own
+          // table and every count comes back 0. See the same note on
+          // `findPropertyBySource`. Here it would have made "prefer the
+          // duplicate with the most images" always pick the first candidate.
+          imageCount: sql<number>`count(${propertyImages.id})::int`,
           type: properties.type,
           bedrooms: properties.bedrooms,
           squareFootage: properties.squareFootage,
@@ -278,6 +281,7 @@ export class IngestionService {
         })
         .from(properties)
         .innerJoin(addresses, eq(properties.addressId, addresses.id))
+        .leftJoin(propertyImages, eq(propertyImages.propertyId, properties.id))
         .where(
           and(
             eq(properties.isExternal, true),
@@ -288,6 +292,24 @@ export class IngestionService {
             eq(addresses.cityId, cityId),
             this.buildPriceFilter(incoming),
           ),
+        )
+        // The photo LEFT JOIN multiplies each candidate by its photo count, so
+        // the grouping is what keeps `LIMIT` counting CANDIDATES rather than
+        // photo rows — a listing with 30 photos would otherwise consume the
+        // whole budget on its own.
+        .groupBy(
+          properties.id,
+          addresses.cityId,
+          properties.description,
+          properties.type,
+          properties.bedrooms,
+          properties.squareFootage,
+          properties.longTermRentMonthlyAmount,
+          properties.longTermRentCurrency,
+          properties.shortTermRentNightlyRate,
+          properties.shortTermRentCurrency,
+          properties.salePrice,
+          properties.saleCurrency,
         )
         .limit(DEDUP_CANDIDATE_LIMIT);
       if (candidates.length === 0) return null;

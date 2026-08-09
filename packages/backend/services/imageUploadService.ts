@@ -3,7 +3,6 @@ import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import { promises as fs, realpathSync } from 'fs';
-import type { Document, Types } from 'mongoose';
 import type {
   ImageEntityType,
   ImageVariantKeys,

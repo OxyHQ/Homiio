@@ -30,6 +30,8 @@ import { syncHasImages } from '../../db/hasImages';
 import {
   addresses,
   agencies,
+  commissions,
+  partners,
   cities,
   countries,
   images,
@@ -95,6 +97,32 @@ export async function resetGeoTables(): Promise<void> {
   await db.delete(regions);
   await db.delete(countries);
   await db.delete(images);
+}
+
+/**
+ * Clear the partner program's own tables.
+ *
+ * SEPARATE from {@link resetGeoTables} rather than folded into it, because the
+ * two answer different questions and a suite should say which it needs.
+ *
+ * **Call this BEFORE `resetGeoTables()`, not after.** Both of `commissions`'
+ * references are ON DELETE **RESTRICT**, so a commission still standing makes
+ * `delete from properties` RAISE — a commission is a booked payout, not a copy
+ * of the listing that earned it. `partners` can go in the same breath because
+ * `properties.sourced_by_partner_id` is SET NULL, which is the whole point of
+ * that action: attribution is not ownership.
+ *
+ * The reason a suite needs this at all is worth stating: Postgres persists for
+ * the whole jest WORKER, where the in-memory Mongo this replaced was wiped
+ * between tests by a global `afterEach`. A partner-program suite that re-joins
+ * the same Oxy user in two tests therefore meets the row the previous test
+ * created — measured, as a points total of 200 where the test asserted 100,
+ * which reads exactly like a broken idempotency guard and is not one.
+ */
+export async function resetPartnerTables(): Promise<void> {
+  const db = getDb();
+  await db.delete(commissions);
+  await db.delete(partners);
 }
 
 export interface GeoChain {

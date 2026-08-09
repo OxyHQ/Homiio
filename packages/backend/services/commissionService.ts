@@ -17,12 +17,16 @@ import {
   COMMISSION_CONFIG,
   POINTS_CONFIG,
   commissionAmount,
+  type Commission as ApiCommission,
   type CommissionBasis,
   type CommissionOffering,
 } from '@homiio/shared-types';
 import { OfferingType, PropertyStatus } from '@homiio/shared-types';
 
-import { Partner, Commission } from '../models';
+import { eq, sql } from 'drizzle-orm';
+
+import { getDb } from '../db/postgres';
+import { commissions, partners } from '../db/schema';
 import { logger } from '../middlewares/logging';
 
 /**
@@ -30,9 +34,18 @@ import { logger } from '../middlewares/logging';
  * callers consume (the Mongoose model adds the rest). `toJSON()` yields the
  * API-shaped {@link Commission}.
  */
-export interface CommissionDocument {
-  _id: unknown;
-  toJSON(): unknown;
+/**
+ * A persisted commission, in the shape callers put on the wire.
+ *
+ * `toJSON()` is kept because `markPropertyTransacted` calls it, and it returns
+ * the API shape rather than the ROW — the four flattened `basis_*` columns are
+ * re-nested into the `basis` sub-object the contract declares, the same way
+ * `db/properties/propertySerializer` re-nests the twelve property subdocuments.
+ * Returning the row here was a real wire regression: `commission.basis` came
+ * back `undefined` on `POST /properties/:id/mark-transacted`.
+ */
+export interface CommissionDocument extends ApiCommission {
+  toJSON(): ApiCommission;
 }
 
 /** Result of computing a partner payout for a single closed deal. */
@@ -43,6 +56,52 @@ export interface ComputedCommission {
   currency: string;
   /** Audit breakdown of how the payout was derived (shared with the API shape). */
   basis: CommissionBasis;
+}
+
+type CommissionRow = typeof commissions.$inferSelect;
+
+/** Build the API representation of one commission, plus the `toJSON` callers use. */
+export function toCommissionDocument(row: CommissionRow): CommissionDocument {
+  const body: ApiCommission = {
+    id: row.id,
+    partnerId: row.partnerId,
+    propertyId: row.propertyId,
+    amount: row.amount,
+    currency: row.currency,
+    status: row.status,
+    // ISO strings, which is what the contract declares. The Mongo path emitted
+    // `Date` objects and let `res.json` stringify them — same bytes on the
+    // wire, but a type that was never true.
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+    basis:
+      row.basisKind === 'percentOfMonthlyRent'
+        ? {
+            offering: row.basisOffering,
+            dealValue: row.basisDealValue,
+            kind: row.basisKind,
+            rate: row.basisRate ?? 0,
+          }
+        : {
+            offering: row.basisOffering,
+            dealValue: row.basisDealValue,
+            kind: row.basisKind,
+            flat: row.basisFlat ?? 0,
+          },
+  };
+  return { ...body, toJSON: () => body };
+}
+
+/** One commission by the property it closed, or null. */
+export async function findCommissionByProperty(
+  propertyId: string,
+): Promise<CommissionDocument | null> {
+  const [row] = await getDb()
+    .select()
+    .from(commissions)
+    .where(eq(commissions.propertyId, propertyId))
+    .limit(1);
+  return row ? toCommissionDocument(row) : null;
 }
 
 /** Minimal shape of a property document this service reads. */
@@ -182,13 +241,19 @@ export async function onPropertyTransacted(
     return null;
   }
 
-  // Idempotency: one commission per property (also guarded by a unique index).
-  const existing: CommissionDocument | null = await Commission.findOne({ propertyId });
+  // Idempotency: one commission per property. `commissions_property_id_key`
+  // is what actually guarantees it — this read only avoids the round trip and
+  // returns the existing row rather than raising on the second close.
+  const existing = await findCommissionByProperty(String(propertyId));
   if (existing) {
     return existing;
   }
 
-  const partner = await Partner.findById(property.sourcedByPartner);
+  const [partner] = await getDb()
+    .select({ id: partners.id, points: partners.points })
+    .from(partners)
+    .where(eq(partners.id, String(property.sourcedByPartner)))
+    .limit(1);
   if (!partner) {
     logger.warn('onPropertyTransacted: sourcing partner not found', {
       propertyId: String(propertyId),
@@ -208,28 +273,49 @@ export async function onPropertyTransacted(
 
   const computed = computeCommission(basis.offering, basis.dealValue);
 
-  // Closed deals create the commission as `approved` (payout is Phase 2).
-  const commission: CommissionDocument = await Commission.create({
-    partnerId: partner._id,
-    propertyId,
-    amount: computed.amount,
-    currency: computed.currency,
-    basis: computed.basis,
-    status: 'approved',
+  const earnedBonus = Math.floor(computed.amount / POINTS_EARNED_STEP) * POINTS_CONFIG.perThousandEarned;
+  const pointsAwarded = POINTS_CONFIG.perClosedDeal + earnedBonus;
+
+  // The commission row and the points award in ONE transaction. They are one
+  // fact — a partner is awarded points BECAUSE a deal closed — and committing
+  // them separately would let a crash between the two leave a commission whose
+  // points were never granted, with nothing to detect it.
+  const commission = await getDb().transaction(async (tx) => {
+    // Closed deals create the commission as `approved` (payout is Phase 2).
+    const [row] = await tx
+      .insert(commissions)
+      .values({
+        partnerId: partner.id,
+        propertyId: String(propertyId),
+        amount: computed.amount,
+        currency: computed.currency as 'EUR',
+        basisOffering: computed.basis.offering,
+        basisDealValue: computed.basis.dealValue,
+        basisKind: computed.basis.kind,
+        basisRate: computed.basis.kind === 'percentOfMonthlyRent' ? computed.basis.rate : null,
+        basisFlat: computed.basis.kind === 'flat' ? computed.basis.flat : null,
+        status: 'approved',
+      })
+      .returning();
+
+    // Award gamification points: a flat per-deal base plus a per-1,000-earned
+    // bonus. Incremented IN SQL rather than read-modify-written, so two closes
+    // landing together cannot lose one partner's award.
+    await tx
+      .update(partners)
+      .set({ points: sql`${partners.points} + ${pointsAwarded}` })
+      .where(eq(partners.id, partner.id));
+
+    return toCommissionDocument(row);
   });
 
-  // Award gamification points: a flat per-deal base plus a per-1,000-earned bonus.
-  const earnedBonus = Math.floor(computed.amount / POINTS_EARNED_STEP) * POINTS_CONFIG.perThousandEarned;
-  partner.points += POINTS_CONFIG.perClosedDeal + earnedBonus;
-  await partner.save();
-
   logger.info('Commission created on property close', {
-    commissionId: String(commission._id),
+    commissionId: commission.id,
     propertyId: String(propertyId),
-    partnerId: String(partner._id),
+    partnerId: partner.id,
     offering: basis.offering,
     amount: computed.amount,
-    pointsAwarded: POINTS_CONFIG.perClosedDeal + earnedBonus,
+    pointsAwarded,
   });
 
   return commission;
@@ -271,8 +357,12 @@ export async function generateReferralCode(nameOrUsername: string | undefined | 
 
   for (let attempt = 0; attempt < REFERRAL_MAX_ATTEMPTS; attempt += 1) {
     const candidate = `${base}-${randomSuffix()}`;
-    const clash = await Partner.exists({ referralCode: candidate });
-    if (!clash) {
+    const clash = await getDb()
+      .select({ id: partners.id })
+      .from(partners)
+      .where(eq(partners.referralCode, candidate))
+      .limit(1);
+    if (clash.length === 0) {
       return candidate;
     }
   }

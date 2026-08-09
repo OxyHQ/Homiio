@@ -2,7 +2,7 @@
  * Partner earn close-deal loop (no Stripe Connect).
  *
  * Exercises the full manual referral-commission path end to end against the
- * real controllers + models on the in-memory Mongo:
+ * real controllers against a REAL Postgres:
  *
  *   join (partner)  →  create a property carrying the partner's referralCode
  *                   →  the property owner marks it transacted
@@ -25,14 +25,37 @@ import {
 
 import { createProperty } from '../../controllers/property/create';
 import { markPropertyTransacted } from '../../controllers/property/transact';
-import { createAddress, models } from '../helpers/factories';
+import { eq } from 'drizzle-orm';
+
+import { createAddress } from '../helpers/factories';
+import { getDb } from '../../db/postgres';
+import { commissions as commissionsTable, partners, properties } from '../../db/schema';
+import { findPropertyById } from '../../db/properties/propertyReads';
+import { resetGeoTables, resetPartnerTables } from '../helpers/postgresGeoFixtures';
 
 import partnerController from '../../controllers/partnerController';
 import roomController from '../../controllers/roomController';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { serializeWireIds } from '../../middlewares/wireIds';
 import { assertFound } from '../helpers/assertFound';
-const { Partner, Commission, Property } = models;
+
+/** The partner row behind a referral code. */
+async function partnerByCode(referralCode: string) {
+  const [row] = await getDb()
+    .select()
+    .from(partners)
+    .where(eq(partners.referralCode, referralCode))
+    .limit(1);
+  return row ?? null;
+}
+
+/** Every commission booked against a listing. */
+async function commissionsFor(propertyId: string) {
+  return getDb()
+    .select()
+    .from(commissionsTable)
+    .where(eq(commissionsTable.propertyId, propertyId));
+}
 
 /** Fake-auth app that injects `req.user.id` / `req.userId` for one Oxy user. */
 function buildApp(oxyUserId: string): Express {
@@ -66,10 +89,23 @@ async function rentCreateBody(referralCode?: string) {
     bathrooms: 1,
     offerings: [OfferingType.LONG_TERM_RENT],
     longTermRent: { monthlyAmount: 1200, currency: 'EUR' },
-    addressId: address._id,
+    addressId: address.id,
     ...(referralCode ? { referralCode } : {}),
   };
 }
+
+// Postgres persists for the whole jest worker, where the in-memory Mongo this
+// suite used to run against was wiped between tests. Every case here joins as
+// the SAME Oxy user, so without this reset the second one meets the first's
+// partner row — and its points assertion fails by exactly one award, which
+// reads as a broken idempotency guard rather than as leftover state.
+beforeEach(async () => {
+  // Partners FIRST: both of `commissions`' references are ON DELETE RESTRICT,
+  // so a booked commission makes the listing delete inside `resetGeoTables`
+  // raise.
+  await resetPartnerTables();
+  await resetGeoTables();
+});
 
 describe('partner earn close-deal loop', () => {
   it('join → create with referralCode → mark-transacted creates one commission + points', async () => {
@@ -89,12 +125,14 @@ describe('partner earn close-deal loop', () => {
     const propertyId: string = createRes.body.data.id;
 
     // The listing is attributed to the sourcing partner.
-    const partner = await Partner.findOne({ referralCode });
+    const partner = await partnerByCode(referralCode);
     assertFound(partner, 'partner');
-    const sourced = await Property.findById(propertyId);
+    const sourced = await findPropertyById(propertyId);
     assertFound(sourced, 'sourced');
-    expect(String(sourced.sourcedByPartner)).toBe(String(partner._id));
-    expect(sourced.sourcedByReferralCode).toBe(referralCode);
+    // The attribution is a real FOREIGN KEY to `partners.id` now, so a listing
+    // could not carry an id no partner row holds even if the lookup were wrong.
+    expect(sourced.property.sourcedByPartnerId).toBe(partner.id);
+    expect(sourced.property.sourcedByReferralCode).toBe(referralCode);
 
     // The owner closes the deal (status inferred from offerings → rented).
     const markRes = await request(ownerApp)
@@ -111,11 +149,15 @@ describe('partner earn close-deal loop', () => {
     expect(markRes.body.data.commission.status).toBe('approved');
     expect(markRes.body.data.commission.basis.offering).toBe('rent');
 
-    const commissions = await Commission.find({ propertyId });
+    const commissions = await commissionsFor(propertyId);
     expect(commissions).toHaveLength(1);
 
     // Points: the flat per-deal base (a €36 payout earns no per-1,000 bonus).
-    const reloadedPartner = await Partner.findById(partner._id);
+    const [reloadedPartner] = await getDb()
+      .select()
+      .from(partners)
+      .where(eq(partners.id, partner.id))
+      .limit(1);
     assertFound(reloadedPartner, 'reloadedPartner');
     expect(reloadedPartner.points).toBe(POINTS_CONFIG.perClosedDeal);
   });
@@ -146,10 +188,10 @@ describe('partner earn close-deal loop', () => {
     const secondCommissionId = second.body.data.commission.id;
     expect(String(secondCommissionId)).toBe(String(firstCommissionId));
 
-    const commissions = await Commission.find({ propertyId });
+    const commissions = await commissionsFor(propertyId);
     expect(commissions).toHaveLength(1);
 
-    const partner = await Partner.findOne({ referralCode });
+    const partner = await partnerByCode(referralCode);
     assertFound(partner, 'partner');
     expect(partner.points).toBe(POINTS_CONFIG.perClosedDeal);
   });
@@ -168,7 +210,7 @@ describe('partner earn close-deal loop', () => {
     expect(markRes.body.data.property.status).toBe(PropertyStatus.RENTED);
     expect(markRes.body.data.commission).toBeNull();
 
-    const commissions = await Commission.find({ propertyId });
+    const commissions = await commissionsFor(propertyId);
     expect(commissions).toHaveLength(0);
   });
 
@@ -179,43 +221,51 @@ describe('partner earn close-deal loop', () => {
     const partnerApp = buildApp('oxy-partner');
     const joinRes = await request(partnerApp).post('/partners/join');
     const referralCode: string = joinRes.body.data.partner.referralCode;
-    const partner = await Partner.findOne({ referralCode });
+    const partner = await partnerByCode(referralCode);
     assertFound(partner, 'partner');
 
     const address = await createAddress();
-    const parent = await Property.create({
-      oxyUserId: 'oxy-owner',
-      addressId: address._id,
-      type: PropertyType.APARTMENT,
-      bedrooms: 3,
-      bathrooms: 1,
-      offerings: [OfferingType.LONG_TERM_RENT],
-      longTermRent: { monthlyAmount: 2000, currency: 'EUR' },
-      status: PropertyStatus.PUBLISHED,
-    });
+    const [parent] = await getDb()
+      .insert(properties)
+      .values({
+        oxyUserId: 'oxy-owner',
+        addressId: address.id,
+        type: PropertyType.APARTMENT,
+        bedrooms: 3,
+        bathrooms: 1,
+        offerings: [OfferingType.LONG_TERM_RENT],
+        longTermRentMonthlyAmount: 2000,
+        longTermRentCurrency: 'EUR',
+        status: PropertyStatus.PUBLISHED,
+      })
+      .returning({ id: properties.id });
     // Seed a room directly with the partner attribution (the room create flow
     // never accepts a referral code, but the trigger must still fire if a room
     // is sourced).
-    const room = await Property.create({
-      oxyUserId: 'oxy-owner',
-      addressId: address._id,
-      parentPropertyId: parent._id,
-      type: PropertyType.ROOM,
-      offerings: [OfferingType.LONG_TERM_RENT],
-      longTermRent: { monthlyAmount: 800, currency: 'EUR' },
-      status: PropertyStatus.PUBLISHED,
-      sourcedByPartner: partner._id,
-      sourcedByReferralCode: referralCode,
-    });
+    const [room] = await getDb()
+      .insert(properties)
+      .values({
+        oxyUserId: 'oxy-owner',
+        addressId: address.id,
+        parentPropertyId: parent.id,
+        type: PropertyType.ROOM,
+        offerings: [OfferingType.LONG_TERM_RENT],
+        longTermRentMonthlyAmount: 800,
+        longTermRentCurrency: 'EUR',
+        status: PropertyStatus.PUBLISHED,
+        sourcedByPartnerId: partner.id,
+        sourcedByReferralCode: referralCode,
+      })
+      .returning({ id: properties.id });
 
     const ownerApp = buildApp('oxy-owner');
     const res = await request(ownerApp)
-      .put(`/rooms/${room._id}`)
+      .put(`/rooms/${room.id}`)
       .send({ status: PropertyStatus.RENTED });
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe(PropertyStatus.RENTED);
 
-    const commissions = await Commission.find({ propertyId: room._id });
+    const commissions = await commissionsFor(room.id);
     expect(commissions).toHaveLength(1);
     expect(commissions[0].amount).toBe(commissionAmount('rent', 800));
   });
@@ -239,7 +289,7 @@ describe('partner earn close-deal loop', () => {
     expect(markRes.status).toBe(403);
     expect(markRes.body.error.code).toBe('FORBIDDEN');
 
-    const commissions = await Commission.find({ propertyId });
+    const commissions = await commissionsFor(propertyId);
     expect(commissions).toHaveLength(0);
   });
 });
