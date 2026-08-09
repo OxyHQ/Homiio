@@ -5,7 +5,7 @@ const router = express.Router();
 // typed `unknown`, so every route below was registering an untyped value.
 import * as propertyController from '../controllers/property';
 import * as profileController from '../controllers/profile';
-import reportController from '../controllers/reportController';
+import { createListingReport } from '../controllers/reportController';
 import * as validation from '../middlewares/validation';
 import { asyncHandler } from '../middlewares/errorHandler';
 
@@ -25,7 +25,7 @@ router.post("/:propertyId/mark-transacted", asyncHandler(propertyController.mark
 router.post("/:propertyId/track-view", asyncHandler(profileController.trackPropertyView));
 
 // Trust & safety: file a report against a listing (requires authentication)
-router.post("/:propertyId/report", asyncHandler(reportController.createListingReport));
+router.post("/:propertyId/report", asyncHandler(createListingReport));
 
 // User properties (requires authentication)
 router.get("/me/list", asyncHandler(propertyController.getMyProperties));

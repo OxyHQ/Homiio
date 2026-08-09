@@ -22,10 +22,8 @@ import config from '../../config';
 import { logger } from '../../middlewares/logging';
 import { applyDecisionOutboxEvent } from './ModerationDecisionWorker';
 import { deliverReportOutboxEvent } from './ModerationDeliveryWorker';
-import {
-  dispatchModerationOutbox,
-  type ModerationOutboxEvent,
-} from './ModerationOutboxService';
+import { dispatchModerationOutbox } from './ModerationOutboxService';
+import type { ModerationOutboxEvent } from '../../db/moderation/moderationOutboxRepository';
 
 /** Route an event to the worker that owns its kind. */
 export async function handleModerationOutboxEvent(

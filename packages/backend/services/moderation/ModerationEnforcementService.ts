@@ -21,7 +21,6 @@
  * trail is real rather than a log line saying a decision was seen.
  */
 
-import mongoose from 'mongoose';
 import type { Decision } from '@oxyhq/crowdsource-contracts';
 import {
   ModerationReportedType,
@@ -29,10 +28,19 @@ import {
   type ModerationEnforcementAction,
   type ModerationEnforcementMode,
 } from '@homiio/shared-types';
-import ModerationEnforcement, {
-  type IModerationEnforcement,
-} from '../../models/ModerationEnforcement';
-import { Property, Review } from '../../models';
+import {
+  claimEnforcement,
+  findLatestAppliedRestriction,
+  findPropertyRestriction,
+  findReviewModerationStatus,
+  hasAppliedEnforcement,
+  markEnforcementApplied,
+  markEnforcementSkipped,
+  releaseEnforcementClaim,
+  setPropertyRestriction,
+  setReviewModerationStatus,
+  type ModerationEnforcementRow,
+} from '../../db/moderation/moderationEnforcementRepository';
 import config from '../../config';
 import { logger } from '../../middlewares/logging';
 import { planEnforcement, type PlannedEnforcementAction } from './enforcementPlan';
@@ -54,55 +62,31 @@ export interface EnforcementOutcome {
   result: 'applied' | 'recorded' | 'duplicate';
 }
 
-function isDuplicateKeyError(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    Number((error as { code?: unknown }).code) === 11000
-  );
+/**
+ * What was there before, so a reversal can put it back.
+ *
+ * The two columns are flattened on the row (`previous_state_*`); this keeps the
+ * nested shape the effect functions return, and the repository maps it.
+ */
+interface PreviousState {
+  readonly propertyModerationRestricted?: boolean;
+  /**
+   * `NonNullable`, because the COLUMN is nullable and the field is not.
+   *
+   * On the row, NULL means "this action changed nothing, so there is nothing to
+   * put back". Here the property is simply absent in that case, and letting the
+   * column's `null` leak into this type would make "no previous state" and "a
+   * previous state of null" two spellings of one thing — which is exactly the
+   * ambiguity a reversal cannot afford.
+   */
+  readonly reviewModerationStatus?: NonNullable<
+    ModerationEnforcementRow['previousStateReviewModerationStatus']
+  >;
 }
-
-/** What was there before, so a reversal can put it back. */
-type PreviousState = IModerationEnforcement['previousState'];
 
 type EffectResult =
   | { changed: true; previousState?: PreviousState }
   | { changed: false; reason: string };
-
-interface PropertyState {
-  moderation?: { restricted?: boolean };
-}
-
-interface ReviewState {
-  moderationStatus?: string;
-}
-
-/**
- * Whether an earlier APPLIED enforcement of this action is on record for this
- * object.
- *
- * The question a reversal has to answer: did MODERATION do this, or was it
- * already true for some other reason? A review sitting at `under_review` because
- * three users reported it is the community's own state, and lifting it because a
- * jury said "no violation" about something else would undo a signal moderation
- * never set.
- */
-async function hasAppliedEnforcement(
-  subject: EnforcementSubject,
-  action: ModerationEnforcementAction,
-): Promise<boolean> {
-  const record = await ModerationEnforcement.findOne({
-    subjectType: subject.type,
-    subjectId: subject.id,
-    action,
-    applied: true,
-  })
-    .sort({ createdAt: -1 })
-    .select('_id')
-    .lean<{ _id: mongoose.Types.ObjectId } | null>();
-  return record !== null;
-}
 
 /**
  * The effect on a property listing.
@@ -122,43 +106,36 @@ async function applyToProperty(
   subject: EnforcementSubject,
   decision: Decision,
 ): Promise<EffectResult> {
-  if (!mongoose.isValidObjectId(subject.id)) {
-    return { changed: false, reason: 'The reported listing id is not a valid identifier' };
+  // The Mongo version opened with `if (!mongoose.isValidObjectId(subject.id))`.
+  // That guard is deliberately NOT ported: `db/ids.ts` states the rule, and
+  // post-cutover every id `generatedId()` mints is a uuid v7, for which
+  // `isValidObjectId` is FALSE — so keeping it would silently make every listing
+  // created after the cutover permanently un-enforceable while still reporting
+  // `changed: false` as though it had looked. The read below already answers "no
+  // such row", for every id shape.
+  const restricted = await findPropertyRestriction(subject.id);
+  if (restricted === undefined) {
+    return { changed: false, reason: 'The reported listing no longer exists' };
   }
-  const current = await Property.findById(subject.id)
-    .select('moderation.restricted')
-    .lean<PropertyState | null>();
-  if (!current) return { changed: false, reason: 'The reported listing no longer exists' };
 
   switch (action) {
     case 'restrict': {
-      if (current.moderation?.restricted === true) {
+      if (restricted) {
         return { changed: false, reason: 'The listing was already restricted' };
       }
-      await Property.updateOne(
-        { _id: subject.id },
-        {
-          $set: {
-            'moderation.restricted': true,
-            'moderation.restrictedAt': new Date(),
-            'moderation.restrictedByDecisionId': decision.id,
-          },
-        },
-      );
+      await setPropertyRestriction({
+        propertyId: subject.id,
+        restricted: true,
+        decisionId: decision.id,
+      });
       return { changed: true, previousState: { propertyModerationRestricted: false } };
     }
 
     case 'restore': {
-      if (current.moderation?.restricted !== true) {
+      if (!restricted) {
         return { changed: false, reason: 'The listing was not restricted' };
       }
-      await Property.updateOne(
-        { _id: subject.id },
-        {
-          $set: { 'moderation.restricted': false },
-          $unset: { 'moderation.restrictedAt': '', 'moderation.restrictedByDecisionId': '' },
-        },
-      );
+      await setPropertyRestriction({ propertyId: subject.id, restricted: false });
       return { changed: true, previousState: { propertyModerationRestricted: true } };
     }
 
@@ -195,33 +172,28 @@ async function applyToReview(
   action: ModerationEnforcementAction,
   subject: EnforcementSubject,
 ): Promise<EffectResult> {
-  if (!mongoose.isValidObjectId(subject.id)) {
-    return { changed: false, reason: 'The reported review id is not a valid identifier' };
+  // No `isValidObjectId` guard — see the note in `applyToProperty` above; the
+  // same reasoning applies, and a review created after the cutover would
+  // otherwise be permanently un-enforceable.
+  const current = await findReviewModerationStatus(subject.id);
+  if (current === undefined) {
+    return { changed: false, reason: 'The reported review no longer exists' };
   }
-  const current = await Review.findById(subject.id)
-    .select('moderationStatus')
-    .lean<ReviewState | null>();
-  if (!current) return { changed: false, reason: 'The reported review no longer exists' };
 
   switch (action) {
     case 'restrict': {
-      if (current.moderationStatus === ReviewModerationStatus.REMOVED) {
+      if (current === ReviewModerationStatus.REMOVED) {
         return { changed: false, reason: 'The review was already removed' };
       }
-      await Review.updateOne(
-        { _id: subject.id },
-        { $set: { moderationStatus: ReviewModerationStatus.REMOVED } },
-      );
+      await setReviewModerationStatus(subject.id, ReviewModerationStatus.REMOVED);
       return {
         changed: true,
-        previousState: {
-          reviewModerationStatus: current.moderationStatus ?? ReviewModerationStatus.ACTIVE,
-        },
+        previousState: { reviewModerationStatus: current },
       };
     }
 
     case 'restore': {
-      if (current.moderationStatus !== ReviewModerationStatus.REMOVED) {
+      if (current !== ReviewModerationStatus.REMOVED) {
         return { changed: false, reason: 'The review was not removed' };
       }
       /**
@@ -230,17 +202,10 @@ async function applyToReview(
        * from the community's own report counter must come back to
        * `under_review`, not have that signal quietly cleared by a correction.
        */
-      const removal = await ModerationEnforcement.findOne({
-        subjectType: subject.type,
-        subjectId: subject.id,
-        action: 'restrict',
-        applied: true,
-      })
-        .sort({ createdAt: -1 })
-        .lean<Pick<IModerationEnforcement, 'previousState'> | null>();
+      const removal = await findLatestAppliedRestriction(subject);
       const restoreTo =
-        removal?.previousState?.reviewModerationStatus ?? ReviewModerationStatus.ACTIVE;
-      await Review.updateOne({ _id: subject.id }, { $set: { moderationStatus: restoreTo } });
+        removal?.previousStateReviewModerationStatus ?? ReviewModerationStatus.ACTIVE;
+      await setReviewModerationStatus(subject.id, restoreTo);
       return {
         changed: true,
         previousState: { reviewModerationStatus: ReviewModerationStatus.REMOVED },
@@ -248,13 +213,10 @@ async function applyToReview(
     }
 
     case 'flag_for_review': {
-      if (current.moderationStatus !== ReviewModerationStatus.ACTIVE) {
+      if (current !== ReviewModerationStatus.ACTIVE) {
         return { changed: false, reason: 'The review was not active' };
       }
-      await Review.updateOne(
-        { _id: subject.id },
-        { $set: { moderationStatus: ReviewModerationStatus.UNDER_REVIEW } },
-      );
+      await setReviewModerationStatus(subject.id, ReviewModerationStatus.UNDER_REVIEW);
       return {
         changed: true,
         previousState: { reviewModerationStatus: ReviewModerationStatus.ACTIVE },
@@ -262,7 +224,7 @@ async function applyToReview(
     }
 
     case 'unflag': {
-      if (current.moderationStatus !== ReviewModerationStatus.UNDER_REVIEW) {
+      if (current !== ReviewModerationStatus.UNDER_REVIEW) {
         return { changed: false, reason: 'The review was not under review' };
       }
       /**
@@ -277,10 +239,7 @@ async function applyToReview(
           reason: 'The review was flagged by Homiio’s own report counter, not by moderation',
         };
       }
-      await Review.updateOne(
-        { _id: subject.id },
-        { $set: { moderationStatus: ReviewModerationStatus.ACTIVE } },
-      );
+      await setReviewModerationStatus(subject.id, ReviewModerationStatus.ACTIVE);
       return {
         changed: true,
         previousState: { reviewModerationStatus: ReviewModerationStatus.UNDER_REVIEW },
@@ -383,45 +342,41 @@ async function applyOne(
   const { decision, caseId, subject } = input;
 
   /**
-   * The claim. The unique index refuses a second row for this
-   * `decisionId + revision + action`, so losing this insert is the answer
-   * "another delivery already handled it" and not an error.
+   * The claim. `moderation_enforcements_decision_action_key` refuses a second
+   * row for this `decisionId + revision + action`, so an empty `RETURNING` set
+   * is the answer "another delivery already handled it" and not an error.
+   *
+   * `ON CONFLICT DO NOTHING` rather than a caught `23505`: the conflict is the
+   * expected, ordinary outcome of a redelivery, and reading it off the returned
+   * rows means a genuine failure — a dropped connection, a CHECK violation —
+   * still propagates as the error it is instead of being mistaken for a
+   * duplicate.
    */
-  let record: IModerationEnforcement;
-  try {
-    record = await ModerationEnforcement.create({
-      decisionId: decision.id,
-      decisionRevision: decision.revision,
-      action: planned.action,
-      caseId,
-      subjectType: subject.type,
-      subjectId: subject.id,
-      outcome: decision.outcome,
-      ...(planned.recommendedAction === undefined
-        ? {}
-        : { recommendedAction: planned.recommendedAction }),
-      reason: planned.reason,
-      mode,
-      applied: false,
-    });
-  } catch (error: unknown) {
-    if (isDuplicateKeyError(error)) {
-      return { action: planned.action, result: 'duplicate' };
-    }
-    throw error;
+  const record = await claimEnforcement({
+    decisionId: decision.id,
+    decisionRevision: decision.revision,
+    action: planned.action,
+    caseId,
+    subjectType: subject.type,
+    subjectId: subject.id,
+    outcome: decision.outcome,
+    ...(planned.recommendedAction === undefined
+      ? {}
+      : { recommendedAction: planned.recommendedAction }),
+    reason: planned.reason,
+    mode,
+    applied: false,
+  });
+  if (!record) {
+    return { action: planned.action, result: 'duplicate' };
   }
 
   if (!modeAllows(mode, planned.action)) {
-    await ModerationEnforcement.updateOne(
-      { _id: record._id },
-      {
-        $set: {
-          skippedReason:
-            mode === 'observe'
-              ? 'observe mode: recorded, not applied'
-              : `${mode} mode does not apply '${planned.action}' automatically`,
-        },
-      },
+    await markEnforcementSkipped(
+      record.id,
+      mode === 'observe'
+        ? 'observe mode: recorded, not applied'
+        : `${mode} mode does not apply '${planned.action}' automatically`,
     );
     return { action: planned.action, result: 'recorded' };
   }
@@ -429,25 +384,14 @@ async function applyOne(
   try {
     const effect = await applyEffect(planned.action, subject, decision);
     if (!effect.changed) {
-      await ModerationEnforcement.updateOne(
-        { _id: record._id },
-        { $set: { skippedReason: effect.reason } },
-      );
+      await markEnforcementSkipped(record.id, effect.reason);
       return { action: planned.action, result: 'recorded' };
     }
 
-    await ModerationEnforcement.updateOne(
-      { _id: record._id },
-      {
-        $set: {
-          applied: true,
-          appliedAt: new Date(),
-          ...(effect.previousState === undefined
-            ? {}
-            : { previousState: effect.previousState }),
-        },
-      },
-    );
+    await markEnforcementApplied({
+      enforcementId: record.id,
+      ...(effect.previousState === undefined ? {} : { previousState: effect.previousState }),
+    });
     return { action: planned.action, result: 'applied' };
   } catch (error: unknown) {
     /**
@@ -455,7 +399,7 @@ async function applyOne(
      * transient failure permanent: the action would be deduplicated away forever
      * and the decision would silently never be carried out.
      */
-    await ModerationEnforcement.deleteOne({ _id: record._id });
+    await releaseEnforcementClaim(record.id);
     logger.error('[CrowdSource] enforcement effect failed, claim released', {
       decisionId: decision.id,
       revision: decision.revision,

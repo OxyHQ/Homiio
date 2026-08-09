@@ -14,12 +14,14 @@
 
 import { DecisionSchema, type Decision } from '@oxyhq/crowdsource-contracts';
 import type { ModerationEnforcementAction } from '@homiio/shared-types';
-import ModerationReport, {
-  type LeanModerationReport,
-} from '../../models/ModerationReport';
+import {
+  cacheDecisionOnReport,
+  findModerationReportsByCaseId,
+  type ModerationReportRow,
+} from '../../db/moderation/moderationReportRepository';
 import { logger } from '../../middlewares/logging';
 import { applyDecisionEnforcement } from './ModerationEnforcementService';
-import type { ModerationOutboxEvent } from './ModerationOutboxService';
+import type { ModerationOutboxEvent } from '../../db/moderation/moderationOutboxRepository';
 import { localStatusForDecision } from './reportStatus';
 
 /** A failure that will not be fixed by trying again. */
@@ -53,33 +55,20 @@ export class ModerationDecisionDeferredError extends Error {
  * last would otherwise overwrite the current answer with a stale one.
  */
 async function applyToReport(
-  report: Pick<LeanModerationReport, '_id'>,
+  report: Pick<ModerationReportRow, 'id'>,
   decision: Decision,
   enforcedAction: ModerationEnforcementAction | undefined,
 ): Promise<boolean> {
-  const result = await ModerationReport.updateOne(
-    {
-      _id: report._id,
-      $or: [
-        { decisionRevision: { $exists: false } },
-        { decisionRevision: { $lte: decision.revision } },
-      ],
-    },
-    {
-      $set: {
-        localStatus: localStatusForDecision(decision.status),
-        decisionId: decision.id,
-        decisionRevision: decision.revision,
-        decisionOutcome: decision.outcome,
-        decisionStatus: decision.status,
-        decidedAt: new Date(decision.publishedAt),
-        ...(enforcedAction === undefined
-          ? {}
-          : { enforcedAction, enforcedAt: new Date() }),
-      },
-    },
-  );
-  return result.matchedCount === 1;
+  return cacheDecisionOnReport({
+    reportId: report.id,
+    localStatus: localStatusForDecision(decision.status),
+    decisionId: decision.id,
+    decisionRevision: decision.revision,
+    decisionOutcome: decision.outcome,
+    decisionStatus: decision.status,
+    decidedAt: new Date(decision.publishedAt),
+    ...(enforcedAction === undefined ? {} : { enforcedAction }),
+  });
 }
 
 /**
@@ -137,9 +126,7 @@ export async function applyDecisionOutboxEvent(
   }
   const decision = parsed.data;
 
-  const reports = await ModerationReport.find({ crowdSourceCaseId: caseId })
-    .select('_id reportedType reportedId')
-    .lean<Pick<LeanModerationReport, '_id' | 'reportedType' | 'reportedId'>[]>();
+  const reports = await findModerationReportsByCaseId(caseId);
 
   if (reports.length === 0) {
     /**

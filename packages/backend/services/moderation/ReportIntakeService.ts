@@ -25,54 +25,43 @@
  *
  * ## Joining a caller's transaction rather than opening one
  *
- * Every caller here already has a domain write of its own — a `ListingReport`
- * row, a subdocument pushed onto a `Review`, an `EvictionReport` row. Those must
- * commit with the moderation report, not beside it, so this function takes the
- * caller's session instead of starting its own. {@link withReportIntakeSession}
- * is the helper that opens one for callers that have nothing else to join.
+ * Every caller here already has a domain write of its own — a `listing_reports`
+ * row, a review report, an `eviction_reports` row. Those must commit with the
+ * moderation report, not beside it, so this function takes the caller's
+ * transaction handle instead of starting its own.
+ * {@link withReportIntakeTransaction} is the helper that opens one for callers
+ * that have nothing else to join.
+ *
+ * `db/moderation/moderationOutboxRepository.ts` REFUSES the root connection at
+ * runtime, so a caller that forgets to thread the handle through fails loudly
+ * instead of committing the report alone — see `transactionGuard.ts` for why the
+ * type alone cannot express that.
  */
 
-import mongoose, { type ClientSession } from 'mongoose';
 import { ModerationReportedType } from '@homiio/shared-types';
-import ModerationReport, {
-  type IModerationReport,
-  type LeanModerationReport,
-} from '../../models/ModerationReport';
 import {
-  enqueueModerationOutboxEvent,
-  reportSubmitEventId,
-} from './ModerationOutboxService';
+  insertModerationReport,
+  type ModerationReportRow,
+} from '../../db/moderation/moderationReportRepository';
+import { enqueueModerationOutboxEvent } from '../../db/moderation/moderationOutboxRepository';
+import { getDb, type Database, type DatabaseOrTransaction } from '../../db/postgres';
+import { reportSubmitEventId } from './ModerationOutboxService';
 import { subjectProviderFor } from './subjects/registry';
-
-const TRANSACTION_OPTIONS = {
-  readPreference: 'primary' as const,
-  readConcern: { level: 'snapshot' as const },
-  writeConcern: { w: 'majority' as const },
-};
-
-/** This reporter has already reported this object. */
-export class DuplicateModerationReportError extends Error {
-  readonly existing: LeanModerationReport;
-
-  constructor(existing: LeanModerationReport) {
-    super('This item has already been reported by this reporter.');
-    this.name = 'DuplicateModerationReportError';
-    this.existing = existing;
-  }
-}
 
 /**
  * Refuses an identifier that is not a string, at the point the QUERY is built.
  *
  * The types say these are strings and every route rejects a missing one, but a
- * type is erased at runtime and a truthiness check happily passes `{$ne: null}`.
- * Handed that, `findOne` matches an UNRELATED report and this function answers
- * "you already reported this" about somebody else's row — and the insert would
- * then store an operator where an id belongs.
+ * type is erased at runtime. Under Mongo a truthiness check happily passed
+ * `{$ne: null}`, which matched an UNRELATED report and answered "you already
+ * reported this" about somebody else's row. Parameterised SQL does not have that
+ * particular hole, but the guard is kept and is still worth its lines: it turns
+ * a malformed id into a loud `TypeError` at the boundary instead of a row keyed
+ * by `"[object Object]"`.
  *
- * The check lives here rather than at a route because `createModerationReport`
- * is exported: a queue worker, a backfill script or a future admin path is under
- * no obligation to have passed a route's validation, and a guard that exists at
+ * It lives here rather than at a route because {@link createModerationReport} is
+ * exported: a queue worker, a backfill script or a future admin path is under no
+ * obligation to have passed a route's validation, and a guard that exists at
  * only one caller is a guard that holds until the second one arrives.
  */
 function requireIdentifier(value: unknown, field: string): string {
@@ -80,6 +69,17 @@ function requireIdentifier(value: unknown, field: string): string {
     throw new TypeError(`createModerationReport: ${field} must be a non-empty string.`);
   }
   return value;
+}
+
+/**
+ * Narrow a validated string to the reportable-type union.
+ *
+ * A predicate rather than a cast, so the union stays the single source of truth:
+ * adding a member to `ModerationReportedType` cannot leave this accepting a value
+ * the rest of the pipeline has no provider entry for.
+ */
+function isReportedType(value: string): value is ModerationReportedType {
+  return (Object.values(ModerationReportedType) as string[]).includes(value);
 }
 
 export interface CreateModerationReportInput {
@@ -93,7 +93,7 @@ export interface CreateModerationReportInput {
 }
 
 export interface CreateModerationReportResult {
-  report: IModerationReport;
+  report: ModerationReportRow;
   /**
    * The durable delivery event.
    *
@@ -110,7 +110,7 @@ export interface CreateModerationReportResult {
  * Stored on the row rather than left to be inferred from a missing outbox event.
  * A missing row is also what a lost write looks like, and the two need to be
  * distinguishable months later without re-deriving which types had providers at
- * the time. Bounded by the schema's 300-character limit.
+ * the time.
  */
 function localOnlyReason(reportedType: string): string {
   return (
@@ -124,29 +124,14 @@ function localOnlyReason(reportedType: string): string {
  * join.
  *
  * Callers that DO have one — every existing report surface — must pass their own
- * session to {@link createModerationReport} instead, so their domain write and
+ * handle to {@link createModerationReport} instead, so their domain write and
  * the moderation report commit together.
  */
-export async function withReportIntakeSession<T>(
-  operation: (session: ClientSession) => Promise<T>,
+export async function withReportIntakeTransaction<T>(
+  operation: (tx: DatabaseOrTransaction) => Promise<T>,
+  db: Database = getDb(),
 ): Promise<T> {
-  const session = await mongoose.startSession();
-  let result: T | undefined;
-  let completed = false;
-  try {
-    await session.withTransaction(async () => {
-      result = await operation(session);
-      completed = true;
-    }, TRANSACTION_OPTIONS);
-    // `completed` rather than `result !== undefined`: an operation whose value
-    // legitimately IS undefined must not be mistaken for one that never ran.
-    if (!completed) {
-      throw new Error('Report intake transaction completed without running its body');
-    }
-    return result as T;
-  } finally {
-    await session.endSession();
-  }
+  return db.transaction(async (tx) => operation(tx));
 }
 
 /**
@@ -166,44 +151,39 @@ export async function withReportIntakeSession<T>(
  *
  * Intake deliberately does not read `CROWDSOURCE_ENABLED`. A report taken while
  * the integration is off still gets its delivery event, so turning the flag on
- * delivers the backlog instead of stranding it — the dispatcher is what is
- * gated, not the durable record. Nothing here is conditional on a third party's
- * state; only on whether this application knows how to describe the object.
+ * delivers the backlog instead of stranding it — the dispatcher LOOP is what is
+ * gated, never the durable record. Nothing here is conditional on a third
+ * party's state; only on whether this application knows how to describe the
+ * object.
+ *
+ * @throws {DuplicateModerationReportError} When this reporter already reported
+ *   this object. Raised by `moderation_reports_reporter_object_key` rather than
+ *   by a preceding read, so two concurrent submissions cannot both pass.
  */
 export async function createModerationReport(
   input: CreateModerationReportInput,
-  session: ClientSession,
+  tx: DatabaseOrTransaction,
 ): Promise<CreateModerationReportResult> {
-  const reporter = requireIdentifier(input.reporter, 'reporter');
+  const reporterOxyUserId = requireIdentifier(input.reporter, 'reporter');
   const reportedId = requireIdentifier(input.reportedId, 'reportedId');
   const reportedType = requireIdentifier(input.reportedType, 'reportedType');
   const reason = requireIdentifier(input.reason, 'reason');
-  if (!Object.values(ModerationReportedType).includes(reportedType as ModerationReportedType)) {
+  if (!isReportedType(reportedType)) {
     throw new TypeError(
       `createModerationReport: reportedType '${reportedType}' is not a reportable type.`,
     );
   }
   const deliverable = subjectProviderFor(reportedType) !== undefined;
 
-  const existing = await ModerationReport.findOne({ reporter, reportedType, reportedId })
-    .session(session)
-    .lean<LeanModerationReport | null>();
-  if (existing) throw new DuplicateModerationReportError(existing);
-
-  const [report] = await ModerationReport.create(
-    [
-      {
-        reportedType,
-        reportedId,
-        reporter,
-        reason,
-        details: input.details,
-        localStatus: deliverable ? 'queued' : 'received',
-        ...(deliverable ? {} : { localStatusReason: localOnlyReason(reportedType) }),
-      },
-    ],
-    { session },
-  );
+  const report = await insertModerationReport(tx, {
+    reportedType,
+    reportedId,
+    reporterOxyUserId,
+    reason,
+    details: input.details,
+    localStatus: deliverable ? 'queued' : 'received',
+    ...(deliverable ? {} : { localStatusReason: localOnlyReason(reportedType) }),
+  });
 
   if (!deliverable) return { report };
 
@@ -213,7 +193,7 @@ export async function createModerationReport(
       kind: 'report.submit',
       payload: { reportId: report.id },
     },
-    session,
+    tx,
   );
 
   return { report, outboxEventId };

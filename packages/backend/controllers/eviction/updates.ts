@@ -1,16 +1,31 @@
 /**
  * Eviction timeline updates.
  *
- * Owner-only: append a note to a case's timeline (a reschedule, a status
- * change, or a plain message). When the update carries a new schedule/status
- * the case root fields are updated too. Every attendee (except the owner) is
- * notified best-effort.
+ * Owner-only: append a note to a case's timeline (a reschedule, a status change,
+ * or a plain message). When the update carries a new schedule/status the case
+ * row is updated too. Every attendee except the owner is notified best-effort.
+ *
+ * The timeline is `eviction_case_updates` now, not an array on the case, so the
+ * entry and the case columns it announces live in two tables — and they are
+ * still written by ONE call (`updateOwnedEvictionCase`, one transaction). That
+ * matters more here than anywhere: a status change visible on the case but
+ * missing from the timeline is a change nobody can account for, and a timeline
+ * entry announcing a change that did not commit is worse. `insertEvictionUpdate`
+ * exists for a note that stands alone; this handler never uses it, because a
+ * message with no lifecycle change and a message with one must not take
+ * different write paths.
  */
 
 import { pickFields } from '../../utils/pickFields';
-import { EvictionCase } from '../../models';
+import {
+  countEvictionAttendees,
+  findOwnedEvictionCase,
+  listEvictionUpdates,
+  updateOwnedEvictionCase,
+  type EvictionCasePatch,
+} from '../../db/evictions/evictionRepository';
 import { toEvictionDTO } from './toEvictionDTO';
-import { fanOutToAttendees, parseDate, VALID_EVICTION_STATUSES } from './shared';
+import { fanOutToAttendees, parseDate, parseEvictionStatus, type EvictionStatusValue } from './shared';
 import { AppError, successResponse } from '../../middlewares/errorHandler';
 import { requireSessionOxyUserId } from '../../utils/sessionUser';
 import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
@@ -24,8 +39,8 @@ export async function createUpdate(req: ControllerRequest, res: ControllerRespon
     const { id } = req.params;
     const oxyUserId = requireSessionOxyUserId(req);
 
-    const evictionCase = await EvictionCase.findOne({ _id: id, oxyUserId }).select('_id');
-    if (!evictionCase) return next(new AppError('Eviction case not found', 404, 'EVICTION_NOT_FOUND'));
+    const owned = await findOwnedEvictionCase(id, oxyUserId);
+    if (!owned) return next(new AppError('Eviction case not found', 404, 'EVICTION_NOT_FOUND'));
 
     const picked = pickFields<Record<string, unknown>>(req.body, CREATABLE_UPDATE_FIELDS);
 
@@ -35,46 +50,49 @@ export async function createUpdate(req: ControllerRequest, res: ControllerRespon
       return next(new AppError('Update message is too long', 400, 'MESSAGE_TOO_LONG'));
     }
 
-    const set: Record<string, unknown> = {};
+    const patch: EvictionCasePatch = {};
     let newScheduledAt: Date | undefined;
-    let newStatus: string | undefined;
+    let newStatus: EvictionStatusValue | undefined;
 
     if (picked.newScheduledAt !== undefined) {
       const parsed = parseDate(picked.newScheduledAt);
       if (!parsed) return next(new AppError('A valid scheduled date is required', 400, 'INVALID_SCHEDULED_AT'));
       newScheduledAt = parsed;
-      set.scheduledAt = parsed;
+      patch.scheduledAt = parsed;
     }
     if (picked.newStatus !== undefined) {
-      const status = String(picked.newStatus);
-      if (!VALID_EVICTION_STATUSES.has(status)) return next(new AppError('Invalid status', 400, 'INVALID_STATUS'));
+      const status = parseEvictionStatus(picked.newStatus);
+      if (!status) return next(new AppError('Invalid status', 400, 'INVALID_STATUS'));
       newStatus = status;
-      set.status = status;
+      patch.status = status;
     }
 
-    const updateOps: Record<string, unknown> = {
-      $push: {
-        updates: { message, newScheduledAt, newStatus, createdAt: new Date() },
-      },
-    };
-    if (Object.keys(set).length) updateOps.$set = set;
-
-    const updated = await EvictionCase.findOneAndUpdate({ _id: id, oxyUserId }, updateOps, {
-      new: true,
-      runValidators: true,
+    const updated = await updateOwnedEvictionCase({
+      caseId: id,
+      oxyUserId,
+      patch,
+      timelineEntry: { message, newScheduledAt, newStatus },
     });
     if (!updated) return next(new AppError('Eviction case not found', 404, 'EVICTION_NOT_FOUND'));
 
-    await fanOutToAttendees(String(id), oxyUserId, {
+    await fanOutToAttendees(id, oxyUserId, {
       type: 'eviction_update',
       title: 'Eviction case update',
       message,
-      data: { evictionId: String(id) },
+      data: { evictionId: id },
     });
+
+    const [updates, attendeeCount] = await Promise.all([
+      listEvictionUpdates(id),
+      countEvictionAttendees(id),
+    ]);
 
     res.status(201).json(
       successResponse(
-        toEvictionDTO(updated, { viewerOxyUserId: oxyUserId, includeContact: true }),
+        toEvictionDTO(
+          { evictionCase: updated, updates, attendeeCount },
+          { viewerOxyUserId: oxyUserId, includeContact: true },
+        ),
         'Update posted',
       ),
     );

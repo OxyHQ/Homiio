@@ -14,10 +14,6 @@
 
 import type { IAddress, IAddressModel } from './Address';
 import type { IReview, IReviewModel } from './Review';
-import type { IModerationReport } from './ModerationReport';
-import type { IModerationOutbox } from './ModerationOutbox';
-import type { IModerationEvent } from './ModerationEvent';
-import type { IModerationEnforcement } from './ModerationEnforcement';
 import type {
   IProperty,
   IPropertyModel,
@@ -44,7 +40,6 @@ import type {
   INeighborhood,
   IExchangeRequest,
   IExchangeReview,
-  IListingReport,
   IAgency,
   IAgencyModel,
   IPartner,
@@ -53,9 +48,6 @@ import type {
   IPlacePoi,
   IRoommateRequest,
   IRoommateRelationship,
-  IEvictionCase,
-  IEvictionComment,
-  IEvictionReport,
 } from './documentTypes';
 
 import PropertyModelDefault from './schemas/PropertySchema';
@@ -79,7 +71,6 @@ import TenantApplicationModelDefault from './schemas/TenantApplicationSchema';
 import NotificationModelDefault from './schemas/NotificationSchema';
 import ExchangeRequestModelDefault from './schemas/ExchangeRequestSchema';
 import ExchangeReviewModelDefault from './schemas/ExchangeReviewSchema';
-import ListingReportModelDefault from './schemas/ListingReportSchema';
 import AgencyModelDefault from './schemas/AgencySchema';
 import PartnerModelDefault from './schemas/PartnerSchema';
 import CommissionModelDefault from './schemas/CommissionSchema';
@@ -87,13 +78,6 @@ import ImageModelDefault from './schemas/ImageSchema';
 import PlacePoiModelDefault from './schemas/PlacePoiSchema';
 import RoommateRequestModelDefault from './schemas/RoommateRequestSchema';
 import RoommateRelationshipModelDefault from './schemas/RoommateRelationshipSchema';
-import EvictionCaseModelDefault from './schemas/EvictionCaseSchema';
-import EvictionCommentModelDefault from './schemas/EvictionCommentSchema';
-import EvictionReportModelDefault from './schemas/EvictionReportSchema';
-import { ModerationReport as ModerationReportSource } from './ModerationReport';
-import { ModerationOutbox as ModerationOutboxSource } from './ModerationOutbox';
-import { ModerationEvent as ModerationEventSource } from './ModerationEvent';
-import { ModerationEnforcement as ModerationEnforcementSource } from './ModerationEnforcement';
 
 // The casts attach each document interface, which `mongoose.model()` cannot
 // infer from the schema literal on its own.
@@ -119,7 +103,6 @@ const TenantApplicationModel = TenantApplicationModelDefault;
 const NotificationModel = NotificationModelDefault;
 const ExchangeRequestModel = ExchangeRequestModelDefault;
 const ExchangeReviewModel = ExchangeReviewModelDefault;
-const ListingReportModel = ListingReportModelDefault;
 const AgencyModel = AgencyModelDefault;
 const PartnerModel = PartnerModelDefault;
 const CommissionModel = CommissionModelDefault;
@@ -127,13 +110,6 @@ const ImageModel = ImageModelDefault;
 const PlacePoiModel = PlacePoiModelDefault;
 const RoommateRequestModel = RoommateRequestModelDefault;
 const RoommateRelationshipModel = RoommateRelationshipModelDefault;
-const EvictionCaseModel = EvictionCaseModelDefault;
-const EvictionCommentModel = EvictionCommentModelDefault;
-const EvictionReportModel = EvictionReportModelDefault;
-const ModerationReportModel = ModerationReportSource;
-const ModerationOutboxModel = ModerationOutboxSource;
-const ModerationEventModel = ModerationEventSource;
-const ModerationEnforcementModel = ModerationEnforcementSource;
 
 // CrowdSource moderation. TS-native models, required the same way as the rest so
 // they land on the aggregate `module.exports` below alongside them.
@@ -160,7 +136,6 @@ export const TenantApplication = TenantApplicationModel;
 export const Notification = NotificationModel;
 export const ExchangeRequest = ExchangeRequestModel;
 export const ExchangeReview = ExchangeReviewModel;
-export const ListingReport = ListingReportModel;
 export const Agency = AgencyModel;
 export const Partner = PartnerModel;
 export const Commission = CommissionModel;
@@ -168,13 +143,6 @@ export const Image = ImageModel;
 export const PlacePoi = PlacePoiModel;
 export const RoommateRequest = RoommateRequestModel;
 export const RoommateRelationship = RoommateRelationshipModel;
-export const EvictionCase = EvictionCaseModel;
-export const EvictionComment = EvictionCommentModel;
-export const EvictionReport = EvictionReportModel;
-export const ModerationReport = ModerationReportModel;
-export const ModerationOutbox = ModerationOutboxModel;
-export const ModerationEvent = ModerationEventModel;
-export const ModerationEnforcement = ModerationEnforcementModel;
 
 // Re-export the document interfaces so callers can `import type { ILease } from '../models'`.
 export type {
@@ -207,7 +175,6 @@ export type {
   INeighborhood,
   IExchangeRequest,
   IExchangeReview,
-  IListingReport,
   IAgency,
   IAgencyModel,
   IPartner,
@@ -216,13 +183,6 @@ export type {
   IPlacePoi,
   IRoommateRequest,
   IRoommateRelationship,
-  IEvictionCase,
-  IEvictionComment,
-  IEvictionReport,
-  IModerationReport,
-  IModerationOutbox,
-  IModerationEvent,
-  IModerationEnforcement,
 };
 
 // The remaining `require('../models')` callers (Jest helpers, integration
@@ -253,7 +213,6 @@ module.exports = {
   Notification: NotificationModel,
   ExchangeRequest: ExchangeRequestModel,
   ExchangeReview: ExchangeReviewModel,
-  ListingReport: ListingReportModel,
   Agency: AgencyModel,
   Partner: PartnerModel,
   Commission: CommissionModel,
@@ -261,11 +220,4 @@ module.exports = {
   PlacePoi: PlacePoiModel,
   RoommateRequest: RoommateRequestModel,
   RoommateRelationship: RoommateRelationshipModel,
-  EvictionCase: EvictionCaseModel,
-  EvictionComment: EvictionCommentModel,
-  EvictionReport: EvictionReportModel,
-  ModerationReport: ModerationReportModel,
-  ModerationOutbox: ModerationOutboxModel,
-  ModerationEvent: ModerationEventModel,
-  ModerationEnforcement: ModerationEnforcementModel,
 };

@@ -5,10 +5,33 @@
  * neither shows up as an error. A decision applied with the wrong reversal puts
  * back a state that was never there. Both are silent in production, so both are
  * pinned here.
+ *
+ * ## Postgres, and the one thing the port had to ADD
+ *
+ * The subjects are seeded in Postgres because that is where the two levers live:
+ * `properties.moderation_restricted` (plus its two provenance columns) and
+ * `reviews.moderation_status`, both written only by
+ * `db/moderation/moderationEnforcementRepository.ts`. Nothing asserted here
+ * changed meaning.
+ *
+ * What had to be added is the truncation below. `moderation_enforcements` is
+ * keyed `(decision_id, decision_revision, action)` and `decisionFixture()`
+ * defaults to the SAME id (`dec_test_1`) on every call — so under Mongo's
+ * per-test collection wipe those tests were independent, and without an
+ * equivalent here the second test to use the default would be answered
+ * `duplicate` by a row the first one left behind. A test file sharing a worker's
+ * database with another does the same thing across files.
+ *
+ * One assertion changed SHAPE and is not weakened: a listing seeded with the
+ * column DEFAULT is `moderation_restricted = false`, and absence is not
+ * representable — so where the Mongo test read `not.toBe(true)` against a
+ * missing subdocument, this reads `toBe(false)` against a real column, which is
+ * strictly stronger.
  */
 
 import { decisionFixture } from '@oxyhq/crowdsource-testing';
 import type { Decision, RecommendedAction } from '@oxyhq/crowdsource-contracts';
+import { count, eq } from 'drizzle-orm';
 import {
   ModerationReportedType,
   PropertyStatus,
@@ -20,10 +43,16 @@ import {
 import { planEnforcement } from '../../services/moderation/enforcementPlan';
 import { applyDecisionEnforcement } from '../../services/moderation/ModerationEnforcementService';
 import { localStatusForDecision } from '../../services/moderation/reportStatus';
-import ModerationEnforcement from '../../models/ModerationEnforcement';
-import { createAddress, models } from '../helpers/factories';
-
-const { Property, Review } = models;
+import { getDb } from '../../db/postgres';
+import { moderationEnforcements, properties, reviews } from '../../db/schema';
+import {
+  objectIdHex,
+  resetGeoTables,
+  seedAddress,
+  seedGeoChain,
+  seedProperty,
+  type GeoChain,
+} from '../helpers/postgresGeoFixtures';
 
 /** A decision with the recommendations a test needs, otherwise realistic. */
 function decisionWith(options: {
@@ -47,42 +76,117 @@ function decisionWith(options: {
   } as Decision;
 }
 
-async function listing(): Promise<{ _id: unknown }> {
-  const address = await createAddress();
-  return Property.create({
-    oxyUserId: 'oxy-landlord',
-    addressId: address._id,
-    type: PropertyType.APARTMENT,
-    bedrooms: 1,
-    bathrooms: 1,
-    offerings: [OfferingType.LONG_TERM_RENT],
-    longTermRent: { monthlyAmount: 1000, currency: 'EUR' },
-    status: PropertyStatus.PUBLISHED,
+/** Distinguishes the geo chains one test seeds; `countries_code_key` is UNIQUE. */
+let nextChain = 0;
+/** The chain the current test's subjects hang off, created on first use. */
+let place: GeoChain | null = null;
+
+async function chain(): Promise<GeoChain> {
+  if (place) return place;
+  place = await seedGeoChain({ countryCode: `ME-${nextChain++}` });
+  return place;
+}
+
+async function listing(): Promise<string> {
+  const addressId = await seedAddress({ chain: await chain(), street: `Carrer ${nextChain++}` });
+  return seedProperty({
+    addressId,
+    overrides: {
+      oxyUserId: 'oxy-landlord',
+      type: PropertyType.APARTMENT,
+      bedrooms: 1,
+      bathrooms: 1,
+      offerings: [OfferingType.LONG_TERM_RENT],
+      longTermRentMonthlyAmount: 1000,
+      longTermRentCurrency: 'EUR',
+      status: PropertyStatus.PUBLISHED,
+    },
   });
 }
 
 async function review(
   moderationStatus: ReviewModerationStatus = ReviewModerationStatus.ACTIVE,
-): Promise<{ _id: unknown }> {
-  const address = await createAddress();
-  return Review.create({
-    addressId: address._id,
-    addressLevel: 'BUILDING',
-    streetLevelId: address._id,
-    buildingLevelId: address._id,
-    oxyUserId: 'oxy-reviewer',
-    greenHouse: 'n/a',
-    price: 1000,
-    currency: 'EUR',
-    livedFrom: new Date('2023-01-01'),
-    livedTo: new Date('2024-01-01'),
-    livedForMonths: 12,
-    recommendation: false,
-    opinion: 'A long opinion about the flat.',
-    rating: 2,
-    moderationStatus,
-  });
+): Promise<string> {
+  const geo = await chain();
+  const addressId = await seedAddress({ chain: geo, street: `Carrer ${nextChain++}` });
+  const [row] = await getDb()
+    .insert(reviews)
+    .values({
+      id: objectIdHex(),
+      addressId,
+      // A BUILDING review names no unit — `reviews_unit_level_check` enforces
+      // exactly that, so a fixture cannot drift from the rollup's rule.
+      addressLevel: 'BUILDING',
+      streetLevelId: addressId,
+      buildingLevelId: addressId,
+      cityId: geo.cityId,
+      oxyUserId: 'oxy-reviewer',
+      greenHouse: 'n/a',
+      price: 1000,
+      currency: 'EUR',
+      livedFrom: new Date('2023-01-01'),
+      livedTo: new Date('2024-01-01'),
+      livedForMonths: 12,
+      recommendation: false,
+      opinion: 'A long opinion about the flat.',
+      rating: 2,
+      moderationStatus,
+    })
+    .returning({ id: reviews.id });
+  return row.id;
 }
+
+/** The listing's two moderation columns plus the owner's own status. */
+async function storedListing(propertyId: string) {
+  const [row] = await getDb()
+    .select({
+      restricted: properties.moderationRestricted,
+      byDecisionId: properties.moderationRestrictedByDecisionId,
+      status: properties.status,
+    })
+    .from(properties)
+    .where(eq(properties.id, propertyId));
+  return row;
+}
+
+async function storedReviewStatus(reviewId: string): Promise<string> {
+  const [row] = await getDb()
+    .select({ moderationStatus: reviews.moderationStatus })
+    .from(reviews)
+    .where(eq(reviews.id, reviewId));
+  return row.moderationStatus;
+}
+
+/** The single enforcement row this decision produced. */
+async function storedEnforcement(decisionId: string) {
+  const [row] = await getDb()
+    .select()
+    .from(moderationEnforcements)
+    .where(eq(moderationEnforcements.decisionId, decisionId));
+  return row;
+}
+
+async function countEnforcements(decisionId: string): Promise<number> {
+  const [row] = await getDb()
+    .select({ total: count() })
+    .from(moderationEnforcements)
+    .where(eq(moderationEnforcements.decisionId, decisionId));
+  return row.total;
+}
+
+/**
+ * Reviews before the geo tables: `reviews.address_id` is ON DELETE **RESTRICT**,
+ * so emptying an address under one RAISES rather than cascading — which is the
+ * constraint working, and would read here as a mysterious teardown failure.
+ */
+beforeEach(async () => {
+  const db = getDb();
+  await db.delete(moderationEnforcements);
+  await db.delete(reviews);
+  await resetGeoTables();
+  place = null;
+  nextChain = 0;
+});
 
 describe('enforcement plan', () => {
   it.each<[RecommendedAction, string]>([
@@ -170,13 +274,13 @@ describe('enforcement plan', () => {
 
 describe('enforcement execution', () => {
   it('records everything and applies nothing in observe mode', async () => {
-    const property = await listing();
+    const propertyId = await listing();
     const decision = decisionWith({ outcome: 'violation', recommendedActions: ['remove'] });
 
     const outcomes = await applyDecisionEnforcement({
       decision,
       caseId: 'case_observe',
-      subject: { type: ModerationReportedType.PROPERTY, id: String(property._id) },
+      subject: { type: ModerationReportedType.PROPERTY, id: propertyId },
       mode: 'observe',
     });
 
@@ -184,32 +288,32 @@ describe('enforcement execution', () => {
 
     // The audit trail is REAL — that is what makes observe mode a proof of what
     // will happen rather than a log line saying a decision was seen.
-    const record = await ModerationEnforcement.findOne({ decisionId: decision.id }).lean();
-    expect(record?.applied).toBe(false);
-    expect(record?.skippedReason).toContain('observe');
+    const record = await storedEnforcement(decision.id);
+    expect(record.applied).toBe(false);
+    expect(record.appliedAt).toBeNull();
+    expect(record.skippedReason).toContain('observe');
 
-    const after = await Property.findById(property._id).lean();
-    expect(after?.moderation?.restricted).not.toBe(true);
+    expect((await storedListing(propertyId)).restricted).toBe(false);
   });
 
   it('restricts a listing in automatic mode and keeps it out of public reads', async () => {
-    const property = await listing();
+    const propertyId = await listing();
     const decision = decisionWith({ outcome: 'violation', recommendedActions: ['remove'] });
 
     const outcomes = await applyDecisionEnforcement({
       decision,
       caseId: 'case_auto',
-      subject: { type: ModerationReportedType.PROPERTY, id: String(property._id) },
+      subject: { type: ModerationReportedType.PROPERTY, id: propertyId },
       mode: 'automatic',
     });
 
     expect(outcomes).toEqual([{ action: 'restrict', result: 'applied' }]);
-    const after = await Property.findById(property._id).lean();
-    expect(after?.moderation?.restricted).toBe(true);
-    expect(after?.moderation?.restrictedByDecisionId).toBe(decision.id);
+    const after = await storedListing(propertyId);
+    expect(after.restricted).toBe(true);
+    expect(after.byDecisionId).toBe(decision.id);
     // The owner's own `status` is untouched: a jury restricted the listing, it
     // did not archive it, and a restore has to be able to tell those apart.
-    expect(after?.status).toBe(PropertyStatus.PUBLISHED);
+    expect(after.status).toBe(PropertyStatus.PUBLISHED);
   });
 
   /**
@@ -218,12 +322,12 @@ describe('enforcement execution', () => {
    * redelivered correction restores twice.
    */
   it('is idempotent on decision, revision and action', async () => {
-    const property = await listing();
+    const propertyId = await listing();
     const decision = decisionWith({ outcome: 'violation', recommendedActions: ['remove'] });
     const input = {
       decision,
       caseId: 'case_twice',
-      subject: { type: ModerationReportedType.PROPERTY, id: String(property._id) },
+      subject: { type: ModerationReportedType.PROPERTY, id: propertyId },
       mode: 'automatic' as const,
     };
 
@@ -234,7 +338,7 @@ describe('enforcement execution', () => {
       { action: 'restrict', result: 'duplicate' },
     ]);
 
-    expect(await ModerationEnforcement.countDocuments({ decisionId: decision.id })).toBe(1);
+    expect(await countEnforcements(decision.id)).toBe(1);
   });
 
   /**
@@ -243,8 +347,8 @@ describe('enforcement execution', () => {
    * put a listing back.
    */
   it('lets a later revision restore what an earlier one restricted', async () => {
-    const property = await listing();
-    const subject = { type: ModerationReportedType.PROPERTY, id: String(property._id) };
+    const propertyId = await listing();
+    const subject = { type: ModerationReportedType.PROPERTY, id: propertyId };
 
     await applyDecisionEnforcement({
       decision: decisionWith({
@@ -257,7 +361,7 @@ describe('enforcement execution', () => {
       subject,
       mode: 'automatic',
     });
-    expect((await Property.findById(property._id).lean())?.moderation?.restricted).toBe(true);
+    expect((await storedListing(propertyId)).restricted).toBe(true);
 
     const outcomes = await applyDecisionEnforcement({
       decision: decisionWith({
@@ -272,30 +376,33 @@ describe('enforcement execution', () => {
     });
 
     expect(outcomes.map((outcome) => outcome.action)).toContain('restore');
-    expect((await Property.findById(property._id).lean())?.moderation?.restricted).toBe(false);
+    const after = await storedListing(propertyId);
+    expect(after.restricted).toBe(false);
+    // Clearing the flag clears its provenance in the same statement, so a
+    // restored listing never keeps a decision id claiming it is still down.
+    expect(after.byDecisionId).toBeNull();
   });
 
   it('records honestly that a listing has no flag_for_review effect', async () => {
-    const property = await listing();
+    const propertyId = await listing();
     const decision = decisionWith({ outcome: 'violation', recommendedActions: ['label'] });
 
     const outcomes = await applyDecisionEnforcement({
       decision,
       caseId: 'case_label',
-      subject: { type: ModerationReportedType.PROPERTY, id: String(property._id) },
+      subject: { type: ModerationReportedType.PROPERTY, id: propertyId },
       mode: 'automatic',
     });
 
     // Homiio has no content warning and no distribution dial for a listing.
     // Recording an effect that did not happen would make the audit a fiction.
     expect(outcomes).toEqual([{ action: 'flag_for_review', result: 'recorded' }]);
-    const record = await ModerationEnforcement.findOne({ decisionId: decision.id }).lean();
-    expect(record?.skippedReason).toContain('no');
+    expect((await storedEnforcement(decision.id)).skippedReason).toContain('no');
   });
 
   it('flags a review as under review, and can lift its own flag', async () => {
-    const stored = await review();
-    const subject = { type: ModerationReportedType.REVIEW, id: String(stored._id) };
+    const reviewId = await review();
+    const subject = { type: ModerationReportedType.REVIEW, id: reviewId };
 
     await applyDecisionEnforcement({
       decision: decisionWith({
@@ -307,9 +414,7 @@ describe('enforcement execution', () => {
       subject,
       mode: 'automatic',
     });
-    expect((await Review.findById(stored._id).lean())?.moderationStatus).toBe(
-      ReviewModerationStatus.UNDER_REVIEW,
-    );
+    expect(await storedReviewStatus(reviewId)).toBe(ReviewModerationStatus.UNDER_REVIEW);
 
     await applyDecisionEnforcement({
       decision: {
@@ -322,9 +427,7 @@ describe('enforcement execution', () => {
     });
     // `restore` finds nothing removed; the flag stays until something plans an
     // `unflag`, which is what the next test covers.
-    expect((await Review.findById(stored._id).lean())?.moderationStatus).toBe(
-      ReviewModerationStatus.UNDER_REVIEW,
-    );
+    expect(await storedReviewStatus(reviewId)).toBe(ReviewModerationStatus.UNDER_REVIEW);
   });
 
   /**
@@ -334,8 +437,8 @@ describe('enforcement execution', () => {
    * reappeared.
    */
   it('refuses to lift an under_review that moderation did not set', async () => {
-    const stored = await review(ReviewModerationStatus.UNDER_REVIEW);
-    const subject = { type: ModerationReportedType.REVIEW, id: String(stored._id) };
+    const reviewId = await review(ReviewModerationStatus.UNDER_REVIEW);
+    const subject = { type: ModerationReportedType.REVIEW, id: reviewId };
 
     const outcomes = await applyDecisionEnforcement({
       decision: {
@@ -350,9 +453,7 @@ describe('enforcement execution', () => {
 
     // The plan is a restore, which correctly finds nothing removed.
     expect(outcomes.map((outcome) => outcome.action)).toEqual(['restore']);
-    expect((await Review.findById(stored._id).lean())?.moderationStatus).toBe(
-      ReviewModerationStatus.UNDER_REVIEW,
-    );
+    expect(await storedReviewStatus(reviewId)).toBe(ReviewModerationStatus.UNDER_REVIEW);
   });
 
   it('records rather than acts for a noun with no enforcement path', async () => {
@@ -366,17 +467,51 @@ describe('enforcement execution', () => {
   });
 
   it('records rather than acts when the listing is already gone', async () => {
-    const property = await listing();
-    const id = String(property._id);
-    await Property.deleteOne({ _id: property._id });
+    const propertyId = await listing();
+    await getDb().delete(properties).where(eq(properties.id, propertyId));
 
     const outcomes = await applyDecisionEnforcement({
       decision: decisionWith({ outcome: 'violation', recommendedActions: ['remove'] }),
       caseId: 'case_gone',
-      subject: { type: ModerationReportedType.PROPERTY, id },
+      subject: { type: ModerationReportedType.PROPERTY, id: propertyId },
       mode: 'automatic',
     });
     expect(outcomes).toEqual([{ action: 'restrict', result: 'recorded' }]);
+  });
+
+  /**
+   * A listing created AFTER the cutover carries a uuid v7, for which
+   * `mongoose.isValidObjectId` is FALSE. The Mongo effect opened with exactly
+   * that guard, so keeping it would have made every post-cutover listing
+   * permanently un-enforceable while still reporting `changed: false` as though
+   * it had looked: a jury could restrict such a listing and it would stay up,
+   * with an enforcement row claiming the action was handled.
+   *
+   * The guard is deliberately gone, and this is the assertion that replaces the
+   * Mongo-era "rejects a malformed id" test — the id shape a report carries is
+   * no longer a precondition on the query.
+   */
+  it('restricts a listing whose id is a uuid v7, not an ObjectId hex', async () => {
+    const addressId = await seedAddress({ chain: await chain(), street: 'Carrer Generated' });
+    const propertyId = await seedProperty({ addressId, idShape: 'generated' });
+    // The shape is the point of the test — assert it rather than trusting the
+    // fixture, or the assertion below is vacuous.
+    expect(propertyId).not.toMatch(/^[0-9a-f]{24}$/);
+
+    const decision = decisionWith({
+      id: 'dec_uuid_subject',
+      outcome: 'violation',
+      recommendedActions: ['remove'],
+    });
+    expect(
+      await applyDecisionEnforcement({
+        decision,
+        caseId: 'case_uuid',
+        subject: { type: ModerationReportedType.PROPERTY, id: propertyId },
+        mode: 'automatic',
+      }),
+    ).toEqual([{ action: 'restrict', result: 'applied' }]);
+    expect((await storedListing(propertyId)).restricted).toBe(true);
   });
 
   /**
@@ -385,8 +520,8 @@ describe('enforcement execution', () => {
    * somebody reads a queue — and Homiio has no queue and no reader.
    */
   it('applies a restore but not a restriction in manual mode', async () => {
-    const property = await listing();
-    const subject = { type: ModerationReportedType.PROPERTY, id: String(property._id) };
+    const propertyId = await listing();
+    const subject = { type: ModerationReportedType.PROPERTY, id: propertyId };
 
     expect(
       await applyDecisionEnforcement({
@@ -400,12 +535,12 @@ describe('enforcement execution', () => {
         mode: 'manual',
       }),
     ).toEqual([{ action: 'restrict', result: 'recorded' }]);
-    expect((await Property.findById(property._id).lean())?.moderation?.restricted).not.toBe(true);
+    expect((await storedListing(propertyId)).restricted).toBe(false);
 
-    await Property.updateOne(
-      { _id: property._id },
-      { $set: { 'moderation.restricted': true } },
-    );
+    await getDb()
+      .update(properties)
+      .set({ moderationRestricted: true })
+      .where(eq(properties.id, propertyId));
 
     expect(
       await applyDecisionEnforcement({
@@ -419,7 +554,7 @@ describe('enforcement execution', () => {
         mode: 'manual',
       }),
     ).toEqual([{ action: 'restore', result: 'applied' }]);
-    expect((await Property.findById(property._id).lean())?.moderation?.restricted).toBe(false);
+    expect((await storedListing(propertyId)).restricted).toBe(false);
   });
 });
 

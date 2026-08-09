@@ -1,16 +1,36 @@
 /**
  * Eviction DTO serializers.
  *
- * Convert an EvictionCase / EvictionComment (Mongoose document OR `.lean()`
- * plain object) into the shape the frontend consumes (mirrors `EvictionCase` /
- * `EvictionComment` in `@homiio/shared-types`):
- *   - `_id` → `id` (on the case and on every `updates` subdocument),
- *   - dates → ISO strings,
- *   - `attendees` STRIPPED (never exposed publicly),
- *   - `isAttending` / `isOwner` derived for a signed-in viewer.
+ * Convert the rows the repository returns into the shape the frontend consumes
+ * (`EvictionCase` / `EvictionComment` in `@homiio/shared-types`). The wire shape
+ * is UNCHANGED by the Postgres port and must stay that way — a shipped client
+ * reads `location.coordinates` as GeoJSON and `attendeeCount` as a number, and
+ * neither is a fact about how the row is stored.
+ *
+ * ## The three things the port changed, and what each means here
+ *
+ * **A case is now three inputs, not one document.** `updates[]` is a table and
+ * the RSVP roster is a table, so the timeline rows and the attendee COUNT are
+ * passed in explicitly ({@link EvictionCaseWithTimeline}) rather than read off
+ * the document. That is deliberate: this function cannot query, so a caller that
+ * forgets the timeline gets an empty array from its own hand rather than a
+ * silently truncated response, and every caller is one grep away.
+ *
+ * **`attendeeCount` is no longer stored.** It is `count(*)` over
+ * `eviction_case_attendees`, which is why the count arrives as a parameter and
+ * why the DTO still exposes it under the same name — the number the board shows
+ * as turnout did not change meaning, only where it comes from.
+ *
+ * **Ids are already strings.** The Mongo version carried an ObjectId/populated
+ * ref reducer and a `toObject()` branch for the document-vs-`lean()` split;
+ * neither has a counterpart, and both are gone.
+ *
+ * The `location.coordinates` GeoJSON array is REBUILT here from the two named
+ * columns, longitude first — the only place in the eviction path where the pair
+ * becomes positional again, and the reason it is written out rather than
+ * spread.
  */
 
-import mongoose from 'mongoose';
 import {
   EvictionCaseStatus,
   type EvictionCase,
@@ -19,17 +39,22 @@ import {
   type EvictionLocation,
   type EvictionUpdate,
 } from '@homiio/shared-types';
-
-type Loose = Record<string, unknown>;
+import type {
+  EvictionCaseRow,
+  EvictionCaseUpdateRow,
+  EvictionCaseWithTimeline,
+  EvictionCommentRow,
+} from '../../db/evictions/evictionRepository';
 
 interface ToEvictionDTOOptions {
   /** The signed-in viewer, if any — drives `isOwner` / `isAttending`. */
   viewerOxyUserId?: string | null;
   /**
-   * Explicit attendance for the viewer, computed by the caller (attendees are
-   * `select: false`, so list/detail handlers resolve this with a separate
-   * `$elemMatch` query). When omitted, the DTO falls back to an in-memory scan
-   * of a loaded `attendees` array (present only when explicitly selected).
+   * Whether this viewer has RSVP'd, resolved by the caller.
+   *
+   * Left `undefined` for an anonymous viewer, exactly as before: the field is
+   * absent from the response rather than `false`, which is what tells a client
+   * "not asked" apart from "asked and no".
    */
   isAttending?: boolean;
   /**
@@ -41,133 +66,83 @@ interface ToEvictionDTOOptions {
   includeContact?: boolean;
 }
 
-/** Convert a Mongoose document or lean object into a plain field bag. */
-function toLoose(value: unknown): Loose {
-  if (value && typeof value === 'object') {
-    const maybeDoc = value as { toObject?: () => Loose };
-    if (typeof maybeDoc.toObject === 'function') {
-      return maybeDoc.toObject();
-    }
-    return value as Loose;
-  }
-  return {};
+/**
+ * The column value → enum member map.
+ *
+ * The column's type is the string-literal union the CHECK is built from, and
+ * `EvictionCaseStatus` is a TypeScript enum; a literal is not assignable to one.
+ * An exhaustive record is how that conversion stays compiler-checked — adding a
+ * status to `EVICTION_CASE_STATUSES` fails to compile here until it is mapped,
+ * rather than falling through to a default that quietly reports `upcoming`.
+ */
+const STATUS_BY_COLUMN_VALUE: Readonly<Record<EvictionCaseRow['status'], EvictionCaseStatus>> = {
+  upcoming: EvictionCaseStatus.UPCOMING,
+  stopped: EvictionCaseStatus.STOPPED,
+  postponed: EvictionCaseStatus.POSTPONED,
+  executed: EvictionCaseStatus.EXECUTED,
+  cancelled: EvictionCaseStatus.CANCELLED,
+};
+
+/** A stored string, trimmed, with the empty case reported as absent. */
+function optionalText(value: string | null): string | undefined {
+  if (value === null) return undefined;
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : undefined;
 }
 
-/** Reference (ObjectId | string | populated doc) → string id. */
-function refToId(ref: unknown): string | undefined {
-  if (ref === null || ref === undefined) return undefined;
-  if (ref instanceof mongoose.Types.ObjectId) return ref.toString();
-  if (typeof ref === 'string') return ref;
-  if (typeof ref === 'object') {
-    const obj = ref as { _id?: unknown; id?: unknown };
-    if (obj._id !== undefined && obj._id !== null) return String(obj._id);
-    if (obj.id !== undefined && obj.id !== null) return String(obj.id);
-  }
-  return String(ref);
+function optionalIso(value: Date | null): string | undefined {
+  return value === null ? undefined : value.toISOString();
 }
 
-function asString(value: unknown): string {
-  if (typeof value === 'string') return value;
-  if (value === null || value === undefined) return '';
-  return String(value);
-}
-
-function asOptString(value: unknown): string | undefined {
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    return trimmed.length ? trimmed : undefined;
-  }
-  return undefined;
-}
-
-/** Date | ISO string → ISO string (handles both Mongoose Date and lean output). */
-function toIso(value: unknown): string | undefined {
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? undefined : value.toISOString();
-  }
-  if (typeof value === 'string' && value.length) {
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? value : parsed.toISOString();
-  }
-  return undefined;
-}
-
-function asStatus(value: unknown): EvictionCaseStatus {
-  const status = asString(value);
-  return (Object.values(EvictionCaseStatus) as string[]).includes(status)
-    ? (status as EvictionCaseStatus)
-    : EvictionCaseStatus.UPCOMING;
-}
-
-function toLocation(value: unknown): EvictionLocation {
-  const src = (value ?? {}) as Loose;
-  const coordSrc = (src.coordinates ?? {}) as Loose;
-  const rawCoords = Array.isArray(coordSrc.coordinates) ? coordSrc.coordinates : [];
-  const lng = Number(rawCoords[0]);
-  const lat = Number(rawCoords[1]);
+function toLocation(row: EvictionCaseRow): EvictionLocation {
   return {
-    label: asString(src.label),
-    coordinates: {
-      type: 'Point',
-      coordinates: [Number.isFinite(lng) ? lng : 0, Number.isFinite(lat) ? lat : 0],
-    },
-    precision: src.precision === 'exact' ? 'exact' : 'approximate',
-    city: asOptString(src.city),
-    countryCode: asOptString(src.countryCode),
+    label: row.locationLabel,
+    // Longitude FIRST — GeoJSON's ordering, and the one place the named columns
+    // go back to being a positional pair.
+    coordinates: { type: 'Point', coordinates: [row.locationLongitude, row.locationLatitude] },
+    precision: row.locationPrecision,
+    city: optionalText(row.locationCity),
+    countryCode: optionalText(row.locationCountryCode),
   };
 }
 
-function toContactInfo(value: unknown): EvictionContactInfo | undefined {
-  if (!value || typeof value !== 'object') return undefined;
-  const src = value as Loose;
+/** The organiser's contact block, or `undefined` when every handle is empty. */
+function toContactInfo(row: EvictionCaseRow): EvictionContactInfo | undefined {
   const contact: EvictionContactInfo = {
-    phone: asOptString(src.phone),
-    email: asOptString(src.email),
-    telegram: asOptString(src.telegram),
-    whatsapp: asOptString(src.whatsapp),
-    instructions: asOptString(src.instructions),
+    phone: optionalText(row.contactPhone),
+    email: optionalText(row.contactEmail),
+    telegram: optionalText(row.contactTelegram),
+    whatsapp: optionalText(row.contactWhatsapp),
+    instructions: optionalText(row.contactInstructions),
   };
-  const hasAny = Object.values(contact).some((entry) => entry !== undefined);
-  return hasAny ? contact : undefined;
+  return Object.values(contact).some((entry) => entry !== undefined) ? contact : undefined;
 }
 
-function toCoverImage(value: unknown): { imageId?: string; url?: string } | undefined {
-  if (!value || typeof value !== 'object') return undefined;
-  const src = value as Loose;
-  const imageId = refToId(src.imageId);
-  const url = asOptString(src.url);
+function toCoverImage(row: EvictionCaseRow): { imageId?: string; url?: string } | undefined {
+  const imageId = optionalText(row.coverImageId);
+  const url = optionalText(row.coverImageUrl);
   if (!imageId && !url) return undefined;
   return { imageId, url };
 }
 
-function toUpdates(value: unknown): EvictionUpdate[] {
-  if (!Array.isArray(value)) return [];
-  return value.map((entry) => {
-    const src = (entry ?? {}) as Loose;
-    return {
-      id: refToId(src._id ?? src.id) ?? '',
-      message: asString(src.message),
-      newScheduledAt: toIso(src.newScheduledAt),
-      newStatus: src.newStatus ? asStatus(src.newStatus) : undefined,
-      createdAt: toIso(src.createdAt) ?? '',
-    };
-  });
+function toUpdate(row: EvictionCaseUpdateRow): EvictionUpdate {
+  return {
+    id: row.id,
+    message: row.message,
+    newScheduledAt: optionalIso(row.newScheduledAt),
+    newStatus: row.newStatus === null ? undefined : STATUS_BY_COLUMN_VALUE[row.newStatus],
+    createdAt: row.createdAt.toISOString(),
+  };
 }
 
-export function toEvictionDTO(caseDoc: unknown, options: ToEvictionDTOOptions = {}): EvictionCase {
-  const src = toLoose(caseDoc);
+export function toEvictionDTO(
+  source: EvictionCaseWithTimeline,
+  options: ToEvictionDTOOptions = {},
+): EvictionCase {
+  const row = source.evictionCase;
   const viewer = options.viewerOxyUserId ?? undefined;
-
-  let isAttending: boolean | undefined;
-  if (typeof options.isAttending === 'boolean') {
-    isAttending = options.isAttending;
-  } else if (viewer && Array.isArray(src.attendees)) {
-    isAttending = (src.attendees as Loose[]).some(
-      (attendee) => asString(attendee?.oxyUserId) === viewer,
-    );
-  }
-
-  const isOwner = viewer ? asString(src.oxyUserId) === viewer : undefined;
+  const isAttending = options.isAttending;
+  const isOwner = viewer ? row.oxyUserId === viewer : undefined;
 
   // Contact gating — DETAIL only. Owners and confirmed attendees see the
   // organiser contact; everyone else gets `contactLocked` (but only when there
@@ -175,7 +150,7 @@ export function toEvictionDTO(caseDoc: unknown, options: ToEvictionDTOOptions = 
   let contactInfo: EvictionContactInfo | undefined;
   let contactLocked: boolean | undefined;
   if (options.includeContact) {
-    const contact = toContactInfo(src.contactInfo);
+    const contact = toContactInfo(row);
     const unlocked = isOwner === true || isAttending === true;
     if (unlocked) {
       contactInfo = contact;
@@ -185,34 +160,33 @@ export function toEvictionDTO(caseDoc: unknown, options: ToEvictionDTOOptions = 
   }
 
   return {
-    id: refToId(src._id ?? src.id) ?? '',
-    oxyUserId: asString(src.oxyUserId),
-    title: asString(src.title),
-    description: asString(src.description),
-    location: toLocation(src.location),
-    scheduledAt: toIso(src.scheduledAt) ?? '',
-    status: asStatus(src.status),
-    agencyId: refToId(src.agencyId),
+    id: row.id,
+    oxyUserId: row.oxyUserId,
+    title: row.title,
+    description: row.description,
+    location: toLocation(row),
+    scheduledAt: row.scheduledAt.toISOString(),
+    status: STATUS_BY_COLUMN_VALUE[row.status],
+    agencyId: row.agencyId ?? undefined,
     contactInfo,
     contactLocked,
-    coverImage: toCoverImage(src.coverImage),
-    updates: toUpdates(src.updates),
-    attendeeCount: typeof src.attendeeCount === 'number' ? src.attendeeCount : 0,
+    coverImage: toCoverImage(row),
+    updates: source.updates.map(toUpdate),
+    attendeeCount: source.attendeeCount,
     isAttending,
     isOwner,
-    createdAt: toIso(src.createdAt) ?? '',
-    updatedAt: toIso(src.updatedAt) ?? '',
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
 
-export function toEvictionCommentDTO(commentDoc: unknown): EvictionComment {
-  const src = toLoose(commentDoc);
+export function toEvictionCommentDTO(row: EvictionCommentRow): EvictionComment {
   return {
-    id: refToId(src._id ?? src.id) ?? '',
-    caseId: refToId(src.caseId) ?? '',
-    oxyUserId: asString(src.oxyUserId),
-    body: asString(src.body),
-    createdAt: toIso(src.createdAt) ?? '',
-    updatedAt: toIso(src.updatedAt) ?? '',
+    id: row.id,
+    caseId: row.caseId,
+    oxyUserId: row.oxyUserId,
+    body: row.body,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   };
 }

@@ -1,11 +1,27 @@
 /**
  * The rest of the loop: delivery, decisions coming back, and the sweep that
  * notices when the two have drifted apart.
+ *
+ * ## Postgres, and what moved in the port
+ *
+ * `claimModerationOutboxEvent` and the `ModerationOutboxEvent` type now come
+ * from `db/moderation/moderationOutboxRepository`; what stays in
+ * `ModerationOutboxService` is the POLICY half — the backoff curve, the
+ * retryability verdict and the bounded drain. The event's identifier is `id`,
+ * not `_id`, and the reporter column is `reporter_oxy_user_id`.
+ *
+ * Nothing asserted here changed meaning. The one thing that had to be ADDED is
+ * the truncation below: Mongo's `jest.setup.ts` wiped every collection after
+ * each test, and the reconciliation counters (`awaitingDecision`, `localOnly`)
+ * are whole-table counts — a row left by an earlier test, or by an earlier FILE
+ * sharing this worker's database, would make them measure history instead of
+ * the sweep.
  */
 
-import mongoose from 'mongoose';
 import { decisionFixture } from '@oxyhq/crowdsource-testing';
 import type { Decision } from '@oxyhq/crowdsource-contracts';
+import { count, eq, inArray } from 'drizzle-orm';
+import { uuidv7 } from '@oxyhq/db';
 import {
   ModerationReportedType,
   ListingReportReason,
@@ -25,48 +41,65 @@ import {
   ModerationDeliveryRejectedError,
 } from '../../services/moderation/ModerationDeliveryWorker';
 import {
-  claimModerationOutboxEvent,
   dispatchModerationOutbox,
   failModerationOutboxEvent,
   isRetryableDeliveryError,
   reportSubmitEventId,
-  type ModerationOutboxEvent,
 } from '../../services/moderation/ModerationOutboxService';
 import {
+  claimModerationOutboxEvent,
+  type ModerationOutboxEvent,
+} from '../../db/moderation/moderationOutboxRepository';
+import {
   createModerationReport,
-  withReportIntakeSession,
+  withReportIntakeTransaction,
 } from '../../services/moderation/ReportIntakeService';
 import { reconcileModerationReports } from '../../services/moderation/ModerationReconciliation';
-import ModerationOutbox from '../../models/ModerationOutbox';
-import ModerationReport from '../../models/ModerationReport';
-import { createAddress, models } from '../helpers/factories';
+import { getDb } from '../../db/postgres';
+import {
+  listingReports,
+  moderationEnforcements,
+  moderationOutbox,
+  moderationReports,
+} from '../../db/schema';
+import {
+  resetGeoTables,
+  seedAddress,
+  seedGeoChain,
+  seedProperty,
+} from '../helpers/postgresGeoFixtures';
 
-const { Property } = models;
+/** Distinguishes the geo chains one test seeds; `countries_code_key` is UNIQUE. */
+let nextChain = 0;
 
-async function listing(): Promise<{ _id: unknown }> {
-  const address = await createAddress();
-  return Property.create({
-    oxyUserId: 'oxy-landlord',
-    addressId: address._id,
-    type: PropertyType.APARTMENT,
-    bedrooms: 1,
-    bathrooms: 1,
-    offerings: [OfferingType.LONG_TERM_RENT],
-    longTermRent: { monthlyAmount: 1000, currency: 'EUR' },
-    status: PropertyStatus.PUBLISHED,
+async function listing(): Promise<string> {
+  const chain = await seedGeoChain({ countryCode: `MP-${nextChain++}` });
+  const addressId = await seedAddress({ chain });
+  return seedProperty({
+    addressId,
+    overrides: {
+      oxyUserId: 'oxy-landlord',
+      type: PropertyType.APARTMENT,
+      bedrooms: 1,
+      bathrooms: 1,
+      offerings: [OfferingType.LONG_TERM_RENT],
+      longTermRentMonthlyAmount: 1000,
+      longTermRentCurrency: 'EUR',
+      status: PropertyStatus.PUBLISHED,
+    },
   });
 }
 
 async function storedReport(reportedId: string): Promise<string> {
-  const result = await withReportIntakeSession((session) =>
+  const result = await withReportIntakeTransaction((tx) =>
     createModerationReport(
       {
         reportedType: ModerationReportedType.PROPERTY,
         reportedId,
-        reporter: `oxy-${Math.random().toString(36).slice(2)}`,
+        reporter: `oxy-${uuidv7()}`,
         reason: ListingReportReason.SCAM,
       },
-      session,
+      tx,
     ),
   );
   return result.report.id;
@@ -74,7 +107,7 @@ async function storedReport(reportedId: string): Promise<string> {
 
 function outboxEvent(overrides: Partial<ModerationOutboxEvent>): ModerationOutboxEvent {
   return {
-    _id: 'evt',
+    id: 'evt',
     kind: 'report.submit',
     payload: {},
     attempts: 1,
@@ -85,6 +118,47 @@ function outboxEvent(overrides: Partial<ModerationOutboxEvent>): ModerationOutbo
   };
 }
 
+/** The stored outbox row, including the columns the reassembled payload drops. */
+async function storedOutbox(eventId: string) {
+  const [row] = await getDb()
+    .select()
+    .from(moderationOutbox)
+    .where(eq(moderationOutbox.id, eventId));
+  return row;
+}
+
+async function storedReportRow(reportId: string) {
+  const [row] = await getDb()
+    .select()
+    .from(moderationReports)
+    .where(eq(moderationReports.id, reportId));
+  return row;
+}
+
+async function countOutbox(): Promise<number> {
+  const [row] = await getDb().select({ total: count() }).from(moderationOutbox);
+  return row.total;
+}
+
+/**
+ * Empty everything this file counts, before each test.
+ *
+ * The reconciliation counters are whole-table counts and the enforcement claim
+ * is unique on `(decision_id, revision, action)` — both of which read a row left
+ * by an earlier test, or by an earlier FILE that shared this worker's database,
+ * as part of the result. Order: the outbox CASCADEs from `moderation_reports`,
+ * `listing_reports` from `properties`.
+ */
+beforeEach(async () => {
+  const db = getDb();
+  await db.delete(moderationOutbox);
+  await db.delete(moderationReports);
+  await db.delete(moderationEnforcements);
+  await db.delete(listingReports);
+  await resetGeoTables();
+  nextChain = 0;
+});
+
 describe('delivery worker', () => {
   /**
    * The integration is off in tests, so there is nowhere to deliver. That is a
@@ -92,8 +166,7 @@ describe('delivery worker', () => {
    * backlog delivers when the flag is switched on.
    */
   it('treats an unconfigured integration as retryable', async () => {
-    const property = await listing();
-    const reportId = await storedReport(String(property._id));
+    const reportId = await storedReport(await listing());
 
     await expect(
       deliverReportOutboxEvent(outboxEvent({ payload: { reportId } })),
@@ -101,7 +174,7 @@ describe('delivery worker', () => {
 
     expect(isRetryableDeliveryError(new CrowdSourceUnavailableError())).toBe(true);
     // Untouched: nothing failed, so nothing is marked failed.
-    expect((await ModerationReport.findById(reportId).lean())?.localStatus).toBe('queued');
+    expect((await storedReportRow(reportId)).localStatus).toBe('queued');
   });
 
   it('refuses an event with no report id, permanently', async () => {
@@ -116,9 +189,7 @@ describe('delivery worker', () => {
     // Nothing to deliver and nothing to fix: retrying would keep looking for a
     // row that no longer exists.
     await expect(
-      deliverReportOutboxEvent(
-        outboxEvent({ payload: { reportId: String(new mongoose.Types.ObjectId()) } }),
-      ),
+      deliverReportOutboxEvent(outboxEvent({ payload: { reportId: uuidv7() } })),
     ).resolves.toBeUndefined();
   });
 
@@ -135,41 +206,39 @@ describe('delivery worker', () => {
 
 describe('outbox dispatch', () => {
   it('dead-letters a non-retryable failure instead of backing off', async () => {
-    const property = await listing();
-    const reportId = await storedReport(String(property._id));
+    const reportId = await storedReport(await listing());
     const eventId = reportSubmitEventId(reportId);
 
     const claimed = await claimModerationOutboxEvent({ leaseOwner: 'owner-1' });
-    expect(claimed?._id).toBe(eventId);
+    expect(claimed?.id).toBe(eventId);
 
     const outcome = await failModerationOutboxEvent(
-      { _id: eventId, attempts: 1 },
+      { id: eventId, attempts: 1 },
       'owner-1',
       new ModerationDeliveryRejectedError('the envelope is not processable'),
     );
 
     expect(outcome).toEqual({ released: true, deadLettered: true });
-    const stored = await ModerationOutbox.findById(eventId).lean();
-    expect(stored?.status).toBe('dead_letter');
-    expect(stored?.lastError).toContain('not processable');
+    const stored = await storedOutbox(eventId);
+    expect(stored.status).toBe('dead_letter');
+    expect(stored.lastError).toContain('not processable');
   });
 
   it('backs off a retryable failure and keeps the event', async () => {
-    const property = await listing();
-    const reportId = await storedReport(String(property._id));
+    const reportId = await storedReport(await listing());
     const eventId = reportSubmitEventId(reportId);
 
     await claimModerationOutboxEvent({ leaseOwner: 'owner-1' });
     const outcome = await failModerationOutboxEvent(
-      { _id: eventId, attempts: 1 },
+      { id: eventId, attempts: 1 },
       'owner-1',
       new CrowdSourceUnavailableError(),
     );
 
     expect(outcome).toEqual({ released: true, deadLettered: false });
-    const stored = await ModerationOutbox.findById(eventId).lean();
-    expect(stored?.status).toBe('pending');
-    expect(stored?.availableAt.getTime()).toBeGreaterThan(Date.now());
+    const stored = await storedOutbox(eventId);
+    expect(stored.status).toBe('pending');
+    expect(stored.availableAt.getTime()).toBeGreaterThan(Date.now());
   });
 
   /**
@@ -177,13 +246,12 @@ describe('outbox dispatch', () => {
    * owns — that is what lets two tasks drain one queue safely.
    */
   it('refuses to release a lease another owner holds', async () => {
-    const property = await listing();
-    const reportId = await storedReport(String(property._id));
+    const reportId = await storedReport(await listing());
     const eventId = reportSubmitEventId(reportId);
 
     await claimModerationOutboxEvent({ leaseOwner: 'owner-1' });
     const outcome = await failModerationOutboxEvent(
-      { _id: eventId, attempts: 1 },
+      { id: eventId, attempts: 1 },
       'owner-2',
       new Error('not mine'),
     );
@@ -191,25 +259,29 @@ describe('outbox dispatch', () => {
   });
 
   it('drains a batch and reports what happened', async () => {
-    const property = await listing();
-    await storedReport(String(property._id));
-    await storedReport(String(property._id));
+    const propertyId = await listing();
+    await storedReport(propertyId);
+    await storedReport(propertyId);
 
     const handled: string[] = [];
     const result = await dispatchModerationOutbox({
       handler: async (event) => {
-        handled.push(event._id);
+        handled.push(event.id);
       },
     });
 
     expect(result).toEqual({ processed: 2, failed: 0, deadLettered: 0 });
     expect(handled).toHaveLength(2);
-    expect(await ModerationOutbox.countDocuments({ status: 'processed' })).toBe(2);
+
+    const [processed] = await getDb()
+      .select({ total: count() })
+      .from(moderationOutbox)
+      .where(eq(moderationOutbox.status, 'processed'));
+    expect(processed.total).toBe(2);
   });
 
   it('stops claiming new work once aborted', async () => {
-    const property = await listing();
-    await storedReport(String(property._id));
+    await storedReport(await listing());
     const controller = new AbortController();
     controller.abort();
 
@@ -269,13 +341,13 @@ describe('decision worker', () => {
   });
 
   it('writes the decision onto every report that joined the case', async () => {
-    const property = await listing();
-    const first = await storedReport(String(property._id));
-    const second = await storedReport(String(property._id));
-    await ModerationReport.updateMany(
-      { _id: { $in: [first, second] } },
-      { $set: { crowdSourceCaseId: 'case_shared', localStatus: 'submitted' } },
-    );
+    const propertyId = await listing();
+    const first = await storedReport(propertyId);
+    const second = await storedReport(propertyId);
+    await getDb()
+      .update(moderationReports)
+      .set({ crowdSourceCaseId: 'case_shared', localStatus: 'submitted' })
+      .where(inArray(moderationReports.id, [first, second]));
 
     const decision = decisionFor('case_shared', { status: 'final' });
     await applyDecisionOutboxEvent(
@@ -286,11 +358,11 @@ describe('decision worker', () => {
     );
 
     for (const id of [first, second]) {
-      const stored = await ModerationReport.findById(id).lean();
-      expect(stored?.decisionId).toBe(decision.id);
-      expect(stored?.decisionRevision).toBe(decision.revision);
-      expect(stored?.localStatus).toBe('closed');
-      expect(stored?.enforcedAction).toBeDefined();
+      const stored = await storedReportRow(id);
+      expect(stored.decisionId).toBe(decision.id);
+      expect(stored.decisionRevision).toBe(decision.revision);
+      expect(stored.localStatus).toBe('closed');
+      expect(stored.enforcedAction).not.toBeNull();
     }
   });
 
@@ -300,12 +372,11 @@ describe('decision worker', () => {
    * otherwise overwrite the current answer.
    */
   it('refuses to overwrite a newer revision with an older one', async () => {
-    const property = await listing();
-    const reportId = await storedReport(String(property._id));
-    await ModerationReport.updateOne(
-      { _id: reportId },
-      { $set: { crowdSourceCaseId: 'case_rev', localStatus: 'submitted' } },
-    );
+    const reportId = await storedReport(await listing());
+    await getDb()
+      .update(moderationReports)
+      .set({ crowdSourceCaseId: 'case_rev', localStatus: 'submitted' })
+      .where(eq(moderationReports.id, reportId));
 
     const newer = decisionFor('case_rev', {
       id: 'dec_rev',
@@ -317,7 +388,7 @@ describe('decision worker', () => {
     await applyDecisionOutboxEvent(
       outboxEvent({ kind: 'decision.apply', payload: { caseId: 'case_rev', decision: newer } }),
     );
-    expect((await ModerationReport.findById(reportId).lean())?.decisionRevision).toBe(3);
+    expect((await storedReportRow(reportId)).decisionRevision).toBe(3);
 
     const older = decisionFor('case_rev', {
       id: 'dec_rev',
@@ -330,29 +401,27 @@ describe('decision worker', () => {
       outboxEvent({ kind: 'decision.apply', payload: { caseId: 'case_rev', decision: older } }),
     );
 
-    const stored = await ModerationReport.findById(reportId).lean();
-    expect(stored?.decisionRevision).toBe(3);
-    expect(stored?.decisionOutcome).toBe('no_violation');
+    const stored = await storedReportRow(reportId);
+    expect(stored.decisionRevision).toBe(3);
+    expect(stored.decisionOutcome).toBe('no_violation');
   });
 });
 
 describe('reconciliation', () => {
   it('re-derives a delivery event a report lost', async () => {
-    const property = await listing();
-    const reportId = await storedReport(String(property._id));
-    await ModerationOutbox.deleteMany({});
+    const reportId = await storedReport(await listing());
+    await getDb().delete(moderationOutbox);
 
     const result = await reconcileModerationReports();
 
     expect(result.requeued).toBe(1);
     // The SAME deterministic id, so a report that did have an event is never
     // delivered twice.
-    expect(await ModerationOutbox.findById(reportSubmitEventId(reportId)).lean()).not.toBeNull();
+    expect(await storedOutbox(reportSubmitEventId(reportId))).toBeDefined();
   });
 
   it('leaves an existing delivery event alone', async () => {
-    const property = await listing();
-    await storedReport(String(property._id));
+    await storedReport(await listing());
     const result = await reconcileModerationReports();
     expect(result.requeued).toBe(0);
   });
@@ -362,12 +431,11 @@ describe('reconciliation', () => {
    * and re-queueing it would spin — so the count is the alert.
    */
   it('counts a dead-lettered delivery instead of retrying it', async () => {
-    const property = await listing();
-    const reportId = await storedReport(String(property._id));
-    await ModerationOutbox.updateOne(
-      { _id: reportSubmitEventId(reportId) },
-      { $set: { status: 'dead_letter' } },
-    );
+    const reportId = await storedReport(await listing());
+    await getDb()
+      .update(moderationOutbox)
+      .set({ status: 'dead_letter' })
+      .where(eq(moderationOutbox.id, reportSubmitEventId(reportId)));
 
     const result = await reconcileModerationReports();
     expect(result.deadLettered).toBe(1);
@@ -380,18 +448,18 @@ describe('reconciliation', () => {
    * A `received` report has no subject provider, so an event re-derived for it
    * would fail as unsupported on its first attempt and dead-letter — turning a
    * deliberate local-only report into a recurring alert. Adding 'received' to
-   * the sweep's `$in` is the mutation this test exists to catch.
+   * `RECONCILABLE_LOCAL_STATUSES` is the mutation this test exists to catch.
    */
   it('never re-queues a report that was never going anywhere', async () => {
-    await withReportIntakeSession((session) =>
+    await withReportIntakeTransaction((tx) =>
       createModerationReport(
         {
           reportedType: ModerationReportedType.EVICTION_CASE,
-          reportedId: String(new mongoose.Types.ObjectId()),
+          reportedId: uuidv7(),
           reporter: 'oxy-reporter',
           reason: ListingReportReason.OTHER,
         },
-        session,
+        tx,
       ),
     );
 
@@ -401,21 +469,18 @@ describe('reconciliation', () => {
     expect(result.localOnly).toBe(1);
     // Counting it is the only thing that makes "reports no jury will ever see" a
     // visible number rather than a quiet one.
-    expect(await ModerationOutbox.countDocuments({})).toBe(0);
+    expect(await countOutbox()).toBe(0);
   });
 
   it('counts a case that has gone quiet', async () => {
-    const property = await listing();
-    const reportId = await storedReport(String(property._id));
-    await ModerationReport.updateOne(
-      { _id: reportId },
-      {
-        $set: {
-          localStatus: 'submitted',
-          submittedAt: new Date(Date.now() - 96 * 60 * 60 * 1_000),
-        },
-      },
-    );
+    const reportId = await storedReport(await listing());
+    await getDb()
+      .update(moderationReports)
+      .set({
+        localStatus: 'submitted',
+        submittedAt: new Date(Date.now() - 96 * 60 * 60 * 1_000),
+      })
+      .where(eq(moderationReports.id, reportId));
 
     const result = await reconcileModerationReports();
     expect(result.awaitingDecision).toBe(1);

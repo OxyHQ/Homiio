@@ -5,10 +5,25 @@
  *   - createComment  — authed; notifies the case owner (unless self-comment).
  *   - deleteComment  — the comment author OR the case owner may remove it;
  *                      anyone else gets a 404 (no existence leak).
+ *
+ * The owner check in `deleteComment` is `findOwnedEvictionCase`, which asks
+ * "does this caller own this case?" as a single predicate rather than fetching
+ * the case and comparing its `oxyUserId` here — the same gate every eviction
+ * write uses, so there is one spelling of case ownership in the domain.
+ *
+ * A thread does not outlive its case: `eviction_comments.case_id` cascades, so
+ * `deleteEviction` no longer sweeps this table by hand.
  */
 
 import { pickFields } from '../../utils/pickFields';
-import { EvictionCase, EvictionComment } from '../../models';
+import {
+  deleteEvictionComment,
+  findEvictionCase,
+  findEvictionComment,
+  findOwnedEvictionCase,
+  insertEvictionComment,
+  listEvictionComments,
+} from '../../db/evictions/evictionRepository';
 import { toEvictionCommentDTO } from './toEvictionDTO';
 import { parsePagination } from './shared';
 import { notificationDispatchService } from '../../services/notificationDispatchService';
@@ -23,11 +38,7 @@ export async function listComments(req: ControllerRequest, res: ControllerRespon
     const { id } = req.params;
     const { page, limit, skip } = parsePagination(req.query);
 
-    const filter = { caseId: id };
-    const [total, comments] = await Promise.all([
-      EvictionComment.countDocuments(filter),
-      EvictionComment.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
-    ]);
+    const { total, comments } = await listEvictionComments(id, { limit, skip });
 
     const totalPages = Math.ceil(total / limit);
     res.json(
@@ -53,7 +64,7 @@ export async function createComment(req: ControllerRequest, res: ControllerRespo
     const { id } = req.params;
     const oxyUserId = requireSessionOxyUserId(req);
 
-    const evictionCase = await EvictionCase.findById(id).select('oxyUserId title');
+    const evictionCase = await findEvictionCase(id);
     if (!evictionCase) return next(new AppError('Eviction case not found', 404, 'EVICTION_NOT_FOUND'));
 
     const picked = pickFields<Record<string, unknown>>(req.body, ['body']);
@@ -61,14 +72,14 @@ export async function createComment(req: ControllerRequest, res: ControllerRespo
     if (!body) return next(new AppError('A comment body is required', 400, 'INVALID_COMMENT'));
     if (body.length > MAX_BODY_LENGTH) return next(new AppError('Comment is too long', 400, 'COMMENT_TOO_LONG'));
 
-    const comment = await EvictionComment.create({ caseId: id, oxyUserId, body });
+    const comment = await insertEvictionComment({ caseId: id, oxyUserId, body });
 
-    if (evictionCase.oxyUserId && evictionCase.oxyUserId !== oxyUserId) {
+    if (evictionCase.oxyUserId !== oxyUserId) {
       await notificationDispatchService.createForUser(evictionCase.oxyUserId, {
         type: 'eviction_comment',
         title: 'New comment on your eviction case',
         message: `Someone commented on "${evictionCase.title}"`,
-        data: { evictionId: String(id), commentId: String(comment._id) },
+        data: { evictionId: id, commentId: comment.id },
       });
     }
 
@@ -83,19 +94,18 @@ export async function deleteComment(req: ControllerRequest, res: ControllerRespo
     const { id, commentId } = req.params;
     const oxyUserId = requireSessionOxyUserId(req);
 
-    const comment = await EvictionComment.findOne({ _id: commentId, caseId: id });
+    const comment = await findEvictionComment(id, commentId);
     if (!comment) return next(new AppError('Comment not found', 404, 'COMMENT_NOT_FOUND'));
 
     let authorized = comment.oxyUserId === oxyUserId;
     if (!authorized) {
       // The case owner may also moderate the thread.
-      const evictionCase = await EvictionCase.findById(id).select('oxyUserId');
-      authorized = Boolean(evictionCase && evictionCase.oxyUserId === oxyUserId);
+      authorized = (await findOwnedEvictionCase(id, oxyUserId)) !== undefined;
     }
     // Non-author, non-owner → 404 (never reveal the comment exists).
     if (!authorized) return next(new AppError('Comment not found', 404, 'COMMENT_NOT_FOUND'));
 
-    await EvictionComment.deleteOne({ _id: commentId, caseId: id });
+    await deleteEvictionComment(id, commentId);
     res.json(successResponse(null, 'Comment deleted'));
   } catch (error) {
     next(error);

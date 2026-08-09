@@ -49,6 +49,49 @@ export type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
  */
 export type DatabaseOrTransaction = Database | Transaction;
 
+/**
+ * Run a write that MAY violate a constraint, without poisoning the caller's
+ * transaction.
+ *
+ * ## The failure this exists to prevent
+ *
+ * In PostgreSQL a failed statement aborts the whole transaction: every
+ * subsequent statement on that handle raises `25P02
+ * current_transaction_is_aborted` until it is rolled back. So the natural
+ * idiom — INSERT, catch `23505`, then read the row that already existed — works
+ * on the ROOT connection (where each statement is its own implicit transaction)
+ * and is BROKEN inside a transaction, which is exactly where the report intake
+ * runs it.
+ *
+ * The symptom is not a lost write. It is that the recovery read dies, the
+ * repository's `DuplicateReportError` is never constructed, and the controller
+ * branch that answers a re-file with a friendly 200 becomes unreachable — so a
+ * user re-filing a report gets a 500. It is a port regression: Mongo detected
+ * the duplicate with a `findOne` BEFORE the insert, so nothing was ever aborted,
+ * and moving that check into the index (which is what makes it race-free) is
+ * what introduced it.
+ *
+ * ## Why a nested transaction is the fix
+ *
+ * drizzle issues a real `SAVEPOINT` / `ROLLBACK TO SAVEPOINT` when
+ * `.transaction()` is called on a transaction handle, so the conflict unwinds
+ * only to the savepoint and the OUTER transaction stays usable. Handed the root
+ * connection it is a plain `BEGIN`/`COMMIT`, so one call site serves both.
+ *
+ * Deliberately NOT solved with `ON CONFLICT DO NOTHING`: several of these
+ * indexes are PARTIAL (`… WHERE status = 'open'`), whose arbiter Postgres can
+ * only infer if the predicate is repeated exactly at every call site — a
+ * duplicated invariant that silently stops matching the day the predicate
+ * changes. `isUniqueViolation` naming the constraint keeps that in one place and
+ * keeps any OTHER violation propagating as the genuine error it is.
+ */
+export async function inSavepoint<T>(
+  db: DatabaseOrTransaction,
+  write: (tx: DatabaseOrTransaction) => Promise<T>,
+): Promise<T> {
+  return db.transaction(async (tx) => write(tx));
+}
+
 let db: Database | null = null;
 let client: postgres.Sql | null = null;
 

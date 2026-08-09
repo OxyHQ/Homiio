@@ -31,13 +31,37 @@
 import { createHash } from 'crypto';
 import type { ReportInput } from '@oxyhq/crowdsource';
 import { ModerationReportedType } from '@homiio/shared-types';
+import type { ModerationReportRow } from '../../db/moderation/moderationReportRepository';
 import { REPORT_TAXONOMY_VERSION, allegationForReport } from './reportTaxonomy';
 import { subjectProviderFor } from './subjects/registry';
 import type { ModerationSubjectSnapshot } from './subjects/types';
-import type { ModerationReportFields } from '../../models/ModerationReport';
 
 /** The contract bounds the reporter's free text; this stays inside it. */
 const MAX_DETAILS_LENGTH = 2_000;
+
+/**
+ * The stored `reported_type`, as the enum the taxonomy is keyed by.
+ *
+ * `moderation_reports.reported_type` is a `text` column whose CHECK carries the
+ * enum's VALUES, so drizzle types the row as the string union rather than as
+ * {@link ModerationReportedType} — and TypeScript does not accept a bare
+ * `'property'` where a string enum member is wanted.
+ *
+ * Written as an exhaustive record rather than an assertion, and that is the
+ * point of it. `MODERATION_REPORTED_TYPES` and this enum are two declarations of
+ * one closed set, so a fourth noun added to the schema must be answered here
+ * too; a cast would keep compiling and hand the new noun to
+ * `allegationForReport`, which reads the LISTING table for everything that is
+ * not a review. The report would deliver a plausible allegation drawn from the
+ * wrong vocabulary, with nothing failing anywhere.
+ */
+const REPORTED_TYPE_BY_STORED_VALUE: Readonly<
+  Record<ModerationReportRow['reportedType'], ModerationReportedType>
+> = {
+  property: ModerationReportedType.PROPERTY,
+  review: ModerationReportedType.REVIEW,
+  eviction_case: ModerationReportedType.EVICTION_CASE,
+};
 
 /**
  * The material could not be described, because nothing can describe it.
@@ -107,9 +131,9 @@ export interface ModerationReportInput {
  */
 export async function buildModerationReportInput(
   report: Pick<
-    ModerationReportFields,
-    'reportedType' | 'reportedId' | 'reporter' | 'reason' | 'details' | 'createdAt'
-  > & { id: string },
+    ModerationReportRow,
+    'id' | 'reportedType' | 'reportedId' | 'reporterOxyUserId' | 'reason' | 'details' | 'createdAt'
+  >,
 ): Promise<ModerationReportInput | null> {
   const provider = subjectProviderFor(report.reportedType);
   if (!provider) throw new ModerationSubjectUnsupportedError(report.reportedType);
@@ -118,7 +142,7 @@ export async function buildModerationReportInput(
   if (!snapshot) return null;
 
   const code = allegationForReport({
-    reportedType: report.reportedType as ModerationReportedType,
+    reportedType: REPORTED_TYPE_BY_STORED_VALUE[report.reportedType],
     reason: report.reason,
   });
   const details = report.details?.trim();
@@ -142,9 +166,12 @@ export async function buildModerationReportInput(
       /**
        * The Oxy subject IS the binding proof. Homiio stores reporters as Oxy
        * user ids resolved from the session, so there is no separate binding step
-       * to implement here — and nothing a client could supply to fake one.
+       * to implement here — and nothing a client could supply to fake one. The
+       * column now says so in its own name (`reporter_oxy_user_id`), which is
+       * what brings it inside the schema's Oxy-account classification rather
+       * than leaving a `reporter` that could hold anything.
        */
-      reportedBy: { oxyUserId: report.reporter },
+      reportedBy: { oxyUserId: report.reporterOxyUserId },
       /**
        * The moment the USER reported it — the local report's own timestamp, not
        * the moment of delivery. Any value invented per attempt would make every

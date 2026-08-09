@@ -24,14 +24,32 @@
  * with no `verify` hook, and the only `req.rawBody` assignment in the file is
  * inside the Stripe route, from `bodyParser.raw`, scoped to
  * `/api/billing/webhook`. So nothing hands this route a Buffer and a late mount
- * refuses every delivery. Confirmed behaviourally too: mounting the parser first
- * in the app below fails five of these tests.
+ * refuses every delivery. Confirmed behaviourally too, and re-measured after the
+ * Postgres port rather than carried over: mounting the parser first in
+ * `buildApp` below fails 13 of these 15 tests. The two survivors are the
+ * `server.ts` source read (which does not use `buildApp`) and the "is mounted at
+ * all" vacuity floor (which only asserts a non-404) — so the ordering is pinned
+ * by the tests that exercise the route, not by the one that reads the file.
  *
  * That is a property of today's `server.ts`, not of the invariant — add a
  * `verify` hook for some unrelated reason and Homiio becomes the silent case
  * overnight. So the assertion below is `typeof req.body === 'undefined'`, which
  * proves NO PARSER RAN. Asserting that verification failed would only be true in
  * the arrangement Homiio happens to have today.
+ *
+ * ## Postgres, and what the port had to add
+ *
+ * The two tables are read with drizzle now, through
+ * `db/moderation/moderationEventRepository` and
+ * `db/moderation/moderationOutboxRepository` — the dedupe store the route
+ * installs is `postgresProcessedEventStore()`, so the claim these tests exercise
+ * is a real `INSERT … ON CONFLICT DO NOTHING … RETURNING` rather than an
+ * in-process map. Every event id below is a FIXED string (`evt_bad`,
+ * `evt_decided`, …) and `moderation_events.id` IS the dedupe key, so the
+ * truncation in `beforeEach` is load-bearing: Mongo got it from `jest.setup.ts`'s
+ * per-test collection wipe, and without an equivalent a row left by an earlier
+ * test — or by an earlier FILE sharing this worker's database — would make the
+ * receiver answer "already processed" and every count below measure history.
  */
 
 import express, { Router, type Express, type Request } from 'express';
@@ -39,6 +57,7 @@ import bodyParser from 'body-parser';
 import request from 'supertest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { count } from 'drizzle-orm';
 import {
   caseDecidedEventFixture,
   decisionFixture,
@@ -46,13 +65,25 @@ import {
 } from '@oxyhq/crowdsource-testing';
 
 import { createCrowdSourceWebhookRoutes } from '../../routes/crowdSourceWebhook';
-import ModerationEvent from '../../models/ModerationEvent';
-import ModerationOutbox from '../../models/ModerationOutbox';
+import { findModerationEvent } from '../../db/moderation/moderationEventRepository';
+import { findModerationOutboxEvent } from '../../db/moderation/moderationOutboxRepository';
+import { getDb } from '../../db/postgres';
+import { moderationEvents, moderationOutbox } from '../../db/schema';
 import { decisionApplyEventId } from '../../services/moderation/ModerationOutboxService';
 
 /** Must match what `__tests__/jest.setup.ts` puts in the environment. */
 const WEBHOOK_SECRET = 'test-webhook-secret-at-least-16-chars';
 const PREVIOUS_SECRET = 'test-previous-secret-at-least-16-chars';
+
+async function countEvents(): Promise<number> {
+  const [row] = await getDb().select({ total: count() }).from(moderationEvents);
+  return row.total;
+}
+
+async function countOutbox(): Promise<number> {
+  const [row] = await getDb().select({ total: count() }).from(moderationOutbox);
+  return row.total;
+}
 
 /**
  * The app in the SAME order `server.ts` uses: webhook first, parsers after.
@@ -134,6 +165,22 @@ interface RefusalOverrides {
   readonly signature?: string;
 }
 
+/**
+ * Both tables emptied before each test.
+ *
+ * `moderation_events.id` IS the dedupe key and every id here is a fixed string,
+ * so a surviving row would silently turn "recorded correctly" into "already
+ * claimed" — and the `countEvents()`/`countOutbox()` assertions into statements
+ * about the file's history. The outbox goes first only for symmetry with the
+ * other moderation suites; it carries no foreign key to `moderation_events`
+ * (deliberately — see `db/schema/moderation.ts`).
+ */
+beforeEach(async () => {
+  const db = getDb();
+  await db.delete(moderationOutbox);
+  await db.delete(moderationEvents);
+});
+
 describe('crowdsource webhook mount', () => {
   /**
    * The one assertion about the REAL `server.ts`, rather than about the order
@@ -206,13 +253,13 @@ describe('crowdsource webhook mount', () => {
     // "Did CrowdSource tell us about this case, and when" is the first question
     // asked when a report looks stuck, so an event with nothing to enforce is
     // still written down.
-    const event = await ModerationEvent.findById('evt_case_created').lean();
-    expect(event).not.toBeNull();
+    const event = await findModerationEvent('evt_case_created');
+    expect(event).toBeDefined();
     expect(event?.state).toBe('ignored');
     expect(event?.caseId).toBe('case_quiet');
 
     // …but no work is queued for it.
-    expect(await ModerationOutbox.countDocuments({})).toBe(0);
+    expect(await countOutbox()).toBe(0);
   });
 
   /**
@@ -262,8 +309,8 @@ describe('crowdsource webhook mount', () => {
       .set({ ...control.headers })
       .send(control.body);
     expect(accepted.status).toBeLessThan(300);
-    expect(await ModerationEvent.countDocuments({})).toBe(1);
-    await ModerationEvent.deleteMany({});
+    expect(await countEvents()).toBe(1);
+    await getDb().delete(moderationEvents);
 
     const signed = signWebhookDelivery({
       secret: overrides.wrongSecret ?? WEBHOOK_SECRET,
@@ -287,8 +334,8 @@ describe('crowdsource webhook mount', () => {
      * the signature check entirely.
      */
     expect((res.body as { rejection?: string }).rejection).toBe(expectedRejection);
-    expect(await ModerationEvent.countDocuments({})).toBe(0);
-    expect(await ModerationOutbox.countDocuments({})).toBe(0);
+    expect(await countEvents()).toBe(0);
+    expect(await countOutbox()).toBe(0);
   });
 
   /**
@@ -316,22 +363,20 @@ describe('crowdsource webhook mount', () => {
 
     expect(res.status).toBeLessThan(300);
 
-    const stored = await ModerationEvent.findById('evt_decided').lean();
+    const stored = await findModerationEvent('evt_decided');
     expect(stored?.state).toBe('queued');
 
-    const outboxEvent = await ModerationOutbox.findById(
-      decisionApplyEventId('evt_decided'),
-    ).lean();
-    expect(outboxEvent).not.toBeNull();
+    const outboxEvent = await findModerationOutboxEvent(decisionApplyEventId('evt_decided'));
+    expect(outboxEvent).toBeDefined();
     expect(outboxEvent?.kind).toBe('decision.apply');
-    expect(outboxEvent?.payload?.caseId).toBe('case_decided');
+    expect(outboxEvent?.payload.caseId).toBe('case_decided');
     /**
      * Stored WHOLE, not projected into columns. The decision document is loose
      * by design so a newer server can add to it, and a projection would silently
      * drop whatever it added — including a finding field the enforcement mapping
      * may later need.
      */
-    expect(outboxEvent?.payload?.decision).toEqual(JSON.parse(JSON.stringify(decision)));
+    expect(outboxEvent?.payload.decision).toEqual(JSON.parse(JSON.stringify(decision)));
   });
 
   /**
@@ -361,10 +406,10 @@ describe('crowdsource webhook mount', () => {
       .send(delivery.body);
 
     expect(res.status).toBeLessThan(300);
-    const stored = await ModerationEvent.findById('evt_future').lean();
-    expect(stored).not.toBeNull();
+    const stored = await findModerationEvent('evt_future');
+    expect(stored).toBeDefined();
     expect(stored?.state).toBe('ignored');
-    expect(await ModerationOutbox.countDocuments({})).toBe(0);
+    expect(await countOutbox()).toBe(0);
   });
 
   /**
@@ -405,7 +450,7 @@ describe('crowdsource webhook mount', () => {
       expect(res.status).toBeLessThan(300);
       // The side effect, not the status: a 200 that wrote nothing would agree
       // with a receiver that had verified nothing.
-      expect(await ModerationEvent.findById('evt_passthrough').lean()).not.toBeNull();
+      expect(await findModerationEvent('evt_passthrough')).toBeDefined();
     } finally {
       process.env.CROWDSOURCE_WEBHOOK_SECRET = realEnv;
     }
@@ -436,7 +481,7 @@ describe('crowdsource webhook mount', () => {
         .send(signed.body);
 
       expect(res.status).toBeLessThan(300);
-      expect(await ModerationEvent.findById('evt_rotating').lean()).not.toBeNull();
+      expect(await findModerationEvent('evt_rotating')).toBeDefined();
     } finally {
       process.env.CROWDSOURCE_WEBHOOK_SECRET_PREVIOUS = realEnv;
     }
@@ -459,7 +504,7 @@ describe('crowdsource webhook mount', () => {
       .send(signed.body);
 
     expect((res.body as { rejection?: string }).rejection).toBe('signature_mismatch');
-    expect(await ModerationEvent.countDocuments({})).toBe(0);
+    expect(await countEvents()).toBe(0);
   });
 
   it('deduplicates a redelivery of the same event', async () => {
@@ -473,7 +518,7 @@ describe('crowdsource webhook mount', () => {
     await request(app).post('/webhooks/crowdsource').set(delivery.headers).send(delivery.body);
 
     // One claim, one queued job — even though the delivery arrived twice.
-    expect(await ModerationEvent.countDocuments({})).toBe(1);
-    expect(await ModerationOutbox.countDocuments({})).toBe(1);
+    expect(await countEvents()).toBe(1);
+    expect(await countOutbox()).toBe(1);
   });
 });

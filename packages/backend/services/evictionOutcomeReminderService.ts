@@ -7,16 +7,25 @@
  * we nudge the OWNER exactly once to record what really happened (stopped /
  * postponed / carried out) so the public board stays honest.
  *
- * Idempotency is enforced by claiming each case atomically (an `updateOne`
- * guarded on `outcomeReminderSentAt: null`) BEFORE dispatching — so concurrent
- * cron runs across API tasks can never double-notify, and a re-run simply finds
- * nothing due. The dispatch itself is best-effort (swallow-and-logged inside the
- * notification dispatch service); the domain state (`outcomeReminderSentAt`)
- * having been set is the source of truth for "already reminded".
+ * Idempotency is enforced by CLAIMING each case before dispatching:
+ * `claimEvictionOutcomeReminder` is an `UPDATE … WHERE outcome_reminder_sent_at
+ * IS NULL … RETURNING`, so concurrent cron runs across ECS tasks cannot both
+ * take it — exactly one gets a row back and notifies, and a re-run simply finds
+ * nothing due. The claim commits BEFORE the notification is sent, which is the
+ * right way round: the dispatch is best-effort (swallow-and-logged inside the
+ * notification dispatch service), so a missed nudge is better than a repeated
+ * one, and `outcome_reminder_sent_at` remains the source of truth for "already
+ * reminded".
+ *
+ * The due-set predicate — `upcoming`, past the cutoff, never claimed — lives in
+ * `listEvictionCasesAwaitingOutcome` rather than here, so the query the sweep
+ * scans and the claim it then takes cannot describe two different sets.
  */
 
-import { EvictionCaseStatus } from '@homiio/shared-types';
-import { EvictionCase } from '../models';
+import {
+  claimEvictionOutcomeReminder,
+  listEvictionCasesAwaitingOutcome,
+} from '../db/evictions/evictionRepository';
 import { notificationDispatchService } from './notificationDispatchService';
 
 /** A case is "stale" once its date is more than this far in the past. */
@@ -37,35 +46,24 @@ export interface EvictionOutcomeReminderResult {
 export async function sendEvictionOutcomeReminders(
   limit: number = DEFAULT_REMINDER_LIMIT,
 ): Promise<EvictionOutcomeReminderResult> {
-  const cutoff = new Date(Date.now() - REMINDER_STALE_MS);
-
-  // `{ outcomeReminderSentAt: null }` matches both an explicit null AND a missing
-  // field, so cases that predate this feature are picked up too.
-  const due = await EvictionCase.find({
-    status: EvictionCaseStatus.UPCOMING,
-    scheduledAt: { $lt: cutoff },
-    outcomeReminderSentAt: null,
-  })
-    .select('_id oxyUserId title')
-    .limit(limit)
-    .lean<Array<{ _id: unknown; oxyUserId?: string; title?: string }>>();
+  const due = await listEvictionCasesAwaitingOutcome({
+    before: new Date(Date.now() - REMINDER_STALE_MS),
+    limit,
+  });
 
   let processed = 0;
   for (const row of due) {
-    // Atomically claim the reminder. If another run already claimed it,
-    // `modifiedCount` is 0 and we skip — guaranteeing exactly-once dispatch.
-    const claimed = await EvictionCase.updateOne(
-      { _id: row._id, outcomeReminderSentAt: null },
-      { $set: { outcomeReminderSentAt: new Date() } },
-    );
-    if (claimed.modifiedCount !== 1) continue;
+    // Sequential on purpose: each iteration is a claim another task may already
+    // hold, and the loop's whole job is to lose that race quietly.
+    const claimed = await claimEvictionOutcomeReminder(row.id);
+    if (!claimed) continue;
 
-    const label = typeof row.title === 'string' && row.title.trim() ? row.title : 'your case';
+    const label = row.title.trim() ? row.title : 'your case';
     await notificationDispatchService.createForUser(row.oxyUserId, {
       type: 'eviction_outcome_reminder',
       title: 'How did it go?',
       message: `The date for "${label}" has passed. Let neighbours know what happened — was it stopped, postponed or carried out?`,
-      data: { evictionId: String(row._id) },
+      data: { evictionId: row.id },
     });
     processed += 1;
   }

@@ -2,9 +2,18 @@
  * Eviction solidarity board — ownership, privacy, RSVP, timeline, comments,
  * reports, and public browse behaviour.
  *
- * Uses the real eviction controllers + models on the in-memory Mongo, mounted
+ * Uses the real eviction controllers against a real PostgreSQL server, mounted
  * behind a fake-auth middleware (mirrors leaseOwnership / notificationOwnership
  * tests). `buildApp()` with no id models an anonymous public viewer.
+ *
+ * ## The assertions read the TABLES, and three of them got stronger for it
+ *
+ * `attendees` and `updates` were embedded arrays; they are now
+ * `eviction_case_attendees` and `eviction_case_updates`, so "the forged timeline
+ * and roster were ignored" is a row COUNT rather than a subdocument length. And
+ * the comment cascade is now a database fact (`ON DELETE CASCADE`) rather than
+ * a second `deleteMany` the controller had to remember — deleting that call was
+ * safe precisely because this assertion still holds without it.
  */
 
 import express, { type Express } from 'express';
@@ -14,21 +23,34 @@ import { eq } from 'drizzle-orm';
 import { sendEvictionOutcomeReminders } from '../../services/evictionOutcomeReminderService';
 
 import * as eviction from '../../controllers/eviction';
-import { EvictionCase, EvictionComment, EvictionReport } from '../../models';
 import { getDb } from '../../db/postgres';
-import { notifications } from '../../db/schema';
+import {
+  evictionCaseAttendees,
+  evictionCaseUpdates,
+  evictionCases,
+  evictionComments,
+  evictionReports,
+  notifications,
+} from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { assertFound } from '../helpers/assertFound';
 
+/** The comment row with this id, if it is still there. */
+async function commentsWithId(commentId: string) {
+  return getDb().select().from(evictionComments).where(eq(evictionComments.id, commentId));
+}
+
 /**
- * The eviction domain is still Mongo; its NOTIFICATIONS are not.
+ * The whole domain is Postgres now, notifications included.
  *
- * `notificationDispatchService` — the single chokepoint every domain event goes
- * through — writes `notifications` in Postgres from this batch on, so the
- * fan-out assertions below read that table. The Postgres side of the harness has
- * no per-test cleanup (`__tests__/jest.setup.ts` clears the Mongo collections
- * and deliberately leaves Postgres alone), so this file empties the rows it
- * causes.
+ * `__tests__/jest.setup.ts` clears the Mongo collections and deliberately
+ * leaves Postgres alone, so this file empties every table it writes. Clearing
+ * `eviction_cases` is NOT optional and its absence was a real defect while this
+ * domain was half-ported: leftover cases from earlier tests leaked into the
+ * public-browse assertions (11 cases where 1 was expected) and into the
+ * outcome-reminder sweep (`processed: 3` where 1 was expected), so two tests
+ * passed or failed depending on what ran before them. The four child tables —
+ * updates, attendees, comments and reports — all CASCADE from it.
  */
 async function notificationsOfType(type: string) {
   return getDb()
@@ -39,6 +61,7 @@ async function notificationsOfType(type: string) {
 
 beforeEach(async () => {
   await getDb().delete(notifications);
+  await getDb().delete(evictionCases);
 });
 
 function buildApp(oxyUserId?: string): Express {
@@ -118,13 +141,27 @@ describe('createEviction — mass-assignment / ownership', () => {
       });
     expect(res.status).toBe(201);
 
-    const persisted = await EvictionCase.findById(res.body.data.id).select('+attendees');
+    const createdId = String(res.body.data.id);
+    const [persisted] = await getDb()
+      .select()
+      .from(evictionCases)
+      .where(eq(evictionCases.id, createdId));
     assertFound(persisted, 'persisted');
     expect(persisted.oxyUserId).toBe('oxy-owner');
-    expect(persisted.attendeeCount).toBe(0);
     expect(persisted.status).toBe('upcoming');
-    expect(persisted.updates).toHaveLength(0);
-    expect(persisted.attendees).toHaveLength(0);
+    // The forged timeline and roster reached no table at all.
+    expect(
+      await getDb()
+        .select()
+        .from(evictionCaseUpdates)
+        .where(eq(evictionCaseUpdates.caseId, createdId)),
+    ).toHaveLength(0);
+    expect(
+      await getDb()
+        .select()
+        .from(evictionCaseAttendees)
+        .where(eq(evictionCaseAttendees.caseId, createdId)),
+    ).toHaveLength(0);
   });
 
   it('requires a title, description, location and scheduledAt', async () => {
@@ -239,7 +276,7 @@ describe('comments', () => {
 
     const del = await request(buildApp('oxy-author')).delete(`/evictions/${id}/comments/${commentId}`);
     expect(del.status).toBe(200);
-    expect(await EvictionComment.findById(commentId)).toBeNull();
+    expect(await commentsWithId(commentId)).toHaveLength(0);
   });
 
   it('lets the case owner moderate a comment but blocks strangers with 404', async () => {
@@ -249,11 +286,11 @@ describe('comments', () => {
 
     const stranger = await request(buildApp('oxy-stranger')).delete(`/evictions/${id}/comments/${commentId}`);
     expect(stranger.status).toBe(404);
-    expect(await EvictionComment.findById(commentId)).not.toBeNull();
+    expect(await commentsWithId(commentId)).toHaveLength(1);
 
     const owner = await request(buildApp('oxy-owner')).delete(`/evictions/${id}/comments/${commentId}`);
     expect(owner.status).toBe(200);
-    expect(await EvictionComment.findById(commentId)).toBeNull();
+    expect(await commentsWithId(commentId)).toHaveLength(0);
   });
 
   it('cascade-deletes comments when the case is deleted', async () => {
@@ -263,7 +300,10 @@ describe('comments', () => {
 
     const del = await request(buildApp('oxy-owner')).delete(`/evictions/${id}`);
     expect(del.status).toBe(200);
-    expect(await EvictionComment.countDocuments({ caseId: id })).toBe(0);
+    // The cascade, not a controller call — see the header.
+    expect(
+      await getDb().select().from(evictionComments).where(eq(evictionComments.caseId, id)),
+    ).toHaveLength(0);
   });
 });
 
@@ -277,7 +317,9 @@ describe('reports — dedup', () => {
     const second = await request(buildApp('oxy-reporter')).post(`/evictions/${id}/report`).send({ reason: 'inappropriate' });
     expect(second.status).toBe(200);
 
-    expect(await EvictionReport.countDocuments({ caseId: id })).toBe(1);
+    expect(
+      await getDb().select().from(evictionReports).where(eq(evictionReports.caseId, id)),
+    ).toHaveLength(1);
   });
 });
 
@@ -403,9 +445,12 @@ describe('sendEvictionOutcomeReminders — honest stale-case handling', () => {
     expect(notes[0].recipientOxyUserId).toBe('oxy-owner');
     expect(String((notes[0].data as { evictionId?: unknown }).evictionId)).toBe(String(id));
 
-    const claimed = await EvictionCase.findById(id).select('outcomeReminderSentAt');
+    const [claimed] = await getDb()
+      .select({ outcomeReminderSentAt: evictionCases.outcomeReminderSentAt })
+      .from(evictionCases)
+      .where(eq(evictionCases.id, id));
     assertFound(claimed, 'claimed');
-    expect(claimed.outcomeReminderSentAt).toBeTruthy();
+    expect(claimed.outcomeReminderSentAt).not.toBeNull();
 
     // A second run is a no-op — no duplicate reminder.
     const second = await sendEvictionOutcomeReminders();

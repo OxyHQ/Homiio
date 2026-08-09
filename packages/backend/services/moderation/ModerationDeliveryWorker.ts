@@ -20,13 +20,14 @@
  * - **Anything else** is the SDK's `retryable` to answer, and the outbox obeys.
  */
 
-import ModerationReport, {
-  type LeanModerationReport,
-} from '../../models/ModerationReport';
+import {
+  findModerationReportById,
+  updateModerationReport,
+} from '../../db/moderation/moderationReportRepository';
+import type { ModerationOutboxEvent } from '../../db/moderation/moderationOutboxRepository';
 import { logger } from '../../middlewares/logging';
 import { getCrowdSourceClient } from './crowdSourceClient';
 import { buildModerationReportInput } from './EvidenceSnapshotService';
-import type { ModerationOutboxEvent } from './ModerationOutboxService';
 
 /** Thrown when there is nowhere to deliver to yet. Always retryable. */
 export class CrowdSourceUnavailableError extends Error {
@@ -55,10 +56,10 @@ export class ModerationDeliveryRejectedError extends Error {
 
 /** Close a report there is genuinely nothing left to do about. */
 async function closeUndeliverable(reportId: string, reason: string): Promise<void> {
-  await ModerationReport.updateOne(
-    { _id: reportId },
-    { $set: { localStatus: 'closed', localStatusReason: reason } },
-  );
+  await updateModerationReport(reportId, {
+    localStatus: 'closed',
+    localStatusReason: reason,
+  });
 }
 
 /** Handle one `report.submit` outbox event. */
@@ -70,7 +71,7 @@ export async function deliverReportOutboxEvent(
     throw new ModerationDeliveryRejectedError('A report.submit event carried no reportId.');
   }
 
-  const report = await ModerationReport.findById(reportId).lean<LeanModerationReport | null>();
+  const report = await findModerationReportById(reportId);
   if (!report) {
     /**
      * The report is gone but its delivery event survived. Nothing to deliver and
@@ -92,10 +93,10 @@ export async function deliverReportOutboxEvent(
    * one place that looks exactly like the deliberate local-only reports.
    */
   const input = await buildModerationReportInput({
-    id: String(report._id),
+    id: report.id,
     reportedType: report.reportedType,
     reportedId: report.reportedId,
-    reporter: report.reporter,
+    reporterOxyUserId: report.reporterOxyUserId,
     reason: report.reason,
     details: report.details,
     createdAt: report.createdAt,
@@ -122,35 +123,30 @@ export async function deliverReportOutboxEvent(
      * Written before rethrowing, so the outbox still applies its own backoff or
      * dead-letters the event.
      */
-    await ModerationReport.updateOne(
-      { _id: reportId },
-      {
-        $set: {
-          localStatus: 'delivery_failed',
-          lastDeliveryError: (error instanceof Error
-            ? error.message
-            : String(error)
-          ).slice(0, 2_000),
-        },
-      },
-    );
+    await updateModerationReport(reportId, {
+      localStatus: 'delivery_failed',
+      lastDeliveryError: (error instanceof Error
+        ? error.message
+        : String(error)
+      ).slice(0, 2_000),
+    });
     throw error;
   }
 
-  await ModerationReport.updateOne(
-    { _id: reportId },
-    {
-      $set: {
-        localStatus: 'submitted',
-        crowdSourceReportId: receipt.reportId,
-        crowdSourceCaseId: receipt.caseId,
-        crowdSourceMerged: receipt.merged,
-        contentSnapshotHash: input.snapshotHash,
-        submittedAt: new Date(),
-      },
-      $unset: { lastDeliveryError: '', localStatusReason: '' },
-    },
-  );
+  // `null` rather than an omission for the two cleared columns: a successful
+  // delivery must erase the previous attempt's error and any local-only reason,
+  // and leaving them out of the patch would keep a stale failure on a report
+  // that has just been accepted.
+  await updateModerationReport(reportId, {
+    localStatus: 'submitted',
+    crowdSourceReportId: receipt.reportId,
+    crowdSourceCaseId: receipt.caseId,
+    crowdSourceMerged: receipt.merged,
+    contentSnapshotHash: input.snapshotHash,
+    submittedAt: new Date(),
+    lastDeliveryError: null,
+    localStatusReason: null,
+  });
 
   logger.info('[CrowdSource] report delivered', {
     reportId,
