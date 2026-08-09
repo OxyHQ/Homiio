@@ -91,9 +91,35 @@ jobs:
           # VARIABLE, not a secret: the id ships inside the bundle, so it is
           # public by construction and a secret would only hide it from the UI.
           EXPO_PUBLIC_OXY_CLIENT_ID: ${{ vars.EXPO_PUBLIC_OXY_CLIENT_ID }}
+      # `bunx wrangler` DIRECTLY, never `cloudflare/wrangler-action`.
+      #
+      # The action does not just run wrangler, it PROVISIONS it: it probes with
+      # `bun run wrangler --version`, finds nothing (wrangler is not a dependency
+      # of this repo), and installs it itself. That install is the single point
+      # of failure in the only workflow that ships the frontend, and on
+      # 2026-08-09 it took the frontend down with it — run 31292337344 died with
+      # `error: Fail extracting tarball for "wrangler"` after `Script not found
+      # "wrangler"`, published nothing, and left production serving a bundle from
+      # the previous day while the API had already moved to the new wire format.
+      #
+      # This is the same class of failure `~/Oxy/Mercaria/AGENTS.md` records —
+      # "Do NOT use `cloudflare/wrangler-action`: its `npm i wrangler` chokes on
+      # the monorepo's `workspace:*` deps. Run `bunx wrangler` directly" — and
+      # Mercaria's deploy-cloudflare.yml has run this shape since. Do not
+      # "modernise" this back to the action.
+      #
+      # `wrangler@4` is PINNED. An unpinned `bunx wrangler` re-resolves the
+      # latest major on every deploy, which is how a deploy path changes
+      # behaviour with no diff to show for it.
+      #
+      # NOTE this is `pages deploy`, not `deploy`: Homiio's frontend is a
+      # Cloudflare PAGES project (`homiio-frontend`, SPA routing via
+      # `packages/frontend/public/_redirects`). Mercaria serves a Worker with
+      # Static Assets and needs a `wrangler.jsonc` plus `public/.assetsignore`;
+      # none of that applies here and none of it should be copied over — the
+      # shared part is how wrangler is INVOKED, not which product it targets.
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy packages/frontend/dist --project-name=homiio-frontend --branch=main
+        run: bunx wrangler@4 pages deploy packages/frontend/dist --project-name=homiio-frontend --branch=main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
