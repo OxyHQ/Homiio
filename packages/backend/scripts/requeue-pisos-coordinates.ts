@@ -8,7 +8,7 @@
  *   bun run packages/backend/scripts/requeue-pisos-coordinates.ts
  *   bun run packages/backend/scripts/requeue-pisos-coordinates.ts --apply
  *
- * Requires REDIS_URL (Valkey) for --apply. Mongo via standard backend .env.
+ * Requires REDIS_URL (Valkey) for --apply. DATABASE_URL via the standard backend .env.
  */
 
 import path from 'path';
@@ -16,7 +16,7 @@ import dotenv from 'dotenv';
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 import { Queue } from 'bullmq';
-import { Types } from 'mongoose';
+import { and, eq, isNotNull, ne, sql } from 'drizzle-orm';
 import { PropertyStatus } from '@homiio/shared-types';
 import type { ExternalListingRef } from '@homiio/listing-providers';
 import {
@@ -27,7 +27,8 @@ import {
 } from '../services/ingestion/queues';
 import database from '../database/connection';
 
-import { Property, Address } from '../models';
+import { closePostgres, connectPostgres, getDb } from '../db/postgres';
+import { addresses, properties } from '../db/schema';
 
 const APPLY = process.argv.includes('--apply');
 
@@ -36,77 +37,46 @@ const MADRID_CENTROID_LAT = 40.416782;
 const MADRID_CENTROID_LNG = -3.703507;
 const COORD_EPSILON = 0.0002;
 
-function isMadridCentroid(lng: number, lat: number): boolean {
-  return (
-    Math.abs(lat - MADRID_CENTROID_LAT) <= COORD_EPSILON &&
-    Math.abs(lng - MADRID_CENTROID_LNG) <= COORD_EPSILON
-  );
-}
-
-/** Legacy external listings store the Address ref under `address`, not `addressId`. */
-function resolveAddressRef(doc: Record<string, unknown>): Types.ObjectId | null {
-  if (doc.addressId instanceof Types.ObjectId) return doc.addressId;
-  if (typeof doc.addressId === 'string' && Types.ObjectId.isValid(doc.addressId)) {
-    return new Types.ObjectId(doc.addressId);
-  }
-
-  const legacy = doc.address;
-  if (legacy instanceof Types.ObjectId) return legacy;
-  if (typeof legacy === 'string' && Types.ObjectId.isValid(legacy)) {
-    return new Types.ObjectId(legacy);
-  }
-  if (legacy && typeof legacy === 'object') {
-    const candidate = legacy as { _id?: unknown; buffer?: { data?: number[] } };
-    if (candidate._id instanceof Types.ObjectId) return candidate._id;
-    if (typeof candidate._id === 'string' && Types.ObjectId.isValid(candidate._id)) {
-      return new Types.ObjectId(candidate._id);
-    }
-    if (Array.isArray(candidate.buffer?.data)) {
-      return new Types.ObjectId(Buffer.from(candidate.buffer.data));
-    }
-  }
-
-  return null;
-}
-
 async function main(): Promise<void> {
-  await database.connect();
+  await connectPostgres();
 
-  const pisosCursor = Property.collection.find(
-    {
-      source: 'pisos',
-      isExternal: true,
-      status: PropertyStatus.PUBLISHED,
-      sourceUrl: { $exists: true, $type: 'string', $ne: '' },
-    },
-    {
-      projection: { sourceId: 1, sourceUrl: 1, addressId: 1 },
-    },
-  );
+  // ONE join, and the centroid test is a WHERE clause.
+  //
+  // The Mongo version could do neither: it opened a raw cursor over every
+  // published pisos listing and issued an `Address.findById` PER ROW to read
+  // two coordinates, then filtered in JS. It also had to unwrap three possible
+  // shapes of the address reference (`addressId`, a legacy `address`, and a
+  // populated object) — `properties.address_id` is a `text` foreign key with
+  // exactly one shape, so that unwrapping is gone rather than ported.
+  const stuckRows = await getDb()
+    .select({
+      sourceId: properties.sourceId,
+      sourceUrl: properties.sourceUrl,
+    })
+    .from(properties)
+    .innerJoin(addresses, eq(properties.addressId, addresses.id))
+    .where(
+      and(
+        eq(properties.source, 'pisos'),
+        eq(properties.isExternal, true),
+        eq(properties.status, PropertyStatus.PUBLISHED),
+        isNotNull(properties.sourceId),
+        isNotNull(properties.sourceUrl),
+        ne(properties.sourceUrl, ''),
+        // The same epsilon box the JS predicate applied, said in SQL.
+        sql`abs(${addresses.latitude} - ${MADRID_CENTROID_LAT}) <= ${COORD_EPSILON}`,
+        sql`abs(${addresses.longitude} - ${MADRID_CENTROID_LNG}) <= ${COORD_EPSILON}`,
+      ),
+    );
 
-  const stuck: Array<{ sourceId: string; sourceUrl: string; ref: ExternalListingRef }> = [];
-
-  for await (const doc of pisosCursor) {
-    const sourceId = typeof doc.sourceId === 'string' ? doc.sourceId : '';
-    const sourceUrl = typeof doc.sourceUrl === 'string' ? doc.sourceUrl : '';
-    if (!sourceId || !sourceUrl) continue;
-
-    const addressRef = resolveAddressRef(doc);
-    if (!addressRef) continue;
-
-    const address = await Address.findById(addressRef).select({ coordinates: 1 }).lean();
-    const coords = address?.coordinates?.coordinates;
-    if (!Array.isArray(coords) || coords.length !== 2) continue;
-    const [lng, lat] = coords;
-    if (typeof lng !== 'number' || typeof lat !== 'number') continue;
-    if (!isMadridCentroid(lng, lat)) continue;
-
-    stuck.push({
-      sourceId,
-      sourceUrl,
-      ref: { provider: 'pisos', sourceId, url: sourceUrl },
-    });
-  }
+  const stuck = stuckRows
+    .filter((row): row is { sourceId: string; sourceUrl: string } =>
+      Boolean(row.sourceId && row.sourceUrl))
+    .map((row) => ({
+      sourceId: row.sourceId,
+      sourceUrl: row.sourceUrl,
+      ref: { provider: 'pisos', sourceId: row.sourceId, url: row.sourceUrl } as ExternalListingRef,
+    }));
 
   console.log(
     `${APPLY ? 'Re-queueing' : 'Would re-queue'} ${stuck.length} pisos listing(s) at Madrid centroid`,
@@ -119,7 +89,7 @@ async function main(): Promise<void> {
   }
 
   if (!APPLY) {
-    await database.disconnect?.();
+    await closePostgres();
     return;
   }
 
@@ -148,7 +118,7 @@ async function main(): Promise<void> {
 
   console.log(`Enqueued ${enqueued} fetch job(s); skipped ${skipped} already pending/active`);
   await fetchQueue.close();
-  await database.disconnect?.();
+  await closePostgres();
 }
 
 main().catch((error) => {
