@@ -46,6 +46,10 @@ import {
   type SourceDocument,
 } from '../../db/backfill/geoPlan';
 import type { CandidateRow } from '../../db/backfill/rowAudit';
+import { useMongoMemoryServer } from '../helpers/mongoMemory';
+
+// Same reason as `dataBackfill`: the source store is Mongo by definition.
+useMongoMemoryServer();
 
 const oid = () => new mongoose.Types.ObjectId();
 const noCovers: CoverContext = { existingImageIds: new Set() };

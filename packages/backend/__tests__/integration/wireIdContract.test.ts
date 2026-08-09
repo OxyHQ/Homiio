@@ -35,6 +35,11 @@ import {
   seedProperty,
 } from '../helpers/postgresGeoFixtures';
 import { OfferingType, PropertyStatus, PropertyType } from '@homiio/shared-types';
+import { useMongoMemoryServer } from '../helpers/mongoMemory';
+
+// ONE case here needs a live Mongo: the `toJSON` reduction, which is ABOUT a
+// real Mongoose document. See `helpers/mongoMemory.ts`.
+useMongoMemoryServer();
 
 function buildApp(): Express {
   const app = express();

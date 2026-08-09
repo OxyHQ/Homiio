@@ -51,6 +51,11 @@ import {
 import { RowAuditor, UniqueKeyAuditor, type CandidateRow } from '../../db/backfill/rowAudit';
 import { isLiveEntityId, uuidv7 } from '@oxyhq/db';
 import { ResolutionLog } from '../../db/backfill/geoPlan';
+import { useMongoMemoryServer } from '../helpers/mongoMemory';
+
+// The backfill READS Mongo — that is its whole job — so this suite is one of
+// the five that still boot a replica set. See `helpers/mongoMemory.ts`.
+useMongoMemoryServer();
 
 /** The property rules, reached through the PLAN so the test cannot drift from it. */
 const PROPERTY_RULES = DATA_PLANS.properties.rules.properties ?? [];
