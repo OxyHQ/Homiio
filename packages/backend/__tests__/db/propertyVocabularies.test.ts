@@ -29,6 +29,7 @@
 
 import { eq, inArray } from 'drizzle-orm';
 import { CHECK_VIOLATION, constraintNameOf, sqlStateOf } from '@oxyhq/db';
+import { LISTING_CURRENCIES } from '@homiio/shared-types';
 import { closePostgres, connectPostgres, type Database } from '../../db/postgres';
 import { properties } from '../../db/schema';
 import {
@@ -151,6 +152,122 @@ describe('portal-writable vocabularies', () => {
       expect(constraintNameOf(error)).toBe(constraint);
     },
   );
+});
+
+/**
+ * The listing-currency vocabulary, on all THREE priced blocks.
+ *
+ * ## Why this is here and not in a Mongoose test
+ *
+ * This is the port of `__tests__/unit/propertyCurrencyEnum.test.ts`, which
+ * asserted the same property against `PropertySchema`'s Mongoose enum by calling
+ * `new Property({...}).validateSync()`. Listings are saved through
+ * `controllers/property/` into POSTGRES, so that file was guarding a validator
+ * no write in this service runs any more — it passed while proving nothing about
+ * the store a rejected currency would actually be rejected by, and it was the
+ * last reason a unit test imported the model barrel.
+ *
+ * The regression it guards is real and worth keeping: production ingest failed
+ * on `sale.currency: PLN is not a valid enum value` (otodom) and
+ * `longTermRent.currency: MXN is not a valid enum value` (mercadolibre_mx),
+ * because the enum was narrower than the markets that were wired. Both the
+ * Mongoose enum and the three CHECKs here are derived from the same
+ * `LISTING_CURRENCIES` tuple, so the property survives the move intact — what
+ * changes is which store is asked.
+ *
+ * ## Why all three blocks, when `VOCABULARIES` above already covers one
+ *
+ * That entry covers `long_term_rent_currency` only, and it is a single
+ * accept/reject pair rather than a sweep. The two currency columns it does not
+ * touch are exactly where a narrowing would go unnoticed — `sale_currency` is
+ * the one PLN broke — and three CHECKs built from one tuple is three chances to
+ * paste the wrong list.
+ */
+describe('the listing-currency vocabulary, on all three priced blocks', () => {
+  /**
+   * A priced block, and the minimum coherent row that exercises its currency.
+   *
+   * The price and the `offerings` entry are not decoration: each block carries a
+   * `properties_<block>_check` equating "the offering is declared" with "the
+   * price is non-null", and a `properties_<block>_block_check` refusing a
+   * satellite column (the currency IS one) on a block with no price. A fixture
+   * that set only the currency would be refused by those, and would pass a
+   * rejection assertion for the wrong reason.
+   */
+  const PRICED_BLOCKS = [
+    {
+      block: 'long_term_rent',
+      constraint: 'properties_long_term_rent_currency_check',
+      priced: (currency: string) => ({
+        offerings: ['long_term_rent'],
+        longTermRentMonthlyAmount: 1200,
+        longTermRentCurrency: currency,
+      }),
+    },
+    {
+      block: 'short_term_rent',
+      constraint: 'properties_short_term_rent_currency_check',
+      priced: (currency: string) => ({
+        offerings: ['short_term_rent'],
+        shortTermRentNightlyRate: 90,
+        shortTermRentCurrency: currency,
+      }),
+    },
+    {
+      block: 'sale',
+      constraint: 'properties_sale_currency_check',
+      priced: (currency: string) => ({
+        offerings: ['sale'],
+        salePrice: 250_000,
+        saleCurrency: currency,
+      }),
+    },
+  ] as const;
+
+  /**
+   * Vacuity floor. A sweep over an empty or one-element tuple passes by
+   * examining nothing, and `LISTING_CURRENCIES` is imported from another package
+   * — so the number of codes is exactly the kind of thing that can shrink
+   * without anyone here noticing. Deliberately below the current count so an
+   * ordinary addition does not trip it, and far above zero.
+   */
+  it('sweeps a plausible number of currencies', () => {
+    expect(LISTING_CURRENCIES.length).toBeGreaterThan(8);
+  });
+
+  it.each(PRICED_BLOCKS)('accepts every declared currency on $block', async ({ priced }) => {
+    const refused: string[] = [];
+    for (const currency of LISTING_CURRENCIES) {
+      if ((await attempt(priced(currency))) !== undefined) refused.push(currency);
+    }
+    // Naming the codes rather than asserting a count: a CHECK missing one market
+    // should say which market, because that is the whole content of the bug this
+    // replaces.
+    expect(refused).toEqual([]);
+  });
+
+  it.each(PRICED_BLOCKS)(
+    'refuses an undeclared currency on $block, naming $constraint',
+    async ({ constraint, priced }) => {
+      // `ZZZ` is unassigned in ISO 4217 and will not become a market.
+      const error = await attempt(priced('ZZZ'));
+
+      expect(error).toBeDefined();
+      expect(sqlStateOf(error)).toBe(CHECK_VIOLATION);
+      // The block's OWN constraint. Without this the assertion would pass on any
+      // CHECK violation, including the coherence ones the fixture is built to
+      // satisfy — which is how a currency test comes to be measuring `offerings`.
+      expect(constraintNameOf(error)).toBe(constraint);
+    },
+  );
+
+  it('accepts the three expansion-market codes that failed ingest against the Mongo enum', async () => {
+    // The named regression, kept as its own case so a future narrowing of
+    // `LISTING_CURRENCIES` reports the incident rather than an anonymous code.
+    expect(await attempt(PRICED_BLOCKS[2].priced('PLN'))).toBeUndefined();
+    expect(await attempt(PRICED_BLOCKS[0].priced('MXN'))).toBeUndefined();
+    expect(await attempt(PRICED_BLOCKS[0].priced('ARS'))).toBeUndefined();
+  });
 });
 
 describe('properties.source', () => {
