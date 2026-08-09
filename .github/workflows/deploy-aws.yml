@@ -121,11 +121,38 @@ jobs:
       # that other services read.
       #
       # The list covers BOTH task definitions rolled below — the `homiio` API and
-      # the `homiio-worker` listing worker. Adding a new secret means adding it
-      # here, or it never reaches SSM.
+      # the `homiio-worker` listing worker. **A secret added to either task
+      # definition has to be added here in the SAME change, or it silently never
+      # syncs**: this step reports success either way, because it only ever
+      # reports on the names it was given.
+      #
+      # That is not hypothetical. `DATABASE_URL` was added to the repository
+      # secrets and to both task definitions during the Postgres cutover on
+      # 2026-08-09 and NOT added here. `/oxy/homiio/DATABASE_URL` was written by
+      # hand, every deploy that followed synced the other six and reported
+      # success, and a rotation of that secret would have propagated to nothing.
+      # It cost seven hours of the parameter being unmanaged; it would have cost
+      # an outage the first time somebody rotated it and believed the green run.
+      #
+      # Re-derive the list from what the containers actually read, never from
+      # memory or from this comment:
+      #
+      #   AWS_PROFILE=oxy AWS_REGION=us-west-2 aws ecs describe-task-definition \
+      #     --task-definition oxy-homiio \
+      #     --query 'taskDefinition.containerDefinitions[0].secrets[].name'
+      #   # …and again for oxy-homiio-worker.
+      #
+      # `packages/backend/__tests__/unit/deploySecretSync.test.ts` pins the two
+      # spellings below against each other and against that derivation, so a
+      # half-edit fails the build rather than a deploy months later.
       - name: Sync GitHub secrets -> SSM (GitHub is the source of truth)
         env:
+          # Read by BOTH families. Postgres is the live datastore; MONGODB_URI
+          # stays until the write paths finish moving off it, and comes out of
+          # this list at the same time it comes out of the task definitions.
+          APP_DATABASE_URL: ${{ secrets.DATABASE_URL }}
           APP_MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          # API only.
           APP_JWT_SECRET: ${{ secrets.JWT_SECRET }}
           APP_JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
           # Worker only.
@@ -144,6 +171,7 @@ jobs:
             echo "synced -> $path"
           }
 
+          sync_secret DATABASE_URL "$APP_DATABASE_URL" "/oxy/$APP/DATABASE_URL"
           sync_secret MONGODB_URI "$APP_MONGODB_URI" "/oxy/$APP/MONGODB_URI"
           sync_secret JWT_SECRET "$APP_JWT_SECRET" "/oxy/$APP/JWT_SECRET"
           sync_secret JWT_REFRESH_SECRET "$APP_JWT_REFRESH_SECRET" "/oxy/$APP/JWT_REFRESH_SECRET"
