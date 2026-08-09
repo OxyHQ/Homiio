@@ -163,11 +163,13 @@ jobs:
       # half-edit fails the build rather than a deploy months later.
       - name: Sync GitHub secrets -> SSM (GitHub is the source of truth)
         env:
-          # Read by BOTH families. Postgres is the live datastore; MONGODB_URI
-          # stays until the write paths finish moving off it, and comes out of
-          # this list at the same time it comes out of the task definitions.
+          # Read by BOTH families, and the only datastore there is. `MONGODB_URI`
+          # was here beside it and is GONE: nothing reads it, it is off both task
+          # definitions, and the SSM parameter is deleted. Removing the parameter
+          # alone would not have held — this sync recreated it on the next deploy,
+          # which is the general shape worth remembering: removing a value does
+          # not remove the thing that produces it.
           APP_DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          APP_MONGODB_URI: ${{ secrets.MONGODB_URI }}
           # API only.
           APP_JWT_SECRET: ${{ secrets.JWT_SECRET }}
           APP_JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
@@ -188,7 +190,6 @@ jobs:
           }
 
           sync_secret DATABASE_URL "$APP_DATABASE_URL" "/oxy/$APP/DATABASE_URL"
-          sync_secret MONGODB_URI "$APP_MONGODB_URI" "/oxy/$APP/MONGODB_URI"
           sync_secret JWT_SECRET "$APP_JWT_SECRET" "/oxy/$APP/JWT_SECRET"
           sync_secret JWT_REFRESH_SECRET "$APP_JWT_REFRESH_SECRET" "/oxy/$APP/JWT_REFRESH_SECRET"
           sync_secret LISTING_RESIDENTIAL_PROXY_URL "$APP_LISTING_RESIDENTIAL_PROXY_URL" "/oxy/$APP/LISTING_RESIDENTIAL_PROXY_URL"

@@ -4,20 +4,16 @@
  * Publishes the environment `config` captures at module load, and opens the
  * Postgres pool — the store every suite here reads.
  *
- * ## Mongo is NOT booted from this file any more
+ * ## Mongo is not booted anywhere, because Mongo is not installed
  *
- * It used to spin up an in-memory replica set for every one of the 130 suites.
- * Five need one, measured by switching it off and running the whole suite
- * serially: 77 tests of 1,751 turn red, all inside `dataBackfill`,
- * `geoBackfill`, `reviewSystem`, `stripeWebhook` and `wireIdContract`. Those
- * five now call `useMongoMemoryServer()` from
- * `__tests__/helpers/mongoMemory.ts`, which is also where the reasoning about
- * replica sets and `MONGODB_URI` moved.
+ * This file used to spin up an in-memory replica set for every suite. That
+ * moved to an opt-in `useMongoMemoryServer()` helper so the remaining users
+ * were ENUMERABLE rather than assumed, the list shrank port by port, and the
+ * helper is now deleted along with `mongoose` and `mongodb-memory-server`.
  *
- * The point is enumerability rather than speed: `mongoose` and
- * `mongodb-memory-server` are leaving `package.json`, and a `grep -rl
- * useMongoMemoryServer __tests__` now answers "what is still in the way"
- * from the repository instead of from a measurement somebody has to redo.
+ * The enumeration was the mechanism that made this finishable: it turned "how
+ * much Mongo is left?" from a measurement somebody had to redo into a grep
+ * against the repository, and the answer reached zero.
  */
 
 // Give config a real https public URL so self-hosted image URLs
@@ -82,6 +78,3 @@ beforeAll(async () => {
 // the `__tests__/db` files do. Those files close it themselves; the pool is per
 // worker process and dies with it, and `jest.globalTeardown.ts` drops the
 // databases either way.
-//
-// The Mongo half of the old teardown moved to `helpers/mongoMemory.ts`, where it
-// belongs to the suites that actually opened a connection.

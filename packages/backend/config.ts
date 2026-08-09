@@ -293,7 +293,12 @@ const config: Config = {
     // to 8 (`jest.globalSetup.ts`), which is a FLOOR rather than a preference —
     // see the constant there.
     maxPoolSize: boundedInteger(process.env.PG_MAX_POOL_SIZE, 20, 1, 200),
-    idleTimeoutSeconds: 30,
+    // 30 suits a long-lived API process, where holding a warm connection is the
+    // point. The jest harness overrides it to 1 (`jest.globalSetup.ts`), because
+    // there a pool is ABANDONED rather than closed every time a test file ends —
+    // see the constant there for why that is inherent to jest and not a bug in
+    // any suite.
+    idleTimeoutSeconds: boundedInteger(process.env.PG_IDLE_TIMEOUT_SECONDS, 30, 1, 3600),
     connectTimeoutSeconds: 10,
     maxLifetimeSeconds: 1800,
   },
