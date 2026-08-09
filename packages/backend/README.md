@@ -75,7 +75,7 @@ Never `new Model(req.body)` or spread `req.body`. Server-resolved owner ids + li
 
 ## Environment
 
-Copy `.env.example` → `.env`. Core vars: `PORT`, `MONGODB_URI`, Oxy auth config, optional `REDIS_URL` (BullMQ worker), provider feature flags (`PROVIDER_*_ENABLED`), listing fetch tiers (`LISTING_BROWSER_ENABLED`, `LISTING_MANAGED_FETCH_URL`).
+Copy `.env.example` → `.env`. Core vars: `PORT`, `DATABASE_URL`, Oxy auth config, optional `REDIS_URL` (BullMQ worker), provider feature flags (`PROVIDER_*_ENABLED`), listing fetch tiers (`LISTING_BROWSER_ENABLED`, `LISTING_MANAGED_FETCH_URL`).
 
 Secrets for production live in GitHub repo secrets → SSM `/oxy/homiio/*` → ECS task env. See `~/Oxy/oxy-infra`.
 

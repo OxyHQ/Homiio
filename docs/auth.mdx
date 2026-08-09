@@ -109,7 +109,7 @@ The middleware:
 3. On success, attaches `req.userId` (the Oxy user id) and continues.
 4. On failure, returns `401`.
 
-Controllers read `req.userId` directly — that id is the link to every `Billing`, `Profile`, `Saved`, and `RecentlyViewed` document in MongoDB. Public routes (browsing properties, geocoding, public stats) never see `req.userId`.
+Controllers read `req.userId` directly — that id is the link to every billing, profile, saved-item and recently-viewed row in PostgreSQL. Public routes (browsing properties, geocoding, public stats) never see `req.userId`.
 
 ## Multi-account behaviour
 

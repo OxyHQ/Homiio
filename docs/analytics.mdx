@@ -9,11 +9,11 @@ order: 5
 Homiio ships two analytics surfaces, both server-side:
 
 1. **Per-user insights** — `GET /api/analytics` returns the calling user's interaction summary, cross-app actions, and trend deltas. When the optional `horizonService` is available it delegates to the Oxy ecosystem cross-app analytics layer; otherwise it returns a deterministic fallback so the Insights screen never has to render an error state.
-2. **Public marketplace stats** — `GET /api/analytics/stats` runs four MongoDB aggregations in parallel and powers the homepage's "market at a glance" widgets.
+2. **Public marketplace stats** — `GET /api/analytics/stats` runs five Postgres aggregates in parallel and powers the homepage's "market at a glance" widgets.
 
 The corresponding controller lives at `packages/backend/controllers/analyticsController.ts`. The Insights screen at `packages/frontend/app/insights/index.tsx` consumes both endpoints through `packages/frontend/services/analyticsService.ts` over TanStack Query, with charts rendered via `react-native-chart-kit` over `react-native-svg`.
 
-There is currently no client-side product-analytics SDK wired into the frontend tree. All analytics in production are server-aggregated from MongoDB.
+There is currently no client-side product-analytics SDK wired into the frontend tree. All analytics in production are server-aggregated from PostgreSQL.
 
 ## `GET /api/analytics`
 
@@ -37,16 +37,15 @@ The controller first tries to delegate to the `horizonService` (`packages/backen
 
 ## `GET /api/analytics/stats`
 
-Public — mounted under `routes/public.ts`. Runs four parallel Mongo aggregations:
+Public — mounted under `routes/public.ts`. Runs five parallel Postgres aggregates:
 
 ```ts
-const [totalProperties, totalCities, totalSaves, uniqueSavers] = await Promise.all([
-  Property.countDocuments({}).catch(() => 0),
-  City.countDocuments({}).catch(() => 0),
-  Saved ? Saved.countDocuments({ targetType: 'property' }).catch(() => 0) : 0,
-  Saved
-    ? Saved.distinct('profileId', { targetType: 'property' }).then(arr => arr.length).catch(() => 0)
-    : 0,
+const [catalogue, appSaves, pricing, topCities, priceBuckets] = await Promise.all([
+  countAppWideCatalogue(getDb()),
+  countAppWideSaves(getDb()),
+  summarizeCatalogueRent(getDb()),
+  findTopCitiesByListings(getDb(), TOP_CITIES_LIMIT),
+  countListingsByPriceBucket(getDb(), PRICE_BUCKET_BOUNDARIES),
 ]);
 ```
 

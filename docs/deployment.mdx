@@ -1,6 +1,6 @@
 ---
 title: Deployment
-description: AWS ECS Fargate for the backend, Cloudflare Pages for the frontend web build, and serverless/persistent-process concerns (Mongo, cron).
+description: AWS ECS Fargate for the backend, Cloudflare Pages for the frontend web build, and serverless/persistent-process concerns (the Postgres pool, cron).
 order: 7
 ---
 
@@ -33,7 +33,7 @@ Workflow: `.github/workflows/deploy-frontends.yml`
 
 The backend code still carries guards for serverless runtimes (`process.env.VERCEL`, `AWS_LAMBDA_FUNCTION_NAME`). On ECS neither is set, so the backend runs as a normal long-lived process:
 
-`packages/backend/config.ts` switches Mongoose's connection pool sizing automatically:
+`packages/backend/config.ts` switches the Postgres connection pool sizing automatically:
 
 ```ts
 maxPoolSize: process.env.VERCEL ? 1 : 10,
@@ -67,7 +67,7 @@ EXPO_PUBLIC_STRIPE_LINK_FILE=https://buy.stripe.com/...   # optional
 
 ```
 NODE_ENV=production
-MONGODB_URI=mongodb+srv://...
+DATABASE_URL=postgres://...
 OXY_API_URL=https://api.oxy.so
 STRIPE_SECRET_KEY=sk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
@@ -103,5 +103,5 @@ Copy the signing secret into `STRIPE_WEBHOOK_SECRET`. Verify the wiring with `GE
 
 ## Health checks
 
-- `GET /health` — public, returns `status`, `version`, `environment`, and the Mongo `database` status.
+- `GET /health` — public, returns `status`, `version`, `environment`, and the PostgreSQL `database` status.
 - `GET /api/health` — same shape, mounted under the authenticated tree. Use for smoke-test monitors.

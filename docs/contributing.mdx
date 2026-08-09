@@ -14,7 +14,7 @@ This page is the cheat sheet for working on Homiio. Read it before opening a PR.
 Homiio/
 ├── packages/
 │   ├── frontend/        @homiio/frontend       Expo / RN app (iOS, Android, Web)
-│   ├── backend/         @homiio/backend        Express + Mongoose API
+│   ├── backend/         @homiio/backend        Express + drizzle (PostgreSQL) API
 │   └── shared-types/    @homiio/shared-types   Pure TS types built first
 ├── docs/                MDX source synced into the Oxy docs site
 ├── docs.config.json     Tells sync-docs where docs live and how to label them
@@ -69,12 +69,12 @@ These are enforced in review and mirror the Oxy ecosystem rules.
 
 1. **Where it lives**: feature code goes under `packages/frontend/features/<feature-name>/` or `packages/backend/{routes,controllers,models,services}/` — never in `app/_layout.tsx` or `server.ts`.
 2. **Types first**: if the feature has cross-package shapes, add them to `packages/shared-types/src/` and re-build (`bun run build:shared-types`).
-3. **Backend**: add a route in `routes/`, a controller in `controllers/`, a Mongoose schema in `models/schemas/`, and register the route in `routes/index.ts`. Use `oxy.auth()`-gated routes for anything that touches user data; use `routes/public.ts` for anonymous browsing.
+3. **Backend**: add a route in `routes/`, a controller in `controllers/`, a drizzle table in `db/schema/`, and register the route in `routes/index.ts`. Use `oxy.auth()`-gated routes for anything that touches user data; use `routes/public.ts` for anonymous browsing.
 4. **Frontend**: add a TanStack Query hook in `hooks/query/` or `hooks/`, a service wrapper in `services/`, and a screen under `app/`. Use Zustand only for local UI state.
 5. **i18n**: add new strings to all locales in `packages/frontend/locales/`.
 6. **Self-audit**: read every integration point you touched. If the feature crosses Oxy or Bloom, verify the upstream package version in `package.json` matches what you're using.
 
-## Adding a Mongoose schema
+## Adding a drizzle table
 
 - File location: `packages/backend/models/schemas/<Name>Schema.ts`.
 - Re-export the model from `packages/backend/models/index.ts`.

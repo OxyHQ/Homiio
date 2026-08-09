@@ -6,7 +6,7 @@ order: 0
 
 # Homiio
 
-Homiio is a real estate platform built around fair pricing, tenant rights, and transparent listings. The frontend is a single Expo / React Native codebase that targets iOS, Android, and Web. The backend is a Node + Express API backed by MongoDB, Stripe for subscriptions, AWS S3 + Sharp for media, and the AI SDK for **Sindi**, the in-app tenant-rights assistant.
+Homiio is a real estate platform built around fair pricing, tenant rights, and transparent listings. The frontend is a single Expo / React Native codebase that targets iOS, Android, and Web. The backend is a Node + Express API backed by PostgreSQL (PostGIS), Stripe for subscriptions, AWS S3 + Sharp for media, and the AI SDK for **Sindi**, the in-app tenant-rights assistant.
 
 <Badge variant="success">App</Badge> <Badge>iOS / Android / Web</Badge>
 
@@ -24,7 +24,7 @@ Inside the repo:
 | Package | Role |
 |---------|------|
 | `frontend` (`@homiio/frontend`) | Expo Router app. NativeWind + Tailwind for styling, Zustand for local state, TanStack Query for server state, `@oxyhq/bloom` for primitives. |
-| `backend` (`@homiio/backend`) | Express 4 + Mongoose 8 API. Stripe billing, Sharp + S3 image pipeline, Telegram + WhatsApp scrapers, AI SDK streaming endpoints. |
+| `backend` (`@homiio/backend`) | Express 4 + drizzle-orm (PostgreSQL) API. Stripe billing, Sharp + S3 image pipeline, Telegram + WhatsApp scrapers, AI SDK streaming endpoints. |
 | `shared-types` (`@homiio/shared-types`) | Pure TypeScript types — `Property`, `Address`, `City`, `Lease`, `Profile`, `Review`. Built first via `postinstall`. |
 
 ## Architecture
@@ -32,7 +32,7 @@ Inside the repo:
 ```
    ┌──────────────────────┐                  ┌──────────────────────┐
    │   Homiio Frontend    │  ── REST ─────▶  │   Homiio Backend     │
-   │   (Expo / RN / Web)  │                  │   (Express + Mongo)  │
+   │   (Expo / RN / Web)  │                  │  (Express + Postgres)│
    │                      │  ◀── AI stream ─ │                      │
    └──────────────────────┘                  └──────────────────────┘
             │                                          │
@@ -41,7 +41,7 @@ Inside the repo:
      (auth, account switcher)                  + Oxy API (identity)
                                                        │
                                                        ▼
-                                                  MongoDB
+                                                 PostgreSQL
                                         (Property, Profile, Billing, Lease,
                                          City, Address, Review, Conversation)
 ```
@@ -62,7 +62,7 @@ bun install
 
 - Node.js 22.x (pinned in `engines`)
 - Bun 1.0+
-- MongoDB (local or hosted)
+- PostgreSQL with PostGIS (local or hosted)
 - For iOS: macOS + Xcode. For Android: Android Studio.
 
 ### Environment
@@ -70,7 +70,7 @@ bun install
 `packages/backend/.env`:
 
 ```env
-MONGODB_URI=mongodb://localhost:27017/homiio
+DATABASE_URL=postgres://homiio:homiio@127.0.0.1:5434/homiio_dev
 OXY_API_URL=https://api.oxy.so
 PORT=3000
 NODE_ENV=development
@@ -157,7 +157,7 @@ When the user asks Sindi for listings, it can embed a machine-readable property 
 <PROPERTIES_JSON>["propertyId1","propertyId2","propertyId3"]</PROPERTIES_JSON>
 ```
 
-The frontend parses that tag and renders inline property cards under Sindi's message. Conversations are persisted as `Conversation` documents in MongoDB.
+The frontend parses that tag and renders inline property cards under Sindi's message. Conversations are persisted as rows in PostgreSQL.
 
 ### Stripe billing (Homiio+ / file credits / Founder)
 

@@ -190,14 +190,10 @@ class AnalyticsController {
   async getAppStats(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
 
-      // `Property` and `City` stay on Mongo here: the catalogue aggregates
-      // below are the property batch's to move, and these two counts join
-      // nothing to the saved figures, so a mixed read produces two independent
-      // correct numbers rather than an inconsistency.
-      //
-      // The saved pair moves, because `saved_items` is on Postgres — and
-      // `uniqueSavers` was another `distinct('profileId')` against a schema
-      // whose column is `oxyUserId`, so it has always been 0.
+      // All five aggregates read Postgres. `uniqueSavers` used to be a
+      // `distinct('profileId')` against a schema whose column is `oxyUserId`,
+      // so it answered 0 for as long as it existed; `countAppWideSaves` counts
+      // the column that is actually there.
       const [catalogue, appSaves, pricing, topCities, priceBuckets] = await Promise.all([
         countAppWideCatalogue(getDb()),
         countAppWideSaves(getDb()),
