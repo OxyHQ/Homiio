@@ -155,6 +155,27 @@ const MAX_REPORTED_IDS = 5;
  */
 const CITY_CENTROID_LIMIT_METRES = 300_000;
 
+/**
+ * The share of addresses that may sit outside {@link CITY_CENTROID_LIMIT_METRES}
+ * before the run is refused.
+ *
+ * The check exists to catch a TRANSPOSED coordinate pair, and a transposition is
+ * a property of the MAPPER — so it moves every address, not a handful. Measured
+ * against production: 2 of 11,734 (0.017%) are outside 300 km, and both are bad
+ * geocodes in Mongo that the copy reproduced faithfully — an address on
+ * `León Capital` at (-66.99, 10.53), which is Caracas, and a Bremen address at
+ * (0, 0). Neither is a transposition: swapping either pair gives something else
+ * again, and the field-by-field check confirms both match the source exactly.
+ *
+ * A gate at "zero outliers" therefore fails forever on data the copy did not
+ * create, and a gate that fails forever is one somebody switches off. 1% is two
+ * orders of magnitude above the observed rate and two below a transposition,
+ * which would put ~100% over the line. Every outlier is REPORTED either way —
+ * the rate decides whether the run is refused, never whether an operator is
+ * told.
+ */
+const CITY_CENTROID_OUTLIER_LIMIT = 0.01;
+
 /** How far a measured city-pair distance may sit from the real-world figure. */
 const CITY_PAIR_TOLERANCE = 0.25;
 
@@ -913,7 +934,19 @@ export async function runDataBackfill(options: {
   );
   const partial = plans.length !== DATA_COPY_ORDER.length;
 
-  const log = new ResolutionLog();
+  // ONE LOG PER PASS, not one per run.
+  //
+  // `copy` mode reads the source twice — once to audit, once to write — and both
+  // passes run the same mappers, so a shared log counts every resolution TWICE.
+  // Measured against production: `MODERATION_ABSENT` reported 35,284 for a
+  // collection of 17,644 rows. The reported figure is compared against a frozen
+  // census count, so doubling it does not just look untidy, it makes the
+  // comparison meaningless in the direction that reads as drift.
+  //
+  // The COPY pass's log is what the run reports, because it describes the rows
+  // that were written; the audit pass's is logged beside its own verdict.
+  const auditLog = new ResolutionLog();
+  const copyLog = new ResolutionLog();
   const audited: Record<string, number> = {};
 
   // ── the audit pass ──
@@ -925,7 +958,7 @@ export async function runDataBackfill(options: {
   if (mode !== 'verify-only') {
     const violations: AuditViolation[] = [];
     for (const plan of plans) {
-      const pass = await streamCollectionPass(database, mongo, plan, log, false);
+      const pass = await streamCollectionPass(database, mongo, plan, auditLog, false);
       Object.assign(audited, pass.audited);
       violations.push(...pass.violations);
       logger.info(`Audited ${plan.name}`, { documents: pass.documents, rows: pass.audited });
@@ -953,13 +986,13 @@ export async function runDataBackfill(options: {
         'reports identically to one that passed. Nothing was written.',
       );
     }
-    logger.info('Audit passed', { rows: audited, resolutions: log.toRecord() });
+    logger.info('Audit passed', { rows: audited, resolutions: auditLog.toRecord() });
   }
 
   if (mode === 'audit-only') {
     return {
       mode,
-      resolutions: log.toRecord(),
+      resolutions: auditLog.toRecord(),
       audited,
       copied: [],
       hasImagesRederived: null,
@@ -974,7 +1007,7 @@ export async function runDataBackfill(options: {
   const copied: CopyReport[] = [];
   if (mode === 'copy') {
     for (const plan of plans) {
-      const pass = await streamCollectionPass(database, mongo, plan, log, true);
+      const pass = await streamCollectionPass(database, mongo, plan, copyLog, true);
       const report: CopyReport = {
         collection: plan.name,
         documents: pass.documents,
@@ -1017,7 +1050,7 @@ export async function runDataBackfill(options: {
   logger.info('Verification measurements', {
     geometry,
     hasImagesDisagreements,
-    resolutions: log.toRecord(),
+    resolutions: copyLog.toRecord(),
   });
 
   const failures: string[] = [];
@@ -1044,10 +1077,24 @@ export async function runDataBackfill(options: {
       failures.push('geometry: no address could be compared against its city centroid');
     }
     if (geometry.centroidOverLimit > 0) {
-      failures.push(
-        `geometry: ${geometry.centroidOverLimit} address(es) sit more than ` +
-        `${CITY_CENTROID_LIMIT_METRES / 1000} km from their own city — the shape a transposed pair makes`,
-      );
+      const share = geometry.centroidOverLimit / Math.max(geometry.centroidSamples, 1);
+      const line =
+        `${geometry.centroidOverLimit} of ${geometry.centroidSamples} address(es) ` +
+        `(${(share * 100).toFixed(3)}%) sit more than ` +
+        `${CITY_CENTROID_LIMIT_METRES / 1000} km from their own city`;
+      // Reported either way; the RATE decides whether the run is refused. See
+      // CITY_CENTROID_OUTLIER_LIMIT — a transposition moves every address, a bad
+      // geocode in the source moves one.
+      if (share > CITY_CENTROID_OUTLIER_LIMIT) {
+        failures.push(`geometry: ${line} — the shape a transposed pair makes`);
+      } else {
+        logger.warn(
+          `geometry: ${line}. Below the ${CITY_CENTROID_OUTLIER_LIMIT * 100}% ` +
+          'transposition threshold, so this reads as bad geocodes in the SOURCE ' +
+          'rather than a copy that moved them — the field-by-field check compares ' +
+          'each pair against the source document and would have failed otherwise.',
+        );
+      }
     }
     // A pair with no address in one of its cities was NOT MEASURED, which is not
     // the same as measured-and-wrong: reporting it as a failure would make an
@@ -1082,7 +1129,10 @@ export async function runDataBackfill(options: {
 
   return {
     mode,
-    resolutions: log.toRecord(),
+    // The COPY pass's counts. In `verify-only` this log is the one
+    // `compareSample` filled while re-running the mappers, which is the only
+    // pass that ran.
+    resolutions: copyLog.toRecord(),
     audited,
     copied,
     hasImagesRederived,

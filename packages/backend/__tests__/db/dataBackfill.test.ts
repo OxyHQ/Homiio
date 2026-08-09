@@ -703,6 +703,70 @@ describe('data backfill — end to end', () => {
     expect(geometry.centroidMaxMetres).toBeGreaterThan(1_000_000);
   }, 60_000);
 
+  it('counts a resolution ONCE per copy, not once per pass', async () => {
+    // `copy` reads the source twice — audit, then write — and both passes run
+    // the same mappers. A shared log double-counts every resolution, which is
+    // not merely untidy: the figure is compared against a frozen census count,
+    // so 2× reads as drift. Production reported MODERATION_ABSENT 35,284 for a
+    // collection of 17,644 rows.
+    const geo = await seedAndCopyGeo();
+    const database = mongoDatabase();
+    const address = addressDocument(geo, 'Barcelona', BARCELONA);
+    await database.collection('addresses').insertMany([
+      address,
+      addressDocument(geo, 'Madrid', MADRID, { street: 'Gran Vía' }),
+      addressDocument(geo, 'Paris', PARIS, { street: 'Rue de Rivoli', countryCode: 'FR' }),
+    ]);
+    await database.collection('properties').insertMany([
+      propertyDocument(address._id as mongoose.Types.ObjectId),
+      propertyDocument(address._id as mongoose.Types.ObjectId),
+    ]);
+
+    const report = await runDataBackfill({
+      mongo: database,
+      database: getDb(),
+      mode: 'copy',
+      sampleSize: 5,
+    });
+
+    // Two listings, neither carrying `moderation`. Not four.
+    expect(report.resolutions[DATA_RESOLUTIONS.MODERATION_ABSENT]).toBe(2);
+  }, 90_000);
+
+  it('reports a far-flung address without refusing the run, below the transposition rate', async () => {
+    // Two production addresses are bad GEOCODES in Mongo — `León Capital` at
+    // (-66.99, 10.53), which is Caracas, and a Bremen address at (0, 0). The
+    // copy reproduces them faithfully, and a gate at "zero outliers" would
+    // therefore fail forever on data the copy did not create. A transposition is
+    // a property of the MAPPER and moves every address, so the rate is what
+    // discriminates.
+    const geo = await seedAndCopyGeo();
+    const database = mongoDatabase();
+    const good = Array.from({ length: 300 }, () =>
+      addressDocument(geo, 'Barcelona', BARCELONA),
+    );
+    await database.collection('addresses').insertMany([
+      ...good,
+      addressDocument(geo, 'Madrid', MADRID, { street: 'Gran Vía' }),
+      addressDocument(geo, 'Paris', PARIS, { street: 'Rue de Rivoli', countryCode: 'FR' }),
+      // One bad geocode: Caracas, filed under a Spanish city. 1 in 303 is well
+      // under the 1% threshold.
+      addressDocument(geo, 'Barcelona', { lng: -66.9858849, lat: 10.5251816 }),
+    ]);
+
+    const report = await runDataBackfill({
+      mongo: database,
+      database: getDb(),
+      mode: 'copy',
+      sampleSize: 5,
+      only: ['images', 'addresses'],
+    });
+
+    // Reported, not swallowed — and the run stands.
+    expect(report.geometry?.centroidOverLimit).toBe(1);
+    expect(report.geometry?.centroidSamples).toBe(303);
+  }, 120_000);
+
   it('refuses to write anything when the audit finds a violation', async () => {
     const geo = await seedAndCopyGeo();
     const database = mongoDatabase();
