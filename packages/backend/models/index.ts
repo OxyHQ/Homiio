@@ -6,13 +6,12 @@
  * `mongoose.model()` cannot infer from a schema literal.
  *
  * Document interfaces live in `./documentTypes` (lightweight) or beside the
- * TS-native model files (`./Address`, `./Review`).
+ * TS-native model files (`./Review`).
  *
  * The `module.exports` aggregate at the bottom is a bridge for the ~30 files
  * that still do `require('../models')`; it goes when they do.
  */
 
-import type { IAddress, IAddressModel } from './Address';
 import type { IReview, IReviewModel } from './Review';
 import type {
   IProperty,
@@ -51,7 +50,6 @@ import type {
 } from './documentTypes';
 
 import PropertyModelDefault from './schemas/PropertySchema';
-import AddressModelDefault from './Address';
 import { Review as ReviewSource } from './Review';
 import LeaseModelDefault from './schemas/LeaseSchema';
 import RecentlyViewedModelDefault from './schemas/RecentlyViewedSchema';
@@ -83,7 +81,6 @@ import RoommateRelationshipModelDefault from './schemas/RoommateRelationshipSche
 // infer from the schema literal on its own.
 
 const PropertyModel = PropertyModelDefault;
-const AddressModel = AddressModelDefault;
 const ReviewModel = ReviewSource;
 const LeaseModel = LeaseModelDefault;
 const RecentlyViewedModel = RecentlyViewedModelDefault;
@@ -116,7 +113,6 @@ const RoommateRelationshipModel = RoommateRelationshipModelDefault;
 
 // Named ES exports — preferred for new code.
 export const Property = PropertyModel;
-export const Address = AddressModel;
 export const Review = ReviewModel;
 export const Lease = LeaseModel;
 export const RecentlyViewed = RecentlyViewedModel;
@@ -148,8 +144,6 @@ export const RoommateRelationship = RoommateRelationshipModel;
 export type {
   IProperty,
   IPropertyModel,
-  IAddress,
-  IAddressModel,
   IReview,
   IReviewModel,
   IBilling,
@@ -193,7 +187,6 @@ export type {
 // `require('../models')` is gone.
 module.exports = {
   Property: PropertyModel,
-  Address: AddressModel,
   Review: ReviewModel,
   Lease: LeaseModel,
   RecentlyViewed: RecentlyViewedModel,
