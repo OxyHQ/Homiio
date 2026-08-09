@@ -75,11 +75,9 @@ const BACKFILL_PREFIX = 'db/backfill/';
  */
 const PENDING_MONGO_FILES: ReadonlyMap<string, string> = new Map([
   ['controllers/billingController.ts', 'homiio-billing — task #40, ~30 Billing call sites'],
-  ['routes/profiles.ts', 'homiio-billing — 3 Billing sites incl. a `new Billing({...})` write'],
   ['controllers/analyticsController.ts', 'analytics port in flight'],
   ['controllers/roommateController.ts', 'homiio-reviews-roommates — roommates + profiles'],
   ['services/geoResolutionService.ts', 'homiio-property-writes — geo services'],
-  ['scripts/requeue-pisos-coordinates.ts', 'homiio-property-writes — live tooling, needs a real port'],
   ['scripts/seedImages.ts', 'unassigned — decide port vs delete like the other one-offs'],
   ['services/healthService.ts', 'reports Mongo connectivity; retires with the connection itself'],
   ['database/connection.ts', 'the Mongo connection module; deleted last, with models/'],
