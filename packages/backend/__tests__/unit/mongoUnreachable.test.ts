@@ -71,15 +71,18 @@ const BACKFILL_PREFIX = 'db/backfill/';
  * it. DELETE a line when its port lands; an empty list is the signal that
  * `MONGODB_URI` can come off the task definition.
  *
- * Measured at origin/main 55e1ec4a.
+ * Measured at origin/main 4d697bea.
+ *
+ * `controllers/analyticsController.ts` and `controllers/roommateController.ts`
+ * were on this list at 55e1ec4a and came off in #326, which landed between this
+ * gate being written and being merged — so `main` carried a red "no stale
+ * pending entry" for that window. That is the gate working exactly as its
+ * header describes: a finished port shows up here as a line to DELETE, not as a
+ * silent tolerance.
  */
 const PENDING_MONGO_FILES: ReadonlyMap<string, string> = new Map([
   ['controllers/billingController.ts', 'homiio-billing — task #40, ~30 Billing call sites'],
-  ['routes/profiles.ts', 'homiio-billing — 3 Billing sites incl. a `new Billing({...})` write'],
-  ['controllers/analyticsController.ts', 'analytics port in flight'],
-  ['controllers/roommateController.ts', 'homiio-reviews-roommates — roommates + profiles'],
   ['services/geoResolutionService.ts', 'homiio-property-writes — geo services'],
-  ['scripts/requeue-pisos-coordinates.ts', 'homiio-property-writes — live tooling, needs a real port'],
   ['scripts/seedImages.ts', 'unassigned — decide port vs delete like the other one-offs'],
   ['services/healthService.ts', 'reports Mongo connectivity; retires with the connection itself'],
   ['database/connection.ts', 'the Mongo connection module; deleted last, with models/'],
