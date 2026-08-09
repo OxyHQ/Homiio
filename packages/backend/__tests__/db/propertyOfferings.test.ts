@@ -1,7 +1,7 @@
 /**
  * The four offering-coherence CHECKs, asserted against REAL ROWS.
  *
- * This is the invariant `models/schemas/offeringValidation.ts` states and that
+ * This is the invariant `services/offeringValidation.ts` states and that
  * Mongo enforced on ONE of its write paths. `save()` ran the path validator on
  * `offerings`; `findOneAndUpdate` made the same validator skip itself (its
  * `isPropertyDocument` guard returns true only for a document `this`, because a

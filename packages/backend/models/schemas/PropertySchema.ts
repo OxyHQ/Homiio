@@ -10,7 +10,7 @@ import type { Query, UpdateQuery } from 'mongoose';
 import mongoose from 'mongoose';
 import validator from 'validator';
 import { transformAddressFields } from '../../utils/helpers';
-import { validateOfferings } from './offeringValidation';
+import { validateOfferings } from '../../services/offeringValidation';
 import { PropertyType, PropertyStatus, HousingType, LayoutType, UtilitiesIncluded, LeaseDuration, AvailabilityWindowStatus, CancellationPolicy, OfferingType, ExchangeMode, LISTING_CURRENCIES } from '@homiio/shared-types';
 import { resolveGeoFilterAddressIds } from '../../services/geoQueryService';
 

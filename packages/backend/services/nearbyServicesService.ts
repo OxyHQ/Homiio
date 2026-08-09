@@ -11,9 +11,9 @@
  * low-volume usage. We therefore mirror `geocodingService`:
  *   - send the configured User-Agent on every call,
  *   - issue a SINGLE union query per coordinate (all categories at once),
- *   - PERSIST results in the `PlacePoi` collection keyed by a rounded-coordinate
+ *   - PERSIST results in the `place_pois` table keyed by a rounded-coordinate
  *     cell + radius with a long TTL (POIs change slowly), so a fresh cell is
- *     served straight from MongoDB — shared across instances and surviving
+ *     served straight from Postgres — shared across instances and surviving
  *     restarts — without calling Overpass, and
  *   - abort + degrade gracefully on timeout/failure instead of throwing.
  *
@@ -24,7 +24,6 @@
  * @see https://operations.osmfoundation.org/policies/
  */
 
-import type { Model } from 'mongoose';
 import type {
   NearbyServiceKey,
   NearbyServiceCategory,
@@ -32,7 +31,7 @@ import type {
 } from '@homiio/shared-types';
 import config from '../config';
 import { Logger } from '../utils/logger';
-import { PlacePoi } from '../models';
+import { findCachedCell, upsertCachedCell } from '../db/placePois/placePoiRepository';
 
 const logger = new Logger('NearbyServicesService');
 
@@ -52,8 +51,11 @@ const COORD_BOUNDS = {
 /**
  * How long a persisted cell stays fresh. Nearby POIs are stable over days, so a
  * 48h TTL keeps Overpass traffic minimal while still refreshing twice a week.
- * Drives both the row's `expiresAt` (a MongoDB TTL index purges expired rows)
- * and the staleness check on read.
+ * Drives both the row's `expires_at` and the staleness check on read.
+ *
+ * Mongo's TTL index used to reap the expired rows itself. Postgres has none, so
+ * `db/expiry.ts` registers `place_pois.expires_at` and a sweep does it — the
+ * table grows forever without that entry, silently and with no failing test.
  */
 const CACHE_TTL_MS = 48 * 60 * 60 * 1000; // 48h
 
@@ -126,17 +128,6 @@ interface CoordinateCell {
   lng: number;
 }
 
-/** A persisted PlacePoi document (mirrors `PlacePoiSchema`). */
-interface PlacePoiDocument {
-  cellKey: string;
-  lat: number;
-  lng: number;
-  radiusM: number;
-  categories: NearbyServiceCategory[];
-  fetchedAt: Date;
-  expiresAt: Date;
-}
-
 /** The rounded cell a coordinate falls into, at the configured precision. */
 const coordinateCell = (longitude: number, latitude: number): CoordinateCell => ({
   lat: Number(latitude.toFixed(CACHE_COORD_DECIMALS)),
@@ -147,9 +138,6 @@ const coordinateCell = (longitude: number, latitude: number): CoordinateCell => 
 const cacheKey = (cell: CoordinateCell, radiusM: number): string =>
   `${cell.lat.toFixed(CACHE_COORD_DECIMALS)},${cell.lng.toFixed(CACHE_COORD_DECIMALS)}@${radiusM}`;
 
-/** The single PlacePoi registration from `models/index`. */
-const placePoiModel = (): Model<PlacePoiDocument> => PlacePoi as unknown as Model<PlacePoiDocument>;
-
 /**
  * Read a fresh persisted cell from the DB. Returns its categories on a hit,
  * `null` on a miss or when the row is past its `expiresAt` (stale) — the caller
@@ -157,10 +145,10 @@ const placePoiModel = (): Model<PlacePoiDocument> => PlacePoi as unknown as Mode
  * served as a degraded fallback if Overpass is unavailable.
  */
 const readCache = async (key: string): Promise<NearbyServiceCategory[] | null> => {
-  const row = await placePoiModel().findOne({ cellKey: key }).lean<PlacePoiDocument | null>();
-  if (!row) return null;
-  if (row.expiresAt.getTime() < Date.now()) return null;
-  return row.categories;
+  const cell = await findCachedCell(key);
+  if (!cell) return null;
+  if (cell.expiresAt.getTime() < Date.now()) return null;
+  return cell.categories;
 };
 
 /**
@@ -169,8 +157,8 @@ const readCache = async (key: string): Promise<NearbyServiceCategory[] | null> =
  * instead of an all-absent baseline.
  */
 const readStaleCache = async (key: string): Promise<NearbyServiceCategory[] | null> => {
-  const row = await placePoiModel().findOne({ cellKey: key }).lean<PlacePoiDocument | null>();
-  return row ? row.categories : null;
+  const cell = await findCachedCell(key);
+  return cell ? cell.categories : null;
 };
 
 /**
@@ -184,20 +172,15 @@ const writeCache = async (
   categories: NearbyServiceCategory[]
 ): Promise<void> => {
   const now = Date.now();
-  await placePoiModel().updateOne(
-    { cellKey: key },
-    {
-      $set: {
-        lat: cell.lat,
-        lng: cell.lng,
-        radiusM,
-        categories,
-        fetchedAt: new Date(now),
-        expiresAt: new Date(now + CACHE_TTL_MS),
-      },
-    },
-    { upsert: true }
-  );
+  await upsertCachedCell({
+    cellKey: key,
+    lat: cell.lat,
+    lng: cell.lng,
+    radiusM,
+    categories,
+    fetchedAt: new Date(now),
+    expiresAt: new Date(now + CACHE_TTL_MS),
+  });
 };
 
 const toRadians = (degrees: number): number => (degrees * Math.PI) / DEGREES_IN_HALF_CIRCLE;
@@ -365,7 +348,7 @@ const fetchOverpassElements = async (
  * Return the nearby-services snapshot for a coordinate.
  *
  * Reads the persisted `PlacePoi` cell first: a fresh hit is served straight from
- * MongoDB and Overpass is NOT called. On a miss or stale row it queries Overpass
+ * Postgres and Overpass is NOT called. On a miss or stale row it queries Overpass
  * once, persists the result (refreshing `fetchedAt`/`expiresAt`) and returns it.
  *
  * Never throws: on Overpass timeout/failure it returns `partial: true` with the
