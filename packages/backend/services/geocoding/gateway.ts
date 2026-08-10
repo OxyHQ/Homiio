@@ -8,7 +8,7 @@
  * answers "nothing found" because the network was unavailable.
  */
 
-import { and, eq } from 'drizzle-orm';
+import { and, count, eq, isNotNull, max, min } from 'drizzle-orm';
 import {
   parseLocationToken,
   type GeoPlace,
@@ -289,15 +289,18 @@ async function resolveHomiioPlace(
       .where(and(eq(countries.id, id), eq(countries.isActive, true)))
       .limit(1);
     if (!row) return null;
+
+    const extent = await cityExtent(eq(cities.countryId, id));
+    if (!extent) return null;
+
     return {
       source: source('country'),
       placeType: 'country',
       label: { primary: row.name, kind: 'place' },
       admin: { countryCode: row.code.toUpperCase() },
-      // A country has no stored centroid in this schema. `area` is the honest
-      // precision for that: only bounds would apply, and there are none either.
-      center: { longitude: 0, latitude: 0 },
-      precision: 'area',
+      center: extent.center,
+      bounds: extent.bounds,
+      precision: 'centroid',
     };
   }
 
@@ -314,6 +317,10 @@ async function resolveHomiioPlace(
       .where(and(eq(regions.id, id), eq(regions.isActive, true)))
       .limit(1);
     if (!row) return null;
+
+    const extent = await cityExtent(eq(cities.regionId, id));
+    if (!extent) return null;
+
     return {
       source: source('region'),
       placeType: 'region',
@@ -323,8 +330,9 @@ async function resolveHomiioPlace(
         ...(row.code === null ? {} : { regionCode: row.code }),
         regionName: row.name,
       },
-      center: { longitude: 0, latitude: 0 },
-      precision: 'area',
+      center: extent.center,
+      bounds: extent.bounds,
+      precision: 'centroid',
     };
   }
 
@@ -345,7 +353,10 @@ async function resolveHomiioPlace(
       .where(and(eq(cities.id, id), eq(cities.isActive, true)))
       .limit(1);
     if (!row) return null;
-    const hasCentre = row.longitude !== null && row.latitude !== null;
+    // No stored centroid means Homiio does not know where this city is. A 404
+    // says exactly that; a fabricated point would not.
+    if (row.longitude === null || row.latitude === null) return null;
+
     return {
       source: source('city'),
       placeType: 'city',
@@ -360,13 +371,10 @@ async function resolveHomiioPlace(
         regionName: row.regionName,
         cityName: row.name,
       },
-      center: hasCentre
-        ? { longitude: row.longitude as number, latitude: row.latitude as number }
-        : { longitude: 0, latitude: 0 },
+      center: { longitude: row.longitude, latitude: row.latitude },
       // A city centre is a framing device and NOT anybody's location, which is
-      // exactly what `centroid` says. Where no centre is stored, `area` says
-      // there is no meaningful point rather than pretending 0,0 is one.
-      precision: hasCentre ? 'centroid' : 'area',
+      // exactly what `centroid` says.
+      precision: 'centroid',
     };
   }
 
@@ -392,14 +400,25 @@ async function resolveHomiioPlace(
       .where(and(eq(neighborhoods.id, id), eq(neighborhoods.isActive, true)))
       .limit(1);
     if (!row) return null;
-    const hasCentre = row.longitude !== null && row.latitude !== null;
+
     // The CHECK on this table is all-or-none, so one non-null corner means all
     // four are present.
-    const hasBounds =
-      row.bboxWest !== null &&
-      row.bboxSouth !== null &&
-      row.bboxEast !== null &&
-      row.bboxNorth !== null;
+    const bounds =
+      row.bboxWest !== null && row.bboxSouth !== null && row.bboxEast !== null && row.bboxNorth !== null
+        ? { west: row.bboxWest, south: row.bboxSouth, east: row.bboxEast, north: row.bboxNorth }
+        : undefined;
+
+    // Prefer the stored centroid; fall back to the centre of the stored
+    // envelope, which is a real derivation from real data rather than an
+    // invention. With neither, Homiio does not know where this is.
+    const center =
+      row.longitude !== null && row.latitude !== null
+        ? { longitude: row.longitude, latitude: row.latitude }
+        : bounds
+          ? centerOfBounds(bounds)
+          : null;
+    if (!center) return null;
+
     return {
       source: source('neighborhood'),
       placeType: 'neighborhood',
@@ -415,20 +434,9 @@ async function resolveHomiioPlace(
         cityName: row.cityName,
         neighborhoodName: row.name,
       },
-      center: hasCentre
-        ? { longitude: row.longitude as number, latitude: row.latitude as number }
-        : { longitude: 0, latitude: 0 },
-      ...(hasBounds
-        ? {
-            bounds: {
-              west: row.bboxWest as number,
-              south: row.bboxSouth as number,
-              east: row.bboxEast as number,
-              north: row.bboxNorth as number,
-            },
-          }
-        : {}),
-      precision: hasCentre ? 'centroid' : 'area',
+      center,
+      ...(bounds ? { bounds } : {}),
+      precision: 'centroid',
     };
   }
 
@@ -436,4 +444,87 @@ async function resolveHomiioPlace(
   // their own. Returning null (a 404) is correct and not a gap: Homiio does not
   // own a row with that id, so there is nothing to resolve.
   return null;
+}
+
+
+/** The middle of a rectangle. Not valid across the antimeridian; see below. */
+function centerOfBounds(bounds: {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+}): { longitude: number; latitude: number } {
+  return {
+    longitude: (bounds.west + bounds.east) / 2,
+    latitude: (bounds.south + bounds.north) / 2,
+  };
+}
+
+/**
+ * The extent of the cities Homiio knows inside a country or a region.
+ *
+ * ## Why this exists, rather than a stored centroid
+ *
+ * `countries` and `regions` carry NO coordinate columns — deliberately, since
+ * nothing queries them spatially (see the note on `cities.latitude` in
+ * `db/schema/geo.ts`). But `GeoPlace.center` is required, and the first version
+ * of this resolver satisfied it by emitting `{ longitude: 0, latitude: 0 }`
+ * with `precision: 'area'` as the only hint that the point meant nothing.
+ *
+ * That was a real, user-visible bug and it failed silently in the worst way.
+ * `0,0` is a valid coordinate in the Gulf of Guinea: no null check trips and
+ * nothing is logged. A map framing itself from `place.center` — the natural
+ * read, and what ADR 0002 §6.3 tells it to do — showed open ocean, and the
+ * ±0.05° fallback box drawn around it turned "search Spain" into an 11 km
+ * rectangle in the Atlantic returning ZERO listings from a request that
+ * succeeded. Zero results is the plausible-looking failure: it reads as "no
+ * homes in Spain", never as "we invented a centre".
+ *
+ * So the centre is DERIVED from data Homiio actually holds — the bounding
+ * extent of the country's or region's cities — and when there are none with
+ * coordinates the resolver returns null and the caller gets a 404. "We do not
+ * know where this is" is a true statement; a point in the Atlantic is not.
+ *
+ * Two limits, stated rather than papered over. The extent of the cities Homiio
+ * has ingested is not the extent of the country, so this is a framing device
+ * and is typed `centroid` accordingly — which is exactly what `centroid` means:
+ * a representative point of an area, and not anybody's location. And it does
+ * not handle a country straddling the antimeridian (Fiji, Kiribati): the min/max
+ * would span the globe the long way. No such country has cities in this
+ * database today, and the honest fix is a PostGIS extent computed with
+ * `::geography`, which is a schema change rather than a query change.
+ */
+async function cityExtent(
+  scope: ReturnType<typeof eq>,
+): Promise<{
+  center: { longitude: number; latitude: number };
+  bounds: { west: number; south: number; east: number; north: number };
+} | null> {
+  const [row] = await getDb()
+    .select({
+      west: min(cities.longitude),
+      east: max(cities.longitude),
+      south: min(cities.latitude),
+      north: max(cities.latitude),
+      n: count(),
+    })
+    .from(cities)
+    .where(
+      and(
+        scope,
+        eq(cities.isActive, true),
+        isNotNull(cities.longitude),
+        isNotNull(cities.latitude),
+      ),
+    );
+
+  if (!row || row.n === 0) return null;
+  const west = Number(row.west);
+  const east = Number(row.east);
+  const south = Number(row.south);
+  const north = Number(row.north);
+  if ([west, east, south, north].some((value) => !Number.isFinite(value))) return null;
+
+  const bounds = { west, south, east, north };
+  return { center: centerOfBounds(bounds), bounds };
 }

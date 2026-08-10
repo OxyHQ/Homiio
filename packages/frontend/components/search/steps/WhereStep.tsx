@@ -30,7 +30,11 @@ import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { useDebouncedAddressSearch } from '@/hooks/useAddressSearch';
 import { useRecentSearchesStore, type RecentSearch } from '@/store/recentSearchesStore';
-import type { GeoPlace } from '@homiio/shared-types';
+import {
+  isValidBounds,
+  normalizeLongitude,
+  type GeoPlace,
+} from '@homiio/shared-types';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 import type { SearchLocation } from '../types';
@@ -39,14 +43,62 @@ import type { SearchLocation } from '../types';
  * Half-width (degrees) of the box drawn around a picked point when the gateway
  * supplied no bounds of its own.
  *
- * Only a fallback now. A real place comes back with the provider's actual
- * envelope, which is both correct and free — the synthetic square around a city
- * centre was never the city.
+ * A fallback, and a NARROW one — see {@link synthesizeBounds}. A real place
+ * comes back with the provider's actual envelope, which is both correct and
+ * free; the synthetic square around a city centre was never the city.
  */
 const LOCATION_BOUNDS_DELTA_DEG = 0.05;
 const SEARCH_DEBOUNCE_MS = 300;
 const MIN_QUERY_LENGTH = 2;
 const MAX_RESULTS = 6;
+
+/**
+ * Place types that describe an AREA rather than a point.
+ *
+ * A synthetic box is never drawn around one of these. An 11 km square centred
+ * on a country's representative point is not the country — it is a rectangle
+ * somewhere inside it, and searching it returns a handful of listings (or none)
+ * from a request that succeeded. Zero results is the plausible-looking failure:
+ * it reads as "no homes here" or "search is broken", never as "we invented a
+ * box". Where the gateway supplies no bounds for an area, the screen carries
+ * none and frames itself from the listings it gets back.
+ */
+const AREA_PLACE_TYPES: ReadonlySet<string> = new Set([
+  'country',
+  'region',
+  'city',
+  'district',
+  'neighborhood',
+  'postcode',
+]);
+
+/**
+ * A small box around a point-like result, or `undefined`.
+ *
+ * Longitudes are normalised into [-180, 180) before the box is validated. ADR
+ * 0002 §9.3 measured this exact call site as the real antimeridian gap: at
+ * longitude 179.98 the naive east edge is 180.03, the backend's `isLongitude`
+ * rejects it, and the whole search fails with `INVALID_GEO_PARAMS` — every
+ * place within 0.05° of the antimeridian unsearchable. `normalizeLongitude`
+ * wraps it, and the resulting `west > east` box is LEGAL: that is how a box
+ * crossing the antimeridian is expressed, and PostGIS `::geography` already
+ * reads it correctly. `isValidBounds` is the guard that the wrap produced
+ * something the backend will accept rather than something merely plausible.
+ */
+function synthesizeBounds(place: GeoPlace): SearchLocation['bounds'] | undefined {
+  if (AREA_PLACE_TYPES.has(place.placeType)) return undefined;
+
+  const { longitude, latitude } = place.center;
+  const candidate = {
+    west: normalizeLongitude(longitude - LOCATION_BOUNDS_DELTA_DEG),
+    south: latitude - LOCATION_BOUNDS_DELTA_DEG,
+    east: normalizeLongitude(longitude + LOCATION_BOUNDS_DELTA_DEG),
+    north: latitude + LOCATION_BOUNDS_DELTA_DEG,
+  };
+  // Near a pole the latitude arithmetic can leave the valid range. Carrying no
+  // bounds is correct there; a clamped box would be a different place.
+  return isValidBounds(candidate) ? candidate : undefined;
+}
 
 /**
  * Map a gateway candidate onto a resolved {@link SearchLocation}.
@@ -58,16 +110,12 @@ const MAX_RESULTS = 6;
  */
 function toSearchLocation(place: GeoPlace): SearchLocation {
   const { longitude, latitude } = place.center;
+  const bounds = place.bounds ?? synthesizeBounds(place);
   return {
     label: [place.label.primary, place.label.secondary].filter(Boolean).join(', '),
     shortLabel: place.label.primary,
     center: [longitude, latitude],
-    bounds: place.bounds ?? {
-      west: longitude - LOCATION_BOUNDS_DELTA_DEG,
-      south: latitude - LOCATION_BOUNDS_DELTA_DEG,
-      east: longitude + LOCATION_BOUNDS_DELTA_DEG,
-      north: latitude + LOCATION_BOUNDS_DELTA_DEG,
-    },
+    ...(bounds ? { bounds } : {}),
   };
 }
 

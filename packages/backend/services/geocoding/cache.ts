@@ -152,21 +152,46 @@ export function resolveCacheKey(providerId: string, ref: string, language: strin
 }
 
 /**
- * Reverse geocoding keys at 6 decimal places (~11 cm), matching the precision
- * the provider is asked at, so the cache cannot answer for a different
- * building than the one requested.
+ * Grid for a reverse-geocode key: 4 dp is ~11 m, finer than any street address
+ * needs and coarser than any building.
  *
- * This is the one key that holds a full-precision coordinate. It is in-process
- * memory with a TTL, never written to disk, never logged and never returned;
- * ADR 0002 §15 sanctions the 24 h server-side reverse cache explicitly. The
- * privacy rule it must not break is §8.2 — an exact coordinate in a URL, a
- * query key, an analytics event, a log line or a persisted store — and a
- * transient in-memory map is none of those.
+ * It was 6 dp (~11 cm), and that was wrong twice over — both halves caught in
+ * review of #390:
+ *
+ *  - **Privacy.** The cache's KEYS then held building-precision positions —
+ *    every point anyone reverse-geocoded, retained for the TTL, visible to a
+ *    heap dump or to whatever backs this store next. ADR 0002 §8.1's whole
+ *    argument is that degrading on the way IN is what makes a value unable to
+ *    leak later, from a log, a backup or an endpoint that does not exist yet.
+ *    Forty lines above, {@link BIAS_GRID_DECIMALS} states exactly that
+ *    principle for the bias point; the two are now consistent.
+ *  - **It barely functioned as a cache.** At 11 cm, two drags of the same map
+ *    pin essentially never share a key, so the hit rate approached zero for the
+ *    one case it exists to serve — which made the OSM rate-limit protection it
+ *    appeared to provide largely illusory. Worse, a test asserting a hit on a
+ *    repeated IDENTICAL call passes under either precision, so the suite could
+ *    not tell the difference; the test now re-queries a nearby point instead.
+ *
+ * 11 m cannot resolve two neighbouring buildings, which is the property that
+ * makes it safe. It is far short of the ~110 m at which a reverse geocode would
+ * start naming the wrong street.
+ */
+const REVERSE_GRID_DECIMALS = 4;
+
+/**
+ * The key for "what is at this coordinate".
+ *
+ * ADR 0002 §15 sanctions a 24 h server-side reverse cache explicitly; §8.2 is
+ * the rule it must not break (no exact coordinate in a URL, a query key, an
+ * analytics event, a log line or a persisted store). Gridding the coordinate
+ * before it becomes a string satisfies §8.2 structurally rather than by
+ * argument about where the map happens to live today.
  */
 export function reverseCacheKey(
   longitude: number,
   latitude: number,
   language: string,
 ): string {
-  return ['geo:v1:reverse', language, `${longitude.toFixed(6)},${latitude.toFixed(6)}`].join('|');
+  const gridded = `${longitude.toFixed(REVERSE_GRID_DECIMALS)},${latitude.toFixed(REVERSE_GRID_DECIMALS)}`;
+  return ['geo:v1:reverse', language, gridded].join('|');
 }

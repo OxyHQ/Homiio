@@ -67,10 +67,19 @@
  * the host four times), and a comment renders to nobody and calls nothing. It
  * is the same call `packages/backend/__tests__/unit/mongoUnreachable.test.ts`
  * and `noHardcodedCurrency.test.ts` both make.
+ *
+ * The stripping itself comes from `@homiio/shared-types/testing/stripComments`
+ * (#388) rather than being implemented here. This gate briefly carried its own,
+ * written after the two regexes it replaced were caught reporting a clean tree
+ * against a tree holding six live Nominatim calls; #388 generalised that fix and
+ * added regex-literal and template-interpolation tracking, so there is one
+ * implementation and one place to fix the next hole in it.
  */
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+
+import { stripComments } from '@homiio/shared-types/testing/stripComments';
 
 /** Repository root — two levels up from `packages/frontend`. */
 const REPO_ROOT = join(__dirname, '..', '..', '..');
@@ -153,126 +162,6 @@ interface Finding {
   line: number;
   text: string;
   host: string;
-}
-
-/**
- * Blank out comments, keeping string literals and line numbering intact.
- *
- * This is a small state machine rather than two regexes, and both regexes it
- * replaces were measured producing WRONG answers on this repository's real
- * source — in the direction that reports a clean tree:
- *
- *  1. `line.indexOf('//')` truncates `const U = 'https://nominatim…'` at the
- *     scheme separator, deleting the host before any rule can see it. Every
- *     assertion here went vacuous and the frontend rule reported CLEAN against
- *     a tree holding six live Nominatim calls.
- *  2. Blanking block comments with a non-greedy `/*`…`*` `/` first is worse,
- *     because it does not respect line comments: `packages/backend/config.ts`
- *     line 390 mentions the block-comment opener INSIDE a `//` comment, so the
- *     regex treated it as a real opener and blanked the next **112 lines** —
- *     including the one line in the whole backend that names the geocoding
- *     host. A 112-line blind spot in the middle of the file being scanned.
- *
- * Both were caught by the pinned-predicate and allow-list-still-matches cases
- * below, which is exactly what those cases are for: a scan that has stopped
- * matching anything is otherwise indistinguishable from a clean tree.
- *
- * Comments are blanked rather than deleted, and newlines are preserved, so the
- * line NUMBER in a finding still points at the real line.
- *
- * Known limitation, stated rather than papered over: a regex literal
- * containing an escaped slash sequence can look like a comment opener to this
- * scanner, which would blank the rest of that line. It can only cause a missed
- * violation, never an invented one, and the pinned cases prove the scanner
- * still matches real code.
- */
-function stripComments(source: string): string {
-  let out = '';
-  let index = 0;
-  type State = 'code' | 'line' | 'block' | 'string';
-  let state: State = 'code';
-  let quote = '';
-
-  const keep = (char: string) => {
-    out += char;
-  };
-  // Inside a comment, keep newlines and blank everything else.
-  const blank = (char: string) => {
-    out += char === '\n' ? '\n' : ' ';
-  };
-
-  while (index < source.length) {
-    const char = source[index];
-    const next = source[index + 1];
-
-    if (state === 'code') {
-      if (char === '/' && next === '/') {
-        state = 'line';
-        blank(char);
-        index += 1;
-        continue;
-      }
-      if (char === '/' && next === '*') {
-        state = 'block';
-        blank(char);
-        index += 1;
-        continue;
-      }
-      if (char === "'" || char === '"' || char === '`') {
-        state = 'string';
-        quote = char;
-        keep(char);
-        index += 1;
-        continue;
-      }
-      keep(char);
-      index += 1;
-      continue;
-    }
-
-    if (state === 'string') {
-      if (char === '\\') {
-        // An escape consumes the next character, so a `\'` cannot close the
-        // literal and a `\\` at the end cannot escape the closing quote.
-        keep(char);
-        if (next !== undefined) keep(next);
-        index += 2;
-        continue;
-      }
-      if (char === quote) {
-        state = 'code';
-        quote = '';
-      }
-      keep(char);
-      index += 1;
-      continue;
-    }
-
-    if (state === 'line') {
-      if (char === '\n') {
-        state = 'code';
-        keep(char);
-        index += 1;
-        continue;
-      }
-      blank(char);
-      index += 1;
-      continue;
-    }
-
-    // state === 'block'
-    if (char === '*' && next === '/') {
-      state = 'code';
-      blank(char);
-      blank(next);
-      index += 2;
-      continue;
-    }
-    blank(char);
-    index += 1;
-  }
-
-  return out;
 }
 
 /** Every line of `source` that names a geocoding endpoint. */

@@ -356,6 +356,51 @@ describe('GET /api/geo/search — cache', () => {
     expect(second.body.data.candidates).toEqual(first.body.data.candidates);
   });
 
+  it('reverse-geocode caching survives a nudged pin, which is the case it exists for', async () => {
+    // An identical repeated call hits under ANY key precision, so a test built
+    // that way cannot tell a working cache from a useless one — it passed while
+    // the key was 6 dp (~11 cm), at which two drags of the same pin never share
+    // an entry and the hit rate is effectively zero. The discriminator is a
+    // point moved by less than the grid.
+    let calls = 0;
+    installFake({
+      reverse: async () => {
+        calls += 1;
+        return barcelona();
+      },
+    });
+
+    await request(app)
+      .get('/api/geo/reverse')
+      .query({ lng: '2.177432', lat: '41.382893' })
+      .expect(200);
+    // ~2 cm away: the same building, and it must not cost a second call.
+    const nudged = await request(app)
+      .get('/api/geo/reverse')
+      .query({ lng: '2.177434', lat: '41.382891' })
+      .expect(200);
+
+    expect(calls).toBe(1);
+    expect(nudged.body.data.cached).toBe(true);
+  });
+
+  it('does NOT let one coordinate answer for a genuinely different place', async () => {
+    // The other side of the grid: coarsening must not go so far that two
+    // distinct addresses collapse. ~1 km apart must be two entries.
+    let calls = 0;
+    installFake({
+      reverse: async () => {
+        calls += 1;
+        return barcelona();
+      },
+    });
+
+    await request(app).get('/api/geo/reverse').query({ lng: '2.1774', lat: '41.3828' }).expect(200);
+    await request(app).get('/api/geo/reverse').query({ lng: '2.1874', lat: '41.3928' }).expect(200);
+
+    expect(calls).toBe(2);
+  });
+
   it('does NOT let one language’s answer serve another', async () => {
     // The failure this prevents is invisible: a plausible list comes back, in
     // the wrong language, and nothing looks broken.
@@ -484,6 +529,59 @@ describe('GET /api/geo/resolve', () => {
 
     expect(res.body.data.place.label.primary).toBe('Gràcia');
     expect(res.body.data.place.admin.neighborhoodName).toBe('Gràcia');
+  });
+
+  it('resolves a country to the extent of its cities, NEVER to Null Island', async () => {
+    // The bug this pins: `center: { longitude: 0, latitude: 0 }` was emitted for
+    // every country and region, because `GeoPlace.center` is required and
+    // `countries` stores no coordinate. `0,0` is a valid point in the Gulf of
+    // Guinea, so nothing tripped — the map simply framed open ocean, and the
+    // ±0.05° fallback box drawn around it made "search Spain" return zero
+    // listings from a request that succeeded.
+    const chain = await seedGeoChain({
+      cityName: 'Barcelona',
+      countryName: 'Spain',
+      countryCode: 'ES',
+      latitude: 41.3828939,
+      longitude: 2.1774322,
+    });
+
+    const res = await request(app)
+      .get('/api/geo/resolve')
+      .query({ loc: `country.homiio.${chain.countryId}` })
+      .expect(200);
+
+    const place = res.body.data.place;
+    expect(place.label.primary).toBe('Spain');
+    // Derived from real data Homiio holds, not invented.
+    expect(place.center.longitude).toBeCloseTo(2.1774322, 4);
+    expect(place.center.latitude).toBeCloseTo(41.3828939, 4);
+    expect(place.bounds).toBeDefined();
+    // A representative point of an AREA — explicitly not anybody's location.
+    expect(place.precision).toBe('centroid');
+
+    // The assertion that would have caught the original bug on its own.
+    expect([place.center.longitude, place.center.latitude]).not.toEqual([0, 0]);
+  });
+
+  it('404s a country whose cities Homiio has no coordinates for', async () => {
+    // "We do not know where this is" is a true statement. A point in the
+    // Atlantic is not, and it fails silently where a 404 does not.
+    const chain = await seedGeoChain({ cityName: 'Nowhere', countryCode: 'ZZ' });
+
+    await request(app)
+      .get('/api/geo/resolve')
+      .query({ loc: `country.homiio.${chain.countryId}` })
+      .expect(404);
+  });
+
+  it('404s a city with no stored centroid rather than inventing one', async () => {
+    const chain = await seedGeoChain({ cityName: 'Uncharted', countryCode: 'ES' });
+
+    await request(app)
+      .get('/api/geo/resolve')
+      .query({ loc: `city.homiio.${chain.cityId}` })
+      .expect(404);
   });
 
   it('404s a Homiio id that names no row', async () => {
