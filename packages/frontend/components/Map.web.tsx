@@ -35,6 +35,8 @@ import type { Feature, FeatureCollection, Point } from 'geojson';
 import * as Location from 'expo-location';
 
 import { useMapState } from '@/context/MapStateContext';
+import { boundsCenter } from '@homiio/shared-types';
+import { isDegenerateBounds, toCameraBounds } from './mapCamera';
 import { api, type ApiResponse } from '@/utils/api';
 import {
   ATTRIBUTION,
@@ -109,6 +111,18 @@ const ADDRESS_MARKER_COLOR = '#007AFF';
 /** Throttle window (ms) for streaming intermediate region updates while panning. */
 const REGION_EMIT_THROTTLE_MS = 100;
 /** Camera ease duration (ms) for `navigateToLocation`. */
+/**
+ * Zoom used when a box is degenerate and there is nothing to fit.
+ *
+ * City-ish rather than street-level: the caller asked to frame an AREA, so
+ * dropping to the max zoom a zero-area fit would produce is the one answer that
+ * is certainly wrong.
+ */
+const DEGENERATE_BOUNDS_ZOOM = 12;
+
+/** Padding, in px, around a fitted box so markers are not flush to the edge. */
+const FIT_BOUNDS_PADDING = 48;
+
 const NAVIGATE_DURATION_MS = 500;
 /** Lower zoom used when the device's location fix is coarse (> this accuracy, m). */
 const COARSE_ACCURACY_M = 1000;
@@ -618,6 +632,25 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   useImperativeHandle(ref, () => ({
     navigateToLocation: (center: LonLat, zoom: number = 15) => {
       mapRef.current?.easeTo({ center, zoom, duration: NAVIGATE_DURATION_MS });
+    },
+    fitBounds: (bounds, options) => {
+      const map = mapRef.current;
+      if (!map) return;
+      // See `Map.tsx` — the same two decisions, taken from the same helpers, so
+      // the two platforms cannot drift on either the wrap or the degenerate box.
+      if (isDegenerateBounds(bounds)) {
+        const centre = boundsCenter(bounds);
+        map.easeTo({
+          center: [centre.longitude, centre.latitude],
+          zoom: DEGENERATE_BOUNDS_ZOOM,
+          duration: options?.duration ?? NAVIGATE_DURATION_MS,
+        });
+        return;
+      }
+      map.fitBounds(toCameraBounds(bounds), {
+        padding: options?.padding ?? FIT_BOUNDS_PADDING,
+        duration: options?.duration ?? NAVIGATE_DURATION_MS,
+      });
     },
     highlightMarker: (id: string | null) => {
       const pillMarkers = pillMarkersRef.current;

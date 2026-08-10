@@ -248,6 +248,17 @@ const buildScript = (options: MapDocumentOptions): string => {
         map.easeTo({ center: m.center, zoom: m.zoom, duration: m.duration || 500 });
       }
     }
+    if(m.type==='fitBounds'){
+      // bounds arrives already in MapLibre corner form, with a wrapping box's
+      // east edge carried past 180 by mapCamera.toCameraBounds. No geography is
+      // done here on purpose: this document is a template literal, not a
+      // module, so it cannot be unit-tested and must not be where a rule lives.
+      // (No backticks in this comment either — one would end the literal.)
+      map.fitBounds(m.bounds, {
+        padding: typeof m.padding === 'number' ? m.padding : 48,
+        duration: typeof m.duration === 'number' ? m.duration : 500,
+      });
+    }
     if(m.type==='setData'){
       const s = map.getSource(srcId);
       if (s) {
