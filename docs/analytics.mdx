@@ -1,43 +1,78 @@
 ---
 title: Analytics
-description: The /api/analytics insights endpoint, the public marketplace stats aggregator, and how the Insights screen consumes both.
-order: 5
+description: The owner insights endpoint, the public marketplace aggregates, the privacy-safe product observability pipeline, and the ban on geographic PII.
+order: 8
 ---
 
 # Analytics
 
-Homiio ships two analytics surfaces, both server-side:
+Three separate things get called "analytics" here, and conflating them is how a
+privacy rule gets broken by accident. They are:
 
-1. **Per-user insights** — `GET /api/analytics` returns the calling user's interaction summary, cross-app actions, and trend deltas. When the optional `horizonService` is available it delegates to the Oxy ecosystem cross-app analytics layer; otherwise it returns a deterministic fallback so the Insights screen never has to render an error state.
-2. **Public marketplace stats** — `GET /api/analytics/stats` runs five Postgres aggregates in parallel and powers the homepage's "market at a glance" widgets.
+| | What it answers | Who may see it | Where it lives |
+|---|---|---|---|
+| **Owner insights** | "How is MY listing doing?" | The owner, authenticated | `GET /api/analytics` |
+| **Marketplace aggregates** | "What does this market look like?" | Anyone, public | `GET /api/analytics/stats` |
+| **Product observability** | "Did location selection work?" | Homiio's own logs | `POST /api/observability/events` |
 
-The corresponding controller lives at `packages/backend/controllers/analyticsController.ts`. The Insights screen at `packages/frontend/app/insights/index.tsx` consumes both endpoints through `packages/frontend/services/analyticsService.ts` over TanStack Query, with charts rendered via `react-native-chart-kit` over `react-native-svg`.
+The first two are computed from Homiio's own PostgreSQL rows. The third is a
+different kind of thing entirely: a versioned event stream about whether the
+product *works*, deliberately built so it cannot carry an address.
 
-There is currently no client-side product-analytics SDK wired into the frontend tree. All analytics in production are server-aggregated from PostgreSQL.
+**There is no third-party analytics SDK in this repository.** No PostHog, no
+Mixpanel, no Amplitude, no Segment, on web or native. Nothing about a user's IP,
+fingerprint or session leaves the device to a vendor. Verify rather than trust
+this paragraph:
 
-## `GET /api/analytics`
+```bash
+grep -rniE 'posthog|mixpanel|amplitude|@segment/' packages/ --include=package.json
+```
 
-Authenticated. Returns the user's interaction summary, cross-app actions, and trend deltas:
+Adding one is not a dependency decision — it needs an explicit privacy review
+against [ADR 0003](./adr/0003-privacy-verification-publication.md).
+
+## Owner insights — `GET /api/analytics`
+
+Authenticated. Returns what the calling owner's own listings did over a period,
+computed from real rows in `recently_viewed`, `saved_items` and
+`viewing_requests`. `?period=` accepts `7d`, `30d` or `90d` and defaults to
+`30d`.
 
 ```ts
-interface AnalyticsInsights {
+{
+  period: '7d' | '30d' | '90d';
   totalInteractions: number;
-  appsUsed: string[];
-  crossAppActions: number;
-  dataShared: number;
-  insights: string[];
-  trends: {
-    propertyRevenue: { current: number; change: number; period: string };
-    tenantSatisfaction: { current: number; change: number; period: string };
+  properties: { listed: number };
+  views: { total: number; uniqueViewers: number };
+  saves: { total: number };
+  viewingRequests: {
+    received: number; pending: number;
+    approved: number; declined: number; cancelled: number;
   };
+  insights: string[];   // plain sentences, generated only when the count is > 0
 }
 ```
 
-The controller first tries to delegate to the `horizonService` (`packages/backend/services`). When that service is missing — common in standalone dev — it returns a fallback payload tagged `'Analytics retrieved successfully (fallback data)'`. The `period` query param accepts `7d`, `30d`, or `90d` and defaults to `30d`.
+A caller with no Homiio profile gets the same shape with every figure at zero,
+not a 404 — the screen renders an empty state rather than an error.
 
-## `GET /api/analytics/stats`
+**Metrics with no backing data are returned as `0`. Nothing is fabricated and
+nothing is extrapolated.** That rule is worth stating because this endpoint used
+to violate it in the other direction: it delegated to an optional cross-app
+service and, when that was absent, returned a plausible-looking "fallback"
+payload with invented revenue and satisfaction trends. Those numbers described
+nothing. A zero that means zero is more useful than a number that means nothing.
 
-Public — mounted under `routes/public.ts`. Runs five parallel Postgres aggregates:
+The port also fixed two silent defects worth knowing about if you are reading old
+dashboards: owned listings were being selected by a field the schema did not
+declare, so the set was always empty and every figure was 0 regardless of
+activity; and `uniqueSavers` counted a column that did not exist. Both now count
+`oxy_user_id`, which is the real owner key.
+
+## Marketplace aggregates — `GET /api/analytics/stats`
+
+Public, mounted on `routes/public.ts`. Five aggregates run in parallel against
+PostgreSQL:
 
 ```ts
 const [catalogue, appSaves, pricing, topCities, priceBuckets] = await Promise.all([
@@ -49,62 +84,106 @@ const [catalogue, appSaves, pricing, topCities, priceBuckets] = await Promise.al
 ]);
 ```
 
-Followed by a pricing aggregate (`averageRent`, `minRent`, `maxRent`), a top-cities aggregate joining `addresses` via `$lookup`, and a price-bucket histogram with preset boundaries:
-
-```ts
-$bucket: {
-  groupBy: '$rent.amount',
-  boundaries: [0, 500, 1000, 1500, 2000, 3000, 5000, 10000],
-  default: '10000+',
-  output: { count: { $sum: 1 } },
-}
-```
-
-The response feeds the public homepage widgets:
+They live in `packages/backend/db/analytics/ownerAnalytics.ts`, not inline in the
+controller. Response:
 
 ```ts
 interface AppStats {
-  totals: { properties: number; cities: number; saves: number; uniqueSavers: number };
+  totals:  { properties: number; cities: number; saves: number; uniqueSavers: number };
   pricing: { averageRent: number; minRent: number; maxRent: number };
-  topCities: { city: string; state: string; properties: number; averageRent: number }[];
+  topCities: { cityId: string; city: string; state: string; properties: number; averageRent: number }[];
   priceBuckets: { bucket: string; count: number }[];
 }
 ```
 
-Every aggregate is wrapped in `.catch(() => 0)` (or `[]`) and the entire handler has a top-level fallback so a single failing pipeline never produces a 500 — partial data is always preferable to an outage on a public marketing page.
+The price histogram uses fixed monthly-rent boundaries — `0, 500, 1000, 1500,
+2000, 3000, 5000, 10000` — implemented with `width_bucket`. Bands are numbered
+from 1 and anything at or above the last boundary lands in a `10000+` overflow
+band; a band nobody's listing falls into is **absent** from the response rather
+than present with a zero. Consumers must not assume every band appears.
 
-## Frontend service wrapper
+`topCities` returns a `cityId` alongside the display name, so a caller can link
+to the city rather than re-resolving a name into an id — the kind of round trip
+that produces the wrong Barcelona.
 
-`packages/frontend/services/analyticsService.ts` calls both endpoints and provides identical fallback shapes:
+Everything on this endpoint is marketplace-level. No per-user information leaves
+the server, by construction rather than by filtering: none of the five aggregates
+selects a user column.
 
-```ts
-async getAnalytics(period: '7d' | '30d' | '90d' = '30d'): Promise<AnalyticsInsights> {
-  try {
-    const response = await api.get<{ success: boolean; data: AnalyticsInsights }>(
-      this.baseUrl,
-      { params: { period } },
-    );
-    return (response.data as AnalyticsApiResponse).data ?? response.data;
-  } catch {
-    return FALLBACK_INSIGHTS;
-  }
-}
-```
+## Product observability — `POST /api/observability/events`
 
-The Insights screen consumes both methods via TanStack Query so they participate in the global query cache, optimistic refetch on focus, and offline-first replay.
+This is the newest surface and the least like the other two. It answers "does the
+product work" — did the location permission resolve, did the geocoder fall back,
+did a search return nothing, did somebody abandon the review wizard at step
+four — and it is engineered so that it **cannot carry an address**.
 
-## Privacy posture
+- **Public and unauthenticated, deliberately.** The most important events happen
+  before anybody signs in: the first-open permission prompt, the first search,
+  the fallback after a geocoder failure. Requiring a session would leave exactly
+  the cold-start path this exists to observe unobserved. Nothing in the handler
+  reads `req.user`.
+- **It always answers `202`.** A telemetry endpoint that returns 4xx or 5xx
+  teaches a client to retry, and a retry loop driven by telemetry is a
+  self-inflicted outage. The body reports what was accepted and what was refused;
+  the status never carries that information.
+- **The sink is the structured logger**, not a table. That is a ceiling on
+  purpose: a table would make this a business-intelligence system, which is out
+  of scope, and it would make retention a per-event policy nobody maintains.
+  As a log group, retention is one setting owned by `oxy-infra`.
 
-- `GET /api/analytics` returns only the calling user's data. The controller scopes off `req.userId` (set by the `oxy.auth()` middleware) and accepts a `userID` query override only for delegated admin calls.
-- `GET /api/analytics/stats` is intentionally public and returns only marketplace-level aggregates — no per-user information leaves the server.
-- No third-party analytics SDK is loaded on web or native, so there is no client-side IP, fingerprint, or session replay leaving the device.
+The event vocabulary is versioned (`OBSERVABILITY_SCHEMA_VERSION`) and closed —
+thirteen names today, including `location_permission_resolved`,
+`location_selection_committed`, `geocoder_request_completed`, `search_submitted`,
+`map_area_search_committed`, `search_results_loaded`, `search_zero_results`,
+`address_candidate_selected`, `review_step_completed` and `review_abandoned`.
+Read `packages/shared-types/src/observability/schema.ts` for the current set;
+an event name not in it is refused.
+
+### The prohibition on geographic PII
+
+**No event may carry a coordinate, an address, a postcode, a street, a listing's
+exact position, or anything from which one can be reconstructed.** This is not a
+review convention — it is enforced in code and it is enforced on both sides.
+
+The mechanism is *bucketing*: a value that would identify a place is replaced by
+a band before it is ever an event field. Radius becomes a radius bucket, a result
+count becomes a count bucket, a map viewport becomes an area bucket and a zoom
+bucket, a latency becomes a latency bucket, a free-text query becomes a length
+bucket. `location.kind` records that a query was scoped to a `city`, a `bbox` or
+a `radius` — never to *which* one, at coordinate precision.
+
+`redactObservabilityEvent` in `@homiio/shared-types` is the single
+implementation, and it runs **twice**: the client redacts before sending, and the
+server redacts again on ingest. The second pass is not paranoia about our own
+code — an old build, a modified build, or something that is not our client at all
+reaches the same public route, so the server cannot treat a client-side pass as
+having happened.
+
+Two properties of the ingest path that are easy to get backwards:
+
+- It **preserves** the client's `surface` and `occurredAt`. A phone's event
+  relabelled `server` is a lie about where it happened.
+- It does **not** sample. The client already did; sampling twice silently squares
+  the rate.
+
+The classification rules these enforce are
+[ADR 0003](./adr/0003-privacy-verification-publication.md) — the four-tier data
+classification, the precision ladder, and the k-anonymity floor that any
+aggregate must clear before publication. Do not restate them; that ADR is the
+authority, and an aggregate published without checking it against the floor is
+the failure mode this whole pipeline exists to avoid.
 
 ## Where to look
 
 | Concern | File |
-|---------|------|
-| Backend controller | `packages/backend/controllers/analyticsController.ts` |
+|---|---|
+| Owner + public stats controller | `packages/backend/controllers/analyticsController.ts` |
+| The aggregate queries | `packages/backend/db/analytics/ownerAnalytics.ts` |
 | Authenticated route | `packages/backend/routes/analytics.ts` |
-| Public stats route | `packages/backend/routes/public.ts` (`GET /analytics/stats`) |
+| Public stats + observability routes | `packages/backend/routes/public.ts` |
+| Observability ingest | `packages/backend/controllers/observabilityController.ts` |
+| Server sink and the two entry points | `packages/backend/observability/serverObservability.ts` |
+| Event schema, redaction, buckets | `packages/shared-types/src/observability/` |
 | Frontend service | `packages/frontend/services/analyticsService.ts` |
 | Insights screen | `packages/frontend/app/insights/index.tsx` |
+| E2E matrix for location and identity | `docs/qa/location-and-housing-identity-e2e-matrix.md` |

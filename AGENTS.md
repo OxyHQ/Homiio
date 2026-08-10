@@ -1,11 +1,53 @@
 # Homiio
 
-Real estate platform. Expo/RN frontend plus an Express backend. Agent: `homiio`.
+Housing platform: find a place, research its history, understand what it really
+costs, and manage or defend the tenancy. Expo/RN frontend plus an Express
+backend. Agent: `homiio`.
 
 > Org-wide engineering standards (package manager, TypeScript, React, naming,
 > error handling, security, testing, git and PR conventions) live in
 > <https://github.com/OxyHQ/engineering>. This file carries only what is true of
 > Homiio specifically. Versions are in `package.json`, never here.
+
+## The four architecture decision records (READ BEFORE DESIGNING ANYTHING)
+
+`docs/adr/` holds the contracts every housing, location, privacy and pricing
+change is bound by. They are the authority; this file summarises where they
+apply and never restates their rules. Index: [`docs/adr/README.md`](docs/adr/README.md).
+
+| ADR | Decides |
+|---|---|
+| [0001](docs/adr/0001-canonical-housing-graph.md) | Street / building / unit / listing — what a dwelling IS, and what a listing is not |
+| [0002](docs/adr/0002-location-and-search-contract.md) | One location + search contract for Home, Explore, reviews and evictions |
+| [0003](docs/adr/0003-privacy-verification-publication.md) | Data classification, the precision ladder, verification, publication |
+| [0004](docs/adr/0004-local-explainable-pricing.md) | Local, explainable, versioned price assessments |
+
+All four are **Status: Proposed** as of 2026-08-10. They bind DESIGN — a new
+feature must not contradict them — but they describe target contracts, so do not
+document their rules as shipped behaviour. Re-read the `Status` line rather than
+trusting this sentence; it is the kind of fact that goes stale quietly.
+
+### The invariants they establish
+
+Four rules, stated here only so nobody has to read 5,000 lines to find out a
+change is disallowed. The ADR is the authority for each; do not re-derive.
+
+1. **A dwelling is permanent; a listing is temporary.** The identity of a place
+   is a row in `addresses` at a declared level (`STREET` / `BUILDING` / `UNIT`).
+   A row in `properties` is a sourced advertisement POINTING AT a place — it may
+   exist several times over for one dwelling, disappear, and come back. Never
+   treat a `properties.id` as the identity of a home. (ADR 0001)
+2. **Location is never implicit.** Every surface answering "where?" states the
+   area it is querying, and a geocoding failure never degrades into a worldwide
+   feed. Free text and geographic scope are independent dimensions. (ADR 0002)
+3. **Privacy by precision.** A coordinate, an address and a review are stored at
+   one precision and published at another; the reduction happens on the way OUT.
+   Never widen a published precision without ADR 0003.
+4. **Pricing must be explainable.** A price assessment is local, versioned and
+   carries its reasoning and confidence. No universal score. (ADR 0004)
+
+**Do not duplicate an ADR's rules into this file, a doc page or a code comment.**
+Link the ADR. A rule copied twice diverges, and the copy is what people read.
 
 ## Deployment
 
@@ -23,10 +65,12 @@ Infra (ECS task definitions, ALB, ECR, SSM, the S3 bucket) lives in
   in the ECS env.
 - Worker: the same ECR image, a separate ECS service (`app-homiio-worker.tf`),
   entrypoint `packages/backend/worker.ts`.
+<!-- vocabulary-exempt:start names the secret that was REMOVED, so the removal can be verified against SSM -->
 - `DATABASE_URL` is the only database secret either task definition carries;
   `MONGODB_URI` is off both and deleted from SSM. A secret added to either task
   definition must be added to `deploy-aws.yml`'s explicit sync allowlist in the
   SAME change, or it is silently never synced to SSM.
+<!-- vocabulary-exempt:end -->
 
 ## Commands
 
@@ -71,6 +115,7 @@ trusted extension — the app role that owns the database cannot install it
 itself). `DATABASE_URL` is the only database secret either process needs, and
 `initializeDatabase()` exits non-zero without it.
 
+<!-- vocabulary-exempt:start states what was REMOVED and names the reintroduction gate; both need the old vocabulary to be checkable -->
 **The Mongo→Postgres migration is finished.** `database/connection.ts`,
 `models/`, `db/backfill/`, `mongoose` and `mongodb-memory-server` are all
 deleted, `config.ts` reads no `MONGODB_URI` and has no `config.database` key,
@@ -83,45 +128,53 @@ any module that imports mongoose or opens a Mongo connection fails the build. It
 scans COMMENT-STRIPPED source on purpose, because several modules here document
 what they no longer do in exactly that vocabulary. Bringing Mongo back is
 allowed, but it has to be a decision somebody makes on purpose and writes down.
+<!-- vocabulary-exempt:end -->
 
 **The porting rules — id preservation, the census-before-porting discipline,
 schema-fixture pitfalls already found and fixed once — live in
 `packages/backend/db/MIGRATION-CONTRACT.md`, and the table-by-table schema
-decisions in `packages/backend/db/schema/CONVENTIONS.md`. Read those before
-porting or touching any table; this section is only the current state.**
+decisions in `packages/backend/db/schema/CONVENTIONS.md`. Those two documents are
+HISTORY plus durable rules; this section is the current state.**
 
-- **Ported to Postgres** (repository code under `packages/backend/db/<domain>/`,
-  controllers call the repository, not a Mongoose model): the property
-  catalogue's READS, addresses and geo reference data, images, tenancy (leases,
-  applications, viewings, reservations, home exchanges), saved
-  properties/folders/recently-viewed, conversations and the profile sidecar,
-  notifications and saved searches, the roommate handshake, the CrowdSource
-  moderation pipeline, and evictions.
-- **Still Mongoose**, around three dozen backend files as of this writing
-  (controllers, services, scripts, `worker.ts`) — this number moves, so
-  re-count it rather than trusting a figure here; `MIGRATION-CONTRACT.md`'s
-  "census who else reads it" recipe is the right shape (grep the model name
-  across `controllers/`, `services/`, `routes/`, `utils/`, `middlewares/`, not
-  just a file list). Includes property/room/review create-update-delete,
-  partner commissions, analytics, billing, telegram, the neighborhood and
-  area-price services, and the whole listing-ingestion pipeline
-  (`scraperService`, `IngestionService`, `ExternalMediaIngest`).
-- **Property WRITES are the significant gap, and it inverts which store is
-  fresher.** The catalogue's read repository (`db/properties/propertyReads.ts`)
-  serves every property/search/list endpoint from Postgres, but
-  `controllers/property/create.ts`, `updateDelete.ts` and `transact.ts` — and
-  the ingestion worker — still write ONLY to Mongo. Postgres holds a
-  point-in-time copy from the backfill; Mongo keeps moving. **This is latent
-  risk, not yet realized damage**, only because so little writes to properties
-  right now — but it means Postgres reads are silently drifting stale for any
-  property created or edited since the backfill, and the exposure gets worse,
-  not better, the longer the write-path port is deferred. Do not add a NEW
-  Postgres-only read against `properties`/`addresses`/`images` without checking
-  whether the write path feeding it is still Mongo-only.
-- **Profiles are the same shape, narrower.** A profile write lands in Postgres
-  (`db/profiles/profileRepository.ts`), but multiple controllers (roommates
-  among them) still resolve a profile by reading the Mongoose `Profile` model
-  directly — census before adding a new profile reader.
+- **Every domain is on Postgres.** Repository code lives under
+  `packages/backend/db/<domain>/`; controllers call a repository, never an ORM
+  model. That includes the property catalogue's reads AND WRITES
+  (`db/properties/propertyWrites.ts`, reached by
+  `controllers/property/create.ts`, `updateDelete.ts` and `transact.ts`),
+  addresses and geo reference data, images, tenancy (leases, applications,
+  viewings, reservations, home exchanges), saved properties/folders/recently
+  viewed, conversations, profiles, notifications and saved searches, the roommate
+  handshake, the CrowdSource moderation pipeline, evictions, billing, partner
+  commissions, analytics and the listing-ingestion pipeline.
+- **There is no divided authority left, and there is no split-store caveat to
+  work around.** Earlier revisions of this file described property writes and
+  profile reads as still living on the pre-migration store. That was true when
+  written and is not now — re-measure rather than trusting either statement:
+
+  <!-- vocabulary-exempt:start a reintroduction census must name the term it searches for, or it measures nothing -->
+
+  ```bash
+  # Real imports, not prose. Expect ZERO.
+  git ls-files -- 'packages/' | grep -E '\.(ts|tsx|js|mjs|cjs)$' \
+    | xargs grep -nE "from ['\"]mongoose['\"]|require\(['\"]mongoose['\"]\)"
+  # Positive control — the same shape against a package that IS imported.
+  git ls-files -- 'packages/' | grep -E '\.(ts|tsx|js|mjs|cjs)$' \
+    | xargs grep -lE "from ['\"]drizzle-orm['\"]" | wc -l
+  ```
+
+  Measured on `docs/architecture-vocabulary-349` at base `bf3ef48b`
+  (2026-08-10): **0 real mongoose imports** against **161 files importing
+  `drizzle-orm`**, over 1,181 scanned source files. The only textual hits are
+  `__tests__/unit/mongoUnreachable.test.ts`'s own detector fixtures, one
+  assertion in `reviewSystem.test.ts`, and a commented-out line in
+  `scripts/test-telegram-topics.js`. A bare `grep -i mongoose` matches prose and
+  is the wrong instrument — it returns non-zero on a clean tree.
+
+  <!-- vocabulary-exempt:end -->
+- **Counting the port's remaining work is no longer a thing to do.** If you need
+  to know whether a domain reads Postgres, read its controller's imports. The
+  file-count figures this section used to carry moved every week and were the
+  single most misleading thing in this document.
 - **Migrations:** `bun run db:migrate` (`db/migrate.ts --phase=all` for a
   developer database), applied in production as a one-shot ECS task running the
   compiled `dist/db/migrate.js` — same `pre`/`post` deploy-phase convention as
@@ -134,6 +187,14 @@ porting or touching any table; this section is only the current state.**
   jest worker its own throwaway, fully-migrated database
   (`@oxyhq/db/testing`, prefix `oxydb_test_`), migrated by calling the real
   `db/migrate.ts` entrypoint rather than a second, divergent migrator.
+- **Expiry is a SWEEP, and it is the quietest way to break a table.** Postgres
+  never deletes an expired row on its own — nothing in the engine watches a
+  deadline column. Any table whose rows are supposed to expire needs an entry in
+  `db/expiry.ts`'s `EXPIRY_SWEEP_TARGETS`, and `services/cron.ts` is what runs
+  it. A table added without an entry grows forever with no error and no failing
+  test. Read that module's header before adding one: `EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE`
+  exists because one deadline (`conversations.sharing_expires_at`) belongs to a
+  share LINK and must clear four columns rather than delete the row.
 
 ## Key features
 
@@ -144,22 +205,36 @@ with Sharp into AWS S3; i18n with i18next.
 
 ## Routes
 
-**Frontend:** addresses, contracts, horizon, insights, profile, properties,
-reviews, roommates, saved, search, settings, sindi, tips, viewings.
+The full table — every mounted Express router, every Expo Router screen, which
+endpoints are public and which need a session, and the `/search` → `/explore`
+redirect — is [`docs/routes.mdx`](docs/routes.mdx). It is generated from reading
+`packages/backend/routes/` and `packages/frontend/app/`, and
+`scripts/check-docs.mjs` fails the build when it drifts from either. Two things
+that belong here rather than there:
 
-**Backend:** addresses, ai, analytics, billing, cities, images, leases,
-notifications, profiles, properties, public, reviews, roommates, rooms, scraper,
-telegram, tips, viewings.
+- **`/explore` is the discovery surface. `/search` is a redirect and nothing
+  else.** `app/search/index.tsx` and `app/search/[query].tsx` are two-line
+  `<Redirect>` components kept for existing links; query-string params survive
+  because they live on the URL rather than the path. Never add a screen, a
+  filter or a data hook under `/search` — it goes to `/explore`.
+- **Public vs authenticated is decided by which ROUTER a handler is mounted on,
+  not by a per-handler check.** `routes/public.ts` is mounted at `/api` first;
+  `routes/index.ts` is mounted at `/api` behind `createOxyAuthMiddleware(oxy)`.
+  A handler moved between the two files changes its auth requirement silently, so
+  a handler on the public router must never read `req.user` for authorization.
+
+Do not maintain a second route list anywhere. A list in two places is a list that
+disagrees with itself.
 
 ## Ownership (CRITICAL)
 
 Property, room and **lease** create and update take the session `oxyUserId` from
 `@oxyhq/core/server` (`requireSessionOxyUserId`), never an owner id from the
-client. Property and room (still Mongoose) go through
-`Model.findOne({ _id, oxyUserId })`, so a non-owner gets a 404; lease (on
-Postgres) enforces the same rule by filtering on `landlordOxyUserId` /
-`tenantOxyUserId` in the repository query instead. Profile is an optional
-real-estate sidecar keyed by `oxyUserId`, not an ownership authority.
+client. Ownership is enforced in the REPOSITORY QUERY, so a non-owner gets a 404
+rather than a 403: property and room filter on `properties.oxy_user_id`
+(`db/properties/propertyWrites.ts`'s `ownedBy` option), lease filters on
+`landlordOxyUserId` / `tenantOxyUserId`. Profile is an optional real-estate
+sidecar keyed by `oxyUserId`, not an ownership authority.
 
 - Shared guard: `packages/backend/utils/pickFields.ts`, one implementation for
   every write controller.
@@ -173,9 +248,9 @@ real-estate sidecar keyed by `oxyUserId`, not an ownership authority.
 Leases are on **Postgres** (`leases` and six child tables — `db/leases/`, see
 "Data storage" above), and empty in production at cutover, so the port carried
 no backfill. `controllers/leaseController.ts` calls the `db/leases/` repository
-rather than a model; `leaseSerializer.ts` is the DTO boundary (id, and optional
-hydrated `property`/`landlord`/`tenant`, for the frontend) in place of the old
-Mongoose virtuals.
+rather than a model; `leaseSerializer.ts` is the DTO boundary — it decides the
+`id` and the optional hydrated `property` / `landlord` / `tenant` the frontend
+reads, and it is the only place that shape is assembled.
 
 - **Backend routes:** `/api/leases`, with list (`?status=`, `?propertyId=`),
   CRUD, sub-resources (`/:id/payments`, `/:id/documents`) and lifecycle
@@ -225,8 +300,8 @@ The roommate handshake (requests and accepted relationships) is on **Postgres**
 (`roommate_requests` / `roommate_relationships`, `db/roommates/roommateRepository.ts`
 — see "Data storage" above). Routes: `GET /api/roommates/relationships` and
 `DELETE /api/roommates/relationships/:relationshipId`. Participant resolution
-still reads the profile from Mongoose in places — part of the profile
-divided-authority gap noted above, not yet closed here.
+goes through `findProfileByOxyUserId` from `db/profiles/profileRepository.ts`, so
+the whole handshake reads one store.
 
 ## Partner commissions (mark-transacted)
 
@@ -416,9 +491,10 @@ detectors and portal-specific selectors.
 ### Ingest pipeline (no portal CDN hotlinks, ever)
 
 1. Validate the `NormalizedListing`.
-2. `Address.findOrCreateCanonical` plus geocode.
-3. Upsert the Property with `isExternal: true`, `status: 'published'`,
-   `sourceUrl` and an `expiresAt` TTL.
+2. `findOrCreateCanonicalAddress` (`services/addressService.ts`) plus geocode.
+3. Upsert the property row with `isExternal: true`, `status: 'published'`,
+   `sourceUrl` and an `expires_at` deadline. Postgres does not reap on its own:
+   the row is deleted by the `db/expiry.ts` sweep that `services/cron.ts` runs.
 4. For each `remoteImages` entry: download, Sharp,
    `createImageForEntity('property', id, ...)`, `PropertyImageRef`. Dedup by URL
    or hash stored in Image metadata; re-syncs add and remove refs.
@@ -565,13 +641,13 @@ ID/TH/TR; OLX PT/PL; Immowelt AT; Blueground PT/GR/AE/HK; ImmobiliareScout24 AT.
 ### Legacy retirement
 
 - The legacy Fotocasa 30-second cron scrape loop is **gone**. `services/cron.ts`
-  now runs only health checks and TTL cleanup.
+  now runs only health checks and the expiry sweep.
 - The `localhost:3000` sidecar dependency and the `config/cron.ts` `scrapeSources`
   array are removed.
 - `/api/scraper/*` routes are admin only (`middlewares/requireAdmin.ts`).
 - `scraperService` upsert helpers (`upsertExternalListing`, `getScraperHealth`,
-  `cleanupExpiredProperties`) remain for TTL cleanup, health reporting and manual
-  admin runs.
+  `cleanupExpiredProperties`) remain for expired-listing cleanup, health
+  reporting and manual admin runs.
 - See `packages/backend/services/scraper-notes.md` for the archived migration
   log.
 

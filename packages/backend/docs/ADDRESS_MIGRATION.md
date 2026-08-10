@@ -1,5 +1,24 @@
 # Address Refactoring Migration Guide
 
+> **HISTORICAL — superseded twice. Do not follow it.**
+>
+> This records a refactor that happened on the previous datastore: addresses moved
+> from being embedded on each listing to being a referenced record of their own.
+> **That decision still holds** and is why `properties.address_id` exists today.
+> Everything else here is out of date: the code samples show the old ORM's schema
+> objects, the store is now PostgreSQL, and the canonical-address rules have moved
+> on again.
+>
+> Current: [`docs/glossary.mdx`](../../../docs/glossary.mdx) for what an address
+> IS, [`docs/listings.mdx`](../../../docs/listings.mdx) for the wire and storage
+> shapes, and [ADR 0001](../../../docs/adr/0001-canonical-housing-graph.md) for
+> the street / building / unit levelling that supersedes this.
+>
+> Kept because it explains *why* addresses are relational, which is load-bearing
+> history. The vocabulary gate exempts it for that reason, and only inside the
+> markers below.
+
+<!-- vocabulary-exempt:start historical record of a pre-PostgreSQL refactor; the old vocabulary IS the record -->
 ## Overview
 
 This document describes the refactoring of address handling in the Homiio application from embedded documents to a separate collection with references. This change improves data integrity, reduces duplication, and enables easier address updates.
@@ -218,3 +237,4 @@ For issues related to this migration:
 2. Verify database indexes are properly created
 3. Ensure all controllers populate address data
 4. Check for any remaining embedded address references in queries
+<!-- vocabulary-exempt:end -->
