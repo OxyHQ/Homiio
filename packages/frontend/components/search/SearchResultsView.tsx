@@ -50,7 +50,7 @@ import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { colors } from '@/styles/colors';
 import { cardShadow, hairline, radius, spacing } from '@/constants/styles';
 import { OfferingType, PropertyType, formatMoney } from '@homiio/shared-types';
-import type { GeoBounds, LocationSelection, Property } from '@homiio/shared-types';
+import { normalizeLongitude, type GeoBounds, LocationSelection, Property } from '@homiio/shared-types';
 import { resolvePrimaryOffering, toPriceDescriptor } from '@/utils/propertyUtils';
 import { useFormatting, type Formatting } from '@/utils/format';
 import { browseModeFromOffering, savedSearchName } from './types';
@@ -119,9 +119,39 @@ function toMarkers(
     );
 }
 
+/**
+ * The centre of a declared box, correct across the antimeridian.
+ *
+ * `(west + east) / 2` is wrong for exactly the boxes `GeoBounds` exists to be
+ * able to express. For `west 170, east -170` — the 20-degree strip over the
+ * Pacific — it computes longitude **0**, which is not a nearby approximation
+ * but the Gulf of Guinea, roughly 13,000 km away and on the opposite side of
+ * the planet. The true centre is 180.
+ *
+ * That box is a LEGAL token: `isValidBounds` deliberately enforces only
+ * `south <= north`, because `west > east` IS the wrap, and PostGIS
+ * `::geography` already reads it that way. So the bounds are right, the search
+ * is right, and only the derived point is wrong — which is why it produces a
+ * correct list of Fijian listings beside a map looking at West Africa, with
+ * nothing logged and nothing to suggest the two disagree.
+ *
+ * When the box wraps, its width is `(180 - west) + (east + 180)`, so the centre
+ * is `west + width / 2`, normalised back into the half-open [-180, 180). Note
+ * the centre of the Fiji box comes back as **-180, not 180** — the same
+ * meridian, in the one spelling `normalizeLongitude` allows, deliberately, so
+ * that one box cannot produce two tokens and two cache keys.
+ */
+function boundsCenterLongitude(west: number, east: number): number {
+  if (west <= east) return (west + east) / 2;
+  return normalizeLongitude((west + east + 360) / 2);
+}
+
 /** The centre of a declared box — a real derived framing point, not an invented one. */
 function boundsCenter(bounds: GeoBounds): [number, number] {
-  return [(bounds.west + bounds.east) / 2, (bounds.south + bounds.north) / 2];
+  return [
+    boundsCenterLongitude(bounds.west, bounds.east),
+    (bounds.south + bounds.north) / 2,
+  ];
 }
 
 /**

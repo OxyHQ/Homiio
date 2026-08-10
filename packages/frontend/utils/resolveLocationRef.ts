@@ -34,13 +34,49 @@
  * listings won, arbitrarily, and the winner could change as data arrived.
  */
 import {
+  normalizeLongitude,
   type CityPlaceCandidate,
+  type GeoBounds,
+  type GeoPoint,
   type LocationRef,
   type LocationResolution,
   type LocationSelection,
 } from '@homiio/shared-types';
 
 import { cityService } from '@/services/cityService';
+
+/**
+ * The centre of a declared box, correct across the antimeridian.
+ *
+ * `(west + east) / 2` is wrong for exactly the boxes `GeoBounds` exists to be
+ * able to express. For `west 170, east -170` — the 20-degree strip over the
+ * Pacific — it computes longitude **0**, which is not a nearby approximation
+ * but the Gulf of Guinea, roughly 13,000 km away and on the opposite side of
+ * the planet. The true centre is 180.
+ *
+ * Here it is worse than a framing bug: the centre is written into the
+ * COMMITTED selection, so every later reader of `.center` inherits it.
+ *
+ * That box is a LEGAL token: `isValidBounds` deliberately enforces only
+ * `south <= north`, because `west > east` IS the wrap, and PostGIS
+ * `::geography` already reads it that way. So the bounds are right, the search
+ * is right, and only the derived point is wrong — which is why it produces a
+ * correct list of Fijian listings beside a map looking at West Africa, with
+ * nothing logged and nothing to suggest the two disagree.
+ *
+ * When the box wraps, its width is `(180 - west) + (east + 180)`, so the centre
+ * is `west + width / 2`, normalised back into the half-open [-180, 180). Note
+ * the centre of the Fiji box comes back as **-180, not 180** — the same
+ * meridian, in the one spelling `normalizeLongitude` allows, deliberately, so
+ * that one box cannot produce two tokens and two cache keys.
+ */
+function boundsCenter(bounds: GeoBounds): GeoPoint {
+  const longitude =
+    bounds.west <= bounds.east
+      ? (bounds.west + bounds.east) / 2
+      : normalizeLongitude((bounds.west + bounds.east + 360) / 2);
+  return { longitude, latitude: (bounds.south + bounds.north) / 2 };
+}
 
 /** A device fix, supplied by the caller — this module never asks for one. */
 export interface DeviceFix {
@@ -122,10 +158,7 @@ export async function resolveLocationRef(
         selection: {
           kind: 'map_bounds',
           bounds: ref.bounds,
-          center: {
-            longitude: (ref.bounds.west + ref.bounds.east) / 2,
-            latitude: (ref.bounds.south + ref.bounds.north) / 2,
-          },
+          center: boundsCenter(ref.bounds),
           label: { primary: 'search.summary.mapArea', kind: 'generated' },
           precision: 'area',
         },
