@@ -12,12 +12,19 @@
  * measurement rather than a mock.
  */
 
-import type {
-  GeoBounds,
-  GeoPoint,
-  PricedListing,
-  QueryDescriptor,
-} from '@homiio/shared-types';
+import type { PricedListing } from '@homiio/shared-types';
+// `GeoPoint`, `GeoBounds` and `QueryDescriptor` come from the observability
+// module BY PATH, not from the package barrel.
+//
+// The barrel's `GeoPoint` is now the canonical location contract's
+// (`{ longitude, latitude }`, ADR 0002 §3), while the query-identity digest
+// these fixtures feed takes its own `{ lat, lng }`. The two are different types
+// with one name, so this file has to say which it means — and it means the one
+// its consumer, `checkQueryIdentityMatch`, actually accepts. Do not "tidy" this
+// back to the barrel: it compiled before only because the canonical contract
+// did not exist yet, and folding the two encodings into one is the location
+// migration's job (#352), not a change to make silently from here.
+import type { GeoBounds, GeoPoint, QueryDescriptor } from '@homiio/shared-types/observability/queryIdentity';
 
 export interface PlaceFixture {
   /** A stable key, never a display string — see `LocationScopeContract`. */
