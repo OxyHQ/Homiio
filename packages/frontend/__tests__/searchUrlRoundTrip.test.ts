@@ -213,15 +213,33 @@ describe('a polygon deliberately has no token, and does not degrade to its box',
     expect(params).not.toHaveProperty('loc');
     expect(params.q).toBe('loft');
 
-    // …and the omission is REPORTED, which is the half that matters. An absent
-    // `loc` is read by `parseSearchParams` as `{ kind: 'none' }` — "no location
-    // was requested" — so a silent drop turns a drawn area into a global
-    // search that reopens as somebody else's. Draw a polygon, reload the URL,
-    // get a different search presented as yours.
+    // …and the omission is REPORTED, which is the half that matters.
     expect(droppedLocation).toBe('unsupported_kind');
 
     // The round trip a caller must not attempt: no shareable href exists.
     expect(exploreHref(query({ location: polygon }))).toBeNull();
+  });
+
+  it('demonstrates WHY the omission must be reported: absence reads as "none"', () => {
+    // These two assertions are the whole argument, and they belong together so
+    // neither can be deleted as redundant.
+    //
+    // The params a silent drop would have produced are indistinguishable from a
+    // query that never had a location — and `parseSearchParams` reads that as
+    // "no location was requested, answer normally", which runs the search
+    // UNSCOPED. So dropping `loc` does not merely lose the polygon: it converts
+    // a committed location into a global feed on the next share or reload,
+    // presented to the user as their own search.
+    //
+    // That is why `buildSearchParamsForUrl` reports `droppedLocation` and
+    // `commitQuery` refuses to navigate rather than writing such a URL. If the
+    // case above is ever "simplified" to just assert the absence, this one
+    // states the consequence that makes the absence unacceptable.
+    expect(parseSearchParams({ q: 'loft' }).location.kind).toBe('none');
+
+    // …and `none` is the variant the screen answers normally, which is exactly
+    // what must NOT happen to a location the user committed.
+    expect(parseSearchParams({ loc: 'polygon.whatever' }).location.kind).toBe('invalid');
   });
 });
 
