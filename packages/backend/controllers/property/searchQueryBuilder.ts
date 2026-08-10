@@ -334,6 +334,15 @@ export interface ParsedSearchParams {
   /** Explicit city filter (case-insensitive). */
   city?: string;
   state?: string;
+  /**
+   * Explicit neighborhood filter, by id or name (ADR 0002 §14.2).
+   *
+   * Added because a `neighborhood` place had NO id param to scope by and fell
+   * through to its geometry — and a neighborhood whose record carries an extent
+   * but no centre then had nothing at all, which is the "scoped by nothing,
+   * answered globally" failure wearing a place's name.
+   */
+  neighborhood?: string;
   boundingBox?: BoundingBox;
   centerRadius?: CenterRadius;
   sortField: SortField;
@@ -500,6 +509,7 @@ export function buildSearchPlan(
       text: asString(query.q) ?? asString(query.query) ?? asString(query.search),
       city: asString(query.city),
       state: asString(query.state),
+      neighborhood: asString(query.neighborhood) ?? asString(query.neighborhoodId),
       boundingBox,
       centerRadius,
       sortField,

@@ -10,6 +10,7 @@ import { useOxy } from '@oxyhq/services';
 import { api, ApiError } from '@/utils/api';
 import type { LocationSelection } from '@homiio/shared-types';
 
+
 /**
  * Stable React Query key for the authenticated user's saved searches. Mutations
  * write the freshly-returned server object back to this cache, so the list and
@@ -32,6 +33,8 @@ interface RawSavedSearch {
   title?: string;
   query?: string;
   search?: string;
+  location?: LocationSelection | null;
+  locationStatus?: 'resolved' | 'needs_confirmation';
   filters?: SavedSearchFilters;
   criteria?: SavedSearchFilters;
   notifications?: boolean;
@@ -105,6 +108,14 @@ const normalizeSearch = (raw: RawSavedSearch, defaults: Partial<SavedSearch> = {
   id: raw.id ?? defaults.id ?? '',
   name: raw.name ?? raw.title ?? defaults.name ?? '',
   query: raw.query ?? raw.search ?? defaults.query ?? '',
+  location: raw.location ?? defaults.location ?? null,
+  // Defaults to `needs_confirmation` when the field is ABSENT, not to
+  // `resolved`. An older backend, a cached payload or a shape this normaliser
+  // does not recognise must land on the cautious side: the cost of a spurious
+  // "confirm where" prompt is one tap, and the cost of the opposite default is
+  // a saved alert quietly running against the whole planet.
+  locationStatus:
+    raw.locationStatus ?? (raw.location ? 'resolved' : 'needs_confirmation'),
   filters: raw.filters ?? raw.criteria ?? defaults.filters,
   notifications:
     typeof raw.notifications === 'boolean'

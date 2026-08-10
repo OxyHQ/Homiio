@@ -46,7 +46,11 @@ import {
 } from './searchQueryBuilder';
 import { paginationResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
-import { resolveCityId, resolveRegionId } from '../../services/geoQueryService';
+import {
+  resolveCityId,
+  resolveNeighborhoodId,
+  resolveRegionId,
+} from '../../services/geoQueryService';
 import {
   allOf,
   countProperties,
@@ -54,7 +58,12 @@ import {
   propertyOrderBy,
 } from '../../db/properties/propertyReads';
 import { withinBoundingBox, withinCircle } from '../../db/properties/propertyGeo';
-import { inCity, inRegion, matchesText } from '../../db/properties/propertyFilters';
+import {
+  inCity,
+  inNeighborhood,
+  inRegion,
+  matchesText,
+} from '../../db/properties/propertyFilters';
 import { serializeProperty } from '../../db/properties/propertySerializer';
 
 /**
@@ -68,10 +77,11 @@ interface ResolvedPlace {
   conditions: SQL[];
   unresolved: boolean;
   /** Which named parameter failed to resolve, for the response's echo. */
-  unresolvedParam?: 'city' | 'state';
+  unresolvedParam?: 'city' | 'state' | 'neighborhood';
   /** The canonical ids the scope was actually narrowed to, for the echo. */
   cityId?: string;
   regionId?: string;
+  neighborhoodId?: string;
 }
 
 /**
@@ -92,11 +102,15 @@ type LocationEcho =
       status: 'resolved';
       cityId?: string;
       regionId?: string;
+      neighborhoodId?: string;
       bounds?: { west: number; south: number; east: number; north: number };
       center?: { longitude: number; latitude: number };
       radiusMeters?: number;
     }
-  | { status: 'unresolved'; requested: { param: 'city' | 'state'; value: string } }
+  | {
+      status: 'unresolved';
+      requested: { param: 'city' | 'state' | 'neighborhood'; value: string };
+    }
   | { status: 'none' };
 
 /** Describe the geographic scope the query ran under. */
@@ -106,7 +120,7 @@ function buildLocationEcho(params: ParsedSearchParams, place: ResolvedPlace): Lo
       status: 'unresolved',
       requested: {
         param: place.unresolvedParam,
-        value: (place.unresolvedParam === 'city' ? params.city : params.state) ?? '',
+        value: params[place.unresolvedParam] ?? '',
       },
     };
   }
@@ -115,7 +129,8 @@ function buildLocationEcho(params: ParsedSearchParams, place: ResolvedPlace): Lo
     params.boundingBox !== undefined ||
     params.centerRadius !== undefined ||
     place.cityId !== undefined ||
-    place.regionId !== undefined;
+    place.regionId !== undefined ||
+    place.neighborhoodId !== undefined;
 
   // "No location" is a legitimate query and answers normally — the failure mode
   // this contract forbids is a location REQUESTED AND LOST, never one that was
@@ -127,6 +142,7 @@ function buildLocationEcho(params: ParsedSearchParams, place: ResolvedPlace): Lo
     status: 'resolved',
     ...(place.cityId ? { cityId: place.cityId } : {}),
     ...(place.regionId ? { regionId: place.regionId } : {}),
+    ...(place.neighborhoodId ? { neighborhoodId: place.neighborhoodId } : {}),
     ...(params.boundingBox
       ? {
           bounds: {
@@ -172,6 +188,7 @@ async function resolvePlaceConditions(params: ParsedSearchParams): Promise<Resol
 
   let cityId: string | undefined;
   let regionId: string | undefined;
+  let neighborhoodId: string | undefined;
 
   if (params.city) {
     const resolved = await resolveCityId(params.city);
@@ -186,7 +203,20 @@ async function resolvePlaceConditions(params: ParsedSearchParams): Promise<Resol
     conditions.push(inRegion(regionId));
   }
 
-  return { conditions, unresolved: false, cityId, regionId };
+  if (params.neighborhood) {
+    // Scoped by the city when one was also given, which narrows a NAME match to
+    // the right "Centro" out of the several every country has. An id already
+    // names one row, so the scope can only ever turn a right answer into none —
+    // `resolveNeighborhoodId` applies it to the name side only.
+    const resolved = await resolveNeighborhoodId(params.neighborhood, { cityId });
+    if (!resolved) {
+      return { conditions: [], unresolved: true, unresolvedParam: 'neighborhood' };
+    }
+    neighborhoodId = resolved;
+    conditions.push(inNeighborhood(neighborhoodId));
+  }
+
+  return { conditions, unresolved: false, cityId, regionId, neighborhoodId };
 }
 
 /**

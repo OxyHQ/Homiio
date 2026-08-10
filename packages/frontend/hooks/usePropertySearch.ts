@@ -90,8 +90,18 @@ function boundsToParams(bounds: GeoBounds): Record<string, number> {
  * area, and framing it by a radius around its centroid is a different question
  * with a different answer. `homiio`-sourced places go out as a canonical id, so
  * two cities named Barcelona stay two different requests.
+ *
+ * **`null` means "this selection cannot be scoped", and it is NOT the same as
+ * `{}`.** A homiio COUNTRY has no id param on this endpoint (`city`, `state`
+ * and `neighborhood` are the three it takes), `precision: 'area'` means it
+ * carries no centre, and its record may carry no bounds either — so there is
+ * genuinely nothing to send. Returning `{}` there would run the query with no
+ * geographic filter at all and answer globally under the country's name, which
+ * is the same bug as substituting `(0,0)`, only quieter: `(0,0)` returns a
+ * suspicious zero, an unscoped query returns a confident everything. The caller
+ * refuses to run instead — see `usePropertySearch`.
  */
-function locationParams(selection: LocationSelection): Record<string, string | number> {
+function locationParams(selection: LocationSelection): Record<string, string | number> | null {
   switch (selection.kind) {
     case 'current_location':
       // Full precision in the REQUEST — this is the one place the device fix
@@ -114,6 +124,7 @@ function locationParams(selection: LocationSelection): Record<string, string | n
         // somebody reach.
         if (entity === 'city') return { city: id };
         if (entity === 'region') return { state: id };
+        if (entity === 'neighborhood') return { neighborhood: id };
       }
       // An external candidate carries no id this backend can resolve, so it is
       // scoped by the geometry it inlined — which is why an `external` place is
@@ -135,7 +146,7 @@ function locationParams(selection: LocationSelection): Record<string, string | n
       // them, which is a superset and therefore honest about over-returning
       // rather than wrong about under-returning.
       const cover = coveringBounds(selection.areas);
-      return cover ? boundsToParams(cover) : {};
+      return cover ? boundsToParams(cover) : null;
     }
 
     default: {
@@ -170,12 +181,12 @@ function pointBox(center: GeoPoint): GeoBounds {
 function geometryParams(selection: {
   bounds?: GeoBounds;
   center?: GeoPoint;
-}): Record<string, string | number> {
+}): Record<string, string | number> | null {
   if (selection.bounds) return boundsToParams(selection.bounds);
   if (selection.center) {
     return { lat: selection.center.latitude, lng: selection.center.longitude };
   }
-  return {};
+  return null;
 }
 
 /**
@@ -250,7 +261,10 @@ export function buildSearchParams(query: SearchQuery): Record<string, string | n
   };
 
   if (query.location) {
-    Object.assign(params, locationParams(query.location));
+    // `null` is handled by `unscopeableLocation` below and by the hook's
+    // `enabled` gate; the params object simply carries no geographic filter,
+    // and nothing is allowed to SEND it in that state.
+    Object.assign(params, locationParams(query.location) ?? {});
   }
   // `q` carries free text and NOTHING else. It used to be assigned
   // `location.label` unconditionally whenever a label existed, IN ADDITION to
@@ -309,6 +323,19 @@ export function buildSearchParams(query: SearchQuery): Record<string, string | n
   }
 
   return params;
+}
+
+/**
+ * Whether a committed location cannot be expressed as a scope this endpoint
+ * accepts.
+ *
+ * Exported so a screen can say "we cannot search that area yet" rather than
+ * rendering a global feed under a place's name. Today the only shape that
+ * reaches it is a homiio place that is neither a city, a region nor a
+ * neighborhood — a COUNTRY — carrying no geometry.
+ */
+export function isUnscopeableLocation(location: SearchQuery['location']): boolean {
+  return location !== null && locationParams(location) === null;
 }
 
 /**
@@ -386,6 +413,11 @@ export function usePropertySearch(
   options: UsePropertySearchOptions = {},
 ): PropertySearchResult {
   const { enabled = true } = options;
+  // A location that cannot be scoped must not run. Letting it through would
+  // send a request with no geographic filter and render everything on earth
+  // under that place's name — the failure ADR 0002 §4.3 forbids, arrived at
+  // from the params side rather than the resolution side.
+  const unscopeable = isUnscopeableLocation(query.location);
   const baseParams = useMemo(() => buildSearchParams(query), [query]);
   // Built from the already-constructed `baseParams` so the params object is not
   // built twice per query, through the SAME helper `searchQueryKey` uses so the
@@ -400,7 +432,7 @@ export function usePropertySearch(
     queryKey,
     endpoint: SEARCH_ENDPOINT,
     baseParams,
-    enabled,
+    enabled: enabled && !unscopeable,
     mapResponse: (data, pageParam) => ({
       properties: data.data ?? [],
       page: data.page ?? pageParam,

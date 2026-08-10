@@ -122,6 +122,15 @@ export default function SearchScreen() {
 
   const query = useSearchQueryStore((s) => s.query);
   const [panelOpen, setPanelOpen] = useState(false);
+  /**
+   * A saved search whose place could not be read, awaiting the user's answer.
+   *
+   * Held rather than silently dropped: the row is not runnable, and the person
+   * who saved it is the only one who can say which place they meant.
+   */
+  const [pendingConfirmation, setPendingConfirmation] = useState<
+    { name: string; label: string } | null
+  >(null);
 
   // Parsing is pure, so it is derived rather than an effect.
   //
@@ -271,15 +280,31 @@ export default function SearchScreen() {
     [commitQuery, query],
   );
 
-  // Saved searches pushed over the event bus by the RightBar widget while the
-  // user is already here (avoids a navigation/remount).
+  /**
+   * Saved searches pushed over the event bus while the user is already here.
+   *
+   * A row that NEEDS CONFIRMATION does not run — and that refusal is the whole
+   * point of the branch. A legacy row predates the location column, so all it
+   * has is a place LABEL in `query`; applying it would commit free text with NO
+   * geographic scope and answer globally under the name "Madrid". That is the
+   * degradation ADR 0002 §4.3 forbids in the words "not for a legacy saved
+   * search", and it is worse than the homonym bug it replaced, because a wrong
+   * city at least looks wrong.
+   *
+   * Re-geocoding the label here is equally forbidden and for the older reason:
+   * one label, several cities, and taking the first is how a saved alert
+   * silently changes country.
+   */
   useEffect(() => {
     const unsubscribe = onApplySavedSearch((payload) => {
-      const next = payloadToQuery(payload);
-      // A saved row's own location, when it has one. A LEGACY row (no stored
-      // selection) is NOT geocoded from its label here: that is the homonym bug
-      // the contract exists to remove, so it goes to the confirmation path.
-      commitQuery(next);
+      // Absent status is read as `needs_confirmation`: an older payload shape
+      // must land on the cautious side rather than run unscoped.
+      const status = payload.locationStatus ?? (payload.location ? 'resolved' : 'needs_confirmation');
+      if (status !== 'resolved' || !payload.location) {
+        setPendingConfirmation({ name: payload.name ?? payload.query, label: payload.query });
+        return;
+      }
+      commitQuery({ ...payloadToQuery(payload), location: payload.location });
     });
     return () => {
       unsubscribe();
@@ -303,6 +328,39 @@ export default function SearchScreen() {
   );
 
   const handleRequireAuth = useCallback(() => router.push('/profile'), [router]);
+
+  // A legacy saved search asks which place it meant, and runs nothing until it
+  // is told. Rendered before the results surface for the same reason `failed`
+  // is: neither state may issue a query.
+  if (pendingConfirmation) {
+    return (
+      <View style={styles.root}>
+        <ErrorState
+          title={
+            t('search.savedSearch.confirmTitle', 'Which place did you mean?') ?? undefined
+          }
+          description={
+            t('search.savedSearch.confirmDescription', {
+              name: pendingConfirmation.label,
+              defaultValue:
+                'This saved search was created before we stored places by name, so we cannot tell which one it means. Choose it again and we will remember.',
+            }) ?? undefined
+          }
+          retryLabel={t('search.location.chooseAnother', 'Choose a place') ?? undefined}
+          onRetry={() => {
+            setPendingConfirmation(null);
+            setPanelOpen(true);
+          }}
+        />
+        <SearchPanel
+          open={panelOpen}
+          onClose={handleClosePanel}
+          initialQuery={query}
+          onSubmit={handleSubmitSearch}
+        />
+      </View>
+    );
+  }
 
   // A failed resolution shows the reason and issues NO request. This is the
   // branch that used to be a silent fall-through to the global feed.

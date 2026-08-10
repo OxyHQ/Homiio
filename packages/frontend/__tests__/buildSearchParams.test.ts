@@ -29,7 +29,11 @@ import {
   type GeoBounds,
   type LocationSelection,
 } from '@homiio/shared-types';
-import { buildSearchParams, searchQueryKey } from '@/hooks/usePropertySearch';
+import {
+  buildSearchParams,
+  isUnscopeableLocation,
+  searchQueryKey,
+} from '@/hooks/usePropertySearch';
 import type { SearchQuery } from '@/components/search/types';
 
 /** A minimal valid query: only the always-present fields are populated. */
@@ -342,6 +346,95 @@ describe('searchQueryKey', () => {
       expect(searchQueryKey(baseQuery({ location: madridViewport }))).not.toEqual(
         searchQueryKey(baseQuery({ location: moved })),
       );
+    });
+  });
+});
+
+/**
+ * A place that cannot be scoped must REFUSE, not widen.
+ *
+ * The failure this guards is quieter than the one it replaced. Substituting
+ * `(0,0)` for a missing centre returns a suspicious zero over the Gulf of
+ * Guinea; emitting NOTHING returns a confident everything, under the name of
+ * the place the user picked. Both are wrong and only the second looks fine.
+ *
+ * A homiio COUNTRY is the shape that reaches it: `/api/properties/search` takes
+ * `city`, `state` and `neighborhood` and no country param, `precision: 'area'`
+ * means it carries no centre, and its record may carry no bounds either — so
+ * there is genuinely nothing to send, and the honest answer is not to send.
+ */
+describe('an unscopeable location refuses rather than widening', () => {
+  const country: LocationSelection = {
+    kind: 'place',
+    source: { kind: 'homiio', entity: 'country', id: 'ES' },
+    placeType: 'country',
+    label: { primary: 'Spain', kind: 'place' },
+    admin: { countryCode: 'ES' },
+    precision: 'area',
+  };
+
+  it('reports a geometry-less country as unscopeable', () => {
+    expect(isUnscopeableLocation(country)).toBe(true);
+  });
+
+  it('emits NO geographic params for it — which is why the query must not run', () => {
+    const params = buildSearchParams(baseQuery({ location: country }));
+
+    // Every geographic param absent. Sent as-is this is a global feed labelled
+    // "Spain", so `usePropertySearch` gates `enabled` on the predicate above.
+    for (const key of ['city', 'state', 'neighborhood', 'lat', 'lng', 'swLat', 'neLat']) {
+      expect(params).not.toHaveProperty(key);
+    }
+  });
+
+  it('becomes scopeable the moment it has bounds', () => {
+    // The floor: the predicate must not be true of every country forever, or it
+    // would be indistinguishable from "countries are unsupported".
+    const withBounds: LocationSelection = {
+      ...country,
+      bounds: { west: -9.3, south: 36.0, east: 3.3, north: 43.8 },
+    };
+
+    expect(isUnscopeableLocation(withBounds)).toBe(false);
+    expect(buildSearchParams(baseQuery({ location: withBounds }))).toMatchObject({
+      swLng: -9.3,
+      neLng: 3.3,
+    });
+  });
+
+  it('scopes a NEIGHBORHOOD by its canonical id rather than its geometry', () => {
+    // ADR §14.2 gives the endpoint `neighborhoodId`; without it a neighborhood
+    // fell through to geometry and a coordinate-less one had nothing at all.
+    const neighborhood: LocationSelection = {
+      kind: 'place',
+      source: { kind: 'homiio', entity: 'neighborhood', id: 'NBH-1' },
+      placeType: 'neighborhood',
+      label: { primary: 'Gràcia', secondary: 'Barcelona', kind: 'place' },
+      admin: { countryCode: 'ES' },
+      precision: 'area',
+    };
+
+    expect(isUnscopeableLocation(neighborhood)).toBe(false);
+    expect(buildSearchParams(baseQuery({ location: neighborhood }))).toMatchObject({
+      neighborhood: 'NBH-1',
+    });
+  });
+
+  it('treats a normal city as scopeable even with no geometry at all', () => {
+    // The case `isFramablePlace` exists to protect: Homiio knows the city by
+    // id, the query filters by that id, and only the MAP has nothing to frame.
+    const coordinatelessCity: LocationSelection = {
+      kind: 'place',
+      source: { kind: 'homiio', entity: 'city', id: 'CITY-1' },
+      placeType: 'city',
+      label: { primary: 'Riverside', kind: 'place' },
+      admin: { countryCode: 'US' },
+      precision: 'area',
+    };
+
+    expect(isUnscopeableLocation(coordinatelessCity)).toBe(false);
+    expect(buildSearchParams(baseQuery({ location: coordinatelessCity }))).toMatchObject({
+      city: 'CITY-1',
     });
   });
 });

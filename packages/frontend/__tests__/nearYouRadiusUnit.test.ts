@@ -15,6 +15,7 @@
  * distinction this file turns on.
  */
 import { getCategoryFilters } from '@/store/getCategoryFilters';
+import { homeFeedQueryKeys } from '@/hooks/useHomeFeed';
 
 const DEVICE_FIX = { latitude: 41.3874, longitude: 2.1686 };
 
@@ -49,5 +50,74 @@ describe('getCategoryFilters — near_you', () => {
     expect(filters).not.toHaveProperty('radius');
     expect(filters).not.toHaveProperty('lat');
     expect(filters).not.toHaveProperty('lng');
+  });
+});
+
+/**
+ * The home feed's React Query key carries NO device coordinate.
+ *
+ * ADR 0002 §8.2's violation table names this file and these lines
+ * (`useHomeFeed.ts:17-18`) as one of six places an exact position leaked. It
+ * survived the first pass of that work because `usePropertySearch`'s key was
+ * fixed and this one was not — two keys built by different rules, which is how
+ * a rule stops holding without anybody deciding to stop holding it.
+ *
+ * Asserted on the SERIALISED key rather than field by field: a coordinate that
+ * reappeared under another name, or nested one level deeper, slips past a
+ * per-field check, and this key nests `filters` inside an object.
+ */
+describe('homeFeedQueryKeys.feed — no coordinate in the cache key', () => {
+  const NEAR_YOU_FILTERS = {
+    limit: 16,
+    status: 'published' as const,
+    lat: 41.3850639,
+    lng: 2.1734035,
+    radius: 25_000,
+  };
+
+  it('keys a near-you feed without the device fix', () => {
+    const serialised = JSON.stringify(homeFeedQueryKeys.feed(NEAR_YOU_FILTERS, false));
+
+    expect(serialised).not.toContain('41.3850639');
+    expect(serialised).not.toContain('2.1734035');
+    // The radius is not a coordinate and it distinguishes two real queries, so
+    // it stays — through `locationKey`'s `here:<radius>` form.
+    expect(serialised).toContain('here:25000');
+  });
+
+  it('gives two DIFFERENT positions at one radius the same key', () => {
+    // The property that proves the coordinate is gone rather than merely
+    // reformatted: if any part of the fix still varied with position, these
+    // two would differ.
+    const barcelona = homeFeedQueryKeys.feed(NEAR_YOU_FILTERS, false);
+    const madrid = homeFeedQueryKeys.feed(
+      { ...NEAR_YOU_FILTERS, lat: 40.4167754, lng: -3.7037902 },
+      false,
+    );
+
+    expect(barcelona).toEqual(madrid);
+  });
+
+  it('still gives two RADII different keys, because they are different queries', () => {
+    // The floor for the previous case. A key coarse enough to hide a position
+    // must not be so coarse that a 5 km lens and a 25 km lens share a cache
+    // entry — that would serve one the other's results.
+    expect(homeFeedQueryKeys.feed(NEAR_YOU_FILTERS, false)).not.toEqual(
+      homeFeedQueryKeys.feed({ ...NEAR_YOU_FILTERS, radius: 5_000 }, false),
+    );
+  });
+
+  it('keeps the non-geographic filters in the key', () => {
+    // Stripping the coordinates must not strip everything else with them: an
+    // offering or a status change still has to re-key.
+    const serialised = JSON.stringify(homeFeedQueryKeys.feed(NEAR_YOU_FILTERS, false));
+    expect(serialised).toContain('published');
+  });
+
+  it('reports `none` for a feed with no coordinates at all', () => {
+    const serialised = JSON.stringify(
+      homeFeedQueryKeys.feed({ limit: 16, status: 'published' as const }, false),
+    );
+    expect(serialised).toContain('none');
   });
 });

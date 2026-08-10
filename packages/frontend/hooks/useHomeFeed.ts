@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import * as Location from 'expo-location';
 
-import { OfferingType, type PropertyFilters } from '@homiio/shared-types';
+import { OfferingType, locationKey, type PropertyFilters } from '@homiio/shared-types';
 
 import { propertyService } from '@/services/propertyService';
 import { getCategoryFilters } from '@/store/getCategoryFilters';
@@ -14,10 +14,46 @@ export type UserCoordinates = { latitude: number; longitude: number };
 
 export const homeFeedQueryKeys = {
   all: ['homeFeed'] as const,
-  feed: (filters: PropertyFilters, blocked: boolean) =>
-    ['homeFeed', { filters, blocked }] as const,
+  /**
+   * The feed's cache key, with the DEVICE FIX REMOVED.
+   *
+   * `filters` is a `PropertyFilters`, and for the `near_you` lens that object
+   * carries `lat` / `lng` at full precision — so embedding it verbatim put the
+   * user's position into a React Query key, which is ADR 0002 §8.2's violation
+   * table naming this file and these lines. It survived the first pass of this
+   * work because `usePropertySearch`'s key was fixed and this one was not, and
+   * two keys built by different rules is exactly how the rule stops holding.
+   *
+   * `locationKey` is the ONE function allowed to turn a location into a string
+   * for a key, and its `current_location` branch has no coordinate to emit:
+   * `here:25000`. So a 5 km lens and a 25 km lens still key differently — the
+   * radius is what distinguishes the two QUERIES — while two people standing on
+   * opposite sides of a city share a key, which is correct, because the cache
+   * is per-device anyway and the request still carries their real position.
+   */
+  feed: (filters: PropertyFilters, blocked: boolean) => {
+    const { lat, lng, radius, ...rest } = filters;
+    const geoKey =
+      typeof lat === 'number' && typeof lng === 'number'
+        ? locationKey({
+            kind: 'current_location',
+            center: { longitude: lng, latitude: lat },
+            radiusMeters: typeof radius === 'number' ? radius : NEAR_YOU_FALLBACK_RADIUS_METERS,
+            precision: 'exact',
+          })
+        : locationKey(null);
+    return ['homeFeed', { filters: rest, geoKey, blocked }] as const;
+  },
   coordinates: ['userCoordinates'] as const,
 };
+
+/**
+ * Radius assumed when a lens supplies coordinates without one.
+ *
+ * Matches the search endpoint's own default, so the key describes the query the
+ * server would actually have run. METRES — see `PropertyFilters.radius`.
+ */
+const NEAR_YOU_FALLBACK_RADIUS_METERS = 25_000;
 
 /**
  * `near_you` requires device coordinates. While coordinates are still

@@ -19,7 +19,12 @@
  * rather than a bug — so the discriminated result is asserted directly, and the
  * two are checked to be different variants rather than merely both falsy.
  */
-import { OfferingType, PropertyType, type LocationSelection } from '@homiio/shared-types';
+import {
+  OfferingType,
+  PropertyType,
+  locationKey,
+  type LocationSelection,
+} from '@homiio/shared-types';
 
 import {
   buildSearchParamsForUrl,
@@ -59,6 +64,20 @@ const deviceLens: LocationSelection = {
   precision: 'exact',
 };
 
+/**
+ * Two areas at once — the one kind with a genuinely distinct codec path.
+ *
+ * `multi.` is recursive: it splits on `+`, parses each member, and refuses a
+ * nested `multi.`. Leaving it out of a suite titled "every kind" meant the
+ * whole of that path — including the order asymmetry below — was untested while
+ * the title said otherwise.
+ */
+const multiArea: LocationSelection = {
+  kind: 'multi_area',
+  areas: [barcelona, madridBox],
+  label: { primary: 'search.summary.multiArea', kind: 'generated' },
+};
+
 const externalCandidate: LocationSelection = {
   kind: 'address_candidate',
   source: { kind: 'external', provider: 'osm', ref: 'R349036' },
@@ -68,12 +87,21 @@ const externalCandidate: LocationSelection = {
   precision: 'approximate',
 };
 
-describe('the `loc` token round-trips for every kind', () => {
+describe('the `loc` token round-trips for every kind that HAS a token', () => {
+  // The qualifier is load-bearing. `polygon` has no §5.2 production at all
+  // (§2.1 reserves the wire format), so "every kind" would be a false claim —
+  // and a false claim in a describe is the sentence a later maintainer trusts
+  // instead of re-checking. Its deliberate non-round-trip is asserted below.
   it.each<[string, LocationSelection, string]>([
     ['a canonical Homiio city', barcelona, 'city.homiio.01H8XQ7C2R9V6WQ2N4M0KJ3ZTA'],
     ['a confirmed map viewport', madridBox, 'bbox.-3.75,40.38,-3.65,40.45'],
     ['a device lens, with NO coordinates', deviceLens, 'here.25000'],
     ['an external address candidate', externalCandidate, 'address.osm.R349036'],
+    [
+      'several areas at once',
+      multiArea,
+      'multi.city.homiio.01H8XQ7C2R9V6WQ2N4M0KJ3ZTA+bbox.-3.75,40.38,-3.65,40.45',
+    ],
   ])('%s', (_label, selection, expectedToken) => {
     // Serialise…
     const params = buildSearchParamsForUrl(query({ location: selection }));
@@ -121,6 +149,66 @@ describe('the `loc` token round-trips for every kind', () => {
     const second = exploreHref({ ...parsed.query, location: barcelona });
 
     expect(second).toBe(first);
+  });
+});
+
+describe('multi-area: order is preserved in the URL and SORTED in the key', () => {
+  // Deliberately different, and both directions are asserted because the two
+  // requirements pull opposite ways: §16(1) wants an exact URL round trip, so
+  // the token keeps the user's order; §3.1 wants an order-INDEPENDENT identity,
+  // so the key sorts. A codec that sorted both would break the round trip, and
+  // one that sorted neither would give the same two areas two cache entries.
+  const reversed: LocationSelection = {
+    kind: 'multi_area',
+    areas: [madridBox, barcelona],
+    label: { primary: 'search.summary.multiArea', kind: 'generated' },
+  };
+
+  it('keeps member order in the token, so the URL round-trips exactly', () => {
+    const forward = buildSearchParamsForUrl(query({ location: multiArea })).loc;
+    const backward = buildSearchParamsForUrl(query({ location: reversed })).loc;
+
+    expect(forward).toBe(
+      'multi.city.homiio.01H8XQ7C2R9V6WQ2N4M0KJ3ZTA+bbox.-3.75,40.38,-3.65,40.45',
+    );
+    expect(backward).toBe(
+      'multi.bbox.-3.75,40.38,-3.65,40.45+city.homiio.01H8XQ7C2R9V6WQ2N4M0KJ3ZTA',
+    );
+    expect(forward).not.toBe(backward);
+  });
+
+  it('gives the two orderings ONE cache key, because they are one query', () => {
+    expect(locationKey(multiArea)).toBe(locationKey(reversed));
+  });
+
+  it('refuses a nested multi rather than flattening it', () => {
+    // Flattening would round-trip to a DIFFERENT token than it was given, which
+    // is the one thing the URL contract cannot allow.
+    const parsed = parseSearchParams({ loc: 'multi.multi.city.homiio.a+city.homiio.b+city.homiio.c' });
+    expect(parsed.location.kind).toBe('invalid');
+  });
+});
+
+describe('a polygon deliberately has no token, and does not degrade to its box', () => {
+  it('omits `loc` entirely rather than emitting the bounding box', () => {
+    const polygon: LocationSelection = {
+      kind: 'polygon',
+      polygon: {
+        type: 'Polygon',
+        coordinates: [[[2.0, 41.3], [2.3, 41.3], [2.3, 41.5], [2.0, 41.5], [2.0, 41.3]]],
+      },
+      bounds: { west: 2.0, south: 41.3, east: 2.3, north: 41.5 },
+      label: { primary: 'search.summary.drawnArea', kind: 'generated' },
+      precision: 'area',
+    };
+
+    const params = buildSearchParamsForUrl(query({ location: polygon, queryText: 'loft' }));
+
+    // Falling back to `bbox.` would silently swap a drawn area for a rectangle
+    // that CONTAINS it — a superset, so it over-returns rather than failing,
+    // which is the quiet direction. The rest of the query still serialises.
+    expect(params).not.toHaveProperty('loc');
+    expect(params.q).toBe('loft');
   });
 });
 

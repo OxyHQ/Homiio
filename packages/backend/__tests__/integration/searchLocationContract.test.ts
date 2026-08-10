@@ -17,11 +17,17 @@ import { OfferingType, PropertyStatus, PropertyType } from '@homiio/shared-types
 import { searchProperties } from '../../controllers/property/search';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { serializeWireIds } from '../../middlewares/wireIds';
+import { eq } from 'drizzle-orm';
+
+import { getDb } from '../../db/postgres';
+import { addresses, properties } from '../../db/schema';
 import {
   resetGeoTables,
   seedAddress,
   seedGeoChain,
+  seedNeighborhood,
   seedProperty,
+  type GeoChain,
 } from '../helpers/postgresGeoFixtures';
 
 const BARCELONA = { longitude: 2.1686, latitude: 41.3874 };
@@ -35,7 +41,11 @@ function buildApp(): Express {
   return app;
 }
 
-async function seedBarcelonaListing(): Promise<{ cityId: string; propertyId: string }> {
+async function seedBarcelonaListing(): Promise<{
+  cityId: string;
+  propertyId: string;
+  chain: GeoChain;
+}> {
   const chain = await seedGeoChain({
     cityName: 'Barcelona',
     regionName: 'Catalonia',
@@ -53,7 +63,21 @@ async function seedBarcelonaListing(): Promise<{ cityId: string; propertyId: str
       longTermRentCurrency: 'EUR',
     },
   });
-  return { cityId: chain.cityId, propertyId };
+  return { cityId: chain.cityId, propertyId, chain };
+}
+
+/** Point an existing listing's address at a neighborhood. */
+async function attachNeighborhood(propertyId: string, neighborhoodId: string): Promise<void> {
+  const db = getDb();
+  const [row] = await db
+    .select({ addressId: properties.addressId })
+    .from(properties)
+    .where(eq(properties.id, propertyId))
+    .limit(1);
+  await db
+    .update(addresses)
+    .set({ neighborhoodId })
+    .where(eq(addresses.id, row.addressId));
 }
 
 describe('search location contract', () => {
@@ -160,6 +184,43 @@ describe('search location contract', () => {
         status: 'resolved',
         center: { longitude: BARCELONA.longitude, latitude: BARCELONA.latitude },
         radiusMeters: 25000,
+      });
+    });
+
+    it('scopes by a canonical NEIGHBORHOOD id and echoes it', async () => {
+      // ADR 0002 §14.2 gives the endpoint `neighborhoodId`, and without it a
+      // `neighborhood` place had no id param to scope by: it fell through to
+      // its geometry, and a neighborhood whose record carries an extent but no
+      // centre had nothing at all — a query answered globally under the
+      // neighborhood's name.
+      const { chain, propertyId } = await seedBarcelonaListing();
+      const neighborhoodId = await seedNeighborhood({ cityId: chain.cityId, name: 'Gracia' });
+      await attachNeighborhood(propertyId, neighborhoodId);
+
+      const res = await request(buildApp()).get(
+        `/properties/search?neighborhood=${neighborhoodId}`,
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.map((p: { id: string }) => p.id)).toEqual([propertyId]);
+      expect(res.body.location).toEqual({ status: 'resolved', neighborhoodId });
+    });
+
+    it('marks an unresolvable neighborhood as unresolved rather than ignoring it', async () => {
+      // The floor for the case above: an unknown neighborhood must not silently
+      // drop the filter and answer with everything.
+      const { propertyId } = await seedBarcelonaListing();
+
+      const unfiltered = await request(buildApp()).get('/properties/search');
+      expect(unfiltered.body.data.map((p: { id: string }) => p.id)).toContain(propertyId);
+
+      const res = await request(buildApp()).get('/properties/search?neighborhood=NoSuchBarrio');
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveLength(0);
+      expect(res.body.location).toEqual({
+        status: 'unresolved',
+        requested: { param: 'neighborhood', value: 'NoSuchBarrio' },
       });
     });
 
