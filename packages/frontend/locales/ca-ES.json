@@ -250,7 +250,9 @@
     },
     "explore": {
       "eyebrow": "Continua explorant",
-      "title": "Explora més habitatges"
+      "title": "Explora més habitatges",
+      "cta": "Explore all homes here",
+      "ctaAccessible": "Open Explore with the area you are searching in"
     },
     "hostCta": {
       "cta": "Become a host",
@@ -280,6 +282,72 @@
       "petFriendly": "Admet mascotes",
       "homeSwap": "Intercanvi de cases",
       "hosting": "Allotjament"
+    },
+    "sections": {
+      "explain": "{{reason}} · Source: {{source}}",
+      "explainAccessible": "Why these homes: {{reason}}. Source: {{source}}.",
+      "error": "We could not load this area. Nothing is being hidden — the request failed.",
+      "source": {
+        "listing_created_at": "listing publication dates",
+        "listing_sale_price_reduced_flag": "the price-reduced flag the portal publishes",
+        "listing_status": "listing status changes",
+        "listing_agency_fee_flag": "the agency-fee field on the listing",
+        "listing_cost_fields": "the cost fields on the listing",
+        "resident_reviews": "reviews written by people who lived there",
+        "listing_verification": "Homiio verification records",
+        "listing_housing_type": "the housing-type field on the listing"
+      },
+      "new_in_area": {
+        "eyebrow": "New",
+        "title": "New in your area",
+        "reason": "Listed most recently inside the area you are searching"
+      },
+      "price_reduced": {
+        "eyebrow": "Price change",
+        "title": "Asking price reduced",
+        "reason": "The seller published a price reduction. Homiio keeps no rent price history, so this covers homes for sale only"
+      },
+      "no_longer_available": {
+        "eyebrow": "Left the market",
+        "title": "No longer available",
+        "reason": "Marked rented or sold by their owner, most recent first — what actually went, and at what price"
+      },
+      "no_agency_fee": {
+        "eyebrow": "Costs",
+        "title": "No agency fee",
+        "reason": "The listing states that no agency fee is payable. Listings that say nothing are not included"
+      },
+      "transparent_total_cost": {
+        "eyebrow": "Costs",
+        "title": "Whole cost stated",
+        "reason": "Every recurring cost is on the listing — rent with bills included and the deposit, or the nightly rate with cleaning and service fees"
+      },
+      "with_resident_reviews": {
+        "eyebrow": "Trust",
+        "title": "Reviewed by residents",
+        "reason": "Somebody who lived at this address has written a review"
+      },
+      "verified": {
+        "eyebrow": "Trust",
+        "title": "Verified address or lister",
+        "reason": "Homiio verified the address or the person listing it"
+      },
+      "public_housing": {
+        "eyebrow": "Public",
+        "title": "Public housing",
+        "reason": "Listed as public housing. Homiio has no cooperative or community housing field yet, so those are not included"
+      }
+    },
+    "scopePrompt": {
+      "eyebrow": "One step first",
+      "title": "Where are you looking for a home?",
+      "body": "Pick a city or neighbourhood, or turn on location. Location is optional — you can always choose a place by hand."
+    },
+    "empty": {
+      "title": "Nothing to show for this area yet",
+      "body": "No listing here matches what Homiio can explain. Widen the area, choose somewhere else, or open Explore and change the filters.",
+      "changeFilters": "Open Explore",
+      "changeFiltersAccessible": "Open Explore to change the filters for this area"
     }
   },
   "agent": {
@@ -4003,6 +4071,35 @@
     "range": {
       "upTo": "Fins a {{value}}",
       "from": "Des de {{value}}"
+    }
+  },
+  "location": {
+    "scope": {
+      "eyebrow": "Searching in",
+      "announce": "Searching in {{scope}}",
+      "change": "Change",
+      "changeAccessible": "Change the area you are searching in",
+      "everywhere": "Everywhere",
+      "nearYou": "Near you · {{distance}}",
+      "nearPlace": "Near {{place}} · {{distance}}",
+      "resolving": "Finding where you are…",
+      "useCurrent": "Use my location",
+      "useCurrentAccessible": "Use my current location to search nearby",
+      "exploreGlobal": "Explore everywhere",
+      "exploreGlobalAccessible": "Explore homes everywhere, with no area filter",
+      "pickerTitle": "Where are you looking for a home?",
+      "deviceUnavailable": "Your current location is no longer available. Showing the last area you chose.",
+      "showingCached": "Saved copy from {{when}}. Not up to date.",
+      "failure": {
+        "permission_denied": "Location is off, so we cannot search near you. Pick a place instead — location is optional.",
+        "position_unavailable": "We could not get your position. Pick a place instead.",
+        "network": "We could not reach Homiio to look that up. Check your connection and try again.",
+        "rate_limited": "Too many place lookups just now. Try again in a moment.",
+        "ambiguous": "Several places match that name. Pick the one you meant.",
+        "no_results": "We could not find that place. Try another name.",
+        "unsupported": "Homiio cannot search that kind of place yet. Pick a city instead."
+      },
+      "notChosen": "Not chosen yet"
     }
   }
 }

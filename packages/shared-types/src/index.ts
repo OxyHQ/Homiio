@@ -89,6 +89,10 @@ export * from './location';
 // coordinate encoding ADR §1.2 counts three of inside this package.
 export type { GeoPoint, GeoBounds } from './location';
 
+// The Home surface's finite, explainable sections (#353). Depends on
+// `./location` for the scope summary, so it is exported after it.
+export * from './home';
+
 // International formatting — money, units, dates, percentages. Pure, shared by
 // frontend and backend so a price is never assembled by concatenation.
 export * from './format/money';

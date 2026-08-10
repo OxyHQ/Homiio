@@ -75,6 +75,24 @@ sibling.
 the nearest, never a place name. `partial: true` means the upstream lookup
 degraded — treat an all-absent `partial` result as *unknown*, not as *none*.
 
+### Home
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/api/home/sections` | The whole Home surface in one request, under ONE scope |
+
+`loc` is the scope and it is a single atomic token (ADR 0002 §5.1), not a set of
+geographic parameters — a half-updated scope is unrepresentable in the request as
+well as in the store. Three answers are deliberately distinct and a client must
+render them differently: **no `loc`** is answered everywhere with
+`location.status: "none"`; an **unreadable** `loc` is a **400**, never a global
+page; and a `loc` naming a place that does not resolve is a `200` carrying
+`location.status: "unresolved"` and no sections at all.
+
+`loc=here.<radiusMeters>` carries no coordinates by design, so a device scope
+sends `lat` and `lng` beside it — in the request only, never in the echo, a key
+or a log.
+
 ### Geography
 
 | Method | Path | Notes |

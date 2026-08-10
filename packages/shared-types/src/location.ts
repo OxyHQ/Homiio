@@ -623,6 +623,54 @@ export function locationKey(selection: LocationSelection | null): string {
   }
 }
 
+/**
+ * The same key, for a REFERENCE rather than a resolved selection.
+ *
+ * WHY A SECOND ENTRY POINT AND NOT A SECOND IMPLEMENTATION. A server receiving
+ * a `loc` token has a {@link LocationRef} and no selection — the label, admin
+ * hierarchy and centre come from resolving it, and it must not invent them just
+ * to compute a string (that is the fabrication {@link parseLocationToken}'s own
+ * asymmetry exists to prevent). Without this it would hand-roll the grammar at
+ * the API edge, and "one function turns a location into a string" — the property
+ * ADR 0002 §8.2 leans on to keep a device fix out of six places at once — would
+ * quietly become two functions that agree until somebody edits one.
+ *
+ * ## The one place the two vocabularies differ, and why it is safe
+ *
+ * {@link locationKey} keys a homiio place by `source.entity`
+ * (`country | region | city | neighborhood | address`); a ref carries
+ * `placeType`, whose vocabulary additionally has `district` and `postcode`. For
+ * every value that exists in BOTH, they are the same string, so the two
+ * functions agree for every selection that can be constructed — pinned by a test
+ * that enumerates the entity vocabulary rather than by this sentence.
+ *
+ * `district` and `postcode` are reachable in a token and NOT in a `PlaceSource`,
+ * so such a token names an identity no selection can hold. It gets a key here
+ * anyway rather than a failure: the key is a cache and comparison identity, and
+ * refusing to key something the grammar accepts would mean the caller had to
+ * invent its own — which is the outcome this function exists to prevent. The
+ * token still fails later, at RESOLUTION, which is where the real answer is.
+ */
+export function locationKeyOfRef(ref: LocationRef): string {
+  switch (ref.kind) {
+    case 'device':
+      // NO coordinates, exactly as `locationKey`'s `current_location` branch.
+      return `here:${ref.radiusMeters}`;
+    case 'place':
+      return ref.source.kind === 'homiio'
+        ? `homiio:${ref.placeType}:${ref.id}`
+        : `ext:${ref.source.provider}:${ref.id}`;
+    case 'bounds':
+      return `bbox:${keyCoordinate(ref.bounds.west)},${keyCoordinate(ref.bounds.south)},${keyCoordinate(ref.bounds.east)},${keyCoordinate(ref.bounds.north)}`;
+    case 'multi':
+      return `multi:${ref.refs.map(locationKeyOfRef).sort().join('+')}`;
+    default: {
+      const exhaustive: never = ref;
+      return exhaustive;
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // §5.2 — the `loc` URL token codec
 // ---------------------------------------------------------------------------
