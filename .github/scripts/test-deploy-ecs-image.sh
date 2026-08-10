@@ -36,7 +36,11 @@ export DEPLOY_TEST_TASK_LAST_STATUS=STOPPED
 # full green run -- and every guarantee below would read as verified while never
 # having executed. Incremented by run_release, checked at the very end.
 cases_run=0
-MINIMUM_CASES=24
+# 24 -> 18: the six ALLOW_ZERO_DESIRED_COUNT cases and the standalone zero-count
+# REFUSAL case went with the opt-in they tested, replaced by one `zero-desired-count`
+# case asserting the release lands. Lower this ONLY alongside a deletion you can
+# name; a floor quietly reduced to match whatever ran is not a floor.
+MINIMUM_CASES=18
 
 aws() {
   local service_json='{
@@ -350,7 +354,6 @@ run_release() {
     # `deploy-test` to keep matching the container in the mocked task definition.
     APP="${DEPLOY_TEST_APP:-deploy-test}"
     CONTAINER_NAME=deploy-test
-    ALLOW_ZERO_DESIRED_COUNT="${DEPLOY_TEST_ALLOW_ZERO_DESIRED_COUNT:-}"
     MIGRATION_SERVICE="${DEPLOY_TEST_MIGRATION_SERVICE:-}"
     IMAGE_URI="example.invalid/deploy-test@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     MAX_WAIT_SECS=5
@@ -426,6 +429,21 @@ assert_output_lacks() {
 
 # The recorded AWS calls must not mention a string. Used to prove a refusal
 # happened BEFORE anything mutating, and that a lane ran no migrator.
+assert_aws_log_contains() {
+  local case_name="$1" needle="$2" why="$3"
+  if ! grep -qF -- "$needle" "$test_directory/$case_name/aws.log"; then
+    {
+      echo "ASSERTION FAILED in case '$case_name'"
+      echo "  the recorded AWS calls must contain: $needle"
+      echo "  why: $why"
+      echo "  ---- recorded AWS calls ----"
+      cat "$test_directory/$case_name/aws.log"
+      echo "  ---- end ----"
+    } >&2
+    return 1
+  fi
+}
+
 assert_aws_log_lacks() {
   local case_name="$1" needle="$2" why="$3"
   if grep -qF -- "$needle" "$test_directory/$case_name/aws.log"; then
@@ -778,10 +796,6 @@ if ! grep -qF \
   exit 1
 fi
 
-run_release zero-desired-count false false false 0 false 0
-assert_output_contains zero-desired-count "must have a positive desiredCount before deployment (current: 0)"
-assert_no_aws_calls zero-desired-count "Zero-capacity service reached a mutating AWS call."
-
 run_release transient-zero-deployment true false false 0 false 1 transient-zero-deployment
 printf '%s\n' \
   'service:arn:aws:ecs:test:task-definition/deploy-test:2:desired=1' \
@@ -843,88 +857,51 @@ assert_aws_log_lacks smoke-no-rollback-failure 'service:arn:aws:ecs:test:task-de
 assert_output_contains smoke-no-rollback-failure "stays on arn:aws:ecs:test:task-definition/deploy-test:2"
 assert_output_contains smoke-no-rollback-failure "Nothing was rolled back; this release needs a human."
 
-# ALLOW_ZERO_DESIRED_COUNT, in the five states that matter.
+# A service parked at desiredCount 0 -- the state the cutover leaves both Homiio
+# services in -- must still land its image, because the release that would make
+# the service bootable again is the one a refusal blocks.
 #
-# The cutover (issue #281) deploys `homiio` and `homiio-worker` while both are
-# deliberately scaled to zero, because the running image is Mongo-backed and
-# bringing either up after the copy would let real writes land in the store being
-# abandoned. Every OTHER deploy must still refuse a zero-count service, and the
-# exemption must not outlive the window.
+# This REPLACES the ALLOW_ZERO_DESIRED_COUNT opt-in, which refused by default and
+# permitted only with a dated `<service>:<YYYY-MM-DD>` variable. That mechanism
+# was never reachable in production: the script read the variable and
+# `deploy-aws.yml` never passed it, so the six cases that tested it exercised an
+# env var no deploy could set. It is deleted rather than left inert.
 #
-# The value is `<service>:<YYYY-MM-DD>`. Two cases carry the design:
-#   - WRONG SERVICE proves the value is compared against APP rather than read as
-#     a boolean. A boolean passes every other case here. Homiio has TWO services,
-#     so an authorisation for one really must not cover the other.
-#   - EXPIRED proves a forgotten variable disarms itself. Without it the
-#     exemption is a permanent reduction in protection bought for one window.
+# The exact log is the whole assertion, and what it does NOT contain matters more
+# than what it does. Compare `migration-order` above, the same release at
+# desired=1: there, `service:` is followed by `smoke` and `task:reconcile`. Here
+# the log must STOP at `service:`, because neither is real when nothing is
+# running -- a smoke check against a service with zero tasks is the plausible
+# green this case exists to refuse. `diff -u` fails if either appears.
+run_release zero-desired-count true true false 0 false 0
+printf '%s\n' \
+  'task:node packages/backend/dist/db/migrate.js --target-database=homiio --phase=pre' \
+  'service:arn:aws:ecs:test:task-definition/deploy-test:2:desired=0' \
+  >"$test_directory/zero-desired-count/expected.log"
+diff -u \
+  "$test_directory/zero-desired-count/expected.log" \
+  "$test_directory/zero-desired-count/aws.log"
+# `service:...deploy-test:2:...` is the REPOINT, and it is the half that is easy
+# to drop: registering a revision does not point the service at it, so without
+# this line a later scale-up would launch the OLD image and every subsequent
+# deploy would render from the stale revision. Homiio has TWO services, each
+# carrying its own revision, so each lane has to repoint its own.
+assert_aws_log_contains zero-desired-count 'service:arn:aws:ecs:test:task-definition/deploy-test:2:desired=0' "A zero-capacity release did not repoint the service, so a later scale-up would launch the OLD image."
+assert_output_contains zero-desired-count "NO ROLLOUT PERFORMED: ECS service deploy-test is at desiredCount=0"
+assert_output_contains zero-desired-count "NO ROLLOUT PERFORMED: the task definition WAS registered and the service now points at it: arn:aws:ecs:test:task-definition/deploy-test:2"
+assert_output_contains zero-desired-count "NO ROLLOUT PERFORMED: image example.invalid"
+# The success line of an ordinary release. If it ever appears here, a reader of
+# the workflow log six weeks from now cannot tell this run apart from one that
+# actually shipped, which is the failure this whole case exists to prevent.
+assert_output_lacks zero-desired-count "ECS rollout reached a healthy steady state" "A zero-capacity release claimed a healthy rollout it never performed."
 
-zero_optin_future="$(date -u -d '+2 days' +%F)"
-zero_optin_past="$(date -u -d '-1 day' +%F)"
-
-# 1. Absent -> refuses. (This is `zero-desired-count` above, restated against the
-#    opt-in so the group reads as a set.)
-DEPLOY_TEST_ALLOW_ZERO_DESIRED_COUNT="" \
-  run_release zero-count-optin-absent false false false 0 false 0
-assert_output_contains zero-count-optin-absent "must have a positive desiredCount before deployment (current: 0)"
-assert_no_aws_calls zero-count-optin-absent "Zero-count deploy with no opt-in reached a mutating AWS call."
-
-# 2. MALFORMED (no expiry at all -- the shape somebody reaches for first) ->
-#    refuses. An unparseable authorisation is not permission.
-DEPLOY_TEST_ALLOW_ZERO_DESIRED_COUNT="true" \
-  run_release zero-count-optin-malformed false false false 0 false 0
-assert_output_contains zero-count-optin-malformed "ALLOW_ZERO_DESIRED_COUNT is set but malformed"
-assert_no_aws_calls zero-count-optin-malformed "A malformed zero-count opt-in reached a mutating AWS call."
-
-# 3. WRONG service, valid date -> refuses. A boolean cannot tell this from case 6.
-#    Spelled as the sibling service, which is the value that would really be
-#    pasted: authorising `homiio` must not authorise `homiio-worker`.
-DEPLOY_TEST_ALLOW_ZERO_DESIRED_COUNT="deploy-test-worker:$zero_optin_future" \
-  run_release zero-count-optin-wrong-service false false false 0 false 0
-assert_output_contains zero-count-optin-wrong-service "must have a positive desiredCount before deployment (current: 0)"
-assert_no_aws_calls zero-count-optin-wrong-service "Zero-count deploy authorised by the WRONG service name reached a mutating AWS call. The opt-in is being read as a boolean rather than compared against APP."
-
-# 4. Right service, EXPIRED -> refuses, and says so by name rather than falling
-#    through to the generic desiredCount message.
-DEPLOY_TEST_ALLOW_ZERO_DESIRED_COUNT="deploy-test:$zero_optin_past" \
-  run_release zero-count-optin-expired false false false 0 false 0
-assert_output_contains zero-count-optin-expired "ALLOW_ZERO_DESIRED_COUNT expired on $zero_optin_past"
-assert_no_aws_calls zero-count-optin-expired "An EXPIRED zero-count opt-in reached a mutating AWS call."
-
-# 5. A regex-valid but nonexistent date must refuse rather than sort after every
-#    real date and never expire -- the one fail-OPEN this could have had.
-DEPLOY_TEST_ALLOW_ZERO_DESIRED_COUNT="deploy-test:2026-13-45" \
-  run_release zero-count-optin-impossible-date false false false 0 false 0
-assert_output_contains zero-count-optin-impossible-date "carries an invalid date: 2026-13-45"
-
-# 6. Right service, valid date -> proceeds, and SAYS what it costs.
-#
-#    ONE case covers all THREE refusals, and that is a measured claim rather than
-#    a hopeful one: it runs with the service at desiredCount 0 against the
-#    `completed-zero-deployment` scenario, so it traverses the pre-deploy gate,
-#    then the mid-rollout `service_desired < 1` gate on the first poll, then the
-#    COMPLETED steady-state gate — and mutating any ONE of the three in isolation
-#    turns this case red. A fourth case driving `zero-service-during-deploy` was
-#    written and removed: it reproduces the identical state, so it could never
-#    fail independently, and a case that cannot fail alone reads to the next
-#    person as coverage that is not there.
-#
-#    The three assertions below map one-to-one onto the three gates: the
-#    authorisation warning (gate 1), the absence of the mid-rollout refusal
-#    (gate 2), and the "as authorised" steady state (gate 3).
-DEPLOY_TEST_ALLOW_ZERO_DESIRED_COUNT="deploy-test:$zero_optin_future" \
-  run_release zero-count-optin-correct true false false 0 false 0 completed-zero-deployment
-assert_output_contains zero-count-optin-correct "authorised by ALLOW_ZERO_DESIRED_COUNT=deploy-test:$zero_optin_future (expires $zero_optin_future)"
-assert_output_contains zero-count-optin-correct "serve NOTHING until it is scaled up"
-assert_output_contains zero-count-optin-correct "completed at desiredCount=0, as authorised"
-assert_output_lacks zero-count-optin-correct "reached desiredCount=0 during the deployment rollout" "An authorised zero-count deploy was killed by the MID-ROLLOUT guard (gate 2). All three zero-count refusals must honour ALLOW_ZERO_DESIRED_COUNT."
-assert_output_lacks zero-count-optin-correct "refusing to accept a zero-task steady state" "An authorised zero-count deploy was killed by the STEADY-STATE guard (gate 3). The exemption was applied to the pre-check only; all three zero-checks need it."
-
-# A non-numeric desiredCount is NOT covered by any authorisation: it is ECS
-# saying it does not know the answer, which no date and no service name can make
-# safe. Without this, folding the numeric check into the zero check would let a
-# valid opt-in wave through a service whose count could not be read at all.
-DEPLOY_TEST_ALLOW_ZERO_DESIRED_COUNT="deploy-test:$zero_optin_future" \
-  run_release non-numeric-desired-count false false false 0 false '"unknown"'
+# A non-numeric desiredCount still REFUSES, and is deliberately split from the
+# zero case above: ECS declining to say what the count is, is not the same fact
+# as a zero it reports confidently. Without this, folding the numeric check into
+# the zero check would wave through a service whose count could not be read at
+# all -- and it is the negative control for the case above, since deleting the
+# numeric check outright would otherwise leave the suite green.
+run_release non-numeric-desired-count false false false 0 false '"unknown"'
 assert_output_contains non-numeric-desired-count "reported a non-numeric desiredCount"
 assert_no_aws_calls non-numeric-desired-count "A service with an unreadable desiredCount reached a mutating AWS call."
 
