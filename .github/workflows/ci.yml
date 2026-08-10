@@ -50,11 +50,29 @@ on:
 # the `_id` -> `id` incident), and it produces no red job anywhere.
 #
 # So cancellation is now scoped to the refs that do not deploy. Pull requests
-# keep the fast-cancel behaviour; pushes to main QUEUE behind each other, which
-# is what "serialize production rollouts" has meant in deploy-aws.yml all along.
-# The cost is real and deliberate: on a busy morning main's deploys run one after
-# another instead of the newest winning. That is the trade the rollout guarantee
-# is worth.
+# keep the fast-cancel behaviour; a run on main that has STARTED is never
+# cancelled, which is what "serialize production rollouts" has meant in
+# deploy-aws.yml all along.
+#
+# WHAT THIS DOES NOT DO, MEASURED, because the previous version of this comment
+# claimed the opposite and a safety argument now leans on it. It said pushes to
+# main "QUEUE behind each other" and that "main's deploys run one after another
+# instead of the newest winning". They do not. `cancel-in-progress` governs the
+# IN-PROGRESS run only; a run still PENDING in the group is evicted by the next
+# push, and at most one pending run is ever retained. On 2026-08-10 runs
+# `31376441022` (a3213af2, 09:50:10Z) and `31376457516` (873c3e25, 09:50:23Z)
+# were both `cancelled` while `31376855242` (ff4f04c3, 09:55:41Z) went on to
+# run. Both cancelled runs report ZERO jobs — they never started one. So the
+# newest DOES win; what is guaranteed is only that a run already executing is
+# left alone.
+#
+# For a rollout that is the property that matters: a run that never started
+# never called `update-service` and never started a migrator, so nothing is left
+# half-done. The cost lands elsewhere and is worth knowing — an intermediate
+# commit's deploy can be dropped entirely, and `deployment-scope.sh` reads a
+# single commit (`<sha>^1..<sha>`), so if the run that wins is documentation-only
+# it deploys nothing at all and the skipped commit's changes wait for the next
+# code merge.
 concurrency:
   group: ci-${{ github.ref }}
   # An EXPRESSION, and a mistyped one degrades silently to falsy — which would

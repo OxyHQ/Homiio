@@ -91,8 +91,11 @@ fi
 # then the worker through this same script. Left unset, `RUN_MIGRATIONS=true`
 # would therefore run the migrator TWICE per release — wasted at best, and at
 # worst a race: `db/migrate.ts` takes no cross-process advisory lock, and neither
-# does drizzle (recorded as a precondition carried out of Lote 0). Nothing can
-# run two migrators concurrently today; the deploy is the first thing that could.
+# does drizzle. That was recorded as a precondition carried out of Lote 0 on the
+# reasoning that nothing could run two migrators concurrently; `deploy-aws.yml`
+# now sets `RUN_MIGRATIONS: 'true'`, so this variable is what keeps that true
+# WITHIN a release, and the workflow's `concurrency` group is what keeps it true
+# ACROSS releases. See `packages/backend/db/migrate.ts` for what remains open.
 #
 # Naming the owning SERVICE, rather than trusting each lane to set the flag
 # correctly, is what makes a job-level `RUN_MIGRATIONS: true` safe: the worker
@@ -120,21 +123,32 @@ MIGRATION_SERVICE="${MIGRATION_SERVICE:-}"
 #
 # This replaces a hardcoded `["bun","packages/backend/dist/scripts/migrate.js"]`
 # that was wrong on both counts and named a file that has never existed in this
-# repository — `RUN_MIGRATIONS=true` has therefore never once worked here.
+# repository — so `RUN_MIGRATIONS=true` could never once have worked here. It
+# was also never set: nothing turned it on until 2026-08-10, by which point
+# production was four migrations behind and answering 500 on two routes.
 #
-# `--phase=pre` is the side of the cutover this runs on; the `post` phase runs
-# AFTER the rollout, as a separate invocation, and is not part of this table.
+# `--phase=pre` is the only side this table runs. The `post` phase runs AFTER
+# the rollout, through `POST_DEPLOY_TASK_COMMAND_JSON` below, and `deploy-aws.yml`
+# sets it on the WORKER lane — the last service to roll, and therefore the first
+# moment no old image is serving. A `post` migration drops or narrows something,
+# so running it from this table would break the image still running.
 #
-# THE POPULATION FLOOR IS THE ENTRY THAT IS NOT HERE YET. `db/assertPostgresPopulated.ts`
-# ships in this batch but is deliberately NOT wired in, because it asserts that
-# Postgres is AUTHORITATIVE — false before the cutover, and false again the
-# moment we exercise the planned rollback to Mongo. Landing it live now would
-# block every deploy from here to the window, and landing it live and forgetting
-# it would block every deploy after a rollback, for a reason nothing about that
-# rollback would lead anyone to look for. It has no env flag on purpose: a flag
-# is a second thing to remember, and the guard's lifetime should equal the
-# lifetime of the claim it makes. The cutover commit (Lote 13) appends this entry
-# verbatim, and reverting that commit removes it again:
+# THE POPULATION FLOOR IS STILL THE ENTRY THAT IS NOT HERE, AND THE REASON HAS
+# CHANGED. `db/assertPostgresPopulated.ts` asserts that Postgres is AUTHORITATIVE.
+# That was false before the cutover and would have been false again after the
+# planned rollback to Mongo, which is why this comment used to say the cutover
+# commit would append the entry and a revert would remove it.
+#
+# The cutover has happened and there is no rollback target: `AGENTS.md`'s data
+# storage section records that `models/`, `db/backfill/` and mongoose are deleted,
+# `MONGODB_URI` is off both task definitions and out of SSM, and the only copy of
+# the old data is an offline dump. So the ORIGINAL objection is gone.
+#
+# What replaces it is narrower and has to be measured rather than reasoned about:
+# the five floors are numbers taken from a Mongo census on 2026-08-06, and no one
+# has counted the rows Postgres holds today. Wiring a floor that production does
+# not clear blocks every deploy, which is the failure this guard exists to avoid
+# causing. Count first, then append this entry verbatim:
 #
 #   ,
 #   {
@@ -724,10 +738,14 @@ if [[ -n "$POST_DEPLOY_SMOKE_SCRIPT" ]]; then
 fi
 
 if [[ -n "$POST_DEPLOY_TASK_COMMAND_JSON" ]]; then
+  # Labelled for what the hook IS rather than for one thing a caller might put
+  # in it. Homiio's worker lane puts the `post` migration phase here, and a line
+  # reading "Post-deploy reconciliation failed" for a failed migration is the
+  # kind of operator-facing string that misleads at the worst possible moment.
   if ! run_one_shot_command \
-    "Post-deploy reconciliation" \
+    "Post-deploy task" \
     "$POST_DEPLOY_TASK_COMMAND_JSON"; then
-    echo "::error::Post-deploy reconciliation failed."
+    echo "::error::The post-deploy task failed."
     if ! rollback_service; then
       echo "::error::Reconciliation and rollback both failed; manual intervention is required."
     fi
