@@ -47,7 +47,7 @@ import { H1, P } from '@oxyhq/bloom/typography';
 import { serializeLocationToken, type LocationSelection, type Property } from '@homiio/shared-types';
 
 import { useLocationScope } from '@/hooks/useLocationScope';
-import { useHomeSections } from '@/hooks/useHomeSections';
+import { homeSurfaceState, useHomeSections } from '@/hooks/useHomeSections';
 import { LocationScopeBar } from '@/components/location/LocationScopeBar';
 import { HomeSectionBand } from '@/components/home/HomeSectionBand';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
@@ -95,6 +95,16 @@ export default function HomePage() {
 
   const scope = useLocationScope();
   const home = useHomeSections(scope.selection, browseOffering, { enabled: scope.canQuery });
+
+  // ONE exclusive answer, so "we could not load this" can never be rendered as
+  // "there is nothing here" — see `homeSurfaceState`.
+  const surface = homeSurfaceState({
+    needsPlace: scope.needsPlace,
+    canQuery: scope.canQuery,
+    isLoading: home.isLoading,
+    hasError: home.error !== null,
+    sectionCount: home.sections.length,
+  });
 
   const { properties: recentlyViewedProperties, refetch: refetchRecentlyViewed } = useRecentlyViewed();
   const { savedProperties, isLoading: savedLoading, loadSavedProperties } = useSavedPropertiesContext();
@@ -268,7 +278,7 @@ export default function HomePage() {
         <View className="gap-6 md:gap-8 pb-14 pt-6">
           {/* The mandatory picker. NOT a global list: when nothing has been
               chosen and the device cannot answer, Home asks rather than guesses. */}
-          {scope.needsPlace ? (
+          {surface === 'needs_place' ? (
             <View className={`gap-2 ${PAGE_GUTTER_CLASS}`}>
               <SectionEyebrow>{t('home.scopePrompt.eyebrow')}</SectionEyebrow>
               <H1 className="text-[24px] font-bold leading-7 tracking-tight text-foreground">
@@ -280,14 +290,14 @@ export default function HomePage() {
 
           {/* Skeletons that PRESERVE the layout, so nothing jumps when the
               sections land. */}
-          {home.isLoading ? (
+          {surface === 'loading' ? (
             <View className={`gap-6 ${PAGE_GUTTER_CLASS}`}>
               <PropertyResultsGridSkeleton count={SKELETON_CARDS} />
               <PropertyResultsGridSkeleton count={SKELETON_CARDS} />
             </View>
           ) : null}
 
-          {home.error ? (
+          {surface === 'failed' ? (
             <View className={`gap-2 ${PAGE_GUTTER_CLASS}`}>
               <P className="text-sm text-muted-foreground">{t('home.sections.error')}</P>
               <Button variant="secondary" size="medium" onPress={onRefresh} accessibilityLabel={t('common.retry')}>
@@ -304,7 +314,7 @@ export default function HomePage() {
 
           {/* A USEFUL empty state: what to do, not an apology. Only shown once the
               surface has actually answered, so it never flashes during a load. */}
-          {scope.canQuery && !home.isLoading && !home.error && home.sections.length === 0 ? (
+          {surface === 'empty' ? (
             <View className={`gap-3 ${PAGE_GUTTER_CLASS}`}>
               <H1 className="text-[22px] font-bold leading-7 tracking-tight text-foreground">
                 {t('home.empty.title')}

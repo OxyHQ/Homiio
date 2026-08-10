@@ -32,7 +32,13 @@ import { OfferingType, PropertyStatus, PropertyType } from '@homiio/shared-types
 import { getHomeSections } from '../../controllers/home/homeSectionsController';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { serializeWireIds } from '../../middlewares/wireIds';
+import { getDb } from '../../db/postgres';
+import { cities, countries, regions } from '../../db/schema';
+import { resetGeoCache } from '../../services/geocoding/cache';
+import { registerProvider, resetProviderRegistry } from '../../services/geocoding/registry';
+import { GeocodingProviderError, type ProviderPlace } from '../../services/geocoding/types';
 import {
+  objectIdHex,
   resetGeoTables,
   seedAddress,
   seedGeoChain,
@@ -51,7 +57,7 @@ interface SectionPayload {
   source: string;
   generatedAt: string;
   location: { status: string; key?: string };
-  items: { id: string; address?: { cityName?: string } }[];
+  items: { id: string; title?: string; address?: { cityName?: string } }[];
 }
 
 interface HomePayload {
@@ -446,6 +452,315 @@ describe('GET /home/sections', () => {
       // the rent response DOES have sections — the rule simply does not apply.
       expect(rentIds.length).toBeGreaterThan(0);
       expect(rentIds).not.toContain('price_reduced');
+    });
+  });
+
+  /**
+   * The defect that reached production, and the shape of its repair.
+   *
+   * `GET /api/home/sections?loc=city.osm.R347950` answered **400
+   * UNSUPPORTED_LOCATION** on the live service. That token is not exotic input:
+   * it is the ORDINARY output of picking a city, because the place picker
+   * resolves through the #351 geo gateway and every gateway candidate is
+   * external (`source: { kind: 'external', provider, ref }`, pinned by
+   * `geoGateway.test.ts`). So the location ladder handed Home a scope Home
+   * refused — the same class of failure #353 exists to prevent, arrived at from
+   * the other side.
+   *
+   * ## Each RUNG is distinguished, not just the outcome
+   *
+   * The repair has three rungs — a canonical Homiio city, the place's own
+   * bounds, then `unresolved` — and the first two both answer "Barcelona
+   * listings" for a Barcelona pick. A fixture that only asserts "Barcelona came
+   * back" therefore cannot tell which rung ran, and the first version of this
+   * file could not: every country code was unique per chain (`ES-Barcelona`), so
+   * `lookupCityPlaces({ countryCode: 'ES' })` matched no country at all, and
+   * every "resolved by Homiio city" assertion was in fact passing through the
+   * BOUNDS fallback. It was mutation-testing that exposed it — capping the
+   * lookup at one row changed nothing, because the lookup was never reached.
+   *
+   * So each rung now has a fixture only IT can satisfy: a second Homiio city
+   * inside the same bounding box, whose listing the city rung excludes and the
+   * bounds rung includes.
+   *
+   * The provider is a registered FAKE rather than a mocked module, the same seam
+   * `geoGateway.test.ts` uses: the request goes through the real registry, cache
+   * and normaliser, so a repair that only works against a mock fails here.
+   */
+  describe('an external (geocoder) place ref', () => {
+    const PROVIDER_ID = 'fakeosm';
+    const EXTERNAL_REF = 'R347950';
+    /** The bbox the fake geocoder returns for "Barcelona". Contains BARCELONA and NEARBY. */
+    const PICKED_BOUNDS = { west: 2.0, south: 41.3, east: 2.3, north: 41.5 };
+    /** A second point inside `PICKED_BOUNDS`, in a DIFFERENT Homiio city. */
+    const NEARBY = { longitude: 2.1, latitude: 41.36 };
+
+    function providerPlace(overrides: Partial<ProviderPlace> = {}): ProviderPlace {
+      return {
+        providerId: PROVIDER_ID,
+        ref: EXTERNAL_REF,
+        name: 'Barcelona',
+        displayName: 'Barcelona, Catalunya, España',
+        address: { city: 'Barcelona', region: 'Catalunya', country: 'España', countryCode: 'ES' },
+        center: { longitude: 2.1774322, latitude: 41.3828939 },
+        bounds: PICKED_BOUNDS,
+        rawAddressType: 'city',
+        ...overrides,
+      };
+    }
+
+    function installFake(resolve?: (ref: string) => Promise<ProviderPlace | null>): void {
+      registerProvider({
+        id: PROVIDER_ID,
+        attribution: { text: '© Fake contributors', url: 'https://example.invalid/copyright' },
+        autocomplete: async () => [providerPlace()],
+        resolve: async (input) => (resolve ? resolve(input.ref) : providerPlace()),
+        reverse: async () => providerPlace(),
+        health: async () => ({ providerId: PROVIDER_ID, healthy: true }),
+      });
+    }
+
+    /**
+     * ONE country whose code is really `ES`.
+     *
+     * The lookup filters HARD on the country code the geocoder reported, so a
+     * fixture country coded `ES-Barcelona` makes every Homiio-city rung
+     * unreachable — which is exactly how the first version of these tests
+     * passed while measuring the wrong rung.
+     */
+    async function seedSpain(): Promise<string> {
+      const [country] = await getDb()
+        .insert(countries)
+        .values({ id: objectIdHex(), code: 'ES', name: 'Spain' })
+        .returning({ id: countries.id });
+      return country.id;
+    }
+
+    /** A city (and its region) under an EXISTING country, with a listing on it. */
+    async function seedCityWithListing(options: {
+      countryId: string;
+      cityName: string;
+      regionName: string;
+      longitude: number;
+      latitude: number;
+      title: string;
+    }): Promise<{ cityId: string; propertyId: string }> {
+      const db = getDb();
+      const [region] = await db
+        .insert(regions)
+        .values({ id: objectIdHex(), countryId: options.countryId, name: options.regionName })
+        .returning({ id: regions.id });
+      const [city] = await db
+        .insert(cities)
+        .values({
+          id: objectIdHex(),
+          countryId: options.countryId,
+          regionId: region.id,
+          name: options.cityName,
+          latitude: options.latitude,
+          longitude: options.longitude,
+        })
+        .returning({ id: cities.id });
+
+      const addressId = await seedAddress({
+        chain: { countryId: options.countryId, regionId: region.id, cityId: city.id },
+        street: `${options.title} street`,
+        longitude: options.longitude,
+        latitude: options.latitude,
+      });
+      const propertyId = await seedProperty({
+        addressId,
+        overrides: {
+          title: options.title,
+          type: PropertyType.APARTMENT,
+          status: PropertyStatus.PUBLISHED,
+          availabilityIsAvailable: true,
+          offerings: [OfferingType.LONG_TERM_RENT],
+          longTermRentMonthlyAmount: 1200,
+        },
+      });
+      return { cityId: city.id, propertyId };
+    }
+
+    const externalQuery = {
+      loc: `city.${PROVIDER_ID}.${EXTERNAL_REF}`,
+      offering: OfferingType.LONG_TERM_RENT,
+    };
+
+    beforeEach(() => {
+      resetProviderRegistry();
+      resetGeoCache();
+      installFake();
+    });
+
+    afterEach(() => {
+      resetProviderRegistry();
+      resetGeoCache();
+    });
+
+    it('scopes by the matching Homiio CITY, not merely by the picked box', async () => {
+      // The discriminator: `Hospitalet` sits INSIDE the geocoder's bounding box
+      // but is a different Homiio city. The city rung excludes its listing; the
+      // bounds rung would include it. Asserting only "Barcelona came back" would
+      // pass under either.
+      const countryId = await seedSpain();
+      await seedCityWithListing({
+        countryId,
+        cityName: 'Barcelona',
+        regionName: 'Catalonia',
+        ...BARCELONA,
+        title: 'In Barcelona',
+      });
+      await seedCityWithListing({
+        countryId,
+        cityName: 'Hospitalet',
+        regionName: 'Catalonia South',
+        ...NEARBY,
+        title: 'In the box but another city',
+      });
+
+      const response = await request(app).get('/home/sections').query(externalQuery).expect(200);
+      const payload = response.body.data as HomePayload;
+      const titles = allItems(payload).map((item) => item.title);
+
+      expect(payload.location.status).toBe('resolved');
+      expect(titles).toContain('In Barcelona');
+      expect(titles).not.toContain('In the box but another city');
+    });
+
+    it('keeps the REQUESTED ref as the echoed key, so the client can match it', async () => {
+      // The client compares this against its own `locationKey(selection)`, which
+      // is built from what it asked for. Echoing the Homiio id it resolved TO
+      // would read as "the server applied a different scope".
+      const countryId = await seedSpain();
+      await seedCityWithListing({
+        countryId,
+        cityName: 'Barcelona',
+        regionName: 'Catalonia',
+        ...BARCELONA,
+        title: 'In Barcelona',
+      });
+
+      const response = await request(app).get('/home/sections').query(externalQuery).expect(200);
+
+      expect((response.body.data as HomePayload).location.key).toBe(
+        `ext:${PROVIDER_ID}:${EXTERNAL_REF}`,
+      );
+    });
+
+    it('falls back to the place’s OWN bounds when Homiio knows no such city', async () => {
+      // The city the geocoder found is real; Homiio simply has no row for it. A
+      // dead end here would send the user back to the picker to choose the same
+      // place again, forever. The bounds ARE the area they picked, and they are
+      // what `/api/properties/search` already scopes an external place by.
+      const countryId = await seedSpain();
+      await seedCityWithListing({
+        countryId,
+        cityName: 'Sant Adrià',
+        regionName: 'Catalonia',
+        ...NEARBY,
+        title: 'Inside the picked box',
+      });
+      // Far outside the box, so "scoped by the box" is distinguishable from
+      // "answered globally".
+      await seedListingAt({ city: 'Madrid', ...MADRID });
+
+      const response = await request(app).get('/home/sections').query(externalQuery).expect(200);
+      const payload = response.body.data as HomePayload;
+      const titles = allItems(payload).map((item) => item.title);
+
+      expect(payload.location.status).toBe('resolved');
+      expect(titles).toContain('Inside the picked box');
+      expect(titles.some((title) => title === 'Madrid home')).toBe(false);
+    });
+
+    it('does NOT pick between two Homiio cities of the same name — it uses the box', async () => {
+      // The homonym guard, and the reason `lookupCityPlaces` is called with NO
+      // `limit`: capping a lookup that can match several rows turns a genuinely
+      // ambiguous answer into a confident wrong one (#295). Both cities are
+      // called Barcelona and both sit inside the picked box, so the correct
+      // behaviour — fall through to the bounds — returns BOTH listings, while a
+      // capped lookup would silently scope to whichever row sorted first.
+      const countryId = await seedSpain();
+      await seedCityWithListing({
+        countryId,
+        cityName: 'Barcelona',
+        regionName: 'Catalonia',
+        ...BARCELONA,
+        title: 'The first Barcelona',
+      });
+      await seedCityWithListing({
+        countryId,
+        cityName: 'Barcelona',
+        regionName: 'Anzoátegui',
+        ...NEARBY,
+        title: 'The second Barcelona',
+      });
+
+      const response = await request(app).get('/home/sections').query(externalQuery).expect(200);
+      const titles = allItems(response.body.data as HomePayload).map((item) => item.title);
+
+      expect(titles).toContain('The first Barcelona');
+      expect(titles).toContain('The second Barcelona');
+    });
+
+    it('answers UNRESOLVED, not 400 and not globally, when the geocoder knows the ref no longer', async () => {
+      installFake(async () => null);
+      await seedListingAt({ city: 'Barcelona', ...BARCELONA });
+      await seedListingAt({ city: 'Madrid', ...MADRID });
+
+      const response = await request(app).get('/home/sections').query(externalQuery).expect(200);
+      const payload = response.body.data as HomePayload;
+
+      expect(payload.location.status).toBe('unresolved');
+      // The whole point: a lost location must not widen. Both cities are seeded,
+      // so a global answer would be visibly non-empty here.
+      expect(payload.sections).toHaveLength(0);
+    });
+
+    it('answers 503, NOT 400, when the geocoder itself cannot answer', async () => {
+      // A gateway outage is about the moment, not about the request, so it is
+      // the one failure here a client may retry — and the client's retry
+      // predicate reads exactly this status. Reporting it as `unresolved` would
+      // tell somebody their city does not exist because a provider was down.
+      installFake(async () => {
+        throw new GeocodingProviderError('provider_unavailable', PROVIDER_ID);
+      });
+      await seedListingAt({ city: 'Barcelona', ...BARCELONA });
+
+      const response = await request(app).get('/home/sections').query(externalQuery).expect(503);
+
+      expect(response.body.error).toBe('GEOCODER_UNAVAILABLE');
+    });
+
+    it('still 400s for a ref shape Home genuinely cannot scope', async () => {
+      // The check is narrowed, not removed. A multi-area scope would need the
+      // covering box, which is a SUPERSET of what the user asked for.
+      await seedListingAt({ city: 'Barcelona', ...BARCELONA });
+
+      const response = await request(app)
+        .get('/home/sections')
+        .query({
+          loc: `multi.city.${PROVIDER_ID}.${EXTERNAL_REF}+here.25000`,
+          offering: OfferingType.LONG_TERM_RENT,
+        })
+        .expect(400);
+
+      expect(response.body.error).toBe('UNSUPPORTED_LOCATION');
+    });
+
+    it('still 400s for an external ref of a type Home cannot scope', async () => {
+      // A `country.` or `postcode.` scope has no predicate to hang on, whichever
+      // source it came from. Narrowing the external check must not have widened
+      // the type check.
+      await seedListingAt({ city: 'Barcelona', ...BARCELONA });
+
+      const response = await request(app)
+        .get('/home/sections')
+        .query({ loc: `country.${PROVIDER_ID}.${EXTERNAL_REF}`, offering: OfferingType.LONG_TERM_RENT })
+        .expect(400);
+
+      expect(response.body.error).toBe('UNSUPPORTED_LOCATION');
     });
   });
 });

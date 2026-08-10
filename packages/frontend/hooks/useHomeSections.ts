@@ -31,10 +31,13 @@
  * precisely the "no presentarla como actualizada" the issue forbids.
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useQuery, type QueryKey } from '@tanstack/react-query';
+import i18next from 'i18next';
+import { toast } from '@oxyhq/bloom/toast';
 import { locationKey, type HomeSection, type LocationSelection, type Property } from '@homiio/shared-types';
 
+import { ApiError } from '@/utils/api';
 import { fetchHomeSections } from '@/services/homeSectionsService';
 import {
   readHomeSnapshot,
@@ -47,6 +50,66 @@ export const STALE_AFTER_MS = 1000 * 60 * 30;
 
 /** How long a fetched surface is served without a background refetch. */
 const HOME_SECTIONS_STALE_TIME_MS = 1000 * 60 * 2;
+
+/**
+ * Attempts after the first, for a failure that retrying can actually fix.
+ *
+ * Two, not four. The production incident fired the SAME doomed request four
+ * times against a 400 and showed the user nothing — four attempts at an answer
+ * that could not change, and four chances for the surface to look merely slow.
+ */
+const HOME_SECTIONS_MAX_RETRIES = 2;
+
+/**
+ * The words shown when i18n has not loaded yet.
+ *
+ * Deliberately the same sentence as `home.sections.loadFailedToast` in
+ * `en.json`; the key is the copy, and this is the guarantee that SOMETHING is
+ * said even when the key cannot be resolved.
+ */
+const HOME_SECTIONS_FAILED_FALLBACK =
+  'Could not load homes for this area. Nothing is hidden — the request failed.';
+
+/**
+ * The failure message, guaranteed to have words in it.
+ *
+ * MEASURED, in this repo's own jest environment: an i18next that has not been
+ * `init`ed returns `undefined` from `t()` — and it does so **even when a
+ * `defaultValue` is supplied**, because the pre-init `t` is a stub that never
+ * looks at its options. So `defaultValue` is not the guard it appears to be, and
+ * the floor has to be applied here.
+ *
+ * It matters because `toast.error(undefined)` is a toast with no words in it:
+ * the silent failure this whole change exists to remove, reintroduced one layer
+ * down and only on the boot path, where nobody would look for it.
+ */
+export function homeSectionsFailureMessage(): string {
+  const translated = i18next.t('home.sections.loadFailedToast');
+  return typeof translated === 'string' && translated.trim().length > 0
+    ? translated
+    : HOME_SECTIONS_FAILED_FALLBACK;
+}
+
+/**
+ * Whether retrying could plausibly succeed.
+ *
+ * A **4xx is a statement about the REQUEST** — this scope is not acceptable —
+ * and no number of identical retries will make it acceptable. A 5xx, or a
+ * failure with no status at all (the transport never reached one), is about the
+ * moment, and that is exactly what a retry is for.
+ *
+ * Exported because it is the whole of the fix and belongs in a test that can
+ * name a status, rather than inside an options object nothing can reach.
+ */
+export function isRetryableHomeSectionsError(error: unknown): boolean {
+  const status = error instanceof ApiError ? error.status : undefined;
+  // No status: the request never reached the server. Retrying on reconnect is
+  // the correct behaviour, and it is the one case where an immediate retry is
+  // also cheap.
+  if (typeof status !== 'number') return true;
+  if (status >= 400 && status < 500) return false;
+  return true;
+}
 
 export type HomeDataFreshness = 'live' | 'cached' | 'stale';
 
@@ -122,7 +185,8 @@ export function useHomeSections(
     },
     enabled: options.enabled,
     staleTime: HOME_SECTIONS_STALE_TIME_MS,
-    retry: 1,
+    retry: (failureCount, error) =>
+      failureCount < HOME_SECTIONS_MAX_RETRIES && isRetryableHomeSectionsError(error),
   });
 
   const restored: HomeSnapshot | null = useMemo(
@@ -137,6 +201,31 @@ export function useHomeSections(
     failed: query.isError,
     ageMs: generatedAt ? Date.now() - new Date(generatedAt).getTime() : null,
   });
+
+  /**
+   * ONE message per distinct failure, and never one per retry.
+   *
+   * The signature is a STRING built from the scope, the offering and the
+   * message, so React Query's own retries — which do not change any of the
+   * three — cannot re-fire it, and switching city after a failure legitimately
+   * can. A ref-based "have I toasted yet" flag would have to be reset on every
+   * scope change by hand, and the hand is what gets forgotten.
+   *
+   * An effect is the right tool here rather than a smell: a toast is an external
+   * system, and updating an external system from React state is the one thing
+   * effects are for.
+   */
+  const failureSignature = query.isError
+    ? `${scopeKey}|${offering}|${query.error instanceof Error ? query.error.message : 'unknown'}`
+    : null;
+
+  useEffect(() => {
+    if (failureSignature === null) return;
+    // `i18next.t` rather than `useTranslation`'s `t`: the latter changes
+    // identity on a language switch, which would re-toast an old failure the
+    // moment somebody changed language.
+    toast.error(homeSectionsFailureMessage());
+  }, [failureSignature]);
 
   const refresh = useCallback(async () => {
     // Refetches the SAME key. The location ladder is untouched, so the scope
@@ -158,4 +247,42 @@ export function useHomeSections(
     error: query.error instanceof Error ? query.error : null,
     refresh,
   };
+}
+
+/**
+ * What the Home surface must render, as ONE exclusive answer.
+ *
+ * ## Why this is a function and not four booleans in the screen
+ *
+ * The production incident was a silent failure: four requests failed and the
+ * user saw nothing that named a failure. The states are mutually exclusive and
+ * the dangerous pair is `failed` and `empty` — "we could not load this area" and
+ * "there is nothing in this area" are different claims about the world, and
+ * rendering the second for the first tells somebody their city is empty when
+ * Homiio simply could not answer.
+ *
+ * Expressed as four conditions in JSX, that distinction is one `&&` away from
+ * being lost and cannot be tested without mounting the screen. Expressed here,
+ * it is an ordinary assertion, and `failed` is ordered ABOVE `empty` so the
+ * misleading claim is unreachable rather than merely discouraged.
+ */
+export type HomeSurfaceState = 'needs_place' | 'loading' | 'failed' | 'empty' | 'sections';
+
+export function homeSurfaceState(input: {
+  readonly needsPlace: boolean;
+  readonly canQuery: boolean;
+  readonly isLoading: boolean;
+  readonly hasError: boolean;
+  readonly sectionCount: number;
+}): HomeSurfaceState {
+  // The picker comes first: with no scope there is nothing to have failed at.
+  if (input.needsPlace || !input.canQuery) return 'needs_place';
+  // Then anything already fetched, so a failed BACKGROUND refresh over data we
+  // still hold does not blank the page — the data is real, and the toast plus
+  // the stale banner carry the failure.
+  if (input.sectionCount > 0) return 'sections';
+  if (input.isLoading) return 'loading';
+  // BEFORE `empty`, and that order is the fix.
+  if (input.hasError) return 'failed';
+  return 'empty';
 }

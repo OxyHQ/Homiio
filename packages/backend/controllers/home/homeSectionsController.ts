@@ -38,12 +38,16 @@ import {
   OfferingType,
   locationKeyOfRef,
   parseLocationToken,
+  type GeoPlace,
   type HomeLocationSummary,
   type HomeSectionsResponse,
   type LocationRef,
 } from '@homiio/shared-types';
 
 import { logger } from '../../middlewares/logging';
+import { lookupCityPlaces } from '../../db/geo/placeLookup';
+import { resolvePlace } from '../../services/geocoding/gateway';
+import { parseLanguage } from '../../services/geocoding/validation';
 import {
   resolveCityId,
   resolveNeighborhoodId,
@@ -100,15 +104,161 @@ interface ResolvedScope {
   location: HomeLocationSummary;
 }
 
-/** A 400 the caller must render, with a machine-readable code. */
+/**
+ * A scope this endpoint cannot serve, with a machine-readable code.
+ *
+ * `status` distinguishes the two kinds, and the distinction is what the client's
+ * retry predicate reads: a **400** means "this scope is not acceptable", which no
+ * amount of retrying will change, and a **503** means "the gateway could not
+ * answer just now", which is exactly what a retry is for. Collapsing them is how
+ * a browser fires the same doomed request four times.
+ */
 class HomeScopeError extends Error {
   readonly code: string;
+  readonly status: number;
 
-  constructor(code: string, message: string) {
+  constructor(code: string, message: string, status = 400) {
     super(message);
     this.name = 'HomeScopeError';
     this.code = code;
+    this.status = status;
   }
+}
+
+/** The radius applied when an external place has a centre but no extent. */
+const EXTERNAL_POINT_RADIUS_METERS = 25_000;
+
+/**
+ * The place types Homiio can narrow a listing query by.
+ *
+ * `country` and `postcode` are absent because there is no predicate for them:
+ * `addresses` carries a city, a region and a neighborhood id and nothing else a
+ * scope can hang on. Refusing them is right — dropping one instead is how a
+ * named scope becomes a global page under that name's heading, which ADR §1.3(d)
+ * records this home screen shipping for months.
+ */
+const SCOPEABLE_PLACE_TYPES: ReadonlySet<string> = new Set(['city', 'region', 'neighborhood']);
+
+/** The reader's language, for the geocoder's own labels. Same shape as `geoController`. */
+function languageOf(req: Request): string {
+  const header = req.headers['accept-language'];
+  return parseLanguage(undefined, typeof header === 'string' ? header : undefined);
+}
+
+/**
+ * Scope by an EXTERNAL place ref — the ordinary output of picking a city.
+ *
+ * ## The defect this repairs, which reached production
+ *
+ * This branch used to throw `UNSUPPORTED_LOCATION`, so
+ * `GET /api/home/sections?loc=city.osm.R347950` answered **400**. That token is
+ * not exotic input: the place picker resolves through the #351 geo gateway, and
+ * every gateway candidate is external (`{ kind: 'external', provider, ref }`).
+ * The location ladder therefore handed Home a scope Home refused — the failure
+ * #353 exists to prevent, arrived at from the other side, and the user saw four
+ * silent failures.
+ *
+ * ## Three rungs, and the order is the point
+ *
+ *  1. **The canonical Homiio place.** An id survives a provider swap where a
+ *     provider ref is only as stable as the provider, so a Homiio city is always
+ *     the better scope when one matches. The gateway's own bbox is passed as a
+ *     HARD filter, which is what stops "Barcelona, Catalonia" resolving to
+ *     "Barcelona, Anzoátegui": the candidate has to sit inside the box the
+ *     geocoder returned. An AMBIGUOUS result deliberately falls through rather
+ *     than picking one — auto-picking a homonym is the bug ADR 0002 §7 names.
+ *  2. **The place's own geometry.** `cities` is seeded from Homiio's own data
+ *     and does not cover the world, so a real place the geocoder found perfectly
+ *     well may have no row here. Refusing at that point sends the user back to
+ *     the picker to choose the same place again, forever. Its bounds ARE the
+ *     area they picked, and they are what `/api/properties/search` already
+ *     scopes an external place by (`usePropertySearch.locationParams` →
+ *     `geometryParams`) — two surfaces disagreeing about one selection is the
+ *     bug class this epic removes.
+ *  3. **`unresolved`.** Only when the gateway cannot name the place at all, or
+ *     names one with no geometry and no Homiio match. Never a 400 and never a
+ *     widening: the client renders the picker, as it already does.
+ */
+async function resolveExternalPlace(
+  ref: Extract<LocationRef, { kind: 'place' }>,
+  token: string,
+  language: string,
+): Promise<ResolvedScope> {
+  // The REQUESTED identity, echoed unchanged. The client compares this against
+  // its own `locationKey(selection)`, which is built from what it asked for;
+  // echoing the Homiio id we resolved TO would read as "the server applied a
+  // different scope".
+  const key = locationKeyOfRef(ref);
+  const unresolved: ResolvedScope = {
+    scope: {},
+    location: { status: 'unresolved', requested: { param: 'city', value: ref.id } },
+  };
+
+  let place: GeoPlace | null;
+  try {
+    const result = await resolvePlace(token, language);
+    place = result.place ?? null;
+  } catch (error) {
+    // A gateway that cannot answer is NOT "no such place". Reporting it as
+    // `unresolved` would tell somebody their city does not exist because a
+    // provider was rate-limited, and would make a retryable failure look final.
+    logger.warn('home.sections.geocoder_unavailable', {
+      locationKey: key,
+      error: error instanceof Error ? error.message : 'unknown',
+    });
+    throw new HomeScopeError(
+      'GEOCODER_UNAVAILABLE',
+      'That place could not be looked up just now. Try again.',
+      503,
+    );
+  }
+
+  if (!place) return unresolved;
+
+  // 1. The canonical Homiio place.
+  const lookup = await lookupCityPlaces({
+    token: place.label.primary,
+    countryCode: place.admin.countryCode,
+    // NO `limit: 1`. Capping a lookup that can match several rows turns a
+    // genuinely ambiguous answer into a confident wrong one — the #295 bug, and
+    // `placeLookup` says so at the one `.limit()` it has.
+    ...(place.bounds ? { bounds: place.bounds } : {}),
+    ...(place.precision === 'area' ? {} : { near: place.center }),
+  });
+  if (lookup.status === 'resolved') {
+    return { scope: { cityId: lookup.place.id }, location: { status: 'resolved', key } };
+  }
+
+  // 2. The place's own geometry.
+  if (place.bounds) {
+    return {
+      scope: {
+        boundingBox: {
+          swLat: place.bounds.south,
+          swLng: place.bounds.west,
+          neLat: place.bounds.north,
+          neLng: place.bounds.east,
+        },
+      },
+      location: { status: 'resolved', key, bounds: place.bounds },
+    };
+  }
+  if (place.precision !== 'area') {
+    return {
+      scope: {
+        centerRadius: {
+          lat: place.center.latitude,
+          lng: place.center.longitude,
+          radiusMeters: EXTERNAL_POINT_RADIUS_METERS,
+        },
+      },
+      location: { status: 'resolved', key, radiusMeters: EXTERNAL_POINT_RADIUS_METERS },
+    };
+  }
+
+  // 3. Named, but unframeable and unmatched. There is genuinely nothing to
+  //    scope by, and answering anyway would answer globally.
+  return unresolved;
 }
 
 /**
@@ -121,6 +271,8 @@ class HomeScopeError extends Error {
  */
 async function resolveScope(
   ref: LocationRef,
+  token: string,
+  language: string,
   query: Record<string, RawQueryValue>,
 ): Promise<ResolvedScope> {
   const key = locationKeyOfRef(ref);
@@ -164,11 +316,17 @@ async function resolveScope(
     }
 
     case 'place': {
-      if (ref.source.kind !== 'homiio') {
+      // The three placeTypes Homiio can narrow by, checked BEFORE the source so
+      // an unsupported type is refused identically whether it came from Homiio
+      // or a geocoder.
+      if (!SCOPEABLE_PLACE_TYPES.has(ref.placeType)) {
         throw new HomeScopeError(
           'UNSUPPORTED_LOCATION',
-          'An external place ref cannot scope Home yet. Resolve it to a Homiio place first.',
+          `Home cannot scope by ${ref.placeType}. Supported: city, region, neighborhood, bbox, here.`,
         );
+      }
+      if (ref.source.kind !== 'homiio') {
+        return resolveExternalPlace(ref, token, language);
       }
       if (ref.placeType === 'city') {
         const cityId = await resolveCityId(ref.id);
@@ -200,6 +358,9 @@ async function resolveScope(
         }
         return { scope: { neighborhoodId }, location: { status: 'resolved', key } };
       }
+      // Unreachable: `SCOPEABLE_PLACE_TYPES` is checked above and holds exactly
+      // the three branches returned from. Kept as an exhaustiveness guard rather
+      // than deleted, so adding a fourth scopeable type fails loudly here.
       throw new HomeScopeError(
         'UNSUPPORTED_LOCATION',
         `Home cannot scope by ${ref.placeType}. Supported: city, region, neighborhood, bbox, here.`,
@@ -242,12 +403,13 @@ export async function getHomeSections(req: Request, res: Response): Promise<void
       return;
     }
     try {
-      const resolved = await resolveScope(parsed.value, query);
+      const resolved = await resolveScope(parsed.value, loc, languageOf(req), query);
       scope = resolved.scope;
       location = resolved.location;
     } catch (error) {
       if (error instanceof HomeScopeError) {
-        res.status(400).json({ success: false, message: error.message, error: error.code });
+        // `status` decides whether the client may retry — see the class comment.
+        res.status(error.status).json({ success: false, message: error.message, error: error.code });
         return;
       }
       throw error;
