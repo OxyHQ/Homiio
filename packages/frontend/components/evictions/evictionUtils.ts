@@ -61,6 +61,23 @@ export function formatEvictionFullDate(iso: string, locale: string): string {
 }
 
 /** Compact label for a map marker (e.g. "15 jul"). */
+/**
+ * A timeline entry's timestamp: the date AND the time.
+ *
+ * The timeline is an audit, and a bare date cannot distinguish two entries on
+ * the day everything happened — which is the day this page matters most.
+ */
+export function formatEvictionDateTime(iso: string, locale: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
 export function formatEvictionShortDate(iso: string, locale: string): string {
   const date = safeDate(iso);
   if (!date) return '';

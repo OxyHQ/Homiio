@@ -3,7 +3,7 @@
  *
  * Sectioned form (mirrors `app/reviews/write.tsx`): 1) Qué pasa (title +
  * description) · 2) Dónde (map address lookup → editable label + city + an
- * approximate-location Switch that rounds the pin server-side) · 3) Cuándo (date
+ * household-authorisation Switch; the published pin is always a disc) · 3) Cuándo (date
  * + time) · 4) Cómo ayudar (phone/email/telegram/whatsapp + instructions) ·
  * 5) Agencia/fondo ejecutor (free text) · 6) Foto opcional (single upload to the
  * `evictions` folder). Submits through `useCreateEviction` / `useUpdateEviction`
@@ -82,7 +82,9 @@ const buildInitialState = (existing?: EvictionCase): EvictionFormState => {
   const { date, time } = isoToParts(existing.scheduledAt);
   return {
     title: existing.title,
-    description: existing.description,
+    // Withheld under a precautionary hold, in which case the organiser is
+    // rewriting it anyway — an empty field is the honest starting point.
+    description: existing.description ?? '',
     label: existing.location.label,
     city: existing.location.city ?? '',
     date,
@@ -115,15 +117,36 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
   const router = useRouter();
   const mapRef = useRef<MapApi | null>(null);
 
-  // The case being edited is fixed for this form's lifetime, so its coordinates
-  // are a stable seed for the map center (later taps move the pin imperatively).
+  /**
+   * The map seed when EDITING.
+   *
+   * It is the PUBLISHED centre, not the reported point — the reported point was
+   * never stored (unless the household authorised it) and is not recoverable
+   * here. An organiser re-saving without moving the pin therefore submits a
+   * point inside the current disc, which the server recognises as "no change"
+   * and does NOT redraw: each redraw is an independent sample around the true
+   * point, and a watcher collecting several can average towards it.
+   */
   const initialCoords = useMemo<LonLat | null>(() => {
-    const c = existing?.location.coordinates?.coordinates;
-    return Array.isArray(c) && c.length === 2 ? [c[0], c[1]] : null;
+    const published = existing?.location.approximateCoordinates;
+    return published ? [published[0], published[1]] : null;
   }, [existing]);
 
   const [form, setForm] = useState<EvictionFormState>(() => buildInitialState(existing));
-  const [approximate, setApproximate] = useState(existing?.location.precision !== 'exact');
+  /**
+   * Whether the affected household itself asked for the exact location to be
+   * shareable.
+   *
+   * This is NOT a precision toggle. There is no value a client can send that
+   * publishes an exact point — `EvictionPublicPrecision` has no `exact` member.
+   * What this flag does is let the server STORE the reported point at all, so it
+   * can later be shared with a named actor under a time-bounded, revocable,
+   * audited grant. Off by default, and the CHECK constraint refuses the row if a
+   * future caller writes the coordinates without it.
+   */
+  const [householdAuthorizedExact, setHouseholdAuthorizedExact] = useState(
+    existing?.exactLocationAvailable ?? false,
+  );
   const [coords, setCoords] = useState<LonLat | null>(initialCoords);
   const [cover, setCover] = useState<{ imageId?: string; url?: string } | undefined>(
     existing?.coverImage,
@@ -219,10 +242,13 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
       description: form.description.trim(),
       location: {
         label: form.label.trim(),
-        coordinates: { type: 'Point', coordinates: [coords[0], coords[1]] },
-        precision: approximate ? 'approximate' : 'exact',
+        // The TRUE point the organiser dropped. The server derives the published
+        // disc from it and, without the household's authorisation below, never
+        // writes it anywhere.
+        coordinates: [coords[0], coords[1]],
         city: form.city.trim() || undefined,
       },
+      householdAuthorizedExact,
       scheduledAt,
       contactInfo: hasContact ? contactInfo : undefined,
       coverImage: cover?.imageId ? cover : undefined,
@@ -236,15 +262,39 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
         router.replace(`/evictions/${editId}`);
       } else {
         const created = await createMutation.mutateAsync(payload);
-        toast.success(t('evictions.form.createSuccess'));
-        router.replace(`/evictions/${created.id}`);
+        // The server says WHICH RULES it applied, by category, never the removed
+        // value — echoing the number back would put it in a response body, and
+        // this deployment logs those on error.
+        if (created.removedForPrivacy.length > 0) {
+          toast.success(
+            t('evictions.form.removedForPrivacy', {
+              rules: created.removedForPrivacy
+                .map((rule) => t(`evictions.form.removed.${rule}`))
+                .join(', '),
+            }),
+          );
+        } else {
+          toast.success(t('evictions.form.createSuccess'));
+        }
+        router.replace(`/evictions/${created.eviction.id}`);
       }
     } catch (submitError) {
       toast.error(
         submitError instanceof Error ? submitError.message : t('evictions.form.submitError'),
       );
     }
-  }, [form, coords, approximate, cover, mode, editId, updateMutation, createMutation, router, t]);
+  }, [
+    form,
+    coords,
+    householdAuthorizedExact,
+    cover,
+    mode,
+    editId,
+    updateMutation,
+    createMutation,
+    router,
+    t,
+  ]);
 
   const coverPreview = cover?.url ? resolveBackendImageUrl(cover.url) : undefined;
 
@@ -310,17 +360,28 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
               value={form.city}
               onChangeText={(text) => update('city', text)}
             />
+            {/* The published pin is ALWAYS a disc — there is no control for
+                that, because there is no value that publishes an exact point.
+                What this asks is whether the affected household authorised
+                storing the exact location so it can later be shared with a
+                named actor under an expiring, revocable, audited grant. */}
             <View style={styles.switchRow}>
               <View style={styles.switchText}>
                 <BloomText style={styles.switchLabel}>
-                  {t('evictions.form.approximateLabel')}
+                  {t('evictions.form.householdAuthorizedLabel')}
                 </BloomText>
                 <BloomText style={styles.switchHint}>
-                  {t('evictions.form.approximateHint')}
+                  {t('evictions.form.householdAuthorizedHint')}
                 </BloomText>
               </View>
-              <Switch value={approximate} onValueChange={setApproximate} />
+              <Switch
+                value={householdAuthorizedExact}
+                onValueChange={setHouseholdAuthorizedExact}
+              />
             </View>
+            <BloomText style={styles.switchHint}>
+              {t('evictions.form.approximateAlwaysNotice')}
+            </BloomText>
           </View>
 
           <View style={styles.section}>

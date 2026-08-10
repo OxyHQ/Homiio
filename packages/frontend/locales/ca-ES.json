@@ -3893,7 +3893,8 @@
       "upcoming": "Propers",
       "stopped": "Aturats",
       "postponed": "Ajornats",
-      "executed": "Executats"
+      "executed": "Executats",
+      "cancelled": "Cancelled"
     },
     "status": {
       "upcoming": "Proper",
@@ -3904,7 +3905,8 @@
     },
     "empty": {
       "title": "Encara no hi ha desnonaments aquí",
-      "subtitle": "Quan algú avisa d'un desnonament, apareix aquí perquè el barri pugui organitzar-se."
+      "subtitle": "Quan algú avisa d'un desnonament, apareix aquí perquè el barri pugui organitzar-se.",
+      "scoped": "Nothing reported in this area yet. Widen the area, or post a case so neighbours can organise."
     },
     "detail": {
       "title": "Desnonament",
@@ -3927,6 +3929,16 @@
         "whatsapp": "WhatsApp",
         "telegram": "Telegram",
         "email": "Correu"
+      },
+      "localResources": "Local resources",
+      "organization": "Organised by",
+      "organizationVerified": "Verified by Homiio against {{source}} on {{when}}.",
+      "organizationUnverified": "Named by whoever posted this case. Homiio has not verified it.",
+      "descriptionWithheld": "The description is hidden while a privacy report is reviewed by the organiser.",
+      "contactLocked": {
+        "not_attending": "Say you'll show up to see the meeting point and how to reach the organisers.",
+        "not_confirmed": "Organiser contact opens once your account has been on Homiio for a few days, or once another confirmed supporter vouches for you. This protects organisers from being harvested.",
+        "revoked": "The organiser has withdrawn your access to their contact details for this case."
       }
     },
     "owner": {
@@ -3968,14 +3980,22 @@
         "inaccurate": "Informació falsa",
         "scam": "És fals",
         "inappropriate": "Inapropiat",
-        "other": "Altres"
+        "other": "Altres",
+        "false_information": "False information",
+        "personal_data_exposed": "Exposes personal data",
+        "location_too_precise": "Location is too precise",
+        "outdated": "Out of date",
+        "harassment": "Harassment or incitement",
+        "spam": "Spam",
+        "dangerous_contact": "Dangerous contact"
       },
       "details": "Detalls (opcional)",
       "detailsRequired": "Detalls (obligatori)",
       "detailsPlaceholder": "Explica'ns què passa…",
       "submit": "Envia la denúncia",
       "success": "Denúncia enviada",
-      "error": "No s'ha pogut enviar la denúncia"
+      "error": "No s'ha pogut enviar la denúncia",
+      "holdNotice": "This reason hides the location and the description straight away until the organiser responds. The case itself is not deleted."
     },
     "form": {
       "title": "Publica un desnonament",
@@ -4018,7 +4038,87 @@
       "saveChanges": "Desa els canvis",
       "createSuccess": "Cas publicat",
       "updateSuccess": "Canvis desats",
-      "submitError": "No s'ha pogut desar el cas"
+      "submitError": "No s'ha pogut desar el cas",
+      "householdAuthorizedLabel": "The household asked to be able to share the exact address",
+      "householdAuthorizedHint": "Only turn this on if the affected household asked for it. It lets you later give one named person — a lawyer, an accompanier — time-limited access you can revoke.",
+      "approximateAlwaysNotice": "The public map always shows an approximate area, never the building. That cannot be turned off.",
+      "removedForPrivacy": "Posted. We removed some details for privacy: {{rules}}.",
+      "removed": {
+        "building_number": "a building number",
+        "unit_designator": "a floor or door",
+        "phone": "a phone number",
+        "email": "an email address"
+      }
+    },
+    "countInScope": "{{count}} case in this area",
+    "countInScope_other": "{{count}} cases in this area",
+    "follow": "Follow",
+    "following": "Following",
+    "unfollow": "Stop following",
+    "scope": {
+      "title": "Where are you looking?",
+      "subtitle": "This board is local. Pick an area so you see the evictions you can actually get to — or browse everywhere on purpose.",
+      "useMyLocation": "Use my location",
+      "browseGlobal": "Browse everywhere"
+    },
+    "sort": {
+      "soonest": "Soonest",
+      "distance": "Nearest",
+      "recently_updated": "Recently updated",
+      "newest": "Newest"
+    },
+    "precision": {
+      "radius": "The exact address is not published. The true location is somewhere within {{distance}} of this pin.",
+      "noPoint": "No map location is published for this case.",
+      "held": "Somebody reported this location as too precise or as exposing personal data, so it is hidden until the organiser responds."
+    },
+    "timeline": {
+      "empty": "Nothing has changed yet.",
+      "byline": "{{actor}} · {{when}}",
+      "systemActor": "Homiio",
+      "organizerActor": "The organiser",
+      "event": {
+        "case_created": "Case published",
+        "date_changed": "Date changed",
+        "location_precision_changed": "Location updated",
+        "instructions_updated": "Contact details updated",
+        "postponed": "Postponed",
+        "stopped": "Stopped",
+        "executed": "Carried out",
+        "cancelled": "Cancelled",
+        "legal_resource_added": "Legal resource added",
+        "organization_verified": "Organisation verified",
+        "correction_published": "Correction published",
+        "precautionary_hold_applied": "Put on hold",
+        "note": "Update"
+      }
+    },
+    "help": {
+      "empty": "The organiser has not listed what they need yet.",
+      "noteLine": "{{need}}: {{note}}",
+      "need": {
+        "presence": "People on the day",
+        "legal_support": "Legal support",
+        "translation": "Translation",
+        "transport": "Transport",
+        "temporary_housing": "Temporary housing",
+        "outreach": "Spread the word",
+        "organization_contact": "Contact an organisation"
+      }
+    },
+    "resources": {
+      "loading": "Loading local resources…",
+      "error": "Couldn't load local resources.",
+      "empty": "Nothing verified for this area yet.",
+      "meta": "{{source}} · checked {{verified}}",
+      "openLabel": "Open {{title}}",
+      "fallbackDisclaimer": "Homiio does not provide legal advice and does not represent these organisations.",
+      "type": {
+        "legal_aid": "Legal aid",
+        "tenant_union": "Tenant union",
+        "emergency_housing": "Emergency housing",
+        "official_info": "Official information"
+      }
     }
   },
   "agency": {

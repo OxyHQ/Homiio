@@ -6,6 +6,7 @@ import { MetricsService } from '../utils/metrics';
 import { syncCovers } from './cityCoverSyncService';
 import { repairCorruptCityCoordinates } from './cityCoordinateRepairService';
 import { sendEvictionOutcomeReminders } from './evictionOutcomeReminderService';
+import { sweepEvictionArchive } from './evictionArchivalService';
 import { reconcileModerationReports } from './moderation/ModerationReconciliation';
 import { expireShareLinks } from '../db/conversations/conversationRepository';
 import { getDb } from '../db/postgres';
@@ -47,6 +48,7 @@ class CronJobManager {
     this.setupCityCoverSyncJob();
     this.setupShareLinkExpiryJob();
     this.setupEvictionOutcomeReminderJob();
+    this.setupEvictionArchivalJob();
     this.setupModerationReconciliationJob();
     this.setupExpirySweepJob();
     this.setupHousingAlertJobs();
@@ -56,7 +58,7 @@ class CronJobManager {
 
     this.logger.info(
       'Cron jobs initialized (health + cleanup + city covers + eviction reminders + ' +
-        'moderation reconciliation; scrape loop retired)',
+        'eviction archival + moderation reconciliation; scrape loop retired)',
     );
   }
 
@@ -211,6 +213,46 @@ class CronJobManager {
   }
 
   /**
+   * Setup the eviction archival sweep — daily at 03:20 UTC.
+   *
+   * **This is the wiring `db/expiry.ts` says a registry entry does not give
+   * you.** ADR 0003 §7.5 requires the sweep AND its cron to land in the same
+   * change, because a retention rule with no job is a promise: nothing in
+   * Postgres watches a deadline column, so an unrun policy is indistinguishable
+   * from no policy right up until somebody asks why a two-year-old notice still
+   * carries an organiser's phone number.
+   *
+   * Daily rather than every five minutes: the deadline is ninety days, so the
+   * difference between running now and running tonight is not observable, and a
+   * frequent sweep over a whole table buys nothing.
+   */
+  private setupEvictionArchivalJob(): void {
+    const job = cron.schedule('20 3 * * *', async () => {
+      await this.runEvictionArchival();
+    }, {
+      timezone: 'UTC',
+      scheduled: false,
+    });
+
+    this.jobs.set('evictionArchival', job);
+    this.jobStatus.set('evictionArchival', { isRunning: true, lastRun: undefined, nextRun: undefined });
+    job.start();
+  }
+
+  private async runEvictionArchival(): Promise<void> {
+    this.jobStatus.set('evictionArchival', { isRunning: true, lastRun: new Date() });
+    try {
+      await sweepEvictionArchive();
+    } catch (error) {
+      // Logged, never rethrown: an unhandled rejection inside a cron tick takes
+      // the process down, and a missed archival pass is recoverable by the next.
+      this.logger.error('Eviction archival sweep failed', error);
+    } finally {
+      this.jobStatus.set('evictionArchival', { isRunning: false, lastRun: new Date() });
+    }
+  }
+
+  /**
    * Setup the expiry sweep — every five minutes.
    *
    * **This is the call `db/expiry.ts` says the registry does not make.** The
@@ -271,6 +313,11 @@ class CronJobManager {
    * signal rather than an error — and it is the only way to tell "nothing left
    * to do" from "still working through a backlog".
    */
+  /** The scheduled archival sweep, reachable on demand. */
+  async runEvictionArchivalNow(): Promise<void> {
+    await this.runEvictionArchival();
+  }
+
   /** The scheduled sweep, reachable on demand. See `runExpirySweepNow`. */
   async runExpirySweepNow(): Promise<void> {
     await this.runExpirySweep();
@@ -608,6 +655,19 @@ export function stopCronJobs(): void {
  * connects the two: a job wired to an empty target list satisfies both. This is
  * the seam that makes the connection assertable.
  */
+/**
+ * Run the eviction archival sweep NOW.
+ *
+ * Same reason as {@link runExpirySweepNow}: the scheduled path has to be
+ * REACHABLE without waiting a day, by a test that needs to assert the cron calls
+ * the real sweep and by an operator who needs it to have happened. Without it, a
+ * test can only prove "the sweep works when called directly", which does not
+ * distinguish a wired job from an unwired one.
+ */
+export async function runEvictionArchivalNow(): Promise<void> {
+  await cronManager.runEvictionArchivalNow();
+}
+
 export async function runExpirySweepNow(): Promise<void> {
   await cronManager.runExpirySweepNow();
 }

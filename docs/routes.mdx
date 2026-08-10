@@ -131,8 +131,9 @@ Review **writes** are on the authenticated router. Only reads are public.
 
 | Method | Path | Notes |
 |---|---|---|
-| `GET` | `/api/evictions` | Solidarity board; coordinates deliberately approximate |
-| `GET` | `/api/evictions/:id` | |
+| `GET` | `/api/evictions` | Solidarity board. REFUSES a request with no scope (`LOCATION_SCOPE_REQUIRED`); `?global=true` is the explicit worldwide mode |
+| `GET` | `/api/evictions/resources` | Curated legal/housing resources by `?countryCode` (+ optional `?regionId`). Declared BEFORE `/:id` so `resources` is not swallowed by the id matcher |
+| `GET` | `/api/evictions/:id` | Published centre + radius; never an exact coordinate |
 | `GET` | `/api/evictions/:id/comments` | |
 
 ### Other public
@@ -245,7 +246,7 @@ handshake.
 | `/api/notifications` | `GET /`, `GET|PUT|DELETE /:id`, `PATCH /:id/read`, `PATCH /read-all`, `DELETE /clear-all`, `POST /` |
 | `/api/reviews` | `POST /`, `GET|PUT|DELETE /:reviewId`, `POST /:reviewId/helpful`, `POST /:reviewId/report`, `GET /user/:oxyUserId` |
 | `/api/addresses` | `GET /search`, `GET /nearby`, `GET|PUT|DELETE /:id`, `POST /` |
-| `/api/evictions` | `POST /`, `PUT|DELETE /:id`, `POST /:id/attend|comments|updates|report`, `DELETE /:id/comments/:commentId`, `GET /me/list`, `GET /me/attending` |
+| `/api/evictions` | `POST /`, `PUT|DELETE /:id`, `POST /:id/attend|follow|comments|updates|report`, `POST /:id/hold/clear`, `POST /:id/vouch/:oxyUserId`, `POST /:id/supporters/:oxyUserId/revoke`, `GET|POST /:id/location/grants`, `POST /:id/location/grants/:oxyUserId/revoke`, `GET /:id/location/exact`, `GET /:id/location/audit`, `DELETE /:id/comments/:commentId`, `GET /me/list`, `GET /me/attending`, `GET /me/following` |
 | `/api/partners` | `POST /join`, `GET /me`, `GET /me/earnings`, `GET /me/referrals` |
 | `/api/analytics` | `GET /`, `GET /stats` |
 | `/api/ai` | Sindi: conversations CRUD, `POST /stream`, `POST /analyze-file[/stream]`, `POST /conversations/:id/share`, `POST /suggestions`, history |

@@ -12,7 +12,7 @@ import { useMemo } from 'react';
 import {
   CreateEvictionCaseData,
   CreateEvictionReportInput,
-  CreateEvictionUpdateData,
+  CreateEvictionTimelineEventData,
   EvictionCase,
   EvictionComment,
   UpdateEvictionCaseData,
@@ -21,6 +21,8 @@ import {
   EvictionAttendResult,
   EvictionCommentListResponse,
   EvictionListResponse,
+  EvictionWriteResult,
+  JurisdictionResourcesResponse,
   ListEvictionsParams,
   evictionService,
 } from '@/services/evictionService';
@@ -36,12 +38,17 @@ const EVICTION_LIST_KEY = 'evictions';
 const EVICTION_DETAIL_KEY = 'eviction';
 const EVICTION_COMMENTS_KEY = 'eviction-comments';
 const EVICTION_ATTENDING_KEY = 'eviction-attending';
+const EVICTION_FOLLOWING_KEY = 'eviction-following';
+const EVICTION_RESOURCES_KEY = 'eviction-resources';
 
 export const evictionKeys = {
   list: (params: ListEvictionsParams) => [EVICTION_LIST_KEY, params] as const,
   detail: (id: string) => [EVICTION_DETAIL_KEY, id] as const,
   comments: (id: string) => [EVICTION_COMMENTS_KEY, id] as const,
   attending: () => [EVICTION_ATTENDING_KEY] as const,
+  following: () => [EVICTION_FOLLOWING_KEY] as const,
+  resources: (countryCode: string, regionId?: string) =>
+    [EVICTION_RESOURCES_KEY, countryCode, regionId ?? null] as const,
 };
 
 export type EvictionsInfiniteResult = UseInfiniteQueryResult<
@@ -56,11 +63,16 @@ export type EvictionsInfiniteResult = UseInfiniteQueryResult<
 
 /**
  * Paginated public board feed. Page-based `useInfiniteQuery` (mechanics mirror
- * `usePropertySearch`): each `status`/`city` combination is its own cache entry
- * and paging reuses it. Omitting `status` lets the backend serve `upcoming`.
+ * `usePropertySearch`): each scope + filter combination is its own cache entry
+ * and paging reuses it.
+ *
+ * `params.scope` is REQUIRED, and a caller with no resolved location must pass
+ * `enabled: false` rather than a placeholder scope — the server refuses a
+ * scope-less request, and inventing `global` here to keep a spinner moving is
+ * exactly the silent widening ADR 0002 forbids.
  */
 export function useEvictions(
-  params: ListEvictionsParams = {},
+  params: ListEvictionsParams,
   options: { enabled?: boolean } = {},
 ): EvictionsInfiniteResult {
   const key = useMemo(() => evictionKeys.list(params), [params]);
@@ -147,12 +159,12 @@ export function useMyAttendingEvictions(
 }
 
 export function useCreateEviction(): UseMutationResult<
-  EvictionCase,
+  EvictionWriteResult,
   Error,
   CreateEvictionCaseData
 > {
   const queryClient = useQueryClient();
-  return useMutation<EvictionCase, Error, CreateEvictionCaseData>({
+  return useMutation<EvictionWriteResult, Error, CreateEvictionCaseData>({
     mutationFn: (payload) => evictionService.create(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [EVICTION_LIST_KEY] });
@@ -162,12 +174,12 @@ export function useCreateEviction(): UseMutationResult<
 
 export function useUpdateEviction(
   id: string,
-): UseMutationResult<EvictionCase, Error, UpdateEvictionCaseData> {
+): UseMutationResult<EvictionWriteResult, Error, UpdateEvictionCaseData> {
   const queryClient = useQueryClient();
-  return useMutation<EvictionCase, Error, UpdateEvictionCaseData>({
+  return useMutation<EvictionWriteResult, Error, UpdateEvictionCaseData>({
     mutationFn: (payload) => evictionService.update(id, payload),
-    onSuccess: (updated) => {
-      queryClient.setQueryData(evictionKeys.detail(id), updated);
+    onSuccess: (result) => {
+      queryClient.setQueryData(evictionKeys.detail(id), result.eviction);
       queryClient.invalidateQueries({ queryKey: [EVICTION_LIST_KEY] });
     },
   });
@@ -214,9 +226,10 @@ export function useToggleAttend(
       }
     },
     onSettled: () => {
-      // Refetch the detail: the server gates organiser contact behind attendance
-      // ("asiste para ver cómo ayudar"), so a fresh RSVP flips `contactLocked`
-      // off and the contact block appears (and vice-versa on un-RSVP).
+      // Refetch the detail: the server gates organiser contact behind a
+      // CONFIRMED supporter (an RSVP plus the ADR 0003 §7.3.1 second factor), so
+      // whether this RSVP unlocked anything is the server's answer and not one
+      // this cache can compute.
       queryClient.invalidateQueries({ queryKey: evictionKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: [EVICTION_LIST_KEY] });
       queryClient.invalidateQueries({ queryKey: evictionKeys.attending() });
@@ -226,14 +239,73 @@ export function useToggleAttend(
 
 export function useCreateEvictionUpdate(
   id: string,
-): UseMutationResult<EvictionCase, Error, CreateEvictionUpdateData> {
+): UseMutationResult<EvictionWriteResult, Error, CreateEvictionTimelineEventData> {
   const queryClient = useQueryClient();
-  return useMutation<EvictionCase, Error, CreateEvictionUpdateData>({
+  return useMutation<EvictionWriteResult, Error, CreateEvictionTimelineEventData>({
     mutationFn: (payload) => evictionService.createUpdate(id, payload),
-    onSuccess: (updated) => {
-      queryClient.setQueryData(evictionKeys.detail(id), updated);
+    onSuccess: (result) => {
+      queryClient.setQueryData(evictionKeys.detail(id), result.eviction);
       queryClient.invalidateQueries({ queryKey: [EVICTION_LIST_KEY] });
     },
+  });
+}
+
+/**
+ * Follow / unfollow a case.
+ *
+ * Deliberately NOT folded into {@link useToggleAttend}: "I will be there" and
+ * "tell me if the date moves" are different statements, and a board that
+ * conflates them either spams people who only wanted to watch or inflates the
+ * turnout number the whole page exists to report.
+ */
+export function useToggleFollow(
+  id: string,
+): UseMutationResult<{ following: boolean }, Error, void, { previous?: EvictionCase }> {
+  const queryClient = useQueryClient();
+  return useMutation<{ following: boolean }, Error, void, { previous?: EvictionCase }>({
+    mutationFn: () => evictionService.toggleFollow(id),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: evictionKeys.detail(id) });
+      const previous = queryClient.getQueryData<EvictionCase>(evictionKeys.detail(id));
+      if (previous) {
+        queryClient.setQueryData<EvictionCase>(evictionKeys.detail(id), {
+          ...previous,
+          isFollowing: !previous.isFollowing,
+        });
+      }
+      return { previous };
+    },
+    onError: (_error, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(evictionKeys.detail(id), context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: evictionKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: evictionKeys.following() });
+    },
+  });
+}
+
+/**
+ * Legal and housing resources for a jurisdiction.
+ *
+ * Disabled without a country code rather than defaulting to one: showing a
+ * Spanish tenant union to somebody in Ireland is worse than showing nothing,
+ * and an empty list is a true answer this UI is built to render.
+ */
+export function useJurisdictionResources(
+  countryCode: string | undefined,
+  regionId?: string,
+): UseQueryResult<JurisdictionResourcesResponse, Error> {
+  return useQuery<JurisdictionResourcesResponse, Error>({
+    queryKey: evictionKeys.resources(countryCode ?? '', regionId),
+    queryFn: () => {
+      if (!countryCode) throw new Error('A country code is required');
+      return evictionService.resources(countryCode, regionId);
+    },
+    enabled: Boolean(countryCode),
+    staleTime: LIST_STALE_TIME,
   });
 }
 

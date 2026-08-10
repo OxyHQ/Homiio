@@ -183,8 +183,14 @@ export default function () {
 
   // Public eviction solidarity board reads (no auth; optionalAuth still runs
   // before public routes so a signed-in viewer's `isAttending` is resolved).
-  // Writes + caller-scoped lists live on the authenticated `/evictions` router.
+  // Writes + caller-scoped lists live on the authenticated `/evictions` router,
+  // and so does `GET /evictions/:id/location/exact` — the only endpoint that
+  // returns an exact coordinate, which would return one to anybody from here.
+  //
+  // `/evictions/resources` is declared BEFORE `/evictions/:id` so `resources` is
+  // not swallowed by the id matcher.
   router.get('/evictions', asyncHandler(evictionController.listEvictions));
+  router.get('/evictions/resources', asyncHandler(evictionController.listResources));
   router.get('/evictions/:id/comments', asyncHandler(evictionController.listComments));
   router.get('/evictions/:id', asyncHandler(evictionController.getEvictionById));
 

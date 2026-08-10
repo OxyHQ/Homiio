@@ -157,6 +157,20 @@ export const OXY_ACCOUNT_COLUMN_NAMES: ReadonlySet<string> = new Set([
   // `Lease.documents[].uploadedBy` and `Lease.terminationNotice.givenBy`.
   'uploaded_by_oxy_user_id',
   'termination_notice_given_by_oxy_user_id',
+  // The eviction board's four named roles (#358). Each one is a role and not a
+  // synonym for the case owner, which is why none of them can be folded into
+  // `oxy_user_id`:
+  //  - the timeline's ACTOR, nullable because a system event has none and stays
+  //    anonymous (ADR 0003 §5.8);
+  //  - an access audit row's actor, which is frequently NOT the organiser —
+  //    a refused read is written against whoever tried;
+  //  - the two sides of an exact-location grant;
+  //  - the two sides of a supporter vouch.
+  'actor_oxy_user_id',
+  'grantee_oxy_user_id',
+  'granted_by_oxy_user_id',
+  'voucher_oxy_user_id',
+  'vouched_oxy_user_id',
 ]);
 
 /**

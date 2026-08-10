@@ -96,6 +96,9 @@ export const PROTECTED_COLUMNS_BY_TABLE = {
     'contactTelegram',
     'contactWhatsapp',
     'contactInstructions',
+    'locationExactLongitude',
+    'locationExactLatitude',
+    'locationExactAddress',
   ],
   leases: ['signaturesLandlordDigitalSignature', 'signaturesTenantDigitalSignature'],
   profiles: ['personalInfoAnnualIncome'],
@@ -196,6 +199,35 @@ export const PROTECTED_COLUMNS: readonly ProtectedColumn[] = [
       'Free text the organizer writes for people who are coming — routinely a ' +
       'meeting point, a door code or a name. Protected with the four contact ' +
       'handles because it is the same disclosure by a different route.',
+  },
+  {
+    table: evictionCases,
+    property: 'locationExactLongitude',
+    reason:
+      'Half of the coordinate of a home a bailiff is expected at, stored ONLY ' +
+      'when the affected household itself authorised it (ADR 0003 §7.3). Every ' +
+      'public read of this table goes through `publicColumns`, so the exclusion ' +
+      'is what makes "the public response never contains the exact coordinate" ' +
+      'a COMPILE error rather than a serializer nobody re-reads. The one path ' +
+      'that may serve it — an unexpired, unrevoked access grant — names the ' +
+      'column explicitly, which is greppable in a way a whole-row read is not.',
+  },
+  {
+    table: evictionCases,
+    property: 'locationExactLatitude',
+    reason:
+      'The other half of the same coordinate, protected for the same reason. ' +
+      'Listed separately rather than as a wildcard because the registry is what ' +
+      'the TYPE-level exclusion is computed from, and a pattern cannot be.',
+  },
+  {
+    table: evictionCases,
+    property: 'locationExactAddress',
+    reason:
+      'The street address, and the reason a coordinate rule alone is not ' +
+      'enough: a reporter who types the full address into a text column has ' +
+      'published it however precise the pin is. Stored only under the same ' +
+      'household authorisation, and served only through the same grant.',
   },
 ];
 

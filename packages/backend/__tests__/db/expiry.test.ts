@@ -142,7 +142,16 @@ describe('expiry sweep registry', () => {
 
     // Vacuity floor: an empty forbidden list would make the filter below pass
     // over nothing, which is indistinguishable from a registry that respects it.
-    expect(forbidden).toEqual(['conversations.sharing_expires_at']);
+    //
+    // `eviction_cases.archived_at` joined it with #358: the column is a STAMP
+    // recording when a case left the public board, and the row must survive it
+    // (ADR 0003 §7.5 keeps the anonymised outcome deliberately). Registering it
+    // as a sweep target would delete a notice ninety days after its last edit
+    // and would read as housekeeping in the diff.
+    expect(forbidden).toEqual([
+      'conversations.sharing_expires_at',
+      'eviction_cases.archived_at',
+    ]);
     expect(forbidden.filter((label) => registered.has(label))).toEqual([]);
 
     const unexplained = EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE.filter(

@@ -1,19 +1,33 @@
 /**
- * Eviction solidarity board (tablón) — the public list of upcoming evictions
+ * Eviction solidarity board (tablón) — the LOCAL list of upcoming evictions
  * (desahucios) neighbours can show up to stop.
  *
- * Layout: Header (+ auth-gated "Publicar" CTA) → Bloom Chip status filter →
- * flat `EvictionCard` list → floating map toggle (`MapFab`) revealing the pins.
- * Paginates through BOTH infinite-scroll primitives (native `onScroll` +
- * web `LoadMoreSentinel`). Public browse: no auth needed to read.
+ * ## The board asks WHERE before it asks anything else
+ *
+ * There is no default feed. Until a scope is chosen the screen shows the scope
+ * bar and an explanation, and the query does not run — `enabled: false`, not a
+ * placeholder scope. The server refuses a scope-less request
+ * (`LOCATION_SCOPE_REQUIRED`), and inventing `global` here to keep a spinner
+ * moving would be exactly the silent widening ADR 0002 §2 forbids: *"a
+ * geocoding failure never degrades into a worldwide feed"*.
+ *
+ * `?global=true` stays reachable, as a button somebody presses.
+ *
+ * ## List, map and count are ONE query
+ *
+ * The map draws markers built from the SAME `cases` array the list renders, and
+ * the count is the `total` the same response carried. There is no second, wider
+ * query for pins — which is the ordinary way a map and a list stop agreeing, and
+ * on this board a pin the list does not explain is a place nobody can account
+ * for.
+ *
+ * Layout: Header (+ auth-gated "Publicar") → scope bar → status and help-need
+ * filters → sort → flat `EvictionCard` list → floating map toggle. Paginates
+ * through BOTH infinite-scroll primitives (native `onScroll` + web
+ * `LoadMoreSentinel`).
  */
 import React, { useCallback, useMemo, useState } from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  View,
-  type ImageSourcePropType,
-} from 'react-native';
+import { ScrollView, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -25,16 +39,24 @@ import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxyhq/services';
 
-import { EvictionCaseStatus } from '@homiio/shared-types';
+import {
+  EvictionCaseStatus,
+  EvictionHelpNeedType,
+  type EvictionBoardScope,
+  type EvictionBoardSort,
+} from '@homiio/shared-types';
 import { Header } from '@/components/Header';
 import Map from '@/components/Map';
 import { MapFab } from '@/components/ui/MapFab';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
+import { LocationScopeBar } from '@/components/location/LocationScopeBar';
+import { useLocationScope } from '@/hooks/useLocationScope';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useEvictions } from '@/hooks/useEvictionQueries';
 import { EvictionCard } from '@/components/evictions/EvictionCard';
+import { selectionToBoardScope } from '@/components/evictions/evictionScope';
 import { formatEvictionShortDate } from '@/components/evictions/evictionUtils';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
@@ -42,12 +64,25 @@ import { radius, spacing } from '@/constants/styles';
 const EMPTY_ILLUSTRATION: ImageSourcePropType = require('@/assets/illustrations/empty-evictions.png');
 
 /** Board filters — one paginated server status per chip (no all-status feed). */
-const FILTERS: { status: EvictionCaseStatus; i18nKey: string }[] = [
+const STATUS_FILTERS: { status: EvictionCaseStatus; i18nKey: string }[] = [
   { status: EvictionCaseStatus.UPCOMING, i18nKey: 'evictions.filter.upcoming' },
   { status: EvictionCaseStatus.STOPPED, i18nKey: 'evictions.filter.stopped' },
   { status: EvictionCaseStatus.POSTPONED, i18nKey: 'evictions.filter.postponed' },
   { status: EvictionCaseStatus.EXECUTED, i18nKey: 'evictions.filter.executed' },
+  { status: EvictionCaseStatus.CANCELLED, i18nKey: 'evictions.filter.cancelled' },
 ];
+
+const HELP_FILTERS: readonly EvictionHelpNeedType[] = [
+  EvictionHelpNeedType.PRESENCE,
+  EvictionHelpNeedType.LEGAL_SUPPORT,
+  EvictionHelpNeedType.TRANSLATION,
+  EvictionHelpNeedType.TRANSPORT,
+  EvictionHelpNeedType.TEMPORARY_HOUSING,
+  EvictionHelpNeedType.OUTREACH,
+];
+
+/** `distance` is offered only when the scope carries a centre — see below. */
+const SORTS: readonly EvictionBoardSort[] = ['soonest', 'distance', 'recently_updated', 'newest'];
 
 const BoardSkeleton: React.FC = () => (
   <View style={styles.listWrap}>
@@ -69,12 +104,49 @@ export default function EvictionsBoardScreen() {
   const router = useRouter();
   const { isAuthenticated } = useOxy();
 
+  // The APP-WIDE scope (#353), not a board-local one. Home and this board read
+  // the same ladder, so two surfaces cannot disagree about where the user is —
+  // and `canQuery` is the single flag that answers "may I fetch?", rather than
+  // each screen re-deriving it from a combination one of them will get wrong.
+  const scope = useLocationScope();
   const [status, setStatus] = useState<EvictionCaseStatus>(EvictionCaseStatus.UPCOMING);
+  const [helpNeed, setHelpNeed] = useState<EvictionHelpNeedType | undefined>(undefined);
+  const [sort, setSort] = useState<EvictionBoardSort>('soonest');
   const [showMap, setShowMap] = useState(false);
 
-  const params = useMemo(() => ({ status }), [status]);
+  /**
+   * The board scope, from the shared selection or the EXPLICIT global mode.
+   *
+   * `isGlobal` rather than `selection === null`: "everywhere" is a decision
+   * somebody made and "nothing chosen yet" is the state that must never look
+   * like one. A device failure leaves this `undefined`, which is what stops the
+   * board answering with the world.
+   */
+  const boardScope: EvictionBoardScope | undefined = useMemo(
+    () => (scope.isGlobal ? { kind: 'global' } : selectionToBoardScope(scope.selection)),
+    [scope.isGlobal, scope.selection],
+  );
+
+  const hasCentre = boardScope?.kind === 'radius' || boardScope?.kind === 'bbox';
+  // Asking for a distance sort without a centre is a 400, so the control that
+  // could produce one is not offered — the server's refusal is the backstop, not
+  // the interaction.
+  const effectiveSort: EvictionBoardSort = sort === 'distance' && !hasCentre ? 'soonest' : sort;
+
+  const params = useMemo(
+    () =>
+      boardScope
+        ? { scope: boardScope, status, helpNeed, sort: effectiveSort }
+        : // Never dispatched: the query below is disabled without a scope. The
+          // placeholder exists only because the params object is memoised above
+          // the enabled check.
+          { scope: { kind: 'global' } as EvictionBoardScope, status, helpNeed, sort: effectiveSort },
+    [boardScope, status, helpNeed, effectiveSort],
+  );
+
   const {
     cases,
+    total,
     isLoading,
     isError,
     error,
@@ -82,27 +154,26 @@ export default function EvictionsBoardScreen() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useEvictions(params);
+  } = useEvictions(params, { enabled: scope.canQuery && Boolean(boardScope) });
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
   const { onScroll } = useInfiniteScroll({ onEndReached: handleEndReached, enabled: hasNextPage });
 
+  /**
+   * Map markers, from the SAME array the list renders.
+   *
+   * A case under a precautionary hold publishes no coordinate at all, so it has
+   * no marker — and that is correct rather than a gap: the list still shows it,
+   * and the map does not point at a place the server refused to state.
+   */
   const markers = useMemo(
     () =>
       cases
         .map((eviction) => {
-          const coords = eviction.location?.coordinates?.coordinates;
-          if (
-            !coords ||
-            coords.length !== 2 ||
-            typeof coords[0] !== 'number' ||
-            typeof coords[1] !== 'number' ||
-            (coords[0] === 0 && coords[1] === 0)
-          ) {
-            return null;
-          }
+          const coords = eviction.location.approximateCoordinates;
+          if (!coords) return null;
           return {
             id: eviction.id,
             coordinates: [coords[0], coords[1]] as [number, number],
@@ -110,16 +181,13 @@ export default function EvictionsBoardScreen() {
           };
         })
         .filter(
-          (m): m is { id: string; coordinates: [number, number]; priceLabel: string } =>
-            m !== null,
+          (marker): marker is { id: string; coordinates: [number, number]; priceLabel: string } =>
+            marker !== null,
         ),
     [cases, i18n.language],
   );
 
-  const openDetail = useCallback(
-    (id: string) => router.push(`/evictions/${id}`),
-    [router],
-  );
+  const openDetail = useCallback((id: string) => router.push(`/evictions/${id}`), [router]);
 
   const handlePublish = useCallback(() => {
     if (!isAuthenticated) {
@@ -143,7 +211,30 @@ export default function EvictionsBoardScreen() {
     </Button>
   );
 
+  const scopePrompt = (
+    <View style={styles.scopePrompt}>
+      <Ionicons name="compass-outline" size={28} color={colors.textSecondary} />
+      <H3 style={styles.emptyTitle}>{t('evictions.scope.title')}</H3>
+      <BloomText style={styles.emptyMessage}>{t('evictions.scope.subtitle')}</BloomText>
+      <View style={styles.scopeActions}>
+        <Button
+          variant="primary"
+          size="medium"
+          onPress={scope.useCurrentLocation}
+          icon={<Ionicons name="navigate" size={16} color={colors.primaryForeground} />}
+          iconPosition="left"
+        >
+          {t('evictions.scope.useMyLocation')}
+        </Button>
+        <Button variant="outline" size="medium" onPress={scope.exploreGlobal}>
+          {t('evictions.scope.browseGlobal')}
+        </Button>
+      </View>
+    </View>
+  );
+
   const listBody = () => {
+    if (!boardScope) return scopePrompt;
     if (isLoading && cases.length === 0) return <BoardSkeleton />;
     if (isError) {
       return (
@@ -165,7 +256,11 @@ export default function EvictionsBoardScreen() {
             accessibilityIgnoresInvertColors
           />
           <H3 style={styles.emptyTitle}>{t('evictions.empty.title')}</H3>
-          <BloomText style={styles.emptyMessage}>{t('evictions.empty.subtitle')}</BloomText>
+          <BloomText style={styles.emptyMessage}>
+            {/* The empty state names the AREA, so "nothing here" cannot be
+                mistaken for "nothing anywhere". */}
+            {t('evictions.empty.scoped')}
+          </BloomText>
           <Button
             variant="primary"
             size="medium"
@@ -197,14 +292,9 @@ export default function EvictionsBoardScreen() {
 
   return (
     <View style={styles.root}>
-      <Header
-        options={{
-          title: t('evictions.title'),
-          rightComponents: [publishButton],
-        }}
-      />
+      <Header options={{ title: t('evictions.title'), rightComponents: [publishButton] }} />
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        {showMap ? (
+        {showMap && boardScope ? (
           <View style={styles.mapPanel}>
             <Map
               style={styles.mapFill}
@@ -227,36 +317,101 @@ export default function EvictionsBoardScreen() {
               <BloomText style={styles.subtitle}>{t('evictions.subtitle')}</BloomText>
             </View>
 
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterRow}
-            >
-              {FILTERS.map((entry) => {
-                const isActive = status === entry.status;
-                return (
-                  <Chip
-                    key={entry.status}
-                    onPress={() => setStatus(entry.status)}
-                    variant={isActive ? 'solid' : 'outlined'}
-                    color={isActive ? 'primary' : 'default'}
-                    selected={isActive}
-                  >
-                    {t(entry.i18nKey)}
-                  </Chip>
-                );
-              })}
-            </ScrollView>
+            <LocationScopeBar
+              selection={scope.selection}
+              resolution={scope.resolution}
+              onChange={(next) => {
+                if (next) scope.choose(next);
+              }}
+              onExploreGlobal={scope.isGlobal ? undefined : scope.exploreGlobal}
+              isGlobal={scope.isGlobal}
+              nearbyPlace={scope.nearbyPlace}
+              deviceUnavailable={scope.deviceIssue !== null}
+              {...(scope.source === 'device' ? {} : { onUseCurrentLocation: scope.useCurrentLocation })}
+            />
+
+            {boardScope ? (
+              <>
+                <BloomText style={styles.count} accessibilityRole="header">
+                  {t('evictions.countInScope', { count: total })}
+                </BloomText>
+
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.filterRow}
+                >
+                  {STATUS_FILTERS.map((entry) => {
+                    const isActive = status === entry.status;
+                    return (
+                      <Chip
+                        key={entry.status}
+                        onPress={() => setStatus(entry.status)}
+                        variant={isActive ? 'solid' : 'outlined'}
+                        color={isActive ? 'primary' : 'default'}
+                        selected={isActive}
+                      >
+                        {t(entry.i18nKey)}
+                      </Chip>
+                    );
+                  })}
+                </ScrollView>
+
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.filterRow}
+                >
+                  {HELP_FILTERS.map((need) => {
+                    const isActive = helpNeed === need;
+                    return (
+                      <Chip
+                        key={need}
+                        onPress={() => setHelpNeed(isActive ? undefined : need)}
+                        variant={isActive ? 'solid' : 'outlined'}
+                        color={isActive ? 'primary' : 'default'}
+                        selected={isActive}
+                      >
+                        {t(`evictions.help.need.${need}`)}
+                      </Chip>
+                    );
+                  })}
+                </ScrollView>
+
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.filterRow}
+                >
+                  {SORTS.filter((entry) => entry !== 'distance' || hasCentre).map((entry) => {
+                    const isActive = effectiveSort === entry;
+                    return (
+                      <Chip
+                        key={entry}
+                        onPress={() => setSort(entry)}
+                        variant={isActive ? 'solid' : 'outlined'}
+                        color={isActive ? 'primary' : 'default'}
+                        selected={isActive}
+                      >
+                        {t(`evictions.sort.${entry}`)}
+                      </Chip>
+                    );
+                  })}
+                </ScrollView>
+              </>
+            ) : null}
 
             {listBody()}
           </ScrollView>
         )}
 
-        <MapFab
-          onPress={() => setShowMap((prev) => !prev)}
-          label={showMap ? t('evictions.showList') : t('evictions.showMap')}
-          icon={showMap ? 'list' : 'map'}
-        />
+        {boardScope ? (
+          <MapFab
+            onPress={() => setShowMap((prev) => !prev)}
+            label={showMap ? t('evictions.showList') : t('evictions.showMap')}
+            icon={showMap ? 'list' : 'map'}
+          />
+        ) : null}
       </SafeAreaView>
     </View>
   );
@@ -285,6 +440,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.muted,
   },
+  count: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
   filterRow: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -306,6 +466,19 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.sm,
     justifyContent: 'center',
+  },
+  scopePrompt: {
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing['3xl'],
+    paddingHorizontal: spacing.lg,
+  },
+  scopeActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    justifyContent: 'center',
+    marginTop: spacing.sm,
   },
   emptyWrap: {
     alignItems: 'center',

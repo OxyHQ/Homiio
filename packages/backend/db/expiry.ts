@@ -72,6 +72,7 @@
 import type { PgColumn, PgTable } from 'drizzle-orm/pg-core';
 import type { ExpirySweepTarget } from '@oxyhq/db/expiry';
 import { conversations } from './schema/conversations';
+import { evictionCases } from './schema/evictions';
 import { moderationEvents, moderationOutbox } from './schema/moderation';
 import { placePois } from './schema/placePois';
 import { properties } from './schema/properties';
@@ -213,5 +214,21 @@ export const EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE: readonly NonDeletingExpiryColu
       'columns, which is exactly what `revokeSharing` already does; the read ' +
       'side needs nothing, because `findByShareToken` already refuses an expired ' +
       'token.',
+  },
+  {
+    table: evictionCases,
+    column: evictionCases.archivedAt,
+    reason:
+      'This deadline is a STAMP, not a scythe: `archived_at` records when a case ' +
+      'left the public board, and the row must survive it. ADR 0003 §7.5 keeps ' +
+      'the archived case deliberately — the anonymised outcome is what makes the ' +
+      'board evidence of a pattern rather than a noticeboard — while the sweep ' +
+      'in `services/evictionArchivalService.ts` deletes only the CONTACT block ' +
+      'and the exact coordinates and drops the published precision. Registering ' +
+      'it here as a sweep target would delete the case ninety days after its ' +
+      'last edit, which is the opposite of the policy and would look like ' +
+      'housekeeping in the diff. The actual deletion, at 24 months AFTER ' +
+      'archival, is that service\'s second half and belongs there because it ' +
+      'measures from this column rather than expiring it.',
   },
 ];
