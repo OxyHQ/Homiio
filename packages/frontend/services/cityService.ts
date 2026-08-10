@@ -2,18 +2,63 @@
  * City Service
  * Handles API calls for city-related operations
  * Uses shared types from @homiio/shared-types
+ *
+ * ## A city is addressed by id; a name and a slug are labels (#295)
+ *
+ * `getCityBySlug` used to be the entry point for every deep link, and it guessed
+ * three times over: it tried the token as an id, then looked it up in a
+ * hardcoded fourteen-city map (`barcelona → Barcelona, Catalonia, Spain`), then
+ * ran a name search and took `data[0]`. `getCityByLocation` defaulted the
+ * country to `'USA'`. Between them, `?city=barcelona` resolved to whichever
+ * Barcelona happened to sort first, a city outside the map resolved to whatever
+ * a substring search ranked highest, and both answers could change as listings
+ * arrived — with nothing anywhere saying a choice had been made.
+ *
+ * All of it is gone, replaced by {@link CityService.lookupCity}, which returns
+ * the server's `CityLookupResult` union verbatim. A caller that needs one city
+ * must handle `ambiguous` by ASKING; there is no longer an API here that will
+ * pick for it.
+ *
+ * `searchCities` went with them. It was a typeahead wrapper whose only caller
+ * was `getCityBySlug`'s `data[0]` fallback, so removing that left it dead — and
+ * a "search, then take the first" affordance sitting in the file is how the
+ * behaviour comes back. `GET /api/cities/search` is unchanged and remains the
+ * right endpoint for a real typeahead; a screen that grows one should call it
+ * and render the LIST.
  */
 
-import api from '@/utils/api';
+import api, { ApiError } from '@/utils/api';
 import {
   City,
   CityFilters,
+  CityLookupResult,
+  CityPlaceCandidate,
   CityPropertiesResponse,
   CitiesResponse,
 } from '@homiio/shared-types';
 
 // Re-export the types for backward compatibility
-export type { City, CityFilters, CityPropertiesResponse, CitiesResponse };
+export type { City, CityFilters, CityLookupResult, CityPlaceCandidate, CityPropertiesResponse, CitiesResponse };
+
+/**
+ * What a caller may hand the lookup besides the token.
+ *
+ * Every field is a DISCRIMINATOR the server applies as a filter, except `near`,
+ * which biases the order of an ambiguous list and never removes a candidate.
+ */
+export interface CityLookupOptions {
+  /** ISO-3166-1 alpha-2. There is no default country — see the module comment. */
+  countryCode?: string;
+  countryId?: string;
+  regionId?: string;
+  /** A region NAME, resolved within the country when one is given. */
+  region?: string;
+  /** Proximity bias, in degrees. Ranking only. */
+  near?: { longitude: number; latitude: number };
+  /** `west > east` crosses the antimeridian. */
+  bounds?: { west: number; south: number; east: number; north: number };
+  limit?: number;
+}
 
 class CityService {
   /**
@@ -52,21 +97,40 @@ class CityService {
   }
 
   /**
-   * Get city by name, state, and country
+   * Resolve a city token (an id, a name or a slug) to one place, a list of
+   * candidates, or nothing.
+   *
+   * Never picks. `ambiguous` is a real outcome the caller must render — that is
+   * the whole of #295 — and `not_found` is distinct from it: "we do not know
+   * where that is" and "there are several of those" want different UI and a
+   * different next step.
+   *
+   * The 404 is caught and mapped rather than thrown because `not_found` is a
+   * member of the union, not an error condition. Any other failure (network, 5xx)
+   * still throws, because "the request failed" and "there is no such city" are
+   * different answers and a caller that cannot tell them apart will render the
+   * wrong one (`docs/adr/0002` §4.3).
    */
-  async getCityByLocation(
-    name: string,
-    state: string,
-    country: string = 'USA',
-  ): Promise<{ data: City }> {
-    const params = new URLSearchParams({
-      name,
-      state,
-      country,
-    });
+  async lookupCity(token: string, options: CityLookupOptions = {}): Promise<CityLookupResult> {
+    const params = new URLSearchParams({ q: token });
+    if (options.countryCode) params.append('countryCode', options.countryCode);
+    if (options.countryId) params.append('countryId', options.countryId);
+    if (options.regionId) params.append('regionId', options.regionId);
+    if (options.region) params.append('region', options.region);
+    if (options.near) params.append('near', `${options.near.longitude},${options.near.latitude}`);
+    if (options.bounds) {
+      const { west, south, east, north } = options.bounds;
+      params.append('bounds', `${west},${south},${east},${north}`);
+    }
+    if (options.limit) params.append('limit', String(options.limit));
 
-    const response = await api.get(`/api/cities/lookup?${params.toString()}`);
-    return response.data;
+    try {
+      const response = await api.get(`/api/cities/lookup?${params.toString()}`);
+      return response.data as CityLookupResult;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) return { status: 'not_found' };
+      throw error;
+    }
   }
 
   /**
@@ -105,19 +169,6 @@ class CityService {
   }
 
   /**
-   * Search cities by query
-   */
-  async searchCities(query: string, limit: number = 10): Promise<{ data: City[] }> {
-    const params = new URLSearchParams({
-      q: query,
-      limit: limit.toString(),
-    });
-
-    const response = await api.get(`/api/cities/search?${params.toString()}`);
-    return response.data;
-  }
-
-  /**
    * Create a new city (admin only)
    */
   async createCity(cityData: Partial<City>): Promise<{ data: City }> {
@@ -133,49 +184,6 @@ class CityService {
     return response.data;
   }
 
-  /**
-   * Get city by slug (converts slug to city lookup)
-   */
-  async getCityBySlug(slug: string): Promise<{ data: City } | null> {
-    try {
-      // Try to find city by ID first
-      return await this.getCityById(slug);
-    } catch (error) {
-      // If not found by ID, try to parse as city name
-      const cityName = slug.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
-
-      // Common city mappings for slugs
-      const cityMappings: { [key: string]: { name: string; state: string; country: string } } = {
-        'new-york': { name: 'New York', state: 'New York', country: 'USA' },
-        'los-angeles': { name: 'Los Angeles', state: 'California', country: 'USA' },
-        chicago: { name: 'Chicago', state: 'Illinois', country: 'USA' },
-        miami: { name: 'Miami', state: 'Florida', country: 'USA' },
-        austin: { name: 'Austin', state: 'Texas', country: 'USA' },
-        seattle: { name: 'Seattle', state: 'Washington', country: 'USA' },
-        denver: { name: 'Denver', state: 'Colorado', country: 'USA' },
-        nashville: { name: 'Nashville', state: 'Tennessee', country: 'USA' },
-        portland: { name: 'Portland', state: 'Oregon', country: 'USA' },
-        'san-francisco': { name: 'San Francisco', state: 'California', country: 'USA' },
-        barcelona: { name: 'Barcelona', state: 'Catalonia', country: 'Spain' },
-        berlin: { name: 'Berlin', state: 'Berlin', country: 'Germany' },
-        amsterdam: { name: 'Amsterdam', state: 'North Holland', country: 'Netherlands' },
-        stockholm: { name: 'Stockholm', state: 'Stockholm', country: 'Sweden' },
-      };
-
-      const mapping = cityMappings[slug.toLowerCase()];
-      if (mapping) {
-        return await this.getCityByLocation(mapping.name, mapping.state, mapping.country);
-      }
-
-      // If no mapping found, try a search
-      const searchResults = await this.searchCities(cityName, 1);
-      if (searchResults.data.length > 0) {
-        return { data: searchResults.data[0] };
-      }
-
-      return null;
-    }
-  }
 }
 
 export const cityService = new CityService();

@@ -167,7 +167,7 @@ export default function () {
   router.get('/cities', asyncHandler(cityController.getCities));
   router.get('/cities/popular', asyncHandler(cityController.getPopularCities));
   router.get('/cities/search', asyncHandler(cityController.searchCities));
-  router.get('/cities/lookup', asyncHandler(cityController.getCityByLocation));
+  router.get('/cities/lookup', asyncHandler(cityController.lookupCity));
   router.get('/cities/:id', asyncHandler(cityController.getCityById));
   router.get('/cities/:id/properties', asyncHandler(cityController.getPropertiesByCity));
 

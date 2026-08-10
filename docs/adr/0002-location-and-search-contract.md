@@ -321,9 +321,36 @@ export interface GeoBounds {
  *  - `exact`       a building-level point somebody deliberately provided.
  *  - `approximate` an exact point deliberately degraded (rounded or offset).
  *  - `centroid`    the representative point of an AREA. Not anyone's location.
- *  - `area`        no meaningful point at all; only `bounds`/`polygon` apply.
+ *  - `area`        the EXTENT is the meaning. Any point is derived framing
+ *                  rather than the place's own location, and there may be
+ *                  none at all. AMENDED — see §19(C); this line previously
+ *                  read "no meaningful point at all", which `map_bounds`
+ *                  below contradicts, and two implementers read the two
+ *                  statements to opposite conclusions.
  */
 export type LocationPrecision = 'exact' | 'approximate' | 'centroid' | 'area';
+
+/**
+ * Whether a place HAS a representative point. Added by §19(C).
+ *
+ * `center` used to be required beside a `precision` that could say `area`, so
+ * a country — which Homiio stores no centroid for — had nowhere honest to go,
+ * and the gateway emitted `(0, 0)`. `(0, 0)` is a real place, so absence needs
+ * its own state. `center?: never` rather than a plain optional: an optional
+ * still ACCEPTS `{ precision: 'area', center }`, leaving the contradiction
+ * discouraged rather than unrepresentable.
+ */
+export type PlaceGeometry =
+  | {
+      readonly precision: 'exact' | 'approximate' | 'centroid';
+      readonly center: GeoPoint;
+      readonly bounds?: GeoBounds;
+    }
+  | {
+      readonly precision: 'area';
+      readonly center?: never;
+      readonly bounds?: GeoBounds;
+    };
 
 /** A display label, pre-split by whoever knows how. Never `label.split(',')[0]`. */
 export interface PlaceLabel {
@@ -380,31 +407,33 @@ export type LocationSelection =
       readonly kind: 'current_location';
       readonly center: GeoPoint;
       readonly radiusMeters: number;
-      readonly precision: LocationPrecision;
+      /** §19(C): a device fix is a POINT. `centroid`/`area` were never meaningful here. */
+      readonly precision: 'exact' | 'approximate';
     }
   /** A named area: a country, region, city, district, neighborhood or postcode. */
-  | {
+  | ({
       readonly kind: 'place';
       readonly source: PlaceSource;
       readonly placeType: PlaceType;
       readonly label: PlaceLabel;
       readonly admin: AdminHierarchy;
-      readonly center: GeoPoint;
-      readonly bounds?: GeoBounds;
-      /** A named area's centre is a `centroid`, or `area` when no centre is meaningful. */
-      readonly precision: LocationPrecision;
-    }
+    } & PlaceGeometry)
   /** A specific address a geocoder proposed but Homiio has not materialised. */
-  | {
+  | ({
       readonly kind: 'address_candidate';
       readonly source: PlaceSource;
       readonly label: PlaceLabel;
       readonly admin: AdminHierarchy;
-      readonly center: GeoPoint;
-      readonly bounds?: GeoBounds;
-      readonly precision: LocationPrecision;
-    }
-  /** A map viewport the user confirmed. Has no name and never acquires one. */
+    } & PlaceGeometry)
+  /**
+   * A map viewport the user confirmed. Has no name and never acquires one.
+   *
+   * `precision: 'area'` with a REQUIRED centre, which is why `PlaceGeometry`
+   * is NOT applied here (§19(C)): a viewport's centre is real and is supplied
+   * by whoever built the viewport. Deriving it downstream is a trap — the
+   * naive midpoint of an antimeridian box is wrong (`west 170, east -170`
+   * gives 0, the Gulf of Guinea, when the true centre is 180).
+   */
   | {
       readonly kind: 'map_bounds';
       readonly bounds: GeoBounds;
@@ -1412,3 +1441,87 @@ it learns why rather than assuming a typo.
 opposed to the opener's own device — it needs its own `LocationSelection` kind
 with a declared `LocationPrecision`, added by amending §3 deliberately. It does
 not come back as a grammar leftover rediscovered by the next implementer.
+
+### C. A place may have NO centre, and §3 made that unsayable (2026-08-10)
+
+§3 declared `center: GeoPoint` as REQUIRED on `place`, on `address_candidate`
+and on `GeoPlace`, while `LocationPrecision` offered `area` — which the same
+section described as *"no meaningful point at all"*. **The type therefore said a
+place could have no meaningful point and simultaneously demanded one.**
+
+**What it produced, measured rather than imagined.** Homiio's schema stores no
+centroid for a country or a region, so the geocoding gateway had nowhere honest
+to put that fact and emitted `{ longitude: 0, latitude: 0 }` for every one of
+them. The search screen's fallback then drew a ±0.05° box around that point, so
+choosing "Spain" issued a query over an 11 km square in the Gulf of Guinea and
+returned **zero listings**, under a map of open ocean. Nothing threw. Zero
+results is the plausible-looking failure — it reads as "no homes in Spain", not
+as "we invented a centre" — which is why it survived into review.
+
+**`(0, 0)` is a real coordinate.** It is a point in the Atlantic, and longitude
+zero runs through Greenwich, Accra and Tema. A type that forces it as the "no
+centre" value cannot distinguish ABSENT from THERE — the same family as a check
+that cannot distinguish success from failure. Absence needs its own state.
+
+**The fix, and why it is structural rather than an optional field.** §3 gains
+`PlaceGeometry`, a two-member union carried by `place`, `address_candidate` and
+`GeoPlace`: either a real point (`exact` / `approximate` / `centroid`, with
+`center` required) or an extent (`area`, with `center?: never`). A plain
+`center?: GeoPoint` was tried against the compiler first and **still accepts**
+`{ precision: 'area', center }`, which would have left the contradiction
+discouraged rather than unrepresentable; `never` refuses it as an object literal
+AND through a variable, which is the form the gateway writes. It also makes the
+mirror unrepresentable for free — a `centroid` with no centre no longer
+compiles — and a one-directional guard here would have been half a guard.
+
+`bounds` stays optional on the `area` branch deliberately: requiring it would
+move the fabrication one field across, forcing a country with no stored bbox to
+invent a rectangle instead of a point.
+
+**Two things that did NOT change, and the reasons are the interesting part.**
+
+- **`map_bounds` keeps `precision: 'area'` with a REQUIRED centre**, which is
+  why `PlaceGeometry` is not applied to it. A viewport's centre is real and is
+  supplied by whoever built the viewport. Deriving it downstream instead is a
+  trap: the naive midpoint of an antimeridian box is wrong — for
+  `west 170, east -170` it computes `(170 + -170) / 2 = 0` and lands in the Gulf
+  of Guinea, when the true centre is 180. The field prevents exactly the bug
+  this amendment is about, arrived at from the other direction.
+- **`current_location.precision` narrows to `'exact' | 'approximate'`.** A
+  device fix is a point; `centroid` and `area` are properties of an area and
+  were never meaningful there, so the same lie was expressible in a second
+  place.
+
+**The root cause was prose, not structure.** `area` was documented as "no
+meaningful point at all" while `map_bounds`, forty lines below, carried `area`
+AND a required centre. Two implementers read that sentence and reached opposite
+conclusions — one made its own `center` optional and said so; the other emitted
+Null Island — which is the measurable cost of a definition contradicted by a
+declaration in the same section. `area` now says what it actually distinguishes:
+whether the point IS the place or merely a way to FRAME it.
+
+**The follow-on hole, and why it is a PREDICATE rather than a constraint.** With
+`center` and `bounds` both optional, a place with NEITHER became expressible — a
+place nothing can frame — and closing a hole that produced a wrong point by
+opening one that produces no point at all would be a poor trade, because the
+second failure is quieter: a map handed such a place renders nothing and reports
+no error, which looks exactly like a map still loading.
+
+It is nevertheless **not forbiddable on the type**, and the reason is measured
+rather than argued. A city Homiio knows by id and name but holds no coordinates
+for is a legitimate **disambiguation candidate**: `/api/cities/lookup` returns
+one today, deliberately, and asserts it carries no `center` and
+`precision: 'area'`. A user choosing between two cities called Riverside can
+pick that one, and the search that follows scopes by `cityId`, which needs no
+geometry whatsoever. Requiring geometry on the DTO would force that candidate to
+be dropped from the list — putting back a homonym the user can no longer reach,
+which is the defect §12.2 exists to prevent — or to have geometry invented for
+it, which is the defect this amendment just removed.
+
+So the invariant binds at a narrower boundary than the type: **a place being
+RESOLVED for display must be framable; a place being OFFERED for selection need
+not be.** `GET /api/geo/resolve` answers 404 rather than returning an unframable
+place; `GET /api/geo/search` may list one. §3 gains `isFramablePlace` so both
+sides read one predicate instead of each spelling the condition out, and it is
+mutation-tested: making it answer `true` unconditionally — the shape that lets an
+unframable place reach a map — turns its test red.

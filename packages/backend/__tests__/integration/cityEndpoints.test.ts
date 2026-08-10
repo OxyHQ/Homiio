@@ -110,6 +110,14 @@ describe('GET /api/cities', () => {
     expect(res.body.data[0]).not.toHaveProperty('coordinates');
   });
 
+  it('emits the database-computed slug, so no client re-implements the rule', async () => {
+    await seedGeoChain({ cityName: 'Málaga' });
+
+    const res = await request(app).get('/api/cities').expect(200);
+
+    expect(res.body.data[0].slug).toBe('malaga');
+  });
+
   it('no longer emits imageIds — the denormalized copy of the images relation', async () => {
     await seedGeoChain({ cityName: 'Barcelona' });
     const res = await request(app).get('/api/cities').expect(200);
@@ -201,12 +209,21 @@ describe('GET /api/cities/:id', () => {
   });
 });
 
+/**
+ * The lookup's own contract — the four outcomes, the discriminators, the
+ * ordering and the mutation targets — lives in `cityPlaceLookup.test.ts` (#295).
+ * What stays here is the part this file is about: the ENVELOPE the legacy
+ * parameters still answer with.
+ */
 describe('GET /api/cities/lookup', () => {
-  it('matches the city name case-insensitively', async () => {
+  it('matches the city name case-insensitively, inside the `resolved` envelope', async () => {
     await seedGeoChain({ cityName: 'Barcelona' });
 
     const res = await request(app).get('/api/cities/lookup?name=BARCELONA').expect(200);
-    expect(res.body.data.name).toBe('Barcelona');
+    expect(res.body.data.status).toBe('resolved');
+    // The candidate carries a PRE-SPLIT label rather than a flat `name`, so no
+    // consumer has to invent one by splitting on a comma.
+    expect(res.body.data.place.label.primary).toBe('Barcelona');
   });
 
   it('narrows by country and region NAME', async () => {
@@ -214,7 +231,8 @@ describe('GET /api/cities/lookup', () => {
     await seedGeoChain({ countryCode: 'VE', countryName: 'Venezuela', regionName: 'Valencia', cityName: 'Valencia' });
 
     const res = await request(app).get('/api/cities/lookup?name=Valencia&country=Spain&state=catalonia').expect(200);
-    expect(res.body.data.id).toBe(es.cityId);
+    expect(res.body.data.status).toBe('resolved');
+    expect(res.body.data.place.id).toBe(es.cityId);
   });
 
   it('404s when the narrowing country or region is unknown', async () => {
