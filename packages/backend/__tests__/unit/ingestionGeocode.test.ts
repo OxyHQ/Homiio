@@ -27,6 +27,21 @@ import { addresses, properties } from '../../db/schema';
 import { assertFound } from '../helpers/assertFound';
 import { resetGeoTables } from '../helpers/postgresGeoFixtures';
 
+import { installNoNetworkGuard } from '../helpers/noNetwork';
+
+/**
+ * Wikimedia Commons, reached per-listing by ingest's fire-and-forget city-cover
+ * call. Nothing here asserts on a cover, so a live third-party round trip was
+ * pure flakiness — see `__tests__/helpers/noNetwork.ts`.
+ */
+jest.mock('../../services/cityCoverSyncService', () => ({
+  ensureCover: jest.fn(async () => undefined),
+  syncCovers: jest.fn(async () => 0),
+  syncMissingCovers: jest.fn(async () => 0),
+}));
+
+installNoNetworkGuard('ingestionGeocode');
+
 /** The listing's own row — this suite only ever asserts on scalars. */
 async function propertyRow(id: string) {
   const [row] = await getDb()

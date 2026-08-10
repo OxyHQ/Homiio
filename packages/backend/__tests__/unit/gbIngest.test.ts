@@ -33,6 +33,31 @@ import { serializeProperty } from '../../db/properties/propertySerializer';
 import { resetGeoTables } from '../helpers/postgresGeoFixtures';
 import { assertFound } from '../helpers/assertFound';
 
+import { installNoNetworkGuard } from '../helpers/noNetwork';
+
+/**
+ * Wikimedia Commons, reached per-listing by ingest's fire-and-forget city-cover
+ * call. Nothing here asserts on a cover, so a live third-party round trip was
+ * pure flakiness — see `__tests__/helpers/noNetwork.ts`.
+ */
+jest.mock('../../services/cityCoverSyncService', () => ({
+  ensureCover: jest.fn(async () => undefined),
+  syncCovers: jest.fn(async () => 0),
+  syncMissingCovers: jest.fn(async () => 0),
+}));
+
+/** Nominatim. A FALLBACK for listings without coordinates; asserted on nowhere here. */
+jest.mock('../../services/geocodingService', () => {
+  const unavailable = async () => ({ success: false, error: 'geocoder stubbed in tests' });
+  return {
+    reverseGeocode: jest.fn(unavailable),
+    forwardGeocode: jest.fn(unavailable),
+    default: { reverseGeocode: jest.fn(unavailable), forwardGeocode: jest.fn(unavailable) },
+  };
+});
+
+installNoNetworkGuard('gbIngest');
+
 const ONE_BY_ONE_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
   'base64',
