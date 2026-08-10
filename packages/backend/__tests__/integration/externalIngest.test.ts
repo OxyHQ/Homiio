@@ -41,6 +41,37 @@ import { findPropertyById } from '../../db/properties/propertyReads';
 import { serializeProperty } from '../../db/properties/propertySerializer';
 import { resetGeoTables } from '../helpers/postgresGeoFixtures';
 import { assertFound } from '../helpers/assertFound';
+import { installNoNetworkGuard } from '../helpers/noNetwork';
+
+/**
+ * The two seams this suite reaches the network through, stubbed at the module
+ * the code under test imports rather than by replacing `fetch` globally — a
+ * global stub would silence the guard above and hide the next call somebody adds.
+ *
+ * `cityCoverSyncService` searches Wikimedia Commons for a city photo. Ingest
+ * fires it per listing and does not await it, so this suite was making 44 live
+ * requests to a third party while asserting things about ingest logic.
+ *
+ * `geocodingService` calls Nominatim. It is a FALLBACK here — the fixtures carry
+ * their own coordinates (see `providers/fixture/fixtures.ts`) — so a stub
+ * reporting "no geocoder" exercises the same path a rate-limited or unreachable
+ * Nominatim would, which is the honest default for a suite that asserts nothing
+ * about geocoded values.
+ */
+jest.mock('../../services/cityCoverSyncService', () => ({
+  ensureCover: jest.fn(async () => undefined),
+  syncCovers: jest.fn(async () => 0),
+  syncMissingCovers: jest.fn(async () => 0),
+}));
+
+jest.mock('../../services/geocodingService', () => {
+  const unavailable = async () => ({ success: false, error: 'geocoder stubbed in tests' });
+  return {
+    reverseGeocode: jest.fn(unavailable),
+    forwardGeocode: jest.fn(unavailable),
+    default: { reverseGeocode: jest.fn(unavailable), forwardGeocode: jest.fn(unavailable) },
+  };
+});
 
 // A 1x1 transparent PNG — a real, Sharp-decodable image with no network fetch.
 const ONE_BY_ONE_PNG = Buffer.from(
@@ -168,6 +199,8 @@ afterAll(async () => {
   await resetGeoTables();
   await fs.rm(LOCAL_IMAGE_STORE_DIR, { recursive: true, force: true });
 });
+
+installNoNetworkGuard('externalIngest');
 
 describe('external listing ingest (fixture -> IngestionService)', () => {
   it('creates isExternal, published Properties with re-hosted Image refs', async () => {
