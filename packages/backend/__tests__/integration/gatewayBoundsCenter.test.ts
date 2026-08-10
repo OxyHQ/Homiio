@@ -46,10 +46,16 @@ import { resetGeoTables, seedGeoChain, seedNeighborhood } from '../helpers/postg
 /**
  * A neighbourhood with a bounding box and NO stored centroid.
  *
- * The absent centroid is the whole point: `resolveHomiioPlace` prefers a stored
- * `longitude`/`latitude` and only falls back to deriving one from the envelope.
- * Seeding a centroid would make the derivation unreachable and the test vacuous
- * — it would pass with `centerOfBounds` deleted entirely.
+ * **DO NOT give this fixture a centroid.** `resolveHomiioPlace` prefers a stored
+ * `longitude`/`latitude` and only falls back to deriving one from the envelope,
+ * so a centroid makes the derivation unreachable and BOTH tests below vacuous —
+ * they would pass with `centerOfBounds` deleted outright.
+ *
+ * The trap is that the tidy fixture is the one with a centroid: a real
+ * neighbourhood row usually has both, so "completing" this fixture to look like
+ * production data is the change that silently removes the only thing it tests.
+ * If a future assertion needs a stored centroid, it needs its own fixture rather
+ * than this one.
  */
 async function seedBoxedNeighborhood(bounds: {
   west: number;
@@ -108,10 +114,11 @@ describe('the geo gateway derives a wrap-aware centre', () => {
   });
 
   it('leaves an ordinary box at its plain midpoint', async () => {
-    // The naive and wrap-aware forms agree here, so this case does NOT
-    // distinguish them — it exists so that a "fix" which special-cases the
-    // antimeridian and breaks every normal box cannot pass. Barcelona's
-    // envelope, the same fixture the shared helper's own tests use.
+    // DO NOT delete this as redundant. The naive and wrap-aware forms agree
+    // here, so it deliberately distinguishes NOTHING — it is the guard against a
+    // "fix" that special-cases the antimeridian and breaks every ordinary box,
+    // which is the shape a hurried repair of the case above would take.
+    // Barcelona's envelope, the same fixture the shared helper's own tests use.
     const id = await seedBoxedNeighborhood({ west: 2.05, south: 41.32, east: 2.23, north: 41.47 });
 
     const { place } = await resolvePlace(`neighborhood.homiio.${id}`, 'en');
