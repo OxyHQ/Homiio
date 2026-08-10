@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { TextFieldInput } from '@oxyhq/bloom/text-field';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
-import Map, { type MapApi, type AddressData } from '@/components/Map';
+import Map, { type MapApi, type GeocodedAddress } from '@/components/Map';
 import { StepHeader } from '@/components/reviews/write/StepHeader';
 import type { StepProps } from '@/components/reviews/write/types';
 import { colors } from '@/styles/colors';
@@ -19,7 +19,7 @@ import { radius, spacing } from '@/constants/styles';
 
 interface StepAddressProps extends StepProps {
   mapRef: RefObject<MapApi | null>;
-  onAddressSelect: (address: AddressData, coordinates: [number, number]) => void;
+  onAddressSelect: (address: GeocodedAddress, coordinates: [number, number]) => void;
 }
 
 export const StepAddress: React.FC<StepAddressProps> = ({

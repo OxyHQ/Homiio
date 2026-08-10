@@ -63,7 +63,8 @@ import {
 } from '../db/addresses/addressSerializer';
 import { countryCodeToName, countryNameToCode, defaultCurrencyForCountry } from '../utils/countryData';
 import { sanitizeGeoJsonCoordinates } from '../utils/geoCoordinates';
-import { forwardGeocode, reverseGeocode, type AddressData } from './geocodingService';
+import type { GeocodedAddress } from '@homiio/shared-types';
+import { forwardGeocode, reverseGeocode } from './geocodingService';
 import { GeoResolutionError, type GeoNames } from './geoResolutionService';
 
 /** Resolved geo id chain — the ids an `addresses` row stores. */
@@ -291,7 +292,7 @@ function namesAreComplete(names: GeoNames | undefined): boolean {
 }
 
 /** Merge geocoder output into caller-supplied names (caller wins). */
-function mergeNames(provided: GeoNames | undefined, geocoded: AddressData | undefined): GeoNames {
+function mergeNames(provided: GeoNames | undefined, geocoded: GeocodedAddress | undefined): GeoNames {
   return {
     city: provided?.city || geocoded?.city || undefined,
     state: provided?.state || geocoded?.state || undefined,

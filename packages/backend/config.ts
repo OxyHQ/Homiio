@@ -202,6 +202,13 @@ export interface Config {
      * Nominatim that has no such limit.
      */
     minIntervalMs: number;
+    /**
+     * Registered geocoding providers, MOST PREFERRED FIRST. The order is the
+     * gateway's fallback order (`services/geocoding/registry.ts`). An id named
+     * here with no adapter registered is skipped rather than faked, so listing
+     * a provider that does not exist yet is inert rather than fatal.
+     */
+    providerOrder: readonly string[];
   };
   overpass: {
     /**
@@ -447,6 +454,10 @@ const config: Config = {
     userAgent: process.env.GEOCODING_USER_AGENT || 'Homiio/1.0 (+https://homiio.com)',
     referer: process.env.GEOCODING_REFERER || 'https://homiio.com',
     minIntervalMs: parseInt(process.env.GEOCODING_MIN_INTERVAL_MS || '1000', 10),
+    providerOrder: (process.env.GEOCODING_PROVIDER_ORDER || 'osm')
+      .split(',')
+      .map((id) => id.trim().toLowerCase())
+      .filter(Boolean),
   },
 
   // Overpass Configuration (OpenStreetMap POI lookup — free, no API key)

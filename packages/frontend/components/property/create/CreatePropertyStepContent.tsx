@@ -1,6 +1,6 @@
 import React, { type MutableRefObject } from 'react';
 import { View } from 'react-native';
-import type { MapApi, AddressData } from '@/components/Map';
+import type { MapApi, GeocodedAddress } from '@/components/Map';
 import { ThemedText } from '@/components/ThemedText';
 import type { CreatePropertyFormData } from '@/store/createPropertyFormStore';
 import type { StepValidationErrors } from '@/utils/propertyFormSchema';
@@ -37,7 +37,7 @@ interface CreatePropertyStepContentProps {
   updateFormField: UpdateFormField;
   setFormData: SetFormData;
   onPropertyTypeChange: (typeId: string) => void;
-  onAddressSelect: (address: AddressData, coordinates: [number, number]) => void;
+  onAddressSelect: (address: GeocodedAddress, coordinates: [number, number]) => void;
   onOpenFullscreenMap: () => void;
   onFloorChange: (text: string) => void;
   onShowFloorToggle: (show: boolean) => void;

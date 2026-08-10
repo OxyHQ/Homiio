@@ -1,71 +1,98 @@
 /**
- * Geocoding Service
+ * Geocoding for Homiio's OWN ingest and address pipeline.
  *
- * Forward and reverse geocoding backed by Nominatim (OpenStreetMap).
- * Nominatim is free and requires no API key, but the OSM usage policy
- * mandates a descriptive, identifying User-Agent on every request and a
- * low request rate. We therefore:
- *   - send the configured User-Agent (and Referer) on every call, and
- *   - cache results in-memory to avoid hammering the public endpoint.
+ * This is no longer a geocoder. Since #351 it is a thin projection of the
+ * provider layer (`services/geocoding/`) onto the flat {@link GeocodedAddress}
+ * shape that `addressService`, `IngestionService`, `scraperService`,
+ * `geoResolutionService` and `reviewController` already consume — so there is
+ * exactly ONE Nominatim client in the backend, one rate-limit queue honouring
+ * the OSM policy, and one cache, whoever is asking.
  *
- * @see https://operations.osmfoundation.org/policies/nominatim/
+ * ## Why this returns a result object where the gateway throws
+ *
+ * The two callers want opposite things and it is worth being explicit, because
+ * the difference looks like an inconsistency and is not.
+ *
+ * The **ingest path** geocodes thousands of listings unattended, and a
+ * geocoder failure on one of them must degrade that listing, not abort the
+ * batch — so it gets `{ success: false, error }` and decides for itself.
+ *
+ * The **HTTP gateway** answers a person who is typing, and there a failure
+ * must stay a failure all the way to the screen: a timeout that comes back as
+ * an empty list is indistinguishable from "there is no such place", which is
+ * how a location search silently becomes a global feed. So the gateway
+ * propagates the typed error.
+ *
+ * {@link GeocodedAddress} is the address-FORM and ingest DTO, not the public
+ * place one. The public place DTO is `GeoPlace`, built in
+ * `services/geocoding/normalize.ts`. The two are not interchangeable: a
+ * `GeoPlace` has no street, house number or postal code, because a country does
+ * not have them.
  */
 
-import config from '../config';
+import type { GeocodedAddress } from '@homiio/shared-types';
+
+import {
+  autocompleteCacheKey,
+  GEO_CACHE_TTL_MS,
+  readGeoCache,
+  reverseCacheKey,
+  writeGeoCache,
+} from './geocoding/cache';
+import { withFallback } from './geocoding/registry';
+import { GeocodingProviderError, type ProviderPlace } from './geocoding/types';
 
 /** Longitude/latitude bounds, GeoJSON-style [west, south, east, north]. */
 export type BoundingBox = [number, number, number, number];
 
-export interface AddressData {
-  street?: string;
-  houseNumber?: string;
-  neighborhood?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  postalCode?: string;
-  fullAddress?: string;
-  /** [longitude, latitude], GeoJSON order. Populated by forward geocoding. */
-  coordinates?: [number, number];
-  /** [west, south, east, north]. Populated by forward geocoding when available. */
-  bbox?: BoundingBox;
-}
-
 export interface GeocodingResult {
   success: boolean;
-  data?: AddressData;
+  data?: GeocodedAddress;
   error?: string;
 }
 
-/** Subset of Nominatim's structured `address` object that we consume. */
-interface NominatimAddress {
-  road?: string;
-  pedestrian?: string;
-  footway?: string;
-  house_number?: string;
-  neighbourhood?: string;
-  suburb?: string;
-  quarter?: string;
-  city?: string;
-  town?: string;
-  village?: string;
-  municipality?: string;
-  state?: string;
-  region?: string;
-  country?: string;
-  postcode?: string;
-}
+/**
+ * The ingest pipeline has no reader and therefore no locale: a listing is
+ * geocoded once, long before anybody looks at it. Asking for no particular
+ * language gets the provider's local default, which is the right canonical
+ * name to store. The gateway passes a real tag; these two therefore do not
+ * share cache entries, which is correct rather than wasteful — they are asking
+ * different questions.
+ */
+const INGEST_LANGUAGE = '';
 
-/** Shape of a Nominatim feature as returned by `format=jsonv2`. */
-interface NominatimPlace {
-  lat: string;
-  lon: string;
-  display_name?: string;
-  /** Nominatim order is [south, north, west, east] as strings. */
-  boundingbox?: [string, string, string, string];
-  address?: NominatimAddress;
-  error?: string;
-}
+/** Project a provider result onto the flat ingest DTO. */
+const toGeocodedAddress = (place: ProviderPlace): GeocodedAddress => {
+  const data: GeocodedAddress = {
+    street: place.address.street ?? '',
+    houseNumber: place.address.houseNumber ?? '',
+    neighborhood: place.address.neighborhood ?? '',
+    city: place.address.city ?? '',
+    state: place.address.region ?? '',
+    country: place.address.country ?? '',
+    postalCode: place.address.postalCode ?? '',
+    fullAddress: place.displayName,
+    coordinates: [place.center.longitude, place.center.latitude],
+  };
+  if (place.bounds) {
+    const { west, south, east, north } = place.bounds;
+    data.bbox = [west, south, east, north];
+  }
+  return data;
+};
+
+/**
+ * Turn a provider failure into the soft result this module's callers expect.
+ *
+ * The message names the reason and never the query or the coordinate, so a
+ * caller that logs it cannot leak an address — several of them do log it.
+ */
+const toFailure = (error: unknown): GeocodingResult => {
+  if (error instanceof GeocodingProviderError) {
+    return { success: false, error: `Geocoding failed: ${error.reason}` };
+  }
+  return { success: false, error: 'Geocoding failed' };
+};
 
 const COORD_BOUNDS = {
   minLongitude: -180,
@@ -74,112 +101,6 @@ const COORD_BOUNDS = {
   maxLatitude: 90,
 } as const;
 
-const CACHE = {
-  maxEntries: 500,
-  ttlMs: 24 * 60 * 60 * 1000, // 24h — addresses for a coordinate are stable.
-} as const;
-
-interface CacheEntry {
-  result: GeocodingResult;
-  expiresAt: number;
-}
-
-const geocodeCache = new Map<string, CacheEntry>();
-
-const readCache = (key: string): GeocodingResult | null => {
-  const entry = geocodeCache.get(key);
-  if (!entry) return null;
-  if (entry.expiresAt < Date.now()) {
-    geocodeCache.delete(key);
-    return null;
-  }
-  return entry.result;
-};
-
-const writeCache = (key: string, result: GeocodingResult): void => {
-  // Only cache successful lookups; failures may be transient (rate limits,
-  // network) and should be retried on the next request.
-  if (!result.success) return;
-  if (geocodeCache.size >= CACHE.maxEntries) {
-    const oldestKey = geocodeCache.keys().next().value;
-    if (oldestKey !== undefined) geocodeCache.delete(oldestKey);
-  }
-  geocodeCache.set(key, { result, expiresAt: Date.now() + CACHE.ttlMs });
-};
-
-const nominatimHeaders = (): Record<string, string> => {
-  const headers: Record<string, string> = {
-    'User-Agent': config.geocoding.userAgent,
-    Accept: 'application/json',
-  };
-  if (config.geocoding.referer) headers.Referer = config.geocoding.referer;
-  return headers;
-};
-
-/**
- * Serialize Nominatim network requests so their *starts* are spaced by at least
- * `config.geocoding.minIntervalMs`. Two goals: honour the OSM usage policy
- * (~1 req/sec on the public endpoint) AND stop a high-volume ingest from
- * self-inflicting 429s — the failure mode that silently dropped external
- * listings whose address geocode raced a flood of concurrent lookups. Cache
- * hits never reach this gate; only real network calls queue behind it. The
- * chain swallows its own settle so one slot can never wedge the queue.
- */
-let nominatimQueue: Promise<void> = Promise.resolve();
-let lastNominatimRequestAt = 0;
-
-function acquireNominatimSlot(): Promise<void> {
-  const slot = nominatimQueue.then(async () => {
-    const minInterval = config.geocoding.minIntervalMs;
-    if (minInterval > 0) {
-      const wait = lastNominatimRequestAt + minInterval - Date.now();
-      if (wait > 0) {
-        await new Promise((resolve) => setTimeout(resolve, wait));
-      }
-    }
-    lastNominatimRequestAt = Date.now();
-  });
-  nominatimQueue = slot.catch(() => undefined);
-  return slot;
-}
-
-/** Map a Nominatim place onto our flat AddressData DTO. */
-const toAddressData = (place: NominatimPlace): AddressData => {
-  const address = place.address ?? {};
-  const longitude = parseFloat(place.lon);
-  const latitude = parseFloat(place.lat);
-
-  const data: AddressData = {
-    street: address.road || address.pedestrian || address.footway || '',
-    houseNumber: address.house_number || '',
-    neighborhood: address.neighbourhood || address.suburb || address.quarter || '',
-    city: address.city || address.town || address.village || address.municipality || '',
-    state: address.state || address.region || '',
-    country: address.country || '',
-    postalCode: address.postcode || '',
-    fullAddress: place.display_name || '',
-  };
-
-  if (!Number.isNaN(longitude) && !Number.isNaN(latitude)) {
-    data.coordinates = [longitude, latitude];
-  }
-
-  // Nominatim boundingbox is [south, north, west, east]; convert to the
-  // GeoJSON-style [west, south, east, north] order the frontend expects.
-  const bb = place.boundingbox;
-  if (bb && bb.length === 4) {
-    const south = parseFloat(bb[0]);
-    const north = parseFloat(bb[1]);
-    const west = parseFloat(bb[2]);
-    const east = parseFloat(bb[3]);
-    if (![south, north, west, east].some(Number.isNaN)) {
-      data.bbox = [west, south, east, north];
-    }
-  }
-
-  return data;
-};
-
 /**
  * Reverse geocode coordinates to an address.
  * @param longitude - Longitude coordinate ([-180, 180])
@@ -187,6 +108,8 @@ const toAddressData = (place: NominatimPlace): AddressData => {
  */
 export async function reverseGeocode(longitude: number, latitude: number): Promise<GeocodingResult> {
   if (
+    !Number.isFinite(longitude) ||
+    !Number.isFinite(latitude) ||
     longitude < COORD_BOUNDS.minLongitude ||
     longitude > COORD_BOUNDS.maxLongitude ||
     latitude < COORD_BOUNDS.minLatitude ||
@@ -195,41 +118,37 @@ export async function reverseGeocode(longitude: number, latitude: number): Promi
     return { success: false, error: 'Invalid coordinates provided' };
   }
 
-  const cacheKey = `reverse:${longitude.toFixed(6)},${latitude.toFixed(6)}`;
-  const cached = readCache(cacheKey);
-  if (cached) return cached;
+  const key = reverseCacheKey(longitude, latitude, INGEST_LANGUAGE);
+  const cached = readGeoCache<ProviderPlace>(key);
+  if (cached) return { success: true, data: toGeocodedAddress(cached) };
 
   try {
-    const url = new URL('/reverse', config.geocoding.nominatimBaseUrl);
-    url.searchParams.set('format', 'jsonv2');
-    url.searchParams.set('lat', String(latitude));
-    url.searchParams.set('lon', String(longitude));
-    url.searchParams.set('addressdetails', '1');
-
-    await acquireNominatimSlot();
-    const response = await fetch(url.toString(), { headers: nominatimHeaders() });
-    if (!response.ok) {
-      throw new Error(`Nominatim API error: ${response.status} ${response.statusText}`);
-    }
-
-    const place = (await response.json()) as NominatimPlace;
-    if (place.error || !place.lat || !place.lon) {
+    const { value } = await withFallback((provider) =>
+      provider.reverse({
+        point: { longitude, latitude },
+        language: INGEST_LANGUAGE,
+      }),
+    );
+    if (!value) {
       return { success: false, error: 'No address found for the provided coordinates' };
     }
-
-    const result: GeocodingResult = { success: true, data: toAddressData(place) };
-    writeCache(cacheKey, result);
-    return result;
+    // Only successes are cached. A transient failure cached for 24 hours turns
+    // a network blip into an outage that long outlives it.
+    writeGeoCache(key, value, GEO_CACHE_TTL_MS.resolved);
+    return { success: true, data: toGeocodedAddress(value) };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Geocoding failed',
-    };
+    return toFailure(error);
   }
 }
 
 /**
  * Forward geocode an address string to coordinates + structured address.
+ *
+ * Returns the single best match, which is what an unattended ingest needs. The
+ * PUBLIC search endpoint deliberately does the opposite and always returns a
+ * list: auto-picking one candidate for a person is how somebody's search ends
+ * up in the wrong Barcelona.
+ *
  * @param address - Address string to geocode
  */
 export async function forwardGeocode(address: string): Promise<GeocodingResult> {
@@ -238,37 +157,27 @@ export async function forwardGeocode(address: string): Promise<GeocodingResult> 
     return { success: false, error: 'Address is required' };
   }
 
-  const cacheKey = `forward:${query.toLowerCase()}`;
-  const cached = readCache(cacheKey);
-  if (cached) return cached;
+  const key = autocompleteCacheKey({ query, language: INGEST_LANGUAGE, limit: 1 });
+  const cached = readGeoCache<ProviderPlace[]>(key);
+  if (cached) {
+    const [place] = cached;
+    return place
+      ? { success: true, data: toGeocodedAddress(place) }
+      : { success: false, error: 'No coordinates found for the provided address' };
+  }
 
   try {
-    const url = new URL('/search', config.geocoding.nominatimBaseUrl);
-    url.searchParams.set('format', 'jsonv2');
-    url.searchParams.set('q', query);
-    url.searchParams.set('addressdetails', '1');
-    url.searchParams.set('limit', '1');
-
-    await acquireNominatimSlot();
-    const response = await fetch(url.toString(), { headers: nominatimHeaders() });
-    if (!response.ok) {
-      throw new Error(`Nominatim API error: ${response.status} ${response.statusText}`);
-    }
-
-    const places = (await response.json()) as NominatimPlace[];
-    const place = Array.isArray(places) ? places[0] : undefined;
+    const { value } = await withFallback((provider) =>
+      provider.autocomplete({ query, language: INGEST_LANGUAGE, limit: 1 }),
+    );
+    const [place] = value;
     if (!place) {
       return { success: false, error: 'No coordinates found for the provided address' };
     }
-
-    const result: GeocodingResult = { success: true, data: toAddressData(place) };
-    writeCache(cacheKey, result);
-    return result;
+    writeGeoCache(key, value, GEO_CACHE_TTL_MS.resolved);
+    return { success: true, data: toGeocodedAddress(place) };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Geocoding failed',
-    };
+    return toFailure(error);
   }
 }
 

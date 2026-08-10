@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/styles/colors';
 import { ThemedText } from '@/components/ThemedText';
-import Map, { type MapApi, type AddressData } from '@/components/Map';
+import Map, { type MapApi, type GeocodedAddress } from '@/components/Map';
 import { createPropertyStyles as styles } from './styles';
 
 const fullscreenMapStyle = { flex: 1 };
@@ -13,7 +13,7 @@ interface FullscreenMapModalProps {
   visible: boolean;
   mapRef: MutableRefObject<MapApi | null>;
   onClose: () => void;
-  onAddressSelect: (address: AddressData, coordinates: [number, number]) => void;
+  onAddressSelect: (address: GeocodedAddress, coordinates: [number, number]) => void;
 }
 
 /**

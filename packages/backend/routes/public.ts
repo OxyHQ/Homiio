@@ -4,10 +4,13 @@
  */
 
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import neighborhoodRoutes from './neighborhoods';
 import cityController from '../controllers/cityController';
 import imageController from '../controllers/imageController';
 import geocodingController from '../controllers/geocodingController';
+import * as geoController from '../controllers/geoController';
+import { rateLimitKeyFor } from '../middlewares/rateLimitKey';
 import observabilityController from '../controllers/observabilityController';
 import * as propertyController from '../controllers/property';
 import telegramController from '../controllers/telegramController';
@@ -28,6 +31,33 @@ const PROPERTY_ADJUSTMENTS = {
   apartment: 1.0,
   house: 1.2,
 };
+
+/**
+ * The geo budget, per caller per 15 minutes.
+ *
+ * Sized for a person typing rather than for a screen's fan-out: at a 300 ms
+ * debounce an engaged searcher issues single-digit requests per minute, and 300
+ * leaves generous room for several sessions while stopping a script from
+ * spending Homiio's whole provider allowance. It is deliberately far below the
+ * global anonymous budget, because a geo call leaves Homiio's network and is
+ * counted against Homiio by the provider — the cost is not ours to absorb.
+ *
+ * The backend does not rely on the client's debounce for any of this. A
+ * debounce is absent from a script, a replay, or an app binary shipped last
+ * year; the limiter and the input validation are the actual boundary.
+ */
+const GEO_RATE_LIMIT_MAX = 300;
+const GEO_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+
+const geoLimiter = rateLimit({
+  windowMs: GEO_RATE_LIMIT_WINDOW_MS,
+  max: GEO_RATE_LIMIT_MAX,
+  // Its own namespace, so the geo budget and the global API budget cannot
+  // consume one another.
+  keyGenerator: (req) => rateLimitKeyFor(req, 'geo'),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 function getPropertyAdjustmentFactor(propertyType: unknown): number {
   switch (propertyType) {
@@ -64,7 +94,37 @@ export default function () {
   router.get('/properties/:propertyId/area-insights', asyncHandler(propertyController.getAreaInsights));
   router.get('/properties/:propertyId/nearby-services', asyncHandler(propertyController.getPropertyNearbyServices));
 
-  // Public geocoding routes
+  // ── Geo gateway (#351, ADR 0002 §14.1) ──────────────────────────────────
+  //
+  // The only thing in Homiio that asks a geocoder a question on behalf of a
+  // person. Public on purpose: somebody typing a city name has not signed in
+  // yet, and requiring auth would push every screen back to a device-side
+  // geocoder, which is exactly what this replaces.
+  //
+  // Its own rate limiter, tighter than the global one, because these calls
+  // leave Homiio's network and are counted against Homiio by the provider —
+  // unlike the rest of `/api`, where the cost of an extra request is a database
+  // read. The key is the same privacy-preserving one the global limiter uses
+  // (`middlewares/rateLimitKey.ts`): a user id when there is one, otherwise a
+  // salted HMAC of the normalized IP, so no user IP is held at rest.
+  router.use('/geo', geoLimiter);
+  router.get('/geo/search', asyncHandler(geoController.search));
+  router.get('/geo/resolve', asyncHandler(geoController.resolve));
+  router.get('/geo/reverse', asyncHandler(geoController.reverse));
+
+  // The ADDRESS-FORM endpoints, kept and NOT superseded by `/api/geo/*`.
+  //
+  // These return `GeocodedAddress` — street, house number, postal code — which
+  // `GeoPlace` deliberately cannot carry, because a country has no street. The
+  // map's pin-drop feeds the review, property-creation and eviction forms, and
+  // the review form cannot advance without a street, so pointing them at
+  // `/api/geo/reverse` would silently empty three forms. They now run on the
+  // same provider layer, cache and OSM-policy queue as the gateway; nothing
+  // here talks to a provider directly.
+  //
+  // They are rate-limited alongside `/geo` rather than separately: the budget
+  // that matters is calls leaving Homiio, and these leave by the same door.
+  router.use('/geocoding', geoLimiter);
   router.get('/geocoding/reverse', asyncHandler(geocodingController.reverseGeocode));
   router.get('/geocoding/forward', asyncHandler(geocodingController.forwardGeocode));
 

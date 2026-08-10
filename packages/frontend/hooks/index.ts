@@ -1,5 +1,4 @@
 // Core hooks
-export { useLocationSearch } from './useLocation';
 export { useEcoProperties } from './usePropertyList';
 export { useSavedProperties } from './useSavedProperties';
 export { useProfileActions } from './useProfile';
@@ -42,12 +41,11 @@ export { useProfileRedux, useActiveProfile } from './useProfileQueries';
 // Utility hooks
 export { useDebounce } from './useDebounce';
 
-// Address Search hooks
+// Place autocomplete, through Homiio's geo gateway (never a geocoder directly).
 export {
   useAddressSearch,
   useDebouncedAddressSearch,
-  useReverseGeocode,
-  type AddressSuggestion,
   type AddressSearchOptions,
+  type AddressSearchState,
   type UseAddressSearchReturn,
 } from './useAddressSearch';

@@ -26,7 +26,7 @@ import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { CreateEvictionCaseData, EvictionCase } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
-import Map, { type MapApi, type AddressData, type LonLat } from '@/components/Map';
+import Map, { type MapApi, type GeocodedAddress, type LonLat } from '@/components/Map';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useCreateEviction, useEvictionDetail, useUpdateEviction } from '@/hooks/useEvictionQueries';
@@ -143,7 +143,7 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
     [],
   );
 
-  const handleAddressSelect = useCallback((address: AddressData, coordinates: LonLat) => {
+  const handleAddressSelect = useCallback((address: GeocodedAddress, coordinates: LonLat) => {
     setCoords(coordinates);
     const composed =
       address.fullAddress ||

@@ -1,12 +1,11 @@
 // Load environment variables first
 import 'dotenv/config';
 
-import crypto from 'crypto';
 import express from "express";
 import type { Request, Response, NextFunction } from 'express';
 import cors, { type CorsOptions } from 'cors';
 import helmet from 'helmet';
-import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import rateLimit from 'express-rate-limit';
 import bodyParser from 'body-parser';
 import { version } from './package.json';
 
@@ -14,6 +13,7 @@ import config from './config';
 import routes from './routes';
 import { logger, requestLogger, errorLogger } from './middlewares/logging';
 import { notFound, errorHandler } from './middlewares/errorHandler';
+import { rateLimitKeyFor } from './middlewares/rateLimitKey';
 import { connectPostgres } from './db/postgres';
 import publicRoutes from './routes/public';
 import { OxyServices } from '@oxyhq/core';
@@ -83,27 +83,14 @@ const isRateLimitExempt = (req: Request): boolean => {
 };
 
 /**
- * Per-user (authenticated) or per-anonymous-client key. Authenticated requests
- * key on the user id, which avoids the shared-IP collision behind the ALB.
+ * Per-user (authenticated) or per-anonymous-client key.
  *
- * Anonymous requests key on a salted, non-reversible HMAC of the normalized
- * client IP — the raw IP is never held at rest in the rate-limit store (privacy
- * mandate: no user IPs at rest). `ipKeyGenerator` buckets IPv6 to its /56 subnet
- * so a single v6 host can't rotate through its allocation to mint fresh keys; the
- * result is HMAC'd with `IP_HASH_SALT` and namespaced `rl|`. Mirrors the
- * semantics of OxyHQServices' `packages/api/src/utils/ipKey.ts`. `req.ip` is read
- * transiently here and discarded — it is never logged or persisted.
+ * The implementation moved to `middlewares/rateLimitKey.ts` when the geo
+ * gateway needed a second, tighter limiter: two limiters keying differently
+ * would mean two privacy postures, and the weaker one would be the one nobody
+ * reviewed. `rl` is this limiter's namespace.
  */
-const rateLimitKey = (req: Request): string => {
-  const userId = req.user?.id || req.user?._id;
-  if (userId) {
-    return `user:${userId}`;
-  }
-  const ip = req.ip || req.socket.remoteAddress || 'unknown';
-  const normalized = ipKeyGenerator(ip);
-  const salt = process.env.IP_HASH_SALT || '';
-  return crypto.createHmac('sha256', salt).update(`rl|${normalized}`).digest('hex').slice(0, 24);
-};
+const rateLimitKey = (req: Request): string => rateLimitKeyFor(req, 'rl');
 
 /**
  * Open the store before serving traffic.

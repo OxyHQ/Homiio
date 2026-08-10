@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as Location from 'expo-location';
 import { useMutation } from '@tanstack/react-query';
-import type { MapApi, AddressData } from '@/components/Map';
+import type { MapApi, GeocodedAddress } from '@/components/Map';
 import {
   useCreatePropertyFormStore,
   useCreatePropertyFormSelectors,
@@ -288,7 +288,7 @@ export function usePropertyCreateForm(id: string | undefined) {
 
   // --- Address autofill from the map ----------------------------------------
   const applyAddressSelection = useCallback(
-    (address: AddressData, coordinates: [number, number]) => {
+    (address: GeocodedAddress, coordinates: [number, number]) => {
       updateFormField('location', 'latitude', coordinates[1]);
       updateFormField('location', 'longitude', coordinates[0]);
 
@@ -308,7 +308,7 @@ export function usePropertyCreateForm(id: string | undefined) {
   );
 
   const handleAddressSelect = useCallback(
-    (address: AddressData, coordinates: [number, number]) => {
+    (address: GeocodedAddress, coordinates: [number, number]) => {
       applyAddressSelection(address, coordinates);
     },
     [applyAddressSelection],
