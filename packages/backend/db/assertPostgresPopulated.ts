@@ -29,23 +29,28 @@
  * about in its own comments. Anything this file did to the data could therefore
  * still be happening after the deploy gave up. It counts, and it exits.
  *
- * ## ITS LIFETIME IS THE CUTOVER'S — it is NOT wired in by this commit
+ * ## STILL NOT WIRED IN, and the reason has changed — read this before wiring it
  *
- * This asserts that Postgres is AUTHORITATIVE. That is true from the cutover
- * onward, false before it, and false again the moment we exercise the planned
- * rollback: Mongo is the rollback target, and reverting to it makes an empty
- * Postgres correct again. A floor that outlived the cutover would then block
- * every subsequent deploy for a reason nothing about a Mongo rollback would lead
- * anyone to look for.
+ * This asserts that Postgres is AUTHORITATIVE. That was false before the
+ * cutover, and would have been false again after the planned rollback to Mongo,
+ * so the original plan was for the cutover commit to append this file's entry to
+ * `MIGRATION_TASK_COMMANDS_JSON` in `deploy-ecs-image.sh` and for a revert to
+ * remove it — the guard's lifetime tied to the lifetime of the claim it makes,
+ * with no env flag, because a flag is a second thing to remember at the moment
+ * nobody has attention to spare. That is also why this stays out of `/health`: a
+ * permanent claim about the app becomes a trap for whoever first boots on a
+ * fresh database.
  *
- * So `MIGRATION_TASK_COMMANDS_JSON` in `deploy-ecs-image.sh` carries the entry
- * for this file as a comment, and the cutover commit (issue #281, Lote 13)
- * appends it verbatim — reverting the cutover reverts the guard with it. There
- * is no env flag on purpose: a flag is a second thing to remember at the exact
- * moment nobody has attention to spare, and it would let the guard's lifetime
- * drift away from the lifetime of the claim it makes. That is the same objection
- * that keeps this out of `/health`: a permanent claim about the app becomes a
- * trap for whoever first boots on a fresh database.
+ * The cutover happened, and there is no rollback target left (see `AGENTS.md`).
+ * The entry was never appended, and the objection that kept it out is gone.
+ *
+ * WHAT REPLACES IT IS A MEASUREMENT, NOT AN ARGUMENT. Every floor below is a
+ * number from the Mongo census of 2026-08-06, and nobody has counted what
+ * Postgres holds now. A floor production does not clear blocks every deploy —
+ * the exact failure this guard exists to prevent, caused by the guard. So:
+ * count the five tables against production first, adjust or justify each floor
+ * against what you measured, and only then append the entry. Wiring it on the
+ * strength of this paragraph is not the same as wiring it on a count.
  *
  * ## It needs no "we are mid-migration" escape hatch
  *

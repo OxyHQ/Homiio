@@ -36,7 +36,7 @@ export DEPLOY_TEST_TASK_LAST_STATUS=STOPPED
 # full green run -- and every guarantee below would read as verified while never
 # having executed. Incremented by run_release, checked at the very end.
 cases_run=0
-MINIMUM_CASES=22
+MINIMUM_CASES=24
 
 aws() {
   local service_json='{
@@ -304,6 +304,18 @@ run_release() {
   local output_file="$case_directory/output.log"
   local smoke_script="$case_directory/smoke.sh"
 
+  # What this case hands the post-deploy hook. An env override rather than a
+  # tenth positional, which nobody could read at a call site. `none` means the
+  # lane sets NO post-deploy task — the real API lane's shape, and distinct from
+  # "unset", which keeps the historical `reconcile` fixture every older case
+  # below expects.
+  local post_deploy_command
+  case "${DEPLOY_TEST_POST_DEPLOY_TASK_COMMAND_JSON:-}" in
+    '') post_deploy_command='["reconcile"]' ;;
+    none) post_deploy_command='' ;;
+    *) post_deploy_command="$DEPLOY_TEST_POST_DEPLOY_TASK_COMMAND_JSON" ;;
+  esac
+
   cases_run=$((cases_run + 1))
   mkdir -p "$case_directory"
   DEPLOY_TEST_LOG="$case_directory/aws.log"
@@ -345,7 +357,7 @@ run_release() {
     POLL_INTERVAL=1
     RUN_MIGRATIONS="$run_migrations"
     POST_DEPLOY_SMOKE_SCRIPT="$smoke_script"
-    POST_DEPLOY_TASK_COMMAND_JSON='["reconcile"]'
+    POST_DEPLOY_TASK_COMMAND_JSON="$post_deploy_command"
   )
   if [[ "$inject_internal_metrics" == "true" ]]; then
     release_environment+=(
@@ -601,6 +613,141 @@ printf '%s\n' \
 diff -u \
   "$test_directory/owning-lane-runs-migration/expected.log" \
   "$test_directory/owning-lane-runs-migration/aws.log"
+
+# ── THE WIRING ITSELF, READ OUT OF deploy-aws.yml ───────────────────────────
+#
+# Every case above proves the SCRIPT behaves correctly when it is handed
+# `RUN_MIGRATIONS=true`. None of them proves anything hands it that, and for
+# months nothing did: the flag defaulted to `false`, no workflow set it, and this
+# suite was green throughout. Production ran four migrations behind while
+# `check-migration-phases.mjs` verified that every one of them DECLARED a phase —
+# a passing gate about a pipeline that did nothing with the declaration.
+#
+# So these two cases take the values out of the workflow file and drive the
+# script with them. They fail if `RUN_MIGRATIONS` stops being `true`, if
+# `MIGRATION_SERVICE` stops naming the API lane, or if the post-deploy migration
+# command is removed or moved — which is the whole point, because none of those
+# edits breaks anything else in this repository.
+#
+# WHICH LANE declares the post-deploy command is not observable from here; this
+# suite only sees that exactly one lane does. `deployMigrationWiring.test.ts`
+# owns the lane attribution, and reads the same file.
+
+workflow_file="$repository_root/.github/workflows/deploy-aws.yml"
+
+# A WORKFLOW-LEVEL `env:` value, matched at exactly two spaces of indent.
+#
+# The indent is the assertion, not decoration: a step-level `env:` binding sits
+# at ten, so a pattern that ignored leading space would happily read a value
+# scoped to one step and report it as the job-wide default. Exactly one match is
+# required — zero means the key was renamed, more than one means two scopes
+# disagree and this helper cannot say which one the deploy reads.
+workflow_env_value() {
+  local key="$1" matches value
+  matches="$(grep -cE "^  ${key}:" "$workflow_file" || true)"
+  if [[ "$matches" != "1" ]]; then
+    echo "ASSERTION FAILED: expected exactly one workflow-level \`${key}:\` in $workflow_file, found $matches." >&2
+    exit 1
+  fi
+  value="$(grep -E "^  ${key}:" "$workflow_file" | head -1)"
+  value="${value#*: }"
+  value="${value%\'}"
+  value="${value#\'}"
+  value="${value%\"}"
+  value="${value#\"}"
+  printf '%s' "$value"
+}
+
+workflow_run_migrations="$(workflow_env_value RUN_MIGRATIONS)"
+workflow_migration_service="$(workflow_env_value MIGRATION_SERVICE)"
+# The API lane's own service name, read from `APP` rather than from
+# MIGRATION_SERVICE.
+#
+# THAT DISTINCTION IS THE WHOLE CASE, and it was measured: deriving the lane from
+# MIGRATION_SERVICE made both cases below pass with MIGRATION_SERVICE mutated to
+# `homiio-worker`, because the API-lane case then WAS the worker and happily ran
+# the migrator there. A check that names its subject after the value it is
+# checking cannot fail — the same shape as a table map derived from a collection
+# name. Read from APP, the same mutation turns both cases red.
+workflow_app="$(workflow_env_value APP)"
+
+# THE GATE, stated before it is used, so a failure names the value rather than
+# surfacing as a confusing diff twenty lines later.
+if [[ "$workflow_run_migrations" != "true" ]]; then
+  echo "ASSERTION FAILED: deploy-aws.yml sets RUN_MIGRATIONS to '$workflow_run_migrations', not 'true'." >&2
+  echo "The deploy would push an image and roll it out without applying a single migration," >&2
+  echo "and every job in this repository would still be green — which is exactly what" >&2
+  echo "happened until 2026-08-10." >&2
+  exit 1
+fi
+if [[ -z "$workflow_migration_service" ]]; then
+  echo "ASSERTION FAILED: deploy-aws.yml declares no MIGRATION_SERVICE." >&2
+  echo "Without it BOTH lanes run the migrator on one release, and the migrator holds" >&2
+  echo "no cross-process lock." >&2
+  exit 1
+fi
+if [[ -z "$workflow_app" ]]; then
+  echo "ASSERTION FAILED: deploy-aws.yml declares no APP, so neither lane below has a name." >&2
+  exit 1
+fi
+
+# Exactly one lane may declare a post-deploy task. Two would run the post
+# migration twice per release; none would never run it at all, and an unapplied
+# `post` migration is silent until the NEXT release's `pre` run blocks behind it.
+workflow_post_command_matches="$(grep -cE "^ {10}POST_DEPLOY_TASK_COMMAND_JSON:" "$workflow_file" || true)"
+if [[ "$workflow_post_command_matches" != "1" ]]; then
+  echo "ASSERTION FAILED: expected exactly one lane in $workflow_file to set POST_DEPLOY_TASK_COMMAND_JSON, found $workflow_post_command_matches." >&2
+  exit 1
+fi
+workflow_post_command="$(grep -E "^ {10}POST_DEPLOY_TASK_COMMAND_JSON:" "$workflow_file" | head -1)"
+workflow_post_command="${workflow_post_command#*: }"
+workflow_post_command="${workflow_post_command%\'}"
+workflow_post_command="${workflow_post_command#\'}"
+if ! jq -e 'type == "array" and length > 0' <<<"$workflow_post_command" >/dev/null; then
+  echo "ASSERTION FAILED: the post-deploy command in $workflow_file is not a non-empty JSON array: $workflow_post_command" >&2
+  exit 1
+fi
+workflow_post_command_line="task:$(jq -r 'join(" ")' <<<"$workflow_post_command")"
+
+# The API lane, with the workflow's own values. It runs the `pre` migrator before
+# `update-service` and declares NO post-deploy task, which is why this case sets
+# `none` rather than inheriting the harness's `reconcile` fixture.
+DEPLOY_TEST_APP="$workflow_app" \
+DEPLOY_TEST_MIGRATION_SERVICE="$workflow_migration_service" \
+DEPLOY_TEST_POST_DEPLOY_TASK_COMMAND_JSON=none \
+  run_release workflow-api-lane-migrates true "$workflow_run_migrations" false 0
+printf '%s\n' \
+  'task:node packages/backend/dist/db/migrate.js --target-database=homiio --phase=pre' \
+  'service:arn:aws:ecs:test:task-definition/deploy-test:2:desired=1' \
+  smoke \
+  >"$test_directory/workflow-api-lane-migrates/expected.log"
+diff -u \
+  "$test_directory/workflow-api-lane-migrates/expected.log" \
+  "$test_directory/workflow-api-lane-migrates/aws.log"
+assert_aws_log_lacks workflow-api-lane-migrates "--phase=post" "The API lane ran the post migration. It rolls FIRST, so the worker would still be serving the previous image when a DROP landed."
+
+# The worker lane, same workflow values. It declines the `pre` migrator because
+# MIGRATION_SERVICE names the API, and it runs the `post` phase AFTER its own
+# rollout — the first moment no old image is serving, since both services share
+# one image and this one rolls last.
+DEPLOY_TEST_APP="${workflow_app}-worker" \
+DEPLOY_TEST_MIGRATION_SERVICE="$workflow_migration_service" \
+DEPLOY_TEST_POST_DEPLOY_TASK_COMMAND_JSON="$workflow_post_command" \
+  run_release workflow-worker-lane-migrates-post true "$workflow_run_migrations" false 0
+printf '%s\n' \
+  'service:arn:aws:ecs:test:task-definition/deploy-test:2:desired=1' \
+  smoke \
+  "$workflow_post_command_line" \
+  >"$test_directory/workflow-worker-lane-migrates-post/expected.log"
+diff -u \
+  "$test_directory/workflow-worker-lane-migrates-post/expected.log" \
+  "$test_directory/workflow-worker-lane-migrates-post/aws.log"
+assert_aws_log_lacks workflow-worker-lane-migrates-post "--phase=pre" "The worker lane ran the pre migrator. Both services share one image and the migrator holds no cross-process lock, so it must run exactly once per release."
+assert_output_contains workflow-worker-lane-migrates-post "Skipping migrations for ${workflow_app}-worker"
+# The ORDER is the assertion, and a whole-log diff is what sees it: a `post`
+# migration recorded before `update-service` would be a DROP applied while the
+# previous image was still serving.
+assert_output_contains workflow-worker-lane-migrates-post "ECS rollout reached a healthy steady state"
 
 # A migration one-shot that never STOPS is the case that reaches the EXIT trap's
 # unfinished-task warning -- the only signal that a migration may still be

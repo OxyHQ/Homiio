@@ -296,22 +296,39 @@ cutover: an image built before a migration existed prints `No migrations to
 apply`, exits 0, and is otherwise byte-identical to the correct case. Compare it
 against `meta/_journal.json` at the pinned SHA and refuse if they differ.
 
-## Open — required before the deploy runs migrations (batch 12)
+## Open — the deploy runs migrations, and the interlock is the workflow's
 
-**There is no cross-process advisory lock**, and one is needed before
-`deploy-aws.yml` gains a migration step. drizzle's migrator takes no lock of any
-kind: it reads the ledger's high-water mark OUTSIDE its transaction, then opens
-one and replays everything newer. Two concurrent runs therefore both read the
-same mark and both replay the same DDL, and the loser fails on an already-applied
-statement after the winner has committed — leaving a duplicate ledger row behind.
+**There is still no cross-process advisory lock.** drizzle's migrator takes no
+lock of any kind: it reads the ledger's high-water mark OUTSIDE its transaction,
+then opens one and replays everything newer. Two concurrent runs therefore both
+read the same mark and both replay the same DDL, and the loser fails on an
+already-applied statement after the winner has committed.
 
-Homiio has no path that can run two migrators today, because nothing runs
-migrations automatically at all. Wiring the deploy to migrate is exactly what
-creates the race (a deploy's own step against a manual dispatch, in two GitHub
-concurrency groups that cannot see each other). oxy-api's `db/migrate.ts` has the
-reference implementation: a session-scoped `pg_try_advisory_lock` held on its own
-connection for the caller's lifetime, not on the short-lived one `runMigrations`
-opens internally.
+**This section used to say the lock was required BEFORE `deploy-aws.yml` gained
+a migration step. That step landed on 2026-08-10 without it, deliberately**, and
+the reasoning is worth keeping rather than the old sentence:
+
+- The interlock a GitHub deploy actually needs is a workflow-level `concurrency`
+  group with `cancel-in-progress: false`, and `deploy-aws.yml` has carried one
+  (`deploy-homiio-backend`) throughout. It is a CALLED workflow, so it runs
+  inside `ci.yml`'s run, whose group also does not cancel on `refs/heads/main` —
+  two merges to main queue rather than overlap. Both halves are pinned by
+  `__tests__/unit/deployRolloutConcurrency.test.ts`.
+- What that leaves open is a `workflow_dispatch` of `deploy-aws.yml` landing
+  while a push-triggered deploy is mid-flight: different runs, and the old
+  parenthetical about "two concurrency groups that cannot see each other" is
+  right about exactly that case and no other.
+- The cost there is a red deploy rather than a damaged database — the loser
+  exits non-zero on an already-applied statement. **The old claim that it leaves
+  "a duplicate ledger row behind" is not something this repository has measured,
+  and the ecosystem measurement of the same drizzle replay rule says the ledger
+  ends correct with one row.** Do not repeat the duplicate-row claim without
+  measuring it here.
+
+oxy-api's `db/migrate.ts` still has the reference implementation if the lock is
+wanted: a session-scoped `pg_try_advisory_lock` held on its own connection for
+the caller's lifetime, not on the short-lived one `runMigrations` opens
+internally.
 
 ## Batch 0 scope, and what it deliberately leaves for later
 

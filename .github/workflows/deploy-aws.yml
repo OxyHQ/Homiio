@@ -55,17 +55,40 @@ env:
   APP: homiio
   CLUSTER: oxy-cluster
   DOCKERFILE: packages/backend/Dockerfile
-  # Which of the two lanes below owns the one-shot migrations. Both roll the SAME
-  # image through deploy-ecs-image.sh, and the migrator holds no cross-process
-  # advisory lock, so it must run exactly once per release. Naming the service
-  # here rather than setting RUN_MIGRATIONS per step means a future job-level
-  # `RUN_MIGRATIONS: true` still cannot reach the worker: the worker lane sets
-  # APP to `homiio-worker`, which does not match, and it declines with a notice.
-  #
-  # RUN_MIGRATIONS itself stays at its default of `false` until the cutover
-  # (issue #281, Lote 13). Turning it on before `/oxy/homiio/DATABASE_URL` exists
-  # in SSM would fail the one-shot and therefore the whole release.
+  # Which of the two lanes below owns the one-shot `pre` migrations. Both roll
+  # the SAME image through deploy-ecs-image.sh, and the migrator holds no
+  # cross-process advisory lock, so it must run exactly once per release. Naming
+  # the service here rather than setting RUN_MIGRATIONS per step is what makes
+  # the workflow-level `RUN_MIGRATIONS` below safe: the worker lane sets APP to
+  # `homiio-worker`, which does not match, and it declines with a notice.
   MIGRATION_SERVICE: homiio
+  # THE DEPLOY APPLIES MIGRATIONS. It did not until this line existed, and the
+  # gap was invisible: `RUN_MIGRATIONS` defaults to `false` in
+  # deploy-ecs-image.sh, nothing set it, and every deploy was green.
+  #
+  # What that cost, on 2026-08-10: production was four migrations behind (0008,
+  # 0009, 0010, 0011) and `/api/cities` and `/api/home/sections` both answered
+  # 500 until the one-shot was run BY HAND. The migrations had merged with green
+  # CI, green deploys, and a passing `check-migration-phases.mjs` gate — which
+  # verifies every migration DECLARES a phase, while nothing consumed the
+  # declaration. A green gate about a pipeline that does nothing.
+  #
+  # Two preconditions the old comment here named, and where each stands:
+  #
+  #   - `/oxy/homiio/DATABASE_URL` must exist in SSM, or the one-shot fails and
+  #     takes the release with it. It exists; it is the only database secret
+  #     either task definition carries, and the sync step below maintains it.
+  #   - Two migrators must not run concurrently. `db/migrate.ts` records this as
+  #     a PRECONDITION of turning this on, because drizzle reads the ledger's
+  #     high-water mark outside its transaction. The interlock is the
+  #     `concurrency` block above plus `ci.yml`'s non-cancelling group on main,
+  #     pinned by `deployRolloutConcurrency.test.ts` — see `db/migrate.ts` for
+  #     what is left uncovered and what it would cost.
+  #
+  # Quoted so the value reaching the script is the string `true`. The script
+  # rejects anything that is neither `true` nor `false` rather than treating an
+  # unparseable value as off.
+  RUN_MIGRATIONS: 'true'
   # The commit CI judged. When called from ci.yml this IS that commit, because a
   # called workflow runs inside the caller's run — there is no window in which
   # main moves on underneath. Under workflow_dispatch it is the dispatched ref.
@@ -276,6 +299,36 @@ jobs:
           fi
           bash .github/scripts/deploy-ecs-image.sh
 
+      # THE `post` MIGRATION PHASE RUNS HERE, AND THE LANE IS THE ASSERTION.
+      #
+      # `pre` is additive and correct against both images, so it runs before the
+      # API rollout. `post` takes something away — a DROP, a RENAME, a narrowed
+      # CHECK — so it is only safe once NO old image is serving. Both services
+      # run the SAME image, and the worker rolls last, so "no old image is
+      # serving" is first true at the end of THIS step and not the API one.
+      # Putting it on the API lane would drop a column out from under a worker
+      # still running the previous image for the length of its own rollout.
+      #
+      # `POST_DEPLOY_TASK_COMMAND_JSON` is the hook deploy-ecs-image.sh already
+      # provides for exactly this position: after `update-service`, after the
+      # rollout reaches a healthy steady state, and after any smoke checks. A
+      # non-zero exit fails the job and rolls this service back.
+      #
+      # IT IS UNCONDITIONAL, WHICH IS THE POINT. Sibling repos grep the release
+      # for a post-phase marker and skip this task when it finds none, to save a
+      # Fargate task. Homiio does not, for two reasons. A wrong grep reads as "no
+      # post migration in this release" and silently skips the drop — the same
+      # silent-skip shape as the defect this whole change repairs — whereas a
+      # wrong COMMAND fails loudly on the first release that needs it. And an
+      # ungated task runs the post path on every deploy, so it cannot rot between
+      # the day it is written and the day it first matters. With nothing pending
+      # the migrator logs `No migrations to apply (phase=post, journal
+      # entries=N)` and exits 0.
+      #
+      # It cannot block a normal release either: `--phase=post` refuses only when
+      # a `pre` migration is still pending after the rollout, and the `pre` run
+      # in the API lane above would already have failed the job before this step
+      # was reached (see @oxyhq/db's `phases.ts`, `planMigrationRun`).
       - name: Register immutable task definition and deploy (listing worker)
         env:
           # Still oxy/homiio: APP names the ECS SERVICE, and the worker shares
@@ -284,13 +337,19 @@ jobs:
           # workflow's value or one a sibling key just set.
           IMAGE_URI: ${{ env.ECR_REGISTRY }}/oxy/${{ env.APP }}@${{ steps.build.outputs.digest }}
           DEPLOY_SHA: ''
+          POST_DEPLOY_TASK_COMMAND_JSON: '["node","packages/backend/dist/db/migrate.js","--target-database=homiio","--phase=post"]'
         run: |
           export APP="${APP}-worker"
           # CONTAINER_NAME is left to default to APP, which is what the
           # oxy-homiio-worker family actually calls its container.
           STATUS=$(aws ecs describe-services --cluster "$CLUSTER" --services "$APP" --query 'services[0].status' --output text 2>/dev/null || echo NONE)
           if [ "$STATUS" != "ACTIVE" ]; then
-            echo "ECS service $APP not created yet - image is in ECR, skipping $APP"
+            # Not silent, because this branch now skips the post migration too.
+            # It self-corrects loudly rather than quietly: the next release's
+            # `pre` run BLOCKS on a `pre` migration queued behind the unapplied
+            # `post` one and names both files.
+            echo "::warning::ECS service $APP does not exist, so the post-deploy migration phase did not run either. Any post-rollout migration in this release is unapplied."
+            echo "image is in ECR, skipping $APP"
             exit 0
           fi
           bash .github/scripts/deploy-ecs-image.sh

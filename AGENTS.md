@@ -176,9 +176,23 @@ HISTORY plus durable rules; this section is the current state.**
   file-count figures this section used to carry moved every week and were the
   single most misleading thing in this document.
 - **Migrations:** `bun run db:migrate` (`db/migrate.ts --phase=all` for a
-  developer database), applied in production as a one-shot ECS task running the
-  compiled `dist/db/migrate.js` — same `pre`/`post` deploy-phase convention as
-  the rest of Oxy. Never `drizzle-kit migrate`.
+  developer database). Never `drizzle-kit migrate`.
+
+  In production `deploy-aws.yml` applies them as one-shot ECS tasks running the
+  compiled `dist/db/migrate.js`, on both sides of the rollout: `--phase=pre` in
+  the API lane before `update-service`, `--phase=post` in the WORKER lane after
+  its rollout, because the worker rolls last and `post` is only safe once no old
+  image is serving. Both are unconditional and pinned by
+  `.github/scripts/test-deploy-ecs-image.sh` and
+  `__tests__/unit/deployMigrationWiring.test.ts`.
+
+  **This paragraph described an intention until 2026-08-10.** `RUN_MIGRATIONS`
+  defaulted to `false` and nothing set it, so no deploy had ever applied a
+  migration; production ran four behind and answered 500 on `/api/cities` and
+  `/api/home/sections`. The durable lesson is the shape, not the date: the CI
+  gate that checks every migration DECLARES a phase passed the whole time,
+  because nothing consumed the declaration. Before trusting any gate here, ask
+  what reads its output.
 - **Tests:** `docker-compose.postgres.yml` runs `postgis/postgis:17-3.5` on
   `127.0.0.1:5434` (5432 and 5433 are already taken by oxy-api's and Mention's
   own compose files on the same machine). `bun run --cwd packages/backend test`

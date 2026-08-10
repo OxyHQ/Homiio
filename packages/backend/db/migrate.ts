@@ -3,9 +3,10 @@
  *
  * This is the ONE migration mechanism for the Postgres side of this package.
  * `bun run db:migrate` runs it, the jest harness (`db/testDatabase.ts`) calls
- * the same function in-process, CI runs the same script, and production will run
- * its COMPILED form (`dist/db/migrate.js`) as a one-shot ECS task. Nothing
- * applies a migration by any other route.
+ * the same function in-process, CI runs the same script, and production runs its
+ * COMPILED form (`dist/db/migrate.js`) as a one-shot ECS task on every deploy —
+ * `--phase=pre` before the API rollout, `--phase=post` after the worker's.
+ * Nothing applies a migration by any other route.
  *
  * The actual apply — journal read, phase-marker read, ledger read, extension
  * setup, `migrate()`, the post-apply re-check — is `runMigrations` from
@@ -35,16 +36,34 @@
  * and a manual dispatch have no previous image to protect; a production one-shot
  * task states its own phase explicitly on the command line.
  *
- * ## What is deliberately NOT here yet
+ * ## The interlock is the WORKFLOW's, and there is still no advisory lock
  *
- * No cross-process advisory lock. drizzle's migrator takes no lock of its own —
- * it reads the ledger's high-water mark OUTSIDE its transaction, then replays
- * everything newer inside one — so two concurrent runs both replay the same DDL
- * and the loser fails on an already-applied statement. Homiio has no path that
- * can run two migrators today (nothing in `deploy-aws.yml` runs migrations at
- * all yet). Wiring the deploy to migrate is what makes a deploy race a manual
- * dispatch, so the lock is a PRECONDITION of that change, not of this one. See
- * `db/MIGRATION-CONTRACT.md`.
+ * drizzle's migrator takes no lock of its own — it reads the ledger's
+ * high-water mark OUTSIDE its transaction, then replays everything newer inside
+ * one — so two concurrent runs both replay the same DDL and the loser fails on
+ * an already-applied statement. `@oxyhq/db/migrate`'s runner says the same in
+ * its own header and assigns the interlock to the caller, naming this exact
+ * case: a deploy's own migration step racing a manually dispatched one.
+ *
+ * An earlier revision of this comment said Homiio had no path that could run
+ * two migrators, because nothing in `deploy-aws.yml` ran migrations at all, and
+ * called the lock a precondition of turning them on. Turning them on is done
+ * (2026-08-10), and the precondition is met by the WORKFLOW rather than by a
+ * lock here: `deploy-aws.yml` carries `concurrency: deploy-homiio-backend` with
+ * `cancel-in-progress: false`, and because it is a CALLED workflow the run it
+ * lives in is `ci.yml`'s, whose group does not cancel on `refs/heads/main`
+ * either. Two merges to main therefore queue rather than overlap. Both halves
+ * are pinned by `__tests__/unit/deployRolloutConcurrency.test.ts`, which fails
+ * the build if either moves.
+ *
+ * What that does NOT cover is a `workflow_dispatch` of `deploy-aws.yml` landing
+ * while a push-triggered deploy is mid-flight, since the two are different runs.
+ * The cost if it happens is bounded and worth stating rather than implying: the
+ * loser exits non-zero on an already-applied statement and its deploy goes red,
+ * while the ledger stays correct — this is a property of drizzle's replay rule,
+ * not a Homiio measurement. A red deploy, not a damaged database. A
+ * session-scoped advisory lock taken on a connection held for this process's
+ * lifetime is the mechanism that would close it; see `db/MIGRATION-CONTRACT.md`.
  *
  * ## Why not `drizzle-kit migrate`
  *
