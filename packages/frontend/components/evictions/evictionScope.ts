@@ -19,6 +19,26 @@
 import type { EvictionBoardScope, LocationSelection } from '@homiio/shared-types';
 
 /**
+ * Every `LocationSelection` kind, DERIVED from the union rather than listed.
+ *
+ * `satisfies Record<LocationSelection['kind'], true>` is what makes it derived:
+ * adding a kind to the contract fails to compile HERE until somebody decides
+ * what the board does with it. A hand-written array would accept the new kind
+ * silently and the test below would keep passing over a set that had quietly
+ * stopped being complete.
+ *
+ * Exported for `__tests__/evictionScope.test.ts`, which is the only consumer.
+ */
+export const LOCATION_SELECTION_KINDS = {
+  current_location: true,
+  place: true,
+  address_candidate: true,
+  map_bounds: true,
+  polygon: true,
+  multi_area: true,
+} as const satisfies Record<LocationSelection['kind'], true>;
+
+/**
  * The board scope a selection implies, or `undefined` when it implies none.
  *
  * A `multi_area` selection is deliberately unsupported rather than approximated
@@ -75,7 +95,35 @@ export function selectionToBoardScope(
     }
     case 'multi_area':
       return undefined;
+    default:
+      return unsupportedSelection(selection);
   }
+}
+
+/**
+ * The exhaustiveness guard.
+ *
+ * Without it this switch is not checked by the type system at all: the function
+ * returns `EvictionBoardScope | undefined`, so a kind with no arm simply falls
+ * off the end as `undefined` and `tsc` is satisfied. Verified by MUTATION —
+ * deleting the `multi_area` arm produced no error before this existed.
+ *
+ * The behaviour that fallthrough produced was already the SAFE one: no scope
+ * means the board disables its query and shows the picker, so a kind nobody
+ * handled could never mis-scope a request, only refuse it. What was missing is
+ * that nobody was TOLD. `never` turns a new kind into a compile error at the
+ * one place that has to make a decision about it, which is the same defect
+ * class as the home-sections controller handling three of six place types
+ * (fixed in `a3213af2`) — there it refused places the picker could produce, and
+ * the refusal looked like a working feature.
+ *
+ * Returns `undefined` at runtime rather than throwing: a board that shows the
+ * picker is a better answer to an unknown selection than a crash, and this
+ * function is on a render path.
+ */
+function unsupportedSelection(selection: never): undefined {
+  void selection;
+  return undefined;
 }
 
 /** The radius a point-shaped place is queried with, in metres. */
