@@ -35,7 +35,13 @@
 
 import { asc, desc, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
-import { PropertyType, PropertyStatus, OfferingType, ExchangeMode } from '@homiio/shared-types';
+import {
+  PropertyType,
+  PropertyStatus,
+  OfferingType,
+  ExchangeMode,
+  isOpaqueId,
+} from '@homiio/shared-types';
 
 import { properties } from '../../db/schema';
 import {
@@ -345,6 +351,17 @@ export interface ParsedSearchParams {
   neighborhood?: string;
   boundingBox?: BoundingBox;
   centerRadius?: CenterRadius;
+  /**
+   * The client's identity for this search, echoed back untouched.
+   *
+   * Nothing here reads it as a filter — it exists so a response can be matched
+   * to the query it answers, which is the only way a list, a map, a heading and
+   * a count can prove they are describing one search rather than assuming it.
+   * Absent when the caller sent none, or sent something that is not the one
+   * shape the observability contract accepts (`isOpaqueId`): reflecting an
+   * arbitrary string back into a JSON body is how an echo becomes a payload.
+   */
+  queryId?: string;
   sortField: SortField;
   sortDirection: SortDirection;
   // Per-offering filters (mirror the conditions for downstream visibility).
@@ -501,17 +518,59 @@ export function buildSearchPlan(
     );
   }
 
+  const city = asString(query.city);
+  const state = asString(query.state);
+  const neighborhood = asString(query.neighborhood) ?? asString(query.neighborhoodId);
+
+  // A request names AT MOST ONE authoritative geographic scope, and a SHAPE and
+  // a PLACE are two of them.
+  //
+  // ANDing them is defensible arithmetic and the wrong answer: "inside
+  // Barcelona AND inside this Madrid rectangle" is empty, and empty is the
+  // plausible-looking failure that renders as "this area has no homes". It is
+  // the exact shape of the bug #354 exists to close, arriving from the wire
+  // instead of from the store, and it is a client bug every time — no selection
+  // in `LocationSelection` can produce both, so a request carrying both was
+  // assembled by merging two selections, which is what the atomic contract
+  // forbids. The loud failure is the one that gets it fixed.
+  //
+  // City, region and neighborhood together are NOT this case: they nest, and
+  // `resolveNeighborhoodId` deliberately uses the city to disambiguate a name.
+  const shapeScope = boundingBox ? 'a bounding box' : centerRadius ? 'a centre and radius' : null;
+  if (shapeScope) {
+    const namedPlaces = [
+      city === undefined ? null : 'city',
+      state === undefined ? null : 'state',
+      neighborhood === undefined ? null : 'neighborhood',
+    ].filter((name): name is string => name !== null);
+    if (namedPlaces.length > 0) {
+      throw new GeoParamError(
+        `A search may carry ${shapeScope} or a named place (${namedPlaces.join(', ')}), not both. ` +
+          'Send one geographic scope.',
+      );
+    }
+  }
+
+  // Validated rather than trusted: it is written straight back into the
+  // response body, so the one shape the observability contract defines for an
+  // opaque id is the whole of what may be reflected. Anything else is dropped —
+  // silently, because a caller that sends no id gets the same treatment and
+  // neither is an error.
+  const queryIdRaw = asString(query.queryId);
+  const queryId = queryIdRaw !== undefined && isOpaqueId(queryIdRaw) ? queryIdRaw : undefined;
+
   return {
     conditions,
     params: {
       page,
       limit,
       text: asString(query.q) ?? asString(query.query) ?? asString(query.search),
-      city: asString(query.city),
-      state: asString(query.state),
-      neighborhood: asString(query.neighborhood) ?? asString(query.neighborhoodId),
+      city,
+      state,
+      neighborhood,
       boundingBox,
       centerRadius,
+      queryId,
       sortField,
       sortDirection,
       offering,

@@ -37,6 +37,7 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import type { SQL } from 'drizzle-orm';
+import type { LocationKind } from '@homiio/shared-types';
 
 import {
   buildSearchPlan,
@@ -100,6 +101,7 @@ interface ResolvedPlace {
 type LocationEcho =
   | {
       status: 'resolved';
+      appliedLocationKind: LocationKind;
       cityId?: string;
       regionId?: string;
       neighborhoodId?: string;
@@ -109,15 +111,45 @@ type LocationEcho =
     }
   | {
       status: 'unresolved';
+      appliedLocationKind: LocationKind;
       requested: { param: 'city' | 'state' | 'neighborhood'; value: string };
     }
-  | { status: 'none' };
+  | { status: 'none'; appliedLocationKind: LocationKind };
+
+/**
+ * The single coarse word for the scope that was APPLIED.
+ *
+ * Total rather than optional, and it is `'none'` in both empty cases: an
+ * unresolvable place applies no filter at all, so saying "none" is the truth
+ * about the query that ran, and `status` is what distinguishes it from a search
+ * that never named a place. Two fields, two different questions — collapsing
+ * them is how "we could not find that place" and "there are no homes here"
+ * became the same bytes in the first place.
+ *
+ * The vocabulary is `LOCATION_KINDS` from the observability contract rather
+ * than one invented here, so a scope reported in an event and a scope reported
+ * in a response cannot be described in two different words.
+ *
+ * Precedence when place ids nest: the NARROWEST wins, because that is the one
+ * that decides the result set. A shape scope cannot co-occur with a place —
+ * `buildSearchPlan` refuses that combination outright.
+ */
+function appliedLocationKind(params: ParsedSearchParams, place: ResolvedPlace): LocationKind {
+  if (place.unresolved) return 'none';
+  if (params.boundingBox) return 'bbox';
+  if (params.centerRadius) return 'radius';
+  if (place.neighborhoodId) return 'neighborhood';
+  if (place.cityId) return 'city';
+  if (place.regionId) return 'region';
+  return 'none';
+}
 
 /** Describe the geographic scope the query ran under. */
 function buildLocationEcho(params: ParsedSearchParams, place: ResolvedPlace): LocationEcho {
   if (place.unresolved && place.unresolvedParam) {
     return {
       status: 'unresolved',
+      appliedLocationKind: appliedLocationKind(params, place),
       requested: {
         param: place.unresolvedParam,
         value: params[place.unresolvedParam] ?? '',
@@ -136,10 +168,11 @@ function buildLocationEcho(params: ParsedSearchParams, place: ResolvedPlace): Lo
   // this contract forbids is a location REQUESTED AND LOST, never one that was
   // never asked for. Saying so explicitly is what lets a heading read "Homes
   // everywhere" honestly instead of naming a place nothing filtered on.
-  if (!hasScope) return { status: 'none' };
+  if (!hasScope) return { status: 'none', appliedLocationKind: 'none' };
 
   return {
     status: 'resolved',
+    appliedLocationKind: appliedLocationKind(params, place),
     ...(place.cityId ? { cityId: place.cityId } : {}),
     ...(place.regionId ? { regionId: place.regionId } : {}),
     ...(place.neighborhoodId ? { neighborhoodId: place.neighborhoodId } : {}),
@@ -232,6 +265,7 @@ function buildSearchResponse(
   total: number,
   message: string,
   location: LocationEcho,
+  queryId: string | undefined,
 ): Record<string, unknown> {
   const totalPages = Math.max(1, Math.ceil(total / limit));
   const hasMore = (page - 1) * limit + data.length < total;
@@ -243,6 +277,11 @@ function buildSearchResponse(
     totalPages,
     hasMore,
     location,
+    // Absent rather than null when the caller sent none, so "this server does
+    // not stamp answers" and "this answer belongs to another query" stay
+    // distinguishable — a client that treated them alike would black out its
+    // results surface against an older deployment.
+    ...(queryId === undefined ? {} : { queryId }),
   };
 }
 
@@ -274,23 +313,41 @@ export async function searchProperties(req: Request, res: Response, next: NextFu
         0,
         'No properties found for the specified location',
         buildLocationEcho(params, place),
+        params.queryId,
       ));
       return;
     }
     conditions.push(...place.conditions);
 
     // --- Free-text query ---
-    // Matches the listing's own text OR the place it is in, so a location word
-    // still works when the description does not carry it. The two place ids are
-    // resolved here rather than expanded into an address-id set.
+    //
+    // `q` is matched against the listing's own text and its street. It is ALSO
+    // read as a place name — but ONLY when nothing else said where, and that
+    // condition is the fix rather than a tuning knob.
+    //
+    // With a scope already applied the place expansion is at best redundant and
+    // at worst the bug: a viewport over Madrid plus `q=Barcelona` produced
+    // `inside Madrid AND (text matches Barcelona OR city = Barcelona)`, whose
+    // honest answer is zero, rendered as "this area is empty". A person who has
+    // said where by picking a place or moving the map has already answered the
+    // question `q` would be re-answering; what they typed is a description of
+    // the home, not of the city (ADR 0002 §4.1 — the two dimensions are
+    // independent, and only one of them is geographic).
+    //
+    // It also removes two place lookups per scoped request.
     if (params.text) {
-      const [textCityId, textRegionId] = await Promise.all([
-        resolveCityId(params.text),
-        resolveRegionId(params.text),
-      ]);
+      const scoped = appliedLocationKind(params, place) !== 'none';
+      const [textCityId, textRegionId] = scoped
+        ? [undefined, undefined]
+        : await Promise.all([resolveCityId(params.text), resolveRegionId(params.text)]);
       conditions.push(matchesText(params.text, { cityId: textCityId, regionId: textRegionId }));
     }
 
+    // ONE `where`, built once, handed to BOTH reads. The count and the page
+    // must answer the same question: a count assembled separately drifts from
+    // the list it is labelling the moment a predicate is added to one of them,
+    // and the result — "1,204 homes" over eleven cards — looks like paging
+    // rather than like a bug.
     const where = allOf(conditions);
     const orderBy = propertyOrderBy(...buildSort(params, params.text));
     const skip = (params.page - 1) * params.limit;
@@ -307,6 +364,7 @@ export async function searchProperties(req: Request, res: Response, next: NextFu
       total,
       'Search completed successfully',
       buildLocationEcho(params, place),
+      params.queryId,
     ));
   } catch (error) {
     // The parameter NAMES, never their values. This used to log `req.query`

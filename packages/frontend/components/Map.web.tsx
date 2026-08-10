@@ -50,12 +50,14 @@ import {
   installMissingImageFallback,
 } from './mapStyle';
 import { colors } from '@/styles/colors';
+import { PROGRAMMATIC_MOVE, moveSourceOf } from './mapTypes';
 import type {
   GeocodedAddress,
   ClusterLeaf,
   ClusterOptions,
   LonLat,
   MapApi,
+  MapMoveSource,
   MarkerInput,
   MarkerStyle,
 } from './mapTypes';
@@ -95,7 +97,7 @@ export interface MapProps {
   onAddressSelect?: (address: GeocodedAddress, coordinates: LonLat) => void;
   onAddressLookupStart?: () => void;
   onAddressLookupEnd?: () => void;
-  onRegionChange?: (e: { center: LonLat; zoom: number; bearing: number; pitch: number; bounds: { west: number; south: number; east: number; north: number }; isFinal?: boolean }) => void;
+  onRegionChange?: (e: { center: LonLat; zoom: number; bearing: number; pitch: number; bounds: { west: number; south: number; east: number; north: number }; isFinal?: boolean; source: MapMoveSource }) => void;
   onMarkerPress?: (e: { id: string; lngLat: LonLat }) => void;
   onClusterPress?: (e: { leaves: ClusterLeaf[] }) => void;
 }
@@ -333,7 +335,11 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   }, [renderPillMarkers]);
 
   // Emit a region change, throttling the streaming (non-final) updates.
-  const emitRegion = useCallback((isFinal: boolean) => {
+  //
+  // `event` is the MapLibre event that caused the move, taken as `unknown`
+  // because the only thing read off it is the marker every camera command in
+  // this file attaches — see `PROGRAMMATIC_MOVE`.
+  const emitRegion = useCallback((isFinal: boolean, event?: unknown) => {
     const map = mapRef.current;
     if (!map) return;
     const now = Date.now();
@@ -365,6 +371,7 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
       pitch: map.getPitch(),
       bounds: boundsPayload,
       isFinal,
+      source: moveSourceOf(event),
     });
   }, []);
 
@@ -464,7 +471,9 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
             source.getClusterExpansionZoom(clusterId).then((zoom) => {
               const geometry = feature.geometry;
               if (geometry.type === 'Point') {
-                map.easeTo({ center: toLonLat(geometry.coordinates), zoom });
+                // Expanding a cluster is a click on a cluster, not a statement
+                // about which area to search — so it must not arm the button.
+                map.easeTo({ center: toLonLat(geometry.coordinates), zoom }, PROGRAMMATIC_MOVE);
               }
             }).catch(() => {
               // Cluster expansion is best-effort; ignore lookup failures.
@@ -523,15 +532,20 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
         }
       });
 
-      const onMove = () => emitRegion(false);
-      const onMoveEnd = () => emitRegion(true);
+      const onMove = (event: unknown) => emitRegion(false, event);
+      const onMoveEnd = (event: unknown) => emitRegion(true, event);
       (['move', 'zoom', 'rotate', 'pitch'] as const).forEach((ev) => map.on(ev, onMove));
       (['moveend', 'zoomend', 'rotateend', 'pitchend'] as const).forEach((ev) => map.on(ev, onMoveEnd));
 
       // Recompute size when the flex/grid parent resolves or resizes — the GL
       // canvas needs an explicit pixel size and the container starts at 0×0 until
       // RN-Web layout settles.
-      resizeObserver = new ResizeObserver(() => map.resize());
+      //
+      // `resize` FIRES `movestart`/`move`/`moveend`, so it must be marked like
+      // any other camera command: the first one lands as the split layout
+      // settles, which is exactly the "a programmatic initial move must not show
+      // the button" case.
+      resizeObserver = new ResizeObserver(() => map.resize(PROGRAMMATIC_MOVE));
       resizeObserver.observe(container);
     };
 
@@ -613,10 +627,10 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
         const zoom = accuracy && accuracy > COARSE_ACCURACY_M
           ? Math.max(initialZoom, COARSE_ZOOM)
           : Math.max(initialZoom, FINE_ZOOM);
-        map.easeTo({
-          center: [loc.coords.longitude, loc.coords.latitude],
-          zoom,
-        });
+        map.easeTo(
+          { center: [loc.coords.longitude, loc.coords.latitude], zoom },
+          PROGRAMMATIC_MOVE,
+        );
         hasCenteredOnce.current = true;
       } catch {
         // Location is best-effort; the map keeps its initial camera.
@@ -631,7 +645,7 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   // Expose the imperative MapApi — identical to the native component.
   useImperativeHandle(ref, () => ({
     navigateToLocation: (center: LonLat, zoom: number = 15) => {
-      mapRef.current?.easeTo({ center, zoom, duration: NAVIGATE_DURATION_MS });
+      mapRef.current?.easeTo({ center, zoom, duration: NAVIGATE_DURATION_MS }, PROGRAMMATIC_MOVE);
     },
     fitBounds: (bounds, options) => {
       const map = mapRef.current;
@@ -640,17 +654,24 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
       // the two platforms cannot drift on either the wrap or the degenerate box.
       if (isDegenerateBounds(bounds)) {
         const centre = boundsCenter(bounds);
-        map.easeTo({
-          center: [centre.longitude, centre.latitude],
-          zoom: DEGENERATE_BOUNDS_ZOOM,
-          duration: options?.duration ?? NAVIGATE_DURATION_MS,
-        });
+        map.easeTo(
+          {
+            center: [centre.longitude, centre.latitude],
+            zoom: DEGENERATE_BOUNDS_ZOOM,
+            duration: options?.duration ?? NAVIGATE_DURATION_MS,
+          },
+          PROGRAMMATIC_MOVE,
+        );
         return;
       }
-      map.fitBounds(toCameraBounds(bounds), {
-        padding: options?.padding ?? FIT_BOUNDS_PADDING,
-        duration: options?.duration ?? NAVIGATE_DURATION_MS,
-      });
+      map.fitBounds(
+        toCameraBounds(bounds),
+        {
+          padding: options?.padding ?? FIT_BOUNDS_PADDING,
+          duration: options?.duration ?? NAVIGATE_DURATION_MS,
+        },
+        PROGRAMMATIC_MOVE,
+      );
     },
     highlightMarker: (id: string | null) => {
       const pillMarkers = pillMarkersRef.current;

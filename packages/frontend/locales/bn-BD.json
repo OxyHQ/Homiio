@@ -674,7 +674,8 @@
       "filters": "Filters",
       "saved": "Saved",
       "decreaseGuests": "Decrease guests",
-      "increaseGuests": "Increase guests"
+      "increaseGuests": "Increase guests",
+      "backToSearchedArea": "অনুসন্ধান করা এলাকায় ফিরে যান"
     },
     "summary": {
       "edit": "Edit search",
@@ -724,7 +725,10 @@
       "noResults": "No properties match this search",
       "loading": "Searching properties...",
       "count_one": "{{count}} property",
-      "count_other": "{{count}} properties"
+      "count_other": "{{count}} properties",
+      "unresolvedLocation": "আমরা সেই জায়গাটি খুঁজে পাইনি",
+      "withoutMapLocation_one": "এর মধ্যে {{count}}টির মানচিত্রে অবস্থান নেই",
+      "withoutMapLocation_other": "এর মধ্যে {{count}}টির মানচিত্রে অবস্থান নেই"
     },
     "recent": {
       "title": "Recent searches"
@@ -758,12 +762,15 @@
       "enableNotifications": "Enable notifications"
     },
     "where": {
-      "noResults": "No places match that search.",
-      "offline": "Can't reach Homiio. Check your connection and try again.",
-      "rateLimited": "Too many searches just now. Try again in a moment.",
-      "providerUnavailable": "Place search is temporarily unavailable. Try again shortly.",
-      "failed": "Couldn't search for places right now.",
-      "degraded": "Showing results from a backup source; some places may be missing."
+      "noResults": "সেই অনুসন্ধানের সঙ্গে কোনো জায়গা মেলেনি।",
+      "offline": "Homiio-তে সংযোগ করা যাচ্ছে না। আপনার সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।",
+      "rateLimited": "এই মুহূর্তে অনেক বেশি অনুসন্ধান হচ্ছে। কিছুক্ষণ পরে আবার চেষ্টা করুন।",
+      "providerUnavailable": "জায়গা অনুসন্ধান সাময়িকভাবে বন্ধ আছে। একটু পরে আবার চেষ্টা করুন।",
+      "failed": "এখন জায়গা খোঁজা যায়নি।",
+      "degraded": "বিকল্প উৎস থেকে ফলাফল দেখানো হচ্ছে; কিছু জায়গা বাদ পড়তে পারে।"
+    },
+    "area": {
+      "stillShowing": "এখনও {{place}}-এর ফলাফল দেখানো হচ্ছে"
     }
   },
   "profile": {

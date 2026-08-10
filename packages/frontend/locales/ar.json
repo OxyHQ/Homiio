@@ -674,7 +674,8 @@
       "filters": "Filters",
       "saved": "Saved",
       "decreaseGuests": "Decrease guests",
-      "increaseGuests": "Increase guests"
+      "increaseGuests": "Increase guests",
+      "backToSearchedArea": "العودة إلى المنطقة التي بحثت عنها"
     },
     "summary": {
       "edit": "Edit search",
@@ -724,7 +725,10 @@
       "noResults": "No properties match this search",
       "loading": "Searching properties...",
       "count_one": "{{count}} property",
-      "count_other": "{{count}} properties"
+      "count_other": "{{count}} properties",
+      "unresolvedLocation": "لم نتمكن من العثور على هذا المكان",
+      "withoutMapLocation_one": "{{count}} منها بدون موقع على الخريطة",
+      "withoutMapLocation_other": "{{count}} منها بدون موقع على الخريطة"
     },
     "recent": {
       "title": "Recent searches"
@@ -758,12 +762,15 @@
       "enableNotifications": "Enable notifications"
     },
     "where": {
-      "noResults": "No places match that search.",
-      "offline": "Can't reach Homiio. Check your connection and try again.",
-      "rateLimited": "Too many searches just now. Try again in a moment.",
-      "providerUnavailable": "Place search is temporarily unavailable. Try again shortly.",
-      "failed": "Couldn't search for places right now.",
-      "degraded": "Showing results from a backup source; some places may be missing."
+      "noResults": "لا توجد أماكن تطابق هذا البحث.",
+      "offline": "تعذّر الاتصال بـ Homiio. تحقّق من اتصالك وحاول مرة أخرى.",
+      "rateLimited": "عمليات بحث كثيرة جدًا الآن. حاول مرة أخرى بعد قليل.",
+      "providerUnavailable": "البحث عن الأماكن غير متاح مؤقتًا. حاول مرة أخرى قريبًا.",
+      "failed": "تعذّر البحث عن الأماكن الآن.",
+      "degraded": "نعرض نتائج من مصدر احتياطي؛ قد تنقص بعض الأماكن."
+    },
+    "area": {
+      "stillShowing": "ما زلنا نعرض نتائج {{place}}"
     }
   },
   "profile": {

@@ -674,7 +674,8 @@
       "filters": "Filters",
       "saved": "Saved",
       "decreaseGuests": "Decrease guests",
-      "increaseGuests": "Increase guests"
+      "increaseGuests": "Increase guests",
+      "backToSearchedArea": "Revenir à la zone recherchée"
     },
     "summary": {
       "edit": "Edit search",
@@ -724,7 +725,10 @@
       "noResults": "No properties match this search",
       "loading": "Searching properties...",
       "count_one": "{{count}} property",
-      "count_other": "{{count}} properties"
+      "count_other": "{{count}} properties",
+      "unresolvedLocation": "Nous n'avons pas trouvé ce lieu",
+      "withoutMapLocation_one": "{{count}} d'entre eux n'a pas de position sur la carte",
+      "withoutMapLocation_other": "{{count}} d'entre eux n'ont pas de position sur la carte"
     },
     "recent": {
       "title": "Recent searches"
@@ -758,12 +762,15 @@
       "enableNotifications": "Enable notifications"
     },
     "where": {
-      "noResults": "No places match that search.",
-      "offline": "Can't reach Homiio. Check your connection and try again.",
-      "rateLimited": "Too many searches just now. Try again in a moment.",
-      "providerUnavailable": "Place search is temporarily unavailable. Try again shortly.",
-      "failed": "Couldn't search for places right now.",
-      "degraded": "Showing results from a backup source; some places may be missing."
+      "noResults": "Aucun lieu ne correspond à cette recherche.",
+      "offline": "Impossible de joindre Homiio. Vérifiez votre connexion et réessayez.",
+      "rateLimited": "Trop de recherches à la fois. Réessayez dans un instant.",
+      "providerUnavailable": "La recherche de lieux est temporairement indisponible. Réessayez sous peu.",
+      "failed": "Impossible de rechercher des lieux pour le moment.",
+      "degraded": "Résultats issus d'une source de secours ; certains lieux peuvent manquer."
+    },
+    "area": {
+      "stillShowing": "Résultats toujours affichés pour {{place}}"
     }
   },
   "profile": {

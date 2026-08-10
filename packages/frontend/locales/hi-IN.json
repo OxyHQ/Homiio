@@ -674,7 +674,8 @@
       "filters": "Filters",
       "saved": "Saved",
       "decreaseGuests": "Decrease guests",
-      "increaseGuests": "Increase guests"
+      "increaseGuests": "Increase guests",
+      "backToSearchedArea": "खोजे गए क्षेत्र पर लौटें"
     },
     "summary": {
       "edit": "Edit search",
@@ -724,7 +725,10 @@
       "noResults": "No properties match this search",
       "loading": "Searching properties...",
       "count_one": "{{count}} property",
-      "count_other": "{{count}} properties"
+      "count_other": "{{count}} properties",
+      "unresolvedLocation": "हमें वह जगह नहीं मिली",
+      "withoutMapLocation_one": "इनमें से {{count}} का मानचित्र पर स्थान नहीं है",
+      "withoutMapLocation_other": "इनमें से {{count}} का मानचित्र पर स्थान नहीं है"
     },
     "recent": {
       "title": "Recent searches"
@@ -758,12 +762,15 @@
       "enableNotifications": "Enable notifications"
     },
     "where": {
-      "noResults": "No places match that search.",
-      "offline": "Can't reach Homiio. Check your connection and try again.",
-      "rateLimited": "Too many searches just now. Try again in a moment.",
-      "providerUnavailable": "Place search is temporarily unavailable. Try again shortly.",
-      "failed": "Couldn't search for places right now.",
-      "degraded": "Showing results from a backup source; some places may be missing."
+      "noResults": "उस खोज से कोई जगह मेल नहीं खाती।",
+      "offline": "Homiio से संपर्क नहीं हो पा रहा। अपना कनेक्शन जाँचें और फिर कोशिश करें।",
+      "rateLimited": "अभी बहुत अधिक खोजें हो रही हैं। थोड़ी देर बाद कोशिश करें।",
+      "providerUnavailable": "जगह खोज अस्थायी रूप से उपलब्ध नहीं है। थोड़ी देर बाद कोशिश करें।",
+      "failed": "अभी जगहें नहीं खोजी जा सकीं।",
+      "degraded": "वैकल्पिक स्रोत से परिणाम दिखाए जा रहे हैं; कुछ जगहें छूट सकती हैं।"
+    },
+    "area": {
+      "stillShowing": "अब भी {{place}} के परिणाम दिखाए जा रहे हैं"
     }
   },
   "profile": {

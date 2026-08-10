@@ -674,7 +674,8 @@
       "filters": "Filters",
       "saved": "Saved",
       "decreaseGuests": "Decrease guests",
-      "increaseGuests": "Increase guests"
+      "increaseGuests": "Increase guests",
+      "backToSearchedArea": "Kembali ke area yang dicari"
     },
     "summary": {
       "edit": "Edit search",
@@ -724,7 +725,10 @@
       "noResults": "No properties match this search",
       "loading": "Searching properties...",
       "count_one": "{{count}} property",
-      "count_other": "{{count}} properties"
+      "count_other": "{{count}} properties",
+      "unresolvedLocation": "Kami tidak menemukan tempat itu",
+      "withoutMapLocation_one": "{{count}} di antaranya tidak memiliki lokasi di peta",
+      "withoutMapLocation_other": "{{count}} di antaranya tidak memiliki lokasi di peta"
     },
     "recent": {
       "title": "Recent searches"
@@ -758,12 +762,15 @@
       "enableNotifications": "Enable notifications"
     },
     "where": {
-      "noResults": "No places match that search.",
-      "offline": "Can't reach Homiio. Check your connection and try again.",
-      "rateLimited": "Too many searches just now. Try again in a moment.",
-      "providerUnavailable": "Place search is temporarily unavailable. Try again shortly.",
-      "failed": "Couldn't search for places right now.",
-      "degraded": "Showing results from a backup source; some places may be missing."
+      "noResults": "Tidak ada tempat yang cocok dengan pencarian itu.",
+      "offline": "Tidak dapat menghubungi Homiio. Periksa koneksi Anda lalu coba lagi.",
+      "rateLimited": "Terlalu banyak pencarian saat ini. Coba lagi sebentar lagi.",
+      "providerUnavailable": "Pencarian tempat sementara tidak tersedia. Coba lagi nanti.",
+      "failed": "Tidak dapat mencari tempat saat ini.",
+      "degraded": "Menampilkan hasil dari sumber cadangan; beberapa tempat mungkin tidak ada."
+    },
+    "area": {
+      "stillShowing": "Masih menampilkan hasil untuk {{place}}"
     }
   },
   "profile": {

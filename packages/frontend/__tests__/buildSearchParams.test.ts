@@ -32,6 +32,7 @@ import {
 import {
   buildSearchParams,
   isUnscopeableLocation,
+  searchQueryId,
   searchQueryKey,
 } from '@/hooks/usePropertySearch';
 import type { SearchQuery } from '@/components/search/types';
@@ -278,8 +279,15 @@ describe('buildSearchParams', () => {
 
 describe('searchQueryKey', () => {
   it('drops page/limit so all pages of one search share a cache entry', () => {
-    const [namespace, , rest] = searchQueryKey(baseQuery({ priceMin: 800 }));
+    const query = baseQuery({ priceMin: 800 });
+    const [namespace, id, place, rest] = searchQueryKey(query);
     expect(namespace).toBe('propertySearch');
+    // The key's first discriminator IS the identity every other surface quotes
+    // — the heading, the count, the markers and the server's echo. A cache key
+    // that could disagree with it would put one search's pages under another's
+    // name (#354, invariant 1).
+    expect(id).toBe(searchQueryId(query));
+    expect(place).toBe('none');
     expect(rest).not.toHaveProperty('page');
     expect(rest).not.toHaveProperty('limit');
     expect(rest).toMatchObject({ priceMin: 800, offering: OfferingType.LONG_TERM_RENT });

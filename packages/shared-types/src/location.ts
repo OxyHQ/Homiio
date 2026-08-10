@@ -517,10 +517,30 @@ export function crossesAntimeridian(bounds: GeoBounds): boolean {
  * naive form for `2.05→2.23`, `-3.75→-3.65` and `-10→40` — which is what makes
  * adopting it everywhere safe rather than a behaviour change.
  */
+/**
+ * How wide and how tall a box is, in degrees, measured the way the box means.
+ *
+ * The longitude term is the reason this is a function rather than a
+ * subtraction: for a box that wraps the antimeridian, `east - west` is the
+ * NEGATIVE of nothing useful (`-170 - 170 = -340`), and the span it describes
+ * is the 20 degrees the other way. Extracted so {@link boundsCenter} and every
+ * caller that needs a size read one implementation — the header above records
+ * that four production sites each derived this arithmetic naively, and a second
+ * copy is how a fifth happens.
+ */
+export function boundsSpanDegrees(bounds: GeoBounds): { longitude: number; latitude: number } {
+  return {
+    longitude: crossesAntimeridian(bounds)
+      ? 360 - bounds.west + bounds.east
+      : bounds.east - bounds.west,
+    // Latitude never wraps: `south > north` is an ERROR rather than a
+    // convention, so the plain difference is correct and always was.
+    latitude: bounds.north - bounds.south,
+  };
+}
+
 export function boundsCenter(bounds: GeoBounds): GeoPoint {
-  const eastwardSpan = crossesAntimeridian(bounds)
-    ? 360 - bounds.west + bounds.east
-    : bounds.east - bounds.west;
+  const eastwardSpan = boundsSpanDegrees(bounds).longitude;
   return {
     longitude: normalizeLongitude(bounds.west + eastwardSpan / 2),
     // Latitude never wraps: `south > north` is an ERROR rather than a

@@ -674,7 +674,8 @@
       "filters": "Filters",
       "saved": "Saved",
       "decreaseGuests": "Decrease guests",
-      "increaseGuests": "Increase guests"
+      "increaseGuests": "Increase guests",
+      "backToSearchedArea": "返回已搜索区域"
     },
     "summary": {
       "edit": "Edit search",
@@ -724,7 +725,10 @@
       "noResults": "No properties match this search",
       "loading": "Searching properties...",
       "count_one": "{{count}} property",
-      "count_other": "{{count}} properties"
+      "count_other": "{{count}} properties",
+      "unresolvedLocation": "未能找到该地点",
+      "withoutMapLocation_one": "其中 {{count}} 个没有地图位置",
+      "withoutMapLocation_other": "其中 {{count}} 个没有地图位置"
     },
     "recent": {
       "title": "Recent searches"
@@ -758,12 +762,15 @@
       "enableNotifications": "Enable notifications"
     },
     "where": {
-      "noResults": "No places match that search.",
-      "offline": "Can't reach Homiio. Check your connection and try again.",
-      "rateLimited": "Too many searches just now. Try again in a moment.",
-      "providerUnavailable": "Place search is temporarily unavailable. Try again shortly.",
-      "failed": "Couldn't search for places right now.",
-      "degraded": "Showing results from a backup source; some places may be missing."
+      "noResults": "没有符合该搜索的地点。",
+      "offline": "无法连接 Homiio。请检查网络连接后重试。",
+      "rateLimited": "搜索过于频繁，请稍后再试。",
+      "providerUnavailable": "地点搜索暂时不可用，请稍后再试。",
+      "failed": "目前无法搜索地点。",
+      "degraded": "正在显示备用来源的结果，部分地点可能缺失。"
+    },
+    "area": {
+      "stillShowing": "仍在显示{{place}}的搜索结果"
     }
   },
   "profile": {

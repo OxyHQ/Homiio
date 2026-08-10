@@ -17,6 +17,7 @@ import type {
   LonLat,
   MapApi,
   MapEvent,
+  MapMoveSource,
   MarkerInput,
   MarkerStyle,
   OutboundMapMessage,
@@ -57,7 +58,7 @@ export interface MapProps {
   onAddressSelect?: (address: GeocodedAddress, coordinates: LonLat) => void;
   onAddressLookupStart?: () => void;
   onAddressLookupEnd?: () => void;
-  onRegionChange?: (e: { center: LonLat; zoom: number; bearing: number; pitch: number; bounds: { west: number; south: number; east: number; north: number }; isFinal?: boolean }) => void;
+  onRegionChange?: (e: { center: LonLat; zoom: number; bearing: number; pitch: number; bounds: { west: number; south: number; east: number; north: number }; isFinal?: boolean; source: MapMoveSource }) => void;
   onMarkerPress?: (e: { id: string; lngLat: LonLat }) => void;
   onClusterPress?: (e: { leaves: ClusterLeaf[] }) => void;
 }
@@ -415,7 +416,13 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
             bounds: msg.bounds,
           });
         }
-        onRegionChange?.(msg);
+        // The document is the ONLY producer of this message and it always
+        // stamps a source (`buildMapDocument`, pinned by
+        // `__tests__/mapMoveSource.test.ts`). Normalising anyway means a
+        // payload this host cannot read is treated as "the app moved the
+        // camera" — the reading that changes nothing — rather than arming a
+        // button off a message that arrived malformed.
+        onRegionChange?.({ ...msg, source: msg.source === 'user' ? 'user' : 'programmatic' });
       }
     } catch {
       // Silently handle message parsing errors
