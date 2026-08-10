@@ -25,12 +25,13 @@ import {
 } from '@oxyhq/bloom/segmented-control';
 
 import { Section } from '@/components/property/Section';
-import { CurrencyFormatter } from '@/components/CurrencyFormatter';
+import { MoneyText } from '@/components/MoneyText';
 import { RangeSlider } from '@/components/ui/RangeSlider';
 import { parseLocaleNumber } from '@/utils/number';
 import { colors } from '@/styles/colors';
 import { hairline, radius, spacing } from '@/constants/styles';
-import { DEFAULT_MORTGAGE_CONFIG } from '@homiio/shared-types';
+import { DEFAULT_MORTGAGE_CONFIG, formatPercentage } from '@homiio/shared-types';
+import { useFormatting } from '@/utils/format';
 
 interface Props {
   salePrice: number;
@@ -72,6 +73,7 @@ function fractionToPercent(fraction: number): number {
 
 export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency }) => {
   const { t } = useTranslation();
+  const { locale } = useFormatting();
 
   const [downPaymentFraction, setDownPaymentFraction] = useState(
     DEFAULT_MORTGAGE_CONFIG.defaultDownPaymentFraction,
@@ -110,9 +112,22 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
     if (!Number.isNaN(parsed)) setTermYears(parsed);
   }, []);
 
-  const downPaymentPercentLabel = `${Math.round(downPaymentFraction * PERCENT)}%`;
+  // `downPaymentFraction` and `principalShare` are FRACTIONS, which is what
+  // `formatPercentage` expects by default — no hand-multiplication by 100 and no
+  // hardcoded `%`, whose spacing differs by language.
+  const downPaymentPercentLabel = formatPercentage(downPaymentFraction, locale, {
+    maximumFractionDigits: 0,
+  });
   const principalPercent = Math.round(result.principalShare * PERCENT);
   const interestPercent = PERCENT - principalPercent;
+  const principalPercentLabel = formatPercentage(principalPercent, locale, {
+    input: 'percent',
+    maximumFractionDigits: 0,
+  });
+  const interestPercentLabel = formatPercentage(interestPercent, locale, {
+    input: 'percent',
+    maximumFractionDigits: 0,
+  });
 
   return (
     <Section
@@ -121,10 +136,9 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
     >
       {/* Monthly payment headline */}
       <View style={styles.headline}>
-        <CurrencyFormatter
+        <MoneyText
           amount={Math.round(result.monthly)}
-          originalCurrency={currency}
-          showConversion={false}
+          currency={currency}
           style={styles.monthly}
         />
         <BloomText style={styles.monthlyUnit}>
@@ -141,10 +155,9 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
           <BloomText style={styles.controlValue}>
             {downPaymentPercentLabel}
             {'  ·  '}
-            <CurrencyFormatter
+            <MoneyText
               amount={Math.round(result.downPayment)}
-              originalCurrency={currency}
-              showConversion={false}
+              currency={currency}
               style={styles.controlValue}
             />
           </BloomText>
@@ -218,13 +231,13 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: colors.primaryColor }]} />
             <BloomText style={styles.legendLabel}>
-              {`${t('listing.mortgage.principal')} · ${principalPercent}%`}
+              {`${t('listing.mortgage.principal')} · ${principalPercentLabel}`}
             </BloomText>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: colors.warning }]} />
             <BloomText style={styles.legendLabel}>
-              {`${t('listing.mortgage.interest')} · ${interestPercent}%`}
+              {`${t('listing.mortgage.interest')} · ${interestPercentLabel}`}
             </BloomText>
           </View>
         </View>
@@ -236,10 +249,9 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
           <BloomText style={styles.totalLabel}>
             {t('listing.mortgage.loanAmount')}
           </BloomText>
-          <CurrencyFormatter
+          <MoneyText
             amount={Math.round(result.loanAmount)}
-            originalCurrency={currency}
-            showConversion={false}
+            currency={currency}
             style={styles.totalValue}
           />
         </View>
@@ -247,10 +259,9 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
           <BloomText style={styles.totalLabel}>
             {t('listing.mortgage.totalInterest')}
           </BloomText>
-          <CurrencyFormatter
+          <MoneyText
             amount={Math.round(result.totalInterest)}
-            originalCurrency={currency}
-            showConversion={false}
+            currency={currency}
             style={styles.totalValue}
           />
         </View>
@@ -258,10 +269,9 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
           <BloomText style={styles.totalLabelStrong}>
             {t('listing.mortgage.totalPaid')}
           </BloomText>
-          <CurrencyFormatter
+          <MoneyText
             amount={Math.round(result.totalPaid)}
-            originalCurrency={currency}
-            showConversion={false}
+            currency={currency}
             style={styles.totalValueStrong}
           />
         </View>

@@ -28,6 +28,7 @@ import { useProperty } from '@/hooks';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { resolveBookingMode } from '@/utils/bookingMode';
 import { resolveHeadlinePrice } from '@/utils/propertyPricing';
+import { useFormatting } from '@/utils/format';
 import profileService from '@/services/profileService';
 
 interface PropertyBookingWidgetProps {
@@ -38,6 +39,7 @@ const STICKY_TOP_OFFSET = 80;
 
 export function PropertyBookingWidget({ propertyId }: PropertyBookingWidgetProps) {
   const { t } = useTranslation();
+  const formatting = useFormatting();
   const { mode: rentalMode } = useRentalMode();
   const { property: apiProperty } = useProperty(propertyId ?? '');
 
@@ -61,7 +63,7 @@ export function PropertyBookingWidget({ propertyId }: PropertyBookingWidgetProps
     return null;
   }
 
-  const { priceLabel, priceSubtitle } = resolveHeadlinePrice(property, rentalMode, t);
+  const { priceLabel, priceSubtitle } = resolveHeadlinePrice(property, rentalMode, t, formatting);
 
   return (
     <View style={Platform.OS === 'web' ? styles.stickyWrapperWeb : undefined}>

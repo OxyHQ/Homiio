@@ -10,6 +10,8 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { formatArea } from '@homiio/shared-types';
+import { useFormatting } from '@/utils/format';
 
 import { Divider } from '@oxyhq/bloom/divider';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
@@ -37,6 +39,7 @@ interface Row {
 
 export const PropertyOverview: React.FC<Props> = ({ property }) => {
   const { t } = useTranslation();
+  const { locale, areaUnitLabels } = useFormatting();
   const size = property?.size ?? property?.squareFootage;
 
   const rows: Row[] = [
@@ -50,7 +53,10 @@ export const PropertyOverview: React.FC<Props> = ({ property }) => {
     },
     {
       label: t('property.sections.size'),
-      value: size !== undefined ? `${size}m²` : '-',
+      value:
+        size !== undefined
+          ? formatArea(size, 'sqm', locale, { labels: areaUnitLabels })
+          : '-',
     },
     ...(property?.floor !== undefined
       ? [

@@ -16,10 +16,11 @@ import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Section } from '@/components/property/Section';
-import { CurrencyFormatter } from '@/components/CurrencyFormatter';
+import { MoneyText } from '@/components/MoneyText';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
-import type { PropertySale } from '@homiio/shared-types';
+import { formatPercentage, type PropertySale } from '@homiio/shared-types';
+import { useFormatting } from '@/utils/format';
 
 interface Props {
   sale: PropertySale;
@@ -39,16 +40,16 @@ const CHAIN_STATUS_LABEL: Record<
 
 export const SaleDetailsSection: React.FC<Props> = ({ sale }) => {
   const { t } = useTranslation();
+  const { locale } = useFormatting();
 
   const chain = sale.chainStatus ? CHAIN_STATUS_LABEL[sale.chainStatus] : undefined;
 
   return (
     <Section title={t('listing.sale.sectionTitle')}>
       <View style={styles.headline}>
-        <CurrencyFormatter
+        <MoneyText
           amount={sale.price}
-          originalCurrency={sale.currency}
-          showConversion={false}
+          currency={sale.currency}
           style={styles.price}
         />
         {sale.isPriceReduced ? (
@@ -69,10 +70,9 @@ export const SaleDetailsSection: React.FC<Props> = ({ sale }) => {
               {t('listing.sale.pricePerSqm')}
             </BloomText>
             <BloomText style={styles.value}>
-              <CurrencyFormatter
+              <MoneyText
                 amount={sale.pricePerSqm}
-                originalCurrency={sale.currency}
-                showConversion={false}
+                currency={sale.currency}
                 style={styles.value}
               />
             </BloomText>
@@ -88,9 +88,10 @@ export const SaleDetailsSection: React.FC<Props> = ({ sale }) => {
               {t('listing.sale.estimatedYield')}
             </BloomText>
             <BloomText style={styles.value}>
-              {`${sale.estimatedYield.toLocaleString(undefined, {
+              {formatPercentage(sale.estimatedYield, locale, {
+                input: 'percent',
                 maximumFractionDigits: PERCENT_MAX_FRACTION_DIGITS,
-              })}%`}
+              })}
             </BloomText>
           </View>
         </>

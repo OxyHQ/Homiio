@@ -125,6 +125,14 @@ export function generatePaymentSchedule(
       // LABEL is formatted in the server's zone, so an instalment stored at
       // `2026-02-01T00:00:00Z` reads "January 2026" on a machine west of UTC —
       // a description that contradicts the date beside it.
+      //
+      // The `en-US` is deliberate and does NOT go through the shared date
+      // formatter (issue #357): this string is PERSISTED on the payment row at
+      // schedule-generation time, when no reader and therefore no locale exists
+      // yet. Formatting it per-locale here would freeze one tenant's language
+      // into a row every party to the lease reads. Localising it properly means
+      // storing the month as data and rendering it at read time, which is a
+      // schema change rather than a formatting one.
       description: `Monthly Rent - ${currentDate.toLocaleDateString('en-US', {
         month: 'long',
         year: 'numeric',

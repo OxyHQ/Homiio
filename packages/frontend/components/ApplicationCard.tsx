@@ -10,13 +10,13 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { Avatar } from '@oxyhq/bloom/avatar';
-import { TenantApplication } from '@homiio/shared-types';
+import { TenantApplication, formatMoney } from '@homiio/shared-types';
 import { ApplicationStatusBadge } from '@/components/ApplicationStatusBadge';
 import { ThumbnailCard } from '@/components/ui/ThumbnailCard';
 import { ThumbnailImage } from '@/components/ui/ThumbnailImage';
 import { useProperty } from '@/hooks';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
-import { formatCurrency } from '@/utils/currency';
+import { useFormatting } from '@/utils/format';
 import { formatLocalized } from '@/utils/dateLocale';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
@@ -47,6 +47,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
   applicantAvatarFileId,
 }) => {
   const { t } = useTranslation();
+  const { locale } = useFormatting();
   const router = useRouter();
   const { property } = useProperty(application.propertyId);
 
@@ -104,7 +105,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
             </BloomText>
           </View>
           <BloomText style={styles.meta} numberOfLines={1}>
-            {formatCurrency(application.monthlyIncome, APPLICATION_INCOME_CURRENCY)}
+            {formatMoney(application.monthlyIncome, APPLICATION_INCOME_CURRENCY, locale)}
             {t('applications.card.perMonth')} ·{' '}
             {t(`profile.edit.options.employmentStatus.${application.employmentStatus}`)} ·{' '}
             {t('applications.card.moveIn')} {moveInLabel}

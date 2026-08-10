@@ -18,6 +18,7 @@ import {
 import { Header } from '@/components/Header';
 import { useCurrency } from '@/hooks/useCurrency';
 import { CURRENCIES, getExchangeRateDisplay } from '@/utils/currency';
+import { useFormatting } from '@/utils/format';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
@@ -25,6 +26,7 @@ export default function CurrencySettingsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { currentCurrency, changeCurrency } = useCurrency();
+  const { locale } = useFormatting();
 
   const handleCurrencySelect = async (currencyCode: string): Promise<void> => {
     try {
@@ -58,7 +60,7 @@ export default function CurrencySettingsScreen() {
             const exchangeRate =
               currency.code === currentCurrency
                 ? undefined
-                : getExchangeRateDisplay(currentCurrency, currency.code);
+                : getExchangeRateDisplay(currentCurrency, currency.code, locale);
             const description = exchangeRate
               ? `${currency.code} · ${exchangeRate}`
               : currency.code;

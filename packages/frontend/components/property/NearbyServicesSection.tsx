@@ -41,7 +41,12 @@ import { getIconArt } from '@/constants/iconArt';
 import { useNearbyServices } from '@/hooks';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
-import type { NearbyServiceCategory, NearbyServiceKey } from '@homiio/shared-types';
+import {
+  formatDistance,
+  type NearbyServiceCategory,
+  type NearbyServiceKey,
+} from '@homiio/shared-types';
+import { useFormatting } from '@/utils/format';
 
 interface NearbyServicesSectionProps {
   propertyId: string;
@@ -109,21 +114,18 @@ const SERVICE_META: Record<
   },
 };
 
-/** Metres in one kilometre — distances at/above this switch to a km label. */
-const METRES_PER_KM = 1000;
 /** Em-dash shown for absent categories (no distance). */
 const ABSENT_DISTANCE = '—';
 
 /**
- * Format a straight-line distance in metres for display: `< 1 km` reads in
- * whole metres ("153 m"), otherwise one decimal of kilometres ("1.2 km").
- * `null` (absent category) renders the em-dash placeholder.
+ * Format a straight-line distance in metres for display. The `< 1 km` → whole
+ * metres, `>= 1 km` → one decimal ladder this used to spell out by hand is the
+ * shared formatter's own rule; going through it adds the reader's decimal
+ * separator ("1,2 km" in Spanish) and an imperial rendering where the locale
+ * calls for one. `null` (absent category) renders the em-dash placeholder.
  */
-const formatDistance = (metres: number | null): string => {
-  if (metres === null) return ABSENT_DISTANCE;
-  if (metres < METRES_PER_KM) return `${Math.round(metres)} m`;
-  return `${(metres / METRES_PER_KM).toFixed(1)} km`;
-};
+const distanceLabelFor = (metres: number | null, locale: string): string =>
+  metres === null ? ABSENT_DISTANCE : formatDistance(metres, locale);
 
 interface ServiceRowProps {
   category: NearbyServiceCategory;
@@ -193,6 +195,7 @@ interface NearbyServicesContentProps {
 }
 
 const NearbyServicesContent: React.FC<NearbyServicesContentProps> = ({ t, data }) => {
+  const { locale } = useFormatting();
   const { categories, partial, radiusM } = data;
 
   // Present first (nearest → farthest), then absent. Sorting buys a tidy "what's
@@ -216,9 +219,8 @@ const NearbyServicesContent: React.FC<NearbyServicesContentProps> = ({ t, data }
   // section instead of rendering an all-em-dash grid that would mislead.
   if (partial && presentCount === 0) return null;
 
-  const radiusKm = radiusM / METRES_PER_KM;
   const subtitle = t('property.nearbyServices.within', {
-    km: Number.isInteger(radiusKm) ? radiusKm : radiusKm.toFixed(1),
+    distance: formatDistance(radiusM, locale),
   });
 
   return (
@@ -229,7 +231,7 @@ const NearbyServicesContent: React.FC<NearbyServicesContentProps> = ({ t, data }
             <ServiceRow
               category={category}
               label={t(SERVICE_META[category.key].labelKey)}
-              distanceLabel={formatDistance(category.nearestM)}
+              distanceLabel={distanceLabelFor(category.nearestM, locale)}
             />
           </DetailIconCell>
         ))}

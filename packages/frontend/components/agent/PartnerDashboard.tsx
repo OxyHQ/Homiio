@@ -22,7 +22,8 @@ import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { colors } from '@/styles/colors';
 import { ProgressBar } from '@/components/ui/ProgressBar';
-import { formatCurrency } from '@/utils/currency';
+import { formatMoney } from '@homiio/shared-types';
+import { useFormatting } from '@/utils/format';
 import { formatLocalized } from '@/utils/dateLocale';
 import {
   hairline,
@@ -54,7 +55,7 @@ interface PartnerDashboardProps {
 
 /**
  * Whole-unit display (no decimals) for the ledger amounts. Earnings are shown in
- * the commission's OWN currency, so `formatCurrency` is used without FX
+ * the commission's OWN currency, so `formatMoney` is used without FX
  * conversion — it only renders the symbol + grouped amount.
  */
 const WHOLE_CURRENCY = { minimumFractionDigits: 0, maximumFractionDigits: 0 } as const;
@@ -136,6 +137,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
   earningsLoading,
 }) => {
   const { t } = useTranslation();
+  const { locale } = useFormatting();
   const isWide = useMediaQuery({ minWidth: 768 });
   const horizontalPadding = resolvePagePadding(isWide);
 
@@ -183,7 +185,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
   };
 
   // The 4-up summary grid. Counts render as-is; the two money figures are shown
-  // in the ledger's own currency (no FX) via `formatCurrency`.
+  // in the ledger's own currency (no FX) via `formatMoney`.
   const summaryCells: readonly { key: string; label: string; value: string }[] = [
     {
       key: 'referrals',
@@ -198,12 +200,12 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
     {
       key: 'pending',
       label: t('agent.dashboard.pending'),
-      value: formatCurrency(stats.pendingEarnings, stats.currency, WHOLE_CURRENCY),
+      value: formatMoney(stats.pendingEarnings, stats.currency, locale, WHOLE_CURRENCY),
     },
     {
       key: 'earned',
       label: t('agent.dashboard.earned'),
-      value: formatCurrency(stats.paidEarnings, stats.currency, WHOLE_CURRENCY),
+      value: formatMoney(stats.paidEarnings, stats.currency, locale, WHOLE_CURRENCY),
     },
   ];
 
@@ -289,7 +291,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
               <View key={commission.id} style={styles.ledgerRow}>
                 <View style={styles.ledgerLeft}>
                   <BloomText style={styles.ledgerAmount}>
-                    {formatCurrency(commission.amount, commission.currency, WHOLE_CURRENCY)}
+                    {formatMoney(commission.amount, commission.currency, locale, WHOLE_CURRENCY)}
                   </BloomText>
                   <BloomText style={styles.ledgerMeta}>
                     {`${offeringLabel(commission.basis.offering)} · ${formatLocalized(

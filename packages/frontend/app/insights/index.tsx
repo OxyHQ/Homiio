@@ -13,13 +13,16 @@ import { HomeCarouselSection } from '@/components/HomeCarouselSection';
 import { PropertyCard } from '@/components/PropertyCard';
 import { useRouter } from 'expo-router';
 import { InsightsSkeleton } from '@/components/ui/skeletons/InsightsSkeleton';
-import type { Property } from '@homiio/shared-types';
+import { formatMoney, type Property } from '@homiio/shared-types';
+import { SEARCH_PRICE_CURRENCY } from '@/components/search/types';
+import { useFormatting } from '@/utils/format';
 import { logger } from '@/utils/logger';
 import { spacing } from '@/constants/styles';
 
 // Chart width will adapt to 100% of available content width
 
 export default function InsightsScreen() {
+    const { locale } = useFormatting();
     const { t: _t } = useTranslation();
     const router = useRouter();
     const insets = useSafeAreaInsets();
@@ -251,7 +254,11 @@ export default function InsightsScreen() {
                                 </View>
                                 <View style={styles.cityStatChip}>
                                     <Ionicons name="cash-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} />
-                                    <ThemedText style={styles.cityStatText}>${c.averageRent}</ThemedText>
+                                    <ThemedText style={styles.cityStatText}>
+                                        {formatMoney(c.averageRent, SEARCH_PRICE_CURRENCY, locale, {
+                                            maximumFractionDigits: 0,
+                                        })}
+                                    </ThemedText>
                                 </View>
                             </View>
                         </View>

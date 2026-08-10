@@ -1,5 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
 
+import { formatMoney } from '@homiio/shared-types';
+
+/**
+ * The currency and locale `ETHICAL_AMENITY_GUIDELINES`' thresholds are stated in.
+ *
+ * They are fixed USD figures in an untranslated English validation message, so
+ * this names what the hardcoded `$` used to assert rather than pretending the
+ * threshold follows the reader's currency. Formatting them still matters: the
+ * grouping was absent entirely, so a four-figure limit read as `$1200`.
+ */
+const AMENITY_GUIDELINE_CURRENCY = 'USD';
+const AMENITY_GUIDELINE_LOCALE = 'en-US';
+
+/** One guideline threshold, formatted. */
+const guidelineMoney = (amount: number): string =>
+  formatMoney(amount, AMENITY_GUIDELINE_CURRENCY, AMENITY_GUIDELINE_LOCALE, {
+    maximumFractionDigits: 0,
+  });
+
 export interface Amenity {
   id: string;
   name: string;
@@ -1411,7 +1430,7 @@ export const calculateEthicalAmenityValue = (
 
   if (totalValue > ETHICAL_AMENITY_GUIDELINES.maxTotalAmenityValue) {
     warnings.push(
-      `Total amenity value ($${totalValue}) exceeds ethical limit of $${ETHICAL_AMENITY_GUIDELINES.maxTotalAmenityValue}`,
+      `Total amenity value (${guidelineMoney(totalValue)}) exceeds ethical limit of ${guidelineMoney(ETHICAL_AMENITY_GUIDELINES.maxTotalAmenityValue)}`,
     );
   }
 
@@ -1435,7 +1454,7 @@ export const calculateEthicalAmenityValue = (
   );
   if (essentialValue > ETHICAL_AMENITY_GUIDELINES.essentialAmenitiesMaxValue) {
     warnings.push(
-      `Essential amenities are overpriced ($${essentialValue} vs max $${ETHICAL_AMENITY_GUIDELINES.essentialAmenitiesMaxValue})`,
+      `Essential amenities are overpriced (${guidelineMoney(essentialValue)} vs max ${guidelineMoney(ETHICAL_AMENITY_GUIDELINES.essentialAmenitiesMaxValue)})`,
     );
   }
 

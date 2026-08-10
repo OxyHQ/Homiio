@@ -15,6 +15,8 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { formatMoney } from '@homiio/shared-types';
+import { useFormatting } from '@/utils/format';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@oxyhq/bloom/button';
 import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
@@ -66,17 +68,18 @@ export const ContractCard: React.FC<ContractCardProps> = ({
   landlordName,
   tenantName,
   monthlyRent,
-  currency = '€',
+  currency = 'EUR',
   onPress,
   onSharePress,
   onDownloadPress,
 }) => {
   const { t } = useTranslation();
+  const { locale } = useFormatting();
   const [pressed, setPressed] = useState(false);
 
   const formattedRent = useMemo(
-    () => `${currency}${monthlyRent.toLocaleString()}`,
-    [currency, monthlyRent],
+    () => formatMoney(monthlyRent, currency, locale),
+    [currency, monthlyRent, locale],
   );
 
   const body = (

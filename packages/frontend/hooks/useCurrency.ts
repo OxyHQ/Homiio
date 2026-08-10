@@ -1,12 +1,17 @@
+/**
+ * The user's chosen DISPLAY currency, for the settings picker.
+ *
+ * It used to also format and CONVERT: `formatAmount`, `convertAndFormat`,
+ * `getCurrencySymbol` and friends turned every listing price into this currency
+ * at an exchange rate with no timestamp, and defaulted to USD, so a fresh
+ * install rendered European rents as approximate dollars. Issue #357 removed
+ * that path — a listing's price is shown in the listing's own currency — so
+ * everything except the preference itself is gone. Formatting lives in
+ * `formatMoney` (`@homiio/shared-types`); the FX rate is quoted, explicitly and
+ * only, on the picker screen.
+ */
 import { useCurrencyStore } from '@/store/currencyStore';
-import {
-  getCurrencyByCode,
-  formatCurrency,
-  formatCurrencyWithCode,
-  convertCurrency,
-  getExchangeRateDisplay,
-  Currency,
-} from '@/utils/currency';
+import { getCurrencyByCode, Currency } from '@/utils/currency';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect } from 'react';
 
@@ -53,43 +58,10 @@ export const useCurrency = () => {
     }
   };
 
-  const formatAmount = (amount: number, showCode: boolean = false): string => {
-    if (showCode) {
-      return formatCurrencyWithCode(amount, currentCurrency);
-    }
-    return formatCurrency(amount, currentCurrency);
-  };
-
-  const convertAndFormat = (
-    amount: number,
-    originalCurrency: string,
-    showCode: boolean = false,
-  ): string => {
-    const convertedAmount = convertCurrency(amount, originalCurrency, currentCurrency);
-    return formatAmount(convertedAmount, showCode);
-  };
-
   const getCurrentCurrency = (): Currency => {
     return (
       getCurrencyByCode(currentCurrency) || { code: currentCurrency, symbol: '$', name: 'Unknown' }
     );
-  };
-
-  const getCurrencySymbol = (): string => {
-    const currency = getCurrencyByCode(currentCurrency);
-    return currency?.symbol || '$';
-  };
-
-  const getCurrencyCode = (): string => {
-    return currentCurrency;
-  };
-
-  const getExchangeRateInfo = (fromCurrency: string): string => {
-    return getExchangeRateDisplay(fromCurrency, currentCurrency);
-  };
-
-  const convertAmount = (amount: number, fromCurrency: string): number => {
-    return convertCurrency(amount, fromCurrency, currentCurrency);
   };
 
   return {
@@ -97,12 +69,6 @@ export const useCurrency = () => {
     isLoading,
     error,
     changeCurrency,
-    formatAmount,
-    convertAndFormat,
     getCurrentCurrency,
-    getCurrencySymbol,
-    getCurrencyCode,
-    getExchangeRateInfo,
-    convertAmount,
   };
 };

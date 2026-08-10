@@ -11,6 +11,8 @@ import { SindiIcon } from '@/assets/icons';
 import { Header } from '@/components/Header';
 import { useTranslation } from 'react-i18next';
 import { logger } from '@/utils/logger';
+import { deviceTimeZone, formatDate } from '@homiio/shared-types';
+import { useFormatting } from '@/utils/format';
 
 interface ConversationMessage {
   id: string;
@@ -33,6 +35,7 @@ interface SharedConversationResponse {
 }
 
 export default function SharedConversationView() {
+  const { locale } = useFormatting();
   const { token } = useLocalSearchParams<{ token: string }>();
   const { t } = useTranslation();
   const [conversation, setConversation] = useState<SharedConversation | null>(null);
@@ -215,7 +218,13 @@ export default function SharedConversationView() {
               </View>
               <Text style={styles.messageTime}>
                 {m.role === 'user' ? t('sindi.chat.you') : t('sindi.name')} •{' '}
-                {new Date(m.timestamp).toLocaleString()}
+                {formatDate(m.timestamp, locale, deviceTimeZone(), {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
               </Text>
             </View>
           ))

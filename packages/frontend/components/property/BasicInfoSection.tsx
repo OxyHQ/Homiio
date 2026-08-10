@@ -3,7 +3,7 @@
  * page.
  *
  * Composition:
- *  1. Rent label + amount (via shared `CurrencyFormatter`).
+ *  1. Rent label + amount (via shared `MoneyText`).
  *  2. External-source badge if the listing came from a scraper feed.
  *  3. Truncated "About this property" body (via shared TruncatedDescription).
  *  4. Active-viewing banner.
@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@oxyhq/bloom/button';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
-import { CurrencyFormatter } from '@/components/CurrencyFormatter';
+import { MoneyText } from '@/components/MoneyText';
 import { TruncatedDescription } from '@/components/ui/TruncatedDescription';
 import { SECTION_GUTTER } from '@/components/property/Section';
 import { colors } from '@/styles/colors';
@@ -59,10 +59,9 @@ export const BasicInfoSection: React.FC<Props> = ({
     <View style={styles.container}>
       <View style={styles.priceRow}>
         <BloomText style={styles.priceLabel}>{rentLabel}</BloomText>
-        <CurrencyFormatter
+        <MoneyText
           amount={rentAmount}
-          originalCurrency={rentCurrency}
-          showConversion
+          currency={rentCurrency}
         />
       </View>
 

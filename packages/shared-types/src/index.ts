@@ -69,3 +69,11 @@ export * from './ethicalPricing';
 // redaction, bucketing, query identity and the location/identity divergence
 // invariants. Shared so the redaction rules have exactly one implementation.
 export * from './observability';
+
+// International formatting — money, units, dates, percentages. Pure, shared by
+// frontend and backend so a price is never assembled by concatenation.
+export * from './format/money';
+export * from './format/units';
+export * from './format/dates';
+export * from './format/percentage';
+export * from './format/numbers';

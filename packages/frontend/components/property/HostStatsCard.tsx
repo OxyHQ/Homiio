@@ -21,7 +21,8 @@ import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 import { SECTION_GUTTER } from '@/components/property/Section';
-import type { Profile, Property } from '@homiio/shared-types';
+import { deviceTimeZone, formatDate, type Profile, type Property } from '@homiio/shared-types';
+import { useFormatting } from '@/utils/format';
 import { useOxyAvatars } from '@/hooks/useOxyAvatars';
 
 interface HostStatsCardProps {
@@ -29,12 +30,8 @@ interface HostStatsCardProps {
   landlordProfile: Profile | null;
 }
 
-const monthYear = (input: string | Date | undefined): string => {
-  if (!input) return '';
-  const date = input instanceof Date ? input : new Date(input);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-};
+const monthYear = (input: string | Date | undefined, locale: string, timeZone: string): string =>
+  input ? formatDate(input, locale, timeZone, { month: 'long', year: 'numeric' }) : '';
 
 const getDisplayName = (profile: Profile | null): string => {
   if (!profile) return 'Unknown host';
@@ -51,6 +48,7 @@ export const HostStatsCard: React.FC<HostStatsCardProps> = ({
 }) => {
   const router = useRouter();
   const { t } = useTranslation();
+  const { locale } = useFormatting();
   const [pressed, setPressed] = useState(false);
   const { getAvatarFileId } = useOxyAvatars([landlordProfile?.oxyUserId]);
 
@@ -61,8 +59,8 @@ export const HostStatsCard: React.FC<HostStatsCardProps> = ({
 
   const hostingSince = useMemo(() => {
     const created = landlordProfile?.createdAt;
-    return monthYear(created);
-  }, [landlordProfile]);
+    return monthYear(created, locale, deviceTimeZone());
+  }, [landlordProfile, locale]);
 
   const isVerified = Boolean(landlordProfile?.personalProfile?.verification?.identity);
   const oxyUserId = landlordProfile?.oxyUserId;

@@ -36,7 +36,8 @@ import {
 import { RangeSlider } from '@/components/ui/RangeSlider';
 import { colors } from '@/styles/colors';
 import { hairline, radius, resolvePagePadding, spacing, tracker } from '@/constants/styles';
-import { formatCurrency } from '@/utils/currency';
+import { formatMoney } from '@homiio/shared-types';
+import { useFormatting } from '@/utils/format';
 import { useMediaQuery } from 'react-responsive';
 import { COMMISSION_CONFIG, commissionAmount, type CommissionOffering } from '@homiio/shared-types';
 
@@ -94,29 +95,33 @@ interface RentControlProps {
  * segmented control or result copy. Requires a stable `onChange`.
  */
 const RentControl: React.FC<RentControlProps> = React.memo(
-  ({ rent, onChange, label, perMonth, currency }) => (
-    <View style={styles.control}>
-      <View style={styles.controlHeader}>
-        <BloomText style={styles.controlLabel}>{label}</BloomText>
-        <BloomText style={styles.controlValue}>
-          {`${formatCurrency(rent, currency, WHOLE_CURRENCY)} / ${perMonth}`}
-        </BloomText>
+  ({ rent, onChange, label, perMonth, currency }) => {
+    const { locale } = useFormatting();
+    return (
+      <View style={styles.control}>
+        <View style={styles.controlHeader}>
+          <BloomText style={styles.controlLabel}>{label}</BloomText>
+          <BloomText style={styles.controlValue}>
+            {`${formatMoney(rent, currency, locale, WHOLE_CURRENCY)} / ${perMonth}`}
+          </BloomText>
+        </View>
+        <RangeSlider
+          value={rent}
+          min={RENT_RANGE.min}
+          max={RENT_RANGE.max}
+          step={RENT_RANGE.step}
+          onChange={onChange}
+          accessibilityLabel={label}
+        />
       </View>
-      <RangeSlider
-        value={rent}
-        min={RENT_RANGE.min}
-        max={RENT_RANGE.max}
-        step={RENT_RANGE.step}
-        onChange={onChange}
-        accessibilityLabel={label}
-      />
-    </View>
-  ),
+    );
+  },
 );
 RentControl.displayName = 'RentControl';
 
 export const EarningsCalculator: React.FC = () => {
   const { t } = useTranslation();
+  const { locale } = useFormatting();
   const isWide = useMediaQuery({ minWidth: 768 });
   const horizontalPadding = resolvePagePadding(isWide);
 
@@ -188,7 +193,7 @@ export const EarningsCalculator: React.FC = () => {
           <BloomText style={styles.resultLabel}>
             {t('agent.calculator.result')}
           </BloomText>
-          <H1 style={styles.resultAmount}>{formatCurrency(payout, currency, WHOLE_CURRENCY)}</H1>
+          <H1 style={styles.resultAmount}>{formatMoney(payout, currency, locale, WHOLE_CURRENCY)}</H1>
           <BloomText style={styles.resultCaption}>
             {t('agent.calculator.caption')}
           </BloomText>

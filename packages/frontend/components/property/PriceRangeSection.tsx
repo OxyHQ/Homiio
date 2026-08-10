@@ -26,10 +26,14 @@ import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { Section } from '@/components/property/Section';
 import { useAreaInsights } from '@/hooks';
-import { useCurrency } from '@/hooks/useCurrency';
+import { useFormatting } from '@/utils/format';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
-import type { AreaPriceVerdict, PropertyAreaInsights } from '@homiio/shared-types';
+import {
+  formatMoney,
+  type AreaPriceVerdict,
+  type PropertyAreaInsights,
+} from '@homiio/shared-types';
 
 interface PriceRangeSectionProps {
   propertyId: string;
@@ -134,14 +138,15 @@ const PriceRangeContent: React.FC<PriceRangeContentProps> = ({
   insights,
   bedrooms,
 }) => {
-  const { convertAndFormat } = useCurrency();
+  const { locale } = useFormatting();
   const { currency } = insights;
 
-  // All prices in the payload share `currency`; format every value through the
-  // same path PropertyCard uses (convert to the user's display currency).
-  // `convertAndFormat` is re-created each render, so memoizing buys nothing.
-  const money = (amount: number): string =>
-    convertAndFormat(amount, currency, false);
+  // All prices in the payload share `currency` and are quoted IN it — the same
+  // currency the listing's own price is quoted in, which is the whole point of a
+  // comparison. Converting them into the reader's display currency (what this
+  // used to do) put the comparison and the price it compares against in
+  // different units, at an exchange rate with no timestamp.
+  const money = (amount: number): string => formatMoney(amount, currency, locale);
 
   const isStudio = bedrooms <= 0;
   const subtitle = useMemo(() => {

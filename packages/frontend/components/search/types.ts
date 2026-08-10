@@ -11,6 +11,20 @@ import { OfferingType } from '@homiio/shared-types';
 import type { ExchangeMode, PropertyType } from '@homiio/shared-types';
 
 /**
+ * The currency a search's `priceMin`/`priceMax` are expressed in.
+ *
+ * A numeric price filter has no listing to take a currency from, and the backend
+ * compares the number against listing amounts WITHOUT converting — so the filter
+ * has always had exactly one implicit currency, and it was euros: the price
+ * chips are euro bands and `resolvePrimaryOffering` falls back to `EUR` for a
+ * block that names none. This constant only makes that assumption say its own
+ * name, so the filter labels can be formatted properly instead of being built
+ * from a hardcoded `€`. Comparing a filter against listings priced in several
+ * currencies is a modelling gap this does not close.
+ */
+export const SEARCH_PRICE_CURRENCY = 'EUR';
+
+/**
  * A geographic bounding box in the same `{ west, south, east, north }` shape the
  * `Map` component emits via `onRegionChange` and the search hook forwards to the
  * backend as `swLat/swLng/neLat/neLng`.

@@ -1,15 +1,17 @@
 /**
- * Pure-logic unit tests for the currency utilities. These exercise the real
- * conversion/formatting/parsing math with no React Native or native-module
- * dependencies, so they run fast and deterministically under jest-expo.
+ * Pure-logic unit tests for the currency CATALOGUE and the exchange-rate maths
+ * behind the settings picker. No React Native or native-module dependencies, so
+ * they run fast and deterministically under jest-expo.
+ *
+ * The `formatCurrency` / `formatCurrencyWithCode` blocks that used to sit here
+ * are gone with the functions: they asserted `€1,200` for `es-ES` readers too,
+ * which is precisely the bug issue #357 fixed. Money formatting is covered by
+ * `__tests__/format/money.test.ts` against `formatMoney`.
  */
 import {
   convertCurrency,
-  formatCurrency,
-  formatCurrencyWithCode,
   getExchangeRate,
   getCurrencyByCode,
-  getDefaultCurrency,
   isValidCurrencyCode,
   parseCurrencyAmount,
   searchCurrencies,
@@ -46,30 +48,6 @@ describe('currency utils', () => {
     it('converts between two non-USD currencies', () => {
       // 85 EUR -> GBP: 85 / 0.85 * 0.73 = 73
       expect(convertCurrency(85, 'EUR', 'GBP')).toBeCloseTo(73, 5);
-    });
-  });
-
-  describe('formatCurrency', () => {
-    it('prefixes the amount with the currency symbol', () => {
-      expect(formatCurrency(1200, 'EUR')).toBe('€1,200');
-    });
-
-    it('defaults to USD when no code is provided', () => {
-      expect(formatCurrency(1000)).toBe('$1,000');
-    });
-
-    it('falls back to the default currency for an unknown code', () => {
-      expect(formatCurrency(50, 'ZZZ')).toBe(`${getDefaultCurrency().symbol}50`);
-    });
-
-    it('keeps up to two fractional digits', () => {
-      expect(formatCurrency(1234.5, 'USD')).toBe('$1,234.5');
-    });
-  });
-
-  describe('formatCurrencyWithCode', () => {
-    it('suffixes the amount with the ISO code', () => {
-      expect(formatCurrencyWithCode(1500, 'GBP')).toBe('1,500 GBP');
     });
   });
 

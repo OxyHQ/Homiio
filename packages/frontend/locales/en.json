@@ -2161,7 +2161,7 @@
     },
     "nearbyServices": {
       "title": "What's nearby",
-      "within": "Within {{km}} km",
+      "within": "Within {{distance}}",
       "partialNote": "Some nearby data may be unavailable.",
       "labels": {
         "pharmacy": "Pharmacy",
@@ -3892,5 +3892,44 @@
     "emptyReviewsDescription": "This agency has no reviews yet.",
     "emptyListingsTitle": "No listings",
     "emptyListingsDescription": "This agency has no active listings."
+  },
+  "format": {
+    "priceUnit": {
+      "night": {
+        "short": "night",
+        "spoken": "per night"
+      },
+      "day": {
+        "short": "day",
+        "spoken": "per day"
+      },
+      "week": {
+        "short": "week",
+        "spoken": "per week"
+      },
+      "month": {
+        "short": "month",
+        "spoken": "per month"
+      },
+      "year": {
+        "short": "year",
+        "spoken": "per year"
+      },
+      "total": {
+        "spoken": "in total"
+      }
+    },
+    "areaUnit": {
+      "sqm": {
+        "spoken": "square metres"
+      },
+      "sqft": {
+        "spoken": "square feet"
+      }
+    },
+    "range": {
+      "upTo": "Up to {{value}}",
+      "from": "From {{value}}"
+    }
   }
 }

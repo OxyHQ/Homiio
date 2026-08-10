@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import type { RoommateRelationship, RoommateProfile } from '@/hooks/useRoommate';
 import { ActionButton } from '@/components/ui/ActionButton';
-import { getDateLocale } from '@/utils/dateLocale';
+import { getFormatLocale } from '@/utils/dateLocale';
 
 interface RoommateRelationshipProps {
   relationship: RoommateRelationship;
@@ -79,7 +79,7 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString(getDateLocale(i18n.language));
+    return date.toLocaleDateString(getFormatLocale(i18n.language));
   };
 
   const getDuration = () => {

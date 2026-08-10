@@ -10,7 +10,7 @@
  * / exchange listings have their own dedicated sections, so this block self-hides
  * when the active mode's rent block is absent.
  *
- * Prices render through `CurrencyFormatter` (converts to the user's display
+ * Prices render through `MoneyText` (converts to the user's display
  * currency); row separators use the canonical Bloom `Divider`.
  */
 import React from 'react';
@@ -21,7 +21,7 @@ import { Divider } from '@oxyhq/bloom/divider';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { Section } from '@/components/property/Section';
-import { CurrencyFormatter } from '@/components/CurrencyFormatter';
+import { MoneyText } from '@/components/MoneyText';
 import { colors } from '@/styles/colors';
 import { hairline, radius, spacing } from '@/constants/styles';
 import { type Property } from '@homiio/shared-types';
@@ -35,7 +35,7 @@ interface Props {
 
 const PERCENT_DIVISOR = 100;
 
-/** A money row: label + amount (formatted via CurrencyFormatter). */
+/** A money row: label + amount (formatted via MoneyText). */
 interface MoneyRow {
   key: string;
   label: string;
@@ -155,10 +155,9 @@ export const PricingDetails: React.FC<Props> = ({ property, mode }) => {
           <View style={styles.row}>
             <BloomText style={styles.label}>{row.label}</BloomText>
             <BloomText style={styles.value}>
-              <CurrencyFormatter
+              <MoneyText
                 amount={row.amount}
-                originalCurrency={currency}
-                showConversion={false}
+                currency={currency}
                 style={styles.value}
               />
               {row.key === 'rent' ? (
@@ -195,10 +194,9 @@ export const PricingDetails: React.FC<Props> = ({ property, mode }) => {
             {moveInRows.map((row) => (
               <View key={row.key} style={styles.moveInRow}>
                 <BloomText style={styles.moveInLabel}>{row.label}</BloomText>
-                <CurrencyFormatter
+                <MoneyText
                   amount={row.amount}
-                  originalCurrency={currency}
-                  showConversion={false}
+                  currency={currency}
                   style={styles.moveInValue}
                 />
               </View>
@@ -206,10 +204,9 @@ export const PricingDetails: React.FC<Props> = ({ property, mode }) => {
           </View>
           <View style={styles.moveInTotalRow}>
             <BloomText style={styles.moveInTotalLabel}>{totalLabel}</BloomText>
-            <CurrencyFormatter
+            <MoneyText
               amount={total}
-              originalCurrency={currency}
-              showConversion={false}
+              currency={currency}
               style={styles.moveInTotalValue}
             />
           </View>

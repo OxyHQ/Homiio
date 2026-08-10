@@ -8,6 +8,9 @@ import {
   TextInput,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { formatPrice } from '@homiio/shared-types';
+import { SEARCH_PRICE_CURRENCY } from '@/components/search/types';
+import { useFormatting } from '@/utils/format';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import type { RoommateProfile } from '@/hooks/useRoommate';
@@ -27,6 +30,7 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
   onViewProfile,
 }) => {
   const { t } = useTranslation();
+  const { locale, priceUnitLabels } = useFormatting();
   const [isLoading, setIsLoading] = useState(false);
   const [showMessageInput, setShowMessageInput] = useState(false);
   const [message, setMessage] = useState('');
@@ -109,7 +113,16 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
             <View style={styles.preferenceItem}>
               <Ionicons name="cash-outline" size={16} color={colors.COLOR_BLACK_LIGHT_5} />
               <Text style={styles.preferenceText}>
-                ${profile.personalProfile.settings.roommate.preferences.budget?.max || 0}/mo
+                {formatPrice(
+                  {
+                    amount:
+                      profile.personalProfile.settings.roommate.preferences.budget?.max || 0,
+                    currency: SEARCH_PRICE_CURRENCY,
+                    unit: 'month',
+                  },
+                  locale,
+                  { unitLabels: priceUnitLabels, maximumFractionDigits: 0 },
+                )}
               </Text>
             </View>
             <View style={styles.preferenceItem}>

@@ -1,6 +1,16 @@
 /**
- * Currency utilities for Homiio
- * Provides currency formatting, conversion, and management functions.
+ * The currency catalogue and the exchange-rate lookups behind the currency
+ * PICKER in settings.
+ *
+ * It no longer formats anything. `formatCurrency`, `formatCurrencyWithCode`,
+ * `formatAmountInCurrency` and `getCurrencyDisplayName` lived here and were all
+ * locale-blind: they grouped in `en-US` for every reader and always PREFIXED the
+ * symbol, so a Spanish reader saw `€1,234.56` where the language everywhere else
+ * on the screen writes `1.234,56 €`. Money formatting is now
+ * `formatMoney` from `@homiio/shared-types` — see issue #357.
+ *
+ * The `symbol` field on {@link Currency} survives for the picker's list rows,
+ * which name currencies rather than render amounts. Never build a price from it.
  *
  * Exchange rates are served by `@/utils/exchangeRates`: live data from
  * frankfurter.app cached in-memory + AsyncStorage (12h TTL), with a bundled
@@ -8,6 +18,8 @@
  * `refreshExchangeRates()` (from `@/utils/exchangeRates`) to keep the
  * synchronous lookups below current.
  */
+import { formatMoney } from '@homiio/shared-types';
+
 import { getRate } from '@/utils/exchangeRates';
 
 export interface Currency {
@@ -201,81 +213,24 @@ export function convertCurrency(amount: number, fromCurrency: string, toCurrency
   return (amount / fromRate) * toRate;
 }
 
-/** Fraction-digit overrides for {@link formatCurrency}. */
-export interface FormatCurrencyOptions {
-  /** Minimum fraction digits (defaults to 0 — whole amounts show no decimals). */
-  minimumFractionDigits?: number;
-  /** Maximum fraction digits (defaults to 2). */
-  maximumFractionDigits?: number;
-}
-
 /**
- * Format amount with currency symbol.
+ * "1 EUR = 1,08 US$" for the currency picker in settings.
  *
- * Defaults to `0–2` fraction digits (whole amounts render without decimals).
- * Pass `options` to force a fixed precision — e.g. a price breakdown that
- * always shows cents passes `{ minimumFractionDigits: 2, maximumFractionDigits: 2 }`.
+ * The ONLY place an exchange rate reaches the UI, and it says so out loud: the
+ * screen is about rates. Listing prices are never converted — see
+ * `components/MoneyText.tsx` for why that changed.
  */
-export function formatCurrency(
-  amount: number,
-  currencyCode: string = 'USD',
-  options: FormatCurrencyOptions = {},
+export function getExchangeRateDisplay(
+  fromCurrency: string,
+  toCurrency: string,
+  locale: string,
 ): string {
-  const currency = getCurrencyByCode(currencyCode) || getDefaultCurrency();
-  const safeAmount = Number.isFinite(amount) ? amount : 0;
-
-  const formattedAmount = safeAmount.toLocaleString('en-US', {
-    minimumFractionDigits: options.minimumFractionDigits ?? 0,
-    maximumFractionDigits: options.maximumFractionDigits ?? 2,
-  });
-
-  return `${currency.symbol}${formattedAmount}`;
-}
-
-/**
- * Format amount with currency code
- */
-export function formatCurrencyWithCode(amount: number, currencyCode: string = 'USD'): string {
-  const currency = getCurrencyByCode(currencyCode) || getDefaultCurrency();
-
-  const formattedAmount = amount.toLocaleString('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
-
-  return `${formattedAmount} ${currency.code}`;
-}
-
-/**
- * Get currency display name with flag
- */
-export function getCurrencyDisplayName(currencyCode: string): string {
-  const currency = getCurrencyByCode(currencyCode) || getDefaultCurrency();
-  return `${currency.flag} ${currency.name} (${currency.code})`;
-}
-
-/**
- * Format amount in current currency with conversion
- */
-export function formatAmountInCurrency(
-  amount: number,
-  originalCurrency: string,
-  targetCurrency: string,
-): string {
-  const convertedAmount = convertCurrency(amount, originalCurrency, targetCurrency);
-  return formatCurrency(convertedAmount, targetCurrency);
-}
-
-/**
- * Get exchange rate display string
- */
-export function getExchangeRateDisplay(fromCurrency: string, toCurrency: string): string {
   if (fromCurrency === toCurrency) {
     return '1:1';
   }
 
   const rate = convertCurrency(1, fromCurrency, toCurrency);
-  return `1 ${fromCurrency} = ${formatCurrency(rate, toCurrency)}`;
+  return `1 ${fromCurrency} = ${formatMoney(rate, toCurrency, locale, { maximumFractionDigits: 4 })}`;
 }
 
 /**

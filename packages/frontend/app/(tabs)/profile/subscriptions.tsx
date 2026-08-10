@@ -9,7 +9,7 @@ import { useOxy } from '@oxyhq/services';
 import { useSubscriptionStore } from '@/store/subscriptionStore';
 import { api } from '@/utils/api';
 import { logger } from '@/utils/logger';
-import { getDateLocale } from '@/utils/dateLocale';
+import { getFormatLocale } from '@/utils/dateLocale';
 
 const getErrorMessage = (error: unknown, fallback: string): string =>
     error instanceof Error ? error.message : fallback;
@@ -142,7 +142,7 @@ export default function SubscriptionsScreen() {
 
     const formatDate = (dateString?: string) => {
         if (!dateString) return t('subscriptions.page.notAvailable');
-        return new Date(dateString).toLocaleDateString(getDateLocale(i18n.language), {
+        return new Date(dateString).toLocaleDateString(getFormatLocale(i18n.language), {
             year: 'numeric',
             month: 'long',
             day: 'numeric'

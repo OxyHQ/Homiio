@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Ionicons } from '@expo/vector-icons';
+import { formatMoney, formatMoneyRange } from '@homiio/shared-types';
 import { openAccountDialog } from '@oxyhq/services';
 import { Button } from '@oxyhq/bloom/button';
 import { Switch } from '@oxyhq/bloom/switch';
@@ -13,14 +15,13 @@ import { toast } from '@oxyhq/bloom/toast';
 import { BaseWidget } from './BaseWidget';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
 import type { SavedSearchFilters } from '@/store/savedSearchesStore';
+import { SEARCH_PRICE_CURRENCY } from '@/components/search/types';
+import { useFormatting } from '@/utils/format';
 
 const ALERT_ICON_SIZE = 22;
 const EMPTY_ICON_SIZE = 28;
 /** Diameter of the round empty-state icon bubble (denser than the prior 56). */
 const EMPTY_ICON_BUBBLE_SIZE = 48;
-const CURRENCY_SYMBOL = '€';
-/** En-dash range separator for the human alert label, e.g. "€500–€1000". */
-const RANGE_SEPARATOR = '–';
 /** Middle-dot separator between the location and the price range. */
 const LABEL_SEPARATOR = ' · ';
 
@@ -42,13 +43,29 @@ function parsePrice(raw: string): ParsedPrice {
   return { kind: 'value', value };
 }
 
-/** Build the human-readable price portion of the alert label (e.g. "€500–€1000"). */
-function formatPriceRange(min: number | undefined, max: number | undefined): string {
+/**
+ * Build the human-readable price portion of the alert label.
+ *
+ * A saved alert's price bound is a search filter, so it carries
+ * {@link SEARCH_PRICE_CURRENCY} like every other filter bound, and it is
+ * formatted rather than glued after a hardcoded `€`. The one-sided cases take
+ * their preposition from the locale file.
+ */
+function formatPriceRange(
+  min: number | undefined,
+  max: number | undefined,
+  locale: string,
+  t: TFunction,
+): string {
+  const money = (amount: number): string =>
+    formatMoney(amount, SEARCH_PRICE_CURRENCY, locale, { maximumFractionDigits: 0 });
   if (min !== undefined && max !== undefined) {
-    return `${CURRENCY_SYMBOL}${min}${RANGE_SEPARATOR}${CURRENCY_SYMBOL}${max}`;
+    return formatMoneyRange(min, max, SEARCH_PRICE_CURRENCY, locale, {
+      maximumFractionDigits: 0,
+    });
   }
-  if (min !== undefined) return `${CURRENCY_SYMBOL}${min}+`;
-  if (max !== undefined) return `${CURRENCY_SYMBOL}0${RANGE_SEPARATOR}${CURRENCY_SYMBOL}${max}`;
+  if (min !== undefined) return t('format.range.from', { value: money(min) });
+  if (max !== undefined) return t('format.range.upTo', { value: money(max) });
   return '';
 }
 
@@ -64,6 +81,7 @@ function formatPriceRange(min: number | undefined, max: number | undefined): str
  */
 export function PropertyAlertWidget() {
   const { t } = useTranslation();
+  const { locale } = useFormatting();
   const { saveSearch, isAuthenticated, isSaving } = useSavedSearches();
 
   const [location, setLocation] = useState('');
@@ -123,7 +141,7 @@ export function PropertyAlertWidget() {
 
     // Compose a sensible, non-empty name + query from the criteria. The hook and
     // backend both require a non-empty name and query.
-    const priceLabel = formatPriceRange(minValue, maxValue);
+    const priceLabel = formatPriceRange(minValue, maxValue, locale, t);
     const labelParts = [trimmedLocation, priceLabel].filter(Boolean);
     const alertName = labelParts.join(LABEL_SEPARATOR) || t('search.widgets.alerts.title');
     const query = trimmedLocation || alertName;

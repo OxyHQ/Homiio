@@ -5,5 +5,6 @@ export {
   calculateEthicalRent,
   validateEthicalPricing,
   type EthicalPricingCharacteristics,
+  type PricingDisplay,
   type PricingRecommendation,
 } from '@homiio/shared-types';

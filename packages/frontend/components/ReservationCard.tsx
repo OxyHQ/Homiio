@@ -3,13 +3,13 @@ import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
-import { Reservation } from '@homiio/shared-types';
+import { Reservation, formatMoney } from '@homiio/shared-types';
 import { ReservationStatusBadge } from '@/components/ReservationStatusBadge';
 import { ThumbnailCard } from '@/components/ui/ThumbnailCard';
 import { ThumbnailImage } from '@/components/ui/ThumbnailImage';
 import { useProperty } from '@/hooks';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
-import { formatCurrency } from '@/utils/currency';
+import { useFormatting } from '@/utils/format';
 import { formatDateRange } from '@/utils/dateFormatting';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
@@ -28,6 +28,7 @@ export const ReservationCard: React.FC<ReservationCardProps> = ({
   actions,
 }) => {
   const { t } = useTranslation();
+  const { locale } = useFormatting();
   const router = useRouter();
   const { property } = useProperty(reservation.propertyId);
 
@@ -73,7 +74,7 @@ export const ReservationCard: React.FC<ReservationCardProps> = ({
       <BloomText style={styles.meta} numberOfLines={1}>
         {reservation.nights} {nightLabel} · {reservation.guestCount} {guestLabel}
         {variant === 'host' ? ` ${t('reservations.card.hostGuestSuffix')}` : ''} ·{' '}
-        {formatCurrency(reservation.total, reservation.currency)}
+        {formatMoney(reservation.total, reservation.currency, locale)}
       </BloomText>
     </ThumbnailCard>
   );

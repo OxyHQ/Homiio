@@ -5,7 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { useNeighborhood } from '@/hooks/useNeighborhood';
-import { formatCurrency } from '@/utils/currency';
+import { formatMoney } from '@homiio/shared-types';
+import { useFormatting } from '@/utils/format';
 
 interface NeighborhoodRatingWidgetProps {
   propertyId?: string;
@@ -30,6 +31,7 @@ export function NeighborhoodRatingWidget({
   city,
 }: NeighborhoodRatingWidgetProps = {}) {
   const { t } = useTranslation();
+  const { locale } = useFormatting();
   const { data: neighborhood, isLoading } = useNeighborhood({
     propertyId,
     name: neighborhoodName,
@@ -62,7 +64,7 @@ export function NeighborhoodRatingWidget({
           </View>
           {averageRent !== null ? (
             <View style={styles.metric}>
-              <Text style={styles.metricValue}>{formatCurrency(averageRent, currencyCode)}</Text>
+              <Text style={styles.metricValue}>{formatMoney(averageRent, currencyCode, locale)}</Text>
               <Text style={styles.metricLabel}>{t('property.neighborhood.avgRentPerMonth')}</Text>
             </View>
           ) : null}
