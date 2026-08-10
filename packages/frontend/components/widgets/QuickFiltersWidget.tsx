@@ -136,7 +136,9 @@ export function QuickFiltersWidget() {
   const applyFilters = useCallback(() => {
     if (!hasSelection) return;
     const patch = mergeSelectedPatches(selectedIds);
-    useSearchQueryStore.getState().patchQuery(patch);
+    // `patchFilters`, which cannot reach `location` or `queryText` — these are
+    // property/price/amenity chips and none of them is a place.
+    useSearchQueryStore.getState().patchFilters(patch);
     // On the search surface the patch updates the live query in place; elsewhere
     // the store carries it across the navigation to the (just-mounted) results.
     if (!pathname.startsWith(SEARCH_ROUTE)) {

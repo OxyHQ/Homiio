@@ -268,3 +268,99 @@ describe('deleteSavedSearch — ownership', () => {
     expect((await request(app).delete('/saved-searches/not-an-id')).status).toBe(404);
   });
 });
+
+/**
+ * The `location` column and its lazy, CONFIRMED migration (ADR 0002 §11).
+ *
+ * The property under test is not "a jsonb value round-trips" — it is that a row
+ * WITHOUT a location is reported as needing confirmation rather than being
+ * quietly resolved from its label. Geocoding a stored label and keeping the
+ * first hit is the homonym bug, and doing it one row at a time on read is the
+ * same mistake as doing it to everyone at once in a migration.
+ */
+describe('saved-search location', () => {
+  const barcelona = {
+    kind: 'place',
+    source: { kind: 'homiio', entity: 'city', id: '01H8XQ7C2R9V6WQ2N4M0KJ3ZTA' },
+    placeType: 'city',
+    label: { primary: 'Barcelona', secondary: 'Catalonia, Spain', kind: 'place' },
+    admin: { countryCode: 'ES', regionName: 'Catalonia', cityName: 'Barcelona' },
+    center: { longitude: 2.1734, latitude: 41.3851 },
+    precision: 'centroid',
+  };
+
+  it('stores a selection and reports it resolved', async () => {
+    const res = await request(buildApp('oxy-a'))
+      .post('/saved-searches')
+      .send({ name: 'Barcelona · Catalonia, Spain', query: '', location: barcelona });
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.locationStatus).toBe('resolved');
+    // The IDENTITY survives the round trip. A row that kept only the label
+    // would reopen in whichever Barcelona a geocoder preferred that day.
+    expect(res.body.data.location.source.id).toBe('01H8XQ7C2R9V6WQ2N4M0KJ3ZTA');
+
+    const persisted = await rowById(res.body.data.id);
+    expect((persisted?.location as { source: { id: string } }).source.id).toBe(
+      '01H8XQ7C2R9V6WQ2N4M0KJ3ZTA',
+    );
+  });
+
+  it('accepts a PLACE-ONLY save, where the free text is empty', async () => {
+    // The guard used to require a non-empty `query`, back when `query` held the
+    // location's LABEL. Once it became the free-text dimension — normally empty
+    // for a place search — that check would have rejected every saved city with
+    // a 400 nobody could act on.
+    const res = await request(buildApp('oxy-a'))
+      .post('/saved-searches')
+      .send({ name: 'place only', location: barcelona });
+
+    expect(res.status).toBe(201);
+  });
+
+  it('still refuses a save with neither a location nor any text', async () => {
+    // The floor for the previous case: relaxing the guard must not accept a
+    // search that asks for nothing at all.
+    const res = await request(buildApp('oxy-a')).post('/saved-searches').send({ name: 'empty' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('SEARCH_DATA_REQUIRED');
+  });
+
+  it('marks a row with no location as NEEDING CONFIRMATION, not as resolved', async () => {
+    // Exactly the shape a pre-contract row has: a label in `query`, no
+    // `location`. It must not be resolved on the caller's behalf.
+    const res = await request(buildApp('oxy-a'))
+      .post('/saved-searches')
+      .send({ name: 'legacy', query: 'Barcelona' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.locationStatus).toBe('needs_confirmation');
+    expect(res.body.data.location).toBeNull();
+    // …and the label is still there, so the UI can ask "did you mean?" rather
+    // than losing the row.
+    expect(res.body.data.query).toBe('Barcelona');
+  });
+
+  it('refuses a location that is not a recognised selection', async () => {
+    const res = await request(buildApp('oxy-a'))
+      .post('/saved-searches')
+      .send({ name: 'bogus', query: 'q', location: { kind: 'wherever', lat: 1 } });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_LOCATION');
+  });
+
+  it('keeps notificationsEnabled on the DTO beside the new location fields', async () => {
+    // A regression guard with a story: adding `location`/`locationStatus` to
+    // this DTO dropped `notificationsEnabled` from it, and the only thing that
+    // noticed was the ownership test two describes up — a 200 whose body had
+    // quietly lost a field. Alerts are decided by that flag.
+    const created = await request(buildApp('oxy-a'))
+      .post('/saved-searches')
+      .send({ name: 'with alerts', query: 'q', notificationsEnabled: true });
+
+    expect(created.body.data.notificationsEnabled).toBe(true);
+    expect(created.body.data.locationStatus).toBe('needs_confirmation');
+  });
+});

@@ -53,13 +53,14 @@ import { TypeStep } from './steps/TypeStep';
 import { PriceStep } from './steps/PriceStep';
 import { DatesStep } from './steps/DatesStep';
 import { GuestsStep } from './steps/GuestsStep';
+import type { LocationSelection } from '@homiio/shared-types';
 import {
   BROWSE_MODE_OFFERING,
   SEARCH_PRICE_CURRENCY,
   browseModeFromOffering,
   type BrowseMode,
+  locationDisplayLabel,
   type SearchDateRange,
-  type SearchLocation,
   type SearchQuery,
   type SearchStep,
 } from './types';
@@ -118,7 +119,7 @@ function buildRecentLabel(
   t: TFunction,
   locale: string,
 ): { label: string; sublabel?: string } {
-  const where = query.location?.shortLabel ?? 'Anywhere';
+  const where = locationDisplayLabel(query.location, t);
   const typeCount = query.propertyTypes.length;
   const typePart =
     typeCount === 0 ? '' : typeCount === 1 ? ` · ${query.propertyTypes[0]}` : ` · ${typeCount} types`;
@@ -185,9 +186,10 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
   // while collapsed and re-seeds from a fresh `initialQuery` on every reopen —
   // no `useEffect` and no parent `key` required.
   const [draft, setDraft] = useState<SearchQuery>(initialQuery);
-  const [whereText, setWhereText] = useState<string>(
-    initialQuery.location?.label ?? '',
-  );
+  // The free-text box is seeded from `queryText`, NEVER from the location's
+  // label. Seeding it from the label is how a place turned back into a text
+  // search the moment the panel was reopened.
+  const [whereText, setWhereText] = useState<string>(initialQuery.queryText ?? '');
   // Seed the opening step from `initialStep`, clamped to the steps valid for the
   // seeded rental mode (e.g. `'dates'` only exists in vacation). The panel fully
   // unmounts while collapsed, so this initializer re-runs on every reopen — no
@@ -233,9 +235,13 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
   }, []);
 
   const handleSelectLocation = useCallback(
-    (location: SearchLocation) => {
-      setDraft((prev) => ({ ...prev, location }));
-      setWhereText(location.label);
+    (location: LocationSelection) => {
+      // Committing a PLACE clears the free text: the user told us WHERE, not
+      // WHAT. Copying the label into the text box is how a place search turned
+      // into a text search for its own name — matched against listing content
+      // and ANDed with the geographic filter, whose honest answer is often zero.
+      setDraft((prev) => ({ ...prev, location, queryText: null }));
+      setWhereText('');
       // The narrow sheet walks the multi-step flow, so picking a place advances
       // to the type step. The wide dialog shows ONLY the tapped step, so it
       // stays on "where" with the now-filled input; the user presses Done.
@@ -248,8 +254,17 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
 
   const handleSelectRecent = useCallback(
     (recent: RecentSearch) => {
-      // Re-running a recent search commits immediately.
-      onSubmit(recent.query);
+      // Re-running a recent search replays its FILTERS and re-resolves its
+      // location, rather than restoring a cached selection. A recent entry
+      // holds a `locationKey`, not a place — deliberately, since replaying a
+      // stored coordinate would mean "near where you were last week" for a
+      // device search and would keep an exact position on disk to do it.
+      //
+      // Resolving a key back into a selection is the geo gateway's job (#351),
+      // so until it exists the filters are replayed and the location is left
+      // for the user to pick. That is the honest degradation: it asks again
+      // rather than guessing, which is the rule the whole contract turns on.
+      onSubmit({ ...recent.filters, location: null });
     },
     [onSubmit],
   );
@@ -286,7 +301,8 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
   const handleClear = useCallback(() => {
     setDraft((prev) => ({
       ...prev,
-      location: undefined,
+      location: null,
+      queryText: null,
       propertyTypes: [],
       priceMin: undefined,
       priceMax: undefined,
@@ -299,7 +315,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
 
   const handleSubmit = useCallback(() => {
     const { label, sublabel } = buildRecentLabel(draft, t, locale);
-    addRecentSearch({ label, sublabel, query: draft });
+    addRecentSearch(draft, { label, sublabel });
     onSubmit(draft);
   }, [draft, addRecentSearch, onSubmit, t, locale]);
 

@@ -39,7 +39,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { H1, P } from '@oxyhq/bloom/typography';
 
-import { OfferingType, PropertyType, type City, type Property } from '@homiio/shared-types';
+import {
+  OfferingType,
+  PropertyType,
+  type City,
+  type LocationSelection,
+  type Property,
+} from '@homiio/shared-types';
 
 import {
   HOME_FEED_LIMIT,
@@ -50,6 +56,8 @@ import {
 } from '@/hooks/useHomeFeed';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { getCategoryFilters } from '@/store/getCategoryFilters';
+import { locationDisplayLabel } from '@/components/search/types';
+import { exploreHref } from '@/utils/searchUrl';
 import type { HomeCategory } from '@/store/homeCategoryStore';
 import { DEFAULT_SEARCH_QUERY, useSearchQueryStore } from '@/store/searchQueryStore';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
@@ -57,7 +65,6 @@ import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGrid
 import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { cityQueryKeys, usePopularCities } from '@/hooks/useCityQueries';
-import { cityCountryName, cityRegionName } from '@/utils/cityDisplay';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { useRentalMode } from '@/context/RentalModeContext';
@@ -100,6 +107,17 @@ const EXPLORE_CITY_LIMIT = 8;
  */
 const WITHIN_REGION_KM = 120;
 
+/**
+ * Radius for a `near_you` lens when `getCategoryFilters` supplies none.
+ *
+ * Matches the search endpoint's own default (`DEFAULT_RADIUS_METERS`), so the
+ * seeded selection asks for exactly what the server would have applied anyway
+ * rather than quietly narrowing or widening it. METRES — see
+ * `PropertyFilters.radius`, where the unit is now part of the type because a
+ * 1000x error in it returns a plausible page instead of failing.
+ */
+const NEAR_YOU_FALLBACK_RADIUS_METERS = 25_000;
+
 /** Haversine distance (km) between two lat/lng points; used for nearest-city. */
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const toRad = (v: number) => (v * Math.PI) / 180;
@@ -113,25 +131,25 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * c;
 }
 
+/**
+ * The place the FEATURED GRID's heading may name.
+ *
+ * It may name the place the query actually used, and nothing else. This used to
+ * derive a display place from the nearest city's region, else its country, else
+ * the active query's label, else the first popular city's country — while the
+ * feed behind that heading was `getCategoryFilters(null)`, an empty filter set
+ * with no geographic constraint at all. So "Studios in Catalonia" sat above a
+ * global list, and nothing in the UI said otherwise.
+ *
+ * `null` means "everywhere", and the caller renders a heading that says so
+ * rather than borrowing a nearby place name. A heading is a claim about the
+ * query; it is not decoration.
+ */
 function resolveExplorePlace(
-  userLocation: { latitude: number; longitude: number } | null | undefined,
-  cities: City[],
-  citiesByDistance: { city: City; distance: number }[],
-  queryPlace: string | undefined,
-  defaultPlace: string,
-): string {
-  const nearest = citiesByDistance[0];
-  if (userLocation && nearest && nearest.distance <= WITHIN_REGION_KM) {
-    const region = cityRegionName(nearest.city);
-    if (region) return region;
-  }
-  if (userLocation && nearest) {
-    const country = cityCountryName(nearest.city);
-    if (country) return country;
-  }
-  if (queryPlace) return queryPlace;
-  const fallbackCountry = cities.map((c) => cityCountryName(c)).find(Boolean);
-  return fallbackCountry ?? defaultPlace;
+  selection: LocationSelection | null,
+  t: (key: string) => string,
+): string | null {
+  return selection ? locationDisplayLabel(selection, t) : null;
 }
 
 /**
@@ -152,19 +170,21 @@ function buildExploreFeedQuery(
     offering,
   });
 
-  // `near_you` resolves to a lat/lng + a 25km radius, which equals the search
-  // endpoint's default radius when only a center is sent — so we seed the
-  // location with the coordinates and an EMPTY label. An empty label makes
-  // `buildSearchParams` emit lat/lng WITHOUT a free-text `q` (a non-empty label
-  // is text-matched, which a pure geo lens must not do).
-  const location =
+  // A `near_you` lens IS a `current_location` selection, and saying so is what
+  // removes the workaround this replaces: the feed used to fabricate a location
+  // with an EMPTY label, purely so that `buildSearchParams` would not copy the
+  // label into `q` and text-match it. A field whose own semantics have to be
+  // defeated by a blank value is the field being wrong — `q` now carries free
+  // text only, so nothing has to be blanked to keep a geo lens pure.
+  const location: LocationSelection | null =
     typeof filters.lat === 'number' && typeof filters.lng === 'number'
       ? {
-          label: '',
-          shortLabel: '',
-          center: [filters.lng, filters.lat] as [number, number],
+          kind: 'current_location',
+          center: { longitude: filters.lng, latitude: filters.lat },
+          radiusMeters: typeof filters.radius === 'number' ? filters.radius : NEAR_YOU_FALLBACK_RADIUS_METERS,
+          precision: 'exact',
         }
-      : undefined;
+      : null;
 
   return {
     ...DEFAULT_SEARCH_QUERY,
@@ -270,22 +290,31 @@ export default function HomePage() {
 
   const nearbyCities = userLocation ? citiesByDistance.slice(0, 2).map((entry) => entry.city) : [];
 
-  const explorePlace = resolveExplorePlace(
-    userLocation,
-    cities,
-    citiesByDistance,
-    activeQuery.location?.shortLabel || activeQuery.location?.label,
-    t('home.cityShowcase.defaultPlace'),
-  );
+  // The heading names the place the FEED used, or says "everywhere". The
+  // home feed's own geographic lens is `activeQuery.location`, so these are
+  // the same thing by construction rather than by coincidence.
+  const explorePlace = resolveExplorePlace(activeQuery.location, t);
+
+  /**
+   * A heading for the featured grid.
+   *
+   * When no place was queried it uses the `*Everywhere` variant rather than
+   * interpolating a borrowed name into a "{{place}}" slot — the whole point of
+   * dropping `resolveExplorePlace`'s fallback chain.
+   */
+  const headingFor = (key: string): string =>
+    explorePlace
+      ? t(`home.featured.${key}`, { place: explorePlace })
+      : t(`home.featured.${key}Everywhere`);
 
   const featuredGridTitle =
     browseOffering === OfferingType.SALE
-      ? t('home.featured.gridBuy', { place: explorePlace })
+      ? headingFor('gridBuy')
       : browseOffering === OfferingType.EXCHANGE
-        ? t('home.featured.gridExchange', { place: explorePlace })
+        ? headingFor('gridExchange')
         : browseOffering === OfferingType.SHORT_TERM_RENT
-          ? t('home.featured.gridVacation', { place: explorePlace })
-          : t('home.featured.gridLongTerm', { place: explorePlace });
+          ? headingFor('gridVacation')
+          : headingFor('gridLongTerm');
 
   const feedEmptyText = nearYouBlocked ? t('home.category.nearYouUnavailable') : t('home.featured.empty');
 
@@ -425,12 +454,15 @@ export default function HomePage() {
                 initialQuery={heroSearchSeed}
                 initialStep={searchPanelStep}
                 onSubmit={(query) => {
-                  useSearchQueryStore.getState().setQuery(query);
                   setSearchPanelOpen(false);
-                  router.push('/explore');
+                  // Navigate to the search's OWN URL, not a bare `/explore`.
+                  // Every entry point used to push the bare route and rely on
+                  // the store carrying the query across, which is why a search
+                  // could not be shared, bookmarked or reached with Back.
+                  router.push(exploreHref(query));
                 }}
                 onApply={(query) => {
-                  useSearchQueryStore.getState().setQuery(query);
+                  useSearchQueryStore.getState().replaceSearch(query);
                   setSearchPanelOpen(false);
                 }}
               />
@@ -462,7 +494,11 @@ export default function HomePage() {
           {cities.length > 0 ? (
             <Animated.View entering={FadeInDown.duration(420)}>
               <CityShowcaseSection
-                title={t('home.cityShowcase.title', { place: explorePlace })}
+                title={
+                  explorePlace
+                    ? t('home.cityShowcase.title', { place: explorePlace })
+                    : t('home.cityShowcase.titleEverywhere')
+                }
                 items={cities}
                 onPressCity={(city) => router.push(`/properties/city/${city.id}`)}
               />

@@ -8,7 +8,12 @@
  * them without a cycle.
  */
 import { OfferingType } from '@homiio/shared-types';
-import type { ExchangeMode, PropertyType } from '@homiio/shared-types';
+import type {
+  ExchangeMode,
+  LocationSelection,
+  PlaceLabel,
+  PropertyType,
+} from '@homiio/shared-types';
 
 /**
  * The currency a search's `priceMin`/`priceMax` are expressed in.
@@ -25,31 +30,68 @@ import type { ExchangeMode, PropertyType } from '@homiio/shared-types';
 export const SEARCH_PRICE_CURRENCY = 'EUR';
 
 /**
- * A geographic bounding box in the same `{ west, south, east, north }` shape the
- * `Map` component emits via `onRegionChange` and the search hook forwards to the
- * backend as `swLat/swLng/neLat/neLng`.
+ * The display label for a committed selection, or `null` when the selection
+ * has no name of its own.
+ *
+ * `current_location` is the `null` case and deliberately so: the device's
+ * position is not a place and never acquires a name, so the caller supplies a
+ * translated "Near you" rather than this module inventing one. Keeping i18n out
+ * of here is what lets the same function serve the pill, the results heading
+ * and the saved-search default name.
+ *
+ * `label.split(',')[0]` is what this replaces. That assumed a comma-separated
+ * Western ordering and mangled every address format and script that does not
+ * use one; `PlaceLabel` arrives already split by whoever knew how.
  */
-export interface SearchBounds {
-  west: number;
-  south: number;
-  east: number;
-  north: number;
+export function selectionLabel(selection: LocationSelection | null): PlaceLabel | null {
+  if (!selection) return null;
+  return selection.kind === 'current_location' ? null : selection.label;
 }
 
 /**
- * A resolved "Where" selection: the human label plus its center point and an
- * optional bounding box. Coordinates follow the GeoJSON `[lng, lat]` order used
- * everywhere in this codebase (Map, Address.coordinates).
+ * The one-line label shown in the pill, the summary bar and the results
+ * heading.
+ *
+ * Every branch is translated, including the two that have no place name:
+ * `current_location` has no label at all (the device's position is not a place)
+ * and `map_bounds` carries a GENERATED label whose `primary` is an i18n key
+ * rather than a name. That is what keeps a generated label out of everywhere a
+ * place label goes — it is not a string anyone would mistake for a city.
+ *
+ * `primary` only. The administrative parent belongs in the disambiguation list
+ * and in a saved search's name (see {@link savedSearchName}), not in a pill
+ * that has to fit on a phone.
  */
-export interface SearchLocation {
-  /** Full human-readable place name (Nominatim `display_name`). */
-  label: string;
-  /** Short primary label used in the collapsed pill (e.g. "Barcelona"). */
-  shortLabel: string;
-  /** [longitude, latitude] center of the selection. */
-  center: [number, number];
-  /** Optional bounding box around the selection (degrees). */
-  bounds?: SearchBounds;
+export function locationDisplayLabel(
+  selection: LocationSelection | null,
+  t: (key: string) => string,
+): string {
+  if (!selection) return t('search.summary.anywhere');
+  if (selection.kind === 'current_location') return t('search.summary.nearYou');
+  const label = selection.label;
+  return label.kind === 'generated' ? t(label.primary) : label.primary;
+}
+
+/**
+ * The default name offered when saving a search, or `null` when the selection
+ * has no name to offer.
+ *
+ * `primary · secondary`, not `primary` alone. `saved_searches` is UNIQUE on
+ * `(oxy_user_id, name)` and the default used to be the short label, so a person
+ * who saved "Barcelona" in Catalonia and then "Barcelona" in Anzoátegui
+ * collided on that key — one silently replacing the other, since the two are
+ * indistinguishable by name and distinguishable only by id. Including the
+ * administrative parent is what makes the two defaults differ; a collision that
+ * still happens is surfaced as a prompt to rename, never as an overwrite.
+ *
+ * A `map_bounds` selection returns `null` deliberately: its label is
+ * `kind: 'generated'`, and a generated label is never a place's name, never
+ * re-geocoded and never written where a place label goes.
+ */
+export function savedSearchName(selection: LocationSelection | null): string | null {
+  const label = selectionLabel(selection);
+  if (!label || label.kind === 'generated') return null;
+  return label.secondary ? `${label.primary} · ${label.secondary}` : label.primary;
 }
 
 /**
@@ -81,8 +123,30 @@ export interface SearchQuery {
    * sale → sale price. The unit is fixed per offering and never reinterpreted.
    */
   offering: OfferingType;
-  /** Resolved "Where" selection, if any. */
-  location?: SearchLocation;
+  /**
+   * The committed geographic scope, or `null` for "everywhere".
+   *
+   * ATOMIC: replaced whole or not at all. There is no API anywhere for mutating
+   * one field of it, which is what makes "the old city with the new bounds"
+   * unrepresentable rather than merely discouraged — that combination was the
+   * single largest source of wrong results, and it was reachable because the
+   * store exposed a `setBounds` that merged a box onto whatever place was
+   * already there.
+   */
+  location: LocationSelection | null;
+  /**
+   * What the user TYPED, and nothing else. `null` when they typed nothing.
+   *
+   * A different dimension from {@link location}, not a fallback for it. A place
+   * label is never copied in here: doing that made a text search and a place
+   * search the same request, so "Barcelona" the word was matched against
+   * listing content while the Madrid box filtered the rows, and the honest
+   * answer to that question is zero — which reads as "this area is empty".
+   *
+   * Both may be set at once and both are then meant: "loft with a terrace",
+   * inside Barcelona.
+   */
+  queryText: string | null;
   /** Selected property types (empty = any). */
   propertyTypes: PropertyType[];
   /**

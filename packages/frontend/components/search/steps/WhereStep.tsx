@@ -4,8 +4,13 @@
  * Uses the keyless OpenStreetMap Nominatim geocoder via
  * `useDebouncedAddressSearch`. While the input is empty it surfaces the user's
  * recent searches; once they type, debounced suggestions replace the list.
- * Selecting a row resolves a {@link SearchLocation} (label + center + a small
- * bounding box) and hands it back to the panel.
+ * Selecting a row commits a whole {@link LocationSelection} — an
+ * `address_candidate`, because a geocoder proposal is a CANDIDATE and not a
+ * materialised Homiio place, and the discriminant is what keeps the two
+ * different things at every layer downstream.
+ *
+ * Where the suggestions come from is #351's half of this file; how a selection
+ * is committed is this one's.
  */
 import React, { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -22,30 +27,65 @@ import {
 import { useRecentSearchesStore, type RecentSearch } from '@/store/recentSearchesStore';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
-import type { SearchLocation } from '../types';
+import { locationKey, type LocationSelection } from '@homiio/shared-types';
+import { selectionLabel } from '../types';
 
-/** Half-width (degrees) of the bounding box drawn around a picked point. */
-const LOCATION_BOUNDS_DELTA_DEG = 0.05;
 const SEARCH_DEBOUNCE_MS = 300;
 const MIN_QUERY_LENGTH = 2;
 const MAX_RESULTS = 6;
 
-/** Map a Nominatim suggestion onto a resolved {@link SearchLocation}. */
-function toSearchLocation(s: AddressSuggestion): SearchLocation | null {
+/**
+ * Map a geocoder suggestion onto an `address_candidate` selection.
+ *
+ * ## The synthetic bounding box is GONE
+ *
+ * This used to draw a +/-0.05 degree square around the picked point and call it
+ * the selection's bounds. Two things were wrong with it. It is not the place's
+ * extent — it is the same square for a hamlet and for Tokyo — and at longitude
+ * 179.98 its east edge is 180.03, which `isLongitude` rejects, so the whole
+ * search failed with a hard 400 for anywhere within 0.05 degrees of the
+ * antimeridian. A candidate with no bounds is scoped by its centre and the
+ * endpoint's default radius, which is honest about what a geocoder actually
+ * told us. Real bounds arrive with the geo gateway (#351), which computes them.
+ *
+ * ## The label is not split on a comma
+ *
+ * `text.split(',')[0]` assumed a comma-separated Western ordering and mangled
+ * every script and address format that does not use one. Until the gateway
+ * returns a pre-split `PlaceLabel`, the provider's own string is kept WHOLE as
+ * `primary` rather than cut at a character that means nothing in most of the
+ * world.
+ */
+function toLocationSelection(s: AddressSuggestion): LocationSelection | null {
   if (typeof s.lat !== 'number' || typeof s.lon !== 'number') return null;
-  const [primary] = s.text.split(',');
-  const center: [number, number] = [s.lon, s.lat];
   return {
-    label: s.text,
-    shortLabel: (primary ?? s.text).trim() || s.text,
-    center,
-    bounds: {
-      west: s.lon - LOCATION_BOUNDS_DELTA_DEG,
-      south: s.lat - LOCATION_BOUNDS_DELTA_DEG,
-      east: s.lon + LOCATION_BOUNDS_DELTA_DEG,
-      north: s.lat + LOCATION_BOUNDS_DELTA_DEG,
-    },
+    kind: 'address_candidate',
+    // An external candidate's ref is only as stable as its provider, which is
+    // exactly why it must inline its own centre — it has to survive the
+    // provider disappearing.
+    source: { kind: 'external', provider: 'osm', ref: s.id },
+    label: { primary: s.text, kind: 'place' },
+    admin: { countryCode: s.address?.country ?? '' },
+    center: { longitude: s.lon, latitude: s.lat },
+    precision: 'approximate',
   };
+}
+
+/**
+ * The row's two lines.
+ *
+ * `primary`/`secondary` are read as-is, never re-split. Once the gateway
+ * supplies a pre-split `PlaceLabel` the secondary line carries the
+ * administrative parent, which is what lets somebody tell "Barcelona,
+ * Catalonia, Spain" from "Barcelona, Anzoátegui, Venezuela" without choosing
+ * blind — the disambiguation the picker exists for.
+ */
+function suggestionTitle(selection: LocationSelection): string {
+  return selectionLabel(selection)?.primary ?? '';
+}
+
+function suggestionSubtitle(selection: LocationSelection): string | undefined {
+  return selectionLabel(selection)?.secondary;
 }
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -103,7 +143,7 @@ interface WhereStepProps {
   /** Fired on every keystroke so the panel can hold the raw text. */
   onChangeText: (text: string) => void;
   /** Fired when a place suggestion is chosen. */
-  onSelectLocation: (location: SearchLocation) => void;
+  onSelectLocation: (selection: LocationSelection) => void;
   /** Fired when a recent search row is chosen. */
   onSelectRecent: (recent: RecentSearch) => void;
   /**
@@ -149,11 +189,11 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     clearSuggestions();
   }, [onChangeText, clearSuggestions]);
 
-  const resolvedSuggestions = useMemo<SearchLocation[]>(
+  const resolvedSuggestions = useMemo<LocationSelection[]>(
     () =>
       suggestions
-        .map(toSearchLocation)
-        .filter((s): s is SearchLocation => s !== null),
+        .map(toLocationSelection)
+        .filter((s): s is LocationSelection => s !== null),
     [suggestions],
   );
 
@@ -196,14 +236,17 @@ export const WhereStep: React.FC<WhereStepProps> = ({
               {t('search.header.geocoding')}
             </BloomText>
           ) : null}
-          {resolvedSuggestions.map((location) => (
+          {resolvedSuggestions.map((selection) => (
             <SuggestionRow
-              key={`${location.center[0]},${location.center[1]}`}
+              // Keyed by the selection's own identity, not by its coordinates.
+              // Two candidates can share a rounded centre; they cannot share a
+              // provider ref, and a duplicate React key silently drops a row.
+              key={locationKey(selection)}
               icon="location-outline"
-              title={location.shortLabel}
-              subtitle={location.label}
-              accessibilityLabel={location.label}
-              onPress={() => onSelectLocation(location)}
+              title={suggestionTitle(selection)}
+              subtitle={suggestionSubtitle(selection)}
+              accessibilityLabel={suggestionTitle(selection)}
+              onPress={() => onSelectLocation(selection)}
             />
           ))}
         </View>

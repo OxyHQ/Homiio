@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxyhq/services';
 import { api, ApiError } from '@/utils/api';
+import type { LocationSelection } from '@homiio/shared-types';
 
 /**
  * Stable React Query key for the authenticated user's saved searches. Mutations
@@ -129,6 +130,7 @@ export interface UseSavedSearches {
     query: string,
     filters?: SavedSearchFilters,
     notificationsEnabled?: boolean,
+    location?: LocationSelection | null,
   ) => Promise<boolean>;
   deleteSavedSearch: (searchId: string, searchName?: string) => Promise<boolean>;
   updateSearch: (
@@ -207,12 +209,17 @@ export const useSavedSearches = (): UseSavedSearches => {
       query: string;
       filters?: SavedSearchFilters;
       notificationsEnabled?: boolean;
+      location?: LocationSelection | null;
     }): Promise<SavedSearch> => {
       const response = await api.post<SavedSearchPayload>('/api/profiles/me/saved-searches', {
         name: vars.name,
         query: vars.query,
         filters: vars.filters,
         notificationsEnabled: Boolean(vars.notificationsEnabled),
+        // Stored so reopening resolves by IDENTITY. Omitted rather than sent as
+        // null when absent, so a row written by an older client and one written
+        // deliberately without a place are the same thing to the backend.
+        ...(vars.location ? { location: vars.location } : {}),
       });
 
       const payload = response.data;
@@ -327,8 +334,13 @@ export const useSavedSearches = (): UseSavedSearches => {
       query: string,
       filters?: SavedSearchFilters,
       notificationsEnabled: boolean = false,
+      location: LocationSelection | null = null,
     ): Promise<boolean> => {
-      if (!name.trim() || !query.trim()) {
+      // A name, and SOMETHING to search — a place, free text, or both. It used
+      // to require a non-empty `query`, which held the location's LABEL; now
+      // that `query` is the free-text dimension and is normally empty for a
+      // place search, that check would have rejected every saved city.
+      if (!name.trim() || (!location && !query.trim())) {
         toast.error(t('search.widgets.savedSearches.nameAndQueryRequired'));
         return false;
       }
@@ -337,6 +349,14 @@ export const useSavedSearches = (): UseSavedSearches => {
       const normalizedQuery = query.trim();
 
       // Prevent obvious duplicates client-side before hitting the network.
+      //
+      // The NAME check below is what actually protects the
+      // `(oxy_user_id, name)` unique index; this one only catches a re-save of
+      // an identical row. Neither compares locations, because two saved
+      // searches over two different cities are two different searches even when
+      // their names collide — which is why the default name now carries the
+      // administrative parent (`savedSearchName`) and a residual collision is a
+      // prompt to rename rather than an overwrite.
       const duplicateExact = searches.some(
         (s) =>
           s.name.toLowerCase() === normalizedName.toLowerCase() &&
@@ -360,6 +380,7 @@ export const useSavedSearches = (): UseSavedSearches => {
           query: normalizedQuery,
           filters,
           notificationsEnabled,
+          location,
         });
         return true;
       } catch {
