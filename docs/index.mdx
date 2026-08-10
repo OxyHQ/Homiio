@@ -1,31 +1,37 @@
 ---
 title: Homiio
-description: Real estate platform with ethical pricing, AI tenant-rights assistant, Stripe billing, and marketplace analytics — Expo/RN + Node + Oxy.
+description: The housing trust and transparency layer — find a place, research its history, understand the real cost, and manage or defend the tenancy.
 order: 0
 ---
 
 # Homiio
 
-Homiio is a real estate platform built around fair pricing, tenant rights, and transparent listings. The frontend is a single Expo / React Native codebase that targets iOS, Android, and Web. The backend is a Node + Express API backed by PostgreSQL (PostGIS), Stripe for subscriptions, AWS S3 + Sharp for media, and the AI SDK for **Sindi**, the in-app tenant-rights assistant.
+Homiio is the housing trust and transparency layer: find a place, research its history, learn what it really costs, understand what living there was like, and manage or defend the tenancy. The frontend is a single Expo / React Native codebase targeting iOS, Android and Web. The backend is a Node + Express API on PostgreSQL with PostGIS, plus Stripe for subscriptions, AWS S3 + Sharp for media, and the AI SDK for **Sindi**, the in-app tenant-rights assistant.
 
 <Badge variant="success">App</Badge> <Badge>iOS / Android / Web</Badge>
 
 ## What it is
 
-A two-sided marketplace for renters and landlords with an opinionated stance:
+More than a listings marketplace, and the difference is structural rather than aspirational:
 
-- **Ethical pricing first.** Properties expose income-based pricing flags, sliding-scale flags, utilities-included flags, and reduced-deposit flags — the schema is built around these signals.
-- **Tenant-rights aware.** Sindi (the in-app AI assistant) is wired to a tenant-first system prompt, references the Sindicat de Llogateres for Catalonia queries, and can pull matching listings inline.
-- **Beyond rentals.** Beyond apartments and houses, the `PropertyType` enum covers couchsurfing, co-living, hostels, guesthouses, campsites, boats, treehouses, and yurts — each with `accommodationDetails` for sleeping arrangement, host preferences, cultural exchange, languages, and meals included.
-- **Identity via Oxy.** Sign-in, account switching, and avatars come from `@oxyhq/services`. Homiio never stores passwords.
+- **A dwelling is permanent; a listing is temporary.** A listing is a sourced advertisement pointing at a physical place. Reviews, rent history and eviction records attach to the *place*, so they outlive the advert. See the [Glossary](./glossary) and [ADR 0001](./adr/0001-canonical-housing-graph).
+- **Location is never implicit.** Every surface that answers "where?" says which area it is querying, free text and geographic scope are separate dimensions, and a geocoding failure is a visible error rather than a silent worldwide feed. [ADR 0002](./adr/0002-location-and-search-contract).
+- **Privacy by precision.** An address, a coordinate and a review are stored at one precision and published at a coarser one, decided by audience rather than by whichever serializer runs. [ADR 0003](./adr/0003-privacy-verification-publication).
+- **Prices must be explainable.** Local, versioned, with their reasoning and confidence — never one universal score. [ADR 0004](./adr/0004-local-explainable-pricing).
+- **Moderation is communal.** No admin panel, no moderator queue, no privileged action over user content. That is a product decision, not a gap.
+- **Beyond rentals.** `PropertyType` covers couchsurfing, co-living, hostels, guesthouses, campsites, boats, treehouses and yurts, each with `accommodationDetails` for sleeping arrangement, host preferences, languages and meals.
+- **Identity via Oxy.** Sign-in, account switching and avatars come from `@oxyhq/services`. Homiio stores no passwords.
+
+The four records above are **Proposed**: they bind design, and they are not all shipped. Where this documentation describes a target it says so.
 
 Inside the repo:
 
 | Package | Role |
 |---------|------|
 | `frontend` (`@homiio/frontend`) | Expo Router app. NativeWind + Tailwind for styling, Zustand for local state, TanStack Query for server state, `@oxyhq/bloom` for primitives. |
-| `backend` (`@homiio/backend`) | Express 4 + drizzle-orm (PostgreSQL) API. Stripe billing, Sharp + S3 image pipeline, Telegram + WhatsApp scrapers, AI SDK streaming endpoints. |
-| `shared-types` (`@homiio/shared-types`) | Pure TypeScript types — `Property`, `Address`, `City`, `Lease`, `Profile`, `Review`. Built first via `postinstall`. |
+| `backend` (`@homiio/backend`) | Express 4 + drizzle-orm (PostgreSQL + PostGIS) API, plus a separate worker process. Stripe billing, Sharp + S3 image pipeline, BullMQ ingestion, AI SDK streaming endpoints. |
+| `listing-providers` (`@homiio/listing-providers`) | The provider plugin contract, the shared fetch runtime, and the portal plugins. Consumed by the worker. |
+| `shared-types` (`@homiio/shared-types`) | Pure TypeScript — the entity DTOs, the `format/` money/unit/date module, and the observability event schema. Built first via `postinstall`. |
 
 ## Architecture
 
@@ -72,7 +78,7 @@ bun install
 ```env
 DATABASE_URL=postgres://homiio:homiio@127.0.0.1:5434/homiio_dev
 OXY_API_URL=https://api.oxy.so
-PORT=3000
+PORT=4000
 NODE_ENV=development
 
 # Stripe (optional — billing endpoints return 501 STRIPE_NOT_CONFIGURED if unset)
@@ -97,7 +103,7 @@ AWS_S3_BUCKET=oxy-homiio-media-usw2-237343248947
 
 ```env
 EXPO_PUBLIC_OXY_BASE_URL=https://api.oxy.so
-API_URL=http://localhost:4130
+EXPO_PUBLIC_API_URL=http://localhost:4000
 EXPO_PUBLIC_STRIPE_LINK_PLUS=https://buy.stripe.com/...   # optional Payment Link fallback
 EXPO_PUBLIC_STRIPE_LINK_FILE=https://buy.stripe.com/...   # optional
 ```
@@ -117,27 +123,23 @@ In the Expo CLI, press `w` for web, `i` for iOS simulator, `a` for Android emula
 
 ## Core concepts
 
-### Property model
+### Listings and places
 
-`Property` is the central entity. Beyond the obvious fields (`type`, `bedrooms`, `bathrooms`, `rent`, `address`), the schema captures the ethical-pricing signals that drive search and ranking:
+A listing (`Property`) is an advertisement; the place it points at is an `addresses` row, and only the place is permanent. A listing carries `id`, an `address`, and **`offerings`** — the single source of truth for how it is offered:
 
 ```ts
-interface PropertyRent {
-  amount: number;
-  currency: string;
-  paymentFrequency: 'monthly' | 'weekly' | 'daily';
-  deposit: number;
-  utilities: 'included' | 'excluded' | 'partial';
-  hasIncomeBasedPricing?: boolean;
-  hasSlidingScale?: boolean;
-  hasUtilitiesIncluded?: boolean;
-  hasReducedDeposit?: boolean;
-}
+offerings: OfferingType[];        // long_term_rent | short_term_rent | sale | exchange
+longTermRent?: LongTermRent;      // present iff offerings includes LONG_TERM_RENT — monthlyAmount
+shortTermRent?: ShortTermRent;    // present iff offerings includes SHORT_TERM_RENT — nightlyRate
+sale?: PropertySale;              // present iff offerings includes SALE — price
+exchange?: PropertyExchange;      // present iff offerings includes EXCHANGE — swap | host | both
 ```
 
-Properties can be internally listed (`profileId` set, `isExternal: false`) or scraped from external sources like Fotocasa (`source`, `sourceId`, `sourceUrl`, `expiresAt` for TTL). The `accommodationDetails` block adds couchsurfing / co-living / hostel / campsite specifics — sleeping arrangement, roommate preferences, host languages, cultural exchange flag, meals included.
+The server validates that `offerings` **exactly equals** the set of priced blocks present, and each block's unit is fixed: monthly is always monthly, nightly always nightly, whatever the browse mode.
 
-See [Listings](./listings) for the full schema, search filters, and the address-first creation flow.
+A listing is either first-party (`oxyUserId` set) or external (`isExternal: true`, no owner, mandatory `sourceUrl`, an `expires_at` deadline reaped by the expiry sweep). External listings are visibly marked and cannot be applied to or booked in-app.
+
+See [Listings](./listings) for the full DTO, the address relation, the filters and external ingest.
 
 ### Profiles, not users
 
@@ -208,17 +210,23 @@ See [Auth](./auth) for the full sign-in lifecycle, profile bootstrap, and the ba
 
 ## Routes at a glance
 
-**Frontend (Expo Router):** `addresses`, `contracts`, `horizon`, `insights`, `profile`, `properties`, `reviews`, `roommates`, `saved`, `search`, `settings`, `sindi`, `tips`, `viewings`.
+**Frontend (Expo Router):** `(tabs)` (home, inbox, saved, profile, sindi), `explore`, `properties`, `addresses`, `agency`, `reviews`, `evictions`, `contracts`, `applications`, `landlord`, `viewings`, `reservations`, `stays`, `host`, `exchange`, `roommates`, `agent`, `insights`, `horizon`, `tips`, `settings`, `notifications`, `donate`. **`/search` is a redirect to `/explore` and holds no logic.**
 
-**Backend (Express):** `addresses`, `ai`, `analytics`, `billing`, `cities`, `images`, `leases`, `notifications`, `profiles`, `properties`, `public`, `reviews`, `roommates`, `rooms`, `scraper`, `telegram`, `tips`, `viewings`.
+**Backend (Express):** `properties`, `rooms`, `leases`, `applications`, `viewings`, `reservations`, `exchanges`, `roommates`, `reviews`, `addresses`, `evictions`, `partners`, `profiles`, `notifications`, `analytics`, `ai`, `images`, `billing`, `telegram`, `scraper`, plus city, neighborhood, geocoding and observability handlers.
+
+The complete table — every path, its method, and whether it needs a session — is [Routes](./routes).
 
 ## Documentation map
 
 - [Getting started](./getting-started) — Clone, install, env vars, first dev run.
-- [Architecture](./architecture) — Tech stack, key modules, request and data flow.
-- [Listings](./listings) — Property schema, search filters, accommodation types, external sourcing.
+- [Architecture](./architecture) — Packages, request lifecycle, providers, PostGIS, the worker, the `id` contract.
+- [Glossary](./glossary) — What `listing`, `housing place`, `building`, `unit`, `precision`, `source` and `snapshot` mean here.
+- [Source of truth](./source-of-truth) — Which module owns each domain, and the chokepoints not to bypass.
+- [Routes](./routes) — Every route with its auth requirement, the `/search` → `/explore` redirect, response and error contracts.
+- [Listings](./listings) — The real `Property` DTO, offerings, the address relation, search, external ingest.
 - [Payments](./payments) — Stripe Checkout, webhook idempotency, customer portal, file credits.
-- [Analytics](./analytics) — Insights endpoint, public stats aggregator, fallback behaviour.
+- [Analytics](./analytics) — Owner insights, marketplace aggregates, privacy-safe observability.
 - [Auth](./auth) — Oxy integration on RN and the server, profile bootstrap, request flow.
-- [Deployment](./deployment) — AWS ECS + Cloudflare Pages, environment, cron, and the bundled image pipeline.
+- [Deployment](./deployment) — AWS ECS + Cloudflare Pages, environment, cron, the image pipeline.
 - [Contributing](./contributing) — Repo layout, code conventions, the agent-first workflow.
+- [ADRs](./adr/README) — The four decision records and what each one binds.

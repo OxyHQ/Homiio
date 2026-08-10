@@ -1,7 +1,7 @@
 ---
 title: Deployment
 description: AWS ECS Fargate for the backend, Cloudflare Pages for the frontend web build, and serverless/persistent-process concerns (the Postgres pool, cron).
-order: 7
+order: 10
 ---
 
 # Deployment
@@ -50,7 +50,7 @@ if (!process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
 }
 ```
 
-On ECS this means cron jobs (health checks, external-listing TTL cleanup) run inside the service task.
+On ECS this means cron jobs run inside the long-lived service task: health checks, and the expiry sweep that deletes external listings past their `expires_at` (Postgres does not reap them by itself — see `packages/backend/db/expiry.ts`).
 
 ## Environment
 

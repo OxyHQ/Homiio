@@ -1,195 +1,345 @@
 ---
 title: Listings
-description: The Property schema, search and discovery, accommodation types beyond apartments, and external sourcing.
-order: 3
+description: The real Property DTO, offerings and priced blocks, the address relation, search and filters, and external listings with their provenance and expiry.
+order: 6
 ---
 
 # Listings
 
-Listings are the heart of Homiio. The `Property` model captures more than typical real-estate listings: ethical-pricing flags, accommodation-specific details (couchsurfing through campsites), external sourcing metadata for scraped properties, and verification / eco flags. This page covers the schema, the public discovery routes, and the create / update flow.
+A **listing** is an advertisement. It is not a home.
 
-## The Property model
+That distinction runs through everything below and it is the one thing to take
+away from this page: a row in `properties` is a temporary, sourced offer that
+*points at* a place. The place itself — a street, a building, a unit — is a row
+in `addresses`, and it outlives every advert ever made about it. One dwelling can
+carry three listings on three portals, lose all three, and pick up a fourth next
+season; the reviews, the rent history and the eviction record stay attached to
+the place, not to whichever advert happened to be live.
 
-`@homiio/shared-types` exports the canonical interface used by both the API and the app:
+The full contract is [ADR 0001](./adr/0001-canonical-housing-graph.md). It is
+**Proposed**: the street / building / unit levelling and the
+listing-to-place-grouping it describes are not implemented yet. What IS true
+today is described below, and where the two diverge it says so.
+
+## The `Property` DTO
+
+`@homiio/shared-types` exports the interface both the API and the app use. This
+is the real shape, from `packages/shared-types/src/property.ts` — read that file
+rather than this excerpt when it matters.
+
+<!-- vocabulary-exempt:start states the wire contract by naming the token it forbids -->
+Note there is **no `_id`**: Homiio's wire format names every identity `id`.
+<!-- vocabulary-exempt:end -->
 
 ```ts
 interface Property {
-  _id: string;
-  profileId?: string;          // Optional for external/scraped properties
-  source?: string;             // e.g. 'fotocasa', 'internal'
-  sourceId?: string;
-  sourceUrl?: string;
-  isExternal?: boolean;
-  expiresAt?: string;          // expiry for external properties (swept, see below)
+  id: string;
+  oxyUserId?: string;             // absent on external listings — nobody here owns them
 
-  address: Address;
-  location?: GeoJSONPoint;     // 2dsphere indexed for nearby queries
+  // Provenance (external listings only)
+  source?: string;                // e.g. 'idealista', 'fotocasa'
+  sourceId?: string;              // the portal's own id
+  sourceUrl?: string;             // mandatory when isExternal
+  isExternal?: boolean;
+  expiresAt?: string;             // reaped by the expiry sweep, not by the engine
+  externalContact?: {
+    phone?: string; email?: string; whatsapp?: string;
+    name?: string; agencyName?: string;
+    kind?: 'owner' | 'agency' | 'private' | 'unknown';
+  };
+
+  address: PropertyAddress;       // building-level fields + geo ids + resolved NAMES
+  location?: GeoJSONPoint;
 
   type: PropertyType;
   housingType?: HousingType;
   layoutType?: LayoutType;
-
   bedrooms?: number;
   bathrooms?: number;
   squareFootage?: number;
-
-  rent: PropertyRent;          // amount + currency + frequency + utilities + ethical flags
-  priceUnit?: PriceUnit;       // day | night | week | month | year
-
   amenities?: string[];
-  images?: PropertyImage[];
-  status: PropertyStatus;      // draft | published | reserved | rented | sold | inactive
 
-  rules?: PropertyRules;
-  accommodationDetails?: AccommodationDetails;
+  offerings: OfferingType[];      // the single source of truth for how it is offered
+  longTermRent?: LongTermRent;    // present iff offerings includes LONG_TERM_RENT
+  shortTermRent?: ShortTermRent;  // present iff offerings includes SHORT_TERM_RENT
+  sale?: PropertySale;            // present iff offerings includes SALE
+  exchange?: PropertyExchange;    // present iff offerings includes EXCHANGE
 
+  images?: string[] | PropertyImage[] | PropertyImageRef[];
+  status: PropertyStatus;
+
+  priceEthics?: PropertyPriceEthics;   // computed server-side on write
   isVerified?: boolean;
   isEcoFriendly?: boolean;
+
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string | null;      // set when soft-deleted (status → ARCHIVED)
 }
 ```
 
-### Ethical-pricing flags
+`status` is `PropertyStatus`: `draft`, `published`, `reserved`, `rented`, `sold`,
+`inactive`, `archived`. `archived` is the soft-delete state — hidden from every
+public query, kept for audit.
 
-`PropertyRent` is the load-bearing field for Homiio's pricing stance:
+`type` is `PropertyType`, and it covers more than flats: `apartment`, `house`,
+`room`, `studio`, `couchsurfing`, `roommates`, `coliving`, `hostel`,
+`guesthouse`, `campsite`, `boat`, `treehouse`, `yurt`, `other`. The
+type-specific fields for the unusual ones live in `accommodationDetails`
+(sleeping arrangement, hostel room type, campsite type, languages, meals
+included, house rules).
+
+## Offerings, and the priced blocks
+
+**`offerings` is the single source of truth for how a listing is offered.** Each
+offering is backed by its own priced block, and the server validates that
+`offerings` **exactly equals** the set of blocks present — not a superset, not a
+subset.
+
+| Offering | Block | Price field |
+|---|---|---|
+| `long_term_rent` | `longTermRent` | `monthlyAmount` (always monthly) |
+| `short_term_rent` | `shortTermRent` | `nightlyRate` (always per night) |
+| `sale` | `sale` | `price` |
+| `exchange` | `exchange` | none — `mode` is `swap`, `host` or `both` |
+
+A listing may carry several at once: a flat can be offered for long-term rent and
+for sale simultaneously, and it is one listing with two blocks.
+
+The units are **fixed and never reinterpreted by browse mode**. `monthlyAmount`
+is monthly whatever the user is looking at; `nightlyRate` is per night. This is
+the field-level reason the old single `rent: { amount, paymentFrequency }` shape
+was replaced — a single amount whose meaning depended on a frequency enum meant
+every consumer had to convert, and they did not all agree.
+
+Validation lives in exactly one place. `services/offeringValidation.ts`'s
+`validateOfferings` is used by `controllers/property/offeringRules.ts` on the
+write path, so the controller and the stored data cannot disagree. Create throws
+a structured `OFFERING_VALIDATION_ERROR`; update is lenient about partial
+payloads, because a PATCH that touches neither `offerings` nor a block must not
+be forced to restate both. `sale.pricePerSqm` is derived server-side from
+`price / squareFootage`; a client-supplied value is not trusted.
+
+## The address relation
+
+**In storage a property references an address by `address_id`. On the wire it
+carries `address`.** Those are two different shapes and the difference is
+deliberate.
+
+- **Storage.** `addresses` is its own table. Administrative geography is *not*
+  free text on it: `country_id`, `region_id`, `city_id` and `neighborhood_id` are
+  ids into the geo tables, and `country_code` (ISO-2) is the single denormalized
+  field, kept so a country filter needs no join. A city name is never copied onto
+  an address, so renaming a city does not require rewriting listings.
+- **Wire.** The serializer resolves the geo chain and emits `PropertyAddress`:
+  the building-level fields, the geo ids, **and** the resolved display names —
+  `cityName`, `regionName`, `countryName`, `neighborhoodName`, plus a ready-made
+  `location` label. Render the resolved NAMES. The `*Id` fields are ids, not
+  human strings.
+
+Because the address is a row rather than a blob, several listings and several
+reviews can point at the same physical place, which is what makes rent history
+and resident reviews possible at all.
 
 ```ts
-interface PropertyRent {
-  amount: number;
-  currency: string;
-  paymentFrequency: 'monthly' | 'weekly' | 'daily';
-  deposit: number;
-  utilities: 'included' | 'excluded' | 'partial';
-  hasIncomeBasedPricing?: boolean;
-  hasSlidingScale?: boolean;
-  hasUtilitiesIncluded?: boolean;
-  hasReducedDeposit?: boolean;
+interface PropertyAddress extends Address, AddressGeoNames {
+  id?: string;
 }
 ```
 
-These flags surface in search filters, listing badges, and Sindi's ranking. A landlord offering income-based pricing is preferred in tenant-rights-leaning queries.
+Write paths do not accept an `addressId` from the client. `CreatePropertyData`
+takes an `AddressInput` — human-readable place names and/or coordinates — and
+`findOrCreateCanonicalAddress` (`services/addressService.ts`) resolves it to an
+existing canonical row or creates one, computing a normalized key so two
+spellings of the same doorway do not become two addresses.
 
-### Accommodation types
+### Listing identity vs housing identity
 
-`PropertyType` covers the full housing spectrum, not just apartments:
+| | Listing | Housing place |
+|---|---|---|
+| Table | `properties` | `addresses` |
+| Lifetime | Temporary — expires, is withdrawn, comes back | Permanent |
+| How many per dwelling | Zero or many, across many sources | One |
+| Owns | Price, photos, availability, the advert's text | Street, building, unit, coordinates, geo chain |
+| Carries reviews? | No | Yes |
+| Stable public URL | Not guaranteed | The target ([ADR 0001](./adr/0001-canonical-housing-graph.md) §3.6) |
+
+**Current gap, stated as a gap:** listings from different portals advertising the
+same dwelling are not grouped yet, and a place-level page independent of active
+listings does not exist yet. Those are #368 and #362 under
+[epic #344](https://github.com/OxyHQ/Homiio/issues/344). Do not write code that
+assumes either is done.
+
+## Search and filters
+
+The searchable axes are `PropertyFilters` in
+`packages/shared-types/src/property.ts`. The ones worth knowing about:
+
+| Group | Parameters |
+|---|---|
+| Text | `search` |
+| Offering | `offering`, and it also selects which priced block `minRent`/`maxRent` apply to |
+| Price | `minRent`, `maxRent`, `minSalePrice`, `maxSalePrice` |
+| Geography | `lat` + `lng` + `radius`, `city`, `state`, `country` |
+| Size | `bedrooms`, `bathrooms`, `minBedrooms`…`maxSquareFootage`, `minYearBuilt`, `maxYearBuilt` |
+| Short-term | `checkIn`, `checkOut`, `guests`, `instantBook` |
+| Exchange | `exchangeMode` — a `both` listing matches a `swap` or a `host` request |
+| Character | `petFriendly`, `furnished`, `furnishedStatus`, `parking`, `parkingType`, `petPolicy`, `utilitiesIncluded`, `housingType`, `layoutType`, `leaseTerm` |
+| Proximity | `proximityToTransport`, `proximityToSchools`, `proximityToShopping` |
+| Media | `hasPhotos` (alias `hasImages`) |
+| Quality | `verified`, `eco`, `budgetFriendly` |
+| Availability | `availableFromBefore`, `availableFromAfter` |
+| Paging | `page`, `limit` |
+
+`offering` is the parameter that changes the meaning of the others: with
+`offering=long_term_rent`, `minRent`/`maxRent` bound `longTermRent.monthlyAmount`;
+with `short_term_rent` they bound `shortTermRent.nightlyRate`; with `sale` they
+bound `sale.price`. A price filter without an offering is ambiguous by
+construction.
+
+Radius and viewport search are PostGIS — `ST_DWithin` on the address's generated
+`geography` column, `ST_MakeEnvelope` for a map bounding box, `ST_Distance` for
+distance ordering. Details in [Architecture](./architecture).
+
+**Target, not current:** free text and geographic scope becoming formally
+independent dimensions, with one `LocationSelection` shared by Home, Explore,
+reviews and evictions, and a geocoding failure that can never degrade into a
+worldwide feed, are [ADR 0002](./adr/0002-location-and-search-contract.md). Today
+several surfaces still express location their own way.
+
+Endpoints, parameters, auth and error codes: [Routes](./routes).
+
+## Price ethics
+
+A listing carries a persisted `priceEthics` snapshot computed server-side on
+create, update and ingest:
 
 ```ts
-enum PropertyType {
-  APARTMENT, HOUSE, ROOM, STUDIO,
-  COUCHSURFING, ROOMMATES, COLIVING,
-  HOSTEL, GUESTHOUSE, CAMPSITE,
-  BOAT, TREEHOUSE, YURT, OTHER
+interface PropertyPriceEthics {
+  ethicalSuggested?: number;
+  ethicalMax?: number;
+  withinEthical?: boolean;          // omitted when no cap could be computed
+  marketVerdict?: AreaPriceVerdict; // good_deal | below_average | average | above_average
+  percentDiffFromAvg?: number;
+  isFairPrice: boolean;             // drives the badge and the fairPrice filter
+  fairnessScore: number;            // drives sortBy=fairness
+  scoredAt: string;
 }
 ```
 
-For non-traditional types, `accommodationDetails` carries the type-specific fields:
+**This is the model [ADR 0004](./adr/0004-local-explainable-pricing.md) exists to
+retire.** It combines a hard-coded rent model carrying US assumptions with a
+local comparison against nearby listings, and presents the result as a single
+universal boolean. The replacement is local, versioned, explainable and
+jurisdiction-aware. Read the ADR before building anything new on `fairnessScore`
+or `isFairPrice`, and do not present the current badge as an authoritative
+judgement anywhere new.
 
-```ts
-interface AccommodationDetails {
-  sleepingArrangement?: 'couch' | 'air_mattress' | 'floor' | 'tent' | 'hammock';
-  roommatePreferences?: string[];
-  colivingFeatures?: string[];
-  hostelRoomType?: 'dormitory' | 'private_room' | 'mixed_dorm' | 'female_dorm' | 'male_dorm';
-  campsiteType?: 'tent_site' | 'rv_site' | 'cabin' | 'glamping' | 'backcountry';
-  maxStay?: number;
-  minAge?: number;
-  maxAge?: number;
-  languages?: string[];
-  culturalExchange?: boolean;
-  mealsIncluded?: boolean;
-  wifiPassword?: string;
-  houseRules?: string[];
-}
-```
+## External listings
 
-`PriceUnit` (`day | night | week | month | year`) defaults to `month` for traditional rentals and switches to `night` for hostels/campsites.
+Homiio aggregates portal listings as **first-party data**. Nothing is
+live-proxied and no portal CDN URL is ever served at runtime: a listing is
+fetched, normalized to a `NormalizedListing`, upserted, and its photos are
+downloaded, processed with `sharp` and stored by Homiio.
 
-## Public discovery routes
+An external listing is identifiable and behaves differently:
 
-Anonymous browsing is wired via `routes/public.ts` — no auth required:
+- `isExternal: true`, no `oxyUserId`, `status: 'published'`, and a **mandatory**
+  `sourceUrl`.
+- The upsert key is `(source, sourceId)`, handled by
+  `scraperService.upsertExternalListing`.
+- **In-app apply and viewing are blocked.** Never route an external listing into
+  a Homiio enquiry flow. The CTA opens `sourceUrl`; guard a missing one with a
+  user-facing error rather than a dead button.
+- When ingest captured advertiser contact from the portal's own contact AJAX
+  (phone, email, WhatsApp, agency name), the app offers those directly as well as
+  the portal link. **Contacts are never invented or guessed** — the field is
+  absent when the portal did not expose it.
 
-| Route | Purpose |
-|-------|---------|
-| `GET /api/properties` | Paginated list with `PropertyFilters` query params. |
-| `GET /api/properties/search` | Full-text + filter search. |
-| `GET /api/properties/by-ids` | Batched lookup; used by Sindi to hydrate the `<PROPERTIES_JSON>` block. |
-| `GET /api/properties/nearby` | `lat`, `lng`, `radius` (km) — uses PostGIS `ST_DWithin` on a `geography` column with a GiST index. |
-| `GET /api/properties/radius` | Bounding-box variant. |
-| `GET /api/properties/:propertyId` | Single property detail. |
-| `GET /api/properties/:propertyId/stats` | Public stats — view count, save count. |
+### Provenance
 
-`PropertyFilters` accepts every meaningful axis:
+Every external listing states where it came from: `source`, `sourceId` and
+`sourceUrl` are the record, and the source badge in the UI is not decoration. The
+richer provenance model — age, confidence, and an immutable snapshot history of
+price and conditions — is [ADR 0004](./adr/0004-local-explainable-pricing.md)
+and #367, and is not built yet.
 
-```ts
-interface PropertyFilters {
-  type?: string;
-  status?: string;
-  available?: boolean;
-  minRent?: number;
-  maxRent?: number;
-  bedrooms?: number;
-  bathrooms?: number;
-  search?: string;
-  page?: number;
-  limit?: number;
-  lat?: number;
-  lng?: number;
-  radius?: number;
-  city?: string;
-  state?: string;
-  country?: string;
-  amenities?: string[];
-  petFriendly?: boolean;
-  furnished?: boolean;
-  parking?: boolean;
-  verified?: boolean;
-  eco?: boolean;
-}
-```
+### Expiry
 
-## Authenticated owner routes
+An external listing carries `expires_at`, set on ingest (default 30 days, via
+`EXTERNAL_PROPERTY_TTL_DAYS`). **Postgres does not act on that column by
+itself.** The row is deleted by the sweep registered in
+`packages/backend/db/expiry.ts` and run from `services/cron.ts`.
 
-Mounted under `/api/properties` and gated by `oxy.auth()`:
+The registry entry records *why* deleting is correct here, and that reasoning is
+the part to copy when registering anything else: the row is a cached copy of
+somebody else's advertisement, re-created by the next discover pass if the ad is
+still up. Deleting it cascades to `property_images`, `property_documents` and
+`property_availability_windows` — all copies of the same ad — but **not** to the
+`images` rows behind those photos.
 
-| Route | Purpose |
-|-------|---------|
-| `POST /api/properties` | Create a new property. Runs `validation.validateProperty`. |
-| `PUT /api/properties/:propertyId` | Update. Owner-scoped. |
-| `DELETE /api/properties/:propertyId` | Delete. Owner-scoped. |
-| `POST /api/properties/:propertyId/track-view` | Track a view on the active profile (drives the Recently Viewed list). |
-| `GET /api/properties/me/list` | All properties owned by the calling profile. |
-| `GET /api/properties/owner/:profileId` | Properties owned by a specific profile. |
+A table with a deadline column and no registry entry grows forever, silently.
+There is no failing test for it because there is no call site to go missing.
 
-Property handlers live under `controllers/property/` and are aggregated by `propertyController.ts` for backwards compatibility.
+### Providers
 
-## Address-first creation flow
+Each portal is a plugin in `@homiio/listing-providers` implementing `discover`,
+`fetch`, `normalize` and `health`, registered in `registry.ts`. Every registered
+provider is **off by default** behind `PROVIDER_<ID>_ENABLED=true`, derived
+mechanically from the plugin's own id — there is no flag list to maintain
+anywhere, and a new plugin is gated the moment it is registered.
 
-Addresses are first-class — they live in their own collection (`addresses`) and properties reference them by `addressId`. The creation flow in the app is:
+Two rules that are not style preferences:
 
-1. User picks an address on a map screen (`app/properties/address-detail.tsx`) or types it. The frontend calls `GET /api/geocoding/forward` to resolve.
-2. The backend creates or returns an existing `Address` document with a 2dsphere `location` and normalised street/city/state/country.
-3. The user fills out the property form (`app/properties/create.tsx`), which posts to `POST /api/properties` with `addressId`.
-4. The new property inherits the address's `location` for nearby queries.
+- **JSON/AJAX first, HTML last.** Prefer a portal's internal JSON, XHR, GraphQL
+  or datalayer API, ideally after a session warm. HTML and embedded JSON-LD are a
+  fallback for when no usable JSON endpoint exists.
+- **General classifieds are never crawled site-wide.** Sites like Kleinanzeigen,
+  Subito, Leboncoin, OLX and Milanuncios sell cars and sofas too. Their plugins
+  allow only housing categories in `discover()` and reject non-housing listings
+  in `normalize()`, pinned by fixtures on both sides. Dedicated real-estate
+  portals are exempt because they are housing-native.
 
-This separation means the same physical address can host multiple historical listings, useful for showing rent-history transparency on a per-address basis.
+Rate limiting, retries, the circuit breaker, the browser pool, the proxy and the
+escalation ladder live once in the shared `FetchRuntime`, not per plugin. Shared
+parse helpers (`parse/jsonLd.ts`, `parse/nextData.ts`, `parse/contact.ts`,
+`parse/classifieds.ts`, `parse/cities.ts`, `parse/price.ts`) must be imported
+rather than reimplemented per portal.
 
-## External sourcing (scraper)
+Per-market status — which portals work, what blocks the rest — is in `AGENTS.md`,
+which is where it can be kept current without a doc release.
 
-Scraped properties (e.g. from Fotocasa) carry:
+## Creating and editing
 
-- `source: 'fotocasa'`
-- `sourceId: '<their id>'`
-- `sourceUrl: 'https://www.fotocasa.es/...'`
-- `isExternal: true`
-- `expiresAt`: expiry — the scheduled expiry sweep removes stale external listings whose `expiresAt` has passed (Postgres has no TTL index; the sweep is the replacement).
+**Current state:** a first-party listing is created through
+`POST /api/properties` from `app/properties/create.tsx`, and edited through
+`PUT /api/properties/:propertyId`. Both go through
+`controllers/property/create.ts` and `updateDelete.ts` onto Postgres
+(`db/properties/propertyWrites.ts`).
 
-Scraped properties don't require a `profileId`, so they coexist with internally-listed properties without a phantom owner. The scraper service lives at `services/scraperService.ts` and is exposed via the admin-only `routes/scraper.ts`.
+Write safety is not per-controller improvisation:
 
-## Drafts and recently viewed
+- The owner is `requireSessionOxyUserId` from the session. Never a body field.
+- Fields are picked with `utils/pickFields.ts` against explicit allowlists in
+  `controllers/property/editableFields.ts` (`CREATABLE_PROPERTY_FIELDS`,
+  `EDITABLE_PROPERTY_FIELDS`). Never a denylist, never a `req.body` spread.
+- Ownership is enforced *in the query* (`properties.oxy_user_id`), so a non-owner
+  gets a 404 rather than a 403 — a 403 confirms the listing exists.
+- Deleting is a **soft delete**: status moves to `archived` and `deleted_at` is
+  set.
 
-The frontend has dedicated screens for owner drafts (`app/properties/drafts.tsx`) and per-user recently-viewed (`app/properties/recently-viewed.tsx`). Drafts are properties with `status: 'draft'`; recently-viewed is populated by `POST /api/properties/:propertyId/track-view` and stored in the `RecentlyViewedSchema` collection.
+Closing a listing is `POST /api/properties/:propertyId/mark-transacted`
+(owner-only). It sets a terminal status — `rented` or `sold`, inferred from the
+offerings when omitted — and runs the idempotent commission trigger. Re-marking
+never creates a second commission.
 
-## Saved properties and collections
+## Saved, drafts and recently viewed
 
-Users can save properties to named collections (the `Saved` and `SavedPropertyFolderSchema` collections). `SavedPropertiesContext` on the frontend hydrates the saved set immediately after profile load so heart icons render in the correct state on first paint.
+- **Drafts** are listings with `status: 'draft'`, listed at
+  `/properties/drafts`.
+- **Recently viewed** is written by `POST /api/properties/:propertyId/track-view`
+  into `recently_viewed`.
+- **Saved** listings live in `saved_items`, organised into `saved_property_folders`
+  with `saved_property_folder_items`. `SavedPropertiesContext` hydrates the saved
+  set right after profile load, so heart icons render correctly on first paint
+  rather than flickering.
