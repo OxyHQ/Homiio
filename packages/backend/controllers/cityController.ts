@@ -37,6 +37,7 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { getDb } from '../db/postgres';
 import { escapeLikePattern } from '../db/likePattern';
 import { cities, countries, images, properties as propertiesTable, regions } from '../db/schema';
+import { MAX_LOOKUP_LIMIT, lookupCityPlaces, type PlaceLookupInput } from '../db/geo/placeLookup';
 import { isPlausibleCityName } from '../utils/plausibleCityName';
 import {
   allOf,
@@ -140,6 +141,11 @@ function serializeCity(row: CityQueryRow): Record<string, unknown> {
 
   return withIds(city.id, {
     name: city.name,
+    // The database-computed URL-safe label (#295). Emitted so a client can build
+    // a link without re-implementing the slug rule — a second implementation of
+    // it is exactly what `db/geo/placeSlug.ts` exists to prevent. It is a LABEL:
+    // two cities can share one, which is why nothing resolves by it alone.
+    slug: city.slug,
     countryId: country ? withIds(country.id, { name: country.name, code: country.code, currency: country.currency, flag: country.flag }) : city.countryId,
     regionId: region ? withIds(region.id, { name: region.name, code: region.code }) : city.regionId,
     coordinates,
@@ -180,6 +186,69 @@ function serializeCity(row: CityQueryRow): Record<string, unknown> {
  */
 function nameEquals(column: AnyPgColumn, value: string): SQL {
   return sql`lower(${column}) = lower(${value})`;
+}
+
+/**
+ * The marker a query-string parser returns for "present and malformed".
+ *
+ * Distinct from `undefined` ("absent") on purpose: absent is legal and means the
+ * filter does not apply, malformed is a 400. Collapsing the two is how a typo'd
+ * `?bounds=` silently becomes a global search.
+ */
+const INVALID = Symbol('invalid');
+
+/** The first of several query aliases that carries a non-empty string. */
+function firstString(...values: unknown[]): string | undefined {
+  for (const value of values) {
+    if (typeof value !== 'string') continue;
+    const trimmed = value.trim();
+    if (trimmed.length > 0) return trimmed;
+  }
+  return undefined;
+}
+
+function finiteNumbers(value: string, count: number): number[] | typeof INVALID {
+  const parts = value.split(',').map((part) => Number(part.trim()));
+  if (parts.length !== count || parts.some((part) => !Number.isFinite(part))) return INVALID;
+  return parts;
+}
+
+/** `lng,lat` in degrees. */
+function parsePoint(value: string | undefined): { longitude: number; latitude: number } | undefined | typeof INVALID {
+  if (value === undefined) return undefined;
+  const parts = finiteNumbers(value, 2);
+  if (parts === INVALID) return INVALID;
+  const [longitude, latitude] = parts;
+  if (longitude < -180 || longitude > 180 || latitude < -90 || latitude > 90) return INVALID;
+  return { longitude, latitude };
+}
+
+/**
+ * `west,south,east,north` in degrees.
+ *
+ * Latitude order is validated (`south <= north`); longitude order is NOT, and
+ * that is the point rather than an omission: `west > east` is how a box says it
+ * crosses the antimeridian (`docs/adr/0002` §9.3). Adding a `west <= east` check
+ * here would silently invert every such query into its complement.
+ */
+function parseBounds(
+  value: string | undefined,
+): { west: number; south: number; east: number; north: number } | undefined | typeof INVALID {
+  if (value === undefined) return undefined;
+  const parts = finiteNumbers(value, 4);
+  if (parts === INVALID) return INVALID;
+  const [west, south, east, north] = parts;
+  if ([west, east].some((degrees) => degrees < -180 || degrees > 180)) return INVALID;
+  if ([south, north].some((degrees) => degrees < -90 || degrees > 90)) return INVALID;
+  if (south > north) return INVALID;
+  return { west, south, east, north };
+}
+
+function parseLimit(value: string | undefined): number | undefined | typeof INVALID {
+  if (value === undefined) return undefined;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > MAX_LOOKUP_LIMIT) return INVALID;
+  return parsed;
 }
 
 class CityController {
@@ -234,7 +303,12 @@ class CityController {
           .where(where)
           // `properties_count` and `name` are both NOT NULL, so Mongo's
           // "missing sorts first" and Postgres' "NULLs last" cannot differ here.
-          .orderBy(desc(cities.propertiesCount), asc(cities.name))
+          //
+          // `id` last (#295): two cities can share a name AND a listing count —
+          // the two Barcelonas do — and without a unique final key their order
+          // is the plan's choice, which for a PAGED list means a row can appear
+          // on two pages or on none.
+          .orderBy(desc(cities.propertiesCount), asc(cities.name), asc(cities.id))
           .limit(numericLimit)
           .offset(skip),
         // `count()` carries drizzle's Number mapper; postgres.js returns bigint
@@ -272,7 +346,10 @@ class CityController {
 
       const rows = await cityQuery()
         .where(and(eq(cities.isActive, true), sql`${cities.coverImageId} is not null`))
-        .orderBy(desc(cities.propertiesCount), asc(cities.name))
+        // `id` last: see `getCities` — the popular carousel is the surface where
+        // a plan-dependent tie is most visible, because two same-named cities
+        // would swap places between two identical loads.
+        .orderBy(desc(cities.propertiesCount), asc(cities.name), asc(cities.id))
         .limit(fetchLimit);
 
       const filtered = rows
@@ -307,53 +384,98 @@ class CityController {
   }
 
   /**
-   * Get city by name, optionally narrowed by region and/or country.
-   * GET /api/cities/lookup?name=&state=&country=
+   * Resolve a city from a token (id, name or slug) plus any discriminators.
+   * GET /api/cities/lookup?name=&slug=&countryCode=&regionId=&near=&bounds=
+   *
+   * ## The contract, and why the status codes are what they are (#295)
+   *
+   * The body is the `CityLookupResult` union from `@homiio/shared-types`, and a
+   * consumer switches on `status` rather than on the HTTP code:
+   *
+   * | Outcome | HTTP | Body |
+   * |---|---|---|
+   * | one place | `200` | `{ success: true, data: { status: 'resolved', place } }` |
+   * | several equally valid places | `200` | `{ success: true, data: { status: 'ambiguous', code: 'AMBIGUOUS_LOCATION', candidates } }` |
+   * | nothing matched | `404` | `{ success: false, code: 'PLACE_NOT_FOUND', … }` |
+   * | the request itself is wrong | `400` | `{ success: false, code: 'INVALID_PLACE_QUERY', … }` |
+   *
+   * `ambiguous` is a **200**, and that is a decision rather than laziness: the
+   * server answered the question it was asked ("which places match this?")
+   * completely and correctly. Making it a 4xx would put the one answer a caller
+   * most needs to render — the list to choose from — on the error path of every
+   * HTTP client in the app, which is how it ends up being swallowed and replaced
+   * by `candidates[0]`. The `code: 'AMBIGUOUS_LOCATION'` marker is there for the
+   * caller that genuinely requires a single city; what it must never do is pick.
+   *
+   * `not_found` stays a **404** because it already was one, and the wire
+   * contract test (`__tests__/integration/wireIdContract.test.ts`) pins the
+   * shape of that error body.
+   *
+   * ## Compatibility
+   *
+   * `?name=` and `?state=`/`?country=` (names) are the parameters this endpoint
+   * has always taken and they still work; `?slug=`, `?q=`, `?countryCode=`,
+   * `?countryId=`, `?regionId=`, `?near=` and `?bounds=` are new. An old link
+   * carrying `?city=barcelona` therefore keeps resolving — and where it is now
+   * genuinely ambiguous it says so instead of quietly resolving to a different
+   * city than it did last year, which is the behaviour #295 exists to remove.
    */
-  async getCityByLocation(req: Request, res: Response) {
+  async lookupCity(req: Request, res: Response) {
     try {
-      const { name, state, country } = req.query;
-      if (!name) {
-        return res.status(400).json({ success: false, message: 'City name is required' });
+      const token = firstString(req.query.name, req.query.slug, req.query.q, req.query.city);
+      if (!token) {
+        return res.status(400).json({
+          success: false,
+          code: 'INVALID_PLACE_QUERY',
+          message: 'A city name, slug or id is required (?name=, ?slug=, ?q= or ?city=)',
+        });
       }
 
-      const conditions: SQL[] = [nameEquals(cities.name, String(name)), eq(cities.isActive, true)];
-
-      // Narrow by region/country NAME by resolving to their canonical ids.
-      let resolvedCountryId: string | undefined;
-      if (country) {
-        const countryRows = await getDb()
-          .select({ id: countries.id })
-          .from(countries)
-          .where(or(eq(countries.code, String(country).toUpperCase()), nameEquals(countries.name, String(country))))
-          .limit(1);
-        if (!countryRows[0]) {
-          return res.status(404).json({ success: false, message: 'City not found' });
-        }
-        resolvedCountryId = countryRows[0].id;
-        conditions.push(eq(cities.countryId, resolvedCountryId));
+      const near = parsePoint(firstString(req.query.near));
+      if (near === INVALID) {
+        return res.status(400).json({ success: false, code: 'INVALID_PLACE_QUERY', message: '`near` must be `lng,lat` in degrees' });
       }
-      if (state) {
-        const regionRows = await getDb()
-          .select({ id: regions.id })
-          .from(regions)
-          .where(
-            resolvedCountryId
-              ? and(nameEquals(regions.name, String(state)), eq(regions.countryId, resolvedCountryId))
-              : nameEquals(regions.name, String(state)),
-          )
-          .limit(1);
-        if (!regionRows[0]) {
-          return res.status(404).json({ success: false, message: 'City not found' });
-        }
-        conditions.push(eq(cities.regionId, regionRows[0].id));
+      const bounds = parseBounds(firstString(req.query.bounds));
+      if (bounds === INVALID) {
+        return res.status(400).json({
+          success: false,
+          code: 'INVALID_PLACE_QUERY',
+          message: '`bounds` must be `west,south,east,north` in degrees, with south <= north',
+        });
+      }
+      const limit = parseLimit(firstString(req.query.limit));
+      if (limit === INVALID) {
+        return res.status(400).json({
+          success: false,
+          code: 'INVALID_PLACE_QUERY',
+          message: `\`limit\` must be a whole number between 1 and ${MAX_LOOKUP_LIMIT}`,
+        });
       }
 
-      const rows = await cityQuery().where(and(...conditions)).limit(1);
-      if (!rows[0]) {
-        return res.status(404).json({ success: false, message: 'City not found' });
+      const input: PlaceLookupInput = {
+        token,
+        countryCode: firstString(req.query.countryCode),
+        countryId: firstString(req.query.countryId),
+        country: firstString(req.query.country),
+        regionId: firstString(req.query.regionId),
+        // `state` is what this endpoint has always called a region.
+        region: firstString(req.query.region, req.query.state),
+        ...(near ? { near } : {}),
+        ...(bounds ? { bounds } : {}),
+        ...(limit ? { limit } : {}),
+      };
+
+      const outcome = await lookupCityPlaces(input);
+      if (outcome.status === 'not_found') {
+        return res.status(404).json({ success: false, code: 'PLACE_NOT_FOUND', message: 'City not found' });
       }
-      res.json({ success: true, data: serializeCity(rows[0]) });
+      if (outcome.status === 'ambiguous') {
+        return res.json({
+          success: true,
+          data: { status: 'ambiguous', code: 'AMBIGUOUS_LOCATION', candidates: outcome.candidates },
+        });
+      }
+      res.json({ success: true, data: { status: 'resolved', place: outcome.place } });
     } catch (error) {
       res.status(500).json({ success: false, message: 'Failed to fetch city', error: (error as Error).message });
     }
@@ -546,6 +668,12 @@ class CityController {
   /**
    * Search cities by name, country + region expanded.
    * GET /api/cities/search
+   *
+   * This is the TYPEAHEAD — an unanchored substring match returning a list the
+   * user picks from — and it stays that. It is not a resolver and never was:
+   * `/api/cities/lookup` is what answers "which city is this?", and #295 is the
+   * change that stopped a caller taking `data[0]` from here and calling it an
+   * answer.
    */
   async searchCities(req: Request, res: Response) {
     try {
@@ -555,7 +683,10 @@ class CityController {
       }
       const rows = await cityQuery()
         .where(and(ilike(cities.name, `%${escapeLikePattern(String(q))}%`), eq(cities.isActive, true)))
-        .orderBy(desc(cities.propertiesCount), asc(cities.name))
+        // `id` last: two same-named cities with the same listing count tie on
+        // both keys, and a typeahead that reorders itself between keystrokes for
+        // no reason is the visible face of a plan-dependent sort.
+        .orderBy(desc(cities.propertiesCount), asc(cities.name), asc(cities.id))
         .limit(Number(limit));
       res.json({ success: true, data: rows.map(serializeCity) });
     } catch (error) {
