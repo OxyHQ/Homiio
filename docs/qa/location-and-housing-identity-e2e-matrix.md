@@ -27,6 +27,25 @@ is a statement that the blocker is the feature, not the harness — the invarian
 it would assert is already implemented and tested in
 `packages/shared-types/src/observability/invariants.ts`.
 
+### Coverage today
+
+**34 journeys: 12 AUTOMATED-NOW, 18 AUTOMATABLE-AFTER, 3 MANUAL, and one (1.4)
+mixed** — automatable on web, manual on both native platforms. Per platform
+cell, that is 36 automated, 55 blocked on a feature, 11 manual, out of 102.
+
+Recount rather than trusting those figures; they go stale the moment a row
+changes, and a number carried from memory is an assertion, not a measurement:
+
+```bash
+grep -cE '^\| *[0-9]+\.[0-9]+ *\|' docs/qa/location-and-housing-identity-e2e-matrix.md   # rows
+grep -oE 'AUTOMATED-NOW|AUTOMATABLE-AFTER-#[0-9]+|MANUAL' \
+  docs/qa/location-and-housing-identity-e2e-matrix.md | sed 's/-#[0-9]*//' | sort | uniq -c
+```
+
+(The second command counts the status vocabulary table and the prose too, so it
+over-counts by a fixed handful — it answers "did a whole group lose its
+statuses?", not the exact figure.)
+
 ---
 
 ## What CI runs now
