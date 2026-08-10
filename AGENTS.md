@@ -678,7 +678,7 @@ boot-mounted component calling a suspenseful hook deadlocks the render, so the
 init effect never runs and the promise never resolves: a blank page with ZERO
 console output. Provider ordering fails the same silent way.
 
-Three properties worth keeping if you edit it:
+Four properties worth keeping if you edit it:
 
 - It asserts `document.visibilityState === 'visible'` **before** any verdict and
   exits INCONCLUSIVE (3) otherwise. A backgrounded tab pauses
@@ -686,8 +686,23 @@ Three properties worth keeping if you edit it:
   that has cost this ecosystem a debugging session.
 - It asserts rendered CONTENT, not merely that nothing threw. "Nothing threw" is
   not the property.
-- It carries a mutation test that breaks the entry bundle and requires the check
-  to notice, so it can tell "ran and found nothing" from "did not run".
+- **It fails on any error logged during boot, because AN ERROR BOUNDARY IS
+  CONTENT.** A content assertion cannot tell a booted app from a caught crash:
+  React's boundary renders "Something went wrong" and logs to `console.error`,
+  throwing no uncaught exception. Measured 2026-08-10 on `/explore` — an
+  infinite render loop produced 33 elements, a visible error, and **exit 0**.
+  The two channels differ and only one used to be gated: `pageErrors`
+  (`Runtime.exceptionThrown`) is uncaught and usually means nothing mounted;
+  `consoleErrors` (`Runtime.consoleAPICalled`, `type: 'error'`) is what a
+  boundary produces. The allow-list of benign messages is deliberately EMPTY,
+  and that is a measurement — eight routes on `main` produced zero console
+  errors, so strictness costs nothing. Prefer fixing the source over adding an
+  entry; a gate that reds on noise gets switched off, and an off gate is worse
+  than the hole.
+- It carries a mutation test **per failing condition** — a broken entry bundle
+  (nothing mounts) and an injected console error (a caught crash that still
+  renders) — so it can tell "ran and found nothing" from "did not run". Add a
+  condition, add a mutation only it catches, and confirm the others still pass.
 
 **Standing rule when reading its output, or any check's here: print the full
 output and the exit code.** Do not ask a grep whether it matched, because an
