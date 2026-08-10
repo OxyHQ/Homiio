@@ -129,15 +129,24 @@ class HomeScopeError extends Error {
 const EXTERNAL_POINT_RADIUS_METERS = 25_000;
 
 /**
- * The place types Homiio can narrow a listing query by.
+ * The place types Homiio can narrow by a canonical ID.
  *
- * `country` and `postcode` are absent because there is no predicate for them:
- * `addresses` carries a city, a region and a neighborhood id and nothing else a
- * scope can hang on. Refusing them is right — dropping one instead is how a
- * named scope becomes a global page under that name's heading, which ADR §1.3(d)
- * records this home screen shipping for months.
+ * ## This is a fact about the geo tables, NOT a list of what Home accepts
+ *
+ * That distinction is the whole of this change, and getting it wrong cost three
+ * production 400s. `addresses` carries a city id, a region id and a neighborhood
+ * id, so those three can be scoped exactly by identity and need no geometry. The
+ * previous revision used this same set as a REFUSAL GATE, checked before the
+ * source and before any geometry, so a `district` with a perfectly usable
+ * bounding box was refused for the unrelated reason that no `addresses.district_id`
+ * column exists.
+ *
+ * **Bounds are a complete scope on their own and need no id.** So this set now
+ * decides only whether the fast id path is available; everything else falls
+ * through to {@link resolvePlaceScope}, which is why adding a seventh place type
+ * can no longer produce a 400 by omission.
  */
-const SCOPEABLE_PLACE_TYPES: ReadonlySet<string> = new Set(['city', 'region', 'neighborhood']);
+const ID_SCOPED_PLACE_TYPES: ReadonlySet<string> = new Set(['city', 'region', 'neighborhood']);
 
 /** The reader's language, for the geocoder's own labels. Same shape as `geoController`. */
 function languageOf(req: Request): string {
@@ -146,19 +155,24 @@ function languageOf(req: Request): string {
 }
 
 /**
- * Scope by an EXTERNAL place ref — the ordinary output of picking a city.
+ * Scope by a place Homiio cannot narrow by id — which is most of them.
  *
- * ## The defect this repairs, which reached production
+ * ## The defects this repairs, which reached production THREE times
  *
- * This branch used to throw `UNSUPPORTED_LOCATION`, so
- * `GET /api/home/sections?loc=city.osm.R347950` answered **400**. That token is
- * not exotic input: the place picker resolves through the #351 geo gateway, and
- * every gateway candidate is external (`{ kind: 'external', provider, ref }`).
- * The location ladder therefore handed Home a scope Home refused — the failure
- * #353 exists to prevent, arrived at from the other side, and the user saw four
- * silent failures.
+ * `city.osm.R347950` answered **400** because the branch refused any non-Homiio
+ * source; `district.osm.R3765380` answered **400** because a placeType gate ran
+ * BEFORE this resolver and refused anything outside {city, region, neighborhood}.
+ * Neither token is exotic input: the picker resolves through the #351 geo
+ * gateway, whose candidates are external and can be any of the six `PlaceType`
+ * members. The location ladder kept handing Home scopes Home refused.
  *
- * ## Three rungs, and the order is the point
+ * The common cause was a gate at the wrong level. The id-lookup list is a fact
+ * about the geo TABLES; it is not a statement about which requests are
+ * answerable, because **bounds are a complete scope on their own**. So this
+ * function now serves every external ref of any type, plus Homiio's own
+ * `country`, `district` and `postcode`.
+ *
+ * ## Four rungs, and the order is the point
  *
  *  1. **The canonical Homiio place.** An id survives a provider swap where a
  *     provider ref is only as stable as the provider, so a Homiio city is always
@@ -179,7 +193,7 @@ function languageOf(req: Request): string {
  *     names one with no geometry and no Homiio match. Never a 400 and never a
  *     widening: the client renders the picker, as it already does.
  */
-async function resolveExternalPlace(
+async function resolvePlaceScope(
   ref: Extract<LocationRef, { kind: 'place' }>,
   token: string,
   language: string,
@@ -191,7 +205,13 @@ async function resolveExternalPlace(
   const key = locationKeyOfRef(ref);
   const unresolved: ResolvedScope = {
     scope: {},
-    location: { status: 'unresolved', requested: { param: 'city', value: ref.id } },
+    location: {
+      status: 'unresolved',
+      // `param` is the search endpoint's vocabulary, which has three values; a
+      // `district` or `postcode` has no name in it, so it reports as the nearest
+      // truthful one rather than inventing a fourth the client cannot read.
+      requested: { param: ref.placeType === 'region' ? 'state' : 'city', value: ref.id },
+    },
   };
 
   let place: GeoPlace | null;
@@ -215,7 +235,27 @@ async function resolveExternalPlace(
 
   if (!place) return unresolved;
 
-  // 1. The canonical Homiio place.
+  // 1. A COUNTRY is scoped by its CODE, never by its bounds.
+  //
+  //    Deliberate, and the alternative is the trap. `addresses.country_code` is
+  //    NOT NULL and indexed, so an equality on it is exact and cheap — whereas a
+  //    country's bounding box is a terrible scope for exactly the countries
+  //    people search: France's OSM extent includes French Guiana and the Pacific
+  //    territories, and the United States' spans the Aleutians to the Virgin
+  //    Islands. Either box is most of the planet, so scoping by it would produce
+  //    a de-facto global feed under a country's name — ADR §1.3(d)'s "named
+  //    heading over a global list", reintroduced by a rung meant to prevent it.
+  //
+  //    Keyed on the REF's type rather than the resolved place's: the token is
+  //    what the user asked for, and a gateway that answered with a different
+  //    type should not silently change the scope's shape.
+  if (ref.placeType === 'country') {
+    const countryCode = place.admin.countryCode.trim().toUpperCase();
+    if (countryCode.length === 0) return unresolved;
+    return { scope: { countryCode }, location: { status: 'resolved', key } };
+  }
+
+  // 2. The canonical Homiio place.
   const lookup = await lookupCityPlaces({
     token: place.label.primary,
     countryCode: place.admin.countryCode,
@@ -229,7 +269,7 @@ async function resolveExternalPlace(
     return { scope: { cityId: lookup.place.id }, location: { status: 'resolved', key } };
   }
 
-  // 2. The place's own geometry.
+  // 3. The place's own geometry.
   if (place.bounds) {
     return {
       scope: {
@@ -256,7 +296,7 @@ async function resolveExternalPlace(
     };
   }
 
-  // 3. Named, but unframeable and unmatched. There is genuinely nothing to
+  // 4. Named, but unframeable and unmatched. There is genuinely nothing to
   //    scope by, and answering anyway would answer globally.
   return unresolved;
 }
@@ -316,17 +356,14 @@ async function resolveScope(
     }
 
     case 'place': {
-      // The three placeTypes Homiio can narrow by, checked BEFORE the source so
-      // an unsupported type is refused identically whether it came from Homiio
-      // or a geocoder.
-      if (!SCOPEABLE_PLACE_TYPES.has(ref.placeType)) {
-        throw new HomeScopeError(
-          'UNSUPPORTED_LOCATION',
-          `Home cannot scope by ${ref.placeType}. Supported: city, region, neighborhood, bbox, here.`,
-        );
-      }
-      if (ref.source.kind !== 'homiio') {
-        return resolveExternalPlace(ref, token, language);
+      // The ID FAST PATH, and it is only a fast path: a Homiio-sourced ref of a
+      // type that has an id column is scoped exactly, with no geocoder call.
+      // Everything else — every external ref, and a Homiio `country`, `district`
+      // or `postcode` — falls through to the geometry resolver rather than being
+      // refused. A type Homiio cannot narrow BY ID is not a type Home cannot
+      // answer.
+      if (ref.source.kind !== 'homiio' || !ID_SCOPED_PLACE_TYPES.has(ref.placeType)) {
+        return resolvePlaceScope(ref, token, language);
       }
       if (ref.placeType === 'city') {
         const cityId = await resolveCityId(ref.id);
@@ -358,13 +395,12 @@ async function resolveScope(
         }
         return { scope: { neighborhoodId }, location: { status: 'resolved', key } };
       }
-      // Unreachable: `SCOPEABLE_PLACE_TYPES` is checked above and holds exactly
-      // the three branches returned from. Kept as an exhaustiveness guard rather
-      // than deleted, so adding a fourth scopeable type fails loudly here.
-      throw new HomeScopeError(
-        'UNSUPPORTED_LOCATION',
-        `Home cannot scope by ${ref.placeType}. Supported: city, region, neighborhood, bbox, here.`,
-      );
+      // Unreachable: the guard above sends every type outside
+      // `ID_SCOPED_PLACE_TYPES` to `resolvePlaceScope`, and the three that
+      // remain each return. Kept as an exhaustiveness guard so adding a fourth
+      // id-scoped type without a branch fails loudly HERE rather than silently
+      // taking the geometry path — which would still answer, just less exactly.
+      return resolvePlaceScope(ref, token, language);
     }
 
     case 'multi':

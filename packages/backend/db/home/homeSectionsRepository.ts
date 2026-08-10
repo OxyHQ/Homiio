@@ -35,6 +35,7 @@ import { OfferingType, type HomeLocationSummary, type HomeSection } from '@homii
 import {
   hasOffering,
   inCity,
+  inCountry,
   inNeighborhood,
   inRegion,
   notDeleted,
@@ -76,6 +77,16 @@ export interface HomeScope {
   readonly cityId?: string;
   readonly regionId?: string;
   readonly neighborhoodId?: string;
+  /**
+   * ISO-3166-1 alpha-2, for a whole-country scope.
+   *
+   * A CODE rather than a bounding box, and that is the point: a country's extent
+   * is a terrible scope for exactly the countries people search (France reaches
+   * the Pacific; the United States reaches the Aleutians), so framing one by its
+   * box would be a global feed under a country's name. `addresses.country_code`
+   * is NOT NULL and indexed, so the equality is both exact and cheap.
+   */
+  readonly countryCode?: string;
 }
 
 export interface HomeSectionsQuery {
@@ -124,6 +135,7 @@ function scopeConditions(query: HomeSectionsQuery): SQL[] {
   if (scope.cityId) conditions.push(inCity(scope.cityId));
   if (scope.regionId) conditions.push(inRegion(scope.regionId));
   if (scope.neighborhoodId) conditions.push(inNeighborhood(scope.neighborhoodId));
+  if (scope.countryCode) conditions.push(inCountry(scope.countryCode));
 
   return conditions;
 }
