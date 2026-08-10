@@ -62,12 +62,25 @@ export async function getPropertyStats(
       // The three room counts in ONE pass, as filtered aggregates. Three
       // separate `countDocuments` could each see a different instant, so an
       // `occupiedRooms` could exceed the `totalRooms` reported beside it.
+      // Both status literals here were outside `PropertyStatus` — `'occupied'`
+      // and `'active'` are as unstorable as each other under
+      // `properties_status_check` — so `occupiedRooms`, `availableRooms` and the
+      // `occupancyRate` derived from them have always reported 0. Same dead
+      // vocabulary as `controllers/property/batch.ts` (#290), found by the same
+      // census.
+      //
+      // `available` becomes `published AND is_available`, which is exactly
+      // `searchQueryBuilder`'s `publishedAndAvailable` pair. `occupied` becomes
+      // `rented`, the one member of the vocabulary that means somebody is
+      // living there; `reserved` is deliberately in NEITHER count, because a
+      // listing under offer is honestly neither free nor occupied and inventing
+      // an answer for it here would put a product decision in an aggregate.
       getDb()
         .select({
           total: sql<number>`count(*)::int`,
-          occupied: sql<number>`count(*) filter (where ${properties.status} = 'occupied')::int`,
+          occupied: sql<number>`count(*) filter (where ${properties.status} = 'rented')::int`,
           available: sql<number>`count(*) filter (
-            where ${properties.status} = 'active' and ${properties.availabilityIsAvailable}
+            where ${properties.status} = 'published' and ${properties.availabilityIsAvailable}
           )::int`,
         })
         .from(properties)

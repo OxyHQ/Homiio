@@ -238,7 +238,7 @@ describe('the wire contract, over a real request', () => {
    * not which layer happens to produce it.
    */
   it('emits no `_id` from any public endpoint that returns entities', async () => {
-    const { cityId } = await seedCityProperty();
+    const { cityId, propertyId } = await seedCityProperty();
     const chain = await seedGeoChain({ cityName: 'Barcelona', propertiesCount: 3 });
 
     const entityPaths = [
@@ -248,16 +248,17 @@ describe('the wire contract, over a real request', () => {
       `/api/cities/${chain.cityId}`,
       `/api/cities/${cityId}/properties?limit=8`,
       '/api/properties',
+      // Joined the sweep once #290 gave it a status filter that can match. It
+      // was excluded here for as long as `controllers/property/batch.ts`
+      // filtered `status: 'active'` — a value outside `PropertyStatus`, so the
+      // body was permanently empty and would have passed the `_id` scan for the
+      // wrong reason. That exclusion is what surfaced the bug; this line is the
+      // other end of it, and the `empty` floor below is what keeps it honest.
+      `/api/properties/by-ids?ids=${propertyId}`,
     ];
-    // Two public GETs are deliberately absent, and neither absence is laziness:
-    //   - `/api/analytics/stats` returns aggregates, not entities, so it has no
-    //     `id` to floor on. It has its own case below.
-    //   - `/api/properties/by-ids` filters `status: 'active'`, which is not a
-    //     value in `PropertyStatus` (draft/published/reserved/rented/sold/
-    //     inactive/archived), so it cannot return a row for any fixture. That is
-    //     a pre-existing bug in `controllers/property/batch.ts`, unrelated to
-    //     this contract; listing it here would only buy a permanently empty body
-    //     that passes the `_id` scan for the wrong reason.
+    // `/api/analytics/stats` is deliberately absent and it is not laziness: it
+    // returns aggregates, not entities, so it has no `id` to floor on. It has
+    // its own case below.
 
     const leaked: string[] = [];
     const empty: string[] = [];
