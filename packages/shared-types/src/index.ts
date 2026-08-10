@@ -70,6 +70,25 @@ export * from './ethicalPricing';
 // invariants. Shared so the redaction rules have exactly one implementation.
 export * from './observability';
 
+// The canonical location contract (ADR 0002 §3): one `LocationSelection`, one
+// `locationKey`, one `loc` URL token codec, one set of bounds validators.
+export * from './location';
+
+// `GeoPoint` and `GeoBounds` are declared BOTH in `./location` and in
+// `./observability/queryIdentity`, which predates it, so the two `export *`
+// lines above would otherwise be ambiguous (TS2308) and neither name would be
+// exported at all. This resolves it towards the canonical contract, because
+// ADR 0002 §3 is normative about the encoding and every other representation is
+// converging on it. Nothing is deleted: the observability declarations keep
+// their names and shapes at `@homiio/shared-types/observability/queryIdentity`,
+// and folding them into this one is the migration change's job, not this file's.
+//
+// `GeoBounds` is structurally identical in both, so this rebinding is invisible
+// to a consumer. `GeoPoint` is NOT — observability's is `{ lat, lng }` and the
+// contract's is `{ longitude, latitude }`, which is exactly the transposable
+// coordinate encoding ADR §1.2 counts three of inside this package.
+export type { GeoPoint, GeoBounds } from './location';
+
 // International formatting — money, units, dates, percentages. Pure, shared by
 // frontend and backend so a price is never assembled by concatenation.
 export * from './format/money';
