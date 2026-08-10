@@ -1,16 +1,27 @@
 /**
  * WhereStep — live city/area autocomplete for the search panel.
  *
- * Uses the keyless OpenStreetMap Nominatim geocoder via
- * `useDebouncedAddressSearch`. While the input is empty it surfaces the user's
- * recent searches; once they type, debounced suggestions replace the list.
- * Selecting a row commits a whole {@link LocationSelection} — an
- * `address_candidate`, because a geocoder proposal is a CANDIDATE and not a
- * materialised Homiio place, and the discriminant is what keeps the two
- * different things at every layer downstream.
+ * Suggestions come from Homiio's geo gateway (`/api/geo/search`, #351), never
+ * from a geocoder the device contacts itself. While the input is empty it
+ * surfaces the user's recent searches; once they type, debounced suggestions
+ * replace the list. Selecting a row commits a whole {@link LocationSelection}
+ * and hands it back to the panel — an `address_candidate` for a street address
+ * and a `place` for everything else, which is the distinction that keeps a
+ * geocoder proposal and a materialised Homiio place different things at every
+ * layer downstream.
  *
- * Where the suggestions come from is #351's half of this file; how a selection
- * is committed is this one's.
+ * Two things here are contract rather than styling.
+ *
+ * **Every non-result state is distinguishable.** "No suggestions" used to be
+ * the answer to five different questions — too few characters, in flight,
+ * nothing matched, the provider timed out, offline — so a network failure
+ * rendered as "no results" and invited the user to search somewhere else.
+ * `AddressSearchState` separates them and each gets its own line of copy.
+ *
+ * **The attribution is rendered whenever results are.** The OSM data licence
+ * requires it; the gateway sends it with every response precisely so the
+ * surface showing results can display it, and a client cannot render what it
+ * was never given.
  */
 import React, { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -20,72 +31,109 @@ import { Ionicons } from '@expo/vector-icons';
 import { Search } from '@oxyhq/bloom/search';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
-import {
-  useDebouncedAddressSearch,
-  type AddressSuggestion,
-} from '@/hooks/useAddressSearch';
+import { useDebouncedAddressSearch } from '@/hooks/useAddressSearch';
 import { useRecentSearchesStore, type RecentSearch } from '@/store/recentSearchesStore';
+import {
+  isValidBounds,
+  normalizeLongitude,
+  geoPlaceToSelection,
+  locationKey,
+  type GeoBounds,
+  type GeoPlace,
+  type LocationSelection,
+  type GeoPoint,
+} from '@homiio/shared-types';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
-import { locationKey, type LocationSelection } from '@homiio/shared-types';
 import { selectionLabel } from '../types';
 
+/**
+ * Half-width (degrees) of the box drawn around a picked point when the gateway
+ * supplied no bounds of its own.
+ *
+ * A fallback, and a NARROW one — see {@link synthesizeBounds}. A real place
+ * comes back with the provider's actual envelope, which is both correct and
+ * free; the synthetic square around a city centre was never the city.
+ */
+const LOCATION_BOUNDS_DELTA_DEG = 0.05;
 const SEARCH_DEBOUNCE_MS = 300;
 const MIN_QUERY_LENGTH = 2;
 const MAX_RESULTS = 6;
 
 /**
- * Map a geocoder suggestion onto an `address_candidate` selection.
+ * Place types that describe an AREA rather than a point.
  *
- * ## The synthetic bounding box is GONE
- *
- * This used to draw a +/-0.05 degree square around the picked point and call it
- * the selection's bounds. Two things were wrong with it. It is not the place's
- * extent — it is the same square for a hamlet and for Tokyo — and at longitude
- * 179.98 its east edge is 180.03, which `isLongitude` rejects, so the whole
- * search failed with a hard 400 for anywhere within 0.05 degrees of the
- * antimeridian. A candidate with no bounds is scoped by its centre and the
- * endpoint's default radius, which is honest about what a geocoder actually
- * told us. Real bounds arrive with the geo gateway (#351), which computes them.
- *
- * ## The label is not split on a comma
- *
- * `text.split(',')[0]` assumed a comma-separated Western ordering and mangled
- * every script and address format that does not use one. Until the gateway
- * returns a pre-split `PlaceLabel`, the provider's own string is kept WHOLE as
- * `primary` rather than cut at a character that means nothing in most of the
- * world.
+ * A synthetic box is never drawn around one of these. An 11 km square centred
+ * on a country's representative point is not the country — it is a rectangle
+ * somewhere inside it, and searching it returns a handful of listings (or none)
+ * from a request that succeeded. Zero results is the plausible-looking failure:
+ * it reads as "no homes here" or "search is broken", never as "we invented a
+ * box". Where the gateway supplies no bounds for an area, the screen carries
+ * none and frames itself from the listings it gets back.
  */
-function toLocationSelection(s: AddressSuggestion): LocationSelection | null {
-  if (typeof s.lat !== 'number' || typeof s.lon !== 'number') return null;
-  return {
-    kind: 'address_candidate',
-    // An external candidate's ref is only as stable as its provider, which is
-    // exactly why it must inline its own centre — it has to survive the
-    // provider disappearing.
-    source: { kind: 'external', provider: 'osm', ref: s.id },
-    label: { primary: s.text, kind: 'place' },
-    admin: { countryCode: s.address?.country ?? '' },
-    center: { longitude: s.lon, latitude: s.lat },
-    precision: 'approximate',
+const AREA_PLACE_TYPES: ReadonlySet<string> = new Set([
+  'country',
+  'region',
+  'city',
+  'district',
+  'neighborhood',
+  'postcode',
+]);
+
+/**
+ * A small box around a point-like result, or `undefined`.
+ *
+ * Longitudes are normalised into [-180, 180) before the box is validated. ADR
+ * 0002 §9.3 measured this exact call site as the real antimeridian gap: at
+ * longitude 179.98 the naive east edge is 180.03, the backend's `isLongitude`
+ * rejects it, and the whole search fails with `INVALID_GEO_PARAMS` — every
+ * place within 0.05° of the antimeridian unsearchable. `normalizeLongitude`
+ * wraps it, and the resulting `west > east` box is LEGAL: that is how a box
+ * crossing the antimeridian is expressed, and PostGIS `::geography` already
+ * reads it correctly. `isValidBounds` is the guard that the wrap produced
+ * something the backend will accept rather than something merely plausible.
+ */
+function synthesizeBounds(place: GeoPlace, center: GeoPoint): GeoBounds | undefined {
+  if (AREA_PLACE_TYPES.has(place.placeType)) return undefined;
+
+  const { longitude, latitude } = center;
+  const candidate = {
+    west: normalizeLongitude(longitude - LOCATION_BOUNDS_DELTA_DEG),
+    south: latitude - LOCATION_BOUNDS_DELTA_DEG,
+    east: normalizeLongitude(longitude + LOCATION_BOUNDS_DELTA_DEG),
+    north: latitude + LOCATION_BOUNDS_DELTA_DEG,
   };
+  // Near a pole the latitude arithmetic can leave the valid range. Carrying no
+  // bounds is correct there; a clamped box would be a different place.
+  return isValidBounds(candidate) ? candidate : undefined;
 }
 
 /**
- * The row's two lines.
+ * Map a gateway candidate onto the selection the user just chose.
  *
- * `primary`/`secondary` are read as-is, never re-split. Once the gateway
- * supplies a pre-split `PlaceLabel` the secondary line carries the
- * administrative parent, which is what lets somebody tell "Barcelona,
- * Catalonia, Spain" from "Barcelona, Anzoátegui, Venezuela" without choosing
- * blind — the disambiguation the picker exists for.
+ * The mapping itself is `geoPlaceToSelection` from the shared contract, NOT a
+ * local one: the `address` → `address_candidate` decision is the single place a
+ * caller could quietly decide a street address is a "place", and a screen that
+ * made that call itself would key by the wrong identity for the rest of that
+ * selection's life.
+ *
+ * **A centreless candidate is now SELECTABLE, and that is the change.** This
+ * used to return `null` for one, because the panel's old `SearchLocation`
+ * required a centre and had no identity field — so an `area` place carrying an
+ * extent and no point could not be represented, and offering it would have
+ * committed a query with nothing to scope by. `LocationSelection` addresses a
+ * place by IDENTITY, so it holds one comfortably: the search scopes by the
+ * place's id and only the map has nothing to frame from. Dropping such a row
+ * would remove a legitimate disambiguation candidate from the list.
+ *
+ * The synthetic box is applied BEFORE the mapping and only where the gateway
+ * supplied no bounds — see {@link synthesizeBounds}, which refuses to draw one
+ * around an area type at all.
  */
-function suggestionTitle(selection: LocationSelection): string {
-  return selectionLabel(selection)?.primary ?? '';
-}
-
-function suggestionSubtitle(selection: LocationSelection): string | undefined {
-  return selectionLabel(selection)?.secondary;
+function toLocationSelection(place: GeoPlace): LocationSelection {
+  const bounds =
+    place.bounds ?? (place.center ? synthesizeBounds(place, place.center) : undefined);
+  return geoPlaceToSelection(bounds === undefined ? place : { ...place, bounds });
 }
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -164,13 +212,11 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   const { t } = useTranslation();
   const recentSearches = useRecentSearchesStore((s) => s.searches);
 
-  const { suggestions, loading, debouncedSearch, clearSuggestions } =
-    useDebouncedAddressSearch({
-      minQueryLength: MIN_QUERY_LENGTH,
-      debounceDelay: SEARCH_DEBOUNCE_MS,
-      maxResults: MAX_RESULTS,
-      includeAddressDetails: false,
-    });
+  const { state, attribution, debouncedSearch, clear } = useDebouncedAddressSearch({
+    minQueryLength: MIN_QUERY_LENGTH,
+    debounceDelay: SEARCH_DEBOUNCE_MS,
+    maxResults: MAX_RESULTS,
+  });
 
   const handleChange = useCallback(
     (text: string) => {
@@ -178,24 +224,56 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       if (text.trim().length >= MIN_QUERY_LENGTH) {
         debouncedSearch(text);
       } else {
-        clearSuggestions();
+        clear();
       }
     },
-    [onChangeText, debouncedSearch, clearSuggestions],
+    [onChangeText, debouncedSearch, clear],
   );
 
   const handleClear = useCallback(() => {
     onChangeText('');
-    clearSuggestions();
-  }, [onChangeText, clearSuggestions]);
+    clear();
+  }, [onChangeText, clear]);
 
   const resolvedSuggestions = useMemo<LocationSelection[]>(
     () =>
-      suggestions
-        .map(toLocationSelection)
-        .filter((s): s is LocationSelection => s !== null),
-    [suggestions],
+      state.status === 'results'
+        ? state.places
+            .map(toLocationSelection)
+        : [],
+    [state],
   );
+
+  /**
+   * One line of copy per state.
+   *
+   * A provider failure must never render as "no results": that tells the user
+   * their place does not exist and invites them to search for somewhere else,
+   * when the truthful answer is that Homiio could not ask.
+   */
+  const statusMessage = useMemo<string | null>(() => {
+    switch (state.status) {
+      case 'debouncing':
+      case 'loading':
+        return t('search.header.geocoding');
+      case 'empty':
+        return t('search.where.noResults');
+      case 'failed':
+        switch (state.reason) {
+          case 'offline':
+            return t('search.where.offline');
+          case 'rate_limited':
+            return t('search.where.rateLimited');
+          case 'timeout':
+          case 'provider_unavailable':
+            return t('search.where.providerUnavailable');
+          default:
+            return t('search.where.failed');
+        }
+      default:
+        return null;
+    }
+  }, [state, t]);
 
   const showRecents = value.trim().length < MIN_QUERY_LENGTH;
 
@@ -231,24 +309,29 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         ) : null
       ) : (
         <View style={styles.list}>
-          {loading && resolvedSuggestions.length === 0 ? (
-            <BloomText style={styles.statusText}>
-              {t('search.header.geocoding')}
-            </BloomText>
+          {statusMessage ? (
+            <BloomText style={styles.statusText}>{statusMessage}</BloomText>
+          ) : null}
+          {state.status === 'results' && state.degraded ? (
+            <BloomText style={styles.statusText}>{t('search.where.degraded')}</BloomText>
           ) : null}
           {resolvedSuggestions.map((selection) => (
             <SuggestionRow
-              // Keyed by the selection's own identity, not by its coordinates.
-              // Two candidates can share a rounded centre; they cannot share a
-              // provider ref, and a duplicate React key silently drops a row.
+              // Keyed by the selection's own IDENTITY. Two candidates can share
+              // a rounded centre — and one may now have no centre at all — so a
+              // coordinate key would collide and silently drop a row.
               key={locationKey(selection)}
               icon="location-outline"
-              title={suggestionTitle(selection)}
-              subtitle={suggestionSubtitle(selection)}
-              accessibilityLabel={suggestionTitle(selection)}
+              title={selectionLabel(selection)?.primary ?? ''}
+              subtitle={selectionLabel(selection)?.secondary}
+              accessibilityLabel={selectionLabel(selection)?.primary ?? ''}
               onPress={() => onSelectLocation(selection)}
             />
           ))}
+          {/* Required by the provider's data licence wherever results appear. */}
+          {resolvedSuggestions.length > 0 && attribution ? (
+            <BloomText style={styles.attribution}>{attribution.text}</BloomText>
+          ) : null}
         </View>
       )}
     </View>
@@ -308,6 +391,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.COLOR_BLACK_LIGHT_4,
     paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+  },
+  attribution: {
+    fontSize: 11,
+    color: colors.COLOR_BLACK_LIGHT_4,
+    paddingTop: spacing.xs,
     paddingHorizontal: spacing.sm,
   },
 });

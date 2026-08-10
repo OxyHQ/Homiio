@@ -34,7 +34,7 @@ export interface PropertyStepProps {
 export interface LocationStepProps extends PropertyStepProps {
   mapRef: MutableRefObject<MapApi | null>;
   onAddressSelect: (
-    address: import('@/components/Map').AddressData,
+    address: import('@/components/Map').GeocodedAddress,
     coordinates: [number, number],
   ) => void;
   onOpenFullscreenMap: () => void;

@@ -1,328 +1,216 @@
-import { useState, useCallback, useEffect } from 'react';
+/**
+ * Place autocomplete, through Homiio's geo gateway.
+ *
+ * There is no geocoder client here any more. Everything below calls
+ * `services/geoService.ts`, which calls `/api/geo/*`, which is the only thing
+ * in the system that talks to a provider (ADR 0002 §9.1, issue #351). The gate
+ * in `__tests__/noClientGeocoder.test.ts` fails the build if a direct call
+ * returns.
+ *
+ * ## The states a caller has to be able to tell apart
+ *
+ * {@link AddressSearchState} exists because "no suggestions" was previously the
+ * answer to five different questions: the user has not typed enough yet, the
+ * request is in flight, nothing matched, the provider timed out, and we are
+ * offline. A screen that cannot distinguish them shows "no results" for a
+ * network failure — and a screen that then drops the location filter shows a
+ * global feed, which looks like a working app returning the wrong homes.
+ */
 
-// Types for address search
-export interface AddressSuggestion {
-  id: string;
-  text: string;
-  icon: string;
-  lat?: number;
-  lon?: number;
-  address?: {
-    street: string;
-    city: string;
-    state: string;
-    country: string;
-    postcode: string;
-  };
-}
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { GeoPlace } from '@homiio/shared-types';
+
+import {
+  GeoRequestError,
+  searchPlaces,
+  type GeoAttribution,
+  type GeoFailureReason,
+} from '@/services/geoService';
 
 export interface AddressSearchOptions {
   minQueryLength?: number;
   debounceDelay?: number;
   maxResults?: number;
-  includeAddressDetails?: boolean;
+  /** ISO-3166-1 alpha-2. Restricts results to one country. */
+  countryCode?: string;
+  /** Place types to keep, e.g. `['city', 'neighborhood']`. */
+  types?: readonly string[];
 }
+
+/**
+ * What the picker is doing, as a discriminated union rather than three
+ * independent booleans.
+ *
+ * Three booleans admit states that cannot happen (loading AND failed) and, more
+ * importantly, admit the one that silently did: `results: []` with no way to
+ * say why.
+ */
+export type AddressSearchState =
+  /** Below the minimum query length — show recents, not "no results". */
+  | { readonly status: 'idle' }
+  /** A keystroke landed; the request has not been sent yet. */
+  | { readonly status: 'debouncing' }
+  | { readonly status: 'loading' }
+  | { readonly status: 'results'; readonly places: GeoPlace[]; readonly degraded: boolean }
+  /** The provider answered, and the answer was nothing. */
+  | { readonly status: 'empty' }
+  | {
+      readonly status: 'failed';
+      readonly reason: GeoFailureReason;
+      readonly retryAfterSeconds?: number;
+    };
 
 export interface UseAddressSearchReturn {
-  suggestions: AddressSuggestion[];
-  loading: boolean;
-  error: string | null;
-  searchAddresses: (query: string) => Promise<void>;
-  clearSuggestions: () => void;
-  setSuggestions: (suggestions: AddressSuggestion[]) => void;
+  readonly state: AddressSearchState;
+  /** The attribution the provider requires be displayed beside its results. */
+  readonly attribution?: GeoAttribution;
+  readonly search: (query: string) => Promise<void>;
+  readonly clear: () => void;
 }
 
-/** Public OpenStreetMap Nominatim geocoder (free, no API key required). */
-const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search';
-
-/**
- * Nominatim's usage policy requires an identifying `User-Agent`; requests
- * without one are rejected with HTTP 403. Browsers send their own UA (and
- * treat `User-Agent` as a forbidden header, so they ignore ours), but native
- * RN fetch sends `okhttp/...` which Nominatim blocks — hence search returned
- * zero suggestions on native. Sending a descriptive UA fixes native without
- * affecting web.
- */
-export const NOMINATIM_HEADERS = {
-  'User-Agent': 'Homiio/1.0 (https://homiio.com)',
-  Accept: 'application/json',
+const DEFAULTS = {
+  minQueryLength: 2,
+  debounceDelay: 300,
+  maxResults: 6,
 } as const;
 
-interface NominatimSearchResult {
-  place_id?: number | string;
-  display_name?: string;
-  lat?: string;
-  lon?: string;
-  address?: {
-    road?: string;
-    city?: string;
-    town?: string;
-    village?: string;
-    state?: string;
-    country?: string;
-    postcode?: string;
-  };
-}
-interface NominatimReverseResult {
-  display_name?: string;
-  address?: {
-    road?: string;
-    city?: string;
-    town?: string;
-    village?: string;
-    state?: string;
-    country?: string;
-    postcode?: string;
-  };
-}
-
 /**
- * One-shot forward geocode against Nominatim, returning normalized
- * suggestions. Shared by `useAddressSearch` and callers that need a single
- * resolve-and-go lookup (e.g. applying a saved search).
- */
-export const geocodeAddress = async (
-  query: string,
-  options: { maxResults?: number; includeAddressDetails?: boolean } = {},
-): Promise<AddressSuggestion[]> => {
-  const trimmed = query.trim();
-  if (!trimmed) return [];
-
-  const { maxResults = 5, includeAddressDetails = true } = options;
-  const params = new URLSearchParams({
-    format: 'json',
-    q: trimmed,
-    limit: maxResults.toString(),
-    ...(includeAddressDetails && { addressdetails: '1' }),
-  });
-
-  const response = await fetch(`${NOMINATIM_SEARCH_URL}?${params.toString()}`, {
-    headers: NOMINATIM_HEADERS,
-  });
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: Failed to fetch address suggestions`);
-  }
-
-  const data = (await response.json()) as NominatimSearchResult[];
-  return data.map((result, index): AddressSuggestion => ({
-    id: result.place_id?.toString() || index.toString(),
-    text: result.display_name ?? '',
-    icon: 'location-outline',
-    lat: result.lat ? parseFloat(result.lat) : undefined,
-    lon: result.lon ? parseFloat(result.lon) : undefined,
-    address: includeAddressDetails
-      ? {
-          street: result.address?.road || '',
-          city:
-            result.address?.city || result.address?.town || result.address?.village || '',
-          state: result.address?.state || '',
-          country: result.address?.country || '',
-          postcode: result.address?.postcode || '',
-        }
-      : undefined,
-  }));
-};
-
-/**
- * Reusable hook for address search using OpenStreetMap Nominatim API
+ * Place autocomplete against the gateway.
  *
- * @param options - Configuration options for the address search
- * @returns Object with suggestions, loading state, error state, and search functions
- *
- * @example
- * ```tsx
- * const { suggestions, loading, error, searchAddresses, clearSuggestions } = useAddressSearch({
- *   minQueryLength: 3,
- *   debounceDelay: 500,
- *   maxResults: 5
- * });
- *
- * // Search for addresses
- * await searchAddresses('123 Main St');
- *
- * // Clear suggestions
- * clearSuggestions();
- * ```
+ * Requests are sequenced rather than cancelled: `utils/api.ts` does not expose
+ * an `AbortSignal`, so a superseded response is DISCARDED on arrival by
+ * comparing a monotonic request id. That is not merely a nicety — without it a
+ * slow response for "Bar" can land after a fast one for "Barcelona" and replace
+ * the correct suggestions with stale ones, which reads as the autocomplete
+ * being wrong rather than late.
  */
 export const useAddressSearch = (options: AddressSearchOptions = {}): UseAddressSearchReturn => {
   const {
-    minQueryLength = 3,
-    debounceDelay = 500,
-    maxResults = 5,
-    includeAddressDetails = true,
+    minQueryLength = DEFAULTS.minQueryLength,
+    maxResults = DEFAULTS.maxResults,
+    countryCode,
+    types,
   } = options;
 
-  const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [state, setState] = useState<AddressSearchState>({ status: 'idle' });
+  const [attribution, setAttribution] = useState<GeoAttribution | undefined>(undefined);
 
-  /**
-   * Search for addresses using OpenStreetMap Nominatim API
-   */
-  const searchAddresses = useCallback(
+  const latestRequest = useRef(0);
+  // A ref so the identity of `search` does not change when a request completes.
+  const isMounted = useRef(true);
+  useEffect(
+    () => () => {
+      isMounted.current = false;
+    },
+    [],
+  );
+
+  const typesKey = types?.join(',') ?? '';
+
+  const search = useCallback(
     async (query: string) => {
-      if (!query.trim() || query.length < minQueryLength) {
-        setSuggestions([]);
+      const trimmed = query.trim();
+      const requestId = latestRequest.current + 1;
+      latestRequest.current = requestId;
+
+      if (trimmed.length < minQueryLength) {
+        setState({ status: 'idle' });
         return;
       }
 
-      setLoading(true);
-      setError(null);
-
+      setState({ status: 'loading' });
       try {
-        const transformedSuggestions = await geocodeAddress(query, {
-          maxResults,
-          includeAddressDetails,
+        const result = await searchPlaces({
+          q: trimmed,
+          limit: maxResults,
+          ...(countryCode ? { countryCode } : {}),
+          ...(typesKey ? { types: typesKey.split(',') } : {}),
         });
-        setSuggestions(transformedSuggestions);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch address suggestions');
-        setSuggestions([]);
-      } finally {
-        setLoading(false);
+        // A superseded or unmounted request must not write.
+        if (!isMounted.current || latestRequest.current !== requestId) return;
+
+        if (result.attribution) setAttribution(result.attribution);
+        setState(
+          result.candidates.length > 0
+            ? { status: 'results', places: result.candidates, degraded: result.degraded }
+            : { status: 'empty' },
+        );
+      } catch (error) {
+        if (!isMounted.current || latestRequest.current !== requestId) return;
+        // A failure is NEVER reported as an empty list.
+        const geoError = error instanceof GeoRequestError ? error : null;
+        setState({
+          status: 'failed',
+          reason: geoError?.reason ?? 'unknown',
+          ...(geoError?.retryAfterSeconds === undefined
+            ? {}
+            : { retryAfterSeconds: geoError.retryAfterSeconds }),
+        });
       }
     },
-    [minQueryLength, maxResults, includeAddressDetails],
+    [minQueryLength, maxResults, countryCode, typesKey],
   );
 
-  /**
-   * Clear all suggestions
-   */
-  const clearSuggestions = useCallback(() => {
-    setSuggestions([]);
-    setError(null);
+  const clear = useCallback(() => {
+    // Bump the sequence so an in-flight response cannot repopulate the list
+    // after the user cleared it.
+    latestRequest.current += 1;
+    setState({ status: 'idle' });
   }, []);
 
-  /**
-   * Set suggestions manually (useful for testing or custom data)
-   */
-  const setSuggestionsManually = useCallback((newSuggestions: AddressSuggestion[]) => {
-    setSuggestions(newSuggestions);
-  }, []);
-
-  return {
-    suggestions,
-    loading,
-    error,
-    searchAddresses,
-    clearSuggestions,
-    setSuggestions: setSuggestionsManually,
-  };
+  return useMemo(
+    () => ({ state, search, clear, ...(attribution ? { attribution } : {}) }),
+    [state, search, clear, attribution],
+  );
 };
 
 /**
- * Hook that combines address search with debounced input
+ * {@link useAddressSearch} with the keystroke debounce attached.
  *
- * @param options - Configuration options for the address search
- * @returns Object with suggestions, loading state, error state, and debounced search function
- *
- * @example
- * ```tsx
- * const { suggestions, loading, error, debouncedSearch } = useDebouncedAddressSearch({
- *   minQueryLength: 3,
- *   debounceDelay: 500,
- *   maxResults: 5
- * });
- *
- * // Use with input onChange
- * <TextInput onChangeText={debouncedSearch} />
- * ```
+ * The debounce is a courtesy to the provider and to the user's data plan; it is
+ * NOT a control. The gateway enforces the real minimum and maximum query
+ * length, the result cap and the per-caller rate limit, because a debounce is
+ * absent from a script, a replay, or an app binary somebody shipped last year.
  */
 export const useDebouncedAddressSearch = (
   options: AddressSearchOptions = {},
-): UseAddressSearchReturn & {
-  debouncedSearch: (query: string) => void;
-} => {
-  const { debounceDelay = 500, ...searchOptions } = options;
+): UseAddressSearchReturn & { readonly debouncedSearch: (query: string) => void } => {
+  const { debounceDelay = DEFAULTS.debounceDelay, ...searchOptions } = options;
+  const minQueryLength = searchOptions.minQueryLength ?? DEFAULTS.minQueryLength;
 
-  const { suggestions, loading, error, searchAddresses, clearSuggestions, setSuggestions } =
-    useAddressSearch(searchOptions);
+  const inner = useAddressSearch(searchOptions);
+  const { search, clear } = inner;
 
-  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [pending, setPending] = useState('');
+  // Distinguishes "the user just typed and we are waiting out the debounce"
+  // from "idle", so the picker can show a spinner from the first keystroke
+  // instead of appearing frozen for `debounceDelay`.
+  const [isDebouncing, setIsDebouncing] = useState(false);
 
-  // Debounced search effect
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (debouncedQuery.trim()) {
-        searchAddresses(debouncedQuery);
+    if (!isDebouncing) return undefined;
+    const timer = setTimeout(() => {
+      setIsDebouncing(false);
+      if (pending.trim().length >= minQueryLength) {
+        void search(pending);
       } else {
-        clearSuggestions();
+        clear();
       }
     }, debounceDelay);
+    return () => clearTimeout(timer);
+  }, [pending, isDebouncing, debounceDelay, minQueryLength, search, clear]);
 
-    return () => clearTimeout(timeoutId);
-  }, [debouncedQuery, debounceDelay, searchAddresses, clearSuggestions]);
-
-  /**
-   * Debounced search function for use with input onChange
-   */
   const debouncedSearch = useCallback((query: string) => {
-    setDebouncedQuery(query);
+    setPending(query);
+    setIsDebouncing(true);
   }, []);
 
-  return {
-    suggestions,
-    loading,
-    error,
-    searchAddresses,
-    clearSuggestions,
-    setSuggestions,
-    debouncedSearch,
-  };
-};
-
-/**
- * Hook for reverse geocoding (coordinates to address)
- *
- * @returns Object with reverse geocoding function and result
- *
- * @example
- * ```tsx
- * const { reverseGeocode, result, loading, error } = useReverseGeocode();
- *
- * // Get address from coordinates
- * await reverseGeocode(41.38723, 2.16538);
- * ```
- */
-export const useReverseGeocode = () => {
-  const [result, setResult] = useState<NominatimReverseResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const reverseGeocode = useCallback(async (lat: number, lng: number) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
-        { headers: NOMINATIM_HEADERS },
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: Failed to reverse geocode`);
-      }
-
-      const data = (await response.json()) as NominatimReverseResult;
-      setResult(data);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to reverse geocode');
-      setResult(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const clearResult = useCallback(() => {
-    setResult(null);
-    setError(null);
-  }, []);
-
-  return {
-    result,
-    loading,
-    error,
-    reverseGeocode,
-    clearResult,
-  };
+  return useMemo(
+    () => ({
+      ...inner,
+      state: isDebouncing && inner.state.status === 'idle' ? { status: 'debouncing' } : inner.state,
+      debouncedSearch,
+    }),
+    [inner, isDebouncing, debouncedSearch],
+  );
 };

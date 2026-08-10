@@ -1,3 +1,5 @@
+import type { GeocodedAddress } from '@homiio/shared-types';
+
 /**
  * Shared map types used by `Map.tsx` (the React host) and `mapDocument.ts`
  * (the embedded HTML/GL document). Splitting them out keeps the document
@@ -10,16 +12,15 @@
  */
 export type LonLat = [number, number];
 
-export interface AddressData {
-  street?: string;
-  houseNumber?: string;
-  neighborhood?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  postalCode?: string;
-  fullAddress?: string;
-}
+/**
+ * Re-exported so map consumers have one import site for the map's own types.
+ *
+ * The DECLARATION lives in `@homiio/shared-types` and used to be duplicated
+ * here, minus `coordinates` and `bbox` — so the backend sent a bounding box
+ * this copy could not represent and no typechecker could see the loss
+ * (ADR 0002 §9.2). This is the same type, not a second one.
+ */
+export type { GeocodedAddress } from '@homiio/shared-types';
 
 /** A clustered marker leaf as emitted by the document (GeoJSON-style feature). */
 export interface ClusterLeaf {
@@ -39,7 +40,7 @@ export type MapEvent =
   | { type: 'mapClick'; lngLat: LonLat }
   | { type: 'markerClick'; id: string; lngLat: LonLat }
   | { type: 'clusterClick'; leaves: ClusterLeaf[] }
-  | { type: 'addressLookup'; address: AddressData; coordinates: LonLat }
+  | { type: 'addressLookup'; address: GeocodedAddress; coordinates: LonLat }
   | { type: 'requestAddressLookup'; coordinates: LonLat }
   | {
       type: 'region';
@@ -85,5 +86,5 @@ export interface MarkerStyle {
 export interface MapApi {
   navigateToLocation: (center: LonLat, zoom?: number) => void;
   highlightMarker: (id: string | null) => void;
-  lookupAddress: (coordinates: LonLat) => Promise<AddressData | null>;
+  lookupAddress: (coordinates: LonLat) => Promise<GeocodedAddress | null>;
 }
