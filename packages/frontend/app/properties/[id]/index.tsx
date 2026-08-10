@@ -51,6 +51,7 @@ import { useRentalMode } from '@/context/RentalModeContext';
 import { useIsRightBarVisible } from '@/hooks/useOptimizedMediaQuery';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { resolveHeadlinePrice } from '@/utils/propertyPricing';
+import { useFormatting } from '@/utils/format';
 import { hasOffering, resolveOfferingSummaries } from '@/utils/propertyUtils';
 import { shareContent } from '@/utils/share';
 import { propertyService } from '@/services/propertyService';
@@ -116,6 +117,7 @@ const STICKY_HEADER_THRESHOLD = 480;
 
 export default function PropertyDetailPage() {
   const { t } = useTranslation();
+  const formatting = useFormatting();
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const { oxyServices, activeSessionId } = useOxy();
@@ -224,6 +226,7 @@ export default function PropertyDetailPage() {
       apiProperty,
       browseMode,
       t,
+      formatting,
     );
 
     // "Also available: By night · For sale" — the listing's OTHER offerings.
@@ -254,7 +257,7 @@ export default function PropertyDetailPage() {
       size: apiProperty.squareFootage || 0,
       images: apiProperty.images || [],
     };
-  }, [apiProperty, browseMode, t]);
+  }, [apiProperty, browseMode, t, formatting]);
 
   // Track property view once per page load.
   useEffect(() => {

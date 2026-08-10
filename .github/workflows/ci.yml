@@ -223,15 +223,22 @@ jobs:
           bun run --cwd packages/frontend test --
           --json --outputFile="$RUNNER_TEMP/frontend-tests.json"
 
-      # RAISED FROM 38 TO 43 by #350's cross-package observability contract
-      # test, which is what proves the shared redaction layer resolves and
-      # behaves from THIS workspace rather than only from the backend's.
-      # Measured 40 -> 45.
+      # RAISED FROM 43 TO 110 by the i18n formatting module (#357): 75 tests for
+      # `format/{money,units,dates,percentage}` plus the 4-case
+      # hardcoded-currency gate, against 5 removed with the locale-blind
+      # `formatCurrency` they covered.
+      #
+      # It went 38 -> 43 just before, for #350's cross-package observability
+      # contract test, which is what proves the shared redaction layer resolves
+      # and behaves from THIS workspace rather than only from the backend's
+      # (measured 40 -> 45). Same convention as the backend floor above: a
+      # MINIMUM, raised as suites grow and lowered only in the change that
+      # removes the tests.
       - name: Assert the suite actually ran
         if: always()
         run: >-
           bun .github/scripts/assert-test-floor.mjs
-          "$RUNNER_TEMP/frontend-tests.json" packages/frontend 43
+          "$RUNNER_TEMP/frontend-tests.json" packages/frontend 110
 
   # Deliberately no job for shared-types or listing-providers. shared-types' `test`
   # script is `echo "No tests specified" && exit 0` — there is no suite. And

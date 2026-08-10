@@ -3,6 +3,8 @@ import { Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { Message } from '@ai-sdk/react';
+import { deviceTimeZone, formatDate } from '@homiio/shared-types';
+import { useFormatting } from '@/utils/format';
 import { PropertyCard } from '@/components/PropertyCard';
 import { ChatMarkdown } from './ChatMarkdown';
 import { PropertiesFromIds } from './PropertiesFromIds';
@@ -71,6 +73,11 @@ const SearchResultCards: React.FC<{ content: string }> = ({ content }) => {
  */
 export const ChatMessage = React.memo<ChatMessageProps>(({ message, isLast, isLoading }) => {
   const { t } = useTranslation();
+  const { locale } = useFormatting();
+  // The row has always shown the CURRENT time rather than the message's own —
+  // `Message` from `@ai-sdk/react` carries no timestamp here. Captured once per
+  // render so at least the two halves of the line agree with each other.
+  const now = new Date();
   const role = message.role;
   const content = typeof message.content === 'string' ? message.content : '';
 
@@ -143,7 +150,7 @@ export const ChatMessage = React.memo<ChatMessageProps>(({ message, isLast, isLo
           isUser ? sindiStyles.messageTimeUser : sindiStyles.messageTimeAssistant,
         ]}
       >
-        {timeLabel} • {new Date().toLocaleTimeString()}
+        {timeLabel} • {formatDate(now, locale, deviceTimeZone(), { hour: '2-digit', minute: '2-digit' })}
       </Text>
     </View>
   );

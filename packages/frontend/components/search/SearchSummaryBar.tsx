@@ -34,27 +34,43 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
-import { OfferingType, PropertyType } from '@homiio/shared-types';
+import {
+  OfferingType,
+  PropertyType,
+  formatDate,
+  formatDateRange,
+  formatMoney,
+  formatMoneyRange,
+} from '@homiio/shared-types';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { IconButton } from '@/components/ui/IconButton';
 import { colors } from '@/styles/colors';
 import { cardShadow, hairline, radius, spacing, tracker } from '@/constants/styles';
-import type { SearchQuery, SearchStep } from './types';
+import { SEARCH_PRICE_CURRENCY, type SearchQuery, type SearchStep } from './types';
+import { useFormatting } from '@/utils/format';
 
 /**
  * Format the price-range segment shared by the wide pill's middle column and the
  * compact summary line: an explicit min–max, a one-sided cap, or the "any price"
  * placeholder. One helper so both call sites read identically.
+ *
+ * The bounds go through the shared formatter in {@link SEARCH_PRICE_CURRENCY}
+ * rather than being pasted after a `€`, so a Spanish reader gets `1.200 €` and
+ * not `€1200`.
  */
-function formatPriceRange(query: SearchQuery, t: TFunction): string {
+function formatPriceRange(query: SearchQuery, t: TFunction, locale: string): string {
+  const money = (amount: number): string =>
+    formatMoney(amount, SEARCH_PRICE_CURRENCY, locale, { maximumFractionDigits: 0 });
   if (query.priceMin !== undefined && query.priceMax !== undefined) {
-    return `€${query.priceMin}–€${query.priceMax}`;
+    return formatMoneyRange(query.priceMin, query.priceMax, SEARCH_PRICE_CURRENCY, locale, {
+      maximumFractionDigits: 0,
+    });
   }
   if (query.priceMax !== undefined) {
-    return `≤ €${query.priceMax}`;
+    return `≤ ${money(query.priceMax)}`;
   }
   if (query.priceMin !== undefined) {
-    return `≥ €${query.priceMin}`;
+    return `≥ ${money(query.priceMin)}`;
   }
   return t('search.summary.anyPrice');
 }
@@ -230,6 +246,7 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
   saveAccessibilityLabel,
 }) => {
   const { t } = useTranslation();
+  const { locale } = useFormatting();
   const isWide = useIsScreenNotMobile();
   const [searchPressed, setSearchPressed] = useState(false);
   const [summaryPressed, setSummaryPressed] = useState(false);
@@ -270,14 +287,19 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
 
   // Dates label for the slim pill's middle segment (vacation only). Falls back
   // to the "Any week" placeholder when no range is picked.
+  // `SearchDateRange` holds CIVIL dates (`YYYY-MM-DD`), which used to be shown
+  // raw — "2026-06-01 – 2026-06-08" on every screen in every language. They are
+  // rendered zone-independently on purpose (the `UTC` argument is inert for a
+  // civil date; see `formatDate`), so a check-in never slides to the day before
+  // for a reader west of Greenwich.
   const datesLabel = useMemo(() => {
     if (query.dates?.start) {
       return query.dates.end
-        ? `${query.dates.start} – ${query.dates.end}`
-        : query.dates.start;
+        ? formatDateRange(query.dates.start, query.dates.end, locale, 'UTC')
+        : formatDate(query.dates.start, locale, 'UTC');
     }
     return t('search.summary.anyWeek');
-  }, [query.dates, t]);
+  }, [query.dates, t, locale]);
 
   // Guests label for the slim pill's last segment (vacation only). Falls back to
   // the "Add guests" placeholder when no guest count is set.
@@ -291,8 +313,8 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
 
   // Price label for the wide pill's middle column (long-term / buy / exchange).
   const priceLabel = useMemo(
-    () => formatPriceRange(query, t),
-    [query, t],
+    () => formatPriceRange(query, t, locale),
+    [query, t, locale],
   );
 
   // Single-line summary segments (compact mode, results top bar). Vacation shows
@@ -300,14 +322,10 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
   // price-range formatter.
   const segments = useMemo<SummarySegments>(() => {
     const price =
-      isVacation && query.dates?.start
-        ? query.dates.end
-          ? `${query.dates.start} – ${query.dates.end}`
-          : query.dates.start
-        : formatPriceRange(query, t);
+      isVacation && query.dates?.start ? datesLabel : formatPriceRange(query, t, locale);
 
     return { where: whereLabel, type: typeLabel, price };
-  }, [isVacation, query, whereLabel, typeLabel, t]);
+  }, [isVacation, query, whereLabel, typeLabel, t, locale, datesLabel]);
 
   // --- Full mode (every width): slim Airbnb-style 3-column pill ---
   if (!compact) {

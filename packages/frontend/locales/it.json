@@ -1413,7 +1413,7 @@
     },
     "nearbyServices": {
       "title": "Cosa c'è nei dintorni",
-      "within": "Entro {{km}} km",
+      "within": "Entro {{distance}}",
       "partialNote": "Alcuni dati nelle vicinanze potrebbero non essere disponibili.",
       "labels": {
         "pharmacy": "Farmacia",
@@ -3941,5 +3941,44 @@
     "emptyReviewsDescription": "Questa agenzia non ha ancora recensioni.",
     "emptyListingsTitle": "Nessun annuncio",
     "emptyListingsDescription": "Questa agenzia non ha annunci attivi."
+  },
+  "format": {
+    "priceUnit": {
+      "night": {
+        "short": "notte",
+        "spoken": "a notte"
+      },
+      "day": {
+        "short": "giorno",
+        "spoken": "al giorno"
+      },
+      "week": {
+        "short": "settimana",
+        "spoken": "a settimana"
+      },
+      "month": {
+        "short": "mese",
+        "spoken": "al mese"
+      },
+      "year": {
+        "short": "anno",
+        "spoken": "all’anno"
+      },
+      "total": {
+        "spoken": "in totale"
+      }
+    },
+    "areaUnit": {
+      "sqm": {
+        "spoken": "metri quadrati"
+      },
+      "sqft": {
+        "spoken": "piedi quadrati"
+      }
+    },
+    "range": {
+      "upTo": "Fino a {{value}}",
+      "from": "Da {{value}}"
+    }
   }
 }

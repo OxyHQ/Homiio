@@ -17,7 +17,8 @@ import { Header } from '@/components/Header';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { useProperty } from '@/hooks';
 import { ActionButton } from '@/components/ui/ActionButton';
-import { PropertyType } from '@homiio/shared-types';
+import { PropertyType, formatDate } from '@homiio/shared-types';
+import { useFormatting } from '@/utils/format';
 import { useOxy } from '@oxyhq/services';
 import ViewingService, { type ViewingRequest } from '@/services/viewingService';
 import { ApiError } from '@/utils/api';
@@ -44,6 +45,7 @@ interface ApiErrorResponse {
 
 export default function BookViewingPage() {
   const { t } = useTranslation();
+  const { locale } = useFormatting();
   const router = useRouter();
   const { id, modifyViewingId } = useLocalSearchParams();
   const { oxyServices, activeSessionId } = useOxy();
@@ -169,11 +171,14 @@ export default function BookViewingPage() {
           // Parse date and time from scheduledAt, adjusting for timezone
           const scheduledDate = new Date(viewing.scheduledAt);
           const dateStr = scheduledDate.toISOString().split('T')[0]; // YYYY-MM-DD
-          const timeStr = scheduledDate.toLocaleTimeString('en-US', {
+          // NOT a display string: this is the `HH:MM` key matched against the
+          // time-slot list below, so it is deliberately locale-INDEPENDENT and
+          // must not go through the locale-aware formatter.
+          const timeStr = scheduledDate.toLocaleTimeString('en-GB', {
             hour: '2-digit',
             minute: '2-digit',
-            hour12: false
-          }); // HH:MM in local time
+            hour12: false,
+          });
           setSelectedDate(dateStr);
           setSelectedTime(timeStr);
           setMessage(viewing.message || '');
@@ -320,13 +325,16 @@ export default function BookViewingPage() {
                   onPress={() => setSelectedDate(date)}
                 >
                   <Text style={[styles.dateDay, isActive && styles.activeDateText]}>
-                    {new Date(date).toLocaleDateString(undefined, { weekday: 'short' })}
+                    {formatDate(date, locale, 'UTC', { weekday: 'short' })}
                   </Text>
                   <Text style={[styles.dateNumber, isActive && styles.activeDateText]}>
-                    {new Date(date).getDate()}
+                    {/* Read out of the CIVIL date, not `new Date(...).getDate()`,
+                        which parses `YYYY-MM-DD` as UTC midnight and therefore shows
+                        the previous day's number to every reader west of Greenwich. */}
+                    {formatDate(date, locale, 'UTC', { day: 'numeric' })}
                   </Text>
                   <Text style={[styles.dateMonth, isActive && styles.activeDateText]}>
-                    {new Date(date).toLocaleDateString(undefined, { month: 'short' })}
+                    {formatDate(date, locale, 'UTC', { month: 'short' })}
                   </Text>
                 </TouchableOpacity>
               );
@@ -337,7 +345,7 @@ export default function BookViewingPage() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
             {t('viewings.availableTimeSlots')} -{' '}
-            {selectedDate && new Date(selectedDate).toLocaleDateString()}
+            {selectedDate && formatDate(selectedDate, locale, 'UTC')}
           </Text>
 
           <View style={styles.timeSlotsContainer}>

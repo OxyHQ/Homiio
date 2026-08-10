@@ -10,6 +10,7 @@ import {
 } from '@/utils/ethicalPricing';
 import type { CreatePropertyFormData } from '@/store/createPropertyFormStore';
 import { createPropertyStyles as styles } from './styles';
+import { useFormatting } from '@/utils/format';
 import { colors } from '@/styles/colors';
 
 interface EthicalPricingRecommendationProps {
@@ -36,6 +37,7 @@ export function EthicalPricingRecommendation({
   propertyData,
 }: EthicalPricingRecommendationProps) {
   const { t } = useTranslation();
+  const { locale } = useFormatting();
 
   const amenities = propertyData.amenities.selectedAmenities ?? [];
 
@@ -63,7 +65,12 @@ export function EthicalPricingRecommendation({
     proximityToShopping: propertyData.location.proximityToShopping,
   };
 
-  const recommendation = validateEthicalPricing(proposedRent, propertyCharacteristics);
+  // The warnings this renders quote money. They are quoted in the LISTING's own
+  // currency (the one the host is typing a rent in), not in dollars.
+  const recommendation = validateEthicalPricing(proposedRent, propertyCharacteristics, {
+    currency: propertyData.pricing?.currency || 'EUR',
+    locale,
+  });
 
   return (
     <View style={styles.ethicalPricingContainer}>

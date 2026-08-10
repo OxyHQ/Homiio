@@ -32,6 +32,7 @@ import {
 } from '@/components/AvailabilityCalendar';
 import { useActiveApplicationForProperty } from '@/hooks/useApplicationQueries';
 import { resolveHeadlinePrice } from '@/utils/propertyPricing';
+import { useFormatting } from '@/utils/format';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 import { type Property } from '@homiio/shared-types';
@@ -46,6 +47,7 @@ const toIsoDay = (date: Date): string => format(date, 'yyyy-MM-dd');
 export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
   const router = useRouter();
   const { t } = useTranslation();
+  const formatting = useFormatting();
   const insets = useSafeAreaInsets();
   const { isAuthenticated } = useOxy();
 
@@ -62,8 +64,8 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
   // Compact price/requirements line — same headline rule as the rest of the
   // detail surfaces (the active mode's priced block; long-term here).
   const { priceLabel } = useMemo(
-    () => resolveHeadlinePrice(property, 'long_term', t),
-    [property, t],
+    () => resolveHeadlinePrice(property, 'long_term', t, formatting),
+    [property, t, formatting],
   );
 
   const openCalendar = useCallback(() => setCalendarOpen(true), []);

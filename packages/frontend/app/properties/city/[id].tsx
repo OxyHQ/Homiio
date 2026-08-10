@@ -18,7 +18,8 @@ import { Header } from '@/components/Header';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
 import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
-import { Property } from '@homiio/shared-types';
+import { Property, formatNumber } from '@homiio/shared-types';
+import { useFormatting } from '@/utils/format';
 import { useCity } from '@/hooks/useCityQueries';
 import {
   useInfiniteCityProperties,
@@ -56,6 +57,7 @@ const DEFAULT_FILTERS: CityFilterState = {
 
 export default function CityPropertiesPage() {
   const { t } = useTranslation();
+  const { locale } = useFormatting();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const cityId = typeof id === 'string' ? id : undefined;
@@ -379,7 +381,7 @@ export default function CityPropertiesPage() {
           </View>
           {typeof city.population === 'number' && city.population > 0 ? (
             <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{city.population.toLocaleString()}</Text>
+              <Text style={styles.statNumber}>{formatNumber(city.population, locale)}</Text>
               <Text style={styles.statLabel}>{t('properties.city.population')}</Text>
             </View>
           ) : null}

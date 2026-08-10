@@ -19,13 +19,17 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { RadioIndicator } from '@oxyhq/bloom/radio-indicator';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
+import { formatMoney } from '@homiio/shared-types';
+
 import { colors } from '@/styles/colors';
+import { useFormatting } from '@/utils/format';
 import { radius, spacing } from '@/constants/styles';
 
 interface TierRowProps {
   title: string;
   subtitle: string;
   amount: number;
+  /** ISO 4217 code the `amount` is in — a code, never a glyph. */
   currency: string;
   /** e.g. "/mo" — shown only for recurring tiers. */
   periodLabel?: string;
@@ -43,6 +47,14 @@ export const TierRow: React.FC<TierRowProps> = ({
   onSelect,
 }) => {
   const [pressed, setPressed] = useState(false);
+  const { locale } = useFormatting();
+  const price = formatMoney(amount, currency, locale, { maximumFractionDigits: 0 });
+  // Spoken form for the radio's label: "5 euros" beats "€5", which a screen
+  // reader may read as "E five".
+  const spokenPrice = formatMoney(amount, currency, locale, {
+    currencyDisplay: 'name',
+    maximumFractionDigits: 0,
+  });
 
   return (
     <Pressable
@@ -51,7 +63,7 @@ export const TierRow: React.FC<TierRowProps> = ({
       onPressOut={() => setPressed(false)}
       accessibilityRole="radio"
       accessibilityState={{ selected }}
-      accessibilityLabel={`${title}, ${currency}${amount}${periodLabel ?? ''}`}
+      accessibilityLabel={`${title}, ${spokenPrice}${periodLabel ?? ''}`}
       style={[
         styles.row,
         selected ? styles.rowSelected : styles.rowUnselected,
@@ -66,10 +78,7 @@ export const TierRow: React.FC<TierRowProps> = ({
       </View>
 
       <View style={styles.priceWrap}>
-        <BloomText style={styles.amount}>
-          {currency}
-          {amount}
-        </BloomText>
+        <BloomText style={styles.amount}>{price}</BloomText>
         {periodLabel ? <BloomText style={styles.period}>{periodLabel}</BloomText> : null}
       </View>
     </Pressable>

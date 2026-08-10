@@ -6,7 +6,8 @@ import { colors } from '@/styles/colors';
 import { useTranslation } from 'react-i18next';
 import type { Property } from '@homiio/shared-types';
 import { useNeighborhood } from '@/hooks/useNeighborhood';
-import { formatCurrency } from '@/utils/currency';
+import { formatMoney } from '@homiio/shared-types';
+import { useFormatting } from '@/utils/format';
 
 interface Props {
   property: Property | null;
@@ -21,6 +22,7 @@ interface Props {
  */
 export const NeighborhoodInfo: React.FC<Props> = ({ property }) => {
   const { t } = useTranslation();
+  const { locale } = useFormatting();
   const propertyId = property?.id;
   const { data: neighborhood } = useNeighborhood({ propertyId });
 
@@ -40,7 +42,7 @@ export const NeighborhoodInfo: React.FC<Props> = ({ property }) => {
         </BloomText>
         {averageRent !== null ? (
           <BloomText style={styles.metric}>
-            {t('property.neighborhood.avgAmountPerMonth', { amount: formatCurrency(averageRent, currencyCode) })}
+            {t('property.neighborhood.avgAmountPerMonth', { amount: formatMoney(averageRent, currencyCode, locale) })}
           </BloomText>
         ) : null}
       </View>

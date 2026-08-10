@@ -27,6 +27,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
+import { useFormatting } from '@/utils/format';
 import i18next from 'i18next';
 import { toast } from '@oxyhq/bloom/toast';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,6 +38,7 @@ import { Text as BloomText, H2 } from '@oxyhq/bloom/typography';
 import {
   TenantApplicationDocument,
   TenantApplicationStatus,
+  formatMoney,
 } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
@@ -59,18 +61,10 @@ import { radius, spacing, tracker } from '@/constants/styles';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
-const formatCurrency = (amount: number): string => {
-  try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  } catch {
-    return `${amount.toFixed(0)}`;
-  }
-};
+/** A tenant's declared income has no currency field; it is quoted in euros. */
+const APPLICATION_INCOME_CURRENCY = 'EUR';
+/** Income reads as a round figure — cents on a salary are noise. */
+const INCOME_FORMAT = { minimumFractionDigits: 0, maximumFractionDigits: 0 } as const;
 
 const formatDate = (raw: string): string => {
   const date = new Date(raw);
@@ -139,6 +133,7 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ document }) => {
 
 export default function ApplicationDetailScreen() {
   const { t } = useTranslation();
+  const { locale } = useFormatting();
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
   const id = typeof params.id === 'string' ? params.id : params.id?.[0];
@@ -310,7 +305,7 @@ export default function ApplicationDetailScreen() {
             <BloomText style={styles.sectionLabel}>Finances</BloomText>
             <DetailRow
               label="Monthly income"
-              value={formatCurrency(application.monthlyIncome)}
+              value={formatMoney(application.monthlyIncome, APPLICATION_INCOME_CURRENCY, locale, INCOME_FORMAT)}
             />
             <DetailRow
               label="Employment"

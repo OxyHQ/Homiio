@@ -6,7 +6,9 @@ import {
   Property,
   PropertyAddress,
   PropertyImage,
+  priceFrequencyFromPriceUnit,
   type ImageVariantName,
+  type PriceDescriptor,
 } from '@homiio/shared-types';
 import type { GalleryImage } from '@oxyhq/bloom/zoomable-image-gallery';
 import type { BrowseMode } from '@/components/search/types';
@@ -30,11 +32,11 @@ export type OfferingKind = 'long_term' | 'short_term' | 'sale' | 'exchange';
 
 /**
  * The single, display-ready price decision for a property. `amount`/`currency`
- * feed `CurrencyFormatter`; `priceUnit` is the per-unit suffix (set for the rent
- * offerings — `month` for long-term, `night` for short-term; absent for sale);
- * `label` is a ready-to-render fallback string used when there is no numeric
- * price (exchange → "Free"). `kind` lets callers branch (e.g. render `label`
- * instead of `CurrencyFormatter` for an exchange).
+ * feed the shared money formatter (via {@link toPriceDescriptor}); `priceUnit`
+ * is the per-unit suffix (set for the rent offerings — `month` for long-term,
+ * `night` for short-term; absent for sale); `label` is a ready-to-render
+ * fallback string used when there is no numeric price (exchange → "Free").
+ * `kind` lets callers branch (e.g. render `label` for an exchange).
  */
 export interface PrimaryOffering {
   amount: number;
@@ -42,6 +44,27 @@ export interface PrimaryOffering {
   priceUnit?: PriceUnit;
   label: string;
   kind: OfferingKind;
+}
+
+/**
+ * The offering as a {@link PriceDescriptor} the shared formatter can render, or
+ * `null` when there is no number to show (an exchange, or a block with no price).
+ *
+ * This is the ONE conversion from Homiio's offering model to the formatting
+ * model, so the frequency always comes from the priced block rather than from
+ * whichever screen is asking: `month` for long-term, `night` for short-term,
+ * `sale` for an asking price.
+ */
+export function toPriceDescriptor(offering: PrimaryOffering): PriceDescriptor | null {
+  if (offering.kind === 'exchange' || !(offering.amount > 0)) return null;
+  const unit =
+    offering.kind === 'sale'
+      ? 'sale'
+      : offering.priceUnit
+        ? priceFrequencyFromPriceUnit(offering.priceUnit)
+        : null;
+  if (unit === null) return null;
+  return { amount: offering.amount, currency: offering.currency, unit };
 }
 
 /**

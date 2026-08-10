@@ -13,6 +13,8 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { deviceTimeZone, formatDate } from '@homiio/shared-types';
+import { useFormatting } from '@/utils/format';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@oxyhq/bloom/toast';
 import { Ionicons } from '@expo/vector-icons';
@@ -76,20 +78,26 @@ const FILTERS: { id: 'all' | ViewingStatus; label: string }[] = [
   { id: 'cancelled', label: 'Cancelled' },
 ];
 
-const formatDateTime = (scheduledAt: string) => {
-  try {
-    const date = new Date(scheduledAt);
-    const dateFormatted = date.toLocaleDateString();
-    const timeFormatted = date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-    return `${dateFormatted} at ${timeFormatted}`;
-  } catch {
-    return scheduledAt;
-  }
-};
+/**
+ * A viewing's `scheduledAt` is an INSTANT, so which day and clock time it lands
+ * on depends on the zone it is read in. It renders in the device's zone, named
+ * explicitly rather than left to `toLocaleDateString()`'s implicit one, and the
+ * zone abbreviation is shown so a viewing that falls on a different day for a
+ * traveller says so instead of quietly moving.
+ *
+ * It used to force `en-US` for the time and the runtime default for the date, so
+ * the two halves of one string could come from two different locales.
+ */
+const formatDateTime = (scheduledAt: string, locale: string, timeZone: string): string =>
+  formatDate(scheduledAt, locale, timeZone, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZoneName: 'short',
+  }) || scheduledAt;
 
 const ViewingsSkeleton: React.FC = () => (
   <View style={styles.listWrap}>
@@ -119,6 +127,7 @@ const ViewingCard: React.FC<ViewingCardProps> = ({
   onModify,
   cancelling,
 }) => {
+  const { locale } = useFormatting();
   const status = viewing.status as ViewingStatus;
   const token = STATUS_TOKENS[status] ?? STATUS_TOKENS.pending;
   const isActionable = status === 'pending' || status === 'approved';
@@ -126,7 +135,7 @@ const ViewingCard: React.FC<ViewingCardProps> = ({
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
-        <H3 style={styles.cardTitle}>{formatDateTime(viewing.scheduledAt)}</H3>
+        <H3 style={styles.cardTitle}>{formatDateTime(viewing.scheduledAt, locale, deviceTimeZone())}</H3>
         <View style={[styles.statusBadge, { backgroundColor: token.bg }]}>
           <Ionicons name={token.icon} size={14} color={token.fg} />
           <BloomText style={[styles.statusLabel, { color: token.fg }]}>

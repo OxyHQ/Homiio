@@ -21,7 +21,10 @@ import { getPropertyTitle } from '@/utils/propertyUtils';
 import { logger } from '@/utils/logger';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { RoomFilters, type RoomFilterOptions } from '@/components/RoomFilters';
-import { PropertyType } from '@homiio/shared-types';
+import { PropertyType, formatArea, formatMoney } from '@homiio/shared-types';
+import { useTranslation } from 'react-i18next';
+import { SEARCH_PRICE_CURRENCY } from '@/components/search/types';
+import { useFormatting } from '@/utils/format';
 
 interface RoomListProps {
     filters?: RoomFilterOptions;
@@ -35,6 +38,8 @@ interface RoomCardProps {
 
 const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
     const router = useRouter();
+    const formatting = useFormatting();
+    const { locale, areaUnitLabels } = formatting;
     // Hover anywhere on the card zooms its photo (web). No card transform.
     const [hovered, setHovered] = useState(false);
 
@@ -44,7 +49,7 @@ const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
 
     const isAvailable = propertyService.isPropertyAvailable(property);
     const primaryImage = propertyService.getPrimaryImageUrl(property);
-    const formattedPrice = propertyService.formatPropertyPrice(property);
+    const formattedPrice = propertyService.formatPropertyPrice(property, formatting);
     const title = getPropertyTitle(property);
     const score = matchScore ?? 0;
 
@@ -115,7 +120,11 @@ const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
                     {property.squareFootage && (
                         <View style={styles.feature}>
                             <Ionicons name="resize-outline" size={16} color={colors.primaryDark_1} />
-                            <Text style={styles.featureText}>{property.squareFootage} sq ft</Text>
+                            <Text style={styles.featureText}>
+                                {formatArea(property.squareFootage, 'sqm', locale, {
+                                    labels: areaUnitLabels,
+                                })}
+                            </Text>
                         </View>
                     )}
                     <View style={styles.feature}>
@@ -144,6 +153,12 @@ const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
 RoomCard.displayName = 'RoomCard';
 
 export function RoomList({ filters, onFilterChange }: RoomListProps) {
+    const { t } = useTranslation();
+    const { locale } = useFormatting();
+    // A rent filter bound carries the search-filter currency, like every other
+    // numeric price filter in the app.
+    const rentBound = (value: unknown): string =>
+        formatMoney(Number(value), SEARCH_PRICE_CURRENCY, locale, { maximumFractionDigits: 0 });
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [rooms, setRooms] = useState<Property[]>([]);
@@ -303,8 +318,8 @@ export function RoomList({ filters, onFilterChange }: RoomListProps) {
                                 }}
                             >
                                 <Text style={styles.filterChipText}>
-                                    {key === 'minRent' ? `$${value}+` :
-                                        key === 'maxRent' ? `Up to $${value}` :
+                                    {key === 'minRent' ? t('format.range.from', { value: rentBound(value) }) :
+                                        key === 'maxRent' ? t('format.range.upTo', { value: rentBound(value) }) :
                                             Array.isArray(value) ? `${value.length} selected` : String(value)}
                                 </Text>
                                 <Ionicons name="close-circle" size={16} color={colors.primaryColor} />

@@ -636,10 +636,16 @@ export default function aiRouter() {
         contextPrompt += `Property context: ${type || 'Property'} in ${city || 'the area'}`;
         if (bedrooms) contextPrompt += `, ${bedrooms} bedrooms`;
         if (bathrooms) contextPrompt += `, ${bathrooms} bathrooms`;
+        // Deliberately NOT the shared display formatter (issue #357): this is a
+        // PROMPT, and its reader is a language model. A bare amount beside its
+        // ISO code is unambiguous to one; `1.700 €` is a grouping convention it
+        // has to guess at, and the guess is wrong exactly where the separators
+        // differ. The currency code is always emitted, so the model is never
+        // handed a naked number.
         if (longTermRent?.monthlyAmount) {
-          contextPrompt += `, ${longTermRent.monthlyAmount} ${longTermRent.currency || ''}/month`;
+          contextPrompt += `, ${longTermRent.monthlyAmount} ${longTermRent.currency || 'EUR'}/month`;
         } else if (shortTermRent?.nightlyRate) {
-          contextPrompt += `, ${shortTermRent.nightlyRate} ${shortTermRent.currency || ''}/night`;
+          contextPrompt += `, ${shortTermRent.nightlyRate} ${shortTermRent.currency || 'EUR'}/night`;
         }
         if (amenities?.length) contextPrompt += `, amenities: ${amenities.slice(0, 3).join(', ')}`;
         contextPrompt += '. ';

@@ -11,10 +11,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
 import { SECTION_GUTTER } from '@/components/property/Section';
-import { useCurrency } from '@/hooks/useCurrency';
+import { useFormatting } from '@/utils/format';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
-import type { PropertyPriceEthics } from '@homiio/shared-types';
+import { formatMoney, type PropertyPriceEthics } from '@homiio/shared-types';
 
 interface PriceEthicsBannerProps {
   priceEthics: PropertyPriceEthics;
@@ -26,7 +26,7 @@ export const PriceEthicsBanner: React.FC<PriceEthicsBannerProps> = ({
   currency = 'EUR',
 }) => {
   const { t } = useTranslation();
-  const { convertAndFormat } = useCurrency();
+  const { locale } = useFormatting();
 
   const reasonLines = useMemo(() => {
     const lines: string[] = [];
@@ -36,7 +36,7 @@ export const PriceEthicsBanner: React.FC<PriceEthicsBannerProps> = ({
     if (exceedsEthical && typeof priceEthics.ethicalMax === 'number') {
       lines.push(
         t('property.priceEthics.banner.exceedsEthical', {
-          max: convertAndFormat(priceEthics.ethicalMax, currency, false),
+          max: formatMoney(priceEthics.ethicalMax, currency, locale),
         }),
       );
     } else if (exceedsEthical) {
@@ -58,7 +58,7 @@ export const PriceEthicsBanner: React.FC<PriceEthicsBannerProps> = ({
     }
 
     return lines;
-  }, [convertAndFormat, currency, priceEthics, t]);
+  }, [locale, currency, priceEthics, t]);
 
   return (
     <View style={styles.container}>

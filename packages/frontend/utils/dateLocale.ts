@@ -39,8 +39,16 @@ function resolveLocale(language: string | undefined): Locale {
   }
 }
 
-/** BCP-47 tag for `Date#toLocaleDateString` / `Intl` from an i18next language code. */
-export function getDateLocale(language?: string): string {
+/**
+ * The BCP-47 tag every `Intl` formatter in the app runs on, derived from the
+ * i18next language.
+ *
+ * It is not date-specific despite living here: money, area, distance and
+ * percentages all resolve their locale through this one function (see
+ * `utils/format.ts`), because a screen showing `1.700 €` beside `29 mar 2026`
+ * must have taken both from the same language.
+ */
+export function getFormatLocale(language?: string): string {
   const tag = (language ?? i18next.language ?? 'en-US').toLowerCase();
   const base = tag.split('-')[0];
   switch (base) {

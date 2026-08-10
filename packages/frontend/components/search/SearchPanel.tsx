@@ -29,6 +29,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@oxyhq/bloom/button';
@@ -40,8 +41,9 @@ import {
 } from '@oxyhq/bloom/segmented-control';
 import { H3 } from '@oxyhq/bloom/typography';
 
-import { OfferingType, PropertyType } from '@homiio/shared-types';
+import { OfferingType, PropertyType, formatMoney } from '@homiio/shared-types';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
+import { useFormatting } from '@/utils/format';
 import { useRecentSearchesStore, type RecentSearch } from '@/store/recentSearchesStore';
 import { colors } from '@/styles/colors';
 import { cardShadow, radius, spacing } from '@/constants/styles';
@@ -53,6 +55,7 @@ import { DatesStep } from './steps/DatesStep';
 import { GuestsStep } from './steps/GuestsStep';
 import {
   BROWSE_MODE_OFFERING,
+  SEARCH_PRICE_CURRENCY,
   browseModeFromOffering,
   type BrowseMode,
   type SearchDateRange,
@@ -103,17 +106,29 @@ const STEP_TITLE: Record<SearchStep, string> = {
  */
 const DIALOG_MAX_WIDTH = 420;
 
-/** Build a short recent-search label from a committed query. */
-function buildRecentLabel(query: SearchQuery): { label: string; sublabel?: string } {
+/**
+ * Build a short recent-search label from a committed query.
+ *
+ * The bound is formatted in {@link SEARCH_PRICE_CURRENCY} and the preposition
+ * comes from the locale file, so neither the currency glyph nor the English word
+ * around it is baked into the string.
+ */
+function buildRecentLabel(
+  query: SearchQuery,
+  t: TFunction,
+  locale: string,
+): { label: string; sublabel?: string } {
   const where = query.location?.shortLabel ?? 'Anywhere';
   const typeCount = query.propertyTypes.length;
   const typePart =
     typeCount === 0 ? '' : typeCount === 1 ? ` · ${query.propertyTypes[0]}` : ` · ${typeCount} types`;
+  const money = (amount: number): string =>
+    formatMoney(amount, SEARCH_PRICE_CURRENCY, locale, { maximumFractionDigits: 0 });
   const pricePart =
     query.priceMax !== undefined
-      ? `Up to €${query.priceMax}`
+      ? t('format.range.upTo', { value: money(query.priceMax) })
       : query.priceMin !== undefined
-        ? `From €${query.priceMin}`
+        ? t('format.range.from', { value: money(query.priceMin) })
         : undefined;
   return { label: `${where}${typePart}`, sublabel: pricePart };
 }
@@ -157,6 +172,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
   onApply,
 }) => {
   const { t } = useTranslation();
+  const { locale } = useFormatting();
   const isWide = useIsScreenNotMobile();
   const insets = useSafeAreaInsets();
   const addRecentSearch = useRecentSearchesStore((s) => s.addSearch);
@@ -282,10 +298,10 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
   }, []);
 
   const handleSubmit = useCallback(() => {
-    const { label, sublabel } = buildRecentLabel(draft);
+    const { label, sublabel } = buildRecentLabel(draft, t, locale);
     addRecentSearch({ label, sublabel, query: draft });
     onSubmit(draft);
-  }, [draft, addRecentSearch, onSubmit]);
+  }, [draft, addRecentSearch, onSubmit, t, locale]);
 
   // Wide dialog "Done": push the draft to the live query so the collapsed pill
   // reflects it, then close. No navigation and no recent-search entry — the pill

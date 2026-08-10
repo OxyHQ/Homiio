@@ -37,6 +37,8 @@ import { toast } from '@oxyhq/bloom/toast';
 import { colors } from '@/styles/colors';
 import { contentClamp, radius, spacing } from '@/constants/styles';
 import { logger } from '@/utils/logger';
+import { formatPrice } from '@homiio/shared-types';
+import { useFormatting } from '@/utils/format';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -142,6 +144,7 @@ function DraftCard({
   onContinue: () => void;
   onDelete: () => void;
 }) {
+  const { locale, priceUnitLabels } = useFormatting();
   return (
     <View style={styles.draftCard}>
       <View style={styles.draftHeader}>
@@ -165,8 +168,11 @@ function DraftCard({
         </BloomText>
         {draft.rent.amount > 0 ? (
           <BloomText style={styles.draftPrice}>
-            ${draft.rent.amount.toLocaleString()}/
-            {draft.rent.currency === 'USD' ? 'month' : draft.rent.currency}
+            {formatPrice(
+              { amount: draft.rent.amount, currency: draft.rent.currency, unit: 'month' },
+              locale,
+              { unitLabels: priceUnitLabels, maximumFractionDigits: 0 },
+            )}
           </BloomText>
         ) : null}
         <View style={styles.draftMeta}>

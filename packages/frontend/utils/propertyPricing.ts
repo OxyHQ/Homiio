@@ -1,31 +1,31 @@
 import type { TFunction } from 'i18next';
 
-import { type Property } from '@homiio/shared-types';
+import { formatPrice, formatPriceLabel, type Property } from '@homiio/shared-types';
 
 import type { BrowseMode } from '@/components/search/types';
-import { resolvePrimaryOffering } from './propertyUtils';
+import type { Formatting } from '@/utils/format';
+import { resolvePrimaryOffering, toPriceDescriptor } from './propertyUtils';
 
 /**
  * The display-ready headline price + subtitle for a property detail surface.
  *
- * `priceLabel` is the formatted headline (e.g. `€1700/month`, `€110/night`,
- * `€350000`, or the "Free" exchange label); `priceSubtitle` is the listing
- * location (`"City, Country"`). Both feed the sticky property header, the
- * desktop BookingCard (right column), and the PropertyBookingWidget.
+ * `priceLabel` is the formatted headline (`1.700 € / mes`, `€110 / night`,
+ * `€350,000`, or the "Free" exchange label); `priceAccessibilityLabel` is the
+ * same figure spoken in full ("1700 euros per month") for `accessibilityLabel`;
+ * `priceSubtitle` is the listing location (`"City, Country"`). All three feed the
+ * sticky property header, the desktop BookingCard (right column), and the
+ * PropertyBookingWidget.
+ *
+ * The money goes through the shared formatter, so the currency is the LISTING's
+ * (never the locale's, never converted) and the separators and symbol position
+ * are the reader's. It used to be `${offering.currency}${offering.amount}`,
+ * which pasted the ISO CODE where a symbol belongs — `EUR1700/month`.
  */
 export interface HeadlinePrice {
   priceLabel: string;
+  priceAccessibilityLabel: string;
   priceSubtitle: string;
 }
-
-/** The per-unit suffix string shown after the rent amount in the headline. */
-const PRICE_UNIT_SUFFIX: Record<'month' | 'night' | 'day' | 'week' | 'year', string> = {
-  day: 'day',
-  night: 'night',
-  week: 'week',
-  month: 'month',
-  year: 'year',
-};
 
 /**
  * Resolve the headline price + subtitle a property detail surface should show
@@ -34,36 +34,37 @@ const PRICE_UNIT_SUFFIX: Record<'month' | 'night' | 'day' | 'week' | 'year', str
  * Centralises the detail screen's price decision so the screen, the right-column
  * booking widget, and any future surface share one rule. The unit is fixed per
  * priced block and never reinterpreted: {@link resolvePrimaryOffering} picks the
- * active offering's block — long-term shows `${currency}${amount}/month`,
- * short-term `${currency}${amount}/night`, sale the asking price (no suffix),
- * exchange the injected "Free" label.
+ * active offering's block, and {@link toPriceDescriptor} carries that block's own
+ * frequency through to the formatter.
  *
  * `t` is injected so this helper stays UI-agnostic (it only reads the
- * `listing.exchange.free` label for the exchange offering).
+ * `listing.exchange.free` label for the exchange offering); `formatting` carries
+ * the reader's locale and the translated unit words.
  */
 export function resolveHeadlinePrice(
   property: Property,
   browseMode: BrowseMode,
   t: TFunction,
+  formatting: Formatting,
 ): HeadlinePrice {
   const offering = resolvePrimaryOffering(
     property,
     browseMode,
     t('listing.exchange.free'),
   );
+  const price = toPriceDescriptor(offering);
+  const options = { unitLabels: formatting.priceUnitLabels };
 
-  let priceLabel: string;
-  if (offering.kind === 'exchange') {
-    priceLabel = offering.label;
-  } else if (offering.kind === 'sale') {
-    priceLabel = offering.amount > 0 ? `${offering.currency}${offering.amount}` : '';
-  } else if (offering.amount > 0 && offering.priceUnit) {
-    priceLabel = `${offering.currency}${offering.amount}/${PRICE_UNIT_SUFFIX[offering.priceUnit]}`;
-  } else {
-    priceLabel = '';
-  }
+  const priceLabel = price
+    ? formatPrice(price, formatting.locale, options)
+    : offering.kind === 'exchange'
+      ? offering.label
+      : '';
+  const priceAccessibilityLabel = price
+    ? formatPriceLabel(price, formatting.locale, options)
+    : priceLabel;
 
   const priceSubtitle = `${property.address?.cityName || ''}, ${property.address?.countryName || ''}`;
 
-  return { priceLabel, priceSubtitle };
+  return { priceLabel, priceAccessibilityLabel, priceSubtitle };
 }

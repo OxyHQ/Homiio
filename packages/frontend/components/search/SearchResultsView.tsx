@@ -49,9 +49,10 @@ import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { colors } from '@/styles/colors';
 import { cardShadow, hairline, radius, spacing } from '@/constants/styles';
-import { OfferingType, PropertyType } from '@homiio/shared-types';
+import { OfferingType, PropertyType, formatMoney } from '@homiio/shared-types';
 import type { Property } from '@homiio/shared-types';
-import { resolvePrimaryOffering } from '@/utils/propertyUtils';
+import { resolvePrimaryOffering, toPriceDescriptor } from '@/utils/propertyUtils';
+import { useFormatting, type Formatting } from '@/utils/format';
 import { browseModeFromOffering } from './types';
 
 import { SearchActionPill } from './SearchActionPill';
@@ -74,10 +75,21 @@ const SKELETON_COUNT = 6;
  */
 const NEXT_PAGE_SKELETON_COUNT = 2;
 
-/** Build map markers ([lng, lat] pins) from a property list. */
+/**
+ * Build map markers ([lng, lat] pins) from a property list.
+ *
+ * The pin label used to be `€${Math.round(amount).toLocaleString()}` — a euro
+ * sign on every marker in the catalogue, whatever the listing was priced in, and
+ * grouped in the DEVICE's locale rather than the reader's. It now goes through
+ * the shared formatter, so a Polish listing shows złoty and a Romanian one lei.
+ *
+ * Markers stay whole-unit (`maximumFractionDigits: 0`): a pin is a few
+ * characters wide and `1.234,56 €` does not fit in one.
+ */
 function toMarkers(
   properties: readonly Property[],
   offering: OfferingType,
+  formatting: Formatting,
 ): { id: string; coordinates: [number, number]; priceLabel: string }[] {
   const browseMode = browseModeFromOffering(offering);
   return properties
@@ -93,10 +105,12 @@ function toMarkers(
       }
       // Price the pin off the ACTIVE offering's block (monthly / nightly / sale).
       const primary = resolvePrimaryOffering(p, browseMode);
-      const priceLabel =
-        primary.amount > 0
-          ? `€${Math.round(primary.amount).toLocaleString()}`
-          : primary.label;
+      const price = toPriceDescriptor(primary);
+      const priceLabel = price
+        ? formatMoney(price.amount, price.currency, formatting.locale, {
+            maximumFractionDigits: 0,
+          })
+        : primary.label;
       return {
         id: p.id,
         coordinates: [coords[0], coords[1]] as [number, number],
@@ -170,6 +184,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   onRequireAuth,
 }) => {
   const { t } = useTranslation();
+  const formatting = useFormatting();
   const isWide = useIsScreenNotMobile();
   const insets = useSafeAreaInsets();
   const bottomSheet = useContext(BottomSheetContext);
@@ -186,8 +201,8 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   const { searchExists } = useSavedSearches();
 
   const markers = useMemo(
-    () => toMarkers(properties, query.offering),
-    [properties, query.offering],
+    () => toMarkers(properties, query.offering, formatting),
+    [properties, query.offering, formatting],
   );
 
   // --- Top-bar control state (drives the action pills' active/badge UI) ---

@@ -5,20 +5,20 @@ import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 import type { Conversation } from '@/store/conversationStore';
+import { deviceTimeZone, formatDate } from '@homiio/shared-types';
+import { useFormatting } from '@/utils/format';
 
-/** Compact label for a conversation's last-activity time (today → time, else date). */
-const formatTimestamp = (date: Date): string => {
+/**
+ * Compact label for a conversation's last-activity time (today → time, else
+ * date), in the reader's chosen language rather than the device's — the
+ * `undefined` locale these calls used to pass is the runtime's, not Homiio's.
+ */
+const formatTimestamp = (date: Date, locale: string, timeZone: string): string => {
   const now = new Date();
   if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString(undefined, {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return formatDate(date, locale, timeZone, { hour: '2-digit', minute: '2-digit' });
   }
-  return date.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-  });
+  return formatDate(date, locale, timeZone, { month: 'short', day: 'numeric' });
 };
 
 export interface ConversationItemProps {
@@ -44,6 +44,7 @@ export const ConversationItem = memo<ConversationItemProps>(
   ({ conversation, isLast, onPress, isActive = false, emptyPreview = 'No messages yet' }) => {
     const last = conversation.messages[conversation.messages.length - 1];
     const [pressed, setPressed] = useState(false);
+    const { locale } = useFormatting();
     return (
       <Pressable
         onPress={onPress}
@@ -67,7 +68,7 @@ export const ConversationItem = memo<ConversationItemProps>(
               {conversation.title}
             </BloomText>
             <BloomText style={styles.conversationDate}>
-              {formatTimestamp(new Date(conversation.updatedAt))}
+              {formatTimestamp(new Date(conversation.updatedAt), locale, deviceTimeZone())}
             </BloomText>
           </View>
           <BloomText style={styles.conversationPreview} numberOfLines={1}>

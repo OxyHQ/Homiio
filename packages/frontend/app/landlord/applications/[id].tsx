@@ -22,6 +22,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
+import { useFormatting } from '@/utils/format';
 import i18next from 'i18next';
 import { toast } from '@oxyhq/bloom/toast';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,6 +36,7 @@ import {
   TenantApplication,
   TenantApplicationDocument,
   TenantApplicationStatus,
+  formatMoney,
 } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
 import { ApplicationStatusBadge } from '@/components/ApplicationStatusBadge';
@@ -57,6 +59,11 @@ import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+/** A tenant's declared income has no currency field; it is quoted in euros. */
+const APPLICATION_INCOME_CURRENCY = 'EUR';
+/** Income reads as a round figure — cents on a salary are noise. */
+const INCOME_FORMAT = { minimumFractionDigits: 0, maximumFractionDigits: 0 } as const;
 
 type ReviewAction = 'reviewing' | 'approve' | 'reject';
 
@@ -91,19 +98,6 @@ const getReviewLabels = (
     successToast: t('applications.landlord.review.reject.successToast'),
   },
 });
-
-const formatCurrency = (amount: number): string => {
-  try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  } catch {
-    return `${amount.toFixed(0)}`;
-  }
-};
 
 const formatDate = (raw: string): string => {
   const date = new Date(raw);
@@ -230,6 +224,7 @@ const DetailSkeleton: React.FC = () => (
 
 export default function LandlordApplicationDetailScreen() {
   const { t } = useTranslation();
+  const { locale } = useFormatting();
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
   const id = typeof params.id === 'string' ? params.id : params.id?.[0];
@@ -407,7 +402,7 @@ export default function LandlordApplicationDetailScreen() {
               <H2 style={styles.applicantName}>{applicantName}</H2>
               <BloomText style={styles.subtitle}>
                 {t(`profile.edit.options.employmentStatus.${application.employmentStatus}`)} ·{' '}
-                {formatCurrency(application.monthlyIncome)} / mo
+                {formatMoney(application.monthlyIncome, APPLICATION_INCOME_CURRENCY, locale, INCOME_FORMAT)} / mo
               </BloomText>
             </View>
             <ApplicationStatusBadge status={application.status} />

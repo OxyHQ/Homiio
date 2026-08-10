@@ -11,8 +11,11 @@ import {
   PropertyStatus,
   OfferingType,
   UtilitiesIncluded,
+  formatArea,
+  formatMoney,
   type PropertyImage,
 } from '@homiio/shared-types';
+import { useFormatting } from '@/utils/format';
 
 import { PropertyCard } from '../PropertyCard';
 
@@ -36,6 +39,7 @@ const STEP_TO_SECTION: Record<number, string> = {
 };
 
 export function PropertyPreviewWidget() {
+  const { locale, areaUnitLabels } = useFormatting();
   const { formData, currentStep } = useCreatePropertyFormStore();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['basic', 'pricing']),
@@ -176,12 +180,6 @@ export function PropertyPreviewWidget() {
       return `${typeLabel} in ${city}`;
     }
   }, [formData?.basicInfo?.propertyType, formData?.basicInfo?.bedrooms, formData?.location?.city]);
-
-  // Memoized price display
-  const _priceDisplay = useMemo(() => {
-    if (!formData?.pricing?.monthlyRent || formData.pricing.monthlyRent <= 0) return null;
-    return `$${formData.pricing.monthlyRent.toLocaleString()}/month`;
-  }, [formData?.pricing?.monthlyRent]);
 
   // Memoized accommodation type label
   const accommodationType = useMemo(() => {
@@ -464,7 +462,9 @@ export function PropertyPreviewWidget() {
                       <View style={styles.dataItem}>
                         <ThemedText style={styles.dataLabel}>Square Footage:</ThemedText>
                         <ThemedText style={styles.dataValue}>
-                          {formData.basicInfo.squareFootage} sqft
+                          {formatArea(formData.basicInfo.squareFootage, 'sqm', locale, {
+                            labels: areaUnitLabels,
+                          })}
                         </ThemedText>
                       </View>
                     )}
@@ -502,7 +502,7 @@ export function PropertyPreviewWidget() {
                       <View style={styles.dataItem}>
                         <ThemedText style={styles.dataLabel}>Monthly Rent:</ThemedText>
                         <ThemedText style={styles.dataValue}>
-                          ${formData.pricing.monthlyRent.toLocaleString()}
+                          {formatMoney(formData.pricing.monthlyRent, formData.pricing.currency, locale)}
                         </ThemedText>
                       </View>
                     )}
@@ -510,7 +510,7 @@ export function PropertyPreviewWidget() {
                       <View style={styles.dataItem}>
                         <ThemedText style={styles.dataLabel}>Nightly Rate:</ThemedText>
                         <ThemedText style={styles.dataValue}>
-                          ${formData.pricing.nightlyRate.toLocaleString()}
+                          {formatMoney(formData.pricing.nightlyRate, formData.pricing.currency, locale)}
                         </ThemedText>
                       </View>
                     )}
@@ -518,7 +518,7 @@ export function PropertyPreviewWidget() {
                       <View style={styles.dataItem}>
                         <ThemedText style={styles.dataLabel}>Security Deposit:</ThemedText>
                         <ThemedText style={styles.dataValue}>
-                          ${formData.pricing.securityDeposit.toLocaleString()}
+                          {formatMoney(formData.pricing.securityDeposit, formData.pricing.currency, locale)}
                         </ThemedText>
                       </View>
                     )}
@@ -534,7 +534,7 @@ export function PropertyPreviewWidget() {
                       <View style={styles.dataItem}>
                         <ThemedText style={styles.dataLabel}>Application Fee:</ThemedText>
                         <ThemedText style={styles.dataValue}>
-                          ${formData.pricing.applicationFee.toLocaleString()}
+                          {formatMoney(formData.pricing.applicationFee, formData.pricing.currency, locale)}
                         </ThemedText>
                       </View>
                     )}
@@ -542,7 +542,7 @@ export function PropertyPreviewWidget() {
                       <View style={styles.dataItem}>
                         <ThemedText style={styles.dataLabel}>Late Fee:</ThemedText>
                         <ThemedText style={styles.dataValue}>
-                          ${formData.pricing.lateFee.toLocaleString()}
+                          {formatMoney(formData.pricing.lateFee, formData.pricing.currency, locale)}
                         </ThemedText>
                       </View>
                     )}

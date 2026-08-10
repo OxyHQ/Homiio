@@ -47,6 +47,9 @@ import { hairline, radius, spacing, tracker } from '@/constants/styles';
 import { api } from '@/utils/api';
 import { logger } from '@/utils/logger';
 
+/** Homiio's donation tiers are priced in euros; the code, never the glyph. */
+const DONATION_CURRENCY = 'EUR';
+
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 /** Donation frequency — drives which tiers are offered. */
@@ -85,7 +88,7 @@ export default function DonatePage() {
         title: t('donations.page.tiers.supporter.title'),
         subtitle: t('donations.page.tiers.supporter.subtitle'),
         amount: 5,
-        currency: '€',
+        currency: DONATION_CURRENCY,
         ctaLabel: t('donations.page.tiers.supporter.button'),
       },
       {
@@ -95,7 +98,7 @@ export default function DonatePage() {
         title: t('donations.page.tiers.monthly.title'),
         subtitle: t('donations.page.tiers.monthly.subtitle'),
         amount: 10,
-        currency: '€',
+        currency: DONATION_CURRENCY,
         ctaLabel: t('donations.page.tiers.monthly.button'),
       },
       {
@@ -105,7 +108,7 @@ export default function DonatePage() {
         title: t('donations.page.tiers.founder.title'),
         subtitle: t('donations.page.tiers.founder.subtitle'),
         amount: 25,
-        currency: '€',
+        currency: DONATION_CURRENCY,
         ctaLabel: t('donations.page.tiers.founder.button'),
       },
     ],

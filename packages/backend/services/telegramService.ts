@@ -9,7 +9,30 @@ import path from 'path';
 import config from '../config';
 import { logger } from '../middlewares/logging';
 import { generateLargePropertyTitle } from '../utils/propertyTitleGenerator';
+import { formatArea, formatDate, formatMoney } from '@homiio/shared-types';
 import { resolveAddressDisplay, type GeoDisplay, type AddressGeoLike } from './geoDisplayService';
+
+/**
+ * BCP-47 tag per Telegram group language.
+ *
+ * The bot's own `i18n` catalogue is keyed by bare language codes, which `Intl`
+ * accepts but which leave the region — and therefore the number and date
+ * conventions — unstated. Naming the tag here keeps `1.700 €` from becoming
+ * `1,700 €` on a Spanish group.
+ */
+/**
+ * Currency assumed when a priced block carries none — the same fallback
+ * `resolvePrimaryOffering` uses on the frontend, so the two surfaces cannot
+ * disagree about what an unlabelled amount is.
+ */
+const LISTING_FALLBACK_CURRENCY = 'EUR';
+
+const TELEGRAM_LOCALES: Record<string, string> = {
+  es: 'es-ES',
+  en: 'en-US',
+  ca: 'ca-ES',
+  it: 'it-IT',
+};
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -246,6 +269,9 @@ class TelegramService {
 
     // Get translations for the language
     const t = this.getI18nForLanguage(language);
+    // The BCP-47 tag every figure in this message is formatted with. It follows
+    // the GROUP's language, which is the only locale a broadcast has.
+    const locale = TELEGRAM_LOCALES[language] ?? TELEGRAM_LOCALES.en;
 
     // Generate large format title using the title generator. Geo labels are
     // relational and threaded through explicitly (resolved by the caller).
@@ -267,15 +293,20 @@ class TelegramService {
 
     // Format price from the listing's primary offering block (monthly rent →
     // nightly rate → sale price). Falls back to a neutral label when none set.
+    //
+    // The amounts used to be grouped by a locale-less `toLocaleString()` — the
+    // SERVER's locale, which has nothing to do with the group's language — with
+    // the raw ISO code pasted in front. They now go through the shared
+    // formatter, so a Spanish group reads `1.700 €` and an English one `€1,700`.
     let rentDisplay = t.__('telegram.priceOnRequest') || 'Price on request';
     if (longTermRent?.monthlyAmount) {
       const perMonth = t.__('telegram.perMonth') || 'month';
-      rentDisplay = `${longTermRent.currency} ${Number(longTermRent.monthlyAmount).toLocaleString()}/${perMonth}`;
+      rentDisplay = `${formatMoney(Number(longTermRent.monthlyAmount), longTermRent.currency ?? LISTING_FALLBACK_CURRENCY, locale)}/${perMonth}`;
     } else if (shortTermRent?.nightlyRate) {
       const perNight = t.__('telegram.perNight') || 'night';
-      rentDisplay = `${shortTermRent.currency} ${Number(shortTermRent.nightlyRate).toLocaleString()}/${perNight}`;
+      rentDisplay = `${formatMoney(Number(shortTermRent.nightlyRate), shortTermRent.currency ?? LISTING_FALLBACK_CURRENCY, locale)}/${perNight}`;
     } else if (sale?.price) {
-      rentDisplay = `${sale.currency} ${Number(sale.price).toLocaleString()}`;
+      rentDisplay = formatMoney(Number(sale.price), sale.currency ?? LISTING_FALLBACK_CURRENCY, locale);
     }
     
     // Format amenities (limit to first 5)
@@ -283,9 +314,11 @@ class TelegramService {
       ? amenities.slice(0, 5).join(', ') + (amenities.length > 5 ? '...' : '')
       : t.__('telegram.noneListedAmenities');
 
-    // Available date
+    // Available date — a CIVIL date (a move-in day is the same day everywhere),
+    // so it renders zone-independently rather than through `new Date()`, which
+    // reads a bare `YYYY-MM-DD` as UTC midnight.
     const availableDate = availability?.availableFrom
-      ? new Date(availability.availableFrom).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')
+      ? formatDate(availability.availableFrom, locale, 'UTC')
       : t.__('telegram.immediately');
 
     // Build description section only if description exists
@@ -326,7 +359,7 @@ class TelegramService {
 • ${bedrooms} ${t.__('telegram.bedrooms')}, ${bathrooms} ${t.__('telegram.bathrooms')}
 • ${locationLine}
 • ${t.__('telegram.type')}: ${this.escapeMarkdown(propertyType)}
-${property.squareFootage ? `• ${t.__('telegram.size')}: ${this.escapeMarkdown(property.squareFootage.toString())} m²` : ''}
+${property.squareFootage ? `• ${t.__('telegram.size')}: ${this.escapeMarkdown(formatArea(property.squareFootage, 'sqm', locale, { preference: 'metric' }))}` : ''}
 
 ✨ **${t.__('telegram.amenities')}:** ${this.escapeMarkdown(amenitiesText)}${descriptionSection}
 ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(propertyType.replace(/\s+/g, ''))}`;

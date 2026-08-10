@@ -1,9 +1,21 @@
 /**
  * Ethical pricing calculator shared by Homiio frontend and backend.
  * Ensures fair and non-speculative rental prices based on property characteristics.
+ *
+ * The `reasoning` and `warnings` strings this produces are English prose and stay
+ * that way for now — translating a pricing model's explanation is a different
+ * job from formatting a UI label. What they must NOT do is state a euro figure
+ * with a dollar sign, which is what `$${amount}` did on every listing whatever
+ * its currency, so the money in them goes through {@link formatMoney} against a
+ * currency and locale the CALLER supplies.
+ *
+ * The defaults are USD / `en-US`, because that is what the model's own constants
+ * are denominated in (`BASE_PRICES_PER_SQFT`) and exactly what the hardcoded `$`
+ * used to assert — now stated out loud instead of assumed.
  */
 
 import { HousingType, PropertyType } from './common';
+import { formatMoney } from './format/money';
 
 export interface EthicalPricingCharacteristics {
   type: PropertyType;
@@ -186,9 +198,26 @@ const FLOOR_ADJUSTMENTS: Record<number, number> = {
   10: 1.2,
 };
 
-export function calculateEthicalRent(property: EthicalPricingCharacteristics): PricingRecommendation {
+/** Currency and locale the explanation strings quote their figures in. */
+export interface PricingDisplay {
+  /** ISO 4217 code the amounts are denominated in. */
+  currency: string;
+  /** BCP-47 tag for the reader. */
+  locale: string;
+}
+
+/** What the model's own constants are in, and what the old `$` asserted. */
+const DEFAULT_PRICING_DISPLAY: PricingDisplay = { currency: 'USD', locale: 'en-US' };
+
+export function calculateEthicalRent(
+  property: EthicalPricingCharacteristics,
+  display: PricingDisplay = DEFAULT_PRICING_DISPLAY,
+): PricingRecommendation {
   const warnings: string[] = [];
   const reasoning: string[] = [];
+  /** Whole-unit money for the explanation lines. */
+  const money = (amount: number): string =>
+    formatMoney(amount, display.currency, display.locale, { maximumFractionDigits: 0 });
 
   const locationMultiplier =
     LOCATION_MULTIPLIERS[property.location.city] ??
@@ -199,25 +228,25 @@ export function calculateEthicalRent(property: EthicalPricingCharacteristics): P
 
   if (property.type === PropertyType.ROOM) {
     basePrice = 800;
-    reasoning.push('Base room price: $800');
+    reasoning.push(`Base room price: ${money(800)}`);
   } else {
     const basePricePerSqft = BASE_PRICES_PER_SQFT[property.type] ?? BASE_PRICES_PER_SQFT[PropertyType.OTHER];
     basePrice = property.squareFootage * basePricePerSqft;
     reasoning.push(
-      `${property.type} base price: $${basePricePerSqft}/sqft × ${property.squareFootage}sqft = $${basePrice.toFixed(0)}`,
+      `${property.type} base price: ${formatMoney(basePricePerSqft, display.currency, display.locale, { maximumFractionDigits: 2 })}/sqft × ${property.squareFootage}sqft = ${money(basePrice)}`,
     );
   }
 
   const locationAdjustedPrice = basePrice * locationMultiplier;
-  reasoning.push(`Location adjustment (${locationMultiplier}x): $${locationAdjustedPrice.toFixed(0)}`);
+  reasoning.push(`Location adjustment (${locationMultiplier}x): ${money(locationAdjustedPrice)}`);
 
   const bedroomAdjustment = BEDROOM_ADJUSTMENTS[property.bedrooms] ?? 1.0;
   const bedroomAdjustedPrice = locationAdjustedPrice * bedroomAdjustment;
-  reasoning.push(`Bedroom adjustment (${bedroomAdjustment}x): $${bedroomAdjustedPrice.toFixed(0)}`);
+  reasoning.push(`Bedroom adjustment (${bedroomAdjustment}x): ${money(bedroomAdjustedPrice)}`);
 
   const bathroomAdjustment = BATHROOM_ADJUSTMENTS[property.bathrooms] ?? 1.0;
   const bathroomAdjustedPrice = bedroomAdjustedPrice * bathroomAdjustment;
-  reasoning.push(`Bathroom adjustment (${bathroomAdjustment}x): $${bathroomAdjustedPrice.toFixed(0)}`);
+  reasoning.push(`Bathroom adjustment (${bathroomAdjustment}x): ${money(bathroomAdjustedPrice)}`);
 
   let sizeEfficiencyAdjustment = 1.0;
   for (const [size, adjustment] of Object.entries(SIZE_EFFICIENCY_ADJUSTMENTS)) {
@@ -227,7 +256,7 @@ export function calculateEthicalRent(property: EthicalPricingCharacteristics): P
     }
   }
   const sizeAdjustedPrice = bathroomAdjustedPrice * sizeEfficiencyAdjustment;
-  reasoning.push(`Size efficiency adjustment (${sizeEfficiencyAdjustment}x): $${sizeAdjustedPrice.toFixed(0)}`);
+  reasoning.push(`Size efficiency adjustment (${sizeEfficiencyAdjustment}x): ${money(sizeAdjustedPrice)}`);
 
   let qualityAdjustment = 1.0;
   if (property.yearBuilt) {
@@ -241,7 +270,7 @@ export function calculateEthicalRent(property: EthicalPricingCharacteristics): P
   const qualityAdjustedPrice = sizeAdjustedPrice * qualityAdjustment;
   if (property.yearBuilt) {
     reasoning.push(
-      `Quality adjustment (${qualityAdjustment}x, built ${property.yearBuilt}): $${qualityAdjustedPrice.toFixed(0)}`,
+      `Quality adjustment (${qualityAdjustment}x, built ${property.yearBuilt}): ${money(qualityAdjustedPrice)}`,
     );
   }
 
@@ -256,7 +285,7 @@ export function calculateEthicalRent(property: EthicalPricingCharacteristics): P
   }
   const floorAdjustedPrice = qualityAdjustedPrice * floorAdjustment;
   if (property.floor && property.floor > 0) {
-    reasoning.push(`Floor adjustment (${floorAdjustment}x, floor ${property.floor}): $${floorAdjustedPrice.toFixed(0)}`);
+    reasoning.push(`Floor adjustment (${floorAdjustment}x, floor ${property.floor}): ${money(floorAdjustedPrice)}`);
   }
 
   let amenityValue = 0;
@@ -266,43 +295,43 @@ export function calculateEthicalRent(property: EthicalPricingCharacteristics): P
     const value = AMENITY_VALUES[amenity];
     if (value) {
       amenityValue += value;
-      amenityBreakdown.push(`${amenity}: +$${value}`);
+      amenityBreakdown.push(`${amenity}: +${money(value)}`);
     }
   });
 
   if (property.hasElevator) {
     amenityValue += ADDITIONAL_AMENITY_VALUES.elevator;
-    amenityBreakdown.push(`elevator: +$${ADDITIONAL_AMENITY_VALUES.elevator}`);
+    amenityBreakdown.push(`elevator: +${money(ADDITIONAL_AMENITY_VALUES.elevator)}`);
   }
   if (property.furnishedStatus === 'furnished') {
     amenityValue += ADDITIONAL_AMENITY_VALUES.furnished;
-    amenityBreakdown.push(`furnished: +$${ADDITIONAL_AMENITY_VALUES.furnished}`);
+    amenityBreakdown.push(`furnished: +${money(ADDITIONAL_AMENITY_VALUES.furnished)}`);
   }
   if (property.petFriendly) {
     amenityValue += ADDITIONAL_AMENITY_VALUES.pet_friendly;
-    amenityBreakdown.push(`pet friendly: +$${ADDITIONAL_AMENITY_VALUES.pet_friendly}`);
+    amenityBreakdown.push(`pet friendly: +${money(ADDITIONAL_AMENITY_VALUES.pet_friendly)}`);
   }
   if (property.utilitiesIncluded) {
     amenityValue += ADDITIONAL_AMENITY_VALUES.utilities_included;
-    amenityBreakdown.push(`utilities included: +$${ADDITIONAL_AMENITY_VALUES.utilities_included}`);
+    amenityBreakdown.push(`utilities included: +${money(ADDITIONAL_AMENITY_VALUES.utilities_included)}`);
   }
   if (property.proximityToTransport) {
     amenityValue += ADDITIONAL_AMENITY_VALUES.proximity_transport;
-    amenityBreakdown.push(`near transport: +$${ADDITIONAL_AMENITY_VALUES.proximity_transport}`);
+    amenityBreakdown.push(`near transport: +${money(ADDITIONAL_AMENITY_VALUES.proximity_transport)}`);
   }
   if (property.proximityToSchools) {
     amenityValue += ADDITIONAL_AMENITY_VALUES.proximity_schools;
-    amenityBreakdown.push(`near schools: +$${ADDITIONAL_AMENITY_VALUES.proximity_schools}`);
+    amenityBreakdown.push(`near schools: +${money(ADDITIONAL_AMENITY_VALUES.proximity_schools)}`);
   }
   if (property.proximityToShopping) {
     amenityValue += ADDITIONAL_AMENITY_VALUES.proximity_shopping;
-    amenityBreakdown.push(`near shopping: +$${ADDITIONAL_AMENITY_VALUES.proximity_shopping}`);
+    amenityBreakdown.push(`near shopping: +${money(ADDITIONAL_AMENITY_VALUES.proximity_shopping)}`);
   }
   if (property.parkingSpaces && property.parkingSpaces > 1) {
     const additionalSpaces = property.parkingSpaces - 1;
     const parkingValue = additionalSpaces * ADDITIONAL_AMENITY_VALUES.parking_spaces;
     amenityValue += parkingValue;
-    amenityBreakdown.push(`additional parking (${additionalSpaces}): +$${parkingValue}`);
+    amenityBreakdown.push(`additional parking (${additionalSpaces}): +${money(parkingValue)}`);
   }
 
   const housingTypeMultiplier = HOUSING_TYPE_MULTIPLIERS[property.housingType ?? HousingType.PRIVATE];
@@ -310,12 +339,12 @@ export function calculateEthicalRent(property: EthicalPricingCharacteristics): P
   const suggestedRent = Math.round(housingTypeAdjustedPrice);
 
   if (amenityValue > 0) {
-    reasoning.push(`Amenities added: +$${amenityValue} (${amenityBreakdown.join(', ')})`);
+    reasoning.push(`Amenities added: +${money(amenityValue)} (${amenityBreakdown.join(', ')})`);
   }
   if (property.housingType === HousingType.PUBLIC) {
-    reasoning.push(`Public housing discount (${housingTypeMultiplier}x): $${housingTypeAdjustedPrice.toFixed(0)}`);
+    reasoning.push(`Public housing discount (${housingTypeMultiplier}x): ${money(housingTypeAdjustedPrice)}`);
   }
-  reasoning.push(`Final suggested rent: $${suggestedRent}`);
+  reasoning.push(`Final suggested rent: ${money(suggestedRent)}`);
 
   const minRent = Math.round(suggestedRent * 0.85);
   const maxRent = Math.round(suggestedRent * 1.15);
@@ -361,13 +390,17 @@ export function calculateEthicalRent(property: EthicalPricingCharacteristics): P
 export function validateEthicalPricing(
   proposedRent: number,
   property: EthicalPricingCharacteristics,
+  display: PricingDisplay = DEFAULT_PRICING_DISPLAY,
 ): PricingRecommendation {
-  const recommendation = calculateEthicalRent(property);
+  const recommendation = calculateEthicalRent(property, display);
   const isWithinRange = proposedRent <= recommendation.maxRent;
   const warnings = [...recommendation.warnings];
 
   if (proposedRent > recommendation.maxRent) {
-    warnings.push(`Rent exceeds ethical maximum ($${recommendation.maxRent}) - may be speculative`);
+    const maxRentText = formatMoney(recommendation.maxRent, display.currency, display.locale, {
+      maximumFractionDigits: 0,
+    });
+    warnings.push(`Rent exceeds ethical maximum (${maxRentText}) - may be speculative`);
   }
 
   return {

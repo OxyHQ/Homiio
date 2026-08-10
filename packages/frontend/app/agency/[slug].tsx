@@ -17,7 +17,9 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
 
+import { formatPercentage } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
+import { useFormatting } from '@/utils/format';
 import { ReviewCard } from '@/components/ReviewCard';
 import { ReviewTabPill } from '@/components/reviews/ReviewTabPill';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -82,6 +84,7 @@ const AgencyReviewItem: React.FC<AgencyReviewItemProps> = ({ review, author, onP
 };
 
 export default function AgencyProfileScreen() {
+  const { locale } = useFormatting();
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const { t } = useTranslation();
@@ -165,12 +168,18 @@ export default function AgencyProfileScreen() {
             <StatTile value={stats.averageRating.toFixed(1)} label={t('agency.stats.rating')} />
             <StatTile value={String(stats.totalReviews)} label={t('agency.stats.reviews')} />
             <StatTile
-              value={`${Math.round(stats.recommendationPercentage)}%`}
+              value={formatPercentage(stats.recommendationPercentage, locale, {
+                input: 'percent',
+                maximumFractionDigits: 0,
+              })}
               label={t('agency.stats.recommend')}
             />
             {typeof stats.depositFullPct === 'number' ? (
               <StatTile
-                value={`${Math.round(stats.depositFullPct)}%`}
+                value={formatPercentage(stats.depositFullPct, locale, {
+                  input: 'percent',
+                  maximumFractionDigits: 0,
+                })}
                 label={t('agency.stats.depositFull')}
               />
             ) : null}

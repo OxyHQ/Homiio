@@ -3,7 +3,13 @@ import { View, Image, StyleSheet, Pressable, TouchableOpacity, ViewStyle, Platfo
 import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
-import { PriceUnit, Property } from '@homiio/shared-types';
+import {
+  Property,
+  formatArea,
+  formatAreaLabel,
+  priceFrequencyFromPriceUnit,
+} from '@homiio/shared-types';
+import { useFormatting } from '@/utils/format';
 import {
   getPropertyTitle,
   getPropertyImageSource,
@@ -16,7 +22,7 @@ import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { useRentalMode } from '@/context/RentalModeContext';
 
 import { SaveButton } from './SaveButton';
-import { CurrencyFormatter } from './CurrencyFormatter';
+import { MoneyText } from './MoneyText';
 import { OfferingBadge } from './property/OfferingBadge';
 import { MediaChip } from './property/MediaChip';
 import { PropertyImageCarousel } from './property/PropertyImageCarousel';
@@ -206,6 +212,7 @@ export const PropertyCard = React.memo(function PropertyCard({
   const { mode, browseMode } = useRentalMode();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+  const formatting = useFormatting();
 
   // Define the callback function (using property parameter directly)
   const handlePressIn = useCallback(() => {
@@ -288,7 +295,6 @@ export const PropertyCard = React.memo(function PropertyCard({
       bedrooms: property.bedrooms || 0,
       bathrooms: property.bathrooms || 0,
       size: property.squareFootage || 0,
-      sizeUnit: 'm²',
       isVerified: property.isVerified || false,
       rating: undefined as number | undefined,
       reviewCount: undefined as number | undefined,
@@ -404,9 +410,7 @@ export const PropertyCard = React.memo(function PropertyCard({
     // Localized per-unit suffix for the headline (fixed per priced block):
     // long-term → "month", short-term → "night"; sale/exchange have none.
     const priceUnitSuffix = propertyData.priceUnit
-      ? propertyData.priceUnit === PriceUnit.NIGHT
-        ? t('listing.offering.perNightUnit', 'night')
-        : t('listing.offering.perMonthUnit', 'month')
+      ? formatting.priceUnitLabels[priceFrequencyFromPriceUnit(propertyData.priceUnit)].short
       : '';
     // "Also available: By night · For sale" — joins the other offerings' labels.
     const alsoAvailableLabel =
@@ -493,8 +497,15 @@ export const PropertyCard = React.memo(function PropertyCard({
               <>
                 <ThemedText style={styles.featureSeparator}>•</ThemedText>
                 <View style={styles.feature}>
-                  <ThemedText style={styles.featureText}>
-                    {`${propertyData.size} ${propertyData.sizeUnit}`}
+                  <ThemedText
+                    style={styles.featureText}
+                    accessibilityLabel={formatAreaLabel(propertyData.size, 'sqm', formatting.locale, {
+                      labels: formatting.areaUnitLabels,
+                    })}
+                  >
+                    {formatArea(propertyData.size, 'sqm', formatting.locale, {
+                      labels: formatting.areaUnitLabels,
+                    })}
                   </ThemedText>
                 </View>
               </>
@@ -510,7 +521,7 @@ export const PropertyCard = React.memo(function PropertyCard({
 
         {/* Price — the ACTIVE browse mode's priced block. Exchange listings have
             no money price, so they render the "Free" label instead of
-            CurrencyFormatter; sale shows the sale price with NO per-unit suffix;
+            MoneyText; sale shows the sale price with NO per-unit suffix;
             long-term shows `/month` and short-term `/night` (fixed per block). */}
         {finalShowPrice &&
           (propertyData.offeringKind === 'exchange'
@@ -528,10 +539,9 @@ export const PropertyCard = React.memo(function PropertyCard({
                 propertyData.offeringLabel
               ) : (
                 <>
-                  <CurrencyFormatter
+                  <MoneyText
                     amount={propertyData.price}
-                    originalCurrency={propertyData.currency}
-                    showConversion={false}
+                    currency={propertyData.currency}
                   />
                   {priceUnitSuffix ? (
                     <BloomText style={[styles.priceUnit, isGrid ? styles.gridPriceUnit : null]}>
@@ -554,7 +564,7 @@ export const PropertyCard = React.memo(function PropertyCard({
         ) : null}
       </View>
     );
-  }, [derived, orientation, variant, showLocation, showFeatures, showTypeIcon, showPrice, titleLines, locationLines, t]);
+  }, [derived, orientation, variant, showLocation, showFeatures, showTypeIcon, showPrice, titleLines, locationLines, t, formatting]);
 
   // The horizontal (small single-cover thumbnail) variant is too tight for the
   // save heart — suppress it there by either path (skeleton + real render).

@@ -11,7 +11,10 @@ import {
   CreatePropertyData,
   UpdatePropertyData,
   Commission,
+  formatPrice,
+  type PriceDescriptor,
 } from '@homiio/shared-types';
+import type { Formatting } from '@/utils/format';
 
 /** The `{ property, commission }` payload returned by mark-transacted. */
 export interface MarkTransactedResult {
@@ -269,22 +272,25 @@ class PropertyService {
 
   // Format property price for display. Prefers the monthly (long-term) headline;
   // falls back to the nightly (short-term) rate for vacation-only listings.
-  formatPropertyPrice(property: Property): string {
+  //
+  // `formatting` is passed in because this is a service class, not a component:
+  // it used to format with a hardcoded `'en-US'`, so a Spanish reader got
+  // `€1,700` where the language writes `1.700 €`, and the `/month` suffix was
+  // English on every screen.
+  formatPropertyPrice(property: Property, formatting: Formatting): string {
     const longTerm = property.longTermRent;
     const shortTerm = property.shortTermRent;
-    const block = longTerm
+    const price: PriceDescriptor | null = longTerm
       ? { amount: longTerm.monthlyAmount, currency: longTerm.currency, unit: 'month' }
       : shortTerm
         ? { amount: shortTerm.nightlyRate, currency: shortTerm.currency, unit: 'night' }
         : null;
-    if (!block) return 'Contact for price';
+    if (!price) return 'Contact for price';
 
-    return block.amount.toLocaleString('en-US', {
-      style: 'currency',
-      currency: block.currency,
-      minimumFractionDigits: 0,
+    return formatPrice(price, formatting.locale, {
+      unitLabels: formatting.priceUnitLabels,
       maximumFractionDigits: 0,
-    }) + `/${block.unit}`;
+    });
   }
 
   // Get primary image URL, re-homed onto the active API origin so DB images that

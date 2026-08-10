@@ -1266,7 +1266,7 @@
     },
     "nearbyServices": {
       "title": "Què hi ha a prop",
-      "within": "A menys de {{km}} km",
+      "within": "A menys de {{distance}}",
       "partialNote": "És possible que algunes dades properes no estiguin disponibles.",
       "labels": {
         "pharmacy": "Farmàcia",
@@ -3957,5 +3957,44 @@
     "emptyReviewsDescription": "Aquesta agència encara no té ressenyes.",
     "emptyListingsTitle": "Sense anuncis",
     "emptyListingsDescription": "Aquesta agència no té anuncis actius."
+  },
+  "format": {
+    "priceUnit": {
+      "night": {
+        "short": "nit",
+        "spoken": "per nit"
+      },
+      "day": {
+        "short": "dia",
+        "spoken": "per dia"
+      },
+      "week": {
+        "short": "setmana",
+        "spoken": "per setmana"
+      },
+      "month": {
+        "short": "mes",
+        "spoken": "al mes"
+      },
+      "year": {
+        "short": "any",
+        "spoken": "a l’any"
+      },
+      "total": {
+        "spoken": "en total"
+      }
+    },
+    "areaUnit": {
+      "sqm": {
+        "spoken": "metres quadrats"
+      },
+      "sqft": {
+        "spoken": "peus quadrats"
+      }
+    },
+    "range": {
+      "upTo": "Fins a {{value}}",
+      "from": "Des de {{value}}"
+    }
   }
 }

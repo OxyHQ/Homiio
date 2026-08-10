@@ -4,7 +4,8 @@ import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { colors } from '@/styles/colors';
 import { barContent, spacing } from '@/constants/styles';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
-import type { PropertyImage } from '@homiio/shared-types';
+import { formatArea, formatAreaLabel, type PropertyImage } from '@homiio/shared-types';
+import { useFormatting } from '@/utils/format';
 
 interface HeaderSectionProps {
     title: string;
@@ -23,6 +24,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
     size,
     images,
 }) => {
+    const { locale, areaUnitLabels } = useFormatting();
     return (
         <>
             <Image
@@ -38,7 +40,14 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
                 <View style={styles.headerStats}>
                     <BloomText className="text-sm text-foreground">{bedrooms} Bed</BloomText>
                     <BloomText className="text-sm text-foreground">{bathrooms} Bath</BloomText>
-                    <BloomText className="text-sm text-foreground">{size}m²</BloomText>
+                    <BloomText
+                        className="text-sm text-foreground"
+                        accessibilityLabel={formatAreaLabel(size, 'sqm', locale, {
+                            labels: areaUnitLabels,
+                        })}
+                    >
+                        {formatArea(size, 'sqm', locale, { labels: areaUnitLabels })}
+                    </BloomText>
                 </View>
             </View>
         </>

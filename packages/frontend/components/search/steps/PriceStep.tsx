@@ -12,7 +12,11 @@ import { useTranslation } from 'react-i18next';
 import { Chip } from '@oxyhq/bloom/chip';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
-import { OfferingType } from '@homiio/shared-types';
+import { OfferingType, formatMoney, formatMoneyRange } from '@homiio/shared-types';
+import type { TFunction } from 'i18next';
+
+import { SEARCH_PRICE_CURRENCY } from '@/components/search/types';
+import { useFormatting } from '@/utils/format';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 
@@ -38,11 +42,21 @@ const VACATION_BANDS: readonly PriceBand[] = [
   { min: 300, max: null },
 ] as const;
 
-/** Format a band into a human label given the active currency symbol. */
-function bandLabel(band: PriceBand, symbol: string): string {
-  if (band.min === 0 && band.max !== null) return `${symbol}0–${symbol}${band.max}`;
-  if (band.max === null) return `${symbol}${band.min}+`;
-  return `${symbol}${band.min}–${symbol}${band.max}`;
+/**
+ * Format a band into a human label.
+ *
+ * Both bounds go through the shared formatter in {@link SEARCH_PRICE_CURRENCY},
+ * so the chips read `0 €–800 €` for a Spanish reader instead of `€0–€800`. The
+ * open-ended band takes its `+` from the locale file rather than from a literal
+ * here — several languages phrase "and up" as a word, not a sign.
+ */
+function bandLabel(band: PriceBand, locale: string, t: TFunction): string {
+  const money = (amount: number): string =>
+    formatMoney(amount, SEARCH_PRICE_CURRENCY, locale, { maximumFractionDigits: 0 });
+  if (band.max === null) return t('format.range.from', { value: money(band.min) });
+  return formatMoneyRange(band.min, band.max, SEARCH_PRICE_CURRENCY, locale, {
+    maximumFractionDigits: 0,
+  });
 }
 
 /** Parse a free-text numeric input into a positive integer or undefined. */
@@ -58,8 +72,6 @@ interface PriceStepProps {
   priceMin?: number;
   priceMax?: number;
   onChange: (min: number | undefined, max: number | undefined) => void;
-  /** Currency symbol to render. Defaults to the euro sign used app-wide. */
-  currencySymbol?: string;
   /**
    * Compact mode for the wide centered dialog: the dialog header already names
    * the step ("Price range"), so the step's internal heading is suppressed and
@@ -73,10 +85,10 @@ export const PriceStep: React.FC<PriceStepProps> = ({
   priceMin,
   priceMax,
   onChange,
-  currencySymbol = '€',
   compact = false,
 }) => {
   const { t } = useTranslation();
+  const { locale } = useFormatting();
   const isVacation = offering === OfferingType.SHORT_TERM_RENT;
   const bands = isVacation ? VACATION_BANDS : LONG_TERM_BANDS;
 
@@ -124,7 +136,7 @@ export const PriceStep: React.FC<PriceStepProps> = ({
 
       <View style={styles.chips}>
         {bands.map((band, index) => {
-          const label = bandLabel(band, currencySymbol);
+          const label = bandLabel(band, locale, t);
           const isSelected = index === activeBandIndex;
           return (
             <Chip
@@ -153,7 +165,7 @@ export const PriceStep: React.FC<PriceStepProps> = ({
             onChangeText={handleMinChange}
             keyboardType="number-pad"
             inputMode="numeric"
-            placeholder={`${currencySymbol}0`}
+            placeholder={formatMoney(0, SEARCH_PRICE_CURRENCY, locale, { maximumFractionDigits: 0 })}
             placeholderTextColor={colors.COLOR_BLACK_LIGHT_5}
             accessibilityLabel={t('search.step.price.min')}
           />

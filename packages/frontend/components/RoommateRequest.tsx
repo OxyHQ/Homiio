@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Alert, TextInput } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { deviceTimeZone, formatDate } from '@homiio/shared-types';
+import { useFormatting } from '@/utils/format';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/styles/colors';
 import type { RoommateRequest, RoommateProfile } from '@/hooks/useRoommate';
@@ -24,6 +26,8 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
   onViewProfile,
 }) => {
   const { t } = useTranslation();
+  const { locale } = useFormatting();
+  const timeZone = deviceTimeZone();
   const [isLoading, setIsLoading] = useState(false);
   const [showResponseInput, setShowResponseInput] = useState(false);
   const [responseMessage, setResponseMessage] = useState('');
@@ -103,10 +107,10 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
-  };
+  // `toLocaleDateString()` with no argument formats in the DEVICE's locale, not
+  // the language the reader picked in Homiio.
+  const formatRequestDate = (dateString: string): string =>
+    formatDate(dateString, locale, timeZone);
 
   const otherProfile = type === 'sent' ? request.receiver : request.sender;
 
@@ -126,7 +130,7 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
 
         <View style={styles.headerInfo}>
           <ThemedText style={styles.name}>{getDisplayName(otherProfile)}</ThemedText>
-          <ThemedText style={styles.date}>{formatDate(request.createdAt)}</ThemedText>
+          <ThemedText style={styles.date}>{formatRequestDate(request.createdAt)}</ThemedText>
           <View style={styles.matchScore}>
             <ThemedText style={styles.matchScoreText}>{request.matchScore}% Match</ThemedText>
           </View>
