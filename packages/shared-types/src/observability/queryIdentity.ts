@@ -103,6 +103,23 @@ function hex8(value: number): string {
   return (value >>> 0).toString(16).padStart(8, '0');
 }
 
+/**
+ * Domain separator between a namespace and its value.
+ *
+ * Written as an ESCAPE, never as a literal byte. A NUL inside a source file
+ * makes git classify that file as binary, so it merges with no reviewable diff
+ * at all — every gate passes and no reviewer can see a line of it. That is the
+ * exact hazard `packages/backend/__tests__/unit/sourceFilesAreText.test.ts`
+ * exists to catch, and it caught this file in CI after a local full-suite run
+ * missed it: the local run happened while the file was still UNTRACKED, and
+ * that gate enumerates with `git ls-files`, which cannot see an untracked file.
+ *
+ * NUL is the right SEPARATOR — it cannot occur in a namespace or an id, so no
+ * pair of inputs can collide by concatenation. It is only the literal byte in
+ * SOURCE that is the problem, and the escape produces the identical digest.
+ */
+const NAMESPACE_SEPARATOR = '\u0000';
+
 /** 16 lowercase hex characters — the one shape the `opaqueId` field kind accepts. */
 export function digest16(input: string): string {
   return hex8(fnv1a32(input, FNV_OFFSET_A)) + hex8(fnv1a32(input, FNV_OFFSET_B));
@@ -212,7 +229,7 @@ export function deriveQueryId(descriptor: QueryDescriptor): string {
  * housing profile across the log.
  */
 export function deriveOpaqueRef(namespace: string, value: string): string {
-  return digest16(`${namespace} ${value}`);
+  return digest16(`${namespace}${NAMESPACE_SEPARATOR}${value}`);
 }
 
 /** Whether a value is in the one shape the `opaqueId` field kind accepts. */
