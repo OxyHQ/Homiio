@@ -249,6 +249,90 @@ describe('two homonyms inside the SAME country', () => {
   });
 });
 
+describe('a DISCRIMINATOR that is itself ambiguous', () => {
+  /**
+   * Two regions genuinely called "Valencia" — a province in Spain and a state in
+   * Venezuela. `db/schema/geo.ts` scopes `regions_country_name_key` to the
+   * country for exactly this reason, so the collision is designed for, not
+   * hypothetical.
+   *
+   * **No fixture in this file exercised this before, and that is why the bug
+   * survived.** `resolveRegion` matched the name, ordered by `asc(id)` and took
+   * `.limit(1)` — the homonym bug moved one level up, into the discriminator,
+   * where it is harder to see because the wrong answer comes back as a confident
+   * `resolved` rather than as an odd-looking list. Both the arbitrary-pick and
+   * the set-based implementation pass every other case here.
+   *
+   * Spain is seeded FIRST and with more listings, so an implementation that
+   * picks the lowest region id, or the most-listed city, returns Spain and turns
+   * this red.
+   */
+  async function seedTwoValenciaRegions(): Promise<{ es: string; ve: string }> {
+    const spain = await seedCountry('t-ctry-a-es', 'ES', 'Spain');
+    const valenciaProvince = await seedRegion('t-rg-a-val-es', spain, 'Valencia', 'ES-V');
+    const es = await seedCity({
+      id: 't-city-a-torrent-es', countryId: spain, regionId: valenciaProvince, name: 'Torrent', propertiesCount: 400,
+    });
+
+    const venezuela = await seedCountry('t-ctry-b-ve', 'VE', 'Venezuela');
+    const valenciaState = await seedRegion('t-rg-b-val-ve', venezuela, 'Valencia', 'VE-G');
+    const ve = await seedCity({
+      id: 't-city-b-torrent-ve', countryId: venezuela, regionId: valenciaState, name: 'Torrent', propertiesCount: 1,
+    });
+
+    return { es, ve };
+  }
+
+  it('does not pick one of two same-named REGIONS — it answers ambiguous with both cities', async () => {
+    const { es, ve } = await seedTwoValenciaRegions();
+
+    const res = await request(app).get('/api/cities/lookup?name=Torrent&state=Valencia').expect(200);
+
+    expect(res.body.data.status).toBe('ambiguous');
+    expect(res.body.data).not.toHaveProperty('place');
+    expect(candidatesOf(res.body).map((c) => c.id).sort()).toEqual([es, ve].sort());
+    // Each candidate names its own country, so the list is choosable rather than
+    // merely plural.
+    expect(candidatesOf(res.body).map((c) => c.admin.countryCode).sort()).toEqual(['ES', 'VE']);
+  });
+
+  it('resolves the same query once a country narrows the region', async () => {
+    const { ve } = await seedTwoValenciaRegions();
+
+    const res = await request(app).get('/api/cities/lookup?name=Torrent&state=Valencia&countryCode=VE').expect(200);
+
+    expect(res.body.data.status).toBe('resolved');
+    expect(placeOf(res.body)?.id).toBe(ve);
+  });
+
+  it('still 404s when the region name matches nothing at all', async () => {
+    await seedTwoValenciaRegions();
+    const res = await request(app).get('/api/cities/lookup?name=Torrent&state=Atlantis').expect(404);
+    expect(res.body.code).toBe('PLACE_NOT_FOUND');
+  });
+
+  /**
+   * A country COUNTRY-CODE match outranks a country NAME match, and that is a
+   * rule about the KIND of match rather than a pick between two of equal kind —
+   * the same principle as `matchedOn` on a candidate.
+   */
+  it('prefers a country CODE match over a country NAME match', async () => {
+    const spain = await seedCountry('t-ctry-a-es', 'ES', 'Spain');
+    // A country whose NAME is the string "ES". Contrived, and it is what makes
+    // the code-beats-name rule observable at all.
+    const other = await seedCountry('t-ctry-b-xx', 'XX', 'Es');
+    const catalonia = await seedRegion('t-rg-a-cat', spain, 'Catalonia');
+    const elsewhere = await seedRegion('t-rg-b-else', other, 'Elsewhere');
+    const inSpain = await seedCity({ id: 't-city-a-sp', countryId: spain, regionId: catalonia, name: 'Girona' });
+    await seedCity({ id: 't-city-b-other', countryId: other, regionId: elsewhere, name: 'Girona' });
+
+    const res = await request(app).get('/api/cities/lookup?name=Girona&country=ES').expect(200);
+
+    expect(res.body.data.status).toBe('resolved');
+    expect(placeOf(res.body)?.id).toBe(inSpain);
+  });
+});
+
 describe('a geographic bias', () => {
   /**
    * The bias ORDERS the candidate list; it never removes a row from it.
@@ -488,13 +572,49 @@ describe('the slug rule agrees in TypeScript and in Postgres', () => {
    *
    * A disagreement is silent and total: an inbound `?city=malaga` simply stops
    * matching the row stored as `Málaga`, with no error anywhere.
+   *
+   * ## Two fixture families exist because the rule has two failure DIRECTIONS
+   *
+   * The combining-mark strip in `placeSlug.ts` runs on BOTH sides, and each side
+   * is load-bearing for a different input shape. Every fixture here was
+   * NFC-precomposed at first, which covered one direction and left the other
+   * unmeasured — remove the SQL-side strip and all twelve stayed green:
+   *
+   *  - **JavaScript emits the mark.** `İzmir` (U+0130): Postgres `lower()` under
+   *    `en_US.utf8` gives a plain `i`, JavaScript's Unicode-strict `toLowerCase`
+   *    gives `i` + U+0307. Without the TypeScript-side strip the two disagree.
+   *  - **The STORED NAME already carries it.** `MALAGA_NFD` below is `Ma` +
+   *    U+0301 + `laga`, the decomposed form a geocoder or a portal can hand us.
+   *    Postgres' precomposed `translate` table does not know a lone U+0301, so
+   *    without the SQL-side strip it falls through to `[^a-z0-9]+ → -` and the
+   *    column holds `ma-laga` while TypeScript says `malaga`.
+   *
+   * The decomposed and precomposed spellings are seeded TOGETHER and must
+   * produce the SAME slug — which is also why they can coexist under
+   * `cities_region_name_key`: they are different byte strings.
+   *
+   * `SLUG_EXPANSIONS` gets one fixture per entry for the same reason. An
+   * expansion is one-to-many and `translate` cannot express that; given a
+   * shorter `to` string it DELETES the character instead, so `Straße` would
+   * silently become `strae`. Three of the five entries had no fixture, making
+   * that regression invisible for them.
    */
   it('produces the same slug for names that exercise every branch of it', async () => {
     const spain = await seedCountry('t-ctry-es', 'ES', 'Spain');
     const region = await seedRegion('t-rg-any', spain, 'Anywhere');
+    /**
+     * `Málaga` in NFD, written with an explicit escape rather than as a literal
+     * accented character. A decomposed literal is indistinguishable from a
+     * precomposed one on screen, so an editor or a formatter normalising the
+     * file would silently turn this fixture back into the precomposed case the
+     * list already has — leaving the SQL-side strip unmeasured again, which is
+     * exactly the hole this fixture exists to close.
+     */
+    const MALAGA_NFD = 'Ma\u0301laga';
     const names = [
       'Barcelona',
       'Málaga',
+      MALAGA_NFD,
       'São Paulo',
       "L'Hospitalet de Llobregat",
       'Straße',
@@ -504,8 +624,22 @@ describe('the slug rule agrees in TypeScript and in Postgres', () => {
       'Kraków',
       'İzmir',
       '  Palma de Mallorca  ',
+      // One per `SLUG_EXPANSIONS` entry: ß (above), æ, œ, þ, ĳ.
       'Æbeltoft',
+      'Œuvres',
+      'Þingvellir',
+      'ĲsselmeerStad',
     ];
+    // FIXTURE SHAPE, asserted before the thing it enables. A fixture that is not
+    // the shape a check needs passes for an unrelated reason, and the check then
+    // reports on nothing — so this pins that the decomposed name really carries a
+    // combining mark and the precomposed one really does not.
+    expect([...MALAGA_NFD].length).toBe(7);
+    expect(MALAGA_NFD).toContain('́');
+    expect([...'Málaga'].length).toBe(6);
+    expect(MALAGA_NFD).not.toBe('Málaga');
+    expect(MALAGA_NFD.normalize('NFC')).toBe('Málaga');
+
     await Promise.all(
       names.map((name, index) =>
         seedCity({ id: `t-city-slug-${index}`, countryId: spain, regionId: region, name }),
@@ -520,5 +654,24 @@ describe('the slug rule agrees in TypeScript and in Postgres', () => {
       .filter((row) => row.slug !== slugifyPlaceName(row.name))
       .map((row) => `${row.name}: postgres=${row.slug} typescript=${slugifyPlaceName(row.name)}`);
     expect(disagreements).toEqual([]);
+
+    // Postgres must not have normalised the stored name on the way in — if it
+    // had, the decomposed fixture would be the precomposed one again and the
+    // SQL-side strip would go back to being unmeasured.
+    const stored = rows.map((row) => row.name);
+    expect(stored).toContain(MALAGA_NFD);
+    // Both spellings are stored, and they must slug to the SAME string; that
+    // equality is the whole point of stripping the mark on both sides.
+    const slugOf = new Map(rows.map((row) => [row.name, row.slug]));
+    expect(slugOf.get(MALAGA_NFD)).toBe('malaga');
+    expect(slugOf.get('Málaga')).toBe('malaga');
+    // The expansions are one-to-many, which `translate` cannot express — it
+    // would DELETE the character instead. Pinned per entry, so a regression is
+    // visible for all five rather than only for `ß`.
+    expect(slugOf.get('Straße')).toBe('strasse');
+    expect(slugOf.get('Æbeltoft')).toBe('aebeltoft');
+    expect(slugOf.get('Œuvres')).toBe('oeuvres');
+    expect(slugOf.get('Þingvellir')).toBe('thingvellir');
+    expect(slugOf.get('ĲsselmeerStad')).toBe('ijsselmeerstad');
   });
 });

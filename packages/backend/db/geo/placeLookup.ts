@@ -55,7 +55,7 @@
  * smaller costume.
  */
 
-import { and, asc, desc, eq, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
 import type { CityPlaceCandidate } from '@homiio/shared-types';
 
 import { getDb } from '../postgres';
@@ -192,62 +192,109 @@ function distanceToBias(bias: NonNullable<PlaceLookupInput['near']>): SQL {
   end`;
 }
 
-/** Resolve a country id, an ISO-2 code or a country NAME to a country id. */
-async function resolveCountry(input: PlaceLookupInput): Promise<string | null | undefined> {
+/**
+ * What a discriminator resolved to.
+ *
+ *  - `undefined` — the caller did not supply this discriminator. No filter.
+ *  - `null`      — supplied, and it names nothing. The whole lookup is
+ *                  `not_found`; answering anyway would ignore a constraint the
+ *                  caller stated.
+ *  - `string[]`  — one or MORE matching ids, and the plural is the point.
+ */
+type DiscriminatorIds = readonly string[] | null | undefined;
+
+/**
+ * Resolve a country id, an ISO-2 code or a country NAME to EVERY matching id.
+ *
+ * ## Why this returns a set and not a row
+ *
+ * It used to end in `.orderBy(asc(id)).limit(1)`, which is the homonym bug moved
+ * one level up — into the discriminator instead of the answer, where it is
+ * WORSE. A discriminator that picks arbitrarily does not produce a visibly odd
+ * candidate list; it produces a confident `resolved` for a city in the wrong
+ * country, or a `not_found` that a user reads as "there is no such city" rather
+ * than "I could not tell which one you meant". A lookup whose whole subject is
+ * refusing to choose among equally valid matches cannot choose here.
+ *
+ * Returning the SET pushes the ambiguity into the city query, where the existing
+ * four-outcome contract already handles it: matching cities across all matching
+ * countries become candidates, each carrying its own `admin` hierarchy, so a
+ * human can tell them apart. No fifth outcome and no new error shape.
+ *
+ * ## Code beats name, and that is a rule rather than a pick
+ *
+ * When the token matches a country CODE, only code matches are used. A code is
+ * an identifier and a name is a label, so this discriminates on the KIND of
+ * match — which is the same principle as `matchedOn` in the city query, and is
+ * not the same thing as choosing between two matches of equal kind.
+ *
+ * The result is not capped. It is bounded by how many countries share one name
+ * case-insensitively, which is a property of reference data rather than of user
+ * input; a cap would introduce a silent truncation where there is nothing to
+ * truncate.
+ */
+async function resolveCountryIds(input: PlaceLookupInput): Promise<DiscriminatorIds> {
   const byId = trimmed(input.countryId);
   if (byId) {
+    // A PRIMARY KEY equality. At most one row can match, so `.limit(1)` here
+    // caps nothing that could have been ambiguous.
     const rows = await getDb().select({ id: countries.id }).from(countries).where(eq(countries.id, byId)).limit(1);
-    return rows[0]?.id ?? null;
+    return rows[0] ? [rows[0].id] : null;
   }
   const code = trimmed(input.countryCode);
   if (code) {
+    // `countries_code_key` is UNIQUE. Same reasoning as the primary key above.
     const rows = await getDb()
       .select({ id: countries.id })
       .from(countries)
       .where(eq(countries.code, code.toUpperCase()))
       .limit(1);
-    return rows[0]?.id ?? null;
+    return rows[0] ? [rows[0].id] : null;
   }
   const named = trimmed(input.country);
-  if (named) {
-    const rows = await getDb()
-      .select({ id: countries.id })
-      .from(countries)
-      .where(or(eq(countries.code, named.toUpperCase()), sql`lower(${countries.name}) = lower(${named})`))
-      // `countries_code_key` makes the code side unique, so this can only be
-      // several rows when two countries share a NAME case-insensitively. `id`
-      // last for the same reason it is last everywhere else in this file.
-      .orderBy(desc(sql`(${countries.code} = ${named.toUpperCase()})`), asc(countries.id))
-      .limit(1);
-    return rows[0]?.id ?? null;
-  }
-  return undefined;
+  if (!named) return undefined;
+
+  const rows = await getDb()
+    .select({ id: countries.id, isCode: sql<boolean>`(${countries.code} = ${named.toUpperCase()})` })
+    .from(countries)
+    .where(or(eq(countries.code, named.toUpperCase()), sql`lower(${countries.name}) = lower(${named})`))
+    .orderBy(asc(countries.id));
+  if (rows.length === 0) return null;
+  const byCode = rows.filter((row) => row.isCode);
+  return (byCode.length > 0 ? byCode : rows).map((row) => row.id);
 }
 
-/** Resolve a region id or a region NAME (scoped to the country) to a region id. */
-async function resolveRegion(
+/**
+ * Resolve a region id or a region NAME to EVERY matching id, scoped to the
+ * resolved countries when the caller named one.
+ *
+ * Same reasoning as {@link resolveCountryIds}, and this is where it bites in
+ * practice: region names collide across countries BY DESIGN — `db/schema/geo.ts`
+ * scopes `regions_country_name_key` to the country precisely because "Valencia"
+ * is a province in Spain and a state in Venezuela. An unscoped `?state=Valencia`
+ * therefore matches two real regions, and the previous `.limit(1)` answered as
+ * though it matched one.
+ */
+async function resolveRegionIds(
   input: PlaceLookupInput,
-  countryId: string | null | undefined,
-): Promise<string | null | undefined> {
+  countryIds: DiscriminatorIds,
+): Promise<DiscriminatorIds> {
   const byId = trimmed(input.regionId);
   if (byId) {
+    // Primary key again: one row at most.
     const rows = await getDb().select({ id: regions.id }).from(regions).where(eq(regions.id, byId)).limit(1);
-    return rows[0]?.id ?? null;
+    return rows[0] ? [rows[0].id] : null;
   }
   const named = trimmed(input.region);
   if (!named) return undefined;
-  const scoped = countryId ? and(sql`lower(${regions.name}) = lower(${named})`, eq(regions.countryId, countryId)) : sql`lower(${regions.name}) = lower(${named})`;
+
+  const nameMatches = sql`lower(${regions.name}) = lower(${named})`;
   const rows = await getDb()
     .select({ id: regions.id })
     .from(regions)
-    .where(scoped)
-    // Region names collide across countries by design ("Valencia" is a province
-    // in Spain and a state in Venezuela), so an unscoped name can match several.
-    // `id` makes the pick stable rather than plan-dependent; the caller who
-    // cares supplies a country, which turns this into a single row.
-    .orderBy(asc(regions.id))
-    .limit(1);
-  return rows[0]?.id ?? null;
+    .where(countryIds ? and(nameMatches, inArray(regions.countryId, [...countryIds])) : nameMatches)
+    .orderBy(asc(regions.id));
+  return rows.length > 0 ? rows.map((row) => row.id) : null;
 }
 
 /**
@@ -264,10 +311,14 @@ export async function lookupCityPlaces(input: PlaceLookupInput): Promise<PlaceLo
   // A named country or region that resolves to nothing is a HARD no. It is not
   // "ignore the constraint and answer anyway", which is how a lookup for
   // "Barcelona in Atlantis" would otherwise return Spain.
-  const countryId = await resolveCountry(input);
-  if (countryId === null) return { status: 'not_found' };
-  const regionId = await resolveRegion(input, countryId);
-  if (regionId === null) return { status: 'not_found' };
+  //
+  // One that resolves to SEVERAL is not a failure and not a pick: the ids all
+  // become the filter, and whatever cities they contain become candidates the
+  // caller chooses between. See `resolveCountryIds`.
+  const countryIds = await resolveCountryIds(input);
+  if (countryIds === null) return { status: 'not_found' };
+  const regionIds = await resolveRegionIds(input, countryIds);
+  if (regionIds === null) return { status: 'not_found' };
 
   const slug = slugifyPlaceName(token);
   const prefixes = slug.length > 0 ? slugPrefixes(slug) : [];
@@ -280,8 +331,11 @@ export async function lookupCityPlaces(input: PlaceLookupInput): Promise<PlaceLo
   ];
 
   const filters: SQL[] = [eq(cities.isActive, true), or(...matchers) as SQL];
-  if (countryId) filters.push(eq(cities.countryId, countryId));
-  if (regionId) filters.push(eq(cities.regionId, regionId));
+  // `inArray` rather than a hand-built `= any(…)`: an array interpolated into a
+  // raw `sql` template renders as a ROW CONSTRUCTOR, which Postgres rejects at
+  // RUNTIME and `tsc` cannot see (`~/Oxy/AGENTS.md` §"Drizzle `sql` templates").
+  if (countryIds) filters.push(inArray(cities.countryId, [...countryIds]));
+  if (regionIds) filters.push(inArray(cities.regionId, [...regionIds]));
   if (input.bounds) filters.push(withinBounds(input.bounds));
 
   const isIdMatch = sql<boolean>`(${cities.id} = ${token})`;
@@ -337,9 +391,19 @@ export async function lookupCityPlaces(input: PlaceLookupInput): Promise<PlaceLo
     .innerJoin(regions, eq(cities.regionId, regions.id))
     .where(and(...filters))
     .orderBy(...ordering)
-    // `limit` is applied AFTER the ordering above and only ever with it. There
-    // is no `.limit(1)` in this file: a lookup that can be ambiguous has to see
-    // the second row to know that it is.
+    // `limit` is applied AFTER the ordering above and only ever with it, and it
+    // is never 1: a lookup that can be ambiguous has to see the second row to
+    // know that it is.
+    //
+    // The precise claim, because the imprecise one was wrong and sat here
+    // reassuringly for a while: the only `.limit(1)` calls in this file are on a
+    // PRIMARY KEY or on the UNIQUE `countries_code_key`, where at most one row
+    // can match and the cap therefore truncates nothing. No predicate that could
+    // match several rows is capped at one anywhere here — that was the whole bug
+    // (#295), and it was reintroduced once in the DISCRIMINATOR resolvers, where
+    // it is harder to see because the wrong answer still looks like a confident
+    // `resolved`. The behavioural pin is the two-same-named-regions case in
+    // `__tests__/integration/cityPlaceLookup.test.ts`, not this comment.
     .limit(limit);
 
   const candidates: CityPlaceCandidate[] = rows.map((row) => {

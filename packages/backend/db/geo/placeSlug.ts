@@ -16,9 +16,12 @@
  * DERIVED from the tables below rather than written out twice — {@link
  * placeSlugSql} builds its SQL text from the same arrays {@link slugifyPlaceName}
  * iterates — so a change to the rule cannot land in one form and not the other.
- * `__tests__/integration/placeSlug.test.ts` still asserts the two agree against a
- * real server, because "derived from the same data" is an argument and the test
- * is the measurement.
+ * The two are still asserted to agree against a real server, because "derived
+ * from the same data" is an argument and the test is the measurement: see the
+ * `the slug rule agrees in TypeScript and in Postgres` block in
+ * `__tests__/integration/cityPlaceLookup.test.ts`. It reads the `GENERATED`
+ * column back off the database rather than recomputing it, so it also catches a
+ * migration that was never regenerated after this file changed.
  *
  * ## Why not `unaccent()`
  *
