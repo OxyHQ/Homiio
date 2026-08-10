@@ -311,9 +311,17 @@ the reasoning is worth keeping rather than the old sentence:
 - The interlock a GitHub deploy actually needs is a workflow-level `concurrency`
   group with `cancel-in-progress: false`, and `deploy-aws.yml` has carried one
   (`deploy-homiio-backend`) throughout. It is a CALLED workflow, so it runs
-  inside `ci.yml`'s run, whose group also does not cancel on `refs/heads/main` —
-  two merges to main queue rather than overlap. Both halves are pinned by
-  `__tests__/unit/deployRolloutConcurrency.test.ts`.
+  inside `ci.yml`'s run, whose group also does not cancel on `refs/heads/main`.
+  Both halves are pinned by `__tests__/unit/deployRolloutConcurrency.test.ts`.
+- **Be precise about what that group guarantees**, because the natural reading is
+  wrong: `cancel-in-progress: false` protects a run that has STARTED, and does
+  not queue the rest. A run still PENDING in the group is evicted by the next
+  push — measured 2026-08-10, runs `31376441022` and `31376457516` were both
+  cancelled with ZERO jobs each while `31376855242` proceeded. For the migrator
+  that is sufficient and not accidental: a run that never started never ran
+  `migrate.js`. What it costs is that an intermediate commit's deploy can be
+  dropped, so its migrations wait for the next one — which applies everything
+  pending.
 - What that leaves open is a `workflow_dispatch` of `deploy-aws.yml` landing
   while a push-triggered deploy is mid-flight: different runs, and the old
   parenthetical about "two concurrency groups that cannot see each other" is

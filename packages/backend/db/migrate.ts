@@ -52,18 +52,33 @@
  * lock here: `deploy-aws.yml` carries `concurrency: deploy-homiio-backend` with
  * `cancel-in-progress: false`, and because it is a CALLED workflow the run it
  * lives in is `ci.yml`'s, whose group does not cancel on `refs/heads/main`
- * either. Two merges to main therefore queue rather than overlap. Both halves
- * are pinned by `__tests__/unit/deployRolloutConcurrency.test.ts`, which fails
- * the build if either moves.
+ * either. Both halves are pinned by
+ * `__tests__/unit/deployRolloutConcurrency.test.ts`, which fails the build if
+ * either moves.
  *
- * What that does NOT cover is a `workflow_dispatch` of `deploy-aws.yml` landing
- * while a push-triggered deploy is mid-flight, since the two are different runs.
- * The cost if it happens is bounded and worth stating rather than implying: the
- * loser exits non-zero on an already-applied statement and its deploy goes red,
- * while the ledger stays correct — this is a property of drizzle's replay rule,
- * not a Homiio measurement. A red deploy, not a damaged database. A
- * session-scoped advisory lock taken on a connection held for this process's
- * lifetime is the mechanism that would close it; see `db/MIGRATION-CONTRACT.md`.
+ * STATE WHAT THAT GROUP ACTUALLY GUARANTEES, because the obvious reading is
+ * wrong and this is the load-bearing sentence. `cancel-in-progress: false` does
+ * NOT make merges to main queue up and run one after another. It governs the
+ * IN-PROGRESS run only: a run still PENDING in the group is EVICTED by the next
+ * push. Measured 2026-08-10 — runs `31376441022` and `31376457516` were both
+ * cancelled while `31376855242` proceeded, and the two cancelled ones report
+ * ZERO jobs, so neither ever started one.
+ *
+ * That is exactly the guarantee a migrator needs, and no more: a run that never
+ * started never ran `migrate.js`, so two migrators cannot overlap through this
+ * path. What it does not give is that every commit deploys — an evicted run's
+ * commit is simply skipped, and its migrations wait for the next deploy, which
+ * applies everything pending.
+ *
+ * What is NOT covered at all is a `workflow_dispatch` of `deploy-aws.yml`
+ * landing while a push-triggered deploy is mid-flight, since the two are
+ * different runs. The cost if it happens is bounded and worth stating rather
+ * than implying: the loser exits non-zero on an already-applied statement and
+ * its deploy goes red, while the ledger stays correct — this is a property of
+ * drizzle's replay rule, not a Homiio measurement. A red deploy, not a damaged
+ * database. A session-scoped advisory lock taken on a connection held for this
+ * process's lifetime is the mechanism that would close it; see
+ * `db/MIGRATION-CONTRACT.md`.
  *
  * ## Why not `drizzle-kit migrate`
  *
