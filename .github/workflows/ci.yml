@@ -169,6 +169,12 @@ jobs:
       # glob that stops matching all produce an empty green run, and that reads as
       # coverage forever because nothing contradicts it.
       #
+      # RAISED FROM 1450 TO 1520 by the privacy-safe observability work (#350),
+      # which added 73 tests across three backend files: the redaction and
+      # event-schema suite, the ingest suite, and the location/housing-identity
+      # divergence invariants. Measured 1680 -> 1753. Same convention as every
+      # step below — keep roughly the headroom the previous figure carried.
+      #
       # RAISED FROM 1415 TO 1450 by the ViewingRequest stragglers (the
       # retention sweep and the owner analytics). Before that it went
       # 1380 -> 1415 for the reservations port — the last tenancy
@@ -196,7 +202,7 @@ jobs:
         if: always()
         run: >-
           bun .github/scripts/assert-test-floor.mjs
-          "$RUNNER_TEMP/backend-tests.json" packages/backend 1450
+          "$RUNNER_TEMP/backend-tests.json" packages/backend 1520
 
   frontend:
     runs-on: ubuntu-24.04
@@ -217,11 +223,15 @@ jobs:
           bun run --cwd packages/frontend test --
           --json --outputFile="$RUNNER_TEMP/frontend-tests.json"
 
+      # RAISED FROM 38 TO 43 by #350's cross-package observability contract
+      # test, which is what proves the shared redaction layer resolves and
+      # behaves from THIS workspace rather than only from the backend's.
+      # Measured 40 -> 45.
       - name: Assert the suite actually ran
         if: always()
         run: >-
           bun .github/scripts/assert-test-floor.mjs
-          "$RUNNER_TEMP/frontend-tests.json" packages/frontend 38
+          "$RUNNER_TEMP/frontend-tests.json" packages/frontend 43
 
   # Deliberately no job for shared-types or listing-providers. shared-types' `test`
   # script is `echo "No tests specified" && exit 0` — there is no suite. And

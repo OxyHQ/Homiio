@@ -64,3 +64,8 @@ export * from './utils/propertyTitle';
 
 // Ethical rental pricing calculator (shared frontend + backend)
 export * from './ethicalPricing';
+
+// Privacy-safe product observability: versioned event schema, central
+// redaction, bucketing, query identity and the location/identity divergence
+// invariants. Shared so the redaction rules have exactly one implementation.
+export * from './observability';
