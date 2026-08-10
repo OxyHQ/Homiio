@@ -13,15 +13,29 @@ export {
   useSearchProperties,
 } from './usePropertyQueries';
 
+export { homeFeedQueryKeys, useUserCoordinates, type UserCoordinates } from './useHomeFeed';
+
+// Where the app is looking, and what Home shows there (#353).
 export {
-  HOME_FEED_LIMIT,
-  buildHomeFeedFilters,
-  homeFeedQueryKeys,
-  isNearYouBlocked,
-  useHomeFeedProperties,
-  useUserCoordinates,
-  type UserCoordinates,
-} from './useHomeFeed';
+  DEVICE_SCOPE_RADIUS_METERS,
+  deviceAreaKey,
+  useLocationScope,
+  type LocationScope,
+} from './useLocationScope';
+export {
+  resolveLocationScope,
+  type DevicePositionState,
+  type LocationScopeInputs,
+  type LocationScopeSource,
+  type LocationScopeState,
+} from './locationScopeLadder';
+export {
+  homeSectionsQueryKey,
+  resolveFreshness,
+  useHomeSections,
+  type HomeDataFreshness,
+  type HomeSectionsResult,
+} from './useHomeSections';
 
 // Exchange hooks (home swap / free hosting)
 export {

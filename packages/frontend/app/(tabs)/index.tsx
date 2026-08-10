@@ -1,221 +1,89 @@
 /**
- * Homiio home — Airbnb-2026 brand surface. Treats the page as a stack of
- * strongly-spaced, image-heavy merchandising beats:
+ * Homiio home — an explicitly LOCAL, finite, explainable surface (#353).
  *
- *   1. Hero canvas (Barcelona-flavored full-bleed photo, gradient
- *      overlay, collapsed SearchSummaryBar pill floats centered ON the
- *      image at every width and opens the expanding SearchPanel).
- *   2. Sticky category strip (web only) with primary-colored active
- *      state.
- *   3. Property carousel — recommended for you.
- *   4. City showcase — large image cards of Spanish cities.
- *   5. Featured grid — mode-aware, location-scoped titles in a 4-column
- *      web / 1-column mobile grid.
- *   6. Continue browsing (recently viewed) — only if items exist.
- *   7. Saved properties carousel — only if items exist.
- *   8. Nearby cities carousels — only if user shares location and
- *      properties exist.
- *   9. Host CTA banner.
+ * ## What it was, and why none of that survived
  *
- * Rhythm is 32px on web / 24px on mobile between post-hero sections
- * (NativeWind `gap-6 md:gap-8`). The hero sits outside that gap container
- * so it does not participate. Long-form marketing copy (FAQ, stats, trust
- * grids) does NOT live on the home page — it belongs on /about.
+ * A merchandising stack: hero, category strip, recommended carousel, city
+ * showcase, featured grid, nearby-city carousels, and an endless feed that never
+ * ended. Its geographic lens was one chip out of eighteen — `near_you` — and the
+ * default category was `null`, whose filter set is literally `{}`. So opening
+ * Homiio ran a WORLDWIDE search under a heading naming a region derived from the
+ * nearest city, and nothing in the UI said so. That is ADR 0002's principle 2
+ * ("location is never implicit") violated by construction, not by a bug.
+ *
+ * ## The shape now
+ *
+ *  1. **The scope bar, ABOVE the hero.** Position is the requirement: "el hero no
+ *     debe ocultar la ubicación o consumir la mayor parte de una pantalla
+ *     pequeña". Putting the bar first means the area is on screen at first paint
+ *     on the narrowest device, before any image has decoded.
+ *  2. **A shorter hero.** It is a brand moment and a search entry point, not the
+ *     page.
+ *  3. **Finite sections**, each stating its rule and its data source, all
+ *     computed under ONE scope by one request.
+ *  4. **Your own things** — continue browsing, saved — which are yours wherever
+ *     you are and are therefore not scoped.
+ *  5. **"Explore more" as a CTA to `/explore`**, which is where an unbounded list
+ *     belongs. Home no longer paginates.
+ *
+ * ## Nothing renders until the scope resolves
+ *
+ * `scope.canQuery` gates the sections query. There is no arm of this component
+ * that fetches listings without a scope — the global feed is reachable only
+ * through `exploreGlobal`, which is a button somebody has to press.
  */
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, RefreshControl, Pressable } from 'react-native';
 import { Image } from 'expo-image';
-import { useQueryClient } from '@tanstack/react-query';
 import { Menu } from 'lucide-react-native';
-import Animated, {
-  FadeInDown,
-  interpolate,
-  useAnimatedStyle,
-  useSharedValue,
-} from 'react-native-reanimated';
+import Animated, { FadeInDown, interpolate, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 
+import { Button } from '@oxyhq/bloom/button';
 import { H1, P } from '@oxyhq/bloom/typography';
 
-import {
-  OfferingType,
-  PropertyType,
-  type City,
-  type LocationSelection,
-  type Property,
-} from '@homiio/shared-types';
+import { serializeLocationToken, type LocationSelection, type Property } from '@homiio/shared-types';
 
-import {
-  HOME_FEED_LIMIT,
-  isNearYouBlocked,
-  useHomeFeedProperties,
-  useUserCoordinates,
-  type UserCoordinates,
-} from '@/hooks/useHomeFeed';
-import { usePropertySearch } from '@/hooks/usePropertySearch';
-import { getCategoryFilters } from '@/store/getCategoryFilters';
-import { locationDisplayLabel } from '@/components/search/types';
-import { exploreHref } from '@/utils/searchUrl';
-import type { HomeCategory } from '@/store/homeCategoryStore';
-import { DEFAULT_SEARCH_QUERY, useSearchQueryStore } from '@/store/searchQueryStore';
-import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
+import { useLocationScope } from '@/hooks/useLocationScope';
+import { useHomeSections } from '@/hooks/useHomeSections';
+import { LocationScopeBar } from '@/components/location/LocationScopeBar';
+import { HomeSectionBand } from '@/components/home/HomeSectionBand';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
-import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
-import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
-import { cityQueryKeys, usePopularCities } from '@/hooks/useCityQueries';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { useRentalMode } from '@/context/RentalModeContext';
-import { useHomeCategoryStore } from '@/store/homeCategoryStore';
-import { resolveHomeCategory } from '@/store/homeCategories';
+import { useSearchQueryStore } from '@/store/searchQueryStore';
 
 import { PropertyCard } from '@/components/PropertyCard';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
-import { HomeCategoryStrip } from '@/components/HomeCategoryStrip';
-import { NearbyCityCarousel } from '@/components/NearbyCityCarousel';
 import { SearchSummaryBar } from '@/components/search/SearchSummaryBar';
 import { SearchPanel } from '@/components/search/SearchPanel';
 import type { SearchQuery, SearchStep } from '@/components/search/types';
-import { CityShowcaseSection } from '@/components/CityShowcaseSection';
-import { FeaturedGridSection } from '@/components/FeaturedGridSection';
 import { HostCtaBanner } from '@/components/HostCtaBanner';
 import { AgentCtaBanner } from '@/components/agent/AgentCtaBanner';
 import { PageScrollView } from '@/components/PageScrollView';
+import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
+import { exploreHref } from '@/utils/searchUrl';
 import { useMediaQuery } from 'react-responsive';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { useUIStore } from '@/store/uiStore';
 import { colors } from '@/styles/colors';
 import { spacing, tracker, PAGE_GUTTER_CLASS } from '@/constants/styles';
 
-/**
- * Hero photo used at the bottom of the home page Host CTA. Reuses a
- * tasteful Unsplash apartment interior so the banner reads as
- * aspirational without being stocky.
- */
+/** Hero photo for the Host CTA at the foot of the page. */
 const HOST_CTA_IMAGE =
   'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=1600&q=80';
 
-/** How many DB cities to surface in the home Explore showcase. */
-const EXPLORE_CITY_LIMIT = 8;
-
-/**
- * Distance (km) within which the user is treated as "clearly inside" the nearest
- * city's region, so the Explore title scopes to the REGION/province (e.g.
- * "Explore Catalonia"). Beyond it, the title falls back to the COUNTRY.
- */
-const WITHIN_REGION_KM = 120;
-
-/**
- * Radius for a `near_you` lens when `getCategoryFilters` supplies none.
- *
- * Matches the search endpoint's own default (`DEFAULT_RADIUS_METERS`), so the
- * seeded selection asks for exactly what the server would have applied anyway
- * rather than quietly narrowing or widening it. METRES — see
- * `PropertyFilters.radius`, where the unit is now part of the type because a
- * 1000x error in it returns a plausible page instead of failing.
- */
-const NEAR_YOU_FALLBACK_RADIUS_METERS = 25_000;
-
-/** Haversine distance (km) between two lat/lng points; used for nearest-city. */
-function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const toRad = (v: number) => (v * Math.PI) / 180;
-  const R = 6371;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-/**
- * The place the FEATURED GRID's heading may name.
- *
- * It may name the place the query actually used, and nothing else. This used to
- * derive a display place from the nearest city's region, else its country, else
- * the active query's label, else the first popular city's country — while the
- * feed behind that heading was `getCategoryFilters(null)`, an empty filter set
- * with no geographic constraint at all. So "Studios in Catalonia" sat above a
- * global list, and nothing in the UI said otherwise.
- *
- * `null` means "everywhere", and the caller renders a heading that says so
- * rather than borrowing a nearby place name. A heading is a claim about the
- * query; it is not decoration.
- */
-function resolveExplorePlace(
-  selection: LocationSelection | null,
-  t: (key: string) => string,
-): string | null {
-  return selection ? locationDisplayLabel(selection, t) : null;
-}
-
-/**
- * Seed the endless "Explore more homes" feed from the live home state (browse
- * offering + selected category + device location). Reuses `getCategoryFilters` —
- * the single source of truth for what each home category means — and translates
- * its `PropertyFilters` output into the `SearchQuery` shape `usePropertySearch`
- * consumes. Because every dimension folds into `searchQueryKey`, tapping a
- * category chip re-keys the feed and refilters it in place.
- */
-function buildExploreFeedQuery(
-  offering: OfferingType,
-  category: HomeCategory | null,
-  userLocation: UserCoordinates | null | undefined,
-): SearchQuery {
-  const filters = getCategoryFilters(category, {
-    userLocation: userLocation ?? null,
-    offering,
-  });
-
-  // A `near_you` lens IS a `current_location` selection, and saying so is what
-  // removes the workaround this replaces: the feed used to fabricate a location
-  // with an EMPTY label, purely so that `buildSearchParams` would not copy the
-  // label into `q` and text-match it. A field whose own semantics have to be
-  // defeated by a blank value is the field being wrong — `q` now carries free
-  // text only, so nothing has to be blanked to keep a geo lens pure.
-  const location: LocationSelection | null =
-    typeof filters.lat === 'number' && typeof filters.lng === 'number'
-      ? {
-          kind: 'current_location',
-          center: { longitude: filters.lng, latitude: filters.lat },
-          radiusMeters: typeof filters.radius === 'number' ? filters.radius : NEAR_YOU_FALLBACK_RADIUS_METERS,
-          precision: 'exact',
-        }
-      : null;
-
-  return {
-    ...DEFAULT_SEARCH_QUERY,
-    offering,
-    // Newest-first (the backend already ranks image-bearing listings first) so
-    // freshly added homes surface on top each visit (freshness, Part 4).
-    sortBy: 'createdAt',
-    sortOrder: 'desc',
-    propertyTypes: filters.type ? [filters.type as PropertyType] : [],
-    amenities: filters.amenities ?? [],
-    // "Luxury" maps to a monthly-rent floor (or a sale-price floor when buying).
-    // `buildSearchParams` routes `priceMin` to the sale-price param for a SALE
-    // offering, so one `priceMin` seed covers both the rent and sale buckets.
-    priceMin: filters.minRent ?? filters.minSalePrice,
-    instantBook: filters.instantBook,
-    petFriendly: filters.petFriendly,
-    exchangeMode: filters.exchangeMode,
-    location,
-  };
-}
+/** How many skeleton cards stand in for a section while the surface loads. */
+const SKELETON_CARDS = 4;
 
 export default function HomePage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { offering: browseOffering, browseMode, mode } = useRentalMode();
-  const selectedCategory = useHomeCategoryStore((s) => s.category);
-  const queryClient = useQueryClient();
+  const { offering: browseOffering } = useRentalMode();
   const [refreshing, setRefreshing] = useState(false);
-  const { data: cities = [], refetch: refetchCities } = usePopularCities(EXPLORE_CITY_LIMIT);
-  const { data: userLocation, isLoading: coordsLoading, refetch: refetchCoords } =
-    useUserCoordinates();
   const isWide = useMediaQuery({ minWidth: 768 });
   const isXL = useMediaQuery({ minWidth: 1024 });
   const isScreenNotMobile = useIsScreenNotMobile();
@@ -225,133 +93,61 @@ export default function HomePage() {
   const [searchPanelOpen, setSearchPanelOpen] = useState(false);
   const [searchPanelStep, setSearchPanelStep] = useState<SearchStep>('where');
 
-  const heroSearchSeed: SearchQuery = {
-    ...activeQuery,
-    offering: browseOffering,
-  };
+  const scope = useLocationScope();
+  const home = useHomeSections(scope.selection, browseOffering, { enabled: scope.canQuery });
 
-  const activeCategory = resolveHomeCategory(selectedCategory, browseMode, mode);
-  const nearYouBlocked = isNearYouBlocked(activeCategory, userLocation, coordsLoading);
+  const { properties: recentlyViewedProperties, refetch: refetchRecentlyViewed } = useRecentlyViewed();
+  const { savedProperties, isLoading: savedLoading, loadSavedProperties } = useSavedPropertiesContext();
 
-  const {
-    data: feedData,
-    isLoading: feedLoading,
-    refetch: refetchFeed,
-  } = useHomeFeedProperties(browseOffering, activeCategory, userLocation, coordsLoading);
-
-  const { properties: recentlyViewedProperties, refetch: refetchRecentlyViewed } =
-    useRecentlyViewed();
-  const { savedProperties, isLoading: savedLoading, loadSavedProperties } =
-    useSavedPropertiesContext();
-
-  // Endless "Explore more homes" feed — the terminal, never-ending band below the
-  // curated sections. Seeded live from the browse offering + active category +
-  // location so a category chip tap re-keys it (React Query refetches page 1) and
-  // it refilters instantly. Same `usePropertySearch` engine + image-first,
-  // newest-first order as the search/browse screens.
-  const exploreQuery = useMemo(
-    () => buildExploreFeedQuery(browseOffering, activeCategory, userLocation),
-    [browseOffering, activeCategory, userLocation],
-  );
-  const exploreFeed = usePropertySearch(exploreQuery, { enabled: !nearYouBlocked });
-  const exploreProperties = exploreFeed.properties;
-  const exploreInitialLoading = exploreFeed.isLoading && exploreProperties.length === 0;
-  // Guarded loader (matches Mention's `handleLoadMore`): native fires it via
-  // `PageScrollView onEndReached`, web via the `LoadMoreSentinel` at the feed end.
-  const loadMoreExplore = useCallback(() => {
-    if (exploreFeed.hasNextPage && !exploreFeed.isFetchingNextPage) {
-      void exploreFeed.fetchNextPage();
-    }
-  }, [exploreFeed.hasNextPage, exploreFeed.isFetchingNextPage, exploreFeed.fetchNextPage]);
-
-  const properties = feedData?.properties;
-  const propertiesLoading = feedLoading;
-  const featuredProperties = properties ? (properties.slice(0, 8) as Property[]) : [];
-  const gridProperties = properties ? (properties.slice(8, HOME_FEED_LIMIT) as Property[]) : [];
-
-  const locatedCities = cities.filter(
-    (city): city is City & { coordinates: { lat: number; lng: number } } =>
-      typeof city.coordinates?.lat === 'number' && typeof city.coordinates?.lng === 'number',
-  );
-
-  const citiesByDistance = userLocation
-    ? locatedCities
-        .map((city) => ({
-          city,
-          distance: getDistance(
-            userLocation.latitude,
-            userLocation.longitude,
-            city.coordinates.lat,
-            city.coordinates.lng,
-          ),
-        }))
-        .sort((a, b) => a.distance - b.distance)
-    : locatedCities.map((city) => ({ city, distance: Number.POSITIVE_INFINITY }));
-
-  const nearbyCities = userLocation ? citiesByDistance.slice(0, 2).map((entry) => entry.city) : [];
-
-  // The heading names the place the FEED used, or says "everywhere". The
-  // home feed's own geographic lens is `activeQuery.location`, so these are
-  // the same thing by construction rather than by coincidence.
-  const explorePlace = resolveExplorePlace(activeQuery.location, t);
+  const heroSearchSeed: SearchQuery = { ...activeQuery, offering: browseOffering };
 
   /**
-   * A heading for the featured grid.
+   * "See all" for a section, and for the page's closing CTA.
    *
-   * When no place was queried it uses the `*Everywhere` variant rather than
-   * interpolating a borrowed name into a "{{place}}" slot — the whole point of
-   * dropping `resolveExplorePlace`'s fallback chain.
+   * The scope travels as its `loc` token, so the search opens on the SAME area
+   * the section was computed for. A selection the grammar cannot express yields
+   * no link rather than one that silently drops the scope — the same rule
+   * `exploreHref` applies, for the same reason.
    */
-  const headingFor = (key: string): string =>
-    explorePlace
-      ? t(`home.featured.${key}`, { place: explorePlace })
-      : t(`home.featured.${key}Everywhere`);
+  const exploreScopedHref = useMemo((): string | null => {
+    if (!scope.selection) return exploreHref({ ...activeQuery, offering: browseOffering, location: null });
+    const token = serializeLocationToken(scope.selection);
+    if (!token.ok) return null;
+    return exploreHref({ ...activeQuery, offering: browseOffering, location: scope.selection });
+  }, [scope.selection, activeQuery, browseOffering]);
 
-  const featuredGridTitle =
-    browseOffering === OfferingType.SALE
-      ? headingFor('gridBuy')
-      : browseOffering === OfferingType.EXCHANGE
-        ? headingFor('gridExchange')
-        : browseOffering === OfferingType.SHORT_TERM_RENT
-          ? headingFor('gridVacation')
-          : headingFor('gridLongTerm');
+  const openExplore = useCallback(() => {
+    if (exploreScopedHref) router.push(exploreScopedHref);
+  }, [exploreScopedHref, router]);
 
-  const feedEmptyText = nearYouBlocked ? t('home.category.nearYouUnavailable') : t('home.featured.empty');
-
-  const onRefresh = async () => {
+  /**
+   * Pull-to-refresh.
+   *
+   * It refetches the SAME scope and never re-runs the location ladder, which is
+   * the acceptance criterion "pull-to-refresh mantiene exactamente la misma
+   * ubicación" — met by not touching the scope rather than by restoring it
+   * afterwards. Your own lists refresh alongside, because they are not scoped and
+   * cannot move you anywhere.
+   */
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await Promise.all([
-        refetchCoords(),
-        refetchFeed(),
-        refetchCities(),
-        ...nearbyCities.map((city) =>
-          queryClient.invalidateQueries({
-            queryKey: cityQueryKeys.properties(city.id, 8),
-          }),
-        ),
-        loadSavedProperties(),
-        refetchRecentlyViewed(),
-        exploreFeed.refetch(),
-      ]);
+      await Promise.all([home.refresh(), loadSavedProperties(), refetchRecentlyViewed()]);
     } finally {
       setRefreshing(false);
     }
-  };
+  }, [home, loadSavedProperties, refetchRecentlyViewed]);
+
+  const onScopeChange = useCallback(
+    (selection: LocationSelection | null) => {
+      if (selection) scope.choose(selection);
+    },
+    [scope],
+  );
 
   const scrollY = useSharedValue(0);
-
   const heroParallaxStyle = useAnimatedStyle(() => ({
-    transform: [
-      {
-        translateY: interpolate(
-          scrollY.value,
-          [-300, 0, 800],
-          [-120, 0, 240],
-          'clamp',
-        ),
-      },
-    ],
+    transform: [{ translateY: interpolate(scrollY.value, [-300, 0, 800], [-80, 0, 160], 'clamp') }],
   }));
 
   return (
@@ -361,13 +157,27 @@ export default function HomePage() {
         className="flex-1"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
-        onEndReached={loadMoreExplore}
       >
-        <View className="relative h-[400px] w-full justify-end overflow-hidden pt-[max(0.5rem,env(safe-area-inset-top))] md:h-[360px] xl:h-[min(400px,45vh)]">
-          <Animated.View
-            className="absolute inset-x-0"
-            style={[{ top: -120, bottom: -120 }, heroParallaxStyle]}
-          >
+        {/* The scope, FIRST. See the header: on the narrowest device the area
+            must be readable before the hero image has decoded. */}
+        <View className={`${PAGE_GUTTER_CLASS} pt-[max(0.5rem,env(safe-area-inset-top))]`}>
+          <View className="w-full max-w-[1200px] self-center">
+            <LocationScopeBar
+              selection={scope.selection}
+              resolution={scope.resolution}
+              onChange={onScopeChange}
+              onExploreGlobal={scope.isGlobal ? undefined : scope.exploreGlobal}
+              isGlobal={scope.isGlobal}
+              nearbyPlace={scope.nearbyPlace}
+              deviceUnavailable={scope.deviceIssue !== null}
+              {...(home.staleAt ? { staleAt: home.staleAt } : {})}
+              {...(scope.source === 'device' ? {} : { onUseCurrentLocation: scope.useCurrentLocation })}
+            />
+          </View>
+        </View>
+
+        <View className="relative h-[260px] w-full justify-end overflow-hidden md:h-[300px] xl:h-[min(340px,38vh)]">
+          <Animated.View className="absolute inset-x-0" style={[{ top: -80, bottom: -80 }, heroParallaxStyle]}>
             <Image
               source={require('@/assets/images/hero.jpg')}
               className="h-full w-full object-cover object-center"
@@ -379,13 +189,12 @@ export default function HomePage() {
           <LinearGradient
             colors={[
               'rgba(0,0,0,0.10)',
-              'rgba(0,0,0,0.15)',
-              'rgba(0,0,0,0.25)',
-              'rgba(0,0,0,0.40)',
+              'rgba(0,0,0,0.20)',
+              'rgba(0,0,0,0.35)',
               'rgba(0,0,0,0.55)',
               'rgba(0,0,0,0.72)',
             ]}
-            locations={[0, 0.35, 0.55, 0.7, 0.85, 1]}
+            locations={[0, 0.35, 0.6, 0.85, 1]}
             className="absolute inset-0"
             style={{ pointerEvents: 'none' }}
           />
@@ -396,7 +205,7 @@ export default function HomePage() {
               accessibilityRole="button"
               accessibilityLabel={t('sidebar.open')}
               hitSlop={spacing.sm}
-              className="absolute left-4 top-[max(0.5rem,env(safe-area-inset-top))] z-10 h-10 w-10 items-center justify-center rounded-full bg-black/35"
+              className="absolute left-4 top-3 z-10 h-10 w-10 items-center justify-center rounded-full bg-black/35"
             >
               <Menu size={22} color={colors.primaryLight} />
             </Pressable>
@@ -412,30 +221,19 @@ export default function HomePage() {
             <H1
               className={
                 isXL
-                  ? 'mb-2 max-w-[720px] text-center text-[56px] font-bold leading-[60px] text-white'
+                  ? 'mb-2 max-w-[720px] text-center text-[40px] font-bold leading-[44px] text-white'
                   : isWide
-                    ? 'mb-2 max-w-[720px] text-center text-[44px] font-bold leading-[48px] text-white'
-                    : 'mb-2 max-w-[720px] text-left text-[34px] font-bold leading-[38px] text-white'
+                    ? 'mb-2 max-w-[720px] text-center text-[32px] font-bold leading-[36px] text-white'
+                    : 'mb-2 max-w-[720px] text-left text-[26px] font-bold leading-[30px] text-white'
               }
               style={{ letterSpacing: tracker.tight }}
             >
               {t('home.hero.title')}
             </H1>
-            <P
-              className={
-                isWide
-                  ? 'mb-4 max-w-[520px] text-center text-lg leading-[26px] text-white opacity-90'
-                  : 'mb-4 max-w-[520px] text-left text-base leading-[22px] text-white opacity-90'
-              }
-            >
-              {t('home.hero.subtitle')}
-            </P>
 
             <View
               className={
-                isWide
-                  ? 'z-20 mt-2 w-full max-w-[880px] self-center'
-                  : 'z-20 mt-2 w-full max-w-[520px] self-center'
+                isWide ? 'z-20 mt-1 w-full max-w-[880px] self-center' : 'z-20 mt-1 w-full max-w-[520px] self-center'
               }
             >
               <SearchSummaryBar
@@ -455,13 +253,6 @@ export default function HomePage() {
                 initialStep={searchPanelStep}
                 onSubmit={(query) => {
                   setSearchPanelOpen(false);
-                  // Navigate to the search's OWN URL, not a bare `/explore`.
-                  // Every entry point used to push the bare route and rely on
-                  // the store carrying the query across, which is why a search
-                  // could not be shared, bookmarked or reached with Back.
-                  // `null` when the query's location cannot be written to a
-                  // URL. Navigating to a bare `/explore` would drop it and run
-                  // a global search, so the panel stays open instead.
                   const href = exploreHref(query);
                   if (href) router.push(href);
                 }}
@@ -474,53 +265,76 @@ export default function HomePage() {
           </View>
         </View>
 
-        <View className="gap-6 md:gap-8 pb-14">
-          <HomeCategoryStrip sticky />
-
-          <HomeCarouselSection
-            eyebrow={t('home.recommended.eyebrow')}
-            title={t('home.featured.title')}
-            items={featuredProperties}
-            loading={propertiesLoading}
-            emptyText={feedEmptyText}
-            viewAllText={t('home.viewAll')}
-            onViewAll={() => router.push('/explore')}
-            renderItem={(property) => (
-              <PropertyCard
-                property={property}
-                variant="featured"
-                enableImageCarousel={false}
-                onPress={() => router.push(`/properties/${property.id}`)}
-              />
-            )}
-          />
-
-          {cities.length > 0 ? (
-            <Animated.View entering={FadeInDown.duration(420)}>
-              <CityShowcaseSection
-                title={
-                  explorePlace
-                    ? t('home.cityShowcase.title', { place: explorePlace })
-                    : t('home.cityShowcase.titleEverywhere')
-                }
-                items={cities}
-                onPressCity={(city) => router.push(`/properties/city/${city.id}`)}
-              />
-            </Animated.View>
+        <View className="gap-6 md:gap-8 pb-14 pt-6">
+          {/* The mandatory picker. NOT a global list: when nothing has been
+              chosen and the device cannot answer, Home asks rather than guesses. */}
+          {scope.needsPlace ? (
+            <View className={`gap-2 ${PAGE_GUTTER_CLASS}`}>
+              <SectionEyebrow>{t('home.scopePrompt.eyebrow')}</SectionEyebrow>
+              <H1 className="text-[24px] font-bold leading-7 tracking-tight text-foreground">
+                {t('home.scopePrompt.title')}
+              </H1>
+              <P className="text-sm text-muted-foreground">{t('home.scopePrompt.body')}</P>
+            </View>
           ) : null}
 
-          {gridProperties.length > 0 ? (
-            <Animated.View entering={FadeInDown.duration(420)}>
-              <FeaturedGridSection
-                title={featuredGridTitle}
-                items={gridProperties}
-                onPropertyPress={(property) =>
-                  router.push(`/properties/${property.id}`)
-                }
-              />
-            </Animated.View>
+          {/* Skeletons that PRESERVE the layout, so nothing jumps when the
+              sections land. */}
+          {home.isLoading ? (
+            <View className={`gap-6 ${PAGE_GUTTER_CLASS}`}>
+              <PropertyResultsGridSkeleton count={SKELETON_CARDS} />
+              <PropertyResultsGridSkeleton count={SKELETON_CARDS} />
+            </View>
           ) : null}
 
+          {home.error ? (
+            <View className={`gap-2 ${PAGE_GUTTER_CLASS}`}>
+              <P className="text-sm text-muted-foreground">{t('home.sections.error')}</P>
+              <Button variant="secondary" size="medium" onPress={onRefresh} accessibilityLabel={t('common.retry')}>
+                {t('common.retry')}
+              </Button>
+            </View>
+          ) : null}
+
+          {home.sections.map((section) => (
+            <Animated.View key={section.id} entering={FadeInDown.duration(420)}>
+              <HomeSectionBand section={section} {...(exploreScopedHref ? { onSeeAll: openExplore } : {})} />
+            </Animated.View>
+          ))}
+
+          {/* A USEFUL empty state: what to do, not an apology. Only shown once the
+              surface has actually answered, so it never flashes during a load. */}
+          {scope.canQuery && !home.isLoading && !home.error && home.sections.length === 0 ? (
+            <View className={`gap-3 ${PAGE_GUTTER_CLASS}`}>
+              <H1 className="text-[22px] font-bold leading-7 tracking-tight text-foreground">
+                {t('home.empty.title')}
+              </H1>
+              <P className="text-sm text-muted-foreground">{t('home.empty.body')}</P>
+              <View className="flex-row flex-wrap gap-3">
+                <Button
+                  variant="secondary"
+                  size="medium"
+                  onPress={openExplore}
+                  accessibilityLabel={t('home.empty.changeFiltersAccessible')}
+                >
+                  {t('home.empty.changeFilters')}
+                </Button>
+                {scope.isGlobal ? null : (
+                  <Button
+                    variant="secondary"
+                    size="medium"
+                    onPress={scope.exploreGlobal}
+                    accessibilityLabel={t('location.scope.exploreGlobalAccessible')}
+                  >
+                    {t('location.scope.exploreGlobal')}
+                  </Button>
+                )}
+              </View>
+            </View>
+          ) : null}
+
+          {/* Your own things. Deliberately NOT scoped: a home you were looking at
+              last week is yours wherever you are standing today. */}
           {recentlyViewedProperties && recentlyViewedProperties.length > 0 ? (
             <HomeCarouselSection
               title={t('home.recentlyViewed.continue')}
@@ -553,9 +367,25 @@ export default function HomePage() {
             />
           ) : null}
 
-          {nearbyCities.map((city) => (
-            <NearbyCityCarousel key={city.id} city={city} />
-          ))}
+          {/* The page ENDS. "Explore more" is a link to the surface that owns an
+              unbounded list; Home does not paginate any more. */}
+          <View className={`gap-3 ${PAGE_GUTTER_CLASS}`}>
+            <SectionEyebrow>{t('home.explore.eyebrow')}</SectionEyebrow>
+            <H1 className="text-[24px] font-bold leading-7 tracking-tight text-foreground">
+              {t('home.explore.title')}
+            </H1>
+            <View className="flex-row">
+              <Button
+                variant="primary"
+                size="medium"
+                onPress={openExplore}
+                disabled={exploreScopedHref === null}
+                accessibilityLabel={t('home.explore.ctaAccessible')}
+              >
+                {t('home.explore.cta')}
+              </Button>
+            </View>
+          </View>
 
           {isWide ? (
             <View className={`flex-row items-stretch gap-6 md:gap-8 ${PAGE_GUTTER_CLASS}`}>
@@ -594,51 +424,6 @@ export default function HomePage() {
               />
             </>
           )}
-
-          {/* Explore more homes — the terminal, endless band. Curated sections
-              above give way to an image-first, category-driven feed that keeps
-              appending pages (web: the sentinel; native: PageScrollView
-              onEndReached). It reacts live to the category strip via its query
-              key. Rendered with the shared PropertyResultsGrid so it behaves
-              exactly like the search/browse grids. */}
-          <Animated.View entering={FadeInDown.duration(420)} className="gap-4">
-            <View className={PAGE_GUTTER_CLASS}>
-              <SectionEyebrow>{t('home.explore.eyebrow')}</SectionEyebrow>
-              <H1 className="text-[26px] font-bold leading-8 tracking-tight text-foreground">
-                {t('home.explore.title')}
-              </H1>
-            </View>
-
-            {exploreInitialLoading ? (
-              <View className={PAGE_GUTTER_CLASS}>
-                <PropertyResultsGridSkeleton count={8} />
-              </View>
-            ) : exploreProperties.length === 0 ? (
-              <View className={`py-2 ${PAGE_GUTTER_CLASS}`}>
-                <P className="text-sm text-muted-foreground">{feedEmptyText}</P>
-              </View>
-            ) : (
-              <View className={PAGE_GUTTER_CLASS}>
-                <PropertyResultsGrid
-                  properties={exploreProperties}
-                  onPropertyPress={(property) =>
-                    router.push(`/properties/${property.id}`)
-                  }
-                />
-                {exploreFeed.isFetchingNextPage ? (
-                  <View className="pt-6">
-                    <PropertyResultsGridSkeleton count={4} />
-                  </View>
-                ) : null}
-                {/* Web-only pagination trigger; native paginates via
-                    PageScrollView onEndReached. Inert on native. */}
-                <LoadMoreSentinel
-                  enabled={exploreFeed.hasNextPage}
-                  onLoadMore={loadMoreExplore}
-                />
-              </View>
-            )}
-          </Animated.View>
         </View>
       </PageScrollView>
     </View>

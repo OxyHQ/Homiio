@@ -10,6 +10,7 @@ import cityController from '../controllers/cityController';
 import imageController from '../controllers/imageController';
 import geocodingController from '../controllers/geocodingController';
 import * as geoController from '../controllers/geoController';
+import { getHomeSections } from '../controllers/home/homeSectionsController';
 import { rateLimitKeyFor } from '../middlewares/rateLimitKey';
 import observabilityController from '../controllers/observabilityController';
 import * as propertyController from '../controllers/property';
@@ -108,6 +109,12 @@ export default function () {
   // (`middlewares/rateLimitKey.ts`): a user id when there is one, otherwise a
   // salted HMAC of the normalized IP, so no user IP is held at rest.
   router.use('/geo', geoLimiter);
+  // The Home surface, in ONE request (#353). Public: Home works logged out, and
+  // every section it serves is public listing data. The saved and
+  // recently-viewed bands stay CLIENT side precisely so this endpoint needs no
+  // session — a surface that 401s on cold start is a surface that shows nothing.
+  router.get('/home/sections', asyncHandler(getHomeSections));
+
   router.get('/geo/search', asyncHandler(geoController.search));
   router.get('/geo/resolve', asyncHandler(geoController.resolve));
   router.get('/geo/reverse', asyncHandler(geoController.reverse));
