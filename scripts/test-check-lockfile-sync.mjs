@@ -60,10 +60,10 @@ function rootManifest(overrides = {}) {
   };
 }
 
-async function createFixture() {
+async function createFixture(rootOptions = {}) {
   const root = await mkdtemp(fixturePrefix);
   createdFixtures.push(root);
-  await writeManifest(root, ".", rootManifest());
+  await writeManifest(root, ".", rootManifest(rootOptions));
   await writeManifest(root, "packages/alpha", {
     name: "alpha",
     private: true,
@@ -161,6 +161,38 @@ await expectVerdict(
 const overrideFixture = await createFixture();
 await writeManifest(overrideFixture, ".", rootManifest({ overrides: { beta: "workspace:*" } }));
 await expectVerdict("override-added", overrideFixture, 1, "override beta is");
+
+// `resolutions` is the sibling spelling ~/AGENTS.md requires alongside
+// `overrides`; bun folds it into the one `overrides` object it records. Pinned
+// in BOTH to the same range and installed, it must read as in sync — the check
+// models the UNION, it does not refuse the spelling (the bug this replaced).
+const resolutionSyncedFixture = await createFixture({
+  overrides: { beta: "workspace:*" },
+  resolutions: { beta: "workspace:*" },
+});
+await expectVerdict("resolution-synced", resolutionSyncedFixture, 0, "bun.lock is in sync");
+
+// The same desync as `override-added`, but reached through `resolutions`:
+// declared and not reinstalled, it is a pin the folded lockfile does not carry.
+const resolutionAddedFixture = await createFixture();
+await writeManifest(resolutionAddedFixture, ".", rootManifest({ resolutions: { beta: "workspace:*" } }));
+await expectVerdict("resolution-added", resolutionAddedFixture, 1, "override beta is");
+
+// `overrides` and `resolutions` pinning the same name to DIFFERENT ranges is a
+// contradiction the single folded object cannot represent, so the check refuses
+// rather than pick a winner.
+const resolutionConflictFixture = await createFixture();
+await writeManifest(
+  resolutionConflictFixture,
+  ".",
+  rootManifest({ overrides: { beta: "workspace:*" }, resolutions: { beta: "npm:beta@9.9.9" } }),
+);
+await expectVerdict(
+  "resolution-conflict",
+  resolutionConflictFixture,
+  1,
+  "conflicting versions across overrides and resolutions",
+);
 
 // A dependency removed from a manifest while the lockfile still resolves it. This
 // one is invisible to the manifest comparison and is caught by the install.
