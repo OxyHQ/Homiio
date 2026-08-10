@@ -10,9 +10,7 @@
 import { Coordinates, Pagination } from './common';
 import type {
   AdminHierarchy,
-  GeoBounds,
-  GeoPoint,
-  LocationPrecision,
+  PlaceGeometry,
   PlaceLabel,
   PlaceSource,
   PlaceType,
@@ -52,19 +50,22 @@ export interface CitiesResponse {
  * frames a map from `center`/`bounds` and renders the disambiguation list from
  * `label` and `admin`.
  *
- * ## It is a `GeoPlace` in all but one field, and that field is the honest part
+ * ## Its geometry comes from `PlaceGeometry`, so the dishonest shape will not
+ * compile
  *
- * `source`, `label`, `admin`, `center`, `bounds` and `precision` are the shared
- * primitives from `./location`, not copies of them, so a resolved candidate can
- * feed `geoPlaceToSelection` directly. The one difference: `GeoPlace.center` is
- * REQUIRED, because a geocoder candidate always has a point — while a Homiio
- * city row may have none. Production holds rows with null coordinates, and the
- * lookup ranks those below rows that have them rather than hiding them, so
- * `center` is optional here and `precision` says `area` when it is missing.
- * Inventing a centre to satisfy a type would be the one lie this whole contract
- * exists to stop.
+ * `source`, `label`, `admin` and the geometry are the shared primitives from
+ * `./location`, not copies of them, so a resolved candidate feeds
+ * `geoPlaceToSelection` directly.
+ *
+ * A Homiio city row may have NO coordinates — production holds such rows, and
+ * the lookup ranks them below rows that have them rather than hiding them. That
+ * is expressed by `PlaceGeometry`'s `area` branch, where `center?: never`: a
+ * candidate without a centre cannot acquire one, and a `centroid` without a
+ * centre does not compile either. An earlier revision of this type said the same
+ * thing with an optional `center` beside an open `precision`, which ACCEPTED the
+ * contradiction and merely discouraged it.
  */
-export interface CityPlaceCandidate {
+export type CityPlaceCandidate = {
   /**
    * The stable identity. Persist THIS, never the name or the slug.
    *
@@ -101,15 +102,6 @@ export interface CityPlaceCandidate {
    * to resolve.
    */
   readonly qualifiedSlug: string;
-  /** The city centre. A `centroid` (ADR §8.1), and so nobody's location. */
-  readonly center?: GeoPoint;
-  /**
-   * The city's extent. `west > east` crosses the antimeridian (ADR §9.3).
-   * Absent until #351's gateway populates it — never derived from listings.
-   */
-  readonly bounds?: GeoBounds;
-  /** `centroid` with a centre, `area` without one. Declared, never inferred. */
-  readonly precision: LocationPrecision;
   /** Published listings whose address resolves here. Ranking input, not identity. */
   readonly propertiesCount: number;
   /**
@@ -117,7 +109,12 @@ export interface CityPlaceCandidate {
    * its own; `name` and `slug` are labels and can be shared.
    */
   readonly matchedOn: 'id' | 'name' | 'slug';
-}
+  /**
+   * The centre (`centroid` — ADR §8.1, and so nobody's location) or the bare
+   * extent, from {@link PlaceGeometry}. `bounds` is absent until #351's gateway
+   * populates `cities.bbox_*`; `west > east` crosses the antimeridian (ADR §9.3).
+   */
+} & PlaceGeometry;
 
 /**
  * The result of a text/slug/id city lookup.
