@@ -781,7 +781,22 @@ export type LocationRef =
 /** The reserved `source` segment meaning "a row in this database". */
 const HOMIIO_SOURCE = 'homiio';
 
-const PLACE_TYPES: readonly GeoPlaceType[] = [
+/**
+ * Every place type a `loc` token can name — the parser's own vocabulary.
+ *
+ * EXPORTED so a consumer can enumerate the cases it must handle rather than
+ * hand-listing them, and that is not a convenience. Home's scope resolver
+ * hand-listed three of these and refused the rest, and three separate production
+ * 400s followed, one per unhandled member (`district.osm.…` being the third). A
+ * hand-list cannot fail when the union grows; a list derived from THIS array
+ * can, because a new member has to appear here before the parser will accept a
+ * token naming it at all.
+ *
+ * It is `GeoPlaceType`, so it carries the six `PlaceType` members plus
+ * `address` — the one value that becomes an `address_candidate` rather than a
+ * `place` (see {@link GeoPlaceType}).
+ */
+export const PLACE_TYPES: readonly GeoPlaceType[] = [
   'country',
   'region',
   'city',

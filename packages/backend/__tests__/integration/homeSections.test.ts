@@ -749,18 +749,62 @@ describe('GET /home/sections', () => {
       expect(response.body.error).toBe('UNSUPPORTED_LOCATION');
     });
 
-    it('still 400s for an external ref of a type Home cannot scope', async () => {
-      // A `country.` or `postcode.` scope has no predicate to hang on, whichever
-      // source it came from. Narrowing the external check must not have widened
-      // the type check.
+    /**
+     * The THIRD production 400, and the two that were queued behind it.
+     *
+     * `district.osm.R3765380` → **400 UNSUPPORTED_LOCATION**, because a
+     * placeType gate ran BEFORE the geometry resolver and refused anything
+     * outside {city, region, neighborhood}. A district with perfectly usable
+     * bounds was refused for the unrelated reason that `addresses` has no
+     * `district_id` column — the id-lookup list being used as an acceptance
+     * list. `country` and `postcode` were the same defect waiting for a user.
+     *
+     * One production-shaped case per newly-answerable type, mirroring the
+     * `city.osm.…` case above. `homePlaceTypeCoverage.test.ts` is the gate that
+     * makes the NEXT one impossible; these are the regressions for the three
+     * that actually shipped broken.
+     */
+    it.each([
+      ['district', 'R3765380'],
+      ['postcode', 'R08013'],
+    ])('scopes an external %s by its bounds rather than 400ing', async (placeType, providerRef) => {
+      await seedListingAt({ city: 'Barcelona', ...BARCELONA });
+      await seedListingAt({ city: 'Madrid', ...MADRID });
+
+      const response = await request(app)
+        .get('/home/sections')
+        .query({
+          loc: `${placeType}.${PROVIDER_ID}.${providerRef}`,
+          offering: OfferingType.LONG_TERM_RENT,
+        })
+        .expect(200);
+
+      const payload = response.body.data as HomePayload;
+      const items = allItems(payload);
+
+      expect(payload.location.status).toBe('resolved');
+      expect(payload.location.key).toBe(`ext:${PROVIDER_ID}:${providerRef}`);
+      // Floored on a real row, and scoped: Madrid is outside the fake's
+      // Barcelona-shaped bounds, so a scope that had quietly widened would show
+      // it. "Did not 400" is not the property.
+      expect(items.length).toBeGreaterThan(0);
+      expect(items.some((item) => item.address?.cityName === 'Madrid')).toBe(false);
+    });
+
+    it('scopes an external COUNTRY by its code rather than 400ing', async () => {
+      // Separated from the two above because the RUNG differs: a country must
+      // not take the bounds path at all. `homePlaceTypeCoverage.test.ts` pins
+      // why; this pins that the production token shape no longer 400s.
       await seedListingAt({ city: 'Barcelona', ...BARCELONA });
 
       const response = await request(app)
         .get('/home/sections')
-        .query({ loc: `country.${PROVIDER_ID}.${EXTERNAL_REF}`, offering: OfferingType.LONG_TERM_RENT })
-        .expect(400);
+        .query({ loc: `country.${PROVIDER_ID}.R1311`, offering: OfferingType.LONG_TERM_RENT })
+        .expect(200);
 
-      expect(response.body.error).toBe('UNSUPPORTED_LOCATION');
+      const payload = response.body.data as HomePayload;
+      expect(payload.location.status).toBe('resolved');
+      expect(payload.location.key).toBe(`ext:${PROVIDER_ID}:R1311`);
     });
   });
 });
