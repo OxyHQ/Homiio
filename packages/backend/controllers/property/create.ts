@@ -6,6 +6,7 @@ import { pickFields } from '../../utils/pickFields';
 import { getDb } from '../../db/postgres';
 import { partners } from '../../db/schema';
 import { insertProperty } from '../../db/properties/propertyWrites';
+import { recordPropertyCreatedEvent } from '../../services/watches/propertyEventProducer';
 import { serializeProperty } from '../../db/properties/propertySerializer';
 import { findOrCreateCanonicalAddress } from '../../services/addressService';
 import { telegramService } from '../../services';
@@ -171,6 +172,11 @@ export async function createProperty(req: ControllerRequest, res: ControllerResp
     const created = await insertProperty(propertyData);
     const savedProperty = serializeProperty(created);
     const propertyId = created.property.id;
+
+    // The watch matcher's fact (#356). Best effort inside the producer: the
+    // listing is already committed, and a mailbox that could not be told must
+    // not turn a successful create into a 500.
+    await recordPropertyCreatedEvent(propertyId);
 
     const savedOwnerId = created.property.oxyUserId;
     if (savedOwnerId) {

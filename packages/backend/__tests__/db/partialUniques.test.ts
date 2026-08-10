@@ -32,6 +32,7 @@ import {
   roommateRelationships,
   roommateRequests,
   savedPropertyFolders,
+  savedSearches,
 } from '../../db/schema';
 import {
   createPropertyScaffold,
@@ -298,6 +299,69 @@ describe('saved_property_folders — one name per person, case-INSENSITIVELY', (
   });
 });
 
+describe('saved_searches — ONE primary area per person (#356)', () => {
+  it('refuses a second primary area for the same person', async () => {
+    const owner = oxy();
+    await db.insert(savedSearches).values({
+      oxyUserId: owner,
+      name: 'Gràcia',
+      query: '',
+      isPrimaryArea: true,
+    });
+
+    let caught: unknown;
+    try {
+      await db.insert(savedSearches).values({
+        oxyUserId: owner,
+        name: 'Eixample',
+        query: '',
+        isPrimaryArea: true,
+      });
+    } catch (error) {
+      caught = error;
+    }
+    expect(sqlStateOf(caught)).toBe(UNIQUE_VIOLATION);
+
+    await db.delete(savedSearches).where(eq(savedSearches.oxyUserId, owner));
+  });
+
+  it('PERMITS any number of non-primary watches for that same person', async () => {
+    // The half a plain `UNIQUE(oxy_user_id, is_primary_area)` would fail, and the
+    // reason the index has to be partial: that index also permits only ONE
+    // non-primary watch per person, which is absurd and would surface to a user
+    // as "you already have a saved search". Every "refuses a duplicate"
+    // assertion above passes under it.
+    const owner = oxy();
+    await db.insert(savedSearches).values([
+      { oxyUserId: owner, name: 'Sants', query: '' },
+      { oxyUserId: owner, name: 'Poblenou', query: '' },
+      { oxyUserId: owner, name: 'Sarrià', query: '' },
+    ]);
+    const rows = await db.select().from(savedSearches).where(eq(savedSearches.oxyUserId, owner));
+    expect(rows).toHaveLength(3);
+
+    await db.delete(savedSearches).where(eq(savedSearches.oxyUserId, owner));
+  });
+
+  it('scopes the rule to one person — two people may each have a primary area', async () => {
+    // Vacuity guard: an index on `is_primary_area` alone would reject this and
+    // would then mean "one primary area in the whole product".
+    const first = oxy();
+    const second = oxy();
+    await db
+      .insert(savedSearches)
+      .values({ oxyUserId: first, name: 'Home', query: '', isPrimaryArea: true });
+    await expect(
+      db
+        .insert(savedSearches)
+        .values({ oxyUserId: second, name: 'Home', query: '', isPrimaryArea: true }),
+    ).resolves.toBeDefined();
+
+    await db.delete(savedSearches).where(eq(savedSearches.oxyUserId, first));
+    await db.delete(savedSearches).where(eq(savedSearches.oxyUserId, second));
+  });
+});
+
 describe('the partial indexes really are partial', () => {
   it('carries a WHERE clause on every one of them, in the CATALOGUE', async () => {
     // The declaration-level backstop for every "ACCEPTS …" assertion above: those
@@ -329,6 +393,7 @@ describe('the partial indexes really are partial', () => {
       'property_images_one_primary_key',
       'roommate_relationships_active_pair_key',
       'roommate_requests_pending_pair_key',
+      'saved_searches_primary_area_key',
     ]);
     expect(rows.every((row) => (row.predicate ?? '').length > 0)).toBe(true);
   });

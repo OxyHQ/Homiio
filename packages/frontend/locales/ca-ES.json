@@ -4109,5 +4109,119 @@
       },
       "notChosen": "Not chosen yet"
     }
+  },
+  "alerts": {
+    "history": {
+      "title": "Alertes",
+      "emptyTitle": "Encara no hi ha alertes",
+      "emptyDescription": "Quan canviï alguna cosa en una zona que segueixes, apareixerà aquí amb el motiu pel qual ha coincidit.",
+      "pending": "Esperant el teu proper resum",
+      "openReason": "Mira per què has rebut això",
+      "suppressed": {
+        "muted": "Retinguda: aquesta zona està en pausa",
+        "cadence_off": "Retinguda: les alertes estan desactivades en aquesta zona",
+        "channel_unavailable": "Retinguda: encara no hi ha cap canal d’entrega disponible",
+        "rate_limited": "Retinguda: havies arribat al teu límit diari"
+      }
+    },
+    "reason": {
+      "title": "Per què has rebut això",
+      "whatChanged": "Què ha canviat",
+      "whyYou": "Per què tu",
+      "matchedWatch": "Ha coincidit amb la teva zona desada «{{name}}».",
+      "rule": "Regla: {{rule}}",
+      "ruleVersion": "Versió de regla {{version}}",
+      "detectedAt": "Detectat el {{when}}",
+      "evidenceExpired": "El registre original ja ha caducat; l’explicació de dalt és la que es va desar en aquell moment.",
+      "openArea": "Obre aquesta zona",
+      "adjustRules": "Ajusta les alertes d’aquesta zona",
+      "missingTitle": "Alerta no trobada",
+      "missingDescription": "Aquesta alerta ja no està disponible o pertany a un altre compte."
+    },
+    "settings": {
+      "title": "Configuració d’alertes",
+      "cadence": "Amb quina freqüència",
+      "cadenceHint": "«A l’instant» t’avisa tan bon punt canvia alguna cosa. Un resum ho agrupa tot.",
+      "rules": "De què vull assabentar-me",
+      "pause": "Pausa",
+      "pauseHint": "Mentre està en pausa les alertes es registren, però no s’entreguen.",
+      "pauseAction": "Pausa una setmana",
+      "resume": "Reprèn les alertes",
+      "primaryArea": "Zona principal",
+      "primaryAreaHint": "Inici s’obre a la teva zona principal. Només en pots tenir una.",
+      "primaryAreaAction": "Fes que sigui la meva zona principal",
+      "primaryAreaCurrent": "Aquesta és la teva zona principal",
+      "primaryAreaSet": "Zona principal actualitzada",
+      "viewHistory": "Mira les alertes d’aquesta zona",
+      "updated": "Configuració d’alertes actualitzada",
+      "updateFailed": "No s’ha pogut actualitzar la configuració d’alertes",
+      "ruleUnavailable": "Aquesta alerta encara no es pot activar: les dades en què es basa no són fiables.",
+      "ruleUnavailableShort": "Encara no disponible",
+      "missingTitle": "Zona desada no trobada",
+      "missingDescription": "Aquesta zona desada ja no està disponible o pertany a un altre compte.",
+      "inactive": {
+        "muted": "Aquesta zona està en pausa, així que no s’entrega res.",
+        "legacy_query_version": "Aquesta cerca es va desar abans que existissin les zones. Confirma on cerca per activar les alertes.",
+        "location_needs_confirmation": "Confirma on cerca aquesta cerca per activar les alertes.",
+        "no_area": "Aquest lloc no té un límit que puguem vigilar. Tria una zona al mapa.",
+        "no_rules_enabled": "Encara no hi ha cap alerta activada en aquesta zona."
+      }
+    },
+    "cadence": {
+      "instant": "A l’instant",
+      "daily": "Resum diari",
+      "weekly": "Resum setmanal",
+      "off": "Desactivades"
+    },
+    "rules": {
+      "new_listing": {
+        "name": "Habitatges nous",
+        "description": "Es publica un habitatge dins de la teva zona."
+      },
+      "price_decrease": {
+        "name": "Baixades de preu",
+        "description": "El preu demanat baixa."
+      },
+      "price_increase": {
+        "name": "Pujades de preu",
+        "description": "El preu demanat puja."
+      },
+      "cost_terms_changed": {
+        "name": "Canvis de costos",
+        "description": "Canvia la fiança o les despeses."
+      },
+      "listing_removed": {
+        "name": "Habitatges retirats",
+        "description": "Un habitatge deixa d’estar publicat."
+      },
+      "listing_reappeared": {
+        "name": "Habitatges que tornen",
+        "description": "Un habitatge torna a publicar-se."
+      },
+      "new_review": {
+        "name": "Ressenyes noves",
+        "description": "Es publica una ressenya verificada a prop."
+      },
+      "eviction_nearby": {
+        "name": "Desnonaments propers",
+        "description": "Hi ha un desnonament previst a prop de la teva zona."
+      },
+      "source_conflict": {
+        "name": "Anuncis duplicats",
+        "description": "El mateix habitatge apareix en diversos portals."
+      }
+    },
+    "explanation": {
+      "matched": "{{change}} Ha coincidit amb la teva zona desada «{{watchName}}».",
+      "newListing": "Nou anunci: {{title}}.",
+      "priceDecrease": "El preu ha baixat de {{from}} a {{to}} a {{title}}.",
+      "priceIncrease": "El preu ha pujat de {{from}} a {{to}} a {{title}}.",
+      "costTermsChanged": "Ha canviat {{terms}} a {{title}}.",
+      "listingRemoved": "{{title}} ja no està publicat.",
+      "listingReappeared": "{{title}} torna a estar publicat, a {{source}}.",
+      "newReview": "S’ha publicat una nova ressenya verificada per a {{building}}.",
+      "evictionNearby": "Hi ha un desnonament previst a uns {{radius}} m de {{area}}.",
+      "sourceConflict": "{{title}} apareix ara en {{count}} fonts."
+    }
   }
 }

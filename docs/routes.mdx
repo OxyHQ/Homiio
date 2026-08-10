@@ -221,6 +221,12 @@ There is no standalone tenant picker and no free-form lease composer.
 `/me/recent-properties`, and `/me/entitlements` with
 `POST /me/entitlements/consume-file-credit`.
 
+A saved search is also a WATCH (#356): the same rows carry `cadence`,
+`channels`, `alertRules`, `mutedUntil` and `isPrimaryArea`, and the alerts they
+produce are read at `GET /me/alerts` (optionally `?watchId=`) with
+`GET /me/alerts/:alertId` answering "why did I get this?" from the alert's own
+stored explanation.
+
 ### `/api/roommates`
 
 `GET /`, `GET /status`, `PATCH /toggle`, `GET|PUT /preferences`,

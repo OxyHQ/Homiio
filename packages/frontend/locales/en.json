@@ -4044,5 +4044,119 @@
       },
       "notChosen": "Not chosen yet"
     }
+  },
+  "alerts": {
+    "history": {
+      "title": "Alerts",
+      "emptyTitle": "No alerts yet",
+      "emptyDescription": "When something changes in an area you follow, it will show up here with the reason it matched.",
+      "pending": "Waiting for your next summary",
+      "openReason": "See why you got this",
+      "suppressed": {
+        "muted": "Held back — this area is paused",
+        "cadence_off": "Held back — alerts are off for this area",
+        "channel_unavailable": "Held back — no delivery channel is available yet",
+        "rate_limited": "Held back — you had reached your daily limit"
+      }
+    },
+    "reason": {
+      "title": "Why you got this",
+      "whatChanged": "What changed",
+      "whyYou": "Why you",
+      "matchedWatch": "It matched your saved area \"{{name}}\".",
+      "rule": "Rule: {{rule}}",
+      "ruleVersion": "Rule version {{version}}",
+      "detectedAt": "Detected {{when}}",
+      "evidenceExpired": "The underlying record has since expired; the explanation above is the one saved at the time.",
+      "openArea": "Open this area",
+      "adjustRules": "Adjust alerts for this area",
+      "missingTitle": "Alert not found",
+      "missingDescription": "This alert is no longer available, or it belongs to another account."
+    },
+    "settings": {
+      "title": "Alert settings",
+      "cadence": "How often",
+      "cadenceHint": "Instant tells you as soon as something changes. A summary groups everything together.",
+      "rules": "What to tell me about",
+      "pause": "Pause",
+      "pauseHint": "Alerts are recorded while paused, and are not delivered.",
+      "pauseAction": "Pause for a week",
+      "resume": "Resume alerts",
+      "primaryArea": "Main area",
+      "primaryAreaHint": "Home opens on your main area. You can have one at a time.",
+      "primaryAreaAction": "Make this my main area",
+      "primaryAreaCurrent": "This is your main area",
+      "primaryAreaSet": "Main area updated",
+      "viewHistory": "See this area's alerts",
+      "updated": "Alert settings updated",
+      "updateFailed": "Could not update the alert settings",
+      "ruleUnavailable": "That alert cannot be switched on yet — the data behind it is not reliable.",
+      "ruleUnavailableShort": "Not available yet",
+      "missingTitle": "Saved area not found",
+      "missingDescription": "This saved area is no longer available, or it belongs to another account.",
+      "inactive": {
+        "muted": "This area is paused, so nothing is being delivered.",
+        "legacy_query_version": "This search was saved before areas existed. Confirm where it is looking to switch alerts on.",
+        "location_needs_confirmation": "Confirm where this search is looking to switch alerts on.",
+        "no_area": "This place has no boundary we can watch. Pick an area on the map instead.",
+        "no_rules_enabled": "No alerts are switched on for this area yet."
+      }
+    },
+    "cadence": {
+      "instant": "Instant",
+      "daily": "Daily summary",
+      "weekly": "Weekly summary",
+      "off": "Off"
+    },
+    "rules": {
+      "new_listing": {
+        "name": "New homes",
+        "description": "A home is listed inside your area."
+      },
+      "price_decrease": {
+        "name": "Price drops",
+        "description": "The asking price goes down."
+      },
+      "price_increase": {
+        "name": "Price rises",
+        "description": "The asking price goes up."
+      },
+      "cost_terms_changed": {
+        "name": "Cost changes",
+        "description": "The deposit or the bills change."
+      },
+      "listing_removed": {
+        "name": "Homes leaving",
+        "description": "A home is no longer listed."
+      },
+      "listing_reappeared": {
+        "name": "Homes returning",
+        "description": "A home is listed again."
+      },
+      "new_review": {
+        "name": "New reviews",
+        "description": "A verified review is published nearby."
+      },
+      "eviction_nearby": {
+        "name": "Evictions nearby",
+        "description": "An eviction is scheduled near your area."
+      },
+      "source_conflict": {
+        "name": "Duplicate listings",
+        "description": "The same home appears on several portals."
+      }
+    },
+    "explanation": {
+      "matched": "{{change}} It matched your saved area \"{{watchName}}\".",
+      "newListing": "New listing: {{title}}.",
+      "priceDecrease": "The price dropped from {{from}} to {{to}} on {{title}}.",
+      "priceIncrease": "The price rose from {{from}} to {{to}} on {{title}}.",
+      "costTermsChanged": "The {{terms}} changed on {{title}}.",
+      "listingRemoved": "{{title}} is no longer listed.",
+      "listingReappeared": "{{title}} is listed again, on {{source}}.",
+      "newReview": "A new verified review was published for {{building}}.",
+      "evictionNearby": "An eviction is scheduled within about {{radius}} m of {{area}}.",
+      "sourceConflict": "{{title}} now appears on {{count}} sources."
+    }
   }
 }

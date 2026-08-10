@@ -4044,5 +4044,119 @@
       },
       "notChosen": "Not chosen yet"
     }
+  },
+  "alerts": {
+    "history": {
+      "title": "提醒",
+      "emptyTitle": "暂无提醒",
+      "emptyDescription": "当你关注的区域发生变化时，会显示在这里，并说明匹配原因。",
+      "pending": "等待下一次汇总",
+      "openReason": "查看为什么收到此提醒",
+      "suppressed": {
+        "muted": "已保留：该区域已暂停",
+        "cadence_off": "已保留：该区域的提醒已关闭",
+        "channel_unavailable": "已保留：暂无可用的送达渠道",
+        "rate_limited": "已保留：你已达到每日上限"
+      }
+    },
+    "reason": {
+      "title": "为什么收到此提醒",
+      "whatChanged": "发生了什么变化",
+      "whyYou": "为什么是你",
+      "matchedWatch": "它匹配了你保存的区域“{{name}}”。",
+      "rule": "规则：{{rule}}",
+      "ruleVersion": "规则版本 {{version}}",
+      "detectedAt": "检测于 {{when}}",
+      "evidenceExpired": "原始记录已过保留期；上面的说明是当时保存的版本。",
+      "openArea": "打开该区域",
+      "adjustRules": "调整该区域的提醒",
+      "missingTitle": "未找到提醒",
+      "missingDescription": "该提醒已不可用，或属于其他账号。"
+    },
+    "settings": {
+      "title": "提醒设置",
+      "cadence": "提醒频率",
+      "cadenceHint": "“即时”会在变化发生时立即通知你。汇总会把内容合并在一起。",
+      "rules": "想知道哪些变化",
+      "pause": "暂停",
+      "pauseHint": "暂停期间提醒仍会记录，但不会送达。",
+      "pauseAction": "暂停一周",
+      "resume": "恢复提醒",
+      "primaryArea": "主要区域",
+      "primaryAreaHint": "首页会打开你的主要区域。同时只能有一个。",
+      "primaryAreaAction": "设为我的主要区域",
+      "primaryAreaCurrent": "这是你的主要区域",
+      "primaryAreaSet": "主要区域已更新",
+      "viewHistory": "查看该区域的提醒",
+      "updated": "提醒设置已更新",
+      "updateFailed": "无法更新提醒设置",
+      "ruleUnavailable": "该提醒暂时无法开启：其依赖的数据还不可靠。",
+      "ruleUnavailableShort": "暂不可用",
+      "missingTitle": "未找到保存的区域",
+      "missingDescription": "该保存的区域已不可用，或属于其他账号。",
+      "inactive": {
+        "muted": "该区域已暂停，因此不会送达任何内容。",
+        "legacy_query_version": "此搜索保存于区域功能出现之前。请确认它搜索的位置后再开启提醒。",
+        "location_needs_confirmation": "请确认此搜索的位置后再开启提醒。",
+        "no_area": "该地点没有可供监控的边界。请改为在地图上选择一个区域。",
+        "no_rules_enabled": "该区域尚未开启任何提醒。"
+      }
+    },
+    "cadence": {
+      "instant": "即时",
+      "daily": "每日汇总",
+      "weekly": "每周汇总",
+      "off": "关闭"
+    },
+    "rules": {
+      "new_listing": {
+        "name": "新房源",
+        "description": "你的区域内发布了新房源。"
+      },
+      "price_decrease": {
+        "name": "降价",
+        "description": "挂牌价下降。"
+      },
+      "price_increase": {
+        "name": "涨价",
+        "description": "挂牌价上涨。"
+      },
+      "cost_terms_changed": {
+        "name": "费用变化",
+        "description": "押金或杂费发生变化。"
+      },
+      "listing_removed": {
+        "name": "房源下架",
+        "description": "房源不再挂牌。"
+      },
+      "listing_reappeared": {
+        "name": "房源重新上架",
+        "description": "房源重新挂牌。"
+      },
+      "new_review": {
+        "name": "新评价",
+        "description": "附近发布了经过验证的评价。"
+      },
+      "eviction_nearby": {
+        "name": "附近的驱逐",
+        "description": "你的区域附近有安排中的驱逐。"
+      },
+      "source_conflict": {
+        "name": "重复房源",
+        "description": "同一套房源出现在多个平台上。"
+      }
+    },
+    "explanation": {
+      "matched": "{{change}} 它匹配了你保存的区域“{{watchName}}”。",
+      "newListing": "新房源：{{title}}。",
+      "priceDecrease": "{{title}} 的价格从 {{from}} 降到 {{to}}。",
+      "priceIncrease": "{{title}} 的价格从 {{from}} 涨到 {{to}}。",
+      "costTermsChanged": "{{title}} 的{{terms}}发生了变化。",
+      "listingRemoved": "{{title}} 已不再挂牌。",
+      "listingReappeared": "{{title}} 重新挂牌，来源为 {{source}}。",
+      "newReview": "{{building}} 有一条新的已验证评价。",
+      "evictionNearby": "在距 {{area}} 约 {{radius}} 米处有安排中的驱逐。",
+      "sourceConflict": "{{title}} 现在出现在 {{count}} 个来源上。"
+    }
   }
 }

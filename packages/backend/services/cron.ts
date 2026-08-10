@@ -12,6 +12,7 @@ import { getDb } from '../db/postgres';
 import config from '../config';
 import { syncAllHasImages } from '../db/hasImages';
 import { EXPIRY_SWEEP_TARGETS, sweepAllExpiredRows } from '../db/expiry';
+import { deliverDueDigests, runHousingAlertSweep } from './watches/housingAlertSweep';
 
 // Initialize services
 const logger = new Logger('CronService');
@@ -48,6 +49,7 @@ class CronJobManager {
     this.setupEvictionOutcomeReminderJob();
     this.setupModerationReconciliationJob();
     this.setupExpirySweepJob();
+    this.setupHousingAlertJobs();
     // Boot sweeps: repair mangled coords + start Wikimedia cover backfill
     // without waiting for the top of the hour.
     void this.runBootHousekeeping();
@@ -306,6 +308,88 @@ class CronJobManager {
   }
 
   /**
+   * The housing-watch jobs (#356): one queue drain and two digest windows.
+   *
+   * THREE schedules rather than one, because they answer different questions.
+   * The matcher drains the event queue every two minutes so an `instant` watch
+   * is instant enough to be worth the name; the digests close a cadence window
+   * and are the reason there is no `last_digest_at` column anywhere — the
+   * SCHEDULE is the state, so two processes cannot disagree about whether a
+   * window has closed.
+   *
+   * A duplicated run costs nothing: the second finds no `pending` rows, because
+   * the first marked them `delivered` inside itself. A missed run costs a delay.
+   * That asymmetry is what makes a scheduler an acceptable substitute for a
+   * stored watermark here and would not be if the digest deleted anything.
+   */
+  private setupHousingAlertJobs(): void {
+    const matcher = cron.schedule('*/2 * * * *', async () => {
+      await this.runHousingAlertSweep();
+    }, { timezone: 'UTC', scheduled: false });
+    this.jobs.set('housingAlerts', matcher);
+    this.jobStatus.set('housingAlerts', { isRunning: true, lastRun: undefined, nextRun: undefined });
+    matcher.start();
+
+    // 08:05 UTC — a morning digest, and five past so it cannot collide with the
+    // top-of-hour jobs above on a task that has just started.
+    const daily = cron.schedule('5 8 * * *', async () => {
+      await this.runHousingDigest('daily');
+    }, { timezone: 'UTC', scheduled: false });
+    this.jobs.set('housingDigestDaily', daily);
+    this.jobStatus.set('housingDigestDaily', { isRunning: true, lastRun: undefined, nextRun: undefined });
+    daily.start();
+
+    // Monday 08:15 UTC, ten minutes after the daily one so a task running both
+    // does not start them in the same tick.
+    const weekly = cron.schedule('15 8 * * 1', async () => {
+      await this.runHousingDigest('weekly');
+    }, { timezone: 'UTC', scheduled: false });
+    this.jobs.set('housingDigestWeekly', weekly);
+    this.jobStatus.set('housingDigestWeekly', { isRunning: true, lastRun: undefined, nextRun: undefined });
+    weekly.start();
+  }
+
+  /** The scheduled matcher pass, reachable on demand. See `runHousingAlertSweepNow`. */
+  async runHousingAlertSweepNow(): Promise<void> {
+    await this.runHousingAlertSweep();
+  }
+
+  private async runHousingAlertSweep(): Promise<void> {
+    this.jobStatus.set('housingAlerts', { isRunning: true, lastRun: new Date() });
+    try {
+      const result = await runHousingAlertSweep();
+      // Logged on EVERY run, including the empty ones, for the reason the expiry
+      // sweep next door spells out: silence from an unscheduled job and silence
+      // from a quiet market are the same silence, and only one is a problem.
+      if (result.claimed > 0) this.logger.info('Housing alert sweep completed', { ...result });
+      else this.logger.debug('Housing alert sweep found nothing queued', { ...result });
+      if (result.remaining > 0) {
+        this.logger.warn('Housing alert events remain queued after the sweep', {
+          remaining: result.remaining,
+        });
+      }
+    } catch (error) {
+      this.logger.error('Housing alert sweep failed', error);
+    } finally {
+      this.jobStatus.set('housingAlerts', { isRunning: false, lastRun: new Date() });
+    }
+  }
+
+  private async runHousingDigest(cadence: 'daily' | 'weekly'): Promise<void> {
+    const key = cadence === 'daily' ? 'housingDigestDaily' : 'housingDigestWeekly';
+    this.jobStatus.set(key, { isRunning: true, lastRun: new Date() });
+    try {
+      const result = await deliverDueDigests(cadence);
+      if (result.watches > 0) this.logger.info('Housing alert digest delivered', { ...result });
+      else this.logger.debug('Housing alert digest had nothing to send', { ...result });
+    } catch (error) {
+      this.logger.error('Housing alert digest failed', error);
+    } finally {
+      this.jobStatus.set(key, { isRunning: false, lastRun: new Date() });
+    }
+  }
+
+  /**
    * Setup the CrowdSource reconciliation sweep — every 15 minutes.
    *
    * The outbox DISPATCHER runs continuously on every task; this is the separate
@@ -526,6 +610,18 @@ export function stopCronJobs(): void {
  */
 export async function runExpirySweepNow(): Promise<void> {
   await cronManager.runExpirySweepNow();
+}
+
+/**
+ * Run the housing-alert matcher once, now.
+ *
+ * The same seam `runExpirySweepNow` exists for, and for the same reason: without
+ * it the only testable claims are "a job named `housingAlerts` is scheduled" and
+ * "the sweep works when called directly", and neither connects the two — a job
+ * wired to nothing satisfies both.
+ */
+export async function runHousingAlertSweepNow(): Promise<void> {
+  await cronManager.runHousingAlertSweepNow();
 }
 
 /**

@@ -39,6 +39,7 @@ import { useOxy, openAccountDialog } from '@oxyhq/services';
 import type { Property, SavedProperty } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
+import { IconButton } from '@/components/ui/IconButton';
 import { CardSurface } from '@/components/ui/CardSurface';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -210,6 +211,17 @@ export default function SavedPropertiesScreen() {
     <Header
       options={{
         title: t('saved.header'),
+        // The entry point to the alert history (#356). It lives on the saved
+        // header rather than on a tab because the history spans every saved
+        // area, and the per-area view is reached from the area itself.
+        rightComponents: [
+          <IconButton
+            key="alerts"
+            icon="notifications-outline"
+            accessibilityLabel={t('alerts.history.title')}
+            onPress={() => router.push('/saved/alerts')}
+          />,
+        ],
       }}
     />
   );

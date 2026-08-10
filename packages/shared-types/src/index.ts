@@ -93,6 +93,12 @@ export type { GeoPoint, GeoBounds } from './location';
 // `./location` for the scope summary, so it is exported after it.
 export * from './home';
 
+// Saved housing watches and their alerts (#356): the rule vocabulary with its
+// per-rule availability, channels, cadence, and the CLOSED explanation union an
+// alert may be built from. Shared so "which rules exist" and "which of them can
+// actually be evaluated" have one answer on both sides of the wire.
+export * from './watch';
+
 // International formatting — money, units, dates, percentages. Pure, shared by
 // frontend and backend so a price is never assembled by concatenation.
 export * from './format/money';

@@ -8,7 +8,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxyhq/services';
 import { api, ApiError } from '@/utils/api';
-import type { LocationSelection } from '@homiio/shared-types';
+import {
+  AVAILABLE_HOUSING_ALERT_RULE_TYPES,
+  type AlertChannel,
+  type HousingAlertRule,
+  type HousingAlertRuleType,
+  type LocationSelection,
+  type PushPrivacyMode,
+  type WatchAlertStatus,
+  type WatchCadence,
+} from '@homiio/shared-types';
 
 
 /**
@@ -45,6 +54,21 @@ interface RawSavedSearch {
   created_at?: string;
   updatedAt?: string;
   updated_at?: string;
+
+  // The watch half (#356). Every field optional: an older backend answers
+  // without them, and the normaliser below turns that into a silent saved
+  // search rather than into `undefined` reaching a switch.
+  locToken?: string;
+  queryVersion?: number;
+  isPrimaryArea?: boolean;
+  cadence?: WatchCadence;
+  channels?: AlertChannel[];
+  alertRules?: HousingAlertRule[];
+  availableRuleTypes?: HousingAlertRuleType[];
+  mutedUntil?: string | null;
+  pushPrivacyMode?: PushPrivacyMode;
+  hasArea?: boolean;
+  alertStatus?: WatchAlertStatus;
 }
 
 /**
@@ -129,7 +153,38 @@ const normalizeSearch = (raw: RawSavedSearch, defaults: Partial<SavedSearch> = {
         : false,
   createdAt: raw.createdAt ?? raw.created_at ?? new Date().toISOString(),
   updatedAt: raw.updatedAt ?? raw.updated_at ?? new Date().toISOString(),
+
+  // The watch half. `cadence` defaults to `'off'` for the same reason the
+  // column does: a payload that does not mention alerting describes a saved
+  // search that does not alert, and the cautious reading is the only safe
+  // default for something that sends notifications.
+  locToken: raw.locToken,
+  queryVersion: raw.queryVersion,
+  isPrimaryArea: raw.isPrimaryArea ?? false,
+  cadence: raw.cadence ?? 'off',
+  channels: raw.channels ?? ['in_app'],
+  alertRules: raw.alertRules ?? [],
+  // Defaults to the CONTRACT's list rather than to an empty one: an empty list
+  // would render every switch as unavailable and read as a broken feature,
+  // where the contract's list is at worst optimistic and is corrected by the
+  // server's own 400 if a rule is refused.
+  availableRuleTypes: raw.availableRuleTypes ?? [...AVAILABLE_HOUSING_ALERT_RULE_TYPES],
+  mutedUntil: raw.mutedUntil ?? null,
+  pushPrivacyMode: raw.pushPrivacyMode ?? 'discreet',
+  hasArea: raw.hasArea,
+  alertStatus: raw.alertStatus,
 });
+
+/** What the alert-settings screen may change about a watch. */
+export interface WatchAlertSettingsInput {
+  cadence?: WatchCadence;
+  channels?: AlertChannel[];
+  alertRules?: HousingAlertRule[];
+  /** ISO timestamp, or `null` to clear a mute. */
+  mutedUntil?: string | null;
+  pushPrivacyMode?: PushPrivacyMode;
+  isPrimaryArea?: boolean;
+}
 
 export interface UseSavedSearches {
   searches: SavedSearch[];
@@ -154,6 +209,18 @@ export interface UseSavedSearches {
     },
   ) => Promise<boolean>;
   toggleNotifications: (searchId: string, enabled: boolean) => Promise<boolean>;
+  /**
+   * Change what a watch listens for, how often it may speak, and through which
+   * channels (#356).
+   *
+   * ONE mutation for all of them rather than one per field, because they are
+   * decided together on one screen and because the server writes `cadence` and
+   * the legacy `notificationsEnabled` in a single statement — splitting the
+   * client call would put a window between two halves of one fact.
+   */
+  updateAlertSettings: (searchId: string, settings: WatchAlertSettingsInput) => Promise<boolean>;
+  /** Make this the area Home opens on. The server clears whichever held it. */
+  setPrimaryArea: (searchId: string) => Promise<boolean>;
   searchExists: (name: string, query?: string) => boolean;
   getSearchById: (id: string) => SavedSearch | undefined;
   hasSearches: boolean;
@@ -450,6 +517,75 @@ export const useSavedSearches = (): UseSavedSearches => {
     [toggleNotificationsMutation, t],
   );
 
+  const alertSettingsMutation = useMutation({
+    mutationKey: ['updateWatchAlertSettings'],
+    mutationFn: async (vars: {
+      searchId: string;
+      settings: WatchAlertSettingsInput;
+    }): Promise<SavedSearch> => {
+      const response = await api.put<SavedSearchPayload>(
+        `/api/profiles/me/saved-searches/${vars.searchId}`,
+        vars.settings,
+      );
+      const payload = response.data;
+      const raw = Array.isArray(payload) ? (payload[0] ?? {}) : extractSearch(payload);
+      return normalizeSearch(raw, { id: vars.searchId });
+    },
+    onSuccess: (updated) => {
+      upsertCachedSearch(updated);
+    },
+    onError: (error: unknown) => {
+      // The server refuses a rule it cannot evaluate rather than storing a dead
+      // switch, so this path is reachable by design and needs its own message —
+      // "update failed" would leave the user re-trying something that will
+      // never work.
+      if (isApiError(error) && error.status === 400) {
+        const response =
+          error.response && typeof error.response === 'object'
+            ? (error.response as { code?: unknown; message?: unknown })
+            : undefined;
+        if (response?.code === 'RULE_UNAVAILABLE') {
+          toast.error(t('alerts.settings.ruleUnavailable'));
+          return;
+        }
+      }
+      toast.error(getErrorMessage(error, t('alerts.settings.updateFailed')));
+    },
+  });
+
+  const updateAlertSettings = useCallback(
+    async (searchId: string, settings: WatchAlertSettingsInput): Promise<boolean> => {
+      try {
+        await alertSettingsMutation.mutateAsync({ searchId, settings });
+        toast.success(t('alerts.settings.updated'));
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [alertSettingsMutation, t],
+  );
+
+  const setPrimaryArea = useCallback(
+    async (searchId: string): Promise<boolean> => {
+      try {
+        await alertSettingsMutation.mutateAsync({ searchId, settings: { isPrimaryArea: true } });
+        // The server clears whichever watch previously held the flag, in the
+        // same transaction. The local cache cannot know WHICH one that was
+        // without re-reading, so the whole list is invalidated rather than
+        // patched — a patched cache would show two primary areas until the next
+        // refetch, which is precisely the state the partial unique index makes
+        // impossible on the server.
+        await queryClient.invalidateQueries({ queryKey: SAVED_SEARCHES_KEY });
+        toast.success(t('alerts.settings.primaryAreaSet'));
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [alertSettingsMutation, queryClient, t],
+  );
+
   const searchExists = useCallback(
     (name: string, query?: string): boolean =>
       searches.some(
@@ -478,6 +614,8 @@ export const useSavedSearches = (): UseSavedSearches => {
     deleteSavedSearch,
     updateSearch,
     toggleNotifications,
+    updateAlertSettings,
+    setPrimaryArea,
     searchExists,
     getSearchById,
     hasSearches: searches.length > 0,

@@ -95,6 +95,10 @@ export default function () {
   router.delete('/me/saved-searches/:searchId', asyncHandler(profileController.deleteSavedSearch));
   router.put('/me/saved-searches/:searchId', asyncHandler(profileController.updateSavedSearch));
   router.put('/me/saved-searches/:searchId/notifications', asyncHandler(profileController.toggleSearchNotifications));
+  // The alert history — declared BEFORE nothing, but kept next to the watches it
+  // belongs to. `/me/alerts/:alertId` is the "why did I get this?" read.
+  router.get('/me/alerts', asyncHandler(profileController.getHousingAlerts));
+  router.get('/me/alerts/:alertId', asyncHandler(profileController.getHousingAlert));
   router.get('/oxy/:oxyUserId', asyncHandler(profileController.getProfileByOxyUserId));
   router.get('/oxy/:oxyUserId/exchange-reviews', asyncHandler(exchangeReviewController.getProfileExchangeReviews));
 

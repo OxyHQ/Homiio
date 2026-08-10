@@ -4044,5 +4044,119 @@
       },
       "notChosen": "Not chosen yet"
     }
+  },
+  "alerts": {
+    "history": {
+      "title": "التنبيهات",
+      "emptyTitle": "لا توجد تنبيهات بعد",
+      "emptyDescription": "عندما يتغيّر شيء في منطقة تتابعها، سيظهر هنا مع سبب المطابقة.",
+      "pending": "في انتظار ملخصك التالي",
+      "openReason": "اعرف لماذا وصلك هذا",
+      "suppressed": {
+        "muted": "مؤجَّل: هذه المنطقة موقوفة مؤقتًا",
+        "cadence_off": "مؤجَّل: التنبيهات مغلقة لهذه المنطقة",
+        "channel_unavailable": "مؤجَّل: لا توجد بعد قناة تسليم متاحة",
+        "rate_limited": "مؤجَّل: كنت قد بلغت حدّك اليومي"
+      }
+    },
+    "reason": {
+      "title": "لماذا وصلك هذا",
+      "whatChanged": "ما الذي تغيّر",
+      "whyYou": "لماذا أنت",
+      "matchedWatch": "طابق منطقتك المحفوظة «{{name}}».",
+      "rule": "القاعدة: {{rule}}",
+      "ruleVersion": "إصدار القاعدة {{version}}",
+      "detectedAt": "رُصد في {{when}}",
+      "evidenceExpired": "انتهت مدة حفظ السجل الأصلي؛ الشرح أعلاه هو ما حُفظ في حينه.",
+      "openArea": "افتح هذه المنطقة",
+      "adjustRules": "اضبط تنبيهات هذه المنطقة",
+      "missingTitle": "التنبيه غير موجود",
+      "missingDescription": "لم يعد هذا التنبيه متاحًا، أو أنه يخص حسابًا آخر."
+    },
+    "settings": {
+      "title": "إعدادات التنبيهات",
+      "cadence": "كم مرة",
+      "cadenceHint": "«فوري» يخبرك بمجرد حدوث تغيير. أما الملخص فيجمع كل شيء معًا.",
+      "rules": "ما الذي أريد معرفته",
+      "pause": "إيقاف مؤقت",
+      "pauseHint": "أثناء الإيقاف تُسجَّل التنبيهات ولا تُسلَّم.",
+      "pauseAction": "أوقف لمدة أسبوع",
+      "resume": "استئناف التنبيهات",
+      "primaryArea": "المنطقة الرئيسية",
+      "primaryAreaHint": "تفتح الصفحة الرئيسية على منطقتك الرئيسية. يمكنك اختيار واحدة فقط.",
+      "primaryAreaAction": "اجعلها منطقتي الرئيسية",
+      "primaryAreaCurrent": "هذه منطقتك الرئيسية",
+      "primaryAreaSet": "تم تحديث المنطقة الرئيسية",
+      "viewHistory": "اعرض تنبيهات هذه المنطقة",
+      "updated": "تم تحديث إعدادات التنبيهات",
+      "updateFailed": "تعذّر تحديث إعدادات التنبيهات",
+      "ruleUnavailable": "لا يمكن تفعيل هذا التنبيه بعد: البيانات التي يعتمد عليها غير موثوقة.",
+      "ruleUnavailableShort": "غير متاح بعد",
+      "missingTitle": "المنطقة المحفوظة غير موجودة",
+      "missingDescription": "لم تعد هذه المنطقة المحفوظة متاحة، أو أنها تخص حسابًا آخر.",
+      "inactive": {
+        "muted": "هذه المنطقة موقوفة مؤقتًا، لذا لا يُسلَّم شيء.",
+        "legacy_query_version": "حُفظ هذا البحث قبل وجود المناطق. أكِّد موضع بحثه لتفعيل التنبيهات.",
+        "location_needs_confirmation": "أكِّد موضع هذا البحث لتفعيل التنبيهات.",
+        "no_area": "هذا المكان ليس له حدود يمكننا مراقبتها. اختر منطقة على الخريطة بدلًا من ذلك.",
+        "no_rules_enabled": "لم يُفعَّل أي تنبيه لهذه المنطقة بعد."
+      }
+    },
+    "cadence": {
+      "instant": "فوري",
+      "daily": "ملخص يومي",
+      "weekly": "ملخص أسبوعي",
+      "off": "مغلق"
+    },
+    "rules": {
+      "new_listing": {
+        "name": "مساكن جديدة",
+        "description": "يُنشر مسكن داخل منطقتك."
+      },
+      "price_decrease": {
+        "name": "انخفاض السعر",
+        "description": "ينخفض السعر المطلوب."
+      },
+      "price_increase": {
+        "name": "ارتفاع السعر",
+        "description": "يرتفع السعر المطلوب."
+      },
+      "cost_terms_changed": {
+        "name": "تغيّر التكاليف",
+        "description": "يتغيّر التأمين أو الفواتير."
+      },
+      "listing_removed": {
+        "name": "مساكن سُحبت",
+        "description": "لم يعد المسكن معروضًا."
+      },
+      "listing_reappeared": {
+        "name": "مساكن عادت",
+        "description": "عاد المسكن للعرض من جديد."
+      },
+      "new_review": {
+        "name": "مراجعات جديدة",
+        "description": "تُنشر مراجعة موثّقة في الجوار."
+      },
+      "eviction_nearby": {
+        "name": "إخلاء قريب",
+        "description": "هناك إخلاء مقرر قرب منطقتك."
+      },
+      "source_conflict": {
+        "name": "إعلانات مكرّرة",
+        "description": "يظهر المسكن نفسه على عدة بوابات."
+      }
+    },
+    "explanation": {
+      "matched": "{{change}} طابق منطقتك المحفوظة «{{watchName}}».",
+      "newListing": "إعلان جديد: {{title}}.",
+      "priceDecrease": "انخفض السعر من {{from}} إلى {{to}} في {{title}}.",
+      "priceIncrease": "ارتفع السعر من {{from}} إلى {{to}} في {{title}}.",
+      "costTermsChanged": "تغيّر {{terms}} في {{title}}.",
+      "listingRemoved": "لم يعد {{title}} معروضًا.",
+      "listingReappeared": "عاد {{title}} للعرض، على {{source}}.",
+      "newReview": "نُشرت مراجعة موثّقة جديدة عن {{building}}.",
+      "evictionNearby": "هناك إخلاء مقرر على بُعد نحو {{radius}} م من {{area}}.",
+      "sourceConflict": "يظهر {{title}} الآن على {{count}} مصادر."
+    }
   }
 }

@@ -4044,5 +4044,119 @@
       },
       "notChosen": "Not chosen yet"
     }
+  },
+  "alerts": {
+    "history": {
+      "title": "Peringatan",
+      "emptyTitle": "Belum ada peringatan",
+      "emptyDescription": "Ketika ada perubahan di area yang Anda ikuti, itu akan muncul di sini beserta alasannya.",
+      "pending": "Menunggu ringkasan berikutnya",
+      "openReason": "Lihat mengapa Anda menerima ini",
+      "suppressed": {
+        "muted": "Ditahan: area ini sedang dijeda",
+        "cadence_off": "Ditahan: peringatan untuk area ini dimatikan",
+        "channel_unavailable": "Ditahan: belum ada saluran pengiriman yang tersedia",
+        "rate_limited": "Ditahan: Anda sudah mencapai batas harian"
+      }
+    },
+    "reason": {
+      "title": "Mengapa Anda menerima ini",
+      "whatChanged": "Apa yang berubah",
+      "whyYou": "Mengapa Anda",
+      "matchedWatch": "Cocok dengan area tersimpan Anda “{{name}}”.",
+      "rule": "Aturan: {{rule}}",
+      "ruleVersion": "Versi aturan {{version}}",
+      "detectedAt": "Terdeteksi {{when}}",
+      "evidenceExpired": "Catatan aslinya sudah kedaluwarsa; penjelasan di atas adalah yang disimpan saat itu.",
+      "openArea": "Buka area ini",
+      "adjustRules": "Atur peringatan untuk area ini",
+      "missingTitle": "Peringatan tidak ditemukan",
+      "missingDescription": "Peringatan ini tidak lagi tersedia atau milik akun lain."
+    },
+    "settings": {
+      "title": "Pengaturan peringatan",
+      "cadence": "Seberapa sering",
+      "cadenceHint": "“Langsung” memberi tahu begitu ada perubahan. Ringkasan menggabungkan semuanya.",
+      "rules": "Beri tahu saya tentang",
+      "pause": "Jeda",
+      "pauseHint": "Saat dijeda peringatan tetap dicatat, tetapi tidak dikirim.",
+      "pauseAction": "Jeda selama seminggu",
+      "resume": "Lanjutkan peringatan",
+      "primaryArea": "Area utama",
+      "primaryAreaHint": "Beranda terbuka di area utama Anda. Hanya bisa satu.",
+      "primaryAreaAction": "Jadikan ini area utama saya",
+      "primaryAreaCurrent": "Ini area utama Anda",
+      "primaryAreaSet": "Area utama diperbarui",
+      "viewHistory": "Lihat peringatan area ini",
+      "updated": "Pengaturan peringatan diperbarui",
+      "updateFailed": "Tidak dapat memperbarui pengaturan peringatan",
+      "ruleUnavailable": "Peringatan itu belum bisa diaktifkan: datanya belum dapat diandalkan.",
+      "ruleUnavailableShort": "Belum tersedia",
+      "missingTitle": "Area tersimpan tidak ditemukan",
+      "missingDescription": "Area tersimpan ini tidak lagi tersedia atau milik akun lain.",
+      "inactive": {
+        "muted": "Area ini sedang dijeda, jadi tidak ada yang dikirim.",
+        "legacy_query_version": "Pencarian ini disimpan sebelum area ada. Konfirmasi lokasinya untuk mengaktifkan peringatan.",
+        "location_needs_confirmation": "Konfirmasi lokasi pencarian ini untuk mengaktifkan peringatan.",
+        "no_area": "Tempat ini tidak punya batas yang bisa kami pantau. Pilih area di peta.",
+        "no_rules_enabled": "Belum ada peringatan yang aktif untuk area ini."
+      }
+    },
+    "cadence": {
+      "instant": "Langsung",
+      "daily": "Ringkasan harian",
+      "weekly": "Ringkasan mingguan",
+      "off": "Mati"
+    },
+    "rules": {
+      "new_listing": {
+        "name": "Hunian baru",
+        "description": "Sebuah hunian diiklankan di dalam area Anda."
+      },
+      "price_decrease": {
+        "name": "Harga turun",
+        "description": "Harga yang diminta turun."
+      },
+      "price_increase": {
+        "name": "Harga naik",
+        "description": "Harga yang diminta naik."
+      },
+      "cost_terms_changed": {
+        "name": "Perubahan biaya",
+        "description": "Deposit atau tagihan berubah."
+      },
+      "listing_removed": {
+        "name": "Hunian ditarik",
+        "description": "Sebuah hunian tidak lagi diiklankan."
+      },
+      "listing_reappeared": {
+        "name": "Hunian kembali",
+        "description": "Sebuah hunian diiklankan lagi."
+      },
+      "new_review": {
+        "name": "Ulasan baru",
+        "description": "Ulasan terverifikasi terbit di dekat sini."
+      },
+      "eviction_nearby": {
+        "name": "Penggusuran terdekat",
+        "description": "Ada penggusuran terjadwal dekat area Anda."
+      },
+      "source_conflict": {
+        "name": "Iklan ganda",
+        "description": "Hunian yang sama muncul di beberapa portal."
+      }
+    },
+    "explanation": {
+      "matched": "{{change}} Cocok dengan area tersimpan Anda “{{watchName}}”.",
+      "newListing": "Iklan baru: {{title}}.",
+      "priceDecrease": "Harga turun dari {{from}} menjadi {{to}} pada {{title}}.",
+      "priceIncrease": "Harga naik dari {{from}} menjadi {{to}} pada {{title}}.",
+      "costTermsChanged": "{{terms}} berubah pada {{title}}.",
+      "listingRemoved": "{{title}} tidak lagi diiklankan.",
+      "listingReappeared": "{{title}} diiklankan lagi, di {{source}}.",
+      "newReview": "Ulasan terverifikasi baru diterbitkan untuk {{building}}.",
+      "evictionNearby": "Ada penggusuran terjadwal sekitar {{radius}} m dari {{area}}.",
+      "sourceConflict": "{{title}} kini muncul di {{count}} sumber."
+    }
   }
 }

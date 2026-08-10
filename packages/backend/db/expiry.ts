@@ -75,6 +75,7 @@ import { conversations } from './schema/conversations';
 import { moderationEvents, moderationOutbox } from './schema/moderation';
 import { placePois } from './schema/placePois';
 import { properties } from './schema/properties';
+import { housingDomainEvents } from './schema/watches';
 
 export {
   type ExpirySweepOptions,
@@ -157,6 +158,23 @@ export const EXPIRY_SWEEP_TARGETS: readonly ExpirySweepTarget[] = [
       'chose. Note `moderation_outbox.event_id` deliberately carries no foreign ' +
       'key into this table, precisely so this sweep and that one cannot decide ' +
       'each other\'s outcome.',
+  },
+  {
+    table: housingDomainEvents,
+    column: housingDomainEvents.expiresAt,
+    retentionSeconds: 0,
+    reason:
+      'The 90-day retention on housing change FACTS (#356). INTENT CHECKED, and ' +
+      'the check is what makes it safe rather than the number: an event is ' +
+      'EVIDENCE for an alert that has already been delivered, never the alert ' +
+      'itself. `housing_alerts.event_id` is `ON DELETE SET NULL` and every alert ' +
+      'stores its own explanation, so this sweep costs the "why did I get this?" ' +
+      'answer its supporting fact and costs the history nothing. It is the only ' +
+      'entry here with NO Mongo ancestor — registered on the way IN rather than ' +
+      'ported, because a table that grows with every listing change in the ' +
+      'catalogue is exactly the shape this registry exists to catch, and the ' +
+      'only reason the others needed catching is that nobody was there to ' +
+      'register them at birth.',
   },
 ];
 

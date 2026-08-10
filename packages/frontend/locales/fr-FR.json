@@ -4044,5 +4044,119 @@
       },
       "notChosen": "Not chosen yet"
     }
+  },
+  "alerts": {
+    "history": {
+      "title": "Alertes",
+      "emptyTitle": "Pas encore d’alertes",
+      "emptyDescription": "Quand quelque chose change dans une zone que vous suivez, cela apparaîtra ici avec la raison de la correspondance.",
+      "pending": "En attente de votre prochain résumé",
+      "openReason": "Voir pourquoi vous avez reçu ceci",
+      "suppressed": {
+        "muted": "Retenue : cette zone est en pause",
+        "cadence_off": "Retenue : les alertes sont désactivées pour cette zone",
+        "channel_unavailable": "Retenue : aucun canal de livraison n’est encore disponible",
+        "rate_limited": "Retenue : vous aviez atteint votre limite quotidienne"
+      }
+    },
+    "reason": {
+      "title": "Pourquoi vous avez reçu ceci",
+      "whatChanged": "Ce qui a changé",
+      "whyYou": "Pourquoi vous",
+      "matchedWatch": "Cela correspond à votre zone enregistrée « {{name}} ».",
+      "rule": "Règle : {{rule}}",
+      "ruleVersion": "Version de règle {{version}}",
+      "detectedAt": "Détecté le {{when}}",
+      "evidenceExpired": "L’enregistrement d’origine a depuis expiré ; l’explication ci-dessus est celle enregistrée à l’époque.",
+      "openArea": "Ouvrir cette zone",
+      "adjustRules": "Ajuster les alertes de cette zone",
+      "missingTitle": "Alerte introuvable",
+      "missingDescription": "Cette alerte n’est plus disponible ou appartient à un autre compte."
+    },
+    "settings": {
+      "title": "Réglages des alertes",
+      "cadence": "À quelle fréquence",
+      "cadenceHint": "« Instantané » vous prévient dès qu’il y a un changement. Un résumé regroupe tout.",
+      "rules": "Ce dont je veux être informé",
+      "pause": "Pause",
+      "pauseHint": "En pause, les alertes sont enregistrées mais pas livrées.",
+      "pauseAction": "Mettre en pause une semaine",
+      "resume": "Reprendre les alertes",
+      "primaryArea": "Zone principale",
+      "primaryAreaHint": "L’accueil s’ouvre sur votre zone principale. Vous ne pouvez en avoir qu’une.",
+      "primaryAreaAction": "En faire ma zone principale",
+      "primaryAreaCurrent": "C’est votre zone principale",
+      "primaryAreaSet": "Zone principale mise à jour",
+      "viewHistory": "Voir les alertes de cette zone",
+      "updated": "Réglages des alertes mis à jour",
+      "updateFailed": "Impossible de mettre à jour les réglages des alertes",
+      "ruleUnavailable": "Cette alerte ne peut pas encore être activée : les données sur lesquelles elle repose ne sont pas fiables.",
+      "ruleUnavailableShort": "Pas encore disponible",
+      "missingTitle": "Zone enregistrée introuvable",
+      "missingDescription": "Cette zone enregistrée n’est plus disponible ou appartient à un autre compte.",
+      "inactive": {
+        "muted": "Cette zone est en pause, rien n’est donc livré.",
+        "legacy_query_version": "Cette recherche a été enregistrée avant l’existence des zones. Confirmez où elle cherche pour activer les alertes.",
+        "location_needs_confirmation": "Confirmez où cherche cette recherche pour activer les alertes.",
+        "no_area": "Ce lieu n’a pas de limite que nous puissions surveiller. Choisissez plutôt une zone sur la carte.",
+        "no_rules_enabled": "Aucune alerte n’est encore activée pour cette zone."
+      }
+    },
+    "cadence": {
+      "instant": "Instantané",
+      "daily": "Résumé quotidien",
+      "weekly": "Résumé hebdomadaire",
+      "off": "Désactivées"
+    },
+    "rules": {
+      "new_listing": {
+        "name": "Nouveaux logements",
+        "description": "Un logement est publié dans votre zone."
+      },
+      "price_decrease": {
+        "name": "Baisses de prix",
+        "description": "Le prix demandé baisse."
+      },
+      "price_increase": {
+        "name": "Hausses de prix",
+        "description": "Le prix demandé augmente."
+      },
+      "cost_terms_changed": {
+        "name": "Changements de coûts",
+        "description": "Le dépôt de garantie ou les charges changent."
+      },
+      "listing_removed": {
+        "name": "Logements retirés",
+        "description": "Un logement n’est plus publié."
+      },
+      "listing_reappeared": {
+        "name": "Logements de retour",
+        "description": "Un logement est publié à nouveau."
+      },
+      "new_review": {
+        "name": "Nouveaux avis",
+        "description": "Un avis vérifié est publié à proximité."
+      },
+      "eviction_nearby": {
+        "name": "Expulsions à proximité",
+        "description": "Une expulsion est prévue près de votre zone."
+      },
+      "source_conflict": {
+        "name": "Annonces en double",
+        "description": "Le même logement apparaît sur plusieurs portails."
+      }
+    },
+    "explanation": {
+      "matched": "{{change}} Cela correspond à votre zone enregistrée « {{watchName}} ».",
+      "newListing": "Nouvelle annonce : {{title}}.",
+      "priceDecrease": "Le prix est passé de {{from}} à {{to}} sur {{title}}.",
+      "priceIncrease": "Le prix est monté de {{from}} à {{to}} sur {{title}}.",
+      "costTermsChanged": "{{terms}} a changé sur {{title}}.",
+      "listingRemoved": "{{title}} n’est plus publié.",
+      "listingReappeared": "{{title}} est publié à nouveau, sur {{source}}.",
+      "newReview": "Un nouvel avis vérifié a été publié pour {{building}}.",
+      "evictionNearby": "Une expulsion est prévue à environ {{radius}} m de {{area}}.",
+      "sourceConflict": "{{title}} apparaît maintenant sur {{count}} sources."
+    }
   }
 }

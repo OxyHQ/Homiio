@@ -8,6 +8,12 @@ import { findOrCreateCanonicalAddress } from '../../services/addressService';
 import { findPropertyById } from '../../db/properties/propertyReads';
 import { serializeProperty } from '../../db/properties/propertySerializer';
 import { softDeleteProperty, updateProperty as updatePropertyRow } from '../../db/properties/propertyWrites';
+import { getDb } from '../../db/postgres';
+import {
+  readPropertySnapshot,
+  recordPropertyChangeEvents,
+  recordPropertyRemovedEvent,
+} from '../../services/watches/propertyEventProducer';
 import { AppError, successResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
 import { requireSessionOxyUserId } from '../../utils/sessionUser';
@@ -58,11 +64,19 @@ export async function updateProperty(req: ControllerRequest, res: ControllerResp
       updateData.addressId = address.id;
     }
 
+    // The BEFORE half of any change event (#356), read while it is still true.
+    const beforeSnapshot = await readPropertySnapshot(getDb(), String(propertyId));
+
     // The ownership predicate rides on the UPDATE, so the check and the write
     // are one statement and a change of owner cannot interleave between them.
     const updated = await updatePropertyRow(propertyId, updateData, { ownedBy: oxyUserId });
     if (!updated) return next(new AppError('Failed to update property', 500, 'UPDATE_FAILED'));
     const updatedProperty = serializeProperty(updated);
+
+    if (beforeSnapshot) {
+      const afterSnapshot = await readPropertySnapshot(getDb(), String(propertyId));
+      if (afterSnapshot) await recordPropertyChangeEvents(beforeSnapshot, afterSnapshot);
+    }
 
     const transitionedToTerminal =
       existing.property.status !== updated.property.status &&
@@ -97,11 +111,18 @@ export async function deleteProperty(req: ControllerRequest, res: ControllerResp
   try {
     const { propertyId } = req.params;
     const oxyUserId = requireSessionOxyUserId(req);
+    // Read BEFORE the write: the title and the coordinates a `listing_removed`
+    // event needs are only readable while the listing is still visible. It is
+    // read unconditionally rather than after a successful delete, because after
+    // the delete there is nothing left to read — and it is discarded when the
+    // delete turns out not to have been this caller's to make.
+    const snapshot = await readPropertySnapshot(getDb(), String(propertyId));
     // One statement: no row matched means either no such listing or not this
     // caller's, deliberately indistinguishable so a 404 does not confirm a
     // listing exists.
     const deleted = await softDeleteProperty(propertyId, { ownedBy: oxyUserId });
     if (!deleted) return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));
+    if (snapshot) await recordPropertyRemovedEvent(snapshot);
 
     logger.info('Property soft-deleted', { propertyId: String(propertyId), oxyUserId });
     res.json(successResponse(null, 'Property deleted successfully'));

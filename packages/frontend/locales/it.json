@@ -4093,5 +4093,119 @@
       },
       "notChosen": "Not chosen yet"
     }
+  },
+  "alerts": {
+    "history": {
+      "title": "Avvisi",
+      "emptyTitle": "Ancora nessun avviso",
+      "emptyDescription": "Quando qualcosa cambia in una zona che segui, comparirà qui con il motivo per cui ha coinciso.",
+      "pending": "In attesa del prossimo riepilogo",
+      "openReason": "Scopri perché lo hai ricevuto",
+      "suppressed": {
+        "muted": "Trattenuto: questa zona è in pausa",
+        "cadence_off": "Trattenuto: gli avvisi sono disattivati per questa zona",
+        "channel_unavailable": "Trattenuto: non è ancora disponibile alcun canale di consegna",
+        "rate_limited": "Trattenuto: avevi raggiunto il limite giornaliero"
+      }
+    },
+    "reason": {
+      "title": "Perché lo hai ricevuto",
+      "whatChanged": "Che cosa è cambiato",
+      "whyYou": "Perché proprio a te",
+      "matchedWatch": "Ha coinciso con la tua zona salvata «{{name}}».",
+      "rule": "Regola: {{rule}}",
+      "ruleVersion": "Versione della regola {{version}}",
+      "detectedAt": "Rilevato il {{when}}",
+      "evidenceExpired": "Il dato originale è nel frattempo scaduto; la spiegazione qui sopra è quella salvata all’epoca.",
+      "openArea": "Apri questa zona",
+      "adjustRules": "Modifica gli avvisi di questa zona",
+      "missingTitle": "Avviso non trovato",
+      "missingDescription": "Questo avviso non è più disponibile oppure appartiene a un altro account."
+    },
+    "settings": {
+      "title": "Impostazioni avvisi",
+      "cadence": "Con quale frequenza",
+      "cadenceHint": "«Immediato» ti avvisa appena qualcosa cambia. Un riepilogo raggruppa tutto.",
+      "rules": "Di cosa voglio essere avvisato",
+      "pause": "Pausa",
+      "pauseHint": "In pausa gli avvisi vengono registrati, ma non consegnati.",
+      "pauseAction": "Metti in pausa per una settimana",
+      "resume": "Riprendi gli avvisi",
+      "primaryArea": "Zona principale",
+      "primaryAreaHint": "La home si apre sulla tua zona principale. Puoi averne una sola.",
+      "primaryAreaAction": "Imposta come zona principale",
+      "primaryAreaCurrent": "Questa è la tua zona principale",
+      "primaryAreaSet": "Zona principale aggiornata",
+      "viewHistory": "Vedi gli avvisi di questa zona",
+      "updated": "Impostazioni avvisi aggiornate",
+      "updateFailed": "Impossibile aggiornare le impostazioni degli avvisi",
+      "ruleUnavailable": "Questo avviso non può ancora essere attivato: i dati su cui si basa non sono affidabili.",
+      "ruleUnavailableShort": "Non ancora disponibile",
+      "missingTitle": "Zona salvata non trovata",
+      "missingDescription": "Questa zona salvata non è più disponibile oppure appartiene a un altro account.",
+      "inactive": {
+        "muted": "Questa zona è in pausa, quindi non viene consegnato nulla.",
+        "legacy_query_version": "Questa ricerca è stata salvata prima che esistessero le zone. Conferma dove cerca per attivare gli avvisi.",
+        "location_needs_confirmation": "Conferma dove cerca questa ricerca per attivare gli avvisi.",
+        "no_area": "Questo luogo non ha un confine che possiamo sorvegliare. Scegli invece una zona sulla mappa.",
+        "no_rules_enabled": "Nessun avviso è ancora attivo per questa zona."
+      }
+    },
+    "cadence": {
+      "instant": "Immediato",
+      "daily": "Riepilogo giornaliero",
+      "weekly": "Riepilogo settimanale",
+      "off": "Disattivati"
+    },
+    "rules": {
+      "new_listing": {
+        "name": "Nuove case",
+        "description": "Una casa viene pubblicata nella tua zona."
+      },
+      "price_decrease": {
+        "name": "Ribassi di prezzo",
+        "description": "Il prezzo richiesto scende."
+      },
+      "price_increase": {
+        "name": "Rialzi di prezzo",
+        "description": "Il prezzo richiesto sale."
+      },
+      "cost_terms_changed": {
+        "name": "Variazioni di spesa",
+        "description": "Cambiano la caparra o le spese."
+      },
+      "listing_removed": {
+        "name": "Case ritirate",
+        "description": "Una casa non è più in elenco."
+      },
+      "listing_reappeared": {
+        "name": "Case tornate",
+        "description": "Una casa torna in elenco."
+      },
+      "new_review": {
+        "name": "Nuove recensioni",
+        "description": "Viene pubblicata una recensione verificata nelle vicinanze."
+      },
+      "eviction_nearby": {
+        "name": "Sfratti vicini",
+        "description": "È previsto uno sfratto vicino alla tua zona."
+      },
+      "source_conflict": {
+        "name": "Annunci duplicati",
+        "description": "La stessa casa compare su più portali."
+      }
+    },
+    "explanation": {
+      "matched": "{{change}} Ha coinciso con la tua zona salvata «{{watchName}}».",
+      "newListing": "Nuovo annuncio: {{title}}.",
+      "priceDecrease": "Il prezzo è sceso da {{from}} a {{to}} su {{title}}.",
+      "priceIncrease": "Il prezzo è salito da {{from}} a {{to}} su {{title}}.",
+      "costTermsChanged": "È cambiato {{terms}} su {{title}}.",
+      "listingRemoved": "{{title}} non è più in elenco.",
+      "listingReappeared": "{{title}} è di nuovo in elenco, su {{source}}.",
+      "newReview": "È stata pubblicata una nuova recensione verificata per {{building}}.",
+      "evictionNearby": "È previsto uno sfratto entro circa {{radius}} m da {{area}}.",
+      "sourceConflict": "{{title}} ora compare su {{count}} fonti."
+    }
   }
 }

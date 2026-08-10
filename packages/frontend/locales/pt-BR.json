@@ -4044,5 +4044,119 @@
       },
       "notChosen": "Not chosen yet"
     }
+  },
+  "alerts": {
+    "history": {
+      "title": "Alertas",
+      "emptyTitle": "Ainda não há alertas",
+      "emptyDescription": "Quando algo mudar numa área que você acompanha, aparecerá aqui com o motivo da correspondência.",
+      "pending": "Aguardando o seu próximo resumo",
+      "openReason": "Veja por que você recebeu isto",
+      "suppressed": {
+        "muted": "Retido: esta área está pausada",
+        "cadence_off": "Retido: os alertas estão desativados para esta área",
+        "channel_unavailable": "Retido: ainda não há canal de entrega disponível",
+        "rate_limited": "Retido: você havia atingido o limite diário"
+      }
+    },
+    "reason": {
+      "title": "Por que você recebeu isto",
+      "whatChanged": "O que mudou",
+      "whyYou": "Por que você",
+      "matchedWatch": "Correspondeu à sua área salva “{{name}}”.",
+      "rule": "Regra: {{rule}}",
+      "ruleVersion": "Versão da regra {{version}}",
+      "detectedAt": "Detectado em {{when}}",
+      "evidenceExpired": "O registro original já expirou; a explicação acima é a que foi salva na época.",
+      "openArea": "Abrir esta área",
+      "adjustRules": "Ajustar os alertas desta área",
+      "missingTitle": "Alerta não encontrado",
+      "missingDescription": "Este alerta não está mais disponível ou pertence a outra conta."
+    },
+    "settings": {
+      "title": "Configurações de alertas",
+      "cadence": "Com que frequência",
+      "cadenceHint": "“Na hora” avisa assim que algo muda. Um resumo agrupa tudo.",
+      "rules": "Sobre o que quero saber",
+      "pause": "Pausar",
+      "pauseHint": "Durante a pausa os alertas são registrados, mas não entregues.",
+      "pauseAction": "Pausar por uma semana",
+      "resume": "Retomar alertas",
+      "primaryArea": "Área principal",
+      "primaryAreaHint": "A tela inicial abre na sua área principal. Você pode ter uma por vez.",
+      "primaryAreaAction": "Tornar esta a minha área principal",
+      "primaryAreaCurrent": "Esta é a sua área principal",
+      "primaryAreaSet": "Área principal atualizada",
+      "viewHistory": "Ver os alertas desta área",
+      "updated": "Configurações de alertas atualizadas",
+      "updateFailed": "Não foi possível atualizar as configurações de alertas",
+      "ruleUnavailable": "Esse alerta ainda não pode ser ativado: os dados por trás dele não são confiáveis.",
+      "ruleUnavailableShort": "Ainda não disponível",
+      "missingTitle": "Área salva não encontrada",
+      "missingDescription": "Esta área salva não está mais disponível ou pertence a outra conta.",
+      "inactive": {
+        "muted": "Esta área está pausada, então nada está sendo entregue.",
+        "legacy_query_version": "Esta busca foi salva antes de existirem as áreas. Confirme onde ela procura para ativar os alertas.",
+        "location_needs_confirmation": "Confirme onde esta busca procura para ativar os alertas.",
+        "no_area": "Este lugar não tem um limite que possamos monitorar. Escolha uma área no mapa.",
+        "no_rules_enabled": "Nenhum alerta está ativado para esta área ainda."
+      }
+    },
+    "cadence": {
+      "instant": "Na hora",
+      "daily": "Resumo diário",
+      "weekly": "Resumo semanal",
+      "off": "Desativados"
+    },
+    "rules": {
+      "new_listing": {
+        "name": "Novos imóveis",
+        "description": "Um imóvel é anunciado dentro da sua área."
+      },
+      "price_decrease": {
+        "name": "Quedas de preço",
+        "description": "O preço pedido cai."
+      },
+      "price_increase": {
+        "name": "Altas de preço",
+        "description": "O preço pedido sobe."
+      },
+      "cost_terms_changed": {
+        "name": "Mudanças de custo",
+        "description": "O depósito ou as despesas mudam."
+      },
+      "listing_removed": {
+        "name": "Imóveis retirados",
+        "description": "Um imóvel deixa de ser anunciado."
+      },
+      "listing_reappeared": {
+        "name": "Imóveis que voltam",
+        "description": "Um imóvel é anunciado de novo."
+      },
+      "new_review": {
+        "name": "Novas avaliações",
+        "description": "Uma avaliação verificada é publicada por perto."
+      },
+      "eviction_nearby": {
+        "name": "Despejos por perto",
+        "description": "Há um despejo marcado perto da sua área."
+      },
+      "source_conflict": {
+        "name": "Anúncios duplicados",
+        "description": "O mesmo imóvel aparece em vários portais."
+      }
+    },
+    "explanation": {
+      "matched": "{{change}} Correspondeu à sua área salva “{{watchName}}”.",
+      "newListing": "Novo anúncio: {{title}}.",
+      "priceDecrease": "O preço caiu de {{from}} para {{to}} em {{title}}.",
+      "priceIncrease": "O preço subiu de {{from}} para {{to}} em {{title}}.",
+      "costTermsChanged": "Mudou {{terms}} em {{title}}.",
+      "listingRemoved": "{{title}} não está mais anunciado.",
+      "listingReappeared": "{{title}} está anunciado de novo, em {{source}}.",
+      "newReview": "Uma nova avaliação verificada foi publicada para {{building}}.",
+      "evictionNearby": "Há um despejo marcado a cerca de {{radius}} m de {{area}}.",
+      "sourceConflict": "{{title}} agora aparece em {{count}} fontes."
+    }
   }
 }
