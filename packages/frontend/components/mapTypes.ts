@@ -24,6 +24,35 @@ export type LonLat = [number, number];
  */
 export type { GeocodedAddress } from '@homiio/shared-types';
 
+/**
+ * Who moved the camera.
+ *
+ * The distinction has to travel WITH the event because nothing downstream can
+ * recover it: a viewport that arrived because the app framed a city and one the
+ * user dragged there are the same four numbers. Without it, opening a search
+ * arms "Search this area" against the area the search is already showing — the
+ * button appears, unprompted, over results that already answer it.
+ */
+export type MapMoveSource = 'user' | 'programmatic';
+
+/**
+ * The marker every camera COMMAND carries, merged into the events MapLibre
+ * fires for it (`easeTo`/`fitBounds`/`jumpTo`/`resize` all take `eventData`).
+ *
+ * Marking the commands rather than sniffing for a DOM `originalEvent` is the
+ * safer direction of failure: an unmarked command reads as a user gesture, so a
+ * camera call somebody forgets to mark shows a button that need not be there,
+ * while the alternative — treating anything unrecognised as programmatic —
+ * hides the button for good and looks like the feature was never built.
+ */
+export const PROGRAMMATIC_MOVE = { homiioProgrammatic: true } as const;
+
+/** Read {@link PROGRAMMATIC_MOVE} back off an event of unknown shape. */
+export function moveSourceOf(event: unknown): MapMoveSource {
+  const marked = event as { homiioProgrammatic?: unknown } | null | undefined;
+  return marked?.homiioProgrammatic === true ? 'programmatic' : 'user';
+}
+
 /** A clustered marker leaf as emitted by the document (GeoJSON-style feature). */
 export interface ClusterLeaf {
   geometry?: { type: 'Point'; coordinates: LonLat };
@@ -52,6 +81,11 @@ export type MapEvent =
       pitch: number;
       bounds: { west: number; south: number; east: number; north: number };
       isFinal?: boolean; // true when a move/zoom gesture ends
+      /**
+       * Whether a person moved the camera or the app did. Required, so a new
+       * map adapter cannot omit it and leave every consumer guessing.
+       */
+      source: MapMoveSource;
     };
 
 /** Commands the host sends down into the embedded document. */

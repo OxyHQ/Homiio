@@ -650,7 +650,8 @@
       "filters": "Filters",
       "saved": "Saved",
       "decreaseGuests": "Reducir huéspedes",
-      "increaseGuests": "Aumentar huéspedes"
+      "increaseGuests": "Aumentar huéspedes",
+      "backToSearchedArea": "Volver a la zona buscada"
     },
     "summary": {
       "edit": "Editar búsqueda",
@@ -700,7 +701,10 @@
       "noResults": "Ninguna propiedad coincide con esta búsqueda",
       "loading": "Buscando propiedades...",
       "count_one": "{{count}} propiedad",
-      "count_other": "{{count}} propiedades"
+      "count_other": "{{count}} propiedades",
+      "unresolvedLocation": "No hemos encontrado ese lugar",
+      "withoutMapLocation_one": "{{count}} de estos no tiene ubicación en el mapa",
+      "withoutMapLocation_other": "{{count}} de estos no tienen ubicación en el mapa"
     },
     "recent": {
       "title": "Recent searches"
@@ -740,6 +744,9 @@
       "providerUnavailable": "La búsqueda de lugares no está disponible temporalmente. Inténtalo en breve.",
       "failed": "No se han podido buscar lugares ahora mismo.",
       "degraded": "Mostrando resultados de una fuente alternativa; puede que falten lugares."
+    },
+    "area": {
+      "stillShowing": "Seguimos mostrando resultados de {{place}}"
     }
   },
   "profile": {

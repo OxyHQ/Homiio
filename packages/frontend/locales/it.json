@@ -818,7 +818,8 @@
       "filters": "Filters",
       "saved": "Saved",
       "decreaseGuests": "Riduci ospiti",
-      "increaseGuests": "Aumenta ospiti"
+      "increaseGuests": "Aumenta ospiti",
+      "backToSearchedArea": "Torna all'area cercata"
     },
     "summary": {
       "edit": "Modifica ricerca",
@@ -868,7 +869,10 @@
       "noResults": "Nessun immobile corrisponde a questa ricerca",
       "loading": "Ricerca immobili...",
       "count_one": "{{count}} immobile",
-      "count_other": "{{count}} immobili"
+      "count_other": "{{count}} immobili",
+      "unresolvedLocation": "Non abbiamo trovato quel luogo",
+      "withoutMapLocation_one": "{{count}} di questi non ha una posizione sulla mappa",
+      "withoutMapLocation_other": "{{count}} di questi non hanno una posizione sulla mappa"
     },
     "recent": {
       "title": "Recent searches"
@@ -908,6 +912,9 @@
       "providerUnavailable": "La ricerca dei luoghi non è momentaneamente disponibile. Riprova a breve.",
       "failed": "Non è stato possibile cercare luoghi in questo momento.",
       "degraded": "Risultati da una fonte alternativa; alcuni luoghi potrebbero mancare."
+    },
+    "area": {
+      "stillShowing": "Stiamo ancora mostrando i risultati di {{place}}"
     }
   },
   "profile": {

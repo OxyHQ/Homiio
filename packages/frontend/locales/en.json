@@ -674,7 +674,8 @@
       "filters": "Filters",
       "saved": "Saved",
       "decreaseGuests": "Decrease guests",
-      "increaseGuests": "Increase guests"
+      "increaseGuests": "Increase guests",
+      "backToSearchedArea": "Back to searched area"
     },
     "summary": {
       "edit": "Edit search",
@@ -724,7 +725,10 @@
       "noResults": "No properties match this search",
       "loading": "Searching properties...",
       "count_one": "{{count}} property",
-      "count_other": "{{count}} properties"
+      "count_other": "{{count}} properties",
+      "unresolvedLocation": "We could not find that place",
+      "withoutMapLocation_one": "{{count}} of these has no map location",
+      "withoutMapLocation_other": "{{count}} of these have no map location"
     },
     "recent": {
       "title": "Recent searches"
@@ -764,6 +768,9 @@
       "providerUnavailable": "Place search is temporarily unavailable. Try again shortly.",
       "failed": "Couldn't search for places right now.",
       "degraded": "Showing results from a backup source; some places may be missing."
+    },
+    "area": {
+      "stillShowing": "Still showing results for {{place}}"
     }
   },
   "profile": {

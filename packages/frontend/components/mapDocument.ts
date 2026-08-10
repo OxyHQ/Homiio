@@ -120,6 +120,8 @@ const buildScript = (options: MapDocumentOptions): string => {
   }))});
 
   const srcId='markers';
+  // Mirrors mapTypes.PROGRAMMATIC_MOVE. See the note in emit() below.
+  const PROGRAMMATIC_MOVE = { homiioProgrammatic: true };
   const cluster=${String(cluster.enabled)}, cRad=${cluster.radius}, cMax=${cluster.maxZoom};
   const cColor=${JSON.stringify(cluster.color)}, cText=${JSON.stringify(cluster.textColor)};
   let highlightedFeatureId = null;
@@ -197,7 +199,7 @@ const buildScript = (options: MapDocumentOptions): string => {
       const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
       if (!features.length) return;
       const clusterId = features[0].properties.cluster_id;
-      map.getSource(srcId).getClusterExpansionZoom(clusterId).then((z)=>{ map.easeTo({center: features[0].geometry.coordinates, zoom:z}); }).catch(()=>{});
+      map.getSource(srcId).getClusterExpansionZoom(clusterId).then((z)=>{ map.easeTo({center: features[0].geometry.coordinates, zoom:z}, PROGRAMMATIC_MOVE); }).catch(()=>{});
     });
 
     map.on('mouseenter', 'clusters', () => { map.getCanvas().style.cursor = 'pointer'; });
@@ -225,27 +227,33 @@ const buildScript = (options: MapDocumentOptions): string => {
   });
 
   let last = 0;
-  const emit = (force=false) => {
+  const emit = (force, ev) => {
     const now = Date.now();
     if (!force && now - last < 100) return;
     last = now;
     const c = map.getCenter();
     const b = map.getBounds();
     const boundsPayload = { west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() };
-    post({ type:'region', center:[c.lng,c.lat], zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch(), bounds: boundsPayload, isFinal: force });
+    // Every camera command this document issues carries PROGRAMMATIC_MOVE, and
+    // maplibre merges that object into the events it fires for the command. So
+    // an unmarked event is a gesture. The key must stay identical to
+    // mapTypes.PROGRAMMATIC_MOVE - the host cannot import into this template
+    // literal, so the agreement is pinned by a test that reads this string.
+    const source = (ev && ev.homiioProgrammatic === true) ? 'programmatic' : 'user';
+    post({ type:'region', center:[c.lng,c.lat], zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch(), bounds: boundsPayload, isFinal: force, source: source });
   };
 
-  ['move','zoom','rotate','pitch'].forEach(ev => map.on(ev, () => { emit(false); }));
-  ['moveend','zoomend','rotateend','pitchend'].forEach(ev => map.on(ev, () => { emit(true); }));
+  ['move','zoom','rotate','pitch'].forEach(ev => map.on(ev, (e) => { emit(false, e); }));
+  ['moveend','zoomend','rotateend','pitchend'].forEach(ev => map.on(ev, (e) => { emit(true, e); }));
 
   const handle=(raw)=>{ try{
     const m = JSON.parse(raw.data || raw);
     if(!m || typeof m !== 'object') return;
     if(m.type==='setView'){
       if (m.duration === 0) {
-        map.jumpTo({ center: m.center, zoom: m.zoom });
+        map.jumpTo({ center: m.center, zoom: m.zoom }, PROGRAMMATIC_MOVE);
       } else {
-        map.easeTo({ center: m.center, zoom: m.zoom, duration: m.duration || 500 });
+        map.easeTo({ center: m.center, zoom: m.zoom, duration: m.duration || 500 }, PROGRAMMATIC_MOVE);
       }
     }
     if(m.type==='fitBounds'){
@@ -257,7 +265,7 @@ const buildScript = (options: MapDocumentOptions): string => {
       map.fitBounds(m.bounds, {
         padding: typeof m.padding === 'number' ? m.padding : 48,
         duration: typeof m.duration === 'number' ? m.duration : 500,
-      });
+      }, PROGRAMMATIC_MOVE);
     }
     if(m.type==='setData'){
       const s = map.getSource(srcId);

@@ -674,7 +674,8 @@
       "filters": "Filters",
       "saved": "Saved",
       "decreaseGuests": "Decrease guests",
-      "increaseGuests": "Increase guests"
+      "increaseGuests": "Increase guests",
+      "backToSearchedArea": "Voltar à área pesquisada"
     },
     "summary": {
       "edit": "Edit search",
@@ -724,7 +725,10 @@
       "noResults": "No properties match this search",
       "loading": "Searching properties...",
       "count_one": "{{count}} property",
-      "count_other": "{{count}} properties"
+      "count_other": "{{count}} properties",
+      "unresolvedLocation": "Não encontramos esse lugar",
+      "withoutMapLocation_one": "{{count}} destes não tem localização no mapa",
+      "withoutMapLocation_other": "{{count}} destes não têm localização no mapa"
     },
     "recent": {
       "title": "Recent searches"
@@ -758,12 +762,15 @@
       "enableNotifications": "Enable notifications"
     },
     "where": {
-      "noResults": "No places match that search.",
-      "offline": "Can't reach Homiio. Check your connection and try again.",
-      "rateLimited": "Too many searches just now. Try again in a moment.",
-      "providerUnavailable": "Place search is temporarily unavailable. Try again shortly.",
-      "failed": "Couldn't search for places right now.",
-      "degraded": "Showing results from a backup source; some places may be missing."
+      "noResults": "Nenhum lugar corresponde a essa busca.",
+      "offline": "Não foi possível conectar ao Homiio. Verifique sua conexão e tente de novo.",
+      "rateLimited": "Buscas demais agora. Tente de novo em instantes.",
+      "providerUnavailable": "A busca de lugares está temporariamente indisponível. Tente em breve.",
+      "failed": "Não foi possível buscar lugares agora.",
+      "degraded": "Mostrando resultados de uma fonte alternativa; alguns lugares podem faltar."
+    },
+    "area": {
+      "stillShowing": "Ainda mostrando resultados de {{place}}"
     }
   },
   "profile": {

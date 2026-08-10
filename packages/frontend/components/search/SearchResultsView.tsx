@@ -49,17 +49,22 @@ import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { colors } from '@/styles/colors';
 import { cardShadow, hairline, radius, spacing } from '@/constants/styles';
-import { OfferingType, PropertyType, boundsCenter, formatMoney } from '@homiio/shared-types';
+import { PropertyType, boundsCenter } from '@homiio/shared-types';
 import type { GeoBounds, LocationSelection, Property } from '@homiio/shared-types';
-import { resolvePrimaryOffering, toPriceDescriptor } from '@/utils/propertyUtils';
-import { useFormatting, type Formatting } from '@/utils/format';
-import { browseModeFromOffering, savedSearchName } from './types';
+import { useFormatting } from '@/utils/format';
+import { locationDisplayLabel, savedSearchName } from './types';
 
 import { SearchActionPill } from './SearchActionPill';
 import { SearchSummaryBar } from './SearchSummaryBar';
 import { resolveSortLabel, SortControl } from './SortControl';
+import { committedScopeBounds, reduceMapMovement, type MapMovement } from './searchArea';
+import { toMarkers } from './searchMarkers';
 import type { SearchQuery, SearchSortBy, SearchSortOrder } from './types';
-import { mapBoundsSelection, type SearchFilterPatch } from '@/store/searchQueryStore';
+import {
+  mapBoundsSelection,
+  useSearchQueryStore,
+  type SearchFilterPatch,
+} from '@/store/searchQueryStore';
 
 /** Default zoom applied when no location bbox is known. */
 const DEFAULT_MAP_ZOOM = 12;
@@ -70,54 +75,6 @@ const SKELETON_COUNT = 6;
  * the first-load count since it's just a hint that more rows are arriving.
  */
 const NEXT_PAGE_SKELETON_COUNT = 2;
-
-/**
- * Build map markers ([lng, lat] pins) from a property list.
- *
- * The pin label used to be `€${Math.round(amount).toLocaleString()}` — a euro
- * sign on every marker in the catalogue, whatever the listing was priced in, and
- * grouped in the DEVICE's locale rather than the reader's. It now goes through
- * the shared formatter, so a Polish listing shows złoty and a Romanian one lei.
- *
- * Markers stay whole-unit (`maximumFractionDigits: 0`): a pin is a few
- * characters wide and `1.234,56 €` does not fit in one.
- */
-function toMarkers(
-  properties: readonly Property[],
-  offering: OfferingType,
-  formatting: Formatting,
-): { id: string; coordinates: [number, number]; priceLabel: string }[] {
-  const browseMode = browseModeFromOffering(offering);
-  return properties
-    .map((p) => {
-      const coords = p.address?.coordinates?.coordinates ?? p.location?.coordinates;
-      if (
-        !coords ||
-        coords.length !== 2 ||
-        typeof coords[0] !== 'number' ||
-        typeof coords[1] !== 'number'
-      ) {
-        return null;
-      }
-      // Price the pin off the ACTIVE offering's block (monthly / nightly / sale).
-      const primary = resolvePrimaryOffering(p, browseMode);
-      const price = toPriceDescriptor(primary);
-      const priceLabel = price
-        ? formatMoney(price.amount, price.currency, formatting.locale, {
-            maximumFractionDigits: 0,
-          })
-        : primary.label;
-      return {
-        id: p.id,
-        coordinates: [coords[0], coords[1]] as [number, number],
-        priceLabel,
-      };
-    })
-    .filter(
-      (m): m is { id: string; coordinates: [number, number]; priceLabel: string } =>
-        m !== null,
-    );
-}
 
 /**
  * The centre of a declared box, as the map's `[lng, lat]` pair.
@@ -207,12 +164,54 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
 
   const mapRef = useRef<MapApi>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
-  const [pendingBounds, setPendingBounds] = useState<GeoBounds | null>(null);
   const [showMobileMap, setShowMobileMap] = useState(false);
 
+  /**
+   * The pending viewport lives in the STORE, not in this component.
+   *
+   * That is what makes "a box over a map the user has since navigated away
+   * from can never be committed" structural: every action that changes the
+   * committed selection — a place picked in the panel, a saved search applied,
+   * a URL arriving with a different `loc` — clears it in the same `set` call.
+   * Held here instead, it would survive all three and could be confirmed
+   * afterwards, applying a viewport from a search the user has left.
+   *
+   * Committing still goes through {@link SearchResultsViewProps.onCommitLocation}
+   * rather than the store's own `commitPendingViewport`, because the URL is the
+   * authority and only the route screen writes it (ADR 0002 §6.1).
+   */
+  const pendingViewport = useSearchQueryStore((s) => s.pendingViewport);
+  /**
+   * The viewport the app itself last framed.
+   *
+   * STATE rather than a ref, and the difference is not stylistic: the "back to
+   * the searched area" action is only offered when there is somewhere to go
+   * back TO, so the answer is read during render, and a ref read during render
+   * does not re-render when it changes — the action would appear one render
+   * late, or not at all.
+   *
+   * It changes only on a finished PROGRAMMATIC movement (an opening frame, a
+   * return, a re-frame after a new area is confirmed), so the re-render is
+   * rare. It also cannot reload the map: the WebView document and the MapLibre
+   * instance are both built once and fed through refs, so a re-render of this
+   * component reaches neither.
+   */
+  const [anchor, setAnchor] = useState<GeoBounds | null>(null);
+
   const search = usePropertySearch(query);
-  const { properties, total, isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } =
-    search;
+  const {
+    properties,
+    total,
+    isLoading,
+    isError,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+    queryId,
+    appliedLocation,
+  } = search;
 
   const { searchExists } = useSavedSearches();
 
@@ -344,13 +343,67 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     mapRef.current?.highlightMarker(highlightedId);
   }, [highlightedId]);
 
+  /**
+   * Fold a map movement into the camera state.
+   *
+   * The decision itself is in `searchArea.reduceMapMovement`, which is pure and
+   * shared by both map adapters. This callback only routes the two halves of
+   * the result to where each belongs.
+   *
+   * The pending viewport is read through `getState()` rather than from the
+   * subscribed value, so this callback's identity does not change on every pan
+   * — `onRegionChange` is compared by the map's memo, and a new function on
+   * each pan would re-render it constantly.
+   */
   const handleRegionChange = useCallback(
-    ({ bounds, isFinal }: { bounds: GeoBounds; isFinal?: boolean }) => {
-      if (!bounds || !isFinal) return;
-      setPendingBounds(bounds);
+    (movement: MapMovement) => {
+      const previous = { anchor, pending: useSearchQueryStore.getState().pendingViewport };
+      const next = reduceMapMovement(previous, movement);
+      if (next === previous) return;
+      setAnchor(next.anchor);
+      if (next.pending !== previous.pending) {
+        useSearchQueryStore.getState().setPendingViewport(next.pending);
+      }
+    },
+    [anchor],
+  );
+
+  /**
+   * Leaving the screen discards the pending viewport.
+   *
+   * The store outlives this component, so without this a box the user drifted
+   * to, walked away from and never confirmed is still pending when they come
+   * back — and "Search this area" is offered on arrival, over an area they have
+   * no memory of choosing. #354 lists abandoning the screen as a discard
+   * trigger for exactly that reason.
+   *
+   * An effect is right here: it updates an EXTERNAL store on unmount, which is
+   * the case effects are for, and the empty dependency list is accurate — the
+   * cleanup reads the store through `getState()` rather than closing over it.
+   */
+  useEffect(
+    () => () => {
+      useSearchQueryStore.getState().setPendingViewport(null);
     },
     [],
   );
+
+  /**
+   * Take the map back to the area the results actually describe.
+   *
+   * The anchor is preferred over the selection's own box because it is the
+   * viewport the app really framed — padding and zoom snapping included — so
+   * returning to it lands exactly where the search opened. On a cold load
+   * nothing has been framed yet and the selection's declared extent is the
+   * honest fallback. The resulting camera move is programmatic, so the reducer
+   * clears the pending viewport when it arrives; clearing it here as well would
+   * make the button flicker back if the frame is refused.
+   */
+  const returnBounds = anchor ?? committedScopeBounds(query.location);
+  const handleReturnToSearchedArea = useCallback(() => {
+    if (!returnBounds) return;
+    mapRef.current?.fitBounds(returnBounds);
+  }, [returnBounds]);
 
   /**
    * "Search this area" — ONE state transition, replacing the geographic scope
@@ -371,10 +424,9 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
    * retract what they typed.
    */
   const handleSearchThisArea = useCallback(() => {
-    if (!pendingBounds) return;
-    onCommitLocation(mapBoundsSelection(pendingBounds));
-    setPendingBounds(null);
-  }, [pendingBounds, onCommitLocation]);
+    if (!pendingViewport) return;
+    onCommitLocation(mapBoundsSelection(pendingViewport));
+  }, [pendingViewport, onCommitLocation]);
 
   const handleSortPress = useCallback(() => {
     bottomSheet.openBottomSheet(
@@ -510,9 +562,27 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     enabled: hasNextPage,
   });
 
+  /**
+   * The heading describes the COMMITTED query, never the pending viewport.
+   *
+   * It reads `total`, which comes from the same page as `properties` and the
+   * markers, so the count cannot belong to a different search than the rows
+   * beneath it — and a page stamped with another query's id never arrives at
+   * all (`StaleSearchResponseError`).
+   *
+   * The `unresolved` branch is the one that costs nothing and matters most:
+   * "we could not find that place" and "there are no homes here" are the same
+   * empty list on the wire, and only the server's echo separates them.
+   */
   const resultsHeading = useMemo(() => {
     if (isLoading) {
       return t('search.header.loading', 'Searching properties...') || 'Searching properties...';
+    }
+    if (appliedLocation?.status === 'unresolved') {
+      return (
+        t('search.header.unresolvedLocation', 'We could not find that place') ||
+        'We could not find that place'
+      );
     }
     if (total === 0) {
       return t('search.header.noResults', 'No properties match this search') ||
@@ -521,7 +591,34 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     // Pass `count` as interpolation options so i18next selects the pluralized
     // `search.header.count_one`/`_other` variant and fills `{{count}}`.
     return t('search.header.count', { count: total }) || `${total} properties`;
-  }, [t, isLoading, total]);
+  }, [t, isLoading, total, appliedLocation?.status]);
+
+  /**
+   * What the map is showing that the results are not.
+   *
+   * Shown only while a viewport is pending, and it names the scope the results
+   * DO describe — "Still showing results for Barcelona" as the user drifts over
+   * Madrid. Without it the two disagree in silence, which is the whole defect
+   * this screen exists to close.
+   */
+  const stillShowingLabel = useMemo(
+    () =>
+      t('search.area.stillShowing', {
+        place: locationDisplayLabel(query.location, t),
+        defaultValue: 'Still showing results for {{place}}',
+      }) || 'Still showing these results',
+    [t, query.location],
+  );
+
+  /**
+   * How many loaded results the map cannot draw.
+   *
+   * Said out loud rather than left as a discrepancy. Without it the map shows
+   * fewer homes than the heading counts and the gap reads as a map that has not
+   * finished loading — the same "looks like it is still working" failure as a
+   * place with no geometry framing nothing.
+   */
+  const unmappableCount = properties.length - markers.length;
 
   // --- shared sub-renders ---
   // The route wraps this screen in a plain View (no SafeAreaView) and the
@@ -640,14 +737,33 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
 
   const listScroll = (
     <ScrollView
+      // The list and the map below carry the SAME query id, which is what makes
+      // "these two surfaces are showing one search" observable in the rendered
+      // tree rather than merely asserted in a comment. Both come from one
+      // `usePropertySearch` call, so they cannot drift — the ids are how a
+      // browser-level check, or a person with the inspector open, can see that.
+      nativeID={`search-list-${queryId}`}
       style={styles.listScroll}
       contentContainerStyle={styles.listScrollContent}
       onScroll={handleListScroll}
       scrollEventThrottle={16}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.resultsHeader}>
+      {/* `accessibilityLiveRegion` is what announces a result set changing
+          under a screen reader: committing a new area replaces the heading and
+          the count in place, with no navigation and nothing focused, so
+          without it the change is silent. RN-Web maps it to `aria-live`. */}
+      <View
+        style={styles.resultsHeader}
+        accessibilityLiveRegion="polite"
+        accessibilityRole="header"
+      >
         <BloomText style={styles.resultsTitle}>{resultsHeading}</BloomText>
+        {unmappableCount > 0 ? (
+          <BloomText style={styles.resultsNote}>
+            {t('search.header.withoutMapLocation', { count: unmappableCount })}
+          </BloomText>
+        ) : null}
       </View>
       {listBody()}
       {isFetchingNextPage ? (
@@ -661,7 +777,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   );
 
   const mapPanel = (
-    <View style={styles.mapPanel}>
+    <View style={styles.mapPanel} nativeID={`search-map-${queryId}`}>
       <MapView
         ref={mapRef}
         style={styles.mapFill}
@@ -673,9 +789,13 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         onRegionChange={handleRegionChange}
         onMarkerPress={handleMarkerPress}
       />
-      {pendingBounds ? (
+      {pendingViewport ? (
+        // `pointerEvents: 'none'` on the strip and `'auto'` on each control is
+        // the sanctioned split: `box-none` in a STYLE is silently dropped by
+        // RN-Web, leaving a transparent full-width overlay that swallows every
+        // drag and hover on the map beneath it.
         <View style={styles.searchAreaWrap}>
-          <View style={[styles.searchAreaButton, cardShadow.md]}>
+          <View style={[styles.searchAreaButton, cardShadow.md, styles.interactive]}>
             <Button
               onPress={handleSearchThisArea}
               variant="primary"
@@ -688,6 +808,26 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
             >
               {t('search.actions.searchArea', 'Search this area') || 'Search this area'}
             </Button>
+          </View>
+          <View
+            style={[styles.pendingNotice, cardShadow.md, styles.interactive]}
+            accessibilityLiveRegion="polite"
+          >
+            <BloomText style={styles.pendingNoticeText}>{stillShowingLabel}</BloomText>
+            {returnBounds ? (
+              <Button
+                onPress={handleReturnToSearchedArea}
+                variant="secondary"
+                size="small"
+                accessibilityLabel={
+                  t('search.actions.backToSearchedArea', 'Back to searched area') ||
+                  'Back to searched area'
+                }
+              >
+                {t('search.actions.backToSearchedArea', 'Back to searched area') ||
+                  'Back to searched area'}
+              </Button>
+            ) : null}
           </View>
         </View>
       ) : null}
@@ -885,6 +1025,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.COLOR_BLACK,
   },
+  resultsNote: {
+    marginTop: spacing.xs,
+    fontSize: 13,
+    color: colors.COLOR_BLACK_LIGHT_4,
+  },
   // Grid gutter aligned to the header gutter and every other property-grid
   // screen (`spacing.lg`) for a clean, consistent left edge across the app.
   gridPadding: {
@@ -904,11 +1049,33 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
+    gap: spacing.sm,
+    // Valid CSS, unlike `box-none`. The children below re-enable themselves.
+    pointerEvents: 'none',
   },
   searchAreaButton: {
     backgroundColor: colors.surfaceElevated,
     borderRadius: radius.pill,
     overflow: 'hidden',
+  },
+  /** A child `auto` inside a parent `none` IS hittable — that is the split. */
+  interactive: {
+    pointerEvents: 'auto',
+  },
+  pendingNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    maxWidth: 420,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.pill,
+  },
+  pendingNoticeText: {
+    flexShrink: 1,
+    fontSize: 13,
+    color: colors.COLOR_BLACK,
   },
   popoverWrap: {
     position: 'absolute',

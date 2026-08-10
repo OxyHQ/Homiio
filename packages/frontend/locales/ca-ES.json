@@ -671,7 +671,8 @@
       "filters": "Filters",
       "saved": "Saved",
       "decreaseGuests": "Redueix hostes",
-      "increaseGuests": "Augmenta hostes"
+      "increaseGuests": "Augmenta hostes",
+      "backToSearchedArea": "Torna a la zona cercada"
     },
     "summary": {
       "edit": "Edita la cerca",
@@ -721,7 +722,10 @@
       "noResults": "Cap propietat coincideix amb aquesta cerca",
       "loading": "Cercant propietats...",
       "count_one": "{{count}} propietat",
-      "count_other": "{{count}} propietats"
+      "count_other": "{{count}} propietats",
+      "unresolvedLocation": "No hem trobat aquest lloc",
+      "withoutMapLocation_one": "{{count}} d'aquests no té ubicació al mapa",
+      "withoutMapLocation_other": "{{count}} d'aquests no tenen ubicació al mapa"
     },
     "recent": {
       "title": "Recent searches"
@@ -761,6 +765,9 @@
       "providerUnavailable": "La cerca de llocs no està disponible temporalment. Torna-ho a provar aviat.",
       "failed": "Ara mateix no s’han pogut cercar llocs.",
       "degraded": "Es mostren resultats d’una font alternativa; poden faltar llocs."
+    },
+    "area": {
+      "stillShowing": "Encara mostrem resultats de {{place}}"
     }
   },
   "profile": {
