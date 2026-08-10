@@ -12,6 +12,7 @@ import { and, count, eq, isNotNull, max, min } from 'drizzle-orm';
 import {
   isFramablePlace,
   parseLocationToken,
+  boundsCenter,
   type GeoBounds,
   type GeoPlace,
   type LocationRef,
@@ -496,17 +497,18 @@ async function resolveHomiioPlace(
 }
 
 
-/** The middle of a rectangle. Not valid across the antimeridian; see below. */
-function centerOfBounds(bounds: {
-  west: number;
-  south: number;
-  east: number;
-  north: number;
-}): { longitude: number; latitude: number } {
-  return {
-    longitude: (bounds.west + bounds.east) / 2,
-    latitude: (bounds.south + bounds.north) / 2,
-  };
+/**
+ * The middle of a rectangle, CORRECT across the antimeridian.
+ *
+ * This used to carry a comment saying it was "not valid across the
+ * antimeridian" — a documented wrong answer rather than a fixed one, which
+ * survives review precisely because it looks like a known limitation. The
+ * shared `boundsCenter` walks east from `west` by half the eastward span, so a
+ * wrapping box is measured the short way round; a non-wrapping one is
+ * unchanged.
+ */
+function centerOfBounds(bounds: GeoBounds): { longitude: number; latitude: number } {
+  return boundsCenter(bounds);
 }
 
 /**

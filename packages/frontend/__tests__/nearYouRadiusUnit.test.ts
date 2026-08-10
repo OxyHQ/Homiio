@@ -31,8 +31,16 @@ describe('getCategoryFilters — near_you', () => {
   });
 
   it('passes the device coordinates through unrounded, since they scope the request', () => {
-    // Full precision belongs in the REQUEST. What ADR 0002 §8.2 forbids is the
-    // fix reaching a key, a URL, a log or disk — none of which is this call.
+    // Full precision belongs in the REQUEST, and §8.2 forbids the fix reaching
+    // a key, a URL, a log or disk.
+    //
+    // This comment used to end "none of which is this call" — true of the
+    // FUNCTION and false of where its output went: `useHomeFeed` embedded these
+    // filters verbatim in a React Query key, and a query key is part of the
+    // query cache that `getCategoryFilters`' own hardening promises never to
+    // write to. A comment that is right about the line it sits on and wrong
+    // about the data flow is worse than none, because it is what stops the next
+    // person following the value. The key is fixed; see the describe below.
     const filters = getCategoryFilters('near_you', { userLocation: DEVICE_FIX });
 
     expect(filters.lat).toBe(DEVICE_FIX.latitude);

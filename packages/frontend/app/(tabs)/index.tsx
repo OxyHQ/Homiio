@@ -459,7 +459,11 @@ export default function HomePage() {
                   // Every entry point used to push the bare route and rely on
                   // the store carrying the query across, which is why a search
                   // could not be shared, bookmarked or reached with Back.
-                  router.push(exploreHref(query));
+                  // `null` when the query's location cannot be written to a
+                  // URL. Navigating to a bare `/explore` would drop it and run
+                  // a global search, so the panel stays open instead.
+                  const href = exploreHref(query);
+                  if (href) router.push(href);
                 }}
                 onApply={(query) => {
                   useSearchQueryStore.getState().replaceSearch(query);

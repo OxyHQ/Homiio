@@ -38,6 +38,7 @@ import {
   OfferingType,
   type LocationResolution,
   type LocationSelection,
+  type LocationTokenFailure,
   type Property,
 } from '@homiio/shared-types';
 
@@ -131,6 +132,14 @@ export default function SearchScreen() {
   const [pendingConfirmation, setPendingConfirmation] = useState<
     { name: string; label: string } | null
   >(null);
+  /**
+   * A committed location the URL grammar cannot express, if one was attempted.
+   *
+   * Held so the refusal is visible. The alternative — navigating with `loc`
+   * absent — produces a URL that looks fine and reopens as a global search.
+   */
+  const [unshareableLocation, setUnshareableLocation] =
+    useState<LocationTokenFailure | null>(null);
 
   // Parsing is pure, so it is derived rather than an effect.
   //
@@ -238,7 +247,10 @@ export default function SearchScreen() {
    */
   useEffect(() => {
     if (!parsed.needsNormalising || !resolvedSelection) return;
-    const normalised = buildSearchParamsForUrl({ ...parsed.query, location: resolvedSelection });
+    const { params: normalised } = buildSearchParamsForUrl({
+      ...parsed.query,
+      location: resolvedSelection,
+    });
     // Same guard, same reason: `setParams` re-renders, and this effect's deps
     // change on every render. Once the URL carries no legacy param,
     // `needsNormalising` is false and this stops firing at all — but it must
@@ -258,8 +270,20 @@ export default function SearchScreen() {
    */
   const commitQuery = useCallback(
     (next: SearchQuery) => {
+      const { params: urlParams, droppedLocation } = buildSearchParamsForUrl(next);
+
+      // A location the URL cannot carry must not be committed THROUGH the URL.
+      // Navigating anyway would write an address that reproduces a DIFFERENT
+      // search — the location silently absent, which `parseSearchParams` reads
+      // as "none requested" and answers globally. Refusing keeps the previous
+      // URL and says so, which is the honest failure for a shape §2.1 reserves.
+      if (droppedLocation) {
+        setUnshareableLocation(droppedLocation);
+        return;
+      }
+      setUnshareableLocation(null);
+
       const navigate = isNavigationChange(query, next);
-      const urlParams = buildSearchParamsForUrl(next);
       useSearchQueryStore.getState().replaceSearch(next);
       if (navigate) {
         router.push({ pathname: '/explore', params: urlParams });
@@ -328,6 +352,34 @@ export default function SearchScreen() {
   );
 
   const handleRequireAuth = useCallback(() => router.push('/profile'), [router]);
+
+  // A location the URL cannot carry: the commit was refused, so say so rather
+  // than leave the user looking at the previous search wondering why nothing
+  // happened.
+  if (unshareableLocation) {
+    return (
+      <View style={styles.root}>
+        <ErrorState
+          title={t('search.location.unshareable.title', 'This area cannot be opened by link') ?? undefined}
+          description={
+            t('search.location.unshareable.description', 'Try choosing a place or drawing a smaller area.') ??
+            undefined
+          }
+          retryLabel={t('search.location.chooseAnother', 'Choose a place') ?? undefined}
+          onRetry={() => {
+            setUnshareableLocation(null);
+            setPanelOpen(true);
+          }}
+        />
+        <SearchPanel
+          open={panelOpen}
+          onClose={handleClosePanel}
+          initialQuery={query}
+          onSubmit={handleSubmitSearch}
+        />
+      </View>
+    );
+  }
 
   // A legacy saved search asks which place it meant, and runs nothing until it
   // is told. Rendered before the results surface for the same reason `failed`

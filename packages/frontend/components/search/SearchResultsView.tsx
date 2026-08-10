@@ -49,7 +49,7 @@ import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { colors } from '@/styles/colors';
 import { cardShadow, hairline, radius, spacing } from '@/constants/styles';
-import { OfferingType, PropertyType, formatMoney } from '@homiio/shared-types';
+import { OfferingType, PropertyType, boundsCenter, formatMoney } from '@homiio/shared-types';
 import type { GeoBounds, LocationSelection, Property } from '@homiio/shared-types';
 import { resolvePrimaryOffering, toPriceDescriptor } from '@/utils/propertyUtils';
 import { useFormatting, type Formatting } from '@/utils/format';
@@ -119,9 +119,17 @@ function toMarkers(
     );
 }
 
-/** The centre of a declared box — a real derived framing point, not an invented one. */
-function boundsCenter(bounds: GeoBounds): [number, number] {
-  return [(bounds.west + bounds.east) / 2, (bounds.south + bounds.north) / 2];
+/**
+ * The centre of a declared box, as the map's `[lng, lat]` pair.
+ *
+ * Delegates to the shared wrap-aware `boundsCenter` rather than averaging the
+ * corners: for a box crossing the antimeridian the naive average is 13,000 km
+ * away, and the symptom is a map framed on the wrong ocean beside a list of
+ * perfectly correct results.
+ */
+function boundsCameraTarget(bounds: GeoBounds): [number, number] {
+  const { longitude, latitude } = boundsCenter(bounds);
+  return [longitude, latitude];
 }
 
 /**
@@ -259,12 +267,12 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     if (!selection || selection.kind === 'multi_area') return undefined;
 
     if (selection.kind === 'polygon' || selection.kind === 'map_bounds') {
-      return boundsCenter(selection.bounds);
+      return boundsCameraTarget(selection.bounds);
     }
     if (selection.kind === 'current_location') {
       return [selection.center.longitude, selection.center.latitude];
     }
-    if (selection.bounds) return boundsCenter(selection.bounds);
+    if (selection.bounds) return boundsCameraTarget(selection.bounds);
     return selection.center
       ? [selection.center.longitude, selection.center.latitude]
       : undefined;

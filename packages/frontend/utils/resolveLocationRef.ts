@@ -34,6 +34,7 @@
  * listings won, arbitrarily, and the winner could change as data arrived.
  */
 import {
+  boundsCenter,
   type CityPlaceCandidate,
   type LocationRef,
   type LocationResolution,
@@ -122,10 +123,11 @@ export async function resolveLocationRef(
         selection: {
           kind: 'map_bounds',
           bounds: ref.bounds,
-          center: {
-            longitude: (ref.bounds.west + ref.bounds.east) / 2,
-            latitude: (ref.bounds.south + ref.bounds.north) / 2,
-          },
+          // Wrap-aware. The naive midpoint puts the Pacific strip
+          // `170 → -170` at longitude 0, and here that wrong centre is written
+          // into the COMMITTED selection, so it propagates to the map, the
+          // saved search and anything else that reads it later.
+          center: boundsCenter(ref.bounds),
           label: { primary: 'search.summary.mapArea', kind: 'generated' },
           precision: 'area',
         },

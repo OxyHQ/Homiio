@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import {
   OfferingType,
   PropertyType,
+  boundsCenter,
   type GeoBounds,
   type LocationSelection,
 } from '@homiio/shared-types';
@@ -83,10 +84,11 @@ export function mapBoundsSelection(bounds: GeoBounds): LocationSelection {
   return {
     kind: 'map_bounds',
     bounds,
-    center: {
-      longitude: (bounds.west + bounds.east) / 2,
-      latitude: (bounds.south + bounds.north) / 2,
-    },
+    // Wrap-aware, and this is the site that matters most: every "Search this
+    // area" runs through here, so a naive midpoint would write a centre 13,000
+    // km from the box into the committed selection every time somebody
+    // confirmed a viewport over the Pacific.
+    center: boundsCenter(bounds),
     label: MAP_AREA_LABEL,
     precision: 'area',
   };

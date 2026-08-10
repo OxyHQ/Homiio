@@ -195,6 +195,26 @@ export function parseSearchParams(params: RouteParams): ParsedSearchUrl {
 }
 
 /**
+ * The result of serialising a query to URL params.
+ *
+ * `droppedLocation` is a RETURN VALUE rather than a silent omission because the
+ * caller is the only one that can decide what to do about it, and the previous
+ * shape gave it no way to find out: a `Record<string, string>` missing its
+ * `loc` is indistinguishable from a query that never had a location.
+ */
+export interface SerializedSearchUrl {
+  readonly params: Record<string, string>;
+  /**
+   * Why the committed location could not be written to the URL, or `null`.
+   *
+   * A caller that navigates anyway commits a query the URL cannot reproduce —
+   * so reloading, sharing or pressing Back yields a DIFFERENT search presented
+   * as the user's own.
+   */
+  readonly droppedLocation: LocationTokenFailure | null;
+}
+
+/**
  * Build the params for a committed query.
  *
  * Insertion order is fixed (`loc`, `q`, `offering`, then filters alphabetically)
@@ -206,12 +226,24 @@ export function parseSearchParams(params: RouteParams): ParsedSearchUrl {
  * bounding box. Silently substituting a rectangle for a drawn area is the same
  * "half the location survived" bug in a new place.
  */
-export function buildSearchParamsForUrl(query: SearchQuery): Record<string, string> {
+export function buildSearchParamsForUrl(query: SearchQuery): SerializedSearchUrl {
   const params: Record<string, string> = {};
+  let droppedLocation: LocationTokenFailure | null = null;
 
   if (query.location) {
     const token = serializeLocationToken(query.location);
-    if (token.ok) params.loc = token.value;
+    if (token.ok) {
+      params.loc = token.value;
+    } else {
+      // NOT silently omitted. `parseSearchParams` reads an absent `loc` as
+      // `{ kind: 'none' }` — "no location was requested, answer normally" — so
+      // dropping it here turns a committed location into a GLOBAL SEARCH the
+      // moment the URL is written, which is the §4.3 failure this module's own
+      // header says it exists to prevent. Two shapes reach it: `polygon`, whose
+      // wire format §2.1 reserves, and `unencodable_id`, which is not
+      // hypothetical — any provider ref containing `+` produces it.
+      droppedLocation = token.reason;
+    }
   }
   if (query.queryText) params.q = query.queryText;
   if (query.offering !== DEFAULT_SEARCH_QUERY.offering) params.offering = query.offering;
@@ -234,12 +266,20 @@ export function buildSearchParamsForUrl(query: SearchQuery): Record<string, stri
   if (query.sortBy !== DEFAULT_SEARCH_QUERY.sortBy) params.sortBy = query.sortBy;
   if (query.sortOrder !== DEFAULT_SEARCH_QUERY.sortOrder) params.sortOrder = query.sortOrder;
 
-  return params;
+  return { params, droppedLocation };
 }
 
-/** The `/explore` href for a committed query — the one way to navigate to a search. */
-export function exploreHref(query: SearchQuery): string {
-  const params = buildSearchParamsForUrl(query);
+/**
+ * The `/explore` href for a committed query — the one way to navigate to a
+ * search.
+ *
+ * A query whose location cannot be serialised yields `null` rather than a link
+ * that silently drops it. Callers render nothing, or a disabled control, rather
+ * than a share link that opens somebody else's search.
+ */
+export function exploreHref(query: SearchQuery): string | null {
+  const { params, droppedLocation } = buildSearchParamsForUrl(query);
+  if (droppedLocation) return null;
   const search = new URLSearchParams(params).toString();
   return search ? `/explore?${search}` : '/explore';
 }

@@ -104,7 +104,7 @@ describe('the `loc` token round-trips for every kind that HAS a token', () => {
     ],
   ])('%s', (_label, selection, expectedToken) => {
     // Serialise…
-    const params = buildSearchParamsForUrl(query({ location: selection }));
+    const { params } = buildSearchParamsForUrl(query({ location: selection }));
     expect(params.loc).toBe(expectedToken);
 
     // …and read it back to the SAME token. Comparing the token string rather
@@ -117,7 +117,7 @@ describe('the `loc` token round-trips for every kind that HAS a token', () => {
   });
 
   it('never puts the device fix in the URL', () => {
-    const params = buildSearchParamsForUrl(query({ location: deviceLens }));
+    const { params } = buildSearchParamsForUrl(query({ location: deviceLens }));
     const url = exploreHref(query({ location: deviceLens }));
 
     // `here.` carries a radius and nothing else. A shared "near me" link means
@@ -139,6 +139,7 @@ describe('the `loc` token round-trips for every kind that HAS a token', () => {
     });
 
     const first = exploreHref(original);
+    expect(first).not.toBeNull();
     const parsed = parseSearchParams(
       Object.fromEntries(new URL(`https://x${first}`).searchParams.entries()),
     );
@@ -165,8 +166,8 @@ describe('multi-area: order is preserved in the URL and SORTED in the key', () =
   };
 
   it('keeps member order in the token, so the URL round-trips exactly', () => {
-    const forward = buildSearchParamsForUrl(query({ location: multiArea })).loc;
-    const backward = buildSearchParamsForUrl(query({ location: reversed })).loc;
+    const forward = buildSearchParamsForUrl(query({ location: multiArea })).params.loc;
+    const backward = buildSearchParamsForUrl(query({ location: reversed })).params.loc;
 
     expect(forward).toBe(
       'multi.city.homiio.01H8XQ7C2R9V6WQ2N4M0KJ3ZTA+bbox.-3.75,40.38,-3.65,40.45',
@@ -202,19 +203,31 @@ describe('a polygon deliberately has no token, and does not degrade to its box',
       precision: 'area',
     };
 
-    const params = buildSearchParamsForUrl(query({ location: polygon, queryText: 'loft' }));
+    const { params, droppedLocation } = buildSearchParamsForUrl(
+      query({ location: polygon, queryText: 'loft' }),
+    );
 
     // Falling back to `bbox.` would silently swap a drawn area for a rectangle
     // that CONTAINS it — a superset, so it over-returns rather than failing,
     // which is the quiet direction. The rest of the query still serialises.
     expect(params).not.toHaveProperty('loc');
     expect(params.q).toBe('loft');
+
+    // …and the omission is REPORTED, which is the half that matters. An absent
+    // `loc` is read by `parseSearchParams` as `{ kind: 'none' }` — "no location
+    // was requested" — so a silent drop turns a drawn area into a global
+    // search that reopens as somebody else's. Draw a polygon, reload the URL,
+    // get a different search presented as yours.
+    expect(droppedLocation).toBe('unsupported_kind');
+
+    // The round trip a caller must not attempt: no shareable href exists.
+    expect(exploreHref(query({ location: polygon }))).toBeNull();
   });
 });
 
 describe('free text and location are separate params', () => {
   it('puts typed text in `q` and the place in `loc`', () => {
-    const params = buildSearchParamsForUrl(
+    const { params } = buildSearchParamsForUrl(
       query({ location: barcelona, queryText: 'loft with terrace' }),
     );
 
@@ -223,7 +236,7 @@ describe('free text and location are separate params', () => {
   });
 
   it('emits no `q` at all for a place with no typed text', () => {
-    const params = buildSearchParamsForUrl(query({ location: barcelona }));
+    const { params } = buildSearchParamsForUrl(query({ location: barcelona }));
     expect(params).not.toHaveProperty('q');
   });
 
