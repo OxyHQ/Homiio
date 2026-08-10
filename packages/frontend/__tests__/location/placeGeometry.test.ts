@@ -27,6 +27,7 @@
 
 import {
   geoPlaceToSelection,
+  isFramablePlace,
   locationKey,
   serializeLocationToken,
   type AdminHierarchy,
@@ -172,6 +173,57 @@ describe('a place with no representative point', () => {
     // one field across: a country with no bbox would have to invent a rectangle
     // instead of a point.
     expect('bounds' in geoPlaceToSelection(SPAIN)).toBe(false);
+  });
+});
+
+describe('a place with neither a centre nor an extent', () => {
+  /**
+   * `center` and `bounds` are both optional, so a place with NEITHER is
+   * expressible. That is deliberate and it is not a hole in the type: a city
+   * Homiio knows by id and name but has no coordinates for is a real
+   * DISAMBIGUATION CANDIDATE — a user choosing between two cities called
+   * Riverside can pick it, and the search that follows scopes by `cityId`,
+   * which needs no geometry. Forbidding it would drop that candidate from the
+   * list and put the homonym back.
+   *
+   * What must not happen is such a place reaching a MAP, so the invariant binds
+   * at the resolve boundary instead, and this predicate is what both sides read.
+   */
+  const UNFRAMABLE: GeoPlace = {
+    source: { kind: 'homiio', entity: 'city', id: '01J0000000000000000000000' },
+    placeType: 'city',
+    label: { primary: 'Riverside', secondary: 'North, Elsewhere', kind: 'place' },
+    admin: { countryCode: 'XX', regionName: 'North' },
+    precision: 'area',
+  };
+
+  it('is expressible, because a candidate list needs it', () => {
+    expect(geoPlaceToSelection(UNFRAMABLE)).toMatchObject({ kind: 'place', precision: 'area' });
+    expect('center' in geoPlaceToSelection(UNFRAMABLE)).toBe(false);
+  });
+
+  it('is not framable, which is the fact a map must act on', () => {
+    expect(isFramablePlace(UNFRAMABLE)).toBe(false);
+  });
+
+  it('becomes framable with an extent alone', () => {
+    expect(
+      isFramablePlace({ ...UNFRAMABLE, bounds: { west: -9.3, south: 36, east: 3.3, north: 43.8 } }),
+    ).toBe(true);
+  });
+
+  /**
+   * The other three shapes, so the predicate cannot pass by answering `false`
+   * to everything — or `true`, which is the mutation that matters, since it is
+   * the one that lets an unframable place reach a map.
+   */
+  it('is framable with a centre, with or without an extent', () => {
+    expect(isFramablePlace(GREENWICH)).toBe(true);
+    expect(
+      isFramablePlace({ ...GREENWICH, bounds: { west: -0.1, south: 51.4, east: 0.1, north: 51.5 } }),
+    ).toBe(true);
+    // A place at (0, 0) is framable — the sentinel trap again, one layer up.
+    expect(isFramablePlace(AT_NULL_ISLAND)).toBe(true);
   });
 });
 

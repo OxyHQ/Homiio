@@ -358,6 +358,37 @@ export type GeoPlace = {
 } & PlaceGeometry;
 
 /**
+ * Whether a place carries enough geometry to be put on a map.
+ *
+ * WHY THIS IS A PREDICATE AND NOT A CONSTRAINT ON THE TYPE. With `center` and
+ * `bounds` both optional, a place with NEITHER is expressible — and the first
+ * instinct is to forbid that, since a place nobody can frame looks like a place
+ * nobody wants. It is not forbiddable, because that place is REAL and is
+ * already returned deliberately: a city Homiio knows by id and name but has no
+ * coordinates for is a legitimate DISAMBIGUATION CANDIDATE. A user picking
+ * between two cities called Riverside can choose the one with no coordinates,
+ * and the search that follows scopes by `cityId`, which needs no geometry at
+ * all. Requiring geometry on the DTO would force that candidate to be dropped
+ * from the list — reintroducing a homonym the user can no longer reach — or to
+ * have geometry invented for it, which is the bug this module just removed.
+ *
+ * So the invariant is real but it binds at a NARROWER boundary than the type: a
+ * place being RESOLVED for display must be framable, while a place being
+ * OFFERED for selection need not be. `GET /api/geo/resolve` answers 404 rather
+ * than returning an unframable place; `GET /api/geo/search` may list one.
+ *
+ * The quiet failure this exists to prevent: a map handed a place with no
+ * geometry frames nothing and reports no error, which looks exactly like a map
+ * that has not finished loading.
+ */
+export function isFramablePlace(place: GeoPlace): boolean {
+  // The point branch always carries a centre — `PlaceGeometry` requires it — so
+  // `precision` settles it there, and only an `area` place has to be asked
+  // whether it brought an extent.
+  return place.precision === 'area' ? place.bounds !== undefined : true;
+}
+
+/**
  * Turn a gateway candidate into the selection the user just chose.
  *
  * Shared rather than written per screen because the `address` →

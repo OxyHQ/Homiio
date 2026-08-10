@@ -1499,3 +1499,29 @@ conclusions — one made its own `center` optional and said so; the other emitte
 Null Island — which is the measurable cost of a definition contradicted by a
 declaration in the same section. `area` now says what it actually distinguishes:
 whether the point IS the place or merely a way to FRAME it.
+
+**The follow-on hole, and why it is a PREDICATE rather than a constraint.** With
+`center` and `bounds` both optional, a place with NEITHER became expressible — a
+place nothing can frame — and closing a hole that produced a wrong point by
+opening one that produces no point at all would be a poor trade, because the
+second failure is quieter: a map handed such a place renders nothing and reports
+no error, which looks exactly like a map still loading.
+
+It is nevertheless **not forbiddable on the type**, and the reason is measured
+rather than argued. A city Homiio knows by id and name but holds no coordinates
+for is a legitimate **disambiguation candidate**: `/api/cities/lookup` returns
+one today, deliberately, and asserts it carries no `center` and
+`precision: 'area'`. A user choosing between two cities called Riverside can
+pick that one, and the search that follows scopes by `cityId`, which needs no
+geometry whatsoever. Requiring geometry on the DTO would force that candidate to
+be dropped from the list — putting back a homonym the user can no longer reach,
+which is the defect §12.2 exists to prevent — or to have geometry invented for
+it, which is the defect this amendment just removed.
+
+So the invariant binds at a narrower boundary than the type: **a place being
+RESOLVED for display must be framable; a place being OFFERED for selection need
+not be.** `GET /api/geo/resolve` answers 404 rather than returning an unframable
+place; `GET /api/geo/search` may list one. §3 gains `isFramablePlace` so both
+sides read one predicate instead of each spelling the condition out, and it is
+mutation-tested: making it answer `true` unconditionally — the shape that lets an
+unframable place reach a map — turns its test red.
