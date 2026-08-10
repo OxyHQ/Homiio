@@ -32,7 +32,13 @@
  *    the bug they fixed by quoting it (`what `€${amount}` did`), and a comment
  *    renders to nobody. Stripping them is the same call
  *    `__tests__/unit/mongoUnreachable.test.ts` makes in the backend, for the
- *    same reason.
+ *    same reason — and both now make it through the SAME implementation,
+ *    `@homiio/shared-types/testing/stripComments`. The two regexes that used to
+ *    sit here truncated a line at the `//` of a URL and let a `/*` mentioned
+ *    inside a `//` comment open a block, which blanked real code and made this
+ *    gate report a clean tree over 1,047 lines of it, across 128 files
+ *    (measured 2026-08-10 against this gate's own scanned set). See
+ *    `__tests__/stripComments.test.ts`, which pins both regressions.
  *
  * It lives in the FRONTEND suite because that CI job needs no database, and it
  * scans all three packages from the repository root; `shared-types` has no
@@ -41,6 +47,8 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+
+import { stripComments } from '@homiio/shared-types/testing/stripComments';
 
 /** Repository root — two levels up from `packages/frontend`. */
 const REPO_ROOT = join(__dirname, '..', '..', '..');
@@ -154,29 +162,6 @@ interface Finding {
   line: number;
   text: string;
   rule: string;
-}
-
-/**
- * Remove `//` and block comments, and the contents of import specifiers.
- *
- * Crude by design — it does not parse TypeScript — but it errs toward keeping
- * text (a `//` inside a string literal leaves the rest of the line stripped),
- * which is the safe direction here: it can only cause the gate to miss a line,
- * never to invent one, and the pinned-predicate case below proves it still
- * matches real code.
- */
-function stripComments(source: string): string {
-  return source
-    // Replace a block comment with its own newlines, not with nothing: the line
-    // NUMBERS in a finding have to point at the real line, and collapsing a
-    // 40-line header shifted every report in this file by 32.
-    .replace(/\/\*[\s\S]*?\*\//gu, (match) => match.replace(/[^\n]/gu, ''))
-    .split('\n')
-    .map((line) => {
-      const index = line.indexOf('//');
-      return index === -1 ? line : line.slice(0, index);
-    })
-    .join('\n');
 }
 
 /** Every offending line in `source`. */

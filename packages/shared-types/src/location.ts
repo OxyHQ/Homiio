@@ -44,6 +44,12 @@
  *    come from resolving it (§6.2). A parser that filled them in with
  *    placeholders would produce exactly the partially-filled selection §5.2
  *    forbids, so it returns the honest, smaller thing instead.
+ *
+ *    THE ASYMMETRY IS THE SAFETY PROPERTY, not an inconvenience to design
+ *    around. Returning a selection would mean INVENTING a label, and §4.1
+ *    forbids a label being fed back as free text — so a parser that guessed one
+ *    would manufacture, at the URL boundary, precisely the value the contract
+ *    exists to keep out of `q`.
  */
 
 // ---------------------------------------------------------------------------
@@ -489,7 +495,18 @@ export type LocationTokenFailure =
   /** A selection kind §5.2 has no production for. Today: `polygon` (§2.1 reserves it). */
   | 'unsupported_kind'
   /** An id or provider carrying a separator the grammar cannot escape. */
-  | 'unencodable_id';
+  | 'unencodable_id'
+  /**
+   * A token carrying a coordinate pair — today only the withdrawn `at.` form.
+   *
+   * Distinct from `unknown_kind` on purpose. `at.` was a real production of
+   * §5.2 until it was withdrawn (§19(B)), so somebody meeting this failure is
+   * far more likely to be holding an old copy of the grammar than to have made
+   * a typo, and the reason should tell them which. Decision 8 is the rule:
+   * exact coordinates never appear in a URL, and `here.<radiusMeters>` exists
+   * so the device case carries none.
+   */
+  | 'coordinates_in_url';
 
 export type LocationTokenResult<T> =
   | { readonly ok: true; readonly value: T }
@@ -521,14 +538,15 @@ export type LocationRef =
   /** `bbox.<west>,<south>,<east>,<north>` */
   | { readonly kind: 'bounds'; readonly bounds: GeoBounds }
   /**
-   * `at.<lng>,<lat>,<radiusMeters>` — a pin the user dropped.
+   * NOTE: there is deliberately no `point` member here.
    *
-   * The §5.2 grammar defines this production and §3's `LocationSelection` has
-   * no kind that maps to it, so nothing serialises to `at.` today. It is parsed
-   * rather than rejected because refusing a token the normative grammar admits
-   * would be the wrong half of the contract to enforce.
+   * §5.2 carried an `at.<lng>,<lat>,<radiusMeters>` production until it was
+   * withdrawn (§19(B)) — no coordinate pair belongs in a URL (decision 8), and
+   * no `LocationSelection` kind ever mapped to it, so it was a form the parser
+   * accepted and the serialiser could not produce. A grammar that blesses a
+   * shape is how the shape gets used, so it is rejected rather than parsed
+   * leniently. `here.<radiusMeters>` is the device case and carries nothing.
    */
-  | { readonly kind: 'point'; readonly center: GeoPoint; readonly radiusMeters: number }
   /** `here.<radiusMeters>` — NEVER any coordinates. */
   | { readonly kind: 'device'; readonly radiusMeters: number }
   /** `multi.<loc>+<loc>[+…]` — two or more, never nested. */
@@ -590,9 +608,11 @@ function isEncodableSegment(value: string, forbidDots: boolean): boolean {
  *
  * `polygon` is the one kind with no answer: §2.1 reserves its wire format
  * deliberately, so refusing is correct and degrading it to its bounding box
- * would not be — that would silently replace a drawn area with a rectangle,
- * which is the same "half the location survived" class of bug the atomic
- * selection exists to make unrepresentable.
+ * would not be. A bounding box is a SUPERSET of the drawn area, so that
+ * fallback silently WIDENS the search the user asked for — the same failure
+ * family as a resolution failure becoming a global feed (§4.3), differing only
+ * in how much extra ground it quietly covers. It is also the "half the location
+ * survived" bug the atomic selection exists to make unrepresentable.
  */
 export function locationRefOf(selection: LocationSelection): LocationTokenResult<LocationRef> {
   switch (selection.kind) {
@@ -670,17 +690,6 @@ export function serializeLocationRef(ref: LocationRef): LocationTokenResult<stri
           `${formatCoordinate(bounds.east)},${formatCoordinate(bounds.north)}`,
       );
     }
-    case 'point': {
-      const longitude = normalizeLongitude(ref.center.longitude);
-      if (!isValidLongitude(longitude) || !isValidLatitude(ref.center.latitude)) {
-        return fail('out_of_range');
-      }
-      const radius = radiusToken(ref.radiusMeters);
-      if (radius === null) return fail('out_of_range');
-      return ok(
-        `at.${formatCoordinate(longitude)},${formatCoordinate(ref.center.latitude)},${radius}`,
-      );
-    }
     case 'device': {
       const radius = radiusToken(ref.radiusMeters);
       if (radius === null) return fail('out_of_range');
@@ -734,7 +743,9 @@ export function parseLocationToken(token: string): LocationTokenResult<LocationR
   if (head === 'multi') return parseMultiToken(rest);
   if (head === 'here') return parseDeviceToken(rest);
   if (head === 'bbox') return parseBoundsToken(rest);
-  if (head === 'at') return parsePointToken(rest);
+  // The withdrawn `at.` production (§19(B)). Rejected with a reason that names
+  // the rule, not treated as an unknown prefix — see `LocationTokenFailure`.
+  if (head === 'at') return fail('coordinates_in_url');
   if ((PLACE_TYPES as readonly string[]).includes(head)) {
     return parsePlaceToken(head as GeoPlaceType, rest);
   }
@@ -774,21 +785,6 @@ function parseBoundsToken(rest: string): LocationTokenResult<LocationRef> {
   });
   if (!isValidBounds(bounds)) return fail('out_of_range');
   return ok({ kind: 'bounds', bounds });
-}
-
-function parsePointToken(rest: string): LocationTokenResult<LocationRef> {
-  const parts = rest.split(',');
-  if (parts.length !== 3) return fail('malformed');
-  const longitude = parseDecimal(parts[0]);
-  const latitude = parseDecimal(parts[1]);
-  const radiusMeters = parseDecimal(parts[2]);
-  if (longitude === null || latitude === null || radiusMeters === null) return fail('not_a_number');
-  if (!isValidLatitude(latitude) || radiusMeters <= 0) return fail('out_of_range');
-  return ok({
-    kind: 'point',
-    center: { longitude: normalizeLongitude(longitude), latitude },
-    radiusMeters,
-  });
 }
 
 function parseDeviceToken(rest: string): LocationTokenResult<LocationRef> {

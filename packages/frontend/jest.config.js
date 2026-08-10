@@ -60,6 +60,14 @@ module.exports = {
   // Resolve the `@/...` path alias declared in tsconfig.json / babel.config.js.
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    // Shared-types SUBPATHS only. The bare specifier is deliberately left to
+    // node resolution (the built `dist`, as every existing test here uses it);
+    // this maps the subpath form the repo gates import
+    // (`@homiio/shared-types/testing/stripComments`), which has no `exports`
+    // entry to resolve through and would otherwise fail. Points at `src` so a
+    // gate reads the helper it is being edited alongside, not a stale `dist` —
+    // the same mapping the backend suite already declares.
+    '^@homiio/shared-types/(.*)$': '<rootDir>/../shared-types/src/$1',
   },
   // Only pick up our own specs; never descend into build output.
   testMatch: ['<rootDir>/__tests__/**/*.(test|spec).(ts|tsx)'],

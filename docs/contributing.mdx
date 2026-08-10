@@ -1,7 +1,7 @@
 ---
 title: Contributing
 description: Repo layout, the agent-first workflow, code conventions, and the rules that keep the monorepo healthy.
-order: 8
+order: 11
 ---
 
 # Contributing
@@ -74,14 +74,47 @@ These are enforced in review and mirror the Oxy ecosystem rules.
 5. **i18n**: add new strings to all locales in `packages/frontend/locales/`.
 6. **Self-audit**: read every integration point you touched. If the feature crosses Oxy or Bloom, verify the upstream package version in `package.json` matches what you're using.
 
-## Adding a drizzle table
+## Adding a table
 
-- File location: `packages/backend/models/schemas/<Name>Schema.ts`.
-- Re-export the model from `packages/backend/models/index.ts`.
-- Add cross-package types to `packages/shared-types/src/<name>.ts`.
-- For ownership scoping, store the Oxy user id as `oxyUserId: { type: String, required: true, index: true }` (or `profileId` for profile-scoped data).
-- For unique-per-user records, add a unique index: `{ oxyUserId: 1 }` with `unique: true`.
-- For external/scraped data with a TTL, use a TTL index on `expiresAt` with `expireAfterSeconds: 0`.
+Read `packages/backend/db/schema/CONVENTIONS.md` first — it records the
+per-table decisions and the traps already paid for once. The short version:
+
+- **Schema:** `packages/backend/db/schema/<domain>.ts`, exported through
+  `db/schema/index.ts`. One file per domain, not one per table.
+- **Repository:** `packages/backend/db/<domain>/`. Controllers call the
+  repository; they do not build SQL and they do not build DTOs.
+- **Types:** cross-package DTOs go in `packages/shared-types/src/<name>.ts` and
+  are exported from its `index.ts`.
+- **Ownership scoping:** store the Oxy user id as a `text` column, and enforce
+  ownership **in the repository query** rather than after the read — a non-owner
+  should get a 404, because a 403 confirms the row exists.
+- **Uniqueness:** use `unique()` and never `uniqueIndex()` when anything
+  references the column with a foreign key. `drizzle-kit` emits every
+  `ADD CONSTRAINT … FOREIGN KEY` **before** every `CREATE UNIQUE INDEX`
+  regardless of source order, so an FK pointing at a `uniqueIndex()` target
+  fails at apply time with `42830`. A `unique()` constraint is emitted inline
+  inside `CREATE TABLE`, so it already exists. A primary-key target is fine for
+  the same reason.
+- **Expiring rows:** Postgres never deletes an expired row on its own. Add an
+  entry to `EXPIRY_SWEEP_TARGETS` in `packages/backend/db/expiry.ts`, and read
+  that module's header first — check what the deadline *means* before registering
+  it. A table with a deadline column and no entry grows forever, with no error
+  and no failing test.
+- **Migrations:** `bun run --cwd packages/backend db:generate`, then
+  `db:migrate`. Every migration must declare a deploy phase marker; CI refuses
+  one that does not. Never `drizzle-kit migrate` — it does not understand the
+  `pre` / `post` phases.
+
+Two `sql`-template traps worth knowing before you hit them at runtime, because
+`tsc` cannot see either:
+
+- A bare JS array interpolated into a `sql` template renders as a **row
+  constructor**, not an array parameter. Use `inArray`, or `sql.param([...])`
+  when you need an array operator.
+- A `bigint` column — including the result of `max()` or `sum()` over one —
+  arrives in JavaScript as a **string**, whatever TypeScript says. `max + 1` is
+  string concatenation. Coerce at the boundary, and note a test that aggregates
+  only once cannot catch it.
 
 ## Adding a route
 
@@ -89,7 +122,7 @@ These are enforced in review and mirror the Oxy ecosystem rules.
 // packages/backend/routes/<name>.ts
 import express from 'express';
 import { asyncHandler } from '../middlewares';
-const controller = require('../controllers/<name>Controller');
+import * as controller from '../controllers/<name>Controller';
 
 export default function () {
   const router = express.Router();
@@ -102,12 +135,19 @@ export default function () {
 Then in `routes/index.ts`:
 
 ```ts
-const <name> = require('./<name>').default;
+import <name> from './<name>';
 // ...
 router.use('/<name>', <name>());
 ```
 
-Public routes go in `routes/public.ts` instead.
+**Which file you mount it in decides whether a session is required.**
+`routes/index.ts` is behind `createOxyAuthMiddleware(oxy)`; `routes/public.ts` is
+not. A handler on the public router must never read `req.user` for
+authorization. Declare static sub-paths before parameterised ones, or `search`
+gets captured as an id.
+
+Add the route to [`docs/routes.mdx`](./routes) in the same change —
+`bun run check:docs` fails when a mounted router is missing from it.
 
 ## Pull requests
 

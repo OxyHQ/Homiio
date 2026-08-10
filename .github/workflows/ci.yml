@@ -279,10 +279,24 @@ jobs:
       - name: Verify the toolchain pins have not drifted
         run: bash .github/scripts/check-version-pins.sh
 
+      # The documentation gate. Its own step rather than a job, because it needs
+      # nothing this job has not already installed — no Postgres, no build — and a
+      # whole job for one markdown scan is minutes of queue time for seconds of
+      # work.
+      #
+      # It is a REAL gate and not a linter: `main` has carried a README badge
+      # advertising a datastore this repository does not use, an API page whose
+      # every response example used a field name the wire contract forbids, and a
+      # contributing guide telling people to add an index type that does not
+      # exist here. None of that breaks a test, which is exactly why it survived.
+      - name: Verify the documentation still describes this repository
+        run: bun run check:docs
+
       - name: Verify the CI and deploy gates can still fail
         run: |
           bash -n .github/scripts/*.sh
           bun scripts/test-check-lockfile-sync.mjs
+          bun scripts/test-check-docs.mjs
           bun .github/scripts/test-assert-test-floor.mjs
           bun .github/scripts/test-check-migration-phases.mjs
           bash .github/scripts/test-assert-install-clean.sh
