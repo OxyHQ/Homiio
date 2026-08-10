@@ -21,9 +21,19 @@
  * columns. Both columns are nullable here with no default.
  */
 
-import { boolean, check, index, jsonb, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  check,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { createdAt, generatedId, inList, updatedAt } from '@oxyhq/db';
+import { createdAt, generatedId, geography, inList, timestamptz, updatedAt } from '@oxyhq/db';
+import { ALERT_CHANNELS, PUSH_PRIVACY_MODES, WATCH_CADENCES } from '@homiio/shared-types';
 import { properties } from './properties';
 
 /**
@@ -145,6 +155,109 @@ export const savedSearches = pgTable(
     location: jsonb(),
     notificationsEnabled: boolean().notNull().default(false),
 
+    // ── The watch half (#356) ──
+    //
+    // A saved search EVOLVES into a watch rather than being copied into a second
+    // table, and the reason is that a copy would need an authority. Two rows for
+    // one stored intent drift the moment somebody renames one of them, and the
+    // read shape #353 consumes (`isPrimaryArea`, through the saved-search API)
+    // would then have to name which copy it trusts. Everything below is
+    // ADDITIVE: a row written before this landed is a valid watch with alerting
+    // switched off, which is what it already meant.
+
+    /**
+     * Which version of the search contract this row's `query` was written
+     * against. `2` is ADR 0002's; `1` is a row from before it, whose `query`
+     * holds a place LABEL rather than free text.
+     *
+     * Load-bearing rather than bookkeeping. It is the only thing that can tell a
+     * legacy row from a deliberate text-only search, because both have
+     * `location IS NULL` — and the matcher REFUSES a version-1 row, because
+     * reading its label as free text searches for the string "Barcelona" and
+     * reading it as a place is the homonym bug ADR 0002 §11.3 exists to refuse.
+     * The migration derives it from whether a canonical selection is present,
+     * which is the only evidence a stored row carries.
+     */
+    queryVersion: integer().notNull().default(2),
+
+    /**
+     * The area Home opens on.
+     *
+     * At most one per person, and that is a partial UNIQUE index below rather
+     * than a rule in whichever controller happens to set it. A read-then-write
+     * "clear the others, then set this one" is two statements, and two requests
+     * interleaving them leave a person with two primary areas and Home picking
+     * whichever the sort felt like.
+     */
+    isPrimaryArea: boolean().notNull().default(false),
+
+    /**
+     * How often this watch may speak: `instant`, `daily`, `weekly` or `off`.
+     *
+     * `off` is the DEFAULT and is not the same as deleting the watch — the
+     * search is still saved and still reopens, it just says nothing. It also
+     * means every row that existed before this column did is silent until its
+     * owner asks for otherwise, which is the only defensible default for a
+     * feature that sends notifications.
+     */
+    cadence: text({ enum: WATCH_CADENCES }).notNull().default('off'),
+
+    /** Delivery channels. `in_app` is mandatory — see the CHECK below. */
+    channels: text().array().notNull().default(sql`'{in_app}'::text[]`),
+
+    /** Delivers nothing until this passes. NULL means "not muted". */
+    mutedUntil: timestamptz(),
+
+    /**
+     * The moment this watch started watching.
+     *
+     * An event that OCCURRED before it never alerts. Together with
+     * `housing_domain_events.is_backfill` this is what stops "no notificar la
+     * primera indexación de todo el catálogo como miles de nuevos": this half
+     * protects a NEW watch from the EXISTING catalogue, and the flag protects an
+     * OLD watch from a bulk re-index. Neither covers the other's case.
+     *
+     * Re-stamped when alerting is switched back ON, so a watch that was silent
+     * for a month does not wake up and recite the month.
+     */
+    alertsActiveFrom: timestamptz().notNull().defaultNow(),
+
+    /**
+     * How prudent the lock-screen text must be: `discreet` (default) or
+     * `detailed`. The issue requires it to be configurable, and `discreet` names
+     * neither the listing nor the area — a push is read by whoever is holding
+     * the phone, who is not necessarily its owner.
+     */
+    pushPrivacyMode: text({ enum: PUSH_PRIVACY_MODES }).notNull().default('discreet'),
+
+    /**
+     * The watch's area, as GeoJSON, derived from `location` at write time.
+     *
+     * DERIVED and cached rather than computed per query, because the matcher's
+     * central operation is the inverted one — given a point, which watches
+     * contain it — and that needs a GiST index on the watch side. Computing it
+     * from `location` per event would be a sequential scan over every watch in
+     * the system for every listing that changes, which is the shape the issue
+     * rules out by name.
+     *
+     * NULL when no area could be derived (a named place Homiio holds with a
+     * centroid and no extent). Such a watch reports `alertStatus: no_area`
+     * rather than matching everything or nothing in silence.
+     */
+    area: jsonb(),
+    /**
+     * The same area as PostGIS geography, GENERATED so it cannot drift.
+     *
+     * A second application-written column would need the two writers to agree
+     * forever; a generated one is the same fact expressed twice by the database.
+     * Verified against `postgis/postgis:17-3.5`: `ST_GeomFromGeoJSON(jsonb)` is
+     * IMMUTABLE enough for a stored generated column, yields SRID 4326, and
+     * stays NULL for a NULL input.
+     */
+    areaGeo: geography().generatedAlwaysAs(
+      sql`case when area is null then null else ST_GeomFromGeoJSON(area)::geography end`,
+    ),
+
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -162,6 +275,70 @@ export const savedSearches = pgTable(
     index('saved_searches_notifications_enabled_idx')
       .on(table.oxyUserId)
       .where(sql`${table.notificationsEnabled}`),
+    /**
+     * ONE primary area per person, structurally.
+     *
+     * PARTIAL, and it has to be: a plain `UNIQUE(oxy_user_id, is_primary_area)`
+     * would also permit only one NON-primary watch per person, which is absurd
+     * and would surface as "you already have a saved search".
+     */
+    uniqueIndex('saved_searches_primary_area_key')
+      .on(table.oxyUserId)
+      .where(sql`${table.isPrimaryArea}`),
+    /**
+     * The matcher's fan-out from the AREA side: given an event's point, which
+     * watches contain it. This index is the "estrategia invertida" the issue
+     * asks for instead of running each user's query per listing.
+     */
+    index('saved_searches_area_geo_gist')
+      .using('gist', table.areaGeo)
+      .where(sql`${table.areaGeo} is not null`),
+    check(
+      'saved_searches_cadence_check',
+      sql`${table.cadence} in (${sql.raw(inList(WATCH_CADENCES))})`,
+    ),
+    check(
+      'saved_searches_push_privacy_mode_check',
+      sql`${table.pushPrivacyMode} in (${sql.raw(inList(PUSH_PRIVACY_MODES))})`,
+    ),
+    /**
+     * Channels are a non-empty subset of the vocabulary, and always include the
+     * in-app one.
+     *
+     * THREE separate facts, and the middle one is the trap: `<@` (containment)
+     * is TRUE for the empty array — vacuously, since every element of the empty
+     * set is in the allowed set — so a schema that only constrains WHICH values
+     * may appear has said nothing about whether any must. `cardinality`, not
+     * `array_length`, for the reason spelled out on `housing_alerts`.
+     */
+    check(
+      'saved_searches_channels_check',
+      sql`${table.channels} <@ ARRAY[${sql.raw(inList(ALERT_CHANNELS))}]::text[]
+        and cardinality(${table.channels}) >= 1
+        and 'in_app' = any(${table.channels})`,
+    ),
+    /**
+     * THERE IS DELIBERATELY NO CHECK TYING `cadence` TO `location`.
+     *
+     * The obvious constraint — a cadence other than `off` requires a stored
+     * selection — is wrong, and it took writing it to see why. ADR 0002 §11.5
+     * says a saved search with notifications and an UNCONFIRMED location "does
+     * not fire; it produces one prompt to confirm". That is a row which stores
+     * the user's preference and stays silent, and the constraint makes exactly
+     * that row unstorable: switching alerts on would have to be REFUSED, so the
+     * prompt would have nothing to prompt about and the preference would be lost
+     * every time somebody tried.
+     *
+     * The rule is real and lives where it can be honest about itself: the
+     * matcher's `location is not null` predicate, which cannot fire such a
+     * watch, and `watchAlertStatus`, which reports
+     * `location_needs_confirmation` so the UI can ask. Enforcing it here would
+     * have contradicted a landed contract in order to look stricter.
+     */
+    check(
+      'saved_searches_query_version_check',
+      sql.raw('query_version >= 1'),
+    ),
   ],
 );
 

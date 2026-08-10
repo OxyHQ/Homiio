@@ -162,9 +162,16 @@ describe('rung order', () => {
   });
 
   it('an absent saved-area rung is a SKIP, not a failure', () => {
-    // #356 has not landed, so that rung is permanently null today. The ladder
-    // must fall through it silently rather than treating absence as a problem —
-    // otherwise Home breaks for everybody until an unrelated issue merges.
+    // #356 has landed and the rung is live, but `null` is still its COMMON
+    // answer: most people have never marked a primary area. The ladder must fall
+    // through it silently rather than treating absence as a problem — otherwise
+    // Home would break for everybody who has not set one.
+    //
+    // The case this does NOT cover is "still loading", which is deliberately not
+    // expressible here: `useLocationScope` keeps the two apart and passes
+    // `device: { status: 'resolving' }` while the rung is in flight, so the
+    // ladder reports `resolving` instead of skipping to a scope it is about to
+    // replace.
     const state = resolveLocationScope({
       ...EMPTY,
       savedAreaSelection: null,

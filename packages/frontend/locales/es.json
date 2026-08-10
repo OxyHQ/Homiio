@@ -4088,5 +4088,119 @@
       },
       "notChosen": "Not chosen yet"
     }
+  },
+  "alerts": {
+    "history": {
+      "title": "Alertas",
+      "emptyTitle": "Todavía no hay alertas",
+      "emptyDescription": "Cuando algo cambie en una zona que sigues, aparecerá aquí con el motivo por el que coincidió.",
+      "pending": "Esperando a tu próximo resumen",
+      "openReason": "Ver por qué recibiste esto",
+      "suppressed": {
+        "muted": "Retenida: esta zona está en pausa",
+        "cadence_off": "Retenida: las alertas están desactivadas en esta zona",
+        "channel_unavailable": "Retenida: todavía no hay ningún canal de entrega disponible",
+        "rate_limited": "Retenida: habías alcanzado tu límite diario"
+      }
+    },
+    "reason": {
+      "title": "Por qué recibiste esto",
+      "whatChanged": "Qué ha cambiado",
+      "whyYou": "Por qué tú",
+      "matchedWatch": "Coincidió con tu zona guardada «{{name}}».",
+      "rule": "Regla: {{rule}}",
+      "ruleVersion": "Versión de regla {{version}}",
+      "detectedAt": "Detectado el {{when}}",
+      "evidenceExpired": "El registro original ya ha caducado; la explicación de arriba es la que se guardó en su momento.",
+      "openArea": "Abrir esta zona",
+      "adjustRules": "Ajustar las alertas de esta zona",
+      "missingTitle": "Alerta no encontrada",
+      "missingDescription": "Esta alerta ya no está disponible o pertenece a otra cuenta."
+    },
+    "settings": {
+      "title": "Ajustes de alertas",
+      "cadence": "Con qué frecuencia",
+      "cadenceHint": "«Al instante» te avisa en cuanto algo cambia. Un resumen lo agrupa todo.",
+      "rules": "De qué quiero enterarme",
+      "pause": "Pausar",
+      "pauseHint": "Mientras está en pausa las alertas se registran, pero no se entregan.",
+      "pauseAction": "Pausar una semana",
+      "resume": "Reanudar alertas",
+      "primaryArea": "Zona principal",
+      "primaryAreaHint": "Inicio se abre en tu zona principal. Solo puedes tener una.",
+      "primaryAreaAction": "Hacer que sea mi zona principal",
+      "primaryAreaCurrent": "Esta es tu zona principal",
+      "primaryAreaSet": "Zona principal actualizada",
+      "viewHistory": "Ver las alertas de esta zona",
+      "updated": "Ajustes de alertas actualizados",
+      "updateFailed": "No se han podido actualizar los ajustes de alertas",
+      "ruleUnavailable": "Esa alerta todavía no se puede activar: los datos en los que se basa no son fiables.",
+      "ruleUnavailableShort": "Todavía no disponible",
+      "missingTitle": "Zona guardada no encontrada",
+      "missingDescription": "Esta zona guardada ya no está disponible o pertenece a otra cuenta.",
+      "inactive": {
+        "muted": "Esta zona está en pausa, así que no se entrega nada.",
+        "legacy_query_version": "Esta búsqueda se guardó antes de que existieran las zonas. Confirma dónde busca para activar las alertas.",
+        "location_needs_confirmation": "Confirma dónde busca esta búsqueda para activar las alertas.",
+        "no_area": "Este lugar no tiene un límite que podamos vigilar. Elige una zona en el mapa.",
+        "no_rules_enabled": "Todavía no hay ninguna alerta activada en esta zona."
+      }
+    },
+    "cadence": {
+      "instant": "Al instante",
+      "daily": "Resumen diario",
+      "weekly": "Resumen semanal",
+      "off": "Desactivadas"
+    },
+    "rules": {
+      "new_listing": {
+        "name": "Viviendas nuevas",
+        "description": "Se publica una vivienda dentro de tu zona."
+      },
+      "price_decrease": {
+        "name": "Bajadas de precio",
+        "description": "El precio pedido baja."
+      },
+      "price_increase": {
+        "name": "Subidas de precio",
+        "description": "El precio pedido sube."
+      },
+      "cost_terms_changed": {
+        "name": "Cambios de costes",
+        "description": "Cambia la fianza o los gastos."
+      },
+      "listing_removed": {
+        "name": "Viviendas retiradas",
+        "description": "Una vivienda deja de estar publicada."
+      },
+      "listing_reappeared": {
+        "name": "Viviendas que vuelven",
+        "description": "Una vivienda vuelve a publicarse."
+      },
+      "new_review": {
+        "name": "Reseñas nuevas",
+        "description": "Se publica una reseña verificada cerca."
+      },
+      "eviction_nearby": {
+        "name": "Desahucios cercanos",
+        "description": "Hay un desahucio previsto cerca de tu zona."
+      },
+      "source_conflict": {
+        "name": "Anuncios duplicados",
+        "description": "La misma vivienda aparece en varios portales."
+      }
+    },
+    "explanation": {
+      "matched": "{{change}} Coincidió con tu zona guardada «{{watchName}}».",
+      "newListing": "Nuevo anuncio: {{title}}.",
+      "priceDecrease": "El precio bajó de {{from}} a {{to}} en {{title}}.",
+      "priceIncrease": "El precio subió de {{from}} a {{to}} en {{title}}.",
+      "costTermsChanged": "Ha cambiado {{terms}} en {{title}}.",
+      "listingRemoved": "{{title}} ya no está publicada.",
+      "listingReappeared": "{{title}} vuelve a estar publicada, en {{source}}.",
+      "newReview": "Se ha publicado una nueva reseña verificada para {{building}}.",
+      "evictionNearby": "Hay un desahucio previsto a unos {{radius}} m de {{area}}.",
+      "sourceConflict": "{{title}} aparece ahora en {{count}} fuentes."
+    }
   }
 }

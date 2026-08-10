@@ -8,7 +8,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxyhq/services';
 import { api, ApiError } from '@/utils/api';
-import type { LocationSelection } from '@homiio/shared-types';
+import {
+  AVAILABLE_HOUSING_ALERT_RULE_TYPES,
+  type AlertChannel,
+  type HousingAlertRule,
+  type HousingAlertRuleType,
+  type LocationSelection,
+  type PushPrivacyMode,
+  type WatchAlertStatus,
+  type WatchCadence,
+} from '@homiio/shared-types';
 
 
 /**
@@ -45,6 +54,21 @@ interface RawSavedSearch {
   created_at?: string;
   updatedAt?: string;
   updated_at?: string;
+
+  // The watch half (#356). Every field optional: an older backend answers
+  // without them, and the normaliser below turns that into a silent saved
+  // search rather than into `undefined` reaching a switch.
+  locToken?: string;
+  queryVersion?: number;
+  isPrimaryArea?: boolean;
+  cadence?: WatchCadence;
+  channels?: AlertChannel[];
+  alertRules?: HousingAlertRule[];
+  availableRuleTypes?: HousingAlertRuleType[];
+  mutedUntil?: string | null;
+  pushPrivacyMode?: PushPrivacyMode;
+  hasArea?: boolean;
+  alertStatus?: WatchAlertStatus;
 }
 
 /**
@@ -129,7 +153,38 @@ const normalizeSearch = (raw: RawSavedSearch, defaults: Partial<SavedSearch> = {
         : false,
   createdAt: raw.createdAt ?? raw.created_at ?? new Date().toISOString(),
   updatedAt: raw.updatedAt ?? raw.updated_at ?? new Date().toISOString(),
+
+  // The watch half. `cadence` defaults to `'off'` for the same reason the
+  // column does: a payload that does not mention alerting describes a saved
+  // search that does not alert, and the cautious reading is the only safe
+  // default for something that sends notifications.
+  locToken: raw.locToken,
+  queryVersion: raw.queryVersion,
+  isPrimaryArea: raw.isPrimaryArea ?? false,
+  cadence: raw.cadence ?? 'off',
+  channels: raw.channels ?? ['in_app'],
+  alertRules: raw.alertRules ?? [],
+  // Defaults to the CONTRACT's list rather than to an empty one: an empty list
+  // would render every switch as unavailable and read as a broken feature,
+  // where the contract's list is at worst optimistic and is corrected by the
+  // server's own 400 if a rule is refused.
+  availableRuleTypes: raw.availableRuleTypes ?? [...AVAILABLE_HOUSING_ALERT_RULE_TYPES],
+  mutedUntil: raw.mutedUntil ?? null,
+  pushPrivacyMode: raw.pushPrivacyMode ?? 'discreet',
+  hasArea: raw.hasArea,
+  alertStatus: raw.alertStatus,
 });
+
+/** What the alert-settings screen may change about a watch. */
+export interface WatchAlertSettingsInput {
+  cadence?: WatchCadence;
+  channels?: AlertChannel[];
+  alertRules?: HousingAlertRule[];
+  /** ISO timestamp, or `null` to clear a mute. */
+  mutedUntil?: string | null;
+  pushPrivacyMode?: PushPrivacyMode;
+  isPrimaryArea?: boolean;
+}
 
 export interface UseSavedSearches {
   searches: SavedSearch[];
@@ -154,11 +209,129 @@ export interface UseSavedSearches {
     },
   ) => Promise<boolean>;
   toggleNotifications: (searchId: string, enabled: boolean) => Promise<boolean>;
+  /**
+   * Change what a watch listens for, how often it may speak, and through which
+   * channels (#356).
+   *
+   * ONE mutation for all of them rather than one per field, because they are
+   * decided together on one screen and because the server writes `cadence` and
+   * the legacy `notificationsEnabled` in a single statement — splitting the
+   * client call would put a window between two halves of one fact.
+   */
+  updateAlertSettings: (searchId: string, settings: WatchAlertSettingsInput) => Promise<boolean>;
+  /** Make this the area Home opens on. The server clears whichever held it. */
+  setPrimaryArea: (searchId: string) => Promise<boolean>;
   searchExists: (name: string, query?: string) => boolean;
   getSearchById: (id: string) => SavedSearch | undefined;
   hasSearches: boolean;
   isAuthenticated: boolean;
 }
+
+/**
+ * The ONE definition of the saved-searches list query.
+ *
+ * Shared rather than repeated because two hooks read it — this one and
+ * {@link usePrimarySavedArea}, which the location ladder calls — and React Query
+ * de-duplicates on the KEY plus the fetcher's behaviour. Two copies of the
+ * fetcher would still share a cache entry and would drift the day one of them
+ * learned something the other did not, which is the worst version of this: one
+ * consumer silently reading a shape the other stopped producing.
+ */
+function savedSearchesQueryOptions(isAuthenticated: boolean) {
+  return {
+    queryKey: SAVED_SEARCHES_KEY,
+    // Gated so a logged-out client never fires the request (the route sits
+    // behind `oxy.auth()` and `utils/api.ts` sends no `Authorization` header
+    // when there is no token, which would otherwise 401-spam).
+    enabled: isAuthenticated,
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+    queryFn: async (): Promise<SavedSearch[]> => {
+      const response = await api.get<SavedSearchPayload>('/api/profiles/me/saved-searches');
+      return extractSearchList(response.data).map((raw) => normalizeSearch(raw));
+    },
+  };
+}
+
+/**
+ * The primary area's selection, or `null`.
+ *
+ * PURE and exported so the rule is testable without rendering a hook, because
+ * the rule is the part that can be wrong. Two ways it could be, and both are
+ * pinned in `__tests__/home/primarySavedArea.test.ts`:
+ *
+ *  - **Picking the wrong watch.** The flag is the only thing that decides.
+ *    Falling back to "the most recently updated one with a location" would scope
+ *    somebody's whole Home to whichever city they bookmarked last and present it
+ *    as their home area — the opaque personalisation #353 refused when it left
+ *    this rung inert rather than approximating it.
+ *  - **Returning an unusable selection.** A watch whose location never resolved
+ *    carries a LABEL and not a place (ADR 0002 §11), so scoping by it would mean
+ *    re-geocoding the label and taking the first hit, which is the homonym bug.
+ *    Such a watch is skipped, and skipping is safe because the ladder treats an
+ *    absent rung as a fall-through.
+ *
+ * The server already guarantees at most one flagged row per person (a partial
+ * unique index), so this does not have to break a tie — and deliberately does
+ * not invent a rule for one, because a client-side tiebreak would hide a server
+ * invariant having broken.
+ */
+export function primaryAreaOf(searches: readonly SavedSearch[]): LocationSelection | null {
+  const primary = searches.find((search) => search.isPrimaryArea);
+  if (!primary) return null;
+  if (primary.locationStatus !== 'resolved') return null;
+  return primary.location ?? null;
+}
+
+/** What the location ladder's saved-area rung needs, and nothing more. */
+export interface PrimarySavedArea {
+  /**
+   * The primary area's stored selection, or `null`.
+   *
+   * `null` is the COMMON case and is unambiguous: it means "this person has no
+   * primary area", which the ladder treats as a skip to the next rung. It is
+   * NOT "we do not know yet" — that is {@link PrimarySavedArea.pending}, and
+   * conflating the two is what would let Home resolve to the device position and
+   * then jump to a saved area a moment later.
+   */
+  readonly selection: LocationSelection | null;
+  /**
+   * Whether the answer is still unknown.
+   *
+   * `false` for a logged-out user, who cannot have one — so the ladder never
+   * waits on a request that will not be made.
+   */
+  readonly pending: boolean;
+}
+
+/**
+ * The primary area of this person's saved searches, for the location ladder
+ * (#353's second rung, wired here now that #356 gives it something to read).
+ *
+ * A watch marked `isPrimaryArea` is an EXPLICIT choice — at most one per person,
+ * enforced by a partial unique index — which is why it may outrank the device
+ * position. The rung deliberately has no fallback to "the most recently updated
+ * saved search": that would scope somebody's whole Home to whichever city they
+ * happened to bookmark last and present it as their home area, which is the
+ * opaque personalisation #353 refused and #356 has no reason to reintroduce.
+ *
+ * A watch whose location never resolved (`locationStatus: 'needs_confirmation'`)
+ * is skipped rather than used, because there is nothing to scope BY — the row
+ * carries a label, not a place, and re-geocoding it is the homonym bug.
+ */
+export const usePrimarySavedArea = (): PrimarySavedArea => {
+  const { isAuthenticated } = useOxy();
+  const query = useQuery(savedSearchesQueryOptions(isAuthenticated));
+
+  return useMemo<PrimarySavedArea>(() => {
+    if (!isAuthenticated) return { selection: null, pending: false };
+    // `isPending` is true while disabled too, so the guard above has to come
+    // first — otherwise a logged-out Home would wait forever for a request that
+    // is never sent.
+    if (query.isPending) return { selection: null, pending: true };
+    return { selection: primaryAreaOf(query.data ?? []), pending: false };
+  }, [isAuthenticated, query.isPending, query.data]);
+};
 
 export const useSavedSearches = (): UseSavedSearches => {
   const { t } = useTranslation();
@@ -171,16 +344,7 @@ export const useSavedSearches = (): UseSavedSearches => {
    * sits behind `oxy.auth()` and `utils/api.ts` sends no `Authorization` header
    * when there is no token, which would otherwise 401-spam).
    */
-  const listQuery = useQuery({
-    queryKey: SAVED_SEARCHES_KEY,
-    enabled: isAuthenticated,
-    staleTime: 1000 * 30,
-    gcTime: 1000 * 60 * 10,
-    queryFn: async (): Promise<SavedSearch[]> => {
-      const response = await api.get<SavedSearchPayload>('/api/profiles/me/saved-searches');
-      return extractSearchList(response.data).map((raw) => normalizeSearch(raw));
-    },
-  });
+  const listQuery = useQuery(savedSearchesQueryOptions(isAuthenticated));
 
   // When logged out the query is disabled and never resolves, so fall back to a
   // stable empty list rather than leaving `searches` undefined. Memoised on the
@@ -450,6 +614,75 @@ export const useSavedSearches = (): UseSavedSearches => {
     [toggleNotificationsMutation, t],
   );
 
+  const alertSettingsMutation = useMutation({
+    mutationKey: ['updateWatchAlertSettings'],
+    mutationFn: async (vars: {
+      searchId: string;
+      settings: WatchAlertSettingsInput;
+    }): Promise<SavedSearch> => {
+      const response = await api.put<SavedSearchPayload>(
+        `/api/profiles/me/saved-searches/${vars.searchId}`,
+        vars.settings,
+      );
+      const payload = response.data;
+      const raw = Array.isArray(payload) ? (payload[0] ?? {}) : extractSearch(payload);
+      return normalizeSearch(raw, { id: vars.searchId });
+    },
+    onSuccess: (updated) => {
+      upsertCachedSearch(updated);
+    },
+    onError: (error: unknown) => {
+      // The server refuses a rule it cannot evaluate rather than storing a dead
+      // switch, so this path is reachable by design and needs its own message —
+      // "update failed" would leave the user re-trying something that will
+      // never work.
+      if (isApiError(error) && error.status === 400) {
+        const response =
+          error.response && typeof error.response === 'object'
+            ? (error.response as { code?: unknown; message?: unknown })
+            : undefined;
+        if (response?.code === 'RULE_UNAVAILABLE') {
+          toast.error(t('alerts.settings.ruleUnavailable'));
+          return;
+        }
+      }
+      toast.error(getErrorMessage(error, t('alerts.settings.updateFailed')));
+    },
+  });
+
+  const updateAlertSettings = useCallback(
+    async (searchId: string, settings: WatchAlertSettingsInput): Promise<boolean> => {
+      try {
+        await alertSettingsMutation.mutateAsync({ searchId, settings });
+        toast.success(t('alerts.settings.updated'));
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [alertSettingsMutation, t],
+  );
+
+  const setPrimaryArea = useCallback(
+    async (searchId: string): Promise<boolean> => {
+      try {
+        await alertSettingsMutation.mutateAsync({ searchId, settings: { isPrimaryArea: true } });
+        // The server clears whichever watch previously held the flag, in the
+        // same transaction. The local cache cannot know WHICH one that was
+        // without re-reading, so the whole list is invalidated rather than
+        // patched — a patched cache would show two primary areas until the next
+        // refetch, which is precisely the state the partial unique index makes
+        // impossible on the server.
+        await queryClient.invalidateQueries({ queryKey: SAVED_SEARCHES_KEY });
+        toast.success(t('alerts.settings.primaryAreaSet'));
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [alertSettingsMutation, queryClient, t],
+  );
+
   const searchExists = useCallback(
     (name: string, query?: string): boolean =>
       searches.some(
@@ -478,6 +711,8 @@ export const useSavedSearches = (): UseSavedSearches => {
     deleteSavedSearch,
     updateSearch,
     toggleNotifications,
+    updateAlertSettings,
+    setPrimaryArea,
     searchExists,
     getSearchById,
     hasSearches: searches.length > 0,

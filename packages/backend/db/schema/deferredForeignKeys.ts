@@ -38,6 +38,7 @@ import { getTableColumns, getTableName } from 'drizzle-orm';
 import type { PgColumn, PgTable, UpdateDeleteAction } from 'drizzle-orm/pg-core';
 import { sqlColumnName } from '../casing';
 import { billing, billingProcessedSessions } from './billing';
+import { housingAlerts, housingDomainEvents } from './watches';
 import { images } from './images';
 import { leasePaymentSchedule } from './leases';
 import {
@@ -330,6 +331,31 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
       'The payment processor\'s own reference for a recorded rent payment. A ' +
       'foreign service\'s key, written by `recordPayment` from whatever the ' +
       'processor returned, and never resolved against anything in this schema.',
+  },
+  {
+    table: housingDomainEvents,
+    column: housingDomainEvents.subjectId,
+    reason:
+      'Polymorphic by `subject_type` across four nouns — a `properties.id`, ' +
+      '`addresses.id`, `eviction_cases.id` or `reviews.id` — so a single ' +
+      'column cannot reference it, the same permanent case as ' +
+      '`images.entity_id`. A SECOND reason makes it permanent even if the ' +
+      'polymorphism went away: this row must OUTLIVE its subject. The whole ' +
+      'point of a `listing_removed` event is that the listing is gone, and a ' +
+      'cascade would delete the record of the thing having happened at the ' +
+      'exact moment it happened.',
+  },
+  {
+    table: housingAlerts,
+    column: housingAlerts.subjectId,
+    reason:
+      'The same polymorphic subject as `housing_domain_events.subject_id`, ' +
+      'copied onto the alert on purpose rather than reached through the event. ' +
+      'The event EXPIRES on its own 90-day retention (`db/expiry.ts`) and the ' +
+      'alert does not, so an alert that could only name its subject through ' +
+      '`event_id` would become a history entry saying "something changed" the ' +
+      'day the sweep ran. It is also what the cooldown unique index is keyed ' +
+      'on, which a nullable reference through another table could not be.',
   },
 ];
 

@@ -36,6 +36,11 @@ import {
   type PropertyWriteInput,
 } from '../../db/properties/propertyWrites';
 import { findOrCreateAgencyByName } from '../../db/agencies/agencyWrites';
+import {
+  readPropertySnapshot,
+  recordPropertyChangeEvents,
+  recordPropertyCreatedEvent,
+} from '../watches/propertyEventProducer';
 import { ensureCover } from '../cityCoverSyncService';
 import {
   findOrCreateCanonicalAddress,
@@ -189,11 +194,28 @@ export class IngestionService {
     // re-sync (a richer add/remove diff lands in a later phase).
     const needsMedia = !existing || existing.imageCount === 0;
 
+    // The BEFORE half of any change event (#356), read while it is still true.
+    // Only for an update: a listing that does not exist yet has no previous
+    // price, and reading one would be a query per created listing on the
+    // hottest loop in the ingest.
+    const before = existing ? await readPropertySnapshot(getDb(), existing.id) : null;
+
     // Persist scalar fields first so the listing has an id for the `images`
     // rows, whose `entity_id` names it.
     const propertyId = existing
       ? ((await updateProperty(existing.id, fields))?.property.id ?? existing.id)
       : (await insertProperty(fields)).property.id;
+
+    // Record what happened, for the watch matcher to pick up on its own
+    // schedule. Best effort inside the producer — a failed event must not fail
+    // an ingest that already committed — and deliberately NOT awaited into the
+    // media work below, which is the slow part.
+    if (before) {
+      const after = await readPropertySnapshot(getDb(), propertyId);
+      if (after) await recordPropertyChangeEvents(before, after);
+    } else if (!existing) {
+      await recordPropertyCreatedEvent(propertyId);
+    }
 
     let imageCount = existing?.imageCount ?? 0;
     if (needsMedia && listing.remoteImages.length > 0) {

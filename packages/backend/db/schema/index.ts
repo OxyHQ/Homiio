@@ -91,3 +91,4 @@ export {
   savedPropertyFolders,
   savedSearches,
 } from './saved';
+export { housingAlerts, housingDomainEvents, housingWatchRules } from './watches';

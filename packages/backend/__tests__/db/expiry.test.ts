@@ -93,7 +93,7 @@ describe('expiry sweep registry', () => {
     expect(violations).toEqual([]);
   });
 
-  it('registers exactly the four TTL columns that mean "delete this row"', async () => {
+  it('registers exactly the five columns that mean "delete this row"', async () => {
     // A vacuity floor with teeth: `findUnsupportedExpiryColumns` over an EMPTY
     // registry returns `[]` and passes the assertion above while checking
     // nothing at all. Naming the entries is what makes that assertion mean
@@ -105,10 +105,18 @@ describe('expiry sweep registry', () => {
     // Asserting the exact list in both directions is what makes "five in the
     // source, four here, one refused" a checked statement rather than an
     // arithmetic claim in a comment.
+    //
+    // `housing_domain_events.expires_at` (#356) is the FIFTH entry and has no
+    // Mongo ancestor at all — it was registered when the table was created
+    // rather than found by that census. That is the shape this registry wants
+    // every future table to arrive in, and it is why the count in this test's
+    // NAME is now the registry's size rather than the census's: the two stopped
+    // being the same number the moment a table was born on Postgres.
     const registered = EXPIRY_SWEEP_TARGETS.map(
       (target) => `${getTableName(target.table)}.${sqlColumnName(target.column)}`,
     ).sort();
     expect(registered).toEqual([
+      'housing_domain_events.expires_at',
       'moderation_events.expires_at',
       'moderation_outbox.expires_at',
       'place_pois.expires_at',
