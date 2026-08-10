@@ -11,6 +11,7 @@
  */
 
 const { readFileSync } = require('node:fs');
+const path = require('node:path');
 const { HOMIIO_JEST_DATABASE_MANIFEST } = require('./jest.workerCount.cjs');
 
 const manifestPath = process.env[HOMIIO_JEST_DATABASE_MANIFEST];
@@ -36,3 +37,22 @@ if (!Number.isFinite(workerId) || index < 0 || index >= urls.length) {
 }
 
 process.env.DATABASE_URL = urls[index];
+
+/**
+ * Per-worker LOCAL image store, for the same reason as the database above.
+ *
+ * The store root was one hardcoded path shared by every worker, and two suites
+ * remove it recursively in `afterAll`. One worker's `fs.rm` walking the tree
+ * while another worker writes into it fails with `ENOTEMPTY` from the final
+ * `rmdir` — a suite that fails while every test in it passes, which reads like a
+ * broken change rather than a shared-fixture race.
+ *
+ * Derived from `JEST_WORKER_ID`, not from a random name, so a leaked directory
+ * still says which worker leaked it. `services/imageUploadService.ts` reads this
+ * variable and exports the resolved path; tests import that constant rather than
+ * rebuilding it, so there is one authority instead of three.
+ */
+process.env.HOMIIO_LOCAL_IMAGE_STORE_DIR = path.join(
+  __dirname,
+  `.local-image-store-w${workerId}`,
+);

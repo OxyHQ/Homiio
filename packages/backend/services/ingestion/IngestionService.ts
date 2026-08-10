@@ -135,6 +135,8 @@ export class IngestionService {
   private readonly logger: Logger;
   private readonly defaultTtlDays: number;
   private readonly dedupeEnabled: boolean;
+  /** Background work started by `ingest()` that no caller awaits. See {@link whenIdle}. */
+  private readonly background = new Set<Promise<void>>();
 
   constructor(options: IngestionServiceOptions = {}) {
     this.mediaIngest = options.mediaIngest ?? new ExternalMediaIngest();
@@ -206,7 +208,7 @@ export class IngestionService {
       .where(eq(addresses.id, addressId))
       .limit(1);
     if (address?.cityId) {
-      void ensureCover(address.cityId);
+      this.startBackground(ensureCover(address.cityId), 'ensureCover');
     }
 
     const result: IngestResult = {
@@ -219,6 +221,51 @@ export class IngestionService {
     schedulePriceEthicsScore(result.propertyId);
     this.logger.info('Ingested external listing', result);
     return result;
+  }
+
+  /**
+   * Register work that deliberately outlives the `ingest()` call that started it.
+   *
+   * A city cover is fetched from Wikimedia and written to the image store; making
+   * `ingest()` await that would put an external HTTP round trip on the critical
+   * path of every listing, which is why it was fire-and-forget to begin with.
+   * That stays true. What changes is that the promise is no longer DROPPED:
+   * it is held so {@link whenIdle} can await it, and its rejection is handled
+   * here rather than becoming an unhandled rejection that fails whichever test
+   * happens to be running when it lands.
+   */
+  private startBackground(task: Promise<unknown>, label: string): void {
+    const settled = task.then(
+      () => undefined,
+      (error: unknown) => {
+        this.logger.warn(`Background task failed: ${label}`, {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      },
+    );
+    this.background.add(settled);
+    void settled.finally(() => {
+      this.background.delete(settled);
+    });
+  }
+
+  /**
+   * Resolve once every background task this instance started has settled.
+   *
+   * Tests must await this before removing the local image store, or an in-flight
+   * cover write recreates the directory while `fs.rm` is walking it and the
+   * removal fails with `ENOTEMPTY` — a suite that fails with every test passing.
+   * It loops rather than awaiting the set once, because a settling task may
+   * enqueue another.
+   *
+   * Production never needs to call it: the process outlives the work. It exists
+   * so a test can be deterministic about work that is deliberately asynchronous,
+   * which is the only honest alternative to sleeping or retrying the teardown.
+   */
+  async whenIdle(): Promise<void> {
+    while (this.background.size > 0) {
+      await Promise.all([...this.background]);
+    }
   }
 
   /**
