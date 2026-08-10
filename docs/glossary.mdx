@@ -1,0 +1,239 @@
+---
+title: Glossary
+description: What listing, housing place, building, unit, address candidate, place, review, verification, precision, source and snapshot mean in Homiio — one definition each.
+order: 3
+---
+
+# Glossary
+
+One definition per term, and only one. These words are used inconsistently across
+the housing industry, and the inconsistency is where Homiio's hardest bugs came
+from: a "property" that meant an advert to one module and a dwelling to another
+produced reviews attached to listings that expired, and searches that could not
+be reproduced.
+
+Each entry says whether it exists **today**, is a **target** fixed by an ADR, or
+both. Do not write code against a target as though it were current.
+
+---
+
+## Housing identity
+
+### listing
+
+**Current.** A temporary, sourced advertisement for a dwelling. A row in
+`properties`.
+
+A listing is *not* the identity of a home. It has a price, photos, availability
+and an advert's text; it can expire, be withdrawn, and be republished. One
+dwelling may have several listings at once across several sources, and none for
+years in between.
+
+Never use a listing id as the durable identity of a place, and never attach
+anything meant to outlive the advert — a review, a rent history, an eviction
+record — to one.
+
+In the codebase the entity is spelled `Property` (`packages/shared-types/src/property.ts`)
+for historical reasons. That name is not going to be re-litigated here; read it as
+"listing" and note the DTO carries `isExternal`, `source`, `sourceUrl` and
+`expiresAt`, which are advert properties, not building properties.
+
+### housing place
+
+**Target ([ADR 0001](./adr/0001-canonical-housing-graph)).** The permanent
+physical thing a listing points at: a street, a building, or a unit within a
+building. It is what survives every advert.
+
+Today the closest existing thing is a row in `addresses`, which is *building
+level* — see **address**. The declared `STREET` / `BUILDING` / `UNIT` levelling,
+and a place-level page that exists whether or not anything is currently
+advertised there, are the target and are not built.
+
+Prefer "housing place" or "place" over "property" in prose, precisely because
+"property" is ambiguous between the advert and the thing.
+
+### building
+
+**Target ([ADR 0001](./adr/0001-canonical-housing-graph)).** A housing place at
+`BUILDING` level: one postal address, one structure. The level most public
+information is published at, because it is usually coarse enough not to identify
+a household.
+
+A complex with several buildings under one postal address is explicitly handled
+by ADR 0001 §3.3 — do not invent a scheme for it.
+
+### unit
+
+**Target ([ADR 0001](./adr/0001-canonical-housing-graph)).** A housing place at
+`UNIT` level: a specific flat, door or letting within a building.
+
+The unit is where a tenancy actually happens, so it is where a review is most
+useful — and it is also where a review is most likely to identify a person.
+That tension is resolved by publishing at a coarser level than you store at; see
+**precision**. A review may be bound to a unit internally and published at the
+building.
+
+The `Address` interface already carries `unit`, `subunit`, `floor`, `entrance`
+and `block` as building-level fields. Those fields existing is not the same as
+the unit being a first-class entity, which is the part that is still target.
+
+### address
+
+**Current.** A row in `addresses`: a **building-level** record with street,
+number, postal code and coordinates.
+
+Two properties of it matter more than the field list:
+
+- **Administrative geography is relational, never free text.** `country_id`,
+  `region_id`, `city_id` and `neighborhood_id` are ids into the geo tables.
+  `country_code` (ISO-2) is the single denormalized field, kept so a country
+  filter needs no join. A city name is never copied onto an address, so renaming
+  a city does not mean rewriting listings.
+- **It is canonicalized on write.** `findOrCreateCanonicalAddress` computes a
+  normalized key and resolves a submitted address to an existing row rather than
+  creating a near-duplicate, so two spellings of one doorway do not become two
+  places.
+
+On the wire a listing carries `address` — the building-level fields, the geo ids,
+**and** server-resolved display names (`cityName`, `regionName`, `countryName`,
+`neighborhoodName`, and a ready-made `location` label). In storage the relation
+is `properties.address_id`. Render the names; the `*Id` fields are ids.
+
+### address candidate
+
+**Target ([ADR 0001](./adr/0001-canonical-housing-graph) §5.3).** A proposed
+address that has not been accepted into the canonical set — a geocoder
+suggestion, a user-typed string, or an ingest result that did not match an
+existing row confidently.
+
+The point of the concept is that a candidate must be *resolvable or rejectable*
+rather than silently promoted. An unresolved candidate becoming an address is how
+one dwelling ends up as three places with one review each.
+
+Not implemented. `address_candidates` does not exist yet; today an ingest either
+matches a canonical address or creates one.
+
+### place
+
+**Ambiguous — say which you mean.** Two distinct uses, and conflating them is a
+real source of confusion:
+
+1. **A housing place** — the physical dwelling above.
+2. **A geographic place** — a country, region, city or neighborhood: a row in
+   the geo tables, used to scope a search. This is the sense in
+   [ADR 0002](./adr/0002-location-and-search-contract) and in
+   `location.kind: 'city' | 'neighborhood' | 'region' | 'country'`.
+
+There is a third, unrelated: `place_pois` caches OpenStreetMap points of interest
+for the "nearby services" section. It stores presence and counts by category and
+deliberately holds **no place names** — the section answers "is there a pharmacy
+nearby?", never "which pharmacy?".
+
+---
+
+## Trust and provenance
+
+### review
+
+**Current.** A resident's account of living somewhere, attached to an **address**
+rather than to a listing — so it outlives the advert that led someone there.
+
+Moderation is community-level and there is no privileged actor: reports
+accumulate on a review until it moves to `under_review` automatically. Homiio has
+no admin panel and no moderator queue, by explicit product decision.
+
+Agency reviews are a separate surface with the same shape, attached to an
+`agencies` row.
+
+**Target ([ADR 0003](./adr/0003-privacy-verification-publication) §5):** author
+identity in three chosen forms, right of reply, corrections distinguished from
+edits, immutable version history, and the rule that a review bound to a unit
+internally may be published at the building. Also **target
+([ADR 0001](./adr/0001-canonical-housing-graph) §4.2):** the write / read /
+aggregate hierarchy across street, building and unit.
+
+### verification
+
+**Partly current.** A claim that has been checked, as distinct from a claim that
+has been made. `isVerified` exists on a listing today.
+
+**Target ([ADR 0003](./adr/0003-privacy-verification-publication) §6):** graded
+verification levels, residence evidence handled by extracting the signal and
+discarding the document, and one rule that keeps being got wrong —
+**verification is not endorsement.** A verified resident's review is not thereby
+true, and the UI must not imply that it is.
+
+### precision
+
+**Target ([ADR 0003](./adr/0003-privacy-verification-publication) §3), and the
+single most important term here.**
+
+A value is stored at one precision and published at another. The reduction
+happens **on the way out**, in the serializer, from a viewer plus a precision —
+never by storing a second, coarser copy of the entity, and never by each caller
+deciding for itself.
+
+`ADDRESS_PRECISION_LEVELS` in the observability schema already names the ladder:
+`unit`, `building`, `street`, `locality`, `area`.
+
+Two current instances: eviction cases publish deliberately approximate
+coordinates, and observability events carry bucketed bands (radius, area, zoom,
+result count, text length) rather than values. Widening a published precision
+anywhere is an ADR 0003 decision, not a code review one.
+
+### source
+
+**Current.** Where an external listing came from. Three fields together:
+`source` (the portal, e.g. `idealista`), `sourceId` (the portal's own id), and
+`sourceUrl` (the mandatory link back). The upsert key is `(source, sourceId)`.
+
+Source is **provenance shown to the user**, not an internal detail: an external
+listing is visibly marked, cannot be applied to or booked in-app, and links back
+to the portal. Direct contact details are shown only when the portal itself
+exposed them — never inferred, never guessed.
+
+Do not confuse `source` with a **provider**, which is the plugin in
+`@homiio/listing-providers` that fetched it. One provider can produce listings
+for several regional sources.
+
+**Target ([ADR 0004](./adr/0004-local-explainable-pricing)):** provenance
+extended with age and confidence, so a stale price is visibly stale.
+
+### snapshot
+
+**Target ([ADR 0004](./adr/0004-local-explainable-pricing), #367).** An immutable
+record of what a listing said at a moment: price, deposit, fees, conditions and
+provenance, kept as a series so a dwelling has a price *history* rather than only
+a current price.
+
+The distinction from the current state is exact: `priceEthics` on a listing today
+is a single overwritten field with a `scoredAt` timestamp. Overwriting is the
+opposite of a snapshot — it destroys the history the feature needs.
+
+Not implemented. Nothing today records what a listing used to cost.
+
+---
+
+## Related terms you will meet in the code
+
+| Term | Meaning here |
+|---|---|
+| **offering** | How a listing is offered: `long_term_rent`, `short_term_rent`, `sale`, `exchange`. `offerings` is an array and must exactly equal the set of priced blocks present. |
+| **priced block** | The pricing object backing one offering: `longTermRent`, `shortTermRent`, `sale`, `exchange`. Units are fixed — monthly is always monthly, nightly always nightly. |
+| **profile** | Optional Homiio-side real-estate metadata keyed by `oxyUserId`. A sidecar, never an identity or an ownership authority. |
+| **oxyUserId** | The identity, from the Oxy session. The owner key on every write. |
+| **external listing** | `isExternal: true`, no `oxyUserId`, mandatory `sourceUrl`, expires. In-app apply and viewing are blocked for it. |
+| **expiry sweep** | The registered job that deletes expired rows. Postgres does not do this by itself; see `packages/backend/db/expiry.ts`. |
+| **wire id** | Every identity on the wire is `id`. See [Architecture](./architecture) for the serializer that guarantees it. |
+| **`LocationSelection`** | **Target** ([ADR 0002](./adr/0002-location-and-search-contract)): the one shape every surface uses to say "where", carried in state, the URL and the API. |
+| **housing place page** | **Target** (#362): a page for a dwelling that exists whether or not anything is listed there. |
+
+## Naming rules
+
+- **Say "listing" when you mean the advert and "place" when you mean the
+  dwelling.** "Property" means both and is therefore the wrong word in prose,
+  even though it is the type name.
+- **A place name is never stored as text on an entity.** It is an id into the geo
+  tables, resolved for display on the way out.
+- **Do not introduce a synonym.** If a concept here needs a new name, it probably
+  needs an ADR instead.

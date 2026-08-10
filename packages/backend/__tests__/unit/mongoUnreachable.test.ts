@@ -2,6 +2,8 @@ import { execFileSync } from 'child_process';
 import { readFileSync } from 'fs';
 import path from 'path';
 
+import { stripComments } from '@homiio/shared-types/testing/stripComments';
+
 /**
  * Homiio's runtime cannot reach Mongo — asserted, not claimed.
  *
@@ -145,6 +147,17 @@ const PENDING_MONGO_FILES: ReadonlyMap<string, string> = new Map([]);
  * raw-text scan matches their own explanation and fails on correct code. That
  * is not hypothetical: it happened while writing a sibling gate today.
  *
+ * **The stripping is deliberate, and it used to be unsound.** This file carried
+ * its own two-regex stripper, which let a block-comment opener MENTIONED inside
+ * a `//` comment open a real block and blank everything up to the next
+ * terminator. In
+ * `config.ts` that is 109 lines — a `mongoose` import anywhere inside them
+ * would have passed this gate silently, which is the one thing it exists to
+ * prevent. It now strips through `@homiio/shared-types/testing/stripComments`,
+ * shared with the currency gate that hit the same fault; the intent above is
+ * unchanged, only the implementation is sound. See
+ * `packages/frontend/__tests__/stripComments.test.ts`.
+ *
  * **`import` and `require` are BOTH covered for the barrel, not only for
  * mongoose**, and the asymmetry that used to sit here was load-bearing:
  * `scripts/seedCities.js` reached the models through
@@ -182,11 +195,6 @@ function trackedFiles(): string[] {
     .split('\n')
     .filter((line) => !line.endsWith('.d.ts'))
     .filter((line) => SOURCE_EXTENSIONS.some((extension) => line.endsWith(extension)));
-}
-
-/** Strip line and block comments. Crude by design — it only has to remove prose. */
-function stripComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 }
 
 function isScanned(file: string): boolean {

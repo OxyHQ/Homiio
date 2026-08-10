@@ -19,6 +19,7 @@
     "test": "bun run --filter '*' test",
     "lint": "bun run --filter '*' lint",
     "check:lockfile": "bun ./scripts/check-lockfile-sync.mjs",
+    "check:docs": "bun ./scripts/check-docs.mjs",
     "clean": "bun run --filter '*' clean && rm -rf node_modules",
     "install:all": "bun install",
     "start:frontend": "bun run --filter @homiio/frontend start",

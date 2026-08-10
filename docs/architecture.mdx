@@ -1,175 +1,406 @@
 ---
 title: Architecture
-description: Workspace layout, tech stack, request lifecycle, and the data model that anchors the rest of the system.
+description: Packages, request lifecycle on PostgreSQL, the frontend provider tree, PostGIS search, identity, the worker, and the id serialization contract.
 order: 2
 ---
 
 # Architecture
 
-Homiio is a Bun-workspaces monorepo (root `package.json` is `homiio-monorepo@2.0.0`). The build order is:
+Homiio is a Bun-workspaces monorepo (`homiio-monorepo@2.0.0`). Four packages, and
+the build order is a dependency chain rather than a preference:
 
 ```
-@homiio/shared-types  →  @homiio/backend  +  @homiio/frontend
+@homiio/shared-types  →  @homiio/listing-providers  →  @homiio/backend
+                      ↘  @homiio/frontend
 ```
 
-`shared-types` is the contract between the other two. It is built first by the root `postinstall` so subsequent installs have `dist/` available.
+`shared-types` is built first by the root `postinstall`, because both of the
+others import it by package name and resolve it through its built `dist`. The
+production Dockerfile builds the same three in the same order; the API image and
+the worker image are the **same image** with a different start command.
 
 ## Workspace layout
 
 ```
 packages/
-  frontend/       @homiio/frontend       Expo 56 / React Native 0.85 / React 19
-  backend/        @homiio/backend        Express 4 / drizzle-orm (PostgreSQL) / Stripe 16
-  shared-types/   @homiio/shared-types   Pure TS types — built first via postinstall
+  frontend/           @homiio/frontend           Expo Router / React Native / NativeWind
+  backend/            @homiio/backend            Express 4 / Drizzle (PostgreSQL + PostGIS) / Stripe / Sharp / BullMQ
+  listing-providers/  @homiio/listing-providers  Provider plugin contract, FetchRuntime, portal plugins
+  shared-types/       @homiio/shared-types       Pure TS DTOs, formatting, observability schema
 ```
+
+`listing-providers` is the package the old three-package diagram left out, and it
+is not optional: the backend depends on it (`workspace:*`), the API image
+includes it, and the ingestion worker is its only real consumer. Playwright is an
+**optional** peer of it — absent, the browser escalation tier is skipped and
+logged rather than failing.
+
+## Data storage
+
+PostgreSQL is the only store. Database `homiio` on the shared RDS instance
+`oxy-postgres`, with **PostGIS** installed once by a privileged role — it is not
+a trusted extension, so the role that owns the database cannot install it itself.
+`DATABASE_URL` is the only database secret either process needs, and
+`initializeDatabase()` exits non-zero without it.
+
+Schema lives in `packages/backend/db/schema/`, one file per domain, 61 tables in
+21 files. Re-measure rather than trusting that figure:
+
+```bash
+perl -0777 -ne 'while (/pgTable\(\s*'"'"'([a-z_]+)'"'"'/gs) { print "$1\n" }' \
+  packages/backend/db/schema/*.ts | sort -u | wc -l
+```
+
+Use a multiline parser, not `grep`. A table name usually sits on the line AFTER
+`pgTable(`, and `grep -E "pgTable\(\s*'"` matches nothing at all because `\s`
+does not cross a newline — it reports zero tables on a schema that has 61, and
+zero reads exactly like a clean answer.
+
+Which module owns which domain is [Source of truth](./source-of-truth).
+
+### Expiry is a sweep, not an engine feature
+
+Postgres never deletes an expired row on its own. Every table with a deadline
+column is registered in `packages/backend/db/expiry.ts`
+(`EXPIRY_SWEEP_TARGETS`) and reaped by `services/cron.ts`. A table added without
+an entry grows forever with no error and no failing test — there is no call site
+to notice missing, which is what makes it the quietest failure in the system.
+
+That module also carries `EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE`, as data rather
+than as a comment: `conversations.sharing_expires_at` is a deadline on a share
+LINK, so it must clear four `sharing_*` columns and must never delete the
+conversation. Registering it as a sweep target would start destroying people's
+transcripts, and it would look like tidying up.
 
 ## Frontend stack
 
-`packages/frontend` is an Expo Router app targeting iOS, Android, and Web from a single codebase.
+`packages/frontend` is an Expo Router app targeting iOS, Android and Web from one
+codebase.
 
 | Layer | Library |
 |-------|---------|
 | Runtime | React Native 0.85, React 19.2 |
-| Router | `expo-router` (v56) with typed routes |
-| Styling | NativeWind 4 + Tailwind 3 + `global.css` |
-| State (local) | Zustand 5 + per-domain stores in `packages/frontend/store/` |
-| State (server) | TanStack Query 5 — `staleTime: 5min`, `gcTime: 30min`, `refetchOnReconnect: true` |
+| Router | `expo-router` |
+| Styling | NativeWind + Tailwind + `styles/global.css`, on `@oxyhq/bloom` design tokens |
+| State (local) | Zustand, per-domain stores in `packages/frontend/store/` |
+| State (server) | TanStack Query |
 | Identity | `@oxyhq/services` (`OxyProvider`, `useOxy`) — see [Auth](./auth) |
-| Theme + typography | `@oxyhq/bloom` — `BloomThemeProvider`, `Typography.H1/H2/P` |
-| Maps + geolocation | `expo-location`, `react-native-svg`, custom `Map.tsx` |
+| UI primitives + theme | `@oxyhq/bloom` (`BloomProvider`, `ContentPanel`, `Typography`) |
+| Maps + geolocation | `expo-location`, `react-native-svg` |
 | Charts | `react-native-chart-kit` over `react-native-svg` |
-| AI streaming | `@ai-sdk/react` — wires the Sindi chat surface to the backend streaming endpoint |
-| Notifications | `expo-notifications` + custom `NotificationProvider` |
-| i18n | `i18next` + `react-i18next`, locales in `packages/frontend/locales/` (en, es, ca, it) |
+| AI streaming | `@ai-sdk/react`, wired to the backend streaming endpoint |
+| Notifications | `expo-notifications` + `NotificationProvider` |
+| i18n | `i18next` + `react-i18next`, locales in `packages/frontend/locales/` |
 
-The root `_layout.tsx` wires (top-down):
+### The real provider tree
+
+Read off `packages/frontend/app/_layout.tsx`. Order is load-bearing, not
+cosmetic — a provider hoisted or nested wrongly here produces a blank boot with
+no console output.
 
 ```tsx
 <SafeAreaProvider>
   <GestureHandlerRootView>
-    <BloomThemeProvider fonts>
+    <BloomProvider mode="light" colorPreset="yellow" fonts>   {/* TOP: wraps the splash branch too */}
       <QueryClientProvider>
         <RentalModeProvider>
-          <OxyProvider baseURL={OXY_BASE_URL}>
-            <ProfileProvider>
-              <SavedPropertiesProvider>
-                <NotificationProvider>
-                  <I18nextProvider>
-                    <BottomSheetProvider>
-                      <MenuProvider>
-                        <ErrorBoundary>
-                          {/* MapStateProvider, SearchModeProvider, LayoutScrollProvider, then <Slot /> */}
-                        </ErrorBoundary>
+          <OxyProvider baseURL={OXY_BASE_URL} clientId={OXY_CLIENT_ID}>
+            <MediaResolverProvider>
+              <ProfileProvider>
+                <SavedPropertiesProvider>
+                  <NotificationProvider>
+                    <I18nextProvider>
+                      <BottomSheetProvider>
+                        <MenuProvider>
+                          <PortalProvider>
+                            <ErrorBoundary>
+                              <MapStateProvider>
+                                <SearchModeProvider>
+                                  <AppShell />   {/* SideBar + ContentPanel + <Slot /> + RightBar */}
 ```
 
-`NetInfo` drives `onlineManager` and `AppState` drives `focusManager` so React Query refetches on reconnect and foreground.
+Two rules this shape encodes:
+
+- **`BloomProvider` is at the top, above the splash screen**, because
+  `useTheme()` throws outside it and the splash renders before the rest of the
+  tree mounts. Nesting it lower crashes cold start in a real browser while `tsc`
+  and Jest both pass.
+- **A boot-mounted component must not call a suspenseful hook.** A component
+  mounted unconditionally that calls `useTranslation()` (react-i18next defaults
+  to `useSuspense: true`) deadlocks the render before `I18nextProvider`
+  initialises: the child suspends, the root never commits, the init effect never
+  runs, the promise never resolves. White screen, zero errors.
+
+`packages/frontend/scripts/check-cold-start.mjs` is the only thing in this repo
+that can see either failure. Run it after touching anything in the boot path:
+
+```bash
+bun run --cwd packages/frontend build
+bun run --cwd packages/frontend check:cold-start / /properties
+bun run --cwd packages/frontend check:cold-start:test   # mutation-tests the check itself
+```
+
+`NetInfo` drives `onlineManager` and `AppState` drives `focusManager`, so
+TanStack Query refetches on reconnect and on foreground.
 
 ## Backend stack
 
-`packages/backend` is a CommonJS Express 4 server (entry `server.ts`, run with `ts-node --transpile-only`).
+`packages/backend` is a CommonJS Express 4 server (entry `server.ts`, run with
+`ts-node --transpile-only`).
 
 | Layer | Library |
 |-------|---------|
-| Runtime | Node 22, Express 4.21 |
-| ORM | drizzle-orm against PostgreSQL (PostGIS) |
-| Identity | `@oxyhq/core` — `oxy.auth()` middleware gates `/api/*` |
-| Billing | `stripe@16.11` — Checkout, webhooks, customer portal |
-| Image pipeline | `sharp` 0.34 + `@aws-sdk/client-s3` |
-| AI | `ai@4.3` + `@ai-sdk/openai` — streams Sindi responses |
+| Runtime | Node 22, Express 4 |
+| Database | `drizzle-orm` + `postgres` (postgres.js) against PostgreSQL with PostGIS |
+| Shared DB helpers | `@oxyhq/db` — migrator, `geography` column, expiry sweep, unique-violation helpers |
+| Identity | `@oxyhq/core/server` — `createOxyAuthMiddleware` gates the authenticated router |
+| Billing | `stripe` — Checkout, webhooks, customer portal |
+| Image pipeline | `sharp` + `@aws-sdk/client-s3` |
+| AI | `ai` + `@ai-sdk/openai`, streaming the Sindi assistant |
+| Queues | `bullmq` over Valkey (`REDIS_URL`); absent, ingestion falls back to inline |
+| Moderation | `@oxyhq/crowdsource*` — community report intake, decisions, enforcement |
 | Messaging integrations | `node-telegram-bot-api`, `telegraf`, `whatsapp-web.js` |
-| Document parsing | `pdf-parse` (contract uploads) |
-| Cron | `node-cron`, initialised in `services/cron.ts` (skipped on serverless runtimes; runs on the long-lived ECS task) |
-| Validation | `express-validator` + a custom `middlewares/validation.ts` |
+| Cron | `node-cron`, initialised in `services/cron.ts` on the long-lived ECS task |
+| Validation | `express-validator` plus `middlewares/validation.ts` |
 
-CORS is locked to known origins (`homiio.com`, `localhost`, LAN IPs in dev). The check is an O(1) `Set` lookup plus a single combined regex — see `server.ts` line 37 onward.
+`server.ts` mounts in a deliberate order:
 
-`server.ts` mounts middleware in a deliberate order:
+1. `helmet`.
+2. CORS, locked to known origins.
+3. `optionalAuth` — resolves a session when one is presented, without requiring one.
+4. Rate limiting on `/api`.
+5. **Stripe webhook first**, with `bodyParser.raw()` before any JSON parser, so signatures verify. `/api/billing/confirm` sits next with `bodyParser.json()`.
+6. Content-type-aware body parsing for everything else.
+7. Request logger.
+8. `GET /` and `GET /health`.
+9. **Public routes** (`routes/public.ts`) under `/api`.
+10. **Authenticated routes** (`routes/index.ts`) under `/api`, behind `createOxyAuthMiddleware(oxy)`.
+11. Error logger, 404, error handler.
 
-1. CORS.
-2. **Stripe webhook first** — `bodyParser.raw()` mounted before any JSON parser so signatures verify. The `confirm` endpoint sits next with `bodyParser.json()`.
-3. Content-type-aware body parser (`multipart`, `json`, `urlencoded`, or pass-through).
-4. Request logger.
-5. Serverless-only DB-connection guard (when `process.env.VERCEL` or `AWS_LAMBDA_FUNCTION_NAME` is set).
-6. `GET /` (welcome JSON) and `GET /health` (DB status).
-7. **Public routes** (`routes/public.ts`) under `/api`.
-8. **Authenticated routes** under `/api`, gated by `oxy.auth()`.
-9. Error logger, 404, error handler.
-
-## Shared types
-
-`packages/shared-types/src/` is a pure TS package. Every file is exported through `index.ts`:
-
-```ts
-export * from './common';      // PropertyType, PropertyStatus, ProfileType, RentMode, ...
-export * from './address';     // Address, AddressDetail, AddressSuggestion
-export * from './property';    // Property, PropertyRent, AccommodationDetails, PropertyFilters
-export * from './profile';     // Profile, PersonalProfile, AgencyProfile, TrustScore
-export * from './city';        // City, NeighborhoodData
-export * from './lease';       // Lease, LeaseStatus, LeaseTerms
-export * from './review';      // Review
-export * from './reservation'; // Vacation-rental reservations
-export * from './application'; // Long-term tenant applications
-```
-
-Both `@homiio/frontend` and `@homiio/backend` import directly: `import type { Property, ProfileType } from '@homiio/shared-types'`. There is no compatibility shim — when a type changes the build catches every callsite.
-
-## Data model
-
-The drizzle table definitions live under `packages/backend/db/schema/`, one file per domain. Roughly grouped:
-
-- **Marketplace**: `PropertySchema`, `AddressSchema`, `CitySchema`, `RecentlyViewedSchema`, `SavedSchema`, `SavedPropertyFolderSchema`, `SavedSearchSchema`.
-- **Identity (Homiio-side)**: `ProfileSchema` (Personal / Agency / Business / Cooperative). Linked to the Oxy user via `oxyUserId`.
-- **Billing**: `BillingSchema` — one per `oxyUserId`, unique-indexed. See [Payments](./payments).
-- **Tenancy flows**: `LeaseSchema`, `TenantApplicationSchema`, `ViewingRequestSchema`, `ReservationSchema` (vacation rentals).
-- **Trust / social**: `ReviewSchema`.
-- **AI**: `ConversationSchema` — persisted Sindi chats.
-
-`Property` references `Address` by `addressId`. That separation lets multiple historical listings share the same physical address, useful for rent-history transparency.
+Steps 9 and 10 are why a handler's auth requirement is decided by **which file it
+is in**, not by a check inside it. Moving a handler between the two routers
+changes whether a session is required, silently. See [Routes](./routes).
 
 ## Request lifecycle
 
 ```
 Client (Expo / web)
-   │  Authorization: Bearer <Oxy token>
+   │  Authorization: Bearer <Oxy access token>   (linked client mints + refreshes it)
    ▼
-Express CORS → bodyParser → requestLogger
+helmet → CORS → optionalAuth → rate limit → body parser → requestLogger
    │
-   ▼
-oxy.auth()  ───── 401 ── no/invalid token
+   ├─▶ routes/public.ts   ─────────────────────── no session required
    │
-   │ req.userId = <Oxy user id>
-   ▼
-Route handler (controllers/)
-   │
-   ▼
-drizzle schema  →  PostgreSQL
-   │
-   ▼
-errorHandler.successResponse(data)  →  { success, message, data, meta }
+   └─▶ createOxyAuthMiddleware(oxy)  ── 401 ── no/invalid token
+          │  req.user.id = <Oxy user id>
+          ▼
+       routes/index.ts → controllers/
+          │
+          ▼
+       db/<domain>/ repository  →  Drizzle  →  PostgreSQL + PostGIS
+          │
+          ▼
+       serializeWireIds  →  successResponse / paginationResponse
+          │
+          ▼
+       { success, message, data, meta }
 ```
 
-Public routes (browsing properties, public stats, geocoding) skip `oxy.auth()` and are mounted in `routes/public.ts`.
+Controllers do not build SQL and do not build DTOs. A controller resolves the
+caller, picks allow-listed fields, calls a repository under `db/<domain>/`, and
+hands the row to that domain's serializer. The response envelope and pagination
+shape are in [Routes](./routes).
 
-## Frontend ↔ backend protocol
+## The `id` serialization contract
 
-Every response is shaped by `middlewares/errorHandler.ts`:
+<!-- vocabulary-exempt:start states the wire contract by naming the token it forbids; the rule is unstatable without it -->
 
-```json
-{
-  "success": true,
-  "message": "Operation successful",
-  "data": { /* ... */ },
-  "meta": { "timestamp": "2026-05-28T12:34:56.000Z" }
-}
+**Homiio's wire format names every identity `id`.** Nothing this API returns is
+called `_id`.
+
+`middlewares/wireIds.ts` is the single enforcement point. It wraps `res.json` at
+the top of both routers and rebuilds every outgoing body, recursively, renaming
+any `_id` it finds to `id` (stringified) and dropping the original. An `id`
+already present always wins, because a serializer that set one made the more
+specific decision.
+
+Two things worth knowing before touching it:
+
+- **It rebuilds rather than mutates**, so it cannot corrupt a cached object.
+- **It is mounted on the routers, not in `server.ts`**, on purpose. The
+  integration suites build their own `express()` and mount these routers
+  directly; a `server.ts`-only wrapper would be invisible to every test that
+  asserts a response shape, and the suite would go on passing against a wire
+  format production no longer serves.
+
+`__tests__/integration/wireIdContract.test.ts` sweeps the public endpoints and
+fails on `"_id"` appearing anywhere in any body. Now that every row comes from
+Drizzle with an `id` column, the middleware is a **belt-and-braces guarantee**
+rather than a live translation layer — but it is kept, because the cost of the
+guarantee is one pass over a response body and the cost of losing it was paid
+once already: a wire-contract change shipped with the backend rolled by hand and
+the frontend left behind, and production served `id` to a bundle reading `._id`.
+
+<!-- vocabulary-exempt:end -->
+
+## Search and PostGIS
+
+Geographic queries are real PostGIS, not arithmetic in JavaScript.
+
+`addresses.geo` and `eviction_cases.location_geo` are **generated** columns:
+
+```ts
+geo: geography().generatedAlwaysAs(sql`ST_MakePoint(longitude, latitude)::geography`)
 ```
 
-Paginated lists add a `pagination` block (`page`, `limit`, `total`, `totalPages`, `hasNext`, `hasPrev`). Errors mirror the shape:
+A generated column requires an `IMMUTABLE` expression, which `ST_MakePoint` and
+the `geometry → geography` cast both are. This is also why CI and
+`docker-compose.postgres.yml` pin the **same** `postgis/postgis:17-3.5` image on
+both sides: a floating PostGIS minor is a floating set of function volatilities,
+and a developer's database and CI's must not be able to disagree about what is
+installed.
 
-```json
-{
-  "success": false,
-  "error": { "message": "...", "code": "...", "statusCode": 400 }
-}
+The functions actually used, measured across `db/`, `controllers/` and
+`services/`:
+
+| Function | Used for |
+|---|---|
+| `ST_MakePoint` | building the generated `geography` value |
+| `ST_DWithin` | radius search — "within N metres of this point" |
+| `ST_MakeEnvelope` | map-viewport search — a bounding box from the current view |
+| `ST_Intersects` | box containment |
+| `ST_Distance` | ordering results by distance, and reporting it |
+| `ST_AsText` | diagnostics |
+
+```bash
+grep -rhoE "\bST_(MakePoint|DWithin|MakeEnvelope|Distance|Intersects|AsText)\b" \
+  packages/backend/db/ packages/backend/controllers/ packages/backend/services/ \
+  | sort | uniq -c
 ```
 
-The frontend's TanStack Query layer unwraps `.data` consistently — when the network or server fails, every service has a fallback shape so UI never hard-crashes on missing data.
+Do not widen that regex to `ST_[A-Za-z_]+` — it matches ordinary constants like
+`REQUEST_STATUSES` and reports PostGIS functions that do not exist.
+
+One caveat the schema records and nothing else will tell you: **`geography` does
+not validate its input.** Measured on PostGIS 3.5, `ST_MakePoint(0, 100)::geography`
+emits a notice and coerces latitude 100 rather than refusing it, so coordinate
+ranges are enforced by `CHECK` constraints in the schema, not by the type.
+
+`cities` and `neighborhoods` deliberately carry **plain** latitude/longitude
+columns with no `geography` and no GiST index — they are used for map framing,
+not for proximity search. Adding one later is a one-line additive `pre`
+migration; adding one now would be an index nothing queries.
+
+The current query surface, its parameters and its error codes are in
+[Routes](./routes). The **target** contract — one `LocationSelection` shared by
+Home, Explore, reviews and evictions, with free text and geographic scope as
+independent dimensions — is [ADR 0002](./adr/0002-location-and-search-contract.md)
+and is not implemented yet.
+
+## Identity comes from Oxy
+
+There is no Homiio account, no password and no local user table. Identity is the
+device-first Oxy session.
+
+- **Client:** one `OxyProvider` from `@oxyhq/services` with a registered
+  `clientId`. `packages/frontend/utils/api.ts` builds the backend client with
+  `oxyClient.createLinkedClient({ baseURL })`, which owns auth end to end — it
+  mirrors the session token, delegates 401 refresh, and invalidates the session
+  when refresh fails. Never add a local token provider, an auth interceptor or a
+  manual `Authorization` header.
+- **Server:** `@oxyhq/core/server`. `createOxyAuthMiddleware(oxy)` gates the
+  authenticated router; `requireSessionOxyUserId` is how a write resolves its
+  caller.
+- **Ownership follows from the session, never from the body.** Property, room and
+  lease writes take `oxyUserId` from the session and enforce ownership in the
+  repository query — `properties.oxy_user_id`, or `landlordOxyUserId` /
+  `tenantOxyUserId` for a lease — so a non-owner gets a 404 rather than a 403.
+- **Profiles are a sidecar, not an authority.** A Homiio profile is optional
+  real-estate metadata keyed by `oxyUserId`. It is resolved server side
+  (`findProfileByOxyUserId`); a client-supplied `profileId` is never trusted.
+
+Two deliberate exceptions, both documented where they live:
+
+- `normalizeEnvelope` in `utils/api.ts` re-wraps the linked client's
+  auto-unwrapped payload back into the `{ success, data, ... }` envelope Homiio's
+  consumers read. It is an intentional bridge and stays until those consumers
+  migrate. Do not remove it piecemeal.
+- `hooks/useSindiAuthenticatedFetch.ts` is the one sanctioned
+  `oxyServices.getAccessToken()` call site, because the linked client is
+  JSON-only and cannot stream. Do not add another.
+
+Full lifecycle: [Auth](./auth).
+
+## The worker, ingestion and media
+
+`packages/backend/worker.ts` is a **separate process from the same image**, run
+as its own ECS service. It exists because listing ingestion is slow, bursty and
+occasionally drives a browser, none of which belongs in a request path.
+
+```
+listing-discover   city/bbox + provider   →  a batch of ExternalListingRef
+listing-fetch      one sourceId           →  fetch, normalize, ingest
+listing-media      propertyId + URLs      →  download, process, store
+```
+
+Queues are BullMQ over Valkey (`REDIS_URL`). Queue names cannot contain `:`, and
+neither can custom job ids — dedupe ids are the sha256 of `(provider, sourceId)`
+for exactly that reason. Without `REDIS_URL` the pipeline runs inline instead.
+
+Ingest, end to end:
+
+1. Validate the `NormalizedListing` (the DTO `shared-types` exports as the
+   provider → ingest handoff).
+2. `findOrCreateCanonicalAddress` plus geocode, so the listing points at a
+   canonical address row rather than carrying its own copy.
+3. Upsert the property row on `(source, sourceId)` with `isExternal: true`,
+   `status: 'published'`, a mandatory `sourceUrl`, and an `expires_at` deadline
+   that the expiry sweep reaps.
+4. For each remote image: download, process with `sharp`, store through
+   `createImageForEntity('property', id, …)` and reference it. Dedupe by URL or
+   hash; a re-sync adds and removes references.
+5. **Never store a portal CDN URL as a runtime image URL.** Nothing is hotlinked
+   and nothing is live-proxied.
+
+Escalation tiers (browser, managed fetch) are worker-only, env-gated and default
+OFF. The ladder keys availability off method presence, so an unprovisioned rung
+is skipped rather than attempted and failed. The worker must
+`await runtimeHandle.shutdown()` to close the browser pool.
+
+Details, provider contract and per-market status: [Listings](./listings) and
+`AGENTS.md`.
+
+## Shared types
+
+`packages/shared-types/src/` is pure TypeScript with no runtime dependencies, and
+every module is re-exported through `index.ts`. Both other packages import by
+package name — `import type { Property } from '@homiio/shared-types'` — so a
+changed type breaks every call site at build time. There is no compatibility
+shim.
+
+Beyond the entity DTOs (`property`, `address`, `lease`, `profile`, `review`,
+`city`, `geo`, `media`, `application`, `reservation`, `exchange`, `eviction`,
+`partner`, `moderation`, `report`, `listing`), it also owns two things that must
+have exactly one implementation:
+
+- **`format/`** — money, units, dates, percentages and numbers. A price is never
+  assembled by string concatenation, and a currency is never hardcoded.
+- **`observability/`** — the versioned event schema, central redaction, bucketing
+  and the location/identity divergence invariants. Shared so the redaction rules
+  cannot exist twice. See [Analytics](./analytics).
+
+## Where to look
+
+| Concern | Path |
+|---|---|
+| Express entry, middleware order | `packages/backend/server.ts` |
+| Route tables | `packages/backend/routes/index.ts`, `routes/public.ts` |
+| Schema | `packages/backend/db/schema/` |
+| Repositories | `packages/backend/db/<domain>/` |
+| Expiry registry | `packages/backend/db/expiry.ts` |
+| Wire id contract | `packages/backend/middlewares/wireIds.ts` |
+| Worker entry | `packages/backend/worker.ts` |
+| App shell + providers | `packages/frontend/app/_layout.tsx` |
+| Backend client | `packages/frontend/utils/api.ts` |
+| Migration history and porting rules | `packages/backend/db/MIGRATION-CONTRACT.md` |
+| Per-table schema decisions | `packages/backend/db/schema/CONVENTIONS.md` |
