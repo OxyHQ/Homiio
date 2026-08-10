@@ -72,8 +72,6 @@ describe('loc token: round trip is character-for-character', () => {
     'bbox.-3.75,40.38,-3.65,40.45',
     // The antimeridian box §9.3 measured against a real PostGIS. `west > east`.
     'bbox.170,-20,-170,-16',
-    // A dropped pin. No `LocationSelection` kind maps to this yet — see below.
-    'at.2.1734,41.3851,25000',
     // "Near me", carrying NO coordinates.
     'here.25000',
     // Several areas at once.
@@ -92,7 +90,7 @@ describe('loc token: round trip is character-for-character', () => {
    * same shape as a census that reports zero because its traversal broke.
    */
   it('covers every production of the grammar', () => {
-    expect(TOKENS.length).toBeGreaterThanOrEqual(15);
+    expect(TOKENS.length).toBeGreaterThanOrEqual(14);
     const heads = new Set(TOKENS.map((token) => token.slice(0, token.indexOf('.'))));
     expect(heads).toEqual(
       new Set([
@@ -104,7 +102,6 @@ describe('loc token: round trip is character-for-character', () => {
         'postcode',
         'address',
         'bbox',
-        'at',
         'here',
         'multi',
       ]),
@@ -283,11 +280,14 @@ describe('loc token: a bad token is distinguishable from no token', () => {
     ['nonsense.homiio.abc', 'unknown_kind'],
     ['BBOX.1,2,3,4', 'unknown_kind'],
     ['Here.25000', 'unknown_kind'],
+    // The withdrawn `at.` production (ADR §19(B)). A WELL-FORMED one, so the
+    // rejection is about the rule and not about the shape.
+    ['at.2.1734,41.3851,25000', 'coordinates_in_url'],
+    ['at.1,2', 'coordinates_in_url'],
     ['city.homiio.', 'malformed'],
     ['city.homiio', 'malformed'],
     ['bbox.1,2,3', 'malformed'],
     ['bbox.1,2,3,4,5', 'malformed'],
-    ['at.1,2', 'malformed'],
     ['multi.city.homiio.abc', 'malformed'],
     ['bbox.,,,', 'not_a_number'],
     ['here.', 'not_a_number'],
@@ -298,8 +298,6 @@ describe('loc token: a bad token is distinguishable from no token', () => {
     ['bbox.1,2,3,four', 'not_a_number'],
     ['here.0', 'out_of_range'],
     ['here.-5', 'out_of_range'],
-    ['at.2.17,41.38,0', 'out_of_range'],
-    ['at.2.17,91,25000', 'out_of_range'],
     ['bbox.2.05,41.47,2.23,41.32', 'out_of_range'],
     ['bbox.2.05,-91,2.23,41.47', 'out_of_range'],
     ['multi.city.homiio.abc+multi.here.25000+here.500', 'nested_multi'],
@@ -320,7 +318,15 @@ describe('loc token: a bad token is distinguishable from no token', () => {
   it('has a failing case for every reason the parser can return', () => {
     const covered = new Set(BAD.map(([, reason]) => reason));
     expect(covered).toEqual(
-      new Set(['empty', 'unknown_kind', 'malformed', 'not_a_number', 'out_of_range', 'nested_multi']),
+      new Set([
+        'empty',
+        'unknown_kind',
+        'malformed',
+        'not_a_number',
+        'out_of_range',
+        'nested_multi',
+        'coordinates_in_url',
+      ]),
     );
   });
 
@@ -337,6 +343,47 @@ describe('loc token: a bad token is distinguishable from no token', () => {
     // Control: the box really is expressible, so the refusal above is about the
     // empty segments and not about zero being rejected.
     expect(zeroBox.ok).toBe(true);
+  });
+
+  /**
+   * ADR §19(B). `at.<lng>,<lat>,<radiusMeters>` was a real production of §5.2
+   * until it was withdrawn, and the fixture is a WELL-FORMED one on purpose: a
+   * malformed `at.` would be refused by shape alone, which cannot tell a
+   * withdrawn production from a typo.
+   *
+   * Decision 8 is the rule — exact coordinates never appear in a URL, and
+   * `here.<radiusMeters>` exists so the device case carries none. The danger
+   * was never a token somebody types by hand; it is that a grammar blessing the
+   * shape is how "search around this pin" gets wired to it later.
+   */
+  it('rejects the withdrawn `at.` production, because decision 8 forbids a coordinate pair in a URL', () => {
+    const result = parseLocationToken('at.2.1734,41.3851,25000');
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('unreachable');
+    // A reason that names the RULE, not `unknown_kind` — somebody meeting this
+    // is likelier to hold an old copy of §5.2 than to have made a typo.
+    expect(result.reason).toBe('coordinates_in_url');
+  });
+
+  it('rejects an `at.` part nested inside a multi token', () => {
+    // The withdrawal has to hold everywhere the grammar recurses, or `multi.`
+    // becomes the way back in.
+    const result = parseLocationToken('multi.city.homiio.abc+at.2.1734,41.3851,25000');
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('unreachable');
+    expect(result.reason).toBe('coordinates_in_url');
+  });
+
+  /**
+   * Negative control for both assertions above: `here.` is the surviving
+   * radius-bearing production and must still parse. Without this, deleting
+   * every radius form would pass the two rejections.
+   */
+  it('still accepts the coordinate-free device production', () => {
+    expect(parseLocationToken('here.25000')).toEqual({
+      ok: true,
+      value: { kind: 'device', radiusMeters: 25000 },
+    });
   });
 
   it('refuses an id carrying the multi separator rather than corrupting a multi token', () => {
