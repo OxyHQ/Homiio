@@ -158,11 +158,6 @@ export async function resolveLocationRef(
       }
     }
 
-    case 'point':
-      // §5.2 defines `at.` and §3 has no selection kind for it, so a token that
-      // parses still has nowhere to land. Refused rather than approximated.
-      return { status: 'failed', reason: 'unsupported' };
-
     case 'multi':
       return { status: 'failed', reason: 'unsupported' };
 

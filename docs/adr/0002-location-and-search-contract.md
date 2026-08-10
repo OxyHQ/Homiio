@@ -612,13 +612,17 @@ unrepresentable in the URL as well as in the store.
 ### 5.2 `loc` grammar
 
 ```
-loc := "city."   source "." id                  ; and region./country./neighborhood./address.
+loc := "city."   source "." id                  ; and region./country./district./neighborhood./postcode./address.
      | "bbox."   west "," south "," east "," north
-     | "at."     lng "," lat "," radiusMeters
      | "here."   radiusMeters                   ; NO coordinates, ever
      | "multi."  loc ( "+" loc )+
 source := "homiio" | "<providerId>"
 ```
+
+> **Amended 2026-08-10.** This grammar previously carried a fifth production,
+> `"at." lng "," lat "," radiusMeters`, and it is **withdrawn** — see §19(B).
+> A parser must REJECT `at.` rather than read it leniently. No production of
+> this grammar puts a coordinate pair in a URL.
 
 Examples:
 
@@ -1364,3 +1368,47 @@ the result set alone.
 | A precision and retention policy for the user's location | §8 |
 | A compatibility plan for existing saved searches | §11 |
 | Discriminating fixtures for Barcelona/Madrid, two Barcelonas and an antimeridian bbox | §12.1, §12.2, §12.3 |
+
+---
+
+## 19. Amendments
+
+Changes made to this ADR after it was written, each dated and with the reason
+that forced it. Both of the entries below were found while IMPLEMENTING the
+contract in `packages/shared-types/src/location.ts` (#352's foundation half),
+which is the point of recording them here rather than in a commit message: a
+grammar nobody amends is one somebody implements again from the original text.
+
+### A. §3's `LocationSelection` union is SIX kinds (2026-08-10, clarification)
+
+`current_location`, `place`, `address_candidate`, `map_bounds`, `polygon`,
+`multi_area`. §3 has always listed exactly these; the count is recorded because
+an implementation brief derived from this document miscounted it as seven, and
+a phantom seventh kind is the sort of thing an implementer looks for, fails to
+find, and then invents. Nothing in §3 changes.
+
+### B. §5.2's `at.` production is WITHDRAWN, and a parser must REJECT it (2026-08-10)
+
+The grammar carried `at. lng "," lat "," radiusMeters` for a pin the user
+dropped. It is removed, and `parseLocationToken` returns a typed failure
+(`coordinates_in_url`) for any token in that form.
+
+**Why, and it is decision 8 rather than a matter of taste.** "Exact coordinates
+never appear in a URL, a cache key, an analytics event or a log line" (§2.8,
+§8.2) — and `here. radiusMeters` exists precisely so the device case carries
+none. `at.` put a raw coordinate pair straight back into the URL, which is the
+one place §8.2 names first.
+
+**What made it worth fixing rather than leaving inert.** No `LocationSelection`
+kind mapped to `at.`, so nothing could ever produce one — it was a production
+the parser accepted and the serialiser could not emit. That asymmetry is not
+harmless: a grammar that blesses a form is how the form gets used, and the
+predictable route in is somebody wiring "search around this pin" to it because
+§5.2 appeared to permit it. A lenient parser keeps that door open; a typed
+rejection closes it, and names the rule in the failure reason so whoever meets
+it learns why rather than assuming a typo.
+
+**If the case is genuinely needed later** — a point somebody else chose, as
+opposed to the opener's own device — it needs its own `LocationSelection` kind
+with a declared `LocationPrecision`, added by amending §3 deliberately. It does
+not come back as a grammar leftover rediscovered by the next implementer.

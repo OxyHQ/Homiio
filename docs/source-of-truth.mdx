@@ -1,0 +1,110 @@
+---
+title: Source of truth
+description: Which module owns each domain, which tables back it, and the chokepoints that must not be bypassed — so nobody builds a second authority.
+order: 4
+---
+
+# Source of truth
+
+One authority per domain. This page exists because the most expensive class of
+bug in a system like this is not a wrong answer — it is **two modules that both
+believe they own something**, disagreeing quietly for months.
+
+Re-derive the table list rather than trusting the counts below:
+
+```bash
+perl -0777 -ne 'while (/pgTable\(\s*'"'"'([a-z_]+)'"'"'/gs) { print "$1\n" }' \
+  packages/backend/db/schema/*.ts | sort -u
+```
+
+Use a multiline parser. `grep -E "pgTable\(\s*'"` returns **zero** on this schema
+because the table name sits on the following line and `\s` does not cross a
+newline — and zero reads exactly like a clean answer. Measured on this branch: 61
+tables across 21 schema files.
+
+## Domains
+
+| Domain | Owner (repository) | Tables | Chokepoint you must not bypass |
+|---|---|---|---|
+| Listings | `db/properties/` (`propertyReads.ts`, `propertyWrites.ts`, `propertySerializer.ts`) | `properties`, `property_images`, `property_documents`, `property_availability_windows` | Writes go through `propertyWrites`, never raw SQL. `offerings` is validated by `services/offeringValidation.ts` — one implementation for controller and storage |
+| Addresses | `db/addresses/` + `services/addressService.ts` | `addresses` | `findOrCreateCanonicalAddress` is the ONLY way an address row is created. Bypassing it makes duplicate places |
+| Geography | `services/geoQueryService.ts`, `services/geoResolutionService.ts` | `countries`, `regions`, `cities`, `neighborhoods` | Place names are ids, never text on another entity |
+| Points of interest | `db/placePois/` | `place_pois`, `place_poi_categories` | A cache of OpenStreetMap data. Stores presence and counts by category, never place names |
+| Images | `db/images/` | `images` | `createImageForEntity` — entity photos reference `images`; never store a foreign CDN URL as a runtime image URL |
+| Profiles | `db/profiles/profileRepository.ts` | `profiles`, `profile_references`, `profile_rental_history`, `profile_preferred_locations`, `profile_roommate_history`, `profile_chat_messages` | `findProfileByOxyUserId`. A client-supplied `profileId` is never trusted |
+| Identity | **Oxy, not Homiio** | none | The session is the authority. `oxyUserId` comes from `requireSessionOxyUserId`, never from a body |
+| Leases | `db/leases/` + `leaseSerializer.ts` | `leases`, `lease_co_tenants`, `lease_shared_utility_costs`, `lease_payment_schedule`, `lease_documents`, `lease_inspections`, `lease_inspection_findings` | A lease is created ONLY by `POST /api/applications/:id/create-lease` from an approved application |
+| Applications | `db/applications/` | `tenant_applications`, `tenant_application_references`, `tenant_application_documents` | |
+| Bookings | `db/bookings/` | `reservations`, `viewing_requests` | |
+| Exchanges | `db/exchanges/` | `exchange_requests`, `exchange_reviews` | |
+| Roommates | `db/roommates/roommateRepository.ts` | `roommate_requests`, `roommate_relationships` | An accepted request becomes a relationship row; nothing else creates one |
+| Reviews | `db/reviews/` (`reviewWrites.ts`, `reviewAggregates.ts`, `reviewSerializer.ts`) | `reviews`, `review_helpful_votes`, `review_reports` | A review attaches to an **address**, never to a listing |
+| Agencies | `db/agencies/` | `agencies` | |
+| Evictions | `db/evictions/evictionRepository.ts` | `eviction_cases`, `eviction_case_updates`, `eviction_case_attendees`, `eviction_comments`, `eviction_reports` | Public coordinates are deliberately approximate — see [ADR 0003](./adr/0003-privacy-verification-publication) |
+| Moderation | `db/moderation/` + `services/moderation/` | `moderation_reports`, `moderation_outbox`, `moderation_events`, `moderation_enforcements` | Community-level only. No admin queue, no privileged action over user content |
+| Listing reports | `db/` + `controllers/reportController.ts` | `listing_reports` | |
+| Notifications | **`services/notificationDispatchService.ts`** | `notifications` | The single write chokepoint. Controllers call `createForUser`; nothing writes the repository directly |
+| Saved | `db/saved/` | `saved_items`, `saved_searches`, `saved_property_folders`, `saved_property_folder_items`, `recently_viewed` | |
+| Conversations (Sindi) | `db/conversations/` | `conversations`, `conversation_messages`, `conversation_message_attachments` | `sharing_expires_at` expires the LINK, not the conversation |
+| Billing | `db/billing/billingRepository.ts` | `billing`, `billing_processed_sessions` | Stripe is the authority for subscription state; `billing_processed_sessions` makes webhook handling idempotent |
+| Partners | `db/` + `services/commissionService.ts` | `partners`, `commissions` | `onPropertyTransacted` is idempotent — re-marking never creates a second commission |
+| Analytics | `db/analytics/ownerAnalytics.ts` | reads only | No analytics table. Every figure is aggregated from the rows above at request time |
+| Observability | `packages/shared-types/src/observability/` + `backend/observability/` | none — the sink is the structured logger | `redactObservabilityEvent` is the one implementation, and it runs on both client and server |
+| External ingest | `services/ingestion/` + `@homiio/listing-providers` | writes `properties` as `isExternal` | Upsert key is `(source, sourceId)` via `scraperService.upsertExternalListing` |
+| Expiry | `db/expiry.ts` | registry, not a table | Postgres reaps nothing by itself; `services/cron.ts` runs the sweep |
+
+## Authorities outside this repository
+
+| Fact | Owner | Consequence |
+|---|---|---|
+| Who a person is | Oxy (`@oxyhq/core`, `@oxyhq/services`) | No user table, no passwords, no local auth. The linked client owns token refresh; never add a manual `Authorization` header |
+| Subscription and payment state | Stripe | Homiio caches entitlements in `billing`; Stripe's webhook is what moves them |
+| Image bytes | S3 (`AWS_S3_BUCKET`), or the local store in development | `images` holds metadata and keys, not bytes |
+| Infrastructure, secrets, task definitions | `oxy-infra` (`terraform-uswest2`) | A secret added to a task definition must be added to `deploy-aws.yml`'s explicit sync allowlist in the same change, or it is never synced |
+| Community moderation decisions | `@oxyhq/crowdsource` | Homiio records outcomes and enforces them; it does not adjudicate |
+| Points of interest | OpenStreetMap / Overpass | Cached in `place_pois` with a deadline; a miss is re-fetched |
+| Rendering a price, a date, a unit | `@homiio/shared-types` `format/` | A price is never assembled by string concatenation and a currency is never hardcoded |
+
+## The rules these encode
+
+1. **One authority per fact.** If two modules can both write something, one of
+   them is wrong. Find the chokepoint before adding a write path.
+2. **A serializer is a boundary, not a convenience.** `propertySerializer`,
+   `leaseSerializer`, `reviewSerializer`, `addressSerializer` and
+   `conversationSerializer` decide what leaves the server. Assembling a DTO in a
+   controller creates a second, undocumented wire shape.
+3. **The owner comes from the session.** Never from a body field, never from a
+   query parameter, on any write.
+4. **Ownership is enforced in the query.** Filtering by owner in the repository
+   makes a non-owner get a 404 rather than a 403 — a 403 confirms the row exists.
+5. **Place names are ids.** `country_id`, `region_id`, `city_id`,
+   `neighborhood_id`. Never a copied string on another entity.
+6. **A precision is applied on the way out.** One stored value, published at
+   whatever precision the audience is entitled to. Never a second, coarser stored
+   copy. See [ADR 0003](./adr/0003-privacy-verification-publication).
+7. **Reviews and history attach to the place, not the advert.** A listing expires;
+   a building does not. See [ADR 0001](./adr/0001-canonical-housing-graph) and the
+   [Glossary](./glossary).
+
+## Where a second authority nearly appeared
+
+Worth recording, because each was found rather than avoided, and the shape
+repeats:
+
+- **A read path and a write path on different stores.** During the PostgreSQL
+  migration, listing reads moved before listing writes, so Postgres held a
+  point-in-time copy while the old store kept moving. Reads went stale silently —
+  no error, no failing test. Both halves are on PostgreSQL now, and the general
+  rule stands: never add a read against a table whose write path you have not
+  checked.
+- **An analytics query filtering on a field the schema did not declare.** It
+  matched nothing, so every figure was `0` for as long as it existed, and a zero
+  looks like a quiet market rather than a bug. Whenever a count is suspiciously
+  round, check the column name against the schema.
+- **A "fallback" payload of invented figures** when an optional upstream service
+  was absent. It made the screen render, and it described nothing. Metrics with
+  no backing data are `0` now.
+- **An expiry deadline that meant two different things.** One column expires a
+  share *link*; another expires a cached *advert*. Treating them uniformly would
+  have deleted people's conversations. `EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE`
+  exists as data so a later tidy-up cannot make that mistake.
