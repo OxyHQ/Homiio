@@ -9,48 +9,54 @@
  * and turn every geo search into a sequential scan over every address on the
  * planet. Only a plan can tell you.
  *
- * ## Why `enable_seqscan = off` is the ONLY plan assertion here
+ * ## The flake this file already caused, and what actually fixed it
  *
- * An earlier version of this file also asserted the DEFAULT plan — that the
- * planner reaches for the index unprompted — on the strength of a measurement
- * on three rows. That assertion was **flaky and blocked a sibling PR**: CI ran
- * it against a worker database holding ONE row, where `Seq Scan` is the correct
- * plan and the test went red on code nobody had touched.
+ * An earlier version asserted the DEFAULT plan on a fixture of three addresses
+ * ALL SITTING INSIDE the search area. That was flaky and blocked two sibling
+ * PRs: it passed here and on `main`, and failed on other branches with three
+ * different sequential-scan costs for the same three rows.
  *
- * The measurement had been real. Generalising it was the mistake: **the default
- * plan is a property of the table's statistics, not of the predicate**, so a
- * test asserting it is testing the environment. Re-measured properly
- * (`postgis/postgis:17-3.5`, 2026-08-10), across row count, `ANALYZE` state and
- * fixture spread — `default` is the plan with `enable_seqscan` left alone,
- * `forced` is with it off:
+ * The tempting diagnosis is row count, and it is wrong. Measured
+ * (`postgis/postgis:17-3.5`, 2026-08-10) with the OLD tight fixture — every
+ * point inside the 25 km circle — the radius predicate plans a sequential scan
+ * at **every** size from 3 to 20,000 rows, analyzed or not. Nothing about
+ * seeding more rows rescues it, because a sequential scan is the CORRECT plan
+ * there: the predicate matches every row, so there is nothing for an index to
+ * narrow. The variable is **SELECTIVITY**, and the fixture had none.
+ *
+ * With a selective fixture — a handful of matching rows among many that do not
+ * — the default plan is an index scan in every condition measured:
  *
  * ```
- *  rows  ANALYZE  spread   bbox default  radius default   both forced
- *     1    no      —          INDEX          INDEX            INDEX
- *     1    yes     —          SEQ            SEQ              INDEX
- *     3    no      —          SEQ            SEQ              INDEX
- *     3    yes     tight      INDEX          SEQ              INDEX
- *    10 … 20000    tight      INDEX          SEQ              INDEX
- *   200 … 20000    wide       INDEX          INDEX            INDEX
+ *   rows   ANALYZE   bbox default   radius default
+ *     50     no          INDEX          INDEX
+ *     50     yes         INDEX          INDEX
+ *    200     no          INDEX          INDEX
+ *    200     yes         INDEX          INDEX
+ *   2000     no          INDEX          INDEX
+ *   2000     yes         INDEX          INDEX
+ *   20k analyzed, then deleted to ~200 with NO re-analyze
+ *                        INDEX          INDEX
  * ```
  *
- * Three separate things move the default plan and none of them is this
- * codebase: the row count, whether statistics have been gathered, and the
- * fixture's SELECTIVITY. That last one is worth spelling out because it looked
- * like a PostGIS finding and was not: in the `tight` rows every seeded point
- * sits INSIDE the 25 km circle, so `ST_DWithin` matches everything and a
- * sequential scan is genuinely the right plan. Scatter the same 20,000 rows
- * across Europe (`wide`, 0 of them in the circle) and the default plan uses the
- * index for both predicates. "Radius never uses the index" would have been a
- * false statement about PostGIS derived from a badly-shaped fixture.
+ * That last row is the deliberately-stale-statistics case — grow the table,
+ * gather statistics, delete most of it, never re-analyze — because stale
+ * `pg_class` numbers were the other proposed explanation. A selective fixture
+ * survives it.
  *
- * Forcing the sequential scan off asks the question that survives all three:
- * **CAN this predicate reach the index at all?** That is a property of the SQL
- * this repo emits — `INDEX` in 20 of 20 measured combinations — and rewriting
- * `withinCircle` as `ST_Distance(geo, p) < r`, the mistake `propertyGeo.ts`'s
- * own header warns about, turns it RED (mutation-tested).
+ * **So the load-bearing thing in this file is the SHAPE of the seed, not its
+ * size and not the `ANALYZE`.** The selectivity precondition below is therefore
+ * a real assertion rather than a comment: change the seed back to something
+ * uniform and it fails FIRST, naming the cause, instead of leaving the next
+ * person to rediscover the plan flake from a red CI job on an unrelated branch.
  *
- * ## One mutation it does NOT catch, measured rather than assumed
+ * `ANALYZE` stays, and is honestly labelled: measured, it does NOT change any
+ * verdict here (every `no` row above matches its `yes`). It is kept so the
+ * starting state is pinned rather than depending on autovacuum timing, which
+ * makes a future failure attributable to the SQL. Removing it does not turn
+ * this file red, and nothing here should be read as claiming otherwise.
+ *
+ * ## One mutation that proves nothing, measured rather than assumed
  *
  * Deleting the explicit `::geography` from `withinBoundingBox`'s envelope leaves
  * every check here green — and that is CORRECT, not a hole. PostGIS defines an
@@ -63,21 +69,7 @@
  * planar — `geo::geometry` on both sides makes that same point `false`. It is a
  * SEMANTIC failure, so the guard for it is
  * `__tests__/integration/antimeridianBoundingBox.test.ts`, which asserts which
- * rows come back, not which plan produced them. Worth writing down because the
- * obvious mutation for THIS file is the one that proves nothing.
- *
- * ## What this file therefore does NOT cover, stated so nobody assumes it does
- *
- * That the planner PREFERS the index at production scale. It cannot be asserted
- * here without pinning cost constants and seeding a realistic distribution on
- * every run, and its failures would read as "the environment changed" rather
- * than "the code broke". If that guarantee is wanted it belongs in an EXPLAIN
- * check against production-shaped data, not in this suite.
- *
- * The three checks that remain each catch what the others cannot: the catalogue
- * check sees an index that was never created, the forced-plan checks see an
- * index that exists and cannot be reached, and the negative control sees an
- * assertion that has stopped discriminating.
+ * rows come back, not which plan produced them.
  */
 
 import { sql } from 'drizzle-orm';
@@ -85,12 +77,19 @@ import { sql } from 'drizzle-orm';
 import { getDb } from '../../db/postgres';
 import { addresses } from '../../db/schema';
 import { withinBoundingBox, withinCircle } from '../../db/properties/propertyGeo';
-import { resetGeoTables, seedAddress, seedGeoChain } from '../helpers/postgresGeoFixtures';
+import { resetGeoTables, seedGeoChain, type GeoChain } from '../helpers/postgresGeoFixtures';
 
 const GEO_INDEX = 'addresses_geo_gist';
 
 const BARCELONA_BOX = { swLat: 41.32, swLng: 2.05, neLat: 41.47, neLng: 2.23 };
 const BARCELONA_CIRCLE = { longitude: 2.1686, latitude: 41.3874, radiusMeters: 25_000 };
+
+/** Rows inside the search area. Few, on purpose — that is the selectivity. */
+const MATCHING_ROWS = 3;
+/** Rows scattered far outside it. The measured floor is 50; this is margin. */
+const SCATTERED_ROWS = 197;
+/** No more than this fraction of the table may match, or the plan is not determined. */
+const MAX_SELECTIVITY = 0.1;
 
 /**
  * The plan for a statement, as one string.
@@ -101,7 +100,10 @@ const BARCELONA_CIRCLE = { longitude: 2.1686, latitude: 41.3874, radiusMeters: 2
  * no effect. That failure reads as "the planner ignored us", which is exactly
  * the answer this test is trying to distinguish.
  */
-async function planFor(predicate: ReturnType<typeof withinCircle>, seqScan: 'on' | 'off'): Promise<string> {
+async function planFor(
+  predicate: ReturnType<typeof withinCircle>,
+  seqScan: 'on' | 'off',
+): Promise<string> {
   return getDb().transaction(async (tx) => {
     await tx.execute(sql.raw(`set local enable_seqscan = ${seqScan}`));
     const rows = await tx.execute(
@@ -109,6 +111,45 @@ async function planFor(predicate: ReturnType<typeof withinCircle>, seqScan: 'on'
     );
     return [...rows].map((row) => String(Object.values(row)[0])).join('\n');
   });
+}
+
+/** How many rows a predicate actually matches. */
+async function matchCount(predicate: ReturnType<typeof withinCircle>): Promise<number> {
+  const rows = await getDb().execute(
+    sql`select count(*)::int as matched from ${addresses} where ${predicate}`,
+  );
+  return Number(Object.values([...rows][0])[0]);
+}
+
+/** A few addresses inside the Barcelona box and circle. */
+async function seedMatching(chain: GeoChain): Promise<void> {
+  await getDb().execute(sql`
+    insert into addresses (id, street, postal_code, city_id, region_id, country_id, country_code, longitude, latitude)
+    select substring(md5(random()::text || 'match' || g::text) from 1 for 24),
+           'Carrer ' || g, '08001',
+           ${chain.cityId}, ${chain.regionId}, ${chain.countryId}, 'ES',
+           ${BARCELONA_CIRCLE.longitude} + g / 10000.0,
+           ${BARCELONA_CIRCLE.latitude} + g / 10000.0
+    from generate_series(1, ${MATCHING_ROWS}::int) as g
+  `);
+}
+
+/**
+ * Addresses scattered across Europe, none of them in the search area.
+ *
+ * One statement rather than a loop of `seedAddress` calls: 197 round trips
+ * would dominate this file's runtime for no benefit, and the rows exist only to
+ * give the predicate something to exclude.
+ */
+async function seedScattered(chain: GeoChain): Promise<void> {
+  await getDb().execute(sql`
+    insert into addresses (id, street, postal_code, city_id, region_id, country_id, country_code, longitude, latitude)
+    select substring(md5(random()::text || 'far' || g::text) from 1 for 24),
+           'Elsewhere ' || g, '00000',
+           ${chain.cityId}, ${chain.regionId}, ${chain.countryId}, 'ES',
+           -10.0 + (g % 97) * 0.45, 36.0 + (g % 91) * 0.24
+    from generate_series(1, ${SCATTERED_ROWS}::int) as g
+  `);
 }
 
 describe('the geo predicates the search actually ships', () => {
@@ -119,21 +160,11 @@ describe('the geo predicates the search actually ships', () => {
       regionName: 'Catalonia',
       countryCode: 'ES-IDX',
     });
-    // A handful of rows, so the plan is about a table that exists rather than
-    // an empty one the planner may shortcut entirely. The COUNT does not matter
-    // to what is asserted below — that was the flaw in the version this
-    // replaces — but the table not being empty does.
-    for (const [index, street] of ['Carrer Gran', 'Carrer Petit', 'Passeig'].entries()) {
-      await seedAddress({
-        chain,
-        street,
-        longitude: 2.1686 + index / 1000,
-        latitude: 41.3874 + index / 1000,
-      });
-    }
-    // Pin the statistics rather than racing autovacuum. Nothing below depends
-    // on them, and that is the point: gathering them makes the starting state
-    // the same on every run, so a future failure here means the SQL changed.
+    await seedMatching(chain);
+    await seedScattered(chain);
+    // Pinned rather than left to autovacuum. Measured NOT to change any verdict
+    // below — see the header — so this is about making the starting state the
+    // same on every run, not about making the assertions pass.
     await getDb().execute(sql`analyze addresses`);
   });
 
@@ -151,6 +182,23 @@ describe('the geo predicates the search actually ships', () => {
   it.each([
     ['a bounding box', withinBoundingBox(BARCELONA_BOX)],
     ['a centre and radius', withinCircle(BARCELONA_CIRCLE)],
+  ])('is asked a SELECTIVE question by %s, which is what determines the plan', async (_label, predicate) => {
+    // The precondition every plan assertion below rests on, asserted rather
+    // than assumed. A fixture where the predicate matches most of the table
+    // makes a sequential scan correct, and the plan tests then fail for a
+    // reason that has nothing to do with the SQL — which is exactly how this
+    // file went flaky and blocked two other PRs.
+    const total = await matchCount(sql`true`);
+    const matched = await matchCount(predicate);
+
+    expect(total).toBe(MATCHING_ROWS + SCATTERED_ROWS);
+    expect(matched).toBe(MATCHING_ROWS);
+    expect(matched / total).toBeLessThan(MAX_SELECTIVITY);
+  });
+
+  it.each([
+    ['a bounding box', withinBoundingBox(BARCELONA_BOX)],
+    ['a centre and radius', withinCircle(BARCELONA_CIRCLE)],
   ])('lets the planner reach that index for %s', async (_label, predicate) => {
     const plan = await planFor(predicate, 'off');
 
@@ -161,11 +209,25 @@ describe('the geo predicates the search actually ships', () => {
     expect(plan).toContain('Index Scan');
   });
 
+  it.each([
+    ['a bounding box', withinBoundingBox(BARCELONA_BOX)],
+    ['a centre and radius', withinCircle(BARCELONA_CIRCLE)],
+  ])('and CHOOSES it unprompted for %s', async (_label, predicate) => {
+    // The stronger statement, and the one production actually runs: with a
+    // selective question the planner reaches for the index on its own. It is
+    // deterministic here because the fixture's shape is, which the selectivity
+    // test above is what guarantees.
+    const plan = await planFor(predicate, 'on');
+
+    expect(plan).toContain('addresses');
+    expect(plan).toContain(GEO_INDEX);
+  });
+
   it('does NOT name the geo index for a predicate that cannot use it', async () => {
     // The negative control. Without it, "the plan mentions `addresses_geo_gist`"
     // could be true of every plan on this table for a reason unrelated to the
     // predicate — and every assertion above would pass while measuring nothing.
-    const plan = await planFor(sql`${addresses.street} = 'Carrer Gran'`, 'off');
+    const plan = await planFor(sql`${addresses.street} = 'Carrer 1'`, 'off');
 
     expect(plan).toContain('addresses');
     expect(plan).not.toContain(GEO_INDEX);
