@@ -33,7 +33,7 @@ import type {
   SearchQuery,
 } from '@/components/search/types';
 import { useSearchMode } from '@/context/SearchModeContext';
-import { geocodeAddress } from '@/hooks/useAddressSearch';
+import { searchPlaces } from '@/services/geoService';
 import { cityService } from '@/services/cityService';
 import { cityCountryName, cityRegionName } from '@/utils/cityDisplay';
 import { DEFAULT_SEARCH_QUERY, useSearchQueryStore } from '@/store/searchQueryStore';
@@ -116,17 +116,30 @@ function payloadToQuery(payload: SavedSearchPayload): SearchQuery {
   };
 }
 
-/** Geocode a free-text place label into a {@link SearchLocation}, or null. */
+/**
+ * Geocode a free-text place label into a {@link SearchLocation}, or null.
+ *
+ * Goes through Homiio's geo gateway (#351); the device no longer talks to a
+ * geocoder. Two consequences worth keeping when this moves to the location
+ * contract of #352:
+ *
+ *  - the label is PRE-SPLIT by the gateway (`label.primary` / `label.secondary`)
+ *    rather than by `display_name.split(',')`, which assumed a Western
+ *    comma-separated ordering and mangled every script that does not use one
+ *    (ADR 0002 §9.4);
+ *  - a gateway FAILURE propagates instead of becoming `null`. `null` here means
+ *    "no such place" and the caller is entitled to treat it that way, so
+ *    swallowing a timeout into it is what turns an outage into a global feed.
+ */
 async function geocodeLabel(label: string): Promise<SearchLocation | null> {
-  const [match] = await geocodeAddress(label, { maxResults: 1 });
-  if (!match || typeof match.lat !== 'number' || typeof match.lon !== 'number') {
-    return null;
-  }
-  const [primary] = match.text.split(',');
+  const { candidates } = await searchPlaces({ q: label, limit: 1 });
+  const [match] = candidates;
+  if (!match) return null;
   return {
-    label: match.text,
-    shortLabel: (primary ?? match.text).trim() || match.text,
-    center: [match.lon, match.lat],
+    label: [match.label.primary, match.label.secondary].filter(Boolean).join(', '),
+    shortLabel: match.label.primary,
+    center: [match.center.longitude, match.center.latitude],
+    ...(match.bounds ? { bounds: match.bounds } : {}),
   };
 }
 

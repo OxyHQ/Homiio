@@ -41,12 +41,11 @@ export { useProfileRedux, useActiveProfile } from './useProfileQueries';
 // Utility hooks
 export { useDebounce } from './useDebounce';
 
-// Address Search hooks
+// Place autocomplete, through Homiio's geo gateway (never a geocoder directly).
 export {
   useAddressSearch,
   useDebouncedAddressSearch,
-  useReverseGeocode,
-  type AddressSuggestion,
   type AddressSearchOptions,
+  type AddressSearchState,
   type UseAddressSearchReturn,
 } from './useAddressSearch';

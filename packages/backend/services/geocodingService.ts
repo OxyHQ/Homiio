@@ -2,7 +2,7 @@
  * Geocoding for Homiio's OWN ingest and address pipeline.
  *
  * This is no longer a geocoder. Since #351 it is a thin projection of the
- * provider layer (`services/geocoding/`) onto the flat {@link AddressData}
+ * provider layer (`services/geocoding/`) onto the flat {@link GeocodedAddress}
  * shape that `addressService`, `IngestionService`, `scraperService`,
  * `geoResolutionService` and `reviewController` already consume — so there is
  * exactly ONE Nominatim client in the backend, one rate-limit queue honouring
@@ -23,9 +23,14 @@
  * how a location search silently becomes a global feed. So the gateway
  * propagates the typed error.
  *
- * {@link AddressData} is Homiio's ingest DTO, not the public one. The public
- * place DTO is `GeoPlace` and it is built in `services/geocoding/normalize.ts`.
+ * {@link GeocodedAddress} is the address-FORM and ingest DTO, not the public
+ * place one. The public place DTO is `GeoPlace`, built in
+ * `services/geocoding/normalize.ts`. The two are not interchangeable: a
+ * `GeoPlace` has no street, house number or postal code, because a country does
+ * not have them.
  */
+
+import type { GeocodedAddress } from '@homiio/shared-types';
 
 import {
   autocompleteCacheKey,
@@ -40,24 +45,9 @@ import { GeocodingProviderError, type ProviderPlace } from './geocoding/types';
 /** Longitude/latitude bounds, GeoJSON-style [west, south, east, north]. */
 export type BoundingBox = [number, number, number, number];
 
-export interface AddressData {
-  street?: string;
-  houseNumber?: string;
-  neighborhood?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  postalCode?: string;
-  fullAddress?: string;
-  /** [longitude, latitude], GeoJSON order. Populated by forward geocoding. */
-  coordinates?: [number, number];
-  /** [west, south, east, north]. Populated by forward geocoding when available. */
-  bbox?: BoundingBox;
-}
-
 export interface GeocodingResult {
   success: boolean;
-  data?: AddressData;
+  data?: GeocodedAddress;
   error?: string;
 }
 
@@ -72,8 +62,8 @@ export interface GeocodingResult {
 const INGEST_LANGUAGE = '';
 
 /** Project a provider result onto the flat ingest DTO. */
-const toAddressData = (place: ProviderPlace): AddressData => {
-  const data: AddressData = {
+const toGeocodedAddress = (place: ProviderPlace): GeocodedAddress => {
+  const data: GeocodedAddress = {
     street: place.address.street ?? '',
     houseNumber: place.address.houseNumber ?? '',
     neighborhood: place.address.neighborhood ?? '',
@@ -130,7 +120,7 @@ export async function reverseGeocode(longitude: number, latitude: number): Promi
 
   const key = reverseCacheKey(longitude, latitude, INGEST_LANGUAGE);
   const cached = readGeoCache<ProviderPlace>(key);
-  if (cached) return { success: true, data: toAddressData(cached) };
+  if (cached) return { success: true, data: toGeocodedAddress(cached) };
 
   try {
     const { value } = await withFallback((provider) =>
@@ -145,7 +135,7 @@ export async function reverseGeocode(longitude: number, latitude: number): Promi
     // Only successes are cached. A transient failure cached for 24 hours turns
     // a network blip into an outage that long outlives it.
     writeGeoCache(key, value, GEO_CACHE_TTL_MS.resolved);
-    return { success: true, data: toAddressData(value) };
+    return { success: true, data: toGeocodedAddress(value) };
   } catch (error) {
     return toFailure(error);
   }
@@ -172,7 +162,7 @@ export async function forwardGeocode(address: string): Promise<GeocodingResult> 
   if (cached) {
     const [place] = cached;
     return place
-      ? { success: true, data: toAddressData(place) }
+      ? { success: true, data: toGeocodedAddress(place) }
       : { success: false, error: 'No coordinates found for the provided address' };
   }
 
@@ -185,7 +175,7 @@ export async function forwardGeocode(address: string): Promise<GeocodingResult> 
       return { success: false, error: 'No coordinates found for the provided address' };
     }
     writeGeoCache(key, value, GEO_CACHE_TTL_MS.resolved);
-    return { success: true, data: toAddressData(place) };
+    return { success: true, data: toGeocodedAddress(place) };
   } catch (error) {
     return toFailure(error);
   }

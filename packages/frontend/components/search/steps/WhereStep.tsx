@@ -1,11 +1,24 @@
 /**
  * WhereStep — live city/area autocomplete for the search panel.
  *
- * Uses the keyless OpenStreetMap Nominatim geocoder via
- * `useDebouncedAddressSearch`. While the input is empty it surfaces the user's
- * recent searches; once they type, debounced suggestions replace the list.
- * Selecting a row resolves a {@link SearchLocation} (label + center + a small
- * bounding box) and hands it back to the panel.
+ * Suggestions come from Homiio's geo gateway (`/api/geo/search`, #351), never
+ * from a geocoder the device contacts itself. While the input is empty it
+ * surfaces the user's recent searches; once they type, debounced suggestions
+ * replace the list. Selecting a row resolves a {@link SearchLocation} and hands
+ * it back to the panel.
+ *
+ * Two things here are contract rather than styling.
+ *
+ * **Every non-result state is distinguishable.** "No suggestions" used to be
+ * the answer to five different questions — too few characters, in flight,
+ * nothing matched, the provider timed out, offline — so a network failure
+ * rendered as "no results" and invited the user to search somewhere else.
+ * `AddressSearchState` separates them and each gets its own line of copy.
+ *
+ * **The attribution is rendered whenever results are.** The OSM data licence
+ * requires it; the gateway sends it with every response precisely so the
+ * surface showing results can display it, and a client cannot render what it
+ * was never given.
  */
 import React, { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -15,35 +28,45 @@ import { Ionicons } from '@expo/vector-icons';
 import { Search } from '@oxyhq/bloom/search';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 
-import {
-  useDebouncedAddressSearch,
-  type AddressSuggestion,
-} from '@/hooks/useAddressSearch';
+import { useDebouncedAddressSearch } from '@/hooks/useAddressSearch';
 import { useRecentSearchesStore, type RecentSearch } from '@/store/recentSearchesStore';
+import type { GeoPlace } from '@homiio/shared-types';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 import type { SearchLocation } from '../types';
 
-/** Half-width (degrees) of the bounding box drawn around a picked point. */
+/**
+ * Half-width (degrees) of the box drawn around a picked point when the gateway
+ * supplied no bounds of its own.
+ *
+ * Only a fallback now. A real place comes back with the provider's actual
+ * envelope, which is both correct and free — the synthetic square around a city
+ * centre was never the city.
+ */
 const LOCATION_BOUNDS_DELTA_DEG = 0.05;
 const SEARCH_DEBOUNCE_MS = 300;
 const MIN_QUERY_LENGTH = 2;
 const MAX_RESULTS = 6;
 
-/** Map a Nominatim suggestion onto a resolved {@link SearchLocation}. */
-function toSearchLocation(s: AddressSuggestion): SearchLocation | null {
-  if (typeof s.lat !== 'number' || typeof s.lon !== 'number') return null;
-  const [primary] = s.text.split(',');
-  const center: [number, number] = [s.lon, s.lat];
+/**
+ * Map a gateway candidate onto a resolved {@link SearchLocation}.
+ *
+ * The label is taken PRE-SPLIT from the gateway rather than by splitting a
+ * display string on commas: that assumed a Western comma-separated ordering and
+ * mangled every script and address format that does not use one (ADR 0002
+ * §9.4).
+ */
+function toSearchLocation(place: GeoPlace): SearchLocation {
+  const { longitude, latitude } = place.center;
   return {
-    label: s.text,
-    shortLabel: (primary ?? s.text).trim() || s.text,
-    center,
-    bounds: {
-      west: s.lon - LOCATION_BOUNDS_DELTA_DEG,
-      south: s.lat - LOCATION_BOUNDS_DELTA_DEG,
-      east: s.lon + LOCATION_BOUNDS_DELTA_DEG,
-      north: s.lat + LOCATION_BOUNDS_DELTA_DEG,
+    label: [place.label.primary, place.label.secondary].filter(Boolean).join(', '),
+    shortLabel: place.label.primary,
+    center: [longitude, latitude],
+    bounds: place.bounds ?? {
+      west: longitude - LOCATION_BOUNDS_DELTA_DEG,
+      south: latitude - LOCATION_BOUNDS_DELTA_DEG,
+      east: longitude + LOCATION_BOUNDS_DELTA_DEG,
+      north: latitude + LOCATION_BOUNDS_DELTA_DEG,
     },
   };
 }
@@ -124,13 +147,11 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   const { t } = useTranslation();
   const recentSearches = useRecentSearchesStore((s) => s.searches);
 
-  const { suggestions, loading, debouncedSearch, clearSuggestions } =
-    useDebouncedAddressSearch({
-      minQueryLength: MIN_QUERY_LENGTH,
-      debounceDelay: SEARCH_DEBOUNCE_MS,
-      maxResults: MAX_RESULTS,
-      includeAddressDetails: false,
-    });
+  const { state, attribution, debouncedSearch, clear } = useDebouncedAddressSearch({
+    minQueryLength: MIN_QUERY_LENGTH,
+    debounceDelay: SEARCH_DEBOUNCE_MS,
+    maxResults: MAX_RESULTS,
+  });
 
   const handleChange = useCallback(
     (text: string) => {
@@ -138,24 +159,52 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       if (text.trim().length >= MIN_QUERY_LENGTH) {
         debouncedSearch(text);
       } else {
-        clearSuggestions();
+        clear();
       }
     },
-    [onChangeText, debouncedSearch, clearSuggestions],
+    [onChangeText, debouncedSearch, clear],
   );
 
   const handleClear = useCallback(() => {
     onChangeText('');
-    clearSuggestions();
-  }, [onChangeText, clearSuggestions]);
+    clear();
+  }, [onChangeText, clear]);
 
   const resolvedSuggestions = useMemo<SearchLocation[]>(
-    () =>
-      suggestions
-        .map(toSearchLocation)
-        .filter((s): s is SearchLocation => s !== null),
-    [suggestions],
+    () => (state.status === 'results' ? state.places.map(toSearchLocation) : []),
+    [state],
   );
+
+  /**
+   * One line of copy per state.
+   *
+   * A provider failure must never render as "no results": that tells the user
+   * their place does not exist and invites them to search for somewhere else,
+   * when the truthful answer is that Homiio could not ask.
+   */
+  const statusMessage = useMemo<string | null>(() => {
+    switch (state.status) {
+      case 'debouncing':
+      case 'loading':
+        return t('search.header.geocoding');
+      case 'empty':
+        return t('search.where.noResults');
+      case 'failed':
+        switch (state.reason) {
+          case 'offline':
+            return t('search.where.offline');
+          case 'rate_limited':
+            return t('search.where.rateLimited');
+          case 'timeout':
+          case 'provider_unavailable':
+            return t('search.where.providerUnavailable');
+          default:
+            return t('search.where.failed');
+        }
+      default:
+        return null;
+    }
+  }, [state, t]);
 
   const showRecents = value.trim().length < MIN_QUERY_LENGTH;
 
@@ -191,10 +240,11 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         ) : null
       ) : (
         <View style={styles.list}>
-          {loading && resolvedSuggestions.length === 0 ? (
-            <BloomText style={styles.statusText}>
-              {t('search.header.geocoding')}
-            </BloomText>
+          {statusMessage ? (
+            <BloomText style={styles.statusText}>{statusMessage}</BloomText>
+          ) : null}
+          {state.status === 'results' && state.degraded ? (
+            <BloomText style={styles.statusText}>{t('search.where.degraded')}</BloomText>
           ) : null}
           {resolvedSuggestions.map((location) => (
             <SuggestionRow
@@ -206,6 +256,10 @@ export const WhereStep: React.FC<WhereStepProps> = ({
               onPress={() => onSelectLocation(location)}
             />
           ))}
+          {/* Required by the provider's data licence wherever results appear. */}
+          {resolvedSuggestions.length > 0 && attribution ? (
+            <BloomText style={styles.attribution}>{attribution.text}</BloomText>
+          ) : null}
         </View>
       )}
     </View>
@@ -265,6 +319,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.COLOR_BLACK_LIGHT_4,
     paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+  },
+  attribution: {
+    fontSize: 11,
+    color: colors.COLOR_BLACK_LIGHT_4,
+    paddingTop: spacing.xs,
     paddingHorizontal: spacing.sm,
   },
 });

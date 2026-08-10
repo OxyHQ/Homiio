@@ -685,6 +685,14 @@
       "title": "Save this search",
       "namePlaceholder": "Give your search a name",
       "enableNotifications": "Enable notifications"
+    },
+    "where": {
+      "noResults": "Cap lloc coincideix amb aquesta cerca.",
+      "offline": "No es pot connectar amb Homiio. Comprova la connexió i torna-ho a provar.",
+      "rateLimited": "Massa cerques ara mateix. Torna-ho a provar d’aquí a un moment.",
+      "providerUnavailable": "La cerca de llocs no està disponible temporalment. Torna-ho a provar aviat.",
+      "failed": "Ara mateix no s’han pogut cercar llocs.",
+      "degraded": "Es mostren resultats d’una font alternativa; poden faltar llocs."
     }
   },
   "profile": {

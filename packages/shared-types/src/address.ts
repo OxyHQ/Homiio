@@ -151,6 +151,49 @@ export interface AddressCoordinates {
 }
 
 /**
+ * A flat, building-level address as a geocoder described it — the shape the
+ * gateway's `/api/geocoding/reverse|forward` return.
+ *
+ * Declared ONCE here because it used to exist as two divergent copies: the
+ * backend's carried `coordinates` and `bbox` and the frontend's dropped both,
+ * so the backend computed a bounding box the frontend's type could not
+ * represent and no typechecker could see the loss (ADR 0002 §9.2 names this).
+ *
+ * ## Why this is NOT `GeoPlace`, which is the obvious question
+ *
+ * `GeoPlace` (`./location`) is a PLACE: an area or a candidate identified by a
+ * source, a type, a label and an administrative hierarchy. It deliberately has
+ * no `street`, `houseNumber` or `postalCode`, because a country does not have
+ * them.
+ *
+ * The address FORMS — writing a review, creating a property, filing an eviction
+ * — need exactly those three fields to fill their inputs, and the review form
+ * cannot advance without a street. So `GeoPlace` cannot replace this shape for
+ * them, and pretending otherwise would silently empty three forms.
+ *
+ * The division of labour: `GeoPlace` answers "which place is this?" and is what
+ * a location SELECTION is built from; `GeocodedAddress` answers "what are the
+ * parts of this building's address?" and is only ever used to prefill a form.
+ * A selection is never built from this type.
+ */
+export interface GeocodedAddress {
+  street?: string;
+  houseNumber?: string;
+  neighborhood?: string;
+  city?: string;
+  /** Province / state / autonomous community. */
+  state?: string;
+  country?: string;
+  postalCode?: string;
+  /** The provider's full display string. */
+  fullAddress?: string;
+  /** [longitude, latitude], GeoJSON order. Populated by forward geocoding. */
+  coordinates?: [number, number];
+  /** [west, south, east, north]. Populated by forward geocoding when available. */
+  bbox?: [number, number, number, number];
+}
+
+/**
  * Input shape for address creation. Callers supply human-readable place NAMES
  * (city/state/country) and/or coordinates; the backend's geo-resolution service
  * turns them into the canonical `countryId`/`regionId`/`cityId`/`neighborhoodId`

@@ -23,7 +23,7 @@ import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { useOxy } from '@oxyhq/services';
 
 import { Header } from '@/components/Header';
-import type { MapApi, AddressData } from '@/components/Map';
+import type { MapApi, GeocodedAddress } from '@/components/Map';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { WizardProgress } from '@/components/reviews/WizardProgress';
 import { StepAddress } from '@/components/reviews/write/StepAddress';
@@ -125,7 +125,7 @@ export default function WriteReviewPage() {
   }, [addressId, oxyServices, activeSessionId, t]);
 
   const handleAddressSelect = useCallback(
-    (address: AddressData, coordinates: [number, number]) => {
+    (address: GeocodedAddress, coordinates: [number, number]) => {
       setData((prev) => ({
         ...prev,
         latitude: coordinates[1],

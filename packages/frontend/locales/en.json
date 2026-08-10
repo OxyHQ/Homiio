@@ -688,6 +688,14 @@
       "title": "Save this search",
       "namePlaceholder": "Give your search a name",
       "enableNotifications": "Enable notifications"
+    },
+    "where": {
+      "noResults": "No places match that search.",
+      "offline": "Can't reach Homiio. Check your connection and try again.",
+      "rateLimited": "Too many searches just now. Try again in a moment.",
+      "providerUnavailable": "Place search is temporarily unavailable. Try again shortly.",
+      "failed": "Couldn't search for places right now.",
+      "degraded": "Showing results from a backup source; some places may be missing."
     }
   },
   "profile": {

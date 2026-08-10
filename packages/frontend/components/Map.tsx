@@ -9,7 +9,7 @@ import { buildMapDocument } from './mapDocument';
 import { DEFAULT_STYLE_URL, fetchSanitizedMapStyle } from './mapStyle';
 import { colors } from '@/styles/colors';
 import type {
-  AddressData,
+  GeocodedAddress,
   ClusterLeaf,
   ClusterOptions,
   LonLat,
@@ -23,7 +23,7 @@ import type {
 // Re-export the public map types so existing call sites can keep importing
 // them from the component entry point (e.g. `import { MapApi } from '@/components/Map'`).
 export type {
-  AddressData,
+  GeocodedAddress,
   ClusterOptions,
   LonLat,
   MapApi,
@@ -52,7 +52,7 @@ export interface MapProps {
   enableAddressLookup?: boolean;
   showAddressInstructions?: boolean;
   onMapPress?: (e: { lngLat: LonLat }) => void;
-  onAddressSelect?: (address: AddressData, coordinates: LonLat) => void;
+  onAddressSelect?: (address: GeocodedAddress, coordinates: LonLat) => void;
   onAddressLookupStart?: () => void;
   onAddressLookupEnd?: () => void;
   onRegionChange?: (e: { center: LonLat; zoom: number; bearing: number; pitch: number; bounds: { west: number; south: number; east: number; north: number }; isFinal?: boolean }) => void;
@@ -64,10 +64,10 @@ const DEFAULT_CENTER: LonLat = [2.16538, 41.38723];
 const DEFAULT_ZOOM = 12;
 
 // Address lookup function using backend API (Nominatim-backed, no API key).
-const lookupAddressFromCoordinates = async (coordinates: LonLat): Promise<AddressData | null> => {
+const lookupAddressFromCoordinates = async (coordinates: LonLat): Promise<GeocodedAddress | null> => {
   try {
     const [longitude, latitude] = coordinates;
-    const { data: result } = await api.get<ApiResponse<AddressData>>('/api/geocoding/reverse', {
+    const { data: result } = await api.get<ApiResponse<GeocodedAddress>>('/api/geocoding/reverse', {
       params: { longitude, latitude },
       requireAuth: false,
     });

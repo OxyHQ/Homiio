@@ -7,7 +7,7 @@ import { useReferralStore } from '@/store/referralStore';
 import { ThemedText } from '@/components/ThemedText';
 import { Button } from '@oxyhq/bloom/button';
 import { StepsContainer } from '@/components/StepsContainer';
-import type { AddressData } from '@/components/Map';
+import type { GeocodedAddress } from '@/components/Map';
 import { usePropertyCreateForm } from '@/hooks/usePropertyCreateForm';
 import { useCreatePropertyWizard } from '@/hooks/useCreatePropertyWizard';
 import {
@@ -81,7 +81,7 @@ export default function CreatePropertyScreen() {
   const closeFullscreenMap = useCallback(() => setShowFullscreenMap(false), []);
 
   const handleFullscreenAddressSelect = useCallback(
-    (address: AddressData, coordinates: [number, number]) => {
+    (address: GeocodedAddress, coordinates: [number, number]) => {
       applyAddressSelection(address, coordinates);
       setShowFullscreenMap(false);
     },

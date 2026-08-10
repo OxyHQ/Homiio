@@ -664,6 +664,14 @@
       "title": "Save this search",
       "namePlaceholder": "Give your search a name",
       "enableNotifications": "Enable notifications"
+    },
+    "where": {
+      "noResults": "Ningún lugar coincide con esa búsqueda.",
+      "offline": "No se puede conectar con Homiio. Comprueba tu conexión e inténtalo de nuevo.",
+      "rateLimited": "Demasiadas búsquedas ahora mismo. Inténtalo de nuevo en un momento.",
+      "providerUnavailable": "La búsqueda de lugares no está disponible temporalmente. Inténtalo en breve.",
+      "failed": "No se han podido buscar lugares ahora mismo.",
+      "degraded": "Mostrando resultados de una fuente alternativa; puede que falten lugares."
     }
   },
   "profile": {
