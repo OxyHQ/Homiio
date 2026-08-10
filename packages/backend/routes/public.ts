@@ -8,6 +8,7 @@ import neighborhoodRoutes from './neighborhoods';
 import cityController from '../controllers/cityController';
 import imageController from '../controllers/imageController';
 import geocodingController from '../controllers/geocodingController';
+import observabilityController from '../controllers/observabilityController';
 import * as propertyController from '../controllers/property';
 import telegramController from '../controllers/telegramController';
 import analyticsController from '../controllers/analyticsController';
@@ -66,6 +67,12 @@ export default function () {
   // Public geocoding routes
   router.get('/geocoding/reverse', asyncHandler(geocodingController.reverseGeocode));
   router.get('/geocoding/forward', asyncHandler(geocodingController.forwardGeocode));
+
+  // Privacy-safe product observability ingest (#350). Unauthenticated on
+  // purpose — the first-open, permission and geocoder-fallback events this
+  // exists to see all happen before anybody signs in. See the controller
+  // header; it always answers 202 and reads nothing from `req.user`.
+  router.post('/observability/events', asyncHandler(observabilityController.ingestEvents));
 
   // Public review READ routes (community notes). These are community-visible
   // building/unit reviews surfaced on the property-detail screen — the

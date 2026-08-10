@@ -18,6 +18,22 @@ function boundedInteger(
   return Math.min(Math.max(parsed, minimum), maximum);
 }
 
+/**
+ * A sampling probability in [0, 1], or 1 when the variable is absent or
+ * unparseable.
+ *
+ * The fallback direction matters and is the opposite of `boundedInteger`'s
+ * conservatism: a typo that read as 0 would silently stop recording while every
+ * gate stayed green, which is exactly the "check that cannot fail" shape this
+ * repository keeps finding. Recording too much is visible; recording nothing is
+ * not.
+ */
+function observabilitySampleRate(raw: string | undefined): number {
+  const parsed = Number.parseFloat(raw || '');
+  if (!Number.isFinite(parsed)) return 1;
+  return Math.min(Math.max(parsed, 0), 1);
+}
+
 const CROWDSOURCE_ENFORCEMENT_MODES: readonly ModerationEnforcementMode[] = [
   'observe',
   'manual',
@@ -130,6 +146,20 @@ export interface Config {
   logging: {
     level: string;
     file: string;
+  };
+  /**
+   * Privacy-safe product observability (#350). Off by default in every
+   * environment: an events pipeline that starts recording because somebody
+   * deployed is the opposite of the consent posture this feature is for.
+   *
+   * `sampleRate` applies to events that PASS redaction. Refusals are never
+   * sampled away — see `packages/shared-types/src/observability/emitter.ts`.
+   */
+  observability: {
+    enabled: boolean;
+    sampleRate: number;
+    /** Cap on events accepted from one ingest request. */
+    maxEventsPerRequest: number;
   };
   stripe?: {
     secretKey?: string;
@@ -373,7 +403,16 @@ const config: Config = {
     level: process.env.LOG_LEVEL || 'info',
     file: process.env.LOG_FILE || (process.env.VERCEL ? '/tmp/app.log' : './logs/app.log'),
   },
-  
+
+  // Privacy-safe product observability (#350). See the Config interface above:
+  // OFF unless explicitly enabled, and a malformed sample rate reads as 1
+  // rather than as 0 — a typo must not silently stop recording.
+  observability: {
+    enabled: process.env.OBSERVABILITY_ENABLED === 'true',
+    sampleRate: observabilitySampleRate(process.env.OBSERVABILITY_SAMPLE_RATE),
+    maxEventsPerRequest: boundedInteger(process.env.OBSERVABILITY_MAX_EVENTS_PER_REQUEST, 20, 1, 100),
+  },
+
   // Web frontend base URL — single source for server-built deep links.
   web: {
     baseUrl: process.env.FRONTEND_URL ||
