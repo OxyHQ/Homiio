@@ -327,7 +327,8 @@
         "eyebrow": "Public",
         "title": "Public housing",
         "reason": "Listed as public housing. Homiio has no cooperative or community housing field yet, so those are not included"
-      }
+      },
+      "loadFailedToast": "Could not load homes for this area. Nothing is hidden — the request failed."
     },
     "scopePrompt": {
       "eyebrow": "One step first",

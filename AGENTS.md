@@ -816,7 +816,15 @@ const [pressed, setPressed] = useState(false);
   function-form `Pressable` lives in a list.
 - Canonical template:
   `packages/frontend/components/search/SearchSummaryBar.tsx`.
-- Audit: `grep -rn "style={({" app components --include=*.tsx` must return ZERO.
+- **Audit: `packages/frontend/__tests__/noFunctionFormStyle.test.ts`**, which runs
+  in the ordinary suite. It replaced `grep -rn "style={({" app components`,
+  and the reason is worth keeping: a grep is LINE-based, so it cannot tell code
+  from prose, and it started reporting a violation the moment a component's own
+  doc comment quoted the forbidden form in order to warn about it. A gate that
+  cries wolf gets switched off by whoever hits it next. The test strips comments
+  first — through `@homiio/shared-types/testing/stripComments`, the one stripper
+  this repo has — and carries a positive control, a negative control (that very
+  comment), and a floor on files scanned.
 
 ## `pointerEvents: 'box-none'` / `'box-only'` in a STYLE is BROKEN on web
 
