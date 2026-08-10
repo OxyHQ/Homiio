@@ -3,7 +3,10 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const LOCALES_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'locales');
-const LOCALES = ['en', 'es', 'ca-ES', 'it'] as const;
+const LOCALES = [
+  'en', 'es', 'ca-ES', 'it', 'zh-CN', 'hi-IN', 'fr-FR', 'ar', 'bn-BD',
+  'pt-BR', 'ru-RU', 'id-ID',
+] as const;
 
 function flattenKeys(obj: Record<string, unknown>, prefix = ''): Set<string> {
   const keys = new Set<string>();
@@ -34,7 +37,8 @@ let failed = false;
 
 for (const locale of LOCALES) {
   if (locale === 'en') continue;
-  const missing = [...enKeys].filter((key) => !loadKeys(locale).has(key));
+  const localeKeys = loadKeys(locale);
+  const missing = [...enKeys].filter((key) => !localeKeys.has(key));
   if (missing.length > 0) {
     failed = true;
     console.error(`[${locale}] missing ${missing.length} keys from en`);

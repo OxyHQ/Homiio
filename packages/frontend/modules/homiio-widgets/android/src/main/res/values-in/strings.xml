@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="homiio_listings_widget_label">Listing baru</string>
+  <string name="homiio_listings_widget_description">Satu rumah yang baru disewakan setiap kali, dari Homiio.</string>
+  <string name="homiio_listings_widget_eyebrow">BARU DISEWAKAN</string>
+  <string name="homiio_listings_widget_empty">Belum ada listing</string>
+  <string name="homiio_widget_open_app">Buka Homiio</string>
+  <string name="homiio_listings_widget_price_monthly">%1$s/bln</string>
+  <plurals name="homiio_listings_widget_beds">
+    <item quantity="one">%1$d kamar tidur</item>
+    <item quantity="other">%1$d kamar tidur</item>
+  </plurals>
+  <plurals name="homiio_listings_widget_baths">
+    <item quantity="one">%1$d kamar mandi</item>
+    <item quantity="other">%1$d kamar mandi</item>
+  </plurals>
+  <string name="homiio_listings_widget_area">%1$d m²</string>
+  <string name="homiio_listings_widget_source">melalui %1$s</string>
+</resources>

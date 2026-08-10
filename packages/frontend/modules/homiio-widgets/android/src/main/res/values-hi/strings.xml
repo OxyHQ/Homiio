@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="homiio_listings_widget_label">नई लिस्टिंग</string>
+  <string name="homiio_listings_widget_description">Homiio की नई किराये की संपत्ति, एक बार में एक।</string>
+  <string name="homiio_listings_widget_eyebrow">किराये के लिए नया</string>
+  <string name="homiio_listings_widget_empty">अभी कोई लिस्टिंग नहीं</string>
+  <string name="homiio_widget_open_app">Homiio खोलें</string>
+  <string name="homiio_listings_widget_price_monthly">%1$s/माह</string>
+  <plurals name="homiio_listings_widget_beds">
+    <item quantity="one">%1$d बेडरूम</item>
+    <item quantity="other">%1$d बेडरूम</item>
+  </plurals>
+  <plurals name="homiio_listings_widget_baths">
+    <item quantity="one">%1$d बाथरूम</item>
+    <item quantity="other">%1$d बाथरूम</item>
+  </plurals>
+  <string name="homiio_listings_widget_area">%1$d m²</string>
+  <string name="homiio_listings_widget_source">स्रोत %1$s</string>
+</resources>

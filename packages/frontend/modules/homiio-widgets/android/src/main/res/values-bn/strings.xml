@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="homiio_listings_widget_label">নতুন তালিকা</string>
+  <string name="homiio_listings_widget_description">Homiio থেকে একবারে একটি নতুন ভাড়ার বাড়ি।</string>
+  <string name="homiio_listings_widget_eyebrow">নতুন ভাড়া</string>
+  <string name="homiio_listings_widget_empty">এখনও কোনো তালিকা নেই</string>
+  <string name="homiio_widget_open_app">Homiio খুলুন</string>
+  <string name="homiio_listings_widget_price_monthly">%1$s/মাস</string>
+  <plurals name="homiio_listings_widget_beds">
+    <item quantity="one">%1$d শয়নকক্ষ</item>
+    <item quantity="other">%1$d শয়নকক্ষ</item>
+  </plurals>
+  <plurals name="homiio_listings_widget_baths">
+    <item quantity="one">%1$d বাথরুম</item>
+    <item quantity="other">%1$d বাথরুম</item>
+  </plurals>
+  <string name="homiio_listings_widget_area">%1$d m²</string>
+  <string name="homiio_listings_widget_source">উৎস %1$s</string>
+</resources>

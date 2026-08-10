@@ -3,7 +3,20 @@ import i18n from 'i18next';
 
 const STORAGE_KEY = 'homiio.language';
 
-export const SUPPORTED_LANGUAGE_CODES = ['en-US', 'es-ES', 'ca-ES', 'it-IT'] as const;
+export const SUPPORTED_LANGUAGE_CODES = [
+  'en-US',
+  'zh-CN',
+  'hi-IN',
+  'es-ES',
+  'fr-FR',
+  'ar',
+  'bn-BD',
+  'pt-BR',
+  'ru-RU',
+  'id-ID',
+  'ca-ES',
+  'it-IT',
+] as const;
 export type SupportedLanguageCode = (typeof SUPPORTED_LANGUAGE_CODES)[number];
 
 export function isSupportedLanguage(code: string): code is SupportedLanguageCode {

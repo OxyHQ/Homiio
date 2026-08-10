@@ -37,7 +37,15 @@ interface LanguageOption {
 // `includes` call below an error, since it takes the narrow union.
 const ALL_LANGUAGES: LanguageOption[] = [
   { code: 'en-US', label: 'English', description: 'English (United States)', flag: '🇺🇸' },
+  { code: 'zh-CN', label: '中文', description: '简体中文（中国）', flag: '🇨🇳' },
+  { code: 'hi-IN', label: 'हिन्दी', description: 'हिन्दी (भारत)', flag: '🇮🇳' },
   { code: 'es-ES', label: 'Español', description: 'Español (España)', flag: '🇪🇸' },
+  { code: 'fr-FR', label: 'Français', description: 'Français (France)', flag: '🇫🇷' },
+  { code: 'ar', label: 'العربية', description: 'العربية', flag: '🇸🇦' },
+  { code: 'bn-BD', label: 'বাংলা', description: 'বাংলা (বাংলাদেশ)', flag: '🇧🇩' },
+  { code: 'pt-BR', label: 'Português', description: 'Português (Brasil)', flag: '🇧🇷' },
+  { code: 'ru-RU', label: 'Русский', description: 'Русский (Россия)', flag: '🇷🇺' },
+  { code: 'id-ID', label: 'Bahasa Indonesia', description: 'Bahasa Indonesia', flag: '🇮🇩' },
   { code: 'ca-ES', label: 'Català', description: 'Català (Espanya)', flag: '🇪🇸' },
   { code: 'it-IT', label: 'Italiano', description: 'Italiano (Italia)', flag: '🇮🇹' },
 ];
