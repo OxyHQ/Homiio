@@ -56,7 +56,7 @@
  */
 
 import { and, asc, desc, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
-import type { CityPlaceCandidate } from '@homiio/shared-types';
+import type { CityPlaceCandidate, PlaceGeometry } from '@homiio/shared-types';
 
 import { getDb } from '../postgres';
 import { cities, countries, regions } from '../schema';
@@ -411,6 +411,16 @@ export async function lookupCityPlaces(input: PlaceLookupInput): Promise<PlaceLo
       typeof row.latitude === 'number' && typeof row.longitude === 'number'
         ? { longitude: row.longitude, latitude: row.latitude }
         : undefined;
+    const bounds =
+      typeof row.bboxWest === 'number' &&
+      typeof row.bboxSouth === 'number' &&
+      typeof row.bboxEast === 'number' &&
+      typeof row.bboxNorth === 'number'
+        ? { west: row.bboxWest, south: row.bboxSouth, east: row.bboxEast, north: row.bboxNorth }
+        : undefined;
+    const geometry: PlaceGeometry = center
+      ? { precision: 'centroid', center, ...(bounds ? { bounds } : {}) }
+      : { precision: 'area', ...(bounds ? { bounds } : {}) };
     return {
       id: row.id,
       source: { kind: 'homiio', entity: 'city', id: row.id },
@@ -433,19 +443,18 @@ export async function lookupCityPlaces(input: PlaceLookupInput): Promise<PlaceLo
       regionId: row.regionId,
       slug: row.slug,
       qualifiedSlug: qualifiedSlugOf(row.slug, row.regionName, row.countryCode),
-      ...(center ? { center } : {}),
-      ...(typeof row.bboxWest === 'number' &&
-      typeof row.bboxSouth === 'number' &&
-      typeof row.bboxEast === 'number' &&
-      typeof row.bboxNorth === 'number'
-        ? { bounds: { west: row.bboxWest, south: row.bboxSouth, east: row.bboxEast, north: row.bboxNorth } }
-        : {}),
+      propertiesCount: row.propertiesCount,
+      matchedOn: row.isIdMatch ? 'id' : row.isNameMatch ? 'name' : 'slug',
       // A city centre is a `centroid` and never an `exact` point; without one
       // the row describes an AREA we cannot frame, which is a different fact
       // from "we have a point" and is said rather than papered over.
-      precision: center ? 'centroid' : 'area',
-      propertiesCount: row.propertiesCount,
-      matchedOn: row.isIdMatch ? 'id' : row.isNameMatch ? 'name' : 'slug',
+      //
+      // Built as a `PlaceGeometry` VALUE and spread, rather than as three
+      // sibling fields, because the union is what makes the contradiction
+      // unrepresentable — a spread of `...(center ? { center } : {})` beside an
+      // independently computed `precision` type-checks even when the two
+      // disagree, which is precisely the shape #392 removed from the contract.
+      ...geometry,
     };
   });
 
