@@ -4,6 +4,7 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
+import { PropertyStatus } from '@homiio/shared-types';
 
 import { telegramService } from '../services';
 import { AppError, successResponse } from '../middlewares/errorHandler';
@@ -17,7 +18,15 @@ import {
   findPropertyById,
   NEWEST_FIRST,
 } from '../db/properties/propertyReads';
-import { idIn, inCity, inDateRange, statusIs, typeIn } from '../db/properties/propertyFilters';
+import {
+  idIn,
+  inCity,
+  inDateRange,
+  notDeleted,
+  notModerationRestricted,
+  statusIs,
+  typeIn,
+} from '../db/properties/propertyFilters';
 import { serializeProperty } from '../db/properties/propertySerializer';
 import { resolveAddressDisplay, type AddressGeoLike } from '../services/geoDisplayService';
 import { resolveCityId } from '../services/geoQueryService';
@@ -294,11 +303,28 @@ class TelegramController {
       const limitNum = parseInt(String(limit), 10) || 5;
       const hoursNum = parseInt(String(hours), 10) || 24;
 
-      // Get recent properties
+      // Get recent properties.
+      //
+      // This filtered `status = 'active'`, which is not a member of
+      // `PropertyStatus` and so matched nothing — the third and last site of the
+      // dead value #290 was opened about. It mattered more here than on a read:
+      // the endpoint below sends REAL messages to public Telegram groups, and an
+      // empty result meant it has always reported "no recent properties" and
+      // sent none.
+      //
+      // `published` rather than the broader set `by-ids` uses, because this
+      // BROADCASTS: a reserved, rented or deactivated listing is not something
+      // to announce to a city group, and a soft-deleted or jury-restricted one
+      // certainly is not.
       const sinceDate = new Date(Date.now() - hoursNum * 60 * 60 * 1000);
       const recentProperties = (
         await findProperties({
-          where: allOf([inDateRange(properties.createdAt, sinceDate, undefined), statusIs('active')]),
+          where: allOf([
+            inDateRange(properties.createdAt, sinceDate, undefined),
+            notDeleted(),
+            notModerationRestricted(),
+            statusIs(PropertyStatus.PUBLISHED),
+          ]),
           orderBy: [NEWEST_FIRST],
           limit: limitNum,
         })

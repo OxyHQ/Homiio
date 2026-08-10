@@ -67,6 +67,29 @@ export function statusIsNot(status: string): SQL {
   return sql`${properties.status} <> ${status}`;
 }
 
+/**
+ * The two statuses that hide a listing from everybody except its owner.
+ *
+ * Neither is redundant with {@link notDeleted}, and the second is the one that
+ * surprises: `softDeleteProperty` sets `status = 'archived'` AND stamps
+ * `deleted_at`, so a user-deleted listing is caught by either clause — but
+ * `expireExternalProperty` archives a lapsed portal listing by STATUS ALONE,
+ * leaving `deleted_at` null. A read that gated only on `deleted_at` would
+ * therefore keep serving every expired external listing in the catalogue.
+ *
+ * `draft` is the other half and the more obvious one: a listing its owner has
+ * never published is theirs alone to see.
+ *
+ * The remaining five (`published`, `reserved`, `rented`, `sold`, `inactive`)
+ * are all states of a listing that really was published, so a caller that
+ * already holds the id may see it — see the header of
+ * `controllers/property/batch.ts` for why a hydration read wants that and a
+ * discovery feed does not.
+ */
+export function statusVisibleToNonOwner(): SQL {
+  return notInArray(properties.status, ['draft', 'archived']);
+}
+
 export function isAvailable(available: boolean): SQL {
   return eq(properties.availabilityIsAvailable, available);
 }
