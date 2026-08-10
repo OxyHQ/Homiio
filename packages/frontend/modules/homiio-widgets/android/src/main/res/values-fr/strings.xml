@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="homiio_listings_widget_label">Nouvelles annonces</string>
+  <string name="homiio_listings_widget_description">Un logement récemment mis en location à la fois, par Homiio.</string>
+  <string name="homiio_listings_widget_eyebrow">NOUVEAU À LOUER</string>
+  <string name="homiio_listings_widget_empty">Aucune annonce</string>
+  <string name="homiio_widget_open_app">Ouvrir Homiio</string>
+  <string name="homiio_listings_widget_price_monthly">%1$s/mois</string>
+  <plurals name="homiio_listings_widget_beds">
+    <item quantity="one">%1$d chambre</item>
+    <item quantity="other">%1$d chambres</item>
+  </plurals>
+  <plurals name="homiio_listings_widget_baths">
+    <item quantity="one">%1$d salle de bain</item>
+    <item quantity="other">%1$d salles de bain</item>
+  </plurals>
+  <string name="homiio_listings_widget_area">%1$d m²</string>
+  <string name="homiio_listings_widget_source">via %1$s</string>
+</resources>

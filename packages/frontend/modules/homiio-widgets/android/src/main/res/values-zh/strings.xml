@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="homiio_listings_widget_label">新房源</string>
+  <string name="homiio_listings_widget_description">每次展示一套 Homiio 新发布的出租房源。</string>
+  <string name="homiio_listings_widget_eyebrow">最新出租</string>
+  <string name="homiio_listings_widget_empty">暂无房源</string>
+  <string name="homiio_widget_open_app">打开 Homiio</string>
+  <string name="homiio_listings_widget_price_monthly">%1$s/月</string>
+  <plurals name="homiio_listings_widget_beds">
+    <item quantity="one">%1$d 卧室</item>
+    <item quantity="other">%1$d 卧室</item>
+  </plurals>
+  <plurals name="homiio_listings_widget_baths">
+    <item quantity="one">%1$d 浴室</item>
+    <item quantity="other">%1$d 浴室</item>
+  </plurals>
+  <string name="homiio_listings_widget_area">%1$d m²</string>
+  <string name="homiio_listings_widget_source">来自 %1$s</string>
+</resources>

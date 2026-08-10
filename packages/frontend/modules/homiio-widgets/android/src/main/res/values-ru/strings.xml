@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="homiio_listings_widget_label">Новые объявления</string>
+  <string name="homiio_listings_widget_description">По одному новому дому в аренду от Homiio.</string>
+  <string name="homiio_listings_widget_eyebrow">НОВОЕ В АРЕНДУ</string>
+  <string name="homiio_listings_widget_empty">Объявлений пока нет</string>
+  <string name="homiio_widget_open_app">Открыть Homiio</string>
+  <string name="homiio_listings_widget_price_monthly">%1$s/мес.</string>
+  <plurals name="homiio_listings_widget_beds">
+    <item quantity="one">%1$d спальня</item>
+    <item quantity="other">%1$d спальни</item>
+  </plurals>
+  <plurals name="homiio_listings_widget_baths">
+    <item quantity="one">%1$d ванная</item>
+    <item quantity="other">%1$d ванные</item>
+  </plurals>
+  <string name="homiio_listings_widget_area">%1$d m²</string>
+  <string name="homiio_listings_widget_source">через %1$s</string>
+</resources>

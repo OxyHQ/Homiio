@@ -17,7 +17,7 @@
  */
 import i18next from 'i18next';
 import { format, formatDistanceToNowStrict, type Locale } from 'date-fns';
-import { ca, enUS, es, it } from 'date-fns/locale';
+import { ar, bn, ca, enUS, es, fr, hi, id, it, ptBR, ru, zhCN } from 'date-fns/locale';
 
 /**
  * Map an i18next language tag to a `date-fns` locale. Both the full BCP-47 tag
@@ -34,6 +34,22 @@ function resolveLocale(language: string | undefined): Locale {
       return ca;
     case 'it':
       return it;
+    case 'zh':
+      return zhCN;
+    case 'hi':
+      return hi;
+    case 'fr':
+      return fr;
+    case 'ar':
+      return ar;
+    case 'bn':
+      return bn;
+    case 'pt':
+      return ptBR;
+    case 'ru':
+      return ru;
+    case 'id':
+      return id;
     default:
       return enUS;
   }
@@ -58,6 +74,22 @@ export function getFormatLocale(language?: string): string {
       return 'ca-ES';
     case 'it':
       return 'it-IT';
+    case 'zh':
+      return 'zh-CN';
+    case 'hi':
+      return 'hi-IN';
+    case 'fr':
+      return 'fr-FR';
+    case 'ar':
+      return 'ar';
+    case 'bn':
+      return 'bn-BD';
+    case 'pt':
+      return 'pt-BR';
+    case 'ru':
+      return 'ru-RU';
+    case 'id':
+      return 'id-ID';
     default:
       return 'en-US';
   }

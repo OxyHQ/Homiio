@@ -1,5 +1,6 @@
 /**
- * Copy missing keys from en.json into es/ca-ES/it (English placeholder for manual translation).
+ * Copy missing keys from en.json into every shipped locale (English placeholder
+ * for manual translation).
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -44,7 +45,10 @@ function enUsesFlatKey(en: JsonObject, path: string): boolean {
 const en = JSON.parse(readFileSync(join(LOCALES_DIR, 'en.json'), 'utf8')) as JsonObject;
 const enFlat = flatten(en);
 
-for (const localeFile of ['es.json', 'ca-ES.json', 'it.json']) {
+for (const localeFile of [
+  'es.json', 'ca-ES.json', 'it.json', 'zh-CN.json', 'hi-IN.json', 'fr-FR.json',
+  'ar.json', 'bn-BD.json', 'pt-BR.json', 'ru-RU.json', 'id-ID.json',
+]) {
   const target = JSON.parse(readFileSync(join(LOCALES_DIR, localeFile), 'utf8')) as JsonObject;
   const targetFlat = flatten(target);
   let copied = 0;

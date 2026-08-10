@@ -25,6 +25,14 @@ import enUS from '@/locales/en.json';
 import esES from '@/locales/es.json';
 import caES from '@/locales/ca-ES.json';
 import itIT from '@/locales/it.json';
+import zhCN from '@/locales/zh-CN.json';
+import hiIN from '@/locales/hi-IN.json';
+import frFR from '@/locales/fr-FR.json';
+import ar from '@/locales/ar.json';
+import bnBD from '@/locales/bn-BD.json';
+import ptBR from '@/locales/pt-BR.json';
+import ruRU from '@/locales/ru-RU.json';
+import idID from '@/locales/id-ID.json';
 import { MenuProvider } from 'react-native-popup-menu';
 
 import AppSplashScreen from '@/components/AppSplashScreen';
@@ -58,6 +66,14 @@ i18nInit({
     'es-ES': { translation: esES },
     'ca-ES': { translation: caES },
     'it-IT': { translation: itIT },
+    'zh-CN': { translation: zhCN },
+    'hi-IN': { translation: hiIN },
+    'fr-FR': { translation: frFR },
+    ar: { translation: ar },
+    'bn-BD': { translation: bnBD },
+    'pt-BR': { translation: ptBR },
+    'ru-RU': { translation: ruRU },
+    'id-ID': { translation: idID },
   },
   lng: 'en-US',
   fallbackLng: 'en-US',
