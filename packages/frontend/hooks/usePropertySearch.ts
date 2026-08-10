@@ -20,8 +20,16 @@
  */
 import { type InfiniteData, type UseInfiniteQueryResult } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { OfferingType, type Property } from '@homiio/shared-types';
-import type { SearchBounds, SearchQuery } from '@/components/search/types';
+import {
+  OfferingType,
+  locationKey,
+  type GeoBounds,
+  type GeoPoint,
+  type LocationSelection,
+  type Property,
+  type SingleLocationSelection,
+} from '@homiio/shared-types';
+import type { SearchQuery } from '@/components/search/types';
 import {
   PROPERTY_LIST_PAGE_SIZE,
   useInfinitePropertyList,
@@ -54,11 +62,11 @@ export interface PropertySearchPage {
 }
 
 /**
- * Translate a {@link SearchBounds} into the four corner params the endpoint
+ * Translate a {@link GeoBounds} into the four corner params the endpoint
  * expects. Returns the bbox-rounded values (3dp) to keep query keys stable
  * across sub-metre map jitter.
  */
-function boundsToParams(bounds: SearchBounds): Record<string, number> {
+function boundsToParams(bounds: GeoBounds): Record<string, number> {
   const round = (n: number): number => Math.round(n * 1000) / 1000;
   return {
     swLat: round(bounds.south),
@@ -66,6 +74,171 @@ function boundsToParams(bounds: SearchBounds): Record<string, number> {
     neLat: round(bounds.north),
     neLng: round(bounds.east),
   };
+}
+
+/**
+ * The geographic params for a committed selection — ONE shape per selection,
+ * never two at once.
+ *
+ * The endpoint refuses a box AND a centre+radius in the same request
+ * (`INVALID_LOCATION`), which is the server half of the same rule the atomic
+ * selection enforces on the client: a query has at most one authoritative
+ * geographic scope. Because the selection is a discriminated union, "emit the
+ * box and also the centre" is not something this function can express.
+ *
+ * A `place` prefers its BOUNDS over its centre when it has them — a city is an
+ * area, and framing it by a radius around its centroid is a different question
+ * with a different answer. `homiio`-sourced places go out as a canonical id, so
+ * two cities named Barcelona stay two different requests.
+ *
+ * **`null` means "this selection cannot be scoped", and it is NOT the same as
+ * `{}`.** A homiio COUNTRY has no id param on this endpoint (`city`, `state`
+ * and `neighborhood` are the three it takes), `precision: 'area'` means it
+ * carries no centre, and its record may carry no bounds either — so there is
+ * genuinely nothing to send. Returning `{}` there would run the query with no
+ * geographic filter at all and answer globally under the country's name, which
+ * is the same bug as substituting `(0,0)`, only quieter: `(0,0)` returns a
+ * suspicious zero, an unscoped query returns a confident everything. The caller
+ * refuses to run instead — see `usePropertySearch`.
+ */
+function locationParams(selection: LocationSelection): Record<string, string | number> | null {
+  switch (selection.kind) {
+    case 'current_location':
+      // Full precision in the REQUEST — this is the one place the device fix
+      // legitimately goes. It reaches no key, no URL and no log; `locationKey`
+      // cannot emit it and `serializeLocationToken` writes `here.<radius>`.
+      return {
+        lat: selection.center.latitude,
+        lng: selection.center.longitude,
+        radius: selection.radiusMeters,
+      };
+
+    case 'place': {
+      if (selection.source.kind === 'homiio') {
+        const { entity, id } = selection.source;
+        // An id scopes the search on its own and needs NO geometry, which is
+        // what makes a coordinate-less city a legitimate selection rather than
+        // a broken one: Homiio knows it by id, the query filters by that id,
+        // and only the MAP has nothing to frame from. Dropping such a city
+        // would reintroduce the homonym the disambiguation list exists to let
+        // somebody reach.
+        if (entity === 'city') return { city: id };
+        if (entity === 'region') return { state: id };
+        if (entity === 'neighborhood') return { neighborhood: id };
+      }
+      // An external candidate carries no id this backend can resolve, so it is
+      // scoped by the geometry it inlined — which is why an `external` place is
+      // required to carry its own bounds/centre in the first place.
+      return geometryParams(selection);
+    }
+
+    case 'address_candidate':
+      return geometryParams(selection);
+
+    case 'map_bounds':
+    case 'polygon':
+      return boundsToParams(selection.bounds);
+
+    case 'multi_area': {
+      // The endpoint takes ONE scope. Rather than silently querying the first
+      // area — the "quietly choose one" behaviour this contract exists to
+      // remove — a multi-area selection is scoped by the box that covers all of
+      // them, which is a superset and therefore honest about over-returning
+      // rather than wrong about under-returning.
+      const cover = coveringBounds(selection.areas);
+      return cover ? boundsToParams(cover) : null;
+    }
+
+    default: {
+      const exhaustive: never = selection;
+      return exhaustive;
+    }
+  }
+}
+
+/** A zero-area box at a point — the identity element for a cover. */
+function pointBox(center: GeoPoint): GeoBounds {
+  return {
+    west: center.longitude,
+    east: center.longitude,
+    south: center.latitude,
+    north: center.latitude,
+  };
+}
+
+/**
+ * The geographic params for a selection scoped only by its own geometry.
+ *
+ * A BOX is preferred over a point: an area framed by a radius around a centre
+ * is a different question with a different answer. A place with NEITHER yields
+ * no geographic params at all, and the comment matters more than the code —
+ * that case is refused upstream rather than handled here. `resolveLocationRef`
+ * resolves only Homiio cities, which take the id branch above and never reach
+ * this function, so a geometry-less place arriving here would mean a selection
+ * was committed that no resolver produces. Emitting nothing is the least-wrong
+ * residual, not a supported path.
+ */
+function geometryParams(selection: {
+  bounds?: GeoBounds;
+  center?: GeoPoint;
+}): Record<string, string | number> | null {
+  if (selection.bounds) return boundsToParams(selection.bounds);
+  if (selection.center) {
+    return { lat: selection.center.latitude, lng: selection.center.longitude };
+  }
+  return null;
+}
+
+/**
+ * The smallest box containing every area's own box or centre.
+ *
+ * An area with no geometry contributes NOTHING rather than a `(0,0)` corner —
+ * `PlaceGeometry` now says a place may legitimately have no point, and folding
+ * a missing one in as the origin would drag the cover across the Atlantic and
+ * quietly widen the search to half the planet.
+ */
+function coveringBounds(areas: readonly SingleLocationSelection[]): GeoBounds | null {
+  /**
+   * The area an entry covers, or `null` when it carries no geometry.
+   *
+   * Switched on `kind` rather than probed with `in`, because
+   * `current_location` has no `bounds` FIELD at all while `place` has an
+   * optional one — a property test cannot tell "this kind has no such field"
+   * from "this instance left it out", and only one of those is a real absence.
+   */
+  function boxOf(area: SingleLocationSelection): GeoBounds | null {
+    switch (area.kind) {
+      case 'polygon':
+      case 'map_bounds':
+        return area.bounds;
+      case 'current_location':
+        return pointBox(area.center);
+      case 'place':
+      case 'address_candidate':
+        return area.bounds ?? (area.center ? pointBox(area.center) : null);
+    }
+  }
+
+  let west = 180;
+  let south = 90;
+  let east = -180;
+  let north = -90;
+  let contributors = 0;
+
+  for (const area of areas) {
+    const box = boxOf(area);
+    if (!box) continue;
+
+    contributors += 1;
+    west = Math.min(west, box.west);
+    south = Math.min(south, box.south);
+    east = Math.max(east, box.east);
+    north = Math.max(north, box.north);
+  }
+
+  // No area brought any geometry, so there is no cover. Returning the initial
+  // sentinels would emit an INVERTED box spanning the world.
+  return contributors > 0 ? { west, south, east, north } : null;
 }
 
 /**
@@ -87,16 +260,21 @@ export function buildSearchParams(query: SearchQuery): Record<string, string | n
     sortOrder: query.sortOrder,
   };
 
-  const location = query.location;
-  if (location?.bounds) {
-    Object.assign(params, boundsToParams(location.bounds));
-  } else if (location?.center) {
-    const [lng, lat] = location.center;
-    params.lat = lat;
-    params.lng = lng;
+  if (query.location) {
+    // `null` is handled by `unscopeableLocation` below and by the hook's
+    // `enabled` gate; the params object simply carries no geographic filter,
+    // and nothing is allowed to SEND it in that state.
+    Object.assign(params, locationParams(query.location) ?? {});
   }
-  if (location?.label) {
-    params.q = location.label;
+  // `q` carries free text and NOTHING else. It used to be assigned
+  // `location.label` unconditionally whenever a label existed, IN ADDITION to
+  // the geographic params — so a request said "listings matching the word
+  // Barcelona, physically inside this Madrid rectangle", whose honest answer is
+  // zero. Zero is the plausible-looking failure, which is why it went unnoticed
+  // and why `__tests__/buildSearchParams.test.ts` asserts on the PARAMS rather
+  // than on a result count.
+  if (query.queryText) {
+    params.q = query.queryText;
   }
 
   if (query.propertyTypes.length > 0) {
@@ -148,12 +326,66 @@ export function buildSearchParams(query: SearchQuery): Record<string, string | n
 }
 
 /**
- * Stable query key for the active search. Excludes `page` (the infinite query
- * owns paging) so all pages of one search share a cache entry.
+ * Whether a committed location cannot be expressed as a scope this endpoint
+ * accepts.
+ *
+ * Exported so a screen can say "we cannot search that area yet" rather than
+ * rendering a global feed under a place's name. Today the only shape that
+ * reaches it is a homiio place that is neither a city, a region nor a
+ * neighborhood — a COUNTRY — carrying no geometry.
+ */
+export function isUnscopeableLocation(location: SearchQuery['location']): boolean {
+  return location !== null && locationParams(location) === null;
+}
+
+/**
+ * Stable query key for the active search.
+ *
+ * Excludes `page`/`limit` (the infinite query owns paging) so all pages of one
+ * search share a cache entry, and — the part that matters — routes the
+ * geographic dimension through `locationKey` instead of embedding the built
+ * params verbatim.
+ *
+ * The old key WAS the param object, full-precision `lat`/`lng` included, which
+ * put the user's device position into React Query's cache keys and into
+ * anything that ever serialises them (devtools, a persister, an error report).
+ * `locationKey` is the single function allowed to turn a selection into a
+ * string for a key, and its `current_location` branch has no coordinate to
+ * emit — so the rule is enforced by that function's shape rather than by
+ * everyone remembering it here.
+ *
+ * It also fixes a cache correctness bug in the same move: two different cities
+ * called Barcelona produced the same key whenever their bounding boxes rounded
+ * alike, and a jittering map viewport produced a NEW key on every frame.
+ * `locationKey` gives distinct ids distinct keys and grids a box to 3 dp.
  */
 export function searchQueryKey(query: SearchQuery): readonly unknown[] {
-  const { page: _page, limit: _limit, ...rest } = buildSearchParams(query);
-  return ['propertySearch', rest];
+  return buildSearchQueryKey(buildSearchParams(query), query.location);
+}
+
+/** Shared by {@link searchQueryKey} and the hook, so the two cannot drift. */
+function buildSearchQueryKey(
+  params: Record<string, string | number>,
+  location: SearchQuery['location'],
+): readonly unknown[] {
+  const {
+    page: _page,
+    limit: _limit,
+    // Every geographic param is replaced by `locationKey`. Dropping them here
+    // is what removes the coordinates; leaving one behind would reinstate the
+    // leak silently, since the key would still LOOK keyed by location.
+    lat: _lat,
+    lng: _lng,
+    radius: _radius,
+    swLat: _swLat,
+    swLng: _swLng,
+    neLat: _neLat,
+    neLng: _neLng,
+    city: _city,
+    state: _state,
+    ...rest
+  } = params;
+  return ['propertySearch', locationKey(location), rest];
 }
 
 /**
@@ -181,21 +413,26 @@ export function usePropertySearch(
   options: UsePropertySearchOptions = {},
 ): PropertySearchResult {
   const { enabled = true } = options;
+  // A location that cannot be scoped must not run. Letting it through would
+  // send a request with no geographic filter and render everything on earth
+  // under that place's name — the failure ADR 0002 §4.3 forbids, arrived at
+  // from the params side rather than the resolution side.
+  const unscopeable = isUnscopeableLocation(query.location);
   const baseParams = useMemo(() => buildSearchParams(query), [query]);
-  // Key excludes `page`/`limit` (the infinite query owns paging) so every page of
-  // one search shares a cache entry — the same shape `searchQueryKey` returns,
-  // but derived from the already-built `baseParams` so the params object is
-  // constructed once per query instead of a second time inside `searchQueryKey`.
-  const queryKey = useMemo(() => {
-    const { page: _page, limit: _limit, ...rest } = baseParams;
-    return ['propertySearch', rest] as const;
-  }, [baseParams]);
+  // Built from the already-constructed `baseParams` so the params object is not
+  // built twice per query, through the SAME helper `searchQueryKey` uses so the
+  // two cannot drift — a hook keyed differently from the exported key function
+  // is a cache that misses in one direction and collides in the other.
+  const queryKey = useMemo(
+    () => buildSearchQueryKey(baseParams, query.location),
+    [baseParams, query.location],
+  );
 
   return useInfinitePropertyList<SearchResponse, PropertySearchPage>({
     queryKey,
     endpoint: SEARCH_ENDPOINT,
     baseParams,
-    enabled,
+    enabled: enabled && !unscopeable,
     mapResponse: (data, pageParam) => ({
       properties: data.data ?? [],
       page: data.page ?? pageParam,

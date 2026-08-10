@@ -12,8 +12,22 @@ interface CategoryFilterContext {
   offering?: OfferingType;
 }
 
-/** Radius (km) for the "Near you" home-category lens. */
-const NEAR_YOU_RADIUS_KM = 25;
+/**
+ * Radius for the "Near you" home-category lens, in **METRES**.
+ *
+ * It was `NEAR_YOU_RADIUS_KM = 25` and was sent verbatim as `radius`, which
+ * every consumer of that parameter reads as metres (`PropertyFilters.radius`
+ * now says so). So the lens asked for listings within 25 METRES of the device
+ * and got a page ranked by an "inside 25 m" flag that is false for every
+ * listing there has ever been. Nothing failed; the feed just stopped being
+ * "near you" while still being labelled it.
+ *
+ * Correcting the unit fixes the RANKING. It does not make the lens filter:
+ * `GET /api/properties`, which the home feed calls, builds no spatial predicate
+ * at all and uses this only as a tiebreak. Closing that is ADR 0002 §14.3,
+ * deliberately left to #353 rather than widened into here.
+ */
+const NEAR_YOU_RADIUS_METERS = 25_000;
 
 /** Monthly rent floor for the merchandised "Luxury" long-term bucket. */
 const LUXURY_MIN_RENT = 2500;
@@ -56,7 +70,7 @@ export function getCategoryFilters(
       const loc = context.userLocation;
       if (!loc) return {};
       // Consumers must gate the feed when location is missing — see `isNearYouBlocked`.
-      return { lat: loc.latitude, lng: loc.longitude, radius: NEAR_YOU_RADIUS_KM };
+      return { lat: loc.latitude, lng: loc.longitude, radius: NEAR_YOU_RADIUS_METERS };
     }
     case 'beachfront':
       return { amenities: ['waterfront_view'] };

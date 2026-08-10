@@ -484,6 +484,51 @@ export function normalizeLongitude(value: number): number {
  * A degenerate box (`south === north`, or `west === east`) is accepted: it is a
  * zero-area query, not a malformed one.
  */
+/**
+ * Whether a box crosses the antimeridian — i.e. `west > east`.
+ *
+ * The whole reason {@link GeoBounds} permits that ordering, exported so callers
+ * stop re-deriving it and disagreeing about it.
+ */
+export function crossesAntimeridian(bounds: GeoBounds): boolean {
+  return bounds.west > bounds.east;
+}
+
+/**
+ * The representative point of a box, CORRECT ACROSS THE ANTIMERIDIAN.
+ *
+ * THE BUG THIS CLOSES, MEASURED. `(west + east) / 2` is right for every box
+ * that does not wrap and catastrophically wrong for one that does: the Pacific
+ * strip `west 170, east -170` yields longitude **0**, a point in the Gulf of
+ * Guinea 13,000 km from the box, when the true midpoint is ±180. It fails
+ * silently and in the worst direction — the SEARCH is scoped correctly, because
+ * PostGIS reads the wrap properly, so a shared `bbox.170,-20,-170,-16` link
+ * returns the right Fijian listings with the map camera off West Africa and no
+ * pin in view. A request that succeeded, showing the wrong place.
+ *
+ * It is also the exact arithmetic that motivated `map_bounds` keeping a
+ * REQUIRED centre: the field exists so a real centre can be supplied, and every
+ * site that supplied one computed it naively. Four production sites did, across
+ * both packages, which is why this lives here rather than in any of them.
+ *
+ * The method walks EAST from `west` by half the eastward span, so a wrapping
+ * box is measured the short way round rather than through the 340 degrees it
+ * does not cover. A non-wrapping box is untouched — verified identical to the
+ * naive form for `2.05→2.23`, `-3.75→-3.65` and `-10→40` — which is what makes
+ * adopting it everywhere safe rather than a behaviour change.
+ */
+export function boundsCenter(bounds: GeoBounds): GeoPoint {
+  const eastwardSpan = crossesAntimeridian(bounds)
+    ? 360 - bounds.west + bounds.east
+    : bounds.east - bounds.west;
+  return {
+    longitude: normalizeLongitude(bounds.west + eastwardSpan / 2),
+    // Latitude never wraps: `south > north` is an ERROR rather than a
+    // convention, so the naive midpoint is correct here and always was.
+    latitude: (bounds.south + bounds.north) / 2,
+  };
+}
+
 export function isValidBounds(bounds: GeoBounds): boolean {
   if (!isValidLatitude(bounds.south) || !isValidLatitude(bounds.north)) return false;
   if (!isValidLongitude(bounds.west) || !isValidLongitude(bounds.east)) return false;

@@ -6,10 +6,18 @@ import { useTranslation } from 'react-i18next';
 import { colors } from '@/styles/colors';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
 import type { SavedSearchFilters } from '@/store/savedSearchesStore';
+import type { LocationSelection } from '@homiio/shared-types';
 
 interface SaveSearchBottomSheetProps {
     defaultName?: string;
+    /** The FREE-TEXT dimension, which is usually empty for a place search. */
     query: string;
+    /**
+     * The geographic scope, stored alongside the row so reopening it resolves
+     * by IDENTITY rather than re-geocoding its own name. A legacy row has none,
+     * which is what the lazy confirmed migration keys on.
+     */
+    location?: LocationSelection | null;
     filters?: SavedSearchFilters;
     onClose: () => void;
     onSaved?: () => void;
@@ -18,6 +26,7 @@ interface SaveSearchBottomSheetProps {
 export const SaveSearchBottomSheet: React.FC<SaveSearchBottomSheetProps> = ({
     defaultName,
     query,
+    location = null,
     filters,
     onClose,
     onSaved,
@@ -31,10 +40,15 @@ export const SaveSearchBottomSheet: React.FC<SaveSearchBottomSheetProps> = ({
 
     const handleSave = useCallback(async () => {
         if (!isAuthenticated) return;
-        if (!name.trim() || !query.trim()) return;
+        // A name, and SOMETHING to search: a place, free text, or both. This
+        // used to require non-empty `query`, which was the location's label —
+        // so once `query` became the free-text dimension (usually empty for a
+        // place search) that guard would have silently refused every save of a
+        // city, with no message, by returning early.
+        if (!name.trim() || (!location && !query.trim())) return;
         try {
             setSubmitting(true);
-            const ok = await saveSearch(name.trim(), query.trim(), filters, notificationsEnabled);
+            const ok = await saveSearch(name.trim(), query.trim(), filters, notificationsEnabled, location);
             if (ok) {
                 onSaved?.();
                 onClose();
@@ -42,7 +56,7 @@ export const SaveSearchBottomSheet: React.FC<SaveSearchBottomSheetProps> = ({
         } finally {
             setSubmitting(false);
         }
-    }, [isAuthenticated, name, query, filters, notificationsEnabled, saveSearch, onClose, onSaved]);
+    }, [isAuthenticated, name, query, location, filters, notificationsEnabled, saveSearch, onClose, onSaved]);
 
     return (
         <View style={styles.container}>

@@ -1,286 +1,450 @@
 /**
- * Explore route — thin shell around the Airbnb-2026 results surface.
+ * Explore route — the results surface, and the ONE writer of a search URL.
  *
- * The screen owns no map/list/filter logic of its own: it wires the shared
- * {@link SearchResultsView} to the active-search store and the auth signal, and
- * hosts the expanding {@link SearchPanel} used to edit the live query.
+ * The screen owns no map/list/filter logic of its own. What it does own is the
+ * source-of-truth loop, and that is a real change rather than a refactor:
  *
- *  - `query` is the single source of truth, read from `useSearchQueryStore`.
- *  - `onQueryChange` shallow-merges filter/sort/bounds patches into the store.
- *  - `onEditSearch` reopens the panel seeded with the current query; committing
- *    it replaces the store query in place (no navigation — we're already here).
- *  - Save-search is gated on the Oxy auth signal; unauthenticated users are
- *    routed to `/profile` to sign in.
+ * ```
+ * URL params ──(parseSearchParams)──> query ──> React Query key ──> API
+ *      ▲                                │
+ *      └──────(commitQuery, the only writer)───┘
+ * ```
  *
- * Inbound deep links are mapped onto the store (re-applied when they change):
- *  - `?offering=long_term_rent|short_term_rent|sale|exchange` switches the offering.
- *  - `?city=<id|name|slug>` resolves through `GET /api/cities/lookup`, which
- *    answers `resolved` | `ambiguous` | `not_found` and never picks between two
- *    cities of the same name (#295). Only `resolved` applies a location.
- *  - `?query=<text>` geocodes to a located "Where" via the keyless Nominatim
- *    geocoder (see `useAddressSearch`).
+ * The URL used to be a write-once SEED: `?city`, `?query` and `?offering` were
+ * read on mount and pushed into Zustand, and nothing ever wrote back, so a
+ * search could not be shared, bookmarked, reloaded or reached with Back. Now the
+ * URL holds the committed query and the store is its cache. `commitQuery` is the
+ * only path that writes either, which is what stops the two disagreeing — and it
+ * runs on native too, where expo-router carries route params just as it does on
+ * web, because a store-only native path is exactly how two platforms drift.
+ *
+ * ## A location that fails to resolve NEVER runs a query
+ *
+ * Every resolution outcome is a `LocationResolution`, and only `resolved`
+ * reaches the store. The previous code swallowed a failed city lookup with a
+ * comment noting that results would "fall back to the default published feed" —
+ * so asking for a place Homiio could not find silently produced a global list,
+ * under a heading naming the place. `failed` renders an error naming the reason
+ * and issues no request at all.
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useOxy } from '@oxyhq/services';
+import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 
-import { OfferingType, PropertyType, type Property } from '@homiio/shared-types';
+import {
+  OfferingType,
+  type LocationResolution,
+  type LocationSelection,
+  type LocationTokenFailure,
+  type Property,
+} from '@homiio/shared-types';
 
 import { SearchResultsView } from '@/components/search/SearchResultsView';
 import { SearchPanel } from '@/components/search/SearchPanel';
-import type {
-  SearchDateRange,
-  SearchLocation,
-  SearchQuery,
-} from '@/components/search/types';
+import { ErrorState } from '@/components/ui/ErrorState';
+import type { SearchQuery } from '@/components/search/types';
 import { useSearchMode } from '@/context/SearchModeContext';
-import { searchPlaces } from '@/services/geoService';
-import { cityService } from '@/services/cityService';
-import { DEFAULT_SEARCH_QUERY, useSearchQueryStore } from '@/store/searchQueryStore';
+import { useUserCoordinates } from '@/hooks/useHomeFeed';
+import {
+  DEFAULT_SEARCH_QUERY,
+  useSearchQueryStore,
+  type SearchFilterPatch,
+} from '@/store/searchQueryStore';
+import {
+  buildSearchParamsForUrl,
+  isNavigationChange,
+  parseSearchParams,
+  readParam,
+  type ParsedLocation,
+} from '@/utils/searchUrl';
+import { resolveLegacyCityParam, resolveLocationRef } from '@/utils/resolveLocationRef';
 import { onApplySavedSearch, type SavedSearchPayload } from '@/utils/searchEvents';
 
-/** Parse a single optional string route param (expo-router unions string | string[]). */
-function readParam(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return typeof value === 'string' && value.length > 0 ? value : undefined;
-}
-
-/** All valid {@link OfferingType} values, for narrowing offering params/payloads. */
-const OFFERING_TYPES = new Set<string>(Object.values(OfferingType));
-
-/** Coerce a string onto the {@link OfferingType} enum, or undefined. */
-function parseOffering(value: string | undefined): OfferingType | undefined {
-  return value !== undefined && OFFERING_TYPES.has(value)
-    ? (value as OfferingType)
-    : undefined;
-}
-
-/** All valid {@link PropertyType} values, for narrowing saved-search payloads. */
-const PROPERTY_TYPES = new Set<string>(Object.values(PropertyType));
-
-const readNumber = (value: unknown): number | undefined =>
-  typeof value === 'number' && Number.isFinite(value) ? value : undefined;
-
-const readString = (value: unknown): string | undefined =>
-  typeof value === 'string' && value.length > 0 ? value : undefined;
-
-const readStringArray = (value: unknown): string[] =>
-  Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
-
-const readPropertyTypes = (value: unknown): PropertyType[] => {
-  const raw = Array.isArray(value) ? value : value !== undefined ? [value] : [];
-  return raw.filter(
-    (v): v is PropertyType => typeof v === 'string' && PROPERTY_TYPES.has(v),
-  );
-};
-
-const readDates = (filters: Record<string, unknown>): SearchDateRange | undefined => {
-  const dates = filters.dates;
-  if (dates && typeof dates === 'object') {
-    const { start, end } = dates as { start?: unknown; end?: unknown };
-    if (typeof start === 'string' && typeof end === 'string') return { start, end };
-  }
-  // Legacy flat shape used `checkIn`/`checkOut`.
-  const start = readString(filters.checkIn);
-  const end = readString(filters.checkOut);
-  return start && end ? { start, end } : undefined;
-};
-
-/**
- * Reconstruct a {@link SearchQuery} from a saved-search payload. Tolerates both
- * the current shape (a flattened {@link SearchQuery}, written by
- * `SaveSearchBottomSheet`) and the legacy flat shape (`minPrice`/`maxPrice`/
- * `type`). The `location` is attached separately once the label is geocoded.
- */
+/** Reconstruct the non-geographic half of a query from a saved-search payload. */
 function payloadToQuery(payload: SavedSearchPayload): SearchQuery {
   const filters = payload.filters ?? {};
+  const readNumber = (value: unknown): number | undefined =>
+    typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+  const readString = (value: unknown): string | undefined =>
+    typeof value === 'string' && value.length > 0 ? value : undefined;
+
+  const offeringRaw = readString(filters.offering);
   const offering =
-    parseOffering(readString(filters.offering)) ?? OfferingType.LONG_TERM_RENT;
-  const propertyTypes = filters.propertyTypes
-    ? readPropertyTypes(filters.propertyTypes)
-    : readPropertyTypes(filters.type);
-  const priceMin = readNumber(filters.priceMin) ?? readNumber(filters.minPrice);
-  const priceMax = readNumber(filters.priceMax) ?? readNumber(filters.maxPrice);
+    offeringRaw !== undefined && (Object.values(OfferingType) as string[]).includes(offeringRaw)
+      ? (offeringRaw as OfferingType)
+      : OfferingType.LONG_TERM_RENT;
+
+  const propertyTypesRaw = filters.propertyTypes ?? filters.type;
+  const propertyTypes = Array.isArray(propertyTypesRaw)
+    ? propertyTypesRaw.filter((v): v is SearchQuery['propertyTypes'][number] => typeof v === 'string')
+    : [];
+
+  const dates = filters.dates;
+  const dateRange =
+    dates && typeof dates === 'object'
+      ? (dates as { start?: unknown; end?: unknown })
+      : { start: filters.checkIn, end: filters.checkOut };
 
   return {
     ...DEFAULT_SEARCH_QUERY,
     offering,
     propertyTypes,
-    priceMin,
-    priceMax,
+    priceMin: readNumber(filters.priceMin) ?? readNumber(filters.minPrice),
+    priceMax: readNumber(filters.priceMax) ?? readNumber(filters.maxPrice),
     bedrooms: readNumber(filters.bedrooms),
     bathrooms: readNumber(filters.bathrooms),
-    amenities: readStringArray(filters.amenities),
+    amenities: Array.isArray(filters.amenities)
+      ? filters.amenities.filter((a): a is string => typeof a === 'string')
+      : [],
     guests: readNumber(filters.guests),
-    dates: offering === OfferingType.SHORT_TERM_RENT ? readDates(filters) : undefined,
-  };
-}
-
-/**
- * Geocode a free-text place label into a {@link SearchLocation}, or null.
- *
- * Goes through Homiio's geo gateway (#351); the device no longer talks to a
- * geocoder. Two consequences worth keeping when this moves to the location
- * contract of #352:
- *
- *  - the label is PRE-SPLIT by the gateway (`label.primary` / `label.secondary`)
- *    rather than by `display_name.split(',')`, which assumed a Western
- *    comma-separated ordering and mangled every script that does not use one
- *    (ADR 0002 §9.4);
- *  - a gateway FAILURE propagates instead of becoming `null`. `null` here means
- *    "no such place" and the caller is entitled to treat it that way, so
- *    swallowing a timeout into it is what turns an outage into a global feed.
- */
-async function geocodeLabel(label: string): Promise<SearchLocation | null> {
-  const { candidates } = await searchPlaces({ q: label, limit: 1 });
-  const [match] = candidates;
-  // An `area` place carries an extent and no centre — `SearchLocation` needs
-  // one, so such a candidate is "not resolvable to a location" rather than
-  // something to invent a midpoint for.
-  if (!match?.center) return null;
-  return {
-    label: [match.label.primary, match.label.secondary].filter(Boolean).join(', '),
-    shortLabel: match.label.primary,
-    center: [match.center.longitude, match.center.latitude],
-    ...(match.bounds ? { bounds: match.bounds } : {}),
+    dates:
+      offering === OfferingType.SHORT_TERM_RENT &&
+      typeof dateRange.start === 'string' &&
+      typeof dateRange.end === 'string'
+        ? { start: dateRange.start, end: dateRange.end }
+        : undefined,
+    // The free-text dimension, which is what `query` now means on a saved row.
+    // A LEGACY row holds the place LABEL here, which is why a legacy row is
+    // resolved through the confirmation path rather than dropped in as text.
+    queryText: readString(payload.query) ?? null,
   };
 }
 
 export default function SearchScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{
-    query?: string | string[];
-    city?: string | string[];
-    offering?: string | string[];
-  }>();
+  const { t } = useTranslation();
+  const params = useLocalSearchParams();
   const { isAuthenticated } = useOxy();
   const { setIsMapMode } = useSearchMode();
+  const { data: deviceFix } = useUserCoordinates();
 
   const query = useSearchQueryStore((s) => s.query);
-  const patchQuery = useSearchQueryStore((s) => s.patchQuery);
-
   const [panelOpen, setPanelOpen] = useState(false);
+  /**
+   * A saved search whose place could not be read, awaiting the user's answer.
+   *
+   * Held rather than silently dropped: the row is not runnable, and the person
+   * who saved it is the only one who can say which place they meant.
+   */
+  const [pendingConfirmation, setPendingConfirmation] = useState<
+    { name: string; label: string } | null
+  >(null);
+  /**
+   * A committed location the URL grammar cannot express, if one was attempted.
+   *
+   * Held so the refusal is visible. The alternative — navigating with `loc`
+   * absent — produces a URL that looks fine and reopens as a global search.
+   */
+  const [unshareableLocation, setUnshareableLocation] =
+    useState<LocationTokenFailure | null>(null);
 
-  // The results surface drives the shell's "map mode" (suppresses the right-bar
-  // widget rail the rest of the app shows). Mount-scoped, mirroring the prior
-  // screen's behaviour.
+  // Parsing is pure, so it is derived rather than an effect.
+  //
+  // `useLocalSearchParams()` returns a NEW OBJECT on every render, so this memo
+  // recomputes every render and `parsed.query` has a fresh identity every time.
+  // That is fine for rendering and lethal for an effect dependency — see the
+  // guard in the store-sync effect below, which is what stops it.
+  const parsed = useMemo(() => parseSearchParams(params), [params]);
+  const locationRequest = parsed.location;
+  const requestKey = locationRequestKey(locationRequest);
+
+  /**
+   * Resolution is a QUERY, not an effect with a `setState` in it.
+   *
+   * The obvious shape here is `useEffect` + `setResolution('resolving')` +
+   * an async call, and it is wrong twice: the synchronous `setState` in the
+   * effect body is a cascading render on every URL change, and hand-rolling the
+   * in-flight and failure bookkeeping duplicates what React Query already does
+   * correctly — including not racing two resolutions when the URL changes
+   * mid-flight, which is exactly the window in which a stale location could
+   * otherwise be committed.
+   *
+   * Keyed on the TOKEN so it re-resolves when the location changes and NOT when
+   * an unrelated filter does.
+   */
+  const needsResolving =
+    locationRequest.kind === 'ref' || locationRequest.kind === 'legacy_city';
+
+  const resolutionQuery = useQuery({
+    queryKey: ['locationResolution', requestKey],
+    queryFn: (): Promise<LocationResolution> =>
+      locationRequest.kind === 'ref'
+        ? resolveLocationRef(locationRequest.ref, deviceFix ?? null)
+        : locationRequest.kind === 'legacy_city'
+          ? resolveLegacyCityParam(locationRequest.value)
+          : Promise.resolve({ status: 'idle' }),
+    enabled: needsResolving,
+    // A failed resolution is NEVER cached (ADR §15) — asking again is cheap and
+    // a cached failure would outlive the network problem that caused it.
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+  });
+
+  /**
+   * The resolution, derived from the URL and the query — no local state at all.
+   *
+   * An unparseable `loc` is `failed`, not `idle`. That distinction is the whole
+   * of decision 5 at this layer: a location that was requested and lost must
+   * never widen into a global feed, so there is no branch here that turns a
+   * broken token into "no location".
+   */
+  const resolution: LocationResolution = useMemo(() => {
+    if (locationRequest.kind === 'none') return { status: 'idle' };
+    if (locationRequest.kind === 'invalid') return { status: 'failed', reason: 'unsupported' };
+    if (resolutionQuery.isPending || resolutionQuery.isFetching) return { status: 'resolving' };
+    if (resolutionQuery.isError) return { status: 'failed', reason: 'network' };
+    return resolutionQuery.data ?? { status: 'resolving' };
+  }, [locationRequest, resolutionQuery.isPending, resolutionQuery.isFetching, resolutionQuery.isError, resolutionQuery.data]);
+
+  /**
+   * Sync the derived query into the store.
+   *
+   * This writes an EXTERNAL store (zustand), not this component's state, so it
+   * is the "update external systems with the latest state from React" case an
+   * effect is actually for. Only a `resolved` location is ever committed — the
+   * `resolving` and `failed` branches deliberately leave the previous query
+   * alone rather than clearing it, because clearing it is how a failure becomes
+   * a global feed.
+   */
+  const resolvedSelection = resolution.status === 'resolved' ? resolution.selection : null;
+
   useEffect(() => {
-    setIsMapMode(true);
-    return () => setIsMapMode(false);
-  }, [setIsMapMode]);
+    // Nothing to commit until a requested location has actually resolved.
+    // Writing `null` here instead would be the "a failure becomes a global
+    // feed" bug, one layer in.
+    if (locationRequest.kind !== 'none' && !resolvedSelection) return;
 
-  // Hydrate the active query from inbound deep-link params. This is a genuine
-  // external side effect (URL → store, with async geocoding/city lookup), so an
-  // effect is the right primitive. Keyed on the primitive params so it re-runs
-  // only when a deep link actually changes — never on the user's own in-panel
-  // edits (those don't touch the URL), so it can't clobber them.
-  const queryParam = readParam(params.query);
-  const cityParam = readParam(params.city);
-  const offeringParam = readParam(params.offering);
+    const next: SearchQuery = { ...parsed.query, location: resolvedSelection };
 
+    // WRITE ONLY ON A REAL CHANGE.
+    //
+    // Not an optimisation — without it this is an infinite render loop, and it
+    // was one: `useLocalSearchParams()` hands back a new object every render,
+    // so `parsed.query` is a new identity every render, so this effect fires
+    // every render, so `replaceSearch` re-renders, forever. It surfaced as
+    // React error #185 and an error boundary on `/explore`, caught by the
+    // cold-start check rather than by tsc or jest, neither of which can see it.
+    //
+    // Zustand's `set` notifies every subscriber whether or not the value
+    // changed, so identity alone cannot break the cycle — the comparison has to
+    // be on the VALUE.
+    const current = useSearchQueryStore.getState().query;
+    if (JSON.stringify(current) === JSON.stringify(next)) return;
+
+    useSearchQueryStore.getState().replaceSearch(next);
+  }, [locationRequest.kind, parsed.query, resolvedSelection]);
+
+  /**
+   * Normalise a legacy URL once its single match is known.
+   *
+   * `setParams`, not `push`: the user did not navigate, the address bar is
+   * being corrected under them. Several matches never reach here — they resolve
+   * to a failure and open the picker instead of auto-picking one.
+   */
   useEffect(() => {
-    const offering = parseOffering(offeringParam);
-    if (offering) {
-      useSearchQueryStore.getState().setOffering(offering);
-    }
-    if (!cityParam && !queryParam) return;
+    if (!parsed.needsNormalising || !resolvedSelection) return;
+    const { params: normalised } = buildSearchParamsForUrl({
+      ...parsed.query,
+      location: resolvedSelection,
+    });
+    // Same guard, same reason: `setParams` re-renders, and this effect's deps
+    // change on every render. Once the URL carries no legacy param,
+    // `needsNormalising` is false and this stops firing at all — but it must
+    // not loop during the one render where it is still true.
+    if (normalised.loc === readParam(params.loc)) return;
+    router.setParams(normalised);
+  }, [parsed.needsNormalising, parsed.query, resolvedSelection, router, params.loc]);
 
-    let cancelled = false;
-    const applyLocation = (location: SearchLocation) => {
-      if (cancelled) return;
-      useSearchQueryStore.getState().setLocation(location);
-    };
+  /**
+   * The ONE writer. Serialises the query to `loc`/`q`/filters and navigates;
+   * the store then updates from the resulting params, so there is no path that
+   * writes the store without writing the URL.
+   *
+   * A location change is a `push` — somewhere the user navigated to and can
+   * leave with Back. A filter or sort tweak is a `replace`, because burying the
+   * previous search under twenty history entries makes Back mean nothing.
+   */
+  const commitQuery = useCallback(
+    (next: SearchQuery) => {
+      const { params: urlParams, droppedLocation } = buildSearchParamsForUrl(next);
 
-    (async () => {
-      try {
-        if (cityParam) {
-          // #295: the lookup answers `resolved` | `ambiguous` | `not_found` and
-          // never picks between homonyms. A location is applied ONLY on
-          // `resolved`; an ambiguous `?city=barcelona` leaves the selection
-          // untouched rather than silently opening a different Barcelona than it
-          // did last year. Rendering a picker for that list is #352's half of
-          // this — see the note in the #295 PR body.
-          const result = await cityService.lookupCity(cityParam);
-          const place = result.status === 'resolved' ? result.place : undefined;
-          const center = place?.center;
-          if (place && center) {
-            // The label arrives PRE-SPLIT (`primary` + `secondary`), so nothing
-            // here re-derives one by joining or splitting on commas — the
-            // assumption that mangles every script that does not order a place
-            // name that way (ADR §9.4).
-            applyLocation({
-              label: place.label.secondary
-                ? `${place.label.primary}, ${place.label.secondary}`
-                : place.label.primary,
-              shortLabel: place.label.primary,
-              center: [center.longitude, center.latitude],
-            });
-            return;
-          }
-          if (result.status === 'ambiguous') return;
-        }
-        if (queryParam) {
-          const location = await geocodeLabel(queryParam);
-          if (location) applyLocation(location);
-        }
-      } catch {
-        // Deep-link resolution is best-effort: the results fall back to the
-        // default published feed if the city/geocode lookup fails.
+      // A location the URL cannot carry must not be committed THROUGH the URL.
+      // Navigating anyway would write an address that reproduces a DIFFERENT
+      // search — the location silently absent, which `parseSearchParams` reads
+      // as "none requested" and answers globally. Refusing keeps the previous
+      // URL and says so, which is the honest failure for a shape §2.1 reserves.
+      if (droppedLocation) {
+        setUnshareableLocation(droppedLocation);
+        return;
       }
-    })();
+      setUnshareableLocation(null);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [cityParam, queryParam, offeringParam]);
-
-  // Apply saved searches pushed over the lightweight event bus by the
-  // RightBar's SavedSearchesWidget while the user is already on this screen
-  // (it avoids a navigation/remount). We reconstruct the full query from the
-  // saved payload, commit it, then resolve the location label asynchronously.
-  useEffect(() => {
-    const unsubscribe = onApplySavedSearch(async (payload) => {
-      const next = payloadToQuery(payload);
-      useSearchQueryStore.getState().setQuery(next);
-      const label = readString(payload.query);
-      if (!label) return;
-      try {
-        const location = await geocodeLabel(label);
-        if (location) useSearchQueryStore.getState().setLocation(location);
-      } catch {
-        // Label geocoding is best-effort; the committed filters still apply.
+      const navigate = isNavigationChange(query, next);
+      useSearchQueryStore.getState().replaceSearch(next);
+      if (navigate) {
+        router.push({ pathname: '/explore', params: urlParams });
+      } else {
+        router.setParams(urlParams);
       }
+    },
+    [query, router],
+  );
+
+  const commitLocation = useCallback(
+    (selection: LocationSelection) => commitQuery({ ...query, location: selection }),
+    [commitQuery, query],
+  );
+
+  const patchFilters = useCallback(
+    (patch: SearchFilterPatch) => commitQuery({ ...query, ...patch }),
+    [commitQuery, query],
+  );
+
+  /**
+   * Saved searches pushed over the event bus while the user is already here.
+   *
+   * A row that NEEDS CONFIRMATION does not run — and that refusal is the whole
+   * point of the branch. A legacy row predates the location column, so all it
+   * has is a place LABEL in `query`; applying it would commit free text with NO
+   * geographic scope and answer globally under the name "Madrid". That is the
+   * degradation ADR 0002 §4.3 forbids in the words "not for a legacy saved
+   * search", and it is worse than the homonym bug it replaced, because a wrong
+   * city at least looks wrong.
+   *
+   * Re-geocoding the label here is equally forbidden and for the older reason:
+   * one label, several cities, and taking the first is how a saved alert
+   * silently changes country.
+   */
+  useEffect(() => {
+    const unsubscribe = onApplySavedSearch((payload) => {
+      // Absent status is read as `needs_confirmation`: an older payload shape
+      // must land on the cautious side rather than run unscoped.
+      const status = payload.locationStatus ?? (payload.location ? 'resolved' : 'needs_confirmation');
+      if (status !== 'resolved' || !payload.location) {
+        setPendingConfirmation({ name: payload.name ?? payload.query, label: payload.query });
+        return;
+      }
+      commitQuery({ ...payloadToQuery(payload), location: payload.location });
     });
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [commitQuery]);
 
   const handleEditSearch = useCallback(() => setPanelOpen(true), []);
   const handleClosePanel = useCallback(() => setPanelOpen(false), []);
 
-  const handleSubmitSearch = useCallback((next: SearchQuery) => {
-    useSearchQueryStore.getState().setQuery(next);
-    setPanelOpen(false);
-  }, []);
+  const handleSubmitSearch = useCallback(
+    (next: SearchQuery) => {
+      commitQuery(next);
+      setPanelOpen(false);
+    },
+    [commitQuery],
+  );
 
   const handlePropertyPress = useCallback(
-    (property: Property) => {
-      router.push(`/properties/${property.id}`);
-    },
+    (property: Property) => router.push(`/properties/${property.id}`),
     [router],
   );
 
-  const handleRequireAuth = useCallback(() => {
-    router.push('/profile');
-  }, [router]);
+  const handleRequireAuth = useCallback(() => router.push('/profile'), [router]);
+
+  // A location the URL cannot carry: the commit was refused, so say so rather
+  // than leave the user looking at the previous search wondering why nothing
+  // happened.
+  if (unshareableLocation) {
+    return (
+      <View style={styles.root}>
+        <ErrorState
+          title={t('search.location.unshareable.title', 'This area cannot be opened by link') ?? undefined}
+          description={
+            t('search.location.unshareable.description', 'Try choosing a place or drawing a smaller area.') ??
+            undefined
+          }
+          retryLabel={t('search.location.chooseAnother', 'Choose a place') ?? undefined}
+          onRetry={() => {
+            setUnshareableLocation(null);
+            setPanelOpen(true);
+          }}
+        />
+        <SearchPanel
+          open={panelOpen}
+          onClose={handleClosePanel}
+          initialQuery={query}
+          onSubmit={handleSubmitSearch}
+        />
+      </View>
+    );
+  }
+
+  // A legacy saved search asks which place it meant, and runs nothing until it
+  // is told. Rendered before the results surface for the same reason `failed`
+  // is: neither state may issue a query.
+  if (pendingConfirmation) {
+    return (
+      <View style={styles.root}>
+        <ErrorState
+          title={
+            t('search.savedSearch.confirmTitle', 'Which place did you mean?') ?? undefined
+          }
+          description={
+            t('search.savedSearch.confirmDescription', {
+              name: pendingConfirmation.label,
+              defaultValue:
+                'This saved search was created before we stored places by name, so we cannot tell which one it means. Choose it again and we will remember.',
+            }) ?? undefined
+          }
+          retryLabel={t('search.location.chooseAnother', 'Choose a place') ?? undefined}
+          onRetry={() => {
+            setPendingConfirmation(null);
+            setPanelOpen(true);
+          }}
+        />
+        <SearchPanel
+          open={panelOpen}
+          onClose={handleClosePanel}
+          initialQuery={query}
+          onSubmit={handleSubmitSearch}
+        />
+      </View>
+    );
+  }
+
+  // A failed resolution shows the reason and issues NO request. This is the
+  // branch that used to be a silent fall-through to the global feed.
+  if (resolution.status === 'failed') {
+    return (
+      <View style={styles.root}>
+        <ErrorState
+          title={t('search.location.failed.title', 'We could not find that place') ?? undefined}
+          description={
+            t(`search.location.failed.${resolution.reason}`, {
+              defaultValue: t('search.location.failed.generic', 'Try choosing a different place.') ?? '',
+            }) ?? undefined
+          }
+          retryLabel={t('search.location.chooseAnother', 'Choose a place') ?? undefined}
+          onRetry={handleEditSearch}
+        />
+        <SearchPanel
+          open={panelOpen}
+          onClose={handleClosePanel}
+          initialQuery={query}
+          onSubmit={handleSubmitSearch}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>
       <SearchResultsView
         query={query}
-        onQueryChange={patchQuery}
+        onQueryChange={patchFilters}
+        onCommitLocation={commitLocation}
         onEditSearch={handleEditSearch}
         onPropertyPress={handlePropertyPress}
         canSaveSearch={isAuthenticated}
@@ -294,6 +458,25 @@ export default function SearchScreen() {
       />
     </View>
   );
+}
+
+/**
+ * A stable string for "which location did the URL ask for".
+ *
+ * The effect above keys on this rather than on the parsed object, which is a
+ * new object every render and would re-resolve — and re-render — forever.
+ */
+function locationRequestKey(location: ParsedLocation): string {
+  switch (location.kind) {
+    case 'none':
+      return 'none';
+    case 'ref':
+      return `loc:${location.token}`;
+    case 'legacy_city':
+      return `city:${location.value}`;
+    case 'invalid':
+      return `invalid:${location.token}`;
+  }
 }
 
 const styles = StyleSheet.create({

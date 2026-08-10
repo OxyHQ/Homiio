@@ -121,6 +121,28 @@ export const savedSearches = pgTable(
      * would make every filter addition a migration and every removal a data loss.
      */
     filters: jsonb().notNull().default({}),
+    /**
+     * The serialised `LocationSelection` this search is scoped to, or NULL for
+     * a row written before the location contract existed (ADR 0002 §11).
+     *
+     * Deliberately a THIRD field rather than a reshaping of `query`, and
+     * deliberately NULLABLE:
+     *
+     *  - `query` keeps its old meaning (the place LABEL for a legacy row, free
+     *    text for a new one) and `filters` is untouched, so every existing row
+     *    stays valid and readable. Nothing about this column narrows anything.
+     *  - NULL is the discriminator the lazy migration reads. There is **no bulk
+     *    backfill**: geocoding every stored label and taking the first hit would
+     *    apply the homonym bug to every user at once, silently, inside one
+     *    migration — precisely the move ADR 0002 exists to prevent. A row is
+     *    resolved on READ, and only when exactly one candidate comes back; two
+     *    or none returns `needs_confirmation` and runs no search.
+     *
+     * `jsonb` for the same reason `filters` is: the selection is a discriminated
+     * union whose arms carry different fields, so flattening it into columns
+     * would make every new `LocationSelection` kind a migration.
+     */
+    location: jsonb(),
     notificationsEnabled: boolean().notNull().default(false),
 
     createdAt: createdAt(),

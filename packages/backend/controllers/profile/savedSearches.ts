@@ -35,6 +35,43 @@ import {
 } from '../../db/saved/savedSearchRepository';
 import { errorResponse, successResponse } from './shared';
 
+/**
+ * The selection kinds a saved row may carry (ADR 0002 §3).
+ *
+ * An allowlist rather than "any object": `location` is `jsonb`, so without one
+ * the column would accept whatever a client posted and every reader downstream
+ * would have to defend itself. Membership is TOTAL — a kind that is in neither
+ * this list nor the union is refused, not stored and ignored.
+ */
+const LOCATION_KINDS: ReadonlySet<string> = new Set([
+  'current_location',
+  'place',
+  'address_candidate',
+  'map_bounds',
+  'polygon',
+  'multi_area',
+]);
+
+/** A jsonb payload big enough for any real selection and small enough to bound. */
+const MAX_LOCATION_BYTES = 8_192;
+
+/**
+ * Narrow a posted `location` to something storable.
+ *
+ * Returns `undefined` for absent (a legitimate text-only search) and `null` for
+ * PRESENT BUT INVALID, so the caller can refuse the second without treating it
+ * as the first — the same "absence is not failure" distinction the whole
+ * contract turns on, applied to a request body.
+ */
+function readLocation(value: unknown): Record<string, unknown> | undefined | null {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== 'object' || Array.isArray(value)) return null;
+  const kind = (value as { kind?: unknown }).kind;
+  if (typeof kind !== 'string' || !LOCATION_KINDS.has(kind)) return null;
+  if (JSON.stringify(value).length > MAX_LOCATION_BYTES) return null;
+  return value as Record<string, unknown>;
+}
+
 /** Resolve the owner from the session, in the shape the auth layer sets. */
 function ownerOf(req: Request): string | undefined {
   return req.user?.id || req.user?._id || undefined;
@@ -75,9 +112,23 @@ export async function saveSearch(req: Request, res: Response, next: NextFunction
       );
     }
 
-    if (typeof name !== 'string' || !name.trim() || typeof query !== 'string' || !query.trim()) {
+    const location = readLocation(req.body.location);
+    if (location === null) {
       return res.status(400).json(
-        errorResponse("Search name and query are required", "SEARCH_DATA_REQUIRED")
+        errorResponse("The location is not a recognised selection", "INVALID_LOCATION")
+      );
+    }
+
+    // A name, and SOMETHING to search — a location, free text, or both.
+    //
+    // This used to require a non-empty `query`, back when `query` held the
+    // location's LABEL. Now that it is the free-text dimension and is normally
+    // EMPTY for a place search, that check would have rejected every saved city
+    // with a 400 the user could do nothing about.
+    const text = typeof query === 'string' ? query.trim() : '';
+    if (typeof name !== 'string' || !name.trim() || (!location && !text)) {
+      return res.status(400).json(
+        errorResponse("A search name and either a location or search text are required", "SEARCH_DATA_REQUIRED")
       );
     }
 
@@ -89,8 +140,9 @@ export async function saveSearch(req: Request, res: Response, next: NextFunction
         // unique index is on the stored bytes — an untrimmed name would make
         // `'Madrid '` a second row and quietly retire the duplicate-name rule.
         name: name.trim(),
-        query: query.trim(),
+        query: text,
         filters: filters ?? {},
+        location,
         notificationsEnabled: Boolean(notificationsEnabled),
       });
     } catch (error) {

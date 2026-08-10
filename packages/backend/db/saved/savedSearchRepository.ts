@@ -46,6 +46,15 @@ export interface CreateSavedSearchInput {
   readonly name: string;
   readonly query: string;
   readonly filters?: Record<string, unknown>;
+  /**
+   * The serialised `LocationSelection`, or absent for a text-only search.
+   *
+   * Absent is NOT the same as "no location was wanted" once a row is old
+   * enough: a row written before this column existed also has NULL here, and
+   * the read path resolves it lazily and asks for confirmation rather than
+   * guessing. That is why nothing writes a placeholder into it.
+   */
+  readonly location?: Record<string, unknown>;
   readonly notificationsEnabled?: boolean;
 }
 
@@ -68,6 +77,7 @@ export async function createSavedSearch(
         name: input.name,
         query: input.query,
         filters: input.filters ?? {},
+        location: input.location ?? null,
         notificationsEnabled: input.notificationsEnabled ?? false,
       })
       .returning();
@@ -96,6 +106,8 @@ export interface UpdateSavedSearchInput {
   readonly name?: string;
   readonly query?: string;
   readonly filters?: Record<string, unknown>;
+  /** Set the stored selection. `null` clears it back to "not yet resolved". */
+  readonly location?: Record<string, unknown> | null;
   readonly notificationsEnabled?: boolean;
 }
 
@@ -120,6 +132,7 @@ export async function updateSavedSearch(
   if (input.name !== undefined) values.name = input.name;
   if (input.query !== undefined) values.query = input.query;
   if (input.filters !== undefined) values.filters = input.filters;
+  if (input.location !== undefined) values.location = input.location;
   if (input.notificationsEnabled !== undefined) {
     values.notificationsEnabled = input.notificationsEnabled;
   }
@@ -182,6 +195,20 @@ export function toSavedSearchDTO(row: SavedSearchRow): Record<string, unknown> {
     name: row.name,
     query: row.query,
     filters: row.filters,
+    location: row.location,
+    /**
+     * How the stored location should be READ (ADR 0002 §11).
+     *
+     * `resolved` — the row carries a selection; use it, resolving a `homiio`
+     * source by id so a rename does not move the search.
+     * `needs_confirmation` — the row predates the column, so all we have is a
+     * label in `query`. The UI asks which place was meant. It is deliberately
+     * NOT geocoded here: taking the first hit for a stored label is the homonym
+     * bug, and doing it on read is the same mistake as doing it in a migration,
+     * one row at a time. An unconfirmed search does not run and its alert does
+     * not fire.
+     */
+    locationStatus: row.location ? 'resolved' : 'needs_confirmation',
     notificationsEnabled: row.notificationsEnabled,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

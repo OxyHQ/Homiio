@@ -4,8 +4,11 @@
  * Suggestions come from Homiio's geo gateway (`/api/geo/search`, #351), never
  * from a geocoder the device contacts itself. While the input is empty it
  * surfaces the user's recent searches; once they type, debounced suggestions
- * replace the list. Selecting a row resolves a {@link SearchLocation} and hands
- * it back to the panel.
+ * replace the list. Selecting a row commits a whole {@link LocationSelection}
+ * and hands it back to the panel — an `address_candidate` for a street address
+ * and a `place` for everything else, which is the distinction that keeps a
+ * geocoder proposal and a materialised Homiio place different things at every
+ * layer downstream.
  *
  * Two things here are contract rather than styling.
  *
@@ -33,12 +36,16 @@ import { useRecentSearchesStore, type RecentSearch } from '@/store/recentSearche
 import {
   isValidBounds,
   normalizeLongitude,
+  geoPlaceToSelection,
+  locationKey,
+  type GeoBounds,
   type GeoPlace,
+  type LocationSelection,
   type GeoPoint,
 } from '@homiio/shared-types';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
-import type { SearchLocation } from '../types';
+import { selectionLabel } from '../types';
 
 /**
  * Half-width (degrees) of the box drawn around a picked point when the gateway
@@ -86,7 +93,7 @@ const AREA_PLACE_TYPES: ReadonlySet<string> = new Set([
  * reads it correctly. `isValidBounds` is the guard that the wrap produced
  * something the backend will accept rather than something merely plausible.
  */
-function synthesizeBounds(place: GeoPlace, center: GeoPoint): SearchLocation['bounds'] | undefined {
+function synthesizeBounds(place: GeoPlace, center: GeoPoint): GeoBounds | undefined {
   if (AREA_PLACE_TYPES.has(place.placeType)) return undefined;
 
   const { longitude, latitude } = center;
@@ -102,40 +109,31 @@ function synthesizeBounds(place: GeoPlace, center: GeoPoint): SearchLocation['bo
 }
 
 /**
- * Map a gateway candidate onto a resolved {@link SearchLocation}, or `null`.
+ * Map a gateway candidate onto the selection the user just chose.
  *
- * The label is taken PRE-SPLIT from the gateway rather than by splitting a
- * display string on commas: that assumed a Western comma-separated ordering and
- * mangled every script and address format that does not use one (ADR 0002
- * §9.4).
+ * The mapping itself is `geoPlaceToSelection` from the shared contract, NOT a
+ * local one: the `address` → `address_candidate` decision is the single place a
+ * caller could quietly decide a street address is a "place", and a screen that
+ * made that call itself would key by the wrong identity for the rest of that
+ * selection's life.
  *
- * **Why this can return `null`.** `GeoPlace` is a discriminated union: an
- * `area` place carries an extent and NO centre, because inventing one is the
- * bug that whole shape exists to prevent. `SearchLocation` — the panel's
- * current type — requires a centre and has no identity field, so a centreless
- * candidate cannot be represented and must not be OFFERED: picking it would
- * commit a query with nothing to scope by.
+ * **A centreless candidate is now SELECTABLE, and that is the change.** This
+ * used to return `null` for one, because the panel's old `SearchLocation`
+ * required a centre and had no identity field — so an `area` place carrying an
+ * extent and no point could not be represented, and offering it would have
+ * committed a query with nothing to scope by. `LocationSelection` addresses a
+ * place by IDENTITY, so it holds one comfortably: the search scopes by the
+ * place's id and only the map has nothing to frame from. Dropping such a row
+ * would remove a legitimate disambiguation candidate from the list.
  *
- * That is a limitation of `SearchLocation`, not a judgement about the
- * candidate. #352 replaces it with `LocationSelection`, which addresses a place
- * by identity and can hold one; when it does, this filter goes and the row
- * becomes selectable.
- *
- * In practice nothing from `/api/geo/search` hits this today — every provider
- * candidate carries a coordinate, since the adapter drops results without one —
- * so this is a defensive branch rather than a live case. It is here because the
- * type permits the state and a silent `undefined` centre would reach the map.
+ * The synthetic box is applied BEFORE the mapping and only where the gateway
+ * supplied no bounds — see {@link synthesizeBounds}, which refuses to draw one
+ * around an area type at all.
  */
-function toSearchLocation(place: GeoPlace): SearchLocation | null {
-  if (!place.center) return null;
-  const { longitude, latitude } = place.center;
-  const bounds = place.bounds ?? synthesizeBounds(place, place.center);
-  return {
-    label: [place.label.primary, place.label.secondary].filter(Boolean).join(', '),
-    shortLabel: place.label.primary,
-    center: [longitude, latitude],
-    ...(bounds ? { bounds } : {}),
-  };
+function toLocationSelection(place: GeoPlace): LocationSelection {
+  const bounds =
+    place.bounds ?? (place.center ? synthesizeBounds(place, place.center) : undefined);
+  return geoPlaceToSelection(bounds === undefined ? place : { ...place, bounds });
 }
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -193,7 +191,7 @@ interface WhereStepProps {
   /** Fired on every keystroke so the panel can hold the raw text. */
   onChangeText: (text: string) => void;
   /** Fired when a place suggestion is chosen. */
-  onSelectLocation: (location: SearchLocation) => void;
+  onSelectLocation: (selection: LocationSelection) => void;
   /** Fired when a recent search row is chosen. */
   onSelectRecent: (recent: RecentSearch) => void;
   /**
@@ -237,12 +235,11 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     clear();
   }, [onChangeText, clear]);
 
-  const resolvedSuggestions = useMemo<SearchLocation[]>(
+  const resolvedSuggestions = useMemo<LocationSelection[]>(
     () =>
       state.status === 'results'
         ? state.places
-            .map(toSearchLocation)
-            .filter((location): location is SearchLocation => location !== null)
+            .map(toLocationSelection)
         : [],
     [state],
   );
@@ -318,14 +315,17 @@ export const WhereStep: React.FC<WhereStepProps> = ({
           {state.status === 'results' && state.degraded ? (
             <BloomText style={styles.statusText}>{t('search.where.degraded')}</BloomText>
           ) : null}
-          {resolvedSuggestions.map((location) => (
+          {resolvedSuggestions.map((selection) => (
             <SuggestionRow
-              key={`${location.center[0]},${location.center[1]}`}
+              // Keyed by the selection's own IDENTITY. Two candidates can share
+              // a rounded centre — and one may now have no centre at all — so a
+              // coordinate key would collide and silently drop a row.
+              key={locationKey(selection)}
               icon="location-outline"
-              title={location.shortLabel}
-              subtitle={location.label}
-              accessibilityLabel={location.label}
-              onPress={() => onSelectLocation(location)}
+              title={selectionLabel(selection)?.primary ?? ''}
+              subtitle={selectionLabel(selection)?.secondary}
+              accessibilityLabel={selectionLabel(selection)?.primary ?? ''}
+              onPress={() => onSelectLocation(selection)}
             />
           ))}
           {/* Required by the provider's data licence wherever results appear. */}

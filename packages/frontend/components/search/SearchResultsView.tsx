@@ -49,21 +49,17 @@ import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { colors } from '@/styles/colors';
 import { cardShadow, hairline, radius, spacing } from '@/constants/styles';
-import { OfferingType, PropertyType, formatMoney } from '@homiio/shared-types';
-import type { Property } from '@homiio/shared-types';
+import { OfferingType, PropertyType, boundsCenter, formatMoney } from '@homiio/shared-types';
+import type { GeoBounds, LocationSelection, Property } from '@homiio/shared-types';
 import { resolvePrimaryOffering, toPriceDescriptor } from '@/utils/propertyUtils';
 import { useFormatting, type Formatting } from '@/utils/format';
-import { browseModeFromOffering } from './types';
+import { browseModeFromOffering, savedSearchName } from './types';
 
 import { SearchActionPill } from './SearchActionPill';
 import { SearchSummaryBar } from './SearchSummaryBar';
 import { resolveSortLabel, SortControl } from './SortControl';
-import type {
-  SearchBounds,
-  SearchQuery,
-  SearchSortBy,
-  SearchSortOrder,
-} from './types';
+import type { SearchQuery, SearchSortBy, SearchSortOrder } from './types';
+import { mapBoundsSelection, type SearchFilterPatch } from '@/store/searchQueryStore';
 
 /** Default zoom applied when no location bbox is known. */
 const DEFAULT_MAP_ZOOM = 12;
@@ -124,6 +120,19 @@ function toMarkers(
 }
 
 /**
+ * The centre of a declared box, as the map's `[lng, lat]` pair.
+ *
+ * Delegates to the shared wrap-aware `boundsCenter` rather than averaging the
+ * corners: for a box crossing the antimeridian the naive average is 13,000 km
+ * away, and the symptom is a map framed on the wrong ocean beside a list of
+ * perfectly correct results.
+ */
+function boundsCameraTarget(bounds: GeoBounds): [number, number] {
+  const { longitude, latitude } = boundsCenter(bounds);
+  return [longitude, latitude];
+}
+
+/**
  * Derive the {@link SearchFilters} shape (used by the reused filters sheet)
  * from the active {@link SearchQuery}. The sheet edits a flatter model, so we
  * translate both ways.
@@ -167,8 +176,14 @@ interface SearchResultsViewProps {
   onEditSearch: () => void;
   /** Open a property's detail screen. */
   onPropertyPress: (property: Property) => void;
-  /** Patch the active query (filters, sort, map bounds). */
-  onQueryChange: (patch: Partial<SearchQuery>) => void;
+  /**
+   * Patch the NON-geographic filters. Cannot reach `location` or `queryText`:
+   * a shallow patch over the geographic dimension is precisely how half a
+   * location used to survive a change.
+   */
+  onQueryChange: (patch: SearchFilterPatch) => void;
+  /** Commit a geographic scope, replacing any previous one whole. */
+  onCommitLocation: (selection: LocationSelection) => void;
   /** Whether the user can save searches (gates the Save action). */
   canSaveSearch?: boolean;
   /** Fired when the user wants to save but isn't authenticated. */
@@ -180,6 +195,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   onEditSearch,
   onPropertyPress,
   onQueryChange,
+  onCommitLocation,
   canSaveSearch = true,
   onRequireAuth,
 }) => {
@@ -191,7 +207,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
 
   const mapRef = useRef<MapApi>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
-  const [pendingBounds, setPendingBounds] = useState<SearchBounds | null>(null);
+  const [pendingBounds, setPendingBounds] = useState<GeoBounds | null>(null);
   const [showMobileMap, setShowMobileMap] = useState(false);
 
   const search = usePropertySearch(query);
@@ -213,16 +229,54 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     [query.sortBy, query.sortOrder, t],
   );
 
-  // A search is "saved" when one already exists matching this location label.
-  const isSearchSaved = useMemo(() => {
-    const label = query.location?.label;
-    return label ? searchExists(label, label) : false;
-  }, [query.location?.label, searchExists]);
-
-  const initialCoordinates = useMemo<[number, number] | undefined>(
-    () => query.location?.center,
-    [query.location],
+  // A search is "saved" when one already exists for this exact selection.
+  //
+  // Keyed by `locationKey`, not by the label. Two different cities called
+  // Barcelona have the same label and different ids, so a label comparison
+  // reported the Venezuelan one as already saved the moment the Spanish one
+  // was — and offered to overwrite it.
+  const savedName = useMemo(() => savedSearchName(query.location), [query.location]);
+  const isSearchSaved = useMemo(
+    () => (savedName ? searchExists(savedName, savedName) : false),
+    [savedName, searchExists],
   );
+
+  /**
+   * The map's opening camera. Only a framing hint — once results arrive the map
+   * frames from the server's `location` echo, so the two cannot disagree.
+   *
+   * A place may legitimately have NO centre: `PlaceGeometry` says an `area`
+   * carries an extent and no representative point, and a city Homiio knows by
+   * id but has no coordinates for is a real, selectable place — its search
+   * scopes by `cityId` and needs no geometry at all.
+   *
+   * So the order is bounds → centre → nothing, and the last arm is the one that
+   * matters. Deriving the centre of a declared box is a real framing point;
+   * INVENTING one is not, and the invented value would be `(0, 0)` — an actual
+   * location in the Atlantic, which is how "Spain" ended up over the Gulf of
+   * Guinea. `undefined` lets the map keep its own default, which is honest
+   * about having nothing to frame from, and the LIST is still correctly scoped
+   * either way.
+   *
+   * Framing that also picked a sensible ZOOM from the box — so a city and a
+   * neighbourhood do not open identically — needs a `fitBounds` on `MapApi`,
+   * which this component cannot express today (#395).
+   */
+  const initialCoordinates = useMemo<[number, number] | undefined>(() => {
+    const selection = query.location;
+    if (!selection || selection.kind === 'multi_area') return undefined;
+
+    if (selection.kind === 'polygon' || selection.kind === 'map_bounds') {
+      return boundsCameraTarget(selection.bounds);
+    }
+    if (selection.kind === 'current_location') {
+      return [selection.center.longitude, selection.center.latitude];
+    }
+    if (selection.bounds) return boundsCameraTarget(selection.bounds);
+    return selection.center
+      ? [selection.center.longitude, selection.center.latitude]
+      : undefined;
+  }, [query.location]);
 
   const selectedProperty = useMemo(
     () => (highlightedId ? properties.find((p) => p.id === highlightedId) ?? null : null),
@@ -252,34 +306,36 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   }, [highlightedId]);
 
   const handleRegionChange = useCallback(
-    ({ bounds, isFinal }: { bounds: SearchBounds; isFinal?: boolean }) => {
+    ({ bounds, isFinal }: { bounds: GeoBounds; isFinal?: boolean }) => {
       if (!bounds || !isFinal) return;
       setPendingBounds(bounds);
     },
     [],
   );
 
+  /**
+   * "Search this area" — ONE state transition, replacing the geographic scope
+   * entirely.
+   *
+   * Everything about the previous selection is discarded: its id, its label, its
+   * centre, its bounds, its provider, its country. It used to re-use
+   * `query.location.label`, `shortLabel` and `center` whenever they existed, so
+   * panning from Barcelona to Madrid and pressing this produced "Barcelona,
+   * centred on Barcelona, bounded by Madrid" — and then sent the stale label out
+   * as free text alongside the new box, asking for Barcelona-matching listings
+   * physically inside Madrid. The answer is zero, and zero renders as "this area
+   * is empty".
+   *
+   * The merge is not possible any more: `onCommitLocation` takes a whole
+   * {@link LocationSelection} and there is no action that takes less.
+   * `queryText` is untouched — a different dimension, and the user did not
+   * retract what they typed.
+   */
   const handleSearchThisArea = useCallback(() => {
     if (!pendingBounds) return;
-    const center: [number, number] =
-      query.location?.center ?? [
-        (pendingBounds.west + pendingBounds.east) / 2,
-        (pendingBounds.south + pendingBounds.north) / 2,
-      ];
-    onQueryChange({
-      location: {
-        label:
-          query.location?.label ||
-          (t('search.summary.mapArea', 'Map area') || 'Map area'),
-        shortLabel:
-          query.location?.shortLabel ||
-          (t('search.summary.mapArea', 'Map area') || 'Map area'),
-        center,
-        bounds: pendingBounds,
-      },
-    });
+    onCommitLocation(mapBoundsSelection(pendingBounds));
     setPendingBounds(null);
-  }, [pendingBounds, query.location, onQueryChange, t]);
+  }, [pendingBounds, onCommitLocation]);
 
   const handleSortPress = useCallback(() => {
     bottomSheet.openBottomSheet(
@@ -377,11 +433,14 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
       onRequireAuth?.();
       return;
     }
-    const label = query.location?.label ?? '';
     bottomSheet.openBottomSheet(
       <SaveSearchBottomSheet
-        defaultName={query.location?.shortLabel || 'My Search'}
-        query={label}
+        defaultName={savedName ?? t('search.actions.save', 'My Search') ?? 'My Search'}
+        // `query` is the free-text dimension, NOT the place. Sending the label
+        // here is what made a saved search re-geocode its own name on reopen and
+        // land in a different country.
+        query={query.queryText ?? ''}
+        location={query.location}
         filters={{
           offering: query.offering,
           propertyTypes: query.propertyTypes,
@@ -397,7 +456,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         onSaved={() => bottomSheet.closeBottomSheet()}
       />,
     );
-  }, [bottomSheet, canSaveSearch, onRequireAuth, query]);
+  }, [bottomSheet, canSaveSearch, onRequireAuth, query, savedName, t]);
 
   // Shared infinite-scroll primitive: native fires `onScroll` end-detect, web
   // uses the `<LoadMoreSentinel>` below. Both funnel through the same guarded

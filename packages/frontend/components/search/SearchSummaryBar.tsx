@@ -46,7 +46,12 @@ import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { IconButton } from '@/components/ui/IconButton';
 import { colors } from '@/styles/colors';
 import { cardShadow, hairline, radius, spacing, tracker } from '@/constants/styles';
-import { SEARCH_PRICE_CURRENCY, type SearchQuery, type SearchStep } from './types';
+import {
+  SEARCH_PRICE_CURRENCY,
+  locationDisplayLabel,
+  type SearchQuery,
+  type SearchStep,
+} from './types';
 import { useFormatting } from '@/utils/format';
 
 /**
@@ -268,10 +273,8 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
 
   // Shared "Where" label, reused by both layouts.
   const whereLabel = useMemo(
-    () =>
-      query.location?.shortLabel ||
-      (t('search.summary.anywhere')),
-    [query.location?.shortLabel, t],
+    () => locationDisplayLabel(query.location, t),
+    [query.location, t],
   );
 
   // Shared "Property type" label, reused by both layouts.
@@ -336,7 +339,7 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
     const isNarrow = !isWide;
 
     // Segment 1 — where (both modes).
-    const whereFilled = Boolean(query.location?.shortLabel);
+    const whereFilled = query.location !== null;
     const whereColLabel = t('searchBar.long.where');
 
     // Segment 2 — vacation: dates ("Any week"); long-term: price ("Any price").
