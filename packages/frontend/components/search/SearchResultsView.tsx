@@ -18,7 +18,7 @@
  * Data comes from `usePropertySearch` keyed by the active query; this component
  * owns no fetching logic beyond reading that hook and forwarding map bounds.
  */
-import React, { useCallback, useContext, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -258,9 +258,10 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
    * about having nothing to frame from, and the LIST is still correctly scoped
    * either way.
    *
-   * Framing that also picked a sensible ZOOM from the box — so a city and a
-   * neighbourhood do not open identically — needs a `fitBounds` on `MapApi`,
-   * which this component cannot express today (#395).
+   * This is the OPENING camera only — a point, because `initialCoordinates` is
+   * all the map accepts before it has mounted. The zoom that makes a city and a
+   * neighbourhood open differently comes from the effect below, which calls
+   * `fitBounds` once the map exists (#395).
    */
   const initialCoordinates = useMemo<[number, number] | undefined>(() => {
     const selection = query.location;
@@ -277,6 +278,44 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
       ? [selection.center.longitude, selection.center.latitude]
       : undefined;
   }, [query.location]);
+
+  /**
+   * The extent to frame, when the selection declares one.
+   *
+   * Separate from `initialCoordinates` because they answer different questions:
+   * a centre says WHERE, an extent says HOW MUCH. Without the second, a city
+   * and a neighbourhood opened at an identical zoom — the map was told the
+   * middle of each and nothing about their size.
+   */
+  const framedBounds = useMemo<GeoBounds | undefined>(() => {
+    const selection = query.location;
+    if (!selection || selection.kind === 'multi_area') return undefined;
+    if (selection.kind === 'current_location') return undefined;
+    return selection.bounds;
+  }, [query.location]);
+
+  /**
+   * Frame the box once the map can be commanded.
+   *
+   * `fitBounds` is imperative and `initialCoordinates` is a mount-time prop, so
+   * this cannot be expressed as a prop: the ref is null on the first render.
+   * Keyed on the SERIALISED box rather than the object so a re-render with an
+   * equal box does not re-animate the camera under the user.
+   *
+   * A selection with no bounds is deliberately not handled here — the opening
+   * centre already covers it, and re-framing on every selection change would
+   * fight a user who has panned.
+   */
+  const framedBoundsKey = framedBounds
+    ? `${framedBounds.west},${framedBounds.south},${framedBounds.east},${framedBounds.north}`
+    : null;
+  useEffect(() => {
+    if (!framedBounds) return;
+    mapRef.current?.fitBounds(framedBounds);
+    // `framedBoundsKey` is the dependency that matters; `framedBounds` is the
+    // value it stands for.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [framedBoundsKey]);
 
   const selectedProperty = useMemo(
     () => (highlightedId ? properties.find((p) => p.id === highlightedId) ?? null : null),

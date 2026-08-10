@@ -6,6 +6,8 @@ import * as Location from 'expo-location';
 import { useMapState } from '@/context/MapStateContext';
 import { api, type ApiResponse } from '@/utils/api';
 import { buildMapDocument } from './mapDocument';
+import { boundsCenter } from '@homiio/shared-types';
+import { isDegenerateBounds, toCameraBounds } from './mapCamera';
 import { DEFAULT_STYLE_URL, fetchSanitizedMapStyle } from './mapStyle';
 import { colors } from '@/styles/colors';
 import type {
@@ -59,6 +61,21 @@ export interface MapProps {
   onMarkerPress?: (e: { id: string; lngLat: LonLat }) => void;
   onClusterPress?: (e: { leaves: ClusterLeaf[] }) => void;
 }
+
+/**
+ * Zoom used when a box is degenerate and there is nothing to fit.
+ *
+ * City-ish rather than street-level: the caller asked to frame an AREA, so
+ * dropping to the max zoom a zero-area fit would produce is the one answer that
+ * is certainly wrong.
+ */
+const DEGENERATE_BOUNDS_ZOOM = 12;
+
+/** Padding, in px, around a fitted box so markers are not flush to the edge. */
+const FIT_BOUNDS_PADDING = 48;
+
+/** Camera animation for a fit, matching `navigateToLocation`'s ease. */
+const FIT_BOUNDS_DURATION_MS = 500;
 
 const DEFAULT_CENTER: LonLat = [2.16538, 41.38723];
 const DEFAULT_ZOOM = 12;
@@ -422,6 +439,33 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   React.useImperativeHandle(ref, () => ({
     navigateToLocation: (center: LonLat, zoom: number = 15) => {
       post({ type: 'setView', center, zoom, duration: 500 });
+    },
+    fitBounds: (bounds, options) => {
+      // A degenerate box asks MapLibre to fit an infinitely small region, which
+      // pins the zoom to its maximum — a city with a point-like extent would
+      // open at building level. Framing its centre at a sane zoom is the honest
+      // answer, and the decision is named in `mapCamera` rather than inlined.
+      if (isDegenerateBounds(bounds)) {
+        const centre = boundsCenter(bounds);
+        post({
+          type: 'setView',
+          center: [centre.longitude, centre.latitude],
+          zoom: DEGENERATE_BOUNDS_ZOOM,
+          duration: options?.duration ?? FIT_BOUNDS_DURATION_MS,
+        });
+        return;
+      }
+      // Padding and duration are sent EXPLICITLY rather than left to the
+      // document's own fallbacks. The document is a template literal with no
+      // type checking and no tests, so a default living only there is a second
+      // copy of a number the web host already owns — and the two would drift
+      // silently, giving the same box a different frame per platform.
+      post({
+        type: 'fitBounds',
+        bounds: toCameraBounds(bounds),
+        padding: options?.padding ?? FIT_BOUNDS_PADDING,
+        duration: options?.duration ?? FIT_BOUNDS_DURATION_MS,
+      });
     },
     highlightMarker: (id: string | null) => {
       post({ type: 'highlightMarker', id });

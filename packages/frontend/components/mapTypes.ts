@@ -1,4 +1,6 @@
-import type { GeocodedAddress } from '@homiio/shared-types';
+import type { GeoBounds, GeocodedAddress } from '@homiio/shared-types';
+
+import type { CameraBounds } from './mapCamera';
 
 /**
  * Shared map types used by `Map.tsx` (the React host) and `mapDocument.ts`
@@ -56,6 +58,16 @@ export type MapEvent =
 export type OutboundMapMessage =
   | { type: 'setData'; features: MarkerInput[] }
   | { type: 'setView'; center: LonLat; zoom: number; duration?: number }
+  /**
+   * Frame an AREA rather than a point.
+   *
+   * `bounds` is already in MapLibre's `[[west, south], [east, north]]` corner
+   * form and has already been carried past 180 when it wraps — see
+   * `mapCamera.toCameraBounds`. The document does no geography of its own,
+   * deliberately: the wrap is the kind of thing that must be decided once, and
+   * the document is the one place a second copy could not be unit-tested.
+   */
+  | { type: 'fitBounds'; bounds: CameraBounds; padding?: number; duration?: number }
   | { type: 'setUserLocation'; coordinates: LonLat }
   | { type: 'highlightMarker'; id: string | null };
 
@@ -85,6 +97,24 @@ export interface MarkerStyle {
 
 export interface MapApi {
   navigateToLocation: (center: LonLat, zoom?: number) => void;
+  /**
+   * Frame a declared area, choosing the zoom from the box.
+   *
+   * The gap this closes (#395): with only `navigateToLocation`, a city and a
+   * neighbourhood opened at an IDENTICAL zoom, because the caller could pass a
+   * centre and nothing about the extent. ADR 0002 §6.3 has the map frame itself
+   * from `location.bounds` in the server's echo, and half of that rule was
+   * unimplementable without this.
+   *
+   * A box that wraps the antimeridian frames the strip it describes, not the
+   * rest of the world — the conversion is `mapCamera.toCameraBounds` and it is
+   * not the caller's problem.
+   *
+   * A DEGENERATE box (zero width or height) is not framed: fitting one drives
+   * the zoom to maximum, so a city with a point-like extent would open at
+   * building level. Those fall back to `navigateToLocation` at a sensible zoom.
+   */
+  fitBounds: (bounds: GeoBounds, options?: { padding?: number; duration?: number }) => void;
   highlightMarker: (id: string | null) => void;
   lookupAddress: (coordinates: LonLat) => Promise<GeocodedAddress | null>;
 }
