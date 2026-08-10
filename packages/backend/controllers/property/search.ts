@@ -67,6 +67,86 @@ import { serializeProperty } from '../../db/properties/propertySerializer';
 interface ResolvedPlace {
   conditions: SQL[];
   unresolved: boolean;
+  /** Which named parameter failed to resolve, for the response's echo. */
+  unresolvedParam?: 'city' | 'state';
+  /** The canonical ids the scope was actually narrowed to, for the echo. */
+  cityId?: string;
+  regionId?: string;
+}
+
+/**
+ * What the server ACTUALLY applied, echoed back on every search response.
+ *
+ * ADR 0002 §6.3: the map frames itself from this, not from the client's belief
+ * about the request it sent, so "map in Madrid, list from Barcelona" stops
+ * being reachable by a race — the two read one field of one payload.
+ *
+ * `unresolved` is the half that matters most and the half that costs nothing:
+ * an unresolvable place has always answered with an empty page rather than an
+ * unfiltered one (which is correct), but with no marker on it, so a client
+ * could not tell "there are no homes here" from "we did not understand where".
+ * Those are different sentences and the UI has to be able to pick one.
+ */
+type LocationEcho =
+  | {
+      status: 'resolved';
+      cityId?: string;
+      regionId?: string;
+      bounds?: { west: number; south: number; east: number; north: number };
+      center?: { longitude: number; latitude: number };
+      radiusMeters?: number;
+    }
+  | { status: 'unresolved'; requested: { param: 'city' | 'state'; value: string } }
+  | { status: 'none' };
+
+/** Describe the geographic scope the query ran under. */
+function buildLocationEcho(params: ParsedSearchParams, place: ResolvedPlace): LocationEcho {
+  if (place.unresolved && place.unresolvedParam) {
+    return {
+      status: 'unresolved',
+      requested: {
+        param: place.unresolvedParam,
+        value: (place.unresolvedParam === 'city' ? params.city : params.state) ?? '',
+      },
+    };
+  }
+
+  const hasScope =
+    params.boundingBox !== undefined ||
+    params.centerRadius !== undefined ||
+    place.cityId !== undefined ||
+    place.regionId !== undefined;
+
+  // "No location" is a legitimate query and answers normally — the failure mode
+  // this contract forbids is a location REQUESTED AND LOST, never one that was
+  // never asked for. Saying so explicitly is what lets a heading read "Homes
+  // everywhere" honestly instead of naming a place nothing filtered on.
+  if (!hasScope) return { status: 'none' };
+
+  return {
+    status: 'resolved',
+    ...(place.cityId ? { cityId: place.cityId } : {}),
+    ...(place.regionId ? { regionId: place.regionId } : {}),
+    ...(params.boundingBox
+      ? {
+          bounds: {
+            west: params.boundingBox.swLng,
+            south: params.boundingBox.swLat,
+            east: params.boundingBox.neLng,
+            north: params.boundingBox.neLat,
+          },
+        }
+      : {}),
+    ...(params.centerRadius
+      ? {
+          center: {
+            longitude: params.centerRadius.lng,
+            latitude: params.centerRadius.lat,
+          },
+          radiusMeters: params.centerRadius.radiusMeters,
+        }
+      : {}),
+  };
 }
 
 /**
@@ -90,18 +170,23 @@ async function resolvePlaceConditions(params: ParsedSearchParams): Promise<Resol
     }));
   }
 
+  let cityId: string | undefined;
+  let regionId: string | undefined;
+
   if (params.city) {
-    const cityId = await resolveCityId(params.city);
-    if (!cityId) return { conditions: [], unresolved: true };
+    const resolved = await resolveCityId(params.city);
+    if (!resolved) return { conditions: [], unresolved: true, unresolvedParam: 'city' };
+    cityId = resolved;
     conditions.push(inCity(cityId));
   }
   if (params.state) {
-    const regionId = await resolveRegionId(params.state);
-    if (!regionId) return { conditions: [], unresolved: true };
+    const resolved = await resolveRegionId(params.state);
+    if (!resolved) return { conditions: [], unresolved: true, unresolvedParam: 'state' };
+    regionId = resolved;
     conditions.push(inRegion(regionId));
   }
 
-  return { conditions, unresolved: false };
+  return { conditions, unresolved: false, cityId, regionId };
 }
 
 /**
@@ -115,7 +200,8 @@ function buildSearchResponse(
   page: number,
   limit: number,
   total: number,
-  message: string
+  message: string,
+  location: LocationEcho,
 ): Record<string, unknown> {
   const totalPages = Math.max(1, Math.ceil(total / limit));
   const hasMore = (page - 1) * limit + data.length < total;
@@ -126,6 +212,7 @@ function buildSearchResponse(
     limit,
     totalPages,
     hasMore,
+    location,
   };
 }
 
@@ -138,7 +225,7 @@ export async function searchProperties(req: Request, res: Response, next: NextFu
       plan = buildSearchPlan(req.query as Record<string, string | string[] | undefined>);
     } catch (error) {
       if (error instanceof GeoParamError) {
-        res.status(400).json({ success: false, message: error.message, error: 'INVALID_GEO_PARAMS' });
+        res.status(400).json({ success: false, message: error.message, error: error.code });
         return;
       }
       throw error;
@@ -147,7 +234,17 @@ export async function searchProperties(req: Request, res: Response, next: NextFu
 
     const place = await resolvePlaceConditions(params);
     if (place.unresolved) {
-      res.json(buildSearchResponse([], params.page, params.limit, 0, 'No properties found for the specified location'));
+      // Still an empty page rather than an unfiltered one — a location that was
+      // requested and lost must never widen into a global feed — but now it
+      // says so, so the screen can render "we could not find that place".
+      res.json(buildSearchResponse(
+        [],
+        params.page,
+        params.limit,
+        0,
+        'No properties found for the specified location',
+        buildLocationEcho(params, place),
+      ));
       return;
     }
     conditions.push(...place.conditions);
@@ -179,11 +276,18 @@ export async function searchProperties(req: Request, res: Response, next: NextFu
       params.limit,
       total,
       'Search completed successfully',
+      buildLocationEcho(params, place),
     ));
   } catch (error) {
+    // The parameter NAMES, never their values. This used to log `req.query`
+    // wholesale, which put full-precision `lat`/`lng` — a device fix, on the
+    // "near me" path — into the log of every failed search, where it is
+    // retained far longer than the request and read by people debugging
+    // something else entirely (ADR 0002 §8.2). The names are what a diagnosis
+    // actually needs: they say which shape of request broke.
     logger.error('Property search failed', {
       message: error instanceof Error ? error.message : String(error),
-      query: req.query,
+      queryParams: Object.keys(req.query).sort(),
     });
     next(error);
   }

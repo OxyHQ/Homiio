@@ -71,6 +71,13 @@
       "when": 1786280361533,
       "tag": "0009_roommate_preferences_location_interests",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1786334768535,
+      "tag": "0010_saved_search_location",
+      "breakpoints": true
     }
   ]
 }

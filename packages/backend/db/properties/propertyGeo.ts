@@ -43,14 +43,32 @@
  *    wrong everywhere except the equator. A wrong "nearby" is worse than an
  *    absent one.
  *
- * ## The one deliberate semantic difference, stated rather than discovered
+ * ## The envelope's edges are GREAT CIRCLES, and two things follow
  *
- * Mongo's bounding box was a GeoJSON `Polygon` under `$geoWithin`, whose edges
- * are GREAT CIRCLES. {@link withinBoundingBox} uses `ST_MakeEnvelope`, whose
- * edges are straight in lat/lon space. The two disagree only in the interior of
- * a very large box (they share all four corners), and the envelope is the one
- * that matches what a map viewport actually shows — the box comes from the
- * frontend's visible rectangle, not from a geodesic.
+ * This paragraph used to claim the opposite — that `ST_MakeEnvelope` gives
+ * edges "straight in lat/lon space", disagreeing with Mongo's geodesic
+ * `$geoWithin` polygon only inside a very large box. That is wrong, and wrong
+ * in the direction that reassures: {@link withinBoundingBox} casts the envelope
+ * to `::geography`, and a `geography` polygon's edges are great-circle arcs.
+ * Measured against `postgis/postgis:17-3.5` on 2026-08-10 (fixtures and full
+ * numbers in `__tests__/integration/antimeridianBoundingBox.test.ts`):
+ *
+ *  - **The cast is what makes an antimeridian box work at all.** `west > east`
+ *    means the box crosses ±180 — `170 → -170` is the 20° Pacific strip, not
+ *    the 340° remainder — and `::geography` already reads it that way. Drop the
+ *    cast and every such query returns its exact COMPLEMENT, silently. That is
+ *    also why `parseBoundingBox` validates latitude order and NOT longitude
+ *    order: the asymmetry is deliberate, and "tidying" it into `swLng <= neLng`
+ *    turns every antimeridian search into a 400.
+ *  - **A very wide box is therefore NOT the rectangle the map drew.** The
+ *    geodesic edges bulge poleward, so a box past roughly 50–58° of longitude
+ *    in a narrow latitude band can exclude its own centre, and one exactly 180°
+ *    wide raises `Antipodal (180 degrees long) edge detected!`. Every realistic
+ *    viewport is unaffected — a city, Spain, Europe and the continental US all
+ *    contain their own cities — so this is a known edge, not a live defect, and
+ *    it is recorded rather than fixed because the obvious repair costs the wrap:
+ *    `ST_Segmentize` on the envelope straightens the edges AND inverts the
+ *    antimeridian case into its complement.
  */
 
 import { sql, type SQL } from 'drizzle-orm';

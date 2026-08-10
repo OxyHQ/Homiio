@@ -208,8 +208,18 @@ export interface CenterRadius {
   radiusMeters: number;
 }
 
+/**
+ * A geographic parameter the server refuses to guess about.
+ *
+ * Carries a machine-readable {@link code} because ADR 0002 requires the client
+ * to tell "we did not understand where" from "there is nothing there" — two
+ * answers that look identical when both arrive as an empty list.
+ */
 export class GeoParamError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    readonly code: 'INVALID_LOCATION' = 'INVALID_LOCATION',
+  ) {
     super(message);
     this.name = 'GeoParamError';
   }
@@ -467,6 +477,21 @@ export function buildSearchPlan(
     ? (exchangeMode as ExchangeMode)
     : undefined;
 
+  // A request may name AT MOST ONE authoritative geographic scope. Sending
+  // both a box and a centre+radius used to be resolved by the controller
+  // silently preferring the box, which is the "choose one quietly" behaviour
+  // ADR 0002 forbids: the caller asked two different questions and got an
+  // answer to one of them with nothing saying which. It is a client bug every
+  // time, and the loud failure is the one that gets it fixed.
+  const boundingBox = parseBoundingBox(query);
+  const centerRadius = parseCenterRadius(query);
+  if (boundingBox && centerRadius) {
+    throw new GeoParamError(
+      'A search may carry a bounding box or a centre and radius, not both. ' +
+        'Send swLat/swLng/neLat/neLng, or lat/lng/radius.',
+    );
+  }
+
   return {
     conditions,
     params: {
@@ -475,8 +500,8 @@ export function buildSearchPlan(
       text: asString(query.q) ?? asString(query.query) ?? asString(query.search),
       city: asString(query.city),
       state: asString(query.state),
-      boundingBox: parseBoundingBox(query),
-      centerRadius: parseCenterRadius(query),
+      boundingBox,
+      centerRadius,
       sortField,
       sortDirection,
       offering,

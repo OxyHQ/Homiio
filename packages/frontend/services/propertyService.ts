@@ -1,4 +1,4 @@
-import { api } from '@/utils/api';
+import { api, ApiError } from '@/utils/api';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
 import {
   PropertyType,
@@ -31,6 +31,27 @@ export interface PropertySearchResult {
   matchScore: number;
 }
 
+/**
+ * ## Transport failures propagate; they are not an empty result
+ *
+ * Every read below used to `catch` and return `{ properties: [], total: 0 }`.
+ * That makes a network error, a 500, an expired session and a genuinely empty
+ * city produce the SAME value, so no caller can render them differently — and
+ * the one it renders is the reassuring one: "no homes here" over a search that
+ * never reached the server. ADR 0002 §4.3 forbids it, and it is the transport
+ * half of the same rule that forbids a failed location resolution degrading
+ * into a global feed.
+ *
+ * Every caller is ready for the throw. The list/search/home readers are React
+ * Query `queryFn`s, which turn a rejection into `isError` — the state their
+ * screens already render (`SearchResultsView`'s `ErrorState`). The two callers
+ * outside React Query, `app/insights/index.tsx` and `components/RoomList.tsx`,
+ * carry their own `catch` already.
+ *
+ * A read that legitimately has "absent" as an answer still returns `null` for
+ * a **404** — that is a fact about the resource, not a failure — but no longer
+ * for anything else.
+ */
 class PropertyService {
   private baseUrl = '/api/properties';
 
@@ -43,19 +64,15 @@ class PropertyService {
     page: number;
     totalPages: number;
   }> {
-    try {
-      const response = await api.get(this.baseUrl, {
-        params: filters,
-      });
-      return {
-        properties: response.data.data || response.data.results || response.data.properties || [],
-        total: response.data.pagination?.total || response.data.total || 0,
-        page: response.data.pagination?.page || response.data.page || 1,
-        totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1
-      };
-    } catch (error) {
-      return { properties: [], total: 0, page: 1, totalPages: 1 };
-    }
+    const response = await api.get(this.baseUrl, {
+      params: filters,
+    });
+    return {
+      properties: response.data.data || response.data.results || response.data.properties || [],
+      total: response.data.pagination?.total || response.data.total || 0,
+      page: response.data.pagination?.page || response.data.page || 1,
+      totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1
+    };
   }
 
   // Get all available rooms
@@ -67,22 +84,18 @@ class PropertyService {
     page: number;
     totalPages: number;
   }> {
-    try {
-      const response = await api.get(this.baseUrl, {
-        params: {
-          ...filters,
-          type: PropertyType.ROOM
-        },
-      });
-      return {
-        rooms: response.data.data || response.data.results || response.data.properties || [],
-        total: response.data.pagination?.total || response.data.total || 0,
-        page: response.data.pagination?.page || response.data.page || 1,
-        totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1
-      };
-    } catch (error) {
-      return { rooms: [], total: 0, page: 1, totalPages: 1 };
-    }
+    const response = await api.get(this.baseUrl, {
+      params: {
+        ...filters,
+        type: PropertyType.ROOM
+      },
+    });
+    return {
+      rooms: response.data.data || response.data.results || response.data.properties || [],
+      total: response.data.pagination?.total || response.data.total || 0,
+      page: response.data.pagination?.page || response.data.page || 1,
+      totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1
+    };
   }
 
   // Get all properties with filters and match scores
@@ -95,19 +108,15 @@ class PropertyService {
     page: number;
     totalPages: number;
   }> {
-    try {
-      const response = await api.get(`${this.baseUrl}/search`, {
-        params: { query, ...filters },
-      });
-      return {
-        properties: response.data.data || response.data.results || response.data.properties || [],
-        total: response.data.pagination?.total || response.data.total || 0,
-        page: response.data.pagination?.page || response.data.page || 1,
-        totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1
-      };
-    } catch (error) {
-      return { properties: [], total: 0, page: 1, totalPages: 1 };
-    }
+    const response = await api.get(`${this.baseUrl}/search`, {
+      params: { query, ...filters },
+    });
+    return {
+      properties: response.data.data || response.data.results || response.data.properties || [],
+      total: response.data.pagination?.total || response.data.total || 0,
+      page: response.data.pagination?.page || response.data.page || 1,
+      totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1
+    };
   }
 
   // Get property details by ID
@@ -118,7 +127,10 @@ class PropertyService {
       const response = await api.get(`${this.baseUrl}/${propertyId}`);
       return response.data.data;
     } catch (error) {
-      return null;
+      // A 404 is an answer — this listing does not exist. Anything else is a
+      // failure to ask, and the caller has to be able to tell them apart.
+      if (error instanceof ApiError && error.status === 404) return null;
+      throw error;
     }
   }
 
@@ -129,20 +141,16 @@ class PropertyService {
     page: number;
     totalPages: number;
   }> {
-    try {
-      const response = await api.get(`${this.baseUrl}/me/list`, {
-        params: { page, limit },
-      });
-      const pagination = response.data.pagination ?? {};
-      return {
-        properties: response.data.data || [],
-        total: pagination.total || 0,
-        page: pagination.page || page,
-        totalPages: pagination.totalPages || 1,
-      };
-    } catch {
-      return { properties: [], total: 0, page: 1, totalPages: 1 };
-    }
+    const response = await api.get(`${this.baseUrl}/me/list`, {
+      params: { page, limit },
+    });
+    const pagination = response.data.pagination ?? {};
+    return {
+      properties: response.data.data || [],
+      total: pagination.total || 0,
+      page: pagination.page || page,
+      totalPages: pagination.totalPages || 1,
+    };
   }
 
   // Get published properties owned by an Oxy user id
@@ -155,24 +163,20 @@ class PropertyService {
     page: number;
     totalPages: number;
   }> {
-    try {
-      const response = await api.get(`${this.baseUrl}`, {
-        params: {
-          oxyUserId,
-          excludeIds: excludePropertyId,
-          sortBy: 'createdAt',
-          sortOrder: 'desc',
-        },
-      });
-      return {
-        properties: response.data.data || response.data.results || response.data.properties || [],
-        total: response.data.pagination?.total || response.data.total || 0,
-        page: response.data.pagination?.page || response.data.page || 1,
-        totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1
-      };
-    } catch (error) {
-      return { properties: [], total: 0, page: 1, totalPages: 1 };
-    }
+    const response = await api.get(`${this.baseUrl}`, {
+      params: {
+        oxyUserId,
+        excludeIds: excludePropertyId,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
+      },
+    });
+    return {
+      properties: response.data.data || response.data.results || response.data.properties || [],
+      total: response.data.pagination?.total || response.data.total || 0,
+      page: response.data.pagination?.page || response.data.page || 1,
+      totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1
+    };
   }
 
   // Get property rooms
@@ -185,14 +189,10 @@ class PropertyService {
     page: number;
     totalPages: number;
   }> {
-    try {
-      const response = await api.get(`${this.baseUrl}/${propertyId}/rooms`, {
-        params: filters,
-      });
-      return response.data;
-    } catch (error) {
-      return { rooms: [], total: 0, page: 1, totalPages: 1 };
-    }
+    const response = await api.get(`${this.baseUrl}/${propertyId}/rooms`, {
+      params: filters,
+    });
+    return response.data;
   }
 
   // Calculate match score between property and preferences
@@ -338,26 +338,22 @@ class PropertyService {
     page: number;
     totalPages: number;
   }> {
-    try {
-      const params = {
-        ...filters,
-        bounds: `${bounds.west},${bounds.south},${bounds.east},${bounds.north}`,
-        limit: 50 // Increase limit for map view
-      };
-      
-      const response = await api.get(`${this.baseUrl}/search`, {
-        params,
-      });
-      
-      return {
-        properties: response.data.data || response.data.results || response.data.properties || [],
-        total: response.data.total || 0,
-        page: response.data.page || 1,
-        totalPages: response.data.totalPages || 1
-      };
-    } catch (error) {
-      return { properties: [], total: 0, page: 1, totalPages: 1 };
-    }
+    const params = {
+      ...filters,
+      bounds: `${bounds.west},${bounds.south},${bounds.east},${bounds.north}`,
+      limit: 50 // Increase limit for map view
+    };
+
+    const response = await api.get(`${this.baseUrl}/search`, {
+      params,
+    });
+
+    return {
+      properties: response.data.data || response.data.results || response.data.properties || [],
+      total: response.data.total || 0,
+      page: response.data.page || 1,
+      totalPages: response.data.totalPages || 1
+    };
   }
 
   // Get property statistics
@@ -368,7 +364,10 @@ class PropertyService {
       const response = await api.get(`${this.baseUrl}/${propertyId}/stats`);
       return response.data.data;
     } catch (error) {
-      return null;
+      // Stats may genuinely not exist for a listing yet; a transport failure
+      // is not that, and must not render as "no stats".
+      if (error instanceof ApiError && error.status === 404) return null;
+      throw error;
     }
   }
 

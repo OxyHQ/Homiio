@@ -1,0 +1,20 @@
+-- oxy:deploy-phase=pre
+--
+-- `saved_searches.location` — the serialised `LocationSelection` a saved search
+-- is scoped to (ADR 0002 §11).
+--
+-- ADDITIVE and NULLABLE, therefore `pre`: nothing drops, nothing narrows, and
+-- the previous image neither reads nor writes the column, so applying it before
+-- the rollout is safe on both images. `query` and `filters` are untouched, so
+-- every existing row stays exactly as valid as it was.
+--
+-- There is deliberately NO BACKFILL, and that is the substance of this change
+-- rather than an omission. A backfill would have to geocode each row's stored
+-- `query` label and keep the first hit — which is the homonym bug applied to
+-- every user's saved searches at once, silently, inside one migration, with no
+-- way for anyone to notice their alert had moved country. NULL is instead read
+-- at run time as "not yet resolved": the row is resolved through the gateway on
+-- READ, materialised and written back only when EXACTLY ONE candidate comes
+-- back, and returned as `needs_confirmation` (running no search, firing no
+-- alert) when several or none do.
+ALTER TABLE "saved_searches" ADD COLUMN "location" jsonb;
