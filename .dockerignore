@@ -32,6 +32,7 @@ packages/frontend
 
 # Self-hosted local image store (dev-only backend fallback)
 **/.local-image-store
+**/.local-image-store-w*
 
 # Logs & temp
 **/logs

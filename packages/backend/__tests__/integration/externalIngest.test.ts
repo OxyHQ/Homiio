@@ -20,7 +20,6 @@
  */
 
 import { promises as fs } from 'node:fs';
-import path from 'node:path';
 
 import {
   FixtureProvider,
@@ -32,7 +31,7 @@ import { OfferingType, PropertyType, type NormalizedListing } from '@homiio/shar
 
 import { IngestionService } from '../../services/ingestion/IngestionService';
 import { ExternalMediaIngest } from '../../services/ingestion/ExternalMediaIngest';
-import type { ImageBufferInput } from '../../services/imageUploadService';
+import { LOCAL_IMAGE_STORE_DIR, type ImageBufferInput } from '../../services/imageUploadService';
 
 import { and, eq } from 'drizzle-orm';
 
@@ -49,7 +48,6 @@ const ONE_BY_ONE_PNG = Buffer.from(
   'base64',
 );
 
-const LOCAL_IMAGE_STORE_DIR = path.join(__dirname, '..', '..', '.local-image-store');
 const FIRST_SOURCE_ID = 'fixture-bcn-0001';
 const FIRST_SOURCE_URL = 'https://fixtures.homiio.com/es/barcelona/fixture-bcn-0001';
 
@@ -62,9 +60,19 @@ const fetchImage = jest.fn(
   async (): Promise<ImageBufferInput> => ({ buffer: ONE_BY_ONE_PNG, mimetype: 'image/png' }),
 );
 
+/**
+ * Every service this file builds, so `afterAll` can drain the background work
+ * they started before removing the image store. `ingest()` deliberately does not
+ * await the city-cover fetch, so without this the write lands DURING the
+ * teardown's `fs.rm` and the removal fails with `ENOTEMPTY`.
+ */
+const ingestionServices: IngestionService[] = [];
+
 function buildIngestionService(dedupeEnabled = false): IngestionService {
   const mediaIngest = new ExternalMediaIngest({ fetchImage });
-  return new IngestionService({ mediaIngest, dedupeEnabled });
+  const service = new IngestionService({ mediaIngest, dedupeEnabled });
+  ingestionServices.push(service);
+  return service;
 }
 
 async function normalizeAll(): Promise<NormalizedListing[]> {
@@ -150,6 +158,13 @@ afterAll(async () => {
   // counted this file's leftover as a third. The failure lands two files away
   // from its cause and moves around as the file-to-worker distribution shifts,
   // which is why adding an unrelated test file appeared to break it.
+  // Drain first. `ingest()` starts the city-cover fetch WITHOUT awaiting it, so
+  // the write can still be in flight here; if it lands while `fs.rm` is walking
+  // the tree, the final `rmdir` fails with `ENOTEMPTY` and this suite fails with
+  // every one of its tests passing. Draining is the only fix that keeps the
+  // removal meaningful — retrying it, or ignoring its error, would leave the
+  // written bytes behind for whatever runs next.
+  await Promise.all(ingestionServices.map((service) => service.whenIdle()));
   await resetGeoTables();
   await fs.rm(LOCAL_IMAGE_STORE_DIR, { recursive: true, force: true });
 });
