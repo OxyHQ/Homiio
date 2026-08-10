@@ -387,6 +387,11 @@ describe('the partial indexes really are partial', () => {
       'addresses_normalized_key_key',
       'billing_plus_stripe_subscription_id_key',
       'conversations_share_token_key',
+      // ONE live grant per (case, grantee): the partiality is what lets a
+      // revoked grant free the slot for a fresh one instead of blocking it
+      // forever, and it is why every `ON CONFLICT` against this index has to
+      // carry the arbiter predicate (`42P10` at runtime otherwise).
+      'eviction_location_grants_live_key',
       'eviction_reports_open_reporter_key',
       'listing_reports_open_reporter_key',
       'properties_source_source_id_key',

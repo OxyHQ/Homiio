@@ -1,8 +1,18 @@
 /**
  * Report-a-case reason sheet, opened from the detail overflow action via the
- * app-wide `BottomSheetContext`. Reuses the property-report reason set + the
- * same "details required when reason is other" rule, then files the report with
- * `useReportEviction`. Bloom `Chip`/`Button`/`TextField` only.
+ * app-wide `BottomSheetContext`.
+ *
+ * ## The reasons are the EVICTION vocabulary, not the listing one
+ *
+ * "This location is too precise" and "this exposes personal data" have no
+ * counterpart on a property advertisement, and they are the two that carry a
+ * CONSEQUENCE rather than a counter: the first report of either applies a
+ * precautionary hold that withholds the location and the description until the
+ * organiser answers. The sheet says so, because a reader choosing between
+ * reasons should know which one does something.
+ *
+ * Nothing here routes to a moderator. A threshold fires, a column is stamped and
+ * the organiser is notified; there is no queue and no reviewer.
  */
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -11,18 +21,42 @@ import { Button } from '@oxyhq/bloom/button';
 import { Chip } from '@oxyhq/bloom/chip';
 import { TextFieldInput } from '@oxyhq/bloom/text-field';
 import { H3, Text as BloomText } from '@oxyhq/bloom/typography';
-import { ListingReportReason } from '@homiio/shared-types';
+import {
+  EvictionReportReason,
+  EVICTION_PRECAUTIONARY_HOLD_REASONS,
+} from '@homiio/shared-types';
 
 import { useReportEviction } from '@/hooks/useEvictionQueries';
 import { toast } from '@oxyhq/bloom/toast';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
-const REASON_OPTIONS: { value: ListingReportReason; labelKey: string }[] = [
-  { value: ListingReportReason.INACCURATE, labelKey: 'evictions.report.reason.inaccurate' },
-  { value: ListingReportReason.SCAM, labelKey: 'evictions.report.reason.scam' },
-  { value: ListingReportReason.INAPPROPRIATE, labelKey: 'evictions.report.reason.inappropriate' },
-  { value: ListingReportReason.OTHER, labelKey: 'evictions.report.reason.other' },
+const REASON_OPTIONS: { value: EvictionReportReason; labelKey: string }[] = [
+  {
+    value: EvictionReportReason.FALSE_INFORMATION,
+    labelKey: 'evictions.report.reason.false_information',
+  },
+  {
+    value: EvictionReportReason.PERSONAL_DATA_EXPOSED,
+    labelKey: 'evictions.report.reason.personal_data_exposed',
+  },
+  {
+    value: EvictionReportReason.LOCATION_TOO_PRECISE,
+    labelKey: 'evictions.report.reason.location_too_precise',
+  },
+  { value: EvictionReportReason.OUTDATED, labelKey: 'evictions.report.reason.outdated' },
+  { value: EvictionReportReason.HARASSMENT, labelKey: 'evictions.report.reason.harassment' },
+  { value: EvictionReportReason.SPAM, labelKey: 'evictions.report.reason.spam' },
+  {
+    value: EvictionReportReason.DANGEROUS_CONTACT,
+    labelKey: 'evictions.report.reason.dangerous_contact',
+  },
+];
+
+/** Reasons the SERVER also requires details for, mirrored so the UI agrees. */
+const REASONS_REQUIRING_DETAILS: readonly EvictionReportReason[] = [
+  EvictionReportReason.FALSE_INFORMATION,
+  EvictionReportReason.PERSONAL_DATA_EXPOSED,
 ];
 
 interface EvictionReportSheetProps {
@@ -34,10 +68,11 @@ export const EvictionReportSheet: React.FC<EvictionReportSheetProps> = ({ caseId
   const { t } = useTranslation();
   const reportMutation = useReportEviction(caseId);
 
-  const [reason, setReason] = useState<ListingReportReason | null>(null);
+  const [reason, setReason] = useState<EvictionReportReason | null>(null);
   const [details, setDetails] = useState('');
 
-  const detailsRequired = reason === ListingReportReason.OTHER;
+  const detailsRequired = reason !== null && REASONS_REQUIRING_DETAILS.includes(reason);
+  const appliesHold = reason !== null && EVICTION_PRECAUTIONARY_HOLD_REASONS.includes(reason);
   const isValid = useMemo(() => {
     if (!reason) return false;
     if (detailsRequired && !details.trim()) return false;
@@ -62,6 +97,9 @@ export const EvictionReportSheet: React.FC<EvictionReportSheetProps> = ({ caseId
     <View style={styles.wrap}>
       <H3 style={styles.title}>{t('evictions.report.title')}</H3>
       <BloomText style={styles.intro}>{t('evictions.report.intro')}</BloomText>
+      {appliesHold ? (
+        <BloomText style={styles.intro}>{t('evictions.report.holdNotice')}</BloomText>
+      ) : null}
 
       <View style={styles.chipRow}>
         {REASON_OPTIONS.map((option) => (

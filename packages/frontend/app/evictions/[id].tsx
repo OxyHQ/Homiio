@@ -1,11 +1,25 @@
 /**
  * Eviction case detail (detalle) — the mobilisation page for a single desahucio.
  *
- * Cover → status + date/time → title → reporter → description → "Cómo ayudar"
- * (tappable organiser contacts) → approximate-location map + disclaimer →
- * timeline of owner updates → public comment thread (paginated). A sticky RSVP
- * CTA drives "Asistiré/Asistiendo"; the header carries Share + Report. Owner-only
- * controls (post update / edit / cancel) appear when the viewer owns the case.
+ * Cover → status + date/time → title → reporter → organisation → description →
+ * "Cómo ayudar" (structured needs + gated organiser contacts) → published disc
+ * on a map with the precision explained → local legal resources → timeline →
+ * public comment thread. A sticky RSVP CTA drives "Asistiré/Asistiendo" and a
+ * separate Follow control drives "avísame"; the header carries Share + Report.
+ *
+ * ## Three things this screen must not do
+ *
+ * **Never render a coordinate as a precise place.** The pin is the centre of a
+ * published disc and `EvictionPrecisionNote` says how wide it is. A case under a
+ * precautionary hold publishes no point at all, and the map section simply does
+ * not render — which is correct rather than a gap.
+ *
+ * **Never promise that an RSVP unlocks the contact.** It is necessary and not
+ * sufficient (ADR 0003 §7.3.1), so the locked state renders the reason the
+ * server gave and the copy matches it.
+ *
+ * **Never show the attendee roster.** Only the count is published, to anybody,
+ * the organiser included.
  */
 import React, { useCallback, useContext, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -35,7 +49,9 @@ import {
   useDeleteEvictionComment,
   useEvictionComments,
   useEvictionDetail,
+  useJurisdictionResources,
   useToggleAttend,
+  useToggleFollow,
 } from '@/hooks/useEvictionQueries';
 import { EvictionStatusBadge } from '@/components/evictions/EvictionStatusBadge';
 import { EvictionDateBlock } from '@/components/evictions/EvictionDateBlock';
@@ -43,10 +59,11 @@ import { EvictionContactActions } from '@/components/evictions/EvictionContactAc
 import { EvictionCommentRow } from '@/components/evictions/EvictionCommentRow';
 import { EvictionOwnerControls } from '@/components/evictions/EvictionOwnerControls';
 import { EvictionReportSheet } from '@/components/evictions/EvictionReportSheet';
-import {
-  formatEvictionFullDate,
-  EVICTION_STATUS_META,
-} from '@/components/evictions/evictionUtils';
+import { EvictionTimeline } from '@/components/evictions/EvictionTimeline';
+import { EvictionHelpNeeds } from '@/components/evictions/EvictionHelpNeeds';
+import { EvictionResources } from '@/components/evictions/EvictionResources';
+import { EvictionPrecisionNote } from '@/components/evictions/EvictionPrecisionNote';
+import { formatEvictionFullDate } from '@/components/evictions/evictionUtils';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { shareContent } from '@/utils/share';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
@@ -91,10 +108,21 @@ export default function EvictionDetailScreen() {
   } = useEvictionComments(caseId);
 
   const toggleAttend = useToggleAttend(caseId);
+  const toggleFollow = useToggleFollow(caseId);
   const createComment = useCreateEvictionComment(caseId);
   const deleteComment = useDeleteEvictionComment(caseId);
 
   const [commentText, setCommentText] = useState('');
+
+  /**
+   * Local legal and housing resources for THIS case's jurisdiction.
+   *
+   * Keyed on the case's own country rather than on the reader's: the person
+   * needing a tenant union is at the address on the notice, not wherever the
+   * phone happens to be. Disabled entirely when the case carries no country, so
+   * the screen shows nothing rather than a guess.
+   */
+  const resources = useJurisdictionResources(eviction?.location.countryCode);
 
   const avatarIds = useMemo(
     () => [eviction?.oxyUserId, ...comments.map((comment) => comment.oxyUserId)],
@@ -140,6 +168,14 @@ export default function EvictionDetailScreen() {
       <EvictionReportSheet caseId={caseId} onClose={() => bottomSheet.closeBottomSheet()} />,
     );
   }, [isAuthenticated, bottomSheet, caseId]);
+
+  const handleFollow = useCallback(() => {
+    if (!isAuthenticated) {
+      openAccountDialog();
+      return;
+    }
+    toggleFollow.mutate();
+  }, [isAuthenticated, toggleFollow]);
 
   const handleRSVP = useCallback(() => {
     if (!isAuthenticated) {
@@ -239,13 +275,11 @@ export default function EvictionDetailScreen() {
   const coverUrl = eviction.coverImage?.url
     ? resolveBackendImageUrl(eviction.coverImage.url)
     : undefined;
-  const coords = eviction.location?.coordinates?.coordinates;
-  const hasPin =
-    Array.isArray(coords) &&
-    coords.length === 2 &&
-    typeof coords[0] === 'number' &&
-    typeof coords[1] === 'number' &&
-    !(coords[0] === 0 && coords[1] === 0);
+  // The PUBLISHED centre, or nothing. A case under a precautionary hold has no
+  // coordinate at all and the map section below does not render — which is the
+  // hold working, not a missing pin.
+  const coords = eviction.location.approximateCoordinates;
+  const hasPin = Array.isArray(coords) && coords.length === 2;
 
   return (
     <View style={styles.root}>
@@ -304,16 +338,48 @@ export default function EvictionDetailScreen() {
             </View>
           </View>
 
-          <BloomText style={styles.description}>{eviction.description}</BloomText>
+          {eviction.description ? (
+            <BloomText style={styles.description}>{eviction.description}</BloomText>
+          ) : (
+            // Withheld ENTIRELY under a precautionary hold rather than partly
+            // redacted: a partial redaction of prose reported as exposing
+            // somebody's details is a guess about which sentence did it.
+            <BloomText style={styles.muted}>{t('evictions.detail.descriptionWithheld')}</BloomText>
+          )}
+
+          {eviction.organization ? (
+            <SectionCard title={t('evictions.detail.organization')}>
+              <BloomText style={styles.organizationName}>{eviction.organization.name}</BloomText>
+              <BloomText style={styles.muted}>
+                {/* Verification is STRICTLY stronger than authorship, and the
+                    UI has to say which one it is showing. */}
+                {eviction.organization.verified
+                  ? t('evictions.detail.organizationVerified', {
+                      source: eviction.organization.verificationSource ?? '',
+                      when: eviction.organization.verifiedAt
+                        ? formatEvictionFullDate(eviction.organization.verifiedAt, i18n.language)
+                        : '',
+                    })
+                  : t('evictions.detail.organizationUnverified')}
+              </BloomText>
+            </SectionCard>
+          ) : null}
 
           <SectionCard title={t('evictions.detail.howToHelp')}>
+            <EvictionHelpNeeds needs={eviction.helpNeeds} />
+            <Divider />
             {eviction.contactLocked ? (
               <View style={styles.lockedContact}>
                 <View style={styles.lockedIcon}>
                   <Ionicons name="lock-closed" size={22} color={colors.textSecondary} />
                 </View>
                 <BloomText style={styles.lockedText}>
-                  {t('evictions.detail.contactLockedNotice')}
+                  {/* The REASON, not a generic lock: "RSVP first" and "your
+                      account is too new" ask the reader for different things,
+                      and one message for both teaches people to re-tap. */}
+                  {t(
+                    `evictions.detail.contactLocked.${eviction.contactLockReason ?? 'not_attending'}`,
+                  )}
                 </BloomText>
                 <Button
                   variant="primary"
@@ -367,42 +433,36 @@ export default function EvictionDetailScreen() {
                 />
               </View>
               <BloomText style={styles.locationLabel}>{eviction.location.label}</BloomText>
-              {eviction.location.precision === 'approximate' ? (
-                <View style={styles.disclaimerRow}>
-                  <Ionicons name="information-circle-outline" size={16} color={colors.info} />
-                  <BloomText style={styles.disclaimer}>
-                    {t('evictions.detail.approximateNotice')}
-                  </BloomText>
-                </View>
-              ) : null}
+              <EvictionPrecisionNote
+                location={eviction.location}
+                moderation={eviction.moderation}
+                locale={i18n.language}
+              />
             </SectionCard>
-          ) : null}
+          ) : (
+            <SectionCard title={t('evictions.detail.where')}>
+              <BloomText style={styles.locationLabel}>{eviction.location.label}</BloomText>
+              <EvictionPrecisionNote
+                location={eviction.location}
+                moderation={eviction.moderation}
+                locale={i18n.language}
+              />
+            </SectionCard>
+          )}
 
-          {eviction.updates.length > 0 ? (
-            <SectionCard title={t('evictions.detail.timeline')}>
-              <View style={styles.timeline}>
-                {eviction.updates
-                  .slice()
-                  .reverse()
-                  .map((update) => (
-                    <View key={update.id} style={styles.timelineItem}>
-                      <View style={styles.timelineDot} />
-                      <View style={styles.timelineBody}>
-                        <BloomText style={styles.timelineTime}>
-                          {formatRelativeTime(new Date(update.createdAt))}
-                        </BloomText>
-                        <BloomText style={styles.timelineMessage}>{update.message}</BloomText>
-                        {update.newStatus ? (
-                          <BloomText style={styles.timelineMeta}>
-                            {t(EVICTION_STATUS_META[update.newStatus].i18nKey)}
-                          </BloomText>
-                        ) : null}
-                      </View>
-                    </View>
-                  ))}
-              </View>
-            </SectionCard>
-          ) : null}
+          <SectionCard title={t('evictions.detail.localResources')}>
+            <EvictionResources
+              resources={resources.data?.resources ?? []}
+              disclaimer={resources.data?.disclaimer}
+              locale={i18n.language}
+              isLoading={resources.isLoading}
+              isError={resources.isError}
+            />
+          </SectionCard>
+
+          <SectionCard title={t('evictions.detail.timeline')}>
+            <EvictionTimeline events={eviction.timeline} locale={i18n.language} />
+          </SectionCard>
 
           {eviction.isOwner ? (
             <EvictionOwnerControls
@@ -479,6 +539,9 @@ export default function EvictionDetailScreen() {
             size="large"
             onPress={handleRSVP}
             loading={toggleAttend.isPending}
+            accessibilityLabel={
+              eviction.isAttending ? t('evictions.attending') : t('evictions.attend')
+            }
             icon={
               <Ionicons
                 name={eviction.isAttending ? 'checkmark-circle' : 'megaphone-outline'}
@@ -490,6 +553,29 @@ export default function EvictionDetailScreen() {
             style={styles.footerButton}
           >
             {`${eviction.isAttending ? t('evictions.attending') : t('evictions.attend')} · ${t('evictions.attendeesCount', { count: eviction.attendeeCount })}`}
+          </Button>
+          {/* Following is a SEPARATE statement from attending: "tell me if the
+              date moves" is not "I will be there", and folding them together
+              either spams watchers or inflates the turnout number the page
+              exists to report. */}
+          <Button
+            variant="outline"
+            size="large"
+            onPress={handleFollow}
+            loading={toggleFollow.isPending}
+            accessibilityLabel={
+              eviction.isFollowing ? t('evictions.unfollow') : t('evictions.follow')
+            }
+            icon={
+              <Ionicons
+                name={eviction.isFollowing ? 'notifications' : 'notifications-outline'}
+                size={20}
+                color={colors.text}
+              />
+            }
+            iconPosition="left"
+          >
+            {eviction.isFollowing ? t('evictions.following') : t('evictions.follow')}
           </Button>
         </View>
       </SafeAreaView>
@@ -602,6 +688,11 @@ const styles = StyleSheet.create({
   },
   mapInner: {
     height: 220,
+  },
+  organizationName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
   },
   locationLabel: {
     fontSize: 14,

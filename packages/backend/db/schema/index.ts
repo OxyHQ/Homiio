@@ -41,10 +41,18 @@ export {
 } from './conversations';
 export {
   evictionCaseAttendees,
+  evictionCaseFollowers,
+  evictionCaseHelpNeeds,
   evictionCases,
   evictionCaseUpdates,
   evictionComments,
+  evictionLocationAccessAudit,
+  evictionLocationGrants,
+  evictionOrganizations,
   evictionReports,
+  evictionSupporterVouches,
+  evictionUpdateNotifications,
+  jurisdictionResources,
 } from './evictions';
 export { exchangeRequests, exchangeReviews } from './exchanges';
 export { cities, countries, neighborhoods, regions } from './geo';
