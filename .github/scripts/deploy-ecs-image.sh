@@ -21,70 +21,6 @@ AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-}"
 AWS_PARTITION="${AWS_PARTITION:-aws}"
 POST_DEPLOY_SMOKE_SCRIPT="${POST_DEPLOY_SMOKE_SCRIPT:-}"
 POST_DEPLOY_TASK_COMMAND_JSON="${POST_DEPLOY_TASK_COMMAND_JSON:-}"
-# Deploy a service that is deliberately scaled to ZERO — and say which one.
-#
-# Every ordinary deploy must refuse a zero-count service: it means capacity was
-# lost, and rolling a new image onto nothing produces a green deploy and an
-# outage. That guard stays, and this does not weaken it.
-#
-# The exception it exists for is the Mongo->Postgres cutover (issue #281). Both
-# Homiio services are stopped at desiredCount 0 for the whole window ON PURPOSE,
-# because the running image is Mongo-backed: bringing either up after the copy
-# has finished would let real user writes land in the store being abandoned, and
-# the copy is not incremental, so nothing recovers them. The worker is the one
-# that WRITES, which is why it is stopped first and why an authorisation for one
-# service must not silently cover the other. Downtime is acceptable there;
-# losing writes is not.
-#
-# It names the SERVICE rather than being a boolean because a bare `true` left in
-# a workflow file or pasted out of a runbook authorises a zero-count deploy of
-# ANYTHING, and the value that would be wrong is exactly the value that is
-# easiest to copy. Homiio has TWO services (`homiio`, `homiio-worker`), so that
-# distinction is load-bearing here in a way it was not for a single-service repo.
-ALLOW_ZERO_DESIRED_COUNT="${ALLOW_ZERO_DESIRED_COUNT:-}"
-
-# Whether THIS run may proceed against a zero-count service.
-#
-# The value is `<service>:<YYYY-MM-DD>` and BOTH halves must hold: the service
-# must be this one, and the date must not have passed. Every other shape refuses.
-#
-# The expiry is what keeps this from being a permanent reduction in protection.
-# Without it, a variable set for one window and never removed silently disarms
-# the zero-count guard forever, and the failure only shows up the day somebody
-# scales to zero for an unrelated reason and a deploy reports green onto no
-# capacity. With it, a forgotten variable disarms ITSELF the day after.
-#
-# It fails toward REFUSING, which is the direction that matters: if the window
-# slips past the expiry the deploy refuses loudly, mid-window, and is fixed in
-# thirty seconds by updating the variable. It can never fail toward permitting.
-zero_desired_count_allowed=false
-zero_optin_expiry=""
-if [[ -n "$ALLOW_ZERO_DESIRED_COUNT" ]]; then
-  if [[ ! "$ALLOW_ZERO_DESIRED_COUNT" =~ ^[A-Za-z0-9_-]+:[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
-    echo "::error::ALLOW_ZERO_DESIRED_COUNT is set but malformed: expected <service>:<YYYY-MM-DD>, e.g. $APP:$(date -u -d '+2 days' +%F). Refusing to treat an unparseable authorisation as permission."
-    exit 1
-  fi
-  zero_optin_service="${ALLOW_ZERO_DESIRED_COUNT%%:*}"
-  zero_optin_expiry="${ALLOW_ZERO_DESIRED_COUNT#*:}"
-  # A regex-valid but NONEXISTENT date (2026-13-45) would sort after every real
-  # date and therefore never expire — fail-open, the one direction this must not
-  # have. Round-tripping it through `date` rejects that.
-  if ! zero_optin_parsed="$(date -u -d "$zero_optin_expiry" +%F 2>/dev/null)" ||
-     [[ "$zero_optin_parsed" != "$zero_optin_expiry" ]]; then
-    echo "::error::ALLOW_ZERO_DESIRED_COUNT carries an invalid date: $zero_optin_expiry. Refusing."
-    exit 1
-  fi
-  zero_optin_today="$(date -u +%F)"
-  # ISO dates compare correctly as strings; the expiry day itself is still valid.
-  if [[ "$zero_optin_expiry" < "$zero_optin_today" ]]; then
-    echo "::error::ALLOW_ZERO_DESIRED_COUNT expired on $zero_optin_expiry (today is $zero_optin_today). If this window is still running, update the variable; do not delete the expiry."
-    exit 1
-  fi
-  if [[ "$zero_optin_service" == "$APP" ]]; then
-    zero_desired_count_allowed=true
-  fi
-fi
-
 # Which ECS service's deploy lane runs the one-shot migrations.
 #
 # Homiio's two services share ONE image, and `deploy-aws.yml` rolls the API and
@@ -270,12 +206,28 @@ if ! [[ "$service_desired_count" =~ ^[0-9]+$ ]]; then
   echo "::error::ECS service $APP reported a non-numeric desiredCount (${service_desired_count:-missing}); refusing to deploy."
   exit 1
 fi
-if (( service_desired_count < 1 )) && [[ "$zero_desired_count_allowed" != true ]]; then
-  echo "::error::ECS service $APP must have a positive desiredCount before deployment (current: ${service_desired_count:-missing}). Scale the service up explicitly before retrying, or set ALLOW_ZERO_DESIRED_COUNT=$APP:<YYYY-MM-DD> if this is a deliberate zero-capacity deploy."
-  exit 1
-fi
+# desiredCount 0 is a STATE, not an error, and it needs no authorisation to be
+# recognised as one. Both Homiio services are parked at zero for the whole of a
+# store cutover on purpose, and refusing the deploy there is self-sealing: the
+# image that would make the service bootable again is the image the refusal
+# blocks, so the parked state can never be left.
+#
+# What this must NOT become is a green deploy that reports a release nobody got.
+# So the release still does everything that is real at zero capacity — it runs
+# the migrations, registers the revision, and POINTS THE SERVICE AT IT — and then
+# stops at the one step that is not real, the rollout, and says so loudly.
+#
+# Pointing the service is the half that is easy to leave out and expensive to
+# skip. `register-task-definition` alone does not repoint anything: ECS launches
+# whatever revision the SERVICE is configured with, so a later `desiredCount`
+# bump would start the OLD image, and this script derives its next render from
+# `services[0].taskDefinition` (see `current_task_definition` above), so every
+# subsequent deploy would keep building on the stale revision too. Homiio has TWO
+# services and each carries its own revision, so each has to be repointed by its
+# own lane.
+zero_capacity_deploy=false
 if (( service_desired_count < 1 )); then
-  echo "::warning::Deploying $APP at desiredCount=0, authorised by ALLOW_ZERO_DESIRED_COUNT=$ALLOW_ZERO_DESIRED_COUNT (expires $zero_optin_expiry). The rollout will complete with zero running tasks and the service will serve NOTHING until it is scaled up."
+  zero_capacity_deploy=true
 fi
 
 task_definition_file="$(mktemp)"
@@ -367,22 +319,19 @@ wait_for_service_rollout() {
               "$desired" =~ ^[0-9]+$ &&
               "$service_desired" =~ ^[0-9]+$ ]]; then
         echo "::warning::ECS returned non-numeric task counts for the $label rollout; retrying."
-      elif (( service_desired < 1 )) && [[ "$zero_desired_count_allowed" != true ]]; then
+      # These two refusals are UNCONDITIONAL, and they are the protection that
+      # survives the zero-capacity path above. A service that STARTED this deploy
+      # with capacity and reached zero part-way through has lost it — that is a
+      # real regression, not a parked service, and it must stay red. A release
+      # that begins at zero never enters this loop at all: it exits before the
+      # rollout, so there is nothing here for it to be exempted from.
+      elif (( service_desired < 1 )); then
         echo "::error::ECS service $APP reached desiredCount=0 during the $label rollout."
         return 1
       elif [[ "$rollout_state" == "COMPLETED" ]]; then
-        # All THREE zero-checks need the same exemption. Under an authorised
-        # zero-count deploy the steady state genuinely IS zero tasks, so a bypass
-        # applied only to the pre-check would let the release start and then kill
-        # it mid-rollout — later, and harder to read, than refusing up front, and
-        # with the cutover window already burning.
-        if (( desired < 1 )) && [[ "$zero_desired_count_allowed" != true ]]; then
+        if (( desired < 1 )); then
           echo "::error::ECS $label rollout for $APP completed at desiredCount=0; refusing to accept a zero-task steady state."
           return 1
-        fi
-        if (( desired < 1 )); then
-          echo "$label rollout for $APP completed at desiredCount=0, as authorised."
-          return 0
         fi
         if [[ "$running" == "$desired" ]]; then
           return 0
@@ -699,10 +648,31 @@ if ! aws ecs update-service \
   }' \
   >/dev/null; then
   echo "::error::ECS rejected the service update; restoring the previous task definition defensively."
+  # At zero capacity there is nothing to restore TO: no task is running, so the
+  # "previous image" is not serving either, and rollback_service would sit in
+  # wait_for_service_rollout until MAX_WAIT_SECS waiting for a steady state that
+  # cannot arrive. Say that instead of spending twenty minutes proving it.
+  if [[ "$zero_capacity_deploy" == "true" ]]; then
+    echo "::error::$APP is at desiredCount=0, so no rollback was attempted: nothing is running to roll back from, and the service is still pointed at $current_task_definition."
+    exit 1
+  fi
   if ! rollback_service; then
     echo "::error::The defensive rollback also failed; manual intervention is required."
   fi
   exit 1
+fi
+
+# Everything real at zero capacity is now done: the migrations ran, the revision
+# is registered, and the service points at it. The rollout is the part that would
+# be a lie, so it is skipped rather than waited on — a rollout at desiredCount 0
+# reaches "COMPLETED" with zero running tasks, which is exactly the
+# plausible-looking green this estate keeps getting caught by.
+if [[ "$zero_capacity_deploy" == "true" ]]; then
+  echo "::warning::NO ROLLOUT PERFORMED: ECS service $APP is at desiredCount=0 and is running ZERO tasks."
+  echo "::warning::NO ROLLOUT PERFORMED: the task definition WAS registered and the service now points at it: $new_task_definition"
+  echo "::warning::NO ROLLOUT PERFORMED: image $IMAGE_URI is NOT live and $APP is serving NOTHING. This deploy released nothing to users."
+  echo "::warning::NO ROLLOUT PERFORMED: to run this image, raise desired_count in oxy-infra terraform and deploy again."
+  exit 0
 fi
 
 echo "Deploying immutable image $IMAGE_URI with task definition $new_task_definition"
