@@ -106,13 +106,72 @@ export interface GeoJSONMultiPolygon {
  *  - `exact`       a building-level point somebody deliberately provided.
  *  - `approximate` an exact point deliberately degraded (rounded or offset).
  *  - `centroid`    the representative point of an AREA. Not anyone's location.
- *  - `area`        no meaningful point at all; only `bounds`/`polygon` apply.
+ *  - `area`        the EXTENT is the meaning. Any point is derived framing
+ *                  rather than the place's own location, and there may be no
+ *                  point at all.
  *
  * The distinction that matters most is that a `centroid` IS NOT ANYBODY'S
  * LOCATION. A city centre is a framing device, and code that treats it as a
  * home's position is wrong in a way no other type in this package prevents.
+ *
+ * `area` PREVIOUSLY READ "no meaningful point at all", and that was wrong in a
+ * way that mattered — see §19(C) of the ADR. `map_bounds` has always carried
+ * `precision: 'area'` AND a required centre, because a viewport's centre is
+ * real, so the old wording contradicted a variant sitting forty lines below it.
+ * Two implementers read that sentence and reached opposite conclusions. What
+ * `area` actually distinguishes is whether the point is the PLACE or merely a
+ * way to FRAME it; whether a point exists at all is now said structurally, by
+ * {@link PlaceGeometry}.
  */
 export type LocationPrecision = 'exact' | 'approximate' | 'centroid' | 'area';
+
+/**
+ * Whether a place has a representative point, said in the type rather than in a
+ * comment nobody is obliged to read.
+ *
+ * THE BUG THIS CLOSES, MEASURED. `center` used to be REQUIRED beside a
+ * `precision` that could say `area`, so a country — which has no centroid in
+ * this schema — could not be expressed honestly. The geocoding gateway
+ * therefore emitted `{ longitude: 0, latitude: 0 }` for every country and
+ * region, and the search screen drew its fallback box around that, so picking
+ * "Spain" returned zero listings over a map of the Gulf of Guinea. Nothing
+ * threw; zero results is the plausible-looking failure, which is why it
+ * survived review.
+ *
+ * `(0, 0)` IS A REAL COORDINATE — it is a point in the Atlantic, and longitude
+ * zero runs through Greenwich, Accra and Tema. So a type that forces it as the
+ * "no centre" value cannot distinguish ABSENT from THERE, which is the same
+ * family as a check that cannot distinguish success from failure. Absence has
+ * to be its own state.
+ *
+ * `center?: never` rather than a plain optional, and the difference is not
+ * stylistic: a plain `center?: GeoPoint` beside an open `precision` still
+ * ACCEPTS `{ precision: 'area', center }` — verified — so it would leave the
+ * contradiction discouraged rather than unrepresentable. `never` refuses it
+ * both as an object literal and through a variable, which is the shape the
+ * gateway actually writes. It also makes the MIRROR unrepresentable for free: a
+ * `centroid` with no centre no longer compiles, and a one-directional guard
+ * here would only be half a guard.
+ *
+ * `bounds` stays OPTIONAL on the `area` branch on purpose. Requiring it would
+ * simply move the fabrication one field across — a country with no bbox in this
+ * schema would have to invent a rectangle instead of a point, which is the same
+ * lie with a larger footprint. A place with neither is honestly unframeable,
+ * and the caller must say so rather than guess.
+ */
+export type PlaceGeometry =
+  | {
+      /** A real point: the place's own location, or a deliberate degradation of it. */
+      readonly precision: 'exact' | 'approximate' | 'centroid';
+      readonly center: GeoPoint;
+      readonly bounds?: GeoBounds;
+    }
+  | {
+      /** An extent. There is no representative point, and none may be supplied. */
+      readonly precision: 'area';
+      readonly center?: never;
+      readonly bounds?: GeoBounds;
+    };
 
 /** A display label, pre-split by whoever knows how. Never `label.split(',')[0]`. */
 export interface PlaceLabel {
@@ -169,31 +228,47 @@ export type LocationSelection =
       readonly kind: 'current_location';
       readonly center: GeoPoint;
       readonly radiusMeters: number;
-      readonly precision: LocationPrecision;
+      /**
+       * Narrowed to the two values a device fix can actually have. A position
+       * is a point: `centroid` and `area` are properties of an AREA and were
+       * never meaningful here, and the same lie this contract just removed from
+       * `place` was expressible here for the same reason.
+       */
+      readonly precision: 'exact' | 'approximate';
     }
-  /** A named area: a country, region, city, district, neighborhood or postcode. */
-  | {
+  /**
+   * A named area: a country, region, city, district, neighborhood or postcode.
+   *
+   * Its geometry comes from {@link PlaceGeometry}: a `centroid` with a centre,
+   * or `area` with none. A country has no centroid in this schema and says so
+   * rather than pointing at the Atlantic.
+   */
+  | ({
       readonly kind: 'place';
       readonly source: PlaceSource;
       readonly placeType: PlaceType;
       readonly label: PlaceLabel;
       readonly admin: AdminHierarchy;
-      readonly center: GeoPoint;
-      readonly bounds?: GeoBounds;
-      /** A named area's centre is a `centroid`, or `area` when no centre is meaningful. */
-      readonly precision: LocationPrecision;
-    }
+    } & PlaceGeometry)
   /** A specific address a geocoder proposed but Homiio has not materialised. */
-  | {
+  | ({
       readonly kind: 'address_candidate';
       readonly source: PlaceSource;
       readonly label: PlaceLabel;
       readonly admin: AdminHierarchy;
-      readonly center: GeoPoint;
-      readonly bounds?: GeoBounds;
-      readonly precision: LocationPrecision;
-    }
-  /** A map viewport the user confirmed. Has no name and never acquires one. */
+    } & PlaceGeometry)
+  /**
+   * A map viewport the user confirmed. Has no name and never acquires one.
+   *
+   * `precision: 'area'` with a REQUIRED centre, which is not the contradiction
+   * it looks like and is why {@link PlaceGeometry} is not applied here: a
+   * viewport's centre is real, and it is supplied by whoever built the viewport
+   * rather than derived downstream. That matters concretely — the naive
+   * midpoint of an antimeridian box is WRONG: for `west 170, east -170` it
+   * computes `(170 + -170) / 2 = 0` and lands in the Gulf of Guinea, when the
+   * true centre is 180. Dropping this field would push every consumer into
+   * exactly that arithmetic.
+   */
   | {
       readonly kind: 'map_bounds';
       readonly bounds: GeoBounds;
@@ -275,15 +350,12 @@ export type GeoPlaceType = PlaceType | 'address';
  * Auto-picking one is the homonym bug (ADR §12.2), and the list is what makes
  * the `disambiguating` state of §7 possible.
  */
-export interface GeoPlace {
+export type GeoPlace = {
   readonly source: PlaceSource;
   readonly placeType: GeoPlaceType;
   readonly label: PlaceLabel;
   readonly admin: AdminHierarchy;
-  readonly center: GeoPoint;
-  readonly bounds?: GeoBounds;
-  readonly precision: LocationPrecision;
-}
+} & PlaceGeometry;
 
 /**
  * Turn a gateway candidate into the selection the user just chose.
@@ -294,15 +366,27 @@ export interface GeoPlace {
  * identity for the rest of its life.
  */
 export function geoPlaceToSelection(place: GeoPlace): LocationSelection {
+  // Narrowed on `precision` and carried across whole, rather than rebuilt field
+  // by field. Spreading `center` conditionally would let an `area` place
+  // acquire one on the way through — the exact state `PlaceGeometry` exists to
+  // make unrepresentable, reintroduced by the function that is supposed to
+  // preserve it.
+  const geometry: PlaceGeometry =
+    place.precision === 'area'
+      ? { precision: 'area', ...(place.bounds === undefined ? {} : { bounds: place.bounds }) }
+      : {
+          precision: place.precision,
+          center: place.center,
+          ...(place.bounds === undefined ? {} : { bounds: place.bounds }),
+        };
+
   if (place.placeType === 'address') {
     return {
       kind: 'address_candidate',
       source: place.source,
       label: place.label,
       admin: place.admin,
-      center: place.center,
-      ...(place.bounds === undefined ? {} : { bounds: place.bounds }),
-      precision: place.precision,
+      ...geometry,
     };
   }
   return {
@@ -311,9 +395,7 @@ export function geoPlaceToSelection(place: GeoPlace): LocationSelection {
     placeType: place.placeType,
     label: place.label,
     admin: place.admin,
-    center: place.center,
-    ...(place.bounds === undefined ? {} : { bounds: place.bounds }),
-    precision: place.precision,
+    ...geometry,
   };
 }
 
