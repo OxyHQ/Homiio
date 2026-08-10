@@ -32,14 +32,42 @@
  *    passing or failing, because a blank reading would mean nothing.
  *  - Content, not merely absence of errors. "Nothing threw" is not the property;
  *    "the app rendered something" is.
+ *  - AND no error logged during boot — see immediately below, which is the
+ *    condition that was missing.
+ *
+ * THE HOLE THIS CLOSED: AN ERROR BOUNDARY IS CONTENT
+ *
+ * "Assert content" cannot distinguish a booted app from a CAUGHT CRASH, because
+ * React's error boundary renders content of its own — "Something went wrong".
+ * Measured 2026-08-10 on `/explore`: an infinite render loop (React #185, a
+ * store-sync effect firing on every render) produced a page with 33 elements
+ * and a visible error message, and this script printed `PASS` and exited 0. The
+ * only evidence was in the `consoleErrors` array, which it collected, printed,
+ * and did not act on.
+ *
+ * The two error channels are NOT the same thing, which is why the hole existed:
+ *
+ *  - `Runtime.exceptionThrown` (`pageErrors`) is an UNCAUGHT exception. Nothing
+ *    handled it, usually nothing mounted. Already gated before this change.
+ *  - `Runtime.consoleAPICalled` with `type: 'error'` (`consoleErrors`) is what a
+ *    React error boundary produces when it CATCHES a component crash. The app
+ *    mounts, renders a fallback, throws no uncaught exception, and every
+ *    existing condition passes.
+ *
+ * The second is the one a boundary hides, so the second is now a FAIL.
  *
  * A STANDING RULE FOR CHANGING THIS FILE
  *
  * When you check its output, print the FULL output and the exit code. Do not
  * ask a grep whether it matched: an empty match reads identically to a pass,
- * and that mistake was made three separate times while building this. The
- * accompanying `test-check-cold-start.mjs` mutation-tests exactly that — it
- * breaks the bundle and requires this script to notice.
+ * and that mistake was made three separate times while building this.
+ *
+ * `test-check-cold-start.mjs` mutation-tests every condition that can fail,
+ * which is what stops this file drifting into decoration. It breaks the entry
+ * bundle (nothing mounts) AND injects a console error (a caught crash that
+ * still renders). If you add a condition, add a mutation that only it can
+ * catch, and check the OTHER mutations still pass — a condition that fires on
+ * everything proves as little as one that fires on nothing.
  */
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync, existsSync } from 'node:fs';
@@ -53,8 +81,50 @@ const ROUTES = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const BOOT_WAIT_MS = Number(process.env.COLD_START_WAIT_MS ?? 9000);
 const CHROME = process.env.COLD_START_CHROME ?? '/usr/bin/chromium';
 
-/** Below this many DOM nodes we call it blank; a mounted app is far above it. */
+/**
+ * Below this many DOM nodes we call it blank; a mounted app is far above it.
+ *
+ * Deliberately NOT raised to catch an error boundary, although the numbers
+ * tempt it — measured 2026-08-10, the boundary rendered 33 elements while the
+ * eight real routes measured 199 (`/contracts`, the sparsest) to 400 (`/`), so
+ * any threshold in 34–199 would have discriminated. That is exactly the kind of
+ * number that rots: it encodes today's densest and sparsest screens, and the
+ * first genuinely sparse route added breaks it in the direction that reads as a
+ * real failure. The console-error condition below catches the same case by its
+ * MECHANISM rather than by a proxy for it, so this stays a blankness floor and
+ * nothing more.
+ */
 const MIN_ELEMENTS = 20;
+
+/**
+ * Console-error messages that are known-benign and must not fail a boot.
+ *
+ * **It is empty, and that is a measurement, not an oversight.** Eight routes
+ * (`/`, `/explore`, `/properties`, `/reviews`, `/contracts`, `/saved`, `/tips`,
+ * `/profile`) were checked on 2026-08-10 against `main` and every one produced
+ * ZERO console errors. So gating on all of them costs nothing today — there is
+ * no wolf to cry, which is the whole reason this can be strict rather than a
+ * curated list of crash signatures that goes stale with the next React release.
+ *
+ * Before adding an entry, try to fix the source instead. A gate that reds on
+ * noise gets switched off by whoever hits it next, and an off gate is worse
+ * than the hole this closed — but an allow-list that grows on contact is how a
+ * gate becomes decorative. If you must add one:
+ *
+ *  - make the pattern narrow enough that it cannot also match a crash (anchor
+ *    on a library's own prefix, never a bare word like `Warning`),
+ *  - write WHY it is benign and what would let it be removed, and
+ *  - re-run the eight routes above, so the next person inherits a measurement
+ *    rather than an assumption.
+ */
+const ALLOWED_CONSOLE_ERROR_PATTERNS = [];
+
+/** Console errors that are not on the allow-list — the ones that fail a boot. */
+function unexpectedConsoleErrors(messages) {
+  return messages.filter(
+    (message) => !ALLOWED_CONSOLE_ERROR_PATTERNS.some((pattern) => pattern.test(message)),
+  );
+}
 
 if (!existsSync(DIST)) {
   console.error(`No export at ${DIST}. Run \`bun run build\` in packages/frontend first.`);
@@ -212,6 +282,8 @@ for (const route of ROUTES.length ? ROUTES : ['/']) {
   });
   const probe = result.value;
 
+  const badConsoleErrors = unexpectedConsoleErrors(consoleErrors);
+
   console.log(JSON.stringify({ route, ...probe, consoleErrors, pageErrors }, null, 2));
 
   if (probe.visibility !== 'visible') {
@@ -222,6 +294,19 @@ for (const route of ROUTES.length ? ROUTES : ['/']) {
     failures += 1;
   } else if (pageErrors.length) {
     console.error(`FAIL ${route}: uncaught exception during boot.`);
+    failures += 1;
+  } else if (badConsoleErrors.length) {
+    // Content IS present here, and that is the point: this is the branch an
+    // error boundary used to walk straight past. The message says so, and names
+    // the first error, because "the check failed" without the reason sends the
+    // reader back to the JSON above to work out which of the two error channels
+    // fired.
+    console.error(
+      `FAIL ${route}: the app rendered (${probe.elements} elements) but logged ` +
+        `${badConsoleErrors.length} error(s) during boot — a caught crash renders ` +
+        `a fallback, so content alone does not mean it booted.`,
+    );
+    console.error(`  first error: ${badConsoleErrors[0].slice(0, 300)}`);
     failures += 1;
   } else {
     console.error(`PASS ${route}: ${probe.elements} elements, visibility=${probe.visibility}.`);

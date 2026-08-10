@@ -1,6 +1,6 @@
 {
-  "id": "da092300-deb2-44c9-9bfb-066753608349",
-  "prevId": "94344289-6061-4dc1-8815-96d2920e4aff",
+  "id": "c209c091-5586-4b37-872b-25fa62a31999",
+  "prevId": "da092300-deb2-44c9-9bfb-066753608349",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -10499,6 +10499,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'{}'::jsonb"
+        },
+        "location": {
+          "name": "location",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         },
         "notifications_enabled": {
           "name": "notifications_enabled",

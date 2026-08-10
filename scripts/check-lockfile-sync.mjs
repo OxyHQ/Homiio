@@ -224,13 +224,33 @@ for (const workspacePath of manifestWorkspacePaths) {
   }
 }
 
-// bun folds `resolutions` into the overrides it records. Nothing here uses that
-// spelling, and comparing only `overrides` while a manifest declared
-// `resolutions` would report a difference that is not one.
-if (rootManifest.resolutions !== undefined) {
-  die("package.json declares resolutions, which this check does not model alongside overrides. Extend it before adopting that spelling.");
+// bun records a SINGLE `overrides` object in bun.lock and folds `resolutions`
+// into it — there is no separate `resolutions` key in the lockfile. So the set
+// to compare against `lockfile.overrides` is the UNION of the manifest's
+// `overrides` and `resolutions`, not `overrides` alone. Both spellings are
+// load-bearing here: ~/AGENTS.md requires the Oxy SDK to be pinned in BOTH so
+// bun cannot hoist a stale @oxyhq/core inside @oxyhq/services.
+//
+// A name pinned in both to DIFFERENT ranges is a self-contradiction — the value
+// bun would fold is undefined — so surface it rather than silently pick a winner.
+const declaredOverrides = {};
+for (const [spelling, entries] of [
+  ["overrides", rootManifest.overrides ?? {}],
+  ["resolutions", rootManifest.resolutions ?? {}],
+]) {
+  if (typeof entries !== "object" || entries === null) {
+    die(`package.json ${spelling} must be an object, so the versions it pins can be compared against ${LOCKFILE}.`);
+  }
+  for (const [name, range] of Object.entries(entries)) {
+    if (name in declaredOverrides && declaredOverrides[name] !== range) {
+      die(
+        `package.json pins ${name} to conflicting versions across overrides and resolutions ` +
+          `(${JSON.stringify(declaredOverrides[name])} vs ${JSON.stringify(range)}); make them agree so the ${LOCKFILE} fold is well-defined.`,
+      );
+    }
+    declaredOverrides[name] = range;
+  }
 }
-const declaredOverrides = rootManifest.overrides ?? {};
 const recordedOverrides = lockfile.overrides ?? {};
 for (const name of [...new Set([...Object.keys(declaredOverrides), ...Object.keys(recordedOverrides)])].sort()) {
   if (declaredOverrides[name] !== recordedOverrides[name]) {

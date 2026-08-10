@@ -24,6 +24,7 @@ import {
   OfferingType,
   locationKey,
   type GeoBounds,
+  type GeoPoint,
   type LocationSelection,
   type Property,
   type SingleLocationSelection,
@@ -105,33 +106,37 @@ function locationParams(selection: LocationSelection): Record<string, string | n
     case 'place': {
       if (selection.source.kind === 'homiio') {
         const { entity, id } = selection.source;
+        // An id scopes the search on its own and needs NO geometry, which is
+        // what makes a coordinate-less city a legitimate selection rather than
+        // a broken one: Homiio knows it by id, the query filters by that id,
+        // and only the MAP has nothing to frame from. Dropping such a city
+        // would reintroduce the homonym the disambiguation list exists to let
+        // somebody reach.
         if (entity === 'city') return { city: id };
         if (entity === 'region') return { state: id };
       }
       // An external candidate carries no id this backend can resolve, so it is
       // scoped by the geometry it inlined — which is why an `external` place is
       // required to carry its own bounds/centre in the first place.
-      return selection.bounds
-        ? boundsToParams(selection.bounds)
-        : { lat: selection.center.latitude, lng: selection.center.longitude };
+      return geometryParams(selection);
     }
 
     case 'address_candidate':
-      return selection.bounds
-        ? boundsToParams(selection.bounds)
-        : { lat: selection.center.latitude, lng: selection.center.longitude };
+      return geometryParams(selection);
 
     case 'map_bounds':
     case 'polygon':
       return boundsToParams(selection.bounds);
 
-    case 'multi_area':
+    case 'multi_area': {
       // The endpoint takes ONE scope. Rather than silently querying the first
       // area — the "quietly choose one" behaviour this contract exists to
       // remove — a multi-area selection is scoped by the box that covers all of
       // them, which is a superset and therefore honest about over-returning
       // rather than wrong about under-returning.
-      return boundsToParams(coveringBounds(selection.areas));
+      const cover = coveringBounds(selection.areas);
+      return cover ? boundsToParams(cover) : {};
+    }
 
     default: {
       const exhaustive: never = selection;
@@ -140,34 +145,89 @@ function locationParams(selection: LocationSelection): Record<string, string | n
   }
 }
 
-/** The smallest box containing every area's own box or centre. */
-function coveringBounds(areas: readonly SingleLocationSelection[]): GeoBounds {
+/** A zero-area box at a point — the identity element for a cover. */
+function pointBox(center: GeoPoint): GeoBounds {
+  return {
+    west: center.longitude,
+    east: center.longitude,
+    south: center.latitude,
+    north: center.latitude,
+  };
+}
+
+/**
+ * The geographic params for a selection scoped only by its own geometry.
+ *
+ * A BOX is preferred over a point: an area framed by a radius around a centre
+ * is a different question with a different answer. A place with NEITHER yields
+ * no geographic params at all, and the comment matters more than the code —
+ * that case is refused upstream rather than handled here. `resolveLocationRef`
+ * resolves only Homiio cities, which take the id branch above and never reach
+ * this function, so a geometry-less place arriving here would mean a selection
+ * was committed that no resolver produces. Emitting nothing is the least-wrong
+ * residual, not a supported path.
+ */
+function geometryParams(selection: {
+  bounds?: GeoBounds;
+  center?: GeoPoint;
+}): Record<string, string | number> {
+  if (selection.bounds) return boundsToParams(selection.bounds);
+  if (selection.center) {
+    return { lat: selection.center.latitude, lng: selection.center.longitude };
+  }
+  return {};
+}
+
+/**
+ * The smallest box containing every area's own box or centre.
+ *
+ * An area with no geometry contributes NOTHING rather than a `(0,0)` corner —
+ * `PlaceGeometry` now says a place may legitimately have no point, and folding
+ * a missing one in as the origin would drag the cover across the Atlantic and
+ * quietly widen the search to half the planet.
+ */
+function coveringBounds(areas: readonly SingleLocationSelection[]): GeoBounds | null {
+  /**
+   * The area an entry covers, or `null` when it carries no geometry.
+   *
+   * Switched on `kind` rather than probed with `in`, because
+   * `current_location` has no `bounds` FIELD at all while `place` has an
+   * optional one — a property test cannot tell "this kind has no such field"
+   * from "this instance left it out", and only one of those is a real absence.
+   */
+  function boxOf(area: SingleLocationSelection): GeoBounds | null {
+    switch (area.kind) {
+      case 'polygon':
+      case 'map_bounds':
+        return area.bounds;
+      case 'current_location':
+        return pointBox(area.center);
+      case 'place':
+      case 'address_candidate':
+        return area.bounds ?? (area.center ? pointBox(area.center) : null);
+    }
+  }
+
   let west = 180;
   let south = 90;
   let east = -180;
   let north = -90;
+  let contributors = 0;
+
   for (const area of areas) {
-    // `polygon` carries bounds and no centre; `current_location` the reverse.
-    // Degenerating a centre to a zero-area box is correct here — the union of
-    // it with any other box is unaffected, and a lone point yields a point box
-    // the backend reads as an exact-match rectangle rather than as everywhere.
-    const box: GeoBounds =
-      area.kind === 'polygon' || area.kind === 'map_bounds'
-        ? area.bounds
-        : (area.kind === 'place' || area.kind === 'address_candidate') && area.bounds
-          ? area.bounds
-          : {
-              west: area.center.longitude,
-              east: area.center.longitude,
-              south: area.center.latitude,
-              north: area.center.latitude,
-            };
+    const box = boxOf(area);
+    if (!box) continue;
+
+    contributors += 1;
     west = Math.min(west, box.west);
     south = Math.min(south, box.south);
     east = Math.max(east, box.east);
     north = Math.max(north, box.north);
   }
-  return { west, south, east, north };
+
+  // No area brought any geometry, so there is no cover. Returning the initial
+  // sentinels would emit an INVERTED box spanning the world.
+  return contributors > 0 ? { west, south, east, north } : null;
 }
 
 /**

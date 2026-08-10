@@ -119,6 +119,11 @@ function toMarkers(
     );
 }
 
+/** The centre of a declared box — a real derived framing point, not an invented one. */
+function boundsCenter(bounds: GeoBounds): [number, number] {
+  return [(bounds.west + bounds.east) / 2, (bounds.south + bounds.north) / 2];
+}
+
 /**
  * Derive the {@link SearchFilters} shape (used by the reused filters sheet)
  * from the active {@link SearchQuery}. The sheet edits a flatter model, so we
@@ -228,14 +233,41 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     [savedName, searchExists],
   );
 
-  // The map's opening camera. Only a framing hint — once results arrive the map
-  // frames from the server's `location` echo, so the two cannot disagree.
+  /**
+   * The map's opening camera. Only a framing hint — once results arrive the map
+   * frames from the server's `location` echo, so the two cannot disagree.
+   *
+   * A place may legitimately have NO centre: `PlaceGeometry` says an `area`
+   * carries an extent and no representative point, and a city Homiio knows by
+   * id but has no coordinates for is a real, selectable place — its search
+   * scopes by `cityId` and needs no geometry at all.
+   *
+   * So the order is bounds → centre → nothing, and the last arm is the one that
+   * matters. Deriving the centre of a declared box is a real framing point;
+   * INVENTING one is not, and the invented value would be `(0, 0)` — an actual
+   * location in the Atlantic, which is how "Spain" ended up over the Gulf of
+   * Guinea. `undefined` lets the map keep its own default, which is honest
+   * about having nothing to frame from, and the LIST is still correctly scoped
+   * either way.
+   *
+   * Framing that also picked a sensible ZOOM from the box — so a city and a
+   * neighbourhood do not open identically — needs a `fitBounds` on `MapApi`,
+   * which this component cannot express today (#395).
+   */
   const initialCoordinates = useMemo<[number, number] | undefined>(() => {
     const selection = query.location;
-    if (!selection || selection.kind === 'polygon' || selection.kind === 'multi_area') {
-      return undefined;
+    if (!selection || selection.kind === 'multi_area') return undefined;
+
+    if (selection.kind === 'polygon' || selection.kind === 'map_bounds') {
+      return boundsCenter(selection.bounds);
     }
-    return [selection.center.longitude, selection.center.latitude];
+    if (selection.kind === 'current_location') {
+      return [selection.center.longitude, selection.center.latitude];
+    }
+    if (selection.bounds) return boundsCenter(selection.bounds);
+    return selection.center
+      ? [selection.center.longitude, selection.center.latitude]
+      : undefined;
   }, [query.location]);
 
   const selectedProperty = useMemo(

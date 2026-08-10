@@ -75,8 +75,15 @@
     {
       "idx": 10,
       "version": "7",
-      "when": 1786334768535,
-      "tag": "0010_saved_search_location",
+      "when": 1786335410777,
+      "tag": "0010_deterministic_place_slug",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1786341191828,
+      "tag": "0011_saved_search_location",
       "breakpoints": true
     }
   ]

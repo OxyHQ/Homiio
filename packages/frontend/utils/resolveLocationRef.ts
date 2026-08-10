@@ -22,18 +22,25 @@
  * network failure offers a retry, `no_results` offers a different place, and
  * `ambiguous` opens the disambiguation list. Collapsing them into one "error"
  * is how a retry button appears on a query that will never succeed.
+ *
+ * ## `ambiguous` is a SUCCESSFUL answer that must not be resolved
+ *
+ * `cityService.lookupCity` (#295) answers `resolved` | `ambiguous` |
+ * `not_found` and never picks between homonyms. This module maps `ambiguous`
+ * onto `failed('ambiguous')` — "failed" in the sense that no single place was
+ * determined, which is exactly what stops a query running. It must never take
+ * `candidates[0]`: the old `getCityBySlug` ended in `searchCities(name, 1)[0]`
+ * against a backend ordering by listing count, so whichever Barcelona had more
+ * listings won, arbitrarily, and the winner could change as data arrived.
  */
 import {
-  type AdminHierarchy,
-  type City,
+  type CityPlaceCandidate,
   type LocationRef,
   type LocationResolution,
   type LocationSelection,
-  type PlaceLabel,
 } from '@homiio/shared-types';
 
 import { cityService } from '@/services/cityService';
-import { cityCountry, cityCountryName, cityRegionName } from '@/utils/cityDisplay';
 
 /** A device fix, supplied by the caller — this module never asks for one. */
 export interface DeviceFix {
@@ -41,57 +48,55 @@ export interface DeviceFix {
   longitude: number;
 }
 
-/** Build the label + admin hierarchy for a canonical Homiio city. */
-function cityIdentity(city: City): { label: PlaceLabel; admin: AdminHierarchy } {
-  const region = cityRegionName(city);
-  const country = cityCountryName(city);
-  return {
-    label: {
-      primary: city.name,
-      // Pre-split, and joined for display only at the point of rendering. The
-      // parent is what tells "Barcelona, Catalonia, Spain" from "Barcelona,
-      // Anzoátegui, Venezuela" at a glance, so it is never dropped.
-      secondary: [region, country].filter(Boolean).join(', ') || undefined,
-      kind: 'place',
-    },
-    admin: {
-      // ISO-3166-1 alpha-2, read off the POPULATED country rather than guessed.
-      // There is deliberately no default: `cityService.getCityByLocation` used
-      // to default the country to `'USA'`, which is how a lookup for a city
-      // that exists in several countries lands confidently in the wrong one.
-      // Empty means "not known", which a consumer can see; a wrong code is
-      // indistinguishable from a right one.
-      countryCode: cityCountry(city)?.code ?? '',
-      regionName: region || undefined,
-      cityName: city.name,
-    },
-  };
-}
-
-/** Build a `place` selection from a resolved canonical city. */
-export function citySelection(city: City): LocationSelection | null {
-  const coordinates = city.coordinates;
-  if (!coordinates) return null;
-  const { label, admin } = cityIdentity(city);
-  return {
+/**
+ * Build a `place` selection from a resolved city candidate.
+ *
+ * The candidate already carries everything a selection needs — a pre-split
+ * `label`, an explicit `admin` hierarchy, a declared `precision` and its
+ * geometry — so nothing is re-derived here. In particular nothing joins or
+ * splits a label on commas, which is the assumption that mangles every script
+ * that does not order a place name that way.
+ *
+ * The geometry is assembled as a UNIT rather than field by field, because
+ * `PlaceGeometry` is a two-member union: a real point carries `center` with a
+ * point-class precision, an extent carries `precision: 'area'` and
+ * `center?: never`. Copying `center` and `precision` across independently would
+ * let this function reassemble the contradiction the union exists to forbid —
+ * and that contradiction is not hypothetical, it is what made the gateway emit
+ * `(0, 0)` for every country and put "Spain" over the Gulf of Guinea.
+ */
+export function citySelection(city: CityPlaceCandidate): LocationSelection {
+  const identity = {
     kind: 'place',
     source: { kind: 'homiio', entity: 'city', id: city.id },
     placeType: 'city',
-    label,
-    admin,
-    center: { longitude: coordinates.lng, latitude: coordinates.lat },
-    // No bounds: the canonical `City` record carries a centroid and no extent,
-    // so there is nothing honest to put here. A synthetic box around the centre
-    // would be a fabrication — the same one deleted from `WhereStep`, where a
-    // fixed +/-0.05 degree square stood in for the extent of anywhere from a
-    // hamlet to Tokyo. A city with no bounds is scoped by `city=<id>` anyway,
-    // which is the canonical id and better than any box.
+    label: city.label,
+    admin: city.admin,
+  } as const;
 
-    // A city's centre is the representative point of an AREA and is nobody's
-    // address. Declaring that is what stops a consumer treating it as a home's
-    // position — a distinction no type used to carry at all.
-    precision: 'centroid',
-  };
+  return city.precision === 'area' || city.center === undefined
+    ? { ...identity, precision: 'area', bounds: city.bounds }
+    : { ...identity, precision: city.precision, center: city.center, bounds: city.bounds };
+}
+
+/** Map a lookup outcome onto a resolution, without ever choosing a candidate. */
+async function resolveCityToken(token: string): Promise<LocationResolution> {
+  try {
+    const result = await cityService.lookupCity(token);
+    switch (result.status) {
+      case 'resolved':
+        return { status: 'resolved', selection: citySelection(result.place) };
+      case 'ambiguous':
+        // The server found several equally valid places and handed back the
+        // ordered list. Taking the first is the homonym bug; asking is the
+        // contract. Rendering that list is #354's.
+        return { status: 'failed', reason: 'ambiguous' };
+      case 'not_found':
+        return { status: 'failed', reason: 'no_results' };
+    }
+  } catch {
+    return { status: 'failed', reason: 'network' };
+  }
 }
 
 /**
@@ -145,17 +150,11 @@ export async function resolveLocationRef(
         // guessing one would put a wrong place behind a correct-looking URL.
         return { status: 'failed', reason: 'unsupported' };
       }
-      try {
-        const response = await cityService.getCityById(ref.id);
-        const city = response?.data;
-        if (!city) return { status: 'failed', reason: 'no_results' };
-        const selection = citySelection(city);
-        return selection
-          ? { status: 'resolved', selection }
-          : { status: 'failed', reason: 'no_results' };
-      } catch {
-        return { status: 'failed', reason: 'network' };
-      }
+      // The id goes through the SAME four-outcome lookup as a name. An id is an
+      // identity match (`matchedOn: 'id'`) and resolves on its own, so this
+      // costs nothing, and it leaves one resolution path to reason about rather
+      // than two that can quietly acquire different homonym behaviour.
+      return resolveCityToken(ref.id);
     }
 
     case 'multi':
@@ -171,23 +170,11 @@ export async function resolveLocationRef(
 /**
  * Resolve a LEGACY `?city=<slug|name|id>` parameter (ADR §5.3, one release).
  *
- * The rule that matters is what happens with more than one match: it opens the
- * disambiguation list and commits NOTHING. `getCityBySlug` used to end in
- * `searchCities(name, 1).data[0]` — take the first — and the backend ordered
- * candidates by listing count, so whichever Barcelona had more listings won,
- * arbitrarily from the user's point of view, and the winner could change as
- * data arrived.
+ * The same lookup as a `loc` token, because a legacy param is a weaker spelling
+ * of the same question — and routing both through one function is what stops
+ * the deep-link path acquiring different homonym behaviour from the canonical
+ * one.
  */
 export async function resolveLegacyCityParam(value: string): Promise<LocationResolution> {
-  try {
-    const response = await cityService.getCityBySlug(value);
-    const city = response?.data;
-    if (!city) return { status: 'failed', reason: 'no_results' };
-    const selection = citySelection(city);
-    return selection
-      ? { status: 'resolved', selection }
-      : { status: 'failed', reason: 'no_results' };
-  } catch {
-    return { status: 'failed', reason: 'network' };
-  }
+  return resolveCityToken(value);
 }

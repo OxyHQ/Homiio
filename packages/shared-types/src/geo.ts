@@ -98,6 +98,16 @@ export interface City {
   id: string;
   name: string;
   /**
+   * The URL-safe form of {@link name}, computed by the database (#295).
+   *
+   * A LABEL, not an identity — two cities routinely share one — so it is safe to
+   * put in a link and never safe to resolve by on its own. Emitted so a client
+   * can build a URL without re-implementing the slug rule; `GET
+   * /api/cities/lookup` is what turns one back into a place, and it answers with
+   * a candidate list when the slug is shared.
+   */
+  slug: string;
+  /**
    * The owning country's `id`, or the populated {@link Country} document when an
    * endpoint expands it (the `/api/cities*` routes populate `countryId` →
    * `{ name, code, currency, flag }`).
