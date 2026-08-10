@@ -51,8 +51,14 @@ import {
   savedSearches as savedSearchesTable,
 } from '../../db/schema';
 import { recordHousingDomainEvent } from '../../db/watches/domainEventRepository';
-import { matchDomainEvent } from '../../services/watches/housingAlertMatcher';
+import {
+  matchDomainEvent,
+  MAX_DELIVERIES_PER_WATCH_PER_DAY,
+} from '../../services/watches/housingAlertMatcher';
 import { deliverDueDigests, runHousingAlertSweep } from '../../services/watches/housingAlertSweep';
+import { alertNarrative } from '../../services/watches/alertNarrative';
+import { recordPropertyChangeEvents } from '../../services/watches/propertyEventProducer';
+import { runHousingAlertSweepNow } from '../../services/cron';
 import { errorHandler } from '../../middlewares/errorHandler';
 
 let db: Database;
@@ -433,9 +439,6 @@ describe('idempotency', () => {
     const before = await db
       .select({ value: sql<number>`count(*)::int` })
       .from(housingDomainEvents);
-    const { recordPropertyChangeEvents } = await import(
-      '../../services/watches/propertyEventProducer'
-    );
     const snapshot = {
       id: `property-${uuidv7()}`,
       title: 'Flat',
@@ -562,10 +565,6 @@ describe('first indexing of the catalogue', () => {
     // daily ceiling and records the rest as `rate_limited`.
     const owner = oxy();
     await createWatch(owner, 'Eixample');
-
-    const { MAX_DELIVERIES_PER_WATCH_PER_DAY } = await import(
-      '../../services/watches/housingAlertMatcher'
-    );
     const flood = MAX_DELIVERIES_PER_WATCH_PER_DAY + 5;
     for (let index = 0; index < flood; index += 1) {
       await matchDomainEvent(await recordEvent(), db);
@@ -778,7 +777,6 @@ describe('privacy', () => {
     // producer belongs to #358), so this asserts the EXPLANATION's shape at the
     // narrative boundary — which is the part that would leak if the rule were
     // switched on tomorrow with a producer wired to it.
-    const { alertNarrative } = await import('../../services/watches/alertNarrative');
     const narrative = alertNarrative(
       {
         watchName: 'Eixample',
@@ -804,7 +802,6 @@ describe('privacy', () => {
   });
 
   it('names the listing on the lock screen only when the watch asked for detail', async () => {
-    const { alertNarrative } = await import('../../services/watches/alertNarrative');
     const explanation = {
       watchName: 'Eixample',
       watchId: 'watch-1',
@@ -1150,8 +1147,6 @@ describe('the sweep', () => {
     const owner = oxy();
     await createWatch(owner, 'Eixample');
     await recordEvent();
-
-    const { runHousingAlertSweepNow } = await import('../../services/cron');
     await runHousingAlertSweepNow();
 
     expect(await alertsFor(owner)).toHaveLength(1);
@@ -1168,10 +1163,6 @@ describe('the producer', () => {
     await createWatch(owner, 'Eixample', {
       rules: [{ type: 'price_decrease', enabled: true, threshold: 1 }],
     });
-
-    const { recordPropertyChangeEvents } = await import(
-      '../../services/watches/propertyEventProducer'
-    );
     const before = {
       id: `property-${uuidv7()}`,
       title: 'Bright flat',
@@ -1213,10 +1204,6 @@ describe('the producer', () => {
     await createWatch(owner, 'Eixample', {
       rules: [{ type: 'cost_terms_changed', enabled: true }],
     });
-
-    const { recordPropertyChangeEvents } = await import(
-      '../../services/watches/propertyEventProducer'
-    );
     const before = {
       id: `property-${uuidv7()}`,
       title: 'Flat',

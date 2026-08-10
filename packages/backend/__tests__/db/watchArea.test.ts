@@ -67,8 +67,13 @@ describe('a plain bounding box', () => {
 
   it('becomes a closed Polygon ring', () => {
     const area = boundsToArea(eixample);
+    // NARROWED, not cast. The union's two arms nest their coordinates to
+    // different depths, so a cast that reads `coordinates[0]` as a ring is
+    // silently wrong for a MultiPolygon — and this suite deliberately produces
+    // both. Asserting the discriminant first is what makes the read below safe.
     expect(area?.type).toBe('Polygon');
-    const ring = (area as { coordinates: number[][][] }).coordinates[0];
+    if (area?.type !== 'Polygon') throw new Error('expected a Polygon');
+    const ring = area.coordinates[0];
     expect(ring).toHaveLength(5);
     // Closed: GeoJSON requires the first position repeated last, and PostGIS
     // rejects a ring that is not.
@@ -109,7 +114,8 @@ describe('a box that crosses the antimeridian', () => {
   it('splits into TWO rings rather than one', () => {
     const area = boundsToArea(pacific);
     expect(area?.type).toBe('MultiPolygon');
-    expect((area as { coordinates: unknown[] }).coordinates).toHaveLength(2);
+    if (area?.type !== 'MultiPolygon') throw new Error('expected a MultiPolygon');
+    expect(area.coordinates).toHaveLength(2);
   });
 
   it('covers Fiji', async () => {

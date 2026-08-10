@@ -46,6 +46,7 @@ import {
 
 import { reversePlace } from '@/services/geoService';
 import { useLocationScopeStore } from '@/store/locationScopeStore';
+import { usePrimarySavedArea } from './useSavedSearches';
 import {
   resolveLocationScope,
   type DevicePositionState,
@@ -180,24 +181,25 @@ export interface LocationScope extends LocationScopeState {
 }
 
 /**
- * The saved-search rung, ABSENT until #356 lands.
+ * The saved-search rung, LIVE since #356.
  *
- * The ladder's second rung is "the primary area of a saved search or one
- * configured as the home area", and the flag that marks one — `isPrimaryArea` —
- * is #356's and is not merged. The rung therefore reads `null`, and the ladder
- * skips it, because an absent rung is a skip and not a failure.
+ * It reads the watch a person marked as their primary area — at most one each,
+ * enforced by a partial unique index — through {@link usePrimarySavedArea}. That
+ * flag is an EXPLICIT choice, which is why the rung may outrank the device
+ * position; it is not inferred from behaviour.
  *
- * The tempting substitute is "the most recently updated saved search that has a
- * location", and it is worse than nothing: it would scope somebody's entire Home
- * to whichever city they happened to bookmark last, presented as their home
- * area, with no way for them to see why. Guessing which of several saved
- * searches is primary is exactly the opaque personalisation the issue's
- * "personalización ética" section rules out.
+ * The substitute this rung was written to refuse is still refused: "the most
+ * recently updated saved search that has a location" would scope somebody's
+ * entire Home to whichever city they happened to bookmark last, presented as
+ * their home area, with no way to see why. `usePrimarySavedArea` reads the flag
+ * or answers `null`; it never guesses which of several saved searches is
+ * primary.
  *
- * A named constant rather than an inline `null` so the rung is visible in the
- * ladder's inputs to whoever lands #356 and comes looking for where to wire it.
+ * `null` remains the COMMON answer — most people have no primary area — and the
+ * ladder still falls through it, because an absent rung is a skip and not a
+ * failure. What is new is that the absence is now DISTINGUISHED from not knowing
+ * yet: see `savedAreaPending` below.
  */
-const SAVED_PRIMARY_AREA_PENDING_356: LocationSelection | null = null;
 
 export function useLocationScope(): LocationScope {
   const sessionSelection = useLocationScopeStore((s) => s.sessionSelection);
@@ -205,7 +207,23 @@ export function useLocationScope(): LocationScope {
   const lastChosenArea = useLocationScopeStore((s) => s.lastChosenArea);
   const deviceRequested = useLocationScopeStore((s) => s.deviceRequested);
   const permissionPromptShown = useLocationScopeStore((s) => s.permissionPromptShown);
-  const savedAreaSelection = SAVED_PRIMARY_AREA_PENDING_356;
+  const primaryArea = usePrimarySavedArea();
+  const savedAreaSelection = primaryArea.selection;
+  /**
+   * Whether the saved-area rung has ANSWERED yet.
+   *
+   * Distinct from `savedAreaSelection === null`, and the distinction is the
+   * whole reason this exists rather than a bare read. Treating "still loading"
+   * as "absent" produces exactly the late-answer failure this file's header
+   * claims is unreachable: the ladder would fall to the device rung, resolve
+   * Home to the device position, and then jump to the saved area a moment later
+   * when the request lands — a scope changing under the user with no action
+   * from them.
+   *
+   * `false` for a logged-out user, who cannot have a primary area, so nothing
+   * ever waits on a request that will not be made.
+   */
+  const savedAreaPending = primaryArea.pending;
 
   // The device rung runs when there is nothing above it to use, or when the user
   // asked for it. Gating on the higher rungs is not an optimisation: taking a
@@ -213,7 +231,14 @@ export function useLocationScope(): LocationScope {
   // not ask for and would not benefit from.
   const deviceNeeded =
     deviceRequested ||
-    (!explicitGlobal && !sessionSelection && !savedAreaSelection && !lastChosenArea);
+    (!explicitGlobal &&
+      !sessionSelection &&
+      // NOT merely `!savedAreaSelection`: taking a position while the rung above
+      // is still loading is a location read for a scope that may be about to be
+      // outranked, which is the very thing the gate below it exists to avoid.
+      !savedAreaPending &&
+      !savedAreaSelection &&
+      !lastChosenArea);
 
   const fixQuery = useQuery({
     // `deviceRequested` is part of the key so that pressing the button after a
@@ -243,6 +268,13 @@ export function useLocationScope(): LocationScope {
   });
 
   const device = useMemo((): DevicePositionState => {
+    // `resolving` while the rung ABOVE is still loading, so the ladder reports
+    // `resolving` rather than falling through to the mandatory picker. Reporting
+    // `idle` here would flash the place picker open for the half-second the
+    // saved-search request takes, for a user who has already chosen an area —
+    // the same reason the device rung's own `resolving` branch refuses
+    // `needsPlace`.
+    if (savedAreaPending) return { status: 'resolving' };
     if (!deviceNeeded) return { status: 'idle' };
     if (fixQuery.isPending || fixQuery.isFetching) return { status: 'resolving' };
     const outcome = fixQuery.data;
@@ -265,7 +297,7 @@ export function useLocationScope(): LocationScope {
         precision: 'exact',
       },
     };
-  }, [deviceNeeded, fixQuery.isPending, fixQuery.isFetching, fixQuery.data]);
+  }, [savedAreaPending, deviceNeeded, fixQuery.isPending, fixQuery.isFetching, fixQuery.data]);
 
   const state = useMemo(
     () =>

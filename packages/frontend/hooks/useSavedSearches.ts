@@ -227,6 +227,112 @@ export interface UseSavedSearches {
   isAuthenticated: boolean;
 }
 
+/**
+ * The ONE definition of the saved-searches list query.
+ *
+ * Shared rather than repeated because two hooks read it — this one and
+ * {@link usePrimarySavedArea}, which the location ladder calls — and React Query
+ * de-duplicates on the KEY plus the fetcher's behaviour. Two copies of the
+ * fetcher would still share a cache entry and would drift the day one of them
+ * learned something the other did not, which is the worst version of this: one
+ * consumer silently reading a shape the other stopped producing.
+ */
+function savedSearchesQueryOptions(isAuthenticated: boolean) {
+  return {
+    queryKey: SAVED_SEARCHES_KEY,
+    // Gated so a logged-out client never fires the request (the route sits
+    // behind `oxy.auth()` and `utils/api.ts` sends no `Authorization` header
+    // when there is no token, which would otherwise 401-spam).
+    enabled: isAuthenticated,
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+    queryFn: async (): Promise<SavedSearch[]> => {
+      const response = await api.get<SavedSearchPayload>('/api/profiles/me/saved-searches');
+      return extractSearchList(response.data).map((raw) => normalizeSearch(raw));
+    },
+  };
+}
+
+/**
+ * The primary area's selection, or `null`.
+ *
+ * PURE and exported so the rule is testable without rendering a hook, because
+ * the rule is the part that can be wrong. Two ways it could be, and both are
+ * pinned in `__tests__/home/primarySavedArea.test.ts`:
+ *
+ *  - **Picking the wrong watch.** The flag is the only thing that decides.
+ *    Falling back to "the most recently updated one with a location" would scope
+ *    somebody's whole Home to whichever city they bookmarked last and present it
+ *    as their home area — the opaque personalisation #353 refused when it left
+ *    this rung inert rather than approximating it.
+ *  - **Returning an unusable selection.** A watch whose location never resolved
+ *    carries a LABEL and not a place (ADR 0002 §11), so scoping by it would mean
+ *    re-geocoding the label and taking the first hit, which is the homonym bug.
+ *    Such a watch is skipped, and skipping is safe because the ladder treats an
+ *    absent rung as a fall-through.
+ *
+ * The server already guarantees at most one flagged row per person (a partial
+ * unique index), so this does not have to break a tie — and deliberately does
+ * not invent a rule for one, because a client-side tiebreak would hide a server
+ * invariant having broken.
+ */
+export function primaryAreaOf(searches: readonly SavedSearch[]): LocationSelection | null {
+  const primary = searches.find((search) => search.isPrimaryArea);
+  if (!primary) return null;
+  if (primary.locationStatus !== 'resolved') return null;
+  return primary.location ?? null;
+}
+
+/** What the location ladder's saved-area rung needs, and nothing more. */
+export interface PrimarySavedArea {
+  /**
+   * The primary area's stored selection, or `null`.
+   *
+   * `null` is the COMMON case and is unambiguous: it means "this person has no
+   * primary area", which the ladder treats as a skip to the next rung. It is
+   * NOT "we do not know yet" — that is {@link PrimarySavedArea.pending}, and
+   * conflating the two is what would let Home resolve to the device position and
+   * then jump to a saved area a moment later.
+   */
+  readonly selection: LocationSelection | null;
+  /**
+   * Whether the answer is still unknown.
+   *
+   * `false` for a logged-out user, who cannot have one — so the ladder never
+   * waits on a request that will not be made.
+   */
+  readonly pending: boolean;
+}
+
+/**
+ * The primary area of this person's saved searches, for the location ladder
+ * (#353's second rung, wired here now that #356 gives it something to read).
+ *
+ * A watch marked `isPrimaryArea` is an EXPLICIT choice — at most one per person,
+ * enforced by a partial unique index — which is why it may outrank the device
+ * position. The rung deliberately has no fallback to "the most recently updated
+ * saved search": that would scope somebody's whole Home to whichever city they
+ * happened to bookmark last and present it as their home area, which is the
+ * opaque personalisation #353 refused and #356 has no reason to reintroduce.
+ *
+ * A watch whose location never resolved (`locationStatus: 'needs_confirmation'`)
+ * is skipped rather than used, because there is nothing to scope BY — the row
+ * carries a label, not a place, and re-geocoding it is the homonym bug.
+ */
+export const usePrimarySavedArea = (): PrimarySavedArea => {
+  const { isAuthenticated } = useOxy();
+  const query = useQuery(savedSearchesQueryOptions(isAuthenticated));
+
+  return useMemo<PrimarySavedArea>(() => {
+    if (!isAuthenticated) return { selection: null, pending: false };
+    // `isPending` is true while disabled too, so the guard above has to come
+    // first — otherwise a logged-out Home would wait forever for a request that
+    // is never sent.
+    if (query.isPending) return { selection: null, pending: true };
+    return { selection: primaryAreaOf(query.data ?? []), pending: false };
+  }, [isAuthenticated, query.isPending, query.data]);
+};
+
 export const useSavedSearches = (): UseSavedSearches => {
   const { t } = useTranslation();
   const { isAuthenticated } = useOxy();
@@ -238,16 +344,7 @@ export const useSavedSearches = (): UseSavedSearches => {
    * sits behind `oxy.auth()` and `utils/api.ts` sends no `Authorization` header
    * when there is no token, which would otherwise 401-spam).
    */
-  const listQuery = useQuery({
-    queryKey: SAVED_SEARCHES_KEY,
-    enabled: isAuthenticated,
-    staleTime: 1000 * 30,
-    gcTime: 1000 * 60 * 10,
-    queryFn: async (): Promise<SavedSearch[]> => {
-      const response = await api.get<SavedSearchPayload>('/api/profiles/me/saved-searches');
-      return extractSearchList(response.data).map((raw) => normalizeSearch(raw));
-    },
-  });
+  const listQuery = useQuery(savedSearchesQueryOptions(isAuthenticated));
 
   // When logged out the query is disabled and never resolves, so fall back to a
   // stable empty list rather than leaving `searches` undefined. Memoised on the
