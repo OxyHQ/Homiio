@@ -32,12 +32,11 @@
  * Unsplash to observe it would be measuring the network.
  */
 
-import path from 'path';
 import fs from 'fs/promises';
 import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 import { closePostgres, connectPostgres, getDb } from '../../db/postgres';
 import { cities, images, properties, propertyImages } from '../../db/schema';
-import type { ImageBufferInput } from '../../services/imageUploadService';
+import { LOCAL_IMAGE_STORE_DIR, type ImageBufferInput } from '../../services/imageUploadService';
 import { resetGeoTables } from '../helpers/postgresGeoFixtures';
 import { SEED_OWNER_OXY_USER_ID, seedProperties } from '../../scripts/seedProperties';
 
@@ -47,7 +46,6 @@ const ONE_BY_ONE_PNG = Buffer.from(
   'base64',
 );
 
-const LOCAL_IMAGE_STORE_DIR = path.join(__dirname, '..', '..', '.local-image-store');
 
 /**
  * Listings in the seed dataset. An EQUALITY rather than a floor, so adding a

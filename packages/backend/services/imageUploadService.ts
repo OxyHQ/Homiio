@@ -20,8 +20,23 @@ import { insertImage, type ImageRow } from '../db/images/imageWrites';
  * product renders DB-backed images from our OWN host with zero external image
  * dependency in any storage-less environment (local dev, CI). A credentialed
  * environment uses S3 and never touches this path.
+ *
+ * **Overridable, and EXPORTED, for one reason: parallel tests.** Jest runs two
+ * workers here, and this path used to be a hardcoded constant that two suites
+ * (`integration/externalIngest` and `db/seedProperties`) each computed for
+ * themselves and each removed recursively in `afterAll`. Two workers removing
+ * one tree while the other writes into it is a race, and it surfaces as
+ * `ENOTEMPTY` from `rmdir` — a suite that fails with every test passing.
+ * `jest.setupWorkerDatabase.cjs` now gives each worker its own root, the same
+ * way it gives each worker its own database, and tests import THIS constant
+ * rather than re-deriving the path, so the three copies cannot drift apart.
+ *
+ * Production is unchanged: no environment sets this, so it stays the same
+ * directory beside the compiled backend.
  */
-const LOCAL_IMAGE_STORE_DIR = path.join(__dirname, '..', '.local-image-store');
+export const LOCAL_IMAGE_STORE_DIR = process.env.HOMIIO_LOCAL_IMAGE_STORE_DIR
+  ? path.resolve(process.env.HOMIIO_LOCAL_IMAGE_STORE_DIR)
+  : path.join(__dirname, '..', '.local-image-store');
 
 /** Backend route prefix the local image store is served under (no trailing slash). */
 export const LOCAL_IMAGE_ROUTE = '/api/images/file';

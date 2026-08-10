@@ -134,4 +134,8 @@ packages/listing-providers/src/**/*.d.ts
 
 # Self-hosted local image store (backend fallback when object storage is unconfigured)
 .local-image-store/
-packages/backend/.local-image-store/ 
+packages/backend/.local-image-store/
+# Per-worker LOCAL image stores, assigned by jest.setupWorkerDatabase.cjs and
+# removed by jest.globalTeardown.ts. Ignored so a crashed run leaves no
+# untracked noise behind.
+packages/backend/.local-image-store-w*/
