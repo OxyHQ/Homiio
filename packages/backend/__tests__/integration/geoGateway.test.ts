@@ -18,6 +18,10 @@
 
 import express, { type Express } from 'express';
 import request from 'supertest';
+import { eq } from 'drizzle-orm';
+
+import { getDb } from '../../db/postgres';
+import { cities } from '../../db/schema';
 
 import publicRoutes from '../../routes/public';
 import { errorHandler } from '../../middlewares/errorHandler';
@@ -564,6 +568,32 @@ describe('GET /api/geo/resolve', () => {
     expect([place.center.longitude, place.center.latitude]).not.toEqual([0, 0]);
   });
 
+  it('omits `center` ENTIRELY rather than serialising an undefined one', async () => {
+    // Asserting `center === undefined` would pass for `{ center: undefined }`,
+    // which is the shape a later refactor spreading an optional field is most
+    // likely to reintroduce — and which serialises to a `center` key on the
+    // wire. Absence of the KEY is the property that actually holds.
+    const chain = await seedGeoChain({ cityName: 'Uncharted', countryCode: 'ES' });
+    await getDb()
+      .update(cities)
+      .set({ bboxWest: 2.0, bboxSouth: 41.3, bboxEast: 2.3, bboxNorth: 41.5 })
+      .where(eq(cities.id, chain.cityId));
+
+    const res = await request(app)
+      .get('/api/geo/resolve')
+      .query({ loc: `city.homiio.${chain.cityId}` })
+      .expect(200);
+
+    expect(res.body.data.place.precision).toBe('area');
+    expect(res.body.data.place.bounds).toEqual({
+      west: 2.0,
+      south: 41.3,
+      east: 2.3,
+      north: 41.5,
+    });
+    expect('center' in res.body.data.place).toBe(false);
+  });
+
   it('404s a country whose cities Homiio has no coordinates for', async () => {
     // "We do not know where this is" is a true statement. A point in the
     // Atlantic is not, and it fails silently where a 404 does not.
@@ -575,7 +605,11 @@ describe('GET /api/geo/resolve', () => {
       .expect(404);
   });
 
-  it('404s a city with no stored centroid rather than inventing one', async () => {
+  it('404s a city with NEITHER a centroid nor an extent', async () => {
+    // Not "no centroid" any more: since #389 a city can carry `bbox_*`, so a
+    // centreless row with an extent still resolves (see the test above). The
+    // 404 is now exactly `isFramablePlace` refusing a place a screen could not
+    // draw — which is the honest "we do not know where this is".
     const chain = await seedGeoChain({ cityName: 'Uncharted', countryCode: 'ES' });
 
     await request(app)

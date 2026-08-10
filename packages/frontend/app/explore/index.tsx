@@ -135,7 +135,10 @@ function payloadToQuery(payload: SavedSearchPayload): SearchQuery {
 async function geocodeLabel(label: string): Promise<SearchLocation | null> {
   const { candidates } = await searchPlaces({ q: label, limit: 1 });
   const [match] = candidates;
-  if (!match) return null;
+  // An `area` place carries an extent and no centre — `SearchLocation` needs
+  // one, so such a candidate is "not resolvable to a location" rather than
+  // something to invent a midpoint for.
+  if (!match?.center) return null;
   return {
     label: [match.label.primary, match.label.secondary].filter(Boolean).join(', '),
     shortLabel: match.label.primary,

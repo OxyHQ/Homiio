@@ -34,6 +34,7 @@ import {
   isValidBounds,
   normalizeLongitude,
   type GeoPlace,
+  type GeoPoint,
 } from '@homiio/shared-types';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
@@ -85,10 +86,10 @@ const AREA_PLACE_TYPES: ReadonlySet<string> = new Set([
  * reads it correctly. `isValidBounds` is the guard that the wrap produced
  * something the backend will accept rather than something merely plausible.
  */
-function synthesizeBounds(place: GeoPlace): SearchLocation['bounds'] | undefined {
+function synthesizeBounds(place: GeoPlace, center: GeoPoint): SearchLocation['bounds'] | undefined {
   if (AREA_PLACE_TYPES.has(place.placeType)) return undefined;
 
-  const { longitude, latitude } = place.center;
+  const { longitude, latitude } = center;
   const candidate = {
     west: normalizeLongitude(longitude - LOCATION_BOUNDS_DELTA_DEG),
     south: latitude - LOCATION_BOUNDS_DELTA_DEG,
@@ -101,16 +102,34 @@ function synthesizeBounds(place: GeoPlace): SearchLocation['bounds'] | undefined
 }
 
 /**
- * Map a gateway candidate onto a resolved {@link SearchLocation}.
+ * Map a gateway candidate onto a resolved {@link SearchLocation}, or `null`.
  *
  * The label is taken PRE-SPLIT from the gateway rather than by splitting a
  * display string on commas: that assumed a Western comma-separated ordering and
  * mangled every script and address format that does not use one (ADR 0002
  * §9.4).
+ *
+ * **Why this can return `null`.** `GeoPlace` is a discriminated union: an
+ * `area` place carries an extent and NO centre, because inventing one is the
+ * bug that whole shape exists to prevent. `SearchLocation` — the panel's
+ * current type — requires a centre and has no identity field, so a centreless
+ * candidate cannot be represented and must not be OFFERED: picking it would
+ * commit a query with nothing to scope by.
+ *
+ * That is a limitation of `SearchLocation`, not a judgement about the
+ * candidate. #352 replaces it with `LocationSelection`, which addresses a place
+ * by identity and can hold one; when it does, this filter goes and the row
+ * becomes selectable.
+ *
+ * In practice nothing from `/api/geo/search` hits this today — every provider
+ * candidate carries a coordinate, since the adapter drops results without one —
+ * so this is a defensive branch rather than a live case. It is here because the
+ * type permits the state and a silent `undefined` centre would reach the map.
  */
-function toSearchLocation(place: GeoPlace): SearchLocation {
+function toSearchLocation(place: GeoPlace): SearchLocation | null {
+  if (!place.center) return null;
   const { longitude, latitude } = place.center;
-  const bounds = place.bounds ?? synthesizeBounds(place);
+  const bounds = place.bounds ?? synthesizeBounds(place, place.center);
   return {
     label: [place.label.primary, place.label.secondary].filter(Boolean).join(', '),
     shortLabel: place.label.primary,
@@ -219,7 +238,12 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   }, [onChangeText, clear]);
 
   const resolvedSuggestions = useMemo<SearchLocation[]>(
-    () => (state.status === 'results' ? state.places.map(toSearchLocation) : []),
+    () =>
+      state.status === 'results'
+        ? state.places
+            .map(toSearchLocation)
+            .filter((location): location is SearchLocation => location !== null)
+        : [],
     [state],
   );
 

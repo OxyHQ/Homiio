@@ -10,9 +10,12 @@
 
 import { and, count, eq, isNotNull, max, min } from 'drizzle-orm';
 import {
+  isFramablePlace,
   parseLocationToken,
+  type GeoBounds,
   type GeoPlace,
   type LocationRef,
+  type PlaceGeometry,
   type PlaceSource,
 } from '@homiio/shared-types';
 
@@ -174,7 +177,7 @@ export async function resolvePlace(
 
   if (ref.source.kind === 'homiio') {
     const place = await resolveHomiioPlace(ref.placeType, ref.id);
-    return { place, degraded: false, cacheHit: false };
+    return { place: displayable(place), degraded: false, cacheHit: false };
   }
 
   const provider = providerById(ref.source.provider);
@@ -194,7 +197,7 @@ export async function resolvePlace(
     language,
     ...(signal === undefined ? {} : { signal }),
   });
-  const place = resolved ? toGeoPlace(resolved) : null;
+  const place = displayable(resolved ? toGeoPlace(resolved) : null);
   if (place) writeGeoCache(key, place, GEO_CACHE_TTL_MS.resolved);
 
   return {
@@ -236,6 +239,58 @@ export async function reversePlace(
     providerId: outcome.providerId,
     attribution: outcome.value.attribution,
   };
+}
+
+/**
+ * A place is only an answer to `/resolve` if a screen can actually draw it.
+ *
+ * `isFramablePlace` is the shared predicate (`@homiio/shared-types`): a point
+ * place always qualifies, an `area` place qualifies only if it brought an
+ * extent. A place with neither centre nor bounds hands a map nothing to frame,
+ * and a map that frames nothing reports no error — it looks exactly like one
+ * still loading, which is the quiet failure the predicate exists to prevent.
+ *
+ * The asymmetry is deliberate and is the whole reason this is not enforced on
+ * the type: **a place being RESOLVED FOR DISPLAY must be framable; a place
+ * being OFFERED FOR SELECTION need not be.** `/api/geo/search` therefore does
+ * NOT apply this — a coordinate-less city is a legitimate disambiguation
+ * candidate, and dropping it would remove a real choice from the picker.
+ */
+const displayable = (place: GeoPlace | null): GeoPlace | null =>
+  place && isFramablePlace(place) ? place : null;
+
+/**
+ * Build the geometry half of a `GeoPlace` from what a row actually holds.
+ *
+ * `PlaceGeometry` is a discriminated union, so this is the one place the choice
+ * between "a representative point" and "an extent" is made. A centre is emitted
+ * only when one is stored; `precision: 'area'` cannot carry a `center` at all,
+ * which is what makes a fabricated coordinate a compile error rather than a
+ * discouraged habit.
+ */
+function geometryOf(
+  center: { longitude: number; latitude: number } | null,
+  bounds: GeoBounds | undefined,
+): PlaceGeometry {
+  if (center) {
+    // `centroid` is the right LABEL for a representative point of an area, and
+    // it says what it means: a framing device, not anybody's location. How
+    // ACCURATE that point is is a separate question from what kind of point it
+    // is — labelling a coarse one `exact` or `approximate` would be the error.
+    return { precision: 'centroid', center, ...(bounds ? { bounds } : {}) };
+  }
+  return { precision: 'area', ...(bounds ? { bounds } : {}) };
+}
+
+/** Four nullable columns that the table's CHECK keeps all-or-none. */
+function boundsOfColumns(
+  west: number | null,
+  south: number | null,
+  east: number | null,
+  north: number | null,
+): GeoBounds | undefined {
+  if (west === null || south === null || east === null || north === null) return undefined;
+  return { west, south, east, north };
 }
 
 const toGeoPlaces = (places: ProviderPlace[]): GeoPlace[] =>
@@ -291,16 +346,13 @@ async function resolveHomiioPlace(
     if (!row) return null;
 
     const extent = await cityExtent(eq(cities.countryId, id));
-    if (!extent) return null;
 
     return {
       source: source('country'),
       placeType: 'country',
       label: { primary: row.name, kind: 'place' },
       admin: { countryCode: row.code.toUpperCase() },
-      center: extent.center,
-      bounds: extent.bounds,
-      precision: 'centroid',
+      ...geometryOf(extent?.center ?? null, extent?.bounds),
     };
   }
 
@@ -319,7 +371,6 @@ async function resolveHomiioPlace(
     if (!row) return null;
 
     const extent = await cityExtent(eq(cities.regionId, id));
-    if (!extent) return null;
 
     return {
       source: source('region'),
@@ -330,9 +381,7 @@ async function resolveHomiioPlace(
         ...(row.code === null ? {} : { regionCode: row.code }),
         regionName: row.name,
       },
-      center: extent.center,
-      bounds: extent.bounds,
-      precision: 'centroid',
+      ...geometryOf(extent?.center ?? null, extent?.bounds),
     };
   }
 
@@ -342,6 +391,10 @@ async function resolveHomiioPlace(
         name: cities.name,
         latitude: cities.latitude,
         longitude: cities.longitude,
+        bboxWest: cities.bboxWest,
+        bboxSouth: cities.bboxSouth,
+        bboxEast: cities.bboxEast,
+        bboxNorth: cities.bboxNorth,
         regionName: regions.name,
         regionCode: regions.code,
         countryCode: countries.code,
@@ -353,9 +406,6 @@ async function resolveHomiioPlace(
       .where(and(eq(cities.id, id), eq(cities.isActive, true)))
       .limit(1);
     if (!row) return null;
-    // No stored centroid means Homiio does not know where this city is. A 404
-    // says exactly that; a fabricated point would not.
-    if (row.longitude === null || row.latitude === null) return null;
 
     return {
       source: source('city'),
@@ -371,10 +421,16 @@ async function resolveHomiioPlace(
         regionName: row.regionName,
         cityName: row.name,
       },
-      center: { longitude: row.longitude, latitude: row.latitude },
-      // A city centre is a framing device and NOT anybody's location, which is
-      // exactly what `centroid` says.
-      precision: 'centroid',
+      // A city with no stored centroid is not 404'd outright any more: #389
+      // added `cities.bbox_*`, so such a row can still resolve as an EXTENT if
+      // it has one. `isFramablePlace` at the boundary refuses it only when it
+      // has neither, which is the honest "we do not know where this is".
+      ...geometryOf(
+        row.longitude !== null && row.latitude !== null
+          ? { longitude: row.longitude, latitude: row.latitude }
+          : null,
+        boundsOfColumns(row.bboxWest, row.bboxSouth, row.bboxEast, row.bboxNorth),
+      ),
     };
   }
 
@@ -401,23 +457,18 @@ async function resolveHomiioPlace(
       .limit(1);
     if (!row) return null;
 
-    // The CHECK on this table is all-or-none, so one non-null corner means all
-    // four are present.
-    const bounds =
-      row.bboxWest !== null && row.bboxSouth !== null && row.bboxEast !== null && row.bboxNorth !== null
-        ? { west: row.bboxWest, south: row.bboxSouth, east: row.bboxEast, north: row.bboxNorth }
-        : undefined;
+    const bounds = boundsOfColumns(row.bboxWest, row.bboxSouth, row.bboxEast, row.bboxNorth);
 
     // Prefer the stored centroid; fall back to the centre of the stored
     // envelope, which is a real derivation from real data rather than an
-    // invention. With neither, Homiio does not know where this is.
+    // invention. With neither, the place resolves as a bare `area` and
+    // `isFramablePlace` refuses it at the boundary.
     const center =
       row.longitude !== null && row.latitude !== null
         ? { longitude: row.longitude, latitude: row.latitude }
         : bounds
           ? centerOfBounds(bounds)
           : null;
-    if (!center) return null;
 
     return {
       source: source('neighborhood'),
@@ -434,9 +485,7 @@ async function resolveHomiioPlace(
         cityName: row.cityName,
         neighborhoodName: row.name,
       },
-      center,
-      ...(bounds ? { bounds } : {}),
-      precision: 'centroid',
+      ...geometryOf(center, bounds),
     };
   }
 

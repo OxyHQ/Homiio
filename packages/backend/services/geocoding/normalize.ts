@@ -85,8 +85,18 @@ export function placeTypeOf(place: ProviderPlace): GeoPlaceType {
  * worth repeating because it is the whole point: a centroid is NOT anybody's
  * location. A city centre is a framing device, and code that treats it as a
  * home's position is wrong in a way no other type prevents.
+ *
+ * The return type EXCLUDES `'area'`, and that is a claim rather than a
+ * convenience: an adapter only ever produces a place it found a finite
+ * coordinate for (`toProviderPlace` drops the rest), so a provider candidate
+ * always has a representative point. `PlaceGeometry`'s point branch requires
+ * exactly this narrowing — declaring the full `LocationPrecision` here was a
+ * type wider than the function, and the union is what surfaced it.
  */
-export function precisionOf(place: ProviderPlace, placeType: GeoPlaceType): LocationPrecision {
+export function precisionOf(
+  place: ProviderPlace,
+  placeType: GeoPlaceType,
+): Exclude<LocationPrecision, 'area'> {
   if (placeType !== 'address') return 'centroid';
   const level = place.rawAddressType ?? place.rawType ?? '';
   return BUILDING_LEVEL_TYPES.has(level) || place.address.houseNumber ? 'exact' : 'centroid';
