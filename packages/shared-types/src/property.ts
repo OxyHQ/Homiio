@@ -390,6 +390,21 @@ export interface PropertyFilters {
   // Location parameters
   lat?: number;
   lng?: number;
+  /**
+   * Radius in **METRES**, never kilometres.
+   *
+   * Stated because the unit was carried nowhere and both consumers read it as
+   * metres while one producer sent kilometres: the "Near you" home lens emitted
+   * `25`, meaning 25 km, and the backend compared it against `ST_Distance` on
+   * `geography` — which is metres — so the lens asked for "inside 25 metres",
+   * false for every listing on earth. A 1000× error in this field does not
+   * fail, it returns a plausible-looking page, which is why the unit belongs in
+   * the type rather than in whoever remembers.
+   *
+   * On `GET /api/properties/search` it bounds the query (`ST_DWithin`). On
+   * `GET /api/properties` it is RANKING ONLY — that endpoint builds no spatial
+   * predicate and uses this solely as the `preferredRadiusMeters` tiebreak.
+   */
   radius?: number;
   city?: string;
   state?: string;

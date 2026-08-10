@@ -46,14 +46,42 @@ export function buildHomeFeedFilters(
   };
 }
 
-/** One-shot foreground geolocation for home personalization (nearby cities, near_you). */
+/**
+ * How long a device fix may be reused before it is taken again.
+ *
+ * ADR 0002 §8.3 and §15: a device position lives in memory, for at most five
+ * minutes, and is re-taken rather than remembered. It was
+ * `staleTime: Number.POSITIVE_INFINITY` with a one-hour `gcTime`, which is two
+ * separate problems wearing one value. It kept the person's position for the
+ * life of the process even though they had moved; and because the permission
+ * was only ever read on the first call, REVOKING location access changed
+ * nothing — the cached fix went on scoping their feed until they killed the
+ * app. A permission is a decision the user is entitled to change and have
+ * honoured, so the fix has to expire for the check to be re-run at all.
+ */
+const DEVICE_FIX_MAX_AGE_MS = 1000 * 60 * 5;
+
+/**
+ * One-shot foreground geolocation for home personalization (nearby cities,
+ * near_you).
+ *
+ * Never written to disk — not AsyncStorage, not SecureStore, not a query-cache
+ * persister. `gcTime` matches the max age so an expired fix is dropped rather
+ * than lingering as a stale-but-served value.
+ */
 export function useUserCoordinates() {
   return useQuery({
     queryKey: homeFeedQueryKeys.coordinates,
     queryFn: async (): Promise<UserCoordinates | null> => {
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') return null;
+        // Re-read on every refetch, not once per process: this is the only
+        // thing that notices a permission the user has since revoked.
+        const { status } = await Location.getForegroundPermissionsAsync();
+        const granted =
+          status === 'granted'
+            ? true
+            : (await Location.requestForegroundPermissionsAsync()).status === 'granted';
+        if (!granted) return null;
         const location = await Location.getCurrentPositionAsync({});
         return {
           latitude: location.coords.latitude,
@@ -63,8 +91,8 @@ export function useUserCoordinates() {
         return null;
       }
     },
-    staleTime: Number.POSITIVE_INFINITY,
-    gcTime: 1000 * 60 * 60,
+    staleTime: DEVICE_FIX_MAX_AGE_MS,
+    gcTime: DEVICE_FIX_MAX_AGE_MS,
     retry: false,
   });
 }
