@@ -14,6 +14,7 @@ import { boolean, check, doublePrecision, index, integer, pgTable, text, uniqueI
 import { sql } from 'drizzle-orm';
 import { createdAt, generatedId, inList, timestamptz, updatedAt } from '@oxyhq/db';
 import { LISTING_CURRENCIES } from '@homiio/shared-types';
+import { placeSlugSql } from '../geo/placeSlug';
 import { images } from './images';
 
 export const countries = pgTable(
@@ -97,7 +98,7 @@ export const regions = pgTable(
     // prefix of the unique index above, and a btree serves any leading prefix.
     index('regions_name_lower_idx').on(sql`lower(${table.name})`),
     // The SCOPED case-insensitive lookup, and it is a different query from the
-    // one above rather than a duplicate of it. `cityController.getCityByLocation`
+    // one above rather than a duplicate of it. `cityController.lookupCity`
     // and `resolveRegionRef` both resolve a region name WITHIN a country, and
     // region names genuinely collide across countries — "Valencia" is a province
     // in Spain and a state in Venezuela, which is why the unique index is scoped
@@ -113,6 +114,30 @@ export const cities = pgTable(
     id: generatedId(),
 
     name: text().notNull(),
+
+    /**
+     * The URL-safe form of {@link name}, computed by the database.
+     *
+     * `GENERATED ALWAYS`, so it cannot disagree with the name it came from — the
+     * failure mode a hand-maintained `slug` column has, and the reason
+     * `CONVENTIONS.md` §"Arrays and objects" deleted the last denormalized copy
+     * on this table (`imageIds`). Nothing may write it; renaming the city
+     * rewrites it.
+     *
+     * It is a LABEL, not an identity: two cities in different regions slug to
+     * the same string routinely (there is a Barcelona in Catalonia and one in
+     * Anzoátegui), which is exactly why `db/geo/placeLookup.ts` answers a slug
+     * with an ordered candidate LIST and never with a row. The identity is
+     * {@link id}. See `db/geo/placeSlug.ts` for the rule and for why `unaccent`
+     * could not be used to express it.
+     *
+     * The column name is written literally (`placeSlugSql(sql\`name\`)`) rather
+     * than interpolated from the table object: this is raw SQL evaluated in the
+     * table's own scope, the same spelling the emitted DDL carries, and it is
+     * the shape `addresses.address_level` already uses.
+     */
+    slug: text().notNull().generatedAlwaysAs(placeSlugSql(sql`name`)),
+
     countryId: text()
       .notNull()
       .references(() => countries.id, { onDelete: 'restrict' }),
@@ -164,6 +189,32 @@ export const cities = pgTable(
     latitude: doublePrecision(),
     longitude: doublePrecision(),
 
+    /**
+     * The city's extent, for map framing.
+     *
+     * Four NAMED columns with an all-or-none CHECK, identical in shape and
+     * reasoning to `neighborhoods.bbox_*` below — a four-element array whose
+     * ORDER carries its entire meaning is a transposition waiting to happen.
+     *
+     * **Nothing populates these yet, and that is deliberate rather than an
+     * oversight.** #295 adds them because the place-lookup contract has to be
+     * able to CARRY a candidate's bounds (`docs/adr/0002` §3 `GeoPlace`, and
+     * #352 frames the map from them); the geocoding gateway of #351 is what will
+     * write them. `db/geo/placeLookup.ts` emits `bounds` only when all four are
+     * set and omits it otherwise — a derived envelope over the city's listings
+     * would be a different fact wearing this one's name, so none is invented.
+     *
+     * `west > east` is LEGAL and means the box crosses the antimeridian
+     * (`docs/adr/0002` §9.3, measured against this repo's PostGIS image);
+     * `south > north` is an error. Neither is constrained here because nothing
+     * writes the columns yet — the writer of #351 owns that CHECK, and adding
+     * one now would be a rule with no rows to apply it to.
+     */
+    bboxWest: doublePrecision(),
+    bboxSouth: doublePrecision(),
+    bboxEast: doublePrecision(),
+    bboxNorth: doublePrecision(),
+
     timezone: text(),
     population: integer(),
     description: text(),
@@ -205,7 +256,7 @@ export const cities = pgTable(
       .on(sql`${table.propertiesCount} desc`, table.name)
       .where(sql`${table.isActive}`),
     index('cities_name_lower_idx').on(sql`lower(${table.name})`),
-    // The region-scoped case-insensitive lookup — `getCityByLocation` with a
+    // The region-scoped case-insensitive lookup — `lookupCity` with a
     // `state`. Same reasoning as `regions_country_name_lower_idx`: city names
     // collide across regions far more often than region names collide across
     // countries, and the unique `(region_id, name)` index is case-SENSITIVE.
@@ -215,9 +266,37 @@ export const cities = pgTable(
     // uses an index with `gin_trgm_ops`. Without this, every keystroke of the
     // city typeahead is a sequential scan.
     index('cities_name_trgm_idx').using('gin', sql`${table.name} gin_trgm_ops`),
+    // The slug lookup, and it is the only new index #295 adds.
+    //
+    // `db/geo/placeLookup.ts` resolves an inbound token (`?city=barcelona`, an
+    // old bookmark, `barcelona-catalonia-es`) with ONE equality —
+    // `slug = any($1::text[])` over the token's segment prefixes — and that
+    // predicate is issued on every deep link that names a place. Without this it
+    // is a sequential scan of every city per link.
+    //
+    // Three indexes that "sound right" were considered and NOT added, because
+    // the query does not want them: `(country_id, lower(name))` and
+    // `(country_id, slug)` would scope the name lookup by country, but a name
+    // equality already returns a handful of rows (homonym counts are single
+    // digits — see the audit in the #295 PR body), so the country filter is
+    // cheaper applied to that handful than as an index column; and a unique
+    // index on `slug` is WRONG rather than merely unnecessary, since duplicate
+    // slugs are the condition this whole contract exists to answer, not one to
+    // forbid.
+    index('cities_slug_idx').on(table.slug),
     check(
       'cities_currency_check',
       sql`${table.currency} in (${sql.raw(inList(LISTING_CURRENCIES))})`,
+    ),
+    check(
+      'cities_bbox_complete_check',
+      sql`(
+        ${table.bboxWest} is null and ${table.bboxSouth} is null
+        and ${table.bboxEast} is null and ${table.bboxNorth} is null
+      ) or (
+        ${table.bboxWest} is not null and ${table.bboxSouth} is not null
+        and ${table.bboxEast} is not null and ${table.bboxNorth} is not null
+      )`,
     ),
   ],
 );

@@ -14,7 +14,9 @@
  *
  * Inbound deep links are mapped onto the store (re-applied when they change):
  *  - `?offering=long_term_rent|short_term_rent|sale|exchange` switches the offering.
- *  - `?city=<slug>` resolves to a located "Where" via the cities API.
+ *  - `?city=<id|name|slug>` resolves through `GET /api/cities/lookup`, which
+ *    answers `resolved` | `ambiguous` | `not_found` and never picks between two
+ *    cities of the same name (#295). Only `resolved` applies a location.
  *  - `?query=<text>` geocodes to a located "Where" via the keyless Nominatim
  *    geocoder (see `useAddressSearch`).
  */
@@ -35,7 +37,6 @@ import type {
 import { useSearchMode } from '@/context/SearchModeContext';
 import { geocodeAddress } from '@/hooks/useAddressSearch';
 import { cityService } from '@/services/cityService';
-import { cityCountryName, cityRegionName } from '@/utils/cityDisplay';
 import { DEFAULT_SEARCH_QUERY, useSearchQueryStore } from '@/store/searchQueryStore';
 import { onApplySavedSearch, type SavedSearchPayload } from '@/utils/searchEvents';
 
@@ -178,21 +179,30 @@ export default function SearchScreen() {
     (async () => {
       try {
         if (cityParam) {
-          const response = await cityService.getCityBySlug(cityParam);
-          const city = response?.data;
-          if (city?.coordinates) {
-            // Compose the full label from the populated region/country names
-            // (geo is relational; the City carries no free-text display string).
-            const label = [city.name, cityRegionName(city), cityCountryName(city)]
-              .filter(Boolean)
-              .join(', ');
+          // #295: the lookup answers `resolved` | `ambiguous` | `not_found` and
+          // never picks between homonyms. A location is applied ONLY on
+          // `resolved`; an ambiguous `?city=barcelona` leaves the selection
+          // untouched rather than silently opening a different Barcelona than it
+          // did last year. Rendering a picker for that list is #352's half of
+          // this — see the note in the #295 PR body.
+          const result = await cityService.lookupCity(cityParam);
+          const place = result.status === 'resolved' ? result.place : undefined;
+          const center = place?.center;
+          if (place && center) {
+            // The label arrives PRE-SPLIT (`primary` + `secondary`), so nothing
+            // here re-derives one by joining or splitting on commas — the
+            // assumption that mangles every script that does not order a place
+            // name that way (ADR §9.4).
             applyLocation({
-              label: label || city.name,
-              shortLabel: city.name,
-              center: [city.coordinates.lng, city.coordinates.lat],
+              label: place.label.secondary
+                ? `${place.label.primary}, ${place.label.secondary}`
+                : place.label.primary,
+              shortLabel: place.label.primary,
+              center: [center.longitude, center.latitude],
             });
             return;
           }
+          if (result.status === 'ambiguous') return;
         }
         if (queryParam) {
           const location = await geocodeLabel(queryParam);
