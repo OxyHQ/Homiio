@@ -301,7 +301,10 @@
       "gridVacation": "Appartamenti al mare a {{place}}",
       "gridBuy": "Case in vendita a {{place}}",
       "gridExchange": "Scambi di casa in {{place}}",
-      "empty": "No featured properties available at the moment"
+      "empty": "No featured properties available at the moment",
+      "titleIn": "Featured in {{area}}",
+      "chooseArea": "Choose an area to see featured homes.",
+      "loadFailed": "Could not load featured homes for this area."
     },
     "recentlyViewed": {
       "title": "Visualizzate di Recente",

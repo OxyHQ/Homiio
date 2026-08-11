@@ -177,11 +177,14 @@
     },
     "featured": {
       "title": "Featured Properties",
+      "titleIn": "Featured in {{area}}",
       "empty": "No featured properties available at the moment",
       "gridLongTerm": "Studios in {{place}}",
       "gridVacation": "Beach apartments in {{place}}",
       "gridBuy": "Homes for sale in {{place}}",
-      "gridExchange": "Home exchanges in {{place}}"
+      "gridExchange": "Home exchanges in {{place}}",
+      "chooseArea": "Choose an area to see featured homes.",
+      "loadFailed": "Could not load featured homes for this area."
     },
     "viewAll": "View All",
     "recentlyViewed": {
