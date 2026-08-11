@@ -2,7 +2,7 @@
 import 'dotenv/config';
 
 import express from "express";
-import type { Request, Response, NextFunction } from 'express';
+import type { Request, Response } from 'express';
 import cors, { type CorsOptions } from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';

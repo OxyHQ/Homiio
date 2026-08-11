@@ -25,7 +25,6 @@
  * that only wrote once could not tell any of those apart.
  */
 
-import { eq } from 'drizzle-orm';
 import type { NearbyServiceCategory } from '@homiio/shared-types';
 
 import { getDb } from '../../db/postgres';
