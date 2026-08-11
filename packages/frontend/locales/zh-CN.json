@@ -122,227 +122,227 @@
   },
   "home": {
     "insights": {
-      "title": "Platform Insights"
+      "title": "平台数据"
     },
     "hero": {
-      "title": "Find your ethical home",
-      "subtitle": "Transparent rentals with fair agreements and verified properties",
-      "searchPlaceholder": "Where do you want to live?",
-      "searchButton": "Search"
+      "title": "找到你的理想之家",
+      "subtitle": "透明的租赁、公平的合同、经过核实的房源",
+      "searchPlaceholder": "你想住在哪里？",
+      "searchButton": "搜索"
     },
     "cities": {
-      "title": "Featured Cities",
-      "properties": "properties"
+      "title": "精选城市",
+      "properties": "套房源"
     },
     "categories": {
-      "title": "Browse by Category",
-      "view": "View",
+      "title": "按类别浏览",
+      "view": "查看",
       "types": {
-        "apartments": "Apartments",
-        "houses": "Houses",
-        "coLiving": "Co-living",
-        "ecoFriendly": "Eco-friendly"
+        "apartments": "公寓",
+        "houses": "独栋住宅",
+        "coLiving": "共享居住",
+        "ecoFriendly": "环保住宅"
       }
     },
     "category": {
-      "studios": "Studios",
-      "apartments": "Apartments",
-      "houses": "Houses",
-      "rooms": "Rooms",
-      "coliving": "Co-living",
-      "luxury": "Luxury",
-      "newListings": "New listings",
-      "nearYou": "Near you",
-      "nearYouUnavailable": "Turn on location to see homes near you",
-      "beachfront": "Beachfront",
-      "cabins": "Cabins",
-      "pools": "Pools",
-      "mountain": "Mountain",
-      "cityBreaks": "City breaks",
-      "countryside": "Countryside",
-      "instantBook": "Instant book",
-      "petFriendly": "Pet friendly",
-      "homeSwap": "Home swap",
-      "hosting": "Hosting"
+      "studios": "开间",
+      "apartments": "公寓",
+      "houses": "独栋住宅",
+      "rooms": "单间",
+      "coliving": "共享居住",
+      "luxury": "豪华",
+      "newListings": "最新房源",
+      "nearYou": "在你附近",
+      "nearYouUnavailable": "开启定位即可查看附近的房源",
+      "beachfront": "海滨",
+      "cabins": "木屋",
+      "pools": "带泳池",
+      "mountain": "山景",
+      "cityBreaks": "城市短住",
+      "countryside": "乡村",
+      "instantBook": "立即预订",
+      "petFriendly": "可携宠物",
+      "homeSwap": "换房",
+      "hosting": "成为房东"
     },
     "horizon": {
-      "title": "Join Horizon",
-      "description": "Horizon is a global initiative offering fair housing, healthcare, and travel support. Now integrated with Homiio.",
-      "learnMore": "Learn More"
+      "title": "加入 Horizon",
+      "description": "Horizon 是一项全球计划，提供公平住房、医疗与出行支持。现已接入 Homiio。",
+      "learnMore": "了解更多"
     },
     "eco": {
-      "title": "Eco-Certified Properties",
-      "description": "Find sustainable properties that meet our energy efficiency and eco-friendly standards",
-      "viewEcoProperties": "View Eco Properties"
+      "title": "环保认证房源",
+      "description": "查找符合我们能效与环保标准的可持续房源",
+      "viewEcoProperties": "查看环保房源"
     },
     "featured": {
-      "title": "Featured Properties",
-      "empty": "No featured properties available at the moment",
-      "gridLongTerm": "Studios in {{place}}",
-      "gridVacation": "Beach apartments in {{place}}",
-      "gridBuy": "Homes for sale in {{place}}",
-      "gridExchange": "Home exchanges in {{place}}",
-      "titleIn": "Featured in {{area}}",
-      "chooseArea": "Choose an area to see featured homes.",
-      "loadFailed": "Could not load featured homes for this area."
+      "title": "精选房源",
+      "empty": "目前没有精选房源",
+      "gridLongTerm": "{{place}}的开间",
+      "gridVacation": "{{place}}的海滨公寓",
+      "gridBuy": "{{place}}的出售房源",
+      "gridExchange": "{{place}}的换房",
+      "titleIn": "{{area}}的精选房源",
+      "chooseArea": "请先选择一个区域，才能看到精选房源。",
+      "loadFailed": "无法加载该区域的精选房源。"
     },
-    "viewAll": "View All",
+    "viewAll": "查看全部",
     "recentlyViewed": {
-      "title": "Recently Viewed",
-      "noProperties": "No recently viewed properties",
-      "noPropertiesDescription": "Start browsing to see your recent activity here",
-      "browseProperties": "Browse Properties",
-      "errorTitle": "Error Loading Recently Viewed",
-      "errorDescription": "Please try again.",
-      "retry": "Retry",
-      "results": "Results",
-      "filtered": "filtered",
-      "continue": "Continue browsing"
+      "title": "最近浏览",
+      "noProperties": "你还没有浏览过任何房源",
+      "noPropertiesDescription": "开始浏览，最近的记录会显示在这里",
+      "browseProperties": "浏览房源",
+      "errorTitle": "加载最近浏览记录时出错",
+      "errorDescription": "请重试。",
+      "retry": "重试",
+      "results": "结果",
+      "filtered": "已筛选",
+      "continue": "继续浏览"
     },
     "saved": {
-      "title": "Saved Properties",
-      "editFolder": "Edit Folder",
-      "defaultFolder": "Default Folder",
-      "folderNamePlaceholder": "Folder name",
-      "noFolder": "Folder not found",
-      "noFolderDescription": "This folder may have been removed",
-      "noFolderItems": "No properties in this folder",
-      "noFolderItemsDescription": "Save properties to this folder to see them here"
+      "title": "已收藏房源",
+      "editFolder": "编辑收藏夹",
+      "defaultFolder": "默认收藏夹",
+      "folderNamePlaceholder": "收藏夹名称",
+      "noFolder": "找不到该收藏夹",
+      "noFolderDescription": "该收藏夹可能已被删除",
+      "noFolderItems": "该收藏夹中没有房源",
+      "noFolderItemsDescription": "把房源收藏到这个收藏夹，就能在这里看到"
     },
     "tips": {
-      "title": "Rental Tips & Guides",
+      "title": "租房攻略与指南",
       "categories": {
-        "search": "Search",
-        "safety": "Safety",
-        "legal": "Legal",
-        "inspection": "Inspection"
+        "search": "找房",
+        "safety": "安全",
+        "legal": "法律",
+        "inspection": "验房"
       },
       "firstTimeRenting": {
-        "title": "First Time Renting? Here's Your Complete Guide",
-        "description": "Everything you need to know about finding, viewing, and securing your first rental property."
+        "title": "第一次租房？这是你的完整指南",
+        "description": "从找房、看房到签下第一套租房，你需要知道的一切。"
       },
       "avoidScams": {
-        "title": "How to Avoid Rental Scams: Red Flags to Watch For",
-        "description": "Learn to identify common rental scams and protect yourself from fraud when searching for a new home."
+        "title": "如何避开租房骗局：这些危险信号要当心",
+        "description": "学会识别常见的租房骗局，在找房过程中保护好自己。"
       },
       "rentalAgreement": {
-        "title": "Understanding Your Rental Agreement: Key Terms Explained",
-        "description": "Break down complex legal terms and understand what you're signing before committing to a rental."
+        "title": "读懂你的租赁合同：关键条款解析",
+        "description": "拆解复杂的法律术语，让你在签字之前就清楚自己在签什么。"
       },
       "propertyInspection": {
-        "title": "Property Inspection Checklist: What to Look For",
-        "description": "A comprehensive guide to inspecting potential rental properties and identifying potential issues."
+        "title": "验房清单：看房时该查什么",
+        "description": "一份完整的指南，教你如何查看待租房源并发现潜在问题。"
       },
-      "subtitle": "Practical guides from local tenants, legal experts, and the Homiio editorial team.",
-      "eyebrow": "Renting smarter"
+      "subtitle": "来自本地租客、法律专家和 Homiio 编辑团队的实用指南。",
+      "eyebrow": "更聪明地租房"
     },
     "faq": {
-      "title": "Frequently Asked Questions",
+      "title": "常见问题",
       "scheduleViewing": {
-        "question": "How do I schedule a property viewing?",
-        "answer": "You can schedule a viewing by clicking the \"Schedule Viewing\" button on any property listing. Our system will connect you with the landlord or property manager to arrange a convenient time."
+        "question": "我要怎么预约看房？",
+        "answer": "在任意房源页面点击“预约看房”按钮即可。系统会帮你联系房东或管理方，约一个双方方便的时间。"
       },
       "verifiedProperty": {
-        "question": "What does \"Verified Property\" mean?",
-        "answer": "Verified properties have been personally inspected by our team to ensure they meet our quality standards. This includes checking the property condition, amenities, and verifying the landlord's credentials."
+        "question": "“已核实房源”是什么意思？",
+        "answer": "已核实房源经过我们团队的实地查看，确认符合我们的质量标准，包括房屋状况、配套设施，以及房东身份信息的核验。"
       },
       "reportSuspicious": {
-        "question": "How do I report a suspicious listing?",
-        "answer": "If you encounter a suspicious listing, click the \"Report\" button on the property page. Our safety team will investigate and take appropriate action to protect our community."
+        "question": "怎么举报可疑房源？",
+        "answer": "如果遇到可疑房源，请在房源页面点击“举报”按钮。我们的安全团队会进行调查，并采取相应措施保护社区。"
       },
       "applicationRequirements": {
-        "question": "What are the rental application requirements?",
-        "answer": "Requirements vary by property, but typically include proof of income, rental history, credit check, and references. Each listing will specify the exact requirements needed."
+        "question": "申请租房需要哪些材料？",
+        "answer": "要求因房源而异，通常包括收入证明、租房记录、信用审查和推荐人。每个房源页面都会写明具体要求。"
       }
     },
     "cityShowcase": {
-      "title": "Explore {{place}}",
-      "defaultPlace": "Spain"
+      "title": "探索{{place}}",
+      "defaultPlace": "西班牙"
     },
     "nearby": {
-      "title": "Homes in {{city}}"
+      "title": "{{city}}的房源"
     },
     "recommended": {
-      "title": "Recommended homes",
-      "eyebrow": "For you"
+      "title": "为你推荐的房源",
+      "eyebrow": "为你推荐"
     },
     "explore": {
-      "eyebrow": "Keep exploring",
-      "title": "Explore more homes",
-      "cta": "Explore all homes here",
-      "ctaAccessible": "Open Explore with the area you are searching in"
+      "eyebrow": "继续探索",
+      "title": "探索更多房源",
+      "cta": "查看这里的全部房源",
+      "ctaAccessible": "以当前搜索区域打开“探索”"
     },
     "hostCta": {
-      "cta": "Become a host",
-      "subtitle": "Reach verified renters across Spain — free to list, fair fees, real human support.",
-      "title": "List your space, find a great tenant"
+      "cta": "成为房东",
+      "subtitle": "面向全西班牙的实名租客：免费发布、费用公道、真人客服。",
+      "title": "发布你的房源，找到合适的租客"
     },
     "sections": {
-      "explain": "{{reason}} · Source: {{source}}",
-      "explainAccessible": "Why these homes: {{reason}}. Source: {{source}}.",
-      "error": "We could not load this area. Nothing is being hidden — the request failed.",
+      "explain": "{{reason}} · 数据来源：{{source}}",
+      "explainAccessible": "为什么是这些房源：{{reason}}。数据来源：{{source}}。",
+      "error": "无法加载该区域。我们没有隐藏任何内容——是请求失败了。",
       "source": {
-        "listing_created_at": "listing publication dates",
-        "listing_sale_price_reduced_flag": "the price-reduced flag the portal publishes",
-        "listing_status": "listing status changes",
-        "listing_agency_fee_flag": "the agency-fee field on the listing",
-        "listing_cost_fields": "the cost fields on the listing",
-        "resident_reviews": "reviews written by people who lived there",
-        "listing_verification": "Homiio verification records",
-        "listing_housing_type": "the housing-type field on the listing"
+        "listing_created_at": "房源的发布日期",
+        "listing_sale_price_reduced_flag": "门户网站发布的降价标记",
+        "listing_status": "房源状态的变化",
+        "listing_agency_fee_flag": "房源中的中介费字段",
+        "listing_cost_fields": "房源中的费用字段",
+        "resident_reviews": "住过这里的人写下的评价",
+        "listing_verification": "Homiio 的核实记录",
+        "listing_housing_type": "房源中的住房类型字段"
       },
       "new_in_area": {
-        "eyebrow": "New",
-        "title": "New in your area",
-        "reason": "Listed most recently inside the area you are searching"
+        "eyebrow": "新上",
+        "title": "你所在区域的新房源",
+        "reason": "在你搜索的区域内最新发布的房源"
       },
       "price_reduced": {
-        "eyebrow": "Price change",
-        "title": "Asking price reduced",
-        "reason": "The seller published a price reduction. Homiio keeps no rent price history, so this covers homes for sale only"
+        "eyebrow": "价格变动",
+        "title": "报价已下调",
+        "reason": "卖方发布了降价信息。Homiio 不保留租金历史，因此这里只包含出售房源"
       },
       "no_longer_available": {
-        "eyebrow": "Left the market",
-        "title": "No longer available",
-        "reason": "Marked rented or sold by their owner, most recent first — what actually went, and at what price"
+        "eyebrow": "已离开市场",
+        "title": "已不可租售",
+        "reason": "被业主标记为已出租或已售出，按时间从新到旧：真正成交的是哪些，成交价多少"
       },
       "no_agency_fee": {
-        "eyebrow": "Costs",
-        "title": "No agency fee",
-        "reason": "The listing states that no agency fee is payable. Listings that say nothing are not included"
+        "eyebrow": "费用",
+        "title": "无中介费",
+        "reason": "房源写明无需支付中介费。未作说明的房源不计入"
       },
       "transparent_total_cost": {
-        "eyebrow": "Costs",
-        "title": "Whole cost stated",
-        "reason": "Every recurring cost is on the listing — rent with bills included and the deposit, or the nightly rate with cleaning and service fees"
+        "eyebrow": "费用",
+        "title": "已写明全部费用",
+        "reason": "所有经常性费用都写在房源里：含水电杂费的租金和押金，或每晚房价加清洁费和服务费"
       },
       "with_resident_reviews": {
-        "eyebrow": "Trust",
-        "title": "Reviewed by residents",
-        "reason": "Somebody who lived at this address has written a review"
+        "eyebrow": "可信度",
+        "title": "有住户评价",
+        "reason": "有人在这个地址住过并写下了评价"
       },
       "verified": {
-        "eyebrow": "Trust",
-        "title": "Verified address or lister",
-        "reason": "Homiio verified the address or the person listing it"
+        "eyebrow": "可信度",
+        "title": "地址或发布者已核实",
+        "reason": "Homiio 已核实该地址或发布房源的人"
       },
       "public_housing": {
-        "eyebrow": "Public",
-        "title": "Public housing",
-        "reason": "Listed as public housing. Homiio has no cooperative or community housing field yet, so those are not included"
+        "eyebrow": "公共",
+        "title": "公共住房",
+        "reason": "发布为公共住房。Homiio 目前还没有合作社住房或社区住房的字段，因此这类房源不计入"
       },
-      "loadFailedToast": "Could not load homes for this area. Nothing is hidden — the request failed."
+      "loadFailedToast": "无法加载该区域的房源。我们没有隐藏任何内容——是请求失败了。"
     },
     "scopePrompt": {
-      "eyebrow": "One step first",
-      "title": "Where are you looking for a home?",
-      "body": "Pick a city or neighbourhood, or turn on location. Location is optional — you can always choose a place by hand."
+      "eyebrow": "先做一件事",
+      "title": "你想在哪里找房？",
+      "body": "选择一个城市或街区，或者开启定位。定位不是必需的——你随时可以手动选择地点。"
     },
     "empty": {
-      "title": "Nothing to show for this area yet",
-      "body": "No listing here matches what Homiio can explain. Widen the area, choose somewhere else, or open Explore and change the filters.",
-      "changeFilters": "Open Explore",
-      "changeFiltersAccessible": "Open Explore to change the filters for this area"
+      "title": "这个区域暂时没有可展示的内容",
+      "body": "这里没有房源符合 Homiio 能够解释的条件。扩大范围、换个地方，或者打开“探索”修改筛选条件。",
+      "changeFilters": "打开“探索”",
+      "changeFiltersAccessible": "打开“探索”以修改该区域的筛选条件"
     }
   },
   "agent": {
@@ -4121,31 +4121,31 @@
   },
   "location": {
     "scope": {
-      "eyebrow": "Searching in",
-      "announce": "Searching in {{scope}}",
-      "change": "Change",
-      "changeAccessible": "Change the area you are searching in",
-      "everywhere": "Everywhere",
-      "nearYou": "Near you · {{distance}}",
-      "nearPlace": "Near {{place}} · {{distance}}",
-      "resolving": "Finding where you are…",
-      "useCurrent": "Use my location",
-      "useCurrentAccessible": "Use my current location to search nearby",
-      "exploreGlobal": "Explore everywhere",
-      "exploreGlobalAccessible": "Explore homes everywhere, with no area filter",
-      "pickerTitle": "Where are you looking for a home?",
-      "deviceUnavailable": "Your current location is no longer available. Showing the last area you chose.",
-      "showingCached": "Saved copy from {{when}}. Not up to date.",
+      "eyebrow": "搜索范围",
+      "announce": "正在搜索{{scope}}",
+      "change": "更改",
+      "changeAccessible": "更改你正在搜索的区域",
+      "everywhere": "全部地区",
+      "nearYou": "在你附近 · {{distance}}",
+      "nearPlace": "{{place}}附近 · {{distance}}",
+      "resolving": "正在确定你的位置…",
+      "useCurrent": "使用我的位置",
+      "useCurrentAccessible": "使用我当前的位置搜索附近房源",
+      "exploreGlobal": "浏览全部地区",
+      "exploreGlobalAccessible": "浏览全部地区的房源，不限定区域",
+      "pickerTitle": "你想在哪里找房？",
+      "deviceUnavailable": "已无法获取你的当前位置。显示的是你上次选择的区域。",
+      "showingCached": "{{when}}保存的副本，内容可能已过时。",
       "failure": {
-        "permission_denied": "Location is off, so we cannot search near you. Pick a place instead — location is optional.",
-        "position_unavailable": "We could not get your position. Pick a place instead.",
-        "network": "We could not reach Homiio to look that up. Check your connection and try again.",
-        "rate_limited": "Too many place lookups just now. Try again in a moment.",
-        "ambiguous": "Several places match that name. Pick the one you meant.",
-        "no_results": "We could not find that place. Try another name.",
-        "unsupported": "Homiio cannot search that kind of place yet. Pick a city instead."
+        "permission_denied": "定位已关闭，无法搜索你附近的房源。请改为选择一个地点——定位不是必需的。",
+        "position_unavailable": "无法获取你的位置。请改为选择一个地点。",
+        "network": "无法连接 Homiio 完成这次查询。请检查网络后重试。",
+        "rate_limited": "短时间内地点查询次数过多。请稍后再试。",
+        "ambiguous": "有多个地点符合这个名称。请选择你要找的那个。",
+        "no_results": "找不到这个地点。请换个名称再试。",
+        "unsupported": "Homiio 暂时无法搜索这类地点。请改选一个城市。"
       },
-      "notChosen": "Not chosen yet"
+      "notChosen": "尚未选择"
     }
   },
   "alerts": {

@@ -122,227 +122,227 @@
   },
   "home": {
     "insights": {
-      "title": "Platform Insights"
+      "title": "بيانات المنصة"
     },
     "hero": {
-      "title": "Find your ethical home",
-      "subtitle": "Transparent rentals with fair agreements and verified properties",
-      "searchPlaceholder": "Where do you want to live?",
-      "searchButton": "Search"
+      "title": "اعثر على سكنك العادل",
+      "subtitle": "إيجارات شفافة وعقود منصفة وعقارات موثّقة",
+      "searchPlaceholder": "أين تريد أن تسكن؟",
+      "searchButton": "بحث"
     },
     "cities": {
-      "title": "Featured Cities",
-      "properties": "properties"
+      "title": "مدن مختارة",
+      "properties": "عقارات"
     },
     "categories": {
-      "title": "Browse by Category",
-      "view": "View",
+      "title": "التصفح حسب الفئة",
+      "view": "عرض",
       "types": {
-        "apartments": "Apartments",
-        "houses": "Houses",
-        "coLiving": "Co-living",
-        "ecoFriendly": "Eco-friendly"
+        "apartments": "شقق",
+        "houses": "منازل",
+        "coLiving": "سكن مشترك",
+        "ecoFriendly": "صديقة للبيئة"
       }
     },
     "category": {
-      "studios": "Studios",
-      "apartments": "Apartments",
-      "houses": "Houses",
-      "rooms": "Rooms",
-      "coliving": "Co-living",
-      "luxury": "Luxury",
-      "newListings": "New listings",
-      "nearYou": "Near you",
-      "nearYouUnavailable": "Turn on location to see homes near you",
-      "beachfront": "Beachfront",
-      "cabins": "Cabins",
-      "pools": "Pools",
-      "mountain": "Mountain",
-      "cityBreaks": "City breaks",
-      "countryside": "Countryside",
-      "instantBook": "Instant book",
-      "petFriendly": "Pet friendly",
-      "homeSwap": "Home swap",
-      "hosting": "Hosting"
+      "studios": "استوديوهات",
+      "apartments": "شقق",
+      "houses": "منازل",
+      "rooms": "غرف",
+      "coliving": "سكن مشترك",
+      "luxury": "فاخر",
+      "newListings": "إعلانات جديدة",
+      "nearYou": "بالقرب منك",
+      "nearYouUnavailable": "فعّل تحديد الموقع لرؤية المساكن القريبة منك",
+      "beachfront": "على الشاطئ",
+      "cabins": "أكواخ",
+      "pools": "مع مسبح",
+      "mountain": "في الجبل",
+      "cityBreaks": "إقامات قصيرة في المدينة",
+      "countryside": "في الريف",
+      "instantBook": "حجز فوري",
+      "petFriendly": "تسمح بالحيوانات الأليفة",
+      "homeSwap": "تبادل المساكن",
+      "hosting": "الاستضافة"
     },
     "horizon": {
-      "title": "Join Horizon",
-      "description": "Horizon is a global initiative offering fair housing, healthcare, and travel support. Now integrated with Homiio.",
-      "learnMore": "Learn More"
+      "title": "انضم إلى Horizon",
+      "description": "‏Horizon مبادرة عالمية توفّر سكنًا عادلًا ورعاية صحية ودعمًا للسفر. أصبحت الآن متكاملة مع Homiio.",
+      "learnMore": "اعرف المزيد"
     },
     "eco": {
-      "title": "Eco-Certified Properties",
-      "description": "Find sustainable properties that meet our energy efficiency and eco-friendly standards",
-      "viewEcoProperties": "View Eco Properties"
+      "title": "عقارات حاصلة على شهادة بيئية",
+      "description": "اعثر على عقارات مستدامة تستوفي معاييرنا لكفاءة الطاقة والحفاظ على البيئة",
+      "viewEcoProperties": "عرض العقارات البيئية"
     },
     "featured": {
-      "title": "Featured Properties",
-      "empty": "No featured properties available at the moment",
-      "gridLongTerm": "Studios in {{place}}",
-      "gridVacation": "Beach apartments in {{place}}",
-      "gridBuy": "Homes for sale in {{place}}",
-      "gridExchange": "Home exchanges in {{place}}",
-      "titleIn": "Featured in {{area}}",
-      "chooseArea": "Choose an area to see featured homes.",
-      "loadFailed": "Could not load featured homes for this area."
+      "title": "عقارات مختارة",
+      "empty": "لا توجد عقارات مختارة في الوقت الحالي",
+      "gridLongTerm": "استوديوهات في {{place}}",
+      "gridVacation": "شقق على الشاطئ في {{place}}",
+      "gridBuy": "مساكن للبيع في {{place}}",
+      "gridExchange": "تبادل مساكن في {{place}}",
+      "titleIn": "مختارات في {{area}}",
+      "chooseArea": "اختر منطقة لعرض العقارات المختارة.",
+      "loadFailed": "تعذّر تحميل العقارات المختارة لهذه المنطقة."
     },
-    "viewAll": "View All",
+    "viewAll": "عرض الكل",
     "recentlyViewed": {
-      "title": "Recently Viewed",
-      "noProperties": "No recently viewed properties",
-      "noPropertiesDescription": "Start browsing to see your recent activity here",
-      "browseProperties": "Browse Properties",
-      "errorTitle": "Error Loading Recently Viewed",
-      "errorDescription": "Please try again.",
-      "retry": "Retry",
-      "results": "Results",
-      "filtered": "filtered",
-      "continue": "Continue browsing"
+      "title": "شوهدت مؤخرًا",
+      "noProperties": "لم تشاهد أي عقار بعد",
+      "noPropertiesDescription": "ابدأ التصفح وسيظهر نشاطك الأخير هنا",
+      "browseProperties": "تصفّح العقارات",
+      "errorTitle": "خطأ في تحميل ما شوهد مؤخرًا",
+      "errorDescription": "يُرجى المحاولة مرة أخرى.",
+      "retry": "إعادة المحاولة",
+      "results": "النتائج",
+      "filtered": "مُصفّاة",
+      "continue": "متابعة التصفح"
     },
     "saved": {
-      "title": "Saved Properties",
-      "editFolder": "Edit Folder",
-      "defaultFolder": "Default Folder",
-      "folderNamePlaceholder": "Folder name",
-      "noFolder": "Folder not found",
-      "noFolderDescription": "This folder may have been removed",
-      "noFolderItems": "No properties in this folder",
-      "noFolderItemsDescription": "Save properties to this folder to see them here"
+      "title": "العقارات المحفوظة",
+      "editFolder": "تعديل المجلد",
+      "defaultFolder": "المجلد الافتراضي",
+      "folderNamePlaceholder": "اسم المجلد",
+      "noFolder": "لم يُعثر على المجلد",
+      "noFolderDescription": "ربما تم حذف هذا المجلد",
+      "noFolderItems": "لا توجد عقارات في هذا المجلد",
+      "noFolderItemsDescription": "احفظ عقارات في هذا المجلد لتراها هنا"
     },
     "tips": {
-      "title": "Rental Tips & Guides",
+      "title": "نصائح وأدلة الإيجار",
       "categories": {
-        "search": "Search",
-        "safety": "Safety",
-        "legal": "Legal",
-        "inspection": "Inspection"
+        "search": "البحث",
+        "safety": "الأمان",
+        "legal": "القانون",
+        "inspection": "المعاينة"
       },
       "firstTimeRenting": {
-        "title": "First Time Renting? Here's Your Complete Guide",
-        "description": "Everything you need to know about finding, viewing, and securing your first rental property."
+        "title": "تستأجر لأول مرة؟ هذا دليلك الكامل",
+        "description": "كل ما تحتاج معرفته للعثور على أول سكن بالإيجار ومعاينته وتأمينه."
       },
       "avoidScams": {
-        "title": "How to Avoid Rental Scams: Red Flags to Watch For",
-        "description": "Learn to identify common rental scams and protect yourself from fraud when searching for a new home."
+        "title": "كيف تتجنب عمليات الاحتيال في الإيجار: علامات الخطر",
+        "description": "تعلّم كيف تتعرف على أساليب الاحتيال الشائعة وتحمي نفسك أثناء البحث عن سكن."
       },
       "rentalAgreement": {
-        "title": "Understanding Your Rental Agreement: Key Terms Explained",
-        "description": "Break down complex legal terms and understand what you're signing before committing to a rental."
+        "title": "فهم عقد الإيجار: شرح البنود الأساسية",
+        "description": "نبسّط لك المصطلحات القانونية المعقّدة لتعرف ما توقّع عليه قبل الالتزام."
       },
       "propertyInspection": {
-        "title": "Property Inspection Checklist: What to Look For",
-        "description": "A comprehensive guide to inspecting potential rental properties and identifying potential issues."
+        "title": "قائمة معاينة العقار: ما الذي يجب فحصه",
+        "description": "دليل شامل لمعاينة العقارات المعروضة للإيجار واكتشاف المشكلات المحتملة."
       },
-      "subtitle": "Practical guides from local tenants, legal experts, and the Homiio editorial team.",
-      "eyebrow": "Renting smarter"
+      "subtitle": "أدلة عملية من مستأجرين محليين وخبراء قانونيين وفريق التحرير في Homiio.",
+      "eyebrow": "استأجر بذكاء"
     },
     "faq": {
-      "title": "Frequently Asked Questions",
+      "title": "الأسئلة الشائعة",
       "scheduleViewing": {
-        "question": "How do I schedule a property viewing?",
-        "answer": "You can schedule a viewing by clicking the \"Schedule Viewing\" button on any property listing. Our system will connect you with the landlord or property manager to arrange a convenient time."
+        "question": "كيف أحدد موعدًا لمعاينة عقار؟",
+        "answer": "يمكنك تحديد موعد بالضغط على زر «تحديد موعد معاينة» في أي إعلان. سيصلك نظامنا بالمالك أو مدير العقار للاتفاق على وقت مناسب."
       },
       "verifiedProperty": {
-        "question": "What does \"Verified Property\" mean?",
-        "answer": "Verified properties have been personally inspected by our team to ensure they meet our quality standards. This includes checking the property condition, amenities, and verifying the landlord's credentials."
+        "question": "ما معنى «عقار موثّق»؟",
+        "answer": "العقارات الموثّقة عاينها فريقنا بنفسه للتأكد من استيفائها معايير الجودة لدينا، بما في ذلك حالة العقار ومرافقه والتحقق من بيانات المؤجّر."
       },
       "reportSuspicious": {
-        "question": "How do I report a suspicious listing?",
-        "answer": "If you encounter a suspicious listing, click the \"Report\" button on the property page. Our safety team will investigate and take appropriate action to protect our community."
+        "question": "كيف أبلّغ عن إعلان مشبوه؟",
+        "answer": "إذا صادفت إعلانًا مشبوهًا، اضغط زر «إبلاغ» في صفحة العقار. سيتولى فريق الأمان التحقيق واتخاذ الإجراء المناسب لحماية المجتمع."
       },
       "applicationRequirements": {
-        "question": "What are the rental application requirements?",
-        "answer": "Requirements vary by property, but typically include proof of income, rental history, credit check, and references. Each listing will specify the exact requirements needed."
+        "question": "ما متطلبات طلب الإيجار؟",
+        "answer": "تختلف المتطلبات حسب العقار، لكنها تشمل عادةً إثبات الدخل وسجل الإيجار والتحقق الائتماني والتزكيات. يوضّح كل إعلان المتطلبات المحددة."
       }
     },
     "cityShowcase": {
-      "title": "Explore {{place}}",
-      "defaultPlace": "Spain"
+      "title": "استكشف {{place}}",
+      "defaultPlace": "إسبانيا"
     },
     "nearby": {
-      "title": "Homes in {{city}}"
+      "title": "مساكن في {{city}}"
     },
     "recommended": {
-      "title": "Recommended homes",
-      "eyebrow": "For you"
+      "title": "مساكن مقترحة",
+      "eyebrow": "لك"
     },
     "explore": {
-      "eyebrow": "Keep exploring",
-      "title": "Explore more homes",
-      "cta": "Explore all homes here",
-      "ctaAccessible": "Open Explore with the area you are searching in"
+      "eyebrow": "واصل الاستكشاف",
+      "title": "استكشف مزيدًا من المساكن",
+      "cta": "عرض كل المساكن هنا",
+      "ctaAccessible": "فتح «استكشاف» بالمنطقة التي تبحث فيها"
     },
     "hostCta": {
-      "cta": "Become a host",
-      "subtitle": "Reach verified renters across Spain — free to list, fair fees, real human support.",
-      "title": "List your space, find a great tenant"
+      "cta": "كن مضيفًا",
+      "subtitle": "اعرض سكنك على مستأجرين موثّقين في جميع أنحاء إسبانيا: الإعلان مجاني، والرسوم منصفة، والدعم من بشر حقيقيين.",
+      "title": "أعلن عن مساحتك واعثر على مستأجر جيد"
     },
     "sections": {
-      "explain": "{{reason}} · Source: {{source}}",
-      "explainAccessible": "Why these homes: {{reason}}. Source: {{source}}.",
-      "error": "We could not load this area. Nothing is being hidden — the request failed.",
+      "explain": "{{reason}} · المصدر: {{source}}",
+      "explainAccessible": "لماذا هذه المساكن: {{reason}}. المصدر: {{source}}.",
+      "error": "تعذّر تحميل هذه المنطقة. لا نخفي شيئًا — الطلب أخفق.",
       "source": {
-        "listing_created_at": "listing publication dates",
-        "listing_sale_price_reduced_flag": "the price-reduced flag the portal publishes",
-        "listing_status": "listing status changes",
-        "listing_agency_fee_flag": "the agency-fee field on the listing",
-        "listing_cost_fields": "the cost fields on the listing",
-        "resident_reviews": "reviews written by people who lived there",
-        "listing_verification": "Homiio verification records",
-        "listing_housing_type": "the housing-type field on the listing"
+        "listing_created_at": "تواريخ نشر الإعلانات",
+        "listing_sale_price_reduced_flag": "مؤشّر خفض السعر الذي تنشره المنصة",
+        "listing_status": "تغيّرات حالة الإعلان",
+        "listing_agency_fee_flag": "حقل عمولة الوكالة في الإعلان",
+        "listing_cost_fields": "حقول التكاليف في الإعلان",
+        "resident_reviews": "تقييمات كتبها من سكنوا هناك",
+        "listing_verification": "سجلات التوثيق لدى Homiio",
+        "listing_housing_type": "حقل نوع السكن في الإعلان"
       },
       "new_in_area": {
-        "eyebrow": "New",
-        "title": "New in your area",
-        "reason": "Listed most recently inside the area you are searching"
+        "eyebrow": "جديد",
+        "title": "جديد في منطقتك",
+        "reason": "الأحدث نشرًا داخل المنطقة التي تبحث فيها"
       },
       "price_reduced": {
-        "eyebrow": "Price change",
-        "title": "Asking price reduced",
-        "reason": "The seller published a price reduction. Homiio keeps no rent price history, so this covers homes for sale only"
+        "eyebrow": "تغيّر السعر",
+        "title": "انخفاض السعر المطلوب",
+        "reason": "نشر البائع خفضًا في السعر. لا يحتفظ Homiio بسجل لأسعار الإيجار، لذا يشمل هذا القسم المساكن المعروضة للبيع فقط"
       },
       "no_longer_available": {
-        "eyebrow": "Left the market",
-        "title": "No longer available",
-        "reason": "Marked rented or sold by their owner, most recent first — what actually went, and at what price"
+        "eyebrow": "خرجت من السوق",
+        "title": "لم تعد متاحة",
+        "reason": "وضع مالكوها علامة مؤجَّر أو مُباع، من الأحدث إلى الأقدم: ما الذي خرج فعلًا، وبأي سعر"
       },
       "no_agency_fee": {
-        "eyebrow": "Costs",
-        "title": "No agency fee",
-        "reason": "The listing states that no agency fee is payable. Listings that say nothing are not included"
+        "eyebrow": "التكاليف",
+        "title": "بدون عمولة وكالة",
+        "reason": "ينص الإعلان على عدم وجود عمولة وكالة. الإعلانات التي لا تذكر شيئًا غير مُدرجة"
       },
       "transparent_total_cost": {
-        "eyebrow": "Costs",
-        "title": "Whole cost stated",
-        "reason": "Every recurring cost is on the listing — rent with bills included and the deposit, or the nightly rate with cleaning and service fees"
+        "eyebrow": "التكاليف",
+        "title": "التكلفة الكاملة مذكورة",
+        "reason": "كل التكاليف المتكررة مذكورة في الإعلان: الإيجار شاملًا الفواتير والتأمين، أو السعر الليلي مع رسوم التنظيف والخدمة"
       },
       "with_resident_reviews": {
-        "eyebrow": "Trust",
-        "title": "Reviewed by residents",
-        "reason": "Somebody who lived at this address has written a review"
+        "eyebrow": "الثقة",
+        "title": "بتقييمات من سكنوا فيها",
+        "reason": "كتب شخص سكن في هذا العنوان تقييمًا"
       },
       "verified": {
-        "eyebrow": "Trust",
-        "title": "Verified address or lister",
-        "reason": "Homiio verified the address or the person listing it"
+        "eyebrow": "الثقة",
+        "title": "العنوان أو المعلِن موثّق",
+        "reason": "وثّق Homiio العنوان أو الشخص الذي نشر الإعلان"
       },
       "public_housing": {
-        "eyebrow": "Public",
-        "title": "Public housing",
-        "reason": "Listed as public housing. Homiio has no cooperative or community housing field yet, so those are not included"
+        "eyebrow": "عام",
+        "title": "الإسكان العام",
+        "reason": "منشورة بوصفها إسكانًا عامًا. لا يملك Homiio بعد حقلًا للإسكان التعاوني أو المجتمعي، لذا فهي غير مُدرجة"
       },
-      "loadFailedToast": "Could not load homes for this area. Nothing is hidden — the request failed."
+      "loadFailedToast": "تعذّر تحميل المساكن لهذه المنطقة. لا نخفي شيئًا — الطلب أخفق."
     },
     "scopePrompt": {
-      "eyebrow": "One step first",
-      "title": "Where are you looking for a home?",
-      "body": "Pick a city or neighbourhood, or turn on location. Location is optional — you can always choose a place by hand."
+      "eyebrow": "خطوة أولى",
+      "title": "أين تبحث عن سكن؟",
+      "body": "اختر مدينة أو حيًّا، أو فعّل تحديد الموقع. تحديد الموقع اختياري — يمكنك دائمًا اختيار المكان يدويًا."
     },
     "empty": {
-      "title": "Nothing to show for this area yet",
-      "body": "No listing here matches what Homiio can explain. Widen the area, choose somewhere else, or open Explore and change the filters.",
-      "changeFilters": "Open Explore",
-      "changeFiltersAccessible": "Open Explore to change the filters for this area"
+      "title": "لا يوجد ما نعرضه في هذه المنطقة بعد",
+      "body": "لا يوجد إعلان هنا يطابق ما يستطيع Homiio تفسيره. وسّع المنطقة، أو اختر مكانًا آخر، أو افتح «استكشاف» وغيّر عوامل التصفية.",
+      "changeFilters": "فتح «استكشاف»",
+      "changeFiltersAccessible": "فتح «استكشاف» لتغيير عوامل التصفية لهذه المنطقة"
     }
   },
   "agent": {
@@ -4121,31 +4121,31 @@
   },
   "location": {
     "scope": {
-      "eyebrow": "Searching in",
-      "announce": "Searching in {{scope}}",
-      "change": "Change",
-      "changeAccessible": "Change the area you are searching in",
-      "everywhere": "Everywhere",
-      "nearYou": "Near you · {{distance}}",
-      "nearPlace": "Near {{place}} · {{distance}}",
-      "resolving": "Finding where you are…",
-      "useCurrent": "Use my location",
-      "useCurrentAccessible": "Use my current location to search nearby",
-      "exploreGlobal": "Explore everywhere",
-      "exploreGlobalAccessible": "Explore homes everywhere, with no area filter",
-      "pickerTitle": "Where are you looking for a home?",
-      "deviceUnavailable": "Your current location is no longer available. Showing the last area you chose.",
-      "showingCached": "Saved copy from {{when}}. Not up to date.",
+      "eyebrow": "البحث في",
+      "announce": "البحث في {{scope}}",
+      "change": "تغيير",
+      "changeAccessible": "تغيير المنطقة التي تبحث فيها",
+      "everywhere": "كل الأماكن",
+      "nearYou": "بالقرب منك · {{distance}}",
+      "nearPlace": "بالقرب من {{place}} · {{distance}}",
+      "resolving": "جارٍ تحديد مكانك…",
+      "useCurrent": "استخدام موقعي",
+      "useCurrentAccessible": "استخدام موقعي الحالي للبحث في الجوار",
+      "exploreGlobal": "استكشاف كل الأماكن",
+      "exploreGlobalAccessible": "استكشاف المساكن في كل الأماكن، بدون تحديد منطقة",
+      "pickerTitle": "أين تبحث عن سكن؟",
+      "deviceUnavailable": "لم يعد موقعك الحالي متاحًا. نعرض آخر منطقة اخترتها.",
+      "showingCached": "نسخة محفوظة من {{when}}. غير محدَّثة.",
       "failure": {
-        "permission_denied": "Location is off, so we cannot search near you. Pick a place instead — location is optional.",
-        "position_unavailable": "We could not get your position. Pick a place instead.",
-        "network": "We could not reach Homiio to look that up. Check your connection and try again.",
-        "rate_limited": "Too many place lookups just now. Try again in a moment.",
-        "ambiguous": "Several places match that name. Pick the one you meant.",
-        "no_results": "We could not find that place. Try another name.",
-        "unsupported": "Homiio cannot search that kind of place yet. Pick a city instead."
+        "permission_denied": "تحديد الموقع مُعطَّل، لذا لا يمكننا البحث بالقرب منك. اختر مكانًا بدلًا من ذلك — تحديد الموقع اختياري.",
+        "position_unavailable": "تعذّر الحصول على موقعك. اختر مكانًا بدلًا من ذلك.",
+        "network": "تعذّر الاتصال بـ Homiio لإجراء هذا البحث. تحقق من اتصالك ثم أعد المحاولة.",
+        "rate_limited": "عمليات بحث كثيرة عن الأماكن في وقت قصير. أعد المحاولة بعد قليل.",
+        "ambiguous": "عدة أماكن تطابق هذا الاسم. اختر المكان الذي تقصده.",
+        "no_results": "لم نعثر على هذا المكان. جرّب اسمًا آخر.",
+        "unsupported": "لا يستطيع Homiio البحث في هذا النوع من الأماكن بعد. اختر مدينة."
       },
-      "notChosen": "Not chosen yet"
+      "notChosen": "لم تُحدَّد بعد"
     }
   },
   "alerts": {
