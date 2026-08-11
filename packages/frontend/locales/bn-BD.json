@@ -122,227 +122,227 @@
   },
   "home": {
     "insights": {
-      "title": "Platform Insights"
+      "title": "প্ল্যাটফর্মের তথ্য"
     },
     "hero": {
-      "title": "Find your ethical home",
-      "subtitle": "Transparent rentals with fair agreements and verified properties",
-      "searchPlaceholder": "Where do you want to live?",
-      "searchButton": "Search"
+      "title": "আপনার ন্যায্য বাসা খুঁজুন",
+      "subtitle": "স্বচ্ছ ভাড়া, ন্যায্য চুক্তি আর যাচাই করা সম্পত্তি",
+      "searchPlaceholder": "আপনি কোথায় থাকতে চান?",
+      "searchButton": "খুঁজুন"
     },
     "cities": {
-      "title": "Featured Cities",
-      "properties": "properties"
+      "title": "নির্বাচিত শহর",
+      "properties": "সম্পত্তি"
     },
     "categories": {
-      "title": "Browse by Category",
-      "view": "View",
+      "title": "শ্রেণি অনুযায়ী দেখুন",
+      "view": "দেখুন",
       "types": {
-        "apartments": "Apartments",
-        "houses": "Houses",
-        "coLiving": "Co-living",
-        "ecoFriendly": "Eco-friendly"
+        "apartments": "অ্যাপার্টমেন্ট",
+        "houses": "বাড়ি",
+        "coLiving": "কো-লিভিং",
+        "ecoFriendly": "পরিবেশবান্ধব"
       }
     },
     "category": {
-      "studios": "Studios",
-      "apartments": "Apartments",
-      "houses": "Houses",
-      "rooms": "Rooms",
-      "coliving": "Co-living",
-      "luxury": "Luxury",
-      "newListings": "New listings",
-      "nearYou": "Near you",
-      "nearYouUnavailable": "Turn on location to see homes near you",
-      "beachfront": "Beachfront",
-      "cabins": "Cabins",
-      "pools": "Pools",
-      "mountain": "Mountain",
-      "cityBreaks": "City breaks",
-      "countryside": "Countryside",
-      "instantBook": "Instant book",
-      "petFriendly": "Pet friendly",
-      "homeSwap": "Home swap",
-      "hosting": "Hosting"
+      "studios": "স্টুডিও",
+      "apartments": "অ্যাপার্টমেন্ট",
+      "houses": "বাড়ি",
+      "rooms": "রুম",
+      "coliving": "কো-লিভিং",
+      "luxury": "বিলাসবহুল",
+      "newListings": "নতুন বিজ্ঞাপন",
+      "nearYou": "আপনার কাছে",
+      "nearYouUnavailable": "আশপাশের বাসা দেখতে লোকেশন চালু করুন",
+      "beachfront": "সমুদ্রের ধারে",
+      "cabins": "কেবিন",
+      "pools": "পুলসহ",
+      "mountain": "পাহাড়ে",
+      "cityBreaks": "শহরে অল্প দিনের ছুটি",
+      "countryside": "গ্রামাঞ্চল",
+      "instantBook": "তাৎক্ষণিক বুকিং",
+      "petFriendly": "পোষা প্রাণী চলবে",
+      "homeSwap": "বাসা বিনিময়",
+      "hosting": "হোস্টিং"
     },
     "horizon": {
-      "title": "Join Horizon",
-      "description": "Horizon is a global initiative offering fair housing, healthcare, and travel support. Now integrated with Homiio.",
-      "learnMore": "Learn More"
+      "title": "Horizon-এ যোগ দিন",
+      "description": "Horizon একটি বৈশ্বিক উদ্যোগ, যা ন্যায্য আবাসন, স্বাস্থ্যসেবা ও ভ্রমণ সহায়তা দেয়। এখন এটি Homiio-র সঙ্গে যুক্ত।",
+      "learnMore": "আরও জানুন"
     },
     "eco": {
-      "title": "Eco-Certified Properties",
-      "description": "Find sustainable properties that meet our energy efficiency and eco-friendly standards",
-      "viewEcoProperties": "View Eco Properties"
+      "title": "পরিবেশ-সনদপ্রাপ্ত সম্পত্তি",
+      "description": "এমন টেকসই সম্পত্তি খুঁজুন যেগুলো আমাদের জ্বালানি-দক্ষতা ও পরিবেশবান্ধব মান পূরণ করে",
+      "viewEcoProperties": "পরিবেশবান্ধব সম্পত্তি দেখুন"
     },
     "featured": {
-      "title": "Featured Properties",
-      "empty": "No featured properties available at the moment",
-      "gridLongTerm": "Studios in {{place}}",
-      "gridVacation": "Beach apartments in {{place}}",
-      "gridBuy": "Homes for sale in {{place}}",
-      "gridExchange": "Home exchanges in {{place}}",
-      "titleIn": "Featured in {{area}}",
-      "chooseArea": "Choose an area to see featured homes.",
-      "loadFailed": "Could not load featured homes for this area."
+      "title": "নির্বাচিত সম্পত্তি",
+      "empty": "এই মুহূর্তে কোনো নির্বাচিত সম্পত্তি নেই",
+      "gridLongTerm": "{{place}}-এ স্টুডিও",
+      "gridVacation": "{{place}}-এ সমুদ্রের ধারের অ্যাপার্টমেন্ট",
+      "gridBuy": "{{place}}-এ বিক্রির বাসা",
+      "gridExchange": "{{place}}-এ বাসা বিনিময়",
+      "titleIn": "{{area}}-এ নির্বাচিত",
+      "chooseArea": "নির্বাচিত বাসা দেখতে একটি এলাকা বেছে নিন।",
+      "loadFailed": "এই এলাকার নির্বাচিত বাসা লোড করা যায়নি।"
     },
-    "viewAll": "View All",
+    "viewAll": "সব দেখুন",
     "recentlyViewed": {
-      "title": "Recently Viewed",
-      "noProperties": "No recently viewed properties",
-      "noPropertiesDescription": "Start browsing to see your recent activity here",
-      "browseProperties": "Browse Properties",
-      "errorTitle": "Error Loading Recently Viewed",
-      "errorDescription": "Please try again.",
-      "retry": "Retry",
-      "results": "Results",
-      "filtered": "filtered",
-      "continue": "Continue browsing"
+      "title": "সম্প্রতি দেখা",
+      "noProperties": "আপনি এখনো কোনো সম্পত্তি দেখেননি",
+      "noPropertiesDescription": "দেখা শুরু করুন, আপনার সাম্প্রতিক কার্যকলাপ এখানে দেখা যাবে",
+      "browseProperties": "সম্পত্তি দেখুন",
+      "errorTitle": "সম্প্রতি দেখা তালিকা লোড করতে সমস্যা",
+      "errorDescription": "আবার চেষ্টা করুন।",
+      "retry": "আবার চেষ্টা করুন",
+      "results": "ফলাফল",
+      "filtered": "ফিল্টার করা",
+      "continue": "দেখা চালিয়ে যান"
     },
     "saved": {
-      "title": "Saved Properties",
-      "editFolder": "Edit Folder",
-      "defaultFolder": "Default Folder",
-      "folderNamePlaceholder": "Folder name",
-      "noFolder": "Folder not found",
-      "noFolderDescription": "This folder may have been removed",
-      "noFolderItems": "No properties in this folder",
-      "noFolderItemsDescription": "Save properties to this folder to see them here"
+      "title": "সংরক্ষিত সম্পত্তি",
+      "editFolder": "ফোল্ডার সম্পাদনা",
+      "defaultFolder": "ডিফল্ট ফোল্ডার",
+      "folderNamePlaceholder": "ফোল্ডারের নাম",
+      "noFolder": "ফোল্ডার পাওয়া যায়নি",
+      "noFolderDescription": "সম্ভবত এই ফোল্ডারটি মুছে ফেলা হয়েছে",
+      "noFolderItems": "এই ফোল্ডারে কোনো সম্পত্তি নেই",
+      "noFolderItemsDescription": "এখানে দেখতে এই ফোল্ডারে সম্পত্তি সংরক্ষণ করুন"
     },
     "tips": {
-      "title": "Rental Tips & Guides",
+      "title": "ভাড়ার পরামর্শ ও নির্দেশিকা",
       "categories": {
-        "search": "Search",
-        "safety": "Safety",
-        "legal": "Legal",
-        "inspection": "Inspection"
+        "search": "খোঁজা",
+        "safety": "নিরাপত্তা",
+        "legal": "আইনি",
+        "inspection": "পরিদর্শন"
       },
       "firstTimeRenting": {
-        "title": "First Time Renting? Here's Your Complete Guide",
-        "description": "Everything you need to know about finding, viewing, and securing your first rental property."
+        "title": "প্রথমবার ভাড়া নিচ্ছেন? এই নিন পূর্ণ নির্দেশিকা",
+        "description": "প্রথম ভাড়ার বাসা খুঁজে বের করা, দেখা আর চূড়ান্ত করার জন্য যা যা জানা দরকার।"
       },
       "avoidScams": {
-        "title": "How to Avoid Rental Scams: Red Flags to Watch For",
-        "description": "Learn to identify common rental scams and protect yourself from fraud when searching for a new home."
+        "title": "ভাড়ার প্রতারণা এড়াবেন কীভাবে: যেসব লক্ষণে সতর্ক হবেন",
+        "description": "সাধারণ প্রতারণার ধরন চিনতে শিখুন এবং বাসা খোঁজার সময় নিজেকে সুরক্ষিত রাখুন।"
       },
       "rentalAgreement": {
-        "title": "Understanding Your Rental Agreement: Key Terms Explained",
-        "description": "Break down complex legal terms and understand what you're signing before committing to a rental."
+        "title": "আপনার ভাড়া চুক্তি বোঝা: গুরুত্বপূর্ণ শর্তগুলোর ব্যাখ্যা",
+        "description": "জটিল আইনি ভাষা সহজ করে দিচ্ছি, যাতে সই করার আগেই বুঝতে পারেন কী মানছেন।"
       },
       "propertyInspection": {
-        "title": "Property Inspection Checklist: What to Look For",
-        "description": "A comprehensive guide to inspecting potential rental properties and identifying potential issues."
+        "title": "সম্পত্তি পরিদর্শনের তালিকা: কী কী দেখবেন",
+        "description": "ভাড়ার সম্পত্তি পরিদর্শন করে সম্ভাব্য সমস্যা খুঁজে বের করার পূর্ণাঙ্গ নির্দেশিকা।"
       },
-      "subtitle": "Practical guides from local tenants, legal experts, and the Homiio editorial team.",
-      "eyebrow": "Renting smarter"
+      "subtitle": "স্থানীয় ভাড়াটিয়া, আইনি বিশেষজ্ঞ ও Homiio সম্পাদকীয় দলের ব্যবহারিক নির্দেশিকা।",
+      "eyebrow": "বুদ্ধি করে ভাড়া নিন"
     },
     "faq": {
-      "title": "Frequently Asked Questions",
+      "title": "সাধারণ জিজ্ঞাসা",
       "scheduleViewing": {
-        "question": "How do I schedule a property viewing?",
-        "answer": "You can schedule a viewing by clicking the \"Schedule Viewing\" button on any property listing. Our system will connect you with the landlord or property manager to arrange a convenient time."
+        "question": "সম্পত্তি দেখার সময় কীভাবে ঠিক করব?",
+        "answer": "যেকোনো বিজ্ঞাপনে «পরিদর্শনের সময় ঠিক করুন» বোতামে চাপ দিয়ে সময় ঠিক করতে পারেন। আমাদের সিস্টেম আপনাকে বাড়িওয়ালা বা ব্যবস্থাপকের সঙ্গে যুক্ত করবে, যাতে সুবিধাজনক সময় ঠিক করা যায়।"
       },
       "verifiedProperty": {
-        "question": "What does \"Verified Property\" mean?",
-        "answer": "Verified properties have been personally inspected by our team to ensure they meet our quality standards. This includes checking the property condition, amenities, and verifying the landlord's credentials."
+        "question": "«যাচাই করা সম্পত্তি» মানে কী?",
+        "answer": "যাচাই করা সম্পত্তি আমাদের দল নিজে গিয়ে দেখেছে, যাতে সেগুলো আমাদের মান পূরণ করে। এর মধ্যে আছে সম্পত্তির অবস্থা, সুবিধাসমূহ এবং বাড়িওয়ালার তথ্য যাচাই।"
       },
       "reportSuspicious": {
-        "question": "How do I report a suspicious listing?",
-        "answer": "If you encounter a suspicious listing, click the \"Report\" button on the property page. Our safety team will investigate and take appropriate action to protect our community."
+        "question": "সন্দেহজনক বিজ্ঞাপনের অভিযোগ কীভাবে করব?",
+        "answer": "কোনো বিজ্ঞাপন সন্দেহজনক মনে হলে সম্পত্তির পাতায় «অভিযোগ করুন» বোতামে চাপ দিন। আমাদের নিরাপত্তা দল বিষয়টি খতিয়ে দেখবে এবং কমিউনিটিকে রক্ষা করতে প্রয়োজনীয় ব্যবস্থা নেবে।"
       },
       "applicationRequirements": {
-        "question": "What are the rental application requirements?",
-        "answer": "Requirements vary by property, but typically include proof of income, rental history, credit check, and references. Each listing will specify the exact requirements needed."
+        "question": "ভাড়ার আবেদনের জন্য কী কী লাগে?",
+        "answer": "শর্ত সম্পত্তিভেদে আলাদা হয়, তবে সাধারণত আয়ের প্রমাণ, ভাড়ার ইতিহাস, ক্রেডিট যাচাই ও রেফারেন্স লাগে। প্রতিটি বিজ্ঞাপনে ঠিক কী লাগবে তা লেখা থাকে।"
       }
     },
     "cityShowcase": {
-      "title": "Explore {{place}}",
-      "defaultPlace": "Spain"
+      "title": "{{place}} ঘুরে দেখুন",
+      "defaultPlace": "স্পেন"
     },
     "nearby": {
-      "title": "Homes in {{city}}"
+      "title": "{{city}}-এ বাসা"
     },
     "recommended": {
-      "title": "Recommended homes",
-      "eyebrow": "For you"
+      "title": "সুপারিশ করা বাসা",
+      "eyebrow": "আপনার জন্য"
     },
     "explore": {
-      "eyebrow": "Keep exploring",
-      "title": "Explore more homes",
-      "cta": "Explore all homes here",
-      "ctaAccessible": "Open Explore with the area you are searching in"
+      "eyebrow": "আরও দেখুন",
+      "title": "আরও বাসা দেখুন",
+      "cta": "এখানকার সব বাসা দেখুন",
+      "ctaAccessible": "আপনি যে এলাকায় খুঁজছেন সেটি নিয়েই «অন্বেষণ» খুলুন"
     },
     "hostCta": {
-      "cta": "Become a host",
-      "subtitle": "Reach verified renters across Spain — free to list, fair fees, real human support.",
-      "title": "List your space, find a great tenant"
+      "cta": "হোস্ট হন",
+      "subtitle": "পুরো স্পেনের যাচাই করা ভাড়াটিয়াদের কাছে পৌঁছান — বিজ্ঞাপন দেওয়া বিনামূল্যে, ফি ন্যায্য, আর সহায়তায় সত্যিকারের মানুষ।",
+      "title": "আপনার জায়গার বিজ্ঞাপন দিন, ভালো ভাড়াটিয়া পান"
     },
     "sections": {
-      "explain": "{{reason}} · Source: {{source}}",
-      "explainAccessible": "Why these homes: {{reason}}. Source: {{source}}.",
-      "error": "We could not load this area. Nothing is being hidden — the request failed.",
+      "explain": "{{reason}} · উৎস: {{source}}",
+      "explainAccessible": "কেন এই বাসাগুলো: {{reason}}। উৎস: {{source}}।",
+      "error": "এই এলাকাটি লোড করা যায়নি। কিছুই আড়াল করা হচ্ছে না — অনুরোধটি ব্যর্থ হয়েছে।",
       "source": {
-        "listing_created_at": "listing publication dates",
-        "listing_sale_price_reduced_flag": "the price-reduced flag the portal publishes",
-        "listing_status": "listing status changes",
-        "listing_agency_fee_flag": "the agency-fee field on the listing",
-        "listing_cost_fields": "the cost fields on the listing",
-        "resident_reviews": "reviews written by people who lived there",
-        "listing_verification": "Homiio verification records",
-        "listing_housing_type": "the housing-type field on the listing"
+        "listing_created_at": "বিজ্ঞাপন প্রকাশের তারিখ",
+        "listing_sale_price_reduced_flag": "পোর্টালের প্রকাশ করা দাম-কমার চিহ্ন",
+        "listing_status": "বিজ্ঞাপনের অবস্থা পরিবর্তন",
+        "listing_agency_fee_flag": "বিজ্ঞাপনের এজেন্সি ফি ঘর",
+        "listing_cost_fields": "বিজ্ঞাপনের খরচের ঘরগুলো",
+        "resident_reviews": "যাঁরা সেখানে থেকেছেন তাঁদের লেখা রিভিউ",
+        "listing_verification": "Homiio-র যাচাই নথি",
+        "listing_housing_type": "বিজ্ঞাপনের আবাসন-ধরন ঘর"
       },
       "new_in_area": {
-        "eyebrow": "New",
-        "title": "New in your area",
-        "reason": "Listed most recently inside the area you are searching"
+        "eyebrow": "নতুন",
+        "title": "আপনার এলাকায় নতুন",
+        "reason": "আপনি যে এলাকায় খুঁজছেন, সেখানে সবচেয়ে সম্প্রতি প্রকাশিত"
       },
       "price_reduced": {
-        "eyebrow": "Price change",
-        "title": "Asking price reduced",
-        "reason": "The seller published a price reduction. Homiio keeps no rent price history, so this covers homes for sale only"
+        "eyebrow": "দামের পরিবর্তন",
+        "title": "চাওয়া দাম কমেছে",
+        "reason": "বিক্রেতা দাম কমানোর কথা প্রকাশ করেছেন। Homiio ভাড়ার দামের ইতিহাস রাখে না, তাই এতে শুধু বিক্রির বাসা আছে"
       },
       "no_longer_available": {
-        "eyebrow": "Left the market",
-        "title": "No longer available",
-        "reason": "Marked rented or sold by their owner, most recent first — what actually went, and at what price"
+        "eyebrow": "বাজার থেকে সরেছে",
+        "title": "আর পাওয়া যাচ্ছে না",
+        "reason": "মালিক ভাড়া হয়ে গেছে বা বিক্রি হয়ে গেছে বলে চিহ্নিত করেছেন, নতুন থেকে পুরোনো — আসলে কী চলে গেল, আর কত দামে"
       },
       "no_agency_fee": {
-        "eyebrow": "Costs",
-        "title": "No agency fee",
-        "reason": "The listing states that no agency fee is payable. Listings that say nothing are not included"
+        "eyebrow": "খরচ",
+        "title": "এজেন্সি ফি নেই",
+        "reason": "বিজ্ঞাপনে লেখা আছে কোনো এজেন্সি ফি দিতে হবে না। যেসব বিজ্ঞাপনে কিছু বলা নেই, সেগুলো এতে নেই"
       },
       "transparent_total_cost": {
-        "eyebrow": "Costs",
-        "title": "Whole cost stated",
-        "reason": "Every recurring cost is on the listing — rent with bills included and the deposit, or the nightly rate with cleaning and service fees"
+        "eyebrow": "খরচ",
+        "title": "পুরো খরচ উল্লেখ করা",
+        "reason": "নিয়মিত সব খরচ বিজ্ঞাপনেই আছে: বিল সহ ভাড়া ও জামানত, কিংবা প্রতি রাতের দামের সঙ্গে পরিষ্কার ও সেবা ফি"
       },
       "with_resident_reviews": {
-        "eyebrow": "Trust",
-        "title": "Reviewed by residents",
-        "reason": "Somebody who lived at this address has written a review"
+        "eyebrow": "আস্থা",
+        "title": "বাসিন্দাদের রিভিউসহ",
+        "reason": "এই ঠিকানায় থেকেছেন এমন কেউ একটি রিভিউ লিখেছেন"
       },
       "verified": {
-        "eyebrow": "Trust",
-        "title": "Verified address or lister",
-        "reason": "Homiio verified the address or the person listing it"
+        "eyebrow": "আস্থা",
+        "title": "ঠিকানা বা বিজ্ঞাপনদাতা যাচাই করা",
+        "reason": "Homiio ঠিকানাটি বা যিনি বিজ্ঞাপন দিয়েছেন তাঁকে যাচাই করেছে"
       },
       "public_housing": {
-        "eyebrow": "Public",
-        "title": "Public housing",
-        "reason": "Listed as public housing. Homiio has no cooperative or community housing field yet, so those are not included"
+        "eyebrow": "সরকারি",
+        "title": "সরকারি আবাসন",
+        "reason": "সরকারি আবাসন হিসেবে দেওয়া। Homiio-তে এখনো সমবায় বা কমিউনিটি আবাসনের ঘর নেই, তাই সেগুলো এতে নেই"
       },
-      "loadFailedToast": "Could not load homes for this area. Nothing is hidden — the request failed."
+      "loadFailedToast": "এই এলাকার বাসা লোড করা যায়নি। কিছুই আড়াল করা হচ্ছে না — অনুরোধটি ব্যর্থ হয়েছে।"
     },
     "scopePrompt": {
-      "eyebrow": "One step first",
-      "title": "Where are you looking for a home?",
-      "body": "Pick a city or neighbourhood, or turn on location. Location is optional — you can always choose a place by hand."
+      "eyebrow": "আগে একটি ধাপ",
+      "title": "আপনি কোথায় বাসা খুঁজছেন?",
+      "body": "একটি শহর বা এলাকা বেছে নিন, অথবা লোকেশন চালু করুন। লোকেশন বাধ্যতামূলক নয় — জায়গা আপনি সব সময় নিজেই বেছে নিতে পারেন।"
     },
     "empty": {
-      "title": "Nothing to show for this area yet",
-      "body": "No listing here matches what Homiio can explain. Widen the area, choose somewhere else, or open Explore and change the filters.",
-      "changeFilters": "Open Explore",
-      "changeFiltersAccessible": "Open Explore to change the filters for this area"
+      "title": "এই এলাকার জন্য এখনো দেখানোর কিছু নেই",
+      "body": "এখানকার কোনো বিজ্ঞাপন Homiio যা ব্যাখ্যা করতে পারে তার সঙ্গে মেলে না। এলাকা বড় করুন, অন্য জায়গা বেছে নিন, কিংবা «অন্বেষণ» খুলে ফিল্টার বদলান।",
+      "changeFilters": "«অন্বেষণ» খুলুন",
+      "changeFiltersAccessible": "এই এলাকার ফিল্টার বদলাতে «অন্বেষণ» খুলুন"
     }
   },
   "agent": {
@@ -4121,31 +4121,31 @@
   },
   "location": {
     "scope": {
-      "eyebrow": "Searching in",
-      "announce": "Searching in {{scope}}",
-      "change": "Change",
-      "changeAccessible": "Change the area you are searching in",
-      "everywhere": "Everywhere",
-      "nearYou": "Near you · {{distance}}",
-      "nearPlace": "Near {{place}} · {{distance}}",
-      "resolving": "Finding where you are…",
-      "useCurrent": "Use my location",
-      "useCurrentAccessible": "Use my current location to search nearby",
-      "exploreGlobal": "Explore everywhere",
-      "exploreGlobalAccessible": "Explore homes everywhere, with no area filter",
-      "pickerTitle": "Where are you looking for a home?",
-      "deviceUnavailable": "Your current location is no longer available. Showing the last area you chose.",
-      "showingCached": "Saved copy from {{when}}. Not up to date.",
+      "eyebrow": "খোঁজা হচ্ছে",
+      "announce": "{{scope}}-এ খোঁজা হচ্ছে",
+      "change": "বদলান",
+      "changeAccessible": "আপনি যে এলাকায় খুঁজছেন তা বদলান",
+      "everywhere": "সব জায়গায়",
+      "nearYou": "আপনার কাছে · {{distance}}",
+      "nearPlace": "{{place}}-এর কাছে · {{distance}}",
+      "resolving": "আপনি কোথায় আছেন খোঁজা হচ্ছে…",
+      "useCurrent": "আমার লোকেশন ব্যবহার করুন",
+      "useCurrentAccessible": "কাছাকাছি খুঁজতে আমার বর্তমান লোকেশন ব্যবহার করুন",
+      "exploreGlobal": "সব জায়গায় দেখুন",
+      "exploreGlobalAccessible": "এলাকার ফিল্টার ছাড়াই সব জায়গার বাসা দেখুন",
+      "pickerTitle": "আপনি কোথায় বাসা খুঁজছেন?",
+      "deviceUnavailable": "আপনার বর্তমান লোকেশন আর পাওয়া যাচ্ছে না। আপনার বেছে নেওয়া শেষ এলাকাটি দেখানো হচ্ছে।",
+      "showingCached": "{{when}}-এর সংরক্ষিত কপি। এটি হালনাগাদ নয়।",
       "failure": {
-        "permission_denied": "Location is off, so we cannot search near you. Pick a place instead — location is optional.",
-        "position_unavailable": "We could not get your position. Pick a place instead.",
-        "network": "We could not reach Homiio to look that up. Check your connection and try again.",
-        "rate_limited": "Too many place lookups just now. Try again in a moment.",
-        "ambiguous": "Several places match that name. Pick the one you meant.",
-        "no_results": "We could not find that place. Try another name.",
-        "unsupported": "Homiio cannot search that kind of place yet. Pick a city instead."
+        "permission_denied": "লোকেশন বন্ধ, তাই আপনার কাছাকাছি খোঁজা যাচ্ছে না। বরং একটি জায়গা বেছে নিন — লোকেশন বাধ্যতামূলক নয়।",
+        "position_unavailable": "আপনার অবস্থান জানা যায়নি। বরং একটি জায়গা বেছে নিন।",
+        "network": "এটি খুঁজতে Homiio-র সঙ্গে যোগাযোগ করা যায়নি। সংযোগ দেখে আবার চেষ্টা করুন।",
+        "rate_limited": "অল্প সময়ে অনেকবার জায়গা খোঁজা হয়েছে। একটু পরে আবার চেষ্টা করুন।",
+        "ambiguous": "এই নামে একাধিক জায়গা মিলছে। আপনি যেটি বোঝাতে চেয়েছেন সেটি বেছে নিন।",
+        "no_results": "জায়গাটি খুঁজে পাওয়া যায়নি। অন্য নাম দিয়ে চেষ্টা করুন।",
+        "unsupported": "Homiio এখনো এই ধরনের জায়গায় খুঁজতে পারে না। একটি শহর বেছে নিন।"
       },
-      "notChosen": "Not chosen yet"
+      "notChosen": "এখনো বাছাই করা হয়নি"
     }
   },
   "alerts": {

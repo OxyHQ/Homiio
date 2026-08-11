@@ -148,9 +148,9 @@
       "gridVacation": "Apartamentos de playa en {{place}}",
       "gridBuy": "Viviendas en venta en {{place}}",
       "gridExchange": "Intercambios de casa en {{place}}",
-      "titleIn": "Featured in {{area}}",
-      "chooseArea": "Choose an area to see featured homes.",
-      "loadFailed": "Could not load featured homes for this area."
+      "titleIn": "Destacadas en {{area}}",
+      "chooseArea": "Elige una zona para ver viviendas destacadas.",
+      "loadFailed": "No se han podido cargar las viviendas destacadas de esta zona."
     },
     "viewAll": "Ver Todo",
     "recentlyViewed": {
@@ -163,7 +163,7 @@
       "retry": "Reintentar",
       "results": "Resultados",
       "filtered": "filtrados",
-      "continue": "Continue browsing"
+      "continue": "Seguir explorando"
     },
     "saved": {
       "title": "Propiedades Guardadas",
@@ -177,31 +177,31 @@
     },
     "tips": {
       "article": "Artículo",
-      "title": "Rental Tips & Guides",
+      "title": "Consejos y guías de alquiler",
       "categories": {
-        "search": "Search",
-        "safety": "Safety",
+        "search": "Búsqueda",
+        "safety": "Seguridad",
         "legal": "Legal",
-        "inspection": "Inspection"
+        "inspection": "Inspección"
       },
       "firstTimeRenting": {
-        "title": "First Time Renting? Here's Your Complete Guide",
-        "description": "Everything you need to know about finding, viewing, and securing your first rental property."
+        "title": "¿Alquilas por primera vez? Esta es tu guía completa",
+        "description": "Todo lo que necesitas saber para encontrar, visitar y conseguir tu primer alquiler."
       },
       "avoidScams": {
-        "title": "How to Avoid Rental Scams: Red Flags to Watch For",
-        "description": "Learn to identify common rental scams and protect yourself from fraud when searching for a new home."
+        "title": "Cómo evitar estafas de alquiler: señales de alerta",
+        "description": "Aprende a identificar las estafas de alquiler más habituales y protégete del fraude mientras buscas casa."
       },
       "rentalAgreement": {
-        "title": "Understanding Your Rental Agreement: Key Terms Explained",
-        "description": "Break down complex legal terms and understand what you're signing before committing to a rental."
+        "title": "Entender tu contrato de alquiler: las cláusulas clave",
+        "description": "Desglosamos los términos legales complejos para que sepas qué firmas antes de comprometerte."
       },
       "propertyInspection": {
-        "title": "Property Inspection Checklist: What to Look For",
-        "description": "A comprehensive guide to inspecting potential rental properties and identifying potential issues."
+        "title": "Lista para inspeccionar una vivienda: qué mirar",
+        "description": "Una guía completa para inspeccionar viviendas de alquiler y detectar posibles problemas."
       },
-      "subtitle": "Practical guides from local tenants, legal experts, and the Homiio editorial team.",
-      "eyebrow": "Renting smarter"
+      "subtitle": "Guías prácticas de inquilinos locales, expertos legales y el equipo editorial de Homiio.",
+      "eyebrow": "Alquilar mejor"
     },
     "faq": {
       "title": "Preguntas Frecuentes",
@@ -227,29 +227,29 @@
       "defaultPlace": "España"
     },
     "recommended": {
-      "title": "Recommended homes",
-      "eyebrow": "For you"
+      "title": "Viviendas recomendadas",
+      "eyebrow": "Para ti"
     },
     "explore": {
       "eyebrow": "Sigue explorando",
       "title": "Explora más viviendas",
-      "cta": "Explore all homes here",
-      "ctaAccessible": "Open Explore with the area you are searching in"
+      "cta": "Ver todas las viviendas de aquí",
+      "ctaAccessible": "Abrir Explorar con la zona en la que estás buscando"
     },
     "hostCta": {
-      "cta": "Become a host",
-      "subtitle": "Reach verified renters across Spain — free to list, fair fees, real human support.",
-      "title": "List your space, find a great tenant"
+      "cta": "Publica tu vivienda",
+      "subtitle": "Llega a inquilinos verificados de toda España: publicar es gratis, las comisiones son justas y detrás hay personas de verdad.",
+      "title": "Publica tu espacio y encuentra buenos inquilinos"
     },
     "nearby": {
-      "title": "Homes in {{city}}"
+      "title": "Viviendas en {{city}}"
     },
     "category": {
       "studios": "Estudios",
       "apartments": "Apartamentos",
       "houses": "Casas",
       "rooms": "Habitaciones",
-      "coliving": "Co-living",
+      "coliving": "Coliving",
       "luxury": "Lujo",
       "newListings": "Nuevos anuncios",
       "nearYou": "Cerca de ti",
@@ -266,71 +266,71 @@
       "hosting": "Alojamiento"
     },
     "sections": {
-      "explain": "{{reason}} · Source: {{source}}",
-      "explainAccessible": "Why these homes: {{reason}}. Source: {{source}}.",
-      "error": "We could not load this area. Nothing is being hidden — the request failed.",
+      "explain": "{{reason}} · Fuente: {{source}}",
+      "explainAccessible": "Por qué estas viviendas: {{reason}}. Fuente: {{source}}.",
+      "error": "No hemos podido cargar esta zona. No se oculta nada: la petición ha fallado.",
       "source": {
-        "listing_created_at": "listing publication dates",
-        "listing_sale_price_reduced_flag": "the price-reduced flag the portal publishes",
-        "listing_status": "listing status changes",
-        "listing_agency_fee_flag": "the agency-fee field on the listing",
-        "listing_cost_fields": "the cost fields on the listing",
-        "resident_reviews": "reviews written by people who lived there",
-        "listing_verification": "Homiio verification records",
-        "listing_housing_type": "the housing-type field on the listing"
+        "listing_created_at": "las fechas de publicación de los anuncios",
+        "listing_sale_price_reduced_flag": "el indicador de bajada de precio que publica el portal",
+        "listing_status": "los cambios de estado del anuncio",
+        "listing_agency_fee_flag": "el campo de honorarios de agencia del anuncio",
+        "listing_cost_fields": "los campos de costes del anuncio",
+        "resident_reviews": "reseñas escritas por quienes vivieron allí",
+        "listing_verification": "los registros de verificación de Homiio",
+        "listing_housing_type": "el campo de tipo de vivienda del anuncio"
       },
       "new_in_area": {
-        "eyebrow": "New",
-        "title": "New in your area",
-        "reason": "Listed most recently inside the area you are searching"
+        "eyebrow": "Nuevo",
+        "title": "Nuevo en tu zona",
+        "reason": "Lo último publicado dentro de la zona en la que buscas"
       },
       "price_reduced": {
-        "eyebrow": "Price change",
-        "title": "Asking price reduced",
-        "reason": "The seller published a price reduction. Homiio keeps no rent price history, so this covers homes for sale only"
+        "eyebrow": "Cambio de precio",
+        "title": "Precio rebajado",
+        "reason": "La parte vendedora ha publicado una bajada de precio. Homiio no guarda histórico de precios de alquiler, así que esto solo incluye viviendas en venta"
       },
       "no_longer_available": {
-        "eyebrow": "Left the market",
-        "title": "No longer available",
-        "reason": "Marked rented or sold by their owner, most recent first — what actually went, and at what price"
+        "eyebrow": "Fuera del mercado",
+        "title": "Ya no disponibles",
+        "reason": "Marcadas como alquiladas o vendidas por su propietario, de más reciente a menos: qué se fue de verdad y a qué precio"
       },
       "no_agency_fee": {
-        "eyebrow": "Costs",
-        "title": "No agency fee",
-        "reason": "The listing states that no agency fee is payable. Listings that say nothing are not included"
+        "eyebrow": "Costes",
+        "title": "Sin honorarios de agencia",
+        "reason": "El anuncio indica que no hay honorarios de agencia. Los anuncios que no dicen nada no se incluyen"
       },
       "transparent_total_cost": {
-        "eyebrow": "Costs",
-        "title": "Whole cost stated",
-        "reason": "Every recurring cost is on the listing — rent with bills included and the deposit, or the nightly rate with cleaning and service fees"
+        "eyebrow": "Costes",
+        "title": "Coste total indicado",
+        "reason": "Todos los costes recurrentes están en el anuncio: el alquiler con los suministros incluidos y la fianza, o el precio por noche con la limpieza y los gastos de servicio"
       },
       "with_resident_reviews": {
-        "eyebrow": "Trust",
-        "title": "Reviewed by residents",
-        "reason": "Somebody who lived at this address has written a review"
+        "eyebrow": "Confianza",
+        "title": "Con reseñas de residentes",
+        "reason": "Alguien que vivió en esta dirección ha escrito una reseña"
       },
       "verified": {
-        "eyebrow": "Trust",
-        "title": "Verified address or lister",
-        "reason": "Homiio verified the address or the person listing it"
+        "eyebrow": "Confianza",
+        "title": "Dirección o anunciante verificados",
+        "reason": "Homiio ha verificado la dirección o a quien publica el anuncio"
       },
       "public_housing": {
-        "eyebrow": "Public",
-        "title": "Public housing",
-        "reason": "Listed as public housing. Homiio has no cooperative or community housing field yet, so those are not included"
+        "eyebrow": "Pública",
+        "title": "Vivienda pública",
+        "reason": "Publicada como vivienda pública. Homiio todavía no tiene un campo para vivienda cooperativa o comunitaria, así que esas no se incluyen"
       },
-      "loadFailedToast": "Could not load homes for this area. Nothing is hidden — the request failed."
+      "loadFailedToast": "No hemos podido cargar las viviendas de esta zona. No se oculta nada: la petición ha fallado."
     },
     "scopePrompt": {
-      "eyebrow": "One step first",
-      "title": "Where are you looking for a home?",
-      "body": "Pick a city or neighbourhood, or turn on location. Location is optional — you can always choose a place by hand."
+      "eyebrow": "Primero, un paso",
+      "title": "¿Dónde buscas vivienda?",
+      "body": "Elige una ciudad o un barrio, o activa la ubicación. La ubicación es opcional: siempre puedes elegir el lugar a mano."
     },
     "empty": {
-      "title": "Nothing to show for this area yet",
-      "body": "No listing here matches what Homiio can explain. Widen the area, choose somewhere else, or open Explore and change the filters.",
-      "changeFilters": "Open Explore",
-      "changeFiltersAccessible": "Open Explore to change the filters for this area"
+      "title": "Todavía no hay nada que mostrar en esta zona",
+      "body": "Ningún anuncio de aquí encaja con lo que Homiio puede explicar. Amplía la zona, elige otro lugar o abre Explorar y cambia los filtros.",
+      "changeFilters": "Abrir Explorar",
+      "changeFiltersAccessible": "Abrir Explorar para cambiar los filtros de esta zona"
     }
   },
   "agent": {
@@ -4165,31 +4165,31 @@
   },
   "location": {
     "scope": {
-      "eyebrow": "Searching in",
-      "announce": "Searching in {{scope}}",
-      "change": "Change",
-      "changeAccessible": "Change the area you are searching in",
-      "everywhere": "Everywhere",
-      "nearYou": "Near you · {{distance}}",
-      "nearPlace": "Near {{place}} · {{distance}}",
-      "resolving": "Finding where you are…",
-      "useCurrent": "Use my location",
-      "useCurrentAccessible": "Use my current location to search nearby",
-      "exploreGlobal": "Explore everywhere",
-      "exploreGlobalAccessible": "Explore homes everywhere, with no area filter",
-      "pickerTitle": "Where are you looking for a home?",
-      "deviceUnavailable": "Your current location is no longer available. Showing the last area you chose.",
-      "showingCached": "Saved copy from {{when}}. Not up to date.",
+      "eyebrow": "Buscando en",
+      "announce": "Buscando en {{scope}}",
+      "change": "Cambiar",
+      "changeAccessible": "Cambiar la zona en la que buscas",
+      "everywhere": "Todas partes",
+      "nearYou": "Cerca de ti · {{distance}}",
+      "nearPlace": "Cerca de {{place}} · {{distance}}",
+      "resolving": "Buscando dónde estás…",
+      "useCurrent": "Usar mi ubicación",
+      "useCurrentAccessible": "Usar mi ubicación actual para buscar cerca",
+      "exploreGlobal": "Explorar todas partes",
+      "exploreGlobalAccessible": "Explorar viviendas de todas partes, sin filtro de zona",
+      "pickerTitle": "¿Dónde buscas vivienda?",
+      "deviceUnavailable": "Tu ubicación actual ya no está disponible. Se muestra la última zona que elegiste.",
+      "showingCached": "Copia guardada de {{when}}. No está actualizada.",
       "failure": {
-        "permission_denied": "Location is off, so we cannot search near you. Pick a place instead — location is optional.",
-        "position_unavailable": "We could not get your position. Pick a place instead.",
-        "network": "We could not reach Homiio to look that up. Check your connection and try again.",
-        "rate_limited": "Too many place lookups just now. Try again in a moment.",
-        "ambiguous": "Several places match that name. Pick the one you meant.",
-        "no_results": "We could not find that place. Try another name.",
-        "unsupported": "Homiio cannot search that kind of place yet. Pick a city instead."
+        "permission_denied": "La ubicación está desactivada, así que no podemos buscar cerca de ti. Elige un lugar: la ubicación es opcional.",
+        "position_unavailable": "No hemos podido obtener tu posición. Elige un lugar.",
+        "network": "No hemos podido conectar con Homiio para consultarlo. Revisa tu conexión e inténtalo de nuevo.",
+        "rate_limited": "Demasiadas búsquedas de lugares seguidas. Inténtalo dentro de un momento.",
+        "ambiguous": "Hay varios lugares con ese nombre. Elige el que querías.",
+        "no_results": "No hemos encontrado ese lugar. Prueba con otro nombre.",
+        "unsupported": "Homiio todavía no puede buscar en ese tipo de lugar. Elige una ciudad."
       },
-      "notChosen": "Not chosen yet"
+      "notChosen": "Sin elegir"
     }
   },
   "alerts": {

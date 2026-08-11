@@ -145,9 +145,9 @@
       "gridVacation": "Apartaments de platja a {{place}}",
       "gridBuy": "Habitatges en venda a {{place}}",
       "gridExchange": "Intercanvis de casa a {{place}}",
-      "titleIn": "Featured in {{area}}",
-      "chooseArea": "Choose an area to see featured homes.",
-      "loadFailed": "Could not load featured homes for this area."
+      "titleIn": "Destacats a {{area}}",
+      "chooseArea": "Tria una zona per veure habitatges destacats.",
+      "loadFailed": "No s'han pogut carregar els habitatges destacats d'aquesta zona."
     },
     "viewAll": "Veure Tot",
     "recentlyViewed": {
@@ -160,7 +160,7 @@
       "retry": "Tornar a provar",
       "results": "Resultats",
       "filtered": "filtrades",
-      "continue": "Continue browsing"
+      "continue": "Continua explorant"
     },
     "saved": {
       "header": "Desats",
@@ -195,31 +195,31 @@
     },
     "tips": {
       "article": "Article",
-      "title": "Rental Tips & Guides",
+      "title": "Consells i guies de lloguer",
       "categories": {
-        "search": "Search",
-        "safety": "Safety",
+        "search": "Cerca",
+        "safety": "Seguretat",
         "legal": "Legal",
-        "inspection": "Inspection"
+        "inspection": "Inspecció"
       },
       "firstTimeRenting": {
-        "title": "First Time Renting? Here's Your Complete Guide",
-        "description": "Everything you need to know about finding, viewing, and securing your first rental property."
+        "title": "Llogues per primera vegada? Aquesta és la teva guia completa",
+        "description": "Tot el que necessites saber per trobar, visitar i aconseguir el teu primer lloguer."
       },
       "avoidScams": {
-        "title": "How to Avoid Rental Scams: Red Flags to Watch For",
-        "description": "Learn to identify common rental scams and protect yourself from fraud when searching for a new home."
+        "title": "Com evitar estafes de lloguer: senyals d'alerta",
+        "description": "Aprèn a identificar les estafes de lloguer més habituals i protegeix-te del frau mentre busques casa."
       },
       "rentalAgreement": {
-        "title": "Understanding Your Rental Agreement: Key Terms Explained",
-        "description": "Break down complex legal terms and understand what you're signing before committing to a rental."
+        "title": "Entendre el teu contracte de lloguer: les clàusules clau",
+        "description": "Desglossem els termes legals complexos perquè sàpigues què signes abans de comprometre't."
       },
       "propertyInspection": {
-        "title": "Property Inspection Checklist: What to Look For",
-        "description": "A comprehensive guide to inspecting potential rental properties and identifying potential issues."
+        "title": "Llista per inspeccionar un habitatge: què has de mirar",
+        "description": "Una guia completa per inspeccionar habitatges de lloguer i detectar problemes potencials."
       },
-      "subtitle": "Practical guides from local tenants, legal experts, and the Homiio editorial team.",
-      "eyebrow": "Renting smarter"
+      "subtitle": "Guies pràctiques de llogaters locals, experts legals i l'equip editorial de Homiio.",
+      "eyebrow": "Llogar millor"
     },
     "faq": {
       "title": "Preguntes Freqüents",
@@ -245,33 +245,33 @@
       "defaultPlace": "Espanya"
     },
     "insights": {
-      "title": "Platform Insights"
+      "title": "Dades de la plataforma"
     },
     "recommended": {
-      "title": "Recommended homes",
-      "eyebrow": "For you"
+      "title": "Habitatges recomanats",
+      "eyebrow": "Per a tu"
     },
     "explore": {
       "eyebrow": "Continua explorant",
       "title": "Explora més habitatges",
-      "cta": "Explore all homes here",
-      "ctaAccessible": "Open Explore with the area you are searching in"
+      "cta": "Mostra tots els habitatges d'aquí",
+      "ctaAccessible": "Obre Explora amb la zona on estàs cercant"
     },
     "hostCta": {
-      "cta": "Become a host",
-      "subtitle": "Reach verified renters across Spain — free to list, fair fees, real human support.",
-      "title": "List your space, find a great tenant"
+      "cta": "Publica el teu habitatge",
+      "subtitle": "Arriba a llogaters verificats de tot Espanya: publicar és gratuït, les comissions són justes i al darrere hi ha persones de veritat.",
+      "title": "Publica el teu espai i troba bons llogaters"
     },
     "nearby": {
-      "title": "Homes in {{city}}"
+      "title": "Habitatges a {{city}}"
     },
     "category": {
       "studios": "Estudis",
       "apartments": "Apartaments",
       "houses": "Cases",
       "rooms": "Habitacions",
-      "coliving": "Co-living",
-      "luxury": "Luxury",
+      "coliving": "Coliving",
+      "luxury": "Luxe",
       "newListings": "Nous anuncis",
       "nearYou": "A prop teu",
       "nearYouUnavailable": "Activa la ubicació per veure habitatges a prop teu",
@@ -287,71 +287,71 @@
       "hosting": "Allotjament"
     },
     "sections": {
-      "explain": "{{reason}} · Source: {{source}}",
-      "explainAccessible": "Why these homes: {{reason}}. Source: {{source}}.",
-      "error": "We could not load this area. Nothing is being hidden — the request failed.",
+      "explain": "{{reason}} · Font: {{source}}",
+      "explainAccessible": "Per què aquests habitatges: {{reason}}. Font: {{source}}.",
+      "error": "No hem pogut carregar aquesta zona. No s'amaga res: la petició ha fallat.",
       "source": {
-        "listing_created_at": "listing publication dates",
-        "listing_sale_price_reduced_flag": "the price-reduced flag the portal publishes",
-        "listing_status": "listing status changes",
-        "listing_agency_fee_flag": "the agency-fee field on the listing",
-        "listing_cost_fields": "the cost fields on the listing",
-        "resident_reviews": "reviews written by people who lived there",
-        "listing_verification": "Homiio verification records",
-        "listing_housing_type": "the housing-type field on the listing"
+        "listing_created_at": "les dates de publicació dels anuncis",
+        "listing_sale_price_reduced_flag": "l'indicador de baixada de preu que publica el portal",
+        "listing_status": "els canvis d'estat de l'anunci",
+        "listing_agency_fee_flag": "el camp d'honoraris d'agència de l'anunci",
+        "listing_cost_fields": "els camps de costos de l'anunci",
+        "resident_reviews": "ressenyes escrites per qui hi va viure",
+        "listing_verification": "els registres de verificació de Homiio",
+        "listing_housing_type": "el camp de tipus d'habitatge de l'anunci"
       },
       "new_in_area": {
-        "eyebrow": "New",
-        "title": "New in your area",
-        "reason": "Listed most recently inside the area you are searching"
+        "eyebrow": "Nou",
+        "title": "Nou a la teva zona",
+        "reason": "El més recent publicat dins la zona on cerques"
       },
       "price_reduced": {
-        "eyebrow": "Price change",
-        "title": "Asking price reduced",
-        "reason": "The seller published a price reduction. Homiio keeps no rent price history, so this covers homes for sale only"
+        "eyebrow": "Canvi de preu",
+        "title": "Preu rebaixat",
+        "reason": "La part venedora ha publicat una baixada de preu. Homiio no desa històric de preus de lloguer, així que això només inclou habitatges en venda"
       },
       "no_longer_available": {
-        "eyebrow": "Left the market",
-        "title": "No longer available",
-        "reason": "Marked rented or sold by their owner, most recent first — what actually went, and at what price"
+        "eyebrow": "Fora del mercat",
+        "title": "Ja no disponibles",
+        "reason": "Marcats com a llogats o venuts pel seu propietari, del més recent al menys: què va marxar de debò i a quin preu"
       },
       "no_agency_fee": {
-        "eyebrow": "Costs",
-        "title": "No agency fee",
-        "reason": "The listing states that no agency fee is payable. Listings that say nothing are not included"
+        "eyebrow": "Costos",
+        "title": "Sense honoraris d'agència",
+        "reason": "L'anunci indica que no hi ha honoraris d'agència. Els anuncis que no diuen res no s'hi inclouen"
       },
       "transparent_total_cost": {
-        "eyebrow": "Costs",
-        "title": "Whole cost stated",
-        "reason": "Every recurring cost is on the listing — rent with bills included and the deposit, or the nightly rate with cleaning and service fees"
+        "eyebrow": "Costos",
+        "title": "Cost total indicat",
+        "reason": "Tots els costos recurrents són a l'anunci: el lloguer amb els subministraments inclosos i la fiança, o el preu per nit amb la neteja i les despeses de servei"
       },
       "with_resident_reviews": {
-        "eyebrow": "Trust",
-        "title": "Reviewed by residents",
-        "reason": "Somebody who lived at this address has written a review"
+        "eyebrow": "Confiança",
+        "title": "Amb ressenyes de residents",
+        "reason": "Algú que va viure en aquesta adreça hi ha escrit una ressenya"
       },
       "verified": {
-        "eyebrow": "Trust",
-        "title": "Verified address or lister",
-        "reason": "Homiio verified the address or the person listing it"
+        "eyebrow": "Confiança",
+        "title": "Adreça o anunciant verificats",
+        "reason": "Homiio ha verificat l'adreça o qui publica l'anunci"
       },
       "public_housing": {
-        "eyebrow": "Public",
-        "title": "Public housing",
-        "reason": "Listed as public housing. Homiio has no cooperative or community housing field yet, so those are not included"
+        "eyebrow": "Pública",
+        "title": "Habitatge públic",
+        "reason": "Publicat com a habitatge públic. Homiio encara no té un camp per a habitatge cooperatiu o comunitari, així que aquests no s'hi inclouen"
       },
-      "loadFailedToast": "Could not load homes for this area. Nothing is hidden — the request failed."
+      "loadFailedToast": "No hem pogut carregar els habitatges d'aquesta zona. No s'amaga res: la petició ha fallat."
     },
     "scopePrompt": {
-      "eyebrow": "One step first",
-      "title": "Where are you looking for a home?",
-      "body": "Pick a city or neighbourhood, or turn on location. Location is optional — you can always choose a place by hand."
+      "eyebrow": "Primer, un pas",
+      "title": "On busques habitatge?",
+      "body": "Tria una ciutat o un barri, o activa la ubicació. La ubicació és opcional: sempre pots triar el lloc a mà."
     },
     "empty": {
-      "title": "Nothing to show for this area yet",
-      "body": "No listing here matches what Homiio can explain. Widen the area, choose somewhere else, or open Explore and change the filters.",
-      "changeFilters": "Open Explore",
-      "changeFiltersAccessible": "Open Explore to change the filters for this area"
+      "title": "Encara no hi ha res per mostrar en aquesta zona",
+      "body": "Cap anunci d'aquí encaixa amb el que Homiio pot explicar. Amplia la zona, tria un altre lloc o obre Explora i canvia els filtres.",
+      "changeFilters": "Obre Explora",
+      "changeFiltersAccessible": "Obre Explora per canviar els filtres d'aquesta zona"
     }
   },
   "agent": {
@@ -4186,31 +4186,31 @@
   },
   "location": {
     "scope": {
-      "eyebrow": "Searching in",
-      "announce": "Searching in {{scope}}",
-      "change": "Change",
-      "changeAccessible": "Change the area you are searching in",
-      "everywhere": "Everywhere",
-      "nearYou": "Near you · {{distance}}",
-      "nearPlace": "Near {{place}} · {{distance}}",
-      "resolving": "Finding where you are…",
-      "useCurrent": "Use my location",
-      "useCurrentAccessible": "Use my current location to search nearby",
-      "exploreGlobal": "Explore everywhere",
-      "exploreGlobalAccessible": "Explore homes everywhere, with no area filter",
-      "pickerTitle": "Where are you looking for a home?",
-      "deviceUnavailable": "Your current location is no longer available. Showing the last area you chose.",
-      "showingCached": "Saved copy from {{when}}. Not up to date.",
+      "eyebrow": "Cercant a",
+      "announce": "Cercant a {{scope}}",
+      "change": "Canvia",
+      "changeAccessible": "Canvia la zona on estàs cercant",
+      "everywhere": "Arreu",
+      "nearYou": "A prop teu · {{distance}}",
+      "nearPlace": "A prop de {{place}} · {{distance}}",
+      "resolving": "Cercant on ets…",
+      "useCurrent": "Usa la meva ubicació",
+      "useCurrentAccessible": "Usa la meva ubicació actual per cercar a prop",
+      "exploreGlobal": "Explora arreu",
+      "exploreGlobalAccessible": "Explora habitatges d'arreu, sense filtre de zona",
+      "pickerTitle": "On busques habitatge?",
+      "deviceUnavailable": "La teva ubicació actual ja no està disponible. Es mostra l'última zona que vas triar.",
+      "showingCached": "Còpia desada de {{when}}. No està actualitzada.",
       "failure": {
-        "permission_denied": "Location is off, so we cannot search near you. Pick a place instead — location is optional.",
-        "position_unavailable": "We could not get your position. Pick a place instead.",
-        "network": "We could not reach Homiio to look that up. Check your connection and try again.",
-        "rate_limited": "Too many place lookups just now. Try again in a moment.",
-        "ambiguous": "Several places match that name. Pick the one you meant.",
-        "no_results": "We could not find that place. Try another name.",
-        "unsupported": "Homiio cannot search that kind of place yet. Pick a city instead."
+        "permission_denied": "La ubicació està desactivada, així que no podem cercar a prop teu. Tria un lloc: la ubicació és opcional.",
+        "position_unavailable": "No hem pogut obtenir la teva posició. Tria un lloc.",
+        "network": "No hem pogut connectar amb Homiio per consultar-ho. Revisa la connexió i torna-ho a provar.",
+        "rate_limited": "Massa cerques de llocs seguides. Torna-ho a provar d'aquí a un moment.",
+        "ambiguous": "Hi ha diversos llocs amb aquest nom. Tria el que volies.",
+        "no_results": "No hem trobat aquest lloc. Prova amb un altre nom.",
+        "unsupported": "Homiio encara no pot cercar en aquest tipus de lloc. Tria una ciutat."
       },
-      "notChosen": "Not chosen yet"
+      "notChosen": "Sense triar"
     }
   },
   "alerts": {

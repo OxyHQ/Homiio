@@ -122,227 +122,227 @@
   },
   "home": {
     "insights": {
-      "title": "Platform Insights"
+      "title": "Data platform"
     },
     "hero": {
-      "title": "Find your ethical home",
-      "subtitle": "Transparent rentals with fair agreements and verified properties",
-      "searchPlaceholder": "Where do you want to live?",
-      "searchButton": "Search"
+      "title": "Temukan hunian yang etis",
+      "subtitle": "Sewa yang transparan, perjanjian yang adil, dan properti terverifikasi",
+      "searchPlaceholder": "Kamu ingin tinggal di mana?",
+      "searchButton": "Cari"
     },
     "cities": {
-      "title": "Featured Cities",
-      "properties": "properties"
+      "title": "Kota pilihan",
+      "properties": "properti"
     },
     "categories": {
-      "title": "Browse by Category",
-      "view": "View",
+      "title": "Jelajahi per kategori",
+      "view": "Lihat",
       "types": {
-        "apartments": "Apartments",
-        "houses": "Houses",
-        "coLiving": "Co-living",
-        "ecoFriendly": "Eco-friendly"
+        "apartments": "Apartemen",
+        "houses": "Rumah",
+        "coLiving": "Coliving",
+        "ecoFriendly": "Ramah lingkungan"
       }
     },
     "category": {
-      "studios": "Studios",
-      "apartments": "Apartments",
-      "houses": "Houses",
-      "rooms": "Rooms",
-      "coliving": "Co-living",
-      "luxury": "Luxury",
-      "newListings": "New listings",
-      "nearYou": "Near you",
-      "nearYouUnavailable": "Turn on location to see homes near you",
-      "beachfront": "Beachfront",
-      "cabins": "Cabins",
-      "pools": "Pools",
-      "mountain": "Mountain",
-      "cityBreaks": "City breaks",
-      "countryside": "Countryside",
-      "instantBook": "Instant book",
-      "petFriendly": "Pet friendly",
-      "homeSwap": "Home swap",
-      "hosting": "Hosting"
+      "studios": "Studio",
+      "apartments": "Apartemen",
+      "houses": "Rumah",
+      "rooms": "Kamar",
+      "coliving": "Coliving",
+      "luxury": "Mewah",
+      "newListings": "Iklan terbaru",
+      "nearYou": "Dekat kamu",
+      "nearYouUnavailable": "Aktifkan lokasi untuk melihat hunian di dekatmu",
+      "beachfront": "Tepi pantai",
+      "cabins": "Kabin",
+      "pools": "Dengan kolam renang",
+      "mountain": "Pegunungan",
+      "cityBreaks": "Liburan singkat di kota",
+      "countryside": "Pedesaan",
+      "instantBook": "Pesan langsung",
+      "petFriendly": "Boleh bawa hewan",
+      "homeSwap": "Tukar hunian",
+      "hosting": "Jadi tuan rumah"
     },
     "horizon": {
-      "title": "Join Horizon",
-      "description": "Horizon is a global initiative offering fair housing, healthcare, and travel support. Now integrated with Homiio.",
-      "learnMore": "Learn More"
+      "title": "Gabung Horizon",
+      "description": "Horizon adalah inisiatif global yang menyediakan hunian yang adil, layanan kesehatan, dan dukungan perjalanan. Kini terhubung dengan Homiio.",
+      "learnMore": "Pelajari selengkapnya"
     },
     "eco": {
-      "title": "Eco-Certified Properties",
-      "description": "Find sustainable properties that meet our energy efficiency and eco-friendly standards",
-      "viewEcoProperties": "View Eco Properties"
+      "title": "Properti bersertifikat ramah lingkungan",
+      "description": "Temukan properti berkelanjutan yang memenuhi standar efisiensi energi dan ramah lingkungan kami",
+      "viewEcoProperties": "Lihat properti ramah lingkungan"
     },
     "featured": {
-      "title": "Featured Properties",
-      "empty": "No featured properties available at the moment",
-      "gridLongTerm": "Studios in {{place}}",
-      "gridVacation": "Beach apartments in {{place}}",
-      "gridBuy": "Homes for sale in {{place}}",
-      "gridExchange": "Home exchanges in {{place}}",
-      "titleIn": "Featured in {{area}}",
-      "chooseArea": "Choose an area to see featured homes.",
-      "loadFailed": "Could not load featured homes for this area."
+      "title": "Properti pilihan",
+      "empty": "Belum ada properti pilihan saat ini",
+      "gridLongTerm": "Studio di {{place}}",
+      "gridVacation": "Apartemen tepi pantai di {{place}}",
+      "gridBuy": "Hunian dijual di {{place}}",
+      "gridExchange": "Tukar hunian di {{place}}",
+      "titleIn": "Pilihan di {{area}}",
+      "chooseArea": "Pilih sebuah area untuk melihat properti pilihan.",
+      "loadFailed": "Tidak bisa memuat properti pilihan untuk area ini."
     },
-    "viewAll": "View All",
+    "viewAll": "Lihat semua",
     "recentlyViewed": {
-      "title": "Recently Viewed",
-      "noProperties": "No recently viewed properties",
-      "noPropertiesDescription": "Start browsing to see your recent activity here",
-      "browseProperties": "Browse Properties",
-      "errorTitle": "Error Loading Recently Viewed",
-      "errorDescription": "Please try again.",
-      "retry": "Retry",
-      "results": "Results",
-      "filtered": "filtered",
-      "continue": "Continue browsing"
+      "title": "Baru dilihat",
+      "noProperties": "Kamu belum melihat properti apa pun",
+      "noPropertiesDescription": "Mulai menjelajah, dan aktivitas terbarumu akan muncul di sini",
+      "browseProperties": "Jelajahi properti",
+      "errorTitle": "Gagal memuat daftar yang baru dilihat",
+      "errorDescription": "Silakan coba lagi.",
+      "retry": "Coba lagi",
+      "results": "Hasil",
+      "filtered": "difilter",
+      "continue": "Lanjut menjelajah"
     },
     "saved": {
-      "title": "Saved Properties",
-      "editFolder": "Edit Folder",
-      "defaultFolder": "Default Folder",
-      "folderNamePlaceholder": "Folder name",
-      "noFolder": "Folder not found",
-      "noFolderDescription": "This folder may have been removed",
-      "noFolderItems": "No properties in this folder",
-      "noFolderItemsDescription": "Save properties to this folder to see them here"
+      "title": "Properti tersimpan",
+      "editFolder": "Edit folder",
+      "defaultFolder": "Folder bawaan",
+      "folderNamePlaceholder": "Nama folder",
+      "noFolder": "Folder tidak ditemukan",
+      "noFolderDescription": "Folder ini mungkin sudah dihapus",
+      "noFolderItems": "Tidak ada properti di folder ini",
+      "noFolderItemsDescription": "Simpan properti ke folder ini agar muncul di sini"
     },
     "tips": {
-      "title": "Rental Tips & Guides",
+      "title": "Tips & panduan menyewa",
       "categories": {
-        "search": "Search",
-        "safety": "Safety",
-        "legal": "Legal",
-        "inspection": "Inspection"
+        "search": "Pencarian",
+        "safety": "Keamanan",
+        "legal": "Hukum",
+        "inspection": "Pemeriksaan"
       },
       "firstTimeRenting": {
-        "title": "First Time Renting? Here's Your Complete Guide",
-        "description": "Everything you need to know about finding, viewing, and securing your first rental property."
+        "title": "Baru pertama kali menyewa? Ini panduan lengkapnya",
+        "description": "Semua yang perlu kamu tahu untuk mencari, melihat, dan mendapatkan sewa pertamamu."
       },
       "avoidScams": {
-        "title": "How to Avoid Rental Scams: Red Flags to Watch For",
-        "description": "Learn to identify common rental scams and protect yourself from fraud when searching for a new home."
+        "title": "Cara menghindari penipuan sewa: tanda bahaya yang perlu diwaspadai",
+        "description": "Kenali modus penipuan sewa yang umum dan lindungi dirimu saat mencari hunian baru."
       },
       "rentalAgreement": {
-        "title": "Understanding Your Rental Agreement: Key Terms Explained",
-        "description": "Break down complex legal terms and understand what you're signing before committing to a rental."
+        "title": "Memahami perjanjian sewamu: penjelasan istilah pentingnya",
+        "description": "Kami uraikan istilah hukum yang rumit agar kamu paham apa yang kamu tanda tangani."
       },
       "propertyInspection": {
-        "title": "Property Inspection Checklist: What to Look For",
-        "description": "A comprehensive guide to inspecting potential rental properties and identifying potential issues."
+        "title": "Daftar periksa properti: apa saja yang harus dilihat",
+        "description": "Panduan lengkap untuk memeriksa properti sewaan dan menemukan masalah yang mungkin ada."
       },
-      "subtitle": "Practical guides from local tenants, legal experts, and the Homiio editorial team.",
-      "eyebrow": "Renting smarter"
+      "subtitle": "Panduan praktis dari penyewa setempat, ahli hukum, dan tim editorial Homiio.",
+      "eyebrow": "Menyewa dengan lebih cerdas"
     },
     "faq": {
-      "title": "Frequently Asked Questions",
+      "title": "Pertanyaan yang sering diajukan",
       "scheduleViewing": {
-        "question": "How do I schedule a property viewing?",
-        "answer": "You can schedule a viewing by clicking the \"Schedule Viewing\" button on any property listing. Our system will connect you with the landlord or property manager to arrange a convenient time."
+        "question": "Bagaimana cara menjadwalkan kunjungan ke properti?",
+        "answer": "Kamu bisa menjadwalkan kunjungan dengan menekan tombol «Jadwalkan kunjungan» pada iklan properti mana pun. Sistem kami akan menghubungkanmu dengan pemilik atau pengelola untuk menentukan waktu yang cocok."
       },
       "verifiedProperty": {
-        "question": "What does \"Verified Property\" mean?",
-        "answer": "Verified properties have been personally inspected by our team to ensure they meet our quality standards. This includes checking the property condition, amenities, and verifying the landlord's credentials."
+        "question": "Apa arti «properti terverifikasi»?",
+        "answer": "Properti terverifikasi telah diperiksa langsung oleh tim kami untuk memastikan memenuhi standar kualitas kami. Ini mencakup kondisi properti, fasilitasnya, dan pemeriksaan identitas pemiliknya."
       },
       "reportSuspicious": {
-        "question": "How do I report a suspicious listing?",
-        "answer": "If you encounter a suspicious listing, click the \"Report\" button on the property page. Our safety team will investigate and take appropriate action to protect our community."
+        "question": "Bagaimana cara melaporkan iklan yang mencurigakan?",
+        "answer": "Kalau menemukan iklan yang mencurigakan, tekan tombol «Laporkan» di halaman properti. Tim keamanan kami akan menyelidiki dan mengambil tindakan yang diperlukan untuk melindungi komunitas."
       },
       "applicationRequirements": {
-        "question": "What are the rental application requirements?",
-        "answer": "Requirements vary by property, but typically include proof of income, rental history, credit check, and references. Each listing will specify the exact requirements needed."
+        "question": "Apa saja syarat pengajuan sewa?",
+        "answer": "Syaratnya berbeda-beda tiap properti, tetapi umumnya mencakup bukti penghasilan, riwayat sewa, pemeriksaan kredit, dan referensi. Setiap iklan mencantumkan syarat pastinya."
       }
     },
     "cityShowcase": {
-      "title": "Explore {{place}}",
-      "defaultPlace": "Spain"
+      "title": "Jelajahi {{place}}",
+      "defaultPlace": "Spanyol"
     },
     "nearby": {
-      "title": "Homes in {{city}}"
+      "title": "Hunian di {{city}}"
     },
     "recommended": {
-      "title": "Recommended homes",
-      "eyebrow": "For you"
+      "title": "Hunian yang direkomendasikan",
+      "eyebrow": "Untukmu"
     },
     "explore": {
-      "eyebrow": "Keep exploring",
-      "title": "Explore more homes",
-      "cta": "Explore all homes here",
-      "ctaAccessible": "Open Explore with the area you are searching in"
+      "eyebrow": "Terus menjelajah",
+      "title": "Jelajahi lebih banyak hunian",
+      "cta": "Lihat semua hunian di sini",
+      "ctaAccessible": "Buka Jelajahi dengan area yang sedang kamu cari"
     },
     "hostCta": {
-      "cta": "Become a host",
-      "subtitle": "Reach verified renters across Spain — free to list, fair fees, real human support.",
-      "title": "List your space, find a great tenant"
+      "cta": "Jadi tuan rumah",
+      "subtitle": "Jangkau penyewa terverifikasi di seluruh Spanyol — memasang iklan gratis, biayanya adil, dan didukung orang sungguhan.",
+      "title": "Iklankan tempatmu, temukan penyewa yang tepat"
     },
     "sections": {
-      "explain": "{{reason}} · Source: {{source}}",
-      "explainAccessible": "Why these homes: {{reason}}. Source: {{source}}.",
-      "error": "We could not load this area. Nothing is being hidden — the request failed.",
+      "explain": "{{reason}} · Sumber: {{source}}",
+      "explainAccessible": "Mengapa hunian ini: {{reason}}. Sumber: {{source}}.",
+      "error": "Kami tidak bisa memuat area ini. Tidak ada yang disembunyikan — permintaannya gagal.",
       "source": {
-        "listing_created_at": "listing publication dates",
-        "listing_sale_price_reduced_flag": "the price-reduced flag the portal publishes",
-        "listing_status": "listing status changes",
-        "listing_agency_fee_flag": "the agency-fee field on the listing",
-        "listing_cost_fields": "the cost fields on the listing",
-        "resident_reviews": "reviews written by people who lived there",
-        "listing_verification": "Homiio verification records",
-        "listing_housing_type": "the housing-type field on the listing"
+        "listing_created_at": "tanggal penayangan iklan",
+        "listing_sale_price_reduced_flag": "penanda penurunan harga yang ditayangkan portal",
+        "listing_status": "perubahan status iklan",
+        "listing_agency_fee_flag": "kolom biaya agen pada iklan",
+        "listing_cost_fields": "kolom biaya pada iklan",
+        "resident_reviews": "ulasan yang ditulis orang yang pernah tinggal di sana",
+        "listing_verification": "catatan verifikasi Homiio",
+        "listing_housing_type": "kolom jenis hunian pada iklan"
       },
       "new_in_area": {
-        "eyebrow": "New",
-        "title": "New in your area",
-        "reason": "Listed most recently inside the area you are searching"
+        "eyebrow": "Baru",
+        "title": "Baru di areamu",
+        "reason": "Paling baru ditayangkan di dalam area yang kamu cari"
       },
       "price_reduced": {
-        "eyebrow": "Price change",
-        "title": "Asking price reduced",
-        "reason": "The seller published a price reduction. Homiio keeps no rent price history, so this covers homes for sale only"
+        "eyebrow": "Perubahan harga",
+        "title": "Harga diturunkan",
+        "reason": "Penjual menayangkan penurunan harga. Homiio tidak menyimpan riwayat harga sewa, jadi bagian ini hanya mencakup hunian yang dijual"
       },
       "no_longer_available": {
-        "eyebrow": "Left the market",
-        "title": "No longer available",
-        "reason": "Marked rented or sold by their owner, most recent first — what actually went, and at what price"
+        "eyebrow": "Keluar dari pasar",
+        "title": "Sudah tidak tersedia",
+        "reason": "Ditandai tersewa atau terjual oleh pemiliknya, dari yang terbaru: apa yang benar-benar lepas, dan di harga berapa"
       },
       "no_agency_fee": {
-        "eyebrow": "Costs",
-        "title": "No agency fee",
-        "reason": "The listing states that no agency fee is payable. Listings that say nothing are not included"
+        "eyebrow": "Biaya",
+        "title": "Tanpa biaya agen",
+        "reason": "Iklan menyatakan tidak ada biaya agen yang harus dibayar. Iklan yang tidak menyebutkan apa pun tidak dimasukkan"
       },
       "transparent_total_cost": {
-        "eyebrow": "Costs",
-        "title": "Whole cost stated",
-        "reason": "Every recurring cost is on the listing — rent with bills included and the deposit, or the nightly rate with cleaning and service fees"
+        "eyebrow": "Biaya",
+        "title": "Total biaya dicantumkan",
+        "reason": "Semua biaya rutin tercantum di iklan: sewa termasuk tagihan dan deposit, atau tarif per malam dengan biaya kebersihan dan layanan"
       },
       "with_resident_reviews": {
-        "eyebrow": "Trust",
-        "title": "Reviewed by residents",
-        "reason": "Somebody who lived at this address has written a review"
+        "eyebrow": "Kepercayaan",
+        "title": "Diulas oleh penghuni",
+        "reason": "Seseorang yang pernah tinggal di alamat ini menulis ulasan"
       },
       "verified": {
-        "eyebrow": "Trust",
-        "title": "Verified address or lister",
-        "reason": "Homiio verified the address or the person listing it"
+        "eyebrow": "Kepercayaan",
+        "title": "Alamat atau pengiklan terverifikasi",
+        "reason": "Homiio memverifikasi alamatnya atau orang yang memasang iklannya"
       },
       "public_housing": {
-        "eyebrow": "Public",
-        "title": "Public housing",
-        "reason": "Listed as public housing. Homiio has no cooperative or community housing field yet, so those are not included"
+        "eyebrow": "Publik",
+        "title": "Rumah subsidi",
+        "reason": "Ditayangkan sebagai rumah subsidi. Homiio belum punya kolom untuk hunian koperasi atau komunitas, jadi yang itu belum dimasukkan"
       },
-      "loadFailedToast": "Could not load homes for this area. Nothing is hidden — the request failed."
+      "loadFailedToast": "Kami tidak bisa memuat hunian di area ini. Tidak ada yang disembunyikan — permintaannya gagal."
     },
     "scopePrompt": {
-      "eyebrow": "One step first",
-      "title": "Where are you looking for a home?",
-      "body": "Pick a city or neighbourhood, or turn on location. Location is optional — you can always choose a place by hand."
+      "eyebrow": "Satu langkah dulu",
+      "title": "Kamu sedang mencari hunian di mana?",
+      "body": "Pilih kota atau lingkungan, atau aktifkan lokasi. Lokasi bersifat opsional — kamu selalu bisa memilih tempatnya sendiri."
     },
     "empty": {
-      "title": "Nothing to show for this area yet",
-      "body": "No listing here matches what Homiio can explain. Widen the area, choose somewhere else, or open Explore and change the filters.",
-      "changeFilters": "Open Explore",
-      "changeFiltersAccessible": "Open Explore to change the filters for this area"
+      "title": "Belum ada yang bisa ditampilkan untuk area ini",
+      "body": "Tidak ada iklan di sini yang cocok dengan apa yang bisa dijelaskan Homiio. Perluas areanya, pilih tempat lain, atau buka Jelajahi dan ubah filternya.",
+      "changeFilters": "Buka Jelajahi",
+      "changeFiltersAccessible": "Buka Jelajahi untuk mengubah filter area ini"
     }
   },
   "agent": {
@@ -4121,31 +4121,31 @@
   },
   "location": {
     "scope": {
-      "eyebrow": "Searching in",
-      "announce": "Searching in {{scope}}",
-      "change": "Change",
-      "changeAccessible": "Change the area you are searching in",
-      "everywhere": "Everywhere",
-      "nearYou": "Near you · {{distance}}",
-      "nearPlace": "Near {{place}} · {{distance}}",
-      "resolving": "Finding where you are…",
-      "useCurrent": "Use my location",
-      "useCurrentAccessible": "Use my current location to search nearby",
-      "exploreGlobal": "Explore everywhere",
-      "exploreGlobalAccessible": "Explore homes everywhere, with no area filter",
-      "pickerTitle": "Where are you looking for a home?",
-      "deviceUnavailable": "Your current location is no longer available. Showing the last area you chose.",
-      "showingCached": "Saved copy from {{when}}. Not up to date.",
+      "eyebrow": "Mencari di",
+      "announce": "Mencari di {{scope}}",
+      "change": "Ubah",
+      "changeAccessible": "Ubah area tempat kamu mencari",
+      "everywhere": "Di mana saja",
+      "nearYou": "Dekat kamu · {{distance}}",
+      "nearPlace": "Dekat {{place}} · {{distance}}",
+      "resolving": "Mencari lokasimu…",
+      "useCurrent": "Gunakan lokasiku",
+      "useCurrentAccessible": "Gunakan lokasi saya saat ini untuk mencari di sekitar",
+      "exploreGlobal": "Jelajahi di mana saja",
+      "exploreGlobalAccessible": "Jelajahi hunian di mana saja, tanpa filter area",
+      "pickerTitle": "Kamu sedang mencari hunian di mana?",
+      "deviceUnavailable": "Lokasimu saat ini sudah tidak tersedia. Menampilkan area terakhir yang kamu pilih.",
+      "showingCached": "Salinan tersimpan dari {{when}}. Belum diperbarui.",
       "failure": {
-        "permission_denied": "Location is off, so we cannot search near you. Pick a place instead — location is optional.",
-        "position_unavailable": "We could not get your position. Pick a place instead.",
-        "network": "We could not reach Homiio to look that up. Check your connection and try again.",
-        "rate_limited": "Too many place lookups just now. Try again in a moment.",
-        "ambiguous": "Several places match that name. Pick the one you meant.",
-        "no_results": "We could not find that place. Try another name.",
-        "unsupported": "Homiio cannot search that kind of place yet. Pick a city instead."
+        "permission_denied": "Lokasi sedang nonaktif, jadi kami tidak bisa mencari di dekatmu. Pilih tempat saja — lokasi bersifat opsional.",
+        "position_unavailable": "Kami tidak bisa mendapatkan posisimu. Pilih sebuah tempat.",
+        "network": "Kami tidak bisa menghubungi Homiio untuk pencarian itu. Periksa koneksimu lalu coba lagi.",
+        "rate_limited": "Terlalu banyak pencarian tempat sekaligus. Coba lagi sebentar.",
+        "ambiguous": "Ada beberapa tempat dengan nama itu. Pilih yang kamu maksud.",
+        "no_results": "Kami tidak menemukan tempat itu. Coba nama lain.",
+        "unsupported": "Homiio belum bisa mencari di jenis tempat itu. Pilih sebuah kota."
       },
-      "notChosen": "Not chosen yet"
+      "notChosen": "Belum dipilih"
     }
   },
   "alerts": {
