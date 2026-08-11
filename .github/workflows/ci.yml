@@ -345,38 +345,36 @@ jobs:
           NODE_OPTIONS: '--max-old-space-size=4096'
           NODE_ENV: production
 
-  # ─────────────────────────────────────────────────────────────────────────
-  # `lint` is still OFF BY DEFAULT. A job that is red on every pull request from
-  # the day it lands is not a gate — it is a thing the next person disables — so
-  # it stays behind a repository variable until `bun run lint` exits 0, and the
-  # debt stays visible in the place the gate will live.
-  #
-  # `frontend-typecheck` was the other one and is now ARMED, below: it exits 0,
-  # so its switch was removed rather than left set to `ready`. A switch that
-  # nobody needs is a switch someone can flip the wrong way.
-  #
-  # To turn `lint` on: fix the errors it reports, then delete its `if:` — not
-  # set the variable. Same reasoning.
-  # ─────────────────────────────────────────────────────────────────────────
-
   lint:
-    # Set HOMIIO_LINT_GATE=ready once `bun run lint` exits 0.
+    # ARMED. `bun run lint` exits 0 across all four packages.
     #
-    # Today it does not: backend 344 errors, listing-providers 15, frontend 14;
-    # shared-types is clean. #249 removed the noise that made this unreadable
-    # (jest globals, 3555 false `no-undef`s), so what remains is real: 272
-    # `no-require-imports` in a package that is deliberately "type":"commonjs",
-    # 57 unused-vars, and 10 genuine `no-undef`s. listing-providers' 15 include 6
-    # `no-undef` on DOM/undici types (RequestInit), which is the case #249's fix
-    # does not cover — its config still needs typescript-eslint's
-    # `eslint-recommended` to stop the base rule reporting TypeScript types.
+    # It was gated on `vars.HOMIIO_LINT_GATE == 'ready'` from #254 until this
+    # commit, and that variable was never set — at the repository or the org —
+    # so the job was SKIPPED on every run it ever appeared in. A skipped job is
+    # not a neutral outcome on a pull request: `gh pr checks` prints it as
+    # `skipping` in the same list as the passes, the run concludes `success`,
+    # and any check that counts failures rather than naming the jobs it expects
+    # reads the whole thing as green. The presence of a job says nothing about
+    # what it ran.
     #
-    # NOTHING IS BUILT IN THIS JOB, ON PURPOSE. `eslint .` in the backend has no
-    # `ignores`, and eslint 9's flat config does not skip `dist/` by default, so
-    # a build step before this would lint generated `.d.ts` output and add 214
-    # phantom errors. That is why `bun run lint` gives 344 on a clean checkout
-    # and 558 after `bun run build` — measured, both ways, on the same commit.
-    if: vars.HOMIIO_LINT_GATE == 'ready'
+    # The debt the switch was waiting on is gone, and not because a rule was
+    # relaxed: no severity in any of the four eslint configs has changed since
+    # #254. `require(` in backend `.ts` went 268 -> 15 while the package GREW
+    # from 302 to 449 files, which is the Postgres port paying off the 272
+    # `no-require-imports` that made up most of the original 344.
+    #
+    # Measured on this commit, `bun run lint`: backend 0 errors / 102 warnings,
+    # frontend 0 / 23, listing-providers and shared-types clean. Warnings do not
+    # fail the job. That is deliberate for now and it is a REAL gap — nothing
+    # here stops the warning count growing — but 101 of the 102 backend warnings
+    # are `@typescript-eslint/no-explicit-any`, and pinning a ceiling before
+    # those are typed would only teach the next person to raise the ceiling.
+    #
+    # NOTHING IS BUILT IN THIS JOB, ON PURPOSE — eslint does not typecheck, so a
+    # build buys nothing and costs minutes. The generated output that used to
+    # make this dangerous (`bun run lint` reporting 344 on a clean tree and 558
+    # after `bun run build`) is now excluded by `ignores: ['dist/**']` in the
+    # backend and frontend configs rather than by hoping nobody builds first.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
