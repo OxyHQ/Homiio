@@ -15,7 +15,16 @@
  * See `CONVENTIONS.md` for the rules every other decision follows.
  */
 
-import { check, doublePrecision, index, jsonb, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
+import {
+  check,
+  doublePrecision,
+  index,
+  jsonb,
+  pgTable,
+  text,
+  uniqueIndex,
+  type AnyPgColumn,
+} from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { createdAt, generatedId, geography, inList, updatedAt } from '@oxyhq/db';
 import { cities, countries, neighborhoods, regions } from './geo';
@@ -179,6 +188,79 @@ export const addresses = pgTable(
      */
     normalizedKey: text(),
 
+    /**
+     * The LEVEL-AWARE identity key — ADR 0001 §5.1, written only by
+     * `materializeHousingCandidate`.
+     *
+     * It exists BESIDE {@link normalizedKey} and never replaces it, because the
+     * v1 key is copied verbatim from the source and re-keying it would re-create
+     * 11,734 existing buildings on their next ingest. Both columns are live; a
+     * row may carry one, the other, or both.
+     *
+     * ## Why a second key was unavoidable
+     *
+     * The v1 key hashes `street|number|unit|building_name|block|postal_code|
+     * city_id|country_code` while {@link addressLevel} derives from `floor`,
+     * `unit`, `subunit`, `number`, `building_name`, `block` and `entrance`.
+     * `floor`, `entrance` and `subunit` therefore DECIDE the level and are
+     * ABSENT from the key, so a building and the flat on its third floor hash
+     * identically and — under the partial unique index above — become one row
+     * whose level depends on which advertisement was ingested first (ADR 0001
+     * §1.3, measured). Nothing that dedupes on the v1 key can create the
+     * street → building → unit chain this column exists to serve.
+     *
+     * v2 hashes the level itself plus every field that discriminates it, with
+     * internal whitespace collapsed and diacritics stripped
+     * (`computeAddressIdentityKey`).
+     *
+     * **NULL on every row written by any other path**, which is the honest state
+     * rather than an omission: the ADR's plan is forward-only, and back-filling
+     * this column for existing rows is phase 2, gated on a census that has not
+     * run. A NULL here means "no v2 identity has been computed for this row",
+     * never "this row has no identity".
+     */
+    identityKey: text(),
+
+    /**
+     * The row one level up: a UNIT's building, a BUILDING's street.
+     *
+     * NULL for a STREET row, and NULL on every row that predates
+     * `materializeHousingCandidate` — the hierarchy is a projection
+     * `resolveAddressHierarchy` recomputes per review today, and this column
+     * stores it once so every other domain can read it. Populating it for
+     * existing rows is ADR 0001 phase 2.
+     *
+     * RESTRICT rather than CASCADE or SET NULL. CASCADE would delete every flat
+     * in a block along with the block; SET NULL would silently promote a unit to
+     * a street-level orphan, and NULL already means "this is a STREET row", so
+     * the action would introduce a second meaning for the value — the test
+     * `CONVENTIONS.md` sets for `ON DELETE SET NULL`, failed. Nothing in Homiio
+     * deletes an address; anything that ever does must re-parent first.
+     */
+    parentAddressId: text().references((): AnyPgColumn => addresses.id, { onDelete: 'restrict' }),
+
+    /**
+     * The survivor of a merge, when this row lost one — ADR 0001 §8.1.
+     *
+     * A merge NEVER deletes the losing row: reviews, leases and occupancies
+     * point at it, and a wrong merge publishes one household's reviews under
+     * another's address. Setting a pointer instead is what makes the operation
+     * reversible, and reversibility is the requirement rather than a nicety.
+     *
+     * Nothing performs a merge yet — that workflow is the second half of #360.
+     * The column and its FK land here because the MATCHER has to honour it from
+     * its first line: `materializeHousingCandidate` follows this pointer before
+     * returning any match, so a redirect that lands later cannot silently start
+     * handing callers a row the merge retired. A matcher written without it
+     * would have to be re-audited path by path when merge arrives, which is
+     * exactly the "bolt it on later" this column exists to avoid.
+     *
+     * RESTRICT: a survivor may not be deleted while something redirects to it.
+     */
+    mergedIntoAddressId: text().references((): AnyPgColumn => addresses.id, {
+      onDelete: 'restrict',
+    }),
+
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -191,6 +273,25 @@ export const addresses = pgTable(
     uniqueIndex('addresses_normalized_key_key')
       .on(table.normalizedKey)
       .where(sql`${table.normalizedKey} is not null`),
+
+    // The v2 key's own partial unique index — the same shape and the same
+    // reason, on a column that is NULL for every row written before
+    // `materializeHousingCandidate` existed. Partial is REQUIRED here rather
+    // than merely tidy: a total unique index over a column that is NULL on
+    // 11,734 rows would be correct in Postgres (NULLs are distinct) and would
+    // still index all of them, and the predicate is what any `ON CONFLICT`
+    // against it must repeat verbatim to name this index as its arbiter.
+    uniqueIndex('addresses_identity_key_key')
+      .on(table.identityKey)
+      .where(sql`${table.identityKey} is not null`),
+
+    // "Every child of this row", the read the hierarchy exists for.
+    index('addresses_parent_address_id_idx').on(table.parentAddressId),
+    // Partial: a merged-away row is the rare case by construction, so indexing
+    // only the rows that carry a redirect keeps this the size of the real set.
+    index('addresses_merged_into_address_id_idx')
+      .on(table.mergedIntoAddressId)
+      .where(sql`${table.mergedIntoAddressId} is not null`),
 
     // The spatial index. Every `$near` / `$geoWithin` / `$centerSphere` property
     // search resolves through this table, so this is the index the whole search
@@ -243,5 +344,17 @@ export const addresses = pgTable(
       'addresses_coordinates_range_check',
       sql`${table.longitude} between -180 and 180 and ${table.latitude} between -90 and 90`,
     ),
+
+    // No row is its own parent and no row is its own merge survivor. Both are
+    // one-row cycles a self-referencing foreign key cannot see: the constraint
+    // is satisfied by `id` existing, and `id` always exists on the row being
+    // written. Longer cycles are not expressible as a CHECK and are refused by
+    // the writer instead.
+    //
+    // Both admit NULL, deliberately: a NULL parent is a STREET row and a NULL
+    // survivor is a row nobody merged, which are the ordinary states rather than
+    // the ones being forbidden.
+    check('addresses_parent_not_self_check', sql`${table.parentAddressId} <> ${table.id}`),
+    check('addresses_merge_not_self_check', sql`${table.mergedIntoAddressId} <> ${table.id}`),
   ],
 );

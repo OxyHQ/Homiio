@@ -37,6 +37,7 @@
 import { getTableColumns, getTableName } from 'drizzle-orm';
 import type { PgColumn, PgTable, UpdateDeleteAction } from 'drizzle-orm/pg-core';
 import { sqlColumnName } from '../casing';
+import { addressExternalRefs, addressMaterializations } from './addressMaterialization';
 import { billing, billingProcessedSessions } from './billing';
 import { housingAlerts, housingDomainEvents } from './watches';
 import { images } from './images';
@@ -171,6 +172,10 @@ export const OXY_ACCOUNT_COLUMN_NAMES: ReadonlySet<string> = new Set([
   'granted_by_oxy_user_id',
   'voucher_oxy_user_id',
   'vouched_oxy_user_id',
+  // `address_candidates` records WHO observed a place (#360). Nullable, because
+  // the ingestion worker submits candidates with no human behind them, and that
+  // absence is a different fact from any account id rather than a missing one.
+  'submitted_by_oxy_user_id',
 ]);
 
 /**
@@ -370,6 +375,43 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
       '`event_id` would become a history entry saying "something changed" the ' +
       'day the sweep ran. It is also what the cooldown unique index is keyed ' +
       'on, which a nullable reference through another table could not be.',
+  },
+  {
+    table: addressExternalRefs,
+    column: addressExternalRefs.externalId,
+    reason:
+      'A PROVIDER\'s own id for a place — a portal\'s building id, an OSM ref, ' +
+      'a cadastral value — so there is nothing in this schema for it to ' +
+      'reference, the same class as `properties.source_id`. It is half of this ' +
+      'table\'s unique key rather than a pointer: the row exists to say "that ' +
+      'provider calls this place X", and ADR 0001 §3.4 is explicit that an ' +
+      'external identifier is an ATTRIBUTE and never identity, so a constraint ' +
+      'here would be asserting the opposite of the decision.',
+  },
+  {
+    table: addressMaterializations,
+    column: addressMaterializations.candidateId,
+    reason:
+      'The `address_candidates` row this materialization consumed, referenced ' +
+      'by value because the two are under INDEPENDENT expiry regimes and two ' +
+      'sweeps have no ordering between them — the same refusal, for the same ' +
+      'reason, as `moderation_outbox.event_id`. CASCADE would let the candidate ' +
+      'sweep delete the audit trail a merge depends on; RESTRICT would make the ' +
+      'candidate sweep fail against every materialized candidate, i.e. all the ' +
+      'successful ones. Nothing is lost by the absence: every fact an audit ' +
+      'reads is copied onto this row by value at materialization time.',
+  },
+  {
+    table: addressMaterializations,
+    column: addressMaterializations.durableActionRef,
+    reason:
+      'Polymorphic by `durable_action` across a listing, a review, an eviction ' +
+      'case and a correction, so one column cannot reference it — the ' +
+      'permanent case `images.entity_id` and `housing_domain_events.subject_id` ' +
+      'already carry. It must also OUTLIVE its subject: a listing is ' +
+      'hard-deleted by the expiry sweep, and the record that materializing a ' +
+      'place was authorised by that listing is exactly what a later merge audit ' +
+      'needs after the advertisement is gone.',
   },
 ];
 

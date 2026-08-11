@@ -26,6 +26,11 @@
  */
 
 export { addresses } from './addresses';
+export {
+  addressCandidates,
+  addressExternalRefs,
+  addressMaterializations,
+} from './addressMaterialization';
 export { agencies } from './agencies';
 export {
   tenantApplicationDocuments,

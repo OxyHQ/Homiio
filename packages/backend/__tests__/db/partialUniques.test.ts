@@ -384,6 +384,12 @@ describe('the partial indexes really are partial', () => {
     // here deliberately, which is the point — it is the list a reviewer checks
     // against the Mongo `partialFilterExpression`s.
     expect(named).toEqual([
+      // #360's two, both for the same reason `addresses_normalized_key_key`
+      // below is partial: the column is NULL on every row written by any other
+      // path, and an `ON CONFLICT` naming either has to repeat the predicate or
+      // fail at RUNTIME with `42P10` while `tsc` stays clean.
+      'address_materializations_idempotency_key',
+      'addresses_identity_key_key',
       'addresses_normalized_key_key',
       'billing_plus_stripe_subscription_id_key',
       'conversations_share_token_key',

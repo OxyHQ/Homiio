@@ -55,6 +55,8 @@ import { randomBytes } from 'node:crypto';
 import { getDb } from '../../db/postgres';
 import { syncHasImages } from '../../db/hasImages';
 import {
+  addressCandidates,
+  addressMaterializations,
   addresses,
   agencies,
   commissions,
@@ -144,6 +146,20 @@ export async function resetGeoTables(): Promise<void> {
   // and appears in CI at low ones, purely by how jest distributes files.
   await db.delete(reviews);
   await db.delete(agencies);
+  // The candidate → canonical tables (#360), before addresses and in this order.
+  // `address_materializations.address_id` and
+  // `address_candidates.materialized_address_id` are both ON DELETE **RESTRICT**
+  // — the provenance record is what makes a merge reversible, and NULL on the
+  // candidate's pointer already means "not materialized", so SET NULL would give
+  // that value a second meaning. The materialization goes first because it also
+  // names the candidate (by value, with no constraint, so the order is for
+  // legibility rather than for the database).
+  //
+  // `address_external_refs` is deliberately absent: it CASCADEs from
+  // `addresses`, so the delete below takes it. Listing it here would suggest the
+  // other two could have been solved the same way, and they could not.
+  await db.delete(addressMaterializations);
+  await db.delete(addressCandidates);
   await db.delete(addresses);
   await db.delete(neighborhoods);
   // `cities.cover_image_id` / `regions.cover_image_id` are ON DELETE SET NULL,

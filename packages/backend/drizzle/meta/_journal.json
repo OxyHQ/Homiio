@@ -99,6 +99,13 @@
       "when": 1786348633522,
       "tag": "0013_evictions_local_privacy",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1786406907912,
+      "tag": "0014_housing_candidate_materialization",
+      "breakpoints": true
     }
   ]
 }
