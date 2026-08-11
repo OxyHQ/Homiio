@@ -66,13 +66,36 @@ on:
 # newest DOES win; what is guaranteed is only that a run already executing is
 # left alone.
 #
+# Eviction is not rare, and the rate belongs beside the claim: 27 of the last 100
+# CI runs on main concluded `cancelled` (measured 2026-08-11), every one of them
+# with zero jobs. Roughly one main push in four never starts.
+#
 # For a rollout that is the property that matters: a run that never started
 # never called `update-service` and never started a migrator, so nothing is left
-# half-done. The cost lands elsewhere and is worth knowing — an intermediate
-# commit's deploy can be dropped entirely, and `deployment-scope.sh` reads a
-# single commit (`<sha>^1..<sha>`), so if the run that wins is documentation-only
-# it deploys nothing at all and the skipped commit's changes wait for the next
-# code merge.
+# half-done. The cost lands on the NEXT run, and #430 is what that cost turned
+# into once #417 armed migrations.
+#
+# An intermediate commit's deploy can be dropped entirely, so the next run has to
+# carry it. `deployment-scope.sh` used to read a single commit
+# (`<sha>^1..<sha>`), which meant a documentation-only winner deployed nothing at
+# all and the dropped commit's changes waited for the next code merge — measured
+# at up to FOUR consecutive documentation commits on real history, so the wait
+# was unbounded rather than merely long. With a migration in the dropped commit
+# that is a schema sitting behind the code with main green, which is the silent
+# shape this repository has already paid for once.
+#
+# **The backend no longer skips**: `deployment-scope.sh backend` always emits
+# `true`, so an evicted commit is picked up by whatever lands next regardless of
+# what that commit touched. The measurements behind deleting the optimisation
+# rather than making it stateful are in that script's header, and the pairing is
+# pinned by `.github/scripts/test-deployment-scope.sh`.
+#
+# The FRONTEND still skips, deliberately: deploy-frontends.yml triggers on
+# `workflow_run` with `conclusion == 'success'`, so a cancelled run already skips
+# it, and the same combination costs a stale bundle rather than a schema/code
+# split. That is a smaller cost against an hour-long web export, and it is a
+# trade rather than an oversight — but it IS the same mechanism, and if a wire
+# contract ever splits across it, this is the paragraph to come back to.
 concurrency:
   group: ci-${{ github.ref }}
   # An EXPRESSION, and a mistyped one degrades silently to falsy — which would
