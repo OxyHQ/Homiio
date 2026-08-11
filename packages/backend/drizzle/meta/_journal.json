@@ -113,6 +113,13 @@
       "when": 1786411778209,
       "tag": "0015_address_merge_workflow",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1786412763991,
+      "tag": "0016_address_merge_collision_refusal",
+      "breakpoints": true
     }
   ]
 }

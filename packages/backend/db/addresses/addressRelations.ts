@@ -14,16 +14,14 @@
  *
  * ## What derivation CANNOT see, and how that is handled
  *
- * Two columns hold an address id with **no foreign key at all**:
- * `housing_domain_events.subject_id` and `housing_alerts.subject_id`, each
- * discriminated by a `subject_type` column whose CHECK includes `'address'`
+ * Some columns hold an address id with **no foreign key at all** —
+ * `housing_domain_events.subject_id` and `housing_alerts.subject_id` today, each
+ * discriminated by a `subject_type` whose CHECK includes `'address'`
  * (`deferredForeignKeys.ts` records why neither can carry a constraint). No
- * catalogue query finds them, so they are declared in
- * {@link POLYMORPHIC_ADDRESS_RELATIONS} by hand — and the declaration is the
- * dangerous half, so `__tests__/db/addressRelations.test.ts` asserts against the
- * live `subject_type` CHECK that `'address'` is still an accepted value. A
- * discriminator that stopped accepting addresses would make these two entries
- * lies, and nothing else would notice.
+ * FOREIGN KEY derivation finds them, so they come from a second derivation over
+ * the catalogue's CHECK definitions (`polymorphicAddressHolders.ts`) rather than
+ * from a list. They are the dangerous half precisely because no constraint
+ * refuses a stale id in them: a holder nobody moved is invisible.
  *
  * Measured on a database migrated to 0014: `images.entity_type` is
  * `property | city | region | country | profile` and does **not** include
@@ -46,6 +44,8 @@ import { sqlColumnName } from '@oxyhq/db';
 
 import * as schema from '../schema';
 import { addresses } from '../schema/addresses';
+import type { DatabaseOrTransaction } from '../postgres';
+import { derivePolymorphicAddressHolders } from './polymorphicAddressHolders';
 
 /**
  * What a merge does with one column.
@@ -121,26 +121,32 @@ export function addressForeignKeys(): readonly { table: string; column: string }
 }
 
 /**
- * The two columns that hold an address id without a foreign key.
+ * The columns that hold an address id without a foreign key, DERIVED.
  *
- * Declared, because nothing can derive them — and every field is checked against
- * the live catalogue by the gate, including that the discriminator's CHECK still
- * admits `'address'`.
+ * They were hand-listed for one revision, and the reason that was wrong is the
+ * reason they are the dangerous ones: no constraint refuses a stale id here, so
+ * a holder the list forgot is a holder whose rows silently stay on a retired
+ * address. `derivePolymorphicAddressHolders` reads the catalogue's own CHECK
+ * definitions, so a table that starts admitting `'address'` tomorrow is handled
+ * without an edit — and one that breaks the naming convention RAISES rather than
+ * being skipped.
  */
-export const POLYMORPHIC_ADDRESS_RELATIONS: readonly AddressRelation[] = [
-  {
-    table: 'housing_domain_events',
-    column: 'subject_id',
-    disposition: 'move',
-    discriminator: { column: 'subject_type', value: 'address' },
-  },
-  {
-    table: 'housing_alerts',
-    column: 'subject_id',
-    disposition: 'move',
-    discriminator: { column: 'subject_type', value: 'address' },
-  },
-];
+export async function polymorphicAddressRelations(
+  db: DatabaseOrTransaction,
+): Promise<readonly AddressRelation[]> {
+  const holders = await derivePolymorphicAddressHolders(db);
+  return holders.map((holder) => ({
+    table: holder.table,
+    column: holder.column,
+    // Always `move`: a polymorphic subject names the place an event or an alert
+    // is ABOUT, which is a fact about the present. There is no audit-shaped
+    // member of this set today, and if one appears it will arrive as a new value
+    // in some CHECK — at which point this classification is the thing to
+    // revisit, deliberately, rather than a default that already decided.
+    disposition: 'move' as const,
+    discriminator: holder.discriminator,
+  }));
+}
 
 /**
  * The disposition of one derived foreign key, or `null` when it is unknown.
@@ -228,7 +234,9 @@ export function classifyAddressRelation(
  * behind, and the whole point of deriving the set is that the omission cannot
  * happen quietly.
  */
-export function addressRelations(): readonly AddressRelation[] {
+export async function addressRelations(
+  db: DatabaseOrTransaction,
+): Promise<readonly AddressRelation[]> {
   const relations: AddressRelation[] = [];
   for (const { table, column } of addressForeignKeys()) {
     const disposition = classifyAddressRelation(table, column);
@@ -242,10 +250,12 @@ export function addressRelations(): readonly AddressRelation[] {
     }
     relations.push({ table, column, disposition, discriminator: null });
   }
-  return [...relations, ...POLYMORPHIC_ADDRESS_RELATIONS];
+  return [...relations, ...(await polymorphicAddressRelations(db))];
 }
 
 /** Just the relations a merge repoints. */
-export function movableAddressRelations(): readonly AddressRelation[] {
-  return addressRelations().filter((relation) => relation.disposition === 'move');
+export async function movableAddressRelations(
+  db: DatabaseOrTransaction,
+): Promise<readonly AddressRelation[]> {
+  return (await addressRelations(db)).filter((relation) => relation.disposition === 'move');
 }

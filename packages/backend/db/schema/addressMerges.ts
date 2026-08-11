@@ -62,27 +62,30 @@ export const ADDRESS_MERGE_REASONS = [
 export type AddressMergeReason = (typeof ADDRESS_MERGE_REASONS)[number];
 
 /**
- * What happened to one relation row.
+ * What happened to one relation row. One member, and that is the decision.
  *
- * `left_in_place` is the member that matters, and it exists because of a
- * measured collision rather than as a hedge: `reviews_author_address_key` is
- * UNIQUE on `(oxy_user_id, address_id)`, so an author who reviewed BOTH rows has
- * a review that cannot be moved — the move would violate the constraint, and
- * inside a transaction a violation aborts everything (`25P02`), taking the whole
- * merge with it.
+ * ## Why there is no `left_in_place`
  *
- * The two wrong answers are deleting the loser's review and rewriting it; ADR
- * 0001 §2.1.7 forbids both, and neither is reversible. So the row STAYS on the
- * losing address, which still resolves — the matcher follows
- * `merged_into_address_id` — and the fact that it stayed is recorded here so a
- * revert does not try to move it back and an audit can see it happened.
+ * There WAS one, for one revision, and removing it is a correction worth
+ * recording. `reviews_author_address_key` is UNIQUE on
+ * `(oxy_user_id, address_id)`, so an author who reviewed BOTH rows has a review
+ * the merge cannot move. The first answer was to leave that row on the losing
+ * address and record that it stayed — which discards nothing, and was defended
+ * on exactly that ground.
+ *
+ * It is still wrong, for a reason the "nothing was deleted" framing hides: a
+ * review list reads `where address_id = <the place>`, so a row left on the loser
+ * is **invisible on the survivor**. The author keeps a review of what is now one
+ * place that nobody can see, and the constraint that was supposed to prevent one
+ * author holding two reviews of one place has been satisfied by hiding one. A
+ * row surviving in the table is not the same as content surviving.
+ *
+ * So a collision REFUSES the merge and reports it. A merge is a correction
+ * workflow performed by a person, and stopping to ask is a legitimate answer for
+ * it in a way it would never be for an ingest — nothing is lost, nothing is
+ * hidden, and the decision goes to somebody who can talk to the author.
  */
-export const ADDRESS_MERGE_MOVE_OUTCOMES = [
-  /** The row now points at the survivor. A revert points it back. */
-  'moved',
-  /** A unique constraint refused the move; the row stayed on the loser. */
-  'left_in_place',
-] as const;
+export const ADDRESS_MERGE_MOVE_OUTCOMES = ['moved'] as const;
 
 export type AddressMergeMoveOutcome = (typeof ADDRESS_MERGE_MOVE_OUTCOMES)[number];
 
@@ -256,15 +259,15 @@ export const addressMergeRelationMoves = pgTable(
     previousAddressId: text()
       .notNull()
       .references(() => addresses.id, { onDelete: 'restrict' }),
-    outcome: text({ enum: ADDRESS_MERGE_MOVE_OUTCOMES }).notNull(),
     /**
-     * Why a row was left in place, when it was.
+     * Always `moved` today — see {@link ADDRESS_MERGE_MOVE_OUTCOMES}.
      *
-     * NULL for a `moved` row. For a `left_in_place` row it names the constraint
-     * that refused, which is the one thing an operator needs in order to decide
-     * whether to do anything about it.
+     * Kept as a column rather than dropped because the SPLIT half of #360 puts a
+     * second kind of row in this log, and a log whose rows are indistinguishable
+     * is a log a revert cannot read selectively. It is not a placeholder for a
+     * collision outcome: a collision refuses the merge and writes nothing.
      */
-    blockedByConstraint: text(),
+    outcome: text({ enum: ADDRESS_MERGE_MOVE_OUTCOMES }).notNull(),
 
     createdAt: createdAt(),
   },
@@ -284,14 +287,6 @@ export const addressMergeRelationMoves = pgTable(
     check(
       'address_merge_relation_moves_outcome_check',
       sql`${table.outcome} in (${sql.raw(inList(ADDRESS_MERGE_MOVE_OUTCOMES))})`,
-    ),
-    // A blocked row names its constraint; a moved row names none. The absence is
-    // as load-bearing as the presence: a `moved` row carrying a constraint name
-    // would mean the executor recorded a refusal it then went on to ignore.
-    check(
-      'address_merge_relation_moves_blocked_coherence_check',
-      sql`(${table.outcome} = 'moved' and ${table.blockedByConstraint} is null)
-          or (${table.outcome} = 'left_in_place' and ${table.blockedByConstraint} is not null)`,
     ),
   ],
 );
