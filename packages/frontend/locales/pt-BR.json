@@ -181,7 +181,10 @@
       "gridLongTerm": "Studios in {{place}}",
       "gridVacation": "Beach apartments in {{place}}",
       "gridBuy": "Homes for sale in {{place}}",
-      "gridExchange": "Home exchanges in {{place}}"
+      "gridExchange": "Home exchanges in {{place}}",
+      "titleIn": "Featured in {{area}}",
+      "chooseArea": "Choose an area to see featured homes.",
+      "loadFailed": "Could not load featured homes for this area."
     },
     "viewAll": "View All",
     "recentlyViewed": {

@@ -144,7 +144,10 @@
       "gridLongTerm": "Estudis a {{place}}",
       "gridVacation": "Apartaments de platja a {{place}}",
       "gridBuy": "Habitatges en venda a {{place}}",
-      "gridExchange": "Intercanvis de casa a {{place}}"
+      "gridExchange": "Intercanvis de casa a {{place}}",
+      "titleIn": "Featured in {{area}}",
+      "chooseArea": "Choose an area to see featured homes.",
+      "loadFailed": "Could not load featured homes for this area."
     },
     "viewAll": "Veure Tot",
     "recentlyViewed": {

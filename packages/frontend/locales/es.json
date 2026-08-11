@@ -147,7 +147,10 @@
       "gridLongTerm": "Estudios en {{place}}",
       "gridVacation": "Apartamentos de playa en {{place}}",
       "gridBuy": "Viviendas en venta en {{place}}",
-      "gridExchange": "Intercambios de casa en {{place}}"
+      "gridExchange": "Intercambios de casa en {{place}}",
+      "titleIn": "Featured in {{area}}",
+      "chooseArea": "Choose an area to see featured homes.",
+      "loadFailed": "Could not load featured homes for this area."
     },
     "viewAll": "Ver Todo",
     "recentlyViewed": {
