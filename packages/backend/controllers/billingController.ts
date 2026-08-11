@@ -68,11 +68,13 @@ async function applySubscriptionState(oxyUserId: string, columns: SubscriptionSt
   return readEntitlements(oxyUserId);
 }
 
-// Lazy require Stripe to avoid hard crash if not configured
+// Construct the client lazily, so an unconfigured deployment answers 501
+// rather than throwing. Nothing here is required lazily — `stripe` is a static
+// import at the top of this file and loads with the module either way; it is
+// `new Stripe(key)` that must not run without a key.
 function getStripe() {
   const key = config.stripe?.secretKey;
   if (!key) return null;
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   return new Stripe(key, { apiVersion: '2024-06-20' });
 }
 

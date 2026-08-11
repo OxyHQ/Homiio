@@ -80,9 +80,20 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
   const onLayout = useCallback(
     (e: LayoutChangeEvent) => {
       const w = e.nativeEvent.layout.width;
-      if (w && Math.abs(w - layoutWidth) > 1) setLayoutWidth(w);
+      if (!w || Math.abs(w - layoutWidth) <= 1) return;
+      setLayoutWidth(w);
+      // Per-step heights were measured at the OLD width, so a width change
+      // (orientation, split view) makes every one of them stale. This resets
+      // them where the width changes rather than in an effect keyed on
+      // `layoutWidth`: this handler is the only caller of `setLayoutWidth`, so
+      // no other path could have fired that effect, and keeping both state
+      // updates in one event lets React batch them into a single render instead
+      // of the extra pass an effect-driven reset costs.
+      heights.value = Array(TOTAL_STEPS).fill(0);
+      setContainerHeight(0);
+      heightAnim.value = 0;
     },
-    [layoutWidth],
+    [layoutWidth, heights, heightAnim],
   );
 
   const handleStepChange = useCallback((nearest: number) => {
@@ -129,13 +140,6 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
       easing: Easing.out(Easing.quad),
     });
   }, [containerHeight, heightAnim]);
-
-  // Reset cached heights when width changes (e.g., orientation)
-  useEffect(() => {
-    heights.value = Array(TOTAL_STEPS).fill(0);
-    setContainerHeight(0);
-    heightAnim.value = 0;
-  }, [layoutWidth, heightAnim, heights]);
 
   const handleScrollEnd = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
