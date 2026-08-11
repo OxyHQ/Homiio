@@ -8,9 +8,27 @@
 # `paths-ignore` filters. They now trigger on `workflow_run` after CI, because a
 # push must not reach production before the suite has run — and `workflow_run`
 # supports NO path filters. Without something in their place, a docs-only commit
-# would rebuild and roll out the backend, and a backend-only commit would spend an
-# hour re-exporting the web bundle. This restores the filters that the trigger
-# change took away, and nothing more.
+# would rebuild and roll out the backend, and a backend-only commit would
+# re-export the web bundle. This restores the filters that the trigger change
+# took away, and nothing more.
+#
+# THIS PARAGRAPH USED TO SAY THE RE-EXPORT COSTS "AN HOUR". IT DOES NOT.
+#
+# Measured on run 31449277315: the `Build frontend` step is **59 seconds** and
+# the whole `deploy-frontend` job — install, shared-types build, export,
+# Cloudflare publish — is **102 seconds**. The four other real frontend deploys
+# in the surrounding ten runs are all about a minute.
+#
+# The claim came from reading `timeout-minutes: 60` on that step as a duration.
+# **It is a CEILING, not a cost**, and that is the trap worth naming here: every
+# other number in this file is a measurement, and the one that was not is the one
+# that travelled — into this comment, into ci.yml, into this directory's test
+# script, and into an issue — without anybody running it. A figure repeated from
+# memory is an assertion; re-derive it before leaning on it.
+#
+# The frontend skip is still worth keeping, on FREQUENCY rather than cost. See
+# the backend section below for that comparison, and #435 for the hazard it
+# leaves open.
 #
 # IT FAILS OPEN, DELIBERATELY
 #
@@ -68,6 +86,23 @@
 # of not having an invariant that can rot. If documentation-only commits ever
 # become a large fraction of main — the measurement to re-run is the one above,
 # and 5% is the number to beat — the trade is worth revisiting.
+#
+# WHY THE FRONTEND ARM BELOW STILL SKIPS, AND IT IS NOT THE EXPORT COST
+#
+# Measured the same way, over the same 200 commits:
+#
+#   backend skip   avoided  10/200 commits (5%),  longest streak 4
+#   frontend skip  avoids  100/200 commits (50%), longest streak 34
+#
+# So the frontend skip buys ten times as much, which is the whole difference —
+# and what it strands is a BUNDLE, republished by the next frontend commit,
+# rather than a SCHEMA that sits unapplied under green CI.
+#
+# It is a trade and not a law. At 102 seconds a deploy, always deploying the
+# frontend would cost about 2.8 hours per 200 commits against the backend's 2 —
+# affordable, which is a materially different conversation from the one the
+# "hour" figure was supporting. #435 holds the hazard, the numbers and the
+# options; this comment only stops the argument resting on a wrong number.
 #
 # THE RANGE
 #

@@ -93,9 +93,21 @@ on:
 # The FRONTEND still skips, deliberately: deploy-frontends.yml triggers on
 # `workflow_run` with `conclusion == 'success'`, so a cancelled run already skips
 # it, and the same combination costs a stale bundle rather than a schema/code
-# split. That is a smaller cost against an hour-long web export, and it is a
-# trade rather than an oversight — but it IS the same mechanism, and if a wire
-# contract ever splits across it, this is the paragraph to come back to.
+# split.
+#
+# The reason is FREQUENCY, not the cost of the export. An earlier version of this
+# paragraph said "an hour-long web export"; measured on run 31449277315 the
+# export is **59 seconds** and the whole `deploy-frontend` job is **102**. The
+# hour was `timeout-minutes: 60` read as a duration — a ceiling, not a cost. What
+# actually separates the two arms is that the frontend skip avoids 100 of 200
+# commits against the backend's 10, with a longest skip streak of 34, and that
+# what it strands is a bundle the next frontend commit republishes rather than a
+# schema sitting unapplied under green CI.
+#
+# It is a trade rather than an oversight — and at 102 seconds it is a closer one
+# than it looked, so #435 carries the hazard, the numbers and the options. It IS
+# the same mechanism, and if a wire contract ever splits across it, this is the
+# paragraph to come back to.
 concurrency:
   group: ci-${{ github.ref }}
   # An EXPRESSION, and a mistyped one degrades silently to falsy — which would

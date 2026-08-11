@@ -115,7 +115,10 @@ expect "an evicted migration is not stranded by a docs-only next commit" \
 #     above comes from the new rule rather than from a fixture that quietly
 #     touched something;
 #   * the frontend has no migration to strand — the same combination costs a
-#     stale bundle, and an hour-long web export is not the same trade;
+#     stale bundle, and the frontend skip avoids 100 of 200 commits against the
+#     backend's 10, which is the actual difference between the two arms (it is
+#     NOT the export cost: that is 59 s, measured on run 31449277315, and the
+#     "hour" it used to cite was `timeout-minutes: 60` read as a duration);
 #   * it is one of the two assertions here that a stuck-open script fails.
 expect "the same pairing still skips the frontend" false "$(verdict_at_head frontend)"
 
