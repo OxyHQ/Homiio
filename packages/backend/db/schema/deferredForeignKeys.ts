@@ -38,6 +38,7 @@ import { getTableColumns, getTableName } from 'drizzle-orm';
 import type { PgColumn, PgTable, UpdateDeleteAction } from 'drizzle-orm/pg-core';
 import { sqlColumnName } from '../casing';
 import { addressExternalRefs, addressMaterializations } from './addressMaterialization';
+import { addressMergeRelationMoves } from './addressMerges';
 import { billing, billingProcessedSessions } from './billing';
 import { housingAlerts, housingDomainEvents } from './watches';
 import { images } from './images';
@@ -176,6 +177,11 @@ export const OXY_ACCOUNT_COLUMN_NAMES: ReadonlySet<string> = new Set([
   // the ingestion worker submits candidates with no human behind them, and that
   // absence is a different fact from any account id rather than a missing one.
   'submitted_by_oxy_user_id',
+  // Whoever UNDID a merge (#360). A separate role from `actor_oxy_user_id` on
+  // the same row rather than a synonym: the person who reverses a merge is
+  // routinely not the person who made it, and collapsing the two would erase
+  // exactly the fact an audit of a disputed merge is looking for.
+  'reverted_by_oxy_user_id',
 ]);
 
 /**
@@ -387,6 +393,19 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
       'provider calls this place X", and ADR 0001 §3.4 is explicit that an ' +
       'external identifier is an ATTRIBUTE and never identity, so a constraint ' +
       'here would be asserting the opposite of the decision.',
+  },
+  {
+    table: addressMergeRelationMoves,
+    column: addressMergeRelationMoves.relationRowId,
+    reason:
+      'The primary key of a row in whichever relation the merge touched — a ' +
+      '`properties.id` today, a `reviews.id`, an `addresses.id`, a ' +
+      '`housing_domain_events.id` — so it is polymorphic across EVERY table ' +
+      'that can point at an address, and the set is derived rather than fixed ' +
+      '(`db/addresses/addressRelations.ts`). One column cannot reference all of ' +
+      'them, the same permanent case as `images.entity_id`. `relation_table` ' +
+      'beside it names which one, and the revert validates both against the ' +
+      'registry before replaying anything.',
   },
   {
     table: addressMaterializations,

@@ -31,6 +31,7 @@ export {
   addressExternalRefs,
   addressMaterializations,
 } from './addressMaterialization';
+export { addressMergeRelationMoves, addressMerges } from './addressMerges';
 export { agencies } from './agencies';
 export {
   tenantApplicationDocuments,

@@ -57,6 +57,7 @@ import { syncHasImages } from '../../db/hasImages';
 import {
   addressCandidates,
   addressMaterializations,
+  addressMerges,
   addresses,
   agencies,
   commissions,
@@ -160,6 +161,17 @@ export async function resetGeoTables(): Promise<void> {
   // other two could have been solved the same way, and they could not.
   await db.delete(addressMaterializations);
   await db.delete(addressCandidates);
+  // The merge audit (#360), which points at BOTH addresses with ON DELETE
+  // RESTRICT — a merge is what makes the operation reversible, so an address may
+  // not be deleted while one names it. `address_merge_relation_moves` is
+  // deliberately absent for the same reason `address_external_refs` is: it
+  // CASCADEs from `address_merges`, so this one statement takes it.
+  //
+  // Omitting this line does not fail the suite that created the merge. It fails
+  // whichever OTHER file happens to share the worker database and call
+  // `resetGeoTables` next — measured, 337 failures across 27 suites, every one
+  // of them a foreign-key error on a table that file never touched.
+  await db.delete(addressMerges);
   await db.delete(addresses);
   await db.delete(neighborhoods);
   // `cities.cover_image_id` / `regions.cover_image_id` are ON DELETE SET NULL,
