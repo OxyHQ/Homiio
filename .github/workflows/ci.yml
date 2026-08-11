@@ -461,6 +461,23 @@ jobs:
   # ─────────────────────────────────────────────────────────────────────────
   deploy-backend:
     name: Deploy backend to AWS
+    # `lint` IS DELIBERATELY ABSENT FROM `needs`. Do not add it for symmetry.
+    #
+    # The five listed here are correctness gates — a red one means the code is
+    # wrong. `lint` is a quality gate, and a style or typing finding should not
+    # hold a production rollout.
+    #
+    # This is NOT a statement about lint being unable to see a direct push. It
+    # can: `lint` carries no `if:`, and this workflow triggers on `push:
+    # branches: [main]` as well as `pull_request`, so lint runs on every push to
+    # main whether or not it arrived through a pull request. Verified on run
+    # 31447194657 — `event=push`, `branch=main`, `lint: success` — which is the
+    # run that first executed it on the trunk after #425 armed it.
+    #
+    # So the coupling is only the one stated above: on main, lint runs beside
+    # this job rather than before it, and a lint failure is loud without being
+    # blocking. If that is ever the wrong trade, the change is to add `lint` to
+    # this list on purpose, not to assume it is missing by oversight.
     needs: [backend, frontend, frontend-typecheck, lockfile, frontend-bundle]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
