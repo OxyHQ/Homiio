@@ -296,6 +296,48 @@ cutover: an image built before a migration existed prints `No migrations to
 apply`, exits 0, and is otherwise byte-identical to the correct case. Compare it
 against `meta/_journal.json` at the pinned SHA and refuse if they differ.
 
+## An empty answer needs a SECOND number, because the control can be the thing that broke
+
+`~/AGENTS.md` already says to ask what a check would report if the thing it
+measures were absent, and to give every census a positive control and a vacuity
+floor. This is the sharpening that rule does not cover: **in each of the three
+cases below the control was sound in principle and useless in practice, because
+the instrument returned nothing and "nothing" is what a correct answer looks
+like too.** What caught all three was a SECOND number, derived from the same data
+by a different route, that had to agree with the first.
+
+Measured on 2026-08-11, all three while verifying migration `0014` and the deploy
+work around it:
+
+| the check | what it returned | why it was wrong | what caught it |
+|---|---|---|---|
+| catalogue diff, production-shaped database vs a fresh one | `IDENTICAL` | an ambiguous `oid` made the query error; **both** dumps were empty and `diff` compared nothing to nothing | a line-count floor: 1,722 rows expected, 0 seen |
+| census of docs-only commits on `main` | `0 pairs`, `longest streak 0` | a `split(' ', 2)` put the verdict in the wrong field, so the predicate was always false | the same run also reported **10 docs-only commits**, and a streak of 0 is impossible alongside that |
+| control on a comments-only diff | empty, i.e. "the filter cannot see code" | `origin/main` had advanced, so the range no longer touched the file | a commit known to have changed that file must show changes |
+
+The first was a missing floor. The second and third are the ones worth keeping,
+because in both **the control itself was the broken part** — a positive control
+aimed at the wrong range reports absence exactly like a clean result, and adding
+more controls of the same kind does not help.
+
+**So: before believing an empty or zero answer, have an independent expectation
+of the answer's MAGNITUDE, and prefer one you can derive from the same run.** A
+floor works when you know roughly how big the answer should be. When you do not,
+two numbers computed from one dataset by different routes will disagree if either
+route is broken — 10 docs-only commits and a zero-length streak cannot both be
+true, and that contradiction needs no prior knowledge of the right answer.
+
+The corollary is the one that keeps costing time: **a grep answers the question
+you asked, not the question you meant.** The same day, a check for whether a
+false claim had been removed from `main` returned a hit — the corrective text
+quoting the old wording in order to correct it. Both are the same failure at
+different scales: an instrument reporting faithfully about something adjacent to
+what was wanted.
+
+Related, and deliberately not repeated here: the fixture rule above (a fixture
+has to sit on the side of the distinction the test exists to make) is the same
+principle applied to test inputs rather than to measurements.
+
 ## Two branches generating a migration off one parent fork the SNAPSHOT chain
 
 **Measured on `main` at `0a9a53f6` (2026-08-11).** `drizzle-kit generate` could
