@@ -1,7 +1,21 @@
+/**
+ * The right rail.
+ *
+ * It decides NOTHING about which widgets a route gets — `routeRail.ts` owns
+ * that, as a total map from every route in `app/` to a widget set or to `null`.
+ * This component asks it and renders the answer.
+ *
+ * The ladder that used to live here (`pathname ===` / `startsWith`, ending in
+ * `return 'home'`) sent 49 of 69 routes to Home's rail by fall-through, and
+ * re-derived a property id by counting slashes — guarded by a hand-maintained
+ * list of path segments that are not ids, which is exactly the kind of list
+ * that goes stale. Read `routeRail.ts`'s header for the full measurement.
+ */
 import React, { useMemo } from 'react';
 import { View, Platform, type ViewStyle } from 'react-native';
 import { usePathname } from 'expo-router';
 import { WidgetManager } from './widgets';
+import { railForPathname } from './widgets/routeRail';
 import {
   useIsRightBarVisible,
   useIsLargeDesktop,
@@ -14,67 +28,17 @@ export const RightBar = React.memo(function RightBar() {
   const sindiPanelOpen = useUIStore((s) => s.sindiPanelOpen);
   const pathname = usePathname() || '/';
 
-  // Memoize screen ID calculation
-  const screenId = useMemo(() => {
-    if (pathname === '/') return 'home';
-    if (pathname === '/properties') return 'properties';
-    if (pathname === '/properties/create') return 'create-property';
-    if (
-      pathname.startsWith('/properties/') &&
-      pathname !== '/properties/my' &&
-      pathname !== '/properties/saved'
-    )
-      return 'property-details';
-    if (pathname === '/properties/saved') return 'saved-properties';
-    if (pathname === '/profile' || pathname.startsWith('/profile/')) return 'profile';
-    if (pathname === '/contracts' || pathname.startsWith('/contracts/')) return 'contracts';
-    if (pathname === '/payments' || pathname.startsWith('/payments/')) return 'payments';
-    if (pathname === '/messages' || pathname.startsWith('/messages/')) return 'messages';
-    if (pathname === '/explore') return 'explore';
-    if (pathname.startsWith('/explore/')) return 'explore-results';
-    return 'home'; // Default to home
-  }, [pathname]);
-
-  // Memoize property information extraction
-  const propertyInfo = useMemo<{ propertyId?: string; city?: string }>(() => {
-    // Extract property ID from property details page
-    if (
-      pathname.startsWith('/properties/') &&
-      pathname !== '/properties/my' &&
-      pathname !== '/properties/saved'
-    ) {
-      const pathParts = pathname.split('/');
-      const propertyId = pathParts[2]; // /properties/[id]
-
-      if (
-        propertyId &&
-        propertyId !== 'my' &&
-        propertyId !== 'saved' &&
-        propertyId !== 'eco' &&
-        propertyId !== 'type' &&
-        propertyId !== 'city'
-      ) {
-        return { propertyId };
-      }
-    }
-
-    // Extract city information from city properties page
-    if (pathname.startsWith('/properties/city/')) {
-      const pathParts = pathname.split('/');
-      const cityId = pathParts[3]; // /properties/city/[id]
-
-      if (cityId) {
-        // Only the city identifier is available from the route. State and
-        // neighborhood are intentionally omitted so downstream widgets fall
-        // back to their own data sources rather than rendering placeholders.
-        return { city: cityId };
-      }
-    }
-
-    return {};
-  }, [pathname]);
+  // One lookup: the rail AND the params it needs, both read off the pattern
+  // that matched. Only the city identifier is ever available from a route —
+  // state and neighborhood are deliberately absent so downstream widgets fall
+  // back to their own data sources rather than rendering placeholders.
+  const rail = useMemo(() => railForPathname(pathname), [pathname]);
 
   if (!isRightBarVisible) return null;
+  // No rail for this route. A route reaches this either because its entry in
+  // `ROUTE_RAIL` says so, or because the pathname is not a route at all — and
+  // for both, rendering somebody else's widgets is the thing #423 removed.
+  if (rail.screenId === null) return null;
   // Drop the 4th column while the Sindi panel is docked, unless the screen is
   // large-desktop (>= 1440) where all four columns fit.
   if (sindiPanelOpen && !isLargeDesktop) return null;
@@ -95,9 +59,9 @@ export const RightBar = React.memo(function RightBar() {
   return (
     <View className="w-[350px] flex-col px-4 pt-4 gap-4" style={stickyStyle}>
       <WidgetManager
-        screenId={screenId}
-        propertyId={propertyInfo.propertyId}
-        city={propertyInfo.city}
+        screenId={rail.screenId}
+        propertyId={rail.propertyId}
+        city={rail.city}
       />
     </View>
   );

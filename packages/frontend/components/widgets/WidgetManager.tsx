@@ -11,26 +11,13 @@ import { QuickFiltersWidget } from './QuickFiltersWidget';
 import { PropertyPreviewWidget } from './PropertyPreviewWidget';
 import { PropertyBookingWidget } from './PropertyBookingWidget';
 import { DonationWidget } from './DonationWidget';
+import type { ScreenId } from './screenIds';
 
 // Feature flag: controls whether the Neighborhood widget is rendered.
 // Off by default — the widget only renders real, Homiio-derived metrics, so it
 // stays gated until neighborhood data coverage is broad enough to be useful.
 const NEIGHBORHOOD_WIDGET_ENABLED =
   (process.env.EXPO_PUBLIC_NEIGHBORHOOD_WIDGET_ENABLED || '').toLowerCase() === 'true';
-
-// Define screen IDs
-export type ScreenId =
-  | 'home'
-  | 'properties'
-  | 'property-details'
-  | 'saved-properties'
-  | 'profile'
-  | 'contracts'
-  | 'payments'
-  | 'messages'
-  | 'explore'
-  | 'explore-results'
-  | 'create-property';
 
 interface WidgetManagerProps {
   screenId: ScreenId;
@@ -86,21 +73,9 @@ export const WidgetManager = React.memo(function WidgetManager({
         <RecentlyViewedWidget key="recently-viewed" />,
         <EcoCertificationWidget key="eco-cert" />,
       ],
-      'saved-properties': [
-        <PropertyAlertWidget key="property-alert" />,
-        <NeighborhoodRatingWidget
-          key="neighborhood"
-          neighborhoodName={neighborhoodName}
-          city={city}
-          state={state}
-        />,
-      ],
       profile: [
         <DonationWidget key="donation" />,
       ],
-      contracts: [],
-      payments: [],
-      messages: [],
       explore: [
         <QuickFiltersWidget key="quick-filters" />,
         <SavedSearchesWidget key="saved-searches" />,
