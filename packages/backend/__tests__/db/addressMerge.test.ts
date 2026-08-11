@@ -40,8 +40,9 @@ import {
   addressRelations,
   classifyAddressRelation,
   movableAddressRelations,
-  POLYMORPHIC_ADDRESS_RELATIONS,
+  polymorphicAddressRelations,
 } from '../../db/addresses/addressRelations';
+import { derivePolymorphicAddressHolders } from '../../db/addresses/polymorphicAddressHolders';
 import {
   AddressMergeRefusedError,
   AddressMergeRevertRefusedError,
@@ -238,33 +239,48 @@ describe('the relation registry cannot go stale', () => {
     ]);
   });
 
-  it('keeps the audit trail out of the movable set', () => {
+  it('keeps the audit trail out of the movable set', async () => {
     // `address_merges` points at both rows by construction. Moving those columns
     // would rewrite the record of the merge while performing it.
-    const movable = movableAddressRelations().map((r) => `${r.table}.${r.column}`);
+    const movable = (await movableAddressRelations(db)).map((r) => `${r.table}.${r.column}`);
     expect(movable).not.toContain('address_merges.merged_address_id');
     expect(movable).not.toContain('address_merges.survivor_address_id');
     expect(movable).not.toContain('address_materializations.address_id');
     expect(movable).toContain('properties.address_id');
   });
 
-  it('still has a subject_type that admits an address, for each polymorphic entry', async () => {
-    // The declared half is the dangerous half: nothing derives these, so a
-    // discriminator that stopped accepting `'address'` would make the entries
-    // lies and no other check would notice. Read from the LIVE catalogue.
-    for (const relation of POLYMORPHIC_ADDRESS_RELATIONS) {
-      const rows = await db.execute<{ def: string }>(sql`
-        select pg_get_constraintdef(c.oid) as def
-        from pg_constraint c
-        where c.conrelid = ${relation.table}::regclass
-          and c.contype = 'c'
-          and pg_get_constraintdef(c.oid) like ${'%' + relation.discriminator!.column + '%'}
-      `);
-      const definitions = [...rows].map((row) => row.def);
-      expect(definitions.length).toBeGreaterThan(0);
-      expect(definitions.some((def) => def.includes(`'${relation.discriminator!.value}'`))).toBe(
-        true,
-      );
+  it('derives the polymorphic holders from the catalogue, not from a list', async () => {
+    // These are the DANGEROUS ones: no foreign key means nothing in the database
+    // refuses a stale id, so a holder nobody moved is invisible. Derived rather
+    // than declared for the reason a hand-maintained list left three of six
+    // `PlaceType` values unhandled (#416) and 49 of 69 routes inheriting a rail
+    // (#423) — both shipped, and neither list looked incomplete.
+    const holders = await derivePolymorphicAddressHolders(db);
+    const named = holders.map((h) => `${h.table}.${h.column}`).sort();
+
+    // POSITIVE CONTROL: the two known holders must be found. Without this, a
+    // derivation that returned nothing would satisfy every other assertion here.
+    expect(named).toEqual(['housing_alerts.subject_id', 'housing_domain_events.subject_id']);
+    for (const holder of holders) {
+      expect(holder.discriminator.value).toBe('address');
+      expect(holder.discriminator.column).toBe('subject_type');
+    }
+  });
+
+  it('does NOT derive a holder whose discriminator has no address value', async () => {
+    // `images.entity_type` is property|city|region|country|profile. Its absence
+    // is the NEGATIVE control: a derivation matching any `*_type` column would
+    // include it and would then try to move rows that are not addresses.
+    const named = (await derivePolymorphicAddressHolders(db)).map((h) => h.table);
+    expect(named).not.toContain('images');
+  });
+
+  it('classifies every derived polymorphic holder as movable', async () => {
+    const polymorphic = await polymorphicAddressRelations(db);
+    expect(polymorphic.length).toBeGreaterThan(0);
+    for (const relation of polymorphic) {
+      expect(relation.disposition).toBe('move');
+      expect(relation.discriminator).not.toBeNull();
     }
   });
 
@@ -303,7 +319,6 @@ describe('a merge moves the relations and records what it did', () => {
 
     expect(result.survivorAddressId).toBe(survivor);
     expect(result.mergedAddressId).toBe(loser);
-    expect(result.leftInPlaceCount).toBe(0);
 
     // Named by ID, not counted: a count of 2 would also be produced by moving
     // the survivor's own property onto itself.
@@ -347,42 +362,63 @@ describe('a merge moves the relations and records what it did', () => {
     expect(row.parentAddressId).toBe(survivor);
   });
 
-  it('leaves a colliding review in place and names the constraint', async () => {
+  it('REFUSES the merge when one author reviewed both rows, and writes nothing', async () => {
     const survivor = await makeAddress('Carrer de Girona', '7');
     const loser = await makeAddress('Carrer de Gerona', '7');
 
     const author = `author-both-${SUITE}`;
-    // The author who reviewed BOTH: their loser-side review cannot move,
-    // because `reviews_author_address_key` is unique on (oxy_user_id,
-    // address_id).
+    // The author who reviewed BOTH: their loser-side review cannot move, because
+    // `reviews_author_address_key` is unique on (oxy_user_id, address_id).
     await makeReview(survivor, author);
     const collidingReview = await makeReview(loser, author);
     // The author who reviewed ONLY the loser. Without this row the case could
-    // not tell "left the colliding one in place" from "moved nothing at all".
-    const movableReview = await makeReview(loser, `author-only-${SUITE}`);
+    // not tell "refused because of the collision" from "refused everything".
+    const otherReview = await makeReview(loser, `author-only-${SUITE}`);
+    const property = await makeProperty(loser);
+
+    // The DRY RUN reports it, so an operator sees it without attempting.
+    const plan = await planAddressMerge({
+      survivorAddressId: survivor,
+      mergedAddressId: loser,
+    });
+    expect(plan.collisions).toHaveLength(1);
+    expect(plan.collisions[0]).toMatchObject({
+      table: 'reviews',
+      rowId: collidingReview,
+      constraint: 'reviews_author_address_key',
+    });
+    expect(plan.collisions[0].detail).toContain(author);
+
+    await expect(merge(survivor, loser)).rejects.toMatchObject({
+      refusal: { kind: 'unique_collision' },
+    });
+
+    // NOTHING was written. This is the half that separates "refused" from
+    // "partially applied then complained": the movable rows are still on the
+    // loser, and there is no redirect and no audit row.
+    expect(await addressOf(property)).toBe(loser);
+    expect(await reviewAddress(otherReview)).toMatchObject({ addressId: loser });
+    expect(await reviewAddress(collidingReview)).toMatchObject({ addressId: loser });
+    expect(await redirectOf(loser)).toBeNull();
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(addressMerges)
+      .where(eq(addressMerges.mergedAddressId, loser));
+    expect(Number(count)).toBe(0);
+  });
+
+  it('merges the same pair once the collision is gone', async () => {
+    // The POSITIVE CONTROL for the refusal: an implementation that refused every
+    // merge would satisfy the case above. Same shape, no shared author.
+    const survivor = await makeAddress('Carrer de Girona', '77');
+    const loser = await makeAddress('Carrer de Gerona', '77');
+    await makeReview(survivor, `author-s-${SUITE}`);
+    const loserReview = await makeReview(loser, `author-l-${SUITE}`);
 
     const result = await merge(survivor, loser);
 
-    expect(result.leftInPlaceCount).toBeGreaterThan(0);
-    expect(await reviewAddress(collidingReview)).toMatchObject({ addressId: loser });
-    expect(await reviewAddress(movableReview)).toMatchObject({ addressId: survivor });
-
-    const blocked = await db
-      .select()
-      .from(addressMergeRelationMoves)
-      .where(eq(addressMergeRelationMoves.mergeId, result.mergeId));
-    const leftInPlace = blocked.filter((move) => move.outcome === 'left_in_place');
-    expect(leftInPlace.length).toBeGreaterThan(0);
-    // The constraint name is the one fact an operator needs and the one that is
-    // gone by the time anybody reads the log.
-    expect(leftInPlace[0].blockedByConstraint).toBe('reviews_author_address_key');
-    // NOTHING was deleted. ADR 0001 §2.1.7, and the assertion that separates
-    // this implementation from the tempting one.
-    const [{ count }] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(reviews)
-      .where(eq(reviews.id, collidingReview));
-    expect(Number(count)).toBe(1);
+    expect(result.movedCount).toBeGreaterThan(0);
+    expect(await reviewAddress(loserReview)).toMatchObject({ addressId: survivor });
   });
 
   it('records a move log whose size matches the count it stored', async () => {
@@ -491,6 +527,101 @@ describe('a merge is reversible, which is the requirement', () => {
   });
 });
 
+describe('the polymorphic holders, which the database will not protect', () => {
+  /** Any value the table's own CHECK admits; which one is irrelevant here. */
+  const DOMAIN_EVENT_TYPE = 'listing_removed';
+
+  /** A domain event whose subject is an address. No foreign key, by design. */
+  async function makeDomainEvent(addressId: string): Promise<string> {
+    const id = nextId();
+    await db.execute(sql`
+      insert into housing_domain_events (id, type, subject_type, subject_id)
+      values (${id}, ${DOMAIN_EVENT_TYPE}, ${'address'}, ${addressId})
+    `);
+    return id;
+  }
+
+  async function subjectOf(eventId: string): Promise<string> {
+    const rows = await db.execute<{ subject_id: string }>(
+      sql`select subject_id from housing_domain_events where id = ${eventId}`,
+    );
+    return [...rows][0].subject_id;
+  }
+
+  it('moves a subject with no foreign key behind it, and puts it back on revert', async () => {
+    // These are the ones a reversal is most likely to forget, because nothing
+    // raises if it does: no constraint, no dangling-reference report, just an
+    // event filed against a retired address forever.
+    const survivor = await makeAddress('Carrer de Tamarit', '12');
+    const loser = await makeAddress('Carrer de Tamarid', '12');
+    const survivorEvent = await makeDomainEvent(survivor);
+    const loserEvent = await makeDomainEvent(loser);
+
+    const applied = await merge(survivor, loser);
+    expect(await subjectOf(loserEvent)).toBe(survivor);
+    // The survivor's own event must not have been touched — a count assertion
+    // would be satisfied by moving it onto itself.
+    expect(await subjectOf(survivorEvent)).toBe(survivor);
+
+    await revertAddressMerge(applied.mergeId, null, undefined);
+
+    expect(await subjectOf(loserEvent)).toBe(loser);
+    expect(await subjectOf(survivorEvent)).toBe(survivor);
+  });
+
+  it('does not touch a subject of another TYPE that shares the id', async () => {
+    // The discriminator is not decoration. Without it the update would mean
+    // "rewrite every subject", and this row — same id, different type — is the
+    // only fixture that can tell the two statements apart.
+    const survivor = await makeAddress('Carrer de Calàbria', '14');
+    const loser = await makeAddress('Carrer de Calabrio', '14');
+    const id = nextId();
+    await db.execute(sql`
+      insert into housing_domain_events (id, type, subject_type, subject_id)
+      values (${id}, ${DOMAIN_EVENT_TYPE}, ${'property'}, ${loser})
+    `);
+
+    await merge(survivor, loser);
+
+    const rows = await db.execute<{ subject_id: string }>(
+      sql`select subject_id from housing_domain_events where id = ${id}`,
+    );
+    expect([...rows][0].subject_id).toBe(loser);
+  });
+});
+
+describe('the loser still resolves after the merge', () => {
+  it('finds the survivor from the loser\'s own normalized key', async () => {
+    // Confirmed rather than reasoned about, because it is the path every future
+    // ingest takes: a listing carrying the loser's key must land on the survivor
+    // rather than resurrect the retired row. It works because the merge REDIRECTS
+    // rather than deletes — the loser's row and key both survive — but "it works
+    // for free" is exactly the kind of claim that is worth a test.
+    const survivor = await makeAddress('Carrer de Nàpols', '19');
+    const loser = await makeAddress('Carrer de Napols', '19');
+    const key = `merge-key-${SUITE}`;
+    await db.update(addresses).set({ normalizedKey: key }).where(eq(addresses.id, loser));
+
+    await merge(survivor, loser);
+
+    // The lookup a caller makes: find by key, then follow the redirect.
+    const [found] = await db
+      .select({ id: addresses.id, mergedInto: addresses.mergedIntoAddressId })
+      .from(addresses)
+      .where(eq(addresses.normalizedKey, key));
+    expect(found.id).toBe(loser);
+    expect(found.mergedInto).toBe(survivor);
+
+    // And the key is STILL on the loser — releasing it on merge would make a
+    // revert unable to restore the row's identity if somebody else took it.
+    const [survivorRow] = await db
+      .select({ normalizedKey: addresses.normalizedKey })
+      .from(addresses)
+      .where(eq(addresses.id, survivor));
+    expect(survivorRow.normalizedKey).not.toBe(key);
+  });
+});
+
 describe('the refusals', () => {
   it('refuses to merge a row into itself', async () => {
     const address = await makeAddress('Carrer de Casanova', '1');
@@ -577,16 +708,16 @@ describe('the shared test cleanup can still reset the schema', () => {
 });
 
 describe('the registry is the authority on what moves', () => {
-  it('lists every movable relation exactly once', () => {
-    const movable = movableAddressRelations().map((r) => `${r.table}.${r.column}`);
+  it('lists every movable relation exactly once', async () => {
+    const movable = (await movableAddressRelations(db)).map((r) => `${r.table}.${r.column}`);
     expect(movable.length).toBe(new Set(movable).size);
   });
 
-  it('gives every relation a disposition', () => {
-    // The C0 discipline: being in NEITHER bucket must fail. `addressRelations()`
+  it('gives every relation a disposition', async () => {
+    // The C0 discipline: being in NEITHER bucket must fail. `addressRelations`
     // throws rather than skipping, so this case is the one that reports it.
-    expect(() => addressRelations()).not.toThrow();
-    for (const relation of addressRelations()) {
+    await expect(addressRelations(db)).resolves.toBeDefined();
+    for (const relation of await addressRelations(db)) {
       expect(['move', 'keep', 'audit']).toContain(relation.disposition);
     }
   });

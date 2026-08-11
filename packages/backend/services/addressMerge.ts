@@ -24,21 +24,28 @@
  * a separate "plan" implementation would be a second thing to keep in step, and
  * the one that drifted would be the one nobody ran.
  *
- * ## The collision that cannot be avoided, only decided
+ * ## The collision REFUSES the merge, and that is a decision rather than a limit
  *
- * `reviews_author_address_key` is UNIQUE on `(oxy_user_id, address_id)`. An
- * author who reviewed BOTH rows has a review that cannot be moved. The two
- * tempting answers — delete the loser's review, or overwrite it — are both
- * forbidden by §2.1.7 and neither is reversible, so the row STAYS on the losing
- * address, which still resolves through the redirect, and the fact that it
- * stayed is recorded as `left_in_place` with the constraint that refused.
+ * `reviews_author_address_key` is UNIQUE on `(oxy_user_id, address_id)`, so an
+ * author who reviewed BOTH rows has a review that cannot move. An earlier
+ * revision left that row on the losing address and recorded that it stayed,
+ * defended on the ground that nothing was discarded. Nothing was — and it was
+ * still wrong: a review list reads `where address_id = <place>`, so a row left
+ * on the loser is INVISIBLE on the survivor. The author keeps a review of what
+ * is now one place that nobody can see, and the constraint meant to stop one
+ * author holding two reviews of one place has been satisfied by hiding one.
  *
- * That refusal has to happen without poisoning the transaction: in Postgres one
- * failed statement aborts the whole thing (`25P02`), so each move runs inside a
- * SAVEPOINT via `inSavepoint`. Hand-issuing `savepoint` / `rollback to` would
- * look correct at every observable step and then fail at COMMIT with the
- * original error — postgres.js records the failed query on the transaction and
- * catching the rejection does not un-fail it.
+ * So {@link planAddressMerge} detects collisions and {@link applyAddressMerge}
+ * refuses, naming every colliding row. A merge is a correction workflow a person
+ * performs; stopping to ask is legitimate for it in a way it never is for an
+ * ingest.
+ *
+ * An UNKNOWN unique constraint is caught the same way but cannot be predicted,
+ * so each move still runs inside a SAVEPOINT via `inSavepoint` and a violation
+ * converts to the same refusal with the constraint named. Hand-issuing
+ * `savepoint` / `rollback to` would look correct at every observable step and
+ * then fail at COMMIT — postgres.js records the failed query on the transaction
+ * and catching the rejection does not un-fail it.
  */
 
 import { and, eq, sql } from 'drizzle-orm';
@@ -72,6 +79,17 @@ export interface PlannedMove {
   readonly discriminator: AddressRelation['discriminator'];
 }
 
+/** A row whose move a unique constraint would refuse. */
+export interface PlannedCollision {
+  readonly table: string;
+  readonly column: string;
+  readonly rowId: string;
+  /** The constraint that would refuse it. */
+  readonly constraint: string;
+  /** One line a person can act on, naming what actually conflicts. */
+  readonly detail: string;
+}
+
 export interface AddressMergePlan {
   readonly survivorAddressId: string;
   readonly mergedAddressId: string;
@@ -79,6 +97,11 @@ export interface AddressMergePlan {
   readonly moves: readonly PlannedMove[];
   /** Rows per relation, for a caller that wants to eyeball the shape. */
   readonly countsByRelation: Readonly<Record<string, number>>;
+  /**
+   * Rows a unique constraint would refuse. A NON-EMPTY list means the merge is
+   * refused — the dry run is where an operator sees it before attempting.
+   */
+  readonly collisions: readonly PlannedCollision[];
 }
 
 export type AddressMergeRefusal =
@@ -89,7 +112,15 @@ export type AddressMergeRefusal =
   /** Following the survivor's redirects came back to the loser. */
   | { readonly kind: 'would_create_cycle' }
   /** The survivor's own redirect chain is longer than the matcher can walk. */
-  | { readonly kind: 'redirect_chain_too_long' };
+  | { readonly kind: 'redirect_chain_too_long' }
+  /**
+   * A relation row cannot move without violating a unique constraint.
+   *
+   * The merge is refused whole. Nothing is written, nothing is hidden, and the
+   * colliding rows are named so somebody can decide — see this file's header for
+   * why refusing beats leaving the row behind.
+   */
+  | { readonly kind: 'unique_collision'; readonly collisions: readonly PlannedCollision[] };
 
 export class AddressMergeRefusedError extends Error {
   constructor(readonly refusal: AddressMergeRefusal) {
@@ -109,8 +140,7 @@ export interface AddressMergeInput {
 }
 
 export interface AppliedMove extends PlannedMove {
-  readonly outcome: 'moved' | 'left_in_place';
-  readonly blockedByConstraint: string | null;
+  readonly outcome: 'moved';
 }
 
 export interface AddressMergeResult {
@@ -119,7 +149,6 @@ export interface AddressMergeResult {
   readonly mergedAddressId: string;
   readonly moves: readonly AppliedMove[];
   readonly movedCount: number;
-  readonly leftInPlaceCount: number;
 }
 
 /**
@@ -196,7 +225,7 @@ export async function planAddressMerge(
   const moves: PlannedMove[] = [];
   const countsByRelation: Record<string, number> = {};
 
-  for (const relation of movableAddressRelations()) {
+  for (const relation of await movableAddressRelations(db)) {
     const rows = await db.execute<{ id: string }>(
       sql`select ${sql.identifier(relation.table)}.id as id
           from ${sql.identifier(relation.table)}
@@ -215,7 +244,51 @@ export async function planAddressMerge(
     }
   }
 
-  return { survivorAddressId: survivor.id, mergedAddressId, moves, countsByRelation };
+  return {
+    survivorAddressId: survivor.id,
+    mergedAddressId,
+    moves,
+    countsByRelation,
+    collisions: await findCollisions(db, survivor.id, mergedAddressId),
+  };
+}
+
+/**
+ * Rows a unique constraint would refuse.
+ *
+ * Only ONE constraint in this schema is keyed on an address column
+ * (`reviews_author_address_key`, measured against `pg_indexes`), so it is
+ * detected by name here — a generic "would any unique index refuse this update"
+ * is not expressible without attempting the update. An UNKNOWN constraint is
+ * therefore still possible, and {@link moveOne} converts one into the same
+ * refusal rather than an opaque error, so the two paths agree about the outcome
+ * and differ only in when it is discovered.
+ */
+async function findCollisions(
+  db: DatabaseOrTransaction,
+  survivorAddressId: string,
+  mergedAddressId: string,
+): Promise<readonly PlannedCollision[]> {
+  const rows = await db.execute<{ id: string; oxy_user_id: string }>(sql`
+    select loser.id as id, loser.oxy_user_id as oxy_user_id
+    from reviews loser
+    where loser.address_id = ${mergedAddressId}
+      and exists (
+        select 1 from reviews survivor
+        where survivor.address_id = ${survivorAddressId}
+          and survivor.oxy_user_id = loser.oxy_user_id
+      )
+    order by loser.id
+  `);
+  return [...rows].map((row) => ({
+    table: 'reviews',
+    column: 'address_id',
+    rowId: row.id,
+    constraint: 'reviews_author_address_key',
+    detail:
+      `author ${row.oxy_user_id} has reviewed both addresses; moving this review would ` +
+      'give one author two reviews of one place, which the unique index refuses',
+  }));
 }
 
 async function resolveExistingAddress(
@@ -255,20 +328,32 @@ async function moveOne(
             where ${sql.identifier(move.table)}.id = ${move.rowId}`,
       ),
     );
-    return { ...move, outcome: 'moved', blockedByConstraint: null };
+    return { ...move, outcome: 'moved' };
   } catch (error) {
     // `isUniqueViolation` reads the SQLSTATE off `cause`, because drizzle wraps
     // the driver's error and `error.code` is undefined on the wrapper — a
-    // predicate written against `error.code` is permanently false and collapses
-    // this branch into the one below it.
+    // predicate written against `error.code` is permanently false, so the
+    // refusal below would never be reached and the merge would fail with an
+    // opaque driver error instead.
     if (!isUniqueViolation(error)) throw error;
-    return {
-      ...move,
-      outcome: 'left_in_place',
-      // Recorded rather than derived: which constraint refused is the one fact
-      // an operator needs, and it is gone by the time anybody reads the log.
-      blockedByConstraint: constraintNameOf(error) ?? 'unknown_unique_constraint',
-    };
+    // A constraint `findCollisions` does not know about. Same OUTCOME as a
+    // predicted collision — the merge is refused whole — so the two paths cannot
+    // disagree about what happens; they differ only in when it is discovered.
+    throw new AddressMergeRefusedError({
+      kind: 'unique_collision',
+      collisions: [
+        {
+          table: move.table,
+          column: move.column,
+          rowId: move.rowId,
+          constraint: constraintNameOf(error) ?? 'unknown_unique_constraint',
+          detail:
+            'a unique constraint refused this move, and it is not one ' +
+            '`findCollisions` predicts — the merge is refused whole rather than ' +
+            'leaving the row on a retired address',
+        },
+      ],
+    });
   }
 }
 
@@ -287,13 +372,21 @@ export async function applyAddressMerge(
 ): Promise<AddressMergeResult> {
   const run = async (tx: Transaction): Promise<AddressMergeResult> => {
     const plan = await planAddressMerge(input, tx);
+    // Refused WHOLE, before anything is written. The dry run reports the same
+    // list, so an operator sees it without attempting the merge.
+    if (plan.collisions.length > 0) {
+      throw new AddressMergeRefusedError({
+        kind: 'unique_collision',
+        collisions: plan.collisions,
+      });
+    }
 
     const applied: AppliedMove[] = [];
     for (const move of plan.moves) {
       applied.push(await moveOne(tx, move, plan.survivorAddressId));
     }
 
-    const movedCount = applied.filter((move) => move.outcome === 'moved').length;
+    const movedCount = applied.length;
 
     // The redirect, written only now that every relation has been dealt with.
     await tx
@@ -324,7 +417,6 @@ export async function applyAddressMerge(
           relationRowId: move.rowId,
           previousAddressId: plan.mergedAddressId,
           outcome: move.outcome,
-          blockedByConstraint: move.blockedByConstraint,
         })),
       );
     }
@@ -335,7 +427,6 @@ export async function applyAddressMerge(
       mergedAddressId: plan.mergedAddressId,
       moves: applied,
       movedCount,
-      leftInPlaceCount: applied.length - movedCount,
     };
   };
 
