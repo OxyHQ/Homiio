@@ -1,6 +1,6 @@
 {
   "id": "a14c476c-2c42-49cb-b088-32fa0fa221b9",
-  "prevId": "c209c091-5586-4b37-872b-25fa62a31999",
+  "prevId": "62814704-d6f6-46e5-ad56-20d872a84f85",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -744,7 +744,7 @@
           "primaryKey": false,
           "notNull": true,
           "generated": {
-            "as": "regexp_replace(\n    regexp_replace(\n      translate(replace(replace(replace(replace(replace(regexp_replace(lower(name), '[\\u0300-\\u036F]', '', 'g'), 'ß', 'ss'), 'æ', 'ae'), 'œ', 'oe'), 'þ', 'th'), 'ĳ', 'ij'), 'àáâãäåāăąçćčĉċďđðèéêëēĕėęěĝğġģĥħìíîïĩīĭįıĵķĺļľłñńņňòóôõöøōŏőŕŗřśŝşšșţťŧțùúûüũūŭůűųŵýÿŷźżž', 'aaaaaaaaacccccdddeeeeeeeeegggghhiiiiiiiiijkllllnnnnooooooooorrrsssssttttuuuuuuuuuuwyyyzzz'),\n      '[^a-z0-9]+', '-', 'g'\n    ),\n    '^-+|-+$', '', 'g'\n  )",
+            "as": "regexp_replace(\n    regexp_replace(\n      translate(replace(replace(replace(replace(replace(regexp_replace(lower(name), '[\\u0300-\\u036F]', '', 'g'), '\u00df', 'ss'), '\u00e6', 'ae'), '\u0153', 'oe'), '\u00fe', 'th'), '\u0133', 'ij'), '\u00e0\u00e1\u00e2\u00e3\u00e4\u00e5\u0101\u0103\u0105\u00e7\u0107\u010d\u0109\u010b\u010f\u0111\u00f0\u00e8\u00e9\u00ea\u00eb\u0113\u0115\u0117\u0119\u011b\u011d\u011f\u0121\u0123\u0125\u0127\u00ec\u00ed\u00ee\u00ef\u0129\u012b\u012d\u012f\u0131\u0135\u0137\u013a\u013c\u013e\u0142\u00f1\u0144\u0146\u0148\u00f2\u00f3\u00f4\u00f5\u00f6\u00f8\u014d\u014f\u0151\u0155\u0157\u0159\u015b\u015d\u015f\u0161\u0219\u0163\u0165\u0167\u021b\u00f9\u00fa\u00fb\u00fc\u0169\u016b\u016d\u016f\u0171\u0173\u0175\u00fd\u00ff\u0177\u017a\u017c\u017e', 'aaaaaaaaacccccdddeeeeeeeeegggghhiiiiiiiiijkllllnnnnooooooooorrrsssssttttuuuuuuuuuuwyyyzzz'),\n      '[^a-z0-9]+', '-', 'g'\n    ),\n    '^-+|-+$', '', 'g'\n  )",
             "type": "stored"
           }
         },
@@ -3731,6 +3731,633 @@
         "exchange_reviews_distinct_parties_check": {
           "name": "exchange_reviews_distinct_parties_check",
           "value": "\"exchange_reviews\".\"reviewer_oxy_user_id\" <> \"exchange_reviews\".\"subject_oxy_user_id\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.housing_alerts": {
+      "name": "housing_alerts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "watch_id": {
+          "name": "watch_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "oxy_user_id": {
+          "name": "oxy_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_id": {
+          "name": "event_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rule_type": {
+          "name": "rule_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rule_version": {
+          "name": "rule_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subject_type": {
+          "name": "subject_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subject_id": {
+          "name": "subject_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cooldown_bucket": {
+          "name": "cooldown_bucket",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "explanation": {
+          "name": "explanation",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "delivery_state": {
+          "name": "delivery_state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "suppression_reason": {
+          "name": "suppression_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "delivered_channels": {
+          "name": "delivered_channels",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "delivered_at": {
+          "name": "delivered_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notification_id": {
+          "name": "notification_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        }
+      },
+      "indexes": {
+        "housing_alerts_idempotency_key": {
+          "name": "housing_alerts_idempotency_key",
+          "columns": [
+            {
+              "expression": "idempotency_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "housing_alerts_cooldown_key": {
+          "name": "housing_alerts_cooldown_key",
+          "columns": [
+            {
+              "expression": "watch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "rule_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "subject_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "subject_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "cooldown_bucket",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "housing_alerts_owner_created_idx": {
+          "name": "housing_alerts_owner_created_idx",
+          "columns": [
+            {
+              "expression": "oxy_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "\"created_at\" desc",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "housing_alerts_watch_created_idx": {
+          "name": "housing_alerts_watch_created_idx",
+          "columns": [
+            {
+              "expression": "watch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "\"created_at\" desc",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "housing_alerts_pending_idx": {
+          "name": "housing_alerts_pending_idx",
+          "columns": [
+            {
+              "expression": "oxy_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"housing_alerts\".\"delivery_state\" = 'pending'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "housing_alerts_watch_id_saved_searches_id_fk": {
+          "name": "housing_alerts_watch_id_saved_searches_id_fk",
+          "tableFrom": "housing_alerts",
+          "tableTo": "saved_searches",
+          "columnsFrom": [
+            "watch_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "housing_alerts_event_id_housing_domain_events_id_fk": {
+          "name": "housing_alerts_event_id_housing_domain_events_id_fk",
+          "tableFrom": "housing_alerts",
+          "tableTo": "housing_domain_events",
+          "columnsFrom": [
+            "event_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "housing_alerts_notification_id_notifications_id_fk": {
+          "name": "housing_alerts_notification_id_notifications_id_fk",
+          "tableFrom": "housing_alerts",
+          "tableTo": "notifications",
+          "columnsFrom": [
+            "notification_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "housing_alerts_rule_type_check": {
+          "name": "housing_alerts_rule_type_check",
+          "value": "\"housing_alerts\".\"rule_type\" in ('new_listing', 'price_decrease', 'price_increase', 'cost_terms_changed', 'listing_removed', 'listing_reappeared', 'new_review', 'eviction_nearby', 'source_conflict')"
+        },
+        "housing_alerts_subject_type_check": {
+          "name": "housing_alerts_subject_type_check",
+          "value": "\"housing_alerts\".\"subject_type\" in ('property', 'address', 'eviction', 'review')"
+        },
+        "housing_alerts_delivery_state_check": {
+          "name": "housing_alerts_delivery_state_check",
+          "value": "\"housing_alerts\".\"delivery_state\" in ('pending', 'delivered', 'suppressed', 'failed')"
+        },
+        "housing_alerts_suppression_reason_check": {
+          "name": "housing_alerts_suppression_reason_check",
+          "value": "\"housing_alerts\".\"suppression_reason\" is null or \"housing_alerts\".\"suppression_reason\" in ('muted', 'cadence_off', 'channel_unavailable', 'rate_limited')"
+        },
+        "housing_alerts_suppression_coherence_check": {
+          "name": "housing_alerts_suppression_coherence_check",
+          "value": "(\"housing_alerts\".\"delivery_state\" = 'suppressed') = (\"housing_alerts\".\"suppression_reason\" is not null)"
+        },
+        "housing_alerts_delivered_channels_check": {
+          "name": "housing_alerts_delivered_channels_check",
+          "value": "\"housing_alerts\".\"delivery_state\" <> 'delivered' or cardinality(\"housing_alerts\".\"delivered_channels\") >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.housing_domain_events": {
+      "name": "housing_domain_events",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subject_type": {
+          "name": "subject_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subject_id": {
+          "name": "subject_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "transition": {
+          "name": "transition",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "longitude": {
+          "name": "longitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "latitude": {
+          "name": "latitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "geo": {
+          "name": "geo",
+          "type": "geography",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "case when longitude is null or latitude is null then null\n          else ST_MakePoint(longitude, latitude)::geography end",
+            "type": "stored"
+          }
+        },
+        "is_backfill": {
+          "name": "is_backfill",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "processed_at": {
+          "name": "processed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        }
+      },
+      "indexes": {
+        "housing_domain_events_unprocessed_idx": {
+          "name": "housing_domain_events_unprocessed_idx",
+          "columns": [
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"housing_domain_events\".\"processed_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "housing_domain_events_geo_gist": {
+          "name": "housing_domain_events_geo_gist",
+          "columns": [
+            {
+              "expression": "geo",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"housing_domain_events\".\"geo\" is not null",
+          "concurrently": false,
+          "method": "gist",
+          "with": {}
+        },
+        "housing_domain_events_subject_idx": {
+          "name": "housing_domain_events_subject_idx",
+          "columns": [
+            {
+              "expression": "subject_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "subject_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "\"occurred_at\" desc",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "housing_domain_events_expires_at_idx": {
+          "name": "housing_domain_events_expires_at_idx",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"housing_domain_events\".\"expires_at\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "housing_domain_events_type_check": {
+          "name": "housing_domain_events_type_check",
+          "value": "\"housing_domain_events\".\"type\" in ('new_listing', 'price_decrease', 'price_increase', 'cost_terms_changed', 'listing_removed', 'listing_reappeared', 'new_review', 'eviction_nearby', 'source_conflict')"
+        },
+        "housing_domain_events_subject_type_check": {
+          "name": "housing_domain_events_subject_type_check",
+          "value": "\"housing_domain_events\".\"subject_type\" in ('property', 'address', 'eviction', 'review')"
+        },
+        "housing_domain_events_coordinate_pair_check": {
+          "name": "housing_domain_events_coordinate_pair_check",
+          "value": "(\"housing_domain_events\".\"longitude\" is null) = (\"housing_domain_events\".\"latitude\" is null)"
+        },
+        "housing_domain_events_coordinate_range_check": {
+          "name": "housing_domain_events_coordinate_range_check",
+          "value": "\"housing_domain_events\".\"longitude\" is null or (\n        \"housing_domain_events\".\"longitude\" between -180 and 180 and \"housing_domain_events\".\"latitude\" between -90 and 90\n      )"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.housing_watch_rules": {
+      "name": "housing_watch_rules",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "watch_id": {
+          "name": "watch_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "threshold": {
+          "name": "threshold",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        }
+      },
+      "indexes": {
+        "housing_watch_rules_watch_type_key": {
+          "name": "housing_watch_rules_watch_type_key",
+          "columns": [
+            {
+              "expression": "watch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "housing_watch_rules_type_enabled_idx": {
+          "name": "housing_watch_rules_type_enabled_idx",
+          "columns": [
+            {
+              "expression": "type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"housing_watch_rules\".\"enabled\"",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "housing_watch_rules_watch_id_saved_searches_id_fk": {
+          "name": "housing_watch_rules_watch_id_saved_searches_id_fk",
+          "tableFrom": "housing_watch_rules",
+          "tableTo": "saved_searches",
+          "columnsFrom": [
+            "watch_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "housing_watch_rules_type_check": {
+          "name": "housing_watch_rules_type_check",
+          "value": "\"housing_watch_rules\".\"type\" in ('new_listing', 'price_decrease', 'price_increase', 'cost_terms_changed', 'listing_removed', 'listing_reappeared', 'new_review', 'eviction_nearby', 'source_conflict')"
+        },
+        "housing_watch_rules_threshold_check": {
+          "name": "housing_watch_rules_threshold_check",
+          "value": "threshold is null or (threshold >= 0 and threshold <= 1000)"
         }
       },
       "isRLSEnabled": false
@@ -11569,6 +12196,70 @@
           "notNull": true,
           "default": false
         },
+        "query_version": {
+          "name": "query_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 2
+        },
+        "is_primary_area": {
+          "name": "is_primary_area",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "cadence": {
+          "name": "cadence",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'off'"
+        },
+        "channels": {
+          "name": "channels",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{in_app}'::text[]"
+        },
+        "muted_until": {
+          "name": "muted_until",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "alerts_active_from": {
+          "name": "alerts_active_from",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "push_privacy_mode": {
+          "name": "push_privacy_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'discreet'"
+        },
+        "area": {
+          "name": "area",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "area_geo": {
+          "name": "area_geo",
+          "type": "geography",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "case when area is null then null else ST_GeomFromGeoJSON(area)::geography end",
+            "type": "stored"
+          }
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -11642,13 +12333,62 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "saved_searches_primary_area_key": {
+          "name": "saved_searches_primary_area_key",
+          "columns": [
+            {
+              "expression": "oxy_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"saved_searches\".\"is_primary_area\"",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "saved_searches_area_geo_gist": {
+          "name": "saved_searches_area_geo_gist",
+          "columns": [
+            {
+              "expression": "area_geo",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"saved_searches\".\"area_geo\" is not null",
+          "concurrently": false,
+          "method": "gist",
+          "with": {}
         }
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "saved_searches_cadence_check": {
+          "name": "saved_searches_cadence_check",
+          "value": "\"saved_searches\".\"cadence\" in ('instant', 'daily', 'weekly', 'off')"
+        },
+        "saved_searches_push_privacy_mode_check": {
+          "name": "saved_searches_push_privacy_mode_check",
+          "value": "\"saved_searches\".\"push_privacy_mode\" in ('discreet', 'detailed')"
+        },
+        "saved_searches_channels_check": {
+          "name": "saved_searches_channels_check",
+          "value": "\"saved_searches\".\"channels\" <@ ARRAY['in_app', 'push', 'email']::text[]\n        and cardinality(\"saved_searches\".\"channels\") >= 1\n        and 'in_app' = any(\"saved_searches\".\"channels\")"
+        },
+        "saved_searches_query_version_check": {
+          "name": "saved_searches_query_version_check",
+          "value": "query_version >= 1"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.tenant_application_documents": {
