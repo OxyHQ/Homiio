@@ -3,6 +3,7 @@ export * from './FeaturedPropertiesWidget';
 export * from './EcoCertificationWidget';
 export * from './HorizonInitiativeWidget';
 export * from './DonationWidget';
+export * from './screenIds';
 export * from './WidgetManager';
 export * from './SavedSearchesWidget';
 export * from './PropertyAlertWidget';
