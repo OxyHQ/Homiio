@@ -296,6 +296,96 @@ cutover: an image built before a migration existed prints `No migrations to
 apply`, exits 0, and is otherwise byte-identical to the correct case. Compare it
 against `meta/_journal.json` at the pinned SHA and refuse if they differ.
 
+## Two branches generating a migration off one parent fork the SNAPSHOT chain
+
+**Measured on `main` at `0a9a53f6` (2026-08-11).** `drizzle-kit generate` could
+not run at all:
+
+```
+Error: [drizzle/meta/0012_snapshot.json, drizzle/meta/0013_snapshot.json] are
+pointing to a parent snapshot: … which is a collision.
+```
+
+`#356` (watches → 0012) and `#358` (evictions → 0013) were each generated off
+0011 and merged back to back. **Nothing recomputes a snapshot**, so
+`0013_snapshot.json` kept `prevId = c209c091…` — 0011's id, the same parent 0012
+names — and the chain forked. It sat there from the moment #358 merged until
+somebody needed a 0014.
+
+### The refused `generate` is the harmless half
+
+A snapshot is a FULL picture of the schema, taken on the tree that generated it.
+`0013_snapshot.json` was taken on a tree that never had 0012, so it described 69
+tables and was **missing all three of 0012's** (`housing_alerts`,
+`housing_domain_events`, `housing_watch_rules`) plus 0012's nine `saved_searches`
+columns.
+
+Repair the POINTER and leave the CONTENT, and the next generated migration
+re-emits those objects — `CREATE TABLE housing_alerts …` in a 0014. Since the
+deploy applies migrations, that is a release that fails at apply time with
+"relation already exists", not a confusing local error.
+
+### Nothing that runs today could have caught it
+
+A FRESH database applies every migration in order and never reads a snapshot's
+contents. So CI, the per-worker throwaway databases and a developer's local
+reset all pass **either way** — the disagreement exists only against a database
+that already has the migrations applied, which is production and only
+production. It is the same shape as every other trap in this file: green
+everywhere the check runs, wrong where it matters.
+
+### The check, and it is cheap
+
+`__tests__/unit/migrationSnapshotChain.test.ts` reads the files and needs no
+database. Two assertions, and **both are needed because they catch opposite
+halves**:
+
+1. **Every snapshot's `prevId` names its immediate predecessor, and no two share
+   a parent.** This is the CAUSE, caught at the moment the second branch merges.
+2. **The head snapshot describes exactly the tables the schema barrel declares.**
+   This is the CONSEQUENCE, caught independently — a pointer-only repair leaves
+   the head still missing the other branch's objects, and that is the half that
+   reaches production.
+
+Mutation-tested three ways: reintroducing the real `prevId` (only assertion 1
+reds), deleting one table from the head snapshot with the chain left intact (only
+assertion 2 reds), and dropping a migration from `_journal.json` (only the
+journal assertion reds). A fourth assertion — "every migration declares a deploy
+phase" — was WRITTEN AND THEN REMOVED: stripping the marker killed the run, but
+through `@oxyhq/db`'s migrator in `globalSetup` rather than through the
+assertion, which therefore could never fire. The migrator's check is strictly
+stronger because it also runs at apply time in production.
+
+### How to repair one, and how to prove the repair
+
+Do NOT hand-edit the snapshot's contents. Fix `prevId`, then run the generator on
+an **unmodified** tree and adopt its output as the repaired snapshot, keeping the
+old snapshot's own `id` so nothing downstream sees an identity change.
+
+**Two measurements make a repair verified rather than plausible**, and "generate
+works now" is neither:
+
+- **The set difference BOTH ways.** Here: the regenerated snapshot had 72 tables
+  against 69, the difference was exactly 0012's three, and the difference in the
+  other direction was EMPTY. One direction alone cannot tell a repair from a
+  replacement.
+- **Apply the chain to a database that ALREADY HAS the previous migration**, not
+  only to a fresh one — a fresh run cannot distinguish the two cases, which is
+  the whole problem. Bring a probe database to the production state (hide the new
+  `.sql` and its journal entry, migrate, seed rows into the affected tables),
+  then restore and migrate again: exactly one migration must apply. Verified for
+  0014 on 2026-08-11 — `Applying 1 migration(s)`, exit 0, over a seeded
+  `addresses` — and the resulting catalogue was **byte-identical to a
+  fresh-database build across 1,722 rows** of columns, constraints and index
+  definitions. Give that comparison a negative control (add a column to one side
+  and confirm the diff sees it): a broken catalogue query returns two empty
+  files, and `diff` reports them identical. That happened on the first attempt
+  here — an ambiguous `oid` — and only the line-count floor exposed it.
+
+**The cause is structural, not carelessness.** Any two branches that both
+generate a migration will do this, and neither author can see it from their own
+branch. The check is what makes it visible at merge time.
+
 ## Open — the deploy runs migrations, and the interlock is the workflow's
 
 **There is still no cross-process advisory lock.** drizzle's migrator takes no

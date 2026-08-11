@@ -1,9 +1,648 @@
 {
-  "id": "a14c476c-2c42-49cb-b088-32fa0fa221b9",
-  "prevId": "62814704-d6f6-46e5-ad56-20d872a84f85",
+  "id": "7008d5c0-e162-4320-a172-c96ccc1801fa",
+  "prevId": "a14c476c-2c42-49cb-b088-32fa0fa221b9",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.address_candidates": {
+      "name": "address_candidates",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "submitted_by_oxy_user_id": {
+          "name": "submitted_by_oxy_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_ref": {
+          "name": "provider_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "raw_text": {
+          "name": "raw_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "raw_text_hash": {
+          "name": "raw_text_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "normalized_payload": {
+          "name": "normalized_payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "normalization_version": {
+          "name": "normalization_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "longitude": {
+          "name": "longitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "latitude": {
+          "name": "latitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "precision": {
+          "name": "precision",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "proposed_country_code": {
+          "name": "proposed_country_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proposed_country": {
+          "name": "proposed_country",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proposed_region": {
+          "name": "proposed_region",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proposed_city": {
+          "name": "proposed_city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proposed_neighborhood": {
+          "name": "proposed_neighborhood",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proposed_street": {
+          "name": "proposed_street",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proposed_postal_code": {
+          "name": "proposed_postal_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proposed_number": {
+          "name": "proposed_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proposed_building_name": {
+          "name": "proposed_building_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proposed_block": {
+          "name": "proposed_block",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proposed_entrance": {
+          "name": "proposed_entrance",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proposed_floor": {
+          "name": "proposed_floor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proposed_unit": {
+          "name": "proposed_unit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proposed_subunit": {
+          "name": "proposed_subunit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "origin": {
+          "name": "origin",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "confidence": {
+          "name": "confidence",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "materialized_address_id": {
+          "name": "materialized_address_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "materialized_at": {
+          "name": "materialized_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        }
+      },
+      "indexes": {
+        "address_candidates_submitter_raw_text_idx": {
+          "name": "address_candidates_submitter_raw_text_idx",
+          "columns": [
+            {
+              "expression": "submitted_by_oxy_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "raw_text_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "address_candidates_provider_ref_idx": {
+          "name": "address_candidates_provider_ref_idx",
+          "columns": [
+            {
+              "expression": "provider",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "provider_ref",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "address_candidates_expires_at_idx": {
+          "name": "address_candidates_expires_at_idx",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "address_candidates_materialized_address_id_idx": {
+          "name": "address_candidates_materialized_address_id_idx",
+          "columns": [
+            {
+              "expression": "materialized_address_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "address_candidates_materialized_address_id_addresses_id_fk": {
+          "name": "address_candidates_materialized_address_id_addresses_id_fk",
+          "tableFrom": "address_candidates",
+          "tableTo": "addresses",
+          "columnsFrom": [
+            "materialized_address_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "address_candidates_precision_check": {
+          "name": "address_candidates_precision_check",
+          "value": "\"address_candidates\".\"precision\" in ('exact', 'approximate', 'centroid', 'area')"
+        },
+        "address_candidates_origin_check": {
+          "name": "address_candidates_origin_check",
+          "value": "\"address_candidates\".\"origin\" in ('user_typed', 'autocomplete_selection', 'map_pin', 'geocoder', 'listing_ingest', 'public_dataset', 'approved_correction')"
+        },
+        "address_candidates_coordinates_check": {
+          "name": "address_candidates_coordinates_check",
+          "value": "(\"address_candidates\".\"longitude\" is null and \"address_candidates\".\"latitude\" is null)\n          or (\"address_candidates\".\"longitude\" is not null and \"address_candidates\".\"latitude\" is not null\n              and \"address_candidates\".\"longitude\" between -180 and 180\n              and \"address_candidates\".\"latitude\" between -90 and 90)"
+        },
+        "address_candidates_materialized_coherence_check": {
+          "name": "address_candidates_materialized_coherence_check",
+          "value": "(\"address_candidates\".\"materialized_address_id\" is null and \"address_candidates\".\"materialized_at\" is null)\n          or (\"address_candidates\".\"materialized_address_id\" is not null and \"address_candidates\".\"materialized_at\" is not null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.address_external_refs": {
+      "name": "address_external_refs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "address_id": {
+          "name": "address_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "external_id": {
+          "name": "external_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "raw_label": {
+          "name": "raw_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "confidence": {
+          "name": "confidence",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "first_seen_at": {
+          "name": "first_seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_seen_at": {
+          "name": "last_seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        }
+      },
+      "indexes": {
+        "address_external_refs_source_external_id_key": {
+          "name": "address_external_refs_source_external_id_key",
+          "columns": [
+            {
+              "expression": "source",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "external_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "address_external_refs_address_id_idx": {
+          "name": "address_external_refs_address_id_idx",
+          "columns": [
+            {
+              "expression": "address_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "address_external_refs_address_id_addresses_id_fk": {
+          "name": "address_external_refs_address_id_addresses_id_fk",
+          "tableFrom": "address_external_refs",
+          "tableTo": "addresses",
+          "columnsFrom": [
+            "address_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "address_external_refs_confidence_range_check": {
+          "name": "address_external_refs_confidence_range_check",
+          "value": "\"address_external_refs\".\"confidence\" between 0 and 1"
+        },
+        "address_external_refs_seen_order_check": {
+          "name": "address_external_refs_seen_order_check",
+          "value": "\"address_external_refs\".\"last_seen_at\" >= \"address_external_refs\".\"first_seen_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.address_materializations": {
+      "name": "address_materializations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "address_id": {
+          "name": "address_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_id": {
+          "name": "candidate_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_ref": {
+          "name": "provider_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "raw_text": {
+          "name": "raw_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "raw_text_hash": {
+          "name": "raw_text_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "normalization_version": {
+          "name": "normalization_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "match_kind": {
+          "name": "match_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "match_detail": {
+          "name": "match_detail",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "identity_key": {
+          "name": "identity_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "durable_action": {
+          "name": "durable_action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "durable_action_ref": {
+          "name": "durable_action_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actor_oxy_user_id": {
+          "name": "actor_oxy_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        }
+      },
+      "indexes": {
+        "address_materializations_idempotency_key": {
+          "name": "address_materializations_idempotency_key",
+          "columns": [
+            {
+              "expression": "idempotency_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"address_materializations\".\"idempotency_key\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "address_materializations_address_id_idx": {
+          "name": "address_materializations_address_id_idx",
+          "columns": [
+            {
+              "expression": "address_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "address_materializations_candidate_id_idx": {
+          "name": "address_materializations_candidate_id_idx",
+          "columns": [
+            {
+              "expression": "candidate_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "address_materializations_address_id_addresses_id_fk": {
+          "name": "address_materializations_address_id_addresses_id_fk",
+          "tableFrom": "address_materializations",
+          "tableTo": "addresses",
+          "columnsFrom": [
+            "address_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "address_materializations_match_kind_check": {
+          "name": "address_materializations_match_kind_check",
+          "value": "\"address_materializations\".\"match_kind\" in ('created', 'exact_identity_key', 'exact_external_ref', 'adopted_v1_key', 'confirmed_probable')"
+        },
+        "address_materializations_durable_action_check": {
+          "name": "address_materializations_durable_action_check",
+          "value": "\"address_materializations\".\"durable_action\" in ('listing_upsert', 'review', 'follow_dwelling', 'public_data_link', 'canonical_event', 'approved_correction')"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.addresses": {
       "name": "addresses",
       "schema": "",
@@ -186,6 +825,24 @@
           "primaryKey": false,
           "notNull": false
         },
+        "identity_key": {
+          "name": "identity_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "parent_address_id": {
+          "name": "parent_address_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "merged_into_address_id": {
+          "name": "merged_into_address_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -214,6 +871,53 @@
           ],
           "isUnique": true,
           "where": "\"addresses\".\"normalized_key\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "addresses_identity_key_key": {
+          "name": "addresses_identity_key_key",
+          "columns": [
+            {
+              "expression": "identity_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"addresses\".\"identity_key\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "addresses_parent_address_id_idx": {
+          "name": "addresses_parent_address_id_idx",
+          "columns": [
+            {
+              "expression": "parent_address_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "addresses_merged_into_address_id_idx": {
+          "name": "addresses_merged_into_address_id_idx",
+          "columns": [
+            {
+              "expression": "merged_into_address_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"addresses\".\"merged_into_address_id\" is not null",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -382,6 +1086,32 @@
           ],
           "onDelete": "set null",
           "onUpdate": "no action"
+        },
+        "addresses_parent_address_id_addresses_id_fk": {
+          "name": "addresses_parent_address_id_addresses_id_fk",
+          "tableFrom": "addresses",
+          "tableTo": "addresses",
+          "columnsFrom": [
+            "parent_address_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "addresses_merged_into_address_id_addresses_id_fk": {
+          "name": "addresses_merged_into_address_id_addresses_id_fk",
+          "tableFrom": "addresses",
+          "tableTo": "addresses",
+          "columnsFrom": [
+            "merged_into_address_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -395,6 +1125,14 @@
         "addresses_coordinates_range_check": {
           "name": "addresses_coordinates_range_check",
           "value": "\"addresses\".\"longitude\" between -180 and 180 and \"addresses\".\"latitude\" between -90 and 90"
+        },
+        "addresses_parent_not_self_check": {
+          "name": "addresses_parent_not_self_check",
+          "value": "\"addresses\".\"parent_address_id\" <> \"addresses\".\"id\""
+        },
+        "addresses_merge_not_self_check": {
+          "name": "addresses_merge_not_self_check",
+          "value": "\"addresses\".\"merged_into_address_id\" <> \"addresses\".\"id\""
         }
       },
       "isRLSEnabled": false
@@ -744,7 +1482,7 @@
           "primaryKey": false,
           "notNull": true,
           "generated": {
-            "as": "regexp_replace(\n    regexp_replace(\n      translate(replace(replace(replace(replace(replace(regexp_replace(lower(name), '[\\u0300-\\u036F]', '', 'g'), '\u00df', 'ss'), '\u00e6', 'ae'), '\u0153', 'oe'), '\u00fe', 'th'), '\u0133', 'ij'), '\u00e0\u00e1\u00e2\u00e3\u00e4\u00e5\u0101\u0103\u0105\u00e7\u0107\u010d\u0109\u010b\u010f\u0111\u00f0\u00e8\u00e9\u00ea\u00eb\u0113\u0115\u0117\u0119\u011b\u011d\u011f\u0121\u0123\u0125\u0127\u00ec\u00ed\u00ee\u00ef\u0129\u012b\u012d\u012f\u0131\u0135\u0137\u013a\u013c\u013e\u0142\u00f1\u0144\u0146\u0148\u00f2\u00f3\u00f4\u00f5\u00f6\u00f8\u014d\u014f\u0151\u0155\u0157\u0159\u015b\u015d\u015f\u0161\u0219\u0163\u0165\u0167\u021b\u00f9\u00fa\u00fb\u00fc\u0169\u016b\u016d\u016f\u0171\u0173\u0175\u00fd\u00ff\u0177\u017a\u017c\u017e', 'aaaaaaaaacccccdddeeeeeeeeegggghhiiiiiiiiijkllllnnnnooooooooorrrsssssttttuuuuuuuuuuwyyyzzz'),\n      '[^a-z0-9]+', '-', 'g'\n    ),\n    '^-+|-+$', '', 'g'\n  )",
+            "as": "regexp_replace(\n    regexp_replace(\n      translate(replace(replace(replace(replace(replace(regexp_replace(lower(name), '[\\u0300-\\u036F]', '', 'g'), 'ß', 'ss'), 'æ', 'ae'), 'œ', 'oe'), 'þ', 'th'), 'ĳ', 'ij'), 'àáâãäåāăąçćčĉċďđðèéêëēĕėęěĝğġģĥħìíîïĩīĭįıĵķĺļľłñńņňòóôõöøōŏőŕŗřśŝşšșţťŧțùúûüũūŭůűųŵýÿŷźżž', 'aaaaaaaaacccccdddeeeeeeeeegggghhiiiiiiiiijkllllnnnnooooooooorrrsssssttttuuuuuuuuuuwyyyzzz'),\n      '[^a-z0-9]+', '-', 'g'\n    ),\n    '^-+|-+$', '', 'g'\n  )",
             "type": "stored"
           }
         },

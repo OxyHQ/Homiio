@@ -14,7 +14,7 @@
  * there are none.
  */
 
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { UNIQUE_VIOLATION, constraintNameOf, sqlStateOf, uuidv7 } from '@oxyhq/db';
 import { closePostgres, connectPostgres, type Database } from '../../db/postgres';
 import { findHasImagesDisagreements, syncAllHasImages, syncHasImages } from '../../db/hasImages';
@@ -180,6 +180,17 @@ describe('one primary photo per listing', () => {
   it('lets TWO DIFFERENT listings each have their own primary', async () => {
     // Vacuity floor on the constraint itself: an index on `is_primary` alone,
     // without `property_id`, would pass every assertion above and reject this.
+    //
+    // What makes it a floor is that the SECOND `attachPhoto` succeeds — under
+    // the wrong index it raises `23505` and this test dies there. The read below
+    // is the confirmation, and it is SCOPED to the two listings this case
+    // created: an unscoped `where is_primary` reads every row in the worker's
+    // database, so it also fails whenever a sibling FILE in the same worker
+    // leaves a primary photo behind — a Postgres database outlives the file that
+    // wrote to it, unlike the in-memory Mongo this replaced. That made the
+    // assertion depend on how jest happened to distribute files across workers,
+    // which is a property of the schedule and not of the index. Scoping loses
+    // nothing, because the floor was never the unscoped read.
     const first = await createProperty();
     const second = await createProperty();
     await attachPhoto(first, { isPrimary: true });
@@ -188,7 +199,7 @@ describe('one primary photo per listing', () => {
     const rows = await db
       .select({ propertyId: propertyImages.propertyId })
       .from(propertyImages)
-      .where(eq(propertyImages.isPrimary, true));
+      .where(and(eq(propertyImages.isPrimary, true), inArray(propertyImages.propertyId, [first, second])));
     expect(rows.map((row) => row.propertyId).sort()).toEqual([first, second].sort());
   });
 });

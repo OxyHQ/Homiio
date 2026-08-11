@@ -71,6 +71,7 @@
 
 import type { PgColumn, PgTable } from 'drizzle-orm/pg-core';
 import type { ExpirySweepTarget } from '@oxyhq/db/expiry';
+import { addressCandidates } from './schema/addressMaterialization';
 import { conversations } from './schema/conversations';
 import { evictionCases } from './schema/evictions';
 import { moderationEvents, moderationOutbox } from './schema/moderation';
@@ -175,6 +176,25 @@ export const EXPIRY_SWEEP_TARGETS: readonly ExpirySweepTarget[] = [
       'ported, because a table that grows with every listing change in the ' +
       'catalogue is exactly the shape this registry exists to catch, and the ' +
       'only reason the others needed catching is that nobody was there to ' +
+      'register them at birth.',
+  },
+  {
+    table: addressCandidates,
+    column: addressCandidates.expiresAt,
+    retentionSeconds: 0,
+    reason:
+      'The caducidad on an address CANDIDATE (#360). INTENT CHECKED, and the ' +
+      'check is the whole reason this is safe: a candidate is an OBSERVATION — ' +
+      'what somebody typed or a geocoder answered — and every fact an audit ' +
+      'needs is copied BY VALUE onto `address_materializations` at the moment ' +
+      'it produces a canonical row (provider, ref, raw text, its hash, the ' +
+      'normalization version), which is also why `candidate_id` there carries ' +
+      'no foreign key. So this sweep costs a materialized place nothing and ' +
+      'costs an unmaterialized guess exactly what it is worth. It is the second ' +
+      'entry here with NO Mongo ancestor, registered at BIRTH for the same ' +
+      'reason as the one above: a table that grows with every keystroke in an ' +
+      'autocomplete is the shape this registry exists to catch, and the only ' +
+      'reason the ported entries needed catching is that nobody was there to ' +
       'register them at birth.',
   },
 ];

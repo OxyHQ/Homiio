@@ -93,7 +93,7 @@ describe('expiry sweep registry', () => {
     expect(violations).toEqual([]);
   });
 
-  it('registers exactly the five columns that mean "delete this row"', async () => {
+  it('registers exactly the six columns that mean "delete this row"', async () => {
     // A vacuity floor with teeth: `findUnsupportedExpiryColumns` over an EMPTY
     // registry returns `[]` and passes the assertion above while checking
     // nothing at all. Naming the entries is what makes that assertion mean
@@ -106,16 +106,24 @@ describe('expiry sweep registry', () => {
     // source, four here, one refused" a checked statement rather than an
     // arithmetic claim in a comment.
     //
-    // `housing_domain_events.expires_at` (#356) is the FIFTH entry and has no
-    // Mongo ancestor at all — it was registered when the table was created
-    // rather than found by that census. That is the shape this registry wants
-    // every future table to arrive in, and it is why the count in this test's
-    // NAME is now the registry's size rather than the census's: the two stopped
-    // being the same number the moment a table was born on Postgres.
+    // `housing_domain_events.expires_at` (#356) and `address_candidates.expires_at`
+    // (#360) are the fifth and sixth entries and have no Mongo ancestor at all —
+    // both were registered when the table was created rather than found by that
+    // census. That is the shape this registry wants every future table to arrive
+    // in, and it is why the count in this test's NAME is the registry's size
+    // rather than the census's: the two stopped being the same number the moment
+    // a table was born on Postgres.
     const registered = EXPIRY_SWEEP_TARGETS.map(
       (target) => `${getTableName(target.table)}.${sqlColumnName(target.column)}`,
     ).sort();
     expect(registered).toEqual([
+      // #360's candidate table is the SIXTH entry and, like
+      // `housing_domain_events` below, has no Mongo ancestor: it was registered
+      // when the table was created rather than found by that census. A candidate
+      // is an OBSERVATION whose every audit-relevant fact is copied by value
+      // onto `address_materializations` at materialization time, so the sweep
+      // costs a materialized place nothing.
+      'address_candidates.expires_at',
       'housing_domain_events.expires_at',
       'moderation_events.expires_at',
       'moderation_outbox.expires_at',

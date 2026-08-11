@@ -53,7 +53,7 @@
 import * as crypto from 'crypto';
 import { and, eq, sql, type SQL } from 'drizzle-orm';
 
-import { getDb } from '../db/postgres';
+import { getDb, type DatabaseOrTransaction } from '../db/postgres';
 import { addresses, cities, countries, neighborhoods, regions } from '../db/schema';
 import {
   ADDRESS_GEO_NAME_COLUMNS,
@@ -187,8 +187,7 @@ export function normalizeAddressAliases(input: AddressCanonicalInput): AddressCa
 // place already exists) one indexed lookup and no write at all; the trailing
 // SELECT is the branch a concurrent inserter takes.
 
-async function upsertCountry(code: string, name: string): Promise<string> {
-  const db = getDb();
+async function upsertCountry(db: DatabaseOrTransaction, code: string, name: string): Promise<string> {
   const existing = await db.select({ id: countries.id }).from(countries).where(eq(countries.code, code)).limit(1);
   if (existing[0]) return existing[0].id;
 
@@ -204,8 +203,11 @@ async function upsertCountry(code: string, name: string): Promise<string> {
   return raced[0].id;
 }
 
-async function upsertRegion(countryId: string, name: string): Promise<string> {
-  const db = getDb();
+async function upsertRegion(
+  db: DatabaseOrTransaction,
+  countryId: string,
+  name: string,
+): Promise<string> {
   const match = and(eq(regions.countryId, countryId), eq(regions.name, name));
 
   const existing = await db.select({ id: regions.id }).from(regions).where(match).limit(1);
@@ -224,13 +226,13 @@ async function upsertRegion(countryId: string, name: string): Promise<string> {
 }
 
 async function upsertCity(
+  db: DatabaseOrTransaction,
   regionId: string,
   countryId: string,
   name: string,
   countryCode: string,
   coordinates?: [number, number],
 ): Promise<string> {
-  const db = getDb();
   const match = and(eq(cities.regionId, regionId), eq(cities.name, name));
 
   const existing = await db.select({ id: cities.id }).from(cities).where(match).limit(1);
@@ -259,8 +261,12 @@ async function upsertCity(
   return raced[0].id;
 }
 
-async function upsertNeighborhood(cityId: string, name: string, centroid?: [number, number]): Promise<string> {
-  const db = getDb();
+async function upsertNeighborhood(
+  db: DatabaseOrTransaction,
+  cityId: string,
+  name: string,
+  centroid?: [number, number],
+): Promise<string> {
   const match = and(eq(neighborhoods.cityId, cityId), eq(neighborhoods.name, name));
 
   const existing = await db.select({ id: neighborhoods.id }).from(neighborhoods).where(match).limit(1);
@@ -332,6 +338,27 @@ export async function resolveGeoChain(input: {
   coordinates?: [number, number];
   names?: GeoNames;
 }): Promise<ResolvedGeo> {
+  const names = await resolveGeoNames(input);
+  return upsertGeoChain(getDb(), names, input.coordinates);
+}
+
+/**
+ * The NETWORK half of {@link resolveGeoChain}: complete the caller's names from
+ * the geocoder, and nothing else.
+ *
+ * Split out for one reason, and it is not tidiness: a caller that has to do the
+ * upserts INSIDE a transaction must not hold that transaction open across an
+ * HTTP round trip to a geocoder. `materializeHousingCandidate` calls this before
+ * it opens its transaction and {@link upsertGeoChain} inside it, so the whole
+ * materialization is atomic without a network call ever sitting between `BEGIN`
+ * and `COMMIT`.
+ *
+ * @throws GeoResolutionError when neither names nor coordinates yield a city.
+ */
+export async function resolveGeoNames(input: {
+  coordinates?: [number, number];
+  names?: GeoNames;
+}): Promise<GeoNames> {
   let names = input.names;
   if (!namesAreComplete(names) && input.coordinates) {
     const [lng, lat] = input.coordinates;
@@ -346,21 +373,61 @@ export async function resolveGeoChain(input: {
   if (!names?.city) {
     throw new GeoResolutionError('Unable to resolve a city for the provided coordinates/names');
   }
+  return names;
+}
+
+/**
+ * The DATABASE half: upsert country → region → city → (neighborhood) and return
+ * the id chain.
+ *
+ * Takes a handle rather than reaching for {@link getDb} so it can join a
+ * caller's transaction. `DatabaseOrTransaction` and not `Database`, because a
+ * `Transaction` is not assignable to `Database` — a helper typed as the latter
+ * silently forces its caller to run OUTSIDE the transaction, which is how a
+ * write loses atomicity with the work it is supposed to be atomic WITH
+ * (`db/postgres.ts` states the same rule where the type is declared).
+ *
+ * Every statement is `ON CONFLICT DO NOTHING` plus a read-back, so no statement
+ * here can fail on a duplicate and abort a caller's transaction with `25P02`.
+ */
+export async function upsertGeoChain(
+  db: DatabaseOrTransaction,
+  names: GeoNames,
+  coordinates?: [number, number],
+): Promise<ResolvedGeo> {
+  if (!names.city) {
+    throw new GeoResolutionError('Unable to resolve a city for the provided coordinates/names');
+  }
 
   const { code: countryCode, name: countryName } = resolveCountryCodeAndName(names);
-  const countryId = await upsertCountry(countryCode, countryName);
+  const countryId = await upsertCountry(db, countryCode, countryName);
   // Fall back to a stable placeholder so the chain is always whole — the three
   // parent references on `addresses` are NOT NULL.
-  const regionId = await upsertRegion(countryId, names.state?.trim() || UNKNOWN_REGION);
-  const cityId = await upsertCity(regionId, countryId, names.city.trim(), countryCode, input.coordinates);
+  const regionId = await upsertRegion(db, countryId, names.state?.trim() || UNKNOWN_REGION);
+  const cityId = await upsertCity(db, regionId, countryId, names.city.trim(), countryCode, coordinates);
 
   let neighborhoodId: string | undefined;
   if (names.neighborhood?.trim()) {
-    neighborhoodId = await upsertNeighborhood(cityId, names.neighborhood.trim(), input.coordinates);
+    neighborhoodId = await upsertNeighborhood(db, cityId, names.neighborhood.trim(), coordinates);
   }
 
   return { countryId, regionId, cityId, neighborhoodId, countryCode };
 }
+
+/**
+ * The literal region name {@link upsertGeoChain} falls back to when a geocode
+ * returns no administrative region.
+ *
+ * Exported so a caller can REFUSE it rather than reproduce the string. ADR 0001
+ * §5.2 change 5 retires this fallback: two genuinely different `Santiago`s both
+ * land under one `Unknown` region and collapse into a single city row
+ * (measured). `findOrCreateCanonicalAddress` keeps the fallback, because
+ * dropping a listing is worse than bucketing one; `materializeHousingCandidate`
+ * refuses it, because a PERMANENT identity under a bucket is worse than no
+ * identity at all — the candidate is kept and the listing stays searchable at
+ * city scope, which is what the candidate table is for.
+ */
+export const UNRESOLVED_REGION_NAME = UNKNOWN_REGION;
 
 /** The fields {@link computeAddressNormalizedKey} hashes, in order. */
 export interface NormalizedKeyFields {
