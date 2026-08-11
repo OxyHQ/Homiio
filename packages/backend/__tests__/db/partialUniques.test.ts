@@ -389,6 +389,10 @@ describe('the partial indexes really are partial', () => {
       // path, and an `ON CONFLICT` naming either has to repeat the predicate or
       // fail at RUNTIME with `42P10` while `tsc` stays clean.
       'address_materializations_idempotency_key',
+      // A row may lose at most ONE merge that is still in force (#360). Partial
+      // on `status = 'applied'`, because merged → reverted → merged again is an
+      // ordinary history and a total unique index would forbid the second one.
+      'address_merges_active_loser_key',
       'addresses_identity_key_key',
       'addresses_normalized_key_key',
       'billing_plus_stripe_subscription_id_key',
