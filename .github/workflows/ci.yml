@@ -345,6 +345,15 @@ jobs:
       - name: Verify the documentation still describes this repository
         run: bun run check:docs
 
+      # AGENTS.md is prepended to EVERY agent session, so its bytes are paid on
+      # every task forever. It reached 52 KB here by accretion — a subsystem
+      # walkthrough appended by the branch that shipped it, none of them wrong on
+      # its own and none visible except in the sum. Same shape as the docs gate
+      # above: nothing breaks, which is why it survives. Reads the tracked file
+      # listing and nothing else.
+      - name: Verify the AGENTS.md budget
+        run: bun run validate:agents-md
+
       - name: Verify the CI and deploy gates can still fail
         run: |
           bash -n .github/scripts/*.sh
