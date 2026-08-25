@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { View, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
-import { ZoomableImageGallery } from '@oxyhq/bloom/zoomable-image-gallery';
+import { ZoomableMediaGallery } from '@oxyhq/bloom/zoomable-media-gallery';
 import { colors } from '@/styles/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
@@ -66,7 +66,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, onOpen, t })
                 </ScrollView>
             </View>
 
-            <ZoomableImageGallery
+            <ZoomableMediaGallery
                 ref={galleryRef}
                 measureThumb={measureThumb}
                 indicatorVariant="thumbnails"

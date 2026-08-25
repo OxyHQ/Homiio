@@ -2,8 +2,8 @@
  * Host calendar — date-based availability view per property.
  *
  * Stream Q polish (Airbnb-2026):
- *   - Bloom primitives only (Typography, Button, Chip, Menu, Skeleton, Loading).
- *   - Property picker uses Bloom Menu (dropdown) instead of a horizontal chip row.
+ *   - Bloom primitives only (Typography, Button, Chip, DropdownMenu, Skeleton, Loading).
+ *   - Property picker uses Bloom DropdownMenu instead of a horizontal chip row.
  *   - Flat cards on white surfaces with hairline borders, `radius.lg`.
  *   - All copy lives in Bloom Typography, no raw RN <Text>.
  *   - Block-dates flow now reuses ConfirmDialog + Bloom TextField.
@@ -19,13 +19,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@oxyhq/bloom/button';
 import { Loading } from '@oxyhq/bloom/loading';
 import {
-  Menu,
-  MenuContent,
-  MenuGroup,
-  MenuItem,
-  MenuItemText,
-  MenuTrigger,
-} from '@oxyhq/bloom/menu';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@oxyhq/bloom/dropdown-menu';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { TextFieldInput } from '@oxyhq/bloom/text-field';
 import { Text as BloomText, H2 } from '@oxyhq/bloom/typography';
@@ -289,48 +288,45 @@ export default function HostCalendarScreen() {
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.pickerCard}>
             <SectionEyebrow>{t('host.calendar.property')}</SectionEyebrow>
-            <Menu>
-              <MenuTrigger label={t('host.calendar.chooseProperty')}>
-                {({ props: triggerProps }) => (
-                  <Button
-                    onPress={triggerProps.onPress}
-                    accessibilityLabel={triggerProps.accessibilityLabel}
-                    accessibilityHint={triggerProps.accessibilityHint}
-                    variant="secondary"
-                    size="large"
-                    style={styles.pickerButton}
-                    icon={
-                      <Ionicons
-                        name="chevron-down"
-                        size={18}
-                        color={colors.COLOR_BLACK}
-                      />
-                    }
-                    iconPosition="right"
-                  >
-                    {selectedProperty
-                      ? getPropertyTitle(selectedProperty)
-                      : t('host.calendar.chooseProperty')}
-                  </Button>
-                )}
-              </MenuTrigger>
-              <MenuContent>
-                <MenuGroup>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                asChild
+                label={t('host.calendar.chooseProperty')}
+              >
+                <Button
+                  variant="secondary"
+                  size="large"
+                  style={styles.pickerButton}
+                  icon={
+                    <Ionicons
+                      name="chevron-down"
+                      size={18}
+                      color={colors.COLOR_BLACK}
+                    />
+                  }
+                  iconPosition="right"
+                >
+                  {selectedProperty
+                    ? getPropertyTitle(selectedProperty)
+                    : t('host.calendar.chooseProperty')}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuGroup>
                   {properties.map((property) => {
                     const id = property.id ?? '';
                     return (
-                      <MenuItem
+                      <DropdownMenuItem
                         key={id}
-                        label={getPropertyTitle(property)}
                         onPress={() => setSelectedPropertyId(id)}
                       >
-                        <MenuItemText>{getPropertyTitle(property)}</MenuItemText>
-                      </MenuItem>
+                        {getPropertyTitle(property)}
+                      </DropdownMenuItem>
                     );
                   })}
-                </MenuGroup>
-              </MenuContent>
-            </Menu>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </View>
 
           {selectedProperty ? (

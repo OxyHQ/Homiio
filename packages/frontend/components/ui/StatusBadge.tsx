@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { Badge, type BadgeColor, type BadgeSize } from '@oxyhq/bloom/badge';
+import { Badge, type BadgeSize } from '@oxyhq/bloom/badge';
+import type { AccentTone } from '@oxyhq/bloom/theme';
 import { colors } from '@/styles/colors';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -42,7 +43,7 @@ type StatusBadgeProps = {
 interface StatusInfo {
   icon: IoniconName;
   color: string;
-  badgeColor: BadgeColor;
+  badgeColor: AccentTone;
   i18nKey: string;
 }
 
