@@ -3,8 +3,8 @@ import type { View } from 'react-native';
 import {
   type GalleryImage,
   type MeasureThumb,
-  type ZoomableImageGalleryHandle,
-} from '@oxyhq/bloom/zoomable-image-gallery';
+  type ZoomableMediaGalleryHandle,
+} from '@oxyhq/bloom/zoomable-media-gallery';
 import { getPropertyGalleryImages } from '@/utils/propertyUtils';
 import type { PropertyImage } from '@homiio/shared-types';
 
@@ -12,8 +12,8 @@ import type { PropertyImage } from '@homiio/shared-types';
 type ThumbHost = Pick<View, 'measureInWindow'>;
 
 export interface PropertyPhotoGallery {
-  /** Ref for the mounted `<ZoomableImageGallery>`. */
-  galleryRef: React.RefObject<ZoomableImageGalleryHandle | null>;
+  /** Ref for the mounted `<ZoomableMediaGallery>`. */
+  galleryRef: React.RefObject<ZoomableMediaGalleryHandle | null>;
   /** Measures any registered thumbnail by its gallery index (dismiss fly-back). */
   measureThumb: MeasureThumb;
   /**
@@ -27,7 +27,7 @@ export interface PropertyPhotoGallery {
 }
 
 /**
- * Wires a property photo list to the Bloom `ZoomableImageGallery`: builds the
+ * Wires a property photo list to the Bloom `ZoomableMediaGallery`: builds the
  * index-aligned `GalleryImage[]`, keeps a per-index registry of thumbnail host
  * nodes, and exposes the measured-origin `open`/`measureThumb` seam. Both the
  * mobile carousel (`PhotoGallery`) and the desktop hero grid (`PhotoGrid`) share
@@ -36,7 +36,7 @@ export interface PropertyPhotoGallery {
 export function usePropertyPhotoGallery(
   images: (string | PropertyImage)[],
 ): PropertyPhotoGallery {
-  const galleryRef = useRef<ZoomableImageGalleryHandle>(null);
+  const galleryRef = useRef<ZoomableMediaGalleryHandle>(null);
   const galleryImages = useMemo<GalleryImage[]>(
     () => getPropertyGalleryImages(images),
     [images],

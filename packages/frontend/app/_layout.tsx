@@ -47,10 +47,7 @@ import { NotificationProvider } from '@/context/NotificationContext';
 import { OxyProvider, useOxy } from '@oxyhq/services';
 import { BloomProvider } from '@oxyhq/bloom/provider';
 import { ImageResolverProvider, type ImageResolver } from '@oxyhq/bloom/image-resolver';
-import {
-  Provider as PortalProvider,
-  Outlet as PortalOutlet,
-} from '@oxyhq/bloom/portal';
+import { PortalProvider, PortalOutlet } from '@oxyhq/bloom/portal';
 import '../styles/global.css';
 import { OXY_BASE_URL, OXY_CLIENT_ID } from '@/config';
 import { QueryClient, QueryClientProvider, onlineManager, focusManager } from '@tanstack/react-query';

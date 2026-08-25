@@ -14,12 +14,13 @@
  */
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Badge, type BadgeColor } from '@oxyhq/bloom/badge';
+import { Badge } from '@oxyhq/bloom/badge';
+import type { AccentTone } from '@oxyhq/bloom/theme';
 
 /** One status's badge appearance: a Bloom color, a label, and an optional i18n key. */
 export interface StatusBadgeEntry {
   /** Bloom semantic color for the badge. */
-  color: BadgeColor;
+  color: AccentTone;
   /** Display label when no `i18nKey` is set. */
   label: string;
   /** When present, the label is resolved as `t(i18nKey)`. */

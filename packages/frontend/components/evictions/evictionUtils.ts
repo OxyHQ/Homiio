@@ -5,11 +5,11 @@
  * hooks, so both the board card and the detail screen import from here.
  */
 import { EvictionCaseStatus, type EvictionContactInfo } from '@homiio/shared-types';
-import type { BadgeColor } from '@oxyhq/bloom/badge';
+import type { AccentTone } from '@oxyhq/bloom/theme';
 
 /** Bloom badge color + i18n label key per lifecycle status. */
 export interface EvictionStatusMeta {
-  color: BadgeColor;
+  color: AccentTone;
   i18nKey: string;
 }
 

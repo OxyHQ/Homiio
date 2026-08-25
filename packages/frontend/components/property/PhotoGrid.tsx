@@ -9,7 +9,7 @@
  *     component, so consumers can render this once and let it pick
  *     the right presentation.
  *
- * Tapping any tile opens the Bloom `ZoomableImageGallery` at that index,
+ * Tapping any tile opens the Bloom `ZoomableMediaGallery` at that index,
  * flying in from the tapped tile's measured on-screen rect.
  * A "Show all photos" overlay button sits in the bottom-right of the
  * grid container — Bloom outline button, anchored over the trailing
@@ -28,7 +28,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@oxyhq/bloom/button';
-import { ZoomableImageGallery } from '@oxyhq/bloom/zoomable-image-gallery';
+import { ZoomableMediaGallery } from '@oxyhq/bloom/zoomable-media-gallery';
 
 import { PhotoGallery } from './PhotoGallery';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
@@ -131,7 +131,7 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({ images, t }) => {
           </Button>
         </View>
       </View>
-      <ZoomableImageGallery
+      <ZoomableMediaGallery
         ref={galleryRef}
         measureThumb={measureThumb}
         indicatorVariant="thumbnails"

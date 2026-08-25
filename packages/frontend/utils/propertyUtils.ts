@@ -10,7 +10,7 @@ import {
   type ImageVariantName,
   type PriceDescriptor,
 } from '@homiio/shared-types';
-import type { GalleryImage } from '@oxyhq/bloom/zoomable-image-gallery';
+import type { GalleryImage } from '@oxyhq/bloom/zoomable-media-gallery';
 import type { BrowseMode } from '@/components/search/types';
 import propertyPlaceholder from '@/assets/images/property_placeholder.jpg';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
@@ -509,7 +509,7 @@ const PLACEHOLDER_GALLERY_URI =
 
 /**
  * Build the `GalleryImage[]` for the fullscreen lightbox
- * (`@oxyhq/bloom/zoomable-image-gallery`) from a property's photo list.
+ * (`@oxyhq/bloom/zoomable-media-gallery`) from a property's photo list.
  *
  * Unlike {@link getPropertyImageSources}, this maps entries ONE-TO-ONE (no
  * reorder, no drop): the tapped thumbnail's index must line up with the gallery
