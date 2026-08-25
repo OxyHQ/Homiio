@@ -10,7 +10,13 @@
  * build — this lets any component that transitively imports Reanimated (most of
  * the app, via Bloom's dialog/bottom-sheet) render in tests.
  */
-jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
+jest.mock('react-native-reanimated', () => ({
+  ...require('react-native-reanimated/mock'),
+  // Reanimated's own mock ships this one commented out ("ADD ME IF NEEDED").
+  // Bloom's press animation calls it on every pressable, so without it any
+  // component rendering a Bloom Button throws "not a function".
+  useReducedMotion: () => false,
+}));
 
 require('react-native-reanimated').setUpTests();
 
