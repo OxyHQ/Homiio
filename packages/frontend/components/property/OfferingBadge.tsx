@@ -15,7 +15,7 @@ import { OfferingType } from '@homiio/shared-types';
 
 import { colors } from '@/styles/colors';
 import { MediaChip, type MediaChipSize } from './MediaChip';
-import type { Ionicons } from '@expo/vector-icons';
+import type Ionicons from '@expo/vector-icons/Ionicons';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 

@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { StyleSheet, View, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { OfferingType } from '@homiio/shared-types';
 import { colors } from '@/styles/colors';
 import { ThemedText } from '@/components/ThemedText';

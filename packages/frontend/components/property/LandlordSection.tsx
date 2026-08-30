@@ -3,7 +3,7 @@ import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { Section, SECTION_GUTTER } from '@/components/property/Section';
 import { Avatar } from '@oxyhq/bloom/avatar';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors } from '@/styles/colors';
 import { hairline, spacing } from '@/constants/styles';
 import { ActionButton } from '@/components/ui/ActionButton';

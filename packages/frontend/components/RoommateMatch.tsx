@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { formatPrice } from '@homiio/shared-types';
 import { SEARCH_PRICE_CURRENCY } from '@/components/search/types';
 import { useFormatting } from '@/utils/format';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors } from '@/styles/colors';
 import type { RoommateProfile } from '@/hooks/useRoommate';
 import { ActionButton } from '@/components/ui/ActionButton';

@@ -8,7 +8,7 @@ import {
     ScrollView,
     Switch,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors } from '@/styles/colors';
 import { PropertyFilters } from '@/services/propertyService';
 import { PropertyType } from '@homiio/shared-types';

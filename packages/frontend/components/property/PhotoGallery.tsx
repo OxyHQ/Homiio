@@ -3,7 +3,7 @@ import { View, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-nat
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 import { ZoomableMediaGallery } from '@oxyhq/bloom/zoomable-media-gallery';
 import { colors } from '@/styles/colors';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 import { usePropertyPhotoGallery } from '@/hooks/usePropertyPhotoGallery';
 import { radius, spacing } from '@/constants/styles';

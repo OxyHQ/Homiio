@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity, Alert, TextInput } from 'react-nati
 import { useTranslation } from 'react-i18next';
 import { deviceTimeZone, formatDate } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors } from '@/styles/colors';
 import type { RoommateRequest, RoommateProfile } from '@/hooks/useRoommate';
 import { ActionButton } from '@/components/ui/ActionButton';

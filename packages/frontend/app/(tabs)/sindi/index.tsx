@@ -25,7 +25,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Button } from '@oxyhq/bloom/button';
 import { Search } from '@oxyhq/bloom/search';
 import * as Skeleton from '@oxyhq/bloom/skeleton';

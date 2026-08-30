@@ -31,7 +31,7 @@
  */
 import React from 'react';
 import { Image, StyleSheet, View, type ImageSourcePropType } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Text as BloomText } from '@oxyhq/bloom/typography';
 

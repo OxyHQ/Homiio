@@ -14,7 +14,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Button } from '@oxyhq/bloom/button';
 import { Text as BloomText } from '@oxyhq/bloom/typography';

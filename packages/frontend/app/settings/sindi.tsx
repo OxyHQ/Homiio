@@ -10,7 +10,7 @@
 import React, { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { toast } from '@oxyhq/bloom/toast';
 
 import { Switch } from '@oxyhq/bloom/switch';

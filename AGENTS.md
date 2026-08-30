@@ -56,7 +56,8 @@ bun run db:migrate          # db/migrate.ts --phase=all, for a dev database
 Packages: `frontend` (Expo/RN/NativeWind) · `backend` (Express/PostgreSQL via
 drizzle/Stripe/Sharp) · `shared-types` · `listing-providers` (plugin contract,
 `FetchRuntime`, provider plugins). The production Dockerfile builds in that
-dependency order; the worker is the same image with a different start command.
+dependency order and has separate `api` and `worker` targets from the same
+compiled build: only `worker` carries Playwright/Chromium/X11.
 
 ## Data storage: PostgreSQL, and nothing else
 

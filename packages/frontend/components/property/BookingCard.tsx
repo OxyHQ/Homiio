@@ -21,7 +21,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Badge } from '@oxyhq/bloom/badge';
 import { H3, Text as BloomText } from '@oxyhq/bloom/typography';

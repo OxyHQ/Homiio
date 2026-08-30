@@ -6,7 +6,7 @@ import { colors } from '@/styles/colors';
 import { ThemedText } from '@/components/ThemedText';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Rect, Text as SvgText } from 'react-native-svg';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { analyticsService, AnalyticsInsights } from '@/services/analyticsService';
 import { propertyService } from '@/services/propertyService';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';

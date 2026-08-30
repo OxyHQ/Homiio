@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Badge, type BadgeSize } from '@oxyhq/bloom/badge';
 import type { AccentTone } from '@oxyhq/bloom/theme';
 import { colors } from '@/styles/colors';

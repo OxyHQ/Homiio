@@ -12,7 +12,7 @@
  */
 import React from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Button } from '@oxyhq/bloom/button';
 import { H3, Text as BloomText } from '@oxyhq/bloom/typography';

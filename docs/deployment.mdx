@@ -13,10 +13,16 @@ The backend deploys to **AWS ECS Fargate** and the frontend web export deploys t
 Workflow: `.github/workflows/deploy-aws.yml`
 
 - Region `us-west-2`, cluster `oxy-cluster`, service `homiio`, port `4000`, domain `api.homiio.com` (Cloudflare DNS-only → ALB + ACM HTTPS).
-- Builds a `linux/arm64` Docker image from `packages/backend/Dockerfile` and pushes it to ECR (`237343248947.dkr.ecr.us-west-2.amazonaws.com/oxy/homiio`), then runs `aws ecs update-service --force-new-deployment`.
+- Builds `api` and `worker` `linux/arm64` targets from
+  `packages/backend/Dockerfile`, pushes both to ECR
+  (`237343248947.dkr.ecr.us-west-2.amazonaws.com/oxy/homiio`), then rolls their
+  corresponding ECS services by immutable digest.
 - Auth is GitHub OIDC assuming the `oxy-github-deploy` role — no AWS keys are stored in GitHub.
 - Secrets: GitHub Actions secrets are the source of truth. The workflow syncs them to AWS SSM (`/oxy/homiio/*`; shared secrets to `/oxy/_shared/*`) and ECS injects them into the container. To change a secret, edit it in GitHub — the next deploy applies it.
-- Listing-ingestion worker: same ECR image, separate ECS service (`app-homiio-worker.tf` in oxy-infra); command runs `packages/backend/worker.ts`.
+- Listing-ingestion worker: browser-enabled `worker` target from the same
+  compiled commit, separate ECS service (`app-homiio-worker.tf` in oxy-infra);
+  command runs `packages/backend/dist/worker.js`. The API deploys the `api`
+  target, which does not contain Playwright/Chromium/X11.
 
 ## Frontend (Cloudflare Pages)
 

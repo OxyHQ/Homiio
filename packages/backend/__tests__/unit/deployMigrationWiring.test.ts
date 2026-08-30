@@ -26,7 +26,7 @@
  * the time the script runs it has been handed one value with no lane attached.
  *
  * That attribution is the whole safety argument for the `post` phase, so it is
- * asserted here: both services roll the SAME image, the worker rolls LAST, and a
+ * asserted here: both targets carry the SAME compiled commit, the worker rolls LAST, and a
  * `post` migration drops or narrows something. Declared on the API lane it would
  * run while the worker was still serving the previous image for the length of
  * its own rollout. Declared on the worker lane it runs once nothing old is left.
@@ -52,6 +52,7 @@ const deployScript = readFileSync(
 );
 
 /** The name of each lane's step, in the order the job runs them. */
+const BUILD_STEP = 'Build and push API + listing worker (linux/arm64)';
 const API_STEP = 'Register immutable task definition and deploy (API)';
 const WORKER_STEP = 'Register immutable task definition and deploy (listing worker)';
 
@@ -84,6 +85,7 @@ const stepBody = (name: string): string => {
     .join('\n');
 };
 
+const buildStep = stepBody(BUILD_STEP);
 const apiStep = stepBody(API_STEP);
 const workerStep = stepBody(WORKER_STEP);
 
@@ -120,11 +122,24 @@ describe('the deploy applies migrations', () => {
     // Vacuity floor. Every assertion below reads one of these; an empty string
     // would make several of them pass for the wrong reason, which is how a gate
     // stops gating without going red.
+    expect(buildStep).not.toBe('');
     expect(apiStep).not.toBe('');
     expect(workerStep).not.toBe('');
     expect(apiStep).toContain('bash .github/scripts/deploy-ecs-image.sh');
     expect(workerStep).toContain('bash .github/scripts/deploy-ecs-image.sh');
     expect(deployScript).toContain('MIGRATION_TASK_COMMANDS_JSON=');
+  });
+
+  it('deploys the browser-free API and browser-enabled worker digests to their own lanes', () => {
+    expect(buildStep).toContain('--target api');
+    expect(buildStep).toContain('--target worker');
+    expect(buildStep).toContain('api_digest=$API_DIGEST');
+    expect(buildStep).toContain('worker_digest=$WORKER_DIGEST');
+
+    expect(apiStep).toContain('steps.build.outputs.api_digest');
+    expect(apiStep).not.toContain('steps.build.outputs.worker_digest');
+    expect(workerStep).toContain('steps.build.outputs.worker_digest');
+    expect(workerStep).not.toContain('steps.build.outputs.api_digest');
   });
 
   it('turns migrations on, job-wide and unambiguously', () => {
@@ -141,7 +156,7 @@ describe('the deploy applies migrations', () => {
   });
 
   it('gives the pre migrations to exactly one lane, the API one', () => {
-    // Both services roll the same image through the same script, and the
+    // Both targets carry the same migration ledger through the same script, and the
     // migrator holds no cross-process lock, so a job-wide `RUN_MIGRATIONS`
     // is only safe because MIGRATION_SERVICE names one lane. The worker lane
     // derives its own APP by suffixing, which is why this compares against the

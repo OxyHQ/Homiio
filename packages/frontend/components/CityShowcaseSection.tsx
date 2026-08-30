@@ -26,7 +26,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMediaQuery } from 'react-responsive';
 
 import { H1, Text as BloomText } from '@oxyhq/bloom/typography';

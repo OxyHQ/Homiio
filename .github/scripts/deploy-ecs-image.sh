@@ -139,7 +139,7 @@ if [[ "$RUN_MIGRATIONS" == "true" &&
       -n "$MIGRATION_SERVICE" &&
       "$MIGRATION_SERVICE" != "$APP" ]]; then
   migrations_run_in_this_lane=false
-  echo "::notice::Skipping migrations for $APP: MIGRATION_SERVICE=$MIGRATION_SERVICE owns them, and both services share one image. The migrator holds no cross-process lock, so it runs exactly once per release."
+  echo "::notice::Skipping migrations for $APP: MIGRATION_SERVICE=$MIGRATION_SERVICE owns them, and both targets share one compiled migration ledger. The migrator holds no cross-process lock, so it runs exactly once per release."
 fi
 if [[ -n "$POST_DEPLOY_SMOKE_SCRIPT" && ! -f "$POST_DEPLOY_SMOKE_SCRIPT" ]]; then
   echo "::error::POST_DEPLOY_SMOKE_SCRIPT does not exist: $POST_DEPLOY_SMOKE_SCRIPT"

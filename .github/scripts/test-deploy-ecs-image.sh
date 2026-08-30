@@ -592,7 +592,7 @@ diff -u \
 
 # THE WORKER LANE GETS NO MIGRATION ONE-SHOT.
 #
-# Both Homiio services roll the SAME image through this script, and
+# Both Homiio targets carry the SAME compiled migration ledger, and
 # `db/migrate.ts` takes no cross-process advisory lock (neither does drizzle), so
 # the migrator must run exactly once per release. `MIGRATION_SERVICE` names the
 # lane that owns it; the worker lane sees the same `RUN_MIGRATIONS=true` and must
@@ -613,7 +613,7 @@ printf '%s\n' \
 diff -u \
   "$test_directory/worker-lane-skips-migration/expected.log" \
   "$test_directory/worker-lane-skips-migration/aws.log"
-assert_aws_log_lacks worker-lane-skips-migration "migrate.js" "The worker lane ran the migrator; it shares one image with the API."
+assert_aws_log_lacks worker-lane-skips-migration "migrate.js" "The worker lane ran the migrator; it shares one compiled migration ledger with the API."
 assert_output_contains worker-lane-skips-migration "Skipping migrations for deploy-test-worker"
 
 # The SAME flag on the lane that DOES own migrations still runs them. Without
@@ -746,8 +746,8 @@ assert_aws_log_lacks workflow-api-lane-migrates "--phase=post" "The API lane ran
 
 # The worker lane, same workflow values. It declines the `pre` migrator because
 # MIGRATION_SERVICE names the API, and it runs the `post` phase AFTER its own
-# rollout — the first moment no old image is serving, since both services share
-# one image and this one rolls last.
+# rollout — the first moment no old code is serving, since both targets carry
+# the same compiled commit and this one rolls last.
 DEPLOY_TEST_APP="${workflow_app}-worker" \
 DEPLOY_TEST_MIGRATION_SERVICE="$workflow_migration_service" \
 DEPLOY_TEST_POST_DEPLOY_TASK_COMMAND_JSON="$workflow_post_command" \
@@ -760,7 +760,7 @@ printf '%s\n' \
 diff -u \
   "$test_directory/workflow-worker-lane-migrates-post/expected.log" \
   "$test_directory/workflow-worker-lane-migrates-post/aws.log"
-assert_aws_log_lacks workflow-worker-lane-migrates-post "--phase=pre" "The worker lane ran the pre migrator. Both services share one image and the migrator holds no cross-process lock, so it must run exactly once per release."
+assert_aws_log_lacks workflow-worker-lane-migrates-post "--phase=pre" "The worker lane ran the pre migrator. Both targets share one compiled ledger and the migrator holds no cross-process lock, so it must run exactly once per release."
 assert_output_contains workflow-worker-lane-migrates-post "Skipping migrations for ${workflow_app}-worker"
 # The ORDER is the assertion, and a whole-log diff is what sees it: a `post`
 # migration recorded before `update-service` would be a DROP applied while the

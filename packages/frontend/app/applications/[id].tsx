@@ -30,7 +30,7 @@ import { useTranslation } from 'react-i18next';
 import { useFormatting } from '@/utils/format';
 import i18next from 'i18next';
 import { toast } from '@oxyhq/bloom/toast';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Button } from '@oxyhq/bloom/button';
 import { Loading } from '@oxyhq/bloom/loading';

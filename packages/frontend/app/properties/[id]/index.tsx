@@ -36,7 +36,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { toast } from '@oxyhq/bloom/toast';
 import * as Haptics from 'expo-haptics';
 import * as Linking from 'expo-linking';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { useOxy, openAccountDialog } from '@oxyhq/services';
 import { Text as BloomText } from '@oxyhq/bloom/typography';

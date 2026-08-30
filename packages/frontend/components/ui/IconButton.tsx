@@ -23,7 +23,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Loading } from '@oxyhq/bloom/loading';
 
 import { colors } from '@/styles/colors';

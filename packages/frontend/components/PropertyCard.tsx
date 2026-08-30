@@ -29,7 +29,7 @@ import { PropertyImageCarousel } from './property/PropertyImageCarousel';
 import { ZoomableImage } from '@/components/ui/ZoomableImage';
 import { ThemedText } from '@/components/ThemedText';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQueryClient } from '@tanstack/react-query';
 import { prefetchProperty, prefetchPropertyStats } from '@/utils/queryPrefetch';
 import { PropertyCardSkeleton } from './ui/skeletons/PropertyCardSkeleton';

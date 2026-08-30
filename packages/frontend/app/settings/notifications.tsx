@@ -6,7 +6,7 @@
 import React, { useCallback, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { toast } from '@oxyhq/bloom/toast';
 
 import { Button } from '@oxyhq/bloom/button';

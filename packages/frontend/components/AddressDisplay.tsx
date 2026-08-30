@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Platform, Linking, StyleProp, ViewStyle } from 'react-native';
 import { ThemedText } from './ThemedText';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors } from '@/styles/colors';
 import { useTranslation } from 'react-i18next';
 import * as Clipboard from 'expo-clipboard';

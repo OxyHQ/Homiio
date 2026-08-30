@@ -2,7 +2,7 @@ import React from 'react';
 import { Platform, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import type { Message } from '@ai-sdk/react';
 import { useSindiConversation } from '@/hooks/useSindiConversation';
 import { useSindiUpsell } from '@/hooks/useSindiUpsell';

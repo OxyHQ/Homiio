@@ -11,7 +11,7 @@ import {
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import type { Message } from '@ai-sdk/react';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Portal } from '@oxyhq/bloom/portal';
 import { H3, Text as BloomText } from '@oxyhq/bloom/typography';
 import * as Skeleton from '@oxyhq/bloom/skeleton';

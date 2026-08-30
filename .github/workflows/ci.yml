@@ -271,6 +271,9 @@ jobs:
       - name: Install
         run: bash .github/scripts/bun-install.sh --frozen-lockfile
 
+      - name: Check frontend bundle imports
+        run: bun run check:bundle-imports
+
       - name: Test frontend
         run: >-
           bun run --cwd packages/frontend test --
@@ -359,6 +362,7 @@ jobs:
           bash -n .github/scripts/*.sh
           bun scripts/test-check-lockfile-sync.mjs
           bun scripts/test-check-docs.mjs
+          bun scripts/test-check-web-export-budget.mjs
           bun .github/scripts/test-assert-test-floor.mjs
           bun .github/scripts/test-check-migration-phases.mjs
           bash .github/scripts/test-assert-install-clean.sh
@@ -388,6 +392,9 @@ jobs:
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
           NODE_ENV: production
+
+      - name: Enforce production web bundle budgets
+        run: bun run check:web-bundle-budget
 
   lint:
     # ARMED. `bun run lint` exits 0 across all four packages.

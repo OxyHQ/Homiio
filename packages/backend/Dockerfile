@@ -6,14 +6,17 @@
 ## The build context MUST be the monorepo root so the workspace packages
 ## (shared-types + listing-providers + backend) resolve:
 ##
-##   Build:  docker build -f packages/backend/Dockerfile -t homiio-backend .
-##   API:    docker run --env-file packages/backend/.env -p 4000:4000 homiio-backend
+##   API build (default):
+##     docker build -f packages/backend/Dockerfile --target api -t homiio-api .
+##   Worker build:
+##     docker build -f packages/backend/Dockerfile --target worker -t homiio-worker .
+##   API:    docker run --env-file packages/backend/.env -p 4000:4000 homiio-api
 ##   Worker: docker run --env-file packages/backend/.env \
-##             homiio-backend node packages/backend/dist/worker.js
+##             homiio-worker node packages/backend/dist/worker.js
 ##
-## Same ECR image serves both processes — ECS overrides the command for the
-## worker task. Playwright Chromium is installed so LISTING_BROWSER_ENABLED
-## can escalate anti-bot portals on the worker (the API never scrapes).
+## Both targets contain the same compiled commit and migration ledger. Only the
+## worker target contains Playwright, Chromium and X11; the API never scrapes
+## and therefore must not carry or patch those bytes.
 ##
 ## HEADED browser tier (LISTING_BROWSER_HEADED=true): DataDome/Kasada block
 ## headless Chromium, so the worker can launch a real HEADED browser to clear
@@ -72,7 +75,7 @@ WORKDIR /app
 # The root `postinstall` (build:shared-types) is stripped: source is not present
 # yet at install time, and shared-types is built explicitly below.
 COPY package.json ./
-RUN node -e "const p=require('./package.json'); p.workspaces=['packages/shared-types','packages/listing-providers','packages/backend']; delete p.scripts.postinstall; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2));"
+RUN node -e "const p=require('./package.json'); p.workspaces=['packages/shared-types','packages/listing-providers','packages/backend']; p.dependencies={}; delete p.scripts.postinstall; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2));"
 
 # bunfig.toml pins `linker = "hoisted"`. This is REQUIRED: with bun's default
 # isolated linker, @types/express-serve-static-core lands at a deeply-nested
@@ -104,80 +107,108 @@ RUN bun run --filter @homiio/backend build
 # not copy non-imported assets, so stage them next to the compiled output.
 RUN cp -r packages/backend/locales packages/backend/dist/locales
 
-# ── Production stage ──────────────────────────────────────────────
-FROM node:22-bookworm-slim
+# ── Production dependency stages ─────────────────────────────────
+# Bun and the native build toolchain live only in throwaway install stages.
+# The compiled runtime and migration tasks use Node, so shipping Bun added
+# hundreds of MiB without providing a supported production entry point.
+FROM node:22-bookworm-slim AS production-manifests
 ARG BUN_VERSION
 
-# Runtime deps: tini as PID 1; Playwright OS libs installed via
-# `playwright install-deps` below (Chromium needs a full set of shared libs).
-# xvfb + xauth provide the virtual X display for the HEADED browser tier
-# (LISTING_BROWSER_HEADED=true → worker runs under `xvfb-run`, see header). The X
-# *client* libs Chromium links against come from `playwright install --with-deps`
-# below; we only add the virtual framebuffer + its auth cookie helper here.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      ca-certificates tini xvfb xauth \
-    && rm -rf /var/lib/apt/lists/*
+      python3 make g++ ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g bun@${BUN_VERSION}
 
-ENV NODE_ENV=production \
-    PUPPETEER_SKIP_DOWNLOAD=true \
-    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    # Writable log path for the non-root `node` user (default ./logs is EACCES).
-    LOG_FILE=/tmp/homiio-app.log \
-    # Playwright browsers land under this path (owned by root, readable by node).
-    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-
-RUN npm install -g bun@${BUN_VERSION}
+ENV PUPPETEER_SKIP_DOWNLOAD=true \
+    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 WORKDIR /app
 
-# Re-create the narrowed workspace so `bun install --production` resolves the
-# same dependency subset (without dev tooling like tsc/eslint).
 COPY package.json ./
-RUN node -e "const p=require('./package.json'); p.workspaces=['packages/shared-types','packages/listing-providers','packages/backend']; delete p.scripts.postinstall; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2));"
-# Same hoisted linker as the build stage for consistent runtime resolution.
+RUN node -e "const p=require('./package.json'); p.workspaces=['packages/shared-types','packages/listing-providers','packages/backend']; p.dependencies={}; delete p.scripts.postinstall; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2));"
 COPY bunfig.toml ./
 COPY packages/shared-types/package.json packages/shared-types/
 COPY packages/listing-providers/package.json packages/listing-providers/
 COPY packages/backend/package.json packages/backend/
 
-# Playwright is an optional peer of @homiio/listing-providers. Install it as a
-# production dependency of the backend workspace so the worker can escalate to
-# the browser fetch tier when LISTING_BROWSER_ENABLED=true.
-RUN bun add --cwd packages/backend playwright@1.61.1 \
- && bun install --production
+FROM production-manifests AS api-deps
+RUN bun install --production --omit peer \
+    && rm -rf node_modules/@img/sharp-linuxmusl-* \
+              node_modules/@img/sharp-libvips-linuxmusl-*
 
-# Install Chromium + its OS dependencies into PLAYWRIGHT_BROWSERS_PATH.
-# Kept in the shared image so one ECR tag serves API + worker; the API never
-# launches a browser (LISTING_* flags are worker-only). With `linker=hoisted`
-# the playwright CLI lands in the workspace-root node_modules/.bin — not under
-# packages/backend (and `bunx --cwd` mis-resolves the package as a GitHub repo).
-RUN ./node_modules/.bin/playwright install --with-deps chromium \
- && chmod -R a+rX /ms-playwright
+FROM production-manifests AS worker-deps
+# Editing the manifest before the single production install avoids `bun add`,
+# which first installed every devDependency and left them in node_modules.
+RUN node -e "const fs=require('fs'); const file='packages/backend/package.json'; const p=require('./'+file); p.dependencies={...p.dependencies,playwright:'1.61.1'}; fs.writeFileSync(file, JSON.stringify(p, null, 2));" \
+    && bun install --production --omit peer \
+    && rm -rf node_modules/@img/sharp-linuxmusl-* \
+              node_modules/@img/sharp-libvips-linuxmusl-*
 
-# Copy the compiled JavaScript (incl. staged locales) from the build stage.
+# ── Common runtime ────────────────────────────────────────────────
+FROM node:22-bookworm-slim AS runtime-common
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates tini \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV NODE_ENV=production \
+    PUPPETEER_SKIP_DOWNLOAD=true \
+    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    LOG_FILE=/tmp/homiio-app.log
+
+WORKDIR /app
+
 COPY --from=builder /app/packages/shared-types/dist packages/shared-types/dist
 COPY --from=builder /app/packages/listing-providers/dist packages/listing-providers/dist
 COPY --from=builder /app/packages/backend/dist packages/backend/dist
 
-# The Postgres migrations, which are NOT compiled output — they are `.sql` files
-# plus `meta/_journal.json`, and tsc has no reason to touch them. Without this
-# line the compiled migrator (`dist/db/migrate.js`) ships with no journal to
-# read, and that failure is SUCCESS-SHAPED: drizzle applies nothing, prints no
-# error and exits 0, which is byte-for-byte what an already-up-to-date database
-# looks like.
-#
-# `db/migrate.ts` walks up from `__dirname` to find this folder, so it resolves
-# to `/app/packages/backend/drizzle` from `dist/db/` here exactly as it resolves
-# to `packages/backend/drizzle` from `db/` under ts-node — and it THROWS rather
-# than guessing when the folder is absent, which is the other half of the guard.
+# Both task definitions may run migrations. Keep the same ledger in both image
+# targets so pre/post phases always use bytes built from the deployed commit.
 COPY --from=builder /app/packages/backend/drizzle packages/backend/drizzle
 
-# Drop privileges — node:bookworm-slim ships a `node` user (uid 1000).
-USER node
-
-# Express listens on $PORT (default 4000, see config.ts).
 EXPOSE 4000
-
-# tini handles SIGTERM/SIGINT and reaps children (Telegram/WhatsApp/Playwright).
 ENTRYPOINT ["/usr/bin/tini", "--"]
+
+# ── Listing worker target ─────────────────────────────────────────
+FROM runtime-common AS worker
+
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+COPY --from=worker-deps /app/package.json ./
+COPY --from=worker-deps /app/packages packages/
+COPY --from=worker-deps /app/node_modules node_modules/
+
+# Chromium and its X11 libraries exist only in the worker image. xauth is
+# needed by the documented headed `xvfb-run` mode.
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends xauth \
+    && rm -rf /var/lib/apt/lists/* \
+    && ./node_modules/.bin/playwright install --with-deps chromium \
+    && chmod -R a+rX /ms-playwright \
+    && node -e "require('playwright'); require('sharp')" \
+    && test ! -e /usr/local/bin/bun
+# Debian's xvfb-run can wait forever for SIGUSR1 in a container even after Xvfb
+# has created a live display socket. Use the bounded, socket-gated wrapper and
+# stage the shared directory before privileges drop.
+COPY packages/backend/scripts/xvfb-run-ready.sh /usr/local/bin/xvfb-run
+RUN chmod 755 /usr/local/bin/xvfb-run \
+    && mkdir -p /tmp/.X11-unix \
+    && chmod 1777 /tmp/.X11-unix
+USER node
+CMD ["node", "packages/backend/dist/worker.js"]
+
+# ── API target (default/final stage) ──────────────────────────────
+FROM runtime-common AS api
+
+COPY --from=api-deps /app/package.json ./
+COPY --from=api-deps /app/packages packages/
+COPY --from=api-deps /app/node_modules node_modules/
+
+RUN node -e "require('sharp'); require('@homiio/shared-types'); require('@homiio/listing-providers')" \
+    && test ! -d node_modules/playwright \
+    && test ! -d /ms-playwright \
+    && test ! -e /usr/local/bin/bun \
+    && test ! -e /usr/bin/Xvfb
+
+USER node
 CMD ["node", "packages/backend/dist/server.js"]

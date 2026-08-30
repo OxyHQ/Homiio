@@ -18,6 +18,8 @@
     "build:backend": "bun run --filter @homiio/backend build",
     "test": "bun run --filter '*' test",
     "lint": "bun run --filter '*' lint",
+    "check:bundle-imports": "bun ./scripts/check-frontend-bundle-imports.mjs && bun ./scripts/test-check-frontend-bundle-imports.mjs",
+    "check:web-bundle-budget": "bun ./scripts/check-web-export-budget.mjs",
     "check:lockfile": "bun ./scripts/check-lockfile-sync.mjs",
     "validate:agents-md": "bun ./scripts/check-agents-md-size.mjs && bun ./scripts/test-check-agents-md-size.mjs",
     "check:docs": "bun ./scripts/check-docs.mjs",

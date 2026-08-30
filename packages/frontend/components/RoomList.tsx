@@ -12,7 +12,7 @@ import {
     TextInput,
     Platform,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/colors';
 import { ZoomableImage } from '@/components/ui/ZoomableImage';

@@ -15,7 +15,7 @@ import {
   type AccessibilityRole,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Clipboard from 'expo-clipboard';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';

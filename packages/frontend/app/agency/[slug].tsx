@@ -12,7 +12,7 @@ import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { H1, Text as BloomText } from '@oxyhq/bloom/typography';

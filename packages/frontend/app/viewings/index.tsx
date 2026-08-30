@@ -17,7 +17,7 @@ import { deviceTimeZone, formatDate } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@oxyhq/bloom/toast';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Button } from '@oxyhq/bloom/button';
 import { Chip } from '@oxyhq/bloom/chip';
 import * as Skeleton from '@oxyhq/bloom/skeleton';

@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, RefreshCon
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Ionicons as Icon } from '@expo/vector-icons';
+import Icon from '@expo/vector-icons/Ionicons';
 import { colors } from '@/styles/colors';
 import { useOxy } from '@oxyhq/services';
 import { useSubscriptionStore } from '@/store/subscriptionStore';

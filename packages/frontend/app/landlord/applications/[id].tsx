@@ -25,7 +25,7 @@ import { useTranslation } from 'react-i18next';
 import { useFormatting } from '@/utils/format';
 import i18next from 'i18next';
 import { toast } from '@oxyhq/bloom/toast';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Button } from '@oxyhq/bloom/button';
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { Text as BloomText, H2, H3 } from '@oxyhq/bloom/typography';

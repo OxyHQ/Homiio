@@ -25,7 +25,7 @@
 import React, { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 import * as Skeleton from '@oxyhq/bloom/skeleton';
 import { Text as BloomText } from '@oxyhq/bloom/typography';

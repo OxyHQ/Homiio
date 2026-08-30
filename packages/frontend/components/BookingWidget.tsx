@@ -13,7 +13,7 @@ import {
   CancellationPolicy,
 } from '@homiio/shared-types';
 import { isShortTermRentable } from '@/utils/propertyUtils';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   AvailabilityCalendar,
   AvailabilityCalendarRange,

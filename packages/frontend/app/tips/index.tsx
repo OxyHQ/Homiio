@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Chip } from '@oxyhq/bloom/chip';
 import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
 import { useMediaQuery } from 'react-responsive';

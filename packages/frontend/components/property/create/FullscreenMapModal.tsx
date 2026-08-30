@@ -1,6 +1,6 @@
 import React, { type MutableRefObject } from 'react';
 import { Modal, View, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/styles/colors';
 import { ThemedText } from '@/components/ThemedText';

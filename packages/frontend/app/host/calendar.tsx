@@ -15,7 +15,7 @@ import { useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import { toast } from '@oxyhq/bloom/toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Button } from '@oxyhq/bloom/button';
 import { Loading } from '@oxyhq/bloom/loading';
 import {

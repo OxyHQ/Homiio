@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { Text as BloomText } from '@oxyhq/bloom/typography';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { ExchangeMode, type ExchangeRequest } from '@homiio/shared-types';
 
 import { ExchangeStatusBadge } from '@/components/exchange/ExchangeStatusBadge';

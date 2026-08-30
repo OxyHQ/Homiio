@@ -17,7 +17,7 @@ import { format, parseISO } from 'date-fns';
 import { Button } from '@oxyhq/bloom/button';
 import { Divider } from '@oxyhq/bloom/divider';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { ExchangeMode, type PropertyExchange } from '@homiio/shared-types';
 import { Section } from '@/components/property/Section';

@@ -2,7 +2,7 @@ import React, { useMemo, useCallback, useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { colors } from '@/styles/colors';
 import { ThemedText } from '../ThemedText';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { BaseWidget } from './BaseWidget';
 import { useCreatePropertyFormStore } from '@/store/createPropertyFormStore';
 import {

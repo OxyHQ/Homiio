@@ -11,7 +11,9 @@ Express API for the Homiio housing platform, on PostgreSQL + PostGIS via Drizzle
 | `packages/listing-providers` | External listing provider plugins + FetchRuntime |
 | `packages/frontend` | Expo/RN client (separate package) |
 
-The production Dockerfile builds `shared-types` → `listing-providers` → `backend` in that order.
+The production Dockerfile builds `shared-types` → `listing-providers` →
+`backend` in that order, then emits an `api` target and a browser-enabled
+`worker` target from the same compiled output.
 
 ## Commands
 
@@ -27,7 +29,10 @@ bun run dev
 bun run start           # Production (compiled dist)
 ```
 
-Worker (same Docker image, different command): `packages/backend/worker.ts`.
+Worker entry point: `packages/backend/worker.ts`. Build its image with
+`docker build -f packages/backend/Dockerfile --target worker -t homiio-worker .`;
+the default/final `api` target intentionally contains no Playwright, Chromium,
+X11 or Bun runtime.
 
 ## Layout
 

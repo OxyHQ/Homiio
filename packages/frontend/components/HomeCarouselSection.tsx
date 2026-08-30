@@ -17,7 +17,7 @@ import {
   NativeScrollEvent,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMediaQuery } from 'react-responsive';
 
 import { H1, Text as BloomText } from '@oxyhq/bloom/typography';

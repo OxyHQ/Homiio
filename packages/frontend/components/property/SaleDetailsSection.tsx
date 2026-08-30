@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Divider } from '@oxyhq/bloom/divider';
 import { Text as BloomText } from '@oxyhq/bloom/typography';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Section } from '@/components/property/Section';
 import { MoneyText } from '@/components/MoneyText';

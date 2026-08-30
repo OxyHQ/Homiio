@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { formatMoney, formatMoneyRange } from '@homiio/shared-types';
 import { openAccountDialog } from '@oxyhq/services';
 import { Button } from '@oxyhq/bloom/button';

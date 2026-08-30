@@ -59,7 +59,7 @@ packages/
     services/ingestion/IngestionService.ts          NormalizedListing to Property upsert + image pipeline
     services/ingestion/ExternalMediaIngest.ts       fetch, Sharp, S3, Image doc, PropertyImageRef
     services/ingestion/queues.ts                    BullMQ queue definitions
-    worker.ts                                       Worker entrypoint (separate process, same image)
+    worker.ts                                       Worker entrypoint (separate browser-enabled target)
 ```
 
 `shared-types` exports `NormalizedListing`, the handoff DTO from provider to
@@ -306,4 +306,3 @@ ID/TH/TR; OLX PT/PL; Immowelt AT; Blueground PT/GR/AE/HK; ImmobiliareScout24 AT.
 `packages/backend/worker.ts` is the worker entrypoint: the same Docker image as
 the API, a different start command. Run it with a separate ECS task definition.
 Use a separate container only if Playwright memory becomes a concern.
-

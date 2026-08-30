@@ -16,8 +16,9 @@ the build order is a dependency chain rather than a preference:
 
 `shared-types` is built first by the root `postinstall`, because both of the
 others import it by package name and resolve it through its built `dist`. The
-production Dockerfile builds the same three in the same order; the API image and
-the worker image are the **same image** with a different start command.
+production Dockerfile builds the same three in the same order, then emits
+separate `api` and `worker` targets from those exact artifacts. Only the worker
+target contains Playwright/Chromium/X11.
 
 ## Workspace layout
 
@@ -333,8 +334,8 @@ Full lifecycle: [Auth](./auth).
 
 ## The worker, ingestion and media
 
-`packages/backend/worker.ts` is a **separate process from the same image**, run
-as its own ECS service. It exists because listing ingestion is slow, bursty and
+`packages/backend/worker.ts` is a **separate process in the browser-enabled
+worker target**, run as its own ECS service. It exists because listing ingestion is slow, bursty and
 occasionally drives a browser, none of which belongs in a request path.
 
 ```

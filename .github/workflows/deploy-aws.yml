@@ -56,7 +56,7 @@ env:
   CLUSTER: oxy-cluster
   DOCKERFILE: packages/backend/Dockerfile
   # Which of the two lanes below owns the one-shot `pre` migrations. Both roll
-  # the SAME image through deploy-ecs-image.sh, and the migrator holds no
+  # the SAME compiled ledger through deploy-ecs-image.sh, and the migrator holds no
   # cross-process advisory lock, so it must run exactly once per release. Naming
   # the service here rather than setting RUN_MIGRATIONS per step is what makes
   # the workflow-level `RUN_MIGRATIONS` below safe: the worker lane sets APP to
@@ -235,7 +235,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push (linux/arm64)
+      - name: Build and push API + listing worker (linux/arm64)
         id: build
         env:
           COMMIT_TAG: ${{ github.sha }}
@@ -249,9 +249,20 @@ jobs:
           docker buildx build \
             --platform linux/arm64 \
             -f "$DOCKERFILE" \
-            -t "$IMG:$COMMIT_TAG" \
+            --target api \
+            -t "$IMG:$COMMIT_TAG-api" \
             -t "$IMG:latest" \
-            --metadata-file "$RUNNER_TEMP/build-metadata.json" \
+            --metadata-file "$RUNNER_TEMP/build-api-metadata.json" \
+            --push \
+            .
+
+          docker buildx build \
+            --platform linux/arm64 \
+            -f "$DOCKERFILE" \
+            --target worker \
+            -t "$IMG:$COMMIT_TAG-worker" \
+            -t "$IMG:latest-worker" \
+            --metadata-file "$RUNNER_TEMP/build-worker-metadata.json" \
             --push \
             .
 
@@ -259,29 +270,37 @@ jobs:
           # so a from-scratch `terraform apply` -- whose app-service module
           # declares `<repo>:latest` as the task definition's bootstrap image --
           # creates the service on a current build rather than an ancient one.
-          DIGEST=$(jq -r '.["containerimage.digest"] // empty' "$RUNNER_TEMP/build-metadata.json")
-          if [[ ! "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
-            echo "::error::buildx produced no usable image digest (got: ${DIGEST:-<empty>})"
+          API_DIGEST=$(jq -r '.["containerimage.digest"] // empty' "$RUNNER_TEMP/build-api-metadata.json")
+          WORKER_DIGEST=$(jq -r '.["containerimage.digest"] // empty' "$RUNNER_TEMP/build-worker-metadata.json")
+          if [[ ! "$API_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::buildx produced no usable API image digest (got: ${API_DIGEST:-<empty>})"
             exit 1
           fi
-          echo "digest=$DIGEST" >>"$GITHUB_OUTPUT"
-          echo "Built $COMMIT_TAG -> $DIGEST"
+          if [[ ! "$WORKER_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::buildx produced no usable worker image digest (got: ${WORKER_DIGEST:-<empty>})"
+            exit 1
+          fi
+          echo "api_digest=$API_DIGEST" >>"$GITHUB_OUTPUT"
+          echo "worker_digest=$WORKER_DIGEST" >>"$GITHUB_OUTPUT"
+          echo "Built $COMMIT_TAG API -> $API_DIGEST"
+          echo "Built $COMMIT_TAG worker -> $WORKER_DIGEST"
 
-      # Two ECS services, one image. They are separate task-definition families
+      # Two ECS services, two purpose-built targets from the same compiled
+      # commit. They are separate task-definition families
       # with different container names (`homiio` / `homiio-worker`), so each gets
       # its own register-and-roll pass; only the ECR repository is shared, which
       # is why IMAGE_URI is built from the workflow's APP and the per-service
-      # name is overridden instead.
+      # name is overridden instead. Only the worker carries Chromium/X11.
       #
       # Rolling them in sequence rather than in parallel is a change in kind from
       # the previous step, which fired both `update-service` calls and then
       # waited on both: the worker now only starts once the API has reached a
       # healthy steady state, and a failed API rollout stops the worker from
-      # moving at all. That ordering is the point -- the two run the same image,
-      # so an image the API cannot stay up on is not one to hand the worker.
+      # moving at all. Both targets carry the same backend build, so a commit
+      # the API cannot serve is not one to hand the worker.
       - name: Register immutable task definition and deploy (API)
         env:
-          IMAGE_URI: ${{ env.ECR_REGISTRY }}/oxy/${{ env.APP }}@${{ steps.build.outputs.digest }}
+          IMAGE_URI: ${{ env.ECR_REGISTRY }}/oxy/${{ env.APP }}@${{ steps.build.outputs.api_digest }}
           # Cleared deliberately. The script treats a non-empty DEPLOY_SHA as a
           # request to re-verify that the candidate is still the exact head of
           # origin/main before mutating production, via require-current-main.sh,
@@ -304,8 +323,8 @@ jobs:
       # `pre` is additive and correct against both images, so it runs before the
       # API rollout. `post` takes something away — a DROP, a RENAME, a narrowed
       # CHECK — so it is only safe once NO old image is serving. Both services
-      # run the SAME image, and the worker rolls last, so "no old image is
-      # serving" is first true at the end of THIS step and not the API one.
+      # run the SAME compiled commit, and the worker rolls last, so "no old code
+      # is serving" is first true at the end of THIS step and not the API one.
       # Putting it on the API lane would drop a column out from under a worker
       # still running the previous image for the length of its own rollout.
       #
@@ -331,11 +350,11 @@ jobs:
       # was reached (see @oxyhq/db's `phases.ts`, `planMigrationRun`).
       - name: Register immutable task definition and deploy (listing worker)
         env:
-          # Still oxy/homiio: APP names the ECS SERVICE, and the worker shares
-          # the API's image. Derived in the shell below rather than in this map,
+          # Still oxy/homiio: APP names the ECS SERVICE, while this is the
+          # browser-enabled worker target. Derived in the shell below rather than in this map,
           # so there is no question of whether `env.APP` here means the
           # workflow's value or one a sibling key just set.
-          IMAGE_URI: ${{ env.ECR_REGISTRY }}/oxy/${{ env.APP }}@${{ steps.build.outputs.digest }}
+          IMAGE_URI: ${{ env.ECR_REGISTRY }}/oxy/${{ env.APP }}@${{ steps.build.outputs.worker_digest }}
           DEPLOY_SHA: ''
           POST_DEPLOY_TASK_COMMAND_JSON: '["node","packages/backend/dist/db/migrate.js","--target-database=homiio","--phase=post"]'
         run: |

@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import * as Linking from 'expo-linking';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { BaseWidget } from './BaseWidget';
 import { ThemedText } from '../ThemedText';
 import { Button } from '@oxyhq/bloom/button';
