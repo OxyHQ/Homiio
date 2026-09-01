@@ -73,7 +73,7 @@ export interface Config {
   alia: {
     /** Alia product API. Interactive Sindi chat stays on Alia's chat runtime. */
     apiUrl: string;
-    /** Existing Alia agent id backed by the provisioned Sindi bot account. */
+    /** Existing Alia entity id backed 1:1 by the provisioned Sindi bot account. */
     sindiAgentId?: string;
   };
   telegram: {

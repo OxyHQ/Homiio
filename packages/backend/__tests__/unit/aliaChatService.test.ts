@@ -5,6 +5,8 @@ import {
 } from '../../services/aliaChatService';
 
 describe('AliaChatService', () => {
+  const sindiAgentId = '0199a26f-71cc-7f21-8d5e-4b1ea9669222';
+
   it('keeps interactive chat on Alia and forwards only the user session', async () => {
     const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
       new Response(
@@ -14,7 +16,7 @@ describe('AliaChatService', () => {
     );
     const service = new AliaChatService({
       apiUrl: 'https://api.alia.onl/',
-      agentId: 'agent-sindi',
+      agentId: sindiAgentId,
       fetch: fetchClient,
     });
 
@@ -37,7 +39,7 @@ describe('AliaChatService', () => {
     );
     const request = fetchClient.mock.calls[0]?.[1];
     expect(JSON.parse(String(request?.body))).toEqual({
-      agentId: 'agent-sindi',
+      agentId: sindiAgentId,
       messages: [{ role: 'user', content: 'Hola' }],
       stream: false,
     });
@@ -56,13 +58,30 @@ describe('AliaChatService', () => {
     expect(fetchClient).not.toHaveBeenCalled();
   });
 
+  it('fails closed before the network when the configured agent id is not an entity id', async () => {
+    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>();
+    const service = new AliaChatService({
+      apiUrl: 'https://api.alia.onl',
+      agentId: 'agent-sindi',
+      fetch: fetchClient,
+    });
+
+    await expect(
+      service.respondText({
+        accessToken: 'oxy-user-session',
+        messages: [{ role: 'user', content: 'Hola' }],
+      }),
+    ).rejects.toBeInstanceOf(AliaChatConfigurationError);
+    expect(fetchClient).not.toHaveBeenCalled();
+  });
+
   it('does not expose an upstream response body on failure', async () => {
     const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
       new Response('provider detail must stay private', { status: 503 }),
     );
     const service = new AliaChatService({
       apiUrl: 'https://api.alia.onl',
-      agentId: 'agent-sindi',
+      agentId: sindiAgentId,
       fetch: fetchClient,
     });
 

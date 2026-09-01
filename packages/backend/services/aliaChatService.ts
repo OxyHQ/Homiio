@@ -1,4 +1,5 @@
 import config from '../config';
+import { isLiveEntityId } from '../db/ids';
 
 export interface AliaChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -10,6 +11,14 @@ interface AliaChatCompletion {
 }
 
 type FetchClient = typeof fetch;
+
+declare const aliaAgentIdBrand: unique symbol;
+type AliaAgentId = string & { readonly [aliaAgentIdBrand]: true };
+
+function parseAliaAgentId(value: string | undefined): AliaAgentId | undefined {
+  const candidate = value?.trim();
+  return candidate && isLiveEntityId(candidate) ? (candidate as AliaAgentId) : undefined;
+}
 
 export class AliaChatError extends Error {
   readonly status: number;
@@ -25,7 +34,7 @@ export class AliaChatConfigurationError extends Error {
   readonly missing = ['SINDI_ALIA_AGENT_ID'] as const;
 
   constructor() {
-    super('Sindi Alia agent is not configured');
+    super('Sindi Alia agent is missing or invalid');
     this.name = 'AliaChatConfigurationError';
   }
 }
@@ -37,12 +46,12 @@ export class AliaChatConfigurationError extends Error {
  */
 export class AliaChatService {
   readonly #apiUrl: string;
-  readonly #agentId: string | undefined;
+  readonly #agentId: AliaAgentId | undefined;
   readonly #fetch: FetchClient;
 
   constructor(input: { apiUrl: string; agentId?: string; fetch?: FetchClient }) {
     this.#apiUrl = input.apiUrl.replace(/\/+$/, '');
-    this.#agentId = input.agentId?.trim() || undefined;
+    this.#agentId = parseAliaAgentId(input.agentId);
     this.#fetch = input.fetch ?? fetch;
   }
 
