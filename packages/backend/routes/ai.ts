@@ -64,7 +64,11 @@ import {
   homiioInference,
   textMessage,
 } from '../services/oxyInferenceService';
-import { AliaChatError, aliaChat } from '../services/aliaChatService';
+import {
+  AliaChatConfigurationError,
+  AliaChatError,
+  aliaChat,
+} from '../services/aliaChatService';
 import pdfParse from 'pdf-parse';
 
 // -------------------------------
@@ -355,6 +359,12 @@ const inferenceFailure = (res: Response, error: unknown, message: string): Respo
 };
 
 const chatFailure = (res: Response, error: unknown): Response => {
+  if (error instanceof AliaChatConfigurationError) {
+    return res.status(503).json({
+      error: 'Sindi chat is not configured',
+      code: 'chat_not_configured',
+    });
+  }
   if (error instanceof AliaChatError) {
     return res.status(error.status === 401 || error.status === 403 ? 401 : 503).json({
       error: 'Sindi chat is temporarily unavailable',
@@ -1135,7 +1145,7 @@ Return only the JSON array, no other text.`;
         }
         return;
       }
-      return error instanceof AliaChatError
+      return error instanceof AliaChatError || error instanceof AliaChatConfigurationError
         ? chatFailure(res, error)
         : inferenceFailure(res, error, 'Failed to generate response');
     }

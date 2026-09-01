@@ -33,6 +33,7 @@ describe('Homiio never reaches an inference provider directly', () => {
     expect(route).toContain('aliaChat.respondText');
     expect(route).not.toMatch(/feature:\s*['"]sindi-chat['"]/);
     expect(source).toContain('/v1/chat/completions');
+    expect(source).toContain('agentId: this.#agentId');
     expect(source).toContain('Authorization: `Bearer ${input.accessToken}`');
     expect(source).not.toMatch(/ALIA_API_KEY|OPENAI_API_KEY/);
   });

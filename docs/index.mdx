@@ -94,6 +94,9 @@ OXY_SERVICE_API_KEY=oxy_dk_...
 OXY_SERVICE_API_SECRET=...
 OXY_INFERENCE_ROUTING_PROFILE=
 
+# Provisioned Sindi agent in Alia (non-secret)
+SINDI_ALIA_AGENT_ID=
+
 # Image pipeline (production bucket from oxy-infra)
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
@@ -151,7 +154,7 @@ The frontend's `ProfileProvider` loads profiles immediately after `useOxy()` rep
 
 ### Sindi (AI tenant-rights assistant)
 
-Sindi is the in-app AI assistant. Its interactive, persisted chat route calls the Alia API with the already-authenticated user's Oxy token, so Alia remains the owner of chat, tools and memory before it reaches Kaana. Homiio's one-shot features — conversation titles, filter extraction, smart suggestions, and contract or image analysis — call the Oxy inference edge with Homiio's service identity and an Oxy-owned routing profile. Homiio never calls Kaana or an upstream provider directly, and never constructs Kaana's `authorizedRoutes`; Oxy resolves policy and the signed data-plane envelope for those point requests.
+Sindi is the in-app AI assistant and a provisioned Alia agent backed by its canonical bot account. Its interactive, persisted chat route sends that `SINDI_ALIA_AGENT_ID` to the Alia API with the already-authenticated user's Oxy token, so Alia remains the owner of the agent, chat, tools and memory before it reaches Kaana. This repository deliberately does not create or guess the bot account or agent id. Homiio's one-shot features — conversation titles, filter extraction, smart suggestions, and contract or image analysis — call the Oxy inference edge with Homiio's service identity and an Oxy-owned routing profile. Homiio never calls Kaana or an upstream provider directly, and never constructs Kaana's `authorizedRoutes`; Oxy resolves policy and the signed data-plane envelope for those point requests.
 
 `@oxyhq/core` currently exposes only non-streaming `respond()`. Homiio therefore preserves the frontend's AI Data Stream wire format by returning the completed response as one buffered text frame. True token streaming remains blocked on a published Oxy SDK streaming method; this adapter must be removed in the same change that adopts that method.
 

@@ -157,7 +157,7 @@ TanStack Query refetches on reconnect and on foreground.
 | Identity | `@oxyhq/core/server` — `createOxyAuthMiddleware` gates the authenticated router |
 | Billing | `stripe` — Checkout, webhooks, customer portal |
 | Image pipeline | `sharp` + `@aws-sdk/client-s3` |
-| Interactive Sindi chat | Alia API with the caller's Oxy session; Alia owns chat, tools and memory |
+| Interactive Sindi chat | Provisioned Sindi agent in Alia (`SINDI_ALIA_AGENT_ID`) with the caller's Oxy session; Alia owns chat, tools and memory |
 | Point inference | `@oxyhq/core` → Oxy inference edge for titles, filters, suggestions and file analysis; `ai` formats the buffered frontend data-stream response |
 | Queues | `bullmq` over Valkey (`REDIS_URL`); absent, ingestion falls back to inline |
 | Moderation | `@oxyhq/crowdsource*` — community report intake, decisions, enforcement |

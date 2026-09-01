@@ -73,6 +73,8 @@ export interface Config {
   alia: {
     /** Alia product API. Interactive Sindi chat stays on Alia's chat runtime. */
     apiUrl: string;
+    /** Existing Alia agent id backed by the provisioned Sindi bot account. */
+    sindiAgentId?: string;
   };
   telegram: {
     botToken?: string;
@@ -299,6 +301,7 @@ const config: Config = {
 
   alia: {
     apiUrl: process.env.ALIA_API_URL || 'https://api.alia.onl',
+    sindiAgentId: optionalEnvironmentValue(process.env.SINDI_ALIA_AGENT_ID),
   },
   
   // Telegram Bot Configuration

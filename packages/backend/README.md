@@ -105,7 +105,7 @@ Never spread `req.body` into a write. Owner ids come from the session and lifecy
 
 Copy `.env.example` → `.env`. Core vars: `PORT`, `DATABASE_URL`, Oxy auth config, optional `REDIS_URL` (BullMQ worker), provider feature flags (`PROVIDER_*_ENABLED`), listing fetch tiers (`LISTING_BROWSER_ENABLED`, `LISTING_MANAGED_FETCH_URL`).
 
-Secrets for production live in GitHub repo secrets → SSM `/oxy/homiio/*` → ECS task env. Point-inference features use Homiio's Oxy service credential; interactive Sindi chat forwards the already-validated user's Oxy session to Alia. AI provider credentials never enter this repository or task and live only in Kaana's encrypted database. See `~/Oxy/oxy-infra`.
+Secrets for production live in GitHub repo secrets → SSM `/oxy/homiio/*` → ECS task env. Point-inference features use Homiio's Oxy service credential; interactive Sindi chat forwards the already-validated user's Oxy session plus the non-secret id of the provisioned Sindi agent to Alia. AI provider credentials never enter this repository or task and live only in Kaana's encrypted database. See `~/Oxy/oxy-infra`.
 
 ## Deployment
 

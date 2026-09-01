@@ -21,6 +21,15 @@ export class AliaChatError extends Error {
   }
 }
 
+export class AliaChatConfigurationError extends Error {
+  readonly missing = ['SINDI_ALIA_AGENT_ID'] as const;
+
+  constructor() {
+    super('Sindi Alia agent is not configured');
+    this.name = 'AliaChatConfigurationError';
+  }
+}
+
 /**
  * Product chat goes through Alia, which owns chat, tools and memory. Homiio
  * forwards the already-validated Oxy user token; this adapter stores no Alia or
@@ -28,10 +37,12 @@ export class AliaChatError extends Error {
  */
 export class AliaChatService {
   readonly #apiUrl: string;
+  readonly #agentId: string | undefined;
   readonly #fetch: FetchClient;
 
-  constructor(input: { apiUrl: string; fetch?: FetchClient }) {
+  constructor(input: { apiUrl: string; agentId?: string; fetch?: FetchClient }) {
     this.#apiUrl = input.apiUrl.replace(/\/+$/, '');
+    this.#agentId = input.agentId?.trim() || undefined;
     this.#fetch = input.fetch ?? fetch;
   }
 
@@ -40,13 +51,19 @@ export class AliaChatService {
     messages: readonly AliaChatMessage[];
     signal?: AbortSignal;
   }): Promise<string> {
+    if (!this.#agentId) throw new AliaChatConfigurationError();
+
     const response = await this.#fetch(`${this.#apiUrl}/v1/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${input.accessToken}`,
       },
-      body: JSON.stringify({ messages: input.messages, stream: false }),
+      body: JSON.stringify({
+        agentId: this.#agentId,
+        messages: input.messages,
+        stream: false,
+      }),
       ...(input.signal === undefined ? {} : { signal: input.signal }),
     });
 
@@ -59,4 +76,7 @@ export class AliaChatService {
   }
 }
 
-export const aliaChat = new AliaChatService({ apiUrl: config.alia.apiUrl });
+export const aliaChat = new AliaChatService({
+  apiUrl: config.alia.apiUrl,
+  agentId: config.alia.sindiAgentId,
+});
