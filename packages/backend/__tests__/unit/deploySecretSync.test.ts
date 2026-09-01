@@ -49,8 +49,10 @@ const WORKFLOW_PATH = join(REPOSITORY_ROOT, '.github', 'workflows', 'deploy-aws.
 const workflow = readFileSync(WORKFLOW_PATH, 'utf8');
 
 /**
- * Every parameter the two live task definitions read as a `secret`, as of
- * `oxy-homiio:48` and `oxy-homiio-worker:55` (2026-08-09).
+ * Every parameter the two task definitions read as a `secret` after the Sindi
+ * inference rollout. The seven pre-existing entries were re-derived from
+ * `oxy-homiio:48` and `oxy-homiio-worker:55` on 2026-08-09; the two Oxy service
+ * credential entries are release-gated on the matching oxy-infra task update.
  *
  * `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `REDIS_URL` live under
  * `/oxy/_shared/`; the rest under `/oxy/homiio/`. The split is what the
@@ -65,7 +67,14 @@ const workflow = readFileSync(WORKFLOW_PATH, 'utf8');
  * being re-added without somebody noticing.
  */
 const EXPECTED_SYNCED_SECRETS = {
-  APP: ['DATABASE_URL', 'JWT_REFRESH_SECRET', 'JWT_SECRET', 'LISTING_RESIDENTIAL_PROXY_URL'],
+  APP: [
+    'DATABASE_URL',
+    'JWT_REFRESH_SECRET',
+    'JWT_SECRET',
+    'LISTING_RESIDENTIAL_PROXY_URL',
+    'OXY_SERVICE_API_KEY',
+    'OXY_SERVICE_API_SECRET',
+  ],
   SHARED: ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'REDIS_URL'],
 };
 
@@ -102,8 +111,8 @@ describe('the deploy workflow syncs an explicit allowlist', () => {
     // without being synced still has to raise it.
     expect(syncStep).not.toBe('');
     expect(syncStep).toContain('aws ssm put-parameter');
-    expect(envBindings.length).toBeGreaterThanOrEqual(7);
-    expect(syncCalls.length).toBeGreaterThanOrEqual(7);
+    expect(envBindings.length).toBeGreaterThanOrEqual(9);
+    expect(syncCalls.length).toBeGreaterThanOrEqual(9);
   });
 
   it('never enumerates the whole secrets context', () => {
@@ -157,7 +166,7 @@ describe('the deploy workflow syncs an explicit allowlist', () => {
     for (const name of EXPECTED_SYNCED_SECRETS.APP) expect(pathFor(name)).toBe(`/oxy/$APP/${name}`);
   });
 
-  it('covers every secret both task definitions read, and nothing else', () => {
+  it('covers exactly the secrets required by the matching task definitions', () => {
     // Widening this list is the deliberate edit the workflow comment asks for.
     // Narrowing it means a container reads a parameter no deploy maintains.
     expect(syncCalls.map(([, name]) => name).sort()).toEqual(

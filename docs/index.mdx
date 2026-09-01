@@ -43,7 +43,7 @@ Inside the repo:
    └──────────────────────┘                  └──────────────────────┘
             │                                          │
             ▼                                          ▼
-     @oxyhq/services                           Stripe + S3 + OpenAI
+     @oxyhq/services                           Stripe + S3 + Oxy inference
      (auth, account switcher)                  + Oxy API (identity)
                                                        │
                                                        ▼
@@ -89,8 +89,10 @@ STRIPE_PRICE_FILE=price_...
 STRIPE_SUCCESS_URL=https://homiio.com/success
 STRIPE_CANCEL_URL=https://homiio.com/profile/subscriptions
 
-# AI (Sindi assistant)
-OPENAI_API_KEY=sk-...
+# AI (Sindi assistant): Homiio service identity + Oxy routing profile
+OXY_SERVICE_API_KEY=oxy_dk_...
+OXY_SERVICE_API_SECRET=...
+OXY_INFERENCE_ROUTING_PROFILE=
 
 # Image pipeline (production bucket from oxy-infra)
 AWS_ACCESS_KEY_ID=...
@@ -149,7 +151,11 @@ The frontend's `ProfileProvider` loads profiles immediately after `useOxy()` rep
 
 ### Sindi (AI tenant-rights assistant)
 
-Sindi is the in-app AI assistant. Backend route: `POST /api/ai/chat` streams responses via the [AI SDK](https://sdk.vercel.ai/) with `@ai-sdk/openai`. The system prompt is explicit:
+Sindi is the in-app AI assistant. Its backend routes call the Oxy inference edge with Homiio's service identity and an Oxy-owned routing profile. Homiio never calls Kaana or an upstream provider directly, and never constructs Kaana's `authorizedRoutes`; Oxy resolves policy, billing and the signed data-plane envelope.
+
+`@oxyhq/core` currently exposes only non-streaming `respond()`. Homiio therefore preserves the frontend's AI Data Stream wire format by returning the completed response as one buffered text frame. True token streaming remains blocked on a published Oxy SDK streaming method; this adapter must be removed in the same change that adopts that method.
+
+The system prompt is explicit:
 
 > You are Sindi, an AI tenant-rights assistant for Homiio. Be concise, accurate, and pro-tenant. Prioritize tenant rights, fair housing, and current local law. Search Homiio properties first when asked for places to rent; then add rights tips. Prefer official sources and Sindicat de Llogateres for Catalonia queries.
 

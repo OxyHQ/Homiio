@@ -157,7 +157,7 @@ TanStack Query refetches on reconnect and on foreground.
 | Identity | `@oxyhq/core/server` — `createOxyAuthMiddleware` gates the authenticated router |
 | Billing | `stripe` — Checkout, webhooks, customer portal |
 | Image pipeline | `sharp` + `@aws-sdk/client-s3` |
-| AI | `ai` + `@ai-sdk/openai`, streaming the Sindi assistant |
+| AI | `@oxyhq/core` → Oxy inference edge; `ai` only formats the buffered frontend data-stream response |
 | Queues | `bullmq` over Valkey (`REDIS_URL`); absent, ingestion falls back to inline |
 | Moderation | `@oxyhq/crowdsource*` — community report intake, decisions, enforcement |
 | Messaging integrations | `node-telegram-bot-api`, `telegraf`, `whatsapp-web.js` |

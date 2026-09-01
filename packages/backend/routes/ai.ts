@@ -25,9 +25,10 @@
 
 import express, { Request, Response } from 'express';
 import multer from 'multer';
-import { streamText, type CoreMessage } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { formatDataStreamPart, pipeDataStreamToResponse } from 'ai';
+import { OxyInferenceError } from '@oxyhq/core';
 import { getOxyUserId } from '@oxyhq/core/server';
+import type { InferenceContentPart, InferenceMessage } from '@oxyhq/contracts';
 import { getErrorMessage } from '../utils/errors';
 import { logger } from '../middlewares/logging';
 import { getDb } from '../db/postgres';
@@ -58,6 +59,11 @@ import {
   listProfileChatHistory,
 } from '../db/profiles/profileRepository';
 import { resolveAddressDisplay } from '../services/geoDisplayService';
+import {
+  HomiioInferenceConfigurationError,
+  homiioInference,
+  textMessage,
+} from '../services/oxyInferenceService';
 import pdfParse from 'pdf-parse';
 
 // -------------------------------
@@ -278,16 +284,15 @@ const getBaseUrl = () => {
 const ok = (res: Response, data: any) => res.json(data);
 const err = (res: Response, code: number, message: string) => res.status(code).json({ error: message });
 
-const sendEmptyStream = async (res: Response) => {
-  const result = streamText({
-    model: openai('gpt-4o'),
-    temperature: 0,
-    system: 'Return an empty response. Do not output any characters.',
-    messages: [{ role: 'user', content: '' }],
-    maxTokens: 1,
+const pipeTextDataStream = (res: Response, text: string): void => {
+  pipeDataStreamToResponse(res, {
+    execute(writer) {
+      if (text !== '') writer.write(formatDataStreamPart('text', text));
+    },
   });
-  (await result).pipeDataStreamToResponse(res);
 };
+
+const sendEmptyStream = (res: Response): void => pipeTextDataStream(res, '');
 
 const setStreamingHeaders = (res: Response) => {
   res.setHeader('X-Accel-Buffering', 'no');
@@ -306,6 +311,40 @@ const onGracefulClose = (req: Request, res: Response) => {
   };
   req.on('aborted', onClose);
   res.on('close', onClose);
+};
+
+const toInferenceMessages = (messages: readonly ChatMessage[]): InferenceMessage[] =>
+  messages
+    .filter((message) => message.role !== 'tool')
+    .map((message) => textMessage(message.role, message.content));
+
+const inlineContent = (
+  type: 'image' | 'file',
+  mediaType: string,
+  buffer: Buffer,
+  filename?: string,
+): InferenceContentPart => ({
+  type,
+  source: { kind: 'inline', mediaType, data: buffer.toString('base64') },
+  ...(type === 'file' && filename ? { filename } : {}),
+});
+
+const inferenceFailure = (res: Response, error: unknown, message: string): Response => {
+  if (error instanceof HomiioInferenceConfigurationError) {
+    return res.status(503).json({ error: message, code: 'inference_not_configured' });
+  }
+  if (error instanceof OxyInferenceError) {
+    if (error.retryAfterMs !== undefined) {
+      res.setHeader('Retry-After', Math.max(1, Math.ceil(error.retryAfterMs / 1000)));
+    }
+    return res.status(error.status === 429 ? 429 : 503).json({
+      error: message,
+      code: error.code,
+      requestId: error.requestId,
+      retryable: error.retryable,
+    });
+  }
+  return res.status(500).json({ error: message });
 };
 
 const parseDataUrl = (dataUrl: string): { mediaType: string; buffer: Buffer } | null => {
@@ -413,19 +452,21 @@ const buildSearchParams = (
 // -------------------------------
 // AI helpers
 // -------------------------------
-async function generateAITitle(userMessage: string) {
+async function generateAITitle(userMessage: string, oxyUserId: string) {
   try {
-    const result = await streamText({
-      model: openai('gpt-4o'),
-      system:
-        "Generate a concise, descriptive title (≤50 chars) for a tenant-rights chat based on the first user message. Return ONLY the title, no quotes.",
-      messages: [{ role: 'user', content: userMessage }],
+    let title = await homiioInference.respondText({
+      delegatedUserId: oxyUserId,
+      feature: 'conversation-title',
+      messages: [
+        textMessage(
+          'system',
+          "Generate a concise, descriptive title (≤50 chars) for a tenant-rights chat based on the first user message. Return ONLY the title, no quotes.",
+        ),
+        textMessage('user', userMessage),
+      ],
       temperature: 0.3,
-      maxTokens: 24,
+      maxOutputTokens: 24,
     });
-
-    let title = '';
-    for await (const chunk of result.textStream) title += chunk;
     title = title.trim().replace(/^["']|["']$/g, '');
     if (title.length > 50) title = `${title.slice(0, 47)}...`;
     return title && title !== 'New Conversation' ? title : null;
@@ -434,7 +475,10 @@ async function generateAITitle(userMessage: string) {
   }
 }
 
-async function extractFiltersWithAI(userText: string): Promise<PropertyFilters> {
+async function extractFiltersWithAI(
+  userText: string,
+  oxyUserId: string,
+): Promise<PropertyFilters> {
   const instruction = `You extract structured search filters for rental properties from the user's message.
 Return ONLY a compact JSON object with the allowed keys; omit unknown/empty fields.
 
@@ -458,19 +502,17 @@ Examples:
 Important: For simple location questions like "What's in [city]?" or "Properties in [city]", 
 just extract the city name. Don't add extra filters unless explicitly mentioned.
 
-Focus on extracting clear location information from the user's query.`;
+  Focus on extracting clear location information from the user's query.`;
 
   try {
-    const result = await streamText({
-      model: openai('gpt-4o'),
+    const text = await homiioInference.respondText({
+      delegatedUserId: oxyUserId,
+      feature: 'property-filter-extraction',
+      messages: [textMessage('system', instruction), textMessage('user', String(userText || ''))],
       temperature: 0,
-      system: instruction,
-      messages: [{ role: 'user', content: String(userText || '') }],
-      maxTokens: 256,
+      maxOutputTokens: 256,
+      responseFormat: { type: 'json_object' },
     });
-
-    let text = '';
-    for await (const chunk of result.textStream) text += chunk;
     const trimmed = text.trim();
     const start = trimmed.indexOf('{');
     const end = trimmed.lastIndexOf('}');
@@ -531,10 +573,76 @@ Focus on extracting clear location information from the user's query.`;
   }
 }
 
-async function performAppPropertySearch(query: string, priorMessages: ChatMessage[]) {
+async function analyzeHousingFile(input: {
+  buffer: Buffer;
+  mediaType: string;
+  filename: string;
+  userText: string;
+  oxyUserId: string;
+}): Promise<string> {
+  if (input.mediaType.startsWith('application/pdf')) {
+    const system =
+      'You are a tenant-friendly contract and lease reviewer. Identify risky clauses, illegal terms, fees, early termination, maintenance, deposits, and notice periods. Provide brief, actionable advice and questions to ask a landlord. Be concise.';
+    let parsedText = '';
+    try {
+      parsedText = await pdfParse(input.buffer).then((result) => String(result.text || ''));
+    } catch (error: unknown) {
+      logger.info('PDF text extraction unavailable; sending the file through Oxy inference', {
+        error: getErrorMessage(error),
+      });
+    }
+    const prompt = input.userText || 'Please review this lease/contract and advise.';
+    const content: InferenceContentPart[] = [
+      { type: 'text', text: parsedText ? `${prompt}\n\n${parsedText.slice(0, 120000)}` : prompt },
+    ];
+    if (!parsedText) {
+      content.push(inlineContent('file', input.mediaType, input.buffer, input.filename));
+    }
+    return homiioInference.respondText({
+      delegatedUserId: input.oxyUserId,
+      feature: 'contract-review',
+      messages: [textMessage('system', system), { role: 'user', content }],
+      maxOutputTokens: 700,
+      temperature: 0.2,
+    });
+  }
+
+  if (input.mediaType.startsWith('image/')) {
+    const prompt =
+      input.userText ||
+      'Describe what this image shows that is relevant to a housing issue (e.g., damages, mold, notices). Be concise and helpful to a tenant.';
+    return homiioInference.respondText({
+      delegatedUserId: input.oxyUserId,
+      feature: 'housing-image-analysis',
+      messages: [
+        textMessage(
+          'system',
+          'You analyze tenant-related images (e.g., damages, notices) and produce a brief, actionable summary. Be concise and specific. If the image is unclear, ask for one brief clarification question.',
+        ),
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            inlineContent('image', input.mediaType, input.buffer),
+          ],
+        },
+      ],
+      maxOutputTokens: 512,
+      temperature: 0.2,
+    });
+  }
+
+  throw new Error('Unsupported media type');
+}
+
+async function performAppPropertySearch(
+  query: string,
+  priorMessages: ChatMessage[],
+  oxyUserId: string,
+) {
   try {
     const prevIds = extractLastPropertyIdsFromMessages(priorMessages);
-    const filters = await extractFiltersWithAI(query);
+    const filters = await extractFiltersWithAI(query, oxyUserId);
 
     // Determine if this is a location-based search or text search
     const isLocationSearch = filters.city || filters.state;
@@ -666,18 +774,19 @@ Make suggestions conversational and specific. Examples:
 
 Return only the JSON array, no other text.`;
 
-      const result = await streamText({
-        model: openai('gpt-4o'),
+      const generatedText = await homiioInference.respondText({
+        delegatedUserId: userId,
+        feature: 'smart-suggestions',
+        messages: [
+          textMessage(
+            'system',
+            'You are a helpful AI that generates relevant chat suggestions for rental property conversations. Return valid JSON only.',
+          ),
+          textMessage('user', contextPrompt),
+        ],
         temperature: 0.7,
-        system: 'You are a helpful AI that generates relevant chat suggestions for rental property conversations. Return valid JSON only.',
-        messages: [{ role: 'user', content: contextPrompt }],
-        maxTokens: 500,
+        maxOutputTokens: 500,
       });
-
-      let generatedText = '';
-      for await (const chunk of result.textStream) {
-        generatedText += chunk;
-      }
 
       // Parse AI response
       let suggestions;
@@ -720,7 +829,7 @@ Return only the JSON array, no other text.`;
 
     } catch (error: unknown) {
       logger.error('AI suggestions failed', { error: getErrorMessage(error) });
-      return err(res, 500, 'Failed to generate suggestions');
+      return inferenceFailure(res, error, 'Failed to generate suggestions');
     }
   });
 
@@ -786,11 +895,13 @@ Return only the JSON array, no other text.`;
       // If last message is not user, return empty stream for clean client resolution
       if (!isLastTurnUser) {
         announceConversationId(res, conversation, conversationIsNew);
-        await sendEmptyStream(res);
+        sendEmptyStream(res);
         return;
       }
 
-      const propertyResults = isAttachmentStub ? { nearby: [], search: [] } : await performAppPropertySearch(lastContent, messages);
+      const propertyResults = isAttachmentStub
+        ? { nearby: [], search: [] }
+        : await performAppPropertySearch(lastContent, messages, userId);
 
       // Build enhanced messages
       const enhanced: ChatMessage[] = [{ role: 'system', content: SINDI_SYSTEM_PROMPT }, ...messages];
@@ -851,110 +962,92 @@ Return only the JSON array, no other text.`;
         });
       }
 
-      // Choose model path
-      let result: ReturnType<typeof streamText>;
+      let aiResponse: string;
 
       if (hasInlineFile) {
         // Multimodal: image or PDF
-        const parsed = parseDataUrl(tagMatch![1]);
+        const parsed = tagMatch ? parseDataUrl(tagMatch[1]) : null;
         const mediaType = parsed?.mediaType || '';
         const bytes = parsed?.buffer?.byteLength || 0;
 
         // PDF
-        if (mediaType.startsWith('application/pdf')) {
+        if (parsed && mediaType.startsWith('application/pdf')) {
           const CONTRACT_SYSTEM =
             'You are a tenant-friendly contract and lease reviewer. You identify risky clauses, illegal terms (jurisdiction-aware at a high level), fees, early termination, maintenance, deposits, and notice periods. Provide brief, actionable advice and suggest questions to ask a landlord. Be concise.';
-          const prior: CoreMessage[] = (messages as ChatMessage[])
-            .slice(0, -1)
-            .filter((m): m is ChatMessage & { role: 'system' | 'user' | 'assistant' } => m.role !== 'tool')
-            .map(m => ({ role: m.role, content: m.content }));
-          const filename = 'upload.pdf';
-          const userText = (cleanedLastContent || '').slice(0, 2000) || 'Please review this lease/contract and advise.';
+          const prior = toInferenceMessages(messages.slice(0, -1));
+          const userText =
+            (cleanedLastContent || '').slice(0, 2000) ||
+            'Please review this lease/contract and advise.';
+          let parsedText = '';
           try {
-            result = streamText({
-              model: openai('gpt-4o-mini'),
-              temperature: 0.2,
-              messages: [
-                { role: 'system', content: SINDI_SYSTEM_PROMPT },
-                { role: 'system', content: CONTRACT_SYSTEM },
-                ...prior,
-                { role: 'user', content: [{ type: 'text', text: userText }, { type: 'file', data: parsed!.buffer, mimeType: 'application/pdf', filename }] },
-              ],
-              maxTokens: 700,
-            });
-          } catch {
-            // Fallback to text extraction
-            const parsedText = await pdfParse(parsed!.buffer).then((r: any) => String(r?.text || ''));
-            const clipped = parsedText.slice(0, 120000);
-            result = streamText({
-              model: openai('gpt-4o'),
-              temperature: 0.2,
-              messages: [{ role: 'system', content: SINDI_SYSTEM_PROMPT }, { role: 'system', content: CONTRACT_SYSTEM }, ...prior, { role: 'user', content: `${userText}\n\n${clipped}` }],
-              maxTokens: 700,
+            parsedText = await pdfParse(parsed.buffer).then((result) => String(result.text || ''));
+          } catch (error: unknown) {
+            logger.info('PDF text extraction unavailable; sending the file through Oxy inference', {
+              error: getErrorMessage(error),
             });
           }
+          const content: InferenceContentPart[] = [
+            { type: 'text', text: parsedText ? `${userText}\n\n${parsedText.slice(0, 120000)}` : userText },
+          ];
+          if (!parsedText) {
+            content.push(inlineContent('file', mediaType, parsed.buffer, 'upload.pdf'));
+          }
+          aiResponse = await homiioInference.respondText({
+            delegatedUserId: userId,
+            feature: 'contract-review',
+            messages: [
+              textMessage('system', SINDI_SYSTEM_PROMPT),
+              textMessage('system', CONTRACT_SYSTEM),
+              ...prior,
+              { role: 'user', content },
+            ],
+            maxOutputTokens: 700,
+            temperature: 0.2,
+          });
         } else if (!mediaType.startsWith('image/')) {
-          // Unsupported
-          result = streamText({
-            model: openai('gpt-4o'),
-            temperature: 0.2,
-            messages: [
-              { role: 'system', content: SINDI_SYSTEM_PROMPT },
-              { role: 'user', content: `I uploaded a ${mediaType || 'file'}; please accept images (png/jpg/webp) or PDFs for analysis.` },
-            ],
-            maxTokens: 120,
-          });
+          aiResponse = `I can’t analyze ${mediaType || 'this file type'}. Please upload an image (PNG, JPEG, or WebP) or a PDF.`;
         } else if (bytes > IMAGE_MAX_INLINE_MB * 1024 * 1024) {
-          result = streamText({
-            model: openai('gpt-4o'),
-            temperature: 0.2,
-            messages: [
-              { role: 'system', content: SINDI_SYSTEM_PROMPT },
-              { role: 'user', content: 'The image appears very large (>20MB). Please compress or send a smaller photo. What should I capture for a clear assessment?' },
-            ],
-            maxTokens: 140,
-          });
-        } else {
+          aiResponse =
+            'The image is larger than 20 MB. Please compress it or send a smaller, well-lit photo that clearly shows the housing issue.';
+        } else if (parsed) {
           // Image analysis
-          const prior: CoreMessage[] = (messages as ChatMessage[])
-            .slice(0, -1)
-            .filter((m): m is ChatMessage & { role: 'system' | 'user' | 'assistant' } => m.role !== 'tool')
-            .map(m => ({ role: m.role, content: m.content }));
+          const prior = toInferenceMessages(messages.slice(0, -1));
           const promptText =
             (cleanedLastContent || '').slice(0, 2000) ||
             'Describe what this image shows that is relevant to a housing issue (e.g., damages, mold, notices). Be concise and helpful to a tenant.';
           const IMG_SYSTEM =
             'You analyze tenant-related images (e.g., damages, notices) and produce a brief, actionable summary. Be concise and specific. If the image is unclear, ask for one brief clarification question.';
 
-          result = streamText({
-            model: openai('gpt-4o'),
-            temperature: 0.2,
+          aiResponse = await homiioInference.respondText({
+            delegatedUserId: userId,
+            feature: 'housing-image-analysis',
             messages: [
-              { role: 'system', content: SINDI_SYSTEM_PROMPT },
-              { role: 'system', content: IMG_SYSTEM },
+              textMessage('system', SINDI_SYSTEM_PROMPT),
+              textMessage('system', IMG_SYSTEM),
               ...prior,
-              { role: 'user', content: [{ type: 'text', text: promptText }, { type: 'image', image: parsed!.buffer }] },
+              {
+                role: 'user',
+                content: [
+                  { type: 'text', text: promptText },
+                  inlineContent('image', mediaType, parsed.buffer),
+                ],
+              },
             ],
-            maxTokens: 512,
+            maxOutputTokens: 512,
+            temperature: 0.2,
           });
+        } else {
+          aiResponse = 'I couldn’t read that attachment. Please upload it again.';
         }
       } else if (isAttachmentStub) {
-        result = streamText({
-          model: openai('gpt-4o'),
-          temperature: 0,
-          system: 'Return an empty response. Do not output any characters.',
-          messages: [{ role: 'user', content: '' }],
-          maxTokens: 1,
-        });
+        aiResponse = '';
       } else {
-        // `enhanced` only ever holds system/user/assistant string messages
-        // (built from the system prompt + the incoming chat turns). Map to the
-        // AI SDK's CoreMessage shape, dropping the local `timestamp` field and
-        // any stray non-string `tool` turns (which the chat surface never sends).
-        const coreMessages: CoreMessage[] = enhanced
-          .filter((m) => m.role !== 'tool')
-          .map((m) => ({ role: m.role as 'system' | 'user' | 'assistant', content: m.content }));
-        result = streamText({ model: openai('gpt-4o'), temperature: 0.2, messages: coreMessages });
+        aiResponse = await homiioInference.respondText({
+          delegatedUserId: userId,
+          feature: 'sindi-chat',
+          messages: toInferenceMessages(enhanced),
+          temperature: 0.2,
+        });
       }
 
       // Save last user message (strip inline base64)
@@ -973,14 +1066,11 @@ Return only the JSON array, no other text.`;
         }
       }
 
-    // Capture AI stream for persistence
-      let aiResponse = '';
       const persisted = conversation;
       (async () => {
         try {
-          for await (const chunk of (await result).textStream) aiResponse += chunk;
-      // Always save assistant reply if we have one and the last turn was a user message
-      if (isLastTurnUser && persisted && aiResponse.trim()) {
+          // Always save assistant reply if we have one and the last turn was a user message
+          if (isLastTurnUser && persisted && aiResponse.trim()) {
             await appendMessages(db, persisted.id, [
               { role: 'assistant', content: aiResponse.trim() },
             ]);
@@ -994,7 +1084,7 @@ Return only the JSON array, no other text.`;
             const firstUser = current?.messages.find((m) => m.message.role === 'user')?.message
               .content;
             if (current?.conversation.title === PLACEHOLDER_CONVERSATION_TITLE && firstUser) {
-              const generated = await generateAITitle(firstUser);
+              const generated = await generateAITitle(firstUser, persisted.oxyUserId);
               await renameConversation(
                 db,
                 persisted.id,
@@ -1011,7 +1101,7 @@ Return only the JSON array, no other text.`;
       announceConversationId(res, conversation, conversationIsNew);
 
       onGracefulClose(req, res);
-      (await result).pipeDataStreamToResponse(res);
+      pipeTextDataStream(res, aiResponse);
     } catch (error: unknown) {
       const message = getErrorMessage(error);
       logger.error('AI stream failed', { error: message });
@@ -1023,7 +1113,7 @@ Return only the JSON array, no other text.`;
         }
         return;
       }
-      return res.status(500).json({ error: 'Failed to generate streaming response', details: message });
+      return inferenceFailure(res, error, 'Failed to generate response');
     }
   });
 
@@ -1039,74 +1129,33 @@ Return only the JSON array, no other text.`;
       // opened the profile screen. Same removal, same reason, as in `/stream`
       // and `/history` — and the same reason `getUserId` above is the real gate.
 
-  const file = req.file;
+      const file = req.file;
       if (!file?.buffer) return err(res, 400, 'file is required (multipart/form-data, key: file)');
 
       const mediaType = file.mimetype || 'application/octet-stream';
       const userTextRaw: string = typeof req.body?.text === 'string' ? req.body.text : '';
       const userText = userTextRaw.trim().slice(0, 2000);
-      const buffer = file.buffer;
-
-      if (mediaType.startsWith('application/pdf')) {
-        const CONTRACT_SYSTEM =
-          'You are a tenant-friendly contract and lease reviewer. Identify risky clauses, illegal terms, fees, early termination, maintenance, deposits, and notice periods. Provide brief, actionable advice and questions to ask a landlord. Be concise.';
-        try {
-          const result = await streamText({
-            model: openai('gpt-4o-mini'),
-            system: CONTRACT_SYSTEM,
-            messages: [
-              { role: 'user', content: [{ type: 'text', text: userText || 'Please review this lease/contract and advise.' }, { type: 'file', data: buffer, mimeType: 'application/pdf', filename: file.originalname || 'upload.pdf' }] },
-            ],
-            maxTokens: 700,
-            temperature: 0.2,
-          });
-          let out = '';
-          for await (const c of result.textStream) out += c;
-          const trimmed = out.trim();
-          const fallback = 'I couldn’t read this PDF. Please share a text version or try an OCR scan, and I’ll review it.';
-          return ok(res, { output: trimmed || fallback, filename: file.originalname, mediaType });
-        } catch {
-          // Fallback with pdf-parse
-          const parsedText = await pdfParse(buffer).then((r: any) => String(r?.text || ''));
-          const clipped = parsedText.slice(0, 120000);
-          const result = await streamText({
-            model: openai('gpt-4o'),
-            system: CONTRACT_SYSTEM,
-            messages: [{ role: 'user', content: `${userText || 'Please review this lease/contract and advise.'}\n\n${clipped}` }],
-            maxTokens: 700,
-            temperature: 0.2,
-          });
-          let out = '';
-          for await (const c of result.textStream) out += c;
-          const trimmed = out.trim();
-          const fallback = 'I couldn’t read this PDF. Please share a text version or try an OCR scan, and I’ll review it.';
-          return ok(res, { output: trimmed || fallback, filename: file.originalname, mediaType });
-        }
+      if (!mediaType.startsWith('application/pdf') && !mediaType.startsWith('image/')) {
+        return err(res, 415, 'Unsupported media type. Please upload an image (png/jpeg/webp) or a PDF.');
       }
-
-      if (mediaType.startsWith('image/')) {
-        const promptText =
-          userText ||
-          'Describe what this image shows that is relevant to a housing issue (e.g., damages, mold, notices). Be concise and helpful to a tenant.';
-        const result = await streamText({
-          model: openai('gpt-4o'),
-          system:
-            'You analyze tenant-related images (e.g., damages, notices) and produce a brief, actionable summary. Be concise and specific. If the image is unclear, ask for one brief clarification question.',
-          messages: [{ role: 'user', content: [{ type: 'text', text: promptText }, { type: 'image', image: buffer }] }],
-          maxTokens: 512,
-          temperature: 0.2,
-        });
-        let out = '';
-        for await (const c of result.textStream) out += c;
-        const trimmed = out.trim();
-        const fallback = 'I couldn’t extract clear details from this image. Please try a clearer photo, or describe what you’d like me to look for.';
-        return ok(res, { output: trimmed || fallback, filename: file.originalname, mediaType });
-      }
-
-      return err(res, 415, 'Unsupported media type. Please upload an image (png/jpeg/webp) or a PDF.');
+      const output = await analyzeHousingFile({
+        buffer: file.buffer,
+        mediaType,
+        filename: file.originalname || 'upload',
+        userText,
+        oxyUserId: userId,
+      });
+      const fallback = mediaType.startsWith('application/pdf')
+        ? 'I couldn’t read this PDF. Please share a text version or try an OCR scan, and I’ll review it.'
+        : 'I couldn’t extract clear details from this image. Please try a clearer photo, or describe what you’d like me to look for.';
+      return ok(res, {
+        output: output.trim() || fallback,
+        filename: file.originalname,
+        mediaType,
+      });
     } catch (error: unknown) {
       logger.error('AI analyze-file failed', { error: getErrorMessage(error) });
-      return err(res, 500, 'internal error');
+      return inferenceFailure(res, error, 'File analysis is unavailable');
     }
   });
 
@@ -1128,56 +1177,25 @@ Return only the JSON array, no other text.`;
       // opened the profile screen. Same removal, same reason, as in `/stream`
       // and `/history` — and the same reason `getUserId` above is the real gate.
 
-  const file = req.file;
+      const file = req.file;
       if (!file?.buffer) return err(res, 400, 'file is required (multipart/form-data, key: file)');
 
       const mediaType = file.mimetype || 'application/octet-stream';
       const userTextRaw: string = typeof req.body?.text === 'string' ? req.body.text : '';
       const userText = userTextRaw.trim().slice(0, 2000);
-      const buffer = file.buffer;
-
-      let result: Awaited<ReturnType<typeof streamText>>;
-
-      if (mediaType.startsWith('application/pdf')) {
-        const CONTRACT_SYSTEM =
-          'You are a tenant-friendly contract and lease reviewer. Identify risky clauses, illegal terms, fees, early termination, maintenance, deposits, and notice periods. Provide brief, actionable advice and questions to ask a landlord. Be concise.';
-        try {
-          result = await streamText({
-            model: openai('gpt-4o-mini'),
-            system: CONTRACT_SYSTEM,
-            messages: [{ role: 'user', content: [{ type: 'text', text: userText || 'Please review this lease/contract and advise.' }, { type: 'file', data: buffer, mimeType: 'application/pdf', filename: file.originalname || 'upload.pdf' }] }],
-            maxTokens: 700,
-            temperature: 0.2,
-          });
-        } catch {
-          const parsedText = await pdfParse(buffer).then((r: any) => String(r?.text || ''));
-          const clipped = parsedText.slice(0, 120000);
-          result = await streamText({
-            model: openai('gpt-4o'),
-            system: CONTRACT_SYSTEM,
-            messages: [{ role: 'user', content: `${userText || 'Please review this lease/contract and advise.'}\n\n${clipped}` }],
-            maxTokens: 700,
-            temperature: 0.2,
-          });
-        }
-      } else if (mediaType.startsWith('image/')) {
-        const promptText =
-          userText ||
-          'Describe what this image shows that is relevant to a housing issue (e.g., damages, mold, notices). Be concise and helpful to a tenant.';
-        result = await streamText({
-          model: openai('gpt-4o'),
-          system:
-            'You analyze tenant-related images (e.g., damages, notices) and produce a brief, actionable summary. Be concise and specific. If the image is unclear, ask for one brief clarification question.',
-          messages: [{ role: 'user', content: [{ type: 'text', text: promptText }, { type: 'image', image: buffer }] }],
-          maxTokens: 512,
-          temperature: 0.2,
-        });
-      } else {
+      if (!mediaType.startsWith('application/pdf') && !mediaType.startsWith('image/')) {
         return err(res, 415, 'Unsupported media type. Please upload an image (png/jpeg/webp) or a PDF.');
       }
+      const output = await analyzeHousingFile({
+        buffer: file.buffer,
+        mediaType,
+        filename: file.originalname || 'upload',
+        userText,
+        oxyUserId: userId,
+      });
 
       onGracefulClose(req, res);
-      await result.pipeDataStreamToResponse(res);
+      pipeTextDataStream(res, output);
     } catch (error: unknown) {
       logger.error('AI analyze-file stream failed', { error: getErrorMessage(error) });
       if (res.headersSent) {
@@ -1188,16 +1206,17 @@ Return only the JSON array, no other text.`;
         }
         return;
       }
-      return err(res, 500, 'internal error');
+      return inferenceFailure(res, error, 'File analysis is unavailable');
     }
   });
 
   // ---------- Health ----------
   router.get('/health', (_req, res) =>
     ok(res, {
-      status: 'ok',
-      service: 'AI Streaming Service',
-      features: ['text-streaming', 'image-input', 'pdf-file-input'],
+      status: homiioInference.configurationFailure.length === 0 ? 'ok' : 'degraded',
+      service: 'Oxy inference edge adapter',
+      features: ['buffered-data-stream', 'image-input', 'pdf-file-input'],
+      configured: homiioInference.configurationFailure.length === 0,
       timestamp: new Date().toISOString(),
     }),
   );
@@ -1296,12 +1315,12 @@ Return only the JSON array, no other text.`;
     );
 
     // Name it from the first user turn, as the Mongo handler did. The AI call
-    // is deliberately OUTSIDE the transaction: it is a network round trip to a
-    // third party, and holding a Postgres transaction open across one is how a
-    // slow provider turns into a connection-pool outage.
+    // is deliberately OUTSIDE the transaction: it is a network round trip to
+    // the Oxy inference edge, and holding a Postgres transaction open across
+    // one is how a slow inference request turns into a connection-pool outage.
     const firstUser = hydrated.messages.find((m) => m.message.role === 'user')?.message.content;
     if (firstUser && hydrated.conversation.title === PLACEHOLDER_CONVERSATION_TITLE) {
-      const generated = await generateAITitle(firstUser);
+      const generated = await generateAITitle(firstUser, userId);
       if (generated) {
         const renamed = await renameConversation(db, hydrated.conversation.id, userId, generated);
         if (renamed) hydrated = { conversation: renamed, messages: hydrated.messages };

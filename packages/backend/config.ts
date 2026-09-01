@@ -34,6 +34,12 @@ function observabilitySampleRate(raw: string | undefined): number {
   return Math.min(Math.max(parsed, 0), 1);
 }
 
+/** Treat an empty/whitespace deployment value as absent, never as a credential. */
+function optionalEnvironmentValue(raw: string | undefined): string | undefined {
+  const value = raw?.trim();
+  return value || undefined;
+}
+
 const CROWDSOURCE_ENFORCEMENT_MODES: readonly ModerationEnforcementMode[] = [
   'observe',
   'manual',
@@ -57,11 +63,12 @@ export interface Config {
   port: number | string;
   oxy: {
     baseURL: string;
-  };
-  openai: {
-    apiKey?: string;
-    organization?: string;
-    model: string;
+    /** ApplicationCredential.publicKey for Homiio's service identity. */
+    serviceApiKey?: string;
+    /** Cleartext service credential secret, supplied by the secret manager. */
+    serviceApiSecret?: string;
+    /** Oxy-owned routing profile selected for Sindi requests. */
+    inferenceRoutingProfile?: string;
   };
   telegram: {
     botToken?: string;
@@ -281,13 +288,9 @@ const config: Config = {
   // Override with OXY_API_URL when genuinely running an Oxy API yourself.
   oxy: {
     baseURL: process.env.OXY_API_URL || 'https://api.oxy.so',
-  },
-  
-  // OpenAI Configuration
-  openai: {
-    apiKey: process.env.OPENAI_API_KEY,
-    organization: process.env.OPENAI_ORG_ID,
-    model: process.env.OPENAI_MODEL || 'gpt-4o',
+    serviceApiKey: optionalEnvironmentValue(process.env.OXY_SERVICE_API_KEY),
+    serviceApiSecret: optionalEnvironmentValue(process.env.OXY_SERVICE_API_SECRET),
+    inferenceRoutingProfile: optionalEnvironmentValue(process.env.OXY_INFERENCE_ROUTING_PROFILE),
   },
   
   // Telegram Bot Configuration
