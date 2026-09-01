@@ -67,8 +67,12 @@ export interface Config {
     serviceApiKey?: string;
     /** Cleartext service credential secret, supplied by the secret manager. */
     serviceApiSecret?: string;
-    /** Oxy-owned routing profile selected for Sindi requests. */
+    /** Oxy-owned routing profile selected for Homiio's point-inference requests. */
     inferenceRoutingProfile?: string;
+  };
+  alia: {
+    /** Alia product API. Interactive Sindi chat stays on Alia's chat runtime. */
+    apiUrl: string;
   };
   telegram: {
     botToken?: string;
@@ -291,6 +295,10 @@ const config: Config = {
     serviceApiKey: optionalEnvironmentValue(process.env.OXY_SERVICE_API_KEY),
     serviceApiSecret: optionalEnvironmentValue(process.env.OXY_SERVICE_API_SECRET),
     inferenceRoutingProfile: optionalEnvironmentValue(process.env.OXY_INFERENCE_ROUTING_PROFILE),
+  },
+
+  alia: {
+    apiUrl: process.env.ALIA_API_URL || 'https://api.alia.onl',
   },
   
   // Telegram Bot Configuration

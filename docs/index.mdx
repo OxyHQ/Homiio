@@ -6,7 +6,7 @@ order: 0
 
 # Homiio
 
-Homiio is the housing trust and transparency layer: find a place, research its history, learn what it really costs, understand what living there was like, and manage or defend the tenancy. The frontend is a single Expo / React Native codebase targeting iOS, Android and Web. The backend is a Node + Express API on PostgreSQL with PostGIS, plus Stripe for subscriptions, AWS S3 + Sharp for media, and the AI SDK for **Sindi**, the in-app tenant-rights assistant.
+Homiio is the housing trust and transparency layer: find a place, research its history, learn what it really costs, understand what living there was like, and manage or defend the tenancy. The frontend is a single Expo / React Native codebase targeting iOS, Android and Web. The backend is a Node + Express API on PostgreSQL with PostGIS, plus Stripe for subscriptions, AWS S3 + Sharp for media, and **Sindi**, the in-app tenant-rights assistant powered by Alia.
 
 <Badge variant="success">App</Badge> <Badge>iOS / Android / Web</Badge>
 
@@ -43,7 +43,7 @@ Inside the repo:
    └──────────────────────┘                  └──────────────────────┘
             │                                          │
             ▼                                          ▼
-     @oxyhq/services                           Stripe + S3 + Oxy inference
+     @oxyhq/services                           Stripe + S3 + Alia + Oxy inference
      (auth, account switcher)                  + Oxy API (identity)
                                                        │
                                                        ▼
@@ -89,7 +89,7 @@ STRIPE_PRICE_FILE=price_...
 STRIPE_SUCCESS_URL=https://homiio.com/success
 STRIPE_CANCEL_URL=https://homiio.com/profile/subscriptions
 
-# AI (Sindi assistant): Homiio service identity + Oxy routing profile
+# Point inference: Homiio service identity + Oxy routing profile
 OXY_SERVICE_API_KEY=oxy_dk_...
 OXY_SERVICE_API_SECRET=...
 OXY_INFERENCE_ROUTING_PROFILE=
@@ -151,7 +151,7 @@ The frontend's `ProfileProvider` loads profiles immediately after `useOxy()` rep
 
 ### Sindi (AI tenant-rights assistant)
 
-Sindi is the in-app AI assistant. Its backend routes call the Oxy inference edge with Homiio's service identity and an Oxy-owned routing profile. Homiio never calls Kaana or an upstream provider directly, and never constructs Kaana's `authorizedRoutes`; Oxy resolves policy, billing and the signed data-plane envelope.
+Sindi is the in-app AI assistant. Its interactive, persisted chat route calls the Alia API with the already-authenticated user's Oxy token, so Alia remains the owner of chat, tools and memory before it reaches Kaana. Homiio's one-shot features — conversation titles, filter extraction, smart suggestions, and contract or image analysis — call the Oxy inference edge with Homiio's service identity and an Oxy-owned routing profile. Homiio never calls Kaana or an upstream provider directly, and never constructs Kaana's `authorizedRoutes`; Oxy resolves policy and the signed data-plane envelope for those point requests.
 
 `@oxyhq/core` currently exposes only non-streaming `respond()`. Homiio therefore preserves the frontend's AI Data Stream wire format by returning the completed response as one buffered text frame. True token streaming remains blocked on a published Oxy SDK streaming method; this adapter must be removed in the same change that adopts that method.
 

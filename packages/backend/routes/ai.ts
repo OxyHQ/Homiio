@@ -64,6 +64,7 @@ import {
   homiioInference,
   textMessage,
 } from '../services/oxyInferenceService';
+import { AliaChatError, aliaChat } from '../services/aliaChatService';
 import pdfParse from 'pdf-parse';
 
 // -------------------------------
@@ -157,6 +158,12 @@ Avoid repetition:
 // Resolve the authenticated Oxy user id (or null) from a request whose session
 // was already populated by `@oxyhq/core/server` auth middleware in server.ts.
 const getUserId = (req: Request): string | null => getOxyUserId(req);
+
+const getUserAccessToken = (req: Request): string | null => {
+  const authorization = req.headers.authorization;
+  if (typeof authorization !== 'string' || !authorization.startsWith('Bearer ')) return null;
+  return authorization.slice('Bearer '.length).trim() || null;
+};
 
 /**
  * The client's own placeholder id for a chat it has not saved yet.
@@ -345,6 +352,16 @@ const inferenceFailure = (res: Response, error: unknown, message: string): Respo
     });
   }
   return res.status(500).json({ error: message });
+};
+
+const chatFailure = (res: Response, error: unknown): Response => {
+  if (error instanceof AliaChatError) {
+    return res.status(error.status === 401 || error.status === 403 ? 401 : 503).json({
+      error: 'Sindi chat is temporarily unavailable',
+      code: error.status === 401 || error.status === 403 ? 'chat_auth_required' : 'chat_unavailable',
+    });
+  }
+  return res.status(500).json({ error: 'Failed to generate response' });
 };
 
 const parseDataUrl = (dataUrl: string): { mediaType: string; buffer: Buffer } | null => {
@@ -841,6 +858,8 @@ Return only the JSON array, no other text.`;
 
       const userId = getUserId(req);
       if (!userId) return err(res, 401, 'Unauthorized');
+      const userAccessToken = getUserAccessToken(req);
+      if (!userAccessToken) return err(res, 401, 'User session token required');
 
       // No `Profile` lookup: `conversations.oxy_user_id` is the owner, so the
       // "No active profile found" 404 was refusing a chat to anyone who had
@@ -1042,11 +1061,14 @@ Return only the JSON array, no other text.`;
       } else if (isAttachmentStub) {
         aiResponse = '';
       } else {
-        aiResponse = await homiioInference.respondText({
-          delegatedUserId: userId,
-          feature: 'sindi-chat',
-          messages: toInferenceMessages(enhanced),
-          temperature: 0.2,
+        aiResponse = await aliaChat.respondText({
+          accessToken: userAccessToken,
+          messages: enhanced
+            .filter((message) => message.role !== 'tool')
+            .map((message) => ({
+              role: message.role as 'system' | 'user' | 'assistant',
+              content: message.content,
+            })),
         });
       }
 
@@ -1113,7 +1135,9 @@ Return only the JSON array, no other text.`;
         }
         return;
       }
-      return inferenceFailure(res, error, 'Failed to generate response');
+      return error instanceof AliaChatError
+        ? chatFailure(res, error)
+        : inferenceFailure(res, error, 'Failed to generate response');
     }
   });
 

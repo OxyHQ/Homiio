@@ -13,14 +13,28 @@ const files = [
   'packages/backend/package.json',
   'packages/backend/config.ts',
   'packages/backend/routes/ai.ts',
+  'packages/backend/services/aliaChatService.ts',
   'packages/backend/services/oxy.ts',
   'packages/backend/services/oxyInferenceService.ts',
 ];
 
-describe('Sindi reaches providers only through the Oxy inference edge', () => {
+describe('Homiio never reaches an inference provider directly', () => {
   it.each(files)('%s contains no direct provider client or provider credential env', (file) => {
     const source = readFileSync(join(REPOSITORY_ROOT, file), 'utf8');
     expect(source).not.toMatch(/@ai-sdk\/openai|OPENAI_(?:API_KEY|ORG_ID|MODEL)/);
+  });
+
+  it('keeps interactive Sindi chat on the Alia product boundary', () => {
+    const route = readFileSync(join(REPOSITORY_ROOT, 'packages/backend/routes/ai.ts'), 'utf8');
+    const source = readFileSync(
+      join(REPOSITORY_ROOT, 'packages/backend/services/aliaChatService.ts'),
+      'utf8',
+    );
+    expect(route).toContain('aliaChat.respondText');
+    expect(route).not.toMatch(/feature:\s*['"]sindi-chat['"]/);
+    expect(source).toContain('/v1/chat/completions');
+    expect(source).toContain('Authorization: `Bearer ${input.accessToken}`');
+    expect(source).not.toMatch(/ALIA_API_KEY|OPENAI_API_KEY/);
   });
 
   it('never constructs the Kaana-only authorizedRoutes envelope', () => {

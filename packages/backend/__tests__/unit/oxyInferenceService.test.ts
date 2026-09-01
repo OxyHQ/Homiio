@@ -39,7 +39,7 @@ describe('HomiioInferenceService', () => {
     await expect(
       service.respondText({
         delegatedUserId: 'oxy-user-1',
-        feature: 'sindi-chat',
+        feature: 'conversation-title',
         messages: [textMessage('user', 'hello')],
         maxOutputTokens: 128,
         temperature: 0.2,
@@ -49,7 +49,7 @@ describe('HomiioInferenceService', () => {
     const [request, options] = respond.mock.calls[0];
     expect(request).toMatchObject({
       routingProfile: 'sindi-balanced',
-      labels: { product: 'homiio', feature: 'sindi-chat' },
+      labels: { product: 'homiio', feature: 'conversation-title' },
       maxOutputTokens: 128,
       temperature: 0.2,
     });
@@ -71,7 +71,7 @@ describe('HomiioInferenceService', () => {
     await expect(
       service.respondText({
         delegatedUserId: 'oxy-user-1',
-        feature: 'sindi-chat',
+        feature: 'conversation-title',
         messages: [textMessage('user', 'hello')],
       }),
     ).rejects.toMatchObject({

@@ -17,7 +17,7 @@ Homiio is a Bun workspaces monorepo with three packages: `@homiio/frontend` (Exp
 - **Android development**: Android Studio with at least one configured AVD.
 - **Web only**: nothing extra — `bun run dev:frontend` then press `w`.
 
-Optional but recommended: Stripe CLI (for webhook forwarding in dev) and AWS credentials with S3 access (for the image pipeline). Sindi additionally needs Homiio's Oxy service credential and an Oxy routing profile.
+Optional but recommended: Stripe CLI (for webhook forwarding in dev) and AWS credentials with S3 access (for the image pipeline). Homiio's point-inference features additionally need its Oxy service credential and an Oxy routing profile. Interactive Sindi chat uses the caller's Oxy session through Alia.
 
 ## Clone and install
 
@@ -49,7 +49,7 @@ STRIPE_PRICE_FILE=price_...
 STRIPE_SUCCESS_URL=http://localhost:8130/success
 STRIPE_CANCEL_URL=http://localhost:8130/profile/subscriptions
 
-# Oxy service identity + Oxy-owned routing profile — required for Sindi
+# Oxy service identity + Oxy-owned routing profile — required for point inference
 # These are product-to-Oxy credentials, never an upstream provider key.
 OXY_SERVICE_API_KEY=oxy_dk_...
 OXY_SERVICE_API_SECRET=...
