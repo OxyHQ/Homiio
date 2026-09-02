@@ -303,6 +303,30 @@ const pipeTextDataStream = (res: Response, text: string): void => {
   });
 };
 
+const pipeStreamingTextDataStream = (
+  res: Response,
+  stream: AsyncIterable<string>,
+  input: {
+    onComplete: (text: string) => void;
+    onError: (error: unknown) => void;
+  },
+): void => {
+  let completeText = '';
+  pipeDataStreamToResponse(res, {
+    async execute(writer) {
+      for await (const text of stream) {
+        completeText += text;
+        if (text !== '') writer.write(formatDataStreamPart('text', text));
+      }
+      input.onComplete(completeText);
+    },
+    onError(error) {
+      input.onError(error);
+      return 'Sindi could not finish this response. Please try again.';
+    },
+  });
+};
+
 const sendEmptyStream = (res: Response): void => pipeTextDataStream(res, '');
 
 const setStreamingHeaders = (res: Response) => {
@@ -991,7 +1015,8 @@ Return only the JSON array, no other text.`;
         });
       }
 
-      let aiResponse: string;
+      let aiResponse: string | undefined;
+      let aliaResponseStream: AsyncIterable<string> | undefined;
 
       if (hasInlineFile) {
         // Multimodal: image or PDF
@@ -1071,7 +1096,11 @@ Return only the JSON array, no other text.`;
       } else if (isAttachmentStub) {
         aiResponse = '';
       } else {
-        aiResponse = await aliaChat.respondText({
+        const upstreamAbort = new AbortController();
+        const abortUpstream = () => upstreamAbort.abort();
+        req.once('aborted', abortUpstream);
+        res.once('close', abortUpstream);
+        aliaResponseStream = await aliaChat.streamText({
           accessToken: userAccessToken,
           messages: enhanced
             .filter((message) => message.role !== 'tool')
@@ -1079,6 +1108,7 @@ Return only the JSON array, no other text.`;
               role: message.role as 'system' | 'user' | 'assistant',
               content: message.content,
             })),
+          signal: upstreamAbort.signal,
         });
       }
 
@@ -1098,42 +1128,56 @@ Return only the JSON array, no other text.`;
         }
       }
 
-      const persisted = conversation;
-      (async () => {
-        try {
-          // Always save assistant reply if we have one and the last turn was a user message
-          if (isLastTurnUser && persisted && aiResponse.trim()) {
-            await appendMessages(db, persisted.id, [
-              { role: 'assistant', content: aiResponse.trim() },
-            ]);
+      const persistAssistantResponse = (assistantResponse: string): void => {
+        const persisted = conversation;
+        void (async () => {
+          try {
+            // Always save assistant reply if we have one and the last turn was a user message
+            if (isLastTurnUser && persisted && assistantResponse.trim()) {
+              await appendMessages(db, persisted.id, [
+                { role: 'assistant', content: assistantResponse.trim() },
+              ]);
 
-            // Name the conversation from its first user turn, which is what
-            // Mongo's `pre('save')` hook did. The title is re-read from the
-            // ROW rather than from the local copy: `persisted` was loaded
-            // before the stream started and another turn may have renamed it
-            // since, and the rename is scoped to the owner either way.
-            const current = await findConversationForOwner(db, persisted.id, persisted.oxyUserId);
-            const firstUser = current?.messages.find((m) => m.message.role === 'user')?.message
-              .content;
-            if (current?.conversation.title === PLACEHOLDER_CONVERSATION_TITLE && firstUser) {
-              const generated = await generateAITitle(firstUser, persisted.oxyUserId);
-              await renameConversation(
-                db,
-                persisted.id,
-                persisted.oxyUserId,
-                generated || titleFromFirstUserMessage(firstUser),
-              );
+              // Name the conversation from its first user turn, which is what
+              // Mongo's `pre('save')` hook did. The title is re-read from the
+              // ROW rather than from the local copy: `persisted` was loaded
+              // before the stream started and another turn may have renamed it
+              // since, and the rename is scoped to the owner either way.
+              const current = await findConversationForOwner(db, persisted.id, persisted.oxyUserId);
+              const firstUser = current?.messages.find((m) => m.message.role === 'user')?.message
+                .content;
+              if (current?.conversation.title === PLACEHOLDER_CONVERSATION_TITLE && firstUser) {
+                const generated = await generateAITitle(firstUser, persisted.oxyUserId);
+                await renameConversation(
+                  db,
+                  persisted.id,
+                  persisted.oxyUserId,
+                  generated || titleFromFirstUserMessage(firstUser),
+                );
+              }
             }
+          } catch (error: unknown) {
+            logger.warn('Failed to persist assistant reply to conversation', { error: getErrorMessage(error) });
           }
-        } catch (error: unknown) {
-          logger.warn('Failed to persist assistant reply to conversation', { error: getErrorMessage(error) });
-        }
-      })();
+        })();
+      };
 
       announceConversationId(res, conversation, conversationIsNew);
 
       onGracefulClose(req, res);
-      pipeTextDataStream(res, aiResponse);
+      if (aliaResponseStream) {
+        pipeStreamingTextDataStream(res, aliaResponseStream, {
+          onComplete: persistAssistantResponse,
+          onError(error) {
+            logger.error('Alia SSE stream failed', { error: getErrorMessage(error) });
+          },
+        });
+        return;
+      }
+
+      const bufferedResponse = aiResponse ?? '';
+      persistAssistantResponse(bufferedResponse);
+      pipeTextDataStream(res, bufferedResponse);
     } catch (error: unknown) {
       const message = getErrorMessage(error);
       logger.error('AI stream failed', { error: message });

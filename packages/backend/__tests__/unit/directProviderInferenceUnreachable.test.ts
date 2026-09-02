@@ -30,10 +30,14 @@ describe('Homiio never reaches an inference provider directly', () => {
       join(REPOSITORY_ROOT, 'packages/backend/services/aliaChatService.ts'),
       'utf8',
     );
-    expect(route).toContain('aliaChat.respondText');
+    expect(route).toContain('aliaChat.streamText');
+    expect(route).toContain('for await (const text of stream)');
+    expect(route).toContain('signal: upstreamAbort.signal');
+    expect(route).toContain("req.once('aborted', abortUpstream)");
     expect(route).not.toMatch(/feature:\s*['"]sindi-chat['"]/);
     expect(source).toContain('/v1/chat/completions');
     expect(source).toContain('agentId: this.#agentId');
+    expect(source).toContain('stream: true');
     expect(source).toContain('Authorization: `Bearer ${input.accessToken}`');
     expect(source).not.toMatch(/ALIA_API_KEY|OPENAI_API_KEY/);
   });
