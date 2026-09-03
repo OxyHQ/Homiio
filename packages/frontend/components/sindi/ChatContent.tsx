@@ -108,9 +108,9 @@ export function ChatContent({
                 accessibilityRole="button"
                 disabled={isRequestingConsent}
                 onPress={onRequestConsent}
-                style={({ pressed }) => [
+                style={[
                   sindiStyles.consentButton,
-                  (pressed || isRequestingConsent) && sindiStyles.consentButtonPressed,
+                  isRequestingConsent && sindiStyles.consentButtonPressed,
                 ]}
               >
                 <Text style={sindiStyles.consentButtonText}>
