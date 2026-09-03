@@ -15,11 +15,7 @@ import { getData, storeData } from '@/utils/storage';
 import { logger } from '@/utils/logger';
 import { API_URL } from '@/config';
 import i18next from 'i18next';
-import {
-  hasSindiOAuthConsentClient,
-  requestSindiConsentAndRetry,
-  SindiConsentRequiredError,
-} from './sindiConsent';
+import { requestSindiConsentAndRetry, SindiConsentRequiredError } from './sindiConsent';
 
 /** Key under which we record that the file-upsell sheet has been shown once. */
 const FILE_UPSELL_KEY = 'sindi:fileUpsellShown';
@@ -178,13 +174,6 @@ export function useSindiConversation({
 
   const onRequestConsent = useCallback(async () => {
     if (!needsConsent || isRequestingConsent) return;
-    if (!hasSindiOAuthConsentClient(oxyContext)) {
-      Alert.alert(
-        i18next.t('sindi.errors.consentUnavailableTitle'),
-        i18next.t('sindi.errors.consentUnavailableMessage'),
-      );
-      return;
-    }
 
     setIsRequestingConsent(true);
     try {

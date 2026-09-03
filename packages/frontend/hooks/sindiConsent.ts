@@ -1,3 +1,5 @@
+import type { OAuthConsentResult, OxyContextState } from '@oxyhq/services';
+
 export const SERVICE_ACTING_AS_UNAUTHORIZED = 'SERVICE_ACTING_AS_UNAUTHORIZED' as const;
 
 export const SINDI_OAUTH_SCOPES = ['inference:invoke', 'acting-as:offline'] as const;
@@ -6,15 +8,6 @@ export const SINDI_WEB_CONSENT_REDIRECT_URI = 'https://homiio.com' as const;
 export const SINDI_NATIVE_CONSENT_REDIRECT_URI = 'homiio://oauth/consent' as const;
 
 export type SindiConsentPlatform = 'web' | 'native';
-export type SindiConsentStatus =
-  'consented' | 'redirecting' | 'cancelled' | 'timed-out' | 'failed' | 'unsupported';
-
-export interface SindiOAuthConsentClient {
-  requestOAuthConsent(options: {
-    redirectUri: string;
-    scopes: readonly string[];
-  }): Promise<{ status: SindiConsentStatus }>;
-}
 
 export class SindiConsentRequiredError extends Error {
   readonly code = SERVICE_ACTING_AS_UNAUTHORIZED;
@@ -23,11 +16,6 @@ export class SindiConsentRequiredError extends Error {
     super('Sindi needs your permission to continue');
     this.name = 'SindiConsentRequiredError';
   }
-}
-
-export function hasSindiOAuthConsentClient(value: unknown): value is SindiOAuthConsentClient {
-  if (typeof value !== 'object' || value === null) return false;
-  return typeof (value as { requestOAuthConsent?: unknown }).requestOAuthConsent === 'function';
 }
 
 export function consentRedirectUri(platform: SindiConsentPlatform): string {
@@ -39,10 +27,10 @@ export function consentRedirectUri(platform: SindiConsentPlatform): string {
  * request is replayed exactly once, and only after Oxy reports consented.
  */
 export async function requestSindiConsentAndRetry(
-  client: SindiOAuthConsentClient,
+  client: Pick<OxyContextState, 'requestOAuthConsent'>,
   platform: SindiConsentPlatform,
   retry: () => Promise<unknown>,
-): Promise<SindiConsentStatus> {
+): Promise<OAuthConsentResult['status']> {
   const result = await client.requestOAuthConsent({
     redirectUri: consentRedirectUri(platform),
     scopes: SINDI_OAUTH_SCOPES,

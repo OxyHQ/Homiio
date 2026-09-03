@@ -1,3 +1,4 @@
+import type { OAuthConsentResult } from '@oxyhq/services';
 import {
   requestSindiConsentAndRetry,
   responseRequiresSindiConsent,
@@ -5,15 +6,10 @@ import {
   SINDI_NATIVE_CONSENT_REDIRECT_URI,
   SINDI_OAUTH_SCOPES,
   SINDI_WEB_CONSENT_REDIRECT_URI,
-  type SindiConsentStatus,
-  type SindiOAuthConsentClient,
 } from '@/hooks/sindiConsent';
 
-function consentClient(status: SindiConsentStatus): {
-  client: SindiOAuthConsentClient;
-  requestOAuthConsent: jest.Mock;
-} {
-  const requestOAuthConsent = jest.fn().mockResolvedValue({ status });
+function consentClient(result: OAuthConsentResult) {
+  const requestOAuthConsent = jest.fn().mockResolvedValue(result);
   return { client: { requestOAuthConsent }, requestOAuthConsent };
 }
 
@@ -24,7 +20,7 @@ describe('Sindi explicit OAuth consent', () => {
   ] as const)(
     'requests exact scopes and the exact %s redirect before retrying',
     async (platform, redirectUri) => {
-      const { client, requestOAuthConsent } = consentClient('consented');
+      const { client, requestOAuthConsent } = consentClient({ status: 'consented' });
       const retry = jest.fn().mockResolvedValue(undefined);
 
       await expect(requestSindiConsentAndRetry(client, platform, retry)).resolves.toBe('consented');
@@ -41,19 +37,22 @@ describe('Sindi explicit OAuth consent', () => {
     },
   );
 
-  it.each(['redirecting', 'cancelled', 'timed-out', 'failed', 'unsupported'] as const)(
-    'does not retry when OAuth returns %s',
-    async (status) => {
-      const { client } = consentClient(status);
-      const retry = jest.fn().mockResolvedValue(undefined);
+  it.each([
+    { status: 'redirecting', via: 'redirect-mode' },
+    { status: 'cancelled' },
+    { status: 'timed-out' },
+    { status: 'failed', reason: 'exchange-failed' },
+    { status: 'unsupported', reason: 'unsupported-platform' },
+  ] satisfies OAuthConsentResult[])('does not retry when OAuth returns %s', async (result) => {
+    const { client } = consentClient(result);
+    const retry = jest.fn().mockResolvedValue(undefined);
 
-      await expect(requestSindiConsentAndRetry(client, 'web', retry)).resolves.toBe(status);
-      expect(retry).not.toHaveBeenCalled();
-    },
-  );
+    await expect(requestSindiConsentAndRetry(client, 'web', retry)).resolves.toBe(result.status);
+    expect(retry).not.toHaveBeenCalled();
+  });
 
   it('does not retry when the OAuth request throws', async () => {
-    const client: SindiOAuthConsentClient = {
+    const client = {
       requestOAuthConsent: jest.fn().mockRejectedValue(new Error('oauth unavailable')),
     };
     const retry = jest.fn().mockResolvedValue(undefined);
