@@ -16,7 +16,9 @@ MAX_WAIT_SECS="${MAX_WAIT_SECS:-1200}"
 POLL_INTERVAL="${POLL_INTERVAL:-15}"
 RUN_MIGRATIONS="${RUN_MIGRATIONS:-false}"
 INTERNAL_METRICS_PARAMETER="${INTERNAL_METRICS_PARAMETER:-}"
+TASK_ENV_OVERRIDES_JSON="${TASK_ENV_OVERRIDES_JSON:-}"
 TASK_SECRET_OVERRIDES_JSON="${TASK_SECRET_OVERRIDES_JSON:-}"
+TASK_CONFIGURATION_REMOVALS_JSON="${TASK_CONFIGURATION_REMOVALS_JSON:-}"
 AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-}"
 AWS_PARTITION="${AWS_PARTITION:-aws}"
 POST_DEPLOY_SMOKE_SCRIPT="${POST_DEPLOY_SMOKE_SCRIPT:-}"
@@ -158,6 +160,21 @@ if [[ -n "$POST_DEPLOY_TASK_COMMAND_JSON" ]] &&
   echo "::error::POST_DEPLOY_TASK_COMMAND_JSON must be a non-empty JSON string array."
   exit 1
 fi
+if [[ -z "$TASK_ENV_OVERRIDES_JSON" ]]; then
+  TASK_ENV_OVERRIDES_JSON='{}'
+fi
+if ! jq -e '
+  type == "object" and
+  length <= 20 and
+  all(
+    to_entries[];
+    (.key | type == "string" and test("^[A-Z][A-Z0-9_]{0,127}$")) and
+    (.value | type == "string" and length > 0 and length <= 4096)
+  )
+' <<<"$TASK_ENV_OVERRIDES_JSON" >/dev/null; then
+  echo "::error::TASK_ENV_OVERRIDES_JSON must map environment variable names to non-empty strings."
+  exit 1
+fi
 if [[ -z "$TASK_SECRET_OVERRIDES_JSON" ]]; then
   TASK_SECRET_OVERRIDES_JSON='{}'
 fi
@@ -175,6 +192,33 @@ if ! jq -e '
   )
 ' <<<"$TASK_SECRET_OVERRIDES_JSON" >/dev/null; then
   echo "::error::TASK_SECRET_OVERRIDES_JSON must map environment variable names to complete SSM parameter ARNs."
+  exit 1
+fi
+if ! jq -e -n \
+  --argjson environment "$TASK_ENV_OVERRIDES_JSON" \
+  --argjson secrets "$TASK_SECRET_OVERRIDES_JSON" \
+  '([$environment | keys[]] - [$secrets | keys[]] | length) == ($environment | length)'; then
+  echo "::error::TASK_ENV_OVERRIDES_JSON and TASK_SECRET_OVERRIDES_JSON must not name the same variable."
+  exit 1
+fi
+if [[ -z "$TASK_CONFIGURATION_REMOVALS_JSON" ]]; then
+  TASK_CONFIGURATION_REMOVALS_JSON='[]'
+fi
+if ! jq -e '
+  type == "array" and
+  length <= 20 and
+  length == (unique | length) and
+  all(.[]; type == "string" and test("^[A-Z][A-Z0-9_]{0,127}$"))
+' <<<"$TASK_CONFIGURATION_REMOVALS_JSON" >/dev/null; then
+  echo "::error::TASK_CONFIGURATION_REMOVALS_JSON must be an array of unique environment variable names."
+  exit 1
+fi
+if ! jq -e -n \
+  --argjson environment "$TASK_ENV_OVERRIDES_JSON" \
+  --argjson secrets "$TASK_SECRET_OVERRIDES_JSON" \
+  --argjson removals "$TASK_CONFIGURATION_REMOVALS_JSON" \
+  '(([$environment | keys[]] + [$secrets | keys[]]) - $removals | length) == (($environment | length) + ($secrets | length))'; then
+  echo "::error::A task variable cannot be both overridden and removed."
   exit 1
 fi
 
@@ -511,6 +555,12 @@ task_secret_overrides="$(jq -c '
     | {name: .key, valueFrom: .value}
   ]
 ' <<<"$TASK_SECRET_OVERRIDES_JSON")"
+task_environment_overrides="$(jq -c '
+  [
+    to_entries[]
+    | {name: .key, value: .value}
+  ]
+' <<<"$TASK_ENV_OVERRIDES_JSON")"
 
 aws ecs describe-task-definition \
   --task-definition "$current_task_definition" \
@@ -528,7 +578,9 @@ jq \
   --arg name "$CONTAINER_NAME" \
   --arg image "$IMAGE_URI" \
   --arg internalMetricsSecretArn "$internal_metrics_secret_arn" \
+  --argjson taskEnvironmentOverrides "$task_environment_overrides" \
   --argjson taskSecretOverrides "$task_secret_overrides" \
+  --argjson taskConfigurationRemovals "$TASK_CONFIGURATION_REMOVALS_JSON" \
   '
     del(
       .taskDefinitionArn,
@@ -539,6 +591,7 @@ jq \
       .registeredAt,
       .registeredBy
     )
+    | ($taskEnvironmentOverrides | map(.name)) as $taskEnvironmentNames
     | ($taskSecretOverrides | map(.name)) as $taskSecretNames
     | .containerDefinitions |= map(
         if .name == $name then
@@ -564,10 +617,24 @@ jq \
                 | map(
                     select(
                       .name as $existingName
-                      | ($taskSecretNames | index($existingName)) == null
+                      | ($taskSecretNames | index($existingName)) == null and
+                        ($taskEnvironmentNames | index($existingName)) == null and
+                        ($taskConfigurationRemovals | index($existingName)) == null
                     )
                   ))
               + $taskSecretOverrides
+            )
+          | .environment = (
+              ((.environment // [])
+                | map(
+                    select(
+                      .name as $existingName
+                      | ($taskEnvironmentNames | index($existingName)) == null and
+                        ($taskSecretNames | index($existingName)) == null and
+                        ($taskConfigurationRemovals | index($existingName)) == null
+                    )
+                  ))
+              + $taskEnvironmentOverrides
             )
         else . end
       )

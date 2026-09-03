@@ -17,7 +17,7 @@ Homiio is a Bun workspaces monorepo with three packages: `@homiio/frontend` (Exp
 - **Android development**: Android Studio with at least one configured AVD.
 - **Web only**: nothing extra — `bun run dev:frontend` then press `w`.
 
-Optional but recommended: Stripe CLI (for webhook forwarding in dev) and AWS credentials with S3 access (for the image pipeline). Homiio's point-inference features additionally need its Oxy service credential and an Oxy routing profile. Interactive Sindi chat uses the caller's Oxy session through the provisioned Sindi agent in Alia (`SINDI_ALIA_AGENT_ID`).
+Optional but recommended: Stripe CLI (for webhook forwarding in dev) and AWS credentials with S3 access (for the image pipeline). Homiio's point-inference features additionally need its Oxy service credential and an Oxy routing profile. Interactive Sindi chat uses Homiio's Oxy service credential and delegates the already-verified user to the private Alia agent through `X-Oxy-User-Id`; the caller's bearer stops at Homiio.
 
 ## Clone and install
 
@@ -53,10 +53,12 @@ STRIPE_CANCEL_URL=http://localhost:8130/profile/subscriptions
 # These are product-to-Oxy credentials, never an upstream provider key.
 OXY_SERVICE_API_KEY=oxy_dk_...
 OXY_SERVICE_API_SECRET=...
-OXY_INFERENCE_ROUTING_PROFILE=
+OXY_INFERENCE_ROUTING_PROFILE_ID=01a06477-94f5-74f0-bc25-4c5c13b93ccd
 
-# Provisioned Sindi agent in Alia (non-secret)
-SINDI_ALIA_AGENT_ID=
+# Separate product-service identity for the private Sindi agent
+SINDI_OXY_SERVICE_API_KEY=oxy_dk_...
+SINDI_OXY_SERVICE_API_SECRET=...
+SINDI_ALIA_AGENT_ID=01a0646a-078f-7514-9800-9f43ceed7df8
 
 # AWS S3 — required for image uploads (production bucket from oxy-infra)
 AWS_ACCESS_KEY_ID=...

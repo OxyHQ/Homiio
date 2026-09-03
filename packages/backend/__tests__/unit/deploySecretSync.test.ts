@@ -52,7 +52,8 @@ const workflow = readFileSync(WORKFLOW_PATH, 'utf8');
  * Every parameter the two task definitions read as a `secret` after the Sindi
  * inference rollout. The seven pre-existing entries were re-derived from
  * `oxy-homiio:48` and `oxy-homiio-worker:55` on 2026-08-09; the two Oxy service
- * credential entries are release-gated on the matching oxy-infra task update.
+ * credential parameters are intentionally absent: Oxy's exact-ID provisioner
+ * owns them and this deploy only verifies their SecureString type.
  *
  * `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `REDIS_URL` live under
  * `/oxy/_shared/`; the rest under `/oxy/homiio/`. The split is what the
@@ -72,8 +73,6 @@ const EXPECTED_SYNCED_SECRETS = {
     'JWT_REFRESH_SECRET',
     'JWT_SECRET',
     'LISTING_RESIDENTIAL_PROXY_URL',
-    'OXY_SERVICE_API_KEY',
-    'OXY_SERVICE_API_SECRET',
   ],
   SHARED: ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'REDIS_URL'],
 };
@@ -110,9 +109,11 @@ describe('the deploy workflow syncs an explicit allowlist', () => {
     // ever come down. It is a MINIMUM, so a secret ADDED to the task definitions
     // without being synced still has to raise it.
     expect(syncStep).not.toBe('');
-    expect(syncStep).toContain('aws ssm put-parameter');
-    expect(envBindings.length).toBeGreaterThanOrEqual(9);
-    expect(syncCalls.length).toBeGreaterThanOrEqual(9);
+    expect(syncStep).toContain('bash .github/scripts/put-secure-parameter.sh "$path"');
+    expect(syncStep).not.toContain('aws ssm put-parameter');
+    expect(syncStep).not.toContain('--value "$value"');
+    expect(envBindings.length).toBeGreaterThanOrEqual(7);
+    expect(syncCalls.length).toBeGreaterThanOrEqual(7);
   });
 
   it('never enumerates the whole secrets context', () => {
@@ -182,5 +183,17 @@ describe('the deploy workflow syncs an explicit allowlist', () => {
     // The ESCAPED spelling, because the guard is a `grep` regex — asserting the
     // bare hostname passes on a workflow whose dots are unescaped wildcards.
     expect(syncStep).toContain(String.raw`'\.usw2\.cache\.amazonaws\.com'`);
+  });
+
+  it('does not source Oxy service credentials from GitHub and verifies exact SSM paths', () => {
+    const executableSync = syncStep
+      .split('\n')
+      .filter((line) => !line.trimStart().startsWith('#'))
+      .join('\n');
+    expect(syncStep).not.toMatch(/secrets\.OXY_SERVICE_API_(?:KEY|SECRET)/);
+    expect(syncStep).not.toMatch(/sync_secret OXY_SERVICE_API_(?:KEY|SECRET)/);
+    expect(syncStep).toContain('require_secure_string "/oxy/$APP/OXY_SERVICE_API_KEY"');
+    expect(syncStep).toContain('require_secure_string "/oxy/$APP/OXY_SERVICE_API_SECRET"');
+    expect(executableSync).not.toContain('--with-decryption');
   });
 });

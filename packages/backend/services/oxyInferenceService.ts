@@ -32,22 +32,24 @@ export class HomiioInferenceConfigurationError extends Error {
 
 export class HomiioInferenceService {
   readonly #client: InferenceClient;
-  readonly #routingProfile: string | undefined;
+  readonly #routingProfileId: string | undefined;
   readonly #missingConfiguration: readonly string[];
 
   constructor(input: {
     client: InferenceClient;
-    routingProfile?: string;
+    routingProfileId?: string;
     missingConfiguration?: readonly string[];
   }) {
     this.#client = input.client;
-    this.#routingProfile = input.routingProfile?.trim() || undefined;
+    this.#routingProfileId = input.routingProfileId;
     this.#missingConfiguration = input.missingConfiguration ?? [];
   }
 
   get configurationFailure(): readonly string[] {
     const missing = [...this.#missingConfiguration];
-    if (!this.#routingProfile) missing.push('OXY_INFERENCE_ROUTING_PROFILE');
+    if (this.#routingProfileId === undefined || this.#routingProfileId.length === 0) {
+      missing.push('OXY_INFERENCE_ROUTING_PROFILE_ID');
+    }
     return missing;
   }
 
@@ -56,7 +58,7 @@ export class HomiioInferenceService {
     if (missing.length > 0) throw new HomiioInferenceConfigurationError(missing);
 
     const request: OxyResponsesRequest = {
-      routingProfile: this.#routingProfile,
+      routingProfileId: this.#routingProfileId,
       input: input.messages,
       labels: { product: 'homiio', feature: input.feature },
       ...(input.maxOutputTokens === undefined
@@ -97,6 +99,6 @@ export const homiioInference = new HomiioInferenceService({
     baseURL: config.oxy.baseURL,
     credential: () => oxyService.getServiceToken(),
   }),
-  routingProfile: config.oxy.inferenceRoutingProfile,
+  routingProfileId: config.oxy.inferenceRoutingProfileId,
   missingConfiguration,
 });

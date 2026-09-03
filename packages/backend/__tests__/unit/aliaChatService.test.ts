@@ -1,4 +1,5 @@
 import {
+  CANONICAL_SINDI_ALIA_AGENT_ID,
   AliaChatConfigurationError,
   AliaChatError,
   AliaChatService,
@@ -32,10 +33,19 @@ async function collect(stream: AsyncIterable<string>): Promise<string> {
   return text;
 }
 
-describe('AliaChatService', () => {
-  const sindiAgentId = '0199a26f-71cc-7f21-8d5e-4b1ea9669222';
+function createService(
+  input: Omit<ConstructorParameters<typeof AliaChatService>[0], 'serviceToken'>,
+): AliaChatService {
+  return new AliaChatService({
+    ...input,
+    serviceToken: async () => 'oxy-homiio-service-token',
+  });
+}
 
-  it('streams the exact Alia agent with the exact user bearer and no identity fallback', async () => {
+describe('AliaChatService', () => {
+  const sindiAgentId = CANONICAL_SINDI_ALIA_AGENT_ID;
+
+  it('streams the exact Alia agent with service auth and delegated Oxy user id', async () => {
     const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
       sseResponse([
         ': keep-alive\n\n',
@@ -44,7 +54,7 @@ describe('AliaChatService', () => {
         `data: ${chatChunk()}\n\ndata: [DONE]\n\n`,
       ]),
     );
-    const service = new AliaChatService({
+    const service = createService({
       apiUrl: 'https://api.alia.onl/',
       agentId: sindiAgentId,
       fetch: fetchClient,
@@ -52,7 +62,7 @@ describe('AliaChatService', () => {
 
     const controller = new AbortController();
     const stream = await service.streamText({
-      accessToken: 'oxy-user-session',
+      delegatedUserId: 'oxy-user-id',
       messages: [{ role: 'user', content: 'Hola' }],
       signal: controller.signal,
     });
@@ -64,7 +74,8 @@ describe('AliaChatService', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: 'Bearer oxy-user-session',
+          Authorization: 'Bearer oxy-homiio-service-token',
+          'X-Oxy-User-Id': 'oxy-user-id',
         },
         signal: controller.signal,
       }),
@@ -85,14 +96,14 @@ describe('AliaChatService', () => {
     const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
       sseResponse([wire.slice(0, 7), wire.slice(7, 41), wire.slice(41, 113), wire.slice(113)]),
     );
-    const service = new AliaChatService({
+    const service = createService({
       apiUrl: 'https://api.alia.onl',
       agentId: sindiAgentId,
       fetch: fetchClient,
     });
 
     const text = await collect(await service.streamText({
-      accessToken: 'oxy-user-session',
+      delegatedUserId: 'oxy-user-id',
       messages: [{ role: 'user', content: 'Enséñame pisos' }],
     }));
 
@@ -108,14 +119,14 @@ describe('AliaChatService', () => {
         'event: alia.title\ndata: {"eventVersion":1,"title":"A title"}\n\n',
       ]),
     );
-    const service = new AliaChatService({
+    const service = createService({
       apiUrl: 'https://api.alia.onl',
       agentId: sindiAgentId,
       fetch: fetchClient,
     });
 
     await expect(collect(await service.streamText({
-      accessToken: 'oxy-user-session',
+      delegatedUserId: 'oxy-user-id',
       messages: [{ role: 'user', content: 'Hola' }],
     }))).resolves.toBe('visible');
   });
@@ -124,42 +135,48 @@ describe('AliaChatService', () => {
     const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
       sseResponse([`data: ${chatChunk('partial')}\n\n`]),
     );
-    const service = new AliaChatService({
+    const service = createService({
       apiUrl: 'https://api.alia.onl',
       agentId: sindiAgentId,
       fetch: fetchClient,
     });
 
     await expect(collect(await service.streamText({
-      accessToken: 'oxy-user-session',
+      delegatedUserId: 'oxy-user-id',
       messages: [{ role: 'user', content: 'Hola' }],
     }))).rejects.toMatchObject({ name: 'AliaChatError', status: 502 });
   });
 
   it('fails closed before the network when the provisioned Sindi agent is absent', async () => {
     const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>();
-    const service = new AliaChatService({ apiUrl: 'https://api.alia.onl', fetch: fetchClient });
+    const service = createService({ apiUrl: 'https://api.alia.onl', fetch: fetchClient });
 
     await expect(
       service.streamText({
-        accessToken: 'oxy-user-session',
+        delegatedUserId: 'oxy-user-id',
         messages: [{ role: 'user', content: 'Hola' }],
       }),
     ).rejects.toBeInstanceOf(AliaChatConfigurationError);
     expect(fetchClient).not.toHaveBeenCalled();
   });
 
-  it('fails closed before the network when the configured agent id is not an entity id', async () => {
+  it.each([
+    'agent-sindi',
+    '01a0646a-078f-7514-9800-9f43ceed7df9',
+    ` ${CANONICAL_SINDI_ALIA_AGENT_ID}`,
+    `${CANONICAL_SINDI_ALIA_AGENT_ID} `,
+    CANONICAL_SINDI_ALIA_AGENT_ID.toUpperCase(),
+  ])('fails closed before the network when the configured agent id is not the exact reserved PK: %s', async (agentId) => {
     const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>();
-    const service = new AliaChatService({
+    const service = createService({
       apiUrl: 'https://api.alia.onl',
-      agentId: 'agent-sindi',
+      agentId,
       fetch: fetchClient,
     });
 
     await expect(
       service.streamText({
-        accessToken: 'oxy-user-session',
+        delegatedUserId: 'oxy-user-id',
         messages: [{ role: 'user', content: 'Hola' }],
       }),
     ).rejects.toBeInstanceOf(AliaChatConfigurationError);
@@ -170,7 +187,7 @@ describe('AliaChatService', () => {
     const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
       new Response('provider detail must stay private', { status: 503 }),
     );
-    const service = new AliaChatService({
+    const service = createService({
       apiUrl: 'https://api.alia.onl',
       agentId: sindiAgentId,
       fetch: fetchClient,
@@ -178,7 +195,7 @@ describe('AliaChatService', () => {
 
     const error = await service
       .streamText({
-        accessToken: 'oxy-user-session',
+        delegatedUserId: 'oxy-user-id',
         messages: [{ role: 'user', content: 'Hola' }],
       })
       .catch((reason: unknown) => reason);
@@ -192,14 +209,14 @@ describe('AliaChatService', () => {
     const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
       sseResponse(['{}'], 'application/json'),
     );
-    const service = new AliaChatService({
+    const service = createService({
       apiUrl: 'https://api.alia.onl',
       agentId: sindiAgentId,
       fetch: fetchClient,
     });
 
     await expect(service.streamText({
-      accessToken: 'oxy-user-session',
+      delegatedUserId: 'oxy-user-id',
       messages: [{ role: 'user', content: 'Hola' }],
     })).rejects.toMatchObject({ name: 'AliaChatError', status: 502 });
   });

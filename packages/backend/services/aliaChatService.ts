@@ -1,5 +1,5 @@
 import config from '../config';
-import { isLiveEntityId } from '../db/ids';
+import { getCanonicalSindiServiceToken } from './oxy';
 
 export interface AliaChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -11,9 +11,11 @@ type FetchClient = typeof fetch;
 declare const aliaAgentIdBrand: unique symbol;
 type AliaAgentId = string & { readonly [aliaAgentIdBrand]: true };
 
+export const CANONICAL_SINDI_ALIA_AGENT_ID =
+  '01a0646a-078f-7514-9800-9f43ceed7df8' as AliaAgentId;
+
 function parseAliaAgentId(value: string | undefined): AliaAgentId | undefined {
-  const candidate = value?.trim();
-  return candidate && isLiveEntityId(candidate) ? (candidate as AliaAgentId) : undefined;
+  return value === CANONICAL_SINDI_ALIA_AGENT_ID ? CANONICAL_SINDI_ALIA_AGENT_ID : undefined;
 }
 
 export class AliaChatError extends Error {
@@ -37,32 +39,42 @@ export class AliaChatConfigurationError extends Error {
 
 /**
  * Product chat goes through Alia, which owns chat, tools and memory. Homiio
- * forwards the already-validated Oxy user token; this adapter stores no Alia or
- * provider credential and never learns which Kaana provider served the turn.
+ * authenticates with Homiio's verified Oxy service credential and delegates
+ * the already-validated user id in a separate header. A human bearer is never
+ * forwarded; this adapter stores no Alia or provider credential.
  */
 export class AliaChatService {
   readonly #apiUrl: string;
   readonly #agentId: AliaAgentId | undefined;
   readonly #fetch: FetchClient;
+  readonly #serviceToken: () => Promise<string>;
 
-  constructor(input: { apiUrl: string; agentId?: string; fetch?: FetchClient }) {
+  constructor(input: {
+    apiUrl: string;
+    agentId?: string;
+    serviceToken: () => Promise<string>;
+    fetch?: FetchClient;
+  }) {
     this.#apiUrl = input.apiUrl.replace(/\/+$/, '');
     this.#agentId = parseAliaAgentId(input.agentId);
     this.#fetch = input.fetch ?? fetch;
+    this.#serviceToken = input.serviceToken;
   }
 
   async streamText(input: {
-    accessToken: string;
+    delegatedUserId: string;
     messages: readonly AliaChatMessage[];
     signal?: AbortSignal;
   }): Promise<AsyncIterable<string>> {
     if (!this.#agentId) throw new AliaChatConfigurationError();
+    const serviceToken = await this.#serviceToken();
 
     const response = await this.#fetch(`${this.#apiUrl}/v1/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${input.accessToken}`,
+        Authorization: `Bearer ${serviceToken}`,
+        'X-Oxy-User-Id': input.delegatedUserId,
       },
       body: JSON.stringify({
         agentId: this.#agentId,
@@ -190,4 +202,5 @@ async function* readAliaTextStream(body: ReadableStream<Uint8Array>): AsyncGener
 export const aliaChat = new AliaChatService({
   apiUrl: config.alia.apiUrl,
   agentId: config.alia.sindiAgentId,
+  serviceToken: getCanonicalSindiServiceToken,
 });

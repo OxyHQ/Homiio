@@ -92,10 +92,12 @@ STRIPE_CANCEL_URL=https://homiio.com/profile/subscriptions
 # Point inference: Homiio service identity + Oxy routing profile
 OXY_SERVICE_API_KEY=oxy_dk_...
 OXY_SERVICE_API_SECRET=...
-OXY_INFERENCE_ROUTING_PROFILE=
+OXY_INFERENCE_ROUTING_PROFILE_ID=01a06477-94f5-74f0-bc25-4c5c13b93ccd
 
-# Provisioned Sindi agent in Alia (non-secret)
-SINDI_ALIA_AGENT_ID=
+# Separate product-service identity for the private Sindi agent
+SINDI_OXY_SERVICE_API_KEY=oxy_dk_...
+SINDI_OXY_SERVICE_API_SECRET=...
+SINDI_ALIA_AGENT_ID=01a0646a-078f-7514-9800-9f43ceed7df8
 
 # Image pipeline (production bucket from oxy-infra)
 AWS_ACCESS_KEY_ID=...
@@ -154,7 +156,9 @@ The frontend's `ProfileProvider` loads profiles immediately after `useOxy()` rep
 
 ### Sindi (AI tenant-rights assistant)
 
-Sindi is the in-app AI assistant and a provisioned Alia agent backed by its canonical bot account. Its interactive, persisted chat route sends that `SINDI_ALIA_AGENT_ID` to the Alia API with the already-authenticated user's Oxy token, so Alia remains the owner of the agent, chat, tools and memory before it reaches Kaana. This repository deliberately does not create or guess the bot account or agent id. Homiio's one-shot features — conversation titles, filter extraction, smart suggestions, and contract or image analysis — call the Oxy inference edge with Homiio's service identity and an Oxy-owned routing profile. Homiio never calls Kaana or an upstream provider directly, and never constructs Kaana's `authorizedRoutes`; Oxy resolves policy and the signed data-plane envelope for those point requests.
+Sindi is the in-app AI assistant and a private Alia agent backed by its canonical bot account. Its interactive, persisted chat route sends the byte-exact `SINDI_ALIA_AGENT_ID` to Alia with Homiio's Oxy service credential and the already-verified user in `X-Oxy-User-Id`; the human bearer stops at Homiio. Alia therefore remains the owner of the agent, chat, tools and memory before inference reaches Oxy and Kaana. Oxy's internal bootstrap binds project account `01a0646a-078f-72ea-8759-86326484a7e0`, bot account `01a0646a-078f-7974-9645-a5e8be237f47`, agent `01a0646a-078f-7514-9800-9f43ceed7df8`, service app `6a2f851751b784a86fd0e922` and service credential `01a0648e-ad3f-7608-aa8b-c07bfef6cf73`. Homiio never creates, rebinds, normalizes or discovers those IDs by name/list/order, and Sindi's only capability grant is `web`.
+
+Homiio's one-shot features — conversation titles, filter extraction, smart suggestions, and contract or image analysis — call the Oxy inference edge with Homiio's service identity and an Oxy-owned routing profile. Homiio never calls Kaana or an upstream provider directly, and never constructs Kaana's `authorizedRoutes`; Oxy resolves policy and the signed data-plane envelope for those point requests. Kaana is the sole hosted inference data plane and its only canonical signed origin is `https://kaana.ai`, never an `oxy.so` hostname. Provider credentials live only encrypted in Kaana PostgreSQL/KMS; Homiio's Oxy service credentials are application identities, not provider keys.
 
 Interactive Sindi chat consumes Alia's OpenAI-compatible SSE response incrementally and translates each text delta to the AI Data Stream protocol already consumed by the frontend. The adapter forwards text verbatim — including property ids that may span arbitrary stream chunks — ignores Alia-only named events, and aborts the upstream request when the Homiio client disconnects. Homiio-owned one-shot features remain non-streaming through `OxyInferenceClient.respond()`.
 

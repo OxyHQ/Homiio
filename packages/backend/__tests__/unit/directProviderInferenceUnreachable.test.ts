@@ -38,7 +38,16 @@ describe('Homiio never reaches an inference provider directly', () => {
     expect(source).toContain('/v1/chat/completions');
     expect(source).toContain('agentId: this.#agentId');
     expect(source).toContain('stream: true');
-    expect(source).toContain('Authorization: `Bearer ${input.accessToken}`');
+    expect(source).toContain('Authorization: `Bearer ${serviceToken}`');
+    expect(source).toContain("'X-Oxy-User-Id': input.delegatedUserId");
+    expect(source).not.toContain('input.accessToken');
+    expect(route).not.toContain('getUserAccessToken');
+    expect(route).toContain(
+      "message.role === 'user' || message.role === 'assistant'",
+    );
+    expect(route).not.toContain(
+      "const enhanced: ChatMessage[] = [{ role: 'system', content: SINDI_SYSTEM_PROMPT }",
+    );
     expect(source).not.toMatch(/ALIA_API_KEY|OPENAI_API_KEY/);
   });
 
@@ -48,6 +57,7 @@ describe('Homiio never reaches an inference provider directly', () => {
       'utf8',
     );
     expect(source).not.toMatch(/^\s*authorizedRoutes\s*:/m);
-    expect(source).toContain('routingProfile: this.#routingProfile');
+    expect(source).toContain('routingProfileId: this.#routingProfileId');
+    expect(source).not.toMatch(/^\s*routingProfile\s*:/m);
   });
 });

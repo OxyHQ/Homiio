@@ -197,10 +197,6 @@ jobs:
           # API only.
           APP_JWT_SECRET: ${{ secrets.JWT_SECRET }}
           APP_JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
-          # Homiio's product-to-Oxy service identity. Provider credentials are
-          # owned by Kaana and must never enter this repository or task.
-          APP_OXY_SERVICE_API_KEY: ${{ secrets.OXY_SERVICE_API_KEY }}
-          APP_OXY_SERVICE_API_SECRET: ${{ secrets.OXY_SERVICE_API_SECRET }}
           # Worker only.
           APP_LISTING_RESIDENTIAL_PROXY_URL: ${{ secrets.LISTING_RESIDENTIAL_PROXY_URL }}
           SHARED_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -213,15 +209,13 @@ jobs:
               echo "::warning::skip empty/placeholder secret $name; SSM unchanged"
               return 0
             fi
-            aws ssm put-parameter --name "$path" --value "$value" --type SecureString --overwrite >/dev/null
+            printf '%s' "$value" | bash .github/scripts/put-secure-parameter.sh "$path"
             echo "synced -> $path"
           }
 
           sync_secret DATABASE_URL "$APP_DATABASE_URL" "/oxy/$APP/DATABASE_URL"
           sync_secret JWT_SECRET "$APP_JWT_SECRET" "/oxy/$APP/JWT_SECRET"
           sync_secret JWT_REFRESH_SECRET "$APP_JWT_REFRESH_SECRET" "/oxy/$APP/JWT_REFRESH_SECRET"
-          sync_secret OXY_SERVICE_API_KEY "$APP_OXY_SERVICE_API_KEY" "/oxy/$APP/OXY_SERVICE_API_KEY"
-          sync_secret OXY_SERVICE_API_SECRET "$APP_OXY_SERVICE_API_SECRET" "/oxy/$APP/OXY_SERVICE_API_SECRET"
           sync_secret LISTING_RESIDENTIAL_PROXY_URL "$APP_LISTING_RESIDENTIAL_PROXY_URL" "/oxy/$APP/LISTING_RESIDENTIAL_PROXY_URL"
           sync_secret AWS_ACCESS_KEY_ID "$SHARED_AWS_ACCESS_KEY_ID" "/oxy/_shared/AWS_ACCESS_KEY_ID"
           sync_secret AWS_SECRET_ACCESS_KEY "$SHARED_AWS_SECRET_ACCESS_KEY" "/oxy/_shared/AWS_SECRET_ACCESS_KEY"
@@ -235,6 +229,24 @@ jobs:
           else
             sync_secret REDIS_URL "$SHARED_REDIS_URL" "/oxy/_shared/REDIS_URL"
           fi
+
+          # Oxy's exact-application-ID credential provisioner owns these two
+          # SecureStrings. Homiio does not copy them from GitHub secrets: this
+          # deploy verifies their type without reading their values. The deploy
+          # role has GetParameter on these two exact ARNs only; no provider-key
+          # path is readable, and --with-decryption is deliberately absent.
+          require_secure_string() {
+            path="$1"
+            type=$(aws ssm get-parameter --name "$path" --query 'Parameter.Type' --output text)
+            if [ "$type" != "SecureString" ]; then
+              echo "::error::$path must exist as an SSM SecureString before the Homiio API rollout"
+              exit 1
+            fi
+          }
+          require_secure_string "/oxy/$APP/OXY_SERVICE_API_KEY"
+          require_secure_string "/oxy/$APP/OXY_SERVICE_API_SECRET"
+          require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_KEY"
+          require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_SECRET"
 
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
@@ -308,6 +320,12 @@ jobs:
       - name: Register immutable task definition and deploy (API)
         env:
           IMAGE_URI: ${{ env.ECR_REGISTRY }}/oxy/${{ env.APP }}@${{ steps.build.outputs.api_digest }}
+          # Non-secret, exact identifiers provisioned outside this workflow.
+          # There is no display-name query, list ordering or fallback id.
+          HOMIIO_SINDI_ALIA_AGENT_ID: ${{ vars.SINDI_ALIA_AGENT_ID }}
+          HOMIIO_OXY_INFERENCE_ROUTING_PROFILE_ID: ${{ vars.OXY_INFERENCE_ROUTING_PROFILE_ID }}
+          # Remove the superseded slug selector from inherited live revisions.
+          TASK_CONFIGURATION_REMOVALS_JSON: '["OXY_INFERENCE_ROUTING_PROFILE"]'
           # Cleared deliberately. The script treats a non-empty DEPLOY_SHA as a
           # request to re-verify that the candidate is still the exact head of
           # origin/main before mutating production, via require-current-main.sh,
@@ -318,6 +336,30 @@ jobs:
           # filter above.
           DEPLOY_SHA: ''
         run: |
+          if [[ "$HOMIIO_SINDI_ALIA_AGENT_ID" != "01a0646a-078f-7514-9800-9f43ceed7df8" ]]; then
+            echo "::error::SINDI_ALIA_AGENT_ID must equal the reserved Sindi Alia agent primary key"
+            exit 1
+          fi
+          if [[ "$HOMIIO_OXY_INFERENCE_ROUTING_PROFILE_ID" != "01a06477-94f5-74f0-bc25-4c5c13b93ccd" ]]; then
+            echo "::error::OXY_INFERENCE_ROUTING_PROFILE_ID must equal the reviewed kaana-v1 profile primary key"
+            exit 1
+          fi
+          TASK_ENV_OVERRIDES_JSON=$(jq -cn \
+            --arg sindiAgentId "$HOMIIO_SINDI_ALIA_AGENT_ID" \
+            --arg routingProfileId "$HOMIIO_OXY_INFERENCE_ROUTING_PROFILE_ID" \
+            '{
+              OXY_API_URL: "https://api.oxy.so",
+              ALIA_API_URL: "https://api.alia.onl",
+              SINDI_ALIA_AGENT_ID: $sindiAgentId,
+              OXY_INFERENCE_ROUTING_PROFILE_ID: $routingProfileId
+            }')
+          TASK_SECRET_OVERRIDES_JSON='{
+            "OXY_SERVICE_API_KEY": "arn:aws:ssm:us-west-2:237343248947:parameter/oxy/homiio/OXY_SERVICE_API_KEY",
+            "OXY_SERVICE_API_SECRET": "arn:aws:ssm:us-west-2:237343248947:parameter/oxy/homiio/OXY_SERVICE_API_SECRET",
+            "SINDI_OXY_SERVICE_API_KEY": "arn:aws:ssm:us-west-2:237343248947:parameter/oxy/homiio/SINDI_OXY_SERVICE_API_KEY",
+            "SINDI_OXY_SERVICE_API_SECRET": "arn:aws:ssm:us-west-2:237343248947:parameter/oxy/homiio/SINDI_OXY_SERVICE_API_SECRET"
+          }'
+          export TASK_ENV_OVERRIDES_JSON TASK_SECRET_OVERRIDES_JSON
           STATUS=$(aws ecs describe-services --cluster "$CLUSTER" --services "$APP" --query 'services[0].status' --output text 2>/dev/null || echo NONE)
           if [ "$STATUS" != "ACTIVE" ]; then
             echo "ECS service $APP not created yet - image is in ECR, skipping deploy"
@@ -363,6 +405,10 @@ jobs:
           # workflow's value or one a sibling key just set.
           IMAGE_URI: ${{ env.ECR_REGISTRY }}/oxy/${{ env.APP }}@${{ steps.build.outputs.worker_digest }}
           DEPLOY_SHA: ''
+          # The worker imports the shared config module but reaches none of the
+          # Oxy/Alia clients. Remove stale API-only values from the inherited
+          # live revision instead of preserving them forever.
+          TASK_CONFIGURATION_REMOVALS_JSON: '["ALIA_API_URL","OXY_API_URL","OXY_SERVICE_API_KEY","OXY_SERVICE_API_SECRET","SINDI_OXY_SERVICE_API_KEY","SINDI_OXY_SERVICE_API_SECRET","OXY_INFERENCE_ROUTING_PROFILE","OXY_INFERENCE_ROUTING_PROFILE_ID","SINDI_ALIA_AGENT_ID"]'
           POST_DEPLOY_TASK_COMMAND_JSON: '["node","packages/backend/dist/db/migrate.js","--target-database=homiio","--phase=post"]'
         run: |
           export APP="${APP}-worker"

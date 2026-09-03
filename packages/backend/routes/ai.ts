@@ -163,12 +163,6 @@ Avoid repetition:
 // was already populated by `@oxyhq/core/server` auth middleware in server.ts.
 const getUserId = (req: Request): string | null => getOxyUserId(req);
 
-const getUserAccessToken = (req: Request): string | null => {
-  const authorization = req.headers.authorization;
-  if (typeof authorization !== 'string' || !authorization.startsWith('Bearer ')) return null;
-  return authorization.slice('Bearer '.length).trim() || null;
-};
-
 /**
  * The client's own placeholder id for a chat it has not saved yet.
  *
@@ -892,8 +886,6 @@ Return only the JSON array, no other text.`;
 
       const userId = getUserId(req);
       if (!userId) return err(res, 401, 'Unauthorized');
-      const userAccessToken = getUserAccessToken(req);
-      if (!userAccessToken) return err(res, 401, 'User session token required');
 
       // No `Profile` lookup: `conversations.oxy_user_id` is the owner, so the
       // "No active profile found" 404 was refusing a chat to anyone who had
@@ -956,8 +948,12 @@ Return only the JSON array, no other text.`;
         ? { nearby: [], search: [] }
         : await performAppPropertySearch(lastContent, messages, userId);
 
-      // Build enhanced messages
-      const enhanced: ChatMessage[] = [{ role: 'system', content: SINDI_SYSTEM_PROMPT }, ...messages];
+      // Sindi's fixed prompt lives in the provisioned Alia agent. Homiio sends
+      // only user/assistant transcript plus trusted, request-local property
+      // context; a client-supplied system/tool role never crosses this boundary.
+      const enhanced: ChatMessage[] = messages.filter(
+        (message) => message.role === 'user' || message.role === 'assistant',
+      );
 
       if (!isAttachmentStub && ((propertyResults?.nearby?.length ?? 0) || (propertyResults?.search?.length ?? 0))) {
         const nearbyList: any[] = Array.isArray(propertyResults?.nearby) ? propertyResults.nearby : [];
@@ -1101,7 +1097,7 @@ Return only the JSON array, no other text.`;
         req.once('aborted', abortUpstream);
         res.once('close', abortUpstream);
         aliaResponseStream = await aliaChat.streamText({
-          accessToken: userAccessToken,
+          delegatedUserId: userId,
           messages: enhanced
             .filter((message) => message.role !== 'tool')
             .map((message) => ({
