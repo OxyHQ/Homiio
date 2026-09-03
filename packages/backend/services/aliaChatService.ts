@@ -14,17 +14,24 @@ type AliaAgentId = string & { readonly [aliaAgentIdBrand]: true };
 export const CANONICAL_SINDI_ALIA_AGENT_ID =
   '01a0646a-078f-7514-9800-9f43ceed7df8' as AliaAgentId;
 
+export const SERVICE_ACTING_AS_UNAUTHORIZED = 'SERVICE_ACTING_AS_UNAUTHORIZED' as const;
+
+type AliaChatErrorCode = typeof SERVICE_ACTING_AS_UNAUTHORIZED;
+const MAX_ERROR_BODY_BYTES = 4096;
+
 function parseAliaAgentId(value: string | undefined): AliaAgentId | undefined {
   return value === CANONICAL_SINDI_ALIA_AGENT_ID ? CANONICAL_SINDI_ALIA_AGENT_ID : undefined;
 }
 
 export class AliaChatError extends Error {
   readonly status: number;
+  readonly code?: AliaChatErrorCode;
 
-  constructor(status: number) {
+  constructor(status: number, code?: AliaChatErrorCode) {
     super('Alia chat request failed');
     this.name = 'AliaChatError';
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -35,6 +42,35 @@ export class AliaChatConfigurationError extends Error {
     super('Sindi Alia agent is missing or invalid');
     this.name = 'AliaChatConfigurationError';
   }
+}
+
+export interface AliaChatHttpFailure {
+  status: 401 | 403 | 503;
+  body: {
+    error: string;
+    code: 'chat_auth_required' | 'chat_unavailable' | typeof SERVICE_ACTING_AS_UNAUTHORIZED;
+  };
+}
+
+/** Map only the explicit consent condition to a client-actionable response. */
+export function aliaChatHttpFailure(error: AliaChatError): AliaChatHttpFailure {
+  if (error.status === 403 && error.code === SERVICE_ACTING_AS_UNAUTHORIZED) {
+    return {
+      status: 403,
+      body: {
+        error: 'Sindi needs your permission to continue',
+        code: SERVICE_ACTING_AS_UNAUTHORIZED,
+      },
+    };
+  }
+  const isAuthenticationFailure = error.status === 401 || error.status === 403;
+  return {
+    status: isAuthenticationFailure ? 401 : 503,
+    body: {
+      error: 'Sindi chat is temporarily unavailable',
+      code: isAuthenticationFailure ? 'chat_auth_required' : 'chat_unavailable',
+    },
+  };
 }
 
 /**
@@ -84,7 +120,9 @@ export class AliaChatService {
       ...(input.signal === undefined ? {} : { signal: input.signal }),
     });
 
-    if (!response.ok) throw new AliaChatError(response.status);
+    if (!response.ok) {
+      throw new AliaChatError(response.status, await readAllowlistedErrorCode(response));
+    }
     if (!response.headers.get('content-type')?.toLowerCase().startsWith('text/event-stream')) {
       throw new AliaChatError(502);
     }
@@ -98,6 +136,33 @@ type JsonRecord = Record<string, unknown>;
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** Preserve only the upstream condition Homiio can safely act on. */
+async function readAllowlistedErrorCode(
+  response: Response,
+): Promise<AliaChatErrorCode | undefined> {
+  if (response.status !== 403) return undefined;
+
+  const declaredLength = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_ERROR_BODY_BYTES) return undefined;
+
+  let body: string;
+  try {
+    body = await response.text();
+  } catch {
+    return undefined;
+  }
+  if (new TextEncoder().encode(body).byteLength > MAX_ERROR_BODY_BYTES) return undefined;
+
+  try {
+    const value = JSON.parse(body) as unknown;
+    return isRecord(value) && value.code === SERVICE_ACTING_AS_UNAUTHORIZED
+      ? SERVICE_ACTING_AS_UNAUTHORIZED
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function textDeltaFromChunk(data: string): string | undefined {

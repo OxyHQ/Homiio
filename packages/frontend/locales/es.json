@@ -2281,6 +2281,12 @@
     "errors": {
       "connection": "Error de Conexión",
       "connectionMessage": "Por favor verifica tu conexión e inténtalo de nuevo.",
+      "consentTitle": "Permiso necesario",
+      "consentMessage": "Permite que Homiio deje que Sindi siga ayudándote cuando no estés.",
+      "consentAction": "Revisar permisos",
+      "consentRequesting": "Abriendo permisos...",
+      "consentUnavailableTitle": "Permiso no disponible",
+      "consentUnavailableMessage": "Actualiza Homiio e inténtalo de nuevo. No se concedió ningún permiso.",
       "uploadFailedTitle": "Error al subir",
       "uploadAnalyzeFailed": "No se pudo analizar el archivo."
     },

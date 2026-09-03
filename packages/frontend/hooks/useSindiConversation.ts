@@ -3,6 +3,7 @@ import { Alert, Platform, type ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useChat, type Message, type UseChatOptions } from '@ai-sdk/react';
+import { useOxy } from '@oxyhq/services';
 import * as DocumentPicker from 'expo-document-picker';
 import {
   useConversationStore,
@@ -14,6 +15,11 @@ import { getData, storeData } from '@/utils/storage';
 import { logger } from '@/utils/logger';
 import { API_URL } from '@/config';
 import i18next from 'i18next';
+import {
+  hasSindiOAuthConsentClient,
+  requestSindiConsentAndRetry,
+  SindiConsentRequiredError,
+} from './sindiConsent';
 
 /** Key under which we record that the file-upsell sheet has been shown once. */
 const FILE_UPSELL_KEY = 'sindi:fileUpsellShown';
@@ -70,6 +76,8 @@ export interface UseSindiConversationResult {
   input: string;
   isLoading: boolean;
   isUploading: boolean;
+  needsConsent: boolean;
+  isRequestingConsent: boolean;
   attachedFile: AttachedAsset | null;
   scrollViewRef: React.RefObject<ScrollView | null>;
   onChangeInput: (text: string) => void;
@@ -77,6 +85,7 @@ export interface UseSindiConversationResult {
   onAttachFile: () => void;
   onRemoveFile: () => void;
   onSuggestionPress: (prompt: string) => void;
+  onRequestConsent: () => void;
 }
 
 /** Whether a conversation ID refers to a persisted (server-side) conversation. */
@@ -115,9 +124,11 @@ export function useSindiConversation({
   onOpenUpsell,
 }: UseSindiConversationArgs): UseSindiConversationResult {
   const router = useRouter();
+  const oxyContext = useOxy();
 
   const [attachedFile, setAttachedFile] = useState<AttachedAsset | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isRequestingConsent, setIsRequestingConsent] = useState(false);
 
   const scrollViewRef = useRef<ScrollView | null>(null);
   const lastSyncedHash = useRef<string>('');
@@ -161,8 +172,45 @@ export function useSindiConversation({
     [authenticatedFetch, initialMessages, conversationId],
   );
 
-  const { messages, error, handleInputChange, input, handleSubmit, isLoading, append } =
+  const { messages, error, handleInputChange, input, handleSubmit, isLoading, append, reload } =
     useChat(chatOptions);
+  const needsConsent = error instanceof SindiConsentRequiredError;
+
+  const onRequestConsent = useCallback(async () => {
+    if (!needsConsent || isRequestingConsent) return;
+    if (!hasSindiOAuthConsentClient(oxyContext)) {
+      Alert.alert(
+        i18next.t('sindi.errors.consentUnavailableTitle'),
+        i18next.t('sindi.errors.consentUnavailableMessage'),
+      );
+      return;
+    }
+
+    setIsRequestingConsent(true);
+    try {
+      const status = await requestSindiConsentAndRetry(
+        oxyContext,
+        Platform.OS === 'web' ? 'web' : 'native',
+        async () => {
+          await reload();
+        },
+      );
+      if (status === 'failed' || status === 'unsupported') {
+        Alert.alert(
+          i18next.t('sindi.errors.consentUnavailableTitle'),
+          i18next.t('sindi.errors.consentUnavailableMessage'),
+        );
+      }
+    } catch (consentError) {
+      logger.error('Sindi OAuth consent failed:', consentError);
+      Alert.alert(
+        i18next.t('sindi.errors.consentUnavailableTitle'),
+        i18next.t('sindi.errors.consentUnavailableMessage'),
+      );
+    } finally {
+      setIsRequestingConsent(false);
+    }
+  }, [isRequestingConsent, needsConsent, oxyContext, reload]);
 
   // Persist streamed messages back to the store (hash-gated + debounced), and
   // promote a freshly-created conversation's route once it gains a real ID.
@@ -405,6 +453,8 @@ export function useSindiConversation({
     input,
     isLoading,
     isUploading,
+    needsConsent,
+    isRequestingConsent,
     attachedFile,
     scrollViewRef,
     onChangeInput,
@@ -412,6 +462,7 @@ export function useSindiConversation({
     onAttachFile,
     onRemoveFile,
     onSuggestionPress,
+    onRequestConsent,
   };
 }
 

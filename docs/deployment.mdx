@@ -116,20 +116,29 @@ to Homiio GitHub secrets, SSM or ECS environment variables. Kaana's only
 canonical signed origin is `https://kaana.ai`; Homiio never addresses it
 directly or through an `oxy.so` alias.
 
-Oxy's internal bootstrap owns the other Sindi identities: project account
+The reserved Oxy desired state names the other Sindi identities: project account
 `01a0646a-078f-72ea-8759-86326484a7e0`, bot account
 `01a0646a-078f-7974-9645-a5e8be237f47`, service application
 `6a2f851751b784a86fd0e922`, and service credential
-`01a0648e-ad3f-7608-aa8b-c07bfef6cf73`. The agent is private, its
+`01a0648e-ad3f-7608-aa8b-c07bfef6cf73`. After apply, the agent must be private, its
 `oxyAccountId` is the bot account, and its capability grant is exactly `web`.
 These are opaque primary keys, never names or list positions; no public Homiio
-request may create or rebind them.
+request may create or rebind them. These are not assertions about current live
+state: require provisioner apply and byte-exact readback of every relation.
 
-The exact-ID client field ships additively in `@oxyhq/core@23.2.0`, backed by
-`@oxyhq/contracts@0.40.0`. Publish contracts first and core second, then run
-`bun install` here to refresh `bun.lock` before building Homiio. The manifests
-already require those versions; an older lock/package is not a deployable
+Dependency versions live only in the package manifests. Publish the contracts
+and core changes in dependency order, then run `bun install` here to refresh
+`bun.lock` before building Homiio. An older lock/package is not a deployable
 substitute and must fail closed rather than be cast to the new request shape.
+
+Existing users also need an explicit OAuth reconsent path for the exact scopes
+`inference:invoke acting-as:offline`. The frontend may offer that action only
+after the backend returns exact code `SERVICE_ACTING_AS_UNAUTHORIZED`, and may
+retry only after Oxy reports `consented`. Web uses exact redirect
+`https://homiio.com`; native uses exact redirect `homiio://oauth/consent` with
+the SDK-owned state and PKCE flow. Until the `@oxyhq/services` release exposing
+`requestOAuthConsent` is present in the manifest and lockfile, the UI remains
+fail-closed and production is not deployable.
 
 This section describes the reviewed target, not the current production task.
 Neither a merged Homiio branch nor values present in Oxy's database prove that

@@ -3,6 +3,8 @@ import {
   AliaChatConfigurationError,
   AliaChatError,
   AliaChatService,
+  SERVICE_ACTING_AS_UNAUTHORIZED,
+  aliaChatHttpFailure,
 } from '../../services/aliaChatService';
 
 const encode = (text: string): Uint8Array => new TextEncoder().encode(text);
@@ -44,6 +46,32 @@ function createService(
 
 describe('AliaChatService', () => {
   const sindiAgentId = CANONICAL_SINDI_ALIA_AGENT_ID;
+
+  it('maps only exact acting-as denial to the client consent contract', () => {
+    expect(
+      aliaChatHttpFailure(new AliaChatError(403, SERVICE_ACTING_AS_UNAUTHORIZED)),
+    ).toEqual({
+      status: 403,
+      body: {
+        error: 'Sindi needs your permission to continue',
+        code: SERVICE_ACTING_AS_UNAUTHORIZED,
+      },
+    });
+    expect(aliaChatHttpFailure(new AliaChatError(403))).toEqual({
+      status: 401,
+      body: {
+        error: 'Sindi chat is temporarily unavailable',
+        code: 'chat_auth_required',
+      },
+    });
+    expect(aliaChatHttpFailure(new AliaChatError(503))).toEqual({
+      status: 503,
+      body: {
+        error: 'Sindi chat is temporarily unavailable',
+        code: 'chat_unavailable',
+      },
+    });
+  });
 
   it('streams the exact Alia agent with service auth and delegated Oxy user id', async () => {
     const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
@@ -203,6 +231,64 @@ describe('AliaChatService', () => {
     expect(error).toBeInstanceOf(AliaChatError);
     expect(error).toMatchObject({ status: 503, message: 'Alia chat request failed' });
     expect(String(error)).not.toContain('provider detail');
+  });
+
+  it('preserves only the exact Oxy acting-as consent signal', async () => {
+    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
+      Response.json(
+        {
+          error: SERVICE_ACTING_AS_UNAUTHORIZED,
+          message: 'private upstream detail',
+          code: SERVICE_ACTING_AS_UNAUTHORIZED,
+          status: 403,
+        },
+        { status: 403 },
+      ),
+    );
+    const service = createService({
+      apiUrl: 'https://api.alia.onl',
+      agentId: sindiAgentId,
+      fetch: fetchClient,
+    });
+
+    const error = await service
+      .streamText({
+        delegatedUserId: 'oxy-user-id',
+        messages: [{ role: 'user', content: 'Hola' }],
+      })
+      .catch((reason: unknown) => reason);
+
+    expect(error).toMatchObject({
+      name: 'AliaChatError',
+      status: 403,
+      code: SERVICE_ACTING_AS_UNAUTHORIZED,
+      message: 'Alia chat request failed',
+    });
+    expect(String(error)).not.toContain('private upstream detail');
+  });
+
+  it.each([
+    ['wrong status', 401, JSON.stringify({ code: SERVICE_ACTING_AS_UNAUTHORIZED })],
+    ['wrong code', 403, JSON.stringify({ code: 'SERVICE_TOKEN_NOT_CONFIGURED' })],
+    ['whitespace code', 403, JSON.stringify({ code: ` ${SERVICE_ACTING_AS_UNAUTHORIZED}` })],
+    ['malformed body', 403, '{'],
+    ['oversized body', 403, JSON.stringify({ code: SERVICE_ACTING_AS_UNAUTHORIZED, pad: 'x'.repeat(4096) })],
+  ])('does not promote %s to a consent request', async (_label, status, body) => {
+    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
+      new Response(body, { status }),
+    );
+    const service = createService({
+      apiUrl: 'https://api.alia.onl',
+      agentId: sindiAgentId,
+      fetch: fetchClient,
+    });
+
+    await expect(
+      service.streamText({
+        delegatedUserId: 'oxy-user-id',
+        messages: [{ role: 'user', content: 'Hola' }],
+      }),
+    ).rejects.toMatchObject({ status, code: undefined });
   });
 
   it('rejects a successful non-SSE response instead of buffering a fallback shape', async () => {

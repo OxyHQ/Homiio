@@ -2,6 +2,10 @@ import { useCallback } from 'react';
 import { Platform } from 'react-native';
 import { fetch as expoFetch } from 'expo/fetch';
 import { useOxy } from '@oxyhq/services';
+import {
+  responseRequiresSindiConsent,
+  SindiConsentRequiredError,
+} from './sindiConsent';
 
 /** Shape compatible with the AI SDK / conversation store fetchers. */
 type ConversationFetch = typeof globalThis.fetch;
@@ -59,7 +63,11 @@ export function useSindiAuthenticatedFetch(): ConversationFetch {
         Platform.OS === 'web'
           ? globalThis.fetch
           : (expoFetch as unknown as ConversationFetch);
-      return fetchImpl(input, fetchOptions);
+      const response = await fetchImpl(input, fetchOptions);
+      if (await responseRequiresSindiConsent(response)) {
+        throw new SindiConsentRequiredError();
+      }
+      return response;
     },
     [oxyServices, activeSessionId],
   );

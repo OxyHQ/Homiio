@@ -67,6 +67,7 @@ import {
 import {
   AliaChatConfigurationError,
   AliaChatError,
+  aliaChatHttpFailure,
   aliaChat,
 } from '../services/aliaChatService';
 import pdfParse from 'pdf-parse';
@@ -384,10 +385,8 @@ const chatFailure = (res: Response, error: unknown): Response => {
     });
   }
   if (error instanceof AliaChatError) {
-    return res.status(error.status === 401 || error.status === 403 ? 401 : 503).json({
-      error: 'Sindi chat is temporarily unavailable',
-      code: error.status === 401 || error.status === 403 ? 'chat_auth_required' : 'chat_unavailable',
-    });
+    const failure = aliaChatHttpFailure(error);
+    return res.status(failure.status).json(failure.body);
   }
   return res.status(500).json({ error: 'Failed to generate response' });
 };
