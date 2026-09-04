@@ -34,6 +34,17 @@ function observabilitySampleRate(raw: string | undefined): number {
   return Math.min(Math.max(parsed, 0), 1);
 }
 
+/** Treat an empty/whitespace deployment value as absent, never as a credential. */
+function optionalEnvironmentValue(raw: string | undefined): string | undefined {
+  const value = raw?.trim();
+  return value || undefined;
+}
+
+/** Preserve an opaque database identity exactly; only the empty value is absent. */
+function optionalExactIdentifier(raw: string | undefined): string | undefined {
+  return raw === undefined || raw.length === 0 ? undefined : raw;
+}
+
 const CROWDSOURCE_ENFORCEMENT_MODES: readonly ModerationEnforcementMode[] = [
   'observe',
   'manual',
@@ -57,11 +68,21 @@ export interface Config {
   port: number | string;
   oxy: {
     baseURL: string;
+    /** ApplicationCredential.publicKey for Homiio's service identity. */
+    serviceApiKey?: string;
+    /** Cleartext service credential secret, supplied by the secret manager. */
+    serviceApiSecret?: string;
+    /** Exact Oxy routing-profile PK selected for Homiio point inference. */
+    inferenceRoutingProfileId?: string;
   };
-  openai: {
-    apiKey?: string;
-    organization?: string;
-    model: string;
+  alia: {
+    /** Alia product API. Interactive Sindi chat stays on Alia's chat runtime. */
+    apiUrl: string;
+    /** Existing Alia entity id backed 1:1 by the provisioned Sindi bot account. */
+    sindiAgentId?: string;
+    /** Dedicated, exact Sindi service credential; never reused by point inference. */
+    sindiServiceApiKey?: string;
+    sindiServiceApiSecret?: string;
   };
   telegram: {
     botToken?: string;
@@ -281,13 +302,18 @@ const config: Config = {
   // Override with OXY_API_URL when genuinely running an Oxy API yourself.
   oxy: {
     baseURL: process.env.OXY_API_URL || 'https://api.oxy.so',
+    serviceApiKey: optionalEnvironmentValue(process.env.OXY_SERVICE_API_KEY),
+    serviceApiSecret: optionalEnvironmentValue(process.env.OXY_SERVICE_API_SECRET),
+    inferenceRoutingProfileId: optionalExactIdentifier(
+      process.env.OXY_INFERENCE_ROUTING_PROFILE_ID
+    ),
   },
-  
-  // OpenAI Configuration
-  openai: {
-    apiKey: process.env.OPENAI_API_KEY,
-    organization: process.env.OPENAI_ORG_ID,
-    model: process.env.OPENAI_MODEL || 'gpt-4o',
+
+  alia: {
+    apiUrl: process.env.ALIA_API_URL || 'https://api.alia.onl',
+    sindiAgentId: optionalExactIdentifier(process.env.SINDI_ALIA_AGENT_ID),
+    sindiServiceApiKey: optionalEnvironmentValue(process.env.SINDI_OXY_SERVICE_API_KEY),
+    sindiServiceApiSecret: optionalEnvironmentValue(process.env.SINDI_OXY_SERVICE_API_SECRET),
   },
   
   // Telegram Bot Configuration

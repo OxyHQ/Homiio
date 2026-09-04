@@ -119,7 +119,10 @@ measurements and the migration history: **`docs/postgres.md`**.
   INTENTIONAL bridge back to the `{success, data}` envelope Homiio's consumers
   read — do not "fix" it piecemeal. The only sanctioned
   `oxyServices.getAccessToken()` call site is Sindi's streaming fetch, because
-  the linked client is JSON-only; do not add another.
+  the linked client is JSON-only; that human bearer authenticates only to
+  Homiio and must never be forwarded to Alia. The backend calls Alia with the
+  exact Sindi Oxy service credential plus `X-Oxy-User-Id`; do not add another
+  manual token path. Identity and inference detail: `docs/index.mdx`.
 
 ## Product rules that are vetoed or load-bearing
 

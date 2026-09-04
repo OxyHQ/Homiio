@@ -217,6 +217,21 @@ export const sindiStyles = StyleSheet.create({
     color: ERROR_SUBTEXT_COLOR,
     textAlign: 'center',
   },
+  consentButton: {
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.lg,
+    backgroundColor: colors.primaryForeground,
+  },
+  consentButtonPressed: {
+    opacity: 0.7,
+  },
+  consentButtonText: {
+    color: colors.primaryColor,
+    fontSize: 15,
+    fontWeight: '700',
+  },
   markdownParagraph: {
     fontSize: 15,
     lineHeight: 20,

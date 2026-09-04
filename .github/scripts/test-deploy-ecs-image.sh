@@ -24,7 +24,9 @@ export DEPLOY_TEST_EXPECT_METRICS_ARN=false
 # overrides it to cover a path shape the default does not.
 export DEPLOY_TEST_METRICS_PARAMETER=/oxy/sampleapp/INTERNAL_METRICS_TOKEN
 export DEPLOY_TEST_TASK_EXIT_CODE=0
+export DEPLOY_TEST_EXPECT_TASK_ENV=false
 export DEPLOY_TEST_EXPECT_TASK_SECRET_ARN=false
+export DEPLOY_TEST_EXPECT_TASK_REMOVAL=false
 export DEPLOY_TEST_SERVICE_DESIRED_COUNT=1
 export DEPLOY_TEST_ROLLOUT_SCENARIO=healthy
 # `lastStatus` the mocked describe-tasks reports. Only the never-stops case moves
@@ -136,6 +138,21 @@ aws() {
           "name": "deploy-test",
           "image": "example.invalid/deploy-test:old",
           "essential": true,
+          "environment": [
+            {"name": "EXTRA_TASK_ENV", "value": "stale-value"},
+            {"name": "EXTRA_TASK_SECRET", "value": "stale-plaintext"},
+            {"name": "STALE_TASK_CONFIG", "value": "remove-me"}
+          ],
+          "secrets": [
+            {
+              "name": "EXTRA_TASK_ENV",
+              "valueFrom": "arn:aws:ssm:test:123456789012:parameter/oxy/sample-app/STALE_ENV"
+            },
+            {
+              "name": "STALE_TASK_CONFIG",
+              "valueFrom": "arn:aws:ssm:test:123456789012:parameter/oxy/sample-app/STALE_TASK_CONFIG"
+            }
+          ],
           "logConfiguration": {
             "logDriver": "awslogs",
             "options": {
@@ -200,15 +217,65 @@ aws() {
         if jq -e '
           .containerDefinitions[]
           | select(.name == "deploy-test")
-          | .secrets[]
-          | select(
-              .name == "EXTRA_TASK_SECRET" and
-              .valueFrom == "arn:aws:ssm:test:123456789012:parameter/oxy/sample-app/EXTRA_TASK_SECRET"
+          | (
+              ([.secrets[] | select(
+                .name == "EXTRA_TASK_SECRET" and
+                .valueFrom == "arn:aws:ssm:test:123456789012:parameter/oxy/sample-app/EXTRA_TASK_SECRET"
+              )] | length == 1) and
+              ([.environment[] | select(.name == "EXTRA_TASK_SECRET")] | length == 0)
             )
         ' "$input_json" >/dev/null; then
           printf 'task-secret:arn\n' >>"$DEPLOY_TEST_LOG"
         else
           printf 'task-secret:arn:MISMATCH\n' >>"$DEPLOY_TEST_LOG"
+        fi
+      fi
+      if [[ "$DEPLOY_TEST_EXPECT_TASK_ENV" == "true" ]]; then
+        local previous_argument=""
+        local input_json=""
+        local argument
+        for argument in "$@"; do
+          if [[ "$previous_argument" == "--cli-input-json" ]]; then
+            input_json="${argument#file://}"
+            break
+          fi
+          previous_argument="$argument"
+        done
+        if jq -e '
+          .containerDefinitions[]
+          | select(.name == "deploy-test")
+          | (
+              ([.environment[] | select(
+                .name == "EXTRA_TASK_ENV" and .value == "exact-runtime-id"
+              )] | length == 1) and
+              ([.secrets[] | select(.name == "EXTRA_TASK_ENV")] | length == 0)
+            )
+        ' "$input_json" >/dev/null; then
+          printf 'task-env:value\n' >>"$DEPLOY_TEST_LOG"
+        else
+          printf 'task-env:value:MISMATCH\n' >>"$DEPLOY_TEST_LOG"
+        fi
+      fi
+      if [[ "$DEPLOY_TEST_EXPECT_TASK_REMOVAL" == "true" ]]; then
+        local previous_argument=""
+        local input_json=""
+        local argument
+        for argument in "$@"; do
+          if [[ "$previous_argument" == "--cli-input-json" ]]; then
+            input_json="${argument#file://}"
+            break
+          fi
+          previous_argument="$argument"
+        done
+        if jq -e '
+          .containerDefinitions[]
+          | select(.name == "deploy-test")
+          | (([.environment[] | select(.name == "STALE_TASK_CONFIG")] | length == 0) and
+             ([.secrets[] | select(.name == "STALE_TASK_CONFIG")] | length == 0))
+        ' "$input_json" >/dev/null; then
+          printf 'task-removal:clean\n' >>"$DEPLOY_TEST_LOG"
+        else
+          printf 'task-removal:clean:MISMATCH\n' >>"$DEPLOY_TEST_LOG"
         fi
       fi
       printf '%s\n' "arn:aws:ecs:test:task-definition/deploy-test:2"
@@ -300,7 +367,7 @@ run_release() {
   local run_migrations="${3:-false}"
   local inject_internal_metrics="${4:-false}"
   local task_exit_code="${5:-0}"
-  local inject_task_secret="${6:-false}"
+  local inject_task_overrides="${6:-false}"
   local service_desired_count="${7:-1}"
   local rollout_scenario="${8:-healthy}"
   local smoke_exit_code="${9:-0}"
@@ -325,12 +392,16 @@ run_release() {
   DEPLOY_TEST_LOG="$case_directory/aws.log"
   DEPLOY_TEST_EXPECT_METRICS_ARN="$inject_internal_metrics"
   DEPLOY_TEST_TASK_EXIT_CODE="$task_exit_code"
-  DEPLOY_TEST_EXPECT_TASK_SECRET_ARN="$inject_task_secret"
+  DEPLOY_TEST_EXPECT_TASK_ENV="$inject_task_overrides"
+  DEPLOY_TEST_EXPECT_TASK_SECRET_ARN="$inject_task_overrides"
+  DEPLOY_TEST_EXPECT_TASK_REMOVAL="$inject_task_overrides"
   DEPLOY_TEST_SERVICE_DESIRED_COUNT="$service_desired_count"
   DEPLOY_TEST_ROLLOUT_SCENARIO="$rollout_scenario"
   export DEPLOY_TEST_LOG DEPLOY_TEST_EXPECT_METRICS_ARN
   export DEPLOY_TEST_TASK_EXIT_CODE
+  export DEPLOY_TEST_EXPECT_TASK_ENV
   export DEPLOY_TEST_EXPECT_TASK_SECRET_ARN
+  export DEPLOY_TEST_EXPECT_TASK_REMOVAL
   export DEPLOY_TEST_SERVICE_DESIRED_COUNT
   export DEPLOY_TEST_ROLLOUT_SCENARIO
   export DEPLOY_TEST_TASK_LAST_STATUS
@@ -367,9 +438,11 @@ run_release() {
       INTERNAL_METRICS_PARAMETER="$DEPLOY_TEST_METRICS_PARAMETER"
     )
   fi
-  if [[ "$inject_task_secret" == "true" ]]; then
+  if [[ "$inject_task_overrides" == "true" ]]; then
     release_environment+=(
+      TASK_ENV_OVERRIDES_JSON='{"EXTRA_TASK_ENV":"exact-runtime-id"}'
       TASK_SECRET_OVERRIDES_JSON='{"EXTRA_TASK_SECRET":"arn:aws:ssm:test:123456789012:parameter/oxy/sample-app/EXTRA_TASK_SECRET"}'
+      TASK_CONFIGURATION_REMOVALS_JSON='["STALE_TASK_CONFIG"]'
     )
   fi
 
@@ -527,16 +600,18 @@ diff -u \
   "$test_directory/hyphenated-metrics-parameter/expected.log" \
   "$test_directory/hyphenated-metrics-parameter/aws.log"
 
-run_release explicit-task-secret true false false 0 true
+run_release explicit-task-overrides true false false 0 true
 printf '%s\n' \
   task-secret:arn \
+  task-env:value \
+  task-removal:clean \
   'service:arn:aws:ecs:test:task-definition/deploy-test:2:desired=1' \
   smoke \
   task:reconcile \
-  >"$test_directory/explicit-task-secret/expected.log"
+  >"$test_directory/explicit-task-overrides/expected.log"
 diff -u \
-  "$test_directory/explicit-task-secret/expected.log" \
-  "$test_directory/explicit-task-secret/aws.log"
+  "$test_directory/explicit-task-overrides/expected.log" \
+  "$test_directory/explicit-task-overrides/aws.log"
 
 run_release reconciliation-failure false false false 1
 printf '%s\n' \

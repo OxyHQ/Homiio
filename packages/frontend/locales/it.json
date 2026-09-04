@@ -2298,6 +2298,12 @@
     "errors": {
       "connection": "Errore di Connessione",
       "connectionMessage": "Controlla la tua connessione e riprova.",
+      "consentTitle": "Autorizzazione necessaria",
+      "consentMessage": "Consenti a Homiio di lasciare che Sindi continui ad aiutarti quando non ci sei.",
+      "consentAction": "Rivedi autorizzazioni",
+      "consentRequesting": "Apertura autorizzazioni...",
+      "consentUnavailableTitle": "Autorizzazione non disponibile",
+      "consentUnavailableMessage": "Aggiorna Homiio e riprova. Nessuna autorizzazione è stata concessa.",
       "uploadFailedTitle": "Caricamento non riuscito",
       "uploadAnalyzeFailed": "Impossibile analizzare il file."
     },

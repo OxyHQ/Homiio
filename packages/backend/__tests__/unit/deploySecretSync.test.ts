@@ -49,8 +49,11 @@ const WORKFLOW_PATH = join(REPOSITORY_ROOT, '.github', 'workflows', 'deploy-aws.
 const workflow = readFileSync(WORKFLOW_PATH, 'utf8');
 
 /**
- * Every parameter the two live task definitions read as a `secret`, as of
- * `oxy-homiio:48` and `oxy-homiio-worker:55` (2026-08-09).
+ * Every parameter the two task definitions read as a `secret` after the Sindi
+ * inference rollout. The seven pre-existing entries were re-derived from
+ * `oxy-homiio:48` and `oxy-homiio-worker:55` on 2026-08-09; the two Oxy service
+ * credential parameters are intentionally absent: Oxy's exact-ID provisioner
+ * owns them and this deploy only verifies their SecureString type.
  *
  * `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `REDIS_URL` live under
  * `/oxy/_shared/`; the rest under `/oxy/homiio/`. The split is what the
@@ -65,7 +68,12 @@ const workflow = readFileSync(WORKFLOW_PATH, 'utf8');
  * being re-added without somebody noticing.
  */
 const EXPECTED_SYNCED_SECRETS = {
-  APP: ['DATABASE_URL', 'JWT_REFRESH_SECRET', 'JWT_SECRET', 'LISTING_RESIDENTIAL_PROXY_URL'],
+  APP: [
+    'DATABASE_URL',
+    'JWT_REFRESH_SECRET',
+    'JWT_SECRET',
+    'LISTING_RESIDENTIAL_PROXY_URL',
+  ],
   SHARED: ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'REDIS_URL'],
 };
 
@@ -101,7 +109,9 @@ describe('the deploy workflow syncs an explicit allowlist', () => {
     // ever come down. It is a MINIMUM, so a secret ADDED to the task definitions
     // without being synced still has to raise it.
     expect(syncStep).not.toBe('');
-    expect(syncStep).toContain('aws ssm put-parameter');
+    expect(syncStep).toContain('bash .github/scripts/put-secure-parameter.sh "$path"');
+    expect(syncStep).not.toContain('aws ssm put-parameter');
+    expect(syncStep).not.toContain('--value "$value"');
     expect(envBindings.length).toBeGreaterThanOrEqual(7);
     expect(syncCalls.length).toBeGreaterThanOrEqual(7);
   });
@@ -157,7 +167,7 @@ describe('the deploy workflow syncs an explicit allowlist', () => {
     for (const name of EXPECTED_SYNCED_SECRETS.APP) expect(pathFor(name)).toBe(`/oxy/$APP/${name}`);
   });
 
-  it('covers every secret both task definitions read, and nothing else', () => {
+  it('covers exactly the secrets required by the matching task definitions', () => {
     // Widening this list is the deliberate edit the workflow comment asks for.
     // Narrowing it means a container reads a parameter no deploy maintains.
     expect(syncCalls.map(([, name]) => name).sort()).toEqual(
@@ -173,5 +183,17 @@ describe('the deploy workflow syncs an explicit allowlist', () => {
     // The ESCAPED spelling, because the guard is a `grep` regex — asserting the
     // bare hostname passes on a workflow whose dots are unescaped wildcards.
     expect(syncStep).toContain(String.raw`'\.usw2\.cache\.amazonaws\.com'`);
+  });
+
+  it('does not source Oxy service credentials from GitHub and verifies exact SSM paths', () => {
+    const executableSync = syncStep
+      .split('\n')
+      .filter((line) => !line.trimStart().startsWith('#'))
+      .join('\n');
+    expect(syncStep).not.toMatch(/secrets\.OXY_SERVICE_API_(?:KEY|SECRET)/);
+    expect(syncStep).not.toMatch(/sync_secret OXY_SERVICE_API_(?:KEY|SECRET)/);
+    expect(syncStep).toContain('require_secure_string "/oxy/$APP/OXY_SERVICE_API_KEY"');
+    expect(syncStep).toContain('require_secure_string "/oxy/$APP/OXY_SERVICE_API_SECRET"');
+    expect(executableSync).not.toContain('--with-decryption');
   });
 });

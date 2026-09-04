@@ -212,6 +212,9 @@ jobs:
       - name: Verify every migration declares a deploy phase
         run: bun .github/scripts/check-migration-phases.mjs packages/backend/drizzle
 
+      - name: Verify SecureString values never enter AWS argv
+        run: bash .github/scripts/test-put-secure-parameter.sh
+
       - name: Test backend
         run: >-
           bun run --cwd packages/backend test --

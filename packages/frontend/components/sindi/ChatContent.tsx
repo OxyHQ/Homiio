@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, Pressable, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -64,6 +64,8 @@ export function ChatContent({
     input,
     isLoading,
     isUploading,
+    needsConsent,
+    isRequestingConsent,
     attachedFile,
     scrollViewRef,
     onChangeInput,
@@ -71,6 +73,7 @@ export function ChatContent({
     onAttachFile,
     onRemoveFile,
     onSuggestionPress,
+    onRequestConsent,
   } = useSindiConversation({
     conversationId,
     currentConversation,
@@ -92,8 +95,31 @@ export function ChatContent({
         >
           <View style={sindiStyles.errorContent}>
             <Ionicons name="alert-circle" size={48} color={colors.primaryForeground} />
-            <Text style={sindiStyles.errorText}>{t('sindi.errors.connection')}</Text>
-            <Text style={sindiStyles.errorSubtext}>{t('sindi.errors.connectionMessage')}</Text>
+            <Text style={sindiStyles.errorText}>
+              {needsConsent ? t('sindi.errors.consentTitle') : t('sindi.errors.connection')}
+            </Text>
+            <Text style={sindiStyles.errorSubtext}>
+              {needsConsent
+                ? t('sindi.errors.consentMessage')
+                : t('sindi.errors.connectionMessage')}
+            </Text>
+            {needsConsent ? (
+              <Pressable
+                accessibilityRole="button"
+                disabled={isRequestingConsent}
+                onPress={onRequestConsent}
+                style={[
+                  sindiStyles.consentButton,
+                  isRequestingConsent && sindiStyles.consentButtonPressed,
+                ]}
+              >
+                <Text style={sindiStyles.consentButtonText}>
+                  {isRequestingConsent
+                    ? t('sindi.errors.consentRequesting')
+                    : t('sindi.errors.consentAction')}
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
         </LinearGradient>
       ) : null}
@@ -113,7 +139,7 @@ export function ChatContent({
         onAttachFile={onAttachFile}
         onRemoveFile={onRemoveFile}
         attachedFile={attachedFile}
-        isLoading={isLoading}
+        isLoading={isLoading || needsConsent || isRequestingConsent}
         isUploading={isUploading}
         stickyStyle={webStickyInput}
       />

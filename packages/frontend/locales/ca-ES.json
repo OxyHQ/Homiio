@@ -2302,6 +2302,12 @@
     "errors": {
       "connection": "Error de Connexió",
       "connectionMessage": "Si us plau, verifiqueu la vostra connexió i intenteu-ho de nou.",
+      "consentTitle": "Cal permís",
+      "consentMessage": "Permet que Homiio deixi que Sindi continuï ajudant-te quan no hi siguis.",
+      "consentAction": "Revisar permisos",
+      "consentRequesting": "Obrint permisos...",
+      "consentUnavailableTitle": "Permís no disponible",
+      "consentUnavailableMessage": "Actualitza Homiio i torna-ho a provar. No s'ha concedit cap permís.",
       "uploadFailedTitle": "Error en pujar",
       "uploadAnalyzeFailed": "No s'ha pogut analitzar el fitxer."
     },

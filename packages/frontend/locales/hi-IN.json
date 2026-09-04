@@ -1949,6 +1949,12 @@
     "errors": {
       "connection": "Connection Error",
       "connectionMessage": "Please check your connection and try again.",
+      "consentTitle": "Permission needed",
+      "consentMessage": "Allow Homiio to let Sindi continue helping you while you are away.",
+      "consentAction": "Review permissions",
+      "consentRequesting": "Opening permissions...",
+      "consentUnavailableTitle": "Permission unavailable",
+      "consentUnavailableMessage": "Update Homiio and try again. No permission was granted.",
       "uploadFailedTitle": "Upload failed",
       "uploadAnalyzeFailed": "Could not analyze the file."
     },
