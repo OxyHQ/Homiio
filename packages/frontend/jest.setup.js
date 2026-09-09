@@ -21,6 +21,15 @@ jest.mock('react-native-reanimated', () => ({
 require('react-native-reanimated').setUpTests();
 
 /**
+ * @oxyhq/services wraps its native UI in KeyboardProvider. Jest has no linked
+ * native keyboard module, so keep the provider boundary while rendering its
+ * children directly in the Node test environment.
+ */
+jest.mock('react-native-keyboard-controller', () => ({
+  KeyboardProvider: ({ children }) => children,
+}));
+
+/**
  * @react-native-async-storage/async-storage requires a native module that does
  * not exist in the Node/Jest environment. Use the official in-memory mock so
  * any module that transitively imports AsyncStorage (e.g. @oxyhq/core's
