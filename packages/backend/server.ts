@@ -164,6 +164,7 @@ const corsOptions: CorsOptions = {
     'Content-Type',
     'Accept',
     'Authorization',
+    'X-Oxy-Edge-Region',
     'Cache-Control',
     'Pragma'
   ],
