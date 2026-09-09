@@ -1,0 +1,23 @@
+# Response headers for the Cloudflare Worker's static assets. wrangler parses
+# this file out of the assets directory and the asset router applies the rules.
+#
+# It exists because of what the move off Pages took away. Cloudflare Pages added
+# the two headers below to every response it served, automatically, with nothing
+# in this repository asking for them — this file did not exist and never has.
+# Workers Static Assets does not, so without this rule homiio.com would have
+# lost both at cutover, silently, since no build, deploy or test here reads a
+# response header.
+#
+# Measured on a Pages hostname whose project has no `_headers` rule for them
+# either, which is what shows they come from the platform rather than any
+# project:
+#
+#   oxy-auth.pages.dev  referrer-policy: strict-origin-when-cross-origin
+#                       x-content-type-options: nosniff
+#
+# `nosniff` is the one that matters: without it a browser may disregard a
+# declared Content-Type and sniff the bytes instead, which turns any response
+# carrying attacker-influenced content into a possible script.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
