@@ -1238,7 +1238,7 @@ Return only the JSON array, no other text.`;
       setStreamingHeaders(res);
       if (!res.getHeader('Access-Control-Allow-Origin')) {
         res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Oxy-Edge-Region');
+        res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Oxy-Edge-Region, X-Oxy-Activity-Id');
       }
 
       const userId = getUserId(req);
