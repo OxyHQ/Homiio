@@ -23,18 +23,15 @@ if grep -Fq -- "$secret" "$TEST_AWS_ARGV_FILE"; then
 fi
 
 mapfile -t argv <"$TEST_AWS_ARGV_FILE"
-expected=(ssm put-parameter --cli-input-json file:///dev/stdin)
+expected=(ssm put-parameter --name /oxy/homiio/JWT_SECRET --value file:///dev/stdin --type SecureString --overwrite)
 if [[ "${argv[*]}" != "${expected[*]}" ]]; then
   printf 'unexpected aws argv: %q\n' "${argv[@]}" >&2
   exit 1
 fi
 
-jq -e \
-  --arg secret "$secret" \
-  '.Name == "/oxy/homiio/JWT_SECRET" and
-   .Value == $secret and
-   .Type == "SecureString" and
-   .Overwrite == true' \
-  "$TEST_AWS_STDIN_FILE" >/dev/null
+if [[ "$(<"$TEST_AWS_STDIN_FILE")" != "$secret" ]]; then
+  echo 'protected value was not passed intact through stdin' >&2
+  exit 1
+fi
 
 echo 'Homiio SecureString stdin and argv test passed.'
