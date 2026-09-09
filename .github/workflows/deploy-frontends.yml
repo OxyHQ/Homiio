@@ -108,6 +108,17 @@ jobs:
       # Mercaria's deploy-cloudflare.yml has run this shape since. Do not
       # "modernise" this back to the action.
       #
+      # It has been proposed again since, so the provenance is worth having in
+      # one place. `d0fc937c` (#291) is the commit that moved off the action.
+      # Clarity's frontend deploy hit the identical `Fail extracting tarball for
+      # "wrangler"` in September 2026. And `workingDirectory` — the argument that
+      # would be needed to point the action at `packages/frontend` — makes it
+      # strictly worse rather than better: the action chooses its package manager
+      # by looking for a lockfile in that directory, finds none because this
+      # repository's lockfile is at the root, and falls back to npm. That is
+      # exactly how Alia's canvas deploy failed five runs out of five before it
+      # moved off the action too.
+      #
       # `wrangler@4` is PINNED. An unpinned `bunx wrangler` re-resolves the
       # latest major on every deploy, which is how a deploy path changes
       # behaviour with no diff to show for it.
