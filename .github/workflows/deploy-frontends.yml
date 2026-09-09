@@ -108,18 +108,39 @@ jobs:
       # Mercaria's deploy-cloudflare.yml has run this shape since. Do not
       # "modernise" this back to the action.
       #
+      # It has been proposed again since, so the provenance is worth having in
+      # one place. `d0fc937c` (#291) is the commit that moved off the action.
+      # Clarity's frontend deploy hit the identical `Fail extracting tarball for
+      # "wrangler"` in September 2026. And `workingDirectory` — the argument that
+      # would be needed to point the action at `packages/frontend` — makes it
+      # strictly worse rather than better: the action chooses its package manager
+      # by looking for a lockfile in that directory, finds none because this
+      # repository's lockfile is at the root, and falls back to npm. That is
+      # exactly how Alia's canvas deploy failed five runs out of five before it
+      # moved off the action too.
+      #
       # `wrangler@4` is PINNED. An unpinned `bunx wrangler` re-resolves the
       # latest major on every deploy, which is how a deploy path changes
       # behaviour with no diff to show for it.
       #
-      # NOTE this is `pages deploy`, not `deploy`: Homiio's frontend is a
-      # Cloudflare PAGES project (`homiio-frontend`, SPA routing via
-      # `packages/frontend/public/_redirects`). Mercaria serves a Worker with
-      # Static Assets and needs a `wrangler.jsonc` plus `public/.assetsignore`;
-      # none of that applies here and none of it should be copied over — the
-      # shared part is how wrangler is INVOKED, not which product it targets.
-      - name: Deploy to Cloudflare Pages
-        run: bunx wrangler@4 pages deploy packages/frontend/dist --project-name=homiio-frontend --branch=main
+      # THIS IS NOW `deploy`, NOT `pages deploy`. Homiio's frontend is a WORKER
+      # with Static Assets, because a Pages project always serves
+      # `<project>.pages.dev` and Cloudflare offers no way to switch it off —
+      # `wrangler pages project` has only `list`, `create` and `delete`. That
+      # left `homiio-frontend.pages.dev` as a second, complete copy of the app
+      # on a hostname `packages/backend/server.ts` does not allow-list, so it
+      # rendered the shell and had every API call refused. `workers_dev = false`
+      # in `packages/frontend/wrangler.toml` leaves `homiio.com` as the only way
+      # in.
+      #
+      # Every argument the old `pages deploy` line carried — the directory, the
+      # project name, the SPA fallback that replaced `public/_redirects`, and the
+      # custom domain — is DECLARED IN THAT FILE instead, so a deploy cannot
+      # disagree with the configuration. `working-directory` is what lets
+      # wrangler find it.
+      - name: Deploy the Worker
+        working-directory: packages/frontend
+        run: bunx wrangler@4 deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

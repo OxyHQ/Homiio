@@ -189,7 +189,7 @@ The one privileged surface is the scraper route, which is infrastructure tooling
 |---|---|
 | [`ci.yml`](.github/workflows/ci.yml) | Lint, tests and builds on every push and pull request |
 | [`deploy-aws.yml`](.github/workflows/deploy-aws.yml) | API and worker to AWS ECS Fargate on `linux/arm64` |
-| [`deploy-frontends.yml`](.github/workflows/deploy-frontends.yml) | Web build to Cloudflare Pages |
+| [`deploy-frontends.yml`](.github/workflows/deploy-frontends.yml) | Web build to a Cloudflare Worker |
 
 The API and worker are separate Docker targets from the same compiled build;
 only the worker image carries Playwright/Chromium/X11. Full instructions are in
