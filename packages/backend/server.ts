@@ -131,7 +131,7 @@ const allowedOriginsSet = new Set([
   'http://127.0.0.1:8130',
   'http://127.0.0.1:19006'
 ]);
-// Extra production web origins (e.g. Cloudflare Pages), comma-separated
+// Extra production web origins (e.g. a preview deployment), comma-separated
 for (const origin of (process.env.CORS_ALLOWED_ORIGINS || '').split(',')) {
   const trimmed = origin.trim();
   if (trimmed) allowedOriginsSet.add(trimmed);

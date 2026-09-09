@@ -1,0 +1,42 @@
+# The Homiio web app is a Worker, not a Cloudflare Pages project.
+#
+# WHY: a Pages project ALWAYS serves `<project>.pages.dev` and Cloudflare offers
+# no way to switch it off — `wrangler pages project` has only `list`, `create`
+# and `delete`. Alia measured what that costs before migrating: `alia.onl` and
+# `alia-app.pages.dev` returned byte-identical deployments, and the second was in
+# no CORS allowlist, so it rendered the shell and failed every call it made.
+#
+# The same allowlist exists here and is just as exact: `packages/backend/server.ts`
+# admits `https://homiio.com` and localhost, and nothing else. So
+# `homiio-frontend.pages.dev` is the same defect — a complete, indexable second
+# copy of the app whose every API call is refused. `workers_dev = false` below
+# leaves `homiio.com` as the only name that reaches this deployment.
+name = "homiio-frontend"
+compatibility_date = "2026-09-09"
+
+workers_dev = false
+
+# Static assets with no `main`: no Worker script runs, every request is served
+# from the uploaded directory.
+[assets]
+directory = "./dist"
+# Replaces `public/_redirects` (`/*  /index.html  200`), deleted in the same
+# change because `_redirects` is a Pages-only convention and, left in `public/`,
+# `expo export` would copy it into `dist/` to be uploaded as a public asset.
+#
+# Behaviour is unchanged, wart included: `expo export --platform web` with
+# `web.output: 'single'` (app.config.js) emits ONE index.html plus hashed assets,
+# so every miss gets the shell — including a stale hashed bundle, which a browser
+# that asked for `.js` and was handed `text/html` will reject. That is exactly
+# what the Pages rule did, and Alia's Worker ships the same setting.
+not_found_handling = "single-page-application"
+
+# The only way in. `homiio.com` is the zone apex; Cloudflare writes the flattened
+# record for a custom domain, so no CNAME is declared by hand. This is also why
+# the apex must carry NO pre-existing DNS record at cutover: a Worker custom
+# domain refuses a hostname that already has externally managed records
+# (`code: 100117`). `api.homiio.com` is a different hostname on AWS ECS and is
+# untouched by this.
+[[routes]]
+pattern = "homiio.com"
+custom_domain = true

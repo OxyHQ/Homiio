@@ -1,12 +1,12 @@
 ---
 title: Deployment
-description: AWS ECS Fargate for the backend, Cloudflare Pages for the frontend web build, and serverless/persistent-process concerns (the Postgres pool, cron).
+description: AWS ECS Fargate for the backend, a Cloudflare Worker for the frontend web build, and serverless/persistent-process concerns (the Postgres pool, cron).
 order: 10
 ---
 
 # Deployment
 
-The backend deploys to **AWS ECS Fargate** and the frontend web export deploys to **Cloudflare Pages**. Both are driven by GitHub Actions on push to `main`. Homiio does **not** deploy to DigitalOcean App Platform or droplets — ECS task definitions, ALB routing, ECR, SSM secrets, and the S3 media bucket are owned by `~/Oxy/oxy-infra/terraform-uswest2/`.
+The backend deploys to **AWS ECS Fargate** and the frontend web export deploys to a **Cloudflare Worker** with Static Assets. Both are driven by GitHub Actions on push to `main`. Homiio does **not** deploy to DigitalOcean App Platform or droplets — ECS task definitions, ALB routing, ECR, SSM secrets, and the S3 media bucket are owned by `~/Oxy/oxy-infra/terraform-uswest2/`.
 
 ## Backend (AWS ECS Fargate)
 
@@ -24,14 +24,23 @@ Workflow: `.github/workflows/deploy-aws.yml`
   command runs `packages/backend/dist/worker.js`. The API deploys the `api`
   target, which does not contain Playwright/Chromium/X11.
 
-## Frontend (Cloudflare Pages)
+## Frontend (Cloudflare Worker)
 
 Workflow: `.github/workflows/deploy-frontends.yml`
 
 1. `bun install --frozen-lockfile`
 2. Builds `@homiio/shared-types` with `tsc`.
 3. Runs `bun run build` in `packages/frontend` (Expo web export to `dist/`).
-4. Deploys `packages/frontend/dist` with `wrangler pages deploy` to the `homiio-frontend` Pages project.
+4. Runs `wrangler deploy` in `packages/frontend`, which uploads `dist/` as the Worker's Static Assets.
+
+Everything the deploy needs is declared in `packages/frontend/wrangler.toml` rather than passed on the command line: the asset directory, the SPA fallback, and `homiio.com` as a custom domain.
+
+This is a **Worker**, not a Pages project, and the difference is the point. A Pages project always serves `<project>.pages.dev` and Cloudflare offers no way to turn that off, which left a second complete copy of the app on a hostname `server.ts` does not allow-list — it rendered the shell and had every API call refused. `workers_dev = false` leaves `homiio.com` as the only name that reaches the deployment.
+
+Two consequences worth knowing before touching this:
+
+- **The apex `homiio.com` must carry no externally managed DNS record.** A Worker custom domain writes its own and refuses a hostname that already has one (`code: 100117`). `api.homiio.com` is a separate hostname pointing at the ALB and is unaffected.
+- **`_redirects` and `_headers` are Pages conventions.** SPA routing is `not_found_handling = "single-page-application"` in `wrangler.toml` now; adding those files back to `public/` would only ship them into `dist/` as public assets.
 
 `EXPO_PUBLIC_*` variables are inlined into the bundle at build time. Anything not prefixed will not be visible at runtime.
 
