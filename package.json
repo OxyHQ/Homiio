@@ -18,6 +18,7 @@
     "build:backend": "bun run --filter @homiio/backend build",
     "test": "bun run --filter '*' test",
     "lint": "bun run --filter '*' lint",
+    "doctor:oxy": "oxy-doctor --ci",
     "check:bundle-imports": "bun ./scripts/check-frontend-bundle-imports.mjs && bun ./scripts/test-check-frontend-bundle-imports.mjs",
     "check:web-bundle-budget": "bun ./scripts/check-web-export-budget.mjs",
     "check:lockfile": "bun ./scripts/check-lockfile-sync.mjs",
@@ -30,6 +31,7 @@
     "postinstall": "bun run build:shared-types"
   },
   "devDependencies": {
+    "@oxy.so/doctor": "1.0.0",
     "@types/node": "^22.20.1",
     "ajv": "^8.20.0",
     "ajv-keywords": "^5.1.0",

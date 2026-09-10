@@ -212,6 +212,7 @@ only the worker image carries Playwright/Chromium/X11. Full instructions are in
 | [`docs/auth.mdx`](docs/auth.mdx) | Sessions, ownership and profiles |
 | [`docs/deployment.mdx`](docs/deployment.mdx) | Shipping it |
 | [`docs/contributing.mdx`](docs/contributing.mdx) | Working on it |
+| [`docs/dependencies.md`](docs/dependencies.md) | Reviewable Oxy updates and Doctor |
 | [`docs/adr/README.md`](docs/adr/README.md) | The architecture decision records, and which one binds what |
 
 The full working agreement, including the layout and styling rules the app is held to, is in [`AGENTS.md`](AGENTS.md).
