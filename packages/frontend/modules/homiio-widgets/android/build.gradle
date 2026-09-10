@@ -78,4 +78,10 @@ dependencies {
   // listings parser is built on it. This is the real implementation; AGP puts
   // the mockable android.jar last on the unit-test classpath, so this one wins.
   testImplementation "org.json:json:20250517"
+
+  // `runBlocking`, so `ListingsApiTest` can drive the real suspending fetch
+  // against a real socket. Declared rather than leaned on as a transitive of
+  // datastore for the same reason as core-ktx above.
+  testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2"
+  testImplementation "com.squareup.okhttp3:mockwebserver:4.12.0"
 }
