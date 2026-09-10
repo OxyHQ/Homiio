@@ -5,6 +5,9 @@ updates:
     schedule:
       interval: weekly
     groups:
+      oxy-platform:
+        patterns:
+          - "@oxy.so/*"
       minor-and-patch:
         update-types: [minor, patch]
     labels:
