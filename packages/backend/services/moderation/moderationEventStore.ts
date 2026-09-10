@@ -1,7 +1,7 @@
 /**
  * The webhook dedupe store, in Postgres.
  *
- * `@oxyhq/crowdsource-express` defaults to an in-process store and says exactly
+ * `@oxy.so/crowdsource-express` defaults to an in-process store and says exactly
  * when that is not enough: two instances behind a load balancer each keep their
  * own, so a redelivery landing on the other instance is not deduplicated. Homiio
  * runs behind the shared ALB with an API task and a worker task on the same
@@ -21,7 +21,7 @@
  * `db/moderation/moderationEventRepository.ts`.
  */
 
-import type { ProcessedEventStore } from '@oxyhq/crowdsource-express';
+import type { ProcessedEventStore } from '@oxy.so/crowdsource-express';
 import {
   claimModerationEvent,
   releaseModerationEvent,

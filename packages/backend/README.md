@@ -74,7 +74,7 @@ migrator that could drift from it.
 
 ## Auth
 
-Uses `@oxyhq/core/server` (`createOxyAuthMiddleware`, `requireOxyAuth`, `getRequiredOxyUserId`). The linked Oxy client on the frontend owns token refresh — no app-local bearer parsers.
+Uses `@oxy.so/core/server` (`createOxyAuthMiddleware`, `requireOxyAuth`, `getRequiredOxyUserId`). The linked Oxy client on the frontend owns token refresh — no app-local bearer parsers.
 
 Profile ownership resolves via `findProfileByOxyUserId` (`db/profiles/profileRepository.ts`) — never trust a client-supplied profile id.
 

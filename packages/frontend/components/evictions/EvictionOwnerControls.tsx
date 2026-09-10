@@ -10,15 +10,15 @@
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@oxyhq/bloom/button';
-import { Chip } from '@oxyhq/bloom/chip';
-import { TextFieldInput } from '@oxyhq/bloom/text-field';
-import { H3, Text as BloomText } from '@oxyhq/bloom/typography';
+import { Button } from '@oxy.so/bloom/button';
+import { Chip } from '@oxy.so/bloom/chip';
+import { TextFieldInput } from '@oxy.so/bloom/text-field';
+import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { EvictionCaseStatus } from '@homiio/shared-types';
 import { useCreateEvictionUpdate, useUpdateEviction } from '@/hooks/useEvictionQueries';
 import { webAlert } from '@/utils/api';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 import { EVICTION_STATUS_META } from './evictionUtils';

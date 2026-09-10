@@ -13,8 +13,8 @@ import { useTranslation } from 'react-i18next';
 import { formatArea } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 
-import { Divider } from '@oxyhq/bloom/divider';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Divider } from '@oxy.so/bloom/divider';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { Section } from '@/components/property/Section';
 import { colors } from '@/styles/colors';

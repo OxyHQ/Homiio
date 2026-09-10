@@ -8,8 +8,8 @@ order: 9
 
 Homiio does not have its own login form. Identity, sessions, account switching, and avatars are all owned by **Oxy**:
 
-- The Expo / React Native app uses `@oxyhq/services` — `OxyProvider`, `useOxy`, and the Oxy bottom-sheet flows for sign-in and account switching.
-- The Express API uses `@oxyhq/core` — `oxy.auth()` is the only request-gating middleware on the authenticated route tree.
+- The Expo / React Native app uses `@oxy.so/services` — `OxyProvider`, `useOxy`, and the Oxy bottom-sheet flows for sign-in and account switching.
+- The Express API uses `@oxy.so/core` — `oxy.auth()` is the only request-gating middleware on the authenticated route tree.
 
 There is no password storage, no session table, and no JWT minting on Homiio's side.
 
@@ -49,7 +49,7 @@ export const OXY_BASE_URL =
 The components and contexts that need identity import the hook directly:
 
 ```tsx
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 
 const { oxyServices, activeSessionId, isAuthenticated, user } = useOxy();
 ```
@@ -91,7 +91,7 @@ A user can hold multiple profiles; the active one is selected via `activateProfi
 `packages/backend/server.ts` instantiates a single `OxyServices` client and uses its `auth()` middleware to gate the authenticated route tree:
 
 ```ts
-import { OxyServices } from '@oxyhq/core';
+import { OxyServices } from '@oxy.so/core';
 
 const oxy = new OxyServices({ baseURL: '<oxy api>' });
 
@@ -115,7 +115,7 @@ Controllers read `req.userId` directly — that id is the link to every billing,
 
 Because the active session can switch at any time, `ProfileContext` invalidates its loaded profile on `activeSessionId` change and TanStack Query keys on profile-scoped requests include the active profile id. The UI re-renders with the new context without a full page reload.
 
-The Oxy account switcher is provided by `@oxyhq/services` and rendered from a bottom sheet — Homiio does not build its own.
+The Oxy account switcher is provided by `@oxy.so/services` and rendered from a bottom sheet — Homiio does not build its own.
 
 ## Where to look
 

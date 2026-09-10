@@ -8,8 +8,8 @@ import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Chip } from '@oxyhq/bloom/chip';
-import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
+import { Chip } from '@oxy.so/bloom/chip';
+import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useMediaQuery } from 'react-responsive';
 
 import { Header } from '@/components/Header';

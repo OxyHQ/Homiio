@@ -13,7 +13,7 @@ import React, { useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 import type { EvictionCase } from '@homiio/shared-types';
 
 import { ZoomableImage } from '@/components/ui/ZoomableImage';

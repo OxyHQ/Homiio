@@ -18,11 +18,11 @@ import { useTranslation } from 'react-i18next';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Button } from '@oxyhq/bloom/button';
-import * as Skeleton from '@oxyhq/bloom/skeleton';
-import { Switch } from '@oxyhq/bloom/switch';
-import { TextFieldInput } from '@oxyhq/bloom/text-field';
-import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
+import { Button } from '@oxy.so/bloom/button';
+import * as Skeleton from '@oxy.so/bloom/skeleton';
+import { Switch } from '@oxy.so/bloom/switch';
+import { TextFieldInput } from '@oxy.so/bloom/text-field';
+import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { CreateEvictionCaseData, EvictionCase } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
@@ -32,7 +32,7 @@ import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useCreateEviction, useEvictionDetail, useUpdateEviction } from '@/hooks/useEvictionQueries';
 import { imageUploadService } from '@/services/imageUploadService';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 

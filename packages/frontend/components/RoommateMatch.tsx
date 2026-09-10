@@ -15,7 +15,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors } from '@/styles/colors';
 import type { RoommateProfile } from '@/hooks/useRoommate';
 import { ActionButton } from '@/components/ui/ActionButton';
-import { FollowButton } from '@oxyhq/services';
+import { FollowButton } from '@oxy.so/services';
 
 
 interface RoommateMatchProps {

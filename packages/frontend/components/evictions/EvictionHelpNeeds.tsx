@@ -16,8 +16,8 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Chip } from '@oxyhq/bloom/chip';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Chip } from '@oxy.so/bloom/chip';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 import type { EvictionHelpNeed } from '@homiio/shared-types';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';

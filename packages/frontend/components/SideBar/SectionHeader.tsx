@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Pressable } from 'react-native';
-import { Text } from '@oxyhq/bloom/typography';
+import { Text } from '@oxy.so/bloom/typography';
 import { ChevronDown } from 'lucide-react-native';
 import { colors } from '@/styles/colors';
 

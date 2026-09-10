@@ -15,12 +15,12 @@ import { ThemedText } from './ThemedText';
 import { colors } from '@/styles/colors';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import savedPropertyFolderService, { SavedPropertyFolder } from '@/services/savedPropertyFolderService';
-import { Button } from '@oxyhq/bloom/button';
+import { Button } from '@oxy.so/bloom/button';
 import { Property } from '@homiio/shared-types';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import savedPropertyService from '@/services/savedPropertyService';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 
 
 interface SaveToFolderBottomSheetProps {

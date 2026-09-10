@@ -16,10 +16,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 
-import { Button } from '@oxyhq/bloom/button';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Button } from '@oxy.so/bloom/button';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';

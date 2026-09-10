@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button } from '@oxyhq/bloom/button';
-import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
+import { Button } from '@oxy.so/bloom/button';
+import { Text as BloomText, H3 } from '@oxy.so/bloom/typography';
 import { colors } from '@/styles/colors';
 
 export interface GuestCounts {

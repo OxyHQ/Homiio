@@ -13,22 +13,22 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { format } from 'date-fns';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 import { useQueryClient } from '@tanstack/react-query';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Button } from '@oxyhq/bloom/button';
-import { Loading } from '@oxyhq/bloom/loading';
+import { Button } from '@oxy.so/bloom/button';
+import { Loading } from '@oxy.so/bloom/loading';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@oxyhq/bloom/dropdown-menu';
-import * as Skeleton from '@oxyhq/bloom/skeleton';
-import { TextFieldInput } from '@oxyhq/bloom/text-field';
-import { Text as BloomText, H2 } from '@oxyhq/bloom/typography';
-import { useOxy, openAccountDialog } from '@oxyhq/services';
+} from '@oxy.so/bloom/dropdown-menu';
+import * as Skeleton from '@oxy.so/bloom/skeleton';
+import { TextFieldInput } from '@oxy.so/bloom/text-field';
+import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
+import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { useTranslation } from 'react-i18next';
 import {
   AvailabilityWindow,

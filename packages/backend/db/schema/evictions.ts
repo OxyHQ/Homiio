@@ -57,7 +57,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { createdAt, generatedId, geography, inList, timestamptz, updatedAt } from '@oxyhq/db';
+import { createdAt, generatedId, geography, inList, timestamptz, updatedAt } from '@oxy.so/db';
 import type {
   EvictionCaseStatus,
   EvictionHelpNeedType,
@@ -539,7 +539,7 @@ export const evictionCaseUpdates = pgTable(
  * An Oxy `account_verified` signal is the third factor the ADR names and it is
  * NOT implemented here: the session object this backend receives
  * (`OxyRequestUser`) carries no verification field, so wiring it means changing
- * `@oxyhq/core`, not this table. Recorded rather than faked — a basis value that
+ * `@oxy.so/core`, not this table. Recorded rather than faked — a basis value that
  * nothing can ever write would look like coverage.
  */
 export const evictionCaseAttendees = pgTable(

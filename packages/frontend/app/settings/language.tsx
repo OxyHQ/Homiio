@@ -12,7 +12,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   SettingsListGroup,
   SettingsListItem,
-} from '@oxyhq/bloom/settings-list';
+} from '@oxy.so/bloom/settings-list';
 
 import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';

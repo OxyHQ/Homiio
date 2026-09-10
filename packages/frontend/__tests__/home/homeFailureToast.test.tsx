@@ -25,7 +25,7 @@ import { OfferingType, type LocationSelection } from '@homiio/shared-types';
 // statement in the file and may only reach variables named that way — the one
 // naming convention jest enforces rather than suggests.
 const mockToastError = jest.fn();
-jest.mock('@oxyhq/bloom/toast', () => ({
+jest.mock('@oxy.so/bloom/toast', () => ({
   toast: { error: (...args: unknown[]) => mockToastError(...args), success: jest.fn() },
 }));
 

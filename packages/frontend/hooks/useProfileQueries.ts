@@ -1,8 +1,8 @@
 import { useCallback, useEffect } from 'react';
 import i18next from 'i18next';
 import { useProfileStore } from '@/store/profileStore';
-import { useOxy } from '@oxyhq/services';
-import { toast } from '@oxyhq/bloom/toast';
+import { useOxy } from '@oxy.so/services';
+import { toast } from '@oxy.so/bloom/toast';
 import type { UpdateProfileData } from '@homiio/shared-types';
 
 export const useProfileRedux = () => {

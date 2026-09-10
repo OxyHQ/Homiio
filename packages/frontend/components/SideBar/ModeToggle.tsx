@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Pressable, Platform } from 'react-native';
-import { Text } from '@oxyhq/bloom/typography';
+import { Text } from '@oxy.so/bloom/typography';
 import { Home, CalendarDays, Tag, Repeat } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import Animated, {

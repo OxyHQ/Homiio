@@ -48,7 +48,7 @@ If you find a leftover `package-lock.json`, delete it and run `bun install` so t
 Cross-project agents that show up here:
 
 - `mention-fixer` — Senior debugger for issues that cross layers.
-- `oxy-core`, `oxy-services` — When a bug is in `@oxyhq/core` or `@oxyhq/services`, fix it upstream first (build, test, push, publish) and then bump the dep in Homiio. Never patch the shared package locally.
+- `oxy-core`, `oxy-services` — When a bug is in `@oxy.so/core` or `@oxy.so/services`, fix it upstream first (build, test, push, publish) and then bump the dep in Homiio. Never patch the shared package locally.
 - `test-build` and `git-ops` — Required before pushing: tests + build, then commit and push when green.
 
 The rule is: **never code in the main thread**. Delegate to agents in parallel; the main thread coordinates.

@@ -23,7 +23,7 @@
  */
 
 import { eq, inArray, sql } from 'drizzle-orm';
-import { CHECK_VIOLATION, constraintNameOf, sqlStateOf, uuidv7 } from '@oxyhq/db';
+import { CHECK_VIOLATION, constraintNameOf, sqlStateOf, uuidv7 } from '@oxy.so/db';
 import { closePostgres, connectPostgres, type Database } from '../../db/postgres';
 import {
   commissions,

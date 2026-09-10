@@ -22,7 +22,7 @@
  */
 
 import { getTableName, sql } from 'drizzle-orm';
-import { findUnsupportedExpiryColumns } from '@oxyhq/db/assert';
+import { findUnsupportedExpiryColumns } from '@oxy.so/db/assert';
 import { sqlColumnName } from '../../db/casing';
 import { EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE, EXPIRY_SWEEP_TARGETS } from '../../db/expiry';
 import { getCronStatus, initCronJobs, runExpirySweepNow, stopCronJobs } from '../../services/cron';

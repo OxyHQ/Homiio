@@ -33,11 +33,11 @@ import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Button } from '@oxyhq/bloom/button';
-import { Chip } from '@oxyhq/bloom/chip';
-import * as Skeleton from '@oxyhq/bloom/skeleton';
-import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
-import { useOxy, openAccountDialog } from '@oxyhq/services';
+import { Button } from '@oxy.so/bloom/button';
+import { Chip } from '@oxy.so/bloom/chip';
+import * as Skeleton from '@oxy.so/bloom/skeleton';
+import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
+import { useOxy, openAccountDialog } from '@oxy.so/services';
 
 import {
   EvictionCaseStatus,

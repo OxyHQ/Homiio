@@ -1,4 +1,4 @@
-import { getRequiredOxyUserId } from '@oxyhq/core/server';
+import { getRequiredOxyUserId } from '@oxy.so/core/server';
 import { AppError } from '../middlewares/errorHandler';
 import type { ControllerRequest } from '../controllers/controllerTypes';
 

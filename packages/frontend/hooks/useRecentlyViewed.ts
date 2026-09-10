@@ -1,5 +1,5 @@
 import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 import type { Property } from '@homiio/shared-types';
 import { RecentlyViewedType } from '@homiio/shared-types';
 import { useCallback, useMemo } from 'react';

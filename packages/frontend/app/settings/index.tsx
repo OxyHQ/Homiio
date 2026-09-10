@@ -11,16 +11,16 @@ import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Constants from 'expo-constants';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 
-import { Switch } from '@oxyhq/bloom/switch';
+import { Switch } from '@oxy.so/bloom/switch';
 import {
   SettingsListGroup,
   SettingsListItem,
-} from '@oxyhq/bloom/settings-list';
+} from '@oxy.so/bloom/settings-list';
 
 import { Header } from '@/components/Header';
 import { ConfirmDialog } from '@/components/ConfirmDialog';

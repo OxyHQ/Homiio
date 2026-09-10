@@ -27,8 +27,8 @@ import { StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import * as Skeleton from '@oxyhq/bloom/skeleton';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import * as Skeleton from '@oxy.so/bloom/skeleton';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { Section } from '@/components/property/Section';
 import {

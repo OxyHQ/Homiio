@@ -40,7 +40,7 @@
 
 import { bigint, boolean, check, doublePrecision, index, pgTable, text } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { createdAt, generatedId, inList, textArrayLiteral, timestamptz, updatedAt } from '@oxyhq/db';
+import { createdAt, generatedId, inList, textArrayLiteral, timestamptz, updatedAt } from '@oxy.so/db';
 import { PAYMENT_CURRENCIES, type LeaseDocumentType, type LeaseStatus } from '@homiio/shared-types';
 import { properties } from './properties';
 

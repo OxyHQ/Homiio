@@ -26,7 +26,7 @@ import {
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { createdAt, generatedId, geography, inList, updatedAt } from '@oxyhq/db';
+import { createdAt, generatedId, geography, inList, updatedAt } from '@oxy.so/db';
 import { cities, countries, neighborhoods, regions } from './geo';
 
 /**

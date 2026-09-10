@@ -2,7 +2,7 @@
  * Turning a stored report into the thing the SDK delivers.
  *
  * This is NOT a case-envelope builder, and the difference matters enough to
- * name: `@oxyhq/crowdsource` builds the Case Envelope and deliberately does not
+ * name: `@oxy.so/crowdsource` builds the Case Envelope and deliberately does not
  * export the function that does it. What this module produces is the SDK's
  * `ReportInput` — a description of the material — and the SDK derives the
  * envelope from it: resource ids, relations, digests, pseudonymous principal
@@ -29,7 +29,7 @@
  */
 
 import { createHash } from 'crypto';
-import type { ReportInput } from '@oxyhq/crowdsource';
+import type { ReportInput } from '@oxy.so/crowdsource';
 import { ModerationReportedType } from '@homiio/shared-types';
 import type { ModerationReportRow } from '../../db/moderation/moderationReportRepository';
 import { REPORT_TAXONOMY_VERSION, allegationForReport } from './reportTaxonomy';

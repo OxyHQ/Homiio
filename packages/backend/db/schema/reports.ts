@@ -16,7 +16,7 @@
 
 import { check, index, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { createdAt, generatedId, inList, updatedAt } from '@oxyhq/db';
+import { createdAt, generatedId, inList, updatedAt } from '@oxy.so/db';
 import type { ListingReportReason, ListingReportStatus } from '@homiio/shared-types';
 import { properties } from './properties';
 

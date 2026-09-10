@@ -2,8 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Badge, type BadgeSize } from '@oxyhq/bloom/badge';
-import type { AccentTone } from '@oxyhq/bloom/theme';
+import { Badge, type BadgeSize } from '@oxy.so/bloom/badge';
+import type { AccentTone } from '@oxy.so/bloom/theme';
 import { colors } from '@/styles/colors';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];

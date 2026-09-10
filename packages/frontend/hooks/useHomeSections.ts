@@ -34,7 +34,7 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { useQuery, type QueryKey } from '@tanstack/react-query';
 import i18next from 'i18next';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 import { locationKey, type HomeSection, type LocationSelection, type Property } from '@homiio/shared-types';
 
 import { ApiError } from '@/utils/api';

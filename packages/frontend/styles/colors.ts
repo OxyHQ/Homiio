@@ -23,8 +23,8 @@
  * palette: every brand/neutral/status value comes from Bloom.
  */
 
-import { buildTheme } from '@oxyhq/bloom/theme';
-import type { ThemeColors } from '@oxyhq/bloom/theme';
+import { buildTheme } from '@oxy.so/bloom/theme';
+import type { ThemeColors } from '@oxy.so/bloom/theme';
 
 /** Bloom `yellow` resolved palettes — the single source of truth. */
 export const BLOOM_LIGHT: ThemeColors = buildTheme('yellow', 'light').colors;

@@ -14,9 +14,9 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Avatar } from '@oxyhq/bloom/avatar';
-import { Badge } from '@oxyhq/bloom/badge';
-import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
+import { Avatar } from '@oxy.so/bloom/avatar';
+import { Badge } from '@oxy.so/bloom/badge';
+import { Text as BloomText, H3 } from '@oxy.so/bloom/typography';
 
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';

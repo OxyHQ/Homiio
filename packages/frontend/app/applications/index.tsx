@@ -16,9 +16,9 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { isThisWeek, isToday } from 'date-fns';
 
-import { Chip } from '@oxyhq/bloom/chip';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
-import { useOxy, openAccountDialog } from '@oxyhq/services';
+import { Chip } from '@oxy.so/bloom/chip';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
+import { useOxy, openAccountDialog } from '@oxy.so/services';
 import {
   TenantApplication,
   TenantApplicationStatus,

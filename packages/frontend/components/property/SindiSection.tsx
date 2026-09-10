@@ -25,8 +25,8 @@
 import React, { useContext, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Button } from '@oxyhq/bloom/button';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Button } from '@oxy.so/bloom/button';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { SECTION_GUTTER } from '@/components/property/Section';
 import { SindiIcon } from '@/assets/icons';

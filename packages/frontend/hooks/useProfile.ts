@@ -2,8 +2,8 @@ import { useCallback } from 'react';
 import i18next from 'i18next';
 import { useProfileStore } from '@/store/profileStore';
 import profileService, { UpdateProfileData } from '@/services/profileService';
-import { useOxy } from '@oxyhq/services';
-import { toast } from '@oxyhq/bloom/toast';
+import { useOxy } from '@oxy.so/services';
+import { toast } from '@oxy.so/bloom/toast';
 
 export const useProfileActions = () => {
   const { profile, isLoading, error, setProfile, setLoading, setError } = useProfileStore();

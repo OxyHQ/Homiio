@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getOxyUserId } from '@oxyhq/core/server';
+import { getOxyUserId } from '@oxy.so/core/server';
 import config from '../config';
 import {
   type CheckoutProduct,

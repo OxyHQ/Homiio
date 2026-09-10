@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Image, Platform, StyleSheet } from 'react-native';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { colors } from '@/styles/colors';
 import { barContent, spacing } from '@/constants/styles';
 import { getPropertyImageSource } from '@/utils/propertyUtils';

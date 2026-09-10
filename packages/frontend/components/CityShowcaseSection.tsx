@@ -29,7 +29,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMediaQuery } from 'react-responsive';
 
-import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
+import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
 import type { City } from '@homiio/shared-types';
 
 import { colors } from '@/styles/colors';

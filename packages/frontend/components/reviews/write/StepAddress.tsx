@@ -8,8 +8,8 @@ import React, { type RefObject } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { TextFieldInput } from '@oxyhq/bloom/text-field';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { TextFieldInput } from '@oxy.so/bloom/text-field';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import Map, { type MapApi, type GeocodedAddress } from '@/components/Map';
 import { StepHeader } from '@/components/reviews/write/StepHeader';

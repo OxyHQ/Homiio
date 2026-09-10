@@ -3,7 +3,7 @@ import { Alert, Platform, type ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useChat, type Message, type UseChatOptions } from '@ai-sdk/react';
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 import * as DocumentPicker from 'expo-document-picker';
 import {
   useConversationStore,

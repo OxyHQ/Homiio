@@ -10,7 +10,7 @@
 import React from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { Skeleton } from '@oxyhq/bloom';
+import { Skeleton } from '@oxy.so/bloom';
 
 import { spacing } from '@/constants/styles';
 

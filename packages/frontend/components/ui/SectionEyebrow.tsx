@@ -9,7 +9,7 @@
  */
 import React from 'react';
 
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 interface SectionEyebrowProps {
   children: React.ReactNode;

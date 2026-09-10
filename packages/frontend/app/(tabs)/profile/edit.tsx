@@ -1,7 +1,7 @@
 import React from 'react';
 import { ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button } from '@oxyhq/bloom/button';
+import { Button } from '@oxy.so/bloom/button';
 import { Header } from '@/components/Header';
 import { ProfileSkeleton } from '@/components/ui/skeletons/ProfileSkeleton';
 import { ProfileEditTabBar } from '@/components/profile/edit/ProfileEditTabBar';

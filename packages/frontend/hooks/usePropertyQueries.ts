@@ -6,10 +6,10 @@ import {
   PropertyAreaInsights,
   PropertyNearbyServices,
 } from '@homiio/shared-types';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 import i18next from 'i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 
 /** Area-scale lookups (price insights, nearby services) are comparatively
  *  expensive to compute server-side and change slowly (they aggregate a whole

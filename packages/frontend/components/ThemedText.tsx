@@ -13,7 +13,7 @@ import {
   type TextStyle,
 } from 'react-native';
 
-import { H1, H2, P, Text } from '@oxyhq/bloom/typography';
+import { H1, H2, P, Text } from '@oxy.so/bloom/typography';
 import { colors } from '@/styles/colors';
 
 export type ThemedTextType =

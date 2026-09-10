@@ -12,7 +12,7 @@
  * they merge additively with Homiio's app-local `@theme` below (the one shared
  * key, `--color-border`, resolves to the identical `var(--border)`).
  */
-@import "@oxyhq/bloom/design-tokens/theme.css";
+@import "@oxy.so/bloom/design-tokens/theme.css";
 
 @source "../app/**/*.{js,jsx,ts,tsx}";
 @source "../components/**/*.{js,jsx,ts,tsx}";
@@ -22,8 +22,8 @@
 @source "../store/**/*.{js,jsx,ts,tsx}";
 @source "../utils/**/*.{js,jsx,ts,tsx}";
 @source "../styles/**/*.{js,jsx,ts,tsx}";
-@source "../../../node_modules/@oxyhq/services/lib/**/*.{js,jsx}";
-@source "../../../node_modules/@oxyhq/bloom/lib/**/*.{js,jsx}";
+@source "../../../node_modules/@oxy.so/services/lib/**/*.{js,jsx}";
+@source "../../../node_modules/@oxy.so/bloom/lib/**/*.{js,jsx}";
 
 /*
  * Bloom is the single source of truth for colors. The `--color-*` aliases below
@@ -65,7 +65,7 @@
 }
 
 /*
- * The CSS variables below are the `blue` preset exported from @oxyhq/bloom/theme
+ * The CSS variables below are the `blue` preset exported from @oxy.so/bloom/theme
  * (APP_COLOR_PRESETS.blue), mirrored here so NativeWind utilities resolve to the
  * same values Bloom uses. Bloom's BloomThemeProvider also injects these vars at
  * runtime and toggles the `.dark` class; this static block guarantees correct

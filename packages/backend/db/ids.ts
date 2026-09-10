@@ -101,4 +101,4 @@
  * than silently. They belong to their own batch, as do every call site above.
  */
 
-export { isLiveEntityId } from '@oxyhq/db';
+export { isLiveEntityId } from '@oxy.so/db';

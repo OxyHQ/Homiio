@@ -9,7 +9,7 @@
  * name for a catalogue lookup. All three read `DATABASE_CASING` from here, so
  * there is one setting rather than three copies to keep in lockstep.
  *
- * The implementations live in `@oxyhq/db` — every Oxy backend on Postgres uses
+ * The implementations live in `@oxy.so/db` — every Oxy backend on Postgres uses
  * the same convention, and a second copy of the converter is a second thing that
  * can disagree with drizzle. This module exists to give Homiio ONE import path
  * for them and to carry the trap below where a reader will meet it.
@@ -48,4 +48,4 @@
  * nothing" as a bug in the SQL until proven otherwise.
  */
 
-export { DATABASE_CASING, qualified, sqlColumnName } from '@oxyhq/db';
+export { DATABASE_CASING, qualified, sqlColumnName } from '@oxy.so/db';

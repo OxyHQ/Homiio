@@ -8,9 +8,9 @@ import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@oxyhq/bloom/button';
-import { TextFieldInput } from '@oxyhq/bloom/text-field';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Button } from '@oxy.so/bloom/button';
+import { TextFieldInput } from '@oxy.so/bloom/text-field';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { IconButton } from '@/components/ui/IconButton';
 import { colors } from '@/styles/colors';

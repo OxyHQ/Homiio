@@ -15,7 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMediaQuery } from 'react-responsive';
 
-import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
+import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { colors } from '@/styles/colors';
 import { radius, resolvePagePadding, spacing, tracker } from '@/constants/styles';

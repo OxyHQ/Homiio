@@ -33,7 +33,7 @@
 
 import { bigint, boolean, check, doublePrecision, index, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { createdAt, generatedId, inList, timestamptz, updatedAt } from '@oxyhq/db';
+import { createdAt, generatedId, inList, timestamptz, updatedAt } from '@oxy.so/db';
 
 /** Mirrors `NearbyServiceKey` in shared-types. */
 export const NEARBY_SERVICE_KEYS = [

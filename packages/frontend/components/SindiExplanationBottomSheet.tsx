@@ -23,7 +23,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { colors } from '@/styles/colors';
-import { Button } from '@oxyhq/bloom/button';
+import { Button } from '@oxy.so/bloom/button';
 
 // Apple-style colors
 const APPLE_CARD_BACKGROUND = colors.white;

@@ -4,10 +4,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
-import { toast } from '@oxyhq/bloom/toast';
-import { Button } from '@oxyhq/bloom/button';
-import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
-import { useOxy, openAccountDialog } from '@oxyhq/services';
+import { toast } from '@oxy.so/bloom/toast';
+import { Button } from '@oxy.so/bloom/button';
+import { Text as BloomText, H3 } from '@oxy.so/bloom/typography';
+import { useOxy, openAccountDialog } from '@oxy.so/services';
 import {
   Property,
   CancellationPolicy,

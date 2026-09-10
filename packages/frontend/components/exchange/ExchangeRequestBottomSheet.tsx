@@ -13,16 +13,16 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Button } from '@oxyhq/bloom/button';
-import { H3, Text as BloomText } from '@oxyhq/bloom/typography';
-import { useOxy, openAccountDialog } from '@oxyhq/services';
+import { Button } from '@oxy.so/bloom/button';
+import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
+import { useOxy, openAccountDialog } from '@oxy.so/services';
 import {
   ExchangeMode,
   OfferingType,
   type CreateExchangeRequestData,
   type Property,
 } from '@homiio/shared-types';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 import {
   AvailabilityCalendar,
   type AvailabilityCalendarRange,

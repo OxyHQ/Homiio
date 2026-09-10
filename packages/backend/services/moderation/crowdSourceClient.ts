@@ -12,7 +12,7 @@
  * there is no option, field or parameter through which one could be passed.
  */
 
-import { CrowdSource } from '@oxyhq/crowdsource';
+import { CrowdSource } from '@oxy.so/crowdsource';
 import config from '../../config';
 import { logger } from '../../middlewares/logging';
 

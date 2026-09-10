@@ -18,9 +18,9 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Button } from '@oxyhq/bloom/button';
-import * as Skeleton from '@oxyhq/bloom/skeleton';
-import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
+import { Button } from '@oxy.so/bloom/button';
+import * as Skeleton from '@oxy.so/bloom/skeleton';
+import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { CommunityNoteCard } from '@/components/property/CommunityNoteCard';
 import { EmptyState } from '@/components/ui/EmptyState';

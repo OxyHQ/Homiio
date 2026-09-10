@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Button } from '@oxyhq/bloom/button';
+import { Button } from '@oxy.so/bloom/button';
 
 import { PropertyCard } from '@/components/PropertyCard';
 import { colors } from '@/styles/colors';

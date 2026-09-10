@@ -94,7 +94,7 @@ exposure.)
 
 **F5 — The whole-row-read gate is documented and never wired.**
 `protectedColumns.ts:55-59` describes `findImplicitWholeRowReads` from
-`@oxyhq/db/assert` as "the scan that turns this into a gate". `git grep
+`@oxy.so/db/assert` as "the scan that turns this into a gate". `git grep
 findImplicitWholeRowReads` returns two hits, both inside comments; nothing
 imports or calls it. Meanwhile `db/evictions/evictionRepository.ts` uses a bare
 `.select()` on `eviction_cases` at lines 142, 158, 172, 185 and 248 — precisely
@@ -392,7 +392,7 @@ ladder means it is one forgotten argument from being public.
 
 ### 4.3 Wire the gate that already exists
 
-`findImplicitWholeRowReads` from `@oxyhq/db/assert` must be invoked by a test
+`findImplicitWholeRowReads` from `@oxy.so/db/assert` must be invoked by a test
 (F5). Both known offenders — `db/evictions/evictionRepository.ts` lines 142, 158,
 172, 185, 248 — are converted to `publicColumns(evictionCases)` plus an explicit
 named read for the one detail path that legitimately needs contact. A registry

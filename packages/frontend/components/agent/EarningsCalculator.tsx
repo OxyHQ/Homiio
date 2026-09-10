@@ -26,12 +26,12 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
+import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
 import {
   SegmentedControl,
   SegmentedControlItem,
   SegmentedControlItemText,
-} from '@oxyhq/bloom/segmented-control';
+} from '@oxy.so/bloom/segmented-control';
 
 import { RangeSlider } from '@/components/ui/RangeSlider';
 import { colors } from '@/styles/colors';

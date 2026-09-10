@@ -11,7 +11,7 @@
 
 import { boolean, check, index, integer, pgTable, text } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { createdAt, generatedId, inList, updatedAt } from '@oxyhq/db';
+import { createdAt, generatedId, inList, updatedAt } from '@oxy.so/db';
 import type { ImageEntityType } from '@homiio/shared-types';
 
 /**

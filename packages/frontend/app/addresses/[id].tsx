@@ -14,8 +14,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Button } from '@oxyhq/bloom/button';
-import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
+import { Button } from '@oxy.so/bloom/button';
+import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useTranslation } from 'react-i18next';
 
 import { AddressDisplay } from '@/components/AddressDisplay';

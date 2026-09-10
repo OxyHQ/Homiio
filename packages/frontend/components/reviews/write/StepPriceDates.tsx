@@ -8,7 +8,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { TextFieldInput } from '@oxyhq/bloom/text-field';
+import { TextFieldInput } from '@oxy.so/bloom/text-field';
 
 import { EnumChipSelector } from '@/components/reviews/EnumChipSelector';
 import { StepHeader } from '@/components/reviews/write/StepHeader';

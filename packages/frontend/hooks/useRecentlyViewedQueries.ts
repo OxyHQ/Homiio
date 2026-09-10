@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 import { recentlyViewedService } from '@/services/recentlyViewedService';
 import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
 import { RecentlyViewedType, Property } from '@homiio/shared-types';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 import i18next from 'i18next';
 
 /**

@@ -25,13 +25,13 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { Button } from '@oxyhq/bloom/button';
+import { Button } from '@oxy.so/bloom/button';
 import {
   SegmentedControl,
   SegmentedControlItem,
   SegmentedControlItemText,
-} from '@oxyhq/bloom/segmented-control';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+} from '@oxy.so/bloom/segmented-control';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { Header } from '@/components/Header';
 import { Section } from '@/components/property/Section';

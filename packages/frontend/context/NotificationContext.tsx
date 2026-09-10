@@ -28,7 +28,7 @@ import {
     NotificationContent,
 } from '@/utils/notifications';
 import { notificationService, Notification } from '@/services/notificationService';
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 import { logger } from '@/utils/logger';
 import { getData, storeData } from '@/utils/storage';
 

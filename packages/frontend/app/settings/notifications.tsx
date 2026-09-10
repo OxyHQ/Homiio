@@ -7,15 +7,15 @@ import React, { useCallback, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 
-import { Button } from '@oxyhq/bloom/button';
-import { Switch } from '@oxyhq/bloom/switch';
+import { Button } from '@oxy.so/bloom/button';
+import { Switch } from '@oxy.so/bloom/switch';
 import {
   SettingsListGroup,
   SettingsListItem,
-} from '@oxyhq/bloom/settings-list';
-import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
+} from '@oxy.so/bloom/settings-list';
+import { Text as BloomText, H3 } from '@oxy.so/bloom/typography';
 
 import { Header } from '@/components/Header';
 import { ConfirmDialog } from '@/components/ConfirmDialog';

@@ -27,7 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { H4, Text as BloomText } from '@oxyhq/bloom/typography';
+import { H4, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { colors } from '@/styles/colors';
 import { contentClamp, hairline, radius, spacing } from '@/constants/styles';

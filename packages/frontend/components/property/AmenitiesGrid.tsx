@@ -21,8 +21,8 @@ import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native'
 import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Button } from '@oxyhq/bloom/button';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Button } from '@oxy.so/bloom/button';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { Section, SectionHeader } from '@/components/property/Section';

@@ -4,7 +4,7 @@ import {
   type GalleryImage,
   type MeasureThumb,
   type ZoomableMediaGalleryHandle,
-} from '@oxyhq/bloom/zoomable-media-gallery';
+} from '@oxy.so/bloom/zoomable-media-gallery';
 import { getPropertyGalleryImages } from '@/utils/propertyUtils';
 import type { PropertyImage } from '@homiio/shared-types';
 

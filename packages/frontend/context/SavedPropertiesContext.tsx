@@ -6,9 +6,9 @@ import React, {
   useMemo,
   ReactNode,
 } from 'react';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 import i18next from 'i18next';
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 import savedPropertyFolderService, {
   SavedPropertyFolder,
   SavedPropertyFoldersResponse,

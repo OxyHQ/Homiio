@@ -7,10 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Button } from '@oxyhq/bloom/button';
-import { Loading } from '@oxyhq/bloom/loading';
-import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
-import { FollowButton, useFollow, useOxy } from '@oxyhq/services';
+import { Button } from '@oxy.so/bloom/button';
+import { Loading } from '@oxy.so/bloom/loading';
+import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
+import { FollowButton, useFollow, useOxy } from '@oxy.so/services';
 import { useTranslation } from 'react-i18next';
 
 import { Header } from '@/components/Header';

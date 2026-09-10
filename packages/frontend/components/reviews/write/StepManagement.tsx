@@ -14,8 +14,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { TextFieldInput } from '@oxyhq/bloom/text-field';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { TextFieldInput } from '@oxy.so/bloom/text-field';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import {
   LandlordTreatment,

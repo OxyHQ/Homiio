@@ -157,7 +157,7 @@ resource). Implement/retire the missing `/internal/service-acting-as/verify` con
 
 ### Section 3 — Oxy SDK surface
 
-**`@oxyhq/core`:**
+**`@oxy.so/core`:**
 - Types: `accountType` on `User`; `ManagedAccount` gains type + generic business metadata + pending
   invites; new `MemberInvite` type.
 - `getEffectiveUserId(): string` — canonical attribution id (`actingAs ?? currentUserId`).
@@ -167,7 +167,7 @@ resource). Implement/retire the missing `/internal/service-acting-as/verify` con
 - Invite methods: `inviteMember(accountId, {email|username, role})`, `listInvites`, `acceptInvite`,
   `declineInvite`, `removeMember`.
 
-**`@oxyhq/services` (RN SDK):**
+**`@oxy.so/services` (RN SDK):**
 - `useActiveIdentity()` → `{ identity, accountType, isActingAs }`, own query key (no collision with
   `useCurrentUser`).
 - `useIdentities()` → all switchable identities (personal + business), each `kind`-tagged.

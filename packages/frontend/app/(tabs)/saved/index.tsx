@@ -27,15 +27,15 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { Chip } from '@oxyhq/bloom/chip';
+import { Chip } from '@oxy.so/bloom/chip';
 import {
   SegmentedControl,
   SegmentedControlItem,
   SegmentedControlItemText,
-} from '@oxyhq/bloom/segmented-control';
-import { Search } from '@oxyhq/bloom/search';
-import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
-import { useOxy, openAccountDialog } from '@oxyhq/services';
+} from '@oxy.so/bloom/segmented-control';
+import { Search } from '@oxy.so/bloom/search';
+import { Text as BloomText, H3 } from '@oxy.so/bloom/typography';
+import { useOxy, openAccountDialog } from '@oxy.so/services';
 import type { Property, SavedProperty } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';

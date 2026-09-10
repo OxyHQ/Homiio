@@ -1,6 +1,6 @@
 /**
  * Minimal confirmation dialog. A thin composition over Bloom's centered
- * {@link Dialog} primitive (`@oxyhq/bloom/dialog`) — Bloom owns the dimmed
+ * {@link Dialog} primitive (`@oxy.so/bloom/dialog`) — Bloom owns the dimmed
  * backdrop, the snug centered card, the title header, and the body padding.
  * ConfirmDialog adds the message copy, the optional secondary content, and the
  * cancel/confirm action row. Used by:
@@ -11,9 +11,9 @@
  */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button } from '@oxyhq/bloom/button';
-import { Dialog } from '@oxyhq/bloom/dialog';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Button } from '@oxy.so/bloom/button';
+import { Dialog } from '@oxy.so/bloom/dialog';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 

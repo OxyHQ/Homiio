@@ -100,7 +100,7 @@ measurements and the migration history: **`docs/postgres.md`**.
 ## Ownership and auth (CRITICAL)
 
 - **Property, room and lease writes take the session `oxyUserId` from
-  `@oxyhq/core/server` (`requireSessionOxyUserId`), never an owner id from the
+  `@oxy.so/core/server` (`requireSessionOxyUserId`), never an owner id from the
   client.** Ownership is enforced in the REPOSITORY QUERY, so a non-owner gets a
   404 rather than a 403. Profile is an optional real-estate sidecar keyed by
   `oxyUserId`, not an ownership authority.

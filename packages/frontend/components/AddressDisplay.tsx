@@ -5,7 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors } from '@/styles/colors';
 import { useTranslation } from 'react-i18next';
 import * as Clipboard from 'expo-clipboard';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 import * as Haptics from 'expo-haptics';
 
 

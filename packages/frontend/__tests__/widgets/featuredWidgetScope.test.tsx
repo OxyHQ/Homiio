@@ -33,7 +33,7 @@
  */
 import React, { type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BloomThemeProvider } from '@oxyhq/bloom/theme';
+import { BloomThemeProvider } from '@oxy.so/bloom/theme';
 import { act, render, waitFor } from '@testing-library/react-native';
 import { OfferingType, type LocationSelection } from '@homiio/shared-types';
 

@@ -15,7 +15,7 @@ import Animated, {
   SlideOutLeft,
 } from 'react-native-reanimated';
 import { useRouter, usePathname } from 'expo-router';
-import { Portal } from '@oxyhq/bloom/portal';
+import { Portal } from '@oxy.so/bloom/portal';
 import { useTranslation } from 'react-i18next';
 import {
   Home,
@@ -35,8 +35,8 @@ import {
   X,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
-import { Text } from '@oxyhq/bloom/typography';
-import { openAccountDialog, useOxy, ProfileButton } from '@oxyhq/services';
+import { Text } from '@oxy.so/bloom/typography';
+import { openAccountDialog, useOxy, ProfileButton } from '@oxy.so/services';
 
 import { colors } from '@/styles/colors';
 import { useRentalMode } from '@/context/RentalModeContext';

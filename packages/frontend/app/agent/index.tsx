@@ -19,7 +19,7 @@ import React, { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
-import { openAccountDialog, useOxy } from '@oxyhq/services';
+import { openAccountDialog, useOxy } from '@oxy.so/services';
 
 import { Header } from '@/components/Header';
 import { PageScrollView } from '@/components/PageScrollView';
@@ -32,7 +32,7 @@ import { PartnerDashboard } from '@/components/agent/PartnerDashboard';
 import { AgentCtaBanner } from '@/components/agent/AgentCtaBanner';
 import { usePartnerMe, useJoinPartner, useReferrals, useEarnings } from '@/hooks/usePartner';
 import { shareReferralLink } from '@/utils/shareReferral';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 
 export default function AgentScreen() {
   const { t } = useTranslation();

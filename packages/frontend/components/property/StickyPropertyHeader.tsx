@@ -22,9 +22,9 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button } from '@oxyhq/bloom/button';
-import { PANEL_TOP_INSET } from '@oxyhq/bloom/content-panel';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Button } from '@oxy.so/bloom/button';
+import { PANEL_TOP_INSET } from '@oxy.so/bloom/content-panel';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { SaveButton } from '@/components/SaveButton';
 import { IconButton } from '@/components/ui/IconButton';

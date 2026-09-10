@@ -15,7 +15,7 @@
  */
 
 import { and, eq, inArray, sql } from 'drizzle-orm';
-import { UNIQUE_VIOLATION, constraintNameOf, sqlStateOf, uuidv7 } from '@oxyhq/db';
+import { UNIQUE_VIOLATION, constraintNameOf, sqlStateOf, uuidv7 } from '@oxy.so/db';
 import { closePostgres, connectPostgres, type Database } from '../../db/postgres';
 import { findHasImagesDisagreements, syncAllHasImages, syncHasImages } from '../../db/hasImages';
 import { images, properties, propertyImages } from '../../db/schema';

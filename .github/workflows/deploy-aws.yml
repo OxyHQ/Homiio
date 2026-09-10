@@ -396,7 +396,7 @@ jobs:
       # It cannot block a normal release either: `--phase=post` refuses only when
       # a `pre` migration is still pending after the rollout, and the `pre` run
       # in the API lane above would already have failed the job before this step
-      # was reached (see @oxyhq/db's `phases.ts`, `planMigrationRun`).
+      # was reached (see @oxy.so/db's `phases.ts`, `planMigrationRun`).
       - name: Register immutable task definition and deploy (listing worker)
         env:
           # Still oxy/homiio: APP names the ECS SERVICE, while this is the

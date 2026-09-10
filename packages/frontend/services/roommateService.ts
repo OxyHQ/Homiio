@@ -1,5 +1,5 @@
 import { api } from '@/utils/api';
-import { OxyServices } from '@oxyhq/core';
+import { OxyServices } from '@oxy.so/core';
 import { Profile, PersonalProfile, PropertyPreferences, RoommatePreferences } from '@homiio/shared-types';
 
 // Re-export the types for backward compatibility

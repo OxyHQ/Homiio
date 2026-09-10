@@ -11,13 +11,13 @@ import React, { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 
-import { Switch } from '@oxyhq/bloom/switch';
+import { Switch } from '@oxy.so/bloom/switch';
 import {
   SettingsListGroup,
   SettingsListItem,
-} from '@oxyhq/bloom/settings-list';
+} from '@oxy.so/bloom/settings-list';
 
 import { Header } from '@/components/Header';
 import { ConfirmDialog } from '@/components/ConfirmDialog';

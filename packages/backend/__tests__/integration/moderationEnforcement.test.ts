@@ -29,8 +29,8 @@
  * strictly stronger.
  */
 
-import { decisionFixture } from '@oxyhq/crowdsource-testing';
-import type { Decision, RecommendedAction } from '@oxyhq/crowdsource-contracts';
+import { decisionFixture } from '@oxy.so/crowdsource-testing';
+import type { Decision, RecommendedAction } from '@oxy.so/crowdsource-contracts';
 import { count, eq } from 'drizzle-orm';
 import {
   ModerationReportedType,

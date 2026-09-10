@@ -22,7 +22,7 @@ import { join } from 'path';
 import { eq } from 'drizzle-orm';
 import express, { type Express } from 'express';
 import request from 'supertest';
-import { uuidv7 } from '@oxyhq/db';
+import { uuidv7 } from '@oxy.so/db';
 
 import * as reviewController from '../../controllers/reviewController';
 import { OfferingType, PropertyStatus, PropertyType } from '@homiio/shared-types';

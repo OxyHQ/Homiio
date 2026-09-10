@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 import { propertyService } from '@/services/propertyService';
 
 /**

@@ -21,9 +21,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { toast } from '@oxyhq/bloom/toast';
-import { Button } from '@oxyhq/bloom/button';
-import { Chip } from '@oxyhq/bloom/chip';
+import { toast } from '@oxy.so/bloom/toast';
+import { Button } from '@oxy.so/bloom/button';
+import { Chip } from '@oxy.so/bloom/chip';
 
 import {
   EmploymentStatus,
@@ -39,7 +39,7 @@ import {
   ApplicationDocumentUpload,
   ApplicationReferenceInput,
 } from '@/services/applicationService';
-import { useOxy, openAccountDialog } from '@oxyhq/services';
+import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { ApiError } from '@/utils/api';
 

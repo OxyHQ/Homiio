@@ -21,8 +21,8 @@ import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { usePathname, useRouter } from 'expo-router';
 
-import { Button } from '@oxyhq/bloom/button';
-import { Chip } from '@oxyhq/bloom/chip';
+import { Button } from '@oxy.so/bloom/button';
+import { Chip } from '@oxy.so/bloom/chip';
 
 import { PropertyType } from '@homiio/shared-types';
 import type { SearchQuery } from '@/components/search/types';

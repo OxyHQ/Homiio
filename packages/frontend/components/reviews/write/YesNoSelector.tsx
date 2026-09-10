@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { colors } from '@/styles/colors';
 import { hairline, radius, spacing } from '@/constants/styles';

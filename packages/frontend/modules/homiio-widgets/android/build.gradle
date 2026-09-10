@@ -62,7 +62,7 @@ dependencies {
   // it adds no artifact — it only puts it on this module's compile classpath.
   implementation "androidx.datastore:datastore-preferences:1.2.1"
 
-  // There is deliberately NO dependency on `@oxyhq/services` here, unlike
+  // There is deliberately NO dependency on `@oxy.so/services` here, unlike
   // Mention's widget module. This widget is ANONYMOUS: it reads the same public
   // listing search an unauthenticated visitor gets, so it needs no session, no
   // token mint and no background credential. Adding one would mean adding the

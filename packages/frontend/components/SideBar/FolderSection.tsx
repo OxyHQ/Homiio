@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Pressable, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Text } from '@oxyhq/bloom/typography';
+import { Text } from '@oxy.so/bloom/typography';
 import { ChevronRight } from 'lucide-react-native';
 import { colors } from '@/styles/colors';
 

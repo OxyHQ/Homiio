@@ -27,8 +27,8 @@ import { useTranslation } from 'react-i18next';
 import { Image as ExpoImage } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Button } from '@oxyhq/bloom/button';
-import { ZoomableMediaGallery } from '@oxyhq/bloom/zoomable-media-gallery';
+import { Button } from '@oxy.so/bloom/button';
+import { ZoomableMediaGallery } from '@oxy.so/bloom/zoomable-media-gallery';
 
 import { PhotoGallery } from './PhotoGallery';
 import { getPropertyImageSource } from '@/utils/propertyUtils';

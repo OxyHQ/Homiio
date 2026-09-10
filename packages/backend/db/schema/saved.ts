@@ -32,7 +32,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { createdAt, generatedId, geography, inList, timestamptz, updatedAt } from '@oxyhq/db';
+import { createdAt, generatedId, geography, inList, timestamptz, updatedAt } from '@oxy.so/db';
 import { ALERT_CHANNELS, PUSH_PRIVACY_MODES, WATCH_CADENCES } from '@homiio/shared-types';
 import { properties } from './properties';
 

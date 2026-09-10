@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Button } from '@oxyhq/bloom/button';
+import { Button } from '@oxy.so/bloom/button';
 
 import { cardShadow } from '@/constants/styles';
 import { colors } from '@/styles/colors';

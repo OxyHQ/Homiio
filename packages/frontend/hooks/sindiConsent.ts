@@ -1,4 +1,4 @@
-import type { OAuthConsentResult, OxyContextState } from '@oxyhq/services';
+import type { OAuthConsentResult, OxyContextState } from '@oxy.so/services';
 
 export const SERVICE_ACTING_AS_UNAUTHORIZED = 'SERVICE_ACTING_AS_UNAUTHORIZED' as const;
 

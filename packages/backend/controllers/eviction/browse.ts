@@ -48,7 +48,7 @@
  * endpoint alone.
  */
 
-import { getOxyUserId } from '@oxyhq/core/server';
+import { getOxyUserId } from '@oxy.so/core/server';
 import {
   countAttendeesForCases,
   countEvictionAttendees,

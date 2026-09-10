@@ -3,7 +3,7 @@
  * children for each `type` variant, this proves the full jest-expo rendering
  * path works on RN 0.85 / React 19: it mounts a real component tree (via
  * react-test-renderer 19.2.3, bundled by jest-expo) and exercises the Babel
- * transform for Bloom (`@oxyhq/bloom/*`) sources whose `react-native` export
+ * transform for Bloom (`@oxy.so/bloom/*`) sources whose `react-native` export
  * condition resolves to raw `.tsx`.
  *
  * ThemedText renders Bloom typography, which reads the theme via `useTheme`, so
@@ -17,7 +17,7 @@ import { render, screen } from '@testing-library/react-native';
 // Import from the dedicated `theme` subpath (as the app does for `portal`/
 // `typography`) rather than the Bloom barrel, so the test only pulls the theme
 // provider — not toast/dialog/bottom-sheet and their heavy transitive deps.
-import { BloomThemeProvider } from '@oxyhq/bloom/theme';
+import { BloomThemeProvider } from '@oxy.so/bloom/theme';
 
 import { ThemedText } from '@/components/ThemedText';
 

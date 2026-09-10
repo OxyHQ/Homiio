@@ -17,7 +17,7 @@
  */
 
 import { eq, sql } from 'drizzle-orm';
-import { GENERATED_ALWAYS, sqlStateOf, uuidv7 } from '@oxyhq/db';
+import { GENERATED_ALWAYS, sqlStateOf, uuidv7 } from '@oxy.so/db';
 import { closePostgres, connectPostgres, type Database } from '../../db/postgres';
 import { addresses, cities, countries, regions } from '../../db/schema';
 

@@ -229,7 +229,7 @@ for (const workspacePath of manifestWorkspacePaths) {
 // to compare against `lockfile.overrides` is the UNION of the manifest's
 // `overrides` and `resolutions`, not `overrides` alone. Both spellings are
 // load-bearing here: ~/AGENTS.md requires the Oxy SDK to be pinned in BOTH so
-// bun cannot hoist a stale @oxyhq/core inside @oxyhq/services.
+// bun cannot hoist a stale @oxy.so/core inside @oxy.so/services.
 //
 // A name pinned in both to DIFFERENT ranges is a self-contradiction — the value
 // bun would fold is undefined — so surface it rather than silently pick a winner.

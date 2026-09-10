@@ -52,7 +52,7 @@
  *    There is deliberately no helper for that — the whole point is that it reads
  *    differently from an ordinary select.
  *
- * `findImplicitWholeRowReads` from `@oxyhq/db/assert` is the scan that turns
+ * `findImplicitWholeRowReads` from `@oxy.so/db/assert` is the scan that turns
  * this into a gate: it walks the source tree for the two shapes that return
  * every column IMPLICITLY — a bare `select()` and the relational
  * `db.query.<table>` API — against any table named here, and reports the
@@ -67,7 +67,7 @@
 import {
   type ProtectedColumnRegistry,
   publicColumns as excludeProtectedColumns,
-} from '@oxyhq/db/assert';
+} from '@oxy.so/db/assert';
 import type { PgTable } from 'drizzle-orm/pg-core';
 import { evictionCases } from './evictions';
 import { leases } from './leases';

@@ -26,9 +26,9 @@
 import express, { Request, Response } from 'express';
 import multer from 'multer';
 import { formatDataStreamPart, pipeDataStreamToResponse } from 'ai';
-import { OxyInferenceError } from '@oxyhq/core';
-import { getOxyUserId } from '@oxyhq/core/server';
-import type { InferenceContentPart, InferenceMessage } from '@oxyhq/contracts';
+import { OxyInferenceError } from '@oxy.so/core';
+import { getOxyUserId } from '@oxy.so/core/server';
+import type { InferenceContentPart, InferenceMessage } from '@oxy.so/contracts';
 import { getErrorMessage } from '../utils/errors';
 import { logger } from '../middlewares/logging';
 import { getDb } from '../db/postgres';
@@ -161,7 +161,7 @@ Avoid repetition:
 /** Utilities */
 // -------------------------------
 // Resolve the authenticated Oxy user id (or null) from a request whose session
-// was already populated by `@oxyhq/core/server` auth middleware in server.ts.
+// was already populated by `@oxy.so/core/server` auth middleware in server.ts.
 const getUserId = (req: Request): string | null => getOxyUserId(req);
 
 /**

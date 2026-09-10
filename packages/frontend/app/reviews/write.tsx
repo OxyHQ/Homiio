@@ -18,9 +18,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
-import * as Skeleton from '@oxyhq/bloom/skeleton';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
-import { useOxy } from '@oxyhq/services';
+import * as Skeleton from '@oxy.so/bloom/skeleton';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
+import { useOxy } from '@oxy.so/services';
 
 import { Header } from '@/components/Header';
 import type { MapApi, GeocodedAddress } from '@/components/Map';

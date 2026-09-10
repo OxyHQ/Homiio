@@ -17,11 +17,11 @@
       "@homiio/shared-types/*": [
         "../shared-types/src/*"
       ],
-      "@oxyhq/core": [
-        "../../node_modules/@oxyhq/core"
+      "@oxy.so/core": [
+        "../../node_modules/@oxy.so/core"
       ],
-      "@oxyhq/core/*": [
-        "../../node_modules/@oxyhq/core/*"
+      "@oxy.so/core/*": [
+        "../../node_modules/@oxy.so/core/*"
       ]
     }
   },

@@ -21,7 +21,7 @@ import React, { useState } from 'react';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 import type { JurisdictionResourceWithId } from '@homiio/shared-types';
 import { formatEvictionShortDate } from './evictionUtils';
 import { colors } from '@/styles/colors';

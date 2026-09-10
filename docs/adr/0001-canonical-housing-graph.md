@@ -417,7 +417,7 @@ listing expires it redirects to its place.
 24-character ObjectId hex for rows that predate the cutover and a uuid v7 for
 rows created after it (`packages/backend/db/ids.ts:1-10`). Neither encodes a
 location. Note for #362 and for anything that sorts: **uuid v7 is not monotonic
-within a millisecond in `@oxyhq/db`**, so id order is not creation order.
+within a millisecond in `@oxy.so/db`**, so id order is not creation order.
 
 ---
 

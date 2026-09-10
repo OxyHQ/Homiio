@@ -14,8 +14,8 @@
  */
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Badge } from '@oxyhq/bloom/badge';
-import type { AccentTone } from '@oxyhq/bloom/theme';
+import { Badge } from '@oxy.so/bloom/badge';
+import type { AccentTone } from '@oxy.so/bloom/theme';
 
 /** One status's badge appearance: a Bloom color, a label, and an optional i18n key. */
 export interface StatusBadgeEntry {

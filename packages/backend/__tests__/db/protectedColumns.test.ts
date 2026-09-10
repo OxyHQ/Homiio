@@ -20,7 +20,7 @@
  */
 
 import { getTableColumns, getTableName } from 'drizzle-orm';
-import type { SelectedRow } from '@oxyhq/db';
+import type { SelectedRow } from '@oxy.so/db';
 import {
   PROTECTED_COLUMNS,
   PROTECTED_COLUMNS_BY_TABLE,
@@ -84,7 +84,7 @@ const wifiPasswordIsUnreachable: 'accommodationDetailsWifiPassword' extends keyo
 
 /**
  * The vacuity floor for the assertion above, and it is not theoretical:
- * `@oxyhq/db`'s own documentation records that widening the registry from a
+ * `@oxy.so/db`'s own documentation records that widening the registry from a
  * literal to `ProtectedColumnRegistry` collapses `PublicColumns` to `{}` — at
  * which point EVERY column becomes type-inaccessible and the check above passes
  * while protecting nothing. This pins the other side.

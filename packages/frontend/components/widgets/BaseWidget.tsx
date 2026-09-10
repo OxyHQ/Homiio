@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import { View } from 'react-native';
 
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 type BaseWidgetProps = {
   title?: string;

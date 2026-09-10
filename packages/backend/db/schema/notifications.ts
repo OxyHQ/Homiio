@@ -9,7 +9,7 @@
 
 import { boolean, check, index, jsonb, pgTable, text } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { createdAt, generatedId, inList, timestamptz, updatedAt } from '@oxyhq/db';
+import { createdAt, generatedId, inList, timestamptz, updatedAt } from '@oxy.so/db';
 
 export const NOTIFICATION_PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
 

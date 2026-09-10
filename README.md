@@ -34,7 +34,7 @@ That is what makes rent history, resident reviews and eviction records attachabl
 
 ### 🔑 Identity comes from Oxy
 
-There is no Homiio account. Sign in is the device first Oxy session, handled end to end by [`@oxyhq/services`](https://www.npmjs.com/package/@oxyhq/services) on the client and [`@oxyhq/core`](https://www.npmjs.com/package/@oxyhq/core) on the server.
+There is no Homiio account. Sign in is the device first Oxy session, handled end to end by [`@oxy.so/services`](https://www.npmjs.com/package/@oxy.so/services) on the client and [`@oxy.so/core`](https://www.npmjs.com/package/@oxy.so/core) on the server.
 
 Ownership follows from it: every property, room and lease write resolves the owner from the session and never from the request body. See the [Oxy platform repo](https://github.com/OxyHQ/oxy) for how the session works.
 
@@ -71,7 +71,7 @@ Most of this repo is what happens after the listing. Applications become leases;
 | `@homiio/listing-providers` | [`packages/listing-providers/`](packages/listing-providers/) | Provider plugin contract, shared fetch runtime, and the portal plugins |
 | `@homiio/shared-types` | [`packages/shared-types/`](packages/shared-types/) | Address, city, lease, profile, property, review and observability DTOs |
 
-The UI is [`@oxyhq/bloom`](https://www.npmjs.com/package/@oxyhq/bloom) primitives with NativeWind on top. The production image builds in dependency order: shared types, then listing providers, then the backend.
+The UI is [`@oxy.so/bloom`](https://www.npmjs.com/package/@oxy.so/bloom) primitives with NativeWind on top. The production image builds in dependency order: shared types, then listing providers, then the backend.
 
 ## Data lives in PostgreSQL, and nowhere else
 

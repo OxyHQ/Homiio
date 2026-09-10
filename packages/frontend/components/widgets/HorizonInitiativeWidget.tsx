@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { BaseWidget } from './BaseWidget';
 import { ThemedText } from '../ThemedText';
-import { Button } from '@oxyhq/bloom/button';
+import { Button } from '@oxy.so/bloom/button';
 import { colors } from '@/styles/colors';
 
 export function HorizonInitiativeWidget() {

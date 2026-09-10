@@ -2,12 +2,12 @@ import type {
   OxyInferenceRequestOptions,
   OxyInferenceResponse,
   OxyResponsesRequest,
-} from '@oxyhq/core';
+} from '@oxy.so/core';
 
 // This suite injects its own client. Keep the module-level production singleton
 // from constructing the registry-installed pre-23.2 client while the exact-ID
 // release is prepared but not yet published.
-jest.mock('@oxyhq/core', () => ({
+jest.mock('@oxy.so/core', () => ({
   OxyInferenceClient: class {},
   OxyServices: class {
     configureServiceAuth() {}

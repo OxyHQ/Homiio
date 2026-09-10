@@ -19,7 +19,7 @@
  * like the quiet removal of an inconvenient test.
  *
  * Importing the module also pulls the hook's dependency graph (the `api`
- * client, `react-native`, `@oxyhq/core`) through Jest's module resolver, so
+ * client, `react-native`, `@oxy.so/core`) through Jest's module resolver, so
  * this suite doubles as proof that the jest-expo transform and
  * `transformIgnorePatterns` handle the app's ESM/native packages.
  */

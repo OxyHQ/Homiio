@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Header } from '@/components/Header';
 import { useReferralStore } from '@/store/referralStore';
 import { ThemedText } from '@/components/ThemedText';
-import { Button } from '@oxyhq/bloom/button';
+import { Button } from '@oxy.so/bloom/button';
 import { StepsContainer } from '@/components/StepsContainer';
 import type { GeocodedAddress } from '@/components/Map';
 import { usePropertyCreateForm } from '@/hooks/usePropertyCreateForm';

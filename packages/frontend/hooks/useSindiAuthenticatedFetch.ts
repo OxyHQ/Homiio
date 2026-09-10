@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { Platform } from 'react-native';
 import { fetch as expoFetch } from 'expo/fetch';
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 import {
   responseRequiresSindiConsent,
   SindiConsentRequiredError,

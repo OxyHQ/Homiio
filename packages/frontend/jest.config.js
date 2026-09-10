@@ -13,7 +13,7 @@
  *
  * `transformIgnorePatterns` REPLACES (does not merge with) the preset's array,
  * so this list is a superset: it mirrors jest-expo's own defaults and then adds
- * the ESM-shipping packages this app depends on (the `@oxyhq/*` scope — whose
+ * the ESM-shipping packages this app depends on (the `@oxy.so/*` scope — whose
  * `react-native` export condition resolves to raw `.ts` source — plus
  * NativeWind, its css-interop runtime, and the `nanoid` ESM module pulled in
  * transitively).
@@ -44,7 +44,7 @@ module.exports = {
         '@sentry/react-native',
         'native-base',
         // App-specific ESM / raw-source packages:
-        '@oxyhq',
+        '@oxy\\.so',
         'nativewind',
         'react-native-css-interop',
         // ESM-only transitive deps that surface through the above packages.

@@ -17,7 +17,7 @@
  */
 
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 import type { AlertExplanation, AlertSuppressionReason } from '@homiio/shared-types';
 import { api } from '@/utils/api';
 

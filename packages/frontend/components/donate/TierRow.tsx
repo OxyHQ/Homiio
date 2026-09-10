@@ -16,8 +16,8 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { RadioIndicator } from '@oxyhq/bloom/radio-indicator';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { RadioIndicator } from '@oxy.so/bloom/radio-indicator';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { formatMoney } from '@homiio/shared-types';
 

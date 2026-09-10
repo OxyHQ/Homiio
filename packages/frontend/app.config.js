@@ -1,5 +1,5 @@
 const pkg = require('./package.json');
-const { oxySplashScreenPlugin } = require('@oxyhq/expo-splash/config');
+const { oxySplashScreenPlugin } = require('@oxy.so/expo-splash/config');
 
 module.exports = function (config) {
   /**
@@ -110,14 +110,14 @@ module.exports = function (config) {
         // Native OS splash (Oxy family "Instagram, from Meta" pattern): Homiio's
         // own logo (white on transparent) centered on the dark brand background,
         // with the shared Oxy symbol pinned to the bottom. `oxySplashScreenPlugin`
-        // builds the expo-splash-screen tuple; the bare `@oxyhq/expo-splash` entry
+        // builds the expo-splash-screen tuple; the bare `@oxy.so/expo-splash` entry
         // (bundled Oxy asset) MUST follow it to add the bottom branding.
         oxySplashScreenPlugin({
           image: './assets/images/splash-logo.png',
           imageWidth: 176,
           backgroundColor: '#0B0B0F',
         }),
-        '@oxyhq/expo-splash',
+        '@oxy.so/expo-splash',
         [
           'expo-notifications',
           {
@@ -169,9 +169,9 @@ module.exports = function (config) {
         // the device session is shared ("sign in once, use everywhere").
         './plugins/withSharedUserId',
         // Reader side of the shared-identity native module (ships in
-        // @oxyhq/services): request the signature permission + <queries> so
+        // @oxy.so/services): request the signature permission + <queries> so
         // cold boot can silently read the Commons-hosted shared identity.
-        '@oxyhq/services/plugins/withSharedIdentityReader',
+        '@oxy.so/services/plugins/withSharedIdentityReader',
         // Points the Android home-screen widget (`modules/homiio-widgets`) at a
         // backend. The native module itself is autolinked from `modules/` — this
         // plugin only writes the two origin string resources, and only when a

@@ -1,6 +1,6 @@
 import { Alert, Platform } from 'react-native';
-import { oxyClient } from '@oxyhq/core';
-import type { LinkedHttpClient } from '@oxyhq/core';
+import { oxyClient } from '@oxy.so/core';
+import type { LinkedHttpClient } from '@oxy.so/core';
 import { API_URL } from '@/config';
 
 /** The HTTP client exposed by a linked backend client (Homiio's own API). */
