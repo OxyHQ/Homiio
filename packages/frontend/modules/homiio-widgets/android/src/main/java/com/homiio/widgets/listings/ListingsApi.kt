@@ -39,29 +39,47 @@ internal object ListingsApi {
     private val READ_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(20).toInt()
 
     /**
-     * Fetch the rotation.
+     * Fetch the rotation from the configured API origin.
+     *
+     * Thin on purpose: everything except reading the origin out of resources lives in
+     * [fetchFrom], which needs no `Context` and is therefore reachable from a plain JVM
+     * test against a real socket. That split is what lets `ListingsApiTest` assert the
+     * anonymity above as a property of the REQUEST THAT GOES OUT rather than as a promise
+     * in a comment — see the test's own note on why a comment was not enough.
+     */
+    suspend fun fetch(context: Context): List<WidgetListing> =
+        fetchFrom(context.getString(R.string.homiio_widget_api_base_url))
+
+    /**
+     * Fetch the rotation from [baseUrl].
      *
      * Throws [IOException] for what a later attempt could get past (no network, a timeout,
      * a 5xx) and [org.json.JSONException] for a body that is not the documented shape. The
      * caller distinguishes the two: the first is worth retrying, the second is not.
+     *
+     * THE ONLY REQUEST HEADER IS `Accept`. Nothing here identifies the device or its
+     * owner: no `Authorization`, no cookie, no client id. That is the whole privacy
+     * position of this widget expressed in the one place it can actually be observed, and
+     * it is asserted by a test that reads the headers a real server received.
      */
-    suspend fun fetch(context: Context): List<WidgetListing> = withContext(Dispatchers.IO) {
-        val base = context.getString(R.string.homiio_widget_api_base_url).trimEnd('/')
-        val url = URL("$base/api/properties/search?offering=long_term_rent&limit=$FEED_PAGE_LENGTH")
-        val connection = (url.openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            connectTimeout = CONNECT_TIMEOUT_MS
-            readTimeout = READ_TIMEOUT_MS
-            setRequestProperty("Accept", "application/json")
-        }
-        try {
-            val status = connection.responseCode
-            if (status != HttpURLConnection.HTTP_OK) {
-                throw IOException("GET /api/properties/search responded $status")
+    internal suspend fun fetchFrom(baseUrl: String): List<WidgetListing> =
+        withContext(Dispatchers.IO) {
+            val base = baseUrl.trimEnd('/')
+            val url = URL("$base/api/properties/search?offering=long_term_rent&limit=$FEED_PAGE_LENGTH")
+            val connection = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = CONNECT_TIMEOUT_MS
+                readTimeout = READ_TIMEOUT_MS
+                setRequestProperty("Accept", "application/json")
             }
-            parseListingsResponse(connection.inputStream.bufferedReader().use { it.readText() })
-        } finally {
-            connection.disconnect()
+            try {
+                val status = connection.responseCode
+                if (status != HttpURLConnection.HTTP_OK) {
+                    throw IOException("GET /api/properties/search responded $status")
+                }
+                parseListingsResponse(connection.inputStream.bufferedReader().use { it.readText() })
+            } finally {
+                connection.disconnect()
+            }
         }
-    }
 }
