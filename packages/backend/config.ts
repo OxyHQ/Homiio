@@ -253,8 +253,8 @@ export interface Config {
    * drawn jury, and signed decisions come back.
    *
    * The variable names come from the PACKAGES, not from any plan document:
-   * `@oxyhq/crowdsource` reads `CROWDSOURCE_SERVICE_KEY` and
-   * `CROWDSOURCE_BASE_URL`, `@oxyhq/crowdsource-express` reads
+   * `@oxy.so/crowdsource` reads `CROWDSOURCE_SERVICE_KEY` and
+   * `CROWDSOURCE_BASE_URL`, `@oxy.so/crowdsource-express` reads
    * `CROWDSOURCE_WEBHOOK_SECRET` and `CROWDSOURCE_WEBHOOK_SECRET_PREVIOUS`.
    *
    * There is deliberately NO `CROWDSOURCE_APP_ID`. The `applicationId` is read

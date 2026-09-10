@@ -7,13 +7,13 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '@oxyhq/bloom/theme';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { colors } from '@/styles/colors';
 import { colorChannels } from '@/styles/shadows';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PANEL_TOP_INSET } from '@oxyhq/bloom/content-panel';
+import { PANEL_TOP_INSET } from '@oxy.so/bloom/content-panel';
 import { barBackIconSize, barContent, spacing } from '@/constants/styles';
 import { IconButton } from '@/components/ui/IconButton';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';

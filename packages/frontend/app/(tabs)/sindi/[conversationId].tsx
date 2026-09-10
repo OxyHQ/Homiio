@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 import type { Message } from '@ai-sdk/react';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useOxy, openAccountDialog } from '@oxyhq/services';
+import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { Header } from '@/components/Header';
 import { IconButton } from '@/components/ui/IconButton';
 import { EmptyState } from '@/components/ui/EmptyState';

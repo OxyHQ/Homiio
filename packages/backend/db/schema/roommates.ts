@@ -10,7 +10,7 @@
 
 import { check, doublePrecision, index, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { createdAt, generatedId, inList, timestamptz, updatedAt } from '@oxyhq/db';
+import { createdAt, generatedId, inList, timestamptz, updatedAt } from '@oxy.so/db';
 
 export const ROOMMATE_REQUEST_STATUSES = ['pending', 'accepted', 'declined'] as const;
 export const ROOMMATE_RELATIONSHIP_STATUSES = ['active', 'ended'] as const;

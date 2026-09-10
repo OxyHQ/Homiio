@@ -15,10 +15,10 @@ import { Image, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-
 import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Avatar } from '@oxyhq/bloom/avatar';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
-import { useOxy } from '@oxyhq/services';
-import type { User } from '@oxyhq/core';
+import { Avatar } from '@oxy.so/bloom/avatar';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
+import { useOxy } from '@oxy.so/services';
+import type { User } from '@oxy.so/core';
 
 import {
   ReviewModerationStatus,

@@ -39,9 +39,9 @@ import {
   SegmentedControl,
   SegmentedControlItem,
   SegmentedControlItemText,
-} from '@oxyhq/bloom/segmented-control';
-import { Search } from '@oxyhq/bloom/search';
-import { H3, Text as BloomText } from '@oxyhq/bloom/typography';
+} from '@oxy.so/bloom/segmented-control';
+import { Search } from '@oxy.so/bloom/search';
+import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { useNotifications } from '@/context/NotificationContext';
 import { NotificationItem } from '@/components/NotificationItem';
@@ -53,7 +53,7 @@ import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 import { formatRelativeTime } from '@/utils/dateLocale';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 import type { Notification } from '@/services/notificationService';
 import { logger } from '@/utils/logger';
 

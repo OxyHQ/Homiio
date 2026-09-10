@@ -41,8 +41,8 @@ import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { Button } from '@oxyhq/bloom/button';
-import { H1, P } from '@oxyhq/bloom/typography';
+import { Button } from '@oxy.so/bloom/button';
+import { H1, P } from '@oxy.so/bloom/typography';
 
 import { serializeLocationToken, type LocationSelection, type Property } from '@homiio/shared-types';
 

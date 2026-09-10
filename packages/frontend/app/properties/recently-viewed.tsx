@@ -17,7 +17,7 @@ import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-na
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 
-import { Button } from '@oxyhq/bloom/button';
+import { Button } from '@oxy.so/bloom/button';
 
 import { PropertyListHeader } from '@/components/ui/PropertyListHeader';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';

@@ -14,7 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from 'react-responsive';
 
-import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
+import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { colors } from '@/styles/colors';
 import { radius, resolvePagePadding, spacing, tracker } from '@/constants/styles';

@@ -12,9 +12,9 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@oxyhq/bloom/button';
-import { Chip } from '@oxyhq/bloom/chip';
-import { useOxy, openAccountDialog } from '@oxyhq/services';
+import { Button } from '@oxy.so/bloom/button';
+import { Chip } from '@oxy.so/bloom/chip';
+import { useOxy, openAccountDialog } from '@oxy.so/services';
 import {
   ExchangeRequest,
   ExchangeRequestStatus,
@@ -29,7 +29,7 @@ import {
   useMyExchangeRequests,
   useUpdateExchangeStatus,
 } from '@/hooks/useExchangeQueries';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 

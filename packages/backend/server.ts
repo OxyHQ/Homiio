@@ -16,8 +16,8 @@ import { notFound, errorHandler } from './middlewares/errorHandler';
 import { rateLimitKeyFor } from './middlewares/rateLimitKey';
 import { connectPostgres } from './db/postgres';
 import publicRoutes from './routes/public';
-import { OxyServices } from '@oxyhq/core';
-import { createOptionalOxyAuth, createOxyAuthMiddleware } from '@oxyhq/core/server';
+import { OxyServices } from '@oxy.so/core';
+import { createOptionalOxyAuth, createOxyAuthMiddleware } from '@oxy.so/core/server';
 import { stripeWebhook, confirmCheckoutSession } from './controllers/billingController';
 import { initCronJobs } from './services/cron';
 import { HealthService } from './services/healthService';
@@ -50,7 +50,7 @@ const UNAUTHENTICATED_RATE_LIMIT_MAX = 600; // ~0.66 req/sec per anonymous IP
 
 /**
  * Resolve the user from the bearer token WITHOUT rejecting unauthenticated
- * requests, via the shared `@oxyhq/core/server` helper. It is idempotent (skips
+ * requests, via the shared `@oxy.so/core/server` helper. It is idempotent (skips
  * re-verification when a prior pass already resolved the user) and a
  * failed/expired token never blocks public traffic.
  *
@@ -202,7 +202,7 @@ app.use('/api', apiLimiter);
  * the Stripe webhook below is.
  *
  * The HMAC covers the bytes that arrived, and a JSON parser destroys them.
- * `@oxyhq/crowdsource-express` reads the raw body itself and refuses outright
+ * `@oxy.so/crowdsource-express` reads the raw body itself and refuses outright
  * rather than verifying a signature over a re-serialisation, so a late mount
  * fails every delivery loudly instead of silently trusting the wrong bytes.
  * `__tests__/integration/crowdSourceWebhookMount.test.ts` asserts that nothing

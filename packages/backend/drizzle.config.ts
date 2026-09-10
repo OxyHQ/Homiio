@@ -1,5 +1,5 @@
 import { defineConfig } from 'drizzle-kit';
-import { DATABASE_CASING } from '@oxyhq/db';
+import { DATABASE_CASING } from '@oxy.so/db';
 
 /**
  * drizzle-kit configuration.
@@ -15,7 +15,7 @@ import { DATABASE_CASING } from '@oxyhq/db';
  *   one migrator; see its docblock.
  *
  * `casing` decides what the DDL CREATES; the same value passed to `drizzle()` in
- * `db/postgres.ts` decides what queries REFERENCE. Both read it from `@oxyhq/db`
+ * `db/postgres.ts` decides what queries REFERENCE. Both read it from `@oxy.so/db`
  * (re-exported through `db/casing.ts` for application code) so they cannot drift
  * apart — and if they did, queries would reference columns the migrations never
  * created.

@@ -22,9 +22,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
-import { Button } from '@oxyhq/bloom/button';
-import { Chip } from '@oxyhq/bloom/chip';
-import { openAccountDialog, useOxy } from '@oxyhq/services';
+import { Button } from '@oxy.so/bloom/button';
+import { Chip } from '@oxy.so/bloom/chip';
+import { openAccountDialog, useOxy } from '@oxy.so/services';
 
 import { ListingReportReason, PropertyType } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
@@ -33,7 +33,7 @@ import { useProperty } from '@/hooks';
 import { useReportListingMutation } from '@/hooks/useReportMutation';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { ApiError } from '@/utils/api';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 

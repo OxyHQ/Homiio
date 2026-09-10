@@ -17,9 +17,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { parseISO } from 'date-fns';
 
-import { Button } from '@oxyhq/bloom/button';
-import { Loading } from '@oxyhq/bloom/loading';
-import { Text as BloomText, H2 } from '@oxyhq/bloom/typography';
+import { Button } from '@oxy.so/bloom/button';
+import { Loading } from '@oxy.so/bloom/loading';
+import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
 import {
   ExchangeMode,
   ExchangeRequestStatus,
@@ -41,7 +41,7 @@ import { CardSurface } from '@/components/ui/CardSurface';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { formatLocalized } from '@/utils/dateLocale';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 import { colors } from '@/styles/colors';
 import { radius, spacing, tracker } from '@/constants/styles';
 

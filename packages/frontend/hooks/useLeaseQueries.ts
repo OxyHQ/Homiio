@@ -5,7 +5,7 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 import { CreateLeaseData, Lease, LeaseDocument, UpdateLeaseData } from '@homiio/shared-types';
 import {
   LeaseFilters,

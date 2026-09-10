@@ -25,7 +25,7 @@
  */
 
 import { and, eq, inArray, sql } from 'drizzle-orm';
-import { GENERATED_ALWAYS, sqlStateOf, uuidv7 } from '@oxyhq/db';
+import { GENERATED_ALWAYS, sqlStateOf, uuidv7 } from '@oxy.so/db';
 import { closePostgres, connectPostgres, type Database } from '../../db/postgres';
 import { TEXT_SEARCH_CONFIGURATION } from '../../db/extensions';
 import { properties } from '../../db/schema';

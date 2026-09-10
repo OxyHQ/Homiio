@@ -8,7 +8,7 @@ import React, { useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import Map from '@/components/Map';
 import { SectionHeader, SECTION_GUTTER } from '@/components/property/Section';

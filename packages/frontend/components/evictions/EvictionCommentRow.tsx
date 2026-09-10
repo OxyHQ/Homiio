@@ -7,8 +7,8 @@
  */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Avatar } from '@oxyhq/bloom/avatar';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Avatar } from '@oxy.so/bloom/avatar';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 import type { EvictionComment } from '@homiio/shared-types';
 
 import { IconButton } from '@/components/ui/IconButton';

@@ -20,7 +20,7 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { formatMoney, type AlertExplanationDetail } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 

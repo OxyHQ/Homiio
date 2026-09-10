@@ -40,7 +40,7 @@
 
 import { Request, Response } from 'express';
 import { forwardGeocode } from '../services/geocodingService';
-import { getRequiredOxyUserId, getOxyUserId } from '@oxyhq/core/server';
+import { getRequiredOxyUserId, getOxyUserId } from '@oxy.so/core/server';
 import {
   ReviewReportReason,
   ReviewModerationStatus,

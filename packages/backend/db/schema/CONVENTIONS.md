@@ -93,7 +93,7 @@ identifier it emits. Hand-written SQL must quote it too.
 ## Primary keys
 
 `text`, holding the 24-char ObjectId hex verbatim for pre-cutover rows and a
-**uuid v7** for new ones (`generatedId()` from `@oxyhq/db`). Ids are preserved
+**uuid v7** for new ones (`generatedId()` from `@oxy.so/db`). Ids are preserved
 because that is how every foreign key survives the copy by construction — there
 is no remapping table, so there is nothing to get wrong.
 
@@ -125,7 +125,7 @@ than merely rejecting.
 - Adding a value to a pg enum is easy; **removing or renaming one is not
   possible**. A CHECK is ordinary `DROP CONSTRAINT` / `ADD CONSTRAINT`.
 - Declare the values once as a `const` tuple and derive both the column type and
-  the CHECK from it (`inList` from `@oxyhq/db`), so they cannot drift.
+  the CHECK from it (`inList` from `@oxy.so/db`), so they cannot drift.
 
 **Mongoose enums were never enforced on an update.** `runValidators` is off for
 updates in this package, so the live collections may contain values the schemas
@@ -195,7 +195,7 @@ in.
 ## Timestamps
 
 Always `timestamptz` (`timestamptz()` / `createdAt()` / `updatedAt()` from
-`@oxyhq/db`). `timestamp` without a time zone reinterprets the value in the
+`@oxy.so/db`). `timestamp` without a time zone reinterprets the value in the
 session's `TimeZone` on every read, silently changing what a Mongo `Date` meant.
 
 `created_at` / `updated_at` both default to
@@ -287,7 +287,7 @@ reason so it does not read as an oversight.
 ## Expiry — the Mongo TTL replacement
 
 Postgres has no TTL index. The mechanism is `db/expiry.ts` over
-`@oxyhq/db/expiry`; a table adds a registry entry rather than its own cleanup
+`@oxy.so/db/expiry`; a table adds a registry entry rather than its own cleanup
 path. **A table ported without an entry grows FOREVER — no error, no failing
 test, no symptom until disk**, and it is invisible in review because the thing
 doing the work was never in Homiio's code to be missed.

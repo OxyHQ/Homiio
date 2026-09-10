@@ -7,7 +7,7 @@
  * created. Every check here reads `information_schema` / `pg_catalog` on the
  * throwaway database this worker migrated, so it tests what actually exists.
  *
- * The bulk of the rules come from `@oxyhq/db/assert`, which returns a single
+ * The bulk of the rules come from `@oxy.so/db/assert`, which returns a single
  * violation list with its own vacuity floors folded in — a floor a consumer
  * could forget to assert separately would protect nothing. What is added here is
  * Homiio-specific: the extensions this schema cannot work without, and the
@@ -16,7 +16,7 @@
 
 import { getTableName, sql } from 'drizzle-orm';
 import type { PgTable } from 'drizzle-orm/pg-core';
-import { findSchemaInvariantViolations } from '@oxyhq/db/assert';
+import { findSchemaInvariantViolations } from '@oxy.so/db/assert';
 import { closePostgres, connectPostgres, type Database } from '../../db/postgres';
 import { REQUIRED_EXTENSIONS } from '../../db/extensions';
 import * as schema from '../../db/schema';

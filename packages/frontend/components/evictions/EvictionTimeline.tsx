@@ -16,7 +16,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { EvictionTimelineEventType, type EvictionTimelineEvent } from '@homiio/shared-types';
 import { formatEvictionDateTime } from './evictionUtils';
 import { colors } from '@/styles/colors';

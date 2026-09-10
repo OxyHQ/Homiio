@@ -24,7 +24,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Loading } from '@oxyhq/bloom/loading';
+import { Loading } from '@oxy.so/bloom/loading';
 
 import { colors } from '@/styles/colors';
 import { barIconButton, barIconButtonPressed, barIconSize, radius, spacing } from '@/constants/styles';

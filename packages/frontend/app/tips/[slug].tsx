@@ -13,7 +13,7 @@ import {
   H2,
   H3,
   Text as BloomText,
-} from '@oxyhq/bloom/typography';
+} from '@oxy.so/bloom/typography';
 
 import { Header } from '@/components/Header';
 import { ErrorState } from '@/components/ui/ErrorState';

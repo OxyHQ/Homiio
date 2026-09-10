@@ -10,7 +10,7 @@
  *
  * The actual apply — journal read, phase-marker read, ledger read, extension
  * setup, `migrate()`, the post-apply re-check — is `runMigrations` from
- * `@oxyhq/db/migrate`; see its own doc comment for the full ordering and why
+ * `@oxy.so/db/migrate`; see its own doc comment for the full ordering and why
  * each step comes where it does. This file supplies what that mechanism needs
  * from THIS package: its migrations folder, its extensions, and BOTH guards.
  *
@@ -29,7 +29,7 @@
  * applied while the previous image is still serving is an outage on that image;
  * a `pre` migration not applied before the new image rolls out is an outage on
  * the new one. Every migration `.sql` declares its side on one line and there is
- * NO DEFAULT — see `@oxyhq/db/migrate`'s `phases.ts` for the incident.
+ * NO DEFAULT — see `@oxy.so/db/migrate`'s `phases.ts` for the incident.
  *
  * Neither is spelled with a default in this file. `package.json`'s `db:migrate`
  * script supplies `--phase=all` because a developer database, the jest harness
@@ -41,7 +41,7 @@
  * drizzle's migrator takes no lock of its own — it reads the ledger's
  * high-water mark OUTSIDE its transaction, then replays everything newer inside
  * one — so two concurrent runs both replay the same DDL and the loser fails on
- * an already-applied statement. `@oxyhq/db/migrate`'s runner says the same in
+ * an already-applied statement. `@oxy.so/db/migrate`'s runner says the same in
  * its own header and assigns the interlock to the caller, naming this exact
  * case: a deploy's own migration step racing a manually dispatched one.
  *
@@ -108,7 +108,7 @@ import {
   readJournal,
   readTargetDatabase,
   runMigrations,
-} from '@oxyhq/db/migrate';
+} from '@oxy.so/db/migrate';
 import { Logger } from '../utils/logger';
 import { ensureExtensions } from './extensions';
 

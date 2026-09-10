@@ -14,9 +14,9 @@ import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { format, parseISO } from 'date-fns';
 
-import { Button } from '@oxyhq/bloom/button';
-import { Divider } from '@oxyhq/bloom/divider';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Button } from '@oxy.so/bloom/button';
+import { Divider } from '@oxy.so/bloom/divider';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { ExchangeMode, type PropertyExchange } from '@homiio/shared-types';

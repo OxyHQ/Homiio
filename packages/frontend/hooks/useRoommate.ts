@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { roommateService } from '@/services/roommateService';
 import type { Profile } from '@/services/profileService';
 import { useRoommateStore, useRoommateSelectors } from '@/store/roommateStore';
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 
 export interface RoommateProfile extends Profile {
   matchScore?: number;

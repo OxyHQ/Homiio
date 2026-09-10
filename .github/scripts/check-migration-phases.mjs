@@ -9,12 +9,12 @@
 // two, or with an unrecognised value is a hard failure here AND at migration
 // time. A default would quietly pick a side for a migration whose author never
 // considered the question — which is exactly the incident that put the marker
-// system in `@oxyhq/db/migrate` in the first place: an additive migration and
+// system in `@oxy.so/db/migrate` in the first place: an additive migration and
 // the code that read its new column shipped together, the image reached
 // production and the column did not, and every request 500'd until somebody
 // dispatched the migration by hand.
 //
-// This gate imports the REAL marker reader from `@oxyhq/db/migrate` rather than
+// This gate imports the REAL marker reader from `@oxy.so/db/migrate` rather than
 // carrying a second copy of the regex, so the gate and the migrator can never
 // disagree about what a marker says. That module deliberately imports nothing
 // but node builtins for this reason.
@@ -26,7 +26,7 @@
 
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { readJournal, readMigrationPhases } from "@oxyhq/db/migrate";
+import { readJournal, readMigrationPhases } from "@oxy.so/db/migrate";
 
 const folder = process.argv[2] ?? "packages/backend/drizzle";
 

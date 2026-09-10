@@ -13,7 +13,7 @@ import {
   UpdateApplicationInput,
   applicationService,
 } from '@/services/applicationService';
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 
 const STALE_TIME = 1000 * 30;
 const GC_TIME = 1000 * 60 * 10;

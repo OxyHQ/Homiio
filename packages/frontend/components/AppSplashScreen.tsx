@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react';
 import { View, Animated } from 'react-native';
 import { LogoIcon } from '@/assets/logo';
-import { Loading } from '@oxyhq/bloom/loading';
+import { Loading } from '@oxy.so/bloom/loading';
 import { colors } from '@/styles/colors';
 import { USE_NATIVE_DRIVER } from '@/utils/animation';
 import { LinearGradient, type LinearGradientProps } from 'expo-linear-gradient';

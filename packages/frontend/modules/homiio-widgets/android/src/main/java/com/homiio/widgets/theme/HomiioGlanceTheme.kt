@@ -51,7 +51,7 @@ fun HomiioGlanceTheme(content: @GlanceComposable @Composable () -> Unit) {
  * `yellow` preset — seed `#ffc300`, variant `vivid`, the preset `app/_layout.tsx` pins —
  * into the full Material 3 role set for light and dark:
  *
- *     const base = 'node_modules/@oxyhq/bloom/lib/commonjs/theme/'
+ *     const base = 'node_modules/@oxy.so/bloom/lib/commonjs/theme/'
  *     const { generateRoleColors } = require(base + 'color-engine/index.js')
  *     const { APP_COLOR_PRESETS } = require(base + 'color-presets.js')
  *     const p = APP_COLOR_PRESETS.yellow

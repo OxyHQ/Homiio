@@ -82,11 +82,11 @@ codebase.
 |-------|---------|
 | Runtime | React Native 0.85, React 19.2 |
 | Router | `expo-router` |
-| Styling | NativeWind + Tailwind + `styles/global.css`, on `@oxyhq/bloom` design tokens |
+| Styling | NativeWind + Tailwind + `styles/global.css`, on `@oxy.so/bloom` design tokens |
 | State (local) | Zustand, per-domain stores in `packages/frontend/store/` |
 | State (server) | TanStack Query |
-| Identity | `@oxyhq/services` (`OxyProvider`, `useOxy`) — see [Auth](./auth) |
-| UI primitives + theme | `@oxyhq/bloom` (`BloomProvider`, `ContentPanel`, `Typography`) |
+| Identity | `@oxy.so/services` (`OxyProvider`, `useOxy`) — see [Auth](./auth) |
+| UI primitives + theme | `@oxy.so/bloom` (`BloomProvider`, `ContentPanel`, `Typography`) |
 | Maps + geolocation | `expo-location`, `react-native-svg` |
 | Charts | `react-native-chart-kit` over `react-native-svg` |
 | AI streaming | `@ai-sdk/react`, wired to the backend streaming endpoint |
@@ -153,14 +153,14 @@ TanStack Query refetches on reconnect and on foreground.
 |-------|---------|
 | Runtime | Node 22, Express 4 |
 | Database | `drizzle-orm` + `postgres` (postgres.js) against PostgreSQL with PostGIS |
-| Shared DB helpers | `@oxyhq/db` — migrator, `geography` column, expiry sweep, unique-violation helpers |
-| Identity | `@oxyhq/core/server` — `createOxyAuthMiddleware` gates the authenticated router |
+| Shared DB helpers | `@oxy.so/db` — migrator, `geography` column, expiry sweep, unique-violation helpers |
+| Identity | `@oxy.so/core/server` — `createOxyAuthMiddleware` gates the authenticated router |
 | Billing | `stripe` — Checkout, webhooks, customer portal |
 | Image pipeline | `sharp` + `@aws-sdk/client-s3` |
 | Interactive Sindi chat | Once provisioned and read back, private Sindi agent in Alia (`SINDI_ALIA_AGENT_ID`); Homiio authenticates with its Oxy service credential and delegates the verified user through `X-Oxy-User-Id`; Alia owns chat, tools and memory |
-| Point inference | `@oxyhq/core` → Oxy inference edge for titles, filters, suggestions and file analysis; `ai` formats the buffered frontend data-stream response |
+| Point inference | `@oxy.so/core` → Oxy inference edge for titles, filters, suggestions and file analysis; `ai` formats the buffered frontend data-stream response |
 | Queues | `bullmq` over Valkey (`REDIS_URL`); absent, ingestion falls back to inline |
-| Moderation | `@oxyhq/crowdsource*` — community report intake, decisions, enforcement |
+| Moderation | `@oxy.so/crowdsource*` — community report intake, decisions, enforcement |
 | Messaging integrations | `node-telegram-bot-api`, `telegraf`, `whatsapp-web.js` |
 | Cron | `node-cron`, initialised in `services/cron.ts` on the long-lived ECS task |
 | Validation | `express-validator` plus `middlewares/validation.ts` |
@@ -304,13 +304,13 @@ and is not implemented yet.
 There is no Homiio account, no password and no local user table. Identity is the
 device-first Oxy session.
 
-- **Client:** one `OxyProvider` from `@oxyhq/services` with a registered
+- **Client:** one `OxyProvider` from `@oxy.so/services` with a registered
   `clientId`. `packages/frontend/utils/api.ts` builds the backend client with
   `oxyClient.createLinkedClient({ baseURL })`, which owns auth end to end — it
   mirrors the session token, delegates 401 refresh, and invalidates the session
   when refresh fails. Never add a local token provider, an auth interceptor or a
   manual `Authorization` header.
-- **Server:** `@oxyhq/core/server`. `createOxyAuthMiddleware(oxy)` gates the
+- **Server:** `@oxy.so/core/server`. `createOxyAuthMiddleware(oxy)` gates the
   authenticated router; `requireSessionOxyUserId` is how a write resolves its
   caller.
 - **Ownership follows from the session, never from the body.** Property, room and

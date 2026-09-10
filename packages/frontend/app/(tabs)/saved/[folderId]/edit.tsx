@@ -3,13 +3,13 @@ import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert } from 'reac
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 
 import { Header } from '@/components/Header';
-import { Button } from '@oxyhq/bloom/button';
+import { Button } from '@oxy.so/bloom/button';
 import { colors } from '@/styles/colors';
 import savedPropertyFolderService from '@/services/savedPropertyFolderService';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 import { logger } from '@/utils/logger';
 
 // Reuse the curated folder-color picker palette from SaveToFolderBottomSheet.

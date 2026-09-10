@@ -1,6 +1,6 @@
 import React, { createContext, ReactNode, useRef, useCallback, useState, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import BottomSheet, { type BottomSheetRef } from '@oxyhq/bloom/bottom-sheet';
+import BottomSheet, { type BottomSheetRef } from '@oxy.so/bloom/bottom-sheet';
 import { SavedPropertiesProvider } from './SavedPropertiesContext';
 import { ProfileProvider } from './ProfileContext';
 import { I18nextProvider } from 'react-i18next';

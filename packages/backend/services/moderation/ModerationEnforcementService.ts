@@ -21,7 +21,7 @@
  * trail is real rather than a log line saying a decision was seen.
  */
 
-import type { Decision } from '@oxyhq/crowdsource-contracts';
+import type { Decision } from '@oxy.so/crowdsource-contracts';
 import {
   ModerationReportedType,
   ReviewModerationStatus,

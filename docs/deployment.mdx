@@ -145,7 +145,7 @@ Existing users also need an explicit OAuth reconsent path for the exact scopes
 after the backend returns exact code `SERVICE_ACTING_AS_UNAUTHORIZED`, and may
 retry only after Oxy reports `consented`. Web uses exact redirect
 `https://homiio.com`; native uses exact redirect `homiio://oauth/consent` with
-the SDK-owned state and PKCE flow. Until the `@oxyhq/services` release exposing
+the SDK-owned state and PKCE flow. Until the `@oxy.so/services` release exposing
 `requestOAuthConsent` is present in the manifest and lockfile, the UI remains
 fail-closed and production is not deployable.
 

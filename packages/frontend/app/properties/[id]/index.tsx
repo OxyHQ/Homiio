@@ -33,13 +33,13 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 import * as Haptics from 'expo-haptics';
 import * as Linking from 'expo-linking';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { useOxy, openAccountDialog } from '@oxyhq/services';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { useOxy, openAccountDialog } from '@oxy.so/services';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { Header } from '@/components/Header';
 import { PageScrollView } from '@/components/PageScrollView';

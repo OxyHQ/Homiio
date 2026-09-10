@@ -20,8 +20,8 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useTheme } from '@oxyhq/bloom/theme';
-import { H3, Text as BloomText } from '@oxyhq/bloom/typography';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AlertExplanationText } from '@/components/watches/AlertExplanationText';

@@ -15,7 +15,7 @@
  */
 
 import { eq, sql } from 'drizzle-orm';
-import { CHECK_VIOLATION, constraintNameOf, sqlStateOf, uuidv7 } from '@oxyhq/db';
+import { CHECK_VIOLATION, constraintNameOf, sqlStateOf, uuidv7 } from '@oxy.so/db';
 import { closePostgres, connectPostgres, getDb, type Database } from '../../db/postgres';
 import {
   enqueueModerationOutboxEvent,

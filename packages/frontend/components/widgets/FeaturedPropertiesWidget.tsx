@@ -39,7 +39,7 @@
  */
 import React, { useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Loading } from '@oxyhq/bloom/loading';
+import { Loading } from '@oxy.so/bloom/loading';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -62,7 +62,7 @@ import { exploreHref } from '@/utils/searchUrl';
 import { useFormatting } from '@/utils/format';
 import { PropertyCard } from '../PropertyCard';
 import { ThemedText } from '../ThemedText';
-import { Button } from '@oxyhq/bloom/button';
+import { Button } from '@oxy.so/bloom/button';
 
 // The API decorates listings with an aggregate save count that is not part of
 // the persisted Property model, so it is modelled as an optional extension.

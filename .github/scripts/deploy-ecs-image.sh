@@ -744,7 +744,7 @@ fi
 # image performs; with zero tasks running there is no previous image, and no
 # such write. The rule that defers it has no subject here.
 #
-# Deferring it anyway DEADLOCKS the service. @oxyhq/db records migration
+# Deferring it anyway DEADLOCKS the service. @oxy.so/db records migration
 # progress as a high-water mark and cannot skip a hole (see planMigrationRun in
 # its migrate/phases), so the NEXT release's `pre` run is BLOCKED behind the
 # unapplied `post` one and that deploy fails at its migration step — before ever

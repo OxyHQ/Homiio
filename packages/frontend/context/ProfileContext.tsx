@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 import { useProfileStore } from '@/store/profileStore';
 import type { Profile } from '@/services/profileService';
 import { logger } from '@/utils/logger';

@@ -20,7 +20,7 @@ More than a listings marketplace, and the difference is structural rather than a
 - **Prices must be explainable.** Local, versioned, with their reasoning and confidence — never one universal score. [ADR 0004](./adr/0004-local-explainable-pricing).
 - **Moderation is communal.** No admin panel, no moderator queue, no privileged action over user content. That is a product decision, not a gap.
 - **Beyond rentals.** `PropertyType` covers couchsurfing, co-living, hostels, guesthouses, campsites, boats, treehouses and yurts, each with `accommodationDetails` for sleeping arrangement, host preferences, languages and meals.
-- **Identity via Oxy.** Sign-in, account switching and avatars come from `@oxyhq/services`. Homiio stores no passwords.
+- **Identity via Oxy.** Sign-in, account switching and avatars come from `@oxy.so/services`. Homiio stores no passwords.
 
 The four records above are **Proposed**: they bind design, and they are not all shipped. Where this documentation describes a target it says so.
 
@@ -28,7 +28,7 @@ Inside the repo:
 
 | Package | Role |
 |---------|------|
-| `frontend` (`@homiio/frontend`) | Expo Router app. NativeWind + Tailwind for styling, Zustand for local state, TanStack Query for server state, `@oxyhq/bloom` for primitives. |
+| `frontend` (`@homiio/frontend`) | Expo Router app. NativeWind + Tailwind for styling, Zustand for local state, TanStack Query for server state, `@oxy.so/bloom` for primitives. |
 | `backend` (`@homiio/backend`) | Express 4 + drizzle-orm (PostgreSQL + PostGIS) API, plus a separate worker process. Stripe billing, Sharp + S3 image pipeline, BullMQ ingestion, AI SDK streaming endpoints. |
 | `listing-providers` (`@homiio/listing-providers`) | The provider plugin contract, the shared fetch runtime, and the portal plugins. Consumed by the worker. |
 | `shared-types` (`@homiio/shared-types`) | Pure TypeScript — the entity DTOs, the `format/` money/unit/date module, and the observability event schema. Built first via `postinstall`. |
@@ -43,7 +43,7 @@ Inside the repo:
    └──────────────────────┘                  └──────────────────────┘
             │                                          │
             ▼                                          ▼
-     @oxyhq/services                           Stripe + S3 + Alia + Oxy inference
+     @oxy.so/services                           Stripe + S3 + Alia + Oxy inference
      (auth, account switcher)                  + Oxy API (identity)
                                                        │
                                                        ▼
@@ -199,7 +199,7 @@ See [Analytics](./analytics) for the aggregation pipelines, the Insights screen 
 
 ### Identity via Oxy
 
-`OxyProvider` from `@oxyhq/services` owns the auth context, account switcher, and the bottom-sheet system. The frontend wires it inside `BloomThemeProvider` (from `@oxyhq/bloom`) and a TanStack `QueryClientProvider` so Homiio's own contexts coexist with Oxy's.
+`OxyProvider` from `@oxy.so/services` owns the auth context, account switcher, and the bottom-sheet system. The frontend wires it inside `BloomThemeProvider` (from `@oxy.so/bloom`) and a TanStack `QueryClientProvider` so Homiio's own contexts coexist with Oxy's.
 
 ```tsx
 <BloomThemeProvider fonts>

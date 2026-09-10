@@ -21,7 +21,7 @@
  *
  * ## The fact that shapes this file: there is no `users` table, and there never will be
  *
- * Oxy owns identity. Homiio reaches it over HTTP (`@oxyhq/core/server`
+ * Oxy owns identity. Homiio reaches it over HTTP (`@oxy.so/core/server`
  * resolves the session), so **every `oxy_user_id` in this schema is a foreign
  * SERVICE's primary key** and can carry no foreign key. That is not a gap to
  * close later: a shadow `users` table would be a cache that can disagree with

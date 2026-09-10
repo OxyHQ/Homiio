@@ -95,7 +95,7 @@ HISTORY plus durable rules; this section is the current state.**
   treats a reachable Postgres as a **hard prerequisite** — the suite refuses to
   start without it, it does not skip silently. `db/testDatabase.ts` gives each
   jest worker its own throwaway, fully-migrated database
-  (`@oxyhq/db/testing`, prefix `oxydb_test_`), migrated by calling the real
+  (`@oxy.so/db/testing`, prefix `oxydb_test_`), migrated by calling the real
   `db/migrate.ts` entrypoint rather than a second, divergent migrator.
 - **Expiry is a SWEEP, and it is the quietest way to break a table.** Postgres
   never deletes an expired row on its own — nothing in the engine watches a

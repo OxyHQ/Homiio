@@ -19,10 +19,10 @@ import { useProperty } from '@/hooks';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { PropertyType, formatDate } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 import ViewingService, { type ViewingRequest } from '@/services/viewingService';
 import { ApiError } from '@/utils/api';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { logger } from '@/utils/logger';
 

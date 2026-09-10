@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Property, SindiSuggestion } from '@homiio/shared-types';
 import { api } from '@/utils/api';
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 
 interface UseSindiSuggestionsProps {
     property?: Property;

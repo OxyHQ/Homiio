@@ -1,6 +1,6 @@
 import React from 'react';
 import { ImageStyle } from 'react-native';
-import { Avatar } from '@oxyhq/bloom/avatar';
+import { Avatar } from '@oxy.so/bloom/avatar';
 import { Profile } from '@homiio/shared-types';
 
 interface ProfileAvatarProps {

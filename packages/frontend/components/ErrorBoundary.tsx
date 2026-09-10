@@ -21,10 +21,10 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { useMediaQuery } from 'react-responsive';
 
-import { ErrorBoundary as BloomErrorBoundary } from '@oxyhq/bloom';
-import { Button } from '@oxyhq/bloom/button';
-import { H2, P, Text as BloomText } from '@oxyhq/bloom/typography';
-import { toast } from '@oxyhq/bloom/toast';
+import { ErrorBoundary as BloomErrorBoundary } from '@oxy.so/bloom';
+import { Button } from '@oxy.so/bloom/button';
+import { H2, P, Text as BloomText } from '@oxy.so/bloom/typography';
+import { toast } from '@oxy.so/bloom/toast';
 
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
@@ -41,7 +41,7 @@ interface Props {
  * App-wide error boundary. Delegates the catching mechanics to Bloom's
  * `ErrorBoundary` (so the React class semantics stay battle-tested upstream)
  * and renders Homiio's rich fallback via the render-prop API added in
- * `@oxyhq/bloom@0.6.0`.
+ * `@oxy.so/bloom@0.6.0`.
  */
 const ErrorBoundary = ({
   children,

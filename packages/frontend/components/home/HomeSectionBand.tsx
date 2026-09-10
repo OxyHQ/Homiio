@@ -27,7 +27,7 @@ import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 import type { HomeSection, Property } from '@homiio/shared-types';
 
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';

@@ -321,7 +321,7 @@ export async function resolveAgencyId(agencyName: string): Promise<string | unde
  *
  * The ADR names a third, an Oxy `account_verified` signal, and it is NOT
  * implemented: `OxyRequestUser` carries no verification field, so wiring it means
- * changing `@oxyhq/core` rather than this function. Recorded rather than faked —
+ * changing `@oxy.so/core` rather than this function. Recorded rather than faked —
  * a basis nothing can write would look like coverage.
  *
  * @returns the basis that was satisfied, or `undefined` when neither was.

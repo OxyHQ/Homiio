@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useOxy } from '@oxyhq/services';
-import type { User } from '@oxyhq/core';
+import { useOxy } from '@oxy.so/services';
+import type { User } from '@oxy.so/core';
 
 /**
  * Resolve a set of Oxy user ids to their canonical Oxy {@link User} records in a

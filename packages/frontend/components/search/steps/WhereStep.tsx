@@ -28,8 +28,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Search } from '@oxyhq/bloom/search';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Search } from '@oxy.so/bloom/search';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { useDebouncedAddressSearch } from '@/hooks/useAddressSearch';
 import { useRecentSearchesStore, type RecentSearch } from '@/store/recentSearchesStore';

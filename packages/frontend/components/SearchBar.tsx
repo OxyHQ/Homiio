@@ -27,8 +27,8 @@ import {
   SegmentedControl,
   SegmentedControlItem,
   SegmentedControlItemText,
-} from '@oxyhq/bloom/segmented-control';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+} from '@oxy.so/bloom/segmented-control';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { useRentalMode, type RentalMode } from '@/context/RentalModeContext';
 import { BottomSheetContext } from '@/context/BottomSheetContext';

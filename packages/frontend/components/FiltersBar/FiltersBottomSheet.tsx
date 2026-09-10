@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { colors } from '@/styles/colors';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Switch } from '@oxyhq/bloom/switch';
+import { Switch } from '@oxy.so/bloom/switch';
 
 export type FilterValue = string | number | boolean | (string | number)[];
 

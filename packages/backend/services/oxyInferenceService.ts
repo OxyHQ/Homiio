@@ -3,8 +3,8 @@ import {
   type OxyInferenceRequestOptions,
   type OxyInferenceResponse,
   type OxyResponsesRequest,
-} from '@oxyhq/core';
-import type { InferenceMessage, ResponseFormat } from '@oxyhq/contracts';
+} from '@oxy.so/core';
+import type { InferenceMessage, ResponseFormat } from '@oxy.so/contracts';
 import config from '../config';
 import { oxyService } from './oxy';
 

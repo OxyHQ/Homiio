@@ -32,14 +32,14 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Button } from '@oxyhq/bloom/button';
-import { Dialog } from '@oxyhq/bloom/dialog';
+import { Button } from '@oxy.so/bloom/button';
+import { Dialog } from '@oxy.so/bloom/dialog';
 import {
   SegmentedControl,
   SegmentedControlItem,
   SegmentedControlItemText,
-} from '@oxyhq/bloom/segmented-control';
-import { H3 } from '@oxyhq/bloom/typography';
+} from '@oxy.so/bloom/segmented-control';
+import { H3 } from '@oxy.so/bloom/typography';
 
 import { OfferingType, PropertyType, formatMoney } from '@homiio/shared-types';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';

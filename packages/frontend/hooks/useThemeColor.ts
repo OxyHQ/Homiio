@@ -9,8 +9,8 @@
  */
 
 import { useMemo } from 'react';
-import { useTheme, useThemeColor } from '@oxyhq/bloom/theme';
-import type { ThemeColors } from '@oxyhq/bloom/theme';
+import { useTheme, useThemeColor } from '@oxy.so/bloom/theme';
+import type { ThemeColors } from '@oxy.so/bloom/theme';
 import { DomainColors, type DomainColorKey } from '@/styles/colors';
 
 export { useThemeColor };

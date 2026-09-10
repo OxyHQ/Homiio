@@ -14,8 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import * as Skeleton from '@oxyhq/bloom/skeleton';
-import { H1, Text as BloomText } from '@oxyhq/bloom/typography';
+import * as Skeleton from '@oxy.so/bloom/skeleton';
+import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { formatPercentage } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
@@ -30,7 +30,7 @@ import { useAgency, useAgencyReviews, useAgencyProperties } from '@/hooks/useAge
 import { useOxyAvatars } from '@/hooks/useOxyAvatars';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import type { ReviewDTO } from '@homiio/shared-types';
-import type { User } from '@oxyhq/core';
+import type { User } from '@oxy.so/core';
 import { colors } from '@/styles/colors';
 import { hairline, radius, spacing } from '@/constants/styles';
 

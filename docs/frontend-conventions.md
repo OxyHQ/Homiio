@@ -45,7 +45,7 @@ Use NativeWind `gap-6 md:gap-8` on the section container, **not** per-section
 
 ### Design-token CSS (no hand-copied radius)
 
-`@import "@oxyhq/bloom/design-tokens/theme.css"` in
+`@import "@oxy.so/bloom/design-tokens/theme.css"` in
 `packages/frontend/styles/global.css`, after the Tailwind import. That provides
 `rounded-radius-28`, `p-space-8` and the rest without pasting anything locally.
 

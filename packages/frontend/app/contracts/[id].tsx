@@ -20,11 +20,11 @@ import { useTranslation } from 'react-i18next';
 import i18next from 'i18next';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 
-import { Button } from '@oxyhq/bloom/button';
-import { Loading } from '@oxyhq/bloom/loading';
-import { Text as BloomText, H2 } from '@oxyhq/bloom/typography';
+import { Button } from '@oxy.so/bloom/button';
+import { Loading } from '@oxy.so/bloom/loading';
+import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
 import { LeaseStatus } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';

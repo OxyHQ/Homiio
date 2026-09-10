@@ -68,7 +68,7 @@ import {
   type RequiredExtension,
   assertMigrationTarget,
   ensureExtensions as ensureRequiredExtensions,
-} from '@oxyhq/db/migrate';
+} from '@oxy.so/db/migrate';
 
 /** Seconds the one-shot admin connection waits before forcing itself shut. */
 const CLOSE_TIMEOUT_SECONDS = 5;

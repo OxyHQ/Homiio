@@ -40,7 +40,7 @@
  */
 
 import { getTableConfig, type PgTable } from 'drizzle-orm/pg-core';
-import { sqlColumnName } from '@oxyhq/db';
+import { sqlColumnName } from '@oxy.so/db';
 
 import * as schema from '../schema';
 import { addresses } from '../schema/addresses';
@@ -104,7 +104,7 @@ function declaredTables(): Map<string, PgTable> {
  * Returns SQL names on both sides — `sqlColumnName`, never `column.name`, which
  * is the drizzle PROPERTY name and would silently match nothing in a catalogue
  * query or produce `column "materializedAddressId" does not exist` in emitted
- * SQL. `@oxyhq/db`'s own header records that trap.
+ * SQL. `@oxy.so/db`'s own header records that trap.
  */
 export function addressForeignKeys(): readonly { table: string; column: string }[] {
   const found: { table: string; column: string }[] = [];

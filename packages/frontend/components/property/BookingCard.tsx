@@ -23,8 +23,8 @@ import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Badge } from '@oxyhq/bloom/badge';
-import { H3, Text as BloomText } from '@oxyhq/bloom/typography';
+import { Badge } from '@oxy.so/bloom/badge';
+import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { BookingWidget } from '@/components/BookingWidget';
 import { ApplyToRentCTA } from '@/components/property/ApplyToRentCTA';

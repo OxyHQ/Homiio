@@ -2,22 +2,22 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Avatar } from '@oxyhq/bloom/avatar';
-import { Badge } from '@oxyhq/bloom/badge';
-import { Button } from '@oxyhq/bloom/button';
+import { Avatar } from '@oxy.so/bloom/avatar';
+import { Badge } from '@oxy.so/bloom/badge';
+import { Button } from '@oxy.so/bloom/button';
 import {
   SettingsListGroup,
   SettingsListItem,
-} from '@oxyhq/bloom/settings-list';
+} from '@oxy.so/bloom/settings-list';
 import {
   H1,
   H2,
   Text as BloomText,
-} from '@oxyhq/bloom/typography';
-import { useOxy } from '@oxyhq/services';
+} from '@oxy.so/bloom/typography';
+import { useOxy } from '@oxy.so/services';
 import { TenantApplicationStatus } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';

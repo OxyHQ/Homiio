@@ -31,8 +31,8 @@ const files = [
 ];
 
 const directProviderPatterns = [
-  /(?:from\s+|require\(\s*|import\(\s*)['"](?:@ai-sdk\/(?:openai|anthropic|groq|xai|cerebras|openai-compatible)|openai|anthropic|@anthropic-ai\/sdk|groq-sdk|@openrouter\/[^'"]+|@xai\/[^'"]+|@cerebras\/cerebras_cloud_sdk|cerebras-cloud-sdk|@oxyhq\/relay|relay-sdk|xai)['"]\s*\)?/i,
-  /"(?:@ai-sdk\/(?:openai|anthropic|groq|xai|cerebras|openai-compatible)|openai|anthropic|@anthropic-ai\/sdk|groq-sdk|@openrouter\/[^'"]+|@xai\/[^'"]+|@cerebras\/cerebras_cloud_sdk|cerebras-cloud-sdk|@oxyhq\/relay|relay-sdk|xai)"\s*:\s*"[~^]?\d/i,
+  /(?:from\s+|require\(\s*|import\(\s*)['"](?:@ai-sdk\/(?:openai|anthropic|groq|xai|cerebras|openai-compatible)|openai|anthropic|@anthropic-ai\/sdk|groq-sdk|@openrouter\/[^'"]+|@xai\/[^'"]+|@cerebras\/cerebras_cloud_sdk|cerebras-cloud-sdk|@oxy\.so\/relay|relay-sdk|xai)['"]\s*\)?/i,
+  /"(?:@ai-sdk\/(?:openai|anthropic|groq|xai|cerebras|openai-compatible)|openai|anthropic|@anthropic-ai\/sdk|groq-sdk|@openrouter\/[^'"]+|@xai\/[^'"]+|@cerebras\/cerebras_cloud_sdk|cerebras-cloud-sdk|@oxy\.so\/relay|relay-sdk|xai)"\s*:\s*"[~^]?\d/i,
   /(?:VITE_|NEXT_PUBLIC_|EXPO_PUBLIC_|PUBLIC_)?(?:OPENAI|ANTHROPIC|GROQ|OPENROUTER|XAI|X_AI|CEREBRAS|RELAY)_(?:API_?KEYS?|SECRET|TOKEN|BASE_?URL|ORG_ID|MODEL(?:S|_ID)?)/,
   /ALIA_(?:API_KEY|PROVIDER_[A-Z0-9_]+|RELAY_[A-Z0-9_]+)/,
   /https:\/\/(?:api\.openai\.com|api\.anthropic\.com|api\.groq\.com|openrouter\.ai\/api|api\.x\.ai|api\.cerebras\.ai|relay\.oxy\.so|kaana\.oxy\.so)(?:[/'"]|$)/i,
@@ -59,7 +59,7 @@ describe('Homiio never reaches an inference provider directly', () => {
     "import { xai } from '@ai-sdk/xai'",
     "import { cerebras } from '@ai-sdk/cerebras'",
     "import Cerebras from '@cerebras/cerebras_cloud_sdk'",
-    "import Relay from '@oxyhq/relay'",
+    "import Relay from '@oxy.so/relay'",
     'EXPO_PUBLIC_OPENAI_API_KEY=secret',
     'ANTHROPIC_APIKEY=secret',
     'GROQ_TOKEN=secret',

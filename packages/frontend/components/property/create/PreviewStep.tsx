@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { ThemedText } from '@/components/ThemedText';
-import { Button } from '@oxyhq/bloom/button';
+import { Button } from '@oxy.so/bloom/button';
 import { PropertyPreviewWidget } from '@/components/widgets/PropertyPreviewWidget';
 import { createPropertyStyles as styles } from './styles';
 

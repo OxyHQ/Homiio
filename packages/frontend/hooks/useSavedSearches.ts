@@ -3,10 +3,10 @@ import {
   type SavedSearch,
   type SavedSearchFilters,
 } from '@/store/savedSearchesStore';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 import { api, ApiError } from '@/utils/api';
 import {
   AVAILABLE_HOUSING_ALERT_RULE_TYPES,

@@ -13,7 +13,7 @@
  */
 
 import { eq } from 'drizzle-orm';
-import { uuidv7 } from '@oxyhq/db';
+import { uuidv7 } from '@oxy.so/db';
 
 import { closePostgres, connectPostgres, type Database } from '../../db/postgres';
 import { findOrCreateAgencyByName } from '../../db/agencies/agencyWrites';

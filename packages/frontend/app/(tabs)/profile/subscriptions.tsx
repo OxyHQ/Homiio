@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Icon from '@expo/vector-icons/Ionicons';
 import { colors } from '@/styles/colors';
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 import { useSubscriptionStore } from '@/store/subscriptionStore';
 import { api } from '@/utils/api';
 import { logger } from '@/utils/logger';

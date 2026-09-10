@@ -16,7 +16,7 @@
  * package script: a harness that builds its schema by a different route is a
  * harness that can pass against a schema production will never have.
  *
- * `@oxyhq/db/testing` owns create and drop; this module owns the migrate hook
+ * `@oxy.so/db/testing` owns create and drop; this module owns the migrate hook
  * and the safety assertion below.
  *
  * ## The drop guard
@@ -27,7 +27,7 @@
  * its target from the environment. It is checked BEFORE any connection is
  * opened, so a wrong name never reaches a server at all.
  *
- * **The prefix is `oxydb_test_`, not `homiio_test_`.** `@oxyhq/db/testing` mints
+ * **The prefix is `oxydb_test_`, not `homiio_test_`.** `@oxy.so/db/testing` mints
  * the name and hard-codes that prefix, and it is not configurable. The safety
  * PROPERTY is identical either way — an affirmative pattern match against a
  * name this process generated — so the shared implementation is used rather than
@@ -37,11 +37,11 @@
  * what teardown may drop.
  */
 
-import { createTestDatabase as createSharedTestDatabase, dropTestDatabase as dropSharedTestDatabase } from '@oxyhq/db/testing';
+import { createTestDatabase as createSharedTestDatabase, dropTestDatabase as dropSharedTestDatabase } from '@oxy.so/db/testing';
 import { applyMigrations } from './migrate';
 
 /**
- * The name shape `@oxyhq/db/testing` mints, restated here as a local guard.
+ * The name shape `@oxy.so/db/testing` mints, restated here as a local guard.
  *
  * If the shared package ever changes its prefix, this assertion fails loudly on
  * the first test run instead of quietly accepting a wider set of droppable

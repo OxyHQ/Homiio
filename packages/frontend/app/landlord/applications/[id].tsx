@@ -24,13 +24,13 @@ import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { useFormatting } from '@/utils/format';
 import i18next from 'i18next';
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Button } from '@oxyhq/bloom/button';
-import * as Skeleton from '@oxyhq/bloom/skeleton';
-import { Text as BloomText, H2, H3 } from '@oxyhq/bloom/typography';
-import { Avatar } from '@oxyhq/bloom/avatar';
-import { TextFieldInput } from '@oxyhq/bloom/text-field';
+import { Button } from '@oxy.so/bloom/button';
+import * as Skeleton from '@oxy.so/bloom/skeleton';
+import { Text as BloomText, H2, H3 } from '@oxy.so/bloom/typography';
+import { Avatar } from '@oxy.so/bloom/avatar';
+import { TextFieldInput } from '@oxy.so/bloom/text-field';
 import {
   Profile,
   TenantApplication,

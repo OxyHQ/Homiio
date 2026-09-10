@@ -1,5 +1,5 @@
 // Specialized skeleton components — primitives now come directly from
-// `@oxyhq/bloom`'s `Skeleton` namespace (Skeleton.Box, Skeleton.Pill, etc.).
+// `@oxy.so/bloom`'s `Skeleton` namespace (Skeleton.Box, Skeleton.Pill, etc.).
 export { PropertyCardSkeleton } from './PropertyCardSkeleton';
 export { PropertyDetailSkeleton } from './PropertyDetailSkeleton';
 export { PropertyListSkeleton } from './PropertyListSkeleton';

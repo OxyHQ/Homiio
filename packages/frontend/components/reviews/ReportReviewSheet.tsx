@@ -9,9 +9,9 @@ import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@oxyhq/bloom/button';
-import { TextFieldInput } from '@oxyhq/bloom/text-field';
-import { H3, Text as BloomText } from '@oxyhq/bloom/typography';
+import { Button } from '@oxy.so/bloom/button';
+import { TextFieldInput } from '@oxy.so/bloom/text-field';
+import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { ReviewReportReason } from '@homiio/shared-types';
 

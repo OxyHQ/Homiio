@@ -1,12 +1,12 @@
 import React, { useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
-import { Loading } from '@oxyhq/bloom/loading';
+import { Loading } from '@oxy.so/bloom/loading';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
 import type { Property } from '@homiio/shared-types';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 import { BaseWidget } from './BaseWidget';
 import { PropertyCard } from '@/components/PropertyCard';
 import { colors } from '@/styles/colors';

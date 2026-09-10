@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Skeleton } from '@oxyhq/bloom';
+import { Skeleton } from '@oxy.so/bloom';
 import { TextLines } from './TextLines';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';

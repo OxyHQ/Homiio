@@ -1,7 +1,7 @@
 /**
  * Expiry Sweep Registry — the replacement for Homiio's Mongo TTL indexes
  *
- * The MECHANISM lives in `@oxyhq/db/expiry` (batched delete by `ctid`, one
+ * The MECHANISM lives in `@oxy.so/db/expiry` (batched delete by `ctid`, one
  * statement per batch, a ceiling per table per call). This module is Homiio's
  * REGISTRY: one entry per table that used to carry a TTL index, and nothing
  * else. Re-exported here so a caller has one import path and so the rule below
@@ -70,7 +70,7 @@
  */
 
 import type { PgColumn, PgTable } from 'drizzle-orm/pg-core';
-import type { ExpirySweepTarget } from '@oxyhq/db/expiry';
+import type { ExpirySweepTarget } from '@oxy.so/db/expiry';
 import { addressCandidates } from './schema/addressMaterialization';
 import { conversations } from './schema/conversations';
 import { evictionCases } from './schema/evictions';
@@ -85,14 +85,14 @@ export {
   type ExpirySweepTarget,
   sweepAllExpiredRows,
   sweepExpiredRows,
-} from '@oxyhq/db/expiry';
+} from '@oxy.so/db/expiry';
 
 /**
  * Every table whose rows expire, with the retention Mongo's TTL index used.
  *
  * Every registered column MUST have a supporting btree index: the sweep's
  * predicate is a range scan, and Mongo's TTL index carried the same obligation
- * implicitly. `@oxyhq/db/assert`'s `findUnsupportedExpiryColumns` checks it
+ * implicitly. `@oxy.so/db/assert`'s `findUnsupportedExpiryColumns` checks it
  * against the real database.
  *
  * **Registering a target is only half of the port.** This list is data; nothing

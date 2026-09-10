@@ -40,7 +40,7 @@
  *
  * A first draft also asserted that every migration declares an
  * `oxy:deploy-phase` marker. Mutation-testing it — stripping the marker from
- * `0014` — killed the run, but **not through that assertion**: `@oxyhq/db`'s
+ * `0014` — killed the run, but **not through that assertion**: `@oxy.so/db`'s
  * migrator refuses an unmarked migration, and the jest harness migrates a
  * throwaway database in `globalSetup`, so the run dies before any test executes.
  * The assertion could therefore never be the thing that failed.

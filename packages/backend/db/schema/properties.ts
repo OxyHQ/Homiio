@@ -103,7 +103,7 @@ import {
   timestamptz,
   tsvector,
   updatedAt,
-} from '@oxyhq/db';
+} from '@oxy.so/db';
 import {
   AvailabilityWindowStatus,
   CancellationPolicy,

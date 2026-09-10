@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { Reservation, formatMoney } from '@homiio/shared-types';
 import { ReservationStatusBadge } from '@/components/ReservationStatusBadge';
 import { ThumbnailCard } from '@/components/ui/ThumbnailCard';

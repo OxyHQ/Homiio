@@ -10,10 +10,10 @@
 import React, { useState } from 'react';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 import type { EvictionContactInfo } from '@homiio/shared-types';
 
-import { toast } from '@oxyhq/bloom/toast';
+import { toast } from '@oxy.so/bloom/toast';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 import { buildEvictionContactActions, type EvictionContactAction } from './evictionUtils';

@@ -49,7 +49,7 @@
  */
 
 import { and, eq, sql } from 'drizzle-orm';
-import { constraintNameOf, isUniqueViolation } from '@oxyhq/db';
+import { constraintNameOf, isUniqueViolation } from '@oxy.so/db';
 
 import {
   addressMergeRelationMoves,

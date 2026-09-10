@@ -2,8 +2,8 @@
 
 Homiio's **deltas only**. The ecosystem-wide rules — what a deploy phase means,
 how the ledger works, why the migrator is drizzle-orm's and not drizzle-kit's,
-what a `@oxyhq/db` column builder guarantees — live in oxy-api's own
-`MIGRATION-CONTRACT.md` and in `@oxyhq/db`'s module docs. Read those first; this
+what a `@oxy.so/db` column builder guarantees — live in oxy-api's own
+`MIGRATION-CONTRACT.md` and in `@oxy.so/db`'s module docs. Read those first; this
 file states only what is different HERE.
 
 Schema-level conventions are in `db/schema/CONVENTIONS.md`. This file is about
@@ -174,7 +174,7 @@ exists for.
 So a minted id is a pure function of the position the row occupies:
 `sha256(parentId|path|index)` supplies the 74 random bits and the PARENT's own
 `created_at` supplies the 48-bit timestamp prefix, with the version and variant
-nibbles pinned exactly as `@oxyhq/db`'s `uuidv7` pins them so `isLiveEntityId`
+nibbles pinned exactly as `@oxy.so/db`'s `uuidv7` pins them so `isLiveEntityId`
 still accepts it. `db/backfill/dataPlan.ts`'s `deterministicUuidV7` is the
 implementation. Same reasoning that already makes `moderation_outbox.id`
 deterministic: where the id IS the deduplication mechanism, minting a fresh one
@@ -394,7 +394,7 @@ reds), deleting one table from the head snapshot with the chain left intact (onl
 assertion 2 reds), and dropping a migration from `_journal.json` (only the
 journal assertion reds). A fourth assertion — "every migration declares a deploy
 phase" — was WRITTEN AND THEN REMOVED: stripping the marker killed the run, but
-through `@oxyhq/db`'s migrator in `globalSetup` rather than through the
+through `@oxy.so/db`'s migrator in `globalSetup` rather than through the
 assertion, which therefore could never fire. The migrator's check is strictly
 stronger because it also runs at apply time in production.
 

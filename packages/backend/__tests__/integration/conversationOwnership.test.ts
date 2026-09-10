@@ -28,7 +28,7 @@
 import express, { type Express } from 'express';
 import request from 'supertest';
 import { eq } from 'drizzle-orm';
-import { uuidv7 } from '@oxyhq/db';
+import { uuidv7 } from '@oxy.so/db';
 
 import aiRouter from '../../routes/ai';
 import publicRoutes from '../../routes/public';

@@ -1,4 +1,4 @@
-import type { OAuthConsentResult } from '@oxyhq/services';
+import type { OAuthConsentResult } from '@oxy.so/services';
 import {
   requestSindiConsentAndRetry,
   responseRequiresSindiConsent,

@@ -21,8 +21,8 @@ import {
   startOfMonth,
   subMonths,
 } from 'date-fns';
-import { Button } from '@oxyhq/bloom/button';
-import { Text as BloomText, H3 } from '@oxyhq/bloom/typography';
+import { Button } from '@oxy.so/bloom/button';
+import { Text as BloomText, H3 } from '@oxy.so/bloom/typography';
 import {
   AvailabilityWindow,
   AvailabilityWindowStatus,

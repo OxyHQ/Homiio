@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { ChatContent } from '@/components/sindi/ChatContent';
 import { Property } from '@homiio/shared-types';
-import { useOxy } from '@oxyhq/services';
+import { useOxy } from '@oxy.so/services';
 import { useConversationStore } from '@/store/conversationStore';
 import type { Conversation } from '@/store/conversationStore';
 import { useSindiAuthenticatedFetch } from '@/hooks/useSindiAuthenticatedFetch';

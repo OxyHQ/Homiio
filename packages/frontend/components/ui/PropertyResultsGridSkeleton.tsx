@@ -24,7 +24,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import * as Skeleton from '@oxyhq/bloom/skeleton';
+import * as Skeleton from '@oxy.so/bloom/skeleton';
 
 import { colors } from '@/styles/colors';
 import {

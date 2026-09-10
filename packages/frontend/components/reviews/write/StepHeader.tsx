@@ -4,7 +4,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { H2, Text as BloomText } from '@oxyhq/bloom/typography';
+import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';

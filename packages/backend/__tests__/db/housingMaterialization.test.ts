@@ -29,7 +29,7 @@
  */
 
 import { eq, sql } from 'drizzle-orm';
-import { constraintNameOf, uuidv7 } from '@oxyhq/db';
+import { constraintNameOf, uuidv7 } from '@oxy.so/db';
 
 import { closePostgres, connectPostgres, type Database } from '../../db/postgres';
 import {

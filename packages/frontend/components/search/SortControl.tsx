@@ -11,8 +11,8 @@ import React, { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { RadioIndicator } from '@oxyhq/bloom/radio-indicator';
-import { H3, Text as BloomText } from '@oxyhq/bloom/typography';
+import { RadioIndicator } from '@oxy.so/bloom/radio-indicator';
+import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';

@@ -11,11 +11,11 @@ import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQueries } from '@tanstack/react-query';
-import { H2, H3, Text as BloomText } from '@oxyhq/bloom/typography';
-import { Chip } from '@oxyhq/bloom/chip';
-import * as Skeleton from '@oxyhq/bloom/skeleton';
-import { Search } from '@oxyhq/bloom/search';
-import { useOxy, openAccountDialog } from '@oxyhq/services';
+import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
+import { Chip } from '@oxy.so/bloom/chip';
+import * as Skeleton from '@oxy.so/bloom/skeleton';
+import { Search } from '@oxy.so/bloom/search';
+import { useOxy, openAccountDialog } from '@oxy.so/services';
 import {
   Profile,
   TenantApplication,

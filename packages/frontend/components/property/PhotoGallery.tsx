@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { View, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
-import { Text as BloomText } from '@oxyhq/bloom/typography';
-import { ZoomableMediaGallery } from '@oxyhq/bloom/zoomable-media-gallery';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
+import { ZoomableMediaGallery } from '@oxy.so/bloom/zoomable-media-gallery';
 import { colors } from '@/styles/colors';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { getPropertyImageSource } from '@/utils/propertyUtils';

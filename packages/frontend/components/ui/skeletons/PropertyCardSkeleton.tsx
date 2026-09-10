@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Skeleton } from '@oxyhq/bloom';
+import { Skeleton } from '@oxy.so/bloom';
 import { TextLines } from './TextLines';
 import { PropertyCardVariant, PropertyCardOrientation } from '../../PropertyCard';
 import { colors } from '@/styles/colors';
