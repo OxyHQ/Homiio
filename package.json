@@ -43,7 +43,7 @@
     "node": "22.x"
   },
   "overrides": {
-    "@oxy.so/core": "^1.1.1",
+    "@oxy.so/core": "^1.1.2",
     "@oxy.so/bloom": "^1.0.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -55,10 +55,10 @@
     "@oxy.so/contracts": "^1.1.1"
   },
   "resolutions": {
-    "@oxy.so/core": "^1.1.0"
+    "@oxy.so/core": "^1.1.2"
   },
   "cacheDirectories": [],
   "dependencies": {
-    "@oxy.so/core": "^1.1.1"
+    "@oxy.so/core": "^1.1.2"
   }
 }

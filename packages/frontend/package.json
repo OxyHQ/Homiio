@@ -29,7 +29,7 @@
     "@expo/vector-icons": "^15.1.1",
     "@homiio/shared-types": "workspace:*",
     "@oxy.so/bloom": "^1.0.1",
-    "@oxy.so/core": "^1.1.1",
+    "@oxy.so/core": "^1.1.2",
     "@oxy.so/expo-splash": "^1.0.0",
     "@oxy.so/services": "^1.0.3",
     "@react-native-async-storage/async-storage": "^2.2.0",
