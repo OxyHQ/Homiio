@@ -6,7 +6,7 @@ order: 10
 
 # Deployment
 
-The backend deploys to **AWS ECS Fargate** and the frontend web export deploys to a **Cloudflare Worker** with Static Assets. Both are driven by GitHub Actions on push to `main`. Homiio does **not** deploy to DigitalOcean App Platform or droplets — ECS task definitions, ALB routing, ECR, SSM secrets, and the S3 media bucket are owned by `~/Oxy/oxy-infra/terraform-uswest2/`.
+The backend deploys to **AWS ECS Fargate** and the frontend web export deploys to a **Cloudflare Worker** with Static Assets. Both are driven by GitHub Actions on push to `main`. ECS task definitions, ALB routing, ECR, SSM secrets, and the S3 media bucket are owned by `~/Oxy/oxy-infra/terraform-uswest2/`.
 
 ## Backend (AWS ECS Fargate)
 

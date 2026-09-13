@@ -13,6 +13,7 @@
  */
 
 import 'dotenv/config';
+import { startPlatformActivity } from './services/platformActivity';
 
 import { Queue, Worker, UnrecoverableError, type Job, type Queue as BullQueue } from 'bullmq';
 import {
@@ -509,6 +510,8 @@ async function startBullMq(): Promise<() => Promise<void>> {
 }
 
 async function main(): Promise<void> {
+  let activityReady = false;
+  const activity = startPlatformActivity(() => activityReady, 'homiio-worker');
   // The ingest path resolves geo and addresses through Postgres, so the worker
   // needs a pool for the same reason the API does — see `server.ts`.
   await connectPostgres();
@@ -516,6 +519,7 @@ async function main(): Promise<void> {
     onLog: (message) => logger.warn(message),
   });
   runtime = runtimeHandle.runtime;
+  activityReady = true;
   proxyPerMarketGeo = proxyPerMarketGeoFromEnv();
   logger.info('Listing worker connected to database', {
     providers: registry.ids(),
@@ -533,6 +537,8 @@ async function main(): Promise<void> {
   } else if (config.listingWorker.discoverOnBoot) {
     await runInlinePass();
     logger.info('Inline pass complete; no Redis configured, exiting');
+    activityReady = false;
+    await activity?.stop();
     await runtimeHandle.shutdown();
     await closePostgres();
     return;
@@ -542,7 +548,9 @@ async function main(): Promise<void> {
 
   const shutdown = async (signal: string): Promise<void> => {
     logger.info(`Received ${signal}, shutting down listing worker`);
+    activityReady = false;
     if (closer) await closer();
+    await activity?.stop();
     await runtimeHandle.shutdown();
     await closePostgres();
     process.exit(0);

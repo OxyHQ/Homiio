@@ -43,7 +43,7 @@
     "node": "22.x"
   },
   "overrides": {
-    "@oxy.so/core": "^1.0.1",
+    "@oxy.so/core": "^1.1.0",
     "@oxy.so/bloom": "^1.0.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -54,10 +54,10 @@
     "react-native-svg": "15.15.4"
   },
   "resolutions": {
-    "@oxy.so/core": "^1.0.1"
+    "@oxy.so/core": "^1.1.0"
   },
   "cacheDirectories": [],
   "dependencies": {
-    "@oxy.so/core": "^1.0.1"
+    "@oxy.so/core": "^1.1.0"
   }
 }

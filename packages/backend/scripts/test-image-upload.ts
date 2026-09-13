@@ -77,7 +77,7 @@ async function testImageUpload() {
 
     console.log('\n🎉 Image upload service test completed!');
     console.log('\nTo use the service in production:');
-    console.log('1. Set up DigitalOcean Spaces bucket');
+    console.log('1. Set up Amazon S3 bucket');
     console.log('2. Configure environment variables:');
     console.log('   - S3_ENDPOINT');
     console.log('   - S3_REGION');

@@ -1,5 +1,6 @@
 // Load environment variables first
 import 'dotenv/config';
+import { startPlatformActivity } from './services/platformActivity';
 
 import express from "express";
 import type { Request, Response } from 'express';
@@ -111,7 +112,10 @@ async function initializeDatabase() {
 }
 
 // Express setup
+let activityReady = false;
+const activity = startPlatformActivity(() => activityReady);
 const app = express();
+if (activity) app.use(activity.observeHttp);
 
 // Behind AWS ALB — trust the first proxy hop so req.ip reflects the client IP
 app.set('trust proxy', 1);
@@ -313,6 +317,7 @@ async function startServer() {
     await initializeDatabase();
 
     const server = app.listen(port, () => {
+      activityReady = true;
       logger.info(`Homio Backend running on port ${port} [${config.environment}]`);
       // Initialize cron jobs (only in non-serverless persistent environments)
       if (!process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
@@ -337,12 +342,24 @@ async function startServer() {
      * delivery mid-call, which is what would leave a report's outbox row
      * `processing` until its lease expired.
      */
-    const stopModerationDispatcher = (signal: string): void => {
-      logger.info('[CrowdSource] stopping outbox dispatcher', { signal });
-      void moderationOutboxDispatcher.stop();
+    let shuttingDown = false;
+    const shutdown = async (signal: string): Promise<void> => {
+      if (shuttingDown) return;
+      shuttingDown = true;
+      activityReady = false;
+      logger.info('Stopping backend', { signal });
+      const timeout = setTimeout(() => process.exit(1), 10_000);
+      timeout.unref();
+      await Promise.all([
+        new Promise<void>(resolve => server.close(() => resolve())),
+        moderationOutboxDispatcher.stop(),
+      ]);
+      await activity?.stop();
+      clearTimeout(timeout);
+      process.exit(0);
     };
-    process.once('SIGTERM', () => stopModerationDispatcher('SIGTERM'));
-    process.once('SIGINT', () => stopModerationDispatcher('SIGINT'));
+    process.once('SIGTERM', () => void shutdown('SIGTERM'));
+    process.once('SIGINT', () => void shutdown('SIGINT'));
 
     server.on('error', (err: NodeJS.ErrnoException) => {
       if (err.code === 'EADDRINUSE') {
