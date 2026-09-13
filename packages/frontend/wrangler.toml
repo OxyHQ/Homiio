@@ -12,13 +12,15 @@
 # copy of the app whose every API call is refused. `workers_dev = false` below
 # leaves `homiio.com` as the only name that reaches this deployment.
 name = "homiio-frontend"
+main = "worker/index.js"
 compatibility_date = "2026-09-09"
 
 workers_dev = false
 
-# Static assets with no `main`: no Worker script runs, every request is served
-# from the uploaded directory.
+# The Worker observes each request before streaming the asset response.
 [assets]
+binding = "ASSETS"
+run_worker_first = true
 directory = "./dist"
 # Replaces `public/_redirects` (`/*  /index.html  200`), deleted in the same
 # change because `_redirects` is a Pages-only convention and, left in `public/`,

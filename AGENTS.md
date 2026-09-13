@@ -156,7 +156,7 @@ measurements and the migration history: **`docs/postgres.md`**.
 
 ## Deployment
 
-**AWS ECS Fargate**, not DigitalOcean. Port `4000`, `api.homiio.com`, ECR
+**AWS ECS Fargate**. Port `4000`, `api.homiio.com`, ECR
 `oxy/homiio`, `us-west-2`, `linux/arm64`. Infra lives in
 `~/Oxy/oxy-infra/terraform-uswest2/`; deploy is `.github/workflows/deploy-aws.yml`
 on push to `main`. Detail: `docs/deployment.mdx`.
