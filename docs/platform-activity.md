@@ -13,13 +13,15 @@ PoPs, direction, scope, category and aggregate counts. It never sends payloads,
 paths, query strings, IPs, user IDs, credentials or socket IDs. A Cloudflare PoP
 is a network ingress location, not a visitor's physical location.
 
-`OXY_ECOSYSTEM_ACTIVITY_ENABLED=true` explicitly enables the deployed producer; it is disabled by default. Keep it false in local environments, even when using AWS storage.
+The deployed producer activates automatically once `OXY_ACTIVITY_API_KEY` and
+`OXY_ACTIVITY_API_SECRET` are both set; leave them unset in local environments,
+even when using AWS storage. There is no separate enable flag — the dedicated
+credential pair is both the authentication and the toggle.
 
-`AWS_REGION` supplies the process location. `OXY_ACTIVITY_API_KEY` and
-`OXY_ACTIVITY_API_SECRET` authenticate publication. Enabled producer configuration is validated before
-listening. Each process registers a fresh instance, refreshes its lease,
-and removes it during graceful shutdown. Crashed instances disappear when their
-lease expires. Oxy broadcasts authoritative snapshots over Socket.IO.
+`AWS_REGION` supplies the process location. Each process registers a fresh
+instance, refreshes its lease, and removes it during graceful shutdown.
+Crashed instances disappear when their lease expires. Oxy broadcasts
+authoritative snapshots over Socket.IO.
 
 Counters describe observed application operations, not network bytes. Direct
 object-storage downloads, media transports, database wire protocols and third
