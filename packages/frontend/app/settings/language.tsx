@@ -1,12 +1,19 @@
 /**
- * Settings → Language. Uses Bloom SettingsList primitives end-to-end so the
- * row layout, divider, and active-state visuals match the rest of the
- * settings stack.
+ * Settings → Language.
+ *
+ * The app's UI language is an Oxy-account concern, not Homiio's own: Oxy
+ * already resolves it (account locales when signed in, a device/guest locale
+ * otherwise — see `OxyProvider`'s `language` config in `app/_layout.tsx`) and
+ * ships the picker that reads and writes it (`LanguageSelectorScreen`, opened
+ * here the same way every other Oxy-owned surface is —
+ * `showBottomSheet('LanguageSelector')`, exactly like `ManageAccount` and
+ * `FileManagement` in Settings). This screen no longer hand-rolls a picker.
  */
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useRouter } from 'expo-router';
+import { useOxy } from '@oxy.so/services';
+import { getNativeLanguageName } from '@oxy.so/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import {
@@ -15,46 +22,28 @@ import {
 } from '@oxy.so/bloom/settings-list';
 
 import { Header } from '@/components/Header';
-import { EmptyState } from '@/components/ui/EmptyState';
-import {
-  SUPPORTED_LANGUAGE_CODES,
-  setStoredLanguage,
-  type SupportedLanguageCode,
-} from '@/utils/languagePreference';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
-interface LanguageOption {
-  code: SupportedLanguageCode;
-  label: string;
-  description: string;
-  flag: string;
-}
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
-// Annotated on the LITERAL, not on the result of `.filter`. Annotating the
-// result let each `code` widen to `string`, which both defeated the point of
-// `SupportedLanguageCode` — a typo here would have compiled — and made the
-// `includes` call below an error, since it takes the narrow union.
-const ALL_LANGUAGES: LanguageOption[] = [
-  { code: 'en-US', label: 'English', description: 'English (United States)', flag: '🇺🇸' },
-  { code: 'zh-CN', label: '中文', description: '简体中文（中国）', flag: '🇨🇳' },
-  { code: 'hi-IN', label: 'हिन्दी', description: 'हिन्दी (भारत)', flag: '🇮🇳' },
-  { code: 'es-ES', label: 'Español', description: 'Español (España)', flag: '🇪🇸' },
-  { code: 'fr-FR', label: 'Français', description: 'Français (France)', flag: '🇫🇷' },
-  { code: 'ar', label: 'العربية', description: 'العربية', flag: '🇸🇦' },
-  { code: 'bn-BD', label: 'বাংলা', description: 'বাংলা (বাংলাদেশ)', flag: '🇧🇩' },
-  { code: 'pt-BR', label: 'Português', description: 'Português (Brasil)', flag: '🇧🇷' },
-  { code: 'ru-RU', label: 'Русский', description: 'Русский (Россия)', flag: '🇷🇺' },
-  { code: 'id-ID', label: 'Bahasa Indonesia', description: 'Bahasa Indonesia', flag: '🇮🇩' },
-  { code: 'ca-ES', label: 'Català', description: 'Català (Espanya)', flag: '🇪🇸' },
-  { code: 'it-IT', label: 'Italiano', description: 'Italiano (Italia)', flag: '🇮🇹' },
-];
-
-const LANGUAGES = ALL_LANGUAGES.filter((lang) => SUPPORTED_LANGUAGE_CODES.includes(lang.code));
+const RowIcon: React.FC<{ name: IoniconName }> = ({ name }) => (
+  <Ionicons name={name} size={20} color={colors.muted} />
+);
 
 export default function LanguageSettingsScreen() {
-  const { t, i18n } = useTranslation();
-  const router = useRouter();
+  const { t } = useTranslation();
+  const { showBottomSheet, currentLanguage, currentLanguages } = useOxy();
+
+  const openLanguageSelector = useCallback(() => {
+    showBottomSheet?.('LanguageSelector');
+  }, [showBottomSheet]);
+
+  // Account locales when there are any (signed in, or a guest override was
+  // set), else the single resolved device/fallback locale — the same
+  // fallback `LanguageSelectorScreen` itself uses.
+  const selectedLanguages = currentLanguages.length > 0 ? currentLanguages : [currentLanguage];
+  const languageDescription = selectedLanguages.map((code) => getNativeLanguageName(code)).join(', ');
 
   return (
     <View style={styles.root}>
@@ -64,46 +53,16 @@ export default function LanguageSettingsScreen() {
           showBackButton: true,
         }}
       />
-      <ScrollView contentContainerStyle={styles.scroll}>
-        {LANGUAGES.length === 0 ? (
-          <EmptyState
-            icon="language-outline"
-            title={t('settings.language.emptyTitle')}
-            description={t('settings.language.emptyDescription')}
+      <View style={styles.content}>
+        <SettingsListGroup title={t('settings.language.choose')}>
+          <SettingsListItem
+            icon={<RowIcon name="language" />}
+            title={t('settings.language.title')}
+            description={languageDescription}
+            onPress={openLanguageSelector}
           />
-        ) : (
-          <SettingsListGroup
-            title={t('settings.language.choose')}
-            footer={t('settings.language.footer')}
-          >
-            {LANGUAGES.map((lang) => {
-              const isActive = i18n.language === lang.code;
-              return (
-                <SettingsListItem
-                  key={lang.code}
-                  icon={<Text style={styles.flag}>{lang.flag}</Text>}
-                  title={lang.label}
-                  description={lang.description}
-                  rightElement={
-                    isActive ? (
-                      <Ionicons
-                        name="checkmark"
-                        size={20}
-                        color={colors.primaryColor}
-                      />
-                    ) : undefined
-                  }
-                  showChevron={!isActive}
-                  onPress={async () => {
-                    await setStoredLanguage(lang.code);
-                    router.back();
-                  }}
-                />
-              );
-            })}
-          </SettingsListGroup>
-        )}
-      </ScrollView>
+        </SettingsListGroup>
+      </View>
     </View>
   );
 }
@@ -113,12 +72,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  scroll: {
+  content: {
     paddingTop: spacing.lg,
     paddingBottom: spacing['4xl'],
-  },
-  flag: {
-    fontSize: 18,
-    lineHeight: 20,
   },
 });

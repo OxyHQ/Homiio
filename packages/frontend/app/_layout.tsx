@@ -53,7 +53,11 @@ import { OXY_BASE_URL, OXY_CLIENT_ID } from '@/config';
 import { QueryClient, QueryClientProvider, onlineManager, focusManager } from '@tanstack/react-query';
 import NetInfo from '@react-native-community/netinfo';
 import { logger } from '@/utils/logger';
-import { getStoredLanguage } from '@/utils/languagePreference';
+import {
+  isSupportedLanguage,
+  setStoredLanguage,
+  SUPPORTED_LANGUAGE_CODES,
+} from '@/utils/languagePreference';
 
 i18nUse(initReactI18next);
 
@@ -310,10 +314,6 @@ export default function RootLayout() {
     let active = true;
     (async () => {
       try {
-        const storedLanguage = await getStoredLanguage();
-        if (storedLanguage) {
-          await i18n.changeLanguage(storedLanguage);
-        }
         if (Platform.OS !== 'web') {
           await setupNotifications();
           const hasPermission = await requestNotificationPermissions();
@@ -367,7 +367,21 @@ export default function RootLayout() {
           ) : (
               <QueryClientProvider client={queryClient}>
                 <RentalModeProvider>
-                <OxyProvider baseURL={OXY_BASE_URL} clientId={OXY_CLIENT_ID}>
+                <OxyProvider
+                  baseURL={OXY_BASE_URL}
+                  clientId={OXY_CLIENT_ID}
+                  language={{
+                    supportedLocales: SUPPORTED_LANGUAGE_CODES,
+                    fallbackLocale: 'en-US',
+                    onChange: (locale) => {
+                      if (!isSupportedLanguage(locale)) return;
+                      return setStoredLanguage(locale);
+                    },
+                    onError: (error, locale) => {
+                      logger.warn('Failed to follow the Oxy-resolved language', locale, error);
+                    },
+                  }}
+                >
                   {/*
                     Renders nothing itself — it just pushes to the toast store
                     that `OxyProvider`'s own `<ToastOutlet />` renders. Mounted
