@@ -2216,15 +2216,23 @@
     "deleteTitle": "Delete Image",
     "deleteMessage": "Are you sure you want to delete this image?",
     "deleteFailed": "Failed to delete image. Please try again.",
-    "choosePhotos": "Choose Photos",
     "takePhoto": "Take Photo",
-    "uploading": "Uploading images...",
     "imageCount": "{{current}} of {{max}} images uploaded",
-    "primary": "Primary",
-    "addMore": "Add More",
     "helperText": "Upload high-quality images of your property. Include photos of all rooms, exterior, and any special features.",
-    "helperPrimaryNote": " The first image will be set as the primary image.",
-    "setPrimary": "Set as primary image"
+    "grid": {
+      "label": "Photos",
+      "photo": "Photo {{position}} of {{total}}",
+      "cover": "Cover",
+      "moveEarlier": "Move photo {{position}} earlier",
+      "moveLater": "Move photo {{position}} later",
+      "remove": "Remove photo {{position}}",
+      "retry": "Retry uploading photo {{position}}",
+      "retryAction": "Retry",
+      "uploading": "Uploading photo {{position}}",
+      "failed": "Upload failed",
+      "add": "Add photos",
+      "moved": "Moved to position {{position}} of {{total}}"
+    }
   },
   "property": {
     "loading": "Loading property details...",
@@ -2232,7 +2240,7 @@
     "notFound": "Property not found",
     "bed": "Bed",
     "bath": "Bath",
-    "pricingReviewNeeded": "Pricing Review Needed",
+    "pricingReviewNeeded": "Review this price",
     "bedrooms": "Number of Bedrooms",
     "bathrooms": "Number of Bathrooms",
     "customNumber": {
@@ -2241,11 +2249,11 @@
       "confirm": "Confirm",
       "cancel": "Cancel"
     },
-    "suggestedRent": "Suggested: ${{amount}}/month",
-    "maxEthicalRent": "Max Ethical: ${{amount}}/month",
-    "ethicalPricingWarning": "Your price exceeds the ethical maximum. Consider lowering it to make housing more accessible.",
+    "suggestedRent": "Suggested: {{amount}} per month",
+    "maxEthicalRent": "Ethical maximum: {{amount}} per month",
+    "ethicalPricingWarning": "Your price is above the ethical maximum for a home like this. Consider lowering it to keep housing accessible.",
     "warningBullet": "• {{warning}}",
-    "ethicalPricing": "Ethical Pricing",
+    "ethicalPricing": "Ethical pricing",
     "amenities": {
       "title": "What this place offers",
       "showAll": "Show all {{count}} amenities"
@@ -2541,7 +2549,8 @@
       "label": "Listing photos",
       "photoOf": "Photo {{position}} of {{total}}",
       "namedPhotoOf": "{{name}}, photo {{position}} of {{total}}"
-    }
+    },
+    "ethicalPricingPublishWarning": "You can still publish at this price, but the listing will not be marked as a fair price."
   },
   "viewings": {
     "title": "Viewings",
@@ -3218,20 +3227,7 @@
       }
     },
     "write": {
-      "validationTitle": "Validation Error",
-      "streetRequired": "Please provide a street address.",
-      "cityRequired": "Please provide a city.",
-      "postalCodeRequired": "Please provide a postal code.",
-      "countryRequired": "Please provide a country.",
-      "opinionRequired": "Please provide your opinion about this address.",
-      "opinionMinLength": "Your opinion must be at least 10 characters long.",
-      "priceRequired": "Please provide a valid price.",
-      "datesRequired": "Please provide both start and end dates.",
-      "recommendationRequired": "Please indicate whether you would recommend this address.",
-      "ratingRequired": "Please provide a rating from 1 to 5.",
-      "submitSuccess": "Your review has been submitted successfully!",
       "submitFailed": "Failed to submit review",
-      "submitFailedRetry": "Failed to submit review. Please try again.",
       "loadAddressFailed": "Couldn't load address",
       "title": "Write review",
       "stepCounter": "Step {{current}} of {{total}}",
@@ -3335,7 +3331,6 @@
         "adviceToAgency": "What should the agency improve?",
         "adviceToLandlord": "What should the landlord know?",
         "price": "0.00",
-        "date": "YYYY-MM-DD",
         "reviewTitle": "Sum up your experience",
         "opinion": "Share your experience (10+ characters)",
         "pros": "Add something you liked",
@@ -3696,20 +3691,11 @@
   },
   "propertyCreate": {
     "location": {
-      "title": "Location",
-      "instructions": "📍 Address Details: Fill in the complete address information. Our system uses a hierarchical structure:\n• STREET level: Street name only\n• BUILDING level: Street + number + building details\n• UNIT level: Building + floor + unit/apartment details\nReviews and listings are organized by these levels for better organization.",
       "country": "Country or Region",
-      "countryPickerTitle": "Country or Region",
       "state": "State / Province / Region",
-      "statePickerTitle": "State / Province / Region",
-      "city": "City",
       "street": "Street",
       "number": "Number",
-      "postalCode": "Postal code",
       "floor": "Floor",
-      "unit": "Unit / Apartment",
-      "showFloor": "Show floor field",
-      "hideFloor": "Hide floor field",
       "selectCountry": "Select country or region",
       "streetPlaceholder": "Street name",
       "unitOptional": "Unit/Apartment Number (optional)",
@@ -3749,7 +3735,6 @@
     },
     "amenities": {
       "title": "Amenities",
-      "subtitle": "Select the amenities available at this property.",
       "rulesTitle": "Amenities & Rules",
       "houseRules": "House Rules",
       "petsAllowed": "Pets Allowed",
@@ -3759,6 +3744,81 @@
       "maxGuests": "Maximum Number of Guests",
       "yes": "Yes",
       "no": "No"
+    },
+    "title": {
+      "create": "Create listing",
+      "edit": "Edit listing"
+    },
+    "loading": "Loading listing…",
+    "loadError": "Couldn't load this listing: {{error}}",
+    "submitError": "Couldn't save the listing: {{error}}",
+    "saveDraft": "Save draft",
+    "draftSaved": "Draft saved",
+    "draftSaveFailed": "Couldn't save the draft",
+    "publish": "Publish",
+    "saveChanges": "Save changes",
+    "steps": {
+      "propertyType": {
+        "title": "What kind of home is it?"
+      },
+      "location": {
+        "title": "Where is it?",
+        "description": "Pin it on the map, then check the address fields."
+      },
+      "basicInfo": {
+        "title": "The basics"
+      },
+      "coliving": {
+        "title": "Coliving features"
+      },
+      "media": {
+        "title": "Add photos",
+        "description": "Add at least five. The first one is the cover; drag or use the arrows to reorder."
+      },
+      "description": {
+        "title": "Describe your home"
+      },
+      "preview": {
+        "title": "Ready to publish",
+        "description": "Check the preview. You can edit the listing at any time after publishing."
+      }
+    },
+    "basicInfo": {
+      "propertyType": "Property type",
+      "propertyTypeRequired": "Choose a property type",
+      "area": "Floor area (m²)",
+      "yearBuilt": "Year built (optional)",
+      "description": "Description",
+      "descriptionPlaceholder": "What makes the home and the neighbourhood worth it?"
+    },
+    "preview": {
+      "title": "Preview",
+      "description": "This is how people will see your listing.",
+      "card": "Card",
+      "page": "Page",
+      "toggle": "Preview as"
+    },
+    "quality": {
+      "title": "Listing quality",
+      "needsWork": "Needs work",
+      "good": "Good",
+      "excellent": "Excellent",
+      "done": "Done",
+      "todo": "To do",
+      "type": "Choose the property type",
+      "location": "Pin the location on the map",
+      "pricing": "Set a price for every offering",
+      "photos": "Add at least {{count}} photos",
+      "description": "Write at least {{count}} characters about the home",
+      "area": "Add the floor area",
+      "amenities": "List the amenities"
+    },
+    "coliving": {
+      "sharedSpaces": "Shared spaces",
+      "communityEvents": "Community events",
+      "whichSharedSpaces": "Which shared spaces?",
+      "otherFeatures": "Other shared spaces or features",
+      "otherFeaturesPlaceholder": "e.g. rooftop, cinema room, pool"
     }
   },
   "searchBar": {

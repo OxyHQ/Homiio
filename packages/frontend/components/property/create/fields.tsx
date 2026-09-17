@@ -7,8 +7,6 @@ import { Field } from '@oxy.so/bloom/field';
 import { TextFieldInput, type TextFieldInputProps } from '@oxy.so/bloom/text-field';
 import { Textarea, type TextareaProps } from '@oxy.so/bloom/textarea';
 import { RiArrowDownSLine, RiCheckLine } from '@oxy.so/bloom/icons';
-import { SettingsListItem } from '@oxy.so/bloom/settings-list';
-import { Switch } from '@oxy.so/bloom/switch';
 
 type WizardTextFieldProps = Omit<TextFieldInputProps, 'isInvalid' | 'style'> & {
   /** Visible label above the field; also the input's accessible name. */
@@ -133,35 +131,3 @@ function matchesIgnoringAccents(item: CommandItem, query: string): boolean {
 const styles = StyleSheet.create({
   trigger: { justifyContent: 'space-between' },
 });
-
-interface WizardSwitchItemProps {
-  title: string;
-  description?: string;
-  value: boolean | undefined;
-  onValueChange: (value: boolean) => void;
-  icon?: React.ReactNode;
-}
-
-/**
- * A yes/no listing setting: a `SettingsListItem` row carrying a Bloom `Switch`.
- * Render inside a `SettingsListGroup`.
- */
-export function WizardSwitchItem({
-  title,
-  description,
-  value,
-  onValueChange,
-  icon,
-}: WizardSwitchItemProps) {
-  return (
-    <SettingsListItem
-      icon={icon}
-      title={title}
-      description={description}
-      showChevron={false}
-      rightElement={
-        <Switch value={Boolean(value)} onValueChange={onValueChange} accessibilityLabel={title} />
-      }
-    />
-  );
-}

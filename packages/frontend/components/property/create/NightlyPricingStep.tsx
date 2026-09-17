@@ -2,10 +2,9 @@ import React, { useCallback } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Field } from '@oxy.so/bloom/field';
-import { SettingsListGroup } from '@oxy.so/bloom/settings-list';
-import { ThemedText } from '@/components/ThemedText';
+import { SwitchFilterRow } from '@oxy.so/bloom/stay-filters';
 import { PriceBreakdown } from '@/components/PriceBreakdown';
-import { WizardSwitchItem, WizardTextField } from './fields';
+import { WizardTextField } from './fields';
 import { createPropertyStyles as styles } from './styles';
 import type { PropertyStepProps } from './types';
 import { parseLocaleNumber } from '@/utils/number';
@@ -53,10 +52,6 @@ export function NightlyPricingStep({
 
   return (
     <View style={styles.step}>
-      <ThemedText type="subtitle">
-        {t('listing.offering.nightlyStepTitle')}
-      </ThemedText>
-
       <WizardTextField
         label={t('listing.nightly.nightlyRate')}
         value={pricing.nightlyRate ? pricing.nightlyRate.toString() : ''}
@@ -115,13 +110,11 @@ export function NightlyPricingStep({
         </View>
       </Field>
 
-      <SettingsListGroup>
-        <WizardSwitchItem
-          title={t('listing.nightly.instantBook')}
-          value={pricing.instantBook}
-          onValueChange={(value) => updateFormField('pricing', 'instantBook', value)}
-        />
-      </SettingsListGroup>
+      <SwitchFilterRow
+        title={t('listing.nightly.instantBook')}
+        value={Boolean(pricing.instantBook)}
+        onValueChange={(value) => updateFormField('pricing', 'instantBook', value)}
+      />
 
       {/* Live booking-quote preview for a representative short stay so the host
           sees how the nightly rate, fees and taxes compound into a total. */}

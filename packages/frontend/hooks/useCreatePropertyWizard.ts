@@ -238,10 +238,17 @@ interface SubmitResult {
  * navigation, identical toasts, with the resulting error surfaced through the
  * form store (`error`) and consumed by the Preview step.
  */
-export function useCreatePropertyWizard(id: string | undefined) {
+export function useCreatePropertyWizard(
+  id: string | undefined,
+  options: {
+    /** After a NEW listing is created, before navigating to it (e.g. drop its saved draft). */
+    onCreated?: () => void;
+  } = {},
+) {
   const router = useRouter();
   const isEditMode = Boolean(id);
-  const { setLoading, setError } = useCreatePropertyFormStore();
+  const { setLoading, setError, resetForm } = useCreatePropertyFormStore();
+  const { onCreated } = options;
 
   const { mutate, isPending } = useMutation<SubmitResult, Error>({
     mutationFn: async () => {
@@ -288,7 +295,11 @@ export function useCreatePropertyWizard(id: string | undefined) {
       // The captured referral code has now been consumed by this listing —
       // clear it so a later, un-referred listing isn't mis-attributed.
       useReferralStore.getState().clearReferralCode();
+      onCreated?.();
       if (redirectId) {
+        // The listing exists now: the next "Create" starts from a blank form,
+        // not from this one parked on its last step.
+        resetForm();
         router.push(`/properties/${redirectId}`);
       } else {
         setError('Created property but received unexpected response format');

@@ -4,7 +4,9 @@
  * This screen owns the single `ReviewWizardData` object, the step index, the
  * `?addressId=` prefill (seeds the address step from an existing Homiio
  * address), and the submit → `CreateReviewPayload`. Each step is a component
- * under `components/reviews/write/`; `WizardProgress` is the bottom nav.
+ * under `components/reviews/write/`. Bloom's `wizard` draws the frame: the
+ * `WizardProgress` bar names the step at the top of the scroll, and the
+ * `WizardFooter` under it is Back / Next (Submit on the last step).
  *
  * Hard-required steps gate `Next`/`Submit` (address, price + dates, title +
  * opinion, rating + recommendation); every dimension step is skippable. On
@@ -13,19 +15,19 @@
  * derives it from the dates.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { Admonition } from '@oxy.so/bloom/admonition';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
+import { WizardFooter, WizardProgress, type WizardStep } from '@oxy.so/bloom/wizard';
 import { useOxy } from '@oxy.so/services';
 
 import { Header } from '@/components/Header';
 import type { MapApi, GeocodedAddress } from '@/components/Map';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { WizardProgress } from '@/components/reviews/WizardProgress';
 import { StepAddress } from '@/components/reviews/write/StepAddress';
 import { StepApartment } from '@/components/reviews/write/StepApartment';
 import { StepManagement } from '@/components/reviews/write/StepManagement';
@@ -45,8 +47,18 @@ import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 import { RiAlertLine } from '@oxy.so/bloom/icons';
 
-const TOTAL_STEPS = 8;
-const LAST_STEP = TOTAL_STEPS - 1;
+/** The steps, in order: each one's copy lives at `reviews.write.steps.<key>`. */
+const STEP_KEYS = [
+  'address',
+  'apartment',
+  'management',
+  'building',
+  'area',
+  'priceDates',
+  'texts',
+  'photos',
+] as const;
+const LAST_STEP = STEP_KEYS.length - 1;
 const MIN_TITLE_LENGTH = 5;
 const MIN_OPINION_LENGTH = 10;
 
@@ -76,6 +88,20 @@ export default function WriteReviewPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const wizardSteps = useMemo<WizardStep[]>(
+    () =>
+      STEP_KEYS.map((key) => ({
+        key,
+        title: t(`reviews.write.steps.${key}.title`),
+        description: t(`reviews.write.steps.${key}.subtitle`),
+      })),
+    [t],
+  );
+  const formatStepCount = useCallback(
+    (current: number, total: number) => t('reviews.write.stepCounter', { current, total }),
+    [t],
+  );
 
   const update = useCallback(
     <K extends keyof ReviewWizardData>(field: K, value: ReviewWizardData[K]) => {
@@ -324,19 +350,26 @@ export default function WriteReviewPage() {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
+          <WizardProgress
+            steps={wizardSteps}
+            current={step}
+            currentProgress={canProceed ? 1 : 0.5}
+            formatStepCount={formatStepCount}
+            headingLevel={2}
+            testID="review-wizard-progress"
+          />
           {renderStep()}
           {submitError ? <Admonition type="error">{submitError}</Admonition> : null}
         </ScrollView>
-        <WizardProgress
-          step={step}
-          totalSteps={TOTAL_STEPS}
-          onBack={goBack}
-          onNext={goNext}
-          onSubmit={handleSubmit}
-          isFirst={step === 0}
-          isLast={step === LAST_STEP}
+        <WizardFooter
+          onBack={step > 0 ? goBack : undefined}
+          backLabel={t('common.back')}
+          backDisabled={submitting}
+          onNext={step === LAST_STEP ? handleSubmit : goNext}
+          nextLabel={step === LAST_STEP ? t('reviews.write.submit') : t('common.next')}
           nextDisabled={!canProceed}
-          submitting={submitting}
+          loading={step === LAST_STEP && submitting}
+          testID="review-wizard-footer"
         />
       </SafeAreaView>
     </View>
@@ -346,6 +379,8 @@ export default function WriteReviewPage() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    // A viewport tall on web (document scroll), so the footer sits at the bottom.
+    ...(Platform.OS === 'web' ? { minHeight: '100dvh' as unknown as number } : null),
     backgroundColor: colors.background,
   },
   safeArea: {

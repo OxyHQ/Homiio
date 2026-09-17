@@ -2216,15 +2216,23 @@
     "deleteTitle": "Delete Image",
     "deleteMessage": "Are you sure you want to delete this image?",
     "deleteFailed": "Failed to delete image. Please try again.",
-    "choosePhotos": "Choose Photos",
     "takePhoto": "Take Photo",
-    "uploading": "Uploading images...",
     "imageCount": "{{current}} of {{max}} images uploaded",
-    "primary": "Primary",
-    "addMore": "Add More",
     "helperText": "Upload high-quality images of your property. Include photos of all rooms, exterior, and any special features.",
-    "helperPrimaryNote": " The first image will be set as the primary image.",
-    "setPrimary": "Definir como imagem principal"
+    "grid": {
+      "label": "Fotos",
+      "photo": "Foto {{position}} de {{total}}",
+      "cover": "Capa",
+      "moveEarlier": "Mover a foto {{position}} para antes",
+      "moveLater": "Mover a foto {{position}} para depois",
+      "remove": "Remover a foto {{position}}",
+      "retry": "Tentar enviar a foto {{position}} novamente",
+      "retryAction": "Tentar novamente",
+      "uploading": "Enviando a foto {{position}}",
+      "failed": "Falha no envio",
+      "add": "Adicionar fotos",
+      "moved": "Movida para a posição {{position}} de {{total}}"
+    }
   },
   "property": {
     "loading": "Loading property details...",
@@ -2232,7 +2240,7 @@
     "notFound": "Property not found",
     "bed": "Bed",
     "bath": "Bath",
-    "pricingReviewNeeded": "Pricing Review Needed",
+    "pricingReviewNeeded": "Revise este preço",
     "bedrooms": "Number of Bedrooms",
     "bathrooms": "Number of Bathrooms",
     "customNumber": {
@@ -2241,11 +2249,11 @@
       "confirm": "Confirm",
       "cancel": "Cancel"
     },
-    "suggestedRent": "Suggested: ${{amount}}/month",
-    "maxEthicalRent": "Max Ethical: ${{amount}}/month",
-    "ethicalPricingWarning": "Your price exceeds the ethical maximum. Consider lowering it to make housing more accessible.",
+    "suggestedRent": "Sugerido: {{amount}} por mês",
+    "maxEthicalRent": "Máximo ético: {{amount}} por mês",
+    "ethicalPricingWarning": "Seu preço está acima do máximo ético para um imóvel como este. Considere reduzi-lo para manter a moradia acessível.",
     "warningBullet": "• {{warning}}",
-    "ethicalPricing": "Ethical Pricing",
+    "ethicalPricing": "Preço ético",
     "amenities": {
       "title": "What this place offers",
       "showAll": "Show all {{count}} amenities"
@@ -2541,7 +2549,8 @@
       "label": "Fotos do anúncio",
       "photoOf": "Foto {{position}} de {{total}}",
       "namedPhotoOf": "{{name}}, foto {{position}} de {{total}}"
-    }
+    },
+    "ethicalPricingPublishWarning": "Você ainda pode publicar por esse preço, mas o anúncio não será marcado como preço justo."
   },
   "viewings": {
     "title": "Viewings",
@@ -3218,20 +3227,7 @@
       }
     },
     "write": {
-      "validationTitle": "Validation Error",
-      "streetRequired": "Please provide a street address.",
-      "cityRequired": "Please provide a city.",
-      "postalCodeRequired": "Please provide a postal code.",
-      "countryRequired": "Please provide a country.",
-      "opinionRequired": "Please provide your opinion about this address.",
-      "opinionMinLength": "Your opinion must be at least 10 characters long.",
-      "priceRequired": "Please provide a valid price.",
-      "datesRequired": "Please provide both start and end dates.",
-      "recommendationRequired": "Please indicate whether you would recommend this address.",
-      "ratingRequired": "Please provide a rating from 1 to 5.",
-      "submitSuccess": "Your review has been submitted successfully!",
       "submitFailed": "Failed to submit review",
-      "submitFailedRetry": "Failed to submit review. Please try again.",
       "loadAddressFailed": "Couldn't load address",
       "title": "Write review",
       "stepCounter": "Step {{current}} of {{total}}",
@@ -3335,7 +3331,6 @@
         "adviceToAgency": "What should the agency improve?",
         "adviceToLandlord": "What should the landlord know?",
         "price": "0.00",
-        "date": "YYYY-MM-DD",
         "reviewTitle": "Sum up your experience",
         "opinion": "Share your experience (10+ characters)",
         "pros": "Add something you liked",
@@ -3696,20 +3691,11 @@
   },
   "propertyCreate": {
     "location": {
-      "title": "Location",
-      "instructions": "📍 Address Details: Fill in the complete address information. Our system uses a hierarchical structure:\n• STREET level: Street name only\n• BUILDING level: Street + number + building details\n• UNIT level: Building + floor + unit/apartment details\nReviews and listings are organized by these levels for better organization.",
       "country": "Country or Region",
-      "countryPickerTitle": "Country or Region",
       "state": "State / Province / Region",
-      "statePickerTitle": "State / Province / Region",
-      "city": "City",
       "street": "Street",
       "number": "Number",
-      "postalCode": "Postal code",
       "floor": "Floor",
-      "unit": "Unit / Apartment",
-      "showFloor": "Show floor field",
-      "hideFloor": "Hide floor field",
       "selectCountry": "Select country or region",
       "streetPlaceholder": "Street name",
       "unitOptional": "Unit/Apartment Number (optional)",
@@ -3749,7 +3735,6 @@
     },
     "amenities": {
       "title": "Amenities",
-      "subtitle": "Select the amenities available at this property.",
       "rulesTitle": "Amenities & Rules",
       "houseRules": "House Rules",
       "petsAllowed": "Pets Allowed",
@@ -3759,6 +3744,81 @@
       "maxGuests": "Maximum Number of Guests",
       "yes": "Yes",
       "no": "No"
+    },
+    "title": {
+      "create": "Criar anúncio",
+      "edit": "Editar anúncio"
+    },
+    "loading": "Carregando anúncio…",
+    "loadError": "Não foi possível carregar este anúncio: {{error}}",
+    "submitError": "Não foi possível salvar o anúncio: {{error}}",
+    "saveDraft": "Salvar rascunho",
+    "draftSaved": "Rascunho salvo",
+    "draftSaveFailed": "Não foi possível salvar o rascunho",
+    "publish": "Publicar",
+    "saveChanges": "Salvar alterações",
+    "steps": {
+      "propertyType": {
+        "title": "Que tipo de imóvel é?"
+      },
+      "location": {
+        "title": "Onde fica?",
+        "description": "Marque no mapa e depois confira os campos do endereço."
+      },
+      "basicInfo": {
+        "title": "O básico"
+      },
+      "coliving": {
+        "title": "Recursos do coliving"
+      },
+      "media": {
+        "title": "Adicione fotos",
+        "description": "Adicione pelo menos cinco. A primeira é a capa; arraste ou use as setas para reordenar."
+      },
+      "description": {
+        "title": "Descreva seu imóvel"
+      },
+      "preview": {
+        "title": "Pronto para publicar",
+        "description": "Confira a prévia. Você pode editar o anúncio a qualquer momento depois de publicá-lo."
+      }
+    },
+    "basicInfo": {
+      "propertyType": "Tipo de imóvel",
+      "propertyTypeRequired": "Escolha um tipo de imóvel",
+      "area": "Área (m²)",
+      "yearBuilt": "Ano de construção (opcional)",
+      "description": "Descrição",
+      "descriptionPlaceholder": "O que faz o imóvel e o bairro valerem a pena?"
+    },
+    "preview": {
+      "title": "Prévia",
+      "description": "É assim que as pessoas verão seu anúncio.",
+      "card": "Cartão",
+      "page": "Página",
+      "toggle": "Visualizar como"
+    },
+    "quality": {
+      "title": "Qualidade do anúncio",
+      "needsWork": "Precisa melhorar",
+      "good": "Bom",
+      "excellent": "Excelente",
+      "done": "Concluído",
+      "todo": "Pendente",
+      "type": "Escolha o tipo de imóvel",
+      "location": "Marque a localização no mapa",
+      "pricing": "Defina um preço para cada modalidade",
+      "photos": "Adicione pelo menos {{count}} fotos",
+      "description": "Escreva pelo menos {{count}} caracteres sobre o imóvel",
+      "area": "Adicione a área",
+      "amenities": "Informe as comodidades"
+    },
+    "coliving": {
+      "sharedSpaces": "Espaços compartilhados",
+      "communityEvents": "Eventos da comunidade",
+      "whichSharedSpaces": "Quais espaços compartilhados?",
+      "otherFeatures": "Outros espaços compartilhados ou recursos",
+      "otherFeaturesPlaceholder": "ex.: terraço, sala de cinema, piscina"
     }
   },
   "searchBar": {

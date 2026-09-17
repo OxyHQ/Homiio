@@ -8,7 +8,6 @@ import { DatePicker } from '@oxy.so/bloom/date-picker';
 import { Field } from '@oxy.so/bloom/field';
 import { RiExpandDiagonalSLine, RiEyeLine, RiEyeOffLine } from '@oxy.so/bloom/icons';
 import { useTheme } from '@oxy.so/bloom/theme';
-import { ThemedText } from '@/components/ThemedText';
 import Map from '@/components/Map';
 import { COUNTRY_OPTIONS, STATE_OPTIONS, MAP_HEIGHT } from './constants';
 import { WizardSelect, WizardTextField } from './fields';
@@ -53,12 +52,6 @@ export function LocationStep({
 
   return (
     <View style={styles.step}>
-      <ThemedText type="subtitle">{t('propertyCreate.location.title')}</ThemedText>
-
-      <ThemedText style={styles.instructions}>
-        {t('propertyCreate.location.instructions')}
-      </ThemedText>
-
       <Field error={validationErrors.coordinates}>
         <View style={styles.mapContainer}>
           <View style={styles.mapWrapper}>

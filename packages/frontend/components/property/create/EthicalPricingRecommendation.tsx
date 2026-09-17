@@ -9,7 +9,7 @@ import {
 } from '@oxy.so/bloom/admonition';
 import { StatBar } from '@oxy.so/bloom/stat-bar';
 import { useTheme } from '@oxy.so/bloom/theme';
-import { PropertyType } from '@homiio/shared-types';
+import { PropertyType, formatMoney } from '@homiio/shared-types';
 import {
   validateEthicalPricing,
   type EthicalPricingCharacteristics,
@@ -69,10 +69,11 @@ export function EthicalPricingRecommendation({
     proximityToShopping: propertyData.location.proximityToShopping,
   };
 
-  // The warnings this renders quote money. They are quoted in the LISTING's own
-  // currency (the one the host is typing a rent in), not in dollars.
+  // Every amount this renders is quoted in the LISTING's own currency (the one
+  // the host is typing a rent in), never a hard-coded dollar sign.
+  const currency = propertyData.pricing?.currency || 'EUR';
   const recommendation = validateEthicalPricing(proposedRent, propertyCharacteristics, {
-    currency: propertyData.pricing?.currency || 'EUR',
+    currency,
     locale,
   });
   const withinRange = recommendation.isWithinEthicalRange;
@@ -88,10 +89,14 @@ export function EthicalPricingRecommendation({
           </AdmonitionText>
 
           <StatBar
-            label={t('property.suggestedRent', { amount: recommendation.suggestedRent })}
+            label={t('property.suggestedRent', {
+              amount: formatMoney(recommendation.suggestedRent, currency, locale),
+            })}
             value={Math.min(proposedRent, maxRent)}
             max={maxRent}
-            maxLabel={t('property.maxEthicalRent', { amount: recommendation.maxRent })}
+            maxLabel={t('property.maxEthicalRent', {
+              amount: formatMoney(recommendation.maxRent, currency, locale),
+            })}
             fillColor={withinRange ? theme.colors.success : theme.colors.warning}
           />
 

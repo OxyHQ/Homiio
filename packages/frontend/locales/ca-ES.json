@@ -1395,7 +1395,7 @@
     "notFound": "Property not found",
     "bed": "Bed",
     "bath": "Bath",
-    "pricingReviewNeeded": "Pricing Review Needed",
+    "pricingReviewNeeded": "Revisa aquest preu",
     "bedrooms": "Number of Bedrooms",
     "bathrooms": "Number of Bathrooms",
     "customNumber": {
@@ -1404,11 +1404,11 @@
       "confirm": "Confirm",
       "cancel": "Cancel"
     },
-    "suggestedRent": "Suggested: ${{amount}}/month",
-    "maxEthicalRent": "Max Ethical: ${{amount}}/month",
-    "ethicalPricingWarning": "Your price exceeds the ethical maximum. Consider lowering it to make housing more accessible.",
+    "suggestedRent": "Suggerit: {{amount}} al mes",
+    "maxEthicalRent": "Màxim ètic: {{amount}} al mes",
+    "ethicalPricingWarning": "El teu preu supera el màxim ètic per a un habitatge com aquest. Considera abaixar-lo perquè l'habitatge continuï sent accessible.",
     "warningBullet": "• {{warning}}",
-    "ethicalPricing": "Ethical Pricing",
+    "ethicalPricing": "Preu ètic",
     "toast": {
       "createSuccess": "Propietat creada correctament",
       "updateSuccess": "Propietat actualitzada correctament",
@@ -1568,7 +1568,8 @@
       "label": "Fotos de l'anunci",
       "photoOf": "Foto {{position}} de {{total}}",
       "namedPhotoOf": "{{name}}, foto {{position}} de {{total}}"
-    }
+    },
+    "ethicalPricingPublishWarning": "Pots publicar-lo a aquest preu, però l'anunci no es marcarà com a preu just."
   },
   "viewings": {
     "title": "Visites",
@@ -2603,15 +2604,23 @@
     "deleteTitle": "Eliminar imatge",
     "deleteMessage": "Segur que vols eliminar aquesta imatge?",
     "deleteFailed": "No s'ha pogut eliminar la imatge. Torna-ho a provar.",
-    "choosePhotos": "Choose Photos",
     "takePhoto": "Take Photo",
-    "uploading": "Uploading images...",
     "imageCount": "{{current}} of {{max}} images uploaded",
-    "primary": "Primary",
-    "addMore": "Add More",
     "helperText": "Upload high-quality images of your property. Include photos of all rooms, exterior, and any special features.",
-    "helperPrimaryNote": " The first image will be set as the primary image.",
-    "setPrimary": "Estableix com a imatge principal"
+    "grid": {
+      "label": "Fotos",
+      "photo": "Foto {{position}} de {{total}}",
+      "cover": "Portada",
+      "moveEarlier": "Mou la foto {{position}} abans",
+      "moveLater": "Mou la foto {{position}} després",
+      "remove": "Treu la foto {{position}}",
+      "retry": "Torna a provar de pujar la foto {{position}}",
+      "retryAction": "Torna-ho a provar",
+      "uploading": "Pujant la foto {{position}}",
+      "failed": "No s'ha pogut pujar",
+      "add": "Afegeix fotos",
+      "moved": "Moguda a la posició {{position}} de {{total}}"
+    }
   },
   "listing": {
     "exchange": {
@@ -3265,20 +3274,7 @@
       }
     },
     "write": {
-      "validationTitle": "Error de validació",
-      "streetRequired": "Introdueix un carrer.",
-      "cityRequired": "Introdueix una ciutat.",
-      "postalCodeRequired": "Introdueix un codi postal.",
-      "countryRequired": "Introdueix un país.",
-      "opinionRequired": "Comparteix la teva opinió sobre aquesta adreça.",
-      "opinionMinLength": "La teva opinió ha de tenir almenys 10 caràcters.",
-      "priceRequired": "Introdueix un preu vàlid.",
-      "datesRequired": "Introdueix les dates d'inici i fi.",
-      "recommendationRequired": "Indica si recomanaries aquesta adreça.",
-      "ratingRequired": "Assigna una valoració de l'1 al 5.",
-      "submitSuccess": "La teva ressenya s'ha enviat correctament!",
       "submitFailed": "No s'ha pogut enviar la ressenya",
-      "submitFailedRetry": "No s'ha pogut enviar la ressenya. Torna-ho a provar.",
       "loadAddressFailed": "Couldn't load address",
       "title": "Write review",
       "stepCounter": "Pas {{current}} de {{total}}",
@@ -3382,7 +3378,6 @@
         "adviceToAgency": "Què hauria de millorar l'agència?",
         "adviceToLandlord": "Què hauria de saber el propietari?",
         "price": "0,00",
-        "date": "AAAA-MM-DD",
         "reviewTitle": "Resumeix la teva experiència",
         "opinion": "Comparteix la teva experiència (més de 10 caràcters)",
         "pros": "Afegeix una cosa que t'agradés",
@@ -3690,20 +3685,11 @@
   },
   "propertyCreate": {
     "location": {
-      "title": "Location",
-      "instructions": "📍 Address Details: Fill in the complete address information. Our system uses a hierarchical structure:\n• STREET level: Street name only\n• BUILDING level: Street + number + building details\n• UNIT level: Building + floor + unit/apartment details\nReviews and listings are organized by these levels for better organization.",
       "country": "Country or Region",
-      "countryPickerTitle": "Country or Region",
       "state": "State / Province / Region",
-      "statePickerTitle": "State / Province / Region",
-      "city": "City",
       "street": "Street",
       "number": "Number",
-      "postalCode": "Postal code",
       "floor": "Floor",
-      "unit": "Unit / Apartment",
-      "showFloor": "Show floor field",
-      "hideFloor": "Hide floor field",
       "selectCountry": "Select country or region",
       "streetPlaceholder": "Street name",
       "unitOptional": "Unit/Apartment Number (optional)",
@@ -3743,7 +3729,6 @@
     },
     "amenities": {
       "title": "Amenities",
-      "subtitle": "Select the amenities available at this property.",
       "rulesTitle": "Serveis i normes",
       "houseRules": "House Rules",
       "petsAllowed": "Pets Allowed",
@@ -3753,6 +3738,81 @@
       "maxGuests": "Maximum Number of Guests",
       "yes": "Yes",
       "no": "No"
+    },
+    "title": {
+      "create": "Crea un anunci",
+      "edit": "Edita l'anunci"
+    },
+    "loading": "Carregant l'anunci…",
+    "loadError": "No s'ha pogut carregar aquest anunci: {{error}}",
+    "submitError": "No s'ha pogut desar l'anunci: {{error}}",
+    "saveDraft": "Desa l'esborrany",
+    "draftSaved": "Esborrany desat",
+    "draftSaveFailed": "No s'ha pogut desar l'esborrany",
+    "publish": "Publica",
+    "saveChanges": "Desa els canvis",
+    "steps": {
+      "propertyType": {
+        "title": "Quin tipus d'habitatge és?"
+      },
+      "location": {
+        "title": "On és?",
+        "description": "Marca-ho al mapa i revisa els camps de l'adreça."
+      },
+      "basicInfo": {
+        "title": "El bàsic"
+      },
+      "coliving": {
+        "title": "Característiques del coliving"
+      },
+      "media": {
+        "title": "Afegeix fotos",
+        "description": "Afegeix-ne almenys cinc. La primera és la portada; arrossega o fes servir les fletxes per reordenar."
+      },
+      "description": {
+        "title": "Descriu el teu habitatge"
+      },
+      "preview": {
+        "title": "A punt per publicar",
+        "description": "Revisa la previsualització. Pots editar l'anunci en qualsevol moment després de publicar-lo."
+      }
+    },
+    "basicInfo": {
+      "propertyType": "Tipus d'immoble",
+      "propertyTypeRequired": "Tria un tipus d'immoble",
+      "area": "Superfície (m²)",
+      "yearBuilt": "Any de construcció (opcional)",
+      "description": "Descripció",
+      "descriptionPlaceholder": "Què fa que l'habitatge i el barri valguin la pena?"
+    },
+    "preview": {
+      "title": "Previsualització",
+      "description": "Així veuran el teu anunci els altres.",
+      "card": "Targeta",
+      "page": "Pàgina",
+      "toggle": "Veure com a"
+    },
+    "quality": {
+      "title": "Qualitat de l'anunci",
+      "needsWork": "Cal millorar-lo",
+      "good": "Bé",
+      "excellent": "Excel·lent",
+      "done": "Fet",
+      "todo": "Pendent",
+      "type": "Tria el tipus d'immoble",
+      "location": "Marca la ubicació al mapa",
+      "pricing": "Posa preu a cada modalitat",
+      "photos": "Afegeix almenys {{count}} fotos",
+      "description": "Escriu almenys {{count}} caràcters sobre l'habitatge",
+      "area": "Afegeix la superfície",
+      "amenities": "Indica els serveis"
+    },
+    "coliving": {
+      "sharedSpaces": "Espais compartits",
+      "communityEvents": "Esdeveniments de la comunitat",
+      "whichSharedSpaces": "Quins espais compartits?",
+      "otherFeatures": "Altres espais compartits o característiques",
+      "otherFeaturesPlaceholder": "p. ex., terrat, sala de cinema, piscina"
     }
   },
   "booking": {

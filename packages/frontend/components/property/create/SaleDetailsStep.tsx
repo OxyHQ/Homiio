@@ -2,17 +2,18 @@ import React, { useCallback } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { PropertySale } from '@homiio/shared-types';
-import { Chip } from '@oxy.so/bloom/chip';
 import { Field } from '@oxy.so/bloom/field';
-import { SettingsListGroup } from '@oxy.so/bloom/settings-list';
-import { ThemedText } from '@/components/ThemedText';
+import { SegmentedFilter, SwitchFilterRow } from '@oxy.so/bloom/stay-filters';
 import { CHAIN_STATUS_OPTIONS, CURRENCY_OPTIONS } from './constants';
-import { WizardSwitchItem, WizardTextField } from './fields';
+import { WizardTextField } from './fields';
 import { createPropertyStyles as styles } from './styles';
 import type { PropertyStepProps } from './types';
 import { parseLocaleNumber } from '@/utils/number';
 
 type ChainStatus = NonNullable<PropertySale['chainStatus']>;
+
+const isChainStatus = (value: string): value is ChainStatus =>
+  CHAIN_STATUS_OPTIONS.some((option) => option.value === value);
 
 /**
  * "Sale Details" wizard step — only reachable when the listing is for sale.
@@ -40,24 +41,9 @@ export function SaleDetailsStep({
     [updateFormField],
   );
 
-  const handleChainStatus = useCallback(
-    (value: ChainStatus) => {
-      // Toggle off when re-tapping the active option.
-      updateFormField(
-        'offering',
-        'chainStatus',
-        offering.chainStatus === value ? undefined : value,
-      );
-    },
-    [offering.chainStatus, updateFormField],
-  );
 
   return (
     <View style={styles.step}>
-      <ThemedText type="subtitle">
-        {t('listing.sale.stepTitle')}
-      </ThemedText>
-
       <WizardTextField
         label={t('listing.sale.askingPrice')}
         value={offering.salePrice?.toString() ?? ''}
@@ -68,44 +54,34 @@ export function SaleDetailsStep({
       />
 
       <Field label={t('listing.sale.currency')}>
-        <View style={styles.optionRow}>
-          {CURRENCY_OPTIONS.map((option) => (
-            <Chip
-              key={option.value}
-              size="large"
-              selected={offering.saleCurrency === option.value}
-              variant={offering.saleCurrency === option.value ? 'solid' : 'outlined'}
-              onPress={() => updateFormField('offering', 'saleCurrency', option.value)}
-            >
-              {option.label}
-            </Chip>
-          ))}
-        </View>
+        {/* Unset until picked: the sale then uses the listing's currency. */}
+        <SegmentedFilter<string>
+          options={CURRENCY_OPTIONS.map((code) => ({ value: code, label: code }))}
+          value={offering.saleCurrency ?? ''}
+          onValueChange={(value) => updateFormField('offering', 'saleCurrency', value)}
+          accessibilityLabel={t('listing.sale.currency')}
+          testID="create-sale-currency"
+        />
       </Field>
 
       <Field label={t('listing.sale.chainStatus.label')}>
-        <View style={styles.optionRow}>
-          {CHAIN_STATUS_OPTIONS.map((option) => (
-            <Chip
-              key={option.value}
-              size="large"
-              selected={offering.chainStatus === option.value}
-              variant={offering.chainStatus === option.value ? 'solid' : 'outlined'}
-              onPress={() => handleChainStatus(option.value)}
-            >
-              {t(option.i18nKey)}
-            </Chip>
-          ))}
-        </View>
+        <SegmentedFilter<ChainStatus | ''>
+          options={CHAIN_STATUS_OPTIONS.map((option) => ({
+            value: option.value,
+            label: t(option.i18nKey),
+          }))}
+          value={offering.chainStatus && isChainStatus(offering.chainStatus) ? offering.chainStatus : ''}
+          onValueChange={(value) => updateFormField('offering', 'chainStatus', value || undefined)}
+          accessibilityLabel={t('listing.sale.chainStatus.label')}
+          testID="create-sale-chain"
+        />
       </Field>
 
-      <SettingsListGroup>
-        <WizardSwitchItem
-          title={t('listing.sale.priceReduced')}
-          value={offering.isPriceReduced}
-          onValueChange={(value) => updateFormField('offering', 'isPriceReduced', value)}
-        />
-      </SettingsListGroup>
+      <SwitchFilterRow
+        title={t('listing.sale.priceReduced')}
+        value={Boolean(offering.isPriceReduced)}
+        onValueChange={(value) => updateFormField('offering', 'isPriceReduced', value)}
+      />
     </View>
   );
 }

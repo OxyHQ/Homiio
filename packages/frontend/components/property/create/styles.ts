@@ -1,22 +1,32 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
 /**
  * Layout-only styles shared by the property creation wizard. Controls, labels,
- * hints and errors are Bloom (`Field`, `TextFieldInput`, `Chip`, `Switch`,
- * `CheckboxCard`, `RadioCard`…), so nothing here paints a control.
+ * hints and errors are Bloom (`Field`, `TextFieldInput`, `stay-filters` choices,
+ * `CheckboxCard`, `RadioGroup`…), so nothing here paints a control.
  */
 export const createPropertyStyles = StyleSheet.create({
+  /**
+   * At least a viewport tall on web, where the document scrolls: the scroll view
+   * grows into it, so a short step still has the wizard footer at the bottom.
+   */
   container: {
     flex: 1,
+    ...(Platform.OS === 'web' ? { minHeight: '100dvh' as unknown as number } : null),
   },
   scrollView: {
-    flex: 1,
+    flexGrow: 1,
   },
+  /** The step column: Bloom's housing publish template's 680 column, the progress 32 above the step. */
   scrollContent: {
+    width: '100%',
+    maxWidth: 680 + spacing.lg * 2,
+    alignSelf: 'center',
     padding: spacing.lg,
-    paddingBottom: 100,
+    paddingBottom: spacing['2xl'],
+    gap: 32,
   },
   /** Vertical rhythm of one step: title, then every field group. */
   step: {
@@ -33,6 +43,14 @@ export const createPropertyStyles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
+  },
+  /** A column of `SwitchFilterRow`s. */
+  switches: {
+    gap: spacing.lg,
+  },
+  /** A column of selection cards. */
+  cards: {
+    gap: spacing.md,
   },
   instructions: {
     fontSize: 14,
@@ -70,27 +88,6 @@ export const createPropertyStyles = StyleSheet.create({
   fullscreenMapTitle: {
     flex: 1,
     textAlign: 'center',
-  },
-  errorText: {
-    color: colors.danger,
-    fontSize: 12,
-  },
-  submitContainer: {
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  helperText: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    textAlign: 'center',
-  },
-  navigationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.xl,
-  },
-  navigationSpacer: {
-    flex: 1,
   },
   centeredState: {
     flex: 1,

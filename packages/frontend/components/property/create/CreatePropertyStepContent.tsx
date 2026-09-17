@@ -1,7 +1,5 @@
 import React, { type MutableRefObject } from 'react';
-import { View } from 'react-native';
 import type { MapApi, GeocodedAddress } from '@/components/Map';
-import { ThemedText } from '@/components/ThemedText';
 import type { CreatePropertyFormData } from '@/store/createPropertyFormStore';
 import type { StepValidationErrors } from '@/utils/propertyFormSchema';
 import { BasicInfoStep } from './BasicInfoStep';
@@ -16,6 +14,14 @@ import { ColivingFeaturesStep } from './ColivingFeaturesStep';
 import { MediaStep } from './MediaStep';
 import { PreviewStep } from './PreviewStep';
 import {
+  STEP_AMENITIES,
+  STEP_BASIC_INFO,
+  STEP_COLIVING,
+  STEP_DESCRIPTION,
+  STEP_LOCATION,
+  STEP_MEDIA,
+  STEP_PREVIEW,
+  STEP_PROPERTY_TYPE,
   STEP_EXCHANGE_SETTINGS,
   STEP_LONG_TERM_PRICING,
   STEP_NIGHTLY_PRICING,
@@ -30,9 +36,8 @@ interface CreatePropertyStepContentProps {
   validationErrors: StepValidationErrors;
   fieldsToShow: readonly string[];
   isLoading: boolean;
-  isEditMode: boolean;
-  isPropertyLoading: boolean;
   submitError: string | null;
+  railShowsPreview: boolean;
   mapRef: MutableRefObject<MapApi | null>;
   updateFormField: UpdateFormField;
   setFormData: SetFormData;
@@ -42,7 +47,6 @@ interface CreatePropertyStepContentProps {
   onFloorChange: (text: string) => void;
   onShowFloorToggle: (show: boolean) => void;
   onAmenityToggle: (amenityId: string) => void;
-  onSubmit: () => void;
 }
 
 /**
@@ -55,9 +59,8 @@ export function CreatePropertyStepContent({
   validationErrors,
   fieldsToShow,
   isLoading,
-  isEditMode,
-  isPropertyLoading,
   submitError,
+  railShowsPreview,
   mapRef,
   updateFormField,
   setFormData,
@@ -67,7 +70,6 @@ export function CreatePropertyStepContent({
   onFloorChange,
   onShowFloorToggle,
   onAmenityToggle,
-  onSubmit,
 }: CreatePropertyStepContentProps) {
   const sharedProps = {
     formData,
@@ -78,9 +80,13 @@ export function CreatePropertyStepContent({
   };
 
   switch (stepName) {
-    case 'Basic Info':
+    // One component for the three steps about the home itself: each shows
+    // only its own fields (`fieldsToShow`).
+    case STEP_PROPERTY_TYPE:
+    case STEP_BASIC_INFO:
+    case STEP_DESCRIPTION:
       return <BasicInfoStep {...sharedProps} onPropertyTypeChange={onPropertyTypeChange} />;
-    case 'Location':
+    case STEP_LOCATION:
       return (
         <LocationStep
           {...sharedProps}
@@ -101,29 +107,17 @@ export function CreatePropertyStepContent({
       return <SaleDetailsStep {...sharedProps} />;
     case STEP_EXCHANGE_SETTINGS:
       return <ExchangeSettingsStep {...sharedProps} />;
-    case 'Amenities':
+    case STEP_AMENITIES:
       return <AmenitiesStep {...sharedProps} onAmenityToggle={onAmenityToggle} />;
-    case 'Coliving Features':
+    case STEP_COLIVING:
       return <ColivingFeaturesStep {...sharedProps} />;
-    case 'Media':
+    case STEP_MEDIA:
       return (
         <MediaStep formData={formData} updateFormField={updateFormField} isLoading={isLoading} />
       );
-    case 'Preview':
-      return (
-        <PreviewStep
-          isLoading={isLoading}
-          isEditMode={isEditMode}
-          isPropertyLoading={isPropertyLoading}
-          submitError={submitError}
-          onSubmit={onSubmit}
-        />
-      );
+    case STEP_PREVIEW:
+      return <PreviewStep submitError={submitError} railShowsPreview={railShowsPreview} />;
     default:
-      return (
-        <View>
-          <ThemedText>Unknown step: {stepName}</ThemedText>
-        </View>
-      );
+      return null;
   }
 }

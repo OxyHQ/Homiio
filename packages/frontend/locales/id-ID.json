@@ -2216,15 +2216,23 @@
     "deleteTitle": "Delete Image",
     "deleteMessage": "Are you sure you want to delete this image?",
     "deleteFailed": "Failed to delete image. Please try again.",
-    "choosePhotos": "Choose Photos",
     "takePhoto": "Take Photo",
-    "uploading": "Uploading images...",
     "imageCount": "{{current}} of {{max}} images uploaded",
-    "primary": "Primary",
-    "addMore": "Add More",
     "helperText": "Upload high-quality images of your property. Include photos of all rooms, exterior, and any special features.",
-    "helperPrimaryNote": " The first image will be set as the primary image.",
-    "setPrimary": "Jadikan gambar utama"
+    "grid": {
+      "label": "Foto",
+      "photo": "Foto {{position}} dari {{total}}",
+      "cover": "Sampul",
+      "moveEarlier": "Pindahkan foto {{position}} ke depan",
+      "moveLater": "Pindahkan foto {{position}} ke belakang",
+      "remove": "Hapus foto {{position}}",
+      "retry": "Coba unggah ulang foto {{position}}",
+      "retryAction": "Coba lagi",
+      "uploading": "Mengunggah foto {{position}}",
+      "failed": "Unggahan gagal",
+      "add": "Tambah foto",
+      "moved": "Dipindahkan ke posisi {{position}} dari {{total}}"
+    }
   },
   "property": {
     "loading": "Loading property details...",
@@ -2232,7 +2240,7 @@
     "notFound": "Property not found",
     "bed": "Bed",
     "bath": "Bath",
-    "pricingReviewNeeded": "Pricing Review Needed",
+    "pricingReviewNeeded": "Tinjau harga ini",
     "bedrooms": "Number of Bedrooms",
     "bathrooms": "Number of Bathrooms",
     "customNumber": {
@@ -2241,11 +2249,11 @@
       "confirm": "Confirm",
       "cancel": "Cancel"
     },
-    "suggestedRent": "Suggested: ${{amount}}/month",
-    "maxEthicalRent": "Max Ethical: ${{amount}}/month",
-    "ethicalPricingWarning": "Your price exceeds the ethical maximum. Consider lowering it to make housing more accessible.",
+    "suggestedRent": "Disarankan: {{amount}} per bulan",
+    "maxEthicalRent": "Batas etis: {{amount}} per bulan",
+    "ethicalPricingWarning": "Harga Anda di atas batas etis untuk hunian seperti ini. Pertimbangkan untuk menurunkannya agar hunian tetap terjangkau.",
     "warningBullet": "• {{warning}}",
-    "ethicalPricing": "Ethical Pricing",
+    "ethicalPricing": "Harga etis",
     "amenities": {
       "title": "What this place offers",
       "showAll": "Show all {{count}} amenities"
@@ -2541,7 +2549,8 @@
       "label": "Foto iklan",
       "photoOf": "Foto {{position}} dari {{total}}",
       "namedPhotoOf": "{{name}}, foto {{position}} dari {{total}}"
-    }
+    },
+    "ethicalPricingPublishWarning": "Anda tetap bisa menerbitkan dengan harga ini, tetapi iklan tidak akan ditandai sebagai harga wajar."
   },
   "viewings": {
     "title": "Viewings",
@@ -3218,20 +3227,7 @@
       }
     },
     "write": {
-      "validationTitle": "Validation Error",
-      "streetRequired": "Please provide a street address.",
-      "cityRequired": "Please provide a city.",
-      "postalCodeRequired": "Please provide a postal code.",
-      "countryRequired": "Please provide a country.",
-      "opinionRequired": "Please provide your opinion about this address.",
-      "opinionMinLength": "Your opinion must be at least 10 characters long.",
-      "priceRequired": "Please provide a valid price.",
-      "datesRequired": "Please provide both start and end dates.",
-      "recommendationRequired": "Please indicate whether you would recommend this address.",
-      "ratingRequired": "Please provide a rating from 1 to 5.",
-      "submitSuccess": "Your review has been submitted successfully!",
       "submitFailed": "Failed to submit review",
-      "submitFailedRetry": "Failed to submit review. Please try again.",
       "loadAddressFailed": "Couldn't load address",
       "title": "Write review",
       "stepCounter": "Step {{current}} of {{total}}",
@@ -3335,7 +3331,6 @@
         "adviceToAgency": "What should the agency improve?",
         "adviceToLandlord": "What should the landlord know?",
         "price": "0.00",
-        "date": "YYYY-MM-DD",
         "reviewTitle": "Sum up your experience",
         "opinion": "Share your experience (10+ characters)",
         "pros": "Add something you liked",
@@ -3696,20 +3691,11 @@
   },
   "propertyCreate": {
     "location": {
-      "title": "Location",
-      "instructions": "📍 Address Details: Fill in the complete address information. Our system uses a hierarchical structure:\n• STREET level: Street name only\n• BUILDING level: Street + number + building details\n• UNIT level: Building + floor + unit/apartment details\nReviews and listings are organized by these levels for better organization.",
       "country": "Country or Region",
-      "countryPickerTitle": "Country or Region",
       "state": "State / Province / Region",
-      "statePickerTitle": "State / Province / Region",
-      "city": "City",
       "street": "Street",
       "number": "Number",
-      "postalCode": "Postal code",
       "floor": "Floor",
-      "unit": "Unit / Apartment",
-      "showFloor": "Show floor field",
-      "hideFloor": "Hide floor field",
       "selectCountry": "Select country or region",
       "streetPlaceholder": "Street name",
       "unitOptional": "Unit/Apartment Number (optional)",
@@ -3749,7 +3735,6 @@
     },
     "amenities": {
       "title": "Amenities",
-      "subtitle": "Select the amenities available at this property.",
       "rulesTitle": "Amenities & Rules",
       "houseRules": "House Rules",
       "petsAllowed": "Pets Allowed",
@@ -3759,6 +3744,81 @@
       "maxGuests": "Maximum Number of Guests",
       "yes": "Yes",
       "no": "No"
+    },
+    "title": {
+      "create": "Buat iklan",
+      "edit": "Edit iklan"
+    },
+    "loading": "Memuat iklan…",
+    "loadError": "Tidak dapat memuat iklan ini: {{error}}",
+    "submitError": "Tidak dapat menyimpan iklan: {{error}}",
+    "saveDraft": "Simpan draf",
+    "draftSaved": "Draf tersimpan",
+    "draftSaveFailed": "Tidak dapat menyimpan draf",
+    "publish": "Terbitkan",
+    "saveChanges": "Simpan perubahan",
+    "steps": {
+      "propertyType": {
+        "title": "Jenis hunian apa ini?"
+      },
+      "location": {
+        "title": "Di mana lokasinya?",
+        "description": "Tandai di peta, lalu periksa kolom alamat."
+      },
+      "basicInfo": {
+        "title": "Informasi dasar"
+      },
+      "coliving": {
+        "title": "Fitur coliving"
+      },
+      "media": {
+        "title": "Tambahkan foto",
+        "description": "Tambahkan setidaknya lima. Foto pertama adalah sampul; seret atau gunakan panah untuk mengubah urutan."
+      },
+      "description": {
+        "title": "Jelaskan hunian Anda"
+      },
+      "preview": {
+        "title": "Siap diterbitkan",
+        "description": "Periksa pratinjau. Anda dapat mengedit iklan kapan saja setelah diterbitkan."
+      }
+    },
+    "basicInfo": {
+      "propertyType": "Jenis properti",
+      "propertyTypeRequired": "Pilih jenis properti",
+      "area": "Luas lantai (m²)",
+      "yearBuilt": "Tahun dibangun (opsional)",
+      "description": "Deskripsi",
+      "descriptionPlaceholder": "Apa yang membuat hunian dan lingkungannya menarik?"
+    },
+    "preview": {
+      "title": "Pratinjau",
+      "description": "Beginilah orang lain akan melihat iklan Anda.",
+      "card": "Kartu",
+      "page": "Halaman",
+      "toggle": "Pratinjau sebagai"
+    },
+    "quality": {
+      "title": "Kualitas iklan",
+      "needsWork": "Perlu diperbaiki",
+      "good": "Baik",
+      "excellent": "Sangat baik",
+      "done": "Selesai",
+      "todo": "Belum",
+      "type": "Pilih jenis properti",
+      "location": "Tandai lokasi di peta",
+      "pricing": "Tetapkan harga untuk setiap penawaran",
+      "photos": "Tambahkan setidaknya {{count}} foto",
+      "description": "Tulis setidaknya {{count}} karakter tentang hunian",
+      "area": "Tambahkan luas lantai",
+      "amenities": "Cantumkan fasilitas"
+    },
+    "coliving": {
+      "sharedSpaces": "Ruang bersama",
+      "communityEvents": "Acara komunitas",
+      "whichSharedSpaces": "Ruang bersama apa saja?",
+      "otherFeatures": "Ruang bersama atau fitur lain",
+      "otherFeaturesPlaceholder": "mis. atap, ruang bioskop, kolam renang"
     }
   },
   "searchBar": {

@@ -15,7 +15,6 @@ import {
 } from '@homiio/shared-types';
 
 import { EnumChipSelector } from '@/components/reviews/EnumChipSelector';
-import { StepHeader } from '@/components/reviews/write/StepHeader';
 import { YesNoSelector } from '@/components/reviews/write/YesNoSelector';
 import type { StepProps } from '@/components/reviews/write/types';
 import { spacing } from '@/constants/styles';
@@ -25,11 +24,6 @@ export const StepBuilding: React.FC<StepProps> = ({ data, update }) => {
 
   return (
     <View style={styles.container}>
-      <StepHeader
-        title={t('reviews.write.steps.building.title')}
-        subtitle={t('reviews.write.steps.building.subtitle')}
-      />
-
       <EnumChipSelector
         label={t('reviews.write.fields.staircaseNeighbors')}
         labelPrefix="reviews.enums.staircaseNeighbors"

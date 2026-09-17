@@ -29,7 +29,6 @@ import {
 } from '@homiio/shared-types';
 
 import { EnumChipSelector } from '@/components/reviews/EnumChipSelector';
-import { StepHeader } from '@/components/reviews/write/StepHeader';
 import type { StepProps } from '@/components/reviews/write/types';
 import { reviewService } from '@/services/reviewService';
 import { spacing } from '@/constants/styles';
@@ -70,11 +69,6 @@ export const StepManagement: React.FC<StepProps> = ({ data, update }) => {
 
   return (
     <View style={styles.container}>
-      <StepHeader
-        title={t('reviews.write.steps.management.title')}
-        subtitle={t('reviews.write.steps.management.subtitle')}
-      />
-
       <View>
         <Field label={t('reviews.write.fields.agencyName')}>
           <TextFieldInput
