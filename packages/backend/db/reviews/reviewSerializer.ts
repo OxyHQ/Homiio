@@ -174,6 +174,8 @@ export function serializeReview(hydrated: HydratedReview): Record<string, unknow
     helpfulCount: hydrated.helpfulCount,
     viewerHasVotedHelpful: hydrated.viewerHasVotedHelpful,
     agency: hydrated.agency ?? undefined,
-    populatedAddress: serializeAddressRow(hydrated.address),
+    // `exact`, unchanged: a review's own publication rule (building by default,
+    // ADR 0003 §5.1) is F2/#365's work and is not decided by a listing's ceiling.
+    populatedAddress: serializeAddressRow(hydrated.address, 'exact'),
   });
 }

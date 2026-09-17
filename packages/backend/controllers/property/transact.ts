@@ -74,7 +74,7 @@ export async function markPropertyTransacted(
         ? existing
         : ((await updateProperty(propertyId, { status: nextStatus }, { ownedBy: oxyUserId })) ??
           existing);
-    const property = serializeProperty(hydrated);
+    const property = serializeProperty(hydrated, 'owner');
 
     // Idempotent: creates at most one commission for this property, ever.
     const commission = await onPropertyTransacted({

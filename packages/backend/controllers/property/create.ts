@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 
 import { applyOfferingRulesForCreate, OfferingValidationError, type OfferingBearingPayload } from './offeringRules';
-import { CREATABLE_PROPERTY_FIELDS } from './editableFields';
+import { CREATABLE_PROPERTY_FIELDS, invalidAddressPublishedPrecision } from './editableFields';
 import { pickFields } from '../../utils/pickFields';
 import { getDb } from '../../db/postgres';
 import { partners } from '../../db/schema';
@@ -87,6 +87,8 @@ export async function createProperty(req: ControllerRequest, res: ControllerResp
 
     const propertyData = pickFields<OfferingBearingPayload>(req.body, CREATABLE_PROPERTY_FIELDS);
     propertyData.oxyUserId = oxyUserId;
+    const precisionError = invalidAddressPublishedPrecision(propertyData);
+    if (precisionError) return next(precisionError);
 
     // Resolve an optional partner referral code into an attribution: a valid,
     // active partner stamps `sourcedByPartner` + `sourcedByReferralCode` on the
@@ -170,7 +172,10 @@ export async function createProperty(req: ControllerRequest, res: ControllerResp
     // so a listing created here is visible to `GET /properties` in the next
     // request, and the 201 body is byte-identical to what a later fetch returns.
     const created = await insertProperty(propertyData);
-    const savedProperty = serializeProperty(created);
+    // Two bodies: the 201 goes back to the owner who just wrote it, while the
+    // Telegram group post below is a PUBLICATION and gets what anybody gets.
+    const savedProperty = serializeProperty(created, 'owner');
+    const publishedProperty = serializeProperty(created, 'public');
     const propertyId = created.property.id;
 
     // The watch matcher's fact (#356). Best effort inside the producer: the
@@ -184,7 +189,7 @@ export async function createProperty(req: ControllerRequest, res: ControllerResp
     } else {
       logger.warn('Created property without oxyUserId', { propertyId });
     }
-    telegramService.sendPropertyNotification(savedProperty).catch(error => {
+    telegramService.sendPropertyNotification(publishedProperty).catch(error => {
       logger.error('Failed to send Telegram notification for new property', {
         propertyId,
         error: getErrorMessage(error),

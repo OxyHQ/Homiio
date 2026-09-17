@@ -113,7 +113,9 @@ export async function getAreaInsights(
     if (!hydrated) {
       return next(new AppError('Property not found', 404, 'NOT_FOUND'));
     }
-    const property = serializeProperty(hydrated) as ComparableProperty;
+    // 'system': the target is read for its price and point, never echoed; the
+    // comparables that DO reach the wire are serialized 'public' by fetchComparables.
+    const property = serializeProperty(hydrated, 'system') as ComparableProperty;
 
     const targetResult = buildTargetContext(property);
     if ('reason' in targetResult) {

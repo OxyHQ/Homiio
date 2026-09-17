@@ -72,7 +72,7 @@ export async function getPropertiesByIds(req: ControllerRequest, res: Controller
     const hydrated = await findProperties({
       where: allOf([idIn(list), notDeleted(), notModerationRestricted(), statusVisibleToNonOwner()]),
     });
-    return res.json(successResponse(hydrated.map(serializeProperty), 'Properties fetched by IDs'));
+    return res.json(successResponse(hydrated.map((listing) => serializeProperty(listing, 'public')), 'Properties fetched by IDs'));
   } catch (error) { next(error); }
 }
 
@@ -99,6 +99,6 @@ export async function getPropertiesByOwner(req: ControllerRequest, res: Controll
       findProperties({ where, orderBy: propertyOrderBy(NEWEST_FIRST), limit, offset: skip }),
       countProperties(where),
     ]);
-    res.json(paginationResponse(hydrated.map(serializeProperty), page, limit, total, "Owner's properties retrieved successfully"));
+    res.json(paginationResponse(hydrated.map((listing) => serializeProperty(listing, 'public')), page, limit, total, "Owner's properties retrieved successfully"));
   } catch (error) { next(error); }
 }

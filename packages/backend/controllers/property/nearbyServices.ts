@@ -74,7 +74,7 @@ export async function getPropertyNearbyServices(
       return next(new AppError('Property not found', 404, 'NOT_FOUND'));
     }
 
-    const coordinates = resolveCoordinates(serializeProperty(hydrated));
+    const coordinates = resolveCoordinates(serializeProperty(hydrated, 'system'));
     if (!coordinates) {
       // No usable coordinates — return a graceful degraded snapshot so the
       // frontend can simply hide the section rather than handle an error.

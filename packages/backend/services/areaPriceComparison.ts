@@ -501,7 +501,7 @@ export async function fetchComparables(
     limit: COMPARABLES_LIMIT,
     distanceFrom: origin,
   });
-  return hydrated.map(serializeProperty);
+  return hydrated.map((listing) => serializeProperty(listing, 'public'));
 }
 
 export async function computeMarketVerdictForProperty(

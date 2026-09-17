@@ -120,7 +120,7 @@ async function serveProximityFeed(
     ]);
 
     return res.json(paginationResponse(
-      hydrated.map(serializeProperty),
+      hydrated.map((listing) => serializeProperty(listing, 'public')),
       page,
       limit,
       total,

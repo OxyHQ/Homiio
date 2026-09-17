@@ -16,7 +16,7 @@ import {
   ExchangeMode,
   DeepPartial
 } from './common';
-import { Address, AddressInput, PropertyAddress } from './address';
+import { Address, AddressInput, ListingAddressPrecision, PropertyAddress } from './address';
 import { PropertyImageRef } from './media';
 
 /**
@@ -193,8 +193,14 @@ export interface Property {
    * (`cityName` / `regionName` / `countryName` / `neighborhoodName` /
    * `location`). Read the resolved NAMES for display — the geo `*Id` fields are
    * ids, not human strings.
+   *
+   * Served at {@link Property.addressPublishedPrecision} to everybody but the
+   * owner: below `exact` the floor, unit and subunit keys are ABSENT (and the
+   * top-level `floor` with them), never `null`.
    */
   address: PropertyAddress;
+  /** The advertiser's publication ceiling for `address` and `floor`. */
+  addressPublishedPrecision?: ListingAddressPrecision;
   type: PropertyType;
   housingType?: HousingType;
   layoutType?: LayoutType;
@@ -331,6 +337,11 @@ export interface CreatePropertyData {
    */
   images?: string[] | PropertyImage[] | PropertyImageRef[];
   location?: GeoJSONPoint;
+  /**
+   * How precisely the address and floor are published to non-owners. The
+   * server stores `building` when this is omitted on create.
+   */
+  addressPublishedPrecision?: ListingAddressPrecision;
   // Additional comprehensive details for ethical pricing
   floor?: number;
   hasElevator?: boolean;

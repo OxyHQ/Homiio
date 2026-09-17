@@ -160,7 +160,7 @@ async function buildSection(
     source: rule.source,
     location: query.location,
     generatedAt: query.generatedAt,
-    items: rows.map((row) => serializeProperty(row)),
+    items: rows.map((row) => serializeProperty(row, 'public')),
   };
 }
 

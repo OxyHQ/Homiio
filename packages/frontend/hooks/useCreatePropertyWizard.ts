@@ -108,6 +108,10 @@ export function buildPropertyPayload(formData: CreatePropertyFormData): Property
       po_box: location.po_box,
       reference: location.reference,
     },
+    // The Location step's floor-and-door toggle. `building` withholds the floor
+    // and the unit from everybody but the owner; it is also what the server
+    // stores when nothing is sent, so an untouched toggle publishes neither.
+    addressPublishedPrecision: location.showFloor ? 'exact' : 'building',
     type: basicInfo.propertyType as PropertyType,
     description: basicInfo.description,
     bedrooms: toNumber(basicInfo.bedrooms, (v) => parseInt(v, 10)),

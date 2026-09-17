@@ -72,6 +72,19 @@ describe('resolveStepFlow', () => {
 });
 
 describe('draftPreviewData', () => {
+  it('draws the floor as a fact only when the host published it', () => {
+    const form = createDefaultFormData();
+    form.basicInfo.propertyType = 'apartment';
+    form.location = { ...form.location, floor: 7, unit: '7-1', showFloor: false };
+    expect(draftPreviewData(form, t, formatting).dates ?? '').not.toContain('property.sections.floor');
+
+    form.location.showFloor = true;
+    const published = draftPreviewData(form, t, formatting);
+    expect(published.dates).toContain('property.sections.floor 7');
+    // Public floor or not, the card never draws the door.
+    expect(JSON.stringify(published)).not.toContain('7-1');
+  });
+
   it('draws the city line, never the number, floor or unit', () => {
     const form = createDefaultFormData();
     form.basicInfo.propertyType = 'apartment';

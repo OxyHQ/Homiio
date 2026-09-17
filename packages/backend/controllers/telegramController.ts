@@ -156,7 +156,7 @@ class TelegramController {
       // The serialized listing nests its address and carries the resolved geo
       // NAMES on it, which is what the notifier reads — the `.populate()` this
       // replaces existed only to produce that shape.
-      const property = serializeProperty(hydrated);
+      const property = serializeProperty(hydrated, 'public');
 
       const geo = await resolveAddressDisplay(property.address as AddressGeoLike);
       const success = await telegramService.sendPropertyNotification(property);
@@ -185,7 +185,7 @@ class TelegramController {
       if (propertyIds && propertyIds.length > 0) {
         // Send notifications for specific properties
         const ids = (propertyIds as unknown[]).map(String);
-        notifiable = (await findProperties({ where: idIn(ids) })).map(serializeProperty);
+        notifiable = (await findProperties({ where: idIn(ids) })).map((listing) => serializeProperty(listing, 'public'));
       } else if (filters) {
         const conditions: (SQL | undefined)[] = [];
 
@@ -212,7 +212,7 @@ class TelegramController {
 
         notifiable = (
           await findProperties({ where: allOf(conditions), limit: BULK_NOTIFICATION_LIMIT })
-        ).map(serializeProperty);
+        ).map((listing) => serializeProperty(listing, 'public'));
       } else {
         return next(new AppError('Either propertyIds or filters must be provided', 400, 'MISSING_PARAMETERS'));
       }
@@ -328,7 +328,7 @@ class TelegramController {
           orderBy: [NEWEST_FIRST],
           limit: limitNum,
         })
-      ).map(serializeProperty);
+      ).map((listing) => serializeProperty(listing, 'public'));
 
       if (recentProperties.length === 0) {
         return res.json(successResponse(

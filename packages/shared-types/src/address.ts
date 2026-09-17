@@ -98,6 +98,41 @@ export interface AddressGeoNames {
 }
 
 /**
+ * The most precise address a LISTING publishes to anybody but its owner — the
+ * advertiser's `published_precision` ceiling from
+ * `docs/adr/0003-privacy-verification-publication.md` §3.2.
+ *
+ * The subset of that ADR's §3.1 ladder a listing may choose, in DECREASING
+ * precision order:
+ *
+ *  - `exact`     the dwelling as stored: floor, unit/door and subunit included.
+ *  - `building`  street and number; no floor, unit, subunit or free-form
+ *                address text. The default, and what every listing written
+ *                before the choice existed publishes.
+ *  - `street`    the street, no number.
+ *
+ * It is a CEILING, not the value: the owner is always served `exact`, and the
+ * reduction happens when a response is built, never when the row is written.
+ */
+export const LISTING_ADDRESS_PRECISIONS = ['exact', 'building', 'street'] as const;
+export type ListingAddressPrecision = (typeof LISTING_ADDRESS_PRECISIONS)[number];
+
+/** What a listing publishes when nobody chose: no floor and no unit. */
+export const DEFAULT_LISTING_ADDRESS_PRECISION: ListingAddressPrecision = 'building';
+
+export function isListingAddressPrecision(value: unknown): value is ListingAddressPrecision {
+  return (LISTING_ADDRESS_PRECISIONS as readonly unknown[]).includes(value);
+}
+
+/** The less precise of two ceilings — a comparison on the ladder's order, never on the strings. */
+export function coarserListingAddressPrecision(
+  a: ListingAddressPrecision,
+  b: ListingAddressPrecision,
+): ListingAddressPrecision {
+  return LISTING_ADDRESS_PRECISIONS.indexOf(a) >= LISTING_ADDRESS_PRECISIONS.indexOf(b) ? a : b;
+}
+
+/**
  * The `address` shape as it appears on a SERIALIZED Property (the API renames
  * the populated `addressId` to `address`). It carries the building-level fields
  * and relational geo ids of an {@link Address}, plus the server-resolved geo

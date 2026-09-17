@@ -40,7 +40,7 @@ import { ownedBy, statusIsNot } from '../../db/properties/propertyFilters';
 import { getDb } from '../../db/postgres';
 import { trackPropertyView } from '../../db/saved/recentlyViewedRepository';
 import { incrementPropertyViews } from '../../db/properties/propertyWrites';
-import { serializeProperty } from '../../db/properties/propertySerializer';
+import { propertyAudienceFor, serializeProperty } from '../../db/properties/propertySerializer';
 import { getErrorName } from '../../utils/errors';
 import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
 import { getQueryInteger } from '../queryParams';
@@ -79,7 +79,15 @@ export async function getPropertyById(req: ControllerRequest, res: ControllerRes
         logger.warn('Failed to update recently viewed property', { propertyId, error });
       });
     }
-    res.json(successResponse(serializeProperty(hydrated), 'Property retrieved successfully'));
+    // The owner reads their exact floor and unit; everybody else reads the
+    // listing's published precision. `req.user` is the session the optional
+    // Oxy auth resolved — the same fact the deleted/restricted branch above
+    // already decides visibility on — never an id the caller supplied.
+    const audience = propertyAudienceFor(hydrated, typeof oxyUserId === 'string' ? oxyUserId : undefined);
+    // One URL now answers two bodies, so the owner's must never be stored by
+    // anything in front of the API and replayed to somebody else.
+    if (audience === 'owner') res.set('Cache-Control', 'private, no-store');
+    res.json(successResponse(serializeProperty(hydrated, audience), 'Property retrieved successfully'));
   } catch (error) {
     if (getErrorName(error) === 'CastError') return next(new AppError('Invalid property ID', 400, 'INVALID_ID'));
     next(error);
@@ -106,6 +114,6 @@ export async function getMyProperties(req: ControllerRequest, res: ControllerRes
       findProperties({ where, orderBy: [NEWEST_FIRST], limit, offset: skip }),
       countProperties(where),
     ]);
-    res.json(paginationResponse(hydrated.map(serializeProperty), page, limit, total, 'Your properties retrieved successfully'));
+    res.json(paginationResponse(hydrated.map((listing) => serializeProperty(listing, 'owner')), page, limit, total, 'Your properties retrieved successfully'));
   } catch (error) { next(error); }
 }

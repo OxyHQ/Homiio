@@ -158,7 +158,9 @@ export function usePropertyCreateForm(id: string | undefined) {
     setFormData('location', {
       address: property.address?.street || '',
       floor: property.floor,
-      showFloor: Boolean(property.floor),
+      // The stored publication choice, not whether a floor exists: a listing
+      // with a floor and no choice publishes `building`, which is private.
+      showFloor: property.addressPublishedPrecision === 'exact',
       // Geo is relational: seed the form's resolution inputs from the address's
       // resolved display NAMES (the geo `*Id` fields are ids, not strings).
       neighborhood: property.address?.neighborhoodName || '',

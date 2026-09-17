@@ -69,7 +69,11 @@
  */
 
 import { findPropertyById } from '../../../db/properties/propertyReads';
-import type { HydratedProperty, PropertyRow } from '../../../db/properties/propertySerializer';
+import {
+  publishedAddressPrecision,
+  type HydratedProperty,
+  type PropertyRow,
+} from '../../../db/properties/propertySerializer';
 import type { AddressWithGeoNames } from '../../../db/addresses/addressSerializer';
 import { generatePropertyTitle } from '../../../utils/propertyTitleGenerator';
 import config from '../../../config';
@@ -130,7 +134,8 @@ function listingPrice(property: PropertyRow): { price: number; currency: string 
  * The address as the LISTING publishes it.
  *
  * The building number is included only when the advertiser chose to show it
- * (`showAddressNumber`). That flag is the whole point of the resource for a
+ * (`showAddressNumber`, or an `addressPublishedPrecision` of `street`) — the
+ * same `publishedAddressPrecision` every public API response is built at. That flag is the whole point of the resource for a
  * privacy allegation: the question is what the advert exposed, not what Homiio
  * happens to store.
  */
@@ -141,7 +146,7 @@ function publishedAddressLabel(
   const street = address.street.trim();
   const number = address.number?.trim();
   const parts = [
-    property.showAddressNumber && number ? `${street} ${number}` : street,
+    publishedAddressPrecision(property, 'public') !== 'street' && number ? `${street} ${number}` : street,
     geoName(address.neighborhoodName),
     geoName(address.cityName),
   ].filter((part): part is string => Boolean(part && part.length > 0));

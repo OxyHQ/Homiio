@@ -4,8 +4,9 @@
  *
  * The preview draws the listing the way the results grid will
  * (`PropertyCard`), and nothing more precise: the title generated the same way
- * the card's is, the location line as city and region — never the number,
- * floor or unit the form also holds — the facts, one price line per offering
+ * the card's is, the location line as city and region — never the number or
+ * unit the form also holds — the facts (the floor among them only when the host
+ * published it), one price line per offering
  * in the listing's own currency, and the offerings as `OfferingBadge`s. No
  * rating and no badge: a draft has neither, and the card shows nothing rather
  * than an invented one.
@@ -93,6 +94,12 @@ export function draftPreviewData(
   if (basicInfo.bathrooms) facts.push(t('listing.card.baths', { count: basicInfo.bathrooms }));
   if (basicInfo.squareFootage > 0) {
     facts.push(formatArea(basicInfo.squareFootage, 'sqm', locale, { labels: areaUnitLabels }));
+  }
+  // The floor is a fact the listing page shows a visitor ONLY when the host made
+  // it public — below `exact` the API leaves it off every non-owner response —
+  // so the preview draws it under exactly the same condition.
+  if (location.showFloor && location.floor !== undefined) {
+    facts.push(`${t('property.sections.floor')} ${location.floor}`);
   }
 
   const currency = pricing.currency || 'USD';
