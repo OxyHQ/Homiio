@@ -120,9 +120,12 @@ measurements and the migration history: **`docs/postgres.md`**.
   read — do not "fix" it piecemeal. The only sanctioned
   `oxyServices.getAccessToken()` call site is Sindi's streaming fetch, because
   the linked client is JSON-only; that human bearer authenticates only to
-  Homiio and must never be forwarded to Alia. The backend calls Alia with the
-  exact Sindi Oxy service credential plus `X-Oxy-User-Id`; do not add another
-  manual token path. Identity and inference detail: `docs/index.mdx`.
+  Homiio and must never be forwarded to Alia. For chat the backend sends the
+  request's verified bearer to OXY only, to mint a one-use requester assertion
+  (OxyHQServices ADR 0025), and calls Alia with the exact Sindi Oxy service
+  credential plus `X-Oxy-Requester-Assertion` — never `X-Oxy-User-Id`, and chat
+  never asks for consent. Do not add another manual token path. Identity and
+  inference detail: `docs/index.mdx`.
 
 ## Product rules that are vetoed or load-bearing
 

@@ -3,9 +3,14 @@ import {
   AliaChatConfigurationError,
   AliaChatError,
   AliaChatService,
-  SERVICE_ACTING_AS_UNAUTHORIZED,
   aliaChatHttpFailure,
 } from '../../services/aliaChatService';
+import { SindiRequesterAssertionError } from '../../services/oxy';
+
+/** The person's own Oxy bearer, as Homiio's auth middleware verified it. */
+const HUMAN_BEARER = 'human-oxy-access-token-must-never-reach-alia';
+const REQUESTER = { accountId: 'oxy-user-id', accessToken: HUMAN_BEARER };
+const ASSERTION = 'requester.assertion.minted-by-oxy';
 
 const encode = (text: string): Uint8Array => new TextEncoder().encode(text);
 
@@ -36,9 +41,12 @@ async function collect(stream: AsyncIterable<string>): Promise<string> {
 }
 
 function createService(
-  input: Omit<ConstructorParameters<typeof AliaChatService>[0], 'serviceToken'>,
+  input: Omit<ConstructorParameters<typeof AliaChatService>[0], 'serviceToken' | 'requesterAssertion'> & {
+    requesterAssertion?: ConstructorParameters<typeof AliaChatService>[0]['requesterAssertion'];
+  },
 ): AliaChatService {
   return new AliaChatService({
+    requesterAssertion: async () => ASSERTION,
     ...input,
     serviceToken: async () => 'oxy-homiio-service-token',
   });
@@ -47,33 +55,21 @@ function createService(
 describe('AliaChatService', () => {
   const sindiAgentId = CANONICAL_SINDI_ALIA_AGENT_ID;
 
-  it('maps only exact acting-as denial to the client consent contract', () => {
-    expect(
-      aliaChatHttpFailure(new AliaChatError(403, SERVICE_ACTING_AS_UNAUTHORIZED)),
-    ).toEqual({
-      status: 403,
-      body: {
-        error: 'Sindi needs your permission to continue',
-        code: SERVICE_ACTING_AS_UNAUTHORIZED,
-      },
-    });
-    expect(aliaChatHttpFailure(new AliaChatError(403))).toEqual({
-      status: 401,
-      body: {
-        error: 'Sindi chat is temporarily unavailable',
-        code: 'chat_auth_required',
-      },
-    });
+  it('never answers a chat failure with a consent request', () => {
+    for (const status of [401, 403]) {
+      expect(aliaChatHttpFailure(new AliaChatError(status))).toEqual({
+        status: 401,
+        body: { error: 'Sindi chat is temporarily unavailable', code: 'chat_auth_required' },
+      });
+    }
     expect(aliaChatHttpFailure(new AliaChatError(503))).toEqual({
       status: 503,
-      body: {
-        error: 'Sindi chat is temporarily unavailable',
-        code: 'chat_unavailable',
-      },
+      body: { error: 'Sindi chat is temporarily unavailable', code: 'chat_unavailable' },
     });
+    expect(JSON.stringify(aliaChatHttpFailure(new AliaChatError(403)))).not.toMatch(/SERVICE_ACTING_AS|permission/i);
   });
 
-  it('streams the exact Alia agent with service auth and delegated Oxy user id', async () => {
+  it('streams the exact Alia agent with the Sindi service token and a requester assertion', async () => {
     const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
       sseResponse([
         ': keep-alive\n\n',
@@ -90,7 +86,7 @@ describe('AliaChatService', () => {
 
     const controller = new AbortController();
     const stream = await service.streamText({
-      delegatedUserId: 'oxy-user-id',
+      requester: REQUESTER,
       messages: [{ role: 'user', content: 'Hola' }],
       signal: controller.signal,
     });
@@ -103,7 +99,7 @@ describe('AliaChatService', () => {
         headers: {
           'Content-Type': 'application/json',
           Authorization: 'Bearer oxy-homiio-service-token',
-          'X-Oxy-User-Id': 'oxy-user-id',
+          'X-Oxy-Requester-Assertion': ASSERTION,
         },
         signal: controller.signal,
       }),
@@ -131,7 +127,7 @@ describe('AliaChatService', () => {
     });
 
     const text = await collect(await service.streamText({
-      delegatedUserId: 'oxy-user-id',
+      requester: REQUESTER,
       messages: [{ role: 'user', content: 'Enséñame pisos' }],
     }));
 
@@ -154,7 +150,7 @@ describe('AliaChatService', () => {
     });
 
     await expect(collect(await service.streamText({
-      delegatedUserId: 'oxy-user-id',
+      requester: REQUESTER,
       messages: [{ role: 'user', content: 'Hola' }],
     }))).resolves.toBe('visible');
   });
@@ -170,7 +166,7 @@ describe('AliaChatService', () => {
     });
 
     await expect(collect(await service.streamText({
-      delegatedUserId: 'oxy-user-id',
+      requester: REQUESTER,
       messages: [{ role: 'user', content: 'Hola' }],
     }))).rejects.toMatchObject({ name: 'AliaChatError', status: 502 });
   });
@@ -181,7 +177,7 @@ describe('AliaChatService', () => {
 
     await expect(
       service.streamText({
-        delegatedUserId: 'oxy-user-id',
+        requester: REQUESTER,
         messages: [{ role: 'user', content: 'Hola' }],
       }),
     ).rejects.toBeInstanceOf(AliaChatConfigurationError);
@@ -204,7 +200,7 @@ describe('AliaChatService', () => {
 
     await expect(
       service.streamText({
-        delegatedUserId: 'oxy-user-id',
+        requester: REQUESTER,
         messages: [{ role: 'user', content: 'Hola' }],
       }),
     ).rejects.toBeInstanceOf(AliaChatConfigurationError);
@@ -223,7 +219,7 @@ describe('AliaChatService', () => {
 
     const error = await service
       .streamText({
-        delegatedUserId: 'oxy-user-id',
+        requester: REQUESTER,
         messages: [{ role: 'user', content: 'Hola' }],
       })
       .catch((reason: unknown) => reason);
@@ -233,62 +229,91 @@ describe('AliaChatService', () => {
     expect(String(error)).not.toContain('provider detail');
   });
 
-  it('preserves only the exact Oxy acting-as consent signal', async () => {
+  it('sends no human bearer and no delegated user id to Alia, anywhere in the request', async () => {
     const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
-      Response.json(
-        {
-          error: SERVICE_ACTING_AS_UNAUTHORIZED,
-          message: 'private upstream detail',
-          code: SERVICE_ACTING_AS_UNAUTHORIZED,
-          status: 403,
-        },
-        { status: 403 },
-      ),
+      sseResponse([`data: ${chatChunk('ok')}\n\ndata: [DONE]\n\n`]),
     );
+    const minted: unknown[] = [];
     const service = createService({
       apiUrl: 'https://api.alia.onl',
       agentId: sindiAgentId,
       fetch: fetchClient,
+      requesterAssertion: async (input) => {
+        minted.push(input);
+        return ASSERTION;
+      },
     });
 
-    const error = await service
-      .streamText({
-        delegatedUserId: 'oxy-user-id',
-        messages: [{ role: 'user', content: 'Hola' }],
-      })
-      .catch((reason: unknown) => reason);
+    await collect(await service.streamText({ requester: REQUESTER, messages: [{ role: 'user', content: 'Hola' }] }));
 
-    expect(error).toMatchObject({
-      name: 'AliaChatError',
-      status: 403,
-      code: SERVICE_ACTING_AS_UNAUTHORIZED,
-      message: 'Alia chat request failed',
+    // The bearer went to the Oxy mint, and only there.
+    expect(minted).toEqual([{ subjectToken: HUMAN_BEARER, requesterAccountId: 'oxy-user-id', agentId: sindiAgentId }]);
+    expect(fetchClient).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchClient.mock.calls[0] ?? [];
+    const wire = JSON.stringify({ url, headers: init?.headers, body: init?.body });
+    expect(wire).not.toContain(HUMAN_BEARER);
+    const headerNames = Object.keys((init?.headers ?? {}) as Record<string, string>).map((name) => name.toLowerCase());
+    expect(headerNames).not.toContain('x-oxy-user-id');
+    expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer oxy-homiio-service-token');
+  });
+
+  it('mints a fresh assertion for every turn, because Oxy consumes each one', async () => {
+    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+      .mockImplementation(async () => sseResponse([`data: ${chatChunk('ok')}\n\ndata: [DONE]\n\n`]));
+    let counter = 0;
+    const service = createService({
+      apiUrl: 'https://api.alia.onl',
+      agentId: sindiAgentId,
+      fetch: fetchClient,
+      requesterAssertion: async () => `assertion-${(counter += 1)}`,
     });
-    expect(String(error)).not.toContain('private upstream detail');
+    for (let turn = 0; turn < 2; turn += 1) {
+      await collect(await service.streamText({ requester: REQUESTER, messages: [{ role: 'user', content: 'Hola' }] }));
+    }
+    const sent = fetchClient.mock.calls.map(([, init]) => (init?.headers as Record<string, string>)['X-Oxy-Requester-Assertion']);
+    expect(sent).toEqual(['assertion-1', 'assertion-2']);
   });
 
   it.each([
-    ['wrong status', 401, JSON.stringify({ code: SERVICE_ACTING_AS_UNAUTHORIZED })],
-    ['wrong code', 403, JSON.stringify({ code: 'SERVICE_TOKEN_NOT_CONFIGURED' })],
-    ['whitespace code', 403, JSON.stringify({ code: ` ${SERVICE_ACTING_AS_UNAUTHORIZED}` })],
-    ['malformed body', 403, '{'],
-    ['oversized body', 403, JSON.stringify({ code: SERVICE_ACTING_AS_UNAUTHORIZED, pad: 'x'.repeat(4096) })],
-  ])('does not promote %s to a consent request', async (_label, status, body) => {
-    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
-      new Response(body, { status }),
-    );
+    ['Oxy refuses the requester (signed out, revoked, other app)', new SindiRequesterAssertionError('refused'), 401],
+    ['Oxy cannot mint right now', new SindiRequesterAssertionError('unavailable'), 503],
+    ['the minted assertion fails the identity canary', new Error('Oxy minted a requester assertion for an unexpected Sindi identity'), 503],
+  ])('does not call Alia when %s', async (_label, failure, status) => {
+    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>();
     const service = createService({
       apiUrl: 'https://api.alia.onl',
       agentId: sindiAgentId,
       fetch: fetchClient,
+      requesterAssertion: async () => { throw failure; },
     });
+    await expect(service.streamText({ requester: REQUESTER, messages: [{ role: 'user', content: 'Hola' }] }))
+      .rejects.toMatchObject({ name: 'AliaChatError', status });
+    expect(fetchClient).not.toHaveBeenCalled();
+  });
 
-    await expect(
-      service.streamText({
-        delegatedUserId: 'oxy-user-id',
-        messages: [{ role: 'user', content: 'Hola' }],
-      }),
-    ).rejects.toMatchObject({ status, code: undefined });
+  it('refuses a turn with no verified person or bearer before minting anything', async () => {
+    const minter = jest.fn(async () => ASSERTION);
+    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>();
+    const service = createService({ apiUrl: 'https://api.alia.onl', agentId: sindiAgentId, fetch: fetchClient, requesterAssertion: minter });
+    for (const requester of [{ accountId: 'oxy-user-id', accessToken: '' }, { accountId: '', accessToken: HUMAN_BEARER }]) {
+      await expect(service.streamText({ requester, messages: [{ role: 'user', content: 'Hola' }] }))
+        .rejects.toMatchObject({ status: 401 });
+    }
+    expect(minter).not.toHaveBeenCalled();
+    expect(fetchClient).not.toHaveBeenCalled();
+  });
+
+  it('turns an upstream acting-as refusal into a plain auth failure, never consent', async () => {
+    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
+      Response.json({ code: 'SERVICE_ACTING_AS_UNAUTHORIZED', message: 'private upstream detail' }, { status: 403 }),
+    );
+    const service = createService({ apiUrl: 'https://api.alia.onl', agentId: sindiAgentId, fetch: fetchClient });
+    const error = await service
+      .streamText({ requester: REQUESTER, messages: [{ role: 'user', content: 'Hola' }] })
+      .catch((reason: unknown) => reason);
+    expect(error).toMatchObject({ name: 'AliaChatError', status: 403 });
+    expect(aliaChatHttpFailure(error as AliaChatError).body.code).toBe('chat_auth_required');
+    expect(String(error)).not.toContain('private upstream detail');
   });
 
   it('rejects a successful non-SSE response instead of buffering a fallback shape', async () => {
@@ -302,7 +327,7 @@ describe('AliaChatService', () => {
     });
 
     await expect(service.streamText({
-      delegatedUserId: 'oxy-user-id',
+      requester: REQUESTER,
       messages: [{ role: 'user', content: 'Hola' }],
     })).rejects.toMatchObject({ name: 'AliaChatError', status: 502 });
   });

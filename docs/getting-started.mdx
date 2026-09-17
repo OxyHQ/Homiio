@@ -17,7 +17,7 @@ Homiio is a Bun workspaces monorepo with three packages: `@homiio/frontend` (Exp
 - **Android development**: Android Studio with at least one configured AVD.
 - **Web only**: nothing extra — `bun run dev:frontend` then press `w`.
 
-Optional but recommended: Stripe CLI (for webhook forwarding in dev) and AWS credentials with S3 access (for the image pipeline). Homiio's point-inference features additionally need its Oxy service credential and an Oxy routing profile. Interactive Sindi chat uses Homiio's Oxy service credential and delegates the already-verified user to the private Alia agent through `X-Oxy-User-Id`; the caller's bearer stops at Homiio.
+Optional but recommended: Stripe CLI (for webhook forwarding in dev) and AWS credentials with S3 access (for the image pipeline). Homiio's point-inference features additionally need its Oxy service credential and an Oxy routing profile. Interactive Sindi chat uses Homiio's Oxy service credential plus a requester assertion that Oxy mints for the already-verified user; the caller's bearer goes to Oxy for that mint and never to Alia.
 
 ## Clone and install
 

@@ -165,6 +165,20 @@ Avoid repetition:
 const getUserId = (req: Request): string | null => getOxyUserId(req);
 
 /**
+ * The Oxy access token the auth middleware validated for this request's USER.
+ *
+ * Empty for anything else — a service token has no person behind it, so it
+ * can never be traded for a requester assertion. The value is sent to Oxy only
+ * (see `aliaChatService`).
+ */
+const getVerifiedUserAccessToken = (req: Request): string => {
+  const authenticated = req as Request & { accessToken?: unknown; serviceApp?: unknown };
+  return authenticated.serviceApp === undefined && typeof authenticated.accessToken === 'string'
+    ? authenticated.accessToken
+    : '';
+};
+
+/**
  * The client's own placeholder id for a chat it has not saved yet.
  *
  * `store/conversationStore.ts` mints `conv_<timestamp>` locally so a new chat
@@ -1096,7 +1110,9 @@ Return only the JSON array, no other text.`;
         req.once('aborted', abortUpstream);
         res.once('close', abortUpstream);
         aliaResponseStream = await aliaChat.streamText({
-          delegatedUserId: userId,
+          // The request's own verified bearer, for Oxy's requester assertion
+          // only; `aliaChatService` never sends it to Alia.
+          requester: { accountId: userId, accessToken: getVerifiedUserAccessToken(req) },
           messages: enhanced
             .filter((message) => message.role !== 'tool')
             .map((message) => ({
