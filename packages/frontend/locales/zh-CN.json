@@ -2504,7 +2504,8 @@
     "sleep": {
       "title": "Where you'll sleep",
       "oneBed": "1 bed",
-      "mainBedroom": "Main bedroom"
+      "mainBedroom": "Main bedroom",
+      "bedroomN": "卧室 {{n}}"
     },
     "reviews": {
       "writeAction": "Write a review",
@@ -2556,7 +2557,8 @@
       "nearbyAmenities": "Nearby Amenities",
       "publicTransport": "Public Transport",
       "schools": "Schools",
-      "shopping": "Shopping"
+      "shopping": "Shopping",
+      "propertyType": "房产类型"
     },
     "neighborhood": {
       "title": "Neighborhood",

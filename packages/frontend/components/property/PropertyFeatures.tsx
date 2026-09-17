@@ -126,7 +126,9 @@ export const PropertyFeatures: React.FC<Props> = ({ property }) => {
                 icon: RiCarLine,
             });
         }
-        if (petPolicy !== undefined) {
+        // The API also sends `not_specified`, which is the absence of a policy,
+        // not a feature to list.
+        if (petPolicy === 'allowed' || petPolicy === 'not_allowed' || petPolicy === 'case_by_case') {
             next.push({ key: 'petPolicy', label: t(`petPolicy.${petPolicy}`), icon: RiHomeHeartLine });
         }
 

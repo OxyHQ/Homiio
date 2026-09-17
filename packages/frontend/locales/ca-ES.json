@@ -1542,7 +1542,8 @@
     "sleep": {
       "title": "Where you'll sleep",
       "oneBed": "1 bed",
-      "mainBedroom": "Main bedroom"
+      "mainBedroom": "Main bedroom",
+      "bedroomN": "Dormitori {{n}}"
     },
     "reviews": {
       "writeAction": "Write a review",
@@ -1594,7 +1595,8 @@
       "nearbyAmenities": "Serveis propers",
       "publicTransport": "Transport públic",
       "schools": "Escoles",
-      "shopping": "Comerços"
+      "shopping": "Comerços",
+      "propertyType": "Tipus de propietat"
     },
     "neighborhood": {
       "title": "Neighborhood",
