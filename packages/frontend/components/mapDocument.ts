@@ -17,10 +17,68 @@ import type {
   MarkerStyle,
 } from './mapTypes';
 
-/** MapLibre GL JS — drop-in OSS fork of mapbox-gl, served keyless from unpkg. */
-const MAPLIBRE_VERSION = '4.7.1';
-const MAPLIBRE_JS_URL = `https://unpkg.com/maplibre-gl@${MAPLIBRE_VERSION}/dist/maplibre-gl.js`;
-const MAPLIBRE_CSS_URL = `https://unpkg.com/maplibre-gl@${MAPLIBRE_VERSION}/dist/maplibre-gl.css`;
+/**
+ * MapLibre GL JS — drop-in OSS fork of mapbox-gl, served keyless from unpkg.
+ *
+ * This document cannot import from the app bundle, so it loads its OWN copy of
+ * MapLibre, and that copy's version is not the one in `package.json` unless
+ * something makes it so: 4.7.1 stayed pinned here through every audit of the
+ * npm dependency. `__tests__/mapDocument.test.ts` pins both — this version to
+ * the installed package, and each hash below to the installed file's bytes —
+ * so upgrading `maplibre-gl` fails the suite until this block is updated too.
+ *
+ * maplibre-gl 6 is ESM-only: the document imports `maplibre-gl.mjs` from a
+ * module script, and that module imports `./maplibre-gl-shared.mjs`.
+ */
+export const MAPLIBRE_VERSION = '6.10.0';
+const MAPLIBRE_DIST_URL = `https://unpkg.com/maplibre-gl@${MAPLIBRE_VERSION}/dist`;
+
+/**
+ * Subresource-integrity hashes (sha384) of the CDN files the document loads,
+ * keyed by their path under `dist/`. The stylesheet carries its hash on the
+ * `<link>`; the two modules carry theirs in the import map's `integrity` table,
+ * the only place a module imported BY another module can be given one.
+ *
+ * Browsers without import-map integrity (Chromium < 127, Safari < 18) ignore
+ * that table and load the modules unchecked, as every version did before. The
+ * worker MapLibre starts from `maplibre-gl-worker.mjs` has no integrity check
+ * anywhere: a worker does not inherit the document's import map.
+ */
+export const MAPLIBRE_INTEGRITY = {
+  'maplibre-gl.mjs': 'sha384-2g0hrGNSeleJsCzq4bdDa1QEBwj09vTce/Hf9TbggAsMv37hy9xmKfJfCfOojhyx',
+  'maplibre-gl-shared.mjs': 'sha384-jw07Ono+c6G30wWc0ndm4f9k5wolLAdoHS5hC/WiNNVmg8Sfk4cJKfVGefVigjwA',
+  'maplibre-gl.css': 'sha384-Q5Blg3vUVAlUKqIPJYz7wGnz40Vwrx4pVuFVicI73+8c/26Zr5hhckfuIiIUflLE',
+} as const;
+
+const MAPLIBRE_JS_URL = `${MAPLIBRE_DIST_URL}/maplibre-gl.mjs`;
+const MAPLIBRE_SHARED_URL = `${MAPLIBRE_DIST_URL}/maplibre-gl-shared.mjs`;
+const MAPLIBRE_CSS_URL = `${MAPLIBRE_DIST_URL}/maplibre-gl.css`;
+
+const IMPORT_MAP = JSON.stringify({
+  imports: {},
+  integrity: {
+    [MAPLIBRE_JS_URL]: MAPLIBRE_INTEGRITY['maplibre-gl.mjs'],
+    [MAPLIBRE_SHARED_URL]: MAPLIBRE_INTEGRITY['maplibre-gl-shared.mjs'],
+  },
+});
+
+/**
+ * The origin the native WebView gives this document (`source.baseUrl`).
+ *
+ * Without a base URL react-native-webview loads the HTML as `about:blank`, an
+ * OPAQUE origin, and an opaque-origin document cannot start a MODULE worker —
+ * not even from a Blob it created itself. maplibre-gl 4 ran a classic Blob
+ * worker, so that never mattered; maplibre-gl 6's worker is an ES module, and
+ * in an opaque document it fails with no console error: the map never loads a
+ * tile and never posts `ready`. (Measured in Chromium, the engine of Android's
+ * WebView: a `type: 'module'` Blob worker errors from `about:blank` and starts
+ * from an http(s) origin.)
+ *
+ * `.invalid` is reserved (RFC 2606) and can never resolve, so the document gets
+ * a real, secure origin that is nobody's site: no cookies, storage or
+ * permissions of a real host come with it, and nothing is fetched from it.
+ */
+export const MAP_DOCUMENT_BASE_URL = 'https://map.homiio.invalid/';
 
 /**
  * Attribution markup for the compact `AttributionControl`. Exported so the web
@@ -107,9 +165,9 @@ const buildScript = (options: MapDocumentOptions): string => {
   // so MapLibre logs a missing-image error and fires styleimagemissing. Supply a
   // 1x1 transparent placeholder for any missing id (idempotent) so no POI class
   // can request a non-existent sprite image. Mirrors installMissingImageFallback
-  // in mapStyle.ts for the native WebView document.
-  map.on('styleimagemissing', (e) => {
-    const missingId = e && e.id;
+  // in mapStyle.ts for the native WebView document. A resolver, not a
+  // styleimagemissing listener: since maplibre-gl 6 that event is notify-only.
+  map.setMissingStyleImageResolver((missingId) => {
     if (!missingId || map.hasImage(missingId)) return;
     map.addImage(missingId, { width: 1, height: 1, data: new Uint8Array([0, 0, 0, 0]) });
   });
@@ -304,9 +362,10 @@ export const buildMapDocument = (options: MapDocumentOptions): string =>
   `<!doctype html><html><head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<link href="${MAPLIBRE_CSS_URL}" rel="stylesheet" />
+<link href="${MAPLIBRE_CSS_URL}" rel="stylesheet" integrity="${MAPLIBRE_INTEGRITY['maplibre-gl.css']}" crossorigin="anonymous" />
 <style>${MARKER_STYLES}</style>
+<script type="importmap">${IMPORT_MAP}</script>
 </head><body>
   <div id="map"></div>
-<script src="${MAPLIBRE_JS_URL}"></script>
-<script>${buildScript(options)}</script></body></html>`;
+<script type="module">import * as maplibregl from ${JSON.stringify(MAPLIBRE_JS_URL)};
+${buildScript(options)}</script></body></html>`;

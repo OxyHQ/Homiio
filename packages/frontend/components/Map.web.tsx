@@ -6,6 +6,7 @@
  * skip the iframe/WebView + external-CDN + postMessage bridge entirely and drive
  * `maplibre-gl` **directly** against a real DOM `<div>`: it's the same GL engine,
  * but loaded from the bundle (keyless OpenFreeMap tiles, no unpkg, no sandbox).
+ * Its worker is the one file the bundle cannot carry — see {@link WORKER_URL}.
  *
  * This file is resolved by Metro/Expo only for `Platform.OS === 'web'`, so the
  * `maplibre-gl` import never reaches the native bundle. The component preserves
@@ -72,6 +73,21 @@ export type {
   MarkerInput,
   MarkerStyle,
 } from './mapTypes';
+
+/**
+ * Where MapLibre's worker is served from, on this origin.
+ *
+ * maplibre-gl 6 is ESM-only and starts its worker BY URL, derived from
+ * `import.meta.url` — which inside a Metro bundle is not the package's
+ * directory, so without this the worker never starts and no tile ever renders.
+ * `scripts/vendor-maplibre-worker.js` (run from `metro.config.js`) copies the
+ * worker modules of the installed package to exactly this path, and keying it
+ * on `getVersion()` keeps the worker and this bundle on the same release.
+ */
+const WORKER_URL = `/vendor/maplibre-gl/${maplibregl.getVersion()}/maplibre-gl-worker.mjs`;
+if (typeof window !== 'undefined') {
+  maplibregl.setWorkerUrl(new URL(WORKER_URL, window.location.origin).href);
+}
 
 /** Convert [latitude, longitude] to GeoJSON [longitude, latitude]. */
 export const latLngToLonLat = (lat: number, lng: number): LonLat => [lng, lat];
