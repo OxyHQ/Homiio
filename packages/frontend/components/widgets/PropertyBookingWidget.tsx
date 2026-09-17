@@ -29,7 +29,7 @@ interface PropertyBookingWidgetProps {
 }
 
 export function PropertyBookingWidget({ propertyId }: PropertyBookingWidgetProps) {
-  const { mode: rentalMode } = useRentalMode();
+  const { mode: rentalMode, browseMode } = useRentalMode();
   const { property: apiProperty } = useProperty(propertyId ?? '');
 
   if (!propertyId || !apiProperty) {
@@ -38,7 +38,7 @@ export function PropertyBookingWidget({ propertyId }: PropertyBookingWidgetProps
 
   const property = apiProperty as Property;
 
-  if (resolveBookingMode(property, rentalMode) === 'none' && !property.isExternal) {
+  if (resolveBookingMode(property, rentalMode, browseMode) === 'none' && !property.isExternal) {
     return null;
   }
 

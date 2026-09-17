@@ -1,5 +1,5 @@
 /**
- * TypeStep — property-type multi-select, on Bloom's `ToggleChipGroup`.
+ * TypeStep — property-type multi-select, on Bloom's `PropertyTypePicker` tiles.
  *
  * The four user-facing property types, each with its glyph. The label set
  * adapts to the active offering (short-term phrases "Whole houses" / "Private
@@ -14,7 +14,8 @@ import {
   RiHome4Line,
   RiHotelBedLine,
 } from '@oxy.so/bloom/icons';
-import { ToggleChipGroup, type ToggleChipOption } from '@oxy.so/bloom/stay-filters';
+import { PropertyTypePicker } from '@oxy.so/bloom/home-search';
+import type { PropertyTypeOption } from '@oxy.so/bloom/stay-filters';
 
 import { OfferingType, PropertyType } from '@homiio/shared-types';
 
@@ -67,7 +68,7 @@ interface TypeStepProps {
 export const TypeStep: React.FC<TypeStepProps> = ({ offering, selected, onChange }) => {
   const { t } = useTranslation();
 
-  const options = useMemo<ToggleChipOption<PropertyType>[]>(
+  const options = useMemo<PropertyTypeOption<PropertyType>[]>(
     () =>
       SEARCH_TYPE_OPTIONS.map((option) => ({
         value: option.type,
@@ -78,7 +79,7 @@ export const TypeStep: React.FC<TypeStepProps> = ({ offering, selected, onChange
   );
 
   return (
-    <ToggleChipGroup<PropertyType>
+    <PropertyTypePicker<PropertyType>
       options={options}
       value={selected}
       onValueChange={onChange}

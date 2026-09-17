@@ -1,94 +1,49 @@
 /**
- * ReviewsSection — Airbnb-style "Reviews" block for the property detail.
+ * ReviewsSection — the reviews of the listing's ADDRESS on the property detail.
  *
- * Layout:
- *  - Large rating number + summary line (e.g. "4.8 · 124 reviews").
- *  - 2-column grid of review cards on web, 1-column on mobile.
- *  - "Show all N reviews" Bloom Button when more than `maxVisible` exist.
+ * Reviews are about the place, not the advertisement (ADR 0001): they outlive
+ * every listing that points at the address, so this section reads the shared
+ * `['addressReviews', addressId]` cache via `useAddressReviews` and links out to
+ * the address page for the full set.
  *
- * Reads the shared `['addressReviews', addressId]` cache via `useAddressReviews`
- * and hydrates the authors ONCE (`useOxyAvatars`) so each `ReviewCard` renders a
- * real avatar + display name.
+ * Layout, on Bloom's `place-reviews`:
+ *  - `PlaceReviewsSummary` (`PlaceReviewSummary`): the average, the count, and
+ *    the tenancy stat lines once the set clears the publication floor.
+ *  - A 2-column grid of `ReviewCard`s on web, 1-column on mobile. The card stays
+ *    Homiio's: `PlaceReviewCard` has no room for a review's title, pros and
+ *    cons, categorical answers, advice, agency or photos.
+ *  - "Show all N reviews" when more than `maxVisible` exist.
+ *  - `WriteReviewPrompt`, inviting a past resident to add theirs — the whole
+ *    body while there are no reviews yet.
+ *
+ * Authors are hydrated ONCE (`useOxyAvatars`).
  */
 import React, { useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import {
-  RiDiscussLine,
-  RiEditBoxLine,
-  RiEditLine,
-  RiStarFill,
-} from '@oxy.so/bloom/icons';
+import { RiDiscussLine } from '@oxy.so/bloom/icons';
 
 import { Button } from '@oxy.so/bloom/button';
+import { WriteReviewPrompt } from '@oxy.so/bloom/place-reviews';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
-import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { ReviewCard } from '@/components/ReviewCard';
-import { EmptyState } from '@/components/ui/EmptyState';
+import { PlaceReviewsSummary, placeReviewStats } from '@/components/reviews/PlaceReviewsSummary';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionHeader, SECTION_GUTTER } from '@/components/property/Section';
 import { useAddressReviews } from '@/hooks/useAddressReviews';
 import { useOxyAvatars } from '@/hooks/useOxyAvatars';
+import { getPropertyLocationLabel } from '@/utils/propertyUtils';
 import { colors } from '@/styles/colors';
-import { hairline, radius, spacing } from '@/constants/styles';
-import type { Property, ReviewDTO } from '@homiio/shared-types';
+import { radius, spacing } from '@/constants/styles';
+import type { Property } from '@homiio/shared-types';
 
 interface ReviewsSectionProps {
   property: Property;
   variant?: 'full' | 'preview';
 }
-
-interface AggregatedStats {
-  averageRating: number;
-  totalReviews: number;
-  recommendationPercentage: number;
-  verifiedCount: number;
-}
-
-const computeStats = (reviews: ReviewDTO[]): AggregatedStats | null => {
-  if (reviews.length === 0) return null;
-  const avg = reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length;
-  const recommended = reviews.filter((r) => r.recommendation).length;
-  return {
-    averageRating: avg,
-    totalReviews: reviews.length,
-    recommendationPercentage: (recommended / reviews.length) * 100,
-    verifiedCount: reviews.filter((r) => r.verified).length,
-  };
-};
-
-interface RatingHeaderProps {
-  stats: AggregatedStats;
-}
-
-const RatingHeader: React.FC<RatingHeaderProps> = ({ stats }) => {
-  const { t } = useTranslation();
-  return (
-    <View style={styles.ratingHeader}>
-      <View style={styles.ratingNumberWrap}>
-        <RiStarFill width={28} height={28} fill={colors.COLOR_BLACK} />
-        <H1 style={styles.ratingNumber}>{stats.averageRating.toFixed(1)}</H1>
-        <BloomText style={styles.ratingMeta}>
-          · {stats.totalReviews} {t('property.reviews.count')}
-        </BloomText>
-      </View>
-      <View style={styles.statsRow}>
-        <View style={styles.statItem}>
-          <BloomText style={styles.statValue}>
-            {Math.round(stats.recommendationPercentage)}%
-          </BloomText>
-          <BloomText style={styles.statLabel}>{t('property.reviews.recommend')}</BloomText>
-        </View>
-        <View style={styles.statItem}>
-          <BloomText style={styles.statValue}>{stats.verifiedCount}</BloomText>
-          <BloomText style={styles.statLabel}>{t('property.reviews.verified')}</BloomText>
-        </View>
-      </View>
-    </View>
-  );
-};
 
 export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
   property,
@@ -111,10 +66,10 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
   const error = queryError
     ? queryError instanceof Error
       ? queryError.message
-      : 'Unable to load reviews'
+      : t('property.reviews.errorTitle')
     : null;
 
-  const stats = useMemo(() => computeStats(reviews), [reviews]);
+  const stats = useMemo(() => placeReviewStats(reviews), [reviews]);
   const visibleReviews = useMemo(
     () => reviews.slice(0, maxVisible),
     [reviews, maxVisible],
@@ -129,6 +84,19 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
   const handleWriteReview = () => {
     router.push(`/reviews/write?addressId=${addressId}`);
   };
+
+  const place = property.address?.street || getPropertyLocationLabel(property) || '';
+  const writePrompt = (
+    <WriteReviewPrompt
+      buildingTitle={place}
+      title={t('reviews.prompt.title')}
+      description={
+        place ? t('reviews.prompt.description', { place }) : t('property.reviews.emptyDescription')
+      }
+      actionLabel={t('property.reviews.writeAction')}
+      onStart={handleWriteReview}
+    />
+  );
 
   return (
     <View>
@@ -161,20 +129,11 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
           />
         ) : null}
 
-        {!loading && !error && reviews.length === 0 ? (
-          <EmptyState
-            icon={RiDiscussLine}
-            title={t('property.reviews.emptyTitle')}
-            description={t('property.reviews.emptyDescription')}
-            actionText={t('property.reviews.writeAction')}
-            actionIcon={RiEditBoxLine}
-            onAction={handleWriteReview}
-          />
-        ) : null}
+        {!loading && !error && reviews.length === 0 ? writePrompt : null}
 
         {!loading && !error && reviews.length > 0 ? (
-          <>
-            {stats ? <RatingHeader stats={stats} /> : null}
+          <View style={styles.stack}>
+            <PlaceReviewsSummary stats={stats} />
             <View style={styles.grid}>
               {visibleReviews.map((review) => (
                 <View key={review.id} style={styles.gridCell}>
@@ -186,8 +145,8 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
                 </View>
               ))}
             </View>
-            <View style={styles.actionsRow}>
-              {reviews.length > maxVisible ? (
+            {reviews.length > maxVisible ? (
+              <View style={styles.actionsRow}>
                 <Button
                   onPress={handleViewAll}
                   variant="secondary"
@@ -196,18 +155,10 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
                 >
                   {t('property.reviews.showAll', { count: reviews.length })}
                 </Button>
-              ) : null}
-              <Button
-                onPress={handleWriteReview}
-                variant="ghost"
-                size="medium"
-                leadingIcon={RiEditLine}
-                accessibilityLabel={t('property.reviews.writeAction')}
-              >
-                {t('property.reviews.writeAction')}
-              </Button>
-            </View>
-          </>
+              </View>
+            ) : null}
+            {writePrompt}
+          </View>
         ) : null}
       </View>
     </View>
@@ -225,43 +176,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
     lineHeight: 18,
   },
-  ratingHeader: {
-    gap: spacing.lg,
-    marginBottom: spacing.xl,
-    paddingVertical: spacing.lg,
-    borderBottomWidth: hairline.width,
-    borderBottomColor: hairline.color,
-  },
-  ratingNumberWrap: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: spacing.sm,
-  },
-  ratingNumber: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-    letterSpacing: -0.5,
-  },
-  ratingMeta: {
-    fontSize: 15,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: spacing['4xl'],
-  },
-  statItem: {
-    gap: 2,
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_3,
+  stack: {
+    gap: spacing.xl,
   },
   grid: {
     flexDirection: 'row',
@@ -295,7 +211,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    marginTop: spacing.xl,
     flexWrap: 'wrap',
   },
 });

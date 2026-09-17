@@ -1,15 +1,20 @@
 /**
- * StaySearch — the search composer, on Bloom's `stay-search` family.
+ * HomeSearch — the search composer, on Bloom's `home-search` family.
  *
  * One component, two presentations chosen by width (`useIsScreenNotMobile()`):
  *
- *  - **Wide:** `StaySearchBar` — Where | middle | last segments with the round
- *    search button — and a `StaySearchPanel` dropping under the open segment.
- *    A stay shows When and Who; every other offering shows Price and Type in
- *    the same two slots, because those are what narrows a rental or a sale.
+ *  - **Wide:** `HomeSearchBar` with the offering's own segments — Where · When ·
+ *    Who for a stay, Where · Price · Type for every other offering — and a
+ *    `StaySearchPanel` dropping under the open segment. The segment keys ARE the
+ *    composer's {@link SearchStep}s, so nothing translates between a bar slot
+ *    and the step it opens.
  *  - **Narrow:** the `StaySearchCompact` trigger, opening a bottom `Dialog` of
  *    `StaySearchStep` cards — one expanded at a time — over "Clear all" and
- *    "Search".
+ *    "Search", with the offering switch (`SearchModeTabs`, segmented) on top.
+ *
+ * `modeTabs` adds the page-level switch ABOVE the composer ("explore by mode").
+ * It changes the offering the SCREEN browses, through `onModeChange`; the
+ * sheet's own switch only edits the unsent draft.
  *
  * The open step is CONTROLLED (`openStep`), so a screen can open the composer
  * on a given step from anywhere — "Choose a place" on an error state opens it on
@@ -47,19 +52,13 @@ import type { TFunction } from 'i18next';
 
 import { Button, CloseButton } from '@oxy.so/bloom/button';
 import { Dialog } from '@oxy.so/bloom/dialog';
+import { HomeSearchBar, SearchModeTabs, type HomeSearchSegment } from '@oxy.so/bloom/home-search';
 import { RiSearchLine } from '@oxy.so/bloom/icons';
 import {
-  SegmentedControl,
-  SegmentedControlItem,
-  SegmentedControlItemText,
-} from '@oxy.so/bloom/segmented-control';
-import {
-  StaySearchBar,
   StaySearchCompact,
   StaySearchPanel,
   StaySearchStep,
   type GuestCounts,
-  type StaySearchSegment,
 } from '@oxy.so/bloom/stay-search';
 import { H3 } from '@oxy.so/bloom/typography';
 
@@ -94,10 +93,10 @@ import {
   type SearchStep,
 } from './types';
 
-/** The four top-level browse modes, in display order, for the sheet's toggle. */
+/** The four top-level browse modes, in display order, for the mode tabs. */
 const BROWSE_MODE_ORDER: readonly BrowseMode[] = ['long_term', 'vacation', 'buy', 'exchange'];
 
-/** i18n key for each browse mode in the sheet's toggle. */
+/** i18n key for each browse mode in the mode tabs. */
 const BROWSE_MODE_LABELS: Record<BrowseMode, string> = {
   long_term: 'search.mode.longTerm',
   vacation: 'search.mode.vacation',
@@ -105,9 +104,13 @@ const BROWSE_MODE_LABELS: Record<BrowseMode, string> = {
   exchange: 'search.mode.exchange',
 };
 
-/** Ordered steps per offering. Only a stay has dates and guests. */
+/** Ordered steps per offering in the sheet. Only a stay has dates and guests. */
 const STAY_STEPS: readonly SearchStep[] = ['where', 'dates', 'guests', 'type', 'price'];
 const OTHER_STEPS: readonly SearchStep[] = ['where', 'type', 'price'];
+
+/** The wide bar's segments, left to right. Each key is the step it opens. */
+const STAY_SEGMENTS: readonly SearchStep[] = ['where', 'dates', 'guests'];
+const OTHER_SEGMENTS: readonly SearchStep[] = ['where', 'price', 'type'];
 
 /** The short label of each step: the bar's segment label and the collapsed card's. */
 const STEP_LABEL_KEYS: Record<SearchStep, string> = {
@@ -127,6 +130,24 @@ const STEP_TITLE_KEYS: Record<SearchStep, string> = {
   price: 'search.step.price.title',
 };
 
+/** What a step reads while it holds nothing: the bar's placeholder and the card's summary. */
+const STEP_EMPTY_KEYS: Record<SearchStep, string> = {
+  where: 'search.summary.anywhere',
+  type: 'search.summary.anyType',
+  dates: 'search.summary.anyWeek',
+  guests: 'search.summary.addGuests',
+  price: 'search.summary.anyPrice',
+};
+
+/** Relative segment widths in the wide bar: the place gets the most room. */
+const SEGMENT_FLEX: Record<SearchStep, number> = {
+  where: 1.5,
+  type: 1.3,
+  dates: 1.2,
+  guests: 1.3,
+  price: 1.2,
+};
+
 /** The narrow sheet's height, as a share of the window: fixed, so it never jumps between steps. */
 const SHEET_HEIGHT_RATIO = 0.88;
 
@@ -134,27 +155,7 @@ const SHEET_HEIGHT_RATIO = 0.88;
 const WHERE_PANEL_WIDTH = 440;
 const PRICE_PANEL_WIDTH = 440;
 const GUESTS_PANEL_WIDTH = 400;
-const TYPE_PANEL_WIDTH = 420;
-
-/** The bar segment a step lives in, for the offering. */
-function segmentFor(step: SearchStep | null, stay: boolean): StaySearchSegment | null {
-  if (step === 'where') return 'destination';
-  if (stay) {
-    if (step === 'dates') return 'dates';
-    if (step === 'guests') return 'guests';
-    return null;
-  }
-  if (step === 'price') return 'dates';
-  if (step === 'type') return 'guests';
-  return null;
-}
-
-/** The step a bar segment edits, for the offering. */
-function stepFor(segment: StaySearchSegment, stay: boolean): SearchStep {
-  if (segment === 'destination') return 'where';
-  if (segment === 'guests') return stay ? 'guests' : 'type';
-  return stay ? 'dates' : 'price';
-}
+const TYPE_PANEL_WIDTH = 440;
 
 /**
  * A short recent-search label for a committed query.
@@ -175,7 +176,7 @@ function buildRecentLabel(
   };
 }
 
-export interface StaySearchProps {
+export interface HomeSearchProps {
   /** The query the composer describes and seeds its draft from. */
   query: SearchQuery;
   /** The open step, or `null` at rest. Controlled. */
@@ -188,17 +189,28 @@ export interface StaySearchProps {
    * screens where applying and running a search are the same action.
    */
   onApply?: (query: SearchQuery) => void;
+  /**
+   * The page-level mode switch above the composer, bound to `query.offering`.
+   * `tabs` are text tabs and show only on a wide screen (a phone switches modes
+   * in the sheet); `segmented` is the pill, which also reads on a photo and
+   * shows at every width. Omit for none.
+   */
+  modeTabs?: 'tabs' | 'segmented';
+  /** A mode tab was chosen: the screen switches the offering it browses. */
+  onModeChange?: (mode: BrowseMode) => void;
   style?: StyleProp<ViewStyle>;
 }
 
-export function StaySearch({
+export function HomeSearch({
   query,
   openStep,
   onOpenStepChange,
   onSubmit,
   onApply,
+  modeTabs,
+  onModeChange,
   style,
-}: StaySearchProps): React.ReactElement {
+}: HomeSearchProps): React.ReactElement {
   const { t } = useTranslation();
   const { locale } = useFormatting();
   const isWide = useIsScreenNotMobile();
@@ -237,18 +249,16 @@ export function StaySearch({
   const whereSearch = useWhereSearch(setWhereText);
   const stay = isStayQuery(draft);
   const steps = stay ? STAY_STEPS : OTHER_STEPS;
+  const segmentSteps = stay ? STAY_SEGMENTS : OTHER_SEGMENTS;
 
   const nextStepAfter = useCallback(
     (step: SearchStep): SearchStep | null => {
-      if (isWide) {
-        // The bar walks its own three segments.
-        if (step === 'where') return stay ? 'dates' : 'price';
-        return null;
-      }
-      const index = steps.indexOf(step);
-      return index >= 0 && index < steps.length - 1 ? steps[index + 1] : null;
+      // The bar walks its own segments; the sheet walks every step.
+      const order = isWide ? segmentSteps : steps;
+      const index = order.indexOf(step);
+      return index >= 0 && index < order.length - 1 ? order[index + 1] : null;
     },
-    [isWide, stay, steps],
+    [isWide, segmentSteps, steps],
   );
 
   // --- draft edits ---
@@ -311,6 +321,16 @@ export function StaySearch({
     [openStep, onOpenStepChange],
   );
 
+  const handlePageMode = useCallback(
+    (mode: BrowseMode) => {
+      // The offering changes under the composer, and with it the segments: a
+      // panel open on a segment the new mode does not have would be orphaned.
+      onOpenStepChange(null);
+      onModeChange?.(mode);
+    },
+    [onModeChange, onOpenStepChange],
+  );
+
   const handleClear = useCallback(() => {
     setDraft((prev) => ({
       ...prev,
@@ -335,21 +355,49 @@ export function StaySearch({
   }, [addRecentSearch, draft, t, locale, onOpenStepChange, onSubmit]);
 
   // --- labels ---
-  const whereValue = draft.location ? locationDisplayLabel(draft.location, t) : undefined;
-  const middleValue = stay ? datesLabel(draft, locale) : priceLabel(draft, t, locale);
-  const lastValue = stay ? guestsLabel(draft, t) : typeLabel(draft, t);
+  /** A step's value in the draft, or `null` while it holds nothing. */
+  const stepValue = (step: SearchStep): string | null => {
+    switch (step) {
+      case 'where':
+        return draft.location ? locationDisplayLabel(draft.location, t) : null;
+      case 'type':
+        return typeLabel(draft, t);
+      case 'dates':
+        return datesLabel(draft, locale);
+      case 'guests':
+        return guestsLabel(draft, t);
+      case 'price':
+        return priceLabel(draft, t, locale);
+      default:
+        return null;
+    }
+  };
 
-  const barLabels = useMemo(
+  const modeLabels = useMemo(
     () => ({
-      where: t(STEP_LABEL_KEYS.where),
-      when: t(stay ? STEP_LABEL_KEYS.dates : STEP_LABEL_KEYS.price),
-      who: t(stay ? STEP_LABEL_KEYS.guests : STEP_LABEL_KEYS.type),
-      destinationPlaceholder: t('search.summary.anywhere'),
-      datesPlaceholder: t(stay ? 'search.summary.anyWeek' : 'search.summary.anyPrice'),
-      guestsPlaceholder: t(stay ? 'search.summary.addGuests' : 'search.summary.anyType'),
-      search: t('search.actions.search'),
+      long_term: t(BROWSE_MODE_LABELS.long_term),
+      vacation: t(BROWSE_MODE_LABELS.vacation),
+      buy: t(BROWSE_MODE_LABELS.buy),
+      exchange: t(BROWSE_MODE_LABELS.exchange),
     }),
-    [stay, t],
+    [t],
+  );
+
+  const renderModeTabs = (
+    value: BrowseMode,
+    onValueChange: (mode: BrowseMode) => void,
+    variant: 'tabs' | 'segmented',
+    tabsStyle?: StyleProp<ViewStyle>,
+  ): React.ReactElement => (
+    <SearchModeTabs<BrowseMode>
+      value={value}
+      onValueChange={onValueChange}
+      modes={BROWSE_MODE_ORDER}
+      labels={modeLabels}
+      variant={variant}
+      accessibilityLabel={t('search.mode.label')}
+      style={tabsStyle}
+    />
   );
 
   const stepContent = (step: SearchStep, wide: boolean): React.ReactNode => {
@@ -399,14 +447,22 @@ export function StaySearch({
     }
   };
 
+  const pageMode = browseModeFromOffering(query.offering);
+
   // --- wide ---
   if (isWide) {
-    const activeSegment = segmentFor(openStep, stay);
-    const panelStep = activeSegment ? stepFor(activeSegment, stay) : null;
+    const activeSegment = openStep !== null && segmentSteps.includes(openStep) ? openStep : null;
+    const segments: HomeSearchSegment<SearchStep>[] = segmentSteps.map((step) => ({
+      key: step,
+      label: t(STEP_LABEL_KEYS[step]),
+      value: stepValue(step) ?? undefined,
+      placeholder: t(STEP_EMPTY_KEYS[step]),
+      flex: SEGMENT_FLEX[step],
+    }));
 
-    const handleSegment = (segment: StaySearchSegment | null) => {
+    const handleSegment = (segment: SearchStep | null) => {
       if (segment !== null) {
-        onOpenStepChange(stepFor(segment, stay));
+        onOpenStepChange(segment);
         return;
       }
       onOpenStepChange(null);
@@ -414,10 +470,10 @@ export function StaySearch({
     };
 
     let panel: React.ReactNode = null;
-    if (panelStep) {
-      const label = t(STEP_LABEL_KEYS[panelStep]);
-      const content = stepContent(panelStep, true);
-      switch (panelStep) {
+    if (activeSegment) {
+      const label = t(STEP_LABEL_KEYS[activeSegment]);
+      const content = stepContent(activeSegment, true);
+      switch (activeSegment) {
         case 'where':
           panel = (
             <StaySearchPanel width={WHERE_PANEL_WIDTH} padding={16} accessibilityLabel={label}>
@@ -448,7 +504,7 @@ export function StaySearch({
           break;
         case 'type':
           panel = (
-            <StaySearchPanel width={TYPE_PANEL_WIDTH} padding={24} accessibilityLabel={label}>
+            <StaySearchPanel width={TYPE_PANEL_WIDTH} padding={20} accessibilityLabel={label}>
               {content}
             </StaySearchPanel>
           );
@@ -456,21 +512,31 @@ export function StaySearch({
       }
     }
 
-    return (
-      <StaySearchBar
+    const bar = (
+      <HomeSearchBar<SearchStep>
+        segments={segments}
         activeSegment={activeSegment}
         onActiveSegmentChange={handleSegment}
-        destination={whereValue}
-        dates={middleValue ? { summary: middleValue } : undefined}
-        guests={lastValue ?? undefined}
-        datesMode="single"
-        labels={barLabels}
         onSearch={handleSubmit}
-        destinationQuery={whereText}
-        onDestinationQueryChange={whereSearch.onChangeText}
+        searchLabel={t('search.actions.search')}
+        query={whereText}
+        onQueryChange={whereSearch.onChangeText}
         panel={panel}
-        style={style}
+        style={modeTabs ? styles.fill : style}
       />
+    );
+
+    if (!modeTabs) return bar;
+    return (
+      <View style={[styles.withTabs, style]}>
+        {renderModeTabs(
+          pageMode,
+          handlePageMode,
+          modeTabs,
+          modeTabs === 'segmented' ? styles.segmentedTabs : styles.textTabs,
+        )}
+        {bar}
+      </View>
     );
   }
 
@@ -480,32 +546,26 @@ export function StaySearch({
     reset();
   };
 
-  const stepSummary = (step: SearchStep): string => {
-    switch (step) {
-      case 'where':
-        return locationDisplayLabel(draft.location, t);
-      case 'type':
-        return typeLabel(draft, t) ?? t('search.summary.anyType');
-      case 'dates':
-        return datesLabel(draft, locale) ?? t('search.summary.anyWeek');
-      case 'guests':
-        return guestsLabel(draft, t) ?? t('search.summary.addGuests');
-      case 'price':
-        return priceLabel(draft, t, locale) ?? t('search.summary.anyPrice');
-      default:
-        return '';
-    }
-  };
+  const compact = (
+    <StaySearchCompact
+      onPress={() => onOpenStepChange('where')}
+      title={locationDisplayLabel(query.location, t)}
+      summary={summaryLine(query, t, locale)}
+      accessibilityLabel={`${t('search.summary.edit')}: ${locationDisplayLabel(query.location, t)}, ${summaryLine(query, t, locale)}`}
+      style={modeTabs === 'segmented' ? undefined : style}
+    />
+  );
 
   return (
     <>
-      <StaySearchCompact
-        onPress={() => onOpenStepChange('where')}
-        title={locationDisplayLabel(query.location, t)}
-        summary={summaryLine(query, t, locale)}
-        accessibilityLabel={`${t('search.summary.edit')}: ${locationDisplayLabel(query.location, t)}, ${summaryLine(query, t, locale)}`}
-        style={style}
-      />
+      {modeTabs === 'segmented' ? (
+        <View style={[styles.withTabs, style]}>
+          {renderModeTabs(pageMode, handlePageMode, 'segmented')}
+          {compact}
+        </View>
+      ) : (
+        compact
+      )}
       <Dialog
         placement="bottom"
         open={openStep !== null}
@@ -521,19 +581,7 @@ export function StaySearch({
               <H3>{t('search.panel.title')}</H3>
               <CloseButton onPress={handleCloseSheet} accessibilityLabel={t('common.close')} />
             </View>
-            <SegmentedControl<BrowseMode>
-              label={t('search.mode.label')}
-              type="tabs"
-              size="small"
-              value={browseModeFromOffering(draft.offering)}
-              onChange={handleBrowseMode}
-            >
-              {BROWSE_MODE_ORDER.map((mode) => (
-                <SegmentedControlItem key={mode} value={mode}>
-                  <SegmentedControlItemText>{t(BROWSE_MODE_LABELS[mode])}</SegmentedControlItemText>
-                </SegmentedControlItem>
-              ))}
-            </SegmentedControl>
+            {renderModeTabs(browseModeFromOffering(draft.offering), handleBrowseMode, 'segmented')}
           </View>
           <ScrollView
             style={[styles.sheetScroll, { backgroundColor: colors.backgroundSecondary }]}
@@ -546,7 +594,7 @@ export function StaySearch({
                 key={step}
                 label={t(STEP_LABEL_KEYS[step])}
                 title={t(STEP_TITLE_KEYS[step])}
-                summary={stepSummary(step)}
+                summary={step === 'where' ? locationDisplayLabel(draft.location, t) : (stepValue(step) ?? t(STEP_EMPTY_KEYS[step]))}
                 expanded={openStep === step}
                 onPress={() => onOpenStepChange(step)}
               >
@@ -580,6 +628,22 @@ export function StaySearch({
 }
 
 const styles = StyleSheet.create({
+  withTabs: {
+    gap: spacing.md,
+  },
+  fill: {
+    width: '100%',
+  },
+  textTabs: {
+    alignSelf: 'center',
+  },
+  // The pill stretches to its container; past a phone's width that is a very
+  // long pill, so it stops at a readable width and centres.
+  segmentedTabs: {
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
+  },
   guestsInset: {
     paddingHorizontal: spacing.lg,
   },
@@ -612,4 +676,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default StaySearch;
+export default HomeSearch;

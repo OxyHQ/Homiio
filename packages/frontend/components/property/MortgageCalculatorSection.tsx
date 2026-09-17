@@ -1,393 +1,86 @@
 /**
- * MortgageCalculatorSection — an interactive affordability estimator shown on
- * sale listings. Lets a buyer flex the down payment, interest rate, and term
- * and see the resulting monthly payment, with a principal-vs-interest split.
+ * MortgageCalculatorSection — the affordability estimator on a sale listing, on
+ * Bloom's `listing-actions` `MortgageCalculator`.
  *
- * State is fully local and effect-free (CLAUDE.md: avoid `useEffect`): the three
- * inputs are React state, and every output (loan amount, monthly payment,
- * totals, the split bar) is derived with `useMemo`. Defaults come from the
- * single shared `DEFAULT_MORTGAGE_CONFIG` in `@homiio/shared-types` so the
- * frontend and backend never disagree on the baseline assumptions.
+ * Bloom owns the inputs (price, down payment as an amount and a percent with its
+ * slider, term chips, rate), the annuity maths (`computeMortgage`) and the
+ * result (monthly payment, principal / interest donut, loan, interest, total
+ * cost). Homiio owns three things only:
  *
- * The down-payment control is Bloom's `Slider`, constrained to 5%–50% and
- * driven in whole percent (the state stays a fraction). The
- * term is a Bloom `SegmentedControl` seeded from `termOptions`.
+ *  - the listing's asking price as the starting price,
+ *  - the baseline assumptions, from the one shared `DEFAULT_MORTGAGE_CONFIG` so
+ *    the frontend and backend never disagree (its rate is a FRACTION; Bloom's is
+ *    in percent),
+ *  - the currency and locale every amount is formatted in, and the labels.
+ *
+ * The calculator draws its own heading, so the section adds none.
  */
-import React, { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { TextField, TextFieldInput, TextFieldSuffix } from '@oxy.so/bloom/text-field';
-import { Text as BloomText } from '@oxy.so/bloom/typography';
-import {
-  SegmentedControl,
-  SegmentedControlItem,
-  SegmentedControlItemText,
-} from '@oxy.so/bloom/segmented-control';
+import { MortgageCalculator, type MortgageCalculatorLabels } from '@oxy.so/bloom/listing-actions';
 
 import { Section } from '@/components/property/Section';
-import { MoneyText } from '@/components/MoneyText';
-import { Slider } from '@oxy.so/bloom/slider';
-import { parseLocaleNumber } from '@/utils/number';
-import { colors } from '@/styles/colors';
-import { hairline, radius, spacing } from '@/constants/styles';
-import { DEFAULT_MORTGAGE_CONFIG, formatPercentage } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
+import { DEFAULT_MORTGAGE_CONFIG, formatMoney } from '@homiio/shared-types';
 
 interface Props {
   salePrice: number;
   currency: string;
 }
 
-const MIN_DOWN_PAYMENT_FRACTION = 0.05;
-const MAX_DOWN_PAYMENT_FRACTION = 0.5;
-/** The slider snaps to whole percentage points (1pp). */
-const DOWN_PAYMENT_STEP_PERCENT = 1;
-const MONTHS_PER_YEAR = 12;
-const PERCENT = 100;
-/** Decimal places kept when seeding the rate field (avoids float-noise like 3.5000000000000004). */
-const RATE_PERCENT_PRECISION = 3;
-
-/** Format an annual-rate fraction (0.035) as a clean percent string ("3.5"). */
-function rateFractionToPercentText(fraction: number): string {
-  return parseFloat((fraction * PERCENT).toFixed(RATE_PERCENT_PRECISION)).toString();
-}
-
-/**
- * Standard fixed-rate amortization. Returns the level monthly payment for a
- * `principal` at monthly rate `monthlyRate` over `months` payments. Guards the
- * zero-rate case (interest-free) where the closed form divides by zero.
- */
-function monthlyPayment(principal: number, monthlyRate: number, months: number): number {
-  if (months <= 0) return 0;
-  if (monthlyRate === 0) return principal / months;
-  const growth = Math.pow(1 + monthlyRate, months);
-  return (principal * monthlyRate * growth) / (growth - 1);
-}
-
-/** Map a down-payment fraction (0.2) to the slider's percent integer (20). */
-function fractionToPercent(fraction: number): number {
-  return Math.round(fraction * PERCENT);
-}
+/** Decimal places kept converting the rate, so 0.035 reads 3.5 and not 3.5000000000000004. */
+const RATE_PRECISION = 1000;
+const DEFAULT_ANNUAL_RATE_PERCENT =
+  Math.round(DEFAULT_MORTGAGE_CONFIG.defaultAnnualRate * 100 * RATE_PRECISION) / RATE_PRECISION;
+/** The middle term option (25 years of 10–30), as the calculator opens on it. */
+const DEFAULT_TERM_YEARS =
+  DEFAULT_MORTGAGE_CONFIG.termOptions[Math.floor(DEFAULT_MORTGAGE_CONFIG.termOptions.length / 2)] ??
+  DEFAULT_MORTGAGE_CONFIG.termOptions[0];
 
 export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency }) => {
   const { t } = useTranslation();
   const { locale } = useFormatting();
 
-  const [downPaymentFraction, setDownPaymentFraction] = useState(
-    DEFAULT_MORTGAGE_CONFIG.defaultDownPaymentFraction,
-  );
-  // The rate field is a free-text percentage (e.g. "3.5"); keep the raw string
-  // so partial edits don't fight the parser, and derive the numeric rate.
-  const [annualRateText, setAnnualRateText] = useState(
-    rateFractionToPercentText(DEFAULT_MORTGAGE_CONFIG.defaultAnnualRate),
-  );
-  const [termYears, setTermYears] = useState(
-    DEFAULT_MORTGAGE_CONFIG.termOptions[
-      Math.floor(DEFAULT_MORTGAGE_CONFIG.termOptions.length / 2)
-    ] ?? DEFAULT_MORTGAGE_CONFIG.termOptions[0],
+  const formatCurrency = useCallback(
+    (amount: number) => formatMoney(Math.round(amount), currency, locale, { maximumFractionDigits: 0 }),
+    [currency, locale],
   );
 
-  const annualRate = useMemo(() => {
-    // Comma-tolerant parse (es/it/ca keyboards), shared with the listing wizard.
-    const parsed = parseLocaleNumber(annualRateText);
-    if (Number.isNaN(parsed) || parsed < 0) return 0;
-    return parsed / PERCENT;
-  }, [annualRateText]);
-
-  const result = useMemo(() => {
-    const loanAmount = Math.max(salePrice * (1 - downPaymentFraction), 0);
-    const downPayment = salePrice - loanAmount;
-    const months = termYears * MONTHS_PER_YEAR;
-    const monthly = monthlyPayment(loanAmount, annualRate / MONTHS_PER_YEAR, months);
-    const totalPaid = monthly * months;
-    const totalInterest = Math.max(totalPaid - loanAmount, 0);
-    const principalShare = totalPaid > 0 ? loanAmount / totalPaid : 1;
-    return { loanAmount, downPayment, monthly, totalPaid, totalInterest, principalShare };
-  }, [salePrice, downPaymentFraction, termYears, annualRate]);
-
-  const handleSetTerm = useCallback((value: string) => {
-    const parsed = parseInt(value, 10);
-    if (!Number.isNaN(parsed)) setTermYears(parsed);
-  }, []);
-
-  const handleDownPaymentPercent = useCallback((percent: number) => {
-    setDownPaymentFraction(percent / PERCENT);
-  }, []);
-
-  // `downPaymentFraction` and `principalShare` are FRACTIONS, which is what
-  // `formatPercentage` expects by default — no hand-multiplication by 100 and no
-  // hardcoded `%`, whose spacing differs by language.
-  const downPaymentPercentLabel = formatPercentage(downPaymentFraction, locale, {
-    maximumFractionDigits: 0,
-  });
-  const principalPercent = Math.round(result.principalShare * PERCENT);
-  const interestPercent = PERCENT - principalPercent;
-  const principalPercentLabel = formatPercentage(principalPercent, locale, {
-    input: 'percent',
-    maximumFractionDigits: 0,
-  });
-  const interestPercentLabel = formatPercentage(interestPercent, locale, {
-    input: 'percent',
-    maximumFractionDigits: 0,
-  });
+  const labels = useMemo<MortgageCalculatorLabels>(
+    () => ({
+      title: t('listing.mortgage.title'),
+      price: t('listing.mortgage.price'),
+      downPayment: t('listing.mortgage.downPayment'),
+      downPaymentPercent: t('listing.mortgage.downPaymentPercent'),
+      percent: t('listing.mortgage.percent'),
+      term: t('listing.mortgage.term'),
+      years: t('listing.mortgage.yearsUnit'),
+      rate: t('listing.mortgage.interestRate'),
+      monthlyPayment: t('listing.mortgage.monthlyPayment'),
+      principal: t('listing.mortgage.principal'),
+      interest: t('listing.mortgage.interest'),
+      loanAmount: t('listing.mortgage.loanAmount'),
+      totalInterest: t('listing.mortgage.totalInterest'),
+      totalCost: t('listing.mortgage.totalCost'),
+    }),
+    [t],
+  );
 
   return (
-    <Section
-      title={t('listing.mortgage.title')}
-      subtitle={t('listing.mortgage.subtitle')}
-    >
-      {/* Monthly payment headline */}
-      <View style={styles.headline}>
-        <MoneyText
-          amount={Math.round(result.monthly)}
-          currency={currency}
-          style={styles.monthly}
-        />
-        <BloomText style={styles.monthlyUnit}>
-          {` / ${t('listing.mortgage.perMonth')}`}
-        </BloomText>
-      </View>
-
-      {/* Down payment slider */}
-      <View style={styles.control}>
-        <View style={styles.controlHeader}>
-          <BloomText style={styles.controlLabel}>
-            {t('listing.mortgage.downPayment')}
-          </BloomText>
-          <BloomText style={styles.controlValue}>
-            {downPaymentPercentLabel}
-            {'  ·  '}
-            <MoneyText
-              amount={Math.round(result.downPayment)}
-              currency={currency}
-              style={styles.controlValue}
-            />
-          </BloomText>
-        </View>
-        <Slider
-          value={fractionToPercent(downPaymentFraction)}
-          min={fractionToPercent(MIN_DOWN_PAYMENT_FRACTION)}
-          max={fractionToPercent(MAX_DOWN_PAYMENT_FRACTION)}
-          step={DOWN_PAYMENT_STEP_PERCENT}
-          onValueChange={handleDownPaymentPercent}
-          showTooltip={false}
-          accessibilityLabel={t('listing.mortgage.downPayment')}
-        />
-      </View>
-
-      {/* Interest rate */}
-      <View style={styles.control}>
-        <View style={styles.controlHeader}>
-          <BloomText style={styles.controlLabel}>
-            {t('listing.mortgage.interestRate')}
-          </BloomText>
-        </View>
-        <TextField>
-          <TextFieldInput
-            label={t('listing.mortgage.interestRate')}
-            value={annualRateText}
-            onChangeText={setAnnualRateText}
-            keyboardType="decimal-pad"
-            placeholder="0"
-          />
-          <TextFieldSuffix label={t('listing.mortgage.interestRate')}>%</TextFieldSuffix>
-        </TextField>
-      </View>
-
-      {/* Term */}
-      <View style={styles.control}>
-        <View style={styles.controlHeader}>
-          <BloomText style={styles.controlLabel}>
-            {t('listing.mortgage.term')}
-          </BloomText>
-        </View>
-        <SegmentedControl
-          label={t('listing.mortgage.term')}
-          type="radio"
-          value={String(termYears)}
-          onChange={handleSetTerm}
-        >
-          {DEFAULT_MORTGAGE_CONFIG.termOptions.map((option) => (
-            <SegmentedControlItem key={option} value={String(option)}>
-              <SegmentedControlItemText>
-                {t('listing.mortgage.years', { count: option })}
-              </SegmentedControlItemText>
-            </SegmentedControlItem>
-          ))}
-        </SegmentedControl>
-      </View>
-
-      {/* Principal vs interest split bar */}
-      <View style={styles.splitBlock}>
-        <View style={styles.splitBar}>
-          <View style={[styles.splitPrincipal, { flex: Math.max(result.principalShare, 0.0001) }]} />
-          <View
-            style={[styles.splitInterest, { flex: Math.max(1 - result.principalShare, 0.0001) }]}
-          />
-        </View>
-        <View style={styles.legendRow}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: colors.primaryColor }]} />
-            <BloomText style={styles.legendLabel}>
-              {`${t('listing.mortgage.principal')} · ${principalPercentLabel}`}
-            </BloomText>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: colors.warning }]} />
-            <BloomText style={styles.legendLabel}>
-              {`${t('listing.mortgage.interest')} · ${interestPercentLabel}`}
-            </BloomText>
-          </View>
-        </View>
-      </View>
-
-      {/* Totals */}
-      <View style={styles.totals}>
-        <View style={styles.totalRow}>
-          <BloomText style={styles.totalLabel}>
-            {t('listing.mortgage.loanAmount')}
-          </BloomText>
-          <MoneyText
-            amount={Math.round(result.loanAmount)}
-            currency={currency}
-            style={styles.totalValue}
-          />
-        </View>
-        <View style={styles.totalRow}>
-          <BloomText style={styles.totalLabel}>
-            {t('listing.mortgage.totalInterest')}
-          </BloomText>
-          <MoneyText
-            amount={Math.round(result.totalInterest)}
-            currency={currency}
-            style={styles.totalValue}
-          />
-        </View>
-        <View style={[styles.totalRow, styles.totalRowEmphasis]}>
-          <BloomText style={styles.totalLabelStrong}>
-            {t('listing.mortgage.totalPaid')}
-          </BloomText>
-          <MoneyText
-            amount={Math.round(result.totalPaid)}
-            currency={currency}
-            style={styles.totalValueStrong}
-          />
-        </View>
-      </View>
+    <Section>
+      <MortgageCalculator
+        defaultPrice={salePrice}
+        defaultDownPayment={Math.round(salePrice * DEFAULT_MORTGAGE_CONFIG.defaultDownPaymentFraction)}
+        defaultYears={DEFAULT_TERM_YEARS}
+        defaultAnnualRate={DEFAULT_ANNUAL_RATE_PERCENT}
+        termOptions={DEFAULT_MORTGAGE_CONFIG.termOptions}
+        formatCurrency={formatCurrency}
+        labels={labels}
+        disclaimer={t('listing.mortgage.disclaimer')}
+      />
     </Section>
   );
 };
-
-const styles = StyleSheet.create({
-  headline: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    paddingBottom: spacing.md,
-  },
-  monthly: {
-    fontSize: 30,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-    letterSpacing: -0.4,
-  },
-  monthlyUnit: {
-    fontSize: 16,
-    fontWeight: '400',
-    color: colors.COLOR_BLACK_LIGHT_4,
-  },
-  control: {
-    marginTop: spacing.lg,
-    gap: spacing.sm,
-  },
-  controlHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  controlLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-  },
-  controlValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  splitBlock: {
-    marginTop: spacing.xl,
-    gap: spacing.sm,
-  },
-  splitBar: {
-    flexDirection: 'row',
-    height: 10,
-    borderRadius: radius.pill,
-    overflow: 'hidden',
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-  },
-  splitPrincipal: {
-    backgroundColor: colors.primaryColor,
-  },
-  splitInterest: {
-    backgroundColor: colors.warning,
-  },
-  legendRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.lg,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  legendLabel: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  totals: {
-    marginTop: spacing.xl,
-    gap: spacing.xs,
-  },
-  totalRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.xs,
-    gap: spacing.lg,
-  },
-  totalRowEmphasis: {
-    marginTop: spacing.xs,
-    paddingTop: spacing.md,
-    borderTopWidth: hairline.width,
-    borderTopColor: hairline.color,
-  },
-  totalLabel: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  totalValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_2,
-  },
-  totalLabelStrong: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-  totalValueStrong: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-});
 
 export default MortgageCalculatorSection;

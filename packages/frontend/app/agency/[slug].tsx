@@ -1,9 +1,10 @@
 /**
  * Agency profile — an agency's aggregate reputation, reviews, and listings.
  *
- * Header: name over a Bloom `Rating` (the real average + review count; "no
- * rating yet" when the agency has no reviews) + stat tiles on Bloom `Card`s
- * (recommend % and deposit-full % only when there are reviews, listings count). Bloom `Tabs`: Reviews
+ * Header: the name, then Bloom's `PlaceReviewSummary` (the real average and
+ * count, with the recommend and deposit-back shares above the publication
+ * floor; "no rating yet" when the agency has no reviews) and a listings tile.
+ * Bloom `Tabs`: Reviews
  * (paginated `useAgencyReviews`, each review linking to its address page) and
  * Listings (paginated `useAgencyProperties` rendered with the shared
  * `PropertyResultsGrid`). Infinite scroll wires BOTH primitives —
@@ -30,10 +31,9 @@ import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { formatPercentage } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
-import { useFormatting } from '@/utils/format';
 import { ReviewCard } from '@/components/ReviewCard';
+import { AGGREGATE_MIN_RECORDS, PlaceReviewsSummary } from '@/components/reviews/PlaceReviewsSummary';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
@@ -89,7 +89,6 @@ const AgencyReviewItem: React.FC<AgencyReviewItemProps> = ({ review, author, onP
 };
 
 export default function AgencyProfileScreen() {
-  const { locale } = useFormatting();
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const { t } = useTranslation();
@@ -155,6 +154,7 @@ export default function AgencyProfileScreen() {
   }
 
   const hasReviews = stats.totalReviews > 0;
+  const publishShares = stats.totalReviews >= AGGREGATE_MIN_RECORDS;
 
   return (
     <View style={styles.root}>
@@ -171,45 +171,42 @@ export default function AgencyProfileScreen() {
             </View>
             <View style={styles.agencyTitle}>
               <H1 style={styles.agencyName}>{agency.name}</H1>
-              <Rating
-                value={hasReviews ? stats.averageRating : null}
-                count={stats.totalReviews}
-                newLabel={t('reviews.write.ratingNone')}
-                accessibilityLabel={
-                  hasReviews
-                    ? `${t('reviews.ratingA11y', {
-                        rating: Number(stats.averageRating.toFixed(2)),
-                      })}, ${t('reviews.explore.reviewCount', { count: stats.totalReviews })}`
-                    : t('reviews.write.ratingNone')
-                }
-              />
+              {hasReviews ? null : (
+                <Rating
+                  value={null}
+                  count={0}
+                  newLabel={t('reviews.write.ratingNone')}
+                  accessibilityLabel={t('reviews.write.ratingNone')}
+                />
+              )}
             </View>
           </View>
 
-          <View style={styles.statsRow}>
-            {/* Review-derived shares are 0 when there are no reviews — not a real 0%. */}
-            {hasReviews ? (
-              <StatTile
-                value={formatPercentage(stats.recommendationPercentage, locale, {
-                  input: 'percent',
-                  maximumFractionDigits: 0,
-                })}
-                label={t('agency.stats.recommend')}
-              />
-            ) : null}
-            {hasReviews && typeof stats.depositFullPct === 'number' ? (
-              <StatTile
-                value={formatPercentage(stats.depositFullPct, locale, {
-                  input: 'percent',
-                  maximumFractionDigits: 0,
-                })}
-                label={t('agency.stats.depositFull')}
-              />
-            ) : null}
-            {typeof stats.listingsCount === 'number' ? (
+          {hasReviews ? (
+            <PlaceReviewsSummary
+              stats={{
+                averageRating: stats.averageRating,
+                totalReviews: stats.totalReviews,
+                // Shares publish only above the aggregate floor. The server's
+                // stats carry no author count, so the record floor is the one
+                // this screen can check.
+                ...(publishShares
+                  ? {
+                      recommendRate: stats.recommendationPercentage / 100,
+                      ...(typeof stats.depositFullPct === 'number'
+                        ? { depositReturnedRate: stats.depositFullPct / 100 }
+                        : {}),
+                    }
+                  : {}),
+              }}
+            />
+          ) : null}
+
+          {typeof stats.listingsCount === 'number' ? (
+            <View style={styles.statsRow}>
               <StatTile value={String(stats.listingsCount)} label={t('agency.stats.listings')} />
-            ) : null}
-          </View>
+            </View>
+          ) : null}
 
           <Tabs value={tab} onValueChange={(next) => setTab(next as AgencyTab)}>
             <TabsTrigger value="reviews" label={t('agency.tabs.reviews')} />

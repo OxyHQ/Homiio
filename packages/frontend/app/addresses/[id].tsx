@@ -9,8 +9,10 @@
  * the screen level (`useOxyAvatars`). No fake confidence/evidence badges, no
  * Alert stubs — Helpful / Report are real inside `ReviewCard`.
  *
- * The review summary is a Bloom `Rating` (real average + count, only when the
- * address has reviews) over a `RatingBar` for the recommend share.
+ * The review summary is Bloom's `PlaceReviewSummary` (`PlaceReviewsSummary`:
+ * the real average and count, only when the address has reviews, with the
+ * recommend and deposit-returned shares above the publication floor), and the
+ * invitation to review is Bloom's `WriteReviewPrompt`.
  *
  * Sections sit on outlined Bloom `Card`s; the Properties/Reviews switch and the
  * review sub-tabs are Bloom `Tabs`.
@@ -20,16 +22,14 @@ import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
 import {
   RiChat3Line,
   RiDiscussLine,
-  RiEditBoxLine,
   RiHomeLine,
   RiSearchLine,
 } from '@oxy.so/bloom/icons';
-import { Rating, RatingBar } from '@oxy.so/bloom/rating';
+import { WriteReviewPrompt } from '@oxy.so/bloom/place-reviews';
 import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
 import { H2, H3 } from '@oxy.so/bloom/typography';
 import { useTranslation } from 'react-i18next';
@@ -44,6 +44,7 @@ import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { NeighborhoodRatingWidget } from '@/components/widgets/NeighborhoodRatingWidget';
 import { ReviewCard } from '@/components/ReviewCard';
 import { DimensionBreakdown } from '@/components/reviews/DimensionBreakdown';
+import { PlaceReviewsSummary, placeReviewStats } from '@/components/reviews/PlaceReviewsSummary';
 import { reviewHasSection, type ReviewSection } from '@/components/reviews/dimensions';
 import { useOxyAvatars } from '@/hooks/useOxyAvatars';
 import { reviewService } from '@/services/reviewService';
@@ -77,19 +78,6 @@ const REVIEW_TABS: { id: ReviewTab; labelKey: string }[] = [
   { id: 'building', labelKey: 'addresses.detail.tabBuilding' },
   { id: 'area', labelKey: 'addresses.detail.tabArea' },
 ];
-
-const computeSummary = (reviews: ReviewDTO[]) => {
-  if (reviews.length === 0) {
-    return { averageRating: 0, totalReviews: 0, recommendationPercentage: 0 };
-  }
-  const ratingSum = reviews.reduce((sum, r) => sum + (r.rating || 0), 0);
-  const recommended = reviews.filter((r) => r.recommendation).length;
-  return {
-    averageRating: ratingSum / reviews.length,
-    totalReviews: reviews.length,
-    recommendationPercentage: (recommended / reviews.length) * 100,
-  };
-};
 
 export default function AddressDetailsPage() {
   const { t } = useTranslation();
@@ -140,7 +128,7 @@ export default function AddressDetailsPage() {
 
   const { usersById } = useOxyAvatars(reviews.map((review) => review.oxyUserId));
 
-  const summary = useMemo(() => computeSummary(reviews), [reviews]);
+  const summary = useMemo(() => placeReviewStats(reviews), [reviews]);
 
   const filteredReviews = useMemo(() => {
     if (reviewTab === 'overall') return reviews;
@@ -235,19 +223,7 @@ export default function AddressDetailsPage() {
           {reviews.length > 0 ? (
             <Card variant="outlined" radius="radius-16" style={styles.sectionCard}>
               <SectionEyebrow>{t('addresses.detail.reviewsSection')}</SectionEyebrow>
-              <Rating
-                value={summary.averageRating}
-                count={summary.totalReviews}
-                accessibilityLabel={`${t('reviews.ratingA11y', {
-                  rating: Number(summary.averageRating.toFixed(2)),
-                })}, ${t('reviews.explore.reviewCount', { count: summary.totalReviews })}`}
-              />
-              <RatingBar
-                label={t('addresses.detail.metricRecommend')}
-                value={summary.recommendationPercentage}
-                max={100}
-                display={`${Math.round(summary.recommendationPercentage)}%`}
-              />
+              <PlaceReviewsSummary stats={summary} />
             </Card>
           ) : null}
 
@@ -302,20 +278,22 @@ export default function AddressDetailsPage() {
             </Card>
           ) : (
             <Card variant="outlined" radius="radius-16" style={styles.sectionCard}>
-              <View style={styles.reviewsHeader}>
-                <View style={styles.headerText}>
-                  <SectionEyebrow>{t('addresses.detail.reviewsSection')}</SectionEyebrow>
-                  <H2 style={styles.cardHeading}>{t('addresses.detail.storiesTitle')}</H2>
-                </View>
-                <Button
-                  variant="primary"
-                  size="medium"
-                  onPress={handleWriteReview}
-                  leadingIcon={RiEditBoxLine}
-                >
-                  {t('addresses.detail.writeReview')}
-                </Button>
+              <View style={styles.headerText}>
+                <SectionEyebrow>{t('addresses.detail.reviewsSection')}</SectionEyebrow>
+                <H2 style={styles.cardHeading}>{t('addresses.detail.storiesTitle')}</H2>
               </View>
+
+              <WriteReviewPrompt
+                buildingTitle={address.street || getAddressTitle()}
+                title={t('reviews.prompt.title')}
+                description={
+                  address.street
+                    ? t('reviews.prompt.description', { place: address.street })
+                    : t('addresses.detail.emptyReviewsDescription')
+                }
+                actionLabel={t('addresses.detail.writeReview')}
+                onStart={handleWriteReview}
+              />
 
               <Tabs
                 variant="filled"
@@ -380,15 +358,7 @@ const styles = StyleSheet.create({
   propertiesList: {
     gap: spacing.md,
   },
-  reviewsHeader: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
   headerText: {
-    flex: 1,
-    minWidth: 180,
     gap: spacing.xs,
   },
   reviewsList: {

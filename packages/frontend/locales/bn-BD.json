@@ -2295,30 +2295,41 @@
       "subtitleCity_one": "{{count}}-bed home in {{areaLabel}}",
       "subtitleCity_other": "{{count}}-bed homes in {{areaLabel}}",
       "subtitleStudioCity": "Studios in {{areaLabel}}",
-      "verdict": {
-        "good_deal": "Good deal",
-        "below_average": "Below average",
-        "average": "Typical price",
-        "above_average": "Above average"
-      },
-      "vsAvgCheaper": "{{percent}}% below average",
-      "vsAvgPricier": "{{percent}}% above average",
-      "vsAvgSame": "Right at the average",
-      "rangeMarkerLabel": "{{price}} · {{deltaLabel}}",
-      "average": "Average {{avg}}",
-      "perSqm": "{{price}}/m² vs area {{areaPrice}}/m²",
-      "samples_one": "{{count}} home",
-      "samples_other": "{{count}} homes",
-      "statLine": "{{average}} · {{samples}}",
-      "statLineWithSqm": "{{average}} · {{perSqm}} · {{samples}}",
       "neighborhoodPricier": "{{neighborhood}} is ~{{percent}}% pricier than {{city}}",
       "neighborhoodCheaper": "{{neighborhood}} is ~{{percent}}% cheaper than {{city}}",
       "neighborhoodSame": "{{neighborhood}} is priced in line with {{city}}",
       "distributionLabel": "Price distribution of nearby homes",
       "lowDataNote": "Not enough nearby listings to compare yet.",
-      "lowSampleCaveat_one": "Based on just {{count}} nearby listing — treat as a rough guide.",
-      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide.",
-      "homesMetric": "বাসা"
+      "homesMetric": "বাসা",
+      "rangeTitle": "একই রকম বাড়ির চাওয়া দাম",
+      "thisHome": "এই বাড়ি",
+      "placement": {
+        "within": "স্থানীয় সীমার মধ্যে",
+        "above": "স্থানীয় সীমার চেয়ে {{percent}}% বেশি",
+        "below": "স্থানীয় সীমার চেয়ে {{percent}}% কম"
+      },
+      "confidence": {
+        "low": "কম নির্ভরযোগ্যতা",
+        "medium": "মাঝারি নির্ভরযোগ্যতা",
+        "high": "উচ্চ নির্ভরযোগ্যতা"
+      },
+      "tooFewToPlace": "এই দামের তুলনা করার মতো যথেষ্ট একই রকম বাড়ি নেই",
+      "askingPricesNote": "এগুলো চাওয়া দাম, চূড়ান্ত ভাড়া বা বিক্রয়মূল্য নয়।",
+      "reasonsLabel": "এই সীমা কীভাবে তৈরি",
+      "reason": {
+        "radiusBasis": "{{radiusKm}} কিমির মধ্যে একই ধরনের অফার এবং এক শোবার ঘর কম বা বেশি থাকা বিজ্ঞাপন",
+        "cityBasis": "{{radiusKm}} কিমির মধ্যে একই রকম বিজ্ঞাপন খুব কম, তাই পুরো {{areaLabel}}-এর বাড়ির তুলনা করা হয়েছে",
+        "middle": "মধ্যমা দাম {{median}}, গড় {{avg}}",
+        "range": "তুলনা করা বাড়িগুলোর মধ্যে {{min}} থেকে {{max}}"
+      },
+      "method": "বিজ্ঞাপনের স্থানীয় তুলনা",
+      "perSqmTitle": "প্রতি বর্গমিটার দাম",
+      "perSqmValue": "{{price}}/বর্গমি",
+      "areaAverage": "{{areaLabel}} গড়",
+      "comparables_one": "{{count}}টি একই রকম বিজ্ঞাপনের ভিত্তিতে",
+      "comparables_other": "{{count}}টি একই রকম বিজ্ঞাপনের ভিত্তিতে",
+      "insufficient_one": "কাছাকাছি মাত্র {{count}}টি একই রকম বিজ্ঞাপন আছে — এই দামের তুলনার জন্য খুবই কম।",
+      "insufficient_other": "কাছাকাছি মাত্র {{count}}টি একই রকম বিজ্ঞাপন আছে — এই দামের তুলনার জন্য খুবই কম।"
     },
     "nearbyServices": {
       "title": "What's nearby",
@@ -2458,14 +2469,10 @@
     "reviews": {
       "writeAction": "Write a review",
       "emptyDescription": "Be the first to share what it was like to live here.",
-      "emptyTitle": "No reviews yet",
       "errorTitle": "Could not load reviews",
       "disclaimer": "Community-verified reviews about the building. Experiences may vary by unit.",
       "title": "Reviews",
       "evidence": "With evidence",
-      "verified": "Verified",
-      "recommend": "Recommend",
-      "count": "reviews",
       "countWithNumber": "({{count}} reviews)",
       "showAll": "Show all {{count}} reviews",
       "total_one": "{{count}}টি রিভিউ",
@@ -2520,16 +2527,6 @@
       "pricier": "pricier"
     },
     "fraudWarning": "Never pay or transfer funds outside the Homio platform",
-    "priceEthics": {
-      "banner": {
-        "title": "Not a fair price",
-        "exceedsEthical": "This price exceeds Homiio's ethical maximum ({{max}}/month).",
-        "exceedsEthicalGeneric": "This price exceeds Homiio's ethical maximum for similar homes.",
-        "aboveMarket": "This price is {{percent}}% above similar homes in the area.",
-        "aboveMarketGeneric": "This price is above the local average for similar homes.",
-        "generic": "This listing does not meet Homiio's fair-price criteria."
-      }
-    },
     "photos": {
       "showAll": "সব ছবি দেখুন",
       "label": "বিজ্ঞাপনের ছবি",
@@ -2847,17 +2844,21 @@
     },
     "mortgage": {
       "title": "Mortgage calculator",
-      "subtitle": "An estimate — not a mortgage offer.",
-      "perMonth": "mo",
       "downPayment": "Down payment",
       "interestRate": "Interest rate",
       "term": "Term",
-      "years": "{{count}} yr",
       "principal": "Principal",
       "interest": "Interest",
       "loanAmount": "Loan amount",
       "totalInterest": "Total interest",
-      "totalPaid": "Total paid"
+      "price": "সম্পত্তির দাম",
+      "downPaymentPercent": "ডাউন পেমেন্টের শতাংশ",
+      "percent": "শতাংশ",
+      "yearsUnit": "বছর",
+      "monthlyPayment": "মাসিক কিস্তি",
+      "totalCost": "মোট খরচ",
+      "disclaimer": "এটি একটি আনুমানিক হিসাব, বন্ধকী প্রস্তাব নয়। এতে ফি, কর ও বিমা ধরা হয়নি, এবং পুরো মেয়াদে স্থির সুদের হার ধরা হয়েছে।",
+      "estimate": "আনুমানিক {{amount}}/মাস"
     },
     "cta": {
       "housingAuthority": "Housing Authority",
@@ -2876,6 +2877,21 @@
       "nextPhoto": "পরের ছবি",
       "save": "সংরক্ষণ করুন",
       "unsave": "সংরক্ষিত থেকে সরান"
+    },
+    "actions": {
+      "bills": {
+        "included": "বিল অন্তর্ভুক্ত",
+        "excluded": "বিল অন্তর্ভুক্ত নয়",
+        "partial": "কিছু বিল অন্তর্ভুক্ত"
+      },
+      "status": {
+        "reserved": "সংরক্ষিত",
+        "rented": "ভাড়া দেওয়া হয়েছে",
+        "sold": "বিক্রি হয়েছে",
+        "reservedMessage": "এই বাড়িটি আপাতত সংরক্ষিত এবং নতুন অনুরোধ নিচ্ছে না।",
+        "rentedMessage": "এই বাড়িটি ভাড়া হয়ে গেছে এবং আর অনুরোধ নেয় না।",
+        "soldMessage": "এই বাড়িটি বিক্রি হয়ে গেছে।"
+      }
     }
   },
   "goBack": "Go back",
@@ -3061,13 +3077,10 @@
     },
     "cta": {
       "apply": "Apply to rent",
-      "subtitle": "Submit a quick application with your move-in date, income and references — the landlord reviews and replies inside Homiio.",
-      "title": "Interested in this place?",
       "addMoveIn": "Add move-in date"
     },
     "detail": {
       "viewStatus": "View status",
-      "alreadySubmittedBody": "You already have an application in review for this property.",
       "alreadySubmitted": "Application submitted"
     },
     "actions": {
@@ -3443,7 +3456,16 @@
         "cleaning": "Cleaning"
       }
     },
-    "ratingA11y": "৫-এর মধ্যে {{rating}} রেটিং"
+    "ratingA11y": "৫-এর মধ্যে {{rating}} রেটিং",
+    "summary": {
+      "title": "বাসিন্দাদের রেটিং",
+      "recommend": "{{percent}}% এখানে থাকার সুপারিশ করবেন",
+      "depositReturned": "{{percent}}% ভাড়ায় জামানত পুরোপুরি ফেরত দেওয়া হয়েছে"
+    },
+    "prompt": {
+      "title": "আপনি কি এখানে থেকেছেন?",
+      "description": "{{place}}-এর পরবর্তী বাসিন্দাদের সাহায্য করুন: সেখানে থাকা আসলে কেমন ছিল তা জানান।"
+    }
   },
   "subscriptions": {
     "title": "Subscriptions",
@@ -3655,8 +3677,7 @@
       "tabReviews": "Reviews ({{count}})",
       "tabApartment": "Apartment",
       "tabManagement": "Management",
-      "tabBuilding": "Building",
-      "metricRecommend": "Recommend"
+      "tabBuilding": "Building"
     },
     "display": {
       "copySuccess": "Address copied to clipboard",
@@ -3759,14 +3780,6 @@
   "error": {
     "publicHousing": {
       "openFailed": "Could not open the housing website"
-    },
-    "call": {
-      "failed": "Could not open phone dialer",
-      "noPhone": "No phone number available",
-      "notAllowed": "Owner does not accept calls"
-    },
-    "profile": {
-      "notFound": "Owner profile not found"
     },
     "auth": {
       "required": "Please sign in to call the owner"
@@ -4199,8 +4212,6 @@
     "notFound": "Agency not found",
     "notFoundDescription": "We couldn't find this agency.",
     "stats": {
-      "recommend": "Recommend",
-      "depositFull": "Deposit back",
       "listings": "Listings"
     },
     "tabs": {

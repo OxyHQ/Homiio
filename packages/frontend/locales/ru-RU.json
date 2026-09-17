@@ -2299,30 +2299,45 @@
       "subtitleCity_one": "{{count}}-bed home in {{areaLabel}}",
       "subtitleCity_other": "{{count}}-bed homes in {{areaLabel}}",
       "subtitleStudioCity": "Studios in {{areaLabel}}",
-      "verdict": {
-        "good_deal": "Good deal",
-        "below_average": "Below average",
-        "average": "Typical price",
-        "above_average": "Above average"
-      },
-      "vsAvgCheaper": "{{percent}}% below average",
-      "vsAvgPricier": "{{percent}}% above average",
-      "vsAvgSame": "Right at the average",
-      "rangeMarkerLabel": "{{price}} · {{deltaLabel}}",
-      "average": "Average {{avg}}",
-      "perSqm": "{{price}}/m² vs area {{areaPrice}}/m²",
-      "samples_one": "{{count}} home",
-      "samples_other": "{{count}} homes",
-      "statLine": "{{average}} · {{samples}}",
-      "statLineWithSqm": "{{average}} · {{perSqm}} · {{samples}}",
       "neighborhoodPricier": "{{neighborhood}} is ~{{percent}}% pricier than {{city}}",
       "neighborhoodCheaper": "{{neighborhood}} is ~{{percent}}% cheaper than {{city}}",
       "neighborhoodSame": "{{neighborhood}} is priced in line with {{city}}",
       "distributionLabel": "Price distribution of nearby homes",
       "lowDataNote": "Not enough nearby listings to compare yet.",
-      "lowSampleCaveat_one": "Based on just {{count}} nearby listing — treat as a rough guide.",
-      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide.",
-      "homesMetric": "Жильё"
+      "homesMetric": "Жильё",
+      "rangeTitle": "Запрашиваемые цены похожих домов",
+      "thisHome": "Этот дом",
+      "placement": {
+        "within": "В пределах местного диапазона",
+        "above": "На {{percent}}% выше местного диапазона",
+        "below": "На {{percent}}% ниже местного диапазона"
+      },
+      "confidence": {
+        "low": "Низкая достоверность",
+        "medium": "Средняя достоверность",
+        "high": "Высокая достоверность"
+      },
+      "tooFewToPlace": "Слишком мало похожих домов, чтобы оценить эту цену",
+      "askingPricesNote": "Это запрашиваемые цены, а не согласованная аренда или цена продажи.",
+      "reasonsLabel": "Как построен этот диапазон",
+      "reason": {
+        "radiusBasis": "Объявления в радиусе {{radiusKm}} км с тем же типом предложения и на одну спальню больше или меньше",
+        "cityBasis": "В радиусе {{radiusKm}} км слишком мало похожих объявлений, поэтому сравниваются дома по всей территории: {{areaLabel}}",
+        "middle": "Медианная цена {{median}}, средняя {{avg}}",
+        "range": "От {{min}} до {{max}} среди сравниваемых домов"
+      },
+      "method": "Местное сравнение объявлений",
+      "perSqmTitle": "Цена за м²",
+      "perSqmValue": "{{price}} за м²",
+      "areaAverage": "В среднем: {{areaLabel}}",
+      "comparables_one": "На основе {{count}} похожего объявления",
+      "comparables_few": "На основе {{count}} похожих объявлений",
+      "comparables_many": "На основе {{count}} похожих объявлений",
+      "comparables_other": "На основе {{count}} похожего объявления",
+      "insufficient_one": "Рядом всего {{count}} похожее объявление — слишком мало, чтобы сравнить эту цену.",
+      "insufficient_few": "Рядом всего {{count}} похожих объявления — слишком мало, чтобы сравнить эту цену.",
+      "insufficient_many": "Рядом всего {{count}} похожих объявлений — слишком мало, чтобы сравнить эту цену.",
+      "insufficient_other": "Рядом всего {{count}} похожего объявления — слишком мало, чтобы сравнить эту цену."
     },
     "nearbyServices": {
       "title": "What's nearby",
@@ -2462,14 +2477,10 @@
     "reviews": {
       "writeAction": "Write a review",
       "emptyDescription": "Be the first to share what it was like to live here.",
-      "emptyTitle": "No reviews yet",
       "errorTitle": "Could not load reviews",
       "disclaimer": "Community-verified reviews about the building. Experiences may vary by unit.",
       "title": "Reviews",
       "evidence": "With evidence",
-      "verified": "Verified",
-      "recommend": "Recommend",
-      "count": "reviews",
       "countWithNumber": "({{count}} reviews)",
       "showAll": "Show all {{count}} reviews",
       "total_one": "{{count}} отзыв",
@@ -2526,16 +2537,6 @@
       "pricier": "pricier"
     },
     "fraudWarning": "Never pay or transfer funds outside the Homio platform",
-    "priceEthics": {
-      "banner": {
-        "title": "Not a fair price",
-        "exceedsEthical": "This price exceeds Homiio's ethical maximum ({{max}}/month).",
-        "exceedsEthicalGeneric": "This price exceeds Homiio's ethical maximum for similar homes.",
-        "aboveMarket": "This price is {{percent}}% above similar homes in the area.",
-        "aboveMarketGeneric": "This price is above the local average for similar homes.",
-        "generic": "This listing does not meet Homiio's fair-price criteria."
-      }
-    },
     "photos": {
       "showAll": "Показать все фото",
       "label": "Фото объявления",
@@ -2853,17 +2854,21 @@
     },
     "mortgage": {
       "title": "Mortgage calculator",
-      "subtitle": "An estimate — not a mortgage offer.",
-      "perMonth": "mo",
       "downPayment": "Down payment",
       "interestRate": "Interest rate",
       "term": "Term",
-      "years": "{{count}} yr",
       "principal": "Principal",
       "interest": "Interest",
       "loanAmount": "Loan amount",
       "totalInterest": "Total interest",
-      "totalPaid": "Total paid"
+      "price": "Цена недвижимости",
+      "downPaymentPercent": "Первоначальный взнос, %",
+      "percent": "Процент",
+      "yearsUnit": "лет",
+      "monthlyPayment": "Ежемесячный платёж",
+      "totalCost": "Общая стоимость",
+      "disclaimer": "Это оценка, а не ипотечное предложение. Без учёта комиссий, налогов и страховки, при фиксированной ставке на весь срок.",
+      "estimate": "≈ {{amount}}/мес."
     },
     "cta": {
       "housingAuthority": "Housing Authority",
@@ -2886,6 +2891,21 @@
       "nextPhoto": "Следующее фото",
       "save": "Сохранить",
       "unsave": "Удалить из сохранённого"
+    },
+    "actions": {
+      "bills": {
+        "included": "Коммунальные услуги включены",
+        "excluded": "Коммунальные услуги не включены",
+        "partial": "Часть коммунальных услуг включена"
+      },
+      "status": {
+        "reserved": "Забронировано",
+        "rented": "Сдано",
+        "sold": "Продано",
+        "reservedMessage": "Этот дом сейчас забронирован и не принимает новые запросы.",
+        "rentedMessage": "Этот дом уже сдан и больше не принимает запросы.",
+        "soldMessage": "Этот дом продан."
+      }
     }
   },
   "goBack": "Go back",
@@ -3071,13 +3091,10 @@
     },
     "cta": {
       "apply": "Apply to rent",
-      "subtitle": "Submit a quick application with your move-in date, income and references — the landlord reviews and replies inside Homiio.",
-      "title": "Interested in this place?",
       "addMoveIn": "Add move-in date"
     },
     "detail": {
       "viewStatus": "View status",
-      "alreadySubmittedBody": "You already have an application in review for this property.",
       "alreadySubmitted": "Application submitted"
     },
     "actions": {
@@ -3453,7 +3470,16 @@
         "cleaning": "Cleaning"
       }
     },
-    "ratingA11y": "Оценка {{rating}} из 5"
+    "ratingA11y": "Оценка {{rating}} из 5",
+    "summary": {
+      "title": "Оценки жильцов",
+      "recommend": "{{percent}}% рекомендуют здесь жить",
+      "depositReturned": "Залог возвращён полностью в {{percent}}% случаев аренды"
+    },
+    "prompt": {
+      "title": "Вы здесь жили?",
+      "description": "Помогите следующим жильцам {{place}}: расскажите, каково там жить на самом деле."
+    }
   },
   "subscriptions": {
     "title": "Subscriptions",
@@ -3671,8 +3697,7 @@
       "tabReviews": "Reviews ({{count}})",
       "tabApartment": "Apartment",
       "tabManagement": "Management",
-      "tabBuilding": "Building",
-      "metricRecommend": "Recommend"
+      "tabBuilding": "Building"
     },
     "display": {
       "copySuccess": "Address copied to clipboard",
@@ -3775,14 +3800,6 @@
   "error": {
     "publicHousing": {
       "openFailed": "Could not open the housing website"
-    },
-    "call": {
-      "failed": "Could not open phone dialer",
-      "noPhone": "No phone number available",
-      "notAllowed": "Owner does not accept calls"
-    },
-    "profile": {
-      "notFound": "Owner profile not found"
     },
     "auth": {
       "required": "Please sign in to call the owner"
@@ -4215,8 +4232,6 @@
     "notFound": "Agency not found",
     "notFoundDescription": "We couldn't find this agency.",
     "stats": {
-      "recommend": "Recommend",
-      "depositFull": "Deposit back",
       "listings": "Listings"
     },
     "tabs": {

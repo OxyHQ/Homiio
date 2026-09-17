@@ -73,7 +73,7 @@ interface RecentSearchesState {
 }
 
 /**
- * Persisted store of the user's recent searches, surfaced by the `StaySearch` composer
+ * Persisted store of the user's recent searches, surfaced by the `HomeSearch` composer
  * when it opens with an empty "Where" input.
  */
 export const useRecentSearchesStore = create<RecentSearchesState>()(

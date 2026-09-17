@@ -2303,30 +2303,49 @@
       "subtitleCity_one": "{{count}}-bed home in {{areaLabel}}",
       "subtitleCity_other": "{{count}}-bed homes in {{areaLabel}}",
       "subtitleStudioCity": "Studios in {{areaLabel}}",
-      "verdict": {
-        "good_deal": "Good deal",
-        "below_average": "Below average",
-        "average": "Typical price",
-        "above_average": "Above average"
-      },
-      "vsAvgCheaper": "{{percent}}% below average",
-      "vsAvgPricier": "{{percent}}% above average",
-      "vsAvgSame": "Right at the average",
-      "rangeMarkerLabel": "{{price}} · {{deltaLabel}}",
-      "average": "Average {{avg}}",
-      "perSqm": "{{price}}/m² vs area {{areaPrice}}/m²",
-      "samples_one": "{{count}} home",
-      "samples_other": "{{count}} homes",
-      "statLine": "{{average}} · {{samples}}",
-      "statLineWithSqm": "{{average}} · {{perSqm}} · {{samples}}",
       "neighborhoodPricier": "{{neighborhood}} is ~{{percent}}% pricier than {{city}}",
       "neighborhoodCheaper": "{{neighborhood}} is ~{{percent}}% cheaper than {{city}}",
       "neighborhoodSame": "{{neighborhood}} is priced in line with {{city}}",
       "distributionLabel": "Price distribution of nearby homes",
       "lowDataNote": "Not enough nearby listings to compare yet.",
-      "lowSampleCaveat_one": "Based on just {{count}} nearby listing — treat as a rough guide.",
-      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide.",
-      "homesMetric": "المساكن"
+      "homesMetric": "المساكن",
+      "rangeTitle": "الأسعار المطلوبة لمنازل مماثلة",
+      "thisHome": "هذا المنزل",
+      "placement": {
+        "within": "ضمن النطاق المحلي",
+        "above": "أعلى من النطاق المحلي بنسبة {{percent}}%",
+        "below": "أدنى من النطاق المحلي بنسبة {{percent}}%"
+      },
+      "confidence": {
+        "low": "ثقة منخفضة",
+        "medium": "ثقة متوسطة",
+        "high": "ثقة عالية"
+      },
+      "tooFewToPlace": "عدد المنازل المماثلة قليل جدًا لتحديد موقع هذا السعر",
+      "askingPricesNote": "هذه أسعار مطلوبة، وليست إيجارات أو أسعار بيع متفقًا عليها.",
+      "reasonsLabel": "كيف يُحسب هذا النطاق",
+      "reason": {
+        "radiusBasis": "إعلانات ضمن {{radiusKm}} كم بنفس نوع العرض وبغرفة نوم أكثر أو أقل",
+        "cityBasis": "الإعلانات المماثلة ضمن {{radiusKm}} كم قليلة جدًا، لذا تُقارن المنازل في {{areaLabel}} كلها",
+        "middle": "السعر الوسيط {{median}}، والمتوسط {{avg}}",
+        "range": "من {{min}} إلى {{max}} بين المنازل المقارنة"
+      },
+      "method": "مقارنة محلية للإعلانات",
+      "perSqmTitle": "السعر لكل م²",
+      "perSqmValue": "{{price}} لكل م²",
+      "areaAverage": "متوسط {{areaLabel}}",
+      "comparables_zero": "لا توجد إعلانات مماثلة",
+      "comparables_one": "استنادًا إلى {{count}} إعلان مماثل",
+      "comparables_two": "استنادًا إلى إعلانين مماثلين",
+      "comparables_few": "استنادًا إلى {{count}} إعلانات مماثلة",
+      "comparables_many": "استنادًا إلى {{count}} إعلانًا مماثلًا",
+      "comparables_other": "استنادًا إلى {{count}} إعلان مماثل",
+      "insufficient_zero": "لا توجد إعلانات مماثلة قريبة لمقارنة هذا السعر.",
+      "insufficient_one": "يوجد {{count}} إعلان مماثل فقط بالقرب، وهذا قليل جدًا لمقارنة هذا السعر.",
+      "insufficient_two": "يوجد إعلانان مماثلان فقط بالقرب، وهذا قليل جدًا لمقارنة هذا السعر.",
+      "insufficient_few": "توجد {{count}} إعلانات مماثلة فقط بالقرب، وهذا قليل جدًا لمقارنة هذا السعر.",
+      "insufficient_many": "يوجد {{count}} إعلانًا مماثلًا فقط بالقرب، وهذا قليل جدًا لمقارنة هذا السعر.",
+      "insufficient_other": "يوجد {{count}} إعلان مماثل فقط بالقرب، وهذا قليل جدًا لمقارنة هذا السعر."
     },
     "nearbyServices": {
       "title": "What's nearby",
@@ -2466,14 +2485,10 @@
     "reviews": {
       "writeAction": "Write a review",
       "emptyDescription": "Be the first to share what it was like to live here.",
-      "emptyTitle": "No reviews yet",
       "errorTitle": "Could not load reviews",
       "disclaimer": "Community-verified reviews about the building. Experiences may vary by unit.",
       "title": "Reviews",
       "evidence": "With evidence",
-      "verified": "Verified",
-      "recommend": "Recommend",
-      "count": "reviews",
       "countWithNumber": "({{count}} reviews)",
       "showAll": "Show all {{count}} reviews",
       "total_zero": "{{count}} مراجعات",
@@ -2532,16 +2547,6 @@
       "pricier": "pricier"
     },
     "fraudWarning": "Never pay or transfer funds outside the Homio platform",
-    "priceEthics": {
-      "banner": {
-        "title": "Not a fair price",
-        "exceedsEthical": "This price exceeds Homiio's ethical maximum ({{max}}/month).",
-        "exceedsEthicalGeneric": "This price exceeds Homiio's ethical maximum for similar homes.",
-        "aboveMarket": "This price is {{percent}}% above similar homes in the area.",
-        "aboveMarketGeneric": "This price is above the local average for similar homes.",
-        "generic": "This listing does not meet Homiio's fair-price criteria."
-      }
-    },
     "photos": {
       "showAll": "عرض كل الصور",
       "label": "صور الإعلان",
@@ -2859,17 +2864,21 @@
     },
     "mortgage": {
       "title": "Mortgage calculator",
-      "subtitle": "An estimate — not a mortgage offer.",
-      "perMonth": "mo",
       "downPayment": "Down payment",
       "interestRate": "Interest rate",
       "term": "Term",
-      "years": "{{count}} yr",
       "principal": "Principal",
       "interest": "Interest",
       "loanAmount": "Loan amount",
       "totalInterest": "Total interest",
-      "totalPaid": "Total paid"
+      "price": "سعر العقار",
+      "downPaymentPercent": "نسبة الدفعة الأولى",
+      "percent": "النسبة",
+      "yearsUnit": "سنوات",
+      "monthlyPayment": "القسط الشهري",
+      "totalCost": "التكلفة الإجمالية",
+      "disclaimer": "هذا تقدير وليس عرض رهن عقاري. لا يشمل الرسوم والضرائب والتأمين، ويفترض سعر فائدة ثابتًا طوال المدة.",
+      "estimate": "تقديريًا {{amount}} شهريًا"
     },
     "cta": {
       "housingAuthority": "Housing Authority",
@@ -2896,6 +2905,21 @@
       "nextPhoto": "الصورة التالية",
       "save": "حفظ",
       "unsave": "إزالة من المحفوظات"
+    },
+    "actions": {
+      "bills": {
+        "included": "الفواتير مشمولة",
+        "excluded": "الفواتير غير مشمولة",
+        "partial": "بعض الفواتير مشمولة"
+      },
+      "status": {
+        "reserved": "محجوز",
+        "rented": "مؤجَّر",
+        "sold": "مُباع",
+        "reservedMessage": "هذا المنزل محجوز حاليًا ولا يقبل طلبات جديدة.",
+        "rentedMessage": "تم تأجير هذا المنزل ولم يعد يقبل الطلبات.",
+        "soldMessage": "تم بيع هذا المنزل."
+      }
     }
   },
   "goBack": "Go back",
@@ -3081,13 +3105,10 @@
     },
     "cta": {
       "apply": "Apply to rent",
-      "subtitle": "Submit a quick application with your move-in date, income and references — the landlord reviews and replies inside Homiio.",
-      "title": "Interested in this place?",
       "addMoveIn": "Add move-in date"
     },
     "detail": {
       "viewStatus": "View status",
-      "alreadySubmittedBody": "You already have an application in review for this property.",
       "alreadySubmitted": "Application submitted"
     },
     "actions": {
@@ -3463,7 +3484,16 @@
         "cleaning": "Cleaning"
       }
     },
-    "ratingA11y": "التقييم {{rating}} من 5"
+    "ratingA11y": "التقييم {{rating}} من 5",
+    "summary": {
+      "title": "تقييم السكان",
+      "recommend": "{{percent}}% ينصحون بالسكن هنا",
+      "depositReturned": "أُعيد التأمين كاملًا في {{percent}}% من الإيجارات"
+    },
+    "prompt": {
+      "title": "هل سكنت هنا؟",
+      "description": "ساعد السكان القادمين في {{place}}: شارك كيف كانت الحياة هناك فعلًا."
+    }
   },
   "subscriptions": {
     "title": "Subscriptions",
@@ -3687,8 +3717,7 @@
       "tabReviews": "Reviews ({{count}})",
       "tabApartment": "Apartment",
       "tabManagement": "Management",
-      "tabBuilding": "Building",
-      "metricRecommend": "Recommend"
+      "tabBuilding": "Building"
     },
     "display": {
       "copySuccess": "Address copied to clipboard",
@@ -3791,14 +3820,6 @@
   "error": {
     "publicHousing": {
       "openFailed": "Could not open the housing website"
-    },
-    "call": {
-      "failed": "Could not open phone dialer",
-      "noPhone": "No phone number available",
-      "notAllowed": "Owner does not accept calls"
-    },
-    "profile": {
-      "notFound": "Owner profile not found"
     },
     "auth": {
       "required": "Please sign in to call the owner"
@@ -4231,8 +4252,6 @@
     "notFound": "Agency not found",
     "notFoundDescription": "We couldn't find this agency.",
     "stats": {
-      "recommend": "Recommend",
-      "depositFull": "Deposit back",
       "listings": "Listings"
     },
     "tabs": {

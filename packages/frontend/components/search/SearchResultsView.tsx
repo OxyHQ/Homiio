@@ -9,8 +9,9 @@
  *  - Narrow: the list with a floating "Map" toggle → full-screen map, and a
  *    "List" toggle back.
  *
- * Top bar: the `StaySearch` composer (Bloom's wide bar, or the compact trigger
- * and its sheet on a phone) with a save-search button beside it, over a
+ * Top bar: the `HomeSearch` composer (the mode tabs over Bloom's wide bar, or
+ * the compact trigger and its sheet on a phone) with a save-search button
+ * beside it, over a
  * `PropertyTypeCategoryBar` whose pinned end holds Bloom's `FilterTriggerButton`
  * (opening `SearchFiltersDialog`) and the `SortMenu`. A "Search this area"
  * button over the map re-queries using the current map bounds.
@@ -47,23 +48,32 @@ import { MapMarkerPopover } from '@/components/ui/MapMarkerPopover';
 import { SaveSearchBottomSheet } from '@/components/SaveSearchBottomSheet';
 
 import { BottomSheetContext } from '@/context/BottomSheetContext';
+import { useRentalMode } from '@/context/RentalModeContext';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { useColors } from '@/hooks/useThemeColor';
 import { colors } from '@/styles/colors';
 import { cardShadow, hairline, radius, spacing } from '@/constants/styles';
-import { boundsCenter } from '@homiio/shared-types';
+import { boundsCenter, OfferingType } from '@homiio/shared-types';
 import type { GeoBounds, LocationSelection, Property, PropertyType } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
-import { locationDisplayLabel, savedSearchName } from './types';
+import {
+  BROWSE_MODE_OFFERING,
+  locationDisplayLabel,
+  savedSearchName,
+  type BrowseMode,
+  type SearchQuery,
+  type SearchSortBy,
+  type SearchSortOrder,
+  type SearchStep,
+} from './types';
 
 import { PropertyTypeCategoryBar } from './PropertyTypeCategoryBar';
 import { SearchFiltersDialog, countActiveFilters } from './SearchFiltersDialog';
 import { SortMenu } from './SortMenu';
-import { StaySearch } from './StaySearch';
+import { HomeSearch } from './HomeSearch';
 import { committedScopeBounds, reduceMapMovement, type MapMovement } from './searchArea';
 import { toMarkers } from './searchMarkers';
-import type { SearchQuery, SearchSortBy, SearchSortOrder, SearchStep } from './types';
 import {
   mapBoundsSelection,
   useSearchQueryStore,
@@ -134,6 +144,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   const insets = useSafeAreaInsets();
   const bottomSheet = useContext(BottomSheetContext);
   const themeColors = useColors();
+  const { setBrowseMode } = useRentalMode();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const handleEditSearch = useCallback(() => onOpenStepChange('where'), [onOpenStepChange]);
 
@@ -412,6 +423,29 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     [onQueryChange],
   );
 
+  /**
+   * A mode tab runs the search in that offering at once — the results ARE the
+   * mode — keeping the place and the free text. The price range is quoted per
+   * offering (monthly, nightly, sale) and dates and guests exist only for a
+   * stay, so those clear, exactly as the sheet's own switch clears them. The
+   * sidebar's mode follows, so the two switches never disagree.
+   */
+  const handleModeChange = useCallback(
+    (mode: BrowseMode) => {
+      const offering = BROWSE_MODE_OFFERING[mode];
+      if (offering === query.offering) return;
+      setBrowseMode(mode);
+      onSubmitSearch({
+        ...query,
+        offering,
+        priceMin: undefined,
+        priceMax: undefined,
+        ...(offering === OfferingType.SHORT_TERM_RENT ? {} : { dates: undefined, guests: undefined }),
+      });
+    },
+    [onSubmitSearch, query, setBrowseMode],
+  );
+
   const handleFiltersPress = useCallback(() => setFiltersOpen(true), []);
   const handleFiltersClose = useCallback(() => setFiltersOpen(false), []);
 
@@ -525,18 +559,21 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   const saveLabel = isSearchSaved ? t('search.actions.saved') : t('search.actions.save');
   const topBar = (
     <View style={[styles.topBar, { paddingTop: insets.top }]}>
-      <View style={styles.topBarContent}>
-        <StaySearch
+      <View style={[styles.topBarContent, isWide && styles.topBarContentWithTabs]}>
+        <HomeSearch
           query={query}
           openStep={openStep}
           onOpenStepChange={onOpenStepChange}
           onSubmit={onSubmitSearch}
+          modeTabs="tabs"
+          onModeChange={handleModeChange}
           style={styles.composer}
         />
         {/* A sibling of the composer, never inside it: its own named control. */}
         <Button
           variant="outline"
           size={isWide ? 'large' : 'medium'}
+          style={isWide ? styles.saveBesideBar : undefined}
           iconOnly
           icon={
             isSearchSaved ? (
@@ -845,6 +882,15 @@ const styles = StyleSheet.create({
     // Above the category row: RN-Web gives every View `z-index: 0`, so the
     // composer's open panel would otherwise paint under the later sibling.
     zIndex: 2,
+  },
+  // With the mode tabs above the bar, the row aligns on the bar (the bottom of
+  // the composer) rather than on the tabs-plus-bar column.
+  topBarContentWithTabs: {
+    alignItems: 'flex-end',
+  },
+  // Centres the 44-tall save button on the 66-tall bar.
+  saveBesideBar: {
+    marginBottom: 11,
   },
   // The composer takes the row; on a wide screen it stops at a readable bar
   // width and sits centred with the save button beside it.

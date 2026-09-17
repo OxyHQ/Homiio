@@ -43,7 +43,7 @@ import {
 } from '@homiio/shared-types';
 
 import { SearchResultsView } from '@/components/search/SearchResultsView';
-import { StaySearch } from '@/components/search/StaySearch';
+import { HomeSearch } from '@/components/search/HomeSearch';
 import { ErrorState } from '@/components/ui/ErrorState';
 import type { SearchQuery, SearchStep } from '@/components/search/types';
 import { spacing } from '@/constants/styles';
@@ -356,7 +356,7 @@ export default function SearchScreen() {
   // results surface draws its own inside its top bar.
   const searchPanel = (
     <View style={styles.composer}>
-      <StaySearch
+      <HomeSearch
         query={query}
         openStep={openStep}
         onOpenStepChange={setOpenStep}
