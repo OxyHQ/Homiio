@@ -2,12 +2,9 @@
  * Sindi conversation index — chat sidebar with conversation history + start
  * new chat affordance.
  *
- * Stream Q polish:
- *   - Bloom Typography (H1/H2/H3/Text) everywhere, no raw <Text>.
- *   - Bloom Button replaces every TouchableOpacity CTA.
- *   - Bloom Search replaces hand-rolled search bar.
- *   - Flat cards with radius.lg + hairline borders, semantic tokens.
- *   - Skeleton.Box rows during load; EmptyState shared.
+ * Bloom throughout: `Card` surfaces, Remix glyphs, `Button`, `Search`,
+ * `Item` conversation rows (`ConversationList`) and `Skeleton` rows while the
+ * list loads; the shared `EmptyState` covers the signed-out and empty cases.
  */
 import React, {
   useCallback,
@@ -25,37 +22,48 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Button } from '@oxy.so/bloom/button';
 import { Search } from '@oxy.so/bloom/search';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
-import { H1, H3, Text as BloomText } from '@oxy.so/bloom/typography';
+import { Card } from '@oxy.so/bloom/card';
+import {
+  RiAddLine,
+  RiFileTextLine,
+  RiShieldCheckLine,
+  RiTeamLine,
+} from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { H1, H3, Text } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { SindiIcon } from '@/assets/icons';
 import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
-import {
-  ConversationItem,
-  conversationListStyles,
-} from '@/components/sindi/ConversationItem';
+import { ConversationItem, ConversationList } from '@/components/sindi/ConversationItem';
 import { useSindiAuthenticatedFetch } from '@/hooks/useSindiAuthenticatedFetch';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SindiExplanationBottomSheet } from '@/components/SindiExplanationBottomSheet';
 import { useConversationStore } from '@/store/conversationStore';
-import { radius, spacing } from '@/constants/styles';
-import { colors } from '@/styles/colors';
+import { spacing } from '@/constants/styles';
+import { colors as staticColors } from '@/styles/colors';
+
+/** The three promises under the hero. */
+const FEATURES = [
+  { icon: RiShieldCheckLine, label: 'Know your rights' },
+  { icon: RiFileTextLine, label: 'Legal guidance' },
+  { icon: RiTeamLine, label: 'Community support' },
+] as const;
 
 const SindiSkeleton: React.FC = () => (
   <View style={styles.skeletonList}>
     {Array.from({ length: 4 }).map((_, idx) => (
-      <View key={idx} style={styles.skeletonRow}>
+      <Card key={idx} variant="outlined" style={styles.skeletonRow}>
         <Skeleton.Circle size={36} />
         <View style={styles.skeletonBody}>
           <Skeleton.Text style={{ width: 180, lineHeight: 16 }} />
           <Skeleton.Text style={{ width: 240, lineHeight: 13 }} />
         </View>
-      </View>
+      </Card>
     ))}
   </View>
 );
@@ -64,6 +72,7 @@ export default function Sindi() {
   const { oxyServices, activeSessionId } = useOxy();
   const router = useRouter();
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const {
     conversations,
     loading,
@@ -158,7 +167,7 @@ export default function Sindi() {
           actionText={t('common.signIn')}
           actionIcon="log-in"
           onAction={() => openAccountDialog()}
-          iconColor={colors.primaryColor}
+          iconColor={staticColors.primaryColor}
         />
       </View>
     );
@@ -175,17 +184,15 @@ export default function Sindi() {
       />
 
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.heroCard}>
-          <View style={styles.heroIcon}>
-            <SindiIcon size={56} color={colors.primaryColor} />
-          </View>
+        <Card variant="outlined" radius="radius-24" style={styles.heroCard}>
+          <SindiIcon size={56} color={colors.primary} />
           <SectionEyebrow>Meet Sindi</SectionEyebrow>
-          <H1 style={styles.heroTitle}>{t('sindi.title')}</H1>
-          <BloomText style={styles.heroDescription}>
+          <H1 style={styles.center}>{t('sindi.title')}</H1>
+          <Text variant="body-regular" style={[styles.heroDescription, { color: colors.textSecondary }]}>
             Your AI-powered housing rights assistant. Get instant help with
             tenant issues, understand your rights, and navigate housing
             challenges with confidence.
-          </BloomText>
+          </Text>
           <Button
             variant="secondary"
             size="medium"
@@ -203,43 +210,31 @@ export default function Sindi() {
           >
             Learn how it works
           </Button>
-        </View>
+        </Card>
 
         <View style={styles.featuresRow}>
-          <View style={styles.featureCell}>
-            <Ionicons
-              name="shield-checkmark"
-              size={20}
-              color={colors.primaryColor}
-            />
-            <BloomText style={styles.featureLabel}>Know your rights</BloomText>
-          </View>
-          <View style={styles.featureCell}>
-            <Ionicons
-              name="document-text"
-              size={20}
-              color={colors.primaryColor}
-            />
-            <BloomText style={styles.featureLabel}>Legal guidance</BloomText>
-          </View>
-          <View style={styles.featureCell}>
-            <Ionicons name="people" size={20} color={colors.primaryColor} />
-            <BloomText style={styles.featureLabel}>Community support</BloomText>
-          </View>
+          {FEATURES.map(({ icon: Icon, label }) => (
+            <Card key={label} variant="outlined" style={styles.featureCell}>
+              <Icon width={20} height={20} fill={colors.primary} />
+              <Text variant="body-2-medium" style={[styles.center, { color: colors.text }]}>
+                {label}
+              </Text>
+            </Card>
+          ))}
         </View>
 
         <Button
           variant="primary"
           size="large"
           onPress={createNewConversation}
-          icon={<Ionicons name="add" size={20} color={colors.primaryForeground} />}
-          style={styles.newButton}
+          leadingIcon={RiAddLine}
+          fullWidth
         >
           Start new conversation
         </Button>
 
         <View style={styles.historyBlock}>
-          <H3 style={styles.historyTitle}>Chats</H3>
+          <H3>Chats</H3>
           <Search
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -263,16 +258,15 @@ export default function Sindi() {
               onAction={searchQuery ? undefined : createNewConversation}
             />
           ) : (
-            <View style={conversationListStyles.list}>
-              {sortedConversations.map((conversation, idx) => (
+            <ConversationList>
+              {sortedConversations.map((conversation) => (
                 <ConversationItem
                   key={conversation.id}
                   conversation={conversation}
-                  isLast={idx === sortedConversations.length - 1}
                   onPress={() => router.push(`/sindi/${conversation.id}`)}
                 />
               ))}
-            </View>
+            </ConversationList>
           )}
         </View>
       </ScrollView>
@@ -283,7 +277,7 @@ export default function Sindi() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: staticColors.background,
   },
   content: {
     padding: spacing.lg,
@@ -291,32 +285,15 @@ const styles = StyleSheet.create({
     paddingBottom: spacing['4xl'],
   },
   heroCard: {
-    backgroundColor: colors.surfaceElevated,
     padding: spacing['2xl'],
-    borderRadius: radius.xl,
     alignItems: 'center',
     gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
-  heroIcon: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: colors.infoSubtle,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xs,
-  },
-  heroTitle: {
-    letterSpacing: -0.5,
+  center: {
     textAlign: 'center',
   },
   heroDescription: {
-    fontSize: 14,
-    color: colors.muted,
     textAlign: 'center',
-    lineHeight: 22,
     maxWidth: 420,
     marginBottom: spacing.sm,
   },
@@ -326,28 +303,12 @@ const styles = StyleSheet.create({
   },
   featureCell: {
     flex: 1,
-    backgroundColor: colors.surfaceElevated,
     padding: spacing.md,
-    borderRadius: radius.md,
     alignItems: 'center',
     gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  featureLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_2,
-    textAlign: 'center',
-  },
-  newButton: {
-    alignSelf: 'stretch',
   },
   historyBlock: {
     gap: spacing.md,
-  },
-  historyTitle: {
-    letterSpacing: -0.3,
   },
   skeletonList: {
     gap: spacing.md,
@@ -356,11 +317,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.surfaceElevated,
     padding: spacing.lg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   skeletonBody: {
     flex: 1,

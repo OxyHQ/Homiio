@@ -1,57 +1,43 @@
-import React from 'react';
-import {
-  Platform,
-  ScrollView,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import React, { useRef } from 'react';
+import { Platform, ScrollView, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import type { Message } from '@ai-sdk/react';
 import { ChatEmptyState } from './ChatEmptyState';
 import { ChatMessage } from './ChatMessage';
-import { sindiStyles } from './styles';
-
-/**
- * Web overrides for the scroll container. On web the messages area is a
- * `position: sticky` flex child that scrolls natively; RN's StyleSheet types
- * reject the web-only `overflow: 'auto'` so it is applied via a typed inline
- * override here (the standard escape hatch used across the app).
- */
-const webMessagesContainer: ViewStyle | undefined =
-  Platform.OS === 'web'
-    ? ({
-        marginTop: 0,
-        marginBottom: 0,
-        flex: 1,
-        overflow: 'auto' as unknown as ViewStyle['overflow'],
-      })
-    : undefined;
-
-const webMessagesContent: ViewStyle | undefined =
-  Platform.OS === 'web' ? { paddingBottom: 100 } : undefined;
 
 export interface ChatMessageListProps {
   messages: Message[];
   isLoading: boolean;
   onSuggestionPress: (prompt: string) => void;
-  /** Optional style applied to the scroll container (used by the bottom sheet host). */
   style?: StyleProp<ViewStyle>;
 }
 
 /**
- * Scrollable message list: empty-state hero when there are no messages, the
- * rendered conversation otherwise. The parent owns the ref to drive
- * scroll-to-bottom.
+ * The conversation thread, laid out exactly as Bloom's `AiChatThread`
+ * (bottom-anchored, px 16 / pt 16, turns 12 apart).
+ *
+ * It is a plain `ScrollView` rather than `AiChatThread` itself because the
+ * thread keeps its scroll ref private: `useSindiConversation` owns the ref and
+ * scrolls to the end when a conversation opens, where `AiChatThread` only
+ * follows content that GROWS after its first measure — a long restored history
+ * would open at its oldest turn.
  */
 export const ChatMessageList = React.forwardRef<ScrollView, ChatMessageListProps>(
   ({ messages, isLoading, onSuggestionPress, style }, ref) => {
     const lastIndex = messages.length - 1;
 
+    // Turns present when the thread mounted are history and mount settled; only
+    // turns that arrive afterwards play Bloom's blur-in.
+    const historyIds = useRef<Set<string> | null>(null);
+    if (historyIds.current === null) {
+      historyIds.current = new Set(messages.map((message) => message.id));
+    }
+
     return (
       <ScrollView
         ref={ref}
-        style={[sindiStyles.messagesContainer, webMessagesContainer, style]}
+        style={[styles.scroll, style]}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[sindiStyles.messagesContent, webMessagesContent]}
+        contentContainerStyle={styles.content}
       >
         {messages.length === 0 ? (
           <ChatEmptyState onSuggestionPress={onSuggestionPress} />
@@ -62,6 +48,7 @@ export const ChatMessageList = React.forwardRef<ScrollView, ChatMessageListProps
               message={message}
               isLast={index === lastIndex}
               isLoading={isLoading}
+              animate={!historyIds.current?.has(message.id)}
             />
           ))
         )}
@@ -70,3 +57,22 @@ export const ChatMessageList = React.forwardRef<ScrollView, ChatMessageListProps
   },
 );
 ChatMessageList.displayName = 'ChatMessageList';
+
+const styles = StyleSheet.create({
+  scroll: {
+    flex: 1,
+    minHeight: 0,
+    width: '100%',
+  },
+  content: {
+    // react-native-web gives every view `min-height: 0`, so a flex-grown content
+    // box stays the viewport's height and overflows instead of scrolling; the
+    // percentage floor keeps it bottom-anchored AND scrollable (Bloom's fix).
+    ...(Platform.OS === 'web' ? { minHeight: '100%', flexShrink: 0 } : { flexGrow: 1 }),
+    justifyContent: 'flex-end',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+});

@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import { toast } from '@oxy.so/bloom/toast';
 import { useTranslation } from 'react-i18next';
 import { logger } from '@/utils/logger';
 import { shareContent } from '@/utils/share';
@@ -50,12 +51,12 @@ export function useSindiShare({
   return useCallback(async () => {
     // Unsaved (client-generated) conversations cannot be shared yet.
     if (!currentConversation || currentConversation.id.startsWith('conv_')) {
-      Alert.alert(t('sindi.share.error.title'), t('sindi.share.error.saveFirst'));
+      toast.error(t('sindi.share.error.title'), { description: t('sindi.share.error.saveFirst') });
       return;
     }
 
     if (!currentConversation.messages || currentConversation.messages.length === 0) {
-      Alert.alert(t('sindi.share.error.title'), t('sindi.share.error.emptyConversation'));
+      toast.error(t('sindi.share.error.title'), { description: t('sindi.share.error.emptyConversation') });
       return;
     }
 
@@ -64,12 +65,12 @@ export function useSindiShare({
       shareToken = await generateShareToken(currentConversation.id, authenticatedFetch);
     } catch (error) {
       logger.error('Failed to mint Sindi share token:', error);
-      Alert.alert(t('sindi.share.error.title'), t('sindi.share.error.failed'));
+      toast.error(t('sindi.share.error.title'), { description: t('sindi.share.error.failed') });
       return;
     }
 
     if (!shareToken) {
-      Alert.alert(t('sindi.share.error.title'), t('sindi.share.error.failed'));
+      toast.error(t('sindi.share.error.title'), { description: t('sindi.share.error.failed') });
       return;
     }
 
@@ -87,9 +88,9 @@ export function useSindiShare({
     });
 
     if (outcome === 'copied') {
-      Alert.alert(t('sindi.share.success.title'), t('sindi.share.success.copied'));
+      toast.success(t('sindi.share.success.title'), { description: t('sindi.share.success.copied') });
     } else if (outcome === 'failed') {
-      Alert.alert(t('sindi.share.error.title'), t('sindi.share.error.failed'));
+      toast.error(t('sindi.share.error.title'), { description: t('sindi.share.error.failed') });
     }
     // 'shared' / 'dismissed' → nothing to surface.
   }, [currentConversation, generateShareToken, authenticatedFetch, t]);

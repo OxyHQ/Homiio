@@ -1,19 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-    StyleSheet,
-    Dimensions,
-} from 'react-native';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { ChatContent } from '@/components/sindi/ChatContent';
 import { Property } from '@homiio/shared-types';
 import { useOxy } from '@oxy.so/services';
 import { useConversationStore } from '@/store/conversationStore';
 import type { Conversation } from '@/store/conversationStore';
 import { useSindiAuthenticatedFetch } from '@/hooks/useSindiAuthenticatedFetch';
-import { ScrollView } from 'react-native-gesture-handler';
 import { logger } from '@/utils/logger';
-import { colors } from '@/styles/colors';
+import { useTheme } from '@oxy.so/bloom/theme';
 
-const { height: screenHeight } = Dimensions.get('window');
+/** Share of the window the chat occupies; the thread scrolls inside it. */
+const SHEET_HEIGHT_RATIO = 0.85;
 
 interface SindiChatBottomSheetProps {
     /** Property object containing details to discuss with Sindi AI */
@@ -30,6 +27,8 @@ interface SindiChatBottomSheetProps {
  */
 export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBottomSheetProps) {
     const { oxyServices, activeSessionId } = useOxy();
+    const { height: windowHeight } = useWindowDimensions();
+    const { colors } = useTheme();
     const { createConversation } = useConversationStore();
     const [conversationId, setConversationId] = useState<string | undefined>();
     const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
@@ -122,7 +121,14 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
     const isAuthenticated = !!oxyServices && !!activeSessionId;
 
     return (
-        <ScrollView style={styles.container}>
+        // A bounded column rather than a ScrollView: the chat's own thread
+        // scrolls, and the composer stays pinned under it.
+        <View
+            style={[
+                styles.container,
+                { height: windowHeight * SHEET_HEIGHT_RATIO, backgroundColor: colors.background },
+            ]}
+        >
             <ChatContent
                 conversationId={conversationId}
                 currentConversation={currentConversation}
@@ -130,15 +136,13 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
                 authenticatedFetch={authenticatedFetch}
                 initialMessages={[]}
                 messageFromUrl={initialMessageToSend}
-                style={{ flex: 1 }}
             />
-        </ScrollView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        maxHeight: screenHeight * 0.9,
-        backgroundColor: colors.white,
+        width: '100%',
     },
 });

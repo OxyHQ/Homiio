@@ -1,23 +1,16 @@
 import React, { useEffect, useMemo } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Text,
-  View,
-  type ViewStyle,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, View, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { Message } from '@ai-sdk/react';
-import { LinearGradient } from 'expo-linear-gradient';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Button } from '@oxy.so/bloom/button';
+import { RiShare2Line } from '@oxy.so/bloom/icons';
+import { Loading } from '@oxy.so/bloom/loading';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { Header } from '@/components/Header';
-import { IconButton } from '@/components/ui/IconButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ChatContent } from '@/components/sindi/ChatContent';
-import { sindiStyles } from '@/components/sindi/styles';
 import { useSindiShare } from '@/hooks/useSindiShare';
 import { useSindiAuthenticatedFetch } from '@/hooks/useSindiAuthenticatedFetch';
 import { useConversationStore } from '@/store/conversationStore';
@@ -107,7 +100,7 @@ export default function ConversationDetail() {
 
   if (!isAuthenticated) {
     return (
-      <View style={sindiStyles.container}>
+      <View style={styles.container}>
         <Header options={{ title: t('sindi.conversation.title'), showBackButton: true }} />
         <EmptyState
           icon="lock-closed"
@@ -124,34 +117,30 @@ export default function ConversationDetail() {
 
   if (loading) {
     return (
-      <View style={sindiStyles.container}>
+      <View style={styles.container}>
         <Header options={{ title: t('sindi.conversation.loading'), showBackButton: true }} />
-        <View style={sindiStyles.loadingContainer}>
-          <Ionicons name="hourglass" size={48} color={colors.primaryColor} />
-          <Text style={sindiStyles.loadingText}>{t('sindi.conversation.loadingMessage')}</Text>
-        </View>
+        <Loading
+          size="large"
+          text={t('sindi.conversation.loadingMessage')}
+          style={styles.loading}
+        />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={[sindiStyles.container, webContainer]} edges={['bottom']}>
-      <LinearGradient
-        colors={[colors.white, `${colors.primaryColor}40`]}
-        style={sindiStyles.backgroundGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      />
+    <SafeAreaView style={[styles.container, webContainer]} edges={['bottom']}>
       <Header
         options={{
           title: currentConversation?.title || t('sindi.conversation.title'),
           subtitle: t('sindi.conversation.subtitle'),
           showBackButton: true,
           rightComponents: [
-            <IconButton
+            <Button
               key="share"
-              icon="share-outline"
-              variant="ghost"
+              variant="icon"
+              iconOnly
+              leadingIcon={RiShare2Line}
               onPress={handleShare}
               accessibilityLabel={t('common.share')}
             />,
@@ -159,7 +148,7 @@ export default function ConversationDetail() {
         }}
       />
       <KeyboardAvoidingView
-        style={sindiStyles.container}
+        style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? IOS_KEYBOARD_OFFSET : 0}
       >
@@ -176,3 +165,13 @@ export default function ConversationDetail() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  loading: {
+    flex: 1,
+  },
+});

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Platform, type ScrollView } from 'react-native';
+import { Platform, type ScrollView } from 'react-native';
+import { toast } from '@oxy.so/bloom/toast';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useChat, type Message, type UseChatOptions } from '@ai-sdk/react';
@@ -78,6 +79,8 @@ export interface UseSindiConversationResult {
   scrollViewRef: React.RefObject<ScrollView | null>;
   onChangeInput: (text: string) => void;
   onSubmit: () => void;
+  /** Abort the reply that is streaming (the AI SDK's `stop`). */
+  onStop: () => void;
   onAttachFile: () => void;
   onRemoveFile: () => void;
   onSuggestionPress: (prompt: string) => void;
@@ -168,7 +171,7 @@ export function useSindiConversation({
     [authenticatedFetch, initialMessages, conversationId],
   );
 
-  const { messages, error, handleInputChange, input, handleSubmit, isLoading, append, reload } =
+  const { messages, error, handleInputChange, input, handleSubmit, isLoading, append, reload, stop } =
     useChat(chatOptions);
   const needsConsent = error instanceof SindiConsentRequiredError;
 
@@ -185,17 +188,15 @@ export function useSindiConversation({
         },
       );
       if (status === 'failed' || status === 'unsupported') {
-        Alert.alert(
-          i18next.t('sindi.errors.consentUnavailableTitle'),
-          i18next.t('sindi.errors.consentUnavailableMessage'),
-        );
+        toast.error(i18next.t('sindi.errors.consentUnavailableTitle'), {
+          description: i18next.t('sindi.errors.consentUnavailableMessage'),
+        });
       }
     } catch (consentError) {
       logger.error('Sindi OAuth consent failed:', consentError);
-      Alert.alert(
-        i18next.t('sindi.errors.consentUnavailableTitle'),
-        i18next.t('sindi.errors.consentUnavailableMessage'),
-      );
+      toast.error(i18next.t('sindi.errors.consentUnavailableTitle'), {
+        description: i18next.t('sindi.errors.consentUnavailableMessage'),
+      });
     } finally {
       setIsRequestingConsent(false);
     }
@@ -422,7 +423,7 @@ export function useSindiConversation({
       logger.error('File upload failed:', e);
       const messageText =
         e instanceof Error ? e.message : i18next.t('sindi.errors.uploadAnalyzeFailed');
-      Alert.alert(i18next.t('sindi.errors.uploadFailedTitle'), messageText);
+      toast.error(i18next.t('sindi.errors.uploadFailedTitle'), { description: messageText });
     } finally {
       setIsUploading(false);
     }
@@ -448,6 +449,7 @@ export function useSindiConversation({
     scrollViewRef,
     onChangeInput,
     onSubmit,
+    onStop: stop,
     onAttachFile,
     onRemoveFile,
     onSuggestionPress,

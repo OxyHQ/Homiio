@@ -1,31 +1,23 @@
 import React from 'react';
-import { Platform, Pressable, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { LinearGradient } from 'expo-linear-gradient';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import type { Message } from '@ai-sdk/react';
+import {
+  AdmonitionButton,
+  AdmonitionContent,
+  AdmonitionIcon,
+  AdmonitionRoot,
+  AdmonitionRow,
+  AdmonitionText,
+} from '@oxy.so/bloom/admonition';
 import { useSindiConversation } from '@/hooks/useSindiConversation';
 import { useSindiUpsell } from '@/hooks/useSindiUpsell';
-import { colors } from '@/styles/colors';
 import type { Conversation } from '@/store/conversationStore';
 import { ChatComposer } from './ChatComposer';
 import { ChatMessageList } from './ChatMessageList';
-import { sindiStyles } from './styles';
+import { extractPropertiesJson } from './propertyParsing';
 
 type ConversationFetch = typeof globalThis.fetch;
-
-/**
- * Web sticky-positioning for the composer. RN's StyleSheet types reject the
- * web-only `position: 'sticky'`, so it is applied via a typed inline override
- * (the standard escape hatch used across the app).
- */
-const webStickyInput: ViewStyle | undefined =
-  Platform.OS === 'web'
-    ? ({
-        position: 'sticky' as unknown as ViewStyle['position'],
-        bottom: 0,
-      })
-    : undefined;
 
 export interface ChatContentProps {
   conversationId?: string;
@@ -34,17 +26,18 @@ export interface ChatContentProps {
   authenticatedFetch: ConversationFetch;
   initialMessages: Message[];
   messageFromUrl?: string;
-  /** Optional style applied to the message scroll container (bottom-sheet host). */
+  /** Optional style applied to the chat column (bottom-sheet host). */
   style?: StyleProp<ViewStyle>;
 }
 
 /**
- * Chat pane: error banner, scrollable message list, and composer. Mounts after
- * the conversation is loaded and seeds the AI SDK with the existing history.
+ * Chat pane: error callout, the thread and the composer, stacked as Bloom's
+ * ai-chat container stacks them (thread flexes, footer holds the thinking
+ * state and the composer). Mounts after the conversation is loaded and seeds
+ * the AI SDK with the existing history.
  *
- * Reused in two places: the full-screen Sindi route and the in-property
- * `SindiChatBottomSheet`. The prop contract is intentionally stable so both
- * hosts share one implementation.
+ * Reused by the full-screen Sindi route, the docked `SindiPanel` and the
+ * in-property `SindiChatBottomSheet`; each host gives it a bounded height.
  */
 export function ChatContent({
   conversationId,
@@ -70,6 +63,7 @@ export function ChatContent({
     scrollViewRef,
     onChangeInput,
     onSubmit,
+    onStop,
     onAttachFile,
     onRemoveFile,
     onSuggestionPress,
@@ -84,44 +78,41 @@ export function ChatContent({
     onOpenUpsell: openUpsell,
   });
 
+  const last = messages[messages.length - 1];
+  const hasStreamedText =
+    last?.role === 'assistant' &&
+    typeof last.content === 'string' &&
+    extractPropertiesJson(last.content).visible.trim().length > 0;
+
   return (
-    <>
+    <View style={[styles.column, style]}>
       {error ? (
-        <LinearGradient
-          colors={[colors.primaryColor, colors.secondaryLight]}
-          style={sindiStyles.errorContainer}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <View style={sindiStyles.errorContent}>
-            <Ionicons name="alert-circle" size={48} color={colors.primaryForeground} />
-            <Text style={sindiStyles.errorText}>
-              {needsConsent ? t('sindi.errors.consentTitle') : t('sindi.errors.connection')}
-            </Text>
-            <Text style={sindiStyles.errorSubtext}>
-              {needsConsent
-                ? t('sindi.errors.consentMessage')
-                : t('sindi.errors.connectionMessage')}
-            </Text>
-            {needsConsent ? (
-              <Pressable
-                accessibilityRole="button"
-                disabled={isRequestingConsent}
-                onPress={onRequestConsent}
-                style={[
-                  sindiStyles.consentButton,
-                  isRequestingConsent && sindiStyles.consentButtonPressed,
-                ]}
-              >
-                <Text style={sindiStyles.consentButtonText}>
+        <AdmonitionRoot type={needsConsent ? 'warning' : 'error'} style={styles.callout}>
+          <AdmonitionRow>
+            <AdmonitionIcon />
+            <AdmonitionContent>
+              <AdmonitionText style={styles.calloutTitle}>
+                {needsConsent ? t('sindi.errors.consentTitle') : t('sindi.errors.connection')}
+              </AdmonitionText>
+              <AdmonitionText>
+                {needsConsent
+                  ? t('sindi.errors.consentMessage')
+                  : t('sindi.errors.connectionMessage')}
+              </AdmonitionText>
+              {needsConsent ? (
+                <AdmonitionButton
+                  onPress={onRequestConsent}
+                  disabled={isRequestingConsent}
+                  loading={isRequestingConsent}
+                >
                   {isRequestingConsent
                     ? t('sindi.errors.consentRequesting')
                     : t('sindi.errors.consentAction')}
-                </Text>
-              </Pressable>
-            ) : null}
-          </View>
-        </LinearGradient>
+                </AdmonitionButton>
+              ) : null}
+            </AdmonitionContent>
+          </AdmonitionRow>
+        </AdmonitionRoot>
       ) : null}
 
       <ChatMessageList
@@ -129,20 +120,37 @@ export function ChatContent({
         messages={messages}
         isLoading={isLoading}
         onSuggestionPress={onSuggestionPress}
-        style={style}
       />
 
       <ChatComposer
         input={input}
         onChangeText={onChangeInput}
         onSubmit={onSubmit}
+        onStop={onStop}
         onAttachFile={onAttachFile}
         onRemoveFile={onRemoveFile}
         attachedFile={attachedFile}
-        isLoading={isLoading || needsConsent || isRequestingConsent}
+        isLoading={isLoading}
         isUploading={isUploading}
-        stickyStyle={webStickyInput}
+        disabled={needsConsent || isRequestingConsent}
+        hasStreamedText={hasStreamedText}
+        messageCount={messages.length}
       />
-    </>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  column: {
+    flex: 1,
+    minHeight: 0,
+    width: '100%',
+  },
+  callout: {
+    marginHorizontal: 16,
+    marginTop: 12,
+  },
+  calloutTitle: {
+    fontWeight: '600',
+  },
+});
