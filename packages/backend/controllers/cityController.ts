@@ -49,6 +49,7 @@ import {
 } from '../db/properties/propertyReads';
 import { booleanIs, inCity, inRange, statusIs } from '../db/properties/propertyFilters';
 import { serializeProperty } from '../db/properties/propertySerializer';
+import { logUnexpectedError } from '../middlewares/errorHandler';
 
 const DEFAULT_CITY_LIMIT = 50;
 const DEFAULT_POPULAR_LIMIT = 10;
@@ -328,7 +329,8 @@ class CityController {
         },
       });
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Failed to fetch cities', error: (error as Error).message });
+      logUnexpectedError(error, req, 'Failed to fetch cities');
+      res.status(500).json({ success: false, message: 'Failed to fetch cities', error: 'Internal server error' });
     }
   }
 
@@ -362,7 +364,8 @@ class CityController {
 
       res.json({ success: true, data: filtered });
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Failed to fetch popular cities', error: (error as Error).message });
+      logUnexpectedError(error, req, 'Failed to fetch popular cities');
+      res.status(500).json({ success: false, message: 'Failed to fetch popular cities', error: 'Internal server error' });
     }
   }
 
@@ -379,7 +382,8 @@ class CityController {
       }
       res.json({ success: true, data: serializeCity(rows[0]) });
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Failed to fetch city', error: (error as Error).message });
+      logUnexpectedError(error, req, 'Failed to fetch city');
+      res.status(500).json({ success: false, message: 'Failed to fetch city', error: 'Internal server error' });
     }
   }
 
@@ -477,7 +481,8 @@ class CityController {
       }
       res.json({ success: true, data: { status: 'resolved', place: outcome.place } });
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Failed to fetch city', error: (error as Error).message });
+      logUnexpectedError(error, req, 'Failed to fetch city');
+      res.status(500).json({ success: false, message: 'Failed to fetch city', error: 'Internal server error' });
     }
   }
 
@@ -579,7 +584,8 @@ class CityController {
         },
       });
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Failed to fetch properties', error: (error as Error).message });
+      logUnexpectedError(error, req, 'Failed to fetch properties');
+      res.status(500).json({ success: false, message: 'Failed to fetch properties', error: 'Internal server error' });
     }
   }
 
@@ -627,7 +633,8 @@ class CityController {
       const rows = await cityQuery().where(eq(cities.id, created.id)).limit(1);
       res.status(201).json({ success: true, data: serializeCity(rows[0]) });
     } catch (error) {
-      res.status(400).json({ success: false, message: 'Failed to create city', error: (error as Error).message });
+      logUnexpectedError(error, req, 'Failed to create city');
+      res.status(400).json({ success: false, message: 'Failed to create city', error: 'Invalid city data' });
     }
   }
 
@@ -661,7 +668,8 @@ class CityController {
       const rows = await cityQuery().where(eq(cities.id, id)).limit(1);
       res.json({ success: true, data: serializeCity(rows[0]) });
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Failed to update city properties count', error: (error as Error).message });
+      logUnexpectedError(error, req, 'Failed to update city properties count');
+      res.status(500).json({ success: false, message: 'Failed to update city properties count', error: 'Internal server error' });
     }
   }
 
@@ -690,7 +698,8 @@ class CityController {
         .limit(Number(limit));
       res.json({ success: true, data: rows.map(serializeCity) });
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Failed to search cities', error: (error as Error).message });
+      logUnexpectedError(error, req, 'Failed to search cities');
+      res.status(500).json({ success: false, message: 'Failed to search cities', error: 'Internal server error' });
     }
   }
 }

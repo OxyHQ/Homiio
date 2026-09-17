@@ -33,6 +33,84 @@ const notFound = (req: Request, res: Response, next: NextFunction): void => {
   next(error);
 };
 
+const GENERIC_SERVER_ERROR_MESSAGE = 'Internal server error';
+
+/**
+ * drizzle-orm's `DrizzleQueryError` message is `Failed query: <sql>\nparams: <values>`.
+ * The SQL is placeholders only; everything from `params:` on is the bound VALUES
+ * (ids, dates, whatever the caller sent), which belong in neither a response nor
+ * a log line. A message that wraps it (`Failed to X: Failed query: ...`) carries
+ * the same tail, so it is stripped wherever `Failed query:` appears.
+ */
+const stripQueryParams = (text: string): string =>
+  // Up to the first stack frame (`\n    at ...`) when the text is a stack, else
+  // to the end — a string parameter can itself contain newlines.
+  text.includes('Failed query:') ? text.replace(/\s*params:[\s\S]*?(?=\n\s+at |$)/, '') : text;
+
+/**
+ * Postgres data-exception messages end in the offending VALUE
+ * (`invalid input syntax for type uuid: "abc"`). The code and the type are what
+ * a diagnosis needs, so the value is dropped. Constraint messages quote a
+ * constraint NAME with no preceding colon and are left intact.
+ */
+const redactTrailingValue = (text: string): string => text.replace(/: "[\s\S]*"$/, ': [redacted]');
+
+/**
+ * The parts of an error that are safe to log: no request body, no bound
+ * parameter values, no Postgres `detail` (which repeats key values).
+ * Structured drizzle/postgres fields are preferred over parsing the message.
+ */
+const describeErrorForLog = (err: any): Record<string, unknown> => {
+  const isDrizzleQueryError =
+    err != null && typeof err === 'object' && typeof err.query === 'string' && 'params' in err;
+  const rawMessage = typeof err?.message === 'string' ? err.message : String(err);
+  const description: Record<string, unknown> = {
+    name: isDrizzleQueryError ? 'DrizzleQueryError' : err?.name,
+    message: stripQueryParams(rawMessage),
+  };
+  if (isDrizzleQueryError) description.query = err.query;
+  if (err?.code !== undefined) description.code = err.code;
+
+  const cause = err?.cause;
+  if (cause && typeof cause === 'object') {
+    description.cause = {
+      name: cause.name,
+      code: cause.code,
+      message: typeof cause.message === 'string'
+        ? redactTrailingValue(stripQueryParams(cause.message))
+        : undefined,
+      // postgres-js spells these `*_name`; node-postgres does not.
+      constraint: cause.constraint_name ?? cause.constraint,
+      table: cause.table_name ?? cause.table,
+      column: cause.column_name ?? cause.column,
+    };
+  }
+  if (typeof err?.stack === 'string') description.stack = stripQueryParams(err.stack);
+  return description;
+};
+
+/** Where the request was going: the matched route pattern, never the query string. */
+const describeRequestForLog = (req: Request): Record<string, unknown> => {
+  const routePath = typeof req.route?.path === 'string' ? req.route.path : req.path;
+  return {
+    method: req.method,
+    route: `${req.baseUrl || ''}${routePath || ''}` || (req.originalUrl || '').split('?')[0],
+    requestId: req.id || req.get?.('x-request-id') || req.get?.('x-amzn-trace-id') || null,
+  };
+};
+
+/**
+ * Log an error nobody anticipated, in EVERY environment, without PII. A route
+ * handler that answers a 500 itself calls this instead of echoing the error to
+ * the client.
+ */
+const logUnexpectedError = (err: unknown, req: Request, context = 'Unhandled request error'): void => {
+  logger.error(context, {
+    ...describeRequestForLog(req),
+    error: describeErrorForLog(err),
+  });
+};
+
 /**
  * Global error handler
  */
@@ -48,17 +126,17 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
     return;
   }
 
-  let error = { ...err };
-  error.message = err.message;
+  const isDevelopment = config.environment === 'development';
 
-  // Only log full error in development to avoid PII in production logs
-  if (config.environment === 'development') {
-    logger.error('Unhandled request error', {
-      message: err?.message,
-      name: err?.name,
-      stack: err?.stack,
-    });
-  }
+  let error = { ...err };
+  error.message = err?.message;
+
+  // Whether OUR code wrote the text the client will see. An `AppError` is thrown
+  // deliberately with a message meant for the caller (`'Property not found'`,
+  // `'geocoding failed'`); the mapped branches below replace a library error
+  // with a fixed message. A raw error — a drizzle/postgres failure, a TypeError,
+  // a library error carrying its own `statusCode` — has not been vetted.
+  const clientSafeMessage = err instanceof AppError;
 
   // Mongoose bad ObjectId
   if (err.name === 'CastError') {
@@ -73,7 +151,7 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
   }
 
   // Mongoose validation error
-  if (err.name === 'ValidationError') {
+  if (err.name === 'ValidationError' && err.errors && typeof err.errors === 'object') {
     const message = Object.values(err.errors).map((val: any) => val.message).join(', ');
     error = new AppError(message, 400, 'VALIDATION_ERROR');
   }
@@ -89,16 +167,16 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
     error = new AppError(message, 401, 'TOKEN_EXPIRED');
   }
 
-  // FairCoin API errors
+  // FairCoin / Horizon API errors. These used to forward `err.message`, which is
+  // the upstream integration's own text (possibly naming internal URLs or
+  // accounts), not ours. The client now gets a fixed message; the original is
+  // logged below like any other upstream failure.
   if (err.code === 'FAIRCOIN_ERROR') {
-    const message = err.message || 'FairCoin transaction failed';
-    error = new AppError(message, 502, 'FAIRCOIN_ERROR');
+    error = new AppError('FairCoin transaction failed', 502, 'FAIRCOIN_ERROR');
   }
 
-  // Horizon API errors
   if (err.code === 'HORIZON_ERROR') {
-    const message = err.message || 'Horizon integration error';
-    error = new AppError(message, 502, 'HORIZON_ERROR');
+    error = new AppError('Horizon integration error', 502, 'HORIZON_ERROR');
   }
 
   // Rate limit errors
@@ -128,29 +206,45 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
   const statusCode = error.statusCode || 500;
   const code = error.code || 'INTERNAL_SERVER_ERROR';
 
+  // A mapped branch above replaced the raw error with a fixed-message AppError.
+  const messageIsClientSafe = clientSafeMessage || error instanceof AppError;
+
+  // Every 5xx is logged, in every environment: a 500 nobody can see is a 500
+  // nobody fixes. A 4xx is the caller's own mistake and `requestLogger` already
+  // records its status. The log carries no body and no bound parameter values.
+  if (statusCode >= 500) {
+    logUnexpectedError(err, req);
+  }
+
+  // A 5xx whose text our code did not write is internals — a drizzle error is
+  // the SQL plus every bound parameter — so outside development the client gets
+  // a generic message (and no `details`). A 4xx message describes the caller's
+  // own request and is kept.
+  const exposeMessage = statusCode < 500 || messageIsClientSafe || isDevelopment;
+
   // Error response object
   const errorResponse: any = {
     success: false,
     error: {
-      message: error.message || 'Internal server error',
+      message: (exposeMessage && error.message) || GENERIC_SERVER_ERROR_MESSAGE,
       code: code,
       statusCode: statusCode
     }
   };
 
   // Add validation details if they exist
-  if (error.details) {
+  if (error.details && exposeMessage) {
     errorResponse.error.details = error.details;
   }
 
   // Add stack trace in development
-  if (config.environment === 'development') {
+  if (isDevelopment) {
     errorResponse.error.stack = err.stack;
     errorResponse.error.fullError = err;
   }
 
   // Add request information for debugging
-  if (config.environment === 'development') {
+  if (isDevelopment) {
     errorResponse.request = {
       method: req.method,
       url: req.originalUrl,
@@ -242,6 +336,8 @@ export {
   AppError,
   notFound,
   errorHandler,
+  logUnexpectedError,
+  describeErrorForLog,
   asyncHandler,
   formatValidationError,
   successResponse,

@@ -174,37 +174,13 @@ const requestLogger = (req: Request, res: Response, next: NextFunction): void =>
   next();
 };
 
-/**
- * Error logging middleware
+/*
+ * There is deliberately no error-logging middleware here. The one that lived
+ * here logged `req.body`, `req.query`, the full query string and the raw error
+ * message (a drizzle failure's bound parameter VALUES) for every error in every
+ * environment. Request errors are logged by `errorHandler`
+ * (`logUnexpectedError`), which records the route and a PII-free error.
  */
-interface LoggedError {
-  name?: string;
-  message?: string;
-  stack?: string;
-  code?: string | number;
-  statusCode?: number;
-}
-
-const errorLogger = (err: LoggedError, req: Request, res: Response, next: NextFunction): void => {
-  logger.error('Request error', {
-    method: req.method,
-    url: req.originalUrl,
-    error: {
-      name: err.name,
-      message: err.message,
-      stack: err.stack,
-      code: err.code,
-      statusCode: err.statusCode
-    },
-    userId: req.userId || (req.user ? req.user.id : null),
-    requestId: req.id || null,
-    body: req.body,
-    params: req.params,
-    query: req.query
-  });
-
-  next(err);
-};
 
 /**
  * Business event logger
@@ -242,6 +218,5 @@ const businessLogger = {
 export {
   logger,
   requestLogger,
-  errorLogger,
   businessLogger
 };

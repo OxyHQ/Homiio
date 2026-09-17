@@ -12,6 +12,7 @@ import {
 } from '../db/billing/billingRepository';
 import type { billing } from '../db/schema';
 import { getErrorMessage } from '../utils/errors';
+import { logUnexpectedError } from '../middlewares/errorHandler';
 import Stripe from 'stripe';
 
 /** The products a Checkout session can carry, as the wire spells them. */
@@ -151,7 +152,8 @@ export async function createCheckoutSession(req: Request, res: Response) {
 
     return res.json({ success: true, url: session.url, id: session.id });
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: { message: error.message || 'Failed to create checkout session' }});
+    logUnexpectedError(error, req, 'Billing request failed');
+    return res.status(500).json({ success: false, error: { message: 'Failed to create checkout session' }});
   }
 }
 
@@ -285,7 +287,8 @@ export async function confirmCheckoutSession(req: Request, res: Response) {
 
     return res.json({ success: true, entitlements: await readEntitlements(oxyUserId) });
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: { message: error.message || 'Failed to confirm session' }});
+    logUnexpectedError(error, req, 'Billing request failed');
+    return res.status(500).json({ success: false, error: { message: 'Failed to confirm session' }});
   }
 }
 
@@ -305,7 +308,8 @@ export async function testWebhookConfig(req: Request, res: Response) {
 
     return res.json({ success: true, config });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: { message: err.message }});
+    logUnexpectedError(err, req, 'Billing request failed');
+    return res.status(500).json({ success: false, error: { message: 'Failed to read webhook configuration' }});
   }
 }
 
@@ -342,7 +346,8 @@ export async function debugBillingStatus(req: Request, res: Response) {
       message: billingInfo.plusActive ? 'Plus subscription is active' : 'Plus subscription is not active'
     });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: { message: err.message || 'Failed to get billing status' }});
+    logUnexpectedError(err, req, 'Billing request failed');
+    return res.status(500).json({ success: false, error: { message: 'Failed to get billing status' }});
   }
 }
 
@@ -439,10 +444,11 @@ export async function debugSubscriptionStatus(req: Request, res: Response) {
 
     return res.json({ success: true, debugInfo });
   } catch (error) {
+    logUnexpectedError(error, req, 'Billing request failed');
     return res.status(500).json({
       success: false,
       error: {
-        message: getErrorMessage(error) || 'Internal server error',
+        message: 'Internal server error',
         code: 'INTERNAL_ERROR'
       }
     });
@@ -494,7 +500,8 @@ export async function manuallyActivateSubscription(req: Request, res: Response) 
           : 'File credit added successfully',
     });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: { message: err.message || 'Failed to activate subscription' }});
+    logUnexpectedError(err, req, 'Billing request failed');
+    return res.status(500).json({ success: false, error: { message: 'Failed to activate subscription' }});
   }
 }
 
@@ -674,10 +681,11 @@ export async function syncSubscriptionStatus(req: Request, res: Response) {
       }
     });
   } catch (error: any) {
+    logUnexpectedError(error, req, 'Billing request failed');
     return res.status(500).json({
       success: false,
       error: {
-        message: error.message || 'Internal server error',
+        message: 'Internal server error',
         code: 'INTERNAL_ERROR'
       }
     });
@@ -732,10 +740,11 @@ export async function cancelSubscription(req: Request, res: Response) {
 
     return res.json({ success: true, entitlements });
   } catch (error: any) {
+    logUnexpectedError(error, req, 'Billing request failed');
     return res.status(500).json({
       success: false,
       error: {
-        message: error.message || 'Failed to cancel subscription',
+        message: 'Failed to cancel subscription',
         code: 'CANCEL_ERROR'
       }
     });
@@ -775,10 +784,11 @@ export async function reactivateSubscription(req: Request, res: Response) {
 
     return res.json({ success: true, entitlements });
   } catch (error: any) {
+    logUnexpectedError(error, req, 'Billing request failed');
     return res.status(500).json({
       success: false,
       error: {
-        message: error.message || 'Failed to reactivate subscription',
+        message: 'Failed to reactivate subscription',
         code: 'REACTIVATE_ERROR'
       }
     });
