@@ -9,14 +9,20 @@
  * could find.
  */
 
-const mockConfig = { environment: 'production' };
-jest.mock('../../config', () => ({ __esModule: true, default: mockConfig }));
-
 const mockLogger = { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn() };
 jest.mock('../../middlewares/logging', () => ({ logger: mockLogger }));
 
 import type { NextFunction, Request, Response } from 'express';
+import config from '../../config';
 import { AppError, errorHandler } from '../../middlewares/errorHandler';
+
+// The real config object (the suite's setup reads its Postgres URL); only the
+// environment is switched per test and restored afterwards.
+const originalEnvironment = config.environment;
+const mockConfig = config;
+afterAll(() => {
+  config.environment = originalEnvironment;
+});
 
 const SQL = 'select coalesce(sum("rent_details_monthly_rent"), 0) from "properties" where ("id" = $1 and "status" = $2)';
 const PARAMS = ['0b5a6f1e-secret-property-id', 'active', '2026-09-01T00:00:00.000Z'];

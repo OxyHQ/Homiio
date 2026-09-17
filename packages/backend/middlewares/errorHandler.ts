@@ -42,10 +42,16 @@ const GENERIC_SERVER_ERROR_MESSAGE = 'Internal server error';
  * a log line. A message that wraps it (`Failed to X: Failed query: ...`) carries
  * the same tail, so it is stripped wherever `Failed query:` appears.
  */
-const stripQueryParams = (text: string): string =>
-  // Up to the first stack frame (`\n    at ...`) when the text is a stack, else
-  // to the end — a string parameter can itself contain newlines.
-  text.includes('Failed query:') ? text.replace(/\s*params:[\s\S]*?(?=\n\s+at |$)/, '') : text;
+const stripQueryParams = (text: string): string => {
+  if (!text.includes('Failed query:')) return text;
+  const start = text.indexOf('\nparams:');
+  if (start === -1) return text;
+  // Up to the first stack frame when the text is a stack, else to the end — a
+  // string parameter can itself contain newlines. (String search, not a regex:
+  // the text is attacker-influenced and a backtracking pattern is a ReDoS.)
+  const frame = text.indexOf('\n    at ', start);
+  return frame === -1 ? text.slice(0, start) : text.slice(0, start) + text.slice(frame);
+};
 
 /**
  * Postgres data-exception messages end in the offending VALUE
@@ -53,7 +59,10 @@ const stripQueryParams = (text: string): string =>
  * a diagnosis needs, so the value is dropped. Constraint messages quote a
  * constraint NAME with no preceding colon and are left intact.
  */
-const redactTrailingValue = (text: string): string => text.replace(/: "[\s\S]*"$/, ': [redacted]');
+const redactTrailingValue = (text: string): string => {
+  const start = text.indexOf(': "');
+  return start !== -1 && text.endsWith('"') ? `${text.slice(0, start)}: [redacted]` : text;
+};
 
 /**
  * The parts of an error that are safe to log: no request body, no bound
