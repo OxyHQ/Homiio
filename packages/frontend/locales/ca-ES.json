@@ -2237,7 +2237,9 @@
     "emoji": "Emoji",
     "color": "Color",
     "month": "month",
-    "reset": "Reset"
+    "reset": "Reset",
+    "decreaseItem": "Redueix {{title}}",
+    "increaseItem": "Augmenta {{title}}"
   },
   "sindi": {
     "name": "Sindi",
@@ -3507,7 +3509,8 @@
         "maintenance": "Manteniment",
         "cleaning": "Neteja"
       }
-    }
+    },
+    "ratingA11y": "Valoració de {{rating}} sobre 5"
   },
   "subscriptions": {
     "title": "Subscripcions",
@@ -3691,8 +3694,6 @@
       "tabApartment": "Habitatge",
       "tabManagement": "Gestió",
       "tabBuilding": "Edifici",
-      "metricRating": "Valoració mitjana",
-      "metricReviews": "Ressenyes",
       "metricRecommend": "Recomanen"
     },
     "display": {
@@ -3764,7 +3765,6 @@
       "partiesAllowed": "Parties Allowed",
       "guestsAllowed": "Guests Allowed",
       "maxGuests": "Maximum Number of Guests",
-      "maxGuestsPlaceholder": "e.g., 2",
       "yes": "Yes",
       "no": "No"
     }
@@ -4288,8 +4288,6 @@
     "notFound": "Agència no trobada",
     "notFoundDescription": "No hem trobat aquesta agència.",
     "stats": {
-      "rating": "Valoració",
-      "reviews": "Ressenyes",
       "recommend": "Recomanen",
       "depositFull": "Fiança tornada",
       "listings": "Anuncis"

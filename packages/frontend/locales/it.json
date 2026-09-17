@@ -262,7 +262,9 @@
       }
     },
     "month": "month",
-    "reset": "Reset"
+    "reset": "Reset",
+    "decreaseItem": "Diminuisci {{title}}",
+    "increaseItem": "Aumenta {{title}}"
   },
   "home": {
     "hero": {
@@ -3491,7 +3493,8 @@
         "maintenance": "Manutenzione",
         "cleaning": "Pulizia"
       }
-    }
+    },
+    "ratingA11y": "Valutazione {{rating}} su 5"
   },
   "subscriptions": {
     "title": "Abbonamenti",
@@ -3675,8 +3678,6 @@
       "tabApartment": "Appartamento",
       "tabManagement": "Gestione",
       "tabBuilding": "Edificio",
-      "metricRating": "Voto medio",
-      "metricReviews": "Recensioni",
       "metricRecommend": "Consigliano"
     },
     "display": {
@@ -3748,7 +3749,6 @@
       "partiesAllowed": "Parties Allowed",
       "guestsAllowed": "Guests Allowed",
       "maxGuests": "Maximum Number of Guests",
-      "maxGuestsPlaceholder": "e.g., 2",
       "yes": "Yes",
       "no": "No"
     }
@@ -4272,8 +4272,6 @@
     "notFound": "Agenzia non trovata",
     "notFoundDescription": "Non abbiamo trovato questa agenzia.",
     "stats": {
-      "rating": "Voto",
-      "reviews": "Recensioni",
       "recommend": "Consigliano",
       "depositFull": "Cauzione resa",
       "listings": "Annunci"

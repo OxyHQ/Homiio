@@ -1883,7 +1883,9 @@
     "goHome": "Go home",
     "signIn": "Sign in",
     "month": "month",
-    "reset": "Reset"
+    "reset": "Reset",
+    "decreaseItem": "Kurangi {{title}}",
+    "increaseItem": "Tambah {{title}}"
   },
   "sindi": {
     "name": "Sindi",
@@ -3456,7 +3458,8 @@
         "maintenance": "Maintenance",
         "cleaning": "Cleaning"
       }
-    }
+    },
+    "ratingA11y": "Dinilai {{rating}} dari 5"
   },
   "subscriptions": {
     "title": "Subscriptions",
@@ -3686,8 +3689,6 @@
       "tabApartment": "Apartment",
       "tabManagement": "Management",
       "tabBuilding": "Building",
-      "metricRating": "Avg rating",
-      "metricReviews": "Reviews",
       "metricRecommend": "Recommend"
     },
     "display": {
@@ -3759,7 +3760,6 @@
       "partiesAllowed": "Parties Allowed",
       "guestsAllowed": "Guests Allowed",
       "maxGuests": "Maximum Number of Guests",
-      "maxGuestsPlaceholder": "e.g., 2",
       "yes": "Yes",
       "no": "No"
     }
@@ -4237,8 +4237,6 @@
     "notFound": "Agency not found",
     "notFoundDescription": "We couldn't find this agency.",
     "stats": {
-      "rating": "Rating",
-      "reviews": "Reviews",
       "recommend": "Recommend",
       "depositFull": "Deposit back",
       "listings": "Listings"

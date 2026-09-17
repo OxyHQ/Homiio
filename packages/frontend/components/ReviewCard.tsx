@@ -4,7 +4,7 @@
  * The PARENT hydrates the author (`useOxyAvatars(reviews.map(r => r.oxyUserId))`)
  * and passes the resolved Oxy `User` as `author`; the card renders the Bloom
  * `Avatar` (variant-aware resolver) + display name (falling back to the handle,
- * then an anonymous label). Body: title, stars, recommendation line, opinion,
+ * then an anonymous label). Body: title, Bloom `Rating`, recommendation line, opinion,
  * pros/cons (falling back to the legacy `positiveComment`/`negativeComment`),
  * dimension `Chip`s grouped by section (apartment / management / building /
  * area, only the present ones), advice blocks, an agency link, and a photo row.
@@ -29,6 +29,7 @@ import {
   RiThumbUpLine,
   RiVerifiedBadgeFill,
 } from '@oxy.so/bloom/icons';
+import { Rating } from '@oxy.so/bloom/rating';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy } from '@oxy.so/services';
@@ -40,7 +41,6 @@ import {
   type ReviewReportReason,
 } from '@homiio/shared-types';
 
-import { Stars } from '@/components/ui/Stars';
 import { ReportReviewSheet } from '@/components/reviews/ReportReviewSheet';
 import {
   APARTMENT_DIMENSIONS,
@@ -224,7 +224,12 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
       ) : null}
 
       <View style={styles.ratingRow}>
-        <Stars rating={review.rating} size={16} />
+        {review.rating > 0 ? (
+          <Rating
+            value={review.rating}
+            accessibilityLabel={t('reviews.ratingA11y', { rating: review.rating })}
+          />
+        ) : null}
         <View style={styles.recommendRow}>
           <RecommendIcon width={14} height={14} fill={recommendColor} />
           <BloomText style={[styles.recommendText, { color: recommendColor }]}>

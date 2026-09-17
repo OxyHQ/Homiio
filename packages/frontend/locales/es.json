@@ -2216,7 +2216,9 @@
     "goHome": "Ir al inicio",
     "signIn": "Iniciar sesión",
     "month": "month",
-    "reset": "Reset"
+    "reset": "Reset",
+    "decreaseItem": "Reducir {{title}}",
+    "increaseItem": "Aumentar {{title}}"
   },
   "sindi": {
     "name": "Sindi",
@@ -3486,7 +3488,8 @@
         "maintenance": "Mantenimiento",
         "cleaning": "Limpieza"
       }
-    }
+    },
+    "ratingA11y": "Valoración de {{rating}} sobre 5"
   },
   "subscriptions": {
     "title": "Suscripciones",
@@ -3670,8 +3673,6 @@
       "tabApartment": "Vivienda",
       "tabManagement": "Gestión",
       "tabBuilding": "Edificio",
-      "metricRating": "Valoración media",
-      "metricReviews": "Reseñas",
       "metricRecommend": "Recomiendan"
     },
     "display": {
@@ -3743,7 +3744,6 @@
       "partiesAllowed": "Parties Allowed",
       "guestsAllowed": "Invitados permitidos",
       "maxGuests": "Número máximo de invitados",
-      "maxGuestsPlaceholder": "e.g., 2",
       "yes": "Yes",
       "no": "No"
     }
@@ -4267,8 +4267,6 @@
     "notFound": "Agencia no encontrada",
     "notFoundDescription": "No hemos encontrado esta agencia.",
     "stats": {
-      "rating": "Valoración",
-      "reviews": "Reseñas",
       "recommend": "Recomiendan",
       "depositFull": "Fianza devuelta",
       "listings": "Anuncios"

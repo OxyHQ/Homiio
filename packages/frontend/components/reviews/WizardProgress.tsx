@@ -3,7 +3,8 @@
  * progress track with the "Step X of N" counter above a Back / Next (or Submit
  * on the last step) button row. The wizard's step content scrolls above it.
  *
- * Bloom has no stepper family, so the stepper look is COMPOSED: Bloom `StatBar`
+ * Bloom has no wizard-progress family (its `stepper` is a − value + counter, not
+ * a step indicator), so the progress look is COMPOSED: Bloom `StatBar`
  * draws the labelled track (its label is the step counter) and a Bloom `Badge`
  * carries the percentage; the nav actions are Bloom `Button`s.
  * `nextDisabled` gates a hard-required step from advancing.

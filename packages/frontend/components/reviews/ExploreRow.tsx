@@ -1,49 +1,45 @@
 /**
  * ExploreRow — one tappable row in the review-explore lists (city →
- * neighborhood → building): a Bloom `Item` (title, subtitle, a rating `Chip`
- * and a chevron trailing). The screens stack rows inside one outlined Bloom
+ * neighborhood → building): a Bloom `Item` (title, subtitle, a Bloom `Rating`
+ * and a chevron trailing). The rating is drawn only for a real average (> 0). The screens stack rows inside one outlined Bloom
  * `Card` via `ExploreList`, so the rows share a surface instead of each drawing
  * its own border.
  */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { Card } from '@oxy.so/bloom/card';
-import { Chip } from '@oxy.so/bloom/chip';
 import { Divider } from '@oxy.so/bloom/divider';
-import { RiArrowRightSLine, RiStarFill } from '@oxy.so/bloom/icons';
+import { RiArrowRightSLine } from '@oxy.so/bloom/icons';
 import { Item } from '@oxy.so/bloom/item';
+import { Rating } from '@oxy.so/bloom/rating';
 import { useTheme } from '@oxy.so/bloom/theme';
-
-import { colors } from '@/styles/colors';
 
 interface ExploreRowProps {
   title: string;
   subtitle?: string;
-  /** Average rating shown as a star chip on the right. */
+  /** Average rating (1–5) drawn as a Bloom `Rating` on the right; omitted when absent or 0. */
   rating?: number;
   onPress: () => void;
 }
 
 export const ExploreRow: React.FC<ExploreRowProps> = ({ title, subtitle, rating, onPress }) => {
   const theme = useTheme();
+  const { t } = useTranslation();
+  const hasRating = typeof rating === 'number' && rating > 0;
+  const ratingLabel = hasRating ? t('reviews.ratingA11y', { rating: Number(rating.toFixed(2)) }) : '';
   return (
     <Item
       role="listitem"
       title={title}
       subtitle={subtitle}
       onPress={onPress}
-      accessibilityLabel={title}
+      accessibilityLabel={[title, subtitle, ratingLabel].filter(Boolean).join(', ')}
       trailing={
         <View style={styles.trailing}>
-          {typeof rating === 'number' ? (
-            <Chip
-              size="small"
-              hue="gray"
-              startIcon={<RiStarFill width={12} height={12} fill={colors.ratingStar} />}
-            >
-              {rating.toFixed(1)}
-            </Chip>
+          {hasRating ? (
+            <Rating value={rating} size="small" accessibilityLabel={ratingLabel} />
           ) : null}
           <RiArrowRightSLine width={20} height={20} fill={theme.colors.textTertiary} />
         </View>

@@ -9,6 +9,9 @@
  * the screen level (`useOxyAvatars`). No fake confidence/evidence badges, no
  * Alert stubs — Helpful / Report are real inside `ReviewCard`.
  *
+ * The review summary is a Bloom `Rating` (real average + count, only when the
+ * address has reviews) over a `RatingBar` for the recommend share.
+ *
  * Sections sit on outlined Bloom `Card`s; the Properties/Reviews switch and the
  * review sub-tabs are Bloom `Tabs`.
  */
@@ -26,8 +29,9 @@ import {
   RiHomeLine,
   RiSearchLine,
 } from '@oxy.so/bloom/icons';
+import { Rating, RatingBar } from '@oxy.so/bloom/rating';
 import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
-import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
+import { H2, H3 } from '@oxy.so/bloom/typography';
 import { useTranslation } from 'react-i18next';
 
 import { AddressDisplay } from '@/components/AddressDisplay';
@@ -86,14 +90,6 @@ const computeSummary = (reviews: ReviewDTO[]) => {
     recommendationPercentage: (recommended / reviews.length) * 100,
   };
 };
-
-/** One summary figure on a filled Bloom `Card`. */
-const MetricTile: React.FC<{ value: string; label: string }> = ({ value, label }) => (
-  <Card variant="filled" radius="radius-12" style={styles.metric}>
-    <BloomText style={styles.metricValue}>{value}</BloomText>
-    <BloomText style={styles.metricLabel}>{label}</BloomText>
-  </Card>
-);
 
 export default function AddressDetailsPage() {
   const { t } = useTranslation();
@@ -239,20 +235,19 @@ export default function AddressDetailsPage() {
           {reviews.length > 0 ? (
             <Card variant="outlined" radius="radius-16" style={styles.sectionCard}>
               <SectionEyebrow>{t('addresses.detail.reviewsSection')}</SectionEyebrow>
-              <View style={styles.metricsRow}>
-                <MetricTile
-                  value={summary.averageRating.toFixed(1)}
-                  label={t('addresses.detail.metricRating')}
-                />
-                <MetricTile
-                  value={String(summary.totalReviews)}
-                  label={t('addresses.detail.metricReviews')}
-                />
-                <MetricTile
-                  value={`${Math.round(summary.recommendationPercentage)}%`}
-                  label={t('addresses.detail.metricRecommend')}
-                />
-              </View>
+              <Rating
+                value={summary.averageRating}
+                count={summary.totalReviews}
+                accessibilityLabel={`${t('reviews.ratingA11y', {
+                  rating: Number(summary.averageRating.toFixed(2)),
+                })}, ${t('reviews.explore.reviewCount', { count: summary.totalReviews })}`}
+              />
+              <RatingBar
+                label={t('addresses.detail.metricRecommend')}
+                value={summary.recommendationPercentage}
+                max={100}
+                display={`${Math.round(summary.recommendationPercentage)}%`}
+              />
             </Card>
           ) : null}
 
@@ -381,30 +376,6 @@ const styles = StyleSheet.create({
   },
   cardHeading: {
     letterSpacing: -0.3,
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  metric: {
-    flex: 1,
-    alignItems: 'center',
-    padding: spacing.md,
-    gap: spacing.xs,
-  },
-  metricValue: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.primaryColor,
-    letterSpacing: -0.5,
-  },
-  metricLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    textAlign: 'center',
   },
   propertiesList: {
     gap: spacing.md,
