@@ -74,6 +74,7 @@ export function SaleDetailsStep({
               key={option.value}
               size="large"
               selected={offering.saleCurrency === option.value}
+              variant={offering.saleCurrency === option.value ? 'solid' : 'outlined'}
               onPress={() => updateFormField('offering', 'saleCurrency', option.value)}
             >
               {option.label}
@@ -89,6 +90,7 @@ export function SaleDetailsStep({
               key={option.value}
               size="large"
               selected={offering.chainStatus === option.value}
+              variant={offering.chainStatus === option.value ? 'solid' : 'outlined'}
               onPress={() => handleChainStatus(option.value)}
             >
               {t(option.i18nKey)}

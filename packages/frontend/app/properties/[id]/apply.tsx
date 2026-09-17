@@ -441,6 +441,8 @@ export default function ApplyToRentScreen() {
                     <Chip
                       key={preset}
                       selected={isActive}
+
+                      variant={isActive ? 'solid' : 'outlined'}
                       onPress={() => {
                         setUsingCustomTerm(false);
                         setLeaseTermMonths(preset);
@@ -450,7 +452,11 @@ export default function ApplyToRentScreen() {
                     </Chip>
                   );
                 })}
-                <Chip selected={usingCustomTerm} onPress={() => setUsingCustomTerm(true)}>
+                <Chip
+                  selected={usingCustomTerm}
+                  variant={usingCustomTerm ? 'solid' : 'outlined'}
+                  onPress={() => setUsingCustomTerm(true)}
+                >
                   {t('applications.field.leaseTermCustom')}
                 </Chip>
               </View>
@@ -485,6 +491,8 @@ export default function ApplyToRentScreen() {
                   <Chip
                     key={option.value}
                     selected={employmentStatus === option.value}
+
+                    variant={employmentStatus === option.value ? 'solid' : 'outlined'}
                     onPress={() => setEmploymentStatus(option.value)}
                   >
                     {t(option.labelKey)}
@@ -530,6 +538,8 @@ export default function ApplyToRentScreen() {
                       <Chip
                         key={option.value}
                         selected={reference.relationship === option.value}
+
+                        variant={reference.relationship === option.value ? 'solid' : 'outlined'}
                         onPress={() => handleReferenceChange(index, { relationship: option.value })}
                       >
                         {t(option.labelKey)}
@@ -612,6 +622,8 @@ export default function ApplyToRentScreen() {
                         key={option.value}
                         size="small"
                         selected={doc.type === option.value}
+
+                        variant={doc.type === option.value ? 'solid' : 'outlined'}
                         onPress={() => handleDocumentTypeChange(doc.id, option.value)}
                       >
                         {t(option.labelKey)}

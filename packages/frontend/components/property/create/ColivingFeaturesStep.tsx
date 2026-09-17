@@ -46,6 +46,7 @@ export function ColivingFeaturesStep({ formData, updateFormField }: PropertyStep
                     key={space}
                     size="large"
                     selected={selected}
+                    variant={selected ? 'solid' : 'outlined'}
                     onPress={() => {
                       const updated = selected
                         ? sharedSpacesList.filter((value) => value !== space)

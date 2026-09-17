@@ -68,6 +68,7 @@ export function OfferingSelector({ formData, setFormData }: PropertyStepProps) {
               key={option.value}
               size="large"
               selected={currency === option.value}
+              variant={currency === option.value ? 'solid' : 'outlined'}
               onPress={() => setFormData('pricing', { currency: option.value })}
             >
               {option.label}
