@@ -6,6 +6,7 @@ import {
   Linking,
   StyleSheet,
   useWindowDimensions,
+  type ViewStyle,
 } from 'react-native';
 import Animated, {
   Easing,
@@ -15,30 +16,38 @@ import Animated, {
   SlideOutLeft,
 } from 'react-native-reanimated';
 import { useRouter, usePathname } from 'expo-router';
-import { Portal } from '@oxy.so/bloom/portal';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { Portal } from '@oxy.so/bloom/portal';
 import {
-  Home,
-  Search,
-  FileText,
-  BedDouble,
-  User,
-  Lightbulb,
-  Megaphone,
-  Users,
-  CalendarClock,
-  Bookmark,
-  Star,
-  ChevronsLeft,
-  ChevronsRight,
-  ChevronRight,
-  X,
-} from 'lucide-react-native';
-import type { LucideIcon } from 'lucide-react-native';
-import { Text } from '@oxy.so/bloom/typography';
+  Sidebar,
+  type SidebarIcon,
+  type SidebarMode,
+  type SidebarNavItem,
+  type SidebarTree,
+  type SidebarTreeFolder,
+  type SidebarTreeItem,
+} from '@oxy.so/bloom/sidebar';
+import {
+  RiArrowLeftRightLine,
+  RiBookmarkLine,
+  RiCalendarLine,
+  RiCalendarScheduleLine,
+  RiFilePaper2Line,
+  RiFileTextLine,
+  RiGroupLine,
+  RiHomeLine,
+  RiHotelBedLine,
+  RiKey2Line,
+  RiLightbulbLine,
+  RiMegaphoneLine,
+  RiSearchLine,
+  RiShieldLine,
+  RiStarLine,
+  RiUserLine,
+} from '@oxy.so/bloom/icons';
 import { openAccountDialog, useOxy, ProfileButton } from '@oxy.so/services';
 
-import { colors } from '@/styles/colors';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { useProfile } from '@/context/ProfileContext';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
@@ -47,42 +56,10 @@ import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useUIStore } from '@/store/uiStore';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { getPropertyTitle } from '@/utils/propertyUtils';
-import { resolveBackendImageUrl } from '@/utils/imageUrl';
-import { LogoIcon } from '@/assets/logo';
 import { SindiIcon } from '@/assets/icons';
+import type { BrowseMode } from '@/components/search/types';
 
-import { BaseSidebar } from './BaseSidebar';
-import { NavItem } from './NavItem';
-import { ModeToggle } from './ModeToggle';
-import { SectionHeader } from './SectionHeader';
-import { DateSeparator } from './DateSeparator';
-import { RecentPropertyItem } from './RecentPropertyItem';
-import { FolderRow } from './FolderSection';
-
-import {
-  LARGE_SCREEN_MIN_WIDTH,
-  SIDEBAR_COLLAPSED_WIDTH as COLLAPSED_WIDTH,
-  SIDEBAR_EXPANDED_WIDTH as EXPANDED_WIDTH,
-} from './dimensions';
-
-/**
- * Horizontal section dividers inside the sidebar. Bloom's `--border` CSS
- * variable only resolves reliably on web; on native `border-border` /
- * `bg-border` don't pick up the runtime token, so we paint an explicit
- * `colors.border` hairline (same pattern as the rest of the app).
- *
- * No right-edge rail border — the SideBar sits flush against the ContentPanel
- * gutter (Mention shape). A `borderRight` hairline reads as an unintended
- * seam between the rail and the center column on explore and every other
- * framed shell route.
- */
-const sidebarBorders = StyleSheet.create({
-  /** Horizontal divider between sidebar sections (header → body, body → footer). */
-  divider: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-  },
-});
+import { SIDEBAR_EXPANDED_WIDTH, SIDEBAR_GUTTER, SIDEBAR_MASK_CLEARANCE } from './dimensions';
 
 /**
  * Sliver of viewport kept to the right of the mobile overlay drawer so the
@@ -93,376 +70,165 @@ const MOBILE_DRAWER_EDGE_GAP = 56;
 
 /**
  * Dimming scrim painted over the whole viewport behind the mobile overlay
- * drawer. Matches the `overlayColor` of the inbox app's `front`-type
- * `expo-router/drawer` (`@react-navigation/drawer`) so the two apps share the
- * same slide-in-over-content feel.
+ * drawer. Matches the `overlayColor` of the inbox app's `front`-type drawer.
  */
 const MOBILE_DRAWER_SCRIM = 'rgba(0, 0, 0, 0.3)';
 
-/**
- * Slide / fade duration (ms) for the mobile overlay drawer. Mirrors the
- * default transition timing of `@react-navigation/drawer`'s `front` drawer
- * that the inbox app relies on.
- */
+/** Slide / fade duration (ms) for the mobile overlay drawer. */
 const MOBILE_DRAWER_DURATION = 250;
 
-/**
- * Pressable that participates in Reanimated layout (entering/exiting)
- * transitions — used for the fade-in scrim behind the mobile overlay drawer.
- * Created once at module scope to keep the animated wrapper stable.
- */
+/** Pressable that participates in Reanimated entering/exiting transitions. */
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-interface NavEntry {
-  key: string;
-  icon: LucideIcon;
-  iconActive: LucideIcon;
-  label: string;
-  route: string;
-  shortcut?: string;
-}
-
-interface FolderEntry {
-  id: string;
-  name: string;
-  color: string;
-  icon: string;
-  propertyCount: number;
-  latestImages?: string[];
-}
-
-interface RecentEntry {
-  id: string;
-  title: string;
-  subtitle?: string;
-  imageUrl?: string;
-  /** Sortable timestamp (milliseconds since epoch). */
-  timestamp: number;
-}
-
-interface DateGroup {
-  label: string;
-  items: RecentEntry[];
-}
-
-const isToday = (timestamp: number): boolean => {
-  const date = new Date(timestamp);
-  const now = new Date();
-  return (
-    date.getDate() === now.getDate() &&
-    date.getMonth() === now.getMonth() &&
-    date.getFullYear() === now.getFullYear()
-  );
-};
-
-const isYesterday = (timestamp: number): boolean => {
-  const date = new Date(timestamp);
-  const now = new Date();
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  return (
-    date.getDate() === yesterday.getDate() &&
-    date.getMonth() === yesterday.getMonth() &&
-    date.getFullYear() === yesterday.getFullYear()
-  );
-};
-
-const groupByDate = (
-  items: RecentEntry[],
-  labels: { today: string; yesterday: string; earlier: string },
-): DateGroup[] => {
-  const today: RecentEntry[] = [];
-  const yesterday: RecentEntry[] = [];
-  const earlier: RecentEntry[] = [];
-
-  for (const item of items) {
-    if (isToday(item.timestamp)) {
-      today.push(item);
-    } else if (isYesterday(item.timestamp)) {
-      yesterday.push(item);
-    } else {
-      earlier.push(item);
-    }
-  }
-
-  const groups: DateGroup[] = [];
-  if (today.length > 0) groups.push({ label: labels.today, items: today });
-  if (yesterday.length > 0)
-    groups.push({ label: labels.yesterday, items: yesterday });
-  if (earlier.length > 0)
-    groups.push({ label: labels.earlier, items: earlier });
-  return groups;
-};
-
-const TERMS_URL =
-  'https://oxy.so/company/transparency/policies/terms-of-service';
+const TERMS_URL = 'https://oxy.so/company/transparency/policies/terms-of-service';
 const PRIVACY_URL = 'https://oxy.so/company/transparency/policies/privacy';
 
+/** Most saved folders / recently viewed properties the tree lists. */
+const MAX_FOLDERS = 5;
+const MAX_RECENT = 10;
+
+/** Sindi's brand glyph (`size` / `color`) as a Bloom icon (`width` / `fill`). */
+const SindiSidebarIcon: SidebarIcon = ({ width, height, fill }) => (
+  <SindiIcon size={width ?? height ?? 20} color={fill} />
+);
+
 /**
- * Render the Homiio logo as the sidebar header brand mark. The icon-only
- * variant keeps the rail width tight; the expanded variant adds breathing
- * room before the collapse button.
+ * The browse modes, in display order. The `⌥⌃` + digit hint Bloom shows on
+ * hover is bound below in {@link useModeShortcuts}; the digit is the row's
+ * 1-based position, so the hint and the binding cannot drift apart.
  */
-const SidebarBrand = React.memo(function SidebarBrand({
-  onPress,
-}: {
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel="Homiio"
-      className="p-1 mx-0.5 shrink-0 rounded-xl hover:bg-muted items-center justify-center"
-    >
-      <LogoIcon size={26} color={colors.primaryColor} />
-    </Pressable>
-  );
+const MODE_ROWS: readonly { mode: BrowseMode; icon: SidebarIcon; labelKey: string }[] = [
+  { mode: 'long_term', icon: RiHomeLine, labelKey: 'sidebar.mode.longTerm' },
+  { mode: 'vacation', icon: RiCalendarLine, labelKey: 'sidebar.mode.vacation' },
+  { mode: 'buy', icon: RiKey2Line, labelKey: 'sidebar.mode.buy' },
+  { mode: 'exchange', icon: RiArrowLeftRightLine, labelKey: 'sidebar.mode.exchange' },
+];
+
+const isBrowseMode = (key: string): key is BrowseMode =>
+  MODE_ROWS.some((row) => row.mode === key);
+
+const isSameDay = (a: Date, b: Date): boolean =>
+  a.getDate() === b.getDate() &&
+  a.getMonth() === b.getMonth() &&
+  a.getFullYear() === b.getFullYear();
+
+/** Today / Yesterday / Earlier, as the recently-viewed row's meta chip. */
+const dayBucket = (
+  timestamp: number,
+  labels: { today: string; yesterday: string; earlier: string },
+): string => {
+  const date = new Date(timestamp);
+  const now = new Date();
+  if (isSameDay(date, now)) return labels.today;
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  return isSameDay(date, yesterday) ? labels.yesterday : labels.earlier;
+};
+
+/**
+ * Web-only `⌥⌃1..4` (Alt+Ctrl+digit) browse-mode shortcuts. Bloom only renders
+ * the hint; binding the keys is the app's job.
+ */
+function useModeShortcuts(setBrowseMode: (mode: BrowseMode) => void) {
+  React.useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only Alt+Ctrl chords; let Cmd-based combos (e.g. macOS) fall through.
+      if (!e.altKey || !e.ctrlKey || e.metaKey) return;
+
+      // Never hijack a digit the user is typing into a field.
+      const target = e.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+      ) {
+        return;
+      }
+
+      // `code` (physical key) is layout-stable while Alt is held; `key` can
+      // mutate to an alternate glyph under Alt on macOS.
+      const index = MODE_ROWS.findIndex((_, i) => e.code === `Digit${i + 1}`);
+      if (index === -1) return;
+
+      e.preventDefault();
+      setBrowseMode(MODE_ROWS[index].mode);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setBrowseMode]);
+}
+
+/**
+ * Web pins the column to the viewport (the document is the scroll owner);
+ * native fills the row it sits in.
+ */
+const pinnedColumnStyle: ViewStyle =
+  Platform.OS === 'web'
+    ? ({
+        position: 'sticky',
+        top: 0,
+        alignSelf: 'flex-start',
+        height: '100vh',
+        maxHeight: '100vh',
+      } as unknown as ViewStyle)
+    : { height: '100%' };
+
+const styles = StyleSheet.create({
+  column: {
+    flexShrink: 0,
+    flexDirection: 'column',
+    padding: SIDEBAR_GUTTER,
+    paddingRight: SIDEBAR_GUTTER + SIDEBAR_MASK_CLEARANCE,
+    gap: SIDEBAR_GUTTER,
+  },
+  // Bloom's panel defaults to `height: '100%'`; in the column it shares the
+  // height with the account button below it.
+  panel: {
+    height: undefined,
+    flex: 1,
+    minHeight: 0,
+  },
 });
 
+/**
+ * Homiio's navigation sidebar: Bloom `Sidebar` (panel variant) plus the Oxy
+ * `ProfileButton` beneath it.
+ *
+ * - Wide screens (>= 500): an inline column, collapsible to Bloom's icon rail;
+ *   the collapse choice persists in `uiStore`.
+ * - Below that the native bottom tabs own navigation and the sidebar becomes
+ *   an on-demand slide-in overlay drawer (`mobileDrawerOpen`), rendered through
+ *   Bloom's root Portal so it covers the whole viewport. It stays mounted on
+ *   native phones for that reason.
+ */
 export function SideBar() {
   const router = useRouter();
   const pathname = usePathname() || '/';
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
-  const isSidebarVisible = useIsScreenNotMobile();
-  const isLargeScreen = width >= LARGE_SCREEN_MIN_WIDTH;
+  const isMobile = !useIsScreenNotMobile();
 
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
-  const toggleSidebarCollapsed = useUIStore((s) => s.toggleSidebarCollapsed);
+  const setSidebarCollapsed = useUIStore((s) => s.setSidebarCollapsed);
   const mobileDrawerOpen = useUIStore((s) => s.mobileDrawerOpen);
   const closeMobileDrawer = useUIStore((s) => s.closeMobileDrawer);
   const sindiPanelOpen = useUIStore((s) => s.sindiPanelOpen);
   const toggleSindiPanel = useUIStore((s) => s.toggleSindiPanel);
-  const savedFoldersOpen = useUIStore((s) => s.savedFoldersOpen);
-  const setSavedFoldersOpen = useUIStore((s) => s.setSavedFoldersOpen);
-  const recentPropertiesOpen = useUIStore((s) => s.recentPropertiesOpen);
-  const setRecentPropertiesOpen = useUIStore((s) => s.setRecentPropertiesOpen);
 
-  const { mode } = useRentalMode();
+  const { mode, browseMode, setBrowseMode } = useRentalMode();
   const { canAccessRoommates } = useProfile();
   const { isHost } = useHostStatus();
   const { isAuthenticated } = useOxy();
 
-  const { savedProperties, folders } = useSavedPropertiesContext();
-  const { properties: recentProperties, removeProperty } = useRecentlyViewed();
+  const { folders } = useSavedPropertiesContext();
+  const { properties: recentProperties } = useRecentlyViewed();
 
-  // Only honor the user-chosen collapsed state on screens wide enough to
-  // expand again — below 768px we always render the expanded layout.
-  const isCollapsed = isLargeScreen && sidebarCollapsed;
-
-  /* --------------------------------------------------------------
-     Derived nav entries — mode-aware secondary item
-     -------------------------------------------------------------- */
-  const navEntries = React.useMemo<NavEntry[]>(() => {
-    const entries: NavEntry[] = [
-      {
-        key: 'home',
-        icon: Home,
-        iconActive: Home,
-        label: t('sidebar.navigation.home'),
-        route: '/',
-      },
-      {
-        key: 'search',
-        icon: Search,
-        iconActive: Search,
-        label: t('sidebar.navigation.explore'),
-        route: '/explore',
-      },
-    ];
-
-    // Mode-dependent secondary nav: Applications for long-term tenants,
-    // Stays for vacation bookings. Both require auth.
-    if (isAuthenticated) {
-      if (mode === 'long_term') {
-        entries.push({
-          key: 'applications',
-          icon: FileText,
-          iconActive: FileText,
-          label: t('sidebar.navigation.applications'),
-          route: '/applications',
-        });
-      } else {
-        entries.push({
-          key: 'stays',
-          icon: BedDouble,
-          iconActive: BedDouble,
-          label: t('sidebar.navigation.stays'),
-          route: '/stays',
-        });
-      }
-    }
-
-    entries.push({
-      key: 'profile',
-      icon: User,
-      iconActive: User,
-      label: t('sidebar.navigation.profile'),
-      route: '/profile',
-    });
-
-    entries.push({
-      key: 'tips',
-      icon: Lightbulb,
-      iconActive: Lightbulb,
-      label: t('sidebar.navigation.tips'),
-      route: '/tips',
-    });
-
-    entries.push({
-      key: 'evictions',
-      icon: Megaphone,
-      iconActive: Megaphone,
-      label: t('sidebar.navigation.evictions'),
-      route: '/evictions',
-    });
-
-    // Reviews explore — public (address reputation, reviucasa-style).
-    entries.push({
-      key: 'reviews',
-      icon: Star,
-      iconActive: Star,
-      label: t('sidebar.navigation.reviews'),
-      route: '/reviews',
-    });
-
-    if (canAccessRoommates) {
-      entries.push({
-        key: 'roommates',
-        icon: Users,
-        iconActive: Users,
-        label: t('sidebar.navigation.roommates'),
-        route: '/roommates',
-      });
-    }
-
-    if (isHost) {
-      entries.push({
-        key: 'host-calendar',
-        icon: CalendarClock,
-        iconActive: CalendarClock,
-        label: t('sidebar.navigation.hostCalendar'),
-        route: '/host/calendar',
-      });
-    }
-
-    return entries;
-  }, [t, isAuthenticated, mode, canAccessRoommates, isHost]);
-
-  /* --------------------------------------------------------------
-     Folders — exclude default folder + empty folders, max 5
-     -------------------------------------------------------------- */
-  const folderEntries = React.useMemo<FolderEntry[]>(() => {
-    const safeFolders = Array.isArray(folders) ? folders : [];
-    const safeProps = Array.isArray(savedProperties) ? savedProperties : [];
-
-    return safeFolders
-      .filter((folder) => !folder.isDefault && (folder.propertyCount ?? 0) > 0)
-      .map((folder) => {
-        const folderProperties = safeProps.filter(
-          (property) => property.folderId === folder.id,
-        );
-        const latestImages = [...folderProperties]
-          .sort((a, b) => {
-            const aTs = new Date(
-              a.savedAt ?? a.updatedAt ?? a.createdAt,
-            ).getTime();
-            const bTs = new Date(
-              b.savedAt ?? b.updatedAt ?? b.createdAt,
-            ).getTime();
-            return bTs - aTs;
-          })
-          .slice(0, 2)
-          .map((property) => {
-            const firstImage = Array.isArray(property.images)
-              ? property.images[0]
-              : undefined;
-            // Re-home backend-served URLs so the folder thumbnails load on web.
-            if (typeof firstImage === 'string') return resolveBackendImageUrl(firstImage);
-            if (
-              firstImage &&
-              typeof firstImage === 'object' &&
-              'url' in firstImage
-            ) {
-              return resolveBackendImageUrl(firstImage.url);
-            }
-            return undefined;
-          })
-          .filter((url): url is string => Boolean(url));
-
-        return {
-          id: folder.id,
-          name: folder.name,
-          color: folder.color ?? colors.primaryColor,
-          icon: folder.icon ?? 'folder',
-          propertyCount: folder.propertyCount ?? 0,
-          latestImages: latestImages.length > 0 ? latestImages : undefined,
-        };
-      })
-      .slice(0, 5);
-  }, [folders, savedProperties]);
-
-  /* --------------------------------------------------------------
-     Recently viewed properties — max 10, sorted recent-first
-     -------------------------------------------------------------- */
-  const recentEntries = React.useMemo<RecentEntry[]>(() => {
-    const result: RecentEntry[] = [];
-    for (const property of recentProperties ?? []) {
-      if (!property) continue;
-      const id = property.id;
-      if (!id) continue;
-
-      const firstImage = Array.isArray(property.images)
-        ? property.images[0]
-        : undefined;
-      // Re-home backend-served URLs so the recent-property thumbnail loads on web.
-      const imageUrl =
-        typeof firstImage === 'string'
-          ? resolveBackendImageUrl(firstImage)
-          : firstImage &&
-              typeof firstImage === 'object' &&
-              'url' in firstImage
-            ? resolveBackendImageUrl(firstImage.url)
-            : undefined;
-
-      const title = getPropertyTitle(property, 'short');
-      const subtitle = property.address?.cityName
-        ? property.address.regionName
-          ? `${property.address.cityName}, ${property.address.regionName}`
-          : property.address.cityName
-        : undefined;
-
-      // Properties with no timestamp are treated as the most recent and sort
-      // first. Using MAX_SAFE_INTEGER (instead of the impure `Date.now()`)
-      // keeps this pure during render while preserving the "newest-first"
-      // ordering for entries that lack both `updatedAt` and `createdAt`.
-      const timestamp = property.updatedAt
-        ? new Date(property.updatedAt).getTime()
-        : property.createdAt
-          ? new Date(property.createdAt).getTime()
-          : Number.MAX_SAFE_INTEGER;
-
-      result.push({ id, title, subtitle, imageUrl, timestamp });
-    }
-    return result.sort((a, b) => b.timestamp - a.timestamp).slice(0, 10);
-  }, [recentProperties]);
-
-  const dateGroups = React.useMemo(
-    () =>
-      groupByDate(recentEntries, {
-        today: t('sidebar.recent.today'),
-        yesterday: t('sidebar.recent.yesterday'),
-        earlier: t('sidebar.recent.earlier'),
-      }),
-    [recentEntries, t],
-  );
-
-  const activeRecentId = React.useMemo(() => {
-    const match = pathname.match(/^\/properties\/([^/]+)/);
-    return match ? match[1] : null;
-  }, [pathname]);
+  useModeShortcuts(setBrowseMode);
 
   /* --------------------------------------------------------------
      Handlers
@@ -470,379 +236,266 @@ export function SideBar() {
   const handleNavigate = React.useCallback(
     (route: string) => {
       // Dismiss the mobile overlay drawer on any navigation so the
-      // destination screen isn't hidden behind it. No-op on large screens
-      // where the drawer is never open.
+      // destination screen isn't hidden behind it. No-op on wide screens.
       closeMobileDrawer();
       if (pathname !== route) router.push(route);
     },
     [pathname, router, closeMobileDrawer],
   );
 
-  const handleHome = React.useCallback(() => handleNavigate('/'), [handleNavigate]);
-  const handleSettings = React.useCallback(
-    () => handleNavigate('/settings'),
-    [handleNavigate],
-  );
-  const handleProfile = React.useCallback(
-    () => handleNavigate('/profile'),
-    [handleNavigate],
-  );
-  const handleSaved = React.useCallback(
-    () => handleNavigate('/saved'),
-    [handleNavigate],
-  );
-
   // Sindi is a docked panel on wide screens (toggle inline, no navigation) but
-  // the panel is wide-only, so on the mobile overlay drawer Sindi keeps
-  // navigating to the full-screen `/sindi` route (closing the drawer first).
+  // the panel is wide-only, so from the mobile drawer Sindi keeps navigating to
+  // the full-screen `/sindi` route (closing the drawer first).
   const handleSindi = React.useCallback(() => {
-    if (isSidebarVisible) {
+    if (!isMobile) {
       toggleSindiPanel();
       return;
     }
     handleNavigate('/sindi');
-  }, [isSidebarVisible, toggleSindiPanel, handleNavigate]);
+  }, [isMobile, toggleSindiPanel, handleNavigate]);
 
+  const handleSettings = React.useCallback(() => handleNavigate('/settings'), [handleNavigate]);
+  const handleProfile = React.useCallback(() => handleNavigate('/profile'), [handleNavigate]);
   const handleSignIn = React.useCallback(() => openAccountDialog(), []);
 
-  const handleRemoveRecent = React.useCallback(
-    (id: string) => {
-      void removeProperty(id);
+  /* --------------------------------------------------------------
+     Navigation rows — mode-aware and role-gated
+     -------------------------------------------------------------- */
+  const items = React.useMemo<SidebarNavItem[]>(() => {
+    const entries: SidebarNavItem[] = [
+      { key: 'home', label: t('sidebar.navigation.home'), icon: RiHomeLine, href: '/' },
+      { key: 'search', label: t('sidebar.navigation.explore'), icon: RiSearchLine, href: '/explore' },
+    ];
+
+    // Mode-dependent secondary nav: Applications for long-term tenants,
+    // Stays for vacation bookings. Both require auth.
+    if (isAuthenticated) {
+      entries.push(
+        mode === 'long_term'
+          ? {
+              key: 'applications',
+              label: t('sidebar.navigation.applications'),
+              icon: RiFileTextLine,
+              href: '/applications',
+            }
+          : { key: 'stays', label: t('sidebar.navigation.stays'), icon: RiHotelBedLine, href: '/stays' },
+      );
+    }
+
+    entries.push(
+      { key: 'profile', label: t('sidebar.navigation.profile'), icon: RiUserLine, href: '/profile' },
+      { key: 'tips', label: t('sidebar.navigation.tips'), icon: RiLightbulbLine, href: '/tips' },
+      { key: 'evictions', label: t('sidebar.navigation.evictions'), icon: RiMegaphoneLine, href: '/evictions' },
+      // Reviews explore — public (address reputation).
+      { key: 'reviews', label: t('sidebar.navigation.reviews'), icon: RiStarLine, href: '/reviews' },
+    );
+
+    if (canAccessRoommates) {
+      entries.push({ key: 'roommates', label: t('sidebar.navigation.roommates'), icon: RiGroupLine, href: '/roommates' });
+    }
+
+    if (isHost) {
+      entries.push({
+        key: 'host-calendar',
+        label: t('sidebar.navigation.hostCalendar'),
+        icon: RiCalendarScheduleLine,
+        href: '/host/calendar',
+      });
+    }
+
+    entries.push(
+      { key: 'saved', label: t('sidebar.navigation.saved'), icon: RiBookmarkLine, href: '/saved' },
+      // An action row: a docked panel on wide screens, a route from the drawer.
+      { key: 'sindi', label: t('sidebar.navigation.sindi'), icon: SindiSidebarIcon, onPress: handleSindi },
+    );
+
+    return entries;
+  }, [t, isAuthenticated, mode, canAccessRoommates, isHost, handleSindi]);
+
+  // The legal links were a web-only footer; they are external, so they are
+  // action rows rather than `href` rows.
+  const secondaryItems = React.useMemo<SidebarNavItem[]>(
+    () =>
+      Platform.OS === 'web'
+        ? [
+            {
+              key: 'privacy',
+              label: t('sidebar.menu.privacy'),
+              icon: RiShieldLine,
+              onPress: () => void Linking.openURL(PRIVACY_URL),
+            },
+            {
+              key: 'terms',
+              label: t('sidebar.menu.terms'),
+              icon: RiFilePaper2Line,
+              onPress: () => void Linking.openURL(TERMS_URL),
+            },
+          ]
+        : [],
+    [t],
+  );
+
+  const selected = React.useMemo(() => {
+    const exact = items.find((item) => item.href === pathname);
+    if (exact) return exact.key;
+    if (pathname.startsWith('/saved')) return 'saved';
+    // Bloom highlights a single row: a route match wins, otherwise the Sindi
+    // row reflects the open docked panel.
+    return sindiPanelOpen ? 'sindi' : undefined;
+  }, [items, pathname, sindiPanelOpen]);
+
+  const modes = React.useMemo<SidebarMode[]>(
+    () =>
+      MODE_ROWS.map((row, index) => ({
+        key: row.mode,
+        label: t(row.labelKey),
+        icon: row.icon,
+        shortcut: `⌥⌃${index + 1}`,
+      })),
+    [t],
+  );
+
+  const handleModeChange = React.useCallback(
+    (key: string) => {
+      if (isBrowseMode(key)) setBrowseMode(key);
     },
-    [removeProperty],
+    [setBrowseMode],
   );
-
-  const handleSelectRecent = React.useCallback(() => {
-    // RecentPropertyItem handles navigation internally.
-  }, []);
-
-  const toggleSavedFolders = React.useCallback(
-    () => setSavedFoldersOpen(!savedFoldersOpen),
-    [savedFoldersOpen, setSavedFoldersOpen],
-  );
-
-  const toggleRecentProperties = React.useCallback(
-    () => setRecentPropertiesOpen(!recentPropertiesOpen),
-    [recentPropertiesOpen, setRecentPropertiesOpen],
-  );
-
-  const handleOpenTerms = React.useCallback(() => {
-    void Linking.openURL(TERMS_URL);
-  }, []);
-
-  const handleOpenPrivacy = React.useCallback(() => {
-    void Linking.openURL(PRIVACY_URL);
-  }, []);
 
   /* --------------------------------------------------------------
-     Below the sidebar breakpoint the native bottom tab bar (the `(tabs)`
-     group's `NativeTabs`) takes over primary navigation and the sidebar
-     becomes an on-demand slide-in overlay drawer. Nothing is rendered
-     inline at this breakpoint — the expanded content is rendered through
-     Bloom's root Portal at the bottom of this component so it overlays the
-     whole viewport.
+     Tree — saved folders and recently viewed, one folder each
      -------------------------------------------------------------- */
-  const isMobile = !isSidebarVisible;
+  const tree = React.useMemo<SidebarTree | undefined>(() => {
+    const safeFolders = Array.isArray(folders) ? folders : [];
+    const folderItems: SidebarTreeItem[] = safeFolders
+      .filter((folder) => !folder.isDefault && (folder.propertyCount ?? 0) > 0)
+      .slice(0, MAX_FOLDERS)
+      .map((folder) => ({
+        key: `folder:${folder.id}`,
+        label: folder.name,
+        meta: String(folder.propertyCount ?? 0),
+        href: `/saved/${folder.id}`,
+      }));
 
-  /* ==============================================================
-     COLLAPSED LAYOUT (icon-only rail, 48px wide) — large screens only
-     ============================================================== */
-  if (!isMobile && isCollapsed) {
-    return (
-      <View
-        className="flex flex-col bg-background items-center"
-        style={[
-          { width: COLLAPSED_WIDTH },
-          Platform.OS === 'web'
-            ? ({
-                position: 'sticky',
-                top: 0,
-                alignSelf: 'flex-start',
-                height: '100vh',
-                maxHeight: '100vh',
-              } as object)
-            : { flex: 1, height: '100%' },
-        ]}
-      >
-        <View className="h-14 items-center justify-center shrink-0">
-          <SidebarBrand onPress={handleHome} />
-        </View>
+    const labels = {
+      today: t('sidebar.recent.today'),
+      yesterday: t('sidebar.recent.yesterday'),
+      earlier: t('sidebar.recent.earlier'),
+    };
+    const recent: { id: string; title: string; timestamp: number }[] = [];
+    for (const property of recentProperties ?? []) {
+      if (!property?.id) continue;
+      const stamp = property.updatedAt ?? property.createdAt;
+      // Properties with no timestamp sort first (treated as the most recent);
+      // MAX_SAFE_INTEGER keeps this pure during render, unlike `Date.now()`.
+      const timestamp = stamp ? new Date(stamp).getTime() : Number.MAX_SAFE_INTEGER;
+      recent.push({ id: property.id, title: getPropertyTitle(property, 'short'), timestamp });
+    }
+    const recentItems: SidebarTreeItem[] = recent
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, MAX_RECENT)
+      .map((entry) => ({
+        key: `recent:${entry.id}`,
+        label: entry.title,
+        meta:
+          entry.timestamp === Number.MAX_SAFE_INTEGER
+            ? labels.today
+            : dayBucket(entry.timestamp, labels),
+        href: `/properties/${entry.id}`,
+      }));
 
-        <View className="flex flex-col items-center gap-1 py-1 shrink-0">
-          {navEntries.map((entry) => (
-            <NavItem
-              key={entry.key}
-              icon={entry.icon}
-              iconActive={entry.iconActive}
-              label={entry.label}
-              onPress={() => handleNavigate(entry.route)}
-              isActive={pathname === entry.route}
-              collapsed
-            />
-          ))}
-          <NavItem
-            icon={SindiIcon}
-            iconActive={SindiIcon}
-            label={t('sidebar.navigation.sindi')}
-            onPress={handleSindi}
-            isActive={sindiPanelOpen}
-            collapsed
-          />
-        </View>
+    const treeFolders: SidebarTreeFolder[] = [];
+    if (folderItems.length > 0) {
+      treeFolders.push({
+        key: 'saved-folders',
+        label: t('sidebar.savedProperties.title'),
+        items: folderItems,
+        defaultOpen: true,
+      });
+    }
+    if (recentItems.length > 0) {
+      treeFolders.push({
+        key: 'recently-viewed',
+        label: t('sidebar.recent.title'),
+        items: recentItems,
+        defaultOpen: true,
+      });
+    }
+    return treeFolders.length > 0
+      ? { label: t('profile.sections.activity'), folders: treeFolders }
+      : undefined;
+  }, [folders, recentProperties, t]);
 
-        <View className="mx-2 w-8 my-1" style={sidebarBorders.divider} />
+  const selectedTreeItem = React.useMemo(() => {
+    const folder = pathname.match(/^\/saved\/([^/]+)/);
+    if (folder) return `folder:${folder[1]}`;
+    const property = pathname.match(/^\/properties\/([^/]+)/);
+    return property ? `recent:${property[1]}` : undefined;
+  }, [pathname]);
 
-        <View className="flex flex-col items-center gap-1 py-1 shrink-0">
-          <NavItem
-            icon={Bookmark}
-            iconActive={Bookmark}
-            label={t('sidebar.navigation.saved')}
-            onPress={handleSaved}
-            isActive={pathname.startsWith('/saved')}
-            collapsed
-          />
-        </View>
+  const handleNavItem = React.useCallback(
+    (item: SidebarNavItem | SidebarTreeItem) => {
+      if (item.href) handleNavigate(item.href);
+    },
+    [handleNavigate],
+  );
 
-        <View style={{ flex: 1 }} />
-
-        <View className="flex flex-col items-center gap-2 p-2 pt-1 shrink-0">
-          <Pressable
-            onPress={toggleSidebarCollapsed}
-            accessibilityRole="button"
-            accessibilityLabel={t('sidebar.expand')}
-            className="h-10 w-10 rounded-xl items-center justify-center hover:bg-muted active:bg-muted/80"
-          >
-            <ChevronsRight size={18} color={colors.primaryDark_2} />
-          </Pressable>
-          <ProfileButton
-            expanded={false}
-            onNavigateManage={handleSettings}
-            onNavigateProfile={handleProfile}
-            onAddAccount={handleSignIn}
-          />
-        </View>
-      </View>
-    );
-  }
-
-  /* ==============================================================
-     EXPANDED LAYOUT (240px wide)
-     ============================================================== */
-  const header = (
-    <View className="flex flex-col shrink-0">
-      <View className="h-14 flex-row items-center shrink-0 px-2">
-        <SidebarBrand onPress={handleHome} />
-        {isMobile ? (
-          <View className="ms-auto shrink-0">
-            <Pressable
-              onPress={closeMobileDrawer}
-              accessibilityRole="button"
-              accessibilityLabel={t('sidebar.close')}
-              className="h-10 w-10 rounded-xl items-center justify-center hover:bg-muted active:bg-muted/80"
-            >
-              <X size={20} color={colors.primaryDark_2} />
-            </Pressable>
-          </View>
-        ) : isLargeScreen ? (
-          <View className="ms-auto shrink-0">
-            <Pressable
-              onPress={toggleSidebarCollapsed}
-              accessibilityRole="button"
-              accessibilityLabel={t('sidebar.collapse')}
-              className="h-10 w-10 rounded-xl items-center justify-center hover:bg-muted active:bg-muted/80"
-            >
-              <ChevronsLeft size={18} color={colors.primaryDark_2} />
-            </Pressable>
-          </View>
-        ) : null}
-      </View>
-
-      <View className="shrink-0 px-2 pb-1">
-        <ModeToggle />
-      </View>
-
-      <View className="shrink-0">
-        {navEntries.map((entry) => (
-          <NavItem
-            key={entry.key}
-            icon={entry.icon}
-            iconActive={entry.iconActive}
-            label={entry.label}
-            onPress={() => handleNavigate(entry.route)}
-            isActive={pathname === entry.route}
-            shortcut={entry.shortcut}
-          />
-        ))}
-        <NavItem
-          icon={SindiIcon}
-          iconActive={SindiIcon}
-          label={t('sidebar.navigation.sindi')}
-          onPress={handleSindi}
-          isActive={sindiPanelOpen}
+  const renderColumn = (options: { mobile: boolean; collapsed: boolean }) => (
+    <>
+      <Sidebar
+        variant="panel"
+        items={items}
+        secondaryItems={secondaryItems}
+        selected={selected}
+        onNavigate={handleNavItem}
+        modes={modes}
+        mode={browseMode}
+        onModeChange={handleModeChange}
+        tree={tree}
+        selectedTreeItem={selectedTreeItem}
+        onTreeItemPress={handleNavItem}
+        collapsed={options.collapsed}
+        onCollapsedChange={setSidebarCollapsed}
+        mobile={options.mobile}
+        onClose={closeMobileDrawer}
+        fluid={options.mobile}
+        showThemeToggle={false}
+        showSearch={false}
+        style={styles.panel}
+      />
+      <View style={options.collapsed ? { alignItems: 'center' } : undefined}>
+        <ProfileButton
+          expanded={!options.collapsed}
+          onNavigateManage={handleSettings}
+          onNavigateProfile={handleProfile}
+          onAddAccount={handleSignIn}
         />
       </View>
-
-      <View className="mx-2 my-1" style={sidebarBorders.divider} />
-    </View>
-  );
-
-  const middle = (
-    <>
-      <SectionHeader
-        label={t('sidebar.savedProperties.title')}
-        isOpen={savedFoldersOpen}
-        onToggle={toggleSavedFolders}
-        action={
-          <Pressable
-            onPress={handleSaved}
-            accessibilityRole="button"
-            accessibilityLabel={t('sidebar.savedProperties.viewAll')}
-            className="h-6 w-6 items-center justify-center rounded-md hover:bg-muted"
-          >
-            <ChevronRight size={14} color={colors.primaryDark_2} />
-          </Pressable>
-        }
-      />
-      {savedFoldersOpen && (
-        <View className="px-1.5">
-          {folderEntries.length === 0 ? (
-            <View className="px-3 py-3">
-              <Text
-                style={{ fontSize: 12, color: colors.primaryDark_2 }}
-                numberOfLines={2}
-              >
-                {t('sidebar.savedProperties.empty')}
-              </Text>
-            </View>
-          ) : (
-            folderEntries.map((folder) => (
-              <FolderRow
-                key={folder.id}
-                id={folder.id}
-                name={folder.name}
-                color={folder.color}
-                icon={folder.icon}
-                propertyCount={folder.propertyCount}
-                latestImages={folder.latestImages}
-              />
-            ))
-          )}
-        </View>
-      )}
-
-      <SectionHeader
-        label={t('sidebar.recent.title')}
-        isOpen={recentPropertiesOpen}
-        onToggle={toggleRecentProperties}
-      />
-      {recentPropertiesOpen && (
-        <View className="px-1.5">
-          {recentEntries.length === 0 ? (
-            <View className="px-3 py-3">
-              <Text
-                style={{ fontSize: 12, color: colors.primaryDark_2 }}
-                numberOfLines={2}
-              >
-                {t('sidebar.recent.empty')}
-              </Text>
-            </View>
-          ) : (
-            dateGroups.map((group) => (
-              <View key={group.label}>
-                <DateSeparator label={group.label} />
-                {group.items.map((item) => (
-                  <RecentPropertyItem
-                    key={item.id}
-                    id={item.id}
-                    title={item.title}
-                    subtitle={item.subtitle}
-                    imageUrl={item.imageUrl}
-                    isActive={item.id === activeRecentId}
-                    onSelect={handleSelectRecent}
-                    onRemove={handleRemoveRecent}
-                  />
-                ))}
-              </View>
-            ))
-          )}
-        </View>
-      )}
     </>
-  );
-
-  const footer = (
-    <View className="flex flex-col gap-2 shrink-0 p-2 pt-1 w-full">
-      <ProfileButton
-        onNavigateManage={handleSettings}
-        onNavigateProfile={handleProfile}
-        onAddAccount={handleSignIn}
-      />
-      {Platform.OS === 'web' && (
-        <View className="flex-row items-center justify-center gap-1 mt-1">
-          <Pressable onPress={handleOpenPrivacy}>
-            <Text
-              style={{
-                fontSize: 10,
-                color: colors.primaryDark_2,
-                textDecorationLine: 'underline',
-              }}
-            >
-              {t('sidebar.menu.privacy')}
-            </Text>
-          </Pressable>
-          <Text style={{ fontSize: 10, color: colors.primaryDark_2 }}>·</Text>
-          <Pressable onPress={handleOpenTerms}>
-            <Text
-              style={{
-                fontSize: 10,
-                color: colors.primaryDark_2,
-                textDecorationLine: 'underline',
-              }}
-            >
-              {t('sidebar.menu.terms')}
-            </Text>
-          </Pressable>
-        </View>
-      )}
-    </View>
   );
 
   /* ==============================================================
      MOBILE OVERLAY DRAWER (small screens)
-     Mirrors the inbox app's `front`-type `expo-router/drawer`: the panel
-     slides in from the left over the current screen and a full-viewport
-     dimming scrim sits behind it as a tap-to-dismiss target. Mounted only
-     while open so it occupies no layout when closed (the native bottom tab
-     bar drives navigation at this breakpoint). One responsive component —
-     the same nav content is reused; only the chrome differs from the rail.
+     The panel slides in from the left over the current screen with a
+     full-viewport dimming scrim behind it as a tap-to-dismiss target.
      ============================================================== */
   if (isMobile) {
-    // Cap the panel width to the viewport so it never overflows on the
-    // narrowest phones, leaving a tap-target sliver of scrim on the right.
-    const drawerWidth = Math.min(EXPANDED_WIDTH, width - MOBILE_DRAWER_EDGE_GAP);
-    const slideIn = SlideInLeft.duration(MOBILE_DRAWER_DURATION).easing(
-      Easing.out(Easing.cubic),
+    // No ContentPanel mask beside the drawer, so no mask clearance either.
+    const drawerWidth = Math.min(
+      SIDEBAR_EXPANDED_WIDTH - SIDEBAR_MASK_CLEARANCE,
+      width - MOBILE_DRAWER_EDGE_GAP,
     );
-    const slideOut = SlideOutLeft.duration(MOBILE_DRAWER_DURATION).easing(
-      Easing.in(Easing.cubic),
-    );
+    const slideIn = SlideInLeft.duration(MOBILE_DRAWER_DURATION).easing(Easing.out(Easing.cubic));
+    const slideOut = SlideOutLeft.duration(MOBILE_DRAWER_DURATION).easing(Easing.in(Easing.cubic));
 
-    // Rendered through Bloom's root Portal so the overlay escapes the layout
-    // scroll container and covers the whole viewport — the same way the inbox
-    // app's `front` drawer overlays the entire screen. The Portal host stays
-    // mounted while on mobile so Reanimated can play the exit (slide-out +
-    // fade) when `mobileDrawerOpen` flips to false; only the scrim + panel
-    // mount/unmount. The full-screen wrapper is `pointerEvents:'none'` so that
-    // WHEN CLOSED (no children) it passes every touch through to the app beneath
-    // (the RN-only `'box-none'` is invalid CSS — RN-Web drops it, leaving the
-    // wrapper `auto` and freezing the whole mobile-web screen). The scrim + drawer
-    // re-enable themselves with `'auto'` so they stay interactive when open.
+    // The Portal host stays mounted while on mobile so Reanimated can play the
+    // exit when `mobileDrawerOpen` flips to false. The full-screen wrapper is
+    // `pointerEvents:'none'` so WHEN CLOSED it passes every touch through (the
+    // RN-only `'box-none'` is invalid CSS — RN-Web drops it and freezes the
+    // mobile-web screen); the scrim + drawer re-enable themselves with 'auto'.
     return (
       <Portal>
-        <View
-          className="flex-row"
-          style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
-        >
+        <View className="flex-row" style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
           {mobileDrawerOpen && (
             <>
               <AnimatedPressable
@@ -859,12 +512,19 @@ export function SideBar() {
               <Animated.View
                 entering={slideIn}
                 exiting={slideOut}
-                style={{ width: drawerWidth, pointerEvents: 'auto' }}
                 className="h-full bg-background"
+                style={[
+                  styles.column,
+                  {
+                    width: drawerWidth,
+                    paddingRight: SIDEBAR_GUTTER,
+                    paddingTop: SIDEBAR_GUTTER + insets.top,
+                    paddingBottom: SIDEBAR_GUTTER + insets.bottom,
+                    pointerEvents: 'auto',
+                  },
+                ]}
               >
-                <BaseSidebar header={header} footer={footer}>
-                  {middle}
-                </BaseSidebar>
+                {renderColumn({ mobile: true, collapsed: false })}
               </Animated.View>
             </>
           )}
@@ -875,12 +535,13 @@ export function SideBar() {
 
   return (
     <View
-      style={{ width: EXPANDED_WIDTH }}
-      className="h-full"
+      style={[
+        styles.column,
+        pinnedColumnStyle,
+        Platform.OS !== 'web' && { paddingTop: SIDEBAR_GUTTER + insets.top, paddingBottom: SIDEBAR_GUTTER + insets.bottom },
+      ]}
     >
-      <BaseSidebar header={header} footer={footer}>
-        {middle}
-      </BaseSidebar>
+      {renderColumn({ mobile: false, collapsed: sidebarCollapsed })}
     </View>
   );
 }
