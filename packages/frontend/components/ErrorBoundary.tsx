@@ -21,7 +21,7 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { useMediaQuery } from 'react-responsive';
 
-import { ErrorBoundary as BloomErrorBoundary } from '@oxy.so/bloom';
+import { ErrorBoundary as BloomErrorBoundary } from '@oxy.so/bloom/error-boundary';
 import { Button } from '@oxy.so/bloom/button';
 import { H2, P, Text as BloomText } from '@oxy.so/bloom/typography';
 import { toast } from '@oxy.so/bloom/toast';

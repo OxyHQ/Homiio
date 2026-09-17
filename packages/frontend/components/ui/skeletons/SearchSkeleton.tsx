@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import { Skeleton } from '@oxy.so/bloom';
+import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { colors } from '@/styles/colors';
 
 interface SearchSkeletonProps {
