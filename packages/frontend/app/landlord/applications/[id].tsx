@@ -40,7 +40,7 @@ import {
 } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
 import { ApplicationStatusBadge } from '@/components/ApplicationStatusBadge';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { Dialog } from '@oxy.so/bloom/dialog';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useProperty } from '@/hooks';
@@ -535,17 +535,31 @@ export default function LandlordApplicationDetailScreen() {
           </View>
         </ScrollView>
 
-        <ConfirmDialog
-          visible={pendingAction !== null}
+        <Dialog
+          placement="center"
+          open={pendingAction !== null}
+          onClose={handleClose}
+          dismissOnBackdrop={!updateMutation.isPending}
+          maxWidth={420}
           title={pendingAction ? reviewLabels[pendingAction].title : ''}
-          message={pendingAction ? reviewLabels[pendingAction].message : ''}
-          confirmLabel={
-            pendingAction ? reviewLabels[pendingAction].confirmLabel : ''
-          }
-          confirmDestructive={pendingAction === 'reject'}
-          loading={updateMutation.isPending}
-          onConfirm={handleConfirm}
-          onCancel={handleClose}
+          label={pendingAction ? reviewLabels[pendingAction].title : ''}
+          description={pendingAction ? reviewLabels[pendingAction].message : ''}
+          actions={[
+            {
+              label: pendingAction ? reviewLabels[pendingAction].confirmLabel : '',
+              color: pendingAction === 'reject' ? 'destructive' : 'default',
+              disabled: updateMutation.isPending,
+              shouldCloseOnPress: false,
+              onPress: () => void handleConfirm(),
+            },
+            {
+              label: t('common.cancel'),
+              color: 'cancel',
+              disabled: updateMutation.isPending,
+              shouldCloseOnPress: false,
+              onPress: handleClose,
+            },
+          ]}
         >
           <TextFieldInput
             label="Notes to applicant (optional)"
@@ -555,7 +569,7 @@ export default function LandlordApplicationDetailScreen() {
             maxLength={4000}
             placeholder="Share next steps or a reason for your decision."
           />
-        </ConfirmDialog>
+        </Dialog>
       </SafeAreaView>
     </View>
   );

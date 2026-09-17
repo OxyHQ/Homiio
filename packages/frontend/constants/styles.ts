@@ -353,10 +353,9 @@ export const PAGE_GUTTER_CLASS = 'px-4 md:px-8';
 export const BANNER_FILL_MIN_HEIGHT = 200;
 
 /**
- * Shared header/bar chrome — the "gold recipe" from the property sticky bar,
- * promoted app-wide so every bar (the shared `Header`, `StickyPropertyHeader`,
- * and the property floating-header actions) reads identically. Consume these
- * instead of re-hand-rolling a per-bar icon button or clamp.
+ * Shared bar chrome for the bars Bloom `PageHeader` does not draw (the property
+ * floating-header actions, `IconButton`, `SaveButton`). `Header` and
+ * `StickyPropertyHeader` are Bloom `PageHeader`s and take none of these.
  *
  * - `barContent`: clamp the inner content row to `contentClamp.page`, centered,
  *   so titles/actions line up on wide web instead of running edge-to-edge (the
@@ -365,9 +364,7 @@ export const BANNER_FILL_MIN_HEIGHT = 200;
  *   back button and every left/right icon action. Pair the two via a `pressed`
  *   `useState` + a static style array — never the NativeWind-incompatible
  *   function-form `style` (§NativeWind Pressable).
- * - `barIconSize` / `barBackIconSize`: ONE compact glyph scale for bar icons —
- *   actions `20`, the back chevron `22` — matching the property sticky bar (the
- *   gold reference) so the top header buttons never read chunkier than it.
+ * - `barIconSize`: ONE compact glyph scale (`20`) for bar action icons.
  */
 export const barContent: ViewStyle = {
   maxWidth: contentClamp.page,
@@ -386,5 +383,3 @@ export const barIconButtonPressed: ViewStyle = {
 
 /** Glyph size for bar action icons (share, save, host, …). */
 export const barIconSize = 20;
-/** Glyph size for the bar back chevron — a touch larger than the actions. */
-export const barBackIconSize = 22;

@@ -2,6 +2,24 @@
 
 This directory contains reusable UI components that can be used across the Homiio app for consistent design and improved development efficiency.
 
+## Bloom first
+
+These primitives were removed in favour of Bloom; do not re-add local copies.
+
+| Need | Use |
+|---|---|
+| Confirm / alert dialog | `confirm()` / `alert()` from `@oxy.so/bloom/surfaces`; a Bloom `Dialog` with `actions` only when the dialog holds a form |
+| Button with icon | `Button` from `@oxy.so/bloom/button` (`leadingIcon={Ri…}`) |
+| Slider | `Slider` from `@oxy.so/bloom/slider` |
+| Progress bar | `StatBar` from `@oxy.so/bloom/stat-bar` |
+| Card surface, thumbnail card, card action row | `Card` / `CardFooter` from `@oxy.so/bloom/card` |
+| Horizontal card row | `HomeCarouselSection` (on Bloom `Carousel`) |
+| Screen header | `Header` (on Bloom `PageHeader`) |
+| Date / date-range picking | `@oxy.so/bloom/date-picker`; listing availability through `AvailabilityCalendar` |
+
+Import Bloom only through `@oxy.so/bloom/<family>` — `bun run check:bundle-imports`
+fails on the root `'@oxy.so/bloom'` specifier.
+
 ## Components
 
 ### StatusBadge
@@ -40,52 +58,6 @@ import { StatusBadge, type StatusType } from '@/components/ui/StatusBadge';
 - Payment: `processing`, `completed`, `failed`, `refunded`
 - General: `success`, `warning`, `error`, `info`
 - Custom: `investigating`, `resolved`, `online`, `offline`
-
-### ActionButton
-
-A versatile button component with multiple variants and states.
-
-```tsx
-import { ActionButton, type ActionButtonVariant } from '@/components/ui/ActionButton';
-
-// Primary button
-<ActionButton
-  icon="add"
-  text="Add Item"
-  onPress={handleAdd}
-/>
-
-// Secondary button with loading state
-<ActionButton
-  icon="save"
-  text="Save"
-  onPress={handleSave}
-  variant="secondary"
-  loading={isSaving}
-  disabled={!isValid}
-/>
-```
-
-**Props:**
-
-- `icon`: string - Icon name (Ionicons)
-- `text`: string - Button text
-- `onPress`: () => void - Press handler
-- `variant`: ActionButtonVariant - Button style variant
-- `size`: 'small' | 'medium' | 'large' - Button size
-- `disabled`: boolean - Whether button is disabled
-- `loading`: boolean - Whether to show loading state
-- `style`: ViewStyle - Custom styling
-- `iconSize`: number - Custom icon size
-- `textStyle`: any - Custom text styling
-
-**Variants:**
-
-- `primary`: Primary brand color
-- `secondary`: Secondary/gray color
-- `outline`: Outlined style
-- `ghost`: Transparent background
-- `danger`: Red/danger color
 
 ### FilterChip
 
@@ -157,48 +129,6 @@ import { EmptyState } from '@/components/ui/EmptyState';
 - `iconSize`: number - Icon size
 - `iconColor`: string - Icon color
 
-### ProgressBar
-
-A progress indicator component with multiple display options.
-
-```tsx
-import { ProgressBar } from '@/components/ui/ProgressBar';
-
-// Basic progress bar
-<ProgressBar progress={0.75} />
-
-// With labels and percentage
-<ProgressBar
-  progress={0.6}
-  current={6}
-  total={10}
-  showLabel={true}
-  showPercentage={true}
-/>
-
-// Custom styling
-<ProgressBar
-  progress={0.8}
-  color="#4CAF50"
-  backgroundColor="#E0E0E0"
-  height={12}
-/>
-```
-
-**Props:**
-
-- `progress`: number - Progress value (0 to 1)
-- `total`: number - Total count
-- `current`: number - Current count
-- `showLabel`: boolean - Whether to show label
-- `label`: string - Custom label text
-- `showPercentage`: boolean - Whether to show percentage
-- `color`: string - Progress bar color
-- `backgroundColor`: string - Background color
-- `height`: number - Bar height
-- `style`: ViewStyle - Custom styling
-- `labelStyle`: any - Custom label styling
-
 ## Usage Examples
 
 ### Contract Card with Status Badge
@@ -242,30 +172,6 @@ function PropertyFilters({ activeFilter, onFilterChange }) {
         selected={activeFilter === 'rented'}
         onPress={() => onFilterChange('rented')}
       />
-    </View>
-  );
-}
-```
-
-### Action Buttons in Forms
-
-```tsx
-import { ActionButton } from '@/components/ui/ActionButton';
-
-function PropertyForm({ onSubmit, isSubmitting }) {
-  return (
-    <View style={styles.form}>
-      {/* ... form fields */}
-      <View style={styles.actions}>
-        <ActionButton icon="save" text="Save Draft" onPress={onSaveDraft} variant="outline" />
-        <ActionButton
-          icon="checkmark"
-          text="Publish"
-          onPress={onSubmit}
-          loading={isSubmitting}
-          disabled={!isValid}
-        />
-      </View>
     </View>
   );
 }

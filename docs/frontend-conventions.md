@@ -173,9 +173,38 @@ again.
   `chrome` to `IconButton`'s `variant` (`ghost` in headers and bars, `overlay` on
   cards). There is no separate cream or shadow save chrome. Every SaveButton site
   inherits the shared button.
-- Wired in: `Header` back, `StickyPropertyHeader` back and share, property `[id]`
+- Wired in: property `[id]`
   floating host/share/viewings (checkmark via `badge`), and `SaveButton`
-  everywhere. Future icon-button sites reuse `IconButton`.
+  everywhere. Future icon-button sites reuse `IconButton`. `Header` and
+  `StickyPropertyHeader` draw their buttons through Bloom `PageHeader` instead.
+
+## Bloom primitives (no local copies)
+
+The local confirm dialog, action button, slider, progress bar and card shells
+were removed for their Bloom families. Re-adding a local version is a regression.
+The mapping table lives in `packages/frontend/components/ui/README.md`.
+
+- **Import Bloom by family subpath only** (`@oxy.so/bloom/<family>`).
+  `bun run check:bundle-imports` fails on the root `'@oxy.so/bloom'` specifier,
+  because Metro does not tree-shake and the barrel pulls every family in.
+- **Icons are Remix `Ri*Line` / `Ri*Fill` from `@oxy.so/bloom/icons`.** Colour is
+  NOT inherited: pass `fill`, or hand the component (not an element) to a Bloom
+  control that colours it (`Button leadingIcon`, `Fab icon`).
+- **Confirmations are `confirm()` / `alert()` from `@oxy.so/bloom/surfaces`.** The
+  press resolves immediately and the surface closes, so the handler shows
+  progress and errors with a toast. A dialog that holds a form field (landlord
+  notes, host block reason) is a controlled Bloom `Dialog` with `actions`
+  (`shouldCloseOnPress: false`, disabled while the mutation runs).
+- **Do NOT mount a `SurfaceHost`/`SurfaceProvider` in `app/_layout.tsx`.**
+  `OxyProvider` (`@oxy.so/services`) already mounts `SurfaceProvider`, and a
+  second host renders every surface twice.
+- **`Header` is an adapter over Bloom `PageHeader`**, keeping the `options` API;
+  it pins at `PANEL_TOP_INSET` when framed. Do not fork a second header.
+- **`HomeCarouselSection` scrolls, snaps and pages through Bloom `Carousel`**; it
+  only owns the section header and the card width.
+- **`AvailabilityCalendar` stays as a listing-rules wrapper over Bloom
+  `RangeCalendar`/`Calendar`**: blocked/booked days, min/max stay and the
+  no-range-across-unavailable-days rule are Homiio's, not Bloom's.
 
 ## Infinite scroll and pagination primitive
 

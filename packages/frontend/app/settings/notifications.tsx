@@ -1,7 +1,7 @@
 /**
  * Settings → Notifications. Uses Bloom SettingsList primitives for category
  * toggles, Bloom Switch for booleans, Bloom Button for the request-permission
- * CTA and shared ConfirmDialog for the destructive clear-all flow.
+ * CTA and Bloom `confirm()` for the destructive clear-all flow.
  */
 import React, { useCallback, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
@@ -18,8 +18,8 @@ import {
 import { Text as BloomText, H3 } from '@oxy.so/bloom/typography';
 
 import { Header } from '@/components/Header';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { CardSurface } from '@/components/ui/CardSurface';
+import { confirm } from '@oxy.so/bloom/surfaces';
+import { Card } from '@oxy.so/bloom/card';
 import {
   useNotifications,
   type NotificationPreferences,
@@ -64,8 +64,6 @@ export default function NotificationSettingsScreen() {
   } = useNotifications();
 
   const [isUpdating, setIsUpdating] = useState(false);
-  const [confirmClear, setConfirmClear] = useState(false);
-  const [clearing, setClearing] = useState(false);
 
   const handlePreferenceChange = useCallback(
     async (key: keyof NotificationPreferences, value: boolean): Promise<void> => {
@@ -102,8 +100,15 @@ export default function NotificationSettingsScreen() {
   }, [requestPermissions, t]);
 
   const handleClearAll = useCallback(async () => {
+    const ok = await confirm({
+      title: t('notification.clearAll.title'),
+      description: t('notification.clearAll.message'),
+      confirmLabel: t('common.clear'),
+      cancelLabel: t('common.cancel'),
+      destructive: true,
+    });
+    if (!ok) return;
     try {
-      setClearing(true);
       await clearAllNotifications();
       toast.success(
         t('notification.clearAll.success'),
@@ -112,9 +117,6 @@ export default function NotificationSettingsScreen() {
       toast.error(
         t('notification.clearAll.error'),
       );
-    } finally {
-      setClearing(false);
-      setConfirmClear(false);
     }
   }, [clearAllNotifications, t]);
 
@@ -261,7 +263,7 @@ export default function NotificationSettingsScreen() {
       />
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.permissionWrap}>
-          <CardSurface>
+          <Card variant="outlined" radius="radius-16" className="p-5">
             <View style={styles.permissionHeader}>
               <Ionicons
                 name={hasPermission ? 'checkmark-circle' : 'close-circle'}
@@ -292,7 +294,7 @@ export default function NotificationSettingsScreen() {
                 </Button>
               </View>
             ) : null}
-          </CardSurface>
+          </Card>
         </View>
 
         <SettingsListGroup
@@ -362,7 +364,7 @@ export default function NotificationSettingsScreen() {
             icon={<RowIcon name="trash-outline" destructive />}
             title={t('notification.settings.clearAll')}
             destructive
-            onPress={() => setConfirmClear(true)}
+            onPress={() => void handleClearAll()}
           />
         </SettingsListGroup>
 
@@ -398,17 +400,6 @@ export default function NotificationSettingsScreen() {
           </SettingsListGroup>
         ) : null}
       </ScrollView>
-
-      <ConfirmDialog
-        visible={confirmClear}
-        title={t('notification.clearAll.title')}
-        message={t('notification.clearAll.message')}
-        confirmLabel={t('common.clear')}
-        confirmDestructive
-        loading={clearing}
-        onConfirm={handleClearAll}
-        onCancel={() => setConfirmClear(false)}
-      />
     </View>
   );
 }

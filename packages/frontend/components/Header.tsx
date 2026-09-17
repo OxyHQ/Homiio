@@ -1,34 +1,11 @@
-import React, { useEffect, ReactNode } from 'react';
-import { View, Platform, StyleSheet, type ViewStyle } from 'react-native';
-import Animated, {
-  interpolate,
-  useAnimatedStyle,
-  useSharedValue,
-  type SharedValue,
-} from 'react-native-reanimated';
+import React, { ReactNode } from 'react';
+import { Platform, type ViewStyle } from 'react-native';
+import type { SharedValue } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '@oxy.so/bloom/theme';
-import { Text as BloomText } from '@oxy.so/bloom/typography';
-import { colors } from '@/styles/colors';
-import { colorChannels } from '@/styles/shadows';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { PANEL_TOP_INSET } from '@oxy.so/bloom/content-panel';
-import { barBackIconSize, barContent, spacing } from '@/constants/styles';
-import { IconButton } from '@/components/ui/IconButton';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
-
-/**
- * Header drop shadow, expressed as an animated `boxShadow`: the blur/offset are
- * fixed and the alpha is interpolated with scroll (see `backgroundStyle`). The
- * `"r, g, b"` channels are derived from the theme color once so the worklet only
- * has to interpolate the alpha — no hardcoded color literal.
- */
-const HEADER_SHADOW_CHANNELS = colorChannels(colors.COLOR_BLACK);
-const HEADER_SHADOW_OFFSET_Y = 2;
-const HEADER_SHADOW_BLUR = 3;
-/** Resting shadow alpha when the header background is fully shown. */
-const HEADER_SHADOW_MAX_OPACITY = 0.1;
 
 interface Props {
   options?: {
@@ -43,194 +20,62 @@ interface Props {
   scrollY?: SharedValue<number>;
 }
 
-export const Header: React.FC<Props> = ({ options, scrollY: externalScrollY }) => {
+/** Web stacking of the bar over screen content (StickyPropertyHeader sits at 1001). */
+const HEADER_Z_INDEX_WEB = 1000;
+const HEADER_Z_INDEX_NATIVE = 100;
+
+/**
+ * The app's screen header: a thin adapter over Bloom `PageHeader` that keeps
+ * the `options` API every screen already passes.
+ *
+ * - Scroll-linked paint (border, shadow, `transparent` background/title) is
+ *   PageHeader's: `scrollY` when the screen owns a scroll container, otherwise
+ *   the document scroll on web.
+ * - On framed web the ContentPanel sits at `PANEL_TOP_INSET`, so the sticky bar
+ *   pins there instead of `top: 0`, where the panel's bleed mask would clip it.
+ * - The back button renders only when requested AND there is history to pop.
+ */
+export const Header: React.FC<Props> = ({ options, scrollY }) => {
   const router = useRouter();
   const { t } = useTranslation();
-  const { colors: themeColors } = useTheme();
-  // Derived directly from the router rather than synced via an effect — this is
-  // a pure read of navigation state and avoids cascading renders.
-  const canGoBack = router.canGoBack();
-  const insets = useSafeAreaInsets();
   const isScreenNotMobile = useIsScreenNotMobile();
-  const internalScrollY = useSharedValue(0);
-  const scrollY = externalScrollY ?? internalScrollY;
-
-  // On web the DOCUMENT is the scroll owner and the shell frames content in a
-  // rounded `ContentPanel` at `PANEL_TOP_INSET` (8px) on wide screens, so a
-  // sticky header must pin at that inset (not top:0, where the panel's bleed
-  // mask would clip it); it pins flush on narrow/full-bleed web.
+  // A pure read of navigation state, not synced through an effect.
+  const canGoBack = router.canGoBack();
   const framed = Platform.OS === 'web' && isScreenNotMobile;
 
-  const isTransparent = options?.transparent || false;
-  const scrollThreshold = options?.scrollThreshold || 20;
+  const left = (options?.leftComponents ?? []).filter(Boolean);
+  const right = (options?.rightComponents ?? []).filter(Boolean);
 
-  useEffect(() => {
-    if (Platform.OS !== 'web' || externalScrollY) return;
-    const handleScroll = () => {
-      scrollY.value = window.scrollY;
-    };
-    handleScroll();
-    document.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      document.removeEventListener('scroll', handleScroll);
-    };
-  }, [scrollY, externalScrollY]);
-
-  const backgroundStyle = useAnimatedStyle(() => {
-    if (!isTransparent) {
-      return {
-        opacity: 1,
-        boxShadow: `0px ${HEADER_SHADOW_OFFSET_Y}px ${HEADER_SHADOW_BLUR}px rgba(${HEADER_SHADOW_CHANNELS}, ${HEADER_SHADOW_MAX_OPACITY})`,
-        elevation: 3,
-      };
-    }
-    const progress = interpolate(
-      scrollY.value,
-      [0, scrollThreshold],
-      [0, 1],
-      'clamp',
-    );
-    const shadowAlpha = interpolate(
-      scrollY.value,
-      [0, scrollThreshold],
-      [0, HEADER_SHADOW_MAX_OPACITY],
-      'clamp',
-    );
-    return {
-      opacity: progress,
-      boxShadow: `0px ${HEADER_SHADOW_OFFSET_Y}px ${HEADER_SHADOW_BLUR}px rgba(${HEADER_SHADOW_CHANNELS}, ${shadowAlpha})`,
-      elevation: interpolate(
-        scrollY.value,
-        [0, scrollThreshold],
-        [0, 3],
-        'clamp',
-      ),
-    };
-  });
-
-  // Sticky / relative chrome + dynamic inset height stay as style= (web sticky
-  // + PANEL_TOP_INSET / safe-area are numeric and platform-split).
-  const topRowStyle = {
-    minHeight: 60 + insets.top,
-    ...Platform.select({
-      web: {
-        position: 'sticky',
-        top: framed ? PANEL_TOP_INSET : 0,
-        zIndex: 1000,
-      },
-      default: {
-        position: 'relative',
-        zIndex: 100,
-      },
-    }),
-  } as ViewStyle;
-
-  // Title + optional subtitle, via Bloom `Text`, ALWAYS centered. The title is a
-  // CONSTANT size (`text-xl`) — it never shrinks when a subtitle is present (that
-  // caused the live resize bug); the subtitle is a separate smaller muted line
-  // BELOW it. Each line truncates (`text-center` + `numberOfLines={1}`) inside the
-  // centered `flex:1` middle slot so a long title never shoves the actions off.
-  const titleNode = (
-    <>
-      {options?.title ? (
-        <BloomText numberOfLines={1} className="text-center text-xl font-extrabold text-foreground">
-          {options.title}
-        </BloomText>
-      ) : null}
-      {options?.subtitle ? (
-        <BloomText numberOfLines={1} className="text-center text-sm font-normal text-muted-foreground">
-          {options.subtitle}
-        </BloomText>
-      ) : null}
-    </>
-  );
+  const containerStyle: ViewStyle =
+    Platform.OS === 'web'
+      ? { top: framed ? PANEL_TOP_INSET : 0, zIndex: HEADER_Z_INDEX_WEB }
+      : { zIndex: HEADER_Z_INDEX_NATIVE };
 
   return (
-    <View style={topRowStyle}>
-      {/* Animated Background */}
-      <Animated.View
-        className="absolute inset-0"
-        style={[
-          {
-            // Match ContentPanel `bg-card` — not page `background` / pure white.
-            backgroundColor: themeColors.card,
-            borderBottomWidth: 0.01,
-            borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
-            ...(Platform.OS === 'web' ? { backdropFilter: 'blur(10px)' } : null),
-          },
-          backgroundStyle,
-        ]}
-      />
-
-      {/* Header Content — clamped + centered (the "gold" bar recipe). The
-          background above spans full width; this row aligns to
-          `contentClamp.page` so titles/actions line up on wide web. */}
-      <View
-        style={[
-          styles.content,
-          { paddingTop: insets.top + (Platform.OS === 'web' ? spacing.xs : spacing.md) },
-        ]}
-      >
-        <View style={styles.leftSlot}>
-          {options?.showBackButton && canGoBack && (
-            <IconButton
-              icon="arrow-back"
-              // On a transparent (on-photo) header the bare dark chevron reads as
-              // unfinished — use the frosted-white overlay chip; a solid bar uses
-              // the flat ghost chrome.
-              variant={isTransparent ? 'overlay' : 'ghost'}
-              size={barBackIconSize}
-              onPress={() => router.back()}
-              accessibilityLabel={t('goBack')}
-            />
-          )}
-          {options?.leftComponents?.map((component, index) => (
-            <React.Fragment key={index}>{component}</React.Fragment>
-          ))}
-        </View>
-        <View style={styles.centerSlot}>{titleNode}</View>
-        <View style={styles.rightSlot}>
-          {options?.rightComponents?.map((component, index) => (
-            <React.Fragment key={index}>{component}</React.Fragment>
-          ))}
-        </View>
-      </View>
-    </View>
+    <PageHeader
+      title={options?.title || undefined}
+      subtitle={options?.subtitle || undefined}
+      titleAlign="center"
+      onBack={options?.showBackButton && canGoBack ? () => router.back() : undefined}
+      backLabel={t('goBack')}
+      leading={
+        left.length > 0
+          ? left.map((component, index) => (
+              <React.Fragment key={index}>{component}</React.Fragment>
+            ))
+          : undefined
+      }
+      actions={
+        right.length > 0
+          ? right.map((component, index) => (
+              <React.Fragment key={index}>{component}</React.Fragment>
+            ))
+          : undefined
+      }
+      transparent={options?.transparent ?? false}
+      scrollThreshold={options?.scrollThreshold || undefined}
+      scrollY={scrollY}
+      style={containerStyle}
+    />
   );
 };
-
-const styles = StyleSheet.create({
-  // Clamped, centered content row — the shared bar layout. `minHeight` keeps the
-  // bar tall enough for the circular icon buttons.
-  content: {
-    ...barContent,
-    minHeight: 60,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xs,
-  },
-  leftSlot: {
-    flex: 1,
-    minWidth: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  // Centered middle title block. `minWidth:0` + stretched children (default
-  // alignItems) let the `text-center` title/subtitle truncate instead of pushing
-  // the side slots; sitting between two equal `flex:1` side slots keeps it
-  // centered in the bar regardless of how wide the left/right actions are.
-  centerSlot: {
-    flex: 1,
-    minWidth: 0,
-    justifyContent: 'center',
-  },
-  rightSlot: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: spacing.sm,
-  },
-});

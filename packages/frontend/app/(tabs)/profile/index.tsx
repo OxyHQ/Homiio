@@ -21,10 +21,10 @@ import { useOxy } from '@oxy.so/services';
 import { TenantApplicationStatus } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
-import { CardSurface } from '@/components/ui/CardSurface';
+import { Card } from '@oxy.so/bloom/card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { confirm } from '@oxy.so/bloom/surfaces';
 import { useProfileQuery } from '@/hooks/query/useProfiles';
 import { useMyApplications } from '@/hooks/useApplicationQueries';
 import { useReservationsQuery } from '@/hooks/useReservationQueries';
@@ -56,8 +56,6 @@ export default function ProfileScreen() {
   const reservationsQuery = useReservationsQuery({ limit: 200 });
   const { savedProperties } = useSavedPropertiesContext();
 
-  const [pendingLogout, setPendingLogout] = useState(false);
-  const [busyLogout, setBusyLogout] = useState(false);
 
   const profile = profileQuery.data ?? null;
   const isLoading = profileQuery.isLoading;
@@ -75,7 +73,14 @@ export default function ProfileScreen() {
   const totalSaved = savedProperties.length;
 
   const handleLogout = useCallback(async () => {
-    setBusyLogout(true);
+    const ok = await confirm({
+      title: t('settings.signOut'),
+      description: t('settings.signOutMessage'),
+      confirmLabel: t('settings.signOut'),
+      cancelLabel: t('common.cancel'),
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await logout();
       router.replace('/');
@@ -83,9 +88,6 @@ export default function ProfileScreen() {
     } catch (error: unknown) {
       logger.error('Failed to sign out:', error);
       toast.error(t('settings.signOutFailed'));
-    } finally {
-      setBusyLogout(false);
-      setPendingLogout(false);
     }
   }, [logout, router, t]);
 
@@ -264,23 +266,12 @@ export default function ProfileScreen() {
             icon={<RowIcon name="log-out" destructive />}
             title={t('settings.signOut')}
             destructive
-            onPress={() => setPendingLogout(true)}
+            onPress={() => void handleLogout()}
           />
         </SettingsListGroup>
 
         <View style={styles.bottomPadding} />
       </ScrollView>
-
-      <ConfirmDialog
-        visible={pendingLogout}
-        title={t('settings.signOut')}
-        message={t('settings.signOutMessage')}
-        confirmLabel={t('settings.signOut')}
-        confirmDestructive
-        loading={busyLogout}
-        onConfirm={handleLogout}
-        onCancel={() => setPendingLogout(false)}
-      />
     </View>
   );
 }
@@ -319,10 +310,10 @@ const StatTile: React.FC<StatTileProps> = ({ label, value, description, onPress 
           accessibilityLabel={`${label}: ${value}. Open ${label.toLowerCase()}`}
           style={pressed ? styles.statTilePressed : null}
         >
-          <CardSurface padding={spacing.lg}>{body}</CardSurface>
+          <Card variant="outlined" radius="radius-16" className="p-4">{body}</Card>
         </Pressable>
       ) : (
-        <CardSurface padding={spacing.lg}>{body}</CardSurface>
+        <Card variant="outlined" radius="radius-16" className="p-4">{body}</Card>
       )}
     </View>
   );

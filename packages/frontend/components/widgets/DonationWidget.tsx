@@ -5,7 +5,8 @@ import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { BaseWidget } from './BaseWidget';
 import { ThemedText } from '@/components/ThemedText';
-import { ActionButton } from '@/components/ui/ActionButton';
+import { Button } from '@oxy.so/bloom/button';
+import { RiHeartFill } from '@oxy.so/bloom/icons';
 import { colors } from '@/styles/colors';
 
 
@@ -50,13 +51,14 @@ export function DonationWidget() {
                     </View>
                 </View>
 
-                <ActionButton
-                    icon="heart"
-                    text={t('donations.widget.button')}
+                <Button
+                    leadingIcon={RiHeartFill}
                     onPress={handleDonatePress}
                     variant="primary"
                     style={styles.donateButton}
-                />
+                >
+                    {t('donations.widget.button')}
+                </Button>
             </View>
         </BaseWidget>
     );

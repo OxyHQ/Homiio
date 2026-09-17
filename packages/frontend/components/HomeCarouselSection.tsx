@@ -1,29 +1,26 @@
 /**
  * Horizontal carousel used across the home page for properties, cities,
- * and tips. Renders an optional eyebrow label, an H1-sized title, an
- * optional "View all" link, and a snap-to-card horizontal scroller with
- * left/right arrow controls that only appear when the content overflows
- * on wide breakpoints (hidden on mobile — touch swipe is enough there).
+ * and tips. Renders an optional eyebrow label, an H1-sized title and an
+ * optional "View all" link above a Bloom `Carousel`.
+ *
+ * Scrolling, snapping and the prev/next arrows are Bloom's (`@oxy.so/bloom/carousel`);
+ * this component only owns the section header and the card width, which it
+ * sizes so a whole number of cards (never wider than `maxCardWidth`) fits the
+ * row. Arrows show on wide breakpoints only (touch swipe is enough on mobile);
+ * dots are off because a row of cards is not a one-slide-at-a-time gallery.
  *
  * Section rhythm is owned entirely by the parent (NativeWind `gap`); this
- * component renders only its header + scroller and carries no outer margin.
+ * component renders only its header + carousel and carries no outer margin.
  */
-import React, { useRef, useState } from 'react';
-import {
-  View,
-  Pressable,
-  ScrollView,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
-} from 'react-native';
+import React, { useState } from 'react';
+import { View, Pressable } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMediaQuery } from 'react-responsive';
 
 import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
+import { Carousel, CarouselItem } from '@oxy.so/bloom/carousel';
 
-import { colors } from '@/styles/colors';
-import { cardShadow, gridGap, PAGE_GUTTER_CLASS, pagePadding } from '@/constants/styles';
+import { gridGap, PAGE_GUTTER_CLASS } from '@/constants/styles';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 
 interface HomeCarouselSectionProps<T> {
@@ -42,6 +39,16 @@ interface HomeCarouselSectionProps<T> {
 }
 
 const CARD_GAP = gridGap.normal;
+const SKELETON_COUNT = 4;
+
+/** Widest card width at which a whole number of cards fills `trackWidth`. */
+function fitCardWidth(trackWidth: number, maxCardWidth: number, itemCount: number): number {
+  if (trackWidth <= 0) return maxCardWidth;
+  const cardsToFit = Math.max(1, Math.ceil((trackWidth + CARD_GAP) / (maxCardWidth + CARD_GAP)));
+  if (itemCount < cardsToFit) return maxCardWidth;
+  const exact = (trackWidth - (cardsToFit - 1) * CARD_GAP) / cardsToFit;
+  return Math.min(maxCardWidth, Math.floor(exact));
+}
 
 export function HomeCarouselSection<T>({
   eyebrow,
@@ -55,139 +62,13 @@ export function HomeCarouselSection<T>({
   minItemsToShow: _minItemsToShow = 2,
   maxCardWidth = 220,
 }: HomeCarouselSectionProps<T>) {
-  const carouselRef = useRef<ScrollView>(null);
-  const [_carouselIndex, setCarouselIndex] = useState(0);
-  const [containerWidth, setContainerWidth] = useState(0);
-  const [scrollX, setScrollX] = useState(0);
-  const [_isDragging, setIsDragging] = useState(false);
+  const [trackWidth, setTrackWidth] = useState(0);
   const isWide = useMediaQuery({ minWidth: 768 });
-  const horizontalPadding = (isWide ? pagePadding.desktop : pagePadding.mobile) * 2;
 
-  let calculatedCardWidth = maxCardWidth;
-
-  if (containerWidth > 0) {
-    const availableWidth = Math.max(0, containerWidth - horizontalPadding);
-    const minCardsToFit = Math.max(
-      1,
-      Math.ceil((availableWidth + CARD_GAP) / (maxCardWidth + CARD_GAP)),
-    );
-
-    if (items.length >= minCardsToFit) {
-      const totalGaps = (minCardsToFit - 1) * CARD_GAP;
-      const exactWidth = (availableWidth - totalGaps) / minCardsToFit;
-      calculatedCardWidth = Math.min(maxCardWidth, Math.floor(exactWidth));
-    } else {
-      calculatedCardWidth = maxCardWidth;
-    }
-  }
-
-  const totalCardsWidth = items.length * calculatedCardWidth + (items.length - 1) * CARD_GAP;
-  const availableScrollWidth = containerWidth - horizontalPadding;
-  const maxScroll = Math.max(0, totalCardsWidth - availableScrollWidth);
-  const itemsPerPage =
-    containerWidth > 0
-      ? Math.floor((availableScrollWidth + CARD_GAP) / (calculatedCardWidth + CARD_GAP))
-      : 1;
-
-  const snapToNearestCard = (currentScrollX: number) => {
-    if (calculatedCardWidth <= 0) return 0;
-
-    const cardSpacing = calculatedCardWidth + CARD_GAP;
-    const nearestIndex = Math.round(currentScrollX / cardSpacing);
-    const clampedIndex = Math.max(0, Math.min(nearestIndex, items.length - 1));
-    const targetScrollX = clampedIndex * cardSpacing;
-
-    return Math.min(targetScrollX, maxScroll);
-  };
-
-  const handleScrollLeft = () => {
-    if (!disableLeftArrow) {
-      const cardSpacing = calculatedCardWidth + CARD_GAP;
-      const pageStride = Math.max(1, itemsPerPage) * cardSpacing;
-      const currentPage = Math.floor(scrollX / pageStride);
-      const targetPage = Math.max(0, currentPage - 1);
-      const targetScrollX = Math.max(0, targetPage * pageStride);
-
-      carouselRef.current?.scrollTo({ x: targetScrollX, animated: true });
-      setScrollX(targetScrollX);
-      const targetIndex = Math.round(targetScrollX / cardSpacing);
-      setCarouselIndex(targetIndex);
-    }
-  };
-
-  const handleScrollRight = () => {
-    if (!disableRightArrow) {
-      const cardSpacing = calculatedCardWidth + CARD_GAP;
-      const pageStride = Math.max(1, itemsPerPage) * cardSpacing;
-      const currentPage = Math.floor(scrollX / pageStride);
-      const targetScrollX = Math.min(maxScroll, (currentPage + 1) * pageStride);
-
-      carouselRef.current?.scrollTo({ x: targetScrollX, animated: true });
-      setScrollX(targetScrollX);
-      const targetIndex = Math.round(targetScrollX / cardSpacing);
-      setCarouselIndex(targetIndex);
-    }
-  };
-
-  const handleScroll =
-    calculatedCardWidth > 0
-      ? (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-        const x = e.nativeEvent.contentOffset.x;
-        const clampedScroll = Math.min(x, maxScroll);
-        setScrollX(clampedScroll);
-
-        const currentIndex = Math.round(clampedScroll / (calculatedCardWidth + CARD_GAP));
-        const clampedIndex = Math.max(0, Math.min(currentIndex, items.length - 1));
-        setCarouselIndex(clampedIndex);
-      }
-      : undefined;
-
-  const handleScrollBeginDrag = () => {
-    setIsDragging(true);
-  };
-
-  const handleScrollEndDrag = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    setIsDragging(false);
-    const x = e.nativeEvent.contentOffset.x;
-    const clampedScroll = Math.min(x, maxScroll);
-
-    const snappedScrollX = snapToNearestCard(clampedScroll);
-
-    if (Math.abs(snappedScrollX - clampedScroll) > 2) {
-      carouselRef.current?.scrollTo({ x: snappedScrollX, animated: true });
-      setScrollX(snappedScrollX);
-    } else {
-      setScrollX(clampedScroll);
-    }
-
-    const snappedIndex = Math.round(snappedScrollX / (calculatedCardWidth + CARD_GAP));
-    const clampedIndex = Math.max(0, Math.min(snappedIndex, items.length - 1));
-    setCarouselIndex(clampedIndex);
-  };
-
-  const handleMomentumScrollEnd =
-    calculatedCardWidth > 0
-      ? (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-        const x = e.nativeEvent.contentOffset.x;
-        const clampedScroll = Math.min(x, maxScroll);
-
-        const snappedScrollX = snapToNearestCard(clampedScroll);
-
-        if (Math.abs(snappedScrollX - clampedScroll) > 1) {
-          carouselRef.current?.scrollTo({ x: snappedScrollX, animated: true });
-          setScrollX(snappedScrollX);
-        } else {
-          setScrollX(clampedScroll);
-        }
-
-        const snappedIndex = Math.round(snappedScrollX / (calculatedCardWidth + CARD_GAP));
-        const clampedIndex = Math.max(0, Math.min(snappedIndex, items.length - 1));
-        setCarouselIndex(clampedIndex);
-      }
-      : undefined;
-
-  const disableRightArrow = scrollX >= maxScroll || maxScroll <= 0;
-  const disableLeftArrow = scrollX <= 0;
+  const count = loading ? SKELETON_COUNT : items.length;
+  const cardWidth = fitCardWidth(trackWidth, maxCardWidth, count);
+  // Arrows only earn their row when the cards actually overflow the track.
+  const overflows = trackWidth > 0 && count * cardWidth + (count - 1) * CARD_GAP > trackWidth + 1;
 
   return (
     <Animated.View entering={FadeInDown.duration(420)}>
@@ -200,83 +81,42 @@ export function HomeCarouselSection<T>({
             {title}
           </H1>
         </View>
-        <View className="flex-row items-center gap-3">
-          {onViewAll ? (
-            <Pressable onPress={onViewAll} hitSlop={8} accessibilityRole="button">
-              <BloomText className="text-sm font-semibold underline text-foreground">
-                {viewAllText}
-              </BloomText>
-            </Pressable>
-          ) : null}
-          {isWide && !(disableLeftArrow && disableRightArrow) ? (
-            <View className="flex-row items-center gap-2">
-              <Pressable
-                onPress={handleScrollLeft}
-                disabled={disableLeftArrow}
-                className="h-8 w-8 items-center justify-center rounded-full bg-white"
-                style={[cardShadow.sm, { opacity: disableLeftArrow ? 0.3 : 1 }]}
-                accessibilityRole="button"
-                accessibilityLabel="Scroll left"
-              >
-                <Ionicons name="chevron-back" size={16} color={colors.primaryColor} />
-              </Pressable>
-              <Pressable
-                onPress={handleScrollRight}
-                disabled={disableRightArrow}
-                className="h-8 w-8 items-center justify-center rounded-full bg-white"
-                style={[cardShadow.sm, { opacity: disableRightArrow ? 0.3 : 1 }]}
-                accessibilityRole="button"
-                accessibilityLabel="Scroll right"
-              >
-                <Ionicons name="chevron-forward" size={16} color={colors.primaryColor} />
-              </Pressable>
-            </View>
-          ) : null}
-        </View>
+        {onViewAll ? (
+          <Pressable onPress={onViewAll} hitSlop={8} accessibilityRole="button">
+            <BloomText className="text-sm font-semibold underline text-foreground">
+              {viewAllText}
+            </BloomText>
+          </Pressable>
+        ) : null}
       </View>
-      <View
-        className="flex-row items-center"
-        onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
-      >
-        {!loading && items.length === 0 && emptyText ? (
-          <View className={`py-2 ${PAGE_GUTTER_CLASS}`}>
-            <BloomText className="text-sm text-muted-foreground">{emptyText}</BloomText>
-          </View>
-        ) : (
-          <ScrollView
-            ref={carouselRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            className="flex-row"
-            contentContainerClassName={`justify-start ${PAGE_GUTTER_CLASS}`}
-            scrollEnabled={true}
-            onScrollBeginDrag={handleScrollBeginDrag}
-            onScrollEndDrag={handleScrollEndDrag}
-            onMomentumScrollEnd={handleMomentumScrollEnd}
-            onScroll={handleScroll}
-            scrollEventThrottle={8}
-            decelerationRate={0.8}
-            snapToInterval={calculatedCardWidth + CARD_GAP}
-            snapToAlignment="start"
-            bounces={false}
-          >
-            <View className="flex-row" style={{ gap: CARD_GAP }}>
+      <View className={PAGE_GUTTER_CLASS}>
+        {/* Measured inside the gutter, so the width is the track's own. */}
+        <View onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}>
+          {!loading && items.length === 0 && emptyText ? (
+            <View className="py-2">
+              <BloomText className="text-sm text-muted-foreground">{emptyText}</BloomText>
+            </View>
+          ) : (
+            <Carousel
+              accessibilityLabel={title}
+              gap={CARD_GAP}
+              showDots={false}
+              showArrows={isWide && overflows}
+            >
               {loading
-                ? Array.from({ length: 4 }).map((_, idx) => (
-                  <View
-                    key={idx}
-                    className="h-[200px] rounded-2xl bg-muted"
-                    style={{ width: calculatedCardWidth }}
-                  />
+                ? Array.from({ length: SKELETON_COUNT }).map((_, idx) => (
+                  <CarouselItem key={`skeleton-${idx}`} width={cardWidth}>
+                    <View className="h-[200px] rounded-2xl bg-muted" />
+                  </CarouselItem>
                 ))
                 : items.map((item, idx) => (
-                  <View key={idx} style={{ width: calculatedCardWidth }}>
+                  <CarouselItem key={idx} width={cardWidth}>
                     {renderItem(item, idx)}
-                  </View>
+                  </CarouselItem>
                 ))}
-            </View>
-          </ScrollView>
-        )}
+            </Carousel>
+          )}
+        </View>
       </View>
     </Animated.View>
   );

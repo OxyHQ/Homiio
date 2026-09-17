@@ -1,61 +1,55 @@
 /**
- * MapFab — floating action button used on the mobile search screen to
- * open the full-screen map sheet. Pure Bloom Button with an icon.
+ * MapFab — the centred "Map / List" toggle floating over a results list.
  *
- * Position is left to the caller so we can adjust for tab bar / action
- * bar overlap per screen.
+ * The button is Bloom's extended `Fab`. Bloom anchors a FAB to a CORNER only,
+ * and this toggle sits bottom-CENTRE (the list-over-map pattern), so it uses
+ * `placement="static"` and this wrapper owns the position — the case Bloom's
+ * docs name for `static`. The caller may still lift it (`style.bottom`) to
+ * clear a home indicator or an action bar.
  */
 import React from 'react';
-import {
-  StyleSheet,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { Button } from '@oxy.so/bloom/button';
-
-import { cardShadow } from '@/constants/styles';
-import { colors } from '@/styles/colors';
+import { Fab } from '@oxy.so/bloom/fab';
+import { RiListUnordered, RiMapPinLine } from '@oxy.so/bloom/icons';
 
 interface MapFabProps {
   onPress: () => void;
   label: string;
-  /** Override the default `map` icon. */
-  icon?: React.ComponentProps<typeof Ionicons>['name'];
+  /** Which view the toggle switches TO. Defaults to `map`. */
+  icon?: 'map' | 'list';
   style?: StyleProp<ViewStyle>;
 }
 
-export const MapFab: React.FC<MapFabProps> = ({
-  onPress,
-  label,
-  icon = 'map',
-  style,
-}) => {
+export const MapFab: React.FC<MapFabProps> = ({ onPress, label, icon = 'map', style }) => {
+  const Icon = icon === 'list' ? RiListUnordered : RiMapPinLine;
   return (
-    <View style={[styles.fab, cardShadow.lg, style]}>
-      <Button
-        onPress={onPress}
+    // Pass-through row (valid CSS `none`) so only the button itself takes taps.
+    <View style={[styles.anchor, style]}>
+      <Fab
+        placement="static"
         variant="primary"
-        size="medium"
-        icon={<Ionicons name={icon} size={18} color={colors.primaryForeground} />}
-        iconPosition="left"
+        label={label}
         accessibilityLabel={label}
-      >
-        {label}
-      </Button>
+        icon={<Icon size="md" />}
+        onPress={onPress}
+        style={styles.fab}
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  fab: {
+  anchor: {
     position: 'absolute',
     bottom: 24,
-    alignSelf: 'center',
-    borderRadius: 9999,
-    overflow: 'hidden',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    pointerEvents: 'none',
+  },
+  fab: {
+    pointerEvents: 'auto',
   },
 });
 

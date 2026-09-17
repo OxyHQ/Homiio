@@ -2,7 +2,8 @@ import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ActionButton } from '@/components/ui/ActionButton';
+import { Button } from '@oxy.so/bloom/button';
+import { RiArrowLeftRightLine, RiCalendarLine, RiChat3Line, RiExternalLinkLine, RiGlobalLine, RiPhoneLine } from '@oxy.so/bloom/icons';
 import { HousingType, type Profile, type Property } from '@homiio/shared-types';
 import { colors } from '@/styles/colors';
 
@@ -58,23 +59,25 @@ export const PropertyActionBar: React.FC<Props> = ({
     if (isExchangeListing && !isPublic && !isExternal && onRequestExchange) {
         exchangePrimary = (
             <>
-                <ActionButton
-                    icon="swap-horizontal"
-                    text={t('listing.exchange.requestCta')}
+                <Button
+                    leadingIcon={RiArrowLeftRightLine}
                     onPress={onRequestExchange}
                     variant="primary"
                     size="large"
                     style={{ flex: 1, marginRight: 10 }}
-                />
-                <ActionButton
-                    icon="chatbubble-outline"
-                    text={t('properties.contact')}
+                >
+                    {t('listing.exchange.requestCta')}
+                </Button>
+                <Button
+                    leadingIcon={RiChat3Line}
                     onPress={onContact}
                     variant="secondary"
                     size="large"
                     disabled={!landlordProfile || !canContact}
                     style={{ flex: 1 }}
-                />
+                >
+                    {t('properties.contact')}
+                </Button>
             </>
         );
     }
@@ -86,23 +89,25 @@ export const PropertyActionBar: React.FC<Props> = ({
     if (isSaleListing && !isPublic && !isExternal && onRequestViewing) {
         salePrimary = (
             <>
-                <ActionButton
-                    icon="calendar-outline"
-                    text={t('listing.sale.requestViewing')}
+                <Button
+                    leadingIcon={RiCalendarLine}
                     onPress={onRequestViewing}
                     variant="primary"
                     size="large"
                     style={{ flex: 1, marginRight: 10 }}
-                />
-                <ActionButton
-                    icon="chatbubble-outline"
-                    text={t('properties.contact')}
+                >
+                    {t('listing.sale.requestViewing')}
+                </Button>
+                <Button
+                    leadingIcon={RiChat3Line}
                     onPress={onContact}
                     variant="secondary"
                     size="large"
                     disabled={!landlordProfile || !canContact}
                     style={{ flex: 1 }}
-                />
+                >
+                    {t('properties.contact')}
+                </Button>
             </>
         );
     }
@@ -110,33 +115,36 @@ export const PropertyActionBar: React.FC<Props> = ({
         <SafeAreaView edges={['bottom']} style={styles.bottomBar}>
             <View style={styles.bottomBarInner}>
                 {isPublic ? (
-                    <ActionButton
-                        icon="globe"
-                        text={t('listing.cta.applyOnStateWebsite')}
+                    <Button
+                        leadingIcon={RiGlobalLine}
                         onPress={onApplyPublic}
                         variant="primary"
                         size="large"
                         style={{ flex: 1 }}
-                    />
+                    >
+                        {t('listing.cta.applyOnStateWebsite')}
+                    </Button>
                 ) : isExternal ? (
                     <>
-                        <ActionButton
-                            icon="open-outline"
-                            text={t('listing.cta.viewOnSourceWebsite')}
+                        <Button
+                            leadingIcon={RiExternalLinkLine}
                             onPress={onContact}
                             variant="primary"
                             size="large"
                             style={{ flex: 1, marginRight: canCall ? 10 : 0 }}
-                        />
+                        >
+                            {t('listing.cta.viewOnSourceWebsite')}
+                        </Button>
                         {canCall ? (
-                            <ActionButton
-                                icon="call-outline"
-                                text={t('listing.cta.callNow')}
+                            <Button
+                                leadingIcon={RiPhoneLine}
                                 onPress={onCall}
                                 variant="secondary"
                                 size="large"
                                 style={{ flex: 1 }}
-                            />
+                            >
+                                {t('listing.cta.callNow')}
+                            </Button>
                         ) : null}
                     </>
                 ) : exchangePrimary ? (
@@ -145,24 +153,26 @@ export const PropertyActionBar: React.FC<Props> = ({
                     salePrimary
                 ) : (
                     <>
-                        <ActionButton
-                            icon="chatbubble-outline"
-                            text={t('properties.contact')}
+                        <Button
+                            leadingIcon={RiChat3Line}
                             onPress={onContact}
                             variant="primary"
                             size="large"
                             disabled={!landlordProfile || !canContact}
                             style={{ flex: 1, marginRight: 10 }}
-                        />
+                        >
+                            {t('properties.contact')}
+                        </Button>
                         {canCall && landlordProfile && (
-                            <ActionButton
-                                icon="call-outline"
-                                text={t('listing.cta.callNow')}
+                            <Button
+                                leadingIcon={RiPhoneLine}
                                 onPress={onCall}
                                 variant="secondary"
                                 size="large"
                                 style={{ flex: 1 }}
-                            />
+                            >
+                                {t('listing.cta.callNow')}
+                            </Button>
                         )}
                     </>
                 )}

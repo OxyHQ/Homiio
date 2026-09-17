@@ -11,7 +11,7 @@
  *   exchange payout = payout.exchange.value             (flat reward)
  *
  * Only rent varies with a deal value, so only the rent tab shows a slider — the
- * shared `RangeSlider` (the same control the mortgage calculator uses). Sale and
+ * Bloom `Slider` (the same control the mortgage calculator uses). Sale and
  * exchange are flat, so they show the reward prominently with a short note
  * instead of a misleading slider. The result is rendered as a big gold number;
  * slider bounds/steps are named constants (no magic numbers).
@@ -20,7 +20,7 @@
  * frame. The live "monthly rent" readout + slider live in their own memoised
  * `RentControl` so a drag re-renders only that block — not the SegmentedControl
  * or the result copy. The slider's `onChange` (`setRent`) is referentially
- * stable, and `RangeSlider` is itself `React.memo`.
+ * stable.
  */
 import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -33,7 +33,7 @@ import {
   SegmentedControlItemText,
 } from '@oxy.so/bloom/segmented-control';
 
-import { RangeSlider } from '@/components/ui/RangeSlider';
+import { Slider } from '@oxy.so/bloom/slider';
 import { colors } from '@/styles/colors';
 import { hairline, radius, resolvePagePadding, spacing, tracker } from '@/constants/styles';
 import { formatMoney } from '@homiio/shared-types';
@@ -105,12 +105,13 @@ const RentControl: React.FC<RentControlProps> = React.memo(
             {`${formatMoney(rent, currency, locale, WHOLE_CURRENCY)} / ${perMonth}`}
           </BloomText>
         </View>
-        <RangeSlider
+        <Slider
           value={rent}
           min={RENT_RANGE.min}
           max={RENT_RANGE.max}
           step={RENT_RANGE.step}
-          onChange={onChange}
+          onValueChange={onChange}
+          showTooltip={false}
           accessibilityLabel={label}
         />
       </View>

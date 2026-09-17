@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors } from '@/styles/colors';
 import type { RoommateRelationship, RoommateProfile } from '@/hooks/useRoommate';
-import { ActionButton } from '@/components/ui/ActionButton';
+import { Button } from '@oxy.so/bloom/button';
+import { RiCloseCircleLine } from '@oxy.so/bloom/icons';
 import { getFormatLocale } from '@/utils/dateLocale';
 
 interface RoommateRelationshipProps {
@@ -162,14 +163,15 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
 
       {relationship.status === 'active' && (
         <View style={styles.actions}>
-          <ActionButton
-            icon="close-circle"
-            text={t('roommates.relationship.endRelationship')}
+          <Button
+            leadingIcon={RiCloseCircleLine}
             onPress={handleEndRelationship}
             variant="secondary"
             loading={isLoading}
             style={styles.endButton}
-          />
+          >
+            {t('roommates.relationship.endRelationship')}
+          </Button>
         </View>
       )}
 

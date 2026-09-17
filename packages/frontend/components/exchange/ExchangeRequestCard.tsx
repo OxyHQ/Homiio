@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
@@ -8,7 +8,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { ExchangeMode, type ExchangeRequest } from '@homiio/shared-types';
 
 import { ExchangeStatusBadge } from '@/components/exchange/ExchangeStatusBadge';
-import { ThumbnailCard } from '@/components/ui/ThumbnailCard';
+import { Card, CardFooter } from '@oxy.so/bloom/card';
 import { ThumbnailImage } from '@/components/ui/ThumbnailImage';
 import { useProperty } from '@/hooks';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
@@ -48,36 +48,66 @@ export const ExchangeRequestCard: React.FC<ExchangeRequestCardProps> = ({
       : t('listing.exchange.mode.host');
 
   return (
-    <ThumbnailCard
-      thumbnail={<ThumbnailImage source={imageSource} />}
-      onPress={() => router.push(`/exchange/${request.id}`)}
-      accessibilityLabel={title}
-      actions={actions}
-    >
-      <View style={styles.headerRow}>
-        <BloomText style={styles.title} numberOfLines={1}>
-          {title}
-        </BloomText>
-        <ExchangeStatusBadge status={request.status} />
-      </View>
-      <BloomText style={styles.dates} numberOfLines={1}>
-        {formatDateRange(request.requestedWindow.start, request.requestedWindow.end)}
-      </BloomText>
-      <View style={styles.metaRow}>
-        <Ionicons
-          name={request.mode === ExchangeMode.SWAP ? 'swap-horizontal' : 'bed-outline'}
-          size={MODE_ICON_SIZE}
-          color={colors.exchangeAccent}
-        />
-        <BloomText style={styles.meta} numberOfLines={1}>
-          {modeLabel}
-        </BloomText>
-      </View>
-    </ThumbnailCard>
+    <Card variant="outlined" radius="radius-16" style={styles.card}>
+      <Pressable
+        style={styles.row}
+        onPress={() => router.push(`/exchange/${request.id}`)}
+        accessibilityRole="button"
+        accessibilityLabel={title}
+      >
+        <View style={styles.thumb}><ThumbnailImage source={imageSource} /></View>
+        <View style={styles.body}>
+          <View style={styles.headerRow}>
+            <BloomText style={styles.title} numberOfLines={1}>
+              {title}
+            </BloomText>
+            <ExchangeStatusBadge status={request.status} />
+          </View>
+          <BloomText style={styles.dates} numberOfLines={1}>
+            {formatDateRange(request.requestedWindow.start, request.requestedWindow.end)}
+          </BloomText>
+          <View style={styles.metaRow}>
+            <Ionicons
+              name={request.mode === ExchangeMode.SWAP ? 'swap-horizontal' : 'bed-outline'}
+              size={MODE_ICON_SIZE}
+              color={colors.exchangeAccent}
+            />
+            <BloomText style={styles.meta} numberOfLines={1}>
+              {modeLabel}
+            </BloomText>
+          </View>
+        </View>
+      </Pressable>
+      {actions ? <CardFooter style={styles.actions}>{actions}</CardFooter> : null}
+    </Card>
   );
 };
 
+/** Edge length of the square thumbnail slot. */
+const THUMBNAIL_SIZE = 96;
+
 const styles = StyleSheet.create({
+  card: {
+    marginBottom: spacing.md,
+  },
+  row: {
+    flexDirection: 'row',
+  },
+  thumb: {
+    width: THUMBNAIL_SIZE,
+    height: THUMBNAIL_SIZE,
+  },
+  body: {
+    flex: 1,
+    padding: spacing.md,
+    justifyContent: 'space-between',
+  },
+  actions: {
+    justifyContent: 'flex-start',
+    paddingHorizontal: spacing.md,
+    paddingTop: 0,
+    paddingBottom: spacing.md,
+  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',

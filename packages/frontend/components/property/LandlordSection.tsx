@@ -6,7 +6,8 @@ import { Avatar } from '@oxy.so/bloom/avatar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors } from '@/styles/colors';
 import { hairline, spacing } from '@/constants/styles';
-import { ActionButton } from '@/components/ui/ActionButton';
+import { Button } from '@oxy.so/bloom/button';
+import { RiGlobalLine } from '@oxy.so/bloom/icons';
 import { FollowButton, useOxy } from '@oxy.so/services';
 import type { Profile, Property } from '@homiio/shared-types';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
@@ -106,14 +107,15 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
                             <ThemedText style={styles.landlordSubtitle}>Government-managed affordable housing</ThemedText>
                         </View>
                     </View>
-                    <ActionButton
-                        icon="globe"
-                        text={t('listing.cta.applyOnStateWebsite')}
+                    <Button
+                        leadingIcon={RiGlobalLine}
                         onPress={onApplyPublic}
                         variant="primary"
                         size="medium"
                         style={styles.actionButton}
-                    />
+                    >
+                        {t('listing.cta.applyOnStateWebsite')}
+                    </Button>
                 </View>
             ) : (
                 <View style={styles.contentContainer}>

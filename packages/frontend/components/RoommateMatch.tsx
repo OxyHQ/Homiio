@@ -14,7 +14,8 @@ import { useFormatting } from '@/utils/format';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors } from '@/styles/colors';
 import type { RoommateProfile } from '@/hooks/useRoommate';
-import { ActionButton } from '@/components/ui/ActionButton';
+import { Button } from '@oxy.so/bloom/button';
+import { RiSendPlaneLine, RiUserAddLine } from '@oxy.so/bloom/icons';
 import { FollowButton } from '@oxy.so/services';
 
 
@@ -166,14 +167,15 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
           <Text style={styles.viewProfileText}>{t('roommates.match.viewProfile')}</Text>
         </TouchableOpacity>
 
-        <ActionButton
-          icon={showMessageInput ? 'send' : 'person-add'}
-          text={t('roommates.match.sendRequest')}
+        <Button
+          leadingIcon={showMessageInput ? RiSendPlaneLine : RiUserAddLine}
           onPress={handleSendRequest}
           variant="primary"
           loading={isLoading}
           style={styles.sendRequestButton}
-        />
+        >
+          {t('roommates.match.sendRequest')}
+        </Button>
       </View>
     </View>
   );

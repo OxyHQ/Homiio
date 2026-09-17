@@ -8,12 +8,12 @@
  *
  * Documents are linked via signed S3 URLs returned by the API.
  *
- * Stream P polish: each block is a flat `CardSurface` with no border. Status is
+ * Stream P polish: each block is an outlined Bloom `Card`. Status is
  * rendered with the existing Bloom Badge wrapper.
  * Spinner and ad-hoc error text were replaced with Bloom Loading +
  * the shared ErrorState component.
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   Image,
   Linking,
@@ -43,7 +43,7 @@ import {
 
 import { Header } from '@/components/Header';
 import { ApplicationStatusBadge } from '@/components/ApplicationStatusBadge';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { confirm } from '@oxy.so/bloom/surfaces';
 import { useProperty } from '@/hooks';
 import { useProfile } from '@/context/ProfileContext';
 import {
@@ -55,7 +55,7 @@ import {
   getPropertyTitle,
 } from '@/utils/propertyUtils';
 import { colors } from '@/styles/colors';
-import { CardSurface } from '@/components/ui/CardSurface';
+import { Card } from '@oxy.so/bloom/card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { radius, spacing, tracker } from '@/constants/styles';
 
@@ -144,8 +144,6 @@ export default function ApplicationDetailScreen() {
   const application = applicationQuery.data;
   const { property } = useProperty(application?.propertyId ?? '');
 
-  const [confirmWithdraw, setConfirmWithdraw] = useState(false);
-
   const role = useMemo<'applicant' | 'landlord' | null>(() => {
     if (!application || !profile) return null;
     const sessionOxyUserId = profile?.oxyUserId;
@@ -173,13 +171,20 @@ export default function ApplicationDetailScreen() {
 
   const handleWithdraw = useCallback(async () => {
     if (!id || !application) return;
+    const ok = await confirm({
+      title: 'Withdraw application?',
+      description:
+        'The landlord will see this application as withdrawn. You can submit a new one for this property afterwards.',
+      confirmLabel: 'Withdraw',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await updateMutation.mutateAsync({
         id,
         input: { status: TenantApplicationStatus.WITHDRAWN },
       });
       toast.success(t('applications.toast.withdrawn'));
-      setConfirmWithdraw(false);
     } catch (error) {
       const message =
         error instanceof Error
@@ -268,7 +273,7 @@ export default function ApplicationDetailScreen() {
             )}
           </View>
 
-          <CardSurface>
+          <Card variant="outlined" radius="radius-16" className="p-5">
             <View style={styles.headerRow}>
               <H2 style={styles.title}>{propertyTitle}</H2>
               <ApplicationStatusBadge status={application.status} />
@@ -280,9 +285,9 @@ export default function ApplicationDetailScreen() {
                   .join(', ')}
               </BloomText>
             ) : null}
-          </CardSurface>
+          </Card>
 
-          <CardSurface>
+          <Card variant="outlined" radius="radius-16" className="p-5">
             <BloomText style={styles.sectionLabel}>Tenancy</BloomText>
             <DetailRow label="Move-in" value={formatDate(application.moveInDate)} />
             <DetailRow
@@ -299,9 +304,9 @@ export default function ApplicationDetailScreen() {
                 value={formatDate(application.decidedAt)}
               />
             ) : null}
-          </CardSurface>
+          </Card>
 
-          <CardSurface>
+          <Card variant="outlined" radius="radius-16" className="p-5">
             <BloomText style={styles.sectionLabel}>Finances</BloomText>
             <DetailRow
               label="Monthly income"
@@ -311,9 +316,9 @@ export default function ApplicationDetailScreen() {
               label="Employment"
               value={t(`profile.edit.options.employmentStatus.${application.employmentStatus}`)}
             />
-          </CardSurface>
+          </Card>
 
-          <CardSurface>
+          <Card variant="outlined" radius="radius-16" className="p-5">
             <BloomText style={styles.sectionLabel}>References</BloomText>
             {application.referenceContacts.length === 0 ? (
               <BloomText style={styles.emptyHint}>
@@ -335,9 +340,9 @@ export default function ApplicationDetailScreen() {
                 </View>
               ))
             )}
-          </CardSurface>
+          </Card>
 
-          <CardSurface>
+          <Card variant="outlined" radius="radius-16" className="p-5">
             <BloomText style={styles.sectionLabel}>Documents</BloomText>
             {application.documents.length === 0 ? (
               <BloomText style={styles.emptyHint}>No documents attached.</BloomText>
@@ -346,13 +351,13 @@ export default function ApplicationDetailScreen() {
                 <DocumentRow key={document.url} document={document} />
               ))
             )}
-          </CardSurface>
+          </Card>
 
           {application.notes ? (
-            <CardSurface>
+            <Card variant="outlined" radius="radius-16" className="p-5">
               <BloomText style={styles.sectionLabel}>Notes</BloomText>
               <BloomText style={styles.notesBody}>{application.notes}</BloomText>
-            </CardSurface>
+            </Card>
           ) : null}
 
           {(showCreateLease || canWithdraw) ? (
@@ -371,7 +376,7 @@ export default function ApplicationDetailScreen() {
                 <Button
                   variant="ghost"
                   size="medium"
-                  onPress={() => setConfirmWithdraw(true)}
+                  onPress={() => void handleWithdraw()}
                   disabled={updateMutation.isPending}
                   style={styles.actionButton}
                 >
@@ -381,17 +386,6 @@ export default function ApplicationDetailScreen() {
             </View>
           ) : null}
         </ScrollView>
-
-        <ConfirmDialog
-          visible={confirmWithdraw}
-          title="Withdraw application?"
-          message="The landlord will see this application as withdrawn. You can submit a new one for this property afterwards."
-          confirmLabel="Withdraw"
-          confirmDestructive
-          loading={updateMutation.isPending}
-          onConfirm={handleWithdraw}
-          onCancel={() => setConfirmWithdraw(false)}
-        />
       </SafeAreaView>
     </View>
   );

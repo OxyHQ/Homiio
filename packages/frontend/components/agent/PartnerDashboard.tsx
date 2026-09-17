@@ -21,7 +21,7 @@ import { useMediaQuery } from 'react-responsive';
 import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { colors } from '@/styles/colors';
-import { ProgressBar } from '@/components/ui/ProgressBar';
+import { StatBar } from '@oxy.so/bloom/stat-bar';
 import { formatMoney } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 import { formatLocalized } from '@/utils/dateLocale';
@@ -152,7 +152,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
       : undefined;
   }, [currentTier]);
 
-  // 0–1 fraction toward the next tier (full at the top tier). `ProgressBar`
+  // 0–1 fraction toward the next tier (full at the top tier). `StatBar`
   // clamps for display, so no manual clamp is needed here — only the
   // divide-by-zero guard.
   const progress = useMemo(() => {
@@ -238,21 +238,23 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
               {t('agent.dashboard.pointsValue', { count: points })}
             </BloomText>
           </View>
-          <ProgressBar
-            progress={progress}
+          {/* The caption is the bar's label: StatBar requires one, and it is
+              exactly what the bar measures. */}
+          <StatBar
+            label={
+              nextTier
+                ? t('agent.dashboard.toNext', {
+                    points: Math.max(nextTier.minPoints - points, 0),
+                    tier: tierName(nextTier.key),
+                  })
+                : t('agent.dashboard.maxTier')
+            }
+            value={progress}
+            max={1}
             height={8}
-            color={colors.primaryColor}
-            backgroundColor={colors.COLOR_BLACK_LIGHT_7}
-            borderRadius={radius.pill}
+            fillColor={colors.primaryColor}
+            trackColor={colors.COLOR_BLACK_LIGHT_7}
           />
-          <BloomText style={styles.progressCaption}>
-            {nextTier
-              ? t('agent.dashboard.toNext', {
-                  points: Math.max(nextTier.minPoints - points, 0),
-                  tier: tierName(nextTier.key),
-                })
-              : t('agent.dashboard.maxTier')}
-          </BloomText>
         </View>
 
         {/* Recent referrals */}
@@ -377,10 +379,6 @@ const styles = StyleSheet.create({
   pointsValue: {
     fontSize: 14,
     fontWeight: '700',
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  progressCaption: {
-    fontSize: 13,
     color: colors.COLOR_BLACK_LIGHT_3,
   },
   listBlock: {

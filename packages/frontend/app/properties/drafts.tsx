@@ -32,7 +32,7 @@ import { H4, Text as BloomText } from '@oxy.so/bloom/typography';
 import { PropertyListHeader } from '@/components/ui/PropertyListHeader';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { confirm } from '@oxy.so/bloom/surfaces';
 import { toast } from '@oxy.so/bloom/toast';
 import { colors } from '@/styles/colors';
 import { contentClamp, radius, spacing } from '@/constants/styles';
@@ -218,8 +218,6 @@ export default function PropertyDraftsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-
   const { data: drafts = [], isLoading } = useQuery({
     queryKey: DRAFTS_QUERY_KEY,
     queryFn: readDrafts,
@@ -259,10 +257,19 @@ export default function PropertyDraftsScreen() {
     [router],
   );
 
-  const handleConfirmDelete = useCallback(() => {
-    if (!deleteId) return;
-    deleteMutation.mutate(deleteId, { onSettled: () => setDeleteId(null) });
-  }, [deleteId, deleteMutation]);
+  const handleDelete = useCallback(
+    async (draftId: string) => {
+      const ok = await confirm({
+        title: t('property.drafts.deleteTitle'),
+        description: t('property.drafts.deleteMessage'),
+        confirmLabel: t('common.delete'),
+        cancelLabel: t('common.cancel'),
+        destructive: true,
+      });
+      if (ok) deleteMutation.mutate(draftId);
+    },
+    [deleteMutation, t],
+  );
 
   const body = (() => {
     if (isLoading && drafts.length === 0) {
@@ -293,7 +300,7 @@ export default function PropertyDraftsScreen() {
               key={draft.id}
               draft={draft}
               onContinue={() => void continueEditing(draft)}
-              onDelete={() => setDeleteId(draft.id)}
+              onDelete={() => void handleDelete(draft.id)}
             />
           ))}
         </View>
@@ -321,19 +328,7 @@ export default function PropertyDraftsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {body}
-      </ScrollView>
-      <ConfirmDialog
-        visible={deleteId !== null}
-        title={t('property.drafts.deleteTitle')}
-        message={t('property.drafts.deleteMessage')}
-        confirmLabel={t('common.delete')}
-        cancelLabel={t('common.cancel')}
-        confirmDestructive
-        loading={deleteMutation.isPending}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setDeleteId(null)}
-      />
-    </View>
+      </ScrollView>    </View>
   );
 }
 
