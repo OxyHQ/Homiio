@@ -61,6 +61,7 @@ import {
   StyleSheet,
   View,
   useWindowDimensions,
+  type LayoutChangeEvent,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -174,6 +175,16 @@ const SEGMENT_FLEX: Record<SearchStep, number> = {
   price: 1.2,
 };
 
+/**
+ * Extra width for the LAST segment, which also holds the Search button. Without
+ * it the last label truncates ("Property ty…") at common desktop widths, since
+ * the button eats about half of that segment's share.
+ */
+const LAST_SEGMENT_BUTTON_FLEX = 0.9;
+
+/** Below this measured width the segmented bar truncates its labels; show the compact pill instead. */
+const WIDE_BAR_MIN_WIDTH = 640;
+
 /** The narrow sheet's height, as a share of the window: fixed, so it never jumps between steps. */
 const SHEET_HEIGHT_RATIO = 0.88;
 
@@ -253,7 +264,17 @@ export function HomeSearch({
 }: HomeSearchProps): React.ReactElement {
   const { t } = useTranslation();
   const { locale } = useFormatting();
-  const isWide = useIsScreenNotMobile();
+  const isScreenWide = useIsScreenNotMobile();
+  // The bar's segments need real room, and the page column can be narrow on a
+  // wide screen (the AppShell sidebar plus the right-hand aside leave ~500px at
+  // 1024-1279). Decide from the space THIS component actually gets; until it has
+  // been measured, trust the screen.
+  const [containerWidth, setContainerWidth] = useState(0);
+  const handleContainerLayout = useCallback((event: LayoutChangeEvent) => {
+    const next = Math.round(event.nativeEvent.layout.width);
+    setContainerWidth((prev) => (prev === next ? prev : next));
+  }, []);
+  const isWide = isScreenWide && (containerWidth === 0 || containerWidth >= WIDE_BAR_MIN_WIDTH);
   const insets = useSafeAreaInsets();
   const colors = useColors();
   const { height: windowHeight } = useWindowDimensions();
@@ -626,12 +647,13 @@ export function HomeSearch({
   // --- wide ---
   if (isWide) {
     const activeSegment = openStep !== null && segmentSteps.includes(openStep) ? openStep : null;
-    const segments: HomeSearchSegment<SearchStep>[] = segmentSteps.map((step) => ({
+    const segments: HomeSearchSegment<SearchStep>[] = segmentSteps.map((step, index) => ({
       key: step,
       label: t(STEP_LABEL_KEYS[step]),
       value: stepValue(step) ?? undefined,
       placeholder: step === 'where' ? wherePlaceholder : t(STEP_EMPTY_KEYS[step]),
-      flex: SEGMENT_FLEX[step],
+      flex:
+        SEGMENT_FLEX[step] + (index === segmentSteps.length - 1 ? LAST_SEGMENT_BUTTON_FLEX : 0),
     }));
 
     const handleSegment = (segment: SearchStep | null) => {
@@ -697,13 +719,19 @@ export function HomeSearch({
         query={whereText}
         onQueryChange={whereSearch.onChangeText}
         panel={panel}
-        style={modeTabs ? styles.fill : style}
+        style={styles.fill}
       />
     );
 
-    if (!modeTabs) return bar;
+    if (!modeTabs) {
+      return (
+        <View onLayout={handleContainerLayout} style={style}>
+          {bar}
+        </View>
+      );
+    }
     return (
-      <View style={[styles.withTabs, style]}>
+      <View onLayout={handleContainerLayout} style={[styles.withTabs, style]}>
         {renderModeTabs(
           pageMode,
           handlePageMode,
@@ -728,19 +756,20 @@ export function HomeSearch({
       title={compactTitle}
       summary={summaryLine(query, t, locale)}
       accessibilityLabel={`${t('search.summary.edit')}: ${compactTitle}, ${summaryLine(query, t, locale)}`}
-      style={modeTabs === 'segmented' ? undefined : style}
     />
   );
 
   return (
     <>
       {modeTabs === 'segmented' ? (
-        <View style={[styles.withTabs, style]}>
+        <View onLayout={handleContainerLayout} style={[styles.withTabs, style]}>
           {renderModeTabs(pageMode, handlePageMode, 'segmented')}
           {compact}
         </View>
       ) : (
-        compact
+        <View onLayout={handleContainerLayout} style={style}>
+          {compact}
+        </View>
       )}
       <Dialog
         placement="bottom"
